@@ -1,0 +1,35 @@
+# Prod environment test
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "80:80"
+    environment:
+      - PORT=80
+      - ENVIRONMENT=${ENVIRONMENT}
+      - POSTGRES_HOST=postgres
+      - POSTGRES_USER=${POSTGRES_USER:?error}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:?error}
+      - POSTGRES_DB=${POSTGRES_DB:?error}
+      - POSTGRES_SSL=False
+      - SECRET_KEY=test
+      - ACCESS_TOKEN_EXPIRE_MINUTES=120
+      - ADMIN_AUTH_TOKEN=test
+      - BLOB_READ_WRITE_TOKEN=test
+      - BLOB_BASE_URL=https://test.com
+
+  db:
+    image: postgres:17
+    container_name: postgres
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER:?error}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:?error}
+      - POSTGRES_DB=${POSTGRES_DB:?error}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:

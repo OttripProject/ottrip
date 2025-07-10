@@ -1,0 +1,43 @@
+[project]
+name = "ottrip-server"
+version = "0.1.0"
+description = "ottrip server"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "alembic>=1.15.1",
+    "asyncpg>=0.30.0",
+    "bcrypt>=4.3.0",
+    "fastapi[standard]>=0.115.11",
+    "greenlet>=3.1.1",
+    "httpx>=0.28.1",
+    "passlib>=1.7.4",
+    "psycopg[binary,pool]>=3.2.6",
+    "pydantic-settings>=2.8.1",
+    "pyjwt[crypto]>=2.10.1",
+    "sqlalchemy[asyncio]>=2.0.39",
+    "types-aioboto3[full]>=14.1.0",
+]
+
+[dependency-groups]
+dev = [
+    "alembic>=1.15.1",
+    "poethepoet>=0.33.1",
+    "pre-commit>=4.2.0",
+    "pyright>=1.1.397",
+    "ruff>=0.11.2",
+]
+
+[tool.poe.tasks]
+setup = "pre-commit install"
+dev = "fastapi dev server/app/main.py"
+prod = "fastapi run server/app/main.py --host=0.0.0.0"
+typecheck = "pyright"
+lint = "ruff check"
+format = "ruff format"
+db = "docker compose -f docker-compose.dev.yml"
+revision = "alembic revision --autogenerate"
+migrate = "alembic upgrade head"
+downgrade = "alembic downgrade -1"
+check-migrations = "alembic check"
+
