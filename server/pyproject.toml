@@ -1,5 +1,5 @@
 [project]
-name = "ottrip-server"
+name = "server"
 version = "0.1.0"
 description = "ottrip server"
 readme = "README.md"
@@ -30,8 +30,8 @@ dev = [
 
 [tool.poe.tasks]
 setup = "pre-commit install"
-dev = "fastapi dev server/app/main.py"
-prod = "fastapi run server/app/main.py --host=0.0.0.0"
+dev = "fastapi dev app/main.py --port 8080"
+prod = "fastapi run app/main.py --host=0.0.0.0"
 typecheck = "pyright"
 lint = "ruff check"
 format = "ruff format"
@@ -40,4 +40,3 @@ revision = "alembic revision --autogenerate"
 migrate = "alembic upgrade head"
 downgrade = "alembic downgrade -1"
 check-migrations = "alembic check"
-
