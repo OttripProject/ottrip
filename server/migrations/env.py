@@ -7,10 +7,10 @@ from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
 import app.auth.models as _
-import app.comments.models as _
-import app.like.tables as _
-import app.posts.models as _
-import app.tags.models as _
+import app.expenses.models as _
+import app.flights.models as _
+import app.itinerary.models as _
+import app.plans.models as _
 import app.users.models as _
 
 # Config 임포트

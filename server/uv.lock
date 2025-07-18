@@ -472,59 +472,6 @@ wheels = [
 ]
 
 [[package]]
-name = "ottrip-server"
-version = "0.1.0"
-source = { virtual = "." }
-dependencies = [
-    { name = "alembic" },
-    { name = "asyncpg" },
-    { name = "bcrypt" },
-    { name = "fastapi", extra = ["standard"] },
-    { name = "greenlet" },
-    { name = "httpx" },
-    { name = "passlib" },
-    { name = "psycopg", extra = ["binary", "pool"] },
-    { name = "pydantic-settings" },
-    { name = "pyjwt", extra = ["crypto"] },
-    { name = "sqlalchemy", extra = ["asyncio"] },
-    { name = "types-aioboto3", extra = ["full"] },
-]
-
-[package.dev-dependencies]
-dev = [
-    { name = "alembic" },
-    { name = "poethepoet" },
-    { name = "pre-commit" },
-    { name = "pyright" },
-    { name = "ruff" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "alembic", specifier = ">=1.15.1" },
-    { name = "asyncpg", specifier = ">=0.30.0" },
-    { name = "bcrypt", specifier = ">=4.3.0" },
-    { name = "fastapi", extras = ["standard"], specifier = ">=0.115.11" },
-    { name = "greenlet", specifier = ">=3.1.1" },
-    { name = "httpx", specifier = ">=0.28.1" },
-    { name = "passlib", specifier = ">=1.7.4" },
-    { name = "psycopg", extras = ["binary", "pool"], specifier = ">=3.2.6" },
-    { name = "pydantic-settings", specifier = ">=2.8.1" },
-    { name = "pyjwt", extras = ["crypto"], specifier = ">=2.10.1" },
-    { name = "sqlalchemy", extras = ["asyncio"], specifier = ">=2.0.39" },
-    { name = "types-aioboto3", extras = ["full"], specifier = ">=14.1.0" },
-]
-
-[package.metadata.requires-dev]
-dev = [
-    { name = "alembic", specifier = ">=1.15.1" },
-    { name = "poethepoet", specifier = ">=0.33.1" },
-    { name = "pre-commit", specifier = ">=4.2.0" },
-    { name = "pyright", specifier = ">=1.1.397" },
-    { name = "ruff", specifier = ">=0.11.2" },
-]
-
-[[package]]
 name = "passlib"
 version = "1.7.4"
 source = { registry = "https://pypi.org/simple" }
@@ -812,6 +759,59 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/d9/3a/a647fa4f316482dacf2fd68e8a386327a33d6eabd8eb2f9a0c3d291ec549/ruff-0.11.2-py3-none-win32.whl", hash = "sha256:aca01ccd0eb5eb7156b324cfaa088586f06a86d9e5314b0eb330cb48415097cc", size = 10319835 },
     { url = "https://files.pythonhosted.org/packages/86/54/3c12d3af58012a5e2cd7ebdbe9983f4834af3f8cbea0e8a8c74fa1e23b2b/ruff-0.11.2-py3-none-win_amd64.whl", hash = "sha256:3170150172a8f994136c0c66f494edf199a0bbea7a409f649e4bc8f4d7084080", size = 11373713 },
     { url = "https://files.pythonhosted.org/packages/d6/d4/dd813703af8a1e2ac33bf3feb27e8a5ad514c9f219df80c64d69807e7f71/ruff-0.11.2-py3-none-win_arm64.whl", hash = "sha256:52933095158ff328f4c77af3d74f0379e34fd52f175144cefc1b192e7ccd32b4", size = 10441990 },
+]
+
+[[package]]
+name = "server"
+version = "0.1.0"
+source = { virtual = "." }
+dependencies = [
+    { name = "alembic" },
+    { name = "asyncpg" },
+    { name = "bcrypt" },
+    { name = "fastapi", extra = ["standard"] },
+    { name = "greenlet" },
+    { name = "httpx" },
+    { name = "passlib" },
+    { name = "psycopg", extra = ["binary", "pool"] },
+    { name = "pydantic-settings" },
+    { name = "pyjwt", extra = ["crypto"] },
+    { name = "sqlalchemy", extra = ["asyncio"] },
+    { name = "types-aioboto3", extra = ["full"] },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "alembic" },
+    { name = "poethepoet" },
+    { name = "pre-commit" },
+    { name = "pyright" },
+    { name = "ruff" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "alembic", specifier = ">=1.15.1" },
+    { name = "asyncpg", specifier = ">=0.30.0" },
+    { name = "bcrypt", specifier = ">=4.3.0" },
+    { name = "fastapi", extras = ["standard"], specifier = ">=0.115.11" },
+    { name = "greenlet", specifier = ">=3.1.1" },
+    { name = "httpx", specifier = ">=0.28.1" },
+    { name = "passlib", specifier = ">=1.7.4" },
+    { name = "psycopg", extras = ["binary", "pool"], specifier = ">=3.2.6" },
+    { name = "pydantic-settings", specifier = ">=2.8.1" },
+    { name = "pyjwt", extras = ["crypto"], specifier = ">=2.10.1" },
+    { name = "sqlalchemy", extras = ["asyncio"], specifier = ">=2.0.39" },
+    { name = "types-aioboto3", extras = ["full"], specifier = ">=14.1.0" },
+]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "alembic", specifier = ">=1.15.1" },
+    { name = "poethepoet", specifier = ">=0.33.1" },
+    { name = "pre-commit", specifier = ">=4.2.0" },
+    { name = "pyright", specifier = ">=1.1.397" },
+    { name = "ruff", specifier = ">=0.11.2" },
 ]
 
 [[package]]
