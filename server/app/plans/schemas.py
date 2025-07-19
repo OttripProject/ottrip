@@ -23,6 +23,13 @@ class PlanUpdate(PlanBase):
 
 class PlanRead(PlanBase):
     id: int
+
+
+class PlanReadWithInforms(PlanRead):
     flights: list[FlightRead] | None
     itineraries: list[ItineraryRead] | None
     expenses: list[ExpenseRead] | None
+
+
+class PlansReadByUser(APISchema):
+    plans: list[PlanRead]
