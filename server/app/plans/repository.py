@@ -30,3 +30,9 @@ class PlanRepository:
             .where(Plan.id == plan_id, Plan.is_deleted.is_(False))
         )
         return result.unique().scalar_one_or_none()
+
+    async def find_by_user(self, *, user_id: int) -> list[Plan]:
+        result = await self.session.execute(
+            select(Plan).where(Plan.owner_id == user_id, Plan.is_deleted.is_(False))
+        )
+        return list(result.unique().scalars())

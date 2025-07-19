@@ -5,7 +5,7 @@ from app.utils.dependency import dependency
 
 from .models import Plan
 from .repository import PlanRepository
-from .schemas import PlanCreate, PlanRead
+from .schemas import PlanCreate, PlanRead, PlanReadWithInforms, PlansReadByUser
 
 
 @dependency
@@ -25,10 +25,16 @@ class PlanService:
 
         return PlanRead.model_validate(created_plan)
 
-    async def read_plan(self, *, plan_id: int) -> PlanRead:
+    async def read_plan(self, *, plan_id: int) -> PlanReadWithInforms:
         plan = await self.plan_repository.find_by_id(plan_id=plan_id)
 
         if not plan:
-            raise HTTPException(status_code=404, detail="계획을 찾을 수 없습니다.")
+            raise HTTPException(status_code=404, detail="해당 계획을 찾을 수 없습니다.")
 
-        return PlanRead.model_validate(plan)
+        return PlanReadWithInforms.model_validate(plan)
+
+    async def read_plans_by_user(self, *, user_id: int) -> PlansReadByUser:
+        plans = await self.plan_repository.find_by_user(user_id=user_id)
+        plans_list = [PlanRead.model_validate(plan) for plan in plans]
+
+        return PlansReadByUser(plans=plans_list)
