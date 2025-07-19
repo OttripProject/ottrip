@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 from sqlalchemy import String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -40,7 +40,7 @@ class User(Base):
     description: Mapped[str] = mapped_column(String(1000))
     """유저 설명"""
 
-    gender: Mapped[Optional[Gender]]
+    gender: Mapped[Gender | None]
 
     plans: Mapped[list["Plan"]] = relationship(
         back_populates="owner",
