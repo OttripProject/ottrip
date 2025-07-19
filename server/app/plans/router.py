@@ -14,3 +14,11 @@ async def create_plan(
     plan_data: PlanCreate,
 ) -> PlanRead:
     return await plan_service.create(plan_data=plan_data)
+
+
+@router.get("/{plan_id}", status_code=status.HTTP_200_OK)
+async def read_plan(
+    plan_service: PlanService,
+    plan_id: int,
+) -> PlanRead:
+    return await plan_service.read_plan(plan_id=plan_id)
