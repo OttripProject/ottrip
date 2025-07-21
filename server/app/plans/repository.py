@@ -1,6 +1,6 @@
 # from fastapi import HTTPException
 
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.orm import joinedload
 
 from app.database.deps import SessionDep
@@ -36,3 +36,12 @@ class PlanRepository:
             select(Plan).where(Plan.owner_id == user_id, Plan.is_deleted.is_(False))
         )
         return list(result.unique().scalars())
+
+    async def remove(self, *, plan_id: int) -> None:
+        stmt = (
+            update(Plan)
+            .where(Plan.id == plan_id, Plan.is_deleted.is_(False))
+            .values(is_deleted=True)
+        )
+        await self.session.execute(stmt)
+        await self.session.commit()

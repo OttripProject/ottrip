@@ -30,3 +30,11 @@ async def read_user_plans(
     user_id: int,
 ) -> PlansReadByUser:
     return await plan_service.read_plans_by_user(user_id=user_id)
+
+
+@router.delete("/{plan_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_plan(
+    plan_service: PlanService,
+    plan_id: int,
+) -> None:
+    await plan_service.delete(plan_id=plan_id)
