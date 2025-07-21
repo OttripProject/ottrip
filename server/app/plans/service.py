@@ -38,3 +38,12 @@ class PlanService:
         plans_list = [PlanRead.model_validate(plan) for plan in plans]
 
         return PlansReadByUser(plans=plans_list)
+
+    async def delete(self, *, plan_id: int) -> None:
+        plan = await self.plan_repository.find_by_id(plan_id=plan_id)
+        if not plan:
+            raise HTTPException(status_code=400, detail="계획을 찾을 수 없습니다.")
+        if plan.owner_id != self.current_user.id:
+            raise HTTPException(status_code=400, detail="계획 삭제 권한이 없습니다.")
+
+        await self.plan_repository.remove(plan_id=plan_id)
