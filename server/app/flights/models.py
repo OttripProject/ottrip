@@ -39,6 +39,12 @@ class Flight(Base):
     arrival_time: Mapped[datetime]
     """도착 시간"""
 
+    duration: Mapped[str]
+    """비행 시간"""
+
+    memo: Mapped[str | None] = mapped_column(nullable=True)
+    """메모"""
+
     seat_class: Mapped[str]
     """좌석 등급"""
 
