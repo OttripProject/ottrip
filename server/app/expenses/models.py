@@ -9,6 +9,7 @@ from app.models import Base
 
 if TYPE_CHECKING:
     from app.flights.models import Flight
+    from app.itinerary.models import Itinerary
     from app.plans.models import Plan
 
 
@@ -52,7 +53,17 @@ class Expense(Base):
     plan: Mapped["Plan"] = relationship(back_populates="expenses")
     """해당 여행"""
 
-    flight_id: Mapped[Optional[int]] = mapped_column(
+    itinerary_id: Mapped[int | None] = mapped_column(
+        Integer,
+        ForeignKey("itinerary.id"),
+        nullable=True,
+    )
+    itinerary: Mapped["Itinerary"] = relationship(
+        back_populates="expenses",
+        uselist=False,
+    )
+
+    flight_id: Mapped[int | None] = mapped_column(
         Integer,
         ForeignKey("flight.id", ondelete="CASCADE"),
         nullable=True,

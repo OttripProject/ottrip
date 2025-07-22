@@ -1,6 +1,5 @@
 from datetime import date
 
-# from pydantic import Field
 from app.expenses.schemas import ExpenseRead
 from app.flights.schemas import FlightRead
 from app.itinerary.schemas import ItineraryRead
@@ -17,8 +16,10 @@ class PlanCreate(PlanBase):
     pass
 
 
-class PlanUpdate(PlanBase):
-    pass
+class PlanUpdate(APISchema):
+    title: str | None = None
+    start_date: date | None = None
+    end_date: date | None = None
 
 
 class PlanRead(PlanBase):
