@@ -39,7 +39,7 @@ class Expense(Base):
     amount: Mapped[int]
     """금액"""
 
-    description: Mapped[str]
+    description: Mapped[str | None] = mapped_column(nullable=True)
     """설명"""
 
     date: Mapped[date]
@@ -50,17 +50,14 @@ class Expense(Base):
         ForeignKey("plan.id"),
         nullable=False,
     )
-    plan: Mapped["Plan"] = relationship(back_populates="expenses")
+    plan: Mapped["Plan"] = relationship(back_populates="expenses", init=False)
     """해당 여행"""
 
     itinerary_id: Mapped[int | None] = mapped_column(
-        Integer,
-        ForeignKey("itinerary.id"),
-        nullable=True,
+        Integer, ForeignKey("itinerary.id"), nullable=True, init=False
     )
     itinerary: Mapped["Itinerary"] = relationship(
-        back_populates="expenses",
-        uselist=False,
+        back_populates="expenses", uselist=False, init=False
     )
 
     flight_id: Mapped[int | None] = mapped_column(
@@ -70,8 +67,7 @@ class Expense(Base):
         unique=True,
     )
     flight: Mapped[Optional["Flight"]] = relationship(
-        back_populates="expense",
-        uselist=False,
+        back_populates="expense", uselist=False, init=False
     )
 
     is_deleted: Mapped[bool] = mapped_column(default=False, nullable=False)

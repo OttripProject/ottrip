@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import TYPE_CHECKING, Optional
 
-from sqlalchemy import ForeignKey, Integer
+from sqlalchemy import DateTime, ForeignKey, Integer
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models import Base
@@ -33,17 +33,15 @@ class Flight(Base):
     arrival_airport: Mapped[str]
     """도착 공항"""
 
-    departure_time: Mapped[datetime]
+    departure_time: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
     """출발 시간"""
 
-    arrival_time: Mapped[datetime]
+    arrival_time: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
     """도착 시간"""
-
-    duration: Mapped[str]
-    """비행 시간"""
-
-    memo: Mapped[str | None] = mapped_column(nullable=True)
-    """메모"""
 
     seat_class: Mapped[str]
     """좌석 등급"""
@@ -51,15 +49,22 @@ class Flight(Base):
     seat_number: Mapped[str]
     """좌석 번호"""
 
+    duration: Mapped[str | None] = mapped_column(nullable=True)
+    """비행 시간"""
+
+    memo: Mapped[str | None] = mapped_column(nullable=True)
+    """메모"""
+
     plan_id: Mapped[int] = mapped_column(
         Integer,
         ForeignKey("plan.id"),
         nullable=False,
     )
-    plan: Mapped["Plan"] = relationship(back_populates="flights")
+    plan: Mapped["Plan"] = relationship(init=False, back_populates="flights")
     """해당 여행"""
 
     expense: Mapped[Optional["Expense"]] = relationship(
+        init=False,
         back_populates="flight",
         uselist=False,
         cascade="all, delete-orphan",
