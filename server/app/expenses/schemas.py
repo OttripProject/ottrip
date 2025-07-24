@@ -1,4 +1,5 @@
 from datetime import date
+from typing import Optional
 
 from app.schemas import APISchema
 
@@ -8,7 +9,7 @@ from .models import ExpenseCategory
 
 
 class ExpenseBase(APISchema):
-    date: date
+    ex_date: date
     amount: int
     category: ExpenseCategory
     description: str | None = None
@@ -29,3 +30,10 @@ class ExpenseCreateWithItinerary(ExpenseCreate):
 
 class ExpenseRead(ExpenseBase):
     id: int
+
+
+class ExpenseUpdate(APISchema):
+    ex_date: Optional[date] = None
+    amount: Optional[int] = None
+    category: Optional[ExpenseCategory] = None
+    description: Optional[str] = None

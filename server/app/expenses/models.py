@@ -42,7 +42,7 @@ class Expense(Base):
     description: Mapped[str | None] = mapped_column(nullable=True)
     """설명"""
 
-    date: Mapped[date]
+    ex_date: Mapped[date]
     """지출날짜"""
 
     plan_id: Mapped[int] = mapped_column(
@@ -65,6 +65,7 @@ class Expense(Base):
         ForeignKey("flight.id", ondelete="CASCADE"),
         nullable=True,
         unique=True,
+        init=False,
     )
     flight: Mapped[Optional["Flight"]] = relationship(
         back_populates="expense", uselist=False, init=False
