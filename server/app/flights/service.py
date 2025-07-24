@@ -37,12 +37,12 @@ class FlightService:
                 amount=flight_data.expense.amount,
                 category=flight_data.expense.category,
                 description=flight_data.expense.description,
-                date=flight_data.expense.date,
+                ex_date=flight_data.expense.ex_date,
                 plan_id=created_flight.plan_id,
-                flight_id=created_flight.id,
             )
-            await self.expense_repository.save(expense=expense)
+            created_expense = await self.expense_repository.save(expense=expense)
             created_flight.expense = expense
+            created_expense.flight_id = created_flight.id
 
         return FlightRead.model_validate(created_flight)
 
@@ -70,7 +70,7 @@ class FlightService:
             )
         if flight.plan.owner_id != self.current_user.id:
             raise HTTPException(
-                status_code=400, detail="해당 항공편 수정 대한 권한이 없습니다."
+                status_code=400, detail="해당 항공편에 대한 수정 권한이 없습니다."
             )
 
         if update_data.airline:
