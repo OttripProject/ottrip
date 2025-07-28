@@ -19,16 +19,19 @@ class ItineraryRepository:
     async def find_by_id(self, *, itinerary_id: int) -> Itinerary | None:
         result = await self.session.execute(
             select(Itinerary)
-            .options(joinedload(Itinerary.plan))
+            .options(
+                joinedload(Itinerary.plan),
+                joinedload(Itinerary.expenses),
+            )
             .where(Itinerary.id == itinerary_id, Itinerary.is_deleted.is_(False))
         )
         return result.unique().scalar_one_or_none()
 
     async def find_all_by_plan(self, *, plan_id: int) -> list[Itinerary]:
         result = await self.session.execute(
-            select(Itinerary).where(
-                Itinerary.plan_id == plan_id, Itinerary.is_deleted.is_(False)
-            )
+            select(Itinerary)
+            .options(joinedload(Itinerary.expenses))
+            .where(Itinerary.plan_id == plan_id, Itinerary.is_deleted.is_(False))
         )
         return list(result.unique().scalars())
 

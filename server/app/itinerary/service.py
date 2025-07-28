@@ -1,6 +1,7 @@
 from fastapi import HTTPException
 
 from app.auth.deps import CurrentUser
+from app.plans.repository import PlanRepository
 from app.utils.dependency import dependency
 
 from .models import Itinerary
@@ -12,6 +13,7 @@ from .schemas import ItineraryCreate, ItineraryRead, ItineraryUpdate
 class ItineraryService:
     current_user: CurrentUser
     itinerary_repository: ItineraryRepository
+    plan_repository: PlanRepository
 
     async def create(self, *, itinerary_data: ItineraryCreate) -> ItineraryRead:
         create_itinerary_data = Itinerary(
@@ -43,6 +45,10 @@ class ItineraryService:
         return ItineraryRead.model_validate(itinerary)
 
     async def read_itineraries_by_plan(self, *, plan_id: int) -> list[ItineraryRead]:
+        plan = await self.plan_repository.find_by_id(plan_id=plan_id)
+        if not plan:
+            raise HTTPException(status_code=400, detail="해당 계획을 찾을 수 없습니다.")
+
         itineraries = await self.itinerary_repository.find_all_by_plan(plan_id=plan_id)
         itineraries_list = [
             ItineraryRead.model_validate(itinerary) for itinerary in itineraries
