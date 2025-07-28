@@ -1,8 +1,9 @@
 """db base
 
-Revision ID: 701e16732a53
+
+Revision ID: c458c402844b
 Revises:
-Create Date: 2025-07-19 00:09:07.004107
+Create Date: 2025-07-24 17:11:17.360313
 
 """
 
@@ -12,7 +13,7 @@ import sqlalchemy as sa
 from alembic import op
 
 # revision identifiers, used by Alembic.
-revision: str = "701e16732a53"
+revision: str = "c458c402844b"
 down_revision: Union[str, None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -71,16 +72,35 @@ def upgrade() -> None:
         sa.UniqueConstraint("verified_email"),
     )
     op.create_table(
+        "accommodation",
+        sa.Column("id", sa.Integer(), autoincrement=True, nullable=False),
+        sa.Column("name", sa.String(), nullable=False),
+        sa.Column("address", sa.String(), nullable=True),
+        sa.Column("start_date", sa.Date(), nullable=False),
+        sa.Column("end_date", sa.Date(), nullable=False),
+        sa.Column("memo", sa.String(), nullable=True),
+        sa.Column("plan_id", sa.Integer(), nullable=False),
+        sa.Column("is_deleted", sa.Boolean(), nullable=False),
+        sa.ForeignKeyConstraint(
+            ["plan_id"],
+            ["plan.id"],
+        ),
+        sa.PrimaryKeyConstraint("id"),
+    )
+    op.create_index(op.f("ix_accommodation_id"), "accommodation", ["id"], unique=False)
+    op.create_table(
         "flight",
         sa.Column("id", sa.Integer(), autoincrement=True, nullable=False),
         sa.Column("airline", sa.String(), nullable=False),
         sa.Column("flight_number", sa.String(), nullable=False),
         sa.Column("departure_airport", sa.String(), nullable=False),
         sa.Column("arrival_airport", sa.String(), nullable=False),
-        sa.Column("departure_time", sa.DateTime(), nullable=False),
-        sa.Column("arrival_time", sa.DateTime(), nullable=False),
+        sa.Column("departure_time", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("arrival_time", sa.DateTime(timezone=True), nullable=False),
         sa.Column("seat_class", sa.String(), nullable=False),
         sa.Column("seat_number", sa.String(), nullable=False),
+        sa.Column("duration", sa.String(), nullable=True),
+        sa.Column("memo", sa.String(), nullable=True),
         sa.Column("plan_id", sa.Integer(), nullable=False),
         sa.Column("is_deleted", sa.Boolean(), nullable=False),
         sa.ForeignKeyConstraint(
@@ -94,11 +114,11 @@ def upgrade() -> None:
         "itinerary",
         sa.Column("id", sa.Integer(), autoincrement=True, nullable=False),
         sa.Column("title", sa.String(), nullable=False),
-        sa.Column("description", sa.String(), nullable=False),
-        sa.Column("country", sa.String(), nullable=False),
-        sa.Column("city", sa.String(), nullable=False),
-        sa.Column("location", sa.String(), nullable=False),
-        sa.Column("date", sa.Date(), nullable=False),
+        sa.Column("description", sa.String(), nullable=True),
+        sa.Column("country", sa.String(), nullable=True),
+        sa.Column("city", sa.String(), nullable=True),
+        sa.Column("location", sa.String(), nullable=True),
+        sa.Column("itinerary_date", sa.Date(), nullable=False),
         sa.Column("start_time", sa.Time(), nullable=False),
         sa.Column("end_time", sa.Time(), nullable=False),
         sa.Column("plan_id", sa.Integer(), nullable=False),
@@ -128,17 +148,27 @@ def upgrade() -> None:
             nullable=False,
         ),
         sa.Column("amount", sa.Integer(), nullable=False),
-        sa.Column("description", sa.String(), nullable=False),
-        sa.Column("date", sa.Date(), nullable=False),
+        sa.Column("description", sa.String(), nullable=True),
+        sa.Column("ex_date", sa.Date(), nullable=False),
         sa.Column("plan_id", sa.Integer(), nullable=False),
+        sa.Column("itinerary_id", sa.Integer(), nullable=True),
         sa.Column("flight_id", sa.Integer(), nullable=True),
+        sa.Column("accommodation_id", sa.Integer(), nullable=True),
         sa.Column("is_deleted", sa.Boolean(), nullable=False),
+        sa.ForeignKeyConstraint(
+            ["accommodation_id"], ["accommodation.id"], ondelete="CASCADE"
+        ),
         sa.ForeignKeyConstraint(["flight_id"], ["flight.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(
+            ["itinerary_id"],
+            ["itinerary.id"],
+        ),
         sa.ForeignKeyConstraint(
             ["plan_id"],
             ["plan.id"],
         ),
         sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint("accommodation_id"),
         sa.UniqueConstraint("flight_id"),
     )
     op.create_index(op.f("ix_expense_id"), "expense", ["id"], unique=False)
@@ -153,6 +183,8 @@ def downgrade() -> None:
     op.drop_table("itinerary")
     op.drop_index(op.f("ix_flight_id"), table_name="flight")
     op.drop_table("flight")
+    op.drop_index(op.f("ix_accommodation_id"), table_name="accommodation")
+    op.drop_table("accommodation")
     op.drop_table("user_auth")
     op.drop_index(op.f("ix_plan_id"), table_name="plan")
     op.drop_table("plan")

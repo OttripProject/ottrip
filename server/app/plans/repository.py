@@ -4,6 +4,8 @@ from sqlalchemy import select, update
 from sqlalchemy.orm import joinedload
 
 from app.database.deps import SessionDep
+from app.flights.models import Flight
+from app.itinerary.models import Itinerary
 from app.utils.dependency import dependency
 
 from .models import Plan
@@ -23,8 +25,8 @@ class PlanRepository:
             select(Plan)
             .options(
                 joinedload(Plan.owner),
-                joinedload(Plan.flights),
-                joinedload(Plan.itineraries),
+                joinedload(Plan.flights).joinedload(Flight.expense),
+                joinedload(Plan.itineraries).joinedload(Itinerary.expenses),
                 joinedload(Plan.expenses),
             )
             .where(Plan.id == plan_id, Plan.is_deleted.is_(False))

@@ -7,6 +7,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.models import Base
 
 if TYPE_CHECKING:
+    from app.accomodation.models import Accommodation
     from app.expenses.models import Expense
     from app.flights.models import Flight
     from app.itinerary.models import Itinerary
@@ -65,6 +66,13 @@ class Plan(Base):
     )
 
     itineraries: Mapped[list["Itinerary"]] = relationship(
+        back_populates="plan",
+        cascade="all, delete-orphan",
+        default_factory=list,
+    )
+
+    accommodations: Mapped[list["Accommodation"]] = relationship(
+        init=False,
         back_populates="plan",
         cascade="all, delete-orphan",
         default_factory=list,
