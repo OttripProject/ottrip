@@ -14,20 +14,20 @@ from .service import PlanService
 router = create_router()
 
 
+@router.get("/me", status_code=status.HTTP_200_OK)
+async def read_my_plans(
+    plan_service: PlanService,
+) -> PlansReadByUser:
+    """현재 로그인 사용자의 모든 여행 계획."""
+    return await plan_service.read_plans_by_user()
+
+
 @router.get("/{plan_id}", status_code=status.HTTP_200_OK)
 async def read_plan(
     plan_service: PlanService,
     plan_id: int,
 ) -> PlanReadWithInforms:
     return await plan_service.read_plan(plan_id=plan_id)
-
-
-@router.get("/{user_id}/user", status_code=status.HTTP_200_OK)
-async def read_user_plans(
-    plan_service: PlanService,
-    user_id: int,
-) -> PlansReadByUser:
-    return await plan_service.read_plans_by_user(user_id=user_id)
 
 
 @router.post("/", status_code=status.HTTP_201_CREATED)
