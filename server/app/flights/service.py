@@ -41,7 +41,7 @@ class FlightService:
                 plan_id=created_flight.plan_id,
             )
             created_expense = await self.expense_repository.save(expense=expense)
-            created_flight.expense = expense
+            created_flight.expense = created_expense
             created_expense.flight_id = created_flight.id
 
         return FlightRead.model_validate(created_flight)

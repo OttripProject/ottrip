@@ -19,7 +19,10 @@ class FlightRepository:
     async def find_by_id(self, *, flight_id: int) -> Flight | None:
         result = await self.session.execute(
             select(Flight)
-            .options(joinedload(Flight.expense))
+            .options(
+                joinedload(Flight.plan),
+                joinedload(Flight.expense),
+            )
             .where(Flight.id == flight_id, Flight.is_deleted.is_(False))
         )
         return result.unique().scalar_one_or_none()

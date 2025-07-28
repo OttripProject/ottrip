@@ -1,6 +1,6 @@
 import enum
 from datetime import date
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 from sqlalchemy import ForeignKey, Integer
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -8,6 +8,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.models import Base
 
 if TYPE_CHECKING:
+    from app.accomodation.models import Accommodation
     from app.flights.models import Flight
     from app.itinerary.models import Itinerary
     from app.plans.models import Plan
@@ -60,6 +61,7 @@ class Expense(Base):
         back_populates="expenses", uselist=False, init=False
     )
 
+    # Flight 1:1 FK (Expense → Flight)
     flight_id: Mapped[int | None] = mapped_column(
         Integer,
         ForeignKey("flight.id", ondelete="CASCADE"),
@@ -67,8 +69,24 @@ class Expense(Base):
         unique=True,
         init=False,
     )
-    flight: Mapped[Optional["Flight"]] = relationship(
-        back_populates="expense", uselist=False, init=False
+    flight: Mapped["Flight | None"] = relationship(
+        back_populates="expense",
+        uselist=False,
+        init=False,
+    )
+
+    # Accommodation 1:1 FK (Expense → Accommodation)
+    accommodation_id: Mapped[int | None] = mapped_column(
+        Integer,
+        ForeignKey("accommodation.id", ondelete="CASCADE"),
+        nullable=True,
+        unique=True,
+        init=False,
+    )
+    accommodation: Mapped["Accommodation | None"] = relationship(
+        back_populates="expense",
+        uselist=False,
+        init=False,
     )
 
     is_deleted: Mapped[bool] = mapped_column(default=False, nullable=False)
