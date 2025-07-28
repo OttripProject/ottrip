@@ -46,7 +46,9 @@ class Itinerary(Base):
     """종료 시간"""
 
     expenses: Mapped[list["Expense"]] = relationship(
-        back_populates="itinerary", init=False
+        back_populates="itinerary",
+        init=False,
+        default_factory=list,
     )
 
     plan_id: Mapped[int] = mapped_column(
