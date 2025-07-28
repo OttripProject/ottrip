@@ -32,6 +32,14 @@ class ExpenseRepository:
         )
         return list(result.unique().scalars())
 
+    async def find_all_by_itinerary(self, *, itinerary_id: int) -> list[Expense]:
+        result = await self.session.execute(
+            select(Expense).where(
+                Expense.itinerary_id == itinerary_id, Expense.is_deleted.is_(False)
+            )
+        )
+        return list(result.unique().scalars())
+
     async def remove(self, *, expense_id: int) -> None:
         stmt = (
             update(Expense)

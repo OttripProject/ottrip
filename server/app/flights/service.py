@@ -3,6 +3,7 @@ from fastapi import HTTPException
 from app.auth.deps import CurrentUser
 from app.expenses.models import Expense
 from app.expenses.repository import ExpenseRepository
+from app.plans.repository import PlanRepository
 from app.utils.dependency import dependency
 
 from .models import Flight
@@ -15,6 +16,7 @@ class FlightService:
     current_user: CurrentUser
     flight_repository: FlightRepository
     expense_repository: ExpenseRepository
+    plan_repository: PlanRepository
 
     async def create(self, *, flight_data: FlightCreate) -> FlightRead:
         create_flight_data = Flight(
@@ -57,6 +59,10 @@ class FlightService:
         return FlightRead.model_validate(flight)
 
     async def read_flights_by_plan(self, *, plan_id: int) -> list[FlightRead]:
+        plan = await self.plan_repository.find_by_id(plan_id=plan_id)
+        if not plan:
+            raise HTTPException(status_code=404, detail="해당 계획을 찾을 수 없습니다.")
+
         flights = await self.flight_repository.find_all_by_plan(plan_id=plan_id)
         flights_list = [FlightRead.model_validate(flight) for flight in flights]
 
