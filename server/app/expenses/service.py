@@ -1,6 +1,8 @@
 from fastapi import HTTPException
 
 from app.auth.deps import CurrentUser
+from app.itinerary.repository import ItineraryRepository
+from app.plans.repository import PlanRepository
 from app.utils.dependency import dependency
 
 from .models import Expense
@@ -12,6 +14,8 @@ from .schemas import ExpenseCreate, ExpenseRead, ExpenseUpdate
 class ExpenseService:
     current_user: CurrentUser
     expense_repository: ExpenseRepository
+    itinerary_repository: ItineraryRepository
+    plan_repository: PlanRepository
 
     async def create(self, *, expense_data: ExpenseCreate) -> ExpenseRead:
         create_expense_data = Expense(
@@ -36,7 +40,27 @@ class ExpenseService:
         return ExpenseRead.model_validate(expense)
 
     async def read_expenses_by_plan(self, *, plan_id: int) -> list[ExpenseRead]:
+        plan = await self.plan_repository.find_by_id(plan_id=plan_id)
+        if not plan:
+            raise HTTPException(status_code=404, detail="해당 계획을 찾을 수 없습니다.")
+
         expenses = await self.expense_repository.find_all_by_plan(plan_id=plan_id)
+        expenses_list = [ExpenseRead.model_validate(expense) for expense in expenses]
+
+        return expenses_list
+
+    async def read_expenses_by_itinerary(
+        self, *, itinerary_id: int
+    ) -> list[ExpenseRead]:
+        itinerary = await self.itinerary_repository.find_by_id(
+            itinerary_id=itinerary_id
+        )
+        if not itinerary:
+            raise HTTPException(status_code=404, detail="해당 일정을 찾을 수 없습니다.")
+
+        expenses = await self.expense_repository.find_all_by_itinerary(
+            itinerary_id=itinerary_id
+        )
         expenses_list = [ExpenseRead.model_validate(expense) for expense in expenses]
 
         return expenses_list

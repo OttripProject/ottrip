@@ -28,7 +28,6 @@ class FlightRead(FlightBase):
 
 
 class FlightUpdate(APISchema):
-    title: str | None = None
     departure_time: datetime | None = None
     arrival_time: datetime | None = None
     airline: str | None = None

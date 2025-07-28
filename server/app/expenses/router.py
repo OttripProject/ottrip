@@ -30,6 +30,17 @@ async def read_expenses(
     return await expense_service.read_expenses_by_plan(plan_id=plan_id)
 
 
+@router.get("/{itinerary_id}/itinerary", status_code=status.HTTP_200_OK)
+async def read_expenses_by_itinerary(
+    expense_service: ExpenseService,
+    itinerary_id: int,
+) -> list[ExpenseRead]:
+    """
+    특정 일정에 속한 모든 비용 정보를 조회합니다.
+    """
+    return await expense_service.read_expenses_by_itinerary(itinerary_id=itinerary_id)
+
+
 @router.post("/", status_code=status.HTTP_201_CREATED)
 async def create_expense(
     expense_service: ExpenseService,
