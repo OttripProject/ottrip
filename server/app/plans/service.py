@@ -1,6 +1,7 @@
 from fastapi import HTTPException
 
 from app.auth.deps import CurrentUser
+from app.users.repository import UserRepository
 from app.utils.dependency import dependency
 
 from .models import Plan
@@ -18,6 +19,7 @@ from .schemas import (
 class PlanService:
     current_user: CurrentUser
     plan_repository: PlanRepository
+    user_repository: UserRepository
 
     async def create(self, *, plan_data: PlanCreate) -> PlanRead:
         create_plan_data = Plan(
@@ -39,8 +41,14 @@ class PlanService:
 
         return PlanReadWithInforms.model_validate(plan)
 
-    async def read_plans_by_user(self, *, user_id: int) -> PlansReadByUser:
-        plans = await self.plan_repository.find_all_by_user(user_id=user_id)
+    async def read_plans_by_user(self) -> PlansReadByUser:
+        user = await self.user_repository.find_by_id(user_id=self.current_user.id)
+        if not user:
+            raise HTTPException(status_code=400, detail="사용자를 찾을 수 없습니다.")
+
+        plans = await self.plan_repository.find_all_by_user(
+            user_id=self.current_user.id
+        )
         plans_list = [PlanRead.model_validate(plan) for plan in plans]
 
         return PlansReadByUser(plans=plans_list)
