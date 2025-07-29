@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from app.expenses.schemas import ExpenseBase, ExpenseRead
+from app.expenses.schemas import ExpenseBase, ExpenseRead, ExpenseUpdate
 from app.schemas import APISchema
 
 
@@ -34,7 +34,8 @@ class FlightUpdate(APISchema):
     flight_number: str | None = None
     departure_airport: str | None = None
     arrival_airport: str | None = None
-    seat_class: str | None
+    seat_class: str | None = None
     seat_number: str | None = None
     duration: str | None = None
     memo: str | None = None
+    expense: ExpenseUpdate | None = None
