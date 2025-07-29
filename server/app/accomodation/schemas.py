@@ -1,10 +1,7 @@
 from datetime import date
-from typing import Optional
 
-from app.expenses.schemas import ExpenseBase, ExpenseRead
+from app.expenses.schemas import ExpenseBase, ExpenseRead, ExpenseUpdate
 from app.schemas import APISchema
-
-# from .models import Accommodation
 
 
 class AccommodationBase(APISchema):
@@ -12,7 +9,7 @@ class AccommodationBase(APISchema):
     address: str
     start_date: date
     end_date: date
-    memo: Optional[str] = None
+    memo: str | None = None
 
 
 class AccommodationCreate(AccommodationBase):
@@ -26,9 +23,9 @@ class AccommodationRead(AccommodationBase):
 
 
 class AccommodationUpdate(APISchema):
-    name: Optional[str] = None
-    address: Optional[str] = None
-    start_date: Optional[date] = None
-    end_date: Optional[date] = None
-    total_price: Optional[int] = None
-    memo: Optional[str] = None
+    name: str | None = None
+    address: str | None = None
+    start_date: date | None = None
+    end_date: date | None = None
+    memo: str | None = None
+    expense: ExpenseUpdate | None = None

@@ -102,6 +102,22 @@ class FlightService:
 
         updated_flight = await self.flight_repository.save(flight=flight)
 
+        if update_data.expense:
+            if flight.expense:
+                if update_data.expense.amount is not None:
+                    flight.expense.amount = update_data.expense.amount
+                if update_data.expense.category is not None:
+                    flight.expense.category = update_data.expense.category
+                if update_data.expense.description is not None:
+                    flight.expense.description = update_data.expense.description
+                if update_data.expense.ex_date is not None:
+                    flight.expense.ex_date = update_data.expense.ex_date
+
+                updated_expense = await self.expense_repository.save(
+                    expense=flight.expense
+                )
+                flight.expense = updated_expense
+
         return FlightRead.model_validate(updated_flight)
 
     async def delete(self, *, flight_id: int) -> None:

@@ -1,5 +1,4 @@
 from datetime import date
-from typing import Optional
 
 from app.schemas import APISchema
 
@@ -33,7 +32,7 @@ class ExpenseRead(ExpenseBase):
 
 
 class ExpenseUpdate(APISchema):
-    ex_date: Optional[date] = None
-    amount: Optional[int] = None
-    category: Optional[ExpenseCategory] = None
-    description: Optional[str] = None
+    ex_date: date | None = None
+    amount: int | None = None
+    category: ExpenseCategory | None = None
+    description: str | None = None

@@ -102,6 +102,23 @@ class AccommodationService:
             accommodation=accommodation
         )
 
+        if update_data.expense:
+            if accommodation.expense:
+                if update_data.expense.amount is not None:
+                    accommodation.expense.amount = update_data.expense.amount
+                if update_data.expense.category is not None:
+                    accommodation.expense.category = update_data.expense.category
+                if update_data.expense.description is not None:
+                    accommodation.expense.description = update_data.expense.description
+                if update_data.expense.ex_date is not None:
+                    accommodation.expense.ex_date = update_data.expense.ex_date
+
+                updated_expense = await self.expense_repository.save(
+                    expense=accommodation.expense
+                )
+
+                updated_accommodation.expense = updated_expense
+
         return AccommodationRead.model_validate(updated_accommodation)
 
     async def delete(self, *, accommodation_id: int) -> None:
