@@ -1,0 +1,32 @@
+{
+  "cli": {
+    "version": ">= 16.14.0",
+    "appVersionSource": "remote",
+    "promptToConfigurePushNotifications": false
+  },
+  "build": {
+    "prod": {
+      "channel": "production",
+      "environment": "production",
+      "autoIncrement": true,
+      "android": { "image": "auto" },
+      "ios": { "image": "auto" },
+      "corepack": true
+    },
+    "alpha": {
+      "extends": "prod",
+      "environment": "development",
+      "distribution": "internal",
+      "channel": "dev"
+    },
+    "dev": {
+      "extends": "alpha",
+      "autoIncrement": false,
+      "developmentClient": true,
+      "env": { "DEV_CLIENT": "true" }
+    }
+  },
+  "submit": {
+    "production": {}
+  }
+}
