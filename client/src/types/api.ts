@@ -9,78 +9,113 @@ export interface ApiResponse<T = any> {
 export interface Plan {
   id: number;
   title: string;
-  start_date: string;
-  end_date: string;
-  created_at: string;
-  updated_at: string;
+  startDate: string;
+  endDate: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface CreatePlanRequest {
   title: string;
-  start_date: string;
-  end_date: string;
+  startDate: string;
+  endDate: string;
+}
+
+export interface UpdatePlanRequest {
+  title?: string;
+  startDate?: string;
+  endDate?: string;
 }
 
 // 일정 (Itinerary) 관련 타입
 export interface Itinerary {
   id: number;
   title: string;
-  content?: string;
+  description?: string;
   country?: string;
   city?: string;
   location?: string;
-  itinerary_date: string;
-  start_time: string;
-  end_time: string;
-  color: string;
-  plan_id: number;
-  created_at: string;
-  updated_at: string;
+  itineraryDate: string;
+  startTime: string;
+  endTime: string;
+  planId: number;
 }
 
 export interface CreateItineraryRequest {
   title: string;
-  content?: string;
+  description?: string;
   country?: string;
   city?: string;
   location?: string;
-  itinerary_date: string;
-  start_time: string;
-  end_time: string;
-  color?: string;
-  plan_id: number;
+  itineraryDate: string;
+  startTime: string;
+  endTime: string;
+  planId: number;
+}
+
+export interface UpdateItineraryRequest {
+  title?: string;
+  description?: string;
+  country?: string;
+  city?: string;
+  location?: string;
+  itineraryDate?: string;
+  startTime?: string;
+  endTime?: string;
 }
 
 // 항공 (Flight) 관련 타입
 export interface Flight {
   id: number;
   airline: string;
-  flight_number: string;
-  departure_airport: string;
-  arrival_airport: string;
-  departure_time: string;
-  arrival_time: string;
-  seat_class?: string;
-  seat_number?: string;
+  flightNumber: string;
+  departureAirport: string;
+  arrivalAirport: string;
+  departureTime: string;
+  arrivalTime: string;
+  seatClass?: string;
+  seatNumber?: string;
   duration?: string;
   memo?: string;
-  plan_id: number;
-  created_at: string;
-  updated_at: string;
+  planId: number;
+}
+
+// 항공 생성·수정 시에만 사용하는 경비 입력 타입 (서버 FlightCreate.expense 는 ExpenseBase 스키마를 따름)
+export interface FlightExpenseInput {
+  exDate: string;
+  amount: number;
+  category: ExpenseCategory;
+  currency: ExpenseCurrency;
+  description?: string;
 }
 
 export interface CreateFlightRequest {
   airline: string;
-  flight_number: string;
-  departure_airport: string;
-  arrival_airport: string;
-  departure_time: string;
-  arrival_time: string;
-  seat_class?: string;
-  seat_number?: string;
+  flightNumber: string;
+  departureAirport: string;
+  arrivalAirport: string;
+  departureTime: string;
+  arrivalTime: string;
+  seatClass?: string;
+  seatNumber?: string;
   duration?: string;
   memo?: string;
-  plan_id: number;
+  planId: number;
+  expense: FlightExpenseInput;
+}
+
+export interface UpdateFlightRequest {
+  airline?: string;
+  flightNumber?: string;
+  departureAirport?: string;
+  arrivalAirport?: string;
+  departureTime?: string;
+  arrivalTime?: string;
+  seatClass?: string;
+  seatNumber?: string;
+  duration?: string;
+  memo?: string;
+  expense?: Partial<FlightExpenseInput>;
 }
 
 // 숙박 (Accommodation) 관련 타입
@@ -88,21 +123,43 @@ export interface Accommodation {
   id: number;
   name: string;
   address?: string;
-  start_date: string;
-  end_date: string;
+  startDate: string;
+  endDate: string;
   memo?: string;
-  plan_id: number;
-  created_at: string;
-  updated_at: string;
+  planId: number;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface CreateAccommodationRequest {
   name: string;
   address?: string;
-  start_date: string;
-  end_date: string;
+  startDate: string;
+  endDate: string;
   memo?: string;
-  plan_id: number;
+  planId: number;
+  expense: {
+    exDate: string;
+    amount: number;
+    category: ExpenseCategory;
+    currency: ExpenseCurrency;
+    description?: string;
+  };
+}
+
+export interface UpdateAccommodationRequest {
+  name?: string;
+  address?: string;
+  startDate?: string;
+  endDate?: string;
+  memo?: string;
+  expense?: {
+    exDate?: string;
+    amount?: number;
+    category?: ExpenseCategory;
+    currency?: ExpenseCurrency;
+    description?: string;
+  };
 }
 
 // 지출 (Expense) 관련 타입
@@ -116,27 +173,50 @@ export enum ExpenseCategory {
   ETC = "etc",
 }
 
+export enum ExpenseCurrency {
+  KRW = "KRW",
+  USD = "USD",
+  EUR = "EUR",
+  JPY = "JPY",
+  CNY = "CNY",
+  GBP = "GBP",
+  AUD = "AUD",
+}
+
 export interface Expense {
   id: number;
   category: ExpenseCategory;
   amount: number;
+  currency: ExpenseCurrency;
   description?: string;
-  ex_date: string;
-  plan_id: number;
-  itinerary_id?: number;
-  flight_id?: number;
-  accommodation_id?: number;
-  created_at: string;
-  updated_at: string;
+  exDate: string;
+  planId: number;
+  itineraryId?: number;
+  flightId?: number;
+  accommodationId?: number;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface CreateExpenseRequest {
   category: ExpenseCategory;
   amount: number;
+  currency: ExpenseCurrency;
   description?: string;
-  ex_date: string;
-  plan_id: number;
-  itinerary_id?: number;
-  flight_id?: number;
-  accommodation_id?: number;
+  exDate: string;
+  planId: number;
+  itineraryId?: number;
+  flightId?: number;
+  accommodationId?: number;
+}
+
+export interface UpdateExpenseRequest {
+  category?: ExpenseCategory;
+  amount?: number;
+  currency?: ExpenseCurrency;
+  description?: string;
+  exDate?: string;
+  itineraryId?: number;
+  flightId?: number;
+  accommodationId?: number;
 } 

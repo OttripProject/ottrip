@@ -21,6 +21,7 @@ class ExpenseService:
         create_expense_data = Expense(
             amount=expense_data.amount,
             category=expense_data.category,
+            currency=expense_data.currency,
             description=expense_data.description,
             ex_date=expense_data.ex_date,
             plan_id=expense_data.plan_id,
@@ -28,6 +29,13 @@ class ExpenseService:
         created_expense = await self.expense_repository.save(
             expense=create_expense_data
         )
+        # 선택적으로 일정/항공과 연결
+        itinerary_id = getattr(expense_data, "itinerary_id", None)
+        if itinerary_id:
+            created_expense.itinerary_id = itinerary_id
+        flight_id = getattr(expense_data, "flight_id", None)
+        if flight_id:
+            created_expense.flight_id = flight_id
 
         return ExpenseRead.model_validate(created_expense)
 
@@ -84,6 +92,8 @@ class ExpenseService:
             expense.description = update_data.description
         if update_data.ex_date:
             expense.ex_date = update_data.ex_date
+        if update_data.currency:
+            expense.currency = update_data.currency
 
         updated_expense = await self.expense_repository.save(expense=expense)
 

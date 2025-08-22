@@ -19,12 +19,12 @@ class FlightBase(APISchema):
 
 class FlightCreate(FlightBase):
     plan_id: int
-    expense: ExpenseBase
+    expense: ExpenseBase | None = None
 
 
 class FlightRead(FlightBase):
     id: int
-    expense: ExpenseRead | None = None
+    expense: ExpenseRead
 
 
 class FlightUpdate(APISchema):

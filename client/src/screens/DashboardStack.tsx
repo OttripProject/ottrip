@@ -2,64 +2,55 @@ import React, { useState } from 'react';
 import { View, StyleSheet } from 'react-native';
 import WeeklySchedule, { Itinerary } from '@/components/WeeklySchedule';
 import SidePanels from '@/navigation/SidePanels';
-
-const dummyItineraries: Itinerary[] = [
-  {
-    id: 1,
-    title: '오사카성 방문',
-    itinerary_date: '2025-01-27',
-    start_time: '09:00',
-    end_time: '11:00',
-    color: '#ff6b6b',
-  },
-  {
-    id: 2,
-    title: '도톤보리 쇼핑',
-    itinerary_date: '2025-01-27',
-    start_time: '14:00',
-    end_time: '16:00',
-    color: '#4ecdc4',
-  },
-  {
-    id: 3,
-    title: '우메다 스카이빌딩',
-    itinerary_date: '2025-01-28',
-    start_time: '16:00',
-    end_time: '18:00',
-    color: '#45b7d1',
-  },
-];
+import { usePlanData } from '@/hooks/usePlanData';
 
 export default function DashboardStack() {
-  const [itineraries, setItineraries] = useState(dummyItineraries);
-  const [flights, setFlights] = useState<any[]>([]);
-  const [accommodations, setAccommodations] = useState<any[]>([]);
-  const [expenses, setExpenses] = useState<any[]>([]);
+  const [selectedPlanId, setSelectedPlanId] = useState<number | null>(null);
+  const [selectedItinerary, setSelectedItinerary] = useState<any>(null);
+  
+  // 선택된 Plan의 데이터 로딩
+  const planData = usePlanData(selectedPlanId);
 
-  const handleItineraryAdd = (newItinerary: any) => {
-    setItineraries(prev => [...prev, newItinerary]);
+  const handleItineraryAdd = async (newItinerary: any) => {
+    // Plan이 선택된 경우에만 추가
+    if (selectedPlanId) {
+      await planData.refreshItineraries();
+    }
   };
 
-  const handleFlightAdd = (newFlight: any) => {
-    setFlights(prev => [...prev, newFlight]);
+  const handleFlightAdd = async (newFlight: any) => {
+    // Plan이 선택된 경우에만 추가
+    if (selectedPlanId) {
+      await planData.refreshFlights();
+    }
   };
 
-  const handleAccommodationAdd = (newAccommodation: any) => {
-    setAccommodations(prev => [...prev, newAccommodation]);
+  const handleAccommodationAdd = async (newAccommodation: any) => {
+    // Plan이 선택된 경우에만 추가
+    if (selectedPlanId) {
+      await planData.refreshAccommodations();
+    }
   };
 
-  const handleExpenseAdd = (newExpense: any) => {
-    setExpenses(prev => [...prev, newExpense]);
+  const handleExpenseAdd = async (newExpense: any) => {
+    // Plan이 선택된 경우에만 추가
+    if (selectedPlanId) {
+      await planData.refreshExpenses();
+    }
   };
 
   return (
     <View style={styles.container}>
       <WeeklySchedule 
-        itineraries={itineraries}
+        itineraries={planData.itineraries}
         height={400} 
         onItineraryAdd={handleItineraryAdd}
+        onPlanSelect={setSelectedPlanId}
+        onItinerarySelect={setSelectedItinerary}
       />
       <SidePanels 
+        planData={planData}
+        selectedItinerary={selectedItinerary}
         onItineraryAdd={handleItineraryAdd}
         onFlightAdd={handleFlightAdd}
         onAccommodationAdd={handleAccommodationAdd}

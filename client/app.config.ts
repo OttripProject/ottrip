@@ -5,7 +5,7 @@ import { match } from "ts-pattern";
 import { z } from "zod";
 import { envSchema as publicEnvSchema } from "./src/core/env/schema";
 
-const projectId = "c78be390-3769-4983-be83-9888018dbb02";
+const projectId = "760d14be-9546-4b34-bb91-d0348bceaaf9";
 
 export const envSchema = publicEnvSchema.extend({
   EAS_INIT: z.literal("true"),
@@ -21,7 +21,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     return {
       ...config,
       name: "Fallback",
-      slug: "showbility",
+      slug: "ottrip",
       extra: { eas: { projectId } },
     };
   }
@@ -107,6 +107,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
         },
       ],
       "expo-apple-authentication",
+
       [
         "expo-font",
         {

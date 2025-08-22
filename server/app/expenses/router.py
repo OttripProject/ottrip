@@ -2,7 +2,12 @@ from fastapi import status
 
 from app.core.router import create_router
 
-from .schemas import ExpenseCreate, ExpenseRead, ExpenseUpdate
+from .schemas import (
+    ExpenseCreate,
+    ExpenseCreateWithItinerary,
+    ExpenseRead,
+    ExpenseUpdate,
+)
 from .service import ExpenseService
 
 router = create_router()
@@ -49,6 +54,22 @@ async def create_expense(
     """
     새로운 비용 정보를 생성합니다.
     """
+    return await expense_service.create(expense_data=expense_data)
+
+
+@router.post("/{itinerary_id}/itinerary", status_code=status.HTTP_201_CREATED)
+async def create_expense_for_itinerary(
+    expense_service: ExpenseService,
+    itinerary_id: int,
+    expense_data: ExpenseCreateWithItinerary,
+) -> ExpenseRead:
+    """
+    일정에 연결된 비용 정보를 생성합니다.
+    Body는 camelCase(JSON)로 `itineraryId`를 포함할 수 있습니다.
+    """
+    # 경로의 itinerary_id를 우선 적용
+    if getattr(expense_data, "itinerary_id", None) is None:
+        expense_data.itinerary_id = itinerary_id
     return await expense_service.create(expense_data=expense_data)
 
 

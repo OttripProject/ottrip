@@ -2,6 +2,7 @@ from fastapi import HTTPException
 
 from app.auth.deps import CurrentUser
 from app.plans.repository import PlanRepository
+from app.expenses.repository import ExpenseRepository
 from app.utils.dependency import dependency
 
 from .models import Itinerary
@@ -14,6 +15,7 @@ class ItineraryService:
     current_user: CurrentUser
     itinerary_repository: ItineraryRepository
     plan_repository: PlanRepository
+    expense_repository: ExpenseRepository
 
     async def create(self, *, itinerary_data: ItineraryCreate) -> ItineraryRead:
         create_itinerary_data = Itinerary(
@@ -94,5 +96,8 @@ class ItineraryService:
             raise HTTPException(status_code=400, detail="일정을 찾을 수 없습니다.")
         if itinerary.plan.owner_id != self.current_user.id:
             raise HTTPException(status_code=400, detail="일정 수정 권한이 없습니다.")
-
+        
+        await self.expense_repository.soft_delete_by_itinerary_id(
+            itinerary_id=itinerary_id
+        )
         await self.itinerary_repository.remove(itinerary_id=itinerary_id)

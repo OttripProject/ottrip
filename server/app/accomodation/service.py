@@ -38,6 +38,7 @@ class AccommodationService:
                 amount=accommodation_data.expense.amount,
                 category=accommodation_data.expense.category,
                 description=accommodation_data.expense.description,
+                currency=accommodation_data.expense.currency,
                 ex_date=accommodation_data.expense.ex_date,
                 plan_id=created_accommodation.plan_id,
             )
@@ -132,4 +133,7 @@ class AccommodationService:
                 status_code=400, detail="해당 숙소에 대한 삭제 권한이 없습니다."
             )
 
+        await self.expense_repository.soft_delete_by_accommodation_id(
+            accommodation_id=accommodation_id
+        )
         await self.accommodation_repository.remove(accommodation_id=accommodation_id)

@@ -28,10 +28,19 @@
     "rules": {
       "recommended": true,
       "correctness": {
-        "noUnusedImports": { "level": "warn", "fix": "safe" }
+        "noUnusedImports": { "level": "warn", "fix": "safe" },
+        "noUnusedVariables": { "level": "warn", "fix": "safe" }
       },
       "suspicious": {
-        "noArrayIndexKey": "off"
+        "noArrayIndexKey": "off",
+        "noExplicitAny": "warn"
+      },
+      "style": {
+        "useConst": "error",
+        "useTemplate": "error"
+      },
+      "complexity": {
+        "noExcessiveCognitiveComplexity": "warn"
       }
     }
   },
