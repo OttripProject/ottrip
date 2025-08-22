@@ -14,11 +14,15 @@ interface TripSelectorProps {
   onTripSelect: (trip: Trip) => void;
   trips: Trip[];
   onTripAdd?: (trip: Omit<Trip, 'id'>) => void;
+  onTripUpdate?: (id: string, trip: Omit<Trip, 'id'>) => void;
+  onTripDelete?: (id: string) => void;
 }
 
-export default function TripSelector({ selectedTrip, onTripSelect, trips, onTripAdd }: TripSelectorProps) {
+export default function TripSelector({ selectedTrip, onTripSelect, trips, onTripAdd, onTripUpdate, onTripDelete }: TripSelectorProps) {
   const [showDropdown, setShowDropdown] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingTrip, setEditingTrip] = useState<Trip | null>(null);
   const [newTrip, setNewTrip] = useState({
     name: '',
     startDate: '',
@@ -43,6 +47,59 @@ export default function TripSelector({ selectedTrip, onTripSelect, trips, onTrip
     onTripAdd?.(newTrip);
     setNewTrip({ name: '', startDate: '', endDate: '' });
     setShowAddModal(false);
+    setShowDropdown(false);
+  };
+
+  const handleEditTrip = () => {
+    if (!editingTrip) return;
+    
+    if (!editingTrip.name.trim()) {
+      Alert.alert('오류', '여행 이름을 입력해주세요.');
+      return;
+    }
+    if (!editingTrip.startDate || !editingTrip.endDate) {
+      Alert.alert('오류', '시작일과 종료일을 선택해주세요.');
+      return;
+    }
+
+    onTripUpdate?.(editingTrip.id, {
+      name: editingTrip.name,
+      startDate: editingTrip.startDate,
+      endDate: editingTrip.endDate,
+    });
+    setEditingTrip(null);
+    setShowEditModal(false);
+    setShowDropdown(false);
+  };
+
+  const handleDeleteTrip = (tripId: string) => {
+    onTripDelete?.(tripId);
+    setShowDropdown(false);
+    
+    // 나중에 Alert 복원하려면 아래 주석 해제
+    /*
+    Alert.alert(
+      '여행 삭제',
+      '정말로 이 여행을 삭제하시겠습니까?',
+      [
+        { text: '취소', style: 'cancel' },
+        { 
+          text: '삭제', 
+          style: 'destructive',
+          onPress: () => {
+            console.log('✅ Delete confirmed for tripId:', tripId);
+            onTripDelete?.(tripId);
+            setShowDropdown(false);
+          }
+        }
+      ]
+    );
+    */
+  };
+
+  const openEditModal = (trip: Trip) => {
+    setEditingTrip(trip);
+    setShowEditModal(true);
     setShowDropdown(false);
   };
 
@@ -76,27 +133,44 @@ export default function TripSelector({ selectedTrip, onTripSelect, trips, onTrip
           <View style={styles.dropdown}>
             <ScrollView style={styles.tripList}>
               {trips.map((trip) => (
-                <Pressable
-                  key={trip.id}
-                  style={[
-                    styles.tripItem,
-                    selectedTrip?.id === trip.id && styles.selectedTripItem
-                  ]}
-                  onPress={() => handleTripSelect(trip)}
-                >
-                  <Text style={[
-                    styles.tripName,
-                    selectedTrip?.id === trip.id && styles.selectedTripText
-                  ]}>
-                    {trip.name}
-                  </Text>
-                  <Text style={[
-                    styles.tripDate,
-                    selectedTrip?.id === trip.id && styles.selectedTripText
-                  ]}>
-                    {trip.startDate} ~ {trip.endDate}
-                  </Text>
-                </Pressable>
+                <View key={trip.id} style={styles.tripItemContainer}>
+                  <Pressable
+                    style={[
+                      styles.tripItem,
+                      selectedTrip?.id === trip.id && styles.selectedTripItem
+                    ]}
+                    onPress={() => handleTripSelect(trip)}
+                  >
+                    <View style={styles.tripInfo}>
+                      <Text style={[
+                        styles.tripName,
+                        selectedTrip?.id === trip.id && styles.selectedTripText
+                      ]}>
+                        {trip.name}
+                      </Text>
+                      <Text style={[
+                        styles.tripDate,
+                        selectedTrip?.id === trip.id && styles.selectedTripText
+                      ]}>
+                        {trip.startDate} ~ {trip.endDate}
+                      </Text>
+                    </View>
+                  </Pressable>
+                  <View style={styles.tripActions}>
+                    <Pressable
+                      style={styles.actionButton}
+                      onPress={() => openEditModal(trip)}
+                    >
+                      <Text style={styles.actionButtonText}>수정</Text>
+                    </Pressable>
+                    <Pressable
+                      style={[styles.actionButton, styles.deleteButton]}
+                      onPress={() => handleDeleteTrip(trip.id)}
+                    >
+                      <Text style={[styles.actionButtonText, styles.deleteButtonText]}>삭제</Text>
+                    </Pressable>
+                  </View>
+                </View>
               ))}
             </ScrollView>
             
@@ -149,6 +223,50 @@ export default function TripSelector({ selectedTrip, onTripSelect, trips, onTrip
                 onPress={handleAddTrip}
               >
                 <Text style={styles.addButtonText}>추가</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* 여행 수정 모달 */}
+      <Modal
+        visible={showEditModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowEditModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>여행 수정</Text>
+            
+            <TextInput
+              style={styles.input}
+              placeholder="여행 이름"
+              value={editingTrip?.name || ''}
+              onChangeText={(text) => setEditingTrip(prev => prev ? { ...prev, name: text } : null)}
+            />
+            
+            <DateRangePicker
+              startDate={editingTrip?.startDate || ''}
+              endDate={editingTrip?.endDate || ''}
+              onStartDateChange={(date: string) => setEditingTrip(prev => prev ? { ...prev, startDate: date } : null)}
+              onEndDateChange={(date: string) => setEditingTrip(prev => prev ? { ...prev, endDate: date } : null)}
+              style={styles.datePicker}
+            />
+            
+            <View style={styles.modalButtons}>
+              <Pressable 
+                style={[styles.modalButton, styles.cancelButton]}
+                onPress={() => setShowEditModal(false)}
+              >
+                <Text style={styles.cancelButtonText}>취소</Text>
+              </Pressable>
+              <Pressable 
+                style={[styles.modalButton, styles.addButton]}
+                onPress={handleEditTrip}
+              >
+                <Text style={styles.addButtonText}>수정</Text>
               </Pressable>
             </View>
           </View>
@@ -209,11 +327,41 @@ const styles = StyleSheet.create({
   tripList: {
     maxHeight: 200,
   },
-  tripItem: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+  tripItemContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
     borderBottomWidth: 1,
     borderBottomColor: '#f1f5f9',
+  },
+  tripItem: {
+    flex: 1,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  tripInfo: {
+    flex: 1,
+  },
+  tripActions: {
+    flexDirection: 'row',
+    paddingRight: 8,
+  },
+  actionButton: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    marginLeft: 4,
+    borderRadius: 4,
+    backgroundColor: '#3b82f6',
+  },
+  actionButtonText: {
+    fontSize: 12,
+    color: 'white',
+    fontWeight: '500',
+  },
+  deleteButton: {
+    backgroundColor: '#ef4444',
+  },
+  deleteButtonText: {
+    color: 'white',
   },
   selectedTripItem: {
     backgroundColor: '#3b82f6',

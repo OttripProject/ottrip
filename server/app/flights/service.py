@@ -39,6 +39,7 @@ class FlightService:
                 amount=flight_data.expense.amount,
                 category=flight_data.expense.category,
                 description=flight_data.expense.description,
+                currency=flight_data.expense.currency,
                 ex_date=flight_data.expense.ex_date,
                 plan_id=created_flight.plan_id,
             )
@@ -129,4 +130,5 @@ class FlightService:
                 status_code=400, detail="해당 항공편 삭제에 대한 권한이 없습니다."
             )
 
+        await self.expense_repository.soft_delete_by_flight_id(flight_id=flight_id)
         await self.flight_repository.remove(flight_id=flight_id)

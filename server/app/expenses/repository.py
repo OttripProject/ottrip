@@ -48,3 +48,30 @@ class ExpenseRepository:
         )
         await self.session.execute(stmt)
         await self.session.commit()
+
+    async def soft_delete_by_flight_id(self, *, flight_id: int) -> None:
+        stmt = (
+            update(Expense)
+            .where(Expense.flight_id == flight_id, Expense.is_deleted.is_(False))
+            .values(is_deleted=True)
+        )
+        await self.session.execute(stmt)
+
+    async def soft_delete_by_accommodation_id(self, *, accommodation_id: int) -> None:
+        stmt = (
+            update(Expense)
+            .where(
+                Expense.accommodation_id == accommodation_id,
+                Expense.is_deleted.is_(False),
+            )
+            .values(is_deleted=True)
+        )
+        await self.session.execute(stmt)
+
+    async def soft_delete_by_itinerary_id(self, *, itinerary_id: int) -> None:
+        stmt = (
+            update(Expense)
+            .where(Expense.itinerary_id == itinerary_id, Expense.is_deleted.is_(False))
+            .values(is_deleted=True)
+        )
+        await self.session.execute(stmt)

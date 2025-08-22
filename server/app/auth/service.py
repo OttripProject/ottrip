@@ -19,10 +19,10 @@ class AuthInfoService:
         auth = UserAuthInfo.of_email(email)
         return await self.auth_repository.save(auth)
 
-    async def authenticate_with_google(
+    async def authenticate(
         self, google_id: str, email: Optional[str] = None
     ) -> UserAuthInfo:
-        existing_auth = await self.auth_repository.find_by_criteria(apple_id=google_id)
+        existing_auth = await self.auth_repository.find_by_criteria(google_id=google_id)
 
         if existing_auth:
             return existing_auth

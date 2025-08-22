@@ -23,6 +23,14 @@ class ExpenseCategory(enum.Enum):
     SHOPPING = "shopping"
     ETC = "etc"
 
+class ExpenseCurrency(enum.Enum):
+    KRW = "KRW"
+    USD = "USD"
+    EUR = "EUR"
+    JPY = "JPY"
+    CNY = "CNY"
+    GBP = "GBP"
+    AUD = "AUD"
 
 class Expense(Base):
     __tablename__ = "expense"
@@ -39,6 +47,9 @@ class Expense(Base):
 
     amount: Mapped[int]
     """금액"""
+
+    currency: Mapped[ExpenseCurrency]
+    """통화"""
 
     description: Mapped[str | None] = mapped_column(nullable=True)
     """설명"""

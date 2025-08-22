@@ -1,111 +1,162 @@
-# Ottrip Client
+# OTTRIP Client
 
-React Native (Expo) application written in TypeScript for the **Ottrip** travel-planning platform.
+> OTTRIP의 React Native 앱 레포지토리입니다.
 
----
+## 🚀 Getting Started
 
-## Getting Started
+### Prerequisites
 
-### Requirements
+- Node.js 18+ 
+- pnpm 8+
+- Expo CLI
+- iOS Simulator (macOS) 또는 Android Emulator
 
-- **mise** – toolchain manager used to pin Node, pnpm, and other utilities
-- **pnpm** – package manager (activated via corepack)
-- **Expo CLI / EAS CLI** – installed automatically via pnpm scripts
+### Installation
 
-### 1. Repository setup
+1. **의존성 설치**
+   ```bash
+   pnpm install
+   ```
+
+2. **환경 변수 설정**
+   ```bash
+   # 개발 환경 변수 가져오기 (EAS 사용 시)
+   pnpm env:pull
+   
+   # 또는 .env 파일 직접 생성
+   cp .env.example .env
+   ```
+
+3. **개발 서버 실행**
+   ```bash
+   pnpm dev
+   ```
+
+## 📱 Development
+
+### Available Scripts
 
 ```bash
-# trust the toolchain manifest & install required runtimes
-mise trust
-mise i
-
-# enable the repo-specified pnpm version
-corepack enable
-```
-
-### 2. Authenticate with Expo & load environment variables
-
-```bash
-# login to your Expo/EAS account (opens browser)
-eas login
-
-# pull development env vars; creates .env.local if successful
-pnpm env:pull
-```
-
-### 3. Install dependencies & run the dev server
-
-```bash
-# install node modules
-pnpm i
-
-# start Expo dev server (web, iOS, Android)
+# 개발 서버 실행
 pnpm dev
+
+# 타입 체크
+pnpm typecheck
+
+# 린팅 및 포맷팅
+pnpm lint
+pnpm format
+
+# 플랫폼별 실행
+pnpm ios
+pnpm android
+pnpm web
+
+# 빌드
+pnpm build:dev
+pnpm build:prod
+
+# 배포
+pnpm deploy:dev
+pnpm deploy:prod
 ```
 
----
-
-## Available Scripts
-
-| Script          | Description                       |
-| --------------- | --------------------------------- |
-| `pnpm dev`      | Run Expo dev server               |
-| `pnpm android`  | Build & run on Android device     |
-| `pnpm ios`      | Build & run on iOS simulator      |
-| `pnpm lint`     | Run ESLint with auto-fix          |
-| `pnpm test`     | Run Jest test suite              |
-
-> Additional scripts live in `package.json`.
-
----
-
-## Project Structure (convention-first)
+### Project Structure
 
 ```
-client/
-├── assets/          # static assets (images, fonts)
-│
-├── src/
-│   ├── components/      # shared UI components
-│   ├── screens/         # React Navigation screens
-│   ├── navigation/      # navigation configuration
-│   ├── services/        # API clients, data layers
-│   ├── hooks/           # reusable React hooks
-│   └── contexts/        # React Context providers
-├── .env.example         # documented env vars template
-├── .eslintrc.js         # ESLint config (typescript)
-├── .prettierrc          # Prettier formatting rules
-├── package.json
-├── tsconfig.json        # TypeScript compiler options
-└── README.md            # you are here
+src/
+├── components/     # 재사용 가능한 UI 컴포넌트
+├── contexts/       # 전역 상태 관리 (Auth, Date 등)
+├── core/          # 핵심 설정 (env, constants)
+├── hooks/         # 커스텀 훅
+├── navigation/    # 네비게이션 설정
+├── screens/       # 화면 컴포넌트
+├── services/      # API 서비스
+├── types/         # TypeScript 타입 정의
+└── utils/         # 유틸리티 함수
 ```
 
-Feel free to adjust or extend folders as the codebase grows.
+### Key Features
 
----
+- 🔐 **Secure Token Storage**: expo-secure-store 기반 안전한 토큰 저장
+- 🎨 **Responsive Design**: 반응형 레이아웃 (DashboardSplit/DashboardStack)
+- 📅 **Calendar Integration**: react-native-big-calendar 기반 스케줄링
+- 🔄 **State Management**: React Context + TanStack Query
+- 🛡️ **Type Safety**: TypeScript + Zod 스키마 검증
 
-## Platform-specific components
+### Environment Variables
 
-React Native automatically resolves files by platform suffix. We use it to have web-specific implementations when needed.
+```env
+EXPO_PUBLIC_CHANNEL=dev|prod
+EXPO_PUBLIC_API_URL=http://localhost:8080
+```
+
+## 🏗️ Architecture
+
+### Authentication Flow
+
+1. **LoginScreen** → Google OAuth 또는 테스트 로그인
+2. **AuthContext** → 전역 인증 상태 관리
+3. **Secure Storage** → expo-secure-store로 토큰 저장
+4. **API Services** → 인증된 API 호출
+
+### Navigation Structure
 
 ```
-src/components/Button.native.tsx   // iOS & Android
-src/components/Button.web.tsx      // Web only
+RootNavigator
+├── Auth Stack (미인증)
+│   └── LoginScreen
+└── Main Stack (인증됨)
+    ├── MainTabs
+    │   ├── DashboardScreen
+    │   ├── CreateTripScreen
+    │   └── SettingsScreen
 ```
 
-Keep shared logic in the default file and only branch when required.
+## 🔧 Configuration
 
----
+### Expo Config
 
-## Contributing Guidelines
+- **Multi-environment**: dev/alpha/prod 프로필
+- **OTA Updates**: Expo Updates 지원
+- **Native Features**: SecureStore, ImagePicker 등
 
-1. All commits are linted & formatted automatically via **Husky** pre-commit hooks.
-2. Write type-safe code and prefer explicit types over `any`.
-3. Add or update tests when modifying business logic.
-4. Keep environment variables documented in `.env.example`.
+### Development Tools
 
----
+- **TypeScript**: 정적 타입 검사
+- **Biome**: 린팅 및 포맷팅
+- **TanStack Query**: 서버 상태 관리
+- **Zod**: 런타임 스키마 검증
 
-## License
+## 📦 Build & Deploy
 
-© 2024 Ottrip. All rights reserved. Licensed under the MIT License unless noted otherwise. 
+### Development Build
+
+```bash
+# 개발용 빌드
+pnpm build:dev
+
+# 로컬 실행
+pnpm ios
+pnpm android
+```
+
+### Production Build
+
+```bash
+# 프로덕션 빌드
+pnpm build:prod
+
+# OTA 업데이트 배포
+pnpm deploy:prod
+```
+
+## 🤝 Contributing
+
+1. 코드 스타일 준수 (Biome 설정)
+2. 타입 안전성 유지
+3. 테스트 코드 작성 권장
+
+## 📄 License
+
+This project is licensed under the MIT License. 

@@ -2,15 +2,14 @@ from datetime import date
 
 from app.schemas import APISchema
 
-from .models import ExpenseCategory
-
-# 날짜, 금액, 카테고리, 메모
+from .models import ExpenseCategory, ExpenseCurrency
 
 
 class ExpenseBase(APISchema):
     ex_date: date
     amount: int
     category: ExpenseCategory
+    currency: ExpenseCurrency
     description: str | None = None
 
 
@@ -35,4 +34,5 @@ class ExpenseUpdate(APISchema):
     ex_date: date | None = None
     amount: int | None = None
     category: ExpenseCategory | None = None
+    currency: ExpenseCurrency | None = None
     description: str | None = None
