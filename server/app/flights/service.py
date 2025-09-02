@@ -19,6 +19,17 @@ class FlightService:
     plan_repository: PlanRepository
 
     async def create(self, *, flight_data: FlightCreate) -> FlightRead:
+        plan = await self.plan_repository.find_by_id(plan_id=flight_data.plan_id)
+        if not plan:
+            raise HTTPException(status_code=404, detail="해당 계획을 찾을 수 없습니다.")
+        if plan.owner_id != self.current_user.id:
+            is_editor = await self.plan_repository.is_editor(
+                plan_id=flight_data.plan_id, user_id=self.current_user.id
+            )
+            if not is_editor:
+                raise HTTPException(
+                    status_code=400, detail="해당 항공편에 대한 생성 권한이 없습니다."
+                )
         create_flight_data = Flight(
             airline=flight_data.airline,
             flight_number=flight_data.flight_number,
@@ -76,9 +87,13 @@ class FlightService:
                 status_code=404, detail="해당 항공편을 찾을 수 없습니다."
             )
         if flight.plan.owner_id != self.current_user.id:
-            raise HTTPException(
-                status_code=400, detail="해당 항공편에 대한 수정 권한이 없습니다."
+            is_editor = await self.plan_repository.is_editor(
+                plan_id=flight.plan_id, user_id=self.current_user.id
             )
+            if not is_editor:
+                raise HTTPException(
+                    status_code=400, detail="해당 항공편에 대한 수정 권한이 없습니다."
+                )
 
         if update_data.airline:
             flight.airline = update_data.airline
@@ -126,9 +141,13 @@ class FlightService:
         if not flight:
             raise HTTPException(status_code=400, detail="항공편을 찾을 수 없습니다.")
         if flight.plan.owner_id != self.current_user.id:
-            raise HTTPException(
-                status_code=400, detail="해당 항공편 삭제에 대한 권한이 없습니다."
+            is_editor = await self.plan_repository.is_editor(
+                plan_id=flight.plan_id, user_id=self.current_user.id
             )
+            if not is_editor:
+                raise HTTPException(
+                    status_code=400, detail="해당 항공편에 대한 수정 권한이 없습니다."
+                )
 
         await self.expense_repository.soft_delete_by_flight_id(flight_id=flight_id)
         await self.flight_repository.remove(flight_id=flight_id)

@@ -21,6 +21,15 @@ class AccommodationService:
     async def create(
         self, *, accommodation_data: AccommodationCreate
     ) -> AccommodationRead:
+        plan = await self.plan_repository.find_by_id(plan_id=accommodation_data.plan_id)
+        if not plan:
+            raise HTTPException(status_code=404, detail="해당 계획을 찾을 수 없습니다.")
+        if plan.owner_id != self.current_user.id:
+            is_editor = await self.plan_repository.is_editor(
+                plan_id=accommodation_data.plan_id, user_id=self.current_user.id
+            )
+            if not is_editor:
+                raise HTTPException(status_code=400, detail="해당 숙소에 대한 생성 권한이 없습니다.")
         create_accommodation_data = Accommodation(
             name=accommodation_data.name,
             address=accommodation_data.address,
@@ -84,9 +93,13 @@ class AccommodationService:
         if not accommodation:
             raise HTTPException(status_code=400, detail="해당 숙소를 찾을 수 없습니다.")
         if accommodation.plan.owner_id != self.current_user.id:
-            raise HTTPException(
-                status_code=400, detail="해당 숙소에 대한 수정 권한이 없습니다."
+            is_editor = await self.plan_repository.is_editor(
+                plan_id=accommodation.plan_id, user_id=self.current_user.id
             )
+            if not is_editor:
+                raise HTTPException(
+                    status_code=400, detail="해당 숙소에 대한 수정 권한이 없습니다."
+                )
 
         if update_data.name:
             accommodation.name = update_data.name
@@ -129,9 +142,13 @@ class AccommodationService:
         if not accommodation:
             raise HTTPException(status_code=400, detail="해당 숙소를 찾을 수 없습니다.")
         if accommodation.plan.owner_id != self.current_user.id:
-            raise HTTPException(
-                status_code=400, detail="해당 숙소에 대한 삭제 권한이 없습니다."
+            is_editor = await self.plan_repository.is_editor(
+                plan_id=accommodation.plan_id, user_id=self.current_user.id
             )
+            if not is_editor:
+                raise HTTPException(
+                    status_code=400, detail="해당 숙소에 대한 수정 권한이 없습니다."
+                )
 
         await self.expense_repository.soft_delete_by_accommodation_id(
             accommodation_id=accommodation_id
