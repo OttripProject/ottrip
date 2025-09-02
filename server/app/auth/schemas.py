@@ -61,7 +61,3 @@ class GoogleLoginUrlResponse(APISchema):
 class GoogleCallbackRequest(APISchema):
     code: str
     state: str = "default"
-
-
-class GoogleAuthRequest(APISchema):
-    id_token: str

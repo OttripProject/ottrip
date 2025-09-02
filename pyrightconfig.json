@@ -1,7 +1,0 @@
-{
-  "include": ["server/app"],
-  "strict": ["**/*"],
-  "extraPaths": ["server"],
-  "venvPath": "server",
-  "venv": ".venv"
-} 

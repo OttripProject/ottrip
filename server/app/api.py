@@ -1,13 +1,13 @@
 from fastapi import Depends
 
-# private
-from app.accomodation.router import router as accomodation_router
 from app.auth.deps import get_current_user
 
 # public
 from app.auth.router import router as auth_router
 from app.core.router import create_router
 from app.expenses.router import router as expenses_router
+
+# private
 from app.flights.router import router as flights_router
 from app.itinerary.router import router as itinerary_router
 from app.plans.router import router as plans_router
@@ -27,9 +27,6 @@ private_router.include_router(flights_router, prefix="/flights", tags=["Flights"
 private_router.include_router(itinerary_router, prefix="/itinerary", tags=["Itinerary"])
 private_router.include_router(plans_router, prefix="/plans", tags=["Plans"])
 private_router.include_router(expenses_router, prefix="/expenses", tags=["Expenses"])
-private_router.include_router(
-    accomodation_router, prefix="/accommodations", tags=["Accommodations"]
-)
 
 router.include_router(public_router)
 router.include_router(private_router)
