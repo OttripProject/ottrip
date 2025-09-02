@@ -1,19 +1,22 @@
 import asyncio
 from logging.config import fileConfig
 
+# Third-party imports
 from alembic import context
 from sqlalchemy import pool
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
-import app.auth.models as _
-import app.expenses.models as _
-import app.flights.models as _
-import app.itinerary.models as _
-import app.plans.models as _
-import app.users.models as _
+# Application models (imported for metadata discovery)
+import app.accomodation.models as _  # noqa: F401
+import app.auth.models as _  # noqa: F401
+import app.expenses.models as _  # noqa: F401
+import app.flights.models as _  # noqa: F401
+import app.itinerary.models as _  # noqa: F401
+import app.plans.models as _  # noqa: F401
+import app.users.models as _  # noqa: F401
 
-# Config 임포트
+# Project utilities
 from app.database.config import database_settings
 from app.models import Base
 
