@@ -15,7 +15,8 @@ class AuthInfoCriteria(TypedDict, total=False):
     id: NotRequired[int]
     user_id: NotRequired[Optional[int]]
     verified_email: NotRequired[Optional[str]]
-    google_id: NotRequired[Optional[str]]
+    kakao_id: NotRequired[Optional[str]]
+    apple_id: NotRequired[Optional[str]]
 
 
 @dependency

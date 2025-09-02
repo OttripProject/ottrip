@@ -1,7 +1,6 @@
 import logging
 
 from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import core_settings
 from app.core.exceptions import register_exception_handlers
@@ -29,38 +28,6 @@ def create_app() -> FastAPI:
             title="OTTRIP API",
             swagger_ui_parameters={"persistAuthorization": True},
         )
-
-    # CORS 미들웨어 추가
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=[
-            "http://localhost:8081",  # Expo 개발 서버
-            "http://localhost:19006",  # Expo 웹
-            "http://localhost:3000",   # 일반적인 개발 서버
-            "http://127.0.0.1:8081",
-            "http://127.0.0.1:19006",
-            "http://127.0.0.1:3000",
-            # 모든 localhost 변형 허용
-            "http://localhost:*",
-            "http://127.0.0.1:*",
-        ],
-        allow_credentials=True,
-        allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
-        allow_headers=[
-            "Accept",
-            "Accept-Language",
-            "Content-Language",
-            "Content-Type",
-            "Authorization",
-            "X-Auth-Token",
-            "X-Requested-With",
-            "Origin",
-            "Access-Control-Request-Method",
-            "Access-Control-Request-Headers",
-        ],
-        expose_headers=["*"],
-        max_age=86400,  # 24시간 캐시
-    )
 
     return app
 
