@@ -18,6 +18,16 @@ class ItineraryService:
     expense_repository: ExpenseRepository
 
     async def create(self, *, itinerary_data: ItineraryCreate) -> ItineraryRead:
+        plan = await self.plan_repository.find_by_id(plan_id=itinerary_data.plan_id)
+        if not plan:
+            raise HTTPException(status_code=400, detail="해당 계획을 찾을 수 없습니다.")
+        if plan.owner_id != self.current_user.id:
+            is_editor = await self.plan_repository.is_editor(
+                plan_id=itinerary_data.plan_id, user_id=self.current_user.id
+            )
+            if not is_editor:
+                raise HTTPException(status_code=400, detail="일정 생성 권한이 없습니다.")
+
         create_itinerary_data = Itinerary(
             title=itinerary_data.title,
             itinerary_date=itinerary_data.itinerary_date,
@@ -67,7 +77,11 @@ class ItineraryService:
         if not itinerary:
             raise HTTPException(status_code=400, detail="일정을 찾을 수 없습니다.")
         if itinerary.plan.owner_id != self.current_user.id:
-            raise HTTPException(status_code=400, detail="일정 수정 권한이 없습니다.")
+            is_editor = await self.plan_repository.is_editor(
+                plan_id=itinerary.plan_id, user_id=self.current_user.id
+            )
+            if not is_editor:
+                raise HTTPException(status_code=400, detail="일정 수정 권한이 없습니다.")
 
         if update_data.title:
             itinerary.title = update_data.title
@@ -95,7 +109,11 @@ class ItineraryService:
         if not itinerary:
             raise HTTPException(status_code=400, detail="일정을 찾을 수 없습니다.")
         if itinerary.plan.owner_id != self.current_user.id:
-            raise HTTPException(status_code=400, detail="일정 수정 권한이 없습니다.")
+            is_editor = await self.plan_repository.is_editor(
+                plan_id=itinerary.plan_id, user_id=self.current_user.id
+            )
+            if not is_editor:
+                raise HTTPException(status_code=400, detail="일정 수정 권한이 없습니다.")
         
         await self.expense_repository.soft_delete_by_itinerary_id(
             itinerary_id=itinerary_id

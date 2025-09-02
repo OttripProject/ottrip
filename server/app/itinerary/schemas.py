@@ -34,3 +34,9 @@ class ItineraryUpdate(APISchema):
     country: str | None = None
     city: str | None = None
     location: str | None = None
+
+
+class ItineraryAssistResponse(APISchema):
+    packing: list[str]
+    attractions: list[str]
+    local_tips: list[str]

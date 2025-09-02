@@ -18,6 +18,15 @@ class ExpenseService:
     plan_repository: PlanRepository
 
     async def create(self, *, expense_data: ExpenseCreate) -> ExpenseRead:
+        plan = await self.plan_repository.find_by_id(plan_id=expense_data.plan_id)
+        if not plan:
+            raise HTTPException(status_code=404, detail="해당 계획을 찾을 수 없습니다.")
+        if plan.owner_id != self.current_user.id:
+            is_editor = await self.plan_repository.is_editor(
+                plan_id=expense_data.plan_id, user_id=self.current_user.id
+            )
+            if not is_editor:
+                raise HTTPException(status_code=400, detail="해당 비용에 대한 생성 권한이 없습니다.")
         create_expense_data = Expense(
             amount=expense_data.amount,
             category=expense_data.category,
@@ -80,9 +89,13 @@ class ExpenseService:
         if not expense:
             raise HTTPException(status_code=404, detail="해당 비용을 찾을 수 없습니다.")
         if expense.plan.owner_id != self.current_user.id:
-            raise HTTPException(
-                status_code=400, detail="해당 비용에 대한 수정 권한이 없습니다."
+            is_editor = await self.plan_repository.is_editor(
+                plan_id=expense.plan_id, user_id=self.current_user.id
             )
+            if not is_editor:
+                raise HTTPException(
+                    status_code=400, detail="해당 비용에 대한 수정 권한이 없습니다."
+                )
 
         if update_data.amount:
             expense.amount = update_data.amount
@@ -104,8 +117,12 @@ class ExpenseService:
         if not expense:
             raise HTTPException(status_code=404, detail="해당 비용을 찾을 수 없습니다.")
         if expense.plan.owner_id != self.current_user.id:
-            raise HTTPException(
-                status_code=400, detail="해당 비용에 대한 삭제 권한이 없습니다."
+            is_editor = await self.plan_repository.is_editor(
+                plan_id=expense.plan_id, user_id=self.current_user.id
             )
+            if not is_editor:
+                raise HTTPException(
+                    status_code=400, detail="해당 비용에 대한 수정 권한이 없습니다."
+                )
 
         await self.expense_repository.remove(expense_id=expense_id)

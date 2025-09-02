@@ -1,8 +1,11 @@
 from fastapi import status
+from typing import Any, List, cast
 
 from app.core.router import create_router
+from app.ai.service import OpenAIService, ChatMessage, ChatRequest
+from app.ai.config import ai_settings
 
-from .schemas import ItineraryCreate, ItineraryRead, ItineraryUpdate
+from .schemas import ItineraryAssistResponse, ItineraryCreate, ItineraryRead, ItineraryUpdate
 from .service import ItineraryService
 
 router = create_router()
@@ -49,3 +52,62 @@ async def delete_itinerary(
     itinerary_id: int,
 ) -> None:
     await itinerary_service.delete(itinerary_id=itinerary_id)
+
+
+@router.post("/{itinerary_id}/assist", status_code=status.HTTP_200_OK)
+async def assist_itinerary(
+    itinerary_service: ItineraryService,
+    itinerary_id: int,
+) -> ItineraryAssistResponse:
+    it = await itinerary_service.read_itinerary(itinerary_id=itinerary_id)
+
+    context_parts: list[str] = []
+    if it.country:
+        context_parts.append(f"국가: {it.country}")
+    if it.city:
+        context_parts.append(f"도시: {it.city}")
+    if it.location:
+        context_parts.append(f"장소: {it.location}")
+    context = "\n".join(context_parts)
+
+    system_prompt = ai_settings.ASSIST_SYSTEM_PROMPT
+    user_prompt = ai_settings.ASSIST_USER_PROMPT_TEMPLATE.format(context=context)
+
+    ai = OpenAIService()
+    data = await ai.chat(
+        ChatRequest(
+            messages=[
+                ChatMessage(role="system", content=system_prompt),
+                ChatMessage(role="user", content=user_prompt),
+            ],
+            response_format={"type": "json_object"},
+            temperature=0.6,
+            max_tokens=600,
+        )
+    )
+
+    content = data.get("choices", [{}])[0].get("message", {}).get("content", "{}")
+    try:
+        import json
+
+        obj_dict = json.loads(content)
+        packing_list = [
+            str(x) for x in cast(List[Any], obj_dict.get("packing") or [])
+        ]
+        attractions_list = [
+            str(x) for x in cast(List[Any], obj_dict.get("attractions") or [])
+        ]
+        local_tips_list = [
+            str(x) for x in cast(List[Any], obj_dict.get("local_tips") or [])
+        ]
+        resp = ItineraryAssistResponse(
+            packing=packing_list,
+            attractions=attractions_list,
+            local_tips=local_tips_list,
+        )
+    except Exception:
+        resp = ItineraryAssistResponse(
+            packing=[], attractions=[], local_tips=[]
+        )
+
+    return resp
