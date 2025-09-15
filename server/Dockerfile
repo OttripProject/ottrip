@@ -17,5 +17,5 @@ COPY . /app
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --no-editable --compile-bytecode
 
-CMD ["sh", "-c", "uv run poe prod --port=${PORT:?error}"]
+CMD ["sh", "-c", "uv run alembic upgrade head && uv run fastapi run app/main.py --host=0.0.0.0 --port=${PORT:?error}"]
 
