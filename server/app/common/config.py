@@ -12,6 +12,8 @@ class EmailConfig(BaseConfig):
     INVITE_ACCEPT_URL_BASE: str = (
         "http://localhost:8081"
     )
+    # 추가: 배포 환경에서 CORS 오리진 허용을 위한 환경변수 입력(쉼표 구분)
+    CORS_ALLOWED_ORIGINS: str = ""
 
 
 email_settings = EmailConfig.create()

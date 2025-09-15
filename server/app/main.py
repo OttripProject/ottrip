@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import core_settings
 from app.core.exceptions import register_exception_handlers
+from app.common.config import email_settings
 from app.core.logging import configure_logging
 from app.dev.router import router as dev_router
 
@@ -30,20 +31,25 @@ def create_app() -> FastAPI:
             swagger_ui_parameters={"persistAuthorization": True},
         )
 
-    # CORS 미들웨어 추가
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=[
-            "http://localhost:8081",  # Expo 개발 서버
-            "http://localhost:19006",  # Expo 웹
-            "http://localhost:3000",   # 일반적인 개발 서버
+    # CORS 미들웨어 추가 (환경변수로 오리진 구성, 비어있으면 localhost 기본값 사용)
+    configured_origins = [
+        origin.strip()
+        for origin in email_settings.CORS_ALLOWED_ORIGINS.split(",")
+        if origin.strip()
+    ]
+    if not configured_origins:
+        configured_origins = [
+            "http://localhost:8081",
+            "http://localhost:19006",
+            "http://localhost:3000",
             "http://127.0.0.1:8081",
             "http://127.0.0.1:19006",
             "http://127.0.0.1:3000",
-            # 모든 localhost 변형 허용
-            "http://localhost:*",
-            "http://127.0.0.1:*",
-        ],
+        ]
+
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=configured_origins,
         allow_credentials=True,
         allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
         allow_headers=[
@@ -59,7 +65,7 @@ def create_app() -> FastAPI:
             "Access-Control-Request-Headers",
         ],
         expose_headers=["*"],
-        max_age=86400,  # 24시간 캐시
+        max_age=86400,
     )
 
     return app
