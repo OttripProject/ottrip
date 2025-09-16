@@ -1,9 +1,9 @@
 import axios from 'axios';
-import { envSchema } from '../core/env/schema';
+import { loadPublicEnv } from '../core/env/schema';
 import { tokenStores } from '../utils/tokenStores';
 
 // 환경 변수 파싱
-const env = envSchema.parse(process.env);
+const env = loadPublicEnv();
 
 const api = axios.create({
   baseURL: env.EXPO_PUBLIC_API_URL,
