@@ -31,4 +31,13 @@ export const plansApi = {
     const response = await api.delete(`/private/plans/${planId}`);
     return response.data;
   },
+
+  // 계획 공유 초대 생성
+  invite: async (
+    planId: number,
+    body: { email: string; role: 'editor' | 'viewer'; expires_days?: number }
+  ): Promise<{ token: string; expires_at: string | null }> => {
+    const response = await api.post(`/private/plans/${planId}/invitations`, body);
+    return response.data;
+  },
 }; 
