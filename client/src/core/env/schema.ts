@@ -22,11 +22,11 @@ export type PublicEnv = z.infer<typeof envSchema>;
 /**
  * Environment variables validation helper
  */
-export const validateEnv = () => {
-  const result = envSchema.safeParse(process.env);
-  if (result.success) {
-    return result.data;
-  }
-  console.error("❌ Invalid environment variables:", result.error.format());
-  throw new Error("Invalid environment variables");
-};
+export const loadPublicEnv = (): PublicEnv =>
+  envSchema.parse({
+    EXPO_PUBLIC_CHANNEL: process.env.EXPO_PUBLIC_CHANNEL,
+    EXPO_PUBLIC_API_URL: process.env.EXPO_PUBLIC_API_URL,
+    EXPO_PUBLIC_GOOGLE_CLIENT_ID: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID,
+    EXPO_PUBLIC_APP_VERSION: process.env.EXPO_PUBLIC_APP_VERSION,
+    EXPO_PUBLIC_BUILD_NUMBER: process.env.EXPO_PUBLIC_BUILD_NUMBER,
+  });

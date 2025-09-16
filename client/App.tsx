@@ -3,10 +3,10 @@ import { StatusBar } from "expo-status-bar";
 import QueryProvider from "@/contexts/QueryProvider";
 import { DateProvider } from "@/contexts/DateContext";
 import { AuthProvider } from "@/contexts/AuthContext";
-import { envSchema } from "@/core/env/schema";
+import { loadPublicEnv } from "@/core/env/schema";
 
 export default function App() {
-  const env = envSchema.parse(process.env);
+  const env = loadPublicEnv();
   // 간단한 런타임 확인 로그(웹 콘솔)
   if (typeof window !== "undefined") {
     // eslint-disable-next-line no-console
