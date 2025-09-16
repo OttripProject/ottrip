@@ -5,7 +5,10 @@ import { Calendar } from 'react-native-calendars';
 import dayjs from 'dayjs';
 import ko from 'dayjs/locale/ko';
 import TripSelector from './TripSelector';
+import SharePlanModal from '@/components/SharePlanModal';
+import { plansApi } from '@/services/plans';
 import { usePlans } from '@/hooks/usePlans';
+import { useEffect } from 'react';
 import { usePlanData } from '@/hooks/usePlanData';
 
 dayjs.locale(ko);
@@ -69,9 +72,19 @@ export default function WeeklySchedule({ itineraries, height = 600, onItineraryA
     const [selectedTrip, setSelectedTrip] = useState<any>(null);
     const [showMonthPicker, setShowMonthPicker] = useState(false);
     const [selectedDate, setSelectedDate] = useState<string>(dayjs().format('YYYY-MM-DD'));
+    const [shareOpen, setShareOpen] = useState(false);
     
     // Plan API 연동
-    const { plans, addPlan, updatePlan, deletePlan, isLoading, error } = usePlans();
+    const { plans, addPlan, updatePlan, deletePlan, isLoading, error, fetchPlans } = usePlans();
+
+    // 초대 수락 후 목록 즉시 갱신을 위한 이벤트 리스너
+    useEffect(() => {
+      const handler = () => { fetchPlans(); };
+      if (typeof window !== 'undefined') {
+        window.addEventListener('plans-refresh', handler);
+        return () => window.removeEventListener('plans-refresh', handler);
+      }
+    }, [fetchPlans]);
 
     // Plan을 Trip으로 변환하는 매핑 함수
     const trips = useMemo(() => plans.map(plan => ({
@@ -213,6 +226,20 @@ export default function WeeklySchedule({ itineraries, height = 600, onItineraryA
         {/* Spacer */}
         <View style={{ flex: 1 }} />
 
+        {/* 공유 버튼 */}
+        <Pressable
+          onPress={() => {
+            if (!selectedPlanId) {
+              Alert.alert('알림', '먼저 공유할 여행을 선택해주세요.');
+              return;
+            }
+            setShareOpen(true);
+          }}
+          style={[styles.todayBtn, { marginRight: 8 }]}
+        >
+          <Text style={styles.todayText}>공유</Text>
+        </Pressable>
+
         {/* 여행 선택 콤보박스 */}
         <TripSelector
           selectedTrip={selectedTrip}
@@ -296,6 +323,17 @@ export default function WeeklySchedule({ itineraries, height = 600, onItineraryA
           </View>
         </View>
       </Modal>
+
+      {/* 공유 모달 */}
+      <SharePlanModal
+        visible={shareOpen}
+        onClose={() => setShareOpen(false)}
+        onSubmit={async ({ email, role, expires_days }) => {
+          if (!selectedPlanId) throw new Error('No plan selected');
+          await plansApi.invite(selectedPlanId, { email, role, expires_days });
+          Alert.alert('성공', '초대 메일을 전송했습니다.');
+        }}
+      />
 
     </View>
   );

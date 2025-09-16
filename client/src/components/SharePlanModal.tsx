@@ -1,0 +1,100 @@
+import React, { useState } from 'react';
+import { Modal, View, Text, TextInput, Pressable, StyleSheet, ActivityIndicator, Alert } from 'react-native';
+
+type Props = {
+  visible: boolean;
+  onClose: () => void;
+  onSubmit: (params: { email: string; role: 'editor' | 'viewer'; expires_days?: number }) => Promise<void>;
+};
+
+export default function SharePlanModal({ visible, onClose, onSubmit }: Props) {
+  const [email, setEmail] = useState('');
+  const [role, setRole] = useState<'editor' | 'viewer'>('viewer');
+  const [days, setDays] = useState('7');
+  const [loading, setLoading] = useState(false);
+
+  const submit = async () => {
+    if (!email.trim()) {
+      Alert.alert('알림', '이메일을 입력해주세요.');
+      return;
+    }
+    setLoading(true);
+    try {
+      await onSubmit({ email: email.trim(), role, expires_days: Number(days) || undefined });
+      onClose();
+    } catch (e: any) {
+      Alert.alert('오류', e?.response?.data?.detail || e?.message || '초대 전송에 실패했습니다.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <View style={styles.overlay}>
+        <View style={styles.card}>
+          <Text style={styles.title}>플랜 공유</Text>
+          <Text style={styles.label}>이메일</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="invitee@example.com"
+            autoCapitalize="none"
+            keyboardType="email-address"
+            value={email}
+            onChangeText={setEmail}
+          />
+          <Text style={styles.label}>권한</Text>
+          <View style={styles.row}>
+            <Pressable
+              style={[styles.roleBtn, role === 'viewer' && styles.roleBtnActive]}
+              onPress={() => setRole('viewer')}
+            >
+              <Text style={styles.roleText}>읽기</Text>
+            </Pressable>
+            <Pressable
+              style={[styles.roleBtn, role === 'editor' && styles.roleBtnActive]}
+              onPress={() => setRole('editor')}
+            >
+              <Text style={styles.roleText}>수정</Text>
+            </Pressable>
+          </View>
+          <Text style={styles.label}>만료일(일)</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="7"
+            keyboardType="number-pad"
+            value={days}
+            onChangeText={setDays}
+          />
+
+          <View style={[styles.row, { marginTop: 12 }]}>
+            <Pressable style={[styles.btn, styles.cancel]} onPress={onClose} disabled={loading}>
+              <Text style={styles.btnText}>취소</Text>
+            </Pressable>
+            <Pressable style={[styles.btn, styles.submit]} onPress={submit} disabled={loading}>
+              {loading ? <ActivityIndicator color="#fff" /> : <Text style={[styles.btnText, { color: '#fff' }]}>전송</Text>}
+            </Pressable>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+const styles = StyleSheet.create({
+  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', alignItems: 'center', justifyContent: 'center' },
+  card: { width: '90%', backgroundColor: '#fff', borderRadius: 10, padding: 16 },
+  title: { fontSize: 18, fontWeight: '700', marginBottom: 12 },
+  label: { fontSize: 14, fontWeight: '600', marginTop: 8 },
+  input: { borderWidth: 1, borderColor: '#ddd', borderRadius: 6, paddingHorizontal: 10, paddingVertical: 8, marginTop: 6 },
+  row: { flexDirection: 'row', alignItems: 'center' },
+  roleBtn: { borderWidth: 1, borderColor: '#ddd', borderRadius: 6, paddingHorizontal: 12, paddingVertical: 8, marginRight: 8, marginTop: 6 },
+  roleBtnActive: { backgroundColor: '#111', borderColor: '#111' },
+  roleText: { color: '#111', fontWeight: '600' },
+  btn: { flex: 1, alignItems: 'center', paddingVertical: 10, borderRadius: 8 },
+  cancel: { backgroundColor: '#f3f4f6', marginRight: 8 },
+  submit: { backgroundColor: '#111' },
+  btnText: { fontWeight: '700' },
+});
+
+

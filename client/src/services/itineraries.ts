@@ -31,4 +31,12 @@ export const itinerariesApi = {
     const response = await api.delete(`/private/itinerary/${itineraryId}`);
     return response.data;
   },
+
+  // 일정 보조(LLM) - 준비물/명소/로컬팁 추천
+  assist: async (
+    itineraryId: number
+  ): Promise<{ packing: string[]; attractions: string[]; local_tips: string[] }> => {
+    const response = await api.post(`/private/itinerary/${itineraryId}/assist`);
+    return response.data;
+  },
 }; 

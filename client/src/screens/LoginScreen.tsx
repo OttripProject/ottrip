@@ -6,6 +6,8 @@ import { validateEnv } from '../core/env/schema';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as WebBrowser from 'expo-web-browser';
 import * as Crypto from 'expo-crypto';
+import * as SecureStore from 'expo-secure-store';
+import api from '@/services/api';
 
 // nonce 생성 함수 (크로스 플랫폼)
 const generateNonce = async () => {
@@ -32,11 +34,22 @@ export default function LoginScreen() {
   useEffect(() => {
     if (Platform.OS === 'web') {
       const hash = window.location.hash;
-      
+
+      // 초대 토큰 보관(#invite=...)
+      if (hash && hash.includes('invite=')) {
+        const params = new URLSearchParams(hash.substring(1));
+        const inviteToken = params.get('invite');
+        if (inviteToken) {
+          try { window.localStorage.setItem('pendingInviteToken', inviteToken); } catch {}
+          // 해시 제거
+          window.history.replaceState({}, document.title, window.location.pathname);
+        }
+      }
+
+      // 구글 id_token 처리
       if (hash && hash.includes('id_token=')) {
         const params = new URLSearchParams(hash.substring(1));
         const idToken = params.get('id_token');
-        
         if (idToken) {
           handleGoogleSignIn(idToken);
           window.history.replaceState({}, document.title, window.location.pathname);
@@ -127,6 +140,17 @@ export default function LoginScreen() {
           accessToken: response.accessToken,
           refreshToken: response.refreshToken,
         });
+        // 로그인 직후 pending 초대 토큰 자동 처리
+        try {
+          const token = Platform.OS === 'web'
+            ? window.localStorage.getItem('pendingInviteToken')
+            : await SecureStore.getItemAsync('pendingInviteToken');
+          if (token) {
+            await api.post(`/private/plans/invitations/${token}/accept`);
+            if (Platform.OS === 'web') window.localStorage.removeItem('pendingInviteToken');
+            else await SecureStore.deleteItemAsync('pendingInviteToken');
+          }
+        } catch {}
         // 로그인 성공 시 즉시 로딩 상태 해제하지 않음 (화면 전환 후 자동 해제)
       } else {
         // 신규 사용자 - 자동 등록 처리
@@ -151,6 +175,17 @@ export default function LoginScreen() {
               accessToken: registerResponse.accessToken,
               refreshToken: registerResponse.refreshToken,
             });
+            // 회원가입 직후 pending 초대 토큰 자동 처리
+            try {
+              const token = Platform.OS === 'web'
+                ? window.localStorage.getItem('pendingInviteToken')
+                : await SecureStore.getItemAsync('pendingInviteToken');
+              if (token) {
+                await api.post(`/private/plans/invitations/${token}/accept`);
+                if (Platform.OS === 'web') window.localStorage.removeItem('pendingInviteToken');
+                else await SecureStore.deleteItemAsync('pendingInviteToken');
+              }
+            } catch {}
             // 로그인 성공 시 즉시 로딩 상태 해제하지 않음 (화면 전환 후 자동 해제)
           } catch (error: any) {
             console.error('자동 등록 실패:', error.message);
