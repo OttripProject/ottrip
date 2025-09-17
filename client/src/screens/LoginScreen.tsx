@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, Pressable, StyleSheet, ActivityIndicator, Platform, Alert } from 'react-native';
 import { useAuth } from '../contexts/AuthContext';
 import { authApi } from '../services/auth';
-import { validateEnv } from '../core/env/schema';
+import { loadPublicEnv } from '../core/env/schema';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as WebBrowser from 'expo-web-browser';
 import * as Crypto from 'expo-crypto';
@@ -23,7 +23,7 @@ const generateNonce = async () => {
   }
 };
 
-const env = validateEnv();
+const env = loadPublicEnv();
 
 export default function LoginScreen() {
   const { login, getStorageInfo } = useAuth();
@@ -63,7 +63,10 @@ export default function LoginScreen() {
     const clientId = env.EXPO_PUBLIC_GOOGLE_CLIENT_ID;
     
     if (!clientId) {
-      Alert.alert('오류', 'Google Client ID가 설정되지 않았습니다.');
+      if (typeof window !== 'undefined') {
+        // eslint-disable-next-line no-console
+        console.error('Google Client ID가 비어있습니다. Cloudflare Pages 환경변수를 확인하세요.');
+      }
       return;
     }
 
@@ -75,14 +78,26 @@ export default function LoginScreen() {
       
       if (Platform.OS === 'web') {
         // 웹용 구글 로그인
-        const redirectUri = encodeURIComponent(window.location.origin);
+        const redirectUriRaw = `${window.location.origin}`; // 전체 URL 필요(콘솔에 등록해야 함)
+        const redirectUri = encodeURIComponent(redirectUriRaw);
         const scope = encodeURIComponent('openid email profile');
         const responseType = 'id_token';
         
         const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${redirectUri}&scope=${scope}&response_type=${responseType}&nonce=${newNonce}`;
+        if (typeof window !== 'undefined') {
+          // eslint-disable-next-line no-console
+          console.log('Google Auth URL:', decodeURIComponent(authUrl));
+        }
         
         // 현재 창에서 리다이렉트
-        window.location.href = authUrl;
+        try {
+          window.location.href = authUrl;
+        } catch (e) {
+          if (typeof window !== 'undefined') {
+            // eslint-disable-next-line no-console
+            console.error('구글 로그인 리다이렉트 실패:', e);
+          }
+        }
       } else {
         // 모바일용 구글 로그인 (WebBrowser 사용)
         const redirectUri = 'com.ottrip.app.OttripAlpha://oauth2redirect';
