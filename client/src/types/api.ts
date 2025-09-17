@@ -186,7 +186,7 @@ export enum ExpenseCurrency {
 export interface Expense {
   id: number;
   category: ExpenseCategory;
-  amount: number;
+  amount: number; 
   currency: ExpenseCurrency;
   description?: string;
   exDate: string;
@@ -200,7 +200,7 @@ export interface Expense {
 
 export interface CreateExpenseRequest {
   category: ExpenseCategory;
-  amount: number;
+  amount: number; 
   currency: ExpenseCurrency;
   description?: string;
   exDate: string;
