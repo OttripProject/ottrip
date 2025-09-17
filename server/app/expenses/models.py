@@ -2,7 +2,7 @@ import enum
 from datetime import date
 from typing import TYPE_CHECKING
 
-from sqlalchemy import ForeignKey, Integer
+from sqlalchemy import ForeignKey, Integer, Numeric
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models import Base
@@ -45,8 +45,8 @@ class Expense(Base):
     category: Mapped[ExpenseCategory]
     """카테고리"""
 
-    amount: Mapped[int]
-    """금액"""
+    amount: Mapped[float] = mapped_column(Numeric(20, 2))
+    """금액(소수 2자리)"""
 
     currency: Mapped[ExpenseCurrency]
     """통화"""
