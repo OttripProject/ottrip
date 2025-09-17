@@ -1,5 +1,10 @@
 from datetime import date
 
+from decimal import Decimal
+from typing import Annotated
+
+from pydantic import Field
+
 from app.schemas import APISchema
 
 from .models import ExpenseCategory, ExpenseCurrency
@@ -7,7 +12,7 @@ from .models import ExpenseCategory, ExpenseCurrency
 
 class ExpenseBase(APISchema):
     ex_date: date
-    amount: int
+    amount: Annotated[Decimal, Field(ge=0, max_digits=20, decimal_places=2)]
     category: ExpenseCategory
     currency: ExpenseCurrency
     description: str | None = None
