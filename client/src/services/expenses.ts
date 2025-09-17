@@ -5,19 +5,27 @@ export const expensesApi = {
   // 모든 지출 조회
   getExpenses: async (planId?: number): Promise<Expense[]> => {
     const response = await api.get(`/private/expenses/${planId}/plan`);
-    return response.data;
+    // 서버가 Decimal을 문자열로 반환할 수 있으므로 숫자로 강제 변환
+    return (response.data as Expense[]).map((e) => ({
+      ...e,
+      amount: Number((e as any).amount),
+    }));
   },
 
   // 특정 일정의 지출 조회
   getExpensesByItinerary: async (itineraryId: number): Promise<Expense[]> => {
     const response = await api.get(`/private/expenses/${itineraryId}/itinerary`);
-    return response.data;
+    return (response.data as Expense[]).map((e) => ({
+      ...e,
+      amount: Number((e as any).amount),
+    }));
   },
 
   // 특정 지출 조회
   getExpense: async (expenseId: number): Promise<Expense> => {
     const response = await api.get(`/private/expenses/${expenseId}`);
-    return response.data;
+    const e = response.data as Expense;
+    return { ...e, amount: Number((e as any).amount) } as Expense;
   },
 
   // 지출 생성
