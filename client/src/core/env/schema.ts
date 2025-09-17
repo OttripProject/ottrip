@@ -8,7 +8,9 @@ export const envSchema = z.object({
   /** OTA update channel (dev | prod) */
   EXPO_PUBLIC_CHANNEL: z.enum(["dev", "prod"]).default("dev"),
   /** API URL for backend server */
-  EXPO_PUBLIC_API_URL: z.string().min(1, "EXPO_PUBLIC_API_URL is required"),
+  EXPO_PUBLIC_API_URL: z
+    .string()
+    .default("https://ottrip.onrender.com"),
   /** Google OAuth Client ID for web */
   EXPO_PUBLIC_GOOGLE_CLIENT_ID: z.string().default(""),
   /** App version for debugging */
@@ -18,7 +20,6 @@ export const envSchema = z.object({
 });
 
 export type PublicEnv = z.infer<typeof envSchema>;
-
 /**
  * Environment variables validation helper
  */
