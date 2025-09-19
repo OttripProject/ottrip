@@ -16,6 +16,7 @@ from .schemas import (
     PlanReadWithInforms,
     PlansReadByUser,
     PlanUpdate,
+    ShareRead,
 )
 from app.utils.email import build_invitation_accept_link, send_invitation_email
 
@@ -101,29 +102,26 @@ class PlanService:
             raise HTTPException(status_code=403, detail="권한이 없습니다.")
         await self.plan_repository.upsert_shared(plan_id=plan_id, user_id=user_id, role=role)
 
-    async def list_shares(self, *, plan_id: int):
+    async def list_shares(self, *, plan_id: int) -> list[ShareRead]:
+        plan = await self.plan_repository.find_by_id(plan_id=plan_id)
+        if not plan:
+            raise HTTPException(status_code=404, detail="계획을 찾을 수 없습니다.")
+        shared_plans = await self.plan_repository.list_shared(plan_id=plan_id)
+        return [
+            ShareRead(handle=shared_plan.shared_user.handle, role=shared_plan.role, nickname=(shared_plan.shared_user.nickname if shared_plan.shared_user else ""))
+            for shared_plan in shared_plans
+        ]
+
+    async def revoke_share(self, *, plan_id: int, handle: str) -> None:
         plan = await self.plan_repository.find_by_id(plan_id=plan_id)
         if not plan:
             raise HTTPException(status_code=404, detail="계획을 찾을 수 없습니다.")
         if plan.owner_id != self.current_user.id:
             raise HTTPException(status_code=403, detail="권한이 없습니다.")
-        return await self.plan_repository.list_shared(plan_id=plan_id)
-
-    async def revoke_share(self, *, plan_id: int, user_id: int) -> None:
-        plan = await self.plan_repository.find_by_id(plan_id=plan_id)
-        if not plan:
-            raise HTTPException(status_code=404, detail="계획을 찾을 수 없습니다.")
-        # 소유자이거나, 자신이 공유받은 관계만 해제 가능(자기 자신의 공유 해제)
-        if plan.owner_id == self.current_user.id:
-            await self.plan_repository.revoke_shared(plan_id=plan_id, user_id=user_id)
-            return
-        # 소유자가 아닐 경우, 본인 공유만 해제 허용
-        if user_id != self.current_user.id:
-            raise HTTPException(status_code=403, detail="권한이 없습니다.")
-        is_shared = await self.plan_repository.is_shared(plan_id=plan_id, user_id=self.current_user.id)
-        if not is_shared:
-            raise HTTPException(status_code=400, detail="권한이 없습니다.")
-        await self.plan_repository.revoke_shared(plan_id=plan_id, user_id=self.current_user.id)
+        user_id = await self.user_repository.find_id_by_handle(user_handle=handle)
+        if not user_id:
+            raise HTTPException(status_code=404, detail="사용자를 찾을 수 없습니다.")
+        await self.plan_repository.revoke_shared(plan_id=plan_id, user_id=user_id)
 
     # --- Invitations ---
     async def create_invitation(self, *, plan_id: int, email: str, role: Role, expires_days: int | None, invited_by: int):

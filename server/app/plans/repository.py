@@ -72,10 +72,9 @@ class PlanRepository:
                 )
             )
 
-
     async def list_shared(self, *, plan_id: int) -> list[PlanShared]:
         result = await self.session.execute(
-            select(PlanShared).where(PlanShared.plan_id == plan_id)
+            select(PlanShared).options(joinedload(PlanShared.shared_user)).where(PlanShared.plan_id == plan_id)
         )
         return list(result.scalars())
 
@@ -85,7 +84,6 @@ class PlanRepository:
                 PlanShared.plan_id == plan_id, PlanShared.shared_user_id == user_id
             )
         )
-
 
     async def is_shared(self, *, plan_id: int, user_id: int) -> bool:
         result = await self.session.execute(

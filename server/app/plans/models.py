@@ -80,6 +80,12 @@ class Plan(Base):
         default_factory=list,
     )
 
+    shared: Mapped[list["PlanShared"]] = relationship(
+        back_populates="plan",
+        cascade="all, delete-orphan",
+        default_factory=list,
+    )
+
     created_at: Mapped[datetime] = mapped_column(
         DateTime, server_default=func.now(), init=False
     )
@@ -112,7 +118,10 @@ class PlanShared(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), init=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), onupdate=func.now(), init=False)
 
-    __table_args__ = ()
+    # ORM relationships
+    plan: Mapped["Plan"] = relationship(back_populates="shared", init=False)
+    # 별도 이름으로 연결된 사용자
+    shared_user: Mapped["User"] = relationship(init=False)
 
 
 class PlanInvitation(Base):
@@ -128,5 +137,3 @@ class PlanInvitation(Base):
     status: Mapped[InvitationStatus] = mapped_column(default=InvitationStatus.PENDING)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), init=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), onupdate=func.now(), init=False)
-
-    __table_args__ = ()
