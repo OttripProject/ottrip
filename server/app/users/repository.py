@@ -1,7 +1,9 @@
 from sqlalchemy import exists, select, update
+from app.auth.models import UserAuthInfo
 
 from app.database.deps import SessionDep
 from app.utils.dependency import dependency
+from .schemas import UserRead
 
 from .models import User
 from .schemas import UserCreate, UserUpdate
@@ -23,6 +25,25 @@ class UserRepository:
         return await self.session.scalar(
             select(User.id).where(User.handle == user_handle)
         )
+
+    async def find_user_read_by_id(self, *, user_id: int) -> UserRead | None:
+        result = await self.session.execute(
+            select(User, UserAuthInfo.verified_email)
+            .join(UserAuthInfo, UserAuthInfo.user_id == User.id)
+            .where(User.id == user_id)
+        )
+        row = result.one_or_none()
+        if row is None:
+            return None
+        user, verified_email = row
+        user_profile = {
+            "handle": user.handle,
+            "nickname": user.nickname,
+            "description": user.description,
+            "gender": user.gender,
+            "email": verified_email,
+        }
+        return UserRead(**user_profile)
 
     async def create(self, *, user_data: UserCreate) -> User | None:
         created_user = User(**user_data.model_dump())
