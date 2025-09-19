@@ -1,0 +1,42 @@
+# Root .gitignore
+
+# Node / JS
+node_modules/
+**/node_modules/
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+pnpm-debug.*
+*.tsbuildinfo
+
+# Build outputs
+dist/
+build/
+web-build/
+.expo/
+.next/
+
+# Logs
+logs
+*.log
+**/*.log
+
+# OS / IDE
+.DS_Store
+.idea/
+.vscode/
+
+# Env / secrets
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+.ruff_cache/
+
+# DB / local data
+**/*.db
+
+
