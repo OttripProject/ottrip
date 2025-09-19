@@ -1,6 +1,12 @@
 import api from './api';
 import { Plan, CreatePlanRequest, UpdatePlanRequest } from '../types/api';
 
+export type PlanShare = {
+  handle: string;
+  role: 'editor' | 'viewer';
+  nickname: string;
+};
+
 export const plansApi = {
   // 현재 사용자의 모든 계획 조회
   getPlans: async (): Promise<Plan[]> => {
@@ -30,6 +36,17 @@ export const plansApi = {
   deletePlan: async (planId: number): Promise<void> => {
     const response = await api.delete(`/private/plans/${planId}`);
     return response.data;
+  },
+
+  // 공유 목록
+  listShares: async (planId: number): Promise<PlanShare[]> => {
+    const res = await api.get(`/private/plans/${planId}/shares`);
+    return res.data as PlanShare[];
+  },
+
+  // 공유 해제(소유자만): handle 기반
+  revokeShare: async (planId: number, handle: string): Promise<void> => {
+    await api.delete(`/private/plans/${planId}/shares/${handle}`);
   },
 
   // 계획 공유 초대 생성
