@@ -43,8 +43,9 @@ class ShareCreate(APISchema):
 
 
 class ShareRead(APISchema):
-    user_id: int
+    handle: str
     role: Role
+    nickname: str
 
 
 class InvitationCreate(APISchema):

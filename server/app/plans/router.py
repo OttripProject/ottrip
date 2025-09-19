@@ -64,8 +64,7 @@ async def list_shares(
     plan_service: PlanService,
     plan_id: int,
 ) -> list[ShareRead]:
-    rows = await plan_service.list_shares(plan_id=plan_id)
-    return [ShareRead(user_id=r.shared_user_id, role=r.role) for r in rows]
+    return await plan_service.list_shares(plan_id=plan_id)
 
 
 @router.post("/{plan_id}/shares", status_code=status.HTTP_204_NO_CONTENT)
@@ -77,13 +76,13 @@ async def add_share(
     await plan_service.add_share(plan_id=plan_id, user_id=body.user_id, role=body.role)
 
 
-@router.delete("/{plan_id}/shares/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{plan_id}/shares/{handle}", status_code=status.HTTP_204_NO_CONTENT)
 async def revoke_share(
     plan_service: PlanService,
     plan_id: int,
-    user_id: int,
+    handle: str,
 ) -> None:
-    await plan_service.revoke_share(plan_id=plan_id, user_id=user_id)
+    await plan_service.revoke_share(plan_id=plan_id, handle=handle)
 
 
 # --- Invitations ---
