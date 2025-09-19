@@ -333,6 +333,7 @@ export default function WeeklySchedule({ itineraries, height = 600, onItineraryA
           await plansApi.invite(selectedPlanId, { email, role, expires_days });
           Alert.alert('성공', '초대 메일을 전송했습니다.');
         }}
+        planId={selectedPlanId as number}
       />
 
     </View>
