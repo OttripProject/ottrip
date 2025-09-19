@@ -1,6 +1,8 @@
 import DashboardScreen from "@/screens/DashboardScreen";
 import InviteAcceptScreen from "@/screens/InviteAcceptScreen";
 import LoginScreen from "@/screens/LoginScreen";
+import ProfileScreen from "@/screens/ProfileScreen";
+import HeaderBar from "@/components/HeaderBar";
 import { NavigationContainer } from "@react-navigation/native";
 import { createStackNavigator } from "@react-navigation/stack";
 import { useAuth } from "@/contexts/AuthContext";
@@ -30,6 +32,7 @@ export default function RootNavigator() {
           // 인증된 사용자
           <>
             <Stack.Screen name="OTTRIP" component={DashboardScreen} />
+            <Stack.Screen name="PROFILE" component={ProfileScreen} />
             <Stack.Screen name="INVITE_ACCEPT" component={InviteAcceptScreen} />
           </>
         ) : (
