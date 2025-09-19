@@ -47,6 +47,7 @@ async def create_test_user(
     test_user = UserCreate(
         handle=f"testuser{random_number}",
         nickname=f"testuser{random_number}",
+        email=email,
         description="테스트용 유저입니다.",
         gender=Gender.MALE,
     )

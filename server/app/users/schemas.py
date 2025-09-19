@@ -1,7 +1,7 @@
 import re
 from typing import Annotated
 
-from pydantic import Field
+from pydantic import EmailStr, Field
 
 from app.schemas import APISchema
 
@@ -32,9 +32,11 @@ class UserCreate(UserBase):
     pass
 
 
-class UserUpdate(UserBase):
-    pass
+class UserUpdate(APISchema):
+    nickname: str | None = None
+    description: Description | None = None
+    gender: Gender | None = None
 
 
 class UserRead(UserBase):
-    pass
+    email: EmailStr

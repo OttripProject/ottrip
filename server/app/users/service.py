@@ -12,8 +12,8 @@ from .models import User
 from .repository import UserRepository
 from .schemas import (
     UserCreate,
-    # UserRead,
-    # UserUpdate,
+    UserRead,
+    UserUpdate,
 )
 
 
@@ -42,12 +42,10 @@ class UserService:
         if handle_validate.error:
             raise HTTPException(status_code=400, detail=handle_validate.error)
 
-        # 1. 사용자 생성
         created_user = await self.user_repository.create(user_data=user_data)
         if created_user is None:
             raise HTTPException(status_code=400, detail="사용자 생성에 실패했습니다.")
 
-        # 2. 인증 정보와 사용자 연결
         await self.auth_info_service.connect_to_user(auth=auth, user_id=created_user.id)
 
         return created_user
@@ -67,3 +65,18 @@ class UserService:
             raise HTTPException(status_code=400, detail="사용자를 찾을 수 없습니다.")
 
         return target_user_id
+
+    async def get_profile(self, *, user_id: int) -> UserRead:
+        user_profile = await self.user_repository.find_user_read_by_id(user_id=user_id)
+        if not user_profile:
+            raise HTTPException(status_code=400, detail="사용자를 찾을 수 없습니다.")
+        return user_profile
+
+    async def update(self, *, current_user: CurrentUser, updated_data: UserUpdate) -> UserRead:
+        updated_user = await self.user_repository.update(
+            user_id=current_user.id, updated_data=updated_data
+        )
+        if not updated_user:
+            raise HTTPException(status_code=400, detail="사용자 업데이트에 실패했습니다.")
+        profile = await self.get_profile(user_id=current_user.id)
+        return profile

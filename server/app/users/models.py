@@ -32,7 +32,7 @@ class User(Base):
         nullable=False,
         index=True,
     )
-    """사용자명/Handle"""
+    """Handle - email address"""
 
     nickname: Mapped[str] = mapped_column(String(30), nullable=False)
     """닉네임"""
