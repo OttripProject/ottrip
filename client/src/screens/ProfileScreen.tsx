@@ -7,12 +7,13 @@ import { useAuth } from '@/contexts/AuthContext';
 
 export default function ProfileScreen() {
   const { logout } = useAuth();
-  const navigation = useNavigation();
+  const navigation = useNavigation<any>();
   const [me, setMe] = useState<UserProfile | null>(null);
   const [nickname, setNickname] = useState('');
   const [gender, setGender] = useState<string | null>(null);
   const [description, setDescription] = useState('');
   const [contactOpen, setContactOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     const load = async () => {
@@ -97,16 +98,18 @@ export default function ProfileScreen() {
             <View style={styles.copyRow}>
               <Text style={styles.emailText}>ottrip.official@gmail.com</Text>
               <Pressable
-                style={styles.copyBtn}
+                style={[styles.copyBtn, copied && styles.copyBtnCopied]}
                 onPress={async () => {
                   try {
                     await navigator.clipboard.writeText('ottrip.official@gmail.com');
+                    setCopied(true);
+                    setTimeout(() => setCopied(false), 1500);
                   } catch {
                     // noop
                   }
                 }}
               >
-                <Text style={styles.copyBtnText}>복사</Text>
+                <Text style={styles.copyBtnText}>{copied ? '복사됨' : '복사'}</Text>
               </Pressable>
             </View>
             <Pressable style={styles.modalClose} onPress={() => setContactOpen(false)}>
@@ -154,6 +157,7 @@ const styles = StyleSheet.create({
   copyRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 8 },
   emailText: { fontSize: 14, fontWeight: '600' },
   copyBtn: { backgroundColor: '#2563eb', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8 },
+  copyBtnCopied: { backgroundColor: '#10b981' },
   copyBtnText: { color: '#fff', fontWeight: '700' },
   modalClose: { alignSelf: 'flex-end', marginTop: 12 },
   modalCloseText: { color: '#374151' },
