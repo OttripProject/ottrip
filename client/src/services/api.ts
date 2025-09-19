@@ -5,8 +5,16 @@ import { tokenStores } from '../utils/tokenStores';
 // 환경 변수 파싱
 const env = loadPublicEnv();
 
+let resolvedBaseURL = env.EXPO_PUBLIC_API_URL;
+if (typeof window !== 'undefined') {
+  const h = window.location.hostname;
+  if (h === 'localhost' || h === '127.0.0.1') {
+    resolvedBaseURL = 'http://localhost:8080';
+  }
+}
+
 const api = axios.create({
-  baseURL: env.EXPO_PUBLIC_API_URL,
+  baseURL: resolvedBaseURL,
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',
@@ -44,7 +52,7 @@ api.interceptors.response.use(
         if (refreshToken) {
           // 토큰 갱신 API 호출
           const refreshResponse = await axios.post(
-            `${env.EXPO_PUBLIC_API_URL}/public/auth/refresh`,
+            `${resolvedBaseURL}/public/auth/refresh`,
             { refresh_token: refreshToken },
             { headers: { 'Content-Type': 'application/json' } }
           );
