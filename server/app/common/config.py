@@ -1,21 +1,29 @@
-from app.config import BaseConfig
+from pydantic_settings import BaseSettings
 
 
-class EmailConfig(BaseConfig):
-    EMAIL_FROM: str = "Ottrip <noreply@ottrip.official.com>"
-    SMTP_HOST: str
+class EmailSettings(BaseSettings):
+    # CORS/Links
+    CORS_ALLOWED_ORIGINS: str = ""
+    INVITE_ACCEPT_URL_BASE: str = "http://localhost:8081"
+
+    # SMTP (optional when using HTTP email provider)
+    EMAIL_FROM: str = "no-reply@localhost"
+    SMTP_HOST: str | None = None
     SMTP_PORT: int = 587
-    SMTP_USER: str
-    SMTP_PASS: str
+    SMTP_USER: str | None = None
+    SMTP_PASS: str | None = None
     SMTP_SSL: bool = False
     SMTP_STARTTLS: bool = True
-    INVITE_ACCEPT_URL_BASE: str = (
-        "http://localhost:8081"
-    )
-    # 추가: 배포 환경에서 CORS 오리진 허용을 위한 환경변수 입력(쉼표 구분)
-    CORS_ALLOWED_ORIGINS: str = ""
 
 
-email_settings = EmailConfig.create()
+email_settings = EmailSettings()
+
+
+class CommonSettings(BaseSettings):
+    EMAIL_PROVIDER: str | None = None  
+    SENDGRID_API_KEY: str | None = None
+    EMAIL_FROM: str | None = None  
+
+common_settings = CommonSettings()
 
 

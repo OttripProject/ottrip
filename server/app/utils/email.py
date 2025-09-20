@@ -1,12 +1,13 @@
 from __future__ import annotations
 
-import logging
 import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from typing import Optional
 
-from app.common.config import email_settings
+from app.common.config import email_settings, common_settings
+from sendgrid import SendGridAPIClient
+from sendgrid.helpers.mail import Mail
 
 
 def build_invitation_accept_link(token: str) -> str:
@@ -22,7 +23,6 @@ def send_invitation_email(
     accept_link: str,
     expires_at_iso: Optional[str],
 ) -> None:
-    logger = logging.getLogger(__name__)
     subject = f"[Ottrip] '{plan_title}' 계획에 초대되었습니다"
     html = (
         f"<p>여행 계획 '<b>{plan_title}</b>'에 <b>{role}</b> 권한으로 초대되었습니다.</p>"
@@ -38,20 +38,23 @@ def send_invitation_email(
     use_ssl = email_settings.SMTP_SSL
     use_starttls = email_settings.SMTP_STARTTLS
 
+    if (common_settings.EMAIL_PROVIDER or "").lower() == "sendgrid":
+        api_key = common_settings.SENDGRID_API_KEY
+        from_email = common_settings.EMAIL_FROM or email_from
+        if not api_key or not from_email:
+            raise RuntimeError("SENDGRID_API_KEY/EMAIL_FROM missing for HTTP email provider")
+        message = Mail(
+            from_email=from_email,
+            to_emails=to_email,
+            subject=subject,
+            html_content=html,
+        )
+        sg = SendGridAPIClient(api_key)
+        sg.client.mail.send.post(request_body=message.get())
+        return
+
     if not smtp_host or not smtp_user or not smtp_pass:
         raise RuntimeError("SMTP configuration is missing. Set SMTP_HOST/SMTP_USER/SMTP_PASS.")
-
-    logger.info(
-        "smtp.config",
-        extra={
-            "host": smtp_host,
-            "port": smtp_port,
-            "ssl": use_ssl,
-            "starttls": use_starttls,
-            "from": email_from,
-            "to": to_email,
-        },
-    )
 
     msg = MIMEMultipart("alternative")
     msg["From"] = email_from
@@ -59,31 +62,15 @@ def send_invitation_email(
     msg["Subject"] = subject
     msg.attach(MIMEText(html, "html", _charset="utf-8"))
 
-    try:
-        if use_ssl:
-            logger.info("smtp.ssl.connect.start")
-            with smtplib.SMTP_SSL(smtp_host, smtp_port, timeout=10) as server:
-                logger.info("smtp.ssl.connect.ok")
-                logger.info("smtp.login.start")
-                server.login(smtp_user, smtp_pass)
-                logger.info("smtp.login.ok")
-                logger.info("smtp.send.start")
-                server.sendmail(email_from, [to_email], msg.as_string())
-                logger.info("smtp.send.ok")
-        else:
-            with smtplib.SMTP(smtp_host, smtp_port, timeout=10) as server:
-                if use_starttls:
-                    logger.info("smtp.starttls.start")
-                    server.starttls()
-                    logger.info("smtp.starttls.ok")
-                logger.info("smtp.login.start")
-                server.login(smtp_user, smtp_pass)
-                logger.info("smtp.login.ok")
-                logger.info("smtp.send.start")
-                server.sendmail(email_from, [to_email], msg.as_string())
-                logger.info("smtp.send.ok")
-    except Exception:
-        logger.exception("smtp.error")
-        raise
+    if use_ssl:
+        with smtplib.SMTP_SSL(smtp_host, smtp_port) as server:
+            server.login(smtp_user, smtp_pass)
+            server.sendmail(email_from, [to_email], msg.as_string())
+    else:
+        with smtplib.SMTP(smtp_host, smtp_port) as server:
+            if use_starttls:
+                server.starttls()
+            server.login(smtp_user, smtp_pass)
+            server.sendmail(email_from, [to_email], msg.as_string())
 
 
