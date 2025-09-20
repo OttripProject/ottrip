@@ -5,7 +5,7 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from typing import Optional
 
-from app.common.config import email_settings, common_settings
+from app.common.config import email_settings
 from sendgrid import SendGridAPIClient
 from sendgrid.helpers.mail import Mail
 
@@ -23,6 +23,7 @@ def send_invitation_email(
     accept_link: str,
     expires_at_iso: Optional[str],
 ) -> None:
+
     subject = f"[Ottrip] '{plan_title}' 계획에 초대되었습니다"
     html = (
         f"<p>여행 계획 '<b>{plan_title}</b>'에 <b>{role}</b> 권한으로 초대되었습니다.</p>"
@@ -31,16 +32,10 @@ def send_invitation_email(
     )
 
     email_from = email_settings.EMAIL_FROM
-    smtp_host = email_settings.SMTP_HOST
-    smtp_port = email_settings.SMTP_PORT
-    smtp_user = email_settings.SMTP_USER
-    smtp_pass = email_settings.SMTP_PASS
-    use_ssl = email_settings.SMTP_SSL
-    use_starttls = email_settings.SMTP_STARTTLS
 
-    if (common_settings.EMAIL_PROVIDER or "").lower() == "sendgrid":
-        api_key = common_settings.SENDGRID_API_KEY
-        from_email = common_settings.EMAIL_FROM or email_from
+    if (email_settings.EMAIL_PROVIDER or "").lower() == "sendgrid":
+        api_key = email_settings.SENDGRID_API_KEY
+        from_email = email_settings.EMAIL_FROM or email_from
         if not api_key or not from_email:
             raise RuntimeError("SENDGRID_API_KEY/EMAIL_FROM missing for HTTP email provider")
         message = Mail(
@@ -49,9 +44,9 @@ def send_invitation_email(
             subject=subject,
             html_content=html,
         )
-        sg = SendGridAPIClient(api_key)
-        sg.client.mail.send.post(request_body=message.get())
-        return
+        sg = SendGridAPIClient(api_key=api_key)
+        response = sg.send(message)
+        print("응답 : ", response.status_code)
 
     if not smtp_host or not smtp_user or not smtp_pass:
         raise RuntimeError("SMTP configuration is missing. Set SMTP_HOST/SMTP_USER/SMTP_PASS.")
