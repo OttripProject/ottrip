@@ -144,8 +144,6 @@ class PlanService:
             expires_at=expires_at,
             invited_by=invited_by,
         )
-        # 이메일 발송 (환경변수 미설정 시 로그로 대체)
-        # 이메일 발송 (HTTPClientDep 주입 시 사용; 없으면 내부 생성)
         accept_link = build_invitation_accept_link(token)
         try:
             send_invitation_email(

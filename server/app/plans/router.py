@@ -86,21 +86,19 @@ async def revoke_share(
 
 
 # --- Invitations ---
-@router.post("/{plan_id}/invitations", status_code=status.HTTP_200_OK)
+@router.post("/{plan_id}/invitations", status_code=status.HTTP_204_NO_CONTENT)
 async def create_invitation(
     plan_service: PlanService,
     plan_id: int,
     body: InvitationCreate,
 ):
-    inv = await plan_service.create_invitation(
+    await plan_service.create_invitation(
         plan_id=plan_id,
         email=body.email,
         role=body.role,
         expires_days=body.expires_days,
         invited_by=plan_service.current_user.id,
     )
-    # 개발단계: 메일 대신 토큰 반환
-    return {"token": inv.token, "expires_at": inv.expires_at}
 
 
 @router.post("/invitations/{token}/accept", status_code=status.HTTP_204_NO_CONTENT)
