@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING
 
 from enum import Enum
 
-from sqlalchemy import Date, DateTime, ForeignKey, Integer, String, func
+from sqlalchemy import Date, DateTime, ForeignKey, Integer, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models import Base
@@ -55,6 +55,9 @@ class Plan(Base):
     total_amount: Mapped[int] = mapped_column(default=0, nullable=False)
     """총 금액"""
 
+    memo: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    """플랜 메모(기본 빈 문자열)"""
+
     expenses: Mapped[list["Expense"]] = relationship(
         back_populates="plan",
         cascade="all, delete-orphan",
@@ -99,6 +102,7 @@ class Plan(Base):
 class Role(Enum):
     EDITOR = "editor"
     VIEWER = "viewer"
+    OWNER = "owner"
 
 
 class InvitationStatus(Enum):

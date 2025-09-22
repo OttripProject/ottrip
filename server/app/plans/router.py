@@ -8,6 +8,7 @@ from .schemas import (
     PlanReadWithInforms,
     PlansReadByUser,
     PlanUpdate,
+    PlanMemoUpdate,
     ShareCreate,
     ShareRead,
     InvitationCreate,
@@ -48,6 +49,15 @@ async def update_plan(
     update_data: PlanUpdate,
 ) -> PlanRead:
     return await plan_service.update(plan_id=plan_id, update_data=update_data)
+
+
+@router.patch("/{plan_id}/memo", status_code=status.HTTP_204_NO_CONTENT)
+async def set_plan_memo(
+    plan_service: PlanService,
+    plan_id: int,
+    memo_data: PlanMemoUpdate,
+) -> None:
+    await plan_service.set_memo(plan_id=plan_id, memo_data=memo_data)
 
 
 @router.delete("/{plan_id}", status_code=status.HTTP_204_NO_CONTENT)

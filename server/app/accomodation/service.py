@@ -29,7 +29,7 @@ class AccommodationService:
                 plan_id=accommodation_data.plan_id, user_id=self.current_user.id
             )
             if not is_editor:
-                raise HTTPException(status_code=400, detail="해당 숙소에 대한 생성 권한이 없습니다.")
+                raise HTTPException(status_code=403, detail="해당 숙소에 대한 생성 권한이 없습니다.")
         create_accommodation_data = Accommodation(
             name=accommodation_data.name,
             address=accommodation_data.address,
@@ -44,7 +44,7 @@ class AccommodationService:
 
         if accommodation_data.expense:
             expense = Expense(
-                amount=accommodation_data.expense.amount,
+                amount=float(accommodation_data.expense.amount),
                 category=accommodation_data.expense.category,
                 description=accommodation_data.expense.description,
                 currency=accommodation_data.expense.currency,
@@ -65,6 +65,13 @@ class AccommodationService:
         if not accommodation:
             raise HTTPException(status_code=400, detail="해당 숙소를 찾을 수 없습니다.")
 
+        if accommodation.plan.owner_id != self.current_user.id:
+            is_shared = await self.plan_repository.is_shared(
+                plan_id=accommodation.plan_id, user_id=self.current_user.id
+            )
+            if not is_shared:
+                raise HTTPException(status_code=403, detail="숙소 조회 권한이 없습니다.")
+
         return AccommodationRead.model_validate(accommodation)
 
     async def read_accommodations_by_plan(
@@ -73,6 +80,13 @@ class AccommodationService:
         plan = await self.plan_repository.find_by_id(plan_id=plan_id)
         if not plan:
             raise HTTPException(status_code=404, detail="해당 계획을 찾을 수 없습니다.")
+
+        if plan.owner_id != self.current_user.id:
+            is_shared = await self.plan_repository.is_shared(
+                plan_id=plan_id, user_id=self.current_user.id
+            )
+            if not is_shared:
+                raise HTTPException(status_code=403, detail="숙소 조회 권한이 없습니다.")
 
         accommodations = await self.accommodation_repository.find_all_by_plan(
             plan_id=plan_id
@@ -98,7 +112,7 @@ class AccommodationService:
             )
             if not is_editor:
                 raise HTTPException(
-                    status_code=400, detail="해당 숙소에 대한 수정 권한이 없습니다."
+                    status_code=403, detail="해당 숙소에 대한 수정 권한이 없습니다."
                 )
 
         if update_data.name:
@@ -119,7 +133,7 @@ class AccommodationService:
         if update_data.expense:
             if accommodation.expense:
                 if update_data.expense.amount is not None:
-                    accommodation.expense.amount = update_data.expense.amount
+                    accommodation.expense.amount = float(update_data.expense.amount)
                 if update_data.expense.category is not None:
                     accommodation.expense.category = update_data.expense.category
                 if update_data.expense.description is not None:
@@ -147,7 +161,7 @@ class AccommodationService:
             )
             if not is_editor:
                 raise HTTPException(
-                    status_code=400, detail="해당 숙소에 대한 수정 권한이 없습니다."
+                    status_code=403, detail="해당 숙소에 대한 수정 권한이 없습니다."
                 )
 
         await self.expense_repository.soft_delete_by_accommodation_id(
