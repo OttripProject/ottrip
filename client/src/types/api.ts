@@ -11,6 +11,8 @@ export interface Plan {
   title: string;
   startDate: string;
   endDate: string;
+  memo?: string;
+  myRole?: 'owner' | 'editor' | 'viewer';
   createdAt: string;
   updatedAt: string;
 }

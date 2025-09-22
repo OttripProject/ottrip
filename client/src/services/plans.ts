@@ -53,8 +53,12 @@ export const plansApi = {
   invite: async (
     planId: number,
     body: { email: string; role: 'editor' | 'viewer'; expires_days?: number }
-  ): Promise<{ token: string; expires_at: string | null }> => {
-    const response = await api.post(`/private/plans/${planId}/invitations`, body);
-    return response.data;
+  ): Promise<void> => {
+    await api.post(`/private/plans/${planId}/invitations`, body);
+  },
+
+  // 메모 수정
+  setMemo: async (planId: number, memo: string): Promise<void> => {
+    await api.patch(`/private/plans/${planId}/memo`, { memo });
   },
 }; 
