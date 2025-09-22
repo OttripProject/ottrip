@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { View, Text, Pressable, StyleSheet, Alert, TouchableOpacity, Modal } from 'react-native';
+import { View, Text, Pressable, StyleSheet, Alert, TouchableOpacity, Modal, TextInput } from 'react-native';
 import { Calendar as BigCalendar } from 'react-native-big-calendar';
 import { Calendar } from 'react-native-calendars';
 import dayjs from 'dayjs';
@@ -73,6 +73,8 @@ export default function WeeklySchedule({ itineraries, height = 600, onItineraryA
     const [showMonthPicker, setShowMonthPicker] = useState(false);
     const [selectedDate, setSelectedDate] = useState<string>(dayjs().format('YYYY-MM-DD'));
     const [shareOpen, setShareOpen] = useState(false);
+    const [memoOpen, setMemoOpen] = useState(false);
+    const [memoDraft, setMemoDraft] = useState('');
     
     // Plan API 연동
     const { plans, addPlan, updatePlan, deletePlan, isLoading, error, fetchPlans } = usePlans();
@@ -97,6 +99,11 @@ export default function WeeklySchedule({ itineraries, height = 600, onItineraryA
     // 선택된 Plan의 데이터 로딩
     const selectedPlanId = selectedTrip ? parseInt(selectedTrip.id) : null;
     const planData = usePlanData(selectedPlanId);
+
+    const myRole = useMemo(() => {
+      const r = (planData.plan as any)?.myRole;
+      return typeof r === 'string' ? r.toLowerCase() : undefined; // 'owner' | 'editor' | 'viewer'
+    }, [planData.plan]);
 
     const handleAddTrip = async (newTrip: any) => {
       try {
@@ -226,20 +233,6 @@ export default function WeeklySchedule({ itineraries, height = 600, onItineraryA
         {/* Spacer */}
         <View style={{ flex: 1 }} />
 
-        {/* 공유 버튼 */}
-        <Pressable
-          onPress={() => {
-            if (!selectedPlanId) {
-              Alert.alert('알림', '먼저 공유할 여행을 선택해주세요.');
-              return;
-            }
-            setShareOpen(true);
-          }}
-          style={[styles.todayBtn, { marginRight: 8 }]}
-        >
-          <Text style={styles.todayText}>공유</Text>
-        </Pressable>
-
         {/* 여행 선택 콤보박스 */}
         <TripSelector
           selectedTrip={selectedTrip}
@@ -255,6 +248,44 @@ export default function WeeklySchedule({ itineraries, height = 600, onItineraryA
           onTripUpdate={handleUpdateTrip}
           onTripDelete={handleDeleteTrip}
         />
+
+        {/* 기능 버튼 그룹: plan 선택 시만 표시 */}
+        {selectedPlanId ? (
+          <View style={styles.actionGroup}>
+            {(myRole === 'owner' || myRole === 'editor') && (
+              <Pressable
+                onPress={() => setShareOpen(true)}
+                style={[styles.actionBtn]}
+              >
+                <Text style={styles.actionText}>공유</Text>
+              </Pressable>
+            )}
+
+            {(myRole === 'owner' || myRole === 'editor') && (
+              <Pressable
+                onPress={() => {
+                  // 항공권 관리 진입: 현재 화면 구조상 직접 열 수 없어 안내 처리
+                  Alert.alert('안내', '오른쪽 패널의 "항공" 섹션에서 관리할 수 있어요.');
+                }}
+                style={[styles.actionBtn, { marginLeft: 6 }]}
+              >
+                <Text style={styles.actionText}>항공권</Text>
+              </Pressable>
+            )}
+
+            {(myRole === 'owner' || myRole === 'editor' || myRole === 'viewer') && (
+              <Pressable
+                onPress={() => {
+                  setMemoDraft((planData.plan as any)?.memo ?? '');
+                  setMemoOpen(true);
+                }}
+                style={[styles.actionBtn, { marginLeft: 6 }]}
+              >
+                <Text style={styles.actionText}>메모</Text>
+              </Pressable>
+            )}
+          </View>
+        ) : null}
       </View>
 
       {/* 캘린더 */}
@@ -336,6 +367,49 @@ export default function WeeklySchedule({ itineraries, height = 600, onItineraryA
         planId={selectedPlanId as number}
       />
 
+      {/* 메모 편집 모달 */}
+      <Modal visible={memoOpen} transparent animationType="fade" onRequestClose={() => setMemoOpen(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { width: '90%' }] }>
+            <Text style={styles.title}>플랜 메모</Text>
+            <TextInput
+              style={[styles.memoInput]}
+              multiline
+              numberOfLines={6}
+              value={memoDraft}
+              onChangeText={setMemoDraft}
+              placeholder="메모를 입력하세요"
+              textAlignVertical="top"
+            />
+            <View style={{ flexDirection:'row', justifyContent:'flex-end', marginTop: 8 }}>
+              <Pressable onPress={() => setMemoOpen(false)} style={[styles.todayBtn, { marginRight: 6 }]}>
+                <Text style={styles.todayText}>취소</Text>
+              </Pressable>
+              <Pressable
+                onPress={async () => {
+                  try {
+                    if (!selectedPlanId) throw new Error('No plan selected');
+                    await plansApi.setMemo(selectedPlanId, memoDraft ?? '');
+                    Alert.alert('성공', '메모가 저장되었습니다.');
+                    setMemoOpen(false);
+                    // 최신 데이터 반영
+                    if (selectedPlanId) {
+                      // @ts-ignore
+                      planData.fetchPlanData && (await planData.fetchPlanData(selectedPlanId));
+                    }
+                  } catch (e: any) {
+                    Alert.alert('오류', e?.response?.data?.detail || '메모 저장에 실패했습니다.');
+                  }
+                }}
+                style={[styles.todayBtn]}
+              >
+                <Text style={styles.todayText}>저장</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
     </View>
   );
 }
@@ -378,4 +452,8 @@ const styles = StyleSheet.create({
       width: '92%',
       elevation: 4,
     },
+    actionGroup: { flexDirection:'row', alignItems:'center', marginLeft: 8 },
+    actionBtn: { borderWidth: 1, borderColor: '#c5c5c5', borderRadius: 6, paddingHorizontal: 10, paddingVertical: 4 },
+    actionText: { fontSize: 14, fontWeight: '600' },
+    memoInput: { borderWidth: 1, borderColor: '#ddd', borderRadius: 8, padding: 10, minHeight: 120, backgroundColor: '#fff' },
 });
