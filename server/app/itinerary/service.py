@@ -26,7 +26,7 @@ class ItineraryService:
                 plan_id=itinerary_data.plan_id, user_id=self.current_user.id
             )
             if not is_editor:
-                raise HTTPException(status_code=400, detail="일정 생성 권한이 없습니다.")
+                raise HTTPException(status_code=403, detail="일정 생성 권한이 없습니다.")
 
         create_itinerary_data = Itinerary(
             title=itinerary_data.title,
@@ -54,12 +54,26 @@ class ItineraryService:
         if not itinerary:
             raise HTTPException(status_code=404, detail="해당 일정을 찾을 수 없습니다.")
 
+        if itinerary.plan.owner_id != self.current_user.id:
+            is_shared = await self.plan_repository.is_shared(
+                plan_id=itinerary.plan_id, user_id=self.current_user.id
+            )
+            if not is_shared:
+                raise HTTPException(status_code=403, detail="일정 조회 권한이 없습니다.")
+
         return ItineraryRead.model_validate(itinerary)
 
     async def read_itineraries_by_plan(self, *, plan_id: int) -> list[ItineraryRead]:
         plan = await self.plan_repository.find_by_id(plan_id=plan_id)
         if not plan:
             raise HTTPException(status_code=400, detail="해당 계획을 찾을 수 없습니다.")
+
+        if plan.owner_id != self.current_user.id:
+            is_shared = await self.plan_repository.is_shared(
+                plan_id=plan_id, user_id=self.current_user.id
+            )
+            if not is_shared:
+                raise HTTPException(status_code=403, detail="일정 조회 권한이 없습니다.")
 
         itineraries = await self.itinerary_repository.find_all_by_plan(plan_id=plan_id)
         itineraries_list = [
@@ -81,7 +95,7 @@ class ItineraryService:
                 plan_id=itinerary.plan_id, user_id=self.current_user.id
             )
             if not is_editor:
-                raise HTTPException(status_code=400, detail="일정 수정 권한이 없습니다.")
+                raise HTTPException(status_code=403, detail="일정 수정 권한이 없습니다.")
 
         if update_data.title:
             itinerary.title = update_data.title
@@ -113,7 +127,7 @@ class ItineraryService:
                 plan_id=itinerary.plan_id, user_id=self.current_user.id
             )
             if not is_editor:
-                raise HTTPException(status_code=400, detail="일정 수정 권한이 없습니다.")
+                raise HTTPException(status_code=403, detail="일정 수정 권한이 없습니다.")
         
         await self.expense_repository.soft_delete_by_itinerary_id(
             itinerary_id=itinerary_id

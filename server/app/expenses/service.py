@@ -26,9 +26,9 @@ class ExpenseService:
                 plan_id=expense_data.plan_id, user_id=self.current_user.id
             )
             if not is_editor:
-                raise HTTPException(status_code=400, detail="해당 비용에 대한 생성 권한이 없습니다.")
+                raise HTTPException(status_code=403, detail="해당 비용에 대한 생성 권한이 없습니다.")
         create_expense_data = Expense(
-            amount=expense_data.amount,
+            amount=float(expense_data.amount),
             category=expense_data.category,
             currency=expense_data.currency,
             description=expense_data.description,
@@ -38,7 +38,6 @@ class ExpenseService:
         created_expense = await self.expense_repository.save(
             expense=create_expense_data
         )
-        # 선택적으로 일정/항공과 연결
         itinerary_id = getattr(expense_data, "itinerary_id", None)
         if itinerary_id:
             created_expense.itinerary_id = itinerary_id
@@ -54,12 +53,26 @@ class ExpenseService:
         if not expense:
             raise HTTPException(status_code=404, detail="해당 비용을 찾을 수 없습니다.")
 
+        if expense.plan.owner_id != self.current_user.id:
+            is_shared = await self.plan_repository.is_shared(
+                plan_id=expense.plan_id, user_id=self.current_user.id
+            )
+            if not is_shared:
+                raise HTTPException(status_code=403, detail="비용 조회 권한이 없습니다.")
+
         return ExpenseRead.model_validate(expense)
 
     async def read_expenses_by_plan(self, *, plan_id: int) -> list[ExpenseRead]:
         plan = await self.plan_repository.find_by_id(plan_id=plan_id)
         if not plan:
             raise HTTPException(status_code=404, detail="해당 계획을 찾을 수 없습니다.")
+
+        if plan.owner_id != self.current_user.id:
+            is_shared = await self.plan_repository.is_shared(
+                plan_id=plan_id, user_id=self.current_user.id
+            )
+            if not is_shared:
+                raise HTTPException(status_code=403, detail="비용 조회 권한이 없습니다.")
 
         expenses = await self.expense_repository.find_all_by_plan(plan_id=plan_id)
         expenses_list = [ExpenseRead.model_validate(expense) for expense in expenses]
@@ -94,11 +107,11 @@ class ExpenseService:
             )
             if not is_editor:
                 raise HTTPException(
-                    status_code=400, detail="해당 비용에 대한 수정 권한이 없습니다."
+                    status_code=403, detail="해당 비용에 대한 수정 권한이 없습니다."
                 )
 
         if update_data.amount:
-            expense.amount = update_data.amount
+            expense.amount = float(update_data.amount)
         if update_data.category:
             expense.category = update_data.category
         if update_data.description:
@@ -122,7 +135,7 @@ class ExpenseService:
             )
             if not is_editor:
                 raise HTTPException(
-                    status_code=400, detail="해당 비용에 대한 수정 권한이 없습니다."
+                    status_code=403, detail="해당 비용에 대한 수정 권한이 없습니다."
                 )
 
         await self.expense_repository.remove(expense_id=expense_id)

@@ -11,6 +11,7 @@ class PlanBase(APISchema):
     title: str
     start_date: date
     end_date: date
+    memo: str = ""
 
 
 class PlanCreate(PlanBase):
@@ -31,6 +32,7 @@ class PlanReadWithInforms(PlanRead):
     flights: list[FlightRead] | None
     itineraries: list[ItineraryRead] | None
     expenses: list[ExpenseRead] | None
+    my_role: Role | None = None
 
 
 class PlansReadByUser(APISchema):
@@ -52,6 +54,10 @@ class InvitationCreate(APISchema):
     email: str
     role: Role
     expires_days: int | None = 7
+
+
+class PlanMemoUpdate(APISchema):
+    memo: str = ""
 
 
 class InvitationPreview(APISchema):
