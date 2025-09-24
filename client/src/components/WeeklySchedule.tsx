@@ -300,19 +300,21 @@ export default function WeeklySchedule({ itineraries, height = 600, onItineraryA
         swipeEnabled
         showTime
         renderEvent={(event, touchableOpacityProps) => {
+          // key/children은 제거하고, onPress는 내부 Touchable에서 호출하여 경고 없이 클릭 유지
+          const { key: eventKey, children: _ignoreChildren, style: tpStyle, onPress: calendarOnPress, ...rest } = (touchableOpacityProps as any) ?? {};
           return (
             <View
-              {...touchableOpacityProps}
-              style={[touchableOpacityProps.style, { backgroundColor: event.color || '#3478f6' }]}
+              key={eventKey}
+              {...rest}
+              style={[tpStyle, { backgroundColor: event.color || '#3478f6' }]}
             >
               <TouchableOpacity
                 style={{ flex: 1, justifyContent: 'center', padding: 4 }}
-                onPress={() => {
+                onPress={(e) => {
+                  try { calendarOnPress && calendarOnPress(e); } catch {}
                   const itinerary = finalItineraries.find(it => it.id === event.id);
                   if (itinerary && onItinerarySelect) {
                     onItinerarySelect(itinerary);
-                  } else {
-                    console.log('❌ No itinerary found or no onItinerarySelect callback');
                   }
                 }}
               >

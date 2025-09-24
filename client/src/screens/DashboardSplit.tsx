@@ -7,8 +7,9 @@ import { usePlanData } from '@/hooks/usePlanData';
 
 export default function DashboardSplit() {
   const isWideScreen = useIsWideScreen();
-  const calendarWidth = isWideScreen ? '70%' : '100%';
-  const sideWidth = isWideScreen ? '30%' : '100%';
+  // 좌우 영역을 비율로 채우도록 flex 가중치 사용 (높이 보장)
+  const calendarFlex = isWideScreen ? 7 : 0;
+  const sideFlex = isWideScreen ? 3 : 0;
   
   const [selectedPlanId, setSelectedPlanId] = useState<number | null>(null);
   const [selectedItinerary, setSelectedItinerary] = useState<any>(null);
@@ -46,7 +47,7 @@ export default function DashboardSplit() {
 
   return (
     <View style={styles.container}>
-      <View style={[styles.calendarPane, { width: calendarWidth }]}>
+      <View style={[styles.calendarPane, isWideScreen ? { flex: calendarFlex } : { width: '100%' }]}> 
         <WeeklySchedule 
           itineraries={planData.itineraries}
           height={600} 
@@ -55,7 +56,7 @@ export default function DashboardSplit() {
           onItinerarySelect={setSelectedItinerary}
         />
       </View>
-      <View style={[styles.sidePane, { width: sideWidth }]}>
+      <View style={[styles.sidePane, isWideScreen ? { flex: sideFlex } : { width: '100%' }]}> 
         <SidePanels 
           planData={planData}
           selectedItinerary={selectedItinerary}
@@ -71,6 +72,6 @@ export default function DashboardSplit() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, flexDirection: 'row' },
-  calendarPane: { borderRightWidth: StyleSheet.hairlineWidth, borderColor: '#ccc' },
-  sidePane: { backgroundColor: '#fafafa' },
+  calendarPane: { borderRightWidth: StyleSheet.hairlineWidth, borderColor: '#ccc', minHeight: 0 },
+  sidePane: { backgroundColor: '#fafafa', minHeight: 0 },
 });
