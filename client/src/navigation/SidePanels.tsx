@@ -1823,8 +1823,19 @@ export default function SidePanels({ planData, selectedItinerary, onItineraryAdd
   );
 
   return (
-    <View style={{ flex: 1 }}>
-    <ScrollView style={{ flex: 1 }}>
+    <View style={{ flex: 1, minHeight: 0 }}>
+    <ScrollView
+      style={{ flex: 1, minHeight: 0, ...( { overflowY: 'scroll' } as any ) }}
+      contentContainerStyle={{ paddingBottom: 240, flexGrow: 1 }}
+      keyboardShouldPersistTaps="handled"
+      nestedScrollEnabled
+      showsVerticalScrollIndicator
+      scrollEnabled
+      alwaysBounceVertical
+      bounces
+      overScrollMode="always"
+      contentInsetAdjustmentBehavior="always"
+    >
       <List.Section>
         <List.Accordion
             title="일정"

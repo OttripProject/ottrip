@@ -41,21 +41,25 @@ export default function DashboardStack() {
 
   return (
     <View style={styles.container}>
-      <WeeklySchedule 
-        itineraries={planData.itineraries}
-        height={400} 
-        onItineraryAdd={handleItineraryAdd}
-        onPlanSelect={setSelectedPlanId}
-        onItinerarySelect={setSelectedItinerary}
-      />
-      <SidePanels 
-        planData={planData}
-        selectedItinerary={selectedItinerary}
-        onItineraryAdd={handleItineraryAdd}
-        onFlightAdd={handleFlightAdd}
-        onAccommodationAdd={handleAccommodationAdd}
-        onExpenseAdd={handleExpenseAdd}
-      />
+      <View style={{ height: 400 }}>
+        <WeeklySchedule 
+          itineraries={planData.itineraries}
+          height={400} 
+          onItineraryAdd={handleItineraryAdd}
+          onPlanSelect={setSelectedPlanId}
+          onItinerarySelect={setSelectedItinerary}
+        />
+      </View>
+      <View style={{ flex: 1, minHeight: 0 }}>
+        <SidePanels 
+          planData={planData}
+          selectedItinerary={selectedItinerary}
+          onItineraryAdd={handleItineraryAdd}
+          onFlightAdd={handleFlightAdd}
+          onAccommodationAdd={handleAccommodationAdd}
+          onExpenseAdd={handleExpenseAdd}
+        />
+      </View>
     </View>
   );
 }
