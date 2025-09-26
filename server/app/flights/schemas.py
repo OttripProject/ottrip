@@ -14,7 +14,6 @@ class FlightBase(APISchema):
     seat_class: str
     seat_number: str
     duration: str | None = None
-    memo: str | None = None
 
 
 class FlightCreate(FlightBase):
@@ -37,5 +36,4 @@ class FlightUpdate(APISchema):
     seat_class: str | None = None
     seat_number: str | None = None
     duration: str | None = None
-    memo: str | None = None
     expense: ExpenseUpdate | None = None

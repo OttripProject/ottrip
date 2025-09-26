@@ -40,7 +40,6 @@ class FlightService:
             seat_class=flight_data.seat_class,
             seat_number=flight_data.seat_number,
             duration=flight_data.duration,
-            memo=flight_data.memo,
             plan_id=flight_data.plan_id,
         )
         created_flight = await self.flight_repository.save(flight=create_flight_data)
@@ -127,8 +126,6 @@ class FlightService:
             flight.seat_number = update_data.seat_number
         if update_data.duration:
             flight.duration = update_data.duration
-        if update_data.memo:
-            flight.memo = update_data.memo
 
         updated_flight = await self.flight_repository.save(flight=flight)
 

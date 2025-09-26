@@ -52,9 +52,6 @@ class Flight(Base):
     duration: Mapped[str | None] = mapped_column(nullable=True)
     """비행 시간"""
 
-    memo: Mapped[str | None] = mapped_column(nullable=True)
-    """메모"""
-
     plan_id: Mapped[int] = mapped_column(
         Integer,
         ForeignKey("plan.id"),
