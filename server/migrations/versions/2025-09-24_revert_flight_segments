@@ -1,0 +1,130 @@
+# alembic revision -m "revert flight segments to single-flight columns"
+
+import sqlalchemy as sa
+from alembic import op
+from sqlalchemy.dialects import postgresql
+
+revision = "7d493cc8e271" # 임시
+down_revision = "b54807b4d316"  # 현재 head(세그먼트 도입 리비전)
+
+def upgrade():
+    op.add_column(
+        "flight",
+        sa.Column(
+            "departure_airport", sa.VARCHAR(), autoincrement=False, nullable=True
+        ),
+    )
+    op.add_column(
+        "flight",
+        sa.Column(
+            "arrival_time",
+            postgresql.TIMESTAMP(timezone=True),
+            autoincrement=False,
+            nullable=True,
+        ),
+    )
+    op.add_column(
+        "flight",
+        sa.Column("flight_number", sa.VARCHAR(), autoincrement=False, nullable=True),
+    )
+    op.add_column(
+        "flight",
+        sa.Column("arrival_airport", sa.VARCHAR(), autoincrement=False, nullable=True),
+    )
+    op.add_column(
+        "flight",
+        sa.Column("airline", sa.VARCHAR(), autoincrement=False, nullable=True),
+    )
+    op.add_column(
+        "flight",
+        sa.Column(
+            "departure_time",
+            postgresql.TIMESTAMP(timezone=True),
+            autoincrement=False,
+            nullable=True,
+        ),
+    )
+    op.add_column(
+        "flight",
+        sa.Column("seat_class", sa.VARCHAR(), autoincrement=False, nullable=True),
+    )
+    op.add_column(
+        "flight", sa.Column("memo", sa.VARCHAR(), autoincrement=False, nullable=True)
+    )
+    op.add_column(
+        "flight",
+        sa.Column("seat_number", sa.VARCHAR(), autoincrement=False, nullable=True),
+    )
+    op.add_column(
+        "flight",
+        sa.Column("duration", sa.VARCHAR(), autoincrement=False, nullable=True),
+    )
+
+    # 2) flight_segment에서 대표 세그먼트(최소 order)를 가져와 기존 컬럼들 백필
+    op.execute(
+        """
+        UPDATE flight f
+        SET
+            airline = fs.airline,
+            flight_number = fs.flight_number,
+            departure_airport = fs.departure_airport,
+            arrival_airport = fs.arrival_airport,
+            departure_time = fs.departure_time,
+            arrival_time = fs.arrival_time,
+            seat_class = fs.seat_class,
+            seat_number = fs.seat_number
+        FROM (
+            SELECT DISTINCT ON (flight_id)
+                flight_id,
+                airline,
+                flight_number,
+                departure_airport,
+                arrival_airport,
+                departure_time,
+                arrival_time,
+                seat_class,
+                seat_number
+            FROM flight_segment
+            ORDER BY flight_id, "order"
+        ) fs
+        WHERE f.id = fs.flight_id;
+        """
+    )
+
+    # 2-1) 세그먼트가 없거나 매칭 실패로 남은 NULL 값을 기본값으로 보정
+    op.execute(
+        """
+        UPDATE flight
+        SET
+            airline = COALESCE(airline, ''),
+            flight_number = COALESCE(flight_number, ''),
+            departure_airport = COALESCE(departure_airport, ''),
+            arrival_airport = COALESCE(arrival_airport, ''),
+            seat_class = COALESCE(seat_class, ''),
+            seat_number = COALESCE(seat_number, ''),
+            departure_time = COALESCE(departure_time, now()),
+            arrival_time = COALESCE(arrival_time, now());
+        """
+    )
+
+    # 3) NOT NULL 제약 복원
+    for col in [
+        "airline",
+        "flight_number",
+        "departure_airport",
+        "arrival_airport",
+        "departure_time",
+        "arrival_time",
+        "seat_class",
+        "seat_number",
+    ]:
+        op.alter_column("flight", col, nullable=False)
+
+    op.drop_column("flight", "passenger_name")
+    op.drop_column("flight", "booking_reference")
+    op.drop_index(op.f("ix_flight_segment_id"), table_name="flight_segment")
+    op.drop_table("flight_segment")
+
+def downgrade():
+    # 필요 시 역방향(세그먼트 복구) 로직 작성, 아니면 pass
+    pass
