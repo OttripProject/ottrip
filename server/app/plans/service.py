@@ -49,7 +49,7 @@ class PlanService:
             raise HTTPException(status_code=404, detail="해당 계획을 찾을 수 없습니다.")
         plan_data = PlanReadWithInforms.model_validate(plan)
         if plan.owner_id == self.current_user.id:
-            plan_data.my_role = Role.OWNER
+            plan_data.my_role = Role.EDITOR
         else:
             is_editor = await self.plan_repository.is_editor(plan_id=plan_id, user_id=self.current_user.id)
             if is_editor:
