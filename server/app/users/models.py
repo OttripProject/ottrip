@@ -40,6 +40,10 @@ class User(Base):
     description: Mapped[str] = mapped_column(String(1000))
     """유저 설명"""
 
+    agreed_terms: Mapped[bool] = mapped_column(nullable=False)
+    agreed_privacy: Mapped[bool] = mapped_column(nullable=False)
+    agreed_marketing: Mapped[bool] = mapped_column(nullable=False)
+
     gender: Mapped[Gender | None]
 
     plans: Mapped[list["Plan"]] = relationship(

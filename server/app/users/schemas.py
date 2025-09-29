@@ -29,7 +29,9 @@ class UserBase(APISchema):
 
 
 class UserCreate(UserBase):
-    pass
+    agreed_terms: bool | None = None
+    agreed_privacy: bool | None = None
+    agreed_marketing: bool | None = None
 
 
 class UserUpdate(APISchema):
