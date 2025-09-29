@@ -23,8 +23,7 @@ class ExpenseCreate(ExpenseBase):
 
 
 class ExpenseCreateWithFlight(ExpenseCreate):
-    flight_id: int | None = None
-    category: ExpenseCategory = ExpenseCategory.FLIGHT
+    flight_id: int
 
 
 class ExpenseCreateWithItinerary(ExpenseCreate):

@@ -34,23 +34,24 @@ async def read_flights(
 async def create_flight(
     flight_service: FlightService,
     flight_data: FlightCreate,
-) -> FlightRead:
+):
     """
     새로운 항공편 정보를 생성합니다.
     """
-    return await flight_service.create(flight_data=flight_data)
+    new_id = await flight_service.create(flight_data=flight_data)
+    return {"id": new_id}
 
 
-@router.patch("/{flight_id}", status_code=status.HTTP_200_OK)
+@router.patch("/{flight_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def update_flight(
     flight_service: FlightService,
     flight_id: int,
     update_data: FlightUpdate,
-) -> FlightRead:
+):
     """
     기존 항공편 정보를 수정합니다.
     """
-    return await flight_service.update(flight_id=flight_id, update_data=update_data)
+    await flight_service.update(flight_id=flight_id, update_data=update_data)
 
 
 @router.delete("/{flight_id}", status_code=status.HTTP_204_NO_CONTENT)
