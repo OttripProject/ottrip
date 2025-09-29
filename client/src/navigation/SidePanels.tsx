@@ -141,25 +141,45 @@ export default function SidePanels({ planData, selectedItinerary, onItineraryAdd
       endTime: '10:00',
     });
 
-    // 항공 폼 데이터
+    // 항공 폼 데이터 (기본 정보)
     const [flightFormData, setFlightFormData] = useState({
-      airline: '',
-      flight_number: '',
-      departure_airport: '',
-      arrival_airport: '',
-      departure_time: `${dayjs().format('YYYY-MM-DD')} 00:00`,
-      arrival_time: `${dayjs().format('YYYY-MM-DD')} 00:00`,
-      seat_class: '',
-      seat_number: '',
-      duration: '',
-      memo: '',
+      reservation_number: '',
+      passenger_name: '',
     });
+
+    // 항공 구간(세그먼트) 폼 데이터 배열
+    type SegmentForm = {
+      airline: string;
+      flight_number: string;
+      departure_airport: string;
+      arrival_airport: string;
+      departure_time: string; // 'YYYY-MM-DD HH:mm'
+      arrival_time: string;   // 'YYYY-MM-DD HH:mm'
+      seat_class?: string;
+      seat_number?: string;
+    };
+    const [flightSegments, setFlightSegments] = useState<SegmentForm[]>([
+      {
+        airline: '',
+        flight_number: '',
+        departure_airport: '',
+        arrival_airport: '',
+        departure_time: `${dayjs().format('YYYY-MM-DD')} 00:00`,
+        arrival_time: `${dayjs().format('YYYY-MM-DD')} 00:00`,
+        seat_class: '',
+        seat_number: '',
+      },
+    ]);
 
     // 항공 비용 폼 데이터
     const [flightExpenseForm, setFlightExpenseForm] = useState({
       amount: '',
       currency: ExpenseCurrency.KRW as string,
-      description: '',
+    });
+    // 숙박 지출 전용 상태 (description 허용)
+    const [accommodationExpenseForm, setAccommodationExpenseForm] = useState({
+      amount: '',
+      currency: ExpenseCurrency.KRW as string,
     });
     const [showFlightCurrencyOptions, setShowFlightCurrencyOptions] = useState(false);
 
@@ -300,23 +320,51 @@ export default function SidePanels({ planData, selectedItinerary, onItineraryAdd
     }
   };
 
+  // 유틸: ISO 문자열 변환
+  const toIso = (dt: string) => {
+    if (!dt) return dt;
+    const [date, time] = dt.split(' ');
+    const timeWithSeconds = (time && time.length === 5) ? `${time}:00` : time;
+    return `${date}T${timeWithSeconds}Z`;
+  };
+
+  // 경유 대기시간 계산
+  const computeLayovers = (segments: SegmentForm[]) => {
+    const result: string[] = [];
+    for (let i = 0; i < segments.length - 1; i++) {
+      const prevArr = dayjs(segments[i].arrival_time);
+      const nextDep = dayjs(segments[i + 1].departure_time);
+      const diffMin = nextDep.diff(prevArr, 'minute');
+      if (diffMin >= 0) {
+        const h = Math.floor(diffMin / 60);
+        const m = diffMin % 60;
+        result.push(`${h}시간 ${m}분`);
+      } else {
+        result.push('시간 오류(출발이 도착보다 이릅니다)');
+      }
+    }
+    return result;
+  };
+
   // 항공 저장 함수
   const handleSaveFlight = async () => {
-    if (!flightFormData.airline.trim()) {
-      Alert.alert('오류', '항공사를 입력해주세요.');
+    if (!flightFormData.reservation_number.trim()) {
+      Alert.alert('오류', '예약번호를 입력해주세요.');
       return;
     }
-    if (!flightFormData.flight_number.trim()) {
-      Alert.alert('오류', '항공편 번호를 입력해주세요.');
+    if (!flightFormData.passenger_name.trim()) {
+      Alert.alert('오류', '승객명을 입력해주세요.');
       return;
     }
-    if (!flightFormData.departure_airport.trim()) {
-      Alert.alert('오류', '출발 공항을 입력해주세요.');
+    if (!flightSegments.length) {
+      Alert.alert('오류', '구간은 최소 1개 이상이어야 합니다.');
       return;
     }
-    if (!flightFormData.arrival_airport.trim()) {
-      Alert.alert('오류', '도착 공항을 입력해주세요.');
-      return;
+    for (const [idx, seg] of flightSegments.entries()) {
+      if (!seg.airline.trim() || !seg.flight_number.trim() || !seg.departure_airport.trim() || !seg.arrival_airport.trim()) {
+        Alert.alert('오류', `구간 ${idx + 1}의 필수값을 입력해주세요.`);
+        return;
+      }
     }
 
     // Plan이 선택되지 않은 경우
@@ -326,33 +374,28 @@ export default function SidePanels({ planData, selectedItinerary, onItineraryAdd
     }
 
     try {
-      const toIso = (dt: string) => {
-        if (!dt) return dt;
-        const [date, time] = dt.split(' ');
-        const timeWithSeconds = (time && time.length === 5) ? `${time}:00` : time;
-        return `${date}T${timeWithSeconds}Z`;
-      };
-
       const payload = {
-        airline: flightFormData.airline,
-        flightNumber: flightFormData.flight_number,
-        departureAirport: flightFormData.departure_airport,
-        arrivalAirport: flightFormData.arrival_airport,
-        departureTime: toIso(flightFormData.departure_time),
-        arrivalTime: toIso(flightFormData.arrival_time),
-        seatClass: flightFormData.seat_class || undefined,
-        seatNumber: flightFormData.seat_number || undefined,
-        duration: flightFormData.duration || undefined,
-        memo: flightFormData.memo || undefined,
         planId: planData.plan.id,
+        reservationNumber: flightFormData.reservation_number,
+        passengerName: flightFormData.passenger_name,
         expense: {
-          exDate: (flightFormData.departure_time || '').split(' ')[0],
+          exDate: (flightSegments[0].departure_time || '').split(' ')[0],
           amount: Number(flightExpenseForm.amount || 0),
-          category: ExpenseCategory.FLIGHT,
           currency: flightExpenseForm.currency as any,
-          description: flightExpenseForm.description || undefined,
+          category: ExpenseCategory.FLIGHT as any,
+          planId: planData.plan.id,
         },
-      };
+        segments: flightSegments.map(s => ({
+          airline: s.airline,
+          flightNumber: s.flight_number,
+          departureAirport: s.departure_airport,
+          arrivalAirport: s.arrival_airport,
+          departureTime: toIso(s.departure_time),
+          arrivalTime: toIso(s.arrival_time),
+          seatClass: s.seat_class || null,
+          seatNumber: s.seat_number || null,
+        })),
+      } as any;
 
       const newFlight = await flightsApi.createFlight(payload as any);
 
@@ -365,18 +408,19 @@ export default function SidePanels({ planData, selectedItinerary, onItineraryAdd
       return;
     }
     
-    setFlightFormData({
-      airline: '',
-      flight_number: '',
-      departure_airport: '',
-      arrival_airport: '',
-      departure_time: `${dayjs().format('YYYY-MM-DD')} 00:00`,
-      arrival_time: `${dayjs().format('YYYY-MM-DD')} 00:00`,
-      seat_class: '',
-      seat_number: '',
-      duration: '',
-      memo: '',
-    });
+    setFlightFormData({ reservation_number: '', passenger_name: '' });
+    setFlightSegments([
+      {
+        airline: '',
+        flight_number: '',
+        departure_airport: '',
+        arrival_airport: '',
+        departure_time: `${dayjs().format('YYYY-MM-DD')} 00:00`,
+        arrival_time: `${dayjs().format('YYYY-MM-DD')} 00:00`,
+        seat_class: '',
+        seat_number: '',
+      },
+    ]);
     
     setShowFlightForm(false);
   };
@@ -412,10 +456,9 @@ export default function SidePanels({ planData, selectedItinerary, onItineraryAdd
         planId: planData.plan.id,
         expense: {
           exDate: accommodationFormData.start_date,
-          amount: Number(flightExpenseForm.amount || 0),
+          amount: Number(accommodationExpenseForm.amount || 0),
           category: ExpenseCategory.ACCOMMODATION as any,
-          currency: flightExpenseForm.currency as any,
-          description: flightExpenseForm.description || undefined,
+          currency: accommodationExpenseForm.currency as any,
         },
       };
       const newAcc = await accommodationsApi.createAccommodation(payload as any);
@@ -732,22 +775,24 @@ export default function SidePanels({ planData, selectedItinerary, onItineraryAdd
         setEditingFlight(flight);
         setShowFlightForm(true);
         setFlightFormData({
-          airline: flight.airline || '',
-          flight_number: flightNumber || '',
-          departure_airport: departureAirport || '',
-          arrival_airport: arrivalAirport || '',
-          departure_time: dayjs(departureTime).format('YYYY-MM-DD HH:mm'),
-          arrival_time: dayjs(arrivalTime).format('YYYY-MM-DD HH:mm'),
-          seat_class: seatClass || '',
-          seat_number: seatNumber || '',
-          duration: flight.duration || '',
-          memo: flight.memo || '',
+          reservation_number: flight.reservationNumber || '',
+          passenger_name: flight.passengerName || '',
         });
         setFlightExpenseForm({
           amount: String(flight?.expense?.amount ?? ''),
           currency: (flight?.expense?.currency ?? ExpenseCurrency.KRW) as string,
-          description: flight?.expense?.description ?? '',
         });
+        const segs = (flight.flightSegments || []).map((fs: any) => ({
+          airline: fs.airline,
+          flight_number: fs.flightNumber,
+          departure_airport: fs.departureAirport,
+          arrival_airport: fs.arrivalAirport,
+          departure_time: dayjs(fs.departureTime).format('YYYY-MM-DD HH:mm'),
+          arrival_time: dayjs(fs.arrivalTime).format('YYYY-MM-DD HH:mm'),
+          seat_class: fs.seatClass || '',
+          seat_number: fs.seatNumber || '',
+        }));
+        if (segs.length > 0) setFlightSegments(segs);
       }}>
         <View style={styles.flightHeader}>
           <Text style={styles.flightTitle}>{flight.airline} {flightNumber}</Text>
@@ -764,15 +809,7 @@ export default function SidePanels({ planData, selectedItinerary, onItineraryAdd
               좌석: {seatClass} {seatNumber}
             </Text>
           )}
-          {flight.duration && (
-            <Text style={styles.flightDuration}>비행시간: {flight.duration}</Text>
-          )}
         </View>
-        {flight.memo && (
-          <Text style={styles.flightMemo} numberOfLines={2}>
-            📝 {flight.memo}
-          </Text>
-        )}
       </Pressable>
     );
   };
@@ -791,11 +828,11 @@ export default function SidePanels({ planData, selectedItinerary, onItineraryAdd
           end_date: accommodation.end_date || dayjs().add(1, 'day').format('YYYY-MM-DD'),
           memo: accommodation.memo || '',
         });
-        setFlightExpenseForm({
+        setAccommodationExpenseForm({
           amount: String(accommodation?.expense?.amount ?? ''),
           currency: (accommodation?.expense?.currency ?? ExpenseCurrency.KRW) as string,
-          description: accommodation?.expense?.description ?? '',
         });
+        setShowFlightCurrencyOptions(false);
       }}
     >
       <View style={styles.accommodationHeader}>
@@ -1003,6 +1040,7 @@ export default function SidePanels({ planData, selectedItinerary, onItineraryAdd
         </View>
       </View>
 
+      {/* 설명 */}
       <View style={styles.inputGroup}>
         <Text style={styles.label}>설명</Text>
         <TextInput
@@ -1590,122 +1628,31 @@ export default function SidePanels({ planData, selectedItinerary, onItineraryAdd
   const renderFlightForm = () => (
     <View style={styles.formContainer}>
       <Text style={styles.formTitle}>항공편 정보</Text>
-      
-      {/* 항공사와 항공편 번호 */}
+
+      {/* 예약번호 / 승객명 */}
       <View style={styles.row}>
         <View style={[styles.inputGroup, styles.halfWidth]}>
-          <Text style={styles.label}>항공사</Text>
+          <Text style={styles.label}>예약번호</Text>
           <TextInput
             style={styles.input}
-            placeholder="항공사"
-            value={flightFormData.airline}
-            onChangeText={(text) => setFlightFormData(prev => ({ ...prev, airline: text }))}
+            placeholder="예약번호"
+            value={flightFormData.reservation_number}
+            onChangeText={(text) => setFlightFormData(prev => ({ ...prev, reservation_number: text }))}
           />
         </View>
         <View style={[styles.inputGroup, styles.halfWidth]}>
-          <Text style={styles.label}>항공편 번호</Text>
+          <Text style={styles.label}>승객명</Text>
           <TextInput
             style={styles.input}
-            placeholder="항공편 번호"
-            value={flightFormData.flight_number}
-            onChangeText={(text) => setFlightFormData(prev => ({ ...prev, flight_number: text }))}
+            placeholder="승객명"
+            value={flightFormData.passenger_name}
+            onChangeText={(text) => setFlightFormData(prev => ({ ...prev, passenger_name: text }))}
           />
         </View>
-      </View>
-
-      {/* 출발 공항과 도착 공항 */}
-      <View style={styles.row}>
-        <View style={[styles.inputGroup, styles.halfWidth]}>
-          <Text style={styles.label}>출발 공항</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="출발 공항"
-            value={flightFormData.departure_airport}
-            onChangeText={(text) => setFlightFormData(prev => ({ ...prev, departure_airport: text }))}
-          />
-        </View>
-        <View style={[styles.inputGroup, styles.halfWidth]}>
-          <Text style={styles.label}>도착 공항</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="도착 공항"
-            value={flightFormData.arrival_airport}
-            onChangeText={(text) => setFlightFormData(prev => ({ ...prev, arrival_airport: text }))}
-          />
-        </View>
-      </View>
-
-      {/* 출발 날짜와 도착 날짜 */}
-      <View style={styles.row}>
-        <View style={[styles.inputGroup, styles.halfWidth]}>
-          <Text style={styles.label}>출발 시간</Text>
-          <DateTimePicker
-            value={flightFormData.departure_time}
-            onChange={(datetime) => setFlightFormData(prev => ({ ...prev, departure_time: datetime }))}
-            style={styles.dateTimePicker}
-            placeholder="출발 날짜와 시간을 선택하세요"
-          />
-        </View>
-        <View style={[styles.inputGroup, styles.halfWidth]}>
-          <Text style={styles.label}>도착 시간</Text>
-          <DateTimePicker
-            value={flightFormData.arrival_time}
-            onChange={(datetime) => setFlightFormData(prev => ({ ...prev, arrival_time: datetime }))}
-            style={styles.dateTimePicker}
-            placeholder="도착 날짜와 시간을 선택하세요"
-          />
-        </View>
-      </View>
-
-      {/* 좌석 등급과 좌석 번호 */}
-      <View style={styles.row}>
-        <View style={[styles.inputGroup, styles.halfWidth]}>
-          <Text style={styles.label}>좌석 등급</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="좌석 등급"
-            value={flightFormData.seat_class}
-            onChangeText={(text) => setFlightFormData(prev => ({ ...prev, seat_class: text }))}
-          />
-        </View>
-        <View style={[styles.inputGroup, styles.halfWidth]}>
-          <Text style={styles.label}>좌석 번호</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="좌석 번호"
-            value={flightFormData.seat_number}
-            onChangeText={(text) => setFlightFormData(prev => ({ ...prev, seat_number: text }))}
-          />
-        </View>
-      </View>
-
-      {/* 비행 시간 */}
-      <View style={styles.inputGroup}>
-        <Text style={styles.label}>비행 시간</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="비행 시간 (예: 2시간 30분)"
-          value={flightFormData.duration}
-          onChangeText={(text) => setFlightFormData(prev => ({ ...prev, duration: text }))}
-        />
-      </View>
-
-      {/* 메모 */}
-      <View style={styles.inputGroup}>
-        <Text style={styles.label}>메모</Text>
-        <TextInput
-          style={[styles.input, styles.textArea]}
-          placeholder="메모를 입력하세요"
-          value={flightFormData.memo}
-          onChangeText={(text) => setFlightFormData(prev => ({ ...prev, memo: text }))}
-          multiline
-          numberOfLines={3}
-          textAlignVertical="top"
-        />
       </View>
 
       {/* 항공 비용 */}
-      <View style={[styles.inputGroup, { marginTop: 8 }] }>
+      <View style={[styles.inputGroup, { marginTop: 2 }] }>
         <Text style={styles.label}>항공 비용</Text>
         <View style={styles.row}>
           <View style={[styles.inputGroup, styles.halfWidth]}>
@@ -1748,6 +1695,87 @@ export default function SidePanels({ planData, selectedItinerary, onItineraryAdd
 
       </View>
 
+      {/* 구간들 */}
+      {flightSegments.map((seg, idx) => (
+        <View key={idx} style={{ borderWidth: 1, borderColor: '#eee', borderRadius: 8, padding: 10, marginBottom: 10 }}>
+          <Text style={{ fontWeight: '700', marginBottom: 8 }}>구간 {idx + 1}</Text>
+          <View style={styles.row}>
+            <View style={[styles.inputGroup, styles.halfWidth]}>
+              <Text style={styles.label}>항공사</Text>
+              <TextInput style={styles.input} placeholder="항공사" value={seg.airline} onChangeText={(t) => {
+                const copy = [...flightSegments]; copy[idx].airline = t; setFlightSegments(copy);
+              }} />
+            </View>
+            <View style={[styles.inputGroup, styles.halfWidth]}>
+              <Text style={styles.label}>항공편 번호</Text>
+              <TextInput style={styles.input} placeholder="항공편 번호" value={seg.flight_number} onChangeText={(t) => {
+                const copy = [...flightSegments]; copy[idx].flight_number = t; setFlightSegments(copy);
+              }} />
+            </View>
+          </View>
+          <View style={styles.row}>
+            <View style={[styles.inputGroup, styles.halfWidth]}>
+              <Text style={styles.label}>출발 공항</Text>
+              <TextInput style={styles.input} placeholder="출발 공항" value={seg.departure_airport} onChangeText={(t) => {
+                const copy = [...flightSegments]; copy[idx].departure_airport = t; setFlightSegments(copy);
+              }} />
+            </View>
+            <View style={[styles.inputGroup, styles.halfWidth]}>
+              <Text style={styles.label}>도착 공항</Text>
+              <TextInput style={styles.input} placeholder="도착 공항" value={seg.arrival_airport} onChangeText={(t) => {
+                const copy = [...flightSegments]; copy[idx].arrival_airport = t; setFlightSegments(copy);
+              }} />
+            </View>
+          </View>
+          <View style={styles.row}>
+            <View style={[styles.inputGroup, styles.halfWidth]}>
+              <Text style={styles.label}>출발 시간</Text>
+              <DateTimePicker value={seg.departure_time} onChange={(dt) => {
+                const copy = [...flightSegments]; copy[idx].departure_time = dt; setFlightSegments(copy);
+              }} style={styles.dateTimePicker} placeholder="출발 날짜와 시간" />
+            </View>
+            <View style={[styles.inputGroup, styles.halfWidth]}>
+              <Text style={styles.label}>도착 시간</Text>
+              <DateTimePicker value={seg.arrival_time} onChange={(dt) => {
+                const copy = [...flightSegments]; copy[idx].arrival_time = dt; setFlightSegments(copy);
+              }} style={styles.dateTimePicker} placeholder="도착 날짜와 시간" />
+            </View>
+          </View>
+          <View style={styles.row}>
+            <View style={[styles.inputGroup, styles.halfWidth]}>
+              <Text style={styles.label}>좌석 등급</Text>
+              <TextInput style={styles.input} placeholder="좌석 등급" value={seg.seat_class || ''} onChangeText={(t) => {
+                const copy = [...flightSegments]; copy[idx].seat_class = t; setFlightSegments(copy);
+              }} />
+            </View>
+            <View style={[styles.inputGroup, styles.halfWidth]}>
+              <Text style={styles.label}>좌석 번호</Text>
+              <TextInput style={styles.input} placeholder="좌석 번호" value={seg.seat_number || ''} onChangeText={(t) => {
+                const copy = [...flightSegments]; copy[idx].seat_number = t; setFlightSegments(copy);
+              }} />
+            </View>
+          </View>
+          {idx > 0 && (
+            <Text style={{ color: '#6c757d', marginTop: 4 }}>경유 대기: {computeLayovers(flightSegments)[idx - 1]}</Text>
+          )}
+          <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 8 }}>
+            {flightSegments.length > 1 && (
+              <Pressable style={[styles.button, styles.cancelButton]} onPress={() => {
+                setFlightSegments(prev => prev.filter((_, i) => i !== idx));
+              }}>
+                <Text style={styles.cancelButtonText}>구간 삭제</Text>
+              </Pressable>
+            )}
+          </View>
+        </View>
+      ))}
+      <Pressable style={[styles.button, styles.saveButton]} onPress={() => setFlightSegments(prev => ([...prev, {
+        airline: '', flight_number: '', departure_airport: '', arrival_airport: '',
+        departure_time: `${dayjs().format('YYYY-MM-DD')} 00:00`, arrival_time: `${dayjs().format('YYYY-MM-DD')} 00:00`, seat_class: '', seat_number: ''
+      }]))}>
+        <Text style={styles.saveButtonText}>+ 항공편 구간 추가</Text>
+      </Pressable>
+
       {/* 버튼 */}
       <View style={styles.buttonContainer}>
         <Pressable 
@@ -1763,25 +1791,25 @@ export default function SidePanels({ planData, selectedItinerary, onItineraryAdd
               onPress={async () => {
                 try {
                   const payload = {
-                    airline: flightFormData.airline,
-                    flightNumber: flightFormData.flight_number,
-                    departureAirport: flightFormData.departure_airport,
-                    arrivalAirport: flightFormData.arrival_airport,
-                    departureTime: flightFormData.departure_time,
-                    arrivalTime: flightFormData.arrival_time,
-                    seatClass: flightFormData.seat_class || undefined,
-                    seatNumber: flightFormData.seat_number || undefined,
-                    duration: flightFormData.duration || undefined,
-                    memo: flightFormData.memo || undefined,
+                    reservationNumber: flightFormData.reservation_number,
+                    passengerName: flightFormData.passenger_name,
+                    segments: flightSegments.map(s => ({
+                      airline: s.airline,
+                      flightNumber: s.flight_number,
+                      departureAirport: s.departure_airport,
+                      arrivalAirport: s.arrival_airport,
+                      departureTime: s.departure_time,
+                      arrivalTime: s.arrival_time,
+                      seatClass: s.seat_class || null,
+                      seatNumber: s.seat_number || null,
+                    })),
                     expense: {
-                      exDate: (flightFormData.departure_time || '').split(' ')[0],
+                      exDate: (flightSegments[0].departure_time || '').split(' ')[0],
                       amount: Number(flightExpenseForm.amount || 0),
-                      category: ExpenseCategory.FLIGHT,
                       currency: flightExpenseForm.currency as any,
-                      description: flightExpenseForm.description || undefined,
                     },
-                  };
-                  await flightsApi.updateFlight(editingFlight.id, payload as any);
+                  } as any;
+                  await flightsApi.updateFlight(editingFlight.id, payload);
                   if (planData?.refreshFlights) await planData.refreshFlights();
                   if (planData?.refreshExpenses) await planData.refreshExpenses();
                   setShowFlightForm(false);
@@ -1904,19 +1932,20 @@ export default function SidePanels({ planData, selectedItinerary, onItineraryAdd
                         onPress={() => {
                           setEditingFlight(null);
                           setShowFlightForm(true);
-                          setFlightFormData({
-                            airline: '',
-                            flight_number: '',
-                            departure_airport: '',
-                            arrival_airport: '',
-                            departure_time: `${dayjs().format('YYYY-MM-DD')} 00:00`,
-                            arrival_time: `${dayjs().format('YYYY-MM-DD')} 00:00`,
-                            seat_class: '',
-                            seat_number: '',
-                            duration: '',
-                            memo: '',
-                          });
-                          setFlightExpenseForm({ amount: '', currency: ExpenseCurrency.KRW as string, description: '' });
+                          setFlightFormData({ reservation_number: '', passenger_name: '' });
+                          setFlightSegments([
+                            {
+                              airline: '',
+                              flight_number: '',
+                              departure_airport: '',
+                              arrival_airport: '',
+                              departure_time: `${dayjs().format('YYYY-MM-DD')} 00:00`,
+                              arrival_time: `${dayjs().format('YYYY-MM-DD')} 00:00`,
+                              seat_class: '',
+                              seat_number: '',
+                            },
+                          ]);
+                          setAccommodationExpenseForm({ amount: '', currency: ExpenseCurrency.KRW as string });
                           setShowFlightCurrencyOptions(false);
                         }}
                       >
@@ -1958,7 +1987,7 @@ export default function SidePanels({ planData, selectedItinerary, onItineraryAdd
                             end_date: dayjs().add(1, 'day').format('YYYY-MM-DD'),
                             memo: '',
                           });
-                          setFlightExpenseForm({ amount: '', currency: ExpenseCurrency.KRW as string, description: '' });
+                          setAccommodationExpenseForm({ amount: '', currency: ExpenseCurrency.KRW as string});
                           setShowFlightCurrencyOptions(false);
                         }}
                       >
@@ -2046,8 +2075,8 @@ export default function SidePanels({ planData, selectedItinerary, onItineraryAdd
                           style={styles.input}
                           keyboardType="numeric"
                           placeholder="0"
-                          value={flightExpenseForm.amount}
-                          onChangeText={(text) => setFlightExpenseForm(prev => ({ ...prev, amount: text.replace(/[^0-9]/g, '') }))}
+                          value={accommodationExpenseForm.amount}
+                          onChangeText={(text) => setAccommodationExpenseForm(prev => ({ ...prev, amount: text.replace(/[^0-9]/g, '') }))}
                         />
                       </View>
                       <View style={[styles.inputGroup, styles.halfWidth]}>
@@ -2056,7 +2085,7 @@ export default function SidePanels({ planData, selectedItinerary, onItineraryAdd
                           style={styles.selectInput}
                           onPress={() => setShowFlightCurrencyOptions(prev => !prev)}
                         >
-                          <Text style={{ textAlign: 'center' }}>{flightExpenseForm.currency}</Text>
+                          <Text style={{ textAlign: 'center' }}>{accommodationExpenseForm.currency}</Text>
                           <Text style={styles.arrow}>▼</Text>
                         </Pressable>
                       </View>
@@ -2068,7 +2097,7 @@ export default function SidePanels({ planData, selectedItinerary, onItineraryAdd
                             key={code}
                             style={styles.currencyOption}
                             onPress={() => {
-                              setFlightExpenseForm(prev => ({ ...prev, currency: code }));
+                              setAccommodationExpenseForm(prev => ({ ...prev, currency: code }));
                               setShowFlightCurrencyOptions(false);
                             }}
                           >
@@ -2101,10 +2130,9 @@ export default function SidePanels({ planData, selectedItinerary, onItineraryAdd
                                 memo: accommodationFormData.memo || undefined,
                                 expense: {
                                   exDate: accommodationFormData.start_date,
-                                  amount: Number(flightExpenseForm.amount || 0),
+                                  amount: Number(accommodationExpenseForm.amount || 0),
                                   category: ExpenseCategory.ACCOMMODATION as any,
-                                  currency: flightExpenseForm.currency as any,
-                                  description: flightExpenseForm.description || undefined,
+                                  currency: accommodationExpenseForm.currency as any,
                                 },
                               };
                               await accommodationsApi.updateAccommodation(editingAccommodation.id, payload as any);
