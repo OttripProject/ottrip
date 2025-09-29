@@ -2,6 +2,9 @@ import DashboardScreen from "@/screens/DashboardScreen";
 import InviteAcceptScreen from "@/screens/InviteAcceptScreen";
 import LoginScreen from "@/screens/LoginScreen";
 import ProfileScreen from "@/screens/ProfileScreen";
+import TermsConsentScreen from "@/screens/TermsConsentScreen";
+import RegisterProfileScreen from "@/screens/RegisterProfileScreen";
+import TermsDetailScreen from "@/screens/TermsDetailScreen";
 import HeaderBar from "@/components/HeaderBar";
 import { NavigationContainer } from "@react-navigation/native";
 import { createStackNavigator } from "@react-navigation/stack";
@@ -36,8 +39,13 @@ export default function RootNavigator() {
             <Stack.Screen name="INVITE_ACCEPT" component={InviteAcceptScreen} />
           </>
         ) : (
-          // 미인증 사용자
-          <Stack.Screen name="OTTRIP LOGIN" component={LoginScreen} />
+          // 미인증 사용자 + 가입 플로우
+          <>
+            <Stack.Screen name="OTTRIP LOGIN" component={LoginScreen} />
+            <Stack.Screen name="REGISTER_TERMS" component={TermsConsentScreen} />
+            <Stack.Screen name="REGISTER_PROFILE" component={RegisterProfileScreen} />
+            <Stack.Screen name="TERMS_DETAIL" component={TermsDetailScreen} />
+          </>
         )}
       </Stack.Navigator>
     </NavigationContainer>

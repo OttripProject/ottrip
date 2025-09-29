@@ -41,6 +41,9 @@ export interface UserCreate {
   nickname: string;
   description: string;
   gender: string;
+  agreed_terms?: boolean;
+  agreed_privacy?: boolean;
+  agreed_marketing?: boolean;
 }
 
 export const authApi = {
@@ -69,6 +72,14 @@ export const authApi = {
   // 로그인 상태 확인
   checkLoginStatus: async (): Promise<boolean> => {
     const response = await api.get('/public/auth/valid-token');
+    return response.data;
+  },
+
+  // 닉네임(핸들) 중복 검사
+  validateHandle: async (handle: string): Promise<{ error: string | null }> => {
+    const response = await api.post('/public/auth/validate/handle', handle, {
+      headers: { 'Content-Type': 'application/json' },
+    });
     return response.data;
   },
 
