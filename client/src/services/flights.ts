@@ -1,34 +1,28 @@
 import api from './api';
-import { Flight, CreateFlightRequest, UpdateFlightRequest } from '../types/api';
+import { FlightRead } from '../types/api';
 
 export const flightsApi = {
-  // 모든 항공편 조회
-  getFlights: async (planId?: number): Promise<Flight[]> => {
-    const response = await api.get(`/private/flights/${planId}/plan`);
-    return response.data;
+  // 새 Flight 모델 기반 엔드포인트
+  createFlight: async (payload: any): Promise<{ id: number }> => {
+    const res = await api.post('/private/flights', payload);
+    return res.data as { id: number };
   },
-
-  // 특정 항공편 조회
-  getFlight: async (flightId: number): Promise<Flight> => {
-    const response = await api.get(`/private/flights/${flightId}`);
-    return response.data;
+  updateFlight: async (flightId: number, payload: any): Promise<void> => {
+    await api.patch(`/private/flights/${flightId}`, payload);
   },
-
-  // 항공편 생성
-  createFlight: async (flightData: CreateFlightRequest): Promise<Flight> => {
-    const response = await api.post('/private/flights', flightData);
-    return response.data;
-  },
-
-  // 항공편 수정
-  updateFlight: async (flightId: number, flightData: UpdateFlightRequest): Promise<Flight> => {
-    const response = await api.patch(`/private/flights/${flightId}`, flightData);
-    return response.data;
-  },
-
-  // 항공편 삭제
   deleteFlight: async (flightId: number): Promise<void> => {
-    const response = await api.delete(`/private/flights/${flightId}`);
-    return response.data;
+    await api.delete(`/private/flights/${flightId}`);
+  },
+
+  // 항공 목록 조회(플랜 기준)
+  getFlightsByPlan: async (planId: number): Promise<FlightRead[]> => {
+    const res = await api.get(`/private/flights/${planId}/plan`);
+    return res.data as FlightRead[];
+  },
+
+  // 항공 단건 조회
+  getFlight: async (flightId: number): Promise<FlightRead> => {
+    const res = await api.get(`/private/flights/${flightId}`);
+    return res.data as FlightRead;
   },
 }; 

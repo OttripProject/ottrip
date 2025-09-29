@@ -4,12 +4,12 @@ import { itinerariesApi } from '../services/itineraries';
 import { flightsApi } from '../services/flights';
 import { accommodationsApi } from '../services/accommodations';
 import { expensesApi } from '../services/expenses';
-import { Plan, Itinerary, Flight, Accommodation, Expense } from '../types/api';
+import { Plan, Itinerary, FlightRead, Accommodation, Expense } from '../types/api';
 
 interface PlanData {
   plan: Plan | null;
   itineraries: Itinerary[];
-  flights: Flight[];
+  flights: FlightRead[];
   accommodations: Accommodation[];
   expenses: Expense[];
 }
@@ -35,7 +35,7 @@ export const usePlanData = (planId: number | null) => {
       const [plan, itineraries, flights, accommodations, expenses] = await Promise.all([
         plansApi.getPlan(id),
         itinerariesApi.getItineraries(id),
-        flightsApi.getFlights(id),
+        flightsApi.getFlightsByPlan(id),
         accommodationsApi.getAccommodations(id),
         expensesApi.getExpenses(id),
       ]);
@@ -84,7 +84,7 @@ export const usePlanData = (planId: number | null) => {
   const refreshFlights = useCallback(async () => {
     if (!planId) return;
     try {
-      const flights = await flightsApi.getFlights(planId);
+      const flights = await flightsApi.getFlightsByPlan(planId);
       setPlanData(prev => ({ ...prev, flights }));
     } catch (err: any) {
       console.error('Failed to refresh flights:', err);

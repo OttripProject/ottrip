@@ -67,57 +67,55 @@ export interface UpdateItineraryRequest {
 }
 
 // 항공 (Flight) 관련 타입
-export interface Flight {
+// 신규 다구간 Flight 스키마 (ticket 용어 미사용)
+export interface FlightSegmentBaseDto {
+  airline: string;
+  flightNumber: string;
+  departureAirport: string;
+  arrivalAirport: string;
+  departureTime: string; // ISO datetime
+  arrivalTime: string;   // ISO datetime
+  seatClass?: string | null;
+  seatNumber?: string | null;
+}
+
+export interface FlightSegmentReadDto extends FlightSegmentBaseDto {
   id: number;
-  airline: string;
-  flightNumber: string;
-  departureAirport: string;
-  arrivalAirport: string;
-  departureTime: string;
-  arrivalTime: string;
-  seatClass?: string;
-  seatNumber?: string;
-  duration?: string;
-  memo?: string;
+  order: number;
+}
+
+export interface FlightCreateRequest {
   planId: number;
+  reservationNumber: string;
+  passengerName: string;
+  segments: FlightSegmentBaseDto[]; // 최소 1개
+  expense?: {
+    exDate?: string; // 서버에서 첫 출발일을 기본 사용
+    amount: number;
+    currency: ExpenseCurrency;
+    description?: string;
+  };
 }
 
-// 항공 생성·수정 시에만 사용하는 경비 입력 타입 (서버 FlightCreate.expense 는 ExpenseBase 스키마를 따름)
-export interface FlightExpenseInput {
-  exDate: string;
-  amount: number;
-  category: ExpenseCategory;
-  currency: ExpenseCurrency;
-  description?: string;
+export interface FlightUpdateRequest {
+  reservationNumber?: string;
+  passengerName?: string;
+  segments?: FlightSegmentBaseDto[]; // 주어지면 replace-all
+  expense?: {
+    exDate?: string;
+    amount?: number;
+    currency?: ExpenseCurrency;
+    description?: string;
+  };
 }
 
-export interface CreateFlightRequest {
-  airline: string;
-  flightNumber: string;
-  departureAirport: string;
-  arrivalAirport: string;
-  departureTime: string;
-  arrivalTime: string;
-  seatClass?: string;
-  seatNumber?: string;
-  duration?: string;
-  memo?: string;
+export interface FlightRead {
+  id: number;
   planId: number;
-  expense: FlightExpenseInput;
-}
-
-export interface UpdateFlightRequest {
-  airline?: string;
-  flightNumber?: string;
-  departureAirport?: string;
-  arrivalAirport?: string;
-  departureTime?: string;
-  arrivalTime?: string;
-  seatClass?: string;
-  seatNumber?: string;
-  duration?: string;
-  memo?: string;
-  expense?: Partial<FlightExpenseInput>;
+  reservationNumber: string;
+  passengerName: string;
+  expense?: Expense;
+  flightSegments?: FlightSegmentReadDto[]; // to_camel 직렬화
 }
 
 // 숙박 (Accommodation) 관련 타입
