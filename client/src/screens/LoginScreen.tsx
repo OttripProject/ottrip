@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, Pressable, StyleSheet, ActivityIndicator, Platform, Alert } from 'react-native';
 import { useAuth } from '../contexts/AuthContext';
+import { useNavigation } from '@react-navigation/native';
 import { authApi } from '../services/auth';
 import { loadPublicEnv } from '../core/env/schema';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -27,6 +28,7 @@ const env = loadPublicEnv();
 
 export default function LoginScreen() {
   const { login, getStorageInfo } = useAuth();
+  const navigation = useNavigation<any>();
   const [isLoading, setIsLoading] = useState(false);
   const [nonce, setNonce] = useState<string>('');
 
@@ -82,8 +84,9 @@ export default function LoginScreen() {
         const redirectUri = encodeURIComponent(redirectUriRaw);
         const scope = encodeURIComponent('openid email profile');
         const responseType = 'id_token';
+        const prompt = encodeURIComponent('consent select_account');
         
-        const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${redirectUri}&scope=${scope}&response_type=${responseType}&nonce=${newNonce}`;
+        const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${redirectUri}&scope=${scope}&response_type=${responseType}&nonce=${newNonce}&prompt=${prompt}`;
         if (typeof window !== 'undefined') {
           // eslint-disable-next-line no-console
           console.log('Google Auth URL:', decodeURIComponent(authUrl));
@@ -103,8 +106,9 @@ export default function LoginScreen() {
         const redirectUri = 'com.ottrip.app.OttripAlpha://oauth2redirect';
         const scope = encodeURIComponent('openid email profile');
         const responseType = 'id_token';
+        const prompt = encodeURIComponent('consent select_account');
         
-        const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${redirectUri}&scope=${scope}&response_type=${responseType}&nonce=${newNonce}`;
+        const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${redirectUri}&scope=${scope}&response_type=${responseType}&nonce=${newNonce}&prompt=${prompt}`;
         
         // WebBrowser로 구글 로그인 페이지 열기
         const result = await WebBrowser.openAuthSessionAsync(authUrl, redirectUri);
@@ -145,6 +149,23 @@ export default function LoginScreen() {
     }
   };
 
+  const base64UrlDecode = (input: string) => {
+    const base64 = input.replace(/-/g, '+').replace(/_/g, '/');
+    const pad = base64.length % 4 === 2 ? '==' : base64.length % 4 === 3 ? '=' : '';
+    const str = atob(base64 + pad);
+    try { return decodeURIComponent(escape(str)); } catch { return str; }
+  };
+
+  const parseIdToken = (idToken: string): any | null => {
+    try {
+      const [, payload] = idToken.split('.');
+      const json = base64UrlDecode(payload);
+      return JSON.parse(json);
+    } catch {
+      return null;
+    }
+  };
+
   const handleGoogleSignIn = async (accessToken: string) => {
     try {
       const response = await authApi.googleLogin(accessToken);
@@ -168,46 +189,17 @@ export default function LoginScreen() {
         } catch {}
         // 로그인 성공 시 즉시 로딩 상태 해제하지 않음 (화면 전환 후 자동 해제)
       } else {
-        // 신규 사용자 - 자동 등록 처리
-          
-          try {
-            // 자동으로 사용자 등록
-            const userData = {
-              handle: (response.prefill.name?.toLowerCase().replace(/[^a-z0-9_.]/g, '') || 'user123').substring(0, 36),
-              nickname: (response.prefill.name || '사용자').substring(0, 30),
-              description: '구글 로그인으로 가입한 사용자입니다.',
-              gender: 'male',
-            };
-            
-            const registerResponse = await authApi.registerUser(
-              userData,
-              response.registerToken
-            );
-            
-            // 등록 완료 후 로그인
-            await login({
-              isRegistered: true,
-              accessToken: registerResponse.accessToken,
-              refreshToken: registerResponse.refreshToken,
-            });
-            // 회원가입 직후 pending 초대 토큰 자동 처리
-            try {
-              const token = Platform.OS === 'web'
-                ? window.localStorage.getItem('pendingInviteToken')
-                : await SecureStore.getItemAsync('pendingInviteToken');
-              if (token) {
-                await api.post(`/private/plans/invitations/${token}/accept`);
-                if (Platform.OS === 'web') window.localStorage.removeItem('pendingInviteToken');
-                else await SecureStore.deleteItemAsync('pendingInviteToken');
-              }
-            } catch {}
-            // 로그인 성공 시 즉시 로딩 상태 해제하지 않음 (화면 전환 후 자동 해제)
-          } catch (error: any) {
-            console.error('자동 등록 실패:', error.message);
-            setIsLoading(false); // 오류 시에만 로딩 상태 해제
-            Alert.alert('오류', '사용자 등록에 실패했습니다.');
-          }
-        }
+        // 미등록 사용자: 약관 → 프로필 설정 플로우로 이동
+        await login(response); // registerToken 저장
+        const payload = parseIdToken(accessToken);
+        const email = payload?.email ?? '';
+        navigation.navigate('REGISTER_TERMS', {
+          registerToken: response.registerToken,
+          prefill: response.prefill,
+          email,
+        });
+        setIsLoading(false);
+      }
     } catch (error: any) {
       console.error('Google 로그인 오류:', error.message);
       setIsLoading(false); // 오류 시에만 로딩 상태 해제
