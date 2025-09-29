@@ -1,8 +1,8 @@
-"""db base
+"""set project
 
-Revision ID: 0136bfccf3ea
+Revision ID: 375c12f76c4b
 Revises:
-Create Date: 2025-08-08 21:14:27.666056
+Create Date: 2025-09-29 15:13:33.234910
 
 """
 
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 from alembic import op
 
 # revision identifiers, used by Alembic.
-revision: str = "0136bfccf3ea"
+revision: str = "375c12f76c4b"
 down_revision: Union[str, None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -42,6 +42,7 @@ def upgrade() -> None:
         sa.Column("end_date", sa.Date(), nullable=False),
         sa.Column("owner_id", sa.Integer(), nullable=False),
         sa.Column("total_amount", sa.Integer(), nullable=False),
+        sa.Column("memo", sa.Text(), nullable=False),
         sa.Column(
             "created_at", sa.DateTime(), server_default=sa.text("now()"), nullable=False
         ),
@@ -90,16 +91,8 @@ def upgrade() -> None:
     op.create_table(
         "flight",
         sa.Column("id", sa.Integer(), autoincrement=True, nullable=False),
-        sa.Column("airline", sa.String(), nullable=False),
-        sa.Column("flight_number", sa.String(), nullable=False),
-        sa.Column("departure_airport", sa.String(), nullable=False),
-        sa.Column("arrival_airport", sa.String(), nullable=False),
-        sa.Column("departure_time", sa.DateTime(timezone=True), nullable=False),
-        sa.Column("arrival_time", sa.DateTime(timezone=True), nullable=False),
-        sa.Column("seat_class", sa.String(), nullable=False),
-        sa.Column("seat_number", sa.String(), nullable=False),
-        sa.Column("duration", sa.String(), nullable=True),
-        sa.Column("memo", sa.String(), nullable=True),
+        sa.Column("reservation_number", sa.String(), nullable=False),
+        sa.Column("passenger_name", sa.String(), nullable=False),
         sa.Column("plan_id", sa.Integer(), nullable=False),
         sa.Column("is_deleted", sa.Boolean(), nullable=False),
         sa.ForeignKeyConstraint(
@@ -130,6 +123,61 @@ def upgrade() -> None:
     )
     op.create_index(op.f("ix_itinerary_id"), "itinerary", ["id"], unique=False)
     op.create_table(
+        "plan_invitation",
+        sa.Column("id", sa.Integer(), autoincrement=True, nullable=False),
+        sa.Column("plan_id", sa.Integer(), nullable=False),
+        sa.Column("email", sa.String(length=255), nullable=False),
+        sa.Column("role", sa.Enum("EDITOR", "VIEWER", name="role"), nullable=False),
+        sa.Column("token", sa.String(length=255), nullable=False),
+        sa.Column("invited_by", sa.Integer(), nullable=False),
+        sa.Column("expires_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column(
+            "status",
+            sa.Enum(
+                "PENDING", "ACCEPTED", "REVOKED", "EXPIRED", name="invitationstatus"
+            ),
+            nullable=False,
+        ),
+        sa.Column(
+            "created_at", sa.DateTime(), server_default=sa.text("now()"), nullable=False
+        ),
+        sa.Column(
+            "updated_at", sa.DateTime(), server_default=sa.text("now()"), nullable=False
+        ),
+        sa.ForeignKeyConstraint(
+            ["invited_by"],
+            ["user.id"],
+        ),
+        sa.ForeignKeyConstraint(
+            ["plan_id"],
+            ["plan.id"],
+        ),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint("token"),
+    )
+    op.create_table(
+        "plan_shared",
+        sa.Column("id", sa.Integer(), autoincrement=True, nullable=False),
+        sa.Column("plan_id", sa.Integer(), nullable=False),
+        sa.Column("shared_user_id", sa.Integer(), nullable=False),
+        sa.Column("role", sa.Enum("EDITOR", "VIEWER", name="role"), nullable=False),
+        sa.Column(
+            "created_at", sa.DateTime(), server_default=sa.text("now()"), nullable=False
+        ),
+        sa.Column(
+            "updated_at", sa.DateTime(), server_default=sa.text("now()"), nullable=False
+        ),
+        sa.ForeignKeyConstraint(
+            ["plan_id"],
+            ["plan.id"],
+        ),
+        sa.ForeignKeyConstraint(
+            ["shared_user_id"],
+            ["user.id"],
+        ),
+        sa.PrimaryKeyConstraint("id"),
+    )
+    op.create_table(
         "expense",
         sa.Column("id", sa.Integer(), autoincrement=True, nullable=False),
         sa.Column(
@@ -146,7 +194,7 @@ def upgrade() -> None:
             ),
             nullable=False,
         ),
-        sa.Column("amount", sa.Integer(), nullable=False),
+        sa.Column("amount", sa.Numeric(precision=20, scale=2), nullable=False),
         sa.Column(
             "currency",
             sa.Enum(
@@ -178,13 +226,37 @@ def upgrade() -> None:
         sa.UniqueConstraint("flight_id"),
     )
     op.create_index(op.f("ix_expense_id"), "expense", ["id"], unique=False)
+    op.create_table(
+        "flight_segment",
+        sa.Column("id", sa.Integer(), autoincrement=True, nullable=False),
+        sa.Column("order", sa.Integer(), nullable=False),
+        sa.Column("airline", sa.String(), nullable=False),
+        sa.Column("flight_number", sa.String(), nullable=False),
+        sa.Column("departure_airport", sa.String(), nullable=False),
+        sa.Column("arrival_airport", sa.String(), nullable=False),
+        sa.Column("departure_time", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("arrival_time", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("seat_class", sa.String(), nullable=True),
+        sa.Column("seat_number", sa.String(), nullable=True),
+        sa.Column("flight_id", sa.Integer(), nullable=False),
+        sa.Column("is_deleted", sa.Boolean(), nullable=False),
+        sa.ForeignKeyConstraint(["flight_id"], ["flight.id"], ondelete="CASCADE"),
+        sa.PrimaryKeyConstraint("id"),
+    )
+    op.create_index(
+        op.f("ix_flight_segment_id"), "flight_segment", ["id"], unique=False
+    )
     # ### end Alembic commands ###
 
 
 def downgrade() -> None:
     # ### commands auto generated by Alembic - please adjust! ###
+    op.drop_index(op.f("ix_flight_segment_id"), table_name="flight_segment")
+    op.drop_table("flight_segment")
     op.drop_index(op.f("ix_expense_id"), table_name="expense")
     op.drop_table("expense")
+    op.drop_table("plan_shared")
+    op.drop_table("plan_invitation")
     op.drop_index(op.f("ix_itinerary_id"), table_name="itinerary")
     op.drop_table("itinerary")
     op.drop_index(op.f("ix_flight_id"), table_name="flight")

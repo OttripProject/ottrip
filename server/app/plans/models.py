@@ -102,7 +102,6 @@ class Plan(Base):
 class Role(Enum):
     EDITOR = "editor"
     VIEWER = "viewer"
-    OWNER = "owner"
 
 
 class InvitationStatus(Enum):
