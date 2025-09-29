@@ -1,14 +1,21 @@
 from fastapi import HTTPException
 
 from app.auth.deps import CurrentUser
-from app.expenses.models import Expense
+from app.expenses.models import Expense, ExpenseCategory
 from app.expenses.repository import ExpenseRepository
 from app.plans.repository import PlanRepository
 from app.utils.dependency import dependency
 
-from .models import Flight
+from .models import Flight, FlightSegment
 from .repository import FlightRepository
-from .schemas import FlightCreate, FlightRead, FlightUpdate
+from .schemas import (
+    FlightCreate,
+    FlightRead,
+    FlightUpdate,
+    FlightSegmentCreate,
+    FlightSegmentRead,
+    FlightSegmentUpdate,
+)
 
 
 @dependency
@@ -18,7 +25,7 @@ class FlightService:
     expense_repository: ExpenseRepository
     plan_repository: PlanRepository
 
-    async def create(self, *, flight_data: FlightCreate) -> FlightRead:
+    async def create(self, *, flight_data: FlightCreate) -> int:
         plan = await self.plan_repository.find_by_id(plan_id=flight_data.plan_id)
         if not plan:
             raise HTTPException(status_code=404, detail="해당 계획을 찾을 수 없습니다.")
@@ -31,33 +38,45 @@ class FlightService:
                     status_code=403, detail="해당 항공편에 대한 생성 권한이 없습니다."
                 )
         create_flight_data = Flight(
-            airline=flight_data.airline,
-            flight_number=flight_data.flight_number,
-            departure_airport=flight_data.departure_airport,
-            arrival_airport=flight_data.arrival_airport,
-            departure_time=flight_data.departure_time,
-            arrival_time=flight_data.arrival_time,
-            seat_class=flight_data.seat_class,
-            seat_number=flight_data.seat_number,
-            duration=flight_data.duration,
+            reservation_number=flight_data.reservation_number,
+            passenger_name=flight_data.passenger_name,
             plan_id=flight_data.plan_id,
         )
         created_flight = await self.flight_repository.save(flight=create_flight_data)
 
+        if not flight_data.segments or len(flight_data.segments) < 1:
+            raise HTTPException(status_code=400, detail="세그먼트는 최소 1개 이상이어야 합니다.")
+
+        for idx, seg in enumerate(flight_data.segments, start=1):
+            segment = FlightSegment(
+                flight_id=created_flight.id,
+                airline=seg.airline,
+                flight_number=seg.flight_number,
+                departure_airport=seg.departure_airport,
+                arrival_airport=seg.arrival_airport,
+                departure_time=seg.departure_time,
+                arrival_time=seg.arrival_time,
+                seat_class=seg.seat_class or "",
+                seat_number=seg.seat_number or "",
+                order=idx,
+            )
+            await self.flight_repository.save_segment(segment=segment)
+
+        first_departure_date = min(s.departure_time for s in flight_data.segments).date()
         if flight_data.expense:
             expense = Expense(
                 amount=float(flight_data.expense.amount),
-                category=flight_data.expense.category,
+                category=ExpenseCategory.FLIGHT,
                 description=flight_data.expense.description,
                 currency=flight_data.expense.currency,
-                ex_date=flight_data.expense.ex_date,
+                ex_date=first_departure_date,
                 plan_id=created_flight.plan_id,
             )
             created_expense = await self.expense_repository.save(expense=expense)
             created_flight.expense = created_expense
             created_expense.flight_id = created_flight.id
 
-        return FlightRead.model_validate(created_flight)
+        return int(created_flight.id)
 
     async def read_flight(self, *, flight_id: int) -> FlightRead:
         flight = await self.flight_repository.find_by_id(flight_id=flight_id)
@@ -93,9 +112,10 @@ class FlightService:
 
         return flights_list
 
-    async def update(self, *, flight_id: int, update_data: FlightUpdate) -> FlightRead:
+    async def update(self, *, flight_id: int, update_data: FlightUpdate) -> None:
         flight = await self.flight_repository.find_by_id(flight_id=flight_id)
         if not flight:
+            
             raise HTTPException(
                 status_code=404, detail="해당 항공편을 찾을 수 없습니다."
             )
@@ -108,44 +128,56 @@ class FlightService:
                     status_code=403, detail="해당 항공편에 대한 수정 권한이 없습니다."
                 )
 
-        if update_data.airline:
-            flight.airline = update_data.airline
-        if update_data.flight_number:
-            flight.flight_number = update_data.flight_number
-        if update_data.departure_airport:
-            flight.departure_airport = update_data.departure_airport
-        if update_data.arrival_airport:
-            flight.arrival_airport = update_data.arrival_airport
-        if update_data.departure_time:
-            flight.departure_time = update_data.departure_time
-        if update_data.arrival_time:
-            flight.arrival_time = update_data.arrival_time
-        if update_data.seat_class:
-            flight.seat_class = update_data.seat_class
-        if update_data.seat_number:
-            flight.seat_number = update_data.seat_number
-        if update_data.duration:
-            flight.duration = update_data.duration
+        if update_data.reservation_number is not None:
+            flight.reservation_number = update_data.reservation_number
+        if update_data.passenger_name is not None:
+            flight.passenger_name = update_data.passenger_name
 
-        updated_flight = await self.flight_repository.save(flight=flight)
+        first_departure_date = None
+        if update_data.segments is not None:
+            if len(update_data.segments) < 1:
+                raise HTTPException(status_code=400, detail="세그먼트는 최소 1개 이상이어야 합니다.")
+            to_create: list[FlightSegment] = []
+            first_departure_date = min(
+                (seg.departure_time for seg in update_data.segments),
+                key=lambda d: d,
+            ).date()
+            for seg in update_data.segments:
+                to_create.append(
+                    FlightSegment(
+                        flight_id=flight.id,
+                        airline=seg.airline,
+                        flight_number=seg.flight_number,
+                        departure_airport=seg.departure_airport,
+                        arrival_airport=seg.arrival_airport,
+                        departure_time=seg.departure_time,
+                        arrival_time=seg.arrival_time,
+                        seat_class=seg.seat_class or "",
+                        seat_number=seg.seat_number or "",
+                        order=0,
+                    )
+                )
+            await self.flight_repository.replace_segments(
+                flight_id=flight.id, new_segments=to_create
+            )
+            if flight.expense:
+                flight.expense.ex_date = first_departure_date
+        await self.flight_repository.save(flight=flight)
+            
 
         if update_data.expense:
             if flight.expense:
                 if update_data.expense.amount is not None:
                     flight.expense.amount = float(update_data.expense.amount)
-                if update_data.expense.category is not None:
-                    flight.expense.category = update_data.expense.category
                 if update_data.expense.description is not None:
                     flight.expense.description = update_data.expense.description
-                if update_data.expense.ex_date is not None:
-                    flight.expense.ex_date = update_data.expense.ex_date
 
                 updated_expense = await self.expense_repository.save(
                     expense=flight.expense
                 )
                 flight.expense = updated_expense
 
-        return FlightRead.model_validate(updated_flight)
+        return None
 
     async def delete(self, *, flight_id: int) -> None:
         flight = await self.flight_repository.find_by_id(flight_id=flight_id)
@@ -160,5 +192,74 @@ class FlightService:
                     status_code=403, detail="해당 항공편에 대한 수정 권한이 없습니다."
                 )
 
+        await self.flight_repository.soft_delete_segments_by_flight(flight_id=flight_id)
         await self.expense_repository.soft_delete_by_flight_id(flight_id=flight_id)
         await self.flight_repository.remove(flight_id=flight_id)
+
+    async def add_segment(self, *, data: FlightSegmentCreate) -> FlightSegmentRead:
+        flight = await self.flight_repository.find_by_id(flight_id=data.flight_id)
+        if not flight:
+            raise HTTPException(status_code=404, detail="항공권을 찾을 수 없습니다.")
+        if flight.plan.owner_id != self.current_user.id:
+            is_editor = await self.plan_repository.is_editor(
+                plan_id=flight.plan_id, user_id=self.current_user.id
+            )
+            if not is_editor:
+                raise HTTPException(status_code=403, detail="세그먼트 추가 권한이 없습니다.")
+        segment = FlightSegment(
+            flight_id=data.flight_id,
+            airline=data.airline,
+            flight_number=data.flight_number,
+            departure_airport=data.departure_airport,
+            arrival_airport=data.arrival_airport,
+            departure_time=data.departure_time,
+            arrival_time=data.arrival_time,
+            seat_class=data.seat_class or "",
+            seat_number=data.seat_number or "",
+            order=len(flight.flight_segments) + 1,
+        )
+        created = await self.flight_repository.save_segment(segment=segment)
+        return FlightSegmentRead.model_validate(created)
+
+    async def update_segment(self, *, segment_id: int, data: FlightSegmentUpdate) -> FlightSegmentRead:
+        seg = await self.flight_repository.find_segment_by_id(segment_id=segment_id)
+        if not seg:
+            raise HTTPException(status_code=404, detail="세그먼트를 찾을 수 없습니다.")
+        flight = seg.flight
+        if flight.plan.owner_id != self.current_user.id:
+            is_editor = await self.plan_repository.is_editor(
+                plan_id=flight.plan_id, user_id=self.current_user.id
+            )
+            if not is_editor:
+                raise HTTPException(status_code=403, detail="세그먼트 수정 권한이 없습니다.")
+        if data.airline is not None:
+            seg.airline = data.airline
+        if data.flight_number is not None:
+            seg.flight_number = data.flight_number
+        if data.departure_airport is not None:
+            seg.departure_airport = data.departure_airport
+        if data.arrival_airport is not None:
+            seg.arrival_airport = data.arrival_airport
+        if data.departure_time is not None:
+            seg.departure_time = data.departure_time
+        if data.arrival_time is not None:
+            seg.arrival_time = data.arrival_time
+        if data.seat_class is not None:
+            seg.seat_class = data.seat_class or ""
+        if data.seat_number is not None:
+            seg.seat_number = data.seat_number or ""
+        saved = await self.flight_repository.save_segment(segment=seg)
+        return FlightSegmentRead.model_validate(saved)
+
+    async def delete_segment(self, *, segment_id: int) -> None:
+        seg = await self.flight_repository.find_segment_by_id(segment_id=segment_id)
+        if not seg:
+            return
+        flight = seg.flight
+        if flight.plan.owner_id != self.current_user.id:
+            is_editor = await self.plan_repository.is_editor(
+                plan_id=flight.plan_id, user_id=self.current_user.id
+            )
+            if not is_editor:
+                raise HTTPException(status_code=403, detail="세그먼트 삭제 권한이 없습니다.")
+        await self.flight_repository.soft_delete_segment(segment_id=segment_id)

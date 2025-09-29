@@ -21,36 +21,9 @@ class Flight(Base):
         autoincrement=True,
     )
 
-    airline: Mapped[str]
-    """항공사"""
+    reservation_number: Mapped[str]
 
-    flight_number: Mapped[str]
-    """항공편 번호"""
-
-    departure_airport: Mapped[str]
-    """출발 공항"""
-
-    arrival_airport: Mapped[str]
-    """도착 공항"""
-
-    departure_time: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False
-    )
-    """출발 시간"""
-
-    arrival_time: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False
-    )
-    """도착 시간"""
-
-    seat_class: Mapped[str]
-    """좌석 등급"""
-
-    seat_number: Mapped[str]
-    """좌석 번호"""
-
-    duration: Mapped[str | None] = mapped_column(nullable=True)
-    """비행 시간"""
+    passenger_name: Mapped[str]
 
     plan_id: Mapped[int] = mapped_column(
         Integer,
@@ -58,7 +31,6 @@ class Flight(Base):
         nullable=False,
     )
     plan: Mapped["Plan"] = relationship(init=False, back_populates="flights")
-    """해당 여행"""
 
     expense: Mapped[Optional["Expense"]] = relationship(
         init=False,
@@ -67,4 +39,53 @@ class Flight(Base):
         cascade="all, delete-orphan",
     )
 
+    flight_segments: Mapped[list["FlightSegment"]] = relationship(
+        back_populates="flight",
+        cascade="all, delete-orphan",
+        default_factory=list,
+    )
+
     is_deleted: Mapped[bool] = mapped_column(default=False, nullable=False)
+
+
+class FlightSegment(Base):
+    __tablename__ = "flight_segment"
+
+    id: Mapped[int] = mapped_column(
+        primary_key=True,
+        init=False,
+        index=True,
+        autoincrement=True,
+    )
+    
+    order: Mapped[int]
+
+    airline: Mapped[str]
+
+    flight_number: Mapped[str]
+
+    departure_airport: Mapped[str]
+
+    arrival_airport: Mapped[str]
+
+    departure_time: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+
+    arrival_time: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+
+    seat_class: Mapped[str] = mapped_column(nullable=True)
+
+    seat_number: Mapped[str] = mapped_column(nullable=True)
+
+    flight_id: Mapped[int] = mapped_column(
+        Integer,
+        ForeignKey("flight.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    flight: Mapped["Flight"] = relationship(back_populates="flight_segments", init=False)
+
+    is_deleted: Mapped[bool] = mapped_column(default=False, nullable=False)
+
