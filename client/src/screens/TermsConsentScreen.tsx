@@ -23,7 +23,15 @@ export default function TermsConsentScreen() {
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.title}>Ottrip 계정 서비스 약관에 동의해주세요</Text>
+      <View style={styles.header}>
+        <Text style={styles.title}>Ottrip 계정 서비스 약관에 동의해주세요</Text>
+        <Pressable 
+          style={styles.closeButton} 
+          onPress={() => navigation.navigate('OTTRIP LOGIN')}
+        >
+          <Text style={styles.closeButtonText}>✕</Text>
+        </Pressable>
+      </View>
 
       <View style={styles.card}>
         <View style={styles.rowBetween}>
@@ -75,7 +83,18 @@ export default function TermsConsentScreen() {
 
 const styles = StyleSheet.create({
   container: { flexGrow: 1, padding: 20, backgroundColor: '#fff' },
-  title: { fontSize: 22, fontWeight: '800', marginBottom: 16, color: '#111827' },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 },
+  title: { fontSize: 22, fontWeight: '800', color: '#111827', flex: 1 },
+  closeButton: { 
+    width: 32, 
+    height: 32, 
+    borderRadius: 16, 
+    backgroundColor: '#f3f4f6', 
+    alignItems: 'center', 
+    justifyContent: 'center',
+    marginLeft: 12
+  },
+  closeButtonText: { fontSize: 16, color: '#6b7280', fontWeight: '600' },
   card: { borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 12, padding: 16, backgroundColor: '#fafafa', marginBottom: 20 },
   row: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12 },
   rowBetween: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },

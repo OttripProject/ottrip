@@ -1,8 +1,9 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState } from 'react';
 import { View, Text, TextInput, Pressable, StyleSheet, Alert } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { authApi } from '@/services/auth';
 import { useAuth } from '@/contexts/AuthContext';
+import { useNicknameValidation } from '@/hooks/useNicknameValidation';
 import * as SecureStore from 'expo-secure-store';
 import api from '@/services/api';
 
@@ -23,24 +24,6 @@ function getDisplayLength(text: string): number {
   return len;
 }
 
-// 닉네임 검증: 한글 1~10자 또는 영문 1~20자, 특수문자 '_', '-', '.' 허용
-function validateNickname(nickname: string): { isValid: boolean; error?: string } {
-  const trimmed = nickname.trim();
-  if (trimmed.length === 0) {
-    return { isValid: false, error: '닉네임을 입력해주세요.' };
-  }
-  
-  // 한글 1~10자 또는 영문 1~20자, 특수문자 _-. 허용
-  const pattern = /^(?:[가-힣0-9_.-]{1,10}|[A-Za-z0-9_.-]{1,20})$/;
-  if (!pattern.test(trimmed)) {
-    return { 
-      isValid: false, 
-      error: '닉네임은 한글 1~10자 또는 영문 1~20자이며, 특수문자는 \'_\', \'-\', \'.\'만 허용합니다.' 
-    };
-  }
-  
-  return { isValid: true };
-}
 
 function toHandleFromEmail(email: string): string {
   const local = email.split('@')[0] || '';
@@ -57,37 +40,17 @@ export default function RegisterProfileScreen() {
   const [nickname, setNickname] = useState(prefill?.name || '');
   const [gender, setGender] = useState<'male' | 'female'>('male');
   const [handle] = useState(() => toHandleFromEmail(email));
-  const [nicknameError, setNicknameError] = useState<string | null>(null);
-  const [checkingNickname, setCheckingNickname] = useState(false);
-  const checkNicknameTimer = useRef<NodeJS.Timeout | null>(null);
+  
+  // 닉네임 검증 훅 사용
+  const { nicknameError, checkingNickname, onNicknameChange, isValid } = useNicknameValidation();
 
-  const triggerNicknameCheck = useCallback((nickname: string) => {
-    if (checkNicknameTimer.current) clearTimeout(checkNicknameTimer.current);
-    checkNicknameTimer.current = setTimeout(async () => {
-      setCheckingNickname(true);
-      try {
-        const res = await authApi.validateNickname(nickname);
-        setNicknameError(res.error);
-      } catch (e: any) {
-        setNicknameError('중복 확인 실패. 잠시 후 다시 시도해주세요.');
-      } finally {
-        setCheckingNickname(false);
-      }
-    }, 500);
-  }, []);
-
-  const onNicknameChange = (text: string) => {
+  // 닉네임 변경 핸들러 (훅과 연동)
+  const handleNicknameChange = (text: string) => {
     setNickname(text);
-    const validation = validateNickname(text);
-    if (validation.isValid) {
-      setNicknameError(null);
-      triggerNicknameCheck(text);
-    } else {
-      setNicknameError(validation.error || null);
-    }
+    onNicknameChange(text);
   };
 
-  const canSubmit = !nicknameError && !checkingNickname && nickname.trim().length > 0;
+  const canSubmit = isValid && nickname.trim().length > 0;
 
   const onSubmit = async () => {
     if (!canSubmit) return;
@@ -138,7 +101,7 @@ export default function RegisterProfileScreen() {
 
       <View style={styles.fieldGroup}>
         <Text style={styles.label}>닉네임</Text>
-        <TextInput style={styles.input} value={nickname} onChangeText={onNicknameChange} />
+        <TextInput style={styles.input} value={nickname} onChangeText={handleNicknameChange} />
         {checkingNickname && <Text style={styles.hint}>중복 확인 중...</Text>}
         {nicknameError && <Text style={styles.errorText}>{nicknameError}</Text>}
         {!nicknameError && !checkingNickname && nickname.trim().length > 0 && (

@@ -23,6 +23,9 @@ export const usersApi = {
     const res = await api.put('/private/users/me', data);
     return res.data;
   },
+  deleteAccount: async (): Promise<void> => {
+    await api.delete('/private/users/me');
+  },
 };
 
 
