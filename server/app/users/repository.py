@@ -18,6 +18,11 @@ class UserRepository:
             await self.session.scalar(select(exists().where(User.handle == handle)))
         )
 
+    async def is_nickname_taken(self, *, nickname: str) -> bool:
+        return bool(
+            await self.session.scalar(select(exists().where(User.nickname == nickname)))
+        )
+
     async def find_by_id(self, *, user_id: int) -> User | None:
         return await self.session.get(User, user_id)
 

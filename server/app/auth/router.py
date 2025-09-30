@@ -49,6 +49,14 @@ async def validate_handle(
 
 
 # 삭제?
+@router.post("/validate/nickname")
+async def validate_nickname(
+    user_service: UserService, nickname: str = Body(...)
+) -> ValidationResult:
+    return await user_service.validate_nickname(nickname=nickname)
+
+
+# 삭제?
 @router.post("/register", status_code=status.HTTP_201_CREATED)
 async def register_user(
     user_service: UserService,
