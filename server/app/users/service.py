@@ -103,3 +103,8 @@ class UserService:
             raise HTTPException(status_code=400, detail="사용자 업데이트에 실패했습니다.")
         profile = await self.get_profile(user_id=current_user.id)
         return profile
+
+    async def delete_account(self, *, current_user: CurrentUser) -> None:
+        await self.user_repository.delete_user_auth(user_id=current_user.id)
+        await self.user_repository.soft_delete_user(user_id=current_user.id)
+        
