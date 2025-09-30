@@ -75,9 +75,17 @@ export const authApi = {
     return response.data;
   },
 
-  // 닉네임(핸들) 중복 검사
+  // 핸들 중복 검사
   validateHandle: async (handle: string): Promise<{ error: string | null }> => {
     const response = await api.post('/public/auth/validate/handle', handle, {
+      headers: { 'Content-Type': 'application/json' },
+    });
+    return response.data;
+  },
+
+  // 닉네임 중복 검사
+  validateNickname: async (nickname: string): Promise<{ error: string | null }> => {
+    const response = await api.post('/public/auth/validate/nickname', nickname, {
       headers: { 'Content-Type': 'application/json' },
     });
     return response.data;

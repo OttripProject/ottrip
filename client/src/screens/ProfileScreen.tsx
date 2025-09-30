@@ -11,7 +11,6 @@ export default function ProfileScreen() {
   const [me, setMe] = useState<UserProfile | null>(null);
   const [nickname, setNickname] = useState('');
   const [gender, setGender] = useState<string | null>(null);
-  const [description, setDescription] = useState('');
   const [contactOpen, setContactOpen] = useState(false);
   const [copied, setCopied] = useState(false);
 
@@ -21,13 +20,12 @@ export default function ProfileScreen() {
       setMe(profile);
       setNickname(profile.nickname);
       setGender(profile.gender);
-      setDescription(profile.description ?? '');
     };
     load();
   }, []);
 
   const save = async () => {
-    const updated = await usersApi.updateMe({ nickname, gender, description });
+    const updated = await usersApi.updateMe({ nickname, gender });
     setMe(updated);
     navigation.navigate('OTTRIP');
   };
@@ -64,17 +62,6 @@ export default function ProfileScreen() {
             </Pressable>
           ))}
         </View>
-      </View>
-
-      <View style={styles.fieldGroup}>
-        <Text style={styles.label}>소개</Text>
-        <TextInput
-          style={[styles.input, styles.textarea]}
-          multiline
-          value={description}
-          onChangeText={setDescription}
-          placeholder="자기 소개를 입력하세요"
-        />
       </View>
 
       <Pressable style={styles.contactBtn} onPress={() => setContactOpen(true)}>
@@ -137,7 +124,6 @@ const styles = StyleSheet.create({
   },
   readonly: { backgroundColor: '#f3f4f6' },
   readonlyText: { color: '#374151' },
-  textarea: { minHeight: 80, textAlignVertical: 'top' },
   row: { flexDirection: 'row', gap: 8 },
   chip: { paddingVertical: 8, paddingHorizontal: 12, borderRadius: 16, backgroundColor: '#e5e7eb' },
   chipActive: { backgroundColor: '#2563eb22', borderWidth: 1, borderColor: '#2563eb' },
