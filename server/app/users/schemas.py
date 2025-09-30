@@ -9,7 +9,7 @@ from .models import Gender
 
 Handle = Annotated[
     str,
-    Field(min_length=2, max_length=36, pattern=re.compile(r"^[a-z0-9_.]+$")),
+    Field(min_length=2, max_length=36, pattern=re.compile(r"^[a-z0-9_.-]+$")),
 ]
 
 Description = Annotated[

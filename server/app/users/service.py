@@ -22,30 +22,50 @@ class UserService:
     user_repository: UserRepository
     auth_info_service: AuthInfoService
 
-    _handle_pattern = re.compile(r"^(?:[가-힣0-9_.-]{1,10}|[A-Za-z0-9_.-]{1,20})$")
+    # 닉네임 검증: 한글 1~10자 또는 영문 1~20자, 특수문자 '_', '-', '.' 허용
+    _nickname_pattern = re.compile(r"^(?:[가-힣0-9_.-]{1,10}|[A-Za-z0-9_.-]{1,20})$")
+    
+    async def validate_nickname(self, *, nickname: str) -> ValidationResult:
+        if not self._nickname_pattern.fullmatch(nickname):
+            return ValidationResult(
+                error="닉네임은 한글 1~10자 또는 영문 1~20자이며, 특수문자는 '_', '-', '.'만 허용합니다."
+            )
+        if await self.user_repository.is_nickname_taken(nickname=nickname):
+            return ValidationResult(error="이미 사용 중인 닉네임입니다.")
+        return ValidationResult(error=None)
 
     async def validate_handle(self, *, handle: str) -> ValidationResult:
-        error = None
-
-        if not self._handle_pattern.fullmatch(handle) or handle == "me":
-            return ValidationResult(
-                error="handle은 한글 1~10자 또는 영문 1~20자이며, 특수문자는 '_', '-', '.'만 허용합니다. 또한 'me'는 사용할 수 없습니다."
-            )
-        if await self.user_repository.is_handle_taken(handle=handle):
-            error = "이미 사용 중인 핸들입니다."
-
-        return ValidationResult(error=error)
+        normalized = handle.lower()
+        if normalized == "me":
+            return ValidationResult(error="사용할 수 없는 핸들입니다.")
+        if await self.user_repository.is_handle_taken(handle=normalized):
+            return ValidationResult(error="이미 사용 중인 핸들입니다.")
+        return ValidationResult(error=None)
 
     async def register(self, *, user_data: UserCreate, auth: UserAuthInfo) -> User:
         if user_data.agreed_terms is not True or user_data.agreed_privacy is not True:
             raise HTTPException(status_code=400, detail="필수 약관(이용약관/개인정보수집·이용)에 동의해야 합니다.")
 
         handle_validate = await self.validate_handle(handle=user_data.handle)
-
+        
         if handle_validate.error:
             raise HTTPException(status_code=400, detail=handle_validate.error)
 
-        created_user = await self.user_repository.create(user_data=user_data)
+        nickname_validate = await self.validate_nickname(nickname=user_data.nickname)
+        if nickname_validate.error:
+            raise HTTPException(status_code=400, detail=nickname_validate.error)
+
+        normalized = UserCreate(
+            handle=user_data.handle.lower(),
+            nickname=user_data.nickname,
+            description=user_data.description,
+            gender=user_data.gender,
+            agreed_terms=user_data.agreed_terms,
+            agreed_privacy=user_data.agreed_privacy,
+            agreed_marketing=user_data.agreed_marketing,
+        )
+
+        created_user = await self.user_repository.create(user_data=normalized)
         if created_user is None:
             raise HTTPException(status_code=400, detail="사용자 생성에 실패했습니다.")
 
