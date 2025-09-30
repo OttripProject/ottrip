@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, TextInput, Pressable, StyleSheet, Modal } from 'react-native';
+import { View, Text, TextInput, Pressable, StyleSheet, Modal, Alert, Platform } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { usersApi, UserProfile } from '@/services/users';
 import HeaderBar from '@/components/HeaderBar';
 import { useAuth } from '@/contexts/AuthContext';
+import { useNicknameValidation } from '@/hooks/useNicknameValidation';
 
 export default function ProfileScreen() {
   const { logout } = useAuth();
@@ -13,6 +14,10 @@ export default function ProfileScreen() {
   const [gender, setGender] = useState<string | null>(null);
   const [contactOpen, setContactOpen] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  
+  // 닉네임 검증 훅 사용
+  const { nicknameError, checkingNickname, onNicknameChange, isValid } = useNicknameValidation(me?.nickname);
 
   useEffect(() => {
     const load = async () => {
@@ -24,10 +29,42 @@ export default function ProfileScreen() {
     load();
   }, []);
 
+  // 닉네임 변경 핸들러 (훅과 연동)
+  const handleNicknameChange = (text: string) => {
+    setNickname(text);
+    onNicknameChange(text);
+  };
+
   const save = async () => {
+    // 닉네임 검증
+    if (!isValid) {
+      Alert.alert('오류', '닉네임을 확인해주세요.');
+      return;
+    }
+    
     const updated = await usersApi.updateMe({ nickname, gender });
     setMe(updated);
     navigation.navigate('OTTRIP');
+  };
+
+  const handleDeleteAccount = () => {
+    setDeleteModalOpen(true);
+  };
+
+  const confirmDeleteAccount = async () => {
+    try {
+      await usersApi.deleteAccount();
+      setDeleteModalOpen(false);
+      logout();
+    } catch (error: any) {
+      const errorMessage = error?.response?.data?.detail || '탈퇴 중 오류가 발생했습니다.';
+      setDeleteModalOpen(false);
+      if (Platform.OS === 'web') {
+        window.alert(`오류: ${errorMessage}`);
+      } else {
+        Alert.alert('오류', errorMessage);
+      }
+    }
   };
 
   return (
@@ -44,7 +81,12 @@ export default function ProfileScreen() {
 
       <View style={styles.fieldGroup}>
         <Text style={styles.label}>닉네임</Text>
-        <TextInput style={styles.input} value={nickname} onChangeText={setNickname} />
+        <TextInput style={styles.input} value={nickname} onChangeText={handleNicknameChange} />
+        {checkingNickname && <Text style={styles.hint}>중복 확인 중...</Text>}
+        {nicknameError && <Text style={styles.errorText}>{nicknameError}</Text>}
+        {!nicknameError && !checkingNickname && nickname.trim().length > 0 && nickname !== me?.nickname && (
+          <Text style={styles.successText}>사용 가능한 닉네임입니다.</Text>
+        )}
       </View>
 
       <View style={styles.fieldGroup}>
@@ -71,6 +113,9 @@ export default function ProfileScreen() {
       <View style={styles.footerRow}>
         <Pressable style={[styles.actionBtn, styles.logoutBtn]} onPress={logout}>
           <Text style={styles.actionBtnText}>로그아웃</Text>
+        </Pressable>
+        <Pressable style={styles.deleteBtn} onPress={handleDeleteAccount}>
+          <Text style={styles.deleteBtnText}>계정 탈퇴</Text>
         </Pressable>
         <Pressable style={[styles.actionBtn, styles.saveBtn]} onPress={save}>
           <Text style={styles.actionBtnText}>변경사항 저장</Text>
@@ -105,6 +150,33 @@ export default function ProfileScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* 탈퇴 확인 모달 */}
+      <Modal visible={deleteModalOpen} transparent animationType="fade">
+        <View style={styles.deleteModalOverlay}>
+          <View style={styles.deleteModalCard}>
+            <Text style={styles.deleteModalTitle}>정말 계정을 삭제하시겠어요?</Text>
+            <Text style={styles.deleteModalText}>
+              계정을 삭제하면 지금까지 만든 여행 일정이 모두 사라지며,{'\n'}
+              다시 복구할 수 없어요.
+            </Text>
+            <View style={styles.deleteModalButtonRow}>
+              <Pressable 
+                style={styles.deleteModalButton} 
+                onPress={() => setDeleteModalOpen(false)}
+              >
+                <Text style={styles.deleteModalButtonText}>취소</Text>
+              </Pressable>
+              <Pressable 
+                style={styles.deleteModalButton} 
+                onPress={confirmDeleteAccount}
+              >
+                <Text style={styles.deleteModalButtonText}>삭제</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -124,6 +196,9 @@ const styles = StyleSheet.create({
   },
   readonly: { backgroundColor: '#f3f4f6' },
   readonlyText: { color: '#374151' },
+  hint: { fontSize: 12, color: '#6b7280', marginTop: 4 },
+  errorText: { fontSize: 12, color: '#dc2626', marginTop: 4 },
+  successText: { fontSize: 12, color: '#10b981', marginTop: 4 },
   row: { flexDirection: 'row', gap: 8 },
   chip: { paddingVertical: 8, paddingHorizontal: 12, borderRadius: 16, backgroundColor: '#e5e7eb' },
   chipActive: { backgroundColor: '#2563eb22', borderWidth: 1, borderColor: '#2563eb' },
@@ -136,6 +211,8 @@ const styles = StyleSheet.create({
   logoutBtn: { backgroundColor: '#ef4444' },
   saveBtn: { backgroundColor: '#10b981' },
   actionBtnText: { color: '#fff', fontWeight: '700' },
+  deleteBtn: { flex: 1, backgroundColor: '#dc2626', paddingVertical: 12, borderRadius: 8, alignItems: 'center' },
+  deleteBtnText: { color: '#fff', fontWeight: '700', fontSize: 16 },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', alignItems: 'center', justifyContent: 'center' },
   modalCard: { width: '90%', maxWidth: 420, backgroundColor: '#fff', borderRadius: 12, padding: 16 },
   modalTitle: { fontSize: 18, fontWeight: '700', marginBottom: 8 },
@@ -147,6 +224,61 @@ const styles = StyleSheet.create({
   copyBtnText: { color: '#fff', fontWeight: '700' },
   modalClose: { alignSelf: 'flex-end', marginTop: 12 },
   modalCloseText: { color: '#374151' },
+  modalButtonRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 16, gap: 12 },
+  modalButton: { flex: 1, paddingVertical: 12, borderRadius: 8, alignItems: 'center' },
+  modalButtonCancel: { backgroundColor: '#f3f4f6' },
+  modalButtonDelete: { backgroundColor: '#dc2626' },
+  modalButtonText: { fontSize: 16, fontWeight: '600' },
+  modalButtonDeleteText: { color: '#fff' },
+  // 탈퇴 모달 스타일
+  deleteModalOverlay: { 
+    flex: 1, 
+    backgroundColor: 'rgba(0,0,0,0.5)', 
+    alignItems: 'center', 
+    justifyContent: 'center',
+    padding: 20
+  },
+  deleteModalCard: { 
+    backgroundColor: '#fff', 
+    borderRadius: 16, 
+    padding: 24,
+    width: '100%',
+    maxWidth: 320,
+    alignItems: 'center'
+  },
+  deleteModalTitle: { 
+    fontSize: 18, 
+    fontWeight: '700', 
+    color: '#374151', 
+    marginBottom: 12,
+    textAlign: 'center'
+  },
+  deleteModalText: { 
+    fontSize: 14, 
+    color: '#6b7280', 
+    lineHeight: 20,
+    textAlign: 'center',
+    marginBottom: 24
+  },
+  deleteModalButtonRow: { 
+    flexDirection: 'row', 
+    width: '100%',
+    gap: 12
+  },
+  deleteModalButton: { 
+    flex: 1, 
+    paddingVertical: 12, 
+    paddingHorizontal: 16,
+    borderRadius: 8, 
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#d1d5db'
+  },
+  deleteModalButtonText: { 
+    fontSize: 16, 
+    fontWeight: '600',
+    color: '#dc2626'
+  },
 });
 
 
