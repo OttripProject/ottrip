@@ -23,3 +23,10 @@ async def update_user_info(
     return await user_service.update(
         updated_data=update_data, current_user=current_user
     )
+
+
+@router.delete("/me", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_user_account(
+    user_service: UserService, current_user: CurrentUser
+) -> None:
+    await user_service.delete_account(current_user=current_user)

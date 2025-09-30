@@ -48,6 +48,19 @@ async def get_google_token(*, client: AsyncClient, code: str) -> dict[str, Any]:
     return response.json()
 
 
+async def revoke_google_token(*, client: AsyncClient, access_token: str) -> bool:
+    """구글 OAuth 토큰 해제"""
+    try:
+        response = await client.post(
+            "https://oauth2.googleapis.com/revoke",
+            params={"token": access_token},
+            headers={"Content-Type": "application/x-www-form-urlencoded"},
+        )
+        return response.status_code == 200
+    except Exception:
+        return False
+
+
 async def get_google_user(*, client: AsyncClient, access_token: str) -> GoogleUser:
     response = await client.get(
         "https://openidconnect.googleapis.com/v1/userinfo",

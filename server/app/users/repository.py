@@ -1,4 +1,4 @@
-from sqlalchemy import exists, select, update
+from sqlalchemy import delete, exists, select, update
 from app.auth.models import UserAuthInfo
 
 from app.database.deps import SessionDep
@@ -69,3 +69,19 @@ class UserRepository:
         )
 
         return updated_user
+
+    async def delete_user_auth(self, *, user_id: int) -> None:
+        await self.session.execute(
+            delete(UserAuthInfo).where(UserAuthInfo.user_id == user_id)
+        )
+
+    async def soft_delete_user(self, *, user_id: int) -> None:
+        await self.session.execute(
+            update(User)
+            .where(User.id == user_id)
+            .values(
+                is_deleted=True,
+                handle=f"deleted_{user_id}",
+                nickname=f"deleted_{user_id}",
+                )
+        )
