@@ -1,7 +1,5 @@
 FROM ghcr.io/astral-sh/uv:python3.13-alpine
 
-RUN apk add --no-cache libstdc++ libgcc
-
 WORKDIR /app
 
 ENV UV_SYSTEM_PYTHON=1

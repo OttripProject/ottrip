@@ -2,6 +2,7 @@ from fastapi import HTTPException
 
 from app.auth.deps import CurrentUser
 from app.expenses.models import Expense
+from app.expenses.schemas import ExpenseCategory
 from app.expenses.repository import ExpenseRepository
 from app.plans.repository import PlanRepository
 from app.utils.dependency import dependency
@@ -32,10 +33,14 @@ class AccommodationService:
                 raise HTTPException(status_code=403, detail="해당 숙소에 대한 생성 권한이 없습니다.")
         create_accommodation_data = Accommodation(
             name=accommodation_data.name,
-            address=accommodation_data.address,
-            start_date=accommodation_data.start_date,
-            end_date=accommodation_data.end_date,
-            memo=accommodation_data.memo,
+            place=accommodation_data.place,
+            country=accommodation_data.country,
+            city=accommodation_data.city,
+            checkin_date=accommodation_data.checkin_date,
+            checkout_date=accommodation_data.checkout_date,
+            checkin_time=accommodation_data.checkin_time,
+            checkout_time=accommodation_data.checkout_time,
+            description=accommodation_data.description,
             plan_id=accommodation_data.plan_id,
         )
         created_accommodation = await self.accommodation_repository.save(
@@ -45,7 +50,7 @@ class AccommodationService:
         if accommodation_data.expense:
             expense = Expense(
                 amount=float(accommodation_data.expense.amount),
-                category=accommodation_data.expense.category,
+                category=ExpenseCategory.ACCOMMODATION,
                 description=accommodation_data.expense.description,
                 currency=accommodation_data.expense.currency,
                 ex_date=accommodation_data.expense.ex_date,
@@ -117,14 +122,22 @@ class AccommodationService:
 
         if update_data.name:
             accommodation.name = update_data.name
-        if update_data.address:
-            accommodation.address = update_data.address
-        if update_data.start_date:
-            accommodation.start_date = update_data.start_date
-        if update_data.end_date:
-            accommodation.end_date = update_data.end_date
-        if update_data.memo:
-            accommodation.memo = update_data.memo
+        if update_data.place:
+            accommodation.place = update_data.place
+        if update_data.country:
+            accommodation.country = update_data.country
+        if update_data.city:
+            accommodation.city = update_data.city
+        if update_data.checkin_date:
+            accommodation.checkin_date = update_data.checkin_date   
+        if update_data.checkout_date:
+            accommodation.checkout_date = update_data.checkout_date
+        if update_data.checkin_time:
+            accommodation.checkin_time = update_data.checkin_time
+        if update_data.checkout_time:
+            accommodation.checkout_time = update_data.checkout_time
+        if update_data.description:
+            accommodation.description = update_data.description
 
         updated_accommodation = await self.accommodation_repository.save(
             accommodation=accommodation
@@ -134,12 +147,13 @@ class AccommodationService:
             if accommodation.expense:
                 if update_data.expense.amount is not None:
                     accommodation.expense.amount = float(update_data.expense.amount)
-                if update_data.expense.category is not None:
-                    accommodation.expense.category = update_data.expense.category
+                accommodation.expense.category = ExpenseCategory.ACCOMMODATION
                 if update_data.expense.description is not None:
                     accommodation.expense.description = update_data.expense.description
                 if update_data.expense.ex_date is not None:
                     accommodation.expense.ex_date = update_data.expense.ex_date
+                if update_data.expense.currency is not None:
+                    accommodation.expense.currency = update_data.expense.currency
 
                 updated_expense = await self.expense_repository.save(
                     expense=accommodation.expense
