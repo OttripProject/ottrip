@@ -19,6 +19,8 @@ dependencies = [
     "pyjwt[crypto]>=2.10.1",
     "sqlalchemy[asyncio]>=2.0.39",
     "types-aioboto3[full]>=14.1.0",
+    "google-cloud-vision>=3.7.0",
+    "pymupdf>=1.26.4",
 ]
 
 [dependency-groups]

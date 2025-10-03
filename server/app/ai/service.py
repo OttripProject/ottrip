@@ -1,53 +1,72 @@
-from __future__ import annotations
+from typing import Dict, Any
 
-from typing import Any, Dict, List, Optional
+from app.auth.deps import CurrentUser
+from app.utils.dependency import dependency
 
-import httpx
-from pydantic import BaseModel
-
+from .clients import VisionClient, OpenAIClient
 from .config import ai_settings
+from .schemas import AIFlightRead
 
 
-class ChatMessage(BaseModel):
-    role: str
-    content: str
+@dependency
+class AIService:
+    current_user: CurrentUser
+    vision_client: VisionClient
+    openai_client: OpenAIClient
+      
+    async def extract_text_from_image(self, image_data: bytes) -> AIFlightRead:
+        return await self.vision_client.extract_text_from_image(image_data)
+    
+    async def extract_text_from_pdf(self, pdf_data: bytes) -> AIFlightRead:
+        return await self.vision_client.extract_text_from_pdf(pdf_data)
+    
+    async def parse_flight_data_with_ai(self, ocr_text: str) -> Dict[str, Any]:
+        return await self.openai_client.parse_flight_data(ocr_text)
+    
+    async def process_flight_ticket(self, file_data: bytes, content_type: str, filename: str) -> Dict[str, Any]:
+        """항공권 이미지/PDF 전체 처리 (OCR + AI)"""
+        try:
+            # 파일 크기 검증
+            if len(file_data) > ai_settings.MAX_FILE_SIZE:
+                return {
+                    "success": False,
+                    "error": f"파일 크기가 너무 큽니다. 최대 {ai_settings.MAX_FILE_SIZE // (1024*1024)}MB까지 지원합니다."
+                }
+            
+            # 파일 타입에 따른 OCR 처리
+            if content_type in ai_settings.ALLOWED_IMAGE_TYPES:         
+                ocr_result = await self.extract_text_from_image(file_data)
+                
+            elif content_type in ai_settings.ALLOWED_PDF_TYPES:
+                ocr_result = await self.extract_text_from_pdf(file_data)
+                
+            else:
+                return {
+                    "success": False,
+                    "error": "지원하지 않는 파일 형식입니다."
+                }
+            
+            if not ocr_result.success:
+                return ocr_result
 
-
-class ChatRequest(BaseModel):
-    model: Optional[str] = None
-    messages: List[ChatMessage]
-    temperature: Optional[float] = 0.7
-    max_tokens: Optional[int] = None
-    response_format: Optional[Dict[str, Any]] = None
-
-
-class OpenAIService:
-    def __init__(self, *, api_key: Optional[str] = None, base_url: Optional[str] = None):
-        self.api_key = api_key or ai_settings.OPENAI_API_KEY
-        self.base_url = (base_url or ai_settings.OPENAI_BASE_URL).rstrip("/")
-
-    async def chat(self, payload: ChatRequest) -> Dict[str, Any]:
-        url = f"{self.base_url}/chat/completions"
-        model = payload.model or ai_settings.DEFAULT_MODEL
-        request_json: Dict[str, Any] = {
-            "model": model,
-            "messages": [m.model_dump() for m in payload.messages],
-            "temperature": payload.temperature,
-        }
-        if payload.max_tokens is not None:
-            request_json["max_tokens"] = payload.max_tokens
-        if payload.response_format is not None:
-            request_json["response_format"] = payload.response_format
-
-        headers = {
-            "Authorization": f"Bearer {self.api_key}",
-            "Content-Type": "application/json",
-        }
-
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            resp = await client.post(url, json=request_json, headers=headers)
-            resp.raise_for_status()
-            data: Dict[str, Any] = resp.json()
-            return data
-
-
+            # AI로 항공권 데이터 파싱
+            ai_result = await self.parse_flight_data_with_ai(ocr_result.text)
+            
+            # 결과 통합
+            return {
+                "success": True,
+                "ocr_result": ocr_result,
+                "ai_result": ai_result,
+                "flight_data": ai_result.get("data", {}) if ai_result.get("success") else {},
+                "file_info": {
+                    "filename": filename,
+                    "content_type": content_type,
+                    "size": len(file_data)
+                }
+            }
+            
+        except Exception as e:
+            return {
+                "success": False,
+                "error": f"파일 처리 중 오류 발생: {str(e)}"
+            }
