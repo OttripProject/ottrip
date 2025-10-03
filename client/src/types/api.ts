@@ -122,10 +122,14 @@ export interface FlightRead {
 export interface Accommodation {
   id: number;
   name: string;
-  address?: string;
-  startDate: string;
-  endDate: string;
-  memo?: string;
+  place?: string;
+  country: string;
+  city: string;
+  checkinDate: string;
+  checkoutDate: string;
+  checkinTime: string;
+  checkoutTime: string;
+  description?: string;
   planId: number;
   createdAt: string;
   updatedAt: string;
@@ -133,10 +137,14 @@ export interface Accommodation {
 
 export interface CreateAccommodationRequest {
   name: string;
-  address?: string;
-  startDate: string;
-  endDate: string;
-  memo?: string;
+  place?: string;
+  country: string;
+  city: string;
+  checkinDate: string;
+  checkoutDate: string;
+  checkinTime: string;
+  checkoutTime: string;
+  description?: string;
   planId: number;
   expense: {
     exDate: string;
@@ -149,10 +157,14 @@ export interface CreateAccommodationRequest {
 
 export interface UpdateAccommodationRequest {
   name?: string;
-  address?: string;
-  startDate?: string;
-  endDate?: string;
-  memo?: string;
+  place?: string;
+  country?: string;
+  city?: string;
+  checkinDate?: string;
+  checkoutDate?: string;
+  checkinTime?: string;
+  checkoutTime?: string;
+  description?: string;
   expense?: {
     exDate?: string;
     amount?: number;
