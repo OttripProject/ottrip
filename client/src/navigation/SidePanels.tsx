@@ -186,11 +186,16 @@ export default function SidePanels({ planData, selectedItinerary, onItineraryAdd
     // 숙박 폼 데이터
     const [accommodationFormData, setAccommodationFormData] = useState({
       name: '',
-      address: '',
-      start_date: dayjs().format('YYYY-MM-DD'),
-      end_date: dayjs().add(1, 'day').format('YYYY-MM-DD'),
-      memo: '',
+      place: '',
+      country: '',
+      city: '',
+      checkin_date: dayjs().format('YYYY-MM-DD'),
+      checkout_date: dayjs().add(1, 'day').format('YYYY-MM-DD'),
+      checkin_time: '15:00',
+      checkout_time: '11:00',
+      description: '',
     });
+    const [accommodationErrors, setAccommodationErrors] = useState<{ [k: string]: string }>({});
 
     // 지출 폼 데이터
     const [expenseFormData, setExpenseFormData] = useState({
@@ -427,18 +432,16 @@ export default function SidePanels({ planData, selectedItinerary, onItineraryAdd
 
   // 숙박 저장 함수
   const handleSaveAccommodation = async () => {
-    if (!accommodationFormData.name.trim()) {
-      Alert.alert('오류', '숙소 이름을 입력해주세요.');
-      return;
-    }
-    if (!accommodationFormData.start_date) {
-      Alert.alert('오류', '체크인 날짜를 선택해주세요.');
-      return;
-    }
-    if (!accommodationFormData.end_date) {
-      Alert.alert('오류', '체크아웃 날짜를 선택해주세요.');
-      return;
-    }
+    const errs: { [k: string]: string } = {};
+    if (!accommodationFormData.name.trim()) errs.name = '숙소 이름을 입력해주세요.';
+    if (!accommodationFormData.country.trim()) errs.country = '국가를 입력해주세요.';
+    if (!accommodationFormData.city.trim()) errs.city = '도시를 입력해주세요.';
+    if (!accommodationFormData.checkin_date) errs.checkin_date = '체크인 날짜를 선택해주세요.';
+    if (!accommodationFormData.checkout_date) errs.checkout_date = '체크아웃 날짜를 선택해주세요.';
+    if (!accommodationFormData.checkin_time) errs.checkin_time = '체크인 시간을 선택해주세요.';
+    if (!accommodationFormData.checkout_time) errs.checkout_time = '체크아웃 시간을 선택해주세요.';
+    setAccommodationErrors(errs);
+    if (Object.keys(errs).length) return;
 
     // Plan이 선택되지 않은 경우
     if (!planData?.plan?.id) {
@@ -449,13 +452,17 @@ export default function SidePanels({ planData, selectedItinerary, onItineraryAdd
     try {
       const payload = {
         name: accommodationFormData.name,
-        address: accommodationFormData.address || undefined,
-        startDate: accommodationFormData.start_date,
-        endDate: accommodationFormData.end_date,
-        memo: accommodationFormData.memo || undefined,
+        place: accommodationFormData.place || undefined,
+        country: accommodationFormData.country,
+        city: accommodationFormData.city,
+        checkinDate: accommodationFormData.checkin_date,
+        checkoutDate: accommodationFormData.checkout_date,
+        checkinTime: accommodationFormData.checkin_time + ':00',
+        checkoutTime: accommodationFormData.checkout_time + ':00',
+        description: accommodationFormData.description || undefined,
         planId: planData.plan.id,
         expense: {
-          exDate: accommodationFormData.start_date,
+          exDate: accommodationFormData.checkin_date,
           amount: Number(accommodationExpenseForm.amount || 0),
           category: ExpenseCategory.ACCOMMODATION as any,
           currency: accommodationExpenseForm.currency as any,
@@ -472,11 +479,16 @@ export default function SidePanels({ planData, selectedItinerary, onItineraryAdd
     
     setAccommodationFormData({
       name: '',
-      address: '',
-      start_date: dayjs().format('YYYY-MM-DD'),
-      end_date: dayjs().add(1, 'day').format('YYYY-MM-DD'),
-      memo: '',
+      place: '',
+      country: '',
+      city: '',
+      checkin_date: dayjs().format('YYYY-MM-DD'),
+      checkout_date: dayjs().add(1, 'day').format('YYYY-MM-DD'),
+      checkin_time: '15:00',
+      checkout_time: '11:00',
+      description: '',
     });
+    setAccommodationErrors({});
     
     setShowAccommodationForm(false);
   };
@@ -823,10 +835,14 @@ export default function SidePanels({ planData, selectedItinerary, onItineraryAdd
         setEditingAccommodation(accommodation);
         setAccommodationFormData({
           name: accommodation.name || '',
-          address: accommodation.address || '',
-          start_date: accommodation.start_date || dayjs().format('YYYY-MM-DD'),
-          end_date: accommodation.end_date || dayjs().add(1, 'day').format('YYYY-MM-DD'),
-          memo: accommodation.memo || '',
+          place: accommodation.place || '',
+          country: accommodation.country || '',
+          city: accommodation.city || '',
+          checkin_date: (accommodation.checkinDate || accommodation.checkin_date) || dayjs().format('YYYY-MM-DD'),
+          checkout_date: (accommodation.checkoutDate || accommodation.checkout_date) || dayjs().add(1, 'day').format('YYYY-MM-DD'),
+          checkin_time: ((accommodation.checkinTime || '15:00:00').slice(0,5)),
+          checkout_time: ((accommodation.checkoutTime || '11:00:00').slice(0,5)),
+          description: accommodation.description || '',
         });
         setAccommodationExpenseForm({
           amount: String(accommodation?.expense?.amount ?? ''),
@@ -838,15 +854,15 @@ export default function SidePanels({ planData, selectedItinerary, onItineraryAdd
       <View style={styles.accommodationHeader}>
         <Text style={styles.accommodationTitle}>{accommodation.name}</Text>
         <Text style={styles.accommodationDate}>
-          {dayjs(accommodation.start_date).format('M월 D일')} - {dayjs(accommodation.end_date).format('M월 D일')}
+          {dayjs(accommodation.checkinDate || accommodation.start_date).format('M월 D일')} - {dayjs(accommodation.checkoutDate || accommodation.end_date).format('M월 D일')}
         </Text>
       </View>
-      {accommodation.address && (
-        <Text style={styles.accommodationAddress}>📍 {accommodation.address}</Text>
+      {accommodation.place && (
+        <Text style={styles.accommodationAddress}>📍 {accommodation.place}</Text>
       )}
-      {accommodation.memo && (
+      {accommodation.description && (
         <Text style={styles.accommodationMemo} numberOfLines={2}>
-          📝 {accommodation.memo}
+          📝 {accommodation.description}
         </Text>
       )}
     </Pressable>
@@ -1982,10 +1998,14 @@ export default function SidePanels({ planData, selectedItinerary, onItineraryAdd
                           setShowAccommodationForm(true);
                           setAccommodationFormData({
                             name: '',
-                            address: '',
-                            start_date: dayjs().format('YYYY-MM-DD'),
-                            end_date: dayjs().add(1, 'day').format('YYYY-MM-DD'),
-                            memo: '',
+                            place: '',
+                            country: '',
+                            city: '',
+                            checkin_date: dayjs().format('YYYY-MM-DD'),
+                            checkout_date: dayjs().add(1, 'day').format('YYYY-MM-DD'),
+                            checkin_time: '15:00',
+                            checkout_time: '11:00',
+                            description: '',
                           });
                           setAccommodationExpenseForm({ amount: '', currency: ExpenseCurrency.KRW as string});
                           setShowFlightCurrencyOptions(false);
@@ -2014,51 +2034,156 @@ export default function SidePanels({ planData, selectedItinerary, onItineraryAdd
                       value={accommodationFormData.name}
                       onChangeText={(text) => setAccommodationFormData(prev => ({ ...prev, name: text }))}
                     />
+                    {accommodationErrors.name ? (
+                      <Text style={{ color: '#dc3545', marginTop: 4 }}>{accommodationErrors.name}</Text>
+                    ) : null}
                   </View>
 
-                  {/* 주소 */}
+                  {/* 장소 */}
                   <View style={styles.inputGroup}>
-                    <Text style={styles.label}>주소</Text>
+                    <Text style={styles.label}>장소</Text>
                     <TextInput
                       style={styles.input}
-                      placeholder="상세 주소"
-                      value={accommodationFormData.address}
-                      onChangeText={(text) => setAccommodationFormData(prev => ({ ...prev, address: text }))}
+                      placeholder="장소(선택)"
+                      value={accommodationFormData.place}
+                      onChangeText={(text) => setAccommodationFormData(prev => ({ ...prev, place: text }))}
                     />
+                  </View>
+
+                  {/* 국가/도시 */}
+                  <View style={styles.row}>
+                    <View style={[styles.inputGroup, styles.halfWidth]}>
+                      <Text style={styles.label}>국가</Text>
+                      <TextInput
+                        style={styles.input}
+                        placeholder="국가"
+                        value={accommodationFormData.country}
+                        onChangeText={(text) => setAccommodationFormData(prev => ({ ...prev, country: text }))}
+                      />
+                      {accommodationErrors.country ? (
+                        <Text style={{ color: '#dc3545', marginTop: 4 }}>{accommodationErrors.country}</Text>
+                      ) : null}
+                    </View>
+                    <View style={[styles.inputGroup, styles.halfWidth]}>
+                      <Text style={styles.label}>도시</Text>
+                      <TextInput
+                        style={styles.input}
+                        placeholder="도시"
+                        value={accommodationFormData.city}
+                        onChangeText={(text) => setAccommodationFormData(prev => ({ ...prev, city: text }))}
+                      />
+                      {accommodationErrors.city ? (
+                        <Text style={{ color: '#dc3545', marginTop: 4 }}>{accommodationErrors.city}</Text>
+                      ) : null}
+                    </View>
                   </View>
 
                   {/* 체크인 날짜 */}
                   <View style={styles.inputGroup}>
                     <Text style={styles.label}>체크인 날짜</Text>
                     <DateRangePicker
-                      startDate={accommodationFormData.start_date}
-                      endDate={accommodationFormData.start_date}
-                      onStartDateChange={(date) => setAccommodationFormData(prev => ({ ...prev, start_date: date }))}
-                      onEndDateChange={(date) => setAccommodationFormData(prev => ({ ...prev, start_date: date }))}
+                      startDate={accommodationFormData.checkin_date}
+                      endDate={accommodationFormData.checkin_date}
+                      onStartDateChange={(date) => setAccommodationFormData(prev => ({
+                        ...prev,
+                        checkin_date: date,
+                        checkout_date: dayjs(date).add(1, 'day').format('YYYY-MM-DD'),
+                      }))}
+                      onEndDateChange={(date) => setAccommodationFormData(prev => ({ ...prev, checkin_date: date }))}
                       style={styles.datePicker}
                     />
+                    {accommodationErrors.checkin_date ? (
+                      <Text style={{ color: '#dc3545', marginTop: 4 }}>{accommodationErrors.checkin_date}</Text>
+                    ) : null}
                   </View>
 
                   {/* 체크아웃 날짜 */}
                   <View style={styles.inputGroup}>
                     <Text style={styles.label}>체크아웃 날짜</Text>
                     <DateRangePicker
-                      startDate={accommodationFormData.end_date}
-                      endDate={accommodationFormData.end_date}
-                      onStartDateChange={(date) => setAccommodationFormData(prev => ({ ...prev, end_date: date }))}
-                      onEndDateChange={(date) => setAccommodationFormData(prev => ({ ...prev, end_date: date }))}
+                      startDate={accommodationFormData.checkout_date}
+                      endDate={accommodationFormData.checkout_date}
+                      onStartDateChange={(date) => setAccommodationFormData(prev => ({ ...prev, checkout_date: date }))}
+                      onEndDateChange={(date) => setAccommodationFormData(prev => ({ ...prev, checkout_date: date }))}
                       style={styles.datePicker}
                     />
+                    {accommodationErrors.checkout_date ? (
+                      <Text style={{ color: '#dc3545', marginTop: 4 }}>{accommodationErrors.checkout_date}</Text>
+                    ) : null}
                   </View>
 
-                  {/* 메모 */}
+                  {/* 체크인/체크아웃 시간 (15분 단위 선택) */}
+                  <View style={styles.row}>
+                    <View style={[styles.inputGroup, styles.halfWidth]}>
+                      <Text style={styles.label}>체크인 시간</Text>
+                      <Pressable
+                        style={styles.selectInput}
+                        onPress={() => setShowFlightCurrencyOptions(prev => !prev)}
+                      >
+                        <Text style={{ textAlign: 'center' }}>{accommodationFormData.checkin_time}</Text>
+                        <Text style={styles.arrow}>▼</Text>
+                      </Pressable>
+                      {accommodationErrors.checkin_time ? (
+                        <Text style={{ color: '#dc3545', marginTop: 4 }}>{accommodationErrors.checkin_time}</Text>
+                      ) : null}
+                      {showFlightCurrencyOptions && (
+                        <View style={styles.currencyOptions}>
+                          {Array.from({ length: 24 * 4 }).map((_, idx) => {
+                            const hh = String(Math.floor(idx / 4)).padStart(2, '0');
+                            const mm = String((idx % 4) * 15).padStart(2, '0');
+                            const t = `${hh}:${mm}`;
+                            return (
+                              <Pressable key={t} style={styles.currencyOption} onPress={() => {
+                                setAccommodationFormData(prev => ({ ...prev, checkin_time: t }));
+                                setShowFlightCurrencyOptions(false);
+                              }}>
+                                <Text style={styles.currencyOptionText}>{t}</Text>
+                              </Pressable>
+                            );
+                          })}
+                        </View>
+                      )}
+                    </View>
+                    <View style={[styles.inputGroup, styles.halfWidth]}>
+                      <Text style={styles.label}>체크아웃 시간</Text>
+                      <Pressable
+                        style={styles.selectInput}
+                        onPress={() => setShowCurrencyOptions(prev => !prev)}
+                      >
+                        <Text style={{ textAlign: 'center' }}>{accommodationFormData.checkout_time}</Text>
+                        <Text style={styles.arrow}>▼</Text>
+                      </Pressable>
+                      {accommodationErrors.checkout_time ? (
+                        <Text style={{ color: '#dc3545', marginTop: 4 }}>{accommodationErrors.checkout_time}</Text>
+                      ) : null}
+                      {showCurrencyOptions && (
+                        <View style={styles.currencyOptions}>
+                          {Array.from({ length: 24 * 4 }).map((_, idx) => {
+                            const hh = String(Math.floor(idx / 4)).padStart(2, '0');
+                            const mm = String((idx % 4) * 15).padStart(2, '0');
+                            const t = `${hh}:${mm}`;
+                            return (
+                              <Pressable key={t} style={styles.currencyOption} onPress={() => {
+                                setAccommodationFormData(prev => ({ ...prev, checkout_time: t }));
+                                setShowCurrencyOptions(false);
+                              }}>
+                                <Text style={styles.currencyOptionText}>{t}</Text>
+                              </Pressable>
+                            );
+                          })}
+                        </View>
+                      )}
+                    </View>
+                  </View>
+
+                  {/* 설명 */}
                   <View style={styles.inputGroup}>
-                    <Text style={styles.label}>메모</Text>
+                    <Text style={styles.label}>설명</Text>
                     <TextInput
                       style={[styles.input, styles.textArea]}
-                      placeholder="숙박 메모"
-                      value={accommodationFormData.memo}
-                      onChangeText={(text) => setAccommodationFormData(prev => ({ ...prev, memo: text }))}
+                      placeholder="설명(선택)"
+                      value={accommodationFormData.description}
+                      onChangeText={(text) => setAccommodationFormData(prev => ({ ...prev, description: text }))}
                       multiline
                       numberOfLines={3}
                       textAlignVertical="top"
@@ -2124,12 +2249,16 @@ export default function SidePanels({ planData, selectedItinerary, onItineraryAdd
                             try {
                               const payload = {
                                 name: accommodationFormData.name,
-                                address: accommodationFormData.address || undefined,
-                                startDate: accommodationFormData.start_date,
-                                endDate: accommodationFormData.end_date,
-                                memo: accommodationFormData.memo || undefined,
+                                place: accommodationFormData.place || undefined,
+                                country: accommodationFormData.country,
+                                city: accommodationFormData.city,
+                                checkinDate: accommodationFormData.checkin_date,
+                                checkoutDate: accommodationFormData.checkout_date,
+                                checkinTime: accommodationFormData.checkin_time + ':00',
+                                checkoutTime: accommodationFormData.checkout_time + ':00',
+                                description: accommodationFormData.description || undefined,
                                 expense: {
-                                  exDate: accommodationFormData.start_date,
+                                  exDate: accommodationFormData.checkin_date,
                                   amount: Number(accommodationExpenseForm.amount || 0),
                                   category: ExpenseCategory.ACCOMMODATION as any,
                                   currency: accommodationExpenseForm.currency as any,
