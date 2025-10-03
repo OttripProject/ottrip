@@ -1,26 +1,25 @@
+from typing import List
 from app.config import BaseConfig
 
 
 class AIConfig(BaseConfig):
-    OPENAI_API_KEY: str 
+    # Google Cloud Vision API 설정
+    GOOGLE_CREDENTIALS_JSON: str
+    MAX_FILE_SIZE: int = 10 * 1024 * 1024
+    ALLOWED_IMAGE_TYPES: List[str] = [
+        "image/jpeg", "image/png", "image/gif", "image/bmp", 
+        "image/webp", "image/tiff"
+    ]
+    ALLOWED_PDF_TYPES: List[str] = ["application/pdf"]
+
+    # OpenAI 설정
+    OPENAI_API_KEY: str = ""
     OPENAI_BASE_URL: str = "https://api.openai.com/v1"
-    DEFAULT_MODEL: str = "gpt-4o-mini"
+    DEFAULT_MODEL: str = "gpt-4o-mini"    
+    AI_TIMEOUT: int = 30 
+    MAX_RETRIES: int = 3 
     ASSIST_SYSTEM_PROMPT: str = (
-        "당신은 여행 일정 보조 전문가입니다. 과장 없이 사실 기반으로 조언하고, "
-        "한국어로만 응답합니다. 아래 JSON 스키마를 정확히 지켜 출력하세요."
+        "당신은 항공권 텍스트 분석 전문가입니다. 정확하고 구조화된 JSON 응답을 제공해주세요."
     )
 
-    ASSIST_USER_PROMPT_TEMPLATE: str = (
-        "다음 여행 정보를 바탕으로 준비물, 관광 명소, 로컬 팁을 추천해 주세요.\n\n"
-        "[여행 정보]\n{context}\n\n"
-        "출력 형식(JSON): {\n"
-        '  "packing": ["..."],\n'
-        '  "attractions": ["..."],\n'
-        '  "local_tips": ["..."]\n'
-        "}"
-    )
-
-
-ai_settings = AIConfig.create() 
-
-
+ai_settings = AIConfig.create()
