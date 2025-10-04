@@ -11,8 +11,8 @@ class ItineraryBase(APISchema):
     start_time: time
     end_time: time
     description: str | None = None
-    country: str | None = None
-    city: str | None = None
+    country: str
+    city: str
     location: str | None = None
 
 
