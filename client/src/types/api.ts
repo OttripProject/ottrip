@@ -46,8 +46,8 @@ export interface Itinerary {
 export interface CreateItineraryRequest {
   title: string;
   description?: string;
-  country?: string;
-  city?: string;
+  country: string;
+  city: string;
   location?: string;
   itineraryDate: string;
   startTime: string;
