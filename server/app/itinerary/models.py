@@ -27,10 +27,10 @@ class Itinerary(Base):
     description: Mapped[str | None] = mapped_column(nullable=True)
     """여행 설명"""
 
-    country: Mapped[str | None] = mapped_column(nullable=True)
+    country: Mapped[str]
     """국가"""
 
-    city: Mapped[str | None] = mapped_column(nullable=True)
+    city: Mapped[str]
     """도시"""
 
     location: Mapped[str | None] = mapped_column(nullable=True)
