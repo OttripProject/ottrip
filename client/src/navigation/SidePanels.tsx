@@ -251,6 +251,14 @@ export default function SidePanels({ planData, selectedItinerary, onItineraryAdd
       Alert.alert('오류', '날짜를 선택해주세요.');
       return;
     }
+    if (!formData.country.trim()) {
+      Alert.alert('오류', '국가를 입력해주세요.');
+      return;
+    }
+    if (!formData.city.trim()) {
+      Alert.alert('오류', '도시를 입력해주세요.');
+      return;
+    }
 
     // Plan이 선택되지 않은 경우
     if (!planData?.plan?.id) {
@@ -1279,19 +1287,19 @@ export default function SidePanels({ planData, selectedItinerary, onItineraryAdd
       {/* 국가와 도시 */}
       <View style={styles.row}>
         <View style={[styles.inputGroup, styles.halfWidth]}>
-          <Text style={styles.label}>국가</Text>
+          <Text style={styles.label}>국가 *</Text>
           <TextInput
             style={styles.input}
-            placeholder="국가"
+            placeholder="국가를 입력하세요"
             value={formData.country}
             onChangeText={(text) => setFormData(prev => ({ ...prev, country: text }))}
           />
         </View>
         <View style={[styles.inputGroup, styles.halfWidth]}>
-          <Text style={styles.label}>도시</Text>
+          <Text style={styles.label}>도시 *</Text>
           <TextInput
             style={styles.input}
-            placeholder="도시"
+            placeholder="도시를 입력하세요"
             value={formData.city}
             onChangeText={(text) => setFormData(prev => ({ ...prev, city: text }))}
           />
@@ -1488,19 +1496,19 @@ export default function SidePanels({ planData, selectedItinerary, onItineraryAdd
       {/* 국가와 도시 */}
       <View style={styles.row}>
         <View style={[styles.inputGroup, styles.halfWidth]}>
-          <Text style={styles.label}>국가</Text>
+          <Text style={styles.label}>국가 *</Text>
           <TextInput
             style={styles.input}
-            placeholder="국가"
+            placeholder="국가를 입력하세요"
             value={formData.country}
             onChangeText={(text) => setFormData(prev => ({ ...prev, country: text }))}
           />
         </View>
         <View style={[styles.inputGroup, styles.halfWidth]}>
-          <Text style={styles.label}>도시</Text>
+          <Text style={styles.label}>도시 *</Text>
           <TextInput
             style={styles.input}
-            placeholder="도시"
+            placeholder="도시를 입력하세요"
             value={formData.city}
             onChangeText={(text) => setFormData(prev => ({ ...prev, city: text }))}
           />
@@ -2053,10 +2061,10 @@ export default function SidePanels({ planData, selectedItinerary, onItineraryAdd
                   {/* 국가/도시 */}
                   <View style={styles.row}>
                     <View style={[styles.inputGroup, styles.halfWidth]}>
-                      <Text style={styles.label}>국가</Text>
+                      <Text style={styles.label}>국가 *</Text>
                       <TextInput
                         style={styles.input}
-                        placeholder="국가"
+                        placeholder="국가를 입력하세요"
                         value={accommodationFormData.country}
                         onChangeText={(text) => setAccommodationFormData(prev => ({ ...prev, country: text }))}
                       />
@@ -2065,10 +2073,10 @@ export default function SidePanels({ planData, selectedItinerary, onItineraryAdd
                       ) : null}
                     </View>
                     <View style={[styles.inputGroup, styles.halfWidth]}>
-                      <Text style={styles.label}>도시</Text>
+                      <Text style={styles.label}>도시 *</Text>
                       <TextInput
                         style={styles.input}
-                        placeholder="도시"
+                        placeholder="도시를 입력하세요"
                         value={accommodationFormData.city}
                         onChangeText={(text) => setAccommodationFormData(prev => ({ ...prev, city: text }))}
                       />
