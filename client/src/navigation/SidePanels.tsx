@@ -8,6 +8,7 @@ import { itinerariesApi } from '@/services/itineraries';
 import { expensesApi } from '@/services/expenses';
 import { accommodationsApi } from '@/services/accommodations';
 import { flightsApi } from '@/services/flights';
+import { ExpenseCategory, ExpenseCurrency } from '@/types/expense';
 
 interface SidePanelsProps {
   planData?: {
@@ -62,25 +63,6 @@ interface Expense {
   currency: string;
 }
 
-enum ExpenseCategory {
-  FOOD = "food",
-  TRANSPORT = "transport",
-  FLIGHT = "flight",
-  ACTIVITY = "activity",
-  ACCOMMODATION = "accommodation",
-  SHOPPING = "shopping",
-  ETC = "etc",
-}
-
-enum ExpenseCurrency {
-  KRW = "KRW",
-  USD = "USD",
-  EUR = "EUR",
-  JPY = "JPY",
-  CNY = "CNY",
-  GBP = "GBP",
-  AUD = "AUD",
-}
 
 function Placeholder({ label }: { label: string }) {
   return (
