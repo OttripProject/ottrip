@@ -111,6 +111,8 @@ class ItineraryService:
             itinerary.country = update_data.country
         if update_data.city:
             itinerary.city = update_data.city
+        if update_data.location:
+            itinerary.location = update_data.location
 
         updated_itinerary = await self.itinerary_repository.save(itinerary=itinerary)
 
