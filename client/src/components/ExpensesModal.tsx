@@ -48,7 +48,7 @@ export default function ExpensesModal({ planData, onExpenseAdd }: ExpensesModalP
 
   const handleExpenseSubmit = async () => {
     if (!planData?.plan?.id) {
-      Alert.alert('오류', '플랜을 먼저 선택해주세요.');
+      Alert.alert('오류', '여행을 먼저 선택해주세요.');
       return;
     }
 
@@ -152,7 +152,7 @@ export default function ExpensesModal({ planData, onExpenseAdd }: ExpensesModalP
       <ScrollView style={styles.scrollView}>
         {/* 헤더 섹션 */}
         <View style={styles.headerSection}>
-          <Text style={styles.headerTitle}>$ 지출 내역</Text>
+          <Text style={styles.headerTitle}>Expense List</Text>
           <View style={styles.headerActions}>
             <Pressable
               style={styles.addButton}

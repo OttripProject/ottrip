@@ -152,7 +152,7 @@ export default function DetailsModal({ planData, selectedItinerary, onItineraryA
       return (
         <ModalLayout style={styles.container}>
           <View style={styles.placeholder}>
-            <Text style={styles.placeholderText}>플랜을 선택해주세요</Text>
+            <Text style={styles.placeholderText}>여행을 선택해주세요</Text>
           </View>
         </ModalLayout>
       );

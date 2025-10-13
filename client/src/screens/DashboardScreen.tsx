@@ -126,7 +126,7 @@ export default function DashboardScreen() {
 
             {/* 5. AI 어시스턴트 모달 (우측 하단) */}
             <View style={styles.aiModal}>
-              <AIAssistantModal />
+              <AIAssistantModal planId={selectedPlanId} />
             </View>
           </View>
         </View>
