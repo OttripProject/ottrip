@@ -1,0 +1,87 @@
+
+## Travel Data
+1. Trip Information
+- Period: {start_date} ~ {end_date}
+- Destinations: {destinations}
+
+2. Flight Schedule
+{flights}
+
+3. Accommodation Schedule
+{accommodations}
+
+4. Activity Schedule
+{itineraries}
+
+## Checklist Generation Rules
+1. Four Categories:
+   - basic_required: Essential items for all trips
+   - schedule_required: Items required for specific activities/schedules
+   - recommended: Items that enhance travel convenience
+   - optional: Nice-to-have items
+
+2. Item Format:
+   - name: Concise and clear
+   - reason: Include specific schedule/situation details
+
+3. Data Utilization:
+   - Country/City → Consider climate, culture, dress code, voltage/communication
+   - Flights → Consider long-distance travel, early morning/late night departures
+   - Accommodations → Consider accommodation type, check-in/out times
+   - Activities → Consider activity characteristics (water activities, hiking, early tours, etc.)
+
+4. Output Format:
+   - Respond ONLY in JSON format
+   - Each item must include: id, name, reason, is_checked
+   - id must be globally unique across all categories (sequential: 1, 2, 3, 4...)
+
+
+## Example Output
+{{
+  "basic_required": [
+    {{
+      "id": 1,
+      "name": "여권",
+      "reason": "해외여행 필수 신분증",
+      "is_checked": false
+    }},
+    {{
+      "id": 2,
+      "name": "항공권 (모바일/출력)",
+      "reason": "공항 체크인 시 필요",
+      "is_checked": false
+    }}
+  ],
+  "schedule_required": [
+    {{
+      "id": 3,
+      "name": "얇은 패딩 또는 후디",
+      "reason": "카파도키아 열기구 투어 (새벽 기온 10℃)",
+      "is_checked": false
+    }},
+    {{
+      "id": 4,
+      "name": "방수 폰팩",
+      "reason": "카쉬 케코바 보트 투어 (물놀이 대비)",
+      "is_checked": false
+    }}
+  ],
+  "recommended": [
+    {{
+      "id": 5,
+      "name": "목베개",
+      "reason": "장거리 버스 이동 시 편의",
+      "is_checked": false
+    }}
+  ],
+  "optional": [
+    {{
+      "id": 6,
+      "name": "액션캠",
+      "reason": "추억 기록용",
+      "is_checked": false
+    }}
+  ]
+}}
+
+Analyze the travel data above and generate a checklist in JSON format only.

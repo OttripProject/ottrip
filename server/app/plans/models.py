@@ -1,9 +1,10 @@
 from datetime import date, datetime
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from enum import Enum
 
 from sqlalchemy import Date, DateTime, ForeignKey, Integer, String, Text, func
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models import Base
@@ -57,6 +58,13 @@ class Plan(Base):
 
     memo: Mapped[str] = mapped_column(Text, default="", nullable=False)
     """플랜 메모(기본 빈 문자열)"""
+
+    travel_checklist: Mapped[dict[str, Any] | None] = mapped_column(
+        JSONB,
+        nullable=True,
+        default=None,
+    )
+    """AI 생성 여행 체크리스트 (JSON 형태)"""
 
     expenses: Mapped[list["Expense"]] = relationship(
         back_populates="plan",

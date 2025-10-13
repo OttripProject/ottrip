@@ -5,11 +5,12 @@ from google.cloud.vision_v1 import types as vision_types
 from google.oauth2 import service_account
 import fitz
 import openai
+from pathlib import Path
 
 from app.utils.dependency import dependency
 
 from .config import ai_settings
-from .schemas import AIFlightRead
+from .schemas import AIFlightRead, AIParseResponse
 
 
 @dependency
@@ -131,75 +132,104 @@ class OpenAIClient:
             )
         return self._client
     
-    async def parse_flight_data(self, ocr_text: str) -> Dict[str, Any]:
+    async def parse_flight_data(self, ocr_text: str) -> AIParseResponse:
         """AI로 항공권 데이터 파싱"""
         try:
-            prompt = f"""
-항공권에서 추출된 텍스트를 분석하여 다음 정보를 JSON 형태로 추출해주세요:
-
-텍스트:
-{ocr_text}
-
-추출할 정보:
-- airline: 항공사명 (예: Korean Air, Asiana Airlines)
-- flight_number: 항공편명 (예: KE 123, UA 456)
-- departure_airport: 출발공항 코드 (예: ICN, NRT)
-- arrival_airport: 도착공항 코드 (예: NRT, LAX)
-- departure_date: 출발날짜 (YYYY-MM-DD 형식)
-- departure_time: 출발시간 (HH:MM 형식)
-- arrival_date: 도착날짜 (YYYY-MM-DD 형식, 있다면)
-- arrival_time: 도착시간 (HH:MM 형식, 있다면)
-- departure_city: 출발도시 (예: Seoul, Tokyo)
-- arrival_city: 도착도시 (예: Tokyo, Los Angeles)
-
-응답 형식:
-{{
-    "success": true,
-    "data": {{
-        "airline": "Korean Air",
-        "flight_number": "KE 123",
-        "departure_airport": "ICN",
-        "arrival_airport": "NRT",
-        "departure_date": "2024-01-15",
-        "departure_time": "14:30",
-        "arrival_date": null,
-        "arrival_time": null,
-        "departure_city": "Seoul",
-        "arrival_city": "Tokyo"
-    }},
-    "confidence": 0.95,
-    "reasoning": "추출 과정 설명"
-}}
-
-정보를 찾을 수 없는 필드는 null로 설정하고, confidence는 0.0-1.0 사이의 값으로 설정해주세요.
-"""
+            prompt_path = Path(__file__).parent / "prompt" / "flight.txt"
+            with open(prompt_path, "r", encoding="utf-8") as f:
+                prompt_template = f.read()
+            
+            prompt = prompt_template.format(ocr_text=ocr_text)
 
             response = await self.client.chat.completions.create(
                 model=ai_settings.DEFAULT_MODEL,
                 messages=[
-                    {"role": "system", "content": ai_settings.ASSIST_SYSTEM_PROMPT},
+                    {"role": "system", "content": ai_settings.FLIGHT_SYSTEM_PROMPT},
                     {"role": "user", "content": prompt}
                 ],
-                temperature=0.1,  # 일관된 결과를 위해 낮은 temperature
+                response_format={"type": "json_object"},
+                temperature=0.1,
                 timeout=ai_settings.AI_TIMEOUT
             )
             
-            ai_response = response.choices[0].message.content.strip()
+            ai_response = response.choices[0].message.content
+            if not ai_response:
+                return AIParseResponse(
+                    success=False,
+                    error="AI 응답이 비어있습니다."
+                )
             
-            # JSON 파싱
             try:
-                result = json.loads(ai_response)
-                return result
+                result = json.loads(ai_response.strip())
+                return AIParseResponse(**result)
             except json.JSONDecodeError:
-                # JSON 파싱 실패 시 기본 응답
-                return {
-                    "success": False,
-                    "error": "AI 응답을 파싱할 수 없습니다.",
-                    "raw_response": ai_response
-                }
+                return AIParseResponse(
+                    success=False,
+                    error="AI 응답을 파싱할 수 없습니다."
+                )
             
         except Exception as e:
-            return {
-                "success": False,
-                "error": f"AI 파싱 중 오류 발생: {str(e)}"
-            }
+            return AIParseResponse(
+                success=False,
+                error=f"AI 파싱 중 오류 발생: {str(e)}"
+            )
+    
+    async def generate_checklist(
+        self,
+        start_date: str,
+        end_date: str,
+        destinations: str,
+        flights: str,
+        accommodations: str,
+        itineraries: str
+    ) -> AIParseResponse:
+        """여행 체크리스트 생성"""
+        try:
+            prompt_path = Path(__file__).parent / "prompt" / "assistant.txt"
+            with open(prompt_path, "r", encoding="utf-8") as f:
+                prompt_template = f.read()
+            
+            prompt = prompt_template.format(
+                start_date=start_date,
+                end_date=end_date,
+                destinations=destinations,
+                flights=flights,
+                accommodations=accommodations,
+                itineraries=itineraries
+            )
+            
+            response = await self.client.chat.completions.create(
+                model=ai_settings.DEFAULT_MODEL,
+                messages=[
+                    {"role": "system", "content": ai_settings.CHECKLIST_SYSTEM_PROMPT},
+                    {"role": "user", "content": prompt}
+                ],
+                response_format={"type": "json_object"},
+                temperature=0.7,
+                timeout=ai_settings.AI_TIMEOUT
+            )
+            
+            ai_response = response.choices[0].message.content
+            if not ai_response:
+                return AIParseResponse(
+                    success=False,
+                    error="AI 응답이 비어있습니다."
+                )
+            
+            try:
+                result = json.loads(ai_response.strip())
+                return AIParseResponse(
+                    success=True,
+                    data=result
+                )
+            except json.JSONDecodeError:
+                return AIParseResponse(
+                    success=False,
+                    error="AI 응답을 파싱할 수 없습니다."
+                )
+            
+        except Exception as e:
+            return AIParseResponse(
+                success=False,
+                error=f"체크리스트 생성 중 오류 발생: {str(e)}"
+            )
