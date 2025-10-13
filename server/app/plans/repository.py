@@ -6,6 +6,7 @@ from sqlalchemy.orm import joinedload, with_loader_criteria
 from app.database.deps import SessionDep
 from app.flights.models import Flight, FlightSegment
 from app.itinerary.models import Itinerary
+from app.accomodation.models import Accommodation
 from app.utils.dependency import dependency
 
 from .models import Plan, PlanInvitation, PlanShared, Role
@@ -29,9 +30,19 @@ class PlanRepository:
                 joinedload(Plan.flights).joinedload(Flight.expense),
                 joinedload(Plan.flights).joinedload(Flight.flight_segments),
                 joinedload(Plan.itineraries).joinedload(Itinerary.expenses),
+                joinedload(Plan.accommodations),
                 joinedload(Plan.expenses),
                 with_loader_criteria(
                     FlightSegment, FlightSegment.is_deleted.is_(False), include_aliases=True
+                ),
+                with_loader_criteria(
+                    Itinerary, Itinerary.is_deleted.is_(False), include_aliases=True
+                ),
+                with_loader_criteria(
+                    Flight, Flight.is_deleted.is_(False), include_aliases=True
+                ),
+                with_loader_criteria(
+                    Accommodation, Accommodation.is_deleted.is_(False), include_aliases=True
                 ),
             )
             .where(Plan.id == plan_id, Plan.is_deleted.is_(False))

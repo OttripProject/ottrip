@@ -3,12 +3,16 @@ from fastapi import UploadFile, File, HTTPException
 from fastapi.responses import JSONResponse
 
 from app.core.router import create_router
+from app.common.schemas import StatusResponse
 
 from .config import ai_settings
 from .service import AIService
-from .schemas import AIFlightRead
+from .schemas import AIFlightRead, ChecklistCreateRequest, ChecklistCreateResponse, ChecklistRead, ChecklistItemCheckRequest
 
 router = create_router()
+
+
+
 
 
 @router.post("/extract-flight-data", response_model=Dict[str, Any])
@@ -118,6 +122,7 @@ async def extract_text_only(
 
 
 
+# 데브
 @router.get("/supported-formats")
 async def get_supported_formats():
     """지원하는 파일 형식 목록"""
@@ -136,7 +141,9 @@ async def get_supported_formats():
 
 
 @router.get("/health")
-async def health_check():
+async def health_check(
+    ai_service: AIService
+    ):
     """AI 서비스 상태 확인"""
     try:
         return {
@@ -155,3 +162,53 @@ async def health_check():
                 "message": f"AI 서비스 오류: {str(e)}"
             }
         )
+
+
+# Travel Checklist Endpoints
+@router.post("/checklist/{plan_id}/generate")
+async def generate_travel_checklist(
+    plan_id: int,
+    checklist_request: ChecklistCreateRequest,
+    ai_service: AIService,
+) -> ChecklistCreateResponse:
+    """여행 체크리스트 생성"""
+    return await ai_service.create_checklist(
+        plan_id=plan_id,
+        force_regenerate=checklist_request.force_regenerate
+    ) 
+
+
+@router.get("/checklist/{plan_id}")
+async def get_travel_checklist(
+    plan_id: int,
+    ai_service: AIService,
+) -> ChecklistRead:
+    """여행 체크리스트 조회"""
+    try:
+        result = await ai_service.get_checklist(plan_id=plan_id)
+        return result
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"체크리스트 조회 중 오류가 발생했습니다: {str(e)}"
+        )
+
+
+@router.patch("/checklist/{plan_id}/item/{item_id}")
+async def update_checklist_item_status(
+    plan_id: int,
+    item_id: int,
+    request: ChecklistItemCheckRequest,
+    ai_service: AIService,
+) -> StatusResponse:
+    result = await ai_service.set_checklist_item_status(
+        plan_id=plan_id,
+        item_id=item_id,
+        is_checked=request.is_checked
+    )
+    return result
+        
+

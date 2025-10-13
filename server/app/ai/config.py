@@ -18,8 +18,12 @@ class AIConfig(BaseConfig):
     DEFAULT_MODEL: str = "gpt-4o-mini"    
     AI_TIMEOUT: int = 30 
     MAX_RETRIES: int = 3 
-    ASSIST_SYSTEM_PROMPT: str = (
-        "당신은 항공권 텍스트 분석 전문가입니다. 정확하고 구조화된 JSON 응답을 제공해주세요."
+
+    FLIGHT_SYSTEM_PROMPT: str = (
+        "You are an expert in analyzing flight ticket text. Provide accurate and structured JSON responses."
+    )
+    CHECKLIST_SYSTEM_PROMPT: str = (
+        "You are a travel packing checklist expert. Respond strictly in JSON format matching the example output. "
     )
 
 ai_settings = AIConfig.create()

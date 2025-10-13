@@ -85,7 +85,7 @@ class PlanService:
         plan = await self.plan_repository.find_by_id(plan_id=plan_id)
         if not plan:
             raise HTTPException(status_code=400, detail="계획을 찾을 수 없습니다.")
-        if plan.owner_id != self.current_user.id:
+        if plan.owner_id != self.current_user.id and not await self.plan_repository.is_editor(plan_id=plan_id, user_id=self.current_user.id):
             raise HTTPException(status_code=403, detail="계획 수정 권한이 없습니다.")
 
         if update_data.title:

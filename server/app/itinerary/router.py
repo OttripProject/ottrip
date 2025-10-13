@@ -70,7 +70,7 @@ async def delete_itinerary(
 #         context_parts.append(f"장소: {it.location}")
 #     context = "\n".join(context_parts)
 
-#     system_prompt = ai_settings.ASSIST_SYSTEM_PROMPT
+#     system_prompt = ai_settings.FLIGHT_SYSTEM_PROMPT
 #     user_prompt = ai_settings.ASSIST_USER_PROMPT_TEMPLATE.format(context=context)
 
 #     ai = OpenAIService()
