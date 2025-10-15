@@ -151,8 +151,8 @@ export default function ItineraryItem({
 
   // 지출 관련 핸들러
   const handleExpenseSubmit = async () => {
-    if (!expenseForm.description.trim() || expenseForm.amount <= 0) {
-      Alert.alert('오류', '내용과 금액을 입력해주세요.');
+    if (expenseForm.amount <= 0) {
+      Alert.alert('오류', '금액을 입력해주세요.');
       return;
     }
 

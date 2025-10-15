@@ -701,9 +701,21 @@ export default function SidePanels({ planData, selectedItinerary, onItineraryAdd
       }
 
       await expensesApi.deleteExpense(idNum);
+      
+      // 모든 관련 데이터 새로고침
       if (planData?.refreshExpenses) {
         await planData.refreshExpenses();
       }
+      if (planData?.refreshItineraries) {
+        await planData.refreshItineraries();
+      }
+      if (planData?.refreshFlights) {
+        await planData.refreshFlights();
+      }
+      if (planData?.refreshAccommodations) {
+        await planData.refreshAccommodations();
+      }
+      
       // 일정 편집 중이면 일정 지출 목록도 함께 업데이트
       if (showItineraryEditForm && (editingItinerary as any)?.id) {
         await refreshItineraryExpenseList();
