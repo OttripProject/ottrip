@@ -16,6 +16,9 @@ interface ExpensesModalProps {
     isLoading: boolean;
     error: string | null;
     refreshExpenses: () => Promise<void>;
+    refreshItineraries?: () => Promise<void>;
+    refreshFlights?: () => Promise<void>;
+    refreshAccommodations?: () => Promise<void>;
   };
   onExpenseAdd?: (expense: any) => void;
 }
@@ -57,11 +60,6 @@ export default function ExpensesModal({ planData, onExpenseAdd }: ExpensesModalP
       return;
     }
 
-    if (!expenseForm.description.trim()) {
-      Alert.alert('오류', '설명을 입력해주세요.');
-      return;
-    }
-
     try {
       const newExpense = await expensesApi.createExpense({
         planId: planData.plan.id,
@@ -91,7 +89,12 @@ export default function ExpensesModal({ planData, onExpenseAdd }: ExpensesModalP
     try {
       await expensesApi.deleteExpense(Number(expenseId));
       Alert.alert('성공', '지출이 삭제되었습니다.');
-      planData?.refreshExpenses();
+      
+      // 모든 관련 데이터 새로고침
+      await planData?.refreshExpenses();
+      await planData?.refreshItineraries?.();
+      await planData?.refreshFlights?.();
+      await planData?.refreshAccommodations?.();
     } catch (error) {
       console.error('Failed to delete expense:', error);
       Alert.alert('오류', '지출 삭제에 실패했습니다.');

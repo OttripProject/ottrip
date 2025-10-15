@@ -119,7 +119,12 @@ export default function DashboardScreen() {
             {/* 4. 지출 모달 (좌측 하단) */}
             <View style={styles.expensesModal}>
               <ExpensesModal 
-                planData={planData}
+                planData={{
+                  ...planData,
+                  refreshItineraries: planData.refreshItineraries,
+                  refreshFlights: planData.refreshFlights,
+                  refreshAccommodations: planData.refreshAccommodations,
+                }}
                 onExpenseAdd={handleExpenseAdd}
               />
             </View>
