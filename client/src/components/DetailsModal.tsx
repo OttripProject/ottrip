@@ -136,16 +136,25 @@ export default function DetailsModal({ planData, selectedItinerary, onItineraryA
     const handleItineraryDelete = (itineraryId: string) => {
       // 삭제 후 목록 새로고침
       planData?.refreshItineraries();
+      // 상세 내용 닫기
+      setShowItineraryForm(false);
+      setEditingItinerary(null);
     };
 
     const handleFlightDelete = (flightId: string) => {
       // 삭제 후 목록 새로고침
       planData?.refreshFlights();
+      // 상세 내용 닫기
+      setShowFlightForm(false);
+      setEditingFlight(null);
     };
 
     const handleAccommodationDelete = (accommodationId: string) => {
       // 삭제 후 목록 새로고침
       planData?.refreshAccommodations();
+      // 상세 내용 닫기
+      setShowAccommodationForm(false);
+      setEditingAccommodation(null);
     };
 
     if (!planData?.plan) {
@@ -217,6 +226,7 @@ export default function DetailsModal({ planData, selectedItinerary, onItineraryA
                   <ItineraryItem
                     itinerary={editingItinerary}
                     planId={planData.plan.id}
+                    planData={planData}
                     onSave={handleItinerarySave}
                     onCancel={() => {
                       setShowItineraryForm(false);

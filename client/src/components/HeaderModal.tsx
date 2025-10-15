@@ -21,7 +21,13 @@ export default function HeaderModal() {
 
   return (
     <View style={styles.container}>
-      <Pressable onPress={() => { /* @ts-ignore */ navigation.navigate('OTTRIP'); }} accessibilityRole="button">
+      <Pressable onPress={() => { 
+        /* @ts-ignore */ 
+        navigation.reset({
+          index: 0,
+          routes: [{ name: 'OTTRIP' }],
+        });
+      }} accessibilityRole="button">
         <Text style={styles.brand}>Ottrip</Text>
       </Pressable>
       <Pressable onPress={() => { /* @ts-ignore */ navigation.navigate('PROFILE'); }} accessibilityRole="button">

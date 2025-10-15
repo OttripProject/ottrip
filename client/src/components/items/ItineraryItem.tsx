@@ -11,6 +11,7 @@ import { ExpenseCategory, ExpenseCurrency, categoryLabels } from '@/types/expens
 interface ItineraryItemProps {
   itinerary?: any;
   planId: number;
+  planData?: any;
   onSave: (itinerary: any) => void;
   onCancel: () => void;
   onDelete?: (itineraryId: string) => void;
@@ -20,6 +21,7 @@ interface ItineraryItemProps {
 export default function ItineraryItem({ 
   itinerary, 
   planId, 
+  planData,
   onSave, 
   onCancel, 
   onDelete,
@@ -45,6 +47,9 @@ export default function ItineraryItem({
     description: '',
   });
   const [expenses, setExpenses] = useState<any[]>([]);
+  
+  // 새 일정 생성 중 비용 초안 (로컬 상태)
+  const [draftExpenses, setDraftExpenses] = useState<any[]>([]);
 
   const [isLoading, setIsLoading] = useState(false);
 
@@ -79,6 +84,22 @@ export default function ItineraryItem({
 
     loadExpenses();
   }, [itinerary?.id]);
+
+  // planData가 변경될 때도 지출 목록 새로고침 (ExpensesModal에서 삭제 시 반영)
+  useEffect(() => {
+    const loadExpenses = async () => {
+      if (itinerary?.id) {
+        try {
+          const itineraryExpenses = await expensesApi.getExpensesByItinerary(itinerary.id);
+          setExpenses(itineraryExpenses);
+        } catch (error) {
+          console.error('Failed to load expenses:', error);
+        }
+      }
+    };
+
+    loadExpenses();
+  }, [planData?.expenses]);
 
   const handleSave = async () => {
     if (!formData.title.trim()) {
@@ -116,6 +137,26 @@ export default function ItineraryItem({
             });
           }
         }
+        
+        // 기존 일정 편집 시에도 draft expenses 저장
+        if (draftExpenses.length > 0) {
+          for (const draftExpense of draftExpenses) {
+            try {
+              await expensesApi.createExpense({
+                planId: planId,
+                category: draftExpense.category as any,
+                amount: draftExpense.amount,
+                description: draftExpense.description,
+                exDate: draftExpense.exDate,
+                currency: draftExpense.currency as any,
+                itineraryId: itinerary.id,
+              });
+            } catch (e) {
+              console.warn('Failed to create draft expense:', e);
+            }
+          }
+          setDraftExpenses([]); // 초안 비우기
+        }
       } else {
         // 추가
         savedItinerary = await itinerariesApi.createItinerary({
@@ -129,6 +170,26 @@ export default function ItineraryItem({
           startTime: formData.startTime,
           endTime: formData.endTime,
         });
+        
+        // 새 일정 생성 후 draft expenses 저장
+        if (draftExpenses.length > 0) {
+          for (const draftExpense of draftExpenses) {
+            try {
+              await expensesApi.createExpense({
+                planId: planId,
+                category: draftExpense.category as any,
+                amount: draftExpense.amount,
+                description: draftExpense.description,
+                exDate: draftExpense.exDate,
+                currency: draftExpense.currency as any,
+                itineraryId: savedItinerary.id,
+              });
+            } catch (e) {
+              console.warn('Failed to create draft expense:', e);
+            }
+          }
+          setDraftExpenses([]); // 초안 비우기
+        }
       }
       onSave(savedItinerary);
     } catch (error) {
@@ -156,20 +217,17 @@ export default function ItineraryItem({
       return;
     }
 
-    try {
-      const newExpense = await expensesApi.createExpense({
-        planId: planId,
-        category: expenseForm.category as any,
+    // 새 일정 생성 중에는 로컬 상태에만 저장
+    if (!itinerary?.id) {
+      const newDraftExpense = {
+        category: expenseForm.category,
         amount: expenseForm.amount,
         description: expenseForm.description,
         exDate: formData.itineraryDate,
         currency: ExpenseCurrency.KRW,
-        itineraryId: itinerary?.id,
-      });
+      };
       
-      // 지출 목록 새로고침
-      const updatedExpenses = await expensesApi.getExpensesByItinerary(itinerary?.id);
-      setExpenses(updatedExpenses);
+      setDraftExpenses(prev => [...prev, newDraftExpense]);
       
       setExpenseForm({
         category: ExpenseCategory.ETC,
@@ -178,16 +236,29 @@ export default function ItineraryItem({
       });
       setShowExpenseForm(false);
       
-      // 부모 컴포넌트에 지출 업데이트 알림
-      if (onExpenseUpdate) {
-        onExpenseUpdate();
-      }
-      
-      Alert.alert('성공', '지출이 추가되었습니다.');
-    } catch (error) {
-      console.error('Failed to create expense:', error);
-      Alert.alert('오류', '지출 추가에 실패했습니다.');
+      Alert.alert('성공', '지출이 추가되었습니다. (일정 저장 시 함께 저장됩니다)');
+      return;
     }
+
+    // 기존 일정 편집 시에도 임시로 저장 (일정 저장 시 함께 저장)
+    const newDraftExpense = {
+      category: expenseForm.category,
+      amount: expenseForm.amount,
+      description: expenseForm.description,
+      exDate: formData.itineraryDate,
+      currency: ExpenseCurrency.KRW,
+    };
+    
+    setDraftExpenses(prev => [...prev, newDraftExpense]);
+    
+    setExpenseForm({
+      category: ExpenseCategory.ETC,
+      amount: 0,
+      description: '',
+    });
+    setShowExpenseForm(false);
+    
+    Alert.alert('성공', '지출이 추가되었습니다. (일정 저장 시 함께 저장됩니다)');
   };
 
   const handleExpenseDelete = async (expenseId: string) => {
@@ -392,30 +463,62 @@ export default function ItineraryItem({
 
         {/* 저장된 지출 내역 */}
         <View style={styles.expenseList}>
-          {expenses.length > 0 ? (
-            expenses.map((expense) => (
-              <View key={expense.id} style={styles.expenseItem}>
-                <View style={styles.expenseItemInfo}>
-                  <Text style={styles.expenseItemDescription}>{expense.description}</Text>
-                  <Text style={styles.expenseItemCategory}>
-                    {categoryLabels[expense.category as ExpenseCategory]}
-                  </Text>
+          {/* Draft expenses (새 일정 생성 중 또는 기존 일정 편집 중) */}
+          {draftExpenses.length > 0 && (
+            <>
+              {draftExpenses.map((expense, index) => (
+                <View key={index} style={styles.expenseItem}>
+                  <View style={styles.expenseItemInfo}>
+                    <Text style={styles.expenseItemDescription}>{expense.description}</Text>
+                    <Text style={styles.expenseItemCategory}>
+                      {categoryLabels[expense.category as ExpenseCategory]}
+                    </Text>
+                  </View>
+                  <View style={styles.expenseItemActions}>
+                    <Text style={styles.expenseItemAmount}>
+                      ₩{expense.amount.toLocaleString()}
+                    </Text>
+                    <Pressable
+                      style={styles.deleteExpenseButton}
+                      onPress={() => setDraftExpenses(prev => prev.filter((_, i) => i !== index))}
+                    >
+                      <Text style={styles.deleteExpenseIcon}>🗑️</Text>
+                    </Pressable>
+                  </View>
                 </View>
-                <View style={styles.expenseItemActions}>
-                  <Text style={styles.expenseItemAmount}>
-                    ₩{expense.amount.toLocaleString()}
-                  </Text>
-                  <Pressable
-                    style={styles.deleteExpenseButton}
-                    onPress={() => handleExpenseDelete(expense.id)}
-                  >
-                    <Text style={styles.deleteExpenseIcon}>🗑️</Text>
-                  </Pressable>
-                </View>
-              </View>
-            ))
-          ) : (
-            <Text style={styles.noExpensesText}>등록된 지출이 없습니다.</Text>
+              ))}
+            </>
+          )}
+          
+          {/* Saved expenses (기존 일정 편집 시) */}
+          {itinerary?.id && (
+            <>
+              {expenses.length > 0 ? (
+                expenses.map((expense) => (
+                  <View key={expense.id} style={styles.expenseItem}>
+                    <View style={styles.expenseItemInfo}>
+                      <Text style={styles.expenseItemDescription}>{expense.description}</Text>
+                      <Text style={styles.expenseItemCategory}>
+                        {categoryLabels[expense.category as ExpenseCategory]}
+                      </Text>
+                    </View>
+                    <View style={styles.expenseItemActions}>
+                      <Text style={styles.expenseItemAmount}>
+                        ₩{expense.amount.toLocaleString()}
+                      </Text>
+                      <Pressable
+                        style={styles.deleteExpenseButton}
+                        onPress={() => handleExpenseDelete(expense.id)}
+                      >
+                        <Text style={styles.deleteExpenseIcon}>🗑️</Text>
+                      </Pressable>
+                    </View>
+                  </View>
+                ))
+              ) : (
+                <Text style={styles.noExpensesText}>등록된 지출이 없습니다.</Text>
+              )}
+            </>
           )}
         </View>
       </View>
