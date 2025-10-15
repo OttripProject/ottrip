@@ -4,6 +4,7 @@ from sqlalchemy import select, update, insert, delete
 from sqlalchemy.orm import joinedload, with_loader_criteria
 
 from app.database.deps import SessionDep
+from app.expenses.models import Expense
 from app.flights.models import Flight, FlightSegment
 from app.itinerary.models import Itinerary
 from app.accomodation.models import Accommodation
@@ -43,6 +44,9 @@ class PlanRepository:
                 ),
                 with_loader_criteria(
                     Accommodation, Accommodation.is_deleted.is_(False), include_aliases=True
+                ),
+                with_loader_criteria(
+                    Expense, Expense.is_deleted.is_(False), include_aliases=True
                 ),
             )
             .where(Plan.id == plan_id, Plan.is_deleted.is_(False))

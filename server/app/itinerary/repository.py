@@ -1,7 +1,9 @@
+
 from sqlalchemy import select, update
-from sqlalchemy.orm import joinedload
+from sqlalchemy.orm import joinedload, with_loader_criteria
 
 from app.database.deps import SessionDep
+from app.expenses.models import Expense
 from app.utils.dependency import dependency
 
 from .models import Itinerary
@@ -22,6 +24,9 @@ class ItineraryRepository:
             .options(
                 joinedload(Itinerary.plan),
                 joinedload(Itinerary.expenses),
+                with_loader_criteria(
+                    Expense, Expense.is_deleted.is_(False), include_aliases=True
+                ),
             )
             .where(Itinerary.id == itinerary_id, Itinerary.is_deleted.is_(False))
         )
@@ -30,7 +35,12 @@ class ItineraryRepository:
     async def find_all_by_plan(self, *, plan_id: int) -> list[Itinerary]:
         result = await self.session.execute(
             select(Itinerary)
-            .options(joinedload(Itinerary.expenses))
+            .options(
+                joinedload(Itinerary.expenses),
+                with_loader_criteria(
+                    Expense, Expense.is_deleted.is_(False), include_aliases=True
+                ),
+            )
             .where(Itinerary.plan_id == plan_id, Itinerary.is_deleted.is_(False))
         )
         return list(result.unique().scalars())

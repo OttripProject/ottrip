@@ -40,6 +40,20 @@ class ExpenseRepository:
         )
         return list(result.unique().scalars())
 
+    async def find_by_flight_id(self, *, flight_id: int) -> Expense | None:
+        """Flight ID로 expense 찾기 (soft delete 여부 관계없이)"""
+        result = await self.session.execute(
+            select(Expense).where(Expense.flight_id == flight_id)
+        )
+        return result.unique().scalar_one_or_none()
+
+    async def find_by_accommodation_id(self, *, accommodation_id: int) -> Expense | None:
+        """Accommodation ID로 expense 찾기 (soft delete 여부 관계없이)"""
+        result = await self.session.execute(
+            select(Expense).where(Expense.accommodation_id == accommodation_id)
+        )
+        return result.unique().scalar_one_or_none()
+
     async def remove(self, *, expense_id: int) -> None:
         stmt = (
             update(Expense)
