@@ -1,7 +1,7 @@
 from fastapi import HTTPException
 
 from app.auth.deps import CurrentUser
-from app.expenses.models import Expense, ExpenseCategory
+from app.expenses.models import Expense, ExpenseCategory, ExpenseCurrency
 from app.expenses.repository import ExpenseRepository
 from app.plans.repository import PlanRepository
 from app.utils.dependency import dependency
@@ -171,11 +171,45 @@ class FlightService:
                     flight.expense.amount = float(update_data.expense.amount)
                 if update_data.expense.description is not None:
                     flight.expense.description = update_data.expense.description
+                if update_data.expense.currency is not None:
+                    flight.expense.currency = update_data.expense.currency
+                if first_departure_date is not None:
+                    flight.expense.ex_date = first_departure_date
 
                 updated_expense = await self.expense_repository.save(
                     expense=flight.expense
                 )
                 flight.expense = updated_expense
+            else:
+                existing_expense = await self.expense_repository.find_by_flight_id(flight_id=flight.id)
+                
+                if existing_expense:
+                    existing_expense.is_deleted = False
+                    if update_data.expense.amount is not None:
+                        existing_expense.amount = float(update_data.expense.amount)
+                    if update_data.expense.description is not None:
+                        existing_expense.description = update_data.expense.description
+                    if update_data.expense.currency is not None:
+                        existing_expense.currency = update_data.expense.currency
+                    if first_departure_date is not None:
+                        existing_expense.ex_date = first_departure_date
+
+                    updated_expense = await self.expense_repository.save(expense=existing_expense)
+                    flight.expense = updated_expense
+                else:
+                    if first_departure_date is None:
+                        first_departure_date = min(s.departure_time for s in flight.flight_segments).date()                
+                    expense = Expense(
+                        amount=float(update_data.expense.amount or 0),
+                        category=ExpenseCategory.FLIGHT,
+                        description=update_data.expense.description or flight.reservation_number,
+                        currency=update_data.expense.currency or ExpenseCurrency.KRW,
+                        ex_date=first_departure_date,
+                        plan_id=flight.plan_id,
+                    )
+                    created_expense = await self.expense_repository.save(expense=expense)
+                    flight.expense = created_expense
+                    created_expense.flight_id = flight.id
 
         return None
 

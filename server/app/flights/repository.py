@@ -2,6 +2,7 @@ from sqlalchemy import select, update
 from sqlalchemy.orm import joinedload, with_loader_criteria
 
 from app.database.deps import SessionDep
+from app.expenses.models import Expense
 from app.utils.dependency import dependency
 
 from .models import Flight, FlightSegment
@@ -26,6 +27,9 @@ class FlightRepository:
                 with_loader_criteria(
                     FlightSegment, FlightSegment.is_deleted.is_(False), include_aliases=True
                 ),
+                with_loader_criteria(
+                    Expense, Expense.is_deleted.is_(False), include_aliases=True
+                ),
             )
             .where(Flight.id == flight_id, Flight.is_deleted.is_(False))
         )
@@ -40,6 +44,9 @@ class FlightRepository:
                 joinedload(Flight.flight_segments),
                 with_loader_criteria(
                     FlightSegment, FlightSegment.is_deleted.is_(False), include_aliases=True
+                ),
+                with_loader_criteria(
+                    Expense, Expense.is_deleted.is_(False), include_aliases=True
                 ),
             )
         )

@@ -1,7 +1,9 @@
+
 from sqlalchemy import select, update
-from sqlalchemy.orm import joinedload
+from sqlalchemy.orm import joinedload, with_loader_criteria
 
 from app.database.deps import SessionDep
+from app.expenses.models import Expense
 from app.utils.dependency import dependency
 
 from .models import Accommodation
@@ -22,6 +24,9 @@ class AccommodationRepository:
             .options(
                 joinedload(Accommodation.expense),
                 joinedload(Accommodation.plan),
+                with_loader_criteria(
+                    Expense, Expense.is_deleted.is_(False), include_aliases=True
+                ),
             )
             .where(
                 Accommodation.id == accommodation_id,
@@ -36,7 +41,12 @@ class AccommodationRepository:
             .where(
                 Accommodation.plan_id == plan_id, Accommodation.is_deleted.is_(False)
             )
-            .options(joinedload(Accommodation.expense))
+            .options(
+                joinedload(Accommodation.expense),
+                with_loader_criteria(
+                    Expense, Expense.is_deleted.is_(False), include_aliases=True
+                ),
+            )
         )
         return list(result.unique().scalars())
 

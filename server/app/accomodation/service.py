@@ -2,7 +2,7 @@ from fastapi import HTTPException
 
 from app.auth.deps import CurrentUser
 from app.expenses.models import Expense
-from app.expenses.schemas import ExpenseCategory
+from app.expenses.schemas import ExpenseCategory, ExpenseCurrency
 from app.expenses.repository import ExpenseRepository
 from app.plans.repository import PlanRepository
 from app.utils.dependency import dependency
@@ -144,6 +144,7 @@ class AccommodationService:
         )
 
         if update_data.expense:
+            # 기존 expense가 있는 경우 (soft delete되지 않은 경우)
             if accommodation.expense:
                 if update_data.expense.amount is not None:
                     accommodation.expense.amount = float(update_data.expense.amount)
@@ -158,8 +159,36 @@ class AccommodationService:
                 updated_expense = await self.expense_repository.save(
                     expense=accommodation.expense
                 )
-
                 updated_accommodation.expense = updated_expense
+            else:
+                existing_expense = await self.expense_repository.find_by_accommodation_id(accommodation_id=accommodation.id)
+                
+                if existing_expense:
+                    existing_expense.is_deleted = False
+                    if update_data.expense.amount is not None:
+                        existing_expense.amount = float(update_data.expense.amount)
+                    existing_expense.category = ExpenseCategory.ACCOMMODATION
+                    if update_data.expense.description is not None:
+                        existing_expense.description = update_data.expense.description
+                    if update_data.expense.ex_date is not None:
+                        existing_expense.ex_date = update_data.expense.ex_date
+                    if update_data.expense.currency is not None:
+                        existing_expense.currency = update_data.expense.currency
+
+                    updated_expense = await self.expense_repository.save(expense=existing_expense)
+                    updated_accommodation.expense = updated_expense
+                else:
+                    expense = Expense(
+                        amount=float(update_data.expense.amount or 0),
+                        category=ExpenseCategory.ACCOMMODATION,
+                        description=update_data.expense.description or accommodation.name,
+                        currency=update_data.expense.currency or ExpenseCurrency.KRW,
+                        ex_date=update_data.expense.ex_date or accommodation.checkin_date,
+                        plan_id=accommodation.plan_id,
+                    )
+                    created_expense = await self.expense_repository.save(expense=expense)
+                    updated_accommodation.expense = created_expense
+                    created_expense.accommodation_id = updated_accommodation.id
 
         return AccommodationRead.model_validate(updated_accommodation)
 
