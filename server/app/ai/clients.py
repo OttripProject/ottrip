@@ -135,7 +135,7 @@ class OpenAIClient:
     async def parse_flight_data(self, ocr_text: str) -> AIParseResponse:
         """AI로 항공권 데이터 파싱"""
         try:
-            prompt_path = Path(__file__).parent / "prompt" / "flight.txt"
+            prompt_path = Path(__file__).parent / "prompt" / "flights.txt"
             with open(prompt_path, "r", encoding="utf-8") as f:
                 prompt_template = f.read()
             
