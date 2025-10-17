@@ -7,7 +7,7 @@ import { expensesApi } from '@/services/expenses';
 import ModalLayout from './ModalLayout';
 import { ExpenseCategory, ExpenseCurrency, categoryLabels, currencyLabels } from '@/types/expense';
 import { useDate } from '@/contexts/DateContext';
-import DatePicker from '@/components/DatePicker';
+import DatePicker from '../DatePicker';
 
 interface ExpensesModalProps {
   planData?: {
