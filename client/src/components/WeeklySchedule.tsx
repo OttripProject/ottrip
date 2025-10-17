@@ -1,3 +1,5 @@
+// 현재 사용하지 않음 지워도될듯 나중에
+
 import React, { useState, useMemo } from 'react';
 import { View, Text, Pressable, StyleSheet, Alert, TouchableOpacity, Modal, TextInput } from 'react-native';
 import { Calendar as BigCalendar } from 'react-native-big-calendar';
@@ -5,7 +7,7 @@ import { Calendar } from 'react-native-calendars';
 import dayjs from 'dayjs';
 import ko from 'dayjs/locale/ko';
 import TripSelector from './TripSelector';
-import SharePlanModal from '@/components/SharePlanModal';
+import SharePlanModal from '@/components/modals/SharePlanModal';
 import { plansApi } from '@/services/plans';
 import { usePlans } from '@/hooks/usePlans';
 import { useEffect } from 'react';

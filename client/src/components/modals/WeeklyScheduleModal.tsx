@@ -4,8 +4,8 @@ import { Calendar as BigCalendar } from 'react-native-big-calendar';
 import { Calendar } from 'react-native-calendars';
 import dayjs from 'dayjs';
 import ko from 'dayjs/locale/ko';
-import TripSelector from './TripSelector';
-import SharePlanModal from '@/components/SharePlanModal';
+import TripSelector from '../TripSelector';
+import SharePlanModal from '@/components/modals/SharePlanModal';
 import { plansApi } from '@/services/plans';
 import { usePlans } from '@/hooks/usePlans';
 import { useEffect } from 'react';
@@ -26,9 +26,6 @@ export interface Itinerary {
 }
 
 function toEvent(it: Itinerary): any {
-  // 일정은 모두 파란색으로 통일
-  const color = '#3478f6'; // 파란색
-  
   // 시간 형식 정규화 (초가 있으면 제거)
   const normalizeTime = (time: string) => {
     return time.split(':').slice(0, 2).join(':');
@@ -40,16 +37,18 @@ function toEvent(it: Itinerary): any {
 
   const event = {
     id: it.id,
-    title: it.title, // 제목만 사용 (시간과 장소는 renderEvent에서 별도 렌더링)
+    title: it.title,
     start: new Date(`${it.itineraryDate}T${normalizedStartTime}:00`),
     end: new Date(`${it.itineraryDate}T${normalizedEndTime}:00`),
-    color: color,
-    // 추가 데이터를 event 객체에 저장
+    color: '#3478f6', // 일정 전용 색상 (파란색)
+    type: 'itinerary',
+    originalData: it,
+    // 시간 정보 추가
     normalizedStartTime,
     normalizedEndTime,
     locationText,
   } as any;
-  
+
   return event;
 }
 
@@ -94,9 +93,13 @@ interface Props {
   onItineraryAdd?: (itinerary: any) => void;
   onPlanSelect?: (planId: number | null) => void;
   onItinerarySelect?: (itinerary: Itinerary) => void;
+  onFlightAdd?: (flight: any) => void;
+  onShowItineraryModal?: () => void;
+  onShowFlightModal?: () => void;
+  onShowAccommodationModal?: (accommodation: any, date?: string) => void;
 }
 
-export default function WeeklyScheduleModal({ itineraries, flights = [], height = 600, onItineraryAdd, onPlanSelect, onItinerarySelect }: Props) {
+export default function WeeklyScheduleModal({ itineraries, flights = [], height = 600, onItineraryAdd, onPlanSelect, onItinerarySelect, onFlightAdd, onShowItineraryModal, onShowFlightModal, onShowAccommodationModal }: Props) {
     const [currentWeekStart, setCurrentWeekStart] = useState(
         dayjs().startOf('week').add(1, 'day') // 월요일 시작
         );
@@ -135,6 +138,27 @@ export default function WeeklyScheduleModal({ itineraries, flights = [], height 
       const r = (planData.plan as any)?.myRole;
       return typeof r === 'string' ? r.toLowerCase() : undefined; // 'owner' | 'editor' | 'viewer'
     }, [planData.plan]);
+
+    // 주간 날짜 배열 생성
+    const getWeekDays = () => {
+      const days = [];
+      for (let i = 0; i < 7; i++) {
+        const date = currentWeekStart.add(i, 'day');
+        days.push(date.format('YYYY-MM-DD'));
+      }
+      return days;
+    };
+
+    // 특정 날짜의 숙박 정보 찾기
+    const getAccommodationForDate = (date: string) => {
+      return planData.accommodations.find((acc: any) => {
+        const checkinDate = dayjs(acc.checkinDate).format('YYYY-MM-DD');
+        const checkoutDate = dayjs(acc.checkoutDate).format('YYYY-MM-DD');
+        const targetDate = dayjs(date).format('YYYY-MM-DD');
+        
+        return targetDate >= checkinDate && targetDate <= checkoutDate;
+      });
+    };
 
     const handleAddTrip = async (newTrip: any) => {
       try {
@@ -296,8 +320,7 @@ export default function WeeklyScheduleModal({ itineraries, flights = [], height 
             {(myRole === 'owner' || myRole === 'editor') && (
               <Pressable
                 onPress={() => {
-                  // 항공권 관리 진입: 현재 화면 구조상 직접 열 수 없어 안내 처리
-                  Alert.alert('안내', '오른쪽 패널의 "항공" 섹션에서 관리할 수 있어요.');
+                  onShowFlightModal?.();
                 }}
                 style={[styles.actionBtn, { marginLeft: 6 }]}
               >
@@ -320,6 +343,39 @@ export default function WeeklyScheduleModal({ itineraries, flights = [], height 
         ) : null}
       </View>
 
+      {/* 숙박 정보 행 */}
+      {selectedPlanId && (
+        <View style={styles.accommodationRow}>
+          <View style={styles.accommodationLabel}>
+            <Text style={styles.accommodationLabelText}>숙박</Text>
+          </View>
+          {getWeekDays().map((date, index) => {
+            const accommodation = getAccommodationForDate(date);
+            return (
+              <Pressable
+                key={date}
+                style={styles.accommodationCell}
+                onPress={() => {
+                  if (accommodation) {
+                    onShowAccommodationModal?.(accommodation);
+                  } else {
+                    onShowAccommodationModal?.(null, date);
+                  }
+                }}
+              >
+                {accommodation && (
+                  <View style={styles.accommodationItem}>
+                    <Text style={styles.accommodationName} numberOfLines={1}>
+                      {accommodation.name}
+                    </Text>
+                  </View>
+                ) }
+              </Pressable>
+            );
+          })}
+        </View>
+      )}
+
       {/* 캘린더 */}
       <BigCalendar
         mode="week"
@@ -334,6 +390,11 @@ export default function WeeklyScheduleModal({ itineraries, flights = [], height 
         renderEvent={(event, touchableOpacityProps) => {
           // key/children은 제거하고, onPress는 내부 Touchable에서 호출하여 경고 없이 클릭 유지
           const { key: eventKey, children: _ignoreChildren, style: tpStyle, onPress: calendarOnPress, ...rest } = (touchableOpacityProps as any) ?? {};
+          
+          // 이벤트 타입 확인
+          const isItinerary = event.type === 'itinerary';
+          const isFlight = event.type === 'flight';
+          
           return (
             <View
               key={eventKey}
@@ -344,27 +405,40 @@ export default function WeeklyScheduleModal({ itineraries, flights = [], height 
                 style={{ flex: 1, justifyContent: 'center', padding: 4 }}
                 onPress={(e) => {
                   try { calendarOnPress && calendarOnPress(e); } catch {}
-                  const itinerary = finalItineraries.find(it => it.id === event.id);
-                  if (itinerary && onItinerarySelect) {
-                    onItinerarySelect(itinerary);
+                  
+                  if (isItinerary) {
+                    // 일정 클릭
+                    const itinerary = finalItineraries.find(it => it.id === event.id);
+                    if (itinerary && onItinerarySelect) {
+                      onItinerarySelect(itinerary);
+                    }
+                    onShowItineraryModal?.();
+                  } else if (isFlight) {
+                    // 항공편 클릭
+                    onShowFlightModal?.();
                   }
                 }}
               >
-                  <View style={{ flex: 1, justifyContent: 'center' }}>
-                    <Text numberOfLines={1} ellipsizeMode="tail" style={{ color: '#fff', fontSize: 10, fontWeight: 'bold', lineHeight: 12 }}>
-                      {event.title}
+                <View style={{ flex: 1, justifyContent: 'center' }}>
+                  <Text numberOfLines={1} ellipsizeMode="tail" style={{ color: '#fff', fontSize: 10, fontWeight: 'bold', lineHeight: 12 }}>
+                    {event.title}
+                  </Text>
+                  {isItinerary && event.normalizedStartTime && event.normalizedEndTime && (
+                    <Text numberOfLines={1} ellipsizeMode="tail" style={{ color: '#fff', fontSize: 8, lineHeight: 10, marginTop: 3 }}>
+                      🕒 {event.normalizedStartTime}-{event.normalizedEndTime}
                     </Text>
-                    {event.normalizedStartTime && event.normalizedEndTime && (
-                      <Text numberOfLines={1} ellipsizeMode="tail" style={{ color: '#fff', fontSize: 8, lineHeight: 10, marginTop: 3 }}>
-                        🕒 {event.normalizedStartTime}-{event.normalizedEndTime}
-                      </Text>
-                    )}
-                    {event.locationText && (
-                      <Text numberOfLines={1} ellipsizeMode="tail" style={{ color: '#fff', fontSize: 8, lineHeight: 10, marginTop: 3 }}>
-                        📍 {event.locationText}
-                      </Text>
-                    )}
-                  </View>
+                  )}
+                  {isItinerary && event.locationText && (
+                    <Text numberOfLines={1} ellipsizeMode="tail" style={{ color: '#fff', fontSize: 8, lineHeight: 10, marginTop: 3 }}>
+                      📍 {event.locationText}
+                    </Text>
+                  )}
+                  {isFlight && event.normalizedStartTime && event.normalizedEndTime && (
+                    <Text numberOfLines={1} ellipsizeMode="tail" style={{ color: '#fff', fontSize: 8, lineHeight: 10, marginTop: 3 }}>
+                      🕒 {event.normalizedStartTime}-{event.normalizedEndTime}
+                    </Text>
+                  )}
+                </View>
               </TouchableOpacity>
             </View>
           );
@@ -456,6 +530,7 @@ export default function WeeklyScheduleModal({ itineraries, flights = [], height 
         </View>
       </Modal>
 
+
     </ModalLayout>
   );
 }
@@ -502,4 +577,41 @@ const styles = StyleSheet.create({
     actionBtn: { borderWidth: 1, borderColor: '#c5c5c5', borderRadius: 6, paddingHorizontal: 10, paddingVertical: 4 },
     actionText: { fontSize: 14, fontWeight: '600' },
     memoInput: { borderWidth: 1, borderColor: '#ddd', borderRadius: 8, padding: 10, minHeight: 120, backgroundColor: '#fff' },
+    accommodationRow: {
+      flexDirection: 'row',
+      backgroundColor: '#f8f9fa',
+      borderBottomWidth: 1,
+      borderBottomColor: '#e0e0e0',
+      height: 50,
+    },
+    accommodationLabel: {
+      width: 60,
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: '#fff',
+      borderRightWidth: 1,
+      borderRightColor: '#e0e0e0',
+    },
+    accommodationLabelText: {
+      fontSize: 16,
+    },
+    accommodationCell: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      borderRightWidth: 1,
+      borderRightColor: '#e0e0e0',
+    },
+    accommodationItem: {
+      backgroundColor: '#ff9500',
+      borderRadius: 4,
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      width: '90%',
+    },
+    accommodationName: {
+      color: '#fff',
+      fontSize: 10,
+      fontWeight: '600',
+    },
 });

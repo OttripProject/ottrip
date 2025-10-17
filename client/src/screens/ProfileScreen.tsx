@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, TextInput, Pressable, StyleSheet, Modal, Alert, Platform } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { usersApi, UserProfile } from '@/services/users';
-import HeaderBar from '@/components/HeaderModal';
+import HeaderBar from '@/components/modals/HeaderModal';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNicknameValidation } from '@/hooks/useNicknameValidation';
 

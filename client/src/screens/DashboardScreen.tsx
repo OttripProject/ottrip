@@ -6,11 +6,11 @@ import api from "@/services/api";
 import { usePlanData } from "@/hooks/usePlanData";
 
 // 새로운 모달 컴포넌트들
-import HeaderModal from "@/components/HeaderModal";
-import WeeklyScheduleModal from "@/components/WeeklyScheduleModal";
-import DetailsModal from "@/components/DetailsModal";
-import ExpensesModal from "@/components/ExpensesModal";
-import AIAssistantModal from "@/components/AIAssistantModal";
+import HeaderModal from "@/components/modals/HeaderModal";
+import WeeklyScheduleModal from "@/components/modals/WeeklyScheduleModal";
+import DetailsModal from "@/components/modals/DetailsModal";
+import ExpensesModal from "@/components/modals/ExpensesModal";
+import AIAssistantModal from "@/components/modals/AIAssistantModal";
 
 export default function DashboardScreen() {
   const isWide = useIsWideScreen();
@@ -18,6 +18,9 @@ export default function DashboardScreen() {
   const navigation = useNavigation();
   const [selectedPlanId, setSelectedPlanId] = useState<number | null>(null);
   const [selectedItinerary, setSelectedItinerary] = useState<any>(null);
+  const [selectedFlight, setSelectedFlight] = useState<any>(null);
+  const [selectedAccommodation, setSelectedAccommodation] = useState<any>(null);
+  const [activeTab, setActiveTab] = useState<'itinerary' | 'flight' | 'accommodation' | undefined>(undefined);
   
   // 동적 비율 계산 (화면 크기에 따라 조정)
   const getResponsiveRatio = () => {
@@ -85,6 +88,30 @@ export default function DashboardScreen() {
       await planData.refreshExpenses();
     }
   };
+
+  const handleShowItineraryModal = () => {
+    setActiveTab('itinerary');
+  };
+
+  const handleShowFlightModal = () => {
+    setActiveTab('flight');
+  };
+
+  const handleShowAccommodationModal = (accommodation: any, date?: string) => {
+    setActiveTab('accommodation');
+    if (accommodation) {
+      setSelectedAccommodation(accommodation);
+    } else {
+      setSelectedAccommodation(null);
+      // 새 숙박 추가를 위한 기본 데이터 설정
+      if (date) {
+        setSelectedAccommodation({
+          checkinDate: date,
+          checkoutDate: date,
+        });
+      }
+    }
+  };
   
   return (
     <ScrollView 
@@ -104,13 +131,17 @@ export default function DashboardScreen() {
         <View style={[styles.leftArea, { flex: ratio.left }]}>
           {/* 2. 주간 스케줄 모달 (70% 높이) */}
           <View style={styles.scheduleModal}>
-            <WeeklyScheduleModal 
+            <WeeklyScheduleModal
               itineraries={planData.itineraries}
               flights={planData.flights}
               height={400}
               onItineraryAdd={handleItineraryAdd}
               onPlanSelect={setSelectedPlanId}
               onItinerarySelect={setSelectedItinerary}
+              onFlightAdd={handleFlightAdd}
+              onShowItineraryModal={handleShowItineraryModal}
+              onShowFlightModal={handleShowFlightModal}
+              onShowAccommodationModal={handleShowAccommodationModal}
             />
           </View>
 
@@ -144,6 +175,9 @@ export default function DashboardScreen() {
             <DetailsModal 
               planData={planData}
               selectedItinerary={selectedItinerary}
+              selectedFlight={selectedFlight}
+              selectedAccommodation={selectedAccommodation}
+              activeTab={activeTab}
               onItineraryAdd={handleItineraryAdd}
               onFlightAdd={handleFlightAdd}
               onAccommodationAdd={handleAccommodationAdd}
