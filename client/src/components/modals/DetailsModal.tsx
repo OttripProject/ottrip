@@ -170,8 +170,253 @@ export default function DetailsModal({ planData, selectedItinerary, selectedFlig
       );
     }
 
+  // 단일 아이템 상세 정보 렌더링
+  const renderItemDetail = (item: any, type: 'itinerary' | 'flight' | 'accommodation') => {
+    // 편집 모드가 활성화된 경우 편집 폼 표시
+    if (type === 'itinerary' && showItineraryForm && editingItinerary?.id === item.id) {
+      return (
+        <ItineraryItem
+          itinerary={editingItinerary}
+          planId={planData.plan.id}
+          planData={planData}
+          onSave={handleItinerarySave}
+          onCancel={() => {
+            setShowItineraryForm(false);
+            setEditingItinerary(null);
+          }}
+          onDelete={handleItineraryDelete}
+          onExpenseUpdate={planData.refreshExpenses}
+        />
+      );
+    }
+    
+    if (type === 'flight' && showFlightForm && editingFlight?.id === item.id) {
+      return (
+        <FlightItem
+          flight={editingFlight}
+          planId={planData.plan.id}
+          onSave={handleFlightSave}
+          onCancel={() => {
+            setShowFlightForm(false);
+            setEditingFlight(null);
+          }}
+          onDelete={handleFlightDelete}
+        />
+      );
+    }
+    
+    if (type === 'accommodation' && showAccommodationForm && editingAccommodation?.id === item.id) {
+      return (
+        <AccommodationItem
+          accommodation={editingAccommodation}
+          planId={planData.plan.id}
+          onSave={handleAccommodationSave}
+          onCancel={() => {
+            setShowAccommodationForm(false);
+            setEditingAccommodation(null);
+          }}
+          onDelete={handleAccommodationDelete}
+        />
+      );
+    }
+
+    // 편집 모드가 아닌 경우 상세 정보 표시
+    return (
+      <View style={styles.detailContainer}>
+        <View style={styles.detailHeader}>
+          <Text style={styles.detailTitle}>{item.title || item.name || item.reservationNumber}</Text>
+          <Pressable 
+            style={styles.editButton}
+            onPress={() => {
+              if (type === 'itinerary') {
+                setEditingItinerary(item);
+                setShowItineraryForm(true);
+              } else if (type === 'flight') {
+                setEditingFlight(item);
+                setShowFlightForm(true);
+              } else if (type === 'accommodation') {
+                setEditingAccommodation(item);
+                setShowAccommodationForm(true);
+              }
+            }}
+          >
+            <Text style={styles.editButtonText}>편집</Text>
+          </Pressable>
+        </View>
+        
+        <View style={styles.detailContent}>
+          {type === 'itinerary' && (
+            <>
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>제목</Text>
+                <Text style={styles.detailValue}>{item.title}</Text>
+              </View>
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>날짜</Text>
+                <Text style={styles.detailValue}>{dayjs(item.itineraryDate).format('YYYY년 M월 D일')}</Text>
+              </View>
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>시작 시간</Text>
+                <Text style={styles.detailValue}>{item.startTime ? dayjs(`2000-01-01 ${item.startTime}`).format('HH:mm') : item.startTime}</Text>
+              </View>
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>종료 시간</Text>
+                <Text style={styles.detailValue}>{item.endTime ? dayjs(`2000-01-01 ${item.endTime}`).format('HH:mm') : item.endTime}</Text>
+              </View>
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>국가</Text>
+                <Text style={styles.detailValue}>{item.country}</Text>
+              </View>
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>도시</Text>
+                <Text style={styles.detailValue}>{item.city}</Text>
+              </View>
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>장소</Text>
+                <Text style={styles.detailValue}>{item.location}</Text>
+              </View>
+              {item.description && (
+                <View style={styles.detailRow}>
+                  <Text style={styles.detailLabel}>설명</Text>
+                  <Text style={styles.detailValue}>{item.description}</Text>
+                </View>
+              )}
+            </>
+          )}
+          
+          {type === 'flight' && (
+            <>
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>예약번호</Text>
+                <Text style={styles.detailValue}>{item.reservationNumber}</Text>
+              </View>
+              {item.expense && (
+                <>
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>가격</Text>
+                    <Text style={styles.detailValue}>{item.expense.amount?.toLocaleString() || '미설정'}</Text>
+                  </View>
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>화폐</Text>
+                    <Text style={styles.detailValue}>{item.expense.currency || '미설정'}</Text>
+                  </View>
+                </>
+              )}
+              {item.flightSegments && item.flightSegments.length > 0 && (
+                <>
+                  {item.flightSegments.map((segment: any, index: number) => (
+                    <View key={index} style={styles.segmentDetail}>
+                      <Text style={styles.segmentTitle}>구간 {index + 1}</Text>
+                      <View style={styles.detailRow}>
+                        <Text style={styles.detailLabel}>항공사</Text>
+                        <Text style={styles.detailValue}>{segment.airline}</Text>
+                      </View>
+                      <View style={styles.detailRow}>
+                        <Text style={styles.detailLabel}>항공편 번호</Text>
+                        <Text style={styles.detailValue}>{segment.flightNumber}</Text>
+                      </View>
+                      <View style={styles.detailRow}>
+                        <Text style={styles.detailLabel}>출발 공항</Text>
+                        <Text style={styles.detailValue}>{segment.departureAirport}</Text>
+                      </View>
+                      <View style={styles.detailRow}>
+                        <Text style={styles.detailLabel}>도착 공항</Text>
+                        <Text style={styles.detailValue}>{segment.arrivalAirport}</Text>
+                      </View>
+                      <View style={styles.detailRow}>
+                        <Text style={styles.detailLabel}>출발 시간</Text>
+                        <Text style={styles.detailValue}>{dayjs(segment.departureTime).format('YYYY년 M월 D일 HH:mm')}</Text>
+                      </View>
+                      <View style={styles.detailRow}>
+                        <Text style={styles.detailLabel}>도착 시간</Text>
+                        <Text style={styles.detailValue}>{dayjs(segment.arrivalTime).format('YYYY년 M월 D일 HH:mm')}</Text>
+                      </View>
+                      <View style={styles.detailRow}>
+                        <Text style={styles.detailLabel}>좌석 등급</Text>
+                        <Text style={styles.detailValue}>{segment.seatClass}</Text>
+                      </View>
+                      <View style={styles.detailRow}>
+                        <Text style={styles.detailLabel}>좌석 번호</Text>
+                        <Text style={styles.detailValue}>{segment.seatNumber}</Text>
+                      </View>
+                    </View>
+                  ))}
+                </>
+              )}
+            </>
+          )}
+          
+          {type === 'accommodation' && (
+            <>
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>숙소명</Text>
+                <Text style={styles.detailValue}>{item.name}</Text>
+              </View>
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>체크인 날짜</Text>
+                <Text style={styles.detailValue}>{dayjs(item.checkinDate).format('YYYY년 M월 D일')}</Text>
+              </View>
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>체크인 시간</Text>
+                <Text style={styles.detailValue}>{item.checkinTime ? dayjs(`2000-01-01 ${item.checkinTime}`).format('HH:mm') : '미설정'}</Text>
+              </View>
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>체크아웃 날짜</Text>
+                <Text style={styles.detailValue}>{dayjs(item.checkoutDate).format('YYYY년 M월 D일')}</Text>
+              </View>
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>체크아웃 시간</Text>
+                <Text style={styles.detailValue}>{item.checkoutTime ? dayjs(`2000-01-01 ${item.checkoutTime}`).format('HH:mm') : '미설정'}</Text>
+              </View>
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>국가</Text>
+                <Text style={styles.detailValue}>{item.country}</Text>
+              </View>
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>도시</Text>
+                <Text style={styles.detailValue}>{item.city}</Text>
+              </View>
+              {item.place && (
+                <View style={styles.detailRow}>
+                  <Text style={styles.detailLabel}>장소</Text>
+                  <Text style={styles.detailValue}>{item.place}</Text>
+                </View>
+              )}
+              {item.accommodationType && (
+                <View style={styles.detailRow}>
+                  <Text style={styles.detailLabel}>숙소 타입</Text>
+                  <Text style={styles.detailValue}>{item.accommodationType}</Text>
+                </View>
+              )}
+              {item.description && (
+                <View style={styles.detailRow}>
+                  <Text style={styles.detailLabel}>설명</Text>
+                  <Text style={styles.detailValue}>{item.description}</Text>
+                </View>
+              )}
+            </>
+          )}
+        </View>
+      </View>
+    );
+  };
+
   // 활성 탭에 따라 표시할 내용 결정
   const renderContent = () => {
+    // 단일 아이템이 선택된 경우 - 해당 아이템의 상세 정보 표시
+    if (selectedItinerary) {
+      return renderItemDetail(selectedItinerary, 'itinerary');
+    }
+    
+    if (selectedFlight) {
+      return renderItemDetail(selectedFlight, 'flight');
+    }
+    
+    if (selectedAccommodation) {
+      return renderItemDetail(selectedAccommodation, 'accommodation');
+    }
+
+    // 아무것도 선택되지 않은 경우 - 리스트 표시
     if (!activeTab) {
       return (
         <View style={styles.placeholder}>
@@ -541,5 +786,72 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#888',
     marginTop: 2,
+  },
+  // 단일 아이템 상세 정보 스타일
+  detailContainer: {
+    padding: 16,
+  },
+  detailHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e7eb',
+  },
+  detailTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#333',
+    flex: 1,
+  },
+  editButton: {
+    backgroundColor: '#007AFF',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  editButtonText: {
+    color: '#fff',
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  detailContent: {
+    gap: 16,
+  },
+  detailRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    paddingVertical: 8,
+  },
+  detailLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#666',
+    width: 80,
+    flexShrink: 0,
+  },
+  detailValue: {
+    fontSize: 14,
+    color: '#333',
+    flex: 1,
+    textAlign: 'right',
+  },
+  segmentDetail: {
+    backgroundColor: '#f8f9fa',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 8,
+  },
+  segmentTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 12,
+    paddingBottom: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e7eb',
   },
 });

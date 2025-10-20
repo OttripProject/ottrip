@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { View, Text, Pressable, StyleSheet, TextInput, Alert } from 'react-native';
 import DatePicker from '@/components/DatePicker';
 import TimePicker from '@/components/TimePicker';
 import DropDownPicker from 'react-native-dropdown-picker';
+import { getKoreanCountryOptions, codeToKoreanName } from '@/utils/countryListKo';
 import dayjs from 'dayjs';
 import { itinerariesApi } from '@/services/itineraries';
 import { expensesApi } from '@/services/expenses';
@@ -37,6 +38,17 @@ export default function ItineraryItem({
     startTime: itinerary?.start_time || '09:00',
     endTime: itinerary?.end_time || '10:00',
   });
+
+  // 국가 드롭다운 상태 및 옵션 (ISO 3166 → 한국어 라벨)
+  const countryOptions = useMemo(() => getKoreanCountryOptions(), []);
+  const [countryOpen, setCountryOpen] = useState(false);
+  const [countryCode, setCountryCode] = useState<string | null>(null);
+
+  // formData.country(이름) → 코드 동기화
+  useEffect(() => {
+    const matched = countryOptions.find(opt => opt.label === formData.country);
+    setCountryCode(matched ? matched.value : null);
+  }, [formData.country, countryOptions]);
 
   // 지출 관련 상태
   const [showExpenseForm, setShowExpenseForm] = useState(false);
@@ -320,17 +332,51 @@ export default function ItineraryItem({
         />
       </View>
 
-      <View style={styles.row}>
-        <View style={[styles.inputGroup, styles.halfWidth]}>
+      <View style={[styles.row, styles.pickerRowWrapper, { zIndex: countryOpen ? 10000 : 1 }]}>
+        <View style={[styles.inputGroup, styles.halfWidth, styles.countryPickerWrapper]}>
           <Text style={styles.label}>국가 *</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="국가를 입력하세요"
-            value={formData.country}
-            onChangeText={(text) => setFormData({ ...formData, country: text })}
+          <DropDownPicker
+            open={countryOpen}
+            value={countryCode}
+            items={countryOptions}
+            setOpen={setCountryOpen}
+            setValue={(callback: any) => {
+              const next = callback(countryCode) as string | null;
+              setCountryCode(next);
+              const name = codeToKoreanName(next || undefined) || '';
+              setFormData({ ...formData, country: name });
+            }}
+            searchable
+            searchPlaceholder="국가 검색"
+            searchTextInputStyle={{
+              height: 30,
+              paddingVertical: 6,
+              paddingHorizontal: 10,
+              fontSize: 14,
+              width: '100%',
+            }}
+            searchContainerStyle={{
+              paddingVertical: 5,
+              paddingHorizontal: 8,
+              borderBottomWidth: 0,
+              width: 160,
+              alignSelf: 'flex-start',
+            }}
+            placeholder="국가 선택"
+            style={[styles.countryDropdown, { width: 160, alignSelf: 'flex-start' }]}
+            dropDownContainerStyle={[styles.countryDropdownContainer, { width: 160 }]}
+            containerStyle={[styles.countryDropdownOuter, { width: 160, alignSelf: 'flex-start' }]}
+            listMode="SCROLLVIEW"
+            scrollViewProps={{
+              nestedScrollEnabled: true,
+              keyboardShouldPersistTaps: 'handled',
+            }}
+            translation={{
+              NOTHING_TO_SHOW: '결과가 없습니다',
+            }}
           />
         </View>
-        <View style={[styles.inputGroup, styles.halfWidth]}>
+        <View style={[styles.inputGroup, styles.halfWidth]}> 
           <Text style={styles.label}>도시 *</Text>
           <TextInput
             style={styles.input}
@@ -624,6 +670,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginBottom: 12,
+    overflow: 'visible',
+    position: 'relative',
+  },
+  pickerRowWrapper: {
+    // 국가 드롭다운 + 도시 입력을 하나의 쌓임 맥락으로 묶음
+    overflow: 'visible',
+    position: 'relative',
   },
   inputGroup: {
     marginBottom: 12,
@@ -705,6 +758,36 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     backgroundColor: '#fff',
     minHeight: 50,
+  },
+  countryDropdown: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    backgroundColor: '#fff',
+    minHeight: 45,
+    position: 'relative',
+    zIndex: 9999,
+  },
+  countryDropdownContainer: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    backgroundColor: '#fff',
+    zIndex: 9999,
+    elevation: 6,
+    shadowColor: '#000',
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+  },
+  countryPickerWrapper: {
+    overflow: 'visible',
+    position: 'relative',
+    zIndex: 8000,
+  },
+  countryDropdownOuter: {
+    position: 'relative',
+    zIndex: 9999,
   },
   expenseDropdownContainer: {
     borderWidth: 1,
