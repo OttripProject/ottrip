@@ -359,13 +359,12 @@ export default function ItineraryItem({
               paddingVertical: 5,
               paddingHorizontal: 8,
               borderBottomWidth: 0,
-              width: 160,
-              alignSelf: 'flex-start',
+              width: '100%',
             }}
             placeholder="국가 선택"
-            style={[styles.countryDropdown, { width: 160, alignSelf: 'flex-start' }]}
-            dropDownContainerStyle={[styles.countryDropdownContainer, { width: 160 }]}
-            containerStyle={[styles.countryDropdownOuter, { width: 160, alignSelf: 'flex-start' }]}
+            style={[styles.countryDropdown, { width: '100%' }]}
+            dropDownContainerStyle={[styles.countryDropdownContainer, { width: '100%' }]}
+            containerStyle={[styles.countryDropdownOuter, { width: '100%' }]}
             listMode="SCROLLVIEW"
             scrollViewProps={{
               nestedScrollEnabled: true,
@@ -379,7 +378,7 @@ export default function ItineraryItem({
         <View style={[styles.inputGroup, styles.halfWidth]}> 
           <Text style={styles.label}>도시 *</Text>
           <TextInput
-            style={styles.input}
+            style={[styles.input, { width: '100%' }]}
             placeholder="도시를 입력하세요"
             value={formData.city}
             onChangeText={(text) => setFormData({ ...formData, city: text })}
