@@ -82,12 +82,13 @@ export default function FlightItem({
     setIsLoading(true);
     try {
       let savedFlight;
-      // ISO 문자열 변환 유틸리티
+      // ISO 문자열 변환 유틸리티 (로컬 타임존 유지)
       const toIso = (dt: string) => {
         if (!dt) return dt;
         const [date, time] = dt.split(' ');
         const timeWithSeconds = (time && time.length === 5) ? `${time}:00` : time;
-        return `${date}T${timeWithSeconds}Z`;
+        // Z 제거하여 로컬 타임존으로 전송
+        return `${date}T${timeWithSeconds}`;
       };
 
       if (flight) {

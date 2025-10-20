@@ -97,9 +97,12 @@ interface Props {
   onShowItineraryModal?: () => void;
   onShowFlightModal?: () => void;
   onShowAccommodationModal?: (accommodation: any, date?: string) => void;
+  onShowItineraryDetail?: (itinerary: Itinerary) => void;
+  onShowFlightDetail?: (flight: any) => void;
+  onShowAccommodationDetail?: (accommodation: any) => void;
 }
 
-export default function WeeklyScheduleModal({ itineraries, flights = [], height = 600, onItineraryAdd, onPlanSelect, onItinerarySelect, onFlightAdd, onShowItineraryModal, onShowFlightModal, onShowAccommodationModal }: Props) {
+export default function WeeklyScheduleModal({ itineraries, flights = [], height = 600, onItineraryAdd, onPlanSelect, onItinerarySelect, onFlightAdd, onShowItineraryModal, onShowFlightModal, onShowAccommodationModal, onShowItineraryDetail, onShowFlightDetail, onShowAccommodationDetail }: Props) {
     const [currentWeekStart, setCurrentWeekStart] = useState(
         dayjs().startOf('week').add(1, 'day') // 월요일 시작
         );
@@ -407,15 +410,11 @@ export default function WeeklyScheduleModal({ itineraries, flights = [], height 
                   try { calendarOnPress && calendarOnPress(e); } catch {}
                   
                   if (isItinerary) {
-                    // 일정 클릭
-                    const itinerary = finalItineraries.find(it => it.id === event.id);
-                    if (itinerary && onItinerarySelect) {
-                      onItinerarySelect(itinerary);
-                    }
-                    onShowItineraryModal?.();
+                    // 일정 상세 보기
+                    onShowItineraryDetail?.(event.originalData);
                   } else if (isFlight) {
-                    // 항공편 클릭
-                    onShowFlightModal?.();
+                    // 항공편 상세 보기
+                    onShowFlightDetail?.(event.originalData);
                   }
                 }}
               >

@@ -1,7 +1,7 @@
 import { useIsWideScreen } from "@/hooks/useIsWideScreen";
 import { View, StyleSheet, Alert, Platform, useWindowDimensions, ScrollView } from "react-native";
 import { useNavigation } from "@react-navigation/native";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import api from "@/services/api";
 import { usePlanData } from "@/hooks/usePlanData";
 
@@ -39,6 +39,35 @@ export default function DashboardScreen() {
   
   // 선택된 Plan의 데이터 로딩
   const planData = usePlanData(selectedPlanId);
+
+
+  // planData가 업데이트될 때 선택된 아이템도 업데이트
+  useEffect(() => {
+    if (selectedItinerary && planData.itineraries.length > 0) {
+      const updatedItinerary = planData.itineraries.find((it: any) => it.id === selectedItinerary.id);
+      if (updatedItinerary) {
+        setSelectedItinerary(updatedItinerary);
+      }
+    }
+  }, [planData.itineraries, selectedItinerary]);
+
+  useEffect(() => {
+    if (selectedFlight && planData.flights.length > 0) {
+      const updatedFlight = planData.flights.find((flight: any) => flight.id === selectedFlight.id);
+      if (updatedFlight) {
+        setSelectedFlight(updatedFlight);
+      }
+    }
+  }, [planData.flights, selectedFlight]);
+
+  useEffect(() => {
+    if (selectedAccommodation && planData.accommodations.length > 0) {
+      const updatedAccommodation = planData.accommodations.find((acc: any) => acc.id === selectedAccommodation.id);
+      if (updatedAccommodation) {
+        setSelectedAccommodation(updatedAccommodation);
+      }
+    }
+  }, [planData.accommodations, selectedAccommodation]);
 
   // 이미 로그인된 사용자가 초대 링크(#invite=...)로 진입한 경우 자동 수락 처리
   useEffect(() => {
@@ -89,16 +118,29 @@ export default function DashboardScreen() {
     }
   };
 
-  const handleShowItineraryModal = () => {
+  const handleShowItineraryModal = useCallback(() => {
     setActiveTab('itinerary');
-  };
+    
+    // 다른 선택된 아이템들 초기화
+    setSelectedFlight(null);
+    setSelectedAccommodation(null);
+  }, []);
 
-  const handleShowFlightModal = () => {
+  const handleShowFlightModal = useCallback(() => {
     setActiveTab('flight');
-  };
+    
+    // 다른 선택된 아이템들 초기화
+    setSelectedItinerary(null);
+    setSelectedAccommodation(null);
+  }, []);
 
-  const handleShowAccommodationModal = (accommodation: any, date?: string) => {
+  const handleShowAccommodationModal = useCallback((accommodation: any, date?: string) => {
     setActiveTab('accommodation');
+    
+    // 다른 선택된 아이템들 초기화
+    setSelectedItinerary(null);
+    setSelectedFlight(null);
+    
     if (accommodation) {
       setSelectedAccommodation(accommodation);
     } else {
@@ -111,7 +153,35 @@ export default function DashboardScreen() {
         });
       }
     }
-  };
+  }, []);
+
+  const handleShowItineraryDetail = useCallback((itinerary: any) => {
+    setSelectedItinerary(itinerary);
+    setActiveTab('itinerary');
+    
+    // 다른 선택된 아이템들 초기화
+    setSelectedFlight(null);
+    setSelectedAccommodation(null);
+  }, []);
+
+  const handleShowFlightDetail = useCallback((flight: any) => {
+    setSelectedFlight(flight);
+    setActiveTab('flight');
+    
+    // 다른 선택된 아이템들 초기화
+    setSelectedItinerary(null);
+    setSelectedAccommodation(null);
+  }, []);
+
+  const handleShowAccommodationDetail = useCallback((accommodation: any) => {
+    setSelectedAccommodation(accommodation);
+    setActiveTab('accommodation');
+    
+    // 다른 선택된 아이템들 초기화
+    setSelectedItinerary(null);
+    setSelectedFlight(null);
+  }, []);
+
   
   return (
     <ScrollView 
@@ -142,6 +212,9 @@ export default function DashboardScreen() {
               onShowItineraryModal={handleShowItineraryModal}
               onShowFlightModal={handleShowFlightModal}
               onShowAccommodationModal={handleShowAccommodationModal}
+              onShowItineraryDetail={handleShowItineraryDetail}
+              onShowFlightDetail={handleShowFlightDetail}
+              onShowAccommodationDetail={handleShowAccommodationDetail}
             />
           </View>
 
