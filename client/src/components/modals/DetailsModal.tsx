@@ -30,6 +30,9 @@ interface DetailsModalProps {
   onFlightAdd?: (flight: any) => void;
   onAccommodationAdd?: (accommodation: any) => void;
   onExpenseAdd?: (expense: any) => void;
+  // 외부에서 새 항공편 폼을 바로 열도록 트리거
+  openNewFlightForm?: boolean;
+  onConsumeOpenNewFlightForm?: () => void;
 }
 
 interface Flight {
@@ -93,7 +96,7 @@ function Placeholder({ label }: { label: string }) {
   );
 }
 
-export default function DetailsModal({ planData, selectedItinerary, selectedFlight, selectedAccommodation, activeTab, onItineraryAdd: externalOnItineraryAdd, onFlightAdd: externalOnFlightAdd, onAccommodationAdd: externalOnAccommodationAdd, onExpenseAdd: externalOnExpenseAdd }: DetailsModalProps) {
+export default function DetailsModal({ planData, selectedItinerary, selectedFlight, selectedAccommodation, activeTab, onItineraryAdd: externalOnItineraryAdd, onFlightAdd: externalOnFlightAdd, onAccommodationAdd: externalOnAccommodationAdd, onExpenseAdd: externalOnExpenseAdd, openNewFlightForm, onConsumeOpenNewFlightForm }: DetailsModalProps) {
     const [open, setOpen] = useState<string | undefined>();
     const [showItineraryForm, setShowItineraryForm] = useState(false);
     const [showFlightForm, setShowFlightForm] = useState(false);
@@ -152,6 +155,15 @@ export default function DetailsModal({ planData, selectedItinerary, selectedFlig
       setEditingFlight(null);
     };
 
+    // 외부 트리거: 항공 탭에서 즉시 새 항공편 추가 폼 열기
+    React.useEffect(() => {
+      if (activeTab === 'flight' && openNewFlightForm) {
+        setEditingFlight(null);
+        setShowFlightForm(true);
+        onConsumeOpenNewFlightForm && onConsumeOpenNewFlightForm();
+      }
+    }, [activeTab, openNewFlightForm, onConsumeOpenNewFlightForm]);
+
     const handleAccommodationDelete = (accommodationId: string) => {
       // 삭제 후 목록 새로고침
       planData?.refreshAccommodations();
@@ -191,7 +203,8 @@ export default function DetailsModal({ planData, selectedItinerary, selectedFlig
     
     if (type === 'flight' && showFlightForm && editingFlight?.id === item.id) {
       return (
-        <FlightItem
+          <FlightItem
+            key={editingFlight?.id ?? 'new-flight'}
           flight={editingFlight}
           planId={planData.plan.id}
           onSave={handleFlightSave}
@@ -481,46 +494,9 @@ export default function DetailsModal({ planData, selectedItinerary, selectedFlig
       case 'flight':
         return (
           <View style={styles.sectionContent}>
-            {planData.flights.map((flight: any) => (
-              <Pressable 
-                key={flight.id} 
-                style={styles.itemCard}
-                onPress={() => {
-                  if (editingFlight?.id === flight.id && showFlightForm) {
-                    setShowFlightForm(false);
-                    setEditingFlight(null);
-                  } else {
-                    setEditingFlight(flight);
-                    setShowFlightForm(true);
-                  }
-                }}
-              >
-                <View style={styles.cardContent}>
-                  {flight.flightSegments && flight.flightSegments.length > 0 && (
-                    <>
-                      <Text style={styles.cardTitle}>
-                        {flight.reservationNumber}
-                      </Text>
-                      
-                      {flight.flightSegments.map((segment: any, index: number) => (
-                        <View key={index} style={styles.segmentInfo}>
-                          <Text style={styles.cardSubtitle}>
-                            {segment.departureAirport} → {segment.arrivalAirport}
-                          </Text>
-                          <Text style={styles.cardTime}>
-                            {dayjs(segment.departureTime).format('MM/DD HH:mm')} - {dayjs(segment.arrivalTime).format('MM/DD HH:mm')}
-                          </Text>
-                        </View>
-                      ))}
-                    </>
-                  )}
-                </View>
-                <Text style={styles.cardArrow}>›</Text>
-              </Pressable>
-            ))}
-            
-            {showFlightForm && (
+            {showFlightForm ? (
               <FlightItem
+                key={editingFlight?.id ?? 'new-flight'}
                 flight={editingFlight}
                 planId={planData.plan.id}
                 onSave={handleFlightSave}
@@ -530,15 +506,46 @@ export default function DetailsModal({ planData, selectedItinerary, selectedFlig
                 }}
                 onDelete={handleFlightDelete}
               />
-            )}
-            
-            {!showFlightForm && (
-              <Pressable
-                style={styles.addButton}
-                onPress={() => setShowFlightForm(true)}
-              >
-                <Text style={styles.addButtonText}>항공편 추가</Text>
-              </Pressable>
+            ) : (
+              <>
+                {planData.flights.map((flight: any) => (
+                  <Pressable 
+                    key={flight.id} 
+                    style={styles.itemCard}
+                    onPress={() => {
+                      setEditingFlight(flight);
+                      setShowFlightForm(true);
+                    }}
+                  >
+                    <View style={styles.cardContent}>
+                      {flight.flightSegments && flight.flightSegments.length > 0 && (
+                        <>
+                          <Text style={styles.cardTitle}>
+                            {flight.reservationNumber}
+                          </Text>
+                          {flight.flightSegments.map((segment: any, index: number) => (
+                            <View key={index} style={styles.segmentInfo}>
+                              <Text style={styles.cardSubtitle}>
+                                {segment.departureAirport} → {segment.arrivalAirport}
+                              </Text>
+                              <Text style={styles.cardTime}>
+                                {dayjs(segment.departureTime).format('MM/DD HH:mm')} - {dayjs(segment.arrivalTime).format('MM/DD HH:mm')}
+                              </Text>
+                            </View>
+                          ))}
+                        </>
+                      )}
+                    </View>
+                    <Text style={styles.cardArrow}>›</Text>
+                  </Pressable>
+                ))}
+                <Pressable
+                  style={styles.addButton}
+                  onPress={() => setShowFlightForm(true)}
+                >
+                  <Text style={styles.addButtonText}>항공편 추가</Text>
+                </Pressable>
+              </>
             )}
           </View>
         );

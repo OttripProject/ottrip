@@ -21,6 +21,7 @@ export default function DashboardScreen() {
   const [selectedFlight, setSelectedFlight] = useState<any>(null);
   const [selectedAccommodation, setSelectedAccommodation] = useState<any>(null);
   const [activeTab, setActiveTab] = useState<'itinerary' | 'flight' | 'accommodation' | undefined>(undefined);
+  const [openNewFlightForm, setOpenNewFlightForm] = useState<boolean>(false);
   
   // 동적 비율 계산 (화면 크기에 따라 조정)
   const getResponsiveRatio = () => {
@@ -134,6 +135,14 @@ export default function DashboardScreen() {
     setSelectedAccommodation(null);
   }, []);
 
+  const handleRequestNewFlight = useCallback(() => {
+    setActiveTab('flight');
+    setSelectedItinerary(null);
+    setSelectedAccommodation(null);
+    setSelectedFlight(null); // 기존 편집 대상 초기화
+    setOpenNewFlightForm(true);
+  }, []);
+
   const handleShowAccommodationModal = useCallback((accommodation: any, date?: string) => {
     setActiveTab('accommodation');
     
@@ -211,6 +220,7 @@ export default function DashboardScreen() {
               onFlightAdd={handleFlightAdd}
               onShowItineraryModal={handleShowItineraryModal}
               onShowFlightModal={handleShowFlightModal}
+            onRequestNewFlight={handleRequestNewFlight}
               onShowAccommodationModal={handleShowAccommodationModal}
               onShowItineraryDetail={handleShowItineraryDetail}
               onShowFlightDetail={handleShowFlightDetail}
@@ -255,6 +265,8 @@ export default function DashboardScreen() {
               onFlightAdd={handleFlightAdd}
               onAccommodationAdd={handleAccommodationAdd}
               onExpenseAdd={handleExpenseAdd}
+              openNewFlightForm={openNewFlightForm}
+              onConsumeOpenNewFlightForm={() => setOpenNewFlightForm(false)}
             />
           </View>
         </View>

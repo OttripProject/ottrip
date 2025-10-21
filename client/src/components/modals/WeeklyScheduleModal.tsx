@@ -96,13 +96,14 @@ interface Props {
   onFlightAdd?: (flight: any) => void;
   onShowItineraryModal?: () => void;
   onShowFlightModal?: () => void;
+  onRequestNewFlight?: () => void; // 새 항공편 추가 즉시 열기
   onShowAccommodationModal?: (accommodation: any, date?: string) => void;
   onShowItineraryDetail?: (itinerary: Itinerary) => void;
   onShowFlightDetail?: (flight: any) => void;
   onShowAccommodationDetail?: (accommodation: any) => void;
 }
 
-export default function WeeklyScheduleModal({ itineraries, flights = [], height = 600, onItineraryAdd, onPlanSelect, onItinerarySelect, onFlightAdd, onShowItineraryModal, onShowFlightModal, onShowAccommodationModal, onShowItineraryDetail, onShowFlightDetail, onShowAccommodationDetail }: Props) {
+export default function WeeklyScheduleModal({ itineraries, flights = [], height = 600, onItineraryAdd, onPlanSelect, onItinerarySelect, onFlightAdd, onShowItineraryModal, onShowFlightModal, onRequestNewFlight, onShowAccommodationModal, onShowItineraryDetail, onShowFlightDetail, onShowAccommodationDetail }: Props) {
     const [currentWeekStart, setCurrentWeekStart] = useState(
         dayjs().startOf('week').add(1, 'day') // 월요일 시작
         );
@@ -323,7 +324,7 @@ export default function WeeklyScheduleModal({ itineraries, flights = [], height 
             {(myRole === 'owner' || myRole === 'editor') && (
               <Pressable
                 onPress={() => {
-                  onShowFlightModal?.();
+                  if (onRequestNewFlight) onRequestNewFlight(); else onShowFlightModal?.();
                 }}
                 style={[styles.actionBtn, { marginLeft: 6 }]}
               >
