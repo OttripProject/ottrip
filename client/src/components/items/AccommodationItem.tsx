@@ -111,16 +111,6 @@ export default function AccommodationItem({
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>{accommodation ? '숙박 편집' : '숙박 추가'}</Text>
-        {accommodation && (
-          <Pressable
-            style={styles.editButton}
-            onPress={() => {
-              // 편집 모드 토글 로직은 부모 컴포넌트에서 처리
-            }}
-          >
-            <Text style={styles.editButtonText}>편집</Text>
-          </Pressable>
-        )}
       </View>
       
       <View style={styles.inputGroup}>
@@ -351,16 +341,5 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 16,
-  },
-  editButton: {
-    backgroundColor: '#007AFF',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 6,
-  },
-  editButtonText: {
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: '600',
   },
 });

@@ -164,16 +164,6 @@ export default function FlightItem({
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>{flight ? '항공편 편집' : '항공편 추가'}</Text>
-        {flight && (
-          <Pressable
-            style={styles.editButton}
-            onPress={() => {
-              // 편집 모드 토글 로직은 부모 컴포넌트에서 처리
-            }}
-          >
-            <Text style={styles.editButtonText}>편집</Text>
-          </Pressable>
-        )}
       </View>
       
       <View style={styles.row}>
@@ -487,17 +477,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 16,
-  },
-  editButton: {
-    backgroundColor: '#007AFF',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 6,
-  },
-  editButtonText: {
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: '600',
   },
   segmentContainer: {
     borderWidth: 1,

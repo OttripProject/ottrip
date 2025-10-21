@@ -122,7 +122,6 @@ export default function ItineraryItem({
     try {
       let savedItinerary;
       if (itinerary) {
-        // 편집
         savedItinerary = await itinerariesApi.updateItinerary(itinerary.id, {
           title: formData.title,
           description: formData.description,
@@ -134,9 +133,7 @@ export default function ItineraryItem({
           endTime: formData.endTime,
         });
         
-        // 일정 날짜가 변경된 경우, 연결된 지출들의 날짜도 업데이트
         if (itinerary.itinerary_date !== formData.itineraryDate) {
-          // 현재 일정에 연결된 모든 지출을 찾아서 날짜 업데이트
           const allExpenses = await expensesApi.getExpenses(planId);
           const connectedExpenses = allExpenses.filter(expense => 
             expense.itineraryId === itinerary.id
@@ -150,7 +147,6 @@ export default function ItineraryItem({
           }
         }
         
-        // 기존 일정 편집 시에도 draft expenses 저장
         if (draftExpenses.length > 0) {
           for (const draftExpense of draftExpenses) {
             try {
@@ -252,7 +248,6 @@ export default function ItineraryItem({
       return;
     }
 
-    // 기존 일정 편집 시에도 임시로 저장 (일정 저장 시 함께 저장)
     const newDraftExpense = {
       category: expenseForm.category,
       amount: expenseForm.amount,
@@ -297,16 +292,6 @@ export default function ItineraryItem({
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>{itinerary ? '일정 편집' : '일정 추가'}</Text>
-        {itinerary && (
-          <Pressable
-            style={styles.editButton}
-            onPress={() => {
-              // 편집 모드 토글 로직은 부모 컴포넌트에서 처리
-            }}
-          >
-            <Text style={styles.editButtonText}>편집</Text>
-          </Pressable>
-        )}
       </View>
       
       <View style={styles.inputGroup}>
@@ -695,17 +680,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 16,
-  },
-  editButton: {
-    backgroundColor: '#007AFF',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 6,
-  },
-  editButtonText: {
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: '600',
   },
   submitButton: {
     backgroundColor: '#000',

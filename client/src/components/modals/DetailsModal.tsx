@@ -172,7 +172,6 @@ export default function DetailsModal({ planData, selectedItinerary, selectedFlig
 
   // 단일 아이템 상세 정보 렌더링
   const renderItemDetail = (item: any, type: 'itinerary' | 'flight' | 'accommodation') => {
-    // 편집 모드가 활성화된 경우 편집 폼 표시
     if (type === 'itinerary' && showItineraryForm && editingItinerary?.id === item.id) {
       return (
         <ItineraryItem
@@ -220,7 +219,6 @@ export default function DetailsModal({ planData, selectedItinerary, selectedFlig
       );
     }
 
-    // 편집 모드가 아닌 경우 상세 정보 표시
     return (
       <View style={styles.detailContainer}>
         <View style={styles.detailHeader}>
@@ -435,11 +433,9 @@ export default function DetailsModal({ planData, selectedItinerary, selectedFlig
                 style={styles.itemCard}
                 onPress={() => {
                   if (editingItinerary?.id === itinerary.id && showItineraryForm) {
-                    // 같은 아이템을 다시 누르면 편집창 닫기
                     setShowItineraryForm(false);
                     setEditingItinerary(null);
                   } else {
-                    // 다른 아이템을 누르거나 편집창이 닫혀있으면 편집창 열기
                     setEditingItinerary(itinerary);
                     setShowItineraryForm(true);
                   }
@@ -491,11 +487,9 @@ export default function DetailsModal({ planData, selectedItinerary, selectedFlig
                 style={styles.itemCard}
                 onPress={() => {
                   if (editingFlight?.id === flight.id && showFlightForm) {
-                    // 같은 아이템을 다시 누르면 편집창 닫기
                     setShowFlightForm(false);
                     setEditingFlight(null);
                   } else {
-                    // 다른 아이템을 누르거나 편집창이 닫혀있으면 편집창 열기
                     setEditingFlight(flight);
                     setShowFlightForm(true);
                   }
@@ -558,11 +552,9 @@ export default function DetailsModal({ planData, selectedItinerary, selectedFlig
                 style={styles.itemCard}
                 onPress={() => {
                   if (editingAccommodation?.id === accommodation.id && showAccommodationForm) {
-                    // 같은 아이템을 다시 누르면 편집창 닫기
                     setShowAccommodationForm(false);
                     setEditingAccommodation(null);
                   } else {
-                    // 다른 아이템을 누르거나 편집창이 닫혀있으면 편집창 열기
                     setEditingAccommodation(accommodation);
                     setShowAccommodationForm(true);
                   }
