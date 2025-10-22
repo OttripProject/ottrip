@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { Platform } from 'react-native';
 import { authApi, TokenResponse, AuthResponse } from '../services/auth';
 import { tokenStores } from '../utils/tokenStores'; // 새로운 토큰 스토어 사용
 
@@ -84,6 +85,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     await clearTokens();
     setIsAuthenticated(false);
     setUser(null);
+    // 웹: 오래된 redirect 제거 및 로그인 경로로 변경하여 재로그인 시 의도치 않은 복귀 방지
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      try { window.localStorage.removeItem('postLoginRedirect'); } catch {}
+      try { window.history.replaceState({}, document.title, '/login'); } catch {}
+    }
   };
 
   // 초기 인증 상태 확인

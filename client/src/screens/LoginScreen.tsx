@@ -48,7 +48,7 @@ export default function LoginScreen() {
         }
       }
 
-      // 구글 id_token 처리
+      // 구글 id_token 처리 (콜백 경로가 아닌 /login으로 돌아온 경우도 대비한 폴백)
       if (hash && hash.includes('id_token=')) {
         const params = new URLSearchParams(hash.substring(1));
         const idToken = params.get('id_token');
@@ -80,7 +80,7 @@ export default function LoginScreen() {
       
       if (Platform.OS === 'web') {
         // 웹용 구글 로그인
-        const redirectUriRaw = `${window.location.origin}`; // 전체 URL 필요(콘솔에 등록해야 함)
+        const redirectUriRaw = `${window.location.origin}/auth/callback`; // 콜백 전용 경로
         const redirectUri = encodeURIComponent(redirectUriRaw);
         const scope = encodeURIComponent('openid email profile');
         const responseType = 'id_token';
@@ -176,6 +176,8 @@ export default function LoginScreen() {
           accessToken: response.accessToken,
           refreshToken: response.refreshToken,
         });
+        // 웹: 네비게이션은 RootNavigator가 postLoginRedirect로 처리하도록 위임
+        // 여기서는 아무 것도 하지 않음(레이스/스택 미존재 오류 방지)
         // 로그인 직후 pending 초대 토큰 자동 처리
         try {
           const token = Platform.OS === 'web'
