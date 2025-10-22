@@ -12,7 +12,7 @@
    - Datetime or numeric fields → null  
 5. Passenger name and reservation number apply to all flights if given once.  
 6. Dates and times must be parsed into ISO 8601 format with timezone if possible.  
-   If timezone cannot be determined, still return as ISO (e.g. `"2019-11-15T16:00:00"`).  
+   If timezone cannot be determined, still return as ISO (e.g. `"2019-11-15T16:00"`).  
 7. Use IATA codes for airports if present (e.g. ICN, SFO). If not available, leave `""`.  
 8. Use full airline name if possible (e.g. "Korean Air"), otherwise use code.  
 9. Output must be **valid JSON**, with no extra commentary.  
@@ -31,8 +31,8 @@
         "flight_number": "string",
         "departure_airport": "string",
         "arrival_airport": "string",
-        "departure_time": "YYYY-MM-DDTHH:MM:SS",
-        "arrival_time": "YYYY-MM-DDTHH:MM:SS",
+        "departure_time": "YYYY-MM-DDTHH:MM",
+        "arrival_time": "YYYY-MM-DDTHH:MM",
         "seat_class": "string",
         "seat_number": "string"
       }

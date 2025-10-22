@@ -21,9 +21,14 @@ class Flight(Base):
         autoincrement=True,
     )
 
-    reservation_number: Mapped[str]
+    reservation_number: Mapped[str] = mapped_column(nullable=False)
+    # pnr
 
-    passenger_name: Mapped[str]
+    passenger_name: Mapped[str] = mapped_column(nullable=False)
+
+    ticket_number: Mapped[str] = mapped_column(nullable=True)
+    
+    booking_reference: Mapped[str] = mapped_column(nullable=True)
 
     plan_id: Mapped[int] = mapped_column(
         Integer,
@@ -60,13 +65,13 @@ class FlightSegment(Base):
     
     order: Mapped[int]
 
-    airline: Mapped[str]
+    airline: Mapped[str] = mapped_column(nullable=False)
 
-    flight_number: Mapped[str]
+    flight_number: Mapped[str] = mapped_column(nullable=False)
 
-    departure_airport: Mapped[str]
+    departure_airport: Mapped[str] = mapped_column(nullable=False)
 
-    arrival_airport: Mapped[str]
+    arrival_airport: Mapped[str] = mapped_column(nullable=False)
 
     departure_time: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False
@@ -79,6 +84,10 @@ class FlightSegment(Base):
     seat_class: Mapped[str] = mapped_column(nullable=True)
 
     seat_number: Mapped[str] = mapped_column(nullable=True)
+
+    gate: Mapped[str] = mapped_column(nullable=True)
+
+    terminal: Mapped[str] = mapped_column(nullable=True)
 
     flight_id: Mapped[int] = mapped_column(
         Integer,

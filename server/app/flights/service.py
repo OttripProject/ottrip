@@ -40,6 +40,8 @@ class FlightService:
         create_flight_data = Flight(
             reservation_number=flight_data.reservation_number,
             passenger_name=flight_data.passenger_name,
+            ticket_number=flight_data.ticket_number or "",
+            booking_reference=flight_data.booking_reference or "",
             plan_id=flight_data.plan_id,
         )
         created_flight = await self.flight_repository.save(flight=create_flight_data)
@@ -58,6 +60,8 @@ class FlightService:
                 arrival_time=seg.arrival_time,
                 seat_class=seg.seat_class or "",
                 seat_number=seg.seat_number or "",
+                gate=seg.gate or "",
+                terminal=seg.terminal or "",
                 order=idx,
             )
             await self.flight_repository.save_segment(segment=segment)
@@ -132,6 +136,10 @@ class FlightService:
             flight.reservation_number = update_data.reservation_number
         if update_data.passenger_name is not None:
             flight.passenger_name = update_data.passenger_name
+        if update_data.ticket_number is not None:
+            flight.ticket_number = update_data.ticket_number
+        if update_data.booking_reference is not None:
+            flight.booking_reference = update_data.booking_reference
 
         first_departure_date = None
         if update_data.segments is not None:
@@ -154,6 +162,8 @@ class FlightService:
                         arrival_time=seg.arrival_time,
                         seat_class=seg.seat_class or "",
                         seat_number=seg.seat_number or "",
+                        gate=seg.gate or "",
+                        terminal=seg.terminal or "",
                         order=0,
                     )
                 )
@@ -250,6 +260,8 @@ class FlightService:
             arrival_time=data.arrival_time,
             seat_class=data.seat_class or "",
             seat_number=data.seat_number or "",
+            gate=data.gate or "",
+            terminal=data.terminal or "",
             order=len(flight.flight_segments) + 1,
         )
         created = await self.flight_repository.save_segment(segment=segment)
@@ -282,6 +294,10 @@ class FlightService:
             seg.seat_class = data.seat_class or ""
         if data.seat_number is not None:
             seg.seat_number = data.seat_number or ""
+        if data.gate is not None:
+            seg.gate = data.gate or ""
+        if data.terminal is not None:
+            seg.terminal = data.terminal or ""
         saved = await self.flight_repository.save_segment(segment=seg)
         return FlightSegmentRead.model_validate(saved)
 
