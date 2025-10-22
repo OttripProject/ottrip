@@ -8,6 +8,8 @@ from app.schemas import APISchema
 class FlightBase(APISchema):
     reservation_number: str
     passenger_name: str
+    ticket_number: str | None = None
+    booking_reference: str | None = None
 
 class FlightCreate(FlightBase):
     plan_id: int
@@ -23,6 +25,8 @@ class FlightRead(FlightBase):
 class FlightUpdate(APISchema):
     reservation_number: str | None = None
     passenger_name: str | None = None
+    ticket_number: str | None = None
+    booking_reference: str | None = None
     expense: ExpenseUpdate | None = None
     segments: list["FlightSegmentBase"] | None = None
 
@@ -36,6 +40,8 @@ class FlightSegmentBase(APISchema):
     arrival_time: datetime
     seat_class: str | None = None
     seat_number: str | None = None
+    gate: str | None = None
+    terminal: str | None = None
 
 class FlightSegmentCreate(FlightSegmentBase):
     flight_id: int
@@ -53,3 +59,5 @@ class FlightSegmentUpdate(APISchema):
     arrival_time: datetime | None = None
     seat_class: str | None = None
     seat_number: str | None = None
+    gate: str | None = None
+    terminal: str | None = None
