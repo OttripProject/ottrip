@@ -252,7 +252,7 @@ export default function FlightItem({
           
           <View style={styles.row}>
             <View style={[styles.inputGroup, styles.halfWidth]}>
-              <Text style={styles.label}>항공사</Text>
+              <Text style={styles.label}>항공사 *</Text>
               <TextInput
                 style={styles.input}
                 placeholder="오티항공"
@@ -265,7 +265,7 @@ export default function FlightItem({
               />
             </View>
             <View style={[styles.inputGroup, styles.halfWidth]}>
-              <Text style={styles.label}>항공편 번호</Text>
+              <Text style={styles.label}>항공편 번호 *</Text>
               <TextInput
                 style={styles.input}
                 placeholder="EY0827"
@@ -281,7 +281,7 @@ export default function FlightItem({
 
           <View style={styles.row}>
             <View style={[styles.inputGroup, styles.halfWidth]}>
-              <Text style={styles.label}>출발 공항</Text>
+              <Text style={styles.label}>출발 공항 *</Text>
               <TextInput
                 style={styles.input}
                 placeholder="인천"
@@ -294,7 +294,7 @@ export default function FlightItem({
               />
             </View>
             <View style={[styles.inputGroup, styles.halfWidth]}>
-              <Text style={styles.label}>도착 공항</Text>
+              <Text style={styles.label}>도착 공항 *</Text>
               <TextInput
                 style={styles.input}
                 placeholder="런던"
@@ -310,7 +310,7 @@ export default function FlightItem({
 
           <View style={styles.row}>
             <View style={[styles.inputGroup, styles.halfWidth]}>
-              <Text style={styles.label}>출발 시간</Text>
+              <Text style={styles.label}>출발 시간 *</Text>
               <DateTimePicker
                 value={segment.departure_time}
                 onChange={(datetime) => {
@@ -321,7 +321,7 @@ export default function FlightItem({
               />
             </View>
             <View style={[styles.inputGroup, styles.halfWidth]}>
-              <Text style={styles.label}>도착 시간</Text>
+              <Text style={styles.label}>도착 시간 *</Text>
               <DateTimePicker
                 value={segment.arrival_time}
                 onChange={(datetime) => {
@@ -364,19 +364,6 @@ export default function FlightItem({
 
           <View style={styles.row}>
             <View style={[styles.inputGroup, styles.halfWidth]}>
-              <Text style={styles.label}>게이트</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="12"
-                value={segment.gate || ''}
-                onChangeText={(text) => {
-                  const newSegments = [...flightSegments];
-                  newSegments[idx].gate = text;
-                  setFlightSegments(newSegments);
-                }}
-              />
-            </View>
-            <View style={[styles.inputGroup, styles.halfWidth]}>
               <Text style={styles.label}>터미널</Text>
               <TextInput
                 style={styles.input}
@@ -385,6 +372,19 @@ export default function FlightItem({
                 onChangeText={(text) => {
                   const newSegments = [...flightSegments];
                   newSegments[idx].terminal = text;
+                  setFlightSegments(newSegments);
+                }}
+              />
+            </View>
+            <View style={[styles.inputGroup, styles.halfWidth]}>
+              <Text style={styles.label}>게이트</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="G12"
+                value={segment.gate || ''}
+                onChangeText={(text) => {
+                  const newSegments = [...flightSegments];
+                  newSegments[idx].gate = text;
                   setFlightSegments(newSegments);
                 }}
               />
