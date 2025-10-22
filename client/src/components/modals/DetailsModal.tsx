@@ -366,16 +366,16 @@ export default function DetailsModal({ planData, selectedItinerary, selectedFlig
                           <Text style={styles.detailValue}>{segment.seatNumber}</Text>
                         </View>
                       ) : null}
-                      {segment.gate ? (
-                        <View style={styles.detailRow}>
-                          <Text style={styles.detailLabel}>게이트</Text>
-                          <Text style={styles.detailValue}>{segment.gate}</Text>
-                        </View>
-                      ) : null}
                       {segment.terminal ? (
                         <View style={styles.detailRow}>
                           <Text style={styles.detailLabel}>터미널</Text>
                           <Text style={styles.detailValue}>{segment.terminal}</Text>
+                        </View>
+                      ) : null}                      
+                      {segment.gate ? (
+                        <View style={styles.detailRow}>
+                          <Text style={styles.detailLabel}>게이트</Text>
+                          <Text style={styles.detailValue}>{segment.gate}</Text>
                         </View>
                       ) : null}
                     </View>
