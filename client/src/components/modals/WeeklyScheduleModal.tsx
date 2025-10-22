@@ -52,38 +52,37 @@ function toEvent(it: Itinerary): any {
   return event;
 }
 
-function toFlightEvent(flight: any): any {
-  // 항공편의 첫 번째 구간의 출발 시간을 기준으로 이벤트 생성
+function toFlightEvents(flight: any): any[] {
+  // 항공편의 모든 구간을 개별 이벤트로 생성
   if (!flight.flightSegments || flight.flightSegments.length === 0) {
-    return null;
+    return [];
   }
-  
-  const firstSegment = flight.flightSegments[0];
-  const departureTime = dayjs(firstSegment.departureTime);
-  const arrivalTime = dayjs(firstSegment.arrivalTime);
   
   // 시간 정규화 (초가 있으면 제거)
   const normalizeTime = (time: string) => {
     return time.split(':').slice(0, 2).join(':');
   };
-  
-  const normalizedStartTime = normalizeTime(departureTime.format('HH:mm'));
-  const normalizedEndTime = normalizeTime(arrivalTime.format('HH:mm'));
-  
-  const event = {
-    id: `flight-${flight.id}`,
-    title: `✈️ ${firstSegment.departureAirport} → ${firstSegment.arrivalAirport}`,
-    start: departureTime.toDate(),
-    end: arrivalTime.toDate(),
-    color: '#ff6b35', // 항공편 전용 색상 (주황색)
-    type: 'flight',
-    originalData: flight,
-    // 시간 정보 추가
-    normalizedStartTime,
-    normalizedEndTime,
-  } as any;
-  
-  return event;
+
+  return flight.flightSegments.map((segment: any, index: number) => {
+    const departureTime = dayjs(segment.departureTime);
+    const arrivalTime = dayjs(segment.arrivalTime);
+
+    const normalizedStartTime = normalizeTime(departureTime.format('HH:mm'));
+    const normalizedEndTime = normalizeTime(arrivalTime.format('HH:mm'));
+
+    return {
+      id: `flight-${flight.id}-${segment.id ?? index + 1}`,
+      title: `✈️ ${segment.departureAirport} → ${segment.arrivalAirport}`,
+      start: departureTime.toDate(),
+      end: arrivalTime.toDate(),
+      color: '#ff6b35', // 항공편 전용 색상 (주황색)
+      type: 'flight',
+      originalData: flight,
+      // 시간 정보 추가
+      normalizedStartTime,
+      normalizedEndTime,
+    } as any;
+  });
 }
 
 interface Props {
@@ -251,7 +250,7 @@ export default function WeeklyScheduleModal({ itineraries, flights = [], height 
     
     const events = useMemo(() => {
       const itineraryEvents = finalItineraries.map(toEvent);
-      const flightEvents = flights.map(toFlightEvent).filter(Boolean);
+      const flightEvents = flights.flatMap(toFlightEvents);
       return [...itineraryEvents, ...flightEvents];
     }, [itineraries, flights]);
 
