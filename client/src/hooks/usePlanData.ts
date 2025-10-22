@@ -31,17 +31,24 @@ export const usePlanData = (planId: number | null) => {
     setIsLoading(true);
     setError(null);
     setErrorStatus(null);
-    
-    try {      
-      // 모든 API 호출을 병렬로 실행
-      const [plan, itineraries, flights, accommodations, expenses] = await Promise.all([
-        plansApi.getPlan(id),
+
+    try {
+      // 1) 플랜 존재/권한 먼저 확인
+      const plan = await plansApi.getPlan(id);
+
+      // 2) 부가 데이터 병렬 로딩(개별 실패는 빈 배열 처리)
+      const [itRes, flRes, accRes, exRes] = await Promise.allSettled([
         itinerariesApi.getItineraries(id),
         flightsApi.getFlightsByPlan(id),
         accommodationsApi.getAccommodations(id),
         expensesApi.getExpenses(id),
       ]);
-      
+
+      const itineraries = itRes.status === 'fulfilled' ? itRes.value : [];
+      const flights = flRes.status === 'fulfilled' ? flRes.value : [];
+      const accommodations = accRes.status === 'fulfilled' ? accRes.value : [];
+      const expenses = exRes.status === 'fulfilled' ? exRes.value : [];
+
       setPlanData({
         plan,
         itineraries,
@@ -50,7 +57,8 @@ export const usePlanData = (planId: number | null) => {
         expenses,
       });
     } catch (err: any) {
-      setError(err.response?.data?.detail || err.message || 'Failed to fetch plan data');
+      // 플랜 자체 조회 실패(404/403 등)만 화면에 반영
+      setError(err?.response?.data?.detail || err?.message || 'Failed to fetch plan data');
       setErrorStatus(typeof err?.response?.status === 'number' ? err.response.status : null);
     } finally {
       setIsLoading(false);
