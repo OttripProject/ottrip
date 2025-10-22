@@ -298,9 +298,21 @@ export default function DetailsModal({ planData, selectedItinerary, selectedFlig
           {type === 'flight' && (
             <>
               <View style={styles.detailRow}>
-                <Text style={styles.detailLabel}>예약번호</Text>
+                <Text style={styles.detailLabel}>예약번호(PNR)</Text>
                 <Text style={styles.detailValue}>{item.reservationNumber}</Text>
               </View>
+              {item.ticketNumber ? (
+                <View style={styles.detailRow}>
+                  <Text style={styles.detailLabel}>항공권 번호</Text>
+                  <Text style={styles.detailValue}>{item.ticketNumber}</Text>
+                </View>
+              ) : null}
+              {item.bookingReference ? (
+                <View style={styles.detailRow}>
+                  <Text style={styles.detailLabel}>예약번호(여행사 예약번호)</Text>
+                  <Text style={styles.detailValue}>{item.bookingReference}</Text>
+                </View>
+              ) : null}
               {item.expense && (
                 <>
                   <View style={styles.detailRow}>
@@ -342,14 +354,30 @@ export default function DetailsModal({ planData, selectedItinerary, selectedFlig
                         <Text style={styles.detailLabel}>도착 시간</Text>
                         <Text style={styles.detailValue}>{dayjs(segment.arrivalTime).format('YYYY년 M월 D일 HH:mm')}</Text>
                       </View>
-                      <View style={styles.detailRow}>
-                        <Text style={styles.detailLabel}>좌석 등급</Text>
-                        <Text style={styles.detailValue}>{segment.seatClass}</Text>
-                      </View>
-                      <View style={styles.detailRow}>
-                        <Text style={styles.detailLabel}>좌석 번호</Text>
-                        <Text style={styles.detailValue}>{segment.seatNumber}</Text>
-                      </View>
+                      {segment.seatClass ? (
+                        <View style={styles.detailRow}>
+                          <Text style={styles.detailLabel}>좌석 등급</Text>
+                          <Text style={styles.detailValue}>{segment.seatClass}</Text>
+                        </View>
+                      ) : null}
+                      {segment.seatNumber ? (
+                        <View style={styles.detailRow}>
+                          <Text style={styles.detailLabel}>좌석 번호</Text>
+                          <Text style={styles.detailValue}>{segment.seatNumber}</Text>
+                        </View>
+                      ) : null}
+                      {segment.gate ? (
+                        <View style={styles.detailRow}>
+                          <Text style={styles.detailLabel}>게이트</Text>
+                          <Text style={styles.detailValue}>{segment.gate}</Text>
+                        </View>
+                      ) : null}
+                      {segment.terminal ? (
+                        <View style={styles.detailRow}>
+                          <Text style={styles.detailLabel}>터미널</Text>
+                          <Text style={styles.detailValue}>{segment.terminal}</Text>
+                        </View>
+                      ) : null}
                     </View>
                   ))}
                 </>

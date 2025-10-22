@@ -23,6 +23,8 @@ export default function FlightItem({
   const [formData, setFormData] = useState({
     reservation_number: flight?.reservationNumber || flight?.reservation_number || '',
     passenger_name: flight?.passengerName || flight?.passenger_name || '',
+    ticket_number: flight?.ticketNumber || flight?.ticket_number || '',
+    booking_reference: flight?.bookingReference || flight?.booking_reference || '',
   });
 
   const [expenseData, setExpenseData] = useState({
@@ -40,6 +42,8 @@ export default function FlightItem({
     arrival_time: string;   // 'YYYY-MM-DD HH:mm'
     seat_class?: string;
     seat_number?: string;
+    gate?: string;
+    terminal?: string;
   };
 
   const [flightSegments, setFlightSegments] = useState<SegmentForm[]>(() => {
@@ -54,6 +58,8 @@ export default function FlightItem({
         arrival_time: segment.arrivalTime ? dayjs(segment.arrivalTime).format('YYYY-MM-DD HH:mm') : dayjs().add(1, 'hour').format('YYYY-MM-DD HH:mm'),
         seat_class: segment.seatClass || '',
         seat_number: segment.seatNumber || '',
+        gate: segment.gate || '',
+        terminal: segment.terminal || '',
       }));
     } else {
       // 새 항공편: 기본값
@@ -66,6 +72,8 @@ export default function FlightItem({
         arrival_time: dayjs().add(1, 'hour').format('YYYY-MM-DD HH:mm'),
         seat_class: '',
         seat_number: '',
+        gate: '',
+        terminal: '',
       }];
     }
   });
@@ -96,6 +104,8 @@ export default function FlightItem({
         savedFlight = await flightsApi.updateFlight(flight.id, {
           reservationNumber: formData.reservation_number,
           passengerName: formData.passenger_name,
+          ticketNumber: formData.ticket_number || null,
+          bookingReference: formData.booking_reference || null,
           segments: flightSegments.map(s => ({
             airline: s.airline,
             flightNumber: s.flight_number,
@@ -105,6 +115,8 @@ export default function FlightItem({
             arrivalTime: toIso(s.arrival_time),
             seatClass: s.seat_class || null,
             seatNumber: s.seat_number || null,
+            gate: s.gate || null,
+            terminal: s.terminal || null,
           })),
           expense: {
             exDate: flightSegments[0].departure_time.split(' ')[0],
@@ -121,6 +133,8 @@ export default function FlightItem({
           planId: planId,
           reservationNumber: formData.reservation_number,
           passengerName: formData.passenger_name,
+          ticketNumber: formData.ticket_number || null,
+          bookingReference: formData.booking_reference || null,
           segments: flightSegments.map(s => ({
             airline: s.airline,
             flightNumber: s.flight_number,
@@ -130,6 +144,8 @@ export default function FlightItem({
             arrivalTime: toIso(s.arrival_time),
             seatClass: s.seat_class || null,
             seatNumber: s.seat_number || null,
+            gate: s.gate || null,
+            terminal: s.terminal || null,
           })),
           expense: {
             exDate: flightSegments[0].departure_time.split(' ')[0],
@@ -168,10 +184,10 @@ export default function FlightItem({
       
       <View style={styles.row}>
         <View style={[styles.inputGroup, styles.halfWidth]}>
-          <Text style={styles.label}>예약번호 *</Text>
+          <Text style={styles.label}>예약번호(PNR) *</Text>
           <TextInput
             style={styles.input}
-            placeholder="예약번호"
+            placeholder="F8SKRQ"
             value={formData.reservation_number}
             onChangeText={(text) => setFormData({ ...formData, reservation_number: text })}
           />
@@ -180,9 +196,30 @@ export default function FlightItem({
           <Text style={styles.label}>승객명 *</Text>
           <TextInput
             style={styles.input}
-            placeholder="승객명"
+            placeholder="김오티"
             value={formData.passenger_name}
             onChangeText={(text) => setFormData({ ...formData, passenger_name: text })}
+          />
+        </View>
+      </View>
+
+      <View style={styles.row}>
+        <View style={[styles.inputGroup, styles.halfWidth]}>
+          <Text style={styles.label}>항공권 번호</Text>
+          <TextInput
+            style={styles.input}
+            placeholder=""
+            value={formData.ticket_number}
+            onChangeText={(text) => setFormData({ ...formData, ticket_number: text })}
+          />
+        </View>
+        <View style={[styles.inputGroup, styles.halfWidth]}>
+          <Text style={styles.label}>예약번호(여행사 예약번호)</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="1234-5678"
+            value={formData.booking_reference}
+            onChangeText={(text) => setFormData({ ...formData, booking_reference: text })}
           />
         </View>
       </View>
@@ -218,7 +255,7 @@ export default function FlightItem({
               <Text style={styles.label}>항공사</Text>
               <TextInput
                 style={styles.input}
-                placeholder="항공사"
+                placeholder="오티항공"
                 value={segment.airline}
                 onChangeText={(text) => {
                   const newSegments = [...flightSegments];
@@ -231,7 +268,7 @@ export default function FlightItem({
               <Text style={styles.label}>항공편 번호</Text>
               <TextInput
                 style={styles.input}
-                placeholder="항공편 번호"
+                placeholder="EY0827"
                 value={segment.flight_number}
                 onChangeText={(text) => {
                   const newSegments = [...flightSegments];
@@ -247,7 +284,7 @@ export default function FlightItem({
               <Text style={styles.label}>출발 공항</Text>
               <TextInput
                 style={styles.input}
-                placeholder="출발 공항"
+                placeholder="인천"
                 value={segment.departure_airport}
                 onChangeText={(text) => {
                   const newSegments = [...flightSegments];
@@ -260,7 +297,7 @@ export default function FlightItem({
               <Text style={styles.label}>도착 공항</Text>
               <TextInput
                 style={styles.input}
-                placeholder="도착 공항"
+                placeholder="런던"
                 value={segment.arrival_airport}
                 onChangeText={(text) => {
                   const newSegments = [...flightSegments];
@@ -325,6 +362,35 @@ export default function FlightItem({
             </View>
           </View>
 
+          <View style={styles.row}>
+            <View style={[styles.inputGroup, styles.halfWidth]}>
+              <Text style={styles.label}>게이트</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="12"
+                value={segment.gate || ''}
+                onChangeText={(text) => {
+                  const newSegments = [...flightSegments];
+                  newSegments[idx].gate = text;
+                  setFlightSegments(newSegments);
+                }}
+              />
+            </View>
+            <View style={[styles.inputGroup, styles.halfWidth]}>
+              <Text style={styles.label}>터미널</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="T1"
+                value={segment.terminal || ''}
+                onChangeText={(text) => {
+                  const newSegments = [...flightSegments];
+                  newSegments[idx].terminal = text;
+                  setFlightSegments(newSegments);
+                }}
+              />
+            </View>
+          </View>
+
           {flightSegments.length > 1 && (
             <View style={styles.segmentActions}>
               <Pressable
@@ -352,6 +418,8 @@ export default function FlightItem({
             arrival_time: dayjs().add(1, 'hour').format('YYYY-MM-DD HH:mm'),
             seat_class: '',
             seat_number: '',
+            gate: '',
+            terminal: '',
           }]);
         }}
       >
