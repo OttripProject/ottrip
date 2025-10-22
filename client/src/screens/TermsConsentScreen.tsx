@@ -27,7 +27,7 @@ export default function TermsConsentScreen() {
         <Text style={styles.title}>Ottrip 계정 서비스 약관에 동의해주세요</Text>
         <Pressable 
           style={styles.closeButton} 
-          onPress={() => navigation.navigate('OTTRIP LOGIN')}
+          onPress={() => navigation.navigate('로그인')}
         >
           <Text style={styles.closeButtonText}>✕</Text>
         </Pressable>
@@ -39,7 +39,7 @@ export default function TermsConsentScreen() {
             <View style={[styles.checkbox, agree1 && styles.checkboxOn]} />
             <Text style={styles.label}>[필수] 서비스 이용약관 동의</Text>
           </Pressable>
-          <Pressable onPress={() => navigation.navigate('TERMS_DETAIL', { key: 'tos' })}>
+          <Pressable onPress={() => navigation.navigate('상세내용', { key: 'tos' })}>
             <Text style={styles.chevron}>{'>'}</Text>
           </Pressable>
         </View>
@@ -48,7 +48,7 @@ export default function TermsConsentScreen() {
             <View style={[styles.checkbox, agree2 && styles.checkboxOn]} />
             <Text style={styles.label}>[필수] 개인정보수집 및 이용</Text>
           </Pressable>
-          <Pressable onPress={() => navigation.navigate('TERMS_DETAIL', { key: 'privacy' })}>
+          <Pressable onPress={() => navigation.navigate('상세내용', { key: 'privacy' })}>
             <Text style={styles.chevron}>{'>'}</Text>
           </Pressable>
         </View>
@@ -57,7 +57,7 @@ export default function TermsConsentScreen() {
             <View style={[styles.checkbox, agree3 && styles.checkboxOn]} />
             <Text style={styles.label}>[선택] 이벤트*혜택 정보 수신 및 활용 동의</Text>
           </Pressable>
-          <Pressable onPress={() => navigation.navigate('TERMS_DETAIL', { key: 'marketing' })}>
+          <Pressable onPress={() => navigation.navigate('상세내용', { key: 'marketing' })}>
             <Text style={styles.chevron}>{'>'}</Text>
           </Pressable>
         </View>
@@ -67,7 +67,7 @@ export default function TermsConsentScreen() {
         disabled={!allChecked}
         style={[styles.nextBtn, !allChecked && styles.nextBtnDisabled]}
         onPress={() =>
-          navigation.navigate('REGISTER_PROFILE', {
+          navigation.navigate('프로필 입력', {
             registerToken,
             prefill,
             email,

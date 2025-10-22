@@ -22,12 +22,12 @@ export default function AuthCallbackScreen() {
     const run = async () => {
       if (!idToken) {
         // @ts-ignore
-        navigation.replace('OTTRIP LOGIN');
+        navigation.replace('로그인');
         return;
       }
       try {
         const response = await authApi.googleLogin(idToken);
-        // 이메일 파싱 (REGISTER_TERMS로 전달 용도)
+        // 이메일 파싱 (약관동의로 전달 용도)
         let email: string | undefined = undefined;
         try {
           const [, payload] = idToken.split('.') as [string, string, string];
@@ -44,7 +44,7 @@ export default function AuthCallbackScreen() {
         } else {
           await login(response);
           // @ts-ignore
-          navigation.replace('REGISTER_TERMS', { registerToken: response.registerToken, prefill: response.prefill, email });
+          navigation.replace('약관동의', { registerToken: response.registerToken, prefill: response.prefill, email });
           return;
         }
       } finally {
