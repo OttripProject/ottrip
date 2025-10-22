@@ -195,7 +195,7 @@ export default function LoginScreen() {
         await login(response); // registerToken 저장
         const payload = parseIdToken(accessToken);
         const email = payload?.email ?? '';
-        navigation.navigate('REGISTER_TERMS', {
+        navigation.navigate('약관동의', {
           registerToken: response.registerToken,
           prefill: response.prefill,
           email,

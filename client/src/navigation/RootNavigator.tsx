@@ -65,7 +65,7 @@ export default function RootNavigator() {
         return;
       }
       if (redirect.startsWith('/profile')) {
-        navRef.current?.reset({ index: 0, routes: [{ name: 'PROFILE' }] });
+        navRef.current?.reset({ index: 0, routes: [{ name: '프로필' }] });
         return;
       }
       navRef.current?.reset({ index: 0, routes: [{ name: 'OTTRIP' }] });
@@ -82,14 +82,12 @@ export default function RootNavigator() {
     config: {
       screens: {
         // 비인증 스택
-        "OTTRIP LOGIN": "login",
+        "로그인": "login",
         AUTH_CALLBACK: "auth/callback",
-        // 인증 스택
         OTTRIP: {
           path: "",
         },
-        PROFILE: "profile",
-        // 동일 컴포넌트에 planId 파라미터로 진입
+        프로필: "profile",
         PLAN: {
           path: "plans/:planId",
           parse: {
@@ -109,12 +107,12 @@ export default function RootNavigator() {
 
   return (
     <NavigationContainer linking={linking} ref={navRef}>
-      <Stack.Navigator screenOptions={{ headerShown: false }} initialRouteName={isAuthenticated ? 'OTTRIP' : 'OTTRIP LOGIN'}>
+      <Stack.Navigator screenOptions={{ headerShown: false }} initialRouteName={isAuthenticated ? 'OTTRIP' : '로그인'}>
         {isAuthenticated ? (
           // 인증된 사용자
           <>
             <Stack.Screen name="OTTRIP" component={DashboardScreen} />
-            <Stack.Screen name="PROFILE" component={ProfileScreen} />
+            <Stack.Screen name="프로필" component={ProfileScreen} />
             <Stack.Screen name="INVITE_ACCEPT" component={InviteAcceptScreen} />
             {/* 동일 화면을 경로 기반으로 진입하기 위한 별칭 */}
             <Stack.Screen name="PLAN" component={DashboardScreen} />
@@ -122,10 +120,10 @@ export default function RootNavigator() {
         ) : (
           // 미인증 사용자 + 가입 플로우
           <>
-            <Stack.Screen name="OTTRIP LOGIN" component={LoginScreen} />
-            <Stack.Screen name="REGISTER_TERMS" component={TermsConsentScreen} />
-            <Stack.Screen name="REGISTER_PROFILE" component={RegisterProfileScreen} />
-            <Stack.Screen name="TERMS_DETAIL" component={TermsDetailScreen} />
+            <Stack.Screen name="로그인" component={LoginScreen} />
+            <Stack.Screen name="약관동의" component={TermsConsentScreen} />
+            <Stack.Screen name="프로필 입력" component={RegisterProfileScreen} />
+            <Stack.Screen name="상세내용" component={TermsDetailScreen} />
             <Stack.Screen name="AUTH_CALLBACK" component={AuthCallbackScreen} />
           </>
         )}

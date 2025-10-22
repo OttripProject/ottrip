@@ -29,7 +29,7 @@ export default function InviteAcceptScreen() {
         } catch {}
         // 로그인 화면으로 이동
         // @ts-ignore
-        navigation.navigate('OTTRIP LOGIN');
+        navigation.navigate('로그인');
         setStatus('pending');
         return; // 로그인 후 자동 처리
       }

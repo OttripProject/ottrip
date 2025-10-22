@@ -30,7 +30,7 @@ export default function HeaderModal() {
       }} accessibilityRole="button">
         <Text style={styles.brand}>Ottrip</Text>
       </Pressable>
-      <Pressable onPress={() => { /* @ts-ignore */ navigation.navigate('PROFILE'); }} accessibilityRole="button">
+      <Pressable onPress={() => { /* @ts-ignore */ navigation.navigate('프로필'); }} accessibilityRole="button">
         <Text style={styles.user}>{profile?.nickname ?? '프로필'}</Text>
       </Pressable>
     </View>
