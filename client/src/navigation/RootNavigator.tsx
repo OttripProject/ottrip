@@ -83,7 +83,7 @@ export default function RootNavigator() {
       screens: {
         // 비인증 스택
         "로그인": "login",
-        AUTH_CALLBACK: "auth/callback",
+        인증: "auth/callback",
         OTTRIP: {
           path: "",
         },
@@ -124,7 +124,7 @@ export default function RootNavigator() {
             <Stack.Screen name="약관동의" component={TermsConsentScreen} />
             <Stack.Screen name="프로필 입력" component={RegisterProfileScreen} />
             <Stack.Screen name="상세내용" component={TermsDetailScreen} />
-            <Stack.Screen name="AUTH_CALLBACK" component={AuthCallbackScreen} />
+            <Stack.Screen name="인증" component={AuthCallbackScreen} />
           </>
         )}
       </Stack.Navigator>
