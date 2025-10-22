@@ -67,16 +67,18 @@ export interface UpdateItineraryRequest {
 }
 
 // 항공 (Flight) 관련 타입
-// 신규 다구간 Flight 스키마 (ticket 용어 미사용)
+// 신규 다구간 Flight 스키마
 export interface FlightSegmentBaseDto {
   airline: string;
   flightNumber: string;
   departureAirport: string;
   arrivalAirport: string;
-  departureTime: string; // ISO datetime
-  arrivalTime: string;   // ISO datetime
+  departureTime: string;
+  arrivalTime: string;   
   seatClass?: string | null;
   seatNumber?: string | null;
+  gate?: string | null;
+  terminal?: string | null;
 }
 
 export interface FlightSegmentReadDto extends FlightSegmentBaseDto {
@@ -88,7 +90,9 @@ export interface FlightCreateRequest {
   planId: number;
   reservationNumber: string;
   passengerName: string;
-  segments: FlightSegmentBaseDto[]; // 최소 1개
+  ticketNumber?: string;
+  bookingReference?: string;
+  segments: FlightSegmentBaseDto[]; 
   expense?: {
     exDate?: string; // 서버에서 첫 출발일을 기본 사용
     amount: number;
@@ -100,6 +104,8 @@ export interface FlightCreateRequest {
 export interface FlightUpdateRequest {
   reservationNumber?: string;
   passengerName?: string;
+  ticketNumber?: string;
+  bookingReference?: string;
   segments?: FlightSegmentBaseDto[]; // 주어지면 replace-all
   expense?: {
     exDate?: string;
@@ -114,6 +120,8 @@ export interface FlightRead {
   planId: number;
   reservationNumber: string;
   passengerName: string;
+  ticketNumber: string;
+  bookingReference: string;
   expense?: Expense;
   flightSegments?: FlightSegmentReadDto[]; // to_camel 직렬화
 }
