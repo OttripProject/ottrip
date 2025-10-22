@@ -1,6 +1,6 @@
 import { useIsWideScreen } from "@/hooks/useIsWideScreen";
-import { View, StyleSheet, Alert, Platform, useWindowDimensions, ScrollView } from "react-native";
-import { useNavigation } from "@react-navigation/native";
+import { View, StyleSheet, Alert, Platform, useWindowDimensions, ScrollView, Text, Pressable } from "react-native";
+import { useNavigation, useRoute } from "@react-navigation/native";
 import { useEffect, useState, useCallback } from "react";
 import api from "@/services/api";
 import { usePlanData } from "@/hooks/usePlanData";
@@ -16,6 +16,7 @@ export default function DashboardScreen() {
   const isWide = useIsWideScreen();
   const { width } = useWindowDimensions();
   const navigation = useNavigation();
+  const route = useRoute<any>();
   const [selectedPlanId, setSelectedPlanId] = useState<number | null>(null);
   const [selectedItinerary, setSelectedItinerary] = useState<any>(null);
   const [selectedFlight, setSelectedFlight] = useState<any>(null);
@@ -40,6 +41,14 @@ export default function DashboardScreen() {
   
   // 선택된 Plan의 데이터 로딩
   const planData = usePlanData(selectedPlanId);
+
+  // URL 경로(/plans/:planId)로 진입 시 선택 플랜 반영
+  useEffect(() => {
+    const paramPlanId = route?.params?.planId;
+    if (typeof paramPlanId === 'number' && Number.isFinite(paramPlanId)) {
+      setSelectedPlanId(paramPlanId);
+    }
+  }, [route?.params]);
 
 
   // planData가 업데이트될 때 선택된 아이템도 업데이트
@@ -192,6 +201,46 @@ export default function DashboardScreen() {
   }, []);
 
   
+  // 권한/존재 오류 처리 (플랜 URL로 진입했을 때 가드 화면)
+  if (selectedPlanId && !planData.isLoading && planData.errorStatus) {
+    if (planData.errorStatus === 403) {
+      return (
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#fff', padding: 24 }}>
+          <Text style={{ fontSize: 20, fontWeight: '700', color: '#4b5563', marginBottom: 12 }}>해당 여행 일정의 권한이 없어요.</Text>
+          <Text style={{ fontSize: 16, color: '#6b7280', textAlign: 'center', marginBottom: 24 }}>권한을 요청해서 여행 일정을 같이 만들어 가보세요!</Text>
+          <Pressable
+            onPress={() => {
+              setSelectedPlanId(null);
+              // @ts-ignore
+              navigation.replace('OTTRIP');
+            }}
+            style={{ paddingVertical: 12, paddingHorizontal: 20, borderWidth: 2, borderColor: '#9ca3af', borderRadius: 8 }}
+          >
+            <Text style={{ fontSize: 18, fontWeight: '800', color: '#374151' }}>OTTRIP 홈으로 이동</Text>
+          </Pressable>
+        </View>
+      );
+    }
+    if (planData.errorStatus === 404) {
+      return (
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#fff', padding: 24 }}>
+          <Text style={{ fontSize: 20, fontWeight: '700', color: '#4b5563', marginBottom: 12 }}>해당 여행 일정을 찾을 수 없어요.</Text>
+          <Text style={{ fontSize: 16, color: '#6b7280', textAlign: 'center', marginBottom: 24 }}>링크가 만료되었거나 삭제되었을 수 있어요.</Text>
+          <Pressable
+            onPress={() => {
+              setSelectedPlanId(null);
+              // @ts-ignore
+              navigation.replace('OTTRIP');
+            }}
+            style={{ paddingVertical: 12, paddingHorizontal: 20, borderWidth: 2, borderColor: '#9ca3af', borderRadius: 8 }}
+          >
+            <Text style={{ fontSize: 18, fontWeight: '800', color: '#374151' }}>OTTRIP 홈으로 이동</Text>
+          </Pressable>
+        </View>
+      );
+    }
+  }
+
   return (
     <ScrollView 
       style={styles.scrollContainer}

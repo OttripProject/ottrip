@@ -24,11 +24,13 @@ export const usePlanData = (planId: number | null) => {
   });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [errorStatus, setErrorStatus] = useState<number | null>(null);
 
   // 특정 Plan의 모든 데이터 로딩
   const fetchPlanData = useCallback(async (id: number) => {
     setIsLoading(true);
     setError(null);
+    setErrorStatus(null);
     
     try {      
       // 모든 API 호출을 병렬로 실행
@@ -49,6 +51,7 @@ export const usePlanData = (planId: number | null) => {
       });
     } catch (err: any) {
       setError(err.response?.data?.detail || err.message || 'Failed to fetch plan data');
+      setErrorStatus(typeof err?.response?.status === 'number' ? err.response.status : null);
     } finally {
       setIsLoading(false);
     }
@@ -67,6 +70,8 @@ export const usePlanData = (planId: number | null) => {
         accommodations: [],
         expenses: [],
       });
+      setError(null);
+      setErrorStatus(null);
     }
   }, [planId, fetchPlanData]);
 
@@ -115,6 +120,7 @@ export const usePlanData = (planId: number | null) => {
     ...planData,
     isLoading,
     error,
+    errorStatus,
     fetchPlanData,
     refreshItineraries,
     refreshFlights,
