@@ -82,25 +82,33 @@ export default function FlightItem({
 
   const [isLoading, setIsLoading] = useState(false);
 
+  const firstSegment = flightSegments[0];
+  const isFirstSegmentValid = Boolean(
+    firstSegment &&
+    firstSegment.airline.trim() &&
+    firstSegment.flight_number.trim() &&
+    firstSegment.departure_airport.trim() &&
+    firstSegment.arrival_airport.trim() &&
+    String(firstSegment.departure_time || '').trim() &&
+    String(firstSegment.arrival_time || '').trim()
+  );
+
   const handleSave = async () => {
-    if (!formData.reservation_number.trim() || !formData.passenger_name.trim()) {
+    if (!formData.reservation_number.trim() || !formData.passenger_name.trim() || !isFirstSegmentValid) {
       return;
     }
 
     setIsLoading(true);
     try {
       let savedFlight;
-      // ISO 문자열 변환 유틸리티 (로컬 타임존 유지)
       const toIso = (dt: string) => {
         if (!dt) return dt;
         const [date, time] = dt.split(' ');
         const timeWithSeconds = (time && time.length === 5) ? `${time}:00` : time;
-        // Z 제거하여 로컬 타임존으로 전송
         return `${date}T${timeWithSeconds}`;
       };
 
       if (flight) {
-        // 편집
         savedFlight = await flightsApi.updateFlight(flight.id, {
           reservationNumber: formData.reservation_number,
           passengerName: formData.passenger_name,
@@ -453,7 +461,12 @@ export default function FlightItem({
         <Pressable
           style={[styles.button, styles.saveButton]}
           onPress={handleSave}
-          disabled={isLoading || !formData.reservation_number.trim() || !formData.passenger_name.trim()}
+          disabled={
+            isLoading ||
+            !formData.reservation_number.trim() ||
+            !formData.passenger_name.trim() ||
+            !isFirstSegmentValid
+          }
         >
           <Text style={styles.saveButtonText}>
             {isLoading ? '저장 중...' : '저장'}
