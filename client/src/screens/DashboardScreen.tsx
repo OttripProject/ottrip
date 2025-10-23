@@ -267,9 +267,13 @@ export default function DashboardScreen() {
         onPlanSelect={(id) => {
           setSelectedPlanId(id);
           if (Platform.OS === 'web') {
-            if (id) navigation.replace('PLAN', { planId: id }); else navigation.replace('OTTRIP');
+            // 웹: navigate로 히스토리를 남겨 뒤로가기로 이전 플랜 보기
+            // @ts-ignore
+            if (id) navigation.navigate('PLAN', { planId: id }); else navigation.navigate('OTTRIP');
           } else {
-            if (id) navigation.replace('PLAN', { planId: id }); else navigation.replace('OTTRIP');
+            // 모바일: 동일하게 navigate 사용
+            // @ts-ignore
+            if (id) navigation.navigate('PLAN', { planId: id }); else navigation.navigate('OTTRIP');
           }
         }}
               onItinerarySelect={setSelectedItinerary}
