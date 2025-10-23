@@ -659,9 +659,10 @@ export default function DetailsModal({ planData, selectedItinerary, selectedFlig
     }
   };
 
+  const isInitial = !activeTab && !selectedItinerary && !selectedFlight && !selectedAccommodation;
+
   return (
     <ModalLayout style={styles.container}>
-      {/* 헤더 */}
       {activeTab && (
         <View style={styles.header}>
           <View style={styles.headerLeft}>
@@ -670,15 +671,16 @@ export default function DetailsModal({ planData, selectedItinerary, selectedFlig
           </View>
         </View>
       )}
-      
-      <ScrollView 
-        style={styles.scrollView} 
-        showsVerticalScrollIndicator={true}
-        contentContainerStyle={styles.scrollContent}
-        bounces={false}
-      >
-        {renderContent()}
-      </ScrollView>
+      <View style={styles.scrollWrapper}>
+        <ScrollView 
+          style={styles.scrollView}
+          contentContainerStyle={isInitial ? [styles.scrollContent, styles.centerScroll] : styles.scrollContent}
+          showsVerticalScrollIndicator
+          bounces={false}
+        >
+          {renderContent()}
+        </ScrollView>
+      </View>
     </ModalLayout>
   );
 }
@@ -686,6 +688,7 @@ export default function DetailsModal({ planData, selectedItinerary, selectedFlig
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    minHeight: 0,
   },
   header: {
     flexDirection: 'row',
@@ -712,6 +715,16 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingBottom: 20,
+  },
+  scrollWrapper: {
+    flex: 1,
+    minHeight: 0,
+    overflow: 'hidden',
+  },
+  centerScroll: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   sectionsContainer: {
     padding: 0,

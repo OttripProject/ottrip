@@ -202,7 +202,7 @@ export default function AIAssistantModal({ planId }: AIAssistantModalProps) {
   const stats = getPreviewStats();
 
   return (
-    <ModalLayout style={styles.container}>
+    <ModalLayout style={{ flex: 1 }}>
       {!planId ? (
         // Plan이 선택되지 않은 상태
         <View style={styles.placeholder}>
@@ -227,7 +227,7 @@ export default function AIAssistantModal({ planId }: AIAssistantModalProps) {
           </TouchableOpacity>
         </View>
       ) : showFullView ? (
-        // 전체보기 상태
+        // 전체보기 상태 (컨테이너 고정, 내부 스크롤)
         <View style={styles.fullViewContainer}>
           <View style={styles.headerSection}>
             <Text style={styles.headerTitle}>AI assistant</Text>
@@ -240,8 +240,8 @@ export default function AIAssistantModal({ planId }: AIAssistantModalProps) {
               </TouchableOpacity>
             </View>
           </View>
-          
-          <ScrollView style={styles.checklistScrollView} showsVerticalScrollIndicator={true}>
+          <View style={styles.scrollWrapper}>
+            <ScrollView style={styles.checklistScrollView} showsVerticalScrollIndicator={true}>
             {checklist && Object.entries(checklist.categories).map(([categoryKey, items]) => (
               <View key={categoryKey} style={styles.categorySection}>
                 <Text style={styles.categoryTitle}>
@@ -275,7 +275,8 @@ export default function AIAssistantModal({ planId }: AIAssistantModalProps) {
                 })}
               </View>
             ))}
-          </ScrollView>
+            </ScrollView>
+          </View>
         </View>
       ) : (
         // 미리보기 상태
@@ -381,6 +382,7 @@ export default function AIAssistantModal({ planId }: AIAssistantModalProps) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    minHeight: 0,
   },
   // 초기 상태 스타일
   initialState: {
@@ -559,10 +561,16 @@ const styles = StyleSheet.create({
   // 전체보기 스타일
   fullViewContainer: {
     flex: 1,
+    minHeight: 0,
   },
   checklistScrollView: {
     flex: 1,
     paddingHorizontal: 16,
+  },
+  scrollWrapper: {
+    flex: 1,
+    minHeight: 0,
+    overflow: 'hidden',
   },
   categorySection: {
     marginBottom: 24,

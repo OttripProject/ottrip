@@ -1,5 +1,4 @@
-import { useIsWideScreen } from "@/hooks/useIsWideScreen";
-import { View, StyleSheet, Alert, Platform, useWindowDimensions, ScrollView, Text, Pressable } from "react-native";
+import { View, StyleSheet, Alert, Platform, useWindowDimensions, Text, Pressable } from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { useEffect, useState, useCallback } from "react";
 import api from "@/services/api";
@@ -13,7 +12,6 @@ import ExpensesModal from "@/components/modals/ExpensesModal";
 import AIAssistantModal from "@/components/modals/AIAssistantModal";
 
 export default function DashboardScreen() {
-  const isWide = useIsWideScreen();
   const { width } = useWindowDimensions();
   const navigation = useNavigation();
   const route = useRoute<any>();
@@ -29,20 +27,25 @@ export default function DashboardScreen() {
     if (width < 768) {
       return { left: 1, right: 0 }; // 모바일: 좌측만
     } else if (width < 1024) {
-      return { left: 0.6, right: 0.4 }; // 태블릿: 60:40
+      return { left: 0.6, right: 0.4 };
     } else if (width < 1440) {
-      return { left: 0.7, right: 0.3 }; // 데스크톱: 70:30
+      return { left: 0.7, right: 0.3 }; 
     } else {
-      return { left: 0.75, right: 0.25 }; // 대형 화면: 75:25
+      return { left: 0.75, right: 0.25 }; 
     }
   };
   
   const ratio = getResponsiveRatio();
+  const headerHeight = 56;
+  const headerMarginBottom = 16; 
+  const verticalPadding = 16 * 2; 
+  const availableHeight = Math.max(360, width ? (typeof window !== 'undefined' ? window.innerHeight : 0) - verticalPadding - headerHeight - headerMarginBottom : 600);
+  const innerGap = 16; 
+  const leftTopHeight = Math.max(240, Math.floor((availableHeight - innerGap) * 0.7));
+  const leftBottomHeight = Math.max(160, (availableHeight - innerGap) - leftTopHeight);
   
-  // 선택된 Plan의 데이터 로딩
   const planData = usePlanData(selectedPlanId);
 
-  // URL 경로(/plans/:planId)로 진입 시 선택 플랜 반영
   useEffect(() => {
     const paramPlanId = route?.params?.planId;
     if (typeof paramPlanId === 'number' && Number.isFinite(paramPlanId)) {
@@ -50,8 +53,16 @@ export default function DashboardScreen() {
     }
   }, [route?.params]);
 
+  // 플랜 변경 시 상세 모달 상태 초기화
+  useEffect(() => {
+    setSelectedItinerary(null);
+    setSelectedFlight(null);
+    setSelectedAccommodation(null);
+    setActiveTab(undefined);
+    setOpenNewFlightForm(false);
+  }, [selectedPlanId]);
 
-  // planData가 업데이트될 때 선택된 아이템도 업데이트
+
   useEffect(() => {
     if (selectedItinerary && planData.itineraries.length > 0) {
       const updatedItinerary = planData.itineraries.find((it: any) => it.id === selectedItinerary.id);
@@ -242,12 +253,8 @@ export default function DashboardScreen() {
   }
 
   return (
-    <ScrollView 
-      style={styles.scrollContainer}
-      contentContainerStyle={styles.container}
-      showsVerticalScrollIndicator={true}
-      bounces={false}
-    >
+    <View style={styles.root}>
+      <View style={styles.container}>
       {/* 1. 헤더 모달 */}
       <View style={styles.headerModal}>
         <HeaderModal />
@@ -256,13 +263,14 @@ export default function DashboardScreen() {
       {/* 메인 레이아웃 */}
       <View style={styles.mainLayout}>
         {/* 좌측 영역 (동적 비율) */}
-        <View style={[styles.leftArea, { flex: ratio.left }]}>
+        <View style={[styles.leftArea, { flex: ratio.left, height: availableHeight }]}>
           {/* 2. 주간 스케줄 모달 (70% 높이) */}
-          <View style={styles.scheduleModal}>
+          <View style={[styles.scheduleModal, { height: leftTopHeight }]}>
       <WeeklyScheduleModal
               itineraries={planData.itineraries}
               flights={planData.flights}
-              height={400}
+              height={leftTopHeight}
+              selectedPlanId={selectedPlanId}
               onItineraryAdd={handleItineraryAdd}
         onPlanSelect={(id) => {
           setSelectedPlanId(id);
@@ -289,7 +297,7 @@ export default function DashboardScreen() {
           </View>
 
           {/* 하단 모달들 (30% 높이) */}
-          <View style={styles.bottomRow}>
+          <View style={[styles.bottomRow, { height: leftBottomHeight }]}>
             {/* 4. 지출 모달 (좌측 하단) */}
             <View style={styles.expensesModal}>
               <ExpensesModal 
@@ -312,7 +320,7 @@ export default function DashboardScreen() {
 
         {/* 우측 영역 (동적 비율) */}
         {ratio.right > 0 && (
-        <View style={[styles.rightArea, { flex: ratio.right }]}>
+        <View style={[styles.rightArea, { flex: ratio.right, height: availableHeight }]}>
           {/* 3. 상세 정보 모달 (전체 높이) */}
           <View style={styles.detailsModal}>
             <DetailsModal 
@@ -332,17 +340,18 @@ export default function DashboardScreen() {
         </View>
         )}
       </View>
-    </ScrollView>
+      </View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  scrollContainer: {
+  root: {
     flex: 1,
     backgroundColor: '#f5f5f5',
   },
   container: {
-    minHeight: '100%',
+    flex: 1,
     padding: 16,
   },
   headerModal: {
@@ -353,24 +362,36 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
     gap: 16,
+    minHeight: 0,
   },
   leftArea: {
     gap: 16,
+    minHeight: 0,
+    flexShrink: 1,
+    overflow: 'hidden',
   },
   rightArea: {
     // flex는 동적으로 설정
+    minHeight: 0,
+    flexShrink: 1,
+    overflow: 'hidden',
   },
   scheduleModal: {
     flex: 0.7, // 70% 높이
-    minHeight: 400,
+    minHeight: 0,
+    overflow: 'hidden',
   },
   bottomRow: {
     flex: 0.3, // 30% 높이
     flexDirection: 'row',
     gap: 16,
+    minHeight: 0,
+    overflow: 'hidden',
   },
   detailsModal: {
     flex: 1,
+    minHeight: 0,
+    overflow: 'hidden',
   },
   expensesModal: {
     flex: 1,

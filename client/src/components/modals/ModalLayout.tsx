@@ -16,10 +16,12 @@ export default function ModalLayout({ children, style }: ModalLayoutProps) {
 
 const styles = StyleSheet.create({
   modal: {
+    flex: 1,
     backgroundColor: '#ffffff',
     borderRadius: 12,
     borderWidth: 1,
     borderColor: '#e5e7eb',
+    overflow: 'hidden',
     shadowColor: '#000',
     shadowOffset: {
       width: 0,

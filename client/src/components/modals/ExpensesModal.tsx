@@ -151,8 +151,9 @@ export default function ExpensesModal({ planData, onExpenseAdd }: ExpensesModalP
   const expensesByCategory = getExpensesByCategory();
 
   return (
-    <ModalLayout style={styles.container}>
-      <ScrollView style={styles.scrollView}>
+    <ModalLayout style={{ flex: 1 }}>
+      <View style={styles.scrollWrapper}>
+        <ScrollView style={styles.scrollView}>
         {/* 헤더 섹션 */}
         <View style={styles.headerSection}>
           <Text style={styles.headerTitle}>Expense List</Text>
@@ -236,7 +237,8 @@ export default function ExpensesModal({ planData, onExpenseAdd }: ExpensesModalP
             </View>
           ))}
         </View>
-      </ScrollView>
+        </ScrollView>
+      </View>
 
       {/* 지출 추가 모달 */}
       <Modal
@@ -335,6 +337,10 @@ export default function ExpensesModal({ planData, onExpenseAdd }: ExpensesModalP
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  scrollWrapper: {
+    flex: 1,
+    minHeight: 0,
   },
   scrollView: {
     flex: 1,
