@@ -213,6 +213,8 @@ export default function FlightItem({
             onChangeText={(text) => setFormData({ ...formData, ticket_number: text })}
           />
         </View>
+      </View>
+      <View style={styles.row}>
         <View style={[styles.inputGroup, styles.halfWidth]}>
           <Text style={styles.label}>예약번호(여행사 예약번호)</Text>
           <TextInput
