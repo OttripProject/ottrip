@@ -259,12 +259,19 @@ export default function DashboardScreen() {
         <View style={[styles.leftArea, { flex: ratio.left }]}>
           {/* 2. 주간 스케줄 모달 (70% 높이) */}
           <View style={styles.scheduleModal}>
-            <WeeklyScheduleModal
+      <WeeklyScheduleModal
               itineraries={planData.itineraries}
               flights={planData.flights}
               height={400}
               onItineraryAdd={handleItineraryAdd}
-              onPlanSelect={setSelectedPlanId}
+        onPlanSelect={(id) => {
+          setSelectedPlanId(id);
+          if (Platform.OS === 'web') {
+            if (id) navigation.replace('PLAN', { planId: id }); else navigation.replace('OTTRIP');
+          } else {
+            if (id) navigation.replace('PLAN', { planId: id }); else navigation.replace('OTTRIP');
+          }
+        }}
               onItinerarySelect={setSelectedItinerary}
               onFlightAdd={handleFlightAdd}
               onShowItineraryModal={handleShowItineraryModal}
