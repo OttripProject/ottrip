@@ -100,9 +100,10 @@ interface Props {
   onShowItineraryDetail?: (itinerary: Itinerary) => void;
   onShowFlightDetail?: (flight: any) => void;
   onShowAccommodationDetail?: (accommodation: any) => void;
+  selectedPlanId?: number | null; // 외부(대시보드/URL)에서 받은 선택 동기화용
 }
 
-export default function WeeklyScheduleModal({ itineraries, flights = [], height = 600, onItineraryAdd, onPlanSelect, onItinerarySelect, onFlightAdd, onShowItineraryModal, onShowFlightModal, onRequestNewFlight, onShowAccommodationModal, onShowItineraryDetail, onShowFlightDetail, onShowAccommodationDetail }: Props) {
+export default function WeeklyScheduleModal({ itineraries, flights = [], height = 600, onItineraryAdd, onPlanSelect, onItinerarySelect, onFlightAdd, onShowItineraryModal, onShowFlightModal, onRequestNewFlight, onShowAccommodationModal, onShowItineraryDetail, onShowFlightDetail, onShowAccommodationDetail, selectedPlanId }: Props) {
     const [currentWeekStart, setCurrentWeekStart] = useState(
         dayjs().startOf('week').add(1, 'day') // 월요일 시작
         );
@@ -134,8 +135,24 @@ export default function WeeklyScheduleModal({ itineraries, flights = [], height 
     })), [plans]);
 
     // 선택된 Plan의 데이터 로딩
-    const selectedPlanId = selectedTrip ? parseInt(selectedTrip.id) : null;
-    const planData = usePlanData(selectedPlanId);
+    const internalSelectedPlanId = selectedTrip ? parseInt(selectedTrip.id) : null;
+    const planData = usePlanData(internalSelectedPlanId);
+
+    // 외부 selectedPlanId가 주어지면 TripSelector 선택과 동기화
+    useEffect(() => {
+      if (!selectedPlanId) return;
+      const plan = plans.find(p => p.id === selectedPlanId);
+      if (!plan) return;
+      const nextTrip = {
+        id: String(plan.id),
+        name: plan.title,
+        startDate: plan.startDate,
+        endDate: plan.endDate,
+      } as any;
+      if (!selectedTrip || selectedTrip.id !== String(plan.id)) {
+        setSelectedTrip(nextTrip);
+      }
+    }, [selectedPlanId, plans, selectedTrip]);
 
     const myRole = useMemo(() => {
       const r = (planData.plan as any)?.myRole;
@@ -380,10 +397,11 @@ export default function WeeklyScheduleModal({ itineraries, flights = [], height 
       )}
 
       {/* 캘린더 */}
-      <BigCalendar
+      <View style={styles.calendarWrapper}>
+        <BigCalendar
         mode="week"
         events={events}
-        height={height - 50} // 헤더 높이만큼 빼기
+        height={height - 50}
         date={currentWeekStart.toDate()}
         hourRowHeight={80}
         weekStartsOn={1}
@@ -443,6 +461,7 @@ export default function WeeklyScheduleModal({ itineraries, flights = [], height 
           );
         }}
       />
+      </View>
 
       {/* 월별 달력 모달 */}
       <Modal visible={showMonthPicker} transparent animationType="fade" onRequestClose={() => setShowMonthPicker(false)}>
@@ -537,6 +556,11 @@ export default function WeeklyScheduleModal({ itineraries, flights = [], height 
 const styles = StyleSheet.create({
     container: {
       flex: 1,
+      minHeight: 0,
+    },
+    calendarWrapper: {
+      flex: 1,
+      minHeight: 0,
     },
     customHeader: {
       flexDirection: 'row',

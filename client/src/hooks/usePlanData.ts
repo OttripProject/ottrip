@@ -26,17 +26,14 @@ export const usePlanData = (planId: number | null) => {
   const [error, setError] = useState<string | null>(null);
   const [errorStatus, setErrorStatus] = useState<number | null>(null);
 
-  // 특정 Plan의 모든 데이터 로딩
   const fetchPlanData = useCallback(async (id: number) => {
     setIsLoading(true);
     setError(null);
     setErrorStatus(null);
 
     try {
-      // 1) 플랜 존재/권한 먼저 확인
       const plan = await plansApi.getPlan(id);
 
-      // 2) 부가 데이터 병렬 로딩(개별 실패는 빈 배열 처리)
       const [itRes, flRes, accRes, exRes] = await Promise.allSettled([
         itinerariesApi.getItineraries(id),
         flightsApi.getFlightsByPlan(id),
