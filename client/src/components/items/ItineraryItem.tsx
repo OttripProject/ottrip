@@ -1,9 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { View, Text, Pressable, StyleSheet, TextInput, Alert } from 'react-native';
-import DatePicker from '@/components/DatePicker';
-import TimePicker from '@/components/TimePicker';
-import DropDownPicker from 'react-native-dropdown-picker';
-import { getKoreanCountryOptions, codeToKoreanName } from '@/utils/countryListKo';
+import { View, Text, Pressable, StyleSheet, Alert } from 'react-native';
+import { DatePicker, TimePicker, CountryPicker, CategoryPicker } from '@/ui/components/pickers';
+import Input from '@/ui/components/input/Input';
+import { PLACEHOLDERS } from '@/constants/placeholders';
 import dayjs from 'dayjs';
 import { itinerariesApi } from '@/services/itineraries';
 import { expensesApi } from '@/services/expenses';
@@ -40,15 +39,7 @@ export default function ItineraryItem({
   });
 
   // 국가 드롭다운 상태 및 옵션 (ISO 3166 → 한국어 라벨)
-  const countryOptions = useMemo(() => getKoreanCountryOptions(), []);
   const [countryOpen, setCountryOpen] = useState(false);
-  const [countryCode, setCountryCode] = useState<string | null>(null);
-
-  // formData.country(이름) → 코드 동기화
-  useEffect(() => {
-    const matched = countryOptions.find(opt => opt.label === formData.country);
-    setCountryCode(matched ? matched.value : null);
-  }, [formData.country, countryOptions]);
 
   // 지출 관련 상태
   const [showExpenseForm, setShowExpenseForm] = useState(false);
@@ -296,9 +287,8 @@ export default function ItineraryItem({
       
       <View style={styles.inputGroup}>
         <Text style={styles.label}>제목 *</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="일정 제목"
+        <Input
+          placeholder={PLACEHOLDERS.itinerary.title}
           value={formData.title}
           onChangeText={(text) => setFormData({ ...formData, title: text })}
         />
@@ -306,9 +296,8 @@ export default function ItineraryItem({
 
       <View style={styles.inputGroup}>
         <Text style={styles.label}>내용</Text>
-        <TextInput
-          style={[styles.input, styles.textArea]}
-          placeholder="일정 내용을 입력하세요"
+        <Input
+          placeholder={PLACEHOLDERS.itinerary.description}
           value={formData.description}
           onChangeText={(text) => setFormData({ ...formData, description: text })}
           multiline
@@ -320,51 +309,16 @@ export default function ItineraryItem({
       <View style={[styles.row, styles.pickerRowWrapper, { zIndex: countryOpen ? 10000 : 1 }]}>
         <View style={[styles.inputGroup, styles.halfWidth, styles.countryPickerWrapper]}>
           <Text style={styles.label}>국가 *</Text>
-          <DropDownPicker
-            open={countryOpen}
-            value={countryCode}
-            items={countryOptions}
-            setOpen={setCountryOpen}
-            setValue={(callback: any) => {
-              const next = callback(countryCode) as string | null;
-              setCountryCode(next);
-              const name = codeToKoreanName(next || undefined) || '';
-              setFormData({ ...formData, country: name });
-            }}
-            searchable
-            searchPlaceholder="국가 검색"
-            searchTextInputStyle={{
-              height: 30,
-              paddingVertical: 6,
-              paddingHorizontal: 10,
-              fontSize: 14,
-              width: '100%',
-            }}
-            searchContainerStyle={{
-              paddingVertical: 5,
-              paddingHorizontal: 8,
-              borderBottomWidth: 0,
-              width: '100%',
-            }}
+          <CountryPicker
+            value={formData.country}
+            onChange={(name: string) => setFormData({ ...formData, country: name })}
             placeholder="국가 선택"
-            style={[styles.countryDropdown, { width: '100%' }]}
-            dropDownContainerStyle={[styles.countryDropdownContainer, { width: '100%' }]}
-            containerStyle={[styles.countryDropdownOuter, { width: '100%' }]}
-            listMode="SCROLLVIEW"
-            scrollViewProps={{
-              nestedScrollEnabled: true,
-              keyboardShouldPersistTaps: 'handled',
-            }}
-            translation={{
-              NOTHING_TO_SHOW: '결과가 없습니다',
-            }}
           />
         </View>
         <View style={[styles.inputGroup, styles.halfWidth]}> 
           <Text style={styles.label}>도시 *</Text>
-          <TextInput
-            style={[styles.input, { width: '100%' }]}
-            placeholder="도시를 입력하세요"
+          <Input
+            placeholder={PLACEHOLDERS.itinerary.city}
             value={formData.city}
             onChangeText={(text) => setFormData({ ...formData, city: text })}
           />
@@ -373,9 +327,8 @@ export default function ItineraryItem({
 
       <View style={styles.inputGroup}>
         <Text style={styles.label}>장소</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="상세 장소를 입력하세요"
+        <Input
+          placeholder={PLACEHOLDERS.itinerary.location}
           value={formData.location}
           onChangeText={(text) => setFormData({ ...formData, location: text })}
         />
@@ -423,41 +376,17 @@ export default function ItineraryItem({
           <View style={styles.expenseForm}>
             <View style={styles.inputGroup}>
               <Text style={styles.label}>카테고리</Text>
-              <DropDownPicker
-                open={expenseOpen}
+              {/* TODO: 카테고리 셀렉트도 공통 Select로 대체 예정 */}
+              <CategoryPicker
                 value={expenseForm.category}
-                items={Object.entries(categoryLabels).map(([value, label]) => ({
-                  label: label,
-                  value: value,
-                }))}
-                setOpen={setExpenseOpen}
-                setValue={(callback: any) => {
-                  const newValue = callback(expenseForm.category);
-                  setExpenseForm({ ...expenseForm, category: newValue });
-                }}
-                style={styles.expenseDropdown}
-                dropDownContainerStyle={styles.expenseDropdownContainer}
-                placeholder="카테고리를 선택하세요"
-                zIndex={5000}
-                zIndexInverse={1000}
-                listMode="SCROLLVIEW"
-                scrollViewProps={{
-                  nestedScrollEnabled: true,
-                }}
-                modalProps={{
-                  animationType: "slide",
-                }}
-                closeAfterSelecting={true}
-                showArrowIcon={true}
-                showTickIcon={true}
+                onChange={(cat: ExpenseCategory) => setExpenseForm({ ...expenseForm, category: cat })}
               />
             </View>
 
             <View style={styles.inputGroup}>
               <Text style={styles.label}>금액</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="0"
+              <Input
+                placeholder={PLACEHOLDERS.expense.amount}
                 value={expenseForm.amount.toString()}
                 onChangeText={(text) => setExpenseForm({ ...expenseForm, amount: parseInt(text) || 0 })}
                 keyboardType="numeric"
@@ -466,9 +395,8 @@ export default function ItineraryItem({
 
             <View style={styles.inputGroup}>
               <Text style={styles.label}>내용</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="지출 설명을 입력하세요"
+              <Input
+                placeholder={PLACEHOLDERS.expense.description}
                 value={expenseForm.description}
                 onChangeText={(text) => setExpenseForm({ ...expenseForm, description: text })}
               />

@@ -138,25 +138,16 @@ export default function DateTimePicker({ value, onChange, style, placeholder = "
               {timeOptions.map((time) => (
                 <Pressable
                   key={time}
-                  style={[
-                    styles.timeOption,
-                    tempTime === time && styles.selectedTimeOption
-                  ]}
+                  style={[styles.timeOption, tempTime === time && styles.selectedTimeOption]}
                   onPress={() => handleTimeSelect(time)}
                 >
-                  <Text style={[
-                    styles.timeOptionText,
-                    tempTime === time && styles.selectedTimeOptionText
-                  ]}>
+                  <Text style={[styles.timeOptionText, tempTime === time && styles.selectedTimeOptionText]}>
                     {time}
                   </Text>
                 </Pressable>
               ))}
             </ScrollView>
-            <Pressable 
-              style={styles.timeModalButton}
-              onPress={() => setShowTimePicker(false)}
-            >
+            <Pressable style={styles.timeModalButton} onPress={() => setShowTimePicker(false)}>
               <Text style={styles.timeModalButtonText}>취소</Text>
             </Pressable>
           </View>
@@ -167,175 +158,38 @@ export default function DateTimePicker({ value, onChange, style, placeholder = "
 }
 
 const styles = StyleSheet.create({
-  dateTimeInput: {
-    borderWidth: 1,
-    borderColor: '#ced4da',
-    borderRadius: 6,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    fontSize: 14,
-    color: '#343a40',
-  },
-  dateTimeText: {
-    fontSize: 14,
-    color: '#343a40',
-  },
-  placeholderText: {
-    fontSize: 14,
-    color: '#6c757d',
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalContent: {
-    backgroundColor: 'white',
-    borderRadius: 10,
-    padding: 20,
-    width: '90%',
-    maxHeight: '80%',
-  },
-  modalHeader: {
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#212529',
-    marginBottom: 8,
-  },
-  selectionInfo: {
-    fontSize: 16,
-    color: '#007AFF',
-    fontWeight: '600',
-  },
-  pickerContainer: {
-    flexDirection: 'row',
-    marginBottom: 20,
-  },
-  dateSection: {
-    flex: 2,
-    marginRight: 10,
-  },
-  timeSection: {
-    flex: 1,
-    justifyContent: 'center',
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#212529',
-    marginBottom: 10,
-    textAlign: 'center',
-  },
-  timeSelector: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    borderWidth: 1,
-    borderColor: '#ced4da',
-    borderRadius: 6,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    backgroundColor: '#f8f9fa',
-  },
-  timeText: {
-    fontSize: 16,
-    color: '#343a40',
-    fontWeight: '500',
-  },
-  arrow: {
-    fontSize: 16,
-    color: '#6c757d',
-  },
-  buttonContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-  },
-  button: {
-    flex: 1,
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 6,
-    alignItems: 'center',
-    marginHorizontal: 5,
-  },
-  cancelButton: {
-    backgroundColor: '#dc3545',
-  },
-  cancelButtonText: {
-    color: 'white',
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  confirmButton: {
-    backgroundColor: '#28a745',
-  },
-  confirmButtonText: {
-    color: 'white',
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  timeModalOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 1000,
-  },
-  timeModalContent: {
-    backgroundColor: 'white',
-    borderRadius: 10,
-    padding: 20,
-    width: '80%',
-    alignItems: 'center',
-  },
-  timeModalTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#212529',
-    marginBottom: 20,
-  },
-  timeList: {
-    maxHeight: 200,
-    width: '100%',
-  },
-  timeOption: {
-    paddingVertical: 10,
-    paddingHorizontal: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-  },
-  selectedTimeOption: {
-    backgroundColor: '#e9ecef',
-    borderRadius: 5,
-  },
-  timeOptionText: {
-    fontSize: 16,
-    color: '#343a40',
-  },
-  selectedTimeOptionText: {
-    color: '#007bff',
-    fontWeight: '600',
-  },
-  timeModalButton: {
-    marginTop: 20,
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    backgroundColor: '#6c757d',
-    borderRadius: 6,
-    alignItems: 'center',
-  },
-  timeModalButtonText: {
-    color: 'white',
-    fontSize: 14,
-    fontWeight: '500',
-  },
-}); 
+  dateTimeInput: { borderWidth: 1, borderColor: '#ced4da', borderRadius: 6, paddingHorizontal: 10, paddingVertical: 8, fontSize: 14, color: '#343a40' },
+  dateTimeText: { fontSize: 14, color: '#343a40' },
+  placeholderText: { fontSize: 14, color: '#6c757d' },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' },
+  modalContent: { backgroundColor: 'white', borderRadius: 10, padding: 20, width: '90%', maxHeight: '80%' },
+  modalHeader: { alignItems: 'center', marginBottom: 20 },
+  modalTitle: { fontSize: 20, fontWeight: '700', color: '#212529', marginBottom: 8 },
+  selectionInfo: { fontSize: 16, color: '#007AFF', fontWeight: '600' },
+  pickerContainer: { flexDirection: 'row', marginBottom: 20 },
+  dateSection: { flex: 2, marginRight: 10 },
+  timeSection: { flex: 1, justifyContent: 'center' },
+  sectionTitle: { fontSize: 16, fontWeight: '600', color: '#212529', marginBottom: 10, textAlign: 'center' },
+  timeSelector: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderWidth: 1, borderColor: '#ced4da', borderRadius: 6, paddingHorizontal: 10, paddingVertical: 8, backgroundColor: '#f8f9fa' },
+  timeText: { fontSize: 16, color: '#343a40', fontWeight: '500' },
+  arrow: { fontSize: 16, color: '#6c757d' },
+  buttonContainer: { flexDirection: 'row', justifyContent: 'space-around' },
+  button: { flex: 1, paddingVertical: 10, paddingHorizontal: 20, borderRadius: 6, alignItems: 'center', marginHorizontal: 5 },
+  cancelButton: { backgroundColor: '#dc3545' },
+  cancelButtonText: { color: 'white', fontSize: 14, fontWeight: '500' },
+  confirmButton: { backgroundColor: '#28a745' },
+  confirmButtonText: { color: 'white', fontSize: 14, fontWeight: '500' },
+  timeModalOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', zIndex: 1000 },
+  timeModalContent: { backgroundColor: 'white', borderRadius: 10, padding: 20, width: '80%', alignItems: 'center' },
+  timeModalTitle: { fontSize: 20, fontWeight: '700', color: '#212529', marginBottom: 20 },
+  timeList: { maxHeight: 200, width: '100%' },
+  timeOption: { paddingVertical: 10, paddingHorizontal: 15, borderBottomWidth: 1, borderBottomColor: '#eee' },
+  selectedTimeOption: { backgroundColor: '#e9ecef', borderRadius: 5 },
+  timeOptionText: { fontSize: 16, color: '#343a40' },
+  selectedTimeOptionText: { color: '#007bff', fontWeight: '600' },
+  timeModalButton: { marginTop: 20, paddingVertical: 10, paddingHorizontal: 20, backgroundColor: '#6c757d', borderRadius: 6, alignItems: 'center' },
+  timeModalButtonText: { color: 'white', fontSize: 14, fontWeight: '500' },
+});
+
+
+

@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, Pressable, StyleSheet, Alert } from 'react-native';
+import { View, Text, Pressable, StyleSheet, Alert } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { authApi } from '@/services/auth';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNicknameValidation } from '@/hooks/useNicknameValidation';
 import * as SecureStore from 'expo-secure-store';
 import api from '@/services/api';
+import Input from '@/ui/components/input/Input';
+import { PLACEHOLDERS } from '@/constants/placeholders';
 
 type RouteParams = {
   registerToken: string;
@@ -101,7 +103,7 @@ export default function RegisterProfileScreen() {
 
       <View style={styles.fieldGroup}>
         <Text style={styles.label}>닉네임</Text>
-        <TextInput style={styles.input} value={nickname} onChangeText={handleNicknameChange} />
+        <Input placeholder={PLACEHOLDERS.profile.nickname} value={nickname} onChangeText={handleNicknameChange} />
         {checkingNickname && <Text style={styles.hint}>중복 확인 중...</Text>}
         {nicknameError && <Text style={styles.errorText}>{nicknameError}</Text>}
         {!nicknameError && !checkingNickname && nickname.trim().length > 0 && (

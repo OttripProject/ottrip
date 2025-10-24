@@ -1,13 +1,15 @@
 // 현재 사용하지 않음 지워도될듯 나중에
 
 import React, { useState, useMemo } from 'react';
-import { View, Text, Pressable, StyleSheet, Alert, TouchableOpacity, Modal, TextInput } from 'react-native';
+import { View, Text, Pressable, StyleSheet, Alert, TouchableOpacity, Modal } from 'react-native';
 import { Calendar as BigCalendar } from 'react-native-big-calendar';
 import { Calendar } from 'react-native-calendars';
 import dayjs from 'dayjs';
 import ko from 'dayjs/locale/ko';
 import TripSelector from './TripSelector';
 import SharePlanModal from '@/components/modals/SharePlanModal';
+import Input from '@/ui/components/input/Input';
+import { PLACEHOLDERS } from '@/constants/placeholders';
 import { plansApi } from '@/services/plans';
 import { usePlans } from '@/hooks/usePlans';
 import { useEffect } from 'react';
@@ -376,13 +378,12 @@ export default function WeeklySchedule({ itineraries, height = 600, onItineraryA
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { width: '90%' }] }>
             <Text style={styles.title}>플랜 메모</Text>
-            <TextInput
-              style={[styles.memoInput]}
+            <Input
+              placeholder={PLACEHOLDERS.plan.memo}
               multiline
               numberOfLines={6}
               value={memoDraft}
               onChangeText={setMemoDraft}
-              placeholder="메모를 입력하세요"
               textAlignVertical="top"
             />
             <View style={{ flexDirection:'row', justifyContent:'flex-end', marginTop: 8 }}>

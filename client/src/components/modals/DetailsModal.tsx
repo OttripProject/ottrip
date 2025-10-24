@@ -33,6 +33,9 @@ interface DetailsModalProps {
   // 외부에서 새 항공편 폼을 바로 열도록 트리거
   openNewFlightForm?: boolean;
   onConsumeOpenNewFlightForm?: () => void;
+  openNewAccommodationForm?: boolean;
+  onConsumeOpenNewAccommodationForm?: () => void;
+  newAccommodationDraft?: any | null;
 }
 
 interface Flight {
@@ -96,7 +99,7 @@ function Placeholder({ label }: { label: string }) {
   );
 }
 
-export default function DetailsModal({ planData, selectedItinerary, selectedFlight, selectedAccommodation, activeTab, onItineraryAdd: externalOnItineraryAdd, onFlightAdd: externalOnFlightAdd, onAccommodationAdd: externalOnAccommodationAdd, onExpenseAdd: externalOnExpenseAdd, openNewFlightForm, onConsumeOpenNewFlightForm }: DetailsModalProps) {
+export default function DetailsModal({ planData, selectedItinerary, selectedFlight, selectedAccommodation, activeTab, onItineraryAdd: externalOnItineraryAdd, onFlightAdd: externalOnFlightAdd, onAccommodationAdd: externalOnAccommodationAdd, onExpenseAdd: externalOnExpenseAdd, openNewFlightForm, onConsumeOpenNewFlightForm, openNewAccommodationForm, onConsumeOpenNewAccommodationForm, newAccommodationDraft }: DetailsModalProps) {
     const [open, setOpen] = useState<string | undefined>();
     const [showItineraryForm, setShowItineraryForm] = useState(false);
     const [showFlightForm, setShowFlightForm] = useState(false);
@@ -163,6 +166,20 @@ export default function DetailsModal({ planData, selectedItinerary, selectedFlig
         onConsumeOpenNewFlightForm && onConsumeOpenNewFlightForm();
       }
     }, [activeTab, openNewFlightForm, onConsumeOpenNewFlightForm]);
+
+    // 외부 트리거: 숙박 탭에서 즉시 새 숙박 추가 폼 열기
+    React.useEffect(() => {
+      if (activeTab === 'accommodation' && openNewAccommodationForm) {
+        // 새 날짜로 들어온 경우, 프리필 드래프트가 있으면 우선 사용
+        if (newAccommodationDraft) {
+          setEditingAccommodation(newAccommodationDraft);
+        } else {
+          setEditingAccommodation(selectedAccommodation || null);
+        }
+        setShowAccommodationForm(true);
+        onConsumeOpenNewAccommodationForm && onConsumeOpenNewAccommodationForm();
+      }
+    }, [activeTab, openNewAccommodationForm, onConsumeOpenNewAccommodationForm, selectedAccommodation, newAccommodationDraft]);
 
     const handleAccommodationDelete = (accommodationId: string) => {
       // 삭제 후 목록 새로고침

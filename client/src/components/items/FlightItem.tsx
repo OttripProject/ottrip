@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
-import { View, Text, Pressable, StyleSheet, TextInput } from 'react-native';
-import DateTimePicker from '@/components/DateTimePicker';
+import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { DateTimePicker } from '@/ui/components/pickers';
 import dayjs from 'dayjs';
 import { flightsApi } from '@/services/flights';
 import { ExpenseCurrency, ExpenseCategory } from '@/types/expense';
+import Input from '@/ui/components/input/Input';
+import { PLACEHOLDERS } from '@/constants/placeholders';
 
 interface FlightItemProps {
   flight?: any;
@@ -193,18 +195,16 @@ export default function FlightItem({
       <View style={styles.row}>
         <View style={[styles.inputGroup, styles.halfWidth]}>
           <Text style={styles.label}>예약번호(PNR) *</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="F8SKRQ"
+          <Input
+            placeholder={PLACEHOLDERS.flight.reservationNumber}
             value={formData.reservation_number}
             onChangeText={(text) => setFormData({ ...formData, reservation_number: text })}
           />
         </View>
         <View style={[styles.inputGroup, styles.halfWidth]}>
           <Text style={styles.label}>승객명 *</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="김오티"
+          <Input
+            placeholder={PLACEHOLDERS.flight.passengerName}
             value={formData.passenger_name}
             onChangeText={(text) => setFormData({ ...formData, passenger_name: text })}
           />
@@ -214,9 +214,8 @@ export default function FlightItem({
       <View style={styles.row}>
         <View style={[styles.inputGroup, styles.halfWidth]}>
           <Text style={styles.label}>항공권 번호</Text>
-          <TextInput
-            style={styles.input}
-            placeholder=""
+          <Input
+            placeholder={PLACEHOLDERS.flight.ticketNumber}
             value={formData.ticket_number}
             onChangeText={(text) => setFormData({ ...formData, ticket_number: text })}
           />
@@ -225,9 +224,8 @@ export default function FlightItem({
       <View style={styles.row}>
         <View style={[styles.inputGroup, styles.halfWidth]}>
           <Text style={styles.label}>예약번호(여행사 예약번호)</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="1234-5678"
+          <Input
+            placeholder={PLACEHOLDERS.flight.bookingReference}
             value={formData.booking_reference}
             onChangeText={(text) => setFormData({ ...formData, booking_reference: text })}
           />
@@ -237,19 +235,18 @@ export default function FlightItem({
       <View style={styles.inputGroup}>
         <Text style={styles.label}>항공료</Text>
         <View style={styles.row}>
-          <TextInput
-            style={[styles.input, { flex: 1, marginRight: 8 }]}
-            placeholder="금액"
+          <Input
+            containerStyle={{ flex: 1, marginRight: 8 }}
+            placeholder={PLACEHOLDERS.expense.amount}
             value={expenseData.amount}
             onChangeText={(text) => setExpenseData({ ...expenseData, amount: text.replace(/[^0-9]/g, '') })}
             keyboardType="numeric"
           />
           <View style={{ width: 120 }}>
-            <TextInput
-              style={styles.input}
-              placeholder="통화"
+            <Input
+              placeholder={PLACEHOLDERS.expense.currency}
               value={expenseData.currency}
-              onChangeText={(text) => setExpenseData({ ...expenseData, currency: text })}
+              editable={false}
             />
           </View>
         </View>
@@ -263,9 +260,8 @@ export default function FlightItem({
           <View style={styles.row}>
             <View style={[styles.inputGroup, styles.halfWidth]}>
               <Text style={styles.label}>항공사 *</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="오티항공"
+              <Input
+                placeholder={PLACEHOLDERS.flight.airline}
                 value={segment.airline}
                 onChangeText={(text) => {
                   const newSegments = [...flightSegments];
@@ -276,9 +272,8 @@ export default function FlightItem({
             </View>
             <View style={[styles.inputGroup, styles.halfWidth]}>
               <Text style={styles.label}>항공편 번호 *</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="EY0827"
+              <Input
+                placeholder={PLACEHOLDERS.flight.flightNumber}
                 value={segment.flight_number}
                 onChangeText={(text) => {
                   const newSegments = [...flightSegments];
@@ -292,9 +287,8 @@ export default function FlightItem({
           <View style={styles.row}>
             <View style={[styles.inputGroup, styles.halfWidth]}>
               <Text style={styles.label}>출발 공항 *</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="인천"
+              <Input
+                placeholder={PLACEHOLDERS.flight.departureAirport}
                 value={segment.departure_airport}
                 onChangeText={(text) => {
                   const newSegments = [...flightSegments];
@@ -305,9 +299,8 @@ export default function FlightItem({
             </View>
             <View style={[styles.inputGroup, styles.halfWidth]}>
               <Text style={styles.label}>도착 공항 *</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="런던"
+              <Input
+                placeholder={PLACEHOLDERS.flight.arrivalAirport}
                 value={segment.arrival_airport}
                 onChangeText={(text) => {
                   const newSegments = [...flightSegments];
@@ -346,8 +339,7 @@ export default function FlightItem({
           <View style={styles.row}>
             <View style={[styles.inputGroup, styles.halfWidth]}>
               <Text style={styles.label}>좌석 등급</Text>
-              <TextInput
-                style={styles.input}
+              <Input
                 placeholder="좌석 등급"
                 value={segment.seat_class || ''}
                 onChangeText={(text) => {
@@ -359,8 +351,7 @@ export default function FlightItem({
             </View>
             <View style={[styles.inputGroup, styles.halfWidth]}>
               <Text style={styles.label}>좌석 번호</Text>
-              <TextInput
-                style={styles.input}
+              <Input
                 placeholder="좌석 번호"
                 value={segment.seat_number || ''}
                 onChangeText={(text) => {
@@ -375,8 +366,7 @@ export default function FlightItem({
           <View style={styles.row}>
             <View style={[styles.inputGroup, styles.halfWidth]}>
               <Text style={styles.label}>터미널</Text>
-              <TextInput
-                style={styles.input}
+              <Input
                 placeholder="T1"
                 value={segment.terminal || ''}
                 onChangeText={(text) => {
@@ -388,8 +378,7 @@ export default function FlightItem({
             </View>
             <View style={[styles.inputGroup, styles.halfWidth]}>
               <Text style={styles.label}>게이트</Text>
-              <TextInput
-                style={styles.input}
+              <Input
                 placeholder="G12"
                 value={segment.gate || ''}
                 onChangeText={(text) => {

@@ -3,6 +3,7 @@ import { useNavigation, useRoute } from "@react-navigation/native";
 import { useEffect, useState, useCallback } from "react";
 import api from "@/services/api";
 import { usePlanData } from "@/hooks/usePlanData";
+import dayjs from "dayjs";
 
 // 새로운 모달 컴포넌트들
 import HeaderModal from "@/components/modals/HeaderModal";
@@ -21,6 +22,8 @@ export default function DashboardScreen() {
   const [selectedAccommodation, setSelectedAccommodation] = useState<any>(null);
   const [activeTab, setActiveTab] = useState<'itinerary' | 'flight' | 'accommodation' | undefined>(undefined);
   const [openNewFlightForm, setOpenNewFlightForm] = useState<boolean>(false);
+  const [openNewAccommodationForm, setOpenNewAccommodationForm] = useState<boolean>(false);
+  const [newAccommodationDraft, setNewAccommodationDraft] = useState<any | null>(null);
   
   // 동적 비율 계산 (화면 크기에 따라 조정)
   const getResponsiveRatio = () => {
@@ -172,15 +175,22 @@ export default function DashboardScreen() {
     
     if (accommodation) {
       setSelectedAccommodation(accommodation);
+      setOpenNewAccommodationForm(false);
+      setNewAccommodationDraft(null);
     } else {
       setSelectedAccommodation(null);
       // 새 숙박 추가를 위한 기본 데이터 설정
       if (date) {
-        setSelectedAccommodation({
+        const draft = {
           checkinDate: date,
-          checkoutDate: date,
-        });
+          checkoutDate: dayjs(date).add(1, 'day').format('YYYY-MM-DD'),
+          checkinTime: '15:00',
+          checkoutTime: '11:00',
+        };
+        setSelectedAccommodation(draft);
+        setNewAccommodationDraft(draft);
       }
+      setOpenNewAccommodationForm(true);
     }
   }, []);
 
@@ -335,6 +345,9 @@ export default function DashboardScreen() {
               onExpenseAdd={handleExpenseAdd}
               openNewFlightForm={openNewFlightForm}
               onConsumeOpenNewFlightForm={() => setOpenNewFlightForm(false)}
+              openNewAccommodationForm={openNewAccommodationForm}
+              onConsumeOpenNewAccommodationForm={() => setOpenNewAccommodationForm(false)}
+              newAccommodationDraft={newAccommodationDraft}
             />
           </View>
         </View>

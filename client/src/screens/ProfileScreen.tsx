@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, TextInput, Pressable, StyleSheet, Modal, Alert, Platform } from 'react-native';
+import { View, Text, Pressable, StyleSheet, Modal, Alert, Platform } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { usersApi, UserProfile } from '@/services/users';
 import HeaderBar from '@/components/modals/HeaderModal';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNicknameValidation } from '@/hooks/useNicknameValidation';
+import Input from '@/ui/components/input/Input';
+import { PLACEHOLDERS } from '@/constants/placeholders';
 
 export default function ProfileScreen() {
   const { logout } = useAuth();
@@ -81,7 +83,7 @@ export default function ProfileScreen() {
 
       <View style={styles.fieldGroup}>
         <Text style={styles.label}>닉네임</Text>
-        <TextInput style={styles.input} value={nickname} onChangeText={handleNicknameChange} />
+        <Input placeholder={PLACEHOLDERS.profile.nickname} value={nickname} onChangeText={handleNicknameChange} />
         {checkingNickname && <Text style={styles.hint}>중복 확인 중...</Text>}
         {nicknameError && <Text style={styles.errorText}>{nicknameError}</Text>}
         {!nicknameError && !checkingNickname && nickname.trim().length > 0 && nickname !== me?.nickname && (
@@ -92,7 +94,7 @@ export default function ProfileScreen() {
       <View style={styles.fieldGroup}>
         <Text style={styles.label}>성별</Text>
         <View style={styles.row}>
-          {['male', 'female'].map((g) => (
+          {['남자', '여자'].map((g) => (
             <Pressable
               key={g}
               style={[styles.chip, gender === g && styles.chipActive]}
