@@ -62,50 +62,28 @@ export default function DateRangePicker({
 
   const getMarkedDates = () => {
     const marked: any = {};
-    
     if (tempStartDate) {
-      marked[tempStartDate] = { 
-        selected: true, 
-        startingDay: true,
-        color: '#007AFF',
-        textColor: 'white'
-      };
+      marked[tempStartDate] = { selected: true, startingDay: true, color: '#007AFF', textColor: 'white' };
     }
-    
     if (tempEndDate && tempEndDate !== tempStartDate) {
-      marked[tempEndDate] = { 
-        selected: true, 
-        endingDay: true,
-        color: '#007AFF',
-        textColor: 'white'
-      };
+      marked[tempEndDate] = { selected: true, endingDay: true, color: '#007AFF', textColor: 'white' };
     }
-
-    // 범위 내 날짜들 표시
     if (tempStartDate && tempEndDate && tempStartDate !== tempEndDate) {
       const start = dayjs(tempStartDate);
       const end = dayjs(tempEndDate);
       let current = start.add(1, 'day');
-      
       while (current.isBefore(end)) {
         const dateStr = current.format('YYYY-MM-DD');
-        marked[dateStr] = { 
-          selected: true, 
-          color: '#007AFF',
-          textColor: 'white'
-        };
+        marked[dateStr] = { selected: true, color: '#007AFF', textColor: 'white' };
         current = current.add(1, 'day');
       }
     }
-
     return marked;
   };
 
   const getDisplayText = () => {
     if (startDate && endDate) {
-      if (startDate === endDate) {
-        return formatDate(startDate);
-      }
+      if (startDate === endDate) return formatDate(startDate);
       return `${formatDate(startDate)} ~ ${formatDate(endDate)}`;
     }
     return '날짜 범위 선택';
@@ -113,33 +91,19 @@ export default function DateRangePicker({
 
   return (
     <View style={style}>
-      <Pressable 
-        style={styles.dateInput}
-        onPress={() => setShowCalendar(true)}
-      >
-        <Text style={startDate ? styles.dateText : styles.placeholderText}>
-          {getDisplayText()}
-        </Text>
+      <Pressable style={styles.dateInput} onPress={() => setShowCalendar(true)}>
+        <Text style={startDate ? styles.dateText : styles.placeholderText}>{getDisplayText()}</Text>
       </Pressable>
 
-      <Modal
-        visible={showCalendar}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={handleCancel}
-      >
+      <Modal visible={showCalendar} animationType="slide" transparent={true} onRequestClose={handleCancel}>
         <View style={styles.modalOverlay}>
           <View style={styles.calendarContainer}>
             <View style={styles.calendarHeader}>
               <Text style={styles.calendarTitle}>날짜 범위 선택</Text>
-              <Pressable 
-                style={styles.closeButton}
-                onPress={handleCancel}
-              >
+              <Pressable style={styles.closeButton} onPress={handleCancel}>
                 <Text style={styles.closeButtonText}>×</Text>
               </Pressable>
             </View>
-
             <View style={styles.selectionInfo}>
               <Text style={styles.selectionText}>
                 {selectionMode === 'start' ? '시작일을 선택하세요' : '종료일을 선택하세요'}
@@ -151,7 +115,6 @@ export default function DateRangePicker({
                 </Text>
               )}
             </View>
-            
             <Calendar
               onDayPress={(day) => handleDateSelect(day.dateString)}
               markedDates={getMarkedDates()}
@@ -169,21 +132,14 @@ export default function DateRangePicker({
                 textDayHeaderFontWeight: '300',
                 textDayFontSize: 16,
                 textMonthFontSize: 16,
-                textDayHeaderFontSize: 13
+                textDayHeaderFontSize: 13,
               }}
             />
-
             <View style={styles.buttonContainer}>
-              <Pressable 
-                style={[styles.button, styles.cancelButton]}
-                onPress={handleCancel}
-              >
+              <Pressable style={[styles.button, styles.cancelButton]} onPress={handleCancel}>
                 <Text style={styles.cancelButtonText}>취소</Text>
               </Pressable>
-              <Pressable 
-                style={[styles.button, styles.confirmButton]}
-                onPress={handleConfirm}
-              >
+              <Pressable style={[styles.button, styles.confirmButton]} onPress={handleConfirm}>
                 <Text style={styles.confirmButtonText}>확인</Text>
               </Pressable>
             </View>
@@ -195,96 +151,25 @@ export default function DateRangePicker({
 }
 
 const styles = StyleSheet.create({
-  dateInput: {
-    borderWidth: 1,
-    borderColor: '#dee2e6',
-    borderRadius: 8,
-    padding: 12,
-    backgroundColor: 'white',
-  },
-  dateText: {
-    fontSize: 16,
-    color: '#212529',
-  },
-  placeholderText: {
-    fontSize: 16,
-    color: '#6c757d',
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  calendarContainer: {
-    backgroundColor: 'white',
-    borderRadius: 12,
-    padding: 20,
-    width: '90%',
-    maxWidth: 400,
-  },
-  calendarHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  calendarTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#212529',
-  },
-  closeButton: {
-    padding: 4,
-  },
-  closeButtonText: {
-    fontSize: 24,
-    color: '#6c757d',
-    fontWeight: 'bold',
-  },
-  selectionInfo: {
-    marginBottom: 16,
-    padding: 12,
-    backgroundColor: '#f8f9fa',
-    borderRadius: 8,
-  },
-  selectionText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#495057',
-    marginBottom: 4,
-  },
-  dateInfo: {
-    fontSize: 12,
-    color: '#6c757d',
-  },
-  buttonContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 16,
-  },
-  button: {
-    flex: 1,
-    padding: 12,
-    borderRadius: 8,
-    marginHorizontal: 4,
-  },
-  cancelButton: {
-    backgroundColor: '#6c757d',
-  },
-  cancelButtonText: {
-    color: 'white',
-    textAlign: 'center',
-    fontSize: 16,
-    fontWeight: '500',
-  },
-  confirmButton: {
-    backgroundColor: '#007AFF',
-  },
-  confirmButtonText: {
-    color: 'white',
-    textAlign: 'center',
-    fontSize: 16,
-    fontWeight: '500',
-  },
-}); 
+  dateInput: { borderWidth: 1, borderColor: '#dee2e6', borderRadius: 8, padding: 12, backgroundColor: 'white' },
+  dateText: { fontSize: 16, color: '#212529' },
+  placeholderText: { fontSize: 16, color: '#6c757d' },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0, 0, 0, 0.5)', justifyContent: 'center', alignItems: 'center' },
+  calendarContainer: { backgroundColor: 'white', borderRadius: 12, padding: 20, width: '90%', maxWidth: 400 },
+  calendarHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
+  calendarTitle: { fontSize: 18, fontWeight: '600', color: '#212529' },
+  closeButton: { padding: 4 },
+  closeButtonText: { fontSize: 24, color: '#6c757d', fontWeight: 'bold' },
+  selectionInfo: { marginBottom: 16, padding: 12, backgroundColor: '#f8f9fa', borderRadius: 8 },
+  selectionText: { fontSize: 14, fontWeight: '500', color: '#495057', marginBottom: 4 },
+  dateInfo: { fontSize: 12, color: '#6c757d' },
+  buttonContainer: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 16 },
+  button: { flex: 1, padding: 12, borderRadius: 8, marginHorizontal: 4 },
+  cancelButton: { backgroundColor: '#6c757d' },
+  cancelButtonText: { color: 'white', textAlign: 'center', fontSize: 16, fontWeight: '500' },
+  confirmButton: { backgroundColor: '#007AFF' },
+  confirmButtonText: { color: 'white', textAlign: 'center', fontSize: 16, fontWeight: '500' },
+});
+
+
+

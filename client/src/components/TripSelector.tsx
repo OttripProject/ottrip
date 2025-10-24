@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
-import { View, Text, Pressable, StyleSheet, Modal, ScrollView, TextInput, Alert } from 'react-native';
-import DateRangePicker from './DateRangePicker';
+import { View, Text, Pressable, StyleSheet, Modal, ScrollView, Alert } from 'react-native';
+import DateRangePicker from '@/ui/components/pickers/DateRangePicker';
+import Input from '@/ui/components/input/Input';
+import { PLACEHOLDERS } from '@/constants/placeholders';
 
 interface Trip {
   id: string;
@@ -196,9 +198,9 @@ export default function TripSelector({ selectedTrip, onTripSelect, trips, onTrip
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>새 여행 추가</Text>
             
-            <TextInput
+            <Input
               style={styles.input}
-              placeholder="여행 이름"
+              placeholder={PLACEHOLDERS.plan.name}
               value={newTrip.name}
               onChangeText={(text) => setNewTrip(prev => ({ ...prev, name: text }))}
             />
@@ -240,9 +242,8 @@ export default function TripSelector({ selectedTrip, onTripSelect, trips, onTrip
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>여행 수정</Text>
             
-            <TextInput
-              style={styles.input}
-              placeholder="여행 이름"
+            <Input
+              placeholder={PLACEHOLDERS.plan.name}
               value={editingTrip?.name || ''}
               onChangeText={(text) => setEditingTrip(prev => prev ? { ...prev, name: text } : null)}
             />

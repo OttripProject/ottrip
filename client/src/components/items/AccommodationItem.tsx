@@ -1,8 +1,12 @@
-import React, { useState } from 'react';
-import { View, Text, Pressable, StyleSheet, TextInput } from 'react-native';
-import DateRangePicker from '@/components/DateRangePicker';
+import React, { useState, useEffect, useMemo } from 'react';
+import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { DateRangePicker } from '@/ui/components/pickers';
 import dayjs from 'dayjs';
 import { accommodationsApi } from '@/services/accommodations';
+import { CountryPicker } from '@/ui/components/pickers';
+import Input from '@/ui/components/input/Input';
+import { PLACEHOLDERS } from '@/constants/placeholders';
+import { TimePicker } from '@/ui/components/pickers';
 
 interface AccommodationItemProps {
   accommodation?: any;
@@ -24,10 +28,10 @@ export default function AccommodationItem({
     place: accommodation?.place || '',
     country: accommodation?.country || '',
     city: accommodation?.city || '',
-    checkin_date: accommodation?.checkin_date || dayjs().format('YYYY-MM-DD'),
-    checkout_date: accommodation?.checkout_date || dayjs().add(1, 'day').format('YYYY-MM-DD'),
-    checkin_time: accommodation?.checkin_time || '15:00',
-    checkout_time: accommodation?.checkout_time || '11:00',
+    checkin_date: (accommodation?.checkinDate) || dayjs().format('YYYY-MM-DD'),
+    checkout_date: (accommodation?.checkoutDate) || dayjs().add(1, 'day').format('YYYY-MM-DD'),
+    checkin_time: (accommodation?.checkinTime) || '15:00',
+    checkout_time: (accommodation?.checkoutTime) || '11:00',
     description: accommodation?.description || '',
   });
 
@@ -37,6 +41,26 @@ export default function AccommodationItem({
   });
 
   const [isLoading, setIsLoading] = useState(false);
+
+  // accommodation prop이 변경될 때 폼 데이터 동기화 (snake_case / camelCase 모두 지원)
+  useEffect(() => {
+    if (accommodation) {
+      setFormData({
+        name: accommodation.name || '',
+        place: accommodation.place || '',
+        country: accommodation.country || '',
+        city: accommodation.city || '',
+        checkin_date: (accommodation.checkinDate) || dayjs().format('YYYY-MM-DD'),
+        checkout_date: (accommodation.checkoutDate) || dayjs().add(1, 'day').format('YYYY-MM-DD'),
+        checkin_time: (accommodation.checkinTime || '15:00').substring(0,5),
+        checkout_time: (accommodation.checkoutTime || '11:00').substring(0,5),
+        description: accommodation.description || '',
+      });
+    }
+  }, [accommodation]);
+
+  // 국가 드롭다운 상태 및 옵션
+  const [countryOpen, setCountryOpen] = useState(false); // zIndex 제어용 (CountrySelect 내부 오픈 상태와는 별개로 래퍼 zIndex 제어 가능)
 
   const handleSave = async () => {
     if (!formData.name.trim() || !formData.country.trim() || !formData.city.trim()) {
@@ -115,29 +139,26 @@ export default function AccommodationItem({
       
       <View style={styles.inputGroup}>
         <Text style={styles.label}>숙소 이름 *</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="숙소 이름"
+        <Input
+          placeholder={PLACEHOLDERS.accommodation.name}
           value={formData.name}
           onChangeText={(text) => setFormData({ ...formData, name: text })}
         />
       </View>
 
-      <View style={styles.row}>
-        <View style={[styles.inputGroup, styles.halfWidth]}>
+      <View style={[styles.row, styles.pickerRowWrapper, { zIndex: countryOpen ? 10000 : 1 }]}>
+        <View style={[styles.inputGroup, styles.halfWidth, styles.countryPickerWrapper, { zIndex: countryOpen ? 10000 : 1 }]}>
           <Text style={styles.label}>국가 *</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="국가"
+          <CountryPicker
             value={formData.country}
-            onChangeText={(text) => setFormData({ ...formData, country: text })}
+            onChange={(name: string) => setFormData({ ...formData, country: name })}
+            placeholder={PLACEHOLDERS.picker.country}
           />
         </View>
         <View style={[styles.inputGroup, styles.halfWidth]}>
           <Text style={styles.label}>도시 *</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="도시"
+          <Input
+            placeholder={PLACEHOLDERS.accommodation.city}
             value={formData.city}
             onChangeText={(text) => setFormData({ ...formData, city: text })}
           />
@@ -146,9 +167,8 @@ export default function AccommodationItem({
 
       <View style={styles.inputGroup}>
         <Text style={styles.label}>장소</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="장소"
+        <Input
+          placeholder={PLACEHOLDERS.accommodation.place}
           value={formData.place}
           onChangeText={(text) => setFormData({ ...formData, place: text })}
         />
@@ -177,53 +197,46 @@ export default function AccommodationItem({
       <View style={styles.row}>
         <View style={[styles.inputGroup, styles.halfWidth]}>
           <Text style={styles.label}>체크인 시간</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="15:00"
+          <TimePicker
             value={formData.checkin_time}
-            onChangeText={(text) => setFormData({ ...formData, checkin_time: text })}
+            onChange={(time) => setFormData({ ...formData, checkin_time: time })}
           />
         </View>
         <View style={[styles.inputGroup, styles.halfWidth]}>
           <Text style={styles.label}>체크아웃 시간</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="11:00"
+          <TimePicker
             value={formData.checkout_time}
-            onChangeText={(text) => setFormData({ ...formData, checkout_time: text })}
+            onChange={(time) => setFormData({ ...formData, checkout_time: time })}
           />
         </View>
       </View>
 
       <View style={styles.inputGroup}>
         <Text style={styles.label}>설명</Text>
-        <TextInput
-          style={[styles.input, styles.textArea]}
-          placeholder="설명"
+        <Input
+          placeholder={PLACEHOLDERS.accommodation.description}
           value={formData.description}
           onChangeText={(text) => setFormData({ ...formData, description: text })}
           multiline
           numberOfLines={3}
-          textAlignVertical="top"
         />
       </View>
 
       <View style={styles.inputGroup}>
         <Text style={styles.label}>숙박 비용</Text>
         <View style={styles.row}>
-          <TextInput
-            style={[styles.input, { flex: 1, marginRight: 8 }]}
-            placeholder="금액"
+          <Input
+            containerStyle={{ flex: 1, marginRight: 8 }}
+            placeholder={PLACEHOLDERS.expense.amount}
             value={expenseData.amount}
             onChangeText={(text) => setExpenseData({ ...expenseData, amount: text.replace(/[^0-9]/g, '') })}
             keyboardType="numeric"
           />
           <View style={{ width: 120 }}>
-            <TextInput
-              style={styles.input}
-              placeholder="통화"
+            <Input
+              placeholder={PLACEHOLDERS.expense.currency}
               value={expenseData.currency}
-              onChangeText={(text) => setExpenseData({ ...expenseData, currency: text })}
+              editable={false}
             />
           </View>
         </View>
@@ -322,6 +335,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginBottom: 12,
+    overflow: 'visible',
+    position: 'relative',
+  },
+  pickerRowWrapper: {
+    overflow: 'visible',
+    position: 'relative',
   },
   inputGroup: {
     marginBottom: 12,
@@ -329,6 +348,36 @@ const styles = StyleSheet.create({
   halfWidth: {
     flex: 1,
     marginHorizontal: 4,
+  },
+  countryPickerWrapper: {
+    overflow: 'visible',
+    position: 'relative',
+    zIndex: 8000,
+  },
+  countryDropdown: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    backgroundColor: '#fff',
+    minHeight: 45,
+    position: 'relative',
+    zIndex: 9999,
+  },
+  countryDropdownContainer: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    backgroundColor: '#fff',
+    zIndex: 9999,
+    elevation: 6,
+    shadowColor: '#000',
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+  },
+  countryDropdownOuter: {
+    position: 'relative',
+    zIndex: 9999,
   },
   label: {
     fontSize: 14,

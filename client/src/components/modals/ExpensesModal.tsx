@@ -1,13 +1,15 @@
 import React, { useState } from 'react';
-import { View, Text, Pressable, StyleSheet, TextInput, Alert, ScrollView, Modal } from 'react-native';
-import DropDownPicker from 'react-native-dropdown-picker';
+import { View, Text, Pressable, StyleSheet, Alert, ScrollView, Modal } from 'react-native';
+import { CategoryPicker } from '@/ui/components/pickers';
 import { List } from 'react-native-paper';
 import dayjs from 'dayjs';
 import { expensesApi } from '@/services/expenses';
 import ModalLayout from './ModalLayout';
 import { ExpenseCategory, ExpenseCurrency, categoryLabels, currencyLabels } from '@/types/expense';
 import { useDate } from '@/contexts/DateContext';
-import DatePicker from '../DatePicker';
+import DatePicker from '@/ui/components/pickers/DatePicker';
+import Input from '@/ui/components/input/Input';
+import { PLACEHOLDERS } from '@/constants/placeholders';
 
 interface ExpensesModalProps {
   planData?: {
@@ -264,28 +266,14 @@ export default function ExpensesModal({ planData, onExpenseAdd }: ExpensesModalP
             </Text>
             
             <Text style={styles.inputLabel}>카테고리</Text>
-            <DropDownPicker
-              open={categoryOpen}
+            <CategoryPicker
               value={expenseForm.category}
-              items={Object.entries(categoryLabels).map(([value, label]) => ({
-                label: label,
-                value: value,
-              }))}
-              setOpen={setCategoryOpen}
-              setValue={(callback: any) => {
-                const newValue = callback(expenseForm.category);
-                setExpenseForm({ ...expenseForm, category: newValue });
-              }}
-              style={styles.dropdown}
-              dropDownContainerStyle={styles.dropdownContainer}
-              placeholder="카테고리를 선택하세요"
-              zIndex={1000}
-              zIndexInverse={3000}
+              onChange={(cat) => setExpenseForm({ ...expenseForm, category: cat })}
             />
 
             <Text style={styles.inputLabel}>금액</Text>
-            <TextInput
-              style={styles.input}
+            <Input
+              placeholder={PLACEHOLDERS.expense.amount}
               value={expenseForm.amount.toString()}
               onChangeText={(text) => setExpenseForm({ ...expenseForm, amount: parseInt(text) || 0 })}
               keyboardType="numeric"
@@ -306,9 +294,8 @@ export default function ExpensesModal({ planData, onExpenseAdd }: ExpensesModalP
             />
 
             <Text style={styles.inputLabel}>내용</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="지출 설명을 입력하세요"
+            <Input  
+              placeholder={PLACEHOLDERS.expense.description}
               value={expenseForm.description}
               onChangeText={(text) => setExpenseForm({ ...expenseForm, description: text })}
             />

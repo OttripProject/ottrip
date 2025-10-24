@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { Modal, View, Text, TextInput, Pressable, StyleSheet, ActivityIndicator, Alert } from 'react-native';
+import { Modal, View, Text, Pressable, StyleSheet, ActivityIndicator, Alert } from 'react-native';
 import { plansApi, PlanShare } from '@/services/plans';
+import Input from '@/ui/components/input/Input';
+import { PLACEHOLDERS } from '@/constants/placeholders';
 
 type Props = {
   visible: boolean;
@@ -91,9 +93,8 @@ export default function SharePlanModal({ visible, onClose, onSubmit, planId }: P
             )}
           </View>
           <Text style={styles.label}>이메일</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="example@example.com"
+          <Input
+            placeholder={PLACEHOLDERS.plan.email}
             autoCapitalize="none"
             keyboardType="email-address"
             value={email}
@@ -115,9 +116,8 @@ export default function SharePlanModal({ visible, onClose, onSubmit, planId }: P
             </Pressable>
           </View>
           <Text style={styles.label}>만료일(일)</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="7"
+          <Input
+            placeholder={PLACEHOLDERS.plan.share_expires_days}
             keyboardType="number-pad"
             value={days}
             onChangeText={setDays}
