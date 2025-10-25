@@ -345,57 +345,72 @@ export default function DetailsModal({ planData, selectedItinerary, selectedFlig
               {item.flightSegments && item.flightSegments.length > 0 && (
                 <>
                   {item.flightSegments.map((segment: any, index: number) => (
-                    <View key={index} style={styles.segmentDetail}>
-                      <Text style={styles.segmentTitle}>구간 {index + 1}</Text>
-                      <View style={styles.detailRow}>
-                        <Text style={styles.detailLabel}>항공사</Text>
-                        <Text style={styles.detailValue}>{segment.airline}</Text>
-                      </View>
-                      <View style={styles.detailRow}>
-                        <Text style={styles.detailLabel}>항공편 번호</Text>
-                        <Text style={styles.detailValue}>{segment.flightNumber}</Text>
-                      </View>
-                      <View style={styles.detailRow}>
-                        <Text style={styles.detailLabel}>출발 공항</Text>
-                        <Text style={styles.detailValue}>{segment.departureAirport}</Text>
-                      </View>
-                      <View style={styles.detailRow}>
-                        <Text style={styles.detailLabel}>도착 공항</Text>
-                        <Text style={styles.detailValue}>{segment.arrivalAirport}</Text>
-                      </View>
-                      <View style={styles.detailRow}>
-                        <Text style={styles.detailLabel}>출발 시간</Text>
-                        <Text style={styles.detailValue}>{dayjs(segment.departureTime).format('YYYY년 M월 D일 HH:mm')}</Text>
-                      </View>
-                      <View style={styles.detailRow}>
-                        <Text style={styles.detailLabel}>도착 시간</Text>
-                        <Text style={styles.detailValue}>{dayjs(segment.arrivalTime).format('YYYY년 M월 D일 HH:mm')}</Text>
-                      </View>
-                      {segment.seatClass ? (
+                    <React.Fragment key={index}>
+                      <View style={styles.segmentDetail}>
+                        <Text style={styles.segmentTitle}>구간 {index + 1}</Text>
                         <View style={styles.detailRow}>
-                          <Text style={styles.detailLabel}>좌석 등급</Text>
-                          <Text style={styles.detailValue}>{segment.seatClass}</Text>
+                          <Text style={styles.detailLabel}>항공사</Text>
+                          <Text style={styles.detailValue}>{segment.airline}</Text>
                         </View>
-                      ) : null}
-                      {segment.seatNumber ? (
                         <View style={styles.detailRow}>
-                          <Text style={styles.detailLabel}>좌석 번호</Text>
-                          <Text style={styles.detailValue}>{segment.seatNumber}</Text>
+                          <Text style={styles.detailLabel}>항공편 번호</Text>
+                          <Text style={styles.detailValue}>{segment.flightNumber}</Text>
                         </View>
-                      ) : null}
-                      {segment.terminal ? (
                         <View style={styles.detailRow}>
-                          <Text style={styles.detailLabel}>터미널</Text>
-                          <Text style={styles.detailValue}>{segment.terminal}</Text>
+                          <Text style={styles.detailLabel}>출발 공항</Text>
+                          <Text style={styles.detailValue}>{segment.departureAirport}</Text>
                         </View>
-                      ) : null}                      
-                      {segment.gate ? (
                         <View style={styles.detailRow}>
-                          <Text style={styles.detailLabel}>게이트</Text>
-                          <Text style={styles.detailValue}>{segment.gate}</Text>
+                          <Text style={styles.detailLabel}>도착 공항</Text>
+                          <Text style={styles.detailValue}>{segment.arrivalAirport}</Text>
                         </View>
-                      ) : null}
-                    </View>
+                        <View style={styles.detailRow}>
+                          <Text style={styles.detailLabel}>출발 시간</Text>
+                          <Text style={styles.detailValue}>{dayjs(segment.departureTime).format('YYYY년 M월 D일 HH:mm')}</Text>
+                        </View>
+                        <View style={styles.detailRow}>
+                          <Text style={styles.detailLabel}>도착 시간</Text>
+                          <Text style={styles.detailValue}>{dayjs(segment.arrivalTime).format('YYYY년 M월 D일 HH:mm')}</Text>
+                        </View>
+                        {segment.seatClass ? (
+                          <View style={styles.detailRow}>
+                            <Text style={styles.detailLabel}>좌석 등급</Text>
+                            <Text style={styles.detailValue}>{segment.seatClass}</Text>
+                          </View>
+                        ) : null}
+                        {segment.seatNumber ? (
+                          <View style={styles.detailRow}>
+                            <Text style={styles.detailLabel}>좌석 번호</Text>
+                            <Text style={styles.detailValue}>{segment.seatNumber}</Text>
+                          </View>
+                        ) : null}
+                        {segment.terminal ? (
+                          <View style={styles.detailRow}>
+                            <Text style={styles.detailLabel}>터미널</Text>
+                            <Text style={styles.detailValue}>{segment.terminal}</Text>
+                          </View>
+                        ) : null}
+                        {segment.gate ? (
+                          <View style={styles.detailRow}>
+                            <Text style={styles.detailLabel}>게이트</Text>
+                            <Text style={styles.detailValue}>{segment.gate}</Text>
+                          </View>
+                        ) : null}
+                      </View>
+                      {index < item.flightSegments.length - 1 && (() => {
+                        const next = item.flightSegments[index + 1];
+                        const diffMin = dayjs(next.departureTime).diff(dayjs(segment.arrivalTime), 'minute');
+                        const valid = Number.isFinite(diffMin) && diffMin >= 0;
+                        const h = valid ? Math.floor(diffMin / 60) : 0;
+                        const m = valid ? diffMin % 60 : 0;
+                        const label = valid ? `경유 시간: ${h}시간 ${m}분` : '경유 시간: 계산 불가';
+                        return (
+                          <View style={styles.layoverRow}>
+                            <Text style={styles.layoverText}>{label}</Text>
+                          </View>
+                        );
+                      })()}
+                    </React.Fragment>
                   ))}
                 </>
               )}
@@ -843,6 +858,14 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#888',
     marginTop: 2,
+  },
+  layoverRow: {
+    alignItems: 'center',
+    paddingVertical: 6,
+  },
+  layoverText: {
+    fontSize: 12,
+    color: '#6b7280',
   },
   // 단일 아이템 상세 정보 스타일
   detailContainer: {
