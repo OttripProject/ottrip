@@ -254,8 +254,9 @@ export default function FlightItem({
 
       {/* 항공편 구간들 */}
       {flightSegments.map((segment, idx) => (
-        <View key={idx} style={[styles.segmentContainer, { marginBottom: 16 }]}>
-          <Text style={styles.segmentTitle}>구간 {idx + 1}</Text>
+        <React.Fragment key={idx}>
+          <View style={[styles.segmentContainer, { marginBottom: 16 }]}>
+            <Text style={styles.segmentTitle}>구간 {idx + 1}</Text>
           
           <View style={styles.row}>
             <View style={[styles.inputGroup, styles.halfWidth]}>
@@ -390,19 +391,36 @@ export default function FlightItem({
             </View>
           </View>
 
-          {flightSegments.length > 1 && (
-            <View style={styles.segmentActions}>
-              <Pressable
-                style={[styles.button, styles.deleteButton]}
-                onPress={() => {
-                  setFlightSegments(prev => prev.filter((_, i) => i !== idx));
-                }}
-              >
-                <Text style={styles.deleteButtonText}>구간 삭제</Text>
-              </Pressable>
-            </View>
-          )}
-        </View>
+            {flightSegments.length > 1 && (
+              <View style={styles.segmentActions}>
+                <Pressable
+                  style={[styles.button, styles.deleteButton]}
+                  onPress={() => {
+                    setFlightSegments(prev => prev.filter((_, i) => i !== idx));
+                  }}
+                >
+                  <Text style={styles.deleteButtonText}>구간 삭제</Text>
+                </Pressable>
+              </View>
+            )}
+          </View>
+
+          {idx < flightSegments.length - 1 && (() => {
+            const next = flightSegments[idx + 1];
+            const arrival = dayjs(segment.arrival_time);
+            const nextDeparture = dayjs(next.departure_time);
+            const diffMinutes = nextDeparture.diff(arrival, 'minute');
+            const valid = Number.isFinite(diffMinutes) && diffMinutes >= 0;
+            const hours = valid ? Math.floor(diffMinutes / 60) : 0;
+            const minutes = valid ? diffMinutes % 60 : 0;
+            const label = valid ? `경유 시간: ${hours}시간 ${minutes}분` : '경유 시간: 계산 불가';
+            return (
+              <View style={styles.layoverContainer}>
+                <Text style={styles.layoverText}>{label}</Text>
+              </View>
+            );
+          })()}
+        </React.Fragment>
       ))}
 
       <Pressable
@@ -556,6 +574,14 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     padding: 12,
     backgroundColor: '#f9fafb',
+  },
+  layoverContainer: {
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  layoverText: {
+    fontSize: 12,
+    color: '#6b7280',
   },
   segmentTitle: {
     fontSize: 16,
