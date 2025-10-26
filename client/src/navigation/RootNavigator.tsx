@@ -58,6 +58,14 @@ export default function RootNavigator() {
       const redirect = window.localStorage.getItem('postLoginRedirect') || '';
       if (!redirect) return;
       try { window.localStorage.removeItem('postLoginRedirect'); } catch {}
+      // UUID 패턴 매칭 (8-4-4-4-12 형식)
+      const publicIdMatch = redirect.match(/^\/plans\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i);
+      if (publicIdMatch) {
+        const publicId = publicIdMatch[1];
+        navRef.current?.reset({ index: 0, routes: [{ name: 'PLAN', params: { publicId } }] });
+        return;
+      }
+      // 기존 숫자 ID 패턴도 지원 (하위 호환성)
       const planMatch = redirect.match(/^\/plans\/(\d+)/);
       if (planMatch) {
         const planId = Number(planMatch[1]);
@@ -89,12 +97,12 @@ export default function RootNavigator() {
         },
         프로필: "profile",
         PLAN: {
-          path: "plans/:planId",
+          path: "plans/:publicId",
           parse: {
-            planId: (value: string) => Number(value),
+            publicId: (value: string) => value,
           },
           stringify: {
-            planId: (value: number) => String(value),
+            publicId: (value: string) => value,
           },
         },
       },

@@ -20,6 +20,12 @@ export const plansApi = {
     return response.data;
   },
 
+  // 공개 ID로 계획 조회
+  getPlanByPublicId: async (publicId: string): Promise<Plan> => {
+    const response = await api.get(`/private/plans/public/${publicId}`);
+    return response.data;
+  },
+
   // 계획 생성
   createPlan: async (planData: CreatePlanRequest): Promise<Plan> => {
     const response = await api.post('/private/plans', planData);
