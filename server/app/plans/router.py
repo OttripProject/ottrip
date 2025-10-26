@@ -26,6 +26,15 @@ async def read_my_plans(
     return await plan_service.read_plans_by_user()
 
 
+@router.get("/public/{public_id}", status_code=status.HTTP_200_OK)
+async def read_plan_by_public_id(
+    plan_service: PlanService,
+    public_id: str,
+) -> PlanReadWithInforms:
+    """공개 ID로 여행 계획 조회."""
+    return await plan_service.read_plan_by_public_id(public_id=public_id)
+
+
 @router.get("/{plan_id}", status_code=status.HTTP_200_OK)
 async def read_plan(
     plan_service: PlanService,

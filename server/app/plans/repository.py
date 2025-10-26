@@ -53,6 +53,36 @@ class PlanRepository:
         )
         return result.unique().scalar_one_or_none()
 
+    async def find_by_public_id(self, *, public_id: str) -> Plan | None:
+        result = await self.session.execute(
+            select(Plan)
+            .options(
+                joinedload(Plan.owner),
+                joinedload(Plan.flights).joinedload(Flight.expense),
+                joinedload(Plan.flights).joinedload(Flight.flight_segments),
+                joinedload(Plan.itineraries).joinedload(Itinerary.expenses),
+                joinedload(Plan.accommodations),
+                joinedload(Plan.expenses),
+                with_loader_criteria(
+                    FlightSegment, FlightSegment.is_deleted.is_(False), include_aliases=True
+                ),
+                with_loader_criteria(
+                    Itinerary, Itinerary.is_deleted.is_(False), include_aliases=True
+                ),
+                with_loader_criteria(
+                    Flight, Flight.is_deleted.is_(False), include_aliases=True
+                ),
+                with_loader_criteria(
+                    Accommodation, Accommodation.is_deleted.is_(False), include_aliases=True
+                ),
+                with_loader_criteria(
+                    Expense, Expense.is_deleted.is_(False), include_aliases=True
+                ),
+            )
+            .where(Plan.public_id == public_id, Plan.is_deleted.is_(False))
+        )
+        return result.unique().scalar_one_or_none()
+
     async def find_all_by_user(self, *, user_id: int) -> list[Plan]:
         owned_ids = select(Plan.id).where(
             Plan.owner_id == user_id, Plan.is_deleted.is_(False)

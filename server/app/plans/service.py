@@ -1,7 +1,7 @@
 from fastapi import HTTPException
 from datetime import datetime, timedelta, timezone
 import secrets
-
+import uuid
 from app.auth.deps import CurrentUser
 from app.users.repository import UserRepository
 from app.auth.repository import AuthRepository
@@ -36,11 +36,21 @@ class PlanService:
             end_date=plan_data.end_date,
             memo = plan_data.memo or "",
             owner_id=self.current_user.id,
+            public_id=str(uuid.uuid4()),
         )
 
         created_plan = await self.plan_repository.save(plan=create_plan_data)
 
         return PlanRead.model_validate(created_plan)
+
+    async def read_plan_by_public_id(self, *, public_id: str) -> PlanReadWithInforms:
+        """public_id로 plan을 조회하여 내부적으로 plan_id로 변환"""
+        plan = await self.plan_repository.find_by_public_id(public_id=public_id)
+        if not plan:
+            raise HTTPException(status_code=404, detail="해당 계획을 찾을 수 없습니다.")
+        
+        # 내부적으로는 기존 read_plan 메서드 사용
+        return await self.read_plan(plan_id=plan.id)
 
     async def read_plan(self, *, plan_id: int) -> PlanReadWithInforms:
         plan = await self.plan_repository.find_by_id(plan_id=plan_id)

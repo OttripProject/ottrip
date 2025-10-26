@@ -27,6 +27,14 @@ class Plan(Base):
         autoincrement=True,
     )
 
+    public_id: Mapped[str] = mapped_column(
+        String(36),
+        nullable=False,
+        unique=True,
+        index=True,
+    )
+    """공개용 UUID (URL에서 사용)"""
+
     title: Mapped[str] = mapped_column(
         String(36),
         nullable=False,
