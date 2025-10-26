@@ -2,6 +2,7 @@ import { View, StyleSheet, Alert, Platform, useWindowDimensions, Text, Pressable
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { useEffect, useState, useCallback } from "react";
 import api from "@/services/api";
+import { plansApi } from "@/services/plans";
 import { usePlanData } from "@/hooks/usePlanData";
 import dayjs from "dayjs";
 
@@ -51,8 +52,20 @@ export default function DashboardScreen() {
 
   useEffect(() => {
     const paramPlanId = route?.params?.planId;
+    const paramPublicId = route?.params?.publicId;
+    
     if (typeof paramPlanId === 'number' && Number.isFinite(paramPlanId)) {
+      // 기존 숫자 ID 지원 (하위 호환성)
       setSelectedPlanId(paramPlanId);
+    } else if (paramPublicId && typeof paramPublicId === 'string') {
+      // UUID 형태의 public_id로 plan 조회하여 ID 설정
+      plansApi.getPlanByPublicId(paramPublicId)
+        .then(plan => {
+          setSelectedPlanId(plan.id);
+        })
+        .catch(error => {
+          console.error('Failed to fetch plan by public_id:', error);
+        });
     }
   }, [route?.params]);
 
@@ -286,12 +299,37 @@ export default function DashboardScreen() {
           setSelectedPlanId(id);
           if (Platform.OS === 'web') {
             // 웹: navigate로 히스토리를 남겨 뒤로가기로 이전 플랜 보기
-            // @ts-ignore
-            if (id) navigation.navigate('PLAN', { planId: id }); else navigation.navigate('OTTRIP');
+            if (id) {
+              // planId를 publicId로 변환하여 URL에 사용
+              const plan = planData.plan;
+              const publicId = plan?.publicId;
+              if (publicId) {
+                // @ts-ignore
+                navigation.navigate('PLAN', { publicId });
+              } else {
+                // @ts-ignore
+                navigation.navigate('PLAN', { planId: id });
+              }
+            } else {
+              // @ts-ignore
+              navigation.navigate('OTTRIP');
+            }
           } else {
             // 모바일: 동일하게 navigate 사용
-            // @ts-ignore
-            if (id) navigation.navigate('PLAN', { planId: id }); else navigation.navigate('OTTRIP');
+            if (id) {
+              const plan = planData.plan;
+              const publicId = plan?.publicId;
+              if (publicId) {
+                // @ts-ignore
+                navigation.navigate('PLAN', { publicId });
+              } else {
+                // @ts-ignore
+                navigation.navigate('PLAN', { planId: id });
+              }
+            } else {
+              // @ts-ignore
+              navigation.navigate('OTTRIP');
+            }
           }
         }}
               onItinerarySelect={setSelectedItinerary}

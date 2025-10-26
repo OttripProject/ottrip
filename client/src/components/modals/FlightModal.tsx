@@ -9,6 +9,8 @@ interface FlightModalProps {
   planData?: {
     plan: any;
     flights: any[];
+    itineraries: any[];
+    accommodations: any[];
     isLoading: boolean;
     error: string | null;
     refreshFlights: () => Promise<void>;
@@ -130,6 +132,9 @@ export default function FlightModal({
                 setEditingFlight(null);
               }}
               onDelete={handleFlightDelete}
+              existingFlights={planData.flights}
+              existingItineraries={planData.itineraries || []}
+              existingAccommodations={planData.accommodations || []}
             />
           )}
           

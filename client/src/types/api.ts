@@ -8,6 +8,7 @@ export interface ApiResponse<T = any> {
 // 계획 (Plan) 관련 타입
 export interface Plan {
   id: number;
+  publicId: string;
   title: string;
   startDate: string;
   endDate: string;

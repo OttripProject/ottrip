@@ -230,6 +230,9 @@ export default function DetailsModal({ planData, selectedItinerary, selectedFlig
             setEditingFlight(null);
           }}
           onDelete={handleFlightDelete}
+          existingFlights={planData.flights}
+          existingItineraries={planData.itineraries}
+          existingAccommodations={planData.accommodations}
         />
       );
     }
@@ -565,6 +568,9 @@ export default function DetailsModal({ planData, selectedItinerary, selectedFlig
                   setEditingFlight(null);
                 }}
                 onDelete={handleFlightDelete}
+                existingFlights={planData.flights}
+                existingItineraries={planData.itineraries}
+                existingAccommodations={planData.accommodations}
               />
             ) : (
               <>
