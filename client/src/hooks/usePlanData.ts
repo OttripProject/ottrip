@@ -14,7 +14,7 @@ interface PlanData {
   expenses: Expense[];
 }
 
-export const usePlanData = (planId: number | null) => {
+export const usePlanData = (publicId: string | null) => {
   const [planData, setPlanData] = useState<PlanData>({
     plan: null,
     itineraries: [],
@@ -26,19 +26,19 @@ export const usePlanData = (planId: number | null) => {
   const [error, setError] = useState<string | null>(null);
   const [errorStatus, setErrorStatus] = useState<number | null>(null);
 
-  const fetchPlanData = useCallback(async (id: number) => {
+  const fetchPlanData = useCallback(async (pId: string) => {
     setIsLoading(true);
     setError(null);
     setErrorStatus(null);
 
     try {
-      const plan = await plansApi.getPlan(id);
+      const plan = await plansApi.getPlan(pId);
 
       const [itRes, flRes, accRes, exRes] = await Promise.allSettled([
-        itinerariesApi.getItineraries(id),
-        flightsApi.getFlightsByPlan(id),
-        accommodationsApi.getAccommodations(id),
-        expensesApi.getExpenses(id),
+        itinerariesApi.getItineraries(plan.id),
+        flightsApi.getFlightsByPlan(plan.id),
+        accommodationsApi.getAccommodations(plan.id),
+        expensesApi.getExpenses(plan.id),
       ]);
 
       const itineraries = itRes.status === 'fulfilled' ? itRes.value : [];
@@ -62,12 +62,12 @@ export const usePlanData = (planId: number | null) => {
     }
   }, []);
 
-  // Plan ID가 변경될 때마다 데이터 로딩
+  // publicId가 변경될 때마다 데이터 로딩
   useEffect(() => {
-    if (planId) {
-      fetchPlanData(planId);
+    if (publicId) {
+      fetchPlanData(publicId);
     } else {
-      // Plan ID가 없으면 데이터 초기화
+      // publicId가 없으면 데이터 초기화
       setPlanData({
         plan: null,
         itineraries: [],
@@ -78,48 +78,48 @@ export const usePlanData = (planId: number | null) => {
       setError(null);
       setErrorStatus(null);
     }
-  }, [planId, fetchPlanData]);
+  }, [publicId, fetchPlanData]);
 
   // 개별 데이터 새로고침 함수들
   const refreshItineraries = useCallback(async () => {
-    if (!planId) return;
+    if (!planData.plan?.id) return;
     try {
-      const itineraries = await itinerariesApi.getItineraries(planId);
+      const itineraries = await itinerariesApi.getItineraries(planData.plan.id);
       setPlanData(prev => ({ ...prev, itineraries }));
     } catch (err: any) {
       console.error('Failed to refresh itineraries:', err);
     }
-  }, [planId]);
+  }, [planData.plan?.id]);
 
   const refreshFlights = useCallback(async () => {
-    if (!planId) return;
+    if (!planData.plan?.id) return;
     try {
-      const flights = await flightsApi.getFlightsByPlan(planId);
+      const flights = await flightsApi.getFlightsByPlan(planData.plan.id);
       setPlanData(prev => ({ ...prev, flights }));
     } catch (err: any) {
       console.error('Failed to refresh flights:', err);
     }
-  }, [planId]);
+  }, [planData.plan?.id]);
 
   const refreshAccommodations = useCallback(async () => {
-    if (!planId) return;
+    if (!planData.plan?.id) return;
     try {
-      const accommodations = await accommodationsApi.getAccommodations(planId);
+      const accommodations = await accommodationsApi.getAccommodations(planData.plan.id);
       setPlanData(prev => ({ ...prev, accommodations }));
     } catch (err: any) {
       console.error('Failed to refresh accommodations:', err);
     }
-  }, [planId]);
+  }, [planData.plan?.id]);
 
   const refreshExpenses = useCallback(async () => {
-    if (!planId) return;
+    if (!planData.plan?.id) return;
     try {
-      const expenses = await expensesApi.getExpenses(planId);
+      const expenses = await expensesApi.getExpenses(planData.plan.id);
       setPlanData(prev => ({ ...prev, expenses }));
     } catch (err: any) {
       console.error('Failed to refresh expenses:', err);
     }
-  }, [planId]);
+  }, [planData.plan?.id]);
 
   return {
     ...planData,

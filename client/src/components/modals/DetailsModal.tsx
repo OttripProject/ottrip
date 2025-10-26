@@ -29,6 +29,7 @@ interface DetailsModalProps {
   onItineraryAdd?: (itinerary: any) => void;
   onFlightAdd?: (flight: any) => void;
   onAccommodationAdd?: (accommodation: any) => void;
+  onAccommodationSelect?: (accommodation: any) => void;
   onExpenseAdd?: (expense: any) => void;
   // 외부에서 새 항공편 폼을 바로 열도록 트리거
   openNewFlightForm?: boolean;
@@ -99,7 +100,7 @@ function Placeholder({ label }: { label: string }) {
   );
 }
 
-export default function DetailsModal({ planData, selectedItinerary, selectedFlight, selectedAccommodation, activeTab, onItineraryAdd: externalOnItineraryAdd, onFlightAdd: externalOnFlightAdd, onAccommodationAdd: externalOnAccommodationAdd, onExpenseAdd: externalOnExpenseAdd, openNewFlightForm, onConsumeOpenNewFlightForm, openNewAccommodationForm, onConsumeOpenNewAccommodationForm, newAccommodationDraft }: DetailsModalProps) {
+export default function DetailsModal({ planData, selectedItinerary, selectedFlight, selectedAccommodation, activeTab, onItineraryAdd: externalOnItineraryAdd, onFlightAdd: externalOnFlightAdd, onAccommodationAdd: externalOnAccommodationAdd, onAccommodationSelect, onExpenseAdd: externalOnExpenseAdd, openNewFlightForm, onConsumeOpenNewFlightForm, openNewAccommodationForm, onConsumeOpenNewAccommodationForm, newAccommodationDraft }: DetailsModalProps) {
     const [open, setOpen] = useState<string | undefined>();
     const [showItineraryForm, setShowItineraryForm] = useState(false);
     const [showFlightForm, setShowFlightForm] = useState(false);
@@ -132,14 +133,20 @@ export default function DetailsModal({ planData, selectedItinerary, selectedFlig
       }
     };
 
-    const handleAccommodationSave = (accommodation: any) => {
+    const handleAccommodationSave = async (accommodation: any) => {
       externalOnAccommodationAdd?.(accommodation);
       setShowAccommodationForm(false);
       setEditingAccommodation(null);
+      // 숙박 목록 새로고침
+      if (planData?.refreshAccommodations) {
+        await planData.refreshAccommodations();
+      }
       // 지출 목록 새로고침
       if (planData?.refreshExpenses) {
         planData.refreshExpenses();
       }
+      // 새로 생성된 숙박을 선택된 상태로 설정
+      onAccommodationSelect?.(accommodation);
     };
 
     const handleItineraryDelete = (itineraryId: string) => {
@@ -170,16 +177,12 @@ export default function DetailsModal({ planData, selectedItinerary, selectedFlig
     // 외부 트리거: 숙박 탭에서 즉시 새 숙박 추가 폼 열기
     React.useEffect(() => {
       if (activeTab === 'accommodation' && openNewAccommodationForm) {
-        // 새 날짜로 들어온 경우, 프리필 드래프트가 있으면 우선 사용
-        if (newAccommodationDraft) {
-          setEditingAccommodation(newAccommodationDraft);
-        } else {
-          setEditingAccommodation(selectedAccommodation || null);
-        }
+        // 새 숙박 생성이므로 null로 설정
+        setEditingAccommodation(null);
         setShowAccommodationForm(true);
         onConsumeOpenNewAccommodationForm && onConsumeOpenNewAccommodationForm();
       }
-    }, [activeTab, openNewAccommodationForm, onConsumeOpenNewAccommodationForm, selectedAccommodation, newAccommodationDraft]);
+    }, [activeTab, openNewAccommodationForm, onConsumeOpenNewAccommodationForm]);
 
     const handleAccommodationDelete = (accommodationId: string) => {
       // 삭제 후 목록 새로고침
@@ -241,6 +244,7 @@ export default function DetailsModal({ planData, selectedItinerary, selectedFlig
       return (
         <AccommodationItem
           accommodation={editingAccommodation}
+          draft={newAccommodationDraft}
           planId={planData.plan.id}
           onSave={handleAccommodationSave}
           onCancel={() => {
@@ -649,6 +653,7 @@ export default function DetailsModal({ planData, selectedItinerary, selectedFlig
             {showAccommodationForm && (
               <AccommodationItem
                 accommodation={editingAccommodation}
+                draft={newAccommodationDraft}
                 planId={planData.plan.id}
                 onSave={handleAccommodationSave}
                 onCancel={() => {

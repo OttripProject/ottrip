@@ -14,15 +14,9 @@ export const plansApi = {
     return response.data.plans; // plans 배열 추출
   },
 
-  // 특정 계획 조회
-  getPlan: async (planId: number): Promise<Plan> => {
-    const response = await api.get(`/private/plans/${planId}`);
-    return response.data;
-  },
-
-  // 공개 ID로 계획 조회
-  getPlanByPublicId: async (publicId: string): Promise<Plan> => {
-    const response = await api.get(`/private/plans/public/${publicId}`);
+  // 특정 계획 조회 (public_id 기반)
+  getPlan: async (publicId: string): Promise<Plan> => {
+    const response = await api.get(`/private/plans/${publicId}`);
     return response.data;
   },
 

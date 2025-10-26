@@ -1,7 +1,7 @@
 // 현재 사용하지 않음 지워도될듯 나중에
 
-import React, { useState, useMemo } from 'react';
-import { View, Text, Pressable, StyleSheet, Alert, TouchableOpacity, Modal } from 'react-native';
+import React, { useState, useMemo, useEffect } from 'react';
+import { View, Text, Pressable, StyleSheet, Alert, TouchableOpacity, Modal, Platform } from 'react-native';
 import { Calendar as BigCalendar } from 'react-native-big-calendar';
 import { Calendar } from 'react-native-calendars';
 import dayjs from 'dayjs';
@@ -12,7 +12,6 @@ import Input from '@/ui/components/input/Input';
 import { PLACEHOLDERS } from '@/constants/placeholders';
 import { plansApi } from '@/services/plans';
 import { usePlans } from '@/hooks/usePlans';
-import { useEffect } from 'react';
 import { usePlanData } from '@/hooks/usePlanData';
 
 dayjs.locale(ko);
@@ -95,14 +94,14 @@ export default function WeeklySchedule({ itineraries, height = 600, onItineraryA
     // Plan을 Trip으로 변환하는 매핑 함수
     const trips = useMemo(() => plans.map(plan => ({
       id: plan.id.toString(),
+      publicId: plan.publicId,
       name: plan.title,
       startDate: plan.startDate,
       endDate: plan.endDate,
     })), [plans]);
 
     // 선택된 Plan의 데이터 로딩
-    const selectedPlanId = selectedTrip ? parseInt(selectedTrip.id) : null;
-    const planData = usePlanData(selectedPlanId);
+    const planData = usePlanData(selectedTrip?.publicId || null);
 
     const myRole = useMemo(() => {
       const r = (planData.plan as any)?.myRole;
@@ -246,6 +245,14 @@ export default function WeeklySchedule({ itineraries, height = 600, onItineraryA
             if (onPlanSelect) {
               onPlanSelect(trip ? parseInt(trip.id) : null);
             }
+            // URL 변경 (웹에서만)
+            if (typeof window !== 'undefined' && Platform.OS === 'web') {
+              if (trip?.publicId) {
+                window.history.pushState({}, '', `/plans/${trip.publicId}`);
+              } else {
+                window.history.pushState({}, '', '/');
+              }
+            }
           }}
           trips={trips}
           onTripAdd={handleAddTrip}
@@ -254,7 +261,7 @@ export default function WeeklySchedule({ itineraries, height = 600, onItineraryA
         />
 
         {/* 기능 버튼 그룹: plan 선택 시만 표시 */}
-        {selectedPlanId ? (
+        {selectedTrip ? (
           <View style={styles.actionGroup}>
             {(myRole === 'owner' || myRole === 'editor') && (
               <Pressable
@@ -366,11 +373,11 @@ export default function WeeklySchedule({ itineraries, height = 600, onItineraryA
         visible={shareOpen}
         onClose={() => setShareOpen(false)}
         onSubmit={async ({ email, role, expires_days }) => {
-          if (!selectedPlanId) throw new Error('No plan selected');
-          await plansApi.invite(selectedPlanId, { email, role, expires_days });
+          if (!selectedTrip?.id) throw new Error('No plan selected');
+          await plansApi.invite(parseInt(selectedTrip.id), { email, role, expires_days });
           Alert.alert('성공', '초대 메일을 전송했습니다.');
         }}
-        planId={selectedPlanId as number}
+        planId={selectedTrip ? parseInt(selectedTrip.id) : 0}
       />
 
       {/* 메모 편집 모달 */}
@@ -393,14 +400,14 @@ export default function WeeklySchedule({ itineraries, height = 600, onItineraryA
               <Pressable
                 onPress={async () => {
                   try {
-                    if (!selectedPlanId) throw new Error('No plan selected');
-                    await plansApi.setMemo(selectedPlanId, memoDraft ?? '');
+                    if (!selectedTrip?.id) throw new Error('No plan selected');
+                    await plansApi.setMemo(parseInt(selectedTrip.id), memoDraft ?? '');
                     Alert.alert('성공', '메모가 저장되었습니다.');
                     setMemoOpen(false);
                     // 최신 데이터 반영
-                    if (selectedPlanId) {
+                    if (selectedTrip?.publicId) {
                       // @ts-ignore
-                      planData.fetchPlanData && (await planData.fetchPlanData(selectedPlanId));
+                      planData.fetchPlanData && (await planData.fetchPlanData(selectedTrip.publicId));
                     }
                   } catch (e: any) {
                     Alert.alert('오류', e?.response?.data?.detail || '메모 저장에 실패했습니다.');

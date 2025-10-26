@@ -65,13 +65,6 @@ export default function RootNavigator() {
         navRef.current?.reset({ index: 0, routes: [{ name: 'PLAN', params: { publicId } }] });
         return;
       }
-      // 기존 숫자 ID 패턴도 지원 (하위 호환성)
-      const planMatch = redirect.match(/^\/plans\/(\d+)/);
-      if (planMatch) {
-        const planId = Number(planMatch[1]);
-        navRef.current?.reset({ index: 0, routes: [{ name: 'PLAN', params: { planId } }] });
-        return;
-      }
       if (redirect.startsWith('/profile')) {
         navRef.current?.reset({ index: 0, routes: [{ name: '프로필' }] });
         return;

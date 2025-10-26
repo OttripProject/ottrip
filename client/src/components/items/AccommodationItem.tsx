@@ -10,6 +10,7 @@ import { TimePicker } from '@/ui/components/pickers';
 
 interface AccommodationItemProps {
   accommodation?: any;
+  draft?: any;
   planId: number;
   onSave: (accommodation: any) => void;
   onCancel: () => void;
@@ -18,6 +19,7 @@ interface AccommodationItemProps {
 
 export default function AccommodationItem({ 
   accommodation, 
+  draft,
   planId, 
   onSave, 
   onCancel, 
@@ -28,10 +30,10 @@ export default function AccommodationItem({
     place: accommodation?.place || '',
     country: accommodation?.country || '',
     city: accommodation?.city || '',
-    checkin_date: (accommodation?.checkinDate) || dayjs().format('YYYY-MM-DD'),
-    checkout_date: (accommodation?.checkoutDate) || dayjs().add(1, 'day').format('YYYY-MM-DD'),
-    checkin_time: (accommodation?.checkinTime) || '15:00',
-    checkout_time: (accommodation?.checkoutTime) || '11:00',
+    checkin_date: (accommodation?.checkinDate) || draft?.checkinDate || dayjs().format('YYYY-MM-DD'),
+    checkout_date: (accommodation?.checkoutDate) || draft?.checkoutDate || dayjs().add(1, 'day').format('YYYY-MM-DD'),
+    checkin_time: (accommodation?.checkinTime) || draft?.checkinTime || '15:00',
+    checkout_time: (accommodation?.checkoutTime) || draft?.checkoutTime || '11:00',
     description: accommodation?.description || '',
   });
 
@@ -70,7 +72,7 @@ export default function AccommodationItem({
     setIsLoading(true);
     try {
       let savedAccommodation;
-      if (accommodation) {
+      if (accommodation && accommodation.id) {
         // 편집
         savedAccommodation = await accommodationsApi.updateAccommodation(accommodation.id, {
           name: formData.name,
@@ -121,7 +123,7 @@ export default function AccommodationItem({
   };
 
   const handleDelete = async () => {
-    if (accommodation && onDelete) {
+    if (accommodation && accommodation.id && onDelete) {
       try {
         await accommodationsApi.deleteAccommodation(accommodation.id);
         onDelete(accommodation.id);
