@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { View, Text, Pressable, StyleSheet, Alert, Platform } from 'react-native';
 import { DatePicker, TimePicker, AirportPicker } from '@/ui/components/pickers';
 import dayjs from 'dayjs';
 import { flightsApi } from '@/services/flights';
@@ -113,6 +113,11 @@ export default function FlightItem({
 
   const handleSave = async () => {
     if (!formData.reservation_number.trim() || !formData.passenger_name.trim() || !isFirstSegmentValid) {
+      if (Platform.OS === 'web') {
+        window.alert('입력되지 않은 값이 있어요');
+      } else {
+        Alert.alert('알림', '입력되지 않은 값이 있어요');
+      }
       return;
     }
 
@@ -516,12 +521,7 @@ export default function FlightItem({
         <Pressable
           style={[styles.button, styles.saveButton]}
           onPress={handleSave}
-          disabled={
-            isLoading ||
-            !formData.reservation_number.trim() ||
-            !formData.passenger_name.trim() ||
-            !isFirstSegmentValid
-          }
+          disabled={isLoading}
         >
           <Text style={styles.saveButtonText}>
             {isLoading ? '저장 중...' : '저장'}
