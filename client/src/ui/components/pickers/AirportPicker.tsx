@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { View, StyleSheet, ViewStyle } from 'react-native';
 import DropDownPicker from 'react-native-dropdown-picker';
-import { getAirportOptions, getAirportLabel } from '@/utils/airportList';
+import { getAirportOptions, getAllAirportOptions, getAirportLabel } from '@/utils/airportList';
 import { PLACEHOLDERS } from '@/constants/placeholders';
 
 interface AirportPickerProps {
@@ -19,13 +19,31 @@ export default function AirportPicker({
   containerStyle, 
   disabled 
 }: AirportPickerProps) {
-  const options = useMemo(() => getAirportOptions(), []);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isSearching, setIsSearching] = useState(false);
+  
+  // 검색 중이 아니면 주요 공항만, 검색 중이면 전체 목록
+  const options = useMemo(() => {
+    if (isSearching || searchQuery.length > 0) {
+      // 전체 목록에서 검색 (한번만 로드)
+      return getAllAirportOptions();
+    }
+    return getAirportOptions();
+  }, [isSearching, searchQuery]);
+  
   const [open, setOpen] = useState(false);
   const [code, setCode] = useState<string | null>(null);
 
   useEffect(() => {
     setCode(value || null);
   }, [value]);
+  
+  // DropDownPicker가 열릴 때 검색 모드 활성화
+  useEffect(() => {
+    if (open) {
+      setIsSearching(true);
+    }
+  }, [open]);
 
   return (
     <View style={[styles.wrapper, containerStyle, { zIndex: open ? 999999 : 1 }]}> 
