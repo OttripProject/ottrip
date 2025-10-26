@@ -6,9 +6,10 @@ interface TimePickerProps {
   onChange: (time: string) => void;
   style?: any;
   placeholder?: string;
+  minTime?: string; // 'HH:mm' 형식, 만약 value의 날짜가 minDate와 같다면 이 시간보다 이후만 선택 가능
 }
 
-export default function TimePicker({ value, onChange, style, placeholder = "시간을 선택하세요" }: TimePickerProps) {
+export default function TimePicker({ value, onChange, style, placeholder = "시간을 선택하세요", minTime }: TimePickerProps) {
   const [showPicker, setShowPicker] = useState(false);
   const [tempTime, setTempTime] = useState(value || '09:00');
 
@@ -48,17 +49,29 @@ export default function TimePicker({ value, onChange, style, placeholder = "시�
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>시간 선택</Text>
             <ScrollView style={styles.timeList} showsVerticalScrollIndicator={true}>
-              {timeOptions.map((time) => (
-                <Pressable
-                  key={time}
-                  style={[styles.timeOption, tempTime === time && styles.selectedTimeOption]}
-                  onPress={() => handleTimeSelect(time)}
-                >
-                  <Text style={[styles.timeOptionText, tempTime === time && styles.selectedTimeOptionText]}>
-                    {time}
-                  </Text>
-                </Pressable>
-              ))}
+              {timeOptions.map((time) => {
+                const isDisabled = minTime && time < minTime;
+                return (
+                  <Pressable
+                    key={time}
+                    style={[
+                      styles.timeOption, 
+                      tempTime === time && styles.selectedTimeOption,
+                      isDisabled && styles.disabledTimeOption
+                    ]}
+                    onPress={() => !isDisabled && handleTimeSelect(time)}
+                    disabled={!!isDisabled}
+                  >
+                    <Text style={[
+                      styles.timeOptionText, 
+                      tempTime === time && styles.selectedTimeOptionText,
+                      isDisabled && styles.disabledTimeOptionText
+                    ]}>
+                      {time}
+                    </Text>
+                  </Pressable>
+                );
+              })}
             </ScrollView>
             <Pressable style={styles.cancelButton} onPress={handleCancel}>
               <Text style={styles.cancelButtonText}>취소</Text>
@@ -83,6 +96,8 @@ const styles = StyleSheet.create({
   selectedTimeOption: { backgroundColor: '#e3f2fd', borderRadius: 5 },
   timeOptionText: { fontSize: 16, color: '#343a40', textAlign: 'center' },
   selectedTimeOptionText: { color: '#007AFF', fontWeight: '600' },
+  disabledTimeOption: { opacity: 0.3 },
+  disabledTimeOptionText: { color: '#ccc' },
   cancelButton: { marginTop: 15, paddingVertical: 10, paddingHorizontal: 20, backgroundColor: '#6c757d', borderRadius: 6, alignItems: 'center' },
   cancelButtonText: { color: 'white', fontSize: 14, fontWeight: '500' },
 });
