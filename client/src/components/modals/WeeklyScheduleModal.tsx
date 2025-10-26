@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { View, Text, Pressable, StyleSheet, Alert, TouchableOpacity, Modal } from 'react-native';
+import { View, Text, Pressable, StyleSheet, Alert, TouchableOpacity, Modal, Platform } from 'react-native';
 import { Calendar as BigCalendar } from 'react-native-big-calendar';
 import { Calendar } from 'react-native-calendars';
 import dayjs from 'dayjs';
@@ -92,9 +92,10 @@ interface Props {
   flights?: any[];
   height?: number;
   onItineraryAdd?: (itinerary: any) => void;
-  onPlanSelect?: (planId: number | null) => void;
+  onPlanSelect?: (trip: any) => void;
   onItinerarySelect?: (itinerary: Itinerary) => void;
   onFlightAdd?: (flight: any) => void;
+  onAccommodationAdd?: (accommodation: any) => void;
   onShowItineraryModal?: () => void;
   onShowFlightModal?: () => void;
   onRequestNewFlight?: () => void; // 새 항공편 추가 즉시 열기
@@ -102,14 +103,15 @@ interface Props {
   onShowItineraryDetail?: (itinerary: Itinerary) => void;
   onShowFlightDetail?: (flight: any) => void;
   onShowAccommodationDetail?: (accommodation: any) => void;
-  selectedPlanId?: number | null; // 외부(대시보드/URL)에서 받은 선택 동기화용
+  selectedTrip?: any; // 외부(대시보드/URL)에서 받은 선택 동기화용
+  planData?: any; // planData 전달
 }
 
-export default function WeeklyScheduleModal({ itineraries, flights = [], height = 600, onItineraryAdd, onPlanSelect, onItinerarySelect, onFlightAdd, onShowItineraryModal, onShowFlightModal, onRequestNewFlight, onShowAccommodationModal, onShowItineraryDetail, onShowFlightDetail, onShowAccommodationDetail, selectedPlanId }: Props) {
+export default function WeeklyScheduleModal({ itineraries, flights = [], height = 600, onItineraryAdd, onPlanSelect, onItinerarySelect, onFlightAdd, onAccommodationAdd, onShowItineraryModal, onShowFlightModal, onRequestNewFlight, onShowAccommodationModal, onShowItineraryDetail, onShowFlightDetail, onShowAccommodationDetail, selectedTrip, planData: externalPlanData }: Props) {
     const [currentWeekStart, setCurrentWeekStart] = useState(
         dayjs().startOf('week').add(1, 'day') // 월요일 시작
         );
-    const [selectedTrip, setSelectedTrip] = useState<any>(null);
+    const [internalSelectedTrip, setInternalSelectedTrip] = useState<any>(null);
     const [showMonthPicker, setShowMonthPicker] = useState(false);
     const [selectedDate, setSelectedDate] = useState<string>(dayjs().format('YYYY-MM-DD'));
     const [shareOpen, setShareOpen] = useState(false);
@@ -131,30 +133,22 @@ export default function WeeklyScheduleModal({ itineraries, flights = [], height 
     // Plan을 Trip으로 변환하는 매핑 함수
     const trips = useMemo(() => plans.map(plan => ({
       id: plan.id.toString(),
+      publicId: plan.publicId,
       name: plan.title,
       startDate: plan.startDate,
       endDate: plan.endDate,
     })), [plans]);
 
     // 선택된 Plan의 데이터 로딩
-    const internalSelectedPlanId = selectedTrip ? parseInt(selectedTrip.id) : null;
-    const planData = usePlanData(internalSelectedPlanId);
+    const internalPlanData = usePlanData(internalSelectedTrip?.publicId || null);
+    const planData = externalPlanData || internalPlanData;
 
-    // 외부 selectedPlanId가 주어지면 TripSelector 선택과 동기화
+    // 외부 selectedTrip가 주어지면 TripSelector 선택과 동기화
     useEffect(() => {
-      if (!selectedPlanId) return;
-      const plan = plans.find(p => p.id === selectedPlanId);
-      if (!plan) return;
-      const nextTrip = {
-        id: String(plan.id),
-        name: plan.title,
-        startDate: plan.startDate,
-        endDate: plan.endDate,
-      } as any;
-      if (!selectedTrip || selectedTrip.id !== String(plan.id)) {
-        setSelectedTrip(nextTrip);
+      if (selectedTrip) {
+        setInternalSelectedTrip(selectedTrip);
       }
-    }, [selectedPlanId, plans, selectedTrip]);
+    }, [selectedTrip]);
 
     const myRole = useMemo(() => {
       const r = (planData.plan as any)?.myRole;
@@ -171,14 +165,13 @@ export default function WeeklyScheduleModal({ itineraries, flights = [], height 
       return days;
     };
 
-    // 특정 날짜의 숙박 정보 찾기
+    // 특정 날짜의 숙박 정보 찾기 (체크인 날짜에만 표시)
     const getAccommodationForDate = (date: string) => {
       return planData.accommodations.find((acc: any) => {
         const checkinDate = dayjs(acc.checkinDate).format('YYYY-MM-DD');
-        const checkoutDate = dayjs(acc.checkoutDate).format('YYYY-MM-DD');
         const targetDate = dayjs(date).format('YYYY-MM-DD');
         
-        return targetDate >= checkinDate && targetDate <= checkoutDate;
+        return targetDate === checkinDate;
       });
     };
 
@@ -198,8 +191,8 @@ export default function WeeklyScheduleModal({ itineraries, flights = [], height 
             startDate: createdPlan.startDate,
             endDate: createdPlan.endDate,
           };
-          setSelectedTrip(newTripData);
-          onPlanSelect?.(createdPlan.id);
+          setInternalSelectedTrip(newTripData);
+          onPlanSelect?.(newTripData);
           Alert.alert('성공', '여행 계획이 추가되었습니다.');
         } else {
           Alert.alert('오류', '여행 계획 추가에 실패했습니다.');
@@ -228,7 +221,7 @@ export default function WeeklyScheduleModal({ itineraries, flights = [], height 
               startDate: updatedPlan.startDate,
               endDate: updatedPlan.endDate,
             };
-            setSelectedTrip(updatedTripData);
+            setInternalSelectedTrip(updatedTripData);
           }
           Alert.alert('성공', '여행 계획이 수정되었습니다.');
         } else {
@@ -247,8 +240,8 @@ export default function WeeklyScheduleModal({ itineraries, flights = [], height 
         
         if (success) {
           // 현재 선택된 Plan이 삭제된 Plan이면 선택 해제
-          if (selectedTrip && selectedTrip.id === tripId) {
-            setSelectedTrip(null);
+          if (internalSelectedTrip && internalSelectedTrip.id === tripId) {
+            setInternalSelectedTrip(null);
             onPlanSelect?.(null);
           }
           Alert.alert('성공', '여행 계획이 삭제되었습니다.');
@@ -313,12 +306,20 @@ export default function WeeklyScheduleModal({ itineraries, flights = [], height 
 
         {/* 여행 선택 콤보박스 */}
         <TripSelector
-          selectedTrip={selectedTrip}
+          selectedTrip={internalSelectedTrip}
           onTripSelect={(trip) => {
-            setSelectedTrip(trip);
+            setInternalSelectedTrip(trip);
             // 부모 컴포넌트에 Plan ID 전달
             if (onPlanSelect) {
-              onPlanSelect(trip ? parseInt(trip.id) : null);
+              onPlanSelect(trip);
+            }
+            // URL 변경 (웹에서만)
+            if (typeof window !== 'undefined' && Platform.OS === 'web') {
+              if (trip?.publicId) {
+                window.history.pushState({}, '', `/plans/${trip.publicId}`);
+              } else {
+                window.history.pushState({}, '', '/');
+              }
             }
           }}
           trips={trips}
@@ -328,7 +329,7 @@ export default function WeeklyScheduleModal({ itineraries, flights = [], height 
         />
 
         {/* 기능 버튼 그룹: plan 선택 시만 표시 */}
-        {selectedPlanId ? (
+        {internalSelectedTrip ? (
           <View style={styles.actionGroup}>
             {(myRole === 'owner' || myRole === 'editor') && (
               <Pressable
@@ -366,7 +367,7 @@ export default function WeeklyScheduleModal({ itineraries, flights = [], height 
       </View>
 
       {/* 숙박 정보 행 */}
-      {selectedPlanId && (
+      {internalSelectedTrip && (
         <View style={styles.accommodationRow}>
           <View style={styles.accommodationLabel}>
             <Text style={styles.accommodationLabelText}>숙박</Text>
@@ -500,11 +501,11 @@ export default function WeeklyScheduleModal({ itineraries, flights = [], height 
         visible={shareOpen}
         onClose={() => setShareOpen(false)}
         onSubmit={async ({ email, role, expires_days }) => {
-          if (!selectedPlanId) throw new Error('No plan selected');
-          await plansApi.invite(selectedPlanId, { email, role, expires_days });
+          if (!internalSelectedTrip?.id) throw new Error('No plan selected');
+          await plansApi.invite(parseInt(internalSelectedTrip.id), { email, role, expires_days });
           Alert.alert('성공', '초대 메일을 전송했습니다.');
         }}
-        planId={selectedPlanId as number}
+        planId={internalSelectedTrip ? parseInt(internalSelectedTrip.id) : 0}
       />
 
       {/* 메모 편집 모달 */}
@@ -527,14 +528,14 @@ export default function WeeklyScheduleModal({ itineraries, flights = [], height 
               <Pressable
                 onPress={async () => {
                   try {
-                    if (!selectedPlanId) throw new Error('No plan selected');
-                    await plansApi.setMemo(selectedPlanId, memoDraft ?? '');
+                    if (!internalSelectedTrip?.id) throw new Error('No plan selected');
+                    await plansApi.setMemo(parseInt(internalSelectedTrip.id), memoDraft ?? '');
                     Alert.alert('성공', '메모가 저장되었습니다.');
                     setMemoOpen(false);
                     // 최신 데이터 반영
-                    if (selectedPlanId) {
+                    if (internalSelectedTrip?.publicId) {
                       // @ts-ignore
-                      planData.fetchPlanData && (await planData.fetchPlanData(selectedPlanId));
+                      planData.fetchPlanData && (await planData.fetchPlanData(internalSelectedTrip.publicId));
                     }
                   } catch (e: any) {
                     Alert.alert('오류', e?.response?.data?.detail || '메모 저장에 실패했습니다.');

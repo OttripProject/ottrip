@@ -6,6 +6,7 @@ import { PLACEHOLDERS } from '@/constants/placeholders';
 
 interface Trip {
   id: string;
+  publicId?: string;
   name: string;
   startDate: string;
   endDate: string;

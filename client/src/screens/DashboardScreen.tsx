@@ -18,6 +18,7 @@ export default function DashboardScreen() {
   const navigation = useNavigation();
   const route = useRoute<any>();
   const [selectedPlanId, setSelectedPlanId] = useState<number | null>(null);
+  const [selectedTrip, setSelectedTrip] = useState<any>(null);
   const [selectedItinerary, setSelectedItinerary] = useState<any>(null);
   const [selectedFlight, setSelectedFlight] = useState<any>(null);
   const [selectedAccommodation, setSelectedAccommodation] = useState<any>(null);
@@ -48,26 +49,14 @@ export default function DashboardScreen() {
   const leftTopHeight = Math.max(240, Math.floor((availableHeight - innerGap) * 0.7));
   const leftBottomHeight = Math.max(160, (availableHeight - innerGap) - leftTopHeight);
   
-  const planData = usePlanData(selectedPlanId);
+  const planData = usePlanData(selectedTrip?.publicId || route?.params?.publicId);
 
   useEffect(() => {
-    const paramPlanId = route?.params?.planId;
-    const paramPublicId = route?.params?.publicId;
-    
-    if (typeof paramPlanId === 'number' && Number.isFinite(paramPlanId)) {
-      // 기존 숫자 ID 지원 (하위 호환성)
-      setSelectedPlanId(paramPlanId);
-    } else if (paramPublicId && typeof paramPublicId === 'string') {
-      // UUID 형태의 public_id로 plan 조회하여 ID 설정
-      plansApi.getPlanByPublicId(paramPublicId)
-        .then(plan => {
-          setSelectedPlanId(plan.id);
-        })
-        .catch(error => {
-          console.error('Failed to fetch plan by public_id:', error);
-        });
+    if (planData.plan) {
+      // plan이 로드된 후 ID 설정
+      setSelectedPlanId(planData.plan.id);
     }
-  }, [route?.params]);
+  }, [planData.plan]);
 
   // 플랜 변경 시 상세 모달 상태 초기화
   useEffect(() => {
@@ -146,6 +135,9 @@ export default function DashboardScreen() {
   const handleAccommodationAdd = async (newAccommodation: any) => {
     if (selectedPlanId) {
       await planData.refreshAccommodations();
+      // 새로 생성된 숙박을 선택된 상태로 설정
+      setSelectedAccommodation(newAccommodation);
+      setActiveTab('accommodation');
     }
   };
 
@@ -293,39 +285,26 @@ export default function DashboardScreen() {
               itineraries={planData.itineraries}
               flights={planData.flights}
               height={leftTopHeight}
-              selectedPlanId={selectedPlanId}
+              selectedTrip={selectedTrip}
+              planData={planData}
               onItineraryAdd={handleItineraryAdd}
-        onPlanSelect={(id) => {
-          setSelectedPlanId(id);
+        onPlanSelect={(trip) => {
+          setSelectedTrip(trip);
+          setSelectedPlanId(trip ? parseInt(trip.id) : null);
           if (Platform.OS === 'web') {
             // 웹: navigate로 히스토리를 남겨 뒤로가기로 이전 플랜 보기
-            if (id) {
-              // planId를 publicId로 변환하여 URL에 사용
-              const plan = planData.plan;
-              const publicId = plan?.publicId;
-              if (publicId) {
-                // @ts-ignore
-                navigation.navigate('PLAN', { publicId });
-              } else {
-                // @ts-ignore
-                navigation.navigate('PLAN', { planId: id });
-              }
+            if (trip?.publicId) {
+              // @ts-ignore
+              navigation.navigate('PLAN', { publicId: trip.publicId });
             } else {
               // @ts-ignore
               navigation.navigate('OTTRIP');
             }
           } else {
             // 모바일: 동일하게 navigate 사용
-            if (id) {
-              const plan = planData.plan;
-              const publicId = plan?.publicId;
-              if (publicId) {
-                // @ts-ignore
-                navigation.navigate('PLAN', { publicId });
-              } else {
-                // @ts-ignore
-                navigation.navigate('PLAN', { planId: id });
-              }
+            if (trip?.publicId) {
+              // @ts-ignore
+              navigation.navigate('PLAN', { publicId: trip.publicId });
             } else {
               // @ts-ignore
               navigation.navigate('OTTRIP');
@@ -334,6 +313,7 @@ export default function DashboardScreen() {
         }}
               onItinerarySelect={setSelectedItinerary}
               onFlightAdd={handleFlightAdd}
+              onAccommodationAdd={handleAccommodationAdd}
               onShowItineraryModal={handleShowItineraryModal}
               onShowFlightModal={handleShowFlightModal}
             onRequestNewFlight={handleRequestNewFlight}
@@ -380,6 +360,7 @@ export default function DashboardScreen() {
               onItineraryAdd={handleItineraryAdd}
               onFlightAdd={handleFlightAdd}
               onAccommodationAdd={handleAccommodationAdd}
+              onAccommodationSelect={setSelectedAccommodation}
               onExpenseAdd={handleExpenseAdd}
               openNewFlightForm={openNewFlightForm}
               onConsumeOpenNewFlightForm={() => setOpenNewFlightForm(false)}
