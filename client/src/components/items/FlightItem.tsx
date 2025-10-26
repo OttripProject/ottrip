@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
-import { DateTimePicker } from '@/ui/components/pickers';
+import { DateTimePicker, AirportPicker } from '@/ui/components/pickers';
 import dayjs from 'dayjs';
 import { flightsApi } from '@/services/flights';
 import { ExpenseCurrency, ExpenseCategory } from '@/types/expense';
-import Input from '@/ui/components/input/Input';
+import { Input } from '@/ui/components/input';
 import { PLACEHOLDERS } from '@/constants/placeholders';
 
 interface FlightItemProps {
@@ -28,6 +28,8 @@ export default function FlightItem({
     ticket_number: flight?.ticketNumber || flight?.ticket_number || '',
     booking_reference: flight?.bookingReference || flight?.booking_reference || '',
   });
+
+  const [airportOpen, setAirportOpen] = useState(false);
 
   const [expenseData, setExpenseData] = useState({
     amount: flight?.expense?.amount || '',
@@ -285,29 +287,29 @@ export default function FlightItem({
             </View>
           </View>
 
-          <View style={styles.row}>
-            <View style={[styles.inputGroup, styles.halfWidth]}>
+          <View style={[styles.row, { zIndex: airportOpen ? 10000 : 1 }]}>
+            <View style={[styles.inputGroup, styles.halfWidth, styles.airportPickerWrapper]}>
               <Text style={styles.label}>출발 공항 *</Text>
-              <Input
-                placeholder={PLACEHOLDERS.flight.departureAirport}
+              <AirportPicker
                 value={segment.departure_airport}
-                onChangeText={(text) => {
+                onChange={(code) => {
                   const newSegments = [...flightSegments];
-                  newSegments[idx].departure_airport = text;
+                  newSegments[idx].departure_airport = code;
                   setFlightSegments(newSegments);
                 }}
+                placeholder={PLACEHOLDERS.flight.departureAirport}
               />
             </View>
-            <View style={[styles.inputGroup, styles.halfWidth]}>
+            <View style={[styles.inputGroup, styles.halfWidth, styles.airportPickerWrapper]}>
               <Text style={styles.label}>도착 공항 *</Text>
-              <Input
-                placeholder={PLACEHOLDERS.flight.arrivalAirport}
+              <AirportPicker
                 value={segment.arrival_airport}
-                onChangeText={(text) => {
+                onChange={(code) => {
                   const newSegments = [...flightSegments];
-                  newSegments[idx].arrival_airport = text;
+                  newSegments[idx].arrival_airport = code;
                   setFlightSegments(newSegments);
                 }}
+                placeholder={PLACEHOLDERS.flight.arrivalAirport}
               />
             </View>
           </View>
@@ -499,8 +501,19 @@ const styles = StyleSheet.create({
   },
   row: {
     flexDirection: 'row',
-    gap: 12,
+    justifyContent: 'space-between',
     marginBottom: 12,
+    overflow: 'visible',
+    position: 'relative',
+  },
+  pickerRowWrapper: {
+    overflow: 'visible',
+    position: 'relative',
+  },
+  airportPickerWrapper: {
+    overflow: 'visible',
+    position: 'relative',
+    zIndex: 8000,
   },
   input: {
     borderWidth: 1,
