@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
-import { DateTimePicker, AirportPicker } from '@/ui/components/pickers';
+import { DatePicker, TimePicker, AirportPicker } from '@/ui/components/pickers';
 import dayjs from 'dayjs';
 import { flightsApi } from '@/services/flights';
 import { ExpenseCurrency, ExpenseCategory } from '@/types/expense';
@@ -42,8 +42,10 @@ export default function FlightItem({
     flight_number: string;
     departure_airport: string;
     arrival_airport: string;
-    departure_time: string; // 'YYYY-MM-DD HH:mm'
-    arrival_time: string;   // 'YYYY-MM-DD HH:mm'
+    departure_date: string; // 'YYYY-MM-DD'
+    departure_time: string; // 'HH:mm'
+    arrival_date: string;   // 'YYYY-MM-DD'
+    arrival_time: string;   // 'HH:mm'
     seat_class?: string;
     seat_number?: string;
     gate?: string;
@@ -53,27 +55,37 @@ export default function FlightItem({
   const [flightSegments, setFlightSegments] = useState<SegmentForm[]>(() => {
     if (flight?.flightSegments && flight.flightSegments.length > 0) {
       // 편집 모드: 기존 segments 데이터 사용
-      return flight.flightSegments.map((segment: any) => ({
-        airline: segment.airline || '',
-        flight_number: segment.flightNumber || '',
-        departure_airport: segment.departureAirport || '',
-        arrival_airport: segment.arrivalAirport || '',
-        departure_time: segment.departureTime ? dayjs(segment.departureTime).format('YYYY-MM-DD HH:mm') : dayjs().format('YYYY-MM-DD HH:mm'),
-        arrival_time: segment.arrivalTime ? dayjs(segment.arrivalTime).format('YYYY-MM-DD HH:mm') : dayjs().add(1, 'hour').format('YYYY-MM-DD HH:mm'),
-        seat_class: segment.seatClass || '',
-        seat_number: segment.seatNumber || '',
-        gate: segment.gate || '',
-        terminal: segment.terminal || '',
-      }));
+      return flight.flightSegments.map((segment: any) => {
+        const depTime = segment.departureTime ? dayjs(segment.departureTime) : dayjs();
+        const arrTime = segment.arrivalTime ? dayjs(segment.arrivalTime) : dayjs().add(1, 'hour');
+        return {
+          airline: segment.airline || '',
+          flight_number: segment.flightNumber || '',
+          departure_airport: segment.departureAirport || '',
+          arrival_airport: segment.arrivalAirport || '',
+          departure_date: depTime.format('YYYY-MM-DD'),
+          departure_time: depTime.format('HH:mm'),
+          arrival_date: arrTime.format('YYYY-MM-DD'),
+          arrival_time: arrTime.format('HH:mm'),
+          seat_class: segment.seatClass || '',
+          seat_number: segment.seatNumber || '',
+          gate: segment.gate || '',
+          terminal: segment.terminal || '',
+        };
+      });
     } else {
       // 새 항공편: 기본값
+      const now = dayjs();
+      const later = dayjs().add(1, 'hour');
       return [{
         airline: '',
         flight_number: '',
         departure_airport: '',
         arrival_airport: '',
-        departure_time: dayjs().format('YYYY-MM-DD HH:mm'),
-        arrival_time: dayjs().add(1, 'hour').format('YYYY-MM-DD HH:mm'),
+        departure_date: now.format('YYYY-MM-DD'),
+        departure_time: now.format('HH:mm'),
+        arrival_date: later.format('YYYY-MM-DD'),
+        arrival_time: later.format('HH:mm'),
         seat_class: '',
         seat_number: '',
         gate: '',
@@ -93,7 +105,9 @@ export default function FlightItem({
     firstSegment.flight_number.trim() &&
     firstSegment.departure_airport.trim() &&
     firstSegment.arrival_airport.trim() &&
+    String(firstSegment.departure_date || '').trim() &&
     String(firstSegment.departure_time || '').trim() &&
+    String(firstSegment.arrival_date || '').trim() &&
     String(firstSegment.arrival_time || '').trim()
   );
 
@@ -105,10 +119,9 @@ export default function FlightItem({
     setIsLoading(true);
     try {
       let savedFlight;
-      const toIso = (dt: string) => {
-        if (!dt) return dt;
-        const [date, time] = dt.split(' ');
-        const timeWithSeconds = (time && time.length === 5) ? `${time}:00` : time;
+      const toIso = (date: string, time: string) => {
+        if (!date || !time) return null;
+        const timeWithSeconds = (time.length === 5) ? `${time}:00` : time;
         return `${date}T${timeWithSeconds}`;
       };
 
@@ -123,15 +136,15 @@ export default function FlightItem({
             flightNumber: s.flight_number,
             departureAirport: s.departure_airport,
             arrivalAirport: s.arrival_airport,
-            departureTime: toIso(s.departure_time),
-            arrivalTime: toIso(s.arrival_time),
+            departureTime: toIso(s.departure_date, s.departure_time),
+            arrivalTime: toIso(s.arrival_date, s.arrival_time),
             seatClass: s.seat_class || null,
             seatNumber: s.seat_number || null,
             gate: s.gate || null,
             terminal: s.terminal || null,
           })),
           expense: {
-            exDate: flightSegments[0].departure_time.split(' ')[0],
+            exDate: flightSegments[0].departure_date,
             amount: Number(expenseData.amount) || 0,
             currency: expenseData.currency as ExpenseCurrency,
             category: ExpenseCategory.FLIGHT as any,
@@ -152,15 +165,15 @@ export default function FlightItem({
             flightNumber: s.flight_number,
             departureAirport: s.departure_airport,
             arrivalAirport: s.arrival_airport,
-            departureTime: toIso(s.departure_time),
-            arrivalTime: toIso(s.arrival_time),
+            departureTime: toIso(s.departure_date, s.departure_time),
+            arrivalTime: toIso(s.arrival_date, s.arrival_time),
             seatClass: s.seat_class || null,
             seatNumber: s.seat_number || null,
             gate: s.gate || null,
             terminal: s.terminal || null,
           })),
           expense: {
-            exDate: flightSegments[0].departure_time.split(' ')[0],
+            exDate: flightSegments[0].departure_date,
             amount: Number(expenseData.amount) || 0,
             currency: expenseData.currency as ExpenseCurrency,
             category: ExpenseCategory.FLIGHT as any,
@@ -316,23 +329,48 @@ export default function FlightItem({
 
           <View style={styles.row}>
             <View style={[styles.inputGroup, styles.halfWidth]}>
-              <Text style={styles.label}>출발 시간 *</Text>
-              <DateTimePicker
-                value={segment.departure_time}
-                onChange={(datetime) => {
+              <Text style={styles.label}>출발 날짜 *</Text>
+              <DatePicker
+                value={segment.departure_date}
+                onChange={(date) => {
                   const newSegments = [...flightSegments];
-                  newSegments[idx].departure_time = datetime;
+                  newSegments[idx].departure_date = date;
+                  setFlightSegments(newSegments);
+                }}
+              />
+            </View>
+            <View style={[styles.inputGroup, styles.halfWidth]}>
+              <Text style={styles.label}>출발 시간 *</Text>
+              <TimePicker
+                value={segment.departure_time}
+                onChange={(time) => {
+                  const newSegments = [...flightSegments];
+                  newSegments[idx].departure_time = time;
+                  setFlightSegments(newSegments);
+                }}
+              />
+            </View>
+          </View>
+
+          <View style={styles.row}>
+            <View style={[styles.inputGroup, styles.halfWidth]}>
+              <Text style={styles.label}>도착 날짜 *</Text>
+              <DatePicker
+                value={segment.arrival_date}
+                onChange={(date) => {
+                  const newSegments = [...flightSegments];
+                  newSegments[idx].arrival_date = date;
                   setFlightSegments(newSegments);
                 }}
               />
             </View>
             <View style={[styles.inputGroup, styles.halfWidth]}>
               <Text style={styles.label}>도착 시간 *</Text>
-              <DateTimePicker
+              <TimePicker
                 value={segment.arrival_time}
-                onChange={(datetime) => {
+                onChange={(time) => {
                   const newSegments = [...flightSegments];
-                  newSegments[idx].arrival_time = datetime;
+                  newSegments[idx].arrival_time = time;
                   setFlightSegments(newSegments);
                 }}
               />
@@ -409,8 +447,8 @@ export default function FlightItem({
 
           {idx < flightSegments.length - 1 && (() => {
             const next = flightSegments[idx + 1];
-            const arrival = dayjs(segment.arrival_time);
-            const nextDeparture = dayjs(next.departure_time);
+            const arrival = dayjs(`${segment.arrival_date} ${segment.arrival_time}`);
+            const nextDeparture = dayjs(`${next.departure_date} ${next.departure_time}`);
             const diffMinutes = nextDeparture.diff(arrival, 'minute');
             const valid = Number.isFinite(diffMinutes) && diffMinutes >= 0;
             const hours = valid ? Math.floor(diffMinutes / 60) : 0;
@@ -428,13 +466,17 @@ export default function FlightItem({
       <Pressable
         style={[styles.button, styles.addButton]}
         onPress={() => {
+          const now = dayjs();
+          const later = dayjs().add(1, 'hour');
           setFlightSegments(prev => [...prev, {
             airline: '',
             flight_number: '',
             departure_airport: '',
             arrival_airport: '',
-            departure_time: dayjs().format('YYYY-MM-DD HH:mm'),
-            arrival_time: dayjs().add(1, 'hour').format('YYYY-MM-DD HH:mm'),
+            departure_date: now.format('YYYY-MM-DD'),
+            departure_time: now.format('HH:mm'),
+            arrival_date: later.format('YYYY-MM-DD'),
+            arrival_time: later.format('HH:mm'),
             seat_class: '',
             seat_number: '',
             gate: '',

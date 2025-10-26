@@ -49,7 +49,6 @@ export default function DatePicker({ value, onChange, style, placeholder = "날�
         <Text style={value ? styles.dateText : styles.placeholderText}>
           {getDisplayText()}
         </Text>
-        <Text style={styles.calendarIcon}>📅</Text>
       </Pressable>
 
       <Modal visible={showPicker} animationType="slide" transparent={true} onRequestClose={handleCancel}>
