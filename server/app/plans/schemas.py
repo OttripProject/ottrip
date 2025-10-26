@@ -26,6 +26,7 @@ class PlanUpdate(APISchema):
 
 class PlanRead(PlanBase):
     id: int
+    public_id: str
 
 
 class PlanReadWithInforms(PlanRead):
