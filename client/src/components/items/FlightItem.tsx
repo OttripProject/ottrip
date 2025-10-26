@@ -337,6 +337,7 @@ export default function FlightItem({
                   newSegments[idx].departure_date = date;
                   setFlightSegments(newSegments);
                 }}
+                minDate={idx > 0 ? flightSegments[idx - 1].arrival_date : undefined}
               />
             </View>
             <View style={[styles.inputGroup, styles.halfWidth]}>
@@ -348,6 +349,7 @@ export default function FlightItem({
                   newSegments[idx].departure_time = time;
                   setFlightSegments(newSegments);
                 }}
+                minTime={idx > 0 && segment.departure_date === flightSegments[idx - 1].arrival_date ? flightSegments[idx - 1].arrival_time : undefined}
               />
             </View>
           </View>
@@ -362,6 +364,7 @@ export default function FlightItem({
                   newSegments[idx].arrival_date = date;
                   setFlightSegments(newSegments);
                 }}
+                minDate={segment.departure_date}
               />
             </View>
             <View style={[styles.inputGroup, styles.halfWidth]}>
@@ -373,6 +376,7 @@ export default function FlightItem({
                   newSegments[idx].arrival_time = time;
                   setFlightSegments(newSegments);
                 }}
+                minTime={segment.arrival_date === segment.departure_date ? segment.departure_time : undefined}
               />
             </View>
           </View>

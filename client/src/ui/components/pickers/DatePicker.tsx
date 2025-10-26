@@ -8,9 +8,10 @@ interface DatePickerProps {
   onChange: (date: string) => void;
   style?: any;
   placeholder?: string;
+  minDate?: string; // 'YYYY-MM-DD' 형식
 }
 
-export default function DatePicker({ value, onChange, style, placeholder = "날짜를 선택하세요" }: DatePickerProps) {
+export default function DatePicker({ value, onChange, style, placeholder = "날짜를 선택하세요", minDate }: DatePickerProps) {
   const [showPicker, setShowPicker] = useState(false);
   const [tempDate, setTempDate] = useState(value || dayjs().format('YYYY-MM-DD'));
 
@@ -65,6 +66,7 @@ export default function DatePicker({ value, onChange, style, placeholder = "날�
               <Calendar
                 onDayPress={(day) => handleDateSelect(day.dateString)}
                 markedDates={getMarkedDates()}
+                minDate={minDate}
                 theme={{
                   selectedDayBackgroundColor: '#007AFF',
                   selectedDayTextColor: '#ffffff',
