@@ -44,13 +44,24 @@ class PlanService:
         return PlanRead.model_validate(created_plan)
 
     async def read_plan_by_public_id(self, *, public_id: str) -> PlanReadWithInforms:
-        """public_id로 plan을 조회하여 내부적으로 plan_id로 변환"""
+        """public_id로 plan을 조회"""
         plan = await self.plan_repository.find_by_public_id(public_id=public_id)
         if not plan:
             raise HTTPException(status_code=404, detail="해당 계획을 찾을 수 없습니다.")
         
-        # 내부적으로는 기존 read_plan 메서드 사용
-        return await self.read_plan(plan_id=plan.id)
+        # 이미 필요한 모든 데이터가 포함된 plan 객체를 직접 사용
+        plan_data = PlanReadWithInforms.model_validate(plan)
+        if plan.owner_id == self.current_user.id:
+            plan_data.my_role = Role.EDITOR
+        else:
+            is_editor = await self.plan_repository.is_editor(plan_id=plan.id, user_id=self.current_user.id)
+            if is_editor:
+                plan_data.my_role = Role.EDITOR
+            else:
+                is_shared = await self.plan_repository.is_shared(plan_id=plan.id, user_id=self.current_user.id)
+                plan_data.my_role = Role.VIEWER if is_shared else None
+
+        return plan_data
 
     async def read_plan(self, *, plan_id: int) -> PlanReadWithInforms:
         plan = await self.plan_repository.find_by_id(plan_id=plan_id)
