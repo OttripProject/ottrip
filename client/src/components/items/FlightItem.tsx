@@ -166,81 +166,16 @@ export default function FlightItem({
       }
     }
 
-    // 겹침 검증: 기존 일정과 시간 겹침 확인
-    for (const existingItinerary of existingItineraries) {
-      // 일정 날짜와 시간 정보
-      const itineraryDate = existingItinerary.itinerary_date || existingItinerary.itineraryDate;
-      const startTime = existingItinerary.start_time || existingItinerary.startTime;
-      const endTime = existingItinerary.end_time || existingItinerary.endTime;
-
-      if (!itineraryDate || !startTime || !endTime) continue;
-
-      for (const newSegment of flightSegments) {
-        const newDepTime = dayjs(`${newSegment.departure_date} ${newSegment.departure_time}`);
-        const newArrTime = dayjs(`${newSegment.arrival_date} ${newSegment.arrival_time}`);
-        
-        const itineraryDateTime = dayjs(`${itineraryDate} ${startTime.substring(0, 5)}`);
-        const itineraryEndTime = dayjs(`${itineraryDate} ${endTime.substring(0, 5)}`);
-
-        // 시간이 겹치는지 확인
-        const hasOverlap = (
-          (newDepTime.isAfter(itineraryDateTime) || newDepTime.isSame(itineraryDateTime)) && newDepTime.isBefore(itineraryEndTime) ||
-          newArrTime.isAfter(itineraryDateTime) && (newArrTime.isBefore(itineraryEndTime) || newArrTime.isSame(itineraryEndTime)) ||
-          (newDepTime.isBefore(itineraryDateTime) && newArrTime.isAfter(itineraryEndTime))
-        );
-
-        if (hasOverlap) {
-          if (Platform.OS === 'web') {
-            window.alert('겹치는 일정이 있어요');
-          } else {
-            Alert.alert('알림', '겹치는 일정이 있어요');
-          }
-          return;
-        }
-      }
-    }
-
-    // 겹침 검증: 기존 숙박과 시간 겹침 확인
-    for (const existingAccommodation of existingAccommodations) {
-      const checkinDate = existingAccommodation.checkinDate;
-      const checkoutDate = existingAccommodation.checkoutDate;
-      const checkinTime = existingAccommodation.checkinTime || '15:00';
-      const checkoutTime = existingAccommodation.checkoutTime || '11:00';
-
-      if (!checkinDate || !checkoutDate) continue;
-
-      for (const newSegment of flightSegments) {
-        const newDepTime = dayjs(`${newSegment.departure_date} ${newSegment.departure_time}`);
-        const newArrTime = dayjs(`${newSegment.arrival_date} ${newSegment.arrival_time}`);
-        
-        const accCheckinTime = dayjs(`${checkinDate} ${checkinTime.substring(0, 5)}`);
-        const accCheckoutTime = dayjs(`${checkoutDate} ${checkoutTime.substring(0, 5)}`);
-
-        // 시간이 겹치는지 확인
-        const hasOverlap = (
-          (newDepTime.isAfter(accCheckinTime) || newDepTime.isSame(accCheckinTime)) && newDepTime.isBefore(accCheckoutTime) ||
-          newArrTime.isAfter(accCheckinTime) && (newArrTime.isBefore(accCheckoutTime) || newArrTime.isSame(accCheckoutTime)) ||
-          (newDepTime.isBefore(accCheckinTime) && newArrTime.isAfter(accCheckoutTime))
-        );
-
-        if (hasOverlap) {
-          if (Platform.OS === 'web') {
-            window.alert('겹치는 숙박 일정이 있어요');
-          } else {
-            Alert.alert('알림', '겹치는 숙박 일정이 있어요');
-          }
-          return;
-        }
-      }
-    }
-
     setIsLoading(true);
     try {
       let savedFlight;
       const toIso = (date: string, time: string) => {
         if (!date || !time) return null;
         const timeWithSeconds = (time.length === 5) ? `${time}:00` : time;
-        return `${date}T${timeWithSeconds}`;
+        
+        // 로컬 시간을 UTC로 변환하여 전송
+        const localDateTime = new Date(`${date}T${timeWithSeconds}`);
+        return localDateTime.toISOString();
       };
 
       if (flight) {
