@@ -13,6 +13,7 @@ import { usePlanData } from '@/hooks/usePlanData';
 import ModalLayout from './ModalLayout';
 import Input from '@/ui/components/input/Input';
 import { PLACEHOLDERS } from '@/constants/placeholders';
+import { tripToastMessages } from '@/utils/toast';
 
 dayjs.locale(ko);
 
@@ -187,19 +188,27 @@ export default function WeeklyScheduleModal({ itineraries, flights = [], height 
         if (createdPlan) {
           const newTripData = {
             id: createdPlan.id.toString(),
+            publicId: createdPlan.publicId,
             name: createdPlan.title,
             startDate: createdPlan.startDate,
             endDate: createdPlan.endDate,
           };
           setInternalSelectedTrip(newTripData);
           onPlanSelect?.(newTripData);
-          Alert.alert('성공', '여행 계획이 추가되었습니다.');
+          
+          // URL 업데이트 (웹에서)
+          if (typeof window !== 'undefined' && Platform.OS === 'web') {
+            window.history.pushState({}, '', `/plans/${createdPlan.publicId}`);
+          }
+          
+          // 성공 Toast 표시
+          tripToastMessages.addSuccess();
         } else {
-          Alert.alert('오류', '여행 계획 추가에 실패했습니다.');
+          tripToastMessages.addError();
         }
       } catch (error) {
         console.error('Failed to add trip:', error);
-        Alert.alert('오류', '여행을 추가하는 중 오류가 발생했습니다.');
+        tripToastMessages.addErrorGeneric();
       }
     };
 
