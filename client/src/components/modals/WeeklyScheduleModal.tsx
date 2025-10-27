@@ -103,8 +103,8 @@ interface Props {
   onShowItineraryDetail?: (itinerary: Itinerary) => void;
   onShowFlightDetail?: (flight: any) => void;
   onShowAccommodationDetail?: (accommodation: any) => void;
-  selectedTrip?: any; // 외부(대시보드/URL)에서 받은 선택 동기화용
-  planData?: any; // planData 전달
+  selectedTrip?: any;
+  planData?: any; 
 }
 
 export default function WeeklyScheduleModal({ itineraries, flights = [], height = 600, onItineraryAdd, onPlanSelect, onItinerarySelect, onFlightAdd, onAccommodationAdd, onShowItineraryModal, onShowFlightModal, onRequestNewFlight, onShowAccommodationModal, onShowItineraryDetail, onShowFlightDetail, onShowAccommodationDetail, selectedTrip, planData: externalPlanData }: Props) {

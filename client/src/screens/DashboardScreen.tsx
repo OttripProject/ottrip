@@ -55,8 +55,20 @@ export default function DashboardScreen() {
     if (planData.plan) {
       // plan이 로드된 후 ID 설정
       setSelectedPlanId(planData.plan.id);
+      
+      // URL에서 직접 접근할 때 selectedTrip 설정
+      if (!selectedTrip && route?.params?.publicId) {
+        const tripData = {
+          id: planData.plan.id.toString(),
+          publicId: planData.plan.publicId,
+          name: planData.plan.title,
+          startDate: planData.plan.startDate,
+          endDate: planData.plan.endDate,
+        };
+        setSelectedTrip(tripData);
+      }
     }
-  }, [planData.plan]);
+  }, [planData.plan, selectedTrip, route?.params?.publicId]);
 
   // 플랜 변경 시 상세 모달 상태 초기화
   useEffect(() => {
