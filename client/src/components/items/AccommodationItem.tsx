@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
-import { DateRangePicker } from '@/ui/components/pickers';
+import { DatePicker } from '@/ui/components/pickers';
 import dayjs from 'dayjs';
 import { accommodationsApi } from '@/services/accommodations';
 import { CountryPicker } from '@/ui/components/pickers';
@@ -178,21 +178,17 @@ export default function AccommodationItem({
 
       <View style={styles.inputGroup}>
         <Text style={styles.label}>체크인 날짜</Text>
-        <DateRangePicker
-          startDate={formData.checkin_date}
-          endDate={formData.checkin_date}
-          onStartDateChange={(date) => setFormData({ ...formData, checkin_date: date })}
-          onEndDateChange={(date) => setFormData({ ...formData, checkin_date: date })}
+        <DatePicker
+          value={formData.checkin_date}
+          onChange={(date) => setFormData({ ...formData, checkin_date: date })}
         />
       </View>
 
       <View style={styles.inputGroup}>
         <Text style={styles.label}>체크아웃 날짜</Text>
-        <DateRangePicker
-          startDate={formData.checkout_date}
-          endDate={formData.checkout_date}
-          onStartDateChange={(date) => setFormData({ ...formData, checkout_date: date })}
-          onEndDateChange={(date) => setFormData({ ...formData, checkout_date: date })}
+        <DatePicker
+          value={formData.checkout_date}
+          onChange={(date) => setFormData({ ...formData, checkout_date: date })}
         />
       </View>
 

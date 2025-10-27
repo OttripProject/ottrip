@@ -83,8 +83,11 @@ export default function DateRangePicker({
 
   const getDisplayText = () => {
     if (startDate && endDate) {
-      if (startDate === endDate) return formatDate(startDate);
-      return `${formatDate(startDate)} ~ ${formatDate(endDate)}`;
+      const start = formatDate(startDate);
+      const end = formatDate(endDate);
+      if (!start || !end) return '날짜 범위 선택';
+      if (start === end) return start;
+      return `${start} - ${end}`;
     }
     return '날짜 범위 선택';
   };
@@ -103,17 +106,6 @@ export default function DateRangePicker({
               <Pressable style={styles.closeButton} onPress={handleCancel}>
                 <Text style={styles.closeButtonText}>×</Text>
               </Pressable>
-            </View>
-            <View style={styles.selectionInfo}>
-              <Text style={styles.selectionText}>
-                {selectionMode === 'start' ? '시작일을 선택하세요' : '종료일을 선택하세요'}
-              </Text>
-              {tempStartDate && (
-                <Text style={styles.dateInfo}>
-                  시작: {formatDate(tempStartDate)}
-                  {tempEndDate && tempEndDate !== tempStartDate && ` | 종료: ${formatDate(tempEndDate)}`}
-                </Text>
-              )}
             </View>
             <Calendar
               onDayPress={(day) => handleDateSelect(day.dateString)}
