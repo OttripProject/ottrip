@@ -3,6 +3,7 @@ import { View, StyleSheet, ViewStyle } from 'react-native';
 import DropDownPicker from 'react-native-dropdown-picker';
 import { getAirportOptions, getAllAirportOptions, getAirportLabel } from '@/utils/airportList';
 import { PLACEHOLDERS } from '@/constants/placeholders';
+import { colors } from '@/ui/tokens/colors';
 
 interface AirportPickerProps {
   value: string; // airport code (e.g., "ICN")
@@ -68,7 +69,10 @@ export default function AirportPicker({
         containerStyle={[styles.dropdownOuter, { width: '100%' }]}
         textStyle={{
           fontSize: 14,
-          color: '#333',
+          color: colors.gray700,
+        }}
+        placeholderStyle={{
+          color: colors.gray400,
         }}
         listMode="SCROLLVIEW"
         scrollViewProps={{ nestedScrollEnabled: true, keyboardShouldPersistTaps: 'handled' }}

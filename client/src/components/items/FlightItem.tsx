@@ -4,7 +4,7 @@ import { DatePicker, TimePicker, AirportPicker } from '@/ui/components/pickers';
 import dayjs from 'dayjs';
 import { flightsApi } from '@/services/flights';
 import { ExpenseCurrency, ExpenseCategory } from '@/types/expense';
-import { Input } from '@/ui/components/input';
+import Input from '@/ui/components/input/Input';
 import { PLACEHOLDERS } from '@/constants/placeholders';
 
 interface FlightItemProps {
@@ -25,8 +25,6 @@ export default function FlightItem({
   onCancel, 
   onDelete,
   existingFlights = [],
-  existingItineraries = [],
-  existingAccommodations = []
 }: FlightItemProps) {
   const [formData, setFormData] = useState({
     reservation_number: flight?.reservationNumber || flight?.reservation_number || '',
