@@ -1,8 +1,29 @@
 import React, { useState } from 'react';
-import { View, Text, Pressable, StyleSheet, Modal, ScrollView, Alert } from 'react-native';
-import DateRangePicker from '@/ui/components/pickers/DateRangePicker';
+import { View, Text, Pressable, StyleSheet, Modal, ScrollView, Alert, Platform } from 'react-native';
+import { Calendar } from 'react-native-calendars';
+import dayjs from 'dayjs';
 import Input from '@/ui/components/input/Input';
 import { PLACEHOLDERS } from '@/constants/placeholders';
+import { plansApi } from '@/services/plans';
+import { tripToastMessages } from '@/utils/toast';
+
+// 캘린더 테마 상수
+const CALENDAR_THEME = {
+  selectedDayBackgroundColor: '#007AFF',
+  selectedDayTextColor: '#ffffff',
+  todayTextColor: '#007AFF',
+  dayTextColor: '#2d4150',
+  textDisabledColor: '#d9e1e8',
+  arrowColor: '#007AFF',
+  monthTextColor: '#2d4150',
+  indicatorColor: '#007AFF',
+  textDayFontWeight: '300' as const,
+  textMonthFontWeight: 'bold' as const,
+  textDayHeaderFontWeight: '300' as const,
+  textDayFontSize: 16,
+  textMonthFontSize: 16,
+  textDayHeaderFontSize: 13,
+};
 
 interface Trip {
   id: string;
@@ -31,13 +52,89 @@ export default function TripSelector({ selectedTrip, onTripSelect, trips, onTrip
     startDate: '',
     endDate: '',
   });
+  const [selectionMode, setSelectionMode] = useState<'start' | 'end'>('start');
+  const [editSelectionMode, setEditSelectionMode] = useState<'start' | 'end'>('start');
 
   const handleTripSelect = (trip: Trip) => {
     onTripSelect(trip);
     setShowDropdown(false);
   };
 
-  const handleAddTrip = () => {
+  const handleDateSelect = (dateString: string) => {
+    if (selectionMode === 'start') {
+      setNewTrip(prev => ({ ...prev, startDate: dateString }));
+      setSelectionMode('end');
+    } else {
+      if (dayjs(dateString).isBefore(dayjs(newTrip.startDate))) {
+        setNewTrip(prev => ({ ...prev, startDate: dateString, endDate: newTrip.startDate }));
+      } else {
+        setNewTrip(prev => ({ ...prev, endDate: dateString }));
+      }
+      setSelectionMode('start');
+    }
+  };
+
+  const getMarkedDates = () => {
+    const marked: any = {};
+    if (newTrip.startDate) {
+      marked[newTrip.startDate] = { selected: true, startingDay: true, color: '#007AFF', textColor: 'white' };
+    }
+    if (newTrip.endDate && newTrip.endDate !== newTrip.startDate) {
+      marked[newTrip.endDate] = { selected: true, endingDay: true, color: '#007AFF', textColor: 'white' };
+    }
+    if (newTrip.startDate && newTrip.endDate && newTrip.startDate !== newTrip.endDate) {
+      const start = dayjs(newTrip.startDate);
+      const end = dayjs(newTrip.endDate);
+      let current = start.add(1, 'day');
+      while (current.isBefore(end)) {
+        const dateStr = current.format('YYYY-MM-DD');
+        marked[dateStr] = { selected: true, color: '#007AFF', textColor: 'white' };
+        current = current.add(1, 'day');
+      }
+    }
+    return marked;
+  };
+
+  const handleEditDateSelect = (dateString: string) => {
+    if (!editingTrip) return;
+    
+    if (editSelectionMode === 'start') {
+      setEditingTrip(prev => prev ? { ...prev, startDate: dateString } : null);
+      setEditSelectionMode('end');
+    } else {
+      if (dayjs(dateString).isBefore(dayjs(editingTrip.startDate))) {
+        setEditingTrip(prev => prev ? { ...prev, startDate: dateString, endDate: editingTrip.startDate } : null);
+      } else {
+        setEditingTrip(prev => prev ? { ...prev, endDate: dateString } : null);
+      }
+      setEditSelectionMode('start');
+    }
+  };
+
+  const getEditMarkedDates = () => {
+    if (!editingTrip) return {};
+    
+    const marked: any = {};
+    if (editingTrip.startDate) {
+      marked[editingTrip.startDate] = { selected: true, startingDay: true, color: '#007AFF', textColor: 'white' };
+    }
+    if (editingTrip.endDate && editingTrip.endDate !== editingTrip.startDate) {
+      marked[editingTrip.endDate] = { selected: true, endingDay: true, color: '#007AFF', textColor: 'white' };
+    }
+    if (editingTrip.startDate && editingTrip.endDate && editingTrip.startDate !== editingTrip.endDate) {
+      const start = dayjs(editingTrip.startDate);
+      const end = dayjs(editingTrip.endDate);
+      let current = start.add(1, 'day');
+      while (current.isBefore(end)) {
+        const dateStr = current.format('YYYY-MM-DD');
+        marked[dateStr] = { selected: true, color: '#007AFF', textColor: 'white' };
+        current = current.add(1, 'day');
+      }
+    }
+    return marked;
+  };
+
+  const handleAddTrip = async () => {
     if (!newTrip.name.trim()) {
       Alert.alert('오류', '여행 이름을 입력해주세요.');
       return;
@@ -47,10 +144,18 @@ export default function TripSelector({ selectedTrip, onTripSelect, trips, onTrip
       return;
     }
 
-    onTripAdd?.(newTrip);
-    setNewTrip({ name: '', startDate: '', endDate: '' });
-    setShowAddModal(false);
-    setShowDropdown(false);
+    try {
+      // 상위 컴포넌트의 onTripAdd 콜백 호출
+      onTripAdd?.(newTrip);
+
+      setNewTrip({ name: '', startDate: '', endDate: '' });
+      setSelectionMode('start');
+      setShowAddModal(false);
+      setShowDropdown(false);
+    } catch (error) {
+      console.error('Failed to create trip:', error);
+      Alert.alert('오류', '여행 계획 생성에 실패했습니다.');
+    }
   };
 
   const handleEditTrip = () => {
@@ -65,14 +170,23 @@ export default function TripSelector({ selectedTrip, onTripSelect, trips, onTrip
       return;
     }
 
-    onTripUpdate?.(editingTrip.id, {
-      name: editingTrip.name,
-      startDate: editingTrip.startDate,
-      endDate: editingTrip.endDate,
-    });
-    setEditingTrip(null);
-    setShowEditModal(false);
-    setShowDropdown(false);
+    try {
+      onTripUpdate?.(editingTrip.id, {
+        name: editingTrip.name,
+        startDate: editingTrip.startDate,
+        endDate: editingTrip.endDate,
+      });
+      
+      // 성공 Toast 표시
+      tripToastMessages.updateSuccess();
+      
+      setEditingTrip(null);
+      setShowEditModal(false);
+      setShowDropdown(false);
+    } catch (error) {
+      console.error('Failed to update trip:', error);
+      tripToastMessages.updateError();
+    }
   };
 
   const handleDeleteTrip = (tripId: string) => {
@@ -102,6 +216,7 @@ export default function TripSelector({ selectedTrip, onTripSelect, trips, onTrip
 
   const openEditModal = (trip: Trip) => {
     setEditingTrip(trip);
+    setEditSelectionMode('start');
     setShowEditModal(true);
     setShowDropdown(false);
   };
@@ -197,22 +312,30 @@ export default function TripSelector({ selectedTrip, onTripSelect, trips, onTrip
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>새 여행 추가</Text>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>새 여행 추가</Text>
+              <Text style={styles.modalDescription}>새로운 여행을 만들어 계획을 시작하세요</Text>
+            </View>
             
-            <Input
-              style={styles.input}
-              placeholder={PLACEHOLDERS.plan.name}
-              value={newTrip.name}
-              onChangeText={(text) => setNewTrip(prev => ({ ...prev, name: text }))}
-            />
+            <View style={styles.inputSection}>
+              <Text style={styles.inputLabel}>여행명</Text>
+              <Input
+                style={styles.input}
+                placeholder={PLACEHOLDERS.plan.name}
+                value={newTrip.name}
+                onChangeText={(text) => setNewTrip(prev => ({ ...prev, name: text }))}
+              />
+            </View>
             
-            <DateRangePicker
-              startDate={newTrip.startDate}
-              endDate={newTrip.endDate}
-              onStartDateChange={(date: string) => setNewTrip(prev => ({ ...prev, startDate: date }))}
-              onEndDateChange={(date: string) => setNewTrip(prev => ({ ...prev, endDate: date }))}
-              style={styles.datePicker}
-            />
+            <View style={styles.inputSection}>
+              <Text style={styles.inputLabel}>여행 기간 선택</Text>
+              <Text style={styles.calendarTitle}>날짜 범위 선택</Text>
+              <Calendar
+                onDayPress={(day) => handleDateSelect(day.dateString)}
+                markedDates={getMarkedDates()}
+                theme={CALENDAR_THEME}
+              />
+            </View>
             
             <View style={styles.modalButtons}>
               <Pressable 
@@ -224,8 +347,9 @@ export default function TripSelector({ selectedTrip, onTripSelect, trips, onTrip
               <Pressable 
                 style={[styles.modalButton, styles.addButton]}
                 onPress={handleAddTrip}
+                disabled={!newTrip.startDate || !newTrip.endDate}
               >
-                <Text style={styles.addButtonText}>추가</Text>
+                <Text style={styles.addButtonText}>여행 저장</Text>
               </Pressable>
             </View>
           </View>
@@ -241,21 +365,30 @@ export default function TripSelector({ selectedTrip, onTripSelect, trips, onTrip
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>여행 수정</Text>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>여행 수정</Text>
+              <Text style={styles.modalDescription}>여행 정보를 수정하세요</Text>
+            </View>
             
-            <Input
-              placeholder={PLACEHOLDERS.plan.name}
-              value={editingTrip?.name || ''}
-              onChangeText={(text) => setEditingTrip(prev => prev ? { ...prev, name: text } : null)}
-            />
+            <View style={styles.inputSection}>
+              <Text style={styles.inputLabel}>여행명</Text>
+              <Input
+                style={styles.input}
+                placeholder={PLACEHOLDERS.plan.name}
+                value={editingTrip?.name || ''}
+                onChangeText={(text) => setEditingTrip(prev => prev ? { ...prev, name: text } : null)}
+              />
+            </View>
             
-            <DateRangePicker
-              startDate={editingTrip?.startDate || ''}
-              endDate={editingTrip?.endDate || ''}
-              onStartDateChange={(date: string) => setEditingTrip(prev => prev ? { ...prev, startDate: date } : null)}
-              onEndDateChange={(date: string) => setEditingTrip(prev => prev ? { ...prev, endDate: date } : null)}
-              style={styles.datePicker}
-            />
+            <View style={styles.inputSection}>
+              <Text style={styles.inputLabel}>여행 기간 선택</Text>
+              <Text style={styles.calendarTitle}>날짜 범위 선택</Text>
+              <Calendar
+                onDayPress={(day) => handleEditDateSelect(day.dateString)}
+                markedDates={getEditMarkedDates()}
+                theme={CALENDAR_THEME}
+              />
+            </View>
             
             <View style={styles.modalButtons}>
               <Pressable 
@@ -267,8 +400,9 @@ export default function TripSelector({ selectedTrip, onTripSelect, trips, onTrip
               <Pressable 
                 style={[styles.modalButton, styles.addButton]}
                 onPress={handleEditTrip}
+                disabled={!editingTrip?.startDate || !editingTrip?.endDate}
               >
-                <Text style={styles.addButtonText}>수정</Text>
+                <Text style={styles.addButtonText}>수정사항 저장</Text>
               </Pressable>
             </View>
           </View>
@@ -409,8 +543,8 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     fontSize: 20,
-    fontWeight: '600',
-    marginBottom: 20,
+    fontWeight: '700',
+    color: '#212529',
     textAlign: 'center',
   },
   input: {
@@ -452,5 +586,31 @@ const styles = StyleSheet.create({
   },
   datePicker: {
     marginBottom: 16,
+  },
+  calendarTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#212529',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  modalHeader: {
+    marginBottom: 24,
+    alignItems: 'center',
+  },
+  modalDescription: {
+    fontSize: 14,
+    color: '#6c757d',
+    marginTop: 8,
+    textAlign: 'center',
+  },
+  inputSection: {
+    marginBottom: 20,
+  },
+  inputLabel: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#212529',
+    marginBottom: 8,
   },
 }); 
