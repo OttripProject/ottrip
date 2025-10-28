@@ -8,6 +8,8 @@ import RegisterProfileScreen from "@/screens/RegisterProfileScreen";
 import TermsDetailScreen from "@/screens/TermsDetailScreen";
 import { NavigationContainer, type NavigationContainerRef } from "@react-navigation/native";
 import { createStackNavigator } from "@react-navigation/stack";
+import NotFoundScreen from "@/screens/error/NotFoundScreen";
+import ForbiddenScreen from "@/screens/error/ForbiddenScreen";
 import { useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { View, ActivityIndicator, StyleSheet, Platform } from "react-native";
@@ -98,6 +100,8 @@ export default function RootNavigator() {
             publicId: (value: string) => value,
           },
         },
+        'NOT FOUND': "not-found",
+        FORBIDDEN: "forbidden",
       },
     },
   };
@@ -117,6 +121,8 @@ export default function RootNavigator() {
             <Stack.Screen name="INVITE_ACCEPT" component={InviteAcceptScreen} />
             {/* 동일 화면을 경로 기반으로 진입하기 위한 별칭 */}
             <Stack.Screen name="PLAN" component={DashboardScreen} />
+            <Stack.Screen name="NOT FOUND" component={NotFoundScreen} />
+            <Stack.Screen name="FORBIDDEN" component={ForbiddenScreen} />
           </>
         ) : (
           // 미인증 사용자 + 가입 플로우

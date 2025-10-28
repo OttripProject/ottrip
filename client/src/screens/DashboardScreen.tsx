@@ -238,46 +238,22 @@ export default function DashboardScreen() {
     setSelectedFlight(null);
   }, []);
 
-  
-  // 권한/존재 오류 처리 (플랜 URL로 진입했을 때 가드 화면)
-  if (selectedPlanId && !planData.isLoading && planData.errorStatus) {
-    if (planData.errorStatus === 403) {
-      return (
-        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#fff', padding: 24 }}>
-          <Text style={{ fontSize: 20, fontWeight: '700', color: '#4b5563', marginBottom: 12 }}>해당 여행 일정의 권한이 없어요.</Text>
-          <Text style={{ fontSize: 16, color: '#6b7280', textAlign: 'center', marginBottom: 24 }}>권한을 요청해서 여행 일정을 같이 만들어 가보세요!</Text>
-          <Pressable
-            onPress={() => {
-              setSelectedPlanId(null);
-              // @ts-ignore
-              navigation.replace('OTTRIP');
-            }}
-            style={{ paddingVertical: 12, paddingHorizontal: 20, borderWidth: 2, borderColor: '#9ca3af', borderRadius: 8 }}
-          >
-            <Text style={{ fontSize: 18, fontWeight: '800', color: '#374151' }}>OTTRIP 홈으로 이동</Text>
-          </Pressable>
-        </View>
-      );
-    }
+  // 에러 전용 화면으로의 전환은 렌더 중이 아닌 이펙트에서 수행 (React 경고 방지)
+  useEffect(() => {
     if (planData.errorStatus === 404) {
-      return (
-        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#fff', padding: 24 }}>
-          <Text style={{ fontSize: 20, fontWeight: '700', color: '#4b5563', marginBottom: 12 }}>해당 여행 일정을 찾을 수 없어요.</Text>
-          <Text style={{ fontSize: 16, color: '#6b7280', textAlign: 'center', marginBottom: 24 }}>링크가 만료되었거나 삭제되었을 수 있어요.</Text>
-          <Pressable
-            onPress={() => {
-              setSelectedPlanId(null);
-              // @ts-ignore
-              navigation.replace('OTTRIP');
-            }}
-            style={{ paddingVertical: 12, paddingHorizontal: 20, borderWidth: 2, borderColor: '#9ca3af', borderRadius: 8 }}
-          >
-            <Text style={{ fontSize: 18, fontWeight: '800', color: '#374151' }}>OTTRIP 홈으로 이동</Text>
-          </Pressable>
-        </View>
-      );
+      // @ts-ignore
+      navigation.reset({ index: 0, routes: [{ name: 'NOT FOUND' }] });
+    } else if (planData.errorStatus === 403) {
+      // @ts-ignore
+      navigation.reset({ index: 0, routes: [{ name: 'FORBIDDEN' }] });
     }
+  }, [planData.errorStatus]);
+
+  if (planData.errorStatus === 404 || planData.errorStatus === 403) {
+    // 전용 화면으로 리다이렉트 중이므로 렌더 스킵
+    return null;
   }
+
 
   return (
     <View style={styles.root}>
