@@ -49,19 +49,24 @@ class PlanService:
         if not plan:
             raise HTTPException(status_code=404, detail="해당 계획을 찾을 수 없습니다.")
         
-        # 이미 필요한 모든 데이터가 포함된 plan 객체를 직접 사용
-        plan_data = PlanReadWithInforms.model_validate(plan)
         if plan.owner_id == self.current_user.id:
+            plan_data = PlanReadWithInforms.model_validate(plan)
             plan_data.my_role = Role.EDITOR
+            return plan_data
         else:
             is_editor = await self.plan_repository.is_editor(plan_id=plan.id, user_id=self.current_user.id)
             if is_editor:
+                plan_data = PlanReadWithInforms.model_validate(plan)
                 plan_data.my_role = Role.EDITOR
+                return plan_data
             else:
                 is_shared = await self.plan_repository.is_shared(plan_id=plan.id, user_id=self.current_user.id)
-                plan_data.my_role = Role.VIEWER if is_shared else None
-
-        return plan_data
+                if is_shared:
+                    plan_data = PlanReadWithInforms.model_validate(plan)
+                    plan_data.my_role = Role.VIEWER
+                    return plan_data
+        
+        raise HTTPException(status_code=403, detail="해당 계획에 대한 권한이 없습니다.")
 
     async def read_plan(self, *, plan_id: int) -> PlanReadWithInforms:
         plan = await self.plan_repository.find_by_id(plan_id=plan_id)
