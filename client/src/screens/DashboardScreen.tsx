@@ -135,6 +135,11 @@ export default function DashboardScreen() {
   }, []);
 
   const handleItineraryAdd = async (newItinerary: any) => {
+    // 먼저 상세로 전환하여 리스트 깜빡임 방지
+    setSelectedItinerary(newItinerary);
+    setActiveTab('itinerary');
+    setSelectedFlight(null);
+    setSelectedAccommodation(null);
     if (selectedPlanId) {
       await planData.refreshItineraries();
     }

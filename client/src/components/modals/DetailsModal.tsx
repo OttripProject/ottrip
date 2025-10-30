@@ -274,8 +274,7 @@ export default function DetailsModal({ planData, selectedItinerary, selectedFlig
               {/* 연결된 지출 표시 */}
               {(() => {
                 const connectedExpenses = planData.expenses.filter((expense: any) => 
-                  expense.itineraryId === item.id || 
-                  (expense.exDate === item.itineraryDate && !expense.itineraryId)
+                  expense.itineraryId === item.id
                 );
                 
                 if (connectedExpenses.length > 0) {
