@@ -32,26 +32,20 @@ export const usePlanData = (publicId: string | null) => {
     setErrorStatus(null);
 
     try {
-      const plan = await plansApi.getPlan(pId);
+      // 서버가 Plan + 관련 엔티티들을 함께 반환 (PlanReadWithInforms)
+      const planData: any = await plansApi.getPlan(pId);
 
-      const [itRes, flRes, accRes, exRes] = await Promise.allSettled([
-        itinerariesApi.getItineraries(plan.id),
-        flightsApi.getFlightsByPlan(plan.id),
-        accommodationsApi.getAccommodations(plan.id),
-        expensesApi.getExpenses(plan.id),
-      ]);
-
-      const itineraries = itRes.status === 'fulfilled' ? itRes.value : [];
-      const flights = flRes.status === 'fulfilled' ? flRes.value : [];
-      const accommodations = accRes.status === 'fulfilled' ? accRes.value : [];
-      const expenses = exRes.status === 'fulfilled' ? exRes.value : [];
+      const normalizedExpenses = (planData?.expenses ?? []).map((e: any) => ({
+        ...e,
+        amount: Number(e?.amount),
+      }));
 
       setPlanData({
-        plan,
-        itineraries,
-        flights,
-        accommodations,
-        expenses,
+        plan: planData,
+        itineraries: planData?.itineraries ?? [],
+        flights: planData?.flights ?? [],
+        accommodations: planData?.accommodations ?? [],
+        expenses: normalizedExpenses,
       });
     } catch (err: any) {
       setPlanData({
