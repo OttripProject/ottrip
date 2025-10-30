@@ -61,7 +61,7 @@ class PlanRepository:
                 joinedload(Plan.flights).joinedload(Flight.expense),
                 joinedload(Plan.flights).joinedload(Flight.flight_segments),
                 joinedload(Plan.itineraries).joinedload(Itinerary.expenses),
-                joinedload(Plan.accommodations),
+                joinedload(Plan.accommodations).joinedload(Accommodation.expense),
                 joinedload(Plan.expenses),
                 with_loader_criteria(
                     FlightSegment, FlightSegment.is_deleted.is_(False), include_aliases=True

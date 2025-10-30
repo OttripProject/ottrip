@@ -3,6 +3,7 @@ from datetime import date
 from app.expenses.schemas import ExpenseRead
 from app.flights.schemas import FlightRead
 from app.itinerary.schemas import ItineraryRead
+from app.accomodation.schemas import AccommodationRead
 from app.schemas import APISchema
 from .models import Role
 
@@ -33,6 +34,7 @@ class PlanReadWithInforms(PlanRead):
     flights: list[FlightRead] | None
     itineraries: list[ItineraryRead] | None
     expenses: list[ExpenseRead] | None
+    accommodations: list[AccommodationRead] | None
     my_role: Role | None = None
 
 

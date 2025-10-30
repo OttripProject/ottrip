@@ -32,6 +32,9 @@ class ExpenseCreateWithItinerary(ExpenseCreate):
 
 class ExpenseRead(ExpenseBase):
     id: int
+    itinerary_id: int | None = None
+    flight_id: int | None = None
+    accommodation_id: int | None = None
 
 
 class ExpenseUpdate(APISchema):
