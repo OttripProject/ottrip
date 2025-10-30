@@ -24,6 +24,8 @@ export default function DashboardScreen() {
   const [selectedAccommodation, setSelectedAccommodation] = useState<any>(null);
   const [activeTab, setActiveTab] = useState<'itinerary' | 'flight' | 'accommodation' | undefined>(undefined);
   const [openNewFlightForm, setOpenNewFlightForm] = useState<boolean>(false);
+  const [openNewItineraryForm, setOpenNewItineraryForm] = useState<boolean>(false);
+  const [selectedItineraryDate, setSelectedItineraryDate] = useState<Date | null>(null);
   const [openNewAccommodationForm, setOpenNewAccommodationForm] = useState<boolean>(false);
   const [newAccommodationDraft, setNewAccommodationDraft] = useState<any | null>(null);
   
@@ -183,6 +185,20 @@ export default function DashboardScreen() {
     setOpenNewFlightForm(true);
   }, []);
 
+  const handleRequestNewItinerary = useCallback((date?: Date) => {
+    setActiveTab('itinerary');
+    setSelectedFlight(null);
+    setSelectedAccommodation(null);
+    setSelectedItinerary(null); // 기존 편집 대상 초기화
+    setOpenNewItineraryForm(true);
+    // 선택된 날짜가 있으면 해당 날짜로 설정
+    if (date) {
+      setSelectedItineraryDate(date);
+    } else {
+      setSelectedItineraryDate(null);
+    }
+  }, []);
+
   const handleShowAccommodationModal = useCallback((accommodation: any, date?: string) => {
     setActiveTab('accommodation');
     
@@ -304,7 +320,8 @@ export default function DashboardScreen() {
               onAccommodationAdd={handleAccommodationAdd}
               onShowItineraryModal={handleShowItineraryModal}
               onShowFlightModal={handleShowFlightModal}
-            onRequestNewFlight={handleRequestNewFlight}
+              onRequestNewFlight={handleRequestNewFlight}
+              onRequestNewItinerary={handleRequestNewItinerary}
               onShowAccommodationModal={handleShowAccommodationModal}
               onShowItineraryDetail={handleShowItineraryDetail}
               onShowFlightDetail={handleShowFlightDetail}
@@ -352,6 +369,9 @@ export default function DashboardScreen() {
               onExpenseAdd={handleExpenseAdd}
               openNewFlightForm={openNewFlightForm}
               onConsumeOpenNewFlightForm={() => setOpenNewFlightForm(false)}
+              openNewItineraryForm={openNewItineraryForm}
+              onConsumeOpenNewItineraryForm={() => setOpenNewItineraryForm(false)}
+              selectedItineraryDate={selectedItineraryDate}
               openNewAccommodationForm={openNewAccommodationForm}
               onConsumeOpenNewAccommodationForm={() => setOpenNewAccommodationForm(false)}
               newAccommodationDraft={newAccommodationDraft}

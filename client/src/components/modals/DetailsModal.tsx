@@ -34,75 +34,18 @@ interface DetailsModalProps {
   // 외부에서 새 항공편 폼을 바로 열도록 트리거
   openNewFlightForm?: boolean;
   onConsumeOpenNewFlightForm?: () => void;
+  openNewItineraryForm?: boolean;
+  onConsumeOpenNewItineraryForm?: () => void;
+  selectedItineraryDate?: Date | null;
   openNewAccommodationForm?: boolean;
   onConsumeOpenNewAccommodationForm?: () => void;
   newAccommodationDraft?: any | null;
 }
 
-interface Flight {
-  id: string;
-  airline: string;
-  flight_number: string;
-  departure_airport: string;
-  arrival_airport: string;
-  departure_time: string;
-  arrival_time: string;
-  seat_class: string;
-  seat_number: string;
-  duration: string;
-}
 
-interface Accommodation {
-  id: string;
-  name: string;
-  place?: string;
-  country: string;
-  city: string;
-  checkin_date: string;
-  checkout_date: string;
-  description: string;
-}
-
-interface Expense {
-  id: string;
-  category: string;
-  amount: number;
-  description: string;
-  ex_date: string;
-  currency: string;
-}
-
-enum ExpenseCategory {
-  FOOD = "food",
-  TRANSPORT = "transport",
-  FLIGHT = "flight",
-  ACTIVITY = "activity",
-  ACCOMMODATION = "accommodation",
-  SHOPPING = "shopping",
-  ETC = "etc",
-}
-
-enum ExpenseCurrency {
-  KRW = "KRW",
-  USD = "USD",
-  EUR = "EUR",
-  JPY = "JPY",
-  CNY = "CNY",
-  GBP = "GBP",
-  AUD = "AUD",
-}
-
-function Placeholder({ label }: { label: string }) {
-  return (
-    <View style={{ padding: 16 }}>
-      <Text>{label} – Coming soon…</Text>
-    </View>
-  );
-}
-
-export default function DetailsModal({ planData, selectedItinerary, selectedFlight, selectedAccommodation, activeTab, onItineraryAdd: externalOnItineraryAdd, onFlightAdd: externalOnFlightAdd, onAccommodationAdd: externalOnAccommodationAdd, onAccommodationSelect, onExpenseAdd: externalOnExpenseAdd, openNewFlightForm, onConsumeOpenNewFlightForm, openNewAccommodationForm, onConsumeOpenNewAccommodationForm, newAccommodationDraft }: DetailsModalProps) {
+export default function DetailsModal({ planData, selectedItinerary, selectedFlight, selectedAccommodation, activeTab, onItineraryAdd: externalOnItineraryAdd, onFlightAdd: externalOnFlightAdd, onAccommodationAdd: externalOnAccommodationAdd, onAccommodationSelect, onExpenseAdd: externalOnExpenseAdd, openNewFlightForm, onConsumeOpenNewFlightForm, openNewItineraryForm, onConsumeOpenNewItineraryForm, selectedItineraryDate, openNewAccommodationForm, onConsumeOpenNewAccommodationForm, newAccommodationDraft }: DetailsModalProps) {
     const [open, setOpen] = useState<string | undefined>();
-    const [showItineraryForm, setShowItineraryForm] = useState(false);
+    const [showItineraryForm, setShowItineraryForm] = useState(openNewItineraryForm || false);
     const [showFlightForm, setShowFlightForm] = useState(false);
     const [showAccommodationForm, setShowAccommodationForm] = useState(false);
     const [editingItinerary, setEditingItinerary] = useState<any | null>(null);
@@ -165,6 +108,16 @@ export default function DetailsModal({ planData, selectedItinerary, selectedFlig
       setEditingFlight(null);
     };
 
+    // 외부 트리거: 일정 탭에서 즉시 새 일정 추가 폼 열기
+    React.useEffect(() => {
+      if (activeTab === 'itinerary' && openNewItineraryForm) {
+        setEditingItinerary(null);
+        setShowItineraryForm(true);
+        // 즉시 콜백 호출하여 상태 초기화
+        onConsumeOpenNewItineraryForm && onConsumeOpenNewItineraryForm();
+      }
+    }, [activeTab, openNewItineraryForm]);
+
     // 외부 트리거: 항공 탭에서 즉시 새 항공편 추가 폼 열기
     React.useEffect(() => {
       if (activeTab === 'flight' && openNewFlightForm) {
@@ -217,6 +170,7 @@ export default function DetailsModal({ planData, selectedItinerary, selectedFlig
           }}
           onDelete={handleItineraryDelete}
           onExpenseUpdate={planData.refreshExpenses}
+          selectedDate={selectedItineraryDate || undefined}
         />
       );
     }
@@ -316,6 +270,31 @@ export default function DetailsModal({ planData, selectedItinerary, selectedFlig
                   <Text style={styles.detailValue}>{item.description}</Text>
                 </View>
               )}
+              
+              {/* 연결된 지출 표시 */}
+              {(() => {
+                const connectedExpenses = planData.expenses.filter((expense: any) => 
+                  expense.itineraryId === item.id || 
+                  (expense.exDate === item.itineraryDate && !expense.itineraryId)
+                );
+                
+                if (connectedExpenses.length > 0) {
+                  return (
+                    <View style={styles.expensesSection}>
+                      <Text style={styles.expensesSectionTitle}>지출 내역</Text>
+                      {connectedExpenses.map((expense: any) => (
+                        <View key={expense.id} style={styles.expenseDetailItem}>
+                          <Text style={styles.expenseDetailDescription}>{expense.description}</Text>
+                          <Text style={styles.expenseDetailAmount}>
+                            {expense.amount.toLocaleString()}원
+                          </Text>
+                        </View>
+                      ))}
+                    </View>
+                  );
+                }
+                return null;
+              })()}
             </>
           )}
           
@@ -507,7 +486,8 @@ export default function DetailsModal({ planData, selectedItinerary, selectedFlig
       case 'itinerary':
         return (
           <View style={styles.sectionContent}>
-            {planData.itineraries.map((itinerary: any) => (
+            {/* 새 일정 폼이 열려있거나 openNewItineraryForm이 true일 때는 리스트 숨김 */}
+            {!showItineraryForm && !openNewItineraryForm && planData.itineraries.map((itinerary: any) => (
               <Pressable 
                 key={itinerary.id} 
                 style={styles.itemCard}
@@ -544,6 +524,7 @@ export default function DetailsModal({ planData, selectedItinerary, selectedFlig
                 }}
                 onDelete={handleItineraryDelete}
                 onExpenseUpdate={planData.refreshExpenses}
+                selectedDate={selectedItineraryDate || undefined}
               />
             )}
             
@@ -944,5 +925,35 @@ const styles = StyleSheet.create({
     paddingBottom: 8,
     borderBottomWidth: 1,
     borderBottomColor: '#e5e7eb',
+  },
+  // 지출 상세 정보 스타일
+  expensesSection: {
+    marginTop: 20,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#e5e7eb',
+  },
+  expensesSectionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 12,
+  },
+  expenseDetailItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    backgroundColor: '#f8f9fa',
+    borderRadius: 8,
+    marginBottom: 6,
+  },
+  expenseDetailDescription: {
+    fontSize: 14,
+    color: '#666',
+    flex: 1,
+  },
+  expenseDetailAmount: {
+    fontSize: 14,
   },
 });
