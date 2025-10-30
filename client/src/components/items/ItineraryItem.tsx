@@ -15,7 +15,8 @@ interface ItineraryItemProps {
   onSave: (itinerary: any) => void;
   onCancel: () => void;
   onDelete?: (itineraryId: string) => void;
-  onExpenseUpdate?: () => void; 
+  onExpenseUpdate?: () => void;
+  selectedDate?: Date; // 선택된 날짜
 }
 
 export default function ItineraryItem({ 
@@ -25,7 +26,8 @@ export default function ItineraryItem({
   onSave, 
   onCancel, 
   onDelete,
-  onExpenseUpdate
+  onExpenseUpdate,
+  selectedDate
 }: ItineraryItemProps) {
   const [formData, setFormData] = useState({
     title: itinerary?.title || '',
@@ -33,10 +35,22 @@ export default function ItineraryItem({
     country: itinerary?.country || '',
     city: itinerary?.city || '',
     location: itinerary?.location || '',
-    itineraryDate: itinerary?.itinerary_date || dayjs().format('YYYY-MM-DD'),
-    startTime: itinerary?.start_time || '09:00',
-    endTime: itinerary?.end_time || '10:00',
+    itineraryDate: itinerary?.itinerary_date || (selectedDate ? dayjs(selectedDate).format('YYYY-MM-DD') : dayjs().format('YYYY-MM-DD')),
+    startTime: itinerary?.start_time || (selectedDate ? dayjs(selectedDate).format('HH:mm') : '09:00'),
+    endTime: itinerary?.end_time || (selectedDate ? dayjs(selectedDate).add(1, 'hour').format('HH:mm') : '10:00'),
   });
+
+  // selectedDate가 변경될 때 폼 데이터 업데이트
+  React.useEffect(() => {
+    if (selectedDate && !itinerary) { // 새 일정 추가일 때만
+      setFormData(prev => ({
+        ...prev,
+        itineraryDate: dayjs(selectedDate).format('YYYY-MM-DD'),
+        startTime: dayjs(selectedDate).format('HH:mm'),
+        endTime: dayjs(selectedDate).add(1, 'hour').format('HH:mm'),
+      }));
+    }
+  }, [selectedDate, itinerary]);
 
   // 국가 드롭다운 상태 및 옵션 (ISO 3166 → 한국어 라벨)
   const [countryOpen, setCountryOpen] = useState(false);
@@ -374,14 +388,12 @@ export default function ItineraryItem({
         {/* 지출 추가 폼 */}
         {showExpenseForm && (
           <View style={styles.expenseForm}>
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>카테고리</Text>
-              {/* TODO: 카테고리 셀렉트도 공통 Select로 대체 예정 */}
-              <CategoryPicker
-                value={expenseForm.category}
-                onChange={(cat: ExpenseCategory) => setExpenseForm({ ...expenseForm, category: cat })}
-              />
-            </View>
+            <Text style={styles.label}>카테고리</Text>
+            <CategoryPicker
+              value={expenseForm.category}
+              onChange={(cat: ExpenseCategory) => setExpenseForm({ ...expenseForm, category: cat })}
+              containerStyle={{ marginBottom: 12 }}
+            />
 
             <View style={styles.inputGroup}>
               <Text style={styles.label}>금액</Text>

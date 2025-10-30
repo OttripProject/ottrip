@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, useWindowDimensions, ScrollView } from 'react-native';
 import { useIsWideScreen } from '@/hooks/useIsWideScreen';
-import WeeklySchedule, { Itinerary } from '@/components/WeeklySchedule';
+import WeeklyScheduleModal, { Itinerary } from '@/components/modals/WeeklyScheduleModal';
 import SidePanels from '@/navigation/SidePanels';
 import { usePlanData } from '@/hooks/usePlanData';
 
@@ -28,7 +28,7 @@ export default function DashboardSplit() {
   const [selectedItinerary, setSelectedItinerary] = useState<any>(null);
   
   // 선택된 Plan의 데이터 로딩
-  const planData = usePlanData(selectedPlanId);
+  const planData = usePlanData(selectedPlanId ? selectedPlanId.toString() : null);
 
   const handleItineraryAdd = async (newItinerary: any) => {
     // Plan이 선택된 경우에만 추가
@@ -67,12 +67,18 @@ export default function DashboardSplit() {
     >
       <View style={styles.contentLayout}>
         <View style={[styles.calendarPane, { flex: ratio.calendar }]}> 
-          <WeeklySchedule 
+          <WeeklyScheduleModal 
             itineraries={planData.itineraries}
             height={600} 
             onItineraryAdd={handleItineraryAdd}
-            onPlanSelect={setSelectedPlanId}
+            onPlanSelect={(trip) => setSelectedPlanId(trip ? parseInt(trip.id) : null)}
             onItinerarySelect={setSelectedItinerary}
+            onRequestNewItinerary={(date) => {
+              // 시간 셀을 눌렀을 때 일정 추가 모달 열기
+              console.log('새 일정 추가 요청:', date);
+              // 여기서 일정 추가 모달을 열 수 있습니다
+              // 예: onShowItineraryModal?.(date);
+            }}
           />
         </View>
         {ratio.side > 0 && (

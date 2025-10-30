@@ -54,8 +54,6 @@ export const usePlanData = (publicId: string | null) => {
         expenses,
       });
     } catch (err: any) {
-      // 플랜 자체 조회 실패(404/403 등)만 화면에 반영
-      // 에러 시 이전 플랜 데이터를 제거하여 가드가 안정적으로 동작
       setPlanData({
         plan: null,
         itineraries: [],
@@ -75,7 +73,6 @@ export const usePlanData = (publicId: string | null) => {
     if (publicId) {
       fetchPlanData(publicId);
     } else {
-      // publicId가 없으면 데이터만 초기화하고 에러 상태는 유지 (가드 안정화)
       setPlanData({
         plan: null,
         itineraries: [],
@@ -83,8 +80,6 @@ export const usePlanData = (publicId: string | null) => {
         accommodations: [],
         expenses: [],
       });
-      // setError(null);// 유지
-      // (null); // 유지
     }
   }, [publicId, fetchPlanData]);
 

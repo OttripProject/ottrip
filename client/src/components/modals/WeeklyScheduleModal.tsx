@@ -100,6 +100,7 @@ interface Props {
   onShowItineraryModal?: () => void;
   onShowFlightModal?: () => void;
   onRequestNewFlight?: () => void; // 새 항공편 추가 즉시 열기
+  onRequestNewItinerary?: (date?: Date) => void; // 새 일정 추가 즉시 열기
   onShowAccommodationModal?: (accommodation: any, date?: string) => void;
   onShowItineraryDetail?: (itinerary: Itinerary) => void;
   onShowFlightDetail?: (flight: any) => void;
@@ -108,7 +109,7 @@ interface Props {
   planData?: any; 
 }
 
-export default function WeeklyScheduleModal({ itineraries, flights = [], height = 600, onItineraryAdd, onPlanSelect, onItinerarySelect, onFlightAdd, onAccommodationAdd, onShowItineraryModal, onShowFlightModal, onRequestNewFlight, onShowAccommodationModal, onShowItineraryDetail, onShowFlightDetail, onShowAccommodationDetail, selectedTrip, planData: externalPlanData }: Props) {
+export default function WeeklyScheduleModal({ itineraries, flights = [], height = 600, onItineraryAdd, onPlanSelect, onItinerarySelect, onFlightAdd, onAccommodationAdd, onShowItineraryModal, onShowFlightModal, onRequestNewFlight, onRequestNewItinerary, onShowAccommodationModal, onShowItineraryDetail, onShowFlightDetail, onShowAccommodationDetail, selectedTrip, planData: externalPlanData }: Props) {
     const [currentWeekStart, setCurrentWeekStart] = useState(
         dayjs().startOf('week').add(1, 'day') // 월요일 시작
         );
@@ -420,6 +421,9 @@ export default function WeeklyScheduleModal({ itineraries, flights = [], height 
         hideNowIndicator
         swipeEnabled
         showTime
+        onPressCell={(date: Date) => {
+          onRequestNewItinerary?.(date);
+        }}
         renderEvent={(event, touchableOpacityProps) => {
           // key/children은 제거하고, onPress는 내부 Touchable에서 호출하여 경고 없이 클릭 유지
           const { key: eventKey, children: _ignoreChildren, style: tpStyle, onPress: calendarOnPress, ...rest } = (touchableOpacityProps as any) ?? {};

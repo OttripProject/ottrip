@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { View, StyleSheet } from 'react-native';
-import WeeklySchedule, { Itinerary } from '@/components/WeeklySchedule';
-import SidePanels from '@/navigation/SidePanels';
+import WeeklyScheduleModal, { Itinerary } from '@/components/modals/WeeklyScheduleModal';
 import { usePlanData } from '@/hooks/usePlanData';
 
 export default function DashboardStack() {
@@ -9,7 +8,7 @@ export default function DashboardStack() {
   const [selectedItinerary, setSelectedItinerary] = useState<any>(null);
   
   // 선택된 Plan의 데이터 로딩
-  const planData = usePlanData(selectedPlanId);
+  const planData = usePlanData(selectedPlanId ? selectedPlanId.toString() : null);
 
   const handleItineraryAdd = async (newItinerary: any) => {
     // Plan이 선택된 경우에만 추가
@@ -42,22 +41,18 @@ export default function DashboardStack() {
   return (
     <View style={styles.container}>
       <View style={{ height: 400 }}>
-        <WeeklySchedule 
+        <WeeklyScheduleModal 
           itineraries={planData.itineraries}
           height={400} 
           onItineraryAdd={handleItineraryAdd}
-          onPlanSelect={setSelectedPlanId}
+          onPlanSelect={(trip) => setSelectedPlanId(trip ? parseInt(trip.id) : null)}
           onItinerarySelect={setSelectedItinerary}
-        />
-      </View>
-      <View style={{ flex: 1, minHeight: 0 }}>
-        <SidePanels 
-          planData={planData}
-          selectedItinerary={selectedItinerary}
-          onItineraryAdd={handleItineraryAdd}
-          onFlightAdd={handleFlightAdd}
-          onAccommodationAdd={handleAccommodationAdd}
-          onExpenseAdd={handleExpenseAdd}
+          onRequestNewItinerary={(date) => {
+            // 시간 셀을 눌렀을 때 일정 추가 모달 열기
+            console.log('새 일정 추가 요청:', date);
+            // 여기서 일정 추가 모달을 열 수 있습니다
+            // 예: onShowItineraryModal?.(date);
+          }}
         />
       </View>
     </View>
