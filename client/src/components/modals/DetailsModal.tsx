@@ -127,15 +127,38 @@ export default function DetailsModal({ planData, selectedItinerary, selectedFlig
       }
     }, [activeTab, openNewFlightForm, onConsumeOpenNewFlightForm]);
 
-    // 외부 트리거: 숙박 탭에서 즉시 새 숙박 추가 폼 열기
+    // 외부 트리거: 숙박 탭에서 즉시 새 숙박 추가 폼 열기 (selectedAccommodation이 없을 때)
     React.useEffect(() => {
-      if (activeTab === 'accommodation' && openNewAccommodationForm) {
-        // 새 숙박 생성이므로 null로 설정
+      if (activeTab === 'accommodation' && openNewAccommodationForm && !selectedAccommodation) {
+        // selectedAccommodation이 아직 설정되지 않은 경우 (버튼 클릭 등)
         setEditingAccommodation(null);
         setShowAccommodationForm(true);
         onConsumeOpenNewAccommodationForm && onConsumeOpenNewAccommodationForm();
       }
-    }, [activeTab, openNewAccommodationForm, onConsumeOpenNewAccommodationForm]);
+    }, [activeTab, openNewAccommodationForm, selectedAccommodation, onConsumeOpenNewAccommodationForm]);
+
+    // selectedAccommodation 변경 시 editingAccommodation 동기화
+    React.useEffect(() => {
+      if (activeTab === 'accommodation' && selectedAccommodation) {
+        // 새 숙박 추가인 경우(id가 없고 openNewAccommodationForm이 true) - 편집 폼 열기
+        if (!selectedAccommodation.id && openNewAccommodationForm) {
+          setEditingAccommodation(selectedAccommodation);
+          setShowAccommodationForm(true);
+        } else if (selectedAccommodation.id) {
+          // 기존 숙박 - editingAccommodation만 업데이트하고 편집 폼은 확실히 닫음
+          setEditingAccommodation(selectedAccommodation);
+          setShowAccommodationForm(false);
+        } else {
+          // 새 숙박이지만 openNewAccommodationForm이 false인 경우
+          setEditingAccommodation(selectedAccommodation);
+          setShowAccommodationForm(false);
+        }
+      } else if (activeTab === 'accommodation' && !selectedAccommodation) {
+        // selectedAccommodation이 null이면 폼 닫기
+        setEditingAccommodation(null);
+        setShowAccommodationForm(false);
+      }
+    }, [activeTab, selectedAccommodation, openNewAccommodationForm]);
 
     const handleAccommodationDelete = (accommodationId: string) => {
       // 삭제 후 목록 새로고침
@@ -438,17 +461,23 @@ export default function DetailsModal({ planData, selectedItinerary, selectedFlig
                   <Text style={styles.detailValue}>{item.place}</Text>
                 </View>
               )}
-              {item.accommodationType && (
-                <View style={styles.detailRow}>
-                  <Text style={styles.detailLabel}>숙소 타입</Text>
-                  <Text style={styles.detailValue}>{item.accommodationType}</Text>
-                </View>
-              )}
               {item.description && (
                 <View style={styles.detailRow}>
                   <Text style={styles.detailLabel}>설명</Text>
                   <Text style={styles.detailValue}>{item.description}</Text>
                 </View>
+              )}
+              {item.expense && (
+                <>
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>가격</Text>
+                    <Text style={styles.detailValue}>{item.expense.amount?.toLocaleString() || '미설정'}</Text>
+                  </View>
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>화폐</Text>
+                    <Text style={styles.detailValue}>{item.expense.currency || '미설정'}</Text>
+                  </View>
+                </>
               )}
             </>
           )}
