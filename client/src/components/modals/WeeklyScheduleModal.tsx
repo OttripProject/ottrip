@@ -376,39 +376,6 @@ export default function WeeklyScheduleModal({ itineraries, flights = [], height 
         ) : null}
       </View>
 
-      {/* 숙박 정보 행 */}
-      {internalSelectedTrip && (
-        <View style={styles.accommodationRow}>
-          <View style={styles.accommodationLabel}>
-            <Text style={styles.accommodationLabelText}>숙박</Text>
-          </View>
-          {getWeekDays().map((date, index) => {
-            const accommodation = getAccommodationForDate(date);
-            return (
-              <Pressable
-                key={date}
-                style={styles.accommodationCell}
-                onPress={() => {
-                  if (accommodation) {
-                    onShowAccommodationModal?.(accommodation);
-                  } else {
-                    onShowAccommodationModal?.(null, date);
-                  }
-                }}
-              >
-                {accommodation && (
-                  <View style={styles.accommodationItem}>
-                    <Text style={styles.accommodationName} numberOfLines={1}>
-                      {accommodation.name}
-                    </Text>
-                  </View>
-                ) }
-              </Pressable>
-            );
-          })}
-        </View>
-      )}
-
       {/* 캘린더 */}
       <View style={styles.calendarWrapper}>
         <BigCalendar
@@ -416,11 +383,64 @@ export default function WeeklyScheduleModal({ itineraries, flights = [], height 
         events={events}
         height={height - 50}
         date={currentWeekStart.toDate()}
-        hourRowHeight={80}
+        hourRowHeight={60}
         weekStartsOn={1}
         hideNowIndicator
         swipeEnabled
         showTime
+        renderHeader={(props) => {
+          return (
+            <View>
+              <View style={{ flexDirection: 'row', height: 70 }}>
+                <View style={{ width: 50, borderRightWidth: 0.5, borderRightColor: '#e0e0e0' }} />
+                {getWeekDays().map((date, index) => (
+                  <View key={date} style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+                    <Text style={{ fontSize: 12 }}>
+                      {dayjs(date).format('ddd')}
+                    </Text>
+                    <Text style={{ fontSize: 16, fontWeight: 'bold' }}>
+                      {dayjs(date).format('D')}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+              {/* 날짜 헤더 아래 공간 - 시간 열에 "숙박 */}
+              {internalSelectedTrip && (
+                <View style={{ flexDirection: 'row', height: 50, backgroundColor: '', borderTopWidth: 0.5, borderBottomWidth: 0.5, borderTopColor: '#e0e0e0', borderBottomColor: '#e0e0e0' }}>
+                  <View style={{ width: 50, justifyContent: 'center', alignItems: 'center', borderRightWidth: 0.5, borderRightColor: '#e0e0e0' }}>
+                    <Text style={{ fontSize: 14, fontWeight: '500' }}>숙박</Text>
+                  </View>
+                  <View style={{ flex: 1, flexDirection: 'row' }}>
+                    {getWeekDays().map((date, index) => {
+                      const accommodation = getAccommodationForDate(date);
+                      return (
+                        <Pressable
+                          key={date}
+                          style={{ flex: 1, justifyContent: 'center', alignItems: 'center', borderRightWidth: index < getWeekDays().length - 1 ? 1 : 0, borderRightColor: '#e0e0e0' }}
+                          onPress={() => {
+                            if (accommodation) {
+                              onShowAccommodationModal?.(accommodation);
+                            } else {
+                              onShowAccommodationModal?.(null, date);
+                            }
+                          }}
+                        >
+                          {accommodation && (
+                            <View style={{ backgroundColor: '#ff9500', borderRadius: 4, paddingHorizontal: 8, paddingVertical: 4, width: '90%' }}>
+                              <Text style={{ color: '#fff', fontSize: 10, fontWeight: '600' }} numberOfLines={1}>
+                                {accommodation.name}
+                              </Text>
+                            </View>
+                          )}
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                </View>
+              )}
+            </View>
+          );
+        }}
         onPressCell={(date: Date) => {
           onRequestNewItinerary?.(date);
         }}
