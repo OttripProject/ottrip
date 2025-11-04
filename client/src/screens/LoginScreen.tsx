@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, Pressable, StyleSheet, ActivityIndicator, Platform, Alert } from 'react-native';
+import { View, Text, Pressable, StyleSheet, ActivityIndicator, Platform, Alert, Image } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigation } from '@react-navigation/native';
 import { authApi } from '../services/auth';
@@ -9,6 +10,15 @@ import * as WebBrowser from 'expo-web-browser';
 import * as Crypto from 'expo-crypto';
 import * as SecureStore from 'expo-secure-store';
 import api from '@/services/api';
+import { colors } from '../ui/tokens/colors';
+import { textStyles, typography } from '../ui/tokens/typography';
+
+const googleLogo = require('../../assets/google_logo.png');
+
+// 배경 그라데이션 설정
+const GRADIENT_COLORS = ['#FFE5F1', '#E0F0FF'] as const;
+const GRADIENT_START = { x: 0, y: 0 };
+const GRADIENT_END = { x: 1, y: 1 };
 
 // nonce 생성 함수 (크로스 플랫폼)
 const generateNonce = async () => {
@@ -266,57 +276,54 @@ export default function LoginScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.content}>
-        <View style={styles.header}>
-          <Text style={styles.title}>OTTRIP</Text>
-          <Text style={styles.subtitle}>여행 계획을 더 스마트하게</Text>
-        </View>
-
-        <View style={styles.buttonContainer}>
-          <Pressable 
-            style={[styles.googleButton, isLoading && styles.disabledButton]}
-            onPress={onGoogleSignIn}
-            disabled={isLoading}
-          >
-            <Text style={styles.googleButtonText}>
-              {isLoading ? '로그인 중...' : 'Google로 로그인'}
-            </Text>
-          </Pressable>
-          
-          <View style={styles.divider}>
-            <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>또는</Text>
-            <View style={styles.dividerLine} />
+    <LinearGradient
+      colors={GRADIENT_COLORS}
+      start={GRADIENT_START}
+      end={GRADIENT_END}
+      style={styles.gradient}
+    >
+      <SafeAreaView style={styles.container}>
+        <View style={styles.content}>
+        {/* Figma 디자인에 맞춘 흰색 카드 컨테이너 */}
+        <View style={styles.card}>
+          <View style={styles.header}>
+            <Text style={styles.title}>OTTRIP</Text>
+            <Text style={styles.subtitle}>여행 계획을 더 스마트하게</Text>
           </View>
 
-          <Pressable 
-            style={[styles.testButton, isLoading && styles.disabledButton]}
-            onPress={handleTestLogin}
-            disabled={isLoading}
-          >
-            {isLoading ? (
-              <ActivityIndicator color="white" size="small" />
-            ) : (
-              <Text style={styles.testButtonText}>
-                테스트 로그인 (Dev)
-              </Text>
-            )}
-          </Pressable>
-
-          <Text style={styles.note}>
-            * 테스트 로그인은 개발 환경에서만 사용하세요.
-          </Text>
+          <View style={styles.buttonContainer}>
+            <Pressable 
+              style={[styles.googleButton, isLoading && styles.disabledButton]}
+              onPress={onGoogleSignIn}
+              disabled={isLoading}
+            >
+              <View style={styles.googleButtonContent}>
+                <Image 
+                  source={googleLogo} 
+                  style={styles.googleLogo}
+                  resizeMode="contain"
+                />
+                <Text style={[styles.googleButtonText, { marginLeft: 12 }]}>
+                  {isLoading ? '로그인 중...' : 'Google로 로그인하기'}
+                </Text>
+              </View>
+            </Pressable>
+            
+          </View>
         </View>
       </View>
-    </SafeAreaView>
+      </SafeAreaView>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
+  gradient: {
+    flex: 1,
+  },
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: 'transparent',
   },
   content: {
     flex: 1,
@@ -324,76 +331,79 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 20,
   },
+  card: {
+    width: '100%',
+    maxWidth: 480,
+    height: undefined,
+    maxHeight: 624,
+    minHeight: 624,
+    backgroundColor: colors.white,
+    borderRadius: 24,
+    paddingHorizontal: 40,
+    paddingTop: 40,
+    paddingBottom: 40,
+    alignItems: 'center',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 12,
+      },
+      android: {
+        elevation: 8,
+      },
+    }),
+  },
   header: {
     alignItems: 'center',
-    marginBottom: 60,
+    marginTop: 180,
+    marginBottom: 0,
   },
   title: {
     fontSize: 32,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 10,
+    fontWeight: '600',
+    color: '#0066FF',
+    marginBottom: 8, 
+    fontFamily: typography.fontFamily.poppins,
   },
   subtitle: {
-    fontSize: 16,
-    color: '#666',
+    ...textStyles.body2,
+    color: colors.gray800,
     textAlign: 'center',
+    marginBottom: 48,
   },
   buttonContainer: {
     width: '100%',
     alignItems: 'center',
   },
   googleButton: {
-    width: 240,
-    height: 48,
-    marginBottom: 20,
-    backgroundColor: '#4285F4',
-    borderRadius: 8,
+    width: '100%',
+    maxWidth: 352,
+    height: 56,
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: colors.gray400,
+    borderRadius: 10,
     justifyContent: 'center',
     alignItems: 'center',
+    marginBottom: 20,
   },
-  googleButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  divider: {
+  googleButtonContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    width: '100%',
-    marginVertical: 20,
   },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: '#E0E0E0',
+  googleLogo: {
+    width: 16,
+    height: 16,
   },
-  dividerText: {
-    marginHorizontal: 15,
-    color: '#999',
-    fontSize: 14,
+  googleButtonText: {
+    ...textStyles.h5,
+    color: colors.black,
   },
   disabledButton: {
-    backgroundColor: '#ccc',
-  },
-  testButton: {
-    backgroundColor: '#4CAF50',
-    paddingVertical: 12,
-    paddingHorizontal: 25,
-    borderRadius: 8,
-    marginBottom: 20,
-    minWidth: 200,
-    alignItems: 'center',
-  },
-  testButtonText: {
-    color: 'white',
-    fontSize: 14,
-    fontWeight: 'bold',
-  },
-  note: {
-    fontSize: 12,
-    color: '#999',
-    textAlign: 'center',
-    lineHeight: 18,
+    backgroundColor: colors.gray300,
+    borderColor: colors.gray400,
+    opacity: 0.6,
   },
 }); 
