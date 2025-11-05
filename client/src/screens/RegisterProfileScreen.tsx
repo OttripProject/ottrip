@@ -15,6 +15,7 @@ import { colors } from '@/ui/tokens/colors';
 import { textStyles } from '@/ui/tokens/typography';
 
 import LeftArrowIcon from '../../assets/left_arrow.svg';
+import GenderCheckIcon from '../../assets/gender_check.svg';
 
 type RouteParams = {
   registerToken: string;
@@ -104,33 +105,26 @@ export default function RegisterProfileScreen() {
             <Text style={styles.title}>프로필 설정</Text>
             <Text style={styles.subtitle}>개인정보 및 환경설정을 관리하세요.</Text>
 
-            <View style={[styles.fieldGroup, { top: 232 }]}>
-              <Text style={styles.label}>이메일</Text>
-            </View>
+            <Text style={styles.emailLabel}>이메일</Text>
             <View style={styles.emailContainer}>
               <Text style={styles.emailText}>{email}</Text>
             </View>
 
-            <View style={[styles.fieldGroup, { top: 332 }]}>
-              <Text style={styles.label}>닉네임</Text>
-            </View>
+            <Text style={styles.nicknameLabel}>닉네임</Text>
             <View style={styles.nicknameInputContainer}>
               <Input
                 placeholder={PLACEHOLDERS.profile.nickname}
                 value={nickname}
                 onChangeText={handleNicknameChange}
-                containerStyle={{ width: '100%', borderWidth: 0 }}
-                style={{ height: 48, paddingHorizontal: 16, borderWidth: 0 }}
+                style={styles.input}
               />
             </View>
             {nicknameError && <Text style={styles.errorText}>{nicknameError}</Text>}
             {!nicknameError && !checkingNickname && nickname.trim().length > 0 && (
-              <Text style={styles.successText}>사용 가능한 닉네임이에요.</Text>
+              <Text style={styles.successText}>사용 가능한 닉네임입니다.</Text>
             )}
 
-            <View style={[styles.fieldGroup, { top: 432 }]}>
-              <Text style={styles.label}>성별</Text>
-            </View>
+            <Text style={styles.genderLabel}>성별</Text>
             <View style={styles.genderContainer}>
               {(['male', 'female'] as const).map((g) => (
                 <Pressable
@@ -139,7 +133,7 @@ export default function RegisterProfileScreen() {
                   onPress={() => setGender(g)}
                 >
                   <View style={[styles.radioButton, gender === g && styles.radioButtonSelected]}>
-                    {gender === g && <View style={styles.radioButtonInner} />}
+                    {gender === g && <GenderCheckIcon width={16} height={16} fill={colors.white} />}
                   </View>
                   <Text style={styles.genderText}>{g === 'male' ? '남성' : '여성'}</Text>
                 </Pressable>
@@ -195,18 +189,16 @@ const styles = StyleSheet.create({
     ...textStyles.body3,
     color: colors.gray700,
   },
-  fieldGroup: {
+  emailLabel: {
     position: 'absolute',
     left: 40,
-    width: 400,
-  },
-  label: {
+    top: 206,
     ...textStyles.h7,
   },
   emailContainer: {
     position: 'absolute',
     left: 40,
-    top: 260,
+    top: 234,
     width: 400,
     height: 48,
     backgroundColor: colors.gray200,
@@ -220,31 +212,40 @@ const styles = StyleSheet.create({
     ...textStyles.body4,
     color: colors.gray700,
   },
+  nicknameLabel: {
+    position: 'absolute',
+    left: 40,
+    top: 306,
+    ...textStyles.h7,
+  },
   nicknameInputContainer: {
     position: 'absolute',
     left: 40,
-    top: 360,
+    top: 334,
     width: 400,
+  },
+  input: {
     height: 48,
-    borderWidth: 1,
-    borderColor: colors.gray400,
-    borderRadius: 10,
-    backgroundColor: colors.white,
-    overflow: 'hidden',
   },
   errorText: {
     position: 'absolute',
     left: 40,
-    top: 414,
+    top: 390,
     ...textStyles.body5,
     color: colors.danger,
   },
   successText: {
     position: 'absolute',
     left: 40,
-    top: 414,
+    top: 390,
     ...textStyles.body5,
     color: colors.success,
+  },
+  genderLabel: {
+    position: 'absolute',
+    left: 40,
+    top: 432,
+    ...textStyles.h7,
   },
   genderContainer: {
     position: 'absolute',
@@ -272,12 +273,6 @@ const styles = StyleSheet.create({
   radioButtonSelected: {
     borderColor: colors.black,
     backgroundColor: colors.black,
-  },
-  radioButtonInner: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: colors.white,
   },
   genderText: {
     ...textStyles.body2,
