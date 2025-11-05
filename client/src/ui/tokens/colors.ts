@@ -14,9 +14,10 @@ export const colors = {
   // 사용 안하게될 것들
   primary: '#007AFF',
   primaryDark: '#0059B2',
-  danger: '#EF4444',
-  warning: '#F59E0B',
-  success: '#10B981',
+  danger: '#EF4444',  
+  // 검증
+  success: '#0066FF',
+  warning: '#FF4242',
   // gradient colors
   gradientStart: '#FFD7EB',
   gradientEnd: '#BADFFF',

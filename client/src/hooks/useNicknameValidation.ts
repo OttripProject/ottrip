@@ -15,7 +15,7 @@ export const useNicknameValidation = (currentNickname?: string) => {
   const validateNickname = useCallback((nickname: string): NicknameValidationResult => {
     const trimmed = nickname.trim();
     if (trimmed.length === 0) {
-      return { isValid: false, error: '닉네임을 입력해주세요.' };
+      return { isValid: false };
     }
     const pattern = /^(?:[가-힣0-9_.-]{1,10}|[A-Za-z0-9_.-]{1,20})$/;
     if (!pattern.test(trimmed)) {
