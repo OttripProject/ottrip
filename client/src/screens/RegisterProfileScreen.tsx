@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, Pressable, StyleSheet, Alert } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { authApi } from '@/services/auth';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNicknameValidation } from '@/hooks/useNicknameValidation';
@@ -8,6 +9,12 @@ import * as SecureStore from 'expo-secure-store';
 import api from '@/services/api';
 import Input from '@/ui/components/input/Input';
 import { PLACEHOLDERS } from '@/constants/placeholders';
+import GradientBackground from '@/ui/components/GradientBackground';
+import Card from '@/ui/components/Card';
+import { colors } from '@/ui/tokens/colors';
+import { textStyles } from '@/ui/tokens/typography';
+
+import LeftArrowIcon from '../../assets/left_arrow.svg';
 
 type RouteParams = {
   registerToken: string;
@@ -15,17 +22,6 @@ type RouteParams = {
   email: string;
   terms?: { tos: boolean; privacy: boolean; marketing: boolean };
 };
-
-// 길이 계산: 한글(가-힣)은 2, 그 외는 1로 계산
-function getDisplayLength(text: string): number {
-  let len = 0;
-  for (const ch of text) {
-    if (/^[\u3131-\uD79D]$/.test(ch)) len += 2; // 한글 범위
-    else len += 1;
-  }
-  return len;
-}
-
 
 function toHandleFromEmail(email: string): string {
   const local = email.split('@')[0] || '';
@@ -43,10 +39,8 @@ export default function RegisterProfileScreen() {
   const [gender, setGender] = useState<'male' | 'female'>('male');
   const [handle] = useState(() => toHandleFromEmail(email));
   
-  // 닉네임 검증 훅 사용
   const { nicknameError, checkingNickname, onNicknameChange, isValid } = useNicknameValidation();
 
-  // 닉네임 변경 핸들러 (훅과 연동)
   const handleNicknameChange = (text: string) => {
     setNickname(text);
     onNicknameChange(text);
@@ -84,70 +78,229 @@ export default function RegisterProfileScreen() {
         }
       } catch {}
 
-      // 로그인 전환되며 대시보드로 이동
     } catch (e: any) {
       Alert.alert('가입 실패', e?.response?.data?.detail || e.message || '알 수 없는 오류');
     }
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>프로필 설정</Text>
-
-      <View style={styles.fieldGroup}>
-        <Text style={styles.label}>이메일</Text>
-        <View style={[styles.input, styles.readonly]}>
-          <Text style={styles.readonlyText}>{email}</Text>
-        </View>
-      </View>
-
-      <View style={styles.fieldGroup}>
-        <Text style={styles.label}>닉네임</Text>
-        <Input placeholder={PLACEHOLDERS.profile.nickname} value={nickname} onChangeText={handleNicknameChange} />
-        {checkingNickname && <Text style={styles.hint}>중복 확인 중...</Text>}
-        {nicknameError && <Text style={styles.errorText}>{nicknameError}</Text>}
-        {!nicknameError && !checkingNickname && nickname.trim().length > 0 && (
-          <Text style={styles.successText}>사용 가능한 닉네임입니다.</Text>
-        )}
-      </View>
-
-      <View style={styles.fieldGroup}>
-        <Text style={styles.label}>성별</Text>
-        <View style={styles.row}>
-          {(['male','female'] as const).map((g) => (
-            <Pressable key={g} style={[styles.chip, gender === g && styles.chipActive]} onPress={() => setGender(g)}>
-              <Text style={[styles.chipText, gender === g && styles.chipTextActive]}>{g === 'male' ? '남자' : '여자'}</Text>
+    <GradientBackground>
+      <SafeAreaView style={styles.container}>
+        <View style={styles.cardWrapper}>
+          <Card variant="basic" alignItems="flex-start">
+            <Pressable
+              style={styles.backButton}
+              onPress={() => {
+                if (navigation.canGoBack()) {
+                  navigation.goBack();
+                } else {
+                  navigation.navigate('로그인');
+                }
+              }}
+            >
+              <LeftArrowIcon width={24} height={24} fill={colors.black} />
             </Pressable>
-          ))}
-        </View>
-      </View>
 
-      <Pressable disabled={!canSubmit} style={[styles.submitBtn, !canSubmit && styles.submitBtnDisabled]} onPress={onSubmit}>
-        <Text style={styles.submitText}>회원가입</Text>
-      </Pressable>
-    </View>
+            <Text style={styles.title}>프로필 설정</Text>
+            <Text style={styles.subtitle}>개인정보 및 환경설정을 관리하세요.</Text>
+
+            <View style={[styles.fieldGroup, { top: 232 }]}>
+              <Text style={styles.label}>이메일</Text>
+            </View>
+            <View style={styles.emailContainer}>
+              <Text style={styles.emailText}>{email}</Text>
+            </View>
+
+            <View style={[styles.fieldGroup, { top: 332 }]}>
+              <Text style={styles.label}>닉네임</Text>
+            </View>
+            <View style={styles.nicknameInputContainer}>
+              <Input
+                placeholder={PLACEHOLDERS.profile.nickname}
+                value={nickname}
+                onChangeText={handleNicknameChange}
+                containerStyle={{ width: '100%', borderWidth: 0 }}
+                style={{ height: 48, paddingHorizontal: 16, borderWidth: 0 }}
+              />
+            </View>
+            {nicknameError && <Text style={styles.errorText}>{nicknameError}</Text>}
+            {!nicknameError && !checkingNickname && nickname.trim().length > 0 && (
+              <Text style={styles.successText}>사용 가능한 닉네임이에요.</Text>
+            )}
+
+            <View style={[styles.fieldGroup, { top: 432 }]}>
+              <Text style={styles.label}>성별</Text>
+            </View>
+            <View style={styles.genderContainer}>
+              {(['male', 'female'] as const).map((g) => (
+                <Pressable
+                  key={g}
+                  style={styles.genderOption}
+                  onPress={() => setGender(g)}
+                >
+                  <View style={[styles.radioButton, gender === g && styles.radioButtonSelected]}>
+                    {gender === g && <View style={styles.radioButtonInner} />}
+                  </View>
+                  <Text style={styles.genderText}>{g === 'male' ? '남성' : '여성'}</Text>
+                </Pressable>
+              ))}
+            </View>
+
+            <Pressable
+              disabled={!canSubmit}
+              style={[styles.submitButton, !canSubmit && styles.submitButtonDisabled]}
+              onPress={onSubmit}
+            >
+              <Text style={[styles.submitButtonText, !canSubmit && styles.submitButtonTextDisabled]}>
+                회원가입
+              </Text>
+            </Pressable>
+          </Card>
+        </View>
+      </SafeAreaView>
+    </GradientBackground>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20, backgroundColor: '#fff' },
-  title: { fontSize: 22, fontWeight: '800', marginBottom: 16, color: '#111827' },
-  fieldGroup: { marginBottom: 12 },
-  label: { fontSize: 13, color: '#6b7280', marginBottom: 4 },
-  input: { borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, backgroundColor: '#ffffff' },
-  readonly: { backgroundColor: '#f3f4f6' },
-  readonlyText: { color: '#374151' },
-  row: { flexDirection: 'row', gap: 8 },
-  chip: { paddingVertical: 8, paddingHorizontal: 12, borderRadius: 16, backgroundColor: '#e5e7eb' },
-  chipActive: { backgroundColor: '#2563eb22', borderWidth: 1, borderColor: '#2563eb' },
-  chipText: { color: '#374151' },
-  chipTextActive: { color: '#2563eb', fontWeight: '700' },
-  hint: { marginTop: 6, fontSize: 12, color: '#6b7280' },
-  errorText: { marginTop: 6, fontSize: 12, color: '#ef4444' },
-  successText: { marginTop: 6, fontSize: 12, color: '#10b981' },
-  submitBtn: { backgroundColor: '#10b981', paddingVertical: 14, borderRadius: 10, alignItems: 'center', marginTop: 8 },
-  submitBtnDisabled: { backgroundColor: '#a7f3d0' },
-  submitText: { color: '#fff', fontWeight: '700', fontSize: 16 },
+  container: {
+    flex: 1,
+    backgroundColor: 'transparent',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  cardWrapper: {
+    width: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  backButton: {
+    position: 'absolute',
+    left: 40,
+    top: 50,
+    width: 24,
+    height: 24,
+    zIndex: 1,
+  },
+  title: {
+    position: 'absolute',
+    left: 40,
+    top: 96,
+    ...textStyles.h2,
+  },
+  subtitle: {
+    position: 'absolute',
+    left: 40,
+    top: 140,
+    ...textStyles.body3,
+    color: colors.gray700,
+  },
+  fieldGroup: {
+    position: 'absolute',
+    left: 40,
+    width: 400,
+  },
+  label: {
+    ...textStyles.h7,
+  },
+  emailContainer: {
+    position: 'absolute',
+    left: 40,
+    top: 260,
+    width: 400,
+    height: 48,
+    backgroundColor: colors.gray200,
+    borderWidth: 1,
+    borderColor: colors.gray400,
+    borderRadius: 10,
+    justifyContent: 'center',
+    paddingHorizontal: 16,
+  },
+  emailText: {
+    ...textStyles.body4,
+    color: colors.gray700,
+  },
+  nicknameInputContainer: {
+    position: 'absolute',
+    left: 40,
+    top: 360,
+    width: 400,
+    height: 48,
+    borderWidth: 1,
+    borderColor: colors.gray400,
+    borderRadius: 10,
+    backgroundColor: colors.white,
+    overflow: 'hidden',
+  },
+  errorText: {
+    position: 'absolute',
+    left: 40,
+    top: 414,
+    ...textStyles.body5,
+    color: colors.danger,
+  },
+  successText: {
+    position: 'absolute',
+    left: 40,
+    top: 414,
+    ...textStyles.body5,
+    color: colors.success,
+  },
+  genderContainer: {
+    position: 'absolute',
+    left: 40,
+    top: 460,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 24,
+  },
+  genderOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  radioButton: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: colors.gray400,
+    backgroundColor: colors.white,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  radioButtonSelected: {
+    borderColor: colors.black,
+    backgroundColor: colors.black,
+  },
+  radioButtonInner: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: colors.white,
+  },
+  genderText: {
+    ...textStyles.body2,
+  },
+  submitButton: {
+    position: 'absolute',
+    left: 40,
+    top: 520,
+    width: 400,
+    height: 56,
+    backgroundColor: colors.black,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  submitButtonDisabled: {
+    backgroundColor: colors.gray300,
+  },
+  submitButtonText: {
+    ...textStyles.h5,
+    color: colors.white,
+  },
+  submitButtonTextDisabled: {
+    color: colors.black,
+  },
 });
-
-

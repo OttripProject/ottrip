@@ -34,7 +34,7 @@ export const PLACEHOLDERS = {
     description: '설명',
   },
   profile: {
-    nickname: '닉네임',
+    nickname: '닉네임을 입력해주세요.',
     email: '이메일',
   },
   picker: {
