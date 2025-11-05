@@ -4,6 +4,14 @@ import { colors } from '../tokens/colors';
 
 export type CardVariant = 'default' | 'basic';
 
+export type ShadowConfig = {
+  shadowColor?: string;
+  shadowOffset?: { width: number; height: number };
+  shadowOpacity?: number;
+  shadowRadius?: number;
+  elevation?: number;
+};
+
 export type CardProps = {
   children?: React.ReactNode;
   style?: ViewStyle;
@@ -18,6 +26,10 @@ export type CardProps = {
   paddingVertical?: number;
   paddingTop?: number;
   paddingBottom?: number;
+  alignItems?: ViewStyle['alignItems'];
+  backgroundColor?: string;
+  borderRadius?: number;
+  shadow?: ShadowConfig | false;
 };
 
 export default function Card({
@@ -34,8 +46,22 @@ export default function Card({
   paddingVertical,
   paddingTop,
   paddingBottom,
+  alignItems,
+  backgroundColor,
+  borderRadius,
+  shadow,
 }: CardProps) {
   const variantStyle = variant === 'basic' ? styles.basicCard : {};
+
+  const shadowConfig = shadow === false 
+    ? undefined 
+    : shadow || {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 12,
+        elevation: 8,
+      };
 
   const cardStyle: ViewStyle = {
     ...variantStyle,
@@ -49,6 +75,20 @@ export default function Card({
     ...(paddingVertical !== undefined && { paddingVertical }),
     ...(paddingTop !== undefined && { paddingTop }),
     ...(paddingBottom !== undefined && { paddingBottom }),
+    ...(alignItems !== undefined && { alignItems }),
+    ...(backgroundColor !== undefined && { backgroundColor }),
+    ...(borderRadius !== undefined && { borderRadius }),
+    ...(shadowConfig && Platform.select({
+      ios: {
+        shadowColor: shadowConfig.shadowColor || '#000',
+        shadowOffset: shadowConfig.shadowOffset || { width: 0, height: 4 },
+        shadowOpacity: shadowConfig.shadowOpacity ?? 0.1,
+        shadowRadius: shadowConfig.shadowRadius || 12,
+      },
+      android: {
+        elevation: shadowConfig.elevation || 8,
+      },
+    })),
   };
 
   return (
@@ -63,19 +103,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
     borderRadius: 24,
     alignItems: 'center',
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.1,
-        shadowRadius: 12,
-      },
-      android: {
-        elevation: 8,
-      },
-    }),
   },
-  // 기본 카드 preset (로그인 화면 등에서 사용)
   basicCard: {
     width: '100%',
     maxWidth: 480,
