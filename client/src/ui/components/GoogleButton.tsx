@@ -1,9 +1,9 @@
 import React from 'react';
-import { Pressable, Text, View, Image, StyleSheet, ViewStyle, TextStyle } from 'react-native';
+import { Pressable, Text, View, StyleSheet, ViewStyle, TextStyle } from 'react-native';
 import { colors } from '../tokens/colors';
 import { textStyles } from '../tokens/typography';
 
-const googleLogo = require('../../../assets/google_logo.png');
+import GoogleLogo from '../../../assets/google_logo.svg';
 
 export type GoogleButtonProps = {
   onPress?: () => void;
@@ -29,11 +29,7 @@ export default function GoogleButton({
       disabled={disabled || isLoading}
     >
       <View style={styles.content}>
-        <Image
-          source={googleLogo}
-          style={styles.logo}
-          resizeMode="contain"
-        />
+        <GoogleLogo width={16} height={16} />
         <Text style={[styles.text, textStyle]}>
           {isLoading ? '로그인 중...' : text}
         </Text>
@@ -58,13 +54,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-  logo: {
-    width: 16,
-    height: 16,
-  },
   text: {
     ...textStyles.h5,
-    color: colors.black,
     marginLeft: 12,
   },
   disabled: {
