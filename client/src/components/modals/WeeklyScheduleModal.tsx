@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { View, Text, Pressable, StyleSheet, Alert, TouchableOpacity, Modal, Platform } from 'react-native';
 import { Calendar as BigCalendar } from 'react-native-big-calendar';
 import { Calendar } from 'react-native-calendars';
@@ -8,7 +8,6 @@ import TripSelector from '../TripSelector';
 import SharePlanModal from '@/components/modals/SharePlanModal';
 import { plansApi } from '@/services/plans';
 import { usePlans } from '@/hooks/usePlans';
-import { useEffect } from 'react';
 import { usePlanData } from '@/hooks/usePlanData';
 import ModalLayout from './ModalLayout';
 import Input from '@/ui/components/input/Input';
@@ -388,6 +387,7 @@ export default function WeeklyScheduleModal({ itineraries, flights = [], height 
         hideNowIndicator
         swipeEnabled
         showTime
+        scrollOffsetMinutes={360}
         renderHeader={(props) => {
           return (
             <View>
