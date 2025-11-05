@@ -1,6 +1,7 @@
 import React from 'react';
 import { StyleSheet, ViewStyle } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { colors } from '../tokens/colors';
 
 export type GradientBackgroundProps = {
   colors?: string[];
@@ -15,14 +16,18 @@ const DEFAULT_GRADIENT_START = { x: 0, y: 0 };
 const DEFAULT_GRADIENT_END = { x: 1, y: 1 };
 
 export default function GradientBackground({
+  colors: colorsProp,
   start = DEFAULT_GRADIENT_START,
   end = DEFAULT_GRADIENT_END,
   style,
   children,
 }: GradientBackgroundProps) {
+  const defaultColors = [colors.gradientStart, colors.gradientEnd] as const;
+  const gradientColors = (colorsProp || defaultColors) as readonly [string, string, ...string[]];
+  
   return (
     <LinearGradient
-      colors={['#FFE5F1', '#E0F0FF']}
+      colors={gradientColors}
       start={start}
       end={end}
       style={[styles.gradient, style]}

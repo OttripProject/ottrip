@@ -17,6 +17,9 @@ export const colors = {
   danger: '#EF4444',
   warning: '#F59E0B',
   success: '#10B981',
+  // gradient colors
+  gradientStart: '#FFD7EB',
+  gradientEnd: '#BADFFF',
 };
 
 export type ColorName = keyof typeof colors;
