@@ -151,6 +151,14 @@ export default function WeeklyScheduleModal({ itineraries, flights = [], height 
       }
     }, [selectedTrip]);
 
+    // 선택된 trip의 시작 날짜로 주간 뷰 이동
+    useEffect(() => {
+      if (internalSelectedTrip?.startDate) {
+        const startDateWeekStart = dayjs(internalSelectedTrip.startDate).startOf('week').add(1, 'day');
+        setCurrentWeekStart(startDateWeekStart);
+      }
+    }, [internalSelectedTrip?.startDate]);
+
     const myRole = useMemo(() => {
       const r = (planData.plan as any)?.myRole;
       return typeof r === 'string' ? r.toLowerCase() : undefined; // 'owner' | 'editor' | 'viewer'
@@ -231,6 +239,10 @@ export default function WeeklyScheduleModal({ itineraries, flights = [], height 
               endDate: updatedPlan.endDate,
             };
             setInternalSelectedTrip(updatedTripData);
+            
+            // 시작 날짜가 포함된 주의 월요일로 주간 뷰 이동
+            const startDateWeekStart = dayjs(updatedPlan.startDate).startOf('week').add(1, 'day');
+            setCurrentWeekStart(startDateWeekStart);
           }
           Alert.alert('성공', '여행 계획이 수정되었습니다.');
         } else {
