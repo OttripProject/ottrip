@@ -272,22 +272,22 @@ export default function LoginScreen() {
 
   return (
     <GradientBackground>
-      <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container}>
         <Card variant="basic">
-          <View style={styles.header}>
-            <Text style={styles.title}>OTTRIP</Text>
-            <Text style={styles.subtitle}>여행 계획을 더 스마트하게</Text>
-          </View>
+        <View style={styles.header}>
+          <Text style={styles.title}>OTTRIP</Text>
+          <Text style={styles.subtitle}>여행 계획을 더 스마트하게</Text>
+        </View>
 
-          <View style={styles.buttonContainer}>
+        <View style={styles.buttonContainer}>
             <GoogleButton
-              onPress={onGoogleSignIn}
-              disabled={isLoading}
+            onPress={onGoogleSignIn}
+            disabled={isLoading}
               isLoading={isLoading}
             />
           </View>
         </Card>
-      </SafeAreaView>
+    </SafeAreaView>
     </GradientBackground>
   );
 }
