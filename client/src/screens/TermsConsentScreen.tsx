@@ -44,7 +44,7 @@ export default function TermsConsentScreen() {
     <GradientBackground>
       <SafeAreaView style={styles.container}>
         <View style={styles.cardWrapper}>
-          <Card variant="basic">
+          <Card variant="basic" alignItems="flex-start">
             <Pressable 
               style={styles.backButton}
               onPress={() => navigation.goBack()}
