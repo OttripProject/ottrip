@@ -9,7 +9,6 @@ import * as WebBrowser from 'expo-web-browser';
 import * as Crypto from 'expo-crypto';
 import * as SecureStore from 'expo-secure-store';
 import api from '@/services/api';
-import { colors } from '../ui/tokens/colors';
 import { textStyles, typography } from '../ui/tokens/typography';
 import GradientBackground from '../ui/components/GradientBackground';
 import Card from '../ui/components/Card';
@@ -314,7 +313,6 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     ...textStyles.body2,
-    color: colors.gray800,
     textAlign: 'center',
     marginBottom: 48,
   },

@@ -222,7 +222,7 @@ const styles = StyleSheet.create({
     top: 518,
     width: 400,
     height: 56,
-    backgroundColor: colors.primary,
+    backgroundColor: colors.black,
     borderRadius: 10,
     justifyContent: 'center',
     alignItems: 'center',
@@ -232,6 +232,7 @@ const styles = StyleSheet.create({
   },
   nextButtonText: {
     ...textStyles.h5,
+    color: colors.white,
   },
   nextButtonTextDisabled: {
     color: colors.black,
