@@ -47,7 +47,7 @@ export default function TermsConsentScreen() {
           <Card variant="basic" alignItems="flex-start">
             <Pressable 
               style={styles.backButton}
-              onPress={() => navigation.goBack()}
+              onPress={() => navigation.navigate('로그인')}
             >
               <LeftArrowIcon width={24} height={24} fill={colors.black} />
             </Pressable>
