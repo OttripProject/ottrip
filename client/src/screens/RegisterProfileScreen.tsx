@@ -13,6 +13,7 @@ import GradientBackground from '@/ui/components/GradientBackground';
 import Card from '@/ui/components/Card';
 import { colors } from '@/ui/tokens/colors';
 import { textStyles } from '@/ui/tokens/typography';
+import { Gender } from '@/types/api';
 
 import LeftArrowIcon from '../../assets/left_arrow.svg';
 import GenderCheckIcon from '../../assets/gender_check.svg';
@@ -37,7 +38,7 @@ export default function RegisterProfileScreen() {
   const { registerToken, prefill, email, terms } = route.params as RouteParams;
 
   const [nickname, setNickname] = useState(prefill?.name || '');
-  const [gender, setGender] = useState<'male' | 'female'>('male');
+  const [gender, setGender] = useState<Gender>(Gender.MALE);
   const [handle] = useState(() => toHandleFromEmail(email));
   
   const { nicknameError, checkingNickname, onNicknameChange, isValid } = useNicknameValidation();
@@ -126,7 +127,7 @@ export default function RegisterProfileScreen() {
 
             <Text style={styles.genderLabel}>성별</Text>
             <View style={styles.genderContainer}>
-              {(['male', 'female'] as const).map((g) => (
+              {[Gender.MALE, Gender.FEMALE].map((g) => (
                 <Pressable
                   key={g}
                   style={styles.genderOption}
@@ -135,7 +136,7 @@ export default function RegisterProfileScreen() {
                   <View style={[styles.radioButton, gender === g && styles.radioButtonSelected]}>
                     {gender === g && <GenderCheckIcon width={16} height={16} fill={colors.white} />}
                   </View>
-                  <Text style={styles.genderText}>{g === 'male' ? '남성' : '여성'}</Text>
+                  <Text style={styles.genderText}>{g === Gender.MALE ? '남성' : '여성'}</Text>
                 </Pressable>
               ))}
             </View>

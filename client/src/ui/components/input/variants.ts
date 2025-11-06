@@ -1,5 +1,5 @@
 import { StyleSheet } from 'react-native';
-import { colors, spacing, radii, typography } from '@/ui/tokens';
+import { colors, spacing, radii, textStyles } from '@/ui/tokens';
 
 export type InputVariant = 'outlined' | 'filled' | 'underline';
 
@@ -12,11 +12,11 @@ export type InputState = {
 export function useInputStyleVariant(variant: InputVariant, state?: InputState) {
   const { disabled, error, focused } = state ?? {};
 
-  const baseTextColor = disabled ? colors.gray400 : colors.gray900;
-  const basePlaceholder = disabled ? colors.gray300 : colors.gray400;
+  const baseTextColor = disabled ? colors.gray400 : colors.black;
+  const basePlaceholder = disabled ? colors.gray300 : colors.gray700;
 
   if (variant === 'outlined') {
-    const borderColor = error ? colors.danger : focused ? colors.primary : colors.gray300;
+    const borderColor = error ? colors.danger : colors.gray400;
     return {
       containerStyle: styles.container,
       style: [
@@ -26,6 +26,8 @@ export function useInputStyleVariant(variant: InputVariant, state?: InputState) 
           borderWidth: 1,
           borderColor,
           color: baseTextColor,
+          outlineStyle: 'none',
+          outlineWidth: 0,
         },
       ],
       placeholderTextColor: basePlaceholder,
@@ -34,7 +36,7 @@ export function useInputStyleVariant(variant: InputVariant, state?: InputState) 
 
   if (variant === 'filled') {
     const bg = disabled ? '#F8FAFC' : colors.gray100;
-    const borderColor = error ? colors.danger : focused ? colors.primary : 'transparent';
+    const borderColor = error ? colors.danger : 'transparent';
     return {
       containerStyle: styles.container,
       style: [
@@ -44,6 +46,8 @@ export function useInputStyleVariant(variant: InputVariant, state?: InputState) 
           borderWidth: 1,
           borderColor,
           color: baseTextColor,
+          outlineStyle: 'none',
+          outlineWidth: 0,
         },
       ],
       placeholderTextColor: basePlaceholder,
@@ -51,7 +55,7 @@ export function useInputStyleVariant(variant: InputVariant, state?: InputState) 
   }
 
   // underline
-  const borderColor = error ? colors.danger : focused ? colors.primary : colors.gray300;
+  const borderColor = error ? colors.danger : colors.gray400;
   return {
     containerStyle: styles.container,
     style: [
@@ -62,6 +66,8 @@ export function useInputStyleVariant(variant: InputVariant, state?: InputState) 
         borderBottomColor: borderColor,
         borderRadius: 0,
         color: baseTextColor,
+        outlineStyle: 'none',
+        outlineWidth: 0,
       },
     ],
     placeholderTextColor: basePlaceholder,
@@ -76,7 +82,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.sm,
     borderRadius: radii.md,
-    fontSize: typography.size.md,
+    ...textStyles.body4,
   },
 });
 

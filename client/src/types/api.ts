@@ -204,6 +204,12 @@ export enum ExpenseCurrency {
   AUD = "AUD",
 }
 
+export enum Gender {
+  MALE = "male",
+  FEMALE = "female",
+  OTHER = "other",
+}
+
 export interface Expense {
   id: number;
   category: ExpenseCategory;
