@@ -9,17 +9,17 @@ export type InputProps = TextInputProps & {
 };
 
 export function Input(props: InputProps) {
-  const { containerStyle, style, variant = 'outlined', editable, error, onFocus, onBlur, ...rest } = props;
+  const { containerStyle, style, variant = 'outlined', editable, error, onFocus, onBlur, placeholderTextColor, ...rest } = props;
   const [focused, setFocused] = useState(false);
   const state = useMemo(() => ({ disabled: editable === false, error, focused }), [editable, error, focused]);
-  const v = useInputStyleVariant(variant, state);
+  const variantStyles = useInputStyleVariant(variant, state);
 
   return (
-    <View style={containerStyle ?? v.containerStyle}>
+    <View style={containerStyle ?? variantStyles.containerStyle}>
       <TextInput
         {...rest}
-        style={[v.style, style]}
-        placeholderTextColor={v.placeholderTextColor}
+        style={[variantStyles.style, style]}
+        placeholderTextColor={placeholderTextColor ?? variantStyles.placeholderTextColor}
         onFocus={(e) => {
           setFocused(true);
           onFocus?.(e);

@@ -1,17 +1,18 @@
 import api from './api';
+import { Gender } from '@/types/api';
 
 export interface UserProfile {
   handle: string;
   nickname: string;
   description: string;
-  gender: string | null;
+  gender: Gender | null;
   email: string;
 }
 
 export interface UpdateUserRequest {
   nickname?: string;
   description?: string;
-  gender?: string | null;
+  gender?: Gender | null;
 }
 
 export const usersApi = {

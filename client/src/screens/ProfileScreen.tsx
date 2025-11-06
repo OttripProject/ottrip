@@ -1,19 +1,28 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, Pressable, StyleSheet, Modal, Alert, Platform } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { usersApi, UserProfile } from '@/services/users';
-import HeaderBar from '@/components/modals/HeaderModal';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNicknameValidation } from '@/hooks/useNicknameValidation';
 import Input from '@/ui/components/input/Input';
 import { PLACEHOLDERS } from '@/constants/placeholders';
+import GradientBackground from '@/ui/components/GradientBackground';
+import Card from '@/ui/components/Card';
+import { colors } from '@/ui/tokens/colors';
+import { textStyles } from '@/ui/tokens/typography';
+import { Gender } from '@/types/api';
+
+import GenderCheckIcon from '../../assets/gender_check.svg';
+import QnaIcon from '../../assets/qna.svg';
+import XIcon from '../../assets/x.svg';
 
 export default function ProfileScreen() {
   const { logout } = useAuth();
   const navigation = useNavigation<any>();
   const [me, setMe] = useState<UserProfile | null>(null);
   const [nickname, setNickname] = useState('');
-  const [gender, setGender] = useState<string | null>(null);
+  const [gender, setGender] = useState<Gender | null>(null);
   const [contactOpen, setContactOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
@@ -69,60 +78,114 @@ export default function ProfileScreen() {
     }
   };
 
+  const hasChanges = nickname !== me?.nickname || gender !== me?.gender;
+  const canSave = isValid && hasChanges;
+
   return (
-    <View style={styles.container}>
-      <HeaderBar />
-      <Text style={styles.title}>프로필</Text>
-
-      <View style={styles.fieldGroup}>
-        <Text style={styles.label}>이메일</Text>
-        <View style={[styles.input, styles.readonly]}>
-          <Text style={styles.readonlyText}>{me?.email ?? ''}</Text>
-        </View>
-      </View>
-
-      <View style={styles.fieldGroup}>
-        <Text style={styles.label}>닉네임</Text>
-        <Input placeholder={PLACEHOLDERS.profile.nickname} value={nickname} onChangeText={handleNicknameChange} />
-        {checkingNickname && <Text style={styles.hint}>중복 확인 중...</Text>}
-        {nicknameError && <Text style={styles.errorText}>{nicknameError}</Text>}
-        {!nicknameError && !checkingNickname && nickname.trim().length > 0 && nickname !== me?.nickname && (
-          <Text style={styles.successText}>사용 가능한 닉네임입니다.</Text>
-        )}
-      </View>
-
-      <View style={styles.fieldGroup}>
-        <Text style={styles.label}>성별</Text>
-        <View style={styles.row}>
-          {['남자', '여자'].map((g) => (
+    <GradientBackground>
+      <SafeAreaView style={styles.container}>
+        <View style={styles.cardWrapper}>
+          <Card variant="basic" alignItems="flex-start">
             <Pressable
-              key={g}
-              style={[styles.chip, gender === g && styles.chipActive]}
-              onPress={() => setGender(g)}
+              style={styles.closeButton}
+              onPress={() => {
+                if (navigation.canGoBack()) {
+                  navigation.goBack();
+                } else {
+                  navigation.navigate('OTTRIP');
+                }
+              }}
             >
-              <Text style={[styles.chipText, gender === g && styles.chipTextActive]}>
-                {g}
+              <XIcon width={24} height={24} fill={colors.black} />
+            </Pressable>
+
+            <Text style={styles.title}>프로필 설정</Text>
+            <Text style={styles.subtitle}>개인정보 및 환경설정을 관리하세요.</Text>
+
+            <Text style={styles.emailLabel}>이메일</Text>
+            <View style={styles.emailContainer}>
+              <Text style={styles.emailText}>{me?.email ?? ''}</Text>
+            </View>
+
+            <Text style={styles.nicknameLabel}>닉네임</Text>
+            <View style={styles.nicknameInputContainer}>
+              <Input
+                placeholder={PLACEHOLDERS.profile.nickname}
+                value={nickname}
+                onChangeText={handleNicknameChange}
+                style={styles.input}
+              />
+            </View>
+            {nicknameError && <Text style={styles.errorText}>{nicknameError}</Text>}
+            {!nicknameError && !checkingNickname && nickname.trim().length > 0 && nickname !== me?.nickname && (
+              <Text style={styles.successText}>사용 가능한 닉네임입니다.</Text>
+            )}
+
+            <Text style={styles.genderLabel}>성별</Text>
+            
+            {/* 남성 라디오 버튼 */}
+            <Pressable
+              style={styles.maleRadioButton}
+              onPress={() => setGender(Gender.MALE)}
+            >
+              <View style={[styles.radioButton, gender === Gender.MALE && styles.radioButtonSelected]}>
+                {gender === Gender.MALE && <GenderCheckIcon width={16} height={16} fill={colors.white} />}
+              </View>
+            </Pressable>
+            <Pressable
+              style={styles.maleTextButton}
+              onPress={() => setGender(Gender.MALE)}
+            >
+              <Text style={styles.genderText}>남성</Text>
+            </Pressable>
+
+            {/* 여성 라디오 버튼 */}
+            <Pressable
+              style={styles.femaleRadioButton}
+              onPress={() => setGender(Gender.FEMALE)}
+            >
+              <View style={[styles.radioButton, gender === Gender.FEMALE && styles.radioButtonSelected]}>
+                {gender === Gender.FEMALE && <GenderCheckIcon width={16} height={16} fill={colors.white} />}
+              </View>
+            </Pressable>
+            <Pressable
+              style={styles.femaleTextButton}
+              onPress={() => setGender(Gender.FEMALE)}
+            >
+              <Text style={styles.genderText}>여성</Text>
+            </Pressable>
+
+            <View style={styles.divider} />
+
+            <Pressable style={styles.contactIconButton} onPress={() => setContactOpen(true)}>
+              <QnaIcon width={16} height={16} fill={colors.gray800} />
+            </Pressable>
+            <Pressable style={styles.contactTextButton} onPress={() => setContactOpen(true)}>
+              <Text style={styles.contactButtonText}>문의하기</Text>
+            </Pressable>
+
+            <Pressable
+              disabled={!canSave}
+              style={[styles.saveButton, !canSave && styles.saveButtonDisabled]}
+              onPress={save}
+            >
+              <Text style={[styles.saveButtonText, !canSave && styles.saveButtonTextDisabled]}>
+                저장
               </Text>
             </Pressable>
-          ))}
+
+            <View style={styles.footerRow}>
+              <Pressable style={styles.footerButton} onPress={logout}>
+                <Text style={styles.footerButtonText}>로그아웃</Text>
+              </Pressable>
+              <View style={styles.footerDivider} />
+              <Pressable style={styles.footerButton} onPress={handleDeleteAccount}>
+                <Text style={styles.footerButtonTextInactive}>계정 삭제</Text>
+              </Pressable>
+            </View>
+          </Card>
         </View>
-      </View>
-
-      <Pressable style={styles.contactBtn} onPress={() => setContactOpen(true)}>
-        <Text style={styles.contactBtnText}>문의하기</Text>
-      </Pressable>
-
-      <View style={styles.footerRow}>
-        <Pressable style={[styles.actionBtn, styles.logoutBtn]} onPress={logout}>
-          <Text style={styles.actionBtnText}>로그아웃</Text>
-        </Pressable>
-        <Pressable style={styles.deleteBtn} onPress={handleDeleteAccount}>
-          <Text style={styles.deleteBtnText}>계정 탈퇴</Text>
-        </Pressable>
-        <Pressable style={[styles.actionBtn, styles.saveBtn]} onPress={save}>
-          <Text style={styles.actionBtnText}>변경사항 저장</Text>
-        </Pressable>
-      </View>
+      </SafeAreaView>
 
       <Modal visible={contactOpen} transparent animationType="fade">
         <View style={styles.modalOverlay}>
@@ -130,7 +193,7 @@ export default function ProfileScreen() {
             <Text style={styles.modalTitle}>문의하기</Text>
             <Text style={styles.modalText}>ottrip 공식 이메일로 문의를 보내주세요.</Text>
             <View style={styles.copyRow}>
-              <Text style={styles.emailText}>ottrip.official@gmail.com</Text>
+              <Text style={styles.modalEmailText}>ottrip.official@gmail.com</Text>
               <Pressable
                 style={[styles.copyBtn, copied && styles.copyBtnCopied]}
                 onPress={async () => {
@@ -179,107 +242,311 @@ export default function ProfileScreen() {
           </View>
         </View>
       </Modal>
-    </View>
+    </GradientBackground>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16, backgroundColor: '#f9fafb' },
-  title: { fontSize: 20, fontWeight: '700', marginBottom: 16, color: '#111827' },
-  fieldGroup: { marginBottom: 12 },
-  label: { fontSize: 13, color: '#6b7280', marginBottom: 4 },
-  input: {
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    backgroundColor: '#ffffff',
-  },
-  readonly: { backgroundColor: '#f3f4f6' },
-  readonlyText: { color: '#374151' },
-  hint: { fontSize: 12, color: '#6b7280', marginTop: 4 },
-  errorText: { fontSize: 12, color: '#dc2626', marginTop: 4 },
-  successText: { fontSize: 12, color: '#10b981', marginTop: 4 },
-  row: { flexDirection: 'row', gap: 8 },
-  chip: { paddingVertical: 8, paddingHorizontal: 12, borderRadius: 16, backgroundColor: '#e5e7eb' },
-  chipActive: { backgroundColor: '#2563eb22', borderWidth: 1, borderColor: '#2563eb' },
-  chipText: { color: '#374151' },
-  chipTextActive: { color: '#2563eb', fontWeight: '700' },
-  contactBtn: { alignSelf: 'flex-start', backgroundColor: '#111827', paddingHorizontal: 12, paddingVertical: 10, borderRadius: 8, marginTop: 8 },
-  contactBtnText: { color: '#fff', fontWeight: '600' },
-  footerRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 12, marginTop: 16 },
-  actionBtn: { flex: 1, alignItems: 'center', paddingVertical: 12, borderRadius: 8 },
-  logoutBtn: { backgroundColor: '#ef4444' },
-  saveBtn: { backgroundColor: '#10b981' },
-  actionBtnText: { color: '#fff', fontWeight: '700' },
-  deleteBtn: { flex: 1, backgroundColor: '#dc2626', paddingVertical: 12, borderRadius: 8, alignItems: 'center' },
-  deleteBtnText: { color: '#fff', fontWeight: '700', fontSize: 16 },
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', alignItems: 'center', justifyContent: 'center' },
-  modalCard: { width: '90%', maxWidth: 420, backgroundColor: '#fff', borderRadius: 12, padding: 16 },
-  modalTitle: { fontSize: 18, fontWeight: '700', marginBottom: 8 },
-  modalText: { fontSize: 14, color: '#374151', marginBottom: 8 },
-  copyRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 8 },
-  emailText: { fontSize: 14, fontWeight: '600' },
-  copyBtn: { backgroundColor: '#2563eb', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8 },
-  copyBtnCopied: { backgroundColor: '#10b981' },
-  copyBtnText: { color: '#fff', fontWeight: '700' },
-  modalClose: { alignSelf: 'flex-end', marginTop: 12 },
-  modalCloseText: { color: '#374151' },
-  modalButtonRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 16, gap: 12 },
-  modalButton: { flex: 1, paddingVertical: 12, borderRadius: 8, alignItems: 'center' },
-  modalButtonCancel: { backgroundColor: '#f3f4f6' },
-  modalButtonDelete: { backgroundColor: '#dc2626' },
-  modalButtonText: { fontSize: 16, fontWeight: '600' },
-  modalButtonDeleteText: { color: '#fff' },
-  // 탈퇴 모달 스타일
-  deleteModalOverlay: { 
-    flex: 1, 
-    backgroundColor: 'rgba(0,0,0,0.5)', 
-    alignItems: 'center', 
+  container: {
+    flex: 1,
+    backgroundColor: 'transparent',
     justifyContent: 'center',
-    padding: 20
+    alignItems: 'center',
   },
-  deleteModalCard: { 
-    backgroundColor: '#fff', 
-    borderRadius: 16, 
+  cardWrapper: {
+    width: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  closeButton: {
+    position: 'absolute',
+    right: 40,
+    top: 48,
+    width: 24,
+    height: 24,
+    zIndex: 1,
+  },
+  title: {
+    position: 'absolute',
+    left: 40,
+    top: 48,
+    ...textStyles.h2,
+  },
+  subtitle: {
+    position: 'absolute',
+    left: 40,
+    top: 92,
+    ...textStyles.body3,
+    color: colors.gray700,
+  },
+  emailLabel: {
+    position: 'absolute',
+    left: 40,
+    top: 163,
+    ...textStyles.h7,
+  },
+  emailContainer: {
+    position: 'absolute',
+    left: 40,
+    top: 191,
+    width: 400,
+    height: 48,
+    backgroundColor: colors.gray200,
+    borderWidth: 1,
+    borderColor: colors.gray400,
+    borderRadius: 10,
+    justifyContent: 'center',
+    paddingHorizontal: 16,
+  },
+  emailText: {
+    ...textStyles.body4,
+    color: colors.gray700,
+  },
+  nicknameLabel: {
+    position: 'absolute',
+    left: 40,
+    top: 263,
+    ...textStyles.h7,
+  },
+  nicknameInputContainer: {
+    position: 'absolute',
+    left: 40,
+    top: 291,
+    width: 400,
+  },
+  input: {
+    height: 48,
+  },
+  errorText: {
+    position: 'absolute',
+    left: 40,
+    top: 347,
+    ...textStyles.body5,
+    color: colors.danger,
+  },
+  successText: {
+    position: 'absolute',
+    left: 40,
+    top: 347,
+    ...textStyles.body5,
+    color: colors.success,
+  },
+  genderLabel: {
+    position: 'absolute',
+    left: 40,
+    top: 363,
+    ...textStyles.h7,
+  },
+  radioButton: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: colors.gray400,
+    backgroundColor: colors.white,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  radioButtonSelected: {
+    borderColor: colors.black,
+    backgroundColor: colors.black,
+  },
+  maleRadioButton: {
+    position: 'absolute',
+    left: 40,
+    top: 391,
+    width: 20,
+    height: 20,
+  },
+  maleTextButton: {
+    position: 'absolute',
+    left: 68,
+    top: 390,
+  },
+  femaleRadioButton: {
+    position: 'absolute',
+    left: 112,
+    top: 391,
+    width: 20,
+    height: 20,
+  },
+  femaleTextButton: {
+    position: 'absolute',
+    left: 140,
+    top: 390,
+  },
+  genderText: {
+    ...textStyles.body2,
+  },
+  divider: {
+    position: 'absolute',
+    left: 40,
+    top: 439,
+    width: 400,
+    height: 1,
+    backgroundColor: colors.gray300,
+  },
+  contactIconButton: {
+    position: 'absolute',
+    left: 40,
+    top: 466,
+    width: 16,
+    height: 16,
+  },
+  contactTextButton: {
+    position: 'absolute',
+    left: 64,
+    top: 466,
+  },
+  contactButtonText: {
+    ...textStyles.h7,
+    color: colors.gray800,
+  },
+  saveButton: {
+    position: 'absolute',
+    right: 40,
+    top: 520,
+    width: 196,
+    height: 56,
+    backgroundColor: colors.black,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  saveButtonDisabled: {
+    backgroundColor: colors.gray300,
+  },
+  saveButtonText: {
+    ...textStyles.h5,
+    color: colors.white,
+  },
+  saveButtonTextDisabled: {
+    color: colors.black,
+  },
+  footerRow: {
+    position: 'absolute',
+    left: 40,
+    top: 538,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+  },
+  footerButton: {
+    paddingVertical: 4,
+  },
+  footerDivider: {
+    width: 1,
+    height: 13,
+    backgroundColor: colors.gray500,
+  },
+  footerButtonText: {
+    ...textStyles.h7,
+    color: colors.warning,
+  },
+  footerButtonTextInactive: {
+    ...textStyles.h7,
+    color: colors.gray500,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalCard: {
+    width: '90%',
+    maxWidth: 420,
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 16,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    marginBottom: 8,
+  },
+  modalText: {
+    fontSize: 14,
+    color: '#374151',
+    marginBottom: 8,
+  },
+  copyRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 8,
+  },
+  modalEmailText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  copyBtn: {
+    backgroundColor: '#2563eb',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  copyBtnCopied: {
+    backgroundColor: '#10b981',
+  },
+  copyBtnText: {
+    color: '#fff',
+    fontWeight: '700',
+  },
+  modalClose: {
+    alignSelf: 'flex-end',
+    marginTop: 12,
+  },
+  modalCloseText: {
+    color: '#374151',
+  },
+  deleteModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 20,
+  },
+  deleteModalCard: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
     padding: 24,
     width: '100%',
     maxWidth: 320,
-    alignItems: 'center'
+    alignItems: 'center',
   },
-  deleteModalTitle: { 
-    fontSize: 18, 
-    fontWeight: '700', 
-    color: '#374151', 
+  deleteModalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#374151',
     marginBottom: 12,
-    textAlign: 'center'
+    textAlign: 'center',
   },
-  deleteModalText: { 
-    fontSize: 14, 
-    color: '#6b7280', 
+  deleteModalText: {
+    fontSize: 14,
+    color: '#6b7280',
     lineHeight: 20,
     textAlign: 'center',
-    marginBottom: 24
+    marginBottom: 24,
   },
-  deleteModalButtonRow: { 
-    flexDirection: 'row', 
+  deleteModalButtonRow: {
+    flexDirection: 'row',
     width: '100%',
-    gap: 12
+    gap: 12,
   },
-  deleteModalButton: { 
-    flex: 1, 
-    paddingVertical: 12, 
+  deleteModalButton: {
+    flex: 1,
+    paddingVertical: 12,
     paddingHorizontal: 16,
-    borderRadius: 8, 
+    borderRadius: 8,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#d1d5db'
+    borderColor: '#d1d5db',
   },
-  deleteModalButtonText: { 
-    fontSize: 16, 
+  deleteModalButtonText: {
+    fontSize: 16,
     fontWeight: '600',
-    color: '#dc2626'
+    color: '#dc2626',
   },
 });
 
