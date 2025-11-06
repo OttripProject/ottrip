@@ -62,7 +62,10 @@ class AIService:
                 }
             
             if not ocr_result.success:
-                return ocr_result
+                return {
+                    "success": False,
+                    "error": ocr_result.text or "텍스트 추출에 실패했습니다."
+                }
 
             # AI로 항공권 데이터 파싱
             ai_result = await self.parse_flight_data_with_ai(ocr_result.text)
@@ -87,11 +90,11 @@ class AIService:
             }
     
     # AI Checklist
-    async def create_checklist(self, plan_id: int, force_regenerate: bool = False) -> ChecklistCreateResponse:
-        plan = await self.plan_repository.find_by_id(plan_id=plan_id)
+    async def create_checklist(self, public_id: str, force_regenerate: bool = False) -> ChecklistCreateResponse:
+        plan = await self.plan_repository.find_by_public_id(public_id=public_id)
         if not plan:
-            raise HTTPException(status_code=400, detail="여행계획을 찾을 수 없습니다.")
-        if plan.owner_id != self.current_user.id and not await self.plan_repository.is_editor(plan_id=plan_id, user_id=self.current_user.id):
+            raise HTTPException(status_code=404, detail="해당 계획을 찾을 수 없습니다.")
+        if plan.owner_id != self.current_user.id and not await self.plan_repository.is_editor(plan_id=plan.id, user_id=self.current_user.id):
             raise HTTPException(status_code=403, detail="해당 계획 체크리스트 생성 권한이 없습니다.")
 
         if plan.travel_checklist and not force_regenerate:
@@ -148,11 +151,11 @@ class AIService:
             checklist=checklist
         )
     
-    async def get_checklist(self, plan_id: int) -> ChecklistRead:
+    async def get_checklist(self, public_id: str) -> ChecklistRead:
         """체크리스트 조회"""
-        plan = await self.plan_repository.find_by_id(plan_id=plan_id)
+        plan = await self.plan_repository.find_by_public_id(public_id=public_id)
         if not plan:
-            raise HTTPException(status_code=400, detail="여행계획을 찾을 수 없습니다.")
+            raise HTTPException(status_code=404, detail="해당 계획을 찾을 수 없습니다.")
         
         if not plan.travel_checklist:
             return ChecklistRead(
@@ -168,10 +171,10 @@ class AIService:
             categories=ChecklistItemsByCategory(**plan.travel_checklist["categories"])
         )
     
-    async def set_checklist_item_status(self, plan_id: int, item_id: int, is_checked: bool) -> StatusResponse:
-        plan = await self.plan_repository.find_by_id(plan_id=plan_id)
+    async def set_checklist_item_status(self, public_id: str, item_id: int, is_checked: bool) -> StatusResponse:
+        plan = await self.plan_repository.find_by_public_id(public_id=public_id)
         if not plan:
-            raise HTTPException(status_code=400, detail="여행계획을 찾을 수 없습니다.")
+            raise HTTPException(status_code=404, detail="해당 계획을 찾을 수 없습니다.")
         
         if not plan.travel_checklist:
             raise HTTPException(status_code=400, detail="체크리스트가 존재하지 않습니다.")
