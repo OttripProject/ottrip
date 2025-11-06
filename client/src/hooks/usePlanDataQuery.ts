@@ -47,8 +47,8 @@ export const usePlanDataQuery = (publicId: string | null) => {
       };
     },
     enabled: !!publicId,
-    staleTime: 1 * 60 * 1000, // 1분간 캐시 유지
-    gcTime: 5 * 60 * 1000, // 5분간 가비지 컬렉션 방지
+    staleTime: 1 * 60 * 1000,
+    gcTime: 10 * 60 * 1000, 
   });
 
   const planData = data || {

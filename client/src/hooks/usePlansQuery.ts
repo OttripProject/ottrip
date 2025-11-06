@@ -9,8 +9,8 @@ export const usePlansQuery = () => {
   const { data: plans = [], isLoading, error, refetch } = useQuery<Plan[]>({
     queryKey: ['plans'],
     queryFn: () => plansApi.getPlans(),
-    staleTime: 2 * 60 * 1000, // 2분간 캐시 유지
-    gcTime: 5 * 60 * 1000, // 5분간 가비지 컬렉션 방지
+    staleTime: 1 * 60 * 1000, // 1분간 캐시 유지 (공유/초대 가능성 고려)
+    gcTime: 10 * 60 * 1000, // 10분간 가비지 컬렉션 방지 (최근 본 plans는 메모리에 유지)
   });
 
   // Plan 생성
