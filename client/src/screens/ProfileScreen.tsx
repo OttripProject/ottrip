@@ -16,6 +16,7 @@ import { Gender } from '@/types/api';
 import GenderCheckIcon from '../../assets/gender_check.svg';
 import QnaIcon from '../../assets/qna.svg';
 import XIcon from '../../assets/x.svg';
+import CopyIcon from '../../assets/copy.svg';
 
 export default function ProfileScreen() {
   const { logout } = useAuth();
@@ -189,28 +190,48 @@ export default function ProfileScreen() {
 
       <Modal visible={contactOpen} transparent animationType="fade">
         <View style={styles.modalOverlay}>
-          <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>문의하기</Text>
-            <Text style={styles.modalText}>ottrip 공식 이메일로 문의를 보내주세요.</Text>
-            <View style={styles.copyRow}>
-              <Text style={styles.modalEmailText}>ottrip.official@gmail.com</Text>
-              <Pressable
-                style={[styles.copyBtn, copied && styles.copyBtnCopied]}
-                onPress={async () => {
-                  try {
-                    await navigator.clipboard.writeText('ottrip.official@gmail.com');
-                    setCopied(true);
-                    setTimeout(() => setCopied(false), 1500);
-                  } catch {
-                    // noop
-                  }
-                }}
-              >
-                <Text style={styles.copyBtnText}>{copied ? '복사됨' : '복사'}</Text>
-              </Pressable>
+          <View style={styles.contactModalCard}>
+            <Pressable
+              style={styles.contactModalCloseButton}
+              onPress={() => setContactOpen(false)}
+            >
+              <XIcon width={24} height={24} fill={colors.black} />
+            </Pressable>
+            
+            <Text style={styles.contactModalTitle}>문의하기</Text>
+            <Text style={styles.contactModalText}>도움이 필요하거나 피드백이 있으시면 연락주세요.</Text>
+            
+            <View style={styles.contactModalEmailContainer}>
+              <Text style={styles.contactModalEmailText}>ottrip.official@gmail.com</Text>
+              <View style={styles.contactModalCopyWrapper}>
+                {copied ? (
+                  <Text style={styles.contactModalCopiedText}>복사됨</Text>
+                ) : (
+                  <Pressable
+                    style={styles.contactModalCopyIcon}
+                    onPress={async () => {
+                      try {
+                        await navigator.clipboard.writeText('ottrip.official@gmail.com');
+                        setCopied(true);
+                        setTimeout(() => setCopied(false), 1500);
+                      } catch {
+                        // noop
+                      }
+                    }}
+                  >
+                    <CopyIcon width={16} height={16} fill={colors.gray700} />
+                  </Pressable>
+                )}
+              </View>
             </View>
-            <Pressable style={styles.modalClose} onPress={() => setContactOpen(false)}>
-              <Text style={styles.modalCloseText}>닫기</Text>
+            
+            <Text style={styles.contactModalReplyText}>최대한 빠르게 답변드리겠습니다.</Text>
+            
+            <Pressable 
+              style={styles.contactModalConfirmButton} 
+              onPress={() => setContactOpen(false)}
+            >
+              <Text style={styles.contactModalConfirmButtonText}>확인</Text>
             </Pressable>
           </View>
         </View>
@@ -218,7 +239,7 @@ export default function ProfileScreen() {
 
       {/* 탈퇴 확인 모달 */}
       <Modal visible={deleteModalOpen} transparent animationType="fade">
-        <View style={styles.deleteModalOverlay}>
+        <View style={styles.modalOverlay}>
           <View style={styles.deleteModalCard}>
             <Text style={styles.deleteModalTitle}>정말 계정을 삭제하시겠어요?</Text>
             <Text style={styles.deleteModalText}>
@@ -447,63 +468,96 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  modalCard: {
-    width: '90%',
-    maxWidth: 420,
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    marginBottom: 8,
-  },
-  modalText: {
-    fontSize: 14,
-    color: '#374151',
-    marginBottom: 8,
-  },
-  copyRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: 8,
-  },
-  modalEmailText: {
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  copyBtn: {
-    backgroundColor: '#2563eb',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
-  },
-  copyBtnCopied: {
-    backgroundColor: '#10b981',
-  },
-  copyBtnText: {
-    color: '#fff',
-    fontWeight: '700',
-  },
-  modalClose: {
-    alignSelf: 'flex-end',
-    marginTop: 12,
-  },
-  modalCloseText: {
-    color: '#374151',
-  },
-  deleteModalOverlay: {
-    flex: 1,
     backgroundColor: 'rgba(0,0,0,0.7)',
     alignItems: 'center',
     justifyContent: 'center',
     padding: 20,
+  },
+  contactModalCard: {
+    position: 'relative',
+    backgroundColor: colors.white,
+    borderRadius: 24,
+    width: 480,
+    height: 360,
+  },
+  contactModalCloseButton: {
+    position: 'absolute',
+    right: 40,
+    top: 48,
+    width: 24,
+    height: 24,
+    zIndex: 1,
+  },
+  contactModalTitle: {
+    position: 'absolute',
+    left: 40,
+    top: 48,
+    ...textStyles.h2,
+  },
+  contactModalText: {
+    position: 'absolute',
+    left: 40,
+    top: 92,
+    width: 400,
+    ...textStyles.body3,
+    color: colors.gray700,
+  },
+  contactModalEmailContainer: {
+    position: 'absolute',
+    left: 40,
+    top: 146,
+    width: 400,
+    height: 48,
+    backgroundColor: colors.gray200,
+    borderWidth: 1,
+    borderColor: colors.gray400,
+    borderRadius: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+  },
+  contactModalEmailText: {
+    ...textStyles.body4,
+    color: colors.gray700,
+    flex: 1,
+  },
+  contactModalCopyWrapper: {
+    minWidth: 40,
+    height: 16,
+    marginLeft: 8,
+    alignItems: 'flex-end',
+    justifyContent: 'center',
+  },
+  contactModalCopyIcon: {
+    width: 16,
+    height: 16,
+  },
+  contactModalCopiedText: {
+    ...textStyles.body,
+    color: colors.gray700,
+  },
+  contactModalReplyText: {
+    position: 'absolute',
+    left: 40,
+    top: 202,
+    ...textStyles.body4,
+    color: colors.success,
+  },
+  contactModalConfirmButton: {
+    position: 'absolute',
+    left: 40,
+    bottom: 48,
+    width: 400,
+    height: 56,
+    backgroundColor: colors.black,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  contactModalConfirmButtonText: {
+    ...textStyles.h5,
+    color: colors.white,
   },
   deleteModalCard: {
     position: 'relative',
