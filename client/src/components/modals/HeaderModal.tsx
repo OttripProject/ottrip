@@ -1,23 +1,11 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { usersApi, UserProfile } from '@/services/users';
+import { useMe } from '@/hooks/useMe';
 
 export default function HeaderModal() {
   const navigation = useNavigation();
-  const [profile, setProfile] = useState<UserProfile | null>(null);
-
-  useEffect(() => {
-    const load = async () => {
-      try {
-        const me = await usersApi.getMe();
-        setProfile(me);
-      } catch (e) {
-        // noop
-      }
-    };
-    load();
-  }, []);
+  const { data: profile } = useMe();
 
   return (
     <View style={styles.container}>

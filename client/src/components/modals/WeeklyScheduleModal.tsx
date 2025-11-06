@@ -7,8 +7,7 @@ import ko from 'dayjs/locale/ko';
 import TripSelector from '../TripSelector';
 import SharePlanModal from '@/components/modals/SharePlanModal';
 import { plansApi } from '@/services/plans';
-import { usePlans } from '@/hooks/usePlans';
-import { usePlanData } from '@/hooks/usePlanData';
+import { Plan, CreatePlanRequest, UpdatePlanRequest } from '@/types/api';
 import ModalLayout from './ModalLayout';
 import Input from '@/ui/components/input/Input';
 import { PLACEHOLDERS } from '@/constants/placeholders';
@@ -105,10 +104,42 @@ interface Props {
   onShowFlightDetail?: (flight: any) => void;
   onShowAccommodationDetail?: (accommodation: any) => void;
   selectedTrip?: any;
-  planData?: any; 
+  planData?: any;
+  // 상위에서 전달받는 plans 관련 props (중복 호출 방지)
+  plans?: Plan[];
+  trips?: any[];
+  onPlansRefresh?: () => void;
+  onPlanAdd?: (planData: CreatePlanRequest) => Promise<Plan>;
+  onPlanUpdate?: (planId: number, planData: UpdatePlanRequest) => Promise<Plan>;
+  onPlanDelete?: (planId: number) => Promise<boolean>;
 }
 
-export default function WeeklyScheduleModal({ itineraries, flights = [], height = 600, onItineraryAdd, onPlanSelect, onItinerarySelect, onFlightAdd, onAccommodationAdd, onShowItineraryModal, onShowFlightModal, onRequestNewFlight, onRequestNewItinerary, onShowAccommodationModal, onShowItineraryDetail, onShowFlightDetail, onShowAccommodationDetail, selectedTrip, planData: externalPlanData }: Props) {
+export default function WeeklyScheduleModal({ 
+  itineraries, 
+  flights = [], 
+  height = 600, 
+  onItineraryAdd, 
+  onPlanSelect, 
+  onItinerarySelect, 
+  onFlightAdd, 
+  onAccommodationAdd, 
+  onShowItineraryModal, 
+  onShowFlightModal, 
+  onRequestNewFlight, 
+  onRequestNewItinerary, 
+  onShowAccommodationModal, 
+  onShowItineraryDetail, 
+  onShowFlightDetail, 
+  onShowAccommodationDetail, 
+  selectedTrip, 
+  planData: externalPlanData,
+  plans: externalPlans = [],
+  trips: externalTrips = [],
+  onPlansRefresh,
+  onPlanAdd,
+  onPlanUpdate,
+  onPlanDelete,
+}: Props) {
     const [currentWeekStart, setCurrentWeekStart] = useState(
         dayjs().startOf('week').add(1, 'day') // 월요일 시작
         );
@@ -119,30 +150,23 @@ export default function WeeklyScheduleModal({ itineraries, flights = [], height 
     const [memoOpen, setMemoOpen] = useState(false);
     const [memoDraft, setMemoDraft] = useState('');
     
-    // Plan API 연동
-    const { plans, addPlan, updatePlan, deletePlan, isLoading, error, fetchPlans } = usePlans();
+    // 상위에서 전달받은 plans와 trips 사용 (중복 호출 방지)
+    const plans = externalPlans;
+    const trips = externalTrips;
+    const planData = externalPlanData;
 
     // 초대 수락 후 목록 즉시 갱신을 위한 이벤트 리스너
     useEffect(() => {
-      const handler = () => { fetchPlans(); };
+      const handler = () => { 
+        if (onPlansRefresh) {
+          onPlansRefresh(); 
+        }
+      };
       if (typeof window !== 'undefined') {
         window.addEventListener('plans-refresh', handler);
         return () => window.removeEventListener('plans-refresh', handler);
       }
-    }, [fetchPlans]);
-
-    // Plan을 Trip으로 변환하는 매핑 함수
-    const trips = useMemo(() => plans.map(plan => ({
-      id: plan.id.toString(),
-      publicId: plan.publicId,
-      name: plan.title,
-      startDate: plan.startDate,
-      endDate: plan.endDate,
-    })), [plans]);
-
-    // 선택된 Plan의 데이터 로딩
-    const internalPlanData = usePlanData(internalSelectedTrip?.publicId || null);
-    const planData = externalPlanData || internalPlanData;
+    }, [onPlansRefresh]);
 
     // 외부 selectedTrip가 주어지면 TripSelector 선택과 동기화
     useEffect(() => {
@@ -185,8 +209,13 @@ export default function WeeklyScheduleModal({ itineraries, flights = [], height 
     };
 
     const handleAddTrip = async (newTrip: any) => {
+      if (!onPlanAdd) {
+        tripToastMessages.addErrorGeneric();
+        return;
+      }
+      
       try {
-        const createdPlan = await addPlan({
+        const createdPlan = await onPlanAdd({
           title: newTrip.name,
           startDate: newTrip.startDate,
           endDate: newTrip.endDate,
@@ -221,9 +250,14 @@ export default function WeeklyScheduleModal({ itineraries, flights = [], height 
     };
 
     const handleUpdateTrip = async (tripId: string, updatedTrip: any) => {
+      if (!onPlanUpdate) {
+        Alert.alert('오류', '여행 계획 수정에 실패했습니다.');
+        return;
+      }
+      
       try {
         const planId = parseInt(tripId);
-        const updatedPlan = await updatePlan(planId, {
+        const updatedPlan = await onPlanUpdate(planId, {
           title: updatedTrip.name,
           startDate: updatedTrip.startDate,
           endDate: updatedTrip.endDate,
@@ -255,9 +289,14 @@ export default function WeeklyScheduleModal({ itineraries, flights = [], height 
     };
 
     const handleDeleteTrip = async (tripId: string) => {
+      if (!onPlanDelete) {
+        Alert.alert('오류', '여행 계획 삭제에 실패했습니다.');
+        return;
+      }
+      
       try {
         const planId = parseInt(tripId);
-        const success = await deletePlan(planId);
+        const success = await onPlanDelete(planId);
         
         if (success) {
           // 현재 선택된 Plan이 삭제된 Plan이면 선택 해제

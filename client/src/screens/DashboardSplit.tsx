@@ -3,7 +3,9 @@ import { View, StyleSheet, useWindowDimensions, ScrollView } from 'react-native'
 import { useIsWideScreen } from '@/hooks/useIsWideScreen';
 import WeeklyScheduleModal, { Itinerary } from '@/components/modals/WeeklyScheduleModal';
 import SidePanels from '@/navigation/SidePanels';
-import { usePlanData } from '@/hooks/usePlanData';
+import { usePlanDataQuery } from '@/hooks/usePlanDataQuery';
+import { usePlansQuery } from '@/hooks/usePlansQuery';
+import { useMemo } from 'react';
 
 export default function DashboardSplit() {
   const isWideScreen = useIsWideScreen();
@@ -25,10 +27,23 @@ export default function DashboardSplit() {
   const ratio = getResponsiveRatio();
   
   const [selectedPlanId, setSelectedPlanId] = useState<number | null>(null);
+  const [selectedTrip, setSelectedTrip] = useState<any>(null);
   const [selectedItinerary, setSelectedItinerary] = useState<any>(null);
   
+  // 상위에서 plans 목록 로드
+  const plansQuery = usePlansQuery();
+  
   // 선택된 Plan의 데이터 로딩
-  const planData = usePlanData(selectedPlanId ? selectedPlanId.toString() : null);
+  const planData = usePlanDataQuery(selectedTrip?.publicId || null);
+  
+  // plans를 trips 형태로 변환
+  const trips = useMemo(() => plansQuery.plans.map(plan => ({
+    id: plan.id.toString(),
+    publicId: plan.publicId,
+    name: plan.title,
+    startDate: plan.startDate,
+    endDate: plan.endDate,
+  })), [plansQuery.plans]);
 
   const handleItineraryAdd = async (newItinerary: any) => {
     // Plan이 선택된 경우에만 추가
@@ -69,9 +84,21 @@ export default function DashboardSplit() {
         <View style={[styles.calendarPane, { flex: ratio.calendar }]}> 
           <WeeklyScheduleModal 
             itineraries={planData.itineraries}
+            flights={planData.flights}
             height={600} 
+            selectedTrip={selectedTrip}
+            planData={planData}
+            plans={plansQuery.plans}
+            trips={trips}
+            onPlansRefresh={plansQuery.fetchPlans}
+            onPlanAdd={plansQuery.addPlan}
+            onPlanUpdate={plansQuery.updatePlan}
+            onPlanDelete={plansQuery.deletePlan}
             onItineraryAdd={handleItineraryAdd}
-            onPlanSelect={(trip) => setSelectedPlanId(trip ? parseInt(trip.id) : null)}
+            onPlanSelect={(trip) => {
+              setSelectedTrip(trip);
+              setSelectedPlanId(trip ? parseInt(trip.id) : null);
+            }}
             onItinerarySelect={setSelectedItinerary}
             onRequestNewItinerary={(date) => {
               // 시간 셀을 눌렀을 때 일정 추가 모달 열기
