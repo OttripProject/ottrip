@@ -19,10 +19,10 @@ interface ChecklistData {
 }
 
 interface AIAssistantModalProps {
-  planId: number | null;
+  publicId: string | null;
 }
 
-export default function AIAssistantModal({ planId }: AIAssistantModalProps) {
+export default function AIAssistantModal({ publicId }: AIAssistantModalProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [checklist, setChecklist] = useState<ChecklistData | null>(null);
   const [showPreview, setShowPreview] = useState(false);
@@ -32,20 +32,20 @@ export default function AIAssistantModal({ planId }: AIAssistantModalProps) {
 
   // Plan이 선택될 때 기존 체크리스트 확인
   useEffect(() => {
-    if (planId) {
+    if (publicId) {
       checkExistingChecklist();
     } else {
       // Plan이 선택되지 않으면 상태 초기화
       setChecklist(null);
       setShowPreview(false);
     }
-  }, [planId]);
+  }, [publicId]);
 
   const checkExistingChecklist = async () => {
-    if (!planId) return;
+    if (!publicId) return;
     
     try {
-      const response = await api.get(`/private/ai/checklist/${planId}`);
+      const response = await api.get(`/private/ai/checklist/${publicId}`);
       
       if (response.data && response.data.categories) {
         const hasItems = Object.values(response.data.categories).some(
@@ -71,11 +71,13 @@ export default function AIAssistantModal({ planId }: AIAssistantModalProps) {
   };
   
   const handleGenerateChecklist = async () => {
+    if (!publicId) return;
+    
     try {
       setIsLoading(true);
       
       // 1. 유효성 검사: 상세일정 2개 이상 확인 (삭제되지 않은 일정만)
-      const response = await api.get(`/private/plans/${planId}`);
+      const response = await api.get(`/private/plans/${publicId}`);
       const plan = response.data;
       
       // 삭제되지 않은 일정만 필터링
@@ -87,7 +89,7 @@ export default function AIAssistantModal({ planId }: AIAssistantModalProps) {
       }
       
       // 2. AI 체크리스트 생성
-      const checklistResponse = await api.post(`/private/ai/checklist/${planId}/generate`, {
+      const checklistResponse = await api.post(`/private/ai/checklist/${publicId}/generate`, {
         force_regenerate: false
       });
       
@@ -111,13 +113,13 @@ export default function AIAssistantModal({ planId }: AIAssistantModalProps) {
   };
 
   const performRefresh = async () => {
-    if (!planId) return;
+    if (!publicId) return;
     
     try {
       setIsLoading(true);
       
       // 기존 체크리스트를 강제로 재생성
-      const response = await api.post(`/private/ai/checklist/${planId}/generate`, {
+      const response = await api.post(`/private/ai/checklist/${publicId}/generate`, {
         force_regenerate: true
       });
       
@@ -154,10 +156,10 @@ export default function AIAssistantModal({ planId }: AIAssistantModalProps) {
   };
 
   const handleToggleItem = async (itemId: number, isChecked: boolean) => {
-    if (!planId) return;
+    if (!publicId) return;
     
     try {
-      const endpoint = `/private/ai/checklist/${planId}/item/${itemId}`;
+      const endpoint = `/private/ai/checklist/${publicId}/item/${itemId}`;
       
       await api.patch(endpoint, {
         is_checked: isChecked
@@ -202,7 +204,7 @@ export default function AIAssistantModal({ planId }: AIAssistantModalProps) {
 
   return (
     <ModalLayout style={{ flex: 1 }}>
-      {!planId ? (
+      {!publicId ? (
         // Plan이 선택되지 않은 상태
         <View style={styles.placeholder}>
           <Text style={styles.placeholderText}>여행을 선택해주세요</Text>
