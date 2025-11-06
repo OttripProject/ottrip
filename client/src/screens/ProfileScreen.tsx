@@ -2,9 +2,11 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, Pressable, StyleSheet, Modal, Alert, Platform } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useQueryClient } from '@tanstack/react-query';
 import { usersApi, UserProfile } from '@/services/users';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNicknameValidation } from '@/hooks/useNicknameValidation';
+import { useMe } from '@/hooks/useMe';
 import Input from '@/ui/components/input/Input';
 import { PLACEHOLDERS } from '@/constants/placeholders';
 import GradientBackground from '@/ui/components/GradientBackground';
@@ -21,6 +23,7 @@ import CopyIcon from '../../assets/copy.svg';
 export default function ProfileScreen() {
   const { logout } = useAuth();
   const navigation = useNavigation<any>();
+  const queryClient = useQueryClient();
   const [me, setMe] = useState<UserProfile | null>(null);
   const [nickname, setNickname] = useState('');
   const [gender, setGender] = useState<Gender | null>(null);
@@ -28,18 +31,20 @@ export default function ProfileScreen() {
   const [copied, setCopied] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   
-  // 닉네임 검증 훅 사용
-  const { nicknameError, checkingNickname, onNicknameChange, isValid } = useNicknameValidation(me?.nickname);
-
+  // React Query로 사용자 프로필 로드 (HeaderModal과 캐시 공유)
+  const { data: profile, isLoading: profileLoading } = useMe();
+  
+  // profile이 로드되면 로컬 state 업데이트
   useEffect(() => {
-    const load = async () => {
-      const profile = await usersApi.getMe();
+    if (profile) {
       setMe(profile);
       setNickname(profile.nickname);
       setGender(profile.gender);
-    };
-    load();
-  }, []);
+    }
+  }, [profile]);
+
+  // 닉네임 검증 훅 사용
+  const { nicknameError, checkingNickname, onNicknameChange, isValid } = useNicknameValidation(me?.nickname);
 
   // 닉네임 변경 핸들러 (훅과 연동)
   const handleNicknameChange = (text: string) => {
@@ -56,6 +61,8 @@ export default function ProfileScreen() {
     
     const updated = await usersApi.updateMe({ nickname, gender });
     setMe(updated);
+    // React Query 캐시 업데이트 (HeaderModal에서도 반영됨)
+    queryClient.setQueryData(['me'], updated);
     navigation.navigate('OTTRIP');
   };
 

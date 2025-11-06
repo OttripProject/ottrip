@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { plansApi } from '../services/plans';
 import { itinerariesApi } from '../services/itineraries';
 import { flightsApi } from '../services/flights';
@@ -14,119 +14,123 @@ interface PlanData {
   expenses: Expense[];
 }
 
-export const usePlanData = (publicId: string | null) => {
-  const [planData, setPlanData] = useState<PlanData>({
-    plan: null,
-    itineraries: [],
-    flights: [],
-    accommodations: [],
-    expenses: [],
-  });
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [errorStatus, setErrorStatus] = useState<number | null>(null);
+export const usePlanDataQuery = (publicId: string | null) => {
+  const queryClient = useQueryClient();
 
-  const fetchPlanData = useCallback(async (pId: string) => {
-    setIsLoading(true);
-    setError(null);
-    setErrorStatus(null);
+  const { data, isLoading, error, refetch } = useQuery<PlanData>({
+    queryKey: ['plan', publicId],
+    queryFn: async () => {
+      if (!publicId) {
+        return {
+          plan: null,
+          itineraries: [],
+          flights: [],
+          accommodations: [],
+          expenses: [],
+        };
+      }
 
-    try {
       // 서버가 Plan + 관련 엔티티들을 함께 반환 (PlanReadWithInforms)
-      const planData: any = await plansApi.getPlan(pId);
+      const planData: any = await plansApi.getPlan(publicId);
 
       const normalizedExpenses = (planData?.expenses ?? []).map((e: any) => ({
         ...e,
         amount: Number(e?.amount),
       }));
 
-      setPlanData({
+      return {
         plan: planData,
         itineraries: planData?.itineraries ?? [],
         flights: planData?.flights ?? [],
         accommodations: planData?.accommodations ?? [],
         expenses: normalizedExpenses,
-      });
-    } catch (err: any) {
-      setPlanData({
-        plan: null,
-        itineraries: [],
-        flights: [],
-        accommodations: [],
-        expenses: [],
-      });
-      setError(err?.response?.data?.detail || err?.message || 'Failed to fetch plan data');
-      setErrorStatus(typeof err?.response?.status === 'number' ? err.response.status : null);
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+      };
+    },
+    enabled: !!publicId,
+    staleTime: 1 * 60 * 1000, // 1분간 캐시 유지
+    gcTime: 5 * 60 * 1000, // 5분간 가비지 컬렉션 방지
+  });
 
-  // publicId가 변경될 때마다 데이터 로딩
-  useEffect(() => {
-    if (publicId) {
-      fetchPlanData(publicId);
-    } else {
-      setPlanData({
-        plan: null,
-        itineraries: [],
-        flights: [],
-        accommodations: [],
-        expenses: [],
-      });
-    }
-  }, [publicId, fetchPlanData]);
+  const planData = data || {
+    plan: null,
+    itineraries: [],
+    flights: [],
+    accommodations: [],
+    expenses: [],
+  };
 
   // 개별 데이터 새로고침 함수들
-  const refreshItineraries = useCallback(async () => {
+  const refreshItineraries = async () => {
     if (!planData.plan?.id) return;
     try {
       const itineraries = await itinerariesApi.getItineraries(planData.plan.id);
-      setPlanData(prev => ({ ...prev, itineraries }));
+      queryClient.setQueryData<PlanData>(['plan', publicId], (old = planData) => ({
+        ...old,
+        itineraries,
+      }));
     } catch (err: any) {
       console.error('Failed to refresh itineraries:', err);
     }
-  }, [planData.plan?.id]);
+  };
 
-  const refreshFlights = useCallback(async () => {
+  const refreshFlights = async () => {
     if (!planData.plan?.id) return;
     try {
       const flights = await flightsApi.getFlightsByPlan(planData.plan.id);
-      setPlanData(prev => ({ ...prev, flights }));
+      queryClient.setQueryData<PlanData>(['plan', publicId], (old = planData) => ({
+        ...old,
+        flights,
+      }));
     } catch (err: any) {
       console.error('Failed to refresh flights:', err);
     }
-  }, [planData.plan?.id]);
+  };
 
-  const refreshAccommodations = useCallback(async () => {
+  const refreshAccommodations = async () => {
     if (!planData.plan?.id) return;
     try {
       const accommodations = await accommodationsApi.getAccommodations(planData.plan.id);
-      setPlanData(prev => ({ ...prev, accommodations }));
+      queryClient.setQueryData<PlanData>(['plan', publicId], (old = planData) => ({
+        ...old,
+        accommodations,
+      }));
     } catch (err: any) {
       console.error('Failed to refresh accommodations:', err);
     }
-  }, [planData.plan?.id]);
+  };
 
-  const refreshExpenses = useCallback(async () => {
+  const refreshExpenses = async () => {
     if (!planData.plan?.id) return;
     try {
       const expenses = await expensesApi.getExpenses(planData.plan.id);
-      setPlanData(prev => ({ ...prev, expenses }));
+      queryClient.setQueryData<PlanData>(['plan', publicId], (old = planData) => ({
+        ...old,
+        expenses,
+      }));
     } catch (err: any) {
       console.error('Failed to refresh expenses:', err);
     }
-  }, [planData.plan?.id]);
+  };
+
+  const fetchPlanData = async (pId: string) => {
+    if (pId === publicId) {
+      await refetch();
+    } else {
+      // 다른 plan을 로드하려면 queryClient를 사용하여 직접 호출
+      queryClient.invalidateQueries({ queryKey: ['plan', pId] });
+    }
+  };
 
   return {
     ...planData,
     isLoading,
-    error,
-    errorStatus,
+    error: error ? (error as any).response?.data?.detail || (error as any).message : null,
+    errorStatus: (error as any)?.response?.status || null,
     fetchPlanData,
     refreshItineraries,
     refreshFlights,
     refreshAccommodations,
     refreshExpenses,
   };
-}; 
+};
+

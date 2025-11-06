@@ -1,9 +1,10 @@
 import { View, StyleSheet, Alert, Platform, useWindowDimensions, Text, Pressable } from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import api from "@/services/api";
 import { plansApi } from "@/services/plans";
-import { usePlanData } from "@/hooks/usePlanData";
+import { usePlanDataQuery } from "@/hooks/usePlanDataQuery";
+import { usePlansQuery } from "@/hooks/usePlansQuery";
 import dayjs from "dayjs";
 
 // 새로운 모달 컴포넌트들
@@ -51,7 +52,20 @@ export default function DashboardScreen() {
   const leftTopHeight = Math.max(240, Math.floor((availableHeight - innerGap) * 0.7));
   const leftBottomHeight = Math.max(160, (availableHeight - innerGap) - leftTopHeight);
   
-  const planData = usePlanData(selectedTrip?.publicId || route?.params?.publicId);
+  // 상위에서 plans 목록 로드 (한 번만 호출)
+  const plansQuery = usePlansQuery();
+  
+  // 선택된 plan의 상세 데이터 로드
+  const planData = usePlanDataQuery(selectedTrip?.publicId || route?.params?.publicId);
+  
+  // plans를 trips 형태로 변환
+  const trips = useMemo(() => plansQuery.plans.map(plan => ({
+    id: plan.id.toString(),
+    publicId: plan.publicId,
+    name: plan.title,
+    startDate: plan.startDate,
+    endDate: plan.endDate,
+  })), [plansQuery.plans]);
 
   useEffect(() => {
     if (planData.plan) {
@@ -296,6 +310,12 @@ export default function DashboardScreen() {
               height={leftTopHeight}
               selectedTrip={selectedTrip}
               planData={planData}
+              plans={plansQuery.plans}
+              trips={trips}
+              onPlansRefresh={plansQuery.fetchPlans}
+              onPlanAdd={plansQuery.addPlan}
+              onPlanUpdate={plansQuery.updatePlan}
+              onPlanDelete={plansQuery.deletePlan}
               onItineraryAdd={handleItineraryAdd}
         onPlanSelect={(trip) => {
           setSelectedTrip(trip);

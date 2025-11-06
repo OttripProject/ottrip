@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert, ActivityIndicator, ScrollView, Modal, Pressable } from 'react-native';
 import ModalLayout from './ModalLayout';
-import { usePlanData } from '@/hooks/usePlanData';
 import api from '@/services/api';
 
 interface ChecklistItem {
