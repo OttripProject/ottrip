@@ -222,23 +222,21 @@ export default function ProfileScreen() {
           <View style={styles.deleteModalCard}>
             <Text style={styles.deleteModalTitle}>정말 계정을 삭제하시겠어요?</Text>
             <Text style={styles.deleteModalText}>
-              계정을 삭제하면 지금까지 만든 여행 일정이 모두 사라지며,{'\n'}
-              다시 복구할 수 없어요.
+              계정을 삭제하면 지금까지 만든 여행 일정이 {'\n'}
+              모두 사라지며, 다시 복구할 수 없어요.
             </Text>
-            <View style={styles.deleteModalButtonRow}>
-              <Pressable 
-                style={styles.deleteModalButton} 
-                onPress={() => setDeleteModalOpen(false)}
-              >
-                <Text style={styles.deleteModalButtonText}>취소</Text>
-              </Pressable>
-              <Pressable 
-                style={styles.deleteModalButton} 
-                onPress={confirmDeleteAccount}
-              >
-                <Text style={styles.deleteModalButtonText}>삭제</Text>
-              </Pressable>
-            </View>
+            <Pressable 
+              style={styles.deleteModalCancelButton} 
+              onPress={() => setDeleteModalOpen(false)}
+            >
+              <Text style={styles.deleteModalCancelButtonText}>취소</Text>
+            </Pressable>
+            <Pressable 
+              style={styles.deleteModalDeleteButton} 
+              onPress={confirmDeleteAccount}
+            >
+              <Text style={styles.deleteModalDeleteButtonText}>삭제</Text>
+            </Pressable>
           </View>
         </View>
       </Modal>
@@ -396,7 +394,7 @@ const styles = StyleSheet.create({
   contactTextButton: {
     position: 'absolute',
     left: 64,
-    top: 466,
+    top: 465,
   },
   contactButtonText: {
     ...textStyles.h7,
@@ -502,51 +500,67 @@ const styles = StyleSheet.create({
   },
   deleteModalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: 'rgba(0,0,0,0.7)',
     alignItems: 'center',
     justifyContent: 'center',
     padding: 20,
   },
   deleteModalCard: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 24,
-    width: '100%',
-    maxWidth: 320,
-    alignItems: 'center',
+    position: 'relative',
+    backgroundColor: colors.white,
+    borderRadius: 24,
+    width: 320,
+    height: 208,
   },
   deleteModalTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#374151',
-    marginBottom: 12,
+    position: 'absolute',
+    left: 69,
+    top: 32,
+    width: 182,
+    height: 24,
+    ...textStyles.h5,
     textAlign: 'center',
   },
   deleteModalText: {
-    fontSize: 14,
-    color: '#6b7280',
-    lineHeight: 20,
+    position: 'absolute',
+    left: 49,
+    top: 72,
+    width: 221,
+    height: 40,
+    ...textStyles.body4,
+    color: colors.gray600,
     textAlign: 'center',
-    marginBottom: 24,
   },
-  deleteModalButtonRow: {
-    flexDirection: 'row',
-    width: '100%',
-    gap: 12,
-  },
-  deleteModalButton: {
-    flex: 1,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 8,
+  deleteModalCancelButton: {
+    position: 'absolute',
+    left: 24,
+    bottom: 24,
+    width: 132,
+    height: 40,
+    borderRadius: 10,
     alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.white,
     borderWidth: 1,
-    borderColor: '#d1d5db',
+    borderColor: colors.gray400,
   },
-  deleteModalButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#dc2626',
+  deleteModalCancelButtonText: {
+    ...textStyles.h7,
+  },
+  deleteModalDeleteButton: {
+    position: 'absolute',
+    right: 24,
+    bottom: 24,
+    width: 132,
+    height: 40,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.warning,
+  },
+  deleteModalDeleteButtonText: {
+    ...textStyles.h7,
+    color: colors.white,
   },
 });
 
