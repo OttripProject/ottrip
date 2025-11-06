@@ -82,7 +82,7 @@ async def extract_flight_data_from_image(
     except HTTPException:
         raise
     except Exception as e:
-        print(f"❌ 항공권 데이터 추출 오류: {str(e)}")
+        print(f"항공권 데이터 추출 오류: {str(e)}")
         raise HTTPException(
             status_code=500, 
             detail=f"항공권 데이터 추출 중 오류가 발생했습니다: {str(e)}"
@@ -139,53 +139,28 @@ async def get_supported_formats():
         }
     }
 
-
-@router.get("/health")
-async def health_check(
-    ai_service: AIService
-    ):
-    """AI 서비스 상태 확인"""
-    try:
-        return {
-            "success": True,
-            "message": "AI 서비스가 정상 작동 중입니다.",
-            "services": {
-                "vision_api": "connected" if ai_service._vision_client else "disconnected",
-                "openai": "connected" if ai_service._openai_client else "disconnected"
-            },
-        }
-    except Exception as e:
-        return JSONResponse(
-            status_code=500,
-            content={
-                "success": False,
-                "message": f"AI 서비스 오류: {str(e)}"
-            }
-        )
-
-
 # Travel Checklist Endpoints
-@router.post("/checklist/{plan_id}/generate")
+@router.post("/checklist/{public_id}/generate")
 async def generate_travel_checklist(
-    plan_id: int,
+    public_id: str,
     checklist_request: ChecklistCreateRequest,
     ai_service: AIService,
 ) -> ChecklistCreateResponse:
     """여행 체크리스트 생성"""
     return await ai_service.create_checklist(
-        plan_id=plan_id,
+        public_id=public_id,
         force_regenerate=checklist_request.force_regenerate
     ) 
 
 
-@router.get("/checklist/{plan_id}")
+@router.get("/checklist/{public_id}")
 async def get_travel_checklist(
-    plan_id: int,
+    public_id: str,
     ai_service: AIService,
 ) -> ChecklistRead:
     """여행 체크리스트 조회"""
     try:
-        result = await ai_service.get_checklist(plan_id=plan_id)
+        result = await ai_service.get_checklist(public_id=public_id)
         return result
         
     except HTTPException:
@@ -197,18 +172,40 @@ async def get_travel_checklist(
         )
 
 
-@router.patch("/checklist/{plan_id}/item/{item_id}")
+@router.patch("/checklist/{public_id}/item/{item_id}")
 async def update_checklist_item_status(
-    plan_id: int,
+    public_id: str,
     item_id: int,
     request: ChecklistItemCheckRequest,
     ai_service: AIService,
 ) -> StatusResponse:
     result = await ai_service.set_checklist_item_status(
-        plan_id=plan_id,
+        public_id=public_id,
         item_id=item_id,
         is_checked=request.is_checked
     )
     return result
         
-
+# Health Check Endpoints 보류
+# @router.get("/health")
+# async def health_check(
+#     ai_service: AIService
+#     ):
+#     """AI 서비스 상태 확인"""
+#     try:
+#         return {
+#             "success": True,
+#             "message": "AI 서비스가 정상 작동 중입니다.",
+#             "services": {
+#                 "vision_api": "connected" if ai_service._vision_client else "disconnected",
+#                 "openai": "connected" if ai_service._openai_client else "disconnected"
+#             },
+#         }
+#     except Exception as e:
+#         return JSONResponse(
+#             status_code=500,
+#             content={
+#                 "success": False,
+#                 "message": f"AI 서비스 오류: {str(e)}"
+#             }
+#         )
