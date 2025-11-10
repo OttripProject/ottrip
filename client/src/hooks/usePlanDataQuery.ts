@@ -17,7 +17,7 @@ interface PlanData {
 export const usePlanDataQuery = (publicId: string | null) => {
   const queryClient = useQueryClient();
 
-  const { data, isLoading, error, refetch } = useQuery<PlanData>({
+  const { data, isLoading, error, isError, refetch } = useQuery<PlanData>({
     queryKey: ['plan', publicId],
     queryFn: async () => {
       if (!publicId) {
@@ -48,7 +48,8 @@ export const usePlanDataQuery = (publicId: string | null) => {
     },
     enabled: !!publicId,
     staleTime: 1 * 60 * 1000,
-    gcTime: 10 * 60 * 1000, 
+    gcTime: 10 * 60 * 1000,
+    retry: false, // 404 에러는 재시도하지 않음
   });
 
   const planData = data || {
@@ -121,11 +122,25 @@ export const usePlanDataQuery = (publicId: string | null) => {
     }
   };
 
+  // errorStatus 추출
+  let errorStatus: number | null = null;
+  
+  if (isError && error) {
+    // AxiosError의 response.status
+    if ((error as any)?.response?.status) {
+      errorStatus = (error as any).response.status;
+    }
+    // 직접 status 속성
+    else if ((error as any)?.status) {
+      errorStatus = (error as any).status;
+    }
+  }
+
   return {
     ...planData,
     isLoading,
     error: error ? (error as any).response?.data?.detail || (error as any).message : null,
-    errorStatus: (error as any)?.response?.status || null,
+    errorStatus,
     fetchPlanData,
     refreshItineraries,
     refreshFlights,
