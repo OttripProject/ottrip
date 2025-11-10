@@ -17,8 +17,14 @@ export default function AuthCallbackScreen() {
   useEffect(() => {
     if (Platform.OS !== 'web') return;
     const hash = window.location.hash;
+    
+    try {
+      window.history.replaceState({}, document.title, window.location.pathname);
+    } catch {}
+    
     const params = new URLSearchParams(hash.startsWith('#') ? hash.substring(1) : hash);
     const idToken = params.get('id_token');
+    
     const run = async () => {
       if (!idToken) {
         // @ts-ignore
@@ -47,9 +53,10 @@ export default function AuthCallbackScreen() {
           navigation.replace('약관동의', { registerToken: response.registerToken, prefill: response.prefill, email });
           return;
         }
-      } finally {
-        // 해시 제거
-        try { window.history.replaceState({}, document.title, window.location.pathname); } catch {}
+      } catch (error) {
+        console.error('Google login error:', error);
+        // @ts-ignore
+        navigation.replace('로그인');
       }
     };
     run();
