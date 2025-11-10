@@ -52,13 +52,15 @@ export default function LoginScreen() {
         }
       }
 
-      // 구글 id_token 처리 (콜백 경로가 아닌 /login으로 돌아온 경우도 대비한 폴백)
       if (hash && hash.includes('id_token=')) {
+        try {
+          window.history.replaceState({}, document.title, window.location.pathname);
+        } catch {}
+        
         const params = new URLSearchParams(hash.substring(1));
         const idToken = params.get('id_token');
         if (idToken) {
           handleGoogleSignIn(idToken);
-          window.history.replaceState({}, document.title, window.location.pathname);
         }
       }
     }
