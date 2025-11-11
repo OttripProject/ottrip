@@ -36,7 +36,7 @@ class Plan(Base):
     """공개용 UUID (URL에서 사용)"""
 
     title: Mapped[str] = mapped_column(
-        String(36),
+        String(50),
         nullable=False,
     )
     """여행 계획 이름"""
