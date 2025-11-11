@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, Pressable, StyleSheet, Modal } from 'react-native';
 import { Calendar } from 'react-native-calendars';
 import dayjs from 'dayjs';
+import { colors } from '@/ui/tokens/colors';
 
 interface DateRangePickerProps {
   startDate: string;
@@ -146,7 +147,7 @@ const styles = StyleSheet.create({
   dateInput: { borderWidth: 1, borderColor: '#dee2e6', borderRadius: 8, padding: 12, backgroundColor: 'white' },
   dateText: { fontSize: 16, color: '#212529' },
   placeholderText: { fontSize: 16, color: '#6c757d' },
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0, 0, 0, 0.5)', justifyContent: 'center', alignItems: 'center' },
+  modalOverlay: { flex: 1, backgroundColor: colors.overlayBackground, justifyContent: 'center', alignItems: 'center' },
   calendarContainer: { backgroundColor: 'white', borderRadius: 12, padding: 20, width: '90%', maxWidth: 400 },
   calendarHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
   calendarTitle: { fontSize: 18, fontWeight: '600', color: '#212529' },

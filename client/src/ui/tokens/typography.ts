@@ -7,6 +7,7 @@ export const typography = {
     mono: 'Courier',
     pretendard: 'Pretendard',
     poppins: 'Poppins',
+    poppinsSemiBold: 'Poppins-SemiBold',
   },
   size: {
     xs: 12,
@@ -123,6 +124,14 @@ export const textStyles: Record<string, TextStyle> = {
     fontSize: 11,
     lineHeight: 16,
     fontWeight: typography.weight.regular,
+    color: colors.black,
+  },
+  // Poppins 스타일
+  poppinsH4: {
+    fontFamily: typography.fontFamily.poppinsSemiBold,
+    fontSize: 18,
+    lineHeight: 26,
+    fontWeight: typography.weight.semibold,
     color: colors.black,
   },
 };

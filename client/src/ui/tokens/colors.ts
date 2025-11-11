@@ -11,7 +11,6 @@ export const colors = {
   gray700: '#6C6C6C',
   gray800: '#373737',
   gray900: '#1F1F1F',
-  // 사용 안하게될 것들
   primary: '#007AFF',
   primaryDark: '#0059B2',
   danger: '#EF4444',  
@@ -21,6 +20,8 @@ export const colors = {
   // gradient colors
   gradientStart: '#FFD7EB',
   gradientEnd: '#BADFFF',
+  // 오버레이 배경
+  overlayBackground: 'rgba(0, 0, 0, 0.7)',
 };
 
 export type ColorName = keyof typeof colors;

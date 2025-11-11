@@ -12,6 +12,17 @@ import ModalLayout from './ModalLayout';
 import Input from '@/ui/components/input/Input';
 import { PLACEHOLDERS } from '@/constants/placeholders';
 import { tripToastMessages } from '@/utils/toast';
+import { colors } from '@/ui/tokens/colors';
+import { textStyles, typography } from '@/ui/tokens/typography';
+
+// 아이콘 import
+import LeftArrowIcon from '../../../assets/left_arrow.svg';
+import RightArrowIcon from '../../../assets/right_arrow.svg';
+import CalenderIcon from '../../../assets/calender.svg';
+import TodayIcon from '../../../assets/today.svg';
+import ShareIcon from '../../../assets/share.svg';
+import AirplaneIcon from '../../../assets/airplane.svg';
+import MemoIcon from '../../../assets/memo.svg';
 
 dayjs.locale(ko);
 
@@ -211,7 +222,7 @@ export default function WeeklyScheduleModal({
     const handleAddTrip = async (newTrip: any) => {
       if (!onPlanAdd) {
         tripToastMessages.addErrorGeneric();
-        return;
+        return null;
       }
       
       try {
@@ -240,6 +251,7 @@ export default function WeeklyScheduleModal({
           
           // 성공 Toast 표시
           tripToastMessages.addSuccess();
+          return newTripData;
         } else {
           tripToastMessages.addError();
         }
@@ -247,6 +259,8 @@ export default function WeeklyScheduleModal({
         console.error('Failed to add trip:', error);
         tripToastMessages.addErrorGeneric();
       }
+
+      return null;
     };
 
     const handleUpdateTrip = async (tripId: string, updatedTrip: any) => {
@@ -333,97 +347,98 @@ export default function WeeklyScheduleModal({
 
   return (
     <ModalLayout style={styles.container}>
-      {/* 커스텀 헤더 */}
+      {/* 커스텀 헤더 - Figma 디자인에 맞게 재구성 */}
       <View style={styles.customHeader}>
-        {/* 왼쪽 화살표 */}
-        <Pressable onPress={goPrev} style={styles.arrow}>
-          <Text style={styles.arrowText}>‹</Text>
-        </Pressable>
-
-        {/* 연·월 표시 */}
-        <Text style={styles.title}>{currentWeekStart.format('YYYY년 M월')}</Text>
-
-        {/* 오른쪽 화살표 */}
-        <Pressable onPress={goNext} style={styles.arrow}>
-          <Text style={styles.arrowText}>›</Text>
-        </Pressable>
-
-        {/* Spacer */}
-        <View style={{ flex: 0.02 }} />
-
-        {/* 오늘 버튼 */}
-        <Pressable onPress={goToday} style={styles.todayBtn}>
-          <Text style={styles.todayText}>오늘</Text>
-        </Pressable>
-
-        {/* 월별 달력 버튼 */}
-        <Pressable onPress={() => setShowMonthPicker(true)} style={[styles.todayBtn, { marginLeft: 6 }] }>
-          <Text style={styles.todayText}>달력</Text>
-        </Pressable>
-
-        {/* Spacer */}
-        <View style={{ flex: 1 }} />
-
-        {/* 여행 선택 콤보박스 */}
-        <TripSelector
-          selectedTrip={internalSelectedTrip}
-          onTripSelect={(trip) => {
-            setInternalSelectedTrip(trip);
-            // 부모 컴포넌트에 Plan ID 전달
-            if (onPlanSelect) {
-              onPlanSelect(trip);
-            }
-            // URL 변경 (웹에서만)
-            if (typeof window !== 'undefined' && Platform.OS === 'web') {
-              if (trip?.publicId) {
-                window.history.pushState({}, '', `/plans/${trip.publicId}`);
-              } else {
-                window.history.pushState({}, '', '/');
-              }
-            }
-          }}
-          trips={trips}
-          onTripAdd={handleAddTrip}
-          onTripUpdate={handleUpdateTrip}
-          onTripDelete={handleDeleteTrip}
-        />
-
-        {/* 기능 버튼 그룹: plan 선택 시만 표시 */}
-        {internalSelectedTrip ? (
-          <View style={styles.actionGroup}>
-            {(myRole === 'owner' || myRole === 'editor') && (
-              <Pressable
-                onPress={() => setShareOpen(true)}
-                style={[styles.actionBtn]}
-              >
-                <Text style={styles.actionText}>공유</Text>
-              </Pressable>
-            )}
-
-            {(myRole === 'owner' || myRole === 'editor') && (
-              <Pressable
-                onPress={() => {
-                  if (onRequestNewFlight) onRequestNewFlight(); else onShowFlightModal?.();
-                }}
-                style={[styles.actionBtn, { marginLeft: 6 }]}
-              >
-                <Text style={styles.actionText}>항공권</Text>
-              </Pressable>
-            )}
-
-            {(myRole === 'owner' || myRole === 'editor' || myRole === 'viewer') && (
-              <Pressable
-                onPress={() => {
-                  setMemoDraft((planData.plan as any)?.memo ?? '');
-                  setMemoOpen(true);
-                }}
-                style={[styles.actionBtn, { marginLeft: 6 }]}
-              >
-                <Text style={styles.actionText}>메모</Text>
-              </Pressable>
-            )}
+        {/* 왼쪽: 타이틀 및 날짜 네비게이션 */}
+        <View style={styles.leftSection}>
+          <Text style={styles.title}>Weekly Schedule</Text>
+          
+          <View style={styles.dateNavigation}>
+            <Pressable onPress={goPrev}>
+              <LeftArrowIcon width={12} height={12} />
+            </Pressable>
+            
+            <Text style={styles.dateText}>{currentWeekStart.format('YYYY년 M월')}</Text>
+            
+            <Pressable onPress={goNext}>
+              <RightArrowIcon width={12} height={12} />
+            </Pressable>
           </View>
-        ) : null}
+
+          <Pressable onPress={goToday} style={[styles.actionButton, { marginLeft: 34 }]}>
+            <View style={{ marginRight: 4 }}>
+              <TodayIcon width={16} height={16} />
+            </View>
+            <Text style={styles.actionButtonText}>오늘</Text>
+          </Pressable>
+
+          <Pressable onPress={() => setShowMonthPicker(true)} style={[styles.iconButton, { marginLeft: 8 }]}>
+            <CalenderIcon width={16} height={16} />
+          </Pressable>
+        </View>
+
+        {/* 오른쪽: 여행 선택 및 기능 버튼 */}
+        <View style={styles.rightSection}>
+          <TripSelector
+            selectedTrip={internalSelectedTrip}
+            onTripSelect={(trip) => {
+              setInternalSelectedTrip(trip);
+              // 부모 컴포넌트에 Plan ID 전달
+              if (onPlanSelect) {
+                onPlanSelect(trip);
+              }
+              // URL 변경 (웹에서만)
+              if (typeof window !== 'undefined' && Platform.OS === 'web') {
+                if (trip?.publicId) {
+                  window.history.pushState({}, '', `/plans/${trip.publicId}`);
+                } else {
+                  window.history.pushState({}, '', '/');
+                }
+              }
+            }}
+            trips={trips}
+            onTripAdd={handleAddTrip}
+            onTripUpdate={handleUpdateTrip}
+            onTripDelete={handleDeleteTrip}
+          />
+
+          {/* 기능 버튼 그룹: plan 선택 시만 표시 */}
+          {internalSelectedTrip ? (
+            <View style={styles.actionGroup}>
+              {(myRole === 'owner' || myRole === 'editor') && (
+                <Pressable
+                  onPress={() => setShareOpen(true)}
+                  style={[styles.iconButton, { marginLeft: 6 }]}
+                >
+                  <ShareIcon width={16} height={16} />
+                </Pressable>
+              )}
+
+              {(myRole === 'owner' || myRole === 'editor') && (
+                <Pressable
+                  onPress={() => {
+                    if (onRequestNewFlight) onRequestNewFlight(); else onShowFlightModal?.();
+                  }}
+                  style={[styles.iconButton, { marginLeft: 6 }]}
+                >
+                  <AirplaneIcon width={16} height={16} />
+                </Pressable>
+              )}
+
+              {(myRole === 'owner' || myRole === 'editor' || myRole === 'viewer') && (
+                <Pressable
+                  onPress={() => {
+                    setMemoDraft((planData.plan as any)?.memo ?? '');
+                    setMemoOpen(true);
+                  }}
+                  style={[styles.iconButton, { marginLeft: 6 }]}
+                >
+                  <MemoIcon width={16} height={16} />
+                </Pressable>
+              )}
+            </View>
+          ) : null}
+        </View>
       </View>
 
       {/* 캘린더 */}
@@ -643,6 +658,7 @@ const styles = StyleSheet.create({
     container: {
       flex: 1,
       minHeight: 0,
+      backgroundColor: colors.white,
     },
     calendarWrapper: {
       flex: 1,
@@ -651,24 +667,75 @@ const styles = StyleSheet.create({
     customHeader: {
       flexDirection: 'row',
       alignItems: 'center',
-      paddingHorizontal: 12,
-      paddingVertical: 6,
-      backgroundColor: '#fff',
+      justifyContent: 'space-between',
+      paddingHorizontal: 32,
+      paddingVertical: 22,
+      backgroundColor: colors.white,
       borderBottomWidth: 1,
-      borderBottomColor: '#e0e0e0',
+      borderBottomColor: colors.gray300,
       zIndex: 9998,
     },
-    arrow: { paddingHorizontal: 6, paddingVertical: 4 },
-    arrowText: { fontSize: 24, fontWeight: '600' },
-    title: { fontSize: 20, fontWeight: '700', marginHorizontal: 8 },
+    leftSection: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    title: {
+      ...textStyles.poppinsH4,
+      marginRight: 25,
+    },
+    dateNavigation: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginLeft: 25,
+    },
+    dateText: {
+      ...textStyles.h6,
+      marginHorizontal: 8,
+      minWidth: 90,
+      textAlign: 'center',
+    },
+    rightSection: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    iconButton: {
+      width: 32,
+      height: 32,
+      borderRadius: 8,
+      backgroundColor: colors.gray300,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    actionButton: {
+      flexDirection: 'row',
+      height: 32,
+      borderRadius: 8,
+      backgroundColor: colors.gray300,
+      paddingHorizontal: 12,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    actionButtonText: {
+      ...textStyles.h8,
+      fontSize: 12,
+      lineHeight: 18,
+    },
+    actionGroup: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
     todayBtn: {
       borderWidth: 1,
-      borderColor: '#c5c5c5',
-      borderRadius: 6,
+      borderColor: colors.gray300,
+      borderRadius: 8,
       paddingHorizontal: 10,
       paddingVertical: 4,
     },
-      todayText: { fontSize: 14, fontWeight: '600' },
+    todayText: {
+      ...textStyles.h8,
+      fontSize: 12,
+      lineHeight: 18,
+    },
     modalOverlay: {
       flex: 1,
       backgroundColor: 'rgba(0,0,0,0.5)',
@@ -676,30 +743,46 @@ const styles = StyleSheet.create({
       alignItems: 'center',
     },
     modalContent: {
-      backgroundColor: '#fff',
+      backgroundColor: colors.white,
       borderRadius: 10,
       padding: 12,
       width: '92%',
       elevation: 4,
     },
-    actionGroup: { flexDirection:'row', alignItems:'center', marginLeft: 8 },
-    actionBtn: { borderWidth: 1, borderColor: '#c5c5c5', borderRadius: 6, paddingHorizontal: 10, paddingVertical: 4 },
-    actionText: { fontSize: 14, fontWeight: '600' },
-    memoInput: { borderWidth: 1, borderColor: '#ddd', borderRadius: 8, padding: 10, minHeight: 120, backgroundColor: '#fff' },
+    actionBtn: {
+      borderWidth: 1,
+      borderColor: colors.gray300,
+      borderRadius: 6,
+      paddingHorizontal: 10,
+      paddingVertical: 4,
+    },
+    actionText: {
+      ...textStyles.h6,
+      fontSize: 14,
+      lineHeight: 22,
+    },
+    memoInput: {
+      borderWidth: 1,
+      borderColor: colors.gray400,
+      borderRadius: 8,
+      padding: 10,
+      minHeight: 120,
+      backgroundColor: colors.white,
+    },
     accommodationRow: {
       flexDirection: 'row',
-      backgroundColor: '#f8f9fa',
+      backgroundColor: colors.gray200,
       borderBottomWidth: 1,
-      borderBottomColor: '#e0e0e0',
+      borderBottomColor: colors.gray300,
       height: 50,
     },
     accommodationLabel: {
       width: 60,
       justifyContent: 'center',
       alignItems: 'center',
-      backgroundColor: '#fff',
+      backgroundColor: colors.white,
       borderRightWidth: 1,
-      borderRightColor: '#e0e0e0',
+      borderRightColor: colors.gray300,
     },
     accommodationLabelText: {
       fontSize: 16,
@@ -709,7 +792,7 @@ const styles = StyleSheet.create({
       justifyContent: 'center',
       alignItems: 'center',
       borderRightWidth: 1,
-      borderRightColor: '#e0e0e0',
+      borderRightColor: colors.gray300,
     },
     accommodationItem: {
       backgroundColor: '#ff9500',
@@ -719,7 +802,7 @@ const styles = StyleSheet.create({
       width: '90%',
     },
     accommodationName: {
-      color: '#fff',
+      color: colors.white,
       fontSize: 10,
       fontWeight: '600',
     },
