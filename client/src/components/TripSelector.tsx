@@ -189,6 +189,8 @@ export default function TripSelector({ selectedTrip, onTripSelect, trips, onTrip
   const [tripToDelete, setTripToDelete] = useState<string | null>(null);
   const [menuPosition, setMenuPosition] = useState<{ top: number; right: number } | null>(null);
   const [showCompletionModal, setShowCompletionModal] = useState(false);
+  const [showUpdateCompletionModal, setShowUpdateCompletionModal] = useState(false);
+  const [showDeleteCompletionModal, setShowDeleteCompletionModal] = useState(false);
   const tripItemRefs = React.useRef<{ [key: string]: View | null }>({});
 
   const handleTripSelect = (trip: Trip) => {
@@ -329,12 +331,10 @@ export default function TripSelector({ selectedTrip, onTripSelect, trips, onTrip
         endDate: editingTrip.endDate,
       });
       
-      // 성공 Toast 표시
-      tripToastMessages.updateSuccess();
-      
       setEditingTrip(null);
       setShowEditModal(false);
       setShowDropdown(false);
+      setShowUpdateCompletionModal(true);
     } catch (error) {
       console.error('Failed to update trip:', error);
       tripToastMessages.updateError();
@@ -353,6 +353,7 @@ export default function TripSelector({ selectedTrip, onTripSelect, trips, onTrip
       setShowDropdown(false);
       setDeleteConfirmModalOpen(false);
       setTripToDelete(null);
+      setShowDeleteCompletionModal(true);
     }
   };
 
@@ -363,7 +364,6 @@ export default function TripSelector({ selectedTrip, onTripSelect, trips, onTrip
     setShowDropdown(false);
   };
 
-  // 드롭다운 외부 클릭 시 닫기 (React Native용)
   React.useEffect(() => {
     if (showDropdown) {
       const timer = setTimeout(() => {
@@ -374,7 +374,6 @@ export default function TripSelector({ selectedTrip, onTripSelect, trips, onTrip
     }
   }, [showDropdown]);
 
-  // 드롭다운이 닫히면 메뉴도 닫기
   React.useEffect(() => {
     if (!showDropdown) {
       setOpenMenuTripId(null);
@@ -410,6 +409,30 @@ export default function TripSelector({ selectedTrip, onTripSelect, trips, onTrip
 
     return () => clearTimeout(timer);
   }, [showCompletionModal]);
+
+  React.useEffect(() => {
+    if (!showUpdateCompletionModal) {
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      setShowUpdateCompletionModal(false);
+    }, 2000);
+
+    return () => clearTimeout(timer);
+  }, [showUpdateCompletionModal]);
+
+  React.useEffect(() => {
+    if (!showDeleteCompletionModal) {
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      setShowDeleteCompletionModal(false);
+    }, 2000);
+
+    return () => clearTimeout(timer);
+  }, [showDeleteCompletionModal]);
 
   return (
     <View style={styles.container} ref={containerRef}>
@@ -734,7 +757,7 @@ export default function TripSelector({ selectedTrip, onTripSelect, trips, onTrip
                 onPress={handleEditTrip}
                 disabled={!editingTrip?.startDate || !editingTrip?.endDate}
               >
-                <Text style={styles.addButtonText}>수정사항 저장</Text>
+                <Text style={styles.addButtonText}>여행 수정</Text>
               </Pressable>
             </View>
           </View>
@@ -792,6 +815,42 @@ export default function TripSelector({ selectedTrip, onTripSelect, trips, onTrip
             </View>
             <Text style={styles.completionTitle}>여행 추가 완료</Text>
             <Text style={styles.completionDescription}>새로운 여행이 성공적으로 추가되었습니다.</Text>
+          </View>
+        </Pressable>
+      </Modal>
+
+      {/* 여행 수정 완료 모달 */}
+      <Modal
+        visible={showUpdateCompletionModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowUpdateCompletionModal(false)}
+      >
+        <Pressable style={styles.completionOverlay} onPress={() => setShowUpdateCompletionModal(false)}>
+          <View style={styles.completionCard}>
+            <View style={styles.completionIconWrapper}>
+              <CheckIcon width={20} height={20} />
+            </View>
+            <Text style={styles.completionTitle}>여행 수정 완료</Text>
+            <Text style={styles.completionDescription}>여행 정보가 성공적으로 수정되었습니다.</Text>
+          </View>
+        </Pressable>
+      </Modal>
+
+      {/* 여행 삭제 완료 모달 */}
+      <Modal
+        visible={showDeleteCompletionModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowDeleteCompletionModal(false)}
+      >
+        <Pressable style={styles.completionOverlay} onPress={() => setShowDeleteCompletionModal(false)}>
+          <View style={styles.completionCard}>
+            <View style={styles.completionIconWrapper}>
+              <CheckIcon width={20} height={20} />
+            </View>
+            <Text style={styles.completionTitle}>여행 삭제 완료</Text>
+            <Text style={styles.completionDescription}>여행이 성공적으로 삭제되었습니다.</Text>
           </View>
         </Pressable>
       </Modal>

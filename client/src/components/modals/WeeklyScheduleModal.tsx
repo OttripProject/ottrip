@@ -249,8 +249,6 @@ export default function WeeklyScheduleModal({
             window.history.pushState({}, '', `/plans/${createdPlan.publicId}`);
           }
           
-          // 성공 Toast 표시
-          tripToastMessages.addSuccess();
           return newTripData;
         } else {
           tripToastMessages.addError();
