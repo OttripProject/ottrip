@@ -130,7 +130,10 @@ export default ({ config }: ConfigContext): ExpoConfig => {
             "Poppins-Bold",
             "Poppins-ExtraBold",
             "Poppins-Black",
-          ].map(fontName => `./assets/fonts/${fontName}.otf`),
+          ].flatMap(fontName => [
+            `./assets/fonts/${fontName}.ttf`,
+            `./assets/fonts/${fontName}.otf`,
+          ]),
         },
       ],
       [

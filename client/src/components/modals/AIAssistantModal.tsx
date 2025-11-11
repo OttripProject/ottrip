@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert, ActivityIndicator, ScrollView, Modal, Pressable } from 'react-native';
 import ModalLayout from './ModalLayout';
 import api from '@/services/api';
+import { colors } from '@/ui/tokens/colors';
 
 interface ChecklistItem {
   id: number;
@@ -502,7 +503,7 @@ const styles = StyleSheet.create({
   // Modal 스타일
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: colors.overlayBackground,
     justifyContent: 'center',
     alignItems: 'center',
   },
