@@ -131,7 +131,7 @@ export const textStyles: Record<string, TextStyle> = {
     fontFamily: typography.fontFamily.poppinsSemiBold,
     fontSize: 18,
     lineHeight: 26,
-    fontWeight: typography.weight.semibold,
+    fontWeight: typography.weight.bold,
     color: colors.black,
   },
 };

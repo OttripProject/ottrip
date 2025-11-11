@@ -626,6 +626,7 @@ export default function TripSelector({ selectedTrip, onTripSelect, trips, onTrip
                 placeholder={PLACEHOLDERS.plan.name}
                 value={newTrip.name}
                 onChangeText={(text) => setNewTrip(prev => ({ ...prev, name: text }))}
+                maxLength={50}
               />
             </View>
             
@@ -709,6 +710,7 @@ export default function TripSelector({ selectedTrip, onTripSelect, trips, onTrip
                 placeholder={PLACEHOLDERS.plan.name}
                 value={editingTrip?.name || ''}
                 onChangeText={(text) => setEditingTrip(prev => prev ? { ...prev, name: text } : null)}
+                maxLength={50}
               />
             </View>
             
