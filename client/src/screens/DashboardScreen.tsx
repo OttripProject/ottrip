@@ -44,7 +44,7 @@ export default function DashboardScreen() {
   };
   
   const ratio = getResponsiveRatio();
-  const headerHeight = 56;
+  const headerHeight = 64;
   const headerMarginBottom = 16; 
   const verticalPadding = 16 * 2; 
   const availableHeight = Math.max(360, width ? (typeof window !== 'undefined' ? window.innerHeight : 0) - verticalPadding - headerHeight - headerMarginBottom : 600);
@@ -292,13 +292,13 @@ export default function DashboardScreen() {
 
   return (
     <View style={styles.root}>
-      <View style={styles.container}>
       {/* 1. 헤더 모달 */}
       <View style={styles.headerModal}>
         <HeaderModal />
       </View>
 
       {/* 메인 레이아웃 */}
+      <View style={styles.container}>
       <View style={styles.mainLayout}>
         {/* 좌측 영역 (동적 비율) */}
         <View style={[styles.leftArea, { flex: ratio.left, height: availableHeight }]}>
@@ -420,8 +420,7 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   headerModal: {
-    height: 56,
-    marginBottom: 16,
+    width: '100%',
   },
   mainLayout: {
     flex: 1,
