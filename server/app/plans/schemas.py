@@ -51,6 +51,7 @@ class ShareRead(APISchema):
     handle: str
     role: Role
     nickname: str
+    email: str
 
 
 class InvitationCreate(APISchema):

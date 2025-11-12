@@ -65,7 +65,7 @@ class UserService:
             agreed_marketing=user_data.agreed_marketing,
         )
 
-        created_user = await self.user_repository.create(user_data=normalized)
+        created_user = await self.user_repository.create(user_data=normalized, email=auth.verified_email)
         if created_user is None:
             raise HTTPException(status_code=400, detail="사용자 생성에 실패했습니다.")
 
