@@ -59,6 +59,7 @@ LocaleConfig.locales['ko'] = {
   ],
   dayNamesShort: ['일', '월', '화', '수', '목', '금', '토'],
   today: '오늘',
+  firstDayOfWeek: 1,
 };
 LocaleConfig.defaultLocale = 'ko';
 
@@ -505,17 +506,14 @@ export default function TripSelector({ selectedTrip, onTripSelect, trips, onTrip
                         e.stopPropagation();
                         const itemRef = tripItemRefs.current[trip.id];
                         if (itemRef) {
-                          // measure를 사용해서 화면 기준 절대 위치 측정
                           itemRef.measure((x, y, width, height, pageX, pageY) => {
-                            // tripItem의 중앙 높이에서 메뉴를 표시 (dots 버튼 위치 고려)
-                            const menuTop = pageY + height / 2 + 16; // tripItem 중앙에서 약간 위로
+                            const menuTop = pageY + height / 2 + 16; 
                             const screenWidth = Dimensions.get('window').width;
-                            const menuRight = screenWidth - (pageX + width) - 54; // tripItem 오른쪽에서 50px 왼쪽
+                            const menuRight = screenWidth - (pageX + width) - 54;
                             setMenuPosition({ top: menuTop, right: menuRight });
                             setOpenMenuTripId(openMenuTripId === trip.id ? null : trip.id);
                           });
                         } else {
-                          // fallback: 기존 계산 방식 사용
                           const tripIndex = trips.findIndex(t => t.id === trip.id);
                           if (containerLayout) {
                             const selectorHeight = 32;
@@ -554,7 +552,6 @@ export default function TripSelector({ selectedTrip, onTripSelect, trips, onTrip
         </View>
       )}
 
-      {/* 메뉴를 Modal로 렌더링하여 모달 밖에서도 보이도록 */}
       {openMenuTripId && (
         <Modal
           visible={true}
@@ -639,6 +636,7 @@ export default function TripSelector({ selectedTrip, onTripSelect, trips, onTrip
                   markedDates={getMarkedDates()}
                   markingType="custom"
                   theme={CALENDAR_THEME}
+                  firstDay={1}
                   renderArrow={(direction) =>
                     direction === 'left' ? (
                       <LeftArrowIcon width={18} height={18} />
@@ -724,6 +722,7 @@ export default function TripSelector({ selectedTrip, onTripSelect, trips, onTrip
                   markedDates={getEditMarkedDates()}
                   markingType="custom"
                   theme={CALENDAR_THEME}
+                  firstDay={1}
                   style={styles.calendar}
                   renderArrow={(direction) =>
                     direction === 'left' ? (
