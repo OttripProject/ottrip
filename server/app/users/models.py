@@ -34,6 +34,9 @@ class User(Base):
     )
     """Handle - email address"""
 
+    email: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    """이메일 주소"""
+
     nickname: Mapped[str] = mapped_column(String(30), nullable=False)
     """닉네임"""
 

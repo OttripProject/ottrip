@@ -153,7 +153,12 @@ class PlanService:
             raise HTTPException(status_code=404, detail="계획을 찾을 수 없습니다.")
         shared_plans = await self.plan_repository.list_shared(plan_id=plan_id)
         return [
-            ShareRead(handle=shared_plan.shared_user.handle, role=shared_plan.role, nickname=(shared_plan.shared_user.nickname if shared_plan.shared_user else ""))
+            ShareRead(
+                handle=shared_plan.shared_user.handle,
+                role=shared_plan.role,
+                nickname=shared_plan.shared_user.nickname,
+                email=shared_plan.shared_user.email or ""
+            )
             for shared_plan in shared_plans
         ]
 
