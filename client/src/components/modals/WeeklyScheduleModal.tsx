@@ -9,6 +9,7 @@ import SharePlanModal from '@/components/modals/SharePlanModal';
 import { plansApi } from '@/services/plans';
 import { Plan, CreatePlanRequest, UpdatePlanRequest } from '@/types/api';
 import ModalLayout from './ModalLayout';
+import Card from '@/ui/components/Card';
 import Input from '@/ui/components/input/Input';
 import { PLACEHOLDERS } from '@/constants/placeholders';
 import { tripToastMessages } from '@/utils/toast';
@@ -23,6 +24,7 @@ import TodayIcon from '../../../assets/today.svg';
 import ShareIcon from '../../../assets/share.svg';
 import AirplaneIcon from '../../../assets/airplane.svg';
 import MemoIcon from '../../../assets/memo.svg';
+import XIcon from '../../../assets/x.svg';
 
 dayjs.locale(ko);
 
@@ -603,24 +605,55 @@ export default function WeeklyScheduleModal({
           Alert.alert('성공', '초대 메일을 전송했습니다.');
         }}
         planId={internalSelectedTrip ? parseInt(internalSelectedTrip.id) : 0}
+        planName={internalSelectedTrip?.name}
       />
 
       {/* 메모 편집 모달 */}
       <Modal visible={memoOpen} transparent animationType="fade" onRequestClose={() => setMemoOpen(false)}>
         <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { width: '90%' }] }>
-            <Text style={styles.title}>플랜 메모</Text>
-            <Input   
-              placeholder={PLACEHOLDERS.plan.memo}
-              multiline
-              numberOfLines={6}
-              value={memoDraft}
-              onChangeText={setMemoDraft}
-              textAlignVertical="top"
-            />
-            <View style={{ flexDirection:'row', justifyContent:'flex-end', marginTop: 8 }}>
-              <Pressable onPress={() => setMemoOpen(false)} style={[styles.todayBtn, { marginRight: 6 }]}>
-                <Text style={styles.todayText}>취소</Text>
+          <Card
+            width="100%"
+            maxWidth={420}
+            minHeight={582}
+            paddingHorizontal={32}
+            paddingVertical={32}
+            borderRadius={24}
+            alignItems="stretch"
+            shadow={{
+              shadowColor: colors.black,
+              shadowOffset: { width: 0, height: 24 },
+              shadowOpacity: 0.12,
+              shadowRadius: 48,
+              elevation: 24,
+            }}
+            style={{ marginHorizontal: 16 }}
+          >
+            <View style={styles.memoModalHeader}>
+              <View style={styles.memoModalTextGroup}>
+                <Text style={styles.memoModalTitle}>공유 메모</Text>
+                <Text style={styles.memoModalDescription}>다른 사람과 여행을 공유하고 함께 계획을 세워보세요.</Text>
+              </View>
+              <Pressable onPress={() => setMemoOpen(false)} style={styles.memoModalCloseButton}>
+                <XIcon width={24} height={24} />
+              </Pressable>
+            </View>
+
+            <View style={styles.memoModalFieldGroup}>
+              <Text style={styles.memoModalLabel}>내용</Text>
+              <Input
+                placeholder={PLACEHOLDERS.plan.memo}
+                multiline
+                numberOfLines={8}
+                value={memoDraft}
+                onChangeText={setMemoDraft}
+                textAlignVertical="top"
+                style={styles.memoModalInput}
+              />
+            </View>
+
+            <View style={styles.memoModalActions}>
+              <Pressable onPress={() => setMemoOpen(false)} style={styles.memoModalSecondaryButton}>
+                <Text style={styles.memoModalSecondaryButtonText}>닫기</Text>
               </Pressable>
               <Pressable
                 onPress={async () => {
@@ -629,7 +662,6 @@ export default function WeeklyScheduleModal({
                     await plansApi.setMemo(parseInt(internalSelectedTrip.id), memoDraft ?? '');
                     Alert.alert('성공', '메모가 저장되었습니다.');
                     setMemoOpen(false);
-                    // 최신 데이터 반영
                     if (internalSelectedTrip?.publicId) {
                       // @ts-ignore
                       planData.fetchPlanData && (await planData.fetchPlanData(internalSelectedTrip.publicId));
@@ -638,12 +670,12 @@ export default function WeeklyScheduleModal({
                     Alert.alert('오류', e?.response?.data?.detail || '메모 저장에 실패했습니다.');
                   }
                 }}
-                style={[styles.todayBtn]}
+                style={styles.memoModalPrimaryButton}
               >
-                <Text style={styles.todayText}>저장</Text>
+                <Text style={styles.memoModalPrimaryButtonText}>저장</Text>
               </Pressable>
             </View>
-          </View>
+          </Card>
         </View>
       </Modal>
 
@@ -736,7 +768,7 @@ const styles = StyleSheet.create({
     },
     modalOverlay: {
       flex: 1,
-      backgroundColor: 'rgba(0,0,0,0.5)',
+      backgroundColor: colors.overlayBackground,
       justifyContent: 'center',
       alignItems: 'center',
     },
@@ -747,25 +779,83 @@ const styles = StyleSheet.create({
       width: '92%',
       elevation: 4,
     },
-    actionBtn: {
-      borderWidth: 1,
-      borderColor: colors.gray300,
-      borderRadius: 6,
-      paddingHorizontal: 10,
-      paddingVertical: 4,
+    memoModalHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'flex-start',
+      marginBottom: 40,
     },
-    actionText: {
-      ...textStyles.h6,
-      fontSize: 14,
-      lineHeight: 22,
+    memoModalTextGroup: {
+      flex: 1,
+      paddingRight: 16,
     },
-    memoInput: {
+    memoModalTitle: {
+      ...textStyles.h3,
+      marginBottom: 8,
+    },
+    memoModalDescription: {
+      ...textStyles.body4,
+      color: colors.gray700,
+    },
+    memoModalCloseButton: {
+      width: 26,
+      height: 26,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    memoModalFieldGroup: {
+      marginBottom: 24,
+    },
+    memoModalLabel: {
+      ...textStyles.h7,
+      color: colors.black,
+      marginBottom: 8,
+    },
+    memoModalInput: {
+      minHeight: 300,
+      maxHeight: 356,
       borderWidth: 1,
       borderColor: colors.gray400,
-      borderRadius: 8,
-      padding: 10,
-      minHeight: 120,
+      borderRadius: 10,
+      paddingHorizontal: 16,
+      paddingVertical: 16,
       backgroundColor: colors.white,
+      fontSize: 13,
+      lineHeight: 20,
+    },
+    memoModalActions: {
+      flexDirection: 'row',
+      justifyContent: 'flex-end',
+      alignItems: 'center',
+      columnGap: 8,
+    },
+    memoModalSecondaryButton: {
+      minWidth: 174,
+      height: 50,
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: colors.gray400,
+      backgroundColor: colors.white,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: 16,
+    },
+    memoModalSecondaryButtonText: {
+      ...textStyles.h6,
+      color: colors.black,
+    },
+    memoModalPrimaryButton: {
+      minWidth: 174,
+      height: 50,
+      borderRadius: 10,
+      backgroundColor: colors.black,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: 16,
+    },
+    memoModalPrimaryButtonText: {
+      ...textStyles.h6,
+      color: colors.white,
     },
     accommodationRow: {
       flexDirection: 'row',
