@@ -559,7 +559,7 @@ export default function TripSelector({ selectedTrip, onTripSelect, trips, onTrip
         <Modal
           visible={true}
           transparent={true}
-          animationType="none"
+          animationType="fade"
           onRequestClose={() => setOpenMenuTripId(null)}
         >
           <Pressable 
@@ -602,6 +602,7 @@ export default function TripSelector({ selectedTrip, onTripSelect, trips, onTrip
       <Modal
         visible={showAddModal}
         transparent={true}
+        animationType="fade"
         onRequestClose={() => setShowAddModal(false)}
       >
         <View style={styles.modalOverlay}>
@@ -686,6 +687,7 @@ export default function TripSelector({ selectedTrip, onTripSelect, trips, onTrip
       <Modal
         visible={showEditModal}
         transparent={true}
+        animationType="fade"
         onRequestClose={() => setShowEditModal(false)}
       >
         <View style={styles.modalOverlay}>

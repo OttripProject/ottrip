@@ -5,6 +5,7 @@ export type PlanShare = {
   handle: string;
   role: 'editor' | 'viewer';
   nickname: string;
+  email: string;
 };
 
 export const plansApi = {
