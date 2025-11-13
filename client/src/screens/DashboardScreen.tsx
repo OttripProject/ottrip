@@ -6,6 +6,7 @@ import { plansApi } from "@/services/plans";
 import { usePlanDataQuery } from "@/hooks/usePlanDataQuery";
 import { usePlansQuery } from "@/hooks/usePlansQuery";
 import dayjs from "dayjs";
+import { colors } from "@/ui/tokens/colors";
 
 // 새로운 모달 컴포넌트들
 import HeaderModal from "@/components/modals/HeaderModal";
@@ -417,7 +418,7 @@ export default function DashboardScreen() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: colors.gray300,
   },
   container: {
     flex: 1,
