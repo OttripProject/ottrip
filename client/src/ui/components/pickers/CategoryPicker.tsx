@@ -3,6 +3,8 @@ import { View, StyleSheet, ViewStyle } from 'react-native';
 import DropDownPicker from 'react-native-dropdown-picker';
 import { categoryLabels, ExpenseCategory } from '@/types/expense';
 import { PLACEHOLDERS } from '@/constants/placeholders';
+import { colors } from '@/ui/tokens/colors';
+import { radii } from '@/ui/tokens/radii';
 
 interface CategoryPickerProps {
   value: ExpenseCategory;
@@ -46,8 +48,8 @@ export default function CategoryPicker({ value, onChange, placeholder = PLACEHOL
 
 const styles = StyleSheet.create({
   wrapper: { position: 'relative' },
-  dropdown: { borderWidth: 1, borderColor: '#ddd', borderRadius: 8, minHeight: 45, backgroundColor: '#fff' },
-  dropdownContainer: { borderWidth: 1, borderColor: '#ddd', borderRadius: 8, backgroundColor: '#fff' },
+  dropdown: { borderWidth: 1, borderColor: colors.gray400, borderRadius: radii.md, minHeight: 40, backgroundColor: colors.white },
+  dropdownContainer: { borderWidth: 1, borderColor: colors.gray400, borderRadius: radii.md, backgroundColor: colors.white },
 });
 
 

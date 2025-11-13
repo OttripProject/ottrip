@@ -2,6 +2,11 @@ import React, { useState } from 'react';
 import { View, Text, Pressable, StyleSheet, Modal } from 'react-native';
 import { Calendar } from 'react-native-calendars';
 import dayjs from 'dayjs';
+import { colors } from '@/ui/tokens/colors';
+import { radii } from '@/ui/tokens/radii';
+import { textStyles } from '@/ui/tokens/typography';
+import { spacing } from '@/ui/tokens/spacing';
+import CalendarIcon from '../../../../assets/calender.svg';
 
 interface DatePickerProps {
   value: string; // 'YYYY-MM-DD' 형식
@@ -47,9 +52,14 @@ export default function DatePicker({ value, onChange, style, placeholder = "날�
   return (
     <View style={style}>
       <Pressable style={styles.dateInput} onPress={() => setShowPicker(true)}>
-        <Text style={value ? styles.dateText : styles.placeholderText}>
-          {getDisplayText()}
-        </Text>
+        <View style={styles.dateTextContainer}>
+          <Text style={value ? styles.dateText : styles.placeholderText}>
+            {getDisplayText()}
+          </Text>
+          <View style={styles.iconWrapper}>
+            <CalendarIcon width={16} height={16} />
+          </View>
+        </View>
       </Pressable>
 
       <Modal visible={showPicker} animationType="slide" transparent={true} onRequestClose={handleCancel}>
@@ -104,22 +114,29 @@ export default function DatePicker({ value, onChange, style, placeholder = "날�
 const styles = StyleSheet.create({
   dateInput: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#ced4da',
-    borderRadius: 6,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    backgroundColor: '#f8f9fa',
+    borderWidth: 0,
+    borderRadius: radii.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 10,
+    backgroundColor: colors.gray300,
+    minHeight: 40,
+  },
+  dateTextContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
   },
   dateText: {
-    fontSize: 14,
-    color: '#343a40',
+    ...textStyles.body4,
+    color: colors.black,
   },
   placeholderText: {
-    fontSize: 14,
-    color: '#6c757d',
+    ...textStyles.body4,
+    color: colors.gray600,
+  },
+  iconWrapper: {
+    marginTop: -2,
   },
   calendarIcon: {
     fontSize: 16,

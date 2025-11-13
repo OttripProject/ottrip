@@ -13,6 +13,7 @@ import { spacing } from '@/ui/tokens/spacing';
 import { radii } from '@/ui/tokens/radii';
 import DeleteIcon from '../../../assets/delete_gray.svg';
 import AddIcon from '../../../assets/add.svg';
+
 interface ItineraryItemProps {
   itinerary?: any;
   planId: number;
@@ -110,6 +111,11 @@ export default function ItineraryItem({
       setExpenses([]);
       setDraftExpenses([]);
       setShowExpenseForm(false);
+      setExpenseForm({
+        category: ExpenseCategory.ETC,
+        amount: 0,
+        description: '',
+      });
     }
   }, [itinerary, selectedDate]);
 
@@ -263,10 +269,17 @@ export default function ItineraryItem({
   };
 
   const handleDelete = async () => {
+    // 일정 추가 모드: 입력창 닫기
+    if (!itinerary) {
+      onCancel();
+      return;
+    }
+    
     if (itinerary && onDelete) {
       try {
         await itinerariesApi.deleteItinerary(itinerary.id);
         onDelete(itinerary.id);
+        onCancel();
       } catch (error) {
         console.error('Failed to delete itinerary:', error);
       }
@@ -353,15 +366,15 @@ export default function ItineraryItem({
   return (
     <ScrollView style={[styles.container, { position: 'relative', overflow: 'visible' }]}
     contentContainerStyle={[styles.contentContainer, { overflow: 'visible' }]}>
-      <Text style={styles.title}>{itinerary ? '일정 편집' : '일정 추가'}</Text>
+        <Text style={styles.title}>{itinerary ? '일정 편집' : '일정 추가'}</Text>
       
       <View style={styles.formSection}>
-        <View style={styles.inputGroup}>
+      <View style={styles.inputGroup}>
           <Text style={styles.label}>제목</Text>
-          <Input
+        <Input
             variant="filled"
             placeholder={PLACEHOLDERS.itinerary.titleForm}
-            value={formData.title}
+          value={formData.title}
             onChangeText={(text) => {
               if (text.length <= 10) {
                 setFormData({ ...formData, title: text });
@@ -370,52 +383,52 @@ export default function ItineraryItem({
             maxLength={10}
             style={styles.input}
             placeholderTextColor={colors.gray600}
-          />
-        </View>
+        />
+      </View>
 
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>내용</Text>
-          <Input
+      <View style={styles.inputGroup}>
+        <Text style={styles.label}>내용</Text>
+        <Input
             variant="filled"
             placeholder={PLACEHOLDERS.itinerary.descriptionForm}
-            value={formData.description}
-            onChangeText={(text) => setFormData({ ...formData, description: text })}
-            multiline
-            numberOfLines={3}
-            textAlignVertical="top"
+          value={formData.description}
+          onChangeText={(text) => setFormData({ ...formData, description: text })}
+          multiline
+          numberOfLines={3}
+          textAlignVertical="top"
             style={styles.textArea}
             placeholderTextColor={colors.gray600}
+        />
+      </View>
+
+      <View style={[styles.row, styles.pickerRowWrapper, { zIndex: countryOpen ? 10000 : 1 }]}>
+        <View style={[styles.inputGroup, styles.halfWidth, styles.countryPickerWrapper]}>
+            <Text style={styles.label}>국가</Text>
+          <CountryPicker
+            value={formData.country}
+            onChange={(name: string) => setFormData({ ...formData, country: name })}
+              placeholder={PLACEHOLDERS.itinerary.countryForm}
           />
         </View>
-
-        <View style={[styles.row, styles.pickerRowWrapper, { zIndex: countryOpen ? 10000 : 1 }]}>
-          <View style={[styles.inputGroup, styles.halfWidth, styles.countryPickerWrapper]}>
-            <Text style={styles.label}>국가</Text>
-            <CountryPicker
-              value={formData.country}
-              onChange={(name: string) => setFormData({ ...formData, country: name })}
-              placeholder={PLACEHOLDERS.itinerary.countryForm}
-            />
-          </View>
-          <View style={[styles.inputGroup, styles.halfWidth]}> 
+        <View style={[styles.inputGroup, styles.halfWidth]}> 
             <Text style={styles.label}>도시</Text>
-            <Input
+          <Input
               variant="filled"
               placeholder={PLACEHOLDERS.itinerary.cityForm}
-              value={formData.city}
-              onChangeText={(text) => setFormData({ ...formData, city: text })}
+            value={formData.city}
+            onChangeText={(text) => setFormData({ ...formData, city: text })}
               style={styles.input}
               placeholderTextColor={colors.gray600}
-            />
-          </View>
+          />
         </View>
+      </View>
 
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>장소</Text>
-          <Input
+      <View style={styles.inputGroup}>
+        <Text style={styles.label}>장소</Text>
+        <Input
             variant="filled"
             placeholder="장소를 입력하세요."
-            value={formData.location}
+          value={formData.location}
             onChangeText={(text) => {
               if (text.length <= 100) {
                 setFormData({ ...formData, location: text });
@@ -424,33 +437,33 @@ export default function ItineraryItem({
             maxLength={100}
             style={styles.input}
             placeholderTextColor={colors.gray600}
-          />
-        </View>
+        />
+      </View>
 
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>날짜</Text>
-          <DatePicker
-            value={formData.itineraryDate}
-            onChange={(date) => setFormData({ ...formData, itineraryDate: date })}
-          />
-        </View>
+      <View style={styles.inputGroup}>
+        <Text style={styles.label}>날짜</Text>
+        <DatePicker
+          value={formData.itineraryDate}
+          onChange={(date) => setFormData({ ...formData, itineraryDate: date })}
+        />
+      </View>
 
         <View style={[styles.row, styles.pickerRowWrapper, { zIndex: timeOpen ? 10001 : 1 }]}>
-          <View style={[styles.inputGroup, styles.halfWidth]}>
-            <Text style={styles.label}>시작 시간</Text>
-            <TimePicker
-              value={formData.startTime}
-              onChange={(time) => setFormData({ ...formData, startTime: time })}
+        <View style={[styles.inputGroup, styles.halfWidth]}>
+          <Text style={styles.label}>시작 시간</Text>
+          <TimePicker
+            value={formData.startTime}
+            onChange={(time) => setFormData({ ...formData, startTime: time })}
               maxTime={formData.endTime}
-            />
-          </View>
-          <View style={[styles.inputGroup, styles.halfWidth]}>
-            <Text style={styles.label}>종료 시간</Text>
-            <TimePicker
-              value={formData.endTime}
-              onChange={(time) => setFormData({ ...formData, endTime: time })}
+          />
+        </View>
+        <View style={[styles.inputGroup, styles.halfWidth]}>
+          <Text style={styles.label}>종료 시간</Text>
+          <TimePicker
+            value={formData.endTime}
+            onChange={(time) => setFormData({ ...formData, endTime: time })}
               minTime={formData.startTime}
-            />
+          />
           </View>
         </View>
       </View>
@@ -460,9 +473,9 @@ export default function ItineraryItem({
         <Text style={styles.label}>지출 내역</Text>
         
         {/* 지출 카드 목록 */}
-        <View style={styles.expenseList}>
-          {allExpenses.length > 0 ? (
-            allExpenses.map((expense) => (
+        {allExpenses.length > 0 && (
+          <View style={styles.expenseList}>
+            {allExpenses.map((expense) => (
               <View key={expense.id} style={styles.expenseCard}>
                 <View style={styles.expenseCardContent}>
                   <View style={styles.expenseCardHeader}>
@@ -488,30 +501,30 @@ export default function ItineraryItem({
                   </Text>
                 </View>
               </View>
-            ))
-          ) : null}
-        </View>
+            ))}
+          </View>
+        )}
 
         {/* 지출 추가 버튼 */}
-        <Pressable
-          style={styles.addExpenseButton}
-          onPress={() => setShowExpenseForm(!showExpenseForm)}
-        >
+          <Pressable
+            style={styles.addExpenseButton}
+            onPress={() => setShowExpenseForm(!showExpenseForm)}
+          >
           <View style={styles.addIconWrapper}>
             <AddIcon width={16} height={16} />
           </View>
           <Text style={styles.addExpenseButtonText}>지출 내역 추가</Text>
-        </Pressable>
+          </Pressable>
 
         {/* 지출 추가 폼 */}
         {showExpenseForm && (
           <View style={styles.expenseForm}>
             <View style={styles.expenseFormRow}>
               <View style={styles.expenseFormHalf}>
-                <Text style={styles.label}>카테고리</Text>
-                <CategoryPicker
-                  value={expenseForm.category}
-                  onChange={(cat: ExpenseCategory) => setExpenseForm({ ...expenseForm, category: cat })}
+            <Text style={styles.label}>카테고리</Text>
+            <CategoryPicker
+              value={expenseForm.category}
+              onChange={(cat: ExpenseCategory) => setExpenseForm({ ...expenseForm, category: cat })}
                 />
               </View>
               <View style={styles.expenseFormHalf}>
@@ -526,7 +539,7 @@ export default function ItineraryItem({
               <Text style={styles.label}>금액</Text>
               <Input
                 variant="outlined"
-                placeholder="0"
+                placeholder={PLACEHOLDERS.expense.amount}
                 value={expenseForm.amount.toString()}
                 onChangeText={(text) => setExpenseForm({ ...expenseForm, amount: parseInt(text) || 0 })}
                 keyboardType="numeric"
@@ -538,7 +551,7 @@ export default function ItineraryItem({
               <Text style={styles.label}>내용</Text>
               <Input
                 variant="outlined"
-                placeholder="지출 설명을 입력하세요."
+                placeholder={PLACEHOLDERS.expense.descriptionForm}
                 value={expenseForm.description}
                 onChangeText={(text) => setExpenseForm({ ...expenseForm, description: text })}
                 style={styles.expenseInput}
@@ -548,7 +561,14 @@ export default function ItineraryItem({
             <View style={styles.expenseButtonRow}>
               <Pressable
                 style={styles.expenseCancelButton}
-                onPress={() => setShowExpenseForm(false)}
+                onPress={() => {
+                  setExpenseForm({
+                    category: ExpenseCategory.ETC,
+                    amount: 0,
+                    description: '',
+                  });
+                  setShowExpenseForm(false);
+                }}
               >
                 <Text style={styles.expenseCancelButtonText}>취소</Text>
               </Pressable>
@@ -564,14 +584,12 @@ export default function ItineraryItem({
       </View>
 
       <View style={styles.buttonRow}>
-        {itinerary && onDelete && (
-          <Pressable
-            style={styles.deleteButton}
-            onPress={handleDelete}
-          >
-            <Text style={styles.deleteButtonText}>삭제</Text>
-          </Pressable>
-        )}
+        <Pressable
+          style={styles.deleteButton}
+          onPress={handleDelete}
+        >
+          <Text style={styles.deleteButtonText}>삭제</Text>
+        </Pressable>
         <Pressable
           style={styles.saveButton}
           onPress={handleSave}
@@ -625,7 +643,7 @@ const styles = StyleSheet.create({
   buttonRow: {
     flexDirection: 'row',
     gap: spacing.sm,
-    marginTop: spacing.xl,
+    marginTop: spacing.sm,
     paddingBottom: spacing.xl,
   },
   deleteButton: {
@@ -679,7 +697,7 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   expenseList: {
-    gap: spacing.sm,
+    gap: spacing.xs,
   },
   expenseCard: {
     backgroundColor: colors.gray300,
@@ -690,7 +708,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   expenseCardContent: {
-    gap: 12,
+    gap: spacing.sm,
   },
   expenseCardHeader: {
     flexDirection: 'row',
@@ -719,7 +737,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     gap: spacing.sm,
-    marginTop: spacing.sm,
   },
   addIconWrapper: {
     marginTop: -2,
@@ -780,7 +797,7 @@ const styles = StyleSheet.create({
     borderColor: colors.gray400,
     borderRadius: 8,
     height: 32,
-    paddingHorizontal: 52,
+    paddingHorizontal: spacing.lg,
     justifyContent: 'center',
     alignItems: 'center',
     flex: 1,
@@ -793,7 +810,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.gray900,
     borderRadius: 8,
     height: 32,
-    paddingHorizontal: 52,
+    paddingHorizontal: spacing.lg,
     justifyContent: 'center',
     alignItems: 'center',
     flex: 1,

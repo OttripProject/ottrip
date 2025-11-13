@@ -14,6 +14,7 @@ interface ItinerarySectionProps {
   selectedItinerary?: any;
   activeTab?: 'itinerary' | 'flight' | 'accommodation' | undefined;
   onItineraryAdd?: (itinerary: any) => void;
+  onItineraryClear?: () => void;
   openNewItineraryForm?: boolean;
   onConsumeOpenNewItineraryForm?: () => void;
   selectedItineraryDate?: Date | null;
@@ -26,6 +27,7 @@ export default function ItinerarySection({
   selectedItinerary,
   activeTab,
   onItineraryAdd,
+  onItineraryClear,
   openNewItineraryForm,
   onConsumeOpenNewItineraryForm,
   selectedItineraryDate,
@@ -71,10 +73,11 @@ export default function ItinerarySection({
     }
   };
 
-  const handleItineraryDelete = () => {
+  const handleItineraryDelete = (itineraryId?: string) => {
     planData?.refreshItineraries();
     setShowItineraryForm(false);
     setEditingItinerary(null);
+    onItineraryClear?.();
   };
 
   // 선택된 일정이 있고 편집 모드가 아닐 때 - 상세 정보 표시
@@ -180,6 +183,7 @@ export default function ItinerarySection({
         onCancel={() => {
           setShowItineraryForm(false);
           setEditingItinerary(null);
+          onItineraryClear?.();
         }}
         onDelete={handleItineraryDelete}
         onExpenseUpdate={planData.refreshExpenses}

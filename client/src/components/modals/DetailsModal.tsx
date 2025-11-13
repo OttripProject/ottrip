@@ -25,6 +25,7 @@ interface DetailsModalProps {
   selectedAccommodation?: any;
   activeTab?: 'itinerary' | 'flight' | 'accommodation' | undefined;
   onItineraryAdd?: (itinerary: any) => void;
+  onItineraryClear?: () => void;
   onFlightAdd?: (flight: any) => void;
   onAccommodationAdd?: (accommodation: any) => void;
   onAccommodationSelect?: (accommodation: any) => void;
@@ -48,6 +49,7 @@ export default function DetailsModal({
   selectedAccommodation,
   activeTab,
   onItineraryAdd,
+  onItineraryClear,
   onFlightAdd,
   onAccommodationAdd,
   onAccommodationSelect,
@@ -82,6 +84,7 @@ export default function DetailsModal({
           selectedItinerary={selectedItinerary}
           activeTab={activeTab}
           onItineraryAdd={onItineraryAdd}
+          onItineraryClear={onItineraryClear}
           openNewItineraryForm={openNewItineraryForm}
           onConsumeOpenNewItineraryForm={onConsumeOpenNewItineraryForm}
           selectedItineraryDate={selectedItineraryDate}
@@ -134,6 +137,7 @@ export default function DetailsModal({
             planData={planData}
             activeTab={activeTab}
             onItineraryAdd={onItineraryAdd}
+            onItineraryClear={onItineraryClear}
             openNewItineraryForm={openNewItineraryForm}
             onConsumeOpenNewItineraryForm={onConsumeOpenNewItineraryForm}
             selectedItineraryDate={selectedItineraryDate}

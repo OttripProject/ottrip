@@ -388,6 +388,10 @@ export default function DashboardScreen() {
               selectedAccommodation={selectedAccommodation}
               activeTab={activeTab}
               onItineraryAdd={handleItineraryAdd}
+              onItineraryClear={() => {
+                setSelectedItinerary(null);
+                setActiveTab(undefined);
+              }}
               onFlightAdd={handleFlightAdd}
               onAccommodationAdd={handleAccommodationAdd}
               onAccommodationSelect={setSelectedAccommodation}
