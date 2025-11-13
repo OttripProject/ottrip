@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { View, Text, Pressable, StyleSheet, Alert } from 'react-native';
+import { View, Text, Pressable, StyleSheet, Alert, ScrollView } from 'react-native';
 import { DatePicker, TimePicker, CountryPicker, CategoryPicker } from '@/ui/components/pickers';
 import Input from '@/ui/components/input/Input';
 import { PLACEHOLDERS } from '@/constants/placeholders';
@@ -7,6 +7,12 @@ import dayjs from 'dayjs';
 import { itinerariesApi } from '@/services/itineraries';
 import { expensesApi } from '@/services/expenses';
 import { ExpenseCategory, ExpenseCurrency, categoryLabels } from '@/types/expense';
+import { colors } from '@/ui/tokens/colors';
+import { textStyles, typography } from '@/ui/tokens/typography';
+import { spacing } from '@/ui/tokens/spacing';
+import { radii } from '@/ui/tokens/radii';
+import DeleteIcon from '../../../assets/delete_gray.svg';
+import AddIcon from '../../../assets/add.svg';
 
 interface ItineraryItemProps {
   itinerary?: any;
@@ -54,7 +60,8 @@ export default function ItineraryItem({
 
   // 국가 드롭다운 상태 및 옵션 (ISO 3166 → 한국어 라벨)
   const [countryOpen, setCountryOpen] = useState(false);
-
+  const [timeOpen, setTimeOpen] = useState(false);
+  
   // 지출 관련 상태
   const [showExpenseForm, setShowExpenseForm] = useState(false);
   const [expenseOpen, setExpenseOpen] = useState(false);
@@ -293,225 +300,225 @@ export default function ItineraryItem({
     }
   };
 
+  // 모든 지출 (draft + saved)
+  const allExpenses = useMemo(() => {
+    const draft = draftExpenses.map((exp, idx) => ({ ...exp, id: `draft-${idx}`, isDraft: true }));
+    const saved = expenses.map(exp => ({ ...exp, isDraft: false }));
+    return [...draft, ...saved];
+  }, [draftExpenses, expenses]);
+
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>{itinerary ? '일정 편집' : '일정 추가'}</Text>
-      </View>
+    <ScrollView style={[styles.container, { position: 'relative', overflow: 'visible' }]}
+    contentContainerStyle={[styles.contentContainer, { overflow: 'visible' }]}>
+      <Text style={styles.title}>{itinerary ? '일정 편집' : '일정 추가'}</Text>
       
-      <View style={styles.inputGroup}>
-        <Text style={styles.label}>제목 *</Text>
-        <Input
-          placeholder={PLACEHOLDERS.itinerary.title}
-          value={formData.title}
-          onChangeText={(text) => setFormData({ ...formData, title: text })}
-        />
-      </View>
-
-      <View style={styles.inputGroup}>
-        <Text style={styles.label}>내용</Text>
-        <Input
-          placeholder={PLACEHOLDERS.itinerary.description}
-          value={formData.description}
-          onChangeText={(text) => setFormData({ ...formData, description: text })}
-          multiline
-          numberOfLines={3}
-          textAlignVertical="top"
-        />
-      </View>
-
-      <View style={[styles.row, styles.pickerRowWrapper, { zIndex: countryOpen ? 10000 : 1 }]}>
-        <View style={[styles.inputGroup, styles.halfWidth, styles.countryPickerWrapper]}>
-          <Text style={styles.label}>국가 *</Text>
-          <CountryPicker
-            value={formData.country}
-            onChange={(name: string) => setFormData({ ...formData, country: name })}
-            placeholder="국가 선택"
-          />
-        </View>
-        <View style={[styles.inputGroup, styles.halfWidth]}> 
-          <Text style={styles.label}>도시 *</Text>
+      <View style={styles.formSection}>
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>제목</Text>
           <Input
-            placeholder={PLACEHOLDERS.itinerary.city}
-            value={formData.city}
-            onChangeText={(text) => setFormData({ ...formData, city: text })}
+            variant="filled"
+            placeholder={PLACEHOLDERS.itinerary.titleForm}
+            value={formData.title}
+            onChangeText={(text) => setFormData({ ...formData, title: text })}
+            style={styles.input}
+            placeholderTextColor={colors.gray600}
           />
         </View>
-      </View>
 
-      <View style={styles.inputGroup}>
-        <Text style={styles.label}>장소</Text>
-        <Input
-          placeholder={PLACEHOLDERS.itinerary.location}
-          value={formData.location}
-          onChangeText={(text) => setFormData({ ...formData, location: text })}
-        />
-      </View>
-
-      <View style={styles.inputGroup}>
-        <Text style={styles.label}>날짜</Text>
-        <DatePicker
-          value={formData.itineraryDate}
-          onChange={(date) => setFormData({ ...formData, itineraryDate: date })}
-        />
-      </View>
-
-      <View style={styles.timeRow}>
-        <View style={[styles.inputGroup, styles.halfWidth]}>
-          <Text style={styles.label}>시작 시간</Text>
-          <TimePicker
-            value={formData.startTime}
-            onChange={(time) => setFormData({ ...formData, startTime: time })}
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>내용</Text>
+          <Input
+            variant="filled"
+            placeholder={PLACEHOLDERS.itinerary.descriptionForm}
+            value={formData.description}
+            onChangeText={(text) => setFormData({ ...formData, description: text })}
+            multiline
+            numberOfLines={3}
+            textAlignVertical="top"
+            style={styles.textArea}
+            placeholderTextColor={colors.gray600}
           />
         </View>
-        <View style={[styles.inputGroup, styles.halfWidth]}>
-          <Text style={styles.label}>종료 시간</Text>
-          <TimePicker
-            value={formData.endTime}
-            onChange={(time) => setFormData({ ...formData, endTime: time })}
+
+        <View style={[styles.row, styles.pickerRowWrapper, { zIndex: countryOpen ? 10000 : 1 }]}>
+          <View style={[styles.inputGroup, styles.halfWidth, styles.countryPickerWrapper]}>
+            <Text style={styles.label}>국가</Text>
+            <CountryPicker
+              value={formData.country}
+              onChange={(name: string) => setFormData({ ...formData, country: name })}
+              placeholder={PLACEHOLDERS.itinerary.countryForm}
+            />
+          </View>
+          <View style={[styles.inputGroup, styles.halfWidth]}> 
+            <Text style={styles.label}>도시</Text>
+            <Input
+              variant="filled"
+              placeholder={PLACEHOLDERS.itinerary.cityForm}
+              value={formData.city}
+              onChangeText={(text) => setFormData({ ...formData, city: text })}
+              style={styles.input}
+              placeholderTextColor={colors.gray600}
+            />
+          </View>
+        </View>
+
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>장소</Text>
+          <Input
+            variant="filled"
+            placeholder="장소를 입력하세요."
+            value={formData.location}
+            onChangeText={(text) => setFormData({ ...formData, location: text })}
+            style={styles.input}
+            placeholderTextColor={colors.gray600}
           />
+        </View>
+
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>날짜</Text>
+          <DatePicker
+            value={formData.itineraryDate}
+            onChange={(date) => setFormData({ ...formData, itineraryDate: date })}
+          />
+        </View>
+
+        <View style={[styles.row, styles.pickerRowWrapper, { zIndex: timeOpen ? 10001 : 1 }]}>
+          <View style={[styles.inputGroup, styles.halfWidth]}>
+            <Text style={styles.label}>시작 시간</Text>
+            <TimePicker
+              value={formData.startTime}
+              onChange={(time) => setFormData({ ...formData, startTime: time })}
+              maxTime={formData.endTime}
+            />
+          </View>
+          <View style={[styles.inputGroup, styles.halfWidth]}>
+            <Text style={styles.label}>종료 시간</Text>
+            <TimePicker
+              value={formData.endTime}
+              onChange={(time) => setFormData({ ...formData, endTime: time })}
+              minTime={formData.startTime}
+            />
+          </View>
         </View>
       </View>
 
       {/* 지출 추가 섹션 */}
       <View style={styles.expenseSection}>
-        <View style={styles.expenseHeader}>
-          <Text style={styles.expenseTitle}>지출 내역</Text>
-          <Pressable
-            style={styles.addExpenseButton}
-            onPress={() => setShowExpenseForm(!showExpenseForm)}
-          >
-            <Text style={styles.addExpenseButtonText}>+ 지출 추가</Text>
-          </Pressable>
+        <Text style={styles.label}>지출 내역</Text>
+        
+        {/* 지출 카드 목록 */}
+        <View style={styles.expenseList}>
+          {allExpenses.length > 0 ? (
+            allExpenses.map((expense) => (
+              <View key={expense.id} style={styles.expenseCard}>
+                <View style={styles.expenseCardContent}>
+                  <View style={styles.expenseCardHeader}>
+                    <Text style={styles.expenseCardTitle}>
+                      {categoryLabels[expense.category as ExpenseCategory]}
+                    </Text>
+                    <Pressable
+                      style={styles.deleteExpenseButton}
+                      onPress={() => {
+                        if (expense.isDraft) {
+                          setDraftExpenses(prev => prev.filter((_, i) => i !== Number(expense.id.split('-')[1])));
+                        } else {
+                          handleExpenseDelete(expense.id);
+                        }
+                      }}
+                    >
+                      <DeleteIcon width={16} height={16} />
+                    </Pressable>
+                  </View>
+                  <Text style={styles.expenseCardDescription}>{expense.description || ''}</Text>
+                  <Text style={styles.expenseCardAmount}>
+                    ₩{expense.amount.toLocaleString()}
+                  </Text>
+                </View>
+              </View>
+            ))
+          ) : null}
         </View>
+
+        {/* 지출 추가 버튼 */}
+        <Pressable
+          style={styles.addExpenseButton}
+          onPress={() => setShowExpenseForm(!showExpenseForm)}
+        >
+          <AddIcon width={16} height={16} />
+          <Text style={styles.addExpenseButtonText}>지출 내역 추가</Text>
+        </Pressable>
 
         {/* 지출 추가 폼 */}
         {showExpenseForm && (
           <View style={styles.expenseForm}>
-            <Text style={styles.label}>카테고리</Text>
-            <CategoryPicker
-              value={expenseForm.category}
-              onChange={(cat: ExpenseCategory) => setExpenseForm({ ...expenseForm, category: cat })}
-              containerStyle={{ marginBottom: 12 }}
-            />
+            <View style={styles.expenseFormRow}>
+              <View style={styles.expenseFormHalf}>
+                <Text style={styles.label}>카테고리</Text>
+                <CategoryPicker
+                  value={expenseForm.category}
+                  onChange={(cat: ExpenseCategory) => setExpenseForm({ ...expenseForm, category: cat })}
+                />
+              </View>
+              <View style={styles.expenseFormHalf}>
+                <Text style={styles.label}>화폐</Text>
+                <View style={styles.currencyPicker}>
+                  <Text style={styles.currencyText}>KRW</Text>
+                </View>
+              </View>
+            </View>
 
             <View style={styles.inputGroup}>
               <Text style={styles.label}>금액</Text>
               <Input
-                placeholder={PLACEHOLDERS.expense.amount}
+                variant="outlined"
+                placeholder="0"
                 value={expenseForm.amount.toString()}
                 onChangeText={(text) => setExpenseForm({ ...expenseForm, amount: parseInt(text) || 0 })}
                 keyboardType="numeric"
+                style={styles.expenseInput}
               />
             </View>
 
             <View style={styles.inputGroup}>
               <Text style={styles.label}>내용</Text>
               <Input
-                placeholder={PLACEHOLDERS.expense.description}
+                variant="outlined"
+                placeholder="지출 설명을 입력하세요."
                 value={expenseForm.description}
                 onChangeText={(text) => setExpenseForm({ ...expenseForm, description: text })}
+                style={styles.expenseInput}
               />
             </View>
 
             <View style={styles.expenseButtonRow}>
               <Pressable
-                style={[styles.button, styles.cancelButton]}
+                style={styles.expenseCancelButton}
                 onPress={() => setShowExpenseForm(false)}
               >
-                <Text style={styles.cancelButtonText}>취소</Text>
+                <Text style={styles.expenseCancelButtonText}>취소</Text>
               </Pressable>
               <Pressable
-                style={[styles.button, styles.submitButton]}
+                style={styles.expenseSubmitButton}
                 onPress={handleExpenseSubmit}
               >
-                <Text style={styles.submitButtonText}>추가</Text>
+                <Text style={styles.expenseSubmitButtonText}>추가</Text>
               </Pressable>
             </View>
           </View>
         )}
-
-        {/* 저장된 지출 내역 */}
-        <View style={styles.expenseList}>
-          {/* Draft expenses (새 일정 생성 중 또는 기존 일정 편집 중) */}
-          {draftExpenses.length > 0 && (
-            <>
-              {draftExpenses.map((expense, index) => (
-                <View key={index} style={styles.expenseItem}>
-                  <View style={styles.expenseItemInfo}>
-                    <Text style={styles.expenseItemDescription}>{expense.description}</Text>
-                    <Text style={styles.expenseItemCategory}>
-                      {categoryLabels[expense.category as ExpenseCategory]}
-                    </Text>
-                  </View>
-                  <View style={styles.expenseItemActions}>
-                    <Text style={styles.expenseItemAmount}>
-                      ₩{expense.amount.toLocaleString()}
-                    </Text>
-                    <Pressable
-                      style={styles.deleteExpenseButton}
-                      onPress={() => setDraftExpenses(prev => prev.filter((_, i) => i !== index))}
-                    >
-                      <Text style={styles.deleteExpenseIcon}>🗑️</Text>
-                    </Pressable>
-                  </View>
-                </View>
-              ))}
-            </>
-          )}
-          
-          {/* Saved expenses (기존 일정 편집 시) */}
-          {itinerary?.id && (
-            <>
-              {expenses.length > 0 ? (
-                expenses.map((expense) => (
-                  <View key={expense.id} style={styles.expenseItem}>
-                    <View style={styles.expenseItemInfo}>
-                      <Text style={styles.expenseItemDescription}>{expense.description}</Text>
-                      <Text style={styles.expenseItemCategory}>
-                        {categoryLabels[expense.category as ExpenseCategory]}
-                      </Text>
-                    </View>
-                    <View style={styles.expenseItemActions}>
-                      <Text style={styles.expenseItemAmount}>
-                        ₩{expense.amount.toLocaleString()}
-                      </Text>
-                      <Pressable
-                        style={styles.deleteExpenseButton}
-                        onPress={() => handleExpenseDelete(expense.id)}
-                      >
-                        <Text style={styles.deleteExpenseIcon}>🗑️</Text>
-                      </Pressable>
-                    </View>
-                  </View>
-                ))
-              ) : (
-                <Text style={styles.noExpensesText}>등록된 지출이 없습니다.</Text>
-              )}
-            </>
-          )}
-        </View>
       </View>
 
       <View style={styles.buttonRow}>
-        <Pressable
-          style={[styles.button, styles.cancelButton]}
-          onPress={onCancel}
-        >
-          <Text style={styles.cancelButtonText}>취소</Text>
-        </Pressable>
-        
         {itinerary && onDelete && (
           <Pressable
-            style={[styles.button, styles.deleteButton]}
+            style={styles.deleteButton}
             onPress={handleDelete}
           >
             <Text style={styles.deleteButtonText}>삭제</Text>
           </Pressable>
         )}
-        
         <Pressable
-          style={[styles.button, styles.saveButton]}
+          style={styles.saveButton}
           onPress={handleSave}
           disabled={isLoading || !formData.title.trim()}
         >
@@ -520,231 +527,226 @@ export default function ItineraryItem({
           </Text>
         </Pressable>
       </View>
-    </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#f8f9fa',
-    padding: 16,
-    borderRadius: 8,
-    marginBottom: 12,
+    flex: 1,
+    backgroundColor: colors.white,
+  },
+  contentContainer: {
+    padding: spacing.xl,
+    gap: spacing.xl,
   },
   title: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 12,
-    color: '#333',
+    ...textStyles.h5,
+    marginBottom: 0,
+  },
+  formSection: {
+    gap: spacing.lg,
   },
   input: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 12,
-    fontSize: 16,
-    backgroundColor: '#fff',
+    backgroundColor: colors.gray300,
+    height: 40,
+    borderRadius: radii.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 10,
+    ...textStyles.body4,
+  },
+  textArea: {
+    backgroundColor: colors.gray300,
+    height: 80,
+    borderRadius: radii.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 10,
+    ...textStyles.body4,
   },
   timeRow: {
     flexDirection: 'row',
-    gap: 12,
-    marginBottom: 12,
-  },
-  timeInput: {
-    flex: 1,
+    gap: spacing.sm,
   },
   buttonRow: {
     flexDirection: 'row',
-    justifyContent: 'flex-end',
-    gap: 8,
-  },
-  button: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 6,
-  },
-  cancelButton: {
-    backgroundColor: '#f0f0f0',
-  },
-  cancelButtonText: {
-    color: '#333',
-    fontWeight: '600',
+    gap: spacing.sm,
+    marginTop: spacing.xl,
+    paddingBottom: spacing.xl,
   },
   deleteButton: {
-    backgroundColor: '#ff3b30',
+    backgroundColor: colors.gray400,
+    height: 40,
+    borderRadius: radii.md,
+    paddingHorizontal: spacing.lg,
+    justifyContent: 'center',
+    alignItems: 'center',
+    minWidth: 90,
   },
   deleteButtonText: {
-    color: '#fff',
-    fontWeight: '600',
+    ...textStyles.h8,
+    color: colors.black,
   },
   saveButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: colors.gray900,
+    height: 40,
+    borderRadius: radii.md,
+    paddingHorizontal: spacing.lg,
+    justifyContent: 'center',
+    alignItems: 'center',
+    flex: 1,
   },
   saveButtonText: {
-    color: '#fff',
-    fontWeight: '600',
-  },
-  textArea: {
-    minHeight: 60,
-    paddingTop: 8,
-    textAlignVertical: 'top',
+    ...textStyles.h8,
+    color: colors.white,
   },
   row: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 12,
+    gap: spacing.sm,
     overflow: 'visible',
     position: 'relative',
   },
   pickerRowWrapper: {
-    // 국가 드롭다운 + 도시 입력을 하나의 쌓임 맥락으로 묶음
     overflow: 'visible',
     position: 'relative',
   },
   inputGroup: {
-    marginBottom: 12,
+    gap: spacing.sm,
   },
   halfWidth: {
     flex: 1,
-    marginHorizontal: 4,
   },
   label: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#495057',
-    marginBottom: 4,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  submitButton: {
-    backgroundColor: '#000',
-  },
-  submitButtonText: {
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: '600',
+    ...textStyles.h8,
+    color: colors.black,
   },
   // 지출 관련 스타일
   expenseSection: {
-    marginTop: 20,
-    paddingTop: 20,
-    borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
+    gap: spacing.sm,
   },
-  expenseHeader: {
+  expenseList: {
+    gap: spacing.sm,
+  },
+  expenseCard: {
+    backgroundColor: colors.gray300,
+    borderRadius: radii.md,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: 12,
+    height: 96,
+    justifyContent: 'center',
+  },
+  expenseCardContent: {
+    gap: 12,
+  },
+  expenseCardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
   },
-  expenseTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
+  expenseCardTitle: {
+    ...textStyles.h7,
+    color: colors.black,
+  },
+  expenseCardDescription: {
+    ...textStyles.body5,
+    color: colors.gray700,
+  },
+  expenseCardAmount: {
+    ...textStyles.h7,
+    color: colors.black,
   },
   addExpenseButton: {
-    backgroundColor: '#007AFF',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 6,
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: colors.gray400,
+    borderRadius: 8,
+    height: 40,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginTop: spacing.sm,
   },
   addExpenseButtonText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '600',
+    ...textStyles.h8,
+    color: colors.black,
   },
   expenseForm: {
-    backgroundColor: '#f8f9fa',
-    padding: 16,
-    borderRadius: 8,
-    marginBottom: 16,
-  },
-  expenseDropdown: {
+    backgroundColor: colors.white,
     borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    marginBottom: 16,
-    backgroundColor: '#fff',
-    minHeight: 50,
+    borderColor: colors.gray400,
+    borderRadius: radii.md,
+    padding: spacing.md,
+    marginTop: spacing.sm,
+    gap: spacing.lg,
+  },
+  expenseFormRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  expenseFormHalf: {
+    flex: 1,
+    gap: spacing.sm,
+  },
+  currencyPicker: {
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: colors.gray400,
+    borderRadius: radii.md,
+    height: 40,
+    paddingHorizontal: spacing.md,
+    justifyContent: 'center',
+  },
+  currencyText: {
+    ...textStyles.body4,
+    color: colors.gray800,
+  },
+  expenseInput: {
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: colors.gray400,
+    borderRadius: radii.md,
+    height: 40,
   },
   countryPickerWrapper: {
     overflow: 'visible',
     position: 'relative',
     zIndex: 8000,
   },
-  expenseDropdownContainer: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    backgroundColor: '#fff',
-    position: 'relative',
-    elevation: 5,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-  },
   expenseButtonRow: {
     flexDirection: 'row',
-    justifyContent: 'flex-end',
-    gap: 8,
+    gap: spacing.sm,
   },
-  expenseList: {
-    marginTop: 8,
-  },
-  expenseItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    backgroundColor: '#fff',
-    borderRadius: 8,
-    marginBottom: 8,
+  expenseCancelButton: {
+    backgroundColor: colors.white,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
-  },
-  expenseItemInfo: {
+    borderColor: colors.gray400,
+    borderRadius: 8,
+    height: 32,
+    paddingHorizontal: 52,
+    justifyContent: 'center',
+    alignItems: 'center',
     flex: 1,
   },
-  expenseItemDescription: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#333',
+  expenseCancelButtonText: {
+    ...textStyles.h8,
+    color: colors.black,
   },
-  expenseItemCategory: {
-    fontSize: 12,
-    color: '#666',
-    marginTop: 2,
-  },
-  expenseItemActions: {
-    flexDirection: 'row',
+  expenseSubmitButton: {
+    backgroundColor: colors.gray900,
+    borderRadius: 8,
+    height: 32,
+    paddingHorizontal: 52,
+    justifyContent: 'center',
     alignItems: 'center',
+    flex: 1,
   },
-  expenseItemAmount: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#333',
-    marginRight: 8,
+  expenseSubmitButtonText: {
+    ...textStyles.h8,
+    color: colors.white,
   },
   deleteExpenseButton: {
     padding: 4,
-  },
-  deleteExpenseIcon: {
-    fontSize: 16,
-  },
-  noExpensesText: {
-    textAlign: 'center',
-    color: '#666',
-    fontSize: 14,
-    paddingVertical: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });
