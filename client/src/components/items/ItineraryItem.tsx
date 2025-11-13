@@ -90,8 +90,27 @@ export default function ItineraryItem({
         startTime: (itinerary.start_time || itinerary.startTime || '09:00').substring(0, 5),
         endTime: (itinerary.end_time || itinerary.endTime || '10:00').substring(0, 5),
       });
+    } else {
+      const defaultDate = selectedDate ? dayjs(selectedDate).format('YYYY-MM-DD') : dayjs().format('YYYY-MM-DD');
+      const defaultStartTime = selectedDate ? dayjs(selectedDate).format('HH:mm') : '09:00';
+      const defaultEndTime = selectedDate ? dayjs(selectedDate).add(1, 'hour').format('HH:mm') : '10:00';
+      
+      setFormData({
+        title: '',
+        description: '',
+        country: '',
+        city: '',
+        location: '',
+        itineraryDate: defaultDate,
+        startTime: defaultStartTime,
+        endTime: defaultEndTime,
+      });
+      
+      setExpenses([]);
+      setDraftExpenses([]);
+      setShowExpenseForm(false);
     }
-  }, [itinerary]);
+  }, [itinerary, selectedDate]);
 
   // 기존 지출 불러오기
   useEffect(() => {
@@ -103,6 +122,9 @@ export default function ItineraryItem({
         } catch (error) {
           console.error('Failed to load expenses:', error);
         }
+      } else {
+        // itinerary가 없으면 지출 목록 초기화
+        setExpenses([]);
       }
     };
 
@@ -119,11 +141,14 @@ export default function ItineraryItem({
         } catch (error) {
           console.error('Failed to load expenses:', error);
         }
+      } else {
+        // itinerary가 없으면 지출 목록 초기화
+        setExpenses([]);
       }
     };
 
     loadExpenses();
-  }, [planData?.expenses]);
+  }, [planData?.expenses, itinerary?.id]);
 
   const handleSave = async () => {
     if (!formData.title.trim()) {
@@ -444,7 +469,9 @@ export default function ItineraryItem({
           style={styles.addExpenseButton}
           onPress={() => setShowExpenseForm(!showExpenseForm)}
         >
-          <AddIcon width={16} height={16} />
+          <View style={styles.addIconWrapper}>
+            <AddIcon width={16} height={16} />
+          </View>
           <Text style={styles.addExpenseButtonText}>지출 내역 추가</Text>
         </Pressable>
 
@@ -665,6 +692,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.sm,
     marginTop: spacing.sm,
+  },
+  addIconWrapper: {
+    marginTop: -2,
   },
   addExpenseButtonText: {
     ...textStyles.h8,
