@@ -875,7 +875,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingHorizontal: 16,
     paddingVertical: 8,
-    minWidth: 241,
+    minWidth: 200,
     height: 32,
   },
   selectorOpen: {

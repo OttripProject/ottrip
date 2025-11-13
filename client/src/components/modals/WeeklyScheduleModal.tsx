@@ -15,6 +15,7 @@ import { PLACEHOLDERS } from '@/constants/placeholders';
 import { tripToastMessages } from '@/utils/toast';
 import { colors } from '@/ui/tokens/colors';
 import { textStyles, typography } from '@/ui/tokens/typography';
+import { spacing } from '@/ui/tokens/spacing';
 
 // 아이콘 import
 import LeftArrowIcon from '../../../assets/left_arrow.svg';
@@ -25,6 +26,7 @@ import ShareIcon from '../../../assets/share.svg';
 import AirplaneIcon from '../../../assets/airplane.svg';
 import MemoIcon from '../../../assets/memo.svg';
 import XIcon from '../../../assets/x.svg';
+import FilesIcon from '../../../assets/files.svg';
 
 dayjs.locale(ko);
 
@@ -365,14 +367,14 @@ export default function WeeklyScheduleModal({
             </Pressable>
           </View>
 
-          <Pressable onPress={goToday} style={[styles.actionButton, { marginLeft: 34 }]}>
-            <View style={{ marginRight: 4 }}>
+          <Pressable onPress={goToday} style={[styles.actionButton, { marginLeft: spacing.xl }]}>
+            <View style={{ marginRight: spacing.xs }}>
               <TodayIcon width={16} height={16} />
             </View>
             <Text style={styles.actionButtonText}>오늘</Text>
           </Pressable>
 
-          <Pressable onPress={() => setShowMonthPicker(true)} style={[styles.iconButton, { marginLeft: 8 }]}>
+          <Pressable onPress={() => setShowMonthPicker(true)} style={[styles.iconButton, { marginLeft: spacing.sm }]}>
             <CalenderIcon width={16} height={16} />
           </Pressable>
         </View>
@@ -408,7 +410,7 @@ export default function WeeklyScheduleModal({
               {(myRole === 'owner' || myRole === 'editor') && (
                 <Pressable
                   onPress={() => setShareOpen(true)}
-                  style={[styles.iconButton, { marginLeft: 6 }]}
+                  style={styles.iconButton}
                 >
                   <ShareIcon width={16} height={16} />
                 </Pressable>
@@ -417,9 +419,20 @@ export default function WeeklyScheduleModal({
               {(myRole === 'owner' || myRole === 'editor') && (
                 <Pressable
                   onPress={() => {
+                    // TODO: 파일 첨부 기능 구현
+                  }}
+                  style={styles.iconButton}
+                >
+                  <FilesIcon width={16} height={16} />
+                </Pressable>
+              )}
+
+              {(myRole === 'owner' || myRole === 'editor') && (
+                <Pressable
+                  onPress={() => {
                     if (onRequestNewFlight) onRequestNewFlight(); else onShowFlightModal?.();
                   }}
-                  style={[styles.iconButton, { marginLeft: 6 }]}
+                  style={styles.iconButton}
                 >
                   <AirplaneIcon width={16} height={16} />
                 </Pressable>
@@ -431,7 +444,7 @@ export default function WeeklyScheduleModal({
                     setMemoDraft((planData.plan as any)?.memo ?? '');
                     setMemoOpen(true);
                   }}
-                  style={[styles.iconButton, { marginLeft: 6 }]}
+                  style={styles.iconButton}
                 >
                   <MemoIcon width={16} height={16} />
                 </Pressable>
@@ -711,16 +724,16 @@ const styles = StyleSheet.create({
     },
     title: {
       ...textStyles.poppinsH4,
-      marginRight: 25,
+      marginRight: spacing.xl,
     },
     dateNavigation: {
       flexDirection: 'row',
       alignItems: 'center',
-      marginLeft: 25,
+      gap: spacing.sm,
+      marginLeft: spacing.xl,
     },
     dateText: {
       ...textStyles.h6,
-      marginHorizontal: 8,
       minWidth: 90,
       textAlign: 'center',
     },
@@ -753,6 +766,8 @@ const styles = StyleSheet.create({
     actionGroup: {
       flexDirection: 'row',
       alignItems: 'center',
+      gap: spacing.sm,
+      marginLeft: spacing.md,
     },
     todayBtn: {
       borderWidth: 1,
