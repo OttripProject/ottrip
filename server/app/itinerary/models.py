@@ -1,7 +1,7 @@
 from datetime import date, time
 from typing import TYPE_CHECKING
 
-from sqlalchemy import ForeignKey, Integer
+from sqlalchemy import ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models import Base
@@ -21,7 +21,7 @@ class Itinerary(Base):
         autoincrement=True,
     )
 
-    title: Mapped[str]
+    title: Mapped[str] = mapped_column(String(10), nullable=False)
     """여행 제목"""
 
     description: Mapped[str | None] = mapped_column(nullable=True)
@@ -33,7 +33,7 @@ class Itinerary(Base):
     city: Mapped[str]
     """도시"""
 
-    location: Mapped[str | None] = mapped_column(nullable=True)
+    location: Mapped[str | None] = mapped_column(String(100), nullable=True)
     """장소"""
 
     itinerary_date: Mapped[date]
