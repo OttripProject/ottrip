@@ -472,7 +472,7 @@ export default function WeeklyScheduleModal({
           return (
             <View>
               <View style={{ flexDirection: 'row', height: 70 }}>
-                <View style={{ width: 50 }} />
+                <View style={styles.timeColumn} />
                 {getWeekDays().map((date, index) => {
                   const isToday = dayjs(date).format('YYYY-MM-DD') === dayjs().format('YYYY-MM-DD');
                   return (
@@ -492,7 +492,7 @@ export default function WeeklyScheduleModal({
               {/* 날짜 헤더 아래 공간 - 시간 열에 "숙박 */}
               {internalSelectedTrip && (
                 <View style={{ flexDirection: 'row', height: 40, backgroundColor: '', borderTopWidth: 0.5, borderBottomWidth: 0.5, borderTopColor: '#e0e0e0', borderBottomColor: '#e0e0e0' }}>
-                  <View style={{ width: 50, justifyContent: 'center', alignItems: 'center', borderRightWidth: 0.5, borderRightColor: '#e0e0e0' }}>
+                  <View style={[styles.timeColumn, { justifyContent: 'center', alignItems: 'center', borderRightWidth: 0.5, borderRightColor: '#e0e0e0' }]}>
                     <AccommodationIcon width={16} height={16} />
                   </View>
                   <View style={{ flex: 1, flexDirection: 'row' }}>
@@ -760,6 +760,9 @@ const styles = StyleSheet.create({
     todayDateText: {
       ...textStyles.h6,
       color: colors.white,
+    },
+    timeColumn: {
+      width: 51,
     },
     rightSection: {
       flexDirection: 'row',
