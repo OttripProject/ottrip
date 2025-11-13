@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { ScrollView, View, Text, Pressable, StyleSheet } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import ModalLayout from './ModalLayout';
-import ItineraryItem from '../items/ItineraryItem';
+import ModalLayout from '../ModalLayout';
+import ItineraryItem from '../../items/ItineraryItem';
 
 interface ItineraryModalProps {
   planData?: {

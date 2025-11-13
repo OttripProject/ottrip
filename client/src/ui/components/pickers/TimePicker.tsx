@@ -1,105 +1,153 @@
-import React, { useState } from 'react';
-import { View, Text, Pressable, StyleSheet, Modal, ScrollView } from 'react-native';
+import React, { useMemo, useState, useEffect } from 'react';
+import { View, StyleSheet, ViewStyle } from 'react-native';
+import DropDownPicker from 'react-native-dropdown-picker';
+import { colors } from '@/ui/tokens/colors';
+import { textStyles } from '@/ui/tokens/typography';
+import { radii } from '@/ui/tokens/radii';
+import { spacing } from '@/ui/tokens/spacing';
+import DownArrowIcon from '../../../../assets/down_arrow.svg';
+import UpperArrowIcon from '../../../../assets/upper_arrow.svg';
 
 interface TimePickerProps {
   value: string; // 'HH:mm' 형식
   onChange: (time: string) => void;
-  style?: any;
+  style?: ViewStyle;
   placeholder?: string;
-  minTime?: string; // 'HH:mm' 형식, 만약 value의 날짜가 minDate와 같다면 이 시간보다 이후만 선택 가능
+  minTime?: string; // 'HH:mm' 형식, 이 시간 이후만 선택 가능
+  maxTime?: string; // 'HH:mm' 형식, 이 시간 이전만 선택 가능
 }
 
-export default function TimePicker({ value, onChange, style, placeholder = "시간을 선택하세요", minTime }: TimePickerProps) {
-  const [showPicker, setShowPicker] = useState(false);
-  const [tempTime, setTempTime] = useState(value || '09:00');
+export default function TimePicker({ 
+  value, 
+  onChange, 
+  style, 
+  placeholder = "시간을 선택하세요", 
+  minTime,
+  maxTime 
+}: TimePickerProps) {
+  const [open, setOpen] = useState(false);
+  const [selectedValue, setSelectedValue] = useState<string | null>(value || null);
 
-  const timeOptions: string[] = [];
-  for (let hour = 0; hour < 24; hour++) {
-    for (let minute = 0; minute < 60; minute += 15) {
-      const timeString = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
-      timeOptions.push(timeString);
+  // 15분 단위로 시간 옵션 생성 (00:00 ~ 23:45)
+  const timeOptions = useMemo(() => {
+    const options: { label: string; value: string }[] = [];
+    for (let hour = 0; hour < 24; hour++) {
+      for (let minute = 0; minute < 60; minute += 15) {
+        const timeString = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+        
+        // minTime과 maxTime 필터링
+        const isAfterMin = !minTime || timeString >= minTime;
+        const isBeforeMax = !maxTime || timeString <= maxTime;
+        
+        if (isAfterMin && isBeforeMax) {
+          options.push({
+            label: timeString,
+            value: timeString,
+          });
+        }
+      }
     }
-  }
+    return options;
+  }, [minTime, maxTime]);
 
-  const handleTimeSelect = (time: string) => {
-    setTempTime(time);
-    onChange(time);
-    setShowPicker(false);
-  };
+  // value가 변경될 때 selectedValue 업데이트
+  useEffect(() => {
+    if (value) {
+      setSelectedValue(value);
+    } else {
+      setSelectedValue(null);
+    }
+  }, [value]);
 
-  const handleCancel = () => {
-    setTempTime(value || '09:00');
-    setShowPicker(false);
-  };
-
-  const getDisplayText = () => {
-    if (!value) return placeholder;
-    return value;
-  };
+  // 선택된 값이 변경될 때 onChange 호출
+  useEffect(() => {
+    if (selectedValue) {
+      onChange(selectedValue);
+    }
+  }, [selectedValue]);
 
   return (
-    <View style={style}>
-      <Pressable style={styles.timeInput} onPress={() => setShowPicker(true)}>
-        <Text style={value ? styles.timeText : styles.placeholderText}>{getDisplayText()}</Text>
-        <Text style={styles.arrow}>▼</Text>
-      </Pressable>
-
-      <Modal visible={showPicker} transparent={true} animationType="slide" onRequestClose={handleCancel}>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>시간 선택</Text>
-            <ScrollView style={styles.timeList} showsVerticalScrollIndicator={true}>
-              {timeOptions.map((time) => {
-                const isDisabled = minTime && time < minTime;
-                return (
-                  <Pressable
-                    key={time}
-                    style={[
-                      styles.timeOption, 
-                      tempTime === time && styles.selectedTimeOption,
-                      isDisabled && styles.disabledTimeOption
-                    ]}
-                    onPress={() => !isDisabled && handleTimeSelect(time)}
-                    disabled={!!isDisabled}
-                  >
-                    <Text style={[
-                      styles.timeOptionText, 
-                      tempTime === time && styles.selectedTimeOptionText,
-                      isDisabled && styles.disabledTimeOptionText
-                    ]}>
-                      {time}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </ScrollView>
-            <Pressable style={styles.cancelButton} onPress={handleCancel}>
-              <Text style={styles.cancelButtonText}>취소</Text>
-            </Pressable>
-          </View>
-        </View>
-      </Modal>
+    <View style={[styles.wrapper, style, { zIndex: open ? 10000 : 1 }]}>
+      <DropDownPicker
+        open={open}
+        value={selectedValue}
+        items={timeOptions}
+        setOpen={setOpen}
+        setValue={(callback: any) => {
+          const next = callback(selectedValue) as string | null;
+          setSelectedValue(next);
+        }}
+        placeholder={placeholder}
+        placeholderStyle={styles.placeholder}
+        textStyle={styles.text}
+        labelStyle={styles.text}
+        listItemLabelStyle={styles.listItemLabel}
+        selectedItemLabelStyle={styles.selectedItem}
+        selectedItemContainerStyle={styles.selectedItemContainer}
+        style={[styles.dropdown, { width: '100%' }]}
+        dropDownContainerStyle={[styles.dropdownContainer, { width: '100%' }]}
+        containerStyle={[styles.dropdownOuter, { width: '100%' }]}
+        listMode="SCROLLVIEW"
+        scrollViewProps={{ 
+          nestedScrollEnabled: true, 
+          keyboardShouldPersistTaps: 'handled',
+          showsVerticalScrollIndicator: false 
+        }}
+        ArrowDownIconComponent={() => <DownArrowIcon width={16} height={16} />}
+        ArrowUpIconComponent={() => <UpperArrowIcon width={16} height={16} />}
+        translation={{ NOTHING_TO_SHOW: '선택 가능한 시간이 없습니다' }}
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  timeInput: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderWidth: 1, borderColor: '#ced4da', borderRadius: 6, paddingHorizontal: 10, paddingVertical: 8, backgroundColor: '#f8f9fa' },
-  timeText: { fontSize: 14, color: '#343a40' },
-  placeholderText: { fontSize: 14, color: '#6c757d' },
-  arrow: { fontSize: 12, color: '#6c757d' },
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' },
-  modalContent: { backgroundColor: 'white', borderRadius: 10, padding: 20, width: '80%', maxHeight: '60%' },
-  modalTitle: { fontSize: 18, fontWeight: '700', color: '#212529', marginBottom: 15, textAlign: 'center' },
-  timeList: { maxHeight: 300, width: '100%' },
-  timeOption: { paddingVertical: 12, paddingHorizontal: 15, borderBottomWidth: 1, borderBottomColor: '#eee' },
-  selectedTimeOption: { backgroundColor: '#e3f2fd', borderRadius: 5 },
-  timeOptionText: { fontSize: 16, color: '#343a40', textAlign: 'center' },
-  selectedTimeOptionText: { color: '#007AFF', fontWeight: '600' },
-  disabledTimeOption: { opacity: 0.3 },
-  disabledTimeOptionText: { color: '#ccc' },
-  cancelButton: { marginTop: 15, paddingVertical: 10, paddingHorizontal: 20, backgroundColor: '#6c757d', borderRadius: 6, alignItems: 'center' },
-  cancelButtonText: { color: 'white', fontSize: 14, fontWeight: '500' },
+  wrapper: { 
+    position: 'relative' 
+  },
+  dropdown: {
+    borderWidth: 0,
+    borderRadius: radii.md,
+    backgroundColor: colors.gray300,
+    minHeight: 40,
+    position: 'relative',
+    zIndex: 9999,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 10,
+  },
+  dropdownContainer: {
+    borderWidth: 0,
+    borderRadius: radii.md,
+    backgroundColor: colors.gray300,
+    zIndex: 9999,
+    elevation: 6,
+  },
+  dropdownOuter: { 
+    position: 'relative', 
+    zIndex: 9999 
+  },
+  placeholder: {
+    ...textStyles.body4,
+    color: colors.gray600,
+  },
+  text: {
+    ...textStyles.body4,
+    color: colors.black,
+  },
+  listItemLabel: {
+    ...textStyles.body4,
+    color: colors.black,
+    backgroundColor: colors.gray300,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 6,
+  },
+  selectedItem: {
+    ...textStyles.body4,
+    color: colors.black,
+  },
+  selectedItemContainer: {
+    backgroundColor: colors.gray300,
+  },
 });
 
 
