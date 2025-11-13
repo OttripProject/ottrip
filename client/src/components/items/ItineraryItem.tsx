@@ -13,7 +13,6 @@ import { spacing } from '@/ui/tokens/spacing';
 import { radii } from '@/ui/tokens/radii';
 import DeleteIcon from '../../../assets/delete_gray.svg';
 import AddIcon from '../../../assets/add.svg';
-
 interface ItineraryItemProps {
   itinerary?: any;
   planId: number;
@@ -23,6 +22,7 @@ interface ItineraryItemProps {
   onDelete?: (itineraryId: string) => void;
   onExpenseUpdate?: () => void;
   selectedDate?: Date; // 선택된 날짜
+  onShowWarning?: () => void;
 }
 
 export default function ItineraryItem({ 
@@ -33,7 +33,8 @@ export default function ItineraryItem({
   onCancel, 
   onDelete,
   onExpenseUpdate,
-  selectedDate
+  selectedDate,
+  onShowWarning
 }: ItineraryItemProps) {
   const [formData, setFormData] = useState({
     title: itinerary?.title || '',
@@ -151,7 +152,24 @@ export default function ItineraryItem({
   }, [planData?.expenses, itinerary?.id]);
 
   const handleSave = async () => {
-    if (!formData.title.trim()) {
+    // 필수 값 검증
+    if (!formData.title.trim() || 
+        !formData.country.trim() || 
+        !formData.city.trim() || 
+        !formData.itineraryDate || 
+        !formData.startTime || 
+        !formData.endTime) {
+      onShowWarning?.();
+      return;
+    }
+
+    // 길이 제한 검증
+    if (formData.title.trim().length > 10) {
+      Alert.alert('오류', '제목은 최대 10자까지 입력 가능합니다.');
+      return;
+    }
+    if (formData.location && formData.location.trim().length > 100) {
+      Alert.alert('오류', '장소는 최대 100자까지 입력 가능합니다.');
       return;
     }
 
@@ -344,7 +362,12 @@ export default function ItineraryItem({
             variant="filled"
             placeholder={PLACEHOLDERS.itinerary.titleForm}
             value={formData.title}
-            onChangeText={(text) => setFormData({ ...formData, title: text })}
+            onChangeText={(text) => {
+              if (text.length <= 10) {
+                setFormData({ ...formData, title: text });
+              }
+            }}
+            maxLength={10}
             style={styles.input}
             placeholderTextColor={colors.gray600}
           />
@@ -393,7 +416,12 @@ export default function ItineraryItem({
             variant="filled"
             placeholder="장소를 입력하세요."
             value={formData.location}
-            onChangeText={(text) => setFormData({ ...formData, location: text })}
+            onChangeText={(text) => {
+              if (text.length <= 100) {
+                setFormData({ ...formData, location: text });
+              }
+            }}
+            maxLength={100}
             style={styles.input}
             placeholderTextColor={colors.gray600}
           />
@@ -547,7 +575,7 @@ export default function ItineraryItem({
         <Pressable
           style={styles.saveButton}
           onPress={handleSave}
-          disabled={isLoading || !formData.title.trim()}
+          disabled={isLoading}
         >
           <Text style={styles.saveButtonText}>
             {isLoading ? '저장 중...' : '저장'}

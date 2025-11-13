@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { ScrollView, View, Text, StyleSheet } from 'react-native';
 import ModalLayout from './ModalLayout';
 import ItinerarySection from './DetailsModalSections/ItinerarySection';
 import FlightSection from './DetailsModalSections/FlightSection';
 import AccommodationSection from './DetailsModalSections/AccommodationSection';
+import WarningBanner from '@/ui/components/toast/warning';
 
 interface DetailsModalProps {
   planData?: {
@@ -60,6 +61,7 @@ export default function DetailsModal({
   onConsumeOpenNewAccommodationForm,
   newAccommodationDraft,
 }: DetailsModalProps) {
+  const [showWarning, setShowWarning] = useState(false);
   if (!planData?.plan) {
     return (
       <ModalLayout style={styles.container}>
@@ -83,6 +85,7 @@ export default function DetailsModal({
           openNewItineraryForm={openNewItineraryForm}
           onConsumeOpenNewItineraryForm={onConsumeOpenNewItineraryForm}
           selectedItineraryDate={selectedItineraryDate}
+          onShowWarning={() => setShowWarning(true)}
         />
       );
     }
@@ -134,6 +137,7 @@ export default function DetailsModal({
             openNewItineraryForm={openNewItineraryForm}
             onConsumeOpenNewItineraryForm={onConsumeOpenNewItineraryForm}
             selectedItineraryDate={selectedItineraryDate}
+            onShowWarning={() => setShowWarning(true)}
           />
         );
 
@@ -175,6 +179,12 @@ export default function DetailsModal({
   return (
     <ModalLayout style={styles.container}>
       <View style={styles.scrollWrapper}>
+        <WarningBanner
+          message="입력되지 않은 값이 있어요."
+          visible={showWarning}
+          duration={1000}
+          onHide={() => setShowWarning(false)}
+        />
         <ScrollView 
           style={styles.scrollView}
           contentContainerStyle={isInitial ? [styles.scrollContent, styles.centerScroll] : styles.scrollContent}
@@ -203,7 +213,8 @@ const styles = StyleSheet.create({
   scrollWrapper: {
     flex: 1,
     minHeight: 0,
-    overflow: 'hidden',
+    overflow: 'visible',
+    position: 'relative',
   },
   centerScroll: {
     flexGrow: 1,
