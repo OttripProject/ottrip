@@ -27,6 +27,7 @@ import AirplaneIcon from '../../../assets/airplane.svg';
 import MemoIcon from '../../../assets/memo.svg';
 import XIcon from '../../../assets/x.svg';
 import FilesIcon from '../../../assets/files.svg';
+import AccommodationIcon from '../../../assets/accomodation.svg';
 
 dayjs.locale(ko);
 
@@ -461,7 +462,7 @@ export default function WeeklyScheduleModal({
         events={events}
         height={height - 50}
         date={currentWeekStart.toDate()}
-        hourRowHeight={60}
+        hourRowHeight={40}
         weekStartsOn={1}
         hideNowIndicator
         swipeEnabled
@@ -471,23 +472,28 @@ export default function WeeklyScheduleModal({
           return (
             <View>
               <View style={{ flexDirection: 'row', height: 70 }}>
-                <View style={{ width: 50, borderRightWidth: 0.5, borderRightColor: '#e0e0e0' }} />
-                {getWeekDays().map((date, index) => (
-                  <View key={date} style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-                    <Text style={{ fontSize: 12 }}>
-                      {dayjs(date).format('ddd')}
-                    </Text>
-                    <Text style={{ fontSize: 16, fontWeight: 'bold' }}>
-                      {dayjs(date).format('D')}
-                    </Text>
-                  </View>
-                ))}
+                <View style={{ width: 50 }} />
+                {getWeekDays().map((date, index) => {
+                  const isToday = dayjs(date).format('YYYY-MM-DD') === dayjs().format('YYYY-MM-DD');
+                  return (
+                    <View key={date} style={styles.dateHeaderCell}>
+                      <Text style={styles.weekdayText}>
+                        {dayjs(date).format('ddd')}
+                      </Text>
+                      <View style={isToday ? styles.todayDateCircle : null}>
+                        <Text style={isToday ? styles.todayDateText : styles.dateText}>
+                          {dayjs(date).format('D')}
+                        </Text>
+                      </View>
+                    </View>
+                  );
+                })}
               </View>
               {/* 날짜 헤더 아래 공간 - 시간 열에 "숙박 */}
               {internalSelectedTrip && (
-                <View style={{ flexDirection: 'row', height: 50, backgroundColor: '', borderTopWidth: 0.5, borderBottomWidth: 0.5, borderTopColor: '#e0e0e0', borderBottomColor: '#e0e0e0' }}>
+                <View style={{ flexDirection: 'row', height: 40, backgroundColor: '', borderTopWidth: 0.5, borderBottomWidth: 0.5, borderTopColor: '#e0e0e0', borderBottomColor: '#e0e0e0' }}>
                   <View style={{ width: 50, justifyContent: 'center', alignItems: 'center', borderRightWidth: 0.5, borderRightColor: '#e0e0e0' }}>
-                    <Text style={{ fontSize: 14, fontWeight: '500' }}>숙박</Text>
+                    <AccommodationIcon width={16} height={16} />
                   </View>
                   <View style={{ flex: 1, flexDirection: 'row' }}>
                     {getWeekDays().map((date, index) => {
@@ -714,8 +720,6 @@ const styles = StyleSheet.create({
       paddingHorizontal: 32,
       paddingVertical: 22,
       backgroundColor: colors.white,
-      borderBottomWidth: 1,
-      borderBottomColor: colors.gray300,
       zIndex: 9998,
     },
     leftSection: {
@@ -734,8 +738,28 @@ const styles = StyleSheet.create({
     },
     dateText: {
       ...textStyles.h6,
-      minWidth: 90,
-      textAlign: 'center',
+    },
+    dateHeaderCell: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      gap: spacing.sm,
+    },
+    weekdayText: {
+      ...textStyles.h8,
+      color: colors.gray600,
+    },
+    todayDateCircle: {
+      width: 32,
+      height: 32,
+      borderRadius: 16,
+      backgroundColor: colors.primary,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    todayDateText: {
+      ...textStyles.h6,
+      color: colors.white,
     },
     rightSection: {
       flexDirection: 'row',
