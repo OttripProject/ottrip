@@ -67,6 +67,7 @@ export default function ItineraryItem({
   // 지출 관련 상태
   const [showExpenseForm, setShowExpenseForm] = useState(false);
   const [expenseOpen, setExpenseOpen] = useState(false);
+  const [editingExpense, setEditingExpense] = useState<any | null>(null);
   const [expenseForm, setExpenseForm] = useState({
     category: ExpenseCategory.ETC,
     amount: 0,
@@ -293,6 +294,64 @@ export default function ItineraryItem({
       return;
     }
 
+    // 편집 모드인 경우
+    if (editingExpense && !editingExpense.isDraft) {
+      try {
+        await expensesApi.updateExpense(Number(editingExpense.id), {
+          category: expenseForm.category,
+          amount: expenseForm.amount,
+          description: expenseForm.description,
+        });
+        
+        // 지출 목록 새로고침
+        if (itinerary?.id) {
+          const updatedExpenses = await expensesApi.getExpensesByItinerary(itinerary.id);
+          setExpenses(updatedExpenses);
+        }
+        
+        setExpenseForm({
+          category: ExpenseCategory.ETC,
+          amount: 0,
+          description: '',
+        });
+        setEditingExpense(null);
+        setShowExpenseForm(false);
+        
+        Alert.alert('성공', '지출이 수정되었습니다.');
+        return;
+      } catch (error) {
+        console.error('Failed to update expense:', error);
+        Alert.alert('오류', '지출 수정에 실패했습니다.');
+        return;
+      }
+    }
+
+    // draft expense 편집 모드인 경우
+    if (editingExpense && editingExpense.isDraft) {
+      const draftIndex = Number(editingExpense.id.split('-')[1]);
+      setDraftExpenses(prev => {
+        const updated = [...prev];
+        updated[draftIndex] = {
+          ...updated[draftIndex],
+          category: expenseForm.category,
+          amount: expenseForm.amount,
+          description: expenseForm.description,
+        };
+        return updated;
+      });
+      
+      setExpenseForm({
+        category: ExpenseCategory.ETC,
+        amount: 0,
+        description: '',
+      });
+      setEditingExpense(null);
+      setShowExpenseForm(false);
+      
+      Alert.alert('성공', '지출이 수정되었습니다. (일정 저장 시 함께 저장됩니다)');
+      return;
+    }
+
     // 새 일정 생성 중에는 로컬 상태에만 저장
     if (!itinerary?.id) {
       const newDraftExpense = {
@@ -476,7 +535,19 @@ export default function ItineraryItem({
         {allExpenses.length > 0 && (
           <View style={styles.expenseList}>
             {allExpenses.map((expense) => (
-              <View key={expense.id} style={styles.expenseCard}>
+              <Pressable
+                key={expense.id}
+                style={styles.expenseCard}
+                onPress={() => {
+                  setEditingExpense(expense);
+                  setExpenseForm({
+                    category: expense.category as ExpenseCategory,
+                    amount: expense.amount,
+                    description: expense.description || '',
+                  });
+                  setShowExpenseForm(true);
+                }}
+              >
                 <View style={styles.expenseCardContent}>
                   <View style={styles.expenseCardHeader}>
                     <Text style={styles.expenseCardTitle}>
@@ -484,7 +555,8 @@ export default function ItineraryItem({
                     </Text>
                     <Pressable
                       style={styles.deleteExpenseButton}
-                      onPress={() => {
+                      onPress={(e) => {
+                        e.stopPropagation();
                         if (expense.isDraft) {
                           setDraftExpenses(prev => prev.filter((_, i) => i !== Number(expense.id.split('-')[1])));
                         } else {
@@ -500,7 +572,7 @@ export default function ItineraryItem({
                     ₩{expense.amount.toLocaleString()}
                   </Text>
                 </View>
-              </View>
+              </Pressable>
             ))}
           </View>
         )}
@@ -508,7 +580,15 @@ export default function ItineraryItem({
         {/* 지출 추가 버튼 */}
           <Pressable
             style={styles.addExpenseButton}
-            onPress={() => setShowExpenseForm(!showExpenseForm)}
+            onPress={() => {
+              setEditingExpense(null);
+              setExpenseForm({
+                category: ExpenseCategory.ETC,
+                amount: 0,
+                description: '',
+              });
+              setShowExpenseForm(!showExpenseForm);
+            }}
           >
           <View style={styles.addIconWrapper}>
             <AddIcon width={16} height={16} />
@@ -562,6 +642,7 @@ export default function ItineraryItem({
               <Pressable
                 style={styles.expenseCancelButton}
                 onPress={() => {
+                  setEditingExpense(null);
                   setExpenseForm({
                     category: ExpenseCategory.ETC,
                     amount: 0,
@@ -576,7 +657,9 @@ export default function ItineraryItem({
                 style={styles.expenseSubmitButton}
                 onPress={handleExpenseSubmit}
               >
-                <Text style={styles.expenseSubmitButtonText}>추가</Text>
+                <Text style={styles.expenseSubmitButtonText}>
+                  {editingExpense ? '수정' : '추가'}
+                </Text>
               </Pressable>
             </View>
           </View>
