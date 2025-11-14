@@ -6,6 +6,7 @@ import dayjs from 'dayjs';
 import ko from 'dayjs/locale/ko';
 import TripSelector from '../TripSelector';
 import SharePlanModal from '@/components/modals/SharePlanModal';
+import MonthCalendarPopup from '@/components/popup/MonthCalendarPopup';
 import { plansApi } from '@/services/plans';
 import { Plan, CreatePlanRequest, UpdatePlanRequest } from '@/types/api';
 import ModalLayout from './ModalLayout';
@@ -375,9 +376,22 @@ export default function WeeklyScheduleModal({
             <Text style={styles.actionButtonText}>오늘</Text>
           </Pressable>
 
-          <Pressable onPress={() => setShowMonthPicker(true)} style={[styles.iconButton, { marginLeft: spacing.sm }]}>
-            <CalenderIcon width={16} height={16} />
-          </Pressable>
+          <View style={styles.calendarButtonWrapper}>
+            <Pressable onPress={() => setShowMonthPicker(true)} style={[styles.iconButton, { marginLeft: spacing.sm }]}>
+              <CalenderIcon width={16} height={16} />
+            </Pressable>
+            <MonthCalendarPopup
+              visible={showMonthPicker}
+              selectedDate={selectedDate}
+              onDayPress={(day) => {
+                setSelectedDate(day.dateString);
+                const monday = dayjs(day.dateString).startOf('week').add(1, 'day');
+                setCurrentWeekStart(monday);
+              }}
+              onClose={() => setShowMonthPicker(false)}
+              style={styles.calendarPopup}
+            />
+          </View>
         </View>
 
         {/* 오른쪽: 여행 선택 및 기능 버튼 */}
@@ -584,35 +598,6 @@ export default function WeeklyScheduleModal({
       />
       </View>
 
-      {/* 월별 달력 모달 */}
-      <Modal visible={showMonthPicker} transparent animationType="fade" onRequestClose={() => setShowMonthPicker(false)}>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Calendar
-              current={selectedDate}
-              onDayPress={(day) => {
-                setSelectedDate(day.dateString);
-                const monday = dayjs(day.dateString).startOf('week').add(1, 'day');
-                setCurrentWeekStart(monday);
-                setShowMonthPicker(false);
-              }}
-              firstDay={1}
-              monthFormat={'M월 yyyy'}
-              markedDates={{
-                [selectedDate]: { selected: true, selectedColor: '#111', selectedTextColor: '#fff' },
-              }}
-              theme={{
-                arrowColor: '#111',
-                todayTextColor: '#111',
-                textMonthFontWeight: '700',
-              }}
-            />
-            <Pressable onPress={() => setShowMonthPicker(false)} style={[styles.todayBtn, { alignSelf: 'center', marginTop: 8 }]}>
-              <Text style={styles.todayText}>닫기</Text>
-            </Pressable>
-          </View>
-        </View>
-      </Modal>
 
       {/* 공유 모달 */}
       <SharePlanModal
@@ -807,6 +792,24 @@ const styles = StyleSheet.create({
       ...textStyles.h8,
       fontSize: 12,
       lineHeight: 18,
+    },
+    calendarButtonWrapper: {
+      position: 'relative',
+    },
+    calendarPopup: {
+      position: 'absolute',
+      top: 40,
+      left: 8,
+      width: 276,
+      backgroundColor: colors.white,
+      borderRadius: 10,
+      padding: 12,
+      elevation: 8,
+      shadowColor: colors.black,
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.3,
+      shadowRadius: 8,
+      zIndex: 10000,
     },
     modalOverlay: {
       flex: 1,
