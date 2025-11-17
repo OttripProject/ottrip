@@ -15,9 +15,11 @@ interface CountryPickerProps {
   placeholder?: string;
   containerStyle?: ViewStyle;
   disabled?: boolean;
+  onOpen?: () => void;
+  onClose?: () => void;
 }
 
-export default function CountryPicker({ value, onChange, placeholder = '국가 선택', containerStyle, disabled }: CountryPickerProps) {
+export default function CountryPicker({ value, onChange, placeholder = '국가 선택', containerStyle, disabled, onOpen, onClose }: CountryPickerProps) {
   const options = useMemo(() => getKoreanCountryOptions(), []);
   const [open, setOpen] = useState(false);
   const [code, setCode] = useState<string | null>(null);
@@ -33,7 +35,14 @@ export default function CountryPicker({ value, onChange, placeholder = '국가 �
         open={open}
         value={code}
         items={options}
-        setOpen={setOpen}
+        setOpen={(isOpen) => {
+          setOpen(isOpen);
+          if (isOpen) {
+            onOpen?.();
+          } else {
+            onClose?.();
+          }
+        }}
         setValue={(callback: any) => {
           const next = callback(code) as string | null;
           setCode(next);

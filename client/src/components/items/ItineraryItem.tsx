@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { View, Text, Pressable, StyleSheet, Alert, ScrollView } from 'react-native';
-import { DatePicker, TimePicker, CountryPicker, CategoryPicker } from '@/ui/components/pickers';
+import { View, Text, Pressable, StyleSheet, Alert, ScrollView, Modal } from 'react-native';
+import { TimePicker, CountryPicker, CategoryPicker } from '@/ui/components/pickers';
 import Input from '@/ui/components/input/Input';
 import { PLACEHOLDERS } from '@/constants/placeholders';
 import dayjs from 'dayjs';
@@ -13,6 +13,8 @@ import { spacing } from '@/ui/tokens/spacing';
 import { radii } from '@/ui/tokens/radii';
 import DeleteIcon from '../../../assets/delete_gray.svg';
 import AddIcon from '../../../assets/add.svg';
+import MonthCalendarPopup from '@/components/popup/MonthCalendarPopup';
+import CalendarIcon from '../../../assets/calender.svg';
 
 interface ItineraryItemProps {
   itinerary?: any;
@@ -63,6 +65,7 @@ export default function ItineraryItem({
   // 국가 드롭다운 상태 및 옵션 (ISO 3166 → 한국어 라벨)
   const [countryOpen, setCountryOpen] = useState(false);
   const [timeOpen, setTimeOpen] = useState(false);
+  const [showDatePicker, setShowDatePicker] = useState(false);
   
   // 지출 관련 상태
   const [showExpenseForm, setShowExpenseForm] = useState(false);
@@ -423,11 +426,13 @@ export default function ItineraryItem({
   }, [draftExpenses, expenses]);
 
   return (
-    <ScrollView style={[styles.container, { position: 'relative', overflow: 'visible' }]}
-    contentContainerStyle={[styles.contentContainer, { overflow: 'visible' }]}>
+    <>
+    <ScrollView 
+      style={[styles.container, { position: 'relative', overflow: 'visible' }]}
+      contentContainerStyle={[styles.contentContainer, { overflow: 'visible' }]}
+    >
+      <View style={styles.contentWrapper}>
         <Text style={styles.title}>{itinerary ? '일정 편집' : '일정 추가'}</Text>
-      
-      <View style={styles.formSection}>
       <View style={styles.inputGroup}>
           <Text style={styles.label}>제목</Text>
         <Input
@@ -460,12 +465,14 @@ export default function ItineraryItem({
         />
       </View>
 
-      <View style={[styles.row, styles.pickerRowWrapper, { zIndex: countryOpen ? 10000 : 1 }]}>
+      <View style={[styles.row, styles.pickerRowWrapper, { zIndex: countryOpen ? 10001 : 1 }]}>
         <View style={[styles.inputGroup, styles.halfWidth, styles.countryPickerWrapper]}>
             <Text style={styles.label}>국가</Text>
           <CountryPicker
             value={formData.country}
             onChange={(name: string) => setFormData({ ...formData, country: name })}
+            onOpen={() => setCountryOpen(true)}
+            onClose={() => setCountryOpen(false)}
               placeholder={PLACEHOLDERS.itinerary.countryForm}
           />
         </View>
@@ -499,11 +506,27 @@ export default function ItineraryItem({
         />
       </View>
 
-      <View style={styles.inputGroup}>
+      <View style={[styles.inputGroup, styles.datePickerWrapper, { zIndex: showDatePicker ? 20000 : 1 }]}>
         <Text style={styles.label}>날짜</Text>
-        <DatePicker
-          value={formData.itineraryDate}
-          onChange={(date) => setFormData({ ...formData, itineraryDate: date })}
+        <Pressable style={styles.dateInput} onPress={() => setShowDatePicker(!showDatePicker)}>
+          <View style={styles.dateTextContainer}>
+            <Text style={styles.dateText}>
+              {dayjs(formData.itineraryDate).format('YYYY년 M월 D일')}
+            </Text>
+            <View style={styles.iconWrapper}>
+              <CalendarIcon width={16} height={16} />
+            </View>
+          </View>
+        </Pressable>
+        <MonthCalendarPopup
+          visible={showDatePicker}
+          selectedDate={formData.itineraryDate}
+          onDayPress={(day) => {
+            setFormData({ ...formData, itineraryDate: day.dateString });
+            setShowDatePicker(false);
+          }}
+          onClose={() => setShowDatePicker(false)}
+          style={[styles.calendarPopup, { position: 'absolute', zIndex: 20000 }]}
         />
       </View>
 
@@ -513,6 +536,8 @@ export default function ItineraryItem({
           <TimePicker
             value={formData.startTime}
             onChange={(time) => setFormData({ ...formData, startTime: time })}
+            onOpen={() => setTimeOpen(true)}
+            onClose={() => setTimeOpen(false)}
               maxTime={formData.endTime}
           />
         </View>
@@ -521,11 +546,12 @@ export default function ItineraryItem({
           <TimePicker
             value={formData.endTime}
             onChange={(time) => setFormData({ ...formData, endTime: time })}
+            onOpen={() => setTimeOpen(true)}
+            onClose={() => setTimeOpen(false)}
               minTime={formData.startTime}
           />
           </View>
         </View>
-      </View>
 
       {/* 지출 추가 섹션 */}
       <View style={styles.expenseSection}>
@@ -599,12 +625,14 @@ export default function ItineraryItem({
         {/* 지출 추가 폼 */}
         {showExpenseForm && (
           <View style={styles.expenseForm}>
-            <View style={styles.expenseFormRow}>
+            <View style={[styles.expenseFormRow, { zIndex: expenseOpen ? 10001 : 1 }]}>
               <View style={styles.expenseFormHalf}>
             <Text style={styles.label}>카테고리</Text>
             <CategoryPicker
               value={expenseForm.category}
               onChange={(cat: ExpenseCategory) => setExpenseForm({ ...expenseForm, category: cat })}
+              onOpen={() => setExpenseOpen(true)}
+              onClose={() => setExpenseOpen(false)}
                 />
               </View>
               <View style={styles.expenseFormHalf}>
@@ -683,7 +711,22 @@ export default function ItineraryItem({
           </Text>
         </Pressable>
       </View>
+      </View>
     </ScrollView>
+    {showDatePicker && (
+      <Modal
+        visible={showDatePicker}
+        transparent={true}
+        animationType="none"
+        onRequestClose={() => setShowDatePicker(false)}
+      >
+        <Pressable 
+          style={styles.modalOverlay}
+          onPress={() => setShowDatePicker(false)}
+        />
+      </Modal>
+    )}
+    </>
   );
 }
 
@@ -696,9 +739,14 @@ const styles = StyleSheet.create({
     padding: spacing.xl,
     gap: spacing.xl,
   },
+  contentWrapper: {
+    position: 'relative',
+    overflow: 'visible',
+    gap: spacing.lg,
+  },
   title: {
     ...textStyles.h5,
-    marginBottom: 0,
+    marginBottom: spacing.lg,
   },
   formSection: {
     gap: spacing.lg,
@@ -777,6 +825,9 @@ const styles = StyleSheet.create({
   },
   // 지출 관련 스타일
   expenseSection: {
+    position: 'relative',
+    overflow: 'visible',
+    zIndex: 1,
     gap: spacing.sm,
   },
   expenseList: {
@@ -906,5 +957,46 @@ const styles = StyleSheet.create({
     padding: 4,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  dateInput: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 0,
+    borderRadius: radii.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 10,
+    backgroundColor: colors.gray300,
+    minHeight: 40,
+  },
+  dateTextContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    flex: 1,
+  },
+  dateText: {
+    ...textStyles.body4,
+    color: colors.black,
+  },
+  iconWrapper: {
+    marginTop: -2,
+  },
+  datePickerWrapper: {
+    position: 'relative',
+    overflow: 'visible',
+  },
+  calendarPopup: {
+    position: 'absolute',
+    top: 70,
+    left: 0,
+  },
+  modalOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'transparent',
+    zIndex: 19999,
   },
 });
