@@ -684,6 +684,21 @@ export default function WeeklyScheduleModal({
         </View>
       </Modal>
 
+      {/* 달력 팝업 외부 클릭 감지 */}
+      {showMonthPicker && (
+        <Modal
+          visible={showMonthPicker}
+          transparent={true}
+          animationType="none"
+          onRequestClose={() => setShowMonthPicker(false)}
+        >
+          <Pressable 
+            style={styles.calendarModalOverlay}
+            onPress={() => setShowMonthPicker(false)}
+          />
+        </Modal>
+      )}
+
 
     </ModalLayout>
   );
@@ -817,6 +832,15 @@ const styles = StyleSheet.create({
       backgroundColor: colors.overlayBackground,
       justifyContent: 'center',
       alignItems: 'center',
+    },
+    calendarModalOverlay: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: 'transparent',
+      zIndex: 9999,
     },
     modalContent: {
       backgroundColor: colors.white,

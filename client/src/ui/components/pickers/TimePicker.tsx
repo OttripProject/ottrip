@@ -15,6 +15,8 @@ interface TimePickerProps {
   placeholder?: string;
   minTime?: string; // 'HH:mm' 형식, 이 시간 이후만 선택 가능
   maxTime?: string; // 'HH:mm' 형식, 이 시간 이전만 선택 가능
+  onOpen?: () => void;
+  onClose?: () => void;
 }
 
 export default function TimePicker({ 
@@ -23,7 +25,9 @@ export default function TimePicker({
   style, 
   placeholder = "시간을 선택하세요", 
   minTime,
-  maxTime 
+  maxTime,
+  onOpen,
+  onClose
 }: TimePickerProps) {
   const [open, setOpen] = useState(false);
   const [selectedValue, setSelectedValue] = useState<string | null>(value || null);
@@ -72,7 +76,14 @@ export default function TimePicker({
         open={open}
         value={selectedValue}
         items={timeOptions}
-        setOpen={setOpen}
+        setOpen={(isOpen) => {
+          setOpen(isOpen);
+          if (isOpen) {
+            onOpen?.();
+          } else {
+            onClose?.();
+          }
+        }}
         setValue={(callback: any) => {
           const next = callback(selectedValue) as string | null;
           setSelectedValue(next);

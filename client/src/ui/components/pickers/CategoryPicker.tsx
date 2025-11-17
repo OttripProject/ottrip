@@ -12,9 +12,11 @@ interface CategoryPickerProps {
   placeholder?: string;
   containerStyle?: ViewStyle;
   disabled?: boolean;
+  onOpen?: () => void;
+  onClose?: () => void;
 }
 
-export default function CategoryPicker({ value, onChange, placeholder = PLACEHOLDERS.picker.category, containerStyle, disabled }: CategoryPickerProps) {
+export default function CategoryPicker({ value, onChange, placeholder = PLACEHOLDERS.picker.category, containerStyle, disabled, onOpen, onClose }: CategoryPickerProps) {
   const items = useMemo(() =>
     Object.entries(categoryLabels).map(([v, label]) => ({ label, value: v as ExpenseCategory })), []);
   const [open, setOpen] = useState(false);
@@ -23,12 +25,19 @@ export default function CategoryPicker({ value, onChange, placeholder = PLACEHOL
   useEffect(() => setInnerValue(value), [value]);
 
   return (
-    <View style={[styles.wrapper, containerStyle, { zIndex: open ? 5000 : 1 }]}> 
+    <View style={[styles.wrapper, containerStyle, { zIndex: open ? 10000 : 1 }]}> 
       <DropDownPicker
         open={open}
         value={innerValue}
         items={items}
-        setOpen={setOpen}
+        setOpen={(isOpen) => {
+          setOpen(isOpen);
+          if (isOpen) {
+            onOpen?.();
+          } else {
+            onClose?.();
+          }
+        }}
         setValue={(callback: any) => {
           const next = callback(innerValue) as ExpenseCategory;
           setInnerValue(next);
@@ -37,9 +46,9 @@ export default function CategoryPicker({ value, onChange, placeholder = PLACEHOL
         disabled={disabled}
         placeholder={placeholder}
         style={styles.dropdown}
-        dropDownContainerStyle={styles.dropdownContainer}
+        dropDownContainerStyle={[styles.dropdownContainer, { zIndex: 11000, position: 'absolute' }]}
         listMode="SCROLLVIEW"
-        zIndex={5000}
+        zIndex={10000}
         zIndexInverse={1000}
       />
     </View>
