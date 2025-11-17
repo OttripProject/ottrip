@@ -30,8 +30,9 @@ export default function CategoryPicker({ value, onChange, placeholder = PLACEHOL
         open={open}
         value={innerValue}
         items={items}
-        setOpen={(isOpen) => {
-          setOpen(isOpen);
+        setOpen={(value) => {
+          const isOpen = typeof value === 'function' ? value(open) : value;
+          setOpen(value);
           if (isOpen) {
             onOpen?.();
           } else {
