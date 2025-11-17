@@ -9,6 +9,7 @@ import { textStyles } from '@/ui/tokens/typography';
 
 import LeftArrowIcon from '../../assets/left_arrow.svg';
 import CheckIcon from '../../assets/check.svg';
+import RightArrowTermIcon from '../../assets/right_arrow_term.svg';
 
 type RouteParams = {
   registerToken: string;
@@ -81,7 +82,7 @@ export default function TermsConsentScreen() {
                 <Text style={styles.checkboxLabel}>[필수] 서비스 이용 약관</Text>
           </Pressable>
           <Pressable onPress={() => navigation.navigate('상세내용', { key: 'tos' })}>
-                <Text style={styles.chevron}>›</Text>
+                <RightArrowTermIcon style={styles.termsChevron} />
           </Pressable>
         </View>
 
@@ -96,7 +97,7 @@ export default function TermsConsentScreen() {
                 <Text style={styles.checkboxLabel}>[필수] 개인정보 수집 및 이용</Text>
           </Pressable>
           <Pressable onPress={() => navigation.navigate('상세내용', { key: 'privacy' })}>
-                <Text style={styles.chevron}>›</Text>
+                <RightArrowTermIcon style={styles.termsChevron} />
           </Pressable>
         </View>
 
@@ -111,7 +112,7 @@ export default function TermsConsentScreen() {
                 <Text style={styles.checkboxLabel}>[선택] 이벤트*혜택 정보 수신 및 활용 동의</Text>
           </Pressable>
           <Pressable onPress={() => navigation.navigate('상세내용', { key: 'marketing' })}>
-                <Text style={styles.chevron}>›</Text>
+                <RightArrowTermIcon style={styles.termsChevron} />
           </Pressable>
       </View>
 
@@ -236,5 +237,9 @@ const styles = StyleSheet.create({
   },
   nextButtonTextDisabled: {
     color: colors.black,
+  },
+  termsChevron: {
+    width: 16,
+    height: 16,
   },
 });
