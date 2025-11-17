@@ -35,8 +35,9 @@ export default function CountryPicker({ value, onChange, placeholder = '국가 �
         open={open}
         value={code}
         items={options}
-        setOpen={(isOpen) => {
-          setOpen(isOpen);
+        setOpen={(value) => {
+          const isOpen = typeof value === 'function' ? value(open) : value;
+          setOpen(value);
           if (isOpen) {
             onOpen?.();
           } else {

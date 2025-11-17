@@ -76,8 +76,9 @@ export default function TimePicker({
         open={open}
         value={selectedValue}
         items={timeOptions}
-        setOpen={(isOpen) => {
-          setOpen(isOpen);
+        setOpen={(value) => {
+          const isOpen = typeof value === 'function' ? value(open) : value;
+          setOpen(value);
           if (isOpen) {
             onOpen?.();
           } else {
