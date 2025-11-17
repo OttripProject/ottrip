@@ -134,27 +134,44 @@ function DayCell({
   const isSingle = selection === 'single';
   const isToday = dayjs().isSame(dayjs(date.dateString), 'day');
 
+  const rangeStyle: any = {
+    opacity: (isStart || isEnd || isRange) ? 1 : 0,
+  };
+
+  if (isStart) {
+    rangeStyle.left = 16;
+    rangeStyle.right = -4;
+  } else if (isEnd) {
+    rangeStyle.left = -4;
+    rangeStyle.right = 16;
+  } else if (isRange) {
+    rangeStyle.left = -4;
+    rangeStyle.right = -4;
+  }
+
+  const circleStyle: any = {};
+  if (isSingle || isStart || isEnd) {
+    circleStyle.backgroundColor = colors.primary;
+  } else if (isToday && !selection) {
+    circleStyle.backgroundColor = '#E8F1FF';
+  }
+
   return (
     <Pressable
       style={styles.dayContainer}
       disabled={isDisabled}
       onPress={() => onPress?.(date)}
     >
-      {(isEnd || isRange) && (
-        <View
-          style={[
-            styles.dayRangeBackground,
-            isStart && styles.dayRangeStart,
-            isEnd && styles.dayRangeEnd,
-            isRange && styles.dayRangeMiddle,
-          ]}
-        />
-      )}
       <View
         style={[
-          styles.dayCircle,
-          (isSingle || isStart || isEnd) && styles.dayCircleSelected,
-          isToday && !selection && styles.dayCircleToday,
+          styles.rangeBase,
+          rangeStyle,
+        ]}
+      />
+      <View
+        style={[
+          styles.circleBase,
+          circleStyle,
         ]}
       >
         <Text
@@ -1165,13 +1182,13 @@ const styles = StyleSheet.create({
   dayContainer: {
     width: 32,
     height: 32,
-    alignItems: 'center',
     justifyContent: 'center',
-    marginVertical: 2,
+    alignItems: 'center',
     position: 'relative',
     overflow: 'visible',
+    marginVertical: 2,
   },
-  dayRangeBackground: {
+  rangeBase: {
     position: 'absolute',
     left: -12,
     right: -12,
@@ -1179,38 +1196,17 @@ const styles = StyleSheet.create({
     height: 32,
     marginTop: -16,
     backgroundColor: '#E8F1FF',
-    zIndex: 0, // ✅
+    zIndex: 1,
   },
-  dayRangeStart: {
-    width: 16,
-    left: 0,
-    right: undefined,
-  },
-  dayRangeEnd: {
-    width: 16,
-    left: undefined,
-    right: 0,
-  },
-  dayRangeMiddle: {
-    left: -14,
-    right: -14,
-  },
-  dayCircle: {
-    position: 'absolute', 
+  circleBase: {
+    position: 'absolute',
     width: 32,
     height: 32,
     borderRadius: 16,
-    alignItems: 'center',
     justifyContent: 'center',
-    zIndex: 5, 
-  },
-  dayCircleSelected: {
-    backgroundColor: '#007AFF',
-    zIndex: 10,
-  },
-  dayCircleToday: {
-    backgroundColor: '#E8F1FF',
-    zIndex: 6,
+    alignItems: 'center',
+    backgroundColor: 'transparent',
+    zIndex: 2,
   },
   dayText: {
     fontFamily: textStyles.body4.fontFamily,
@@ -1225,7 +1221,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   dayTextToday: {
-    color: colors.white,
+    color: colors.primary,
     fontWeight: '600',
   },
   deleteModalOverlay: {
