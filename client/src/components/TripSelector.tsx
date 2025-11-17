@@ -1223,7 +1223,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   dayTextToday: {
-    color: '#007AFF',
+    color: colors.white,
     fontWeight: '600',
   },
   deleteModalOverlay: {

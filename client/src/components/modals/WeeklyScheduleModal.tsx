@@ -383,6 +383,7 @@ export default function WeeklyScheduleModal({
             <MonthCalendarPopup
               visible={showMonthPicker}
               selectedDate={selectedDate}
+              currentWeekStart={currentWeekStart.format('YYYY-MM-DD')}
               onDayPress={(day) => {
                 setSelectedDate(day.dateString);
                 const monday = dayjs(day.dateString).startOf('week').add(1, 'day');
