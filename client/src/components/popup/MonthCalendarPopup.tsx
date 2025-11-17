@@ -125,22 +125,33 @@ export default function MonthCalendarPopup({
     return weekDates;
   };
 
+  const dayNames = ['월', '화', '수', '목', '금', '토', '일'];
+
   const customHeader = () => (
-    <View style={styles.header}>
-      <Text style={styles.headerText}>{monthYearText}</Text>
-      <View style={styles.arrowContainer}>
-        <Pressable 
-          style={styles.arrowButton}
-          onPress={() => handleMonthChange('prev')}
-        >
-          <LeftArrowIcon width={24} height={24} />
-        </Pressable>
-        <Pressable 
-          style={styles.arrowButton}
-          onPress={() => handleMonthChange('next')}
-        >
-          <RightArrowIcon width={24} height={24} />
-        </Pressable>
+    <View>
+      <View style={styles.header}>
+        <Text style={styles.headerText}>{monthYearText}</Text>
+        <View style={styles.arrowContainer}>
+          <Pressable 
+            style={styles.arrowButton}
+            onPress={() => handleMonthChange('prev')}
+          >
+            <LeftArrowIcon width={24} height={24} />
+          </Pressable>
+          <Pressable 
+            style={styles.arrowButton}
+            onPress={() => handleMonthChange('next')}
+          >
+            <RightArrowIcon width={24} height={24} />
+          </Pressable>
+        </View>
+      </View>
+      <View style={styles.dayHeader}>
+        {dayNames.map((day, index) => (
+          <View key={index} style={styles.dayHeaderCell}>
+            <Text style={styles.dayHeaderText}>{day}</Text>
+          </View>
+        ))}
       </View>
     </View>
   );
@@ -208,10 +219,27 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 12,
     minHeight: 40,
+    marginBottom: 8,
   },
   headerText: {
     ...textStyles.body1,
     color: colors.black,
+  },
+  dayHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 1,
+    marginBottom: 4,
+  },
+  dayHeaderCell: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginHorizontal: 17,
+  },
+  dayHeaderText: {
+    ...textStyles.body5,
+    color: colors.gray600,
   },
   arrowContainer: {
     flexDirection: 'row',
