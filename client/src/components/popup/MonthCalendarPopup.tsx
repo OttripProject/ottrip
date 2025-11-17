@@ -13,6 +13,7 @@ interface MonthCalendarPopupProps {
   onDayPress: (day: { dateString: string }) => void;
   onClose?: () => void;
   style?: any;
+  currentWeekStart?: string; // 현재 주간의 시작일 (월요일)
 }
 
 function DayCell({
@@ -22,6 +23,7 @@ function DayCell({
   onPress,
   hoveredWeek,
   setHoveredWeek,
+  currentWeekStart,
 }: {
   date?: DateData;
   state: string;
@@ -29,6 +31,7 @@ function DayCell({
   onPress?: (date: DateData) => void;
   hoveredWeek?: string | null;
   setHoveredWeek?: (week: string | null) => void;
+  currentWeekStart?: string;
 }) {
   if (!date) {
     return <View style={styles.dayContainer} />;
@@ -43,6 +46,9 @@ function DayCell({
   const dayOfWeek = dateObj.day() === 0 ? 6 : dateObj.day() - 1; // 0=월요일, 6=일요일
   const weekKey = dateObj.subtract(dayOfWeek, 'day').format('YYYY-MM-DD');
   const isHoveredWeek = hoveredWeek === weekKey;
+  
+  // 현재 주간 스케줄에 표시된 주간인지 확인
+  const isCurrentWeek = currentWeekStart && weekKey === dayjs(currentWeekStart).format('YYYY-MM-DD');
 
   return (
     <Pressable
@@ -53,8 +59,8 @@ function DayCell({
       onHoverOut={() => setHoveredWeek?.(null)}
     >
       {/* 주 단위 배경 */}
-      {isHoveredWeek && (
-        <View style={styles.weekBackground} />
+      {(isHoveredWeek || isCurrentWeek) && (
+        <View style={[styles.weekBackground, isCurrentWeek && styles.currentWeekBackground]} />
       )}
       {/* 오늘 날짜 원형 테두리 */}
       {isToday && !isSelected && (
@@ -84,31 +90,76 @@ export default function MonthCalendarPopup({
   onDayPress,
   onClose,
   style,
+  currentWeekStart,
 }: MonthCalendarPopupProps) {
   const [hoveredWeek, setHoveredWeek] = useState<string | null>(null);
+  const [currentMonth, setCurrentMonth] = useState(selectedDate);
 
   if (!visible) return null;
+
+  const currentDate = dayjs(currentMonth);
+  const monthYearText = `${currentDate.format('YYYY')}년 ${currentDate.format('M')}월`;
+
+  const handleMonthChange = (direction: 'prev' | 'next') => {
+    const newDate = direction === 'prev' 
+      ? currentDate.subtract(1, 'month')
+      : currentDate.add(1, 'month');
+    setCurrentMonth(newDate.format('YYYY-MM-DD'));
+  };
+
+  // 현재 주간의 날짜들 계산 (월요일부터 일요일까지)
+  const getCurrentWeekDates = () => {
+    if (!currentWeekStart) return {};
+    const weekStart = dayjs(currentWeekStart);
+    const weekDates: Record<string, any> = {};
+    
+    // 월요일부터 일요일까지 (7일)
+    for (let i = 0; i < 7; i++) {
+      const date = weekStart.add(i, 'day');
+      const dateString = date.format('YYYY-MM-DD');
+      weekDates[dateString] = { 
+        marked: true,
+        dotColor: 'transparent',
+      };
+    }
+    return weekDates;
+  };
+
+  const customHeader = () => (
+    <View style={styles.header}>
+      <Text style={styles.headerText}>{monthYearText}</Text>
+      <View style={styles.arrowContainer}>
+        <Pressable 
+          style={styles.arrowButton}
+          onPress={() => handleMonthChange('prev')}
+        >
+          <LeftArrowIcon width={24} height={24} />
+        </Pressable>
+        <Pressable 
+          style={styles.arrowButton}
+          onPress={() => handleMonthChange('next')}
+        >
+          <RightArrowIcon width={24} height={24} />
+        </Pressable>
+      </View>
+    </View>
+  );
 
   return (
     <View style={[styles.popup, style]}>
       <Calendar
-        current={selectedDate}
+        key={currentMonth}
+        current={currentMonth}
         onDayPress={(day) => {
           onDayPress(day);
           onClose?.();
         }}
         firstDay={1}
-        monthFormat={'M월 yyyy'}
         markedDates={{
           [selectedDate]: { selected: true },
+          ...getCurrentWeekDates(),
         }}
-        renderArrow={(direction) =>
-          direction === 'left' ? (
-            <LeftArrowIcon width={18} height={18} />
-          ) : (
-            <RightArrowIcon width={18} height={18} />
-          )
-        }
+        customHeader={customHeader}
         dayComponent={({ date, state, marking, onPress }) => (
           <DayCell
             date={date as DateData}
@@ -117,18 +168,19 @@ export default function MonthCalendarPopup({
             onPress={onPress}
             hoveredWeek={hoveredWeek}
             setHoveredWeek={setHoveredWeek}
+            currentWeekStart={currentWeekStart}
           />
         )}
-        theme={{
-          arrowColor: 'transparent', // 기본 화살표 숨기기
-          todayTextColor: 'transparent', // 기본 오늘 날짜 스타일 숨기기
-          textMonthFontSize: textStyles.body1.fontSize, // 18
-          textMonthFontWeight: '700', // bold
-          textMonthFontFamily: textStyles.body1.fontFamily,
-          monthTextColor: colors.black,
-          selectedDayBackgroundColor: 'transparent', // 기본 선택 배경 숨기기
-          selectedDayTextColor: colors.white,
+        onMonthChange={(month) => {
+          setCurrentMonth(month.dateString);
         }}
+        style={styles.calendar}
+        theme={{
+          arrowColor: 'transparent',
+          todayTextColor: colors.white,
+          selectedDayBackgroundColor: 'transparent',
+          selectedDayTextColor: colors.white,
+        } as any}
       />
     </View>
   );
@@ -140,13 +192,41 @@ const styles = StyleSheet.create({
     width: 276,
     backgroundColor: colors.white,
     borderRadius: 10,
-    padding: 12,
+    paddingTop: 12,
+    paddingBottom: 12,
+    paddingHorizontal: 12,
     elevation: 8,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
     zIndex: 10000,
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    minHeight: 40,
+  },
+  headerText: {
+    ...textStyles.body1,
+    color: colors.black,
+  },
+  arrowContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  arrowButton: {
+    width: 18,
+    height: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  calendar: {
+    paddingTop: 0,
+    marginTop: 0,
   },
   dayContainer: {
     width: 36,
@@ -166,13 +246,15 @@ const styles = StyleSheet.create({
     backgroundColor: '#E8F1FF',
     zIndex: 0,
   },
+  currentWeekBackground: {
+    backgroundColor: '#E8F1FF',
+  },
   todayCircle: {
     position: 'absolute',
     width: 32,
     height: 32,
     borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#E8F1FF',
+    backgroundColor: colors.primary,
     zIndex: 1,
   },
   selectedCircle: {
@@ -180,14 +262,17 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#111',
+    backgroundColor: colors.primary,
     zIndex: 2,
   },
   dayText: {
     fontFamily: textStyles.body4.fontFamily,
     fontSize: 14,
+    lineHeight: 14,
+    height: 14,
     color: colors.black,
     zIndex: 3,
+    textAlignVertical: 'center',
   },
   dayTextDisabled: {
     color: colors.gray300,
@@ -197,7 +282,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   dayTextToday: {
-    color: colors.primary,
+    color: colors.white,
     fontWeight: '600',
   },
 });
