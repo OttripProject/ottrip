@@ -165,6 +165,7 @@ export default function BaseCalendar({
   const [showMonthCalendar, setShowMonthCalendar] = useState(false);
   const [view, setView] = useState<'day' | 'month' | 'year'>('day'); // 1: day, 2: month, 3: year
   const [tempSelectedMonth, setTempSelectedMonth] = useState<number | null>(null); // 임시 선택된 월 (0-11)
+  const [tempSelectedYear, setTempSelectedYear] = useState<number | null>(null); // 임시 선택된 년도
 
   // 달력이 열릴 때 현재 주간으로 스크롤 및 tempSelectedDate 초기화
   useEffect(() => {
@@ -181,6 +182,7 @@ export default function BaseCalendar({
       setTempSelectedDate(selectedDate);
       setView('day'); // 달력이 열릴 때 항상 1단계로 초기화
       setTempSelectedMonth(null); // 임시 선택된 월 초기화
+      setTempSelectedYear(null); // 임시 선택된 년도 초기화
     }
   }, [visible, scrollToWeek, currentWeekStart, selectedDate]);
 
@@ -291,11 +293,13 @@ export default function BaseCalendar({
 
   // 3단계 헤더 (년도 선택 달력)
   const yearHeader = () => {
-    const currentYear = dayjs(currentMonth).year();
+    const currentDate = dayjs(currentMonth);
+    const currentYear = currentDate.year();
+    const monthYearText = `${currentYear}년 ${currentDate.format('M')}월`;
     return (
       <View style={[styles.header, { marginHorizontal: 5 }]}>
         <View style={styles.headerLeft}>
-          <Text style={styles.headerText}>{currentYear}년</Text>
+          <Text style={styles.headerText}>{monthYearText}</Text>
           <Pressable 
             style={styles.dropdownButton}
             onPress={() => setView('month')}
@@ -356,8 +360,14 @@ export default function BaseCalendar({
         setView('day');
       }
     } else if (view === 'year') {
-      // 3단계에서는 2단계로 이동
-      setView('month');
+      // 3단계: 선택된 년도로 이동하고 2단계로 전환 (현재 월 유지)
+      if (tempSelectedYear !== null) {
+        const currentDate = dayjs(currentMonth);
+        const currentMonthIndex = currentDate.month(); // 0-11
+        const newDate = dayjs(`${tempSelectedYear}-${currentMonthIndex + 1}-01`);
+        setCurrentMonth(newDate.format('YYYY-MM-DD'));
+        setView('month');
+      }
     }
   };
 
@@ -408,9 +418,76 @@ export default function BaseCalendar({
 
   // 3단계: 년도 선택 달력 컨텐츠
   const renderYearPicker = () => {
+    const currentDate = dayjs(currentMonth);
+    const currentYear = currentDate.year();
+    
+    // 10년 단위 계산 (xxx0년부터 xxx9년까지)
+    const decadeStart = Math.floor(currentYear / 10) * 10; // 예: 2023 -> 2020
+    const decadeEnd = decadeStart + 9; // 예: 2029
+    
+    // 표시할 년도들: -1년, 0-9년, +1년 (총 12개)
+    const yearsToShow: Array<{ year: number; isDecade: boolean }> = [];
+    
+    // -1년 (이전 10년으로 이동)
+    yearsToShow.push({ year: decadeStart - 1, isDecade: false });
+    
+    // 10년 단위 년도들 (xxx0 ~ xxx9)
+    for (let i = 0; i <= 9; i++) {
+      yearsToShow.push({ year: decadeStart + i, isDecade: true });
+    }
+    
+    // +1년 (다음 10년으로 이동)
+    yearsToShow.push({ year: decadeEnd + 1, isDecade: false });
+    
+    // tempSelectedYear가 없으면 현재 년도를 기본값으로 사용
+    const selectedYear = tempSelectedYear !== null ? tempSelectedYear : currentYear;
+    
+    const handleYearPress = (year: number, isDecade: boolean) => {
+      if (isDecade) {
+        // 10년 단위 년도 선택
+        setTempSelectedYear(year);
+      } else {
+        // -1년 또는 +1년 선택 시 해당 년도 선택하고 해당 10년으로 이동
+        const currentDate = dayjs(currentMonth);
+        const currentMonthIndex = currentDate.month(); // 0-11
+        const newDate = dayjs(`${year}-${currentMonthIndex + 1}-01`);
+        setCurrentMonth(newDate.format('YYYY-MM-DD'));
+        setTempSelectedYear(year); // 해당 년도 선택
+      }
+    };
+
     return (
       <View style={styles.pickerContent}>
-        {/* 빈 컨텐츠 영역 - 추후 구현 */}
+        <View style={styles.yearPickerGrid}>
+          {yearsToShow.map(({ year, isDecade }) => {
+            const isCurrentYear = year === currentYear;
+            const isSelected = year === selectedYear && isDecade;
+
+            return (
+              <View key={year} style={styles.yearPickerItemWrapper}>
+                <Pressable
+                  style={[
+                    styles.yearPickerItem,
+                    isCurrentYear && styles.yearPickerItemCurrent,
+                    isSelected && styles.yearPickerItemSelected,
+                  ]}
+                  onPress={() => handleYearPress(year, isDecade)}
+                >
+                  <Text
+                    style={[
+                      styles.yearPickerItemText,
+                      !isDecade && styles.yearPickerItemTextDisabled,
+                      isCurrentYear && !isSelected && styles.yearPickerItemTextCurrent,
+                      isSelected && styles.yearPickerItemTextSelected,
+                    ]}
+                  >
+                    {year}
+                  </Text>
+                </Pressable>
+              </View>
+            );
+          })}
+        </View>
       </View>
     );
   };
@@ -717,6 +794,48 @@ const styles = StyleSheet.create({
     color: colors.primary, // 하늘색 배경일 때 파란색 텍스트
   },
   monthPickerItemTextSelected: {
+    color: colors.white, // 파란색 배경일 때 흰색 텍스트
+  },
+  yearPickerGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 4,
+    rowGap: 8, // 위아래 간격
+    width: '100%',
+    paddingHorizontal: 0,
+    justifyContent: 'space-between',
+  },
+  yearPickerItemWrapper: {
+    width: '32%', // 3열 배치
+    height: 32,
+  },
+  yearPickerItem: {
+    width: '100%',
+    height: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 2,
+    borderRadius: 8,
+  },
+  yearPickerItemCurrent: {
+    backgroundColor: 'rgba(0, 102, 255, 0.08)', // 하늘색 배경 (현재 년도)
+  },
+  yearPickerItemSelected: {
+    backgroundColor: colors.primary, // 파란색 배경 (선택된 년도)
+  },
+  yearPickerItemText: {
+    fontFamily: typography.fontFamily.pretendardRegular,
+    fontSize: 13,
+    lineHeight: 18,
+    color: colors.black,
+  },
+  yearPickerItemTextDisabled: {
+    color: colors.gray600, // 회색 텍스트 (-1년, +1년)
+  },
+  yearPickerItemTextCurrent: {
+    color: colors.primary, // 하늘색 배경일 때 파란색 텍스트
+  },
+  yearPickerItemTextSelected: {
     color: colors.white, // 파란색 배경일 때 흰색 텍스트
   },
 });
