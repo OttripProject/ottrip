@@ -1,0 +1,54 @@
+services:
+  - type: web
+    name: ottrip-dev
+    env: docker
+    rootDir: server
+    branch: dev
+    autoDeploy: true
+    healthCheckPath: "/"
+    pullRequestPreviewsEnabled: true
+    envVars:
+      - key: ENVIRONMENT
+        value: dev
+      - key: DATABASE_URL
+        fromSecret: OTTRIP_DEV_DATABASE_URL
+      - key: SECRET_KEY
+        generateValue: true
+      - key: GOOGLE_CLIENT_ID
+        fromSecret: OTTRIP_GOOGLE_CLIENT_ID
+      - key: GOOGLE_CLIENT_SECRET
+        fromSecret: OTTRIP_GOOGLE_CLIENT_SECRET
+      - key: CORS_ALLOWED_ORIGINS
+        value: "http://localhost:19006,http://localhost:3000"
+    postDeployCommand: "uv run alembic upgrade head"
+
+  # 서버 모니터링 워커 (Render Background Worker)
+  # Render 서버가 다운되거나 복구될 때 Slack으로 알림을 보냅니다.
+  - type: worker
+    name: server-monitor
+    env: docker
+    rootDir: server
+    branch: dev
+    buildCommand: "uv sync --frozen"
+    startCommand: "python monitor.py"
+    envVars:
+      - key: SLACK_WEBHOOK_URL
+        fromSecret: SLACK_WEBHOOK_URL
+      - key: MONITOR_SERVER_URL
+        value: "https://ottrip.onrender.com"
+      - key: MONITOR_CHECK_INTERVAL
+        value: "60"
+      - key: MONITOR_TIMEOUT
+        value: "10"
+
+# 사용법:
+# 1) 이 파일을 dev 브랜치에 커밋/푸시합니다.
+# 2) Render 대시보드 → New → Blueprint → GitHub에서 레포 선택 후 `render.yaml`로 생성.
+# 3) Secrets에 다음 키를 추가:
+#    - OTTRIP_DEV_DATABASE_URL
+#    - OTTRIP_GOOGLE_CLIENT_ID
+#    - OTTRIP_GOOGLE_CLIENT_SECRET
+#    - SLACK_WEBHOOK_URL (서버 모니터링용)
+# 4) 생성 후 배포하면 Dockerfile(server/)을 사용해 자동 빌드/실행됩니다.
+# 5) server-monitor 워커는 서버 상태를 모니터링하고 Slack으로 알림을 보냅니다.
+
