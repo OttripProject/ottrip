@@ -308,10 +308,9 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 32,
-    fontWeight: '600',
     color: '#0066FF',
     marginBottom: 8, 
-    fontFamily: typography.fontFamily.poppins,
+    fontFamily: typography.fontFamily.poppinsSemiBold,
   },
   subtitle: {
     ...textStyles.body2,
