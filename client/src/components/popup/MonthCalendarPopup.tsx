@@ -196,7 +196,6 @@ export default function MonthCalendarPopup({
     </View>
   );
 }
-
 const styles = StyleSheet.create({
   popup: {
     position: 'absolute',
@@ -314,4 +313,5 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 });
+
 

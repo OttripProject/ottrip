@@ -11,9 +11,9 @@ import { colors } from '@/ui/tokens/colors';
 import { textStyles, typography } from '@/ui/tokens/typography';
 import { spacing } from '@/ui/tokens/spacing';
 import { radii } from '@/ui/tokens/radii';
-import DeleteIcon from '../../../assets/delete_gray.svg';
+import DeleteIcon from '../../../assets/delete.svg';
 import AddIcon from '../../../assets/add.svg';
-import MonthCalendarPopup from '@/components/popup/MonthCalendarPopup';
+import BaseCalendar from '@/components/popup/calendar/BaseCalendar';
 import CalendarIcon from '../../../assets/calender.svg';
 
 interface ItineraryItemProps {
@@ -518,15 +518,18 @@ export default function ItineraryItem({
             </View>
           </View>
         </Pressable>
-        <MonthCalendarPopup
+        <BaseCalendar
           visible={showDatePicker}
           selectedDate={formData.itineraryDate}
+          markedDates={{
+            [formData.itineraryDate]: { selected: true }
+          }}
           onDayPress={(day) => {
             setFormData({ ...formData, itineraryDate: day.dateString });
             setShowDatePicker(false);
           }}
           onClose={() => setShowDatePicker(false)}
-          style={[styles.calendarPopup, { position: 'absolute', zIndex: 20000 }]}
+          style={styles.calendarPopup}
         />
       </View>
 
@@ -538,7 +541,7 @@ export default function ItineraryItem({
             onChange={(time) => setFormData({ ...formData, startTime: time })}
             onOpen={() => setTimeOpen(true)}
             onClose={() => setTimeOpen(false)}
-              maxTime={formData.endTime}
+            maxTime={formData.endTime}
           />
         </View>
         <View style={[styles.inputGroup, styles.halfWidth]}>
@@ -548,7 +551,7 @@ export default function ItineraryItem({
             onChange={(time) => setFormData({ ...formData, endTime: time })}
             onOpen={() => setTimeOpen(true)}
             onClose={() => setTimeOpen(false)}
-              minTime={formData.startTime}
+            minTime={formData.startTime}
           />
           </View>
         </View>
@@ -713,19 +716,6 @@ export default function ItineraryItem({
       </View>
       </View>
     </ScrollView>
-    {showDatePicker && (
-      <Modal
-        visible={showDatePicker}
-        transparent={true}
-        animationType="none"
-        onRequestClose={() => setShowDatePicker(false)}
-      >
-        <Pressable 
-          style={styles.modalOverlay}
-          onPress={() => setShowDatePicker(false)}
-        />
-      </Modal>
-    )}
     </>
   );
 }
@@ -778,9 +768,11 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.xl,
   },
   deleteButton: {
-    backgroundColor: colors.gray400,
+    backgroundColor: colors.gray300,
     height: 40,
     borderRadius: radii.md,
+    borderWidth: 1,
+    borderColor: colors.gray400,
     paddingHorizontal: spacing.lg,
     justifyContent: 'center',
     alignItems: 'center',
@@ -926,7 +918,7 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   expenseCancelButton: {
-    backgroundColor: colors.white,
+    backgroundColor: colors.gray300,
     borderWidth: 1,
     borderColor: colors.gray400,
     borderRadius: 8,

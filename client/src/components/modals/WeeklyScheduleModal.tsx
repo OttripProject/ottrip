@@ -7,6 +7,7 @@ import ko from 'dayjs/locale/ko';
 import TripSelector from '../TripSelector';
 import SharePlanModal from '@/components/modals/SharePlanModal';
 import MonthCalendarPopup from '@/components/popup/MonthCalendarPopup';
+import BaseCalendar from '@/components/popup/calendar/BaseCalendar';
 import { plansApi } from '@/services/plans';
 import { Plan, CreatePlanRequest, UpdatePlanRequest } from '@/types/api';
 import ModalLayout from './ModalLayout';
@@ -377,13 +378,12 @@ export default function WeeklyScheduleModal({
           </Pressable>
 
           <View style={styles.calendarButtonWrapper}>
-            <Pressable onPress={() => setShowMonthPicker(true)} style={[styles.iconButton, { marginLeft: spacing.sm }]}>
+            <Pressable onPress={() => setShowMonthPicker(!showMonthPicker)} style={[styles.iconButton, { marginLeft: spacing.sm }]}>
               <CalenderIcon width={16} height={16} />
             </Pressable>
-            <MonthCalendarPopup
+            <BaseCalendar
               visible={showMonthPicker}
               selectedDate={selectedDate}
-              currentWeekStart={currentWeekStart.format('YYYY-MM-DD')}
               onDayPress={(day) => {
                 setSelectedDate(day.dateString);
                 const monday = dayjs(day.dateString).startOf('week').add(1, 'day');
@@ -391,6 +391,10 @@ export default function WeeklyScheduleModal({
               }}
               onClose={() => setShowMonthPicker(false)}
               style={styles.calendarPopup}
+              currentWeekStart={currentWeekStart.format('YYYY-MM-DD')}
+              showToday={true}
+              showHover={true}
+              scrollToWeek={true}
             />
           </View>
         </View>
@@ -684,8 +688,7 @@ export default function WeeklyScheduleModal({
         </View>
       </Modal>
 
-      {/* 달력 팝업 외부 클릭 감지 */}
-      {showMonthPicker && (
+      {/* {showMonthPicker && (
         <Modal
           visible={showMonthPicker}
           transparent={true}
@@ -697,7 +700,7 @@ export default function WeeklyScheduleModal({
             onPress={() => setShowMonthPicker(false)}
           />
         </Modal>
-      )}
+      )} */}
 
 
     </ModalLayout>
@@ -813,19 +816,8 @@ const styles = StyleSheet.create({
       position: 'relative',
     },
     calendarPopup: {
-      position: 'absolute',
       top: 40,
       left: 8,
-      width: 276,
-      backgroundColor: colors.white,
-      borderRadius: 10,
-      padding: 12,
-      elevation: 8,
-      shadowColor: colors.black,
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.3,
-      shadowRadius: 8,
-      zIndex: 10000,
     },
     modalOverlay: {
       flex: 1,
