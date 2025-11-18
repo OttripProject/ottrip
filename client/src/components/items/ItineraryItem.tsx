@@ -521,9 +521,6 @@ export default function ItineraryItem({
         <BaseCalendar
           visible={showDatePicker}
           selectedDate={formData.itineraryDate}
-          markedDates={{
-            [formData.itineraryDate]: { selected: true }
-          }}
           onDayPress={(day) => {
             setFormData({ ...formData, itineraryDate: day.dateString });
             setShowDatePicker(false);

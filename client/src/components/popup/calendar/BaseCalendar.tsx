@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { View, StyleSheet, Text, Pressable } from 'react-native';
 import { Calendar, DateData } from 'react-native-calendars';
 import dayjs from 'dayjs';
 import { colors } from '@/ui/tokens/colors';
-import { textStyles } from '@/ui/tokens/typography';
+import { textStyles, typography } from '@/ui/tokens/typography';
+import { radii } from '@/ui/tokens/radii';
 import LeftArrowIcon from '../../../../assets/cal_left_arrow.svg';
 import RightArrowIcon from '../../../../assets/cal_right_arrow.svg';
 
@@ -157,8 +158,9 @@ export default function BaseCalendar({
 }: BaseCalendarProps) {
   const [currentMonth, setCurrentMonth] = useState(selectedDate || dayjs().format('YYYY-MM-DD'));
   const [hoveredWeek, setHoveredWeek] = useState<string | null>(null);
+  const [tempSelectedDate, setTempSelectedDate] = useState<string | undefined>(selectedDate);
 
-  // 달력이 열릴 때 현재 주간으로 스크롤
+  // 달력이 열릴 때 현재 주간으로 스크롤 및 tempSelectedDate 초기화
   useEffect(() => {
     if (visible && scrollToWeek && currentWeekStart) {
       // currentWeekStart가 있으면 해당 주간이 포함된 월로 이동
@@ -168,7 +170,25 @@ export default function BaseCalendar({
       // selectedDate가 있으면 해당 날짜가 포함된 월로 이동
       setCurrentMonth(selectedDate);
     }
+    // visible이 true일 때 tempSelectedDate를 selectedDate로 초기화
+    if (visible) {
+      setTempSelectedDate(selectedDate);
+    }
   }, [visible, scrollToWeek, currentWeekStart, selectedDate]);
+
+  // markedDates는 prop으로 전달된 것만 사용 (자동 마킹 제거)
+  // tempSelectedDate를 포함한 markedDates 생성
+  // useMemo는 early return 전에 호출해야 함 (Hooks 규칙)
+  const defaultMarkedDates = useMemo(() => {
+    const baseMarkedDates = markedDates || {};
+    if (tempSelectedDate) {
+      return {
+        ...baseMarkedDates,
+        [tempSelectedDate]: { selected: true },
+      };
+    }
+    return baseMarkedDates;
+  }, [markedDates, tempSelectedDate]);
 
   if (!visible) return null;
 
@@ -193,13 +213,13 @@ export default function BaseCalendar({
             style={styles.arrowButton}
             onPress={() => handleMonthChange('prev')}
           >
-            <LeftArrowIcon width={24} height={24} />
+            <LeftArrowIcon width={18} height={18} />
           </Pressable>
           <Pressable 
             style={styles.arrowButton}
             onPress={() => handleMonthChange('next')}
           >
-            <RightArrowIcon width={24} height={24} />
+            <RightArrowIcon width={18} height={18} />
           </Pressable>
         </View>
       </View>
@@ -213,8 +233,17 @@ export default function BaseCalendar({
     </View>
   );
 
-  // markedDates는 prop으로 전달된 것만 사용 (자동 마킹 제거)
-  const defaultMarkedDates = markedDates || {};
+  const handleCancel = () => {
+    setTempSelectedDate(selectedDate); // 선택 취소
+    onClose?.();
+  };
+
+  const handleConfirm = () => {
+    if (tempSelectedDate) {
+      onDayPress?.({ dateString: tempSelectedDate });
+    }
+    onClose?.();
+  };
 
   return (
     <View style={[styles.calendarContainer, style]}>
@@ -222,8 +251,7 @@ export default function BaseCalendar({
         key={currentMonth}
         current={currentMonth}
         onDayPress={(day) => {
-          onDayPress?.(day);
-          onClose?.(); // 날짜 선택 시 팝업 닫기
+          setTempSelectedDate(day.dateString); // 임시 선택만 하고 팝업은 닫지 않음
         }}
         firstDay={1}
         markedDates={defaultMarkedDates}
@@ -254,8 +282,18 @@ export default function BaseCalendar({
           selectedDayTextColor: colors.white,
           todayTextColor: showToday ? colors.white : colors.black, // showToday에 따라 오늘 날짜 색상 변경
           todayBackgroundColor: showToday ? colors.primary : 'transparent', // showToday에 따라 오늘 날짜 배경 변경
+          weekVerticalMargin: 2, 
         } as any}
       />
+      {/* 하단 버튼 */}
+      <View style={styles.buttonContainer}>
+        <Pressable style={styles.cancelButton} onPress={handleCancel}>
+          <Text style={styles.cancelButtonText}>취소</Text>
+        </Pressable>
+        <Pressable style={styles.confirmButton} onPress={handleConfirm}>
+          <Text style={styles.confirmButtonText}>확인</Text>
+        </Pressable>
+      </View>
     </View>
   );
 }
@@ -278,13 +316,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 12,
+    paddingLeft: 12,
+    paddingRight: 8,
     minHeight: 40,
     marginBottom: 8,
   },
   headerText: {
     ...textStyles.body1,
     color: colors.black,
+    fontWeight: typography.weight.bold,
   },
   dayHeader: {
     flexDirection: 'row',
@@ -305,7 +345,8 @@ const styles = StyleSheet.create({
   arrowContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 18,
+    marginLeft: 'auto', // 오른쪽으로 이동
   },
   arrowButton: {
     width: 18,
@@ -373,6 +414,38 @@ const styles = StyleSheet.create({
   },
   currentWeekBackground: {
     backgroundColor: '#E8F1FF',
+  },
+  buttonContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 8,
+    paddingTop: 12,
+  },
+  cancelButton: {
+    flex: 1,
+    height: 32,
+    borderRadius: radii.sm,
+    backgroundColor: colors.gray200,
+    borderWidth: 1,
+    borderColor: colors.gray400,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cancelButtonText: {
+    ...textStyles.h8,
+    color: colors.black,
+  },
+  confirmButton: {
+    flex: 1,
+    height: 32,
+    borderRadius: radii.sm,
+    backgroundColor: colors.gray900,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  confirmButtonText: {
+    ...textStyles.h8,
+    color: colors.white,
   },
 });
 

@@ -163,7 +163,7 @@ export default function WeeklyScheduleModal({
         );
     const [internalSelectedTrip, setInternalSelectedTrip] = useState<any>(null);
     const [showMonthPicker, setShowMonthPicker] = useState(false);
-    const [selectedDate, setSelectedDate] = useState<string>(dayjs().format('YYYY-MM-DD'));
+    const [selectedDate, setSelectedDate] = useState<string | undefined>(undefined);
     const [shareOpen, setShareOpen] = useState(false);
     const [memoOpen, setMemoOpen] = useState(false);
     const [memoDraft, setMemoDraft] = useState('');
