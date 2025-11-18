@@ -255,7 +255,7 @@ export default function BaseCalendar({
     const currentDate = dayjs(currentMonth);
     const monthYearText = `${currentDate.format('YYYY')}년 ${currentDate.format('M')}월`;
     return (
-      <View style={styles.header}>
+      <View style={[styles.header, { marginHorizontal: 5 }]}>
         <View style={styles.headerLeft}>
           <Text style={styles.headerText}>{monthYearText}</Text>
           <Pressable 
@@ -293,7 +293,7 @@ export default function BaseCalendar({
   const yearHeader = () => {
     const currentYear = dayjs(currentMonth).year();
     return (
-      <View style={styles.header}>
+      <View style={[styles.header, { marginHorizontal: 5 }]}>
         <View style={styles.headerLeft}>
           <Text style={styles.headerText}>{currentYear}년</Text>
           <Pressable 
