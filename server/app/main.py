@@ -86,4 +86,4 @@ register_exception_handlers(app)
 
 @app.get("/")
 def main():
-    return {"hello": "showbility"}
+    return {"hello": "ottrip"}
