@@ -6,8 +6,7 @@ Render 서버 상태 모니터링 스크립트
 
 import os
 import time
-import json
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Literal
 
 import httpx
@@ -70,7 +69,6 @@ class ServerMonitor:
             if self.last_status == "down":
                 # 서버가 다시 살아남
                 title = "✅ 서버 복구됨"
-                color = "good"
                 status_text = "서버가 다시 정상 작동합니다"
                 if self.down_since:
                     down_duration = datetime.now() - self.down_since
@@ -89,12 +87,10 @@ class ServerMonitor:
                 # 처음 다운된 경우
                 self.down_since = datetime.now()
                 title = "❌ 서버 다운됨"
-                color = "danger"
                 status_text = "서버에 연결할 수 없습니다"
             else:
                 # 계속 다운 상태 (주기적으로 알림)
                 title = "⚠️ 서버 여전히 다운됨"
-                color = "warning"
                 if self.down_since:
                     down_duration = datetime.now() - self.down_since
                     duration_text = self._format_duration(down_duration)
@@ -148,7 +144,7 @@ class ServerMonitor:
         except Exception as e:
             print(f"[{now}] Slack 알림 전송 실패: {e}")
 
-    def _format_duration(self, duration: datetime) -> str:
+    def _format_duration(self, duration: timedelta) -> str:
         """다운 시간을 포맷팅합니다."""
         total_seconds = int(duration.total_seconds())
         hours = total_seconds // 3600
