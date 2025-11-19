@@ -100,7 +100,7 @@ const styles = StyleSheet.create({
     right: 0,
     backgroundColor: colors.gray700,
     height: 40,
-    borderRadius: 12,
+    borderRadius: radii.md,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',

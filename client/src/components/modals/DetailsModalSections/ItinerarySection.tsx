@@ -19,7 +19,7 @@ interface ItinerarySectionProps {
   onConsumeOpenNewItineraryForm?: () => void;
   selectedItineraryDate?: Date | null;
   onEdit?: (itinerary: any) => void;
-  onShowWarning?: () => void;
+  onShowWarning?: (message?: string) => void;
 }
 
 export default function ItinerarySection({
