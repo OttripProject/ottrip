@@ -14,6 +14,7 @@ import BaseCalendar from '@/components/popup/calendar/BaseCalendar';
 import CalendarIcon from '../../../assets/calender.svg';
 import AddIcon from '../../../assets/add.svg';
 import DeleteIcon from '../../../assets/delete.svg';
+import XIcon from '../../../assets/x.svg';
 import DropDownPicker from 'react-native-dropdown-picker';
 import DownArrowIcon from '../../../assets/down_arrow.svg';
 import UpperArrowIcon from '../../../assets/upper_arrow.svg';
@@ -321,7 +322,15 @@ export default function FlightItem({
       contentContainerStyle={[styles.contentContainer, { overflow: 'visible' }]}
     >
       {/* <View style={styles.contentWrapper}> */}
-        <Text style={styles.title}>항공편 정보</Text>
+        <View style={styles.titleRow}>
+          <Text style={styles.title}>항공편 정보</Text>
+          <Pressable
+            onPress={onCancel}
+            style={styles.closeButton}
+          >
+            <XIcon width={20} height={20} />
+          </Pressable>
+        </View>
 
         {/* 기본 정보 섹션 */}
         <View style={styles.formSection}>
@@ -661,7 +670,7 @@ export default function FlightItem({
             disabled={isLoading}
           >
             <Text style={styles.saveButtonText}>
-              {isLoading ? '저장 중...' : '저장'}
+              {isLoading ? (flight ? '수정 중...' : '저장 중...') : (flight ? '수정' : '저장')}
             </Text>
           </Pressable>
         </View>
@@ -684,9 +693,19 @@ const styles = StyleSheet.create({
     overflow: 'visible',
     gap: spacing.lg,
   },
+  titleRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.xl,
+  },
   title: {
     ...textStyles.h5,
-    marginBottom: spacing.xl,
+  },
+  closeButton: {
+    padding: spacing.xs,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   formSection: {
     gap: spacing.lg,
