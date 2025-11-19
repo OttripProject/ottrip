@@ -13,6 +13,7 @@ import { spacing } from '@/ui/tokens/spacing';
 import { radii } from '@/ui/tokens/radii';
 import DeleteIcon from '../../../assets/delete.svg';
 import AddIcon from '../../../assets/add.svg';
+import XIcon from '../../../assets/x.svg';
 import BaseCalendar from '@/components/popup/calendar/BaseCalendar';
 import CalendarIcon from '../../../assets/calender.svg';
 
@@ -432,7 +433,15 @@ export default function ItineraryItem({
       contentContainerStyle={[styles.contentContainer, { overflow: 'visible' }]}
     >
       <View style={styles.contentWrapper}>
-        <Text style={styles.title}>{itinerary ? '일정 편집' : '일정 추가'}</Text>
+        <View style={styles.titleRow}>
+          <Text style={styles.title}>{itinerary ? '일정 편집' : '일정 추가'}</Text>
+          <Pressable
+            onPress={onCancel}
+            style={styles.closeButton}
+          >
+            <XIcon width={20} height={20} />
+          </Pressable>
+        </View>
       <View style={styles.inputGroup}>
           <Text style={styles.label}>제목</Text>
         <Input
@@ -707,7 +716,7 @@ export default function ItineraryItem({
           disabled={isLoading}
         >
           <Text style={styles.saveButtonText}>
-            {isLoading ? '저장 중...' : '저장'}
+            {isLoading ? (itinerary ? '수정 중...' : '저장 중...') : (itinerary ? '수정' : '저장')}
           </Text>
         </Pressable>
       </View>
@@ -731,9 +740,19 @@ const styles = StyleSheet.create({
     overflow: 'visible',
     gap: spacing.lg,
   },
+  titleRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.lg,
+  },
   title: {
     ...textStyles.h5,
-    marginBottom: spacing.lg,
+  },
+  closeButton: {
+    padding: spacing.xs,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   formSection: {
     gap: spacing.lg,
