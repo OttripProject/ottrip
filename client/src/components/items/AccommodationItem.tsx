@@ -1,12 +1,21 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { View, Text, Pressable, StyleSheet } from 'react-native';
-import { DatePicker } from '@/ui/components/pickers';
+import { View, Text, Pressable, StyleSheet, ScrollView } from 'react-native';
 import dayjs from 'dayjs';
 import { accommodationsApi } from '@/services/accommodations';
-import { CountryPicker } from '@/ui/components/pickers';
+import { CountryPicker, TimePicker } from '@/ui/components/pickers';
 import Input from '@/ui/components/input/Input';
 import { PLACEHOLDERS } from '@/constants/placeholders';
-import { TimePicker } from '@/ui/components/pickers';
+import { colors } from '@/ui/tokens/colors';
+import { textStyles, typography } from '@/ui/tokens/typography';
+import { spacing } from '@/ui/tokens/spacing';
+import { radii } from '@/ui/tokens/radii';
+import BaseCalendar from '@/components/popup/calendar/BaseCalendar';
+import CalendarIcon from '../../../assets/calender.svg';
+import XIcon from '../../../assets/x.svg';
+import DropDownPicker from 'react-native-dropdown-picker';
+import DownArrowIcon from '../../../assets/down_arrow.svg';
+import UpperArrowIcon from '../../../assets/upper_arrow.svg';
+import { ExpenseCurrency } from '@/types/expense';
 
 interface AccommodationItemProps {
   accommodation?: any;
@@ -39,10 +48,14 @@ export default function AccommodationItem({
 
   const [expenseData, setExpenseData] = useState({
     amount: accommodation?.expense?.amount || '',
-    currency: accommodation?.expense?.currency || 'KRW',
+    currency: accommodation?.expense?.currency || ExpenseCurrency.KRW,
   });
 
   const [isLoading, setIsLoading] = useState(false);
+  const [showCheckinDatePicker, setShowCheckinDatePicker] = useState(false);
+  const [showCheckoutDatePicker, setShowCheckoutDatePicker] = useState(false);
+  const [checkinTimeOpen, setCheckinTimeOpen] = useState(false);
+  const [checkoutTimeOpen, setCheckoutTimeOpen] = useState(false);
 
   // accommodation prop이 변경될 때 폼 데이터 동기화 (snake_case / camelCase 모두 지원)
   useEffect(() => {
@@ -88,7 +101,7 @@ export default function AccommodationItem({
             exDate: formData.checkin_date,
             amount: Number(expenseData.amount) || 0,
             category: 'accommodation' as any,
-            currency: expenseData.currency as any,
+            currency: expenseData.currency as ExpenseCurrency,
             description: formData.name,
           },
         });
@@ -109,7 +122,7 @@ export default function AccommodationItem({
             exDate: formData.checkin_date,
             amount: Number(expenseData.amount) || 0,
             category: 'accommodation' as any,
-            currency: expenseData.currency as any,
+            currency: expenseData.currency as ExpenseCurrency,
             description: formData.name,
           },
         });
@@ -123,270 +136,398 @@ export default function AccommodationItem({
   };
 
   const handleDelete = async () => {
+    // 숙박 추가 모드: 입력창 닫기
+    if (!accommodation) {
+      onCancel();
+      return;
+    }
+    
     if (accommodation && accommodation.id && onDelete) {
       try {
         await accommodationsApi.deleteAccommodation(accommodation.id);
         onDelete(accommodation.id);
+        onCancel();
       } catch (error) {
         console.error('Failed to delete accommodation:', error);
       }
     }
   };
 
+  // 통화 옵션
+  const currencyOptions = useMemo(() => [
+    { label: 'KRW', value: ExpenseCurrency.KRW },
+    { label: 'USD', value: ExpenseCurrency.USD },
+    { label: 'EUR', value: ExpenseCurrency.EUR },
+    { label: 'JPY', value: ExpenseCurrency.JPY },
+  ], []);
+
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>{accommodation ? '숙박 편집' : '숙박 추가'}</Text>
-      </View>
-      
-      <View style={styles.inputGroup}>
-        <Text style={styles.label}>숙소 이름 *</Text>
-        <Input
-          placeholder={PLACEHOLDERS.accommodation.name}
-          value={formData.name}
-          onChangeText={(text) => setFormData({ ...formData, name: text })}
-        />
+    <ScrollView 
+      style={[styles.container, { position: 'relative', overflow: 'visible' }]}
+      contentContainerStyle={[styles.contentContainer, { overflow: 'visible' }]}
+    >
+      <View style={styles.titleRow}>
+        <Text style={styles.title}>숙박 정보</Text>
+        <Pressable
+          onPress={onCancel}
+          style={styles.closeButton}
+        >
+          <XIcon width={20} height={20} />
+        </Pressable>
       </View>
 
-      <View style={[styles.row, styles.pickerRowWrapper, { zIndex: countryOpen ? 10000 : 1 }]}>
-        <View style={[styles.inputGroup, styles.halfWidth, styles.countryPickerWrapper, { zIndex: countryOpen ? 10000 : 1 }]}>
-          <Text style={styles.label}>국가 *</Text>
-          <CountryPicker
-            value={formData.country}
-            onChange={(name: string) => setFormData({ ...formData, country: name })}
-            placeholder={PLACEHOLDERS.picker.country}
-          />
-        </View>
-        <View style={[styles.inputGroup, styles.halfWidth]}>
-          <Text style={styles.label}>도시 *</Text>
+      {/* 기본 정보 섹션 */}
+      <View style={styles.formSection}>
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>숙소 이름</Text>
           <Input
-            placeholder={PLACEHOLDERS.accommodation.city}
-            value={formData.city}
-            onChangeText={(text) => setFormData({ ...formData, city: text })}
+            variant="filled"
+            placeholder={PLACEHOLDERS.accommodation.name}
+            value={formData.name}
+            onChangeText={(text) => setFormData({ ...formData, name: text })}
+            style={styles.input}
+            placeholderTextColor={colors.gray600}
           />
         </View>
-      </View>
 
-      <View style={styles.inputGroup}>
-        <Text style={styles.label}>장소</Text>
+        <View style={styles.inputGroup}>
+        <Text style={styles.label}>내용</Text>
         <Input
-          placeholder={PLACEHOLDERS.accommodation.place}
-          value={formData.place}
-          onChangeText={(text) => setFormData({ ...formData, place: text })}
-        />
-      </View>
-
-      <View style={styles.inputGroup}>
-        <Text style={styles.label}>체크인 날짜</Text>
-        <DatePicker
-          value={formData.checkin_date}
-          onChange={(date) => setFormData({ ...formData, checkin_date: date })}
-        />
-      </View>
-
-      <View style={styles.inputGroup}>
-        <Text style={styles.label}>체크아웃 날짜</Text>
-        <DatePicker
-          value={formData.checkout_date}
-          onChange={(date) => setFormData({ ...formData, checkout_date: date })}
-        />
-      </View>
-
-      <View style={styles.row}>
-        <View style={[styles.inputGroup, styles.halfWidth]}>
-          <Text style={styles.label}>체크인 시간</Text>
-          <TimePicker
-            value={formData.checkin_time}
-            onChange={(time) => setFormData({ ...formData, checkin_time: time })}
-          />
-        </View>
-        <View style={[styles.inputGroup, styles.halfWidth]}>
-          <Text style={styles.label}>체크아웃 시간</Text>
-          <TimePicker
-            value={formData.checkout_time}
-            onChange={(time) => setFormData({ ...formData, checkout_time: time })}
-          />
-        </View>
-      </View>
-
-      <View style={styles.inputGroup}>
-        <Text style={styles.label}>설명</Text>
-        <Input
-          placeholder={PLACEHOLDERS.accommodation.description}
+            variant="filled"
+            placeholder={PLACEHOLDERS.itinerary.descriptionForm}
           value={formData.description}
           onChangeText={(text) => setFormData({ ...formData, description: text })}
           multiline
           numberOfLines={3}
+          textAlignVertical="top"
+            style={styles.textArea}
+            placeholderTextColor={colors.gray600}
         />
-      </View>
+        </View>
 
-      <View style={styles.inputGroup}>
-        <Text style={styles.label}>숙박 비용</Text>
-        <View style={styles.row}>
-          <Input
-            containerStyle={{ flex: 1, marginRight: 8 }}
-            placeholder={PLACEHOLDERS.expense.amount}
-            value={expenseData.amount}
-            onChangeText={(text) => setExpenseData({ ...expenseData, amount: text.replace(/[^0-9]/g, '') })}
-            keyboardType="numeric"
-          />
-          <View style={{ width: 120 }}>
-            <Input
-              placeholder={PLACEHOLDERS.expense.currency}
-              value={expenseData.currency}
-              editable={false}
+        <View style={[styles.row, { gap: spacing.sm, zIndex: countryOpen ? 10000 : 1 }]}>
+          <View style={[styles.inputGroup, styles.halfWidth, { zIndex: countryOpen ? 10000 : 1 }]}>
+            <Text style={styles.label}>국가</Text>
+            <CountryPicker
+              value={formData.country}
+              onChange={(name: string) => setFormData({ ...formData, country: name })}
+              placeholder={PLACEHOLDERS.picker.country}
+              onOpen={() => setCountryOpen(true)}
+              onClose={() => setCountryOpen(false)}
             />
+          </View>
+          <View style={[styles.inputGroup, styles.halfWidth]}>
+            <Text style={styles.label}>도시</Text>
+            <Input
+              variant="filled"
+              placeholder={PLACEHOLDERS.accommodation.city}
+              value={formData.city}
+              onChangeText={(text) => setFormData({ ...formData, city: text })}
+              style={styles.input}
+              placeholderTextColor={colors.gray600}
+            />
+          </View>
+        </View>
+
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>장소</Text>
+          <Input
+            variant="filled"
+            placeholder={PLACEHOLDERS.accommodation.place}
+            value={formData.place}
+            onChangeText={(text) => setFormData({ ...formData, place: text })}
+            style={styles.input}
+            placeholderTextColor={colors.gray600}
+          />
+        </View>
+
+        <View style={[styles.row, { gap: spacing.sm, zIndex: checkinTimeOpen || showCheckinDatePicker ? 2000 : 1000 }]}>
+          <View style={[styles.inputGroup, styles.halfWidth, { position: 'relative', zIndex: showCheckinDatePicker ? 20000 : 1000 }]}>
+            <Text style={styles.label}>체크인 날짜</Text>
+            <Pressable 
+              style={styles.dateInput} 
+              onPress={() => setShowCheckinDatePicker(true)}
+            >
+              <View style={styles.dateTextContainer}>
+                <Text style={formData.checkin_date ? styles.dateText : styles.placeholderText}>
+                  {formData.checkin_date ? dayjs(formData.checkin_date).format('YYYY.MM.DD') : '기타'}
+                </Text>
+                <View style={styles.iconWrapper}>
+                  <CalendarIcon width={16} height={16} />
+                </View>
+              </View>
+            </Pressable>
+            {showCheckinDatePicker && (
+              <BaseCalendar
+                visible={true}
+                selectedDate={formData.checkin_date}
+                onDayPress={(day) => {
+                  setFormData({ ...formData, checkin_date: day.dateString });
+                  setShowCheckinDatePicker(false);
+                }}
+                onClose={() => setShowCheckinDatePicker(false)}
+                style={styles.calendarPopup}
+                minDate={dayjs().format('YYYY-MM-DD')}
+              />
+            )}
+          </View>
+          <View style={[styles.inputGroup, styles.halfWidth, { position: 'relative', zIndex: checkinTimeOpen ? 2000 : 1000 }]}>
+            <Text style={styles.label}>체크인 시간</Text>
+            <TimePicker
+              value={formData.checkin_time}
+              onChange={(time) => setFormData({ ...formData, checkin_time: time })}
+              onOpen={() => setCheckinTimeOpen(true)}
+              onClose={() => setCheckinTimeOpen(false)}
+              style={styles.timePicker}
+            />
+          </View>
+        </View>
+
+        <View style={[styles.row, { gap: spacing.sm, zIndex: checkoutTimeOpen || showCheckoutDatePicker ? 2000 : 500 }]}>
+          <View style={[styles.inputGroup, styles.halfWidth, { position: 'relative', zIndex: showCheckoutDatePicker ? 20000 : 500 }]}>
+            <Text style={styles.label}>체크아웃 날짜</Text>
+            <Pressable 
+              style={styles.dateInput} 
+              onPress={() => setShowCheckoutDatePicker(true)}
+            >
+              <View style={styles.dateTextContainer}>
+                <Text style={formData.checkout_date ? styles.dateText : styles.placeholderText}>
+                  {formData.checkout_date ? dayjs(formData.checkout_date).format('YYYY.MM.DD') : '기타'}
+                </Text>
+                <View style={styles.iconWrapper}>
+                  <CalendarIcon width={16} height={16} />
+                </View>
+              </View>
+            </Pressable>
+            {showCheckoutDatePicker && (
+              <BaseCalendar
+                visible={true}
+                selectedDate={formData.checkout_date}
+                onDayPress={(day) => {
+                  setFormData({ ...formData, checkout_date: day.dateString });
+                  setShowCheckoutDatePicker(false);
+                }}
+                onClose={() => setShowCheckoutDatePicker(false)}
+                style={styles.calendarPopup}
+                minDate={formData.checkin_date}
+              />
+            )}
+          </View>
+          <View style={[styles.inputGroup, styles.halfWidth, { position: 'relative', zIndex: checkoutTimeOpen ? 2000 : 500 }]}>
+            <Text style={styles.label}>체크아웃 시간</Text>
+            <TimePicker
+              value={formData.checkout_time}
+              onChange={(time) => setFormData({ ...formData, checkout_time: time })}
+              onOpen={() => setCheckoutTimeOpen(true)}
+              onClose={() => setCheckoutTimeOpen(false)}
+              style={styles.timePicker}
+            />
+          </View>
+        </View>
+
+        <View style={[styles.row, { gap: spacing.sm }]}>
+          <View style={[styles.inputGroup, styles.halfWidth]}>
+            <Text style={styles.label}>숙박 비용</Text>
+            <Input
+              variant="filled"
+              placeholder={PLACEHOLDERS.expense.amount}
+              value={expenseData.amount.toString()}
+              onChangeText={(text) => setExpenseData({ ...expenseData, amount: text.replace(/[^0-9]/g, '') })}
+              keyboardType="numeric"
+              style={styles.input}
+              placeholderTextColor={colors.gray600}
+            />
+          </View>
+          <View style={[styles.inputGroup, styles.halfWidth]}>
+            <Text style={styles.label}>통화</Text>
+            <View style={styles.currencyPickerWrapper}>
+              <DropDownPicker
+                open={false}
+                value={ExpenseCurrency.KRW}
+                items={currencyOptions}
+                setOpen={() => {}}
+                setValue={() => {}}
+                disabled={true}
+                placeholder={PLACEHOLDERS.expense.currency}
+                style={styles.currencyDropdown}
+                dropDownContainerStyle={styles.currencyDropdownContainer}
+                listMode="SCROLLVIEW"
+                ArrowDownIconComponent={() => <DownArrowIcon width={16} height={16} />}
+                ArrowUpIconComponent={() => <UpperArrowIcon width={16} height={16} />}
+              />
+            </View>
           </View>
         </View>
       </View>
 
-      <View style={styles.buttonRow}>
+      {/* 하단 버튼 */}
+      <View style={[styles.buttonRow, { zIndex: -1, elevation: -1 }]}>
         <Pressable
-          style={[styles.button, styles.cancelButton]}
-          onPress={onCancel}
+          style={styles.deleteButton}
+          onPress={handleDelete}
         >
-          <Text style={styles.cancelButtonText}>취소</Text>
+          <Text style={styles.deleteButtonText}>삭제</Text>
         </Pressable>
-        
-        {accommodation && onDelete && (
-          <Pressable
-            style={[styles.button, styles.deleteButton]}
-            onPress={handleDelete}
-          >
-            <Text style={styles.deleteButtonText}>삭제</Text>
-          </Pressable>
-        )}
-        
         <Pressable
-          style={[styles.button, styles.saveButton]}
+          style={styles.saveButton}
           onPress={handleSave}
           disabled={isLoading || !formData.name.trim() || !formData.country.trim() || !formData.city.trim()}
         >
           <Text style={styles.saveButtonText}>
-            {isLoading ? '저장 중...' : '저장'}
+            {isLoading 
+              ? (accommodation && accommodation.id ? '수정 중...' : '저장 중...') 
+              : (accommodation && accommodation.id ? '수정' : '저장')
+            }
           </Text>
         </Pressable>
       </View>
-    </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#f8f9fa',
-    padding: 16,
-    borderRadius: 8,
-    marginBottom: 12,
+    flex: 1,
+    backgroundColor: colors.white,
+  },
+  contentContainer: {
+    padding: spacing.xl,
+    gap: spacing.xl,
+  },
+  titleRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.xl,
   },
   title: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 12,
-    color: '#333',
+    ...textStyles.h5,
   },
-  input: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 12,
-    fontSize: 16,
-    backgroundColor: '#fff',
+  closeButton: {
+    padding: spacing.xs,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  buttonRow: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    gap: 8,
-  },
-  button: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 6,
-  },
-  cancelButton: {
-    backgroundColor: '#f0f0f0',
-  },
-  cancelButtonText: {
-    color: '#333',
-    fontWeight: '600',
-  },
-  deleteButton: {
-    backgroundColor: '#ff3b30',
-  },
-  deleteButtonText: {
-    color: '#fff',
-    fontWeight: '600',
-  },
-  saveButton: {
-    backgroundColor: '#007AFF',
-  },
-  saveButtonText: {
-    color: '#fff',
-    fontWeight: '600',
-  },
-  textArea: {
-    minHeight: 60,
-    paddingTop: 8,
-    textAlignVertical: 'top',
+  formSection: {
+    gap: spacing.lg,
   },
   row: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 12,
-    overflow: 'visible',
-    position: 'relative',
-  },
-  pickerRowWrapper: {
+    gap: spacing.sm,
     overflow: 'visible',
     position: 'relative',
   },
   inputGroup: {
-    marginBottom: 12,
+    gap: spacing.sm,
   },
   halfWidth: {
     flex: 1,
-    marginHorizontal: 4,
-  },
-  countryPickerWrapper: {
-    overflow: 'visible',
-    position: 'relative',
-    zIndex: 8000,
-  },
-  countryDropdown: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    backgroundColor: '#fff',
-    minHeight: 45,
-    position: 'relative',
-    zIndex: 9999,
-  },
-  countryDropdownContainer: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    backgroundColor: '#fff',
-    zIndex: 9999,
-    elevation: 6,
-    shadowColor: '#000',
-    shadowOpacity: 0.2,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 2 },
-  },
-  countryDropdownOuter: {
-    position: 'relative',
-    zIndex: 9999,
   },
   label: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#495057',
-    marginBottom: 4,
+    ...textStyles.h8,
+    color: colors.black,
   },
-  header: {
+  input: {
+    backgroundColor: colors.gray300,
+    height: 40,
+    borderRadius: radii.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+    ...textStyles.body4,
+  },
+  dateInput: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    borderWidth: 0,
+    borderRadius: radii.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 10,
+    backgroundColor: colors.gray300,
+    minHeight: 40,
+  },
+  dateTextContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    flex: 1,
+  },
+  dateText: {
+    ...textStyles.body4,
+    color: colors.black,
+  },
+  placeholderText: {
+    ...textStyles.body4,
+    color: colors.gray600,
+  },
+  iconWrapper: {
+    marginTop: 0,
+  },
+  calendarPopup: {
+    position: 'absolute',
+    top: 70,
+    left: 0,
+    zIndex: 20000,
+  },
+  timePicker: {
+    borderWidth: 0,
+    borderColor: colors.gray400,
+    borderRadius: radii.md,
+    height: 40,
+  },
+  currencyPickerWrapper: {
+    position: 'relative',
+  },
+  currencyDropdown: {
+    borderRadius: radii.md,
+    backgroundColor: colors.gray300,
+    borderWidth: 0,
+    minHeight: 40,
+    paddingHorizontal: spacing.md,
+  },
+  currencyDropdownContainer: {
+    borderRadius: radii.md,
+    backgroundColor: colors.gray300,
+  },
+  buttonRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginTop: spacing.sm,
+    paddingBottom: spacing.xl,
+  },
+  deleteButton: {
+    backgroundColor: colors.gray300,
+    height: 40,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    borderColor: colors.gray400,
+    paddingHorizontal: spacing.lg,
+    justifyContent: 'center',
+    alignItems: 'center',
+    minWidth: 90,
+  },
+  deleteButtonText: {
+    ...textStyles.h8,
+    color: colors.black,
+  },
+  saveButton: {
+    backgroundColor: colors.gray900,
+    height: 40,
+    borderRadius: radii.md,
+    paddingHorizontal: spacing.lg,
+    justifyContent: 'center',
+    alignItems: 'center',
+    flex: 1,
+  },
+  saveButtonText: {
+    ...textStyles.h8,
+    color: colors.white,
+  },
+  textArea: {
+    backgroundColor: colors.gray300,
+    height: 80,
+    borderRadius: radii.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 10,
+    ...textStyles.body4,
   },
 });
