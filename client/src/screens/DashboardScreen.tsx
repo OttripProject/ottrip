@@ -400,6 +400,10 @@ export default function DashboardScreen() {
               }}
               onAccommodationAdd={handleAccommodationAdd}
               onAccommodationSelect={setSelectedAccommodation}
+              onAccommodationClear={() => {
+                setSelectedAccommodation(null);
+                setActiveTab(undefined);
+              }}
               onExpenseAdd={handleExpenseAdd}
               openNewFlightForm={openNewFlightForm}
               onConsumeOpenNewFlightForm={() => setOpenNewFlightForm(false)}

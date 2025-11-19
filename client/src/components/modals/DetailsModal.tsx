@@ -30,6 +30,7 @@ interface DetailsModalProps {
   onFlightClear?: () => void;
   onAccommodationAdd?: (accommodation: any) => void;
   onAccommodationSelect?: (accommodation: any) => void;
+  onAccommodationClear?: () => void;
   onExpenseAdd?: (expense: any) => void;
   // 외부에서 새 항공편 폼을 바로 열도록 트리거
   openNewFlightForm?: boolean;
@@ -55,6 +56,7 @@ export default function DetailsModal({
   onFlightClear,
   onAccommodationAdd,
   onAccommodationSelect,
+  onAccommodationClear,
   onExpenseAdd,
   openNewFlightForm,
   onConsumeOpenNewFlightForm,
@@ -125,9 +127,14 @@ export default function DetailsModal({
           activeTab={activeTab}
           onAccommodationAdd={onAccommodationAdd}
           onAccommodationSelect={onAccommodationSelect}
+          onAccommodationClear={onAccommodationClear}
           openNewAccommodationForm={openNewAccommodationForm}
           onConsumeOpenNewAccommodationForm={onConsumeOpenNewAccommodationForm}
           newAccommodationDraft={newAccommodationDraft}
+          onShowWarning={(message?: string) => {
+            if (message) setWarningMessage(message);
+            setShowWarning(true);
+          }}
         />
       );
     }
@@ -182,9 +189,14 @@ export default function DetailsModal({
             activeTab={activeTab}
             onAccommodationAdd={onAccommodationAdd}
             onAccommodationSelect={onAccommodationSelect}
+            onAccommodationClear={onAccommodationClear}
             openNewAccommodationForm={openNewAccommodationForm}
             onConsumeOpenNewAccommodationForm={onConsumeOpenNewAccommodationForm}
             newAccommodationDraft={newAccommodationDraft}
+            onShowWarning={(message?: string) => {
+              if (message) setWarningMessage(message);
+              setShowWarning(true);
+            }}
           />
         );
 
