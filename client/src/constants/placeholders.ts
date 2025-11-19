@@ -19,7 +19,7 @@ export const PLACEHOLDERS = {
     name: '숙소 이름',
     city: '도시',
     place: '장소',
-    description: '설명',
+    description: '내용',
   },
   itinerary: {
     title: '일정 제목',
