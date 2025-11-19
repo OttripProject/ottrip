@@ -8,8 +8,8 @@ export const PLACEHOLDERS = {
   flight: {
     reservationNumber: 'F8SKRQ',
     passengerName: '김오티',
-    ticketNumber: '1234567890',
-    bookingReference: '1234-5678',
+    ticketNumber: '항공권 번호를 입력하세요.',
+    bookingReference: '예약번호를 입력하세요.',
     airline: 'KE',
     flightNumber: 'KE123',
     departureAirport: 'ICN',
@@ -47,6 +47,7 @@ export const PLACEHOLDERS = {
     country: '국가 선택',
     search: '검색',
     category: '카테고리 선택',
+    time: '00:00'
   },
 } as const;
 

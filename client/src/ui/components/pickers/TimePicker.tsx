@@ -7,6 +7,7 @@ import { radii } from '@/ui/tokens/radii';
 import { spacing } from '@/ui/tokens/spacing';
 import DownArrowIcon from '../../../../assets/dropdown_time.svg';
 import UpperArrowIcon from '../../../../assets/upper_arrow.svg';
+import { PLACEHOLDERS } from '@/constants/placeholders';
 
 interface TimePickerProps {
   value: string; // 'HH:mm' 형식
@@ -23,7 +24,7 @@ export default function TimePicker({
   value, 
   onChange, 
   style, 
-  placeholder = "시간을 선택하세요", 
+  placeholder = PLACEHOLDERS.picker.time, 
   minTime,
   maxTime,
   onOpen,

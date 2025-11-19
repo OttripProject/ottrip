@@ -394,6 +394,10 @@ export default function DashboardScreen() {
                 setActiveTab(undefined);
               }}
               onFlightAdd={handleFlightAdd}
+              onFlightClear={() => {
+                setSelectedFlight(null);
+                setActiveTab(undefined);
+              }}
               onAccommodationAdd={handleAccommodationAdd}
               onAccommodationSelect={setSelectedAccommodation}
               onExpenseAdd={handleExpenseAdd}

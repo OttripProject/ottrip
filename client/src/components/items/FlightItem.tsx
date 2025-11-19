@@ -13,6 +13,7 @@ import { radii } from '@/ui/tokens/radii';
 import BaseCalendar from '@/components/popup/calendar/BaseCalendar';
 import CalendarIcon from '../../../assets/calender.svg';
 import AddIcon from '../../../assets/add.svg';
+import DeleteIcon from '../../../assets/delete.svg';
 import DropDownPicker from 'react-native-dropdown-picker';
 import DownArrowIcon from '../../../assets/down_arrow.svg';
 import UpperArrowIcon from '../../../assets/upper_arrow.svg';
@@ -23,9 +24,10 @@ interface FlightItemProps {
   onSave: (flight: any) => void;
   onCancel: () => void;
   onDelete?: (flightId: string) => void;
-  existingFlights?: any[]; // 기존 항공편 목록 (겹침 검증용)
-  existingItineraries?: any[]; // 기존 일정 목록 (겹침 검증용)
-  existingAccommodations?: any[]; // 기존 숙박 목록 (겹침 검증용)
+  existingFlights?: any[]; 
+  existingItineraries?: any[];
+  existingAccommodations?: any[];
+  onShowWarning?: (message?: string) => void;
 }
 
 export default function FlightItem({ 
@@ -35,6 +37,7 @@ export default function FlightItem({
   onCancel, 
   onDelete,
   existingFlights = [],
+  onShowWarning,
 }: FlightItemProps) {
   const [formData, setFormData] = useState({
     reservation_number: flight?.reservationNumber || flight?.reservation_number || '',
@@ -101,9 +104,9 @@ export default function FlightItem({
         departure_airport: '',
         arrival_airport: '',
         departure_date: now.format('YYYY-MM-DD'),
-        departure_time: now.format('HH:mm'),
+        departure_time: '',
         arrival_date: later.format('YYYY-MM-DD'),
-        arrival_time: later.format('HH:mm'),
+        arrival_time: '',
         seat_class: '',
         seat_number: '',
         gate: '',
@@ -156,11 +159,7 @@ export default function FlightItem({
 
   const handleSave = async () => {
     if (!formData.reservation_number.trim() || !formData.passenger_name.trim() || !isFirstSegmentValid) {
-      if (Platform.OS === 'web') {
-        window.alert('입력되지 않은 값이 있어요');
-      } else {
-        Alert.alert('알림', '입력되지 않은 값이 있어요');
-      }
+      onShowWarning?.();
       return;
     }
 
@@ -192,11 +191,7 @@ export default function FlightItem({
           );
 
           if (hasOverlap) {
-            if (Platform.OS === 'web') {
-              window.alert('겹치는 항공 일정이 있어요');
-            } else {
-              Alert.alert('알림', '겹치는 항공 일정이 있어요');
-            }
+            onShowWarning?.('겹치는 항공 일정이 있어요');
             return;
           }
         }
@@ -236,7 +231,7 @@ export default function FlightItem({
           expense: {
             exDate: expenseDate,
             amount: Number(expenseData.amount) || 0,
-            currency: expenseData.currency as ExpenseCurrency,
+            currency: ExpenseCurrency.KRW,
             category: ExpenseCategory.FLIGHT as any,
             planId: planId,
             description: formData.reservation_number,
@@ -265,7 +260,7 @@ export default function FlightItem({
           expense: {
             exDate: expenseDate,
             amount: Number(expenseData.amount) || 0,
-            currency: expenseData.currency as ExpenseCurrency,
+            currency: ExpenseCurrency.KRW,
             category: ExpenseCategory.FLIGHT as any,
             planId: planId,
             description: formData.reservation_number,
@@ -281,10 +276,17 @@ export default function FlightItem({
   };
 
   const handleDelete = async () => {
+    // 항공편 추가 모드: 입력창 닫기
+    if (!flight) {
+      onCancel();
+      return;
+    }
+    
     if (flight && onDelete) {
       try {
         await flightsApi.deleteFlight(flight.id);
         onDelete(flight.id);
+        onCancel();
       } catch (error) {
         console.error('Failed to delete flight:', error);
       }
@@ -299,12 +301,26 @@ export default function FlightItem({
     { label: 'JPY', value: ExpenseCurrency.JPY },
   ], []);
 
+  // 필수 필드가 모두 입력되었는지 확인하는 함수
+  const isSegmentComplete = (segment: SegmentForm): boolean => {
+    return !!(
+      segment.airline &&
+      segment.flight_number &&
+      segment.departure_airport &&
+      segment.arrival_airport &&
+      segment.departure_date &&
+      segment.departure_time &&
+      segment.arrival_date &&
+      segment.arrival_time
+    );
+  };
+
   return (
     <ScrollView 
       style={[styles.container, { position: 'relative', overflow: 'visible' }]}
       contentContainerStyle={[styles.contentContainer, { overflow: 'visible' }]}
     >
-      <View style={styles.contentWrapper}>
+      {/* <View style={styles.contentWrapper}> */}
         <Text style={styles.title}>항공편 정보</Text>
 
         {/* 기본 정보 섹션 */}
@@ -337,10 +353,10 @@ export default function FlightItem({
 
           {/* 항공편 번호 */}
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>항공편 번호</Text>
+            <Text style={styles.label}>항공권 번호</Text>
             <Input
               variant="filled"
-              placeholder="항공편 번호를 입력하세요."
+              placeholder={PLACEHOLDERS.flight.ticketNumber}
               value={formData.ticket_number}
               onChangeText={(text) => setFormData({ ...formData, ticket_number: text })}
               style={styles.input}
@@ -353,7 +369,7 @@ export default function FlightItem({
             <Text style={styles.label}>예약번호 (여행사 예약 번호)</Text>
             <Input
               variant="filled"
-              placeholder="예약번호를 입력하세요."
+              placeholder={PLACEHOLDERS.flight.bookingReference}
               value={formData.booking_reference}
               onChangeText={(text) => setFormData({ ...formData, booking_reference: text })}
               style={styles.input}
@@ -375,19 +391,17 @@ export default function FlightItem({
                 placeholderTextColor={colors.gray600}
               />
             </View>
-            <View style={[styles.inputGroup, styles.halfWidth, { zIndex: currencyOpen ? 10001 : 1 }]}>
+            <View style={[styles.inputGroup, styles.halfWidth]}>
               <Text style={styles.label}>통화</Text>
               <View style={styles.currencyPickerWrapper}>
                 <DropDownPicker
-                  open={currencyOpen}
-                  value={expenseData.currency}
+                  open={false}
+                  value={ExpenseCurrency.KRW}
                   items={currencyOptions}
-                  setOpen={setCurrencyOpen}
-                  setValue={(callback: any) => {
-                    const next = callback(expenseData.currency) as ExpenseCurrency;
-                    setExpenseData({ ...expenseData, currency: next });
-                  }}
-                  placeholder="통화 선택"
+                  setOpen={() => {}}
+                  setValue={() => {}}
+                  disabled={true}
+                  placeholder={PLACEHOLDERS.expense.currency}
                   style={styles.currencyDropdown}
                   dropDownContainerStyle={styles.currencyDropdownContainer}
                   listMode="SCROLLVIEW"
@@ -400,14 +414,38 @@ export default function FlightItem({
         </View>
 
         {/* 항공편 구간들 */}
-        <View style={styles.inputGroup}>
-          {flightSegments.map((segment, idx) => (
-              <View key={idx} style={styles.segmentContainer}>
-                <Text style={styles.segmentTitle}>구간{idx + 1}</Text>
+        <View style={[styles.inputGroup, { zIndex: 5000 }]}>
+          {flightSegments.map((segment, idx) => {
+            const isComplete = isSegmentComplete(segment);
+            return (
+              <View 
+                key={idx} 
+                style={[
+                  styles.segmentContainer,
+                  { 
+                    zIndex: (flightSegments.length - idx) * 1000,
+                    backgroundColor: isComplete ? colors.gray300 : colors.white
+                  }
+                ]}
+              >
+                <View style={styles.segmentTitleRow}>
+                  <Text style={styles.segmentTitle}>구간{idx + 1}</Text>
+                  <Pressable
+                    onPress={() => {
+                      if (flightSegments.length > 1) {
+                        setFlightSegments(prev => prev.filter((_, i) => i !== idx));
+                      } else {
+                        onCancel();
+                      }
+                    }}
+                    style={styles.segmentDeleteButton}
+                  >
+                    <DeleteIcon width={16} height={16} />
+                  </Pressable>
+                </View>
                 
                 <View style={styles.segmentContent}>
-                  {/* 항공사 / 항공편명 */}
-                  <View style={[styles.row, { gap: spacing.sm }]}>
+                  <View style={[styles.row, { gap: spacing.sm, zIndex: 3000 }]}>
                     <View style={[styles.inputGroup, styles.halfWidth]}>
                       <Text style={styles.label}>항공사</Text>
                       <Input
@@ -440,8 +478,7 @@ export default function FlightItem({
                     </View>
                   </View>
 
-                  {/* 출발 공항 / 도착 공항 */}
-                  <View style={[styles.row, { gap: spacing.sm, zIndex: airportOpen ? 10001 : 1 }]}>
+                  <View style={[styles.row, { gap: spacing.sm, zIndex: 2000 }]}>
                     <View style={[styles.inputGroup, styles.halfWidth, styles.airportPickerWrapper]}>
                       <Text style={styles.label}>출발 공항</Text>
                       <AirportPicker
@@ -468,8 +505,7 @@ export default function FlightItem({
                     </View>
                   </View>
 
-                  {/* 출발 일자 / 출발 시간 */}
-                  <View style={[styles.row, { gap: spacing.sm }]}>
+                  <View style={[styles.row, { gap: spacing.sm, zIndex: 1000 }]}>
                     <View style={[styles.inputGroup, styles.halfWidth]}>
                       <Text style={styles.label}>출발 일자</Text>
                       <Pressable 
@@ -479,9 +515,14 @@ export default function FlightItem({
                           setSegmentDatePickerOpen({ ...segmentDatePickerOpen, [key]: true });
                         }}
                       >
-                        <Text style={segment.departure_date ? styles.segmentDateText : styles.segmentPlaceholderText}>
-                          {segment.departure_date ? dayjs(segment.departure_date).format('YYYY. MM. DD') : '기타'}
-                        </Text>
+                        <View style={styles.segmentDateTextContainer}>
+                          <Text style={segment.departure_date ? styles.segmentDateText : styles.segmentPlaceholderText}>
+                            {segment.departure_date ? dayjs(segment.departure_date).format('YYYY.MM.DD') : '기타'}
+                          </Text>
+                          <View style={styles.iconWrapper}>
+                            <CalendarIcon width={16} height={16} />
+                          </View>
+                        </View>
                       </Pressable>
                       {segmentDatePickerOpen[`dep_${idx}`] && (
                         <BaseCalendar
@@ -503,7 +544,7 @@ export default function FlightItem({
                         />
                       )}
                     </View>
-                    <View style={[styles.inputGroup, styles.halfWidth, { zIndex: timeOpen ? 10001 : 1 }]}>
+                    <View style={[styles.inputGroup, styles.halfWidth]}>
                       <Text style={styles.label}>출발 시간</Text>
                       <TimePicker
                         value={segment.departure_time}
@@ -520,8 +561,7 @@ export default function FlightItem({
                     </View>
                   </View>
 
-                  {/* 도착 일자 / 도착 시간 */}
-                  <View style={[styles.row, { gap: spacing.sm }]}>
+                  <View style={[styles.row, { gap: spacing.sm, zIndex: 500 }]}>
                     <View style={[styles.inputGroup, styles.halfWidth]}>
                       <Text style={styles.label}>도착 일자</Text>
                       <Pressable 
@@ -531,9 +571,14 @@ export default function FlightItem({
                           setSegmentDatePickerOpen({ ...segmentDatePickerOpen, [key]: true });
                         }}
                       >
-                        <Text style={segment.arrival_date ? styles.segmentDateText : styles.segmentPlaceholderText}>
-                          {segment.arrival_date ? dayjs(segment.arrival_date).format('YYYY. MM. DD') : '기타'}
-                        </Text>
+                        <View style={styles.segmentDateTextContainer}>
+                          <Text style={segment.arrival_date ? styles.segmentDateText : styles.segmentPlaceholderText}>
+                            {segment.arrival_date ? dayjs(segment.arrival_date).format('YYYY.MM.DD') : '기타'}
+                          </Text>
+                          <View style={styles.iconWrapper}>
+                            <CalendarIcon width={16} height={16} />
+                          </View>
+                        </View>
                       </Pressable>
                       {segmentDatePickerOpen[`arr_${idx}`] && (
                         <BaseCalendar
@@ -555,7 +600,7 @@ export default function FlightItem({
                         />
                       )}
                     </View>
-                    <View style={[styles.inputGroup, styles.halfWidth, { zIndex: timeOpen ? 10001 : 1 }]}>
+                    <View style={[styles.inputGroup, styles.halfWidth]}>
                       <Text style={styles.label}>도착 시간</Text>
                       <TimePicker
                         value={segment.arrival_time}
@@ -571,49 +616,14 @@ export default function FlightItem({
                       />
                     </View>
                   </View>
-
-                  {/* 구간 내부 버튼 */}
-                  <View style={styles.segmentButtonRow}>
-                    <Pressable
-                      style={styles.segmentCancelButton}
-                      onPress={() => {
-                        if (flightSegments.length > 1) {
-                          setFlightSegments(prev => prev.filter((_, i) => i !== idx));
-                        } else {
-                          onCancel();
-                        }
-                      }}
-                    >
-                      <Text style={styles.segmentCancelButtonText}>취소</Text>
-                    </Pressable>
-                    <Pressable
-                      style={styles.segmentAddButton}
-                      onPress={() => {
-                        const now = dayjs();
-                        const later = dayjs().add(1, 'hour');
-                        const newSegment: SegmentForm = {
-                          airline: '',
-                          flight_number: '',
-                          departure_airport: '',
-                          arrival_airport: '',
-                          departure_date: now.format('YYYY-MM-DD'),
-                          departure_time: now.format('HH:mm'),
-                          arrival_date: later.format('YYYY-MM-DD'),
-                          arrival_time: later.format('HH:mm'),
-                        };
-                        setFlightSegments(prev => [...prev, newSegment]);
-                      }}
-                    >
-                      <Text style={styles.segmentAddButtonText}>추가</Text>
-                    </Pressable>
-                  </View>
                 </View>
               </View>
-            ))}
+            );
+          })}
 
           {/* 항공권 구간 추가 버튼 */}
           <Pressable
-            style={styles.addSegmentButton}
+            style={[styles.addSegmentButton, { zIndex: -1 }]}
             onPress={() => {
               const now = dayjs();
               const later = dayjs().add(1, 'hour');
@@ -623,9 +633,9 @@ export default function FlightItem({
                 departure_airport: '',
                 arrival_airport: '',
                 departure_date: now.format('YYYY-MM-DD'),
-                departure_time: now.format('HH:mm'),
+                departure_time: '',
                 arrival_date: later.format('YYYY-MM-DD'),
-                arrival_time: later.format('HH:mm'),
+                arrival_time: '',
               };
               setFlightSegments(prev => [...prev, newSegment]);
             }}
@@ -638,10 +648,10 @@ export default function FlightItem({
         </View>
 
         {/* 하단 버튼 */}
-        <View style={styles.buttonRow}>
+        <View style={[styles.buttonRow, { zIndex: -1, elevation: -1 }]}>
           <Pressable
             style={styles.deleteButton}
-            onPress={flight && onDelete ? handleDelete : onCancel}
+            onPress={handleDelete}
           >
             <Text style={styles.deleteButtonText}>삭제</Text>
           </Pressable>
@@ -655,7 +665,7 @@ export default function FlightItem({
             </Text>
           </Pressable>
         </View>
-      </View>
+      {/* </View> */}
     </ScrollView>
   );
 }
@@ -734,7 +744,7 @@ const styles = StyleSheet.create({
     color: colors.gray600,
   },
   iconWrapper: {
-    marginTop: -2,
+    marginTop: 0,
   },
   calendarPopup: {
     position: 'absolute',
@@ -763,10 +773,21 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     marginBottom: spacing.xl,
     gap: spacing.lg,
+    backgroundColor: colors.white,
+  },
+  segmentTitleRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   segmentTitle: {
     ...textStyles.h6,
     color: colors.black,
+  },
+  segmentDeleteButton: {
+    padding: spacing.xs,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   segmentContent: {
     gap: spacing.lg,
@@ -787,13 +808,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     justifyContent: 'center',
   },
+  segmentDateTextContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    flex: 1,
+  },
   segmentDateText: {
     ...textStyles.body4,
     color: colors.gray800,
   },
   segmentPlaceholderText: {
     ...textStyles.body4,
-    color: colors.gray800,
+    color: colors.gray600,
   },
   segmentTimePicker: {
     borderWidth: 1,
@@ -805,7 +832,6 @@ const styles = StyleSheet.create({
   airportPickerWrapper: {
     overflow: 'visible',
     position: 'relative',
-    zIndex: 8000,
   },
   segmentButtonRow: {
     flexDirection: 'row',

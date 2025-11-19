@@ -16,9 +16,11 @@ interface FlightSectionProps {
   selectedFlight?: any;
   activeTab?: 'itinerary' | 'flight' | 'accommodation' | undefined;
   onFlightAdd?: (flight: any) => void;
+  onFlightClear?: () => void;
   openNewFlightForm?: boolean;
   onConsumeOpenNewFlightForm?: () => void;
   onEdit?: (flight: any) => void;
+  onShowWarning?: (message?: string) => void;
 }
 
 export default function FlightSection({
@@ -26,9 +28,11 @@ export default function FlightSection({
   selectedFlight,
   activeTab,
   onFlightAdd,
+  onFlightClear,
   openNewFlightForm,
   onConsumeOpenNewFlightForm,
   onEdit,
+  onShowWarning,
 }: FlightSectionProps) {
   const [showFlightForm, setShowFlightForm] = useState(false);
   const [editingFlight, setEditingFlight] = useState<any | null>(null);
@@ -71,6 +75,7 @@ export default function FlightSection({
     planData?.refreshFlights();
     setShowFlightForm(false);
     setEditingFlight(null);
+    onFlightClear?.();
   };
 
   // 선택된 항공편이 있고 편집 모드가 아닐 때 - 상세 정보 표시
@@ -221,11 +226,13 @@ export default function FlightSection({
         onCancel={() => {
           setShowFlightForm(false);
           setEditingFlight(null);
+          onFlightClear?.();
         }}
         onDelete={handleFlightDelete}
         existingFlights={planData.flights}
         existingItineraries={planData.itineraries}
         existingAccommodations={planData.accommodations}
+        onShowWarning={onShowWarning}
       />
     );
   }

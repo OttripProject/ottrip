@@ -27,6 +27,7 @@ interface DetailsModalProps {
   onItineraryAdd?: (itinerary: any) => void;
   onItineraryClear?: () => void;
   onFlightAdd?: (flight: any) => void;
+  onFlightClear?: () => void;
   onAccommodationAdd?: (accommodation: any) => void;
   onAccommodationSelect?: (accommodation: any) => void;
   onExpenseAdd?: (expense: any) => void;
@@ -51,6 +52,7 @@ export default function DetailsModal({
   onItineraryAdd,
   onItineraryClear,
   onFlightAdd,
+  onFlightClear,
   onAccommodationAdd,
   onAccommodationSelect,
   onExpenseAdd,
@@ -64,6 +66,7 @@ export default function DetailsModal({
   newAccommodationDraft,
 }: DetailsModalProps) {
   const [showWarning, setShowWarning] = useState(false);
+  const [warningMessage, setWarningMessage] = useState('입력되지 않은 값이 있어요.');
   if (!planData?.plan) {
     return (
       <ModalLayout style={styles.container}>
@@ -88,7 +91,10 @@ export default function DetailsModal({
           openNewItineraryForm={openNewItineraryForm}
           onConsumeOpenNewItineraryForm={onConsumeOpenNewItineraryForm}
           selectedItineraryDate={selectedItineraryDate}
-          onShowWarning={() => setShowWarning(true)}
+          onShowWarning={(message?: string) => {
+            if (message) setWarningMessage(message);
+            setShowWarning(true);
+          }}
         />
       );
     }
@@ -100,8 +106,13 @@ export default function DetailsModal({
           selectedFlight={selectedFlight}
           activeTab={activeTab}
           onFlightAdd={onFlightAdd}
+          onFlightClear={onFlightClear}
           openNewFlightForm={openNewFlightForm}
           onConsumeOpenNewFlightForm={onConsumeOpenNewFlightForm}
+          onShowWarning={(message?: string) => {
+            if (message) setWarningMessage(message);
+            setShowWarning(true);
+          }}
         />
       );
     }
@@ -141,7 +152,10 @@ export default function DetailsModal({
             openNewItineraryForm={openNewItineraryForm}
             onConsumeOpenNewItineraryForm={onConsumeOpenNewItineraryForm}
             selectedItineraryDate={selectedItineraryDate}
-            onShowWarning={() => setShowWarning(true)}
+            onShowWarning={(message?: string) => {
+            if (message) setWarningMessage(message);
+            setShowWarning(true);
+          }}
           />
         );
 
@@ -151,8 +165,13 @@ export default function DetailsModal({
             planData={planData}
             activeTab={activeTab}
             onFlightAdd={onFlightAdd}
+            onFlightClear={onFlightClear}
             openNewFlightForm={openNewFlightForm}
             onConsumeOpenNewFlightForm={onConsumeOpenNewFlightForm}
+            onShowWarning={(message?: string) => {
+            if (message) setWarningMessage(message);
+            setShowWarning(true);
+          }}
           />
         );
 
@@ -184,10 +203,13 @@ export default function DetailsModal({
     <ModalLayout style={styles.container}>
       <View style={styles.scrollWrapper}>
         <WarningBanner
-          message="입력되지 않은 값이 있어요."
+          message={warningMessage}
           visible={showWarning}
           duration={1000}
-          onHide={() => setShowWarning(false)}
+          onHide={() => {
+            setShowWarning(false);
+            setWarningMessage('입력되지 않은 값이 있어요.'); // 기본 메시지로 리셋
+          }}
         />
         <ScrollView 
           style={styles.scrollView}
