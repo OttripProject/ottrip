@@ -361,31 +361,6 @@ export default function FlightItem({
             />
           </View>
 
-          {/* 날짜 */}
-          <View style={[styles.inputGroup, styles.datePickerWrapper, { zIndex: showDatePicker ? 20000 : 1 }]}>
-            <Text style={styles.label}>날짜</Text>
-            <Pressable style={styles.dateInput} onPress={() => setShowDatePicker(!showDatePicker)}>
-              <View style={styles.dateTextContainer}>
-                <Text style={expenseDate ? styles.dateText : styles.placeholderText}>
-                  {expenseDate ? dayjs(expenseDate).format('YYYY. MM. DD') : '날짜를 선택하세요.'}
-                </Text>
-                <View style={styles.iconWrapper}>
-                  <CalendarIcon width={16} height={16} />
-                </View>
-              </View>
-            </Pressable>
-            <BaseCalendar
-              visible={showDatePicker}
-              selectedDate={expenseDate}
-              onDayPress={(day) => {
-                setExpenseDate(day.dateString);
-                setShowDatePicker(false);
-              }}
-              onClose={() => setShowDatePicker(false)}
-              style={styles.calendarPopup}
-            />
-          </View>
-
           {/* 항공료 / 통화 */}
           <View style={[styles.row, { gap: spacing.sm }]}>
             <View style={[styles.inputGroup, styles.halfWidth]}>
@@ -727,7 +702,7 @@ const styles = StyleSheet.create({
     height: 40,
     borderRadius: radii.md,
     paddingHorizontal: spacing.md,
-    paddingVertical: 10,
+    paddingVertical: spacing.md,
     ...textStyles.body4,
   },
   datePickerWrapper: {

@@ -79,7 +79,7 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   base: {
-    paddingHorizontal: spacing.lg,
+    paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     borderRadius: radii.md,
     ...textStyles.body4,
