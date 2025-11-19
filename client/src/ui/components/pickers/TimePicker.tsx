@@ -5,7 +5,7 @@ import { colors } from '@/ui/tokens/colors';
 import { textStyles } from '@/ui/tokens/typography';
 import { radii } from '@/ui/tokens/radii';
 import { spacing } from '@/ui/tokens/spacing';
-import DownArrowIcon from '../../../../assets/down_arrow.svg';
+import DownArrowIcon from '../../../../assets/dropdown_time.svg';
 import UpperArrowIcon from '../../../../assets/upper_arrow.svg';
 
 interface TimePickerProps {
@@ -70,8 +70,40 @@ export default function TimePicker({
     }
   }, [selectedValue]);
 
+  // style prop에서 커스텀 스타일 추출 (항공 구간용)
+  const styleObj = style as any;
+  const customBackgroundColor = styleObj?.backgroundColor;
+  const customBorderColor = styleObj?.borderColor;
+  const customBorderWidth = styleObj?.borderWidth;
+  const customHeight = styleObj?.height;
+  const customBorderRadius = styleObj?.borderRadius;
+  
+  // 커스텀 스타일이 있으면 적용, 없으면 기본값 사용
+  const dropdownBgColor = customBackgroundColor || colors.gray300;
+  const dropdownStyle: any = {
+    width: '100%',
+    backgroundColor: dropdownBgColor,
+  };
+  
+  // 보더가 있으면 적용 (항공 구간만)
+  if (customBorderColor !== undefined) {
+    dropdownStyle.borderColor = customBorderColor;
+    dropdownStyle.borderWidth = customBorderWidth ?? 1;
+  }
+  
+  // 높이가 지정되어 있으면 적용 (항공 구간만)
+  if (customHeight !== undefined) {
+    dropdownStyle.height = customHeight;
+    dropdownStyle.minHeight = customHeight;
+  }
+  
+  // borderRadius가 지정되어 있으면 적용 (항공 구간만)
+  if (customBorderRadius !== undefined) {
+    dropdownStyle.borderRadius = customBorderRadius;
+  }
+
   return (
-    <View style={[styles.wrapper, style, { zIndex: open ? 10000 : 1 }]}>
+    <View style={[styles.wrapper, { zIndex: open ? 10000 : 1 }]}>
       <DropDownPicker
         open={open}
         value={selectedValue}
@@ -93,11 +125,22 @@ export default function TimePicker({
         placeholderStyle={styles.placeholder}
         textStyle={styles.text}
         labelStyle={styles.text}
-        listItemLabelStyle={styles.listItemLabel}
+        listItemLabelStyle={[styles.listItemLabel, { backgroundColor: dropdownBgColor }]}
         selectedItemLabelStyle={styles.selectedItem}
-        selectedItemContainerStyle={styles.selectedItemContainer}
-        style={[styles.dropdown, { width: '100%' }]}
-        dropDownContainerStyle={[styles.dropdownContainer, { width: '100%' }]}
+        selectedItemContainerStyle={[styles.selectedItemContainer, { backgroundColor: dropdownBgColor }]}
+        style={[styles.dropdown, dropdownStyle]}
+        dropDownContainerStyle={[
+          styles.dropdownContainer, 
+          { 
+            width: '100%', 
+            backgroundColor: dropdownBgColor,
+            ...(customBorderColor && {
+              borderColor: customBorderColor,
+              borderWidth: customBorderWidth ?? 1,
+              borderTopWidth: 0,
+            })
+          }
+        ]}
         containerStyle={[styles.dropdownOuter, { width: '100%' }]}
         listMode="SCROLLVIEW"
         scrollViewProps={{ 

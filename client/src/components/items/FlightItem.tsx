@@ -1,11 +1,21 @@
-import React, { useState } from 'react';
-import { View, Text, Pressable, StyleSheet, Alert, Platform } from 'react-native';
-import { DatePicker, TimePicker, AirportPicker } from '@/ui/components/pickers';
+import React, { useState, useMemo } from 'react';
+import { View, Text, Pressable, StyleSheet, Alert, Platform, ScrollView } from 'react-native';
+import { TimePicker, AirportPicker } from '@/ui/components/pickers';
 import dayjs from 'dayjs';
 import { flightsApi } from '@/services/flights';
 import { ExpenseCurrency, ExpenseCategory } from '@/types/expense';
 import Input from '@/ui/components/input/Input';
 import { PLACEHOLDERS } from '@/constants/placeholders';
+import { colors } from '@/ui/tokens/colors';
+import { textStyles, typography } from '@/ui/tokens/typography';
+import { spacing } from '@/ui/tokens/spacing';
+import { radii } from '@/ui/tokens/radii';
+import BaseCalendar from '@/components/popup/calendar/BaseCalendar';
+import CalendarIcon from '../../../assets/calender.svg';
+import AddIcon from '../../../assets/add.svg';
+import DropDownPicker from 'react-native-dropdown-picker';
+import DownArrowIcon from '../../../assets/down_arrow.svg';
+import UpperArrowIcon from '../../../assets/upper_arrow.svg';
 
 interface FlightItemProps {
   flight?: any;
@@ -34,6 +44,10 @@ export default function FlightItem({
   });
 
   const [airportOpen, setAirportOpen] = useState(false);
+  const [timeOpen, setTimeOpen] = useState(false);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [currencyOpen, setCurrencyOpen] = useState(false);
+  const [segmentDatePickerOpen, setSegmentDatePickerOpen] = useState<Record<string, boolean>>({});
 
   const [expenseData, setExpenseData] = useState({
     amount: flight?.expense?.amount || '',
@@ -98,7 +112,32 @@ export default function FlightItem({
     }
   });
 
+  const [expenseDate, setExpenseDate] = useState(
+    flight?.expense?.exDate || (flightSegments.length > 0 ? flightSegments[0].departure_date : dayjs().format('YYYY-MM-DD'))
+  );
 
+  // 12시간제 시간 표시 변환 함수
+  const formatTime12Hour = (time24: string) => {
+    if (!time24) return '';
+    const [hours, minutes] = time24.split(':');
+    const hour24 = parseInt(hours, 10);
+    const hour12 = hour24 === 0 ? 12 : hour24 > 12 ? hour24 - 12 : hour24;
+    const ampm = hour24 >= 12 ? 'PM' : 'AM';
+    return `${hour12}:${minutes} ${ampm}`;
+  };
+
+  // 12시간제에서 24시간제로 변환
+  const parseTime12To24 = (time12: string) => {
+    if (!time12) return '';
+    const match = time12.match(/(\d+):(\d+)\s*(AM|PM)/i);
+    if (!match) return time12;
+    let hour = parseInt(match[1], 10);
+    const minute = match[2];
+    const ampm = match[3].toUpperCase();
+    if (ampm === 'PM' && hour !== 12) hour += 12;
+    if (ampm === 'AM' && hour === 12) hour = 0;
+    return `${hour.toString().padStart(2, '0')}:${minute}`;
+  };
 
   const [isLoading, setIsLoading] = useState(false);
 
@@ -195,7 +234,7 @@ export default function FlightItem({
             terminal: s.terminal || null,
           })),
           expense: {
-            exDate: flightSegments[0].departure_date,
+            exDate: expenseDate,
             amount: Number(expenseData.amount) || 0,
             currency: expenseData.currency as ExpenseCurrency,
             category: ExpenseCategory.FLIGHT as any,
@@ -224,7 +263,7 @@ export default function FlightItem({
             terminal: s.terminal || null,
           })),
           expense: {
-            exDate: flightSegments[0].departure_date,
+            exDate: expenseDate,
             amount: Number(expenseData.amount) || 0,
             currency: expenseData.currency as ExpenseCurrency,
             category: ExpenseCategory.FLIGHT as any,
@@ -252,460 +291,631 @@ export default function FlightItem({
     }
   };
 
+  // 통화 옵션
+  const currencyOptions = useMemo(() => [
+    { label: 'KRW', value: ExpenseCurrency.KRW },
+    { label: 'USD', value: ExpenseCurrency.USD },
+    { label: 'EUR', value: ExpenseCurrency.EUR },
+    { label: 'JPY', value: ExpenseCurrency.JPY },
+  ], []);
+
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>{flight ? '항공편 편집' : '항공편 추가'}</Text>
-      </View>
-      
-      <View style={styles.row}>
-        <View style={[styles.inputGroup, styles.halfWidth]}>
-          <Text style={styles.label}>예약번호(PNR) *</Text>
-          <Input
-            placeholder={PLACEHOLDERS.flight.reservationNumber}
-            value={formData.reservation_number}
-            onChangeText={(text) => setFormData({ ...formData, reservation_number: text })}
-          />
-        </View>
-        <View style={[styles.inputGroup, styles.halfWidth]}>
-          <Text style={styles.label}>승객명 *</Text>
-          <Input
-            placeholder={PLACEHOLDERS.flight.passengerName}
-            value={formData.passenger_name}
-            onChangeText={(text) => setFormData({ ...formData, passenger_name: text })}
-          />
-        </View>
-      </View>
+    <ScrollView 
+      style={[styles.container, { position: 'relative', overflow: 'visible' }]}
+      contentContainerStyle={[styles.contentContainer, { overflow: 'visible' }]}
+    >
+      <View style={styles.contentWrapper}>
+        <Text style={styles.title}>항공편 정보</Text>
 
-      <View style={styles.row}>
-        <View style={[styles.inputGroup, styles.halfWidth]}>
-          <Text style={styles.label}>항공권 번호</Text>
-          <Input
-            placeholder={PLACEHOLDERS.flight.ticketNumber}
-            value={formData.ticket_number}
-            onChangeText={(text) => setFormData({ ...formData, ticket_number: text })}
-          />
-        </View>
-      </View>
-      <View style={styles.row}>
-        <View style={[styles.inputGroup, styles.halfWidth]}>
-          <Text style={styles.label}>예약번호(여행사 예약번호)</Text>
-          <Input
-            placeholder={PLACEHOLDERS.flight.bookingReference}
-            value={formData.booking_reference}
-            onChangeText={(text) => setFormData({ ...formData, booking_reference: text })}
-          />
-        </View>
-      </View>
+        {/* 기본 정보 섹션 */}
+        <View style={styles.formSection}>
+          {/* 예약번호(PNR) / 승객명 */}
+          <View style={[styles.row, { gap: spacing.sm }]}>
+            <View style={[styles.inputGroup, styles.halfWidth]}>
+              <Text style={styles.label}>예약번호 (PNR)</Text>
+              <Input
+                variant="filled"
+                placeholder={PLACEHOLDERS.flight.reservationNumber}
+                value={formData.reservation_number}
+                onChangeText={(text) => setFormData({ ...formData, reservation_number: text })}
+                style={styles.input}
+                placeholderTextColor={colors.gray600}
+              />
+            </View>
+            <View style={[styles.inputGroup, styles.halfWidth]}>
+              <Text style={styles.label}>승객명</Text>
+              <Input
+                variant="filled"
+                placeholder={PLACEHOLDERS.flight.passengerName}
+                value={formData.passenger_name}
+                onChangeText={(text) => setFormData({ ...formData, passenger_name: text })}
+                style={styles.input}
+                placeholderTextColor={colors.gray600}
+              />
+            </View>
+          </View>
 
-      <View style={styles.inputGroup}>
-        <Text style={styles.label}>항공료</Text>
-        <View style={styles.row}>
-          <Input
-            containerStyle={{ flex: 1, marginRight: 8 }}
-            placeholder={PLACEHOLDERS.expense.amount}
-            value={expenseData.amount}
-            onChangeText={(text) => setExpenseData({ ...expenseData, amount: text.replace(/[^0-9]/g, '') })}
-            keyboardType="numeric"
-          />
-          <View style={{ width: 120 }}>
+          {/* 항공편 번호 */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>항공편 번호</Text>
             <Input
-              placeholder={PLACEHOLDERS.expense.currency}
-              value={expenseData.currency}
-              editable={false}
+              variant="filled"
+              placeholder="항공편 번호를 입력하세요."
+              value={formData.ticket_number}
+              onChangeText={(text) => setFormData({ ...formData, ticket_number: text })}
+              style={styles.input}
+              placeholderTextColor={colors.gray600}
             />
           </View>
-        </View>
-      </View>
 
-      {/* 항공편 구간들 */}
-      {flightSegments.map((segment, idx) => (
-        <React.Fragment key={idx}>
-          <View style={[styles.segmentContainer, { marginBottom: 16 }]}>
-            <Text style={styles.segmentTitle}>구간 {idx + 1}</Text>
-          
-          <View style={styles.row}>
-            <View style={[styles.inputGroup, styles.halfWidth]}>
-              <Text style={styles.label}>항공사 *</Text>
-              <Input
-                placeholder={PLACEHOLDERS.flight.airline}
-                value={segment.airline}
-                onChangeText={(text) => {
-                  const newSegments = [...flightSegments];
-                  newSegments[idx].airline = text;
-                  setFlightSegments(newSegments);
-                }}
-              />
-            </View>
-            <View style={[styles.inputGroup, styles.halfWidth]}>
-              <Text style={styles.label}>항공편 번호 *</Text>
-              <Input
-                placeholder={PLACEHOLDERS.flight.flightNumber}
-                value={segment.flight_number}
-                onChangeText={(text) => {
-                  const newSegments = [...flightSegments];
-                  newSegments[idx].flight_number = text;
-                  setFlightSegments(newSegments);
-                }}
-              />
-            </View>
+          {/* 예약번호(여행사 예약번호) */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>예약번호 (여행사 예약 번호)</Text>
+            <Input
+              variant="filled"
+              placeholder="예약번호를 입력하세요."
+              value={formData.booking_reference}
+              onChangeText={(text) => setFormData({ ...formData, booking_reference: text })}
+              style={styles.input}
+              placeholderTextColor={colors.gray600}
+            />
           </View>
 
-          <View style={[styles.row, { zIndex: airportOpen ? 10000 : 1 }]}>
-            <View style={[styles.inputGroup, styles.halfWidth, styles.airportPickerWrapper]}>
-              <Text style={styles.label}>출발 공항 *</Text>
-              <AirportPicker
-                value={segment.departure_airport}
-                onChange={(code) => {
-                  const newSegments = [...flightSegments];
-                  newSegments[idx].departure_airport = code;
-                  setFlightSegments(newSegments);
-                }}
-                placeholder={PLACEHOLDERS.flight.departureAirport}
-              />
-            </View>
-            <View style={[styles.inputGroup, styles.halfWidth, styles.airportPickerWrapper]}>
-              <Text style={styles.label}>도착 공항 *</Text>
-              <AirportPicker
-                value={segment.arrival_airport}
-                onChange={(code) => {
-                  const newSegments = [...flightSegments];
-                  newSegments[idx].arrival_airport = code;
-                  setFlightSegments(newSegments);
-                }}
-                placeholder={PLACEHOLDERS.flight.arrivalAirport}
-              />
-            </View>
+          {/* 날짜 */}
+          <View style={[styles.inputGroup, styles.datePickerWrapper, { zIndex: showDatePicker ? 20000 : 1 }]}>
+            <Text style={styles.label}>날짜</Text>
+            <Pressable style={styles.dateInput} onPress={() => setShowDatePicker(!showDatePicker)}>
+              <View style={styles.dateTextContainer}>
+                <Text style={expenseDate ? styles.dateText : styles.placeholderText}>
+                  {expenseDate ? dayjs(expenseDate).format('YYYY. MM. DD') : '날짜를 선택하세요.'}
+                </Text>
+                <View style={styles.iconWrapper}>
+                  <CalendarIcon width={16} height={16} />
+                </View>
+              </View>
+            </Pressable>
+            <BaseCalendar
+              visible={showDatePicker}
+              selectedDate={expenseDate}
+              onDayPress={(day) => {
+                setExpenseDate(day.dateString);
+                setShowDatePicker(false);
+              }}
+              onClose={() => setShowDatePicker(false)}
+              style={styles.calendarPopup}
+            />
           </View>
 
-          <View style={styles.row}>
+          {/* 항공료 / 통화 */}
+          <View style={[styles.row, { gap: spacing.sm }]}>
             <View style={[styles.inputGroup, styles.halfWidth]}>
-              <Text style={styles.label}>출발 날짜 *</Text>
-              <DatePicker
-                value={segment.departure_date}
-                onChange={(date) => {
-                  const newSegments = [...flightSegments];
-                  newSegments[idx].departure_date = date;
-                  setFlightSegments(newSegments);
-                }}
-                minDate={idx > 0 ? flightSegments[idx - 1].arrival_date : undefined}
-              />
-            </View>
-            <View style={[styles.inputGroup, styles.halfWidth]}>
-              <Text style={styles.label}>출발 시간 *</Text>
-              <TimePicker
-                value={segment.departure_time}
-                onChange={(time) => {
-                  const newSegments = [...flightSegments];
-                  newSegments[idx].departure_time = time;
-                  setFlightSegments(newSegments);
-                }}
-                minTime={idx > 0 && segment.departure_date === flightSegments[idx - 1].arrival_date ? flightSegments[idx - 1].arrival_time : undefined}
-              />
-            </View>
-          </View>
-
-          <View style={styles.row}>
-            <View style={[styles.inputGroup, styles.halfWidth]}>
-              <Text style={styles.label}>도착 날짜 *</Text>
-              <DatePicker
-                value={segment.arrival_date}
-                onChange={(date) => {
-                  const newSegments = [...flightSegments];
-                  newSegments[idx].arrival_date = date;
-                  setFlightSegments(newSegments);
-                }}
-                minDate={segment.departure_date}
-              />
-            </View>
-            <View style={[styles.inputGroup, styles.halfWidth]}>
-              <Text style={styles.label}>도착 시간 *</Text>
-              <TimePicker
-                value={segment.arrival_time}
-                onChange={(time) => {
-                  const newSegments = [...flightSegments];
-                  newSegments[idx].arrival_time = time;
-                  setFlightSegments(newSegments);
-                }}
-                minTime={segment.arrival_date === segment.departure_date ? segment.departure_time : undefined}
-              />
-            </View>
-          </View>
-
-          <View style={styles.row}>
-            <View style={[styles.inputGroup, styles.halfWidth]}>
-              <Text style={styles.label}>좌석 등급</Text>
+              <Text style={styles.label}>항공료</Text>
               <Input
-                placeholder="좌석 등급"
-                value={segment.seat_class || ''}
-                onChangeText={(text) => {
-                  const newSegments = [...flightSegments];
-                  newSegments[idx].seat_class = text;
-                  setFlightSegments(newSegments);
-                }}
+                variant="filled"
+                placeholder={PLACEHOLDERS.expense.amount}
+                value={expenseData.amount.toString()}
+                onChangeText={(text) => setExpenseData({ ...expenseData, amount: text.replace(/[^0-9]/g, '') })}
+                keyboardType="numeric"
+                style={styles.input}
+                placeholderTextColor={colors.gray600}
               />
             </View>
-            <View style={[styles.inputGroup, styles.halfWidth]}>
-              <Text style={styles.label}>좌석 번호</Text>
-              <Input
-                placeholder="좌석 번호"
-                value={segment.seat_number || ''}
-                onChangeText={(text) => {
-                  const newSegments = [...flightSegments];
-                  newSegments[idx].seat_number = text;
-                  setFlightSegments(newSegments);
-                }}
-              />
-            </View>
-          </View>
-
-          <View style={styles.row}>
-            <View style={[styles.inputGroup, styles.halfWidth]}>
-              <Text style={styles.label}>터미널</Text>
-              <Input
-                placeholder="T1"
-                value={segment.terminal || ''}
-                onChangeText={(text) => {
-                  const newSegments = [...flightSegments];
-                  newSegments[idx].terminal = text;
-                  setFlightSegments(newSegments);
-                }}
-              />
-            </View>
-            <View style={[styles.inputGroup, styles.halfWidth]}>
-              <Text style={styles.label}>게이트</Text>
-              <Input
-                placeholder="G12"
-                value={segment.gate || ''}
-                onChangeText={(text) => {
-                  const newSegments = [...flightSegments];
-                  newSegments[idx].gate = text;
-                  setFlightSegments(newSegments);
-                }}
-              />
-            </View>
-          </View>
-
-            {flightSegments.length > 1 && (
-              <View style={styles.segmentActions}>
-                <Pressable
-                  style={[styles.button, styles.deleteButton]}
-                  onPress={() => {
-                    setFlightSegments(prev => prev.filter((_, i) => i !== idx));
+            <View style={[styles.inputGroup, styles.halfWidth, { zIndex: currencyOpen ? 10001 : 1 }]}>
+              <Text style={styles.label}>통화</Text>
+              <View style={styles.currencyPickerWrapper}>
+                <DropDownPicker
+                  open={currencyOpen}
+                  value={expenseData.currency}
+                  items={currencyOptions}
+                  setOpen={setCurrencyOpen}
+                  setValue={(callback: any) => {
+                    const next = callback(expenseData.currency) as ExpenseCurrency;
+                    setExpenseData({ ...expenseData, currency: next });
                   }}
-                >
-                  <Text style={styles.deleteButtonText}>구간 삭제</Text>
-                </Pressable>
+                  placeholder="통화 선택"
+                  style={styles.currencyDropdown}
+                  dropDownContainerStyle={styles.currencyDropdownContainer}
+                  listMode="SCROLLVIEW"
+                  ArrowDownIconComponent={() => <DownArrowIcon width={16} height={16} />}
+                  ArrowUpIconComponent={() => <UpperArrowIcon width={16} height={16} />}
+                />
               </View>
-            )}
+            </View>
           </View>
+        </View>
 
-          {idx < flightSegments.length - 1 && (() => {
-            const next = flightSegments[idx + 1];
-            const arrival = dayjs(`${segment.arrival_date} ${segment.arrival_time}`);
-            const nextDeparture = dayjs(`${next.departure_date} ${next.departure_time}`);
-            const diffMinutes = nextDeparture.diff(arrival, 'minute');
-            const valid = Number.isFinite(diffMinutes) && diffMinutes >= 0;
-            const hours = valid ? Math.floor(diffMinutes / 60) : 0;
-            const minutes = valid ? diffMinutes % 60 : 0;
-            const label = valid ? `경유 시간: ${hours}시간 ${minutes}분` : '경유 시간: 계산 불가';
-            return (
-              <View style={styles.layoverContainer}>
-                <Text style={styles.layoverText}>{label}</Text>
+        {/* 항공편 구간들 */}
+        <View style={styles.inputGroup}>
+          {flightSegments.map((segment, idx) => (
+              <View key={idx} style={styles.segmentContainer}>
+                <Text style={styles.segmentTitle}>구간{idx + 1}</Text>
+                
+                <View style={styles.segmentContent}>
+                  {/* 항공사 / 항공편명 */}
+                  <View style={[styles.row, { gap: spacing.sm }]}>
+                    <View style={[styles.inputGroup, styles.halfWidth]}>
+                      <Text style={styles.label}>항공사</Text>
+                      <Input
+                        variant="outlined"
+                        placeholder={PLACEHOLDERS.flight.airline}
+                        value={segment.airline}
+                        onChangeText={(text) => {
+                          const newSegments = [...flightSegments];
+                          newSegments[idx].airline = text;
+                          setFlightSegments(newSegments);
+                        }}
+                        style={styles.segmentInput}
+                        placeholderTextColor={colors.gray600}
+                      />
+                    </View>
+                    <View style={[styles.inputGroup, styles.halfWidth]}>
+                      <Text style={styles.label}>항공편명</Text>
+                      <Input
+                        variant="outlined"
+                        placeholder={PLACEHOLDERS.flight.flightNumber}
+                        value={segment.flight_number}
+                        onChangeText={(text) => {
+                          const newSegments = [...flightSegments];
+                          newSegments[idx].flight_number = text;
+                          setFlightSegments(newSegments);
+                        }}
+                        style={styles.segmentInput}
+                        placeholderTextColor={colors.gray600}
+                      />
+                    </View>
+                  </View>
+
+                  {/* 출발 공항 / 도착 공항 */}
+                  <View style={[styles.row, { gap: spacing.sm, zIndex: airportOpen ? 10001 : 1 }]}>
+                    <View style={[styles.inputGroup, styles.halfWidth, styles.airportPickerWrapper]}>
+                      <Text style={styles.label}>출발 공항</Text>
+                      <AirportPicker
+                        value={segment.departure_airport}
+                        onChange={(code) => {
+                          const newSegments = [...flightSegments];
+                          newSegments[idx].departure_airport = code;
+                          setFlightSegments(newSegments);
+                        }}
+                        placeholder={PLACEHOLDERS.flight.departureAirport}
+                      />
+                    </View>
+                    <View style={[styles.inputGroup, styles.halfWidth, styles.airportPickerWrapper]}>
+                      <Text style={styles.label}>도착 공항</Text>
+                      <AirportPicker
+                        value={segment.arrival_airport}
+                        onChange={(code) => {
+                          const newSegments = [...flightSegments];
+                          newSegments[idx].arrival_airport = code;
+                          setFlightSegments(newSegments);
+                        }}
+                        placeholder={PLACEHOLDERS.flight.arrivalAirport}
+                      />
+                    </View>
+                  </View>
+
+                  {/* 출발 일자 / 출발 시간 */}
+                  <View style={[styles.row, { gap: spacing.sm }]}>
+                    <View style={[styles.inputGroup, styles.halfWidth]}>
+                      <Text style={styles.label}>출발 일자</Text>
+                      <Pressable 
+                        style={styles.segmentDateInput} 
+                        onPress={() => {
+                          const key = `dep_${idx}`;
+                          setSegmentDatePickerOpen({ ...segmentDatePickerOpen, [key]: true });
+                        }}
+                      >
+                        <Text style={segment.departure_date ? styles.segmentDateText : styles.segmentPlaceholderText}>
+                          {segment.departure_date ? dayjs(segment.departure_date).format('YYYY. MM. DD') : '기타'}
+                        </Text>
+                      </Pressable>
+                      {segmentDatePickerOpen[`dep_${idx}`] && (
+                        <BaseCalendar
+                          visible={true}
+                          selectedDate={segment.departure_date}
+                          onDayPress={(day) => {
+                            const newSegments = [...flightSegments];
+                            newSegments[idx].departure_date = day.dateString;
+                            setFlightSegments(newSegments);
+                            const key = `dep_${idx}`;
+                            setSegmentDatePickerOpen({ ...segmentDatePickerOpen, [key]: false });
+                          }}
+                          onClose={() => {
+                            const key = `dep_${idx}`;
+                            setSegmentDatePickerOpen({ ...segmentDatePickerOpen, [key]: false });
+                          }}
+                          style={styles.calendarPopup}
+                          minDate={idx > 0 ? flightSegments[idx - 1].arrival_date : undefined}
+                        />
+                      )}
+                    </View>
+                    <View style={[styles.inputGroup, styles.halfWidth, { zIndex: timeOpen ? 10001 : 1 }]}>
+                      <Text style={styles.label}>출발 시간</Text>
+                      <TimePicker
+                        value={segment.departure_time}
+                        onChange={(time) => {
+                          const newSegments = [...flightSegments];
+                          newSegments[idx].departure_time = time;
+                          setFlightSegments(newSegments);
+                        }}
+                        onOpen={() => setTimeOpen(true)}
+                        onClose={() => setTimeOpen(false)}
+                        minTime={idx > 0 && segment.departure_date === flightSegments[idx - 1].arrival_date ? flightSegments[idx - 1].arrival_time : undefined}
+                        style={styles.segmentTimePicker}
+                      />
+                    </View>
+                  </View>
+
+                  {/* 도착 일자 / 도착 시간 */}
+                  <View style={[styles.row, { gap: spacing.sm }]}>
+                    <View style={[styles.inputGroup, styles.halfWidth]}>
+                      <Text style={styles.label}>도착 일자</Text>
+                      <Pressable 
+                        style={styles.segmentDateInput} 
+                        onPress={() => {
+                          const key = `arr_${idx}`;
+                          setSegmentDatePickerOpen({ ...segmentDatePickerOpen, [key]: true });
+                        }}
+                      >
+                        <Text style={segment.arrival_date ? styles.segmentDateText : styles.segmentPlaceholderText}>
+                          {segment.arrival_date ? dayjs(segment.arrival_date).format('YYYY. MM. DD') : '기타'}
+                        </Text>
+                      </Pressable>
+                      {segmentDatePickerOpen[`arr_${idx}`] && (
+                        <BaseCalendar
+                          visible={true}
+                          selectedDate={segment.arrival_date}
+                          onDayPress={(day) => {
+                            const newSegments = [...flightSegments];
+                            newSegments[idx].arrival_date = day.dateString;
+                            setFlightSegments(newSegments);
+                            const key = `arr_${idx}`;
+                            setSegmentDatePickerOpen({ ...segmentDatePickerOpen, [key]: false });
+                          }}
+                          onClose={() => {
+                            const key = `arr_${idx}`;
+                            setSegmentDatePickerOpen({ ...segmentDatePickerOpen, [key]: false });
+                          }}
+                          style={styles.calendarPopup}
+                          minDate={segment.departure_date}
+                        />
+                      )}
+                    </View>
+                    <View style={[styles.inputGroup, styles.halfWidth, { zIndex: timeOpen ? 10001 : 1 }]}>
+                      <Text style={styles.label}>도착 시간</Text>
+                      <TimePicker
+                        value={segment.arrival_time}
+                        onChange={(time) => {
+                          const newSegments = [...flightSegments];
+                          newSegments[idx].arrival_time = time;
+                          setFlightSegments(newSegments);
+                        }}
+                        onOpen={() => setTimeOpen(true)}
+                        onClose={() => setTimeOpen(false)}
+                        minTime={segment.arrival_date === segment.departure_date ? segment.departure_time : undefined}
+                        style={styles.segmentTimePicker}
+                      />
+                    </View>
+                  </View>
+
+                  {/* 구간 내부 버튼 */}
+                  <View style={styles.segmentButtonRow}>
+                    <Pressable
+                      style={styles.segmentCancelButton}
+                      onPress={() => {
+                        if (flightSegments.length > 1) {
+                          setFlightSegments(prev => prev.filter((_, i) => i !== idx));
+                        } else {
+                          onCancel();
+                        }
+                      }}
+                    >
+                      <Text style={styles.segmentCancelButtonText}>취소</Text>
+                    </Pressable>
+                    <Pressable
+                      style={styles.segmentAddButton}
+                      onPress={() => {
+                        const now = dayjs();
+                        const later = dayjs().add(1, 'hour');
+                        const newSegment: SegmentForm = {
+                          airline: '',
+                          flight_number: '',
+                          departure_airport: '',
+                          arrival_airport: '',
+                          departure_date: now.format('YYYY-MM-DD'),
+                          departure_time: now.format('HH:mm'),
+                          arrival_date: later.format('YYYY-MM-DD'),
+                          arrival_time: later.format('HH:mm'),
+                        };
+                        setFlightSegments(prev => [...prev, newSegment]);
+                      }}
+                    >
+                      <Text style={styles.segmentAddButtonText}>추가</Text>
+                    </Pressable>
+                  </View>
+                </View>
               </View>
-            );
-          })()}
-        </React.Fragment>
-      ))}
+            ))}
 
-      <Pressable
-        style={[styles.button, styles.addButton]}
-        onPress={() => {
-          const now = dayjs();
-          const later = dayjs().add(1, 'hour');
-          setFlightSegments(prev => [...prev, {
-            airline: '',
-            flight_number: '',
-            departure_airport: '',
-            arrival_airport: '',
-            departure_date: now.format('YYYY-MM-DD'),
-            departure_time: now.format('HH:mm'),
-            arrival_date: later.format('YYYY-MM-DD'),
-            arrival_time: later.format('HH:mm'),
-            seat_class: '',
-            seat_number: '',
-            gate: '',
-            terminal: '',
-          }]);
-        }}
-      >
-        <Text style={styles.addButtonText}>+ 항공편 구간 추가</Text>
-      </Pressable>
-
-
-
-
-
-
-      <View style={styles.buttonRow}>
-        <Pressable
-          style={[styles.button, styles.cancelButton]}
-          onPress={onCancel}
-        >
-          <Text style={styles.cancelButtonText}>취소</Text>
-        </Pressable>
-        
-        {flight && onDelete && (
+          {/* 항공권 구간 추가 버튼 */}
           <Pressable
-            style={[styles.button, styles.deleteButton]}
-            onPress={handleDelete}
+            style={styles.addSegmentButton}
+            onPress={() => {
+              const now = dayjs();
+              const later = dayjs().add(1, 'hour');
+              const newSegment: SegmentForm = {
+                airline: '',
+                flight_number: '',
+                departure_airport: '',
+                arrival_airport: '',
+                departure_date: now.format('YYYY-MM-DD'),
+                departure_time: now.format('HH:mm'),
+                arrival_date: later.format('YYYY-MM-DD'),
+                arrival_time: later.format('HH:mm'),
+              };
+              setFlightSegments(prev => [...prev, newSegment]);
+            }}
+          >
+            <View style={styles.addIconWrapper}>
+              <AddIcon width={16} height={16} />
+            </View>
+            <Text style={styles.addSegmentButtonText}>항공권 구간 추가</Text>
+          </Pressable>
+        </View>
+
+        {/* 하단 버튼 */}
+        <View style={styles.buttonRow}>
+          <Pressable
+            style={styles.deleteButton}
+            onPress={flight && onDelete ? handleDelete : onCancel}
           >
             <Text style={styles.deleteButtonText}>삭제</Text>
           </Pressable>
-        )}
-        
-        <Pressable
-          style={[styles.button, styles.saveButton]}
-          onPress={handleSave}
-          disabled={isLoading}
-        >
-          <Text style={styles.saveButtonText}>
-            {isLoading ? '저장 중...' : '저장'}
-          </Text>
-        </Pressable>
+          <Pressable
+            style={styles.saveButton}
+            onPress={handleSave}
+            disabled={isLoading}
+          >
+            <Text style={styles.saveButtonText}>
+              {isLoading ? '저장 중...' : '저장'}
+            </Text>
+          </Pressable>
+        </View>
       </View>
-    </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#f8f9fa',
-    padding: 16,
-    borderRadius: 8,
-    marginBottom: 12,
+    flex: 1,
+    backgroundColor: colors.white,
+  },
+  contentContainer: {
+    padding: spacing.xl,
+    gap: spacing.xl,
+  },
+  contentWrapper: {
+    position: 'relative',
+    overflow: 'visible',
+    gap: spacing.lg,
   },
   title: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 12,
-    color: '#333',
+    ...textStyles.h5,
+    marginBottom: spacing.xl,
+  },
+  formSection: {
+    gap: spacing.lg,
   },
   row: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 12,
+    gap: spacing.sm,
     overflow: 'visible',
     position: 'relative',
   },
-  pickerRowWrapper: {
-    overflow: 'visible',
+  inputGroup: {
+    gap: spacing.sm,
+  },
+  halfWidth: {
+    flex: 1,
+  },
+  label: {
+    ...textStyles.h8,
+    color: colors.black,
+  },
+  input: {
+    backgroundColor: colors.gray300,
+    height: 40,
+    borderRadius: radii.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 10,
+    ...textStyles.body4,
+  },
+  datePickerWrapper: {
     position: 'relative',
+    overflow: 'visible',
+  },
+  dateInput: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 0,
+    borderRadius: radii.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 10,
+    backgroundColor: colors.gray300,
+    minHeight: 40,
+  },
+  dateTextContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    flex: 1,
+  },
+  dateText: {
+    ...textStyles.body4,
+    color: colors.black,
+  },
+  placeholderText: {
+    ...textStyles.body4,
+    color: colors.gray600,
+  },
+  iconWrapper: {
+    marginTop: -2,
+  },
+  calendarPopup: {
+    position: 'absolute',
+    top: 70,
+    left: 0,
+    zIndex: 20000,
+  },
+  currencyPickerWrapper: {
+    position: 'relative',
+  },
+  currencyDropdown: {
+    borderRadius: radii.md,
+    backgroundColor: colors.gray300,
+    borderWidth: 0,
+    minHeight: 40,
+    paddingHorizontal: spacing.md,
+  },
+  currencyDropdownContainer: {
+    borderRadius: radii.md,
+    backgroundColor: colors.gray300,
+  },
+  segmentContainer: {
+    borderWidth: 1,
+    borderColor: colors.gray400,
+    borderRadius: radii.md,
+    padding: spacing.md,
+    marginBottom: spacing.xl,
+    gap: spacing.lg,
+  },
+  segmentTitle: {
+    ...textStyles.h6,
+    color: colors.black,
+  },
+  segmentContent: {
+    gap: spacing.lg,
+  },
+  segmentInput: {
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: colors.gray400,
+    borderRadius: radii.md,
+    height: 40,
+  },
+  segmentDateInput: {
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: colors.gray400,
+    borderRadius: radii.md,
+    height: 40,
+    paddingHorizontal: spacing.md,
+    justifyContent: 'center',
+  },
+  segmentDateText: {
+    ...textStyles.body4,
+    color: colors.gray800,
+  },
+  segmentPlaceholderText: {
+    ...textStyles.body4,
+    color: colors.gray800,
+  },
+  segmentTimePicker: {
+    borderWidth: 1,
+    borderColor: colors.gray400,
+    borderRadius: radii.md,
+    backgroundColor: colors.white,
+    height: 40,
   },
   airportPickerWrapper: {
     overflow: 'visible',
     position: 'relative',
     zIndex: 8000,
   },
-  input: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-    backgroundColor: '#fff',
+  segmentButtonRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginTop: spacing.sm,
   },
-  halfInput: {
+  segmentCancelButton: {
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: colors.gray400,
+    borderRadius: 8,
+    height: 32,
+    paddingHorizontal: spacing.lg,
+    justifyContent: 'center',
+    alignItems: 'center',
     flex: 1,
+  },
+  segmentCancelButtonText: {
+    ...textStyles.h8,
+    color: colors.black,
+  },
+  segmentAddButton: {
+    backgroundColor: colors.gray900,
+    borderRadius: 8,
+    height: 32,
+    paddingHorizontal: spacing.lg,
+    justifyContent: 'center',
+    alignItems: 'center',
+    flex: 1,
+  },
+  segmentAddButtonText: {
+    ...textStyles.h8,
+    color: colors.white,
+  },
+  addSegmentButton: {
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: colors.gray400,
+    borderRadius: 8,
+    height: 40,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingHorizontal: spacing.xl,
+  },
+  addIconWrapper: {
+    marginTop: -2,
+  },
+  addSegmentButtonText: {
+    ...textStyles.h8,
+    color: colors.black,
   },
   buttonRow: {
     flexDirection: 'row',
-    justifyContent: 'flex-end',
-    gap: 8,
-  },
-  button: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 6,
-  },
-  cancelButton: {
-    backgroundColor: '#f0f0f0',
-  },
-  cancelButtonText: {
-    color: '#333',
-    fontWeight: '600',
+    gap: spacing.sm,
+    marginTop: spacing.sm,
+    paddingBottom: spacing.xl,
   },
   deleteButton: {
-    backgroundColor: '#ff3b30',
+    backgroundColor: colors.gray300,
+    height: 40,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    borderColor: colors.gray400,
+    paddingHorizontal: spacing.lg,
+    justifyContent: 'center',
+    alignItems: 'center',
+    minWidth: 90,
   },
   deleteButtonText: {
-    color: '#fff',
-    fontWeight: '600',
+    ...textStyles.h8,
+    color: colors.black,
   },
   saveButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: colors.gray900,
+    height: 40,
+    borderRadius: radii.md,
+    paddingHorizontal: spacing.lg,
+    justifyContent: 'center',
+    alignItems: 'center',
+    flex: 1,
   },
   saveButtonText: {
-    color: '#fff',
-    fontWeight: '600',
-  },
-  inputGroup: {
-    marginBottom: 12,
-  },
-  halfWidth: {
-    flex: 1,
-    marginHorizontal: 4,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#495057',
-    marginBottom: 4,
-  },
-  textArea: {
-    minHeight: 60,
-    paddingTop: 8,
-    textAlignVertical: 'top',
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  segmentContainer: {
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-    borderRadius: 8,
-    padding: 12,
-    backgroundColor: '#f9fafb',
-  },
-  layoverContainer: {
-    alignItems: 'center',
-    paddingVertical: 8,
-  },
-  layoverText: {
-    fontSize: 12,
-    color: '#6b7280',
-  },
-  segmentTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#374151',
-    marginBottom: 12,
-  },
-  segmentActions: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    marginTop: 8,
-  },
-  addButton: {
-    backgroundColor: '#10b981',
-    marginBottom: 16,
-  },
-  addButtonText: {
-    color: 'white',
-    fontSize: 14,
-    fontWeight: '500',
+    ...textStyles.h8,
+    color: colors.white,
   },
 });

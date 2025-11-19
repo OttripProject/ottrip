@@ -4,6 +4,9 @@ import DropDownPicker from 'react-native-dropdown-picker';
 import { getAirportOptions, getAllAirportOptions, getAirportLabel } from '@/utils/airportList';
 import { PLACEHOLDERS } from '@/constants/placeholders';
 import { colors } from '@/ui/tokens/colors';
+import DropdownTimeIcon from '../../../../assets/dropdown_time.svg';
+import UpperArrowIcon from '../../../../assets/upper_arrow.svg';
+import { radii } from '@/ui/tokens/radii';
 
 interface AirportPickerProps {
   value: string; // airport code (e.g., "ICN")
@@ -61,24 +64,42 @@ export default function AirportPicker({
         disabled={disabled}
         searchable
         searchPlaceholder={PLACEHOLDERS.picker.search}
-        searchTextInputStyle={{ height: 30, paddingVertical: 6, paddingHorizontal: 10, fontSize: 14, width: '100%' }}
-        searchContainerStyle={{ paddingVertical: 5, paddingHorizontal: 8, borderBottomWidth: 0, width: '100%' }}
-        placeholder={placeholder}
+        searchTextInputStyle={{ 
+          height: 30, 
+          paddingVertical: 6, 
+          paddingHorizontal: 10, 
+          fontSize: 14, 
+          width: '100%',
+          borderWidth: 1,
+          borderColor: colors.gray400,
+          borderRadius: radii.sm,
+        }}
+        searchContainerStyle={{ 
+          paddingVertical: 5, 
+          paddingHorizontal: 8, 
+          borderBottomWidth: 0, 
+          borderTopWidth: 0,
+          width: '100%' 
+        }}
+        placeholder={placeholder} 
         style={[styles.dropdown, { width: '100%' }]}
-        dropDownContainerStyle={[styles.dropdownContainer, { width: '100%', maxHeight: 200 }]}
+        dropDownContainerStyle={[styles.dropdownContainer, { width: '100%', maxHeight: 200, borderTopWidth: 0 }]}
         containerStyle={[styles.dropdownOuter, { width: '100%' }]}
         textStyle={{
           fontSize: 14,
-          color: colors.gray700,
+          color: colors.black,
         }}
         placeholderStyle={{
-          color: colors.gray400,
+          color: colors.gray600,
+          fontSize: 13,
         }}
         listMode="SCROLLVIEW"
         scrollViewProps={{ nestedScrollEnabled: true, keyboardShouldPersistTaps: 'handled' }}
         selectedItemLabelStyle={{
           fontWeight: 'bold',
         }}
+        ArrowDownIconComponent={() => <DropdownTimeIcon width={16} height={16} />}
+        ArrowUpIconComponent={() => <UpperArrowIcon width={16} height={16} />}
         translation={{ NOTHING_TO_SHOW: '결과가 없습니다' }}
       />
     </View>
@@ -88,29 +109,26 @@ export default function AirportPicker({
 const styles = StyleSheet.create({
   wrapper: { position: 'relative' },
   dropdown: {
-    backgroundColor: '#fff',
-    borderColor: '#ddd',
+    backgroundColor: colors.white,
+    borderColor: colors.gray400,
     borderWidth: 1,
     borderRadius: 8,
-    minHeight: 48,
+    minHeight: 40,
     position: 'relative',
     zIndex: 999999,
   },
   dropdownContainer: {
-    borderColor: '#ddd',
+    borderColor: colors.gray400,
     borderWidth: 1,
     borderRadius: 8,
-    backgroundColor: '#fff',
+    borderTopWidth: 0,
+    backgroundColor: colors.white,
     position: 'absolute',
     top: '100%',
     left: 0,
     right: 0,
     zIndex: 999999,
     elevation: 10,
-    shadowColor: '#000',
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
     maxHeight: 200,
   },
   dropdownOuter: {
