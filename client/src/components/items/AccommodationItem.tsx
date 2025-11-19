@@ -24,6 +24,7 @@ interface AccommodationItemProps {
   onSave: (accommodation: any) => void;
   onCancel: () => void;
   onDelete?: (accommodationId: string) => void;
+  onShowWarning?: (message?: string) => void;
 }
 
 export default function AccommodationItem({ 
@@ -32,7 +33,8 @@ export default function AccommodationItem({
   planId, 
   onSave, 
   onCancel, 
-  onDelete 
+  onDelete,
+  onShowWarning,
 }: AccommodationItemProps) {
   const [formData, setFormData] = useState({
     name: accommodation?.name || '',
@@ -78,7 +80,10 @@ export default function AccommodationItem({
   const [countryOpen, setCountryOpen] = useState(false); // zIndex 제어용 (CountrySelect 내부 오픈 상태와는 별개로 래퍼 zIndex 제어 가능)
 
   const handleSave = async () => {
-    if (!formData.name.trim() || !formData.country.trim() || !formData.city.trim()) {
+    // 모델 필수값 검증: name, country, city, checkin_date, checkout_date, checkin_time, checkout_time
+    if (!formData.name.trim() || !formData.country.trim() || !formData.city.trim() || 
+        !formData.checkin_date || !formData.checkout_date || !formData.checkin_time || !formData.checkout_time) {
+      onShowWarning?.();
       return;
     }
 
@@ -371,7 +376,7 @@ export default function AccommodationItem({
         <Pressable
           style={styles.saveButton}
           onPress={handleSave}
-          disabled={isLoading || !formData.name.trim() || !formData.country.trim() || !formData.city.trim()}
+          disabled={isLoading}
         >
           <Text style={styles.saveButtonText}>
             {isLoading 

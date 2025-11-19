@@ -15,10 +15,12 @@ interface AccommodationSectionProps {
   activeTab?: 'itinerary' | 'flight' | 'accommodation' | undefined;
   onAccommodationAdd?: (accommodation: any) => void;
   onAccommodationSelect?: (accommodation: any) => void;
+  onAccommodationClear?: () => void;
   openNewAccommodationForm?: boolean;
   onConsumeOpenNewAccommodationForm?: () => void;
   newAccommodationDraft?: any | null;
   onEdit?: (accommodation: any) => void;
+  onShowWarning?: (message?: string) => void;
 }
 
 export default function AccommodationSection({
@@ -27,10 +29,12 @@ export default function AccommodationSection({
   activeTab,
   onAccommodationAdd,
   onAccommodationSelect,
+  onAccommodationClear,
   openNewAccommodationForm,
   onConsumeOpenNewAccommodationForm,
   newAccommodationDraft,
   onEdit,
+  onShowWarning,
 }: AccommodationSectionProps) {
   const [showAccommodationForm, setShowAccommodationForm] = useState(false);
   const [editingAccommodation, setEditingAccommodation] = useState<any | null>(null);
@@ -85,6 +89,7 @@ export default function AccommodationSection({
     planData?.refreshAccommodations();
     setShowAccommodationForm(false);
     setEditingAccommodation(null);
+    onAccommodationClear?.();
   };
 
   // 선택된 숙박이 있고 편집 모드가 아닐 때 - 상세 정보 표시
@@ -190,8 +195,10 @@ export default function AccommodationSection({
         onCancel={() => {
           setShowAccommodationForm(false);
           setEditingAccommodation(null);
+          onAccommodationClear?.();
         }}
         onDelete={handleAccommodationDelete}
+        onShowWarning={onShowWarning}
       />
     );
   }
