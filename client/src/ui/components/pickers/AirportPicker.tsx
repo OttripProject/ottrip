@@ -9,7 +9,7 @@ import UpperArrowIcon from '../../../../assets/upper_arrow.svg';
 import { radii } from '@/ui/tokens/radii';
 
 interface AirportPickerProps {
-  value: string; // airport code (e.g., "ICN")
+  value: string; 
   onChange: (airportCode: string) => void;
   placeholder?: string;
   containerStyle?: ViewStyle;
@@ -19,35 +19,34 @@ interface AirportPickerProps {
 export default function AirportPicker({ 
   value, 
   onChange, 
-  placeholder = '공항 선택', 
+  placeholder, 
   containerStyle, 
   disabled 
 }: AirportPickerProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearching, setIsSearching] = useState(false);
   
-  // 검색 중이 아니면 주요 공항만, 검색 중이면 전체 목록
   const options = useMemo(() => {
-    if (isSearching || searchQuery.length > 0) {
-      // 전체 목록에서 검색 (한번만 로드)
+    if (value || isSearching || searchQuery.length > 0) {
       return getAllAirportOptions();
     }
     return getAirportOptions();
-  }, [isSearching, searchQuery]);
+  }, [value, isSearching, searchQuery]);
   
   const [open, setOpen] = useState(false);
-  const [code, setCode] = useState<string | null>(null);
+  const [code, setCode] = useState<string | null>(value || null);
 
   useEffect(() => {
     setCode(value || null);
   }, [value]);
   
-  // DropDownPicker가 열릴 때 검색 모드 활성화
-  useEffect(() => {
-    if (open) {
+  const handleSetOpen = (value: boolean | ((prev: boolean) => boolean)) => {
+    const isOpen = typeof value === 'function' ? value(open) : value;
+    setOpen(value);
+    if (isOpen) {
       setIsSearching(true);
     }
-  }, [open]);
+  };
 
   return (
     <View style={[styles.wrapper, containerStyle, { zIndex: open ? 999999 : 1 }]}> 
@@ -55,7 +54,7 @@ export default function AirportPicker({
         open={open}
         value={code}
         items={options}
-        setOpen={setOpen}
+        setOpen={handleSetOpen}
         setValue={(callback: any) => {
           const next = callback(code) as string | null;
           setCode(next);
