@@ -184,7 +184,7 @@ export default function AccommodationItem({
       {/* 기본 정보 섹션 */}
       <View style={styles.formSection}>
         <View style={styles.inputGroup}>
-          <Text style={styles.label}>숙소 이름</Text>
+          <Text style={styles.label}>숙소명</Text>
           <Input
             variant="filled"
             placeholder={PLACEHOLDERS.accommodation.name}
@@ -332,7 +332,7 @@ export default function AccommodationItem({
 
         <View style={[styles.row, { gap: spacing.sm }]}>
           <View style={[styles.inputGroup, styles.halfWidth]}>
-            <Text style={styles.label}>숙박 비용</Text>
+            <Text style={styles.label}>숙박료</Text>
             <Input
               variant="filled"
               placeholder={PLACEHOLDERS.expense.amount}
