@@ -3,6 +3,12 @@ import { View, Text, StyleSheet, TouchableOpacity, Alert, ActivityIndicator, Scr
 import PanelLayout from '../PanelLayout';
 import api from '@/services/api';
 import { colors } from '@/ui/tokens/colors';
+import { textStyles, typography } from '@/ui/tokens/typography';
+import { spacing } from '@/ui/tokens/spacing';
+import { radii } from '@/ui/tokens/radii';
+import AiRefreshIcon from '../../../../assets/Icon/Normal/ai_refresh.svg';
+import AiCautionIcon from '../../../../assets/Icon/Normal/ai_caution.svg';
+import AiCheckedIcon from '../../../../assets/Icon/Normal/ai_checked.svg';
 
 interface ChecklistItem {
   id: number;
@@ -235,7 +241,7 @@ export default function AIAssistantPanel({ publicId }: AIAssistantPanelProps) {
             <Text style={styles.headerTitle}>AI assistant</Text>
             <View style={styles.headerActions}>
               <TouchableOpacity onPress={handleRefresh} style={styles.refreshButton}>
-                <Text style={styles.refreshIcon}>🔄</Text>
+                <AiRefreshIcon width={16} height={16} />
               </TouchableOpacity>
               <TouchableOpacity onPress={handleSimpleView} style={styles.viewAllButton}>
                 <Text style={styles.viewAllText}>간단히 보기</Text>
@@ -284,10 +290,10 @@ export default function AIAssistantPanel({ publicId }: AIAssistantPanelProps) {
         // 미리보기 상태
         <View style={styles.previewContainer}>
           <View style={styles.headerSection}>
-            <Text style={styles.headerTitle}>AI Assistant</Text>
+            <Text style={styles.headerTitle}>AI assistant</Text>
             <View style={styles.headerActions}>
               <TouchableOpacity onPress={handleRefresh} style={styles.refreshButton}>
-                <Text style={styles.refreshIcon}>🔄</Text>
+                <AiRefreshIcon width={16} height={16} />
               </TouchableOpacity>
               <TouchableOpacity onPress={handleViewAll} style={styles.viewAllButton}>
                 <Text style={styles.viewAllText}>전체보기</Text>
@@ -295,20 +301,35 @@ export default function AIAssistantPanel({ publicId }: AIAssistantPanelProps) {
             </View>
           </View>
           
-          <View style={styles.centerContent}>
+          <View style={styles.statsWrapper}>
             <View style={styles.statsContainer}>
-              <View style={styles.statCard}>
+              <View style={styles.statGroup}>
                 <View style={styles.statHeader}>
-                  <Text style={styles.statTitle}>준비 필요 ⚠️</Text>
+                  <View style={styles.statHeaderContent}>
+                    <AiCautionIcon width={16} height={16} />
+                    <Text style={styles.statTitleWarning}>준비 필요</Text>
+                  </View>
                 </View>
-                <Text style={styles.statNumber}>{stats.total - stats.checked}</Text>
+                <View style={[styles.statCard, styles.statCardWarning]}>
+                  <Text style={styles.statNumber}>{stats.total - stats.checked}</Text>
+                </View>
               </View>
               
-              <View style={styles.statCard}>
+              <View style={styles.statGroup}>
                 <View style={styles.statHeader}>
-                  <Text style={styles.statTitle}>준비됨 ✅</Text>
+                  <View style={styles.statHeaderContent}>
+                    <View style={styles.checkIconWrapper}>
+                      <View style={styles.checkIconBackground} />
+                      <View style={styles.checkIconContainer}>
+                        <AiCheckedIcon width={16} height={16} />
+                      </View>
+                    </View>
+                    <Text style={styles.statTitleSuccess}>준비 됨</Text>
+                  </View>
                 </View>
-                <Text style={styles.statNumber}>{stats.checked}</Text>
+                <View style={[styles.statCard, styles.statCardSuccess]}>
+                  <Text style={styles.statNumber}>{stats.checked}</Text>
+                </View>
               </View>
             </View>
           </View>
@@ -424,69 +445,101 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 8,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.lg + 4,
+    paddingBottom: spacing.sm,
   },
   headerTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#333',
+    fontFamily: typography.fontFamily.poppinsSemiBold,
+    fontSize: 16,
+    lineHeight: 24,
+    color: colors.black,
   },
   headerActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-  },
-  centerContent: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 16,
+    // gap: spacing.xs,
   },
   refreshButton: {
-    padding: 4,
-  },
-  refreshIcon: {
-    fontSize: 16,
+    padding: spacing.xs,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   viewAllButton: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
   },
   viewAllText: {
-    fontSize: 12,
-    color: '#007AFF',
-    fontWeight: '500',
+    ...textStyles.h6,
+    color: colors.black,
+  },
+  statsWrapper: {
+    flex: 1,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md + 3,
   },
   statsContainer: {
     flexDirection: 'row',
-    gap: 12,
+    gap: spacing.md,
     width: '100%',
   },
-  statCard: {
+  statGroup: {
     flex: 1,
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: '#E5E5E7',
+  },
+  statCard: {
+    width: '100%',
+    aspectRatio: 225 / 150,
+    borderRadius: radii.md + 2,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  statCardWarning: {
+    backgroundColor: 'rgba(255, 169, 56, 0.16)',
+  },
+  statCardSuccess: {
+    backgroundColor: 'rgba(30, 212, 90, 0.16)',
   },
   statHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: spacing.sm + 1,
   },
-  statTitle: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: '#666',
+  statHeaderContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs + 1,
+  },
+  statTitleWarning: {
+    ...textStyles.h7,
+    color: colors.black,
+  },
+  statTitleSuccess: {
+    ...textStyles.h7,
+    color: colors.black,
+  },
+  checkIconWrapper: {
+    width: 16,
+    height: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'relative',
+  },
+  checkIconBackground: {
+    position: 'absolute',
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: colors.white,
+    top: 2,
+    left: 2,
+  },
+  checkIconContainer: {
+    zIndex: 1,
+    position: 'relative',
   },
   statNumber: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#333',
+    fontFamily: typography.fontFamily.poppinsSemiBold,
+    fontSize: 50,
+    lineHeight: 70,
+    color: colors.gray900,
   },
   // Placeholder 상태 스타일
   placeholder: {
