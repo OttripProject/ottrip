@@ -1,15 +1,10 @@
 import React, { useState } from 'react';
-import { View, Text, Pressable, StyleSheet, Alert, ScrollView, Modal } from 'react-native';
-import { CategoryPicker } from '@/ui/components/pickers';
-import { List } from 'react-native-paper';
+import { View, Text, Pressable, StyleSheet, Alert, ScrollView, ViewStyle } from 'react-native';
 import dayjs from 'dayjs';
 import { expensesApi } from '@/services/expenses';
 import PanelLayout from '../PanelLayout';
-import { ExpenseCategory, ExpenseCurrency, categoryLabels, currencyLabels } from '@/types/expense';
-import { useDate } from '@/contexts/DateContext';
-import DatePicker from '@/ui/components/pickers/DatePicker';
-import Input from '@/ui/components/input/Input';
-import { PLACEHOLDERS } from '@/constants/placeholders';
+import { ExpenseCategory, categoryLabels } from '@/types/expense';
+import AddExpenseModal from '@/components/modals/AddExpenseModal';
 import { colors } from '@/ui/tokens/colors';
 import { textStyles, typography } from '@/ui/tokens/typography';
 import { spacing } from '@/ui/tokens/spacing';
@@ -43,55 +38,7 @@ interface Expense {
 
 export default function ExpensesPanel({ planData, onExpenseAdd }: ExpensesPanelProps) {
   const [showExpenseForm, setShowExpenseForm] = useState(false);
-  const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [categoryOpen, setCategoryOpen] = useState(false);
-  
-  const { selectedDate, setSelectedDate } = useDate();
-
-  const [expenseForm, setExpenseForm] = useState({
-    category: ExpenseCategory.ETC,
-    amount: 0,
-    description: '',
-    ex_date: selectedDate,
-    currency: ExpenseCurrency.KRW,
-  });
-
-  const handleExpenseSubmit = async () => {
-    if (!planData?.plan?.id) {
-      Alert.alert('오류', '여행을 먼저 선택해주세요.');
-      return;
-    }
-
-    if (expenseForm.amount <= 0) {
-      Alert.alert('오류', '금액을 입력해주세요.');
-      return;
-    }
-
-    try {
-      const newExpense = await expensesApi.createExpense({
-        planId: planData.plan.id,
-        category: expenseForm.category as any,
-        amount: expenseForm.amount,
-        description: expenseForm.description,
-        exDate: expenseForm.ex_date,
-        currency: expenseForm.currency as any,
-      });
-      Alert.alert('성공', '지출이 추가되었습니다.');
-      setExpenseForm({
-        category: ExpenseCategory.FOOD,
-        amount: 0,
-        description: '',
-        ex_date: dayjs().format('YYYY-MM-DD'),
-        currency: ExpenseCurrency.KRW,
-      });
-      setShowExpenseForm(false);
-      onExpenseAdd?.(newExpense);
-    } catch (error) {
-      console.error('Failed to create expense:', error);
-      Alert.alert('오류', '지출 추가에 실패했습니다.');
-    }
-  };
 
   const handleExpenseDelete = async (expenseId: string) => {
     try {
@@ -174,14 +121,15 @@ export default function ExpensesPanel({ planData, onExpenseAdd }: ExpensesPanelP
 
   // 카테고리 개수에 따른 카드 크기 계산
   // 총 지출 버튼과 같은 너비를 맞추기 위해 flex 사용
-  const getCardStyle = (totalCategories: number) => {
+  const getCardStyle = (totalCategories: number): ViewStyle => {
     if (totalCategories === 1) {
-      return { flex: 1, minWidth: '100%' };
+      return { flex: 1, minWidth: '100%' as any };
     }
     if (totalCategories >= 2) {
       // gap을 포함해서 총 너비가 100%가 되도록: (100% - gap) / 2
-      return { flex: 1, minWidth: '49%', maxWidth: '49%' };
+      return { flex: 1, minWidth: '49%' as any, maxWidth: '49%' as any };
     }
+    return {};
   };
 
   const cardStyle = getCardStyle(categoriesWithExpenses.length);
@@ -284,80 +232,15 @@ export default function ExpensesPanel({ planData, onExpenseAdd }: ExpensesPanelP
       </View>
 
       {/* 지출 추가 모달 */}
-      <Modal
+      <AddExpenseModal
         visible={showExpenseForm}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setShowExpenseForm(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>지출 추가</Text>
-              <Pressable
-                style={styles.closeButton}
-                onPress={() => setShowExpenseForm(false)}
-              >
-                <Text style={styles.closeButtonText}>✕</Text>
-              </Pressable>
-            </View>
-            
-            <Text style={styles.modalDescription}>
-              이 여행에 대한 지출을 수동으로 추가합니다.
-            </Text>
-            
-            <Text style={styles.inputLabel}>카테고리</Text>
-            <CategoryPicker
-              value={expenseForm.category}
-              onChange={(cat) => setExpenseForm({ ...expenseForm, category: cat })}
-            />
-
-            <Text style={styles.inputLabel}>금액</Text>
-            <Input
-              placeholder={PLACEHOLDERS.expense.amount}
-              value={expenseForm.amount.toString()}
-              onChangeText={(text) => setExpenseForm({ ...expenseForm, amount: parseInt(text) || 0 })}
-              keyboardType="numeric"
-            />
-
-            <Text style={styles.inputLabel}>통화</Text>
-            <View style={styles.currencyDisplay}>
-              <Text style={styles.currencyText}>
-                {currencyLabels[expenseForm.currency]} ({expenseForm.currency})
-              </Text>
-            </View>
-
-
-            <Text style={styles.inputLabel}>날짜</Text>
-            <DatePicker
-              value={expenseForm.ex_date}
-              onChange={(date: string) => setExpenseForm({ ...expenseForm, ex_date: date })}
-            />
-
-            <Text style={styles.inputLabel}>내용</Text>
-            <Input  
-              placeholder={PLACEHOLDERS.expense.description}
-              value={expenseForm.description}
-              onChangeText={(text) => setExpenseForm({ ...expenseForm, description: text })}
-            />
-
-            <View style={styles.modalButtons}>
-              <Pressable
-                style={[styles.modalButton, styles.cancelButton]}
-                onPress={() => setShowExpenseForm(false)}
-              >
-                <Text style={styles.cancelButtonText}>취소</Text>
-              </Pressable>
-              <Pressable
-                style={[styles.modalButton, styles.submitButton]}
-                onPress={handleExpenseSubmit}
-              >
-                <Text style={styles.submitButtonText}>저장</Text>
-              </Pressable>
-            </View>
-          </View>
-        </View>
-      </Modal>
+        onClose={() => setShowExpenseForm(false)}
+        planId={planData?.plan?.id || 0}
+        onExpenseAdd={(newExpense) => {
+          onExpenseAdd?.(newExpense);
+          planData?.refreshExpenses();
+        }}
+      />
     </PanelLayout>
   );
 }
@@ -528,115 +411,5 @@ const styles = StyleSheet.create({
   },
   deleteIcon: {
     fontSize: 16,
-  },
-  // 모달 스타일
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalContent: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 20,
-    width: '90%',
-    maxWidth: 400,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#333',
-  },
-  closeButton: {
-    padding: 4,
-  },
-  closeButtonText: {
-    fontSize: 18,
-    color: '#666',
-  },
-  modalDescription: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 20,
-  },
-  inputLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 8,
-    marginTop: 16,
-  },
-  // 드롭다운 스타일
-  dropdown: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    marginBottom: 16,
-  },
-  dropdownContainer: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    backgroundColor: '#fff',
-  },
-  // 통화 표시
-  currencyDisplay: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    padding: 12,
-    backgroundColor: '#f5f5f5',
-    marginBottom: 16,
-  },
-  currencyText: {
-    fontSize: 16,
-    color: '#666',
-  },
-  // 입력 필드
-  input: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-    backgroundColor: '#fff',
-    marginBottom: 16,
-  },
-  // 모달 버튼
-  modalButtons: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    marginTop: 24,
-    gap: 8,
-  },
-  modalButton: {
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 8,
-    minWidth: 80,
-    alignItems: 'center',
-  },
-  cancelButton: {
-    backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: '#ddd',
-  },
-  cancelButtonText: {
-    color: '#333',
-    fontWeight: '600',
-  },
-  submitButton: {
-    backgroundColor: '#000',
-  },
-  submitButtonText: {
-    color: '#fff',
-    fontWeight: '600',
   },
 });

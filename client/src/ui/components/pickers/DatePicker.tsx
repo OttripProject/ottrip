@@ -14,9 +14,10 @@ interface DatePickerProps {
   style?: any;
   placeholder?: string;
   minDate?: string; // 'YYYY-MM-DD' 형식
+  displayFormat?: string; // 날짜 표시 형식 (예: 'YYYY.MM.DD')
 }
 
-export default function DatePicker({ value, onChange, style, placeholder = "날짜를 선택하세요", minDate }: DatePickerProps) {
+export default function DatePicker({ value, onChange, style, placeholder = "날짜를 선택하세요", minDate, displayFormat }: DatePickerProps) {
   const [showPicker, setShowPicker] = useState(false);
   const [tempDate, setTempDate] = useState(value || dayjs().format('YYYY-MM-DD'));
 
@@ -36,6 +37,9 @@ export default function DatePicker({ value, onChange, style, placeholder = "날�
 
   const getDisplayText = () => {
     if (!value) return placeholder;
+    if (displayFormat) {
+      return dayjs(value).format(displayFormat);
+    }
     return dayjs(value).format('YYYY년 M월 D일');
   };
 
@@ -115,12 +119,13 @@ const styles = StyleSheet.create({
   dateInput: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: 0,
+    borderWidth: 1,
+    borderColor: colors.gray400,
     borderRadius: radii.md,
     paddingHorizontal: spacing.md,
     paddingVertical: 10,
-    backgroundColor: colors.gray300,
-    minHeight: 40,
+    backgroundColor: colors.white,
+    height: 48,
   },
   dateTextContainer: {
     flexDirection: 'row',
