@@ -4,14 +4,20 @@ import { CategoryPicker } from '@/ui/components/pickers';
 import { List } from 'react-native-paper';
 import dayjs from 'dayjs';
 import { expensesApi } from '@/services/expenses';
-import ModalLayout from './ModalLayout';
+import PanelLayout from '../PanelLayout';
 import { ExpenseCategory, ExpenseCurrency, categoryLabels, currencyLabels } from '@/types/expense';
 import { useDate } from '@/contexts/DateContext';
 import DatePicker from '@/ui/components/pickers/DatePicker';
 import Input from '@/ui/components/input/Input';
 import { PLACEHOLDERS } from '@/constants/placeholders';
+import { colors } from '@/ui/tokens/colors';
+import { textStyles, typography } from '@/ui/tokens/typography';
+import { spacing } from '@/ui/tokens/spacing';
+import { radii } from '@/ui/tokens/radii';
+import RightArrowBlueIcon from '../../../../assets/right_arrow_blue.svg';
+import PlusRadiusIcon from '../../../../assets/plus_radius.svg';
 
-interface ExpensesModalProps {
+interface ExpensesPanelProps {
   planData?: {
     plan: any;
     expenses: any[];
@@ -35,10 +41,10 @@ interface Expense {
 }
 
 
-export default function ExpensesModal({ planData, onExpenseAdd }: ExpensesModalProps) {
+export default function ExpensesPanel({ planData, onExpenseAdd }: ExpensesPanelProps) {
   const [showExpenseForm, setShowExpenseForm] = useState(false);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
-  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [categoryOpen, setCategoryOpen] = useState(false);
   
   const { selectedDate, setSelectedDate } = useDate();
@@ -121,15 +127,24 @@ export default function ExpensesModal({ planData, onExpenseAdd }: ExpensesModalP
     return planData.expenses.filter(expense => expense.category === category);
   };
 
-  const toggleCategory = (category: string) => {
-    const newExpanded = new Set(expandedCategories);
-    if (newExpanded.has(category)) {
-      newExpanded.delete(category);
+  const handleCategoryClick = (category: string) => {
+    if (selectedCategory === category) {
+      setSelectedCategory(null);
     } else {
-      newExpanded.add(category);
+      setSelectedCategory(category);
     }
-    setExpandedCategories(newExpanded);
   };
+
+  // 카테고리 순서 정의
+  const categoryOrder = [
+    ExpenseCategory.FOOD,
+    ExpenseCategory.FLIGHT,
+    ExpenseCategory.ACTIVITY,
+    ExpenseCategory.ETC,
+    ExpenseCategory.TRANSPORT,
+    ExpenseCategory.ACCOMMODATION,
+    ExpenseCategory.SHOPPING,
+  ];
 
   const formatCurrency = (amount: number, currency: string) => {
     if (currency === 'USD') return `$${amount.toLocaleString()}`;
@@ -141,104 +156,130 @@ export default function ExpensesModal({ planData, onExpenseAdd }: ExpensesModalP
 
   if (!planData?.plan) {
     return (
-      <ModalLayout style={styles.container}>
+      <PanelLayout style={styles.container}>
         <View style={styles.placeholder}>
           <Text style={styles.placeholderText}>여행을 선택해주세요</Text>
         </View>
-      </ModalLayout>
+      </PanelLayout>
     );
   }
 
   const totalExpenses = getTotalExpenses();
   const expensesByCategory = getExpensesByCategory();
 
+  // 지출이 있는 카테고리만 필터링
+  const categoriesWithExpenses = categoryOrder.filter(
+    (category) => (expensesByCategory[category] || 0) > 0
+  );
+
+  // 카테고리 개수에 따른 카드 크기 계산
+  // 총 지출 버튼과 같은 너비를 맞추기 위해 flex 사용
+  const getCardStyle = (totalCategories: number) => {
+    if (totalCategories === 1) {
+      return { flex: 1, minWidth: '100%' };
+    }
+    if (totalCategories >= 2) {
+      // gap을 포함해서 총 너비가 100%가 되도록: (100% - gap) / 2
+      return { flex: 1, minWidth: '49%', maxWidth: '49%' };
+    }
+  };
+
+  const cardStyle = getCardStyle(categoriesWithExpenses.length);
+
+  // 선택된 카테고리의 지출 목록
+  const selectedCategoryExpenses = selectedCategory 
+    ? getExpensesInCategory(selectedCategory)
+    : [];
+
   return (
-    <ModalLayout style={{ flex: 1 }}>
+    <PanelLayout style={{ flex: 1 }}>
       <View style={styles.scrollWrapper}>
-        <ScrollView style={styles.scrollView}>
+        <ScrollView 
+          style={styles.scrollView} 
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
         {/* 헤더 섹션 */}
         <View style={styles.headerSection}>
           <Text style={styles.headerTitle}>Expense List</Text>
-          <View style={styles.headerActions}>
-            <Pressable
-              style={styles.addButton}
-              onPress={() => setShowExpenseForm(true)}
-            >
-              <Text style={styles.addButtonText}>+ 추가</Text>
-            </Pressable>
+          <Pressable
+            style={styles.addButton}
+            onPress={() => setShowExpenseForm(true)}
+          >
+            <Text style={styles.addButtonText}>지출 추가</Text>
+            <PlusRadiusIcon width={16} height={16} />
+          </Pressable>
+        </View>
+
+        {/* 총 지출 버튼 */}
+        <Pressable style={styles.totalButton}>
+          <Text style={styles.totalButtonLabel}>총 지출</Text>
+          <View style={styles.totalButtonRight}>
+            <Text style={styles.totalButtonAmount}>₩{totalExpenses.toLocaleString()}</Text>
+            <RightArrowBlueIcon width={14} height={14} />
           </View>
-        </View>
+        </Pressable>
 
-        {/* 총 지출 */}
-        <View style={styles.totalSection}>
-          <Text style={styles.totalTitle}>총 지출: ₩{totalExpenses.toLocaleString()}</Text>
-        </View>
+        {/* 카테고리별 지출 카드 (동적 그리드) */}
+        {categoriesWithExpenses.length > 0 && (
+          <View style={styles.categoryGrid}>
+            {categoriesWithExpenses.map((category) => {
+              const amount = expensesByCategory[category] || 0;
+              return (
+                <Pressable
+                  key={category}
+                  style={[
+                    styles.categoryCard,
+                    cardStyle,
+                    selectedCategory === category && styles.categoryCardSelected
+                  ]}
+                  onPress={() => handleCategoryClick(category)}
+                >
+                  <Text style={styles.categoryCardName}>
+                    {categoryLabels[category]}
+                  </Text>
+                  <Text style={styles.categoryCardAmount}>
+                    ₩{amount.toLocaleString()}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        )}
 
-        {/* 지출 내역 상세 */}
-        <View style={styles.detailsSection}>
-          <Text style={styles.detailsTitle}>지출 내역 상세</Text>
-          
-          {/* 카테고리별 지출 요약 */}
-          {Object.entries(expensesByCategory).map(([category, amount]) => (
-            <View key={category} style={styles.categorySummary}>
-              <Text style={styles.categoryName}>
-                {categoryLabels[category as ExpenseCategory] || category}
-              </Text>
-              <Text style={styles.categoryTotal}>
-                ₩{(amount as number).toLocaleString()}
-              </Text>
-            </View>
-          ))}
-        </View>
-
-        {/* 구분선 */}
-        <View style={styles.separator} />
-
-        {/* 상세 내역 */}
-        <View style={styles.detailSection}>
-          {Object.entries(expensesByCategory).map(([category, amount]) => (
-            <View key={category} style={styles.categoryDetailSection}>
-              <Pressable 
-                style={styles.categoryHeader}
-                onPress={() => toggleCategory(category)}
-              >
-                <Text style={styles.categoryHeaderName}>
-                  {categoryLabels[category as ExpenseCategory] || category}
-                </Text>
-                <Text style={styles.expandIcon}>
-                  {expandedCategories.has(category) ? '▼' : '▶'}
-                </Text>
-              </Pressable>
-              
-              {/* 확장된 카테고리의 개별 지출 항목들 */}
-              {expandedCategories.has(category) && (
-                <View style={styles.expenseItems}>
-                  {getExpensesInCategory(category).map((expense: Expense) => (
-                    <View key={expense.id} style={styles.expenseItem}>
-                      <View style={styles.expenseInfo}>
-                        <Text style={styles.expenseDescription}>{expense.description}</Text>
-                        <Text style={styles.expenseDate}>
-                          {dayjs(expense.exDate).format('MM월 DD일')}
-                        </Text>
-                      </View>
-                      <View style={styles.expenseActions}>
-                        <Text style={styles.expenseAmount}>
-                          {formatCurrency(expense.amount, expense.currency)}
-                        </Text>
-                        <Pressable
-                          style={styles.deleteButton}
-                          onPress={() => handleExpenseDelete(expense.id)}
-                        >
-                          <Text style={styles.deleteIcon}>🗑️</Text>
-                        </Pressable>
-                      </View>
+        {/* 선택된 카테고리의 지출 리스트 (카드 형태) */}
+        {selectedCategory && selectedCategoryExpenses.length > 0 && (
+          <View style={styles.expenseListSection}>
+            <Text style={styles.expenseListTitle}>
+              {categoryLabels[selectedCategory as ExpenseCategory]} 상세
+            </Text>
+            <View style={styles.expenseList}>
+              {selectedCategoryExpenses.map((expense: Expense) => (
+                <View key={expense.id} style={styles.expenseCard}>
+                  <View style={styles.expenseCardContent}>
+                    <View style={styles.expenseCardHeader}>
+                      <Text style={styles.expenseCardDescription}>
+                        {expense.description || '내용 없음'}
+                      </Text>
+                      <Pressable
+                        style={styles.deleteExpenseButton}
+                        onPress={() => handleExpenseDelete(expense.id)}
+                      >
+                        <Text style={styles.deleteIcon}>🗑️</Text>
+                      </Pressable>
                     </View>
-                  ))}
+                    <Text style={styles.expenseCardDate}>
+                      {dayjs(expense.exDate).format('YYYY.MM.DD')}
+                    </Text>
+                    <Text style={styles.expenseCardAmount}>
+                      {formatCurrency(expense.amount, expense.currency)}
+                    </Text>
+                  </View>
                 </View>
-              )}
+              ))}
             </View>
-          ))}
-        </View>
+          </View>
+        )}
         </ScrollView>
       </View>
 
@@ -317,7 +358,7 @@ export default function ExpensesModal({ planData, onExpenseAdd }: ExpensesModalP
           </View>
         </View>
       </Modal>
-    </ModalLayout>
+    </PanelLayout>
   );
 }
 
@@ -331,6 +372,9 @@ const styles = StyleSheet.create({
   },
   scrollView: {
     flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: spacing.xl,
   },
   placeholder: {
     flex: 1,
@@ -348,138 +392,142 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 16,
-    paddingBottom: 8,
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.xl,
+    paddingBottom: spacing.md,
   },
   headerTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#333',
-  },
-  headerActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  // 총 지출 섹션
-  totalSection: {
-    paddingHorizontal: 16,
-    paddingBottom: 16,
-  },
-  totalTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
-  },
-  // 지출 내역 상세 섹션
-  detailsSection: {
-    paddingHorizontal: 16,
-    paddingBottom: 16,
-  },
-  detailsTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 12,
-  },
-  // 카테고리 요약
-  categorySummary: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 8,
-  },
-  categoryName: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#333',
-  },
-  categoryTotal: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#333',
-  },
-  // 구분선
-  separator: {
-    height: 1,
-    backgroundColor: '#e0e0e0',
-    marginHorizontal: 16,
-    marginVertical: 8,
-  },
-  // 상세 내역 섹션
-  detailSection: {
-    paddingHorizontal: 16,
-  },
-  categoryDetailSection: {
-    marginBottom: 8,
-  },
-  categoryHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 12,
-  },
-  categoryHeaderName: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#333',
-  },
-  expandIcon: {
-    fontSize: 12,
-    color: '#666',
-  },
-  // 개별 지출 항목들
-  expenseItems: {
-    backgroundColor: '#fff',
-  },
-  expenseItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 0,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
-  },
-  expenseInfo: {
-    flex: 1,
-  },
-  expenseDescription: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#333',
-  },
-  expenseDate: {
-    fontSize: 12,
-    color: '#666',
-    marginTop: 2,
-  },
-  expenseActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  expenseAmount: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#333',
-    marginRight: 8,
-  },
-  deleteButton: {
-    padding: 4,
-  },
-  deleteIcon: {
+    ...textStyles.poppinsH4,
     fontSize: 16,
   },
   // 추가 버튼
   addButton: {
-    backgroundColor: '#007AFF',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    borderWidth: 1,
+    borderColor: colors.gray400,
+    borderRadius: 38,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.xs,
+    backgroundColor: colors.white,
+    height: 32,
+    width: 96,
   },
   addButtonText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '600',
+    ...textStyles.body6,
+    color: colors.black,
+    fontWeight: typography.weight.semibold,
+  },
+  // 총 지출 버튼
+  totalButton: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 102, 255, 0.12)',
+    borderRadius: radii.md,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.lg,
+    marginHorizontal: spacing.xl,
+    marginTop: spacing.lg,
+    marginBottom: spacing.lg,
+    minHeight: 48,
+  },
+  totalButtonLabel: {
+    ...textStyles.body4,
+    color: colors.primary,
+    fontWeight: typography.weight.semibold,
+  },
+  totalButtonRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  totalButtonAmount: {
+    ...textStyles.body4,
+    color: colors.black,
+    fontWeight: typography.weight.semibold,
+  },
+  // 카테고리 그리드
+  categoryGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    columnGap: spacing.md,
+    rowGap: spacing.md,
+    marginHorizontal: spacing.xl,
+    marginBottom: spacing.lg,
+  },
+  // 카테고리 카드
+  categoryCard: {
+    backgroundColor: colors.gray200,
+    borderRadius: radii.md,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    minHeight: 46,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    flexGrow: 0,
+    flexShrink: 1,
+  },
+  categoryCardSelected: {
+    backgroundColor: colors.gray300,
+  },
+  categoryCardName: {
+    ...textStyles.body6,
+    color: colors.black,
+  },
+  categoryCardAmount: {
+    ...textStyles.body6,
+    color: colors.black,
+  },
+  // 지출 리스트 섹션
+  expenseListSection: {
+    paddingHorizontal: spacing.xl,
+    marginTop: spacing.md,
+  },
+  expenseListTitle: {
+    ...textStyles.h6,
+    marginBottom: spacing.md,
+  },
+  expenseList: {
+    gap: spacing.sm,
+  },
+  // 지출 카드
+  expenseCard: {
+    backgroundColor: colors.white,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    borderColor: colors.gray300,
+    padding: spacing.md,
+  },
+  expenseCardContent: {
+    gap: spacing.xs,
+  },
+  expenseCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  expenseCardDescription: {
+    ...textStyles.body4,
+    color: colors.black,
+    flex: 1,
+  },
+  expenseCardDate: {
+    ...textStyles.body6,
+    color: colors.gray600,
+  },
+  expenseCardAmount: {
+    ...textStyles.h7,
+    color: colors.black,
+    marginTop: spacing.xs,
+  },
+  deleteExpenseButton: {
+    padding: 4,
+  },
+  deleteIcon: {
+    fontSize: 16,
   },
   // 모달 스타일
   modalOverlay: {

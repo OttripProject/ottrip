@@ -8,16 +8,16 @@ import { plansApi } from '@/services/plans';
 import { tripToastMessages } from '@/utils/toast';
 import { colors } from '@/ui/tokens/colors';
 import { textStyles } from '@/ui/tokens/typography';
-import DotsIcon from '../../assets/dots.svg';
-import TripAddIcon from '../../assets/trip_add.svg';
-import DownArrowIcon from '../../assets/down_arrow.svg';
-import UpperArrowIcon from '../../assets/upper_arrow.svg';
-import LeftArrowIcon from '../../assets/cal_left_arrow.svg';
-import RightArrowIcon from '../../assets/cal_right_arrow.svg';
-import UpdateIcon from '../../assets/update.svg';
-import DeleteIcon from '../../assets/delete.svg';
-import XIcon from '../../assets/x.svg';
-import CheckIcon from '../../assets/check_blue.svg';
+import DotsIcon from '../../../assets/dots.svg';
+import TripAddIcon from '../../../assets/trip_add.svg';
+import DownArrowIcon from '../../../assets/down_arrow.svg';
+import UpperArrowIcon from '../../../assets/upper_arrow.svg';
+import LeftArrowIcon from '../../../assets/cal_left_arrow.svg';
+import RightArrowIcon from '../../../assets/cal_right_arrow.svg';
+import UpdateIcon from '../../../assets/update.svg';
+import DeleteIcon from '../../../assets/delete.svg';
+import XIcon from '../../../assets/x.svg';
+import CheckIcon from '../../../assets/check_blue.svg';
 
 LocaleConfig.locales['ko'] = {
   monthNames: [

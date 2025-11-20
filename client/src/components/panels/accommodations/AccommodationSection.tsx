@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import dayjs from 'dayjs';
-import AccommodationItem from '../../items/AccommodationItem';
+import AccommodationItem from './AccommodationItem';
 
 interface AccommodationSectionProps {
   planData: {

@@ -6,7 +6,7 @@ import { useMe } from '@/hooks/useMe';
 import { colors } from '@/ui/tokens/colors';
 import { textStyles, typography } from '@/ui/tokens/typography';
 
-export default function HeaderModal() {
+export default function HeaderPanel() {
   const navigation = useNavigation<NavigationProp<any>>();
   const { data: profile } = useMe();
 

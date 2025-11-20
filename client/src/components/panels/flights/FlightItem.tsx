@@ -11,13 +11,13 @@ import { textStyles, typography } from '@/ui/tokens/typography';
 import { spacing } from '@/ui/tokens/spacing';
 import { radii } from '@/ui/tokens/radii';
 import BaseCalendar from '@/components/popup/calendar/BaseCalendar';
-import CalendarIcon from '../../../assets/calender.svg';
-import AddIcon from '../../../assets/add.svg';
-import DeleteIcon from '../../../assets/delete.svg';
-import XIcon from '../../../assets/x.svg';
+import CalendarIcon from '../../../../assets/calender.svg';
+import AddIcon from '../../../../assets/add.svg';
+import DeleteIcon from '../../../../assets/delete.svg';
+import XIcon from '../../../../assets/x.svg';
 import DropDownPicker from 'react-native-dropdown-picker';
-import DownArrowIcon from '../../../assets/down_arrow.svg';
-import UpperArrowIcon from '../../../assets/upper_arrow.svg';
+import DownArrowIcon from '../../../../assets/down_arrow.svg';
+import UpperArrowIcon from '../../../../assets/upper_arrow.svg';
 
 interface FlightItemProps {
   flight?: any;

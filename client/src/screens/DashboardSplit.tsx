@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, useWindowDimensions, ScrollView } from 'react-native';
 import { useIsWideScreen } from '@/hooks/useIsWideScreen';
-import WeeklyScheduleModal, { Itinerary } from '@/components/modals/WeeklyScheduleModal';
+import WeeklySchedulePanel, { Itinerary } from '@/components/panels/WeeklySchedulePanel';
 import SidePanels from '@/navigation/SidePanels';
 import { usePlanDataQuery } from '@/hooks/usePlanDataQuery';
 import { usePlansQuery } from '@/hooks/usePlansQuery';
@@ -82,7 +82,7 @@ export default function DashboardSplit() {
     >
       <View style={styles.contentLayout}>
         <View style={[styles.calendarPane, { flex: ratio.calendar }]}> 
-          <WeeklyScheduleModal 
+          <WeeklySchedulePanel 
             itineraries={planData.itineraries}
             flights={planData.flights}
             height={600} 
