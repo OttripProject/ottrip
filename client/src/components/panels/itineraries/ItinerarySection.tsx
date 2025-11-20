@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import dayjs from 'dayjs';
-import ItineraryItem from '../../items/ItineraryItem';
+import ItineraryItem from './ItineraryItem';
 
 interface ItinerarySectionProps {
   planData: {

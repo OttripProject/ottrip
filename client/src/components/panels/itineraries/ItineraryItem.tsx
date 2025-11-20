@@ -11,11 +11,11 @@ import { colors } from '@/ui/tokens/colors';
 import { textStyles, typography } from '@/ui/tokens/typography';
 import { spacing } from '@/ui/tokens/spacing';
 import { radii } from '@/ui/tokens/radii';
-import DeleteIcon from '../../../assets/delete.svg';
-import AddIcon from '../../../assets/add.svg';
-import XIcon from '../../../assets/x.svg';
+import DeleteIcon from '../../../../assets/delete.svg';
+import AddIcon from '../../../../assets/add.svg';
+import XIcon from '../../../../assets/x.svg';
 import BaseCalendar from '@/components/popup/calendar/BaseCalendar';
-import CalendarIcon from '../../../assets/calender.svg';
+import CalendarIcon from '../../../../assets/calender.svg';
 
 interface ItineraryItemProps {
   itinerary?: any;

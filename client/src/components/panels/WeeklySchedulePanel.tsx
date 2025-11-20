@@ -4,13 +4,13 @@ import { Calendar as BigCalendar } from 'react-native-big-calendar';
 import { Calendar } from 'react-native-calendars';
 import dayjs from 'dayjs';
 import ko from 'dayjs/locale/ko';
-import TripSelector from '../TripSelector';
+import TripSelector from '../selector/TripSelector';
 import SharePlanModal from '@/components/modals/SharePlanModal';
 import MonthCalendarPopup from '@/components/popup/MonthCalendarPopup';
 import BaseCalendar from '@/components/popup/calendar/BaseCalendar';
 import { plansApi } from '@/services/plans';
 import { Plan, CreatePlanRequest, UpdatePlanRequest } from '@/types/api';
-import ModalLayout from './ModalLayout';
+import PanelLayout from './PanelLayout';
 import Card from '@/ui/components/Card';
 import Input from '@/ui/components/input/Input';
 import { PLACEHOLDERS } from '@/constants/placeholders';
@@ -132,7 +132,7 @@ interface Props {
   onPlanDelete?: (planId: number) => Promise<boolean>;
 }
 
-export default function WeeklyScheduleModal({ 
+export default function WeeklySchedulePanel({ 
   itineraries, 
   flights = [], 
   height = 600, 
@@ -351,7 +351,7 @@ export default function WeeklyScheduleModal({
     
 
   return (
-    <ModalLayout style={styles.container}>
+    <PanelLayout style={styles.container}>
       {/* 커스텀 헤더 - Figma 디자인에 맞게 재구성 */}
       <View style={styles.customHeader}>
         {/* 왼쪽: 타이틀 및 날짜 네비게이션 */}
@@ -703,7 +703,7 @@ export default function WeeklyScheduleModal({
       )} */}
 
 
-    </ModalLayout>
+    </PanelLayout>
   );
 }
 

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert, ActivityIndicator, ScrollView, Modal, Pressable } from 'react-native';
-import ModalLayout from './ModalLayout';
+import PanelLayout from '../PanelLayout';
 import api from '@/services/api';
 import { colors } from '@/ui/tokens/colors';
 
@@ -19,11 +19,11 @@ interface ChecklistData {
   categories: ChecklistCategory;
 }
 
-interface AIAssistantModalProps {
+interface AIAssistantPanelProps {
   publicId: string | null;
 }
 
-export default function AIAssistantModal({ publicId }: AIAssistantModalProps) {
+export default function AIAssistantPanel({ publicId }: AIAssistantPanelProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [checklist, setChecklist] = useState<ChecklistData | null>(null);
   const [showPreview, setShowPreview] = useState(false);
@@ -204,7 +204,7 @@ export default function AIAssistantModal({ publicId }: AIAssistantModalProps) {
   const stats = getPreviewStats();
 
   return (
-    <ModalLayout style={{ flex: 1 }}>
+    <PanelLayout style={{ flex: 1 }}>
       {!publicId ? (
         // Plan이 선택되지 않은 상태
         <View style={styles.placeholder}>
@@ -377,7 +377,7 @@ export default function AIAssistantModal({ publicId }: AIAssistantModalProps) {
           </View>
         </View>
       </Modal>
-    </ModalLayout>
+    </PanelLayout>
   );
 }
 

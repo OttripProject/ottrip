@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import { ScrollView, View, Text, StyleSheet } from 'react-native';
-import ModalLayout from './ModalLayout';
-import ItinerarySection from './DetailsModalSections/ItinerarySection';
-import FlightSection from './DetailsModalSections/FlightSection';
-import AccommodationSection from './DetailsModalSections/AccommodationSection';
+import PanelLayout from './PanelLayout';
+import ItinerarySection from './itineraries/ItinerarySection';
+import FlightSection from './flights/FlightSection';
+import AccommodationSection from './accommodations/AccommodationSection';
 import WarningBanner from '@/ui/components/toast/warning';
 
-interface DetailsModalProps {
+interface DetailsPanelProps {
   planData?: {
     plan: any;
     itineraries: any[];
@@ -44,7 +44,7 @@ interface DetailsModalProps {
 }
 
 
-export default function DetailsModal({
+export default function DetailsPanel({
   planData,
   selectedItinerary,
   selectedFlight,
@@ -66,16 +66,16 @@ export default function DetailsModal({
   openNewAccommodationForm,
   onConsumeOpenNewAccommodationForm,
   newAccommodationDraft,
-}: DetailsModalProps) {
+}: DetailsPanelProps) {
   const [showWarning, setShowWarning] = useState(false);
   const [warningMessage, setWarningMessage] = useState('입력되지 않은 값이 있어요.');
   if (!planData?.plan) {
     return (
-      <ModalLayout style={styles.container}>
+      <PanelLayout style={styles.container}>
         <View style={styles.placeholder}>
           <Text style={styles.placeholderText}>여행을 선택해주세요</Text>
         </View>
-      </ModalLayout>
+      </PanelLayout>
     );
   }
 
@@ -212,7 +212,7 @@ export default function DetailsModal({
   const isInitial = !activeTab && !selectedItinerary && !selectedFlight && !selectedAccommodation;
 
   return (
-    <ModalLayout style={styles.container}>
+    <PanelLayout style={styles.container}>
       <View style={styles.scrollWrapper}>
         <WarningBanner
           message={warningMessage}
@@ -232,7 +232,7 @@ export default function DetailsModal({
           {renderContent()}
         </ScrollView>
       </View>
-    </ModalLayout>
+    </PanelLayout>
   );
 }
 

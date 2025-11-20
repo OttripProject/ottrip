@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { View, StyleSheet } from 'react-native';
-import WeeklyScheduleModal, { Itinerary } from '@/components/modals/WeeklyScheduleModal';
+import WeeklySchedulePanel, { Itinerary } from '@/components/panels/WeeklySchedulePanel';
 import { usePlanDataQuery } from '@/hooks/usePlanDataQuery';
 import { usePlansQuery } from '@/hooks/usePlansQuery';
 
@@ -55,7 +55,7 @@ export default function DashboardStack() {
   return (
     <View style={styles.container}>
       <View style={{ height: 400 }}>
-        <WeeklyScheduleModal 
+        <WeeklySchedulePanel 
           itineraries={planData.itineraries}
           flights={planData.flights}
           height={400}

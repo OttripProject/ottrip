@@ -8,12 +8,12 @@ import { usePlansQuery } from "@/hooks/usePlansQuery";
 import dayjs from "dayjs";
 import { colors } from "@/ui/tokens/colors";
 
-// 새로운 모달 컴포넌트들
-import HeaderModal from "@/components/modals/HeaderModal";
-import WeeklyScheduleModal from "@/components/modals/WeeklyScheduleModal";
-import DetailsModal from "@/components/modals/DetailsModal";
-import ExpensesModal from "@/components/modals/ExpensesModal";
-import AIAssistantModal from "@/components/modals/AIAssistantModal";
+// 패널 컴포넌트들
+import HeaderPanel from "@/components/panels/HeaderPanel";
+import WeeklySchedulePanel from "@/components/panels/WeeklySchedulePanel";
+import DetailsPanel from "@/components/panels/DetailsPanel";
+import ExpensesPanel from "@/components/panels/expenses/ExpensesPanel";
+import AIAssistantPanel from "@/components/panels/aiassistant/AIAssistantPanel";
 
 export default function DashboardScreen() {
   const { width } = useWindowDimensions();
@@ -295,7 +295,7 @@ export default function DashboardScreen() {
     <View style={styles.root}>
       {/* 1. 헤더 모달 */}
       <View style={styles.headerModal}>
-        <HeaderModal />
+        <HeaderPanel />
       </View>
 
       {/* 메인 레이아웃 */}
@@ -305,7 +305,7 @@ export default function DashboardScreen() {
         <View style={[styles.leftArea, { flex: ratio.left, height: availableHeight }]}>
           {/* 2. 주간 스케줄 모달 (70% 높이) */}
           <View style={[styles.scheduleModal, { height: leftTopHeight }]}>
-      <WeeklyScheduleModal
+      <WeeklySchedulePanel
               itineraries={planData.itineraries}
               flights={planData.flights}
               height={leftTopHeight}
@@ -359,7 +359,7 @@ export default function DashboardScreen() {
           <View style={[styles.bottomRow, { height: leftBottomHeight }]}>
             {/* 4. 지출 모달 (좌측 하단) */}
             <View style={styles.expensesModal}>
-              <ExpensesModal 
+              <ExpensesPanel 
                 planData={{
                   ...planData,
                   refreshItineraries: planData.refreshItineraries,
@@ -372,7 +372,7 @@ export default function DashboardScreen() {
 
             {/* 5. AI 어시스턴트 모달 (우측 하단) */}
             <View style={styles.aiModal}>
-              <AIAssistantModal publicId={planData.plan?.publicId || null} />
+              <AIAssistantPanel publicId={planData.plan?.publicId || null} />
             </View>
           </View>
         </View>
@@ -382,7 +382,7 @@ export default function DashboardScreen() {
         <View style={[styles.rightArea, { flex: ratio.right, height: availableHeight }]}>
           {/* 3. 상세 정보 모달 (전체 높이) */}
           <View style={styles.detailsModal}>
-            <DetailsModal 
+            <DetailsPanel 
               planData={planData}
               selectedItinerary={selectedItinerary}
               selectedFlight={selectedFlight}

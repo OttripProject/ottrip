@@ -1,59 +1,56 @@
 import React, { useState } from 'react';
 import { ScrollView, View, Text, Pressable, StyleSheet } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import ModalLayout from '../ModalLayout';
-import ItineraryItem from '../../items/ItineraryItem';
+import dayjs from 'dayjs';
+import PanelLayout from '../PanelLayout';
+import FlightItem from './FlightItem';
 
-interface ItineraryModalProps {
+interface FlightModalProps {
   planData?: {
     plan: any;
+    flights: any[];
     itineraries: any[];
+    accommodations: any[];
     isLoading: boolean;
     error: string | null;
-    refreshItineraries: () => Promise<void>;
+    refreshFlights: () => Promise<void>;
     refreshExpenses: () => Promise<void>;
   };
-  selectedItinerary?: any;
-  onItineraryAdd?: (itinerary: any) => void;
+  onFlightAdd?: (flight: any) => void;
   onClose?: () => void;
 }
 
-export default function ItineraryModal({ 
+export default function FlightModal({ 
   planData, 
-  selectedItinerary, 
-  onItineraryAdd, 
+  onFlightAdd, 
   onClose 
-}: ItineraryModalProps) {
-  const [showItineraryForm, setShowItineraryForm] = useState(false);
-  const [editingItinerary, setEditingItinerary] = useState<any | null>(null);
+}: FlightModalProps) {
+  const [showFlightForm, setShowFlightForm] = useState(false);
+  const [editingFlight, setEditingFlight] = useState<any | null>(null);
 
-  const handleItinerarySave = async (itinerary: any) => {
-    onItineraryAdd?.(itinerary);
-    setShowItineraryForm(false);
-    setEditingItinerary(null);
-    // 일정 목록 새로고침
-    if (planData?.refreshItineraries) {
-      await planData.refreshItineraries();
-    }
+  const handleFlightSave = (flight: any) => {
+    onFlightAdd?.(flight);
+    setShowFlightForm(false);
+    setEditingFlight(null);
     // 지출 목록 새로고침
     if (planData?.refreshExpenses) {
       planData.refreshExpenses();
     }
   };
 
-  const handleItineraryDelete = (itineraryId: string) => {
+  const handleFlightDelete = (flightId: string) => {
     // 삭제 후 목록 새로고침
-    planData?.refreshItineraries();
+    planData?.refreshFlights();
     // 상세 내용 닫기
-    setShowItineraryForm(false);
-    setEditingItinerary(null);
+    setShowFlightForm(false);
+    setEditingFlight(null);
   };
 
   if (!planData?.plan) {
     return (
-      <ModalLayout style={styles.container}>
+      <PanelLayout style={styles.container}>
         <View style={styles.header}>
-          <Text style={styles.title}>일정</Text>
+          <Text style={styles.title}>항공</Text>
           {onClose && (
             <Pressable onPress={onClose} style={styles.closeButton}>
               <MaterialIcons name="close" size={24} color="#666" />
@@ -63,14 +60,14 @@ export default function ItineraryModal({
         <View style={styles.placeholder}>
           <Text style={styles.placeholderText}>여행을 선택해주세요</Text>
         </View>
-      </ModalLayout>
+      </PanelLayout>
     );
   }
 
   return (
-    <ModalLayout style={styles.container}>
+    <PanelLayout style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>일정</Text>
+        <Text style={styles.title}>항공</Text>
         {onClose && (
           <Pressable onPress={onClose} style={styles.closeButton}>
             <MaterialIcons name="close" size={24} color="#666" />
@@ -85,59 +82,73 @@ export default function ItineraryModal({
         bounces={false}
       >
         <View style={styles.content}>
-          {planData.itineraries.map((itinerary: any) => (
+          {planData.flights.map((flight: any) => (
             <Pressable 
-              key={itinerary.id} 
+              key={flight.id} 
               style={styles.itemCard}
               onPress={() => {
-                if (editingItinerary?.id === itinerary.id && showItineraryForm) {
+                if (editingFlight?.id === flight.id && showFlightForm) {
                   // 같은 아이템을 다시 누르면 편집창 닫기
-                  setShowItineraryForm(false);
-                  setEditingItinerary(null);
+                  setShowFlightForm(false);
+                  setEditingFlight(null);
                 } else {
                   // 다른 아이템을 누르거나 편집창이 닫혀있으면 편집창 열기
-                  setEditingItinerary(itinerary);
-                  setShowItineraryForm(true);
+                  setEditingFlight(flight);
+                  setShowFlightForm(true);
                 }
               }}
             >
               <View style={styles.cardContent}>
-                <Text style={styles.cardTitle}>{itinerary.title}</Text>
-                <Text style={styles.cardSubtitle}>
-                  {itinerary.itineraryDate} | {itinerary.startTime} - {itinerary.endTime}
-                </Text>                      
-                <Text style={styles.cardLocation}>📍 {itinerary.country} | {itinerary.city} | {itinerary.location}</Text>
+                {flight.flightSegments && flight.flightSegments.length > 0 && (
+                  <>
+                    <Text style={styles.cardTitle}>
+                      {flight.reservationNumber}
+                    </Text>
+                    
+                    {flight.flightSegments.map((segment: any, index: number) => (
+                      <View key={index} style={styles.segmentInfo}>
+                        <Text style={styles.cardSubtitle}>
+                          {segment.departureAirport} → {segment.arrivalAirport}
+                        </Text>
+                        <Text style={styles.cardTime}>
+                          {dayjs(segment.departureTime).format('MM/DD HH:mm')} - {dayjs(segment.arrivalTime).format('MM/DD HH:mm')}
+                        </Text>
+                      </View>
+                    ))}
+                  </>
+                )}
               </View>
               <Text style={styles.cardArrow}>›</Text>
             </Pressable>
           ))}
           
-          {showItineraryForm && (
-            <ItineraryItem
-              itinerary={editingItinerary}
+          {showFlightForm && (
+            <FlightItem
+              flight={editingFlight}
               planId={planData.plan.id}
-              planData={planData}
-              onSave={handleItinerarySave}
+              onSave={handleFlightSave}
               onCancel={() => {
-                setShowItineraryForm(false);
-                setEditingItinerary(null);
+                setShowFlightForm(false);
+                setEditingFlight(null);
               }}
-              onDelete={handleItineraryDelete}
-              onExpenseUpdate={planData.refreshExpenses}
+              onDelete={handleFlightDelete}
+              existingFlights={planData.flights}
+              existingItineraries={planData.itineraries || []}
+              existingAccommodations={planData.accommodations || []}
             />
           )}
           
-          {!showItineraryForm && (
+          {!showFlightForm && (
             <Pressable
               style={styles.addButton}
-              onPress={() => setShowItineraryForm(true)}
+              onPress={() => setShowFlightForm(true)}
             >
-              <Text style={styles.addButtonText}>일정 추가</Text>
+              <Text style={styles.addButtonText}>항공편 추가</Text>
             </Pressable>
           )}
         </View>
       </ScrollView>
-    </ModalLayout>
+    </PanelLayout>
   );
 }
 
@@ -224,15 +235,18 @@ const styles = StyleSheet.create({
     color: '#666',
     marginBottom: 2,
   },
-  cardLocation: {
+  cardTime: {
     fontSize: 12,
     color: '#888',
-    marginTop: 4,
+    marginTop: 2,
   },
   cardArrow: {
     fontSize: 20,
     color: '#007AFF',
     fontWeight: 'bold',
     marginLeft: 12,
+  },
+  segmentInfo: {
+    marginTop: 4,
   },
 });
