@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, Pressable, StyleSheet, Alert } from 'react-native';
+import { View, Text, Pressable, StyleSheet, Alert, Platform } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { authApi } from '@/services/auth';
@@ -65,6 +65,17 @@ export default function RegisterProfileScreen() {
         },
         registerToken
       );
+
+      // 회원가입 완료 플래그를 먼저 설정 (login 전에)
+      if (Platform.OS === 'web' && typeof window !== 'undefined') {
+        try {
+          window.localStorage.setItem('registerComplete', 'true');
+        } catch {}
+      } else {
+        try {
+          await SecureStore.setItemAsync('registerComplete', 'true');
+        } catch {}
+      }
 
       await login({
         isRegistered: true,
