@@ -83,7 +83,7 @@ export default function RootNavigator() {
               registerComplete = value === 'true';
             } catch {}
           }
-          setInitialRoute(registerComplete ? 'RESIST_COMPLETE' : 'OTTRIP');
+          setInitialRoute(registerComplete ? 'REGISTER_COMPLETE' : 'OTTRIP');
         };
         checkInitialRoute();
       }
@@ -119,8 +119,8 @@ export default function RootNavigator() {
           } catch {}
         }
 
-        if (registerComplete && initialRoute !== 'RESIST_COMPLETE') {
-          navRef.current?.reset({ index: 0, routes: [{ name: 'RESIST_COMPLETE' }] });
+        if (registerComplete && initialRoute !== 'REGISTER_COMPLETE') {
+          navRef.current?.reset({ index: 0, routes: [{ name: 'REGISTER_COMPLETE' }] });
           return;
         }
 
@@ -191,7 +191,7 @@ export default function RootNavigator() {
             <Stack.Screen name="OTTRIP" component={DashboardScreen} />
             <Stack.Screen name="프로필" component={ProfileScreen} />
             <Stack.Screen name="INVITE_ACCEPT" component={InviteAcceptScreen} />
-            <Stack.Screen name="RESIST_COMPLETE" component={WelcomeScreen} />
+            <Stack.Screen name="REGISTER_COMPLETE" component={WelcomeScreen} />
             {/* 동일 화면을 경로 기반으로 진입하기 위한 별칭 */}
             <Stack.Screen name="PLAN" component={DashboardScreen} />
             <Stack.Screen name="NOT FOUND" component={NotFoundScreen} />
