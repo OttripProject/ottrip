@@ -6,15 +6,17 @@ import ProfileScreen from "@/screens/ProfileScreen";
 import TermsConsentScreen from "@/screens/TermsConsentScreen";
 import RegisterProfileScreen from "@/screens/RegisterProfileScreen";
 import TermsDetailScreen from "@/screens/TermsDetailScreen";
+import WelcomeScreen from "@/screens/auth/WelcomeScreen";
 import { NavigationContainer, type NavigationContainerRef } from "@react-navigation/native";
 import { createStackNavigator } from "@react-navigation/stack";
 import NotFoundScreen from "@/screens/error/NotFoundScreen";
 import ForbiddenScreen from "@/screens/error/ForbiddenScreen";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { View, ActivityIndicator, StyleSheet, Platform } from "react-native";
 import { useRef } from "react";
 import type { LinkingOptions } from "@react-navigation/native";
+import * as SecureStore from 'expo-secure-store';
 
 const Stack = createStackNavigator();
 
@@ -28,6 +30,12 @@ function LoadingScreen() {
 
 export default function RootNavigator() {
   const { isAuthenticated, isLoading } = useAuth();
+  // 초기 라우트를 동기적으로 결정 (미인증일 때는 즉시 '로그인'으로 설정)
+  const [initialRoute, setInitialRoute] = useState<string | null>(() => {
+    // 초기 렌더링 시 동기적으로 설정
+    return null; // 로딩 중이므로 null로 시작
+  });
+  
   // 미인증 상태에서 보호 경로 접근 시, 로그인 후 복귀할 경로 저장
   useEffect(() => {
     if (!isAuthenticated && Platform.OS === 'web' && typeof window !== 'undefined') {
@@ -53,27 +61,91 @@ export default function RootNavigator() {
     }
   }, [isAuthenticated]);
 
+  // 초기 라우트 결정 (회원가입 완료 플래그 확인)
+  useEffect(() => {
+    if (isLoading) {
+      // 로딩 중일 때는 초기 라우트를 설정하지 않음
+      return;
+    }
+
+    if (isAuthenticated) {
+      // 인증 상태일 때: initialRoute가 없거나, 이전에 미인증 라우트('로그인')로 설정된 경우 업데이트
+      if (!initialRoute || initialRoute === '로그인') {
+        const checkInitialRoute = async () => {
+          let registerComplete = false;
+          if (Platform.OS === 'web' && typeof window !== 'undefined') {
+            try {
+              registerComplete = window.localStorage.getItem('registerComplete') === 'true';
+            } catch {}
+          } else {
+            try {
+              const value = await SecureStore.getItemAsync('registerComplete');
+              registerComplete = value === 'true';
+            } catch {}
+          }
+          setInitialRoute(registerComplete ? 'RESIST_COMPLETE' : 'OTTRIP');
+        };
+        checkInitialRoute();
+      }
+    } else if (!isAuthenticated) {
+      // 미인증 상태일 때: initialRoute가 없거나, 이전에 인증 라우트로 설정된 경우 업데이트
+      if (!initialRoute || (initialRoute !== '로그인' && initialRoute !== '약관동의' && initialRoute !== '프로필 입력' && initialRoute !== '인증')) {
+        setInitialRoute('로그인');
+      }
+    }
+  }, [isAuthenticated, isLoading, initialRoute]);
+
   // 로그인 직후 저장된 경로로 이동 (스택이 인증 스크린을 포함한 뒤 실행)
   const navRef = useRef<NavigationContainerRef<any>>(null);
   useEffect(() => {
-    if (isAuthenticated && Platform.OS === 'web' && typeof window !== 'undefined') {
-      const redirect = window.localStorage.getItem('postLoginRedirect') || '';
-      if (!redirect) return;
-      try { window.localStorage.removeItem('postLoginRedirect'); } catch {}
-      // UUID 패턴 매칭 (8-4-4-4-12 형식)
-      const publicIdMatch = redirect.match(/^\/plans\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i);
-      if (publicIdMatch) {
-        const publicId = publicIdMatch[1];
-        navRef.current?.reset({ index: 0, routes: [{ name: 'PLAN', params: { publicId } }] });
-        return;
-      }
-      if (redirect.startsWith('/profile')) {
-        navRef.current?.reset({ index: 0, routes: [{ name: '프로필' }] });
-        return;
-      }
-      navRef.current?.reset({ index: 0, routes: [{ name: 'OTTRIP' }] });
+    if (isAuthenticated && initialRoute) {
+      // 회원가입 완료 플래그 확인 및 제거
+      const checkRegisterComplete = async () => {
+        let registerComplete = false;
+        if (Platform.OS === 'web' && typeof window !== 'undefined') {
+          try {
+            registerComplete = window.localStorage.getItem('registerComplete') === 'true';
+            if (registerComplete) {
+              window.localStorage.removeItem('registerComplete');
+            }
+          } catch {}
+        } else {
+          try {
+            const value = await SecureStore.getItemAsync('registerComplete');
+            registerComplete = value === 'true';
+            if (registerComplete) {
+              await SecureStore.deleteItemAsync('registerComplete');
+            }
+          } catch {}
+        }
+
+        if (registerComplete && initialRoute !== 'RESIST_COMPLETE') {
+          navRef.current?.reset({ index: 0, routes: [{ name: 'RESIST_COMPLETE' }] });
+          return;
+        }
+
+        // 기존 리다이렉트 로직 (회원가입 완료가 아닌 경우에만)
+        if (!registerComplete && Platform.OS === 'web' && typeof window !== 'undefined') {
+          const redirect = window.localStorage.getItem('postLoginRedirect') || '';
+          if (!redirect) return;
+          try { window.localStorage.removeItem('postLoginRedirect'); } catch {}
+          // UUID 패턴 매칭 (8-4-4-4-12 형식)
+          const publicIdMatch = redirect.match(/^\/plans\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i);
+          if (publicIdMatch) {
+            const publicId = publicIdMatch[1];
+            navRef.current?.reset({ index: 0, routes: [{ name: 'PLAN', params: { publicId } }] });
+            return;
+          }
+          if (redirect.startsWith('/profile')) {
+            navRef.current?.reset({ index: 0, routes: [{ name: '프로필' }] });
+            return;
+          }
+          navRef.current?.reset({ index: 0, routes: [{ name: 'OTTRIP' }] });
+        }
+      };
+      checkRegisterComplete();
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, initialRoute]);
 
   // Web URL ↔ 스크린 매핑 (링크 공유/직접 진입 지원)
   const prefixes = Platform.OS === 'web' && typeof window !== 'undefined'
@@ -106,19 +178,20 @@ export default function RootNavigator() {
     },
   };
 
-  if (isLoading) {
+  if (isLoading || !initialRoute) {
     return <LoadingScreen />;
   }
 
   return (
     <NavigationContainer linking={linking} ref={navRef}>
-      <Stack.Navigator screenOptions={{ headerShown: false }} initialRouteName={isAuthenticated ? 'OTTRIP' : '로그인'}>
+      <Stack.Navigator screenOptions={{ headerShown: false }} initialRouteName={initialRoute}>
         {isAuthenticated ? (
           // 인증된 사용자
           <>
             <Stack.Screen name="OTTRIP" component={DashboardScreen} />
             <Stack.Screen name="프로필" component={ProfileScreen} />
             <Stack.Screen name="INVITE_ACCEPT" component={InviteAcceptScreen} />
+            <Stack.Screen name="RESIST_COMPLETE" component={WelcomeScreen} />
             {/* 동일 화면을 경로 기반으로 진입하기 위한 별칭 */}
             <Stack.Screen name="PLAN" component={DashboardScreen} />
             <Stack.Screen name="NOT FOUND" component={NotFoundScreen} />

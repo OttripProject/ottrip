@@ -19,6 +19,8 @@ import GenderCheckIcon from '../../assets/gender_check.svg';
 import QnaIcon from '../../assets/qna.svg';
 import XIcon from '../../assets/x.svg';
 import CopyIcon from '../../assets/copy.svg';
+import DeleteAccountModal from '@/components/modals/DeleteAccountModal';
+import LogoutModal from '@/components/modals/LogoutModal';
 
 export default function ProfileScreen() {
   const { logout } = useAuth();
@@ -30,6 +32,7 @@ export default function ProfileScreen() {
   const [contactOpen, setContactOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [logoutModalOpen, setLogoutModalOpen] = useState(false);
   
   // React Query로 사용자 프로필 로드 (HeaderModal과 캐시 공유)
   const { data: profile, isLoading: profileLoading } = useMe();
@@ -73,8 +76,8 @@ export default function ProfileScreen() {
   const confirmDeleteAccount = async () => {
     try {
       await usersApi.deleteAccount();
-      setDeleteModalOpen(false);
-      logout();
+      // 모달에서 완료 상태로 전환되므로 여기서는 모달을 닫지 않음
+      // 완료 모달에서 확인 버튼을 누르면 모달이 닫히고 로그아웃됨
     } catch (error: any) {
       const errorMessage = error?.response?.data?.detail || '탈퇴 중 오류가 발생했습니다.';
       setDeleteModalOpen(false);
@@ -83,7 +86,17 @@ export default function ProfileScreen() {
       } else {
         Alert.alert('오류', errorMessage);
       }
+      throw error; // 모달에서 에러를 감지할 수 있도록 throw
     }
+  };
+
+  const handleDeleteModalClose = () => {
+    setDeleteModalOpen(false);
+  };
+
+  const handleDeleteCompleted = () => {
+    setDeleteModalOpen(false);
+    logout();
   };
 
   const hasChanges = nickname !== me?.nickname || gender !== me?.gender;
@@ -183,7 +196,7 @@ export default function ProfileScreen() {
             </Pressable>
 
             <View style={styles.footerRow}>
-              <Pressable style={styles.footerButton} onPress={logout}>
+              <Pressable style={styles.footerButton} onPress={() => setLogoutModalOpen(true)}>
                 <Text style={styles.footerButtonText}>로그아웃</Text>
               </Pressable>
               <View style={styles.footerDivider} />
@@ -244,30 +257,21 @@ export default function ProfileScreen() {
         </View>
       </Modal>
 
-      {/* 탈퇴 확인 모달 */}
-      <Modal visible={deleteModalOpen} transparent animationType="fade">
-        <View style={styles.modalOverlay}>
-          <View style={styles.deleteModalCard}>
-            <Text style={styles.deleteModalTitle}>정말 계정을 삭제하시겠어요?</Text>
-            <Text style={styles.deleteModalText}>
-              계정을 삭제하면 지금까지 만든 여행 일정이 {'\n'}
-              모두 사라지며, 다시 복구할 수 없어요.
-            </Text>
-            <Pressable 
-              style={styles.deleteModalCancelButton} 
-              onPress={() => setDeleteModalOpen(false)}
-            >
-              <Text style={styles.deleteModalCancelButtonText}>취소</Text>
-            </Pressable>
-            <Pressable 
-              style={styles.deleteModalDeleteButton} 
-              onPress={confirmDeleteAccount}
-            >
-              <Text style={styles.deleteModalDeleteButtonText}>삭제</Text>
-            </Pressable>
-          </View>
-        </View>
-      </Modal>
+      <DeleteAccountModal
+        visible={deleteModalOpen}
+        onClose={handleDeleteModalClose}
+        onConfirm={confirmDeleteAccount}
+        onCompleted={handleDeleteCompleted}
+      />
+
+      <LogoutModal
+        visible={logoutModalOpen}
+        onClose={() => setLogoutModalOpen(false)}
+        onConfirm={() => {
+          setLogoutModalOpen(false);
+          logout();
+        }}
+      />
     </GradientBackground>
   );
 }
@@ -564,63 +568,6 @@ const styles = StyleSheet.create({
   },
   contactModalConfirmButtonText: {
     ...textStyles.h5,
-    color: colors.white,
-  },
-  deleteModalCard: {
-    position: 'relative',
-    backgroundColor: colors.white,
-    borderRadius: 24,
-    width: 320,
-    height: 208,
-  },
-  deleteModalTitle: {
-    position: 'absolute',
-    left: 69,
-    top: 32,
-    width: 182,
-    height: 24,
-    ...textStyles.h5,
-    textAlign: 'center',
-  },
-  deleteModalText: {
-    position: 'absolute',
-    left: 49,
-    top: 72,
-    width: 221,
-    height: 40,
-    ...textStyles.body4,
-    color: colors.gray600,
-    textAlign: 'center',
-  },
-  deleteModalCancelButton: {
-    position: 'absolute',
-    left: 24,
-    bottom: 24,
-    width: 132,
-    height: 40,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.white,
-    borderWidth: 1,
-    borderColor: colors.gray400,
-  },
-  deleteModalCancelButtonText: {
-    ...textStyles.h7,
-  },
-  deleteModalDeleteButton: {
-    position: 'absolute',
-    right: 24,
-    bottom: 24,
-    width: 132,
-    height: 40,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.warning,
-  },
-  deleteModalDeleteButtonText: {
-    ...textStyles.h7,
     color: colors.white,
   },
 });
