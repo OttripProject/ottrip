@@ -4,7 +4,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import MaskedView from '@react-native-masked-view/masked-view';
 import PanelLayout from '../PanelLayout';
 import GradientBackground from '@/ui/components/GradientBackground';
-import RefreshChecklistModal from '../../modals/RefreshChecklistModal';
+import RefreshChecklistModal from '../../modals/AIRefreshChecklistModal';
+import InsufficientScheduleModal from '../../modals/AiInsufficientModal';
 import api from '@/services/api';
 import { colors } from '@/ui/tokens/colors';
 import { textStyles, typography } from '@/ui/tokens/typography';
@@ -406,31 +407,10 @@ export default function AIAssistantPanel({ publicId }: AIAssistantPanelProps) {
       />
 
       {/* 일정 부족 Modal */}
-      <Modal
+      <InsufficientScheduleModal
         visible={showInsufficientModal}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setShowInsufficientModal(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>일정이 부족해요</Text>
-            <Text style={styles.modalMessage}>
-              여행 일정이 아직 충분하지 않아{'\n'}
-              AI 체크리스트를 만들 수 없어요.{'\n'}
-              일정을 조금 더 추가해 주세요.
-            </Text>
-            <View style={styles.modalButtons}>
-              <Pressable
-                style={[styles.modalButton, styles.confirmButton]}
-                onPress={() => setShowInsufficientModal(false)}
-              >
-                <Text style={styles.confirmButtonText}>확인</Text>
-              </Pressable>
-            </View>
-          </View>
-        </View>
-      </Modal>
+        onClose={() => setShowInsufficientModal(false)}
+      />
     </PanelLayout>
   );
 }
@@ -634,25 +614,14 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: 'center',
   },
-  cancelButton: {
-    backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: '#E5E5E7',
-  },
   confirmButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: colors.black,
     borderWidth: 1,
-    borderColor: '#007AFF',
-  },
-  cancelButtonText: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#333',
+    borderColor: colors.black,
   },
   confirmButtonText: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#fff',
+    ...textStyles.h7,
+    color: colors.white,
   },
   // 전체보기 스타일
   fullViewContainer: {
