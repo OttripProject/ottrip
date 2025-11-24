@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 
-from fastapi import Body, status, HTTPException
+from fastapi import status, HTTPException
 
 from app.common.deps import HTTPClientDep
 from app.common.schemas import ValidationResult
@@ -21,6 +21,8 @@ from .schemas import (
     TokenResponse,
     UnregisteredAuthResponse,
     GoogleAuthRequest,
+    ValidateHandleRequest,
+    ValidateNicknameRequest,
 )
 from .service import AuthInfoService
 from .token import TokenType, create_jwt_token, create_token_pair
@@ -43,17 +45,17 @@ async def get_keys() -> list[PublicJWK]:
 # 삭제?
 @router.post("/validate/handle")
 async def validate_handle(
-    user_service: UserService, handle: str = Body(...)
+    user_service: UserService, request: ValidateHandleRequest
 ) -> ValidationResult:
-    return await user_service.validate_handle(handle=handle)
+    return await user_service.validate_handle(handle=request.handle)
 
 
 # 삭제?
 @router.post("/validate/nickname")
 async def validate_nickname(
-    user_service: UserService, nickname: str = Body(...)
+    user_service: UserService, request: ValidateNicknameRequest
 ) -> ValidationResult:
-    return await user_service.validate_nickname(nickname=nickname)
+    return await user_service.validate_nickname(nickname=request.nickname)
 
 
 # 삭제?

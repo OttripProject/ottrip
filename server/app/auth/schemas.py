@@ -65,3 +65,11 @@ class GoogleCallbackRequest(APISchema):
 
 class GoogleAuthRequest(APISchema):
     id_token: str
+
+
+class ValidateHandleRequest(APISchema):
+    handle: str
+
+
+class ValidateNicknameRequest(APISchema):
+    nickname: str
