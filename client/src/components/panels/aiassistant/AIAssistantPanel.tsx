@@ -4,6 +4,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import MaskedView from '@react-native-masked-view/masked-view';
 import PanelLayout from '../PanelLayout';
 import GradientBackground from '@/ui/components/GradientBackground';
+import RefreshChecklistModal from '../../modals/RefreshChecklistModal';
 import api from '@/services/api';
 import { colors } from '@/ui/tokens/colors';
 import { textStyles, typography } from '@/ui/tokens/typography';
@@ -395,40 +396,14 @@ export default function AIAssistantPanel({ publicId }: AIAssistantPanelProps) {
       </GradientBackground>
 
       {/* 새로고침 확인 Modal */}
-      <Modal
+      <RefreshChecklistModal
         visible={showRefreshModal}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setShowRefreshModal(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>새로고침</Text>
-            <Text style={styles.modalMessage}>
-              새로고침하면 이번 여행의{'\n'}
-              체크리스트가 초기화돼요.{'\n'}
-              계속 진행할까요?
-            </Text>
-            <View style={styles.modalButtons}>
-              <Pressable
-                style={[styles.modalButton, styles.cancelButton]}
-                onPress={() => setShowRefreshModal(false)}
-              >
-                <Text style={styles.cancelButtonText}>취소</Text>
-              </Pressable>
-              <Pressable
-                style={[styles.modalButton, styles.confirmButton]}
-                onPress={() => {
-                  setShowRefreshModal(false);
-                  performRefresh();
-                }}
-              >
-                <Text style={styles.confirmButtonText}>확인</Text>
-              </Pressable>
-            </View>
-          </View>
-        </View>
-      </Modal>
+        onClose={() => setShowRefreshModal(false)}
+        onConfirm={() => {
+          setShowRefreshModal(false);
+          performRefresh();
+        }}
+      />
 
       {/* 일정 부족 Modal */}
       <Modal
