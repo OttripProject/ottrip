@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, Pressable, StyleSheet, Alert, Platform } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -42,6 +42,13 @@ export default function RegisterProfileScreen() {
   const [handle] = useState(() => toHandleFromEmail(email));
   
   const { nicknameError, checkingNickname, onNicknameChange, isValid } = useNicknameValidation();
+
+  // 초기 닉네임이 설정될 때 검증 실행
+  useEffect(() => {
+    if (nickname.trim().length > 0) {
+      onNicknameChange(nickname);
+    }
+  }, []); // 컴포넌트 마운트 시 한 번만 실행
 
   const handleNicknameChange = (text: string) => {
     setNickname(text);
