@@ -127,7 +127,7 @@ export default function ExpensesPanel({ planData, onExpenseAdd }: ExpensesPanelP
     }
     if (totalCategories >= 2) {
       // gap을 포함해서 총 너비가 100%가 되도록: (100% - gap) / 2
-      return { flex: 1, minWidth: '49%' as any, maxWidth: '49%' as any };
+      return { flex: 1, minWidth: '48.8%' as any, maxWidth: '48.8%' as any };
     }
     return {};
   };

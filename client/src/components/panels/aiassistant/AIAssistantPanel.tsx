@@ -1,14 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert, ActivityIndicator, ScrollView, Modal, Pressable } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, ActivityIndicator, ScrollView, Modal, Pressable, Platform } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import MaskedView from '@react-native-masked-view/masked-view';
 import PanelLayout from '../PanelLayout';
+import GradientBackground from '@/ui/components/GradientBackground';
 import api from '@/services/api';
 import { colors } from '@/ui/tokens/colors';
 import { textStyles, typography } from '@/ui/tokens/typography';
 import { spacing } from '@/ui/tokens/spacing';
 import { radii } from '@/ui/tokens/radii';
-import AiRefreshIcon from '../../../../assets/Icon/Normal/ai_refresh.svg';
-import AiCautionIcon from '../../../../assets/Icon/Normal/ai_caution.svg';
-import AiCheckedIcon from '../../../../assets/Icon/Normal/ai_checked.svg';
+import AiRefreshIcon from '../../../../assets/ai_refresh.svg';
+import AiCautionIcon from '../../../../assets/ai_caution.svg';
+import AiCheckedIcon from '../../../../assets/ai_checked.svg';
+import AiCheckIcon from '../../../../assets/ai_check.svg';
+import AiListIcon from '../../../../assets/ai_list.svg';
 
 interface ChecklistItem {
   id: number;
@@ -156,8 +161,8 @@ export default function AIAssistantPanel({ publicId }: AIAssistantPanelProps) {
     const titles: { [key: string]: string } = {
       'basicRequired': '기본 필수',
       'scheduleRequired': '일정 필수', 
-      'recommended': '권장',
-      'optional': '옵션'
+      'recommended': '권장 (있으면 편리한 항목)',
+      'optional': '옵션 (선택 사항)'
     };
     return titles[categoryKey] || categoryKey;
   };
@@ -209,96 +214,148 @@ export default function AIAssistantPanel({ publicId }: AIAssistantPanelProps) {
 
   const stats = getPreviewStats();
 
+  // 그라데이션 텍스트 컴포넌트
+  const GradientText = ({ children, style }: { children: string; style?: any }) => {
+    if (Platform.OS === 'web') {
+      // 웹에서는 CSS gradient 사용
+      return (
+        <Text 
+          style={[
+            style,
+            {
+              background: 'linear-gradient(90deg, #FF2391 0%, #1F96FF 100%)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              backgroundClip: 'text',
+            } as any
+          ]}
+        >
+          {children}
+        </Text>
+      );
+    }
+    
+    // 네이티브에서는 MaskedView 사용
+    return (
+      <MaskedView
+        maskElement={
+          <Text style={style}>{children}</Text>
+        }
+        style={{ flexDirection: 'row', height: 24 }}
+      >
+        <LinearGradient
+          colors={['#FF2391', '#1F96FF']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+          style={{ flex: 1 }}
+        >
+          <Text style={[style, styles.headerTitleTransparent]}>{children}</Text>
+        </LinearGradient>
+      </MaskedView>
+    );
+  };
+
   return (
     <PanelLayout style={{ flex: 1 }}>
-      {!publicId ? (
-        // Plan이 선택되지 않은 상태
-        <View style={styles.placeholder}>
-          <Text style={styles.placeholderText}>여행을 선택해주세요</Text>
-        </View>
-      ) : !showPreview ? (
-        // 초기 상태: AI 체크리스트 버튼
-        <View style={styles.initialState}>
-          <TouchableOpacity 
-            style={styles.generateButton}
-            onPress={handleGenerateChecklist}
-            disabled={isLoading}
-          >
-            {isLoading ? (
-              <View style={styles.loadingContainer}>
-                <ActivityIndicator size="small" color="#fff" />
-                <Text style={styles.loadingText}>체크리스트 생성 중...</Text>
+      <GradientBackground style={{ flex: 1 }}>
+        {!publicId ? (
+          // Plan이 선택되지 않은 상태
+          <View style={styles.placeholder}>
+            <Text style={styles.placeholderText}>여행을 선택해주세요</Text>
+          </View>
+        ) : !showPreview ? (
+          // 초기 상태: AI 체크리스트 버튼
+          <View style={styles.initialState}>
+            <TouchableOpacity 
+              style={styles.generateButton}
+              onPress={handleGenerateChecklist}
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <View style={styles.loadingContainer}>
+                  <ActivityIndicator size="small" color="#fff" />
+                  <Text style={styles.loadingText}>체크리스트 생성 중...</Text>
+                </View>
+              ) : (
+                <Text style={styles.generateButtonText}>AI 체크리스트</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        ) : showFullView ? (
+          // 전체보기 상태 (컨테이너 고정, 내부 스크롤)
+          <View style={styles.fullViewContainer}>
+            <View style={styles.headerSection}>
+              <View style={styles.titleContainer}>
+                <GradientText style={styles.headerTitle}>AI assistant</GradientText>
+                <TouchableOpacity onPress={handleRefresh} style={styles.refreshButton}>
+                  <AiRefreshIcon width={16} height={16} />
+                </TouchableOpacity>
               </View>
-            ) : (
-              <Text style={styles.generateButtonText}>AI 체크리스트</Text>
-            )}
-          </TouchableOpacity>
-        </View>
-      ) : showFullView ? (
-        // 전체보기 상태 (컨테이너 고정, 내부 스크롤)
-        <View style={styles.fullViewContainer}>
-          <View style={styles.headerSection}>
-            <Text style={styles.headerTitle}>AI assistant</Text>
-            <View style={styles.headerActions}>
-              <TouchableOpacity onPress={handleRefresh} style={styles.refreshButton}>
-                <AiRefreshIcon width={16} height={16} />
-              </TouchableOpacity>
               <TouchableOpacity onPress={handleSimpleView} style={styles.viewAllButton}>
                 <Text style={styles.viewAllText}>간단히 보기</Text>
               </TouchableOpacity>
             </View>
-          </View>
           <View style={styles.scrollWrapper}>
             <ScrollView style={styles.checklistScrollView} showsVerticalScrollIndicator={true}>
+            {checklist && (
+              <View style={styles.checklistHeader}>
+                <AiListIcon width={16} height={16} />
+                <Text style={styles.checklistHeaderText}>체크 리스트</Text>
+              </View>
+            )}
             {checklist && Object.entries(checklist.categories).map(([categoryKey, items]) => (
               <View key={categoryKey} style={styles.categorySection}>
                 <Text style={styles.categoryTitle}>
                   {getCategoryTitle(categoryKey)}
                 </Text>
-                {items.map((item) => {
-                  return (
-                    <TouchableOpacity
-                      key={item.id}
-                      style={styles.checklistItem}
-                      onPress={() => handleToggleItem(item.id, !item.isChecked)}
-                    >
-                      <View style={styles.itemContent}>
-                        <View style={styles.checkboxContainer}>
-                          <Text style={styles.checkbox}>
-                            {item.isChecked ? '☑️' : '☐'}
-                          </Text>
-                        </View>
-                        <View style={styles.itemTextContainer}>
-                          <Text style={[
-                            styles.itemName,
-                            item.isChecked && styles.itemNameChecked
+                <View style={styles.categoryCard}>
+                  {items.map((item) => {
+                    return (
+                      <TouchableOpacity
+                        key={item.id}
+                        style={styles.checklistItem}
+                        onPress={() => handleToggleItem(item.id, !item.isChecked)}
+                      >
+                        <View style={styles.itemContent}>
+                          <View style={[
+                            styles.checkboxContainer,
+                            item.isChecked && styles.checkboxContainerChecked
                           ]}>
-                            {item.name}
-                          </Text>
-                          <Text style={styles.itemReason}>{item.reason}</Text>
+                            {item.isChecked ? (
+                              <AiCheckIcon width={13} height={13} fill={colors.white} />
+                            ) : null}
+                          </View>
+                          <View style={styles.itemTextContainer}>
+                            <Text style={[
+                              styles.itemText,
+                              item.isChecked && styles.itemTextChecked
+                            ]}>
+                              {item.name} → {item.reason}
+                            </Text>
+                          </View>
                         </View>
-                      </View>
-                    </TouchableOpacity>
-                  );
-                })}
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
               </View>
             ))}
             </ScrollView>
           </View>
         </View>
-      ) : (
+        ) : (
         // 미리보기 상태
         <View style={styles.previewContainer}>
           <View style={styles.headerSection}>
-            <Text style={styles.headerTitle}>AI assistant</Text>
-            <View style={styles.headerActions}>
+            <View style={styles.titleContainer}>
+              <GradientText style={styles.headerTitle}>AI assistant</GradientText>
               <TouchableOpacity onPress={handleRefresh} style={styles.refreshButton}>
                 <AiRefreshIcon width={16} height={16} />
               </TouchableOpacity>
-              <TouchableOpacity onPress={handleViewAll} style={styles.viewAllButton}>
-                <Text style={styles.viewAllText}>전체보기</Text>
-              </TouchableOpacity>
             </View>
+            <TouchableOpacity onPress={handleViewAll} style={styles.viewAllButton}>
+              <Text style={styles.viewAllText}>전체보기</Text>
+            </TouchableOpacity>
           </View>
           
           <View style={styles.statsWrapper}>
@@ -334,7 +391,8 @@ export default function AIAssistantPanel({ publicId }: AIAssistantPanelProps) {
             </View>
           </View>
         </View>
-      )}
+        )}
+      </GradientBackground>
 
       {/* 새로고침 확인 Modal */}
       <Modal
@@ -445,15 +503,23 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: spacing.lg,
+    paddingHorizontal: spacing.xl,
     paddingTop: spacing.lg + 4,
     paddingBottom: spacing.sm,
+  },
+  titleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
   },
   headerTitle: {
     fontFamily: typography.fontFamily.poppinsSemiBold,
     fontSize: 16,
     lineHeight: 24,
     color: colors.black,
+  },
+  headerTitleTransparent: {
+    opacity: 0,
   },
   headerActions: {
     flexDirection: 'row',
@@ -471,11 +537,11 @@ const styles = StyleSheet.create({
   },
   viewAllText: {
     ...textStyles.h6,
-    color: colors.black,
+    color: colors.gray700,
   },
   statsWrapper: {
     flex: 1,
-    paddingHorizontal: spacing.lg,
+    paddingHorizontal: spacing.xl,
     paddingTop: spacing.md + 3,
   },
   statsContainer: {
@@ -488,16 +554,16 @@ const styles = StyleSheet.create({
   },
   statCard: {
     width: '100%',
-    aspectRatio: 225 / 150,
+    aspectRatio: 5 / 4.55,
     borderRadius: radii.md + 2,
     justifyContent: 'center',
     alignItems: 'center',
   },
   statCardWarning: {
-    backgroundColor: 'rgba(255, 169, 56, 0.16)',
+    backgroundColor: colors.white,
   },
   statCardSuccess: {
-    backgroundColor: 'rgba(30, 212, 90, 0.16)',
+    backgroundColor: colors.white,
   },
   statHeader: {
     marginBottom: spacing.sm + 1,
@@ -509,11 +575,11 @@ const styles = StyleSheet.create({
   },
   statTitleWarning: {
     ...textStyles.h7,
-    color: colors.black,
+    color: colors.gray700,
   },
   statTitleSuccess: {
     ...textStyles.h7,
-    color: colors.black,
+    color: colors.gray700,
   },
   checkIconWrapper: {
     width: 16,
@@ -620,59 +686,78 @@ const styles = StyleSheet.create({
   },
   checklistScrollView: {
     flex: 1,
-    paddingHorizontal: 16,
+    paddingHorizontal: spacing.xl,
+    backgroundColor: 'transparent',
   },
   scrollWrapper: {
     flex: 1,
     minHeight: 0,
     overflow: 'hidden',
   },
+  checklistHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    marginBottom: spacing.lg,
+    paddingTop: spacing.xs,
+  },
+  checklistHeaderText: {
+    ...textStyles.h7,
+    color: colors.black,
+  },
   categorySection: {
-    marginBottom: 24,
+    marginBottom: spacing.lg,
   },
   categoryTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 12,
-    paddingBottom: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E5E7',
+    ...textStyles.h7,
+    color: colors.black,
+    marginBottom: spacing.sm,
+  },
+  categoryCard: {
+    backgroundColor: colors.white,
+    borderRadius: radii.md,
+    padding: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.gray300,
   },
   checklistItem: {
-    backgroundColor: '#fff',
-    borderRadius: 8,
-    marginBottom: 8,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: '#E5E5E7',
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.sm,
   },
   itemContent: {
     flexDirection: 'row',
     alignItems: 'flex-start',
   },
   checkboxContainer: {
-    marginRight: 12,
+    width: 15,
+    height: 15,
+    borderRadius: 4,
+    borderWidth: 1.3,
+    borderColor: colors.gray400,
+    backgroundColor: colors.white,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: spacing.md,
     marginTop: 2,
   },
-  checkbox: {
-    fontSize: 16,
+  checkboxContainerChecked: {
+    backgroundColor: colors.black,
+    borderColor: colors.black,
+  },
+  checkboxEmpty: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.white,
   },
   itemTextContainer: {
     flex: 1,
   },
-  itemName: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#333',
-    marginBottom: 4,
+  itemText: {
+    ...textStyles.body4,
+    color: colors.black,
   },
-  itemNameChecked: {
-    color: '#666',
-  },
-  itemReason: {
-    fontSize: 12,
-    color: '#666',
-    lineHeight: 16,
+  itemTextChecked: {
+    color: colors.gray700,
   },
 });
