@@ -6,8 +6,8 @@ from app.schemas import APISchema
 
 
 class FlightBase(APISchema):
-    reservation_number: str
-    passenger_name: str
+    reservation_number: str | None = None
+    passenger_name: str | None = None
     ticket_number: str | None = None
     booking_reference: str | None = None
 
@@ -32,8 +32,8 @@ class FlightUpdate(APISchema):
 
 
 class FlightSegmentBase(APISchema):
-    airline: str
-    flight_number: str
+    airline: str | None = None
+    flight_number: str | None = None
     departure_airport: str
     arrival_airport: str
     departure_time: datetime
