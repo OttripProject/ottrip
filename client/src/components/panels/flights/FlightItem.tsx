@@ -544,6 +544,8 @@ export default function FlightItem({
                           }}
                           style={styles.calendarPopup}
                           minDate={idx > 0 ? flightSegments[idx - 1].arrival_date : undefined}
+                          hideButtons={true}
+                          autoCloseOnSelect={true}
                         />
                       )}
                     </View>
@@ -600,6 +602,8 @@ export default function FlightItem({
                           }}
                           style={styles.calendarPopup}
                           minDate={segment.departure_date}
+                          hideButtons={true}
+                          autoCloseOnSelect={true}
                         />
                       )}
                     </View>

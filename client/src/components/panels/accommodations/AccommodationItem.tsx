@@ -315,6 +315,8 @@ export default function AccommodationItem({
                 onClose={() => setShowCheckoutDatePicker(false)}
                 style={styles.calendarPopup}
                 minDate={formData.checkin_date}
+                hideButtons={true}
+                autoCloseOnSelect={true}
               />
             )}
           </View>
