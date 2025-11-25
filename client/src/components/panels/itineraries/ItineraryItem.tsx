@@ -536,6 +536,8 @@ export default function ItineraryItem({
           }}
           onClose={() => setShowDatePicker(false)}
           style={styles.calendarPopup}
+          hideButtons={true}
+          autoCloseOnSelect={true}
         />
       </View>
 

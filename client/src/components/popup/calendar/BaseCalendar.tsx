@@ -12,45 +12,28 @@ import DropupperCalIcon from '../../../../assets/dropupper_cal.svg';
 import MonthCalendarPopup from '../MonthCalendarPopup';
 
 export interface BaseCalendarProps {
-  // 기본 props
   visible?: boolean;
   selectedDate?: string;
   onDayPress?: (day: { dateString: string }) => void;
-  onClose?: () => void; // 날짜 선택 시 팝업 닫기
+  onClose?: () => void; 
   style?: any;
-  
-  // 날짜 제약
   minDate?: string;
   maxDate?: string;
-  
-  // 마킹된 날짜들
   markedDates?: Record<string, any>;
-  
-  // 오늘 날짜 표시 여부
-  showToday?: boolean; // true면 오늘 날짜 표시, false면 표시 안 함 (기본값: false)
-  
-  // 마우스 오버 음영 표시 여부
-  showHover?: boolean; // true면 마우스 오버 시 주 단위 음영 표시 (기본값: false)
-  
-  // 선택된 주 막대 표시
-  currentWeekStart?: string; // 현재 주간의 시작일 (월요일) - 이 값이 있으면 해당 주에 막대 표시
-  
-  // 달력 열릴 때 현재 주간으로 스크롤
-  scrollToWeek?: boolean; // true면 달력이 열릴 때 currentWeekStart가 있으면 해당 주간이 보이도록 스크롤 (기본값: false)
-  
-  // 커스텀 헤더
+  showToday?: boolean; 
+  showHover?: boolean; 
+  currentWeekStart?: string; 
+  scrollToWeek?: boolean; 
   customHeader?: () => React.ReactNode;
-  
-  // 커스텀 DayCell
   dayComponent?: (props: {
     date?: DateData;
     state?: string;
     marking?: any;
     onPress?: (date: DateData) => void;
   }) => React.ReactNode;
-  
-  // 이벤트 핸들러
   onMonthChange?: (month: { dateString: string }) => void;
+  hideButtons?: boolean; 
+  autoCloseOnSelect?: boolean; 
 }
 
 function DefaultDayCell({
@@ -82,13 +65,12 @@ function DefaultDayCell({
   const isSelected = marking?.selected;
   const isToday = showToday && dayjs().isSame(dayjs(date.dateString), 'day') && !isSelected;
 
-  // 주 단위 계산 (월요일부터 시작)
   let isHoveredWeek = false;
   let isCurrentWeek = false;
   
   if (showHover || currentWeekStart) {
     const dateObj = dayjs(date.dateString);
-    const dayOfWeek = dateObj.day() === 0 ? 6 : dateObj.day() - 1; // 0=월요일, 6=일요일
+    const dayOfWeek = dateObj.day() === 0 ? 6 : dateObj.day() - 1; 
     const weekKey = dateObj.subtract(dayOfWeek, 'day').format('YYYY-MM-DD');
     isHoveredWeek = showHover && hoveredWeek === weekKey;
     
@@ -116,15 +98,12 @@ function DefaultDayCell({
         }
       }}
     >
-      {/* 주 단위 배경 (마우스 오버 또는 선택된 주) */}
       {(isHoveredWeek || isCurrentWeek) && (showHover || currentWeekStart) && (
         <View style={[styles.weekBackground, isCurrentWeek && styles.currentWeekBackground]} />
       )}
-      {/* 오늘 날짜 원형 테두리 (showToday가 true일 때만) */}
       {isToday && (
         <View style={styles.todayCircle} />
       )}
-      {/* 선택된 날짜 배경 */}
       {isSelected && (
         <View style={styles.selectedCircle} />
       )}
@@ -158,37 +137,32 @@ export default function BaseCalendar({
   customHeader,
   dayComponent,
   onMonthChange,
+  hideButtons = false,
+  autoCloseOnSelect = false,
 }: BaseCalendarProps) {
   const [currentMonth, setCurrentMonth] = useState(selectedDate || dayjs().format('YYYY-MM-DD'));
   const [hoveredWeek, setHoveredWeek] = useState<string | null>(null);
   const [tempSelectedDate, setTempSelectedDate] = useState<string | undefined>(selectedDate);
   const [showMonthCalendar, setShowMonthCalendar] = useState(false);
-  const [view, setView] = useState<'day' | 'month' | 'year'>('day'); // 1: day, 2: month, 3: year
-  const [tempSelectedMonth, setTempSelectedMonth] = useState<number | null>(null); // 임시 선택된 월 (0-11)
-  const [tempSelectedYear, setTempSelectedYear] = useState<number | null>(null); // 임시 선택된 년도
+  const [view, setView] = useState<'day' | 'month' | 'year'>('day'); 
+  const [tempSelectedMonth, setTempSelectedMonth] = useState<number | null>(null); 
+  const [tempSelectedYear, setTempSelectedYear] = useState<number | null>(null); 
 
-  // 달력이 열릴 때 현재 주간으로 스크롤 및 tempSelectedDate 초기화
   useEffect(() => {
     if (visible && scrollToWeek && currentWeekStart) {
-      // currentWeekStart가 있으면 해당 주간이 포함된 월로 이동
       const weekStartDate = dayjs(currentWeekStart);
       setCurrentMonth(weekStartDate.format('YYYY-MM-DD'));
     } else if (visible && selectedDate) {
-      // selectedDate가 있으면 해당 날짜가 포함된 월로 이동
       setCurrentMonth(selectedDate);
     }
-    // visible이 true일 때 tempSelectedDate를 selectedDate로 초기화
     if (visible) {
       setTempSelectedDate(selectedDate);
-      setView('day'); // 달력이 열릴 때 항상 1단계로 초기화
-      setTempSelectedMonth(null); // 임시 선택된 월 초기화
-      setTempSelectedYear(null); // 임시 선택된 년도 초기화
+      setView('day'); 
+      setTempSelectedMonth(null); 
+      setTempSelectedYear(null); 
     }
   }, [visible, scrollToWeek, currentWeekStart, selectedDate]);
 
-  // markedDates는 prop으로 전달된 것만 사용 (자동 마킹 제거)
-  // tempSelectedDate를 포함한 markedDates 생성
-  // useMemo는 early return 전에 호출해야 함 (Hooks 규칙)
   const defaultMarkedDates = useMemo(() => {
     const baseMarkedDates = markedDates || {};
     if (tempSelectedDate) {
@@ -214,7 +188,6 @@ export default function BaseCalendar({
     onMonthChange?.({ dateString: newMonthString });
   };
 
-  // 1단계 헤더 (날짜 선택 달력)
   const dayHeader = () => (
     <View>
       <View style={styles.header}>
@@ -252,7 +225,6 @@ export default function BaseCalendar({
     </View>
   );
 
-  // 2단계 헤더 (월 선택 달력)
   const monthHeader = () => {
     const currentDate = dayjs(currentMonth);
     const monthYearText = `${currentDate.format('YYYY')}년 ${currentDate.format('M')}월`;
@@ -291,7 +263,6 @@ export default function BaseCalendar({
     );
   };
 
-  // 3단계 헤더 (년도 선택 달력)
   const yearHeader = () => {
     const currentDate = dayjs(currentMonth);
     const currentYear = currentDate.year();
@@ -333,10 +304,9 @@ export default function BaseCalendar({
 
   const handleCancel = () => {
     if (view === 'day') {
-      setTempSelectedDate(selectedDate); // 선택 취소
+      setTempSelectedDate(selectedDate); 
       onClose?.();
     } else {
-      // 2단계나 3단계에서는 이전 단계로 이동
       if (view === 'month') {
         setView('day');
       } else if (view === 'year') {
@@ -352,7 +322,6 @@ export default function BaseCalendar({
       }
       onClose?.();
     } else if (view === 'month') {
-      // 2단계: 선택된 월로 이동하고 1단계로 전환
       if (tempSelectedMonth !== null) {
         const currentYear = dayjs(currentMonth).year();
         const newDate = dayjs(`${currentYear}-${tempSelectedMonth + 1}-01`);
@@ -360,10 +329,9 @@ export default function BaseCalendar({
         setView('day');
       }
     } else if (view === 'year') {
-      // 3단계: 선택된 년도로 이동하고 2단계로 전환 (현재 월 유지)
       if (tempSelectedYear !== null) {
         const currentDate = dayjs(currentMonth);
-        const currentMonthIndex = currentDate.month(); // 0-11
+        const currentMonthIndex = currentDate.month(); 
         const newDate = dayjs(`${tempSelectedYear}-${currentMonthIndex + 1}-01`);
         setCurrentMonth(newDate.format('YYYY-MM-DD'));
         setView('month');
@@ -371,14 +339,22 @@ export default function BaseCalendar({
     }
   };
 
-  // 2단계: 월 선택 달력 컨텐츠
   const renderMonthPicker = () => {
     const currentDate = dayjs(currentMonth);
     const currentYear = currentDate.year();
-    const currentMonthIndex = currentDate.month(); // 0-11
+    const currentMonthIndex = currentDate.month(); 
     
-    // tempSelectedMonth가 없으면 현재 월을 기본값으로 사용
     const selectedMonthIndex = tempSelectedMonth !== null ? tempSelectedMonth : currentMonthIndex;
+
+    const handleMonthPress = (monthIndex: number) => {
+      if (autoCloseOnSelect) {
+        const newDate = dayjs(`${currentYear}-${monthIndex + 1}-01`);
+        setCurrentMonth(newDate.format('YYYY-MM-DD'));
+        setView('day');
+      } else {
+        setTempSelectedMonth(monthIndex);
+      }
+    };
 
     return (
       <View style={styles.pickerContent}>
@@ -396,7 +372,7 @@ export default function BaseCalendar({
                     isCurrentMonth && styles.monthPickerItemCurrent,
                     isSelected && styles.monthPickerItemSelected,
                   ]}
-                  onPress={() => setTempSelectedMonth(monthIndex)}
+                  onPress={() => handleMonthPress(monthIndex)}
                 >
                   <Text
                     style={[
@@ -416,43 +392,40 @@ export default function BaseCalendar({
     );
   };
 
-  // 3단계: 년도 선택 달력 컨텐츠
   const renderYearPicker = () => {
     const currentDate = dayjs(currentMonth);
     const currentYear = currentDate.year();
     
-    // 10년 단위 계산 (xxx0년부터 xxx9년까지)
-    const decadeStart = Math.floor(currentYear / 10) * 10; // 예: 2023 -> 2020
-    const decadeEnd = decadeStart + 9; // 예: 2029
+    const decadeStart = Math.floor(currentYear / 10) * 10; 
+    const decadeEnd = decadeStart + 9; 
     
-    // 표시할 년도들: -1년, 0-9년, +1년 (총 12개)
     const yearsToShow: Array<{ year: number; isDecade: boolean }> = [];
     
-    // -1년 (이전 10년으로 이동)
     yearsToShow.push({ year: decadeStart - 1, isDecade: false });
     
-    // 10년 단위 년도들 (xxx0 ~ xxx9)
     for (let i = 0; i <= 9; i++) {
       yearsToShow.push({ year: decadeStart + i, isDecade: true });
     }
     
-    // +1년 (다음 10년으로 이동)
     yearsToShow.push({ year: decadeEnd + 1, isDecade: false });
     
-    // tempSelectedYear가 없으면 현재 년도를 기본값으로 사용
     const selectedYear = tempSelectedYear !== null ? tempSelectedYear : currentYear;
     
     const handleYearPress = (year: number, isDecade: boolean) => {
-      if (isDecade) {
-        // 10년 단위 년도 선택
-        setTempSelectedYear(year);
-      } else {
-        // -1년 또는 +1년 선택 시 해당 년도 선택하고 해당 10년으로 이동
+      if (autoCloseOnSelect && isDecade) {
         const currentDate = dayjs(currentMonth);
-        const currentMonthIndex = currentDate.month(); // 0-11
+        const currentMonthIndex = currentDate.month(); 
         const newDate = dayjs(`${year}-${currentMonthIndex + 1}-01`);
         setCurrentMonth(newDate.format('YYYY-MM-DD'));
-        setTempSelectedYear(year); // 해당 년도 선택
+        setView('month');
+      } else if (isDecade) {
+        setTempSelectedYear(year);
+      } else {
+        const currentDate = dayjs(currentMonth);
+        const currentMonthIndex = currentDate.month(); 
+        const newDate = dayjs(`${year}-${currentMonthIndex + 1}-01`);
+        setCurrentMonth(newDate.format('YYYY-MM-DD'));
+        setTempSelectedYear(year); 
       }
     };
 
@@ -500,7 +473,12 @@ export default function BaseCalendar({
             key={currentMonth}
             current={currentMonth}
             onDayPress={(day) => {
-              setTempSelectedDate(day.dateString); // 임시 선택만 하고 팝업은 닫지 않음
+              if (autoCloseOnSelect) {
+                onDayPress?.({ dateString: day.dateString });
+                onClose?.();
+              } else {
+                setTempSelectedDate(day.dateString);
+              }
             }}
             firstDay={1}
             markedDates={defaultMarkedDates}
@@ -529,51 +507,53 @@ export default function BaseCalendar({
               arrowColor: 'transparent',
               selectedDayBackgroundColor: 'transparent',
               selectedDayTextColor: colors.white,
-              todayTextColor: showToday ? colors.white : colors.black, // showToday에 따라 오늘 날짜 색상 변경
-              todayBackgroundColor: showToday ? colors.primary : 'transparent', // showToday에 따라 오늘 날짜 배경 변경
+              todayTextColor: showToday ? colors.white : colors.black, 
+              todayBackgroundColor: showToday ? colors.primary : 'transparent', 
               weekVerticalMargin: 2, 
             } as any}
           />
-          {/* 하단 버튼 */}
-          <View style={styles.buttonContainer}>
-            <Pressable style={styles.cancelButton} onPress={handleCancel}>
-              <Text style={styles.cancelButtonText}>취소</Text>
-            </Pressable>
-            <Pressable style={styles.confirmButton} onPress={handleConfirm}>
-              <Text style={styles.confirmButtonText}>확인</Text>
-            </Pressable>
-          </View>
+          {!hideButtons && (
+            <View style={styles.buttonContainer}>
+              <Pressable style={styles.cancelButton} onPress={handleCancel}>
+                <Text style={styles.cancelButtonText}>취소</Text>
+              </Pressable>
+              <Pressable style={styles.confirmButton} onPress={handleConfirm}>
+                <Text style={styles.confirmButtonText}>확인</Text>
+              </Pressable>
+            </View>
+          )}
         </>
       ) : view === 'month' ? (
         <>
           {monthHeader()}
           {renderMonthPicker()}
-          {/* 하단 버튼 */}
-          <View style={styles.buttonContainer}>
-            <Pressable style={styles.cancelButton} onPress={handleCancel}>
-              <Text style={styles.cancelButtonText}>취소</Text>
-            </Pressable>
-            <Pressable style={styles.confirmButton} onPress={handleConfirm}>
-              <Text style={styles.confirmButtonText}>확인</Text>
-            </Pressable>
-          </View>
+          {!hideButtons && (
+            <View style={styles.buttonContainer}>
+              <Pressable style={styles.cancelButton} onPress={handleCancel}>
+                <Text style={styles.cancelButtonText}>취소</Text>
+              </Pressable>
+              <Pressable style={styles.confirmButton} onPress={handleConfirm}>
+                <Text style={styles.confirmButtonText}>확인</Text>
+              </Pressable>
+            </View>
+          )}
         </>
       ) : (
         <>
           {yearHeader()}
           {renderYearPicker()}
-          {/* 하단 버튼 */}
-          <View style={styles.buttonContainer}>
-            <Pressable style={styles.cancelButton} onPress={handleCancel}>
-              <Text style={styles.cancelButtonText}>취소</Text>
-            </Pressable>
-            <Pressable style={styles.confirmButton} onPress={handleConfirm}>
-              <Text style={styles.confirmButtonText}>확인</Text>
-            </Pressable>
-          </View>
+          {!hideButtons && (
+            <View style={styles.buttonContainer}>
+              <Pressable style={styles.cancelButton} onPress={handleCancel}>
+                <Text style={styles.cancelButtonText}>취소</Text>
+              </Pressable>
+              <Pressable style={styles.confirmButton} onPress={handleConfirm}>
+                <Text style={styles.confirmButtonText}>확인</Text>
+              </Pressable>
+            </View>
+          )}
         </>
       )}
-      {/* 월 달력 팝업 (기존 호환성 유지) */}
       {showMonthCalendar && (
         <MonthCalendarPopup
           visible={showMonthCalendar}
@@ -649,7 +629,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 18,
-    marginLeft: 'auto', // 오른쪽으로 이동
+    marginLeft: 'auto', 
   },
   arrowButton: {
     width: 18,
@@ -752,7 +732,7 @@ const styles = StyleSheet.create({
   },
   pickerContent: {
     flex: 1,
-    minHeight: 200, // 임시 높이
+    minHeight: 200, 
     paddingHorizontal: 0,
     paddingTop: 4,
     paddingBottom: 4,
@@ -761,13 +741,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 4,
-    rowGap: 8, // 위아래 간격
+    rowGap: 8, 
     width: '100%',
     paddingHorizontal: 0,
     justifyContent: 'space-between',
   },
   monthPickerItemWrapper: {
-    width: '32%', // 3열 배치 (gap 제거로 더 넓게)
+    width: '32%', 
     height: 32,
   },
   monthPickerItem: {
@@ -779,10 +759,10 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   monthPickerItemCurrent: {
-    backgroundColor: '#E8F1FF', // 하늘색 배경 (현재 월)
+    backgroundColor: '#E8F1FF', 
   },
   monthPickerItemSelected: {
-    backgroundColor: colors.primary, // 파란색 배경 (선택된 월)
+    backgroundColor: colors.primary, 
   },
   monthPickerItemText: {
     fontFamily: typography.fontFamily.pretendardRegular,
@@ -791,22 +771,22 @@ const styles = StyleSheet.create({
     color: colors.black,
   },
   monthPickerItemTextCurrent: {
-    color: colors.primary, // 하늘색 배경일 때 파란색 텍스트
+    color: colors.primary, 
   },
   monthPickerItemTextSelected: {
-    color: colors.white, // 파란색 배경일 때 흰색 텍스트
+    color: colors.white, 
   },
   yearPickerGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 4,
-    rowGap: 8, // 위아래 간격
+    rowGap: 8, 
     width: '100%',
     paddingHorizontal: 0,
     justifyContent: 'space-between',
   },
   yearPickerItemWrapper: {
-    width: '32%', // 3열 배치
+    width: '32%', 
     height: 32,
   },
   yearPickerItem: {
@@ -818,10 +798,10 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   yearPickerItemCurrent: {
-    backgroundColor: 'rgba(0, 102, 255, 0.08)', // 하늘색 배경 (현재 년도)
+    backgroundColor: 'rgba(0, 102, 255, 0.08)', 
   },
   yearPickerItemSelected: {
-    backgroundColor: colors.primary, // 파란색 배경 (선택된 년도)
+    backgroundColor: colors.primary, 
   },
   yearPickerItemText: {
     fontFamily: typography.fontFamily.pretendardRegular,
@@ -830,13 +810,13 @@ const styles = StyleSheet.create({
     color: colors.black,
   },
   yearPickerItemTextDisabled: {
-    color: colors.gray600, // 회색 텍스트 (-1년, +1년)
+    color: colors.gray600, 
   },
   yearPickerItemTextCurrent: {
-    color: colors.primary, // 하늘색 배경일 때 파란색 텍스트
+    color: colors.primary, 
   },
   yearPickerItemTextSelected: {
-    color: colors.white, // 파란색 배경일 때 흰색 텍스트
+    color: colors.white, 
   },
 });
 
