@@ -148,8 +148,6 @@ export default function FlightItem({
   const firstSegment = flightSegments[0];
   const isFirstSegmentValid = Boolean(
     firstSegment &&
-    firstSegment.airline.trim() &&
-    firstSegment.flight_number.trim() &&
     firstSegment.departure_airport.trim() &&
     firstSegment.arrival_airport.trim() &&
     String(firstSegment.departure_date || '').trim() &&
@@ -159,7 +157,7 @@ export default function FlightItem({
   );
 
   const handleSave = async () => {
-    if (!formData.reservation_number.trim() || !formData.passenger_name.trim() || !isFirstSegmentValid) {
+    if (!isFirstSegmentValid) {
       onShowWarning?.();
       return;
     }
@@ -213,13 +211,13 @@ export default function FlightItem({
 
       if (flight) {
         savedFlight = await flightsApi.updateFlight(flight.id, {
-          reservationNumber: formData.reservation_number,
-          passengerName: formData.passenger_name,
+          reservationNumber: formData.reservation_number || null,
+          passengerName: formData.passenger_name || null,
           ticketNumber: formData.ticket_number || null,
           bookingReference: formData.booking_reference || null,
           segments: flightSegments.map(s => ({
-            airline: s.airline,
-            flightNumber: s.flight_number,
+            airline: s.airline || null,
+            flightNumber: s.flight_number || null,
             departureAirport: s.departure_airport,
             arrivalAirport: s.arrival_airport,
             departureTime: toIso(s.departure_date, s.departure_time),
@@ -235,20 +233,19 @@ export default function FlightItem({
             currency: ExpenseCurrency.KRW,
             category: ExpenseCategory.FLIGHT as any,
             planId: planId,
-            description: formData.reservation_number,
+            description: formData.reservation_number || null,
           },
         });
       } else {
-        // 추가
         savedFlight = await flightsApi.createFlight({
           planId: planId,
-          reservationNumber: formData.reservation_number,
-          passengerName: formData.passenger_name,
+          reservationNumber: formData.reservation_number || null,
+          passengerName: formData.passenger_name || null,
           ticketNumber: formData.ticket_number || null,
           bookingReference: formData.booking_reference || null,
           segments: flightSegments.map(s => ({
-            airline: s.airline,
-            flightNumber: s.flight_number,
+            airline: s.airline || null,
+            flightNumber: s.flight_number || null,
             departureAirport: s.departure_airport,
             arrivalAirport: s.arrival_airport,
             departureTime: toIso(s.departure_date, s.departure_time),
@@ -264,7 +261,7 @@ export default function FlightItem({
             currency: ExpenseCurrency.KRW,
             category: ExpenseCategory.FLIGHT as any,
             planId: planId,
-            description: formData.reservation_number,
+            description: formData.reservation_number || null,
           },
         });
       }
@@ -302,11 +299,8 @@ export default function FlightItem({
     { label: 'JPY', value: ExpenseCurrency.JPY },
   ], []);
 
-  // 필수 필드가 모두 입력되었는지 확인하는 함수
   const isSegmentComplete = (segment: SegmentForm): boolean => {
     return !!(
-      segment.airline &&
-      segment.flight_number &&
       segment.departure_airport &&
       segment.arrival_airport &&
       segment.departure_date &&

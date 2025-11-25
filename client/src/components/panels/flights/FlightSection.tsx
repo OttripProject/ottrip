@@ -83,7 +83,7 @@ export default function FlightSection({
     return (
       <View style={styles.detailContainer}>
         <View style={styles.detailHeader}>
-          <Text style={styles.detailTitle}>{selectedFlight.reservationNumber}</Text>
+          <Text style={styles.detailTitle}>{selectedFlight.reservationNumber || '항공편 정보'}</Text>
           <Pressable
             style={styles.editButton}
             onPress={() => {
@@ -97,10 +97,18 @@ export default function FlightSection({
         </View>
 
         <View style={styles.detailContent}>
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>예약번호(PNR)</Text>
-            <Text style={styles.detailValue}>{selectedFlight.reservationNumber}</Text>
-          </View>
+          {selectedFlight.reservationNumber && (
+            <View style={styles.detailRow}>
+              <Text style={styles.detailLabel}>예약번호(PNR)</Text>
+              <Text style={styles.detailValue}>{selectedFlight.reservationNumber}</Text>
+            </View>
+          )}
+          {selectedFlight.passengerName && (
+            <View style={styles.detailRow}>
+              <Text style={styles.detailLabel}>승객명</Text>
+              <Text style={styles.detailValue}>{selectedFlight.passengerName}</Text>
+            </View>
+          )}
           {selectedFlight.ticketNumber && (
             <View style={styles.detailRow}>
               <Text style={styles.detailLabel}>항공권 번호</Text>
@@ -135,14 +143,18 @@ export default function FlightSection({
                 <React.Fragment key={index}>
                   <View style={styles.segmentDetail}>
                     <Text style={styles.segmentTitle}>구간 {index + 1}</Text>
-                    <View style={styles.detailRow}>
-                      <Text style={styles.detailLabel}>항공사</Text>
-                      <Text style={styles.detailValue}>{segment.airline}</Text>
-                    </View>
-                    <View style={styles.detailRow}>
-                      <Text style={styles.detailLabel}>항공편 번호</Text>
-                      <Text style={styles.detailValue}>{segment.flightNumber}</Text>
-                    </View>
+                    {segment.airline && (
+                      <View style={styles.detailRow}>
+                        <Text style={styles.detailLabel}>항공사</Text>
+                        <Text style={styles.detailValue}>{segment.airline}</Text>
+                      </View>
+                    )}
+                    {segment.flightNumber && (
+                      <View style={styles.detailRow}>
+                        <Text style={styles.detailLabel}>항공편 번호</Text>
+                        <Text style={styles.detailValue}>{segment.flightNumber}</Text>
+                      </View>
+                    )}
                     <View style={styles.detailRow}>
                       <Text style={styles.detailLabel}>출발 공항</Text>
                       <Text style={styles.detailValue}>{segment.departureAirport}</Text>
