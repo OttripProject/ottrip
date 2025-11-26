@@ -32,6 +32,7 @@ import AccommodationIcon from '../../../assets/accomodation.svg';
 import WeekBarAirplaneIcon from '../../../assets/week_bar_airplane.svg';
 import WeekBarLocationIcon from '../../../assets/week_bar_location.svg';
 import WeekBarTimeIcon from '../../../assets/week_bar_time.svg';
+import WeekBarAccommodationIcon from '../../../assets/week_bar_accommodation.svg';
 
 dayjs.locale(ko);
 
@@ -600,10 +601,23 @@ export default function WeeklySchedulePanel({
                           }}
                         >
                           {accommodation && (
-                            <View style={{ backgroundColor: '#ff9500', borderRadius: 4, paddingHorizontal: 8, paddingVertical: 4, width: '90%' }}>
-                              <Text style={{ color: '#fff', fontSize: 10, fontWeight: '600' }} numberOfLines={1}>
-                                {accommodation.name}
-                              </Text>
+                            <View style={{ 
+                              backgroundColor: 'rgba(245, 158, 11, 0.1)', 
+                              borderWidth: 1,
+                              borderColor: '#F59E0B',
+                              borderRadius: radii.sm, 
+                              paddingHorizontal: 8, 
+                              paddingVertical: 4, 
+                              width: '90%',
+                              height: '95%',
+                              justifyContent: 'center',
+                            }}>
+                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8}}>
+                                <WeekBarAccommodationIcon width={14} height={14} />
+                                <Text style={{ ...textStyles.h8, color: '#F59E0B', lineHeight: 10 }} numberOfLines={1}>
+                                  {accommodation.name}
+                                </Text>
+                              </View>
                             </View>
                           )}
                         </Pressable>
