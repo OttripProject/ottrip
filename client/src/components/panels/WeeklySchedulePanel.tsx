@@ -608,7 +608,7 @@ export default function WeeklySchedulePanel({
                               borderRadius: radii.sm, 
                               paddingHorizontal: 8, 
                               paddingVertical: 4, 
-                              width: '90%',
+                              width: '98%',
                               height: '95%',
                               justifyContent: 'center',
                             }}>
