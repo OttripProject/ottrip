@@ -443,7 +443,7 @@ export default function ItineraryItem({
           </Pressable>
         </View>
       <View style={styles.inputGroup}>
-          <Text style={styles.label}>제목</Text>
+          <Text style={styles.label}>제목*</Text>
         <Input
             variant="filled"
             placeholder={PLACEHOLDERS.itinerary.titleForm}
@@ -476,7 +476,7 @@ export default function ItineraryItem({
 
       <View style={[styles.row, styles.pickerRowWrapper, { zIndex: countryOpen ? 10001 : 1 }]}>
         <View style={[styles.inputGroup, styles.halfWidth, styles.countryPickerWrapper]}>
-            <Text style={styles.label}>국가</Text>
+            <Text style={styles.label}>국가*</Text>
           <CountryPicker
             value={formData.country}
             onChange={(name: string) => setFormData({ ...formData, country: name })}
@@ -486,7 +486,7 @@ export default function ItineraryItem({
           />
         </View>
         <View style={[styles.inputGroup, styles.halfWidth]}> 
-            <Text style={styles.label}>도시</Text>
+            <Text style={styles.label}>도시*</Text>
           <Input
               variant="filled"
               placeholder={PLACEHOLDERS.itinerary.cityForm}
@@ -516,7 +516,7 @@ export default function ItineraryItem({
       </View>
 
       <View style={[styles.inputGroup, styles.datePickerWrapper, { zIndex: showDatePicker ? 20000 : 1 }]}>
-        <Text style={styles.label}>날짜</Text>
+        <Text style={styles.label}>날짜*</Text>
         <Pressable style={styles.dateInput} onPress={() => setShowDatePicker(!showDatePicker)}>
           <View style={styles.dateTextContainer}>
             <Text style={styles.dateText}>
@@ -543,7 +543,7 @@ export default function ItineraryItem({
 
         <View style={[styles.row, styles.pickerRowWrapper, { zIndex: timeOpen ? 10001 : 1 }]}>
         <View style={[styles.inputGroup, styles.halfWidth]}>
-          <Text style={styles.label}>시작 시간</Text>
+          <Text style={styles.label}>시작 시간*</Text>
           <TimePicker
             value={formData.startTime}
             onChange={(time) => setFormData({ ...formData, startTime: time })}
@@ -553,7 +553,7 @@ export default function ItineraryItem({
           />
         </View>
         <View style={[styles.inputGroup, styles.halfWidth]}>
-          <Text style={styles.label}>종료 시간</Text>
+          <Text style={styles.label}>종료 시간*</Text>
           <TimePicker
             value={formData.endTime}
             onChange={(time) => setFormData({ ...formData, endTime: time })}
@@ -655,7 +655,7 @@ export default function ItineraryItem({
             </View>
 
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>금액</Text>
+              <Text style={styles.label}>금액*</Text>
               <Input
                 variant="outlined"
                 placeholder={PLACEHOLDERS.expense.amount}
