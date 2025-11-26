@@ -1,10 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, Pressable, StyleSheet, Modal, ScrollView, Alert, Platform, Dimensions } from 'react-native';
-import { Calendar, LocaleConfig, DateData } from 'react-native-calendars';
+import { LocaleConfig } from 'react-native-calendars';
 import dayjs from 'dayjs';
-import Input from '@/ui/components/input/Input';
-import { PLACEHOLDERS } from '@/constants/placeholders';
-import { plansApi } from '@/services/plans';
 import { tripToastMessages } from '@/utils/toast';
 import { colors } from '@/ui/tokens/colors';
 import { textStyles } from '@/ui/tokens/typography';
@@ -12,12 +9,11 @@ import DotsIcon from '../../../assets/dots.svg';
 import TripAddIcon from '../../../assets/trip_add.svg';
 import DownArrowIcon from '../../../assets/down_arrow.svg';
 import UpperArrowIcon from '../../../assets/upper_arrow.svg';
-import LeftArrowIcon from '../../../assets/cal_left_arrow.svg';
-import RightArrowIcon from '../../../assets/cal_right_arrow.svg';
 import UpdateIcon from '../../../assets/update.svg';
 import DeleteIcon from '../../../assets/delete.svg';
-import XIcon from '../../../assets/x.svg';
 import TripCompletionModal from '../modals/TripCompletionModal';
+import TripFormModal from '../modals/TripFormModal';
+import TripDeleteConfirmModal from '../modals/TripDeleteConfirmModal';
 
 LocaleConfig.locales['ko'] = {
   monthNames: [
@@ -63,31 +59,6 @@ LocaleConfig.locales['ko'] = {
 };
 LocaleConfig.defaultLocale = 'ko';
 
-// 캘린더 테마 상수
-const CALENDAR_THEME = {
-  selectedDayBackgroundColor: '#007AFF',
-  selectedDayTextColor: '#ffffff',
-  todayTextColor: '#007AFF',
-  dayTextColor: '#2d4150',
-  textDisabledColor: '#d9e1e8',
-  monthTextColor: '#2d4150',
-  indicatorColor: '#007AFF',
-  textDayFontWeight: '400' as const,
-  textMonthFontWeight: '600' as const,
-  textDayHeaderFontWeight: '500' as const,
-  textDayFontSize: 13,
-  textMonthFontSize: 16,
-  textDayHeaderFontSize: 11,
-  textSectionTitleColor: colors.gray600,
-  'stylesheet.calendar.main': {
-    week: {
-      marginVertical: 2,
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-    },
-  },
-};
-
 interface Trip {
   id: string;
   publicId?: string;
@@ -110,84 +81,6 @@ interface TripSelectorProps {
 type SelectionType = 'single' | 'start' | 'end' | 'range' | undefined;
 type CalendarDayMark = { selection?: SelectionType; selected?: boolean };
 type CalendarMarkedDates = Record<string, CalendarDayMark>;
-
-function DayCell({
-  date,
-  state,
-  marking,
-  onPress,
-}: {
-  date?: DateData;
-  state: string;
-  marking?: CalendarDayMark;
-  onPress?: (date: DateData) => void;
-}) {
-  if (!date) {
-    return <View style={styles.dayContainer} />;
-  }
-
-  const selection = marking?.selection;
-  const isDisabled = state === 'disabled';
-  const isStart = selection === 'start';
-  const isEnd = selection === 'end';
-  const isRange = selection === 'range';
-  const isSingle = selection === 'single';
-  const isToday = dayjs().isSame(dayjs(date.dateString), 'day');
-
-  const rangeStyle: any = {
-    opacity: (isStart || isEnd || isRange) ? 1 : 0,
-  };
-
-  if (isStart) {
-    rangeStyle.left = 16;
-    rangeStyle.right = -4;
-  } else if (isEnd) {
-    rangeStyle.left = -4;
-    rangeStyle.right = 16;
-  } else if (isRange) {
-    rangeStyle.left = -4;
-    rangeStyle.right = -4;
-  }
-
-  const circleStyle: any = {};
-  if (isSingle || isStart || isEnd) {
-    circleStyle.backgroundColor = colors.primary;
-  } else if (isToday && !selection) {
-    circleStyle.backgroundColor = '#E8F1FF';
-  }
-
-  return (
-    <Pressable
-      style={styles.dayContainer}
-      disabled={isDisabled}
-      onPress={() => onPress?.(date)}
-    >
-      <View
-        style={[
-          styles.rangeBase,
-          rangeStyle,
-        ]}
-      />
-      <View
-        style={[
-          styles.circleBase,
-          circleStyle,
-        ]}
-      >
-        <Text
-          style={[
-            styles.dayText,
-            isDisabled && styles.dayTextDisabled,
-            (isSingle || isStart || isEnd) && styles.dayTextSelected,
-            isToday && !selection && styles.dayTextToday,
-          ]}
-        >
-          {date.day}
-        </Text>
-      </View>
-    </Pressable>
-  );
-}
 
 export default function TripSelector({ selectedTrip, onTripSelect, trips, onTripAdd, onTripUpdate, onTripDelete }: TripSelectorProps) {
   const [showDropdown, setShowDropdown] = useState(false);
@@ -619,237 +512,63 @@ export default function TripSelector({ selectedTrip, onTripSelect, trips, onTrip
         </Modal>
       )}
 
-      {/* 새 여행 추가 모달 */}
-      <Modal
+      {/* 여행 추가 모달 */}
+      <TripFormModal
         visible={showAddModal}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setShowAddModal(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <View style={styles.modalHeaderText}>
-                <Text style={styles.modalTitle}>새 여행 추가</Text>
-                <Text style={styles.modalDescription}>새로운 여행을 만들어 계획을 시작하세요.</Text>
-              </View>
-              <Pressable
-                onPress={() => setShowAddModal(false)}
-                style={styles.closeButton}
-              >
-                <XIcon width={24} height={24} />
-              </Pressable>
-            </View>
-            
-            <View style={styles.inputSection}>
-              <Text style={styles.inputLabel}>여행명</Text>
-              <Input
-                style={styles.input}
-                placeholder={PLACEHOLDERS.plan.name}
-                value={newTrip.name}
-                onChangeText={(text) => setNewTrip(prev => ({ ...prev, name: text }))}
-                maxLength={50}
-              />
-            </View>
-            
-            <View style={styles.inputSection}>
-              <Text style={styles.inputLabel}>여행 기간 선택</Text>
-              <View style={styles.calendarWrapper}>
-                <Calendar
-                  monthFormat="yyyy년 M월"
-                  markedDates={getMarkedDates()}
-                  markingType="custom"
-                  theme={CALENDAR_THEME}
-                  firstDay={1}
-                  renderArrow={(direction) =>
-                    direction === 'left' ? (
-                      <LeftArrowIcon width={18} height={18} />
-                    ) : (
-                      <RightArrowIcon width={18} height={18} />
-                    )
-                  }
-                  dayComponent={({ date, state, marking, onPress }) => (
-                    <DayCell
-                      date={date as DateData}
-                      state={state ?? ''}
-                      marking={marking as CalendarDayMark}
-                      onPress={onPress}
-                    />
-                  )}
-                  onDayPress={(day) => handleDateSelect(day.dateString)}
-                  style={styles.calendar}
-                />
-              </View>
-            </View>
-            
-            <View style={styles.modalButtons}>
-              <Pressable 
-                style={[styles.modalButton, styles.cancelButton]}
-                onPress={() => setShowAddModal(false)}
-              >
-                <Text style={styles.cancelButtonText}>취소</Text>
-              </Pressable>
-              <Pressable 
-                style={[
-                  styles.modalButton,
-                  styles.addButton,
-                  (!newTrip.startDate || !newTrip.endDate) && styles.modalButtonDisabled
-                ]}
-                onPress={handleAddTrip}
-                disabled={!newTrip.startDate || !newTrip.endDate}
-              >
-                <Text style={styles.addButtonText}>여행 저장</Text>
-              </Pressable>
-            </View>
-          </View>
-        </View>
-      </Modal>
+        onClose={() => setShowAddModal(false)}
+        mode="add"
+        tripData={newTrip}
+        onTripDataChange={(data) => setNewTrip(prev => ({ ...prev, ...data }))}
+        markedDates={getMarkedDates()}
+        onDateSelect={handleDateSelect}
+        onSubmit={handleAddTrip}
+        isSubmitDisabled={!newTrip.startDate || !newTrip.endDate}
+      />
 
       {/* 여행 수정 모달 */}
-      <Modal
+      <TripFormModal
         visible={showEditModal}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setShowEditModal(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <View style={styles.modalHeaderText}>
-                <Text style={styles.modalTitle}>여행 수정</Text>
-                <Text style={styles.modalDescription}>여행 정보를 수정하세요.</Text>
-              </View>
-              <Pressable
-                onPress={() => setShowEditModal(false)}
-                style={styles.closeButton}
-              >
-                <XIcon width={24} height={24} />
-              </Pressable>
-            </View>
-            
-            <View style={styles.inputSection}>
-              <Text style={styles.inputLabel}>여행명</Text>
-              <Input
-                style={styles.input}
-                placeholder={PLACEHOLDERS.plan.name}
-                value={editingTrip?.name || ''}
-                onChangeText={(text) => setEditingTrip(prev => prev ? { ...prev, name: text } : null)}
-                maxLength={50}
-              />
-            </View>
-            
-            <View style={styles.inputSection}>
-              <Text style={styles.inputLabel}>여행 기간 선택</Text>
-              <View style={styles.calendarWrapper}>
-                <Calendar
-                  monthFormat="yyyy년 M월"
-                  markedDates={getEditMarkedDates()}
-                  markingType="custom"
-                  theme={CALENDAR_THEME}
-                  firstDay={1}
-                  style={styles.calendar}
-                  renderArrow={(direction) =>
-                    direction === 'left' ? (
-                      <LeftArrowIcon width={18} height={18} />
-                    ) : (
-                      <RightArrowIcon width={18} height={18} />
-                    )
-                  }
-                  dayComponent={({ date, state, marking, onPress }) => (
-                    <DayCell
-                      date={date as DateData}
-                      state={state ?? ''}
-                      marking={marking as CalendarDayMark}
-                      onPress={onPress}
-                    />
-                  )}
-                  onDayPress={(day) => handleEditDateSelect(day.dateString)}
-                />
-              </View>
-            </View>
-            
-            <View style={styles.modalButtons}>
-              <Pressable 
-                style={[styles.modalButton, styles.cancelButton]}
-                onPress={() => setShowEditModal(false)}
-              >
-                <Text style={styles.cancelButtonText}>취소</Text>
-              </Pressable>
-              <Pressable 
-                style={[
-                  styles.modalButton,
-                  styles.addButton,
-                  (!editingTrip?.startDate || !editingTrip?.endDate) && styles.modalButtonDisabled
-                ]}
-                onPress={handleEditTrip}
-                disabled={!editingTrip?.startDate || !editingTrip?.endDate}
-              >
-                <Text style={styles.addButtonText}>여행 수정</Text>
-              </Pressable>
-            </View>
-          </View>
-        </View>
-      </Modal>
+        onClose={() => setShowEditModal(false)}
+        mode="edit"
+        tripData={editingTrip || { name: '', startDate: '', endDate: '' }}
+        onTripDataChange={(data) => setEditingTrip(prev => prev ? { ...prev, ...data } : null)}
+        markedDates={getEditMarkedDates()}
+        onDateSelect={handleEditDateSelect}
+        onSubmit={handleEditTrip}
+        isSubmitDisabled={!editingTrip?.startDate || !editingTrip?.endDate}
+      />
 
       {/* 여행 삭제 확인 모달 */}
-      <Modal 
-        visible={deleteConfirmModalOpen} 
-        transparent 
-        animationType="fade"
-        onRequestClose={() => setDeleteConfirmModalOpen(false)}
-      >
-        <View style={styles.deleteModalOverlay}>
-          <View style={styles.deleteModalCard}>
-            <Text style={styles.deleteModalTitle}>정말 이 여행을 삭제하시겠어요?</Text>
-            <Text style={styles.deleteModalText}>
-              "{tripToDelete ? trips.find(t => t.id === tripToDelete)?.name || '' : ''}" 여행을 삭제하면{'\n'}
-              이 여행에 속한 모든 일정, 항공편,{'\n'}
-              숙소 및 비용 데이터가 영구적으로 삭제됩니다.{'\n'}
-              이 작업은 되돌릴 수 없습니다.
-            </Text>
-            <View style={styles.deleteModalButtons}>
-              <Pressable 
-                style={styles.deleteModalCancelButton} 
-                onPress={() => {
-                  setDeleteConfirmModalOpen(false);
-                  setTripToDelete(null);
-                }}
-              >
-                <Text style={styles.deleteModalCancelButtonText}>취소</Text>
-              </Pressable>
-              <Pressable 
-                style={styles.deleteModalDeleteButton} 
-                onPress={confirmDeleteTrip}
-              >
-                <Text style={styles.deleteModalDeleteButtonText}>삭제</Text>
-              </Pressable>
-            </View>
-          </View>
-        </View>
-      </Modal>
+      <TripDeleteConfirmModal
+        visible={deleteConfirmModalOpen}
+        onClose={() => {
+          setDeleteConfirmModalOpen(false);
+          setTripToDelete(null);
+        }}
+        tripName={tripToDelete ? trips.find(t => t.id === tripToDelete)?.name || '' : ''}
+        onConfirm={confirmDeleteTrip}
+      />
 
       {/* 여행 생성 완료 모달 */}
       <TripCompletionModal
         visible={showCompletionModal}
         onClose={() => setShowCompletionModal(false)}
-        title="여행 추가 완료"
-        description={`"${createdTripName}"이/가 생성되었어요!\n이제 여행 정보를 채워 넣어 볼까요?`}
+        mode="add"
+        tripName={createdTripName}
       />
 
       {/* 여행 수정 완료 모달 */}
       <TripCompletionModal
         visible={showUpdateCompletionModal}
         onClose={() => setShowUpdateCompletionModal(false)}
-        title="변경 사항이 저장 되었어요."
-        description="여행 정보를 최신 상태로 유지해보세요!"
+        mode="edit"
       />
 
       {/* 여행 삭제 완료 모달 */}
       <TripCompletionModal
         visible={showDeleteCompletionModal}
         onClose={() => setShowDeleteCompletionModal(false)}
-        title="여행 삭제 완료"
-        description="여행이 성공적으로 삭제되었습니다."
+        mode="delete"
       />
     </View>
   );
@@ -1035,229 +754,5 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 18,
     color: colors.success,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: colors.overlayBackground,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-  },
-  modalContent: {
-    backgroundColor: colors.white,
-    borderRadius: 16,
-    paddingTop: 32,
-    paddingBottom: 24,
-    paddingHorizontal: 24,
-    minWidth: 420,
-    maxHeight: 724,
-  },
-  modalTitle: {
-    ...textStyles.h3,
-    textAlign: 'left',
-    marginBottom: 4,
-    marginLeft: 10,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: colors.gray300,
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 0,
-    width: 356,
-    height: 48,
-    fontSize: 14,
-    backgroundColor: colors.white,
-    alignSelf: 'center',
-  },
-  modalButtons: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-  },
-  modalButton: {
-    width: 174,
-    height: 50,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  cancelButton: {
-    backgroundColor: colors.white,
-    borderWidth: 1,
-    borderColor: colors.gray400,
-    marginRight: 4,
-  },
-  cancelButtonText: {
-    ...textStyles.h7,
-    color: colors.black,
-  },
-  addButton: {
-    backgroundColor: colors.gray900,
-    marginLeft: 4,
-  },
-  addButtonText: {
-    ...textStyles.h7,
-    color: colors.white,
-  },
-  modalButtonDisabled: {
-    opacity: 0.4,
-  },
-  datePicker: {
-    marginBottom: 16,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 24,
-  },
-  modalHeaderText: {
-    flex: 1,
-    paddingRight: 16,
-  },
-  modalDescription: {
-    ...textStyles.body4,
-    color: colors.gray700,
-    marginLeft: 10,
-    textAlign: 'left',
-  },
-  inputSection: {
-    marginBottom: 16,
-  },
-  inputLabel: {
-    ...textStyles.h7,
-    color: colors.black,
-    marginBottom: 4,
-    marginLeft: 10,
-  },
-  closeButton: {
-    width: 24,
-    height: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  calendarWrapper: {
-    width: 356,
-    height: 334,
-    borderWidth: 1,
-    borderColor: colors.gray300,
-    borderRadius: 10,
-    paddingVertical: 24,
-    paddingHorizontal: 40,
-    alignSelf: 'center',
-    justifyContent: 'center',
-  },
-  calendar: {
-    alignSelf: 'center',
-    width: 276,
-    backgroundColor: 'transparent',
-  },
-  calendarArrow: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-  },
-  dayContainer: {
-    width: 32,
-    height: 32,
-    justifyContent: 'center',
-    alignItems: 'center',
-    position: 'relative',
-    overflow: 'visible',
-    marginVertical: 2,
-  },
-  rangeBase: {
-    position: 'absolute',
-    left: -12,
-    right: -12,
-    top: '50%',
-    height: 32,
-    marginTop: -16,
-    backgroundColor: '#E8F1FF',
-    zIndex: 1,
-  },
-  circleBase: {
-    position: 'absolute',
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'transparent',
-    zIndex: 2,
-  },
-  dayText: {
-    fontFamily: textStyles.body4.fontFamily,
-    fontSize: 14,
-    color: colors.black,
-  },
-  dayTextDisabled: {
-    color: colors.gray300,
-  },
-  dayTextSelected: {
-    color: colors.white,
-    fontWeight: '600',
-  },
-  dayTextToday: {
-    color: colors.primary,
-    fontWeight: '600',
-  },
-  deleteModalOverlay: {
-    flex: 1,
-    backgroundColor: colors.overlayBackground,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  deleteModalCard: {
-    width: 320,
-    backgroundColor: colors.white,
-    borderRadius: 16,
-    paddingTop: 32,
-    paddingBottom: 24,
-    paddingHorizontal: 24,
-    alignItems: 'center',
-  },
-  deleteModalTitle: {
-    ...textStyles.h5,
-    textAlign: 'center',
-    marginBottom: 16,
-  },
-  deleteModalText: {
-    ...textStyles.body4,
-    color: colors.gray600,
-    textAlign: 'center',
-    marginBottom: 32,
-    lineHeight: 20,
-  },
-  deleteModalButtons: {
-    flexDirection: 'row',
-    width: '100%',
-    justifyContent: 'space-between',
-  },
-  deleteModalCancelButton: {
-    flex: 1,
-    height: 40,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.white,
-    borderWidth: 1,
-    borderColor: colors.gray400,
-    marginRight: 6,
-  },
-  deleteModalCancelButtonText: {
-    ...textStyles.h7,
-  },
-  deleteModalDeleteButton: {
-    flex: 1,
-    height: 40,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#ff4242',
-    marginLeft: 6,
-  },
-  deleteModalDeleteButtonText: {
-    ...textStyles.h7,
-    color: colors.white,
   },
 }); 

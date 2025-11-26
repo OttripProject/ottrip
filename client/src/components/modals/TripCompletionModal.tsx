@@ -7,16 +7,18 @@ import CheckIcon from '../../../assets/check_blue.svg';
 interface TripCompletionModalProps {
   visible: boolean;
   onClose: () => void;
-  title: string;
-  description: string;
+  mode: 'add' | 'edit' | 'delete';
+  tripName?: string;
 }
 
 export default function TripCompletionModal({
   visible,
   onClose,
-  title,
-  description,
+  mode,
+  tripName,
 }: TripCompletionModalProps) {
+  const title = mode === 'add' ? '여행 추가 완료' : mode === 'edit' ? '변경 사항이 저장 되었어요.' : '여행 삭제 완료';
+  const description = mode === 'add' ? `"${tripName}"이/가 생성되었어요!\n이제 여행 정보를 채워 넣어 볼까요?` : mode === 'edit' ? '여행 정보를 최신 상태로 유지해보세요!' : '여행이 성공적으로 삭제되었습니다.';
   return (
     <Modal
       visible={visible}
