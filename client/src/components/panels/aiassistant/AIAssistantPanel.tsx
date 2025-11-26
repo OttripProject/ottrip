@@ -4,7 +4,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import MaskedView from '@react-native-masked-view/masked-view';
 import PanelLayout from '../PanelLayout';
 import GradientBackground from '@/ui/components/GradientBackground';
-import RefreshChecklistModal from '../../modals/AIRefreshChecklistModal';
+import RefreshChecklistModal from '../../modals/AiRefreshChecklistModal';
 import InsufficientScheduleModal from '../../modals/AiInsufficientModal';
 import api from '@/services/api';
 import { colors } from '@/ui/tokens/colors';
