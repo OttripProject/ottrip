@@ -1,12 +1,10 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { View, Text, Pressable, StyleSheet, Alert, TouchableOpacity, Modal, Platform } from 'react-native';
 import { Calendar as BigCalendar } from 'react-native-big-calendar';
-import { Calendar } from 'react-native-calendars';
 import dayjs from 'dayjs';
 import ko from 'dayjs/locale/ko';
 import TripSelector from '../selector/TripSelector';
 import SharePlanModal from '@/components/modals/SharePlanModal';
-import MonthCalendarPopup from '@/components/popup/MonthCalendarPopup';
 import BaseCalendar from '@/components/popup/calendar/BaseCalendar';
 import { plansApi } from '@/services/plans';
 import { Plan, CreatePlanRequest, UpdatePlanRequest } from '@/types/api';
@@ -18,6 +16,7 @@ import { tripToastMessages } from '@/utils/toast';
 import { colors } from '@/ui/tokens/colors';
 import { textStyles, typography } from '@/ui/tokens/typography';
 import { spacing } from '@/ui/tokens/spacing';
+import { radii } from '@/ui/tokens';
 
 // 아이콘 import
 import LeftArrowIcon from '../../../assets/left_arrow.svg';
@@ -30,6 +29,9 @@ import MemoIcon from '../../../assets/memo.svg';
 import XIcon from '../../../assets/x.svg';
 import FilesIcon from '../../../assets/files.svg';
 import AccommodationIcon from '../../../assets/accomodation.svg';
+import WeekBarAirplaneIcon from '../../../assets/week_bar_airplane.svg';
+import WeekBarLocationIcon from '../../../assets/week_bar_location.svg';
+import WeekBarTimeIcon from '../../../assets/week_bar_time.svg';
 
 dayjs.locale(ko);
 
@@ -59,7 +61,6 @@ function toEvent(it: Itinerary): any {
     title: it.title,
     start: new Date(`${it.itineraryDate}T${normalizedStartTime}:00`),
     end: new Date(`${it.itineraryDate}T${normalizedEndTime}:00`),
-    color: '#3478f6', // 일정 전용 색상 (파란색)
     type: 'itinerary',
     originalData: it,
     // 시간 정보 추가
@@ -91,13 +92,11 @@ function toFlightEvents(flight: any): any[] {
 
     return {
       id: `flight-${flight.id}-${segment.id ?? index + 1}`,
-      title: `✈️ ${segment.departureAirport} → ${segment.arrivalAirport}`,
+      title: `${segment.departureAirport} → ${segment.arrivalAirport}`,
       start: departureTime.toDate(),
       end: arrivalTime.toDate(),
-      color: '#ff6b35', // 항공편 전용 색상 (주황색)
       type: 'flight',
       originalData: flight,
-      // 시간 정보 추가
       normalizedStartTime,
       normalizedEndTime,
     } as any;
@@ -167,6 +166,7 @@ export default function WeeklySchedulePanel({
     const [shareOpen, setShareOpen] = useState(false);
     const [memoOpen, setMemoOpen] = useState(false);
     const [memoDraft, setMemoDraft] = useState('');
+    const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
     
     // 상위에서 전달받은 plans와 trips 사용 (중복 호출 방지)
     const plans = externalPlans;
@@ -342,7 +342,77 @@ export default function WeeklySchedulePanel({
     const events = useMemo(() => {
       const itineraryEvents = finalItineraries.map(toEvent);
       const flightEvents = flights.flatMap(toFlightEvents);
-      return [...itineraryEvents, ...flightEvents];
+      
+      // 1. 두 배열을 합칩니다.
+      const allEvents = [...itineraryEvents, ...flightEvents];
+      
+      // 2. [필수 수정] 시작 시간(start)을 기준으로 오름차순 정렬합니다.
+      allEvents.sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime());
+      
+      // 3. 겹치는 이벤트 그룹을 찾아서 overlapIndex와 overlapCount를 추가
+      // 먼저 모든 이벤트에 대해 겹침 그룹을 찾습니다
+      const overlapGroups: any[][] = [];
+      const processedEvents: any[] = [];
+      
+      allEvents.forEach((event) => {
+        // 이미 그룹에 속한 이벤트인지 확인
+        const alreadyInGroup = overlapGroups.some(group => 
+          group.some(e => e.id === event.id)
+        );
+        
+        if (alreadyInGroup) return;
+        
+        // 이 이벤트와 겹치는 모든 이벤트 찾기
+        const overlappingEvents = allEvents.filter((otherEvent) => {
+          if (otherEvent.id === event.id) return false;
+          const eventStart = new Date(event.start).getTime();
+          const eventEnd = new Date(event.end).getTime();
+          const otherStart = new Date(otherEvent.start).getTime();
+          const otherEnd = new Date(otherEvent.end).getTime();
+          
+          // 시간이 겹치는지 확인 (시작/종료 시간이 같아도 겹침으로 간주)
+          return !(eventEnd <= otherStart || eventStart >= otherEnd);
+        });
+        
+        if (overlappingEvents.length > 0) {
+          // 겹치는 그룹 생성
+          const group = [event, ...overlappingEvents];
+          // 그룹 내에서 정렬 (시작 시간, 그 다음 ID)
+          group.sort((a, b) => {
+            const startDiff = new Date(a.start).getTime() - new Date(b.start).getTime();
+            if (startDiff !== 0) return startDiff;
+            return String(a.id).localeCompare(String(b.id));
+          });
+          overlapGroups.push(group);
+        }
+      });
+      
+      // 각 이벤트에 overlapIndex와 overlapCount 추가
+      return allEvents.map((event) => {
+        // 이 이벤트가 속한 그룹 찾기
+        const group = overlapGroups.find(g => g.some(e => e.id === event.id));
+        
+        if (group) {
+          const overlapIndex = group.findIndex(e => e.id === event.id);
+          const overlapCount = group.length;
+          
+          return {
+            ...event,
+            id: String(event.id),
+            overlapIndex,
+            overlapCount,
+          };
+        }
+        
+        return {
+          ...event,
+          id: String(event.id),
+          overlapIndex: 0,
+          overlapCount: 1,
+        };
+      });
+      
+      return processedEvents;
     }, [itineraries, flights]);
 
     const goPrev = () => setCurrentWeekStart(prev => prev.subtract(1, 'week'));
@@ -556,16 +626,94 @@ export default function WeeklySchedulePanel({
           const isItinerary = event.type === 'itinerary';
           const isFlight = event.type === 'flight';
           
+          // 선택된 이벤트인지 확인
+          const isSelected = selectedEventId === event.id;
+          const borderWidth = isSelected ? 2 : 1;
+          
+          // tpStyle 평탄화 및 left 값 수동 계산
+          const flattenStyle = (style: any): any => {
+            if (!style) return {};
+            if (Array.isArray(style)) {
+              return Object.assign({}, ...style.filter(s => s && typeof s === 'object').map(flattenStyle));
+            }
+            return style || {};
+          };
+          
+          const flatTpStyle = flattenStyle(tpStyle);
+          let adjustedStyle = { ...flatTpStyle };
+          
+          // 전체 너비의 90%만 사용 (좌우 각 5% 여백)
+          const totalWidthPercent = 90;
+          const leftMarginPercent = 5;
+          
+          // 겹치는 이벤트인 경우
+          if (event.overlapCount > 1 && typeof event.overlapIndex === 'number') {
+            const overlapIndex = event.overlapIndex;
+            const overlapCount = event.overlapCount;
+            
+            // 90%를 n개로 나눈 너비
+            const widthPercent = totalWidthPercent / overlapCount;
+            adjustedStyle.width = `${widthPercent}%`;
+            
+            // left 위치 계산: 5% 여백 + (너비 * 인덱스)
+            const leftPercent = leftMarginPercent + (widthPercent * overlapIndex);
+            adjustedStyle.left = `${leftPercent}%`;
+            
+            // 기존 tpStyle의 left/width를 무시하고 우리가 계산한 값으로 덮어쓰기
+            delete adjustedStyle.minWidth; // minWidth 제거하여 우리 계산값이 적용되도록
+          } else {
+            // 단일 이벤트인 경우: 90% 너비, 5% 왼쪽 여백
+            // tpStyle에 이미 left가 있으면 유지하되, 너비만 90%로 제한
+            if (!adjustedStyle.left || adjustedStyle.left === '0%' || adjustedStyle.left === 0) {
+              adjustedStyle.left = `${leftMarginPercent}%`;
+            }
+            
+            // 너비가 100%인 경우 90%로 제한
+            if (adjustedStyle.width === '100%' || adjustedStyle.width === '100') {
+              adjustedStyle.width = `${totalWidthPercent}%`;
+            } else if (typeof adjustedStyle.width === 'string' && adjustedStyle.width.includes('%')) {
+              // 이미 퍼센트인 경우, 90%를 넘지 않도록 제한
+              const currentWidth = parseFloat(adjustedStyle.width);
+              if (currentWidth > totalWidthPercent) {
+                adjustedStyle.width = `${totalWidthPercent}%`;
+              }
+            } else if (!adjustedStyle.width) {
+              adjustedStyle.width = `${totalWidthPercent}%`;
+            }
+          }
+          
+          // flight 이벤트 스타일
+          const flightStyle = isFlight ? {
+            backgroundColor: 'rgba(139, 92, 246, 0.1)',
+            borderWidth: borderWidth,
+            borderColor: '#8B5CF6',
+            borderRadius: radii.md,
+          } : null;
+          
+          // itinerary 이벤트 스타일
+          const itineraryStyle = isItinerary ? {
+            backgroundColor: 'rgba(0, 102, 255, 0.1)',
+            borderWidth: borderWidth,
+            borderColor: '#0066FF',
+            borderRadius: radii.md,
+          } : null;
+          
+          // 최종 스타일 결정: flight > itinerary > 기본
+          const finalStyle = flightStyle || itineraryStyle || { backgroundColor: event.color || '#3478f6' };
+
           return (
             <View
               key={eventKey}
               {...rest}
-              style={[tpStyle, { backgroundColor: event.color || '#3478f6' }]}
+              style={[adjustedStyle, finalStyle]}
             >
               <TouchableOpacity
                 style={{ flex: 1, justifyContent: 'center', padding: 4 }}
                 onPress={(e) => {
                   try { calendarOnPress && calendarOnPress(e); } catch {}
+                  
+                  // 이벤트 선택 상태 업데이트
+                  setSelectedEventId(event.id);
                   
                   if (isItinerary) {
                     // 일정 상세 보기
@@ -577,22 +725,31 @@ export default function WeeklySchedulePanel({
                 }}
               >
                 <View style={{ flex: 1, justifyContent: 'center' }}>
-                  <Text numberOfLines={1} ellipsizeMode="tail" style={{ color: '#fff', fontSize: 10, fontWeight: 'bold', lineHeight: 12 }}>
-                    {event.title}
-                  </Text>
-                  {isItinerary && event.normalizedStartTime && event.normalizedEndTime && (
-                    <Text numberOfLines={1} ellipsizeMode="tail" style={{ color: '#fff', fontSize: 8, lineHeight: 10, marginTop: 3 }}>
-                      🕒 {event.normalizedStartTime}-{event.normalizedEndTime}
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                    {isFlight && <WeekBarAirplaneIcon width={14} height={14} />}
+                    <Text numberOfLines={1} ellipsizeMode="tail" style={{ ...textStyles.h8, color: isFlight ? '#8B5CF6' : '#0066FF', lineHeight: 12, flex: 1 }}>
+                      {event.title}
                     </Text>
+                  </View>
+                  {isItinerary && event.normalizedStartTime && event.normalizedEndTime && (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 8 }}>
+                      <WeekBarTimeIcon width={14} height={14} />
+                      <Text numberOfLines={1} ellipsizeMode="tail" style={{ ...textStyles.h9, color: '#0066FF', lineHeight: 10 }}>
+                        {event.normalizedStartTime} - {event.normalizedEndTime}
+                      </Text>
+                    </View>
                   )}
                   {isItinerary && event.locationText && (
-                    <Text numberOfLines={1} ellipsizeMode="tail" style={{ color: '#fff', fontSize: 8, lineHeight: 10, marginTop: 3 }}>
-                      📍 {event.locationText}
-                    </Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 }}>
+                      <WeekBarLocationIcon width={14} height={14} />
+                      <Text numberOfLines={1} ellipsizeMode="tail" style={{ ...textStyles.h9, color: '#0066FF', lineHeight: 10 }}>
+                        {event.locationText}
+                      </Text>
+                    </View>
                   )}
                   {isFlight && event.normalizedStartTime && event.normalizedEndTime && (
-                    <Text numberOfLines={1} ellipsizeMode="tail" style={{ color: '#fff', fontSize: 8, lineHeight: 10, marginTop: 3 }}>
-                      🕒 {event.normalizedStartTime}-{event.normalizedEndTime}
+                    <Text numberOfLines={1} ellipsizeMode="tail" style={{ ...textStyles.h9, color: '#8B5CF6', lineHeight: 10, marginTop: 8 }}>
+                      {event.normalizedStartTime}-{event.normalizedEndTime}
                     </Text>
                   )}
                 </View>
@@ -687,21 +844,6 @@ export default function WeeklySchedulePanel({
           </Card>
         </View>
       </Modal>
-
-      {/* {showMonthPicker && (
-        <Modal
-          visible={showMonthPicker}
-          transparent={true}
-          animationType="none"
-          onRequestClose={() => setShowMonthPicker(false)}
-        >
-          <Pressable 
-            style={styles.calendarModalOverlay}
-            onPress={() => setShowMonthPicker(false)}
-          />
-        </Modal>
-      )} */}
-
 
     </PanelLayout>
   );
