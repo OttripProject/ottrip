@@ -17,7 +17,7 @@ import RightArrowIcon from '../../../assets/cal_right_arrow.svg';
 import UpdateIcon from '../../../assets/update.svg';
 import DeleteIcon from '../../../assets/delete.svg';
 import XIcon from '../../../assets/x.svg';
-import CheckIcon from '../../../assets/check_blue.svg';
+import TripCompletionModal from '../modals/TripCompletionModal';
 
 LocaleConfig.locales['ko'] = {
   monthNames: [
@@ -209,6 +209,7 @@ export default function TripSelector({ selectedTrip, onTripSelect, trips, onTrip
   const [showCompletionModal, setShowCompletionModal] = useState(false);
   const [showUpdateCompletionModal, setShowUpdateCompletionModal] = useState(false);
   const [showDeleteCompletionModal, setShowDeleteCompletionModal] = useState(false);
+  const [createdTripName, setCreatedTripName] = useState<string>('');
   const tripItemRefs = React.useRef<{ [key: string]: View | null }>({});
 
   const handleTripSelect = (trip: Trip) => {
@@ -318,6 +319,12 @@ export default function TripSelector({ selectedTrip, onTripSelect, trips, onTrip
       if (createdTrip === null || createdTrip === false) {
         return;
       }
+
+      // 생성된 여행 이름 저장
+      const tripName = createdTrip && typeof createdTrip === 'object' && 'name' in createdTrip 
+        ? createdTrip.name 
+        : newTrip.name;
+      setCreatedTripName(tripName);
 
       setNewTrip({ name: '', startDate: '', endDate: '' });
       setSelectionMode('start');
@@ -822,58 +829,28 @@ export default function TripSelector({ selectedTrip, onTripSelect, trips, onTrip
       </Modal>
 
       {/* 여행 생성 완료 모달 */}
-      <Modal
+      <TripCompletionModal
         visible={showCompletionModal}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowCompletionModal(false)}
-      >
-        <Pressable style={styles.completionOverlay} onPress={() => setShowCompletionModal(false)}>
-          <View style={styles.completionCard}>
-            <View style={styles.completionIconWrapper}>
-              <CheckIcon width={20} height={20} />
-            </View>
-            <Text style={styles.completionTitle}>여행 추가 완료</Text>
-            <Text style={styles.completionDescription}>새로운 여행이 성공적으로 추가되었습니다.</Text>
-          </View>
-        </Pressable>
-      </Modal>
+        onClose={() => setShowCompletionModal(false)}
+        title="여행 추가 완료"
+        description={`"${createdTripName}"이/가 생성되었어요!\n이제 여행 정보를 채워 넣어 볼까요?`}
+      />
 
       {/* 여행 수정 완료 모달 */}
-      <Modal
+      <TripCompletionModal
         visible={showUpdateCompletionModal}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowUpdateCompletionModal(false)}
-      >
-        <Pressable style={styles.completionOverlay} onPress={() => setShowUpdateCompletionModal(false)}>
-          <View style={styles.completionCard}>
-            <View style={styles.completionIconWrapper}>
-              <CheckIcon width={20} height={20} />
-            </View>
-            <Text style={styles.completionTitle}>여행 수정 완료</Text>
-            <Text style={styles.completionDescription}>여행 정보가 성공적으로 수정되었습니다.</Text>
-          </View>
-        </Pressable>
-      </Modal>
+        onClose={() => setShowUpdateCompletionModal(false)}
+        title="변경 사항이 저장 되었어요."
+        description="여행 정보를 최신 상태로 유지해보세요!"
+      />
 
       {/* 여행 삭제 완료 모달 */}
-      <Modal
+      <TripCompletionModal
         visible={showDeleteCompletionModal}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowDeleteCompletionModal(false)}
-      >
-        <Pressable style={styles.completionOverlay} onPress={() => setShowDeleteCompletionModal(false)}>
-          <View style={styles.completionCard}>
-            <View style={styles.completionIconWrapper}>
-              <CheckIcon width={20} height={20} />
-            </View>
-            <Text style={styles.completionTitle}>여행 삭제 완료</Text>
-            <Text style={styles.completionDescription}>여행이 성공적으로 삭제되었습니다.</Text>
-          </View>
-        </Pressable>
-      </Modal>
+        onClose={() => setShowDeleteCompletionModal(false)}
+        title="여행 삭제 완료"
+        description="여행이 성공적으로 삭제되었습니다."
+      />
     </View>
   );
 }
@@ -1282,45 +1259,5 @@ const styles = StyleSheet.create({
   deleteModalDeleteButtonText: {
     ...textStyles.h7,
     color: colors.white,
-  },
-  completionOverlay: {
-    flex: 1,
-    backgroundColor: colors.overlayBackground,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 24,
-  },
-  completionCard: {
-    width: 320,
-    maxWidth: '90%',
-    borderRadius: 24,
-    backgroundColor: colors.white,
-    alignItems: 'center',
-    paddingHorizontal: 24,
-    paddingVertical: 32,
-    shadowColor: colors.black,
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.12,
-    shadowRadius: 24,
-    elevation: 12,
-  },
-  completionIconWrapper: {
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  completionTitle: {
-    ...textStyles.h5,
-    color: colors.black,
-    textAlign: 'center',
-  },
-  completionDescription: {
-    ...textStyles.body4,
-    color: colors.gray700,
-    textAlign: 'center',
-    marginTop: 8,
-    marginBottom: 16,
   },
 }); 
