@@ -63,6 +63,22 @@ export default function ItineraryItem({
     }
   }, [selectedDate, itinerary]);
 
+  // formData 변경 시 미리보기 업데이트 (새 일정 추가 모드일 때만)
+  React.useEffect(() => {
+    if (!itinerary && typeof window !== 'undefined') {
+      // 미리보기 업데이트 이벤트 발생
+      window.dispatchEvent(new CustomEvent('itinerary-preview-update', {
+        detail: {
+          title: formData.title || '제목없음',
+          startTime: formData.startTime,
+          endTime: formData.endTime,
+          location: formData.location,
+          itineraryDate: formData.itineraryDate,
+        }
+      }));
+    }
+  }, [formData, itinerary]);
+
   // 국가 드롭다운 상태 및 옵션 (ISO 3166 → 한국어 라벨)
   const [countryOpen, setCountryOpen] = useState(false);
   const [timeOpen, setTimeOpen] = useState(false);
@@ -265,6 +281,12 @@ export default function ItineraryItem({
           setDraftExpenses([]); // 초안 비우기
         }
       }
+      
+      // 미리보기 제거 이벤트 발생
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('itinerary-preview-clear'));
+      }
+      
       onSave(savedItinerary);
     } catch (error) {
       console.error('Failed to save itinerary:', error);
@@ -276,6 +298,10 @@ export default function ItineraryItem({
   const handleDelete = async () => {
     // 일정 추가 모드: 입력창 닫기
     if (!itinerary) {
+      // 미리보기 제거 이벤트 발생
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('itinerary-preview-clear'));
+      }
       onCancel();
       return;
     }
@@ -436,7 +462,13 @@ export default function ItineraryItem({
         <View style={styles.titleRow}>
           <Text style={styles.title}>{itinerary ? '일정 편집' : '일정 추가'}</Text>
           <Pressable
-            onPress={onCancel}
+            onPress={() => {
+              // 미리보기 제거 이벤트 발생
+              if (typeof window !== 'undefined') {
+                window.dispatchEvent(new CustomEvent('itinerary-preview-clear'));
+              }
+              onCancel();
+            }}
             style={styles.closeButton}
           >
             <XIcon width={20} height={20} />

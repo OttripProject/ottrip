@@ -168,6 +168,14 @@ export default function WeeklySchedulePanel({
     const [memoOpen, setMemoOpen] = useState(false);
     const [memoDraft, setMemoDraft] = useState('');
     const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
+    const [previewEvent, setPreviewEvent] = useState<{
+      start: Date;
+      end: Date;
+      title: string;
+      startTime: string;
+      endTime: string;
+      location?: string;
+    } | null>(null);
     
     // 상위에서 전달받은 plans와 trips 사용 (중복 호출 방지)
     const plans = externalPlans;
@@ -186,6 +194,45 @@ export default function WeeklySchedulePanel({
         return () => window.removeEventListener('plans-refresh', handler);
       }
     }, [onPlansRefresh]);
+
+    // 일정 미리보기 업데이트를 위한 이벤트 리스너
+    useEffect(() => {
+      const handler = (e: CustomEvent) => {
+        const { title, startTime, endTime, location, itineraryDate } = e.detail;
+        if (previewEvent) {
+          setPreviewEvent(prev => prev ? {
+            ...prev,
+            title: title !== undefined ? title : prev.title,
+            startTime: startTime !== undefined ? startTime : prev.startTime,
+            endTime: endTime !== undefined ? endTime : prev.endTime,
+            location: location !== undefined ? location : prev.location,
+            start: itineraryDate && startTime 
+              ? dayjs(`${itineraryDate}T${startTime}:00`).toDate()
+              : prev.start,
+            end: itineraryDate && endTime
+              ? dayjs(`${itineraryDate}T${endTime}:00`).toDate()
+              : prev.end,
+          } : null);
+        }
+      };
+      
+      if (typeof window !== 'undefined') {
+        window.addEventListener('itinerary-preview-update', handler as EventListener);
+        return () => window.removeEventListener('itinerary-preview-update', handler as EventListener);
+      }
+    }, [previewEvent]);
+
+    // 일정 저장/취소 시 미리보기 제거를 위한 이벤트 리스너
+    useEffect(() => {
+      const handler = () => {
+        setPreviewEvent(null);
+      };
+      
+      if (typeof window !== 'undefined') {
+        window.addEventListener('itinerary-preview-clear', handler);
+        return () => window.removeEventListener('itinerary-preview-clear', handler);
+      }
+    }, []);
 
     // 외부 selectedTrip가 주어지면 TripSelector 선택과 동기화
     useEffect(() => {
@@ -344,8 +391,20 @@ export default function WeeklySchedulePanel({
       const itineraryEvents = finalItineraries.map(toEvent);
       const flightEvents = flights.flatMap(toFlightEvents);
       
+      // 미리보기 이벤트 추가
+      const previewEvents = previewEvent ? [{
+        id: 'preview-event',
+        title: previewEvent.title,
+        start: previewEvent.start,
+        end: previewEvent.end,
+        type: 'preview',
+        normalizedStartTime: previewEvent.startTime,
+        normalizedEndTime: previewEvent.endTime,
+        locationText: previewEvent.location || '',
+      }] : [];
+      
       // 1. 두 배열을 합칩니다.
-      const allEvents = [...itineraryEvents, ...flightEvents];
+      const allEvents = [...itineraryEvents, ...flightEvents, ...previewEvents];
       
       // 2. [필수 수정] 시작 시간(start)을 기준으로 오름차순 정렬합니다.
       allEvents.sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime());
@@ -414,7 +473,7 @@ export default function WeeklySchedulePanel({
       });
       
       return processedEvents;
-    }, [itineraries, flights]);
+    }, [itineraries, flights, previewEvent]);
 
     const goPrev = () => setCurrentWeekStart(prev => prev.subtract(1, 'week'));
     const goNext = () => setCurrentWeekStart(prev => prev.add(1, 'week'));
@@ -630,6 +689,21 @@ export default function WeeklySchedulePanel({
           );
         }}
         onPressCell={(date: Date) => {
+          setSelectedEventId(null);
+          
+          // 미리보기 이벤트 생성 (기본 1시간)
+          const startTime = dayjs(date);
+          const endTime = startTime.add(1, 'hour');
+          
+          setPreviewEvent({
+            start: startTime.toDate(),
+            end: endTime.toDate(),
+            title: '제목없음',
+            startTime: startTime.format('HH:mm'),
+            endTime: endTime.format('HH:mm'),
+            location: '',
+          });
+          
           onRequestNewItinerary?.(date);
         }}
         renderEvent={(event, touchableOpacityProps) => {
@@ -639,6 +713,7 @@ export default function WeeklySchedulePanel({
           // 이벤트 타입 확인
           const isItinerary = event.type === 'itinerary';
           const isFlight = event.type === 'flight';
+          const isPreview = event.type === 'preview';
           
           // 선택된 이벤트인지 확인
           const isSelected = selectedEventId === event.id;
@@ -656,44 +731,25 @@ export default function WeeklySchedulePanel({
           const flatTpStyle = flattenStyle(tpStyle);
           let adjustedStyle = { ...flatTpStyle };
           
-          // 전체 너비의 90%만 사용 (좌우 각 5% 여백)
           const totalWidthPercent = 90;
-          const leftMarginPercent = 5;
+          const leftMarginPercent = 3.5;
           
-          // 겹치는 이벤트인 경우
           if (event.overlapCount > 1 && typeof event.overlapIndex === 'number') {
             const overlapIndex = event.overlapIndex;
             const overlapCount = event.overlapCount;
             
-            // 90%를 n개로 나눈 너비
             const widthPercent = totalWidthPercent / overlapCount;
             adjustedStyle.width = `${widthPercent}%`;
             
-            // left 위치 계산: 5% 여백 + (너비 * 인덱스)
             const leftPercent = leftMarginPercent + (widthPercent * overlapIndex);
             adjustedStyle.left = `${leftPercent}%`;
             
-            // 기존 tpStyle의 left/width를 무시하고 우리가 계산한 값으로 덮어쓰기
-            delete adjustedStyle.minWidth; // minWidth 제거하여 우리 계산값이 적용되도록
+            delete adjustedStyle.minWidth;
           } else {
-            // 단일 이벤트인 경우: 90% 너비, 5% 왼쪽 여백
-            // tpStyle에 이미 left가 있으면 유지하되, 너비만 90%로 제한
-            if (!adjustedStyle.left || adjustedStyle.left === '0%' || adjustedStyle.left === 0) {
-              adjustedStyle.left = `${leftMarginPercent}%`;
-            }
+            adjustedStyle.left = `${leftMarginPercent}%`;
+            adjustedStyle.width = `${totalWidthPercent}%`;
             
-            // 너비가 100%인 경우 90%로 제한
-            if (adjustedStyle.width === '100%' || adjustedStyle.width === '100') {
-              adjustedStyle.width = `${totalWidthPercent}%`;
-            } else if (typeof adjustedStyle.width === 'string' && adjustedStyle.width.includes('%')) {
-              // 이미 퍼센트인 경우, 90%를 넘지 않도록 제한
-              const currentWidth = parseFloat(adjustedStyle.width);
-              if (currentWidth > totalWidthPercent) {
-                adjustedStyle.width = `${totalWidthPercent}%`;
-              }
-            } else if (!adjustedStyle.width) {
-              adjustedStyle.width = `${totalWidthPercent}%`;
-            }
+            delete adjustedStyle.minWidth;
           }
           
           // flight 이벤트 스타일
@@ -712,8 +768,17 @@ export default function WeeklySchedulePanel({
             borderRadius: radii.md,
           } : null;
           
-          // 최종 스타일 결정: flight > itinerary > 기본
-          const finalStyle = flightStyle || itineraryStyle || { backgroundColor: event.color || '#3478f6' };
+          const previewStyle = isPreview ? {
+            backgroundColor: 'rgba(0, 102, 255, 0.1)',
+            borderWidth: 1,
+            borderColor: '#0066FF',
+            borderRadius: radii.md,
+            borderStyle: 'dashed', 
+            opacity: 0.7, 
+          } : null;
+
+          // 최종 스타일 결정: preview > flight > itinerary > 기본
+          const finalStyle = previewStyle || flightStyle || itineraryStyle || { backgroundColor: event.color || '#3478f6' };
 
           return (
             <View
@@ -723,7 +788,10 @@ export default function WeeklySchedulePanel({
             >
               <TouchableOpacity
                 style={{ flex: 1, justifyContent: 'center', padding: 4 }}
+                disabled={isPreview} // 미리보기 이벤트는 클릭 불가
                 onPress={(e) => {
+                  if (isPreview) return; // 미리보기 이벤트는 클릭 무시
+                  
                   try { calendarOnPress && calendarOnPress(e); } catch {}
                   
                   // 이벤트 선택 상태 업데이트
@@ -745,7 +813,7 @@ export default function WeeklySchedulePanel({
                       {event.title}
                     </Text>
                   </View>
-                  {isItinerary && event.normalizedStartTime && event.normalizedEndTime && (
+                  {(isItinerary || isPreview) && event.normalizedStartTime && event.normalizedEndTime && (
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 8 }}>
                       <WeekBarTimeIcon width={14} height={14} />
                       <Text numberOfLines={1} ellipsizeMode="tail" style={{ ...textStyles.h9, color: '#0066FF', lineHeight: 10 }}>
@@ -753,7 +821,7 @@ export default function WeeklySchedulePanel({
                       </Text>
                     </View>
                   )}
-                  {isItinerary && event.locationText && (
+                  {(isItinerary || isPreview) && event.locationText && (
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 }}>
                       <WeekBarLocationIcon width={14} height={14} />
                       <Text numberOfLines={1} ellipsizeMode="tail" style={{ ...textStyles.h9, color: '#0066FF', lineHeight: 10 }}>
