@@ -352,6 +352,8 @@ export default function DashboardScreen() {
               onShowItineraryDetail={handleShowItineraryDetail}
               onShowFlightDetail={handleShowFlightDetail}
               onShowAccommodationDetail={handleShowAccommodationDetail}
+              activeTab={activeTab}
+              selectedItinerary={selectedItinerary}
             />
           </View>
 
