@@ -130,6 +130,9 @@ interface Props {
   onPlanAdd?: (planData: CreatePlanRequest) => Promise<Plan>;
   onPlanUpdate?: (planId: number, planData: UpdatePlanRequest) => Promise<Plan>;
   onPlanDelete?: (planId: number) => Promise<boolean>;
+  // 디테일패널 상태 추적용 (미리보기 제거를 위해)
+  activeTab?: 'itinerary' | 'flight' | 'accommodation' | undefined;
+  selectedItinerary?: any;
 }
 
 export default function WeeklySchedulePanel({ 
@@ -157,6 +160,8 @@ export default function WeeklySchedulePanel({
   onPlanAdd,
   onPlanUpdate,
   onPlanDelete,
+  activeTab,
+  selectedItinerary,
 }: Props) {
     const [currentWeekStart, setCurrentWeekStart] = useState(
         dayjs().startOf('week').add(1, 'day') // 월요일 시작
@@ -233,6 +238,20 @@ export default function WeeklySchedulePanel({
         return () => window.removeEventListener('itinerary-preview-clear', handler);
       }
     }, []);
+
+    // 디테일패널이 일정 입력창이 아닌 다른 기능으로 변경되거나 닫히면 미리보기 제거
+    useEffect(() => {
+      if (previewEvent) {
+        const isItineraryTabActive = activeTab === 'itinerary';
+        
+        if (!isItineraryTabActive) {
+          setPreviewEvent(null);
+        }
+        else if (isItineraryTabActive && selectedItinerary && selectedItinerary.id) {
+          setPreviewEvent(null);
+        }
+      }
+    }, [activeTab, selectedItinerary, previewEvent]);
 
     // 외부 selectedTrip가 주어지면 TripSelector 선택과 동기화
     useEffect(() => {
@@ -733,6 +752,10 @@ export default function WeeklySchedulePanel({
           
           const totalWidthPercent = 90;
           const leftMarginPercent = 3.5;
+          
+          if (adjustedStyle.marginTop !== undefined) {
+            delete adjustedStyle.marginTop;
+          }
           
           if (event.overlapCount > 1 && typeof event.overlapIndex === 'number') {
             const overlapIndex = event.overlapIndex;
