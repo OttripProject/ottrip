@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { View, Text, Pressable, StyleSheet, Alert, ScrollView, Modal } from 'react-native';
 import { TimePicker, CountryPicker, CategoryPicker } from '@/ui/components/pickers';
 import Input from '@/ui/components/input/Input';
@@ -98,7 +98,8 @@ export default function ItineraryItem({
   // 새 일정 생성 중 비용 초안 (로컬 상태)
   const [draftExpenses, setDraftExpenses] = useState<any[]>([]);
 
-  const [isLoading, setIsLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false); // 버튼 비활성화용 (리렌더링 필요)
+  const isSubmittingRef = useRef(false); // 중복 요청 방지 플래그
 
   // itinerary prop이 변경될 때 formData 업데이트
   useEffect(() => {
@@ -179,6 +180,11 @@ export default function ItineraryItem({
   }, [planData?.expenses, itinerary?.id]);
 
   const handleSave = async () => {
+    // 중복 요청 방지: 이미 실행 중이면 무시
+    if (isSubmittingRef.current) {
+      return;
+    }
+
     // 필수 값 검증
     if (!formData.title.trim() || 
         !formData.country.trim() || 
@@ -200,7 +206,9 @@ export default function ItineraryItem({
       return;
     }
 
-    setIsLoading(true);
+    // 실행 중 플래그 설정
+    isSubmittingRef.current = true;
+    setIsSubmitting(true);
     try {
       let savedItinerary;
       if (itinerary) {
@@ -291,7 +299,8 @@ export default function ItineraryItem({
     } catch (error) {
       console.error('Failed to save itinerary:', error);
     } finally {
-      setIsLoading(false);
+      isSubmittingRef.current = false;
+      setIsSubmitting(false);
     }
   };
 
@@ -747,10 +756,10 @@ export default function ItineraryItem({
         <Pressable
           style={styles.saveButton}
           onPress={handleSave}
-          disabled={isLoading}
+          disabled={isSubmitting}
         >
           <Text style={styles.saveButtonText}>
-            {isLoading ? (itinerary ? '수정 중...' : '저장 중...') : (itinerary ? '수정' : '저장')}
+            {itinerary ? '수정' : '저장'}
           </Text>
         </Pressable>
       </View>

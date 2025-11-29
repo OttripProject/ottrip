@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { View, Text, Pressable, StyleSheet, Alert, Platform, ScrollView } from 'react-native';
 import { TimePicker, AirportPicker } from '@/ui/components/pickers';
 import dayjs from 'dayjs';
@@ -143,7 +143,8 @@ export default function FlightItem({
     return `${hour.toString().padStart(2, '0')}:${minute}`;
   };
 
-  const [isLoading, setIsLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false); // 버튼 비활성화용 (리렌더링 필요)
+  const isSubmittingRef = useRef(false); // 중복 요청 방지 플래그
 
   const firstSegment = flightSegments[0];
   const isFirstSegmentValid = Boolean(
@@ -157,6 +158,11 @@ export default function FlightItem({
   );
 
   const handleSave = async () => {
+    // 중복 요청 방지: 이미 실행 중이면 무시
+    if (isSubmittingRef.current) {
+      return;
+    }
+
     if (!isFirstSegmentValid) {
       onShowWarning?.();
       return;
@@ -197,7 +203,9 @@ export default function FlightItem({
       }
     }
 
-    setIsLoading(true);
+    // 실행 중 플래그 설정
+    isSubmittingRef.current = true;
+    setIsSubmitting(true);
     try {
       let savedFlight;
       const toIso = (date: string, time: string) => {
@@ -269,7 +277,8 @@ export default function FlightItem({
     } catch (error) {
       console.error('Failed to save flight:', error);
     } finally {
-      setIsLoading(false);
+      isSubmittingRef.current = false;
+      setIsSubmitting(false);
     }
   };
 
@@ -665,10 +674,10 @@ export default function FlightItem({
           <Pressable
             style={styles.saveButton}
             onPress={handleSave}
-            disabled={isLoading}
+            disabled={isSubmitting}
           >
             <Text style={styles.saveButtonText}>
-              {isLoading ? (flight ? '수정 중...' : '저장 중...') : (flight ? '수정' : '저장')}
+              {flight ? '수정' : '저장'}
             </Text>
           </Pressable>
         </View>

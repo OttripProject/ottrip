@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { View, Text, Pressable, StyleSheet, Alert, Modal, ScrollView } from 'react-native';
 import { CategoryPicker } from '@/ui/components/pickers';
 import dayjs from 'dayjs';
@@ -35,6 +35,8 @@ export default function AddExpenseModal({
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showWarning, setShowWarning] = useState(false);
   const [warningMessage, setWarningMessage] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false); // 버튼 비활성화용 (리렌더링 필요)
+  const isSubmittingRef = useRef(false); // 중복 요청 방지 플래그
 
   const [expenseForm, setExpenseForm] = useState({
     category: ExpenseCategory.ETC,
@@ -45,6 +47,11 @@ export default function AddExpenseModal({
   });
 
   const handleExpenseSubmit = async () => {
+    // 중복 요청 방지: 이미 실행 중이면 무시
+    if (isSubmittingRef.current) {
+      return;
+    }
+
     if (!planId) {
       setWarningMessage('여행을 먼저 선택해주세요.');
       setShowWarning(true);
@@ -56,6 +63,10 @@ export default function AddExpenseModal({
       setShowWarning(true);
       return;
     }
+
+    // 실행 중 플래그 설정
+    isSubmittingRef.current = true;
+    setIsSubmitting(true);
 
     try {
       const newExpense = await expensesApi.createExpense({
@@ -79,6 +90,9 @@ export default function AddExpenseModal({
     } catch (error) {
       console.error('Failed to create expense:', error);
       Alert.alert('오류', '지출 추가에 실패했습니다.');
+    } finally {
+      isSubmittingRef.current = false;
+      setIsSubmitting(false);
     }
   };
 
@@ -210,6 +224,7 @@ export default function AddExpenseModal({
               <Pressable
                 style={[styles.modalButton, styles.submitButton]}
                 onPress={handleExpenseSubmit}
+                disabled={isSubmitting}
               >
                 <Text style={styles.submitButtonText}>저장</Text>
               </Pressable>
