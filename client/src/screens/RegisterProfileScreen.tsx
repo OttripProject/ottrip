@@ -315,6 +315,6 @@ const styles = StyleSheet.create({
     color: colors.white,
   },
   submitButtonTextDisabled: {
-    color: colors.black,
+    color: colors.gray700,
   },
 });

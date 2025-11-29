@@ -236,7 +236,7 @@ const styles = StyleSheet.create({
     color: colors.white,
   },
   nextButtonTextDisabled: {
-    color: colors.black,
+    color: colors.gray700,
   },
   termsChevron: {
     width: 16,
