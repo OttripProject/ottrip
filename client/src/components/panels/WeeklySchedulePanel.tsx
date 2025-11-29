@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef, useEffect } from 'react';
+import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { View, Text, Pressable, StyleSheet, Alert, TouchableOpacity, Modal, Platform } from 'react-native';
 import { Calendar as BigCalendar } from 'react-native-big-calendar';
 import dayjs from 'dayjs';
@@ -181,6 +181,313 @@ export default function WeeklySchedulePanel({
       endTime: string;
       location?: string;
     } | null>(null);
+    
+    // 드래그까진 잘됨, 드롭은 되는데 시간 이상
+    // 드래그 앤 드롭 상태
+    const [draggingEvent, setDraggingEvent] = useState<{
+      id: string;
+      type: 'itinerary' | 'flight';
+      startX: number;
+      startY: number;
+      elementX: number; // 이벤트 요소의 화면상 X 위치
+      elementY: number; // 이벤트 요소의 화면상 Y 위치
+      elementWidth: number; // 이벤트 요소의 너비
+      elementHeight: number; // 이벤트 요소의 높이
+    } | null>(null);
+    const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+    
+    // 드롭 위치 미리보기 상태
+    const [dropPreviewPosition, setDropPreviewPosition] = useState<{
+      x: number;      // 화면상 X 위치
+      y: number;      // 화면상 Y 위치
+      date: string;   // 'YYYY-MM-DD'
+      time: Date;     // 드롭될 시간
+    } | null>(null);
+    
+    // 최신 드롭 위치를 ref로 저장 (클로저 문제 해결)
+    const dropPreviewPositionRef = useRef<{
+      x: number;
+      y: number;
+      date: string;
+      time: Date;
+    } | null>(null);
+    
+    // 드롭된 이벤트의 새로운 위치 (로컬 상태로만 관리)
+    const [droppedEventPosition, setDroppedEventPosition] = useState<{
+      eventId: string;
+      newStart: Date;
+      newEnd: Date;
+    } | null>(null);
+    
+    // 캘린더 컨테이너 ref (드롭 위치 계산용)
+    const calendarWrapperRef = useRef<View>(null);
+    const [calendarLayout, setCalendarLayout] = useState({ x: 0, y: 0, width: 0, height: 0 });
+    
+    // 드롭 위치 계산 함수
+    const calculateDropPosition = useCallback((clientX: number, clientY: number) => {
+      // 웹에서만 getBoundingClientRect 사용 가능
+      if (Platform.OS !== 'web') return null;
+      
+      // onLayout으로 저장된 위치 정보가 없으면 null 반환
+      if (calendarLayout.width === 0 || calendarLayout.height === 0) {
+        return null;
+      }
+      
+      // 웹에서 DOM 요소 직접 찾기
+      let calendarElement: HTMLElement | null = null;
+      
+      // 방법 1: data-testid로 찾기
+      calendarElement = document.querySelector('[data-testid="calendar-wrapper"]') as HTMLElement;
+      
+      // 방법 2: ref로 찾기
+      if (!calendarElement && calendarWrapperRef.current) {
+        const refElement = calendarWrapperRef.current as any;
+        if (refElement._nativeNode) {
+          calendarElement = refElement._nativeNode;
+        } else if (refElement._internalFiberInstanceHandleDEV?.stateNode) {
+          calendarElement = refElement._internalFiberInstanceHandleDEV.stateNode;
+        }
+      }
+      
+      // 방법 3: BigCalendar의 클래스로 찾기 (가장 안정적)
+      if (!calendarElement) {
+        const bigCalendar = document.querySelector('.rbc-calendar') as HTMLElement;
+        if (bigCalendar) {
+          calendarElement = bigCalendar;
+        }
+      }
+      
+      // 방법 4: onLayout으로 저장된 위치 정보 사용
+      if (!calendarElement) {
+        // 모든 div 요소 중에서 크기가 일치하는 것 찾기
+        const allDivs = document.querySelectorAll('div');
+        calendarElement = Array.from(allDivs).find((el: any) => {
+          const rect = el.getBoundingClientRect();
+          return Math.abs(rect.width - calendarLayout.width) < 20 && 
+                 Math.abs(rect.height - calendarLayout.height) < 20 &&
+                 rect.width > 500; // 캘린더는 충분히 큰 요소
+        }) as HTMLElement || null;
+      }
+      
+      // 여전히 찾지 못하면 onLayout 정보로 직접 계산
+      let calendarRect: DOMRect;
+      if (!calendarElement) {
+        // onLayout으로 저장된 정보를 사용하여 가상의 rect 생성
+        // 하지만 실제 화면 위치를 알아야 하므로, 다른 방법 시도
+        const testElement = document.querySelector('[data-testid="calendar-wrapper"]') as HTMLElement;
+        if (testElement) {
+          calendarRect = testElement.getBoundingClientRect();
+        } else {
+          // 최후의 수단: 모든 큰 div 중에서 찾기
+          const bigDivs = Array.from(document.querySelectorAll('div')).filter((el: any) => {
+            const rect = el.getBoundingClientRect();
+            return rect.width > 500 && rect.height > 300;
+          });
+          if (bigDivs.length > 0) {
+            calendarRect = (bigDivs[0] as HTMLElement).getBoundingClientRect();
+          } else {
+            return null;
+          }
+        }
+      } else {
+        calendarRect = calendarElement.getBoundingClientRect();
+      }
+      
+      const timeColumnWidth = 60; // 시간 열 너비
+      const headerHeight = 110; // 헤더 높이 (날짜 헤더 70px + 숙박 행 40px)
+      const hourRowHeight = 40;
+      const timeslots = 3; // 15분 단위
+      const segmentHeight = hourRowHeight / (timeslots + 1); // 10px per 15min
+      
+      // 캘린더 영역 내 상대 좌표 계산
+      const relativeX = clientX - calendarRect.left;
+      const relativeY = clientY - calendarRect.top - headerHeight;
+      
+      // 캘린더 영역 밖이면 null 반환
+      if (relativeX < timeColumnWidth || relativeY < 0) return null;
+      if (relativeX > calendarRect.width || relativeY > calendarRect.height - headerHeight) return null;
+      
+      // 날짜 계산
+      const calendarWidth = calendarRect.width - timeColumnWidth;
+      const dayWidth = calendarWidth / 7;
+      const dayIndex = Math.floor((relativeX - timeColumnWidth) / dayWidth);
+      const dayIndexClamped = Math.max(0, Math.min(6, dayIndex));
+      const targetDate = dayjs(currentWeekStart).add(dayIndexClamped, 'day');
+      
+      // 시간 계산
+      const segmentIndex = Math.floor(relativeY / segmentHeight);
+      const hour = Math.floor(segmentIndex / (timeslots + 1));
+      const minuteSegment = segmentIndex % (timeslots + 1);
+      const minutes = minuteSegment * 15; // 0, 15, 30, 45
+      
+      // 시간 범위 제한 (0-23시)
+      const clampedHour = Math.max(0, Math.min(23, hour));
+      const targetTime = targetDate.hour(clampedHour).minute(minutes).second(0).millisecond(0);
+      
+      // 디버깅 로그
+      console.log('=== 드롭 위치 계산 ===');
+      console.log('입력 좌표:', { clientX, clientY });
+      console.log('캘린더 rect:', {
+        left: calendarRect.left,
+        top: calendarRect.top,
+        width: calendarRect.width,
+        height: calendarRect.height,
+      });
+      console.log('상대 좌표:', { relativeX, relativeY });
+      console.log('시간 계산:', {
+        segmentHeight,
+        segmentIndex,
+        hour,
+        minuteSegment,
+        minutes,
+        clampedHour,
+      });
+      console.log('결과:', {
+        date: targetDate.format('YYYY-MM-DD'),
+        time: targetTime.format('YYYY-MM-DD HH:mm'),
+      });
+      console.log('==================');
+      
+      // 드롭 위치의 실제 화면 좌표 계산 (해당 날짜/시간 셀의 위치)
+      const dayLeft = calendarRect.left + timeColumnWidth + (dayWidth * dayIndexClamped);
+      const timeTop = calendarRect.top + headerHeight + (segmentIndex * segmentHeight);
+      
+      // 이벤트의 left margin 반영 (3.5%)
+      const leftMarginPercent = 3.5;
+      const eventLeft = dayLeft + (dayWidth * leftMarginPercent / 100);
+      
+      return {
+        x: eventLeft,
+        y: timeTop,
+        date: targetDate.format('YYYY-MM-DD'),
+        time: targetTime.toDate(),
+      };
+    }, [currentWeekStart, calendarLayout]);
+    
+    // 마우스 이벤트 핸들러 (웹용)
+    useEffect(() => {
+      if (!draggingEvent) return;
+      
+      const handleMouseMove = (e: MouseEvent) => {
+        const offsetX = e.clientX - draggingEvent.startX;
+        const offsetY = e.clientY - draggingEvent.startY;
+        setDragOffset({ x: offsetX, y: offsetY });
+        
+        // 드래그 중인 이벤트 막대의 현재 위치 계산
+        const draggedElementX = draggingEvent.elementX + offsetX;
+        const draggedElementY = draggingEvent.elementY + offsetY;
+        
+        // 이벤트 막대의 중심점 또는 상단 중앙점을 기준으로 드롭 위치 계산
+        // 상단 중앙점 사용 (더 직관적)
+        const elementCenterX = draggedElementX + (draggingEvent.elementWidth / 2);
+        const elementTopY = draggedElementY;
+        
+        // 디버깅: 드래그 중인 이벤트 막대 위치
+        console.log('드래그 중인 이벤트 막대 위치:', {
+          elementX: draggedElementX,
+          elementY: draggedElementY,
+          elementWidth: draggingEvent.elementWidth,
+          elementHeight: draggingEvent.elementHeight,
+          centerX: elementCenterX,
+          topY: elementTopY,
+        });
+        
+        // 드롭 위치 미리보기 계산 (드래그 중인 이벤트 막대의 위치 기준)
+        const dropPos = calculateDropPosition(elementCenterX, elementTopY);
+        setDropPreviewPosition(dropPos);
+        // ref에도 저장 (최신 값 보장)
+        dropPreviewPositionRef.current = dropPos;
+      };
+      
+      const handleMouseUp = () => {
+        // ref에서 최신 드롭 위치 가져오기
+        const latestDropPos = dropPreviewPositionRef.current;
+        
+        // 드롭 위치가 있으면 이벤트 위치 업데이트 (로컬 상태만)
+        if (latestDropPos && draggingEvent) {
+          const dropTime = dayjs(latestDropPos.time);
+          
+          // 드래그된 이벤트 찾기 (itineraries 또는 flights에서)
+          let originalStart: dayjs.Dayjs | null = null;
+          let originalEnd: dayjs.Dayjs | null = null;
+          
+          if (draggingEvent.type === 'itinerary') {
+            const itineraryId = parseInt(draggingEvent.id);
+            const itinerary = itineraries.find(it => it.id === itineraryId);
+            if (itinerary) {
+              originalStart = dayjs(`${itinerary.itineraryDate}T${itinerary.startTime}:00`);
+              originalEnd = dayjs(`${itinerary.itineraryDate}T${itinerary.endTime}:00`);
+            }
+          } else if (draggingEvent.type === 'flight') {
+            // event.id 형식: `flight-${flight.id}-${segment.id ?? index + 1}`
+            const eventIdParts = draggingEvent.id.split('-');
+            const flightId = eventIdParts.length > 1 ? parseInt(eventIdParts[1]) : null;
+            const segmentIndex = eventIdParts.length > 2 ? parseInt(eventIdParts[2]) - 1 : 0;
+            
+            if (flightId) {
+              const flight = flights.find(f => f.id === flightId);
+              if (flight && flight.flightSegments && flight.flightSegments[segmentIndex]) {
+                const segment = flight.flightSegments[segmentIndex];
+                originalStart = dayjs(segment.departureTime);
+                originalEnd = dayjs(segment.arrivalTime);
+              }
+            }
+          }
+          
+          if (originalStart && originalEnd) {
+            const duration = originalEnd.diff(originalStart, 'minute'); // 분 단위 차이
+            
+            // 새로운 시작/종료 시간 계산
+            const newStart = dropTime.toDate();
+            const newEnd = dropTime.add(duration, 'minute').toDate();
+            
+            console.log('=== 드롭 처리 ===');
+            console.log('이벤트 ID:', draggingEvent.id);
+            console.log('이벤트 타입:', draggingEvent.type);
+            console.log('이동 전 시간:');
+            console.log('  시작:', originalStart.format('YYYY-MM-DD HH:mm'));
+            console.log('  종료:', originalEnd.format('YYYY-MM-DD HH:mm'));
+            console.log('  지속 시간:', duration, '분');
+            console.log('드롭 위치:', {
+              date: latestDropPos.date,
+              time: dayjs(latestDropPos.time).format('YYYY-MM-DD HH:mm'),
+            });
+            console.log('이동 후 시간:');
+            console.log('  시작:', dayjs(newStart).format('YYYY-MM-DD HH:mm'));
+            console.log('  종료:', dayjs(newEnd).format('YYYY-MM-DD HH:mm'));
+            console.log('================');
+            
+            // 드롭된 위치 저장
+            setDroppedEventPosition({
+              eventId: draggingEvent.id,
+              newStart,
+              newEnd,
+            });
+          } else {
+            console.warn('원본 시작/종료 시간을 찾을 수 없음:', {
+              eventId: draggingEvent.id,
+              type: draggingEvent.type,
+            });
+          }
+        }
+        
+        // 드래그 종료
+        setDraggingEvent(null);
+        setDragOffset({ x: 0, y: 0 });
+        setDropPreviewPosition(null);
+        dropPreviewPositionRef.current = null;
+      };
+      
+      window.addEventListener('mousemove', handleMouseMove);
+      window.addEventListener('mouseup', handleMouseUp);
+      
+      return () => {
+        window.removeEventListener('mousemove', handleMouseMove);
+        window.removeEventListener('mouseup', handleMouseUp);
+        setDropPreviewPosition(null);
+        dropPreviewPositionRef.current = null;
+      };
+    }, [draggingEvent, calculateDropPosition, itineraries, flights]);
     
     // 상위에서 전달받은 plans와 trips 사용 (중복 호출 방지)
     const plans = externalPlans;
@@ -425,6 +732,43 @@ export default function WeeklySchedulePanel({
       // 1. 두 배열을 합칩니다.
       const allEvents = [...itineraryEvents, ...flightEvents, ...previewEvents];
       
+      // 드롭된 이벤트의 위치 업데이트 (로컬 상태만)
+      if (droppedEventPosition) {
+        const eventIndex = allEvents.findIndex(e => String(e.id) === String(droppedEventPosition.eventId));
+        if (eventIndex !== -1) {
+          const event = allEvents[eventIndex];
+          console.log('=== 이벤트 위치 업데이트 ===');
+          console.log('이벤트 ID:', droppedEventPosition.eventId);
+          console.log('업데이트 전:', {
+            start: dayjs(event.start).format('YYYY-MM-DD HH:mm'),
+            end: dayjs(event.end).format('YYYY-MM-DD HH:mm'),
+            normalizedStartTime: event.normalizedStartTime,
+            normalizedEndTime: event.normalizedEndTime,
+          });
+          console.log('업데이트 후:', {
+            start: dayjs(droppedEventPosition.newStart).format('YYYY-MM-DD HH:mm'),
+            end: dayjs(droppedEventPosition.newEnd).format('YYYY-MM-DD HH:mm'),
+            normalizedStartTime: dayjs(droppedEventPosition.newStart).format('HH:mm'),
+            normalizedEndTime: dayjs(droppedEventPosition.newEnd).format('HH:mm'),
+          });
+          console.log('==========================');
+          
+          // 새 객체 생성 (불변성 유지)
+          allEvents[eventIndex] = {
+            ...event,
+            start: droppedEventPosition.newStart,
+            end: droppedEventPosition.newEnd,
+            normalizedStartTime: dayjs(droppedEventPosition.newStart).format('HH:mm'),
+            normalizedEndTime: dayjs(droppedEventPosition.newEnd).format('HH:mm'),
+          };
+        } else {
+          console.warn('드롭된 이벤트를 찾을 수 없음:', {
+            droppedEventId: droppedEventPosition.eventId,
+            availableIds: allEvents.map(e => String(e.id)),
+          });
+        }
+      }
+      
       // 2. [필수 수정] 시작 시간(start)을 기준으로 오름차순 정렬합니다.
       allEvents.sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime());
       
@@ -492,7 +836,7 @@ export default function WeeklySchedulePanel({
       });
       
       return processedEvents;
-    }, [itineraries, flights, previewEvent]);
+    }, [itineraries, flights, previewEvent, droppedEventPosition]);
 
     const goPrev = () => setCurrentWeekStart(prev => prev.subtract(1, 'week'));
     const goNext = () => setCurrentWeekStart(prev => prev.add(1, 'week'));
@@ -624,18 +968,31 @@ export default function WeeklySchedulePanel({
       </View>
 
       {/* 캘린더 */}
-      <View style={styles.calendarWrapper}>
+      <View 
+        style={styles.calendarWrapper}
+        ref={calendarWrapperRef}
+        {...(Platform.OS === 'web' ? { 'data-testid': 'calendar-wrapper' } : {})}
+        onLayout={(e) => {
+          const { x, y, width, height } = e.nativeEvent.layout;
+          setCalendarLayout({ x, y, width, height });
+        }}
+      >
         <BigCalendar
         mode="week"
         events={events}
         height={height - 50}
         date={currentWeekStart.toDate()}
         hourRowHeight={40}
+        timeslots={3}
         weekStartsOn={1}
         hideNowIndicator
         swipeEnabled
         showTime
         scrollOffsetMinutes={360}
+        onSwipeEnd={(newDate: Date) => {
+          const newWeekStart = dayjs(newDate).startOf('week').add(1, 'day');
+          setCurrentWeekStart(newWeekStart);
+        }}
         renderHeader={(props) => {
           return (
             <View>
@@ -734,9 +1091,15 @@ export default function WeeklySchedulePanel({
           const isFlight = event.type === 'flight';
           const isPreview = event.type === 'preview';
           
+          // 드래그 중인 이벤트인지 확인
+          const isDragging = draggingEvent?.id === event.id;
+          
           // 선택된 이벤트인지 확인
           const isSelected = selectedEventId === event.id;
           const borderWidth = isSelected ? 2 : 1;
+          
+          // 드래그 가능한 이벤트인지 확인 (일정, 항공만, preview 제외)
+          const isDraggable = !isPreview && (isItinerary || isFlight) && (myRole === 'owner' || myRole === 'editor');
           
           // tpStyle 평탄화 및 left 값 수동 계산
           const flattenStyle = (style: any): any => {
@@ -802,18 +1165,54 @@ export default function WeeklySchedulePanel({
 
           // 최종 스타일 결정: preview > flight > itinerary > 기본
           const finalStyle = previewStyle || flightStyle || itineraryStyle || { backgroundColor: event.color || '#3478f6' };
+          
+          // 드래그 중인 경우 원본 이벤트는 투명하게 (별도 렌더링된 드래그 이벤트가 표시됨)
+          const dragStyle = isDragging ? {
+            opacity: 0.3, // 원본은 반투명하게
+            cursor: 'grabbing',
+          } : isDraggable ? {
+            cursor: 'grab',
+          } : {};
 
           return (
             <View
               key={eventKey}
               {...rest}
-              style={[adjustedStyle, finalStyle]}
+              style={[adjustedStyle, finalStyle, dragStyle]}
+              // 웹용 마우스 이벤트 (드래그 시작)
+              {...(Platform.OS === 'web' && isDraggable ? {
+                onMouseDown: (e: any) => {
+                  if (!isDragging && !isPreview) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const clientX = e.nativeEvent?.clientX || e.clientX || 0;
+                    const clientY = e.nativeEvent?.clientY || e.clientY || 0;
+                    
+                    // 이벤트 요소의 화면상 위치 및 크기 계산
+                    const target = e.currentTarget as HTMLElement;
+                    const rect = target.getBoundingClientRect();
+                    
+                    setDraggingEvent({
+                      id: event.id,
+                      type: isItinerary ? 'itinerary' : 'flight',
+                      startX: clientX,
+                      startY: clientY,
+                      elementX: rect.left,
+                      elementY: rect.top,
+                      elementWidth: rect.width,
+                      elementHeight: rect.height,
+                    });
+                    setDragOffset({ x: 0, y: 0 });
+                    setSelectedEventId(null); // 드래그 시작 시 선택 해제
+                  }
+                },
+              } : {})}
             >
               <TouchableOpacity
                 style={{ flex: 1, justifyContent: 'center', padding: 4 }}
-                disabled={isPreview} // 미리보기 이벤트는 클릭 불가
+                disabled={isPreview || isDragging} // 미리보기 이벤트와 드래그 중인 이벤트는 클릭 불가
                 onPress={(e) => {
-                  if (isPreview) return; // 미리보기 이벤트는 클릭 무시
+                  if (isPreview || isDragging) return; // 미리보기 이벤트와 드래그 중인 이벤트는 클릭 무시
                   
                   try { calendarOnPress && calendarOnPress(e); } catch {}
                   
@@ -864,6 +1263,105 @@ export default function WeeklySchedulePanel({
         }}
       />
       </View>
+      
+      {/* 드롭 위치 미리보기 막대 (점선 테두리) */}
+      {draggingEvent && dropPreviewPosition && Platform.OS === 'web' && (
+        <View
+          style={{
+            position: 'fixed' as any,
+            left: dropPreviewPosition.x,
+            top: dropPreviewPosition.y,
+            width: draggingEvent.elementWidth,
+            height: draggingEvent.elementHeight,
+            borderWidth: 2,
+            borderStyle: 'dashed' as any,
+            borderColor: draggingEvent.type === 'itinerary' ? 'rgba(0, 102, 255, 0.5)' : 'rgba(139, 92, 246, 0.5)',
+            backgroundColor: 'transparent',
+            borderRadius: radii.md,
+            pointerEvents: 'none' as const,
+            zIndex: 9999,
+            opacity: 0.8,
+          }}
+        />
+      )}
+      
+      {/* 드래그 중인 이벤트를 별도로 렌더링 (다른 컬럼 위에 표시) */}
+      {draggingEvent && Platform.OS === 'web' && (() => {
+        const draggedEvent = events.find(e => e.id === draggingEvent.id);
+        if (!draggedEvent) return null;
+        
+        const isItinerary = draggedEvent.type === 'itinerary';
+        const isFlight = draggedEvent.type === 'flight';
+        const flightStyle = isFlight ? {
+          backgroundColor: 'rgba(139, 92, 246, 0.1)',
+          borderWidth: 1,
+          borderColor: '#8B5CF6',
+          borderRadius: radii.md,
+        } : null;
+        const itineraryStyle = isItinerary ? {
+          backgroundColor: 'rgba(0, 102, 255, 0.1)',
+          borderWidth: 1,
+          borderColor: '#0066FF',
+          borderRadius: radii.md,
+        } : null;
+        const finalStyle = flightStyle || itineraryStyle || { backgroundColor: draggedEvent.color || '#3478f6' };
+        
+        return (
+          <View
+            style={[
+              {
+                position: 'absolute' as const,
+                left: draggingEvent.elementX + dragOffset.x,
+                top: draggingEvent.elementY + dragOffset.y,
+                width: draggingEvent.elementWidth,
+                height: draggingEvent.elementHeight,
+                zIndex: 10000,
+                opacity: 0.7,
+                pointerEvents: 'none' as const,
+                padding: 4,
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: 0.3,
+                shadowRadius: 4,
+                elevation: 10,
+              },
+              finalStyle,
+              // 웹 전용: position fixed (타입 체크 우회)
+              Platform.OS === 'web' ? { position: 'fixed' as any } : {},
+            ]}
+          >
+            <View style={{ flex: 1, justifyContent: 'center' }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                {isFlight && <WeekBarAirplaneIcon width={14} height={14} />}
+                <Text numberOfLines={1} ellipsizeMode="tail" style={{ ...textStyles.h8, color: isFlight ? '#8B5CF6' : '#0066FF', lineHeight: 12, flex: 1 }}>
+                  {draggedEvent.title}
+                </Text>
+              </View>
+              {(isItinerary) && draggedEvent.normalizedStartTime && draggedEvent.normalizedEndTime && (
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 8 }}>
+                  <WeekBarTimeIcon width={14} height={14} />
+                  <Text numberOfLines={1} ellipsizeMode="tail" style={{ ...textStyles.h9, color: '#0066FF', lineHeight: 10 }}>
+                    {draggedEvent.normalizedStartTime} - {draggedEvent.normalizedEndTime}
+                  </Text>
+                </View>
+              )}
+              {(isItinerary) && draggedEvent.locationText && (
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 }}>
+                  <WeekBarLocationIcon width={14} height={14} />
+                  <Text numberOfLines={1} ellipsizeMode="tail" style={{ ...textStyles.h9, color: '#0066FF', lineHeight: 10 }}>
+                    {draggedEvent.locationText}
+                  </Text>
+                </View>
+              )}
+              {isFlight && draggedEvent.normalizedStartTime && draggedEvent.normalizedEndTime && (
+                <Text numberOfLines={1} ellipsizeMode="tail" style={{ ...textStyles.h9, color: '#8B5CF6', lineHeight: 10, marginTop: 8 }}>
+                  {draggedEvent.normalizedStartTime}-{draggedEvent.normalizedEndTime}
+                </Text>
+              )}
+            </View>
+          </View>
+        );
+      })()}
 
 
       {/* 공유 모달 */}
