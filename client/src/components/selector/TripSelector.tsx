@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { View, Text, Pressable, StyleSheet, Modal, ScrollView, Alert, Platform, Dimensions } from 'react-native';
 import { LocaleConfig } from 'react-native-calendars';
 import dayjs from 'dayjs';
@@ -104,6 +104,10 @@ export default function TripSelector({ selectedTrip, onTripSelect, trips, onTrip
   const [showDeleteCompletionModal, setShowDeleteCompletionModal] = useState(false);
   const [createdTripName, setCreatedTripName] = useState<string>('');
   const tripItemRefs = React.useRef<{ [key: string]: View | null }>({});
+  const [isSubmittingAdd, setIsSubmittingAdd] = useState(false); // 추가 모달 버튼 비활성화용
+  const [isSubmittingEdit, setIsSubmittingEdit] = useState(false); // 수정 모달 버튼 비활성화용
+  const isSubmittingAddRef = useRef(false); // 추가 중복 요청 방지 플래그
+  const isSubmittingEditRef = useRef(false); // 수정 중복 요청 방지 플래그
 
   const handleTripSelect = (trip: Trip) => {
     onTripSelect(trip);
@@ -192,6 +196,11 @@ export default function TripSelector({ selectedTrip, onTripSelect, trips, onTrip
   };
 
   const handleAddTrip = async () => {
+    // 중복 요청 방지: 이미 실행 중이면 무시
+    if (isSubmittingAddRef.current || isSubmittingAdd) {
+      return;
+    }
+
     if (!newTrip.name.trim()) {
       Alert.alert('오류', '여행 이름을 입력해주세요.');
       return;
@@ -200,6 +209,10 @@ export default function TripSelector({ selectedTrip, onTripSelect, trips, onTrip
       Alert.alert('오류', '시작일과 종료일을 선택해주세요.');
       return;
     }
+
+    // 실행 중 플래그 설정
+    isSubmittingAddRef.current = true;
+    setIsSubmittingAdd(true);
 
     try {
       if (!onTripAdd) {
@@ -230,7 +243,12 @@ export default function TripSelector({ selectedTrip, onTripSelect, trips, onTrip
     }
   };
 
-  const handleEditTrip = () => {
+  const handleEditTrip = async () => {
+    // 중복 요청 방지: 이미 실행 중이면 무시
+    if (isSubmittingEditRef.current || isSubmittingEdit) {
+      return;
+    }
+
     if (!editingTrip) return;
     
     if (!editingTrip.name.trim()) {
@@ -242,12 +260,22 @@ export default function TripSelector({ selectedTrip, onTripSelect, trips, onTrip
       return;
     }
 
+    // 실행 중 플래그 설정
+    isSubmittingEditRef.current = true;
+    setIsSubmittingEdit(true);
+
     try {
-      onTripUpdate?.(editingTrip.id, {
+      // onTripUpdate 호출 (Promise를 반환할 수 있으므로 await 처리)
+      const result = onTripUpdate?.(editingTrip.id, {
         name: editingTrip.name,
         startDate: editingTrip.startDate,
         endDate: editingTrip.endDate,
       });
+      
+      // Promise인 경우 await
+      if (result && typeof result === 'object' && 'then' in result) {
+        await result;
+      }
       
       setEditingTrip(null);
       setShowEditModal(false);
@@ -256,6 +284,9 @@ export default function TripSelector({ selectedTrip, onTripSelect, trips, onTrip
     } catch (error) {
       console.error('Failed to update trip:', error);
       tripToastMessages.updateError();
+    } finally {
+      isSubmittingEditRef.current = false;
+      setIsSubmittingEdit(false);
     }
   };
 
@@ -522,7 +553,7 @@ export default function TripSelector({ selectedTrip, onTripSelect, trips, onTrip
         markedDates={getMarkedDates()}
         onDateSelect={handleDateSelect}
         onSubmit={handleAddTrip}
-        isSubmitDisabled={!newTrip.startDate || !newTrip.endDate}
+        isSubmitDisabled={!newTrip.startDate || !newTrip.endDate || isSubmittingAdd}
       />
 
       {/* 여행 수정 모달 */}
@@ -535,7 +566,7 @@ export default function TripSelector({ selectedTrip, onTripSelect, trips, onTrip
         markedDates={getEditMarkedDates()}
         onDateSelect={handleEditDateSelect}
         onSubmit={handleEditTrip}
-        isSubmitDisabled={!editingTrip?.startDate || !editingTrip?.endDate}
+        isSubmitDisabled={!editingTrip?.startDate || !editingTrip?.endDate || isSubmittingEdit}
       />
 
       {/* 여행 삭제 확인 모달 */}

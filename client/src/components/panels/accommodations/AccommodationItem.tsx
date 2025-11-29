@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { View, Text, Pressable, StyleSheet, ScrollView } from 'react-native';
 import dayjs from 'dayjs';
 import { accommodationsApi } from '@/services/accommodations';
@@ -53,7 +53,8 @@ export default function AccommodationItem({
     currency: accommodation?.expense?.currency || ExpenseCurrency.KRW,
   });
 
-  const [isLoading, setIsLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false); // 버튼 비활성화용 (리렌더링 필요)
+  const isSubmittingRef = useRef(false); // 중복 요청 방지 플래그
   const [showCheckinDatePicker, setShowCheckinDatePicker] = useState(false);
   const [showCheckoutDatePicker, setShowCheckoutDatePicker] = useState(false);
   const [checkinTimeOpen, setCheckinTimeOpen] = useState(false);
@@ -80,6 +81,11 @@ export default function AccommodationItem({
   const [countryOpen, setCountryOpen] = useState(false); // zIndex 제어용 (CountrySelect 내부 오픈 상태와는 별개로 래퍼 zIndex 제어 가능)
 
   const handleSave = async () => {
+    // 중복 요청 방지: 이미 실행 중이면 무시
+    if (isSubmittingRef.current) {
+      return;
+    }
+
     // 모델 필수값 검증: name, country, city, checkin_date, checkout_date, checkin_time, checkout_time
     if (!formData.name.trim() || !formData.country.trim() || !formData.city.trim() || 
         !formData.checkin_date || !formData.checkout_date || !formData.checkin_time || !formData.checkout_time) {
@@ -87,7 +93,9 @@ export default function AccommodationItem({
       return;
     }
 
-    setIsLoading(true);
+    // 실행 중 플래그 설정
+    isSubmittingRef.current = true;
+    setIsSubmitting(true);
     try {
       let savedAccommodation;
       if (accommodation && accommodation.id) {
@@ -136,7 +144,8 @@ export default function AccommodationItem({
     } catch (error) {
       console.error('Failed to save accommodation:', error);
     } finally {
-      setIsLoading(false);
+      isSubmittingRef.current = false;
+      setIsSubmitting(false);
     }
   };
 
@@ -378,13 +387,10 @@ export default function AccommodationItem({
         <Pressable
           style={styles.saveButton}
           onPress={handleSave}
-          disabled={isLoading}
+          disabled={isSubmitting}
         >
           <Text style={styles.saveButtonText}>
-            {isLoading 
-              ? (accommodation && accommodation.id ? '수정 중...' : '저장 중...') 
-              : (accommodation && accommodation.id ? '수정' : '저장')
-            }
+            {accommodation && accommodation.id ? '수정' : '저장'}
           </Text>
         </Pressable>
       </View>
