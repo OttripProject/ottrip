@@ -983,7 +983,7 @@ export default function WeeklySchedulePanel({
         height={height - 50}
         date={currentWeekStart.toDate()}
         hourRowHeight={40}
-        timeslots={3}
+        // timeslots={3}
         weekStartsOn={1}
         hideNowIndicator
         swipeEnabled
