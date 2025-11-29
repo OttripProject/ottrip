@@ -224,7 +224,6 @@ export default function TripFormModal({
               style={[
                 styles.modalButton,
                 styles.addButton,
-                isSubmitDisabled && styles.modalButtonDisabled
               ]}
               onPress={onSubmit}
               disabled={isSubmitDisabled}
@@ -348,9 +347,6 @@ const styles = StyleSheet.create({
   addButtonText: {
     ...textStyles.h7,
     color: colors.white,
-  },
-  modalButtonDisabled: {
-    opacity: 0.4,
   },
   dayContainer: {
     width: 32,
