@@ -1,5 +1,6 @@
-import React, { useMemo, useState, useEffect } from 'react';
-import { View, StyleSheet, ViewStyle } from 'react-native';
+import React, { useMemo, useState, useEffect, useRef } from 'react';
+import { View, StyleSheet, ViewStyle, Pressable } from 'react-native';
+import useDetectClose from '@/hooks/useDetectClose';
 import DropDownPicker from 'react-native-dropdown-picker';
 import { colors } from '@/ui/tokens/colors';
 import { textStyles } from '@/ui/tokens/typography';
@@ -30,7 +31,8 @@ export default function TimePicker({
   onOpen,
   onClose
 }: TimePickerProps) {
-  const [open, setOpen] = useState(false);
+  const pickerRef = useRef<View>(null);
+  const [open, setIsOpen, handleOutsidePress] = useDetectClose(pickerRef, false);
   const [selectedValue, setSelectedValue] = useState<string | null>(value || null);
 
   // 15분 단위로 시간 옵션 생성 (00:00 ~ 23:45)
@@ -104,14 +106,22 @@ export default function TimePicker({
   }
 
   return (
-    <View style={[styles.wrapper, { zIndex: open ? 10000 : 1 }]}>
-      <DropDownPicker
+    <>
+      {/* 외부 클릭 감지를 위한 투명 오버레이 */}
+      {open && (
+        <Pressable 
+          style={[StyleSheet.absoluteFill, { zIndex: 9999 }]}
+          onPress={handleOutsidePress}
+        />
+      )}
+      <View ref={pickerRef} style={[styles.wrapper, { zIndex: open ? 10000 : 1 }]}>
+        <DropDownPicker
         open={open}
         value={selectedValue}
         items={timeOptions}
         setOpen={(value) => {
           const isOpen = typeof value === 'function' ? value(open) : value;
-          setOpen(value);
+          setIsOpen(isOpen);
           if (isOpen) {
             onOpen?.();
           } else {
@@ -152,8 +162,9 @@ export default function TimePicker({
         ArrowDownIconComponent={() => <DownArrowIcon width={16} height={16} />}
         ArrowUpIconComponent={() => <UpperArrowIcon width={16} height={16} />}
         translation={{ NOTHING_TO_SHOW: '선택 가능한 시간이 없습니다' }}
-      />
-    </View>
+        />
+      </View>
+    </>
   );
 }
 

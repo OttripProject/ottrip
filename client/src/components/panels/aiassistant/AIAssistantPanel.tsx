@@ -298,7 +298,7 @@ export default function AIAssistantPanel({ publicId }: AIAssistantPanelProps) {
               </TouchableOpacity>
             </View>
           <View style={styles.scrollWrapper}>
-            <ScrollView style={styles.checklistScrollView} showsVerticalScrollIndicator={true}>
+            <ScrollView style={styles.checklistScrollView} showsVerticalScrollIndicator={false}>
             {checklist && (
               <View style={styles.checklistHeader}>
                 <AiListIcon width={16} height={16} />

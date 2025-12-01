@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { View, StyleSheet, ViewStyle } from 'react-native';
+import React, { useEffect, useMemo, useState, useRef } from 'react';
+import { View, StyleSheet, ViewStyle, Pressable } from 'react-native';
 import DropDownPicker from 'react-native-dropdown-picker';
 import { getKoreanCountryOptions, codeToKoreanName } from '@/utils/countryListKo';
 import { PLACEHOLDERS } from '@/constants/placeholders';
@@ -7,7 +7,8 @@ import { radii } from '@/ui/tokens/radii';
 import { colors } from '@/ui/tokens/colors';
 import { textStyles } from '@/ui/tokens/typography';
 import DownArrowIcon from '../../../../assets/down_arrow.svg';
-import UpperArrowIcon from '../../../../assets/upper_arrow.svg'; 
+import UpperArrowIcon from '../../../../assets/upper_arrow.svg';
+import useDetectClose from '@/hooks/useDetectClose'; 
 
 interface CountryPickerProps {
   value: string; // country name in Korean
@@ -21,7 +22,8 @@ interface CountryPickerProps {
 
 export default function CountryPicker({ value, onChange, placeholder = '국가 선택', containerStyle, disabled, onOpen, onClose }: CountryPickerProps) {
   const options = useMemo(() => getKoreanCountryOptions(), []);
-  const [open, setOpen] = useState(false);
+  const pickerRef = useRef<View>(null);
+  const [open, setIsOpen, handleOutsidePress] = useDetectClose(pickerRef, false);
   const [code, setCode] = useState<string | null>(null);
 
   useEffect(() => {
@@ -30,14 +32,22 @@ export default function CountryPicker({ value, onChange, placeholder = '국가 �
   }, [value, options]);
 
   return (
-    <View style={[styles.wrapper, containerStyle, { zIndex: open ? 10000 : 1 }]}> 
+    <>
+      {/* 외부 클릭 감지를 위한 투명 오버레이 */}
+      {open && (
+        <Pressable 
+          style={[StyleSheet.absoluteFill, { zIndex: 9999 }]}
+          onPress={handleOutsidePress}
+        />
+      )}
+      <View ref={pickerRef} style={[styles.wrapper, containerStyle, { zIndex: open ? 10000 : 1 }]}> 
       <DropDownPicker
         open={open}
         value={code}
         items={options}
         setOpen={(value) => {
           const isOpen = typeof value === 'function' ? value(open) : value;
-          setOpen(value);
+          setIsOpen(isOpen);
           if (isOpen) {
             onOpen?.();
           } else {
@@ -76,7 +86,8 @@ export default function CountryPicker({ value, onChange, placeholder = '국가 �
         ArrowUpIconComponent={() => <UpperArrowIcon width={16} height={16} />}
         translation={{ NOTHING_TO_SHOW: '결과가 없습니다' }}
       />
-    </View>
+      </View>
+    </>
   );
 }
 

@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { View, StyleSheet, Text, Pressable } from 'react-native';
+import useDetectClose from '@/hooks/useDetectClose';
 import { Calendar, DateData } from 'react-native-calendars';
 import dayjs from 'dayjs';
 import { colors } from '@/ui/tokens/colors';
@@ -147,6 +148,24 @@ export default function BaseCalendar({
   const [view, setView] = useState<'day' | 'month' | 'year'>('day'); 
   const [tempSelectedMonth, setTempSelectedMonth] = useState<number | null>(null); 
   const [tempSelectedYear, setTempSelectedYear] = useState<number | null>(null); 
+
+  // 외부 클릭 감지
+  const calendarRef = useRef<View>(null);
+  const [isOpen, setIsOpen, handleOutsidePress] = useDetectClose(calendarRef, visible);
+
+  // visible이 변경되면 isOpen도 업데이트
+  useEffect(() => {
+    if (visible !== isOpen) {
+      setIsOpen(visible);
+    }
+  }, [visible]);
+
+  // isOpen이 false가 되면 onClose 호출
+  useEffect(() => {
+    if (!isOpen && visible) {
+      onClose?.();
+    }
+  }, [isOpen]);
 
   useEffect(() => {
     if (visible && scrollToWeek && currentWeekStart) {
@@ -466,7 +485,20 @@ export default function BaseCalendar({
   };
 
   return (
-    <View style={[styles.calendarContainer, style]}>
+    <>
+      {/* 외부 클릭 감지를 위한 투명 오버레이 */}
+      {visible && (
+        <Pressable 
+          style={[StyleSheet.absoluteFill, { zIndex: 8999 }]}
+          onPress={handleOutsidePress}
+        />
+      )}
+      <View 
+        ref={calendarRef}
+        style={[styles.calendarContainer, style]}
+        onStartShouldSetResponder={() => true}
+        onResponderGrant={(e) => e.stopPropagation()}
+      >
       {view === 'day' ? (
         <>
           <Calendar
@@ -567,6 +599,7 @@ export default function BaseCalendar({
         />
       )}
     </View>
+    </>
   );
 }
 

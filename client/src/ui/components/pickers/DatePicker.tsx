@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { View, Text, Pressable, StyleSheet, Modal } from 'react-native';
+import useDetectClose from '@/hooks/useDetectClose';
 import { Calendar } from 'react-native-calendars';
 import dayjs from 'dayjs';
 import { colors } from '@/ui/tokens/colors';
@@ -18,7 +19,8 @@ interface DatePickerProps {
 }
 
 export default function DatePicker({ value, onChange, style, placeholder = "날짜를 선택하세요", minDate, displayFormat }: DatePickerProps) {
-  const [showPicker, setShowPicker] = useState(false);
+  const pickerRef = useRef<View>(null);
+  const [showPicker, setIsPickerOpen, handleOutsidePress] = useDetectClose(pickerRef, false);
   const [tempDate, setTempDate] = useState(value || dayjs().format('YYYY-MM-DD'));
 
   const handleDateSelect = (dateString: string) => {
@@ -27,12 +29,12 @@ export default function DatePicker({ value, onChange, style, placeholder = "날�
 
   const handleConfirm = () => {
     onChange(tempDate);
-    setShowPicker(false);
+    setIsPickerOpen(false);
   };
 
   const handleCancel = () => {
     setTempDate(value || dayjs().format('YYYY-MM-DD'));
-    setShowPicker(false);
+    setIsPickerOpen(false);
   };
 
   const getDisplayText = () => {
@@ -55,7 +57,7 @@ export default function DatePicker({ value, onChange, style, placeholder = "날�
 
   return (
     <View style={style}>
-      <Pressable style={styles.dateInput} onPress={() => setShowPicker(true)}>
+      <Pressable style={styles.dateInput} onPress={() => setIsPickerOpen(true)}>
         <View style={styles.dateTextContainer}>
           <Text style={value ? styles.dateText : styles.placeholderText}>
             {getDisplayText()}
@@ -66,9 +68,9 @@ export default function DatePicker({ value, onChange, style, placeholder = "날�
         </View>
       </Pressable>
 
-      <Modal visible={showPicker} animationType="slide" transparent={true} onRequestClose={handleCancel}>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
+      <Modal visible={showPicker} animationType="slide" transparent={true} onRequestClose={handleOutsidePress}>
+        <Pressable style={styles.modalOverlay} onPress={handleOutsidePress}>
+          <View ref={pickerRef} style={styles.modalContent} onStartShouldSetResponder={() => true}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>날짜 선택</Text>
               <Text style={styles.selectionInfo}>
@@ -109,7 +111,7 @@ export default function DatePicker({ value, onChange, style, placeholder = "날�
               </Pressable>
             </View>
           </View>
-        </View>
+        </Pressable>
       </Modal>
     </View>
   );
