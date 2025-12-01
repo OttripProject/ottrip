@@ -1,12 +1,13 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { View, StyleSheet, ViewStyle } from 'react-native';
+import React, { useEffect, useState, useRef } from 'react';
+import { View, StyleSheet, ViewStyle, Pressable } from 'react-native';
 import DropDownPicker from 'react-native-dropdown-picker';
-import { getAirportOptions, getAllAirportOptions, getAirportLabel } from '@/utils/airportList';
+import { getAirportOptionsBySearch, getAirportLabelByIata } from '@/utils/airportList';
 import { PLACEHOLDERS } from '@/constants/placeholders';
 import { colors } from '@/ui/tokens/colors';
 import DropdownTimeIcon from '../../../../assets/dropdown_time.svg';
 import UpperArrowIcon from '../../../../assets/upper_arrow.svg';
 import { radii } from '@/ui/tokens/radii';
+import useDetectClose from '@/hooks/useDetectClose';
 
 interface AirportPickerProps {
   value: string; 
@@ -24,16 +25,28 @@ export default function AirportPicker({
   disabled 
 }: AirportPickerProps) {
   const [searchQuery, setSearchQuery] = useState('');
-  const [isSearching, setIsSearching] = useState(false);
+  const [options, setOptions] = useState<Array<{ label: string; value: string }>>([]);
   
-  const options = useMemo(() => {
-    if (value || isSearching || searchQuery.length > 0) {
-      return getAllAirportOptions();
+  useEffect(() => {
+    if (searchQuery.trim().length >= 1) {
+      const searchResults = getAirportOptionsBySearch(searchQuery);
+      setOptions(searchResults);
+    } else {
+      if (value) {
+        const label = getAirportLabelByIata(value);
+        if (label) {
+          setOptions([{ label, value }]);
+        } else {
+          setOptions([]);
+        }
+      } else {
+        setOptions([]);
+      }
     }
-    return getAirportOptions();
-  }, [value, isSearching, searchQuery]);
+  }, [searchQuery, value]);
   
-  const [open, setOpen] = useState(false);
+  const pickerRef = useRef<View>(null);
+  const [open, setIsOpen, handleOutsidePress] = useDetectClose(pickerRef, false);
   const [code, setCode] = useState<string | null>(value || null);
 
   useEffect(() => {
@@ -42,14 +55,25 @@ export default function AirportPicker({
   
   const handleSetOpen = (value: boolean | ((prev: boolean) => boolean)) => {
     const isOpen = typeof value === 'function' ? value(open) : value;
-    setOpen(value);
-    if (isOpen) {
-      setIsSearching(true);
+    setIsOpen(isOpen);
+    if (!isOpen) {
+      setSearchQuery('');
     }
+  };
+  
+  const handleSearch = (text: string) => {
+    setSearchQuery(text);
   };
 
   return (
-    <View style={[styles.wrapper, containerStyle, { zIndex: open ? 999999 : 1 }]}> 
+    <>
+      {open && (
+        <Pressable 
+          style={[StyleSheet.absoluteFill, { zIndex: 999998 }]}
+          onPress={handleOutsidePress}
+        />
+      )}
+      <View ref={pickerRef} style={[styles.wrapper, containerStyle, { zIndex: open ? 999999 : 1 }]}> 
       <DropDownPicker
         open={open}
         value={code}
@@ -63,6 +87,8 @@ export default function AirportPicker({
         disabled={disabled}
         searchable
         searchPlaceholder={PLACEHOLDERS.picker.search}
+        onChangeSearchText={handleSearch}
+        disableLocalSearch={true}
         searchTextInputStyle={{ 
           height: 30, 
           paddingVertical: 6, 
@@ -93,7 +119,7 @@ export default function AirportPicker({
           fontSize: 13,
         }}
         listMode="SCROLLVIEW"
-        scrollViewProps={{ nestedScrollEnabled: true, keyboardShouldPersistTaps: 'handled' }}
+        scrollViewProps={{ nestedScrollEnabled: true, keyboardShouldPersistTaps: 'handled', showsVerticalScrollIndicator: false }}
         selectedItemLabelStyle={{
           fontWeight: 'bold',
         }}
@@ -101,7 +127,8 @@ export default function AirportPicker({
         ArrowUpIconComponent={() => <UpperArrowIcon width={16} height={16} />}
         translation={{ NOTHING_TO_SHOW: '결과가 없습니다' }}
       />
-    </View>
+      </View>
+    </>
   );
 }
 

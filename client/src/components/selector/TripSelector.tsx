@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { View, Text, Pressable, StyleSheet, Modal, ScrollView, Alert, Platform, Dimensions } from 'react-native';
+import useDetectClose from '@/hooks/useDetectClose';
 import { LocaleConfig } from 'react-native-calendars';
 import dayjs from 'dayjs';
 import { tripToastMessages } from '@/utils/toast';
@@ -83,7 +84,8 @@ type CalendarDayMark = { selection?: SelectionType; selected?: boolean };
 type CalendarMarkedDates = Record<string, CalendarDayMark>;
 
 export default function TripSelector({ selectedTrip, onTripSelect, trips, onTripAdd, onTripUpdate, onTripDelete }: TripSelectorProps) {
-  const [showDropdown, setShowDropdown] = useState(false);
+  const dropdownRef = useRef<View>(null);
+  const [showDropdown, setIsDropdownOpen, handleOutsidePress] = useDetectClose(dropdownRef, false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingTrip, setEditingTrip] = useState<Trip | null>(null);
@@ -111,7 +113,7 @@ export default function TripSelector({ selectedTrip, onTripSelect, trips, onTrip
 
   const handleTripSelect = (trip: Trip) => {
     onTripSelect(trip);
-    setShowDropdown(false);
+    setIsDropdownOpen(false);
   };
 
   const handleDateSelect = (dateString: string) => {
@@ -235,7 +237,7 @@ export default function TripSelector({ selectedTrip, onTripSelect, trips, onTrip
       setNewTrip({ name: '', startDate: '', endDate: '' });
       setSelectionMode('start');
       setShowAddModal(false);
-      setShowDropdown(false);
+      setIsDropdownOpen(false);
       setShowCompletionModal(true);
     } catch (error) {
       console.error('Failed to create trip:', error);
@@ -279,7 +281,7 @@ export default function TripSelector({ selectedTrip, onTripSelect, trips, onTrip
       
       setEditingTrip(null);
       setShowEditModal(false);
-      setShowDropdown(false);
+      setIsDropdownOpen(false);
       setShowUpdateCompletionModal(true);
     } catch (error) {
       console.error('Failed to update trip:', error);
@@ -299,7 +301,7 @@ export default function TripSelector({ selectedTrip, onTripSelect, trips, onTrip
   const confirmDeleteTrip = () => {
     if (tripToDelete) {
       onTripDelete?.(tripToDelete);
-      setShowDropdown(false);
+      setIsDropdownOpen(false);
       setDeleteConfirmModalOpen(false);
       setTripToDelete(null);
       setShowDeleteCompletionModal(true);
@@ -310,13 +312,13 @@ export default function TripSelector({ selectedTrip, onTripSelect, trips, onTrip
     setEditingTrip(trip);
     setEditSelectionMode('start');
     setShowEditModal(true);
-    setShowDropdown(false);
+    setIsDropdownOpen(false);
   };
 
   React.useEffect(() => {
     if (showDropdown) {
       const timer = setTimeout(() => {
-        setShowDropdown(false);
+        setIsDropdownOpen(false);
       }, 5000); // 5초 후 자동으로 닫기
 
       return () => clearTimeout(timer);
@@ -390,7 +392,7 @@ export default function TripSelector({ selectedTrip, onTripSelect, trips, onTrip
           styles.selector,
           showDropdown && styles.selectorOpen
         ]}
-        onPress={() => setShowDropdown(!showDropdown)}
+        onPress={() => setIsDropdownOpen(!showDropdown)}
       >
         <View style={styles.selectorContent}>
           <Text style={styles.selectorText}>
@@ -405,8 +407,19 @@ export default function TripSelector({ selectedTrip, onTripSelect, trips, onTrip
       </Pressable>
 
       {showDropdown && (
-        <View style={styles.dropdownContainer}>
-          <View style={styles.dropdown} pointerEvents="box-none">
+        <>
+          {/* 외부 클릭 감지를 위한 투명 오버레이 */}
+          <Pressable 
+            style={[StyleSheet.absoluteFill, { zIndex: 9998 }]}
+            onPress={handleOutsidePress}
+          />
+          <View 
+            style={styles.dropdownContainer} 
+            ref={dropdownRef}
+            onStartShouldSetResponder={() => true}
+            onResponderGrant={(e) => e.stopPropagation()}
+          >
+            <View style={styles.dropdown} pointerEvents="box-none">
             <ScrollView 
               style={styles.tripList}
               contentContainerStyle={styles.tripListContent}
@@ -496,8 +509,9 @@ export default function TripSelector({ selectedTrip, onTripSelect, trips, onTrip
                 <Text style={styles.addTripButtonText}>새 여행 추가</Text>
               </View>
             </Pressable>
+            </View>
           </View>
-        </View>
+        </>
       )}
 
       {openMenuTripId && (

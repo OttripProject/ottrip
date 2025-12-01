@@ -1,10 +1,11 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { View, StyleSheet, ViewStyle } from 'react-native';
+import React, { useEffect, useMemo, useState, useRef } from 'react';
+import { View, StyleSheet, ViewStyle, Pressable } from 'react-native';
 import DropDownPicker from 'react-native-dropdown-picker';
 import { categoryLabels, ExpenseCategory } from '@/types/expense';
 import { PLACEHOLDERS } from '@/constants/placeholders';
 import { colors } from '@/ui/tokens/colors';
 import { radii } from '@/ui/tokens/radii';
+import useDetectClose from '@/hooks/useDetectClose';
 
 interface CategoryPickerProps {
   value: ExpenseCategory;
@@ -19,7 +20,8 @@ interface CategoryPickerProps {
 export default function CategoryPicker({ value, onChange, placeholder = PLACEHOLDERS.picker.category, containerStyle, disabled, onOpen, onClose }: CategoryPickerProps) {
   const items = useMemo(() =>
     Object.entries(categoryLabels).map(([v, label]) => ({ label, value: v as ExpenseCategory })), []);
-  const [open, setOpen] = useState(false);
+  const pickerRef = useRef<View>(null);
+  const [open, setIsOpen, handleOutsidePress] = useDetectClose(pickerRef, false);
 
   const [innerValue, setInnerValue] = useState<ExpenseCategory>(value);
   useEffect(() => setInnerValue(value), [value]);
@@ -30,14 +32,22 @@ export default function CategoryPicker({ value, onChange, placeholder = PLACEHOL
     : undefined;
 
   return (
-    <View style={[styles.wrapper, containerStyle, { zIndex: open ? 10000 : 1 }]}> 
-      <DropDownPicker
+    <>
+      {/* 외부 클릭 감지를 위한 투명 오버레이 */}
+      {open && (
+        <Pressable 
+          style={[StyleSheet.absoluteFill, { zIndex: 9999 }]}
+          onPress={handleOutsidePress}
+        />
+      )}
+      <View ref={pickerRef} style={[styles.wrapper, containerStyle, { zIndex: open ? 10000 : 1 }]}> 
+        <DropDownPicker
         open={open}
         value={innerValue}
         items={items}
         setOpen={(value) => {
           const isOpen = typeof value === 'function' ? value(open) : value;
-          setOpen(value);
+          setIsOpen(isOpen);
           if (isOpen) {
             onOpen?.();
           } else {
@@ -57,8 +67,9 @@ export default function CategoryPicker({ value, onChange, placeholder = PLACEHOL
         scrollViewProps={{ showsVerticalScrollIndicator: false }}
         zIndex={10000}
         zIndexInverse={1000}
-      />
-    </View>
+        />
+      </View>
+    </>
   );
 }
 
