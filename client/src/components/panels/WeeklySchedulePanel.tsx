@@ -323,31 +323,7 @@ export default function WeeklySchedulePanel({
       // 시간 범위 제한 (0-23시)
       const clampedHour = Math.max(0, Math.min(23, hour));
       const targetTime = targetDate.hour(clampedHour).minute(minutes).second(0).millisecond(0);
-      
-      // 디버깅 로그
-      console.log('=== 드롭 위치 계산 ===');
-      console.log('입력 좌표:', { clientX, clientY });
-      console.log('캘린더 rect:', {
-        left: calendarRect.left,
-        top: calendarRect.top,
-        width: calendarRect.width,
-        height: calendarRect.height,
-      });
-      console.log('상대 좌표:', { relativeX, relativeY });
-      console.log('시간 계산:', {
-        segmentHeight,
-        segmentIndex,
-        hour,
-        minuteSegment,
-        minutes,
-        clampedHour,
-      });
-      console.log('결과:', {
-        date: targetDate.format('YYYY-MM-DD'),
-        time: targetTime.format('YYYY-MM-DD HH:mm'),
-      });
-      console.log('==================');
-      
+          
       // 드롭 위치의 실제 화면 좌표 계산 (해당 날짜/시간 셀의 위치)
       const dayLeft = calendarRect.left + timeColumnWidth + (dayWidth * dayIndexClamped);
       const timeTop = calendarRect.top + headerHeight + (segmentIndex * segmentHeight);
@@ -381,17 +357,7 @@ export default function WeeklySchedulePanel({
         // 상단 중앙점 사용 (더 직관적)
         const elementCenterX = draggedElementX + (draggingEvent.elementWidth / 2);
         const elementTopY = draggedElementY;
-        
-        // 디버깅: 드래그 중인 이벤트 막대 위치
-        console.log('드래그 중인 이벤트 막대 위치:', {
-          elementX: draggedElementX,
-          elementY: draggedElementY,
-          elementWidth: draggingEvent.elementWidth,
-          elementHeight: draggingEvent.elementHeight,
-          centerX: elementCenterX,
-          topY: elementTopY,
-        });
-        
+                
         // 드롭 위치 미리보기 계산 (드래그 중인 이벤트 막대의 위치 기준)
         const dropPos = calculateDropPosition(elementCenterX, elementTopY);
         setDropPreviewPosition(dropPos);
@@ -439,34 +405,13 @@ export default function WeeklySchedulePanel({
             
             // 새로운 시작/종료 시간 계산
             const newStart = dropTime.toDate();
-            const newEnd = dropTime.add(duration, 'minute').toDate();
-            
-            console.log('=== 드롭 처리 ===');
-            console.log('이벤트 ID:', draggingEvent.id);
-            console.log('이벤트 타입:', draggingEvent.type);
-            console.log('이동 전 시간:');
-            console.log('  시작:', originalStart.format('YYYY-MM-DD HH:mm'));
-            console.log('  종료:', originalEnd.format('YYYY-MM-DD HH:mm'));
-            console.log('  지속 시간:', duration, '분');
-            console.log('드롭 위치:', {
-              date: latestDropPos.date,
-              time: dayjs(latestDropPos.time).format('YYYY-MM-DD HH:mm'),
-            });
-            console.log('이동 후 시간:');
-            console.log('  시작:', dayjs(newStart).format('YYYY-MM-DD HH:mm'));
-            console.log('  종료:', dayjs(newEnd).format('YYYY-MM-DD HH:mm'));
-            console.log('================');
-            
+            const newEnd = dropTime.add(duration, 'minute').toDate();            
+          
             // 드롭된 위치 저장
             setDroppedEventPosition({
               eventId: draggingEvent.id,
               newStart,
               newEnd,
-            });
-          } else {
-            console.warn('원본 시작/종료 시간을 찾을 수 없음:', {
-              eventId: draggingEvent.id,
-              type: draggingEvent.type,
             });
           }
         }
@@ -737,21 +682,6 @@ export default function WeeklySchedulePanel({
         const eventIndex = allEvents.findIndex(e => String(e.id) === String(droppedEventPosition.eventId));
         if (eventIndex !== -1) {
           const event = allEvents[eventIndex];
-          console.log('=== 이벤트 위치 업데이트 ===');
-          console.log('이벤트 ID:', droppedEventPosition.eventId);
-          console.log('업데이트 전:', {
-            start: dayjs(event.start).format('YYYY-MM-DD HH:mm'),
-            end: dayjs(event.end).format('YYYY-MM-DD HH:mm'),
-            normalizedStartTime: event.normalizedStartTime,
-            normalizedEndTime: event.normalizedEndTime,
-          });
-          console.log('업데이트 후:', {
-            start: dayjs(droppedEventPosition.newStart).format('YYYY-MM-DD HH:mm'),
-            end: dayjs(droppedEventPosition.newEnd).format('YYYY-MM-DD HH:mm'),
-            normalizedStartTime: dayjs(droppedEventPosition.newStart).format('HH:mm'),
-            normalizedEndTime: dayjs(droppedEventPosition.newEnd).format('HH:mm'),
-          });
-          console.log('==========================');
           
           // 새 객체 생성 (불변성 유지)
           allEvents[eventIndex] = {
@@ -762,18 +692,11 @@ export default function WeeklySchedulePanel({
             normalizedEndTime: dayjs(droppedEventPosition.newEnd).format('HH:mm'),
           };
         } else {
-          console.warn('드롭된 이벤트를 찾을 수 없음:', {
-            droppedEventId: droppedEventPosition.eventId,
-            availableIds: allEvents.map(e => String(e.id)),
-          });
         }
       }
       
-      // 2. [필수 수정] 시작 시간(start)을 기준으로 오름차순 정렬합니다.
       allEvents.sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime());
       
-      // 3. 겹치는 이벤트 그룹을 찾아서 overlapIndex와 overlapCount를 추가
-      // 먼저 모든 이벤트에 대해 겹침 그룹을 찾습니다
       const overlapGroups: any[][] = [];
       const processedEvents: any[] = [];
       
