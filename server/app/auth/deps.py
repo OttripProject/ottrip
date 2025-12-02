@@ -69,6 +69,7 @@ async def get_current_user_or_none(
 
     user_id = decode_jwt_token(token)
     if user_id is None:
+        # 토큰이 만료되었거나 무효함
         return None
 
     user = await session.get(User, user_id)
@@ -81,10 +82,20 @@ async def get_current_user_or_none(
 CurrentUserOptional = Annotated[Optional[User], Depends(get_current_user_or_none)]
 
 
-async def get_current_user(user: CurrentUserOptional) -> User:
-    if not user:
-        raise HTTPException(status_code=403)
-
+async def get_current_user(
+    session: SessionDep, 
+    token: TokenDep, 
+    user: CurrentUserOptional
+) -> User:
+    """현재 사용자를 반환합니다. 토큰이 없거나 만료/무효한 경우 401, 권한이 없는 경우 403을 반환합니다."""
+    if token is None:
+        # 토큰이 없음
+        raise HTTPException(status_code=401, detail="Authentication required")
+    
+    if user is None:
+        # 토큰이 만료되었거나 무효함 (401)
+        raise HTTPException(status_code=401, detail="Token expired or invalid")
+    
     return user
 
 
