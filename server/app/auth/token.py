@@ -66,7 +66,11 @@ def decode_jwt_token(
     *,
     token_type: TokenType = TokenType.AUTH,
 ) -> Optional[int]:
-    """JWT 토큰을 디코딩합니다."""
+    """JWT 토큰을 디코딩합니다.
+    
+    Returns:
+        Optional[int]: 디코딩된 user_id, 실패 시 None
+    """
     try:
         payload = jwt.decode(
             token,
@@ -79,7 +83,11 @@ def decode_jwt_token(
             raise jwt.PyJWTError()
 
         return int(sub)
+    except jwt.ExpiredSignatureError:
+        # 토큰 만료
+        return None
     except jwt.PyJWTError:
+        # 토큰 무효 (서명 오류, 형식 오류 등)
         return None
 
 
