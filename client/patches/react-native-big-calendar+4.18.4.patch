@@ -1,0 +1,96 @@
+diff --git a/node_modules/react-native-big-calendar/build/index.es.js b/node_modules/react-native-big-calendar/build/index.es.js
+index 4a7c12a..d013d6e 100644
+--- a/node_modules/react-native-big-calendar/build/index.es.js
++++ b/node_modules/react-native-big-calendar/build/index.es.js
+@@ -748,24 +748,25 @@ var _HourGuideCell = function (_a) {
+     var cellHeight = _a.cellHeight, onLongPress = _a.onLongPress, onPress = _a.onPress, date = _a.date, hour = _a.hour, index = _a.index, calendarCellStyle = _a.calendarCellStyle, calendarCellAccessibilityProps = _a.calendarCellAccessibilityProps, timeslots = _a.timeslots;
+     var theme = useTheme();
+     var getCalendarCellStyle = React.useMemo(function () { return (typeof calendarCellStyle === 'function' ? calendarCellStyle : function () { return calendarCellStyle; }); }, [calendarCellStyle]);
+-    return (React.createElement(TouchableWithoutFeedback, __assign({ onLongPress: function () { return onLongPress(date.hour(hour).minute(0)); }, onPress: function () { return onPress(date.hour(hour).minute(0)); } }, calendarCellAccessibilityProps),
+-        React.createElement(View, { style: [
+-                u['border-l'],
+-                u['border-b'],
+-                {
+-                    borderColor: theme.palette.gray['200'],
+-                    height: cellHeight,
+-                    justifyContent: 'space-evenly',
+-                },
+-                __assign({}, getCalendarCellStyle(date.toDate(), index)),
+-            ] }, Array.from({ length: timeslots }, function (_, index) { return (React.createElement(View, { key: index, style: [
+-                u['border-l'],
+-                u['border-b'],
+-                {
+-                    borderColor: theme.palette.gray['100'],
+-                    height: 1,
+-                },
+-            ] })); }))));
++    var segmentCount = Math.max(1, (timeslots || 0) + 1);
++    var minutesPerSegment = 60 / segmentCount;
++    var segmentHeight = cellHeight / segmentCount;
++    return (React.createElement(View, { style: [
++            u['border-l'],
++            u['border-b'],
++            {
++                borderColor: theme.palette.gray['200'],
++                height: cellHeight,
++            },
++            __assign({}, getCalendarCellStyle(date.toDate(), index)),
++        ] }, Array.from({ length: segmentCount }, function (_, segmentIndex) {
++            var minuteValue = Math.min(59, Math.round(segmentIndex * minutesPerSegment));
++            return (React.createElement(TouchableWithoutFeedback, __assign({ key: segmentIndex, onLongPress: function () { return onLongPress(date.hour(hour).minute(minuteValue)); }, onPress: function () { return onPress(date.hour(hour).minute(minuteValue)); } }, calendarCellAccessibilityProps),
++                React.createElement(View, { style: {
++                        height: segmentHeight,
++                        width: '100%',
++                    } })));
++        })));
+ };
+ var HourGuideCell = React.memo(_HourGuideCell);
+ 
+diff --git a/node_modules/react-native-big-calendar/build/index.js b/node_modules/react-native-big-calendar/build/index.js
+index f88c814..355985d 100644
+--- a/node_modules/react-native-big-calendar/build/index.js
++++ b/node_modules/react-native-big-calendar/build/index.js
+@@ -779,24 +779,25 @@ var _HourGuideCell = function (_a) {
+     var cellHeight = _a.cellHeight, onLongPress = _a.onLongPress, onPress = _a.onPress, date = _a.date, hour = _a.hour, index = _a.index, calendarCellStyle = _a.calendarCellStyle, calendarCellAccessibilityProps = _a.calendarCellAccessibilityProps, timeslots = _a.timeslots;
+     var theme = useTheme();
+     var getCalendarCellStyle = React__namespace.useMemo(function () { return (typeof calendarCellStyle === 'function' ? calendarCellStyle : function () { return calendarCellStyle; }); }, [calendarCellStyle]);
+-    return (React__namespace.createElement(reactNative.TouchableWithoutFeedback, tslib.__assign({ onLongPress: function () { return onLongPress(date.hour(hour).minute(0)); }, onPress: function () { return onPress(date.hour(hour).minute(0)); } }, calendarCellAccessibilityProps),
+-        React__namespace.createElement(reactNative.View, { style: [
+-                u['border-l'],
+-                u['border-b'],
+-                {
+-                    borderColor: theme.palette.gray['200'],
+-                    height: cellHeight,
+-                    justifyContent: 'space-evenly',
+-                },
+-                tslib.__assign({}, getCalendarCellStyle(date.toDate(), index)),
+-            ] }, Array.from({ length: timeslots }, function (_, index) { return (React__namespace.createElement(reactNative.View, { key: index, style: [
+-                u['border-l'],
+-                u['border-b'],
+-                {
+-                    borderColor: theme.palette.gray['100'],
+-                    height: 1,
+-                },
+-            ] })); }))));
++    var segmentCount = Math.max(1, (timeslots || 0) + 1);
++    var minutesPerSegment = 60 / segmentCount;
++    var segmentHeight = cellHeight / segmentCount;
++    return (React__namespace.createElement(reactNative.View, { style: [
++            u['border-l'],
++            u['border-b'],
++            {
++                borderColor: theme.palette.gray['200'],
++                height: cellHeight,
++            },
++            tslib.__assign({}, getCalendarCellStyle(date.toDate(), index)),
++        ] }, Array.from({ length: segmentCount }, function (_, segmentIndex) {
++            var minuteValue = Math.min(59, Math.round(segmentIndex * minutesPerSegment));
++            return (React__namespace.createElement(reactNative.TouchableWithoutFeedback, tslib.__assign({ key: segmentIndex, onLongPress: function () { return onLongPress(date.hour(hour).minute(minuteValue)); }, onPress: function () { return onPress(date.hour(hour).minute(minuteValue)); } }, calendarCellAccessibilityProps),
++                React__namespace.createElement(reactNative.View, { style: {
++                        height: segmentHeight,
++                        width: '100%',
++                    } })));
++        })));
+ };
+ var HourGuideCell = React__namespace.memo(_HourGuideCell);
+ 
