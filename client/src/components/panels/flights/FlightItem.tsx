@@ -436,7 +436,7 @@ export default function FlightItem({
                   styles.segmentContainer,
                   { 
                     zIndex: (flightSegments.length - idx) * 1000,
-                    backgroundColor: isComplete ? colors.gray300 : colors.white
+                    backgroundColor: isComplete ? colors.gray200 : colors.white
                   }
                 ]}
               >
@@ -734,36 +734,12 @@ const styles = StyleSheet.create({
     color: colors.black,
   },
   input: {
-    backgroundColor: colors.gray300,
+    backgroundColor: colors.gray200,
     height: 40,
     borderRadius: radii.md,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.md,
     ...textStyles.body4,
-  },
-  datePickerWrapper: {
-    position: 'relative',
-    overflow: 'visible',
-  },
-  dateInput: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 0,
-    borderRadius: radii.md,
-    paddingHorizontal: spacing.md,
-    paddingVertical: 10,
-    backgroundColor: colors.gray300,
-    minHeight: 40,
-  },
-  dateTextContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    flex: 1,
-  },
-  dateText: {
-    ...textStyles.body4,
-    color: colors.black,
   },
   placeholderText: {
     ...textStyles.body4,
@@ -781,16 +757,16 @@ const styles = StyleSheet.create({
   currencyPickerWrapper: {
     position: 'relative',
   },
-  currencyDropdown: {
+  currencyDropdown: { 
     borderRadius: radii.md,
-    backgroundColor: colors.gray300,
+    backgroundColor: colors.gray200,
     borderWidth: 0,
     minHeight: 40,
     paddingHorizontal: spacing.md,
   },
   currencyDropdownContainer: {
     borderRadius: radii.md,
-    backgroundColor: colors.gray300,
+    backgroundColor: colors.gray200,
   },
   segmentContainer: {
     borderWidth: 1,

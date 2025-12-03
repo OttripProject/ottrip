@@ -409,9 +409,7 @@ const styles = StyleSheet.create({
     height: 50,
   },
   cancelButton: {
-    backgroundColor: colors.gray200,
-    borderWidth: 1,
-    borderColor: colors.gray400,
+    backgroundColor: colors.gray300,
   },
   cancelButtonText: {
     ...textStyles.h6,

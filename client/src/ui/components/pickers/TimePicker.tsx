@@ -36,14 +36,13 @@ export default function TimePicker({
   const [open, setIsOpen, handleOutsidePress] = useDetectClose(pickerRef, false);
   const [selectedValue, setSelectedValue] = useState<string | null>(value || null);
 
-  // 15분 단위로 시간 옵션 생성 (00:00 ~ 23:45)
   const timeOptions = useMemo(() => {
     const options: { label: string; value: string }[] = [];
-    for (let hour = 0; hour < 24; hour++) {
-      for (let minute = 0; minute < 60; minute += 15) {
+    for (let hour = 0; hour <= 24; hour++) {
+      const minutes = hour === 24 ? [0] : [0, 15, 30, 45];
+      for (const minute of minutes) {
         const timeString = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
         
-        // minTime과 maxTime 필터링
         const isAfterMin = !minTime || timeString >= minTime;
         const isBeforeMax = !maxTime || timeString <= maxTime;
         
@@ -58,7 +57,6 @@ export default function TimePicker({
     return options;
   }, [minTime, maxTime]);
 
-  // value가 변경될 때 selectedValue 업데이트
   useEffect(() => {
     if (value) {
       setSelectedValue(value);
