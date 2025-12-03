@@ -331,14 +331,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   cancelButton: {
-    backgroundColor: colors.white,
-    borderWidth: 1,
-    borderColor: colors.gray400,
+    backgroundColor: colors.gray300,
     marginRight: 4,
   },
   cancelButtonText: {
     ...textStyles.h7,
-    color: colors.black,
   },
   addButton: {
     backgroundColor: colors.gray900,

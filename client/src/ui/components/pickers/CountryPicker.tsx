@@ -8,6 +8,7 @@ import { colors } from '@/ui/tokens/colors';
 import { textStyles } from '@/ui/tokens/typography';
 import DownArrowIcon from '../../../../assets/down_arrow.svg';
 import UpperArrowIcon from '../../../../assets/upper_arrow.svg';
+import CheckBlackIcon from '../../../../assets/check_black.svg';
 import useDetectClose from '@/hooks/useDetectClose'; 
 
 interface CountryPickerProps {
@@ -85,6 +86,9 @@ export default function CountryPicker({ value, onChange, placeholder = '국가 �
         ArrowDownIconComponent={() => <DownArrowIcon width={16} height={16} />}
         ArrowUpIconComponent={() => <UpperArrowIcon width={16} height={16} />}
         translation={{ NOTHING_TO_SHOW: '결과가 없습니다' }}
+        TickIconComponent={() => (
+          <CheckBlackIcon width={16} height={16} />
+        )}
       />
       </View>
     </>
@@ -96,7 +100,7 @@ const styles = StyleSheet.create({
   dropdown: {
     borderWidth: 0,
     borderRadius: radii.md,
-    backgroundColor: colors.gray300,
+    backgroundColor: colors.gray200,
     minHeight: 40,
     position: 'relative',
     zIndex: 9999,
@@ -106,7 +110,7 @@ const styles = StyleSheet.create({
   dropdownContainer: {
     borderWidth: 0,
     borderRadius: radii.md,
-    backgroundColor: colors.gray300,
+    backgroundColor: colors.gray200,
     zIndex: 9999,
     elevation: 6,
     position: 'absolute'
@@ -123,7 +127,7 @@ const styles = StyleSheet.create({
   listItemLabel: {
     ...textStyles.body4,
     color: colors.black,
-    backgroundColor: colors.gray300,
+    backgroundColor: colors.gray200,
     paddingHorizontal: 8,
     paddingVertical: 6,
   },
@@ -132,7 +136,7 @@ const styles = StyleSheet.create({
     color: colors.black,
   },
   selectedItemContainer: {
-    backgroundColor: colors.gray300,
+    backgroundColor: colors.gray200,
   },
   searchInput: {
     height: 30,
