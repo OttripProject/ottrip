@@ -535,14 +535,33 @@ export default function WeeklySchedulePanel({
       return days;
     };
 
-    // 특정 날짜의 숙박 정보 찾기 (체크인 날짜에만 표시)
+    // 특정 날짜의 숙박 정보 찾기 (체크인~체크아웃 사이의 모든 날짜 포함)
     const getAccommodationForDate = (date: string) => {
+      const targetDate = dayjs(date).format('YYYY-MM-DD');
       return planData.accommodations.find((acc: any) => {
         const checkinDate = dayjs(acc.checkinDate).format('YYYY-MM-DD');
-        const targetDate = dayjs(date).format('YYYY-MM-DD');
+        const checkoutDate = dayjs(acc.checkoutDate).format('YYYY-MM-DD');
         
-        return targetDate === checkinDate;
+        // 체크인 날짜부터 체크아웃 날짜 전날까지 포함
+        return targetDate >= checkinDate && targetDate < checkoutDate;
       });
+    };
+    
+    // 숙박이 해당 날짜에서 시작인지 확인
+    const isAccommodationStart = (accommodation: any, date: string) => {
+      if (!accommodation) return false;
+      const checkinDate = dayjs(accommodation.checkinDate).format('YYYY-MM-DD');
+      const targetDate = dayjs(date).format('YYYY-MM-DD');
+      return targetDate === checkinDate;
+    };
+    
+    // 숙박이 해당 날짜에서 끝나는지 확인 (체크아웃 전날)
+    const isAccommodationEnd = (accommodation: any, date: string) => {
+      if (!accommodation) return false;
+      const checkoutDate = dayjs(accommodation.checkoutDate).format('YYYY-MM-DD');
+      const targetDate = dayjs(date).format('YYYY-MM-DD');
+      const dayBeforeCheckout = dayjs(checkoutDate).subtract(1, 'day').format('YYYY-MM-DD');
+      return targetDate === dayBeforeCheckout;
     };
 
     const handleAddTrip = async (newTrip: any) => {
@@ -943,13 +962,32 @@ export default function WeeklySchedulePanel({
                   <View style={[styles.timeColumn, { justifyContent: 'center', alignItems: 'center', borderRightWidth: 0.5, borderRightColor: '#e0e0e0' }]}>
                     <AccommodationIcon width={16} height={16} />
                   </View>
-                  <View style={{ flex: 1, flexDirection: 'row' }}>
+                  <View style={{ flex: 1, flexDirection: 'row', position: 'relative' }}>
                     {getWeekDays().map((date, index) => {
                       const accommodation = getAccommodationForDate(date);
+                      const isStart = isAccommodationStart(accommodation, date);
+                      const isEnd = isAccommodationEnd(accommodation, date);
+                      const isMiddle = accommodation && !isStart && !isEnd;
+                      
+                      // 다음 날짜에도 같은 숙박이 있는지 확인
+                      const nextDate = index < getWeekDays().length - 1 ? getWeekDays()[index + 1] : null;
+                      const nextAccommodation = nextDate ? getAccommodationForDate(nextDate) : null;
+                      const hasContinuousAccommodation = accommodation && nextAccommodation && 
+                        accommodation.id === nextAccommodation.id;
+                      
+                      // 숙박이 연속되는 경우 오른쪽 border 숨김
+                      const shouldHideRightBorder = hasContinuousAccommodation || isMiddle;
+                      
                       return (
                         <Pressable
                           key={date}
-                          style={{ flex: 1, justifyContent: 'center', alignItems: 'center', borderRightWidth: index < getWeekDays().length - 1 ? 1 : 0, borderRightColor: '#e0e0e0' }}
+                          style={{ 
+                            flex: 1, 
+                            justifyContent: 'center', 
+                            alignItems: 'center', 
+                            borderRightWidth: (index < getWeekDays().length - 1 && !shouldHideRightBorder) ? 1 : 0, 
+                            borderRightColor: '#e0e0e0' 
+                          }}
                           onPress={() => {
                             if (accommodation) {
                               onShowAccommodationModal?.(accommodation);
@@ -961,21 +999,33 @@ export default function WeeklySchedulePanel({
                           {accommodation && (
                             <View style={{ 
                               backgroundColor: 'rgba(245, 158, 11, 0.1)', 
-                              borderWidth: 1,
+                              borderTopWidth: 1,
+                              borderBottomWidth: 1,
+                              borderLeftWidth: isStart ? 1 : 0,
+                              borderRightWidth: isEnd ? 1 : 0,
                               borderColor: '#F59E0B',
-                              borderRadius: radii.sm, 
-                              paddingHorizontal: 8, 
+                              borderTopLeftRadius: isStart ? radii.sm : 0,
+                              borderBottomLeftRadius: isStart ? radii.sm : 0,
+                              borderTopRightRadius: isEnd ? radii.sm : 0,
+                              borderBottomRightRadius: isEnd ? radii.sm : 0,
+                              paddingHorizontal: isStart ? 8 : (isEnd ? 8 : 0),
                               paddingVertical: 4, 
-                              width: '98%',
+                              width: '100%',
                               height: '95%',
                               justifyContent: 'center',
+                              marginLeft: isStart ? 0 : -1,
+                              marginRight: isEnd ? 0 : -1,
                             }}>
-                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8}}>
-                                <WeekBarAccommodationIcon width={14} height={14} />
-                                <Text style={{ ...textStyles.h8, color: '#F59E0B', lineHeight: 10 }} numberOfLines={1}>
-                                  {accommodation.name}
-                                </Text>
-                              </View>
+                              {(isStart || isMiddle) && (
+                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingLeft: isStart ? 0 : 8 }}>
+                                  {isStart && <WeekBarAccommodationIcon width={14} height={14} />}
+                                  {isStart && (
+                                    <Text style={{ ...textStyles.h8, color: '#F59E0B', lineHeight: 10 }} numberOfLines={1}>
+                                      {accommodation.name}
+                                    </Text>
+                                  )}
+                                </View>
+                              )}
                             </View>
                           )}
                         </Pressable>
