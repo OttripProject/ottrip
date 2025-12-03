@@ -193,7 +193,7 @@ export default function AccommodationItem({
       {/* 기본 정보 섹션 */}
       <View style={styles.formSection}>
         <View style={styles.inputGroup}>
-          <Text style={styles.label}>숙소명</Text>
+          <Text style={styles.label}>숙소명*</Text>
           <Input
             variant="filled"
             placeholder={PLACEHOLDERS.accommodation.name}
@@ -221,7 +221,7 @@ export default function AccommodationItem({
 
         <View style={[styles.row, { gap: spacing.sm, zIndex: countryOpen ? 10000 : 1 }]}>
           <View style={[styles.inputGroup, styles.halfWidth, { zIndex: countryOpen ? 10000 : 1 }]}>
-            <Text style={styles.label}>국가</Text>
+            <Text style={styles.label}>국가*</Text>
             <CountryPicker
               value={formData.country}
               onChange={(name: string) => setFormData({ ...formData, country: name })}
@@ -231,7 +231,7 @@ export default function AccommodationItem({
             />
           </View>
           <View style={[styles.inputGroup, styles.halfWidth]}>
-            <Text style={styles.label}>도시</Text>
+            <Text style={styles.label}>도시*</Text>
             <Input
               variant="filled"
               placeholder={PLACEHOLDERS.accommodation.city}
@@ -441,7 +441,7 @@ const styles = StyleSheet.create({
     color: colors.black,
   },
   input: {
-    backgroundColor: colors.gray300,
+    backgroundColor: colors.gray200,
     height: 40,
     borderRadius: radii.md,
     paddingHorizontal: spacing.md,
@@ -455,7 +455,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.md,
     paddingHorizontal: spacing.md,
     paddingVertical: 10,
-    backgroundColor: colors.gray300,
+    backgroundColor: colors.gray200,
     minHeight: 40,
   },
   dateTextContainer: {
@@ -492,14 +492,14 @@ const styles = StyleSheet.create({
   },
   currencyDropdown: {
     borderRadius: radii.md,
-    backgroundColor: colors.gray300,
+    backgroundColor: colors.gray200,
     borderWidth: 0,
     minHeight: 40,
     paddingHorizontal: spacing.md,
   },
   currencyDropdownContainer: {
     borderRadius: radii.md,
-    backgroundColor: colors.gray300,
+    backgroundColor: colors.gray200,
   },
   buttonRow: {
     flexDirection: 'row',
@@ -511,8 +511,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.gray300,
     height: 40,
     borderRadius: radii.md,
-    borderWidth: 1,
-    borderColor: colors.gray400,
     paddingHorizontal: spacing.lg,
     justifyContent: 'center',
     alignItems: 'center',
@@ -536,7 +534,7 @@ const styles = StyleSheet.create({
     color: colors.white,
   },
   textArea: {
-    backgroundColor: colors.gray300,
+    backgroundColor: colors.gray200,
     height: 80,
     borderRadius: radii.md,
     paddingHorizontal: spacing.md,

@@ -590,7 +590,6 @@ export default function ItineraryItem({
             onChange={(time) => setFormData({ ...formData, startTime: time })}
             onOpen={() => setTimeOpen(true)}
             onClose={() => setTimeOpen(false)}
-            maxTime={formData.endTime}
           />
         </View>
         <View style={[styles.inputGroup, styles.halfWidth]}>
@@ -883,7 +882,7 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
   },
   expenseCard: {
-    backgroundColor: colors.gray300,
+    backgroundColor: colors.gray200,
     borderRadius: radii.md,
     paddingHorizontal: spacing.lg,
     paddingVertical: 12,
@@ -976,8 +975,6 @@ const styles = StyleSheet.create({
   },
   expenseCancelButton: {
     backgroundColor: colors.gray300,
-    borderWidth: 1,
-    borderColor: colors.gray400,
     borderRadius: 8,
     height: 32,
     paddingHorizontal: spacing.lg,
