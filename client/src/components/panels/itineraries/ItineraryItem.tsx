@@ -801,7 +801,7 @@ const styles = StyleSheet.create({
     gap: spacing.lg,
   },
   input: {
-    backgroundColor: colors.gray300,
+    backgroundColor: colors.gray200,
     height: 40,
     borderRadius: radii.md,
     paddingHorizontal: spacing.md,
@@ -809,7 +809,7 @@ const styles = StyleSheet.create({
     ...textStyles.body4,
   },
   textArea: {
-    backgroundColor: colors.gray300,
+    backgroundColor: colors.gray200,
     height: 80,
     borderRadius: radii.md,
     paddingHorizontal: spacing.md,
@@ -830,8 +830,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.gray300,
     height: 40,
     borderRadius: radii.md,
-    borderWidth: 1,
-    borderColor: colors.gray400,
     paddingHorizontal: spacing.lg,
     justifyContent: 'center',
     alignItems: 'center',
@@ -1016,7 +1014,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.md,
     paddingHorizontal: spacing.md,
     paddingVertical: 10,
-    backgroundColor: colors.gray300,
+    backgroundColor: colors.gray200,
     minHeight: 40,
   },
   dateTextContainer: {
@@ -1027,7 +1025,6 @@ const styles = StyleSheet.create({
   },
   dateText: {
     ...textStyles.body4,
-    color: colors.black,
   },
   iconWrapper: {
     marginTop: -2,

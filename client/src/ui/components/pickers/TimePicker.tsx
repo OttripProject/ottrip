@@ -8,6 +8,7 @@ import { radii } from '@/ui/tokens/radii';
 import { spacing } from '@/ui/tokens/spacing';
 import DownArrowIcon from '../../../../assets/dropdown_time.svg';
 import UpperArrowIcon from '../../../../assets/upper_arrow.svg';
+import CheckBlackIcon from '../../../../assets/check_black.svg';
 import { PLACEHOLDERS } from '@/constants/placeholders';
 
 interface TimePickerProps {
@@ -82,7 +83,7 @@ export default function TimePicker({
   const customBorderRadius = styleObj?.borderRadius;
   
   // 커스텀 스타일이 있으면 적용, 없으면 기본값 사용
-  const dropdownBgColor = customBackgroundColor || colors.gray300;
+  const dropdownBgColor = customBackgroundColor || colors.gray200;
   const dropdownStyle: any = {
     width: '100%',
     backgroundColor: dropdownBgColor,
@@ -162,6 +163,9 @@ export default function TimePicker({
         ArrowDownIconComponent={() => <DownArrowIcon width={16} height={16} />}
         ArrowUpIconComponent={() => <UpperArrowIcon width={16} height={16} />}
         translation={{ NOTHING_TO_SHOW: '선택 가능한 시간이 없습니다' }}
+        TickIconComponent={() => (
+          <CheckBlackIcon width={16} height={16} />
+        )}
         />
       </View>
     </>
@@ -175,7 +179,7 @@ const styles = StyleSheet.create({
   dropdown: {
     borderWidth: 0,
     borderRadius: radii.md,
-    backgroundColor: colors.gray300,
+    backgroundColor: colors.gray200,
     minHeight: 40,
     position: 'relative',
     zIndex: 9999,
@@ -185,7 +189,7 @@ const styles = StyleSheet.create({
   dropdownContainer: {
     borderWidth: 0,
     borderRadius: radii.md,
-    backgroundColor: colors.gray300,
+    backgroundColor: colors.gray200,
     zIndex: 9999,
     elevation: 6,
   },
@@ -204,7 +208,7 @@ const styles = StyleSheet.create({
   listItemLabel: {
     ...textStyles.body4,
     color: colors.black,
-    backgroundColor: colors.gray300,
+    backgroundColor: colors.gray200,
     paddingHorizontal: spacing.sm,
     paddingVertical: 6,
   },
@@ -213,7 +217,7 @@ const styles = StyleSheet.create({
     color: colors.black,
   },
   selectedItemContainer: {
-    backgroundColor: colors.gray300,
+    backgroundColor: colors.gray200,
   },
 });
 
