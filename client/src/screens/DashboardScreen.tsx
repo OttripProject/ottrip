@@ -428,7 +428,7 @@ export default function DashboardScreen() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: colors.gray300,
+    backgroundColor: colors.gray200,
   },
   container: {
     flex: 1,

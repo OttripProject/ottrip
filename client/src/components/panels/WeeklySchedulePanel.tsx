@@ -776,17 +776,17 @@ export default function WeeklySchedulePanel({
           
           <View style={styles.dateNavigation}>
             <Pressable onPress={goPrev}>
-              <LeftArrowIcon width={12} height={12} />
+              <LeftArrowIcon width={16} height={16} />
             </Pressable>
             
             <Text style={styles.dateText}>{currentWeekStart.format('YYYY년 M월')}</Text>
             
             <Pressable onPress={goNext}>
-              <RightArrowIcon width={12} height={12} />
+              <RightArrowIcon width={16} height={16} />
             </Pressable>
           </View>
 
-          <Pressable onPress={goToday} style={[styles.actionButton, { marginLeft: spacing.xl }]}>
+          <Pressable onPress={goToday} style={[styles.actionButton, { marginLeft: spacing.lg }]}>
             <View style={{ marginRight: spacing.xs }}>
               <TodayIcon width={16} height={16} />
             </View>
@@ -794,7 +794,7 @@ export default function WeeklySchedulePanel({
           </Pressable>
 
           <View style={styles.calendarButtonWrapper}>
-            <Pressable onPress={() => setShowMonthPicker(!showMonthPicker)} style={[styles.iconButton, { marginLeft: spacing.sm }]}>
+            <Pressable onPress={() => setShowMonthPicker(!showMonthPicker)} style={[styles.iconButton, { marginLeft: spacing.xs }]}>
               <CalenderIcon width={16} height={16} />
             </Pressable>
             <BaseCalendar
@@ -1452,7 +1452,7 @@ const styles = StyleSheet.create({
       flexDirection: 'row',
       height: 32,
       borderRadius: 8,
-      backgroundColor: colors.gray300,
+      backgroundColor: colors.gray200,
       paddingHorizontal: 12,
       justifyContent: 'center',
       alignItems: 'center',
@@ -1465,8 +1465,8 @@ const styles = StyleSheet.create({
     actionGroup: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: spacing.sm,
-      marginLeft: spacing.md,
+      gap: spacing.xs,
+      marginLeft: spacing.lg,
     },
     todayBtn: {
       borderWidth: 1,
