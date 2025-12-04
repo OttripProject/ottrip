@@ -7,7 +7,7 @@ from app.common.schemas import StatusResponse
 
 from .config import ai_settings
 from .service import AIService
-from .schemas import AIFlightRead, ChecklistCreateRequest, ChecklistCreateResponse, ChecklistRead, ChecklistItemCheckRequest
+from .schemas import AIFlightRead, ChecklistCreateRequest, ChecklistCreateResponse, ChecklistRead, ChecklistItemCheckRequest, ChecklistItemAddRequest
 
 router = create_router()
 
@@ -183,6 +183,36 @@ async def update_checklist_item_status(
         public_id=public_id,
         item_id=item_id,
         is_checked=request.is_checked
+    )
+    return result
+
+
+@router.post("/checklist/{public_id}/item")
+async def add_checklist_item(
+    public_id: str,
+    request: ChecklistItemAddRequest,
+    ai_service: AIService,
+) -> StatusResponse:
+    """체크리스트 항목 추가 (지정된 카테고리)"""
+    result = await ai_service.add_checklist_item(
+        public_id=public_id,
+        name=request.name,
+        reason=request.reason,
+        category=request.category
+    )
+    return result
+
+
+@router.delete("/checklist/{public_id}/item/{item_id}")
+async def delete_checklist_item(
+    public_id: str,
+    item_id: int,
+    ai_service: AIService,
+) -> StatusResponse:
+    """체크리스트 항목 삭제 (custom 카테고리만)"""
+    result = await ai_service.delete_checklist_item(
+        public_id=public_id,
+        item_id=item_id
     )
     return result
         
