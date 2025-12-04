@@ -9,6 +9,7 @@ import { textStyles } from '@/ui/tokens/typography';
 import DownArrowIcon from '../../../../assets/down_arrow.svg';
 import UpperArrowIcon from '../../../../assets/upper_arrow.svg';
 import CheckBlackIcon from '../../../../assets/check_black.svg';
+import SearchIcon from '../../../../assets/search.svg';
 import useDetectClose from '@/hooks/useDetectClose'; 
 
 interface CountryPickerProps {
@@ -42,6 +43,11 @@ export default function CountryPicker({ value, onChange, placeholder = '국가 �
         />
       )}
       <View ref={pickerRef} style={[styles.wrapper, containerStyle, { zIndex: open ? 10000 : 1 }]}> 
+        {open && (
+          <View style={styles.searchIconOverlay}>
+            <SearchIcon width={16} height={16} />
+          </View>
+        )}
       <DropDownPicker
         open={open}
         value={code}
@@ -126,7 +132,7 @@ const styles = StyleSheet.create({
   },
   listItemLabel: {
     ...textStyles.body4,
-    color: colors.black,
+    color: colors.gray500,
     backgroundColor: colors.gray200,
     paddingHorizontal: 8,
     paddingVertical: 6,
@@ -141,18 +147,29 @@ const styles = StyleSheet.create({
   searchInput: {
     height: 30,
     paddingVertical: 6,
-    paddingHorizontal: 10,
+    paddingLeft: 32,
+    paddingRight: 10,
     fontSize: 14,
     width: '100%',
-    borderWidth: 1,
-    borderColor: colors.gray400,
-    borderRadius: radii.sm
+    borderWidth: 0,
+    borderRadius: radii.xs,
+    backgroundColor: colors.white,
   },
   searchContainer: {
     paddingVertical: 5,
     paddingHorizontal: 8,
     borderBottomWidth: 0,
     width: '100%',
+    position: 'relative',
+  },
+  searchIconOverlay: {
+    position: 'absolute',
+    left: 20,
+    top: 56,
+    zIndex: 12000,
+    justifyContent: 'center',
+    alignItems: 'center',
+    pointerEvents: 'none',
   },
 });
 

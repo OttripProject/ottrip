@@ -6,6 +6,7 @@ import { PLACEHOLDERS } from '@/constants/placeholders';
 import { colors } from '@/ui/tokens/colors';
 import DropdownTimeIcon from '../../../../assets/dropdown_time.svg';
 import UpperArrowIcon from '../../../../assets/upper_arrow.svg';
+import SearchIcon from '../../../../assets/search.svg';
 import { radii } from '@/ui/tokens/radii';
 import useDetectClose from '@/hooks/useDetectClose';
 
@@ -74,6 +75,11 @@ export default function AirportPicker({
         />
       )}
       <View ref={pickerRef} style={[styles.wrapper, containerStyle, { zIndex: open ? 999999 : 1 }]}> 
+        {open && (
+          <View style={styles.searchIconOverlay}>
+            <SearchIcon width={16} height={16} />
+          </View>
+        )}
       <DropDownPicker
         open={open}
         value={code}
@@ -92,19 +98,21 @@ export default function AirportPicker({
         searchTextInputStyle={{ 
           height: 30, 
           paddingVertical: 6, 
-          paddingHorizontal: 10, 
+          paddingLeft: 32,
+          paddingRight: 10, 
           fontSize: 14, 
           width: '100%',
           borderWidth: 1,
           borderColor: colors.gray400,
-          borderRadius: radii.sm,
+          borderRadius: radii.xs,
         }}
         searchContainerStyle={{ 
           paddingVertical: 5, 
           paddingHorizontal: 8, 
           borderBottomWidth: 0, 
           borderTopWidth: 0,
-          width: '100%' 
+          width: '100%',
+          position: 'relative',
         }}
         placeholder={placeholder} 
         style={[styles.dropdown, { width: '100%' }]}
@@ -161,5 +169,14 @@ const styles = StyleSheet.create({
     position: 'relative',
     zIndex: 999999,
     width: '100%',
+  },
+  searchIconOverlay: {
+    position: 'absolute',
+    left: 20,
+    top: 53,
+    zIndex: 1000000,
+    justifyContent: 'center',
+    alignItems: 'center',
+    pointerEvents: 'none',
   },
 });
