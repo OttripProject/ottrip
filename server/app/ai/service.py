@@ -1,4 +1,4 @@
-from typing import Dict, Any
+from typing import Dict, Any, cast
 
 from fastapi import HTTPException
 from sqlalchemy.orm import attributes
@@ -98,11 +98,16 @@ class AIService:
             raise HTTPException(status_code=403, detail="해당 계획 체크리스트 생성 권한이 없습니다.")
 
         if plan.travel_checklist and not force_regenerate:
+            # 기존 체크리스트에서 custom 카테고리 제거
+            categories = plan.travel_checklist["categories"].copy()
+            if "custom" in categories:
+                del categories["custom"]
+            
             return ChecklistCreateResponse(
                 success=True,
                 message="기존 체크리스트가 존재합니다.",
                 checklist=ChecklistRead(
-                    categories=ChecklistItemsByCategory(**plan.travel_checklist["categories"])
+                    categories=ChecklistItemsByCategory(**categories)
                 )
             )
         
@@ -138,8 +143,60 @@ class AIService:
                 checklist=None
             )
         
+        # AI 생성 항목에 is_custom: False 설정
+        ai_data = ai_result.data or {}
+        for items in ai_data.values():
+            if isinstance(items, list):
+                items_list = cast(list[Any], items)
+                for item in items_list:
+                    if isinstance(item, dict):
+                        item_dict = cast(Dict[str, Any], item)
+                        item_dict["is_custom"] = False
+        
+        # 기존 체크리스트에서 사용자가 추가한 항목(is_custom: True) 보존
+        if plan.travel_checklist and "categories" in plan.travel_checklist:
+            existing_categories = plan.travel_checklist["categories"]
+            
+            # 각 카테고리에서 사용자가 추가한 항목 찾기
+            for category_key, existing_items in existing_categories.items():
+                if not isinstance(category_key, str) or not isinstance(existing_items, list):
+                    continue
+                
+                existing_list = cast(list[Any], existing_items)
+                user_added_items: list[Dict[str, Any]] = []
+                
+                for item in existing_list:
+                    if isinstance(item, dict):
+                        item_dict = cast(Dict[str, Any], item)
+                        # 사용자가 추가한 항목(is_custom: True)만 보존
+                        if item_dict.get("is_custom", False):
+                            user_added_items.append(item_dict)
+                
+                # 사용자가 추가한 항목이 있으면 AI 생성 데이터에 추가
+                if user_added_items:
+                    # 카테고리 키 변환 (snake_case로 통일)
+                    category_map: Dict[str, str] = {
+                        "basicRequired": "basic_required",
+                        "scheduleRequired": "schedule_required",
+                        "recommended": "recommended",
+                        "optional": "optional",
+                        "custom": "custom"
+                    }
+                    ai_category_key = category_map.get(category_key, category_key)
+                    
+                    # AI 생성 데이터에 해당 카테고리가 없으면 생성
+                    if ai_category_key not in ai_data:
+                        ai_data[ai_category_key] = []
+                    
+                    # AI 생성 데이터의 카테고리가 리스트인지 확인
+                    ai_category_items = ai_data[ai_category_key]
+                    if isinstance(ai_category_items, list):
+                        ai_category_list = cast(list[Any], ai_category_items)
+                        # 사용자가 추가한 항목들을 AI 생성 항목 뒤에 추가
+                        ai_category_list.extend(user_added_items)
+        
         checklist = ChecklistRead(
-            categories=ChecklistItemsByCategory(**(ai_result.data or {}))
+            categories=ChecklistItemsByCategory(**ai_data)
         )
         
         plan.travel_checklist = checklist.model_dump()
@@ -167,8 +224,20 @@ class AIService:
                 )
             )
         
+        # 기존 체크리스트에서 is_custom 필드가 없는 경우 기본값 설정 (하위 호환성)
+        categories = plan.travel_checklist["categories"]
+             
+        for items in categories.values():
+            if isinstance(items, list):
+                items_list = cast(list[Any], items)
+                for item in items_list:
+                    if isinstance(item, dict):
+                        item_dict = cast(Dict[str, Any], item)
+                        if "is_custom" not in item_dict:
+                            item_dict["is_custom"] = False  # 기본값은 AI 생성
+        
         return ChecklistRead(
-            categories=ChecklistItemsByCategory(**plan.travel_checklist["categories"])
+            categories=ChecklistItemsByCategory(**categories)
         )
     
     async def set_checklist_item_status(self, public_id: str, item_id: int, is_checked: bool) -> StatusResponse:
@@ -191,6 +260,109 @@ class AIService:
                         ok=True,
                         message="체크리스트 항목이 업데이트되었습니다."
                     )
+        
+        raise HTTPException(status_code=404, detail="해당 항목을 찾을 수 없습니다.")
+    
+    async def add_checklist_item(self, public_id: str, name: str, reason: str = "", category: str = "basic_required") -> StatusResponse:
+        """체크리스트 항목 추가 (지정된 카테고리)"""
+        plan = await self.plan_repository.find_by_public_id(public_id=public_id)
+        if not plan:
+            raise HTTPException(status_code=404, detail="해당 계획을 찾을 수 없습니다.")
+        
+        if plan.owner_id != self.current_user.id and not await self.plan_repository.is_editor(plan_id=plan.id, user_id=self.current_user.id):
+            raise HTTPException(status_code=403, detail="해당 계획 체크리스트 수정 권한이 없습니다.")
+        
+        if not plan.travel_checklist:
+            # 체크리스트가 없으면 기본 구조 생성
+            plan.travel_checklist = {
+                "categories": {
+                    "basic_required": [],
+                    "schedule_required": [],
+                    "recommended": [],
+                    "optional": []
+                }
+            }
+        
+        categories = plan.travel_checklist["categories"]
+        
+        # camelCase를 snake_case로 변환
+        category_map = {
+            "basicRequired": "basic_required",
+            "scheduleRequired": "schedule_required",
+            "recommended": "recommended",
+            "optional": "optional"
+        }
+        category_snake = category_map.get(category, category)
+        
+        # 유효한 카테고리인지 확인
+        valid_categories = ["basic_required", "schedule_required", "recommended", "optional"]
+        if category_snake not in valid_categories:
+            raise HTTPException(status_code=400, detail="유효하지 않은 카테고리입니다.")
+        
+        # 카테고리가 없으면 생성
+        if category_snake not in categories:
+            categories[category_snake] = []
+        
+        # 모든 카테고리에서 최대 ID 찾기 (효율적으로 한 번의 순회로 처리)
+        max_id = 0
+        for cat_items in categories.values():
+            if isinstance(cat_items, list):
+                cat_list = cast(list[Any], cat_items)
+                for item in cat_list:
+                    if isinstance(item, dict) and "id" in item:
+                        item_dict = cast(Dict[str, Any], item)
+                        item_id = item_dict.get("id")
+                        if isinstance(item_id, int) and item_id > max_id:
+                            max_id = item_id
+        
+        # 새 항목 생성 (사용자 추가 항목)
+        new_item = {
+            "id": max_id + 1,
+            "name": name,
+            "reason": reason,
+            "is_checked": False,
+            "is_custom": True
+        }
+        
+        categories[category_snake].append(new_item)
+        attributes.flag_modified(plan, "travel_checklist")
+        await self.plan_repository.save(plan=plan)
+        
+        return StatusResponse(
+            ok=True,
+            message="체크리스트 항목이 추가되었습니다."
+        )
+    
+    async def delete_checklist_item(self, public_id: str, item_id: int) -> StatusResponse:
+        """체크리스트 항목 삭제"""
+        plan = await self.plan_repository.find_by_public_id(public_id=public_id)
+        if not plan:
+            raise HTTPException(status_code=404, detail="해당 계획을 찾을 수 없습니다.")
+        
+        if plan.owner_id != self.current_user.id and not await self.plan_repository.is_editor(plan_id=plan.id, user_id=self.current_user.id):
+            raise HTTPException(status_code=403, detail="해당 계획 체크리스트 수정 권한이 없습니다.")
+        
+        if not plan.travel_checklist:
+            raise HTTPException(status_code=400, detail="체크리스트가 존재하지 않습니다.")
+        
+        categories = plan.travel_checklist["categories"]
+        
+        # 모든 카테고리에서 해당 항목 찾아서 삭제 (모든 카테고리에서 삭제 가능)
+        for category_items in categories.values():
+            if not isinstance(category_items, list):
+                continue
+            category_list = cast(list[Any], category_items)
+            for idx, item in enumerate(category_list):
+                if isinstance(item, dict):
+                    item_dict = cast(Dict[str, Any], item)
+                    if item_dict.get("id") == item_id:
+                        category_list.pop(idx)
+                        attributes.flag_modified(plan, "travel_checklist")
+                        await self.plan_repository.save(plan=plan)
+                        return StatusResponse(
+                            ok=True,
+                            message="체크리스트 항목이 삭제되었습니다."
+                        )
         
         raise HTTPException(status_code=404, detail="해당 항목을 찾을 수 없습니다.")
 
