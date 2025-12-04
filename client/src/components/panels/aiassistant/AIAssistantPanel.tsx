@@ -1,27 +1,27 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert, ActivityIndicator, ScrollView, Modal, Pressable, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, ActivityIndicator, ScrollView, Pressable, Platform, TextInput } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import MaskedView from '@react-native-masked-view/masked-view';
 import PanelLayout from '../PanelLayout';
 import GradientBackground from '@/ui/components/GradientBackground';
 import RefreshChecklistModal from '../../modals/AiRefreshChecklistModal';
 import InsufficientScheduleModal from '../../modals/AiInsufficientModal';
+import AiChecklistListViewModal from '../../modals/AiChecklistListViewModal';
 import api from '@/services/api';
 import { colors } from '@/ui/tokens/colors';
 import { textStyles, typography } from '@/ui/tokens/typography';
 import { spacing } from '@/ui/tokens/spacing';
 import { radii } from '@/ui/tokens/radii';
 import AiRefreshIcon from '../../../../assets/ai_refresh.svg';
-import AiCautionIcon from '../../../../assets/ai_caution.svg';
-import AiCheckedIcon from '../../../../assets/ai_checked.svg';
 import AiCheckIcon from '../../../../assets/ai_check.svg';
-import AiListIcon from '../../../../assets/ai_list.svg';
+import DeleteIcon from '../../../../assets/delete_ai.svg';
 
 interface ChecklistItem {
   id: number;
   name: string;
   reason: string;
   isChecked: boolean;
+  isCustom: boolean;  // true: 사용자 추가, false: AI 생성
 }
 
 interface ChecklistCategory {
@@ -39,10 +39,15 @@ interface AIAssistantPanelProps {
 export default function AIAssistantPanel({ publicId }: AIAssistantPanelProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [checklist, setChecklist] = useState<ChecklistData | null>(null);
-  const [showPreview, setShowPreview] = useState(false);
   const [showRefreshModal, setShowRefreshModal] = useState(false);
   const [showInsufficientModal, setShowInsufficientModal] = useState(false);
-  const [showFullView, setShowFullView] = useState(false);
+  const [showListViewModal, setShowListViewModal] = useState(false);
+  const [showAddItemModal, setShowAddItemModal] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [hoveredItemId, setHoveredItemId] = useState<number | null>(null);
+  const [addingCategory, setAddingCategory] = useState<string | null>(null);
+  const [newItemName, setNewItemName] = useState('');
+  const [newItemReason, setNewItemReason] = useState('');
 
   // Plan이 선택될 때 기존 체크리스트 확인
   useEffect(() => {
@@ -51,7 +56,6 @@ export default function AIAssistantPanel({ publicId }: AIAssistantPanelProps) {
     } else {
       // Plan이 선택되지 않으면 상태 초기화
       setChecklist(null);
-      setShowPreview(false);
     }
   }, [publicId]);
 
@@ -62,25 +66,14 @@ export default function AIAssistantPanel({ publicId }: AIAssistantPanelProps) {
       const response = await api.get(`/private/ai/checklist/${publicId}`);
       
       if (response.data && response.data.categories) {
-        const hasItems = Object.values(response.data.categories).some(
-          (category: any) => category && category.length > 0
-        );
-        
-        if (hasItems) {
-          setChecklist(response.data);
-          setShowPreview(true);
-        } else {
-          setChecklist(null);
-          setShowPreview(false);
-        }
+        // 백엔드가 이미 camelCase로 응답하므로 변환 불필요
+        setChecklist(response.data);
       } else {
         setChecklist(null);
-        setShowPreview(false);
       }
     } catch (error) {
       console.log('기존 체크리스트 없음 또는 오류:', error);
       setChecklist(null);
-      setShowPreview(false);
     }
   };
   
@@ -98,6 +91,7 @@ export default function AIAssistantPanel({ publicId }: AIAssistantPanelProps) {
       const activeItineraries = plan.itineraries?.filter((it: any) => !it.is_deleted) || [];
       
       if (activeItineraries.length < 2) {
+        setIsLoading(false);
         setShowInsufficientModal(true);
         return;
       }
@@ -109,7 +103,6 @@ export default function AIAssistantPanel({ publicId }: AIAssistantPanelProps) {
       
       if (checklistResponse.data.success) {
         setChecklist(checklistResponse.data.checklist);
-        setShowPreview(true);
       } else {
         Alert.alert('오류', checklistResponse.data.message || '체크리스트 생성에 실패했습니다.');
       }
@@ -132,14 +125,26 @@ export default function AIAssistantPanel({ publicId }: AIAssistantPanelProps) {
     try {
       setIsLoading(true);
       
-      // 기존 체크리스트를 강제로 재생성
+      // 1. 유효성 검사: 상세일정 2개 이상 확인 (삭제되지 않은 일정만)
+      const planResponse = await api.get(`/private/plans/${publicId}`);
+      const plan = planResponse.data;
+      
+      // 삭제되지 않은 일정만 필터링
+      const activeItineraries = plan.itineraries?.filter((it: any) => !it.is_deleted) || [];
+      
+      if (activeItineraries.length < 2) {
+        setIsLoading(false);
+        setShowInsufficientModal(true);
+        return;
+      }
+      
+      // 2. 기존 체크리스트를 강제로 재생성
       const response = await api.post(`/private/ai/checklist/${publicId}/generate`, {
         force_regenerate: true
       });
       
       if (response.data.success) {
         setChecklist(response.data.checklist);
-        setShowPreview(true);
       } else {
         Alert.alert('오류', response.data.message || '체크리스트 새로고침에 실패했습니다.');
       }
@@ -152,11 +157,11 @@ export default function AIAssistantPanel({ publicId }: AIAssistantPanelProps) {
   };
 
   const handleViewAll = () => {
-    setShowFullView(true);
+    setShowListViewModal(true);
   };
 
-  const handleSimpleView = () => {
-    setShowFullView(false);
+  const handleCloseListViewModal = () => {
+    setShowListViewModal(false);
   };
 
   const getCategoryTitle = (categoryKey: string) => {
@@ -197,6 +202,76 @@ export default function AIAssistantPanel({ publicId }: AIAssistantPanelProps) {
     }
   };
 
+  const handleAddItem = async (name: string, reason: string, category: string) => {
+    if (!publicId) return;
+    
+    try {
+      const endpoint = `/private/ai/checklist/${publicId}/item`;
+      
+      await api.post(endpoint, {
+        name,
+        reason,
+        category
+      });
+      
+      // 체크리스트 다시 불러오기
+      await checkExistingChecklist();
+      
+      // 추가 모드 종료 및 입력 필드 초기화
+      setAddingCategory(null);
+      setNewItemName('');
+      setNewItemReason('');
+    } catch (error) {
+      console.error('체크리스트 항목 추가 오류:', error);
+      Alert.alert('오류', '체크리스트 항목 추가에 실패했습니다.');
+    }
+  };
+
+  const handleStartAdding = (categoryKey: string) => {
+    setAddingCategory(categoryKey);
+    setNewItemName('');
+    setNewItemReason('');
+  };
+
+  const handleCancelAdding = () => {
+    setAddingCategory(null);
+    setNewItemName('');
+    setNewItemReason('');
+  };
+
+  const handleSaveAdding = () => {
+    if (!addingCategory || !newItemName.trim()) {
+      Alert.alert('알림', '항목명을 입력해주세요.');
+      return;
+    }
+    handleAddItem(newItemName.trim(), newItemReason.trim(), addingCategory);
+  };
+
+  const handleDeleteItem = async (itemId: number) => {
+    if (!publicId) return;
+    
+    try {
+      const endpoint = `/private/ai/checklist/${publicId}/item/${itemId}`;
+      
+      await api.delete(endpoint);
+      
+      // 체크리스트 다시 불러오기
+      await checkExistingChecklist();
+    } catch (error) {
+      console.error('체크리스트 항목 삭제 오류:', error);
+      Alert.alert('오류', '체크리스트 항목 삭제에 실패했습니다.');
+    }
+  };
+
+  // 체크리스트가 실제로 항목을 가지고 있는지 확인
+  const hasChecklistItems = () => {
+    if (!checklist || !checklist.categories) return false;
+    
+    return Object.values(checklist.categories).some(
+      (category: any) => category && Array.isArray(category) && category.length > 0
+    );
+  };
+
   // 미리보기 통계 계산
   const getPreviewStats = () => {
     if (!checklist) return { total: 0, checked: 0 };
@@ -215,6 +290,7 @@ export default function AIAssistantPanel({ publicId }: AIAssistantPanelProps) {
   };
 
   const stats = getPreviewStats();
+  const hasItems = hasChecklistItems();
 
   // 그라데이션 텍스트 컴포넌트
   const GradientText = ({ children, style }: { children: string; style?: any }) => {
@@ -260,141 +336,263 @@ export default function AIAssistantPanel({ publicId }: AIAssistantPanelProps) {
   return (
     <PanelLayout style={{ flex: 1 }}>
       <GradientBackground style={{ flex: 1 }}>
-        {!publicId ? (
-          // Plan이 선택되지 않은 상태
-          <View style={styles.placeholder}>
-            <Text style={styles.placeholderText}>여행을 선택해주세요</Text>
-          </View>
-        ) : !showPreview ? (
-          // 초기 상태: AI 체크리스트 버튼
-          <View style={styles.initialState}>
-            <TouchableOpacity 
-              style={styles.generateButton}
-              onPress={handleGenerateChecklist}
-              disabled={isLoading}
-            >
-              {isLoading ? (
-                <View style={styles.loadingContainer}>
-                  <ActivityIndicator size="small" color="#fff" />
-                  <Text style={styles.loadingText}>체크리스트 생성 중...</Text>
-                </View>
-              ) : (
-                <Text style={styles.generateButtonText}>AI 체크리스트</Text>
-              )}
-            </TouchableOpacity>
-          </View>
-        ) : showFullView ? (
-          // 전체보기 상태 (컨테이너 고정, 내부 스크롤)
-          <View style={styles.fullViewContainer}>
+        <View 
+          style={[
+            styles.contentContainer, 
+            isLoading && (Platform.OS === 'web' 
+              ? { filter: 'blur(4px)' } 
+              : styles.contentContainerBlur)
+          ]}
+        >
+          {!publicId ? (
+            // Plan이 선택되지 않은 상태
+            <View style={styles.placeholder}>
+              <Text style={styles.placeholderText}>여행을 선택해주세요</Text>
+            </View>
+          ) : (
+            // 간단히 보기 상태 (체크리스트가 없어도 빈 카테고리 표시)
+            <View style={styles.previewContainer}>
             <View style={styles.headerSection}>
               <View style={styles.titleContainer}>
-                <GradientText style={styles.headerTitle}>AI assistant</GradientText>
-                <TouchableOpacity onPress={handleRefresh} style={styles.refreshButton}>
-                  <AiRefreshIcon width={16} height={16} />
+                <GradientText style={styles.headerTitle}>Checklist</GradientText>
+                {hasItems ? (
+                  <TouchableOpacity onPress={handleRefresh} style={styles.refreshButton}>
+                    <AiRefreshIcon width={16} height={16} />
+                  </TouchableOpacity>
+                ) : (
+                  <TouchableOpacity 
+                    style={styles.generateButton}
+                    onPress={handleGenerateChecklist}
+                  >
+                    <Text style={styles.generateButtonText}>AI assistant</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+              {hasItems && (
+                <TouchableOpacity onPress={handleViewAll} style={styles.viewAllButton}>
+                  <Text style={styles.viewAllText}>리스트로 보기</Text>
                 </TouchableOpacity>
-              </View>
-              <TouchableOpacity onPress={handleSimpleView} style={styles.viewAllButton}>
-                <Text style={styles.viewAllText}>간단히 보기</Text>
-              </TouchableOpacity>
+              )}
             </View>
-          <View style={styles.scrollWrapper}>
-            <ScrollView style={styles.checklistScrollView} showsVerticalScrollIndicator={false}>
-            {checklist && (
-              <View style={styles.checklistHeader}>
-                <AiListIcon width={16} height={16} />
-                <Text style={styles.checklistHeaderText}>체크 리스트</Text>
+            
+            {/* 작은 통계 버튼 */}
+            <View style={styles.simpleStatsContainer}>
+              <View style={styles.simpleStatButton}>
+                <Text style={styles.simpleStatLabel}>준비 필요</Text>
+                <Text style={styles.simpleStatNumberWarning}>{stats.total - stats.checked}</Text>
               </View>
-            )}
-            {checklist && Object.entries(checklist.categories).map(([categoryKey, items]) => (
-              <View key={categoryKey} style={styles.categorySection}>
-                <Text style={styles.categoryTitle}>
-                  {getCategoryTitle(categoryKey)}
-                </Text>
-                <View style={styles.categoryCard}>
-                  {items.map((item) => {
-                    return (
-                      <TouchableOpacity
-                        key={item.id}
-                        style={styles.checklistItem}
-                        onPress={() => handleToggleItem(item.id, !item.isChecked)}
-                      >
-                        <View style={styles.itemContent}>
-                          <View style={[
-                            styles.checkboxContainer,
-                            item.isChecked && styles.checkboxContainerChecked
-                          ]}>
-                            {item.isChecked ? (
-                              <AiCheckIcon width={13} height={13} fill={colors.white} />
-                            ) : null}
-                          </View>
-                          <View style={styles.itemTextContainer}>
-                            <Text style={[
-                              styles.itemText,
-                              item.isChecked && styles.itemTextChecked
-                            ]}>
-                              {item.name} → {item.reason}
-                            </Text>
-                          </View>
-                        </View>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
+              <View style={styles.simpleStatButton}>
+                <Text style={styles.simpleStatLabel}>준비 됨</Text>
+                <Text style={styles.simpleStatNumberSuccess}>{stats.checked}</Text>
               </View>
-            ))}
-            </ScrollView>
-          </View>
-        </View>
-        ) : (
-        // 미리보기 상태
-        <View style={styles.previewContainer}>
-          <View style={styles.headerSection}>
-            <View style={styles.titleContainer}>
-              <GradientText style={styles.headerTitle}>AI assistant</GradientText>
-              <TouchableOpacity onPress={handleRefresh} style={styles.refreshButton}>
-                <AiRefreshIcon width={16} height={16} />
-              </TouchableOpacity>
             </View>
-            <TouchableOpacity onPress={handleViewAll} style={styles.viewAllButton}>
-              <Text style={styles.viewAllText}>전체보기</Text>
-            </TouchableOpacity>
-          </View>
-          
-          <View style={styles.statsWrapper}>
-            <View style={styles.statsContainer}>
-              <View style={styles.statGroup}>
-                <View style={styles.statHeader}>
-                  <View style={styles.statHeaderContent}>
-                    <AiCautionIcon width={16} height={16} />
-                    <Text style={styles.statTitleWarning}>준비 필요</Text>
-                  </View>
-                </View>
-                <View style={[styles.statCard, styles.statCardWarning]}>
-                  <Text style={styles.statNumber}>{stats.total - stats.checked}</Text>
-                </View>
-              </View>
-              
-              <View style={styles.statGroup}>
-                <View style={styles.statHeader}>
-                  <View style={styles.statHeaderContent}>
-                    <View style={styles.checkIconWrapper}>
-                      <View style={styles.checkIconBackground} />
-                      <View style={styles.checkIconContainer}>
-                        <AiCheckedIcon width={16} height={16} />
+
+            {/* 체크리스트 리스트 */}
+            <View style={styles.previewScrollWrapper}>
+              <ScrollView style={styles.previewScrollView} showsVerticalScrollIndicator={false}>
+                {(() => {
+                  // 기본 카테고리 목록
+                  const defaultCategories = ['basic_required', 'schedule_required', 'recommended', 'optional', 'custom'];
+                  
+                  // checklist가 없으면 빈 카테고리 구조 생성
+                  const categoriesToShow = checklist 
+                    ? checklist.categories 
+                    : {
+                        basic_required: [],
+                        schedule_required: [],
+                        recommended: [],
+                        optional: [],
+                        custom: []
+                      };
+                  
+                  // custom 카테고리를 맨 위로 정렬
+                  const categoryEntries = Object.entries(categoriesToShow);
+                  const sortedEntries = [
+                    ...categoryEntries.filter(([key]) => key === 'custom'),
+                    ...categoryEntries.filter(([key]) => key !== 'custom')
+                  ];
+                  
+                  return sortedEntries.map(([categoryKey, items]) => (
+                    <View key={categoryKey} style={styles.previewCategorySection}>
+                      <View style={styles.previewCategoryTitleRow}>
+                        <Text style={styles.previewCategoryTitle}>
+                          {getCategoryTitle(categoryKey)}
+                        </Text>
                       </View>
+                      {items.length === 0 ? (
+                        <View style={styles.previewEmptyCategory}>
+                          {addingCategory !== categoryKey ? (
+                            <>
+                              <TouchableOpacity
+                                style={styles.previewAddItemButtonCard}
+                                onPress={() => handleStartAdding(categoryKey)}
+                              >
+                                <Text style={styles.previewAddItemButtonTextCard}>+</Text>
+                              </TouchableOpacity>
+                              <Text style={styles.previewEmptyCategoryText}>체크리스트를 추가해주세요.</Text>
+                            </>
+                          ) : (
+                            <View style={styles.previewAddingItemRow}>
+                              <View style={styles.previewAddingItemInputs}>
+                                <TextInput
+                                  style={styles.addingItemNameInput}
+                                  placeholder="항목명"
+                                  placeholderTextColor={colors.gray700}
+                                  value={newItemName}
+                                  onChangeText={setNewItemName}
+                                  maxLength={50}
+                                  autoFocus
+                                />
+                                <TextInput
+                                  style={styles.addingItemReasonInput}
+                                  placeholder="이유 (선택사항)"
+                                  placeholderTextColor={colors.gray700}
+                                  value={newItemReason}
+                                  onChangeText={setNewItemReason}
+                                  maxLength={100}
+                                />
+                              </View>
+                              <View style={styles.addingItemButtons}>
+                                <TouchableOpacity
+                                  style={styles.addingItemCancelButton}
+                                  onPress={handleCancelAdding}
+                                >
+                                  <Text style={styles.addingItemCancelText}>취소</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                  style={styles.addingItemSaveButton}
+                                  onPress={handleSaveAdding}
+                                >
+                                  <Text style={styles.addingItemSaveText}>저장</Text>
+                                </TouchableOpacity>
+                              </View>
+                            </View>
+                          )}
+                        </View>
+                      ) : (
+                        <View style={styles.previewCategoryCard}>
+                          {addingCategory !== categoryKey ? (
+                            <TouchableOpacity
+                              style={styles.previewAddItemButtonCard}
+                              onPress={() => handleStartAdding(categoryKey)}
+                            >
+                              <Text style={styles.previewAddItemButtonTextCard}>+</Text>
+                            </TouchableOpacity>
+                          ) : (
+                            <View style={styles.previewAddingItemRow}>
+                              <View style={styles.previewAddingItemInputs}>
+                                <TextInput
+                                  style={styles.addingItemNameInput}
+                                  placeholder="항목명"
+                                  value={newItemName}
+                                  onChangeText={setNewItemName}
+                                  maxLength={50}
+                                  autoFocus
+                                />
+                                <TextInput
+                                  style={styles.addingItemReasonInput}
+                                  placeholder="이유 (선택사항)"
+                                  value={newItemReason}
+                                  onChangeText={setNewItemReason}
+                                  maxLength={100}
+                                />
+                              </View>
+                              <View style={styles.addingItemButtons}>
+                                <TouchableOpacity
+                                  style={styles.addingItemCancelButton}
+                                  onPress={handleCancelAdding}
+                                >
+                                  <Text style={styles.addingItemCancelText}>취소</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                  style={styles.addingItemSaveButton}
+                                  onPress={handleSaveAdding}
+                                >
+                                  <Text style={styles.addingItemSaveText}>저장</Text>
+                                </TouchableOpacity>
+                              </View>
+                            </View>
+                          )}
+                          {items.map((item) => {
+                            const isHovered = hoveredItemId === item.id;
+                            return (
+                              <View 
+                                key={item.id} 
+                                style={styles.previewChecklistItemWrapper}
+                                {...(Platform.OS === 'web' ? {
+                                  onMouseEnter: () => setHoveredItemId(item.id),
+                                  onMouseLeave: () => setHoveredItemId(null),
+                                } : {})}
+                              >
+                                <TouchableOpacity
+                                  style={styles.previewChecklistItem}
+                                  onPress={() => handleToggleItem(item.id, !item.isChecked)}
+                                >
+                                  <View style={styles.previewItemContent}>
+                                    <View style={[
+                                      styles.checkboxContainer,
+                                      item.isChecked && styles.checkboxContainerChecked
+                                    ]}>
+                                      {item.isChecked ? (
+                                        <AiCheckIcon width={13} height={13} fill={colors.white} />
+                                      ) : null}
+                                    </View>
+                                    {!item.isCustom && (
+                                      <View style={styles.aiBadge}>
+                                        <GradientText style={styles.aiBadgeText}>AI</GradientText>
+                                      </View>
+                                    )}
+                                    <View style={styles.itemTextContainer}>
+                                      <Text style={[
+                                        styles.itemText,
+                                        item.isChecked && styles.itemTextChecked
+                                      ]}>
+                                        {item.name} → {item.reason}
+                                      </Text>
+                                    </View>
+                                  </View>
+                                </TouchableOpacity>
+                                {isHovered && (
+                                  <TouchableOpacity
+                                    style={styles.deleteItemButton}
+                                    onPress={() => handleDeleteItem(item.id)}
+                                  >
+                                    <DeleteIcon width={18.33} height={18.33} />
+                                  </TouchableOpacity>
+                                )}
+                              </View>
+                            );
+                          })}
+                        </View>
+                      )}
                     </View>
-                    <Text style={styles.statTitleSuccess}>준비 됨</Text>
-                  </View>
-                </View>
-                <View style={[styles.statCard, styles.statCardSuccess]}>
-                  <Text style={styles.statNumber}>{stats.checked}</Text>
-                </View>
-              </View>
+                  ));
+                })()}
+              </ScrollView>
             </View>
           </View>
+          )}
         </View>
+        {isLoading && (
+          <View style={styles.loadingOverlay}>
+            <View style={styles.loadingContent}>
+              <ActivityIndicator size="large" color={colors.white} />
+              <Text style={styles.loadingMessage}>AI Checklist 생성중..</Text>
+            </View>
+          </View>
         )}
       </GradientBackground>
+
+      {/* 리스트 보기 Modal */}
+      <AiChecklistListViewModal
+        visible={showListViewModal}
+        checklist={checklist}
+        onClose={handleCloseListViewModal}
+        onRefresh={handleRefresh}
+        onToggleItem={handleToggleItem}
+        onDeleteItem={handleDeleteItem}
+        onAddItem={handleAddItem}
+      />
 
       {/* 새로고침 확인 Modal */}
       <RefreshChecklistModal
@@ -411,6 +609,7 @@ export default function AIAssistantPanel({ publicId }: AIAssistantPanelProps) {
         visible={showInsufficientModal}
         onClose={() => setShowInsufficientModal(false)}
       />
+
     </PanelLayout>
   );
 }
@@ -420,6 +619,35 @@ const styles = StyleSheet.create({
     flex: 1,
     minHeight: 0,
   },
+  contentContainer: {
+    flex: 1,
+  },
+  contentContainerBlur: {
+    ...(Platform.OS === 'web' ? {
+      filter: 'blur(4px)',
+    } : {
+      opacity: 0.5,
+    }),
+  },
+  loadingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1000,
+  },
+  loadingContent: {
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  loadingMessage: {
+    ...textStyles.h6,
+    color: colors.white,
+  },
   // 초기 상태 스타일
   initialState: {
     flex: 1,
@@ -428,27 +656,24 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   generateButton: {
-    backgroundColor: '#007AFF',
-    paddingHorizontal: 32,
-    paddingVertical: 16,
-    borderRadius: 12,
-    minWidth: 160,
+    backgroundColor: colors.gray400,
+    padding: spacing.xs,
+    justifyContent: 'center',
     alignItems: 'center',
+    borderRadius: radii.sm,
   },
   generateButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
+    ...textStyles.h8,
+    color: colors.white,
   },
   loadingContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: spacing.xs,
   },
   loadingText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '500',
+    ...textStyles.body4,
+    color: colors.white,
   },
   // 미리보기 상태 스타일
   previewContainer: {
@@ -494,6 +719,119 @@ const styles = StyleSheet.create({
     ...textStyles.h6,
     color: colors.gray700,
   },
+  // 간단히 보기 통계 버튼
+  simpleStatsContainer: {
+    flexDirection: 'row',
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.md,
+    gap: spacing.md,
+  },
+  simpleStatButton: {
+    backgroundColor: colors.white,
+    borderRadius: 29,
+    height: 40,
+    width: 108,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs,
+  },
+  simpleStatLabel: {
+    ...textStyles.h7,
+    color: colors.black,
+  },
+  simpleStatNumberWarning: {
+    fontFamily: typography.fontFamily.poppinsSemiBold,
+    fontSize: 13,
+    lineHeight: 20,
+    color: '#FF0080',
+  },
+  simpleStatNumberSuccess: {
+    fontFamily: typography.fontFamily.poppinsSemiBold,
+    fontSize: 13,
+    lineHeight: 20,
+    color: '#0066FF',
+  },
+  // 간단히 보기 스크롤 영역
+  previewScrollWrapper: {
+    flex: 1,
+    marginTop: spacing.md,
+  },
+  previewScrollView: {
+    flex: 1,
+  },
+  // 간단히 보기 카테고리 섹션
+  previewCategorySection: {
+    marginBottom: spacing.lg,
+    paddingHorizontal: spacing.xl,
+  },
+  previewCategoryTitleRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.sm,
+  },
+  previewCategoryTitle: {
+    ...textStyles.h7,
+    color: colors.black,
+  },
+  previewAddItemButtonCard: {
+    position: 'absolute',
+    top: spacing.sm,
+    right: spacing.sm,
+    width: 24,
+    height: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1,
+  },
+  previewAddItemButtonTextCard: {
+    ...textStyles.body4,
+    color: colors.gray700,
+    fontSize: 16,
+    lineHeight: 20,
+  },
+  previewCategoryCard: {
+    backgroundColor: colors.white,
+    borderRadius: radii.md,
+    padding: spacing.md,
+    position: 'relative',
+  },
+  previewChecklistItemWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  previewChecklistItem: {
+    flex: 1,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.sm,
+  },
+  previewItemContent: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+  previewEmptyCategory: {
+    backgroundColor: colors.white,
+    borderRadius: radii.md,
+    padding: spacing.lg,
+    alignItems: 'center',
+    position: 'relative',
+  },
+  previewEmptyCategoryText: {
+    ...textStyles.body4,
+    color: colors.gray600,
+  },
+  emptyChecklistMessage: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: spacing.xl,
+  },
+  emptyChecklistText: {
+    ...textStyles.body4,
+    color: colors.gray600,
+  },
+  // 기존 상세 보기용 스타일 (유지)
   statsWrapper: {
     flex: 1,
     paddingHorizontal: spacing.xl,
@@ -623,7 +961,7 @@ const styles = StyleSheet.create({
     ...textStyles.h7,
     color: colors.white,
   },
-  // 전체보기 스타일
+  // 전체보기 스타일 (모달에서도 사용)
   fullViewContainer: {
     flex: 1,
     minHeight: 0,
@@ -652,10 +990,25 @@ const styles = StyleSheet.create({
   categorySection: {
     marginBottom: spacing.lg,
   },
+  categoryTitleRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.sm,
+  },
   categoryTitle: {
     ...textStyles.h7,
     color: colors.black,
-    marginBottom: spacing.sm,
+  },
+  addItemButton: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: radii.sm,
+    backgroundColor: colors.gray100,
+  },
+  addItemButtonText: {
+    ...textStyles.body4,
+    color: colors.black,
   },
   categoryCard: {
     backgroundColor: colors.white,
@@ -663,14 +1016,133 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     borderWidth: 1,
     borderColor: colors.gray300,
+    position: 'relative',
+  },
+  addItemButtonCard: {
+    position: 'absolute',
+    top: spacing.sm,
+    right: spacing.sm,
+    width: 24,
+    height: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1,
+  },
+  addItemButtonTextCard: {
+    ...textStyles.body4,
+    color: colors.gray700,
+    fontSize: 16,
+    lineHeight: 20,
+  },
+  checklistItemWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   checklistItem: {
+    flex: 1,
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.sm,
+  },
+  deleteItemButton: {
+    padding: spacing.xs,
+    marginRight: spacing.sm,
+  },
+  emptyCategory: {
+    padding: spacing.lg,
+    alignItems: 'center',
+  },
+  emptyCategoryText: {
+    ...textStyles.body4,
+    color: colors.gray600,
+  },
+  // 아이템 추가 row 스타일
+  addingItemRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: spacing.sm,
+    gap: spacing.sm,
+  },
+  addingItemInputs: {
+    flex: 1,
+    flexDirection: 'row',
+    gap: spacing.xs,
+  },
+  addingItemNameInput: {
+    ...textStyles.body4,
+    flex: 1,
+    borderWidth: 1,
+    borderColor: colors.gray300,
+    borderRadius: radii.sm,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    color: colors.black,
+  },
+  addingItemReasonInput: {
+    ...textStyles.body4,
+    flex: 1,
+    borderWidth: 1,
+    borderColor: colors.gray300,
+    borderRadius: radii.sm,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    color: colors.black,
+  },
+  addingItemButtons: {
+    flexDirection: 'row',
+    gap: spacing.xs,
+  },
+  addingItemCancelButton: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: radii.sm,
+    backgroundColor: colors.gray200,
+  },
+  addingItemCancelText: {
+    ...textStyles.body4,
+    color: colors.gray600,
+  },
+  addingItemSaveButton: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: radii.sm,
+    backgroundColor: colors.black,
+  },
+  addingItemSaveText: {
+    ...textStyles.body4,
+    color: colors.white,
+  },
+  // 간단히 보기용 추가 row 스타일
+  previewAddingItemRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: spacing.sm,
+    gap: spacing.sm,
+  },
+  previewAddingItemInputs: {
+    flex: 1,
+    flexDirection: 'row',
+    gap: spacing.xs,
   },
   itemContent: {
     flexDirection: 'row',
     alignItems: 'flex-start',
+  },
+  aiBadge: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: colors.gray200,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: spacing.sm,
+    marginTop: 2,
+  },
+  aiBadgeText: {
+    fontSize: 9,
+    lineHeight: 18,
+    fontWeight: '500',
+    fontFamily: typography.fontFamily.poppinsMedium,
+    textAlign: 'center',
   },
   checkboxContainer: {
     width: 15,
@@ -697,9 +1169,16 @@ const styles = StyleSheet.create({
   itemTextContainer: {
     flex: 1,
   },
+  itemTextRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    flexWrap: 'wrap',
+  },
   itemText: {
     ...textStyles.body4,
     color: colors.black,
+    flex: 1,
   },
   itemTextChecked: {
     color: colors.gray700,
