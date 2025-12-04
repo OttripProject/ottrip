@@ -181,7 +181,7 @@ const styles = StyleSheet.create({
     minHeight: 40,
     position: 'relative',
     zIndex: 9999,
-    paddingHorizontal: spacing.md,
+    paddingHorizontal: spacing.lg,
     paddingVertical: 10,
   },
   dropdownContainer: {
@@ -205,9 +205,9 @@ const styles = StyleSheet.create({
   },
   listItemLabel: {
     ...textStyles.body4,
-    color: colors.black,
+    color: colors.gray500,
     backgroundColor: colors.gray200,
-    paddingHorizontal: spacing.sm,
+    paddingHorizontal: 6,
     paddingVertical: 6,
   },
   selectedItem: {
