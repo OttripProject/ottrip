@@ -224,11 +224,15 @@ export default function TripFormModal({
               style={[
                 styles.modalButton,
                 styles.addButton,
+                isSubmitDisabled && styles.addButtonDisabled,
               ]}
               onPress={onSubmit}
               disabled={isSubmitDisabled}
             >
-              <Text style={styles.addButtonText}>{submitButtonText}</Text>
+              <Text style={[
+                styles.addButtonText,
+                isSubmitDisabled && styles.addButtonTextDisabled,
+              ]}>{submitButtonText}</Text>
             </Pressable>
           </View>
         </View>
@@ -341,9 +345,15 @@ const styles = StyleSheet.create({
     backgroundColor: colors.gray900,
     marginLeft: 4,
   },
+  addButtonDisabled: {
+    backgroundColor: colors.gray300,
+  },
   addButtonText: {
     ...textStyles.h7,
     color: colors.white,
+  },
+  addButtonTextDisabled: {
+    color: colors.gray700,
   },
   dayContainer: {
     width: 32,

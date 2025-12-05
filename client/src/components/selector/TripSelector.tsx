@@ -567,7 +567,7 @@ export default function TripSelector({ selectedTrip, onTripSelect, trips, onTrip
         markedDates={getMarkedDates()}
         onDateSelect={handleDateSelect}
         onSubmit={handleAddTrip}
-        isSubmitDisabled={!newTrip.startDate || !newTrip.endDate || isSubmittingAdd}
+        isSubmitDisabled={!newTrip.name.trim() || !newTrip.startDate || !newTrip.endDate || isSubmittingAdd}
       />
 
       {/* 여행 수정 모달 */}
@@ -580,7 +580,7 @@ export default function TripSelector({ selectedTrip, onTripSelect, trips, onTrip
         markedDates={getEditMarkedDates()}
         onDateSelect={handleEditDateSelect}
         onSubmit={handleEditTrip}
-        isSubmitDisabled={!editingTrip?.startDate || !editingTrip?.endDate || isSubmittingEdit}
+        isSubmitDisabled={!editingTrip?.name.trim() || !editingTrip?.startDate || !editingTrip?.endDate || isSubmittingEdit}
       />
 
       {/* 여행 삭제 확인 모달 */}
