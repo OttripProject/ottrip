@@ -86,8 +86,8 @@ export default function AccommodationItem({
       return;
     }
 
-    // 모델 필수값 검증: name, country, city, checkin_date, checkout_date, checkin_time, checkout_time
-    if (!formData.name.trim() || !formData.country.trim() || !formData.city.trim() || 
+    // 모델 필수값 검증: name, checkin_date, checkout_date, checkin_time, checkout_time
+    if (!formData.name.trim() || 
         !formData.checkin_date || !formData.checkout_date || !formData.checkin_time || !formData.checkout_time) {
       onShowWarning?.();
       return;
@@ -103,8 +103,8 @@ export default function AccommodationItem({
         savedAccommodation = await accommodationsApi.updateAccommodation(accommodation.id, {
           name: formData.name,
           place: formData.place || undefined,
-          country: formData.country,
-          city: formData.city,
+          country: formData.country?.trim() || undefined,
+          city: formData.city?.trim() || undefined,
           checkinDate: formData.checkin_date,
           checkoutDate: formData.checkout_date,
           checkinTime: formData.checkin_time + ':00',
@@ -124,8 +124,8 @@ export default function AccommodationItem({
           planId: planId,
           name: formData.name,
           place: formData.place || undefined,
-          country: formData.country,
-          city: formData.city,
+          country: formData.country?.trim() || undefined,
+          city: formData.city?.trim() || undefined,
           checkinDate: formData.checkin_date,
           checkoutDate: formData.checkout_date,
           checkinTime: formData.checkin_time + ':00',
@@ -221,7 +221,7 @@ export default function AccommodationItem({
 
         <View style={[styles.row, { gap: spacing.sm, zIndex: countryOpen ? 10000 : 1 }]}>
           <View style={[styles.inputGroup, styles.halfWidth, { zIndex: countryOpen ? 10000 : 1 }]}>
-            <Text style={styles.label}>국가*</Text>
+            <Text style={styles.label}>국가</Text>
             <CountryPicker
               value={formData.country}
               onChange={(name: string) => setFormData({ ...formData, country: name })}
@@ -231,7 +231,7 @@ export default function AccommodationItem({
             />
           </View>
           <View style={[styles.inputGroup, styles.halfWidth]}>
-            <Text style={styles.label}>도시*</Text>
+            <Text style={styles.label}>도시</Text>
             <Input
               variant="filled"
               placeholder={PLACEHOLDERS.accommodation.city}

@@ -125,14 +125,18 @@ export default function ItinerarySection({
                 : selectedItinerary.endTime}
             </Text>
           </View>
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>국가</Text>
-            <Text style={styles.detailValue}>{selectedItinerary.country}</Text>
-          </View>
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>도시</Text>
-            <Text style={styles.detailValue}>{selectedItinerary.city}</Text>
-          </View>
+          {selectedItinerary.country && (
+            <View style={styles.detailRow}>
+              <Text style={styles.detailLabel}>국가</Text>
+              <Text style={styles.detailValue}>{selectedItinerary.country}</Text>
+            </View>
+          )}
+          {selectedItinerary.city && (
+            <View style={styles.detailRow}>
+              <Text style={styles.detailLabel}>도시</Text>
+              <Text style={styles.detailValue}>{selectedItinerary.city}</Text>
+            </View>
+          )}
           <View style={styles.detailRow}>
             <Text style={styles.detailLabel}>장소</Text>
             <Text style={styles.detailValue}>{selectedItinerary.location}</Text>

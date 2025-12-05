@@ -47,8 +47,8 @@ export interface Itinerary {
 export interface CreateItineraryRequest {
   title: string;
   description?: string;
-  country: string;
-  city: string;
+  country?: string;
+  city?: string;
   location?: string;
   itineraryDate: string;
   startTime: string;
@@ -132,8 +132,8 @@ export interface Accommodation {
   id: number;
   name: string;
   place?: string;
-  country: string;
-  city: string;
+  country?: string;
+  city?: string;
   checkinDate: string;
   checkoutDate: string;
   checkinTime: string;
@@ -147,8 +147,8 @@ export interface Accommodation {
 export interface CreateAccommodationRequest {
   name: string;
   place?: string;
-  country: string;
-  city: string;
+  country?: string;
+  city?: string;
   checkinDate: string;
   checkoutDate: string;
   checkinTime: string;
