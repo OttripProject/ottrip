@@ -23,12 +23,14 @@ def create_app() -> FastAPI:
             docs_url=None,  # Swagger UI 비활성화
             redoc_url=None,  # ReDoc 비활성화
             openapi_url=None,  # OpenAPI 스키마도 비활성화
+            redirect_slashes=False, 
         )
     else:
         # 개발/로컬: Swagger 활성화
         app = FastAPI(
             title="OTTRIP API",
             swagger_ui_parameters={"persistAuthorization": True},
+            redirect_slashes=False,  
         )
 
     # CORS 미들웨어 추가 (환경변수로 오리진 구성, 비어있으면 localhost 기본값 사용)
