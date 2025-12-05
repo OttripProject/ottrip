@@ -16,7 +16,7 @@ export const itinerariesApi = {
 
   // 일정 생성
   createItinerary: async (itineraryData: CreateItineraryRequest): Promise<Itinerary> => {
-    const response = await api.post('/private/itinerary', itineraryData);
+    const response = await api.post('/private/itinerary/', itineraryData);
     return response.data;
   },
 

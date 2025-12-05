@@ -20,7 +20,6 @@ const api = axios.create({
     'Content-Type': 'application/json',
   },
 });
-console.log('Base URL:', api.defaults.baseURL);
 // 동시에 여러 요청이 401을 받았을 때 refresh를 한 번만 실행하기 위한 플래그
 let isRefreshing = false;
 let failedQueue: Array<{
