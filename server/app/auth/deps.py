@@ -95,7 +95,7 @@ async def get_current_user(
     if user is None:
         # 토큰이 만료되었거나 무효함 (401)
         raise HTTPException(status_code=401, detail="Token expired or invalid")
-    
+        
     return user
 
 
