@@ -195,8 +195,6 @@ export default function ItineraryItem({
 
     // 필수 값 검증
     if (!formData.title.trim() || 
-        !formData.country.trim() || 
-        !formData.city.trim() || 
         !formData.itineraryDate || 
         !formData.startTime || 
         !formData.endTime) {
@@ -204,15 +202,6 @@ export default function ItineraryItem({
       return;
     }
 
-    // 길이 제한 검증
-    if (formData.title.trim().length > 10) {
-      Alert.alert('오류', '제목은 최대 10자까지 입력 가능합니다.');
-      return;
-    }
-    if (formData.location && formData.location.trim().length > 100) {
-      Alert.alert('오류', '장소는 최대 100자까지 입력 가능합니다.');
-      return;
-    }
 
     // 실행 중 플래그 설정
     isSubmittingRef.current = true;
@@ -226,8 +215,8 @@ export default function ItineraryItem({
         savedItinerary = await itinerariesApi.updateItinerary(itinerary.id, {
           title: formData.title,
           description: formData.description,
-          country: formData.country,
-          city: formData.city,
+          country: formData.country?.trim() || undefined,
+          city: formData.city?.trim() || undefined,
           location: formData.location,
           itineraryDate: formData.itineraryDate,
           startTime: formData.startTime,
@@ -272,8 +261,8 @@ export default function ItineraryItem({
           planId: planId,
           title: formData.title,
           description: formData.description,
-          city: formData.city,
-          country: formData.country,
+          country: formData.country?.trim() || undefined,
+          city: formData.city?.trim() || undefined,
           location: formData.location,
           itineraryDate: formData.itineraryDate,
           startTime: formData.startTime,
@@ -500,12 +489,7 @@ export default function ItineraryItem({
             variant="filled"
             placeholder={PLACEHOLDERS.itinerary.titleForm}
           value={formData.title}
-            onChangeText={(text) => {
-              if (text.length <= 10) {
-                setFormData({ ...formData, title: text });
-              }
-            }}
-            maxLength={10}
+            onChangeText={(text) => setFormData({ ...formData, title: text })}
             style={styles.input}
             placeholderTextColor={colors.gray600}
         />
@@ -528,7 +512,7 @@ export default function ItineraryItem({
 
       <View style={[styles.row, styles.pickerRowWrapper, { zIndex: countryOpen ? 10001 : 1 }]}>
         <View style={[styles.inputGroup, styles.halfWidth, styles.countryPickerWrapper]}>
-            <Text style={styles.label}>국가*</Text>
+            <Text style={styles.label}>국가</Text>
           <CountryPicker
             value={formData.country}
             onChange={(name: string) => setFormData({ ...formData, country: name })}
@@ -538,7 +522,7 @@ export default function ItineraryItem({
           />
         </View>
         <View style={[styles.inputGroup, styles.halfWidth]}> 
-            <Text style={styles.label}>도시*</Text>
+            <Text style={styles.label}>도시</Text>
           <Input
               variant="filled"
               placeholder={PLACEHOLDERS.itinerary.cityForm}
@@ -556,12 +540,7 @@ export default function ItineraryItem({
             variant="filled"
             placeholder="장소를 입력하세요."
           value={formData.location}
-            onChangeText={(text) => {
-              if (text.length <= 100) {
-                setFormData({ ...formData, location: text });
-              }
-            }}
-            maxLength={100}
+            onChangeText={(text) => setFormData({ ...formData, location: text })}
             style={styles.input}
             placeholderTextColor={colors.gray600}
         />

@@ -143,14 +143,18 @@ export default function AccommodationSection({
                 : '미설정'}
             </Text>
           </View>
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>국가</Text>
-            <Text style={styles.detailValue}>{selectedAccommodation.country}</Text>
-          </View>
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>도시</Text>
-            <Text style={styles.detailValue}>{selectedAccommodation.city}</Text>
-          </View>
+          {selectedAccommodation.country && (
+            <View style={styles.detailRow}>
+              <Text style={styles.detailLabel}>국가</Text>
+              <Text style={styles.detailValue}>{selectedAccommodation.country}</Text>
+            </View>
+          )}
+          {selectedAccommodation.city && (
+            <View style={styles.detailRow}>
+              <Text style={styles.detailLabel}>도시</Text>
+              <Text style={styles.detailValue}>{selectedAccommodation.city}</Text>
+            </View>
+          )}
           {selectedAccommodation.place && (
             <View style={styles.detailRow}>
               <Text style={styles.detailLabel}>장소</Text>
