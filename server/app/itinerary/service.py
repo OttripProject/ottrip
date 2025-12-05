@@ -105,13 +105,13 @@ class ItineraryService:
             itinerary.start_time = update_data.start_time
         if update_data.end_time:
             itinerary.end_time = update_data.end_time
-        if update_data.description:
+        if update_data.description is not None:
             itinerary.description = update_data.description
-        if update_data.country:
+        if update_data.country is not None:
             itinerary.country = update_data.country
-        if update_data.city:
+        if update_data.city is not None:
             itinerary.city = update_data.city
-        if update_data.location:
+        if update_data.location is not None:
             itinerary.location = update_data.location
 
         updated_itinerary = await self.itinerary_repository.save(itinerary=itinerary)

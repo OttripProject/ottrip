@@ -1,7 +1,7 @@
 from datetime import date, time
 from typing import TYPE_CHECKING, Optional
 
-from sqlalchemy import ForeignKey, Integer, String
+from sqlalchemy import ForeignKey, Integer
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models import Base
@@ -21,15 +21,17 @@ class Accommodation(Base):
         autoincrement=True,
     )
 
-    name: Mapped[str] = mapped_column(String(10), nullable=False)
+    name: Mapped[str] = mapped_column(nullable=False)
     """숙소 이름"""
 
-    place: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    place: Mapped[str | None] = mapped_column(nullable=True)
     """장소"""
 
-    country: Mapped[str]
+    country: Mapped[str | None] = mapped_column(nullable=True)
+    """국가"""
 
-    city: Mapped[str]
+    city: Mapped[str | None] = mapped_column(nullable=True)
+    """도시"""
 
     checkin_date: Mapped[date]
     """체크인 날짜"""
