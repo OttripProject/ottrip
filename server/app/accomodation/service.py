@@ -122,11 +122,11 @@ class AccommodationService:
 
         if update_data.name:
             accommodation.name = update_data.name
-        if update_data.place:
+        if update_data.place is not None:
             accommodation.place = update_data.place
-        if update_data.country:
+        if update_data.country is not None:
             accommodation.country = update_data.country
-        if update_data.city:
+        if update_data.city is not None:
             accommodation.city = update_data.city
         if update_data.checkin_date:
             accommodation.checkin_date = update_data.checkin_date   
