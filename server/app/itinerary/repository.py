@@ -52,4 +52,4 @@ class ItineraryRepository:
             .values(is_deleted=True)
         )
         await self.session.execute(stmt)
-        await self.session.commit()
+        # commit은 get_db()에서 처리됨

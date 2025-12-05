@@ -61,7 +61,7 @@ class ExpenseRepository:
             .values(is_deleted=True)
         )
         await self.session.execute(stmt)
-        await self.session.commit()
+        # commit은 get_db()에서 처리됨
 
     async def soft_delete_by_flight_id(self, *, flight_id: int) -> None:
         stmt = (
