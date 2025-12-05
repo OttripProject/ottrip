@@ -16,7 +16,7 @@ export const accommodationsApi = {
 
   // 숙박 생성
   createAccommodation: async (accommodationData: CreateAccommodationRequest): Promise<Accommodation> => {
-    const response = await api.post('/private/accommodations/', accommodationData);
+    const response = await api.post('/private/accommodations', accommodationData);
     return response.data;
   },
 

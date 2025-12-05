@@ -34,7 +34,7 @@ export const expensesApi = {
       const response = await api.post(`/private/expenses/${expenseData.itineraryId}/itinerary`, expenseData);
       return response.data;
     }
-    const response = await api.post('/private/expenses/', expenseData);
+    const response = await api.post('/private/expenses', expenseData);
     return response.data;
   },
 
