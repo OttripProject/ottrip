@@ -23,7 +23,7 @@ export const plansApi = {
 
   // 계획 생성
   createPlan: async (planData: CreatePlanRequest): Promise<Plan> => {
-    const response = await api.post('/private/plans', planData);
+    const response = await api.post('/private/plans/', planData);
     return response.data;
   },
 
