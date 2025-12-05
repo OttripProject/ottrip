@@ -30,8 +30,8 @@ def get_engine() -> EngineCache:
         engine = create_async_engine(
             database_settings.DATABASE_URI,
             pool_pre_ping=True,
-            pool_size=5,
-            max_overflow=5,
+            pool_size=15,  # Session 모드에서는 pool_size만큼만 사용 가능 (max_overflow 무시됨)
+            max_overflow=0,  # Session 모드에서는 사용되지 않음
             pool_recycle=300,
         )
         session_factory = async_sessionmaker(bind=engine, expire_on_commit=False)
