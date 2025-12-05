@@ -31,7 +31,7 @@ def get_engine() -> EngineCache:
             database_settings.DATABASE_URI,
             pool_pre_ping=True,
             pool_size=5,
-            max_overflow=2,
+            max_overflow=5,
             pool_recycle=300,
         )
         session_factory = async_sessionmaker(bind=engine, expire_on_commit=False)
