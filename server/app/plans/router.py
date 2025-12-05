@@ -35,7 +35,7 @@ async def read_plan_by_public_id(
     return await plan_service.read_plan_by_public_id(public_id=public_id)
 
 
-@router.post("/", status_code=status.HTTP_201_CREATED)
+@router.post("", status_code=status.HTTP_201_CREATED)
 async def create_plan(
     plan_service: PlanService,
     plan_data: PlanCreate,

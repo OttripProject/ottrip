@@ -32,7 +32,7 @@ async def read_accommodations(
     return await accommodation_service.read_accommodations_by_plan(plan_id=plan_id)
 
 
-@router.post("/", status_code=status.HTTP_201_CREATED)
+@router.post("", status_code=status.HTTP_201_CREATED)
 async def create_accommodation(
     accommodation_service: AccommodationService,
     accommodation_data: AccommodationCreate,

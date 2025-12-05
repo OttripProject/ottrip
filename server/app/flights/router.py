@@ -30,7 +30,7 @@ async def read_flights(
     return await flight_service.read_flights_by_plan(plan_id=plan_id)
 
 
-@router.post("/", status_code=status.HTTP_201_CREATED)
+@router.post("", status_code=status.HTTP_201_CREATED)
 async def create_flight(
     flight_service: FlightService,
     flight_data: FlightCreate,

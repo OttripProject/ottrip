@@ -46,7 +46,7 @@ async def read_expenses_by_itinerary(
     return await expense_service.read_expenses_by_itinerary(itinerary_id=itinerary_id)
 
 
-@router.post("/", status_code=status.HTTP_201_CREATED)
+@router.post("", status_code=status.HTTP_201_CREATED)
 async def create_expense(
     expense_service: ExpenseService,
     expense_data: ExpenseCreate,
