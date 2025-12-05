@@ -54,14 +54,27 @@ function toEvent(it: Itinerary): any {
   };
   
   const normalizedStartTime = normalizeTime(it.startTime);
-  const normalizedEndTime = normalizeTime(it.endTime);
+  let normalizedEndTime = normalizeTime(it.endTime);
   const locationText = it.location || it.city || '';
+
+  // 백엔드에서 받은 23:59:59를 24:00으로 표시
+  if (normalizedEndTime === '23:59' || it.endTime?.startsWith('23:59:')) {
+    normalizedEndTime = '24:00';
+  }
+
+  // endTime이 24:00인 경우, 23:59:59로 표시 (BigCalendar는 24:00을 표시할 수 없음)
+  let endDate = new Date(`${it.itineraryDate}T${normalizedEndTime}:00`);
+  if (normalizedEndTime === '24:00') {
+    // 일정 날짜의 23:59:59로 표시 (막대는 24:00까지 표시)
+    endDate = dayjs(`${it.itineraryDate}T23:59:59`).toDate();
+    normalizedEndTime = '24:00'; // 표시는 24:00으로 유지
+  }
 
   const event = {
     id: it.id,
     title: it.title,
     start: new Date(`${it.itineraryDate}T${normalizedStartTime}:00`),
-    end: new Date(`${it.itineraryDate}T${normalizedEndTime}:00`),
+    end: endDate,
     type: 'itinerary',
     originalData: it,
     // 시간 정보 추가
@@ -87,15 +100,28 @@ function toFlightEvents(flight: any): any[] {
   return flight.flightSegments.map((segment: any, index: number) => {
     const departureTime = dayjs(segment.departureTime);
     const arrivalTime = dayjs(segment.arrivalTime);
+    
+    // 도착 시간이 다음날 00:00인 경우, 출발 날짜의 23:59:59로 표시 (BigCalendar는 24:00을 표시할 수 없음)
+    const departureDate = departureTime.format('YYYY-MM-DD');
+    const arrivalDate = arrivalTime.format('YYYY-MM-DD');
+    const isNextDay = arrivalDate !== departureDate && arrivalTime.format('HH:mm') === '00:00';
+    
+    let displayEndTime = arrivalTime;
+    let normalizedEndTime = normalizeTime(arrivalTime.format('HH:mm'));
+    
+    if (isNextDay) {
+      // 출발 날짜의 23:59:59로 표시 (막대는 24:00까지 표시)
+      displayEndTime = departureTime.endOf('day');
+      normalizedEndTime = '24:00';
+    }
 
     const normalizedStartTime = normalizeTime(departureTime.format('HH:mm'));
-    const normalizedEndTime = normalizeTime(arrivalTime.format('HH:mm'));
 
     return {
       id: `flight-${flight.id}-${segment.id ?? index + 1}`,
       title: `${segment.departureAirport} → ${segment.arrivalAirport}`,
       start: departureTime.toDate(),
-      end: arrivalTime.toDate(),
+      end: displayEndTime.toDate(),
       type: 'flight',
       originalData: flight,
       normalizedStartTime,
@@ -321,7 +347,7 @@ export default function WeeklySchedulePanel({
       const minutes = minuteSegment * 15; // 0, 15, 30, 45
       
       // 시간 범위 제한 (0-23시)
-      const clampedHour = Math.max(0, Math.min(23, hour));
+      const clampedHour = Math.max(0, Math.min(24, hour));
       const targetTime = targetDate.hour(clampedHour).minute(minutes).second(0).millisecond(0);
           
       // 드롭 위치의 실제 화면 좌표 계산 (해당 날짜/시간 셀의 위치)

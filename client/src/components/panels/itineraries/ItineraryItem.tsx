@@ -104,6 +104,14 @@ export default function ItineraryItem({
   // itinerary prop이 변경될 때 formData 업데이트
   useEffect(() => {
     if (itinerary) {
+      // 백엔드에서 받은 23:59:59를 24:00으로 표시
+      let endTimeRaw = itinerary.end_time || itinerary.endTime || '10:00';
+      let endTime = endTimeRaw.substring(0, 5);
+      // 23:59:59 또는 23:59를 24:00으로 변환
+      if (endTime === '23:59' || endTimeRaw.startsWith('23:59:')) {
+        endTime = '24:00';
+      }
+      
       setFormData({
         title: itinerary.title || '',
         description: itinerary.description || '',
@@ -112,7 +120,7 @@ export default function ItineraryItem({
         location: itinerary.location || '',
         itineraryDate: itinerary.itinerary_date || itinerary.itineraryDate || dayjs().format('YYYY-MM-DD'),
         startTime: (itinerary.start_time || itinerary.startTime || '09:00').substring(0, 5),
-        endTime: (itinerary.end_time || itinerary.endTime || '10:00').substring(0, 5),
+        endTime: endTime,
       });
     } else {
       const defaultDate = selectedDate ? dayjs(selectedDate).format('YYYY-MM-DD') : dayjs().format('YYYY-MM-DD');
@@ -210,6 +218,9 @@ export default function ItineraryItem({
     isSubmittingRef.current = true;
     setIsSubmitting(true);
     try {
+      // 24:00을 23:59:59로 변환 (백엔드 time 타입은 24:00을 허용하지 않음)
+      const finalEndTime = formData.endTime === '24:00' ? '23:59:59' : formData.endTime;
+      
       let savedItinerary;
       if (itinerary) {
         savedItinerary = await itinerariesApi.updateItinerary(itinerary.id, {
@@ -220,7 +231,7 @@ export default function ItineraryItem({
           location: formData.location,
           itineraryDate: formData.itineraryDate,
           startTime: formData.startTime,
-          endTime: formData.endTime,
+          endTime: finalEndTime,
         });
         
         if (itinerary.itinerary_date !== formData.itineraryDate) {
@@ -266,7 +277,7 @@ export default function ItineraryItem({
           location: formData.location,
           itineraryDate: formData.itineraryDate,
           startTime: formData.startTime,
-          endTime: formData.endTime,
+          endTime: finalEndTime,
         });
         
         // 새 일정 생성 후 draft expenses 저장
