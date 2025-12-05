@@ -10,30 +10,6 @@ if (typeof window !== 'undefined') {
   const h = window.location.hostname;
   if (h === 'localhost' || h === '127.0.0.1') {
     resolvedBaseURL = 'http://localhost:8080';
-  } else {
-    // HTTPS 페이지에서 HTTP API를 호출하려고 하면 HTTPS로 자동 변환
-    // Mixed Content 에러 방지
-    if (window.location.protocol === 'https:' && resolvedBaseURL.startsWith('http://')) {
-      console.warn('⚠️ HTTP API URL detected on HTTPS page, converting to HTTPS:', resolvedBaseURL);
-      resolvedBaseURL = resolvedBaseURL.replace('http://', 'https://');
-    }
-  }
-}
-
-// 디버깅: 최종 baseURL 로깅 (프로덕션에서도 확인 가능)
-if (typeof window !== 'undefined') {
-  console.log('🔗 API Base URL:', resolvedBaseURL);
-  console.log('📋 Environment API URL:', env.EXPO_PUBLIC_API_URL);
-  console.log('🌐 Window Protocol:', window.location.protocol);
-  console.log('🌐 Window Hostname:', window.location.hostname);
-  
-  // HTTP URL이 감지되면 경고
-  if (resolvedBaseURL.startsWith('http://') && window.location.protocol === 'https:') {
-    console.error('❌ ERROR: HTTP API URL detected on HTTPS page!', {
-      resolvedBaseURL,
-      envUrl: env.EXPO_PUBLIC_API_URL,
-      windowProtocol: window.location.protocol,
-    });
   }
 }
 
@@ -44,7 +20,7 @@ const api = axios.create({
     'Content-Type': 'application/json',
   },
 });
-
+console.log('Base URL:', api.defaults.baseURL);
 // 동시에 여러 요청이 401을 받았을 때 refresh를 한 번만 실행하기 위한 플래그
 let isRefreshing = false;
 let failedQueue: Array<{
