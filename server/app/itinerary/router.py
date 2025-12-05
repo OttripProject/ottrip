@@ -27,7 +27,7 @@ async def read_itineraries_by_plan(
     return await itinerary_service.read_itineraries_by_plan(plan_id=plan_id)
 
 
-@router.post("/", status_code=status.HTTP_201_CREATED)
+@router.post("", status_code=status.HTTP_201_CREATED)
 async def create_itinerary(
     itinerary_service: ItineraryService,
     itinerary_data: ItineraryCreate,
