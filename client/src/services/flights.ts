@@ -4,7 +4,7 @@ import { FlightRead } from '../types/api';
 export const flightsApi = {
   // 새 Flight 모델 기반 엔드포인트
   createFlight: async (payload: any): Promise<{ id: number }> => {
-    const res = await api.post('/private/flights/', payload);
+    const res = await api.post('/private/flights', payload);
     return res.data as { id: number };
   },
   updateFlight: async (flightId: number, payload: any): Promise<void> => {
