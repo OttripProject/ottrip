@@ -145,31 +145,54 @@ class FlightService:
         if update_data.segments is not None:
             if len(update_data.segments) < 1:
                 raise HTTPException(status_code=400, detail="세그먼트는 최소 1개 이상이어야 합니다.")
-            to_create: list[FlightSegment] = []
+            
+            existing_segments = await self.flight_repository.find_segments_by_flight(flight_id=flight.id)
+            existing_segment_ids = {seg.id for seg in existing_segments}
+            
+            new_segment_ids = {seg.id for seg in update_data.segments if seg.id is not None}
+            
+            segments_to_delete = existing_segment_ids - new_segment_ids
+            for segment_id in segments_to_delete:
+                await self.flight_repository.soft_delete_segment(segment_id=segment_id)
+            
             first_departure_date = min(
                 (seg.departure_time for seg in update_data.segments),
                 key=lambda d: d,
             ).date()
-            for seg in update_data.segments:
-                to_create.append(
-                    FlightSegment(
+            
+            for idx, seg_data in enumerate(update_data.segments, start=1):
+                if seg_data.id and seg_data.id in existing_segment_ids:
+                    existing_seg = next((s for s in existing_segments if s.id == seg_data.id), None)
+                    if existing_seg:
+                        existing_seg.airline = seg_data.airline or ""
+                        existing_seg.flight_number = seg_data.flight_number or ""
+                        existing_seg.departure_airport = seg_data.departure_airport
+                        existing_seg.arrival_airport = seg_data.arrival_airport
+                        existing_seg.departure_time = seg_data.departure_time
+                        existing_seg.arrival_time = seg_data.arrival_time
+                        existing_seg.seat_class = seg_data.seat_class or ""
+                        existing_seg.seat_number = seg_data.seat_number or ""
+                        existing_seg.gate = seg_data.gate or ""
+                        existing_seg.terminal = seg_data.terminal or ""
+                        existing_seg.order = idx
+                        await self.flight_repository.save_segment(segment=existing_seg)
+                else:
+                    new_seg = FlightSegment(
                         flight_id=flight.id,
-                        airline=seg.airline,
-                        flight_number=seg.flight_number,
-                        departure_airport=seg.departure_airport,
-                        arrival_airport=seg.arrival_airport,
-                        departure_time=seg.departure_time,
-                        arrival_time=seg.arrival_time,
-                        seat_class=seg.seat_class or "",
-                        seat_number=seg.seat_number or "",
-                        gate=seg.gate or "",
-                        terminal=seg.terminal or "",
-                        order=0,
+                        airline=seg_data.airline or "",
+                        flight_number=seg_data.flight_number or "",
+                        departure_airport=seg_data.departure_airport,
+                        arrival_airport=seg_data.arrival_airport,
+                        departure_time=seg_data.departure_time,
+                        arrival_time=seg_data.arrival_time,
+                        seat_class=seg_data.seat_class or "",
+                        seat_number=seg_data.seat_number or "",
+                        gate=seg_data.gate or "",
+                        terminal=seg_data.terminal or "",
+                        order=idx,
                     )
-                )
-            await self.flight_repository.replace_segments(
-                flight_id=flight.id, new_segments=to_create
-            )
+                    await self.flight_repository.save_segment(segment=new_seg)
+            
             if flight.expense:
                 flight.expense.ex_date = first_departure_date
         await self.flight_repository.save(flight=flight)

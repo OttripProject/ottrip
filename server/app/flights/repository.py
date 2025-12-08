@@ -106,9 +106,8 @@ class FlightRepository:
             .values(is_deleted=True)
         )
         created: list[FlightSegment] = []
-        for idx, seg in enumerate(new_segments, start=1):
+        for seg in new_segments:
             seg.flight_id = flight_id
-            seg.order = idx
             self.session.add(seg)
             created.append(seg)
         await self.session.flush()
