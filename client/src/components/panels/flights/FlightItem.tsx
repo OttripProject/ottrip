@@ -22,6 +22,7 @@ import UpperArrowIcon from '../../../../assets/upper_arrow.svg';
 interface FlightItemProps {
   flight?: any;
   planId: number;
+  planData?: any;
   onSave: (flight: any) => void;
   onCancel: () => void;
   onDelete?: (flightId: string) => void;
@@ -34,6 +35,7 @@ interface FlightItemProps {
 export default function FlightItem({ 
   flight, 
   planId, 
+  planData,
   onSave, 
   onCancel, 
   onDelete,
@@ -96,15 +98,16 @@ export default function FlightItem({
         };
       });
     } else {
-      // 새 항공편: 기본값
-      const now = dayjs();
-      const later = dayjs().add(1, 'hour');
+      // 새 항공편: 기본값 - plan 시작 날짜 사용
+      const planStartDate = planData?.plan?.startDate || planData?.plan?.start_date;
+      const defaultDate = planStartDate ? dayjs(planStartDate) : dayjs();
+      const later = defaultDate.add(1, 'hour');
       return [{
         airline: '',
         flight_number: '',
         departure_airport: '',
         arrival_airport: '',
-        departure_date: now.format('YYYY-MM-DD'),
+        departure_date: defaultDate.format('YYYY-MM-DD'),
         departure_time: '',
         arrival_date: later.format('YYYY-MM-DD'),
         arrival_time: '',
@@ -116,9 +119,16 @@ export default function FlightItem({
     }
   });
 
-  const [expenseDate, setExpenseDate] = useState(
-    flight?.expense?.exDate || (flightSegments.length > 0 ? flightSegments[0].departure_date : dayjs().format('YYYY-MM-DD'))
-  );
+  const [expenseDate, setExpenseDate] = useState(() => {
+    if (flight?.expense?.exDate) {
+      return flight.expense.exDate;
+    }
+    if (flightSegments.length > 0) {
+      return flightSegments[0].departure_date;
+    }
+    const planStartDate = planData?.plan?.startDate || planData?.plan?.start_date;
+    return planStartDate ? dayjs(planStartDate).format('YYYY-MM-DD') : dayjs().format('YYYY-MM-DD');
+  });
 
   // 12시간제 시간 표시 변환 함수
   const formatTime12Hour = (time24: string) => {
