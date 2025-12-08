@@ -1046,7 +1046,9 @@ export default function WeeklySchedulePanel({
                             }}>
                               {(isStart || isMiddle) && (
                                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingLeft: isStart ? 0 : 8 }}>
-                                  {isStart && <WeekBarAccommodationIcon width={14} height={14} />}
+                                  {isStart && <View style={{ flexShrink: 0 }}>
+                                    <WeekBarAccommodationIcon width={14} height={14} />
+                                  </View>}
                                   {isStart && (
                                     <Text style={{ ...textStyles.h8, color: '#F59E0B', lineHeight: 10 }} numberOfLines={1}>
                                       {accommodation.name}
@@ -1272,7 +1274,9 @@ export default function WeeklySchedulePanel({
                 <View style={{ flex: 1, justifyContent: 'center' }}>
                   {showTitle && (
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                      {isFlight && <WeekBarAirplaneIcon width={14} height={14} />}
+                      {isFlight && <View style={{ flexShrink: 0 }}>
+                        <WeekBarAirplaneIcon width={14} height={14} />
+                      </View>}
                       <Text numberOfLines={1} ellipsizeMode="tail" style={{ ...textStyles.h8, color: isFlight ? '#8B5CF6' : '#0066FF', lineHeight: 12, flex: 1 }}>
                         {event.title}
                       </Text>
@@ -1280,7 +1284,9 @@ export default function WeeklySchedulePanel({
                   )}
                   {showTime && (isItinerary || isPreview) && event.normalizedStartTime && event.normalizedEndTime && (
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: showTitle ? 8 : 0 }}>
-                      <WeekBarTimeIcon width={14} height={14} />
+                      <View style={{ flexShrink: 0 }}>
+                        <WeekBarTimeIcon width={14} height={14} />
+                      </View>
                       <Text numberOfLines={1} ellipsizeMode="tail" style={{ ...textStyles.h9, color: '#0066FF', lineHeight: 10 }}>
                         {event.normalizedStartTime} - {event.normalizedEndTime}
                       </Text>
@@ -1288,7 +1294,9 @@ export default function WeeklySchedulePanel({
                   )}
                   {showLocation && (isItinerary || isPreview) && event.locationText && (
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 }}>
-                      <WeekBarLocationIcon width={14} height={14} />
+                      <View style={{ flexShrink: 0 }}>
+                        <WeekBarLocationIcon width={14} height={14} />
+                      </View>
                       <Text numberOfLines={1} ellipsizeMode="tail" style={{ ...textStyles.h9, color: '#0066FF', lineHeight: 10 }}>
                         {event.locationText}
                       </Text>
