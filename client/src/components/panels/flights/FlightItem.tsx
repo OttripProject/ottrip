@@ -620,7 +620,6 @@ export default function FlightItem({
                             setSegmentDatePickerOpen({ ...segmentDatePickerOpen, [key]: false });
                           }}
                           style={styles.calendarPopup}
-                          minDate={segment.departure_date}
                           hideButtons={true}
                           autoCloseOnSelect={true}
                         />
@@ -637,7 +636,6 @@ export default function FlightItem({
                         }}
                         onOpen={() => setTimeOpen(true)}
                         onClose={() => setTimeOpen(false)}
-                        minTime={segment.arrival_date === segment.departure_date ? segment.departure_time : undefined}
                         style={styles.segmentTimePicker}
                       />
                     </View>
