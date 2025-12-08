@@ -652,16 +652,31 @@ export default function FlightItem({
           <Pressable
             style={[styles.addSegmentButton, { zIndex: -1 }]}
             onPress={() => {
-              const now = dayjs();
-              const later = dayjs().add(1, 'hour');
+              const lastSegment = flightSegments[flightSegments.length - 1];
+              let defaultDepartureDate: string;
+              let defaultDepartureTime: string;
+              let defaultArrivalDate: string;
+              
+              if (lastSegment && lastSegment.arrival_date) {
+                defaultDepartureDate = lastSegment.arrival_date;
+                defaultDepartureTime = lastSegment.arrival_time;
+                defaultArrivalDate = lastSegment.arrival_date;
+              } else {
+                const planStartDate = planData?.plan?.startDate || planData?.plan?.start_date;
+                const defaultDate = planStartDate ? dayjs(planStartDate) : dayjs();
+                defaultDepartureDate = defaultDate.format('YYYY-MM-DD');
+                defaultDepartureTime = '';
+                defaultArrivalDate = defaultDate.format('YYYY-MM-DD');
+              }
+              
               const newSegment: SegmentForm = {
                 airline: '',
                 flight_number: '',
                 departure_airport: '',
                 arrival_airport: '',
-                departure_date: now.format('YYYY-MM-DD'),
-                departure_time: '',
-                arrival_date: later.format('YYYY-MM-DD'),
+                departure_date: defaultDepartureDate,
+                departure_time: defaultDepartureTime,
+                arrival_date: defaultArrivalDate,
                 arrival_time: '',
               };
               setFlightSegments(prev => [...prev, newSegment]);
