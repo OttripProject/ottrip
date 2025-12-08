@@ -32,6 +32,7 @@ class FlightUpdate(APISchema):
 
 
 class FlightSegmentBase(APISchema):
+    id: int | None = None  # 업데이트 시 기존 segment id
     airline: str | None = None
     flight_number: str | None = None
     departure_airport: str
