@@ -13,7 +13,7 @@ async def get_db():
         try:
             yield db
             await db.commit()
-        except:
+        except Exception:
             await db.rollback()
             raise
 
