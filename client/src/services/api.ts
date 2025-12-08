@@ -1,6 +1,15 @@
-import axios from 'axios';
+import axios, { InternalAxiosRequestConfig } from 'axios';
 import { loadPublicEnv } from '../core/env/schema';
 import { tokenStores } from '../utils/tokenStores';
+
+// axios config에 metadata 타입 추가
+declare module 'axios' {
+  export interface InternalAxiosRequestConfig {
+    metadata?: {
+      startTime: number;
+    };
+  }
+}
 
 // 환경 변수 파싱
 const env = loadPublicEnv();
@@ -40,6 +49,9 @@ const processQueue = (error: any, token: string | null = null) => {
 };
 
 api.interceptors.request.use(async config => {
+  // dev에서 성능측정용
+  config.metadata = { startTime: Date.now() };
+  
   try {
     const token = await tokenStores.accessToken.get();
     if (token) {
@@ -54,8 +66,38 @@ api.interceptors.request.use(async config => {
 });
 
 api.interceptors.response.use(
-  response => response,
+  response => {
+    // dev에서 성능측정용
+    // 응답 시간 계산 및 로그 출력
+    const endTime = Date.now();
+    const startTime = response.config.metadata?.startTime;
+    if (startTime) {
+      const duration = endTime - startTime;
+      const method = response.config.method?.toUpperCase() || 'UNKNOWN';
+      const url = response.config.url || '';
+      const status = response.status;
+      
+      console.log(
+        `🚀 API [${method}] ${url} - ${status} - ${duration}ms`
+      );
+    }
+    return response;
+  },
   async error => {
+    // dev에서 성능측정용
+    // 에러 발생 시에도 시간 측정
+    const endTime = Date.now();
+    const startTime = error.config?.metadata?.startTime;
+    if (startTime) {
+      const duration = endTime - startTime;
+      const method = error.config?.method?.toUpperCase() || 'UNKNOWN';
+      const url = error.config?.url || '';
+      const status = error.response?.status || 'ERROR';
+      
+      console.log(
+        `❌ API [${method}] ${url} - ${status} - ${duration}ms`
+      );
+    }
     const originalRequest = error.config;
 
     if (error.response?.status === 401 && !originalRequest._retry) {
