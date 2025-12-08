@@ -62,6 +62,7 @@ export default function FlightItem({
 
   // FlightSegment 타입 정의
   type SegmentForm = {
+    id?: number; // 기존 segment id (편집 모드일 때만)
     airline: string;
     flight_number: string;
     departure_airport: string;
@@ -83,6 +84,7 @@ export default function FlightItem({
         const depTime = segment.departureTime ? dayjs(segment.departureTime) : dayjs();
         const arrTime = segment.arrivalTime ? dayjs(segment.arrivalTime) : dayjs().add(1, 'hour');
         return {
+          id: segment.id, // 기존 segment id 포함
           airline: segment.airline || '',
           flight_number: segment.flightNumber || '',
           departure_airport: segment.departureAirport || '',
@@ -234,6 +236,7 @@ export default function FlightItem({
           ticketNumber: formData.ticket_number || null,
           bookingReference: formData.booking_reference || null,
           segments: flightSegments.map(s => ({
+            id: s.id || undefined, // 기존 segment id 포함 (없으면 undefined)
             airline: s.airline || null,
             flightNumber: s.flight_number || null,
             departureAirport: s.departure_airport,
