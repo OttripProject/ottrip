@@ -1,0 +1,24 @@
+{
+  "base_url": "https://ottrip.onrender.com",
+  "timestamp": 1765177636.114607,
+  "endpoints": {
+    "POST /private/itinerary": {
+      "endpoint": "/private/itinerary",
+      "method": "POST",
+      "total_requests": 1,
+      "successful_requests": 0,
+      "failed_requests": 1,
+      "success_rate": 0.0,
+      "avg_response_time_ms": 949.6257305145264,
+      "min_response_time_ms": 949.6257305145264,
+      "max_response_time_ms": 949.6257305145264,
+      "median_response_time_ms": 949.6257305145264,
+      "p95_response_time_ms": 949.6257305145264,
+      "p99_response_time_ms": 949.6257305145264,
+      "status_codes": {
+        "500": 1
+      },
+      "errors": []
+    }
+  }
+}
