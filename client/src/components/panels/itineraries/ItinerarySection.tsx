@@ -65,12 +65,6 @@ export default function ItinerarySection({
     onItineraryAdd?.(itinerary);
     setShowItineraryForm(false);
     setEditingItinerary(null);
-    if (planData?.refreshItineraries) {
-      await planData.refreshItineraries();
-    }
-    if (planData?.refreshExpenses) {
-      planData.refreshExpenses();
-    }
   };
 
   const handleItineraryDelete = (itineraryId?: string) => {
