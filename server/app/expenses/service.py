@@ -18,15 +18,13 @@ class ExpenseService:
     plan_repository: PlanRepository
 
     async def create(self, *, expense_data: ExpenseCreate) -> ExpenseRead:
-        plan = await self.plan_repository.find_by_id(plan_id=expense_data.plan_id)
-        if not plan:
+        plan_exists, has_permission = await self.plan_repository.has_edit_permission(
+            plan_id=expense_data.plan_id, user_id=self.current_user.id
+        )
+        if not plan_exists:
             raise HTTPException(status_code=404, detail="해당 계획을 찾을 수 없습니다.")
-        if plan.owner_id != self.current_user.id:
-            is_editor = await self.plan_repository.is_editor(
-                plan_id=expense_data.plan_id, user_id=self.current_user.id
-            )
-            if not is_editor:
-                raise HTTPException(status_code=403, detail="해당 비용에 대한 생성 권한이 없습니다.")
+        if not has_permission:
+            raise HTTPException(status_code=403, detail="해당 비용에 대한 생성 권한이 없습니다.")
         create_expense_data = Expense(
             amount=float(expense_data.amount),
             category=expense_data.category,
@@ -63,16 +61,13 @@ class ExpenseService:
         return ExpenseRead.model_validate(expense)
 
     async def read_expenses_by_plan(self, *, plan_id: int) -> list[ExpenseRead]:
-        plan = await self.plan_repository.find_by_id(plan_id=plan_id)
-        if not plan:
+        plan_exists, has_permission = await self.plan_repository.has_read_permission(
+            plan_id=plan_id, user_id=self.current_user.id
+        )
+        if not plan_exists:
             raise HTTPException(status_code=404, detail="해당 계획을 찾을 수 없습니다.")
-
-        if plan.owner_id != self.current_user.id:
-            is_shared = await self.plan_repository.is_shared(
-                plan_id=plan_id, user_id=self.current_user.id
-            )
-            if not is_shared:
-                raise HTTPException(status_code=403, detail="비용 조회 권한이 없습니다.")
+        if not has_permission:
+            raise HTTPException(status_code=403, detail="해당 비용에 대한 조회 권한이 없습니다.")
 
         expenses = await self.expense_repository.find_all_by_plan(plan_id=plan_id)
         expenses_list = [ExpenseRead.model_validate(expense) for expense in expenses]

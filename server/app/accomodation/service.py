@@ -22,15 +22,13 @@ class AccommodationService:
     async def create(
         self, *, accommodation_data: AccommodationCreate
     ) -> AccommodationRead:
-        plan = await self.plan_repository.find_by_id(plan_id=accommodation_data.plan_id)
-        if not plan:
+        plan_exists, has_permission = await self.plan_repository.has_edit_permission(
+            plan_id=accommodation_data.plan_id, user_id=self.current_user.id
+        )
+        if not plan_exists:
             raise HTTPException(status_code=404, detail="해당 계획을 찾을 수 없습니다.")
-        if plan.owner_id != self.current_user.id:
-            is_editor = await self.plan_repository.is_editor(
-                plan_id=accommodation_data.plan_id, user_id=self.current_user.id
-            )
-            if not is_editor:
-                raise HTTPException(status_code=403, detail="해당 숙소에 대한 생성 권한이 없습니다.")
+        if not has_permission:
+            raise HTTPException(status_code=403, detail="해당 숙소에 대한 생성 권한이 없습니다.")
         create_accommodation_data = Accommodation(
             name=accommodation_data.name,
             place=accommodation_data.place,
@@ -82,16 +80,13 @@ class AccommodationService:
     async def read_accommodations_by_plan(
         self, *, plan_id: int
     ) -> list[AccommodationRead]:
-        plan = await self.plan_repository.find_by_id(plan_id=plan_id)
-        if not plan:
+        plan_exists, has_permission = await self.plan_repository.has_read_permission(
+            plan_id=plan_id, user_id=self.current_user.id
+        )
+        if not plan_exists:
             raise HTTPException(status_code=404, detail="해당 계획을 찾을 수 없습니다.")
-
-        if plan.owner_id != self.current_user.id:
-            is_shared = await self.plan_repository.is_shared(
-                plan_id=plan_id, user_id=self.current_user.id
-            )
-            if not is_shared:
-                raise HTTPException(status_code=403, detail="숙소 조회 권한이 없습니다.")
+        if not has_permission:
+            raise HTTPException(status_code=403, detail="해당 숙소에 대한 조회 권한이 없습니다.")
 
         accommodations = await self.accommodation_repository.find_all_by_plan(
             plan_id=plan_id
