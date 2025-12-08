@@ -234,6 +234,7 @@ export default function FlightSection({
         key={editingFlight?.id ?? 'new-flight'}
         flight={editingFlight}
         planId={planData.plan.id}
+        planData={planData}
         onSave={handleFlightSave}
         onCancel={() => {
           setShowFlightForm(false);
