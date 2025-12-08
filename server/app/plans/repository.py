@@ -9,6 +9,7 @@ from app.flights.models import Flight, FlightSegment
 from app.itinerary.models import Itinerary
 from app.accomodation.models import Accommodation
 from app.utils.dependency import dependency
+from app.ai.schemas import ChecklistItemsByCategory
 
 from .models import Plan, PlanInvitation, PlanShared, Role
 from datetime import datetime
@@ -188,3 +189,37 @@ class PlanRepository:
             .where(PlanInvitation.id == invitation_id)
             .values(status=status)
         )
+
+    async def find_travel_checklist_by_public_id(
+        self, *, public_id: str
+    ) -> ChecklistItemsByCategory | None:
+        """Checklist 조회 전용: travel_checklist 필드만 조회하여 ChecklistItemsByCategory로 반환 (성능 최적화)
+        
+        Returns:
+            ChecklistItemsByCategory: Checklist가 있으면 반환, 없으면 빈 리스트 반환
+            None: Plan이 존재하지 않으면 None 반환
+        """
+        # Plan 존재 여부와 travel_checklist를 함께 조회
+        result = await self.session.execute(
+            select(Plan.id, Plan.travel_checklist)
+            .where(Plan.public_id == public_id, Plan.is_deleted.is_(False))
+        )
+        row = result.first()
+        
+        # Plan이 없으면 None 반환
+        if row is None:
+            return None
+        
+        # Plan은 존재하지만 travel_checklist가 없으면 빈 ChecklistItemsByCategory 반환
+        travel_checklist = row[1]
+        if not travel_checklist:
+            return ChecklistItemsByCategory(
+                basic_required=[],
+                schedule_required=[],
+                recommended=[],
+                optional=[],
+            )
+        
+        # categories 추출 및 변환
+        categories = travel_checklist.get("categories", {})
+        return ChecklistItemsByCategory(**categories)

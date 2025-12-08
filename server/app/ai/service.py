@@ -209,36 +209,26 @@ class AIService:
         )
     
     async def get_checklist(self, public_id: str) -> ChecklistRead:
-        """체크리스트 조회"""
-        plan = await self.plan_repository.find_by_public_id(public_id=public_id)
-        if not plan:
-            raise HTTPException(status_code=404, detail="해당 계획을 찾을 수 없습니다.")
-        
-        if not plan.travel_checklist:
-            return ChecklistRead(
-                categories=ChecklistItemsByCategory(
-                    basic_required=[],
-                    schedule_required=[],
-                    recommended=[],
-                    optional=[]
-                )
-            )
-        
-        # 기존 체크리스트에서 is_custom 필드가 없는 경우 기본값 설정 (하위 호환성)
-        categories = plan.travel_checklist["categories"]
-             
-        for items in categories.values():
-            if isinstance(items, list):
-                items_list = cast(list[Any], items)
-                for item in items_list:
-                    if isinstance(item, dict):
-                        item_dict = cast(Dict[str, Any], item)
-                        if "is_custom" not in item_dict:
-                            item_dict["is_custom"] = False  # 기본값은 AI 생성
-        
-        return ChecklistRead(
-            categories=ChecklistItemsByCategory(**categories)
+        """체크리스트 조회 (최적화: travel_checklist만 조회)"""
+        # Checklist 전용 쿼리: Plan 전체 대신 travel_checklist만 조회하여 바로 ChecklistItemsByCategory 반환
+        categories = await self.plan_repository.find_travel_checklist_by_public_id(
+            public_id=public_id
         )
+        if categories is None:
+            raise HTTPException(status_code=404, detail="해당 계획을 찾을 수 없습니다.")
+
+        # is_custom 필드가 없는 경우 기본값 설정 (하위 호환성)
+        # Pydantic 모델이므로 dict로 변환 후 처리
+        categories_dict = categories.model_dump()
+        for category_key in ["basic_required", "schedule_required", "recommended", "optional"]:
+            items = categories_dict.get(category_key, [])
+            for item in items:
+                if isinstance(item, dict) and "is_custom" not in item:
+                    item["is_custom"] = False  # 기본값은 AI 생성
+        
+        # 다시 ChecklistItemsByCategory로 변환
+        categories_updated = ChecklistItemsByCategory(**categories_dict)
+        return ChecklistRead(categories=categories_updated)
     
     async def set_checklist_item_status(self, public_id: str, item_id: int, is_checked: bool) -> StatusResponse:
         plan = await self.plan_repository.find_by_public_id(public_id=public_id)
