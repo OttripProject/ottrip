@@ -75,13 +75,6 @@ export default function AccommodationSection({
     onAccommodationAdd?.(accommodation);
     setShowAccommodationForm(false);
     setEditingAccommodation(null);
-    if (planData?.refreshAccommodations) {
-      await planData.refreshAccommodations();
-    }
-    if (planData?.refreshExpenses) {
-      planData.refreshExpenses();
-    }
-    // 새로 생성된 숙박을 선택된 상태로 설정
     onAccommodationSelect?.(accommodation);
   };
 
