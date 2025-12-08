@@ -26,17 +26,14 @@ class FlightService:
     plan_repository: PlanRepository
 
     async def create(self, *, flight_data: FlightCreate) -> int:
-        plan = await self.plan_repository.find_by_id(plan_id=flight_data.plan_id)
-        if not plan:
+        plan_exists, has_permission = await self.plan_repository.has_edit_permission(
+            plan_id=flight_data.plan_id, user_id=self.current_user.id
+        )
+        if not plan_exists:
             raise HTTPException(status_code=404, detail="해당 계획을 찾을 수 없습니다.")
-        if plan.owner_id != self.current_user.id:
-            is_editor = await self.plan_repository.is_editor(
-                plan_id=flight_data.plan_id, user_id=self.current_user.id
-            )
-            if not is_editor:
-                raise HTTPException(
-                    status_code=403, detail="해당 항공편에 대한 생성 권한이 없습니다."
-                )
+        if not has_permission:
+            raise HTTPException(status_code=403, detail="해당 항공편에 대한 생성 권한이 없습니다.")
+            
         create_flight_data = Flight(
             reservation_number=flight_data.reservation_number,
             passenger_name=flight_data.passenger_name,
@@ -100,16 +97,13 @@ class FlightService:
         return FlightRead.model_validate(flight)
 
     async def read_flights_by_plan(self, *, plan_id: int) -> list[FlightRead]:
-        plan = await self.plan_repository.find_by_id(plan_id=plan_id)
-        if not plan:
+        plan_exists, has_permission = await self.plan_repository.has_read_permission(
+            plan_id=plan_id, user_id=self.current_user.id
+        )
+        if not plan_exists:
             raise HTTPException(status_code=404, detail="해당 계획을 찾을 수 없습니다.")
-
-        if plan.owner_id != self.current_user.id:
-            is_shared = await self.plan_repository.is_shared(
-                plan_id=plan_id, user_id=self.current_user.id
-            )
-            if not is_shared:
-                raise HTTPException(status_code=403, detail="항공편 조회 권한이 없습니다.")
+        if not has_permission:
+            raise HTTPException(status_code=403, detail="해당 항공편에 대한 조회 권한이 없습니다.")
 
         flights = await self.flight_repository.find_all_by_plan(plan_id=plan_id)
         flights_list = [FlightRead.model_validate(flight) for flight in flights]

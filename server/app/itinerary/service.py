@@ -18,15 +18,13 @@ class ItineraryService:
     expense_repository: ExpenseRepository
 
     async def create(self, *, itinerary_data: ItineraryCreate) -> ItineraryRead:
-        plan = await self.plan_repository.find_by_id(plan_id=itinerary_data.plan_id)
-        if not plan:
-            raise HTTPException(status_code=400, detail="해당 계획을 찾을 수 없습니다.")
-        if plan.owner_id != self.current_user.id:
-            is_editor = await self.plan_repository.is_editor(
-                plan_id=itinerary_data.plan_id, user_id=self.current_user.id
-            )
-            if not is_editor:
-                raise HTTPException(status_code=403, detail="일정 생성 권한이 없습니다.")
+        plan_exists, has_permission = await self.plan_repository.has_edit_permission(
+            plan_id=itinerary_data.plan_id, user_id=self.current_user.id
+        )
+        if not plan_exists:
+            raise HTTPException(status_code=404, detail="해당 계획을 찾을 수 없습니다.")
+        if not has_permission:
+            raise HTTPException(status_code=403, detail="일정 생성 권한이 없습니다.")
 
         create_itinerary_data = Itinerary(
             title=itinerary_data.title,
@@ -64,16 +62,13 @@ class ItineraryService:
         return ItineraryRead.model_validate(itinerary)
 
     async def read_itineraries_by_plan(self, *, plan_id: int) -> list[ItineraryRead]:
-        plan = await self.plan_repository.find_by_id(plan_id=plan_id)
-        if not plan:
-            raise HTTPException(status_code=400, detail="해당 계획을 찾을 수 없습니다.")
-
-        if plan.owner_id != self.current_user.id:
-            is_shared = await self.plan_repository.is_shared(
-                plan_id=plan_id, user_id=self.current_user.id
-            )
-            if not is_shared:
-                raise HTTPException(status_code=403, detail="일정 조회 권한이 없습니다.")
+        plan_exists, has_permission = await self.plan_repository.has_read_permission(
+            plan_id=plan_id, user_id=self.current_user.id
+        )
+        if not plan_exists:
+            raise HTTPException(status_code=404, detail="해당 계획을 찾을 수 없습니다.")
+        if not has_permission:
+            raise HTTPException(status_code=403, detail="해당 일정 조회 권한이 없습니다.")
 
         itineraries = await self.itinerary_repository.find_all_by_plan(plan_id=plan_id)
         itineraries_list = [

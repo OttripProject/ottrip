@@ -1,6 +1,6 @@
 # from fastapi import HTTPException
 
-from sqlalchemy import select, update, insert, delete
+from sqlalchemy import select, update, insert, delete, exists
 from sqlalchemy.orm import joinedload, with_loader_criteria
 
 from app.database.deps import SessionDep
@@ -23,6 +23,12 @@ class PlanRepository:
         self.session.add(plan)
         await self.session.flush()
         return plan
+
+    async def exists(self, *, plan_id: int) -> bool:
+        result = await self.session.scalar(
+            select(exists().where(Plan.id == plan_id, Plan.is_deleted.is_(False)))
+        )
+        return bool(result)
 
     async def find_by_id(self, *, plan_id: int) -> Plan | None:
         result = await self.session.execute(
@@ -81,6 +87,12 @@ class PlanRepository:
                 ),
             )
             .where(Plan.public_id == public_id, Plan.is_deleted.is_(False))
+        )
+        return result.unique().scalar_one_or_none()
+
+    async def find_by_id_only_plan(self, *, plan_id: int) -> Plan | None:
+        result = await self.session.execute(
+            select(Plan).where(Plan.id == plan_id, Plan.is_deleted.is_(False))
         )
         return result.unique().scalar_one_or_none()
 
@@ -154,6 +166,38 @@ class PlanRepository:
         )
         return result.scalar_one_or_none() is not None
 
+    async def has_edit_permission(self, *, plan_id: int, user_id: int) -> tuple[bool, bool]:
+        result = await self.session.execute(
+            select(Plan.id, Plan.owner_id)
+            .where(Plan.id == plan_id, Plan.is_deleted.is_(False))
+        )
+        row = result.first()
+        
+        if row is None:
+            return (False, False)
+        
+        owner_id = row[1]
+        
+        if owner_id == user_id:
+            return (True, True)
+        
+        is_editor = await self.is_editor(plan_id=plan_id, user_id=user_id)
+        return (True, is_editor)
+
+    async def has_read_permission(self, *, plan_id: int, user_id: int) -> tuple[bool, bool]:
+        result = await self.session.execute(
+            select(Plan.id, Plan.owner_id)
+            .where(Plan.id == plan_id, Plan.is_deleted.is_(False))
+        )
+        row = result.first()
+        if row is None:
+            return (False, False)
+        owner_id = row[1]
+        if owner_id == user_id:
+            return (True, True)
+        is_shared = await self.is_shared(plan_id=plan_id, user_id=user_id)
+        return (True, is_shared)
+
     # --- Invitations ---
     async def create_invitation(
         self,
@@ -193,12 +237,6 @@ class PlanRepository:
     async def find_travel_checklist_by_public_id(
         self, *, public_id: str
     ) -> ChecklistItemsByCategory | None:
-        """Checklist 조회 전용: travel_checklist 필드만 조회하여 ChecklistItemsByCategory로 반환 (성능 최적화)
-        
-        Returns:
-            ChecklistItemsByCategory: Checklist가 있으면 반환, 없으면 빈 리스트 반환
-            None: Plan이 존재하지 않으면 None 반환
-        """
         # Plan 존재 여부와 travel_checklist를 함께 조회
         result = await self.session.execute(
             select(Plan.id, Plan.travel_checklist)

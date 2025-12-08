@@ -99,20 +99,25 @@ class PlanService:
         return PlansReadByUser(plans=plans_list)
 
     async def delete(self, *, plan_id: int) -> None:
-        plan = await self.plan_repository.find_by_id(plan_id=plan_id)
-        if not plan:
-            raise HTTPException(status_code=400, detail="해당 계획을 찾을 수 없습니다.")
-        if plan.owner_id != self.current_user.id:
+        plan_exists, has_permission = await self.plan_repository.has_edit_permission(
+            plan_id=plan_id, user_id=self.current_user.id
+        )
+        if not plan_exists:
+            raise HTTPException(status_code=404, detail="해당 계획을 찾을 수 없습니다.")
+        if not has_permission:
             raise HTTPException(status_code=403, detail="해당 계획 삭제 권한이 없습니다.")
-
         await self.plan_repository.remove(plan_id=plan_id)
 
     async def update(self, *, plan_id: int, update_data: PlanUpdate) -> PlanRead:
-        plan = await self.plan_repository.find_by_id(plan_id=plan_id)
+        plan = await self.plan_repository.find_by_id_only_plan(plan_id=plan_id)
         if not plan:
             raise HTTPException(status_code=400, detail="계획을 찾을 수 없습니다.")
-        if plan.owner_id != self.current_user.id and not await self.plan_repository.is_editor(plan_id=plan_id, user_id=self.current_user.id):
-            raise HTTPException(status_code=403, detail="계획 수정 권한이 없습니다.")
+        if plan.owner_id != self.current_user.id:
+            is_editor = await self.plan_repository.is_editor(
+                plan_id=plan_id, user_id=self.current_user.id
+            )
+            if not is_editor:
+                raise HTTPException(status_code=403, detail="해당 계획 수정 권한이 없습니다.")
 
         if update_data.title:
             plan.title = update_data.title
@@ -126,7 +131,7 @@ class PlanService:
         return PlanRead.model_validate(updated_plan)
 
     async def set_memo(self, *, plan_id: int, memo_data: PlanMemoUpdate) -> None:
-        plan = await self.plan_repository.find_by_id(plan_id=plan_id)
+        plan = await self.plan_repository.find_by_id_only_plan(plan_id=plan_id)
         if not plan:
             raise HTTPException(status_code=404, detail="계획을 찾을 수 없습니다.")
         if plan.owner_id != self.current_user.id:
@@ -140,15 +145,17 @@ class PlanService:
 
     # --- Sharing ---
     async def add_share(self, *, plan_id: int, user_id: int, role: Role) -> None:
-        plan = await self.plan_repository.find_by_id(plan_id=plan_id)
-        if not plan:
+        plan_exists, has_permission = await self.plan_repository.has_edit_permission(
+            plan_id=plan_id, user_id=self.current_user.id
+        )
+        if not plan_exists:
             raise HTTPException(status_code=404, detail="계획을 찾을 수 없습니다.")
-        if plan.owner_id != self.current_user.id:
-            raise HTTPException(status_code=403, detail="권한이 없습니다.")
+        if not has_permission:
+            raise HTTPException(status_code=403, detail="해당 계획 공유 권한이 없습니다.")
         await self.plan_repository.upsert_shared(plan_id=plan_id, user_id=user_id, role=role)
 
     async def list_shares(self, *, plan_id: int) -> list[ShareRead]:
-        plan = await self.plan_repository.find_by_id(plan_id=plan_id)
+        plan = await self.plan_repository.exists(plan_id=plan_id)
         if not plan:
             raise HTTPException(status_code=404, detail="계획을 찾을 수 없습니다.")
         shared_plans = await self.plan_repository.list_shared(plan_id=plan_id)
@@ -163,11 +170,13 @@ class PlanService:
         ]
 
     async def revoke_share(self, *, plan_id: int, handle: str) -> None:
-        plan = await self.plan_repository.find_by_id(plan_id=plan_id)
-        if not plan:
+        plan_exists, has_permission = await self.plan_repository.has_edit_permission(
+            plan_id=plan_id, user_id=self.current_user.id
+        )
+        if not plan_exists:
             raise HTTPException(status_code=404, detail="계획을 찾을 수 없습니다.")
-        if plan.owner_id != self.current_user.id:
-            raise HTTPException(status_code=403, detail="권한이 없습니다.")
+        if not has_permission:
+            raise HTTPException(status_code=403, detail="해당 계획 공유 권한이 없습니다.")
         user_id = await self.user_repository.find_id_by_handle(user_handle=handle)
         if not user_id:
             raise HTTPException(status_code=404, detail="사용자를 찾을 수 없습니다.")
@@ -175,11 +184,15 @@ class PlanService:
 
     # --- Invitations ---
     async def create_invitation(self, *, plan_id: int, email: str, role: Role, expires_days: int | None, invited_by: int):
-        plan = await self.plan_repository.find_by_id(plan_id=plan_id)
+        plan = await self.plan_repository.find_by_id_only_plan(plan_id=plan_id)
         if not plan:
             raise HTTPException(status_code=404, detail="계획을 찾을 수 없습니다.")
         if plan.owner_id != self.current_user.id:
-            raise HTTPException(status_code=403, detail="권한이 없습니다.")
+            is_editor = await self.plan_repository.is_editor(
+                plan_id=plan_id, user_id=self.current_user.id
+            )
+            if not is_editor:
+                raise HTTPException(status_code=403, detail="해당 계획 초대 권한이 없습니다.")
 
         token = secrets.token_urlsafe(32)
         expires_at: datetime | None = (
@@ -203,8 +216,14 @@ class PlanService:
                 accept_link=accept_link,
                 expires_at_iso=inv.expires_at.isoformat() if inv.expires_at else None,
             )
-        except Exception:
-            pass
+        except Exception as e:
+            import logging
+            logger = logging.getLogger("uvicorn.error")
+            logger.error(
+                f"초대 이메일 전송 실패: plan_id={plan_id}, email={inv.email}, "
+                f"error={type(e).__name__}: {str(e)}",
+                exc_info=True
+            )
         return inv
 
     async def accept_invitation(self, *, token: str) -> None:
