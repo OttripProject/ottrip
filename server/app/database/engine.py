@@ -29,16 +29,12 @@ def get_engine() -> EngineCache:
     if loop not in _engine_cache:
         engine = create_async_engine(
             database_settings.DATABASE_URI,
-            pool_pre_ping=True,  # 연결 사용 전에 살아있는지 확인
-            # Session 모드에서는 pool_size만큼만 사용 가능 (max_overflow 무시됨)
-            # 동시 요청이 많을 때를 고려하여 pool_size 증가
-            pool_size=25,  # 15 -> 25로 증가 (동시 연결 수 증가)
-            max_overflow=0,  # Session 모드에서는 사용되지 않음
-            # 연결 재사용 시간 (초) - 너무 짧으면 재연결 오버헤드, 너무 길면 연결 누수 가능
-            pool_recycle=3600,  # 300 -> 3600 (1시간)로 증가
-            # 연결 타임아웃 (초) - 연결을 기다리는 최대 시간
-            pool_timeout=30,  # 기본값 30초 유지
-            echo=False,  # SQL 로깅 비활성화 (성능 향상)
+            pool_pre_ping=True, 
+            pool_size=25, 
+            max_overflow=0, 
+            pool_recycle=300,  
+            pool_timeout=30,
+            echo=False, 
         )
         session_factory = async_sessionmaker(
             bind=engine,

@@ -38,6 +38,7 @@ class TestResult:
     response_time: float
     success: bool
     error: str | None = None
+    response_data: dict[str, Any] | None = None
 
 
 @dataclass
@@ -144,6 +145,14 @@ class PerformanceTester:
                     **kwargs,
                 )
                 response_time = time.time() - start_time
+                
+                # 응답 데이터 추출 (시퀀스 테스트용)
+                response_data = None
+                if 200 <= response.status_code < 300:
+                    try:
+                        response_data = response.json()
+                    except:
+                        pass
 
                 return TestResult(
                     endpoint=endpoint,
@@ -151,6 +160,7 @@ class PerformanceTester:
                     status_code=response.status_code,
                     response_time=response_time,
                     success=200 <= response.status_code < 300,
+                    response_data=response_data,
                 )
         except httpx.TimeoutException:
             response_time = time.time() - start_time
@@ -221,6 +231,65 @@ class PerformanceTester:
 
         for result in results:
             self._update_stats(result)
+
+    async def test_sequence(
+        self,
+        sequence: list[tuple[str, str, dict[str, Any] | None]],
+        requests: int = 1,
+    ) -> list[float]:
+        """순차적 API 호출 시퀀스 테스트 (프론트엔드 플로우 시뮬레이션)"""
+        sequence_times: list[float] = []
+        
+        for _ in range(requests):
+            start_time = time.time()
+            last_response_data: dict[str, Any] | None = None
+            
+            for method, endpoint, json_data in sequence:
+                # 이전 응답에서 데이터 추출하여 파라미터 치환
+                endpoint_with_params = endpoint
+                if last_response_data:
+                    # publicId 같은 동적 파라미터 치환
+                    if "{publicId}" in endpoint:
+                        # 여러 가능한 키 이름 확인
+                        public_id = (
+                            last_response_data.get("publicId") or 
+                            last_response_data.get("public_id") or
+                            (last_response_data.get("data", {}).get("publicId") if isinstance(last_response_data.get("data"), dict) else None) or
+                            (last_response_data.get("data", {}).get("public_id") if isinstance(last_response_data.get("data"), dict) else None)
+                        )
+                        if public_id:
+                            endpoint_with_params = endpoint_with_params.replace("{publicId}", str(public_id))
+                        else:
+                            print(f"Warning: publicId를 찾을 수 없습니다. 응답 데이터: {last_response_data}")
+                    if "{planId}" in endpoint:
+                        plan_id = (
+                            last_response_data.get("id") or 
+                            last_response_data.get("planId") or
+                            last_response_data.get("plan_id") or
+                            (last_response_data.get("data", {}).get("id") if isinstance(last_response_data.get("data"), dict) else None)
+                        )
+                        if plan_id:
+                            endpoint_with_params = endpoint_with_params.replace("{planId}", str(plan_id))
+                
+                # 요청 실행
+                result = await self._make_request(
+                    method,
+                    endpoint_with_params,
+                    json=json_data,
+                )
+                self._update_stats(result)
+                
+                # 응답 데이터 저장 (다음 요청에서 사용)
+                if result.success and result.status_code in (200, 201) and result.response_data:
+                    last_response_data = result.response_data
+                    # 디버깅: Plan 생성 응답 확인
+                    if method == "POST" and "/private/plans" in endpoint:
+                        print(f"Debug: Plan 생성 응답 - publicId: {last_response_data.get('publicId')}, public_id: {last_response_data.get('public_id')}, 전체 데이터: {list(last_response_data.keys())}")
+            
+            total_time = time.time() - start_time
+            sequence_times.append(total_time)
+        
+        return sequence_times
 
     def get_all_endpoints(self) -> list[tuple[str, str]]:
         """모든 테스트 가능한 엔드포인트 목록 반환"""
@@ -505,6 +574,11 @@ async def main():
         default="performance_report.json",
         help="리포트 출력 파일명 (기본값: performance_report.json)",
     )
+    parser.add_argument(
+        "--sequence",
+        action="store_true",
+        help="프론트엔드 플로우 시뮬레이션: Plan 생성 후 상세 조회 시퀀스 테스트",
+    )
 
     args = parser.parse_args()
 
@@ -525,6 +599,65 @@ async def main():
     params: dict[str, str] | None = None
     if args.params:
         params = parse_params(args.params)
+
+    # 시퀀스 테스트 (프론트엔드 플로우 시뮬레이션)
+    if args.sequence:
+        # Plan 생성 후 상세 조회 시퀀스
+        plan_create_data = {
+            "title": "성능 테스트 여행",
+            "start_date": "2025-01-15",
+            "end_date": "2025-01-20",
+            "memo": ""
+        }
+        if args.json:
+            try:
+                if os.path.exists(args.json):
+                    with open(args.json, "r", encoding="utf-8") as f:
+                        plan_create_data = json.load(f)
+                else:
+                    plan_create_data = json.loads(args.json)
+            except Exception as e:
+                print(f"JSON 파싱 오류: {e}")
+                return
+        
+        sequence = [
+            ("POST", "/private/plans", plan_create_data),
+            ("GET", "/private/plans/{publicId}", None),
+        ]
+        
+        print(f"\n{'='*60}")
+        print(f"프론트엔드 플로우 시뮬레이션 테스트 시작")
+        print(f"{'='*60}")
+        print(f"Base URL: {args.base_url}")
+        print(f"시퀀스: Plan 생성 → Plan 상세 조회")
+        print(f"반복 횟수: {args.requests}")
+        print(f"{'='*60}\n")
+        
+        start_time = time.time()
+        sequence_times = await tester.test_sequence(sequence, requests=args.requests)
+        total_time = time.time() - start_time
+        
+        print(f"\n{'='*60}")
+        print(f"시퀀스 테스트 완료 (총 소요 시간: {total_time:.2f}초)")
+        print(f"{'='*60}\n")
+        
+        if sequence_times:
+            print(f"시퀀스 전체 시간 통계:")
+            print(f"  평균: {statistics.mean(sequence_times)*1000:.2f}ms")
+            print(f"  최소: {min(sequence_times)*1000:.2f}ms")
+            print(f"  최대: {max(sequence_times)*1000:.2f}ms")
+            print(f"  중간값: {statistics.median(sequence_times)*1000:.2f}ms")
+            if len(sequence_times) > 1:
+                sorted_times = sorted(sequence_times)
+                p95_index = int(len(sorted_times) * 0.95)
+                p99_index = int(len(sorted_times) * 0.99)
+                print(f"  P95: {sorted_times[min(p95_index, len(sorted_times)-1)]*1000:.2f}ms")
+                print(f"  P99: {sorted_times[min(p99_index, len(sorted_times)-1)]*1000:.2f}ms")
+            print()
+        
+        tester.print_report()
+        tester.save_report(args.output)
+        return
 
     # JSON 데이터 설정
     json_data: dict[str, Any] | None = None
