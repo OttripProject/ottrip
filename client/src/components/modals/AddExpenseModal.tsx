@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, Pressable, StyleSheet, Alert, Modal, ScrollView } from 'react-native';
 import { CategoryPicker } from '@/ui/components/pickers';
 import dayjs from 'dayjs';
@@ -21,6 +21,7 @@ interface AddExpenseModalProps {
   visible: boolean;
   onClose: () => void;
   planId: number;
+  planStartDate?: string; // plan의 시작 날짜
   onExpenseAdd?: (expense: any) => void;
 }
 
@@ -28,6 +29,7 @@ export default function AddExpenseModal({
   visible, 
   onClose, 
   planId,
+  planStartDate,
   onExpenseAdd 
 }: AddExpenseModalProps) {
   const { selectedDate } = useDate();
@@ -38,13 +40,27 @@ export default function AddExpenseModal({
   const [isSubmitting, setIsSubmitting] = useState(false); // 버튼 비활성화용 (리렌더링 필요)
   const isSubmittingRef = useRef(false); // 중복 요청 방지 플래그
 
+  // 기본 날짜: plan 시작 날짜 > selectedDate > 오늘 날짜 순서로 우선순위
+  const getDefaultDate = () => planStartDate || selectedDate || dayjs().format('YYYY-MM-DD');
+
   const [expenseForm, setExpenseForm] = useState({
     category: ExpenseCategory.ETC,
     amount: 0,
     description: '',
-    ex_date: selectedDate || dayjs().format('YYYY-MM-DD'),
+    ex_date: getDefaultDate(),
     currency: ExpenseCurrency.KRW,
   });
+
+  // 모달이 열릴 때마다 기본 날짜 업데이트
+  useEffect(() => {
+    if (visible) {
+      const defaultDate = planStartDate || selectedDate || dayjs().format('YYYY-MM-DD');
+      setExpenseForm(prev => ({
+        ...prev,
+        ex_date: defaultDate,
+      }));
+    }
+  }, [visible, planStartDate, selectedDate]);
 
   const handleExpenseSubmit = async () => {
     // 중복 요청 방지: 이미 실행 중이면 무시
@@ -82,7 +98,7 @@ export default function AddExpenseModal({
         category: ExpenseCategory.FOOD,
         amount: 0,
         description: '',
-        ex_date: dayjs().format('YYYY-MM-DD'),
+        ex_date: getDefaultDate(),
         currency: ExpenseCurrency.KRW,
       });
       onClose();
@@ -101,7 +117,7 @@ export default function AddExpenseModal({
       category: ExpenseCategory.ETC,
       amount: 0,
       description: '',
-      ex_date: selectedDate || dayjs().format('YYYY-MM-DD'),
+      ex_date: getDefaultDate(),
       currency: ExpenseCurrency.KRW,
     });
     onClose();
@@ -179,7 +195,6 @@ export default function AddExpenseModal({
                     <Text style={styles.currencyText}>
                     {ExpenseCurrency.KRW} ({currencyLabels[ExpenseCurrency.KRW]})
                     </Text>
-                    <DownArrowIcon width={16} height={16} />
                   </View>
                 </View>
               </View>
@@ -346,7 +361,7 @@ const styles = StyleSheet.create({
   },
   currencyText: {
     ...textStyles.body4,
-    color: colors.black,
+    color: colors.gray600,
   },
   dateInput: {
     flexDirection: 'row',

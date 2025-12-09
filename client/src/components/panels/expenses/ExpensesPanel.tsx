@@ -236,6 +236,7 @@ export default function ExpensesPanel({ planData, onExpenseAdd }: ExpensesPanelP
         visible={showExpenseForm}
         onClose={() => setShowExpenseForm(false)}
         planId={planData?.plan?.id || 0}
+        planStartDate={planData?.plan?.startDate}
         onExpenseAdd={(newExpense) => {
           onExpenseAdd?.(newExpense);
         }}
