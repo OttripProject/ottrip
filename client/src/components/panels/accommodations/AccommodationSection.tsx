@@ -10,6 +10,7 @@ interface AccommodationSectionProps {
     expenses: any[];
     refreshAccommodations: () => Promise<void>;
     refreshExpenses: () => Promise<void>;
+    removeAccommodation?: (accommodationId: number) => void;
   };
   selectedAccommodation?: any;
   activeTab?: 'itinerary' | 'flight' | 'accommodation' | undefined;
@@ -78,8 +79,11 @@ export default function AccommodationSection({
     onAccommodationSelect?.(accommodation);
   };
 
-  const handleAccommodationDelete = () => {
-    planData?.refreshAccommodations();
+  const handleAccommodationDelete = (accommodationId: number) => {
+    // 캐시에서 바로 제거 (accommodation + 관련 expense)
+    if (planData?.removeAccommodation) {
+      planData.removeAccommodation(accommodationId);
+    }
     setShowAccommodationForm(false);
     setEditingAccommodation(null);
     onAccommodationClear?.();

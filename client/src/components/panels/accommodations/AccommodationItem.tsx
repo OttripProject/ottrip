@@ -23,7 +23,7 @@ interface AccommodationItemProps {
   planId: number;
   onSave: (accommodation: any) => void;
   onCancel: () => void;
-  onDelete?: (accommodationId: string) => void;
+  onDelete?: (accommodationId: number) => void;
   onShowWarning?: (message?: string) => void;
 }
 

@@ -240,7 +240,7 @@ export default function ItineraryItem({
         if (draftExpenses.length > 0) {
           for (const draftExpense of draftExpenses) {
             try {
-              await expensesApi.createExpense({
+              const createdExpense = await expensesApi.createExpense({
                 planId: planId,
                 category: draftExpense.category as any,
                 amount: draftExpense.amount,
@@ -249,6 +249,10 @@ export default function ItineraryItem({
                 currency: draftExpense.currency as any,
                 itineraryId: itinerary.id,
               });
+              // 응답 객체를 바로 캐시에 추가
+              if (planData?.addExpense) {
+                planData.addExpense(createdExpense);
+              }
             } catch (e) {
               console.warn('Failed to create draft expense:', e);
             }
@@ -273,7 +277,7 @@ export default function ItineraryItem({
         if (draftExpenses.length > 0) {
           for (const draftExpense of draftExpenses) {
             try {
-              await expensesApi.createExpense({
+              const createdExpense = await expensesApi.createExpense({
                 planId: planId,
                 category: draftExpense.category as any,
                 amount: draftExpense.amount,
@@ -282,6 +286,10 @@ export default function ItineraryItem({
                 currency: draftExpense.currency as any,
                 itineraryId: savedItinerary.id,
               });
+              // 응답 객체를 바로 캐시에 추가
+              if (planData?.addExpense) {
+                planData.addExpense(createdExpense);
+              }
             } catch (e) {
               console.warn('Failed to create draft expense:', e);
             }

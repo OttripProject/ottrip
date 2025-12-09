@@ -159,6 +159,59 @@ export const usePlanDataQuery = (publicId: string | null) => {
     });
   };
 
+  // expense를 캐시에 바로 추가 (응답 객체 사용)
+  const addExpense = (newExpense: Expense) => {
+    queryClient.setQueryData<PlanData>(['plan', publicId], (old) => {
+      if (!old) return old;
+
+      // expense 추가/업데이트
+      const normalizedExpense = {
+        ...newExpense,
+        amount: Number(newExpense.amount), // amount 정규화
+      };
+      const existingIndex = old.expenses.findIndex(
+        (e) => e.id === normalizedExpense.id
+      );
+      let updatedExpenses: Expense[];
+      if (existingIndex >= 0) {
+        // 기존 항목 업데이트
+        updatedExpenses = [...old.expenses];
+        updatedExpenses[existingIndex] = normalizedExpense;
+      } else {
+        // 새 항목 추가
+        updatedExpenses = [...old.expenses, normalizedExpense];
+      }
+
+      return {
+        ...old,
+        expenses: updatedExpenses,
+      };
+    });
+  };
+
+  // accommodation을 캐시에서 제거 (삭제 시 사용)
+  const removeAccommodation = (accommodationId: number) => {
+    queryClient.setQueryData<PlanData>(['plan', publicId], (old) => {
+      if (!old) return old;
+
+      // accommodation 제거
+      const updatedAccommodations = old.accommodations.filter(
+        (acc) => acc.id !== accommodationId
+      );
+
+      // accommodation에 연결된 expense도 제거
+      const updatedExpenses = old.expenses.filter(
+        (e) => e.accommodationId !== accommodationId
+      );
+
+      return {
+        ...old,
+        accommodations: updatedAccommodations,
+        expenses: updatedExpenses,
+      };
+    });
+  };
+
   const fetchPlanData = async (pId: string) => {
     if (pId === publicId) {
       await refetch();
@@ -193,6 +246,8 @@ export const usePlanDataQuery = (publicId: string | null) => {
     refreshAccommodations,
     refreshExpenses,
     addAccommodation,
+    addExpense,
+    removeAccommodation,
   };
 };
 

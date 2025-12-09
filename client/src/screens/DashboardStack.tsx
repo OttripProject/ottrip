@@ -48,7 +48,8 @@ export default function DashboardStack() {
   const handleExpenseAdd = async (newExpense: any) => {
     // Plan이 선택된 경우에만 추가
     if (selectedPlanId) {
-      await planData.refreshExpenses();
+      // 응답 객체를 바로 캐시에 추가
+      planData.addExpense(newExpense);
     }
   };
 

@@ -66,9 +66,7 @@ export default function FlightSection({
     onFlightAdd?.(flight);
     setShowFlightForm(false);
     setEditingFlight(null);
-    if (planData?.refreshExpenses) {
-      planData.refreshExpenses();
-    }
+    // refreshExpenses() 제거 - flight의 expense는 addFlight에서 처리해야 함
   };
 
   const handleFlightDelete = () => {

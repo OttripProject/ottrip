@@ -178,7 +178,8 @@ export default function DashboardScreen() {
 
   const handleExpenseAdd = async (newExpense: any) => {
     if (selectedPlanId) {
-      await planData.refreshExpenses();
+      // 응답 객체를 바로 캐시에 추가
+      planData.addExpense(newExpense);
     }
   };
 
