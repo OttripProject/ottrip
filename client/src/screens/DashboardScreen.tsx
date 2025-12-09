@@ -168,7 +168,8 @@ export default function DashboardScreen() {
 
   const handleAccommodationAdd = async (newAccommodation: any) => {
     if (selectedPlanId) {
-      await planData.refreshAccommodations();
+      // 응답 객체를 바로 캐시에 추가 (accommodation + expense)
+      planData.addAccommodation(newAccommodation);
       // 새로 생성된 숙박을 선택된 상태로 설정
       setSelectedAccommodation(newAccommodation);
       setActiveTab('accommodation');

@@ -142,6 +142,7 @@ export interface Accommodation {
   planId: number;
   createdAt: string;
   updatedAt: string;
+  expense?: Expense | null;
 }
 
 export interface CreateAccommodationRequest {

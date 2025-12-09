@@ -113,6 +113,52 @@ export const usePlanDataQuery = (publicId: string | null) => {
     }
   };
 
+  // 숙박을 캐시에 바로 추가 (응답 객체 사용)
+  const addAccommodation = (newAccommodation: Accommodation) => {
+    queryClient.setQueryData<PlanData>(['plan', publicId], (old) => {
+      if (!old) return old;
+
+      // accommodation 추가/업데이트
+      const existingIndex = old.accommodations.findIndex(
+        (acc) => acc.id === newAccommodation.id
+      );
+      let updatedAccommodations: Accommodation[];
+      if (existingIndex >= 0) {
+        // 기존 항목 업데이트
+        updatedAccommodations = [...old.accommodations];
+        updatedAccommodations[existingIndex] = newAccommodation;
+      } else {
+        // 새 항목 추가
+        updatedAccommodations = [...old.accommodations, newAccommodation];
+      }
+
+      // expense도 함께 추가/업데이트 (accommodation에 expense가 있는 경우)
+      let updatedExpenses = [...old.expenses];
+      if (newAccommodation.expense) {
+        const expense = {
+          ...newAccommodation.expense,
+          amount: Number(newAccommodation.expense.amount), // amount 정규화
+        };
+        const existingExpenseIndex = updatedExpenses.findIndex(
+          (e) => e.id === expense.id
+        );
+        if (existingExpenseIndex >= 0) {
+          // 기존 expense 업데이트
+          updatedExpenses[existingExpenseIndex] = expense;
+        } else {
+          // 새 expense 추가
+          updatedExpenses.push(expense);
+        }
+      }
+
+      return {
+        ...old,
+        accommodations: updatedAccommodations,
+        expenses: updatedExpenses,
+      };
+    });
+  };
+
   const fetchPlanData = async (pId: string) => {
     if (pId === publicId) {
       await refetch();
@@ -146,6 +192,7 @@ export const usePlanDataQuery = (publicId: string | null) => {
     refreshFlights,
     refreshAccommodations,
     refreshExpenses,
+    addAccommodation,
   };
 };
 
