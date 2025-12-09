@@ -7,7 +7,7 @@ from app.utils.dependency import dependency
 
 from .models import Expense
 from .repository import ExpenseRepository
-from .schemas import ExpenseCreate, ExpenseRead, ExpenseUpdate
+from .schemas import ExpenseCreate, ExpenseRead, ExpenseUpdate, ExpenseBatchCreate
 
 
 @dependency
@@ -44,6 +44,39 @@ class ExpenseService:
             created_expense.flight_id = flight_id
 
         return ExpenseRead.model_validate(created_expense)
+
+    async def create_batch(self, *, batch_data: ExpenseBatchCreate) -> list[ExpenseRead]:
+        """여러 지출을 한 번에 생성합니다."""
+        plan_exists, has_permission = await self.plan_repository.has_edit_permission(
+            plan_id=batch_data.plan_id, user_id=self.current_user.id
+        )
+        if not plan_exists:
+            raise HTTPException(status_code=404, detail="해당 계획을 찾을 수 없습니다.")
+        if not has_permission:
+            raise HTTPException(status_code=403, detail="해당 비용에 대한 생성 권한이 없습니다.")
+        
+        created_expenses: list[Expense] = []
+        for expense_data in batch_data.expenses:
+            create_expense_data = Expense(
+                amount=float(expense_data.amount),
+                category=expense_data.category,
+                currency=expense_data.currency,
+                description=expense_data.description,
+                ex_date=expense_data.ex_date,
+                plan_id=batch_data.plan_id,
+            )
+            
+            if batch_data.itinerary_id:
+                create_expense_data.itinerary_id = batch_data.itinerary_id
+            if batch_data.flight_id:
+                create_expense_data.flight_id = batch_data.flight_id
+            if batch_data.accommodation_id:
+                create_expense_data.accommodation_id = batch_data.accommodation_id
+            
+            created_expense = await self.expense_repository.save(expense=create_expense_data)
+            created_expenses.append(created_expense)
+        
+        return [ExpenseRead.model_validate(expense) for expense in created_expenses]
 
     async def read_expense(self, *, expense_id: int) -> ExpenseRead:
         expense = await self.expense_repository.find_by_id(expense_id=expense_id)
