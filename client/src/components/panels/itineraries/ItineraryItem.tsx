@@ -253,24 +253,27 @@ export default function ItineraryItem({
         }
         
         if (draftExpenses.length > 0) {
-          for (const draftExpense of draftExpenses) {
-            try {
-              const createdExpense = await expensesApi.createExpense({
-                planId: planId,
+          try {
+            // 배치 API로 모든 지출을 한 번에 생성
+            const createdExpenses = await expensesApi.createExpensesBatch({
+              planId: planId,
+              itineraryId: itinerary.id,
+              expenses: draftExpenses.map(draftExpense => ({
                 category: draftExpense.category as any,
                 amount: draftExpense.amount,
                 description: draftExpense.description,
                 exDate: draftExpense.exDate,
                 currency: draftExpense.currency as any,
-                itineraryId: itinerary.id,
+              })),
+            });
+            // 응답 객체들을 캐시에 추가
+            if (planData?.addExpense) {
+              createdExpenses.forEach(expense => {
+                planData.addExpense(expense);
               });
-              // 응답 객체를 바로 캐시에 추가
-              if (planData?.addExpense) {
-                planData.addExpense(createdExpense);
-              }
-            } catch (e) {
-              console.warn('Failed to create draft expense:', e);
             }
+          } catch (e) {
+            console.warn('Failed to create draft expenses:', e);
           }
           setDraftExpenses([]); // 초안 비우기
         }
@@ -288,26 +291,29 @@ export default function ItineraryItem({
           endTime: finalEndTime,
         });
         
-        // 새 일정 생성 후 draft expenses 저장
+        // 새 일정 생성 후 draft expenses 배치로 저장
         if (draftExpenses.length > 0) {
-          for (const draftExpense of draftExpenses) {
-            try {
-              const createdExpense = await expensesApi.createExpense({
-                planId: planId,
+          try {
+            // 배치 API로 모든 지출을 한 번에 생성
+            const createdExpenses = await expensesApi.createExpensesBatch({
+              planId: planId,
+              itineraryId: savedItinerary.id,
+              expenses: draftExpenses.map(draftExpense => ({
                 category: draftExpense.category as any,
                 amount: draftExpense.amount,
                 description: draftExpense.description,
                 exDate: draftExpense.exDate,
                 currency: draftExpense.currency as any,
-                itineraryId: savedItinerary.id,
+              })),
+            });
+            // 응답 객체들을 캐시에 추가
+            if (planData?.addExpense) {
+              createdExpenses.forEach(expense => {
+                planData.addExpense(expense);
               });
-              // 응답 객체를 바로 캐시에 추가
-              if (planData?.addExpense) {
-                planData.addExpense(createdExpense);
-              }
-            } catch (e) {
-              console.warn('Failed to create draft expense:', e);
             }
+          } catch (e) {
+            console.warn('Failed to create draft expenses:', e);
           }
           setDraftExpenses([]); // 초안 비우기
         }
