@@ -30,6 +30,15 @@ class ExpenseCreateWithItinerary(ExpenseCreate):
     itinerary_id: int | None = None
 
 
+class ExpenseBatchCreate(APISchema):
+    """여러 지출을 한 번에 생성하기 위한 스키마"""
+    plan_id: int
+    itinerary_id: int | None = None
+    flight_id: int | None = None
+    accommodation_id: int | None = None
+    expenses: list[ExpenseBase] = Field(min_length=1)
+
+
 class ExpenseRead(ExpenseBase):
     id: int
     itinerary_id: int | None = None

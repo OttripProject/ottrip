@@ -5,6 +5,7 @@ from app.core.router import create_router
 from .schemas import (
     ExpenseCreate,
     ExpenseCreateWithItinerary,
+    ExpenseBatchCreate,
     ExpenseRead,
     ExpenseUpdate,
 )
@@ -71,6 +72,18 @@ async def create_expense_for_itinerary(
     if getattr(expense_data, "itinerary_id", None) is None:
         expense_data.itinerary_id = itinerary_id
     return await expense_service.create(expense_data=expense_data)
+
+
+@router.post("/batch", status_code=status.HTTP_201_CREATED)
+async def create_expenses_batch(
+    expense_service: ExpenseService,
+    batch_data: ExpenseBatchCreate,
+) -> list[ExpenseRead]:
+    """
+    여러 비용 정보를 한 번에 생성합니다.
+    일정, 항공편, 숙박에 연결된 여러 지출을 배치로 생성할 수 있습니다.
+    """
+    return await expense_service.create_batch(batch_data=batch_data)
 
 
 @router.patch("/{expense_id}", status_code=status.HTTP_200_OK)
