@@ -38,6 +38,27 @@ export const expensesApi = {
     return response.data;
   },
 
+  // 지출 배치 생성
+  createExpensesBatch: async (batchData: {
+    planId: number;
+    itineraryId?: number;
+    flightId?: number;
+    accommodationId?: number;
+    expenses: Array<{
+      category: string;
+      amount: number;
+      currency: string;
+      description?: string;
+      exDate: string;
+    }>;
+  }): Promise<Expense[]> => {
+    const response = await api.post('/private/expenses/batch', batchData);
+    return (response.data as Expense[]).map((e) => ({
+      ...e,
+      amount: Number((e as any).amount),
+    }));
+  },
+
   // 지출 수정
   updateExpense: async (expenseId: number, expenseData: UpdateExpenseRequest): Promise<Expense> => {
     const response = await api.patch(`/private/expenses/${expenseId}`, expenseData);
