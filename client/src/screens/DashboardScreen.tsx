@@ -163,7 +163,11 @@ export default function DashboardScreen() {
 
   const handleFlightAdd = async (newFlight: any) => {
     if (selectedPlanId) {
-      await planData.refreshFlights();
+      // 응답 객체를 바로 캐시에 추가 (flight + expense)
+      planData.addFlight(newFlight);
+      // 항공편 상태 업데이트 (생성/수정 모두 처리)
+      setSelectedFlight(newFlight);
+      setActiveTab('flight');
     }
   };
 

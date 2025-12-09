@@ -69,8 +69,9 @@ export default function FlightSection({
     // refreshExpenses() 제거 - flight의 expense는 addFlight에서 처리해야 함
   };
 
-  const handleFlightDelete = () => {
-    planData?.refreshFlights();
+  const handleFlightDelete = (flightId: number) => {
+    // 캐시에서 바로 제거 (flight + expense)
+    planData?.removeFlight(flightId);
     setShowFlightForm(false);
     setEditingFlight(null);
     onFlightClear?.();

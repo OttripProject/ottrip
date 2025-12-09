@@ -282,6 +282,75 @@ export const usePlanDataQuery = (publicId: string | null) => {
     });
   };
 
+  // 항공편을 캐시에 바로 추가 (응답 객체 사용)
+  const addFlight = (newFlight: FlightRead) => {
+    queryClient.setQueryData<PlanData>(['plan', publicId], (old) => {
+      if (!old) return old;
+
+      // flight 추가/업데이트
+      const existingIndex = old.flights.findIndex(
+        (f) => f.id === newFlight.id
+      );
+      let updatedFlights: FlightRead[];
+      if (existingIndex >= 0) {
+        // 기존 항목 업데이트
+        updatedFlights = [...old.flights];
+        updatedFlights[existingIndex] = newFlight;
+      } else {
+        // 새 항목 추가
+        updatedFlights = [...old.flights, newFlight];
+      }
+
+      // expense도 함께 추가/업데이트 (flight에 expense가 있는 경우)
+      let updatedExpenses = [...old.expenses];
+      if (newFlight.expense) {
+        const expense = {
+          ...newFlight.expense,
+          amount: Number(newFlight.expense.amount), // amount 정규화
+        };
+        const existingExpenseIndex = updatedExpenses.findIndex(
+          (e) => e.id === expense.id
+        );
+        if (existingExpenseIndex >= 0) {
+          // 기존 expense 업데이트
+          updatedExpenses[existingExpenseIndex] = expense;
+        } else {
+          // 새 expense 추가
+          updatedExpenses.push(expense);
+        }
+      }
+
+      return {
+        ...old,
+        flights: updatedFlights,
+        expenses: updatedExpenses,
+      };
+    });
+  };
+
+  // 항공편을 캐시에서 제거 (삭제 시 사용)
+  const removeFlight = (flightId: number) => {
+    queryClient.setQueryData<PlanData>(['plan', publicId], (old) => {
+      if (!old) return old;
+
+      // flight 제거
+      const updatedFlights = old.flights.filter(
+        (f) => f.id !== flightId
+      );
+
+      // flight에 연결된 expense도 제거
+      const updatedExpenses = old.expenses.filter(
+        (e) => e.flightId !== flightId
+      );
+
+      return {
+        ...old,
+        flights: updatedFlights,
+        expenses: updatedExpenses,
+      };
+    });
+  };
+
   const fetchPlanData = async (pId: string) => {
     if (pId === publicId) {
       await refetch();
@@ -321,6 +390,8 @@ export const usePlanDataQuery = (publicId: string | null) => {
     removeAccommodation,
     addItinerary,
     removeItinerary,
+    addFlight,
+    removeFlight,
   };
 };
 

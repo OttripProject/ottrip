@@ -230,7 +230,8 @@ export default function FlightItem({
       };
 
       if (flight) {
-        savedFlight = await flightsApi.updateFlight(flight.id, {
+        // 수정: 응답이 없으므로 업데이트 후 전체 객체를 조회
+        await flightsApi.updateFlight(flight.id, {
           reservationNumber: formData.reservation_number || null,
           passengerName: formData.passenger_name || null,
           ticketNumber: formData.ticket_number || null,
@@ -249,7 +250,9 @@ export default function FlightItem({
             terminal: s.terminal || null,
           })),
           expense: {
-            exDate: expenseDate,
+            exDate: flightSegments.length > 0 && flightSegments[0].departure_date 
+              ? flightSegments[0].departure_date 
+              : expenseDate,
             amount: Number(expenseData.amount) || 0,
             currency: ExpenseCurrency.KRW,
             category: ExpenseCategory.FLIGHT as any,
@@ -257,8 +260,11 @@ export default function FlightItem({
             description: formData.reservation_number || null,
           },
         });
+        // 업데이트 후 전체 객체 조회
+        savedFlight = await flightsApi.getFlight(flight.id);
       } else {
-        savedFlight = await flightsApi.createFlight({
+        // 생성: 응답이 id만 오므로 생성 후 전체 객체를 조회
+        const createResponse = await flightsApi.createFlight({
           planId: planId,
           reservationNumber: formData.reservation_number || null,
           passengerName: formData.passenger_name || null,
@@ -277,7 +283,9 @@ export default function FlightItem({
             terminal: s.terminal || null,
           })),
           expense: {
-            exDate: expenseDate,
+            exDate: flightSegments.length > 0 && flightSegments[0].departure_date 
+              ? flightSegments[0].departure_date 
+              : expenseDate,
             amount: Number(expenseData.amount) || 0,
             currency: ExpenseCurrency.KRW,
             category: ExpenseCategory.FLIGHT as any,
@@ -285,6 +293,8 @@ export default function FlightItem({
             description: formData.reservation_number || null,
           },
         });
+        // 생성 후 전체 객체 조회
+        savedFlight = await flightsApi.getFlight(createResponse.id);
       }
       onSave(savedFlight);
     } catch (error) {
