@@ -6,7 +6,7 @@ import { PLACEHOLDERS } from '@/constants/placeholders';
 import dayjs from 'dayjs';
 import { itinerariesApi } from '@/services/itineraries';
 import { expensesApi } from '@/services/expenses';
-import { ExpenseCategory, ExpenseCurrency, categoryLabels } from '@/types/expense';
+import { ExpenseCategory, ExpenseCurrency, categoryLabels, currencyLabels } from '@/types/expense';
 import { colors } from '@/ui/tokens/colors';
 import { textStyles, typography } from '@/ui/tokens/typography';
 import { spacing } from '@/ui/tokens/spacing';
@@ -712,7 +712,9 @@ export default function ItineraryItem({
               <View style={styles.expenseFormHalf}>
                 <Text style={styles.label}>화폐</Text>
                 <View style={styles.currencyPicker}>
-                  <Text style={styles.currencyText}>KRW</Text>
+                  <Text style={styles.currencyText}>
+                  {ExpenseCurrency.KRW} ({currencyLabels[ExpenseCurrency.KRW]})
+                  </Text>
                 </View>
               </View>
             </View>
@@ -978,7 +980,7 @@ const styles = StyleSheet.create({
   },
   currencyText: {
     ...textStyles.body4,
-    color: colors.gray800,
+    color: colors.gray600,
   },
   expenseInput: {
     backgroundColor: colors.white,

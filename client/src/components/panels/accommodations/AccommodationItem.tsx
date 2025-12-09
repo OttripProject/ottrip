@@ -15,7 +15,7 @@ import XIcon from '../../../../assets/x.svg';
 import DropDownPicker from 'react-native-dropdown-picker';
 import DownArrowIcon from '../../../../assets/down_arrow.svg';
 import UpperArrowIcon from '../../../../assets/upper_arrow.svg';
-import { ExpenseCurrency } from '@/types/expense';
+import { ExpenseCurrency, currencyLabels } from '@/types/expense';
 
 interface AccommodationItemProps {
   accommodation?: any;
@@ -356,21 +356,10 @@ export default function AccommodationItem({
           </View>
           <View style={[styles.inputGroup, styles.halfWidth]}>
             <Text style={styles.label}>통화</Text>
-            <View style={styles.currencyPickerWrapper}>
-              <DropDownPicker
-                open={false}
-                value={ExpenseCurrency.KRW}
-                items={currencyOptions}
-                setOpen={() => {}}
-                setValue={() => {}}
-                disabled={true}
-                placeholder={PLACEHOLDERS.expense.currency}
-                style={styles.currencyDropdown}
-                dropDownContainerStyle={styles.currencyDropdownContainer}
-                listMode="SCROLLVIEW"
-                ArrowDownIconComponent={() => <DownArrowIcon width={16} height={16} />}
-                ArrowUpIconComponent={() => <UpperArrowIcon width={16} height={16} />}
-              />
+            <View style={styles.currencyDisplay}>
+                    <Text style={styles.currencyText}>
+                    {ExpenseCurrency.KRW} ({currencyLabels[ExpenseCurrency.KRW]})
+                    </Text>
             </View>
           </View>
         </View>
@@ -487,19 +476,17 @@ const styles = StyleSheet.create({
     borderRadius: radii.md,
     height: 40,
   },
-  currencyPickerWrapper: {
-    position: 'relative',
-  },
-  currencyDropdown: {
-    borderRadius: radii.md,
+  currencyDisplay: {
     backgroundColor: colors.gray200,
-    borderWidth: 0,
-    minHeight: 40,
+    height: 40,
+    borderRadius: radii.md,
     paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+    justifyContent: 'center',
   },
-  currencyDropdownContainer: {
-    borderRadius: radii.md,
-    backgroundColor: colors.gray200,
+  currencyText: {
+    ...textStyles.body4,
+    color: colors.gray600,
   },
   buttonRow: {
     flexDirection: 'row',

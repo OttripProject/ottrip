@@ -3,7 +3,7 @@ import { View, Text, Pressable, StyleSheet, Alert, Platform, ScrollView } from '
 import { TimePicker, AirportPicker } from '@/ui/components/pickers';
 import dayjs from 'dayjs';
 import { flightsApi } from '@/services/flights';
-import { ExpenseCurrency, ExpenseCategory } from '@/types/expense';
+import { ExpenseCurrency, ExpenseCategory, currencyLabels } from '@/types/expense';
 import Input from '@/ui/components/input/Input';
 import { PLACEHOLDERS } from '@/constants/placeholders';
 import { colors } from '@/ui/tokens/colors';
@@ -428,21 +428,10 @@ export default function FlightItem({
             </View>
             <View style={[styles.inputGroup, styles.halfWidth]}>
               <Text style={styles.label}>통화</Text>
-              <View style={styles.currencyPickerWrapper}>
-                <DropDownPicker
-                  open={false}
-                  value={ExpenseCurrency.KRW}
-                  items={currencyOptions}
-                  setOpen={() => {}}
-                  setValue={() => {}}
-                  disabled={true}
-                  placeholder={PLACEHOLDERS.expense.currency}
-                  style={styles.currencyDropdown}
-                  dropDownContainerStyle={styles.currencyDropdownContainer}
-                  listMode="SCROLLVIEW"
-                  ArrowDownIconComponent={() => <DownArrowIcon width={16} height={16} />}
-                  ArrowUpIconComponent={() => <UpperArrowIcon width={16} height={16} />}
-                />
+              <View style={styles.currencyDisplay}>
+                    <Text style={styles.currencyText}>
+                    {ExpenseCurrency.KRW} ({currencyLabels[ExpenseCurrency.KRW]})
+                    </Text>
               </View>
             </View>
           </View>
@@ -790,19 +779,17 @@ const styles = StyleSheet.create({
     left: 0,
     zIndex: 20000,
   },
-  currencyPickerWrapper: {
-    position: 'relative',
-  },
-  currencyDropdown: { 
-    borderRadius: radii.md,
+  currencyDisplay: {
     backgroundColor: colors.gray200,
-    borderWidth: 0,
-    minHeight: 40,
+    height: 40,
+    borderRadius: radii.md,
     paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+    justifyContent: 'center',
   },
-  currencyDropdownContainer: {
-    borderRadius: radii.md,
-    backgroundColor: colors.gray200,
+  currencyText: {
+    ...textStyles.body4,
+    color: colors.gray600,
   },
   segmentContainer: {
     borderWidth: 1,
