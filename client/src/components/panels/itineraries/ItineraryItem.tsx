@@ -153,11 +153,22 @@ export default function ItineraryItem({
   useEffect(() => {
     const loadExpenses = async () => {
       if (itinerary?.id) {
-        try {
-          const itineraryExpenses = await expensesApi.getExpensesByItinerary(itinerary.id);
-          setExpenses(itineraryExpenses);
-        } catch (error) {
-          console.error('Failed to load expenses:', error);
+        // planData.expenses에서 먼저 확인 (캐시에서 가져오기 - GET 요청 없음)
+        const cachedExpenses = planData?.expenses?.filter(
+          (e: any) => e.itineraryId === itinerary.id
+        ) || [];
+        
+        // 캐시에 데이터가 있으면 사용, 없으면 API 호출
+        if (cachedExpenses.length > 0) {
+          setExpenses(cachedExpenses);
+        } else {
+          // 캐시에 없을 때만 API 호출
+          try {
+            const itineraryExpenses = await expensesApi.getExpensesByItinerary(itinerary.id);
+            setExpenses(itineraryExpenses);
+          } catch (error) {
+            console.error('Failed to load expenses:', error);
+          }
         }
       } else {
         // itinerary가 없으면 지출 목록 초기화
@@ -166,26 +177,7 @@ export default function ItineraryItem({
     };
 
     loadExpenses();
-  }, [itinerary?.id]);
-
-  // planData가 변경될 때도 지출 목록 새로고침 (ExpensesModal에서 삭제 시 반영)
-  useEffect(() => {
-    const loadExpenses = async () => {
-      if (itinerary?.id) {
-        try {
-          const itineraryExpenses = await expensesApi.getExpensesByItinerary(itinerary.id);
-          setExpenses(itineraryExpenses);
-        } catch (error) {
-          console.error('Failed to load expenses:', error);
-        }
-      } else {
-        // itinerary가 없으면 지출 목록 초기화
-        setExpenses([]);
-      }
-    };
-
-    loadExpenses();
-  }, [planData?.expenses, itinerary?.id]);
+  }, [itinerary?.id, planData?.expenses]);
 
   const handleSave = async () => {
     // 중복 요청 방지: 이미 실행 중이면 무시

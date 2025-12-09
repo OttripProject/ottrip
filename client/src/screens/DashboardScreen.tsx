@@ -156,7 +156,8 @@ export default function DashboardScreen() {
     setSelectedFlight(null);
     setSelectedAccommodation(null);
     if (selectedPlanId) {
-      await planData.refreshItineraries();
+      // 응답 객체를 바로 캐시에 추가 (itinerary + expenses)
+      planData.addItinerary(newItinerary);
     }
   };
 

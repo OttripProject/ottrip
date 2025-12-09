@@ -212,6 +212,77 @@ export const usePlanDataQuery = (publicId: string | null) => {
     });
   };
 
+  // 일정을 캐시에 바로 추가 (응답 객체 사용)
+  const addItinerary = (newItinerary: Itinerary) => {
+    queryClient.setQueryData<PlanData>(['plan', publicId], (old) => {
+      if (!old) return old;
+
+      // itinerary 추가/업데이트
+      const existingIndex = old.itineraries.findIndex(
+        (it) => it.id === newItinerary.id
+      );
+      let updatedItineraries: Itinerary[];
+      if (existingIndex >= 0) {
+        // 기존 항목 업데이트
+        updatedItineraries = [...old.itineraries];
+        updatedItineraries[existingIndex] = newItinerary;
+      } else {
+        // 새 항목 추가
+        updatedItineraries = [...old.itineraries, newItinerary];
+      }
+
+      // expense도 함께 추가/업데이트 (itinerary에 expenses가 있는 경우)
+      let updatedExpenses = [...old.expenses];
+      if (newItinerary.expenses && newItinerary.expenses.length > 0) {
+        for (const expense of newItinerary.expenses) {
+          const normalizedExpense = {
+            ...expense,
+            amount: Number(expense.amount), // amount 정규화
+          };
+          const existingExpenseIndex = updatedExpenses.findIndex(
+            (e) => e.id === normalizedExpense.id
+          );
+          if (existingExpenseIndex >= 0) {
+            // 기존 expense 업데이트
+            updatedExpenses[existingExpenseIndex] = normalizedExpense;
+          } else {
+            // 새 expense 추가
+            updatedExpenses.push(normalizedExpense);
+          }
+        }
+      }
+
+      return {
+        ...old,
+        itineraries: updatedItineraries,
+        expenses: updatedExpenses,
+      };
+    });
+  };
+
+  // 일정을 캐시에서 제거 (삭제 시 사용)
+  const removeItinerary = (itineraryId: number) => {
+    queryClient.setQueryData<PlanData>(['plan', publicId], (old) => {
+      if (!old) return old;
+
+      // itinerary 제거
+      const updatedItineraries = old.itineraries.filter(
+        (it) => it.id !== itineraryId
+      );
+
+      // itinerary에 연결된 expense도 제거
+      const updatedExpenses = old.expenses.filter(
+        (e) => e.itineraryId !== itineraryId
+      );
+
+      return {
+        ...old,
+        itineraries: updatedItineraries,
+        expenses: updatedExpenses,
+      };
+    });
+  };
+
   const fetchPlanData = async (pId: string) => {
     if (pId === publicId) {
       await refetch();
@@ -248,6 +319,8 @@ export const usePlanDataQuery = (publicId: string | null) => {
     addAccommodation,
     addExpense,
     removeAccommodation,
+    addItinerary,
+    removeItinerary,
   };
 };
 
