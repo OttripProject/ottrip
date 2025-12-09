@@ -11,6 +11,7 @@ interface ItinerarySectionProps {
     refreshItineraries: () => Promise<void>;
     refreshExpenses: () => Promise<void>;
     addExpense?: (expense: any) => void;
+    removeExpense?: (expenseId: number) => void;
     removeItinerary?: (itineraryId: number) => void;
   };
   selectedItinerary?: any;

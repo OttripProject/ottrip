@@ -189,6 +189,23 @@ export const usePlanDataQuery = (publicId: string | null) => {
     });
   };
 
+  // expense를 캐시에서 제거 (삭제 시 사용)
+  const removeExpense = (expenseId: number) => {
+    queryClient.setQueryData<PlanData>(['plan', publicId], (old) => {
+      if (!old) return old;
+
+      // expense 제거
+      const updatedExpenses = old.expenses.filter(
+        (e) => e.id !== expenseId
+      );
+
+      return {
+        ...old,
+        expenses: updatedExpenses,
+      };
+    });
+  };
+
   // accommodation을 캐시에서 제거 (삭제 시 사용)
   const removeAccommodation = (accommodationId: number) => {
     queryClient.setQueryData<PlanData>(['plan', publicId], (old) => {
@@ -231,31 +248,13 @@ export const usePlanDataQuery = (publicId: string | null) => {
         updatedItineraries = [...old.itineraries, newItinerary];
       }
 
-      // expense도 함께 추가/업데이트 (itinerary에 expenses가 있는 경우)
-      let updatedExpenses = [...old.expenses];
-      if (newItinerary.expenses && newItinerary.expenses.length > 0) {
-        for (const expense of newItinerary.expenses) {
-          const normalizedExpense = {
-            ...expense,
-            amount: Number(expense.amount), // amount 정규화
-          };
-          const existingExpenseIndex = updatedExpenses.findIndex(
-            (e) => e.id === normalizedExpense.id
-          );
-          if (existingExpenseIndex >= 0) {
-            // 기존 expense 업데이트
-            updatedExpenses[existingExpenseIndex] = normalizedExpense;
-          } else {
-            // 새 expense 추가
-            updatedExpenses.push(normalizedExpense);
-          }
-        }
-      }
-
+      // expense는 addExpense로만 관리하므로, addItinerary에서는 expense를 건드리지 않음
+      // itinerary 업데이트 시 서버 응답의 expenses는 이전 데이터일 수 있으므로 무시
+      
       return {
         ...old,
         itineraries: updatedItineraries,
-        expenses: updatedExpenses,
+        // expenses는 그대로 유지 (addExpense로만 업데이트)
       };
     });
   };
@@ -318,6 +317,7 @@ export const usePlanDataQuery = (publicId: string | null) => {
     refreshExpenses,
     addAccommodation,
     addExpense,
+    removeExpense,
     removeAccommodation,
     addItinerary,
     removeItinerary,
