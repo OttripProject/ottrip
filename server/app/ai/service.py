@@ -216,7 +216,7 @@ class AIService:
         )
         if categories is None:
             raise HTTPException(status_code=404, detail="해당 계획을 찾을 수 없습니다.")
-
+        
         # is_custom 필드가 없는 경우 기본값 설정 (하위 호환성)
         # Pydantic 모델이므로 dict로 변환 후 처리
         categories_dict = categories.model_dump()
