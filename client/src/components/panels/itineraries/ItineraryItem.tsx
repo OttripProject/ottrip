@@ -215,17 +215,40 @@ export default function ItineraryItem({
           endTime: finalEndTime,
         });
         
-        if (itinerary.itinerary_date !== formData.itineraryDate) {
-          const allExpenses = await expensesApi.getExpenses(planId);
-          const connectedExpenses = allExpenses.filter(expense => 
+        // 일정 날짜가 실제로 변경된 경우에만 expense 날짜 업데이트
+        const originalDate = itinerary.itinerary_date || itinerary.itineraryDate;
+        const newDate = formData.itineraryDate;
+        // dayjs로 날짜 비교 (형식 차이 고려)
+        if (originalDate && newDate && dayjs(originalDate).format('YYYY-MM-DD') !== dayjs(newDate).format('YYYY-MM-DD')) {
+          // 캐시에서 먼저 가져오기 (GET 요청 없음)
+          const cachedExpenses = planData?.expenses?.filter((expense: any) => 
             expense.itineraryId === itinerary.id
-          );
+          ) || [];
+          
+          // 캐시에 없을 때만 API 호출
+          let connectedExpenses = cachedExpenses;
+          if (cachedExpenses.length === 0) {
+            const allExpenses = await expensesApi.getExpenses(planId);
+            connectedExpenses = allExpenses.filter((expense: any) => 
+              expense.itineraryId === itinerary.id
+            );
+          }
           
           for (const expense of connectedExpenses) {
-            await expensesApi.updateExpense(expense.id, {
-              ...expense,
-              exDate: formData.itineraryDate,
-            });
+            try {
+              // API 응답 객체를 받아서 캐시에 업데이트 (expense 패널에 즉시 반영)
+              const updatedExpense = await expensesApi.updateExpense(expense.id, {
+                ...expense,
+                exDate: formData.itineraryDate,
+              });
+              
+              // 서버 응답 객체를 캐시에 반영
+              if (planData?.addExpense) {
+                planData.addExpense(updatedExpense);
+              }
+            } catch (e) {
+              console.warn('Failed to update expense date:', e);
+            }
           }
         }
         
@@ -336,17 +359,22 @@ export default function ItineraryItem({
     // 편집 모드인 경우
     if (editingExpense && !editingExpense.isDraft) {
       try {
-        await expensesApi.updateExpense(Number(editingExpense.id), {
+        // API 응답 객체를 받아서 캐시에 업데이트 (expense 패널에 즉시 반영)
+        const updatedExpense = await expensesApi.updateExpense(Number(editingExpense.id), {
           category: expenseForm.category,
           amount: expenseForm.amount,
           description: expenseForm.description,
         });
         
-        // 지출 목록 새로고침
-        if (itinerary?.id) {
-          const updatedExpenses = await expensesApi.getExpensesByItinerary(itinerary.id);
-          setExpenses(updatedExpenses);
+        // 캐시 업데이트 (expense 패널에 즉시 반영)
+        if (planData?.addExpense) {
+          planData.addExpense(updatedExpense);
         }
+        
+        // 로컬 상태도 업데이트 (일정 상세에 즉시 반영)
+        setExpenses(prev => prev.map(exp => 
+          exp.id === updatedExpense.id ? updatedExpense : exp
+        ));
         
         setExpenseForm({
           category: ExpenseCategory.ETC,
@@ -438,14 +466,13 @@ export default function ItineraryItem({
     try {
       await expensesApi.deleteExpense(Number(expenseId));
       
-      // 지출 목록 새로고침
-      const updatedExpenses = await expensesApi.getExpensesByItinerary(itinerary?.id);
-      setExpenses(updatedExpenses);
-      
-      // 부모 컴포넌트에 지출 업데이트 알림
-      if (onExpenseUpdate) {
-        onExpenseUpdate();
+      // 캐시에서 제거 (expense 패널에 즉시 반영)
+      if (planData?.removeExpense) {
+        planData.removeExpense(Number(expenseId));
       }
+      
+      // 로컬 상태에서도 제거 (일정 상세에 즉시 반영)
+      setExpenses(prev => prev.filter(exp => exp.id !== Number(expenseId)));
       
       Alert.alert('성공', '지출이 삭제되었습니다.');
     } catch (error) {
