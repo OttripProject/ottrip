@@ -11,6 +11,7 @@ interface ItinerarySectionProps {
     refreshItineraries: () => Promise<void>;
     refreshExpenses: () => Promise<void>;
     addExpense?: (expense: any) => void;
+    removeItinerary?: (itineraryId: number) => void;
   };
   selectedItinerary?: any;
   activeTab?: 'itinerary' | 'flight' | 'accommodation' | undefined;
@@ -68,8 +69,14 @@ export default function ItinerarySection({
     setEditingItinerary(null);
   };
 
-  const handleItineraryDelete = (itineraryId?: string) => {
-    planData?.refreshItineraries();
+  const handleItineraryDelete = (itineraryId?: string | number) => {
+    if (itineraryId) {
+      const id = typeof itineraryId === 'string' ? parseInt(itineraryId) : itineraryId;
+      // 캐시에서 바로 제거 (itinerary + 관련 expense)
+      if (planData?.removeItinerary) {
+        planData.removeItinerary(id);
+      }
+    }
     setShowItineraryForm(false);
     setEditingItinerary(null);
     onItineraryClear?.();

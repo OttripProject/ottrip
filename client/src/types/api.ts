@@ -42,6 +42,7 @@ export interface Itinerary {
   startTime: string;
   endTime: string;
   planId: number;
+  expenses?: Expense[] | null;
 }
 
 export interface CreateItineraryRequest {
