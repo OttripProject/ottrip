@@ -238,7 +238,6 @@ export default function ExpensesPanel({ planData, onExpenseAdd }: ExpensesPanelP
         planId={planData?.plan?.id || 0}
         onExpenseAdd={(newExpense) => {
           onExpenseAdd?.(newExpense);
-          planData?.refreshExpenses();
         }}
       />
     </PanelLayout>

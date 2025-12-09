@@ -10,6 +10,7 @@ interface ItinerarySectionProps {
     expenses: any[];
     refreshItineraries: () => Promise<void>;
     refreshExpenses: () => Promise<void>;
+    addExpense?: (expense: any) => void;
   };
   selectedItinerary?: any;
   activeTab?: 'itinerary' | 'flight' | 'accommodation' | undefined;
