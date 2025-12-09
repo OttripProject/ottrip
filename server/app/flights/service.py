@@ -35,8 +35,8 @@ class FlightService:
             raise HTTPException(status_code=403, detail="해당 항공편에 대한 생성 권한이 없습니다.")
             
         create_flight_data = Flight(
-            reservation_number=flight_data.reservation_number,
-            passenger_name=flight_data.passenger_name,
+            reservation_number=flight_data.reservation_number or "",
+            passenger_name=flight_data.passenger_name or "",
             ticket_number=flight_data.ticket_number or "",
             booking_reference=flight_data.booking_reference or "",
             plan_id=flight_data.plan_id,
@@ -49,8 +49,8 @@ class FlightService:
         for idx, seg in enumerate(flight_data.segments, start=1):
             segment = FlightSegment(
                 flight_id=created_flight.id,
-                airline=seg.airline,
-                flight_number=seg.flight_number,
+                airline=seg.airline or "",
+                flight_number=seg.flight_number or "",
                 departure_airport=seg.departure_airport,
                 arrival_airport=seg.arrival_airport,
                 departure_time=seg.departure_time,
@@ -63,14 +63,14 @@ class FlightService:
             )
             await self.flight_repository.save_segment(segment=segment)
 
-        first_departure_date = min(s.departure_time for s in flight_data.segments).date()
+       
         if flight_data.expense:
             expense = Expense(
                 amount=float(flight_data.expense.amount),
                 category=ExpenseCategory.FLIGHT,
                 description=flight_data.expense.description,
                 currency=flight_data.expense.currency,
-                ex_date=first_departure_date,
+                ex_date=flight_data.expense.ex_date,
                 plan_id=created_flight.plan_id,
             )
             created_expense = await self.expense_repository.save(expense=expense)
@@ -135,7 +135,7 @@ class FlightService:
         if update_data.booking_reference is not None:
             flight.booking_reference = update_data.booking_reference
 
-        first_departure_date = None
+        # 프론트엔드에서 전송한 exDate 우선 사용, 없으면 UTC datetime에서 날짜 추출
         if update_data.segments is not None:
             if len(update_data.segments) < 1:
                 raise HTTPException(status_code=400, detail="세그먼트는 최소 1개 이상이어야 합니다.")
@@ -149,10 +149,7 @@ class FlightService:
             for segment_id in segments_to_delete:
                 await self.flight_repository.soft_delete_segment(segment_id=segment_id)
             
-            first_departure_date = min(
-                (seg.departure_time for seg in update_data.segments),
-                key=lambda d: d,
-            ).date()
+            
             
             for idx, seg_data in enumerate(update_data.segments, start=1):
                 if seg_data.id and seg_data.id in existing_segment_ids:
@@ -187,8 +184,7 @@ class FlightService:
                     )
                     await self.flight_repository.save_segment(segment=new_seg)
             
-            if flight.expense:
-                flight.expense.ex_date = first_departure_date
+
         await self.flight_repository.save(flight=flight)
             
 
@@ -200,8 +196,8 @@ class FlightService:
                     flight.expense.description = update_data.expense.description
                 if update_data.expense.currency is not None:
                     flight.expense.currency = update_data.expense.currency
-                if first_departure_date is not None:
-                    flight.expense.ex_date = first_departure_date
+                if update_data.expense.ex_date is not None:
+                    flight.expense.ex_date = update_data.expense.ex_date
 
                 updated_expense = await self.expense_repository.save(
                     expense=flight.expense
@@ -218,20 +214,18 @@ class FlightService:
                         existing_expense.description = update_data.expense.description
                     if update_data.expense.currency is not None:
                         existing_expense.currency = update_data.expense.currency
-                    if first_departure_date is not None:
-                        existing_expense.ex_date = first_departure_date
+                    if update_data.expense.ex_date is not None:
+                        existing_expense.ex_date = update_data.expense.ex_date
 
                     updated_expense = await self.expense_repository.save(expense=existing_expense)
                     flight.expense = updated_expense
                 else:
-                    if first_departure_date is None:
-                        first_departure_date = min(s.departure_time for s in flight.flight_segments).date()                
                     expense = Expense(
                         amount=float(update_data.expense.amount or 0),
                         category=ExpenseCategory.FLIGHT,
                         description=update_data.expense.description or flight.reservation_number,
                         currency=update_data.expense.currency or ExpenseCurrency.KRW,
-                        ex_date=first_departure_date,
+                        ex_date=update_data.expense.ex_date or flight.flight_segments[0].departure_time.date(),
                         plan_id=flight.plan_id,
                     )
                     created_expense = await self.expense_repository.save(expense=expense)
@@ -269,8 +263,8 @@ class FlightService:
                 raise HTTPException(status_code=403, detail="세그먼트 추가 권한이 없습니다.")
         segment = FlightSegment(
             flight_id=data.flight_id,
-            airline=data.airline,
-            flight_number=data.flight_number,
+            airline=data.airline or "",
+            flight_number=data.flight_number or "",
             departure_airport=data.departure_airport,
             arrival_airport=data.arrival_airport,
             departure_time=data.departure_time,
