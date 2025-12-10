@@ -11,8 +11,6 @@ from app.itinerary.models import Itinerary
 from app.itinerary.repository import ItineraryRepository
 from app.flights.models import Flight
 from app.flights.repository import FlightRepository
-from app.accomodation.models import Accommodation
-from app.accomodation.repository import AccommodationRepository
 
 from .clients import VisionClient, OpenAIClient
 from .config import ai_settings
@@ -27,7 +25,6 @@ class AIService:
     plan_repository: PlanRepository
     itinerary_repository: ItineraryRepository
     flight_repository: FlightRepository
-    accommodation_repository: AccommodationRepository
       
     async def extract_text_from_image(self, image_data: bytes) -> AIFlightRead:
         return await self.vision_client.extract_text_from_image(image_data)
@@ -113,7 +110,6 @@ class AIService:
         
         itineraries = plan.itineraries
         flights = plan.flights
-        accommodations = plan.accommodations
         
         if len(itineraries) < 2:
             return ChecklistCreateResponse(
@@ -124,7 +120,6 @@ class AIService:
         
         destinations = self._format_destinations(itineraries)
         flights_text = self._format_flights(flights)
-        accommodations_text = self._format_accommodations(accommodations)
         itineraries_text = self._format_itineraries(itineraries)
         
         ai_result = await self.openai_client.generate_checklist(
@@ -132,7 +127,6 @@ class AIService:
             end_date=str(plan.end_date),
             destinations=destinations,
             flights=flights_text,
-            accommodations=accommodations_text,
             itineraries=itineraries_text
         )
         
@@ -378,20 +372,7 @@ class AIService:
                     f"(출발: {first_seg.departure_time.strftime('%Y-%m-%d %H:%M')})"
                 )
         return "\n".join(formatted)
-    
-    def _format_accommodations(self, accommodations: list[Accommodation]) -> str:
-        if not accommodations:
-            return "숙박 일정 없음"
-        
-        formatted: list[str] = []
-        for idx, acc in enumerate(accommodations, 1):
-            formatted.append(
-                f"[숙박 {idx}] {acc.name} - {acc.city}, {acc.country} "
-                f"(체크인: {acc.checkin_date} {acc.checkin_time}, "
-                f"체크아웃: {acc.checkout_date} {acc.checkout_time})"
-            )
-        return "\n".join(formatted)
-    
+       
     def _format_itineraries(self, itineraries: list[Itinerary]) -> str:
         if not itineraries:
             return "활동 일정 없음"

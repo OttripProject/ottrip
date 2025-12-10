@@ -180,7 +180,6 @@ class OpenAIClient:
         end_date: str,
         destinations: str,
         flights: str,
-        accommodations: str,
         itineraries: str
     ) -> AIParseResponse:
         """여행 체크리스트 생성"""
@@ -194,7 +193,6 @@ class OpenAIClient:
                 end_date=end_date,
                 destinations=destinations,
                 flights=flights,
-                accommodations=accommodations,
                 itineraries=itineraries
             )
             

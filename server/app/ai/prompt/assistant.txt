@@ -1,4 +1,7 @@
 
+## Traveler Data
+1. The traveler is Korean.
+
 ## Travel Data
 1. Trip Information
 - Period: {start_date} ~ {end_date}
@@ -7,10 +10,7 @@
 2. Flight Schedule
 {flights}
 
-3. Accommodation Schedule
-{accommodations}
-
-4. Activity Schedule
+3. Activity Schedule
 {itineraries}
 
 ## Checklist Generation Rules
@@ -26,11 +26,13 @@
 
 3. Data Utilization:
    - Country/City → Consider climate, culture, dress code, voltage/communication
-   - Flights → Consider long-distance travel, early morning/late night departures
-   - Accommodations → Consider accommodation type, check-in/out times
+   - Flights → Consider distance of travel, early morning/late night departures
    - Activities → Consider activity characteristics (water activities, hiking, early tours, etc.)
 
-4. Output Format:
+4. Exclusions:
+   - Do not include meals (food/dining) and accommodation (lodging) in the checklist
+
+5. Output Format:
    - Respond ONLY in JSON format
    - Each item must include: id, name, reason, is_checked
    - id must be globally unique across all categories (sequential: 1, 2, 3, 4...)
