@@ -221,7 +221,7 @@ export default function AddExpenseModal({
                 <Input
                   variant="outlined"
                   placeholder={PLACEHOLDERS.expense.descriptionForm}
-                  placeholderTextColor={colors.gray700}
+                  placeholderTextColor={colors.gray600}
                   value={expenseForm.description}
                   onChangeText={(text) => setExpenseForm({ ...expenseForm, description: text })}
                   style={styles.descriptionInput}
@@ -361,7 +361,7 @@ const styles = StyleSheet.create({
   },
   currencyText: {
     ...textStyles.body4,
-    color: colors.gray600,
+    color: colors.black,
   },
   dateInput: {
     flexDirection: 'row',
