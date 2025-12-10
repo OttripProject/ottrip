@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { View, Text, Pressable, StyleSheet, Modal, ScrollView, Alert, Platform, Dimensions } from 'react-native';
 import useDetectClose from '@/hooks/useDetectClose';
+import { useTripForm } from '@/hooks/useTripForm';
 import { LocaleConfig } from 'react-native-calendars';
 import dayjs from 'dayjs';
 import { tripToastMessages } from '@/utils/toast';
@@ -77,25 +78,32 @@ interface TripSelectorProps {
   ) => Promise<Trip | null | false | void> | Trip | null | false | void;
   onTripUpdate?: (id: string, trip: Omit<Trip, 'id'>) => void;
   onTripDelete?: (id: string) => void;
+  open?: boolean; // 외부에서 드롭다운 열기 제어
 }
 
 type SelectionType = 'single' | 'start' | 'end' | 'range' | undefined;
 type CalendarDayMark = { selection?: SelectionType; selected?: boolean };
 type CalendarMarkedDates = Record<string, CalendarDayMark>;
 
-export default function TripSelector({ selectedTrip, onTripSelect, trips, onTripAdd, onTripUpdate, onTripDelete }: TripSelectorProps) {
+export default function TripSelector({ selectedTrip, onTripSelect, trips, onTripAdd, onTripUpdate, onTripDelete, open }: TripSelectorProps) {
   const dropdownRef = useRef<View>(null);
   const [showDropdown, setIsDropdownOpen, handleOutsidePress] = useDetectClose(dropdownRef, false);
+  
+  // 외부에서 open prop이 true가 되면 드롭다운 열기
+  React.useEffect(() => {
+    if (open) {
+      setIsDropdownOpen(true);
+    }
+  }, [open, setIsDropdownOpen]);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingTrip, setEditingTrip] = useState<Trip | null>(null);
-  const [newTrip, setNewTrip] = useState({
-    name: '',
-    startDate: '',
-    endDate: '',
-  });
-  const [selectionMode, setSelectionMode] = useState<'start' | 'end'>('start');
-  const [editSelectionMode, setEditSelectionMode] = useState<'start' | 'end'>('start');
+  
+  // 추가 모달용 폼 훅
+  const addTripForm = useTripForm();
+  
+  // 편집 모달용 폼 훅
+  const editTripForm = useTripForm();
   const [hoveredTripId, setHoveredTripId] = useState<string | null>(null);
   const [openMenuTripId, setOpenMenuTripId] = useState<string | null>(null);
   const [deleteConfirmModalOpen, setDeleteConfirmModalOpen] = useState(false);
@@ -116,86 +124,16 @@ export default function TripSelector({ selectedTrip, onTripSelect, trips, onTrip
     setIsDropdownOpen(false);
   };
 
-  const handleDateSelect = (dateString: string) => {
-    if (selectionMode === 'start') {
-      setNewTrip(prev => ({ ...prev, startDate: dateString, endDate: '' }));
-      setSelectionMode('end');
-    } else {
-      if (dayjs(dateString).isBefore(dayjs(newTrip.startDate))) {
-        setNewTrip(prev => ({ ...prev, startDate: dateString, endDate: newTrip.startDate }));
-      } else {
-        setNewTrip(prev => ({ ...prev, endDate: dateString }));
-      }
-      setSelectionMode('start');
+  // 편집 모달이 열릴 때 폼 데이터 초기화
+  React.useEffect(() => {
+    if (editingTrip && showEditModal) {
+      editTripForm.setFormData({
+        name: editingTrip.name,
+        startDate: editingTrip.startDate,
+        endDate: editingTrip.endDate,
+      });
     }
-  };
-
-  const getMarkedDates = (): CalendarMarkedDates => {
-    const marked: CalendarMarkedDates = {};
-
-    if (!newTrip.startDate) {
-      return marked;
-    }
-
-    const start = dayjs(newTrip.startDate);
-    const end = newTrip.endDate ? dayjs(newTrip.endDate) : null;
-
-    if (!end || start.isSame(end, 'day')) {
-      marked[start.format('YYYY-MM-DD')] = { selection: 'single', selected: true };
-      return marked;
-    }
-
-    marked[start.format('YYYY-MM-DD')] = { selection: 'start', selected: true };
-    marked[end.format('YYYY-MM-DD')] = { selection: 'end', selected: true };
-
-    let current = start.add(1, 'day');
-    while (current.isBefore(end, 'day')) {
-      marked[current.format('YYYY-MM-DD')] = { selection: 'range', selected: true };
-      current = current.add(1, 'day');
-    }
-
-    return marked;
-  };
-
-  const handleEditDateSelect = (dateString: string) => {
-    if (!editingTrip) return;
-    
-    if (editSelectionMode === 'start') {
-      setEditingTrip(prev => prev ? { ...prev, startDate: dateString, endDate: '' } : null);
-      setEditSelectionMode('end');
-    } else {
-      if (dayjs(dateString).isBefore(dayjs(editingTrip.startDate))) {
-        setEditingTrip(prev => prev ? { ...prev, startDate: dateString, endDate: editingTrip.startDate } : null);
-      } else {
-        setEditingTrip(prev => prev ? { ...prev, endDate: dateString } : null);
-      }
-      setEditSelectionMode('start');
-    }
-  };
-
-  const getEditMarkedDates = (): CalendarMarkedDates => {
-    if (!editingTrip?.startDate) return {};
-
-    const marked: CalendarMarkedDates = {};
-    const start = dayjs(editingTrip.startDate);
-    const end = editingTrip.endDate ? dayjs(editingTrip.endDate) : null;
-
-    if (!end || start.isSame(end, 'day')) {
-      marked[start.format('YYYY-MM-DD')] = { selection: 'single', selected: true };
-      return marked;
-    }
-
-    marked[start.format('YYYY-MM-DD')] = { selection: 'start', selected: true };
-    marked[end.format('YYYY-MM-DD')] = { selection: 'end', selected: true };
-
-    let current = start.add(1, 'day');
-    while (current.isBefore(end, 'day')) {
-      marked[current.format('YYYY-MM-DD')] = { selection: 'range', selected: true };
-      current = current.add(1, 'day');
-    }
-
-    return marked;
-  };
+  }, [editingTrip, showEditModal, editTripForm]);
 
   const handleAddTrip = async () => {
     // 중복 요청 방지: 이미 실행 중이면 무시
@@ -203,11 +141,11 @@ export default function TripSelector({ selectedTrip, onTripSelect, trips, onTrip
       return;
     }
 
-    if (!newTrip.name.trim()) {
+    if (!addTripForm.tripData.name.trim()) {
       Alert.alert('오류', '여행 이름을 입력해주세요.');
       return;
     }
-    if (!newTrip.startDate || !newTrip.endDate) {
+    if (!addTripForm.tripData.startDate || !addTripForm.tripData.endDate) {
       Alert.alert('오류', '시작일과 종료일을 선택해주세요.');
       return;
     }
@@ -222,7 +160,7 @@ export default function TripSelector({ selectedTrip, onTripSelect, trips, onTrip
         return;
       }
 
-      const createdTrip = await onTripAdd(newTrip);
+      const createdTrip = await onTripAdd(addTripForm.tripData);
 
       if (createdTrip === null || createdTrip === false) {
         return;
@@ -231,11 +169,10 @@ export default function TripSelector({ selectedTrip, onTripSelect, trips, onTrip
       // 생성된 여행 이름 저장
       const tripName = createdTrip && typeof createdTrip === 'object' && 'name' in createdTrip 
         ? createdTrip.name 
-        : newTrip.name;
+        : addTripForm.tripData.name;
       setCreatedTripName(tripName);
 
-      setNewTrip({ name: '', startDate: '', endDate: '' });
-      setSelectionMode('start');
+      addTripForm.resetForm();
       setShowAddModal(false);
       setIsDropdownOpen(false);
       setShowCompletionModal(true);
@@ -253,11 +190,11 @@ export default function TripSelector({ selectedTrip, onTripSelect, trips, onTrip
 
     if (!editingTrip) return;
     
-    if (!editingTrip.name.trim()) {
+    if (!editTripForm.tripData.name.trim()) {
       Alert.alert('오류', '여행 이름을 입력해주세요.');
       return;
     }
-    if (!editingTrip.startDate || !editingTrip.endDate) {
+    if (!editTripForm.tripData.startDate || !editTripForm.tripData.endDate) {
       Alert.alert('오류', '시작일과 종료일을 선택해주세요.');
       return;
     }
@@ -269,9 +206,9 @@ export default function TripSelector({ selectedTrip, onTripSelect, trips, onTrip
     try {
       // onTripUpdate 호출 (Promise를 반환할 수 있으므로 await 처리)
       const result = onTripUpdate?.(editingTrip.id, {
-        name: editingTrip.name,
-        startDate: editingTrip.startDate,
-        endDate: editingTrip.endDate,
+        name: editTripForm.tripData.name,
+        startDate: editTripForm.tripData.startDate,
+        endDate: editTripForm.tripData.endDate,
       });
       
       // Promise인 경우 await
@@ -310,7 +247,6 @@ export default function TripSelector({ selectedTrip, onTripSelect, trips, onTrip
 
   const openEditModal = (trip: Trip) => {
     setEditingTrip(trip);
-    setEditSelectionMode('start');
     setShowEditModal(true);
     setIsDropdownOpen(false);
   };
@@ -560,27 +496,33 @@ export default function TripSelector({ selectedTrip, onTripSelect, trips, onTrip
       {/* 여행 추가 모달 */}
       <TripFormModal
         visible={showAddModal}
-        onClose={() => setShowAddModal(false)}
+        onClose={() => {
+          setShowAddModal(false);
+          addTripForm.resetForm();
+        }}
         mode="add"
-        tripData={newTrip}
-        onTripDataChange={(data) => setNewTrip(prev => ({ ...prev, ...data }))}
-        markedDates={getMarkedDates()}
-        onDateSelect={handleDateSelect}
+        tripData={addTripForm.tripData}
+        onTripDataChange={addTripForm.updateTripData}
+        markedDates={addTripForm.getMarkedDates()}
+        onDateSelect={addTripForm.handleDateSelect}
         onSubmit={handleAddTrip}
-        isSubmitDisabled={!newTrip.name.trim() || !newTrip.startDate || !newTrip.endDate || isSubmittingAdd}
+        isSubmitDisabled={addTripForm.isSubmitDisabled || isSubmittingAdd}
       />
 
       {/* 여행 수정 모달 */}
       <TripFormModal
         visible={showEditModal}
-        onClose={() => setShowEditModal(false)}
+        onClose={() => {
+          setShowEditModal(false);
+          setEditingTrip(null);
+        }}
         mode="edit"
-        tripData={editingTrip || { name: '', startDate: '', endDate: '' }}
-        onTripDataChange={(data) => setEditingTrip(prev => prev ? { ...prev, ...data } : null)}
-        markedDates={getEditMarkedDates()}
-        onDateSelect={handleEditDateSelect}
+        tripData={editTripForm.tripData}
+        onTripDataChange={editTripForm.updateTripData}
+        markedDates={editTripForm.getMarkedDates()}
+        onDateSelect={editTripForm.handleDateSelect}
         onSubmit={handleEditTrip}
-        isSubmitDisabled={!editingTrip?.name.trim() || !editingTrip?.startDate || !editingTrip?.endDate || isSubmittingEdit}
+        isSubmitDisabled={editTripForm.isSubmitDisabled || isSubmittingEdit}
       />
 
       {/* 여행 삭제 확인 모달 */}

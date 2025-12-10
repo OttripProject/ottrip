@@ -5,9 +5,12 @@ import dayjs from 'dayjs';
 import ko from 'dayjs/locale/ko';
 import TripSelector from '../selector/TripSelector';
 import SharePlanModal from '@/components/modals/SharePlanModal';
+import PlanSelectRequiredModal from '@/components/modals/PlanSelectRequiredModal';
+import TripFormModal from '@/components/modals/TripFormModal';
 import BaseCalendar from '@/components/popup/calendar/BaseCalendar';
 import { plansApi } from '@/services/plans';
 import { Plan, CreatePlanRequest, UpdatePlanRequest } from '@/types/api';
+import { useTripForm } from '@/hooks/useTripForm';
 import PanelLayout from './PanelLayout';
 import Card from '@/ui/components/Card';
 import Input from '@/ui/components/input/Input';
@@ -199,6 +202,12 @@ export default function WeeklySchedulePanel({
     const [memoOpen, setMemoOpen] = useState(false);
     const [memoDraft, setMemoDraft] = useState('');
     const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
+    const [showPlanSelectRequiredModal, setShowPlanSelectRequiredModal] = useState(false);
+    const [openTripSelector, setOpenTripSelector] = useState(false);
+    const [showAddPlanModal, setShowAddPlanModal] = useState(false);
+    
+    // Plan 추가 모달용 폼 훅
+    const planForm = useTripForm();
     const [previewEvent, setPreviewEvent] = useState<{
       start: Date;
       end: Date;
@@ -634,6 +643,24 @@ export default function WeeklySchedulePanel({
       return null;
     };
 
+    // Plan 추가 모달 제출 핸들러
+    const handlePlanAddSubmit = async () => {
+      if (!planForm.tripData.name.trim()) {
+        Alert.alert('오류', '여행 이름을 입력해주세요.');
+        return;
+      }
+      if (!planForm.tripData.startDate || !planForm.tripData.endDate) {
+        Alert.alert('오류', '시작일과 종료일을 선택해주세요.');
+        return;
+      }
+
+      const result = await handleAddTrip(planForm.tripData);
+      if (result) {
+        setShowAddPlanModal(false);
+        planForm.resetForm();
+      }
+    };
+
     const handleUpdateTrip = async (tripId: string, updatedTrip: any) => {
       if (!onPlanUpdate) {
         Alert.alert('오류', '여행 계획 수정에 실패했습니다.');
@@ -880,11 +907,14 @@ export default function WeeklySchedulePanel({
                   window.history.pushState({}, '', '/');
                 }
               }
+              // TripSelector가 열렸다면 닫기
+              setOpenTripSelector(false);
             }}
             trips={trips}
             onTripAdd={handleAddTrip}
             onTripUpdate={handleUpdateTrip}
             onTripDelete={handleDeleteTrip}
+            open={openTripSelector}
           />
 
           {/* 기능 버튼 그룹: plan 선택 시만 표시 */}
@@ -1070,7 +1100,19 @@ export default function WeeklySchedulePanel({
         onPressCell={(date: Date) => {
           setSelectedEventId(null);
           
-          // 미리보기 이벤트 생성 (기본 1시간)
+          const hasPlans = trips.length > 0;
+          const isPlanSelected = internalSelectedTrip !== null;
+          
+          if (!hasPlans) {
+            setShowAddPlanModal(true);
+            return;
+          }
+          
+          if (!isPlanSelected) {
+            setShowPlanSelectRequiredModal(true);
+            return;
+          }
+          
           const startTime = dayjs(date);
           const endTime = startTime.add(1, 'hour');
           
@@ -1506,6 +1548,29 @@ export default function WeeklySchedulePanel({
           </Card>
         </View>
       </Modal>
+
+      <PlanSelectRequiredModal
+        visible={showPlanSelectRequiredModal}
+        onClose={() => setShowPlanSelectRequiredModal(false)}
+        onConfirm={() => {
+          setOpenTripSelector(true);
+        }}
+      />
+
+      <TripFormModal
+        visible={showAddPlanModal}
+        onClose={() => {
+          setShowAddPlanModal(false);
+          planForm.resetForm();
+        }}
+        mode="add"
+        tripData={planForm.tripData}
+        onTripDataChange={planForm.updateTripData}
+        markedDates={planForm.getMarkedDates()}
+        onDateSelect={planForm.handleDateSelect}
+        onSubmit={handlePlanAddSubmit}
+        isSubmitDisabled={planForm.isSubmitDisabled}
+      />
 
     </PanelLayout>
   );
