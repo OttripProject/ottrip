@@ -1,0 +1,227 @@
+# Patterns & Design
+
+## CLIENT: Design System Usage
+
+**✅ ALWAYS:**
+- Use design tokens from `@/ui/tokens`
+- Import: `colors`, `spacing`, `radii`, `textStyles`, `shadows`, `zIndex`
+- Apply predefined text styles
+
+```typescript
+// ✅ CORRECT - Use tokens
+import { colors, spacing, textStyles } from '@/ui/tokens';
+
+<Text style={[textStyles.h4, { color: colors.primary }]}>Title</Text>
+<View style={{ padding: spacing.lg, borderRadius: radii.md }} />
+
+// ❌ WRONG - Hardcoded values
+<Text style={{ fontSize: 18, fontWeight: '600' }}>Title</Text>
+<View style={{ padding: 16, borderRadius: 10 }} />
+```
+
+**Available Design Tokens:**
+
+```typescript
+// Colors
+colors.primary      // '#007AFF' - Main brand color
+colors.gray[100-900] // Grayscale palette
+colors.white, colors.black
+colors.danger, colors.success, colors.warning
+
+// Spacing
+spacing.xs  // 4px
+spacing.sm  // 8px
+spacing.md  // 12px
+spacing.lg  // 16px
+spacing.xl  // 24px
+spacing['2xl']  // 32px
+
+// Border Radius
+radii.xs, radii.sm, radii.base, radii.md, radii.lg, radii.xl, radii.pill
+
+// Typography
+textStyles.h2 - h9      // Headings (24px - 11px, SemiBold)
+textStyles.body1 - body6 // Body text (18px - 11px, Regular)
+
+// Shadows
+shadows.sm, shadows.md  // Platform-specific shadows
+
+// Z-Index
+zIndex.base, zIndex.dropdown, zIndex.modal, zIndex.toast
+```
+
+## CLIENT: Component Patterns
+
+**✅ ALWAYS:**
+- Use functional components
+- Use TypeScript with explicit types (avoid `any`)
+- Use `const` for variables that don't change
+- Use template literals for string concatenation
+- Optimize with `useMemo`, `useCallback` for expensive operations
+- Define `StyleSheet` at the bottom of the file
+
+```typescript
+// ✅ CORRECT Pattern
+import React, { useState, useCallback, useMemo } from 'react';
+import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { colors, spacing, textStyles } from '@/ui/tokens';
+
+interface TripCardProps {
+  trip: Trip;
+  onPress: (id: number) => void;
+}
+
+export default function TripCard({ trip, onPress }: TripCardProps) {
+  const [isExpanded, setIsExpanded] = useState(false);
+  
+  const handlePress = useCallback(() => {
+    onPress(trip.id);
+  }, [trip.id, onPress]);
+  
+  const formattedDate = useMemo(() => {
+    return `${trip.startDate} - ${trip.endDate}`;
+  }, [trip.startDate, trip.endDate]);
+  
+  return (
+    <Pressable style={styles.container} onPress={handlePress}>
+      <Text style={textStyles.h5}>{trip.title}</Text>
+      <Text style={textStyles.body3}>{formattedDate}</Text>
+    </Pressable>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    padding: spacing.lg,
+    backgroundColor: colors.white,
+    borderRadius: radii.md,
+  },
+});
+```
+
+**❌ NEVER:**
+- Use class components
+- Use `var` (use `const` or `let`)
+- Hardcode colors, spacing, or typography
+- Use string concatenation with `+` (use template literals)
+- Use `any` type without justification
+
+## CLIENT: State Management
+
+**Server State (React Query):**
+```typescript
+import { useQuery, useMutation } from '@tanstack/react-query';
+import { plansApi } from '@/services/plans';
+
+// ✅ CORRECT - Use React Query for API data
+const { data: plans, isLoading } = useQuery({
+  queryKey: ['plans'],
+  queryFn: () => plansApi.getPlans(),
+});
+
+const mutation = useMutation({
+  mutationFn: plansApi.createPlan,
+  onSuccess: () => queryClient.invalidateQueries(['plans']),
+});
+```
+
+**Client State (useState/Jotai):**
+```typescript
+// Local component state
+const [isOpen, setIsOpen] = useState(false);
+
+// Global client state (use Jotai)
+import { atom, useAtom } from 'jotai';
+const selectedDateAtom = atom<string>('');
+```
+
+## SERVER: Dependency Injection Pattern
+
+**✅ ALWAYS use `@dependency` decorator for services:**
+
+```python
+from app.utils.dependency import dependency
+from app.auth.deps import CurrentUser
+
+@dependency
+class PlanService:
+    current_user: CurrentUser        # Auto-injected
+    plan_repository: PlanRepository  # Auto-injected
+    user_repository: UserRepository  # Auto-injected
+    
+    async def create(self, *, plan_data: PlanCreate) -> PlanRead:
+        # Use keyword-only arguments (after *)
+        # Business logic here
+        pass
+```
+
+**❌ NEVER manually instantiate services in routers**
+
+## SERVER: Schema Patterns
+
+**Follow this inheritance hierarchy:**
+
+```python
+# 1. Base schema (common fields)
+class PlanBase(APISchema):
+    title: str
+    start_date: date
+    end_date: date
+
+# 2. Create schema (for POST)
+class PlanCreate(PlanBase):
+    pass  # Inherits all base fields
+
+# 3. Update schema (for PATCH - all optional)
+class PlanUpdate(APISchema):
+    title: str | None = None
+    start_date: date | None = None
+    end_date: date | None = None
+
+# 4. Read schema (for responses - includes DB fields)
+class PlanRead(PlanBase):
+    id: int
+    public_id: str
+    created_at: datetime
+
+# 5. Detailed read schema (includes relationships)
+class PlanReadWithDetails(PlanRead):
+    flights: list[FlightRead] | None = None
+    itineraries: list[ItineraryRead] | None = None
+```
+
+## SERVER: Router Patterns
+
+```python
+from fastapi import status
+from app.core.router import create_router
+from .service import PlanService
+from .schemas import PlanCreate, PlanRead
+
+router = create_router()
+
+# ✅ CORRECT - Clear endpoint with proper status code
+@router.post("", status_code=status.HTTP_201_CREATED)
+async def create_plan(
+    plan_service: PlanService,
+    plan_data: PlanCreate,
+) -> PlanRead:
+    """Create a new trip plan."""
+    return await plan_service.create(plan_data=plan_data)
+
+@router.get("/{plan_id}", status_code=status.HTTP_200_OK)
+async def get_plan(
+    plan_service: PlanService,
+    plan_id: int,
+) -> PlanRead:
+    """Get a specific trip plan by ID."""
+    return await plan_service.read_plan(plan_id=plan_id)
+
+@router.delete("/{plan_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_plan(
+    plan_service: PlanService,
+    plan_id: int,
+) -> None:
+    """Delete a trip plan."""
+    await plan_service.delete(plan_id=plan_id)
+```

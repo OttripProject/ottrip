@@ -1,0 +1,37 @@
+# Universal Rules
+
+## NEVER DO
+
+1. **❌ Leave TODO comments** - Implement completely or raise an issue
+2. **❌ Use placeholders** - Provide full implementations
+3. **❌ Commit commented-out code** - Delete or fix it
+4. **❌ Hardcode sensitive data** - Use environment variables
+5. **❌ Ignore type errors** - Fix them, don't suppress
+6. **❌ Use `any` in TypeScript** - Use proper types or `unknown`
+7. **❌ Use `print()` in Python** - Use proper logging
+8. **❌ Skip error handling** - Always handle edge cases
+9. **❌ Create files without proper structure** - Follow module patterns
+10. **❌ Mix business logic in routers** - Keep it in services
+
+## ALWAYS DO
+
+1. **✅ Use type hints everywhere** (TypeScript & Python)
+2. **✅ Handle errors explicitly** with proper messages
+3. **✅ Use design tokens** (client) and proper conventions (server)
+4. **✅ Write descriptive variable/function names**
+5. **✅ Follow import order** strictly
+6. **✅ Use async/await** for I/O operations
+7. **✅ Validate inputs** with Pydantic schemas (server)
+8. **✅ Use keyword-only arguments** (`*,` in Python functions)
+9. **✅ Log important operations** with proper log levels
+10. **✅ Test authorization** before operations
+
+## When in Doubt
+
+1. **Check existing code** - Look at similar files in the codebase
+2. **Follow the pattern** - Consistency > personal preference
+3. **Ask before breaking conventions** - Don't innovate on structure
+4. **Readability first** - Code is read more than written
+5. **Complete implementation** - No half-finished features
+
+**Remember: Consistency and maintainability are more important than cleverness.**

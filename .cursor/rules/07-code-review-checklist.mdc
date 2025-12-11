@@ -1,0 +1,32 @@
+# Code Review Checklist
+
+Before completing any task, verify:
+
+## Client Checklist
+
+- [ ] Using `@/` alias for src/ imports
+- [ ] Import order is correct (React → libraries → @/ → assets)
+- [ ] Using design tokens instead of hardcoded values
+- [ ] All props have TypeScript types
+- [ ] Using `const` and template literals
+- [ ] Components use `useMemo`/`useCallback` where appropriate
+- [ ] StyleSheet defined at bottom
+
+## Server Checklist
+
+- [ ] Type hints on all functions
+- [ ] Using async/await for DB operations
+- [ ] Following Router → Service → Repository pattern
+- [ ] Using `@dependency` decorator
+- [ ] Proper HTTPException with status codes
+- [ ] Using `*,` for keyword-only arguments
+- [ ] Eager loading relationships to prevent N+1
+- [ ] Import order is correct
+
+## Both Checklist
+
+- [ ] No TODOs or placeholders
+- [ ] No hardcoded values that should be configurable
+- [ ] No unused imports or variables
+- [ ] Error handling is complete
+- [ ] Code is readable and self-documenting

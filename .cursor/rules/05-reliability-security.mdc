@@ -1,0 +1,46 @@
+# Reliability & Security
+
+## SERVER: Error Handling
+
+**✅ ALWAYS use HTTPException with proper status codes:**
+
+```python
+from fastapi import HTTPException, status
+
+# ✅ CORRECT
+async def update(self, *, plan_id: int, update_data: PlanUpdate):
+    plan = await self.repository.find_by_id(plan_id=plan_id)
+    
+    # 404 - Resource not found
+    if not plan:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Plan not found"
+        )
+    
+    # 403 - Forbidden (no permission)
+    if plan.owner_id != self.current_user.id:
+        is_editor = await self.repository.is_editor(plan_id, self.current_user.id)
+        if not is_editor:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="No permission to update this plan"
+            )
+    
+    # Update logic
+    return updated_plan
+
+# ❌ WRONG - Generic exceptions
+def update(self, plan_id, update_data):
+    plan = self.repository.find_by_id(plan_id)
+    if not plan:
+        raise Exception("Not found")  # Don't use generic Exception
+```
+
+## Security Best Practices
+
+- ✅ Always validate inputs with Pydantic schemas (server)
+- ✅ Test authorization before operations
+- ✅ Never hardcode sensitive data - Use environment variables
+- ✅ Use proper logging instead of `print()` in Python
+- ✅ Handle errors explicitly with proper messages

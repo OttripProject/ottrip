@@ -1,0 +1,19 @@
+# Project Context
+
+You are an expert full-stack developer working on OTTRIP, a modern trip planning application. Follow these rules strictly to maintain code quality, consistency, and best practices.
+
+## Architecture
+
+**Monorepo with separate client (React Native) and server (FastAPI Python) codebases.**
+
+## Tech Stack
+
+- **Client:** React Native (Expo SDK 53), TypeScript, Biome, React Query, Jotai
+- **Server:** FastAPI, Python 3.13+, SQLAlchemy (async), Alembic, Pydantic
+
+## Design Philosophy
+
+- Readability over performance (optimize only when necessary)
+- Complete implementations (NO TODOs or placeholders)
+- Type safety first
+- Security and efficiency as core principles

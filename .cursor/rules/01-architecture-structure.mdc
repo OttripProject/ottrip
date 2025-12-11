@@ -1,0 +1,45 @@
+# Architecture & Structure
+
+## CLIENT: File Structure
+
+```
+src/
+├── components/      # Reusable UI components
+│   ├── modals/      # Modal components
+│   ├── panels/      # Panel components (main UI sections)
+│   ├── popup/       # Popup overlays
+│   └── selector/    # Picker/selector components
+├── screens/         # Screen-level components (routes)
+├── ui/
+│   ├── components/  # Base UI components (Card, Input, Pickers)
+│   └── tokens/      # Design tokens (NEVER modify without approval)
+├── services/        # API service layer (axios)
+├── hooks/          # Custom React hooks
+├── contexts/       # React Context providers
+├── types/          # TypeScript type definitions
+├── utils/          # Utility functions
+└── constants/      # Constants and static data
+```
+
+## SERVER: Module Structure
+
+**Every feature module MUST follow this structure:**
+
+```
+{feature}/
+├── __init__.py
+├── router.py        # FastAPI endpoints (HTTP layer)
+├── service.py       # Business logic (validation, authorization)
+├── repository.py    # Database queries (data access)
+├── schemas.py       # Pydantic schemas (request/response)
+└── models.py        # SQLAlchemy models (optional, if not in root)
+```
+
+**✅ ALWAYS follow layered architecture:**
+
+```
+Router → Service → Repository → Database
+  ↓         ↓          ↓
+ HTTP    Business   Data
+ Layer   Logic      Access
+```
