@@ -7,6 +7,7 @@ import TripSelector from '../selector/TripSelector';
 import SharePlanModal from '@/components/modals/SharePlanModal';
 import PlanSelectRequiredModal from '@/components/modals/PlanSelectRequiredModal';
 import TripFormModal from '@/components/modals/TripFormModal';
+import ResultModal from '@/components/modals/ResultModal';
 import BaseCalendar from '@/components/popup/calendar/BaseCalendar';
 import { plansApi } from '@/services/plans';
 import { Plan, CreatePlanRequest, UpdatePlanRequest } from '@/types/api';
@@ -15,7 +16,6 @@ import PanelLayout from './PanelLayout';
 import Card from '@/ui/components/Card';
 import Input from '@/ui/components/input/Input';
 import { PLACEHOLDERS } from '@/constants/placeholders';
-import { tripToastMessages } from '@/utils/toast';
 import { colors } from '@/ui/tokens/colors';
 import { textStyles, typography } from '@/ui/tokens/typography';
 import { spacing } from '@/ui/tokens/spacing';
@@ -156,9 +156,9 @@ interface Props {
   plans?: Plan[];
   trips?: any[];
   onPlansRefresh?: () => void;
-  onPlanAdd?: (planData: CreatePlanRequest) => Promise<Plan>;
-  onPlanUpdate?: (planId: number, planData: UpdatePlanRequest) => Promise<Plan>;
-  onPlanDelete?: (planId: number) => Promise<boolean>;
+  onPlanAdd: (planData: CreatePlanRequest) => Promise<Plan>;
+  onPlanUpdate: (planId: number, planData: UpdatePlanRequest) => Promise<Plan>;
+  onPlanDelete: (planId: number) => Promise<boolean>;
   // 디테일패널 상태 추적용 (미리보기 제거를 위해)
   activeTab?: 'itinerary' | 'flight' | 'accommodation' | undefined;
   selectedItinerary?: any;
@@ -205,6 +205,8 @@ export default function WeeklySchedulePanel({
     const [showPlanSelectRequiredModal, setShowPlanSelectRequiredModal] = useState(false);
     const [openTripSelector, setOpenTripSelector] = useState(false);
     const [showAddPlanModal, setShowAddPlanModal] = useState(false);
+    const [resultModalVisible, setResultModalVisible] = useState(false);
+    const [resultModalConfig, setResultModalConfig] = useState<{ mode: string; params?: any } | null>(null);
     
     // Plan 추가 모달용 폼 훅
     const planForm = useTripForm();
@@ -542,6 +544,20 @@ export default function WeeklySchedulePanel({
       }
     }, [activeTab, selectedItinerary, previewEvent]);
 
+    // 결과 모달 자동 닫기
+    useEffect(() => {
+      if (!resultModalVisible) {
+        return;
+      }
+
+      const timer = setTimeout(() => {
+        setResultModalVisible(false);
+        setResultModalConfig(null);
+      }, 2000);
+
+      return () => clearTimeout(timer);
+    }, [resultModalVisible]);
+
     // 외부 selectedTrip가 주어지면 TripSelector 선택과 동기화
     useEffect(() => {
       if (selectedTrip) {
@@ -602,11 +618,6 @@ export default function WeeklySchedulePanel({
     };
 
     const handleAddTrip = async (newTrip: any) => {
-      if (!onPlanAdd) {
-        tripToastMessages.addErrorGeneric();
-        return null;
-      }
-      
       try {
         const createdPlan = await onPlanAdd({
           title: newTrip.name,
@@ -633,11 +644,13 @@ export default function WeeklySchedulePanel({
           
           return newTripData;
         } else {
-          tripToastMessages.addError();
+          setResultModalConfig({ mode: 'error', params: { message: '여행 계획 추가에 실패했습니다.' } });
+          setResultModalVisible(true);
         }
       } catch (error) {
         console.error('Failed to add trip:', error);
-        tripToastMessages.addErrorGeneric();
+        setResultModalConfig({ mode: 'error', params: { message: '여행 계획 추가에 실패했습니다.' } });
+        setResultModalVisible(true);
       }
 
       return null;
@@ -645,15 +658,6 @@ export default function WeeklySchedulePanel({
 
     // Plan 추가 모달 제출 핸들러
     const handlePlanAddSubmit = async () => {
-      if (!planForm.tripData.name.trim()) {
-        Alert.alert('오류', '여행 이름을 입력해주세요.');
-        return;
-      }
-      if (!planForm.tripData.startDate || !planForm.tripData.endDate) {
-        Alert.alert('오류', '시작일과 종료일을 선택해주세요.');
-        return;
-      }
-
       const result = await handleAddTrip(planForm.tripData);
       if (result) {
         setShowAddPlanModal(false);
@@ -662,11 +666,6 @@ export default function WeeklySchedulePanel({
     };
 
     const handleUpdateTrip = async (tripId: string, updatedTrip: any) => {
-      if (!onPlanUpdate) {
-        Alert.alert('오류', '여행 계획 수정에 실패했습니다.');
-        return;
-      }
-      
       try {
         const planId = parseInt(tripId);
         const updatedPlan = await onPlanUpdate(planId, {
@@ -690,22 +689,18 @@ export default function WeeklySchedulePanel({
             const startDateWeekStart = dayjs(updatedPlan.startDate).startOf('week').add(1, 'day');
             setCurrentWeekStart(startDateWeekStart);
           }
-          Alert.alert('성공', '여행 계획이 수정되었습니다.');
         } else {
-          Alert.alert('오류', '여행 계획 수정에 실패했습니다.');
+          setResultModalConfig({ mode: 'error', params: { message: '여행 계획 수정에 실패했습니다.' } });
+          setResultModalVisible(true);
         }
       } catch (error) {
         console.error('Failed to update trip:', error);
-        Alert.alert('오류', '여행을 수정하는 중 오류가 발생했습니다.');
+        setResultModalConfig({ mode: 'error', params: { message: '여행을 수정하는 중 오류가 발생했습니다.' } });
+        setResultModalVisible(true);
       }
     };
 
     const handleDeleteTrip = async (tripId: string) => {
-      if (!onPlanDelete) {
-        Alert.alert('오류', '여행 계획 삭제에 실패했습니다.');
-        return;
-      }
-      
       try {
         const planId = parseInt(tripId);
         const success = await onPlanDelete(planId);
@@ -716,13 +711,14 @@ export default function WeeklySchedulePanel({
             setInternalSelectedTrip(null);
             onPlanSelect?.(null);
           }
-          Alert.alert('성공', '여행 계획이 삭제되었습니다.');
         } else {
-          Alert.alert('오류', '여행 계획 삭제에 실패했습니다.');
+          setResultModalConfig({ mode: 'error', params: { message: '여행 계획 삭제에 실패했습니다.' } });
+          setResultModalVisible(true);
         }
       } catch (error) {
         console.error('Failed to delete trip:', error);
-        Alert.alert('오류', '여행을 삭제하는 중 오류가 발생했습니다.');
+        setResultModalConfig({ mode: 'error', params: { message: '여행을 삭제하는 중 오류가 발생했습니다.' } });
+        setResultModalVisible(true);
       }
     };
 
@@ -929,7 +925,7 @@ export default function WeeklySchedulePanel({
                 </Pressable>
               )}
 
-              {(myRole === 'owner' || myRole === 'editor') && (
+              {/* {(myRole === 'owner' || myRole === 'editor') && (
                 <Pressable
                   onPress={() => {
                     // TODO: 파일 첨부 기능 구현
@@ -938,7 +934,7 @@ export default function WeeklySchedulePanel({
                 >
                   <FilesIcon width={16} height={16} />
                 </Pressable>
-              )}
+              )} */}
 
               {(myRole === 'owner' || myRole === 'editor') && (
                 <Pressable
@@ -1570,6 +1566,17 @@ export default function WeeklySchedulePanel({
         onDateSelect={planForm.handleDateSelect}
         onSubmit={handlePlanAddSubmit}
         isSubmitDisabled={planForm.isSubmitDisabled}
+      />
+
+      {/* 결과 모달 (성공/에러) */}
+      <ResultModal
+        visible={resultModalVisible}
+        onClose={() => {
+          setResultModalVisible(false);
+          setResultModalConfig(null);
+        }}
+        mode={resultModalConfig?.mode || ''}
+        params={resultModalConfig?.params}
       />
 
     </PanelLayout>

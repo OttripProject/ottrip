@@ -67,8 +67,6 @@ api.interceptors.request.use(async config => {
 
 api.interceptors.response.use(
   response => {
-    // dev에서 성능측정용
-    // 응답 시간 계산 및 로그 출력
     const endTime = Date.now();
     const startTime = response.config.metadata?.startTime;
     if (startTime) {
@@ -76,16 +74,10 @@ api.interceptors.response.use(
       const method = response.config.method?.toUpperCase() || 'UNKNOWN';
       const url = response.config.url || '';
       const status = response.status;
-      
-      console.log(
-        `🚀 API [${method}] ${url} - ${status} - ${duration}ms`
-      );
     }
     return response;
   },
   async error => {
-    // dev에서 성능측정용
-    // 에러 발생 시에도 시간 측정
     const endTime = Date.now();
     const startTime = error.config?.metadata?.startTime;
     if (startTime) {
@@ -93,16 +85,11 @@ api.interceptors.response.use(
       const method = error.config?.method?.toUpperCase() || 'UNKNOWN';
       const url = error.config?.url || '';
       const status = error.response?.status || 'ERROR';
-      
-      console.log(
-        `❌ API [${method}] ${url} - ${status} - ${duration}ms`
-      );
     }
     const originalRequest = error.config;
 
     if (error.response?.status === 401 && !originalRequest._retry) {
       if (isRefreshing) {
-        // 이미 refresh 중이면 대기 큐에 추가
         return new Promise((resolve, reject) => {
           failedQueue.push({ resolve, reject });
         })

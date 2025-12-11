@@ -1,10 +1,9 @@
 import React, { useState, useRef } from 'react';
-import { View, Text, Pressable, StyleSheet, Modal, ScrollView, Alert, Platform, Dimensions } from 'react-native';
+import { View, Text, Pressable, StyleSheet, Modal, ScrollView, Dimensions } from 'react-native';
 import useDetectClose from '@/hooks/useDetectClose';
 import { useTripForm } from '@/hooks/useTripForm';
 import { LocaleConfig } from 'react-native-calendars';
 import dayjs from 'dayjs';
-import { tripToastMessages } from '@/utils/toast';
 import { colors } from '@/ui/tokens/colors';
 import { textStyles } from '@/ui/tokens/typography';
 import DotsIcon from '../../../assets/dots.svg';
@@ -13,7 +12,7 @@ import DownArrowIcon from '../../../assets/down_arrow.svg';
 import UpperArrowIcon from '../../../assets/upper_arrow.svg';
 import UpdateIcon from '../../../assets/update.svg';
 import DeleteIcon from '../../../assets/delete.svg';
-import TripCompletionModal from '../modals/TripCompletionModal';
+import ResultModal from '../modals/ResultModal';
 import TripFormModal from '../modals/TripFormModal';
 import TripDeleteConfirmModal from '../modals/TripDeleteConfirmModal';
 
@@ -73,7 +72,7 @@ interface TripSelectorProps {
   selectedTrip?: Trip;
   onTripSelect: (trip: Trip) => void;
   trips: Trip[];
-  onTripAdd?: (
+  onTripAdd: (
     trip: Omit<Trip, 'id'>
   ) => Promise<Trip | null | false | void> | Trip | null | false | void;
   onTripUpdate?: (id: string, trip: Omit<Trip, 'id'>) => void;
@@ -83,7 +82,6 @@ interface TripSelectorProps {
 
 type SelectionType = 'single' | 'start' | 'end' | 'range' | undefined;
 type CalendarDayMark = { selection?: SelectionType; selected?: boolean };
-type CalendarMarkedDates = Record<string, CalendarDayMark>;
 
 export default function TripSelector({ selectedTrip, onTripSelect, trips, onTripAdd, onTripUpdate, onTripDelete, open }: TripSelectorProps) {
   const dropdownRef = useRef<View>(null);
@@ -109,10 +107,8 @@ export default function TripSelector({ selectedTrip, onTripSelect, trips, onTrip
   const [deleteConfirmModalOpen, setDeleteConfirmModalOpen] = useState(false);
   const [tripToDelete, setTripToDelete] = useState<string | null>(null);
   const [menuPosition, setMenuPosition] = useState<{ top: number; right: number } | null>(null);
-  const [showCompletionModal, setShowCompletionModal] = useState(false);
-  const [showUpdateCompletionModal, setShowUpdateCompletionModal] = useState(false);
-  const [showDeleteCompletionModal, setShowDeleteCompletionModal] = useState(false);
-  const [createdTripName, setCreatedTripName] = useState<string>('');
+  const [resultModalVisible, setResultModalVisible] = useState(false);
+  const [resultModalConfig, setResultModalConfig] = useState<{ mode: string; params?: any } | null>(null);
   const tripItemRefs = React.useRef<{ [key: string]: View | null }>({});
   const [isSubmittingAdd, setIsSubmittingAdd] = useState(false); // 추가 모달 버튼 비활성화용
   const [isSubmittingEdit, setIsSubmittingEdit] = useState(false); // 수정 모달 버튼 비활성화용
@@ -133,7 +129,8 @@ export default function TripSelector({ selectedTrip, onTripSelect, trips, onTrip
         endDate: editingTrip.endDate,
       });
     }
-  }, [editingTrip, showEditModal, editTripForm]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editingTrip, showEditModal]); // editTripForm은 매 렌더링마다 새 객체이므로 제외
 
   const handleAddTrip = async () => {
     // 중복 요청 방지: 이미 실행 중이면 무시
@@ -141,44 +138,29 @@ export default function TripSelector({ selectedTrip, onTripSelect, trips, onTrip
       return;
     }
 
-    if (!addTripForm.tripData.name.trim()) {
-      Alert.alert('오류', '여행 이름을 입력해주세요.');
-      return;
-    }
-    if (!addTripForm.tripData.startDate || !addTripForm.tripData.endDate) {
-      Alert.alert('오류', '시작일과 종료일을 선택해주세요.');
-      return;
-    }
-
-    // 실행 중 플래그 설정
     isSubmittingAddRef.current = true;
     setIsSubmittingAdd(true);
 
     try {
-      if (!onTripAdd) {
-        console.error('onTripAdd prop is required to create a trip.');
-        return;
-      }
-
       const createdTrip = await onTripAdd(addTripForm.tripData);
 
+      // WeeklySchedulePanel에서 이미 에러 처리를 하므로, null/false인 경우만 처리
       if (createdTrip === null || createdTrip === false) {
         return;
       }
 
-      // 생성된 여행 이름 저장
       const tripName = createdTrip && typeof createdTrip === 'object' && 'name' in createdTrip 
         ? createdTrip.name 
         : addTripForm.tripData.name;
-      setCreatedTripName(tripName);
 
       addTripForm.resetForm();
       setShowAddModal(false);
       setIsDropdownOpen(false);
-      setShowCompletionModal(true);
-    } catch (error) {
-      console.error('Failed to create trip:', error);
-      Alert.alert('오류', '여행 계획 생성에 실패했습니다.');
+      setResultModalConfig({ mode: 'add', params: { tripName } });
+      setResultModalVisible(true);
+    } finally {
+      isSubmittingAddRef.current = false;
+      setIsSubmittingAdd(false);
     }
   };
 
@@ -189,17 +171,10 @@ export default function TripSelector({ selectedTrip, onTripSelect, trips, onTrip
     }
 
     if (!editingTrip) return;
-    
-    if (!editTripForm.tripData.name.trim()) {
-      Alert.alert('오류', '여행 이름을 입력해주세요.');
-      return;
-    }
-    if (!editTripForm.tripData.startDate || !editTripForm.tripData.endDate) {
-      Alert.alert('오류', '시작일과 종료일을 선택해주세요.');
+    if (isSubmittingEditRef.current || isSubmittingEdit) {
       return;
     }
 
-    // 실행 중 플래그 설정
     isSubmittingEditRef.current = true;
     setIsSubmittingEdit(true);
 
@@ -219,10 +194,8 @@ export default function TripSelector({ selectedTrip, onTripSelect, trips, onTrip
       setEditingTrip(null);
       setShowEditModal(false);
       setIsDropdownOpen(false);
-      setShowUpdateCompletionModal(true);
-    } catch (error) {
-      console.error('Failed to update trip:', error);
-      tripToastMessages.updateError();
+      setResultModalConfig({ mode: 'edit' });
+      setResultModalVisible(true);
     } finally {
       isSubmittingEditRef.current = false;
       setIsSubmittingEdit(false);
@@ -241,7 +214,8 @@ export default function TripSelector({ selectedTrip, onTripSelect, trips, onTrip
       setIsDropdownOpen(false);
       setDeleteConfirmModalOpen(false);
       setTripToDelete(null);
-      setShowDeleteCompletionModal(true);
+      setResultModalConfig({ mode: 'delete' });
+      setResultModalVisible(true);
     }
   };
 
@@ -285,41 +259,19 @@ export default function TripSelector({ selectedTrip, onTripSelect, trips, onTrip
     }
   }, [openMenuTripId]);
 
+  // 결과 모달 자동 닫기
   React.useEffect(() => {
-    if (!showCompletionModal) {
+    if (!resultModalVisible) {
       return;
     }
 
     const timer = setTimeout(() => {
-      setShowCompletionModal(false);
+      setResultModalVisible(false);
+      setResultModalConfig(null);
     }, 2000);
 
     return () => clearTimeout(timer);
-  }, [showCompletionModal]);
-
-  React.useEffect(() => {
-    if (!showUpdateCompletionModal) {
-      return;
-    }
-
-    const timer = setTimeout(() => {
-      setShowUpdateCompletionModal(false);
-    }, 2000);
-
-    return () => clearTimeout(timer);
-  }, [showUpdateCompletionModal]);
-
-  React.useEffect(() => {
-    if (!showDeleteCompletionModal) {
-      return;
-    }
-
-    const timer = setTimeout(() => {
-      setShowDeleteCompletionModal(false);
-    }, 2000);
-
-    return () => clearTimeout(timer);
-  }, [showDeleteCompletionModal]);
+  }, [resultModalVisible]);
 
   return (
     <View style={styles.container} ref={containerRef}>
@@ -536,26 +488,15 @@ export default function TripSelector({ selectedTrip, onTripSelect, trips, onTrip
         onConfirm={confirmDeleteTrip}
       />
 
-      {/* 여행 생성 완료 모달 */}
-      <TripCompletionModal
-        visible={showCompletionModal}
-        onClose={() => setShowCompletionModal(false)}
-        mode="add"
-        tripName={createdTripName}
-      />
-
-      {/* 여행 수정 완료 모달 */}
-      <TripCompletionModal
-        visible={showUpdateCompletionModal}
-        onClose={() => setShowUpdateCompletionModal(false)}
-        mode="edit"
-      />
-
-      {/* 여행 삭제 완료 모달 */}
-      <TripCompletionModal
-        visible={showDeleteCompletionModal}
-        onClose={() => setShowDeleteCompletionModal(false)}
-        mode="delete"
+      {/* 결과 모달 (성공/에러) */}
+      <ResultModal
+        visible={resultModalVisible}
+        onClose={() => {
+          setResultModalVisible(false);
+          setResultModalConfig(null);
+        }}
+        mode={resultModalConfig?.mode || ''}
+        params={resultModalConfig?.params}
       />
     </View>
   );
