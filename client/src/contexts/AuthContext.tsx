@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { Platform } from 'react-native';
 import { authApi, TokenResponse, AuthResponse } from '../services/auth';
 import { tokenStores } from '../utils/tokenStores'; // 새로운 토큰 스토어 사용
+import { useTokenRefresh } from '../hooks/useTokenRefresh';
 
 interface AuthContextType {
   isAuthenticated: boolean;
@@ -24,6 +25,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [user, setUser] = useState<any | null>(null);
+
+  // 주기적 토큰 갱신 활성화 (2분마다 체크, 만료 5분 전에 갱신)
+  useTokenRefresh();
 
   // 토큰 저장
   const saveTokens = async (tokens: TokenResponse) => {
