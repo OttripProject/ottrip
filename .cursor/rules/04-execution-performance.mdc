@@ -1,0 +1,92 @@
+# Execution & Performance
+
+## SERVER: Type Hints
+
+**✅ REQUIRED for ALL functions:**
+
+```python
+# ✅ CORRECT
+async def create_plan(
+    self,
+    *,  # Force keyword-only arguments
+    plan_data: PlanCreate,
+) -> PlanRead:
+    plan = Plan(
+        title=plan_data.title,
+        owner_id=self.current_user.id,
+    )
+    return PlanRead.model_validate(plan)
+
+# ❌ WRONG - No type hints
+async def create_plan(self, plan_data):
+    plan = Plan(title=plan_data.title)
+    return plan
+```
+
+## SERVER: Async/Await
+
+**✅ ALWAYS use async for:**
+- Database operations
+- External API calls
+- I/O operations
+
+```python
+# ✅ CORRECT
+async def find_by_id(self, *, plan_id: int) -> Plan | None:
+    result = await self.db.execute(
+        select(Plan).where(Plan.id == plan_id)
+    )
+    return result.scalar_one_or_none()
+
+# ❌ WRONG - Missing async/await
+def find_by_id(self, *, plan_id: int) -> Plan | None:
+    result = self.db.execute(select(Plan).where(Plan.id == plan_id))
+    return result.scalar_one_or_none()
+```
+
+## SERVER: Database Queries
+
+**✅ ALWAYS:**
+- Use async SQLAlchemy
+- Use `select()` for queries
+- Use relationship loading to avoid N+1
+- Handle `None` results explicitly
+
+```python
+from sqlalchemy import select
+from sqlalchemy.orm import selectinload
+
+# ✅ CORRECT - Eager loading to prevent N+1
+async def find_plan_with_details(self, *, plan_id: int) -> Plan | None:
+    result = await self.db.execute(
+        select(Plan)
+        .options(
+            selectinload(Plan.flights),
+            selectinload(Plan.itineraries),
+            selectinload(Plan.expenses),
+        )
+        .where(Plan.id == plan_id)
+    )
+    return result.scalar_one_or_none()
+
+# ❌ WRONG - N+1 problem (fetches relationships separately)
+async def find_plan_with_details(self, *, plan_id: int):
+    plan = await self.db.execute(select(Plan).where(Plan.id == plan_id))
+    # This will trigger additional queries for each relationship
+    flights = plan.flights  # N+1 query!
+    return plan
+```
+
+## Performance Notes
+
+**Client:**
+- Use `React.memo()` for expensive renders
+- Use `useMemo()` for expensive computations
+- Use `useCallback()` for callbacks passed to children
+- Lazy load heavy screens with `React.lazy()`
+
+**Server:**
+- Use `selectinload()` to prevent N+1 queries
+- Add database indexes for frequently queried fields
+- Use connection pooling (already configured)
+- Log query performance for optimization

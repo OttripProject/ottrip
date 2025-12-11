@@ -1,0 +1,94 @@
+# Code Style & Conventions
+
+## CLIENT: Path Aliases
+
+- ✅ **ALWAYS use `@/` for imports from `src/`**
+- ❌ **NEVER use relative paths like `../../` for src/ imports**
+
+```typescript
+// ✅ CORRECT
+import { plansApi } from '@/services/plans';
+import { colors } from '@/ui/tokens';
+import PanelLayout from '@/components/panels/PanelLayout';
+
+// ❌ WRONG
+import { plansApi } from '../../services/plans';
+import { colors } from '../../../ui/tokens';
+```
+
+## CLIENT: Import Order
+
+Follow this EXACT order (use blank lines between groups):
+
+```typescript
+// 1. React and React Native core
+import React, { useState, useCallback, useMemo } from 'react';
+import { View, Text, Pressable, StyleSheet } from 'react-native';
+
+// 2. Third-party libraries
+import dayjs from 'dayjs';
+import { Calendar } from 'react-native-big-calendar';
+
+// 3. Internal absolute imports (@ alias)
+import { plansApi } from '@/services/plans';
+import { Plan } from '@/types/api';
+import { colors, spacing } from '@/ui/tokens';
+
+// 4. SVG/Asset imports (relative paths OK)
+import LeftArrowIcon from '../../../assets/left_arrow.svg';
+
+// 5. Styles at the bottom (after component)
+const styles = StyleSheet.create({ ... });
+```
+
+## SERVER: Import Order
+
+```python
+# 1. Standard library
+import logging
+import time
+from datetime import datetime, timedelta
+
+# 2. Third-party libraries
+from fastapi import HTTPException, status
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+# 3. Internal imports (relative)
+from app.auth.deps import CurrentUser
+from app.core.exceptions import NotFoundException
+from app.database.deps import get_db
+
+# 4. Local imports (same module)
+from .models import Plan
+from .repository import PlanRepository
+from .schemas import PlanCreate, PlanRead
+```
+
+## SERVER: Naming Conventions
+
+```python
+# ✅ CORRECT
+class PlanService:           # PascalCase for classes
+    async def create_plan():  # snake_case for methods
+        plan_id = 123         # snake_case for variables
+        MAX_PLANS = 100       # UPPER_SNAKE_CASE for constants
+
+# ❌ WRONG
+class planService:           # Should be PascalCase
+    async def CreatePlan():  # Should be snake_case
+        PlanId = 123         # Should be snake_case
+```
+
+## CLIENT: Biome Linting Rules
+
+**✅ REQUIRED:**
+- Use `const` instead of `let` when value doesn't change
+- Use template literals: `` `Hello ${name}` `` not `'Hello ' + name`
+- Remove unused imports and variables
+- Avoid `any` type (use `unknown` or proper types)
+
+**❌ FORBIDDEN:**
+- Leaving unused imports or variables
+- Using `var` keyword
+- Explicit `any` without comment explaining why
