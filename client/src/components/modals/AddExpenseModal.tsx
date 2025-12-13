@@ -93,7 +93,7 @@ export default function AddExpenseModal({
         exDate: expenseForm.ex_date,
         currency: expenseForm.currency as any,
       });
-      Alert.alert('성공', '지출이 추가되었습니다.');
+      Alert.alert('성공', '비용이 추가되었습니다.');
       setExpenseForm({
         category: ExpenseCategory.FOOD,
         amount: 0,
@@ -105,7 +105,7 @@ export default function AddExpenseModal({
       onExpenseAdd?.(newExpense);
     } catch (error) {
       console.error('Failed to create expense:', error);
-      Alert.alert('오류', '지출 추가에 실패했습니다.');
+      Alert.alert('오류', '비용 추가에 실패했습니다.');
     } finally {
       isSubmittingRef.current = false;
       setIsSubmitting(false);
@@ -150,9 +150,9 @@ export default function AddExpenseModal({
           >
             <View style={styles.modalHeader}>
               <View style={styles.titleContainer}>
-                <Text style={styles.modalTitle}>지출 추가</Text>
+                <Text style={styles.modalTitle}>비용 추가</Text>
                 <Text style={styles.modalDescription}>
-                  이 여행에 대한 지출을 수동으로 추가합니다.
+                  이 여행에 대한 비용을 수동으로 추가합니다.
                 </Text>
               </View>
               <Pressable

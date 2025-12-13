@@ -1,4 +1,4 @@
-// 공통 지출 관련 타입과 enum
+// 공통 비용 관련 타입과 enum
 
 export enum ExpenseCategory {
   FOOD = "food",

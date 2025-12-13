@@ -366,7 +366,7 @@ export default function DashboardScreen() {
 
           {/* 하단 모달들 (30% 높이) */}
           <View style={[styles.bottomRow, { height: leftBottomHeight }]}>
-            {/* 4. 지출 모달 (좌측 하단) */}
+            {/* 4. 비용 모달 (좌측 하단) */}
             <View style={styles.expensesModal}>
               <ExpensesPanel 
                 planData={{

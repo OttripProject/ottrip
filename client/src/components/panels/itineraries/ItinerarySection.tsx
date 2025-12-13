@@ -151,7 +151,7 @@ export default function ItinerarySection({
             </View>
           )}
 
-          {/* 연결된 지출 표시 */}
+          {/* 연결된 비용 표시 */}
           {(() => {
             const connectedExpenses = planData.expenses.filter(
               (expense: any) => expense.itineraryId === selectedItinerary.id
@@ -160,7 +160,7 @@ export default function ItinerarySection({
             if (connectedExpenses.length > 0) {
               return (
                 <View style={styles.expensesSection}>
-                  <Text style={styles.expensesSectionTitle}>지출 내역</Text>
+                  <Text style={styles.expensesSectionTitle}>비용 내역</Text>
                   {connectedExpenses.map((expense: any) => (
                     <View key={expense.id} style={styles.expenseDetailItem}>
                       <Text style={styles.expenseDetailDescription}>{expense.description}</Text>

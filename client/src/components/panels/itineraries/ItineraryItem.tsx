@@ -84,7 +84,7 @@ export default function ItineraryItem({
   const [timeOpen, setTimeOpen] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
   
-  // 지출 관련 상태
+  // 비용 관련 상태
   const [showExpenseForm, setShowExpenseForm] = useState(false);
   const [expenseOpen, setExpenseOpen] = useState(false);
   const [editingExpense, setEditingExpense] = useState<any | null>(null);
@@ -149,7 +149,7 @@ export default function ItineraryItem({
     }
   }, [itinerary, selectedDate]);
 
-  // 기존 지출 불러오기
+  // 기존 비용 불러오기
   useEffect(() => {
     const loadExpenses = async () => {
       if (itinerary?.id) {
@@ -171,7 +171,7 @@ export default function ItineraryItem({
           }
         }
       } else {
-        // itinerary가 없으면 지출 목록 초기화
+        // itinerary가 없으면 비용 목록 초기화
         setExpenses([]);
       }
     };
@@ -254,7 +254,7 @@ export default function ItineraryItem({
         
         if (draftExpenses.length > 0) {
           try {
-            // 배치 API로 모든 지출을 한 번에 생성
+            // 배치 API로 모든 비용을 한 번에 생성
             const createdExpenses = await expensesApi.createExpensesBatch({
               planId: planId,
               itineraryId: itinerary.id,
@@ -294,7 +294,7 @@ export default function ItineraryItem({
         // 새 일정 생성 후 draft expenses 배치로 저장
         if (draftExpenses.length > 0) {
           try {
-            // 배치 API로 모든 지출을 한 번에 생성
+            // 배치 API로 모든 비용을 한 번에 생성
             const createdExpenses = await expensesApi.createExpensesBatch({
               planId: planId,
               itineraryId: savedItinerary.id,
@@ -355,7 +355,7 @@ export default function ItineraryItem({
     }
   };
 
-  // 지출 관련 핸들러
+  // 비용 관련 핸들러
   const handleExpenseSubmit = async () => {
     if (expenseForm.amount <= 0) {
       Alert.alert('오류', '금액을 입력해주세요.');
@@ -390,11 +390,11 @@ export default function ItineraryItem({
         setEditingExpense(null);
         setShowExpenseForm(false);
         
-        Alert.alert('성공', '지출이 수정되었습니다.');
+        Alert.alert('성공', '비용이 수정되었습니다.');
         return;
       } catch (error) {
         console.error('Failed to update expense:', error);
-        Alert.alert('오류', '지출 수정에 실패했습니다.');
+        Alert.alert('오류', '비용 수정에 실패했습니다.');
         return;
       }
     }
@@ -421,7 +421,7 @@ export default function ItineraryItem({
       setEditingExpense(null);
       setShowExpenseForm(false);
       
-      Alert.alert('성공', '지출이 수정되었습니다. (일정 저장 시 함께 저장됩니다)');
+      Alert.alert('성공', '비용이 수정되었습니다. (일정 저장 시 함께 저장됩니다)');
       return;
     }
 
@@ -444,7 +444,7 @@ export default function ItineraryItem({
       });
       setShowExpenseForm(false);
       
-      Alert.alert('성공', '지출이 추가되었습니다. (일정 저장 시 함께 저장됩니다)');
+      Alert.alert('성공', '비용이 추가되었습니다. (일정 저장 시 함께 저장됩니다)');
       return;
     }
 
@@ -465,7 +465,7 @@ export default function ItineraryItem({
     });
     setShowExpenseForm(false);
     
-    Alert.alert('성공', '지출이 추가되었습니다. (일정 저장 시 함께 저장됩니다)');
+    Alert.alert('성공', '비용이 추가되었습니다. (일정 저장 시 함께 저장됩니다)');
   };
 
   const handleExpenseDelete = async (expenseId: string) => {
@@ -480,14 +480,14 @@ export default function ItineraryItem({
       // 로컬 상태에서도 제거 (일정 상세에 즉시 반영)
       setExpenses(prev => prev.filter(exp => exp.id !== Number(expenseId)));
       
-      Alert.alert('성공', '지출이 삭제되었습니다.');
+      Alert.alert('성공', '비용이 삭제되었습니다.');
     } catch (error) {
       console.error('Failed to delete expense:', error);
-      Alert.alert('오류', '지출 삭제에 실패했습니다.');
+      Alert.alert('오류', '비용 삭제에 실패했습니다.');
     }
   };
 
-  // 모든 지출 (draft + saved)
+  // 모든 비용 (draft + saved)
   const allExpenses = useMemo(() => {
     const draft = draftExpenses.map((exp, idx) => ({ ...exp, id: `draft-${idx}`, isDraft: true }));
     const saved = expenses.map(exp => ({ ...exp, isDraft: false }));
@@ -627,11 +627,11 @@ export default function ItineraryItem({
           </View>
         </View>
 
-      {/* 지출 추가 섹션 */}
+      {/* 비용 추가 섹션 */}
       <View style={styles.expenseSection}>
-        <Text style={styles.label}>지출 내역</Text>
+        <Text style={styles.label}>비용 내역</Text>
         
-        {/* 지출 카드 목록 */}
+        {/* 비용 카드 목록 */}
         {allExpenses.length > 0 && (
           <View style={styles.expenseList}>
             {allExpenses.map((expense) => (
@@ -677,7 +677,7 @@ export default function ItineraryItem({
           </View>
         )}
 
-        {/* 지출 추가 버튼 */}
+        {/* 비용 추가 버튼 */}
           <Pressable
             style={styles.addExpenseButton}
             onPress={() => {
@@ -693,10 +693,10 @@ export default function ItineraryItem({
           <View style={styles.addIconWrapper}>
             <AddIcon width={16} height={16} />
           </View>
-          <Text style={styles.addExpenseButtonText}>지출 내역 추가</Text>
+          <Text style={styles.addExpenseButtonText}>비용 내역 추가</Text>
           </Pressable>
 
-        {/* 지출 추가 폼 */}
+        {/* 비용 추가 폼 */}
         {showExpenseForm && (
           <View style={styles.expenseForm}>
             <View style={[styles.expenseFormRow, { zIndex: expenseOpen ? 10001 : 1 }]}>
@@ -896,7 +896,7 @@ const styles = StyleSheet.create({
     ...textStyles.h8,
     color: colors.black,
   },
-  // 지출 관련 스타일
+  // 비용 관련 스타일
   expenseSection: {
     position: 'relative',
     overflow: 'visible',

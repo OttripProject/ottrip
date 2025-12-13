@@ -842,7 +842,7 @@ export default function WeeklySchedulePanel({
       <View style={styles.customHeader}>
         {/* 왼쪽: 타이틀 및 날짜 네비게이션 */}
         <View style={styles.leftSection}>
-          <Text style={styles.title}>주간 스케쥴</Text>
+          <Text style={styles.title}>여행 일정</Text>
           
           <View style={styles.dateNavigation}>
             <Pressable onPress={goPrev}>
@@ -1607,7 +1607,7 @@ const styles = StyleSheet.create({
       alignItems: 'center',
     },
     title: {
-      ...textStyles.h4,
+      ...textStyles.h3,
       marginRight: spacing.xl,
     },
     dateNavigation: {

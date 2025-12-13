@@ -43,7 +43,7 @@ export default function ExpensesPanel({ planData, onExpenseAdd }: ExpensesPanelP
   const handleExpenseDelete = async (expenseId: string) => {
     try {
       await expensesApi.deleteExpense(Number(expenseId));
-      Alert.alert('성공', '지출이 삭제되었습니다.');
+      Alert.alert('성공', '비용이 삭제되었습니다.');
       
       // 모든 관련 데이터 새로고침
       await planData?.refreshExpenses();
@@ -52,7 +52,7 @@ export default function ExpensesPanel({ planData, onExpenseAdd }: ExpensesPanelP
       await planData?.refreshAccommodations?.();
     } catch (error) {
       console.error('Failed to delete expense:', error);
-      Alert.alert('오류', '지출 삭제에 실패했습니다.');
+      Alert.alert('오류', '비용 삭제에 실패했습니다.');
     }
   };
 
@@ -114,13 +114,13 @@ export default function ExpensesPanel({ planData, onExpenseAdd }: ExpensesPanelP
   const totalExpenses = getTotalExpenses();
   const expensesByCategory = getExpensesByCategory();
 
-  // 지출이 있는 카테고리만 필터링
+  // 비용이 있는 카테고리만 필터링
   const categoriesWithExpenses = categoryOrder.filter(
     (category) => (expensesByCategory[category] || 0) > 0
   );
 
   // 카테고리 개수에 따른 카드 크기 계산
-  // 총 지출 버튼과 같은 너비를 맞추기 위해 flex 사용
+  // 총 비용 버튼과 같은 너비를 맞추기 위해 flex 사용
   const getCardStyle = (totalCategories: number): ViewStyle => {
     if (totalCategories === 1) {
       return { flex: 1, minWidth: '100%' as any };
@@ -134,7 +134,7 @@ export default function ExpensesPanel({ planData, onExpenseAdd }: ExpensesPanelP
 
   const cardStyle = getCardStyle(categoriesWithExpenses.length);
 
-  // 선택된 카테고리의 지출 목록
+  // 선택된 카테고리의 비용 목록
   const selectedCategoryExpenses = selectedCategory 
     ? getExpensesInCategory(selectedCategory)
     : [];
@@ -149,26 +149,26 @@ export default function ExpensesPanel({ planData, onExpenseAdd }: ExpensesPanelP
         >
         {/* 헤더 섹션 */}
         <View style={styles.headerSection}>
-          <Text style={styles.headerTitle}>지출</Text>
+          <Text style={styles.headerTitle}>여행 비용</Text>
           <Pressable
             style={styles.addButton}
             onPress={() => setShowExpenseForm(true)}
           >
-            <Text style={styles.addButtonText}>지출 추가</Text>
+            <Text style={styles.addButtonText}>비용 추가</Text>
             <PlusRadiusIcon width={16} height={16} />
           </Pressable>
         </View>
 
-        {/* 총 지출 버튼 */}
+        {/* 총 비용 버튼 */}
         <Pressable style={styles.totalButton}>
-          <Text style={styles.totalButtonLabel}>총 지출</Text>
+          <Text style={styles.totalButtonLabel}>총 비용</Text>
           <View style={styles.totalButtonRight}>
             <Text style={styles.totalButtonAmount}>₩{totalExpenses.toLocaleString()}</Text>
             <RightArrowBlueIcon width={14} height={14} />
           </View>
         </Pressable>
 
-        {/* 카테고리별 지출 카드 (동적 그리드) */}
+        {/* 카테고리별 비용 카드 (동적 그리드) */}
         {categoriesWithExpenses.length > 0 && (
           <View style={styles.categoryGrid}>
             {categoriesWithExpenses.map((category) => {
@@ -195,7 +195,7 @@ export default function ExpensesPanel({ planData, onExpenseAdd }: ExpensesPanelP
           </View>
         )}
 
-        {/* 선택된 카테고리의 지출 리스트 (카드 형태) */}
+        {/* 선택된 카테고리의 비용 리스트 (카드 형태) */}
         {selectedCategory && selectedCategoryExpenses.length > 0 && (
           <View style={styles.expenseListSection}>
             <Text style={styles.expenseListTitle}>
@@ -231,7 +231,7 @@ export default function ExpensesPanel({ planData, onExpenseAdd }: ExpensesPanelP
         </ScrollView>
       </View>
 
-      {/* 지출 추가 모달 */}
+      {/* 비용 추가 모달 */}
       <AddExpenseModal
         visible={showExpenseForm}
         onClose={() => setShowExpenseForm(false)}
@@ -301,7 +301,7 @@ const styles = StyleSheet.create({
     color: colors.black,
     fontWeight: typography.weight.semibold,
   },
-  // 총 지출 버튼
+  // 총 비용 버튼
   totalButton: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -363,7 +363,7 @@ const styles = StyleSheet.create({
     ...textStyles.body6,
     color: colors.black,
   },
-  // 지출 리스트 섹션
+  // 비용 리스트 섹션
   expenseListSection: {
     paddingHorizontal: spacing.xl,
     marginTop: spacing.md,
@@ -375,7 +375,7 @@ const styles = StyleSheet.create({
   expenseList: {
     gap: spacing.sm,
   },
-  // 지출 카드
+  // 비용 카드
   expenseCard: {
     backgroundColor: colors.white,
     borderRadius: radii.md,
