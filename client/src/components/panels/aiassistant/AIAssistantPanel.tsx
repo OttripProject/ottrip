@@ -354,7 +354,7 @@ export default function AIAssistantPanel({ publicId }: AIAssistantPanelProps) {
             <View style={styles.previewContainer}>
             <View style={styles.headerSection}>
               <View style={styles.titleContainer}>
-                <GradientText style={styles.headerTitle}>Checklist</GradientText>
+                <GradientText style={styles.headerTitle}>체크리스트</GradientText>
                 {hasItems ? (
                   <TouchableOpacity onPress={handleRefresh} style={styles.refreshButton}>
                     <AiRefreshIcon width={16} height={16} />
@@ -693,9 +693,7 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
   },
   headerTitle: {
-    fontFamily: typography.fontFamily.poppinsSemiBold,
-    fontSize: 16,
-    lineHeight: 24,
+    ...textStyles.h4,
     color: colors.black,
   },
   headerTitleTransparent: {

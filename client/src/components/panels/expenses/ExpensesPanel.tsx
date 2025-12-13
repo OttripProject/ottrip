@@ -149,7 +149,7 @@ export default function ExpensesPanel({ planData, onExpenseAdd }: ExpensesPanelP
         >
         {/* 헤더 섹션 */}
         <View style={styles.headerSection}>
-          <Text style={styles.headerTitle}>Expense List</Text>
+          <Text style={styles.headerTitle}>지출</Text>
           <Pressable
             style={styles.addButton}
             onPress={() => setShowExpenseForm(true)}
@@ -280,8 +280,7 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.md,
   },
   headerTitle: {
-    ...textStyles.poppinsH4,
-    fontSize: 16,
+    ...textStyles.h4,
   },
   // 추가 버튼
   addButton: {
