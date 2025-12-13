@@ -138,7 +138,9 @@ export default function FlightSection({
           )}
           {selectedFlight.flightSegments && selectedFlight.flightSegments.length > 0 && (
             <>
-              {selectedFlight.flightSegments.map((segment: any, index: number) => (
+              {[...selectedFlight.flightSegments]
+                .sort((a: any, b: any) => (a.order ?? 0) - (b.order ?? 0))
+                .map((segment: any, index: number) => (
                 <React.Fragment key={index}>
                   <View style={styles.segmentDetail}>
                     <Text style={styles.segmentTitle}>구간 {index + 1}</Text>

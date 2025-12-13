@@ -79,8 +79,9 @@ export default function FlightItem({
 
   const [flightSegments, setFlightSegments] = useState<SegmentForm[]>(() => {
     if (flight?.flightSegments && flight.flightSegments.length > 0) {
-      // 편집 모드: 기존 segments 데이터 사용
-      return flight.flightSegments.map((segment: any) => {
+      // 편집 모드: 기존 segments 데이터 사용 (order 기준으로 정렬)
+      const sortedSegments = [...flight.flightSegments].sort((a: any, b: any) => (a.order ?? 0) - (b.order ?? 0));
+      return sortedSegments.map((segment: any) => {
         const depTime = segment.departureTime ? dayjs(segment.departureTime) : dayjs();
         const arrTime = segment.arrivalTime ? dayjs(segment.arrivalTime) : dayjs().add(1, 'hour');
         return {
