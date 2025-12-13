@@ -10,6 +10,8 @@ import TripFormModal from '@/components/modals/TripFormModal';
 import ResultModal from '@/components/modals/ResultModal';
 import BaseCalendar from '@/components/popup/calendar/BaseCalendar';
 import { plansApi } from '@/services/plans';
+import { itinerariesApi } from '@/services/itineraries';
+import { flightsApi } from '@/services/flights';
 import { Plan, CreatePlanRequest, UpdatePlanRequest } from '@/types/api';
 import { useTripForm } from '@/hooks/useTripForm';
 import PanelLayout from './PanelLayout';
@@ -100,7 +102,10 @@ function toFlightEvents(flight: any): any[] {
     return time.split(':').slice(0, 2).join(':');
   };
 
-  return flight.flightSegments.map((segment: any, index: number) => {
+  // order 기준으로 정렬
+  const sortedSegments = [...flight.flightSegments].sort((a: any, b: any) => (a.order ?? 0) - (b.order ?? 0));
+
+  return sortedSegments.map((segment: any, index: number) => {
     const departureTime = dayjs(segment.departureTime);
     const arrivalTime = dayjs(segment.arrivalTime);
     
@@ -258,6 +263,9 @@ export default function WeeklySchedulePanel({
       newEnd: Date;
     } | null>(null);
     
+    // 드래그 중 겹침 상태 (항공편만)
+    const [hasOverlap, setHasOverlap] = useState(false);
+    
     // 캘린더 컨테이너 ref (드롭 위치 계산용)
     const calendarWrapperRef = useRef<View>(null);
     const [calendarLayout, setCalendarLayout] = useState({ x: 0, y: 0, width: 0, height: 0 });
@@ -332,6 +340,38 @@ export default function WeeklySchedulePanel({
         calendarRect = calendarElement.getBoundingClientRect();
       }
       
+      // BigCalendar의 스크롤 컨테이너 찾기 및 scrollTop 가져오기
+      // BigCalendar는 일반적으로 .rbc-time-content 또는 .rbc-time-view 내부에 스크롤 가능한 요소를 가짐
+      let scrollTop = 0;
+      let scrollContainer: HTMLElement | null = null;
+      
+      // 방법 1: .rbc-time-content 클래스로 찾기
+      scrollContainer = document.querySelector('.rbc-time-content') as HTMLElement;
+      
+      // 방법 2: .rbc-time-view 클래스로 찾기
+      if (!scrollContainer) {
+        scrollContainer = document.querySelector('.rbc-time-view') as HTMLElement;
+      }
+      
+      // 방법 3: BigCalendar 내부의 스크롤 가능한 요소 찾기
+      if (!scrollContainer) {
+        const allScrollable = Array.from(document.querySelectorAll('*')).filter((el: any) => {
+          const style = window.getComputedStyle(el);
+          const hasScroll = style.overflowY === 'auto' || style.overflowY === 'scroll';
+          const hasHeight = el.scrollHeight > el.clientHeight;
+          return hasScroll && hasHeight;
+        }) as HTMLElement[];
+        
+        // 캘린더 요소 내부의 스크롤 컨테이너 찾기
+        if (calendarElement) {
+          scrollContainer = allScrollable.find(el => calendarElement?.contains(el)) || null;
+        }
+      }
+      
+      if (scrollContainer) {
+        scrollTop = scrollContainer.scrollTop;
+      }
+      
       const timeColumnWidth = 60; // 시간 열 너비
       const headerHeight = 110; // 헤더 높이 (날짜 헤더 70px + 숙박 행 40px)
       const hourRowHeight = 40;
@@ -339,12 +379,21 @@ export default function WeeklySchedulePanel({
       const segmentHeight = hourRowHeight / (timeslots + 1); // 10px per 15min
       
       // 캘린더 영역 내 상대 좌표 계산
+      // clientY는 뷰포트 기준이므로, 캘린더의 상단에서의 거리를 계산한 후 스크롤 오프셋을 더함
       const relativeX = clientX - calendarRect.left;
-      const relativeY = clientY - calendarRect.top - headerHeight;
+      // 뷰포트에서 캘린더 헤더 아래까지의 거리
+      const viewportYFromHeader = clientY - calendarRect.top - headerHeight;
+      // 스크롤 위치를 고려한 실제 캘린더 내부 Y 좌표
+      const relativeY = viewportYFromHeader + scrollTop;
+      
+      // 스크롤 가능한 전체 높이 계산 (스크롤 컨테이너가 있으면 scrollHeight 사용)
+      const scrollableHeight = scrollContainer ? scrollContainer.scrollHeight : (calendarRect.height - headerHeight);
       
       // 캘린더 영역 밖이면 null 반환
-      if (relativeX < timeColumnWidth || relativeY < 0) return null;
-      if (relativeX > calendarRect.width || relativeY > calendarRect.height - headerHeight) return null;
+      if (relativeX < timeColumnWidth) return null;
+      if (relativeX > calendarRect.width) return null;
+      // relativeY는 스크롤을 고려한 절대 위치이므로 0 이상이고 scrollableHeight 이하여야 함
+      if (relativeY < 0 || relativeY > scrollableHeight) return null;
       
       // 날짜 계산
       const calendarWidth = calendarRect.width - timeColumnWidth;
@@ -364,8 +413,11 @@ export default function WeeklySchedulePanel({
       const targetTime = targetDate.hour(clampedHour).minute(minutes).second(0).millisecond(0);
           
       // 드롭 위치의 실제 화면 좌표 계산 (해당 날짜/시간 셀의 위치)
+      // segmentIndex는 relativeY로부터 계산되었고, relativeY는 스크롤을 포함한 절대 위치
+      // 화면에 표시되는 위치는 segmentIndex * segmentHeight에서 scrollTop을 빼야 함
       const dayLeft = calendarRect.left + timeColumnWidth + (dayWidth * dayIndexClamped);
-      const timeTop = calendarRect.top + headerHeight + (segmentIndex * segmentHeight);
+      // segmentIndex * segmentHeight는 스크롤을 포함한 절대 위치이므로, 화면 좌표로 변환
+      const timeTop = calendarRect.top + headerHeight + (segmentIndex * segmentHeight) - scrollTop;
       
       // 이벤트의 left margin 반영 (3.5%)
       const leftMarginPercent = 3.5;
@@ -379,9 +431,54 @@ export default function WeeklySchedulePanel({
       };
     }, [currentWeekStart, calendarLayout]);
     
+    // 드래그 중 겹침 체크 함수 (항공편만)
+    const checkOverlap = useCallback((dropTime: Date, durationMinutes: number, flightId: number | null, segmentIndex: number | null) => {
+      if (!dropTime || flightId === null || segmentIndex === null) {
+        return false;
+      }
+      
+      const newStartTime = dayjs(dropTime);
+      const newEndTime = newStartTime.add(durationMinutes, 'minute');
+      
+      // 모든 항공편의 segment와 비교 (현재 드래그 중인 segment 제외)
+      for (const existingFlight of flights) {
+        if (!existingFlight.flightSegments || existingFlight.flightSegments.length === 0) {
+          continue;
+        }
+        
+        for (let idx = 0; idx < existingFlight.flightSegments.length; idx++) {
+          const existingSegment = existingFlight.flightSegments[idx];
+          
+          // 같은 항공편의 같은 segment는 제외 (자기 자신)
+          if (existingFlight.id === flightId && idx === segmentIndex) {
+            continue;
+          }
+          
+          const existingDepTime = dayjs(existingSegment.departureTime);
+          const existingArrTime = dayjs(existingSegment.arrivalTime);
+          
+          // 시간이 겹치는지 확인
+          const hasOverlap = (
+            (newStartTime.isAfter(existingDepTime) || newStartTime.isSame(existingDepTime)) && newStartTime.isBefore(existingArrTime) ||
+            newEndTime.isAfter(existingDepTime) && (newEndTime.isBefore(existingArrTime) || newEndTime.isSame(existingArrTime)) ||
+            (newStartTime.isBefore(existingDepTime) && newEndTime.isAfter(existingArrTime))
+          );
+          
+          if (hasOverlap) {
+            return true;
+          }
+        }
+      }
+      
+      return false;
+    }, [flights]);
+    
     // 마우스 이벤트 핸들러 (웹용)
     useEffect(() => {
-      if (!draggingEvent) return;
+      if (!draggingEvent) {
+        setHasOverlap(false);
+        return;
+      }
       
       const handleMouseMove = (e: MouseEvent) => {
         const offsetX = e.clientX - draggingEvent.startX;
@@ -402,22 +499,64 @@ export default function WeeklySchedulePanel({
         setDropPreviewPosition(dropPos);
         // ref에도 저장 (최신 값 보장)
         dropPreviewPositionRef.current = dropPos;
+        
+        // 항공편인 경우 실시간 겹침 체크
+        if (draggingEvent.type === 'flight' && dropPos) {
+          const eventIdParts = draggingEvent.id.split('-');
+          const flightId = eventIdParts.length > 1 ? parseInt(eventIdParts[1]) : null;
+          const segmentIdOrIndex = eventIdParts.length > 2 ? parseInt(eventIdParts[2]) : null;
+          
+          if (flightId !== null && segmentIdOrIndex !== null) {
+            const flight = flights.find(f => f.id === flightId);
+            if (flight && flight.flightSegments) {
+              let segmentIndex: number | null = null;
+              let segment = flight.flightSegments.find((seg: any, idx: number) => 
+                seg.id === segmentIdOrIndex || (seg.id == null && idx + 1 === segmentIdOrIndex)
+              );
+              
+              if (!segment && segmentIdOrIndex > 0) {
+                segmentIndex = segmentIdOrIndex - 1;
+                segment = flight.flightSegments[segmentIndex];
+              } else if (segment) {
+                segmentIndex = flight.flightSegments.findIndex((seg: any) => 
+                  seg.id === segment.id || seg === segment
+                );
+              }
+              
+              if (segmentIndex !== null && segment) {
+                // duration 계산
+                const originalStart = dayjs(segment.departureTime);
+                const originalEnd = dayjs(segment.arrivalTime);
+                const durationMinutes = originalEnd.diff(originalStart, 'minute');
+                
+                const overlap = checkOverlap(dropPos.time, durationMinutes, flightId, segmentIndex);
+                setHasOverlap(overlap);
+              }
+            }
+          }
+        } else {
+          setHasOverlap(false);
+        }
       };
       
-      const handleMouseUp = () => {
+      const handleMouseUp = async () => {
         // ref에서 최신 드롭 위치 가져오기
         const latestDropPos = dropPreviewPositionRef.current;
         
-        // 드롭 위치가 있으면 이벤트 위치 업데이트 (로컬 상태만)
+        // 드롭 위치가 있으면 이벤트 위치 업데이트 (서버 포함)
         if (latestDropPos && draggingEvent) {
           const dropTime = dayjs(latestDropPos.time);
           
           // 드래그된 이벤트 찾기 (itineraries 또는 flights에서)
           let originalStart: dayjs.Dayjs | null = null;
           let originalEnd: dayjs.Dayjs | null = null;
+          let itineraryId: number | null = null;
+          let flightId: number | null = null;
+          let segmentIndex: number | null = null;
+          let flight: any = null;
           
           if (draggingEvent.type === 'itinerary') {
-            const itineraryId = parseInt(draggingEvent.id);
+            itineraryId = parseInt(draggingEvent.id);
             const itinerary = itineraries.find(it => it.id === itineraryId);
             if (itinerary) {
               originalStart = dayjs(`${itinerary.itineraryDate}T${itinerary.startTime}:00`);
@@ -426,15 +565,32 @@ export default function WeeklySchedulePanel({
           } else if (draggingEvent.type === 'flight') {
             // event.id 형식: `flight-${flight.id}-${segment.id ?? index + 1}`
             const eventIdParts = draggingEvent.id.split('-');
-            const flightId = eventIdParts.length > 1 ? parseInt(eventIdParts[1]) : null;
-            const segmentIndex = eventIdParts.length > 2 ? parseInt(eventIdParts[2]) - 1 : 0;
+            flightId = eventIdParts.length > 1 ? parseInt(eventIdParts[1]) : null;
+            // segment.id가 있으면 그대로 사용, 없으면 index + 1이므로 -1 해서 index로 변환
+            const segmentIdOrIndex = eventIdParts.length > 2 ? parseInt(eventIdParts[2]) : null;
             
-            if (flightId) {
-              const flight = flights.find(f => f.id === flightId);
-              if (flight && flight.flightSegments && flight.flightSegments[segmentIndex]) {
-                const segment = flight.flightSegments[segmentIndex];
-                originalStart = dayjs(segment.departureTime);
-                originalEnd = dayjs(segment.arrivalTime);
+            if (flightId !== null && segmentIdOrIndex !== null) {
+              flight = flights.find(f => f.id === flightId);
+              if (flight && flight.flightSegments) {
+                // segment.id가 있으면 그 id로 찾고, 없으면 index로 찾기
+                let segment = flight.flightSegments.find((seg: any, idx: number) => 
+                  seg.id === segmentIdOrIndex || (seg.id == null && idx + 1 === segmentIdOrIndex)
+                );
+                
+                // 위 방법으로 못 찾으면 index로 직접 접근
+                if (!segment && segmentIdOrIndex > 0) {
+                  segmentIndex = segmentIdOrIndex - 1;
+                  segment = flight.flightSegments[segmentIndex];
+                } else if (segment) {
+                  segmentIndex = flight.flightSegments.findIndex((seg: any) => 
+                    seg.id === segment.id || seg === segment
+                  );
+                }
+                
+                if (segment) {
+                  originalStart = dayjs(segment.departureTime);
+                  originalEnd = dayjs(segment.arrivalTime);
+                }
               }
             }
           }
@@ -444,14 +600,125 @@ export default function WeeklySchedulePanel({
             
             // 새로운 시작/종료 시간 계산
             const newStart = dropTime.toDate();
-            const newEnd = dropTime.add(duration, 'minute').toDate();            
-          
-            // 드롭된 위치 저장
+            const newEnd = dropTime.add(duration, 'minute').toDate();
+            
+            // 항공편인 경우 겹침 검증 (현재 드래그 중인 segment만 제외)
+            if (draggingEvent.type === 'flight' && flightId !== null && segmentIndex !== null && flight) {
+              const newStartTime = dayjs(newStart);
+              const newEndTime = dayjs(newEnd);
+              
+              // 모든 항공편의 segment와 비교 (현재 드래그 중인 segment 제외)
+              for (const existingFlight of flights) {
+                if (!existingFlight.flightSegments || existingFlight.flightSegments.length === 0) {
+                  continue;
+                }
+                
+                // 각 구간과 비교
+                for (let idx = 0; idx < existingFlight.flightSegments.length; idx++) {
+                  const existingSegment = existingFlight.flightSegments[idx];
+                  
+                  // 같은 항공편의 같은 segment는 제외 (자기 자신)
+                  if (existingFlight.id === flightId && idx === segmentIndex) {
+                    continue;
+                  }
+                  
+                  const existingDepTime = dayjs(existingSegment.departureTime);
+                  const existingArrTime = dayjs(existingSegment.arrivalTime);
+                  
+                  // 시간이 겹치는지 확인 (범위가 겹치면 true)
+                  const hasOverlap = (
+                    (newStartTime.isAfter(existingDepTime) || newStartTime.isSame(existingDepTime)) && newStartTime.isBefore(existingArrTime) ||
+                    newEndTime.isAfter(existingDepTime) && (newEndTime.isBefore(existingArrTime) || newEndTime.isSame(existingArrTime)) ||
+                    (newStartTime.isBefore(existingDepTime) && newEndTime.isAfter(existingArrTime))
+                  );
+                  
+                  if (hasOverlap) {
+                    Alert.alert('알림', '겹치는 항공 일정이 있어요');
+                    // 드래그 종료
+                    setDraggingEvent(null);
+                    setDragOffset({ x: 0, y: 0 });
+                    setDropPreviewPosition(null);
+                    dropPreviewPositionRef.current = null;
+                    setHasOverlap(false);
+                    return;
+                  }
+                }
+              }
+            }
+            
+            // 드롭된 위치 저장 (로컬 상태)
             setDroppedEventPosition({
               eventId: draggingEvent.id,
               newStart,
               newEnd,
             });
+            
+            // 서버 업데이트
+            try {
+              if (draggingEvent.type === 'itinerary' && itineraryId) {
+                // 일정 업데이트 - 응답값을 받아서 사용
+                const updatedItinerary = await itinerariesApi.updateItinerary(itineraryId, {
+                  itineraryDate: dayjs(newStart).format('YYYY-MM-DD'),
+                  startTime: dayjs(newStart).format('HH:mm'),
+                  endTime: dayjs(newEnd).format('HH:mm'),
+                });
+                
+                // 성공 시 planData의 refreshItineraries 호출하여 즉시 반영
+                if (planData?.refreshItineraries) {
+                  await planData.refreshItineraries();
+                } else if (onPlansRefresh) {
+                  onPlansRefresh();
+                }
+                
+                // 드롭된 위치 초기화 (서버에서 새 데이터를 가져왔으므로)
+                setDroppedEventPosition(null);
+              } else if (draggingEvent.type === 'flight' && flightId !== null && flight && segmentIndex !== null) {
+                // 항공편 업데이트 - 해당 segment만 시간 변경
+                const updatedSegments = flight.flightSegments.map((segment: any, idx: number) => {
+                  if (idx === segmentIndex) {
+                    return {
+                      ...segment,
+                      departureTime: dayjs(newStart).toISOString(),
+                      arrivalTime: dayjs(newEnd).toISOString(),
+                    };
+                  }
+                  return segment;
+                });
+                
+                await flightsApi.updateFlight(flightId, {
+                  segments: updatedSegments.map((seg: any) => ({
+                    airline: seg.airline || null,
+                    flightNumber: seg.flightNumber || null,
+                    departureAirport: seg.departureAirport,
+                    arrivalAirport: seg.arrivalAirport,
+                    departureTime: seg.departureTime,
+                    arrivalTime: seg.arrivalTime,
+                    seatClass: seg.seatClass || null,
+                    seatNumber: seg.seatNumber || null,
+                    gate: seg.gate || null,
+                    terminal: seg.terminal || null,
+                  })),
+                });
+                
+                // 업데이트 후 전체 객체 조회 (디테일패널과 동일한 방식)
+                const updatedFlight = await flightsApi.getFlight(flightId);
+                
+                // 성공 시 planData의 refreshFlights 호출하여 즉시 반영
+                if (planData?.refreshFlights) {
+                  await planData.refreshFlights();
+                } else if (onPlansRefresh) {
+                  onPlansRefresh();
+                }
+                
+                // 드롭된 위치 초기화 (서버에서 새 데이터를 가져왔으므로)
+                setDroppedEventPosition(null);
+              }
+            } catch (error) {
+              console.error('Failed to update event:', error);
+              Alert.alert('오류', '일정 업데이트에 실패했습니다.');
+              // 실패 시 드롭된 위치 롤백
+              setDroppedEventPosition(null);
+            }
           }
         }
         
@@ -460,6 +727,7 @@ export default function WeeklySchedulePanel({
         setDragOffset({ x: 0, y: 0 });
         setDropPreviewPosition(null);
         dropPreviewPositionRef.current = null;
+        setHasOverlap(false);
       };
       
       window.addEventListener('mousemove', handleMouseMove);
@@ -1364,7 +1632,11 @@ export default function WeeklySchedulePanel({
             height: draggingEvent.elementHeight,
             borderWidth: 2,
             borderStyle: 'dashed' as any,
-            borderColor: draggingEvent.type === 'itinerary' ? 'rgba(0, 102, 255, 0.5)' : 'rgba(139, 92, 246, 0.5)',
+            borderColor: draggingEvent.type === 'flight' && hasOverlap 
+              ? '#FF4242' 
+              : draggingEvent.type === 'itinerary' 
+                ? 'rgba(0, 102, 255, 0.5)' 
+                : 'rgba(139, 92, 246, 0.5)',
             backgroundColor: 'transparent',
             borderRadius: radii.md,
             pointerEvents: 'none' as const,
@@ -1381,10 +1653,36 @@ export default function WeeklySchedulePanel({
         
         const isItinerary = draggedEvent.type === 'itinerary';
         const isFlight = draggedEvent.type === 'flight';
+        
+        // 드롭 위치가 있으면 실시간 시간 계산, 없으면 원래 시간 사용
+        let displayStartTime = draggedEvent.normalizedStartTime;
+        let displayEndTime = draggedEvent.normalizedEndTime;
+        
+        if (dropPreviewPosition && dropPreviewPosition.time) {
+          // 원래 이벤트의 duration 계산
+          const originalStart = new Date(draggedEvent.start).getTime();
+          const originalEnd = new Date(draggedEvent.end).getTime();
+          const durationMinutes = (originalEnd - originalStart) / (1000 * 60);
+          
+          // 드롭 위치의 시간을 시작 시간으로 사용
+          const newStartTime = dayjs(dropPreviewPosition.time);
+          const newEndTime = newStartTime.add(durationMinutes, 'minute');
+          
+          // 시간 포맷팅
+          displayStartTime = newStartTime.format('HH:mm');
+          displayEndTime = newEndTime.format('HH:mm');
+          
+          // 24:00 처리
+          if (displayEndTime === '23:59' || (newEndTime.hour() === 23 && newEndTime.minute() === 59)) {
+            displayEndTime = '24:00';
+          }
+        }
+        
         const flightStyle = isFlight ? {
           backgroundColor: 'rgba(139, 92, 246, 0.1)',
-          borderWidth: 1,
-          borderColor: '#8B5CF6',
+          borderWidth: hasOverlap ? 2 : 1,
+          borderColor: hasOverlap ? '#FF4242' : '#8B5CF6',
+          borderStyle: hasOverlap ? ('dashed' as any) : ('solid' as any),
           borderRadius: radii.md,
         } : null;
         const itineraryStyle = isItinerary ? {
@@ -1434,11 +1732,11 @@ export default function WeeklySchedulePanel({
                   </Text>
                 </View>
               )}
-              {dragShowTime && (isItinerary) && draggedEvent.normalizedStartTime && draggedEvent.normalizedEndTime && (
+              {dragShowTime && (isItinerary) && displayStartTime && displayEndTime && (
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: dragShowTitle ? 8 : 0 }}>
                   <WeekBarTimeIcon width={14} height={14} />
                   <Text numberOfLines={1} ellipsizeMode="tail" style={{ ...textStyles.h9, color: '#0066FF', lineHeight: 10 }}>
-                    {draggedEvent.normalizedStartTime} - {draggedEvent.normalizedEndTime}
+                    {displayStartTime} - {displayEndTime}
                   </Text>
                 </View>
               )}
@@ -1450,9 +1748,9 @@ export default function WeeklySchedulePanel({
                   </Text>
                 </View>
               )}
-              {dragShowTime && isFlight && draggedEvent.normalizedStartTime && draggedEvent.normalizedEndTime && (
+              {dragShowTime && isFlight && displayStartTime && displayEndTime && (
                 <Text numberOfLines={1} ellipsizeMode="tail" style={{ ...textStyles.h9, color: '#8B5CF6', lineHeight: 10, marginTop: dragShowTitle ? 8 : 0 }}>
-                  {draggedEvent.normalizedStartTime}-{draggedEvent.normalizedEndTime}
+                  {displayStartTime}-{displayEndTime}
                 </Text>
               )}
             </View>
