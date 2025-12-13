@@ -31,7 +31,7 @@ class ExpenseCreateWithItinerary(ExpenseCreate):
 
 
 class ExpenseBatchCreate(APISchema):
-    """여러 지출을 한 번에 생성하기 위한 스키마"""
+    """여러 비용을 한 번에 생성하기 위한 스키마"""
     plan_id: int
     itinerary_id: int | None = None
     flight_id: int | None = None

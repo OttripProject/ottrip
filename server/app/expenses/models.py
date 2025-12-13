@@ -55,7 +55,7 @@ class Expense(Base):
     """설명"""
 
     ex_date: Mapped[date]
-    """지출날짜"""
+    """비용날짜"""
 
     plan_id: Mapped[int] = mapped_column(
         Integer,
