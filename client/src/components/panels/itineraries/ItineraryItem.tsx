@@ -16,6 +16,7 @@ import AddIcon from '../../../../assets/add.svg';
 import XIcon from '../../../../assets/x.svg';
 import BaseCalendar from '@/components/popup/calendar/BaseCalendar';
 import CalendarIcon from '../../../../assets/calender.svg';
+import WarningBanner from '@/ui/components/toast/warning';
 
 interface ItineraryItemProps {
   itinerary?: any;
@@ -40,6 +41,8 @@ export default function ItineraryItem({
   selectedDate,
   onShowWarning
 }: ItineraryItemProps) {
+  const [showWarning, setShowWarning] = useState(false);
+  const [warningMessage, setWarningMessage] = useState('');
   const [formData, setFormData] = useState({
     title: itinerary?.title || '',
     description: itinerary?.description || '',
@@ -190,6 +193,8 @@ export default function ItineraryItem({
         !formData.itineraryDate || 
         !formData.startTime || 
         !formData.endTime) {
+      setWarningMessage('입력되지 않은 값이 있어요.');
+      setShowWarning(true);
       onShowWarning?.();
       return;
     }
@@ -770,7 +775,17 @@ export default function ItineraryItem({
         )}
       </View>
 
-      <View style={styles.buttonRow}>
+      <View style={[styles.buttonRow, { position: 'relative', zIndex: 1 }]}>
+        <WarningBanner
+          message={warningMessage}
+          visible={showWarning}
+          duration={3000}
+          bottomOffset={70}
+          onHide={() => {
+            setShowWarning(false);
+            setWarningMessage('');
+          }}
+        />
         <Pressable
           style={styles.deleteButton}
           onPress={handleDelete}

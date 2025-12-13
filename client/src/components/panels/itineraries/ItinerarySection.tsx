@@ -22,7 +22,6 @@ interface ItinerarySectionProps {
   onConsumeOpenNewItineraryForm?: () => void;
   selectedItineraryDate?: Date | null;
   onEdit?: (itinerary: any) => void;
-  onShowWarning?: (message?: string) => void;
 }
 
 export default function ItinerarySection({
@@ -35,7 +34,6 @@ export default function ItinerarySection({
   onConsumeOpenNewItineraryForm,
   selectedItineraryDate,
   onEdit,
-  onShowWarning,
 }: ItinerarySectionProps) {
   const [showItineraryForm, setShowItineraryForm] = useState(openNewItineraryForm || false);
   const [editingItinerary, setEditingItinerary] = useState<any | null>(null);
@@ -195,7 +193,6 @@ export default function ItinerarySection({
         onDelete={handleItineraryDelete}
         onExpenseUpdate={planData.refreshExpenses}
         selectedDate={selectedItineraryDate || undefined}
-        onShowWarning={onShowWarning}
       />
     );
   }

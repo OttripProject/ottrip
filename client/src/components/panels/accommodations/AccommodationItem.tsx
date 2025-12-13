@@ -16,6 +16,7 @@ import DropDownPicker from 'react-native-dropdown-picker';
 import DownArrowIcon from '../../../../assets/down_arrow.svg';
 import UpperArrowIcon from '../../../../assets/upper_arrow.svg';
 import { ExpenseCurrency, currencyLabels } from '@/types/expense';
+import WarningBanner from '@/ui/components/toast/warning';
 
 interface AccommodationItemProps {
   accommodation?: any;
@@ -34,8 +35,9 @@ export default function AccommodationItem({
   onSave, 
   onCancel, 
   onDelete,
-  onShowWarning,
 }: AccommodationItemProps) {
+  const [showWarning, setShowWarning] = useState(false);
+  const [warningMessage, setWarningMessage] = useState('');
   const [formData, setFormData] = useState({
     name: accommodation?.name || '',
     place: accommodation?.place || '',
@@ -89,7 +91,8 @@ export default function AccommodationItem({
     // 모델 필수값 검증: name, checkin_date, checkout_date, checkin_time, checkout_time
     if (!formData.name.trim() || 
         !formData.checkin_date || !formData.checkout_date || !formData.checkin_time || !formData.checkout_time) {
-      onShowWarning?.();
+      setWarningMessage('입력되지 않은 값이 있어요.');
+      setShowWarning(true);
       return;
     }
 
@@ -366,7 +369,17 @@ export default function AccommodationItem({
       </View>
 
       {/* 하단 버튼 */}
-      <View style={[styles.buttonRow, { zIndex: -1, elevation: -1 }]}>
+      <View style={[styles.buttonRow, { position: 'relative', zIndex: 1 }]}>
+        <WarningBanner
+          message={warningMessage}
+          visible={showWarning}
+          duration={3000}
+          bottomOffset={70}
+          onHide={() => {
+            setShowWarning(false);
+            setWarningMessage('');
+          }}
+        />
         <Pressable
           style={styles.deleteButton}
           onPress={handleDelete}

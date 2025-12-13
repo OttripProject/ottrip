@@ -18,6 +18,7 @@ import XIcon from '../../../../assets/x.svg';
 import DropDownPicker from 'react-native-dropdown-picker';
 import DownArrowIcon from '../../../../assets/down_arrow.svg';
 import UpperArrowIcon from '../../../../assets/upper_arrow.svg';
+import WarningBanner from '@/ui/components/toast/warning';
 
 interface FlightItemProps {
   flight?: any;
@@ -59,6 +60,9 @@ export default function FlightItem({
     amount: flight?.expense?.amount || '',
     currency: flight?.expense?.currency || ExpenseCurrency.KRW,
   });
+
+  const [showWarning, setShowWarning] = useState(false);
+  const [warningMessage, setWarningMessage] = useState('');
 
   // FlightSegment 타입 정의
   type SegmentForm = {
@@ -177,7 +181,8 @@ export default function FlightItem({
     }
 
     if (!isFirstSegmentValid) {
-      onShowWarning?.();
+      setWarningMessage('입력되지 않은 값이 있어요.');
+      setShowWarning(true);
       return;
     }
 
@@ -209,7 +214,8 @@ export default function FlightItem({
           );
 
           if (hasOverlap) {
-            onShowWarning?.('겹치는 항공 일정이 있어요');
+            setWarningMessage('겹치는 항공 일정이 있어요');
+            setShowWarning(true);
             return;
           }
         }
@@ -690,7 +696,17 @@ export default function FlightItem({
         </View>
 
         {/* 하단 버튼 */}
-        <View style={[styles.buttonRow, { zIndex: -1, elevation: -1 }]}>
+        <View style={[styles.buttonRow, { position: 'relative', zIndex: 100000 }]}>
+          <WarningBanner
+            message={warningMessage}
+            visible={showWarning}
+            duration={3000}
+            bottomOffset={70}
+            onHide={() => {
+              setShowWarning(false);
+              setWarningMessage('');
+            }}
+          />
           <Pressable
             style={styles.deleteButton}
             onPress={handleDelete}

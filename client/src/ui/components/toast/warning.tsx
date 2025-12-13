@@ -11,60 +11,58 @@ interface WarningBannerProps {
   visible: boolean;
   duration?: number; // milliseconds
   onHide?: () => void;
+  bottomOffset?: number; // 버튼 위로부터의 거리 (기본값: 44, undefined면 상단 고정)
 }
 
 export default function WarningBanner({ 
   message, 
   visible, 
-  duration = 5000,
-  onHide 
+  duration = 3000,
+  onHide,
+  bottomOffset = 70
 }: WarningBannerProps) {
-  const translateY = useRef(new Animated.Value(-60)).current;
   const opacity = useRef(new Animated.Value(0)).current;
+  const scale = useRef(new Animated.Value(0.8)).current;
 
   useEffect(() => {
     let timer: NodeJS.Timeout | null = null;
     
     if (visible) {
-      const slideDuration = 1000;
-      
-      // 나타나는 애니메이션 시작
+      // 나타나는 애니메이션
       Animated.parallel([
-        Animated.timing(translateY, {
-          toValue: 0,
-          duration: slideDuration,
-          useNativeDriver: true,
-        }),
         Animated.timing(opacity, {
           toValue: 1,
-          duration: slideDuration,
+          duration: 200,
           useNativeDriver: true,
         }),
-      ]).start(() => {
-        // 나타나는 애니메이션이 완료된 후 duration만큼 머무르기
-        if (duration > 0) {
-          timer = setTimeout(() => {
-            // 사라지는 애니메이션 시작
-            Animated.parallel([
-              Animated.timing(translateY, {
-                toValue: -60,
-                duration: slideDuration,
-                useNativeDriver: true,
-              }),
-              Animated.timing(opacity, {
-                toValue: 0,
-                duration: slideDuration,
-                useNativeDriver: true,
-              }),
-            ]).start(() => {
-              onHide?.();
-            });
-          }, duration);
-        }
-      });
+        Animated.spring(scale, {
+          toValue: 1,
+          tension: 50,
+          friction: 7,
+          useNativeDriver: true,
+        }),
+      ]).start();
+
+      // duration 후 사라지는 애니메이션
+      timer = setTimeout(() => {
+        Animated.parallel([
+          Animated.timing(opacity, {
+            toValue: 0,
+            duration: 300,
+            useNativeDriver: true,
+          }),
+          Animated.timing(scale, {
+            toValue: 0.8,
+            duration: 300,
+            useNativeDriver: true,
+          }),
+        ]).start(() => {
+          onHide?.();
+        });
+      }, duration);
     } else {
-      translateY.setValue(-60);
       opacity.setValue(0);
+      scale.setValue(0.8);
     }
 
     return () => {
@@ -72,7 +70,7 @@ export default function WarningBanner({
         clearTimeout(timer);
       }
     };
-  }, [visible, duration, onHide, translateY, opacity]);
+  }, [visible, duration, onHide, opacity, scale]);
 
   if (!visible) return null;
 
@@ -81,8 +79,9 @@ export default function WarningBanner({
       style={[
         styles.banner,
         {
-          transform: [{ translateY }],
           opacity,
+          transform: [{ scale }],
+          ...(bottomOffset !== undefined ? { bottom: bottomOffset } : { top: 0 }),
         }
       ]}
     >
@@ -95,7 +94,6 @@ export default function WarningBanner({
 const styles = StyleSheet.create({
   banner: {
     position: 'absolute',
-    top: 0,
     left: 0,
     right: 0,
     backgroundColor: colors.gray700,
@@ -106,10 +104,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: spacing.md,
     gap: spacing.sm,
-    zIndex: 10000,
-    elevation: 10,
-    marginHorizontal: spacing.md,
-    marginTop: spacing.md,
+    zIndex: 99999, // 제일 위에 표시
+    elevation: 20,
+    shadowColor: colors.black,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
   },
   text: {
     ...textStyles.body5,
