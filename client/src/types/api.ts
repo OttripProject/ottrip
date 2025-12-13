@@ -185,7 +185,7 @@ export interface UpdateAccommodationRequest {
   };
 }
 
-// 지출 (Expense) 관련 타입
+// 비용 (Expense) 관련 타입
 export enum ExpenseCategory {
   FOOD = "food",
   TRANSPORT = "transport",

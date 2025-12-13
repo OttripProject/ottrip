@@ -37,7 +37,7 @@ export const PLACEHOLDERS = {
     amount: '0',
     currency: 'KRW',
     description: '설명',
-    descriptionForm: '지출 설명을 입력하세요.',
+    descriptionForm: '비용 설명을 입력하세요.',
   },
   profile: {
     nickname: '닉네임을 입력해주세요.',
