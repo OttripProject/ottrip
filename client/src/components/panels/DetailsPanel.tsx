@@ -1,10 +1,9 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { ScrollView, View, Text, StyleSheet } from 'react-native';
 import PanelLayout from './PanelLayout';
 import ItinerarySection from './itineraries/ItinerarySection';
 import FlightSection from './flights/FlightSection';
 import AccommodationSection from './accommodations/AccommodationSection';
-import WarningBanner from '@/ui/components/toast/warning';
 
 interface DetailsPanelProps {
   planData?: {
@@ -67,8 +66,6 @@ export default function DetailsPanel({
   onConsumeOpenNewAccommodationForm,
   newAccommodationDraft,
 }: DetailsPanelProps) {
-  const [showWarning, setShowWarning] = useState(false);
-  const [warningMessage, setWarningMessage] = useState('입력되지 않은 값이 있어요.');
   if (!planData?.plan) {
     return (
       <PanelLayout style={styles.container}>
@@ -93,10 +90,6 @@ export default function DetailsPanel({
           openNewItineraryForm={openNewItineraryForm}
           onConsumeOpenNewItineraryForm={onConsumeOpenNewItineraryForm}
           selectedItineraryDate={selectedItineraryDate}
-          onShowWarning={(message?: string) => {
-            if (message) setWarningMessage(message);
-            setShowWarning(true);
-          }}
         />
       );
     }
@@ -111,10 +104,6 @@ export default function DetailsPanel({
           onFlightClear={onFlightClear}
           openNewFlightForm={openNewFlightForm}
           onConsumeOpenNewFlightForm={onConsumeOpenNewFlightForm}
-          onShowWarning={(message?: string) => {
-            if (message) setWarningMessage(message);
-            setShowWarning(true);
-          }}
         />
       );
     }
@@ -131,10 +120,6 @@ export default function DetailsPanel({
           openNewAccommodationForm={openNewAccommodationForm}
           onConsumeOpenNewAccommodationForm={onConsumeOpenNewAccommodationForm}
           newAccommodationDraft={newAccommodationDraft}
-          onShowWarning={(message?: string) => {
-            if (message) setWarningMessage(message);
-            setShowWarning(true);
-          }}
         />
       );
     }
@@ -159,10 +144,6 @@ export default function DetailsPanel({
             openNewItineraryForm={openNewItineraryForm}
             onConsumeOpenNewItineraryForm={onConsumeOpenNewItineraryForm}
             selectedItineraryDate={selectedItineraryDate}
-            onShowWarning={(message?: string) => {
-            if (message) setWarningMessage(message);
-            setShowWarning(true);
-          }}
           />
         );
 
@@ -175,10 +156,6 @@ export default function DetailsPanel({
             onFlightClear={onFlightClear}
             openNewFlightForm={openNewFlightForm}
             onConsumeOpenNewFlightForm={onConsumeOpenNewFlightForm}
-            onShowWarning={(message?: string) => {
-            if (message) setWarningMessage(message);
-            setShowWarning(true);
-          }}
           />
         );
 
@@ -193,10 +170,6 @@ export default function DetailsPanel({
             openNewAccommodationForm={openNewAccommodationForm}
             onConsumeOpenNewAccommodationForm={onConsumeOpenNewAccommodationForm}
             newAccommodationDraft={newAccommodationDraft}
-            onShowWarning={(message?: string) => {
-              if (message) setWarningMessage(message);
-              setShowWarning(true);
-            }}
           />
         );
 
@@ -214,15 +187,6 @@ export default function DetailsPanel({
   return (
     <PanelLayout style={styles.container}>
       <View style={styles.scrollWrapper}>
-        <WarningBanner
-          message={warningMessage}
-          visible={showWarning}
-          duration={1000}
-          onHide={() => {
-            setShowWarning(false);
-            setWarningMessage('입력되지 않은 값이 있어요.'); // 기본 메시지로 리셋
-          }}
-        />
         <ScrollView 
           style={styles.scrollView}
           contentContainerStyle={isInitial ? [styles.scrollContent, styles.centerScroll] : styles.scrollContent}

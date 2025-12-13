@@ -20,7 +20,6 @@ interface FlightSectionProps {
   openNewFlightForm?: boolean;
   onConsumeOpenNewFlightForm?: () => void;
   onEdit?: (flight: any) => void;
-  onShowWarning?: (message?: string) => void;
 }
 
 export default function FlightSection({
@@ -32,7 +31,6 @@ export default function FlightSection({
   openNewFlightForm,
   onConsumeOpenNewFlightForm,
   onEdit,
-  onShowWarning,
 }: FlightSectionProps) {
   const [showFlightForm, setShowFlightForm] = useState(false);
   const [editingFlight, setEditingFlight] = useState<any | null>(null);
@@ -246,7 +244,6 @@ export default function FlightSection({
         existingFlights={planData.flights}
         existingItineraries={planData.itineraries}
         existingAccommodations={planData.accommodations}
-        onShowWarning={onShowWarning}
       />
     );
   }

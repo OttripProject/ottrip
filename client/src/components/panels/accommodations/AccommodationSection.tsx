@@ -21,7 +21,6 @@ interface AccommodationSectionProps {
   onConsumeOpenNewAccommodationForm?: () => void;
   newAccommodationDraft?: any | null;
   onEdit?: (accommodation: any) => void;
-  onShowWarning?: (message?: string) => void;
 }
 
 export default function AccommodationSection({
@@ -35,7 +34,6 @@ export default function AccommodationSection({
   onConsumeOpenNewAccommodationForm,
   newAccommodationDraft,
   onEdit,
-  onShowWarning,
 }: AccommodationSectionProps) {
   const [showAccommodationForm, setShowAccommodationForm] = useState(false);
   const [editingAccommodation, setEditingAccommodation] = useState<any | null>(null);
@@ -199,7 +197,6 @@ export default function AccommodationSection({
           onAccommodationClear?.();
         }}
         onDelete={handleAccommodationDelete}
-        onShowWarning={onShowWarning}
       />
     );
   }
