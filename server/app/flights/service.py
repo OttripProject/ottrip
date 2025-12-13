@@ -46,7 +46,10 @@ class FlightService:
         if not flight_data.segments or len(flight_data.segments) < 1:
             raise HTTPException(status_code=400, detail="세그먼트는 최소 1개 이상이어야 합니다.")
 
-        for idx, seg in enumerate(flight_data.segments, start=1):
+        # 시간 순서대로 정렬 (departure_time 기준)
+        sorted_segments = sorted(flight_data.segments, key=lambda seg: seg.departure_time)
+
+        for idx, seg in enumerate(sorted_segments, start=1):
             segment = FlightSegment(
                 flight_id=created_flight.id,
                 airline=seg.airline or "",
@@ -149,9 +152,10 @@ class FlightService:
             for segment_id in segments_to_delete:
                 await self.flight_repository.soft_delete_segment(segment_id=segment_id)
             
+            # 시간 순서대로 정렬 (departure_time 기준)
+            sorted_segments = sorted(update_data.segments, key=lambda seg: seg.departure_time)
             
-            
-            for idx, seg_data in enumerate(update_data.segments, start=1):
+            for idx, seg_data in enumerate(sorted_segments, start=1):
                 if seg_data.id and seg_data.id in existing_segment_ids:
                     existing_seg = next((s for s in existing_segments if s.id == seg_data.id), None)
                     if existing_seg:
@@ -261,7 +265,9 @@ class FlightService:
             )
             if not is_editor:
                 raise HTTPException(status_code=403, detail="세그먼트 추가 권한이 없습니다.")
-        segment = FlightSegment(
+        
+        # 새 segment 생성 (임시 order로 저장)
+        new_segment = FlightSegment(
             flight_id=data.flight_id,
             airline=data.airline or "",
             flight_number=data.flight_number or "",
@@ -273,10 +279,21 @@ class FlightService:
             seat_number=data.seat_number or "",
             gate=data.gate or "",
             terminal=data.terminal or "",
-            order=len(flight.flight_segments) + 1,
+            order=0,  # 임시값, 아래에서 재할당
         )
-        created = await self.flight_repository.save_segment(segment=segment)
-        return FlightSegmentRead.model_validate(created)
+        created = await self.flight_repository.save_segment(segment=new_segment)
+        
+        # 모든 segments를 시간 순서대로 재정렬
+        all_segments = await self.flight_repository.find_segments_by_flight(flight_id=flight.id)
+        sorted_segments = sorted(all_segments, key=lambda seg: seg.departure_time)
+        for idx, segment in enumerate(sorted_segments, start=1):
+            if segment.order != idx:
+                segment.order = idx
+                await self.flight_repository.save_segment(segment=segment)
+        
+        # 업데이트된 segment 반환
+        updated_segment = await self.flight_repository.find_segment_by_id(segment_id=created.id)
+        return FlightSegmentRead.model_validate(updated_segment)
 
     async def update_segment(self, *, segment_id: int, data: FlightSegmentUpdate) -> FlightSegmentRead:
         seg = await self.flight_repository.find_segment_by_id(segment_id=segment_id)
@@ -309,7 +326,16 @@ class FlightService:
             seg.gate = data.gate or ""
         if data.terminal is not None:
             seg.terminal = data.terminal or ""
-        saved = await self.flight_repository.save_segment(segment=seg)
+        
+        # 시간이 변경되었을 수 있으므로 모든 segments를 시간 순서대로 재정렬
+        all_segments = await self.flight_repository.find_segments_by_flight(flight_id=flight.id)
+        sorted_segments = sorted(all_segments, key=lambda s: s.departure_time)
+        for idx, segment in enumerate(sorted_segments, start=1):
+            if segment.order != idx:
+                segment.order = idx
+                await self.flight_repository.save_segment(segment=segment)
+        
+        saved = await self.flight_repository.find_segment_by_id(segment_id=segment_id)
         return FlightSegmentRead.model_validate(saved)
 
     async def delete_segment(self, *, segment_id: int) -> None:
