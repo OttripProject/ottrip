@@ -3,7 +3,7 @@ from app.expenses.schemas import ExpenseRead
 from app.schemas import APISchema
 
 
-# - 입력 항목: 제목 / 시작~종료 시간 / 상세 내용 / 국가·도시 / 지출 항목
+# - 입력 항목: 제목 / 시작~종료 시간 / 상세 내용 / 국가·도시 / 비용 항목
 class ItineraryBase(APISchema):
     title: str
     itinerary_date: date

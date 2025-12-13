@@ -46,7 +46,7 @@ class ExpenseService:
         return ExpenseRead.model_validate(created_expense)
 
     async def create_batch(self, *, batch_data: ExpenseBatchCreate) -> list[ExpenseRead]:
-        """여러 지출을 한 번에 생성합니다."""
+        """여러 비용을 한 번에 생성합니다."""
         plan_exists, has_permission = await self.plan_repository.has_edit_permission(
             plan_id=batch_data.plan_id, user_id=self.current_user.id
         )

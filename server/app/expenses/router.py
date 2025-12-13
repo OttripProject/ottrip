@@ -81,7 +81,7 @@ async def create_expenses_batch(
 ) -> list[ExpenseRead]:
     """
     여러 비용 정보를 한 번에 생성합니다.
-    일정, 항공편, 숙박에 연결된 여러 지출을 배치로 생성할 수 있습니다.
+    일정, 항공편, 숙박에 연결된 여러 비용을 배치로 생성할 수 있습니다.
     """
     return await expense_service.create_batch(batch_data=batch_data)
 
