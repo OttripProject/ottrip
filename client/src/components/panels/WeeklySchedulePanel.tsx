@@ -423,17 +423,77 @@ export default function WeeklySchedulePanel({
       // 시간 범위 제한 (0-23시)
       const clampedHour = Math.max(0, Math.min(24, hour));
       const targetTime = targetDate.hour(clampedHour).minute(minutes).second(0).millisecond(0);
-          
-      // 드롭 위치의 실제 화면 좌표 계산 (해당 날짜/시간 셀의 위치)
-      // segmentIndex는 relativeY로부터 계산되었고, relativeY는 스크롤을 포함한 절대 위치
-      // 화면에 표시되는 위치는 segmentIndex * segmentHeight에서 scrollTop을 빼야 함
-      const dayLeft = calendarRect.left + timeColumnWidth + (dayWidth * dayIndexClamped);
+      
       // segmentIndex * segmentHeight는 스크롤을 포함한 절대 위치이므로, 화면 좌표로 변환
       const timeTop = calendarRect.top + headerHeight + (segmentIndex * segmentHeight) - scrollTop;
       
-      // 이벤트의 left margin 반영 (3.5%)
-      const leftMarginPercent = 3.5;
-      const eventLeft = dayLeft + (dayWidth * leftMarginPercent / 100);
+      // 방법 2: 드래그 중인 이벤트의 원래 위치를 기준으로 열 위치 역산
+      let eventLeft: number;
+      
+      if (draggingEvent) {
+        // 원래 이벤트가 있던 날짜 찾기
+        let originalDate: dayjs.Dayjs | null = null;
+        
+        if (draggingEvent.type === 'itinerary') {
+          const itineraryId = parseInt(draggingEvent.id);
+          const itinerary = itineraries.find(it => it.id === itineraryId);
+          if (itinerary) {
+            originalDate = dayjs(itinerary.itineraryDate);
+          }
+        } else if (draggingEvent.type === 'flight') {
+          const eventIdParts = draggingEvent.id.split('-');
+          const flightId = eventIdParts.length > 1 ? parseInt(eventIdParts[1]) : null;
+          
+          if (flightId !== null) {
+            const flight = flights.find(f => f.id === flightId);
+            if (flight && flight.flightSegments && flight.flightSegments.length > 0) {
+              // 첫 번째 segment의 출발 시간 사용
+              const segmentIdOrIndex = eventIdParts.length > 2 ? parseInt(eventIdParts[2]) : null;
+              if (segmentIdOrIndex !== null) {
+                const segment = flight.flightSegments.find((seg: any, idx: number) => 
+                  seg.id === segmentIdOrIndex || (seg.id == null && idx + 1 === segmentIdOrIndex)
+                );
+                if (segment) {
+                  originalDate = dayjs(segment.departureTime);
+                } else if (segmentIdOrIndex > 0) {
+                  originalDate = dayjs(flight.flightSegments[segmentIdOrIndex - 1].departureTime);
+                }
+              }
+            }
+          }
+        }
+        
+        if (originalDate) {
+          const originalDayIndex = originalDate.diff(currentWeekStart, 'day');
+          
+          // 원래 이벤트의 실제 위치 (드래그 시작 시 저장된 값)
+          const originalEventLeft = draggingEvent.elementX;
+          const originalEventWidth = draggingEvent.elementWidth;
+          
+          // 실제 막대는 left: 3.5%, width: 90%로 렌더링됨
+          // 따라서 열 너비 = eventWidth / 0.9
+          // 열 시작 위치 = eventLeft - (열 너비 * 0.035)
+          const originalColumnWidth = originalEventWidth / 0.9;
+          const originalColumnLeft = originalEventLeft - (originalColumnWidth * 0.035);
+          
+          // 드롭될 열의 위치 계산 (열 간격은 동일하다고 가정)
+          const dayDiff = dayIndexClamped - originalDayIndex;
+          const dropColumnLeft = originalColumnLeft + (originalColumnWidth * dayDiff);
+          
+          // 드롭 위치 계산 (동일한 마진 적용)
+          eventLeft = dropColumnLeft + (originalColumnWidth * 0.035);
+        } else {
+          // 원래 이벤트를 찾을 수 없으면 폴백: 계산 방식 사용
+          const dayLeft = calendarRect.left + timeColumnWidth + (dayWidth * dayIndexClamped);
+          const leftMarginPercent = 3.5;
+          eventLeft = dayLeft + (dayWidth * leftMarginPercent / 100);
+        }
+      } else {
+        // 드래그 중이 아니면 폴백: 계산 방식 사용
+        const dayLeft = calendarRect.left + timeColumnWidth + (dayWidth * dayIndexClamped);
+        const leftMarginPercent = 3.5;
+        eventLeft = dayLeft + (dayWidth * leftMarginPercent / 100);
+      }
       
       return {
         x: eventLeft,
@@ -441,7 +501,7 @@ export default function WeeklySchedulePanel({
         date: targetDate.format('YYYY-MM-DD'),
         time: targetTime.toDate(),
       };
-    }, [currentWeekStart, calendarLayout]);
+    }, [currentWeekStart, calendarLayout, draggingEvent, itineraries, flights]);
     
     // 드래그 중 겹침 체크 함수 (항공편만)
     const checkOverlap = useCallback((dropTime: Date, durationMinutes: number, flightId: number | null, segmentIndex: number | null) => {
@@ -513,7 +573,6 @@ export default function WeeklySchedulePanel({
         rafIdRef.current = requestAnimationFrame(() => {
           const offsetX = e.clientX - draggingEvent.startX;
           const offsetY = e.clientY - draggingEvent.startY;
-          setDragOffset({ x: offsetX, y: offsetY });
           
           // 드래그 중인 이벤트 막대의 현재 위치 계산
           const draggedElementX = draggingEvent.elementX + offsetX;
@@ -526,6 +585,20 @@ export default function WeeklySchedulePanel({
                   
           // 드롭 위치 미리보기 계산 (드래그 중인 이벤트 막대의 위치 기준)
           const dropPos = calculateDropPosition(elementCenterX, elementTopY);
+          
+          // 자석 효과: 드롭 위치가 있으면 막대를 드롭 위치로 스냅
+          if (dropPos) {
+            // 드롭 위치로 스냅된 offset 계산
+            const snapOffsetX = dropPos.x - draggingEvent.elementX;
+            const snapOffsetY = dropPos.y - draggingEvent.elementY;
+            
+            // 스냅된 위치로 offset 설정 (자석 효과)
+            setDragOffset({ x: snapOffsetX, y: snapOffsetY });
+          } else {
+            // 드롭 위치가 없으면 원래 offset 사용
+            setDragOffset({ x: offsetX, y: offsetY });
+          }
+          
           setDropPreviewPosition(dropPos);
           // ref에도 저장 (최신 값 보장)
           dropPreviewPositionRef.current = dropPos;
@@ -1748,7 +1821,7 @@ export default function WeeklySchedulePanel({
       />
       </View>
       
-      {/* 드롭 위치 미리보기 막대 (점선 테두리) */}
+      {/* 드롭 위치 미리보기 막대 (점선 테두리 + 자석 효과 강조) */}
       {draggingEvent && dropPreviewPosition && Platform.OS === 'web' && (
         <View
           style={{
@@ -1758,17 +1831,31 @@ export default function WeeklySchedulePanel({
             width: draggingEvent.elementWidth,
             height: draggingEvent.elementHeight,
             borderWidth: 2,
-            borderStyle: 'dashed' as any,
+            // borderStyle: 'dashed' as any,
             borderColor: draggingEvent.type === 'flight' && hasOverlap 
               ? '#FF4242' 
               : draggingEvent.type === 'itinerary' 
-                ? 'rgba(0, 102, 255, 0.5)' 
-                : 'rgba(139, 92, 246, 0.5)',
-            backgroundColor: 'transparent',
+                ? 'rgba(0, 102, 255, 0.8)' 
+                : 'rgba(139, 92, 246, 0.8)',
+            backgroundColor: draggingEvent.type === 'flight' && hasOverlap
+              ? 'rgba(255, 66, 66, 0.05)'
+              : draggingEvent.type === 'itinerary'
+                ? 'rgba(0, 102, 255, 0.05)'
+                : 'rgba(139, 92, 246, 0.05)',
             borderRadius: radii.md,
             pointerEvents: 'none' as const,
             zIndex: 9999,
-            opacity: 0.8,
+            opacity: 1,
+            // 자석 효과 강조를 위한 그림자
+            shadowColor: draggingEvent.type === 'flight' && hasOverlap
+              ? '#FF4242'
+              : draggingEvent.type === 'itinerary'
+                ? '#0066FF'
+                : '#8B5CF6',
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.3,
+            shadowRadius: 4,
+            elevation: 8,
           }}
         />
       )}
