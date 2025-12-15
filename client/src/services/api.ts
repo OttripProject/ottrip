@@ -199,18 +199,18 @@ api.interceptors.response.use(
       const newToken = await refreshToken(false);
       
       if (newToken) {
-        originalRequest.headers = originalRequest.headers || {};
+          originalRequest.headers = originalRequest.headers || {};
         (originalRequest.headers as any)["X-Auth-Token"] = newToken;
-        if ((originalRequest.headers as any)["Authorization"]) {
-          delete (originalRequest.headers as any)["Authorization"];
-        }
+          if ((originalRequest.headers as any)["Authorization"]) {
+            delete (originalRequest.headers as any)["Authorization"];
+          }
 
-        // 대기 중인 요청들에 새 토큰 전달
+          // 대기 중인 요청들에 새 토큰 전달
         processQueue(null, newToken);
 
-        // 토큰 갱신 후 원래 요청 재시도
-        return api(originalRequest);
-      } else {
+          // 토큰 갱신 후 원래 요청 재시도
+          return api(originalRequest);
+        } else {
         // 갱신 실패 시 대기 중인 요청들에 에러 전달
         processQueue(new Error('Token refresh failed'), null);
       }

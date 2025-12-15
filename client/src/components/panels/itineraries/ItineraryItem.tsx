@@ -8,7 +8,7 @@ import { itinerariesApi } from '@/services/itineraries';
 import { expensesApi } from '@/services/expenses';
 import { ExpenseCategory, ExpenseCurrency, categoryLabels, currencyLabels } from '@/types/expense';
 import { colors } from '@/ui/tokens/colors';
-import { textStyles, typography } from '@/ui/tokens/typography';
+import { textStyles } from '@/ui/tokens/typography';
 import { spacing } from '@/ui/tokens/spacing';
 import { radii } from '@/ui/tokens/radii';
 import DeleteIcon from '../../../../assets/delete.svg';
@@ -775,17 +775,7 @@ export default function ItineraryItem({
         )}
       </View>
 
-      <View style={[styles.buttonRow, { position: 'relative', zIndex: 1 }]}>
-        <WarningBanner
-          message={warningMessage}
-          visible={showWarning}
-          duration={3000}
-          bottomOffset={70}
-          onHide={() => {
-            setShowWarning(false);
-            setWarningMessage('');
-          }}
-        />
+      <View style={[styles.buttonRow, { position: 'relative' }]}>
         <Pressable
           style={styles.deleteButton}
           onPress={handleDelete}
@@ -802,6 +792,16 @@ export default function ItineraryItem({
           </Text>
         </Pressable>
       </View>
+      <WarningBanner
+        message={warningMessage}
+        visible={showWarning}
+        duration={3000}
+        bottomOffset={74}
+        onHide={() => {
+          setShowWarning(false);
+          setWarningMessage('');
+        }}
+      />
       </View>
     </ScrollView>
     </>
@@ -1074,14 +1074,5 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 70,
     left: 0,
-  },
-  modalOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'transparent',
-    zIndex: 19999,
   },
 });

@@ -72,7 +72,7 @@ export default function CompletionModal({
             {mode === 'error' ? (
               <WarnIcon width={20} height={20} />
             ) : (
-              <CheckIcon width={20} height={20} />
+            <CheckIcon width={20} height={20} />
             )}
           </View>
           <Text style={styles.completionTitle}>{title}</Text>

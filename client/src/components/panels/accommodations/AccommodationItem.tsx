@@ -6,15 +6,12 @@ import { CountryPicker, TimePicker } from '@/ui/components/pickers';
 import Input from '@/ui/components/input/Input';
 import { PLACEHOLDERS } from '@/constants/placeholders';
 import { colors } from '@/ui/tokens/colors';
-import { textStyles, typography } from '@/ui/tokens/typography';
+import { textStyles } from '@/ui/tokens/typography';
 import { spacing } from '@/ui/tokens/spacing';
 import { radii } from '@/ui/tokens/radii';
 import BaseCalendar from '@/components/popup/calendar/BaseCalendar';
 import CalendarIcon from '../../../../assets/calender.svg';
 import XIcon from '../../../../assets/x.svg';
-import DropDownPicker from 'react-native-dropdown-picker';
-import DownArrowIcon from '../../../../assets/down_arrow.svg';
-import UpperArrowIcon from '../../../../assets/upper_arrow.svg';
 import { ExpenseCurrency, currencyLabels } from '@/types/expense';
 import WarningBanner from '@/ui/components/toast/warning';
 
@@ -258,8 +255,8 @@ export default function AccommodationItem({
           />
         </View>
 
-        <View style={[styles.row, { gap: spacing.sm, zIndex: checkinTimeOpen || showCheckinDatePicker ? 2000 : 1000 }]}>
-          <View style={[styles.inputGroup, styles.halfWidth, { position: 'relative', zIndex: showCheckinDatePicker ? 20000 : 1000 }]}>
+        <View style={[styles.row, { gap: spacing.sm, zIndex: showCheckinDatePicker ? 30000 : checkinTimeOpen ? 20002 : 1 }]}>
+          <View style={[styles.inputGroup, styles.halfWidth, { position: 'relative' }]}>
             <Text style={styles.label}>체크인 날짜</Text>
             <Pressable 
               style={styles.dateInput} 
@@ -285,23 +282,31 @@ export default function AccommodationItem({
                 onClose={() => setShowCheckinDatePicker(false)}
                 style={styles.calendarPopup}
                 minDate={dayjs().format('YYYY-MM-DD')}
+                hideButtons={true}
+                autoCloseOnSelect={true}
               />
             )}
           </View>
-          <View style={[styles.inputGroup, styles.halfWidth, { position: 'relative', zIndex: checkinTimeOpen ? 2000 : 1000 }]}>
+          <View style={[styles.inputGroup, styles.halfWidth, { position: 'relative' }]}>
             <Text style={styles.label}>체크인 시간</Text>
             <TimePicker
               value={formData.checkin_time}
               onChange={(time) => setFormData({ ...formData, checkin_time: time })}
-              onOpen={() => setCheckinTimeOpen(true)}
+              onOpen={() => {
+                setCheckinTimeOpen(true);
+                // 체크인 시간이 열릴 때 체크아웃 시간 닫기
+                if (checkoutTimeOpen) {
+                  setCheckoutTimeOpen(false);
+                }
+              }}
               onClose={() => setCheckinTimeOpen(false)}
               style={styles.timePicker}
             />
           </View>
         </View>
 
-        <View style={[styles.row, { gap: spacing.sm, zIndex: checkoutTimeOpen || showCheckoutDatePicker ? 2000 : 500 }]}>
-          <View style={[styles.inputGroup, styles.halfWidth, { position: 'relative', zIndex: showCheckoutDatePicker ? 20000 : 500 }]}>
+        <View style={[styles.row, { gap: spacing.sm, zIndex: showCheckoutDatePicker ? 30000 : checkoutTimeOpen ? 20001 : 1 }]}>
+          <View style={[styles.inputGroup, styles.halfWidth, { position: 'relative' }]}>
             <Text style={styles.label}>체크아웃 날짜</Text>
             <Pressable 
               style={styles.dateInput} 
@@ -332,12 +337,18 @@ export default function AccommodationItem({
               />
             )}
           </View>
-          <View style={[styles.inputGroup, styles.halfWidth, { position: 'relative', zIndex: checkoutTimeOpen ? 2000 : 500 }]}>
+          <View style={[styles.inputGroup, styles.halfWidth, { position: 'relative' }]}>
             <Text style={styles.label}>체크아웃 시간</Text>
             <TimePicker
               value={formData.checkout_time}
               onChange={(time) => setFormData({ ...formData, checkout_time: time })}
-              onOpen={() => setCheckoutTimeOpen(true)}
+              onOpen={() => {
+                setCheckoutTimeOpen(true);
+                // 체크아웃 시간이 열릴 때 체크인 시간 닫기
+                if (checkinTimeOpen) {
+                  setCheckinTimeOpen(false);
+                }
+              }}
               onClose={() => setCheckoutTimeOpen(false)}
               style={styles.timePicker}
             />
@@ -366,20 +377,8 @@ export default function AccommodationItem({
             </View>
           </View>
         </View>
-      </View>
-
-      {/* 하단 버튼 */}
-      <View style={[styles.buttonRow, { position: 'relative', zIndex: 1 }]}>
-        <WarningBanner
-          message={warningMessage}
-          visible={showWarning}
-          duration={3000}
-          bottomOffset={70}
-          onHide={() => {
-            setShowWarning(false);
-            setWarningMessage('');
-          }}
-        />
+              {/* 하단 버튼 */}
+      <View style={[styles.buttonRow, { position: 'relative', zIndex: -1 }]}>
         <Pressable
           style={styles.deleteButton}
           onPress={handleDelete}
@@ -396,6 +395,20 @@ export default function AccommodationItem({
           </Text>
         </Pressable>
       </View>
+      <WarningBanner
+        message={warningMessage}
+        visible={showWarning}
+        duration={3000}
+        bottomOffset={70}
+        onHide={() => {
+          setShowWarning(false);
+          setWarningMessage('');
+        }}
+      />
+      </View>
+
+
+
     </ScrollView>
   );
 }
@@ -481,7 +494,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 70,
     left: 0,
-    zIndex: 20000,
+    zIndex: 30000,
   },
   timePicker: {
     borderWidth: 0,
