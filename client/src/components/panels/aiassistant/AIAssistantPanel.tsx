@@ -166,10 +166,10 @@ export default function AIAssistantPanel({ publicId }: AIAssistantPanelProps) {
 
   const getCategoryTitle = (categoryKey: string) => {
     const titles: { [key: string]: string } = {
-      'basicRequired': '기본 필수',
-      'scheduleRequired': '일정 필수', 
-      'recommended': '권장 (있으면 편리한 항목)',
-      'optional': '옵션 (선택 사항)'
+      'basicRequired': '꼭 챙겨야 해요',
+      'scheduleRequired': '이번 일정에 필요해요', 
+      'recommended': '있으면 더 좋아요',
+      'optional': '선택이에요'
     };
     return titles[categoryKey] || categoryKey;
   };
