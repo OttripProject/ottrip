@@ -715,10 +715,10 @@ export default function ItineraryItem({
                 />
               </View>
               <View style={styles.expenseFormHalf}>
-                <Text style={styles.label}>화폐</Text>
+                <Text style={styles.label}>통화</Text>
                 <View style={styles.currencyPicker}>
                   <Text style={styles.currencyText}>
-                  {ExpenseCurrency.KRW} ({currencyLabels[ExpenseCurrency.KRW]})
+                  {currencyLabels[ExpenseCurrency.KRW]}
                   </Text>
                 </View>
               </View>

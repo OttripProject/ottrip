@@ -270,6 +270,24 @@ export default function WeeklySchedulePanel({
     const calendarWrapperRef = useRef<View>(null);
     const [calendarLayout, setCalendarLayout] = useState({ x: 0, y: 0, width: 0, height: 0 });
     
+    // 캘린더 레이아웃 변경 시 DOM 캐시 무효화
+    useEffect(() => {
+      calendarElementRef.current = null;
+      scrollContainerRef.current = null;
+      calendarRectRef.current = null;
+    }, [calendarLayout]);
+    
+    // DOM 쿼리 결과 캐싱용 ref (성능 최적화)
+    const calendarElementRef = useRef<HTMLElement | null>(null);
+    const scrollContainerRef = useRef<HTMLElement | null>(null);
+    const calendarRectRef = useRef<DOMRect | null>(null);
+    
+    // requestAnimationFrame ID 저장용 ref
+    const rafIdRef = useRef<number | null>(null);
+    
+    // checkOverlap 디바운싱용 ref
+    const overlapCheckTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    
     // 드롭 위치 계산 함수
     const calculateDropPosition = useCallback((clientX: number, clientY: number) => {
       // 웹에서만 getBoundingClientRect 사용 가능
@@ -280,94 +298,88 @@ export default function WeeklySchedulePanel({
         return null;
       }
       
-      // 웹에서 DOM 요소 직접 찾기
-      let calendarElement: HTMLElement | null = null;
+      // 캐시된 DOM 요소 사용 (성능 최적화)
+      let calendarElement: HTMLElement | null = calendarElementRef.current;
+      let calendarRect: DOMRect | null = calendarRectRef.current;
+      let scrollContainer: HTMLElement | null = scrollContainerRef.current;
       
-      // 방법 1: data-testid로 찾기
-      calendarElement = document.querySelector('[data-testid="calendar-wrapper"]') as HTMLElement;
-      
-      // 방법 2: ref로 찾기
-      if (!calendarElement && calendarWrapperRef.current) {
-        const refElement = calendarWrapperRef.current as any;
-        if (refElement._nativeNode) {
-          calendarElement = refElement._nativeNode;
-        } else if (refElement._internalFiberInstanceHandleDEV?.stateNode) {
-          calendarElement = refElement._internalFiberInstanceHandleDEV.stateNode;
+      // 캐시가 없거나 무효화된 경우에만 DOM 쿼리 수행
+      if (!calendarElement || !calendarRect) {
+        // 방법 1: data-testid로 찾기
+        calendarElement = document.querySelector('[data-testid="calendar-wrapper"]') as HTMLElement;
+        
+        // 방법 2: ref로 찾기
+        if (!calendarElement && calendarWrapperRef.current) {
+          const refElement = calendarWrapperRef.current as any;
+          if (refElement._nativeNode) {
+            calendarElement = refElement._nativeNode;
+          } else if (refElement._internalFiberInstanceHandleDEV?.stateNode) {
+            calendarElement = refElement._internalFiberInstanceHandleDEV.stateNode;
+          }
         }
-      }
-      
-      // 방법 3: BigCalendar의 클래스로 찾기 (가장 안정적)
-      if (!calendarElement) {
-        const bigCalendar = document.querySelector('.rbc-calendar') as HTMLElement;
-        if (bigCalendar) {
-          calendarElement = bigCalendar;
+        
+        // 방법 3: BigCalendar의 클래스로 찾기 (가장 안정적)
+        if (!calendarElement) {
+          calendarElement = document.querySelector('.rbc-calendar') as HTMLElement;
         }
-      }
-      
-      // 방법 4: onLayout으로 저장된 위치 정보 사용
-      if (!calendarElement) {
-        // 모든 div 요소 중에서 크기가 일치하는 것 찾기
-        const allDivs = document.querySelectorAll('div');
-        calendarElement = Array.from(allDivs).find((el: any) => {
-          const rect = el.getBoundingClientRect();
-          return Math.abs(rect.width - calendarLayout.width) < 20 && 
-                 Math.abs(rect.height - calendarLayout.height) < 20 &&
-                 rect.width > 500; // 캘린더는 충분히 큰 요소
-        }) as HTMLElement || null;
-      }
-      
-      // 여전히 찾지 못하면 onLayout 정보로 직접 계산
-      let calendarRect: DOMRect;
-      if (!calendarElement) {
-        // onLayout으로 저장된 정보를 사용하여 가상의 rect 생성
-        // 하지만 실제 화면 위치를 알아야 하므로, 다른 방법 시도
-        const testElement = document.querySelector('[data-testid="calendar-wrapper"]') as HTMLElement;
-        if (testElement) {
-          calendarRect = testElement.getBoundingClientRect();
-        } else {
-          // 최후의 수단: 모든 큰 div 중에서 찾기
-          const bigDivs = Array.from(document.querySelectorAll('div')).filter((el: any) => {
+        
+        // 방법 4: onLayout으로 저장된 위치 정보 사용 (최후의 수단)
+        if (!calendarElement) {
+          const allDivs = document.querySelectorAll('div');
+          calendarElement = Array.from(allDivs).find((el: any) => {
             const rect = el.getBoundingClientRect();
-            return rect.width > 500 && rect.height > 300;
-          });
-          if (bigDivs.length > 0) {
-            calendarRect = (bigDivs[0] as HTMLElement).getBoundingClientRect();
+            return Math.abs(rect.width - calendarLayout.width) < 20 && 
+                   Math.abs(rect.height - calendarLayout.height) < 20 &&
+                   rect.width > 500;
+          }) as HTMLElement || null;
+        }
+        
+        // 캘린더 요소를 찾았으면 rect 계산 및 캐싱
+        if (calendarElement) {
+          calendarRect = calendarElement.getBoundingClientRect();
+          calendarElementRef.current = calendarElement;
+          calendarRectRef.current = calendarRect;
+        } else {
+          // 여전히 찾지 못하면 최후의 수단
+          const testElement = document.querySelector('[data-testid="calendar-wrapper"]') as HTMLElement;
+          if (testElement) {
+            calendarRect = testElement.getBoundingClientRect();
+            calendarRectRef.current = calendarRect;
           } else {
             return null;
           }
         }
-      } else {
-        calendarRect = calendarElement.getBoundingClientRect();
       }
       
-      // BigCalendar의 스크롤 컨테이너 찾기 및 scrollTop 가져오기
-      // BigCalendar는 일반적으로 .rbc-time-content 또는 .rbc-time-view 내부에 스크롤 가능한 요소를 가짐
+      // 스크롤 컨테이너 찾기 (캐시 사용)
       let scrollTop = 0;
-      let scrollContainer: HTMLElement | null = null;
-      
-      // 방법 1: .rbc-time-content 클래스로 찾기
-      scrollContainer = document.querySelector('.rbc-time-content') as HTMLElement;
-      
-      // 방법 2: .rbc-time-view 클래스로 찾기
       if (!scrollContainer) {
-        scrollContainer = document.querySelector('.rbc-time-view') as HTMLElement;
-      }
-      
-      // 방법 3: BigCalendar 내부의 스크롤 가능한 요소 찾기
-      if (!scrollContainer) {
-        const allScrollable = Array.from(document.querySelectorAll('*')).filter((el: any) => {
-          const style = window.getComputedStyle(el);
-          const hasScroll = style.overflowY === 'auto' || style.overflowY === 'scroll';
-          const hasHeight = el.scrollHeight > el.clientHeight;
-          return hasScroll && hasHeight;
-        }) as HTMLElement[];
+        // 방법 1: .rbc-time-content 클래스로 찾기
+        scrollContainer = document.querySelector('.rbc-time-content') as HTMLElement;
         
-        // 캘린더 요소 내부의 스크롤 컨테이너 찾기
-        if (calendarElement) {
+        // 방법 2: .rbc-time-view 클래스로 찾기
+        if (!scrollContainer) {
+          scrollContainer = document.querySelector('.rbc-time-view') as HTMLElement;
+        }
+        
+        // 방법 3: BigCalendar 내부의 스크롤 가능한 요소 찾기 (최후의 수단)
+        if (!scrollContainer && calendarElement) {
+          const allScrollable = Array.from(document.querySelectorAll('*')).filter((el: any) => {
+            const style = window.getComputedStyle(el);
+            const hasScroll = style.overflowY === 'auto' || style.overflowY === 'scroll';
+            const hasHeight = el.scrollHeight > el.clientHeight;
+            return hasScroll && hasHeight;
+          }) as HTMLElement[];
+          
           scrollContainer = allScrollable.find(el => calendarElement?.contains(el)) || null;
+        }
+        
+        if (scrollContainer) {
+          scrollContainerRef.current = scrollContainer;
         }
       }
       
+      // scrollTop은 매번 갱신 (스크롤 위치는 변경될 수 있음)
       if (scrollContainer) {
         scrollTop = scrollContainer.scrollTop;
       }
@@ -473,73 +485,110 @@ export default function WeeklySchedulePanel({
       return false;
     }, [flights]);
     
-    // 마우스 이벤트 핸들러 (웹용)
+    // 마우스 이벤트 핸들러 (웹용) - 성능 최적화 적용
     useEffect(() => {
       if (!draggingEvent) {
         setHasOverlap(false);
+        // 캐시 초기화
+        calendarElementRef.current = null;
+        scrollContainerRef.current = null;
+        calendarRectRef.current = null;
+        if (rafIdRef.current) {
+          cancelAnimationFrame(rafIdRef.current);
+          rafIdRef.current = null;
+        }
+        if (overlapCheckTimeoutRef.current) {
+          clearTimeout(overlapCheckTimeoutRef.current);
+          overlapCheckTimeoutRef.current = null;
+        }
         return;
       }
       
       const handleMouseMove = (e: MouseEvent) => {
-        const offsetX = e.clientX - draggingEvent.startX;
-        const offsetY = e.clientY - draggingEvent.startY;
-        setDragOffset({ x: offsetX, y: offsetY });
-        
-        // 드래그 중인 이벤트 막대의 현재 위치 계산
-        const draggedElementX = draggingEvent.elementX + offsetX;
-        const draggedElementY = draggingEvent.elementY + offsetY;
-        
-        // 이벤트 막대의 중심점 또는 상단 중앙점을 기준으로 드롭 위치 계산
-        // 상단 중앙점 사용 (더 직관적)
-        const elementCenterX = draggedElementX + (draggingEvent.elementWidth / 2);
-        const elementTopY = draggedElementY;
-                
-        // 드롭 위치 미리보기 계산 (드래그 중인 이벤트 막대의 위치 기준)
-        const dropPos = calculateDropPosition(elementCenterX, elementTopY);
-        setDropPreviewPosition(dropPos);
-        // ref에도 저장 (최신 값 보장)
-        dropPreviewPositionRef.current = dropPos;
-        
-        // 항공편인 경우 실시간 겹침 체크
-        if (draggingEvent.type === 'flight' && dropPos) {
-          const eventIdParts = draggingEvent.id.split('-');
-          const flightId = eventIdParts.length > 1 ? parseInt(eventIdParts[1]) : null;
-          const segmentIdOrIndex = eventIdParts.length > 2 ? parseInt(eventIdParts[2]) : null;
-          
-          if (flightId !== null && segmentIdOrIndex !== null) {
-            const flight = flights.find(f => f.id === flightId);
-            if (flight && flight.flightSegments) {
-              let segmentIndex: number | null = null;
-              let segment = flight.flightSegments.find((seg: any, idx: number) => 
-                seg.id === segmentIdOrIndex || (seg.id == null && idx + 1 === segmentIdOrIndex)
-              );
-              
-              if (!segment && segmentIdOrIndex > 0) {
-                segmentIndex = segmentIdOrIndex - 1;
-                segment = flight.flightSegments[segmentIndex];
-              } else if (segment) {
-                segmentIndex = flight.flightSegments.findIndex((seg: any) => 
-                  seg.id === segment.id || seg === segment
-                );
-              }
-              
-              if (segmentIndex !== null && segment) {
-                // duration 계산
-                const originalStart = dayjs(segment.departureTime);
-                const originalEnd = dayjs(segment.arrivalTime);
-                const durationMinutes = originalEnd.diff(originalStart, 'minute');
-                
-                const overlap = checkOverlap(dropPos.time, durationMinutes, flightId, segmentIndex);
-                setHasOverlap(overlap);
-              }
-            }
-          }
-        } else {
-          setHasOverlap(false);
+        // requestAnimationFrame으로 쓰로틀링 (60fps 제한)
+        if (rafIdRef.current) {
+          cancelAnimationFrame(rafIdRef.current);
         }
+        
+        rafIdRef.current = requestAnimationFrame(() => {
+          const offsetX = e.clientX - draggingEvent.startX;
+          const offsetY = e.clientY - draggingEvent.startY;
+          setDragOffset({ x: offsetX, y: offsetY });
+          
+          // 드래그 중인 이벤트 막대의 현재 위치 계산
+          const draggedElementX = draggingEvent.elementX + offsetX;
+          const draggedElementY = draggingEvent.elementY + offsetY;
+          
+          // 이벤트 막대의 중심점 또는 상단 중앙점을 기준으로 드롭 위치 계산
+          // 상단 중앙점 사용 (더 직관적)
+          const elementCenterX = draggedElementX + (draggingEvent.elementWidth / 2);
+          const elementTopY = draggedElementY;
+                  
+          // 드롭 위치 미리보기 계산 (드래그 중인 이벤트 막대의 위치 기준)
+          const dropPos = calculateDropPosition(elementCenterX, elementTopY);
+          setDropPreviewPosition(dropPos);
+          // ref에도 저장 (최신 값 보장)
+          dropPreviewPositionRef.current = dropPos;
+          
+          // 항공편인 경우 실시간 겹침 체크 (디바운싱 적용)
+          if (draggingEvent.type === 'flight' && dropPos) {
+            // 기존 타이머 취소
+            if (overlapCheckTimeoutRef.current) {
+              clearTimeout(overlapCheckTimeoutRef.current);
+            }
+            
+            // 100ms 디바운싱으로 겹침 체크 (성능 최적화)
+            overlapCheckTimeoutRef.current = setTimeout(() => {
+              const eventIdParts = draggingEvent.id.split('-');
+              const flightId = eventIdParts.length > 1 ? parseInt(eventIdParts[1]) : null;
+              const segmentIdOrIndex = eventIdParts.length > 2 ? parseInt(eventIdParts[2]) : null;
+              
+              if (flightId !== null && segmentIdOrIndex !== null) {
+                const flight = flights.find(f => f.id === flightId);
+                if (flight && flight.flightSegments) {
+                  let segmentIndex: number | null = null;
+                  let segment = flight.flightSegments.find((seg: any, idx: number) => 
+                    seg.id === segmentIdOrIndex || (seg.id == null && idx + 1 === segmentIdOrIndex)
+                  );
+                  
+                  if (!segment && segmentIdOrIndex > 0) {
+                    segmentIndex = segmentIdOrIndex - 1;
+                    segment = flight.flightSegments[segmentIndex];
+                  } else if (segment) {
+                    segmentIndex = flight.flightSegments.findIndex((seg: any) => 
+                      seg.id === segment.id || seg === segment
+                    );
+                  }
+                  
+                  if (segmentIndex !== null && segment) {
+                    // duration 계산
+                    const originalStart = dayjs(segment.departureTime);
+                    const originalEnd = dayjs(segment.arrivalTime);
+                    const durationMinutes = originalEnd.diff(originalStart, 'minute');
+                    
+                    const overlap = checkOverlap(dropPos.time, durationMinutes, flightId, segmentIndex);
+                    setHasOverlap(overlap);
+                  }
+                }
+              }
+            }, 100);
+          } else {
+            setHasOverlap(false);
+          }
+        });
       };
       
       const handleMouseUp = async () => {
+        // requestAnimationFrame 및 타이머 정리
+        if (rafIdRef.current) {
+          cancelAnimationFrame(rafIdRef.current);
+          rafIdRef.current = null;
+        }
+        if (overlapCheckTimeoutRef.current) {
+          clearTimeout(overlapCheckTimeoutRef.current);
+          overlapCheckTimeoutRef.current = null;
+        }
+        
         // ref에서 최신 드롭 위치 가져오기
         const latestDropPos = dropPreviewPositionRef.current;
         
@@ -736,10 +785,23 @@ export default function WeeklySchedulePanel({
       return () => {
         window.removeEventListener('mousemove', handleMouseMove);
         window.removeEventListener('mouseup', handleMouseUp);
+        // cleanup: requestAnimationFrame 및 타이머 정리
+        if (rafIdRef.current) {
+          cancelAnimationFrame(rafIdRef.current);
+          rafIdRef.current = null;
+        }
+        if (overlapCheckTimeoutRef.current) {
+          clearTimeout(overlapCheckTimeoutRef.current);
+          overlapCheckTimeoutRef.current = null;
+        }
+        // 캐시 초기화
+        calendarElementRef.current = null;
+        scrollContainerRef.current = null;
+        calendarRectRef.current = null;
         setDropPreviewPosition(null);
         dropPreviewPositionRef.current = null;
       };
-    }, [draggingEvent, calculateDropPosition, itineraries, flights]);
+    }, [draggingEvent, calculateDropPosition, itineraries, flights, checkOverlap]);
     
     // 상위에서 전달받은 plans와 trips 사용 (중복 호출 방지)
     const plans = externalPlans;

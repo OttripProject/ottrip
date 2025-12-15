@@ -193,7 +193,7 @@ export default function AddExpenseModal({
                   <Text style={styles.inputLabel}>통화</Text>
                   <View style={styles.currencyDisplay}>
                     <Text style={styles.currencyText}>
-                    {ExpenseCurrency.KRW} ({currencyLabels[ExpenseCurrency.KRW]})
+                    {currencyLabels[ExpenseCurrency.KRW]}
                     </Text>
                   </View>
                 </View>
