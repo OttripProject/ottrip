@@ -15,9 +15,6 @@ import CalendarIcon from '../../../../assets/calender.svg';
 import AddIcon from '../../../../assets/add.svg';
 import DeleteIcon from '../../../../assets/delete.svg';
 import XIcon from '../../../../assets/x.svg';
-import DropDownPicker from 'react-native-dropdown-picker';
-import DownArrowIcon from '../../../../assets/down_arrow.svg';
-import UpperArrowIcon from '../../../../assets/upper_arrow.svg';
 import WarningBanner from '@/ui/components/toast/warning';
 
 interface FlightItemProps {
@@ -542,8 +539,14 @@ export default function FlightItem({
                       <Pressable 
                         style={styles.segmentDateInput} 
                         onPress={() => {
-                          const key = `dep_${idx}`;
-                          setSegmentDatePickerOpen({ ...segmentDatePickerOpen, [key]: true });
+                          const depKey = `dep_${idx}`;
+                          const arrKey = `arr_${idx}`;
+                          // 출발 날짜를 열 때 같은 구간의 도착 날짜 닫기
+                          setSegmentDatePickerOpen({ 
+                            ...segmentDatePickerOpen, 
+                            [depKey]: true,
+                            [arrKey]: false 
+                          });
                         }}
                       >
                         <View style={styles.segmentDateTextContainer}>
@@ -600,8 +603,14 @@ export default function FlightItem({
                       <Pressable 
                         style={styles.segmentDateInput} 
                         onPress={() => {
-                          const key = `arr_${idx}`;
-                          setSegmentDatePickerOpen({ ...segmentDatePickerOpen, [key]: true });
+                          const depKey = `dep_${idx}`;
+                          const arrKey = `arr_${idx}`;
+                          // 도착 날짜를 열 때 같은 구간의 출발 날짜 닫기
+                          setSegmentDatePickerOpen({ 
+                            ...segmentDatePickerOpen, 
+                            [depKey]: false,
+                            [arrKey]: true 
+                          });
                         }}
                       >
                         <View style={styles.segmentDateTextContainer}>
@@ -656,7 +665,7 @@ export default function FlightItem({
 
           {/* 항공권 구간 추가 버튼 */}
           <Pressable
-            style={[styles.addSegmentButton, { zIndex: -1 }]}
+            style={[styles.addSegmentButton, { zIndex: 1 }]}
             onPress={() => {
               const lastSegment = flightSegments[flightSegments.length - 1];
               let defaultDepartureDate: string;
@@ -693,20 +702,7 @@ export default function FlightItem({
             </View>
             <Text style={styles.addSegmentButtonText}>항공권 구간 추가</Text>
           </Pressable>
-        </View>
-
-        {/* 하단 버튼 */}
-        <View style={[styles.buttonRow, { position: 'relative', zIndex: 100000 }]}>
-          <WarningBanner
-            message={warningMessage}
-            visible={showWarning}
-            duration={3000}
-            bottomOffset={70}
-            onHide={() => {
-              setShowWarning(false);
-              setWarningMessage('');
-            }}
-          />
+          <View style={[styles.buttonRow, { position: 'relative', zIndex: 1 }]}>
           <Pressable
             style={styles.deleteButton}
             onPress={handleDelete}
@@ -723,6 +719,21 @@ export default function FlightItem({
             </Text>
           </Pressable>
         </View>
+        <WarningBanner
+          message={warningMessage}
+          visible={showWarning}
+          duration={3000}
+          bottomOffset={70}
+          onHide={() => {
+            setShowWarning(false);
+            setWarningMessage('');
+          }}
+        />
+        </View>
+
+        {/* 하단 버튼 */}
+
+
       {/* </View> */}
     </ScrollView>
   );

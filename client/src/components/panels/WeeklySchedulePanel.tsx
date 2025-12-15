@@ -588,8 +588,8 @@ export default function WeeklySchedulePanel({
                 }
                 
                 if (segment) {
-                  originalStart = dayjs(segment.departureTime);
-                  originalEnd = dayjs(segment.arrivalTime);
+                originalStart = dayjs(segment.departureTime);
+                originalEnd = dayjs(segment.arrivalTime);
                 }
               }
             }
@@ -600,8 +600,8 @@ export default function WeeklySchedulePanel({
             
             // 새로운 시작/종료 시간 계산
             const newStart = dropTime.toDate();
-            const newEnd = dropTime.add(duration, 'minute').toDate();
-            
+            const newEnd = dropTime.add(duration, 'minute').toDate();            
+          
             // 항공편인 경우 겹침 검증 (현재 드래그 중인 segment만 제외)
             if (draggingEvent.type === 'flight' && flightId !== null && segmentIndex !== null && flight) {
               const newStartTime = dayjs(newStart);
@@ -1579,19 +1579,19 @@ export default function WeeklySchedulePanel({
               >
                 <View style={{ flex: 1, justifyContent: 'center' }}>
                   {showTitle && (
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
                       {isFlight && <View style={{ flexShrink: 0 }}>
                         <WeekBarAirplaneIcon width={14} height={14} />
                       </View>}
-                      <Text numberOfLines={1} ellipsizeMode="tail" style={{ ...textStyles.h8, color: isFlight ? '#8B5CF6' : '#0066FF', lineHeight: 12, flex: 1 }}>
-                        {event.title}
-                      </Text>
-                    </View>
+                    <Text numberOfLines={1} ellipsizeMode="tail" style={{ ...textStyles.h8, color: isFlight ? '#8B5CF6' : '#0066FF', lineHeight: 12, flex: 1 }}>
+                      {event.title}
+                    </Text>
+                  </View>
                   )}
                   {showTime && (isItinerary || isPreview) && event.normalizedStartTime && event.normalizedEndTime && (
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: showTitle ? 8 : 0 }}>
                       <View style={{ flexShrink: 0 }}>
-                        <WeekBarTimeIcon width={14} height={14} />
+                      <WeekBarTimeIcon width={14} height={14} />
                       </View>
                       <Text numberOfLines={1} ellipsizeMode="tail" style={{ ...textStyles.h9, color: '#0066FF', lineHeight: 10 }}>
                         {event.normalizedStartTime} - {event.normalizedEndTime}
@@ -1601,7 +1601,7 @@ export default function WeeklySchedulePanel({
                   {showLocation && (isItinerary || isPreview) && event.locationText && (
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 }}>
                       <View style={{ flexShrink: 0 }}>
-                        <WeekBarLocationIcon width={14} height={14} />
+                      <WeekBarLocationIcon width={14} height={14} />
                       </View>
                       <Text numberOfLines={1} ellipsizeMode="tail" style={{ ...textStyles.h9, color: '#0066FF', lineHeight: 10 }}>
                         {event.locationText}
@@ -1725,12 +1725,12 @@ export default function WeeklySchedulePanel({
           >
             <View style={{ flex: 1, justifyContent: 'center' }}>
               {dragShowTitle && (
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                  {isFlight && <WeekBarAirplaneIcon width={14} height={14} />}
-                  <Text numberOfLines={1} ellipsizeMode="tail" style={{ ...textStyles.h8, color: isFlight ? '#8B5CF6' : '#0066FF', lineHeight: 12, flex: 1 }}>
-                    {draggedEvent.title}
-                  </Text>
-                </View>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                {isFlight && <WeekBarAirplaneIcon width={14} height={14} />}
+                <Text numberOfLines={1} ellipsizeMode="tail" style={{ ...textStyles.h8, color: isFlight ? '#8B5CF6' : '#0066FF', lineHeight: 12, flex: 1 }}>
+                  {draggedEvent.title}
+                </Text>
+              </View>
               )}
               {dragShowTime && (isItinerary) && displayStartTime && displayEndTime && (
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: dragShowTitle ? 8 : 0 }}>

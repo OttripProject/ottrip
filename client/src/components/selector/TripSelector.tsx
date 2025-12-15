@@ -128,7 +128,7 @@ export default function TripSelector({ selectedTrip, onTripSelect, trips, onTrip
         startDate: editingTrip.startDate,
         endDate: editingTrip.endDate,
       });
-    }
+      }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editingTrip, showEditModal]); // editTripForm은 매 렌더링마다 새 객체이므로 제외
 
