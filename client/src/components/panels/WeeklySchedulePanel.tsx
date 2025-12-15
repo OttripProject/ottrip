@@ -695,78 +695,81 @@ export default function WeeklySchedulePanel({
               }
             }
             
-            // 드롭된 위치 저장 (로컬 상태)
+            // Optimistic Update: 서버 응답을 기다리지 않고 즉시 UI 업데이트
             setDroppedEventPosition({
               eventId: draggingEvent.id,
               newStart,
               newEnd,
             });
             
-            // 서버 업데이트
-            try {
-              if (draggingEvent.type === 'itinerary' && itineraryId) {
-                // 일정 업데이트 - 응답값을 받아서 사용
-                const updatedItinerary = await itinerariesApi.updateItinerary(itineraryId, {
-                  itineraryDate: dayjs(newStart).format('YYYY-MM-DD'),
-                  startTime: dayjs(newStart).format('HH:mm'),
-                  endTime: dayjs(newEnd).format('HH:mm'),
-                });
-                
-                // 성공 시 planData의 refreshItineraries 호출하여 즉시 반영
-                if (planData?.refreshItineraries) {
-                  await planData.refreshItineraries();
-                } else if (onPlansRefresh) {
-                  onPlansRefresh();
-                }
-                
-                // 드롭된 위치 초기화 (서버에서 새 데이터를 가져왔으므로)
-                setDroppedEventPosition(null);
-              } else if (draggingEvent.type === 'flight' && flightId !== null && flight && segmentIndex !== null) {
-                // 항공편 업데이트 - 해당 segment만 시간 변경
-                const updatedSegments = flight.flightSegments.map((segment: any, idx: number) => {
-                  if (idx === segmentIndex) {
-                    return {
-                      ...segment,
-                      departureTime: dayjs(newStart).toISOString(),
-                      arrivalTime: dayjs(newEnd).toISOString(),
-                    };
+            // 서버 업데이트를 완전히 비동기로 처리 (블로킹 없음)
+            if (draggingEvent.type === 'itinerary' && itineraryId) {
+              // 일정 업데이트 - 완전 비동기 처리
+              itinerariesApi.updateItinerary(itineraryId, {
+                itineraryDate: dayjs(newStart).format('YYYY-MM-DD'),
+                startTime: dayjs(newStart).format('HH:mm'),
+                endTime: dayjs(newEnd).format('HH:mm'),
+              })
+                .then(() => {
+                  // 성공 시 백그라운드에서 리프레시
+                  if (planData?.refreshItineraries) {
+                    planData.refreshItineraries().catch((err: any) => 
+                      console.error('Failed to refresh itineraries:', err)
+                    );
+                  } else if (onPlansRefresh) {
+                    onPlansRefresh();
                   }
-                  return segment;
+                })
+                .catch((error: any) => {
+                  console.error('Failed to update itinerary:', error);
+                  Alert.alert('오류', '일정 업데이트에 실패했습니다.');
+                  // 실패 시 드롭된 위치 롤백
+                  setDroppedEventPosition(null);
                 });
-                
-                await flightsApi.updateFlight(flightId, {
-                  segments: updatedSegments.map((seg: any) => ({
-                    airline: seg.airline || null,
-                    flightNumber: seg.flightNumber || null,
-                    departureAirport: seg.departureAirport,
-                    arrivalAirport: seg.arrivalAirport,
-                    departureTime: seg.departureTime,
-                    arrivalTime: seg.arrivalTime,
-                    seatClass: seg.seatClass || null,
-                    seatNumber: seg.seatNumber || null,
-                    gate: seg.gate || null,
-                    terminal: seg.terminal || null,
-                  })),
-                });
-                
-                // 업데이트 후 전체 객체 조회 (디테일패널과 동일한 방식)
-                const updatedFlight = await flightsApi.getFlight(flightId);
-                
-                // 성공 시 planData의 refreshFlights 호출하여 즉시 반영
-                if (planData?.refreshFlights) {
-                  await planData.refreshFlights();
-                } else if (onPlansRefresh) {
-                  onPlansRefresh();
+            } else if (draggingEvent.type === 'flight' && flightId !== null && flight && segmentIndex !== null) {
+              // 항공편 업데이트 - 해당 segment만 시간 변경
+              const updatedSegments = flight.flightSegments.map((segment: any, idx: number) => {
+                if (idx === segmentIndex) {
+                  return {
+                    ...segment,
+                    departureTime: dayjs(newStart).toISOString(),
+                    arrivalTime: dayjs(newEnd).toISOString(),
+                  };
                 }
-                
-                // 드롭된 위치 초기화 (서버에서 새 데이터를 가져왔으므로)
-                setDroppedEventPosition(null);
-              }
-            } catch (error) {
-              console.error('Failed to update event:', error);
-              Alert.alert('오류', '일정 업데이트에 실패했습니다.');
-              // 실패 시 드롭된 위치 롤백
-              setDroppedEventPosition(null);
+                return segment;
+              });
+              
+              // 항공편 업데이트 - 완전 비동기 처리 (getFlight 호출 제거로 성능 개선)
+              flightsApi.updateFlight(flightId, {
+                segments: updatedSegments.map((seg: any) => ({
+                  airline: seg.airline || null,
+                  flightNumber: seg.flightNumber || null,
+                  departureAirport: seg.departureAirport,
+                  arrivalAirport: seg.arrivalAirport,
+                  departureTime: seg.departureTime,
+                  arrivalTime: seg.arrivalTime,
+                  seatClass: seg.seatClass || null,
+                  seatNumber: seg.seatNumber || null,
+                  gate: seg.gate || null,
+                  terminal: seg.terminal || null,
+                })),
+              })
+                .then(() => {
+                  // 성공 시 백그라운드에서 리프레시 (getFlight 호출 제거)
+                  if (planData?.refreshFlights) {
+                    planData.refreshFlights().catch((err: any) => 
+                      console.error('Failed to refresh flights:', err)
+                    );
+                  } else if (onPlansRefresh) {
+                    onPlansRefresh();
+                  }
+                })
+                .catch((error: any) => {
+                  console.error('Failed to update flight:', error);
+                  Alert.alert('오류', '일정 업데이트에 실패했습니다.');
+                  // 실패 시 드롭된 위치 롤백
+                  setDroppedEventPosition(null);
+                });
             }
           }
         }
@@ -888,6 +891,68 @@ export default function WeeklySchedulePanel({
       return () => clearTimeout(timer);
     }, [resultModalVisible]);
 
+    // droppedEventPosition과 서버 데이터 동기화 (서버 데이터가 올 때까지 droppedEventPosition 유지)
+    useEffect(() => {
+      if (!droppedEventPosition) return;
+      
+      const eventId = droppedEventPosition.eventId;
+      const expectedStart = dayjs(droppedEventPosition.newStart);
+      const expectedEnd = dayjs(droppedEventPosition.newEnd);
+      
+      // 일정인 경우
+      if (eventId && !eventId.startsWith('flight-')) {
+        const itineraryId = parseInt(eventId);
+        const itinerary = itineraries.find(it => it.id === itineraryId);
+        
+        if (itinerary) {
+          const serverStart = dayjs(`${itinerary.itineraryDate}T${itinerary.startTime}:00`);
+          const serverEnd = dayjs(`${itinerary.itineraryDate}T${itinerary.endTime}:00`);
+          
+          // 서버 데이터와 droppedEventPosition이 일치하면 (1분 오차 허용)
+          if (
+            Math.abs(serverStart.diff(expectedStart, 'minute')) <= 1 &&
+            Math.abs(serverEnd.diff(expectedEnd, 'minute')) <= 1
+          ) {
+            // 동기화 완료: droppedEventPosition 제거
+            setDroppedEventPosition(null);
+          }
+        }
+      } 
+      // 항공편인 경우
+      else if (eventId && eventId.startsWith('flight-')) {
+        const eventIdParts = eventId.split('-');
+        const flightId = eventIdParts.length > 1 ? parseInt(eventIdParts[1]) : null;
+        const segmentIdOrIndex = eventIdParts.length > 2 ? parseInt(eventIdParts[2]) : null;
+        
+        if (flightId !== null && segmentIdOrIndex !== null) {
+          const flight = flights.find(f => f.id === flightId);
+          if (flight && flight.flightSegments) {
+            let segment = flight.flightSegments.find((seg: any, idx: number) => 
+              seg.id === segmentIdOrIndex || (seg.id == null && idx + 1 === segmentIdOrIndex)
+            );
+            
+            if (!segment && segmentIdOrIndex > 0) {
+              segment = flight.flightSegments[segmentIdOrIndex - 1];
+            }
+            
+            if (segment) {
+              const serverStart = dayjs(segment.departureTime);
+              const serverEnd = dayjs(segment.arrivalTime);
+              
+              // 서버 데이터와 droppedEventPosition이 일치하면 (1분 오차 허용)
+              if (
+                Math.abs(serverStart.diff(expectedStart, 'minute')) <= 1 &&
+                Math.abs(serverEnd.diff(expectedEnd, 'minute')) <= 1
+              ) {
+                // 동기화 완료: droppedEventPosition 제거
+                setDroppedEventPosition(null);
+              }
+            }
+          }
+        }
+      }
+    }, [droppedEventPosition, itineraries, flights]);
+    
     // 외부 selectedTrip가 주어지면 TripSelector 선택과 동기화
     useEffect(() => {
       if (selectedTrip) {
