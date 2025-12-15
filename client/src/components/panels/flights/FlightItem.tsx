@@ -434,7 +434,7 @@ export default function FlightItem({
               <Text style={styles.label}>통화</Text>
               <View style={styles.currencyDisplay}>
                     <Text style={styles.currencyText}>
-                    {ExpenseCurrency.KRW} ({currencyLabels[ExpenseCurrency.KRW]})
+                    {currencyLabels[ExpenseCurrency.KRW]}
                     </Text>
               </View>
             </View>
@@ -458,18 +458,16 @@ export default function FlightItem({
               >
                 <View style={styles.segmentTitleRow}>
                   <Text style={styles.segmentTitle}>구간{idx + 1}</Text>
-                  <Pressable
-                    onPress={() => {
-                      if (flightSegments.length > 1) {
+                  {flightSegments.length > 1 && (
+                    <Pressable
+                      onPress={() => {
                         setFlightSegments(prev => prev.filter((_, i) => i !== idx));
-                      } else {
-                        onCancel();
-                      }
-                    }}
-                    style={styles.segmentDeleteButton}
-                  >
-                    <DeleteIcon width={16} height={16} />
-                  </Pressable>
+                      }}
+                      style={styles.segmentDeleteButton}
+                    >
+                      <DeleteIcon width={16} height={16} />
+                    </Pressable>
+                  )}
                 </View>
                 
                 <View style={styles.segmentContent}>

@@ -35,7 +35,7 @@ export const PLACEHOLDERS = {
   expense: {
     category: '카테고리',
     amount: '0',
-    currency: 'KRW',
+    currency: '원',
     description: '설명',
     descriptionForm: '비용 설명을 입력하세요.',
   },
