@@ -12,8 +12,8 @@ import { textStyles } from '@/ui/tokens/typography';
 import { spacing } from '@/ui/tokens/spacing';
 import { radii } from '@/ui/tokens/radii';
 import DeleteIcon from '../../../../assets/delete.svg';
+import CloseIcon from '../../../../assets/delete_ai.svg';
 import AddIcon from '../../../../assets/add.svg';
-import XIcon from '../../../../assets/x.svg';
 import BaseCalendar from '@/components/popup/calendar/BaseCalendar';
 import CalendarIcon from '../../../../assets/calender.svg';
 import WarningBanner from '@/ui/components/toast/warning';
@@ -28,6 +28,8 @@ interface ItineraryItemProps {
   onExpenseUpdate?: () => void;
   selectedDate?: Date; // 선택된 날짜
   onShowWarning?: () => void;
+  readOnly?: boolean; // 읽기 전용 모드
+  onEdit?: () => void; // 편집 버튼 클릭 핸들러
 }
 
 export default function ItineraryItem({ 
@@ -39,7 +41,9 @@ export default function ItineraryItem({
   onDelete,
   onExpenseUpdate,
   selectedDate,
-  onShowWarning
+  onShowWarning,
+  readOnly = false,
+  onEdit
 }: ItineraryItemProps) {
   const [showWarning, setShowWarning] = useState(false);
   const [warningMessage, setWarningMessage] = useState('');
@@ -66,9 +70,9 @@ export default function ItineraryItem({
     }
   }, [selectedDate, itinerary]);
 
-  // formData 변경 시 미리보기 업데이트 (새 일정 추가 모드일 때만)
+  // formData 변경 시 미리보기 업데이트 (새 일정 추가 모드일 때만, readOnly가 아닐 때만)
   React.useEffect(() => {
-    if (!itinerary && typeof window !== 'undefined') {
+    if (!itinerary && !readOnly && typeof window !== 'undefined') {
       // 미리보기 업데이트 이벤트 발생
       window.dispatchEvent(new CustomEvent('itinerary-preview-update', {
         detail: {
@@ -80,7 +84,7 @@ export default function ItineraryItem({
         }
       }));
     }
-  }, [formData, itinerary]);
+  }, [formData, itinerary, readOnly]);
 
   // 국가 드롭다운 상태 및 옵션 (ISO 3166 → 한국어 라벨)
   const [countryOpen, setCountryOpen] = useState(false);
@@ -499,6 +503,7 @@ export default function ItineraryItem({
     return [...draft, ...saved];
   }, [draftExpenses, expenses]);
 
+  // 편집 폼 레이아웃 (readOnly일 때도 동일한 구조, 테두리 스타일만 다름)
   return (
     <>
     <ScrollView 
@@ -507,44 +512,44 @@ export default function ItineraryItem({
     >
       <View style={styles.contentWrapper}>
         <View style={styles.titleRow}>
-          <Text style={styles.title}>{itinerary ? '일정 편집' : '일정 추가'}</Text>
+          <Text style={styles.title}>
+            {readOnly ? '일정 정보' : (itinerary ? '일정 수정' : '일정 추가')}
+          </Text>
+
           <Pressable
-            onPress={() => {
-              // 미리보기 제거 이벤트 발생
-              if (typeof window !== 'undefined') {
-                window.dispatchEvent(new CustomEvent('itinerary-preview-clear'));
-              }
-              onCancel();
-            }}
+            onPress={() => {onCancel();}}
             style={styles.closeButton}
           >
-            <XIcon width={20} height={20} />
+            <CloseIcon width={24} height={24} />
           </Pressable>
+
         </View>
       <View style={styles.inputGroup}>
           <Text style={styles.label}>제목*</Text>
         <Input
-            variant="filled"
+            variant={readOnly ? "outlined" : "filled"}
             placeholder={PLACEHOLDERS.itinerary.titleForm}
           value={formData.title}
-            onChangeText={(text) => setFormData({ ...formData, title: text })}
-            style={styles.input}
+            onChangeText={(text) => !readOnly && setFormData({ ...formData, title: text })}
+            style={readOnly ? styles.readOnlyInput : styles.input}
             placeholderTextColor={colors.gray600}
+            editable={!readOnly}
         />
       </View>
 
       <View style={styles.inputGroup}>
         <Text style={styles.label}>내용</Text>
         <Input
-            variant="filled"
+            variant={readOnly ? "outlined" : "filled"}
             placeholder={PLACEHOLDERS.itinerary.descriptionForm}
           value={formData.description}
-          onChangeText={(text) => setFormData({ ...formData, description: text })}
+          onChangeText={(text) => !readOnly && setFormData({ ...formData, description: text })}
           multiline
           numberOfLines={3}
           textAlignVertical="top"
-            style={styles.textArea}
+            style={readOnly ? styles.readOnlyTextArea : styles.textArea}
             placeholderTextColor={colors.gray600}
+            editable={!readOnly}
         />
       </View>
 
@@ -553,21 +558,23 @@ export default function ItineraryItem({
             <Text style={styles.label}>국가</Text>
           <CountryPicker
             value={formData.country}
-            onChange={(name: string) => setFormData({ ...formData, country: name })}
-            onOpen={() => setCountryOpen(true)}
+            onChange={(name: string) => !readOnly && setFormData({ ...formData, country: name })}
+            onOpen={() => !readOnly && setCountryOpen(true)}
             onClose={() => setCountryOpen(false)}
               placeholder={PLACEHOLDERS.itinerary.countryForm}
+              disabled={readOnly}
           />
         </View>
         <View style={[styles.inputGroup, styles.halfWidth]}> 
             <Text style={styles.label}>도시</Text>
           <Input
-              variant="filled"
+              variant={readOnly ? "outlined" : "filled"}
               placeholder={PLACEHOLDERS.itinerary.cityForm}
             value={formData.city}
-            onChangeText={(text) => setFormData({ ...formData, city: text })}
-              style={styles.input}
+            onChangeText={(text) => !readOnly && setFormData({ ...formData, city: text })}
+              style={readOnly ? styles.readOnlyInput : styles.input}
               placeholderTextColor={colors.gray600}
+              editable={!readOnly}
           />
         </View>
       </View>
@@ -575,39 +582,46 @@ export default function ItineraryItem({
       <View style={styles.inputGroup}>
         <Text style={styles.label}>장소</Text>
         <Input
-            variant="filled"
+            variant={readOnly ? "outlined" : "filled"}
             placeholder="장소를 입력하세요."
           value={formData.location}
-            onChangeText={(text) => setFormData({ ...formData, location: text })}
-            style={styles.input}
+            onChangeText={(text) => !readOnly && setFormData({ ...formData, location: text })}
+            style={readOnly ? styles.readOnlyInput : styles.input}
             placeholderTextColor={colors.gray600}
+            editable={!readOnly}
         />
       </View>
 
       <View style={[styles.inputGroup, styles.datePickerWrapper, { zIndex: showDatePicker ? 20000 : 1 }]}>
         <Text style={styles.label}>날짜*</Text>
-        <Pressable style={styles.dateInput} onPress={() => setShowDatePicker(!showDatePicker)}>
+        <Pressable 
+          style={readOnly ? styles.readOnlyDateInput : styles.dateInput} 
+          onPress={() => !readOnly && setShowDatePicker(!showDatePicker)}
+          disabled={readOnly}
+        >
           <View style={styles.dateTextContainer}>
             <Text style={styles.dateText}>
               {dayjs(formData.itineraryDate).format('YYYY년 M월 D일')}
             </Text>
-            <View style={styles.iconWrapper}>
-              <CalendarIcon width={16} height={16} />
-            </View>
+              <View style={styles.iconWrapper}>
+                <CalendarIcon width={16} height={16} />
+              </View>
           </View>
         </Pressable>
-        <BaseCalendar
-          visible={showDatePicker}
-          selectedDate={formData.itineraryDate}
-          onDayPress={(day) => {
-            setFormData({ ...formData, itineraryDate: day.dateString });
-            setShowDatePicker(false);
-          }}
-          onClose={() => setShowDatePicker(false)}
-          style={styles.calendarPopup}
-          hideButtons={true}
-          autoCloseOnSelect={true}
-        />
+        {!readOnly && (
+          <BaseCalendar
+            visible={showDatePicker}
+            selectedDate={formData.itineraryDate}
+            onDayPress={(day) => {
+              setFormData({ ...formData, itineraryDate: day.dateString });
+              setShowDatePicker(false);
+            }}
+            onClose={() => setShowDatePicker(false)}
+            style={styles.calendarPopup}
+            hideButtons={true}
+            autoCloseOnSelect={true}
+          />
+        )}
       </View>
 
         <View style={[styles.row, styles.pickerRowWrapper, { zIndex: timeOpen ? 10001 : 1 }]}>
@@ -615,26 +629,47 @@ export default function ItineraryItem({
           <Text style={styles.label}>시작 시간*</Text>
           <TimePicker
             value={formData.startTime}
-            onChange={(time) => setFormData({ ...formData, startTime: time })}
-            onOpen={() => setTimeOpen(true)}
+            onChange={(time) => !readOnly && setFormData({ ...formData, startTime: time })}
+            onOpen={() => {
+              if (!readOnly) {
+                setTimeOpen(true);
+              }
+            }}
             onClose={() => setTimeOpen(false)}
+            disabled={readOnly}
+            style={readOnly ? {
+              backgroundColor: colors.gray200,
+              borderColor: colors.gray400,
+              borderWidth: 1,
+            } : undefined}
           />
         </View>
         <View style={[styles.inputGroup, styles.halfWidth]}>
           <Text style={styles.label}>종료 시간*</Text>
           <TimePicker
             value={formData.endTime}
-            onChange={(time) => setFormData({ ...formData, endTime: time })}
-            onOpen={() => setTimeOpen(true)}
+            onChange={(time) => !readOnly && setFormData({ ...formData, endTime: time })}
+            onOpen={() => {
+              if (!readOnly) {
+                setTimeOpen(true);
+              }
+            }}
             onClose={() => setTimeOpen(false)}
             minTime={formData.startTime}
+            disabled={readOnly}
+            style={readOnly ? {
+              backgroundColor: colors.gray200,
+              borderColor: colors.gray400,
+              borderWidth: 1,
+            } : undefined}
           />
           </View>
         </View>
 
       {/* 비용 추가 섹션 */}
-      <View style={styles.expenseSection}>
-        <Text style={styles.label}>비용 내역</Text>
+      {(!readOnly || allExpenses.length > 0) && (
+        <View style={styles.expenseSection}>
+          <Text style={styles.label}>비용 내역</Text>
         
         {/* 비용 카드 목록 */}
         {allExpenses.length > 0 && (
@@ -642,35 +677,43 @@ export default function ItineraryItem({
             {allExpenses.map((expense) => (
               <Pressable
                 key={expense.id}
-                style={styles.expenseCard}
+                style={[styles.expenseCard, readOnly && {
+                  borderWidth: 1,
+                  borderColor: colors.gray400,
+                }]}
                 onPress={() => {
-                  setEditingExpense(expense);
-                  setExpenseForm({
-                    category: expense.category as ExpenseCategory,
-                    amount: expense.amount,
-                    description: expense.description || '',
-                  });
-                  setShowExpenseForm(true);
+                  if (!readOnly) {
+                    setEditingExpense(expense);
+                    setExpenseForm({
+                      category: expense.category as ExpenseCategory,
+                      amount: expense.amount,
+                      description: expense.description || '',
+                    });
+                    setShowExpenseForm(true);
+                  }
                 }}
+                disabled={readOnly}
               >
                 <View style={styles.expenseCardContent}>
                   <View style={styles.expenseCardHeader}>
                     <Text style={styles.expenseCardTitle}>
                       {categoryLabels[expense.category as ExpenseCategory]}
                     </Text>
-                    <Pressable
-                      style={styles.deleteExpenseButton}
-                      onPress={(e) => {
-                        e.stopPropagation();
-                        if (expense.isDraft) {
-                          setDraftExpenses(prev => prev.filter((_, i) => i !== Number(expense.id.split('-')[1])));
-                        } else {
-                          handleExpenseDelete(expense.id);
-                        }
-                      }}
-                    >
-                      <DeleteIcon width={16} height={16} />
-                    </Pressable>
+                    {!readOnly && (
+                      <Pressable
+                        style={styles.deleteExpenseButton}
+                        onPress={(e) => {
+                          e.stopPropagation();
+                          if (expense.isDraft) {
+                            setDraftExpenses(prev => prev.filter((_, i) => i !== Number(expense.id.split('-')[1])));
+                          } else {
+                            handleExpenseDelete(expense.id);
+                          }
+                        }}
+                      >
+                        <DeleteIcon width={16} height={16} />
+                      </Pressable>
+                    )}
                   </View>
                   <Text style={styles.expenseCardDescription}>{expense.description || ''}</Text>
                   <Text style={styles.expenseCardAmount}>
@@ -683,6 +726,7 @@ export default function ItineraryItem({
         )}
 
         {/* 비용 추가 버튼 */}
+        {!readOnly && (
           <Pressable
             style={styles.addExpenseButton}
             onPress={() => {
@@ -695,11 +739,12 @@ export default function ItineraryItem({
               setShowExpenseForm(!showExpenseForm);
             }}
           >
-          <View style={styles.addIconWrapper}>
-            <AddIcon width={16} height={16} />
-          </View>
-          <Text style={styles.addExpenseButtonText}>비용 내역 추가</Text>
+            <View style={styles.addIconWrapper}>
+              <AddIcon width={16} height={16} />
+            </View>
+            <Text style={styles.addExpenseButtonText}>비용 내역 추가</Text>
           </Pressable>
+        )}
 
         {/* 비용 추가 폼 */}
         {showExpenseForm && (
@@ -773,25 +818,45 @@ export default function ItineraryItem({
             </View>
           </View>
         )}
-      </View>
+        </View>
+      )}
 
-      <View style={[styles.buttonRow, { position: 'relative' }]}>
-        <Pressable
-          style={styles.deleteButton}
-          onPress={handleDelete}
-        >
-          <Text style={styles.deleteButtonText}>삭제</Text>
-        </Pressable>
-        <Pressable
-          style={styles.saveButton}
-          onPress={handleSave}
-          disabled={isSubmitting}
-        >
-          <Text style={styles.saveButtonText}>
-            {itinerary ? '수정' : '저장'}
-          </Text>
-        </Pressable>
-      </View>
+      {!readOnly ? (
+        <View style={[styles.buttonRow, { position: 'relative' }]}>
+          <Pressable
+            style={styles.deleteButton}
+            onPress={itinerary ? handleDelete : onCancel}
+          >
+            <Text style={styles.deleteButtonText}>
+              {itinerary ? '삭제' : '취소'}
+            </Text>
+          </Pressable>
+          <Pressable
+            style={styles.saveButton}
+            onPress={handleSave}
+            disabled={isSubmitting}
+          >
+            <Text style={styles.saveButtonText}>
+              저장
+            </Text>
+          </Pressable>
+        </View>
+      ) : (
+        <View style={[styles.buttonRow, { position: 'relative' }]}>
+          <Pressable
+            style={styles.deleteButton}
+            onPress={handleDelete}
+          >
+            <Text style={styles.deleteButtonText}>삭제</Text>
+          </Pressable>
+          <Pressable
+            style={[styles.saveButton, { backgroundColor: colors.gray900 }]}
+            onPress={onEdit}
+          >
+            <Text style={styles.saveButtonText}>수정</Text>
+          </Pressable>
+        </View>
+      )}
       <WarningBanner
         message={warningMessage}
         visible={showWarning}
@@ -836,6 +901,51 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  editButton: {
+    backgroundColor: colors.gray900,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    borderRadius: radii.md,
+    minWidth: 80,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  editButtonText: {
+    ...textStyles.h8,
+    color: colors.white,
+  },
+  // 읽기 전용 스타일 (테두리 있는 형태)
+  readOnlyInput: {
+    backgroundColor: colors.gray200,
+    borderWidth: 1,
+    borderColor: colors.gray400,
+    height: 40,
+    borderRadius: radii.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 10,
+    ...textStyles.body4,
+  },
+  readOnlyTextArea: {
+    backgroundColor: colors.gray200,
+    borderWidth: 1,
+    borderColor: colors.gray400,
+    height: 80,
+    borderRadius: radii.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 10,
+    ...textStyles.body4,
+  },
+  readOnlyDateInput: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.gray400,
+    borderRadius: radii.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 10,
+    backgroundColor: colors.gray200,
+    minHeight: 40,
+  },
   formSection: {
     gap: spacing.lg,
   },
@@ -879,7 +989,7 @@ const styles = StyleSheet.create({
     color: colors.black,
   },
   saveButton: {
-    backgroundColor: colors.gray900,
+    backgroundColor: colors.primary,
     height: 40,
     borderRadius: radii.md,
     paddingHorizontal: spacing.lg,

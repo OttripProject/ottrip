@@ -20,6 +20,7 @@ interface TimePickerProps {
   maxTime?: string; // 'HH:mm' 형식, 이 시간 이전만 선택 가능
   onOpen?: () => void;
   onClose?: () => void;
+  disabled?: boolean;
 }
 
 export default function TimePicker({ 
@@ -30,7 +31,8 @@ export default function TimePicker({
   minTime,
   maxTime,
   onOpen,
-  onClose
+  onClose,
+  disabled = false
 }: TimePickerProps) {
   const pickerRef = useRef<View>(null);
   const [open, setIsOpen, handleOutsidePress] = useDetectClose(pickerRef, false);
@@ -131,6 +133,7 @@ export default function TimePicker({
           const next = callback(selectedValue) as string | null;
           setSelectedValue(next);
         }}
+        disabled={disabled}
         placeholder={placeholder}
         placeholderStyle={styles.placeholder}
         textStyle={styles.text}
@@ -178,6 +181,7 @@ const styles = StyleSheet.create({
     borderWidth: 0,
     borderRadius: radii.md,
     backgroundColor: colors.gray200,
+    height: 40,
     minHeight: 40,
     position: 'relative',
     zIndex: 9999,

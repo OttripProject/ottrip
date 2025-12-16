@@ -14,7 +14,7 @@ import BaseCalendar from '@/components/popup/calendar/BaseCalendar';
 import CalendarIcon from '../../../../assets/calender.svg';
 import AddIcon from '../../../../assets/add.svg';
 import DeleteIcon from '../../../../assets/delete.svg';
-import XIcon from '../../../../assets/x.svg';
+import CloseIcon from '../../../../assets/delete_ai.svg';
 import WarningBanner from '@/ui/components/toast/warning';
 
 interface FlightItemProps {
@@ -28,6 +28,8 @@ interface FlightItemProps {
   existingItineraries?: any[];
   existingAccommodations?: any[];
   onShowWarning?: (message?: string) => void;
+  readOnly?: boolean; // 읽기 전용 모드
+  onEdit?: () => void; // 편집 버튼 클릭 핸들러
 }
 
 export default function FlightItem({ 
@@ -39,6 +41,8 @@ export default function FlightItem({
   onDelete,
   existingFlights = [],
   onShowWarning,
+  readOnly = false,
+  onEdit,
 }: FlightItemProps) {
   const [formData, setFormData] = useState({
     reservation_number: flight?.reservationNumber || flight?.reservation_number || '',
@@ -353,12 +357,14 @@ export default function FlightItem({
     >
       {/* <View style={styles.contentWrapper}> */}
         <View style={styles.titleRow}>
-          <Text style={styles.title}>항공편 정보</Text>
+          <Text style={styles.title}>
+            {readOnly ? '항공편 정보' : (flight ? '항공편 수정' : '항공편 추가')}
+          </Text>
           <Pressable
-            onPress={onCancel}
+            onPress={() => {onCancel();}}
             style={styles.closeButton}
           >
-            <XIcon width={20} height={20} />
+            <CloseIcon width={24} height={24} />
           </Pressable>
         </View>
 
@@ -369,23 +375,25 @@ export default function FlightItem({
             <View style={[styles.inputGroup, styles.halfWidth]}>
               <Text style={styles.label}>예약번호 (PNR)</Text>
               <Input
-                variant="filled"
+                variant={readOnly ? "outlined" : "filled"}
                 placeholder={PLACEHOLDERS.flight.reservationNumber}
                 value={formData.reservation_number}
-                onChangeText={(text) => setFormData({ ...formData, reservation_number: text })}
-                style={styles.input}
+                onChangeText={(text) => !readOnly && setFormData({ ...formData, reservation_number: text })}
+                style={readOnly ? styles.readOnlyInput : styles.input}
                 placeholderTextColor={colors.gray600}
+                editable={!readOnly}
               />
             </View>
             <View style={[styles.inputGroup, styles.halfWidth]}>
               <Text style={styles.label}>승객명</Text>
               <Input
-                variant="filled"
+                variant={readOnly ? "outlined" : "filled"}
                 placeholder={PLACEHOLDERS.flight.passengerName}
                 value={formData.passenger_name}
-                onChangeText={(text) => setFormData({ ...formData, passenger_name: text })}
-                style={styles.input}
+                onChangeText={(text) => !readOnly && setFormData({ ...formData, passenger_name: text })}
+                style={readOnly ? styles.readOnlyInput : styles.input}
                 placeholderTextColor={colors.gray600}
+                editable={!readOnly}
               />
             </View>
           </View>
@@ -394,12 +402,13 @@ export default function FlightItem({
           <View style={styles.inputGroup}>
             <Text style={styles.label}>항공권 번호</Text>
             <Input
-              variant="filled"
+              variant={readOnly ? "outlined" : "filled"}
               placeholder={PLACEHOLDERS.flight.ticketNumber}
               value={formData.ticket_number}
-              onChangeText={(text) => setFormData({ ...formData, ticket_number: text })}
-              style={styles.input}
+              onChangeText={(text) => !readOnly && setFormData({ ...formData, ticket_number: text })}
+              style={readOnly ? styles.readOnlyInput : styles.input}
               placeholderTextColor={colors.gray600}
+              editable={!readOnly}
             />
           </View>
 
@@ -407,12 +416,13 @@ export default function FlightItem({
           <View style={styles.inputGroup}>
             <Text style={styles.label}>예약번호 (여행사 예약 번호)</Text>
             <Input
-              variant="filled"
+              variant={readOnly ? "outlined" : "filled"}
               placeholder={PLACEHOLDERS.flight.bookingReference}
               value={formData.booking_reference}
-              onChangeText={(text) => setFormData({ ...formData, booking_reference: text })}
-              style={styles.input}
+              onChangeText={(text) => !readOnly && setFormData({ ...formData, booking_reference: text })}
+              style={readOnly ? styles.readOnlyInput : styles.input}
               placeholderTextColor={colors.gray600}
+              editable={!readOnly}
             />
           </View>
 
@@ -421,18 +431,19 @@ export default function FlightItem({
             <View style={[styles.inputGroup, styles.halfWidth]}>
               <Text style={styles.label}>항공료</Text>
               <Input
-                variant="filled"
+                variant={readOnly ? "outlined" : "filled"}
                 placeholder={PLACEHOLDERS.expense.amount}
                 value={expenseData.amount.toString()}
-                onChangeText={(text) => setExpenseData({ ...expenseData, amount: text.replace(/[^0-9]/g, '') })}
+                onChangeText={(text) => !readOnly && setExpenseData({ ...expenseData, amount: text.replace(/[^0-9]/g, '') })}
                 keyboardType="numeric"
-                style={styles.input}
+                style={readOnly ? styles.readOnlyInput : styles.input}
                 placeholderTextColor={colors.gray600}
+                editable={!readOnly}
               />
             </View>
             <View style={[styles.inputGroup, styles.halfWidth]}>
               <Text style={styles.label}>통화</Text>
-              <View style={styles.currencyDisplay}>
+              <View style={readOnly? [styles.currencyDisplay, { borderWidth: 1, borderColor: colors.gray400 }] : styles.currencyDisplay}>
                     <Text style={styles.currencyText}>
                     {currencyLabels[ExpenseCurrency.KRW]}
                     </Text>
@@ -458,7 +469,7 @@ export default function FlightItem({
               >
                 <View style={styles.segmentTitleRow}>
                   <Text style={styles.segmentTitle}>구간{idx + 1}</Text>
-                  {flightSegments.length > 1 && (
+                  {!readOnly && flightSegments.length > 1 && (
                     <Pressable
                       onPress={() => {
                         setFlightSegments(prev => prev.filter((_, i) => i !== idx));
@@ -475,16 +486,19 @@ export default function FlightItem({
                     <View style={[styles.inputGroup, styles.halfWidth]}>
                       <Text style={styles.label}>항공사</Text>
                       <Input
-                        variant="outlined"
+                        variant={readOnly ? "outlined" : "filled"}
                         placeholder={PLACEHOLDERS.flight.airline}
                         value={segment.airline}
                         onChangeText={(text) => {
-                          const newSegments = [...flightSegments];
-                          newSegments[idx].airline = text;
-                          setFlightSegments(newSegments);
+                          if (!readOnly) {
+                            const newSegments = [...flightSegments];
+                            newSegments[idx].airline = text;
+                            setFlightSegments(newSegments);
+                          }
                         }}
-                        style={styles.segmentInput}
+                        style={readOnly ? [styles.segmentInput, { borderColor: colors.gray400 }] : styles.segmentInput}
                         placeholderTextColor={colors.gray600}
+                        editable={!readOnly}
                       />
                     </View>
                     <View style={[styles.inputGroup, styles.halfWidth]}>
@@ -494,12 +508,15 @@ export default function FlightItem({
                         placeholder={PLACEHOLDERS.flight.flightNumber}
                         value={segment.flight_number}
                         onChangeText={(text) => {
-                          const newSegments = [...flightSegments];
-                          newSegments[idx].flight_number = text;
-                          setFlightSegments(newSegments);
+                          if (!readOnly) {
+                            const newSegments = [...flightSegments];
+                            newSegments[idx].flight_number = text;
+                            setFlightSegments(newSegments);
+                          }
                         }}
-                        style={styles.segmentInput}
+                        style={readOnly ? [styles.segmentInput, { borderColor: colors.gray400 }] : styles.segmentInput}
                         placeholderTextColor={colors.gray600}
+                        editable={!readOnly}
                       />
                     </View>
                   </View>
@@ -510,11 +527,14 @@ export default function FlightItem({
                       <AirportPicker
                         value={segment.departure_airport}
                         onChange={(code) => {
-                          const newSegments = [...flightSegments];
-                          newSegments[idx].departure_airport = code;
-                          setFlightSegments(newSegments);
+                          if (!readOnly) {
+                            const newSegments = [...flightSegments];
+                            newSegments[idx].departure_airport = code;
+                            setFlightSegments(newSegments);
+                          }
                         }}
                         placeholder={PLACEHOLDERS.flight.departureAirport}
+                        disabled={readOnly}
                       />
                     </View>
                     <View style={[styles.inputGroup, styles.halfWidth, styles.airportPickerWrapper]}>
@@ -522,11 +542,14 @@ export default function FlightItem({
                       <AirportPicker
                         value={segment.arrival_airport}
                         onChange={(code) => {
-                          const newSegments = [...flightSegments];
-                          newSegments[idx].arrival_airport = code;
-                          setFlightSegments(newSegments);
+                          if (!readOnly) {
+                            const newSegments = [...flightSegments];
+                            newSegments[idx].arrival_airport = code;
+                            setFlightSegments(newSegments);
+                          }
                         }}
                         placeholder={PLACEHOLDERS.flight.arrivalAirport}
+                        disabled={readOnly}
                       />
                     </View>
                   </View>
@@ -537,15 +560,18 @@ export default function FlightItem({
                       <Pressable 
                         style={styles.segmentDateInput} 
                         onPress={() => {
-                          const depKey = `dep_${idx}`;
-                          const arrKey = `arr_${idx}`;
-                          // 출발 날짜를 열 때 같은 구간의 도착 날짜 닫기
-                          setSegmentDatePickerOpen({ 
-                            ...segmentDatePickerOpen, 
-                            [depKey]: true,
-                            [arrKey]: false 
-                          });
+                          if (!readOnly) {
+                            const depKey = `dep_${idx}`;
+                            const arrKey = `arr_${idx}`;
+                            // 출발 날짜를 열 때 같은 구간의 도착 날짜 닫기
+                            setSegmentDatePickerOpen({ 
+                              ...segmentDatePickerOpen, 
+                              [depKey]: true,
+                              [arrKey]: false 
+                            });
+                          }
                         }}
+                        disabled={readOnly}
                       >
                         <View style={styles.segmentDateTextContainer}>
                           <Text style={segment.departure_date ? styles.segmentDateText : styles.segmentPlaceholderText}>
@@ -561,11 +587,13 @@ export default function FlightItem({
                           visible={true}
                           selectedDate={segment.departure_date}
                           onDayPress={(day) => {
-                            const newSegments = [...flightSegments];
-                            newSegments[idx].departure_date = day.dateString;
-                            setFlightSegments(newSegments);
-                            const key = `dep_${idx}`;
-                            setSegmentDatePickerOpen({ ...segmentDatePickerOpen, [key]: false });
+                            if (!readOnly) {
+                              const newSegments = [...flightSegments];
+                              newSegments[idx].departure_date = day.dateString;
+                              setFlightSegments(newSegments);
+                              const key = `dep_${idx}`;
+                              setSegmentDatePickerOpen({ ...segmentDatePickerOpen, [key]: false });
+                            }
                           }}
                           onClose={() => {
                             const key = `dep_${idx}`;
@@ -583,14 +611,17 @@ export default function FlightItem({
                       <TimePicker
                         value={segment.departure_time}
                         onChange={(time) => {
-                          const newSegments = [...flightSegments];
-                          newSegments[idx].departure_time = time;
-                          setFlightSegments(newSegments);
+                          if (!readOnly) {
+                            const newSegments = [...flightSegments];
+                            newSegments[idx].departure_time = time;
+                            setFlightSegments(newSegments);
+                          }
                         }}
-                        onOpen={() => setTimeOpen(true)}
+                        onOpen={() => !readOnly && setTimeOpen(true)}
                         onClose={() => setTimeOpen(false)}
                         minTime={idx > 0 && segment.departure_date === flightSegments[idx - 1].arrival_date ? flightSegments[idx - 1].arrival_time : undefined}
                         style={styles.segmentTimePicker}
+                        disabled={readOnly}
                       />
                     </View>
                   </View>
@@ -601,15 +632,18 @@ export default function FlightItem({
                       <Pressable 
                         style={styles.segmentDateInput} 
                         onPress={() => {
-                          const depKey = `dep_${idx}`;
-                          const arrKey = `arr_${idx}`;
-                          // 도착 날짜를 열 때 같은 구간의 출발 날짜 닫기
-                          setSegmentDatePickerOpen({ 
-                            ...segmentDatePickerOpen, 
-                            [depKey]: false,
-                            [arrKey]: true 
-                          });
+                          if (!readOnly) {
+                            const depKey = `dep_${idx}`;
+                            const arrKey = `arr_${idx}`;
+                            // 도착 날짜를 열 때 같은 구간의 출발 날짜 닫기
+                            setSegmentDatePickerOpen({ 
+                              ...segmentDatePickerOpen, 
+                              [depKey]: false,
+                              [arrKey]: true 
+                            });
+                          }
                         }}
+                        disabled={readOnly}
                       >
                         <View style={styles.segmentDateTextContainer}>
                           <Text style={segment.arrival_date ? styles.segmentDateText : styles.segmentPlaceholderText}>
@@ -625,11 +659,13 @@ export default function FlightItem({
                           visible={true}
                           selectedDate={segment.arrival_date}
                           onDayPress={(day) => {
-                            const newSegments = [...flightSegments];
-                            newSegments[idx].arrival_date = day.dateString;
-                            setFlightSegments(newSegments);
-                            const key = `arr_${idx}`;
-                            setSegmentDatePickerOpen({ ...segmentDatePickerOpen, [key]: false });
+                            if (!readOnly) {
+                              const newSegments = [...flightSegments];
+                              newSegments[idx].arrival_date = day.dateString;
+                              setFlightSegments(newSegments);
+                              const key = `arr_${idx}`;
+                              setSegmentDatePickerOpen({ ...segmentDatePickerOpen, [key]: false });
+                            }
                           }}
                           onClose={() => {
                             const key = `arr_${idx}`;
@@ -646,13 +682,16 @@ export default function FlightItem({
                       <TimePicker
                         value={segment.arrival_time}
                         onChange={(time) => {
-                          const newSegments = [...flightSegments];
-                          newSegments[idx].arrival_time = time;
-                          setFlightSegments(newSegments);
+                          if (!readOnly) {
+                            const newSegments = [...flightSegments];
+                            newSegments[idx].arrival_time = time;
+                            setFlightSegments(newSegments);
+                          }
                         }}
-                        onOpen={() => setTimeOpen(true)}
+                        onOpen={() => !readOnly && setTimeOpen(true)}
                         onClose={() => setTimeOpen(false)}
                         style={styles.segmentTimePicker}
+                        disabled={readOnly}
                       />
                     </View>
                   </View>
@@ -662,9 +701,10 @@ export default function FlightItem({
           })}
 
           {/* 항공권 구간 추가 버튼 */}
-          <Pressable
-            style={[styles.addSegmentButton, { zIndex: 1 }]}
-            onPress={() => {
+          {!readOnly && (
+            <Pressable
+              style={[styles.addSegmentButton, { zIndex: 1 }]}
+              onPress={() => {
               const lastSegment = flightSegments[flightSegments.length - 1];
               let defaultDepartureDate: string;
               let defaultDepartureTime: string;
@@ -700,23 +740,43 @@ export default function FlightItem({
             </View>
             <Text style={styles.addSegmentButtonText}>항공권 구간 추가</Text>
           </Pressable>
-          <View style={[styles.buttonRow, { position: 'relative', zIndex: 1 }]}>
-          <Pressable
-            style={styles.deleteButton}
-            onPress={handleDelete}
-          >
-            <Text style={styles.deleteButtonText}>삭제</Text>
-          </Pressable>
-          <Pressable
-            style={styles.saveButton}
-            onPress={handleSave}
-            disabled={isSubmitting}
-          >
-            <Text style={styles.saveButtonText}>
-              {flight ? '수정' : '저장'}
-            </Text>
-          </Pressable>
-        </View>
+          )}
+          {!readOnly ? (
+            <View style={[styles.buttonRow, { position: 'relative', zIndex: 1 }]}>
+              <Pressable
+                style={styles.deleteButton}
+                onPress={flight? handleDelete : onCancel}
+              >
+                <Text style={styles.deleteButtonText}>
+                  {flight ? '삭제' : '취소'}
+                </Text>
+              </Pressable>
+              <Pressable
+                style={styles.saveButton}
+                onPress={handleSave}
+                disabled={isSubmitting}
+              >
+                <Text style={styles.saveButtonText}>
+                  저장
+                </Text>
+              </Pressable>
+            </View>
+          ) : (
+            <View style={[styles.buttonRow, { position: 'relative' }]}>
+              <Pressable
+                style={styles.deleteButton}
+                onPress={handleDelete}
+              >
+                <Text style={styles.deleteButtonText}>삭제</Text>
+              </Pressable>
+              <Pressable
+                style={[styles.saveButton, { backgroundColor: colors.gray900 }]}
+                onPress={onEdit}
+              >
+                <Text style={styles.saveButtonText}>수정</Text>
+              </Pressable>
+            </View>
+          )}
         <WarningBanner
           message={warningMessage}
           visible={showWarning}
@@ -792,6 +852,16 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
     ...textStyles.body4,
   },
+  readOnlyInput: {
+    backgroundColor: colors.gray200,
+    borderWidth: 1,
+    borderColor: colors.gray400,
+    height: 40,
+    borderRadius: radii.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 10,
+    ...textStyles.body4,
+  },
   placeholderText: {
     ...textStyles.body4,
     color: colors.gray600,
@@ -849,6 +919,7 @@ const styles = StyleSheet.create({
     borderColor: colors.gray400,
     borderRadius: radii.md,
     height: 40,
+    color: colors.black,
   },
   segmentDateInput: {
     backgroundColor: colors.white,
@@ -958,7 +1029,7 @@ const styles = StyleSheet.create({
     color: colors.black,
   },
   saveButton: {
-    backgroundColor: colors.gray900,
+    backgroundColor: colors.primary,
     height: 40,
     borderRadius: radii.md,
     paddingHorizontal: spacing.lg,
