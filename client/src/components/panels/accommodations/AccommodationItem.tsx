@@ -11,7 +11,7 @@ import { spacing } from '@/ui/tokens/spacing';
 import { radii } from '@/ui/tokens/radii';
 import BaseCalendar from '@/components/popup/calendar/BaseCalendar';
 import CalendarIcon from '../../../../assets/calender.svg';
-import XIcon from '../../../../assets/x.svg';
+import CloseIcon from '../../../../assets/delete_ai.svg';
 import { ExpenseCurrency, currencyLabels } from '@/types/expense';
 import WarningBanner from '@/ui/components/toast/warning';
 
@@ -21,9 +21,11 @@ interface AccommodationItemProps {
   planId: number;
   onSave: (accommodation: any) => void;
   onCancel: () => void;
-  onDelete?: (accommodationId: number) => void;
+  onDelete?: (accommodationId: number | string) => void;
   onShowWarning?: (message?: string) => void;
   existingAccommodations?: any[];
+  readOnly?: boolean;
+  onEdit?: () => void;
 }
 
 export default function AccommodationItem({ 
@@ -34,6 +36,8 @@ export default function AccommodationItem({
   onCancel, 
   onDelete,
   existingAccommodations = [],
+  readOnly = false,
+  onEdit,
 }: AccommodationItemProps) {
   const [showWarning, setShowWarning] = useState(false);
   const [warningMessage, setWarningMessage] = useState('');
@@ -188,7 +192,8 @@ export default function AccommodationItem({
     if (accommodation && accommodation.id && onDelete) {
       try {
         await accommodationsApi.deleteAccommodation(accommodation.id);
-        onDelete(accommodation.id);
+        const id = typeof accommodation.id === 'string' ? accommodation.id : accommodation.id.toString();
+        onDelete(id);
         onCancel();
       } catch (error) {
         console.error('Failed to delete accommodation:', error);
@@ -210,13 +215,17 @@ export default function AccommodationItem({
       contentContainerStyle={[styles.contentContainer, { overflow: 'visible' }]}
     >
       <View style={styles.titleRow}>
-        <Text style={styles.title}>숙박 정보</Text>
-        <Pressable
-          onPress={onCancel}
-          style={styles.closeButton}
-        >
-          <XIcon width={20} height={20} />
-        </Pressable>
+        <Text style={styles.title}>
+          {readOnly ? '숙박 정보' : (accommodation && accommodation.id ? '숙박 수정' : '숙박 추가')}
+        </Text>
+        {readOnly || accommodation ? (
+          <Pressable
+            onPress={onCancel}
+            style={styles.closeButton}
+          >
+            <CloseIcon width={24} height={24} />
+          </Pressable>
+        ) : null}
       </View>
 
       {/* 기본 정보 섹션 */}
@@ -227,9 +236,10 @@ export default function AccommodationItem({
             variant="filled"
             placeholder={PLACEHOLDERS.accommodation.name}
             value={formData.name}
-            onChangeText={(text) => setFormData({ ...formData, name: text })}
-            style={styles.input}
+            onChangeText={(text) => !readOnly && setFormData({ ...formData, name: text })}
+            style={readOnly ? styles.readOnlyInput : styles.input}
             placeholderTextColor={colors.gray600}
+            editable={!readOnly}
           />
         </View>
 
@@ -239,12 +249,13 @@ export default function AccommodationItem({
             variant="filled"
             placeholder={PLACEHOLDERS.itinerary.descriptionForm}
           value={formData.description}
-          onChangeText={(text) => setFormData({ ...formData, description: text })}
+          onChangeText={(text) => !readOnly && setFormData({ ...formData, description: text })}
           multiline
           numberOfLines={3}
           textAlignVertical="top"
-            style={styles.textArea}
+            style={readOnly ? styles.readOnlyTextArea : styles.textArea}
             placeholderTextColor={colors.gray600}
+            editable={!readOnly}
         />
         </View>
 
@@ -253,10 +264,11 @@ export default function AccommodationItem({
             <Text style={styles.label}>국가</Text>
             <CountryPicker
               value={formData.country}
-              onChange={(name: string) => setFormData({ ...formData, country: name })}
+              onChange={(name: string) => !readOnly && setFormData({ ...formData, country: name })}
               placeholder={PLACEHOLDERS.picker.country}
-              onOpen={() => setCountryOpen(true)}
+              onOpen={() => !readOnly && setCountryOpen(true)}
               onClose={() => setCountryOpen(false)}
+              disabled={readOnly}
             />
           </View>
           <View style={[styles.inputGroup, styles.halfWidth]}>
@@ -265,9 +277,10 @@ export default function AccommodationItem({
               variant="filled"
               placeholder={PLACEHOLDERS.accommodation.city}
               value={formData.city}
-              onChangeText={(text) => setFormData({ ...formData, city: text })}
-              style={styles.input}
+              onChangeText={(text) => !readOnly && setFormData({ ...formData, city: text })}
+              style={readOnly ? styles.readOnlyInput : styles.input}
               placeholderTextColor={colors.gray600}
+              editable={!readOnly}
             />
           </View>
         </View>
@@ -278,9 +291,10 @@ export default function AccommodationItem({
             variant="filled"
             placeholder={PLACEHOLDERS.accommodation.place}
             value={formData.place}
-            onChangeText={(text) => setFormData({ ...formData, place: text })}
-            style={styles.input}
+            onChangeText={(text) => !readOnly && setFormData({ ...formData, place: text })}
+            style={readOnly ? styles.readOnlyInput : styles.input}
             placeholderTextColor={colors.gray600}
+            editable={!readOnly}
           />
         </View>
 
@@ -288,19 +302,22 @@ export default function AccommodationItem({
           <View style={[styles.inputGroup, styles.halfWidth, { position: 'relative' }]}>
             <Text style={styles.label}>체크인 날짜</Text>
             <Pressable 
-              style={styles.dateInput} 
-              onPress={() => setShowCheckinDatePicker(true)}
+              style={readOnly ? [styles.dateInput, { borderColor: colors.gray400, borderWidth: 1 }] : styles.dateInput}
+              onPress={() => !readOnly && setShowCheckinDatePicker(true)}
+              disabled={readOnly}
             >
               <View style={styles.dateTextContainer}>
                 <Text style={formData.checkin_date ? styles.dateText : styles.placeholderText}>
                   {formData.checkin_date ? dayjs(formData.checkin_date).format('YYYY.MM.DD') : '기타'}
                 </Text>
-                <View style={styles.iconWrapper}>
-                  <CalendarIcon width={16} height={16} />
-                </View>
+                {!readOnly && (
+                  <View style={styles.iconWrapper}>
+                    <CalendarIcon width={16} height={16} />
+                  </View>
+                )}
               </View>
             </Pressable>
-            {showCheckinDatePicker && (
+            {!readOnly && showCheckinDatePicker && (
               <BaseCalendar
                 visible={true}
                 selectedDate={formData.checkin_date}
@@ -320,16 +337,23 @@ export default function AccommodationItem({
             <Text style={styles.label}>체크인 시간</Text>
             <TimePicker
               value={formData.checkin_time}
-              onChange={(time) => setFormData({ ...formData, checkin_time: time })}
+              onChange={(time) => !readOnly && setFormData({ ...formData, checkin_time: time })}
               onOpen={() => {
-                setCheckinTimeOpen(true);
-                // 체크인 시간이 열릴 때 체크아웃 시간 닫기
-                if (checkoutTimeOpen) {
-                  setCheckoutTimeOpen(false);
+                if (!readOnly) {
+                  setCheckinTimeOpen(true);
+                  // 체크인 시간이 열릴 때 체크아웃 시간 닫기
+                  if (checkoutTimeOpen) {
+                    setCheckoutTimeOpen(false);
+                  }
                 }
               }}
               onClose={() => setCheckinTimeOpen(false)}
-              style={styles.timePicker}
+              style={readOnly ? {
+                backgroundColor: colors.gray200,
+                borderColor: colors.gray400,
+                borderWidth: 1,
+              } : styles.timePicker}
+              disabled={readOnly}
             />
           </View>
         </View>
@@ -338,19 +362,22 @@ export default function AccommodationItem({
           <View style={[styles.inputGroup, styles.halfWidth, { position: 'relative' }]}>
             <Text style={styles.label}>체크아웃 날짜</Text>
             <Pressable 
-              style={styles.dateInput} 
-              onPress={() => setShowCheckoutDatePicker(true)}
+              style={readOnly ? [styles.dateInput, { borderColor: colors.gray400, borderWidth: 1 }] : styles.dateInput}
+              onPress={() => !readOnly && setShowCheckoutDatePicker(true)}
+              disabled={readOnly}
             >
               <View style={styles.dateTextContainer}>
                 <Text style={formData.checkout_date ? styles.dateText : styles.placeholderText}>
                   {formData.checkout_date ? dayjs(formData.checkout_date).format('YYYY.MM.DD') : '기타'}
                 </Text>
-                <View style={styles.iconWrapper}>
-                  <CalendarIcon width={16} height={16} />
-                </View>
+                {!readOnly && (
+                  <View style={styles.iconWrapper}>
+                    <CalendarIcon width={16} height={16} />
+                  </View>
+                )}
               </View>
             </Pressable>
-            {showCheckoutDatePicker && (
+            {!readOnly && showCheckoutDatePicker && (
               <BaseCalendar
                 visible={true}
                 selectedDate={formData.checkout_date}
@@ -370,16 +397,23 @@ export default function AccommodationItem({
             <Text style={styles.label}>체크아웃 시간</Text>
             <TimePicker
               value={formData.checkout_time}
-              onChange={(time) => setFormData({ ...formData, checkout_time: time })}
+              onChange={(time) => !readOnly && setFormData({ ...formData, checkout_time: time })}
               onOpen={() => {
-                setCheckoutTimeOpen(true);
-                // 체크아웃 시간이 열릴 때 체크인 시간 닫기
-                if (checkinTimeOpen) {
-                  setCheckinTimeOpen(false);
+                if (!readOnly) {
+                  setCheckoutTimeOpen(true);
+                  // 체크아웃 시간이 열릴 때 체크인 시간 닫기
+                  if (checkinTimeOpen) {
+                    setCheckinTimeOpen(false);
+                  }
                 }
               }}
               onClose={() => setCheckoutTimeOpen(false)}
-              style={styles.timePicker}
+              style={readOnly ? {
+                backgroundColor: colors.gray200,
+                borderColor: colors.gray400,
+                borderWidth: 1,
+              } : styles.timePicker}
+              disabled={readOnly}
             />
           </View>
         </View>
@@ -391,15 +425,16 @@ export default function AccommodationItem({
               variant="filled"
               placeholder={PLACEHOLDERS.expense.amount}
               value={expenseData.amount.toString()}
-              onChangeText={(text) => setExpenseData({ ...expenseData, amount: text.replace(/[^0-9]/g, '') })}
+              onChangeText={(text) => !readOnly && setExpenseData({ ...expenseData, amount: text.replace(/[^0-9]/g, '') })}
               keyboardType="numeric"
-              style={styles.input}
+              style={readOnly ? styles.readOnlyInput : styles.input}
               placeholderTextColor={colors.gray600}
+              editable={!readOnly}
             />
           </View>
           <View style={[styles.inputGroup, styles.halfWidth]}>
             <Text style={styles.label}>통화</Text>
-            <View style={styles.currencyDisplay}>
+            <View style={readOnly ? [styles.currencyDisplay, { borderWidth: 1, borderColor: colors.gray400 }] : styles.currencyDisplay}>
                     <Text style={styles.currencyText}>
                     {currencyLabels[ExpenseCurrency.KRW]}
                     </Text>
@@ -407,23 +442,42 @@ export default function AccommodationItem({
           </View>
         </View>
               {/* 하단 버튼 */}
-      <View style={[styles.buttonRow, { position: 'relative', zIndex: -1 }]}>
-        <Pressable
-          style={styles.deleteButton}
-          onPress={handleDelete}
-        >
-          <Text style={styles.deleteButtonText}>삭제</Text>
-        </Pressable>
-        <Pressable
-          style={styles.saveButton}
-          onPress={handleSave}
-          disabled={isSubmitting}
-        >
-          <Text style={styles.saveButtonText}>
-            {accommodation && accommodation.id ? '수정' : '저장'}
-          </Text>
-        </Pressable>
-      </View>
+      {!readOnly ? (
+        <View style={[styles.buttonRow, { position: 'relative', zIndex: -1 }]}>
+          <Pressable
+            style={styles.deleteButton}
+            onPress={handleDelete}
+          >
+            <Text style={styles.deleteButtonText}>
+              {accommodation ? '삭제' : '취소'}
+            </Text>
+          </Pressable>
+          <Pressable
+            style={styles.saveButton}
+            onPress={handleSave}
+            disabled={isSubmitting}
+          >
+            <Text style={styles.saveButtonText}>
+              저장
+            </Text>
+          </Pressable>
+        </View>
+      ) : (
+        <View style={[styles.buttonRow, { position: 'relative' }]}>
+          <Pressable
+            style={styles.deleteButton}
+            onPress={handleDelete}
+          >
+            <Text style={styles.deleteButtonText}>삭제</Text>
+          </Pressable>
+          <Pressable
+            style={[styles.saveButton, { backgroundColor: colors.gray900 }]}
+            onPress={onEdit}
+          >
+            <Text style={styles.saveButtonText}>수정</Text>
+          </Pressable>
+        </View>
+      )}
       <WarningBanner
         message={warningMessage}
         visible={showWarning}
@@ -500,7 +554,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: 10,
     backgroundColor: colors.gray200,
-    minHeight: 40,
+    maxHeight: 40,
   },
   dateTextContainer: {
     flexDirection: 'row',
@@ -563,7 +617,7 @@ const styles = StyleSheet.create({
     color: colors.black,
   },
   saveButton: {
-    backgroundColor: colors.gray900,
+    backgroundColor: colors.primary,
     height: 40,
     borderRadius: radii.md,
     paddingHorizontal: spacing.lg,
@@ -583,4 +637,35 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     ...textStyles.body4,
   },
+  readOnlyInput: {
+    backgroundColor: colors.gray200,
+    borderWidth: 1,
+    borderColor: colors.gray400,
+    height: 40,
+    borderRadius: radii.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+    ...textStyles.body4,
+  },
+  readOnlyTextArea: {
+    backgroundColor: colors.gray200,
+    borderWidth: 1,
+    borderColor: colors.gray400,
+    height: 80,
+    borderRadius: radii.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 10,
+    ...textStyles.body4,
+  },
+  // readOnlyDateInput: {
+  //   flexDirection: 'row',
+  //   alignItems: 'center',
+  //   borderWidth: 1,
+  //   borderColor: colors.gray400,
+  //   borderRadius: radii.md,
+  //   paddingHorizontal: spacing.md,
+  //   paddingVertical: 10,
+  //   backgroundColor: colors.gray200,
+  //   minHeight: 40,
+  // },
 });

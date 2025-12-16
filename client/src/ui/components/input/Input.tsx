@@ -20,6 +20,8 @@ export function Input(props: InputProps) {
         {...rest}
         style={[variantStyles.style, style]}
         placeholderTextColor={placeholderTextColor ?? variantStyles.placeholderTextColor}
+        editable={editable}
+        pointerEvents={editable === false ? 'none' : 'auto'}
         onFocus={(e) => {
           setFocused(true);
           onFocus?.(e);

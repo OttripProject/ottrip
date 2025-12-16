@@ -80,7 +80,7 @@ export default function CountryPicker({ value, onChange, placeholder = '국가 �
         listItemLabelStyle={styles.listItemLabel}
         selectedItemLabelStyle={styles.selectedItem}
         selectedItemContainerStyle={styles.selectedItemContainer}
-        style={[styles.dropdown, { width: '100%' }]}
+        style={disabled ? [styles.dropdown, { borderColor: colors.gray400, borderWidth: 1 }] : [styles.dropdown, { width: '100%' }]}
         dropDownContainerStyle={[styles.dropdownContainer, { zIndex: 11000, position: 'absolute' }]}
         containerStyle={[styles.dropdownOuter, { width: '100%' }]}
         listMode="SCROLLVIEW"
@@ -107,7 +107,9 @@ const styles = StyleSheet.create({
     borderWidth: 0,
     borderRadius: radii.md,
     backgroundColor: colors.gray200,
+    height: 40,
     minHeight: 40,
+    maxHeight: 40,
     position: 'relative',
     zIndex: 9999,
     paddingHorizontal: 12,
@@ -129,6 +131,7 @@ const styles = StyleSheet.create({
   text: {
     ...textStyles.body4,
     color: colors.black,
+    lineHeight: 20,
   },
   listItemLabel: {
     ...textStyles.body4,

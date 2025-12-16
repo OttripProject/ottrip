@@ -81,99 +81,29 @@ export default function ItinerarySection({
     onItineraryClear?.();
   };
 
-  // 선택된 일정이 있고 편집 모드가 아닐 때 - 상세 정보 표시
+  // 선택된 일정이 있고 편집 모드가 아닐 때 - 읽기 전용 폼 표시
   if (selectedItinerary && !showItineraryForm) {
     return (
-      <View style={styles.detailContainer}>
-        <View style={styles.detailHeader}>
-          <Text style={styles.detailTitle}>{selectedItinerary.title}</Text>
-          <Pressable
-            style={styles.editButton}
-            onPress={() => {
-              setEditingItinerary(selectedItinerary);
-              setShowItineraryForm(true);
-              onEdit?.(selectedItinerary);
-            }}
-          >
-            <Text style={styles.editButtonText}>편집</Text>
-          </Pressable>
-        </View>
-
-        <View style={styles.detailContent}>
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>제목</Text>
-            <Text style={styles.detailValue}>{selectedItinerary.title}</Text>
-          </View>
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>날짜</Text>
-            <Text style={styles.detailValue}>
-              {dayjs(selectedItinerary.itineraryDate).format('YYYY년 M월 D일')}
-            </Text>
-          </View>
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>시작 시간</Text>
-            <Text style={styles.detailValue}>
-              {selectedItinerary.startTime
-                ? dayjs(`2000-01-01 ${selectedItinerary.startTime}`).format('HH:mm')
-                : selectedItinerary.startTime}
-            </Text>
-          </View>
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>종료 시간</Text>
-            <Text style={styles.detailValue}>
-              {selectedItinerary.endTime
-                ? dayjs(`2000-01-01 ${selectedItinerary.endTime}`).format('HH:mm')
-                : selectedItinerary.endTime}
-            </Text>
-          </View>
-          {selectedItinerary.country && (
-            <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>국가</Text>
-              <Text style={styles.detailValue}>{selectedItinerary.country}</Text>
-            </View>
-          )}
-          {selectedItinerary.city && (
-            <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>도시</Text>
-              <Text style={styles.detailValue}>{selectedItinerary.city}</Text>
-            </View>
-          )}
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>장소</Text>
-            <Text style={styles.detailValue}>{selectedItinerary.location}</Text>
-          </View>
-          {selectedItinerary.description && (
-            <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>설명</Text>
-              <Text style={styles.detailValue}>{selectedItinerary.description}</Text>
-            </View>
-          )}
-
-          {/* 연결된 비용 표시 */}
-          {(() => {
-            const connectedExpenses = planData.expenses.filter(
-              (expense: any) => expense.itineraryId === selectedItinerary.id
-            );
-
-            if (connectedExpenses.length > 0) {
-              return (
-                <View style={styles.expensesSection}>
-                  <Text style={styles.expensesSectionTitle}>비용 내역</Text>
-                  {connectedExpenses.map((expense: any) => (
-                    <View key={expense.id} style={styles.expenseDetailItem}>
-                      <Text style={styles.expenseDetailDescription}>{expense.description}</Text>
-                      <Text style={styles.expenseDetailAmount}>
-                        {expense.amount.toLocaleString()}원
-                      </Text>
-                    </View>
-                  ))}
-                </View>
-              );
-            }
-            return null;
-          })()}
-        </View>
-      </View>
+      <ItineraryItem
+        itinerary={selectedItinerary}
+        planId={planData.plan.id}
+        planData={planData}
+        onSave={handleItinerarySave}
+        onCancel={() => {
+          setShowItineraryForm(false);
+          setEditingItinerary(null);
+          onItineraryClear?.();
+        }}
+        onDelete={handleItineraryDelete}
+        onExpenseUpdate={planData.refreshExpenses}
+        selectedDate={selectedItineraryDate || undefined}
+        readOnly={true}
+        onEdit={() => {
+          setEditingItinerary(selectedItinerary);
+          setShowItineraryForm(true);
+          onEdit?.(selectedItinerary);
+        }}
+      />
     );
   }
 
@@ -193,6 +123,7 @@ export default function ItinerarySection({
         onDelete={handleItineraryDelete}
         onExpenseUpdate={planData.refreshExpenses}
         selectedDate={selectedItineraryDate || undefined}
+        readOnly={false}
       />
     );
   }
@@ -257,86 +188,6 @@ const styles = StyleSheet.create({
   addButtonText: {
     color: '#fff',
     fontWeight: '600',
-  },
-  detailContainer: {
-    padding: 16,
-  },
-  detailHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
-    paddingBottom: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e5e7eb',
-  },
-  detailTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#333',
-    flex: 1,
-  },
-  editButton: {
-    backgroundColor: '#007AFF',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
-  },
-  editButtonText: {
-    color: '#fff',
-    fontWeight: '600',
-    fontSize: 14,
-  },
-  detailContent: {
-    gap: 16,
-  },
-  detailRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    paddingVertical: 8,
-  },
-  detailLabel: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#666',
-    width: 80,
-    flexShrink: 0,
-  },
-  detailValue: {
-    fontSize: 14,
-    color: '#333',
-    flex: 1,
-    textAlign: 'right',
-  },
-  expensesSection: {
-    marginTop: 20,
-    paddingTop: 16,
-    borderTopWidth: 1,
-    borderTopColor: '#e5e7eb',
-  },
-  expensesSectionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 12,
-  },
-  expenseDetailItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    backgroundColor: '#f8f9fa',
-    borderRadius: 8,
-    marginBottom: 6,
-  },
-  expenseDetailDescription: {
-    fontSize: 14,
-    color: '#666',
-    flex: 1,
-  },
-  expenseDetailAmount: {
-    fontSize: 14,
   },
 });
 

@@ -1646,6 +1646,7 @@ export default function WeeklySchedulePanel({
                           {accommodations.map((accommodation: any, accIndex: number) => {
                             const isStart = isAccommodationStart(accommodation, date);
                             const isEnd = isAccommodationEnd(accommodation, date);
+                            const isVisualStart = isStart || (index === 0 && !isEnd);
                             const isMiddle = accommodation && !isStart && !isEnd;
                             
                             // 다음 날짜에도 이 숙박이 있는지 확인 (이미 계산한 nextAccommodations 재사용)
@@ -1659,11 +1660,46 @@ export default function WeeklySchedulePanel({
                               widthPercent: 100,
                             };
                             
-                            return (() => {
-                            // 시작 위치가 100%를 넘지 않도록 제한
-                            const actualLeft = Math.max(0, Math.min(finalTimeRange.startPercent, 100));
+                            let spanCount = 1;
+                            let totalWidthPercent = 0;
+
+                            if (isVisualStart) {
+                              // 1. 현재 날짜(시작점)의 너비 먼저 더함
+                              // (아래에서 계산할 actualWidth와 동일한 로직을 미리 수행)
+                              const currentLeft = Math.max(0, Math.min(finalTimeRange.startPercent, 100));
+                              const currentMaxWidth = 100 - currentLeft;
+                              const currentRealWidth = Math.min(finalTimeRange.widthPercent, currentMaxWidth);
+                              
+                              totalWidthPercent += currentRealWidth;
                             
-                            // 너비가 100%를 넘지 않도록 제한 (시작 위치 고려)
+                              // 2. 남은 요일들을 순회하며 너비 누적
+                              for (let i = index + 1; i < weekDays.length; i++) {
+                                const d = weekDays[i];
+                                const dAccs = getAllAccommodationsForDate(d);
+                                // 해당 날짜에 같은 숙박이 있는지 확인
+                                const dAcc = dAccs.find((a: any) => a.id === accommodation.id);
+                            
+                                if (dAcc) {
+                                  // 그 날짜의 시간 범위 가져오기
+                                  const dRange = getAccommodationTimeRange(dAcc, d); 
+                                  // 만약 중간에 꽉 찬 날이면 100%, 마지막 날이라 일부만 쓰면 그만큼만 더함
+                                  // (getAccommodationTimeRange가 없으면 꽉 찬 걸로 간주)
+                                  const dWidth = dRange ? dRange.widthPercent : 100;
+                                  
+                                  // 혹시라도 시작점(left)이 있는 경우 고려 (보통 중간 날짜는 left 0)
+                                  const dLeft = dRange ? dRange.startPercent : 0;
+                                  const dVisualWidth = Math.min(dWidth, 100 - dLeft); // 100% 넘지 않게 안전장치
+                            
+                                  totalWidthPercent += dVisualWidth;
+                                } else {
+                                  // 숙박이 끊기면 계산 종료
+                                  break;
+                                }
+                              }
+                            }
+
+                            return (() => {
+                            const actualLeft = Math.max(0, Math.min(finalTimeRange.startPercent, 100));
                             const maxWidth = 100 - actualLeft;
                             const actualWidth = Math.min(finalTimeRange.widthPercent, maxWidth);
                             
@@ -1687,30 +1723,39 @@ export default function WeeklySchedulePanel({
                                   borderTopRightRadius: isEnd ? radii.base : 0,
                                   borderBottomRightRadius: isEnd ? radii.base : 0,
                                   justifyContent: 'center',
-                                  minWidth: 1, // 최소 너비 보장
-                                  zIndex: hasNextDay ? 1 : 0, // 다음 날짜로 넘어가는 막대는 border 위에
+                                  minWidth: 1,
+                                  zIndex: isVisualStart ? 10 : (hasNextDay ? 1 : 0),
+                                  overflow: 'visible', 
                                 }}
                               >
-                                <View style={{
-                                  paddingLeft: isStart ? 8 : (isMiddle ? 8 : 0),
-                                  paddingRight: isEnd ? 8 : (isMiddle ? 8 : 0),
-                                  paddingVertical: 4,
-                                  height: '100%',
-                                  justifyContent: 'center',
-                                }}>
-                                  {(isStart || isMiddle) && (
+                                {isVisualStart && (
+                                  <View style={{
+                                    position: 'absolute',
+                                    left: 0,
+                                    top: 0,
+                                    bottom: 0,
+                                    width: `${(totalWidthPercent / actualWidth) * 100}%`, 
+                                    paddingLeft: isStart ? 8 : 8,
+                                    paddingRight: 4, 
+                                    paddingVertical: 4,
+                                    justifyContent: 'center',
+                                    zIndex: 20,
+                                    overflow: 'hidden',
+                                  }}>
                                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                                      {isStart && <View style={{ flexShrink: 0 }}>
+                                      <View style={{ flexShrink: 0 }}>
                                         <WeekBarAccommodationIcon width={14} height={14} />
-                                      </View>}
-                                      {isStart && (
-                                        <Text style={{ ...textStyles.h8, color: '#F59E0B', lineHeight: 10 }} numberOfLines={1}>
-                                          {accommodation.name}
-                                        </Text>
-                                      )}
+                                      </View>
+                                      <Text 
+                                        style={{ ...textStyles.h8, color: '#F59E0B', lineHeight: 10 }} 
+                                        numberOfLines={1}
+                                        ellipsizeMode="tail"
+                                      >
+                                        {accommodation.name}
+                                      </Text>
                                     </View>
-                                  )}
-                                </View>
+                                  </View>
+                                )}
                               </View>
                             );
                             })();
