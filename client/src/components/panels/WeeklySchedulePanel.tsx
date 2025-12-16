@@ -1046,26 +1046,58 @@ export default function WeeklySchedulePanel({
       return typeof r === 'string' ? r.toLowerCase() : undefined; // 'owner' | 'editor' | 'viewer'
     }, [planData.plan]);
 
-    // 주간 날짜 배열 생성
-    const getWeekDays = () => {
+    // 주간 날짜 배열 생성 (useMemo로 캐싱)
+    const weekDays = useMemo(() => {
       const days = [];
       for (let i = 0; i < 7; i++) {
         const date = currentWeekStart.add(i, 'day');
         days.push(date.format('YYYY-MM-DD'));
       }
       return days;
-    };
+    }, [currentWeekStart]);
 
-    // 특정 날짜의 숙박 정보 찾기 (체크인~체크아웃 사이의 모든 날짜 포함)
-    const getAccommodationForDate = (date: string) => {
-      const targetDate = dayjs(date).format('YYYY-MM-DD');
-      return planData.accommodations.find((acc: any) => {
-        const checkinDate = dayjs(acc.checkinDate).format('YYYY-MM-DD');
-        const checkoutDate = dayjs(acc.checkoutDate).format('YYYY-MM-DD');
-        
-        // 체크인 날짜부터 체크아웃 날짜 전날까지 포함
-        return targetDate >= checkinDate && targetDate < checkoutDate;
+    // 날짜별 숙박 목록을 useMemo로 캐싱
+    const accommodationsByDate = useMemo(() => {
+      if (!planData?.accommodations || !Array.isArray(planData.accommodations)) {
+        return new Map<string, any[]>();
+      }
+      
+      const map = new Map<string, any[]>();
+      weekDays.forEach((date) => {
+        const targetDate = dayjs(date).format('YYYY-MM-DD');
+        const matching = planData.accommodations.filter((acc: any) => {
+          if (!acc || !acc.checkinDate || !acc.checkoutDate) return false;
+          const checkinDate = dayjs(acc.checkinDate).format('YYYY-MM-DD');
+          const checkoutDate = dayjs(acc.checkoutDate).format('YYYY-MM-DD');
+          return targetDate >= checkinDate && targetDate <= checkoutDate;
+        });
+        map.set(date, matching);
       });
+      return map;
+    }, [weekDays, planData?.accommodations]);
+
+    // 특정 날짜에 포함되는 모든 숙박 찾기 (캐시된 맵에서 가져오기)
+    const getAllAccommodationsForDate = useCallback((date: string) => {
+      return accommodationsByDate.get(date) || [];
+    }, [accommodationsByDate]);
+    
+    // 특정 날짜의 숙박 정보 찾기 (체크인~체크아웃 날짜 포함)
+    // 같은 날짜에 체크인과 체크아웃이 겹치면 체크인 숙박을 우선적으로 반환
+    const getAccommodationForDate = (date: string) => {
+      const accommodations = getAllAccommodationsForDate(date);
+      if (accommodations.length === 0) {
+        return undefined;
+      }
+      
+      // 같은 날짜에 여러 숙박이 있으면 체크인 날짜인 숙박을 우선적으로 반환
+      const targetDate = dayjs(date).format('YYYY-MM-DD');
+      const checkinAccommodation = accommodations.find((acc: any) => {
+        const checkinDate = dayjs(acc.checkinDate).format('YYYY-MM-DD');
+        return targetDate === checkinDate;
+      });
+      
+      // 체크인 숙박이 있으면 반환, 없으면 첫 번째 숙박 반환
+      return checkinAccommodation || accommodations[0];
     };
     
     // 숙박이 해당 날짜에서 시작인지 확인
@@ -1076,13 +1108,67 @@ export default function WeeklySchedulePanel({
       return targetDate === checkinDate;
     };
     
-    // 숙박이 해당 날짜에서 끝나는지 확인 (체크아웃 전날)
+    // 숙박이 해당 날짜에서 끝나는지 확인 (체크아웃 날짜)
     const isAccommodationEnd = (accommodation: any, date: string) => {
       if (!accommodation) return false;
       const checkoutDate = dayjs(accommodation.checkoutDate).format('YYYY-MM-DD');
       const targetDate = dayjs(date).format('YYYY-MM-DD');
-      const dayBeforeCheckout = dayjs(checkoutDate).subtract(1, 'day').format('YYYY-MM-DD');
-      return targetDate === dayBeforeCheckout;
+      return targetDate === checkoutDate;
+    };
+    
+    // 특정 날짜에서 숙박의 시작/끝 시간 위치 계산 (24등분 기준)
+    const getAccommodationTimeRange = (accommodation: any, date: string) => {
+      if (!accommodation) return null;
+      
+      const targetDate = dayjs(date).format('YYYY-MM-DD');
+      const checkinDate = dayjs(accommodation.checkinDate).format('YYYY-MM-DD');
+      const checkoutDate = dayjs(accommodation.checkoutDate).format('YYYY-MM-DD');
+      
+      // 해당 날짜가 체크인~체크아웃 사이에 있는지 확인 (체크아웃 날짜 포함)
+      if (targetDate < checkinDate || targetDate > checkoutDate) {
+        if (__DEV__) {
+          console.log('getAccommodationTimeRange: date out of range', {
+            targetDate,
+            checkinDate,
+            checkoutDate,
+            accommodation: accommodation.name,
+          });
+        }
+        return null;
+      }
+      
+      // 시간 정규화 (초 제거)
+      const normalizeTime = (time: string) => {
+        if (!time) return '00:00';
+        return time.split(':').slice(0, 2).join(':');
+      };
+      
+      const checkinTime = normalizeTime(accommodation.checkinTime || '15:00');
+      const checkoutTime = normalizeTime(accommodation.checkoutTime || '11:00');
+      
+      let startHour = 0; // 해당 날짜에서 시작 시간 (0-24)
+      let endHour = 24;  // 해당 날짜에서 끝 시간 (0-24)
+      
+      if (targetDate === checkinDate) {
+        // 체크인 날짜: 체크인 시간부터 24시까지
+        const [hour, minute] = checkinTime.split(':').map(Number);
+        startHour = hour + (minute / 60); // 15:00 -> 15.0, 15:30 -> 15.5
+        endHour = 24;
+      } else if (targetDate === checkoutDate) {
+        // 체크아웃 날짜: 0시부터 체크아웃 시간까지
+        const [hour, minute] = checkoutTime.split(':').map(Number);
+        startHour = 0;
+        endHour = hour + (minute / 60);
+      } else {
+        // 중간 날짜: 0시부터 24시까지
+        startHour = 0;
+        endHour = 24;
+      }
+      
+      return {
+        startPercent: (startHour / 24) * 100, // 시작 위치 (%)
+        widthPercent: ((endHour - startHour) / 24) * 100, // 너비 (%)
+      };
     };
 
     const handleAddTrip = async (newTrip: any) => {
@@ -1462,7 +1548,7 @@ export default function WeeklySchedulePanel({
             <View>
               <View style={{ flexDirection: 'row', height: 70 }}>
                 <View style={styles.timeColumn} />
-                {getWeekDays().map((date, index) => {
+                {weekDays.map((date, index) => {
                   const isToday = dayjs(date).format('YYYY-MM-DD') === dayjs().format('YYYY-MM-DD');
                   return (
                     <View key={date} style={styles.dateHeaderCell}>
@@ -1485,20 +1571,24 @@ export default function WeeklySchedulePanel({
                     <AccommodationIcon width={16} height={16} />
                   </View>
                   <View style={{ flex: 1, flexDirection: 'row', position: 'relative' }}>
-                    {getWeekDays().map((date, index) => {
-                      const accommodation = getAccommodationForDate(date);
-                      const isStart = isAccommodationStart(accommodation, date);
-                      const isEnd = isAccommodationEnd(accommodation, date);
-                      const isMiddle = accommodation && !isStart && !isEnd;
+                    {weekDays.map((date, index) => {
+                      const accommodations = getAllAccommodationsForDate(date);
                       
-                      // 다음 날짜에도 같은 숙박이 있는지 확인
-                      const nextDate = index < getWeekDays().length - 1 ? getWeekDays()[index + 1] : null;
-                      const nextAccommodation = nextDate ? getAccommodationForDate(nextDate) : null;
-                      const hasContinuousAccommodation = accommodation && nextAccommodation && 
-                        accommodation.id === nextAccommodation.id;
+                      // 다음 날짜에도 같은 숙박이 있는지 확인 (모든 숙박 확인)
+                      const nextDate = index < weekDays.length - 1 ? weekDays[index + 1] : null;
+                      const nextAccommodations = nextDate ? getAllAccommodationsForDate(nextDate) : [];
+                      
+                      // 현재 날짜의 모든 숙박이 다음 날짜로 연속되는지 확인
+                      const hasAnyContinuousAccommodation = accommodations.some((acc: any) => 
+                        nextAccommodations.some((nextAcc: any) => acc.id === nextAcc.id)
+                      );
+                      
+                      // 첫 번째 숙박이 중간 날짜인지 확인
+                      const firstAccommodation = accommodations[0];
+                      const isMiddle = firstAccommodation && !isAccommodationStart(firstAccommodation, date) && !isAccommodationEnd(firstAccommodation, date);
                       
                       // 숙박이 연속되는 경우 오른쪽 border 숨김
-                      const shouldHideRightBorder = hasContinuousAccommodation || isMiddle;
+                      const shouldHideRightBorder = hasAnyContinuousAccommodation || isMiddle;
                       
                       return (
                         <Pressable
@@ -1507,51 +1597,124 @@ export default function WeeklySchedulePanel({
                             flex: 1, 
                             justifyContent: 'center', 
                             alignItems: 'center', 
-                            borderRightWidth: (index < getWeekDays().length - 1 && !shouldHideRightBorder) ? 1 : 0, 
-                            borderRightColor: '#e0e0e0' 
+                            position: 'relative', // absolute 위치 지정을 위해
+                            borderRightWidth: (index < weekDays.length - 1 && !shouldHideRightBorder) ? 1 : 0, 
+                            borderRightColor: '#e0e0e0',
+                            zIndex: 0, // border가 막대 위에 보이도록
                           }}
-                          onPress={() => {
-                            if (accommodation) {
-                              onShowAccommodationModal?.(accommodation);
+                          onPress={(e) => {
+                            if (Platform.OS === 'web') {
+                              // 웹에서만 클릭 위치 확인
+                              const clickX = (e.nativeEvent as any)?.clientX || (e as any)?.clientX || 0;
+                              const target = e.currentTarget as unknown as HTMLElement;
+                              if (target) {
+                                const rect = target.getBoundingClientRect();
+                                const relativeX = clickX - rect.left;
+                                const clickPercent = (relativeX / rect.width) * 100;
+                                
+                                // 클릭한 위치에 해당하는 숙박 찾기
+                                let clickedAccommodation = null;
+                                for (const acc of accommodations) {
+                                  const timeRange = getAccommodationTimeRange(acc, date);
+                                  if (timeRange) {
+                                    const isWithinBar = clickPercent >= timeRange.startPercent && 
+                                                       clickPercent <= (timeRange.startPercent + timeRange.widthPercent);
+                                    if (isWithinBar) {
+                                      clickedAccommodation = acc;
+                                      break;
+                                    }
+                                  }
+                                }
+                                
+                                if (clickedAccommodation) {
+                                  onShowAccommodationModal?.(clickedAccommodation);
+                                } else {
+                                  onShowAccommodationModal?.(null, date);
+                                }
+                                return;
+                              }
+                            }
+                            
+                            // 모바일이거나 위치 확인 실패 시 기본 동작
+                            if (accommodations.length > 0) {
+                              onShowAccommodationModal?.(accommodations[0]);
                             } else {
                               onShowAccommodationModal?.(null, date);
                             }
                           }}
                         >
-                          {accommodation && (
-                            <View style={{ 
-                              backgroundColor: 'rgba(245, 158, 11, 0.1)', 
-                              borderTopWidth: 1,
-                              borderBottomWidth: 1,
-                              borderLeftWidth: isStart ? 1 : 0,
-                              borderRightWidth: isEnd ? 1 : 0,
-                              borderColor: '#F59E0B',
-                              borderTopLeftRadius: isStart ? radii.base : 0,
-                              borderBottomLeftRadius: isStart ? radii.base : 0,
-                              borderTopRightRadius: isEnd ? radii.base : 0,
-                              borderBottomRightRadius: isEnd ? radii.base : 0,
-                              paddingHorizontal: isStart ? 8 : (isEnd ? 8 : 0),
-                              paddingVertical: 4, 
-                              width: '100%',
-                              height: '95%',
-                              justifyContent: 'center',
-                              marginLeft: isStart ? 0 : -1,
-                              marginRight: isEnd ? 0 : -1,
-                            }}>
-                              {(isStart || isMiddle) && (
-                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingLeft: isStart ? 0 : 8 }}>
-                                  {isStart && <View style={{ flexShrink: 0 }}>
-                                    <WeekBarAccommodationIcon width={14} height={14} />
-                                  </View>}
-                                  {isStart && (
-                                    <Text style={{ ...textStyles.h8, color: '#F59E0B', lineHeight: 10 }} numberOfLines={1}>
-                                      {accommodation.name}
-                                    </Text>
+                          {accommodations.map((accommodation: any, accIndex: number) => {
+                            const isStart = isAccommodationStart(accommodation, date);
+                            const isEnd = isAccommodationEnd(accommodation, date);
+                            const isMiddle = accommodation && !isStart && !isEnd;
+                            
+                            // 다음 날짜에도 이 숙박이 있는지 확인 (이미 계산한 nextAccommodations 재사용)
+                            const hasNextDay = nextAccommodations.some((acc: any) => acc.id === accommodation.id);
+                            
+                            const timeRange = getAccommodationTimeRange(accommodation, date);
+                            
+                            // timeRange가 null이면 전체 날짜를 차지하도록 fallback
+                            const finalTimeRange = timeRange || {
+                              startPercent: 0,
+                              widthPercent: 100,
+                            };
+                            
+                            return (() => {
+                            // 시작 위치가 100%를 넘지 않도록 제한
+                            const actualLeft = Math.max(0, Math.min(finalTimeRange.startPercent, 100));
+                            
+                            // 너비가 100%를 넘지 않도록 제한 (시작 위치 고려)
+                            const maxWidth = 100 - actualLeft;
+                            const actualWidth = Math.min(finalTimeRange.widthPercent, maxWidth);
+                            
+                            return (
+                              <View 
+                                key={`${accommodation.id}-${date}-${accIndex}`}
+                                style={{ 
+                                  position: 'absolute',
+                                  left: `${actualLeft}%`,
+                                  width: `${actualWidth}%`,
+                                  top: 0,
+                                  bottom: 0,
+                                  backgroundColor: 'rgba(245, 158, 11, 0.1)', 
+                                  borderTopWidth: 1,
+                                  borderBottomWidth: 1,
+                                  borderLeftWidth: isStart ? 1 : 0,
+                                  borderRightWidth: isEnd ? 1 : 0,
+                                  borderColor: '#F59E0B',
+                                  borderTopLeftRadius: isStart ? radii.base : 0,
+                                  borderBottomLeftRadius: isStart ? radii.base : 0,
+                                  borderTopRightRadius: isEnd ? radii.base : 0,
+                                  borderBottomRightRadius: isEnd ? radii.base : 0,
+                                  justifyContent: 'center',
+                                  minWidth: 1, // 최소 너비 보장
+                                  zIndex: hasNextDay ? 1 : 0, // 다음 날짜로 넘어가는 막대는 border 위에
+                                }}
+                              >
+                                <View style={{
+                                  paddingLeft: isStart ? 8 : (isMiddle ? 8 : 0),
+                                  paddingRight: isEnd ? 8 : (isMiddle ? 8 : 0),
+                                  paddingVertical: 4,
+                                  height: '100%',
+                                  justifyContent: 'center',
+                                }}>
+                                  {(isStart || isMiddle) && (
+                                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                                      {isStart && <View style={{ flexShrink: 0 }}>
+                                        <WeekBarAccommodationIcon width={14} height={14} />
+                                      </View>}
+                                      {isStart && (
+                                        <Text style={{ ...textStyles.h8, color: '#F59E0B', lineHeight: 10 }} numberOfLines={1}>
+                                          {accommodation.name}
+                                        </Text>
+                                      )}
+                                    </View>
                                   )}
                                 </View>
-                              )}
-                            </View>
-                          )}
+                              </View>
+                            );
+                            })();
+                          })}
                         </Pressable>
                       );
                     })}

@@ -23,6 +23,7 @@ interface AccommodationItemProps {
   onCancel: () => void;
   onDelete?: (accommodationId: number) => void;
   onShowWarning?: (message?: string) => void;
+  existingAccommodations?: any[];
 }
 
 export default function AccommodationItem({ 
@@ -32,6 +33,7 @@ export default function AccommodationItem({
   onSave, 
   onCancel, 
   onDelete,
+  existingAccommodations = [],
 }: AccommodationItemProps) {
   const [showWarning, setShowWarning] = useState(false);
   const [warningMessage, setWarningMessage] = useState('');
@@ -91,6 +93,33 @@ export default function AccommodationItem({
       setWarningMessage('입력되지 않은 값이 있어요.');
       setShowWarning(true);
       return;
+    }
+
+    // 겹침 검증: 기존 숙박과 시간 겹침 확인
+    const newCheckin = dayjs(`${formData.checkin_date} ${formData.checkin_time}`);
+    const newCheckout = dayjs(`${formData.checkout_date} ${formData.checkout_time}`);
+
+    for (const existingAccommodation of existingAccommodations) {
+      // 편집 중인 숙박은 제외 (자기 자신)
+      if (accommodation && existingAccommodation.id === accommodation.id) {
+        continue;
+      }
+
+      const existingCheckin = dayjs(`${existingAccommodation.checkinDate} ${existingAccommodation.checkinTime || '00:00:00'}`);
+      const existingCheckout = dayjs(`${existingAccommodation.checkoutDate} ${existingAccommodation.checkoutTime || '00:00:00'}`);
+
+      // 시간이 겹치는지 확인 (범위가 겹치면 true)
+      const hasOverlap = (
+        (newCheckin.isAfter(existingCheckin) || newCheckin.isSame(existingCheckin)) && newCheckin.isBefore(existingCheckout) ||
+        newCheckout.isAfter(existingCheckin) && (newCheckout.isBefore(existingCheckout) || newCheckout.isSame(existingCheckout)) ||
+        (newCheckin.isBefore(existingCheckin) && newCheckout.isAfter(existingCheckout))
+      );
+
+      if (hasOverlap) {
+        setWarningMessage('겹치는 숙박 일정이 있어요');
+        setShowWarning(true);
+        return;
+      }
     }
 
     // 실행 중 플래그 설정

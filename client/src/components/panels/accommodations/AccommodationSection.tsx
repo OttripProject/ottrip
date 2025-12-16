@@ -197,6 +197,7 @@ export default function AccommodationSection({
           onAccommodationClear?.();
         }}
         onDelete={handleAccommodationDelete}
+        existingAccommodations={planData.accommodations}
       />
     );
   }
