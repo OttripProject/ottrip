@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { View, Text, Pressable, StyleSheet, Alert, Platform, ScrollView } from 'react-native';
 import { TimePicker, AirportPicker } from '@/ui/components/pickers';
 import dayjs from 'dayjs';
@@ -44,6 +44,19 @@ export default function FlightItem({
   readOnly = false,
   onEdit,
 }: FlightItemProps) {
+  const formatAmountWithCommas = (digits: string) => {
+    if (!digits) return '';
+    const normalized = digits.replace(/^0+(?=\d)/, '');
+    return normalized.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  };
+
+  // "123,456.00" 같은 값이 와도 정수부만 남겨 "123456"으로 정규화
+  const normalizeAmountToIntDigits = (value: unknown) => {
+    const raw = String(value ?? '').trim();
+    if (!raw) return '';
+    const integerPart = raw.split('.')[0];
+    return integerPart.replace(/[^0-9]/g, '');
+  };
   const [formData, setFormData] = useState({
     reservation_number: flight?.reservationNumber || flight?.reservation_number || '',
     passenger_name: flight?.passengerName || flight?.passenger_name || '',
@@ -54,13 +67,19 @@ export default function FlightItem({
   const [airportOpen, setAirportOpen] = useState(false);
   const [timeOpen, setTimeOpen] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
-  const [currencyOpen, setCurrencyOpen] = useState(false);
   const [segmentDatePickerOpen, setSegmentDatePickerOpen] = useState<Record<string, boolean>>({});
 
   const [expenseData, setExpenseData] = useState({
-    amount: flight?.expense?.amount || '',
-    currency: flight?.expense?.currency || ExpenseCurrency.KRW,
+    // amount는 화면 표시를 위해 항상 "정수 digits 문자열"로 유지
+    amount: normalizeAmountToIntDigits(flight?.expense?.amount),
   });
+
+  // flight prop이 변경될 때 금액 동기화 (다른 항공편 선택 시 값이 고정되는 문제 방지)
+  useEffect(() => {
+    setExpenseData({
+      amount: normalizeAmountToIntDigits(flight?.expense?.amount),
+    });
+  }, [flight]);
 
   const [showWarning, setShowWarning] = useState(false);
   const [warningMessage, setWarningMessage] = useState('');
@@ -261,7 +280,7 @@ export default function FlightItem({
             exDate: flightSegments.length > 0 && flightSegments[0].departure_date 
               ? flightSegments[0].departure_date 
               : expenseDate,
-            amount: Number(expenseData.amount) || 0,
+            amount: parseInt(expenseData.amount || '0', 10) || 0,
             currency: ExpenseCurrency.KRW,
             category: ExpenseCategory.FLIGHT as any,
             planId: planId,
@@ -294,7 +313,7 @@ export default function FlightItem({
             exDate: flightSegments.length > 0 && flightSegments[0].departure_date 
               ? flightSegments[0].departure_date 
               : expenseDate,
-            amount: Number(expenseData.amount) || 0,
+            amount: parseInt(expenseData.amount || '0', 10) || 0,
             currency: ExpenseCurrency.KRW,
             category: ExpenseCategory.FLIGHT as any,
             planId: planId,
@@ -330,14 +349,6 @@ export default function FlightItem({
       }
     }
   };
-
-  // 통화 옵션
-  const currencyOptions = useMemo(() => [
-    { label: 'KRW', value: ExpenseCurrency.KRW },
-    { label: 'USD', value: ExpenseCurrency.USD },
-    { label: 'EUR', value: ExpenseCurrency.EUR },
-    { label: 'JPY', value: ExpenseCurrency.JPY },
-  ], []);
 
   const isSegmentComplete = (segment: SegmentForm): boolean => {
     return !!(
@@ -426,27 +437,30 @@ export default function FlightItem({
             />
           </View>
 
-          {/* 항공료 / 통화 */}
+          {/* 항공료 */}
           <View style={[styles.row, { gap: spacing.sm }]}>
-            <View style={[styles.inputGroup, styles.halfWidth]}>
+            <View style={[styles.inputGroup, { flex: 1 }]}>
               <Text style={styles.label}>항공료</Text>
-              <Input
-                variant={readOnly ? "outlined" : "filled"}
-                placeholder={PLACEHOLDERS.expense.amount}
-                value={expenseData.amount.toString()}
-                onChangeText={(text) => !readOnly && setExpenseData({ ...expenseData, amount: text.replace(/[^0-9]/g, '') })}
-                keyboardType="numeric"
-                style={readOnly ? styles.readOnlyInput : styles.input}
-                placeholderTextColor={colors.gray600}
-                editable={!readOnly}
-              />
-            </View>
-            <View style={[styles.inputGroup, styles.halfWidth]}>
-              <Text style={styles.label}>통화</Text>
-              <View style={readOnly? [styles.currencyDisplay, { borderWidth: 1, borderColor: colors.gray400 }] : styles.currencyDisplay}>
-                    <Text style={styles.currencyText}>
-                    {currencyLabels[ExpenseCurrency.KRW]}
-                    </Text>
+              <View style={styles.amountInputWrapper}>
+                <Input
+                  variant={readOnly ? "outlined" : "filled"}
+                  placeholder={PLACEHOLDERS.expense.amount}
+                  value={formatAmountWithCommas(expenseData.amount.toString())}
+                  onChangeText={(text) => {
+                    if (readOnly) return;
+                    setExpenseData({ ...expenseData, amount: normalizeAmountToIntDigits(text) });
+                  }}
+                  keyboardType="numeric"
+                  style={[
+                    readOnly ? styles.readOnlyInput : styles.input,
+                    styles.amountInputPadding,
+                  ]}
+                  placeholderTextColor={colors.gray600}
+                  editable={!readOnly}
+                />
+                <Text style={styles.amountSuffix} pointerEvents="none">
+                  {currencyLabels[ExpenseCurrency.KRW]}
+                </Text>
               </View>
             </View>
           </View>
@@ -886,6 +900,21 @@ const styles = StyleSheet.create({
   currencyText: {
     ...textStyles.body4,
     color: colors.gray600,
+  },
+  amountInputWrapper: {
+    position: 'relative',
+  },
+  amountInputPadding: {
+    paddingRight: 20,
+    textAlign: 'right',
+  },
+  amountSuffix: {
+    position: 'absolute',
+    right: spacing.sm,
+    top: '50%',
+    transform: [{ translateY: -10 }],
+    ...textStyles.body4,
+    color: colors.black,
   },
   segmentContainer: {
     borderWidth: 1,
