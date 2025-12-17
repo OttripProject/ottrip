@@ -1,4 +1,4 @@
-from typing import Dict, Any, cast
+from typing import Dict, Any, cast, Iterable, Tuple
 
 from fastapi import HTTPException
 from sqlalchemy.orm import attributes
@@ -137,60 +137,70 @@ class AIService:
                 checklist=None
             )
         
-        # AI 생성 항목에 is_custom: False 설정
-        ai_data = ai_result.data or {}
-        for items in ai_data.values():
-            if isinstance(items, list):
-                items_list = cast(list[Any], items)
-                for item in items_list:
-                    if isinstance(item, dict):
-                        item_dict = cast(Dict[str, Any], item)
-                        item_dict["is_custom"] = False
-        
-        # 기존 체크리스트에서 사용자가 추가한 항목(is_custom: True) 보존
-        if plan.travel_checklist and "categories" in plan.travel_checklist:
-            existing_categories = plan.travel_checklist["categories"]
-            
-            # 각 카테고리에서 사용자가 추가한 항목 찾기
-            for category_key, existing_items in existing_categories.items():
-                if not isinstance(category_key, str) or not isinstance(existing_items, list):
+        # AI 생성 데이터 정규화 (snake_case 키로 통일 + 필드 기본값 보정)
+        raw_ai_data = ai_result.data or {}
+        ai_data: Dict[str, list[Dict[str, Any]]] = {}
+
+        for raw_category_key, raw_items in raw_ai_data.items():
+            if not isinstance(raw_items, list):
+                continue
+            category_key = self._normalize_checklist_category_key(str(raw_category_key))
+            if category_key not in ai_data:
+                ai_data[category_key] = []
+            for item in cast(list[Any], raw_items):
+                if not isinstance(item, dict):
                     continue
-                
-                existing_list = cast(list[Any], existing_items)
-                user_added_items: list[Dict[str, Any]] = []
-                
-                for item in existing_list:
+                item_dict = cast(Dict[str, Any], item)
+                # AI 생성 항목: 기본값
+                item_dict["is_custom"] = False
+                if "is_checked" not in item_dict:
+                    item_dict["is_checked"] = False
+                ai_data[category_key].append(item_dict)
+
+        # force_regenerate=True 인 경우: 기존 체크리스트를 삭제하지 않고 "추가만" 수행
+        # - 기존 항목은 모두 유지 (AI/Custom 포함)
+        # - 새로 생성된 AI 항목 중 기존과 겹치지 않는 항목만 추가
+        # - 새로 추가되는 항목은 기존 max_id 이후로 id 재부여(충돌 방지)
+        if force_regenerate and plan.travel_checklist and "categories" in plan.travel_checklist:
+            existing_categories_any = plan.travel_checklist.get("categories", {})
+            existing_categories: Dict[str, list[Dict[str, Any]]] = {}
+
+            for raw_category_key, raw_items in existing_categories_any.items():
+                if not isinstance(raw_items, list):
+                    continue
+                category_key = self._normalize_checklist_category_key(str(raw_category_key))
+                existing_categories.setdefault(category_key, [])
+                for item in cast(list[Any], raw_items):
                     if isinstance(item, dict):
-                        item_dict = cast(Dict[str, Any], item)
-                        # 사용자가 추가한 항목(is_custom: True)만 보존
-                        if item_dict.get("is_custom", False):
-                            user_added_items.append(item_dict)
-                
-                # 사용자가 추가한 항목이 있으면 AI 생성 데이터에 추가
-                if user_added_items:
-                    # 카테고리 키 변환 (snake_case로 통일)
-                    category_map: Dict[str, str] = {
-                        "basicRequired": "basic_required",
-                        "scheduleRequired": "schedule_required",
-                        "recommended": "recommended",
-                        "optional": "optional",
-                        "custom": "custom"
-                    }
-                    ai_category_key = category_map.get(category_key, category_key)
-                    
-                    # AI 생성 데이터에 해당 카테고리가 없으면 생성
-                    if ai_category_key not in ai_data:
-                        ai_data[ai_category_key] = []
-                    
-                    # AI 생성 데이터의 카테고리가 리스트인지 확인
-                    ai_category_items = ai_data[ai_category_key]
-                    if isinstance(ai_category_items, list):
-                        ai_category_list = cast(list[Any], ai_category_items)
-                        # 사용자가 추가한 항목들을 AI 생성 항목 뒤에 추가
-                        ai_category_list.extend(user_added_items)
+                        existing_categories[category_key].append(cast(Dict[str, Any], item))
+
+            merged_categories = self._merge_checklist_add_only(
+                existing=existing_categories,
+                incoming_ai=ai_data,
+            )
+            ai_data = merged_categories
+        else:
+            # 기존 체크리스트가 있을 때는 사용자 추가 항목(is_custom: True)만 보존하는 기존 동작 유지
+            if plan.travel_checklist and "categories" in plan.travel_checklist:
+                existing_categories = plan.travel_checklist["categories"]
+                for category_key, existing_items in existing_categories.items():
+                    existing_list = cast(list[Any], existing_items)
+                    user_added_items: list[Dict[str, Any]] = []
+
+                    for item in existing_list:
+                        if isinstance(item, dict):
+                            item_dict = cast(Dict[str, Any], item)
+                            if item_dict.get("is_custom", False):
+                                user_added_items.append(item_dict)
+
+                    if user_added_items:
+                        ai_category_key = self._normalize_checklist_category_key(str(category_key))
+                        if ai_category_key not in ai_data:
+                            ai_data[ai_category_key] = []
+                        ai_data[ai_category_key].extend(user_added_items)
         
         checklist = ChecklistRead(
-            categories=ChecklistItemsByCategory(**ai_data)
+            categories=ChecklistItemsByCategory.model_validate(ai_data)
         )
         
         plan.travel_checklist = checklist.model_dump()
@@ -201,6 +211,74 @@ class AIService:
             message="체크리스트가 성공적으로 생성되었습니다.",
             checklist=checklist
         )
+
+    def _normalize_checklist_category_key(self, key: str) -> str:
+        category_map: Dict[str, str] = {
+            "basicRequired": "basic_required",
+            "scheduleRequired": "schedule_required",
+            "recommended": "recommended",
+            "optional": "optional",
+            "custom": "custom",
+            # 이미 snake_case 인 경우 그대로
+            "basic_required": "basic_required",
+            "schedule_required": "schedule_required",
+        }
+        return category_map.get(key, key)
+
+    def _normalize_checklist_item_key(self, item: Dict[str, Any]) -> Tuple[str, str]:
+        # name/reason 기반 중복 제거 키 (공백/대소문자 차이 흡수)
+        name = str(item.get("name") or "").strip().lower()
+        reason = str(item.get("reason") or "").strip().lower()
+        return (name, reason)
+
+    def _iter_all_items(self, categories: Dict[str, list[Dict[str, Any]]]) -> Iterable[Dict[str, Any]]:
+        for items in categories.values():
+            for item in items:
+                yield item
+
+    def _max_item_id(self, categories: Dict[str, list[Dict[str, Any]]]) -> int:
+        max_id = 0
+        for item in self._iter_all_items(categories):
+            item_id = item.get("id")
+            if isinstance(item_id, int) and item_id > max_id:
+                max_id = item_id
+        return max_id
+
+    def _merge_checklist_add_only(
+        self,
+        existing: Dict[str, list[Dict[str, Any]]],
+        incoming_ai: Dict[str, list[Dict[str, Any]]],
+    ) -> Dict[str, list[Dict[str, Any]]]:
+        merged: Dict[str, list[Dict[str, Any]]] = {k: list(v) for k, v in existing.items()}
+
+        # 기존 항목 set (카테고리 무관하게 name/reason 기준으로 중복 제거)
+        existing_keys: set[Tuple[str, str]] = set()
+        for item in self._iter_all_items(existing):
+            existing_keys.add(self._normalize_checklist_item_key(item))
+
+        next_id = self._max_item_id(existing) + 1
+
+        for category_key, ai_items in incoming_ai.items():
+            category_key_norm = self._normalize_checklist_category_key(category_key)
+            merged.setdefault(category_key_norm, [])
+
+            for item in ai_items:
+                key = self._normalize_checklist_item_key(item)
+                if key in existing_keys:
+                    continue
+
+                # id 충돌 방지: 항상 새 id 부여
+                new_item = dict(item)
+                new_item["id"] = next_id
+                next_id += 1
+                new_item["is_custom"] = False
+                if "is_checked" not in new_item:
+                    new_item["is_checked"] = False
+
+                merged[category_key_norm].append(new_item)
+                existing_keys.add(key)
+
+        return merged
     
     async def get_checklist(self, public_id: str) -> ChecklistRead:
         """체크리스트 조회 (최적화: travel_checklist만 조회)"""
