@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Modal, ScrollView, TextInput, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Modal, ScrollView, TextInput, Platform, ActivityIndicator } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import MaskedView from '@react-native-masked-view/masked-view';
 import GradientBackground from '@/ui/components/GradientBackground';
@@ -9,7 +9,6 @@ import { spacing } from '@/ui/tokens/spacing';
 import { radii } from '@/ui/tokens/radii';
 import AiRefreshIcon from '../../../assets/ai_refresh.svg';
 import AiCheckIcon from '../../../assets/ai_check.svg';
-import AiListIcon from '../../../assets/ai_list.svg';
 import DeleteIcon from '../../../assets/delete_ai.svg';
 import XIcon from '../../../assets/ai_close.svg';
 import AddCheckList from '../../../assets/add_checklist.svg';
@@ -33,6 +32,7 @@ interface ChecklistData {
 interface AiChecklistListViewModalProps {
   visible: boolean;
   checklist: ChecklistData | null;
+  isLoading?: boolean;
   onClose: () => void;
   onRefresh: () => void;
   onToggleItem: (itemId: number, isChecked: boolean) => void;
@@ -92,6 +92,7 @@ const getCategoryTitle = (categoryKey: string) => {
 export default function AiChecklistListViewModal({
   visible,
   checklist,
+  isLoading = false,
   onClose,
   onRefresh,
   onToggleItem,
@@ -137,6 +138,14 @@ export default function AiChecklistListViewModal({
           {/* gradientAIColors가 투명도(알파)를 포함해도 뒤 화면이 비치지 않도록 흰색 베이스 레이어를 먼저 깔아둠 */}
           <View pointerEvents="none" style={StyleSheet.absoluteFillObject} />
           <GradientBackground colors={colors.gradientAIColors} style={{ flex: 1 }}>
+            {isLoading && (
+              <View style={styles.loadingOverlay}>
+                <View style={styles.loadingContent}>
+                  <ActivityIndicator size="large" color={colors.white} />
+                  <Text style={styles.loadingMessage}>AI Checklist 생성중..</Text>
+                </View>
+              </View>
+            )}
             <View style={styles.headerSection}>
               <View style={styles.titleContainer}>
                 <Text style={styles.headerTitle}>체크리스트</Text>
@@ -298,6 +307,25 @@ const styles = StyleSheet.create({
     minHeight: 0,
     overflow: 'hidden',
     backgroundColor: colors.white,
+  },
+  loadingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1000,
+  },
+  loadingContent: {
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  loadingMessage: {
+    ...textStyles.h6,
+    color: colors.white,
   },
   headerSection: {
     flexDirection: 'row',

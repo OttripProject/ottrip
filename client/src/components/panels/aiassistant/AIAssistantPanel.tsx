@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert, ActivityIndicator, ScrollView, Pressable, Platform, TextInput } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, ScrollView, Pressable, Platform, TextInput } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import MaskedView from '@react-native-masked-view/masked-view';
 import PanelLayout from '../PanelLayout';
@@ -97,7 +97,7 @@ export default function AIAssistantPanel({ publicId }: AIAssistantPanelProps) {
       
       // 2. AI 체크리스트 생성
       const checklistResponse = await api.post(`/private/ai/checklist/${publicId}/generate`, {
-        force_regenerate: false
+        force_regenerate: true
       });
       
       if (checklistResponse.data.success) {
@@ -137,7 +137,7 @@ export default function AIAssistantPanel({ publicId }: AIAssistantPanelProps) {
         return;
       }
       
-      // 2. 기존 체크리스트를 강제로 재생성
+      // 2. AI 체크리스트 추가 생성 (기존 항목은 유지, 새 항목만 추가되도록 백엔드에서 처리)
       const response = await api.post(`/private/ai/checklist/${publicId}/generate`, {
         force_regenerate: true
       });
@@ -334,14 +334,7 @@ export default function AIAssistantPanel({ publicId }: AIAssistantPanelProps) {
 
   return (
     <PanelLayout style={{ flex: 1 }}>
-      <View 
-        style={[
-          styles.contentContainer, 
-          isLoading && (Platform.OS === 'web' 
-            ? { filter: 'blur(4px)' } 
-            : styles.contentContainerBlur)
-        ]}
-      >
+      <View style={styles.contentContainer}>
           {!publicId ? (
             // Plan이 선택되지 않은 상태
             <View style={styles.placeholder}>
@@ -377,20 +370,13 @@ export default function AIAssistantPanel({ publicId }: AIAssistantPanelProps) {
             {/* (리스트 제거) */}
           </View>
           )}
-        {isLoading && (
-          <View style={styles.loadingOverlay}>
-            <View style={styles.loadingContent}>
-              <ActivityIndicator size="large" color={colors.white} />
-              <Text style={styles.loadingMessage}>AI Checklist 생성중..</Text>
-            </View>
-          </View>
-        )}
       </View>
 
       {/* 리스트 보기 Modal */}
       <AiChecklistListViewModal
         visible={showListViewModal}
         checklist={checklist}
+        isLoading={isLoading}
         onClose={handleCloseListViewModal}
         onRefresh={handleRefresh}
         onToggleItem={handleToggleItem}
@@ -426,32 +412,6 @@ const styles = StyleSheet.create({
   contentContainer: {
     flex: 1,
     backgroundColor: colors.white,
-  },
-  contentContainerBlur: {
-    ...(Platform.OS === 'web' ? {
-      filter: 'blur(4px)',
-    } : {
-      opacity: 0.5,
-    }),
-  },
-  loadingOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 1000,
-  },
-  loadingContent: {
-    alignItems: 'center',
-    gap: spacing.md,
-  },
-  loadingMessage: {
-    ...textStyles.h6,
-    color: colors.white,
   },
   // 초기 상태 스타일
   initialState: {

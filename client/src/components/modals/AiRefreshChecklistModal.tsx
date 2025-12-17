@@ -25,8 +25,7 @@ export default function RefreshChecklistModal({
         <View style={styles.modalContent}>
           <Text style={styles.modalTitle}>계속 진행할까요?</Text>
           <Text style={styles.modalMessage}>
-            새로고침하면{'\n'}
-            이번 여행의 체크리스트가 초기화돼요.{'\n'}
+            추천 체크리스트가 추가됩니다.{'\n'}
           </Text>
           <View style={styles.modalButtons}>
             <Pressable
