@@ -39,6 +39,21 @@ export default function AccommodationItem({
   readOnly = false,
   onEdit,
 }: AccommodationItemProps) {
+  const formatAmountWithCommas = (digits: string) => {
+    if (!digits) return '';
+    // 선행 0 제거 (단, 모두 0이면 하나만 남김)
+    const normalized = digits.replace(/^0+(?=\d)/, '');
+    return normalized.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  };
+
+  // 입력/서버값이 "123,456.00" 같이 들어와도 정수부만 남겨 "123456"으로 정규화
+  const normalizeAmountToIntDigits = (value: unknown) => {
+    const raw = String(value ?? '').trim();
+    if (!raw) return '';
+    // 소수점이 있으면 정수부만 사용 (100.00 -> 100)
+    const integerPart = raw.split('.')[0];
+    return integerPart.replace(/[^0-9]/g, '');
+  };
   const [showWarning, setShowWarning] = useState(false);
   const [warningMessage, setWarningMessage] = useState('');
   const [formData, setFormData] = useState({
@@ -54,7 +69,8 @@ export default function AccommodationItem({
   });
 
   const [expenseData, setExpenseData] = useState({
-    amount: accommodation?.expense?.amount || '',
+    // amount는 화면 표시를 위해 항상 "정수 digits 문자열"로 유지
+    amount: normalizeAmountToIntDigits(accommodation?.expense?.amount),
     currency: accommodation?.expense?.currency || ExpenseCurrency.KRW,
   });
 
@@ -79,6 +95,13 @@ export default function AccommodationItem({
         checkout_time: (accommodation.checkoutTime || '11:00').substring(0,5),
         description: accommodation.description || '',
       });
+
+      // expense 동기화: 서버에서 123.00 같은 값이 와도 digits로 정규화하여 저장
+      setExpenseData((prev) => ({
+        ...prev,
+        amount: normalizeAmountToIntDigits(accommodation?.expense?.amount),
+        currency: (accommodation?.expense?.currency as ExpenseCurrency) || prev.currency || ExpenseCurrency.KRW,
+      }));
     }
   }, [accommodation]);
 
@@ -145,7 +168,7 @@ export default function AccommodationItem({
           description: formData.description || undefined,
           expense: {
             exDate: formData.checkin_date,
-            amount: Number(expenseData.amount) || 0,
+            amount: parseInt(expenseData.amount || '0', 10) || 0,
             category: 'accommodation' as any,
             currency: expenseData.currency as ExpenseCurrency,
             description: formData.name,
@@ -166,7 +189,7 @@ export default function AccommodationItem({
           description: formData.description || undefined,
           expense: {
             exDate: formData.checkin_date,
-            amount: Number(expenseData.amount) || 0,
+            amount: parseInt(expenseData.amount || '0', 10) || 0,
             category: 'accommodation' as any,
             currency: expenseData.currency as ExpenseCurrency,
             description: formData.name,
@@ -419,25 +442,28 @@ export default function AccommodationItem({
         </View>
 
         <View style={[styles.row, { gap: spacing.sm }]}>
-          <View style={[styles.inputGroup, styles.halfWidth]}>
+          <View style={[styles.inputGroup, { flex: 1 }]}>
             <Text style={styles.label}>숙박료</Text>
-            <Input
-              variant="filled"
-              placeholder={PLACEHOLDERS.expense.amount}
-              value={expenseData.amount.toString()}
-              onChangeText={(text) => !readOnly && setExpenseData({ ...expenseData, amount: text.replace(/[^0-9]/g, '') })}
-              keyboardType="numeric"
-              style={readOnly ? styles.readOnlyInput : styles.input}
-              placeholderTextColor={colors.gray600}
-              editable={!readOnly}
-            />
-          </View>
-          <View style={[styles.inputGroup, styles.halfWidth]}>
-            <Text style={styles.label}>통화</Text>
-            <View style={readOnly ? [styles.currencyDisplay, { borderWidth: 1, borderColor: colors.gray400 }] : styles.currencyDisplay}>
-                    <Text style={styles.currencyText}>
-                    {currencyLabels[ExpenseCurrency.KRW]}
-                    </Text>
+            <View style={styles.amountInputWrapper}>
+              <Input
+                variant="filled"
+                placeholder={PLACEHOLDERS.expense.amount}
+                value={formatAmountWithCommas(expenseData.amount.toString())}
+                onChangeText={(text) => {
+                  if (readOnly) return;
+                  setExpenseData({ ...expenseData, amount: normalizeAmountToIntDigits(text) });
+                }}
+                keyboardType="numeric"
+                style={[
+                  readOnly ? styles.readOnlyInput : styles.input,
+                  styles.amountInputPadding,
+                ]}
+                placeholderTextColor={colors.gray600}
+                editable={!readOnly}
+              />
+              <Text style={styles.amountSuffix} pointerEvents="none">
+                {currencyLabels[ExpenseCurrency.KRW]}
+              </Text>
             </View>
           </View>
         </View>
@@ -596,6 +622,22 @@ const styles = StyleSheet.create({
   currencyText: {
     ...textStyles.body4,
     color: colors.gray600,
+  },
+  amountInputWrapper: {
+    position: 'relative',
+  },
+  amountInputPadding: {
+    // suffix(원) 공간만큼만 비우고, 숫자는 오른쪽으로 붙여서 "숫자 + 원"이 바로 붙어 보이게 함
+    paddingRight: 20,
+    textAlign: 'right',
+  },
+  amountSuffix: {
+    position: 'absolute',
+    right: spacing.sm,
+    top: '50%',
+    transform: [{ translateY: -10 }],
+    ...textStyles.body4,
+    color: colors.black,
   },
   buttonRow: {
     flexDirection: 'row',
