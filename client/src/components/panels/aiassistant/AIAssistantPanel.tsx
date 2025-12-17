@@ -3,7 +3,6 @@ import { View, Text, StyleSheet, TouchableOpacity, Alert, ActivityIndicator, Scr
 import { LinearGradient } from 'expo-linear-gradient';
 import MaskedView from '@react-native-masked-view/masked-view';
 import PanelLayout from '../PanelLayout';
-import GradientBackground from '@/ui/components/GradientBackground';
 import RefreshChecklistModal from '../../modals/AiRefreshChecklistModal';
 import InsufficientScheduleModal from '../../modals/AiInsufficientModal';
 import AiChecklistListViewModal from '../../modals/AiChecklistListViewModal';
@@ -327,7 +326,7 @@ export default function AIAssistantPanel({ publicId }: AIAssistantPanelProps) {
           end={{ x: 1, y: 0 }}
           style={{ flex: 1 }}
         >
-          <Text style={[style, styles.headerTitleTransparent]}>{children}</Text>
+          <Text style={[style, { opacity: 0 }]}>{children}</Text>
         </LinearGradient>
       </MaskedView>
     );
@@ -335,15 +334,14 @@ export default function AIAssistantPanel({ publicId }: AIAssistantPanelProps) {
 
   return (
     <PanelLayout style={{ flex: 1 }}>
-      <GradientBackground style={{ flex: 1 }}>
-        <View 
-          style={[
-            styles.contentContainer, 
-            isLoading && (Platform.OS === 'web' 
-              ? { filter: 'blur(4px)' } 
-              : styles.contentContainerBlur)
-          ]}
-        >
+      <View 
+        style={[
+          styles.contentContainer, 
+          isLoading && (Platform.OS === 'web' 
+            ? { filter: 'blur(4px)' } 
+            : styles.contentContainerBlur)
+        ]}
+      >
           {!publicId ? (
             // Plan이 선택되지 않은 상태
             <View style={styles.placeholder}>
@@ -351,26 +349,17 @@ export default function AIAssistantPanel({ publicId }: AIAssistantPanelProps) {
             </View>
           ) : (
             // 간단히 보기 상태 (체크리스트가 없어도 빈 카테고리 표시)
-            <View style={styles.previewContainer}>
+            <View
+              style={styles.previewContainer}
+            >
             <View style={styles.headerSection}>
               <View style={styles.titleContainer}>
-                <GradientText style={styles.headerTitle}>체크리스트</GradientText>
-                {hasItems ? (
-                  <TouchableOpacity onPress={handleRefresh} style={styles.refreshButton}>
-                    <AiRefreshIcon width={16} height={16} />
-                  </TouchableOpacity>
-                ) : (
-                  <TouchableOpacity 
-                    style={styles.generateButton}
-                    onPress={handleGenerateChecklist}
-                  >
-                    <Text style={styles.generateButtonText}>AI assistant</Text>
-                  </TouchableOpacity>
-                )}
+                {/* <GradientText style={styles.headerTitle}>체크리스트</GradientText> */}
+                <Text style={styles.headerTitle}>체크리스트</Text>
               </View>
               {hasItems && (
                 <TouchableOpacity onPress={handleViewAll} style={styles.viewAllButton}>
-                  <Text style={styles.viewAllText}>리스트로 보기</Text>
+                  <Text style={styles.viewAllText}>상세보기</Text>
                 </TouchableOpacity>
               )}
             </View>
@@ -387,192 +376,9 @@ export default function AIAssistantPanel({ publicId }: AIAssistantPanelProps) {
               </View>
             </View>
 
-            {/* 체크리스트 리스트 */}
-            <View style={styles.previewScrollWrapper}>
-              <ScrollView style={styles.previewScrollView} showsVerticalScrollIndicator={false}>
-                {(() => {
-                  // 기본 카테고리 목록
-                  const defaultCategories = ['basic_required', 'schedule_required', 'recommended', 'optional', 'custom'];
-                  
-                  // checklist가 없으면 빈 카테고리 구조 생성
-                  const categoriesToShow = checklist 
-                    ? checklist.categories 
-                    : {
-                        basic_required: [],
-                        schedule_required: [],
-                        recommended: [],
-                        optional: [],
-                        custom: []
-                      };
-                  
-                  // custom 카테고리를 맨 위로 정렬
-                  const categoryEntries = Object.entries(categoriesToShow);
-                  const sortedEntries = [
-                    ...categoryEntries.filter(([key]) => key === 'custom'),
-                    ...categoryEntries.filter(([key]) => key !== 'custom')
-                  ];
-                  
-                  return sortedEntries.map(([categoryKey, items]) => (
-                    <View key={categoryKey} style={styles.previewCategorySection}>
-                      <View style={styles.previewCategoryTitleRow}>
-                        <Text style={styles.previewCategoryTitle}>
-                          {getCategoryTitle(categoryKey)}
-                        </Text>
-                      </View>
-                      {items.length === 0 ? (
-                        <View style={styles.previewEmptyCategory}>
-                          {addingCategory !== categoryKey ? (
-                            <>
-                              <TouchableOpacity
-                                style={styles.previewAddItemButtonCard}
-                                onPress={() => handleStartAdding(categoryKey)}
-                              >
-                                <Text style={styles.previewAddItemButtonTextCard}>+</Text>
-                              </TouchableOpacity>
-                              <Text style={styles.previewEmptyCategoryText}>체크리스트를 추가해주세요.</Text>
-                            </>
-                          ) : (
-                            <View style={styles.previewAddingItemRow}>
-                              <View style={styles.previewAddingItemInputs}>
-                                <TextInput
-                                  style={styles.addingItemNameInput}
-                                  placeholder="항목명"
-                                  placeholderTextColor={colors.gray700}
-                                  value={newItemName}
-                                  onChangeText={setNewItemName}
-                                  maxLength={50}
-                                  autoFocus
-                                />
-                                <TextInput
-                                  style={styles.addingItemReasonInput}
-                                  placeholder="이유 (선택사항)"
-                                  placeholderTextColor={colors.gray700}
-                                  value={newItemReason}
-                                  onChangeText={setNewItemReason}
-                                  maxLength={100}
-                                />
-                              </View>
-                              <View style={styles.addingItemButtons}>
-                                <TouchableOpacity
-                                  style={styles.addingItemCancelButton}
-                                  onPress={handleCancelAdding}
-                                >
-                                  <Text style={styles.addingItemCancelText}>취소</Text>
-                                </TouchableOpacity>
-                                <TouchableOpacity
-                                  style={styles.addingItemSaveButton}
-                                  onPress={handleSaveAdding}
-                                >
-                                  <Text style={styles.addingItemSaveText}>저장</Text>
-                                </TouchableOpacity>
-                              </View>
-                            </View>
-                          )}
-                        </View>
-                      ) : (
-                        <View style={styles.previewCategoryCard}>
-                          {addingCategory !== categoryKey ? (
-                            <TouchableOpacity
-                              style={styles.previewAddItemButtonCard}
-                              onPress={() => handleStartAdding(categoryKey)}
-                            >
-                              <Text style={styles.previewAddItemButtonTextCard}>+</Text>
-                            </TouchableOpacity>
-                          ) : (
-                            <View style={styles.previewAddingItemRow}>
-                              <View style={styles.previewAddingItemInputs}>
-                                <TextInput
-                                  style={styles.addingItemNameInput}
-                                  placeholder="항목명"
-                                  value={newItemName}
-                                  onChangeText={setNewItemName}
-                                  maxLength={50}
-                                  autoFocus
-                                />
-                                <TextInput
-                                  style={styles.addingItemReasonInput}
-                                  placeholder="이유 (선택사항)"
-                                  value={newItemReason}
-                                  onChangeText={setNewItemReason}
-                                  maxLength={100}
-                                />
-                              </View>
-                              <View style={styles.addingItemButtons}>
-                                <TouchableOpacity
-                                  style={styles.addingItemCancelButton}
-                                  onPress={handleCancelAdding}
-                                >
-                                  <Text style={styles.addingItemCancelText}>취소</Text>
-                                </TouchableOpacity>
-                                <TouchableOpacity
-                                  style={styles.addingItemSaveButton}
-                                  onPress={handleSaveAdding}
-                                >
-                                  <Text style={styles.addingItemSaveText}>저장</Text>
-                                </TouchableOpacity>
-                              </View>
-                            </View>
-                          )}
-                          {items.map((item) => {
-                            const isHovered = hoveredItemId === item.id;
-                            return (
-                              <View 
-                                key={item.id} 
-                                style={styles.previewChecklistItemWrapper}
-                                {...(Platform.OS === 'web' ? {
-                                  onMouseEnter: () => setHoveredItemId(item.id),
-                                  onMouseLeave: () => setHoveredItemId(null),
-                                } : {})}
-                              >
-                                <TouchableOpacity
-                                  style={styles.previewChecklistItem}
-                                  onPress={() => handleToggleItem(item.id, !item.isChecked)}
-                                >
-                                  <View style={styles.previewItemContent}>
-                                    <View style={[
-                                      styles.checkboxContainer,
-                                      item.isChecked && styles.checkboxContainerChecked
-                                    ]}>
-                                      {item.isChecked ? (
-                                        <AiCheckIcon width={13} height={13} fill={colors.white} />
-                                      ) : null}
-                                    </View>
-                                    {!item.isCustom && (
-                                      <View style={styles.aiBadge}>
-                                        <GradientText style={styles.aiBadgeText}>AI</GradientText>
-                                      </View>
-                                    )}
-                                    <View style={styles.itemTextContainer}>
-                                      <Text style={[
-                                        styles.itemText,
-                                        item.isChecked && styles.itemTextChecked
-                                      ]}>
-                                        {item.name} → {item.reason}
-                                      </Text>
-                                    </View>
-                                  </View>
-                                </TouchableOpacity>
-                                {isHovered && (
-                                  <TouchableOpacity
-                                    style={styles.deleteItemButton}
-                                    onPress={() => handleDeleteItem(item.id)}
-                                  >
-                                    <DeleteIcon width={18.33} height={18.33} />
-                                  </TouchableOpacity>
-                                )}
-                              </View>
-                            );
-                          })}
-                        </View>
-                      )}
-                    </View>
-                  ));
-                })()}
-              </ScrollView>
-            </View>
+            {/* (리스트 제거) */}
           </View>
           )}
-        </View>
         {isLoading && (
           <View style={styles.loadingOverlay}>
             <View style={styles.loadingContent}>
@@ -581,7 +387,7 @@ export default function AIAssistantPanel({ publicId }: AIAssistantPanelProps) {
             </View>
           </View>
         )}
-      </GradientBackground>
+      </View>
 
       {/* 리스트 보기 Modal */}
       <AiChecklistListViewModal
@@ -621,6 +427,7 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     flex: 1,
+    backgroundColor: colors.white,
   },
   contentContainerBlur: {
     ...(Platform.OS === 'web' ? {
@@ -683,8 +490,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: spacing.xl,
-    paddingTop: spacing.lg + 4,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.lg,
     paddingBottom: spacing.sm,
   },
   titleContainer: {
@@ -694,7 +501,6 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     ...textStyles.h4,
-    color: colors.black,
   },
   headerTitleTransparent: {
     opacity: 0,
@@ -704,31 +510,32 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     // gap: spacing.xs,
   },
-  refreshButton: {
-    padding: spacing.xs,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
   viewAllButton: {
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
+    width: 74,
+    height: 32,
+    borderRadius: 28,
+    backgroundColor: colors.gray200,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   viewAllText: {
-    ...textStyles.h6,
-    color: colors.gray700,
+    ...textStyles.h8,
+    color: colors.black,
   },
   // 간단히 보기 통계 버튼
   simpleStatsContainer: {
     flexDirection: 'row',
-    paddingHorizontal: spacing.xl,
-    paddingTop: spacing.md,
     gap: spacing.md,
+    marginTop: spacing.lg, // headerSection과의 간격
+    marginHorizontal: spacing.lg,
+    marginBottom: spacing.lg,
+    flex: 1, // 남은 높이 채우기
+    alignItems: 'stretch',
   },
   simpleStatButton: {
-    backgroundColor: colors.white,
-    borderRadius: 29,
-    height: 40,
-    width: 108,
+    backgroundColor: colors.gray200,
+    borderRadius: radii.md,
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -749,14 +556,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 20,
     color: '#0066FF',
-  },
-  // 간단히 보기 스크롤 영역
-  previewScrollWrapper: {
-    flex: 1,
-    marginTop: spacing.md,
-  },
-  previewScrollView: {
-    flex: 1,
   },
   // 간단히 보기 카테고리 섹션
   previewCategorySection: {

@@ -7,6 +7,7 @@ import { usePlanDataQuery } from "@/hooks/usePlanDataQuery";
 import { usePlansQuery } from "@/hooks/usePlansQuery";
 import dayjs from "dayjs";
 import { colors } from "@/ui/tokens/colors";
+import GradientBackground from "@/ui/components/GradientBackground";
 
 // 패널 컴포넌트들
 import HeaderPanel from "@/components/panels/HeaderPanel";
@@ -299,7 +300,13 @@ export default function DashboardScreen() {
 
 
   return (
-    <View style={styles.root}>
+    <GradientBackground
+      colors={['#D7D0FF33', '#CBDDFF80']}
+      locations={[0.2, 0.502]}
+      start={{ x: 0.5, y: 0 }}
+      end={{ x: 0.5, y: 1 }}
+      style={styles.root}
+    >
       {/* 1. 헤더 모달 */}
       <View style={styles.headerModal}>
         <HeaderPanel />
@@ -428,18 +435,20 @@ export default function DashboardScreen() {
         )}
       </View>
       </View>
-    </View>
+    </GradientBackground>
   );
 }
 
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: colors.gray200,
   },
   container: {
     flex: 1,
-    padding: 16,
+    paddingTop: 16,
+    paddingBottom: 24,
+    paddingLeft: 32,
+    paddingRight: 32,
   },
   headerModal: {
     width: '100%',
@@ -463,12 +472,12 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   scheduleModal: {
-    flex: 0.7, // 70% 높이
+    flex: 0.8, 
     minHeight: 0,
     overflow: 'hidden',
   },
   bottomRow: {
-    flex: 0.3, // 30% 높이
+    flex: 0.2, 
     flexDirection: 'row',
     gap: 16,
     minHeight: 0,
