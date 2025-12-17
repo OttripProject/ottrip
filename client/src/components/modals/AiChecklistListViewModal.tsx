@@ -11,7 +11,8 @@ import AiRefreshIcon from '../../../assets/ai_refresh.svg';
 import AiCheckIcon from '../../../assets/ai_check.svg';
 import AiListIcon from '../../../assets/ai_list.svg';
 import DeleteIcon from '../../../assets/delete_ai.svg';
-import XIcon from '../../../assets/x.svg';
+import XIcon from '../../../assets/ai_close.svg';
+import AddCheckList from '../../../assets/add_checklist.svg';
 
 interface ChecklistItem {
   id: number;
@@ -47,7 +48,7 @@ const GradientText = ({ children, style }: { children: string; style?: any }) =>
         style={[
           style,
           {
-            background: 'linear-gradient(90deg, #FF2391 0%, #1F96FF 100%)',
+            background: 'linear-gradient(90deg, #9CBEFF 0%, #B4A7FF 100%)',
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
             backgroundClip: 'text',
@@ -133,12 +134,22 @@ export default function AiChecklistListViewModal({
     >
       <View style={styles.modalOverlay}>
         <View style={styles.modalContent}>
-          <GradientBackground style={{ flex: 1 }}>
+          {/* gradientAIColors가 투명도(알파)를 포함해도 뒤 화면이 비치지 않도록 흰색 베이스 레이어를 먼저 깔아둠 */}
+          <View pointerEvents="none" style={StyleSheet.absoluteFillObject} />
+          <GradientBackground colors={colors.gradientAIColors} style={{ flex: 1 }}>
             <View style={styles.headerSection}>
               <View style={styles.titleContainer}>
-                <GradientText style={styles.headerTitle}>Cheklist</GradientText>
-                <TouchableOpacity onPress={onRefresh} style={styles.refreshButton}>
-                  <AiRefreshIcon width={16} height={16} />
+                <Text style={styles.headerTitle}>체크리스트</Text>
+                <TouchableOpacity onPress={onRefresh} style={styles.aiRecommendButton} activeOpacity={0.8}>
+                  <LinearGradient
+                    colors={colors.gradientAIRefresh}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={styles.aiRecommendButtonGradient}
+                  >
+                    <Text style={styles.aiRecommendButtonText}>AI 추천</Text>
+                    <AiRefreshIcon width={14} height={14} />
+                  </LinearGradient>
                 </TouchableOpacity>
               </View>
               <TouchableOpacity onPress={onClose} style={styles.viewAllButton}>
@@ -147,12 +158,6 @@ export default function AiChecklistListViewModal({
             </View>
             <View style={styles.scrollWrapper}>
               <ScrollView style={styles.checklistScrollView} showsVerticalScrollIndicator={false}>
-              {checklist && (
-                <View style={styles.checklistHeader}>
-                  <AiListIcon width={16} height={16} />
-                  <Text style={styles.checklistHeaderText}>체크 리스트</Text>
-                </View>
-              )}
               {checklist && Object.entries(checklist.categories).map(([categoryKey, items]) => (
                 <View key={categoryKey} style={styles.categorySection}>
                   <View style={styles.categoryTitleRow}>
@@ -166,7 +171,7 @@ export default function AiChecklistListViewModal({
                         style={styles.addItemButtonCard}
                         onPress={() => handleStartAdding(categoryKey)}
                       >
-                        <Text style={styles.addItemButtonTextCard}>+</Text>
+                        <AddCheckList width={20} height={20} />
                       </TouchableOpacity>
                     )}
                     {addingCategory === categoryKey && (
@@ -292,6 +297,7 @@ const styles = StyleSheet.create({
     flex: 1,
     minHeight: 0,
     overflow: 'hidden',
+    backgroundColor: colors.white,
   },
   headerSection: {
     flexDirection: 'row',
@@ -304,18 +310,28 @@ const styles = StyleSheet.create({
   titleContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.xs,
+    gap: spacing.sm,
   },
   headerTitle: {
-    fontFamily: typography.fontFamily.poppinsSemiBold,
-    fontSize: 16,
-    lineHeight: 24,
+    ...textStyles.h5,
     color: colors.black,
   },
-  refreshButton: {
-    padding: spacing.xs,
-    justifyContent: 'center',
+  aiRecommendButton: {
+    width: 88,
+    height: 30,
+    borderRadius: 40,
+    overflow: 'hidden',
+  },
+  aiRecommendButtonGradient: {
+    flex: 1,
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+  },
+  aiRecommendButtonText: {
+    ...textStyles.h7,
+    color: colors.white,
   },
   viewAllButton: {
     paddingHorizontal: spacing.sm,
@@ -331,6 +347,7 @@ const styles = StyleSheet.create({
     flex: 1,
     minHeight: 0,
     overflow: 'hidden',
+    marginTop: spacing.xl,
   },
   checklistScrollView: {
     flex: 1,
@@ -345,7 +362,7 @@ const styles = StyleSheet.create({
     paddingTop: spacing.xs,
   },
   checklistHeaderText: {
-    ...textStyles.h7,
+    ...textStyles.h5,
     color: colors.black,
   },
   categorySection: {
@@ -396,7 +413,7 @@ const styles = StyleSheet.create({
   },
   deleteItemButton: {
     padding: spacing.xs,
-    marginRight: spacing.sm,
+    marginRight: spacing.lg,
   },
   emptyCategory: {
     padding: spacing.lg,

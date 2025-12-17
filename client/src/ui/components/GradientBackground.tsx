@@ -4,8 +4,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { colors } from '../tokens/colors';
 
 export type GradientBackgroundProps = {
-  colors?: string[];
-  locations?: number[];
+  colors?: readonly string[];
+  locations?: readonly [number, number, ...number[]];
   start?: { x: number; y: number };
   end?: { x: number; y: number };
   style?: ViewStyle;

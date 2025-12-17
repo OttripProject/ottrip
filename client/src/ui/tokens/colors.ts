@@ -20,6 +20,8 @@ export const colors = {
   // gradient colors
   gradientStart: '#FFD7EB',
   gradientEnd: '#BADFFF',
+  gradientAIColors: ['#D7D0FF4D', '#CBDDFF99'] as const,
+  gradientAIRefresh: ['#9CBEFF', '#B4A7FF'] as const,
   // 오버레이 배경
   overlayBackground: 'rgba(0, 0, 0, 0.7)',
 };
