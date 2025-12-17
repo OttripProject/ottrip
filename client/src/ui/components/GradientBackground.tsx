@@ -5,6 +5,7 @@ import { colors } from '../tokens/colors';
 
 export type GradientBackgroundProps = {
   colors?: string[];
+  locations?: number[];
   start?: { x: number; y: number };
   end?: { x: number; y: number };
   style?: ViewStyle;
@@ -17,6 +18,7 @@ const DEFAULT_GRADIENT_END = { x: 1, y: 1 };
 
 export default function GradientBackground({
   colors: colorsProp,
+  locations,
   start = DEFAULT_GRADIENT_START,
   end = DEFAULT_GRADIENT_END,
   style,
@@ -28,6 +30,7 @@ export default function GradientBackground({
   return (
     <LinearGradient
       colors={gradientColors}
+      locations={locations}
       start={start}
       end={end}
       style={[styles.gradient, style]}
