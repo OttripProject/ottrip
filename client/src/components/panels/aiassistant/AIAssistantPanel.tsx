@@ -357,11 +357,9 @@ export default function AIAssistantPanel({ publicId }: AIAssistantPanelProps) {
                 {/* <GradientText style={styles.headerTitle}>체크리스트</GradientText> */}
                 <Text style={styles.headerTitle}>체크리스트</Text>
               </View>
-              {hasItems && (
-                <TouchableOpacity onPress={handleViewAll} style={styles.viewAllButton}>
-                  <Text style={styles.viewAllText}>상세보기</Text>
-                </TouchableOpacity>
-              )}
+              <TouchableOpacity onPress={handleViewAll} style={styles.viewAllButton}>
+                <Text style={styles.viewAllText}>상세보기</Text>
+              </TouchableOpacity>
             </View>
             
             {/* 작은 통계 버튼 */}
