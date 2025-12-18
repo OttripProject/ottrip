@@ -30,11 +30,15 @@ def get_engine() -> EngineCache:
         engine = create_async_engine(
             database_settings.DATABASE_URI,
             pool_pre_ping=True, 
-            pool_size=25, 
+            pool_size=15, 
             max_overflow=0, 
             pool_recycle=300,  
             pool_timeout=30,
             echo=False, 
+            connect_args={
+                "prepared_statement_cache_size": 0, 
+                "statement_cache_size": 0        
+            }            
         )
         session_factory = async_sessionmaker(
             bind=engine,
