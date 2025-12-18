@@ -19,6 +19,7 @@ interface AccommodationSectionProps {
   onConsumeOpenNewAccommodationForm?: () => void;
   newAccommodationDraft?: any | null;
   onEdit?: (accommodation: any) => void;
+  onPreviewChange?: (preview: any) => void;
 }
 
 export default function AccommodationSection({
@@ -32,6 +33,7 @@ export default function AccommodationSection({
   onConsumeOpenNewAccommodationForm,
   newAccommodationDraft,
   onEdit,
+  onPreviewChange,
 }: AccommodationSectionProps) {
   const [showAccommodationForm, setShowAccommodationForm] = useState(false);
   const [editingAccommodation, setEditingAccommodation] = useState<any | null>(null);
@@ -125,6 +127,7 @@ export default function AccommodationSection({
         onDelete={handleAccommodationDelete}
         existingAccommodations={planData.accommodations}
         readOnly={false}
+        onPreviewChange={onPreviewChange}
       />
     );
   }

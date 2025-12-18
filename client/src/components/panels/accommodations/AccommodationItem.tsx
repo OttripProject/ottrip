@@ -26,6 +26,7 @@ interface AccommodationItemProps {
   existingAccommodations?: any[];
   readOnly?: boolean;
   onEdit?: () => void;
+  onPreviewChange?: (preview: any) => void;
 }
 
 export default function AccommodationItem({ 
@@ -38,6 +39,7 @@ export default function AccommodationItem({
   existingAccommodations = [],
   readOnly = false,
   onEdit,
+  onPreviewChange,
 }: AccommodationItemProps) {
   const formatAmountWithCommas = (digits: string) => {
     if (!digits) return '';
@@ -107,7 +109,18 @@ export default function AccommodationItem({
 
   // 국가 드롭다운 상태 및 옵션
   const [countryOpen, setCountryOpen] = useState(false); // zIndex 제어용 (CountrySelect 내부 오픈 상태와는 별개로 래퍼 zIndex 제어 가능)
-
+  useEffect(() => {
+    if (!readOnly && onPreviewChange) {
+      onPreviewChange({
+        checkinDate: formData.checkin_date,
+        checkoutDate: formData.checkout_date,
+        checkinTime: formData.checkin_time,
+        checkoutTime: formData.checkout_time,
+        name: formData.name,
+      });
+    }
+  }, [formData, readOnly, onPreviewChange]);
+  
   const handleSave = async () => {
     // 중복 요청 방지: 이미 실행 중이면 무시
     if (isSubmittingRef.current) {
