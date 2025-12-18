@@ -84,6 +84,7 @@ export default function CountryPicker({ value, onChange, placeholder = '국가 �
         dropDownContainerStyle={[styles.dropdownContainer, { zIndex: 11000, position: 'absolute' }]}
         containerStyle={[styles.dropdownOuter, { width: '100%' }]}
         listMode="SCROLLVIEW"
+        dropDownDirection="BOTTOM"
         scrollViewProps={{ 
           nestedScrollEnabled: true, 
           keyboardShouldPersistTaps: 'handled',

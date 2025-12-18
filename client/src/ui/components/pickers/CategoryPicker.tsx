@@ -64,6 +64,7 @@ export default function CategoryPicker({ value, onChange, placeholder = PLACEHOL
         style={[styles.dropdown, dropdownHeight ? { height: dropdownHeight, minHeight: dropdownHeight } : {}]}
         dropDownContainerStyle={[styles.dropdownContainer, { zIndex: 11000, position: 'absolute', borderTopWidth: 0 }]}
         listMode="SCROLLVIEW"
+        dropDownDirection="BOTTOM"
         scrollViewProps={{ showsVerticalScrollIndicator: false }}
         zIndex={10000}
         zIndexInverse={1000}
