@@ -127,6 +127,7 @@ export default function AirportPicker({
           fontSize: 13,
         }}
         listMode="SCROLLVIEW"
+        dropDownDirection="BOTTOM"
         scrollViewProps={{ nestedScrollEnabled: true, keyboardShouldPersistTaps: 'handled', showsVerticalScrollIndicator: false }}
         selectedItemLabelStyle={{
           fontWeight: 'bold',

@@ -156,6 +156,7 @@ export default function TimePicker({
         ]}
         containerStyle={[styles.dropdownOuter, { width: '100%' }]}
         listMode="SCROLLVIEW"
+        dropDownDirection="BOTTOM"
         scrollViewProps={{ 
           nestedScrollEnabled: true, 
           keyboardShouldPersistTaps: 'handled',
