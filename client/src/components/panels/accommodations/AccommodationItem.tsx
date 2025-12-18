@@ -485,10 +485,10 @@ export default function AccommodationItem({
         <View style={[styles.buttonRow, { position: 'relative', zIndex: -1 }]}>
           <Pressable
             style={styles.deleteButton}
-            onPress={handleDelete}
+            onPress={accommodation.id ? handleDelete : onCancel}
           >
             <Text style={styles.deleteButtonText}>
-              {accommodation ? '삭제' : '취소'}
+              {accommodation.id ? '삭제' : '취소'}
             </Text>
           </Pressable>
           <Pressable

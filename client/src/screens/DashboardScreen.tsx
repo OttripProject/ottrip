@@ -283,6 +283,16 @@ export default function DashboardScreen() {
     setSelectedFlight(null);
   }, []);
 
+  // 숙박 입력창이 닫히거나 다른 탭으로 이동하면 미리보기 제거
+  useEffect(() => {
+    if (previewAccommodation) {
+      const isAccommodationCreating = activeTab === 'accommodation' && (!selectedAccommodation || !selectedAccommodation.id);
+      if (!isAccommodationCreating) {
+        setPreviewAccommodation(null);
+      }
+    }
+  }, [activeTab, selectedAccommodation, previewAccommodation]);
+
   // 에러 전용 화면으로의 전환은 렌더 중이 아닌 이펙트에서 수행 (React 경고 방지)
   useEffect(() => {
     if (planData.errorStatus === 404) {
