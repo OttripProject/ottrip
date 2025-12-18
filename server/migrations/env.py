@@ -5,8 +5,7 @@ from logging.config import fileConfig
 from alembic import context
 from sqlalchemy import pool
 from sqlalchemy.engine import Connection
-from sqlalchemy.ext.asyncio import async_engine_from_config, create_async_engine
-
+from sqlalchemy.ext.asyncio import async_engine_from_config
 
 # Application models (imported for metadata discovery)
 import app.accomodation.models as _  # noqa: F401
@@ -81,11 +80,10 @@ async def run_async_migrations() -> None:
     and associate a connection with the context.
 
     """
-    # config_section = config.get_section(config.config_ini_section, {})
-    # prefix="sqlalchemy.",
-        
-    connectable = create_async_engine(
-        database_settings.DATABASE_URI,
+
+    connectable = async_engine_from_config(
+        config.get_section(config.config_ini_section, {}),
+        prefix="sqlalchemy.",
         poolclass=pool.NullPool,
         connect_args={
             "statement_cache_size": 0
