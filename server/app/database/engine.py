@@ -35,9 +35,6 @@ def get_engine() -> EngineCache:
             pool_recycle=300,  
             pool_timeout=30,
             echo=False, 
-            connect_args={
-                "statement_cache_size": 0
-            }            
         )
         session_factory = async_sessionmaker(
             bind=engine,
