@@ -88,7 +88,6 @@ async def run_async_migrations() -> None:
         database_settings.DATABASE_URI,
         poolclass=pool.NullPool,
         connect_args={
-            "prepared_statement_cache_size": 0,
             "statement_cache_size": 0
         },
     )

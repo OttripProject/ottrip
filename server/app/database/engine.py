@@ -36,7 +36,6 @@ def get_engine() -> EngineCache:
             pool_timeout=30,
             echo=False, 
             connect_args={
-                "prepared_statement_cache_size": 0, 
                 "statement_cache_size": 0        
             }            
         )
