@@ -359,11 +359,11 @@ export default function AIAssistantPanel({ publicId }: AIAssistantPanelProps) {
             <View style={styles.simpleStatsContainer}>
               <View style={styles.simpleStatButton}>
                 <Text style={styles.simpleStatLabel}>준비 필요</Text>
-                <Text style={styles.simpleStatNumberWarning}>{stats.total - stats.checked}</Text>
+                <Text style={styles.simpleStatNumber}>{stats.total - stats.checked}개</Text>
               </View>
               <View style={styles.simpleStatButton}>
                 <Text style={styles.simpleStatLabel}>준비 됨</Text>
-                <Text style={styles.simpleStatNumberSuccess}>{stats.checked}</Text>
+                <Text style={styles.simpleStatNumber}>{stats.checked}개</Text>
               </View>
             </View>
 
@@ -496,24 +496,17 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.xs,
+    justifyContent: 'space-between',
   },
   simpleStatLabel: {
-    ...textStyles.h7,
+    ...textStyles.h6,
+    color: colors.gray700,
+    marginLeft: 16,
+  },
+  simpleStatNumber: {
+    ...textStyles.h6,
     color: colors.black,
-  },
-  simpleStatNumberWarning: {
-    fontFamily: typography.fontFamily.poppinsSemiBold,
-    fontSize: 13,
-    lineHeight: 20,
-    color: '#FF0080',
-  },
-  simpleStatNumberSuccess: {
-    fontFamily: typography.fontFamily.poppinsSemiBold,
-    fontSize: 13,
-    lineHeight: 20,
-    color: '#0066FF',
+    marginRight: 16,
   },
   // 간단히 보기 카테고리 섹션
   previewCategorySection: {

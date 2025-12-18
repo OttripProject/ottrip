@@ -40,6 +40,7 @@ interface DetailsPanelProps {
   openNewAccommodationForm?: boolean;
   onConsumeOpenNewAccommodationForm?: () => void;
   newAccommodationDraft?: any | null;
+  onPreviewAccommodationChange?: (preview: any) => void;
 }
 
 
@@ -65,6 +66,7 @@ export default function DetailsPanel({
   openNewAccommodationForm,
   onConsumeOpenNewAccommodationForm,
   newAccommodationDraft,
+  onPreviewAccommodationChange,
 }: DetailsPanelProps) {
   if (!planData?.plan) {
     return (
@@ -120,6 +122,7 @@ export default function DetailsPanel({
           openNewAccommodationForm={openNewAccommodationForm}
           onConsumeOpenNewAccommodationForm={onConsumeOpenNewAccommodationForm}
           newAccommodationDraft={newAccommodationDraft}
+          onPreviewChange={onPreviewAccommodationChange}
         />
       );
     }
@@ -167,6 +170,7 @@ export default function DetailsPanel({
             onAccommodationAdd={onAccommodationAdd}
             onAccommodationSelect={onAccommodationSelect}
             onAccommodationClear={onAccommodationClear}
+            onPreviewChange={onPreviewAccommodationChange}
             openNewAccommodationForm={openNewAccommodationForm}
             onConsumeOpenNewAccommodationForm={onConsumeOpenNewAccommodationForm}
             newAccommodationDraft={newAccommodationDraft}

@@ -1,14 +1,11 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, useWindowDimensions, ScrollView } from 'react-native';
-import { useIsWideScreen } from '@/hooks/useIsWideScreen';
 import WeeklySchedulePanel, { Itinerary } from '@/components/panels/WeeklySchedulePanel';
-import SidePanels from '@/navigation/SidePanels';
 import { usePlanDataQuery } from '@/hooks/usePlanDataQuery';
 import { usePlansQuery } from '@/hooks/usePlansQuery';
 import { useMemo } from 'react';
 
 export default function DashboardSplit() {
-  const isWideScreen = useIsWideScreen();
   const { width } = useWindowDimensions();
   
   // 동적 비율 계산 (화면 크기에 따라 조정)
@@ -111,14 +108,6 @@ export default function DashboardSplit() {
         </View>
         {ratio.side > 0 && (
           <View style={[styles.sidePane, { flex: ratio.side }]}> 
-            <SidePanels 
-              planData={planData}
-              selectedItinerary={selectedItinerary}
-              onItineraryAdd={handleItineraryAdd}
-              onFlightAdd={handleFlightAdd}
-              onAccommodationAdd={handleAccommodationAdd}
-              onExpenseAdd={handleExpenseAdd}
-            />
           </View>
         )}
       </View>

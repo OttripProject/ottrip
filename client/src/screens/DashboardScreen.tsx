@@ -31,6 +31,7 @@ export default function DashboardScreen() {
   const [selectedItineraryDate, setSelectedItineraryDate] = useState<Date | null>(null);
   const [openNewAccommodationForm, setOpenNewAccommodationForm] = useState<boolean>(false);
   const [newAccommodationDraft, setNewAccommodationDraft] = useState<any | null>(null);
+  const [previewAccommodation, setPreviewAccommodation] = useState<any>(null);
   
   // 동적 비율 계산 (화면 크기에 따라 조정)
   const getResponsiveRatio = () => {
@@ -332,6 +333,8 @@ export default function DashboardScreen() {
               onPlanUpdate={plansQuery.updatePlan}
               onPlanDelete={plansQuery.deletePlan}
               onItineraryAdd={handleItineraryAdd}
+              previewAccommodation={previewAccommodation}
+              onPreviewAccommodationChange={setPreviewAccommodation}
         onPlanSelect={(trip) => {
           setSelectedTrip(trip);
           setSelectedPlanId(trip ? parseInt(trip.id) : null);
@@ -429,6 +432,7 @@ export default function DashboardScreen() {
               openNewAccommodationForm={openNewAccommodationForm}
               onConsumeOpenNewAccommodationForm={() => setOpenNewAccommodationForm(false)}
               newAccommodationDraft={newAccommodationDraft}
+              onPreviewAccommodationChange={setPreviewAccommodation}
             />
           </View>
         </View>

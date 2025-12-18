@@ -155,6 +155,20 @@ interface Props {
   onShowItineraryDetail?: (itinerary: Itinerary) => void;
   onShowFlightDetail?: (flight: any) => void;
   onShowAccommodationDetail?: (accommodation: any) => void;
+  previewAccommodation?: {
+    checkinDate: string;
+    checkoutDate: string;
+    checkinTime: string;
+    checkoutTime: string;
+    name: string;
+  } | null;
+  onPreviewAccommodationChange?: (preview: {
+    checkinDate: string;
+    checkoutDate: string;
+    checkinTime: string;
+    checkoutTime: string;
+    name: string;
+  } | null) => void;
   selectedTrip?: any;
   planData?: any;
   // 상위에서 전달받는 plans 관련 props (중복 호출 방지)
@@ -196,6 +210,8 @@ export default function WeeklySchedulePanel({
   onPlanDelete,
   activeTab,
   selectedItinerary,
+  previewAccommodation: externalPreviewAccommodation,
+  onPreviewAccommodationChange,
 }: Props) {
     const [currentWeekStart, setCurrentWeekStart] = useState(
         dayjs().startOf('week').add(1, 'day') // 월요일 시작
@@ -223,6 +239,22 @@ export default function WeeklySchedulePanel({
       endTime: string;
       location?: string;
     } | null>(null);
+
+    const [previewAccommodation, setPreviewAccommodation] = useState<{
+      checkinDate: string;
+      checkoutDate: string;
+      checkinTime: string;
+      checkoutTime: string;
+      name: string;
+    } | null>(null);
+
+    // 상위에서 전달받은 previewAccommodation이 있으면 동기화
+    useEffect(() => {
+      if (externalPreviewAccommodation !== undefined) {
+        setPreviewAccommodation(externalPreviewAccommodation);
+      }
+    }, [externalPreviewAccommodation]);
+
     // 각 이벤트의 실제 높이 저장 (동적 텍스트 표시용)
     const [eventHeights, setEventHeights] = useState<Record<string, number>>({});
     
@@ -1047,6 +1079,14 @@ export default function WeeklySchedulePanel({
     }, [planData.plan]);
 
     // 주간 날짜 배열 생성 (useMemo로 캐싱)
+    const handleAccommodationAdd = async (newAccommodation: any) => {
+      setPreviewAccommodation(null);
+      onPreviewAccommodationChange?.(null);
+      if (onAccommodationAdd) {
+        onAccommodationAdd(newAccommodation);
+      }
+    };
+
     const weekDays = useMemo(() => {
       const days = [];
       for (let i = 0; i < 7; i++) {
@@ -1628,7 +1668,20 @@ export default function WeeklySchedulePanel({
                                 
                                 if (clickedAccommodation) {
                                   onShowAccommodationModal?.(clickedAccommodation);
+                                  setPreviewAccommodation(null);
+                                  onPreviewAccommodationChange?.(null);
                                 } else {
+                                  const checkinDate = date;
+                                  const checkoutDate = dayjs(date).add(1, 'day').format('YYYY-MM-DD');
+                                  const newPreview = {
+                                    checkinDate: date,
+                                    checkoutDate: checkoutDate,
+                                    checkinTime: '15:00',
+                                    checkoutTime: '11:00',
+                                    name: '',
+                                  };
+                                  setPreviewAccommodation(newPreview);
+                                  onPreviewAccommodationChange?.(newPreview);
                                   onShowAccommodationModal?.(null, date);
                                 }
                                 return;
@@ -1638,7 +1691,20 @@ export default function WeeklySchedulePanel({
                             // 모바일이거나 위치 확인 실패 시 기본 동작
                             if (accommodations.length > 0) {
                               onShowAccommodationModal?.(accommodations[0]);
+                              setPreviewAccommodation(null);
+                              onPreviewAccommodationChange?.(null);
                             } else {
+                              const checkinDate = date;
+                              const checkoutDate = dayjs(date).add(1, 'day').format('YYYY-MM-DD');
+                              const newPreview = {
+                                checkinDate: date,
+                                checkoutDate: checkoutDate,
+                                checkinTime: '15:00',
+                                checkoutTime: '11:00',
+                                name: '',
+                              };
+                              setPreviewAccommodation(newPreview);
+                              onPreviewAccommodationChange?.(newPreview);
                               onShowAccommodationModal?.(null, date);
                             }
                           }}
@@ -1760,6 +1826,113 @@ export default function WeeklySchedulePanel({
                             );
                             })();
                           })}
+
+                          {/* 숙박 미리보기 렌더링 */}
+                          {previewAccommodation && (dayjs(date).isSame(dayjs(previewAccommodation.checkinDate), 'day') || 
+                            dayjs(date).isSame(dayjs(previewAccommodation.checkoutDate), 'day') ||
+                            (dayjs(date).isAfter(dayjs(previewAccommodation.checkinDate), 'day') && 
+                             dayjs(date).isBefore(dayjs(previewAccommodation.checkoutDate), 'day'))) && (() => {
+                            const isStart = previewAccommodation.checkinDate === date;
+                            const isEnd = previewAccommodation.checkoutDate === date;
+                            const isVisualStart = isStart || (index === 0 && !isEnd);
+                            
+                            const timeRange = getAccommodationTimeRange({
+                              checkinDate: previewAccommodation.checkinDate,
+                              checkoutDate: previewAccommodation.checkoutDate,
+                              checkinTime: previewAccommodation.checkinTime,
+                              checkoutTime: previewAccommodation.checkoutTime,
+                            }, date);
+
+                            const finalTimeRange = timeRange || { startPercent: 0, widthPercent: 100 };
+                            const actualLeft = Math.max(0, Math.min(finalTimeRange.startPercent, 100));
+                            const maxWidth = 100 - actualLeft;
+                            const actualWidth = Math.min(finalTimeRange.widthPercent, maxWidth);
+
+                            // 전체 너비 계산 (텍스트 표시용)
+                            let previewTotalWidthPercent = 0;
+                            if (isVisualStart) {
+                              previewTotalWidthPercent += actualWidth;
+                              
+                              // 다음 날짜들을 순회하며 너비 누적
+                              for (let i = index + 1; i < weekDays.length; i++) {
+                                const d = weekDays[i];
+                                const isDAfterStart = dayjs(d).isAfter(dayjs(previewAccommodation.checkinDate), 'day');
+                                const isDBeforeEnd = dayjs(d).isBefore(dayjs(previewAccommodation.checkoutDate), 'day');
+                                const isDEnd = dayjs(d).isSame(dayjs(previewAccommodation.checkoutDate), 'day');
+
+                                if (isDAfterStart && isDBeforeEnd) {
+                                  previewTotalWidthPercent += 100;
+                                } else if (isDEnd) {
+                                  const dRange = getAccommodationTimeRange({
+                                    checkinDate: previewAccommodation.checkinDate,
+                                    checkoutDate: previewAccommodation.checkoutDate,
+                                    checkinTime: previewAccommodation.checkinTime,
+                                    checkoutTime: previewAccommodation.checkoutTime,
+                                  }, d);
+                                  previewTotalWidthPercent += dRange ? dRange.widthPercent : 0;
+                                  break;
+                                } else {
+                                  break;
+                                }
+                              }
+                            }
+
+                            return (
+                              <View 
+                                key={`preview-accommodation-${date}`}
+                                style={{ 
+                                  position: 'absolute',
+                                  left: `${actualLeft}%`,
+                                  width: `${actualWidth}%`,
+                                  top: 0,
+                                  bottom: 0,
+                                  backgroundColor: 'rgba(245, 158, 11, 0.05)', 
+                                  borderWidth: 1,
+                                  borderStyle: 'dashed',
+                                  borderColor: 'rgba(245, 158, 11, 0.5)',
+                                  borderLeftWidth: isStart ? 1 : 0,
+                                  borderRightWidth: isEnd ? 1 : 0,
+                                  borderTopLeftRadius: isStart ? radii.base : 0,
+                                  borderBottomLeftRadius: isStart ? radii.base : 0,
+                                  borderTopRightRadius: isEnd ? radii.base : 0,
+                                  borderBottomRightRadius: isEnd ? radii.base : 0,
+                                  justifyContent: 'center',
+                                  zIndex: 5,
+                                  pointerEvents: 'none',
+                                  overflow: 'visible',
+                                }}
+                              >
+                                {isVisualStart && (
+                                  <View style={{
+                                    position: 'absolute',
+                                    left: 0,
+                                    top: 0,
+                                    bottom: 0,
+                                    width: `${(previewTotalWidthPercent / actualWidth) * 100}%`,
+                                    paddingLeft: isStart ? 8 : 8,
+                                    paddingRight: 4,
+                                    paddingVertical: 4,
+                                    justifyContent: 'center',
+                                    zIndex: 20,
+                                    overflow: 'hidden',
+                                  }}>
+                                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, opacity: 0.6 }}>
+                                      <View style={{ flexShrink: 0 }}>
+                                        <WeekBarAccommodationIcon width={14} height={14} />
+                                      </View>
+                                      <Text 
+                                        style={{ ...textStyles.h8, color: '#F59E0B', lineHeight: 10 }} 
+                                        numberOfLines={1}
+                                        ellipsizeMode="tail"
+                                      >
+                                        {previewAccommodation.name || ''}
+                                      </Text>
+                                    </View>
+                                  </View>
+                                )}
+                              </View>
+                            );
+                          })()}
                         </Pressable>
                       );
                     })}
