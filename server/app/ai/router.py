@@ -82,7 +82,6 @@ async def extract_flight_data_from_image(
     except HTTPException:
         raise
     except Exception as e:
-        print(f"항공권 데이터 추출 오류: {str(e)}")
         raise HTTPException(
             status_code=500, 
             detail=f"항공권 데이터 추출 중 오류가 발생했습니다: {str(e)}"

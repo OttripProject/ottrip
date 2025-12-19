@@ -46,7 +46,6 @@ def send_invitation_email(
         )
         sg = SendGridAPIClient(api_key=api_key)
         response = sg.send(message)
-        print("응답 : ", response.status_code)
 
     if not smtp_host or not smtp_user or not smtp_pass:
         raise RuntimeError("SMTP configuration is missing. Set SMTP_HOST/SMTP_USER/SMTP_PASS.")

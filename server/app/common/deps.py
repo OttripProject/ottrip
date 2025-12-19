@@ -1,9 +1,14 @@
+import logging
 from typing import Annotated  # , Optional
 
 from fastapi import Depends  # , Query
 from httpx import AsyncClient
 
 # from .schemas import PaginationParams
+
+# httpx의 DEBUG 로깅 비활성화 (토큰 등 민감한 정보 노출 방지)
+logging.getLogger("httpx").setLevel(logging.WARNING)
+logging.getLogger("httpcore").setLevel(logging.WARNING)
 
 
 async def get_http_client():
