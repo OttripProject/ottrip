@@ -106,6 +106,7 @@ export default function TripSelector({ selectedTrip, onTripSelect, trips, onTrip
   const [openMenuTripId, setOpenMenuTripId] = useState<string | null>(null);
   const [deleteConfirmModalOpen, setDeleteConfirmModalOpen] = useState(false);
   const [tripToDelete, setTripToDelete] = useState<string | null>(null);
+  const [tripNameToDelete, setTripNameToDelete] = useState('');
   const [menuPosition, setMenuPosition] = useState<{ top: number; right: number } | null>(null);
   const [resultModalVisible, setResultModalVisible] = useState(false);
   const [resultModalConfig, setResultModalConfig] = useState<{ mode: string; params?: any } | null>(null);
@@ -203,9 +204,13 @@ export default function TripSelector({ selectedTrip, onTripSelect, trips, onTrip
   };
 
   const handleDeleteTrip = (tripId: string) => {
-    setTripToDelete(tripId);
-    setDeleteConfirmModalOpen(true);
-    setOpenMenuTripId(null);
+    const trip = trips.find(t => t.id === tripId);
+    if (trip) {
+      setTripNameToDelete(trip.name);
+      setTripToDelete(tripId);
+      setDeleteConfirmModalOpen(true);
+      setOpenMenuTripId(null);
+    }
   };
 
   const confirmDeleteTrip = () => {
@@ -483,8 +488,9 @@ export default function TripSelector({ selectedTrip, onTripSelect, trips, onTrip
         onClose={() => {
           setDeleteConfirmModalOpen(false);
           setTripToDelete(null);
+          // 닫힐 때 이름을 초기화하지 않고 다음 오픈 때 덮어쓰도록 함 (깜빡임 방지)
         }}
-        tripName={tripToDelete ? trips.find(t => t.id === tripToDelete)?.name || '' : ''}
+        tripName={tripNameToDelete}
         onConfirm={confirmDeleteTrip}
       />
 
