@@ -50,7 +50,6 @@ export default function ExpensesPanel({ planData, onExpenseAdd }: ExpensesPanelP
       await planData?.refreshFlights?.();
       await planData?.refreshAccommodations?.();
     } catch (error) {
-      console.error('Failed to delete expense:', error);
       Alert.alert('오류', '비용 삭제에 실패했습니다.');
     }
   };

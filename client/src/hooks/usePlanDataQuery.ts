@@ -70,7 +70,7 @@ export const usePlanDataQuery = (publicId: string | null) => {
         itineraries,
       }));
     } catch (err: any) {
-      console.error('Failed to refresh itineraries:', err);
+      // Silent fail
     }
   };
 
@@ -83,7 +83,7 @@ export const usePlanDataQuery = (publicId: string | null) => {
         flights,
       }));
     } catch (err: any) {
-      console.error('Failed to refresh flights:', err);
+      // Silent fail
     }
   };
 
@@ -96,7 +96,7 @@ export const usePlanDataQuery = (publicId: string | null) => {
         accommodations,
       }));
     } catch (err: any) {
-      console.error('Failed to refresh accommodations:', err);
+      // Silent fail
     }
   };
 
@@ -109,7 +109,7 @@ export const usePlanDataQuery = (publicId: string | null) => {
         expenses,
       }));
     } catch (err: any) {
-      console.error('Failed to refresh expenses:', err);
+      // Silent fail
     }
   };
 

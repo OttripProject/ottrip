@@ -4,7 +4,6 @@ import QueryProvider from "@/contexts/QueryProvider";
 import { DateProvider } from "@/contexts/DateContext";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { loadPublicEnv } from "@/core/env/schema";
-import Toast from 'react-native-toast-message';
 import { Platform } from 'react-native';
 import { useFonts } from 'expo-font';
 import { View, ActivityIndicator } from 'react-native';
@@ -61,7 +60,6 @@ export default function App() {
         <QueryProvider>
           <RootNavigator />
           <StatusBar style="auto" />
-          <Toast />
         </QueryProvider>
       </DateProvider>
     </AuthProvider>

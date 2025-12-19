@@ -117,8 +117,6 @@ export default function FlightSection({
         }}
         onDelete={handleFlightDelete}
         existingFlights={planData.flights}
-        existingItineraries={planData.itineraries}
-        existingAccommodations={planData.accommodations}
         readOnly={false}
       />
     );

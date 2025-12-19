@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { View, Text, Pressable, StyleSheet, Modal, Alert, Platform } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -33,6 +33,7 @@ export default function ProfileScreen() {
   const [copied, setCopied] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [logoutModalOpen, setLogoutModalOpen] = useState(false);
+  const copiedTimerRef = useRef<NodeJS.Timeout | null>(null);
   
   // React Query로 사용자 프로필 로드 (HeaderModal과 캐시 공유)
   const { data: profile, isLoading: profileLoading } = useMe();
@@ -45,6 +46,15 @@ export default function ProfileScreen() {
       setGender(profile.gender);
     }
   }, [profile]);
+
+  // copied 타이머 cleanup
+  useEffect(() => {
+    return () => {
+      if (copiedTimerRef.current) {
+        clearTimeout(copiedTimerRef.current);
+      }
+    };
+  }, []);
 
   // 닉네임 검증 훅 사용
   const { nicknameError, checkingNickname, onNicknameChange, isValid } = useNicknameValidation(me?.nickname);
@@ -225,7 +235,7 @@ export default function ProfileScreen() {
               <Text style={styles.contactModalEmailText}>ottrip.official@gmail.com</Text>
               <View style={styles.contactModalCopyWrapper}>
                 {copied ? (
-                  <Text style={styles.contactModalCopiedText}>복사됨</Text>
+                  <Text style={styles.contactModalCopiedText}>복사됨!</Text>
                 ) : (
                   <Pressable
                     style={styles.contactModalCopyIcon}
@@ -233,7 +243,10 @@ export default function ProfileScreen() {
                       try {
                         await navigator.clipboard.writeText('ottrip.official@gmail.com');
                         setCopied(true);
-                        setTimeout(() => setCopied(false), 1500);
+                        if (copiedTimerRef.current) {
+                          clearTimeout(copiedTimerRef.current);
+                        }
+                        copiedTimerRef.current = setTimeout(() => setCopied(false), 1500);
                       } catch {
                         // noop
                       }
@@ -545,7 +558,7 @@ const styles = StyleSheet.create({
     height: 16,
   },
   contactModalCopiedText: {
-    ...textStyles.body,
+    ...textStyles.body6,
     color: colors.gray700,
   },
   contactModalReplyText: {

@@ -50,7 +50,6 @@ export default function CompletionModal({
   const modeConfig = MODE_CONFIG[mode];
   
   if (!modeConfig) {
-    console.warn(`CompletionModal: mode "${mode}"에 대한 설정이 없습니다.`);
     return null;
   }
   

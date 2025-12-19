@@ -25,7 +25,6 @@ interface ItineraryItemProps {
   onSave: (itinerary: any) => void;
   onCancel: () => void;
   onDelete?: (itineraryId: string) => void;
-  onExpenseUpdate?: () => void;
   selectedDate?: Date; // 선택된 날짜
   onShowWarning?: () => void;
   readOnly?: boolean; // 읽기 전용 모드
@@ -39,7 +38,6 @@ export default function ItineraryItem({
   onSave, 
   onCancel, 
   onDelete,
-  onExpenseUpdate,
   selectedDate,
   onShowWarning,
   readOnly = false,
@@ -174,7 +172,7 @@ export default function ItineraryItem({
             const itineraryExpenses = await expensesApi.getExpensesByItinerary(itinerary.id);
             setExpenses(itineraryExpenses);
           } catch (error) {
-            console.error('Failed to load expenses:', error);
+            // Silent fail
           }
         }
       } else {
@@ -256,7 +254,7 @@ export default function ItineraryItem({
                 planData.addExpense(updatedExpense);
               }
             } catch (e) {
-              console.warn('Failed to update expense date:', e);
+              // Silent fail
             }
           }
         }
@@ -282,7 +280,7 @@ export default function ItineraryItem({
               });
             }
           } catch (e) {
-            console.warn('Failed to create draft expenses:', e);
+            // Silent fail
           }
           setDraftExpenses([]); // 초안 비우기
         }
@@ -322,7 +320,7 @@ export default function ItineraryItem({
               });
             }
           } catch (e) {
-            console.warn('Failed to create draft expenses:', e);
+            // Silent fail
           }
           setDraftExpenses([]); // 초안 비우기
         }
@@ -335,7 +333,7 @@ export default function ItineraryItem({
       
       onSave(savedItinerary);
     } catch (error) {
-      console.error('Failed to save itinerary:', error);
+      // Silent fail
     } finally {
       isSubmittingRef.current = false;
       setIsSubmitting(false);
@@ -343,6 +341,11 @@ export default function ItineraryItem({
   };
 
   const handleDelete = async () => {
+    // 중복 요청 방지: 이미 실행 중이면 무시
+    if (isSubmittingRef.current) {
+      return;
+    }
+
     // 일정 추가 모드: 입력창 닫기
     if (!itinerary) {
       // 미리보기 제거 이벤트 발생
@@ -354,12 +357,18 @@ export default function ItineraryItem({
     }
     
     if (itinerary && onDelete) {
+      // 실행 중 플래그 설정
+      isSubmittingRef.current = true;
+      setIsSubmitting(true);
       try {
         await itinerariesApi.deleteItinerary(itinerary.id);
         onDelete(itinerary.id);
         onCancel();
       } catch (error) {
-        console.error('Failed to delete itinerary:', error);
+        // Silent fail
+      } finally {
+        isSubmittingRef.current = false;
+        setIsSubmitting(false);
       }
     }
   };
@@ -402,7 +411,6 @@ export default function ItineraryItem({
         Alert.alert('성공', '비용이 수정되었습니다.');
         return;
       } catch (error) {
-        console.error('Failed to update expense:', error);
         Alert.alert('오류', '비용 수정에 실패했습니다.');
         return;
       }
@@ -491,7 +499,7 @@ export default function ItineraryItem({
       
       Alert.alert('성공', '비용이 삭제되었습니다.');
     } catch (error) {
-      console.error('Failed to delete expense:', error);
+      // Silent fail
       Alert.alert('오류', '비용 삭제에 실패했습니다.');
     }
   };
@@ -826,6 +834,7 @@ export default function ItineraryItem({
           <Pressable
             style={styles.deleteButton}
             onPress={itinerary ? handleDelete : onCancel}
+            disabled={isSubmitting}
           >
             <Text style={styles.deleteButtonText}>
               {itinerary ? '삭제' : '취소'}
@@ -846,6 +855,7 @@ export default function ItineraryItem({
           <Pressable
             style={styles.deleteButton}
             onPress={handleDelete}
+            disabled={isSubmitting}
           >
             <Text style={styles.deleteButtonText}>삭제</Text>
           </Pressable>

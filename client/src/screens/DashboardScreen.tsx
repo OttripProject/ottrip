@@ -1,4 +1,4 @@
-import { View, StyleSheet, Alert, Platform, useWindowDimensions, Text, Pressable } from "react-native";
+import { View, StyleSheet, Alert, Platform, useWindowDimensions } from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { useEffect, useState, useCallback, useMemo } from "react";
 import api from "@/services/api";
@@ -100,33 +100,38 @@ export default function DashboardScreen() {
 
 
   useEffect(() => {
-    if (selectedItinerary && planData.itineraries.length > 0) {
+    if (selectedItinerary?.id && planData.itineraries.length > 0) {
       const updatedItinerary = planData.itineraries.find((it: any) => it.id === selectedItinerary.id);
-      if (updatedItinerary) {
-        setSelectedItinerary(updatedItinerary);
+      if (updatedItinerary && updatedItinerary.id === selectedItinerary.id) {
+        if (updatedItinerary !== selectedItinerary) {
+          setSelectedItinerary(updatedItinerary);
+        }
       }
     }
-  }, [planData.itineraries, selectedItinerary]);
+  }, [planData.itineraries, selectedItinerary?.id]);
 
   useEffect(() => {
-    if (selectedFlight && planData.flights.length > 0) {
+    if (selectedFlight?.id && planData.flights.length > 0) {
       const updatedFlight = planData.flights.find((flight: any) => flight.id === selectedFlight.id);
-      if (updatedFlight) {
-        setSelectedFlight(updatedFlight);
+      if (updatedFlight && updatedFlight.id === selectedFlight.id) {
+        if (updatedFlight !== selectedFlight) {
+          setSelectedFlight(updatedFlight);
+        }
       }
     }
-  }, [planData.flights, selectedFlight]);
+  }, [planData.flights, selectedFlight?.id]);
 
   useEffect(() => {
-    if (selectedAccommodation && planData.accommodations.length > 0) {
+    if (selectedAccommodation?.id && planData.accommodations.length > 0) {
       const updatedAccommodation = planData.accommodations.find((acc: any) => acc.id === selectedAccommodation.id);
-      if (updatedAccommodation) {
-        setSelectedAccommodation(updatedAccommodation);
+      if (updatedAccommodation && updatedAccommodation.id === selectedAccommodation.id) {
+        if (updatedAccommodation !== selectedAccommodation) {
+          setSelectedAccommodation(updatedAccommodation);
+        }
       }
     }
-  }, [planData.accommodations, selectedAccommodation]);
+  }, [planData.accommodations, selectedAccommodation?.id]);
 
-  // 이미 로그인된 사용자가 초대 링크(#invite=...)로 진입한 경우 자동 수락 처리
   useEffect(() => {
     if (Platform.OS !== 'web') return;
     const hash = window.location.hash;

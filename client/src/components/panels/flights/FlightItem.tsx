@@ -25,8 +25,6 @@ interface FlightItemProps {
   onCancel: () => void;
   onDelete?: (flightId: string) => void;
   existingFlights?: any[]; 
-  existingItineraries?: any[];
-  existingAccommodations?: any[];
   onShowWarning?: (message?: string) => void;
   readOnly?: boolean; // 읽기 전용 모드
   onEdit?: () => void; // 편집 버튼 클릭 핸들러
@@ -156,29 +154,6 @@ export default function FlightItem({
     const planStartDate = planData?.plan?.startDate || planData?.plan?.start_date;
     return planStartDate ? dayjs(planStartDate).format('YYYY-MM-DD') : dayjs().format('YYYY-MM-DD');
   });
-
-  // 12시간제 시간 표시 변환 함수
-  const formatTime12Hour = (time24: string) => {
-    if (!time24) return '';
-    const [hours, minutes] = time24.split(':');
-    const hour24 = parseInt(hours, 10);
-    const hour12 = hour24 === 0 ? 12 : hour24 > 12 ? hour24 - 12 : hour24;
-    const ampm = hour24 >= 12 ? 'PM' : 'AM';
-    return `${hour12}:${minutes} ${ampm}`;
-  };
-
-  // 12시간제에서 24시간제로 변환
-  const parseTime12To24 = (time12: string) => {
-    if (!time12) return '';
-    const match = time12.match(/(\d+):(\d+)\s*(AM|PM)/i);
-    if (!match) return time12;
-    let hour = parseInt(match[1], 10);
-    const minute = match[2];
-    const ampm = match[3].toUpperCase();
-    if (ampm === 'PM' && hour !== 12) hour += 12;
-    if (ampm === 'AM' && hour === 12) hour = 0;
-    return `${hour.toString().padStart(2, '0')}:${minute}`;
-  };
 
   const [isSubmitting, setIsSubmitting] = useState(false); // 버튼 비활성화용 (리렌더링 필요)
   const isSubmittingRef = useRef(false); // 중복 요청 방지 플래그
@@ -325,7 +300,7 @@ export default function FlightItem({
       }
       onSave(savedFlight);
     } catch (error) {
-      console.error('Failed to save flight:', error);
+      // Silent fail
     } finally {
       isSubmittingRef.current = false;
       setIsSubmitting(false);
@@ -333,6 +308,11 @@ export default function FlightItem({
   };
 
   const handleDelete = async () => {
+    // 중복 요청 방지: 이미 실행 중이면 무시
+    if (isSubmittingRef.current) {
+      return;
+    }
+
     // 항공편 추가 모드: 입력창 닫기
     if (!flight) {
       onCancel();
@@ -340,12 +320,18 @@ export default function FlightItem({
     }
     
     if (flight && onDelete) {
+      // 실행 중 플래그 설정
+      isSubmittingRef.current = true;
+      setIsSubmitting(true);
       try {
         await flightsApi.deleteFlight(flight.id);
         onDelete(flight.id);
         onCancel();
       } catch (error) {
-        console.error('Failed to delete flight:', error);
+        // Silent fail
+      } finally {
+        isSubmittingRef.current = false;
+        setIsSubmitting(false);
       }
     }
   };
@@ -760,6 +746,7 @@ export default function FlightItem({
               <Pressable
                 style={styles.deleteButton}
                 onPress={flight? handleDelete : onCancel}
+                disabled={isSubmitting}
               >
                 <Text style={styles.deleteButtonText}>
                   {flight ? '삭제' : '취소'}
@@ -780,6 +767,7 @@ export default function FlightItem({
               <Pressable
                 style={styles.deleteButton}
                 onPress={handleDelete}
+                disabled={isSubmitting}
               >
                 <Text style={styles.deleteButtonText}>삭제</Text>
               </Pressable>

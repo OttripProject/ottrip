@@ -37,11 +37,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         accessToken: tokens.accessToken,
         refreshToken: tokens.refreshToken,
       });
-      
-      // 저장된 토큰 확인
-      const savedToken = await tokenStores.accessToken.get();
-    } catch (error) {
-      console.error('Error saving tokens:', error);
+    } catch (error: any) {
+      // Silent fail
     }
   };
 
@@ -49,8 +46,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const clearTokens = async () => {
     try {
       await tokenStores.clearAll();
-    } catch (error) {
-      console.error('Error clearing tokens:', error);
+    } catch (error: any) {
+      // Silent fail
     }
   };
 
@@ -65,8 +62,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const tokenData = await authApi.refreshToken(refreshToken);
       await saveTokens(tokenData);
       setIsAuthenticated(true);
-    } catch (error) {
-      console.error('Token refresh error:', error);
+    } catch (error: any) {
       await logout();
     }
   };
@@ -112,15 +108,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             } else {
               await refreshAuth();
             }
-          } catch (error) {
-            console.error('Login status check failed:', error);
+          } catch (error: any) {
             await logout();
           }
-        } else {
-          console.log('⚠️ No token found, user not authenticated');
         }
-      } catch (error) {
-        console.error('Auth check error:', error);
+      } catch (error: any) {
         await logout();
       } finally {
         setIsLoading(false);

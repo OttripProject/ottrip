@@ -16,7 +16,6 @@ export const validateEnv = () => {
   if (result.success) {
     return result.data;
   }
-  console.error("❌ Invalid environment variables:", result.error.format());
   throw new Error("Invalid environment variables");
 };
 

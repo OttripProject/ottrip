@@ -211,7 +211,7 @@ export default function AccommodationItem({
       }
       onSave(savedAccommodation);
     } catch (error) {
-      console.error('Failed to save accommodation:', error);
+      // Silent fail
     } finally {
       isSubmittingRef.current = false;
       setIsSubmitting(false);
@@ -219,6 +219,11 @@ export default function AccommodationItem({
   };
 
   const handleDelete = async () => {
+    // 중복 요청 방지: 이미 실행 중이면 무시
+    if (isSubmittingRef.current) {
+      return;
+    }
+
     // 숙박 추가 모드: 입력창 닫기
     if (!accommodation) {
       onCancel();
@@ -226,13 +231,19 @@ export default function AccommodationItem({
     }
     
     if (accommodation && accommodation.id && onDelete) {
+      // 실행 중 플래그 설정
+      isSubmittingRef.current = true;
+      setIsSubmitting(true);
       try {
         await accommodationsApi.deleteAccommodation(accommodation.id);
         const id = typeof accommodation.id === 'string' ? accommodation.id : accommodation.id.toString();
         onDelete(id);
         onCancel();
       } catch (error) {
-        console.error('Failed to delete accommodation:', error);
+        // Silent fail
+      } finally {
+        isSubmittingRef.current = false;
+        setIsSubmitting(false);
       }
     }
   };
@@ -486,6 +497,7 @@ export default function AccommodationItem({
           <Pressable
             style={styles.deleteButton}
             onPress={accommodation.id ? handleDelete : onCancel}
+            disabled={isSubmitting}
           >
             <Text style={styles.deleteButtonText}>
               {accommodation.id ? '삭제' : '취소'}
@@ -506,6 +518,7 @@ export default function AccommodationItem({
           <Pressable
             style={styles.deleteButton}
             onPress={handleDelete}
+            disabled={isSubmitting}
           >
             <Text style={styles.deleteButtonText}>삭제</Text>
           </Pressable>

@@ -76,7 +76,6 @@ export default function DashboardStack() {
           onItinerarySelect={setSelectedItinerary}
           onRequestNewItinerary={(date) => {
             // 시간 셀을 눌렀을 때 일정 추가 모달 열기
-            console.log('새 일정 추가 요청:', date);
             // 여기서 일정 추가 모달을 열 수 있습니다
             // 예: onShowItineraryModal?.(date);
           }}
