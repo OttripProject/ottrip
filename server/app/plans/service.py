@@ -249,9 +249,11 @@ class PlanService:
         except Exception as e:
             import logging
             logger = logging.getLogger("uvicorn.error")
+            email_domain = inv.email.split('@')[1] if '@' in inv.email else 'unknown'
+            error_message = str(e) if len(str(e)) <= 200 else str(e)[:200] + "..."
             logger.error(
-                f"초대 이메일 전송 실패: plan_id={plan_id}, email={inv.email}, "
-                f"error={type(e).__name__}: {str(e)}",
+                f"초대 이메일 전송 실패: plan_id={plan_id}, email_domain={email_domain}, "
+                f"error={type(e).__name__}: {error_message}",
                 exc_info=True
             )
         return inv

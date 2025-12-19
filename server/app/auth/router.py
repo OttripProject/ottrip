@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 
-from fastapi import status, HTTPException
+from fastapi import status, HTTPException, Response
 
 from app.common.deps import HTTPClientDep
 from app.common.schemas import ValidationResult
@@ -11,6 +11,7 @@ from app.users.service import UserService
 from .config import auth_settings
 from .deps import CurrentUserOptional, RefreshTokenDep, RegisterAuthDep
 from .providers.google import get_google_login_url
+from app.core.config import core_settings
 from .schemas import (
     AuthResponse,
     GoogleLoginUrlResponse,
@@ -64,10 +65,36 @@ async def register_user(
     user_service: UserService,
     user: UserCreate,
     auth: RegisterAuthDep,
+    response: Response,
 ) -> TokenResponse:
     registered_user = await user_service.register(user_data=user, auth=auth)
 
     access_token, refresh_token = create_token_pair(registered_user.id)
+    
+    # httpOnly 쿠키 설정
+    # 로컬 개발 환경: SameSite=lax, Secure=False (크로스 사이트 요청 허용)
+    # 프로덕션: SameSite=strict, Secure=True
+    is_prod = core_settings.ENVIRONMENT == "prod"
+    response.set_cookie(
+        key="access_token",
+        value=access_token,
+        httponly=True,
+        secure=is_prod,  # 프로덕션에서만 HTTPS 강제
+        samesite="lax" if not is_prod else "strict",  # 로컬: lax, 프로덕션: strict
+        max_age=60 * 60,  # 1시간
+        path="/",
+    )
+    response.set_cookie(
+        key="refresh_token",
+        value=refresh_token,
+        httponly=True,
+        secure=is_prod,
+        samesite="lax" if not is_prod else "strict",
+        max_age=60 * 60 * 24 * 7,  # 7일
+        path="/",
+    )
+    
+    # 하위 호환: JSON 응답도 유지 (Native 환경용)
     return TokenResponse(access_token=access_token, refresh_token=refresh_token)
 
 
@@ -75,14 +102,46 @@ async def register_user(
 @router.post("/refresh")
 async def refresh_token(
     user: RefreshTokenDep,
+    response: Response,
 ) -> TokenResponse:
     access_token, refresh_token = create_token_pair(user.id)
+    
+    # httpOnly 쿠키 업데이트
+    is_prod = core_settings.ENVIRONMENT == "prod"
+
+    response.set_cookie(
+        key="access_token",
+        value=access_token,
+        httponly=True,
+        secure=is_prod,
+        samesite="lax" if not is_prod else "strict",
+        max_age=60 * 60,  # 1시간
+        path="/",
+    )
+    response.set_cookie(
+        key="refresh_token",
+        value=refresh_token,
+        httponly=True,
+        secure=is_prod,
+        samesite="lax" if not is_prod else "strict",
+        max_age=60 * 60 * 24 * 7,  # 7일
+        path="/",
+    )
+    
+    # 하위 호환: JSON 응답도 유지 (Native 환경용)
     return TokenResponse(access_token=access_token, refresh_token=refresh_token)
 
 
 @router.get("/valid-token", response_model=bool)
 async def check_login_status(current_user: CurrentUserOptional) -> bool:
     return current_user is not None
+
+
+@router.post("/logout")
+async def logout(response: Response) -> None:
+    """로그아웃: httpOnly 쿠키 삭제"""
+    response.delete_cookie(key="access_token", path="/")
+    response.delete_cookie(key="refresh_token", path="/")
 
 
 @router.get("/google/login")
@@ -134,18 +193,19 @@ async def authenticate_google(
     payload: GoogleAuthRequest,
     client: HTTPClientDep,
     auth_info_service: AuthInfoService,
+    response: Response,
 ) -> AuthResponse:
     # 1. Google에 id_token 검증 요청
-    response = await client.get(
+    google_response = await client.get(
         "https://oauth2.googleapis.com/tokeninfo",
         params={"id_token": payload.id_token},
         headers={"Content-Type": "application/x-www-form-urlencoded"},
     )
 
-    if response.status_code != 200:
+    if google_response.status_code != 200:
         raise HTTPException(status_code=401, detail="Failed to verify id_token")
 
-    data = response.json()
+    data = google_response.json()
 
     # 2. aud 검증
     if data.get("aud") != auth_settings.GOOGLE_CLIENT_ID:
@@ -173,6 +233,32 @@ async def authenticate_google(
         )
 
     access_token, refresh_token = create_token_pair(auth_info.user_id)
+    
+    # httpOnly 쿠키 설정
+    # 로컬 개발 환경: SameSite=lax, Secure=False (크로스 사이트 요청 허용)
+    # 프로덕션: SameSite=strict, Secure=True
+    is_prod = core_settings.ENVIRONMENT == "prod"
+
+    response.set_cookie(
+        key="access_token",
+        value=access_token,
+        httponly=True,
+        secure=is_prod,  # 프로덕션에서만 HTTPS 강제
+        samesite="lax" if not is_prod else "strict",  # 로컬: lax, 프로덕션: strict
+        max_age=60 * 60,  # 1시간
+        path="/",
+    )
+    response.set_cookie(
+        key="refresh_token",
+        value=refresh_token,
+        httponly=True,
+        secure=is_prod,
+        samesite="lax" if not is_prod else "strict",
+        max_age=60 * 60 * 24 * 7,  # 7일
+        path="/",
+    )
+    
+    # 하위 호환: JSON 응답도 유지 (Native 환경용)
     return RegisteredAuthResponse(
         access_token=access_token,
         refresh_token=refresh_token,
