@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { Platform, AppState, type AppStateStatus } from 'react-native';
 import { refreshToken } from '@/services/api';
+import { authApi } from '@/services/auth';
 
 /**
  * 주기적으로 토큰 만료를 체크하고 필요시 갱신하는 훅
@@ -8,6 +9,9 @@ import { refreshToken } from '@/services/api';
  * - 2분마다 토큰 만료 상태를 체크
  * - 앱이 포그라운드로 복귀할 때도 체크
  * - 만료 5분 전에 자동으로 토큰 갱신
+ * 
+ * 웹 환경: 쿠키가 자동으로 전송되므로 토큰 읽기 불필요, 서버에서 자동 갱신
+ * Native 환경: 기존 로직 유지
  */
 export function useTokenRefresh() {
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -15,8 +19,23 @@ export function useTokenRefresh() {
 
   useEffect(() => {
     const checkAndRefresh = async () => {
-      // 만료 체크 활성화하여 만료 5분 전일 때만 갱신
-      await refreshToken(true);
+      // 웹 환경: 먼저 로그인 상태 확인 (쿠키가 없으면 refresh 시도하지 않음)
+      if (Platform.OS === 'web') {
+        try {
+          const isLoggedIn = await authApi.checkLoginStatus();
+          if (!isLoggedIn) {
+            // 로그인되지 않은 상태에서는 refresh 시도하지 않음
+            return;
+          }
+        } catch (error) {
+          // 로그인 상태 확인 실패 시 refresh 시도하지 않음
+          return;
+        }
+      }
+      
+      // Native 환경: 만료 체크 활성화하여 만료 5분 전일 때만 갱신
+      // 웹 환경: 서버 응답의 토큰을 사용하여 만료 체크 (쿠키는 httpOnly이므로 직접 읽을 수 없음)
+      await refreshToken(true); // 모든 환경에서 만료 체크 활성화
     };
 
     // 초기 체크

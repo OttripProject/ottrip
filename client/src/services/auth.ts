@@ -62,10 +62,11 @@ export const authApi = {
   },
 
   // 토큰 갱신
-  refreshToken: async (refreshToken: string): Promise<TokenResponse> => {
-    const response = await api.post('/public/auth/refresh', {
-      refresh_token: refreshToken,
-    });
+  refreshToken: async (refreshToken?: string): Promise<TokenResponse> => {
+    // 웹 환경: 쿠키가 자동으로 전송되므로 body에 refresh_token 불필요
+    // Native 환경: refresh_token을 body에 포함
+    const payload = refreshToken ? { refresh_token: refreshToken } : {};
+    const response = await api.post('/public/auth/refresh', payload);
     return response.data;
   },
 
@@ -110,5 +111,10 @@ export const authApi = {
   createTestUserToken: async (userId: number): Promise<string> => {
     const response = await devApi.get(`/dev/create-test-user-token?user_id=${userId}`);
     return response.data;
+  },
+
+  // 로그아웃
+  logout: async (): Promise<void> => {
+    await api.post('/public/auth/logout');
   },
 }; 
