@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, Pressable, StyleSheet, Modal } from 'react-native';
 import { colors } from '@/ui/tokens/colors';
 import { textStyles } from '@/ui/tokens/typography';
+import { getJosa } from '@/utils/koreanUtils';
 
 interface TripDeleteConfirmModalProps {
   visible: boolean;
@@ -27,7 +28,7 @@ export default function TripDeleteConfirmModal({
         <View style={styles.deleteModalCard}>
           <Text style={styles.deleteModalTitle}>정말 이 여행을 삭제하시겠어요?</Text>
           <Text style={styles.deleteModalText}>
-            "{tripName}" 여행을 삭제하면{'\n'}
+            "{tripName}"{getJosa(tripName, 'delete')} 삭제하면{'\n'}
             이 여행에 속한 모든 일정, 항공편,{'\n'}
             숙소 및 비용 데이터가 영구적으로 삭제됩니다.{'\n'}
             이 작업은 되돌릴 수 없습니다.

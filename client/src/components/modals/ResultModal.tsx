@@ -4,13 +4,15 @@ import { colors } from '@/ui/tokens/colors';
 import { textStyles } from '@/ui/tokens/typography';
 import CheckIcon from '../../../assets/check_blue.svg';
 import WarnIcon from '../../../assets/warn.svg';
+import { getJosa } from '@/utils/koreanUtils';
 
-// mode별 설정
 const MODE_CONFIG: Record<string, { title: string; description: string | ((params?: any) => string) }> = {
   add: {
     title: '여행 추가 완료',
-    description: (params?: { tripName?: string }) => 
-      `"${params?.tripName || ''}"이/가 생성되었어요!\n이제 여행 정보를 채워 넣어 볼까요?`,
+    description: (params?: { tripName?: string }) => {
+      const name = params?.tripName || '';
+      return `"${name}"${getJosa(name, 'add')} 생성되었어요!\n이제 여행 정보를 채워 넣어 볼까요?`;
+    },
   },
   edit: {
     title: '변경 사항이 저장 되었어요.',
