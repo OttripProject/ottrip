@@ -53,8 +53,7 @@ export default function AuthCallbackScreen() {
           navigation.replace('약관동의', { registerToken: response.registerToken, prefill: response.prefill, email });
           return;
         }
-      } catch (error) {
-        console.error('Google login error:', error);
+      } catch (error: any) {
         // @ts-ignore
         navigation.replace('로그인');
       }

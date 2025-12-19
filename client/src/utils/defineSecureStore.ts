@@ -7,7 +7,7 @@ if (Platform.OS !== 'web') {
   try {
     SecureStore = require('expo-secure-store').default;
   } catch (error) {
-    console.warn('expo-secure-store not available:', error);
+    // Silent fail
   }
 }
 
@@ -24,7 +24,6 @@ export function defineSecureStore<T extends string>(key: string) {
         }
         return null;
       } catch (error) {
-        console.warn(`[SYNC] Failed to get ${key}:`, error);
         return null;
       }
     },
@@ -37,7 +36,6 @@ export function defineSecureStore<T extends string>(key: string) {
           SecureStore.setItem(key, value);
         }
       } catch (error) {
-        console.error(`[SYNC] Failed to save ${key}:`, error);
         throw error;
       }
     },
@@ -58,7 +56,6 @@ export function defineSecureStore<T extends string>(key: string) {
           return null;
         }
       } catch (error) {
-        console.error(`[ASYNC] Failed to get ${key}:`, error);
         return null;
       }
     },
@@ -78,7 +75,6 @@ export function defineSecureStore<T extends string>(key: string) {
           (global as any).__tempStorage[key] = value;
         }
       } catch (error) {
-        console.error(`[ASYNC] Failed to save ${key}:`, error);
         throw error;
       }
     },
@@ -96,7 +92,6 @@ export function defineSecureStore<T extends string>(key: string) {
           }
         }
       } catch (error) {
-        console.error(`[ASYNC] Failed to clear ${key}:`, error);
         throw error;
       }
     },

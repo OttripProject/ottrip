@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert, ScrollView, Pressable, Platform, TextInput } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import MaskedView from '@react-native-masked-view/masked-view';
@@ -48,18 +48,11 @@ export default function AIAssistantPanel({ publicId }: AIAssistantPanelProps) {
   const [newItemName, setNewItemName] = useState('');
   const [newItemReason, setNewItemReason] = useState('');
 
-  // Plan이 선택될 때 기존 체크리스트 확인
-  useEffect(() => {
-    if (publicId) {
-      checkExistingChecklist();
-    } else {
-      // Plan이 선택되지 않으면 상태 초기화
+  const checkExistingChecklist = useCallback(async () => {
+    if (!publicId) {
       setChecklist(null);
+      return;
     }
-  }, [publicId]);
-
-  const checkExistingChecklist = async () => {
-    if (!publicId) return;
     
     try {
       const response = await api.get(`/private/ai/checklist/${publicId}`);
@@ -71,10 +64,19 @@ export default function AIAssistantPanel({ publicId }: AIAssistantPanelProps) {
         setChecklist(null);
       }
     } catch (error) {
-      console.log('기존 체크리스트 없음 또는 오류:', error);
       setChecklist(null);
     }
-  };
+  }, [publicId]);
+
+  // Plan이 선택될 때 기존 체크리스트 확인
+  useEffect(() => {
+    if (publicId) {
+      checkExistingChecklist();
+    } else {
+      // Plan이 선택되지 않으면 상태 초기화
+      setChecklist(null);
+    }
+  }, [publicId, checkExistingChecklist]);
   
   const handleGenerateChecklist = async () => {
     if (!publicId) return;
@@ -107,7 +109,6 @@ export default function AIAssistantPanel({ publicId }: AIAssistantPanelProps) {
       }
       
     } catch (error) {
-      console.error('체크리스트 생성 오류:', error);
       Alert.alert('오류', '체크리스트 생성 중 오류가 발생했습니다.');
     } finally {
       setIsLoading(false);
@@ -148,7 +149,6 @@ export default function AIAssistantPanel({ publicId }: AIAssistantPanelProps) {
         Alert.alert('오류', response.data.message || '체크리스트 새로고침에 실패했습니다.');
       }
     } catch (error) {
-      console.error('체크리스트 새로고침 오류:', error);
       Alert.alert('오류', '체크리스트 새로고침 중 오류가 발생했습니다.');
     } finally {
       setIsLoading(false);
@@ -196,7 +196,6 @@ export default function AIAssistantPanel({ publicId }: AIAssistantPanelProps) {
         setChecklist(updatedChecklist);
       }
     } catch (error) {
-      console.error('체크리스트 항목 업데이트 오류:', error);
       Alert.alert('오류', '체크리스트 항목 업데이트에 실패했습니다.');
     }
   };
@@ -221,7 +220,6 @@ export default function AIAssistantPanel({ publicId }: AIAssistantPanelProps) {
       setNewItemName('');
       setNewItemReason('');
     } catch (error) {
-      console.error('체크리스트 항목 추가 오류:', error);
       Alert.alert('오류', '체크리스트 항목 추가에 실패했습니다.');
     }
   };
@@ -257,7 +255,6 @@ export default function AIAssistantPanel({ publicId }: AIAssistantPanelProps) {
       // 체크리스트 다시 불러오기
       await checkExistingChecklist();
     } catch (error) {
-      console.error('체크리스트 항목 삭제 오류:', error);
       Alert.alert('오류', '체크리스트 항목 삭제에 실패했습니다.');
     }
   };

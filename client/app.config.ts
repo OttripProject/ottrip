@@ -106,8 +106,6 @@ export default ({ config }: ConfigContext): ExpoConfig => {
           },
         },
       ],
-      "expo-apple-authentication",
-
       [
         "expo-font",
         {
@@ -133,13 +131,6 @@ export default ({ config }: ConfigContext): ExpoConfig => {
             "./assets/fonts/Poppins-ExtraBold.ttf",
             "./assets/fonts/Poppins-Black.ttf",
           ],
-        },
-      ],
-      [
-        "expo-image-picker",
-        {
-          photosPermission: "작품 업로드를 위해 사진 접근 권한이 필요해요.",
-          cameraPermission: "작품 업로드를 위해 카메라 접근 권한이 필요해요.",
         },
       ],
     ],

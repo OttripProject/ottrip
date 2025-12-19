@@ -31,7 +31,7 @@ const generateNonce = async () => {
 const env = loadPublicEnv();
 
 export default function LoginScreen() {
-  const { login, getStorageInfo } = useAuth();
+  const { login } = useAuth();
   const navigation = useNavigation<any>();
   const [isLoading, setIsLoading] = useState(false);
   const [nonce, setNonce] = useState<string>('');
@@ -71,10 +71,6 @@ export default function LoginScreen() {
     const clientId = env.EXPO_PUBLIC_GOOGLE_CLIENT_ID;
     
     if (!clientId) {
-      if (typeof window !== 'undefined') {
-        // eslint-disable-next-line no-console
-        console.error('Google Client ID가 비어있습니다. Cloudflare Pages 환경변수를 확인하세요.');
-      }
       return;
     }
 
@@ -93,19 +89,13 @@ export default function LoginScreen() {
         const prompt = encodeURIComponent('consent select_account');
         
         const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${redirectUri}&scope=${scope}&response_type=${responseType}&nonce=${newNonce}&prompt=${prompt}`;
-        if (typeof window !== 'undefined') {
-          // eslint-disable-next-line no-console
-          console.log('Google Auth URL:', decodeURIComponent(authUrl));
-        }
+        // 민감한 정보(nonce 등)가 포함된 URL은 로깅하지 않음
         
         // 현재 창에서 리다이렉트
         try {
           window.location.href = authUrl;
         } catch (e) {
-          if (typeof window !== 'undefined') {
-            // eslint-disable-next-line no-console
-            console.error('구글 로그인 리다이렉트 실패:', e);
-          }
+          // Silent fail
         }
       } else {
         // 모바일용 구글 로그인 (WebBrowser 사용)
@@ -141,7 +131,6 @@ export default function LoginScreen() {
             Alert.alert('오류', '로그인에 실패했습니다.');
           }
         } else if (result.type === 'cancel') {
-          console.log('사용자가 로그인을 취소했습니다.');
           setIsLoading(false); // 취소 시 로딩 상태 해제
         } else {
           Alert.alert('오류', '로그인에 실패했습니다.');
@@ -149,7 +138,6 @@ export default function LoginScreen() {
         }
       }
     } catch (error: any) {
-      console.error('Google 로그인 오류:', error.message);
       Alert.alert('오류', '로그인 중 오류가 발생했습니다.');
       setIsLoading(false); // 오류 시에만 로딩 상태 해제
     }
@@ -209,21 +197,17 @@ export default function LoginScreen() {
         setIsLoading(false);
       }
     } catch (error: any) {
-      console.error('Google 로그인 오류:', error.message);
       setIsLoading(false); // 오류 시에만 로딩 상태 해제
       Alert.alert('오류', '로그인에 실패했습니다.');
     }
   };
 
-  // Dev 테스트 라우터를 사용한 실제 로그인
   const handleTestLogin = async () => {
     setIsLoading(true);
     try {
-      // 서버 연결 테스트
       try {
-        const timeData = await authApi.getServerTime();
-      } catch (error) {
-        console.error('서버 시간 확인 실패:', error);
+        await authApi.getServerTime();
+      } catch (error: any) {
         Alert.alert('연결 오류', '서버에 연결할 수 없습니다. 서버가 실행 중인지 확인해주세요.');
         return;
       }
@@ -234,7 +218,6 @@ export default function LoginScreen() {
         
         // 응답 데이터 구조 확인
         if (!tokenData || !tokenData.accessToken || !tokenData.refreshToken) {
-          console.error('토큰 데이터 구조:', tokenData);
           throw new Error('Invalid token response structure');
         }
         
@@ -248,9 +231,7 @@ export default function LoginScreen() {
         // 로그인 성공 시 즉시 로딩 상태 해제하지 않음 (화면 전환 후 자동 해제)
         
       } catch (error: any) {
-        console.error('테스트 유저 생성 실패:', error);
         let errorMessage = '알 수 없는 오류';
-        
         if (error.response?.data?.detail) {
           errorMessage = error.response.data.detail;
         } else if (error.response?.status === 401) {
@@ -264,9 +245,8 @@ export default function LoginScreen() {
         Alert.alert('로그인 실패', errorMessage);
       }
     } catch (error: any) {
-      console.error('Test login error:', error);
-      const errorMessage = error.response?.data?.detail || error.message || '알 수 없는 오류';
-      Alert.alert('오류', `테스트 로그인 중 오류가 발생했습니다: ${errorMessage}`);
+      const userErrorMessage = error.response?.data?.detail || error.message || '알 수 없는 오류';
+      Alert.alert('오류', `테스트 로그인 중 오류가 발생했습니다: ${userErrorMessage}`);
       setIsLoading(false); // 오류 시에만 로딩 상태 해제
     }
   };

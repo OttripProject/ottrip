@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { authApi } from '@/services/auth';
 
 interface NicknameValidationResult {
@@ -65,6 +65,16 @@ export const useNicknameValidation = (currentNickname?: string) => {
       clearTimeout(checkNicknameTimer.current);
       checkNicknameTimer.current = null;
     }
+  }, []);
+
+  // 컴포넌트 언마운트 시 타이머 정리
+  useEffect(() => {
+    return () => {
+      if (checkNicknameTimer.current) {
+        clearTimeout(checkNicknameTimer.current);
+        checkNicknameTimer.current = null;
+      }
+    };
   }, []);
 
   // 검증 통과 여부

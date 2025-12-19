@@ -1,4 +1,4 @@
-import axios, { InternalAxiosRequestConfig } from 'axios';
+import axios from 'axios';
 import { loadPublicEnv } from '../core/env/schema';
 import { tokenStores } from '../utils/tokenStores';
 import { isTokenExpiringSoon } from '../utils/jwt';
@@ -92,8 +92,7 @@ export async function refreshToken(checkExpiration: boolean = true): Promise<str
       });
 
       return accessToken;
-    } catch (error) {
-      console.error('Token refresh failed:', error);
+    } catch (error: any) {
       await tokenStores.clearAll();
       return null;
     } finally {
@@ -146,36 +145,18 @@ api.interceptors.request.use(async config => {
       }
       
       config.headers['X-Auth-Token'] = token;
-    } else {
-      console.log('⚠️ No token available for request');
     }
-  } catch (error) {
-    console.error('Error getting token:', error);
+  } catch (error: any) {
+    // Silent fail
   }
   return config;
 });
 
 api.interceptors.response.use(
   response => {
-    const endTime = Date.now();
-    const startTime = response.config.metadata?.startTime;
-    if (startTime) {
-      const duration = endTime - startTime;
-      const method = response.config.method?.toUpperCase() || 'UNKNOWN';
-      const url = response.config.url || '';
-      const status = response.status;
-    }
     return response;
   },
   async error => {
-    const endTime = Date.now();
-    const startTime = error.config?.metadata?.startTime;
-    if (startTime) {
-      const duration = endTime - startTime;
-      const method = error.config?.method?.toUpperCase() || 'UNKNOWN';
-      const url = error.config?.url || '';
-      const status = error.response?.status || 'ERROR';
-    }
     const originalRequest = error.config;
 
     if (error.response?.status === 401 && !originalRequest._retry) {
@@ -216,7 +197,6 @@ api.interceptors.response.use(
       }
     }
 
-    console.error('API Error:', error.response?.data || error.message);
     return Promise.reject(error);
   }
 );

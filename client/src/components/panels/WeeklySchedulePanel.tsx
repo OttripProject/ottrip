@@ -818,15 +818,14 @@ export default function WeeklySchedulePanel({
                 .then(() => {
                   // 성공 시 백그라운드에서 리프레시
                   if (planData?.refreshItineraries) {
-                    planData.refreshItineraries().catch((err: any) => 
-                      console.error('Failed to refresh itineraries:', err)
-                    );
+                    planData.refreshItineraries().catch((err: any) => {
+                      // Silent fail
+                    });
                   } else if (onPlansRefresh) {
                     onPlansRefresh();
                   }
                 })
                 .catch((error: any) => {
-                  console.error('Failed to update itinerary:', error);
                   Alert.alert('오류', '일정 업데이트에 실패했습니다.');
                   // 실패 시 드롭된 위치 롤백
                   setDroppedEventPosition(null);
@@ -862,15 +861,14 @@ export default function WeeklySchedulePanel({
                 .then(() => {
                   // 성공 시 백그라운드에서 리프레시 (getFlight 호출 제거)
                   if (planData?.refreshFlights) {
-                    planData.refreshFlights().catch((err: any) => 
-                      console.error('Failed to refresh flights:', err)
-                    );
+                    planData.refreshFlights().catch((err: any) => {
+                      // Silent fail
+                    });
                   } else if (onPlansRefresh) {
                     onPlansRefresh();
                   }
                 })
                 .catch((error: any) => {
-                  console.error('Failed to update flight:', error);
                   Alert.alert('오류', '일정 업데이트에 실패했습니다.');
                   // 실패 시 드롭된 위치 롤백
                   setDroppedEventPosition(null);
@@ -1166,14 +1164,6 @@ export default function WeeklySchedulePanel({
       
       // 해당 날짜가 체크인~체크아웃 사이에 있는지 확인 (체크아웃 날짜 포함)
       if (targetDate < checkinDate || targetDate > checkoutDate) {
-        if (__DEV__) {
-          console.log('getAccommodationTimeRange: date out of range', {
-            targetDate,
-            checkinDate,
-            checkoutDate,
-            accommodation: accommodation.name,
-          });
-        }
         return null;
       }
       
@@ -1242,7 +1232,6 @@ export default function WeeklySchedulePanel({
           setResultModalVisible(true);
         }
       } catch (error) {
-        console.error('Failed to add trip:', error);
         setResultModalConfig({ mode: 'error', params: { message: '여행 계획 추가에 실패했습니다.' } });
         setResultModalVisible(true);
       }
@@ -1288,7 +1277,6 @@ export default function WeeklySchedulePanel({
           setResultModalVisible(true);
         }
       } catch (error) {
-        console.error('Failed to update trip:', error);
         setResultModalConfig({ mode: 'error', params: { message: '여행을 수정하는 중 오류가 발생했습니다.' } });
         setResultModalVisible(true);
       }
@@ -1310,7 +1298,6 @@ export default function WeeklySchedulePanel({
           setResultModalVisible(true);
         }
       } catch (error) {
-        console.error('Failed to delete trip:', error);
         setResultModalConfig({ mode: 'error', params: { message: '여행을 삭제하는 중 오류가 발생했습니다.' } });
         setResultModalVisible(true);
       }
