@@ -73,15 +73,26 @@ async def register_user(
     
     # httpOnly 쿠키 설정
     # 로컬: SameSite=lax, Secure=False (HTTP 허용)
-    # 개발/프로덕션: SameSite=lax/strict, Secure=True (HTTPS 필수)
+    # 개발: SameSite=None, Secure=True (cross-site 요청 허용)
+    # 프로덕션: SameSite=strict, Secure=True (동일 사이트만)
     is_local = core_settings.ENVIRONMENT == "local"
     is_prod = core_settings.ENVIRONMENT == "prod"
+    
+    # cross-site 요청을 위해 dev 환경에서는 SameSite=None 사용
+    if is_local:
+        samesite_value = "lax"
+    elif is_prod:
+        samesite_value = "strict"
+    else:
+        # dev 환경: cross-site 요청 허용 (ottrip.pages.dev → ottrip.onrender.com)
+        samesite_value = "none"
+    
     response.set_cookie(
         key="access_token",
         value=access_token,
         httponly=True,
         secure=not is_local,  # 로컬만 HTTP 허용, dev/prod는 HTTPS 필수
-        samesite="lax" if not is_prod else "strict",  # 로컬/개발: lax, 프로덕션: strict
+        samesite=samesite_value,
         max_age=60 * 60,  # 1시간
         path="/",
     )
@@ -90,7 +101,7 @@ async def register_user(
         value=refresh_token,
         httponly=True,
         secure=not is_local,  # 로컬만 HTTP 허용, dev/prod는 HTTPS 필수
-        samesite="lax" if not is_prod else "strict",
+        samesite=samesite_value,
         max_age=60 * 60 * 24 * 7,  # 7일
         path="/",
     )
@@ -110,13 +121,22 @@ async def refresh_token(
     # httpOnly 쿠키 업데이트
     is_local = core_settings.ENVIRONMENT == "local"
     is_prod = core_settings.ENVIRONMENT == "prod"
+    
+    # cross-site 요청을 위해 dev 환경에서는 SameSite=None 사용
+    if is_local:
+        samesite_value = "lax"
+    elif is_prod:
+        samesite_value = "strict"
+    else:
+        # dev 환경: cross-site 요청 허용 (ottrip.pages.dev → ottrip.onrender.com)
+        samesite_value = "none"
 
     response.set_cookie(
         key="access_token",
         value=access_token,
         httponly=True,
         secure=not is_local,  # 로컬만 HTTP 허용, dev/prod는 HTTPS 필수
-        samesite="lax" if not is_prod else "strict",
+        samesite=samesite_value,
         max_age=60 * 60,  # 1시간
         path="/",
     )
@@ -125,7 +145,7 @@ async def refresh_token(
         value=refresh_token,
         httponly=True,
         secure=not is_local,  # 로컬만 HTTP 허용, dev/prod는 HTTPS 필수
-        samesite="lax" if not is_prod else "strict",
+        samesite=samesite_value,
         max_age=60 * 60 * 24 * 7,  # 7일
         path="/",
     )
@@ -238,16 +258,26 @@ async def authenticate_google(
     
     # httpOnly 쿠키 설정
     # 로컬: SameSite=lax, Secure=False (HTTP 허용)
-    # 개발/프로덕션: SameSite=lax/strict, Secure=True (HTTPS 필수)
+    # 개발: SameSite=None, Secure=True (cross-site 요청 허용)
+    # 프로덕션: SameSite=strict, Secure=True (동일 사이트만)
     is_local = core_settings.ENVIRONMENT == "local"
     is_prod = core_settings.ENVIRONMENT == "prod"
+    
+    # cross-site 요청을 위해 dev 환경에서는 SameSite=None 사용
+    if is_local:
+        samesite_value = "lax"
+    elif is_prod:
+        samesite_value = "strict"
+    else:
+        # dev 환경: cross-site 요청 허용 (ottrip.pages.dev → ottrip.onrender.com)
+        samesite_value = "none"
 
     response.set_cookie(
         key="access_token",
         value=access_token,
         httponly=True,
         secure=not is_local,  # 로컬만 HTTP 허용, dev/prod는 HTTPS 필수
-        samesite="lax" if not is_prod else "strict",  # 로컬/개발: lax, 프로덕션: strict
+        samesite=samesite_value,
         max_age=60 * 60,  # 1시간
         path="/",
     )
@@ -256,7 +286,7 @@ async def authenticate_google(
         value=refresh_token,
         httponly=True,
         secure=not is_local,  # 로컬만 HTTP 허용, dev/prod는 HTTPS 필수
-        samesite="lax" if not is_prod else "strict",
+        samesite=samesite_value,
         max_age=60 * 60 * 24 * 7,  # 7일
         path="/",
     )

@@ -46,6 +46,14 @@ async def validate_refresh_token(
     session: SessionDep,
     http_request: Request,  # Request 객체로 쿠키 직접 접근
 ) -> User:
+    # 쿠키 전송 확인 로그
+    import logging
+    logger = logging.getLogger(__name__)
+    all_cookies = http_request.cookies
+    logger.info(f"[REFRESH] Received cookies: {list(all_cookies.keys())}")
+    logger.info(f"[REFRESH] Origin: {http_request.headers.get('origin')}")
+    logger.info(f"[REFRESH] Referer: {http_request.headers.get('referer')}")
+    
     # 쿠키 우선, 없으면 요청 body에서 (하위 호환)
     cookie_token = http_request.cookies.get("refresh_token")
     
@@ -61,6 +69,7 @@ async def validate_refresh_token(
     token_value = cookie_token or body_token
     
     if token_value is None:
+        logger.warning(f"[REFRESH] No token found - cookie: {cookie_token is not None}, body: {body_token is not None}")
         raise HTTPException(status_code=401, detail="Refresh token required")
     
     user_id = decode_jwt_token(token_value, token_type=TokenType.REFRESH)
@@ -80,13 +89,25 @@ RefreshTokenDep = Annotated[User, Depends(validate_refresh_token)]
 
 async def get_current_user_or_none(
     session: SessionDep,
+    request: Request,  # Request 객체로 쿠키 확인
     token: TokenDep,  # 헤더에서 (하위 호환)
     access_token: Optional[str] = Cookie(None),  # 쿠키에서
 ) -> Optional[User]:
+    # 쿠키 전송 확인 로그
+    import logging
+    logger = logging.getLogger(__name__)
+    all_cookies = request.cookies
+    logger.info(f"[AUTH] Received cookies: {list(all_cookies.keys())}")
+    logger.info(f"[AUTH] Cookie access_token: {access_token is not None}")
+    logger.info(f"[AUTH] Header token: {token is not None}")
+    logger.info(f"[AUTH] Origin: {request.headers.get('origin')}")
+    logger.info(f"[AUTH] Referer: {request.headers.get('referer')}")
+    
     # 쿠키 우선, 없으면 헤더 사용 (하위 호환)
     token_value = access_token or token
     
     if token_value is None:
+        logger.warning(f"[AUTH] No token found - cookie: {access_token is not None}, header: {token is not None}")
         return None
 
     user_id = decode_jwt_token(token_value)
