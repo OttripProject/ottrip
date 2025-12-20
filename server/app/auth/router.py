@@ -72,15 +72,16 @@ async def register_user(
     access_token, refresh_token = create_token_pair(registered_user.id)
     
     # httpOnly 쿠키 설정
-    # 로컬 개발 환경: SameSite=lax, Secure=False (크로스 사이트 요청 허용)
-    # 프로덕션: SameSite=strict, Secure=True
+    # 로컬: SameSite=lax, Secure=False (HTTP 허용)
+    # 개발/프로덕션: SameSite=lax/strict, Secure=True (HTTPS 필수)
+    is_local = core_settings.ENVIRONMENT == "local"
     is_prod = core_settings.ENVIRONMENT == "prod"
     response.set_cookie(
         key="access_token",
         value=access_token,
         httponly=True,
-        secure=is_prod,  # 프로덕션에서만 HTTPS 강제
-        samesite="lax" if not is_prod else "strict",  # 로컬: lax, 프로덕션: strict
+        secure=not is_local,  # 로컬만 HTTP 허용, dev/prod는 HTTPS 필수
+        samesite="lax" if not is_prod else "strict",  # 로컬/개발: lax, 프로덕션: strict
         max_age=60 * 60,  # 1시간
         path="/",
     )
@@ -88,7 +89,7 @@ async def register_user(
         key="refresh_token",
         value=refresh_token,
         httponly=True,
-        secure=is_prod,
+        secure=not is_local,  # 로컬만 HTTP 허용, dev/prod는 HTTPS 필수
         samesite="lax" if not is_prod else "strict",
         max_age=60 * 60 * 24 * 7,  # 7일
         path="/",
@@ -107,13 +108,14 @@ async def refresh_token(
     access_token, refresh_token = create_token_pair(user.id)
     
     # httpOnly 쿠키 업데이트
+    is_local = core_settings.ENVIRONMENT == "local"
     is_prod = core_settings.ENVIRONMENT == "prod"
 
     response.set_cookie(
         key="access_token",
         value=access_token,
         httponly=True,
-        secure=is_prod,
+        secure=not is_local,  # 로컬만 HTTP 허용, dev/prod는 HTTPS 필수
         samesite="lax" if not is_prod else "strict",
         max_age=60 * 60,  # 1시간
         path="/",
@@ -122,7 +124,7 @@ async def refresh_token(
         key="refresh_token",
         value=refresh_token,
         httponly=True,
-        secure=is_prod,
+        secure=not is_local,  # 로컬만 HTTP 허용, dev/prod는 HTTPS 필수
         samesite="lax" if not is_prod else "strict",
         max_age=60 * 60 * 24 * 7,  # 7일
         path="/",
@@ -235,16 +237,17 @@ async def authenticate_google(
     access_token, refresh_token = create_token_pair(auth_info.user_id)
     
     # httpOnly 쿠키 설정
-    # 로컬 개발 환경: SameSite=lax, Secure=False (크로스 사이트 요청 허용)
-    # 프로덕션: SameSite=strict, Secure=True
+    # 로컬: SameSite=lax, Secure=False (HTTP 허용)
+    # 개발/프로덕션: SameSite=lax/strict, Secure=True (HTTPS 필수)
+    is_local = core_settings.ENVIRONMENT == "local"
     is_prod = core_settings.ENVIRONMENT == "prod"
 
     response.set_cookie(
         key="access_token",
         value=access_token,
         httponly=True,
-        secure=is_prod,  # 프로덕션에서만 HTTPS 강제
-        samesite="lax" if not is_prod else "strict",  # 로컬: lax, 프로덕션: strict
+        secure=not is_local,  # 로컬만 HTTP 허용, dev/prod는 HTTPS 필수
+        samesite="lax" if not is_prod else "strict",  # 로컬/개발: lax, 프로덕션: strict
         max_age=60 * 60,  # 1시간
         path="/",
     )
@@ -252,7 +255,7 @@ async def authenticate_google(
         key="refresh_token",
         value=refresh_token,
         httponly=True,
-        secure=is_prod,
+        secure=not is_local,  # 로컬만 HTTP 허용, dev/prod는 HTTPS 필수
         samesite="lax" if not is_prod else "strict",
         max_age=60 * 60 * 24 * 7,  # 7일
         path="/",
