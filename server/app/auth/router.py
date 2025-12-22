@@ -93,7 +93,7 @@ async def register_user(
         httponly=True,
         secure=not is_local,  # 로컬만 HTTP 허용, dev/prod는 HTTPS 필수
         samesite=samesite_value,
-        max_age=60 * 60,  # 1시간
+        max_age=auth_settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,  # 토큰 유효시간과 일치
         path="/",
     )
     response.set_cookie(
@@ -102,7 +102,7 @@ async def register_user(
         httponly=True,
         secure=not is_local,  # 로컬만 HTTP 허용, dev/prod는 HTTPS 필수
         samesite=samesite_value,
-        max_age=60 * 60 * 24 * 7,  # 7일
+        max_age=auth_settings.REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60,  # 토큰 유효시간과 일치
         path="/",
     )
     
@@ -137,7 +137,7 @@ async def refresh_token(
         httponly=True,
         secure=not is_local,  # 로컬만 HTTP 허용, dev/prod는 HTTPS 필수
         samesite=samesite_value,
-        max_age=60 * 60,  # 1시간
+        max_age=auth_settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,  # 토큰 유효시간과 일치
         path="/",
     )
     response.set_cookie(
@@ -146,7 +146,7 @@ async def refresh_token(
         httponly=True,
         secure=not is_local,  # 로컬만 HTTP 허용, dev/prod는 HTTPS 필수
         samesite=samesite_value,
-        max_age=60 * 60 * 24 * 7,  # 7일
+        max_age=auth_settings.REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60,  # 토큰 유효시간과 일치
         path="/",
     )
     
@@ -162,8 +162,28 @@ async def check_login_status(current_user: CurrentUserOptional) -> bool:
 @router.post("/logout")
 async def logout(response: Response) -> None:
     """로그아웃: httpOnly 쿠키 삭제"""
-    response.delete_cookie(key="access_token", path="/")
-    response.delete_cookie(key="refresh_token", path="/")
+    is_local = core_settings.ENVIRONMENT == "local"
+    is_prod = core_settings.ENVIRONMENT == "prod"
+    
+    if is_local:
+        samesite_value = "lax"
+    elif is_prod:
+        samesite_value = "strict"
+    else:
+        samesite_value = "none"
+    
+    response.delete_cookie(
+        key="access_token",
+        path="/",
+        secure=not is_local,
+        samesite=samesite_value,
+    )
+    response.delete_cookie(
+        key="refresh_token",
+        path="/",
+        secure=not is_local,
+        samesite=samesite_value,
+    )
 
 
 @router.get("/google/login")
@@ -278,7 +298,7 @@ async def authenticate_google(
         httponly=True,
         secure=not is_local,  # 로컬만 HTTP 허용, dev/prod는 HTTPS 필수
         samesite=samesite_value,
-        max_age=60 * 60,  # 1시간
+        max_age=auth_settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,  # 토큰 유효시간과 일치
         path="/",
     )
     response.set_cookie(
@@ -287,7 +307,7 @@ async def authenticate_google(
         httponly=True,
         secure=not is_local,  # 로컬만 HTTP 허용, dev/prod는 HTTPS 필수
         samesite=samesite_value,
-        max_age=60 * 60 * 24 * 7,  # 7일
+        max_age=auth_settings.REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60,  # 토큰 유효시간과 일치
         path="/",
     )
     

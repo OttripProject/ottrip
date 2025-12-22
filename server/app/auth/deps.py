@@ -83,7 +83,7 @@ RefreshTokenDep = Annotated[User, Depends(validate_refresh_token)]
 async def get_current_user_or_none(
     session: SessionDep,
     token: TokenDep,  
-    access_token: Optional[str] = Cookie(None), 
+    access_token: Optional[str] = Cookie(None, include_in_schema=False), 
 ) -> Optional[User]:
     token_value = access_token or token
     
