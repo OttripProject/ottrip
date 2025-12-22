@@ -1,5 +1,7 @@
 from datetime import date
 
+from pydantic import Field
+
 from app.expenses.schemas import ExpenseRead
 from app.flights.schemas import FlightRead
 from app.itinerary.schemas import ItineraryRead
@@ -9,7 +11,7 @@ from .models import Role
 
 
 class PlanBase(APISchema):
-    title: str
+    title: str = Field(..., max_length=50)
     start_date: date
     end_date: date
     memo: str = ""
@@ -20,7 +22,7 @@ class PlanCreate(PlanBase):
 
 
 class PlanUpdate(APISchema):
-    title: str | None = None
+    title: str | None = Field(None, max_length=50)
     start_date: date | None = None
     end_date: date | None = None
 

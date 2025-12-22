@@ -23,7 +23,7 @@ Description = Annotated[
 
 class UserBase(APISchema):
     handle: Handle
-    nickname: str
+    nickname: str = Field(..., max_length=30)
     description: Description
     gender: Gender
 
