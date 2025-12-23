@@ -28,6 +28,13 @@ export default function CountryPicker({ value, onChange, placeholder = '국가 �
   const [open, setIsOpen, handleOutsidePress] = useDetectClose(pickerRef, false);
   const [code, setCode] = useState<string | null>(null);
 
+  const ITEM_HEIGHT = 32;
+
+  const selectedIndex = useMemo(() => {
+    if (!value) return -1;
+    return options.findIndex((opt) => opt.label === value);
+  }, [value, options]);
+
   useEffect(() => {
     const matched = options.find((opt) => opt.label === value);
     setCode(matched ? matched.value : null);
@@ -83,7 +90,7 @@ export default function CountryPicker({ value, onChange, placeholder = '국가 �
         style={disabled ? [styles.dropdown, { borderColor: colors.gray400, borderWidth: 1 }] : [styles.dropdown, { width: '100%' }]}
         dropDownContainerStyle={[styles.dropdownContainer, { zIndex: 11000, position: 'absolute' }]}
         containerStyle={[styles.dropdownOuter, { width: '100%' }]}
-        listMode="SCROLLVIEW"
+        listMode="FLATLIST"
         dropDownDirection="BOTTOM"
         scrollViewProps={{ 
           nestedScrollEnabled: true, 
@@ -96,6 +103,17 @@ export default function CountryPicker({ value, onChange, placeholder = '국가 �
         TickIconComponent={() => (
           <CheckBlackIcon width={16} height={16} />
         )}
+        flatListProps={{
+          initialScrollIndex: selectedIndex > 0 ? selectedIndex : 0,
+          getItemLayout: (data, index) => ({
+            length: ITEM_HEIGHT,
+            offset: ITEM_HEIGHT * index,
+            index,
+          }),
+          nestedScrollEnabled: true,
+          keyboardShouldPersistTaps: 'handled',
+          showsVerticalScrollIndicator: false,
+        }}
       />
       </View>
     </>
