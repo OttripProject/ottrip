@@ -26,6 +26,7 @@ def get_engine() -> EngineCache:
     """
     loop = asyncio.get_event_loop()
 
+    print("DATABASE_URI : ", database_settings.DATABASE_URI)
     if loop not in _engine_cache:
         engine = create_async_engine(
             database_settings.DATABASE_URI,
@@ -33,7 +34,7 @@ def get_engine() -> EngineCache:
             pool_size=15, 
             max_overflow=0, 
             pool_recycle=300,  
-            pool_timeout=30,
+            pool_timeout=60,  
             echo=False, 
         )
         session_factory = async_sessionmaker(
