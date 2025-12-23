@@ -59,6 +59,13 @@ export default function TimePicker({
     return options;
   }, [minTime, maxTime]);
 
+  const ITEM_HEIGHT = 32;
+
+  const selectedIndex = useMemo(() => {
+    if (!value) return -1;
+    return timeOptions.findIndex(item => item.value === value);
+  }, [value, timeOptions]);
+
   useEffect(() => {
     if (value) {
       setSelectedValue(value);
@@ -155,12 +162,19 @@ export default function TimePicker({
           }
         ]}
         containerStyle={[styles.dropdownOuter, { width: '100%' }]}
-        listMode="SCROLLVIEW"
+        listMode="FLATLIST"
         dropDownDirection="BOTTOM"
-        scrollViewProps={{ 
-          nestedScrollEnabled: true, 
+        autoScroll={false}
+        flatListProps={{
+          initialScrollIndex: selectedIndex > 0 ? selectedIndex : 0,
+          getItemLayout: (data, index) => ({
+            length: ITEM_HEIGHT,
+            offset: ITEM_HEIGHT * index,
+            index,
+          }),
+          nestedScrollEnabled: true,
           keyboardShouldPersistTaps: 'handled',
-          showsVerticalScrollIndicator: false 
+          showsVerticalScrollIndicator: false,
         }}
         ArrowDownIconComponent={() => <DownArrowIcon width={16} height={16} />}
         ArrowUpIconComponent={() => <UpperArrowIcon width={16} height={16} />}
