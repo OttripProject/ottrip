@@ -1,7 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { Platform, AppState, type AppStateStatus } from 'react-native';
 import { refreshToken } from '@/services/api';
-import { authApi } from '@/services/auth';
 
 
 export function useTokenRefresh() {
@@ -10,16 +9,8 @@ export function useTokenRefresh() {
 
   useEffect(() => {
     const checkAndRefresh = async () => {
-      if (Platform.OS === 'web') {
-        try {
-          const isLoggedIn = await authApi.checkLoginStatus();
-          if (!isLoggedIn) {
-            return;
-          }
-        } catch (error) {
-          return;
-        }
-      }
+      // AuthContext에서 이미 로그인 상태를 확인하므로 여기서는 중복 확인 제거
+      // refreshToken(true)는 만료 체크를 하므로 안전하게 호출 가능
       await refreshToken(true);
     };
 
