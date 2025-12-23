@@ -120,36 +120,26 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   useEffect(() => {
     const checkAuthStatus = async () => {
       try {
-        // 웹 환경: 쿠키가 자동으로 전송되므로 토큰 읽기 불필요, 서버 상태 확인만
-        // Native 환경: 로컬 저장소에서 토큰 확인
+        // 웹 환경: 초기 로드 시 한 번만 서버 상태 확인 (쿠키 유효성 검증)
+        // Native 환경: 로컬 토큰만 확인 (서버 확인은 첫 API 요청 시 자동 수행)
         if (Platform.OS === 'web') {
           try {
             const isLoggedIn = await authApi.checkLoginStatus();
             if (isLoggedIn) {
               setIsAuthenticated(true);
-              // TODO: 사용자 정보 로드?
             }
           } catch (error: any) {
             // 쿠키가 없거나 만료된 경우
             setIsAuthenticated(false);
           }
         } else {
-          // Native 환경: 기존 로직 유지
+          // Native 환경: 로컬에 토큰이 있으면 인증 상태로 설정
+          // 실제 API 요청 시 서버에서 자동으로 인증 확인 (401 발생 시 자동 refresh)
           const accessToken = await tokenStores.accessToken.get();
           
           if (accessToken) {
-            try {
-              const isLoggedIn = await authApi.checkLoginStatus();
-              
-              if (isLoggedIn) {
-                setIsAuthenticated(true);
-                // TODO: 사용자 정보 로드?
-              } else {
-                await refreshAuth();
-              }
-            } catch (error: any) {
-              await logout();
-            }
+            // 토큰이 있으면 인증 상태로 설정 (서버 확인은 첫 API 요청 시 자동 수행)
+            setIsAuthenticated(true);
           }
         }
       } catch (error: any) {
