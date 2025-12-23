@@ -26,7 +26,6 @@ def get_engine() -> EngineCache:
     """
     loop = asyncio.get_event_loop()
 
-    print("DATABASE_URI : ", database_settings.DATABASE_URI)
     if loop not in _engine_cache:
         engine = create_async_engine(
             database_settings.DATABASE_URI,
