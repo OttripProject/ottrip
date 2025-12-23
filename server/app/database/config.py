@@ -34,9 +34,18 @@ class DatabaseConfig(BaseConfig):
             elif url.startswith("postgresql://") and not url.startswith("postgresql+asyncpg://"):
                 url = "postgresql+asyncpg://" + url[len("postgresql://") :]
             
-            if self.POSTGRES_SSL:
-                url += "?ssl=require"
+            if "ssl=" not in url and "sslmode=" not in url:
+                if "?" in url:
+                    url += "&ssl=require"
+                else:
+                    url += "?ssl=require"
             
             return url
+
+        return self.create_database_uri(
+            dialect="asyncpg",
+            options={"ssl": "require"} if self.POSTGRES_SSL else None,
+        )
+
 
 database_settings = DatabaseConfig.create()
