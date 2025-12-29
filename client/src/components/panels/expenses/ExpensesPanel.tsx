@@ -204,7 +204,7 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
   },
   totalButtonAmount: {
-    ...textStyles.h2,
+    ...textStyles.h3,
     color: colors.black,
   },
 });
