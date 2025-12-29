@@ -1,4 +1,3 @@
-import time
 import logging
 
 from fastapi import HTTPException
@@ -34,9 +33,6 @@ class PlanService:
     user_repository: UserRepository
     auth_repository: AuthRepository
     
-    # 성능 측정을 위한 인스턴스 변수 (초기값 설정)
-    last_db_time_ms: float = 0.0
-
     async def create(self, *, plan_data: PlanCreate) -> PlanRead:
         create_plan_data = Plan(
             title=plan_data.title,
@@ -53,49 +49,33 @@ class PlanService:
 
     async def read_plan_by_public_id(self, *, public_id: str) -> PlanReadWithInforms:
         """public_id로 plan을 조회"""
-        db_start_time = time.time()
         
-        # 첫 번째 DB 쿼리: plan 조회
         plan = await self.plan_repository.find_by_public_id(public_id=public_id)
-        db_query1_time = (time.time() - db_start_time) * 1000
         
         if not plan:
-            self.last_db_time_ms = db_query1_time
             raise HTTPException(status_code=404, detail="해당 계획을 찾을 수 없습니다.")
         
-        total_db_time = db_query1_time
         
         if plan.owner_id == self.current_user.id:
             plan_data = PlanReadWithInforms.model_validate(plan)
             plan_data.my_role = Role.EDITOR
-            self.last_db_time_ms = total_db_time
             return plan_data
         else:
-            # 두 번째 DB 쿼리: editor 확인
-            db_query2_start = time.time()
             is_editor = await self.plan_repository.is_editor(plan_id=plan.id, user_id=self.current_user.id)
-            db_query2_time = (time.time() - db_query2_start) * 1000
-            total_db_time += db_query2_time
             
             if is_editor:
                 plan_data = PlanReadWithInforms.model_validate(plan)
                 plan_data.my_role = Role.EDITOR
-                self.last_db_time_ms = total_db_time
                 return plan_data
             else:
                 # 세 번째 DB 쿼리: shared 확인
-                db_query3_start = time.time()
                 is_shared = await self.plan_repository.is_shared(plan_id=plan.id, user_id=self.current_user.id)
-                db_query3_time = (time.time() - db_query3_start) * 1000
-                total_db_time += db_query3_time
                 
                 if is_shared:
                     plan_data = PlanReadWithInforms.model_validate(plan)
                     plan_data.my_role = Role.VIEWER
-                    self.last_db_time_ms = total_db_time
                     return plan_data
         
-        self.last_db_time_ms = total_db_time
         raise HTTPException(status_code=403, detail="해당 계획에 대한 권한이 없습니다.")
 
     async def read_plan(self, *, plan_id: int) -> PlanReadWithInforms:
@@ -267,7 +247,6 @@ class PlanService:
         if current_email != invitation.email.lower():
             raise HTTPException(status_code=403, detail="초대된 이메일과 일치하지 않습니다.")
 
-        from datetime import datetime, timezone
         if invitation.expires_at and invitation.expires_at <= datetime.now(timezone.utc):
             raise HTTPException(status_code=400, detail="초대가 만료되었습니다.")
 

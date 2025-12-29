@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert, ScrollView, Pressable, Platform, TextInput } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, Platform } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import MaskedView from '@react-native-masked-view/masked-view';
 import PanelLayout from '../PanelLayout';
@@ -11,9 +11,6 @@ import { colors } from '@/ui/tokens/colors';
 import { textStyles, typography } from '@/ui/tokens/typography';
 import { spacing } from '@/ui/tokens/spacing';
 import { radii } from '@/ui/tokens/radii';
-import AiRefreshIcon from '../../../../assets/ai_refresh.svg';
-import AiCheckIcon from '../../../../assets/ai_check.svg';
-import DeleteIcon from '../../../../assets/delete_ai.svg';
 
 interface ChecklistItem {
   id: number;
