@@ -1,2 +1,0 @@
-# tripot
-Trip Planner
