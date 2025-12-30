@@ -43,16 +43,13 @@ export default function AccommodationItem({
 }: AccommodationItemProps) {
   const formatAmountWithCommas = (digits: string) => {
     if (!digits) return '';
-    // 선행 0 제거 (단, 모두 0이면 하나만 남김)
     const normalized = digits.replace(/^0+(?=\d)/, '');
     return normalized.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
   };
 
-  // 입력/서버값이 "123,456.00" 같이 들어와도 정수부만 남겨 "123456"으로 정규화
   const normalizeAmountToIntDigits = (value: unknown) => {
     const raw = String(value ?? '').trim();
     if (!raw) return '';
-    // 소수점이 있으면 정수부만 사용 (100.00 -> 100)
     const integerPart = raw.split('.')[0];
     return integerPart.replace(/[^0-9]/g, '');
   };
@@ -71,19 +68,17 @@ export default function AccommodationItem({
   });
 
   const [expenseData, setExpenseData] = useState({
-    // amount는 화면 표시를 위해 항상 "정수 digits 문자열"로 유지
     amount: normalizeAmountToIntDigits(accommodation?.expense?.amount),
     currency: accommodation?.expense?.currency || ExpenseCurrency.KRW,
   });
 
-  const [isSubmitting, setIsSubmitting] = useState(false); // 버튼 비활성화용 (리렌더링 필요)
-  const isSubmittingRef = useRef(false); // 중복 요청 방지 플래그
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const isSubmittingRef = useRef(false);
   const [showCheckinDatePicker, setShowCheckinDatePicker] = useState(false);
   const [showCheckoutDatePicker, setShowCheckoutDatePicker] = useState(false);
   const [checkinTimeOpen, setCheckinTimeOpen] = useState(false);
   const [checkoutTimeOpen, setCheckoutTimeOpen] = useState(false);
 
-  // accommodation prop이 변경될 때 폼 데이터 동기화 (snake_case / camelCase 모두 지원)
   useEffect(() => {
     if (accommodation) {
       setFormData({
@@ -98,7 +93,6 @@ export default function AccommodationItem({
         description: accommodation.description || '',
       });
 
-      // expense 동기화: 서버에서 123.00 같은 값이 와도 digits로 정규화하여 저장
       setExpenseData((prev) => ({
         ...prev,
         amount: normalizeAmountToIntDigits(accommodation?.expense?.amount),
@@ -107,8 +101,7 @@ export default function AccommodationItem({
     }
   }, [accommodation]);
 
-  // 국가 드롭다운 상태 및 옵션
-  const [countryOpen, setCountryOpen] = useState(false); // zIndex 제어용 (CountrySelect 내부 오픈 상태와는 별개로 래퍼 zIndex 제어 가능)
+  const [countryOpen, setCountryOpen] = useState(false);
   useEffect(() => {
     if (!readOnly && onPreviewChange) {
       onPreviewChange({
@@ -122,12 +115,10 @@ export default function AccommodationItem({
   }, [formData, readOnly, onPreviewChange]);
   
   const handleSave = async () => {
-    // 중복 요청 방지: 이미 실행 중이면 무시
     if (isSubmittingRef.current) {
       return;
     }
 
-    // 모델 필수값 검증: name, checkin_date, checkout_date, checkin_time, checkout_time
     if (!formData.name.trim() || 
         !formData.checkin_date || !formData.checkout_date || !formData.checkin_time || !formData.checkout_time) {
       setWarningMessage('입력되지 않은 값이 있어요.');
@@ -135,12 +126,10 @@ export default function AccommodationItem({
       return;
     }
 
-    // 겹침 검증: 기존 숙박과 시간 겹침 확인
     const newCheckin = dayjs(`${formData.checkin_date} ${formData.checkin_time}`);
     const newCheckout = dayjs(`${formData.checkout_date} ${formData.checkout_time}`);
 
     for (const existingAccommodation of existingAccommodations) {
-      // 편집 중인 숙박은 제외 (자기 자신)
       if (accommodation && existingAccommodation.id === accommodation.id) {
         continue;
       }
@@ -148,7 +137,6 @@ export default function AccommodationItem({
       const existingCheckin = dayjs(`${existingAccommodation.checkinDate} ${existingAccommodation.checkinTime || '00:00:00'}`);
       const existingCheckout = dayjs(`${existingAccommodation.checkoutDate} ${existingAccommodation.checkoutTime || '00:00:00'}`);
 
-      // 시간이 겹치는지 확인 (범위가 겹치면 true)
       const hasOverlap = (
         (newCheckin.isAfter(existingCheckin) || newCheckin.isSame(existingCheckin)) && newCheckin.isBefore(existingCheckout) ||
         newCheckout.isAfter(existingCheckin) && (newCheckout.isBefore(existingCheckout) || newCheckout.isSame(existingCheckout)) ||
@@ -162,13 +150,11 @@ export default function AccommodationItem({
       }
     }
 
-    // 실행 중 플래그 설정
     isSubmittingRef.current = true;
     setIsSubmitting(true);
     try {
       let savedAccommodation;
       if (accommodation && accommodation.id) {
-        // 편집
         savedAccommodation = await accommodationsApi.updateAccommodation(accommodation.id, {
           name: formData.name,
           place: formData.place || undefined,
@@ -219,19 +205,16 @@ export default function AccommodationItem({
   };
 
   const handleDelete = async () => {
-    // 중복 요청 방지: 이미 실행 중이면 무시
     if (isSubmittingRef.current) {
       return;
     }
 
-    // 숙박 추가 모드: 입력창 닫기
     if (!accommodation) {
       onCancel();
       return;
     }
     
     if (accommodation && accommodation.id && onDelete) {
-      // 실행 중 플래그 설정
       isSubmittingRef.current = true;
       setIsSubmitting(true);
       try {
@@ -240,7 +223,6 @@ export default function AccommodationItem({
         onDelete(id);
         onCancel();
       } catch (error) {
-        // Silent fail
       } finally {
         isSubmittingRef.current = false;
         setIsSubmitting(false);
@@ -248,7 +230,6 @@ export default function AccommodationItem({
     }
   };
 
-  // 통화 옵션
   const currencyOptions = useMemo(() => [
     { label: 'KRW', value: ExpenseCurrency.KRW },
     { label: 'USD', value: ExpenseCurrency.USD },
@@ -388,7 +369,6 @@ export default function AccommodationItem({
               onOpen={() => {
                 if (!readOnly) {
                   setCheckinTimeOpen(true);
-                  // 체크인 시간이 열릴 때 체크아웃 시간 닫기
                   if (checkoutTimeOpen) {
                     setCheckoutTimeOpen(false);
                   }
@@ -448,7 +428,6 @@ export default function AccommodationItem({
               onOpen={() => {
                 if (!readOnly) {
                   setCheckoutTimeOpen(true);
-                  // 체크아웃 시간이 열릴 때 체크인 시간 닫기
                   if (checkinTimeOpen) {
                     setCheckinTimeOpen(false);
                   }
@@ -725,15 +704,4 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     ...textStyles.body4,
   },
-  // readOnlyDateInput: {
-  //   flexDirection: 'row',
-  //   alignItems: 'center',
-  //   borderWidth: 1,
-  //   borderColor: colors.gray400,
-  //   borderRadius: radii.md,
-  //   paddingHorizontal: spacing.md,
-  //   paddingVertical: 10,
-  //   backgroundColor: colors.gray200,
-  //   minHeight: 40,
-  // },
 });

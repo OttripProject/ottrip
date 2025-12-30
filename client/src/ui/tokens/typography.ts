@@ -5,7 +5,6 @@ export const typography = {
   fontFamily: {
     default: 'System',
     mono: 'Courier',
-    // Pretendard 폰트 (weight별로 정확한 이름 사용)
     pretendard: 'Pretendard-Regular',
     pretendardThin: 'Pretendard-Thin',
     pretendardExtraLight: 'Pretendard-ExtraLight',
@@ -16,7 +15,6 @@ export const typography = {
     pretendardBold: 'Pretendard-Bold',
     pretendardExtraBold: 'Pretendard-ExtraBold',
     pretendardBlack: 'Pretendard-Black',
-    // Poppins 폰트 (weight별로 정확한 이름 사용)
     poppins: 'Poppins-Regular',
     poppinsThin: 'Poppins-Thin',
     poppinsExtraLight: 'Poppins-ExtraLight',
@@ -43,9 +41,7 @@ export const typography = {
   },
 };
 
-// 타이포그래피 스타일 정의 (재사용 가능한 텍스트 스타일)
 export const textStyles: Record<string, TextStyle> = {
-  // Heading 스타일
   h2: {
     fontFamily: typography.fontFamily.pretendardSemiBold,
     fontSize: 24,
@@ -94,7 +90,6 @@ export const textStyles: Record<string, TextStyle> = {
     lineHeight: 16,
     color: colors.black,
   },
-  // Body 스타일
   body1: {
     fontFamily: typography.fontFamily.pretendardRegular,
     fontSize: 18,
@@ -131,7 +126,6 @@ export const textStyles: Record<string, TextStyle> = {
     lineHeight: 16,
     color: colors.black,
   },
-  // Poppins 스타일
   poppinsH4: {
     fontFamily: typography.fontFamily.poppinsSemiBold,
     fontSize: 18,

@@ -13,7 +13,6 @@ import { textStyles, typography } from '@/ui/tokens/typography';
 import { spacing } from '@/ui/tokens/spacing';
 import { radii } from '@/ui/tokens/radii';
 import WarningBanner from '@/ui/components/toast/warning';
-import DownArrowIcon from '../../../assets/down_arrow.svg';
 import XIcon from '../../../assets/x.svg';
 import CalendarIcon from '../../../assets/calender.svg';
 
@@ -21,7 +20,7 @@ interface AddExpenseModalProps {
   visible: boolean;
   onClose: () => void;
   planId: number;
-  planStartDate?: string; // plan의 시작 날짜
+  planStartDate?: string;
   onExpenseAdd?: (expense: any) => void;
 }
 
@@ -37,10 +36,9 @@ export default function AddExpenseModal({
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showWarning, setShowWarning] = useState(false);
   const [warningMessage, setWarningMessage] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false); // 버튼 비활성화용 (리렌더링 필요)
-  const isSubmittingRef = useRef(false); // 중복 요청 방지 플래그
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const isSubmittingRef = useRef(false);
 
-  // 기본 날짜: plan 시작 날짜 > selectedDate > 오늘 날짜 순서로 우선순위
   const getDefaultDate = () => planStartDate || selectedDate || dayjs().format('YYYY-MM-DD');
 
   const [expenseForm, setExpenseForm] = useState({
@@ -51,7 +49,6 @@ export default function AddExpenseModal({
     currency: ExpenseCurrency.KRW,
   });
 
-  // 모달이 열릴 때마다 기본 날짜 업데이트
   useEffect(() => {
     if (visible) {
       const defaultDate = planStartDate || selectedDate || dayjs().format('YYYY-MM-DD');
@@ -63,7 +60,6 @@ export default function AddExpenseModal({
   }, [visible, planStartDate, selectedDate]);
 
   const handleExpenseSubmit = async () => {
-    // 중복 요청 방지: 이미 실행 중이면 무시
     if (isSubmittingRef.current) {
       return;
     }
@@ -80,7 +76,6 @@ export default function AddExpenseModal({
       return;
     }
 
-    // 실행 중 플래그 설정
     isSubmittingRef.current = true;
     setIsSubmitting(true);
 
@@ -245,7 +240,6 @@ export default function AddExpenseModal({
             </View>
           </ScrollView>
         </View>
-        {/* 달력을 모달 오버레이 레벨에서 렌더링하여 버튼 위에 표시하고 모달 밖으로 나가도 보이도록 함 */}
         {showDatePicker && (
           <View style={styles.calendarOverlay} pointerEvents="box-none">
             <BaseCalendar

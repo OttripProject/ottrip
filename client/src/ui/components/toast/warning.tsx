@@ -28,7 +28,6 @@ export default function WarningBanner({
     let timer: NodeJS.Timeout | null = null;
     
     if (visible) {
-      // 나타나는 애니메이션
       Animated.parallel([
         Animated.timing(opacity, {
           toValue: 1,
@@ -43,7 +42,6 @@ export default function WarningBanner({
         }),
       ]).start();
 
-      // duration 후 사라지는 애니메이션
       timer = setTimeout(() => {
         Animated.parallel([
           Animated.timing(opacity, {

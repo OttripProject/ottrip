@@ -18,7 +18,6 @@ export default function DeleteAccountModal({
 }: DeleteAccountModalProps) {
   const [isCompleted, setIsCompleted] = useState(false);
 
-  // visible이 false로 변경되면 완료 상태 리셋
   useEffect(() => {
     if (!visible) {
       setIsCompleted(false);
@@ -30,7 +29,6 @@ export default function DeleteAccountModal({
       await onConfirm();
       setIsCompleted(true);
     } catch (error) {
-      // 에러는 onConfirm에서 처리하므로 여기서는 완료 상태로 전환하지 않음
     }
   };
 

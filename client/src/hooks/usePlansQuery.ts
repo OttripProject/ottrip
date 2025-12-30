@@ -5,42 +5,34 @@ import { Plan, CreatePlanRequest, UpdatePlanRequest } from '../types/api';
 export const usePlansQuery = () => {
   const queryClient = useQueryClient();
 
-  // Plan 목록 조회
   const { data: plans = [], isLoading, error, refetch } = useQuery<Plan[]>({
     queryKey: ['plans'],
     queryFn: () => plansApi.getPlans(),
-    staleTime: 1 * 60 * 1000, // 1분간 캐시 유지 (공유/초대 가능성 고려)
-    gcTime: 10 * 60 * 1000, // 10분간 가비지 컬렉션 방지 (최근 본 plans는 메모리에 유지)
+    staleTime: 1 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
   });
 
-  // Plan 생성
   const addPlanMutation = useMutation({
     mutationFn: (planData: CreatePlanRequest) => plansApi.createPlan(planData),
     onSuccess: (newPlan) => {
-      // 캐시 업데이트
       queryClient.setQueryData<Plan[]>(['plans'], (old = []) => [...old, newPlan]);
     },
   });
 
-  // Plan 수정
   const updatePlanMutation = useMutation({
     mutationFn: ({ planId, planData }: { planId: number; planData: UpdatePlanRequest }) =>
       plansApi.updatePlan(planId, planData),
     onSuccess: (updatedPlan) => {
-      // 캐시 업데이트
       queryClient.setQueryData<Plan[]>(['plans'], (old = []) =>
         old.map((plan) => (plan.id === updatedPlan.id ? updatedPlan : plan))
       );
-      // 해당 plan의 상세 데이터도 무효화
       queryClient.invalidateQueries({ queryKey: ['plan', updatedPlan.publicId] });
     },
   });
 
-  // Plan 삭제
   const deletePlanMutation = useMutation({
     mutationFn: (planId: number) => plansApi.deletePlan(planId),
     onSuccess: (_, planId) => {
-      // 캐시 업데이트
       queryClient.setQueryData<Plan[]>(['plans'], (old = []) =>
         old.filter((plan) => plan.id !== planId)
       );

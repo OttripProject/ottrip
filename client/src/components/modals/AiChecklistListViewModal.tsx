@@ -40,7 +40,6 @@ interface AiChecklistListViewModalProps {
   onAddItem: (name: string, reason: string, category: string) => void;
 }
 
-// 그라데이션 텍스트 컴포넌트
 const GradientText = ({ children, style }: { children: string; style?: any }) => {
   if (Platform.OS === 'web') {
     return (
@@ -135,7 +134,6 @@ export default function AiChecklistListViewModal({
     >
       <View style={styles.modalOverlay}>
         <View style={styles.modalContent}>
-          {/* gradientAIColors가 투명도(알파)를 포함해도 뒤 화면이 비치지 않도록 흰색 베이스 레이어를 먼저 깔아둠 */}
           <View pointerEvents="none" style={StyleSheet.absoluteFillObject} />
           <GradientBackground colors={colors.gradientAIColors} style={{ flex: 1 }}>
             {isLoading && (

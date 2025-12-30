@@ -74,14 +74,12 @@ export default function TimePicker({
     }
   }, [value]);
 
-  // 선택된 값이 변경될 때 onChange 호출
   useEffect(() => {
     if (selectedValue) {
       onChange(selectedValue);
     }
   }, [selectedValue]);
 
-  // style prop에서 커스텀 스타일 추출 (항공 구간용)
   const styleObj = style as any;
   const customBackgroundColor = styleObj?.backgroundColor;
   const customBorderColor = styleObj?.borderColor;
@@ -89,26 +87,22 @@ export default function TimePicker({
   const customHeight = styleObj?.height;
   const customBorderRadius = styleObj?.borderRadius;
   
-  // 커스텀 스타일이 있으면 적용, 없으면 기본값 사용
   const dropdownBgColor = customBackgroundColor || colors.gray200;
   const dropdownStyle: any = {
     width: '100%',
     backgroundColor: dropdownBgColor,
   };
   
-  // 보더가 있으면 적용 (항공 구간만)
   if (customBorderColor !== undefined) {
     dropdownStyle.borderColor = customBorderColor;
     dropdownStyle.borderWidth = customBorderWidth ?? 1;
   }
   
-  // 높이가 지정되어 있으면 적용 (항공 구간만)
   if (customHeight !== undefined) {
     dropdownStyle.height = customHeight;
     dropdownStyle.minHeight = customHeight;
   }
   
-  // borderRadius가 지정되어 있으면 적용 (항공 구간만)
   if (customBorderRadius !== undefined) {
     dropdownStyle.borderRadius = customBorderRadius;
   }

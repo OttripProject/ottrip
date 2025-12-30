@@ -13,29 +13,16 @@ export default function App() {
   
   // 웹에서는 런타임 폰트 로딩 필요 (플러그인 방식이 웹에서 제대로 작동하지 않음)
   // 네이티브(iOS/Android)에서는 app.config.ts의 expo-font 플러그인이 자동으로 처리
+  // 실제 사용 중인 폰트만 로드하여 성능 최적화
   const [fontsLoaded, fontError] = useFonts(
     Platform.OS === 'web'
       ? {
-          // Pretendard 폰트
-          'Pretendard-Thin': require('./assets/fonts/Pretendard-Thin.otf'),
-          'Pretendard-ExtraLight': require('./assets/fonts/Pretendard-ExtraLight.otf'),
-          'Pretendard-Light': require('./assets/fonts/Pretendard-Light.otf'),
+          // Pretendard 폰트 (실제 사용 중인 것만)
           'Pretendard-Regular': require('./assets/fonts/Pretendard-Regular.otf'),
-          'Pretendard-Medium': require('./assets/fonts/Pretendard-Medium.otf'),
           'Pretendard-SemiBold': require('./assets/fonts/Pretendard-SemiBold.otf'),
-          'Pretendard-Bold': require('./assets/fonts/Pretendard-Bold.otf'),
-          'Pretendard-ExtraBold': require('./assets/fonts/Pretendard-ExtraBold.otf'),
-          'Pretendard-Black': require('./assets/fonts/Pretendard-Black.otf'),
-          // Poppins 폰트
-          'Poppins-Thin': require('./assets/fonts/Poppins-Thin.ttf'),
-          'Poppins-ExtraLight': require('./assets/fonts/Poppins-ExtraLight.ttf'),
-          'Poppins-Light': require('./assets/fonts/Poppins-Light.ttf'),
-          'Poppins-Regular': require('./assets/fonts/Poppins-Regular.ttf'),
+          // Poppins 폰트 (실제 사용 중인 것만)
           'Poppins-Medium': require('./assets/fonts/Poppins-Medium.ttf'),
           'Poppins-SemiBold': require('./assets/fonts/Poppins-SemiBold.ttf'),
-          'Poppins-Bold': require('./assets/fonts/Poppins-Bold.ttf'),
-          'Poppins-ExtraBold': require('./assets/fonts/Poppins-ExtraBold.ttf'),
-          'Poppins-Black': require('./assets/fonts/Poppins-Black.ttf'),
         }
       : {}
   );

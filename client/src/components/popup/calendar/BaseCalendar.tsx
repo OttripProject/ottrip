@@ -149,18 +149,15 @@ export default function BaseCalendar({
   const [tempSelectedMonth, setTempSelectedMonth] = useState<number | null>(null); 
   const [tempSelectedYear, setTempSelectedYear] = useState<number | null>(null); 
 
-  // 외부 클릭 감지
   const calendarRef = useRef<View>(null);
   const [isOpen, setIsOpen, handleOutsidePress] = useDetectClose(calendarRef, visible);
 
-  // visible이 변경되면 isOpen도 업데이트
   useEffect(() => {
     if (visible !== isOpen) {
       setIsOpen(visible);
     }
   }, [visible]);
 
-  // isOpen이 false가 되면 onClose 호출
   useEffect(() => {
     if (!isOpen && visible) {
       onClose?.();

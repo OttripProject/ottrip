@@ -32,7 +32,7 @@ interface CompletionModalProps {
   visible: boolean;
   onClose: () => void;
   mode: 'add' | 'edit' | 'delete' | 'error' | string;
-  params?: any; // mode별 추가 파라미터 (예: add 모드의 tripName, error 모드의 message)
+  params?: any;
 }
 
 export default function CompletionModal({
@@ -41,22 +41,18 @@ export default function CompletionModal({
   mode,
   params,
 }: CompletionModalProps) {
-  // visible이 false이거나 mode가 없으면 렌더링하지 않음
   if (!visible || !mode) {
     return null;
   }
   
-  // mode별 설정 가져오기
   const modeConfig = MODE_CONFIG[mode];
   
   if (!modeConfig) {
     return null;
   }
   
-  // title 가져오기
   const title = modeConfig.title;
   
-  // description 가져오기 (함수면 실행, 문자열이면 그대로 사용)
   const description = typeof modeConfig.description === 'function' 
     ? modeConfig.description(params)
     : modeConfig.description;

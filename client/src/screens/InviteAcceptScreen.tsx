@@ -27,11 +27,10 @@ export default function InviteAcceptScreen() {
             await SecureStore.setItemAsync('pendingInviteToken', token);
           }
         } catch {}
-        // 로그인 화면으로 이동
         // @ts-ignore
         navigation.navigate('로그인');
         setStatus('pending');
-        return; // 로그인 후 자동 처리
+        return;
       }
       try {
         await api.post(`/private/plans/invitations/${token}/accept`);

@@ -30,7 +30,6 @@ export const usePlanDataQuery = (publicId: string | null) => {
         };
       }
 
-      // 서버가 Plan + 관련 엔티티들을 함께 반환 (PlanReadWithInforms)
       const planData: any = await plansApi.getPlan(publicId);
 
       const normalizedExpenses = (planData?.expenses ?? []).map((e: any) => ({
@@ -60,7 +59,6 @@ export const usePlanDataQuery = (publicId: string | null) => {
     expenses: [],
   };
 
-  // 개별 데이터 새로고침 함수들
   const refreshItineraries = async () => {
     if (!planData.plan?.id) return;
     try {
@@ -70,7 +68,6 @@ export const usePlanDataQuery = (publicId: string | null) => {
         itineraries,
       }));
     } catch (err: any) {
-      // Silent fail
     }
   };
 
@@ -83,7 +80,6 @@ export const usePlanDataQuery = (publicId: string | null) => {
         flights,
       }));
     } catch (err: any) {
-      // Silent fail
     }
   };
 
@@ -96,7 +92,6 @@ export const usePlanDataQuery = (publicId: string | null) => {
         accommodations,
       }));
     } catch (err: any) {
-      // Silent fail
     }
   };
 
@@ -109,30 +104,24 @@ export const usePlanDataQuery = (publicId: string | null) => {
         expenses,
       }));
     } catch (err: any) {
-      // Silent fail
     }
   };
 
-  // 숙박을 캐시에 바로 추가 (응답 객체 사용)
   const addAccommodation = (newAccommodation: Accommodation) => {
     queryClient.setQueryData<PlanData>(['plan', publicId], (old) => {
       if (!old) return old;
 
-      // accommodation 추가/업데이트
       const existingIndex = old.accommodations.findIndex(
         (acc) => acc.id === newAccommodation.id
       );
       let updatedAccommodations: Accommodation[];
       if (existingIndex >= 0) {
-        // 기존 항목 업데이트
         updatedAccommodations = [...old.accommodations];
         updatedAccommodations[existingIndex] = newAccommodation;
       } else {
-        // 새 항목 추가
         updatedAccommodations = [...old.accommodations, newAccommodation];
       }
 
-      // expense도 함께 추가/업데이트 (accommodation에 expense가 있는 경우)
       let updatedExpenses = [...old.expenses];
       if (newAccommodation.expense) {
         const expense = {
@@ -143,10 +132,8 @@ export const usePlanDataQuery = (publicId: string | null) => {
           (e) => e.id === expense.id
         );
         if (existingExpenseIndex >= 0) {
-          // 기존 expense 업데이트
           updatedExpenses[existingExpenseIndex] = expense;
         } else {
-          // 새 expense 추가
           updatedExpenses.push(expense);
         }
       }
@@ -159,12 +146,10 @@ export const usePlanDataQuery = (publicId: string | null) => {
     });
   };
 
-  // expense를 캐시에 바로 추가 (응답 객체 사용)
   const addExpense = (newExpense: Expense) => {
     queryClient.setQueryData<PlanData>(['plan', publicId], (old) => {
       if (!old) return old;
 
-      // expense 추가/업데이트
       const normalizedExpense = {
         ...newExpense,
         amount: Number(newExpense.amount), // amount 정규화
@@ -174,11 +159,9 @@ export const usePlanDataQuery = (publicId: string | null) => {
       );
       let updatedExpenses: Expense[];
       if (existingIndex >= 0) {
-        // 기존 항목 업데이트
         updatedExpenses = [...old.expenses];
         updatedExpenses[existingIndex] = normalizedExpense;
       } else {
-        // 새 항목 추가
         updatedExpenses = [...old.expenses, normalizedExpense];
       }
 
@@ -189,12 +172,10 @@ export const usePlanDataQuery = (publicId: string | null) => {
     });
   };
 
-  // expense를 캐시에서 제거 (삭제 시 사용)
   const removeExpense = (expenseId: number) => {
     queryClient.setQueryData<PlanData>(['plan', publicId], (old) => {
       if (!old) return old;
 
-      // expense 제거
       const updatedExpenses = old.expenses.filter(
         (e) => e.id !== expenseId
       );
@@ -206,17 +187,14 @@ export const usePlanDataQuery = (publicId: string | null) => {
     });
   };
 
-  // accommodation을 캐시에서 제거 (삭제 시 사용)
   const removeAccommodation = (accommodationId: number) => {
     queryClient.setQueryData<PlanData>(['plan', publicId], (old) => {
       if (!old) return old;
 
-      // accommodation 제거
       const updatedAccommodations = old.accommodations.filter(
         (acc) => acc.id !== accommodationId
       );
 
-      // accommodation에 연결된 expense도 제거
       const updatedExpenses = old.expenses.filter(
         (e) => e.accommodationId !== accommodationId
       );
@@ -229,47 +207,36 @@ export const usePlanDataQuery = (publicId: string | null) => {
     });
   };
 
-  // 일정을 캐시에 바로 추가 (응답 객체 사용)
   const addItinerary = (newItinerary: Itinerary) => {
     queryClient.setQueryData<PlanData>(['plan', publicId], (old) => {
       if (!old) return old;
 
-      // itinerary 추가/업데이트
       const existingIndex = old.itineraries.findIndex(
         (it) => it.id === newItinerary.id
       );
       let updatedItineraries: Itinerary[];
       if (existingIndex >= 0) {
-        // 기존 항목 업데이트
         updatedItineraries = [...old.itineraries];
         updatedItineraries[existingIndex] = newItinerary;
       } else {
-        // 새 항목 추가
         updatedItineraries = [...old.itineraries, newItinerary];
       }
 
-      // expense는 addExpense로만 관리하므로, addItinerary에서는 expense를 건드리지 않음
-      // itinerary 업데이트 시 서버 응답의 expenses는 이전 데이터일 수 있으므로 무시
-      
       return {
         ...old,
         itineraries: updatedItineraries,
-        // expenses는 그대로 유지 (addExpense로만 업데이트)
       };
     });
   };
 
-  // 일정을 캐시에서 제거 (삭제 시 사용)
   const removeItinerary = (itineraryId: number) => {
     queryClient.setQueryData<PlanData>(['plan', publicId], (old) => {
       if (!old) return old;
 
-      // itinerary 제거
       const updatedItineraries = old.itineraries.filter(
         (it) => it.id !== itineraryId
       );
 
-      // itinerary에 연결된 expense도 제거
       const updatedExpenses = old.expenses.filter(
         (e) => e.itineraryId !== itineraryId
       );
@@ -282,26 +249,21 @@ export const usePlanDataQuery = (publicId: string | null) => {
     });
   };
 
-  // 항공편을 캐시에 바로 추가 (응답 객체 사용)
   const addFlight = (newFlight: FlightRead) => {
     queryClient.setQueryData<PlanData>(['plan', publicId], (old) => {
       if (!old) return old;
 
-      // flight 추가/업데이트
       const existingIndex = old.flights.findIndex(
         (f) => f.id === newFlight.id
       );
       let updatedFlights: FlightRead[];
       if (existingIndex >= 0) {
-        // 기존 항목 업데이트
         updatedFlights = [...old.flights];
         updatedFlights[existingIndex] = newFlight;
       } else {
-        // 새 항목 추가
         updatedFlights = [...old.flights, newFlight];
       }
 
-      // expense도 함께 추가/업데이트 (flight에 expense가 있는 경우)
       let updatedExpenses = [...old.expenses];
       if (newFlight.expense) {
         const expense = {
@@ -312,10 +274,8 @@ export const usePlanDataQuery = (publicId: string | null) => {
           (e) => e.id === expense.id
         );
         if (existingExpenseIndex >= 0) {
-          // 기존 expense 업데이트
           updatedExpenses[existingExpenseIndex] = expense;
         } else {
-          // 새 expense 추가
           updatedExpenses.push(expense);
         }
       }
@@ -328,17 +288,14 @@ export const usePlanDataQuery = (publicId: string | null) => {
     });
   };
 
-  // 항공편을 캐시에서 제거 (삭제 시 사용)
   const removeFlight = (flightId: number) => {
     queryClient.setQueryData<PlanData>(['plan', publicId], (old) => {
       if (!old) return old;
 
-      // flight 제거
       const updatedFlights = old.flights.filter(
         (f) => f.id !== flightId
       );
 
-      // flight에 연결된 expense도 제거
       const updatedExpenses = old.expenses.filter(
         (e) => e.flightId !== flightId
       );
@@ -355,20 +312,16 @@ export const usePlanDataQuery = (publicId: string | null) => {
     if (pId === publicId) {
       await refetch();
     } else {
-      // 다른 plan을 로드하려면 queryClient를 사용하여 직접 호출
       queryClient.invalidateQueries({ queryKey: ['plan', pId] });
     }
   };
 
-  // errorStatus 추출
   let errorStatus: number | null = null;
   
   if (isError && error) {
-    // AxiosError의 response.status
     if ((error as any)?.response?.status) {
       errorStatus = (error as any).response.status;
     }
-    // 직접 status 속성
     else if ((error as any)?.status) {
       errorStatus = (error as any).status;
     }

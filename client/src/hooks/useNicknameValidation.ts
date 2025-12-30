@@ -11,7 +11,6 @@ export const useNicknameValidation = (currentNickname?: string) => {
   const [checkingNickname, setCheckingNickname] = useState(false);
   const checkNicknameTimer = useRef<NodeJS.Timeout | null>(null);
 
-  // 닉네임 형식 검증
   const validateNickname = useCallback((nickname: string): NicknameValidationResult => {
     const trimmed = nickname.trim();
     if (trimmed.length === 0) {
@@ -27,7 +26,6 @@ export const useNicknameValidation = (currentNickname?: string) => {
     return { isValid: true };
   }, []);
 
-  // 닉네임 중복 검사 (디바운싱)
   const triggerNicknameCheck = useCallback((nickname: string) => {
     if (checkNicknameTimer.current) clearTimeout(checkNicknameTimer.current);
     checkNicknameTimer.current = setTimeout(async () => {
@@ -43,12 +41,10 @@ export const useNicknameValidation = (currentNickname?: string) => {
     }, 500);
   }, []);
 
-  // 닉네임 변경 핸들러
   const onNicknameChange = useCallback((text: string) => {
     const validation = validateNickname(text);
     if (validation.isValid) {
       setNicknameError(null);
-      // 현재 닉네임과 다를 때만 중복 검사
       if (text !== currentNickname) {
         triggerNicknameCheck(text);
       }
@@ -57,7 +53,6 @@ export const useNicknameValidation = (currentNickname?: string) => {
     }
   }, [validateNickname, triggerNicknameCheck, currentNickname]);
 
-  // 검증 상태 초기화
   const resetValidation = useCallback(() => {
     setNicknameError(null);
     setCheckingNickname(false);
@@ -67,7 +62,6 @@ export const useNicknameValidation = (currentNickname?: string) => {
     }
   }, []);
 
-  // 컴포넌트 언마운트 시 타이머 정리
   useEffect(() => {
     return () => {
       if (checkNicknameTimer.current) {
@@ -77,7 +71,6 @@ export const useNicknameValidation = (currentNickname?: string) => {
     };
   }, []);
 
-  // 검증 통과 여부
   const isValid = !nicknameError && !checkingNickname;
 
   return {

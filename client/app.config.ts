@@ -110,26 +110,10 @@ export default ({ config }: ConfigContext): ExpoConfig => {
         "expo-font",
         {
           fonts: [
-            // Pretendard는 .otf 파일만 존재
-            "./assets/fonts/Pretendard-Thin.otf",
-            "./assets/fonts/Pretendard-ExtraLight.otf",
-            "./assets/fonts/Pretendard-Light.otf",
             "./assets/fonts/Pretendard-Regular.otf",
-            "./assets/fonts/Pretendard-Medium.otf",
             "./assets/fonts/Pretendard-SemiBold.otf",
-            "./assets/fonts/Pretendard-Bold.otf",
-            "./assets/fonts/Pretendard-ExtraBold.otf",
-            "./assets/fonts/Pretendard-Black.otf",
-            // Poppins는 .ttf 파일만 존재
-            "./assets/fonts/Poppins-Thin.ttf",
-            "./assets/fonts/Poppins-ExtraLight.ttf",
-            "./assets/fonts/Poppins-Light.ttf",
-            "./assets/fonts/Poppins-Regular.ttf",
             "./assets/fonts/Poppins-Medium.ttf",
             "./assets/fonts/Poppins-SemiBold.ttf",
-            "./assets/fonts/Poppins-Bold.ttf",
-            "./assets/fonts/Poppins-ExtraBold.ttf",
-            "./assets/fonts/Poppins-Black.ttf",
           ],
         },
       ],

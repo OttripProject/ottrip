@@ -63,11 +63,9 @@ export default function FlightSection({
     onFlightAdd?.(flight);
     setShowFlightForm(false);
     setEditingFlight(null);
-    // refreshExpenses() 제거 - flight의 expense는 addFlight에서 처리해야 함
   };
 
   const handleFlightDelete = (flightId: string) => {
-    // 캐시에서 바로 제거 (flight + expense)
     const id = typeof flightId === 'string' ? parseInt(flightId, 10) : flightId;
     if (planData?.removeFlight) {
       planData.removeFlight(id);
@@ -77,7 +75,6 @@ export default function FlightSection({
     onFlightClear?.();
   };
 
-  // 선택된 항공편이 있고 편집 모드가 아닐 때 - 읽기 전용 폼 표시
   if (selectedFlight && !showFlightForm) {
     return (
       <FlightItem
@@ -101,7 +98,6 @@ export default function FlightSection({
     );
   }
   
-  // 편집 폼 표시 (추가/수정 모두 처리)
   if (showFlightForm) {
     return (
       <FlightItem

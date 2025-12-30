@@ -55,7 +55,6 @@ export default function AIAssistantPanel({ publicId }: AIAssistantPanelProps) {
       const response = await api.get(`/private/ai/checklist/${publicId}`);
       
       if (response.data && response.data.categories) {
-        // 백엔드가 이미 camelCase로 응답하므로 변환 불필요
         setChecklist(response.data);
       } else {
         setChecklist(null);
@@ -65,12 +64,10 @@ export default function AIAssistantPanel({ publicId }: AIAssistantPanelProps) {
     }
   }, [publicId]);
 
-  // Plan이 선택될 때 기존 체크리스트 확인
   useEffect(() => {
     if (publicId) {
       checkExistingChecklist();
     } else {
-      // Plan이 선택되지 않으면 상태 초기화
       setChecklist(null);
     }
   }, [publicId, checkExistingChecklist]);
@@ -81,11 +78,9 @@ export default function AIAssistantPanel({ publicId }: AIAssistantPanelProps) {
     try {
       setIsLoading(true);
       
-      // 1. 유효성 검사: 상세일정 2개 이상 확인 (삭제되지 않은 일정만)
       const response = await api.get(`/private/plans/${publicId}`);
       const plan = response.data;
       
-      // 삭제되지 않은 일정만 필터링
       const activeItineraries = plan.itineraries?.filter((it: any) => !it.is_deleted) || [];
       
       if (activeItineraries.length < 2) {
@@ -94,7 +89,6 @@ export default function AIAssistantPanel({ publicId }: AIAssistantPanelProps) {
         return;
       }
       
-      // 2. AI 체크리스트 생성
       const checklistResponse = await api.post(`/private/ai/checklist/${publicId}/generate`, {
         force_regenerate: true
       });
@@ -122,11 +116,9 @@ export default function AIAssistantPanel({ publicId }: AIAssistantPanelProps) {
     try {
       setIsLoading(true);
       
-      // 1. 유효성 검사: 상세일정 2개 이상 확인 (삭제되지 않은 일정만)
       const planResponse = await api.get(`/private/plans/${publicId}`);
       const plan = planResponse.data;
       
-      // 삭제되지 않은 일정만 필터링
       const activeItineraries = plan.itineraries?.filter((it: any) => !it.is_deleted) || [];
       
       if (activeItineraries.length < 2) {
@@ -135,7 +127,6 @@ export default function AIAssistantPanel({ publicId }: AIAssistantPanelProps) {
         return;
       }
       
-      // 2. AI 체크리스트 추가 생성 (기존 항목은 유지, 새 항목만 추가되도록 백엔드에서 처리)
       const response = await api.post(`/private/ai/checklist/${publicId}/generate`, {
         force_regenerate: true
       });
@@ -180,7 +171,6 @@ export default function AIAssistantPanel({ publicId }: AIAssistantPanelProps) {
         is_checked: isChecked
       });
       
-      // 로컬 상태 업데이트
       if (checklist) {
         const updatedChecklist = { ...checklist };
         Object.values(updatedChecklist.categories).forEach(category => {
@@ -209,10 +199,8 @@ export default function AIAssistantPanel({ publicId }: AIAssistantPanelProps) {
         category
       });
       
-      // 체크리스트 다시 불러오기
       await checkExistingChecklist();
       
-      // 추가 모드 종료 및 입력 필드 초기화
       setAddingCategory(null);
       setNewItemName('');
       setNewItemReason('');
@@ -249,14 +237,12 @@ export default function AIAssistantPanel({ publicId }: AIAssistantPanelProps) {
       
       await api.delete(endpoint);
       
-      // 체크리스트 다시 불러오기
       await checkExistingChecklist();
     } catch (error) {
       Alert.alert('오류', '체크리스트 항목 삭제에 실패했습니다.');
     }
   };
 
-  // 체크리스트가 실제로 항목을 가지고 있는지 확인
   const hasChecklistItems = () => {
     if (!checklist || !checklist.categories) return false;
     
@@ -285,10 +271,8 @@ export default function AIAssistantPanel({ publicId }: AIAssistantPanelProps) {
   const stats = getPreviewStats();
   const hasItems = hasChecklistItems();
 
-  // 그라데이션 텍스트 컴포넌트
   const GradientText = ({ children, style }: { children: string; style?: any }) => {
     if (Platform.OS === 'web') {
-      // 웹에서는 CSS gradient 사용
       return (
         <Text 
           style={[
@@ -306,7 +290,6 @@ export default function AIAssistantPanel({ publicId }: AIAssistantPanelProps) {
       );
     }
     
-    // 네이티브에서는 MaskedView 사용
     return (
       <MaskedView
         maskElement={
@@ -330,12 +313,10 @@ export default function AIAssistantPanel({ publicId }: AIAssistantPanelProps) {
     <PanelLayout style={{ flex: 1 }}>
       <View style={styles.contentContainer}>
           {!publicId ? (
-            // Plan이 선택되지 않은 상태
             <View style={styles.placeholder}>
               <Text style={styles.placeholderText}>여행을 선택해주세요</Text>
             </View>
           ) : (
-            // 간단히 보기 상태 (체크리스트가 없어도 빈 카테고리 표시)
             <View
               style={styles.previewContainer}
             >
@@ -407,7 +388,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.white,
   },
-  // 초기 상태 스타일
   initialState: {
     flex: 1,
     justifyContent: 'center',
@@ -434,7 +414,6 @@ const styles = StyleSheet.create({
     ...textStyles.body4,
     color: colors.white,
   },
-  // 미리보기 상태 스타일
   previewContainer: {
     flex: 1,
   },
@@ -460,7 +439,6 @@ const styles = StyleSheet.create({
   headerActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    // gap: spacing.xs,
   },
   viewAllButton: {
     width: 74,
@@ -474,7 +452,6 @@ const styles = StyleSheet.create({
     ...textStyles.h8,
     color: colors.black,
   },
-  // 간단히 보기 통계 버튼
   simpleStatsContainer: {
     flexDirection: 'row',
     gap: spacing.md,

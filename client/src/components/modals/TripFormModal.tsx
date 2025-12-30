@@ -10,7 +10,6 @@ import LeftArrowIcon from '../../../assets/cal_left_arrow.svg';
 import RightArrowIcon from '../../../assets/cal_right_arrow.svg';
 import XIcon from '../../../assets/x.svg';
 
-// 캘린더 테마 상수
 const CALENDAR_THEME = {
   selectedDayBackgroundColor: '#007AFF',
   selectedDayTextColor: '#ffffff',

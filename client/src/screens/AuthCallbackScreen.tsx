@@ -33,7 +33,6 @@ export default function AuthCallbackScreen() {
       }
       try {
         const response = await authApi.googleLogin(idToken);
-        // 이메일 파싱 (약관동의로 전달 용도)
         let email: string | undefined = undefined;
         try {
           const [, payload] = idToken.split('.') as [string, string, string];
