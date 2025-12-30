@@ -43,12 +43,11 @@ export default function RegisterProfileScreen() {
   
   const { nicknameError, checkingNickname, onNicknameChange, isValid } = useNicknameValidation();
 
-  // 초기 닉네임이 설정될 때 검증 실행
   useEffect(() => {
     if (nickname.trim().length > 0) {
       onNicknameChange(nickname);
     }
-  }, []); // 컴포넌트 마운트 시 한 번만 실행
+  }, []);
 
   const handleNicknameChange = (text: string) => {
     setNickname(text);
@@ -73,7 +72,6 @@ export default function RegisterProfileScreen() {
         registerToken
       );
 
-      // 회원가입 완료 플래그를 먼저 설정 (login 전에)
       if (Platform.OS === 'web' && typeof window !== 'undefined') {
         try {
           window.localStorage.setItem('registerComplete', 'true');

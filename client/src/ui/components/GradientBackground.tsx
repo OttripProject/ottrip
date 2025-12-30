@@ -12,7 +12,6 @@ export type GradientBackgroundProps = {
   children?: React.ReactNode;
 };
 
-// 기본 그라데이션 설정 (로그인 화면 등에서 사용)
 const DEFAULT_GRADIENT_START = { x: 0, y: 0 };
 const DEFAULT_GRADIENT_END = { x: 1, y: 1 };
 

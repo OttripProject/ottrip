@@ -35,10 +35,8 @@ export default function ProfileScreen() {
   const [logoutModalOpen, setLogoutModalOpen] = useState(false);
   const copiedTimerRef = useRef<NodeJS.Timeout | null>(null);
   
-  // React Query로 사용자 프로필 로드 (HeaderModal과 캐시 공유)
   const { data: profile, isLoading: profileLoading } = useMe();
   
-  // profile이 로드되면 로컬 state 업데이트
   useEffect(() => {
     if (profile) {
       setMe(profile);
@@ -47,7 +45,6 @@ export default function ProfileScreen() {
     }
   }, [profile]);
 
-  // copied 타이머 cleanup
   useEffect(() => {
     return () => {
       if (copiedTimerRef.current) {
@@ -56,17 +53,14 @@ export default function ProfileScreen() {
     };
   }, []);
 
-  // 닉네임 검증 훅 사용
   const { nicknameError, checkingNickname, onNicknameChange, isValid } = useNicknameValidation(me?.nickname);
 
-  // 닉네임 변경 핸들러 (훅과 연동)
   const handleNicknameChange = (text: string) => {
     setNickname(text);
     onNicknameChange(text);
   };
 
   const save = async () => {
-    // 닉네임 검증
     if (!isValid) {
       Alert.alert('오류', '닉네임을 확인해주세요.');
       return;
@@ -74,7 +68,6 @@ export default function ProfileScreen() {
     
     const updated = await usersApi.updateMe({ nickname, gender });
     setMe(updated);
-    // React Query 캐시 업데이트 (HeaderModal에서도 반영됨)
     queryClient.setQueryData(['me'], updated);
     navigation.navigate('OTTRIP');
   };
@@ -86,8 +79,6 @@ export default function ProfileScreen() {
   const confirmDeleteAccount = async () => {
     try {
       await usersApi.deleteAccount();
-      // 모달에서 완료 상태로 전환되므로 여기서는 모달을 닫지 않음
-      // 완료 모달에서 확인 버튼을 누르면 모달이 닫히고 로그아웃됨
     } catch (error: any) {
       const errorMessage = error?.response?.data?.detail || '탈퇴 중 오류가 발생했습니다.';
       setDeleteModalOpen(false);

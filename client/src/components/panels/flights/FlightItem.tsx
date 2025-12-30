@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { View, Text, Pressable, StyleSheet, Alert, Platform, ScrollView } from 'react-native';
+import { View, Text, Pressable, StyleSheet, ScrollView } from 'react-native';
 import { TimePicker, AirportPicker } from '@/ui/components/pickers';
 import dayjs from 'dayjs';
 import { flightsApi } from '@/services/flights';
@@ -7,7 +7,7 @@ import { ExpenseCurrency, ExpenseCategory, currencyLabels } from '@/types/expens
 import Input from '@/ui/components/input/Input';
 import { PLACEHOLDERS } from '@/constants/placeholders';
 import { colors } from '@/ui/tokens/colors';
-import { textStyles, typography } from '@/ui/tokens/typography';
+import { textStyles } from '@/ui/tokens/typography';
 import { spacing } from '@/ui/tokens/spacing';
 import { radii } from '@/ui/tokens/radii';
 import BaseCalendar from '@/components/popup/calendar/BaseCalendar';
@@ -26,8 +26,8 @@ interface FlightItemProps {
   onDelete?: (flightId: string) => void;
   existingFlights?: any[]; 
   onShowWarning?: (message?: string) => void;
-  readOnly?: boolean; // 읽기 전용 모드
-  onEdit?: () => void; // 편집 버튼 클릭 핸들러
+  readOnly?: boolean; 
+  onEdit?: () => void; 
 }
 
 export default function FlightItem({ 
@@ -48,7 +48,6 @@ export default function FlightItem({
     return normalized.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
   };
 
-  // "123,456.00" 같은 값이 와도 정수부만 남겨 "123456"으로 정규화
   const normalizeAmountToIntDigits = (value: unknown) => {
     const raw = String(value ?? '').trim();
     if (!raw) return '';
@@ -68,11 +67,9 @@ export default function FlightItem({
   const [segmentDatePickerOpen, setSegmentDatePickerOpen] = useState<Record<string, boolean>>({});
 
   const [expenseData, setExpenseData] = useState({
-    // amount는 화면 표시를 위해 항상 "정수 digits 문자열"로 유지
     amount: normalizeAmountToIntDigits(flight?.expense?.amount),
   });
 
-  // flight prop이 변경될 때 금액 동기화 (다른 항공편 선택 시 값이 고정되는 문제 방지)
   useEffect(() => {
     setExpenseData({
       amount: normalizeAmountToIntDigits(flight?.expense?.amount),
@@ -82,17 +79,16 @@ export default function FlightItem({
   const [showWarning, setShowWarning] = useState(false);
   const [warningMessage, setWarningMessage] = useState('');
 
-  // FlightSegment 타입 정의
   type SegmentForm = {
-    id?: number; // 기존 segment id (편집 모드일 때만)
+    id?: number;
     airline: string;
     flight_number: string;
     departure_airport: string;
     arrival_airport: string;
-    departure_date: string; // 'YYYY-MM-DD'
-    departure_time: string; // 'HH:mm'
-    arrival_date: string;   // 'YYYY-MM-DD'
-    arrival_time: string;   // 'HH:mm'
+    departure_date: string; 
+    departure_time: string; 
+    arrival_date: string;   
+    arrival_time: string;   
     seat_class?: string;
     seat_number?: string;
     gate?: string;
@@ -101,13 +97,12 @@ export default function FlightItem({
 
   const [flightSegments, setFlightSegments] = useState<SegmentForm[]>(() => {
     if (flight?.flightSegments && flight.flightSegments.length > 0) {
-      // 편집 모드: 기존 segments 데이터 사용 (order 기준으로 정렬)
       const sortedSegments = [...flight.flightSegments].sort((a: any, b: any) => (a.order ?? 0) - (b.order ?? 0));
       return sortedSegments.map((segment: any) => {
         const depTime = segment.departureTime ? dayjs(segment.departureTime) : dayjs();
         const arrTime = segment.arrivalTime ? dayjs(segment.arrivalTime) : dayjs().add(1, 'hour');
         return {
-          id: segment.id, // 기존 segment id 포함
+          id: segment.id, 
           airline: segment.airline || '',
           flight_number: segment.flightNumber || '',
           departure_airport: segment.departureAirport || '',
@@ -123,7 +118,6 @@ export default function FlightItem({
         };
       });
     } else {
-      // 새 항공편: 기본값 - plan 시작 날짜 사용
       const planStartDate = planData?.plan?.startDate || planData?.plan?.start_date;
       const defaultDate = planStartDate ? dayjs(planStartDate) : dayjs();
       const later = defaultDate.add(1, 'hour');
@@ -155,8 +149,8 @@ export default function FlightItem({
     return planStartDate ? dayjs(planStartDate).format('YYYY-MM-DD') : dayjs().format('YYYY-MM-DD');
   });
 
-  const [isSubmitting, setIsSubmitting] = useState(false); // 버튼 비활성화용 (리렌더링 필요)
-  const isSubmittingRef = useRef(false); // 중복 요청 방지 플래그
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const isSubmittingRef = useRef(false);
 
   const firstSegment = flightSegments[0];
   const isFirstSegmentValid = Boolean(
@@ -170,7 +164,6 @@ export default function FlightItem({
   );
 
   const handleSave = async () => {
-    // 중복 요청 방지: 이미 실행 중이면 무시
     if (isSubmittingRef.current) {
       return;
     }
@@ -181,9 +174,7 @@ export default function FlightItem({
       return;
     }
 
-    // 겹침 검증: 기존 항공편과 시간 겹침 확인
     for (const existingFlight of existingFlights) {
-      // 편집 중인 항공편은 제외 (자기 자신)
       if (flight && existingFlight.id === flight.id) {
         continue;
       }
@@ -192,7 +183,6 @@ export default function FlightItem({
         continue;
       }
 
-      // 새로 입력한 항공편의 각 구간과 기존 항공편의 구간 비교
       for (const newSegment of flightSegments) {
         const newDepTime = dayjs(`${newSegment.departure_date} ${newSegment.departure_time}`);
         const newArrTime = dayjs(`${newSegment.arrival_date} ${newSegment.arrival_time}`);
@@ -200,8 +190,7 @@ export default function FlightItem({
         for (const existingSegment of existingFlight.flightSegments) {
           const existingDepTime = dayjs(existingSegment.departureTime);
           const existingArrTime = dayjs(existingSegment.arrivalTime);
-
-          // 시간이 겹치는지 확인 (범위가 겹치면 true)
+          
           const hasOverlap = (
             (newDepTime.isAfter(existingDepTime) || newDepTime.isSame(existingDepTime)) && newDepTime.isBefore(existingArrTime) ||
             newArrTime.isAfter(existingDepTime) && (newArrTime.isBefore(existingArrTime) || newArrTime.isSame(existingArrTime)) ||
@@ -217,7 +206,6 @@ export default function FlightItem({
       }
     }
 
-    // 실행 중 플래그 설정
     isSubmittingRef.current = true;
     setIsSubmitting(true);
     try {
@@ -226,20 +214,18 @@ export default function FlightItem({
         if (!date || !time) return null;
         const timeWithSeconds = (time.length === 5) ? `${time}:00` : time;
         
-        // 로컬 시간을 UTC로 변환하여 전송
         const localDateTime = new Date(`${date}T${timeWithSeconds}`);
         return localDateTime.toISOString();
       };
 
       if (flight) {
-        // 수정: 응답이 없으므로 업데이트 후 전체 객체를 조회
         await flightsApi.updateFlight(flight.id, {
           reservationNumber: formData.reservation_number || null,
           passengerName: formData.passenger_name || null,
           ticketNumber: formData.ticket_number || null,
           bookingReference: formData.booking_reference || null,
           segments: flightSegments.map(s => ({
-            id: s.id || undefined, // 기존 segment id 포함 (없으면 undefined)
+            id: s.id || undefined,
             airline: s.airline || null,
             flightNumber: s.flight_number || null,
             departureAirport: s.departure_airport,
@@ -262,10 +248,8 @@ export default function FlightItem({
             description: formData.reservation_number || null,
           },
         });
-        // 업데이트 후 전체 객체 조회
         savedFlight = await flightsApi.getFlight(flight.id);
       } else {
-        // 생성: 응답이 id만 오므로 생성 후 전체 객체를 조회
         const createResponse = await flightsApi.createFlight({
           planId: planId,
           reservationNumber: formData.reservation_number || null,
@@ -295,12 +279,10 @@ export default function FlightItem({
             description: formData.reservation_number || null,
           },
         });
-        // 생성 후 전체 객체 조회
         savedFlight = await flightsApi.getFlight(createResponse.id);
       }
       onSave(savedFlight);
     } catch (error) {
-      // Silent fail
     } finally {
       isSubmittingRef.current = false;
       setIsSubmitting(false);
@@ -308,19 +290,16 @@ export default function FlightItem({
   };
 
   const handleDelete = async () => {
-    // 중복 요청 방지: 이미 실행 중이면 무시
     if (isSubmittingRef.current) {
       return;
     }
 
-    // 항공편 추가 모드: 입력창 닫기
     if (!flight) {
       onCancel();
       return;
     }
     
     if (flight && onDelete) {
-      // 실행 중 플래그 설정
       isSubmittingRef.current = true;
       setIsSubmitting(true);
       try {
@@ -328,7 +307,6 @@ export default function FlightItem({
         onDelete(flight.id);
         onCancel();
       } catch (error) {
-        // Silent fail
       } finally {
         isSubmittingRef.current = false;
         setIsSubmitting(false);
@@ -352,7 +330,6 @@ export default function FlightItem({
       style={[styles.container, { position: 'relative', overflow: 'visible' }]}
       contentContainerStyle={[styles.contentContainer, { overflow: 'visible' }]}
     >
-      {/* <View style={styles.contentWrapper}> */}
         <View style={styles.titleRow}>
           <Text style={styles.title}>
             {readOnly ? '항공편 정보' : (flight ? '항공편 수정' : '항공편 추가')}
@@ -365,9 +342,7 @@ export default function FlightItem({
           </Pressable>
         </View>
 
-        {/* 기본 정보 섹션 */}
         <View style={styles.formSection}>
-          {/* 예약번호(PNR) / 승객명 */}
           <View style={[styles.row, { gap: spacing.sm }]}>
             <View style={[styles.inputGroup, styles.halfWidth]}>
               <Text style={styles.label}>예약번호 (PNR)</Text>
@@ -395,7 +370,6 @@ export default function FlightItem({
             </View>
           </View>
 
-          {/* 항공편 번호 */}
           <View style={styles.inputGroup}>
             <Text style={styles.label}>항공권 번호</Text>
             <Input
@@ -409,7 +383,6 @@ export default function FlightItem({
             />
           </View>
 
-          {/* 예약번호(여행사 예약번호) */}
           <View style={styles.inputGroup}>
             <Text style={styles.label}>예약번호 (여행사 예약 번호)</Text>
             <Input
@@ -423,7 +396,6 @@ export default function FlightItem({
             />
           </View>
 
-          {/* 항공료 */}
           <View style={[styles.row, { gap: spacing.sm }]}>
             <View style={[styles.inputGroup, { flex: 1 }]}>
               <Text style={styles.label}>항공료</Text>
@@ -452,7 +424,6 @@ export default function FlightItem({
           </View>
         </View>
 
-        {/* 항공편 구간들 */}
         <View style={[styles.inputGroup, { zIndex: 5000 }]}>
           {flightSegments.map((segment, idx) => {
             const isComplete = isSegmentComplete(segment);
@@ -563,7 +534,6 @@ export default function FlightItem({
                           if (!readOnly) {
                             const depKey = `dep_${idx}`;
                             const arrKey = `arr_${idx}`;
-                            // 출발 날짜를 열 때 같은 구간의 도착 날짜 닫기
                             setSegmentDatePickerOpen({ 
                               ...segmentDatePickerOpen, 
                               [depKey]: true,
@@ -635,7 +605,6 @@ export default function FlightItem({
                           if (!readOnly) {
                             const depKey = `dep_${idx}`;
                             const arrKey = `arr_${idx}`;
-                            // 도착 날짜를 열 때 같은 구간의 출발 날짜 닫기
                             setSegmentDatePickerOpen({ 
                               ...segmentDatePickerOpen, 
                               [depKey]: false,
@@ -700,7 +669,6 @@ export default function FlightItem({
             );
           })}
 
-          {/* 항공권 구간 추가 버튼 */}
           {!readOnly && (
             <Pressable
               style={[styles.addSegmentButton, { zIndex: 1 }]}
@@ -791,10 +759,8 @@ export default function FlightItem({
         />
         </View>
 
-        {/* 하단 버튼 */}
 
 
-      {/* </View> */}
     </ScrollView>
   );
 }

@@ -13,7 +13,7 @@ interface MonthCalendarPopupProps {
   onDayPress: (day: { dateString: string }) => void;
   onClose?: () => void;
   style?: any;
-  currentWeekStart?: string; // 현재 주간의 시작일 (월요일)
+  currentWeekStart?: string; 
 }
 
 function DayCell({
@@ -40,14 +40,11 @@ function DayCell({
   const isDisabled = state === 'disabled';
   const isSelected = marking?.selected;
   const isToday = dayjs().isSame(dayjs(date.dateString), 'day');
-  // 월요일부터 시작하는 주의 시작일 계산 (firstDay={1}과 일치)
-  // dayjs의 day()는 0(일요일)~6(토요일)이므로, 월요일(1)을 0으로 변환
   const dateObj = dayjs(date.dateString);
-  const dayOfWeek = dateObj.day() === 0 ? 6 : dateObj.day() - 1; // 0=월요일, 6=일요일
+  const dayOfWeek = dateObj.day() === 0 ? 6 : dateObj.day() - 1; 
   const weekKey = dateObj.subtract(dayOfWeek, 'day').format('YYYY-MM-DD');
   const isHoveredWeek = hoveredWeek === weekKey;
   
-  // 현재 주간 스케줄에 표시된 주간인지 확인
   const isCurrentWeek = currentWeekStart && weekKey === dayjs(currentWeekStart).format('YYYY-MM-DD');
 
   return (
@@ -58,15 +55,12 @@ function DayCell({
       onHoverIn={() => setHoveredWeek?.(weekKey)}
       onHoverOut={() => setHoveredWeek?.(null)}
     >
-      {/* 주 단위 배경 */}
       {(isHoveredWeek || isCurrentWeek) && (
         <View style={[styles.weekBackground, isCurrentWeek && styles.currentWeekBackground]} />
       )}
-      {/* 오늘 날짜 원형 테두리 */}
       {isToday && !isSelected && (
         <View style={styles.todayCircle} />
       )}
-      {/* 선택된 날짜 배경 */}
       {isSelected && (
         <View style={styles.selectedCircle} />
       )}
@@ -107,13 +101,11 @@ export default function MonthCalendarPopup({
     setCurrentMonth(newDate.format('YYYY-MM-DD'));
   };
 
-  // 현재 주간의 날짜들 계산 (월요일부터 일요일까지)
   const getCurrentWeekDates = () => {
     if (!currentWeekStart) return {};
     const weekStart = dayjs(currentWeekStart);
     const weekDates: Record<string, any> = {};
     
-    // 월요일부터 일요일까지 (7일)
     for (let i = 0; i < 7; i++) {
       const date = weekStart.add(i, 'day');
       const dateString = date.format('YYYY-MM-DD');

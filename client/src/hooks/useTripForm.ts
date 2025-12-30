@@ -20,7 +20,6 @@ export const useTripForm = (initialData?: Partial<TripFormData>) => {
   
   const [selectionMode, setSelectionMode] = useState<'start' | 'end'>('start');
 
-  // 날짜 선택 핸들러
   const handleDateSelect = useCallback((dateString: string) => {
     if (selectionMode === 'start') {
       setTripData(prev => ({ ...prev, startDate: dateString, endDate: '' }));
@@ -35,7 +34,6 @@ export const useTripForm = (initialData?: Partial<TripFormData>) => {
     }
   }, [selectionMode, tripData.startDate]);
 
-  // 마킹된 날짜 계산
   const getMarkedDates = useCallback((): CalendarMarkedDates => {
     const marked: CalendarMarkedDates = {};
 
@@ -63,12 +61,10 @@ export const useTripForm = (initialData?: Partial<TripFormData>) => {
     return marked;
   }, [tripData.startDate, tripData.endDate]);
 
-  // 폼 데이터 업데이트
   const updateTripData = useCallback((data: Partial<TripFormData>) => {
     setTripData(prev => ({ ...prev, ...data }));
   }, []);
 
-  // 폼 리셋
   const resetForm = useCallback(() => {
     setTripData({
       name: initialData?.name || '',
@@ -78,13 +74,11 @@ export const useTripForm = (initialData?: Partial<TripFormData>) => {
     setSelectionMode('start');
   }, [initialData]);
 
-  // 초기 데이터로 폼 설정 (편집 모달용)
   const setFormData = useCallback((data: TripFormData) => {
     setTripData(data);
     setSelectionMode('start');
   }, []);
 
-  // 제출 가능 여부 확인
   const isSubmitDisabled = !tripData.name.trim() || !tripData.startDate || !tripData.endDate;
 
   return {

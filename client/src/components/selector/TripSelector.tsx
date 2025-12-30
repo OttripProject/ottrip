@@ -77,17 +77,14 @@ interface TripSelectorProps {
   ) => Promise<Trip | null | false | void> | Trip | null | false | void;
   onTripUpdate?: (id: string, trip: Omit<Trip, 'id'>) => void;
   onTripDelete?: (id: string) => void;
-  open?: boolean; // 외부에서 드롭다운 열기 제어
+  open?: boolean; 
 }
 
-type SelectionType = 'single' | 'start' | 'end' | 'range' | undefined;
-type CalendarDayMark = { selection?: SelectionType; selected?: boolean };
 
 export default function TripSelector({ selectedTrip, onTripSelect, trips, onTripAdd, onTripUpdate, onTripDelete, open }: TripSelectorProps) {
   const dropdownRef = useRef<View>(null);
   const [showDropdown, setIsDropdownOpen, handleOutsidePress] = useDetectClose(dropdownRef, false);
   
-  // 외부에서 open prop이 true가 되면 드롭다운 열기
   React.useEffect(() => {
     if (open) {
       setIsDropdownOpen(true);
@@ -97,10 +94,8 @@ export default function TripSelector({ selectedTrip, onTripSelect, trips, onTrip
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingTrip, setEditingTrip] = useState<Trip | null>(null);
   
-  // 추가 모달용 폼 훅
   const addTripForm = useTripForm();
   
-  // 편집 모달용 폼 훅
   const editTripForm = useTripForm();
   const [hoveredTripId, setHoveredTripId] = useState<string | null>(null);
   const [openMenuTripId, setOpenMenuTripId] = useState<string | null>(null);
@@ -111,17 +106,16 @@ export default function TripSelector({ selectedTrip, onTripSelect, trips, onTrip
   const [resultModalVisible, setResultModalVisible] = useState(false);
   const [resultModalConfig, setResultModalConfig] = useState<{ mode: string; params?: any } | null>(null);
   const tripItemRefs = React.useRef<{ [key: string]: View | null }>({});
-  const [isSubmittingAdd, setIsSubmittingAdd] = useState(false); // 추가 모달 버튼 비활성화용
-  const [isSubmittingEdit, setIsSubmittingEdit] = useState(false); // 수정 모달 버튼 비활성화용
-  const isSubmittingAddRef = useRef(false); // 추가 중복 요청 방지 플래그
-  const isSubmittingEditRef = useRef(false); // 수정 중복 요청 방지 플래그
+  const [isSubmittingAdd, setIsSubmittingAdd] = useState(false); 
+  const [isSubmittingEdit, setIsSubmittingEdit] = useState(false);
+  const isSubmittingAddRef = useRef(false);
+  const isSubmittingEditRef = useRef(false);
 
   const handleTripSelect = (trip: Trip) => {
     onTripSelect(trip);
     setIsDropdownOpen(false);
   };
 
-  // 편집 모달이 열릴 때 폼 데이터 초기화
   React.useEffect(() => {
     if (editingTrip && showEditModal) {
       editTripForm.setFormData({
@@ -130,11 +124,9 @@ export default function TripSelector({ selectedTrip, onTripSelect, trips, onTrip
         endDate: editingTrip.endDate,
       });
       }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [editingTrip, showEditModal]); // editTripForm은 매 렌더링마다 새 객체이므로 제외
+  }, [editingTrip, showEditModal]);
 
   const handleAddTrip = async () => {
-    // 중복 요청 방지: 이미 실행 중이면 무시
     if (isSubmittingAddRef.current || isSubmittingAdd) {
       return;
     }
@@ -145,7 +137,6 @@ export default function TripSelector({ selectedTrip, onTripSelect, trips, onTrip
     try {
       const createdTrip = await onTripAdd(addTripForm.tripData);
 
-      // WeeklySchedulePanel에서 이미 에러 처리를 하므로, null/false인 경우만 처리
       if (createdTrip === null || createdTrip === false) {
         return;
       }
@@ -166,7 +157,6 @@ export default function TripSelector({ selectedTrip, onTripSelect, trips, onTrip
   };
 
   const handleEditTrip = async () => {
-    // 중복 요청 방지: 이미 실행 중이면 무시
     if (isSubmittingEditRef.current || isSubmittingEdit) {
       return;
     }
@@ -180,14 +170,12 @@ export default function TripSelector({ selectedTrip, onTripSelect, trips, onTrip
     setIsSubmittingEdit(true);
 
     try {
-      // onTripUpdate 호출 (Promise를 반환할 수 있으므로 await 처리)
       const result = onTripUpdate?.(editingTrip.id, {
         name: editTripForm.tripData.name,
         startDate: editTripForm.tripData.startDate,
         endDate: editTripForm.tripData.endDate,
       });
       
-      // Promise인 경우 await
       if (result && typeof result === 'object' && 'then' in result) {
         await result;
       }
@@ -234,7 +222,7 @@ export default function TripSelector({ selectedTrip, onTripSelect, trips, onTrip
     if (showDropdown) {
       const timer = setTimeout(() => {
         setIsDropdownOpen(false);
-      }, 5000); // 5초 후 자동으로 닫기
+      }, 5000);
 
       return () => clearTimeout(timer);
     }
@@ -264,7 +252,6 @@ export default function TripSelector({ selectedTrip, onTripSelect, trips, onTrip
     }
   }, [openMenuTripId]);
 
-  // 결과 모달 자동 닫기
   React.useEffect(() => {
     if (!resultModalVisible) {
       return;
@@ -301,7 +288,6 @@ export default function TripSelector({ selectedTrip, onTripSelect, trips, onTrip
 
       {showDropdown && (
         <>
-          {/* 외부 클릭 감지를 위한 투명 오버레이 */}
           <Pressable 
             style={[StyleSheet.absoluteFill, { zIndex: 9998 }]}
             onPress={handleOutsidePress}
@@ -387,7 +373,6 @@ export default function TripSelector({ selectedTrip, onTripSelect, trips, onTrip
               ))}
             </ScrollView>
             
-            {/* 새 여행 추가 버튼 */}
             <Pressable 
               style={styles.addTripButton}
               onPress={() => {
@@ -450,7 +435,6 @@ export default function TripSelector({ selectedTrip, onTripSelect, trips, onTrip
         </Modal>
       )}
 
-      {/* 여행 추가 모달 */}
       <TripFormModal
         visible={showAddModal}
         onClose={() => {
@@ -466,7 +450,6 @@ export default function TripSelector({ selectedTrip, onTripSelect, trips, onTrip
         isSubmitDisabled={addTripForm.isSubmitDisabled || isSubmittingAdd}
       />
 
-      {/* 여행 수정 모달 */}
       <TripFormModal
         visible={showEditModal}
         onClose={() => {
@@ -482,19 +465,16 @@ export default function TripSelector({ selectedTrip, onTripSelect, trips, onTrip
         isSubmitDisabled={editTripForm.isSubmitDisabled || isSubmittingEdit}
       />
 
-      {/* 여행 삭제 확인 모달 */}
       <TripDeleteConfirmModal
         visible={deleteConfirmModalOpen}
         onClose={() => {
           setDeleteConfirmModalOpen(false);
           setTripToDelete(null);
-          // 닫힐 때 이름을 초기화하지 않고 다음 오픈 때 덮어쓰도록 함 (깜빡임 방지)
         }}
         tripName={tripNameToDelete}
         onConfirm={confirmDeleteTrip}
       />
 
-      {/* 결과 모달 (성공/에러) */}
       <ResultModal
         visible={resultModalVisible}
         onClose={() => {

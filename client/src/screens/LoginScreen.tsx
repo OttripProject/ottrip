@@ -14,15 +14,12 @@ import GradientBackground from '../ui/components/GradientBackground';
 import Card from '../ui/components/Card';
 import GoogleButton from '../ui/components/GoogleButton';
 
-// nonce 생성 함수 (크로스 플랫폼)
 const generateNonce = async () => {
   if (Platform.OS === 'web' && typeof crypto !== 'undefined') {
-    // 웹에서는 crypto API 사용
     const array = new Uint8Array(16);
     crypto.getRandomValues(array);
     return Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('');
   } else {
-    // 모바일에서는 expo-crypto 사용
     const randomBytes = await Crypto.getRandomBytesAsync(16);
     return Array.from(randomBytes, byte => byte.toString(16).padStart(2, '0')).join('');
   }
@@ -36,18 +33,15 @@ export default function LoginScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [nonce, setNonce] = useState<string>('');
 
-  // URL에서 ID 토큰 추출 (웹 전용)
   useEffect(() => {
     if (Platform.OS === 'web') {
       const hash = window.location.hash;
 
-      // 초대 토큰 보관(#invite=...)
       if (hash && hash.includes('invite=')) {
         const params = new URLSearchParams(hash.substring(1));
         const inviteToken = params.get('invite');
         if (inviteToken) {
           try { window.localStorage.setItem('pendingInviteToken', inviteToken); } catch {}
-          // 해시 제거
           window.history.replaceState({}, document.title, window.location.pathname);
         }
       }
@@ -66,7 +60,6 @@ export default function LoginScreen() {
     }
   }, [nonce]);
 
-  // 크로스 플랫폼 구글 로그인
   const onGoogleSignIn = async () => {
     const clientId = env.EXPO_PUBLIC_GOOGLE_CLIENT_ID;
     
@@ -76,29 +69,23 @@ export default function LoginScreen() {
 
     setIsLoading(true);
     try {
-      // nonce 생성
       const newNonce = await generateNonce();
       setNonce(newNonce);
       
       if (Platform.OS === 'web') {
-        // 웹용 구글 로그인
-        const redirectUriRaw = `${window.location.origin}/auth/callback`; // 콜백 전용 경로
+        const redirectUriRaw = `${window.location.origin}/auth/callback`;
         const redirectUri = encodeURIComponent(redirectUriRaw);
         const scope = encodeURIComponent('openid email profile');
         const responseType = 'id_token';
         const prompt = encodeURIComponent('consent select_account');
         
         const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${redirectUri}&scope=${scope}&response_type=${responseType}&nonce=${newNonce}&prompt=${prompt}`;
-        // 민감한 정보(nonce 등)가 포함된 URL은 로깅하지 않음
         
-        // 현재 창에서 리다이렉트
         try {
           window.location.href = authUrl;
         } catch (e) {
-          // Silent fail
         }
       } else {
-        // 모바일용 구글 로그인 (WebBrowser 사용)
         const redirectUri = 'com.ottrip.app.OttripAlpha://oauth2redirect';
         const scope = encodeURIComponent('openid email profile');
         const responseType = 'id_token';
@@ -106,11 +93,9 @@ export default function LoginScreen() {
         
         const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${redirectUri}&scope=${scope}&response_type=${responseType}&nonce=${newNonce}&prompt=${prompt}`;
         
-        // WebBrowser로 구글 로그인 페이지 열기
         const result = await WebBrowser.openAuthSessionAsync(authUrl, redirectUri);
         
         if (result.type === 'success' && result.url) {
-          // URL에서 id_token 추출
           let idToken: string | null = null;
           
           try {
@@ -119,7 +104,6 @@ export default function LoginScreen() {
             const params = new URLSearchParams(fragment);
             idToken = params.get('id_token');
           } catch (urlError) {
-            // URL 파싱 실패 시 다른 방법 시도
             const urlString = result.url;
             const idTokenMatch = urlString.match(/id_token=([^&]+)/);
             idToken = idTokenMatch ? idTokenMatch[1] : null;
@@ -131,15 +115,15 @@ export default function LoginScreen() {
             Alert.alert('오류', '로그인에 실패했습니다.');
           }
         } else if (result.type === 'cancel') {
-          setIsLoading(false); // 취소 시 로딩 상태 해제
+          setIsLoading(false);
         } else {
           Alert.alert('오류', '로그인에 실패했습니다.');
-          setIsLoading(false); // 실패 시 로딩 상태 해제
+          setIsLoading(false);
         }
       }
     } catch (error: any) {
       Alert.alert('오류', '로그인 중 오류가 발생했습니다.');
-      setIsLoading(false); // 오류 시에만 로딩 상태 해제
+      setIsLoading(false);
     }
   };
 
@@ -170,9 +154,6 @@ export default function LoginScreen() {
           accessToken: response.accessToken,
           refreshToken: response.refreshToken,
         });
-        // 웹: 네비게이션은 RootNavigator가 postLoginRedirect로 처리하도록 위임
-        // 여기서는 아무 것도 하지 않음(레이스/스택 미존재 오류 방지)
-        // 로그인 직후 pending 초대 토큰 자동 처리
         try {
           const token = Platform.OS === 'web'
             ? window.localStorage.getItem('pendingInviteToken')
@@ -183,10 +164,8 @@ export default function LoginScreen() {
             else await SecureStore.deleteItemAsync('pendingInviteToken');
           }
         } catch {}
-        // 로그인 성공 시 즉시 로딩 상태 해제하지 않음 (화면 전환 후 자동 해제)
       } else {
-        // 미등록 사용자: 약관 → 프로필 설정 플로우로 이동
-        await login(response); // registerToken 저장
+        await login(response);
         const payload = parseIdToken(accessToken);
         const email = payload?.email ?? '';
         navigation.navigate('약관동의', {
@@ -197,7 +176,7 @@ export default function LoginScreen() {
         setIsLoading(false);
       }
     } catch (error: any) {
-      setIsLoading(false); // 오류 시에만 로딩 상태 해제
+      setIsLoading(false);
       Alert.alert('오류', '로그인에 실패했습니다.');
     }
   };
@@ -212,23 +191,18 @@ export default function LoginScreen() {
         return;
       }
 
-      // Dev 테스트 라우터로 테스트 유저 생성 및 토큰 발급
       try {
         const tokenData = await authApi.createTestUser();
         
-        // 응답 데이터 구조 확인
         if (!tokenData || !tokenData.accessToken || !tokenData.refreshToken) {
           throw new Error('Invalid token response structure');
         }
         
-        // 실제 토큰으로 로그인
         await login({
           isRegistered: true,
           accessToken: tokenData.accessToken,
           refreshToken: tokenData.refreshToken,
         });
-        
-        // 로그인 성공 시 즉시 로딩 상태 해제하지 않음 (화면 전환 후 자동 해제)
         
       } catch (error: any) {
         let errorMessage = '알 수 없는 오류';
@@ -247,7 +221,7 @@ export default function LoginScreen() {
     } catch (error: any) {
       const userErrorMessage = error.response?.data?.detail || error.message || '알 수 없는 오류';
       Alert.alert('오류', `테스트 로그인 중 오류가 발생했습니다: ${userErrorMessage}`);
-      setIsLoading(false); // 오류 시에만 로딩 상태 해제
+      setIsLoading(false);
     }
   };
 

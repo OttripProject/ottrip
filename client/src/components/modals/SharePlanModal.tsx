@@ -34,7 +34,6 @@ export default function SharePlanModal({ visible, onClose, onSubmit, planId, pla
       const data = await plansApi.listShares(planId);
       setShares(data);
     } catch (e: any) {
-      // noop
     } finally {
       setListLoading(false);
     }

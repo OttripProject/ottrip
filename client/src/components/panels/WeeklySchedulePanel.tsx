@@ -23,7 +23,6 @@ import { textStyles, typography } from '@/ui/tokens/typography';
 import { spacing } from '@/ui/tokens/spacing';
 import { radii } from '@/ui/tokens';
 
-// 아이콘 import
 import LeftArrowIcon from '../../../assets/left_arrow.svg';
 import RightArrowIcon from '../../../assets/right_arrow.svg';
 import CalenderIcon from '../../../assets/calender.svg';
@@ -53,7 +52,6 @@ export interface Itinerary {
 }
 
 function toEvent(it: Itinerary): any {
-  // 시간 형식 정규화 (초가 있으면 제거)
   const normalizeTime = (time: string) => {
     return time.split(':').slice(0, 2).join(':');
   };
@@ -62,17 +60,14 @@ function toEvent(it: Itinerary): any {
   let normalizedEndTime = normalizeTime(it.endTime);
   const locationText = it.location || it.city || '';
 
-  // 백엔드에서 받은 23:59:59를 24:00으로 표시
   if (normalizedEndTime === '23:59' || it.endTime?.startsWith('23:59:')) {
     normalizedEndTime = '24:00';
   }
 
-  // endTime이 24:00인 경우, 23:59:59로 표시 (BigCalendar는 24:00을 표시할 수 없음)
   let endDate = new Date(`${it.itineraryDate}T${normalizedEndTime}:00`);
   if (normalizedEndTime === '24:00') {
-    // 일정 날짜의 23:59:59로 표시 (막대는 24:00까지 표시)
     endDate = dayjs(`${it.itineraryDate}T23:59:59`).toDate();
-    normalizedEndTime = '24:00'; // 표시는 24:00으로 유지
+    normalizedEndTime = '24:00';
   }
 
   const event = {
@@ -82,7 +77,6 @@ function toEvent(it: Itinerary): any {
     end: endDate,
     type: 'itinerary',
     originalData: it,
-    // 시간 정보 추가
     normalizedStartTime,
     normalizedEndTime,
     locationText,
@@ -92,17 +86,14 @@ function toEvent(it: Itinerary): any {
 }
 
 function toFlightEvents(flight: any): any[] {
-  // 항공편의 모든 구간을 개별 이벤트로 생성
   if (!flight.flightSegments || flight.flightSegments.length === 0) {
     return [];
   }
   
-  // 시간 정규화 (초가 있으면 제거)
   const normalizeTime = (time: string) => {
     return time.split(':').slice(0, 2).join(':');
   };
-
-  // order 기준으로 정렬
+  
   const sortedSegments = [...flight.flightSegments].sort((a: any, b: any) => (a.order ?? 0) - (b.order ?? 0));
 
   return sortedSegments.map((segment: any, index: number) => {

@@ -7,9 +7,8 @@ export default function QueryProvider({ children }: { children: ReactNode }) {
       new QueryClient({
         defaultOptions: {
           queries: {
-            // 기본값: 각 hook에서 개별 설정이 우선됨
-            staleTime: 30 * 1000, // 기본 30초 (보수적 설정)
-            gcTime: 5 * 60 * 1000, // 기본 5분
+            staleTime: 30 * 1000, 
+            gcTime: 5 * 60 * 1000,
             retry: 1,
             retryDelay: 1000,
           },

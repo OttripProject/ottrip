@@ -9,7 +9,6 @@ import dayjs from "dayjs";
 import { colors } from "@/ui/tokens/colors";
 import GradientBackground from "@/ui/components/GradientBackground";
 
-// 패널 컴포넌트들
 import HeaderPanel from "@/components/panels/HeaderPanel";
 import WeeklySchedulePanel from "@/components/panels/WeeklySchedulePanel";
 import DetailsPanel from "@/components/panels/DetailsPanel";
@@ -33,10 +32,9 @@ export default function DashboardScreen() {
   const [newAccommodationDraft, setNewAccommodationDraft] = useState<any | null>(null);
   const [previewAccommodation, setPreviewAccommodation] = useState<any>(null);
   
-  // 동적 비율 계산 (화면 크기에 따라 조정)
   const getResponsiveRatio = () => {
     if (width < 768) {
-      return { left: 1, right: 0 }; // 모바일: 좌측만
+      return { left: 1, right: 0 };
     } else if (width < 1024) {
       return { left: 0.6, right: 0.4 };
     } else if (width < 1440) {
@@ -55,13 +53,10 @@ export default function DashboardScreen() {
   const leftTopHeight = Math.max(240, Math.floor((availableHeight - innerGap) * 0.7));
   const leftBottomHeight = Math.max(160, (availableHeight - innerGap) - leftTopHeight);
   
-  // 상위에서 plans 목록 로드 (한 번만 호출)
   const plansQuery = usePlansQuery();
   
-  // 선택된 plan의 상세 데이터 로드
   const planData = usePlanDataQuery(selectedTrip?.publicId || route?.params?.publicId);
   
-  // plans를 trips 형태로 변환
   const trips = useMemo(() => plansQuery.plans.map(plan => ({
     id: plan.id.toString(),
     publicId: plan.publicId,
@@ -72,10 +67,8 @@ export default function DashboardScreen() {
 
   useEffect(() => {
     if (planData.plan) {
-      // plan이 로드된 후 ID 설정
       setSelectedPlanId(planData.plan.id);
       
-      // URL에서 직접 접근할 때 selectedTrip 설정
       if (!selectedTrip && route?.params?.publicId) {
         const tripData = {
           id: planData.plan.id.toString(),
@@ -89,7 +82,6 @@ export default function DashboardScreen() {
     }
   }, [planData.plan, selectedTrip, route?.params?.publicId]);
 
-  // 플랜 변경 시 상세 모달 상태 초기화
   useEffect(() => {
     setSelectedItinerary(null);
     setSelectedFlight(null);
@@ -148,7 +140,6 @@ export default function DashboardScreen() {
           const msg = e?.response?.data?.detail || '초대 수락에 실패했습니다.';
           Alert.alert('오류', msg);
         } finally {
-          // 해시 제거
           window.history.replaceState({}, document.title, window.location.pathname);
         }
       };
@@ -157,22 +148,18 @@ export default function DashboardScreen() {
   }, []);
 
   const handleItineraryAdd = async (newItinerary: any) => {
-    // 먼저 상세로 전환하여 리스트 깜빡임 방지
     setSelectedItinerary(newItinerary);
     setActiveTab('itinerary');
     setSelectedFlight(null);
     setSelectedAccommodation(null);
     if (selectedPlanId) {
-      // 응답 객체를 바로 캐시에 추가 (itinerary + expenses)
       planData.addItinerary(newItinerary);
     }
   };
 
   const handleFlightAdd = async (newFlight: any) => {
     if (selectedPlanId) {
-      // 응답 객체를 바로 캐시에 추가 (flight + expense)
       planData.addFlight(newFlight);
-      // 항공편 상태 업데이트 (생성/수정 모두 처리)
       setSelectedFlight(newFlight);
       setActiveTab('flight');
     }
@@ -180,9 +167,7 @@ export default function DashboardScreen() {
 
   const handleAccommodationAdd = async (newAccommodation: any) => {
     if (selectedPlanId) {
-      // 응답 객체를 바로 캐시에 추가 (accommodation + expense)
       planData.addAccommodation(newAccommodation);
-      // 새로 생성된 숙박을 선택된 상태로 설정
       setSelectedAccommodation(newAccommodation);
       setActiveTab('accommodation');
     }
@@ -190,7 +175,6 @@ export default function DashboardScreen() {
 
   const handleExpenseAdd = async (newExpense: any) => {
     if (selectedPlanId) {
-      // 응답 객체를 바로 캐시에 추가
       planData.addExpense(newExpense);
     }
   };
@@ -198,7 +182,6 @@ export default function DashboardScreen() {
   const handleShowItineraryModal = useCallback(() => {
     setActiveTab('itinerary');
     
-    // 다른 선택된 아이템들 초기화
     setSelectedFlight(null);
     setSelectedAccommodation(null);
   }, []);
@@ -206,7 +189,6 @@ export default function DashboardScreen() {
   const handleShowFlightModal = useCallback(() => {
     setActiveTab('flight');
     
-    // 다른 선택된 아이템들 초기화
     setSelectedItinerary(null);
     setSelectedAccommodation(null);
   }, []);
@@ -215,7 +197,7 @@ export default function DashboardScreen() {
     setActiveTab('flight');
     setSelectedItinerary(null);
     setSelectedAccommodation(null);
-    setSelectedFlight(null); // 기존 편집 대상 초기화
+    setSelectedFlight(null);
     setOpenNewFlightForm(true);
   }, []);
 
@@ -223,9 +205,8 @@ export default function DashboardScreen() {
     setActiveTab('itinerary');
     setSelectedFlight(null);
     setSelectedAccommodation(null);
-    setSelectedItinerary(null); // 기존 편집 대상 초기화
+    setSelectedItinerary(null);
     setOpenNewItineraryForm(true);
-    // 선택된 날짜가 있으면 해당 날짜로 설정
     if (date) {
       setSelectedItineraryDate(date);
     } else {
@@ -236,7 +217,6 @@ export default function DashboardScreen() {
   const handleShowAccommodationModal = useCallback((accommodation: any, date?: string) => {
     setActiveTab('accommodation');
     
-    // 다른 선택된 아이템들 초기화
     setSelectedItinerary(null);
     setSelectedFlight(null);
     
@@ -246,7 +226,6 @@ export default function DashboardScreen() {
       setNewAccommodationDraft(null);
     } else {
       setSelectedAccommodation(null);
-      // 새 숙박 추가를 위한 기본 데이터 설정
       if (date) {
         const draft = {
           checkinDate: date,
@@ -265,7 +244,6 @@ export default function DashboardScreen() {
     setSelectedItinerary(itinerary);
     setActiveTab('itinerary');
     
-    // 다른 선택된 아이템들 초기화
     setSelectedFlight(null);
     setSelectedAccommodation(null);
   }, []);
@@ -274,7 +252,6 @@ export default function DashboardScreen() {
     setSelectedFlight(flight);
     setActiveTab('flight');
     
-    // 다른 선택된 아이템들 초기화
     setSelectedItinerary(null);
     setSelectedAccommodation(null);
   }, []);
@@ -283,12 +260,10 @@ export default function DashboardScreen() {
     setSelectedAccommodation(accommodation);
     setActiveTab('accommodation');
     
-    // 다른 선택된 아이템들 초기화
     setSelectedItinerary(null);
     setSelectedFlight(null);
   }, []);
 
-  // 숙박 입력창이 닫히거나 다른 탭으로 이동하면 미리보기 제거
   useEffect(() => {
     if (previewAccommodation) {
       const isAccommodationCreating = activeTab === 'accommodation' && (!selectedAccommodation || !selectedAccommodation.id);
@@ -298,7 +273,6 @@ export default function DashboardScreen() {
     }
   }, [activeTab, selectedAccommodation, previewAccommodation]);
 
-  // 에러 전용 화면으로의 전환은 렌더 중이 아닌 이펙트에서 수행 (React 경고 방지)
   useEffect(() => {
     if (planData.errorStatus === 404) {
       // @ts-ignore
@@ -310,7 +284,6 @@ export default function DashboardScreen() {
   }, [planData.errorStatus]);
 
   if (planData.errorStatus === 404 || planData.errorStatus === 403) {
-    // 전용 화면으로 리다이렉트 중이므로 렌더 스킵
     return null;
   }
 
@@ -354,7 +327,6 @@ export default function DashboardScreen() {
           setSelectedTrip(trip);
           setSelectedPlanId(trip ? parseInt(trip.id) : null);
           if (Platform.OS === 'web') {
-            // 웹: navigate로 히스토리를 남겨 뒤로가기로 이전 플랜 보기
             if (trip?.publicId) {
               // @ts-ignore
               navigation.navigate('PLAN', { publicId: trip.publicId });
@@ -363,7 +335,6 @@ export default function DashboardScreen() {
               navigation.navigate('OTTRIP');
             }
           } else {
-            // 모바일: 동일하게 navigate 사용
             if (trip?.publicId) {
               // @ts-ignore
               navigation.navigate('PLAN', { publicId: trip.publicId });
@@ -485,7 +456,6 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   rightArea: {
-    // flex는 동적으로 설정
     minHeight: 0,
     flexShrink: 1,
     overflow: 'hidden',

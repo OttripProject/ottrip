@@ -1,7 +1,6 @@
 export const colors = {
   white: '#FFFFFF',
   black: '#000000',
-  // gray scale
   gray100: '#FAFAFA',
   gray200: '#F4F4F4',
   gray300: '#EDEDED',
@@ -14,15 +13,12 @@ export const colors = {
   primary: '#007AFF',
   primaryDark: '#0059B2',
   danger: '#EF4444',  
-  // 검증
   success: '#0066FF',
   warning: '#FF4242',
-  // gradient colors
   gradientStart: '#FFD7EB',
   gradientEnd: '#BADFFF',
   gradientAIColors: ['#D7D0FF4D', '#CBDDFF99'] as const,
   gradientAIRefresh: ['#9CBEFF', '#B4A7FF'] as const,
-  // 오버레이 배경
   overlayBackground: 'rgba(0, 0, 0, 0.7)',
 };
 

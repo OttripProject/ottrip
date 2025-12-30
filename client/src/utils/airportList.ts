@@ -26,7 +26,6 @@ function loadKoreanAirportsData(): Record<string, AirportData> {
     cachedAirportsData = require('../data/airports.json');
     return cachedAirportsData || {};
   } catch (error) {
-    // Silent fail
     return {};
   }
 }

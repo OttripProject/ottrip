@@ -36,7 +36,6 @@ export default function ItinerarySection({
   const [showItineraryForm, setShowItineraryForm] = useState(openNewItineraryForm || false);
   const [editingItinerary, setEditingItinerary] = useState<any | null>(null);
 
-  // 외부 트리거: 일정 탭에서 즉시 새 일정 추가 폼 열기
   useEffect(() => {
     if (activeTab === 'itinerary' && openNewItineraryForm) {
       setEditingItinerary(null);
@@ -45,16 +44,13 @@ export default function ItinerarySection({
     }
   }, [activeTab, openNewItineraryForm, onConsumeOpenNewItineraryForm]);
 
-  // selectedItinerary 변경 시 편집 폼 상태 동기화
   useEffect(() => {
     if (activeTab === 'itinerary' && selectedItinerary) {
-      // 기존 일정이 선택된 경우 (id가 있음) - 편집 폼 닫고 상세 정보 표시
       if (selectedItinerary.id) {
         setEditingItinerary(selectedItinerary);
         setShowItineraryForm(false);
       }
     } else if (activeTab === 'itinerary' && !selectedItinerary) {
-      // selectedItinerary가 null이면 폼 닫기
       setEditingItinerary(null);
       setShowItineraryForm(true);
     }
@@ -69,7 +65,6 @@ export default function ItinerarySection({
   const handleItineraryDelete = (itineraryId?: string | number) => {
     if (itineraryId) {
       const id = typeof itineraryId === 'string' ? parseInt(itineraryId) : itineraryId;
-      // 캐시에서 바로 제거 (itinerary + 관련 expense)
       if (planData?.removeItinerary) {
         planData.removeItinerary(id);
       }
@@ -79,7 +74,6 @@ export default function ItinerarySection({
     onItineraryClear?.();
   };
 
-  // 선택된 일정이 있고 편집 모드가 아닐 때 - 읽기 전용 폼 표시
   if (selectedItinerary && !showItineraryForm) {
     return (
       <ItineraryItem
@@ -104,7 +98,6 @@ export default function ItinerarySection({
     );
   }
 
-  // 편집 폼 표시
   if (showItineraryForm) {
     return (
       <ItineraryItem

@@ -26,7 +26,6 @@ export default function CategoryPicker({ value, onChange, placeholder = PLACEHOL
   const [innerValue, setInnerValue] = useState<ExpenseCategory>(value);
   useEffect(() => setInnerValue(value), [value]);
 
-  // containerStyle에서 높이를 추출하여 DropDownPicker의 style에도 적용
   const dropdownHeight = containerStyle && 'height' in containerStyle 
     ? containerStyle.height 
     : undefined;

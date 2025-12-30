@@ -54,7 +54,6 @@ export function useInputStyleVariant(variant: InputVariant, state?: InputState) 
     } as const;
   }
 
-  // underline
   const borderColor = error ? colors.danger : colors.gray400;
   return {
     containerStyle: styles.container,

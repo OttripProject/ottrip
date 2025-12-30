@@ -9,8 +9,6 @@ export function useTokenRefresh() {
 
   useEffect(() => {
     const checkAndRefresh = async () => {
-      // AuthContext에서 이미 로그인 상태를 확인하므로 여기서는 중복 확인 제거
-      // refreshToken(true)는 만료 체크를 하므로 안전하게 호출 가능
       await refreshToken(true);
     };
 

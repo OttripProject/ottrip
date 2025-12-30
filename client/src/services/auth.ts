@@ -2,10 +2,8 @@ import api from './api';
 import axios from 'axios';
 import { envSchema } from '../core/env/schema';
 
-// 환경 변수 파싱
 const env = envSchema.parse(process.env);
 
-// Dev 라우터용 API 인스턴스 (토큰 없이 호출)
 const devApi = axios.create({
   baseURL: env.EXPO_PUBLIC_API_URL,
   timeout: 10000,
@@ -14,7 +12,6 @@ const devApi = axios.create({
   },
 });
 
-// 인증 관련 타입 정의
 export interface TokenResponse {
   accessToken: string;
   refreshToken: string;
@@ -47,13 +44,11 @@ export interface UserCreate {
 }
 
 export const authApi = {
-  // 서버 시간 조회
   getServerTime: async (): Promise<{ time: string }> => {
     const response = await api.get('/public/auth/time');
     return response.data;
   },
 
-  // 구글 로그인
   googleLogin: async (idToken: string): Promise<AuthResponse> => {
     const response = await api.post('/public/auth/google', {
       id_token: idToken,
@@ -61,36 +56,29 @@ export const authApi = {
     return response.data;
   },
 
-  // 토큰 갱신
   refreshToken: async (refreshToken?: string): Promise<TokenResponse> => {
-    // 웹 환경: 쿠키가 자동으로 전송되므로 body에 refresh_token 불필요
-    // Native 환경: refresh_token을 body에 포함
     const payload = refreshToken ? { refresh_token: refreshToken } : {};
     const response = await api.post('/public/auth/refresh', payload);
     return response.data;
   },
 
-  // 로그인 상태 확인
   checkLoginStatus: async (): Promise<boolean> => {
     const response = await api.get('/public/auth/valid-token');
     return response.data;
   },
 
-  // 핸들 중복 검사
   validateHandle: async (handle: string): Promise<{ error: string | null }> => {
     const response = await api.post('/public/auth/validate/handle', { handle }, 
     );
     return response.data;
   },
 
-  // 닉네임 중복 검사
   validateNickname: async (nickname: string): Promise<{ error: string | null }> => {
     const response = await api.post('/public/auth/validate/nickname', { nickname }, 
     );
     return response.data;
   },
 
-  // 사용자 등록
   registerUser: async (userData: UserCreate, registerToken: string): Promise<TokenResponse> => {
     const requestData = {
       user: userData,
@@ -101,19 +89,16 @@ export const authApi = {
     return response.data;
   },
 
-  // Dev 테스트 라우터 - 테스트 유저 생성 및 토큰 발급 (토큰 없이 호출)
   createTestUser: async (): Promise<TokenResponse> => {
     const response = await devApi.post('/dev/create-test-user');
     return response.data;
   },
 
-  // Dev 테스트 라우터 - 특정 유저 ID로 토큰 생성 (토큰 없이 호출)
   createTestUserToken: async (userId: number): Promise<string> => {
     const response = await devApi.get(`/dev/create-test-user-token?user_id=${userId}`);
     return response.data;
   },
 
-  // 로그아웃
   logout: async (): Promise<void> => {
     await api.post('/public/auth/logout');
   },

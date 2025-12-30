@@ -44,7 +44,6 @@ export default function ExpensesPanel({ planData, onExpenseAdd }: ExpensesPanelP
       await expensesApi.deleteExpense(Number(expenseId));
       Alert.alert('성공', '비용이 삭제되었습니다.');
       
-      // 모든 관련 데이터 새로고침
       await planData?.refreshExpenses();
       await planData?.refreshItineraries?.();
       await planData?.refreshFlights?.();
@@ -76,7 +75,6 @@ export default function ExpensesPanel({ planData, onExpenseAdd }: ExpensesPanelP
   return (
     <PanelLayout style={{ flex: 1 }}>
       <View style={styles.content}>
-        {/* 헤더 섹션 */}
         <View style={styles.headerSection}>
           <Text style={styles.headerTitle}>여행 비용</Text>
           <View style={styles.headerActions}>
@@ -93,7 +91,6 @@ export default function ExpensesPanel({ planData, onExpenseAdd }: ExpensesPanelP
           </View>
         </View>
 
-        {/* 총 비용 버튼 */}
         <Pressable style={styles.totalButton}>
           <Text style={styles.totalButtonLabel}>총 비용</Text>
           <View style={styles.totalButtonRight}>
@@ -102,7 +99,6 @@ export default function ExpensesPanel({ planData, onExpenseAdd }: ExpensesPanelP
         </Pressable>
       </View>
 
-      {/* 비용 추가 모달 */}
       <AddExpenseModal
         visible={showExpenseForm}
         onClose={() => setShowExpenseForm(false)}
@@ -134,7 +130,6 @@ const styles = StyleSheet.create({
     color: '#666',
     textAlign: 'center',
   },
-  // 헤더 섹션
   headerSection: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -151,7 +146,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
   },
-  // 추가 버튼
   addButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -180,7 +174,6 @@ const styles = StyleSheet.create({
     ...textStyles.h8,
     color: colors.black,
   },
-  // 총 비용 버튼
   totalButton: {
     flexDirection: 'row',
     justifyContent: 'space-between',
