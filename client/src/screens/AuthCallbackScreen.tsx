@@ -3,6 +3,8 @@ import { View, ActivityIndicator, StyleSheet, Platform } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '@/contexts/AuthContext';
 import { authApi } from '@/services/auth';
+import api from '@/services/api';
+import * as SecureStore from 'expo-secure-store';
 
 function base64UrlDecode(input: string): string {
   const base64 = input.replace(/-/g, '+').replace(/_/g, '/');
@@ -46,6 +48,21 @@ export default function AuthCallbackScreen() {
             accessToken: response.accessToken,
             refreshToken: response.refreshToken,
           });
+          
+          try {
+            const token = Platform.OS === 'web'
+              ? window.localStorage.getItem('pendingInviteToken')
+              : await SecureStore.getItemAsync('pendingInviteToken');
+            if (token) {
+              await api.post(`/private/plans/invitations/${token}/accept`);
+              if (Platform.OS === 'web') {
+                window.localStorage.removeItem('pendingInviteToken');
+                window.dispatchEvent(new Event('plans-refresh'));
+              } else {
+                await SecureStore.deleteItemAsync('pendingInviteToken');
+              }
+            }
+          } catch {}
         } else {
           await login(response);
           // @ts-ignore
