@@ -3,12 +3,12 @@ import { View, Text, Pressable, StyleSheet, Alert, TouchableOpacity } from 'reac
 import { expensesApi } from '@/services/expenses';
 import PanelLayout from '../PanelLayout';
 import AddExpenseModal from '@/components/modals/AddExpenseModal';
+import ExpenseDetailModal from '@/components/modals/ExpenseDetailModal';
 import { currencyLabels, ExpenseCurrency } from '@/types/expense';
 import { colors } from '@/ui/tokens/colors';
 import { textStyles, typography } from '@/ui/tokens/typography';
 import { spacing } from '@/ui/tokens/spacing';
 import { radii } from '@/ui/tokens/radii';
-import RightArrowBlueIcon from '../../../../assets/right_arrow_blue.svg';
 import PlusExpenseIcon from '../../../../assets/add_expense.svg';
 
 interface ExpensesPanelProps {
@@ -38,6 +38,7 @@ interface Expense {
 
 export default function ExpensesPanel({ planData, onExpenseAdd }: ExpensesPanelProps) {
   const [showExpenseForm, setShowExpenseForm] = useState(false);
+  const [showExpenseDetail, setShowExpenseDetail] = useState(false);
 
   const handleExpenseDelete = async (expenseId: string) => {
     try {
@@ -78,7 +79,7 @@ export default function ExpensesPanel({ planData, onExpenseAdd }: ExpensesPanelP
         <View style={styles.headerSection}>
           <Text style={styles.headerTitle}>여행 비용</Text>
           <View style={styles.headerActions}>
-            <TouchableOpacity onPress={() => {}} style={styles.viewAllButton}>
+            <TouchableOpacity onPress={() => setShowExpenseDetail(true)} style={styles.viewAllButton}>
               <Text style={styles.viewAllText}>상세보기</Text>
             </TouchableOpacity>
             <Pressable
@@ -106,6 +107,18 @@ export default function ExpensesPanel({ planData, onExpenseAdd }: ExpensesPanelP
         planStartDate={planData?.plan?.startDate}
         onExpenseAdd={(newExpense) => {
           onExpenseAdd?.(newExpense);
+        }}
+      />
+
+      <ExpenseDetailModal
+        visible={showExpenseDetail}
+        onClose={() => setShowExpenseDetail(false)}
+        expenses={planData?.expenses || []}
+        onExpenseDelete={async () => {
+          await planData?.refreshExpenses();
+          await planData?.refreshItineraries?.();
+          await planData?.refreshFlights?.();
+          await planData?.refreshAccommodations?.();
         }}
       />
     </PanelLayout>
