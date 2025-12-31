@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, ActivityIndicator, StyleSheet, Alert, Platform } from 'react-native';
+import { View, Text, ActivityIndicator, StyleSheet, Platform } from 'react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import api from '@/services/api';
 import * as SecureStore from 'expo-secure-store';
@@ -12,11 +12,14 @@ export default function InviteAcceptScreen() {
 
   useEffect(() => {
     const hash = typeof window !== 'undefined' ? window.location.hash : '';
-    const token = hash.startsWith('#token=') ? hash.replace('#token=', '') : '';
+    let token = '';
+    if (hash.includes('invite=')) {
+      const match = hash.match(/invite=([^&]*)/);
+      token = match ? match[1] : '';
+    }
     const run = async () => {
       if (!token) {
         setStatus('error');
-        Alert.alert('오류', '유효하지 않은 초대 링크입니다.');
         return;
       }
       if (!isAuthenticated) {
@@ -35,15 +38,13 @@ export default function InviteAcceptScreen() {
       try {
         await api.post(`/private/plans/invitations/${token}/accept`);
         setStatus('done');
-        Alert.alert('완료', '초대를 수락했습니다. 플랜 목록에서 확인하세요.');
-        // @ts-ignore
-        navigation.navigate('OTTRIP');
         if (typeof window !== 'undefined') {
           window.dispatchEvent(new Event('plans-refresh'));
         }
+        // @ts-ignore
+        navigation.navigate('OTTRIP');
       } catch (e: any) {
         setStatus('error');
-        Alert.alert('오류', e?.response?.data?.detail || '초대 수락에 실패했습니다.');
       }
     };
     run();

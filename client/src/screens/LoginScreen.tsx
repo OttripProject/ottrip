@@ -160,8 +160,12 @@ export default function LoginScreen() {
             : await SecureStore.getItemAsync('pendingInviteToken');
           if (token) {
             await api.post(`/private/plans/invitations/${token}/accept`);
-            if (Platform.OS === 'web') window.localStorage.removeItem('pendingInviteToken');
-            else await SecureStore.deleteItemAsync('pendingInviteToken');
+            if (Platform.OS === 'web') {
+              window.localStorage.removeItem('pendingInviteToken');
+              window.dispatchEvent(new Event('plans-refresh'));
+            } else {
+              await SecureStore.deleteItemAsync('pendingInviteToken');
+            }
           }
         } catch {}
       } else {

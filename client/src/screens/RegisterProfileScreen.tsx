@@ -89,10 +89,17 @@ export default function RegisterProfileScreen() {
       } as any);
 
       try {
-        const token = await SecureStore.getItemAsync('pendingInviteToken');
+        const token = Platform.OS === 'web'
+          ? window.localStorage.getItem('pendingInviteToken')
+          : await SecureStore.getItemAsync('pendingInviteToken');
         if (token) {
           await api.post(`/private/plans/invitations/${token}/accept`);
-          await SecureStore.deleteItemAsync('pendingInviteToken');
+          if (Platform.OS === 'web') {
+            window.localStorage.removeItem('pendingInviteToken');
+            window.dispatchEvent(new Event('plans-refresh'));
+          } else {
+            await SecureStore.deleteItemAsync('pendingInviteToken');
+          }
         }
       } catch {}
 
