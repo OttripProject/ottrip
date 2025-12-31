@@ -6,8 +6,9 @@ from email.mime.text import MIMEText
 from typing import Optional
 
 from app.common.config import email_settings
-from sendgrid import SendGridAPIClient
-from sendgrid.helpers.mail import Mail
+# from sendgrid import SendGridAPIClient
+# from sendgrid.helpers.mail import Mail
+import resend
 
 
 def build_invitation_accept_link(token: str) -> str:
@@ -68,3 +69,32 @@ def send_invitation_email(
             server.sendmail(email_from, [to_email], msg.as_string())
 
 
+def send_invitation_email_resend(
+    *,
+    to_email: str,
+    plan_title: str,
+    role: str,
+    accept_link: str,
+    expires_at_iso: Optional[str],
+) -> None:
+    subject = f"[Ottrip] '{plan_title}' 계획에 초대되었습니다"
+    html = (
+        f"<p>여행 계획 '<b>{plan_title}</b>'에 <b>{role}</b> 권한으로 초대되었습니다.</p>"
+        f"<p><a href='{accept_link}'>여기를 눌러 초대를 수락</a>해주세요.</p>"
+        + (f"<p>만료 시각: {expires_at_iso}</p>" if expires_at_iso else "")
+    )
+
+    api_key = email_settings.RESEND_API_KEY
+    from_email = email_settings.EMAIL_FROM
+    
+    if not api_key or not from_email:
+        raise RuntimeError("RESEND_API_KEY/EMAIL_FROM missing for Resend email provider")
+    
+    resend.api_key = api_key
+    params: resend.Emails.SendParams = {
+        "from": from_email,
+        "to": [to_email],
+        "subject": subject,
+        "html": html,
+    }
+    resend.Emails.send(params)

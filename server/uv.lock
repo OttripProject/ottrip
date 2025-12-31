@@ -1052,6 +1052,19 @@ wheels = [
 ]
 
 [[package]]
+name = "resend"
+version = "2.19.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "requests" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/d8/21/1ddb4c221fc8310a99956f55c2e5e21b548378bde4a662473dcdda6f4018/resend-2.19.0.tar.gz", hash = "sha256:b11191561cdb0ed7aa193212b7c8865bf635013c4d11bd81caf471d1b362be02", size = 30604 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/a0/1f/f53acaad9299a72671c4314fd42c0b332464eaf0d20ea5303e75b8a9a963/resend-2.19.0-py2.py3-none-any.whl", hash = "sha256:1a8b9fcacbe058876ebce757ac2542103ed7227caec10e5c58613ee58615acaa", size = 50881 },
+]
+
+[[package]]
 name = "rich"
 version = "13.9.4"
 source = { registry = "https://pypi.org/simple" }
@@ -1147,6 +1160,7 @@ dependencies = [
     { name = "pydantic-settings" },
     { name = "pyjwt", extra = ["crypto"] },
     { name = "pymupdf" },
+    { name = "resend" },
     { name = "sendgrid" },
     { name = "sqlalchemy", extra = ["asyncio"] },
     { name = "types-aioboto3", extra = ["full"] },
@@ -1176,6 +1190,7 @@ requires-dist = [
     { name = "pydantic-settings", specifier = ">=2.8.1" },
     { name = "pyjwt", extras = ["crypto"], specifier = ">=2.10.1" },
     { name = "pymupdf", specifier = ">=1.26.4" },
+    { name = "resend", specifier = ">=2.19.0" },
     { name = "sendgrid", specifier = ">=6.11.0" },
     { name = "sqlalchemy", extras = ["asyncio"], specifier = ">=2.0.39" },
     { name = "types-aioboto3", extras = ["full"], specifier = ">=14.1.0" },
