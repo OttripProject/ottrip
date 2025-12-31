@@ -168,7 +168,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.xs,
     height: 32,
-    width: 97,
   },
   addButtonText: {
     ...textStyles.h8,
