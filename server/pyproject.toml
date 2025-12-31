@@ -21,6 +21,7 @@ dependencies = [
     "types-aioboto3[full]>=14.1.0",
     "google-cloud-vision>=3.7.0",
     "pymupdf>=1.26.4",
+    "resend>=2.19.0",
 ]
 
 [dependency-groups]

@@ -14,6 +14,7 @@ class EmailConfig(BaseConfig):
 
     EMAIL_PROVIDER: str | None = None 
     SENDGRID_API_KEY: str | None = None
+    RESEND_API_KEY: str | None = None
     EMAIL_FROM: str | None = None 
 
 email_settings = EmailConfig()

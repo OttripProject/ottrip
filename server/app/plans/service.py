@@ -21,7 +21,7 @@ from .schemas import (
     PlanMemoUpdate,
     ShareRead,
 )
-from app.utils.email import build_invitation_accept_link, send_invitation_email
+from app.utils.email import build_invitation_accept_link, send_invitation_email_resend
 
 logger = logging.getLogger("api")
 
@@ -219,13 +219,20 @@ class PlanService:
         )
         accept_link = build_invitation_accept_link(token)
         try:
-            send_invitation_email(
+            send_invitation_email_resend(
                 to_email=inv.email,
                 plan_title=plan.title,
                 role=role.value if hasattr(role, "value") else str(role),
                 accept_link=accept_link,
                 expires_at_iso=inv.expires_at.isoformat() if inv.expires_at else None,
             )
+            # send_invitation_email(
+            #     to_email=inv.email,
+            #     plan_title=plan.title,
+            #     role=role.value if hasattr(role, "value") else str(role),
+            #     accept_link=accept_link,
+            #     expires_at_iso=inv.expires_at.isoformat() if inv.expires_at else None,
+            # )
         except Exception as e:
             import logging
             logger = logging.getLogger("uvicorn.error")
