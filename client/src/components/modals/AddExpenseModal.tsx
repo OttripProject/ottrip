@@ -145,9 +145,6 @@ export default function AddExpenseModal({
             <View style={styles.modalHeader}>
               <View style={styles.titleContainer}>
                 <Text style={styles.modalTitle}>비용 추가</Text>
-                <Text style={styles.modalDescription}>
-                  이 여행에 대한 비용을 수동으로 추가합니다.
-                </Text>
               </View>
               <Pressable
                 style={styles.closeButton}
@@ -295,10 +292,6 @@ const styles = StyleSheet.create({
   modalTitle: {
     ...textStyles.h5,
     color: colors.black,
-  },
-  modalDescription: {
-    ...textStyles.body4,
-    color: colors.gray600,
   },
   closeButton: {
     padding: spacing.xs,
