@@ -8,6 +8,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import * as WebBrowser from 'expo-web-browser';
 import * as Crypto from 'expo-crypto';
 import * as SecureStore from 'expo-secure-store';
+import Constants from 'expo-constants';
 import api from '@/services/api';
 import { textStyles, typography } from '../ui/tokens/typography';
 import GradientBackground from '../ui/components/GradientBackground';
@@ -86,16 +87,40 @@ export default function LoginScreen() {
         } catch (e) {
         }
       } else {
-        const redirectUri = 'com.ottrip.app.OttripAlpha://oauth2redirect';
+        // 모바일에서도 웹 redirect URI 사용 (Google Cloud Console에 추가 가능)
+        // 환경에 따라 웹 URL 결정
+        const getWebRedirectUri = (): string => {
+          const channel = env.EXPO_PUBLIC_CHANNEL;
+          if (channel === 'prod') {
+            return 'https://ottrip.today/auth/callback';
+          } else {
+            // dev/alpha 환경은 API URL 기반으로 결정
+            const apiUrl = env.EXPO_PUBLIC_API_URL;
+            // API URL에서 도메인 추출 (예: https://ottrip.onrender.com -> https://ottrip.today)
+            // 또는 환경 변수로 별도 설정 가능
+            return 'https://ottrip-dev-web.onrender.com/auth/callback'; // 임시로 prod와 동일하게 설정
+          }
+        };
+        
+        const redirectUri = getWebRedirectUri();
         const scope = encodeURIComponent('openid email profile');
         const responseType = 'id_token';
         const prompt = encodeURIComponent('consent select_account');
         
-        const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${redirectUri}&scope=${scope}&response_type=${responseType}&nonce=${newNonce}&prompt=${prompt}`;
+        // redirect_uri를 URL 인코딩
+        const encodedRedirectUri = encodeURIComponent(redirectUri);
+        
+        const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodedRedirectUri}&scope=${scope}&response_type=${responseType}&nonce=${newNonce}&prompt=${prompt}`;
+        
+        // 웹 redirect URI를 사용하므로, 앱 스킴으로 변환하여 처리
+        const appScheme = Platform.OS === 'ios'
+          ? (Constants.expoConfig?.ios?.bundleIdentifier || 'com.ottrip.app.OttripAlpha')
+          : (Constants.expoConfig?.android?.package || 'com.ottrip.app.OttripAlpha');
+        const appRedirectUri = `${appScheme}://oauth2redirect`;
         
         const result = await WebBrowser.openAuthSessionAsync(
           authUrl, 
-          redirectUri,
+          appRedirectUri, // 앱으로 돌아오기 위한 스킴
           {
             preferEphemeralSession: false, 
             showInRecents: true,
