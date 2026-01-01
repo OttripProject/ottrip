@@ -93,7 +93,14 @@ export default function LoginScreen() {
         
         const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${redirectUri}&scope=${scope}&response_type=${responseType}&nonce=${newNonce}&prompt=${prompt}`;
         
-        const result = await WebBrowser.openAuthSessionAsync(authUrl, redirectUri);
+        const result = await WebBrowser.openAuthSessionAsync(
+          authUrl, 
+          redirectUri,
+          {
+            preferEphemeralSession: false, 
+            showInRecents: true,
+          }
+        );
         
         if (result.type === 'success' && result.url) {
           let idToken: string | null = null;
