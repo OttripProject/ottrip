@@ -25,7 +25,7 @@ def send_invitation_email(
     expires_at_iso: Optional[str],
 ) -> None:
 
-    subject = f"[Ottrip] '{plan_title}' 계획에 초대되었습니다"
+    subject = f"[OTTRIP] '{plan_title}' 계획에 초대되었습니다"
     html = (
         f"<p>여행 계획 '<b>{plan_title}</b>'에 <b>{role}</b> 권한으로 초대되었습니다.</p>"
         f"<p><a href='{accept_link}'>여기를 눌러 초대를 수락</a>해주세요.</p>"
