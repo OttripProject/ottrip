@@ -11,6 +11,7 @@ class Environment(str, Enum):
 
 class CoreConfig(BaseConfig):
     ENVIRONMENT: Environment = Environment.LOCAL
+    SENTRY_DSN: str | None = None
 
 
 core_settings = CoreConfig.create()
