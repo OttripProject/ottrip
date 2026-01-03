@@ -62,7 +62,7 @@ async def validate_refresh_token(
     token_value = cookie_token or body_token
     
     if token_value is None:
-        logger.warning(f"[REFRESH] No token found - cookie: {cookie_token is not None}, body: {body_token is not None}")
+        logger.debug(f"[REFRESH] No token found - cookie: {cookie_token is not None}, body: {body_token is not None}")
         raise HTTPException(status_code=401, detail="Refresh token required")
     
     user_id = decode_jwt_token(token_value, token_type=TokenType.REFRESH)
