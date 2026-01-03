@@ -11,29 +11,33 @@ from app.dev.router import router as dev_router
 
 from . import api
 
+import sentry_sdk
+
+
 configure_logging()
 
+if core_settings.ENVIRONMENT == "prod" :
+    sentry_sdk.init(
+        dsn=core_settings.SENTRY_DSN,    
+        send_default_pii=True,
+    )
 
-# 환경에 따라 Swagger 설정
 def create_app() -> FastAPI:
     if core_settings.ENVIRONMENT == "prod":
-        # 프로덕션: Swagger 완전 비활성화
         app = FastAPI(
-            title="OTTRIP API",  # API 이름은 유지
-            docs_url=None,  # Swagger UI 비활성화
-            redoc_url=None,  # ReDoc 비활성화
-            openapi_url=None,  # OpenAPI 스키마도 비활성화
+            title="OTTRIP API",  
+            docs_url=None,  
+            redoc_url=None,
+            openapi_url=None, 
             redirect_slashes=False, 
         )
     else:
-        # 개발/로컬: Swagger 활성화
         app = FastAPI(
             title="OTTRIP API",
             swagger_ui_parameters={"persistAuthorization": True},
             redirect_slashes=False,  
         )
 
-    # CORS 미들웨어 추가 (환경변수로 오리진 구성, 비어있으면 localhost 기본값 사용)
     configured_origins = [
         origin.strip()
         for origin in email_settings.CORS_ALLOWED_ORIGINS.split(",")
