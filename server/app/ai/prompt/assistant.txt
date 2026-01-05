@@ -31,6 +31,7 @@
 
 4. Exclusions:
    - Do not include meals (food/dining) and accommodation (lodging) in the checklist
+   - Do not include same and similar checklist with existing checklist
 
 5. Output Format:
    - Respond ONLY in JSON format
