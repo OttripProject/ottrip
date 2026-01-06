@@ -59,7 +59,10 @@ export async function refreshToken(checkExpiration: boolean = true): Promise<str
 
   if (checkExpiration) {
     if (Platform.OS === 'web') {
-      if (cachedWebToken && !isTokenExpiringSoon(cachedWebToken, 5)) {
+      if (!cachedWebToken) {
+        return null;
+      }
+      if (!isTokenExpiringSoon(cachedWebToken, 5)) {
         return cachedWebToken;
       }
     } else {
