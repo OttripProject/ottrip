@@ -12,22 +12,20 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 export default function App() {
   const env = loadPublicEnv();
   
-  const [fontsLoaded, fontError] = useFonts(
-    Platform.OS === 'web'
-      ? {
-          'Pretendard-Regular': require('./assets/fonts/Pretendard-Regular.otf'),
-          'Pretendard-SemiBold': require('./assets/fonts/Pretendard-SemiBold.otf'),
-          'Poppins-Medium': require('./assets/fonts/Poppins-Medium.ttf'),
-          'Poppins-SemiBold': require('./assets/fonts/Poppins-SemiBold.ttf'),
-        }
-      : {}
-  );
+  // 웹과 네이티브 모두 폰트 로딩 필요
+  const [fontsLoaded, fontError] = useFonts({
+    'Pretendard-Regular': require('./assets/fonts/Pretendard-Regular.otf'),
+    'Pretendard-SemiBold': require('./assets/fonts/Pretendard-SemiBold.otf'),
+    'Poppins-Medium': require('./assets/fonts/Poppins-Medium.ttf'),
+    'Poppins-SemiBold': require('./assets/fonts/Poppins-SemiBold.ttf'),
+  });
 
   if (fontError) {
     console.error('폰트 로딩 실패:', fontError);
   }
 
-  if (Platform.OS === 'web' && !fontsLoaded) {
+  // 폰트 로딩 대기 (웹/네이티브 모두)
+  if (!fontsLoaded) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
         <ActivityIndicator size="large" />
