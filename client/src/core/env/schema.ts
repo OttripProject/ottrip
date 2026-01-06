@@ -4,7 +4,7 @@ export const envSchema = z.object({
   EXPO_PUBLIC_CHANNEL: z.enum(["dev", "prod", "local"]).default("local"),
   EXPO_PUBLIC_API_URL: z
     .string()
-    .default("https://ottrip.onrender.com"),
+    .default("http://localhost:8080"),
   EXPO_PUBLIC_GOOGLE_CLIENT_ID: z.string().default(""),
   EXPO_PUBLIC_APP_VERSION: z.string().optional(),
   EXPO_PUBLIC_BUILD_NUMBER: z.string().optional(),

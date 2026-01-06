@@ -93,12 +93,10 @@ export default function LoginScreen() {
           const channel = env.EXPO_PUBLIC_CHANNEL;
           if (channel === 'prod') {
             return 'https://ottrip.today/auth/callback';
+          } else if (channel === 'dev') {
+            return 'https://ottrip-dev-web.onrender.com/auth/callback';
           } else {
-            // dev/alpha 환경은 API URL 기반으로 결정
-            const apiUrl = env.EXPO_PUBLIC_API_URL;
-            // API URL에서 도메인 추출 (예: https://ottrip.onrender.com -> https://ottrip.today)
-            // 또는 환경 변수로 별도 설정 가능
-            return 'https://ottrip-dev-web.onrender.com/auth/callback'; // 임시로 prod와 동일하게 설정
+            return 'http://localhost:8081/auth/callback';
           }
         };
         
