@@ -15,6 +15,7 @@ dist/
 build/
 .expo/
 .next/
+ios/
 
 # Logs
 logs
