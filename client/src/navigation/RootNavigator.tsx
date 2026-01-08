@@ -124,21 +124,25 @@ export default function RootNavigator() {
           return;
         }
 
-        if (!registerComplete && Platform.OS === 'web' && typeof window !== 'undefined') {
-          const redirect = window.localStorage.getItem('postLoginRedirect') || '';
-          if (!redirect) return;
-          try { window.localStorage.removeItem('postLoginRedirect'); } catch {}
-          const publicIdMatch = redirect.match(/^\/plans\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i);
-          if (publicIdMatch) {
-            const publicId = publicIdMatch[1];
-            navRef.current?.reset({ index: 0, routes: [{ name: 'PLAN', params: { publicId } }] });
-            return;
+        if (!registerComplete) {
+          if (Platform.OS === 'web' && typeof window !== 'undefined') {
+            const redirect = window.localStorage.getItem('postLoginRedirect') || '';
+            if (!redirect) return;
+            try { window.localStorage.removeItem('postLoginRedirect'); } catch {}
+            const publicIdMatch = redirect.match(/^\/plans\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i);
+            if (publicIdMatch) {
+              const publicId = publicIdMatch[1];
+              navRef.current?.reset({ index: 0, routes: [{ name: 'PLAN', params: { publicId } }] });
+              return;
+            }
+            if (redirect.startsWith('/profile')) {
+              navRef.current?.reset({ index: 0, routes: [{ name: '프로필' }] });
+              return;
+            }
+            navRef.current?.reset({ index: 0, routes: [{ name: 'OTTRIP' }] });
+          } else {
+            navRef.current?.reset({ index: 0, routes: [{ name: 'OTTRIP' }] });
           }
-          if (redirect.startsWith('/profile')) {
-            navRef.current?.reset({ index: 0, routes: [{ name: '프로필' }] });
-            return;
-          }
-          navRef.current?.reset({ index: 0, routes: [{ name: 'OTTRIP' }] });
         }
       };
       checkRegisterComplete();
@@ -176,12 +180,14 @@ export default function RootNavigator() {
     return <LoadingScreen />;
   }
 
+  const OttripScreen = Platform.OS === 'web' ? DashboardScreen : MobileTestNavigator;
+
   return (
     <NavigationContainer linking={linking} ref={navRef}>
       <Stack.Navigator screenOptions={{ headerShown: false }} initialRouteName={initialRoute}>
         {isAuthenticated ? (
           <>
-            <Stack.Screen name="OTTRIP" component={DashboardScreen} />
+            <Stack.Screen name="OTTRIP" component={OttripScreen} />
             <Stack.Screen name="프로필" component={ProfileScreen} />
             <Stack.Screen name="INVITE_ACCEPT" component={InviteAcceptScreen} />
             <Stack.Screen name="WELCOME" component={WelcomeScreen} />

@@ -1,110 +1,208 @@
-import React from 'react';
-import { createStackNavigator } from '@react-navigation/stack';
-import { View, Text, StyleSheet, Pressable } from 'react-native';
+import React, { useRef } from 'react';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { Platform, StyleSheet, View } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+  withTiming,
+} from 'react-native-reanimated';
 import { colors } from '@/ui/tokens/colors';
-import { textStyles } from '@/ui/tokens/typography';
 import TodayScreen from './TodayScreen.native';
 import WeeklyScreen from './WeeklyScreen.native';
+import ProfileScreen from './ProfileScreen.native';
+import { Ionicons } from '@expo/vector-icons';
 
-const Stack = createStackNavigator();
+const Tab = createBottomTabNavigator();
 
-// 테스트용 메뉴 화면
-function MobileTestMenu({ navigation }: any) {
-  return (
-    <View style={styles.menuContainer}>
-      <Text style={styles.menuTitle}>모바일 화면 테스트</Text>
-      <Text style={styles.menuSubtitle}>개발 중인 모바일 전용 화면</Text>
+let previousTabIndex: number | null = null;
+let isInitialMount = true;
+
+function SlideScreenWrapper({ 
+  children, 
+  screenIndex,
+  screenName 
+}: { 
+  children: React.ReactNode; 
+  screenIndex: number;
+  screenName: string;
+}) {
+  const translateX = useSharedValue(0);
+  const opacity = useSharedValue(1);
+  const hasAnimated = useRef(false);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      if (isInitialMount && screenIndex === 0) {
+        isInitialMount = false;
+        previousTabIndex = screenIndex;
+        translateX.value = 0;
+        opacity.value = 1;
+        hasAnimated.current = true;
+        return;
+      }
+
+      if (previousTabIndex === null || previousTabIndex === screenIndex) {
+        if (previousTabIndex === null) {
+          previousTabIndex = screenIndex;
+        }
+        return;
+      }
+
+      const direction = screenIndex > previousTabIndex ? 1 : -1;
       
-      <View style={styles.menuButtons}>
-        <Pressable
-          style={styles.menuButton}
-          onPress={() => navigation.navigate('TodayScreen')}
-        >
-          <Text style={styles.buttonEmoji}>📅</Text>
-          <Text style={styles.buttonText}>오늘 화면</Text>
-          <Text style={styles.buttonDesc}>현재 진행 중 활동 중심</Text>
-        </Pressable>
+      translateX.value = direction * 50;
+      opacity.value = 0.5;
+      
+      translateX.value = withSpring(0, {
+        damping: 18,
+        stiffness: 100,
+        mass: 0.7,
+      });
+      
+      opacity.value = withTiming(1, {
+        duration: 250,
+      });
 
-        <Pressable
-          style={styles.menuButton}
-          onPress={() => navigation.navigate('WeeklyScreen')}
-        >
-          <Text style={styles.buttonEmoji}>📆</Text>
-          <Text style={styles.buttonText}>주간 일정 화면</Text>
-          <Text style={styles.buttonDesc}>주간 타임라인 뷰</Text>
-        </Pressable>
-      </View>
+      previousTabIndex = screenIndex;
+      hasAnimated.current = true;
+    }, [translateX, opacity, screenIndex])
+  );
 
-      <View style={styles.note}>
-        <Text style={styles.noteText}>
-          💡 현재는 하드코딩된 샘플 데이터를 사용합니다.{'\n'}
-          실제 API 연동은 다음 단계에서 진행됩니다.
-        </Text>
-      </View>
+  const animatedStyle = useAnimatedStyle(() => {
+    return {
+      transform: [{ translateX: translateX.value }],
+      opacity: opacity.value,
+    };
+  });
+
+  return (
+    <View style={styles.backgroundContainer}>
+      <Animated.View
+        style={[
+          styles.screenContainer,
+          animatedStyle,
+        ]}
+      >
+        {children}
+      </Animated.View>
     </View>
+  );
+}
+
+function TodayScreenWithAnimation() {
+  return (
+    <SlideScreenWrapper screenIndex={0} screenName="Today">
+      <TodayScreen />
+    </SlideScreenWrapper>
+  );
+}
+
+function WeeklyScreenWithAnimation() {
+  return (
+    <SlideScreenWrapper screenIndex={1} screenName="Weekly">
+      <WeeklyScreen />
+    </SlideScreenWrapper>
+  );
+}
+
+function ProfileScreenWithAnimation() {
+  return (
+    <SlideScreenWrapper screenIndex={2} screenName="Profile">
+      <ProfileScreen />
+    </SlideScreenWrapper>
   );
 }
 
 export default function MobileTestNavigator() {
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="MobileTestMenu" component={MobileTestMenu} />
-      <Stack.Screen name="TodayScreen" component={TodayScreen} />
-      <Stack.Screen name="WeeklyScreen" component={WeeklyScreen} />
-    </Stack.Navigator>
+    <View style={styles.navigatorContainer}>
+      <Tab.Navigator
+        screenOptions={{
+          headerShown: false,
+          lazy: true, // 탭을 필요할 때만 로드하여 초기 로딩 최적화
+          tabBarActiveTintColor: colors.gray900,
+          tabBarInactiveTintColor: colors.gray600,
+          tabBarStyle: {
+            backgroundColor: 'rgba(255, 255, 255, 0.8)',
+            borderTopWidth: 1,
+            borderTopColor: 'rgba(255, 255, 255, 0.5)',
+            paddingBottom: Platform.OS === 'ios' ? 24 : 8,
+            paddingTop: 8,
+            height: Platform.OS === 'ios' ? 88 : 64,
+          },
+          tabBarLabelStyle: {
+            fontSize: 10,
+            fontWeight: '500',
+            marginTop: 4,
+          },
+          tabBarIconStyle: {
+            marginTop: 4,
+          },
+        }}
+      >
+      <Tab.Screen
+        name="Today"
+        component={TodayScreenWithAnimation}
+        options={{
+          tabBarLabel: '오늘',
+          tabBarIcon: ({ color, focused }: { color: string; focused: boolean }) => (
+            <Ionicons
+              name={focused ? 'home' : 'home-outline'}
+              size={24}
+              color={color}
+            />
+          ),
+        }}
+      />
+      <Tab.Screen
+        name="Weekly"
+        component={WeeklyScreenWithAnimation}
+        options={{
+          tabBarLabel: '여행 일정',
+          tabBarIcon: ({ color, focused }: { color: string; focused: boolean }) => (
+            <Ionicons
+              name={focused ? 'calendar' : 'calendar-outline'}
+              size={24}
+              color={color}
+            />
+          ),
+        }}
+      />
+      <Tab.Screen
+        name="Profile"
+        component={ProfileScreenWithAnimation}
+        options={{
+          tabBarLabel: '프로필',
+          tabBarIcon: ({ color, focused }: { color: string; focused: boolean }) => (
+            <Ionicons
+              name={focused ? 'person' : 'person-outline'}
+              size={24}
+              color={color}
+            />
+          ),
+        }}
+      />
+      </Tab.Navigator>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  menuContainer: {
+  navigatorContainer: {
     flex: 1,
     backgroundColor: colors.white,
-    paddingTop: 80,
-    paddingHorizontal: 24,
   },
-  menuTitle: {
-    ...textStyles.h1,
-    color: colors.black,
-    marginBottom: 8,
+  backgroundContainer: {
+    flex: 1,
+    width: '100%',
+    backgroundColor: colors.white,
   },
-  menuSubtitle: {
-    ...textStyles.body2,
-    color: colors.gray600,
-    marginBottom: 40,
-  },
-  menuButtons: {
-    gap: 16,
-  },
-  menuButton: {
-    backgroundColor: colors.gray50,
-    padding: 24,
-    borderRadius: 20,
-    borderWidth: 2,
-    borderColor: colors.gray200,
-  },
-  buttonEmoji: {
-    fontSize: 32,
-    marginBottom: 12,
-  },
-  buttonText: {
-    ...textStyles.h3,
-    color: colors.black,
-    marginBottom: 4,
-  },
-  buttonDesc: {
-    ...textStyles.body3,
-    color: colors.gray600,
-  },
-  note: {
-    marginTop: 40,
-    padding: 16,
-    backgroundColor: colors.blue50,
-    borderRadius: 12,
-  },
-  noteText: {
-    ...textStyles.body3,
-    color: colors.blue700,
-    lineHeight: 20,
+  screenContainer: {
+    flex: 1,
+    width: '100%',
+    backgroundColor: colors.white,
   },
 });
 

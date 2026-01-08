@@ -90,7 +90,7 @@ export default function TodayScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.gray50,
+    backgroundColor: colors.white,
   },
   scrollView: {
     flex: 1,
@@ -204,7 +204,7 @@ const styles = StyleSheet.create({
     marginRight: 16,
   },
   nextDot: {
-    backgroundColor: colors.blue500,
+    backgroundColor: colors.primary,
   },
   timelineContent: {
     flex: 1,
