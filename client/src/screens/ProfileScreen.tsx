@@ -74,6 +74,7 @@ export default function ProfileScreen() {
     } else {
       navigation.navigate('OTTRIP');
     }
+    
   };
 
   const handleDeleteAccount = () => {
