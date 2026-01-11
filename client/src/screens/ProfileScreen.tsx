@@ -69,7 +69,11 @@ export default function ProfileScreen() {
     const updated = await usersApi.updateMe({ nickname, gender });
     setMe(updated);
     queryClient.setQueryData(['me'], updated);
-    navigation.navigate('OTTRIP');
+    if (navigation.canGoBack()) {
+      navigation.goBack();
+    } else {
+      navigation.navigate('OTTRIP');
+    }
   };
 
   const handleDeleteAccount = () => {
