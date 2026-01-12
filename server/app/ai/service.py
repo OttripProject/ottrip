@@ -1,4 +1,5 @@
 from typing import Dict, Any, cast, Iterable, Tuple
+import json
 
 from fastapi import HTTPException
 from sqlalchemy.orm import attributes
@@ -127,7 +128,8 @@ class AIService:
             end_date=str(plan.end_date),
             destinations=destinations,
             flights=flights_text,
-            itineraries=itineraries_text
+            itineraries=itineraries_text,
+            existing_checklist=json.dumps(plan.travel_checklist,  ensure_ascii=False, indent=2)
         )
         
         if not ai_result.success:
@@ -465,4 +467,5 @@ class AIService:
                 f"  설명: {description}"
             )
         return "\n".join(formatted)
+    
     

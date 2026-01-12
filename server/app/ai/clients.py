@@ -180,7 +180,8 @@ class OpenAIClient:
         end_date: str,
         destinations: str,
         flights: str,
-        itineraries: str
+        itineraries: str,
+        existing_checklist: str = ""
     ) -> AIParseResponse:
         """여행 체크리스트 생성"""
         try:
@@ -193,7 +194,8 @@ class OpenAIClient:
                 end_date=end_date,
                 destinations=destinations,
                 flights=flights,
-                itineraries=itineraries
+                itineraries=itineraries,
+                existing_checklist=existing_checklist
             )
             
             response = await self.client.chat.completions.create(
