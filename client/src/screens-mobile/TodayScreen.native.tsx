@@ -1,9 +1,12 @@
 import React from 'react';
 import { View, Text, ScrollView, StyleSheet, Pressable } from 'react-native';
+import { getTodayKoreanDate } from '@/utils/dateUtils';
 import { colors } from '@/ui/tokens/colors';
 import { textStyles } from '@/ui/tokens/typography';
 
 export default function TodayScreen() {
+  const formattedDate = getTodayKoreanDate();
+
   return (
     <View style={styles.container}>
       <ScrollView 
@@ -14,7 +17,7 @@ export default function TodayScreen() {
         {/* 헤더 */}
         <View style={styles.header}>
           <Text style={styles.greeting}>오늘의 여행</Text>
-          <Text style={styles.date}>10월 25일 수요일</Text>
+          <Text style={styles.date}>{formattedDate}</Text>
         </View>
 
         {/* 현재 진행 중 활동 카드 */}

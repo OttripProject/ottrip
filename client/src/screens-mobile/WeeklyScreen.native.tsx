@@ -1,27 +1,37 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { View, Text, ScrollView, StyleSheet, Pressable } from 'react-native';
 import { colors } from '@/ui/tokens/colors';
 import { textStyles } from '@/ui/tokens/typography';
-
-const MOCK_WEEK = [
-  { day: '월', date: 23, isToday: false },
-  { day: '화', date: 24, isToday: false },
-  { day: '수', date: 25, isToday: true },
-  { day: '목', date: 26, isToday: false },
-  { day: '금', date: 27, isToday: false },
-  { day: '토', date: 28, isToday: false },
-  { day: '일', date: 29, isToday: false },
-];
+import { getWeekCalendar, formatDateRange } from '@/utils/dateUtils';
+import { spacing } from '@/ui/tokens/spacing';
 
 export default function WeeklyScreen() {
-  const [selectedDate, setSelectedDate] = useState(25);
+  // 오늘 기준 주간 달력 생성
+  const weekCalendar = useMemo(() => getWeekCalendar(), []);
+  
+  // 기본 선택 날짜는 오늘
+  const todayItem = weekCalendar.find(item => item.isToday);
+  const [selectedDate, setSelectedDate] = useState(todayItem?.fullDate || weekCalendar[0].fullDate);
+  
+  // 주간 날짜 범위 (월요일 ~ 일요일)
+  const weekRange = useMemo(() => {
+    if (weekCalendar.length === 0) return '';
+    return formatDateRange(weekCalendar[0].fullDate, weekCalendar[6].fullDate);
+  }, [weekCalendar]);
+  
+  // 선택된 날짜의 포맷팅
+  const selectedDateText = useMemo(() => {
+    const month = selectedDate.month() + 1;
+    const day = selectedDate.date();
+    return `${month}월 ${day}일`;
+  }, [selectedDate]);
 
   return (
     <View style={styles.container}>
       {/* 헤더 */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>🇹🇷 터키 카파도키아 여행</Text>
-        <Text style={styles.headerSubtitle}>10월 23일 - 10월 29일</Text>
+        <Text style={styles.headerSubtitle}>{weekRange}</Text>
       </View>
 
       {/* 주간 날짜 선택 */}
@@ -31,34 +41,37 @@ export default function WeeklyScreen() {
         style={styles.weekScroll}
         contentContainerStyle={styles.weekContent}
       >
-        {MOCK_WEEK.map((item) => (
-          <Pressable
-            key={item.date}
-            style={[
-              styles.dayButton,
-              item.isToday && styles.dayButtonToday,
-              selectedDate === item.date && styles.dayButtonSelected,
-            ]}
-            onPress={() => setSelectedDate(item.date)}
-          >
-            <Text
+        {weekCalendar.map((item) => {
+          const isSelected = selectedDate.isSame(item.fullDate, 'day');
+          return (
+            <Pressable
+              key={`${item.year}-${item.month}-${item.date}`}
               style={[
-                styles.dayText,
-                (item.isToday || selectedDate === item.date) && styles.dayTextActive,
+                styles.dayButton,
+                item.isToday && styles.dayButtonToday,
+                isSelected && styles.dayButtonSelected,
               ]}
+              onPress={() => setSelectedDate(item.fullDate)}
             >
-              {item.day}
-            </Text>
-            <Text
-              style={[
-                styles.dateText,
-                (item.isToday || selectedDate === item.date) && styles.dateTextActive,
-              ]}
-            >
-              {item.date}
-            </Text>
-          </Pressable>
-        ))}
+              <Text
+                style={[
+                  styles.dayText,
+                  (item.isToday || isSelected) && styles.dayTextActive,
+                ]}
+              >
+                {item.day}
+              </Text>
+              <Text
+                style={[
+                  styles.dateText,
+                  (item.isToday || isSelected) && styles.dateTextActive,
+                ]}
+              >
+                {item.date}
+              </Text>
+            </Pressable>
+          );
+        })}
       </ScrollView>
 
       {/* 일정 목록 */}
@@ -67,7 +80,7 @@ export default function WeeklyScreen() {
         contentContainerStyle={styles.scheduleContent}
         showsVerticalScrollIndicator={false}
       >
-        <Text style={styles.scheduleDate}>10월 {selectedDate}일</Text>
+        <Text style={styles.scheduleDate}>{selectedDateText}</Text>
 
         {/* 일정 아이템들 */}
         <View style={styles.scheduleItem}>
@@ -147,7 +160,7 @@ export default function WeeklyScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.gray50,
+    backgroundColor: colors.gray100,
   },
   header: {
     paddingTop: 60,
@@ -170,11 +183,12 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
     borderBottomWidth: 1,
     borderBottomColor: colors.gray200,
+    flexGrow: 0,
   },
   weekContent: {
     paddingHorizontal: 16,
     paddingVertical: 12,
-    gap: 8,
+    gap: spacing.sm,
   },
   dayButton: {
     width: 48,
@@ -186,15 +200,14 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   dayButtonToday: {
-    borderWidth: 2,
-    borderColor: colors.blue500,
+    backgroundColor: colors.gray400,
   },
   dayButtonSelected: {
-    backgroundColor: colors.blue500,
+    backgroundColor: colors.primary,
   },
   dayText: {
     ...textStyles.body3,
-    color: colors.gray600,
+    color: colors.gray800,
     marginBottom: 4,
   },
   dayTextActive: {
