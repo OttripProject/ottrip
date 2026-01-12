@@ -76,3 +76,23 @@ export function formatDateRange(
     }
   }
 }
+
+export function formatTime(time: string): string {
+  if (!time) return '00:00';
+  return time.split(':').slice(0, 2).join(':');
+}
+
+export function convertUTCToLocalTime(utcDateTime: string): string {
+  if (!utcDateTime) return '00:00';
+  const localTime = dayjs(utcDateTime); // UTC → 로컬 시간 자동 변환
+  return formatTime(localTime.format('HH:mm:ss'));
+}
+
+export function isNextDayLocal(startDateTime: string, endDateTime: string): boolean {
+  if (!startDateTime || !endDateTime) return false;
+  const start = dayjs(startDateTime);
+  const end = dayjs(endDateTime);
+  const startDate = start.format('YYYY-MM-DD');
+  const endDate = end.format('YYYY-MM-DD');
+  return startDate !== endDate;
+}

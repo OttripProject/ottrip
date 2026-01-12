@@ -1,40 +1,196 @@
-import React, { useState, useMemo } from 'react';
-import { View, Text, ScrollView, StyleSheet, Pressable } from 'react-native';
+import React, { useState, useMemo, useEffect } from 'react';
+import { View, Text, ScrollView, StyleSheet, Pressable, ActivityIndicator } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import dayjs from 'dayjs';
 import { colors } from '@/ui/tokens/colors';
 import { textStyles } from '@/ui/tokens/typography';
-import { getWeekCalendar, formatDateRange } from '@/utils/dateUtils';
+import { getWeekCalendar, formatDateRange, formatTime, convertUTCToLocalTime, isNextDayLocal } from '@/utils/dateUtils';
 import { spacing } from '@/ui/tokens/spacing';
+import { usePlansQuery } from '@/hooks/usePlansQuery';
+import { usePlanDataQuery } from '@/hooks/usePlanDataQuery';
+import { Plan, Itinerary, FlightRead } from '@/types/api';
 
 export default function WeeklyScreen() {
-  // 오늘 기준 주간 달력 생성
-  const weekCalendar = useMemo(() => getWeekCalendar(), []);
+  const plansQuery = usePlansQuery();
+  const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
+  const [showPlanSelector, setShowPlanSelector] = useState(false);
   
-  // 기본 선택 날짜는 오늘
-  const todayItem = weekCalendar.find(item => item.isToday);
-  const [selectedDate, setSelectedDate] = useState(todayItem?.fullDate || weekCalendar[0].fullDate);
+  useEffect(() => {
+    if (!selectedPlan && plansQuery.plans.length > 0) {
+      setSelectedPlan(plansQuery.plans[0]);
+    }
+  }, [plansQuery.plans, selectedPlan]);
   
-  // 주간 날짜 범위 (월요일 ~ 일요일)
+  const planData = usePlanDataQuery(selectedPlan?.publicId || null);
+  
+  const firstItineraryDate = useMemo(() => {
+    if (!planData.itineraries || planData.itineraries.length === 0) {
+      return null;
+    }
+    const sortedItineraries = [...planData.itineraries].sort((a, b) => 
+      dayjs(a.itineraryDate).diff(dayjs(b.itineraryDate))
+    );
+    return dayjs(sortedItineraries[0].itineraryDate);
+  }, [planData.itineraries]);
+  
+  const weekCalendar = useMemo(() => {
+    const baseDate = firstItineraryDate || dayjs();
+    return getWeekCalendar(baseDate);
+  }, [firstItineraryDate]);
+  
+  const [selectedDate, setSelectedDate] = useState(() => {
+    const baseDate = firstItineraryDate || dayjs();
+    const calendar = getWeekCalendar(baseDate);
+    const todayItem = calendar.find(item => item.isToday);
+    return todayItem?.fullDate || calendar[0].fullDate;
+  });
+  
+  useEffect(() => {
+    const baseDate = firstItineraryDate || dayjs();
+    const calendar = getWeekCalendar(baseDate);
+    const todayItem = calendar.find(item => item.isToday);
+    setSelectedDate(todayItem?.fullDate || calendar[0].fullDate);
+  }, [firstItineraryDate]);
+  
   const weekRange = useMemo(() => {
     if (weekCalendar.length === 0) return '';
     return formatDateRange(weekCalendar[0].fullDate, weekCalendar[6].fullDate);
   }, [weekCalendar]);
   
-  // 선택된 날짜의 포맷팅
   const selectedDateText = useMemo(() => {
     const month = selectedDate.month() + 1;
     const day = selectedDate.date();
     return `${month}월 ${day}일`;
   }, [selectedDate]);
+  
+  const selectedDateItineraries = useMemo(() => {
+    if (!planData.itineraries) return [];
+    return planData.itineraries.filter((itinerary: Itinerary) => 
+      dayjs(itinerary.itineraryDate).isSame(selectedDate, 'day')
+    );
+  }, [planData.itineraries, selectedDate]);
+  
+  const selectedDateSchedules = useMemo(() => {
+    const schedules: Array<{
+      type: 'itinerary' | 'flight';
+      id: number | string;
+      time: string;
+      endTime?: string;
+      data: Itinerary | FlightRead;
+      segment?: any;
+      segmentIndex?: number;
+    }> = [];
+    
+    // 일정 추가
+    selectedDateItineraries.forEach((itinerary: Itinerary) => {
+      schedules.push({
+        type: 'itinerary',
+        id: itinerary.id,
+        time: formatTime(itinerary.startTime || '00:00'),
+        endTime: formatTime(itinerary.endTime || '00:00'),
+        data: itinerary,
+      });
+    });
+    
+    // 모든 항공편의 각 구간을 개별 일정으로 추가 (웹과 동일)
+    if (planData.flights) {
+      planData.flights.forEach((flight: FlightRead) => {
+        if (flight.flightSegments && flight.flightSegments.length > 0) {
+          flight.flightSegments.forEach((segment, index) => {
+            const departureTime = dayjs(segment.departureTime);
+            
+            // 선택된 날짜에 출발하는 구간만 추가
+            if (departureTime.isSame(selectedDate, 'day')) {
+              schedules.push({
+                type: 'flight',
+                id: `${flight.id}-segment-${index}`,
+                time: convertUTCToLocalTime(segment.departureTime),
+                endTime: convertUTCToLocalTime(segment.arrivalTime),
+                data: flight,
+                segment: segment,
+                segmentIndex: index,
+              });
+            }
+          });
+        }
+      });
+    }
+    
+    return schedules.sort((a, b) => a.time.localeCompare(b.time));
+  }, [selectedDateItineraries, planData.flights, selectedDate]);
+
+  if (plansQuery.isLoading || planData.isLoading) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={colors.primary} />
+        </View>
+      </View>
+    );
+  }
+  
+  if (plansQuery.plans.length === 0) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyText}>여행이 없습니다</Text>
+          <Text style={styles.emptySubtext}>새 여행을 만들어보세요</Text>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
-      {/* 헤더 */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>🇹🇷 터키 카파도키아 여행</Text>
+        <Pressable
+          style={styles.planSelector}
+          onPress={() => setShowPlanSelector(!showPlanSelector)}
+        >
+          <Text style={styles.headerTitle} numberOfLines={1}>
+            {selectedPlan?.title || '여행 선택'}
+          </Text>
+          <Ionicons 
+            name={showPlanSelector ? 'chevron-up' : 'chevron-down'} 
+            size={20} 
+            color={colors.gray600} 
+          />
+        </Pressable>
         <Text style={styles.headerSubtitle}>{weekRange}</Text>
+        
+        {showPlanSelector && (
+          <View style={styles.planDropdown}>
+            <ScrollView style={styles.planList} nestedScrollEnabled>
+              {plansQuery.plans.map((plan) => (
+                <Pressable
+                  key={plan.id}
+                  style={[
+                    styles.planItem,
+                    selectedPlan?.id === plan.id && styles.planItemSelected,
+                  ]}
+                  onPress={() => {
+                    setSelectedPlan(plan);
+                    setShowPlanSelector(false);
+                  }}
+                >
+                  <Text
+                    style={[
+                      styles.planItemText,
+                      selectedPlan?.id === plan.id && styles.planItemTextSelected,
+                    ]}
+                  >
+                    {plan.title}
+                  </Text>
+                  {selectedPlan?.id === plan.id && (
+                    <Ionicons name="checkmark" size={20} color={colors.primary} />
+                  )}
+                </Pressable>
+              ))}
+            </ScrollView>
+          </View>
+        )}
       </View>
 
-      {/* 주간 날짜 선택 */}
       <ScrollView 
         horizontal 
         showsHorizontalScrollIndicator={false}
@@ -74,7 +230,6 @@ export default function WeeklyScreen() {
         })}
       </ScrollView>
 
-      {/* 일정 목록 */}
       <ScrollView 
         style={styles.scheduleList}
         contentContainerStyle={styles.scheduleContent}
@@ -82,75 +237,133 @@ export default function WeeklyScreen() {
       >
         <Text style={styles.scheduleDate}>{selectedDateText}</Text>
 
-        {/* 일정 아이템들 */}
-        <View style={styles.scheduleItem}>
-          <View style={styles.scheduleTime}>
-            <Text style={styles.scheduleTimeText}>05:30</Text>
-            <View style={styles.scheduleTimeLine} />
-            <Text style={styles.scheduleTimeText}>08:00</Text>
+        {selectedDateSchedules.length === 0 ? (
+          <View style={styles.emptyScheduleContainer}>
+            <Text style={styles.emptyScheduleText}>이 날짜에는 일정이 없습니다</Text>
           </View>
-          
-          <View style={styles.scheduleCard}>
-            <View style={styles.categoryBadge}>
-              <Text style={styles.categoryText}>🎈 활동</Text>
-            </View>
-            <Text style={styles.scheduleTitle}>카파도키아 벌룬 투어</Text>
-            <Text style={styles.scheduleLocation}>괴레메 국립공원</Text>
-            <Text style={styles.scheduleNote}>05:00 호텔 로비 픽업. 따뜻한 옷 꼭 챙기기.</Text>
-          </View>
-        </View>
-
-        <View style={styles.scheduleItem}>
-          <View style={styles.scheduleTime}>
-            <Text style={styles.scheduleTimeText}>09:00</Text>
-            <View style={styles.scheduleTimeLine} />
-            <Text style={styles.scheduleTimeText}>10:00</Text>
-          </View>
-          
-          <View style={[styles.scheduleCard, styles.currentCard]}>
-            <View style={[styles.categoryBadge, styles.currentBadge]}>
-              <Text style={styles.categoryText}>🍽️ 식사</Text>
-            </View>
-            <Text style={styles.scheduleTitle}>현지 카페에서 아침 식사</Text>
-            <Text style={styles.scheduleLocation}>나자르 보렉 (Nazar Borek)</Text>
-            <View style={styles.currentIndicator}>
-              <View style={styles.currentDot} />
-              <Text style={styles.currentText}>진행 중</Text>
-            </View>
-          </View>
-        </View>
-
-        <View style={styles.scheduleItem}>
-          <View style={styles.scheduleTime}>
-            <Text style={styles.scheduleTimeText}>11:00</Text>
-            <View style={styles.scheduleTimeLine} />
-            <Text style={styles.scheduleTimeText}>13:00</Text>
-          </View>
-          
-          <View style={styles.scheduleCard}>
-            <View style={styles.categoryBadge}>
-              <Text style={styles.categoryText}>🎨 활동</Text>
-            </View>
-            <Text style={styles.scheduleTitle}>괴레메 야외 박물관 관람</Text>
-            <Text style={styles.scheduleLocation}>괴레메 야외 박물관</Text>
-          </View>
-        </View>
-
-        <View style={styles.scheduleItem}>
-          <View style={styles.scheduleTime}>
-            <Text style={styles.scheduleTimeText}>13:30</Text>
-            <View style={styles.scheduleTimeLine} />
-            <Text style={styles.scheduleTimeText}>14:30</Text>
-          </View>
-          
-          <View style={styles.scheduleCard}>
-            <View style={styles.categoryBadge}>
-              <Text style={styles.categoryText}>🍽️ 식사</Text>
-            </View>
-            <Text style={styles.scheduleTitle}>항아리 케밥 점심</Text>
-            <Text style={styles.scheduleLocation}>Topdeck Cave</Text>
-          </View>
-        </View>
+        ) : (
+          selectedDateSchedules.map((schedule) => {
+            const isCurrentTime = dayjs().isSame(selectedDate, 'day') && 
+              dayjs().isAfter(dayjs(`${selectedDate.format('YYYY-MM-DD')} ${schedule.time}`)) &&
+              schedule.endTime &&
+              dayjs().isBefore(dayjs(`${selectedDate.format('YYYY-MM-DD')} ${schedule.endTime}`));
+            
+            let showNextDay = false;
+            
+            if (schedule.type === 'flight' && schedule.segment) {
+              // 현재 segment의 출발/도착 시간으로 날짜 비교
+              const departureTime = dayjs(schedule.segment.departureTime);
+              const arrivalTime = dayjs(schedule.segment.arrivalTime);
+              
+              const departureDate = departureTime.format('YYYY-MM-DD');
+              const arrivalDate = arrivalTime.format('YYYY-MM-DD');
+              showNextDay = departureDate !== arrivalDate;
+            } else if (schedule.type === 'itinerary') {
+              if (schedule.endTime && schedule.time) {
+                const startTimeParts = schedule.time.split(':').map(Number);
+                const endTimeParts = schedule.endTime.split(':').map(Number);
+                const startMinutes = startTimeParts[0] * 60 + (startTimeParts[1] || 0);
+                const endMinutes = endTimeParts[0] * 60 + (endTimeParts[1] || 0);
+                showNextDay = endMinutes < startMinutes;
+              }
+            }
+            
+            if (schedule.type === 'flight' && schedule.segment) {
+              const flight = schedule.data as FlightRead;
+              const segment = schedule.segment;
+              const segmentIndex = schedule.segmentIndex ?? 0;
+              const totalSegments = flight.flightSegments?.length || 1;
+              
+              return (
+                <View key={`flight-${flight.id}-segment-${segmentIndex}`} style={styles.scheduleItem}>
+                  <View style={styles.scheduleTime}>
+                    <Text style={styles.scheduleTimeText}>{schedule.time}</Text>
+                    {showNextDay ? (
+                      <View style={styles.scheduleTimeLineContainer}>
+                        <View style={styles.scheduleTimeLineTop} />
+                        <View style={styles.nextDayIndicator}>
+                          <Text style={styles.nextDayText}>+1 day</Text>
+                        </View>
+                        <View style={styles.scheduleTimeLineBottom} />
+                      </View>
+                    ) : (
+                      <View style={styles.scheduleTimeLine} />
+                    )}
+                    <Text style={styles.scheduleTimeText}>{schedule.endTime || ''}</Text>
+                  </View>
+                  
+                  <View style={[styles.scheduleCard, styles.flightCard, isCurrentTime && styles.currentCard]}>
+                    <View style={[styles.categoryBadge, styles.flightBadge, isCurrentTime && styles.currentBadge]}>
+                      <Text style={styles.categoryText}>✈️ 항공</Text>
+                    </View>
+                    <Text style={styles.scheduleTitle}>
+                      {segment.departureAirport} → {segment.arrivalAirport}
+                    </Text>
+                    {segment.airline && segment.flightNumber && (
+                      <Text style={styles.scheduleLocation}>
+                        {segment.airline} / {segment.flightNumber}
+                      </Text>
+                    )}
+                    {totalSegments > 1 && (
+                      <Text style={styles.scheduleNote}>
+                        구간 {segmentIndex + 1}/{totalSegments}
+                      </Text>
+                    )}
+                    {isCurrentTime && (
+                      <View style={styles.currentIndicator}>
+                        <View style={styles.currentDot} />
+                        <Text style={styles.currentText}>진행 중</Text>
+                      </View>
+                    )}
+                  </View>
+                </View>
+              );
+            } else if (schedule.type === 'itinerary') {
+              const itinerary = schedule.data as Itinerary;
+              
+              return (
+                <View key={`itinerary-${itinerary.id}`} style={styles.scheduleItem}>
+                  <View style={styles.scheduleTime}>
+                    <Text style={styles.scheduleTimeText}>{schedule.time}</Text>
+                    {showNextDay ? (
+                      <View style={styles.scheduleTimeLineContainer}>
+                        <View style={styles.scheduleTimeLineTop} />
+                        <View style={styles.nextDayIndicator}>
+                          <Text style={styles.nextDayText}>+1 day</Text>
+                        </View>
+                        <View style={styles.scheduleTimeLineBottom} />
+                      </View>
+                    ) : (
+                      <View style={styles.scheduleTimeLine} />
+                    )}
+                    <Text style={styles.scheduleTimeText}>{schedule.endTime || ''}</Text>
+                  </View>
+                  
+                  <View style={[styles.scheduleCard, isCurrentTime && styles.currentCard]}>
+                    <View style={[styles.categoryBadge, isCurrentTime && styles.currentBadge]}>
+                      <Text style={styles.categoryText}>
+                        {itinerary.country ? '활동' : '일정'}
+                      </Text>
+                    </View>
+                    <Text style={styles.scheduleTitle}>{itinerary.title}</Text>
+                    {itinerary.location && (
+                      <Text style={styles.scheduleLocation}>{itinerary.location}</Text>
+                    )}
+                    {itinerary.description && (
+                      <Text style={styles.scheduleNote}>{itinerary.description}</Text>
+                    )}
+                    {isCurrentTime && (
+                      <View style={styles.currentIndicator}>
+                        <View style={styles.currentDot} />
+                        <Text style={styles.currentText}>진행 중</Text>
+                      </View>
+                    )}
+                  </View>
+                </View>
+              );
+            }
+          })
+        )}
 
       </ScrollView>
     </View>
@@ -162,23 +375,91 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.gray100,
   },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+  },
+  emptyText: {
+    ...textStyles.h3,
+    color: colors.gray600,
+    marginBottom: 8,
+  },
+  emptySubtext: {
+    ...textStyles.body2,
+    color: colors.gray500,
+  },
   header: {
     paddingTop: 60,
     paddingHorizontal: 24,
     paddingBottom: 20,
     backgroundColor: colors.white,
+    position: 'relative',
+  },
+  planSelector: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 4,
   },
   headerTitle: {
     ...textStyles.h3,
     color: colors.black,
-    marginBottom: 4,
+    flex: 1,
+    marginRight: 8,
   },
   headerSubtitle: {
     ...textStyles.body2,
     color: colors.gray600,
   },
+  planDropdown: {
+    position: 'absolute',
+    top: '100%',
+    left: 24,
+    right: 24,
+    backgroundColor: colors.white,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.gray200,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+    marginTop: 8,
+    maxHeight: 200,
+    zIndex: 1000,
+  },
+  planList: {
+    maxHeight: 200,
+  },
+  planItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.gray100,
+  },
+  planItemSelected: {
+    backgroundColor: colors.gray100,
+  },
+  planItemText: {
+    ...textStyles.h6,
+    color: colors.black,
+    flex: 1,
+  },
+  planItemTextSelected: {
+    color: colors.primary,
+  },
   
-  // 주간 날짜 선택
   weekScroll: {
     backgroundColor: colors.white,
     borderBottomWidth: 1,
@@ -236,6 +517,14 @@ const styles = StyleSheet.create({
     color: colors.black,
     marginBottom: 20,
   },
+  emptyScheduleContainer: {
+    paddingVertical: 40,
+    alignItems: 'center',
+  },
+  emptyScheduleText: {
+    ...textStyles.body2,
+    color: colors.gray500,
+  },
   
   // 일정 아이템
   scheduleItem: {
@@ -257,6 +546,38 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.gray300,
     marginVertical: 4,
+  },
+  scheduleTimeLineContainer: {
+    flex: 1,
+    alignItems: 'center',
+    marginVertical: 4,
+  },
+  scheduleTimeLineTop: {
+    width: 2,
+    flex: 1,
+    backgroundColor: colors.gray300,
+    minHeight: 8,
+  },
+  scheduleTimeLineBottom: {
+    width: 2,
+    flex: 1,
+    backgroundColor: colors.gray300,
+    minHeight: 8,
+  },
+  nextDayIndicator: {
+    backgroundColor: colors.white,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: colors.gray300,
+    marginVertical: 2,
+  },
+  nextDayText: {
+    ...textStyles.body4,
+    color: colors.gray600,
+    fontSize: 9,
+    fontWeight: '600',
   },
   
   // 일정 카드
@@ -285,8 +606,15 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginBottom: 8,
   },
+  flightBadge: {
+    backgroundColor: '#F0F9FF',
+  },
   currentBadge: {
     backgroundColor: '#E0F2FE',
+  },
+  flightCard: {
+    borderLeftWidth: 3,
+    borderLeftColor: colors.primary,
   },
   categoryText: {
     ...textStyles.body4,

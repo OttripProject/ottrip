@@ -85,16 +85,16 @@ export default function LoginScreen() {
     setIsLoading(true);
     try {
       if (Platform.OS === 'web') {
-        const clientId = env.EXPO_PUBLIC_GOOGLE_CLIENT_ID;
-        
-        if (!clientId) {
+    const clientId = env.EXPO_PUBLIC_GOOGLE_CLIENT_ID;
+    
+    if (!clientId) {
           Alert.alert('오류', 'Google OAuth 클라이언트 ID가 설정되지 않았습니다.');
           setIsLoading(false);
-          return;
-        }
-        
-        const newNonce = await generateNonce();
-        setNonce(newNonce);
+      return;
+    }
+
+      const newNonce = await generateNonce();
+      setNonce(newNonce);
         const redirectUriRaw = `${window.location.origin}/auth/callback`;
         const redirectUri = encodeURIComponent(redirectUriRaw);
         const scope = encodeURIComponent('openid email profile');
@@ -132,12 +132,12 @@ export default function LoginScreen() {
           console.error('Google Sign-In 에러:', error);
           
           if (error.code === 'SIGN_IN_CANCELLED') {
-            setIsLoading(false);
+          setIsLoading(false);
           } else if (error.code === 'IN_PROGRESS') {
             // 이미 진행 중 - 로딩 상태 유지
-          } else {
+        } else {
             Alert.alert('오류', '로그인에 실패했습니다: ' + (error.message || '알 수 없는 오류'));
-            setIsLoading(false);
+          setIsLoading(false);
           }
         }
       }
