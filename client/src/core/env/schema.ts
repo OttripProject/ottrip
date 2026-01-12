@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 export const envSchema = z.object({
-  EXPO_PUBLIC_CHANNEL: z.enum(["dev", "prod"]).default("dev"),
+  EXPO_PUBLIC_CHANNEL: z.enum(["dev", "prod", "local"]).default("local"),
   EXPO_PUBLIC_API_URL: z
     .string()
     .default("https://ottrip.onrender.com"),

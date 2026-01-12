@@ -27,12 +27,16 @@ export default ({ config }: ConfigContext): ExpoConfig => {
   }
 
   const { data: env, error } = envSchema.safeParse(process.env);
-  if (!env) throw new Error("Env parse fail", { cause: error });
+  if (!env) {
+    console.error("❌ 환경 변수 검증 실패 상세 사유:", JSON.stringify(error.format(), null, 2));
+    throw new Error("Env parse fail", { cause: error });
+  }
 
   const PROFILE = match(env)
     .with({ EXPO_PUBLIC_CHANNEL: "prod" }, () => "prod")
     .with({ EXPO_PUBLIC_CHANNEL: "dev", DEV_CLIENT: false }, () => "alpha")
     .with({ EXPO_PUBLIC_CHANNEL: "dev", DEV_CLIENT: true }, () => "dev")
+    .with({ EXPO_PUBLIC_CHANNEL: "local" }, () => "local")
     .exhaustive();
 
   const switchProfile = <T>(map: Record<typeof PROFILE, T>) => map[PROFILE];
