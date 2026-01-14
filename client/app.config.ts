@@ -20,7 +20,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
      */
     return {
       ...config,
-      name: "Fallback",
+      name: "OTTRIP",
       slug: "ottrip",
       extra: { eas: { projectId } },
     };
