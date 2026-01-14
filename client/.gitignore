@@ -9,7 +9,6 @@ ios/
 .expo/
 dist/
 npm-debug.*
-web-build/
 expo-env.d.ts
 
 # Native
