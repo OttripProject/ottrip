@@ -81,7 +81,6 @@ export default function WeeklyScreen() {
       segmentIndex?: number;
     }> = [];
     
-    // 일정 추가
     selectedDateItineraries.forEach((itinerary: Itinerary) => {
       schedules.push({
         type: 'itinerary',
@@ -405,14 +404,13 @@ const styles = StyleSheet.create({
   planSelector: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    gap: 8,
     marginBottom: 4,
   },
   headerTitle: {
     ...textStyles.h3,
     color: colors.black,
-    flex: 1,
-    marginRight: 8,
+    flexShrink: 1,
   },
   headerSubtitle: {
     ...textStyles.body2,
@@ -588,6 +586,8 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1,
     borderColor: colors.gray200,
+    borderLeftWidth: 3,
+    borderLeftColor: colors.black,
   },
   currentCard: {
     borderColor: '#0EA5E9',
