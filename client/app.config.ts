@@ -96,6 +96,11 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     },
     web: {
       favicon: "./assets/favicon.png",
+      name: switchProfile({
+        dev: "Ottrip Dev",
+        alpha: "Ottrip Alpha",
+        prod: "OTTRIP",
+      }),
     },
     plugins: [
       "expo-asset",
