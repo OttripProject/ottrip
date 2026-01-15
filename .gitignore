@@ -13,7 +13,6 @@ pnpm-debug.*
 # Build outputs
 dist/
 build/
-web-build/
 .expo/
 .next/
 
