@@ -11,7 +11,6 @@ import Animated, {
 import { colors } from '@/ui/tokens/colors';
 import TodayScreen from './TodayScreen.native';
 import WeeklyScreen from './WeeklyScreen.native';
-import ProfileScreen from './ProfileScreen.native';
 import { Ionicons } from '@expo/vector-icons';
 
 const Tab = createBottomTabNavigator();
@@ -107,14 +106,6 @@ function WeeklyScreenWithAnimation() {
   );
 }
 
-function ProfileScreenWithAnimation() {
-  return (
-    <SlideScreenWrapper screenIndex={2} screenName="Profile">
-      <ProfileScreen />
-    </SlideScreenWrapper>
-  );
-}
-
 export default function MobileTestNavigator() {
   return (
     <View style={styles.navigatorContainer}>
@@ -164,20 +155,6 @@ export default function MobileTestNavigator() {
           tabBarIcon: ({ color, focused }: { color: string; focused: boolean }) => (
             <Ionicons
               name={focused ? 'calendar' : 'calendar-outline'}
-              size={24}
-              color={color}
-            />
-          ),
-        }}
-      />
-      <Tab.Screen
-        name="Profile"
-        component={ProfileScreenWithAnimation}
-        options={{
-          tabBarLabel: '프로필',
-          tabBarIcon: ({ color, focused }: { color: string; focused: boolean }) => (
-            <Ionicons
-              name={focused ? 'person' : 'person-outline'}
               size={24}
               color={color}
             />

@@ -2,13 +2,12 @@ import dayjs from 'dayjs';
 
 export function formatKoreanDate(date: dayjs.Dayjs | string): string {
   const dateObj = typeof date === 'string' ? dayjs(date) : date;
-  const year = dateObj.year();
   const month = dateObj.month() + 1; 
   const day = dateObj.date();
   const weekdays = ['일요일', '월요일', '화요일', '수요일', '목요일', '금요일', '토요일'];
   const weekday = weekdays[dateObj.day()];
   
-  return `${year}년 ${month}월 ${day}일 ${weekday}`;
+  return `${month}월 ${day}일 ${weekday}`;
 }
 
 export function getTodayKoreanDate(): string {

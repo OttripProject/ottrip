@@ -1,11 +1,14 @@
-import React from 'react';
-import { View, Text, ScrollView, StyleSheet, Pressable } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, ScrollView, StyleSheet, Pressable, Modal } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { getTodayKoreanDate } from '@/utils/dateUtils';
 import { colors } from '@/ui/tokens/colors';
 import { textStyles } from '@/ui/tokens/typography';
+import ProfileModal from '@/components/modals/mobile/ProfileModal.native';
 
 export default function TodayScreen() {
   const formattedDate = getTodayKoreanDate();
+  const [profileModalVisible, setProfileModalVisible] = useState(false);
 
   return (
     <View style={styles.container}>
@@ -16,8 +19,18 @@ export default function TodayScreen() {
       >
         {/* 헤더 */}
         <View style={styles.header}>
-          <Text style={styles.greeting}>오늘의 여행</Text>
-          <Text style={styles.date}>{formattedDate}</Text>
+          <View style={styles.headerContent}>
+            <View style={styles.headerTextContainer}>
+              <Text style={styles.date}>{formattedDate}</Text>
+              <Text style={styles.greeting}>오늘의 여행</Text>
+            </View>
+            <Pressable
+              style={styles.settingsButton}
+              onPress={() => setProfileModalVisible(true)}
+            >
+              <Ionicons name="settings-outline" size={24} color={colors.gray900} />
+            </Pressable>
+          </View>
         </View>
 
         {/* 현재 진행 중 활동 카드 */}
@@ -86,6 +99,19 @@ export default function TodayScreen() {
         </View>
 
       </ScrollView>
+
+      <Modal
+        visible={profileModalVisible}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        transparent={true}
+        onRequestClose={() => setProfileModalVisible(false)}
+      >
+        <ProfileModal
+          visible={profileModalVisible}
+          onClose={() => setProfileModalVisible(false)}
+        />
+      </Modal>
     </View>
   );
 }
@@ -107,13 +133,25 @@ const styles = StyleSheet.create({
     paddingBottom: 24,
     backgroundColor: colors.white,
   },
+  headerContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  headerTextContainer: {
+    flex: 1,
+  },
+  settingsButton: {
+    padding: 4,
+    marginTop: -4,
+  },
   greeting: {
     ...textStyles.h2,
     color: colors.black,
     marginBottom: 4,
   },
   date: {
-    ...textStyles.body2,
+    ...textStyles.h5,
     color: colors.gray600,
   },
   

@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { View, Text, ScrollView, StyleSheet, Pressable, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, Pressable, ActivityIndicator, Modal } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import dayjs from 'dayjs';
 import { colors } from '@/ui/tokens/colors';
@@ -9,11 +9,13 @@ import { spacing } from '@/ui/tokens/spacing';
 import { usePlansQuery } from '@/hooks/usePlansQuery';
 import { usePlanDataQuery } from '@/hooks/usePlanDataQuery';
 import { Plan, Itinerary, FlightRead } from '@/types/api';
+import ProfileModal from '@/components/modals/mobile/ProfileModal.native';
 
 export default function WeeklyScreen() {
   const plansQuery = usePlansQuery();
   const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
   const [showPlanSelector, setShowPlanSelector] = useState(false);
+  const [profileModalVisible, setProfileModalVisible] = useState(false);
   
   useEffect(() => {
     if (!selectedPlan && plansQuery.plans.length > 0) {
@@ -142,19 +144,27 @@ export default function WeeklyScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Pressable
-          style={styles.planSelector}
-          onPress={() => setShowPlanSelector(!showPlanSelector)}
-        >
-          <Text style={styles.headerTitle} numberOfLines={1}>
-            {selectedPlan?.title || '여행 선택'}
-          </Text>
-          <Ionicons 
-            name={showPlanSelector ? 'chevron-up' : 'chevron-down'} 
-            size={20} 
-            color={colors.gray600} 
-          />
-        </Pressable>
+        <View style={styles.headerTopRow}>
+          <Pressable
+            style={styles.planSelector}
+            onPress={() => setShowPlanSelector(!showPlanSelector)}
+          >
+            <Text style={styles.headerTitle} numberOfLines={1}>
+              {selectedPlan?.title || '여행 선택'}
+            </Text>
+            <Ionicons 
+              name={showPlanSelector ? 'chevron-up' : 'chevron-down'} 
+              size={20} 
+              color={colors.gray600} 
+            />
+          </Pressable>
+          <Pressable
+            style={styles.settingsButton}
+            onPress={() => setProfileModalVisible(true)}
+          >
+            <Ionicons name="settings-outline" size={24} color={colors.gray900} />
+          </Pressable>
+        </View>
         <Text style={styles.headerSubtitle}>{weekRange}</Text>
         
         {showPlanSelector && (
@@ -365,6 +375,19 @@ export default function WeeklyScreen() {
         )}
 
       </ScrollView>
+
+      <Modal
+        visible={profileModalVisible}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        transparent={true}
+        onRequestClose={() => setProfileModalVisible(false)}
+      >
+        <ProfileModal
+          visible={profileModalVisible}
+          onClose={() => setProfileModalVisible(false)}
+        />
+      </Modal>
     </View>
   );
 }
@@ -401,11 +424,21 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
     position: 'relative',
   },
+  headerTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 4,
+  },
   planSelector: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    marginBottom: 4,
+    flex: 1,
+    marginRight: 8,
+  },
+  settingsButton: {
+    padding: 4,
   },
   headerTitle: {
     ...textStyles.h3,
