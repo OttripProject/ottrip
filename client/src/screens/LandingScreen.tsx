@@ -1,7 +1,7 @@
 import { View, Text, StyleSheet, TouchableOpacity, Platform, Animated } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Svg, { Path } from 'react-native-svg';
 import GradientBackground from '../ui/components/GradientBackground';
 import { colors } from '../ui/tokens/colors';       
@@ -12,9 +12,9 @@ import { radii } from '@/ui/tokens/radii';
 export default function LandingScreen() {
   const navigation = useNavigation();
   const rotateAnim = useRef(new Animated.Value(0)).current;
+  const [isHovered, setIsHovered] = useState(false);
 
   useEffect(() => {
-    // 무한 회전 애니메이션
     Animated.loop(
       Animated.timing(rotateAnim, {
         toValue: 1,
@@ -29,18 +29,16 @@ export default function LandingScreen() {
     outputRange: ['0deg', '360deg'],
   });
 
-  // 원의 중심과 반지름
-  const svgSize = 320; // SVG 크기를 더 크게
+  const svgSize = 320; 
   const centerX = svgSize / 2;
   const centerY = svgSize / 2;
   const radius = 138;
   const strokeWidth = 15;
   
-  // 2개의 호 세그먼트 (끊기게)
   const segments = 2;
-  const gapAngle = 20; // 끊기는 각도
-  const segmentAngle = (360 - gapAngle) / segments; // 각 세그먼트의 각도
-  
+  const gapAngle = 20; 
+  const segmentAngle = (360 - gapAngle) / segments; 
+
   const createArcPath = (startAngle: number, endAngle: number) => {
     const start = (startAngle * Math.PI) / 180;
     const end = (endAngle * Math.PI) / 180;
@@ -53,9 +51,8 @@ export default function LandingScreen() {
     return `M ${x1} ${y1} A ${radius} ${radius} 0 ${largeArcFlag} 1 ${x2} ${y2}`;
   };
   
-  // 호 세그먼트만 생성 (직선 없이)
   const arcPaths = Array.from({ length: segments }).map((_, index) => {
-    const startAngle = index * (segmentAngle + gapAngle) - 90; // -90도부터 시작 (상단)
+    const startAngle = index * (segmentAngle + gapAngle) - 90; 
     const endAngle = startAngle + segmentAngle;
     return createArcPath(startAngle, endAngle);
   });
@@ -80,7 +77,7 @@ export default function LandingScreen() {
                   fill="none"
                   stroke="rgba(255, 255, 255)"
                   strokeWidth={strokeWidth}
-                  strokeLinecap="square"
+                  strokeLinecap="round"
                 />
               ))}
             </Svg>
@@ -96,8 +93,15 @@ export default function LandingScreen() {
           </View>
         </View>
         <TouchableOpacity 
-          style={styles.button}
+          style={[
+            styles.button,
+            isHovered && styles.buttonHovered,
+          ]}
           onPress={() => navigation.navigate('로그인' as never)}
+          {...(Platform.OS === 'web' && {
+            onMouseEnter: () => setIsHovered(true),
+            onMouseLeave: () => setIsHovered(false),
+          } as any)}
         >
           <Text style={styles.buttonText}>여행 시작하기</Text>
         </TouchableOpacity>
@@ -149,10 +153,13 @@ const styles = StyleSheet.create({
     color: colors.gray800,
   },
   button: {
-    backgroundColor: colors.primary,
+    backgroundColor: colors.black,
     paddingHorizontal: spacing['2xl'],
     paddingVertical: spacing.lg,
     borderRadius: radii.base,
+  },
+  buttonHovered: {
+    backgroundColor: colors.primary,
   },
   buttonText: {
     color: colors.white,
