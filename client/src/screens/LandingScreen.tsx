@@ -11,51 +11,78 @@ import { radii } from '@/ui/tokens/radii';
 
 export default function LandingScreen() {
   const navigation = useNavigation();
-  const rotateAnim = useRef(new Animated.Value(0)).current;
+  const rotateAnim1 = useRef(new Animated.Value(0)).current; 
+  const rotateAnim2 = useRef(new Animated.Value(0)).current;
   const [isHovered, setIsHovered] = useState(false);
 
   useEffect(() => {
-    Animated.loop(
-      Animated.timing(rotateAnim, {
+    const startRotation = () => {
+      rotateAnim1.setValue(0);
+      Animated.timing(rotateAnim1, {
         toValue: 1,
-        duration: 30000,
+        duration: 40000,
         useNativeDriver: true,
-      })
-    ).start();
-  }, [rotateAnim]);
+      }).start(({ finished }) => {
+        if (finished) {
+          startRotation();
+        }
+      });
+    };
+    startRotation();
+    return () => {
+      rotateAnim1.stopAnimation();
+    };
+  }, [rotateAnim1]);
 
-  const rotate = rotateAnim.interpolate({
+  useEffect(() => {
+    const startRotation = () => {
+      rotateAnim2.setValue(0);
+      Animated.timing(rotateAnim2, {
+        toValue: 1,
+        duration: 60000, 
+        useNativeDriver: true,
+      }).start(({ finished }) => {
+        if (finished) {
+          startRotation();
+        }
+      });
+    };
+    startRotation();
+    return () => {
+      rotateAnim2.stopAnimation();
+    };
+  }, [rotateAnim2]);
+
+  const rotate1 = rotateAnim1.interpolate({
     inputRange: [0, 1],
     outputRange: ['0deg', '360deg'],
   });
 
-  const svgSize = 320; 
+  const rotate2 = rotateAnim2.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '360deg'],
+  });
+
+  const svgSize = 480; 
   const centerX = svgSize / 2;
   const centerY = svgSize / 2;
-  const radius = 138;
-  const strokeWidth = 15;
+  const squareSize1 = 350; 
+  const squareSize2 = 380; 
+  const strokeWidth1 = 8; 
+  const strokeWidth2 = 15;
   
-  const segments = 2;
-  const gapAngle = 20; 
-  const segmentAngle = (360 - gapAngle) / segments; 
-
-  const createArcPath = (startAngle: number, endAngle: number) => {
-    const start = (startAngle * Math.PI) / 180;
-    const end = (endAngle * Math.PI) / 180;
-    const x1 = centerX + radius * Math.cos(start);
-    const y1 = centerY + radius * Math.sin(start);
-    const x2 = centerX + radius * Math.cos(end);
-    const y2 = centerY + radius * Math.sin(end);
-    const largeArcFlag = end - start > Math.PI ? 1 : 0;
+  const createSquarePath = (size: number) => {
+    const half = size / 2;
+    const topLeft = { x: centerX - half, y: centerY - half };
+    const topRight = { x: centerX + half, y: centerY - half };
+    const bottomRight = { x: centerX + half, y: centerY + half };
+    const bottomLeft = { x: centerX - half, y: centerY + half };
     
-    return `M ${x1} ${y1} A ${radius} ${radius} 0 ${largeArcFlag} 1 ${x2} ${y2}`;
+    return `M ${topLeft.x} ${topLeft.y} L ${topRight.x} ${topRight.y} L ${bottomRight.x} ${bottomRight.y} L ${bottomLeft.x} ${bottomLeft.y} Z`;
   };
   
-  const arcPaths = Array.from({ length: segments }).map((_, index) => {
-    const startAngle = index * (segmentAngle + gapAngle) - 90; 
-    const endAngle = startAngle + segmentAngle;
-    return createArcPath(startAngle, endAngle);
-  });
+  const squarePath1 = createSquarePath(squareSize1);
+  const squarePath2 = createSquarePath(squareSize2); 
 
   return (
     <GradientBackground>
@@ -65,28 +92,42 @@ export default function LandingScreen() {
             style={[
               styles.rotatingCircleWrapper,
               {
-                transform: [{ rotate }],
+                transform: [{ rotate: rotate1 }],
               },
             ]}
           >
-            <Svg width={320} height={320} style={styles.svg}>
-              {arcPaths.map((path, index) => (
-                <Path
-                  key={index}
-                  d={path}
-                  fill="none"
-                  stroke="rgba(255, 255, 255)"
-                  strokeWidth={strokeWidth}
-                  strokeLinecap="round"
-                />
-              ))}
+            <Svg width={480} height={480} style={styles.svg}>
+              <Path
+                d={squarePath1}
+                fill="none"
+                stroke="rgba(255, 255, 255, 0.6)"
+                strokeWidth={strokeWidth1}
+                strokeLinecap="round"
+              />
+            </Svg>
+          </Animated.View>
+          
+          <Animated.View
+            style={[
+              styles.rotatingCircleWrapper,
+              {
+                transform: [{ rotate: rotate2 }],
+              },
+            ]}
+          >
+            <Svg width={480} height={480} style={styles.svg}>
+              <Path
+                d={squarePath2}
+                fill="none"
+                stroke="rgba(255, 255, 255, 0.7)"
+                strokeWidth={strokeWidth2}
+                strokeLinecap="round"
+              />
             </Svg>
           </Animated.View>
           <View style={styles.textContainer}>
             <Text style={styles.title}>OTTRIP</Text>
-            <Text style={styles.description}>
-              여행 계획을 더 스마트하게
-            </Text>
+              <Text style={styles.description}>여행 계획을 더 스마트하게</Text>
             <Text style={styles.subDescription}>
               AI 기반 여행 일정 관리로 더 나은 여행을 계획하세요
             </Text>
@@ -103,7 +144,10 @@ export default function LandingScreen() {
             onMouseLeave: () => setIsHovered(false),
           } as any)}
         >
-          <Text style={styles.buttonText}>여행 시작하기</Text>
+          <Text style={[
+            styles.buttonText,
+            isHovered && styles.buttonTextHovered,
+          ]}>여행 시작하기</Text>
         </TouchableOpacity>
       </SafeAreaView>
     </GradientBackground>
@@ -124,8 +168,8 @@ const styles = StyleSheet.create({
   },
   rotatingCircleWrapper: {
     position: 'absolute',
-    width: 320,
-    height: 320,
+    width: 480,
+    height: 480,
   },
   svg: {
     position: 'absolute',
@@ -137,33 +181,46 @@ const styles = StyleSheet.create({
   },
   title: {
     ...textStyles.h2,
-    fontSize: 48,
-    marginBottom: spacing.xl,
+    fontSize: 56,
     color: colors.gray900,
+    letterSpacing: spacing.sm,
+    textShadowColor: 'rgba(0, 0, 0, 0.1)',
+    textShadowOffset: { width: 0, height: 4 },
+    textShadowRadius: 10,
+    marginBottom: spacing.xl,
   },
   description: {
     ...textStyles.h3,
-    textAlign: 'center',
-    marginBottom: spacing.xs,
     color: colors.gray800,
+    textAlign: 'center',
   },
   subDescription: {
     ...textStyles.body2,
     textAlign: 'center',
     color: colors.gray800,
+    lineHeight: 22,
   },
   button: {
-    backgroundColor: colors.black,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
     paddingHorizontal: spacing['2xl'],
     paddingVertical: spacing.lg,
-    borderRadius: radii.base,
+    borderRadius: 30,
+    borderColor: 'rgba(255, 255, 255, 0.4)',
+    borderWidth: 1,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+    elevation: 10,
   },
   buttonHovered: {
-    backgroundColor: colors.primary,
+    backgroundColor: colors.black,
   },
   buttonText: {
+    ...textStyles.h5,
+    color: colors.gray800,
+  },
+  buttonTextHovered: {
     color: colors.white,
-    fontSize: 16,
-    fontWeight: '600',
   },
 });

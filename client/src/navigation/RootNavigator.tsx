@@ -190,7 +190,13 @@ export default function RootNavigator() {
           </>
         ) : (
           <>
-            <Stack.Screen name="OTTRIP_TODAY" component={LandingScreen} />
+            <Stack.Screen 
+              name="OTTRIP_TODAY" 
+              component={LandingScreen}
+              options={{
+                title: 'OTTRIP',
+              }}
+            />
             <Stack.Screen name="로그인" component={LoginScreen} />
             <Stack.Screen name="약관동의" component={TermsConsentScreen} />
             <Stack.Screen name="프로필 입력" component={RegisterProfileScreen} />
