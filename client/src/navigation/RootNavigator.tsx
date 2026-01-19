@@ -7,6 +7,7 @@ import TermsConsentScreen from "@/screens/TermsConsentScreen";
 import RegisterProfileScreen from "@/screens/RegisterProfileScreen";
 import TermsDetailScreen from "@/screens/TermsDetailScreen";
 import WelcomeScreen from "@/screens/auth/WelcomeScreen";
+import LandingScreen from "@/screens/LandingScreen";
 import { NavigationContainer, type NavigationContainerRef } from "@react-navigation/native";
 import { createStackNavigator } from "@react-navigation/stack";
 import NotFoundScreen from "@/screens/error/NotFoundScreen";
@@ -75,13 +76,22 @@ export default function RootNavigator() {
               registerComplete = value === 'true';
             } catch {}
           }
-          setInitialRoute(registerComplete ? 'REGISTER_COMPLETE' : 'OTTRIP');
+          setInitialRoute(registerComplete ? 'WELCOME' : 'OTTRIP');
         };
         checkInitialRoute();
       }
     } else if (!isAuthenticated) {
-      if (!initialRoute || (initialRoute !== '로그인' && initialRoute !== '약관동의' && initialRoute !== '프로필 입력' && initialRoute !== '인증')) {
-        setInitialRoute('로그인');
+      if (Platform.OS === 'web' && typeof window !== 'undefined') {
+        const path = window.location.pathname;
+        if (path === '/' || path === '') {
+          setInitialRoute('OTTRIP_TODAY');
+        } else if (!initialRoute || (initialRoute !== '로그인' && initialRoute !== '약관동의' && initialRoute !== '프로필 입력' && initialRoute !== '인증' && initialRoute !== 'OTTRIP_TODAY')) {
+          setInitialRoute('로그인');
+        }
+      } else {
+        if (!initialRoute || (initialRoute !== '로그인' && initialRoute !== '약관동의' && initialRoute !== '프로필 입력' && initialRoute !== '인증')) {
+          setInitialRoute('로그인');
+        }
       }
     }
   }, [isAuthenticated, isLoading, initialRoute]);
@@ -108,8 +118,8 @@ export default function RootNavigator() {
           } catch {}
         }
 
-        if (registerComplete && initialRoute !== 'REGISTER_COMPLETE') {
-          navRef.current?.reset({ index: 0, routes: [{ name: 'REGISTER_COMPLETE' }] });
+        if (registerComplete && initialRoute !== 'WELCOME') {
+          navRef.current?.reset({ index: 0, routes: [{ name: 'WELCOME' }] });
           return;
         }
 
@@ -142,11 +152,9 @@ export default function RootNavigator() {
     prefixes,
     config: {
       screens: {
+        OTTRIP_TODAY: "", 
         "로그인": "login",
         인증: "auth/callback",
-        OTTRIP: {
-          path: "",
-        },
         프로필: "profile",
         PLAN: {
           path: "plans/:publicId",
@@ -175,13 +183,20 @@ export default function RootNavigator() {
             <Stack.Screen name="OTTRIP" component={DashboardScreen} />
             <Stack.Screen name="프로필" component={ProfileScreen} />
             <Stack.Screen name="INVITE_ACCEPT" component={InviteAcceptScreen} />
-            <Stack.Screen name="REGISTER_COMPLETE" component={WelcomeScreen} />
+            <Stack.Screen name="WELCOME" component={WelcomeScreen} />
             <Stack.Screen name="PLAN" component={DashboardScreen} />
             <Stack.Screen name="NOT FOUND" component={NotFoundScreen} />
             <Stack.Screen name="FORBIDDEN" component={ForbiddenScreen} />
           </>
         ) : (
           <>
+            <Stack.Screen 
+              name="OTTRIP_TODAY" 
+              component={LandingScreen}
+              options={{
+                title: 'OTTRIP',
+              }}
+            />
             <Stack.Screen name="로그인" component={LoginScreen} />
             <Stack.Screen name="약관동의" component={TermsConsentScreen} />
             <Stack.Screen name="프로필 입력" component={RegisterProfileScreen} />
