@@ -183,7 +183,6 @@ const styles = StyleSheet.create({
     ...textStyles.h2,
     fontSize: 56,
     color: colors.gray900,
-    letterSpacing: spacing.sm,
     textShadowColor: 'rgba(0, 0, 0, 0.1)',
     textShadowOffset: { width: 0, height: 4 },
     textShadowRadius: 10,
