@@ -137,6 +137,9 @@ export default function LandingScreen() {
           style={[
             styles.button,
             isHovered && styles.buttonHovered,
+            Platform.OS === 'web' && {
+              boxShadow: 'inset 0 2px 4px rgba(0, 0, 0, 0.1), inset 0 -2px 4px rgba(255, 255, 255, 0.4)',
+            },
           ]}
           onPress={() => navigation.navigate('로그인' as never)}
           {...(Platform.OS === 'web' && {
