@@ -27,12 +27,20 @@ export default function AuthCallbackScreen() {
     const params = new URLSearchParams(hash.startsWith('#') ? hash.substring(1) : hash);
     const idToken = params.get('id_token');
     
+    const isPopup = window.opener && !window.opener.closed;
+    
     const run = async () => {
       if (!idToken) {
-        // @ts-ignore
-        navigation.replace('로그인');
+        if (isPopup) {
+          window.opener?.postMessage({ type: 'google_oauth_error', error: 'No id_token' }, window.location.origin);
+          window.close();
+        } else {
+          // @ts-ignore
+          navigation.replace('로그인');
+        }
         return;
       }
+      
       try {
         const response = await authApi.googleLogin(idToken);
         let email: string | undefined = undefined;
@@ -42,36 +50,50 @@ export default function AuthCallbackScreen() {
           const obj = JSON.parse(json);
           email = typeof obj?.email === 'string' ? obj.email : undefined;
         } catch {}
-        if (response.isRegistered) {
-          await login({
-            isRegistered: true,
-            accessToken: response.accessToken,
-            refreshToken: response.refreshToken,
-          });
-          
-          try {
-            const token = Platform.OS === 'web'
-              ? window.localStorage.getItem('pendingInviteToken')
-              : await SecureStore.getItemAsync('pendingInviteToken');
-            if (token) {
-              await api.post(`/private/plans/invitations/${token}/accept`);
-              if (Platform.OS === 'web') {
-                window.localStorage.removeItem('pendingInviteToken');
-                window.dispatchEvent(new Event('plans-refresh'));
-              } else {
-                await SecureStore.deleteItemAsync('pendingInviteToken');
-              }
-            }
-          } catch {}
+        
+        if (isPopup) {
+          window.opener?.postMessage(
+            { type: 'google_oauth_token', id_token: idToken },
+            window.location.origin
+          );
+          window.close();
         } else {
-          await login(response);
-          // @ts-ignore
-          navigation.replace('약관동의', { registerToken: response.registerToken, prefill: response.prefill, email });
-          return;
+          if (response.isRegistered) {
+            await login({
+              isRegistered: true,
+              accessToken: response.accessToken,
+              refreshToken: response.refreshToken,
+            });
+            
+            try {
+              const token = Platform.OS === 'web'
+                ? window.localStorage.getItem('pendingInviteToken')
+                : await SecureStore.getItemAsync('pendingInviteToken');
+              if (token) {
+                await api.post(`/private/plans/invitations/${token}/accept`);
+                if (Platform.OS === 'web') {
+                  window.localStorage.removeItem('pendingInviteToken');
+                  window.dispatchEvent(new Event('plans-refresh'));
+                } else {
+                  await SecureStore.deleteItemAsync('pendingInviteToken');
+                }
+              }
+            } catch {}
+          } else {
+            await login(response);
+            // @ts-ignore
+            navigation.replace('약관동의', { registerToken: response.registerToken, prefill: response.prefill, email });
+            return;
+          }
         }
       } catch (error: any) {
-        // @ts-ignore
-        navigation.replace('로그인');
+        if (isPopup) {
+          window.opener?.postMessage({ type: 'google_oauth_error', error: 'Login failed' }, window.location.origin);
+          window.close();
+        } else {
+          // @ts-ignore
+          navigation.replace('로그인');
+        }
       }
     };
     run();

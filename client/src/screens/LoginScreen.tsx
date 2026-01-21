@@ -26,6 +26,32 @@ const generateNonce = async () => {
   }
 };
 
+const isWebView = (): boolean => {
+  if (Platform.OS !== 'web' || typeof window === 'undefined') {
+    return false;
+  }
+  
+  // 예: http://localhost:8081/login?test_webview=true
+  const urlParams = new URLSearchParams(window.location.search);
+  if (urlParams.get('test_webview') === 'true') {
+    return true;
+  }
+  
+  const userAgent = window.navigator.userAgent.toLowerCase();
+  
+  return (
+    userAgent.includes('wv') ||
+    userAgent.includes('naver') ||
+    userAgent.includes('kakaotalk') ||
+    userAgent.includes('instagram') ||
+    userAgent.includes('line') ||
+    userAgent.includes('fbav') || 
+    userAgent.includes('fban') || 
+    userAgent.includes('fbsv') || 
+    (userAgent.includes('mobile') && userAgent.includes('safari') && !userAgent.includes('chrome'))
+  );
+};
+
 const env = loadPublicEnv();
 
 export default function LoginScreen() {
@@ -36,6 +62,21 @@ export default function LoginScreen() {
 
   useEffect(() => {
     if (Platform.OS === 'web') {
+      const handleMessage = (event: MessageEvent) => {
+        if (event.origin !== window.location.origin) {
+          return;
+        }
+        
+        if (event.data && event.data.type === 'google_oauth_token' && event.data.id_token) {
+          handleGoogleSignIn(event.data.id_token);
+        } else if (event.data && event.data.type === 'google_oauth_error') {
+          Alert.alert('오류', '로그인에 실패했습니다.');
+          setIsLoading(false);
+        }
+      };
+      
+      window.addEventListener('message', handleMessage);
+      
       const hash = window.location.hash;
 
       if (hash && hash.includes('invite=')) {
@@ -58,6 +99,10 @@ export default function LoginScreen() {
           handleGoogleSignIn(idToken);
         }
       }
+      
+      return () => {
+        window.removeEventListener('message', handleMessage);
+      };
     }
   }, [nonce]);
 
@@ -82,23 +127,53 @@ export default function LoginScreen() {
         
         const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${redirectUri}&scope=${scope}&response_type=${responseType}&nonce=${newNonce}&prompt=${prompt}`;
         
-        try {
-          window.location.href = authUrl;
-        } catch (e) {
+        // 웹뷰 감지 후 조건부 처리
+        if (isWebView()) {
+          // 웹뷰: 팝업으로 열기
+          const popup = window.open(
+            authUrl,
+            'google_oauth',
+            'width=500,height=600,scrollbars=yes,resizable=yes'
+          );
+          
+          if (!popup) {
+            Alert.alert('팝업 차단', '팝업이 차단되었습니다. 브라우저 설정에서 팝업을 허용해주세요.');
+            setIsLoading(false);
+            return;
+          }
+          
+          const checkPopup = setInterval(() => {
+            if (popup.closed) {
+              clearInterval(checkPopup);
+              setIsLoading(false);
+            }
+          }, 500);
+          
+          setTimeout(() => {
+            clearInterval(checkPopup);
+            if (!popup.closed) {
+              popup.close();
+              setIsLoading(false);
+            }
+          }, 5 * 60 * 1000);
+        } else {
+          try {
+            window.location.href = authUrl;
+          } catch (e) {
+            Alert.alert('오류', '로그인 페이지를 열 수 없습니다.');
+            setIsLoading(false);
+          }
         }
       } else {
-        // 모바일에서도 웹 redirect URI 사용 (Google Cloud Console에 추가 가능)
-        // 환경에 따라 웹 URL 결정
+
         const getWebRedirectUri = (): string => {
           const channel = env.EXPO_PUBLIC_CHANNEL;
           if (channel === 'prod') {
             return 'https://ottrip.today/auth/callback';
           } else {
-            // dev/alpha 환경은 API URL 기반으로 결정
             const apiUrl = env.EXPO_PUBLIC_API_URL;
-            // API URL에서 도메인 추출 (예: https://ottrip.onrender.com -> https://ottrip.today)
-            // 또는 환경 변수로 별도 설정 가능
-            return 'https://ottrip-dev-web.onrender.com/auth/callback'; // 임시로 prod와 동일하게 설정
+
+            return 'https://ottrip-dev-web.onrender.com/auth/callback'; 
           }
         };
         
@@ -107,12 +182,10 @@ export default function LoginScreen() {
         const responseType = 'id_token';
         const prompt = encodeURIComponent('consent select_account');
         
-        // redirect_uri를 URL 인코딩
         const encodedRedirectUri = encodeURIComponent(redirectUri);
         
         const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodedRedirectUri}&scope=${scope}&response_type=${responseType}&nonce=${newNonce}&prompt=${prompt}`;
         
-        // 웹 redirect URI를 사용하므로, 앱 스킴으로 변환하여 처리
         const appScheme = Platform.OS === 'ios'
           ? (Constants.expoConfig?.ios?.bundleIdentifier || 'com.ottrip.app.OttripAlpha')
           : (Constants.expoConfig?.android?.package || 'com.ottrip.app.OttripAlpha');
@@ -120,7 +193,7 @@ export default function LoginScreen() {
         
         const result = await WebBrowser.openAuthSessionAsync(
           authUrl, 
-          appRedirectUri, // 앱으로 돌아오기 위한 스킴
+          appRedirectUri, 
           {
             preferEphemeralSession: false, 
             showInRecents: true,
