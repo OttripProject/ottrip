@@ -378,8 +378,7 @@ export default function WeeklyScreen() {
 
       <Modal
         visible={profileModalVisible}
-        animationType="slide"
-        presentationStyle="pageSheet"
+        animationType="fade"
         transparent={true}
         onRequestClose={() => setProfileModalVisible(false)}
       >
