@@ -11,7 +11,10 @@ import Animated, {
 import { colors } from '@/ui/tokens/colors';
 import TodayScreen from './TodayScreen.native';
 import WeeklyScreen from './WeeklyScreen.native';
-import { Ionicons } from '@expo/vector-icons';
+import HomeSelectedIcon from '../../assets/mobile_home_black.svg';
+import HomeUnselectedIcon from '../../assets/mobile_home_white.svg';
+import CalendarSelectedIcon from '../../assets/mobile_calendar_black.svg';
+import CalendarUnselectedIcon from '../../assets/mobile_calendar_white.svg';
 
 const Tab = createBottomTabNavigator();
 
@@ -112,8 +115,8 @@ export default function MobileTestNavigator() {
       <Tab.Navigator
         screenOptions={{
           headerShown: false,
-          lazy: true, // 탭을 필요할 때만 로드하여 초기 로딩 최적화
-          tabBarActiveTintColor: colors.gray900,
+          lazy: true, 
+          tabBarActiveTintColor: colors.primary,
           tabBarInactiveTintColor: colors.gray600,
           tabBarStyle: {
             backgroundColor: 'rgba(255, 255, 255, 0.8)',
@@ -139,11 +142,7 @@ export default function MobileTestNavigator() {
         options={{
           tabBarLabel: '오늘',
           tabBarIcon: ({ color, focused }: { color: string; focused: boolean }) => (
-            <Ionicons
-              name={focused ? 'home' : 'home-outline'}
-              size={24}
-              color={color}
-            />
+            focused ? <HomeSelectedIcon width={24} height={24} color={colors.primary} /> : <HomeUnselectedIcon width={24} height={24} color={colors.black} />
           ),
         }}
       />
@@ -153,11 +152,7 @@ export default function MobileTestNavigator() {
         options={{
           tabBarLabel: '여행 일정',
           tabBarIcon: ({ color, focused }: { color: string; focused: boolean }) => (
-            <Ionicons
-              name={focused ? 'calendar' : 'calendar-outline'}
-              size={24}
-              color={color}
-            />
+            focused ? <CalendarSelectedIcon width={24} height={24} color={colors.primary} /> : <CalendarUnselectedIcon width={24} height={24} color={colors.black} />
           ),
         }}
       />

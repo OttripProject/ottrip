@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { View, Text, ScrollView, StyleSheet, Pressable, Modal, Animated } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, Pressable, Modal, Animated, RefreshControl } from 'react-native';
 import dayjs from 'dayjs';
 import { getTodayKoreanDate, formatTime } from '@/utils/dateUtils';
 import { colors } from '@/ui/tokens/colors';
@@ -13,12 +13,15 @@ import ProfileModal from '@/components/modals/mobile/ProfileModal.native';
 import SettingIcon from '../../assets/mobile_setting.svg';
 import DropdownIcon from '../../assets/mobile_dropdown.svg';
 import LocationIcon from '../../assets/mobile_location.svg';
+import CheckIcon from '../../assets/check_black.svg';
 
 export default function TodayScreen() {
   const formattedDate = getTodayKoreanDate();
   const [profileModalVisible, setProfileModalVisible] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
   const [showPlanSelector, setShowPlanSelector] = useState(false);
+  const [currentTime, setCurrentTime] = useState(dayjs());
+  const [refreshing, setRefreshing] = useState(false);
   
   const plansQuery = usePlansQuery();
   const planData = usePlanDataQuery(selectedPlan?.publicId || null);
@@ -55,10 +58,33 @@ export default function TodayScreen() {
     }
   }, [plansQuery.plans, selectedPlan]);
 
-  const today = dayjs();
+  useEffect(() => {
+    const checkSchedule = () => {
+      const now = dayjs();
+      // 날짜나 시간이 실제로 변경되었을 때만 상태 업데이트
+      setCurrentTime((prevTime) => {
+        const prevDateStr = prevTime.format('YYYY-MM-DD');
+        const prevTimeStr = prevTime.format('HH:mm:ss');
+        const nowDateStr = now.format('YYYY-MM-DD');
+        const nowTimeStr = now.format('HH:mm:ss');
+        
+        // 날짜나 시간이 변경되었을 때만 업데이트
+        if (prevDateStr !== nowDateStr || prevTimeStr !== nowTimeStr) {
+          return now;
+        }
+        return prevTime;
+      });
+    };
+
+    // 1초마다 실시간 체크
+    const timer = setInterval(checkSchedule, 1000);
+
+    return () => clearInterval(timer);
+  }, []);
+
+  const today = currentTime;
   const todayDateStr = today.format('YYYY-MM-DD');
 
-  // 오늘 날짜의 일정 필터링 및 정렬
   const todayItineraries = useMemo(() => {
     if (!planData.itineraries || planData.itineraries.length === 0) {
       return [];
@@ -76,32 +102,25 @@ export default function TodayScreen() {
       });
   }, [planData.itineraries, todayDateStr]);
 
-  // 현재 진행 중인 활동 찾기
   const currentActivity = useMemo(() => {
-    const now = dayjs();
-    
     return todayItineraries.find((itinerary: Itinerary) => {
       if (!itinerary.startTime || !itinerary.endTime) return false;
       
       const startDateTime = dayjs(`${todayDateStr} ${itinerary.startTime}`);
       const endDateTime = dayjs(`${todayDateStr} ${itinerary.endTime}`);
       
-      return now.isAfter(startDateTime) && now.isBefore(endDateTime);
+      return currentTime.isAfter(startDateTime) && currentTime.isBefore(endDateTime);
     });
-  }, [todayItineraries, todayDateStr]);
+  }, [todayItineraries, todayDateStr, currentTime]);
 
-  // 다음 일정 찾기
   const nextActivityIndex = useMemo(() => {
-    const now = dayjs();
-    
     return todayItineraries.findIndex((itinerary: Itinerary) => {
       if (!itinerary.startTime) return false;
       const startDateTime = dayjs(`${todayDateStr} ${itinerary.startTime}`);
-      return now.isBefore(startDateTime);
+      return currentTime.isBefore(startDateTime);
     });
-  }, [todayItineraries, todayDateStr]);
+  }, [todayItineraries, todayDateStr, currentTime]);
 
-  // 오늘의 비용 계산
   const todayExpenses = useMemo(() => {
     if (!planData.expenses || planData.expenses.length === 0) {
       return { total: 0, byCategory: {} };
@@ -146,21 +165,89 @@ export default function TodayScreen() {
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={async () => {
+              setRefreshing(true);
+              try {
+                await Promise.all([
+                  plansQuery.fetchPlans(),
+                  selectedPlan?.publicId 
+                    ? planData.fetchPlanData(selectedPlan.publicId)
+                    : Promise.resolve(),
+                ]);
+              } finally {
+                setRefreshing(false);
+              }
+            }}
+            tintColor={colors.primary}
+            colors={[colors.primary]}
+          />
+        }
       >
         {/* 헤더 */}
         <View style={styles.header}>
           <View style={styles.headerContent}>
             <View style={styles.headerTextContainer}>
               <Text style={styles.date}>{formattedDate}</Text>
-              <Pressable 
-                style={styles.tripTitleContainer}
-                onPress={() => setShowPlanSelector(true)}
-              >
-                <Text style={styles.tripTitle}>
-                  {selectedPlan?.title || '여행을 선택해주세요'}
-                </Text>
-                <DropdownIcon width={20} height={20} color={colors.gray600} />
-              </Pressable>
+              <View style={styles.tripTitleWrapper}>
+                <Pressable 
+                  style={styles.tripTitleContainer}
+                  onPress={() => setShowPlanSelector(!showPlanSelector)}
+                >
+                  <Text style={styles.tripTitle}>
+                    {selectedPlan?.title || '여행을 선택해주세요'}
+                  </Text>
+                  <DropdownIcon width={20} height={20} color={colors.gray600} />
+                </Pressable>
+                
+                {showPlanSelector && (
+                  <>
+                    <Pressable 
+                      style={styles.overlay}
+                      onPress={() => setShowPlanSelector(false)}
+                    />
+                    <View style={styles.planDropdown}>
+                      <ScrollView style={styles.planList} nestedScrollEnabled>
+                        {plansQuery.plans.length === 0 ? (
+                          <View style={[styles.planItem, styles.planItemFirst]}>
+                            <Text style={styles.planItemText}>여행 계획이 없습니다</Text>
+                          </View>
+                        ) : (
+                          plansQuery.plans.map((plan, index) => (
+                            <Pressable
+                              key={plan.id}
+                              style={[
+                                styles.planItem,
+                                index === 0 && styles.planItemFirst,
+                                selectedPlan?.id === plan.id && styles.planItemSelected,
+                              ]}
+                              onPress={() => {
+                                setSelectedPlan(plan);
+                                setShowPlanSelector(false);
+                              }}
+                              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                            >
+                              <Text
+                                style={[
+                                  styles.planItemText,
+                                  selectedPlan?.id === plan.id && styles.planItemTextSelected,
+                                ]}
+                              >
+                                {plan.title}
+                              </Text>
+                              {selectedPlan?.id === plan.id && (
+                                <CheckIcon width={20} height={20} color={colors.primary} />
+                              )}
+                            </Pressable>
+                          ))
+                        )}
+                      </ScrollView>
+                    </View>
+                  </>
+                )}
+              </View>
               <Text style={styles.greeting}>오늘의 일정 준비되셨나요?</Text>
             </View>
             <Pressable
@@ -291,6 +378,15 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.gray100,
   },
+  overlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 998,
+    backgroundColor: 'transparent',
+  },
   scrollView: {
     flex: 1,
   },
@@ -320,15 +416,63 @@ const styles = StyleSheet.create({
     color: colors.gray700,
     marginBottom: 8,
   },
+  tripTitleWrapper: {
+    position: 'relative',
+    marginBottom: 8,
+  },
   tripTitleContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 8,
   },
   tripTitle: {
     ...textStyles.h3,
     color: colors.black,
     marginRight: 8,
+  },
+  planDropdown: {
+    position: 'absolute',
+    top: '100%',
+    left: 0,
+    right: 0,
+    backgroundColor: colors.white,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.gray200,
+    shadowColor: colors.black,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+    marginTop: 8,
+    maxHeight: 200,
+    zIndex: 999,
+  },
+  planList: {
+    maxHeight: 200,
+  },
+  planItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.gray100,
+  },
+  planItemFirst: {
+    borderTopLeftRadius: 12,
+    borderTopRightRadius: 12,
+  },
+  planItemSelected: {
+    backgroundColor: colors.gray100,
+  },
+  planItemText: {
+    ...textStyles.h6,
+    color: colors.black,
+    flex: 1,
+  },
+  planItemTextSelected: {
+    color: colors.primary,
   },
   greeting: {
     ...textStyles.body3,
