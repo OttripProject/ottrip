@@ -7,6 +7,7 @@ import { textStyles } from '@/ui/tokens/typography';
 import { spacing } from '@/ui/tokens/spacing';
 import { usePlansQuery } from '@/hooks/usePlansQuery';
 import { usePlanDataQuery } from '@/hooks/usePlanDataQuery';
+import { useExpensesQuery } from '@/hooks/useExpensesQuery';
 import { Plan, Itinerary } from '@/types/api';
 import { categoryLabels } from '@/types/expense';
 import ProfileModal from '@/components/modals/mobile/ProfileModal.native';
@@ -31,6 +32,12 @@ export default function TodayScreen() {
   
   const plansQuery = usePlansQuery();
   const planData = usePlanDataQuery(selectedPlan?.publicId || null);
+  
+  const today = currentTime;
+  const todayDateStr = today.format('YYYY-MM-DD');
+  
+  // 오늘 날짜의 expense 조회 (날짜 필터링 API 사용)
+  const { data: todayExpensesFromApi = [], refetch: refetchTodayExpenses } = useExpensesQuery(selectedPlan?.id, todayDateStr);
   
   // Pulse 애니메이션
   const pulseAnim = useRef(new Animated.Value(1)).current;
@@ -88,9 +95,6 @@ export default function TodayScreen() {
     return () => clearInterval(timer);
   }, []);
 
-  const today = currentTime;
-  const todayDateStr = today.format('YYYY-MM-DD');
-
   const todayItineraries = useMemo(() => {
     if (!planData.itineraries || planData.itineraries.length === 0) {
       return [];
@@ -127,28 +131,6 @@ export default function TodayScreen() {
     });
   }, [todayItineraries, todayDateStr, currentTime]);
 
-  const todayExpenses = useMemo(() => {
-    if (!planData.expenses || planData.expenses.length === 0) {
-      return { total: 0, byCategory: {} };
-    }
-    
-    const todayExpensesList = planData.expenses.filter((expense: any) => {
-      if (!expense.expenseDate) return false;
-      const expenseDate = dayjs(expense.expenseDate).format('YYYY-MM-DD');
-      return expenseDate === todayDateStr;
-    });
-    
-    const total = todayExpensesList.reduce((sum: number, expense: any) => sum + (expense.amount || 0), 0);
-    const byCategory: Record<string, number> = {};
-    
-    todayExpensesList.forEach((expense: any) => {
-      const category = expense.category || '기타';
-      byCategory[category] = (byCategory[category] || 0) + (expense.amount || 0);
-    });
-    
-    return { total, byCategory };
-  }, [planData.expenses, todayDateStr]);
-
   // 오늘 날짜의 숙박 정보
   const todayAccommodations = useMemo(() => {
     if (!planData.accommodations || planData.accommodations.length === 0) {
@@ -162,6 +144,24 @@ export default function TodayScreen() {
       return checkinDate <= todayDateStr && checkoutDate >= todayDateStr;
     });
   }, [planData.accommodations, todayDateStr]);
+
+  const todayExpenses = useMemo(() => {
+    let total = 0;
+    const byCategory: Record<string, number> = {};
+    
+    // API에서 받은 오늘 날짜의 모든 expenses 합산
+    // (일반 expenses + itinerary/flight/accommodation에 연결된 expenses 모두 포함)
+    if (todayExpensesFromApi && Array.isArray(todayExpensesFromApi)) {
+      todayExpensesFromApi.forEach((expense: any) => {
+        const amount = expense.amount || 0;
+        total += amount;
+        const category = expense.category || '기타';
+        byCategory[category] = (byCategory[category] || 0) + amount;
+      });
+    }
+    
+    return { total, byCategory };
+  }, [todayExpensesFromApi]);
 
   // 체크리스트 정보
   const checklist = useMemo(() => {
@@ -224,6 +224,7 @@ export default function TodayScreen() {
                   selectedPlan?.publicId 
                     ? planData.fetchPlanData(selectedPlan.publicId)
                     : Promise.resolve(),
+                  refetchTodayExpenses(),
                 ]);
               } finally {
                 setRefreshing(false);
@@ -426,9 +427,6 @@ export default function TodayScreen() {
                 </Text>
                 <Pressable>
                   <GradientBackground
-                    colors={colors.gradientAIColors}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 0 }}
                     style={styles.aiRecommendButton}
                   >
                     <View style={styles.aiRecommendButtonContent}>
@@ -808,14 +806,14 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   checklistEmptyBox: {
-    backgroundColor: colors.gray100,
+    backgroundColor: colors.gray300,
     borderRadius: 12,
-    padding: 16,
+    padding: 26,
   },
   emptyTitle: {
     ...textStyles.h6,
     color: colors.gray700,
-    marginBottom: 8,
+    marginBottom: 4,
     textAlign: 'center',
   },
   emptySubtitle: {
@@ -825,7 +823,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   aiRecommendButton: {
-    paddingVertical: 12,
+    paddingVertical: 9,
     paddingHorizontal: 20,
     borderRadius: 999,
     alignItems: 'center',
