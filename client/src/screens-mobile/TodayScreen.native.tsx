@@ -332,17 +332,35 @@ export default function TodayScreen() {
               )}
             </View>
             
-            <Text style={styles.cardTitle}>{currentActivity.title || '활동'}</Text>
+            <Text 
+              style={styles.cardTitle}
+              numberOfLines={1}
+              ellipsizeMode="tail"
+            >
+              {currentActivity.title || '활동'}
+            </Text>
             {currentActivity.location && (
               <View style={styles.locationRow}>
                 <LocationIcon width={16} height={16} color={colors.gray600} />
-                <Text style={styles.cardLocation}>{currentActivity.location}</Text>
+                <Text 
+                  style={styles.cardLocation}
+                  numberOfLines={1}
+                  ellipsizeMode="tail"
+                >
+                  {currentActivity.location}
+                </Text>
               </View>
             )}
             
             {currentActivity.description && (
               <View style={styles.noteBox}>
-                <Text style={styles.note}>"{currentActivity.description}"</Text>
+                <Text 
+                  style={styles.note}
+                  numberOfLines={1}
+                  ellipsizeMode="tail"
+                >
+                  "{currentActivity.description}"
+                </Text>
               </View>
             )}
           </View>
@@ -379,9 +397,30 @@ export default function TodayScreen() {
                         </Pressable>
                       )}
                     </View>
-                    <Text style={styles.itemTitle}>{itinerary.title || '활동'}</Text>
+                    <Text 
+                      style={styles.itemTitle}
+                      numberOfLines={1}
+                      ellipsizeMode="tail"
+                    >
+                      {itinerary.title || '활동'}
+                    </Text>
                     {itinerary.location && (
-                      <Text style={styles.itemLocation}>{itinerary.location}</Text>
+                      <Text 
+                        style={styles.itemLocation}
+                        numberOfLines={1}
+                        ellipsizeMode="tail"
+                      >
+                        {itinerary.location}
+                      </Text>
+                    )}
+                    {itinerary.description && (
+                      <Text 
+                        style={styles.itemDescription}
+                        numberOfLines={1}
+                        ellipsizeMode="tail"
+                      >
+                        {itinerary.description}
+                      </Text>
                     )}
                   </View>
                 </View>
@@ -671,7 +710,7 @@ const styles = StyleSheet.create({
   cardTitle: {
     ...textStyles.h3,
     color: colors.black,
-    marginBottom: 10,
+    marginBottom: 4,
   },
   locationRow: {
     flexDirection: 'row',
@@ -684,14 +723,14 @@ const styles = StyleSheet.create({
     marginLeft: 4,
   },
   noteBox: {
-    backgroundColor: '#E3F2FD',
+    backgroundColor: 'rgba(0, 122, 255, 0.1)',
     padding: 12,
-    borderRadius: 12,
-    marginTop: 8,
+    borderRadius: 8,
+    marginTop: 4,
   },
   note: {
     ...textStyles.body3,
-    color: colors.gray700,
+    color: colors.primary,
   },
   
   // 섹션
@@ -740,6 +779,12 @@ const styles = StyleSheet.create({
   itemLocation: {
     ...textStyles.body4,
     color: colors.gray600,
+    marginBottom: 4,
+  },
+  itemDescription: {
+    ...textStyles.body4,
+    color: colors.gray500,
+    marginTop: 4,
   },
   timelineCardHeader: {
     flexDirection: 'row',
@@ -748,7 +793,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   nextButton: {
-    backgroundColor: '#0A84FF1A',
+    backgroundColor: 'rgba(0, 122, 255, 0.1)',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 8,
