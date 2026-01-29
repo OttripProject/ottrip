@@ -92,6 +92,11 @@ class ItineraryService:
             if not is_editor:
                 raise HTTPException(status_code=403, detail="일정 수정 권한이 없습니다.")
 
+        # 일정 날짜 변경 여부 확인
+        date_changed = False
+        if update_data.itinerary_date and update_data.itinerary_date != itinerary.itinerary_date:
+            date_changed = True
+
         if update_data.title:
             itinerary.title = update_data.title
         if update_data.itinerary_date:
@@ -110,6 +115,15 @@ class ItineraryService:
             itinerary.location = update_data.location
 
         updated_itinerary = await self.itinerary_repository.save(itinerary=itinerary)
+
+        # 일정 날짜가 변경된 경우 연결된 비용의 날짜도 업데이트
+        if date_changed and update_data.itinerary_date:
+            connected_expenses = await self.expense_repository.find_all_by_itinerary(
+                itinerary_id=itinerary_id
+            )
+            for expense in connected_expenses:
+                expense.ex_date = update_data.itinerary_date
+                await self.expense_repository.save(expense=expense)
 
         return ItineraryRead.model_validate(updated_itinerary)
 

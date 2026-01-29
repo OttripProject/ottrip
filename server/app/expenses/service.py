@@ -1,3 +1,5 @@
+from datetime import date
+
 from fastapi import HTTPException
 
 from app.auth.deps import CurrentUser
@@ -93,7 +95,9 @@ class ExpenseService:
 
         return ExpenseRead.model_validate(expense)
 
-    async def read_expenses_by_plan(self, *, plan_id: int) -> list[ExpenseRead]:
+    async def read_expenses_by_plan(
+        self, *, plan_id: int, ex_date: date | None = None
+    ) -> list[ExpenseRead]:
         plan_exists, has_permission = await self.plan_repository.has_read_permission(
             plan_id=plan_id, user_id=self.current_user.id
         )
@@ -102,7 +106,9 @@ class ExpenseService:
         if not has_permission:
             raise HTTPException(status_code=403, detail="해당 비용에 대한 조회 권한이 없습니다.")
 
-        expenses = await self.expense_repository.find_all_by_plan(plan_id=plan_id)
+        expenses = await self.expense_repository.find_all_by_plan(
+            plan_id=plan_id, ex_date=ex_date
+        )
         expenses_list = [ExpenseRead.model_validate(expense) for expense in expenses]
 
         return expenses_list

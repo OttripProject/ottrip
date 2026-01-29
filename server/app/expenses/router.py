@@ -1,4 +1,6 @@
-from fastapi import status
+from datetime import date
+
+from fastapi import status, Query
 
 from app.core.router import create_router
 
@@ -29,11 +31,13 @@ async def read_expense(
 async def read_expenses(
     expense_service: ExpenseService,
     plan_id: int,
+    ex_date: date | None = Query(None),
 ) -> list[ExpenseRead]:
     """
     특정 여행에 속한 모든 비용 정보를 조회합니다.
+    ex_date 파라미터를 제공하면 해당 날짜의 비용만 필터링합니다.
     """
-    return await expense_service.read_expenses_by_plan(plan_id=plan_id)
+    return await expense_service.read_expenses_by_plan(plan_id=plan_id, ex_date=ex_date)
 
 
 @router.get("/{itinerary_id}/itinerary", status_code=status.HTTP_200_OK)
