@@ -10,10 +10,16 @@ import { usePlanDataQuery } from '@/hooks/usePlanDataQuery';
 import { Plan, Itinerary } from '@/types/api';
 import { categoryLabels } from '@/types/expense';
 import ProfileModal from '@/components/modals/mobile/ProfileModal.native';
+import GradientBackground from '@/ui/components/GradientBackground';
 import SettingIcon from '../../assets/mobile_setting.svg';
 import DropdownIcon from '../../assets/mobile_dropdown.svg';
 import LocationIcon from '../../assets/mobile_location.svg';
-import CheckIcon from '../../assets/check_black.svg';
+import ChecklistIcon from '../../assets/mobile_check.svg';
+import ExpenseIcon from '../../assets/mobile_expense.svg';
+import AccommodationIcon from '../../assets/mobile_accomodation.svg';
+import RightArrowIcon from '../../assets/right_arrow.svg';
+import PlusIcon from '../../assets/mobile_plus.svg';
+import LightningIcon from '../../assets/mobile_lightning.svg';
 
 export default function TodayScreen() {
   const formattedDate = getTodayKoreanDate();
@@ -143,6 +149,48 @@ export default function TodayScreen() {
     return { total, byCategory };
   }, [planData.expenses, todayDateStr]);
 
+  // 오늘 날짜의 숙박 정보
+  const todayAccommodations = useMemo(() => {
+    if (!planData.accommodations || planData.accommodations.length === 0) {
+      return [];
+    }
+    
+    return planData.accommodations.filter((accommodation: any) => {
+      const checkinDate = dayjs(accommodation.checkinDate).format('YYYY-MM-DD');
+      const checkoutDate = dayjs(accommodation.checkoutDate).format('YYYY-MM-DD');
+      // 체크인 날짜가 오늘이거나, 체크아웃 날짜가 오늘 이후인 경우
+      return checkinDate <= todayDateStr && checkoutDate >= todayDateStr;
+    });
+  }, [planData.accommodations, todayDateStr]);
+
+  // 체크리스트 정보
+  const checklist = useMemo(() => {
+    return planData.plan?.travel_checklist || null;
+  }, [planData.plan?.travel_checklist]);
+
+  // 체크리스트 통계
+  const checklistStats = useMemo(() => {
+    if (!checklist || !checklist.categories) {
+      return { total: 0, checked: 0 };
+    }
+    
+    let total = 0;
+    let checked = 0;
+    
+    Object.values(checklist.categories).forEach((category: any) => {
+      if (Array.isArray(category)) {
+        category.forEach((item: any) => {
+          total++;
+          if (item.is_checked) {
+            checked++;
+          }
+        });
+      }
+    });
+    
+    return { total, checked };
+  }, [checklist]);
+
   const formatCurrency = (amount: number) => {
     return `₩${amount.toLocaleString('ko-KR')}`;
   };
@@ -238,7 +286,7 @@ export default function TodayScreen() {
                                 {plan.title}
                               </Text>
                               {selectedPlan?.id === plan.id && (
-                                <CheckIcon width={20} height={20} color={colors.primary} />
+                                <ChecklistIcon width={20} height={20} color={colors.primary} />
                               )}
                             </Pressable>
                           ))
@@ -341,20 +389,115 @@ export default function TodayScreen() {
           </View>
         )}
 
-        {/* 오늘의 비용 요약 */}
-        {todayExpenses.total > 0 && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>오늘의 비용</Text>
-            <View style={styles.costCard}>
-              <View style={styles.costRow}>
-                <Text style={styles.costLabel}>총 지출</Text>
-                <Text style={styles.costAmount}>{formatCurrency(todayExpenses.total)}</Text>
+        {/* 체크리스트 섹션 */}
+        <View style={styles.section}>
+          <View style={styles.cardBase}>
+            <View style={styles.cardHeader}>
+              <View style={styles.cardHeaderLeft}>
+                <ChecklistIcon width={20} height={20} color={colors.black} />
+                <Text style={styles.cardHeaderTitle}>오늘의 체크리스트</Text>
               </View>
-              <View style={styles.costDivider} />
-              <Text style={styles.costDetail}>{formatExpenseDetail()}</Text>
+              <Pressable>
+                <PlusIcon width={20} height={20} color={colors.gray500} />
+              </Pressable>
             </View>
+            {checklist && checklistStats.total > 0 ? (
+              <View style={styles.checklistGrayBox}>
+                <View style={styles.checklistHeader}>
+                  <Text style={styles.checklistTitle}>여행 준비 체크리스트</Text>
+                  <Text style={styles.checklistProgress}>
+                    {checklistStats.checked}/{checklistStats.total}
+                  </Text>
+                </View>
+                <View style={styles.checklistProgressBar}>
+                  <View 
+                    style={[
+                      styles.checklistProgressFill,
+                      { width: `${(checklistStats.checked / checklistStats.total) * 100}%` }
+                    ]} 
+                  />
+                </View>
+              </View>
+            ) : (
+              <View style={styles.checklistEmptyBox}>
+                <Text style={styles.emptyTitle}>체크리스트가 비어있어요</Text>
+                <Text style={styles.emptySubtitle}>
+                  AI가 일정에 맞는 준비물을 추천해드려요.
+                </Text>
+                <Pressable>
+                  <GradientBackground
+                    colors={colors.gradientAIColors}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={styles.aiRecommendButton}
+                  >
+                    <View style={styles.aiRecommendButtonContent}>
+                      <LightningIcon width={16} height={16} color={colors.black} />
+                      <Text style={styles.aiRecommendButtonText}>AI 추천받기</Text>
+                    </View>
+                  </GradientBackground>
+                </Pressable>
+              </View>
+            )}
           </View>
-        )}
+        </View>
+
+        {/* 오늘의 비용 섹션 */}
+        <View style={styles.section}>
+          <Pressable style={[styles.cardBase, styles.costCardPrimary]}>
+            <View style={styles.costCardHeader}>
+              <View style={styles.costCardHeaderLeft}>
+                <ExpenseIcon width={20} height={20} color={colors.white} />
+                <Text style={styles.costCardHeaderTitle}>오늘의 여행 비용</Text>
+              </View>
+              <RightArrowIcon width={20} height={20} color={colors.white} />
+            </View>
+            {todayExpenses.total > 0 ? (
+              <>
+                <Text style={styles.costAmountPrimary}>
+                  {formatCurrency(todayExpenses.total)}
+                </Text>
+                <Text style={styles.costDetailPrimary}>
+                  터치하여 상세 내역 확인
+                </Text>
+              </>
+            ) : (
+              <>
+                <Text style={styles.costAmountPrimary}>0원</Text>
+                <Text style={styles.costDetailPrimary}>
+                  터치하여 상세 내역 확인
+                </Text>
+              </>
+            )}
+          </Pressable>
+        </View>
+
+        {/* 숙박 섹션 */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>여행 정보 (Reference)</Text>
+          {todayAccommodations.length > 0 ? (
+            todayAccommodations.map((accommodation: any) => (
+              <Pressable key={accommodation.id} style={[styles.cardBase, styles.accommodationCard]}>
+                <View style={styles.accommodationHeader}>
+                  <AccommodationIcon width={24} height={24} color={colors.primary} />
+                  <View style={styles.accommodationHeaderText}>
+                    <Text style={styles.accommodationLabel}>오늘의 숙소</Text>
+                    <Text style={styles.itemTitle}>{accommodation.name}</Text>
+                    <Text style={styles.accommodationCheckin}>
+                      체크인 {accommodation.checkinTime}
+                    </Text>
+                  </View>
+                </View>
+                <RightArrowIcon width={12} height={12} color={colors.gray600} />
+              </Pressable>
+            ))
+          ) : (
+            <View style={styles.cardBase}>
+              <Text style={styles.emptyText}>오늘 숙박 정보가 없습니다</Text>
+            </View>
+          )}
+        </View>
+
 
       </ScrollView>
 
@@ -556,6 +699,19 @@ const styles = StyleSheet.create({
   // 섹션
   section: {
     marginTop: 8,
+    marginBottom: 16,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+    marginHorizontal: 16,
+  },
+  sectionHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   sectionTitle: {
     ...textStyles.h5,
@@ -604,40 +760,158 @@ const styles = StyleSheet.create({
     color: colors.primary,
   },
   
-  // 비용 카드
-  costCard: {
-    backgroundColor: colors.white,
-    padding: 20,
-    borderRadius: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 1,
+  // 체크리스트 카드 헤더
+  cardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
   },
-  costRow: {
+  cardHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  cardHeaderTitle: {
+    ...textStyles.h6,
+    color: colors.black,
+  },
+  // 체크리스트 카드
+  checklistGrayBox: {
+    backgroundColor: colors.gray300,
+    borderRadius: 12,
+    padding: 16,
+  },
+  checklistHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 12,
   },
-  costLabel: {
-    ...textStyles.body2,
+  checklistTitle: {
+    ...textStyles.h6,
+    color: colors.black,
+  },
+  checklistProgress: {
+    ...textStyles.body3,
     color: colors.gray600,
   },
-  costAmount: {
-    ...textStyles.h3,
+  checklistProgressBar: {
+    height: 8,
+    backgroundColor: colors.gray300,
+    borderRadius: 4,
+    overflow: 'hidden',
+  },
+  checklistProgressFill: {
+    height: '100%',
+    backgroundColor: colors.primary,
+    borderRadius: 4,
+  },
+  checklistEmptyBox: {
+    backgroundColor: colors.gray100,
+    borderRadius: 12,
+    padding: 16,
+  },
+  emptyTitle: {
+    ...textStyles.h6,
+    color: colors.gray700,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  emptySubtitle: {
+    ...textStyles.body4,
+    color: colors.gray600,
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  aiRecommendButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 999,
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '100%',
+  },
+  aiRecommendButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  aiRecommendButtonText: {
+    ...textStyles.h6,
     color: colors.black,
-    fontWeight: '700',
   },
-  costDivider: {
-    height: 1,
-    backgroundColor: colors.gray200,
-    marginVertical: 12,
+  
+  // 숙박 카드
+  accommodationCard: {
+    marginBottom: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
-  costDetail: {
+  accommodationHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+    flex: 1,
+  },
+  accommodationHeaderText: {
+    flex: 1,
+  },
+  accommodationLabel: {
+    ...textStyles.body4,
+    color: colors.gray600,
+    marginBottom: 4,
+  },
+  accommodationCheckin: {
+    ...textStyles.body4,
+    color: colors.gray600,
+    marginTop: 4,
+  },
+  accommodationDates: {
+    marginTop: 8,
+    gap: 8,
+  },
+  accommodationDateText: {
+    ...textStyles.body4,
+    color: colors.gray600,
+  },
+  
+  // 비용 카드 (Primary 배경)
+  costCardPrimary: {
+    backgroundColor: colors.primary,
+    padding: 20,
+  },
+  costCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  costCardHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  costCardHeaderTitle: {
+    ...textStyles.h6,
+    color: colors.white,
+  },
+  costAmountPrimary: {
+    ...textStyles.h2,
+    color: colors.white,
+    marginBottom: 8,
+  },
+  costDetailPrimary: {
+    ...textStyles.body3,
+    color: colors.white,
+    opacity: 0.9,
+  },
+  emptyText: {
     ...textStyles.body3,
     color: colors.gray500,
+    textAlign: 'center',
+    paddingVertical: 8,
   },
 });
 
