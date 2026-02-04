@@ -9,12 +9,19 @@ import Animated, {
   runOnJS,
 } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import dayjs from 'dayjs';
 import { Plan } from '@/types/api';
 import { colors } from '@/ui/tokens/colors';
 import { textStyles } from '@/ui/tokens/typography';
 import CheckedIcon from '../../../../assets/mobile_plan_checked.svg';
 import UnCheckedIcon from '../../../../assets/mobile_plan_unchecked.svg';
 import AddPlanIcon from '../../../../assets/mobile_plan_add.svg';
+
+function formatPlanDateRange(startDate: string, endDate: string): string {
+  const start = dayjs(startDate).format('YYYY.MM.DD');
+  const end = dayjs(endDate).format('YYYY.MM.DD');
+  return `${start} ~ ${end}`;
+}
 
 interface PlanSelectModalProps {
   visible: boolean;
@@ -152,32 +159,35 @@ export default function PlanSelectModal({
                     <Text style={styles.emptyText}>여행 계획이 없습니다</Text>
                   </View>
                 ) : (
-                  validPlans.map((plan, index) => (
-                    <Pressable
-                      key={plan.id}
-                      style={[
-                        styles.planItem,
-                        index === 0 && styles.planItemFirst,
-                        selectedPlan?.id === plan.id && styles.planItemSelected,
-                      ]}
-                      onPress={() => handleSelectPlan(plan)}
-                      hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                    >
-                      <Text
-                        style={[
-                          styles.planItemText,
-                          selectedPlan?.id === plan.id && styles.planItemTextSelected,
-                        ]}
+                  validPlans.map((plan) => {
+                    const isSelected = selectedPlan?.id === plan.id;
+                    return (
+                      <Pressable
+                        key={plan.id}
+                        style={styles.planCard}
+                        onPress={() => handleSelectPlan(plan)}
+                        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                       >
-                        {plan.title}
-                      </Text>
-                      {selectedPlan?.id === plan.id ? (
-                        <CheckedIcon width={20} height={20} color={colors.primary} />
-                      ) : (
-                        <UnCheckedIcon width={20} height={20} color={colors.primary} />
-                      )}
-                    </Pressable>
-                  ))
+                        <View style={styles.planCardLeft}>
+                          <View style={styles.planCardTextWrap}>
+                            <Text style={styles.planCardTitle} numberOfLines={1}>
+                              {plan.title}
+                            </Text>
+                            <Text style={styles.planCardDate} numberOfLines={1}>
+                              {formatPlanDateRange(plan.startDate, plan.endDate)}
+                            </Text>
+                          </View>
+                        </View>
+                        <View style={[styles.planCardCheckWrap, isSelected && styles.planCardCheckWrapSelected]}>
+                          {isSelected ? (
+                            <CheckedIcon width={20} height={20} color={colors.primary} />
+                          ) : (
+                            <UnCheckedIcon width={20} height={20} color={colors.gray500} />
+                          )}
+                        </View>
+                      </Pressable>
+                    );
+                  })
                 )}
               </ScrollView>
             </GestureDetector>
@@ -256,30 +266,49 @@ const styles = StyleSheet.create({
     minHeight: 200,
   },
   planListContent: {
+    paddingHorizontal: 24,
     paddingBottom: 20,
     flexGrow: 1,
   },
-  planItem: {
+  planCard: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 24,
-    paddingVertical: 16,
+    backgroundColor: colors.gray200,
+    borderRadius: 16,
+    paddingVertical: 24,
+    paddingHorizontal: 20,
+    marginBottom: 8,
   },
-  planItemFirst: {
-    // 첫 번째 아이템은 borderTopRadius가 필요 없음 (헤더와 연결됨)
-  },
-  planItemSelected: {
-    backgroundColor: colors.gray100,
-  },
-  planItemText: {
-    ...textStyles.h6,
-    color: colors.black,
+  planCardLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
     flex: 1,
+    minWidth: 0,
   },
-  planItemTextSelected: {
-    color: colors.primary,
+  planCardTextWrap: {
+    flex: 1,
+    minWidth: 0,
+  },
+  planCardTitle: {
+    ...textStyles.h5,
+    color: colors.black,
     fontWeight: '600',
+  },
+  planCardDate: {
+    ...textStyles.body4,
+    color: colors.gray600,
+    marginTop: 4,
+  },
+  planCardCheckWrap: {
+    width: 24,
+    height: 24,
+    marginLeft: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  planCardCheckWrapSelected: {
+    // 선택 시 아이콘 색상만 primary로 표시
   },
   emptyContainer: {
     paddingVertical: 40,

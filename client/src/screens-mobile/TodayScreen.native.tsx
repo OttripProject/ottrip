@@ -471,7 +471,13 @@ export default function TodayScreen() {
             todayAccommodations.map((accommodation: any) => (
               <Pressable key={accommodation.id} style={[styles.cardBase, styles.accommodationCard]}>
                 <View style={styles.accommodationHeader}>
-                  <AccommodationIcon width={24} height={24} color={colors.primary} />
+                  <View style={styles.accommodationIconBox}>
+                    <AccommodationIcon
+                      width={20}
+                      height={20}
+                      color={colors.primary}
+                    />
+                  </View>
                   <View style={styles.accommodationHeaderText}>
                     <Text style={styles.accommodationLabel}>오늘의 숙소</Text>
                     <Text style={styles.itemTitle}>{accommodation.name}</Text>
@@ -857,9 +863,17 @@ const styles = StyleSheet.create({
   },
   accommodationHeader: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     gap: 12,
     flex: 1,
+  },
+  accommodationIconBox: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    backgroundColor: 'rgba(0, 122, 255, 0.12)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   accommodationHeaderText: {
     flex: 1,
