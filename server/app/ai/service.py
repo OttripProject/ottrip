@@ -88,7 +88,7 @@ class AIService:
             }
     
     # AI Checklist
-    async def create_checklist(self, public_id: str, force_regenerate: bool = False) -> ChecklistCreateResponse:
+    async def create_checklist(self, public_id: str, force_regenerate: bool = False, date: str | None = None) -> ChecklistCreateResponse:
         plan = await self.plan_repository.find_by_public_id(public_id=public_id)
         if not plan:
             raise HTTPException(status_code=404, detail="해당 계획을 찾을 수 없습니다.")
@@ -157,6 +157,9 @@ class AIService:
                 item_dict["is_custom"] = False
                 if "is_checked" not in item_dict:
                     item_dict["is_checked"] = False
+                # date가 제공된 경우 모든 AI 생성 항목에 date 추가
+                if date is not None:
+                    item_dict["date"] = date
                 ai_data[category_key].append(item_dict)
 
         # force_regenerate=True 인 경우: 기존 체크리스트를 삭제하지 않고 "추가만" 수행
@@ -179,6 +182,7 @@ class AIService:
             merged_categories = self._merge_checklist_add_only(
                 existing=existing_categories,
                 incoming_ai=ai_data,
+                date=date,
             )
             ai_data = merged_categories
         else:
@@ -250,6 +254,7 @@ class AIService:
         self,
         existing: Dict[str, list[Dict[str, Any]]],
         incoming_ai: Dict[str, list[Dict[str, Any]]],
+        date: str | None = None,
     ) -> Dict[str, list[Dict[str, Any]]]:
         merged: Dict[str, list[Dict[str, Any]]] = {k: list(v) for k, v in existing.items()}
 
@@ -276,6 +281,9 @@ class AIService:
                 new_item["is_custom"] = False
                 if "is_checked" not in new_item:
                     new_item["is_checked"] = False
+                # date가 제공된 경우 새로 추가되는 항목에 date 추가
+                if date is not None:
+                    new_item["date"] = date
 
                 merged[category_key_norm].append(new_item)
                 existing_keys.add(key)

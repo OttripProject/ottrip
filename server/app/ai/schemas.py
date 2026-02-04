@@ -42,6 +42,7 @@ class ChecklistRead(APISchema):
 
 class ChecklistCreateRequest(APISchema):
     force_regenerate: bool = False
+    date: str | None = None  # YYYY-MM-DD 형식, None이면 전체 체크리스트 항목
 
 
 class ChecklistCreateResponse(APISchema):

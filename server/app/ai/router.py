@@ -148,7 +148,8 @@ async def generate_travel_checklist(
     """여행 체크리스트 생성"""
     return await ai_service.create_checklist(
         public_id=public_id,
-        force_regenerate=checklist_request.force_regenerate
+        force_regenerate=checklist_request.force_regenerate,
+        date=checklist_request.date
     ) 
 
 
