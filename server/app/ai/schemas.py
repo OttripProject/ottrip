@@ -26,6 +26,7 @@ class ChecklistItem(APISchema):
     reason: str
     is_checked: bool = False
     is_custom: bool = False  # True: 사용자 추가, False: AI 생성
+    date: str | None = None 
 
 
 class ChecklistItemsByCategory(APISchema):
@@ -61,3 +62,4 @@ class ChecklistItemAddRequest(APISchema):
     name: str
     reason: str = ""
     category: str = "basic_required"  # basic_required, schedule_required, recommended, optional
+    date: str | None = None 

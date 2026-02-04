@@ -327,7 +327,7 @@ class AIService:
         
         raise HTTPException(status_code=404, detail="해당 항목을 찾을 수 없습니다.")
     
-    async def add_checklist_item(self, public_id: str, name: str, reason: str = "", category: str = "basic_required") -> StatusResponse:
+    async def add_checklist_item(self, public_id: str, name: str, reason: str = "", category: str = "basic_required", date: str | None = None) -> StatusResponse:
         """체크리스트 항목 추가 (지정된 카테고리)"""
         plan = await self.plan_repository.find_by_public_id(public_id=public_id)
         if not plan:
@@ -387,6 +387,10 @@ class AIService:
             "is_checked": False,
             "is_custom": True
         }
+        
+        # date가 제공된 경우에만 추가
+        if date is not None:
+            new_item["date"] = date
         
         categories[category_snake].append(new_item)
         attributes.flag_modified(plan, "travel_checklist")

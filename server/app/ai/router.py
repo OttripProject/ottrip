@@ -197,7 +197,8 @@ async def add_checklist_item(
         public_id=public_id,
         name=request.name,
         reason=request.reason,
-        category=request.category
+        category=request.category,
+        date=request.date
     )
     return result
 
