@@ -116,9 +116,9 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
               variant="basic" 
               alignItems="flex-start"
               maxWidth={360}
+              minHeight={380}
               paddingHorizontal={20}
               paddingTop={20}
-              paddingBottom={20}
               style={styles.card}
             >
               {/* 헤더 */}
@@ -126,7 +126,7 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
                 <Text style={styles.title}>프로필 설정</Text>
               </View>
               <Pressable style={styles.closeButton} onPress={onClose}>
-                <Ionicons name="close" size={24} color={colors.black} />
+                <Ionicons name="close" size={24} color={colors.gray500} />
               </Pressable>
 
               <Text style={styles.subtitle}>개인정보 및 환경설정을 관리하세요.</Text>
@@ -145,6 +145,7 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
                   value={nickname}
                   onChangeText={handleNicknameChange}
                   style={styles.input}
+                  textAlignVertical="center"
                 />
               </View>
               <View style={styles.validationMessageContainer}>
@@ -182,7 +183,7 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
 
               {/* 문의하기 */}
               <Pressable style={styles.contactButton} onPress={() => setContactOpen(true)}>
-                <QnaIcon width={16} height={16} fill={colors.gray800} />
+                <QnaIcon width={20} height={20} fill={colors.black} />
                 <Text style={styles.contactButtonText}>문의하기</Text>
               </Pressable>
 
@@ -190,25 +191,22 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
 
               {/* 하단 버튼 */}
               <View style={styles.footerRow}>
-                <Pressable style={styles.footerButton} onPress={() => setLogoutModalOpen(true)}>
-                  <Text style={styles.footerButtonText}>로그아웃</Text>
-                </Pressable>
-                <View style={styles.footerDivider} />
-                <Pressable style={styles.footerButton} onPress={handleDeleteAccount}>
-                  <Text style={styles.footerButtonTextInactive}>계정 삭제</Text>
-                </Pressable>
-                
-              </View>
-              {/* 저장 버튼 */}
+                <View style={styles.footerLeft}>
+                  <Pressable onPress={() => setLogoutModalOpen(true)}>
+                    <Text style={styles.footerLinkRed}>로그아웃</Text>
+                  </Pressable>
+                  <Pressable onPress={handleDeleteAccount}>
+                    <Text style={styles.footerLinkGray}>계정 삭제</Text>
+                  </Pressable>
+                </View>
                 <Pressable
-                disabled={!canSave}
-                style={[styles.saveButton, !canSave && styles.saveButtonDisabled]}
-                onPress={save}
-              >
-                <Text style={[styles.saveButtonText, !canSave && styles.saveButtonTextDisabled]}>
-                  저장
-                </Text>
-              </Pressable>
+                  disabled={!canSave}
+                  style={[styles.saveButton, !canSave && styles.saveButtonDisabled]}
+                  onPress={save}
+                >
+                  <Text style={styles.saveButtonText}>저장</Text>
+                </Pressable>
+              </View>
             </Card>
           </View>
         </ScrollView>
@@ -304,8 +302,7 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   scrollContent: {
-    paddingTop: 60,
-    paddingBottom: 20,
+    paddingTop: 180,
     paddingHorizontal: 20,
     alignItems: 'center',
   },
@@ -319,7 +316,6 @@ const styles = StyleSheet.create({
   },
   header: {
     marginBottom: 4,
-    marginTop: 20
   },
   title: {
     ...textStyles.h2,
@@ -331,7 +327,6 @@ const styles = StyleSheet.create({
     top: 20,
     padding: 4,
     zIndex: 1,
-    marginTop: 20,
   },
   subtitle: {
     ...textStyles.body3,
@@ -352,7 +347,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     justifyContent: 'center',
     paddingHorizontal: 16,
-    marginBottom: 24,
+    marginBottom: 16,
   },
   emailText: {
     ...textStyles.body4,
@@ -360,10 +355,10 @@ const styles = StyleSheet.create({
   },
   inputContainer: {
     width: '100%',
-    marginBottom: 4,
   },
   input: {
     height: 48,
+    paddingBottom: 17,
   },
   validationMessageContainer: {
     width: '100%',
@@ -399,8 +394,8 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   radioButtonSelected: {
-    borderColor: colors.black,
-    backgroundColor: colors.black,
+    borderColor: colors.primary,
+    backgroundColor: colors.primary,
   },
   genderText: {
     ...textStyles.body2,
@@ -417,51 +412,46 @@ const styles = StyleSheet.create({
     marginTop: 24,
   },
   contactButtonText: {
+    ...textStyles.h6,
+    color: colors.black,
+    marginLeft: 6,
+  },
+  footerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 32,
+    width: '100%',
+  },
+  footerLeft: {
+    flexDirection: 'row',
+    gap: 16,
+    alignItems: 'center',
+    flex: 1,
+  },
+  footerLinkRed: {
     ...textStyles.h7,
-    color: colors.gray800,
-    marginLeft: 8,
+    color: colors.danger,
+  },
+  footerLinkGray: {
+    ...textStyles.h7,
+    color: colors.gray700,
   },
   saveButton: {
-    width: '100%',
-    height: 56,
-    backgroundColor: colors.black,
-    borderRadius: 10,
-    justifyContent: 'center',
+    backgroundColor: colors.primary,
+    paddingHorizontal: 42,
+    paddingVertical: 14,
+    borderRadius: 12,
     alignItems: 'center',
-    marginVertical: 16,
+    justifyContent: 'center',
+    marginLeft: 'auto',
   },
   saveButtonDisabled: {
     backgroundColor: colors.gray300,
   },
   saveButtonText: {
-    ...textStyles.h5,
+    ...textStyles.h6,
     color: colors.white,
-  },
-  saveButtonTextDisabled: {
-    color: colors.black,
-  },
-  footerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 16,
-    marginVertical: 8,
-  },
-  footerButton: {
-    paddingVertical: 4,
-  },
-  footerDivider: {
-    width: 1,
-    height: 13,
-    backgroundColor: colors.gray500,
-  },
-  footerButtonText: {
-    ...textStyles.h7,
-    color: colors.warning,
-  },
-  footerButtonTextInactive: {
-    ...textStyles.h7,
-    color: colors.gray500,
   },
   contactModalOverlay: {
     flex: 1,

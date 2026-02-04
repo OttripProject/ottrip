@@ -82,6 +82,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     borderRadius: radii.md,
     ...textStyles.body4,
+    textAlignVertical: 'center',
   },
 });
 

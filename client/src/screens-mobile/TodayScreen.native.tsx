@@ -11,6 +11,7 @@ import { useExpensesQuery } from '@/hooks/useExpensesQuery';
 import { Plan, Itinerary } from '@/types/api';
 import { categoryLabels } from '@/types/expense';
 import ProfileModal from '@/components/modals/mobile/ProfileModal.native';
+import PlanSelectModal from '@/components/modals/mobile/PlanSelectModal.native';
 import GradientBackground from '@/ui/components/GradientBackground';
 import SettingIcon from '../../assets/mobile_setting.svg';
 import DropdownIcon from '../../assets/mobile_dropdown.svg';
@@ -243,59 +244,13 @@ export default function TodayScreen() {
               <View style={styles.tripTitleWrapper}>
                 <Pressable 
                   style={styles.tripTitleContainer}
-                  onPress={() => setShowPlanSelector(!showPlanSelector)}
+                  onPress={() => setShowPlanSelector(true)}
                 >
                   <Text style={styles.tripTitle}>
                     {selectedPlan?.title || '여행을 선택해주세요'}
                   </Text>
                   <DropdownIcon width={20} height={20} color={colors.gray600} />
                 </Pressable>
-                
-                {showPlanSelector && (
-                  <>
-                    <Pressable 
-                      style={styles.overlay}
-                      onPress={() => setShowPlanSelector(false)}
-                    />
-                    <View style={styles.planDropdown}>
-                      <ScrollView style={styles.planList} nestedScrollEnabled>
-                        {plansQuery.plans.length === 0 ? (
-                          <View style={[styles.planItem, styles.planItemFirst]}>
-                            <Text style={styles.planItemText}>여행 계획이 없습니다</Text>
-                          </View>
-                        ) : (
-                          plansQuery.plans.map((plan, index) => (
-                            <Pressable
-                              key={plan.id}
-                              style={[
-                                styles.planItem,
-                                index === 0 && styles.planItemFirst,
-                                selectedPlan?.id === plan.id && styles.planItemSelected,
-                              ]}
-                              onPress={() => {
-                                setSelectedPlan(plan);
-                                setShowPlanSelector(false);
-                              }}
-                              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                            >
-                              <Text
-                                style={[
-                                  styles.planItemText,
-                                  selectedPlan?.id === plan.id && styles.planItemTextSelected,
-                                ]}
-                              >
-                                {plan.title}
-                              </Text>
-                              {selectedPlan?.id === plan.id && (
-                                <ChecklistIcon width={20} height={20} color={colors.primary} />
-                              )}
-                            </Pressable>
-                          ))
-                        )}
-                      </ScrollView>
-                    </View>
-                  </>
-                )}
               </View>
               <Text style={styles.greeting}>오늘의 일정 준비되셨나요?</Text>
             </View>
@@ -549,6 +504,14 @@ export default function TodayScreen() {
           onClose={() => setProfileModalVisible(false)}
         />
       </Modal>
+
+      <PlanSelectModal
+        visible={showPlanSelector}
+        onClose={() => setShowPlanSelector(false)}
+        plans={plansQuery.plans}
+        selectedPlan={selectedPlan}
+        onSelectPlan={setSelectedPlan}
+      />
     </View>
   );
 }

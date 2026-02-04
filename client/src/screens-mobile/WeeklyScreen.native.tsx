@@ -10,6 +10,7 @@ import { usePlansQuery } from '@/hooks/usePlansQuery';
 import { usePlanDataQuery } from '@/hooks/usePlanDataQuery';
 import { Plan, Itinerary, FlightRead } from '@/types/api';
 import ProfileModal from '@/components/modals/mobile/ProfileModal.native';
+import PlanSelectModal from '@/components/modals/mobile/PlanSelectModal.native';
 
 export default function WeeklyScreen() {
   const plansQuery = usePlansQuery();
@@ -147,13 +148,13 @@ export default function WeeklyScreen() {
         <View style={styles.headerTopRow}>
           <Pressable
             style={styles.planSelector}
-            onPress={() => setShowPlanSelector(!showPlanSelector)}
+            onPress={() => setShowPlanSelector(true)}
           >
             <Text style={styles.headerTitle} numberOfLines={1}>
               {selectedPlan?.title || '여행 선택'}
             </Text>
             <Ionicons 
-              name={showPlanSelector ? 'chevron-up' : 'chevron-down'} 
+              name="chevron-down" 
               size={20} 
               color={colors.gray600} 
             />
@@ -166,38 +167,6 @@ export default function WeeklyScreen() {
           </Pressable>
         </View>
         <Text style={styles.headerSubtitle}>{weekRange}</Text>
-        
-        {showPlanSelector && (
-          <View style={styles.planDropdown}>
-            <ScrollView style={styles.planList} nestedScrollEnabled>
-              {plansQuery.plans.map((plan) => (
-                <Pressable
-                  key={plan.id}
-                  style={[
-                    styles.planItem,
-                    selectedPlan?.id === plan.id && styles.planItemSelected,
-                  ]}
-                  onPress={() => {
-                    setSelectedPlan(plan);
-                    setShowPlanSelector(false);
-                  }}
-                >
-                  <Text
-                    style={[
-                      styles.planItemText,
-                      selectedPlan?.id === plan.id && styles.planItemTextSelected,
-                    ]}
-                  >
-                    {plan.title}
-                  </Text>
-                  {selectedPlan?.id === plan.id && (
-                    <Ionicons name="checkmark" size={20} color={colors.primary} />
-                  )}
-                </Pressable>
-              ))}
-            </ScrollView>
-          </View>
-        )}
       </View>
 
       <ScrollView 
@@ -387,6 +356,14 @@ export default function WeeklyScreen() {
           onClose={() => setProfileModalVisible(false)}
         />
       </Modal>
+
+      <PlanSelectModal
+        visible={showPlanSelector}
+        onClose={() => setShowPlanSelector(false)}
+        plans={plansQuery.plans || []}
+        selectedPlan={selectedPlan}
+        onSelectPlan={setSelectedPlan}
+      />
     </View>
   );
 }
@@ -447,47 +424,6 @@ const styles = StyleSheet.create({
   headerSubtitle: {
     ...textStyles.body2,
     color: colors.gray600,
-  },
-  planDropdown: {
-    position: 'absolute',
-    top: '100%',
-    left: 24,
-    right: 24,
-    backgroundColor: colors.white,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: colors.gray200,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
-    marginTop: 8,
-    maxHeight: 200,
-    zIndex: 1000,
-  },
-  planList: {
-    maxHeight: 200,
-  },
-  planItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.gray100,
-  },
-  planItemSelected: {
-    backgroundColor: colors.gray100,
-  },
-  planItemText: {
-    ...textStyles.h6,
-    color: colors.black,
-    flex: 1,
-  },
-  planItemTextSelected: {
-    color: colors.primary,
   },
   
   weekScroll: {
