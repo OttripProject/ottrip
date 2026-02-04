@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { View, Text, ScrollView, StyleSheet, Pressable, Modal, Animated, RefreshControl } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, Pressable, Modal, Animated, RefreshControl, TextInput, Alert, Platform } from 'react-native';
 import dayjs from 'dayjs';
 import { getTodayKoreanDate, formatTime } from '@/utils/dateUtils';
 import { colors } from '@/ui/tokens/colors';
@@ -13,6 +13,7 @@ import { categoryLabels } from '@/types/expense';
 import ProfileModal from '@/components/modals/mobile/ProfileModal.native';
 import PlanSelectModal from '@/components/modals/mobile/PlanSelectModal.native';
 import GradientBackground from '@/ui/components/GradientBackground';
+import api from '@/services/api';
 import SettingIcon from '../../assets/mobile_setting.svg';
 import DropdownIcon from '../../assets/mobile_dropdown.svg';
 import LocationIcon from '../../assets/mobile_location.svg';
@@ -30,6 +31,8 @@ export default function TodayScreen() {
   const [showPlanSelector, setShowPlanSelector] = useState(false);
   const [currentTime, setCurrentTime] = useState(dayjs());
   const [refreshing, setRefreshing] = useState(false);
+  const [newChecklistItem, setNewChecklistItem] = useState('');
+  const [addingChecklistItem, setAddingChecklistItem] = useState(false);
   
   const plansQuery = usePlansQuery();
   const planData = usePlanDataQuery(selectedPlan?.publicId || null);
@@ -194,6 +197,32 @@ export default function TodayScreen() {
 
   const formatCurrency = (amount: number) => {
     return `₩${amount.toLocaleString('ko-KR')}`;
+  };
+
+  const handleAddChecklistItem = async () => {
+    const name = newChecklistItem.trim();
+    if (!name) return;
+    const publicId = selectedPlan?.publicId;
+    if (!publicId) {
+      Alert.alert('알림', '여행을 선택해주세요.');
+      return;
+    }
+    setAddingChecklistItem(true);
+    try {
+      await api.post(`/private/ai/checklist/${publicId}/item`, {
+        name,
+        reason: '',
+        category: 'basic_required',
+      });
+      setNewChecklistItem('');
+      if (planData.fetchPlanData) {
+        await planData.fetchPlanData(publicId);
+      }
+    } catch {
+      Alert.alert('오류', '체크리스트 항목 추가에 실패했습니다.');
+    } finally {
+      setAddingChecklistItem(false);
+    }
   };
 
   const formatExpenseDetail = () => {
@@ -421,6 +450,8 @@ export default function TodayScreen() {
                 </Text>
                 <Pressable>
                   <GradientBackground
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
                     style={styles.aiRecommendButton}
                   >
                     <View style={styles.aiRecommendButtonContent}>
@@ -431,6 +462,33 @@ export default function TodayScreen() {
                 </Pressable>
               </View>
             )}
+            {/* 할일 직접 추가 입력창 */}
+            <View style={styles.checklistAddRow}>
+              <TextInput
+                style={[
+                  styles.checklistAddInput,
+                  Platform.OS === 'android' && styles.checklistAddInputAndroid,
+                  Platform.OS === 'ios' && styles.checklistAddInputIOS,
+                ]}
+                placeholder="할일 입력..."
+                placeholderTextColor={colors.gray500}
+                value={newChecklistItem}
+                onChangeText={setNewChecklistItem}
+                maxLength={100}
+                editable={!addingChecklistItem}
+                returnKeyType="done"
+                onSubmitEditing={handleAddChecklistItem}
+              />
+              <Pressable
+                style={({ pressed }) => [styles.checklistAddButton, pressed && styles.checklistAddButtonPressed]}
+                onPress={handleAddChecklistItem}
+                disabled={addingChecklistItem || !newChecklistItem.trim()}
+              >
+                <Text style={[styles.checklistAddButtonText, (!newChecklistItem.trim() || addingChecklistItem) && styles.checklistAddButtonTextDisabled]}>
+                  추가
+                </Text>
+              </Pressable>
+            </View>
           </View>
         </View>
 
@@ -790,7 +848,7 @@ const styles = StyleSheet.create({
   },
   // 체크리스트 카드
   checklistGrayBox: {
-    backgroundColor: colors.gray300,
+    backgroundColor: colors.gray200,
     borderRadius: 12,
     padding: 16,
   },
@@ -810,7 +868,7 @@ const styles = StyleSheet.create({
   },
   checklistProgressBar: {
     height: 8,
-    backgroundColor: colors.gray300,
+    backgroundColor: colors.gray200,
     borderRadius: 4,
     overflow: 'hidden',
   },
@@ -820,7 +878,7 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   checklistEmptyBox: {
-    backgroundColor: colors.gray300,
+    backgroundColor: colors.gray200,
     borderRadius: 12,
     padding: 26,
   },
@@ -852,6 +910,45 @@ const styles = StyleSheet.create({
   aiRecommendButtonText: {
     ...textStyles.h6,
     color: colors.black,
+  },
+  checklistAddRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.gray200,
+    borderRadius: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    marginTop: 12,
+    gap: 12,
+  },
+  checklistAddInput: {
+    flex: 1,
+    ...textStyles.body3,
+    color: colors.black,
+    paddingHorizontal: 0,
+  },
+  checklistAddInputAndroid: {
+    paddingVertical: 0,
+    textAlignVertical: 'center',
+    includeFontPadding: false,
+  },
+  checklistAddInputIOS: {
+    paddingVertical: 0,
+    lineHeight: textStyles.body3.fontSize ? textStyles.body3.fontSize * 1.2 : 20,
+  },
+  checklistAddButton: {
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+  },
+  checklistAddButtonPressed: {
+    opacity: 0.7,
+  },
+  checklistAddButtonText: {
+    ...textStyles.h6,
+    color: colors.black,
+  },
+  checklistAddButtonTextDisabled: {
+    color: colors.gray500,
   },
   
   // 숙박 카드
