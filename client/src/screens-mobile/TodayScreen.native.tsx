@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { View, Text, ScrollView, StyleSheet, Pressable, Modal, Animated, RefreshControl, TextInput, Alert, Platform } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import dayjs from 'dayjs';
 import { getTodayKoreanDate, formatTime } from '@/utils/dateUtils';
 import { colors } from '@/ui/tokens/colors';
@@ -8,7 +9,8 @@ import { spacing } from '@/ui/tokens/spacing';
 import { usePlansQuery } from '@/hooks/usePlansQuery';
 import { usePlanDataQuery } from '@/hooks/usePlanDataQuery';
 import { useExpensesQuery } from '@/hooks/useExpensesQuery';
-import { Plan, Itinerary } from '@/types/api';
+import { useQuery } from '@tanstack/react-query';
+import { Plan, Itinerary, TravelChecklistItem } from '@/types/api';
 import { categoryLabels } from '@/types/expense';
 import ProfileModal from '@/components/modals/mobile/ProfileModal.native';
 import PlanSelectModal from '@/components/modals/mobile/PlanSelectModal.native';
@@ -21,8 +23,9 @@ import ChecklistIcon from '../../assets/mobile_check.svg';
 import ExpenseIcon from '../../assets/mobile_expense.svg';
 import AccommodationIcon from '../../assets/mobile_accomodation.svg';
 import RightArrowIcon from '../../assets/right_arrow.svg';
-import PlusIcon from '../../assets/mobile_plus.svg';
 import LightningIcon from '../../assets/mobile_lightning.svg';
+import CheckIcon from '../../assets/gender_check.svg';
+
 
 export default function TodayScreen() {
   const formattedDate = getTodayKoreanDate();
@@ -33,6 +36,7 @@ export default function TodayScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [newChecklistItem, setNewChecklistItem] = useState('');
   const [addingChecklistItem, setAddingChecklistItem] = useState(false);
+  const [aiRecommendLoading, setAiRecommendLoading] = useState(false);
   
   const plansQuery = usePlansQuery();
   const planData = usePlanDataQuery(selectedPlan?.publicId || null);
@@ -40,10 +44,27 @@ export default function TodayScreen() {
   const today = currentTime;
   const todayDateStr = today.format('YYYY-MM-DD');
   
-  // 오늘 날짜의 expense 조회 (날짜 필터링 API 사용)
   const { data: todayExpensesFromApi = [], refetch: refetchTodayExpenses } = useExpensesQuery(selectedPlan?.id, todayDateStr);
   
-  // Pulse 애니메이션
+  const { data: checklistData, refetch: refetchChecklist } = useQuery({
+    queryKey: ['checklist', selectedPlan?.publicId],
+    queryFn: async () => {
+      if (!selectedPlan?.publicId) return null;
+      try {
+        const response = await api.get(`/private/ai/checklist/${selectedPlan.publicId}`);
+        return response.data;
+      } catch (error: any) {
+        if (error.response?.status === 404) {
+          return null;
+        }
+        throw error;
+      }
+    },
+    enabled: !!selectedPlan?.publicId,
+    staleTime: 1 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+  });
+  
   const pulseAnim = useRef(new Animated.Value(1)).current;
   
   useEffect(() => {
@@ -78,14 +99,12 @@ export default function TodayScreen() {
   useEffect(() => {
     const checkSchedule = () => {
       const now = dayjs();
-      // 날짜나 시간이 실제로 변경되었을 때만 상태 업데이트
       setCurrentTime((prevTime) => {
         const prevDateStr = prevTime.format('YYYY-MM-DD');
         const prevTimeStr = prevTime.format('HH:mm:ss');
         const nowDateStr = now.format('YYYY-MM-DD');
         const nowTimeStr = now.format('HH:mm:ss');
         
-        // 날짜나 시간이 변경되었을 때만 업데이트
         if (prevDateStr !== nowDateStr || prevTimeStr !== nowTimeStr) {
           return now;
         }
@@ -93,7 +112,6 @@ export default function TodayScreen() {
       });
     };
 
-    // 1초마다 실시간 체크
     const timer = setInterval(checkSchedule, 1000);
 
     return () => clearInterval(timer);
@@ -135,7 +153,6 @@ export default function TodayScreen() {
     });
   }, [todayItineraries, todayDateStr, currentTime]);
 
-  // 오늘 날짜의 숙박 정보
   const todayAccommodations = useMemo(() => {
     if (!planData.accommodations || planData.accommodations.length === 0) {
       return [];
@@ -144,7 +161,6 @@ export default function TodayScreen() {
     return planData.accommodations.filter((accommodation: any) => {
       const checkinDate = dayjs(accommodation.checkinDate).format('YYYY-MM-DD');
       const checkoutDate = dayjs(accommodation.checkoutDate).format('YYYY-MM-DD');
-      // 체크인 날짜가 오늘이거나, 체크아웃 날짜가 오늘 이후인 경우
       return checkinDate <= todayDateStr && checkoutDate >= todayDateStr;
     });
   }, [planData.accommodations, todayDateStr]);
@@ -153,8 +169,6 @@ export default function TodayScreen() {
     let total = 0;
     const byCategory: Record<string, number> = {};
     
-    // API에서 받은 오늘 날짜의 모든 expenses 합산
-    // (일반 expenses + itinerary/flight/accommodation에 연결된 expenses 모두 포함)
     if (todayExpensesFromApi && Array.isArray(todayExpensesFromApi)) {
       todayExpensesFromApi.forEach((expense: any) => {
         const amount = expense.amount || 0;
@@ -167,33 +181,63 @@ export default function TodayScreen() {
     return { total, byCategory };
   }, [todayExpensesFromApi]);
 
-  // 체크리스트 정보
   const checklist = useMemo(() => {
-    return planData.plan?.travel_checklist || null;
-  }, [planData.plan?.travel_checklist]);
+    return checklistData || null;
+  }, [checklistData]);
 
-  // 체크리스트 통계
-  const checklistStats = useMemo(() => {
-    if (!checklist || !checklist.categories) {
-      return { total: 0, checked: 0 };
+  const hasChecklist = useMemo(() => {
+    if (!checklist?.categories) {
+      return false;
+    }
+    return Object.values(checklist.categories).some((category: any) => {
+      return Array.isArray(category) && category.length > 0;
+    });
+  }, [checklist]);
+
+  const todayChecklistItems = useMemo(() => {
+    if (!checklist?.categories) {
+      return [];
+    }
+    const items: TravelChecklistItem[] = [];
+    
+    const categories = checklist.categories;
+    if (!categories || typeof categories !== 'object') {
+      return [];
     }
     
-    let total = 0;
-    let checked = 0;
-    
-    Object.values(checklist.categories).forEach((category: any) => {
+    Object.entries(categories).forEach(([categoryKey, category]: [string, any]) => {
       if (Array.isArray(category)) {
         category.forEach((item: any) => {
-          total++;
-          if (item.is_checked) {
-            checked++;
+          if (!item || typeof item !== 'object') {
+            return;
+          }
+          
+          const itemDate = item.date;
+          const isCustom = item.isCustom ?? false;
+          const isChecked = item.isChecked ?? false;
+          
+          if (itemDate === todayDateStr) {
+            items.push({
+              id: item.id || 0,
+              name: item.name || '',
+              reason: item.reason || '',
+              is_checked: isChecked,
+              is_custom: isCustom,
+              date: item.date,
+            });
           }
         });
       }
     });
     
+    return items;
+  }, [checklist, todayDateStr]);
+
+  const checklistStats = useMemo(() => {
+    const total = todayChecklistItems.length;
+    const checked = todayChecklistItems.filter((item) => item.is_checked).length;
     return { total, checked };
-  }, [checklist]);
+  }, [todayChecklistItems]);
 
   const formatCurrency = (amount: number) => {
     return `₩${amount.toLocaleString('ko-KR')}`;
@@ -209,19 +253,67 @@ export default function TodayScreen() {
     }
     setAddingChecklistItem(true);
     try {
-      await api.post(`/private/ai/checklist/${publicId}/item`, {
+      const response = await api.post(`/private/ai/checklist/${publicId}/item`, {
         name,
         reason: '',
         category: 'basic_required',
+        date: todayDateStr,
       });
       setNewChecklistItem('');
-      if (planData.fetchPlanData) {
-        await planData.fetchPlanData(publicId);
-      }
+      refetchChecklist();
     } catch {
       Alert.alert('오류', '체크리스트 항목 추가에 실패했습니다.');
     } finally {
       setAddingChecklistItem(false);
+    }
+  };
+
+  const handleToggleChecklistItem = async (itemId: number, isChecked: boolean) => {
+    const publicId = selectedPlan?.publicId;
+    if (!publicId) return;
+    try {
+      await api.patch(`/private/ai/checklist/${publicId}/item/${itemId}`, {
+        is_checked: isChecked,
+      });
+      refetchChecklist();
+    } catch {
+      Alert.alert('오류', '체크리스트 항목 업데이트에 실패했습니다.');
+    }
+  };
+
+  const handleDeleteChecklistItem = async (itemId: number) => {
+    const publicId = selectedPlan?.publicId;
+    if (!publicId) return;
+    try {
+      await api.delete(`/private/ai/checklist/${publicId}/item/${itemId}`);
+      refetchChecklist();
+    } catch {
+      Alert.alert('오류', '체크리스트 항목 삭제에 실패했습니다.');
+    }
+  };
+
+  const handleAiRecommendChecklist = async () => {
+    const publicId = selectedPlan?.publicId;
+    if (!publicId) {
+      Alert.alert('알림', '여행을 선택해주세요.');
+      return;
+    }
+    const activeItineraries = planData.itineraries?.filter((it: any) => !it.is_deleted) || [];
+    if (activeItineraries.length < 2) {
+      Alert.alert('알림', '체크리스트 생성을 위해서는 최소 2개 이상의 세부 일정이 필요합니다.');
+      return;
+    }
+    setAiRecommendLoading(true);
+    try {
+      await api.post(`/private/ai/checklist/${publicId}/generate`, {
+        force_regenerate: true,
+        date: todayDateStr,
+      });
+      refetchChecklist();
+    } catch {
+      Alert.alert('오류', 'AI 체크리스트 생성에 실패했습니다.');
+    } finally {
+      setAiRecommendLoading(false);
     }
   };
 
@@ -255,6 +347,7 @@ export default function TodayScreen() {
                     ? planData.fetchPlanData(selectedPlan.publicId)
                     : Promise.resolve(),
                   refetchTodayExpenses(),
+                  refetchChecklist(),
                 ]);
               } finally {
                 setRefreshing(false);
@@ -421,26 +514,58 @@ export default function TodayScreen() {
                 <ChecklistIcon width={20} height={20} color={colors.black} />
                 <Text style={styles.cardHeaderTitle}>오늘의 체크리스트</Text>
               </View>
-              <Pressable>
-                <PlusIcon width={20} height={20} color={colors.gray500} />
-              </Pressable>
+              {hasChecklist && (
+                <Pressable
+                  onPress={handleAiRecommendChecklist}
+                  disabled={aiRecommendLoading}
+                  style={({ pressed }) => [styles.aiRecommendButtonHeader, pressed && styles.aiRecommendButtonPressed]}
+                >
+                  <GradientBackground
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={styles.aiRecommendButtonGradient}
+                  >
+                    <LightningIcon width={16} height={16} color={colors.black} />
+                    <Text style={styles.aiRecommendButtonText}>AI 추천</Text>
+                  </GradientBackground>
+                </Pressable>
+              )}
             </View>
-            {checklist && checklistStats.total > 0 ? (
-              <View style={styles.checklistGrayBox}>
-                <View style={styles.checklistHeader}>
-                  <Text style={styles.checklistTitle}>여행 준비 체크리스트</Text>
-                  <Text style={styles.checklistProgress}>
-                    {checklistStats.checked}/{checklistStats.total}
-                  </Text>
-                </View>
-                <View style={styles.checklistProgressBar}>
-                  <View 
-                    style={[
-                      styles.checklistProgressFill,
-                      { width: `${(checklistStats.checked / checklistStats.total) * 100}%` }
-                    ]} 
-                  />
-                </View>
+            {todayChecklistItems.length > 0 ? (
+              <View style={styles.checklistListBox}>
+                {todayChecklistItems.map((item) => (
+                  <View key={item.id} style={styles.checklistListItem}>
+                    <Pressable
+                      onPress={() => handleToggleChecklistItem(item.id, !item.is_checked)}
+                      hitSlop={8}
+                    >
+                      <View style={[styles.checklistItemCheckbox, item.is_checked && styles.checklistItemCheckboxSelected]}>
+                        {item.is_checked && <CheckIcon width={16} height={16} fill={colors.white} />}
+                      </View>
+                    </Pressable>
+                    <View style={styles.checklistItemContent}>
+                      <Text
+                        style={[styles.checklistItemName, item.is_checked && styles.checklistItemNameChecked]}
+                        numberOfLines={1}
+                        ellipsizeMode="tail"
+                      >
+                        {item.name}
+                      </Text>
+                      {!item.is_custom && (
+                        <View style={styles.checklistItemAiTag}>
+                          <Text style={styles.checklistItemAiTagText}>AI</Text>
+                        </View>
+                      )}
+                    </View>
+                    <Pressable
+                      onPress={() => handleDeleteChecklistItem(item.id)}
+                      style={styles.checklistItemDelete}
+                      hitSlop={8}
+                    >
+                      <Ionicons name="close" size={20} color={colors.gray500} />
+                    </Pressable>
+                  </View>
+                ))}
               </View>
             ) : (
               <View style={styles.checklistEmptyBox}>
@@ -448,7 +573,11 @@ export default function TodayScreen() {
                 <Text style={styles.emptySubtitle}>
                   AI가 일정에 맞는 준비물을 추천해드려요.
                 </Text>
-                <Pressable>
+                <Pressable
+                  onPress={handleAiRecommendChecklist}
+                  disabled={aiRecommendLoading}
+                  style={({ pressed }) => [pressed && { opacity: 0.8 }]}
+                >
                   <GradientBackground
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 1 }}
@@ -686,7 +815,6 @@ const styles = StyleSheet.create({
     color: colors.black,
   },
   
-  // 공통 카드 스타일
   cardBase: {
     marginHorizontal: 16,
     padding: 20,
@@ -699,7 +827,6 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   
-  // 현재 활동 카드
   currentCard: {
     marginBottom: 16,
   },
@@ -760,7 +887,6 @@ const styles = StyleSheet.create({
     color: colors.primary,
   },
   
-  // 섹션
   section: {
     marginTop: 8,
     marginBottom: 16,
@@ -784,7 +910,6 @@ const styles = StyleSheet.create({
     marginHorizontal: 16,
   },
   
-  // 타임라인
   timelineItem: {
     marginBottom: 12,
   },
@@ -830,7 +955,6 @@ const styles = StyleSheet.create({
     color: colors.primary,
   },
   
-  // 체크리스트 카드 헤더
   cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -846,36 +970,74 @@ const styles = StyleSheet.create({
     ...textStyles.h6,
     color: colors.black,
   },
-  // 체크리스트 카드
-  checklistGrayBox: {
-    backgroundColor: colors.gray200,
-    borderRadius: 12,
-    padding: 16,
-  },
-  checklistHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  checklistTitle: {
-    ...textStyles.h6,
-    color: colors.black,
-  },
-  checklistProgress: {
-    ...textStyles.body3,
-    color: colors.gray600,
-  },
-  checklistProgressBar: {
-    height: 8,
-    backgroundColor: colors.gray200,
-    borderRadius: 4,
+  aiRecommendButtonHeader: {
+    borderRadius: 999,
     overflow: 'hidden',
   },
-  checklistProgressFill: {
-    height: '100%',
+  aiRecommendButtonPressed: {
+    opacity: 0.8,
+  },
+  aiRecommendButtonGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 6,
+    paddingHorizontal: 16,
+  },
+  checklistListBox: {
+    marginBottom: 0,
+  },
+  checklistListItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 0,
+    gap: 12,
+  },
+  checklistItemCheckbox: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: colors.gray300,
+    backgroundColor: colors.gray300,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  checklistItemCheckboxSelected: {
+    borderColor: colors.primary,
     backgroundColor: colors.primary,
-    borderRadius: 4,
+  },
+  checklistItemContent: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  checklistItemName: {
+    ...textStyles.body3,
+    color: colors.black,
+  },
+  checklistItemNameChecked: {
+    color: colors.gray500,
+    textDecorationLine: 'line-through',
+  },
+  checklistItemAiTag: {
+    backgroundColor: 'rgba(0, 122, 255, 0.1)',
+    paddingVertical: 2,
+    paddingHorizontal: 8,
+    borderRadius: 6,
+  },
+  checklistItemAiTagText: {
+    ...textStyles.h9,
+    color: colors.primary,
+  },
+  checklistItemDelete: {
+    width: 32,
+    height: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   checklistEmptyBox: {
     backgroundColor: colors.gray200,
@@ -951,7 +1113,6 @@ const styles = StyleSheet.create({
     color: colors.gray500,
   },
   
-  // 숙박 카드
   accommodationCard: {
     marginBottom: 12,
     flexDirection: 'row',
@@ -994,7 +1155,6 @@ const styles = StyleSheet.create({
     color: colors.gray600,
   },
   
-  // 비용 카드 (Primary 배경)
   costCardPrimary: {
     backgroundColor: colors.primary,
     padding: 20,

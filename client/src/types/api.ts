@@ -6,6 +6,15 @@ export interface ApiResponse<T = any> {
 }
 
 // 계획 (Plan) 관련 타입
+export interface TravelChecklistItem {
+  id: number;
+  name: string;
+  reason: string;
+  is_checked: boolean;
+  is_custom: boolean;
+  date?: string;
+}
+
 export interface Plan {
   id: number;
   publicId: string;
@@ -16,6 +25,9 @@ export interface Plan {
   myRole?: 'owner' | 'editor' | 'viewer';
   createdAt: string;
   updatedAt: string;
+  travel_checklist?: {
+    categories?: Record<string, TravelChecklistItem[]>;
+  } | null;
 }
 
 export interface CreatePlanRequest {
