@@ -313,7 +313,7 @@ class AIService:
         return ChecklistRead(categories=categories_updated)
     
     async def set_checklist_item_status(self, public_id: str, item_id: int, is_checked: bool) -> StatusResponse:
-        plan = await self.plan_repository.find_by_public_id(public_id=public_id)
+        plan = await self.plan_repository.find_by_public_id_only_plan(public_id=public_id)
         if not plan:
             raise HTTPException(status_code=404, detail="해당 계획을 찾을 수 없습니다.")
         
@@ -337,7 +337,7 @@ class AIService:
     
     async def add_checklist_item(self, public_id: str, name: str, reason: str = "", category: str = "basic_required", date: str | None = None) -> StatusResponse:
         """체크리스트 항목 추가 (지정된 카테고리)"""
-        plan = await self.plan_repository.find_by_public_id(public_id=public_id)
+        plan = await self.plan_repository.find_by_public_id_only_plan(public_id=public_id)
         if not plan:
             raise HTTPException(status_code=404, detail="해당 계획을 찾을 수 없습니다.")
         
@@ -411,7 +411,7 @@ class AIService:
     
     async def delete_checklist_item(self, public_id: str, item_id: int) -> StatusResponse:
         """체크리스트 항목 삭제"""
-        plan = await self.plan_repository.find_by_public_id(public_id=public_id)
+        plan = await self.plan_repository.find_by_public_id_only_plan(public_id=public_id)
         if not plan:
             raise HTTPException(status_code=404, detail="해당 계획을 찾을 수 없습니다.")
         
