@@ -18,7 +18,7 @@ import { View, ActivityIndicator, StyleSheet, Platform } from "react-native";
 import { useRef } from "react";
 import type { LinkingOptions } from "@react-navigation/native";
 import * as SecureStore from 'expo-secure-store';
-import MobileTestNavigator from "@/screens-mobile/MobileTestNavigator";
+import MobileNavigator from "@/screens-mobile/MobileNavigator";
 
 const Stack = createStackNavigator();
 
@@ -180,7 +180,7 @@ export default function RootNavigator() {
     return <LoadingScreen />;
   }
 
-  const OttripScreen = Platform.OS === 'web' ? DashboardScreen : MobileTestNavigator;
+  const OttripScreen = Platform.OS === 'web' ? DashboardScreen : MobileNavigator;
 
   return (
     <NavigationContainer linking={linking} ref={navRef}>
@@ -194,8 +194,8 @@ export default function RootNavigator() {
             <Stack.Screen name="PLAN" component={DashboardScreen} />
             <Stack.Screen name="NOT FOUND" component={NotFoundScreen} />
             <Stack.Screen name="FORBIDDEN" component={ForbiddenScreen} />
-            {/* 모바일 테스트 화면 (개발 중) */}
-            <Stack.Screen name="MOBILE_TEST" component={MobileTestNavigator} />
+            {/* 모바일 화면 */}
+            <Stack.Screen name="MOBILE" component={MobileNavigator} />
           </>
         ) : (
           <>
@@ -211,8 +211,8 @@ export default function RootNavigator() {
             <Stack.Screen name="프로필 입력" component={RegisterProfileScreen} />
             <Stack.Screen name="상세내용" component={TermsDetailScreen} />
             <Stack.Screen name="인증" component={AuthCallbackScreen} />
-            {/* 모바일 테스트 화면 (로그인 없이도 접근 가능) */}
-            <Stack.Screen name="MOBILE_TEST" component={MobileTestNavigator} />
+            {/* 모바일 화면 (로그인 없이도 접근 가능) */}
+            <Stack.Screen name="MOBILE" component={MobileNavigator} />
           </>
         )}
       </Stack.Navigator>

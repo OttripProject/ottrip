@@ -9,7 +9,7 @@ import { spacing } from '@/ui/tokens/spacing';
 import { usePlansQuery } from '@/hooks/usePlansQuery';
 import { usePlanDataQuery } from '@/hooks/usePlanDataQuery';
 import { useExpensesQuery } from '@/hooks/useExpensesQuery';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Plan, Itinerary, TravelChecklistItem } from '@/types/api';
 import { categoryLabels } from '@/types/expense';
 import ProfileModal from '@/components/modals/mobile/ProfileModal.native';
@@ -38,6 +38,10 @@ export default function TodayScreen() {
   const [addingChecklistItem, setAddingChecklistItem] = useState(false);
   const [aiRecommendLoading, setAiRecommendLoading] = useState(false);
   
+  const togglingItems = useRef<Set<number>>(new Set());
+  const deletingItems = useRef<Set<number>>(new Set());
+  
+  const queryClient = useQueryClient();
   const plansQuery = usePlansQuery();
   const planData = usePlanDataQuery(selectedPlan?.publicId || null);
   
@@ -271,24 +275,65 @@ export default function TodayScreen() {
   const handleToggleChecklistItem = async (itemId: number, isChecked: boolean) => {
     const publicId = selectedPlan?.publicId;
     if (!publicId) return;
+    
+    if (togglingItems.current.has(itemId)) {
+      return;
+    }
+    
+    togglingItems.current.add(itemId);
+    
+    const previousData = queryClient.getQueryData(['checklist', publicId]);
+    
+    queryClient.setQueryData(['checklist', publicId], (old: any) => {
+      if (!old?.categories) return old;
+      
+      const updated = { ...old };
+      const categories = { ...updated.categories };
+      
+      Object.keys(categories).forEach((categoryKey) => {
+        const items = categories[categoryKey];
+        if (Array.isArray(items)) {
+          categories[categoryKey] = items.map((item: any) => {
+            if (item.id === itemId) {
+              return { ...item, isChecked };
+            }
+            return item;
+          });
+        }
+      });
+      
+      return { ...updated, categories };
+    });
+    
     try {
       await api.patch(`/private/ai/checklist/${publicId}/item/${itemId}`, {
         is_checked: isChecked,
       });
-      refetchChecklist();
     } catch {
+      queryClient.setQueryData(['checklist', publicId], previousData);
       Alert.alert('오류', '체크리스트 항목 업데이트에 실패했습니다.');
+    } finally {
+      togglingItems.current.delete(itemId);
     }
   };
 
   const handleDeleteChecklistItem = async (itemId: number) => {
     const publicId = selectedPlan?.publicId;
     if (!publicId) return;
+    
+    if (deletingItems.current.has(itemId)) {
+      return;
+    }
+    
+    deletingItems.current.add(itemId);
+    
     try {
       await api.delete(`/private/ai/checklist/${publicId}/item/${itemId}`);
       refetchChecklist();
     } catch {
       Alert.alert('오류', '체크리스트 항목 삭제에 실패했습니다.');
+    } finally {
+      deletingItems.current.delete(itemId);
     }
   };
 
@@ -540,7 +585,7 @@ export default function TodayScreen() {
                       hitSlop={8}
                     >
                       <View style={[styles.checklistItemCheckbox, item.is_checked && styles.checklistItemCheckboxSelected]}>
-                        {item.is_checked && <CheckIcon width={16} height={16} fill={colors.white} />}
+                        <CheckIcon width={16} height={16} fill={colors.white} />
                       </View>
                     </Pressable>
                     <View style={styles.checklistItemContent}>
@@ -1020,8 +1065,7 @@ const styles = StyleSheet.create({
     color: colors.black,
   },
   checklistItemNameChecked: {
-    color: colors.gray500,
-    textDecorationLine: 'line-through',
+    color: colors.gray600,
   },
   checklistItemAiTag: {
     backgroundColor: 'rgba(0, 122, 255, 0.1)',
