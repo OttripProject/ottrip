@@ -14,8 +14,10 @@ import { Plan, Itinerary, TravelChecklistItem } from '@/types/api';
 import { categoryLabels } from '@/types/expense';
 import ProfileModal from '@/components/modals/mobile/ProfileModal.native';
 import PlanSelectModal from '@/components/modals/mobile/PlanSelectModal.native';
+import ItineraryDetailModal from '@/components/modals/mobile/ItineraryDetailModal.native';
 import GradientBackground from '@/ui/components/GradientBackground';
 import api from '@/services/api';
+import { itinerariesApi } from '@/services/itineraries';
 import SettingIcon from '../../assets/mobile_setting.svg';
 import DropdownIcon from '../../assets/mobile_dropdown.svg';
 import LocationIcon from '../../assets/mobile_location.svg';
@@ -37,6 +39,8 @@ export default function TodayScreen() {
   const [newChecklistItem, setNewChecklistItem] = useState('');
   const [addingChecklistItem, setAddingChecklistItem] = useState(false);
   const [aiRecommendLoading, setAiRecommendLoading] = useState(false);
+  const [selectedItinerary, setSelectedItinerary] = useState<Itinerary | null>(null);
+  const [showItineraryDetail, setShowItineraryDetail] = useState(false);
   
   const togglingItems = useRef<Set<number>>(new Set());
   const deletingItems = useRef<Set<number>>(new Set());
@@ -508,7 +512,13 @@ export default function TodayScreen() {
                     isDone && styles.doneItem,
                   ]}
                 >
-                  <View style={styles.cardBase}>
+                  <Pressable
+                    style={styles.cardBase}
+                    onPress={() => {
+                      setSelectedItinerary(itinerary);
+                      setShowItineraryDetail(true);
+                    }}
+                  >
                     <View style={styles.timelineCardHeader}>
                       <Text style={[styles.timelineTime, isNext && styles.nextTime]}>
                         {startTime}
@@ -544,7 +554,7 @@ export default function TodayScreen() {
                         {itinerary.description}
                       </Text>
                     )}
-                  </View>
+                  </Pressable>
                 </View>
               );
             })}
@@ -749,6 +759,31 @@ export default function TodayScreen() {
         plans={plansQuery.plans}
         selectedPlan={selectedPlan}
         onSelectPlan={setSelectedPlan}
+      />
+
+      <ItineraryDetailModal
+        visible={showItineraryDetail}
+        onClose={() => {
+          setShowItineraryDetail(false);
+          setSelectedItinerary(null);
+        }}
+        itinerary={selectedItinerary}
+        onEdit={(itinerary) => {
+          // TODO: 편집 기능 구현
+          Alert.alert('알림', '편집 기능은 곧 제공될 예정입니다.');
+        }}
+        onDelete={async (itinerary) => {
+          try {
+            await itinerariesApi.deleteItinerary(itinerary.id);
+            // planData 새로고침
+            if (selectedPlan?.publicId) {
+              planData.fetchPlanData(selectedPlan.publicId);
+            }
+            Alert.alert('성공', '일정이 삭제되었습니다.');
+          } catch (error) {
+            Alert.alert('오류', '일정 삭제에 실패했습니다.');
+          }
+        }}
       />
     </View>
   );
