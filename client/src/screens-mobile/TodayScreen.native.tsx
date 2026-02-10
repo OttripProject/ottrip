@@ -15,6 +15,7 @@ import { categoryLabels } from '@/types/expense';
 import ProfileModal from '@/components/modals/mobile/ProfileModal.native';
 import PlanSelectModal from '@/components/modals/mobile/PlanSelectModal.native';
 import ItineraryDetailModal from '@/components/modals/mobile/ItineraryDetailModal.native';
+import ItineraryEditModal from '@/components/modals/mobile/ItineraryEditModal.native';
 import GradientBackground from '@/ui/components/GradientBackground';
 import api from '@/services/api';
 import { itinerariesApi } from '@/services/itineraries';
@@ -41,6 +42,8 @@ export default function TodayScreen() {
   const [aiRecommendLoading, setAiRecommendLoading] = useState(false);
   const [selectedItinerary, setSelectedItinerary] = useState<Itinerary | null>(null);
   const [showItineraryDetail, setShowItineraryDetail] = useState(false);
+  const [showItineraryEdit, setShowItineraryEdit] = useState(false);
+  const [editingItinerary, setEditingItinerary] = useState<Itinerary | null>(null);
   
   const togglingItems = useRef<Set<number>>(new Set());
   const deletingItems = useRef<Set<number>>(new Set());
@@ -769,8 +772,9 @@ export default function TodayScreen() {
         }}
         itinerary={selectedItinerary}
         onEdit={(itinerary) => {
-          // TODO: 편집 기능 구현
-          Alert.alert('알림', '편집 기능은 곧 제공될 예정입니다.');
+          setShowItineraryDetail(false);
+          setEditingItinerary(itinerary);
+          setShowItineraryEdit(true);
         }}
         onDelete={async (itinerary) => {
           try {
@@ -782,6 +786,26 @@ export default function TodayScreen() {
             Alert.alert('성공', '일정이 삭제되었습니다.');
           } catch (error) {
             Alert.alert('오류', '일정 삭제에 실패했습니다.');
+          }
+        }}
+      />
+
+      <ItineraryEditModal
+        visible={showItineraryEdit}
+        onClose={() => {
+          setShowItineraryEdit(false);
+          setEditingItinerary(null);
+        }}
+        itinerary={editingItinerary}
+        planId={selectedPlan?.id ?? 0}
+        onSave={() => {
+          if (selectedPlan?.publicId) {
+            planData.fetchPlanData(selectedPlan.publicId);
+          }
+        }}
+        onDelete={(itineraryId) => {
+          if (selectedPlan?.publicId) {
+            planData.fetchPlanData(selectedPlan.publicId);
           }
         }}
       />
