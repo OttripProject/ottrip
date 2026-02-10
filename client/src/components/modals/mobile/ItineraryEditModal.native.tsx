@@ -5,6 +5,7 @@ import CloseIcon from '../../../../assets/x.svg';
 import dayjs from 'dayjs';
 import { Itinerary, CreateItineraryRequest } from '@/types/api';
 import { colors } from '@/ui/tokens/colors';
+import { spacing } from '@/ui/tokens/spacing';
 import { textStyles } from '@/ui/tokens/typography';
 import FullScreenModal from '@/ui/components/FullScreenModal.native';
 import { TimePicker, CountryPicker } from '@/ui/components/pickers';
@@ -218,7 +219,7 @@ export default function ItineraryEditModal({
           {/* 일정명 */}
           <View style={styles.inputGroup}>
             <Text style={styles.label}>
-              일정명<Text style={styles.required}>*</Text>
+              일정 제목<Text style={styles.required}>*</Text>
             </Text>
             <Input
               value={formData.title}
@@ -233,7 +234,7 @@ export default function ItineraryEditModal({
             <TextInput
               value={formData.description}
               onChangeText={(text) => setFormData({ ...formData, description: text })}
-              style={[styles.textArea, styles.input]}
+              style={styles.textArea}
               multiline
               numberOfLines={4}
               textAlignVertical="top"
@@ -248,6 +249,10 @@ export default function ItineraryEditModal({
                 value={formData.country}
                 onChange={(country) => setFormData({ ...formData, country })}
                 containerStyle={styles.pickerContainer}
+                style={styles.pickerInput}
+                dropDownContainerStyle={styles.pickerDropDownContainer}
+                listItemLabelStyle={styles.pickerListItemLabel}
+                selectedItemContainerStyle={styles.selectedItemContainerStyle}
               />
             </View>
             <View style={[styles.inputGroup, styles.halfWidth]}>
@@ -281,7 +286,7 @@ export default function ItineraryEditModal({
                 <Text style={formData.itineraryDate ? styles.dateText : styles.placeholderText}>
                   {formData.itineraryDate ? formatDate(formData.itineraryDate) : '날짜 선택'}
                 </Text>
-                <CalendarIcon width={16} height={16} color={colors.gray600} />
+                <CalendarIcon width={16} height={16} color={colors.black} />
               </Pressable>
               {showDatePicker && (
                 <BaseCalendar
@@ -404,13 +409,14 @@ const styles = StyleSheet.create({
     // marginBottom: 4,
   },
   label: {
-    ...textStyles.body3,
+    ...textStyles.h7,
     marginBottom: 8,
   },
   required: {
     color: colors.warning,
   },
   input: {
+    minHeight: 44,
     paddingVertical: 14,
     paddingHorizontal: 12,
     borderWidth: 1,
@@ -419,13 +425,14 @@ const styles = StyleSheet.create({
     backgroundColor: colors.gray100,
   },
   textArea: {
+    ...textStyles.body4,
     minHeight: 100,
-    paddingTop: 12,
-    paddingBottom: 12,
     borderWidth: 1,
-    borderColor: colors.gray300,
-    borderRadius: 8,
-    paddingHorizontal: 16,
+    borderColor: colors.gray400,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: colors.gray100,
   },
   row: {
     flexDirection: 'row',
@@ -437,8 +444,29 @@ const styles = StyleSheet.create({
   pickerContainer: {
     zIndex: 1,
   },
+  pickerInput: {
+    minHeight: 44,
+    borderWidth: 1,
+    borderColor: colors.gray400,
+    borderRadius: 12,
+    backgroundColor: colors.gray100,
+  },
+  pickerDropDownContainer: {
+    borderWidth: 1,
+    borderColor: colors.gray400,
+    borderRadius: 12,
+    backgroundColor: colors.gray100,
+  },
+  pickerListItemLabel: {
+    ...textStyles.body4,
+    color: colors.gray500,
+    backgroundColor: colors.gray100,
+  },
+  selectedItemContainerStyle: {
+    backgroundColor: colors.gray100,
+  },
   dateInput: {
-    paddingVertical: 14,
+    paddingVertical: 10,
     paddingHorizontal: 12,
     flexDirection: 'row',
     alignItems: 'center',
@@ -452,7 +480,7 @@ const styles = StyleSheet.create({
     ...textStyles.body3,
   },
   placeholderText: {
-    ...textStyles.body2,
+    ...textStyles.body3,
     color: colors.gray400,
   },
   calendarPopup: {
