@@ -270,10 +270,10 @@ export default function ItineraryEditModal({
             />
           </View>
 
-          {/* 날짜, 시간 */}
-          <View style={styles.row}>
-            <View style={[styles.inputGroup, styles.halfWidth]}>
-              <Text style={styles.label}>날짜</Text>
+          <View style={[styles.inputGroup, styles.halfWidth, { gap: 8 }]}>
+              <Text style={[styles.label, {marginBottom: 0}]}>
+                날짜 및 시간<Text style={styles.required}>*</Text>
+              </Text>
               <Pressable
                 style={styles.dateInput}
                 onPress={() => setShowDatePicker(true)}
@@ -295,27 +295,26 @@ export default function ItineraryEditModal({
                   style={styles.calendarPopup}
                 />
               )}
+            <View style={styles.row}>
+                <View style={[styles.halfWidth]}>
+                <TimePicker
+                    value={formData.startTime}
+                    onChange={(time) => setFormData({ ...formData, startTime: time })}
+                    style={styles.pickerContainer}
+                />
+                </View>
+                <View style={[styles.halfWidth]}>
+                    <TimePicker
+                    value={formData.endTime}
+                    onChange={(time) => setFormData({ ...formData, endTime: time })}
+                    style={styles.pickerContainer}
+                    minTime={formData.startTime}
+                    />
+                </View>
             </View>
-            <View style={[styles.inputGroup, styles.halfWidth]}>
-              <Text style={styles.label}>시간</Text>
-              <TimePicker
-                value={formData.startTime}
-                onChange={(time) => setFormData({ ...formData, startTime: time })}
-                style={styles.pickerContainer}
-              />
-            </View>
-          </View>
+         </View>
 
-          {/* 종료 시간 */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>종료 시간</Text>
-            <TimePicker
-              value={formData.endTime}
-              onChange={(time) => setFormData({ ...formData, endTime: time })}
-              style={styles.pickerContainer}
-              minTime={formData.startTime}
-            />
-          </View>
+
         </View>
       </ScrollView>
 
@@ -406,7 +405,6 @@ const styles = StyleSheet.create({
   },
   label: {
     ...textStyles.body3,
-    color: colors.black,
     marginBottom: 8,
   },
   required: {
