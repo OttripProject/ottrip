@@ -305,15 +305,23 @@ export default function ItineraryEditModal({
                 <TimePicker
                     value={formData.startTime}
                     onChange={(time) => setFormData({ ...formData, startTime: time })}
-                    style={styles.pickerContainer}
+                    containerStyle={styles.pickerContainer}
+                    style={styles.pickerInput}
+                    dropDownContainerStyle={styles.pickerDropDownContainer}
+                    listItemLabelStyle={styles.pickerListItemLabel}
+                    selectedItemContainerStyle={styles.selectedItemContainerStyle}
                 />
                 </View>
                 <View style={[styles.halfWidth]}>
                     <TimePicker
                     value={formData.endTime}
                     onChange={(time) => setFormData({ ...formData, endTime: time })}
-                    style={styles.pickerContainer}
                     minTime={formData.startTime}
+                    containerStyle={styles.pickerContainer}
+                    style={styles.pickerInput}
+                    dropDownContainerStyle={styles.pickerDropDownContainer}
+                    listItemLabelStyle={styles.pickerListItemLabel}
+                    selectedItemContainerStyle={styles.selectedItemContainerStyle}
                     />
                 </View>
             </View>
@@ -373,7 +381,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 16,
     paddingTop: 12,
-    paddingBottom: 100,
+    paddingBottom: 210,
   },
   categoryTabs: {
     flexDirection: 'row',

@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect, useRef } from 'react';
-import { View, StyleSheet, ViewStyle, Pressable } from 'react-native';
+import { View, StyleSheet, ViewStyle, TextStyle, Pressable } from 'react-native';
 import useDetectClose from '@/hooks/useDetectClose';
 import DropDownPicker from 'react-native-dropdown-picker';
 import { colors } from '@/ui/tokens/colors';
@@ -14,7 +14,11 @@ import { PLACEHOLDERS } from '@/constants/placeholders';
 interface TimePickerProps {
   value: string; // 'HH:mm' 형식
   onChange: (time: string) => void;
+  containerStyle?: ViewStyle;
   style?: ViewStyle;
+  dropDownContainerStyle?: ViewStyle;
+  listItemLabelStyle?: ViewStyle | TextStyle;
+  selectedItemContainerStyle?: ViewStyle;
   placeholder?: string;
   minTime?: string; // 'HH:mm' 형식, 이 시간 이후만 선택 가능
   maxTime?: string; // 'HH:mm' 형식, 이 시간 이전만 선택 가능
@@ -26,7 +30,11 @@ interface TimePickerProps {
 export default function TimePicker({ 
   value, 
   onChange, 
+  containerStyle,
   style, 
+  dropDownContainerStyle,
+  listItemLabelStyle,
+  selectedItemContainerStyle,
   placeholder = PLACEHOLDERS.picker.time, 
   minTime,
   maxTime,
@@ -116,7 +124,7 @@ export default function TimePicker({
           onPress={handleOutsidePress}
         />
       )}
-      <View ref={pickerRef} style={[styles.wrapper, { zIndex: open ? 10000 : 1 }]}>
+      <View ref={pickerRef} style={[styles.wrapper, containerStyle, { zIndex: open ? 10000 : 1 }]}>
         <DropDownPicker
         open={open}
         value={selectedValue}
@@ -139,21 +147,24 @@ export default function TimePicker({
         placeholderStyle={styles.placeholder}
         textStyle={styles.text}
         labelStyle={styles.text}
-        listItemLabelStyle={[styles.listItemLabel, { backgroundColor: dropdownBgColor }]}
+        listItemLabelStyle={[styles.listItemLabel, { backgroundColor: dropdownBgColor }, listItemLabelStyle]}
         selectedItemLabelStyle={styles.selectedItem}
-        selectedItemContainerStyle={[styles.selectedItemContainer, { backgroundColor: dropdownBgColor }]}
-        style={[styles.dropdown, dropdownStyle]}
+        selectedItemContainerStyle={[styles.selectedItemContainer, { backgroundColor: dropdownBgColor }, selectedItemContainerStyle]}
+        style={[styles.dropdown, dropdownStyle, disabled && { borderColor: colors.gray400, borderWidth: 1 }, style]}
         dropDownContainerStyle={[
           styles.dropdownContainer, 
           { 
             width: '100%', 
             backgroundColor: dropdownBgColor,
+            zIndex: 11000,
+            position: 'absolute' as const,
             ...(customBorderColor && {
               borderColor: customBorderColor,
               borderWidth: customBorderWidth ?? 1,
               borderTopWidth: 0,
             })
-          }
+          },
+          dropDownContainerStyle
         ]}
         containerStyle={[styles.dropdownOuter, { width: '100%' }]}
         listMode="FLATLIST"
