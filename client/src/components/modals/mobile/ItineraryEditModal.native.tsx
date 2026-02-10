@@ -402,7 +402,7 @@ const styles = StyleSheet.create({
     gap: 20,
   },
   inputGroup: {
-    marginBottom: 4,
+    // marginBottom: 4,
   },
   label: {
     ...textStyles.body3,
@@ -413,7 +413,12 @@ const styles = StyleSheet.create({
     color: colors.warning,
   },
   input: {
-    height: 48,
+    paddingVertical: 14,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderColor: colors.gray400,
+    borderRadius: 12,
+    backgroundColor: colors.gray100,
   },
   textArea: {
     minHeight: 100,
@@ -426,7 +431,7 @@ const styles = StyleSheet.create({
   },
   row: {
     flexDirection: 'row',
-    gap: 12,
+    gap: 8,
   },
   halfWidth: {
     flex: 1,
@@ -435,19 +440,18 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
   dateInput: {
-    height: 48,
+    paddingVertical: 14,
+    paddingHorizontal: 12,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     borderWidth: 1,
-    borderColor: colors.gray300,
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    backgroundColor: colors.white,
+    borderColor: colors.gray400,
+    borderRadius: 12,
+    backgroundColor: colors.gray100,
   },
   dateText: {
-    ...textStyles.body2,
-    color: colors.black,
+    ...textStyles.body3,
   },
   placeholderText: {
     ...textStyles.body2,
@@ -462,8 +466,6 @@ const styles = StyleSheet.create({
   },
   footer: {
     backgroundColor: colors.white,
-    borderTopWidth: 1,
-    borderTopColor: colors.gray200,
     paddingHorizontal: 24,
     paddingTop: 16,
     paddingBottom: 8,
