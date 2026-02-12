@@ -113,7 +113,7 @@ export default function PlanSelectModal({
                   onPress={() => handleSelectPlan(plan)}
                   hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                 >
-                  {/* 체크 - 왼쪽 */}
+
                   <View style={[styles.planCardCheckWrap, isSelected && styles.planCardCheckWrapSelected]}>
                     {isSelected ? (
                       <CheckedIcon width={20} height={20} color={colors.primary} />
@@ -121,7 +121,7 @@ export default function PlanSelectModal({
                       <UnCheckedIcon width={20} height={20} color={colors.gray500} />
                     )}
                   </View>
-                  {/* 여행 정보 - 가운데 */}
+
                   <View style={styles.planCardCenter}>
                     <View style={styles.planCardTextWrap}>
                       <Text style={styles.planCardTitle} numberOfLines={1}>
@@ -132,7 +132,7 @@ export default function PlanSelectModal({
                       </Text>
                     </View>
                   </View>
-                  {/* 수정/삭제 - 오른쪽 */}
+
                   <View style={styles.planCardActions}>
                     <Pressable
                       style={styles.planCardActionButton}
@@ -238,10 +238,9 @@ const styles = StyleSheet.create({
   planCardActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 10,
   },
   planCardActionButton: {
-    // padding: 4,
     alignItems: 'center',
     justifyContent: 'center',
   },
