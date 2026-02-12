@@ -10,15 +10,17 @@ import { usePlansQuery } from '@/hooks/usePlansQuery';
 import { usePlanDataQuery } from '@/hooks/usePlanDataQuery';
 import { useExpensesQuery } from '@/hooks/useExpensesQuery';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Plan, Itinerary, TravelChecklistItem } from '@/types/api';
+import { Plan, Itinerary, TravelChecklistItem, Accommodation } from '@/types/api';
 import { categoryLabels } from '@/types/expense';
 import ProfileModal from '@/components/modals/mobile/ProfileModal.native';
 import PlanSelectModal from '@/components/modals/mobile/PlanSelectModal.native';
 import ItineraryDetailModal from '@/components/modals/mobile/ItineraryDetailModal.native';
 import ItineraryEditModal from '@/components/modals/mobile/ItineraryEditModal.native';
+import AccommodationDetailModal from '@/components/modals/mobile/AccommodationDetailModal.native';
 import GradientBackground from '@/ui/components/GradientBackground';
 import api from '@/services/api';
 import { itinerariesApi } from '@/services/itineraries';
+import { accommodationsApi } from '@/services/accommodations';
 import SettingIcon from '../../assets/mobile_setting.svg';
 import DropdownIcon from '../../assets/mobile_dropdown.svg';
 import LocationIcon from '../../assets/mobile_location.svg';
@@ -44,7 +46,9 @@ export default function TodayScreen() {
   const [showItineraryDetail, setShowItineraryDetail] = useState(false);
   const [showItineraryEdit, setShowItineraryEdit] = useState(false);
   const [editingItinerary, setEditingItinerary] = useState<Itinerary | null>(null);
-  
+  const [selectedAccommodation, setSelectedAccommodation] = useState<Accommodation | null>(null);
+  const [showAccommodationDetail, setShowAccommodationDetail] = useState(false);
+
   const togglingItems = useRef<Set<number>>(new Set());
   const deletingItems = useRef<Set<number>>(new Set());
   
@@ -713,8 +717,15 @@ export default function TodayScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>여행 정보 (Reference)</Text>
           {todayAccommodations.length > 0 ? (
-            todayAccommodations.map((accommodation: any) => (
-              <Pressable key={accommodation.id} style={[styles.cardBase, styles.accommodationCard]}>
+            todayAccommodations.map((accommodation: Accommodation) => (
+              <Pressable
+                key={accommodation.id}
+                style={[styles.cardBase, styles.accommodationCard]}
+                onPress={() => {
+                  setSelectedAccommodation(accommodation);
+                  setShowAccommodationDetail(true);
+                }}
+              >
                 <View style={styles.accommodationHeader}>
                   <View style={styles.accommodationIconBox}>
                     <AccommodationIcon
@@ -816,6 +827,28 @@ export default function TodayScreen() {
         onDelete={(itineraryId) => {
           planData.removeItinerary(itineraryId);
           refetchTodayExpenses();
+        }}
+      />
+
+      <AccommodationDetailModal
+        visible={showAccommodationDetail}
+        onClose={() => {
+          setShowAccommodationDetail(false);
+          setSelectedAccommodation(null);
+        }}
+        accommodation={selectedAccommodation}
+        onEdit={() => {
+          // TODO: AccommodationEditModal 연동
+          Alert.alert('알림', '숙소 수정 기능은 준비 중입니다.');
+        }}
+        onDelete={async (accommodation) => {
+          try {
+            await accommodationsApi.deleteAccommodation(accommodation.id);
+            planData.removeAccommodation(accommodation.id);
+            Alert.alert('삭제완료', '숙소가 삭제되었습니다.');
+          } catch (error) {
+            Alert.alert('오류', '숙소 삭제에 실패했습니다.');
+          }
         }}
       />
     </View>
