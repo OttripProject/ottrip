@@ -25,8 +25,6 @@ interface ItineraryEditModalProps {
   onDelete?: (itineraryId: number) => void;
 }
 
-type CategoryType = 'accommodation' | 'flight' | 'itinerary';
-
 export default function ItineraryEditModal({
   visible,
   onClose,
@@ -35,7 +33,6 @@ export default function ItineraryEditModal({
   onSave,
   onDelete,
 }: ItineraryEditModalProps) {
-  const [category, setCategory] = useState<CategoryType>('itinerary');
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -171,47 +168,20 @@ export default function ItineraryEditModal({
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* 카테고리 탭 */}
+        {/* 카테고리 탭 (고정 표시) */}
         <View style={styles.categoryTabs}>
-          <Pressable
-            style={[styles.categoryTab, category === 'accommodation' && styles.categoryTabActive]}
-            onPress={() => setCategory('accommodation')}
-          >
-            <AccomodationIcon
-              width={16}
-              height={16}
-              color={category === 'accommodation' ? colors.primary : colors.gray600}
-            />
-            <Text style={[styles.categoryTabText, category === 'accommodation' && styles.categoryTabTextActive]}>
-              숙소
-            </Text>
-          </Pressable>
-          <Pressable
-            style={[styles.categoryTab, category === 'flight' && styles.categoryTabActive]}
-            onPress={() => setCategory('flight')}
-          >
-            <FlightIcon
-              width={16}
-              height={16}
-              color={category === 'flight' ? colors.primary : colors.gray600}
-            />
-            <Text style={[styles.categoryTabText, category === 'flight' && styles.categoryTabTextActive]}>
-              항공
-            </Text>
-          </Pressable>
-          <Pressable
-            style={[styles.categoryTab, category === 'itinerary' && styles.categoryTabActive]}
-            onPress={() => setCategory('itinerary')}
-          >
-            <CalendarIcon
-              width={16}
-              height={16}
-              color={category === 'itinerary' ? colors.primary : colors.gray600}
-            />
-            <Text style={[styles.categoryTabText, category === 'itinerary' && styles.categoryTabTextActive]}>
-              일정
-            </Text>
-          </Pressable>
+          <View style={styles.categoryTab}>
+            <AccomodationIcon width={16} height={16} color={colors.gray600} />
+            <Text style={styles.categoryTabText}>숙소</Text>
+          </View>
+          <View style={styles.categoryTab}>
+            <FlightIcon width={16} height={16} color={colors.gray600} />
+            <Text style={styles.categoryTabText}>항공</Text>
+          </View>
+          <View style={[styles.categoryTab, styles.categoryTabActive]}>
+            <CalendarIcon width={16} height={16} color={colors.primary} />
+            <Text style={[styles.categoryTabText, styles.categoryTabTextActive]}>일정</Text>
+          </View>
         </View>
 
         {/* 입력 필드들 */}
@@ -388,7 +358,7 @@ const styles = StyleSheet.create({
     marginBottom: 24,
     backgroundColor: colors.gray200,
     borderRadius: 12,
-    padding: 6,
+    padding: 4,
   },
   categoryTab: {
     flex: 1,
@@ -397,7 +367,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 4,
-    borderRadius: 8,
+    borderRadius: 12,
   },
   categoryTabActive: {
     backgroundColor: colors.white,
