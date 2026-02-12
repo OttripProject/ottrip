@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { View, Text, ScrollView, StyleSheet, Pressable, ActivityIndicator, Modal } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, Pressable, ActivityIndicator, Modal, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import dayjs from 'dayjs';
 import { colors } from '@/ui/tokens/colors';
@@ -363,6 +363,19 @@ export default function WeeklyScreen() {
         plans={plansQuery.plans || []}
         selectedPlan={selectedPlan}
         onSelectPlan={setSelectedPlan}
+        onEditPlan={() => {}}
+        onDeletePlan={async (plan) => {
+          try {
+            await plansQuery.deletePlan(plan.id);
+            if (selectedPlan?.id === plan.id) {
+              const remaining = (plansQuery.plans || []).filter((p) => p.id !== plan.id);
+              setSelectedPlan(remaining[0] ?? null);
+            }
+            Alert.alert('성공', '여행이 삭제되었습니다.');
+          } catch (error) {
+            Alert.alert('오류', '여행 삭제에 실패했습니다.');
+          }
+        }}
       />
     </View>
   );

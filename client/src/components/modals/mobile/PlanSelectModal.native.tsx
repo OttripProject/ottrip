@@ -9,6 +9,8 @@ import BottomSheetModal from '@/ui/components/BottomSheetModal.native';
 import CheckedIcon from '../../../../assets/mobile_plan_checked.svg';
 import UnCheckedIcon from '../../../../assets/mobile_plan_unchecked.svg';
 import AddPlanIcon from '../../../../assets/mobile_plan_add.svg';
+import UpdateIcon from '../../../../assets/update.svg';
+import DeleteIcon from '../../../../assets/delete_gray.svg';
 
 function formatPlanDateRange(startDate: string, endDate: string): string {
   const start = dayjs(startDate).format('YYYY.MM.DD');
@@ -23,6 +25,8 @@ interface PlanSelectModalProps {
   selectedPlan: Plan | null;
   onSelectPlan: (plan: Plan) => void;
   onAddTrip?: () => void;
+  onEditPlan?: (plan: Plan) => void;
+  onDeletePlan?: (plan: Plan) => void;
 }
 
 export default function PlanSelectModal({
@@ -32,6 +36,8 @@ export default function PlanSelectModal({
   selectedPlan,
   onSelectPlan,
   onAddTrip,
+  onEditPlan,
+  onDeletePlan,
 }: PlanSelectModalProps) {
 
   const handleAddTripPress = () => {
@@ -46,6 +52,27 @@ export default function PlanSelectModal({
   const handleSelectPlan = (plan: Plan) => {
     onSelectPlan(plan);
     onClose();
+  };
+
+  const handleEditPlan = (plan: Plan, e: any) => {
+    e?.stopPropagation?.();
+    onEditPlan?.(plan);
+  };
+
+  const handleDeletePlan = (plan: Plan, e: any) => {
+    e?.stopPropagation?.();
+    Alert.alert(
+      '여행 삭제',
+      `"${plan.title}" 여행을 삭제하시겠습니까?`,
+      [
+        { text: '취소', style: 'cancel' },
+        {
+          text: '삭제',
+          style: 'destructive',
+          onPress: () => onDeletePlan?.(plan),
+        },
+      ]
+    );
   };
 
   const validPlans = Array.isArray(plans) ? plans : [];
@@ -86,7 +113,16 @@ export default function PlanSelectModal({
                   onPress={() => handleSelectPlan(plan)}
                   hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                 >
-                  <View style={styles.planCardLeft}>
+                  {/* 체크 - 왼쪽 */}
+                  <View style={[styles.planCardCheckWrap, isSelected && styles.planCardCheckWrapSelected]}>
+                    {isSelected ? (
+                      <CheckedIcon width={20} height={20} color={colors.primary} />
+                    ) : (
+                      <UnCheckedIcon width={20} height={20} color={colors.gray500} />
+                    )}
+                  </View>
+                  {/* 여행 정보 - 가운데 */}
+                  <View style={styles.planCardCenter}>
                     <View style={styles.planCardTextWrap}>
                       <Text style={styles.planCardTitle} numberOfLines={1}>
                         {plan.title}
@@ -96,12 +132,22 @@ export default function PlanSelectModal({
                       </Text>
                     </View>
                   </View>
-                  <View style={[styles.planCardCheckWrap, isSelected && styles.planCardCheckWrapSelected]}>
-                    {isSelected ? (
-                      <CheckedIcon width={20} height={20} color={colors.primary} />
-                    ) : (
-                      <UnCheckedIcon width={20} height={20} color={colors.gray500} />
-                    )}
+                  {/* 수정/삭제 - 오른쪽 */}
+                  <View style={styles.planCardActions}>
+                    <Pressable
+                      style={styles.planCardActionButton}
+                      onPress={(e) => handleEditPlan(plan, e)}
+                      hitSlop={8}
+                    >
+                      <UpdateIcon width={20} height={20} color={colors.gray600} />
+                    </Pressable>
+                    <Pressable
+                      style={styles.planCardActionButton}
+                      onPress={(e) => handleDeletePlan(plan, e)}
+                      hitSlop={8}
+                    >
+                      <DeleteIcon width={20} height={20} color={colors.gray600} />
+                    </Pressable>
                   </View>
                 </Pressable>
               );
@@ -159,11 +205,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     marginBottom: 8,
   },
-  planCardLeft: {
+  planCardCenter: {
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
     minWidth: 0,
+    marginHorizontal: 12,
   },
   planCardTextWrap: {
     flex: 1,
@@ -182,12 +229,21 @@ const styles = StyleSheet.create({
   planCardCheckWrap: {
     width: 24,
     height: 24,
-    marginLeft: 12,
     alignItems: 'center',
     justifyContent: 'center',
   },
   planCardCheckWrapSelected: {
     // 선택 시 아이콘 색상만 primary로 표시
+  },
+  planCardActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  planCardActionButton: {
+    // padding: 4,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   emptyContainer: {
     paddingVertical: 40,

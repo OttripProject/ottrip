@@ -762,6 +762,19 @@ export default function TodayScreen() {
         plans={plansQuery.plans}
         selectedPlan={selectedPlan}
         onSelectPlan={setSelectedPlan}
+        onEditPlan={() => {}}
+        onDeletePlan={async (plan) => {
+          try {
+            await plansQuery.deletePlan(plan.id);
+            if (selectedPlan?.id === plan.id) {
+              const remaining = plansQuery.plans.filter((p) => p.id !== plan.id);
+              setSelectedPlan(remaining[0] ?? null);
+            }
+            Alert.alert('성공', '여행이 삭제되었습니다.');
+          } catch (error) {
+            Alert.alert('오류', '여행 삭제에 실패했습니다.');
+          }
+        }}
       />
 
       <ItineraryDetailModal
@@ -781,7 +794,7 @@ export default function TodayScreen() {
             await itinerariesApi.deleteItinerary(itinerary.id);
             planData.removeItinerary(itinerary.id);
             refetchTodayExpenses();
-            Alert.alert('성공', '일정이 삭제되었습니다.');
+            Alert.alert('삭제완료', '일정이 삭제되었습니다.');
           } catch (error) {
             Alert.alert('오류', '일정 삭제에 실패했습니다.');
           }
