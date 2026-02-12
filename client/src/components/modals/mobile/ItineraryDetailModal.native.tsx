@@ -250,7 +250,7 @@ const styles = StyleSheet.create({
   headerActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 6,
   },
   actionButton: {
     padding: 4,
@@ -269,9 +269,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   detailIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 36,
+    height: 36,
+    borderRadius: 12,
     backgroundColor: `${colors.primary}1A`,
     alignItems: 'center',
     justifyContent: 'center',
@@ -296,7 +296,7 @@ const styles = StyleSheet.create({
   },
   mapButton: {
     backgroundColor: colors.black,
-    borderRadius: 16,
+    borderRadius: 12,
     paddingVertical: 16,
     flexDirection: 'row',
     alignItems: 'center',
