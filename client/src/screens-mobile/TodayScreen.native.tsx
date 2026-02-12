@@ -779,10 +779,7 @@ export default function TodayScreen() {
         onDelete={async (itinerary) => {
           try {
             await itinerariesApi.deleteItinerary(itinerary.id);
-            // planData 새로고침
-            if (selectedPlan?.publicId) {
-              planData.fetchPlanData(selectedPlan.publicId);
-            }
+            planData.removeItinerary(itinerary.id);
             Alert.alert('성공', '일정이 삭제되었습니다.');
           } catch (error) {
             Alert.alert('오류', '일정 삭제에 실패했습니다.');
@@ -798,15 +795,11 @@ export default function TodayScreen() {
         }}
         itinerary={editingItinerary}
         planId={selectedPlan?.id ?? 0}
-        onSave={() => {
-          if (selectedPlan?.publicId) {
-            planData.fetchPlanData(selectedPlan.publicId);
-          }
+        onSave={(itinerary) => {
+          planData.addItinerary(itinerary);
         }}
         onDelete={(itineraryId) => {
-          if (selectedPlan?.publicId) {
-            planData.fetchPlanData(selectedPlan.publicId);
-          }
+          planData.removeItinerary(itineraryId);
         }}
       />
     </View>
