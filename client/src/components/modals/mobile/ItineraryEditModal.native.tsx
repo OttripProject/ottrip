@@ -93,7 +93,7 @@ export default function ItineraryEditModal({
         if (onSave) {
           onSave(updated);
         }
-        Alert.alert('성공', '일정이 수정되었습니다.');
+        Alert.alert('수정완료', '일정이 수정되었습니다.');
       } else {
         // 추가
         const created = await itinerariesApi.createItinerary({
@@ -103,7 +103,7 @@ export default function ItineraryEditModal({
         if (onSave) {
           onSave(created);
         }
-        Alert.alert('성공', '일정이 추가되었습니다.');
+        Alert.alert('추가완료', '일정이 추가되었습니다.');
       }
       onClose();
     } catch (error) {
@@ -130,7 +130,7 @@ export default function ItineraryEditModal({
               if (onDelete) {
                 onDelete(itinerary.id);
               }
-              Alert.alert('성공', '일정이 삭제되었습니다.');
+              Alert.alert('삭제완료', '일정이 삭제되었습니다.');
               onClose();
             } catch (error) {
               Alert.alert('오류', '일정 삭제에 실패했습니다.');
