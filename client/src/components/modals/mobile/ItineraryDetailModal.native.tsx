@@ -292,7 +292,7 @@ const styles = StyleSheet.create({
   footer: {
     paddingHorizontal: 24,
     paddingBottom: 12,
-    paddingTop: 16,
+    paddingTop: 20,
   },
   mapButton: {
     backgroundColor: colors.black,
