@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, Pressable, StyleSheet, ScrollView, Linking, Alert, Platform } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { Itinerary } from '@/types/api';
 import { colors } from '@/ui/tokens/colors';
@@ -32,6 +33,7 @@ export default function ItineraryDetailModal({
   onEdit,
   onDelete,
 }: ItineraryDetailModalProps) {
+  const insets = useSafeAreaInsets();
   const [expenseAmount, setExpenseAmount] = useState(0);
   const [loadingExpenses, setLoadingExpenses] = useState(false);
 
@@ -214,7 +216,7 @@ export default function ItineraryDetailModal({
 
       {/* 지도 앱에서 길찾기 버튼 */}
       {itinerary.location && (
-        <View style={styles.footer}>
+        <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 16) + 12 }]}>
           <Pressable
             style={styles.mapButton}
             onPress={handleOpenMap}
@@ -291,7 +293,6 @@ const styles = StyleSheet.create({
   },
   footer: {
     paddingHorizontal: 24,
-    paddingBottom: 12,
     paddingTop: 20,
   },
   mapButton: {

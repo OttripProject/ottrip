@@ -9,6 +9,7 @@ import {
   Alert,
   Platform,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Accommodation } from '@/types/api';
 import { colors } from '@/ui/tokens/colors';
 import { textStyles } from '@/ui/tokens/typography';
@@ -40,6 +41,7 @@ export default function AccommodationDetailModal({
   onEdit,
   onDelete,
 }: AccommodationDetailModalProps) {
+  const insets = useSafeAreaInsets();
   if (!accommodation) return null;
 
   const location = accommodation.place || [accommodation.city, accommodation.country].filter(Boolean).join(', ') || undefined;
@@ -209,7 +211,7 @@ export default function AccommodationDetailModal({
 
       {/* 지도 앱에서 길찾기 버튼 */}
       {(location || accommodation.name) && (
-        <View style={styles.footer}>
+        <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 12) }]}>
           <Pressable style={styles.mapButton} onPress={handleOpenMap}>
             <MapIcon width={20} height={20} color={colors.white} />
             <Text style={styles.mapButtonText}>지도 앱에서 길찾기</Text>
@@ -323,7 +325,6 @@ const styles = StyleSheet.create({
   },
   footer: {
     paddingHorizontal: 24,
-    paddingBottom: 12,
     paddingTop: 20,
   },
   mapButton: {
