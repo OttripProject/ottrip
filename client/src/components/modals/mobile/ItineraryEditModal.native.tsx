@@ -381,7 +381,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 16,
     paddingTop: 12,
-    paddingBottom: 210,
+    paddingBottom: 330,
   },
   categoryTabs: {
     flexDirection: 'row',
