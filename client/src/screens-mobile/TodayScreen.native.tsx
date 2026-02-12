@@ -780,6 +780,7 @@ export default function TodayScreen() {
           try {
             await itinerariesApi.deleteItinerary(itinerary.id);
             planData.removeItinerary(itinerary.id);
+            refetchTodayExpenses();
             Alert.alert('성공', '일정이 삭제되었습니다.');
           } catch (error) {
             Alert.alert('오류', '일정 삭제에 실패했습니다.');
@@ -797,9 +798,11 @@ export default function TodayScreen() {
         planId={selectedPlan?.id ?? 0}
         onSave={(itinerary) => {
           planData.addItinerary(itinerary);
+          refetchTodayExpenses();
         }}
         onDelete={(itineraryId) => {
           planData.removeItinerary(itineraryId);
+          refetchTodayExpenses();
         }}
       />
     </View>
