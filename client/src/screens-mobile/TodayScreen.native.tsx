@@ -176,7 +176,7 @@ export default function TodayScreen() {
     return planData.accommodations.filter((accommodation: any) => {
       const checkinDate = dayjs(accommodation.checkinDate).format('YYYY-MM-DD');
       const checkoutDate = dayjs(accommodation.checkoutDate).format('YYYY-MM-DD');
-      return checkinDate <= todayDateStr && checkoutDate >= todayDateStr;
+      return checkinDate <= todayDateStr && checkoutDate > todayDateStr;
     });
   }, [planData.accommodations, todayDateStr]);
 
@@ -738,7 +738,7 @@ export default function TodayScreen() {
                     <Text style={styles.accommodationLabel}>오늘의 숙소</Text>
                     <Text style={styles.itemTitle}>{accommodation.name}</Text>
                     <Text style={styles.accommodationCheckin}>
-                      체크인 {accommodation.checkinTime}
+                      체크인 {formatTime(accommodation.checkinTime)}
                     </Text>
                   </View>
                 </View>
