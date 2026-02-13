@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect, useRef } from 'react';
-import { View, StyleSheet, ViewStyle, TextStyle, Pressable } from 'react-native';
+import { View, StyleSheet, ViewStyle, TextStyle, Pressable, Platform } from 'react-native';
 import useDetectClose from '@/hooks/useDetectClose';
 import DropDownPicker from 'react-native-dropdown-picker';
 import { colors } from '@/ui/tokens/colors';
@@ -7,6 +7,7 @@ import { textStyles } from '@/ui/tokens/typography';
 import { radii } from '@/ui/tokens/radii';
 import { spacing } from '@/ui/tokens/spacing';
 import DownArrowIcon from '../../../../assets/dropdown_time.svg';
+import MobileTimeIcon from '../../../../assets/mobile_time.svg';
 import UpperArrowIcon from '../../../../assets/upper_arrow.svg';
 import CheckBlackIcon from '../../../../assets/check_black.svg';
 import { PLACEHOLDERS } from '@/constants/placeholders';
@@ -181,7 +182,13 @@ export default function TimePicker({
           keyboardShouldPersistTaps: 'handled',
           showsVerticalScrollIndicator: false,
         }}
-        ArrowDownIconComponent={() => <DownArrowIcon width={16} height={16} />}
+        ArrowDownIconComponent={() =>
+          Platform.OS === 'web' ? (
+            <DownArrowIcon width={16} height={16} />
+          ) : (
+            <MobileTimeIcon width={16} height={16} />
+          )
+        }
         ArrowUpIconComponent={() => <UpperArrowIcon width={16} height={16} />}
         translation={{ NOTHING_TO_SHOW: '선택 가능한 시간이 없습니다' }}
         TickIconComponent={() => (
