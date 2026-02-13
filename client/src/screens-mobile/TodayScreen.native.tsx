@@ -17,6 +17,7 @@ import PlanSelectModal from '@/components/modals/mobile/PlanSelectModal.native';
 import ItineraryDetailModal from '@/components/modals/mobile/ItineraryDetailModal.native';
 import ItineraryEditModal from '@/components/modals/mobile/ItineraryEditModal.native';
 import AccommodationDetailModal from '@/components/modals/mobile/AccommodationDetailModal.native';
+import AccommodationEditModal from '@/components/modals/mobile/AccommodationEditModal.native';
 import GradientBackground from '@/ui/components/GradientBackground';
 import api from '@/services/api';
 import { itinerariesApi } from '@/services/itineraries';
@@ -48,6 +49,8 @@ export default function TodayScreen() {
   const [editingItinerary, setEditingItinerary] = useState<Itinerary | null>(null);
   const [selectedAccommodation, setSelectedAccommodation] = useState<Accommodation | null>(null);
   const [showAccommodationDetail, setShowAccommodationDetail] = useState(false);
+  const [showAccommodationEdit, setShowAccommodationEdit] = useState(false);
+  const [editingAccommodation, setEditingAccommodation] = useState<Accommodation | null>(null);
 
   const togglingItems = useRef<Set<number>>(new Set());
   const deletingItems = useRef<Set<number>>(new Set());
@@ -837,9 +840,10 @@ export default function TodayScreen() {
           setSelectedAccommodation(null);
         }}
         accommodation={selectedAccommodation}
-        onEdit={() => {
-          // TODO: AccommodationEditModal 연동
-          Alert.alert('알림', '숙소 수정 기능은 준비 중입니다.');
+        onEdit={(accommodation) => {
+          setShowAccommodationDetail(false);
+          setEditingAccommodation(accommodation);
+          setShowAccommodationEdit(true);
         }}
         onDelete={async (accommodation) => {
           try {
@@ -850,6 +854,18 @@ export default function TodayScreen() {
             Alert.alert('오류', '숙소 삭제에 실패했습니다.');
           }
         }}
+      />
+
+      <AccommodationEditModal
+        visible={showAccommodationEdit}
+        onClose={() => {
+          setShowAccommodationEdit(false);
+          setEditingAccommodation(null);
+        }}
+        accommodation={editingAccommodation}
+        planId={selectedPlan?.id ?? 0}
+        onSave={(updated) => planData.addAccommodation(updated)}
+        onDelete={(accommodationId) => planData.removeAccommodation(accommodationId)}
       />
     </View>
   );

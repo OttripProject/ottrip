@@ -8,7 +8,7 @@ import Animated, {
   withTiming,
   runOnJS,
 } from 'react-native-reanimated';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '@/ui/tokens/colors';
 
 interface BottomSheetModalProps {
@@ -36,6 +36,7 @@ export default function BottomSheetModal({
   showDragHandle = true,
   backdropOpacity = 0.5,
 }: BottomSheetModalProps) {
+  const insets = useSafeAreaInsets();
   const modalHeight = typeof height === 'number' && height <= 1 
     ? Dimensions.get('window').height * height 
     : height;
@@ -108,7 +109,7 @@ export default function BottomSheetModal({
         {/* 모달 컨텐츠 */}
         <GestureDetector gesture={panGesture}>
           <Animated.View style={[styles.modalContent, { height: modalHeight }, animatedStyle]}>
-            <SafeAreaView edges={['bottom']} style={styles.safeArea}>
+            <View style={[styles.safeArea, { paddingBottom: Math.max(insets.bottom, 12) }]}>
               {/* 드래그 핸들 */}
               {showDragHandle && (
                 <View style={styles.dragHandleContainer}>
@@ -119,7 +120,7 @@ export default function BottomSheetModal({
               <View style={styles.content}>
                 {children}
               </View>
-            </SafeAreaView>
+            </View>
           </Animated.View>
         </GestureDetector>
       </View>

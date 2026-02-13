@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { View, Text, Pressable, StyleSheet, ScrollView, Alert, Platform, Modal } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQueryClient } from '@tanstack/react-query';
 import { usersApi, UserProfile } from '@/services/users';
 import { useAuth } from '@/contexts/AuthContext';
@@ -26,6 +26,7 @@ interface ProfileModalProps {
 }
 
 export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
+  const insets = useSafeAreaInsets();
   const { logout } = useAuth();
   const queryClient = useQueryClient();
   const [me, setMe] = useState<UserProfile | null>(null);
@@ -105,7 +106,7 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
 
   return (
     <View style={styles.modalOverlay}>
-      <SafeAreaView style={styles.safeArea}>
+      <View style={[styles.safeArea, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
         <ScrollView 
           style={styles.scrollView}
           contentContainerStyle={styles.scrollContent}
@@ -210,7 +211,7 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
             </Card>
           </View>
         </ScrollView>
-      </SafeAreaView>
+      </View>
 
       {/* 문의하기 모달 */}
       <Modal visible={contactOpen} transparent animationType="fade">
