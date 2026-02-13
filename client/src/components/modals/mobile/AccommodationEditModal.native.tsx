@@ -308,7 +308,6 @@ export default function AccommodationEditModal({
                 <TimePicker
                   value={formData.checkoutTime}
                   onChange={(time) => setFormData({ ...formData, checkoutTime: time })}
-                  minTime={formData.checkinTime}
                   containerStyle={styles.pickerContainer}
                   style={styles.pickerInput}
                   dropDownContainerStyle={styles.pickerDropDownContainer}
