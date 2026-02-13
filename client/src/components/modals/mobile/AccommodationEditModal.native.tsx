@@ -73,9 +73,10 @@ export default function AccommodationEditModal({
         checkinTime: accommodation.checkinTime ? accommodation.checkinTime.substring(0, 5) : '15:00',
         checkoutTime: accommodation.checkoutTime ? accommodation.checkoutTime.substring(0, 5) : '11:00',
       });
+      const amountNum = Math.floor(Number(accommodation.expense?.amount) || 0);
       setExpenseAmount(
-        accommodation.expense?.amount
-          ? String(accommodation.expense.amount).replace(/\B(?=(\d{3})+(?!\d))/g, '')
+        amountNum
+          ? String(amountNum).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
           : ''
       );
     }
@@ -382,7 +383,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 16,
     paddingTop: 12,
-    paddingBottom: 330,
+    paddingBottom: 240,
   },
   categoryTabs: {
     flexDirection: 'row',
@@ -532,13 +533,13 @@ const styles = StyleSheet.create({
   },
   footer: {
     backgroundColor: colors.white,
-    paddingHorizontal: 24,
+    paddingHorizontal: 16,
     paddingTop: 16,
     paddingBottom: 8,
   },
   footerButtons: {
     flexDirection: 'row',
-    gap: 12,
+    gap: 8,
   },
   footerButton: {
     flex: 1,
@@ -548,6 +549,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   deleteButton: {
+    flex: 1,
     backgroundColor: colors.warning,
   },
   deleteButtonText: {
@@ -555,6 +557,7 @@ const styles = StyleSheet.create({
     color: colors.white,
   },
   saveButton: {
+    flex: 2,
     backgroundColor: colors.black,
   },
   saveButtonText: {

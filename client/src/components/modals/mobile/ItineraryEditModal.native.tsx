@@ -470,7 +470,7 @@ const styles = StyleSheet.create({
   },
   footer: {
     backgroundColor: colors.white,
-    paddingHorizontal: 24,
+    paddingHorizontal: 16,
     paddingTop: 16,
     paddingBottom: 8,
   },
