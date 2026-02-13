@@ -245,7 +245,7 @@ export default function AccommodationEditModal({
             <Text style={styles.checkinoutSectionTitle}>체크인 / 체크아웃</Text>
             <View style={styles.checkinoutRow}>
               <View style={[styles.inputGroup, styles.halfWidth]}>
-                <Text style={styles.label}>체크인 날짜</Text>
+                <Text style={styles.checkinoutLabel}>체크인 날짜</Text>
                 <Pressable
                   style={styles.dateInput}
                   onPress={() => setShowCheckinDatePicker(true)}
@@ -267,7 +267,7 @@ export default function AccommodationEditModal({
                 )}
               </View>
               <View style={[styles.inputGroup, styles.halfWidth]}>
-                <Text style={styles.label}>체크인 시간</Text>
+                <Text style={styles.checkinoutLabel}>시간</Text>
                 <TimePicker
                   value={formData.checkinTime}
                   onChange={(time) => setFormData({ ...formData, checkinTime: time })}
@@ -281,7 +281,7 @@ export default function AccommodationEditModal({
             </View>
             <View style={styles.checkinoutRow}>
               <View style={[styles.inputGroup, styles.halfWidth]}>
-                <Text style={styles.label}>체크아웃 날짜</Text>
+                <Text style={styles.checkinoutLabel}>체크아웃 날짜</Text>
                 <Pressable
                   style={styles.dateInput}
                   onPress={() => setShowCheckoutDatePicker(true)}
@@ -303,7 +303,7 @@ export default function AccommodationEditModal({
                 )}
               </View>
               <View style={[styles.inputGroup, styles.halfWidth]}>
-                <Text style={styles.label}>체크아웃 시간</Text>
+                <Text style={styles.checkinoutLabel}>시간</Text>
                 <TimePicker
                   value={formData.checkoutTime}
                   onChange={(time) => setFormData({ ...formData, checkoutTime: time })}
@@ -474,18 +474,24 @@ const styles = StyleSheet.create({
   },
   checkinoutSection: {
     backgroundColor: `${colors.primary}1A`,
+    borderColor: colors.primary,
+    borderWidth: 1,
     borderRadius: 12,
     padding: 16,
   },
   checkinoutSectionTitle: {
     ...textStyles.h6,
     color: colors.primary,
-    marginBottom: 12,
+    marginBottom: 16,
   },
   checkinoutRow: {
     flexDirection: 'row',
     gap: 8,
     marginBottom: 12,
+  },
+  checkinoutLabel: {
+    ...textStyles.h8,
+    color: colors.gray700,
   },
   dateInput: {
     paddingVertical: 10,
