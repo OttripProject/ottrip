@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, Pressable, StyleSheet, ScrollView, TextInput, Alert } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import dayjs from 'dayjs';
 import { Accommodation } from '@/types/api';
 import { colors } from '@/ui/tokens/colors';
 import { textStyles } from '@/ui/tokens/typography';
 import FullScreenModal from '@/ui/components/FullScreenModal.native';
+import FloatingFooter from '@/ui/components/FloatingFooter.native';
 import { TimePicker, CountryPicker } from '@/ui/components/pickers';
 import Input from '@/ui/components/input/Input';
 import { accommodationsApi } from '@/services/accommodations';
@@ -43,7 +43,6 @@ export default function AccommodationEditModal({
   onSave,
   onDelete,
 }: AccommodationEditModalProps) {
-  const insets = useSafeAreaInsets();
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -340,20 +339,13 @@ export default function AccommodationEditModal({
         </View>
       </ScrollView>
 
-      <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 12) }]}>
-        <View style={styles.footerButtons}>
-          <Pressable style={[styles.footerButton, styles.deleteButton]} onPress={handleDelete}>
-            <Text style={styles.deleteButtonText}>삭제</Text>
-          </Pressable>
-          <Pressable
-            style={[styles.footerButton, styles.saveButton]}
-            onPress={handleSave}
-            disabled={isSubmitting}
-          >
-            <Text style={styles.saveButtonText}>수정 완료</Text>
-          </Pressable>
-        </View>
-      </View>
+      <FloatingFooter
+        primaryLabel="수정 완료"
+        onPrimaryPress={handleSave}
+        primaryDisabled={isSubmitting}
+        secondaryLabel="삭제"
+        onSecondaryPress={handleDelete}
+      />
     </FullScreenModal>
   );
 }
@@ -529,38 +521,5 @@ const styles = StyleSheet.create({
   },
   currencyText: {
     ...textStyles.body4,
-  },
-  footer: {
-    backgroundColor: colors.white,
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 8,
-  },
-  footerButtons: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  footerButton: {
-    flex: 1,
-    height: 52,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  deleteButton: {
-    flex: 1,
-    backgroundColor: colors.warning,
-  },
-  deleteButtonText: {
-    ...textStyles.h6,
-    color: colors.white,
-  },
-  saveButton: {
-    flex: 2,
-    backgroundColor: colors.black,
-  },
-  saveButtonText: {
-    ...textStyles.h6,
-    color: colors.white,
   },
 });

@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, Pressable, StyleSheet, ScrollView, TextInput, Alert } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import CloseIcon from '../../../../assets/x.svg';
 import dayjs from 'dayjs';
 import { Itinerary, CreateItineraryRequest } from '@/types/api';
@@ -8,6 +7,7 @@ import { colors } from '@/ui/tokens/colors';
 import { spacing } from '@/ui/tokens/spacing';
 import { textStyles } from '@/ui/tokens/typography';
 import FullScreenModal from '@/ui/components/FullScreenModal.native';
+import FloatingFooter from '@/ui/components/FloatingFooter.native';
 import { TimePicker, CountryPicker } from '@/ui/components/pickers';
 import Input from '@/ui/components/input/Input';
 import { itinerariesApi } from '@/services/itineraries';
@@ -301,28 +301,13 @@ export default function ItineraryEditModal({
         </View>
       </ScrollView>
 
-      {/* 하단 버튼 */}
-      <SafeAreaView edges={['bottom']} style={styles.footer}>
-        <View style={styles.footerButtons}>
-          {itinerary && (
-            <Pressable
-              style={[styles.footerButton, styles.deleteButton]}
-              onPress={handleDelete}
-            >
-              <Text style={styles.deleteButtonText}>삭제</Text>
-            </Pressable>
-          )}
-          <Pressable
-            style={[styles.footerButton, styles.saveButton, itinerary && styles.saveButtonWithDelete]}
-            onPress={handleSave}
-            disabled={isSubmitting}
-          >
-            <Text style={styles.saveButtonText}>
-              {itinerary ? '수정 완료' : '추가 완료'}
-            </Text>
-          </Pressable>
-        </View>
-      </SafeAreaView>
+      <FloatingFooter
+        primaryLabel={itinerary ? '수정 완료' : '추가 완료'}
+        onPrimaryPress={handleSave}
+        primaryDisabled={isSubmitting}
+        secondaryLabel={itinerary ? '삭제' : undefined}
+        onSecondaryPress={itinerary ? handleDelete : undefined}
+      />
     </FullScreenModal>
   );
 }
@@ -467,39 +452,5 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     zIndex: 1000,
-  },
-  footer: {
-    backgroundColor: colors.white,
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 8,
-  },
-  footerButtons: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  footerButton: {
-    flex: 1,
-    height: 52,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  deleteButton: {
-    backgroundColor: colors.warning,
-  },
-  deleteButtonText: {
-    ...textStyles.h6,
-    color: colors.white,
-  },
-  saveButton: {
-    backgroundColor: colors.black,
-  },
-  saveButtonWithDelete: {
-    flex: 1,
-  },
-  saveButtonText: {
-    ...textStyles.h6,
-    color: colors.white,
   },
 });
