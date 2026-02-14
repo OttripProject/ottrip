@@ -109,7 +109,7 @@ export default function BottomSheetModal({
         {/* 모달 컨텐츠 */}
         <GestureDetector gesture={panGesture}>
           <Animated.View style={[styles.modalContent, { height: modalHeight }, animatedStyle]}>
-            <View style={[styles.safeArea, { paddingBottom: Math.max(insets.bottom, 12) }]}>
+            <View style={styles.safeArea}>
               {/* 드래그 핸들 */}
               {showDragHandle && (
                 <View style={styles.dragHandleContainer}>
