@@ -1218,7 +1218,7 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   flightIconWrap: {
-    marginTop: -4, // 텍스트보다 아이콘이 낮아 보이는 optical alignment 보정
+    marginTop: -4,
   },
   timelineCardHeader: {
     flexDirection: 'row',
