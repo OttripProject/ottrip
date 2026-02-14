@@ -23,6 +23,7 @@ import GradientBackground from '@/ui/components/GradientBackground';
 import api from '@/services/api';
 import { itinerariesApi } from '@/services/itineraries';
 import { accommodationsApi } from '@/services/accommodations';
+import { flightsApi } from '@/services/flights';
 import SettingIcon from '../../assets/mobile_setting.svg';
 import DropdownIcon from '../../assets/mobile_dropdown.svg';
 import LocationIcon from '../../assets/mobile_location.svg';
@@ -1012,6 +1013,18 @@ export default function TodayScreen() {
         }}
         flight={selectedFlight}
         segment={selectedFlightSegment}
+        onEdit={() => {
+          Alert.alert('알림', '준비 중입니다.');
+        }}
+        onDelete={async (flight) => {
+          try {
+            await flightsApi.deleteFlight(flight.id);
+            planData.removeFlight(flight.id);
+            Alert.alert('삭제완료', '항공 편이 삭제되었습니다.');
+          } catch (error) {
+            Alert.alert('오류', '항공 편 삭제에 실패했습니다.');
+          }
+        }}
       />
     </View>
   );
