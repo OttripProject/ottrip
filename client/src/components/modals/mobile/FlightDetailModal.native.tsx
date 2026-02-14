@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, Pressable, StyleSheet, ScrollView, Alert } from 'react-native';
 import dayjs from 'dayjs';
 import { FlightRead, FlightSegmentReadDto } from '@/types/api';
@@ -17,7 +17,6 @@ interface FlightDetailModalProps {
   visible: boolean;
   onClose: () => void;
   flight: FlightRead | null;
-  /** 특정 구간 하이라이트 등에 활용 (현재는 전체 구간 표시) */
   segment?: FlightSegmentReadDto | null;
   onEdit?: (flight: FlightRead) => void;
   onDelete?: (flight: FlightRead) => void;
@@ -35,6 +34,12 @@ export default function FlightDetailModal({
 
   const segments = flight.flightSegments || [];
   const expenseAmount = flight.expense?.amount ?? 0;
+  const [showAdditionalInfo, setShowAdditionalInfo] = useState(false);
+  const hasAdditionalInfo = !!(flight.ticketNumber || flight.bookingReference);
+
+  useEffect(() => {
+    if (!visible) setShowAdditionalInfo(false);
+  }, [visible]);
 
   const formatSegmentDate = (dateTime: string) => {
     return dayjs(dateTime).format('MM/DD');
@@ -82,7 +87,7 @@ export default function FlightDetailModal({
   };
 
   return (
-    <BottomSheetModal visible={visible} onClose={onClose} height={0.6}>
+    <BottomSheetModal visible={visible} onClose={onClose} height={0.8}>
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
@@ -197,6 +202,33 @@ export default function FlightDetailModal({
           );
         })}
 
+        {/* 추가 정보 - 구간 아래 */}
+        {hasAdditionalInfo && (
+          <>
+            <Pressable
+              style={styles.additionalInfoToggle}
+              onPress={() => setShowAdditionalInfo((v) => !v)}
+            >
+              <Text style={styles.additionalInfoToggleText}>추가정보</Text>
+            </Pressable>
+            {showAdditionalInfo && (
+              <View style={styles.additionalInfo}>
+                {flight.ticketNumber && (
+                  <View style={styles.additionalInfoRow}>
+                    <Text style={styles.additionalInfoLabel}>항공권번호</Text>
+                    <Text style={styles.additionalInfoValue}>{flight.ticketNumber}</Text>
+                  </View>
+                )}
+                {flight.bookingReference && (
+                  <View style={styles.additionalInfoRow}>
+                    <Text style={styles.additionalInfoLabel}>여행사 예약번호</Text>
+                    <Text style={styles.additionalInfoValue}>{flight.bookingReference}</Text>
+                  </View>
+                )}
+              </View>
+            )}
+          </>
+        )}
         
       </ScrollView>
 
@@ -219,6 +251,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingTop: 8,
     paddingBottom: 24,
+    flexGrow: 0,
   },
   header: {
     flexDirection: 'row',
@@ -285,7 +318,7 @@ const styles = StyleSheet.create({
   },
   details: {
     gap: 20,
-    marginBottom: 24,
+    marginBottom: 12,
   },
   detailItem: {
     flexDirection: 'row',
@@ -311,6 +344,41 @@ const styles = StyleSheet.create({
   },
   detailValue: {
     ...textStyles.h6,
+  },
+  additionalInfoToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.gray200,
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    gap: 4,
+    marginTop: 16,
+  },
+  additionalInfoToggleText: {
+    ...textStyles.body5,
+    color: colors.gray600,
+  },
+  additionalInfo: {
+    paddingHorizontal: 16,
+    gap: 4,
+    marginTop: -16,
+  },
+  additionalInfoRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  additionalInfoLabel: {
+    ...textStyles.h8,
+    color: colors.gray600,
+  },
+  additionalInfoValue: {
+    ...textStyles.h6,
+    flex: 1,
+    textAlign: 'right',
+    marginLeft: 8,
   },
   footer: {
     paddingHorizontal: 24,
