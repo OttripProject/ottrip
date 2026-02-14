@@ -264,7 +264,7 @@ const styles = StyleSheet.create({
   accommodationSectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 6,
     marginBottom: 16,
   },
   accommodationSectionTitle: {

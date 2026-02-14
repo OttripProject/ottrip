@@ -10,7 +10,7 @@ import { usePlansQuery } from '@/hooks/usePlansQuery';
 import { usePlanDataQuery } from '@/hooks/usePlanDataQuery';
 import { useExpensesQuery } from '@/hooks/useExpensesQuery';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Plan, Itinerary, TravelChecklistItem, Accommodation, FlightRead } from '@/types/api';
+import { Plan, Itinerary, TravelChecklistItem, Accommodation, FlightRead, FlightSegmentReadDto } from '@/types/api';
 import { categoryLabels } from '@/types/expense';
 import ProfileModal from '@/components/modals/mobile/ProfileModal.native';
 import PlanSelectModal from '@/components/modals/mobile/PlanSelectModal.native';
@@ -18,6 +18,7 @@ import ItineraryDetailModal from '@/components/modals/mobile/ItineraryDetailModa
 import ItineraryEditModal from '@/components/modals/mobile/ItineraryEditModal.native';
 import AccommodationDetailModal from '@/components/modals/mobile/AccommodationDetailModal.native';
 import AccommodationEditModal from '@/components/modals/mobile/AccommodationEditModal.native';
+import FlightDetailModal from '@/components/modals/mobile/FlightDetailModal.native';
 import GradientBackground from '@/ui/components/GradientBackground';
 import api from '@/services/api';
 import { itinerariesApi } from '@/services/itineraries';
@@ -52,6 +53,9 @@ export default function TodayScreen() {
   const [showAccommodationDetail, setShowAccommodationDetail] = useState(false);
   const [showAccommodationEdit, setShowAccommodationEdit] = useState(false);
   const [editingAccommodation, setEditingAccommodation] = useState<Accommodation | null>(null);
+  const [showFlightDetail, setShowFlightDetail] = useState(false);
+  const [selectedFlight, setSelectedFlight] = useState<FlightRead | null>(null);
+  const [selectedFlightSegment, setSelectedFlightSegment] = useState<FlightSegmentReadDto | null>(null);
 
   const togglingItems = useRef<Set<number>>(new Set());
   const deletingItems = useRef<Set<number>>(new Set());
@@ -490,7 +494,19 @@ export default function TodayScreen() {
 
         {/* 현재 진행 중 활동 카드 */}
         {currentActivity && (
-          <View style={[styles.cardBase, styles.currentCard]}>
+          <Pressable
+            style={[styles.cardBase, styles.currentCard]}
+            onPress={() => {
+              if (currentActivity.type === 'flight') {
+                setSelectedFlight(currentActivity.data);
+                setSelectedFlightSegment(currentActivity.segment);
+                setShowFlightDetail(true);
+              } else {
+                setSelectedItinerary(currentActivity.data);
+                setShowItineraryDetail(true);
+              }
+            }}
+          >
             <View style={styles.currentCardHeader}>
               <View style={styles.statusBadge}>
                 <Animated.View 
@@ -562,7 +578,7 @@ export default function TodayScreen() {
                 )}
               </>
             )}
-          </View>
+          </Pressable>
         )}
 
         {/* 타임라인 섹션 */}
@@ -587,7 +603,14 @@ export default function TodayScreen() {
                       isDone && styles.doneItem,
                     ]}
                   >
-                    <View style={styles.cardBase}>
+                    <Pressable
+                      style={styles.cardBase}
+                      onPress={() => {
+                        setSelectedFlight(item.data);
+                        setSelectedFlightSegment(item.segment);
+                        setShowFlightDetail(true);
+                      }}
+                    >
                       <View style={styles.timelineCardHeader}>
                         <Text style={[styles.timelineTime, isNext && styles.nextTime]}>
                           {startTime}
@@ -619,7 +642,7 @@ export default function TodayScreen() {
                           {[item.segment.airline, item.segment.flightNumber].filter(Boolean).join(' ')}
                         </Text>
                       )}
-                    </View>
+                    </Pressable>
                     
                   </View>
                 );
@@ -978,6 +1001,17 @@ export default function TodayScreen() {
         planId={selectedPlan?.id ?? 0}
         onSave={(updated) => planData.addAccommodation(updated)}
         onDelete={(accommodationId) => planData.removeAccommodation(accommodationId)}
+      />
+
+      <FlightDetailModal
+        visible={showFlightDetail}
+        onClose={() => {
+          setShowFlightDetail(false);
+          setSelectedFlight(null);
+          setSelectedFlightSegment(null);
+        }}
+        flight={selectedFlight}
+        segment={selectedFlightSegment}
       />
     </View>
   );
