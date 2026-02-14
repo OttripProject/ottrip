@@ -539,9 +539,9 @@ export default function TodayScreen() {
                     {currentActivity.segment.departureAirport} → {currentActivity.segment.arrivalAirport}
                   </Text>
                 </View>
-                {(currentActivity.segment.airline || currentActivity.segment.flightNumber) && (
+                {currentActivity.segment.flightNumber && (
                   <Text style={styles.cardLocation} numberOfLines={1}>
-                    {[currentActivity.segment.airline, currentActivity.segment.flightNumber].filter(Boolean).join(' ')}
+                    {currentActivity.segment.flightNumber}
                   </Text>
                 )}
               </>
@@ -634,13 +634,13 @@ export default function TodayScreen() {
                           {item.segment.departureAirport} → {item.segment.arrivalAirport}
                         </Text>
                       </View>
-                      {(item.segment.airline || item.segment.flightNumber) && (
+                      {item.segment.flightNumber && (
                         <Text 
                           style={styles.itemLocation}
                           numberOfLines={1}
                           ellipsizeMode="tail"
                         >
-                          {[item.segment.airline, item.segment.flightNumber].filter(Boolean).join(' ')}
+                          {item.segment.flightNumber}
                         </Text>
                       )}
                     </Pressable>

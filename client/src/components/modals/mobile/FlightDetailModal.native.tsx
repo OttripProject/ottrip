@@ -1,21 +1,23 @@
 import React from 'react';
 import { View, Text, Pressable, StyleSheet, ScrollView, Alert } from 'react-native';
+import dayjs from 'dayjs';
 import { FlightRead, FlightSegmentReadDto } from '@/types/api';
 import { colors } from '@/ui/tokens/colors';
 import { textStyles } from '@/ui/tokens/typography';
 import BottomSheetModal from '@/ui/components/BottomSheetModal.native';
 import { convertUTCToLocalTime } from '@/utils/dateUtils';
 import FlightIcon from '../../../../assets/airplane.svg';
-import TimeIcon from '../../../../assets/week_bar_time.svg';
 import ExpenseIcon from '../../../../assets/mobile_expense.svg';
 import UpdateIcon from '../../../../assets/update.svg';
 import DeleteIcon from '../../../../assets/delete_gray.svg';
 import CloseIcon from '../../../../assets/mobile_close.svg';
+import PNRIcon from '../../../../assets/memo.svg';
 
 interface FlightDetailModalProps {
   visible: boolean;
   onClose: () => void;
   flight: FlightRead | null;
+  /** 특정 구간 하이라이트 등에 활용 (현재는 전체 구간 표시) */
   segment?: FlightSegmentReadDto | null;
   onEdit?: (flight: FlightRead) => void;
   onDelete?: (flight: FlightRead) => void;
@@ -25,22 +27,30 @@ export default function FlightDetailModal({
   visible,
   onClose,
   flight,
-  segment: segmentProp,
+  segment: _segment,
   onEdit,
   onDelete,
 }: FlightDetailModalProps) {
   if (!flight) return null;
 
   const segments = flight.flightSegments || [];
-  const segment = segmentProp ?? segments[0];
-  if (!segment) return null;
-
-  const routeText = `${segment.departureAirport} → ${segment.arrivalAirport}`;
-  const departureTime = convertUTCToLocalTime(segment.departureTime);
-  const arrivalTime = convertUTCToLocalTime(segment.arrivalTime);
-  const timeRange = `${departureTime} ~ ${arrivalTime}`;
-  const airlineInfo = [segment.airline, segment.flightNumber].filter(Boolean).join(' ');
   const expenseAmount = flight.expense?.amount ?? 0;
+
+  const formatSegmentDate = (dateTime: string) => {
+    return dayjs(dateTime).format('MM/DD');
+  };
+
+  const formatLayover = (prevArrival: string, nextDeparture: string) => {
+    const prev = dayjs(prevArrival);
+    const next = dayjs(nextDeparture);
+    const minutes = next.diff(prev, 'minute');
+    if (minutes <= 0) return null;
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    if (hours > 0 && mins > 0) return `경유시간 :  ${hours}시간 ${mins}분`;
+    if (hours > 0) return `경유시간 :  ${hours}시간`;
+    return `경유 ${mins}분`;
+  };
 
   const handleEdit = () => {
     if (onEdit) {
@@ -116,16 +126,18 @@ export default function FlightDetailModal({
             </View>
           )}
 
-          {/* 시간 */}
-          <View style={styles.detailItem}>
-            <View style={styles.detailIcon}>
-              <TimeIcon width={20} height={20} color={colors.primary} />
+          {/* 예약번호 */}
+          {flight.reservationNumber && (
+            <View style={styles.detailItem}>
+              <View style={styles.detailIcon}>
+                <PNRIcon width={20} height={20} color={colors.primary} />
+              </View>
+              <View style={styles.detailContent}>
+                <Text style={styles.detailLabel}>예약번호 (PNR)</Text>
+                <Text style={styles.detailValue}>{flight.reservationNumber}</Text>
+              </View>
             </View>
-            <View style={styles.detailContent}>
-              <Text style={styles.detailLabel}>시간</Text>
-              <Text style={styles.detailValue}>{timeRange}</Text>
-            </View>
-          </View>
+          )}
 
           {/* 비용 */}
           {expenseAmount > 0 && (
@@ -142,33 +154,48 @@ export default function FlightDetailModal({
             </View>
           )}
 
-          {/* 예약번호 */}
-          {flight.reservationNumber && (
-            <View style={styles.detailItem}>
-              <View style={styles.detailIcon}>
-                <FlightIcon width={20} height={20} color={colors.primary} />
-              </View>
-              <View style={styles.detailContent}>
-                <Text style={styles.detailLabel}>예약번호</Text>
-                <Text style={styles.detailValue}>{flight.reservationNumber}</Text>
-              </View>
-            </View>
-          )}
         </View>
 
-        {/* 항공 정보 섹션 */}
-        <View style={styles.flightSection}>
-          <View style={styles.flightSectionHeader}>
-            <FlightIcon width={20} height={20} color={colors.primary} />
-            <Text style={styles.flightSectionTitle}>구간 1</Text>
-          </View>
-          <View style={styles.routeRow}>
-            <Text style={styles.routeText}>{routeText}</Text>
-          </View>
-          {airlineInfo && (
-            <Text style={styles.airlineText}>{airlineInfo}</Text>
-          )}
-        </View>
+        {/* 항공 정보 섹션 - 모든 구간 나열 */}
+        {segments.map((seg, index) => {
+          const routeText = `${seg.departureAirport} → ${seg.arrivalAirport}`;
+          const depTime = convertUTCToLocalTime(seg.departureTime);
+          const arrTime = convertUTCToLocalTime(seg.arrivalTime);
+          const depDate = formatSegmentDate(seg.departureTime);
+          const arrDate = formatSegmentDate(seg.arrivalTime);
+          const timeRange =
+            depDate === arrDate
+              ? `${depDate} ${depTime} - ${arrTime}`
+              : `${depDate} ${depTime} - ${arrDate} ${arrTime}`;
+          const flightNumber = seg.flightNumber ?? null;
+          const layover =
+            index > 0
+              ? formatLayover(segments[index - 1].arrivalTime, seg.departureTime)
+              : null;
+
+          return (
+            <React.Fragment key={seg.id ?? index}>
+              {layover && (
+                <View style={styles.layoverRow}>
+                  <Text style={styles.layoverText}>{layover}</Text>
+                </View>
+              )}
+              <View style={styles.flightSection}>
+                <View style={styles.flightSectionHeader}>
+                  <FlightIcon width={20} height={20} color={colors.primary} />
+                  <Text style={styles.flightSectionTitle}>구간 {seg.order}</Text>
+                </View>
+                <View style={styles.routeRow}>
+                  <Text style={styles.routeText}>{routeText}</Text>
+                </View>
+                {flightNumber ? (
+                  <Text style={styles.airlineText}>{flightNumber}</Text>
+                ) : null}
+                <Text style={styles.segmentTime}>{timeRange}</Text>
+              </View>
+            </React.Fragment>
+          );
+        })}
 
         
       </ScrollView>
@@ -217,10 +244,19 @@ const styles = StyleSheet.create({
     backgroundColor: colors.gray200,
     borderRadius: 16,
   },
+  layoverRow: {
+    paddingHorizontal: 4,
+    alignItems: 'center',
+  },
+  layoverText: {
+    ...textStyles.body5,
+    color: colors.gray600,
+  },
   flightSection: {
     backgroundColor: `${colors.primary}1A`,
     borderRadius: 12,
     padding: 16,
+    marginVertical: 12,
   },
   flightSectionHeader: {
     flexDirection: 'row',
@@ -237,6 +273,11 @@ const styles = StyleSheet.create({
   },
   routeText: {
     ...textStyles.h5,
+  },
+  segmentTime: {
+    ...textStyles.body5,
+    color: colors.gray600,
+    marginBottom: 4,
   },
   airlineText: {
     ...textStyles.body5,
