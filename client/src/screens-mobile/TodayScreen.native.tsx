@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { View, Text, ScrollView, StyleSheet, Pressable, Modal, Animated, RefreshControl, TextInput, Alert, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import dayjs from 'dayjs';
-import { getTodayKoreanDate, formatTime } from '@/utils/dateUtils';
+import { getTodayKoreanDate, formatTime, convertUTCToLocalTime } from '@/utils/dateUtils';
 import { colors } from '@/ui/tokens/colors';
 import { textStyles } from '@/ui/tokens/typography';
 import { spacing } from '@/ui/tokens/spacing';
@@ -10,7 +10,7 @@ import { usePlansQuery } from '@/hooks/usePlansQuery';
 import { usePlanDataQuery } from '@/hooks/usePlanDataQuery';
 import { useExpensesQuery } from '@/hooks/useExpensesQuery';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Plan, Itinerary, TravelChecklistItem, Accommodation } from '@/types/api';
+import { Plan, Itinerary, TravelChecklistItem, Accommodation, FlightRead } from '@/types/api';
 import { categoryLabels } from '@/types/expense';
 import ProfileModal from '@/components/modals/mobile/ProfileModal.native';
 import PlanSelectModal from '@/components/modals/mobile/PlanSelectModal.native';
@@ -29,6 +29,7 @@ import ChecklistIcon from '../../assets/mobile_check.svg';
 import ExpenseIcon from '../../assets/mobile_expense.svg';
 import AccommodationIcon from '../../assets/mobile_accomodation.svg';
 import RightArrowIcon from '../../assets/right_arrow.svg';
+import FlightIcon from '../../assets/airplane.svg';
 import LightningIcon from '../../assets/mobile_lightning.svg';
 import CheckIcon from '../../assets/gender_check.svg';
 
@@ -152,24 +153,67 @@ export default function TodayScreen() {
       });
   }, [planData.itineraries, todayDateStr]);
 
-  const currentActivity = useMemo(() => {
-    return todayItineraries.find((itinerary: Itinerary) => {
-      if (!itinerary.startTime || !itinerary.endTime) return false;
-      
-      const startDateTime = dayjs(`${todayDateStr} ${itinerary.startTime}`);
-      const endDateTime = dayjs(`${todayDateStr} ${itinerary.endTime}`);
-      
-      return currentTime.isAfter(startDateTime) && currentTime.isBefore(endDateTime);
+  type ScheduleItem =
+    | { type: 'itinerary'; id: number; time: string; endTime: string; data: Itinerary }
+    | { type: 'flight'; id: string; time: string; endTime: string; data: FlightRead; segment: any; segmentIndex: number };
+
+  const todaySchedules = useMemo((): ScheduleItem[] => {
+    const items: ScheduleItem[] = [];
+
+    todayItineraries.forEach((itinerary: Itinerary) => {
+      items.push({
+        type: 'itinerary',
+        id: itinerary.id,
+        time: formatTime(itinerary.startTime || '00:00:00'),
+        endTime: formatTime(itinerary.endTime || '00:00:00'),
+        data: itinerary,
+      });
     });
-  }, [todayItineraries, todayDateStr, currentTime]);
+
+    (planData.flights || []).forEach((flight: FlightRead) => {
+      if (!flight.flightSegments || flight.flightSegments.length === 0) return;
+      flight.flightSegments.forEach((segment: any, index: number) => {
+        const departureTime = dayjs(segment.departureTime);
+        if (departureTime.format('YYYY-MM-DD') !== todayDateStr) return;
+        items.push({
+          type: 'flight',
+          id: `${flight.id}-segment-${index}`,
+          time: convertUTCToLocalTime(segment.departureTime),
+          endTime: convertUTCToLocalTime(segment.arrivalTime),
+          data: flight,
+          segment,
+          segmentIndex: index,
+        });
+      });
+    });
+
+    return items.sort((a, b) => a.time.localeCompare(b.time));
+  }, [todayItineraries, planData.flights, todayDateStr]);
+
+  const currentActivity = useMemo((): ScheduleItem | null => {
+    return todaySchedules.find((item: ScheduleItem) => {
+      if (item.type === 'itinerary') {
+        const startDateTime = dayjs(`${todayDateStr} ${item.time}`);
+        let endDateTime = dayjs(`${todayDateStr} ${item.endTime}`);
+        if (item.endTime < item.time) endDateTime = endDateTime.add(1, 'day');
+        return currentTime.isAfter(startDateTime) && currentTime.isBefore(endDateTime);
+      }
+      const dep = dayjs(item.segment.departureTime);
+      const arr = dayjs(item.segment.arrivalTime);
+      return currentTime.isAfter(dep) && currentTime.isBefore(arr);
+    }) ?? null;
+  }, [todaySchedules, todayDateStr, currentTime]);
 
   const nextActivityIndex = useMemo(() => {
-    return todayItineraries.findIndex((itinerary: Itinerary) => {
-      if (!itinerary.startTime) return false;
-      const startDateTime = dayjs(`${todayDateStr} ${itinerary.startTime}`);
-      return currentTime.isBefore(startDateTime);
+    return todaySchedules.findIndex((item: ScheduleItem) => {
+      if (item.type === 'itinerary') {
+        const startDateTime = dayjs(`${todayDateStr} ${item.time}`);
+        return currentTime.isBefore(startDateTime);
+      }
+      const dep = dayjs(item.segment.departureTime);
+      return currentTime.isBefore(dep);
     });
-  }, [todayItineraries, todayDateStr, currentTime]);
+  }, [todaySchedules, todayDateStr, currentTime]);
 
   const todayAccommodations = useMemo(() => {
     if (!planData.accommodations || planData.accommodations.length === 0) {
@@ -462,61 +506,129 @@ export default function TodayScreen() {
               {currentActivity.endTime && (
                 <View style={styles.endTimeBox}>
                   <Text style={styles.endTime}>
-                    {formatTime(currentActivity.endTime)} 종료
+                    {currentActivity.endTime} 종료
                   </Text>
                 </View>
               )}
             </View>
             
-            <Text 
-              style={styles.cardTitle}
-              numberOfLines={1}
-              ellipsizeMode="tail"
-            >
-              {currentActivity.title || '활동'}
-            </Text>
-            {currentActivity.location && (
-              <View style={styles.locationRow}>
-                <LocationIcon width={16} height={16} color={colors.gray600} />
+            {currentActivity.type === 'flight' ? (
+              <>
+                <View style={styles.flightTitleRow}>
+                  <View style={styles.flightIconWrap}>
+                    <FlightIcon width={20} height={20} color={colors.black} />
+                  </View>
+                  <Text style={styles.cardTitle} numberOfLines={1}>
+                    {currentActivity.segment.departureAirport} → {currentActivity.segment.arrivalAirport}
+                  </Text>
+                </View>
+                {(currentActivity.segment.airline || currentActivity.segment.flightNumber) && (
+                  <Text style={styles.cardLocation} numberOfLines={1}>
+                    {[currentActivity.segment.airline, currentActivity.segment.flightNumber].filter(Boolean).join(' ')}
+                  </Text>
+                )}
+              </>
+            ) : (
+              <>
                 <Text 
-                  style={styles.cardLocation}
+                  style={styles.cardTitle}
                   numberOfLines={1}
                   ellipsizeMode="tail"
                 >
-                  {currentActivity.location}
+                  {currentActivity.data.title || '활동'}
                 </Text>
-              </View>
-            )}
-            
-            {currentActivity.description && (
-              <View style={styles.noteBox}>
-                <Text 
-                  style={styles.note}
-                  numberOfLines={1}
-                  ellipsizeMode="tail"
-                >
-                  "{currentActivity.description}"
-                </Text>
-              </View>
+                {currentActivity.data.location && (
+                  <View style={styles.locationRow}>
+                    <LocationIcon width={16} height={16} color={colors.gray600} />
+                    <Text 
+                      style={styles.cardLocation}
+                      numberOfLines={1}
+                      ellipsizeMode="tail"
+                    >
+                      {currentActivity.data.location}
+                    </Text>
+                  </View>
+                )}
+                {currentActivity.data.description && (
+                  <View style={styles.noteBox}>
+                    <Text 
+                      style={styles.note}
+                      numberOfLines={1}
+                      ellipsizeMode="tail"
+                    >
+                      "{currentActivity.data.description}"
+                    </Text>
+                  </View>
+                )}
+              </>
             )}
           </View>
         )}
 
         {/* 타임라인 섹션 */}
-        {todayItineraries.length > 0 && (
+        {todaySchedules.length > 0 && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>타임라인</Text>
             
-            {todayItineraries.map((itinerary: Itinerary, index: number) => {
+            {todaySchedules.map((item: ScheduleItem, index: number) => {
               const isDone = currentActivity && 
-                itinerary.id === currentActivity.id ? false :
-                index < (nextActivityIndex === -1 ? todayItineraries.length : nextActivityIndex);
+                (currentActivity.type === 'itinerary' ? item.type === 'itinerary' && item.id === currentActivity.id : item.type === 'flight' && item.id === currentActivity.id)
+                  ? false
+                  : index < (nextActivityIndex === -1 ? todaySchedules.length : nextActivityIndex);
               const isNext = index === nextActivityIndex;
-              const startTime = itinerary.startTime ? formatTime(itinerary.startTime) : '00:00';
+              const startTime = item.time;
               
+              if (item.type === 'flight') {
+                return (
+                  <View 
+                    key={item.id} 
+                    style={[
+                      styles.timelineItem,
+                      isDone && styles.doneItem,
+                    ]}
+                  >
+                    <View style={styles.cardBase}>
+                      <View style={styles.timelineCardHeader}>
+                        <Text style={[styles.timelineTime, isNext && styles.nextTime]}>
+                          {startTime}
+                        </Text>
+                        {isNext && (
+                          <View style={styles.nextButton}>
+                            <Text style={styles.nextButtonText}>다음</Text>
+                          </View>
+                        )}
+                      </View>
+                      <View style={styles.flightTitleRow}>
+                        <View style={styles.flightIconWrap}>
+                          <FlightIcon width={16} height={16} color={colors.black} />
+                        </View>
+                        <Text 
+                          style={styles.itemTitle}
+                          numberOfLines={1}
+                          ellipsizeMode="tail"
+                        >
+                          {item.segment.departureAirport} → {item.segment.arrivalAirport}
+                        </Text>
+                      </View>
+                      {(item.segment.airline || item.segment.flightNumber) && (
+                        <Text 
+                          style={styles.itemLocation}
+                          numberOfLines={1}
+                          ellipsizeMode="tail"
+                        >
+                          {[item.segment.airline, item.segment.flightNumber].filter(Boolean).join(' ')}
+                        </Text>
+                      )}
+                    </View>
+                    
+                  </View>
+                );
+              }
+
+              const itinerary = item.data;
               return (
                 <View 
-                  key={itinerary.id} 
+                  key={item.id} 
                   style={[
                     styles.timelineItem,
                     isDone && styles.doneItem,
@@ -1099,6 +1211,14 @@ const styles = StyleSheet.create({
     ...textStyles.body4,
     color: colors.gray500,
     marginTop: 4,
+  },
+  flightTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  flightIconWrap: {
+    marginTop: -4, // 텍스트보다 아이콘이 낮아 보이는 optical alignment 보정
   },
   timelineCardHeader: {
     flexDirection: 'row',
