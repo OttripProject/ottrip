@@ -384,6 +384,7 @@ export default function FlightEditModal({
                       value={seg.departure_airport}
                       onChange={(code) => updateSegment(idx, 'departure_airport', code)}
                       placeholder={PLACEHOLDERS.flight.departureAirport}
+                      style={styles.pickerInput}
                     />
                   </View>
                   <View style={[styles.inputGroup, styles.halfWidth, { zIndex: 2000 - idx }]}>
@@ -391,6 +392,7 @@ export default function FlightEditModal({
                       value={seg.arrival_airport}
                       onChange={(code) => updateSegment(idx, 'arrival_airport', code)}
                       placeholder={PLACEHOLDERS.flight.arrivalAirport}
+                      style={styles.pickerInput}
                     />
                   </View>
                 </View>
@@ -462,7 +464,7 @@ export default function FlightEditModal({
                     />
                   </View>
                 </View>
-                <View style={[styles.row, styles.threeCol]}>
+                {/* <View style={[styles.row, styles.threeCol]}>
                   <View style={[styles.inputGroup, styles.thirdWidth]}>
                     <Input
                       value={seg.terminal || ''}
@@ -487,7 +489,7 @@ export default function FlightEditModal({
                       placeholder={PLACEHOLDERS.flight.seatNumber}
                     />
                   </View>
-                </View>
+                </View> */}
               </View>
             </View>
           ))}
@@ -594,7 +596,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   segmentCardHeaderText: { ...textStyles.h6, color: colors.primary },
-  segmentForm: { gap: 16 },
+  segmentForm: { gap: 16, marginBottom: 8 },
   threeCol: { gap: 8 },
   thirdWidth: { flex: 1 },
   dateInput: {
@@ -619,7 +621,9 @@ const styles = StyleSheet.create({
   },
   pickerContainer: { zIndex: 1 },
   pickerInput: {
+    height: 48,
     minHeight: 48,
+    overflow: 'hidden',
     borderWidth: 1,
     borderColor: colors.gray400,
     borderRadius: 12,
