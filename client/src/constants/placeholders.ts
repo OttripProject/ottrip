@@ -14,6 +14,9 @@ export const PLACEHOLDERS = {
     flightNumber: 'KE123',
     departureAirport: 'ICN',
     arrivalAirport: 'NRT',
+    terminal: '터미널',
+    gate: '게이트',
+    seatNumber: '좌석',
   },
   accommodation: {
     name: '숙소 이름',

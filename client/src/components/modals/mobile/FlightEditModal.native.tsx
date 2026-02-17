@@ -16,7 +16,7 @@ import CloseIcon from '../../../../assets/x.svg';
 import CalendarIcon from '../../../../assets/mobile_calendar_black.svg';
 import AccommodationIcon from '../../../../assets/mobile_accomodation.svg';
 import FlightIcon from '../../../../assets/airplane.svg';
-import AddIcon from '../../../../assets/add.svg';
+import AddIcon from '../../../../assets/mobile_plan_add.svg';
 import DeleteIcon from '../../../../assets/delete.svg';
 
 interface FlightEditModalProps {
@@ -338,11 +338,13 @@ export default function FlightEditModal({
           </View>
         </View>
 
+        <View style={styles.sectionDivider} />
+
         <View style={styles.segmentSection}>
           <View style={styles.segmentSectionHeader}>
             <Text style={styles.segmentSectionTitle}>상세 구간 정보</Text>
             <Pressable onPress={addSegment} style={styles.addSegmentBtn}>
-              <AddIcon width={16} height={16} color={colors.primary} />
+              <AddIcon width={16} height={16} />
               <Text style={styles.addSegmentBtnText}>구간 추가</Text>
             </Pressable>
           </View>
@@ -350,7 +352,7 @@ export default function FlightEditModal({
           {flightSegments.map((seg, idx) => (
             <View key={idx} style={styles.segmentCard}>
               <View style={styles.segmentCardHeader}>
-                <Text style={styles.segmentCardTitle}>구간 {idx + 1}</Text>
+                <Text style={styles.segmentCardHeaderText}>구간 {idx + 1}</Text>
                 {flightSegments.length > 1 && (
                   <Pressable onPress={() => removeSegment(idx)} hitSlop={8}>
                     <DeleteIcon width={16} height={16} color={colors.gray600} />
@@ -360,7 +362,6 @@ export default function FlightEditModal({
               <View style={styles.segmentForm}>
                 <View style={styles.row}>
                   <View style={[styles.inputGroup, styles.halfWidth]}>
-                    <Text style={styles.label}>항공사</Text>
                     <Input
                       value={seg.airline}
                       onChangeText={(t) => updateSegment(idx, 'airline', t)}
@@ -369,7 +370,6 @@ export default function FlightEditModal({
                     />
                   </View>
                   <View style={[styles.inputGroup, styles.halfWidth]}>
-                    <Text style={styles.label}>편명 (예:KE081)</Text>
                     <Input
                       value={seg.flight_number}
                       onChangeText={(t) => updateSegment(idx, 'flight_number', t)}
@@ -380,7 +380,6 @@ export default function FlightEditModal({
                 </View>
                 <View style={styles.row}>
                   <View style={[styles.inputGroup, styles.halfWidth, { zIndex: 2000 - idx }]}>
-                    <Text style={styles.label}>출발 공항 (ICN)</Text>
                     <AirportPicker
                       value={seg.departure_airport}
                       onChange={(code) => updateSegment(idx, 'departure_airport', code)}
@@ -388,7 +387,6 @@ export default function FlightEditModal({
                     />
                   </View>
                   <View style={[styles.inputGroup, styles.halfWidth, { zIndex: 2000 - idx }]}>
-                    <Text style={styles.label}>도착 공항 (JFK)</Text>
                     <AirportPicker
                       value={seg.arrival_airport}
                       onChange={(code) => updateSegment(idx, 'arrival_airport', code)}
@@ -398,7 +396,6 @@ export default function FlightEditModal({
                 </View>
                 <View style={styles.row}>
                   <View style={[styles.inputGroup, styles.halfWidth]}>
-                    <Text style={styles.label}>출발 일자</Text>
                     <Pressable
                       style={styles.dateInput}
                       onPress={() => setSegmentDatePicker({ idx, type: 'dep' })}
@@ -421,7 +418,6 @@ export default function FlightEditModal({
                     )}
                   </View>
                   <View style={[styles.inputGroup, styles.halfWidth]}>
-                    <Text style={styles.label}>도착 일자</Text>
                     <Pressable
                       style={styles.dateInput}
                       onPress={() => setSegmentDatePicker({ idx, type: 'arr' })}
@@ -445,7 +441,6 @@ export default function FlightEditModal({
                 </View>
                 <View style={styles.row}>
                   <View style={[styles.inputGroup, styles.halfWidth]}>
-                    <Text style={styles.label}>출발 시간</Text>
                     <TimePicker
                       value={seg.departure_time}
                       onChange={(t) => updateSegment(idx, 'departure_time', t)}
@@ -459,7 +454,6 @@ export default function FlightEditModal({
                     />
                   </View>
                   <View style={[styles.inputGroup, styles.halfWidth]}>
-                    <Text style={styles.label}>도착 시간</Text>
                     <TimePicker
                       value={seg.arrival_time}
                       onChange={(t) => updateSegment(idx, 'arrival_time', t)}
@@ -470,30 +464,27 @@ export default function FlightEditModal({
                 </View>
                 <View style={[styles.row, styles.threeCol]}>
                   <View style={[styles.inputGroup, styles.thirdWidth]}>
-                    <Text style={styles.label}>터미널</Text>
                     <Input
                       value={seg.terminal || ''}
                       onChangeText={(t) => updateSegment(idx, 'terminal', t)}
                       style={styles.input}
-                      placeholder=""
+                      placeholder={PLACEHOLDERS.flight.terminal}
                     />
                   </View>
                   <View style={[styles.inputGroup, styles.thirdWidth]}>
-                    <Text style={styles.label}>게이트</Text>
                     <Input
                       value={seg.gate || ''}
                       onChangeText={(t) => updateSegment(idx, 'gate', t)}
                       style={styles.input}
-                      placeholder=""
+                      placeholder={PLACEHOLDERS.flight.gate}
                     />
                   </View>
                   <View style={[styles.inputGroup, styles.thirdWidth]}>
-                    <Text style={styles.label}>좌석</Text>
                     <Input
                       value={seg.seat_number || ''}
                       onChangeText={(t) => updateSegment(idx, 'seat_number', t)}
                       style={styles.input}
-                      placeholder=""
+                      placeholder={PLACEHOLDERS.flight.seatNumber}
                     />
                   </View>
                 </View>
@@ -556,10 +547,15 @@ const styles = StyleSheet.create({
   categoryTabText: { ...textStyles.h6, color: colors.gray600 },
   categoryTabTextActive: { ...textStyles.h6, color: colors.primary },
   form: { gap: 20, marginBottom: 24 },
+  sectionDivider: {
+    height: 1,
+    backgroundColor: colors.gray300,
+    marginBottom: 24,
+  },
   inputGroup: {},
   label: { ...textStyles.h7, marginBottom: 8 },
   input: {
-    minHeight: 44,
+    minHeight: 48,
     paddingVertical: 14,
     paddingHorizontal: 12,
     borderWidth: 1,
@@ -567,7 +563,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     backgroundColor: colors.gray100,
   },
-  row: { flexDirection: 'row', gap: 8 },
+  row: { flexDirection: 'row', gap: 9 },
   halfWidth: { flex: 1 },
   segmentSection: { marginBottom: 24 },
   segmentSectionHeader: {
@@ -576,7 +572,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 12,
   },
-  segmentSectionTitle: { ...textStyles.h6, color: colors.primary },
+  segmentSectionTitle: { ...textStyles.h5 },
   addSegmentBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -597,12 +593,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 16,
   },
-  segmentCardTitle: { ...textStyles.h6, color: colors.primary },
+  segmentCardHeaderText: { ...textStyles.h6, color: colors.primary },
   segmentForm: { gap: 16 },
   threeCol: { gap: 8 },
   thirdWidth: { flex: 1 },
   dateInput: {
-    minHeight: 44,
+    minHeight: 48,
     paddingVertical: 10,
     paddingHorizontal: 12,
     flexDirection: 'row',
@@ -623,7 +619,7 @@ const styles = StyleSheet.create({
   },
   pickerContainer: { zIndex: 1 },
   pickerInput: {
-    minHeight: 44,
+    minHeight: 48,
     borderWidth: 1,
     borderColor: colors.gray400,
     borderRadius: 12,
