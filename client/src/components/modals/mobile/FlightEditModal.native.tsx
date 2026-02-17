@@ -293,6 +293,7 @@ export default function FlightEditModal({
               onChangeText={(t) => setFormData({ ...formData, reservation_number: t })}
               style={styles.input}
               placeholder={PLACEHOLDERS.flight.reservationNumber}
+              placeholderTextColor={colors.gray600}
             />
           </View>
           <View style={styles.row}>
@@ -303,6 +304,7 @@ export default function FlightEditModal({
                 onChangeText={(t) => setFormData({ ...formData, passenger_name: t })}
                 style={styles.input}
                 placeholder={PLACEHOLDERS.flight.passengerName}
+                placeholderTextColor={colors.gray600}
               />
             </View>
             <View style={[styles.inputGroup, styles.halfWidth]}>
@@ -312,6 +314,7 @@ export default function FlightEditModal({
                 onChangeText={handleAmountChange}
                 style={styles.input}
                 placeholder="0"
+                placeholderTextColor={colors.gray600}
                 keyboardType="number-pad"
               />
             </View>
@@ -324,6 +327,7 @@ export default function FlightEditModal({
                 onChangeText={(t) => setFormData({ ...formData, booking_reference: t })}
                 style={styles.input}
                 placeholder={PLACEHOLDERS.flight.bookingReference}
+                placeholderTextColor={colors.gray600}
               />
             </View>
             <View style={[styles.inputGroup, styles.halfWidth]}>
@@ -333,6 +337,7 @@ export default function FlightEditModal({
                 onChangeText={(t) => setFormData({ ...formData, ticket_number: t })}
                 style={styles.input}
                 placeholder={PLACEHOLDERS.flight.ticketNumber}
+                placeholderTextColor={colors.gray600}
               />
             </View>
           </View>
@@ -367,6 +372,7 @@ export default function FlightEditModal({
                       onChangeText={(t) => updateSegment(idx, 'airline', t)}
                       style={styles.input}
                       placeholder={PLACEHOLDERS.flight.airline}
+                      placeholderTextColor={colors.gray600}
                     />
                   </View>
                   <View style={[styles.inputGroup, styles.halfWidth]}>
@@ -375,6 +381,7 @@ export default function FlightEditModal({
                       onChangeText={(t) => updateSegment(idx, 'flight_number', t)}
                       style={styles.input}
                       placeholder={PLACEHOLDERS.flight.flightNumber}
+                      placeholderTextColor={colors.gray600}
                     />
                   </View>
                 </View>
@@ -471,6 +478,7 @@ export default function FlightEditModal({
                       onChangeText={(t) => updateSegment(idx, 'terminal', t)}
                       style={styles.input}
                       placeholder={PLACEHOLDERS.flight.terminal}
+                      placeholderTextColor={colors.gray600}
                     />
                   </View>
                   <View style={[styles.inputGroup, styles.thirdWidth]}>
@@ -479,6 +487,7 @@ export default function FlightEditModal({
                       onChangeText={(t) => updateSegment(idx, 'gate', t)}
                       style={styles.input}
                       placeholder={PLACEHOLDERS.flight.gate}
+                      placeholderTextColor={colors.gray600}
                     />
                   </View>
                   <View style={[styles.inputGroup, styles.thirdWidth]}>
@@ -487,6 +496,7 @@ export default function FlightEditModal({
                       onChangeText={(t) => updateSegment(idx, 'seat_number', t)}
                       style={styles.input}
                       placeholder={PLACEHOLDERS.flight.seatNumber}
+                      placeholderTextColor={colors.gray600}
                     />
                   </View>
                 </View> */}
