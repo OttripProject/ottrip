@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, Pressable, StyleSheet, ScrollView, TextInput, Alert } from 'react-native';
+import { View, Text, Pressable, StyleSheet, ScrollView, Alert } from 'react-native';
 import dayjs from 'dayjs';
 import { FlightRead } from '@/types/api';
 import { colors } from '@/ui/tokens/colors';
@@ -307,7 +307,7 @@ export default function FlightEditModal({
             </View>
             <View style={[styles.inputGroup, styles.halfWidth]}>
               <Text style={styles.label}>항공료(원)</Text>
-              <TextInput
+              <Input
                 value={expenseAmount}
                 onChangeText={handleAmountChange}
                 style={styles.input}
