@@ -19,6 +19,7 @@ import ItineraryEditModal from '@/components/modals/mobile/ItineraryEditModal.na
 import AccommodationDetailModal from '@/components/modals/mobile/AccommodationDetailModal.native';
 import AccommodationEditModal from '@/components/modals/mobile/AccommodationEditModal.native';
 import FlightDetailModal from '@/components/modals/mobile/FlightDetailModal.native';
+import FlightEditModal from '@/components/modals/mobile/FlightEditModal.native';
 import GradientBackground from '@/ui/components/GradientBackground';
 import api from '@/services/api';
 import { itinerariesApi } from '@/services/itineraries';
@@ -57,6 +58,8 @@ export default function TodayScreen() {
   const [showFlightDetail, setShowFlightDetail] = useState(false);
   const [selectedFlight, setSelectedFlight] = useState<FlightRead | null>(null);
   const [selectedFlightSegment, setSelectedFlightSegment] = useState<FlightSegmentReadDto | null>(null);
+  const [showFlightEdit, setShowFlightEdit] = useState(false);
+  const [editingFlight, setEditingFlight] = useState<FlightRead | null>(null);
 
   const togglingItems = useRef<Set<number>>(new Set());
   const deletingItems = useRef<Set<number>>(new Set());
@@ -1013,8 +1016,10 @@ export default function TodayScreen() {
         }}
         flight={selectedFlight}
         segment={selectedFlightSegment}
-        onEdit={() => {
-          Alert.alert('알림', '준비 중입니다.');
+        onEdit={(flight) => {
+          setShowFlightDetail(false);
+          setEditingFlight(flight);
+          setShowFlightEdit(true);
         }}
         onDelete={async (flight) => {
           try {
@@ -1025,6 +1030,19 @@ export default function TodayScreen() {
             Alert.alert('오류', '항공 편 삭제에 실패했습니다.');
           }
         }}
+      />
+
+      <FlightEditModal
+        visible={showFlightEdit}
+        onClose={() => {
+          setShowFlightEdit(false);
+          setEditingFlight(null);
+        }}
+        flight={editingFlight}
+        planId={selectedPlan?.id ?? 0}
+        planStartDate={selectedPlan?.startDate}
+        onSave={(updated) => planData.addFlight(updated)}
+        onDelete={(flightId) => planData.removeFlight(flightId)}
       />
     </View>
   );
