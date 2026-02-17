@@ -1003,7 +1003,10 @@ export default function TodayScreen() {
         }}
         accommodation={editingAccommodation}
         planId={selectedPlan?.id ?? 0}
-        onSave={(updated) => planData.addAccommodation(updated)}
+        onSave={(updated) => {
+          planData.addAccommodation(updated);
+          refetchTodayExpenses();
+        }}
         onDelete={(accommodationId) => planData.removeAccommodation(accommodationId)}
       />
 
@@ -1041,7 +1044,10 @@ export default function TodayScreen() {
         flight={editingFlight}
         planId={selectedPlan?.id ?? 0}
         planStartDate={selectedPlan?.startDate}
-        onSave={(updated) => planData.addFlight(updated)}
+        onSave={(updated) => {
+          planData.addFlight(updated);
+          refetchTodayExpenses();
+        }}
         onDelete={(flightId) => planData.removeFlight(flightId)}
       />
     </View>

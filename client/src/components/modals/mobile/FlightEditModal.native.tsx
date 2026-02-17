@@ -422,7 +422,6 @@ export default function FlightEditModal({
                         }}
                         onClose={() => setSegmentDatePicker(null)}
                         style={styles.calendarPopup}
-                        minDate={idx > 0 ? flightSegments[idx - 1].arrival_date : undefined}
                       />
                     )}
                   </View>
@@ -455,11 +454,6 @@ export default function FlightEditModal({
                       onChange={(t) => updateSegment(idx, 'departure_time', t)}
                       containerStyle={styles.pickerContainer}
                       style={styles.pickerInput}
-                      minTime={
-                        idx > 0 && seg.departure_date === flightSegments[idx - 1].arrival_date
-                          ? flightSegments[idx - 1].arrival_time
-                          : undefined
-                      }
                     />
                   </View>
                   <View style={[styles.inputGroup, styles.halfWidth]}>
@@ -613,6 +607,7 @@ const styles = StyleSheet.create({
     minHeight: 48,
     paddingVertical: 10,
     paddingHorizontal: 12,
+    paddingRight: 14,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -634,6 +629,7 @@ const styles = StyleSheet.create({
     height: 48,
     minHeight: 48,
     overflow: 'hidden',
+    paddingRight: 14,
     borderWidth: 1,
     borderColor: colors.gray400,
     borderRadius: 12,
