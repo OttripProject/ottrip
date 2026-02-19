@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, Pressable, StyleSheet, ScrollView } from 'react-native';
-import FullScreenModal from '@/ui/components/FullScreenModal.native';
+import BottomSheetModal from '@/ui/components/BottomSheetModal.native';
 import { colors } from '@/ui/tokens/colors';
 import { textStyles } from '@/ui/tokens/typography';
 import { categoryLabels } from '@/types/expense';
@@ -66,7 +66,7 @@ export default function TodayExpenseDetailModal({
   );
 
   return (
-    <FullScreenModal visible={visible} onClose={onClose}>
+    <BottomSheetModal visible={visible} onClose={onClose} height={0.9} >
       <View style={styles.header}>
         <Text style={styles.headerTitle}>오늘의 여행 비용</Text>
         <Pressable style={styles.closeButton} onPress={onClose} hitSlop={8}>
@@ -131,7 +131,7 @@ export default function TodayExpenseDetailModal({
           <Text style={styles.emptyText}>지출 내역이 없습니다</Text>
         )}
       </ScrollView>
-    </FullScreenModal>
+    </BottomSheetModal>
   );
 }
 
