@@ -273,15 +273,17 @@ export default function WeeklyScreen() {
                 <View key={`flight-${flight.id}-segment-${segmentIndex}`} style={styles.scheduleItem}>
                   <View style={styles.scheduleTime}>
                     <View style={styles.dotTimeRow}>
-                      <View style={[styles.timeDot, isCurrentTime && styles.timeDotNow]} />
-                      <Text style={styles.scheduleTimeText}>{schedule.time}</Text>
+                      <View style={styles.timeDotRing}>
+                        <View style={[styles.timeDot, isCurrentTime && styles.timeDotNow]} />
+                      </View>
+                      <Text style={[styles.scheduleTimeText, isCurrentTime && styles.scheduleTimeTextNow]}>{schedule.time}</Text>
                       {isCurrentTime && (
                         <View style={styles.nowBadge}>
                           <Text style={styles.nowBadgeText}>NOW</Text>
                         </View>
                       )}
                       {showNextDay && schedule.endTime && (
-                        <Text style={styles.scheduleTimeText}> → {schedule.endTime}</Text>
+                        <Text style={[styles.scheduleTimeText, isCurrentTime && styles.scheduleTimeTextNow]}> → {schedule.endTime}</Text>
                       )}
                     </View>
                     {showNextDay && (
@@ -291,17 +293,19 @@ export default function WeeklyScreen() {
                     )}
                   </View>
                   <View style={[styles.scheduleCard, isCurrentTime && styles.currentCard]}>
-                    <Text style={styles.scheduleTitle}>
-                      {segment.departureAirport} → {segment.arrivalAirport}
-                    </Text>
+                    <View style={styles.scheduleCardRow}>
+                      <Text style={[styles.scheduleTitle, isCurrentTime && styles.scheduleTitleNow]}>
+                        {segment.departureAirport} → {segment.arrivalAirport}
+                      </Text>
+                      {totalSegments > 1 && (
+                        <Text style={[styles.flightSegments, { flexShrink: 0 }]}>
+                          구간 {segmentIndex + 1}/{totalSegments}
+                        </Text>
+                      )}
+                    </View>
                     {(segment.airline || segment.flightNumber) && (
                       <Text style={styles.scheduleLocation}>
-                        {[segment.airline, segment.flightNumber].filter(Boolean).join(' / ')}
-                      </Text>
-                    )}
-                    {totalSegments > 1 && (
-                      <Text style={styles.scheduleNote}>
-                        구간 {segmentIndex + 1}/{totalSegments}
+                        {segment.flightNumber}
                       </Text>
                     )}
                   </View>
@@ -314,15 +318,17 @@ export default function WeeklyScreen() {
               <View key={`itinerary-${itinerary.id}`} style={styles.scheduleItem}>
                 <View style={styles.scheduleTime}>
                   <View style={styles.dotTimeRow}>
-                    <View style={[styles.timeDot, isCurrentTime && styles.timeDotNow]} />
-                    <Text style={styles.scheduleTimeText}>{schedule.time}</Text>
+                    <View style={styles.timeDotRing}>
+                      <View style={[styles.timeDot, isCurrentTime && styles.timeDotNow]} />
+                    </View>
+    <Text style={[styles.scheduleTimeText, isCurrentTime && styles.scheduleTimeTextNow]}>{schedule.time}</Text>
                     {isCurrentTime && (
-                      <View style={styles.nowBadge}>
+                        <View style={styles.nowBadge}>
                         <Text style={styles.nowBadgeText}>NOW</Text>
                       </View>
                     )}
                     {showNextDay && schedule.endTime && (
-                      <Text style={styles.scheduleTimeText}> → {schedule.endTime}</Text>
+                      <Text style={[styles.scheduleTimeText, isCurrentTime && styles.scheduleTimeTextNow]}> → {schedule.endTime}</Text>
                     )}
                   </View>
                   {showNextDay && (
@@ -332,12 +338,9 @@ export default function WeeklyScreen() {
                   )}
                 </View>
                 <View style={[styles.scheduleCard, isCurrentTime && styles.currentCard]}>
-                  <Text style={styles.scheduleTitle}>{itinerary.title}</Text>
+                  <Text style={[styles.scheduleTitle, isCurrentTime && styles.scheduleTitleNow]} numberOfLines={1} ellipsizeMode="tail">{itinerary.title}</Text>
                   {itinerary.location && (
-                    <Text style={styles.scheduleLocation}>{itinerary.location}</Text>
-                  )}
-                  {itinerary.description && (
-                    <Text style={styles.scheduleNote}>{itinerary.description}</Text>
+                    <Text style={styles.scheduleLocation} numberOfLines={1} ellipsizeMode="tail">{itinerary.location}</Text>
                   )}
                 </View>
               </View>
@@ -578,7 +581,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    paddingLeft: 7,
+    paddingLeft: 3,
+  },
+  timeDotRing: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    borderWidth: 4,
+    borderColor: colors.gray200,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   timeDot: {
     width: 8,
@@ -594,17 +606,18 @@ const styles = StyleSheet.create({
     color: colors.gray700,
     marginLeft: 16,
   },
+  scheduleTimeTextNow: {
+    color: colors.black,
+  },
   nowBadge: {
     backgroundColor: colors.primary,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
   },
   nowBadgeText: {
-    ...textStyles.body4,
+    ...textStyles.h9,
     color: colors.white,
-    fontSize: 10,
-    fontWeight: '700',
   },
   nextDayIndicator: {
     backgroundColor: colors.white,
@@ -622,6 +635,13 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 
+  scheduleCardRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+    marginBottom: 4,
+  },
   scheduleCard: {
     marginTop: 8,
     marginLeft: 36,
@@ -630,31 +650,33 @@ const styles = StyleSheet.create({
     borderRadius: 16,
   },
   currentCard: {
-    borderColor: colors.primary,
-    borderWidth: 2,
-    shadowColor: colors.primary,
+    shadowColor: colors.black,
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
+    shadowOpacity: 0.05,
     shadowRadius: 4,
     elevation: 2,
   },
   scheduleTitle: {
-    ...textStyles.body1,
-    color: colors.black,
-    fontWeight: '600',
+    ...textStyles.h6,
+    color: colors.gray700,
     marginBottom: 4,
   },
+  scheduleTitleNow: {
+    color: colors.black,
+  },
   scheduleLocation: {
-    ...textStyles.body3,
+    ...textStyles.body4,
     color: colors.gray600,
-    marginBottom: 8,
+    marginBottom: 4,
   },
   scheduleNote: {
     ...textStyles.body4,
-    color: colors.gray500,
-    fontStyle: 'italic',
+    color: colors.gray600,
   },
-
+  flightSegments:{
+    ...textStyles.body6,
+    color: colors.gray500,
+  },
   calendarBackdrop: {
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
   },
