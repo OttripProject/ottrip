@@ -222,21 +222,20 @@ export default function WeeklyScreen() {
         </Pressable>
       </View>
 
-      <View style={styles.scheduleHeader}>
-        <View style={styles.scheduleDate}>
-          <Text style={styles.scheduleDateDay}>{selectedDateDisplay.day}</Text>
-          <Text style={styles.scheduleDateWeekday}>{selectedDateDisplay.weekday}</Text>
-        </View>
-        <View style={styles.scheduleCountBadge}>
-          <Text style={styles.scheduleCountText}>{scheduleCount}개의 일정</Text>
-        </View>
-      </View>
-
       <ScrollView
         style={styles.scheduleList}
         contentContainerStyle={styles.scheduleContent}
         showsVerticalScrollIndicator={false}
       >
+        <View style={styles.scheduleHeader}>
+          <View style={styles.scheduleDate}>
+            <Text style={styles.scheduleDateDay}>{selectedDateDisplay.day}</Text>
+            <Text style={styles.scheduleDateWeekday}>{selectedDateDisplay.weekday}</Text>
+          </View>
+          <View style={styles.scheduleCountBadge}>
+            <Text style={styles.scheduleCountText}>{scheduleCount}개의 일정</Text>
+          </View>
+        </View>
         {selectedDateSchedules.length === 0 ? (
           <View style={styles.emptyScheduleContainer}>
             <Text style={styles.emptyScheduleText}>이 날짜에는 일정이 없습니다</Text>
@@ -516,7 +515,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 24,
     paddingTop: 16,
     paddingBottom: 12,
     backgroundColor: colors.gray200,
@@ -550,7 +548,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.gray200,
   },
   scheduleContent: {
-    padding: 24,
+    paddingHorizontal: 16,
     paddingBottom: 100,
   },
   emptyScheduleContainer: {
