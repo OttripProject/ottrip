@@ -303,7 +303,7 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   scrollContent: {
-    paddingTop: 180,
+    paddingTop: 100,
     paddingHorizontal: 20,
     alignItems: 'center',
   },
