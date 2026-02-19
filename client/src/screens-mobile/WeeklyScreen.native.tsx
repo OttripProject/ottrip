@@ -72,8 +72,12 @@ export default function WeeklyScreen() {
     setCalendarModalVisible(false);
   };
 
-  const selectedDateText = useMemo(() => {
-    return formatKoreanDate(selectedDate);
+  const selectedDateDisplay = useMemo(() => {
+    const weekdays = ['일요일', '월요일', '화요일', '수요일', '목요일', '금요일', '토요일'];
+    return {
+      day: `${selectedDate.date()}일`,
+      weekday: weekdays[selectedDate.day()],
+    };
   }, [selectedDate]);
 
   const selectedDateItineraries = useMemo(() => {
@@ -186,8 +190,8 @@ export default function WeeklyScreen() {
       </View>
 
       <View style={styles.weekSelector}>
-        <Pressable style={styles.weekArrow} onPress={handlePrevWeek}>
-          <LeftArrowIcon width={24} height={24} />
+        <Pressable style={{ marginLeft: 12 }} onPress={handlePrevWeek}>
+          <LeftArrowIcon width={20} height={20} color={colors.gray600}/>
         </Pressable>
         <ScrollView
           horizontal
@@ -213,13 +217,16 @@ export default function WeeklyScreen() {
             );
           })}
         </ScrollView>
-        <Pressable style={styles.weekArrow} onPress={handleNextWeek}>
-          <RightArrowIcon width={24} height={24} />
+        <Pressable style={{ marginRight: 12 }} onPress={handleNextWeek}>
+          <RightArrowIcon width={20} height={20} color={colors.gray600}/>
         </Pressable>
       </View>
 
       <View style={styles.scheduleHeader}>
-        <Text style={styles.scheduleDate}>{selectedDateText}</Text>
+        <View style={styles.scheduleDate}>
+          <Text style={styles.scheduleDateDay}>{selectedDateDisplay.day}</Text>
+          <Text style={styles.scheduleDateWeekday}>{selectedDateDisplay.weekday}</Text>
+        </View>
         <View style={styles.scheduleCountBadge}>
           <Text style={styles.scheduleCountText}>{scheduleCount}개의 일정</Text>
         </View>
@@ -428,7 +435,7 @@ const styles = StyleSheet.create({
   header: {
     paddingTop: 60,
     paddingHorizontal: 24,
-    paddingBottom: 16,
+    paddingBottom: 12,
     backgroundColor: colors.white,
   },
   todayDate: {
@@ -460,14 +467,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colors.white,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.gray200,
     paddingVertical: 12,
     paddingHorizontal: 8,
+    borderRadius: 24,
   },
   weekArrow: {
-    width: 40,
-    height: 56,
+    // width: 20,
+    // height: 73,
+    
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -478,11 +485,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 4,
+
   },
   dayColumn: {
-    width: 40,
-    height: 56,
+    width: 45,
+    height: 73,
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 12,
@@ -493,19 +500,16 @@ const styles = StyleSheet.create({
   dayLabel: {
     ...textStyles.body4,
     color: colors.gray600,
-    marginBottom: 4,
+    marginBottom: 9,
   },
   dayLabelSelected: {
     color: colors.white,
   },
   dayDate: {
-    ...textStyles.body1,
-    color: colors.gray900,
-    fontWeight: '600',
+    ...textStyles.h5,
   },
   dayDateSelected: {
     color: colors.white,
-    fontWeight: '600',
   },
 
   scheduleHeader: {
@@ -515,27 +519,35 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingTop: 16,
     paddingBottom: 12,
-    backgroundColor: colors.white,
+    backgroundColor: colors.gray200,
   },
   scheduleDate: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  scheduleDateDay: {
     ...textStyles.h4,
     color: colors.black,
   },
+  scheduleDateWeekday: {
+    ...textStyles.h7,
+    color: colors.gray600,
+  },
   scheduleCountBadge: {
-    backgroundColor: '#E8F4FF',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
+    backgroundColor: `${colors.primary}1A`,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
   },
   scheduleCountText: {
-    ...textStyles.body4,
+    ...textStyles.h9,
     color: colors.primary,
-    fontWeight: '600',
   },
 
   scheduleList: {
     flex: 1,
-    backgroundColor: colors.gray100,
+    backgroundColor: colors.gray200,
   },
   scheduleContent: {
     padding: 24,
