@@ -338,6 +338,9 @@ export default function WeeklyScreen() {
                   )}
                 </View>
                 <View style={[styles.scheduleCard, isCurrentTime && styles.currentCard]}>
+                  <Text style={[styles.scheduleCardTime, isCurrentTime && styles.scheduleCardTimeNow]}>
+                    {schedule.time}
+                  </Text>
                   <Text style={[styles.scheduleTitle, isCurrentTime && styles.scheduleTitleNow]} numberOfLines={1} ellipsizeMode="tail">{itinerary.title}</Text>
                   {itinerary.location && (
                     <Text style={styles.scheduleLocation} numberOfLines={1} ellipsizeMode="tail">{itinerary.location}</Text>
@@ -519,7 +522,7 @@ const styles = StyleSheet.create({
   },
   scheduleDate: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-end',
     gap: 8,
   },
   scheduleDateDay: {
@@ -605,6 +608,14 @@ const styles = StyleSheet.create({
     ...textStyles.h7,
     color: colors.gray700,
     marginLeft: 16,
+  },
+  scheduleCardTime: {
+    ...textStyles.h7,
+    color: colors.gray600,
+    marginBottom: 4,
+  },
+  scheduleCardTimeNow: {
+    color: colors.primary,
   },
   scheduleTimeTextNow: {
     color: colors.black,
