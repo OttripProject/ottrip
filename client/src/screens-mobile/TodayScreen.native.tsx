@@ -20,6 +20,7 @@ import AccommodationDetailModal from '@/components/modals/mobile/AccommodationDe
 import AccommodationEditModal from '@/components/modals/mobile/AccommodationEditModal.native';
 import FlightDetailModal from '@/components/modals/mobile/FlightDetailModal.native';
 import FlightEditModal from '@/components/modals/mobile/FlightEditModal.native';
+import TodayExpenseDetailModal from '@/components/modals/mobile/TodayExpenseDetailModal.native';
 import GradientBackground from '@/ui/components/GradientBackground';
 import api from '@/services/api';
 import { itinerariesApi } from '@/services/itineraries';
@@ -60,6 +61,7 @@ export default function TodayScreen() {
   const [selectedFlightSegment, setSelectedFlightSegment] = useState<FlightSegmentReadDto | null>(null);
   const [showFlightEdit, setShowFlightEdit] = useState(false);
   const [editingFlight, setEditingFlight] = useState<FlightRead | null>(null);
+  const [showExpenseDetail, setShowExpenseDetail] = useState(false);
 
   const togglingItems = useRef<Set<number>>(new Set());
   const deletingItems = useRef<Set<number>>(new Set());
@@ -827,7 +829,10 @@ export default function TodayScreen() {
 
         {/* 오늘의 비용 섹션 */}
         <View style={styles.section}>
-          <Pressable style={[styles.cardBase, styles.costCardPrimary]}>
+          <Pressable
+            style={[styles.cardBase, styles.costCardPrimary]}
+            onPress={() => setShowExpenseDetail(true)}
+          >
             <View style={styles.costCardHeader}>
               <View style={styles.costCardHeaderLeft}>
                 <ExpenseIcon width={20} height={20} color={colors.white} />
@@ -928,6 +933,14 @@ export default function TodayScreen() {
             Alert.alert('오류', '여행 삭제에 실패했습니다.');
           }
         }}
+      />
+
+      <TodayExpenseDetailModal
+        visible={showExpenseDetail}
+        onClose={() => setShowExpenseDetail(false)}
+        expenses={todayExpensesFromApi ?? []}
+        total={todayExpenses.total}
+        byCategory={todayExpenses.byCategory}
       />
 
       <ItineraryDetailModal
