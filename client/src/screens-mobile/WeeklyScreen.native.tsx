@@ -241,7 +241,9 @@ export default function WeeklyScreen() {
             <Text style={styles.emptyScheduleText}>이 날짜에는 일정이 없습니다</Text>
           </View>
         ) : (
-          selectedDateSchedules.map((schedule) => {
+          <View style={styles.timelineWrapper}>
+            <View style={styles.timelineTrack} />
+            {selectedDateSchedules.map((schedule) => {
             const isCurrentTime =
               dayjs().isSame(selectedDate, 'day') &&
               dayjs().isAfter(dayjs(`${selectedDate.format('YYYY-MM-DD')} ${schedule.time}`)) &&
@@ -270,29 +272,25 @@ export default function WeeklyScreen() {
               return (
                 <View key={`flight-${flight.id}-segment-${segmentIndex}`} style={styles.scheduleItem}>
                   <View style={styles.scheduleTime}>
-                    <View style={[styles.timeDot, isCurrentTime && styles.timeDotNow]} />
-                    <View style={styles.timeTextRow}>
+                    <View style={styles.dotTimeRow}>
+                      <View style={[styles.timeDot, isCurrentTime && styles.timeDotNow]} />
                       <Text style={styles.scheduleTimeText}>{schedule.time}</Text>
                       {isCurrentTime && (
                         <View style={styles.nowBadge}>
                           <Text style={styles.nowBadgeText}>NOW</Text>
                         </View>
                       )}
+                      {showNextDay && schedule.endTime && (
+                        <Text style={styles.scheduleTimeText}> → {schedule.endTime}</Text>
+                      )}
                     </View>
-                    {showNextDay ? (
-                      <View style={styles.scheduleTimeLineContainer}>
-                        <View style={styles.scheduleTimeLineTop} />
-                        <View style={styles.nextDayIndicator}>
-                          <Text style={styles.nextDayText}>+1 day</Text>
-                        </View>
-                        <View style={styles.scheduleTimeLineBottom} />
+                    {showNextDay && (
+                      <View style={styles.nextDayIndicator}>
+                        <Text style={styles.nextDayText}>+1 day</Text>
                       </View>
-                    ) : (
-                      <View style={styles.scheduleTimeLine} />
                     )}
-                    <Text style={styles.scheduleTimeText}>{schedule.endTime || ''}</Text>
                   </View>
-                  <View style={[styles.scheduleCard, styles.flightCard, isCurrentTime && styles.currentCard]}>
+                  <View style={[styles.scheduleCard, isCurrentTime && styles.currentCard]}>
                     <Text style={styles.scheduleTitle}>
                       {segment.departureAirport} → {segment.arrivalAirport}
                     </Text>
@@ -315,27 +313,23 @@ export default function WeeklyScreen() {
             return (
               <View key={`itinerary-${itinerary.id}`} style={styles.scheduleItem}>
                 <View style={styles.scheduleTime}>
-                  <View style={[styles.timeDot, isCurrentTime && styles.timeDotNow]} />
-                  <View style={styles.timeTextRow}>
+                  <View style={styles.dotTimeRow}>
+                    <View style={[styles.timeDot, isCurrentTime && styles.timeDotNow]} />
                     <Text style={styles.scheduleTimeText}>{schedule.time}</Text>
                     {isCurrentTime && (
                       <View style={styles.nowBadge}>
                         <Text style={styles.nowBadgeText}>NOW</Text>
                       </View>
                     )}
+                    {showNextDay && schedule.endTime && (
+                      <Text style={styles.scheduleTimeText}> → {schedule.endTime}</Text>
+                    )}
                   </View>
-                  {showNextDay ? (
-                    <View style={styles.scheduleTimeLineContainer}>
-                      <View style={styles.scheduleTimeLineTop} />
-                      <View style={styles.nextDayIndicator}>
-                        <Text style={styles.nextDayText}>+1 day</Text>
-                      </View>
-                      <View style={styles.scheduleTimeLineBottom} />
+                  {showNextDay && (
+                    <View style={styles.nextDayIndicator}>
+                      <Text style={styles.nextDayText}>+1 day</Text>
                     </View>
-                  ) : (
-                    <View style={styles.scheduleTimeLine} />
                   )}
-                  <Text style={styles.scheduleTimeText}>{schedule.endTime || ''}</Text>
                 </View>
                 <View style={[styles.scheduleCard, isCurrentTime && styles.currentCard]}>
                   <Text style={styles.scheduleTitle}>{itinerary.title}</Text>
@@ -348,7 +342,8 @@ export default function WeeklyScreen() {
                 </View>
               </View>
             );
-          })
+            })}
+          </View>
         )}
       </ScrollView>
 
@@ -560,35 +555,44 @@ const styles = StyleSheet.create({
     color: colors.gray500,
   },
 
+  timelineWrapper: {
+    position: 'relative',
+  },
+  timelineTrack: {
+    position: 'absolute',
+    left: 10,
+    top: 0,
+    bottom: 0,
+    width: 2,
+    backgroundColor: colors.gray500,
+  },
   scheduleItem: {
-    flexDirection: 'row',
+    flexDirection: 'column',
     marginBottom: 16,
   },
   scheduleTime: {
-    width: 64,
+    width: 90,
+    marginTop: -4,
+  },
+  dotTimeRow: {
+    flexDirection: 'row',
     alignItems: 'center',
-    marginRight: 16,
+    gap: 8,
+    paddingLeft: 7,
   },
   timeDot: {
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: colors.gray400,
-    marginBottom: 4,
+    backgroundColor: colors.gray500,
   },
   timeDotNow: {
     backgroundColor: colors.primary,
   },
-  timeTextRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginBottom: 4,
-  },
   scheduleTimeText: {
-    ...textStyles.body3,
-    color: colors.gray600,
-    fontWeight: '500',
+    ...textStyles.h7,
+    color: colors.gray700,
+    marginLeft: 16,
   },
   nowBadge: {
     backgroundColor: colors.primary,
@@ -602,29 +606,6 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '700',
   },
-  scheduleTimeLine: {
-    width: 2,
-    flex: 1,
-    backgroundColor: colors.gray300,
-    marginVertical: 4,
-  },
-  scheduleTimeLineContainer: {
-    flex: 1,
-    alignItems: 'center',
-    marginVertical: 4,
-  },
-  scheduleTimeLineTop: {
-    width: 2,
-    flex: 1,
-    backgroundColor: colors.gray300,
-    minHeight: 8,
-  },
-  scheduleTimeLineBottom: {
-    width: 2,
-    flex: 1,
-    backgroundColor: colors.gray300,
-    minHeight: 8,
-  },
   nextDayIndicator: {
     backgroundColor: colors.white,
     paddingHorizontal: 6,
@@ -632,7 +613,7 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     borderWidth: 1,
     borderColor: colors.gray300,
-    marginVertical: 2,
+    marginTop: 4,
   },
   nextDayText: {
     ...textStyles.body4,
@@ -642,14 +623,11 @@ const styles = StyleSheet.create({
   },
 
   scheduleCard: {
-    flex: 1,
+    marginTop: 8,
+    marginLeft: 36,
     backgroundColor: colors.white,
     padding: 16,
     borderRadius: 16,
-    borderWidth: 1,
-    borderColor: colors.gray200,
-    borderLeftWidth: 3,
-    borderLeftColor: colors.black,
   },
   currentCard: {
     borderColor: colors.primary,
@@ -659,9 +637,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.15,
     shadowRadius: 4,
     elevation: 2,
-  },
-  flightCard: {
-    borderLeftColor: colors.primary,
   },
   scheduleTitle: {
     ...textStyles.body1,
