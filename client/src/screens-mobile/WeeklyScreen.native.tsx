@@ -410,7 +410,7 @@ export default function WeeklyScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.gray100,
+    backgroundColor: colors.gray200,
   },
   loadingContainer: {
     flex: 1,
@@ -469,7 +469,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
     paddingVertical: 12,
     paddingHorizontal: 8,
-    borderRadius: 24,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
   },
   weekArrow: {
     // width: 20,
