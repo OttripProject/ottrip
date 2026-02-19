@@ -294,8 +294,8 @@ export default function WeeklyScreen() {
                   </View>
                   <View style={[styles.scheduleCard, isCurrentTime && styles.currentCard]}>
                     <View style={styles.scheduleCardRow}>
-                      <Text style={[styles.scheduleTitle, isCurrentTime && styles.scheduleTitleNow]}>
-                        {segment.departureAirport} → {segment.arrivalAirport}
+                      <Text style={[styles.scheduleCardTime, isCurrentTime && styles.scheduleTimeTextNow]}>
+                        {schedule.time}
                       </Text>
                       {totalSegments > 1 && (
                         <Text style={[styles.flightSegments, { flexShrink: 0 }]}>
@@ -303,6 +303,9 @@ export default function WeeklyScreen() {
                         </Text>
                       )}
                     </View>
+                    <Text style={[styles.scheduleTitle, isCurrentTime && styles.scheduleTitleNow]}>
+                      {segment.departureAirport} → {segment.arrivalAirport}
+                    </Text>
                     {(segment.airline || segment.flightNumber) && (
                       <Text style={styles.scheduleLocation}>
                         {segment.flightNumber}
