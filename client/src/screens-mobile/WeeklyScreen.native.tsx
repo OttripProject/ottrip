@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { View, Text, ScrollView, StyleSheet, Pressable, ActivityIndicator, Modal, Alert } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, Pressable, ActivityIndicator, Modal, Alert, RefreshControl } from 'react-native';
 import dayjs from 'dayjs';
 import { colors } from '@/ui/tokens/colors';
 import { textStyles } from '@/ui/tokens/typography';
@@ -23,6 +23,7 @@ export default function WeeklyScreen() {
   const [profileModalVisible, setProfileModalVisible] = useState(false);
   const [calendarModalVisible, setCalendarModalVisible] = useState(false);
   const [weekBaseDate, setWeekBaseDate] = useState<dayjs.Dayjs | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     if (!selectedPlan && plansQuery.plans.length > 0) {
@@ -226,6 +227,26 @@ export default function WeeklyScreen() {
         style={styles.scheduleList}
         contentContainerStyle={styles.scheduleContent}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={async () => {
+              setRefreshing(true);
+              try {
+                await Promise.all([
+                  plansQuery.fetchPlans(),
+                  selectedPlan?.publicId
+                    ? planData.fetchPlanData(selectedPlan.publicId)
+                    : Promise.resolve(),
+                ]);
+              } finally {
+                setRefreshing(false);
+              }
+            }}
+            tintColor={colors.white}
+            colors={[colors.white]}
+          />
+        }
       >
         <View style={styles.scheduleHeader}>
           <View style={styles.scheduleDate}>
