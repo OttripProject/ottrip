@@ -466,8 +466,8 @@ export default function TodayScreen() {
                 setRefreshing(false);
               }
             }}
-            tintColor={colors.primary}
-            colors={[colors.primary]}
+            tintColor={colors.white}
+            colors={[colors.white]}
           />
         }
       >
