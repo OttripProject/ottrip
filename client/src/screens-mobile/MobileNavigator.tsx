@@ -9,6 +9,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { colors } from '@/ui/tokens/colors';
+import { SelectedPlanProvider } from '@/contexts/SelectedPlanContext';
 import TodayScreen from './TodayScreen.native';
 import WeeklyScreen from './WeeklyScreen.native';
 import HomeSelectedIcon from '../../assets/mobile_home_black.svg';
@@ -111,8 +112,9 @@ function WeeklyScreenWithAnimation() {
 
 export default function MobileNavigator() {
   return (
-    <View style={styles.navigatorContainer}>
-      <Tab.Navigator
+    <SelectedPlanProvider>
+      <View style={styles.navigatorContainer}>
+        <Tab.Navigator
         screenOptions={{
           headerShown: false,
           lazy: true, 
@@ -156,8 +158,9 @@ export default function MobileNavigator() {
           ),
         }}
       />
-      </Tab.Navigator>
-    </View>
+        </Tab.Navigator>
+      </View>
+    </SelectedPlanProvider>
   );
 }
 

@@ -12,6 +12,7 @@ import { useExpensesQuery } from '@/hooks/useExpensesQuery';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Plan, Itinerary, TravelChecklistItem, Accommodation, FlightRead, FlightSegmentReadDto } from '@/types/api';
 import { categoryLabels } from '@/types/expense';
+import { useSelectedPlan } from '@/contexts/SelectedPlanContext';
 import ProfileModal from '@/components/modals/mobile/ProfileModal.native';
 import PlanSelectModal from '@/components/modals/mobile/PlanSelectModal.native';
 import ItineraryDetailModal from '@/components/modals/mobile/ItineraryDetailModal.native';
@@ -40,8 +41,8 @@ import CheckIcon from '../../assets/gender_check.svg';
 
 export default function TodayScreen() {
   const formattedDate = getTodayKoreanDate();
+  const { selectedPlan, setSelectedPlan } = useSelectedPlan();
   const [profileModalVisible, setProfileModalVisible] = useState(false);
-  const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
   const [showPlanSelector, setShowPlanSelector] = useState(false);
   const [currentTime, setCurrentTime] = useState(dayjs());
   const [refreshing, setRefreshing] = useState(false);
@@ -119,12 +120,6 @@ export default function TodayScreen() {
     };
   }, [pulseAnim]);
   
-  useEffect(() => {
-    if (!selectedPlan && plansQuery.plans.length > 0) {
-      setSelectedPlan(plansQuery.plans[0]);
-    }
-  }, [plansQuery.plans, selectedPlan]);
-
   useEffect(() => {
     const checkSchedule = () => {
       const now = dayjs();

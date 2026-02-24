@@ -7,6 +7,7 @@ import { getWeekCalendar, formatTime, convertUTCToLocalTime, formatKoreanDate } 
 import { usePlansQuery } from '@/hooks/usePlansQuery';
 import { usePlanDataQuery } from '@/hooks/usePlanDataQuery';
 import { Plan, Itinerary, FlightRead } from '@/types/api';
+import { useSelectedPlan } from '@/contexts/SelectedPlanContext';
 import ProfileModal from '@/components/modals/mobile/ProfileModal.native';
 import PlanSelectModal from '@/components/modals/mobile/PlanSelectModal.native';
 import BaseCalendar from '@/components/popup/calendar/BaseCalendar';
@@ -18,18 +19,12 @@ import RightArrowIcon from '../../assets/right_arrow.svg';
 
 export default function WeeklyScreen() {
   const plansQuery = usePlansQuery();
-  const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
+  const { selectedPlan, setSelectedPlan } = useSelectedPlan();
   const [showPlanSelector, setShowPlanSelector] = useState(false);
   const [profileModalVisible, setProfileModalVisible] = useState(false);
   const [calendarModalVisible, setCalendarModalVisible] = useState(false);
   const [weekBaseDate, setWeekBaseDate] = useState<dayjs.Dayjs | null>(null);
   const [refreshing, setRefreshing] = useState(false);
-
-  useEffect(() => {
-    if (!selectedPlan && plansQuery.plans.length > 0) {
-      setSelectedPlan(plansQuery.plans[0]);
-    }
-  }, [plansQuery.plans, selectedPlan]);
 
   const planData = usePlanDataQuery(selectedPlan?.publicId || null);
 
