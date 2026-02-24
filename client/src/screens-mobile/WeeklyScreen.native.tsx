@@ -16,6 +16,7 @@ import InformIcon from '../../assets/mobile_inform.svg';
 import DropdownIcon from '../../assets/mobile_dropdown.svg';
 import LeftArrowIcon from '../../assets/left_arrow.svg';
 import RightArrowIcon from '../../assets/right_arrow.svg';
+import CautionIcon from '../../assets/mobile_caution.svg';
 
 export default function WeeklyScreen() {
   const plansQuery = usePlansQuery();
@@ -243,21 +244,23 @@ export default function WeeklyScreen() {
           />
         }
       >
-        <View style={styles.scheduleHeader}>
-          <View style={styles.scheduleDate}>
-            <Text style={styles.scheduleDateDay}>{selectedDateDisplay.day}</Text>
-            <Text style={styles.scheduleDateWeekday}>{selectedDateDisplay.weekday}</Text>
-          </View>
-          <View style={styles.scheduleCountBadge}>
-            <Text style={styles.scheduleCountText}>{scheduleCount}개의 일정</Text>
-          </View>
-        </View>
         {selectedDateSchedules.length === 0 ? (
           <View style={styles.emptyScheduleContainer}>
-            <Text style={styles.emptyScheduleText}>이 날짜에는 일정이 없습니다</Text>
+            <CautionIcon width={24} height={24} color={colors.gray600}/>
+            <Text style={styles.emptyScheduleText}>등록된 일정이 없습니다.</Text>
           </View>
         ) : (
-          <View style={styles.timelineWrapper}>
+          <>
+            <View style={styles.scheduleHeader}>
+              <View style={styles.scheduleDate}>
+                <Text style={styles.scheduleDateDay}>{selectedDateDisplay.day}</Text>
+                <Text style={styles.scheduleDateWeekday}>{selectedDateDisplay.weekday}</Text>
+              </View>
+              <View style={styles.scheduleCountBadge}>
+                <Text style={styles.scheduleCountText}>{scheduleCount}개의 일정</Text>
+              </View>
+            </View>
+            <View style={styles.timelineWrapper}>
             <View style={styles.timelineTrack} />
             {selectedDateSchedules.map((schedule) => {
             const isCurrentTime =
@@ -368,7 +371,8 @@ export default function WeeklyScreen() {
               </View>
             );
             })}
-          </View>
+            </View>
+          </>
         )}
       </ScrollView>
 
@@ -574,12 +578,13 @@ const styles = StyleSheet.create({
     paddingBottom: 100,
   },
   emptyScheduleContainer: {
-    paddingVertical: 40,
+    marginTop: 100,
     alignItems: 'center',
+    gap: 8,
   },
   emptyScheduleText: {
-    ...textStyles.body2,
-    color: colors.gray500,
+    ...textStyles.body3,
+    color: colors.gray600,
   },
 
   timelineWrapper: {
