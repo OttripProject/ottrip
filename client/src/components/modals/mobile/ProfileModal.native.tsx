@@ -15,6 +15,7 @@ import { Gender } from '@/types/api';
 import { Ionicons } from '@expo/vector-icons';
 
 import GenderCheckIcon from '../../../../assets/gender_check.svg';
+import CloseIcon from '../../../../assets/mobile_close.svg';
 import QnaIcon from '../../../../assets/qna.svg';
 import CopyIcon from '../../../../assets/copy.svg';
 import DeleteAccountModal from '@/components/modals/DeleteAccountModal';
@@ -120,6 +121,7 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
               minHeight={380}
               paddingHorizontal={20}
               paddingTop={20}
+              paddingBottom={20}
               style={styles.card}
             >
               {/* 헤더 */}
@@ -127,7 +129,7 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
                 <Text style={styles.title}>프로필 설정</Text>
               </View>
               <Pressable style={styles.closeButton} onPress={onClose}>
-                <Ionicons name="close" size={24} color={colors.gray500} />
+                <CloseIcon width={24} height={24} />
               </Pressable>
 
               <Text style={styles.subtitle}>개인정보 및 환경설정을 관리하세요.</Text>
@@ -319,7 +321,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   title: {
-    ...textStyles.h2,
+    ...textStyles.h3,
     color: colors.black,
   },
   closeButton: {
@@ -330,14 +332,13 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
   subtitle: {
-    ...textStyles.body3,
-    color: colors.gray700,
+    ...textStyles.body4,
+    color: colors.gray600,
     marginBottom: 24,
   },
   label: {
     ...textStyles.h7,
     marginBottom: 8,
-    marginTop: 2,
   },
   emailContainer: {
     width: '100%',
@@ -399,18 +400,17 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
   },
   genderText: {
-    ...textStyles.body2,
+    ...textStyles.body3,
   },
   divider: {
     width: '100%',
     height: 1,
     backgroundColor: colors.gray300,
-    marginVertical: 4,
   },
   contactButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 24,
+    marginTop: 16,
   },
   contactButtonText: {
     ...textStyles.h6,
@@ -421,7 +421,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: 32,
+    marginTop: 24,
     width: '100%',
   },
   footerLeft: {
@@ -436,7 +436,7 @@ const styles = StyleSheet.create({
   },
   footerLinkGray: {
     ...textStyles.h7,
-    color: colors.gray700,
+    color: colors.gray600,
   },
   saveButton: {
     backgroundColor: colors.primary,
