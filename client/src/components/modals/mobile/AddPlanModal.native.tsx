@@ -8,7 +8,7 @@ import { radii } from '@/ui/tokens/radii';
 import { spacing } from '@/ui/tokens/spacing';
 import BottomSheetModal from '@/ui/components/BottomSheetModal.native';
 import BaseCalendar from '@/components/popup/calendar/BaseCalendar';
-import CloseIcon from '../../../../assets/x.svg';
+import CloseIcon from '../../../../assets/mobile_close.svg';
 import CalendarIcon from '../../../../assets/mobile_calendar_black.svg';
 
 interface AddPlanModalProps {
@@ -110,7 +110,7 @@ export default function AddPlanModal({
           <View style={styles.header}>
             <Text style={styles.headerTitle}>새로운 여행 만들기</Text>
             <Pressable onPress={onClose} style={styles.closeButton} hitSlop={8}>
-              <CloseIcon width={24} height={24} color={colors.gray700} />
+              <CloseIcon width={20} height={20} color={colors.gray700} />
             </Pressable>
           </View>
 
@@ -208,8 +208,10 @@ const styles = StyleSheet.create({
     ...textStyles.h4,
   },
   closeButton: {
-    width: 24,
-    height: 24,
+    width: 32,
+    height: 32,
+    backgroundColor: colors.gray200,
+    borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
   },
