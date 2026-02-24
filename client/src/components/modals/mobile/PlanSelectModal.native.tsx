@@ -1,11 +1,12 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, Pressable, StyleSheet, ScrollView, Alert } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import dayjs from 'dayjs';
-import { Plan } from '@/types/api';
+import { Plan, CreatePlanRequest } from '@/types/api';
 import { colors } from '@/ui/tokens/colors';
 import { textStyles } from '@/ui/tokens/typography';
 import BottomSheetModal from '@/ui/components/BottomSheetModal.native';
+import AddPlanModal from './AddPlanModal.native';
 import CheckedIcon from '../../../../assets/mobile_plan_checked.svg';
 import UnCheckedIcon from '../../../../assets/mobile_plan_unchecked.svg';
 import AddPlanIcon from '../../../../assets/mobile_plan_add.svg';
@@ -24,6 +25,7 @@ interface PlanSelectModalProps {
   plans: Plan[];
   selectedPlan: Plan | null;
   onSelectPlan: (plan: Plan) => void;
+  addPlan?: (data: CreatePlanRequest) => Promise<Plan>;
   onAddTrip?: () => void;
   onEditPlan?: (plan: Plan) => void;
   onDeletePlan?: (plan: Plan) => void;
@@ -35,18 +37,30 @@ export default function PlanSelectModal({
   plans = [],
   selectedPlan,
   onSelectPlan,
+  addPlan,
   onAddTrip,
   onEditPlan,
   onDeletePlan,
 }: PlanSelectModalProps) {
+  const [showAddPlanModal, setShowAddPlanModal] = useState(false);
 
   const handleAddTripPress = () => {
+    if (addPlan) {
+      setShowAddPlanModal(true);
+      return;
+    }
     if (onAddTrip) {
       onClose();
       onAddTrip();
       return;
     }
     Alert.alert('새 여행 추가', '새로운 여행 만들기 기능이 곧 제공될 예정입니다.');
+  };
+
+  const handlePlanCreated = (plan: Plan) => {
+    onSelectPlan(plan);
+    onClose();
+    setShowAddPlanModal(false);
   };
 
   const handleSelectPlan = (plan: Plan) => {
@@ -155,6 +169,15 @@ export default function PlanSelectModal({
           )}
         </ScrollView>
       </GestureDetector>
+
+      {addPlan && (
+        <AddPlanModal
+          visible={showAddPlanModal}
+          onClose={() => setShowAddPlanModal(false)}
+          onPlanCreated={handlePlanCreated}
+          addPlan={addPlan}
+        />
+      )}
     </BottomSheetModal>
   );
 }
@@ -165,7 +188,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 24,
-    paddingTop: 20,
     paddingBottom: 16,
   },
   headerTitle: {

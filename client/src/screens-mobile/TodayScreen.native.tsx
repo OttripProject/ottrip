@@ -920,6 +920,7 @@ export default function TodayScreen() {
         plans={plansQuery.plans}
         selectedPlan={selectedPlan}
         onSelectPlan={setSelectedPlan}
+        addPlan={plansQuery.addPlan}
         onEditPlan={() => {}}
         onDeletePlan={async (plan) => {
           try {
