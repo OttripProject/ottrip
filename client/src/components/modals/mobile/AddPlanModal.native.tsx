@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, Pressable, StyleSheet, Modal, Alert, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, Pressable, StyleSheet, Alert, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
 import dayjs from 'dayjs';
 import { Plan, CreatePlanRequest } from '@/types/api';
 import { colors } from '@/ui/tokens/colors';
@@ -41,22 +41,6 @@ export default function AddPlanModal({
 
   const formatDateDisplay = (dateStr: string) =>
     dateStr ? dayjs(dateStr).format('YYYY.MM.DD') : '';
-
-  const handleCalendarDayPress = (day: { dateString: string }) => {
-    const d = day.dateString;
-    if (calendarTarget === 'start') {
-      setStartDate(d);
-      if (endDate && dayjs(d).isAfter(dayjs(endDate))) {
-        setEndDate(d);
-      }
-    } else if (calendarTarget === 'end') {
-      setEndDate(d);
-      if (startDate && dayjs(d).isBefore(dayjs(startDate))) {
-        setStartDate(d);
-      }
-    }
-    setCalendarTarget(null);
-  };
 
   const handleSubmit = async () => {
     const trimmedTitle = title.trim();
@@ -102,6 +86,7 @@ export default function AddPlanModal({
         onClose={onClose}
         height={0.45}
       >
+        <View style={styles.contentWrapper}>
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           style={styles.content}
@@ -166,34 +151,53 @@ export default function AddPlanModal({
             </Text>
           </Pressable>
         </KeyboardAvoidingView>
-      </BottomSheetModal>
 
-      {/* 날짜 선택 캘린더 모달 */}
-      {calendarTarget && (
-        <Modal visible transparent animationType="fade">
-          <Pressable
-            style={[StyleSheet.absoluteFill, styles.calendarBackdrop]}
-            onPress={() => setCalendarTarget(null)}
-          />
-          <View style={styles.calendarWrapper} pointerEvents="box-none">
-            <BaseCalendar
-              visible
-              selectedDate={calendarTarget === 'start' ? startDate || dayjs().format('YYYY-MM-DD') : endDate || startDate || dayjs().format('YYYY-MM-DD')}
-              onDayPress={handleCalendarDayPress}
-              onClose={() => setCalendarTarget(null)}
-              minDate={calendarTarget === 'end' && startDate ? startDate : undefined}
-              maxDate={calendarTarget === 'start' && endDate ? endDate : undefined}
-              autoCloseOnSelect
-              style={styles.calendarPopup}
-            />
-          </View>
-        </Modal>
-      )}
+          {/* 날짜 선택 캘린더 - 화면 중앙 팝업 */}
+          {calendarTarget && (
+            <View style={styles.calendarOverlay}>
+              <Pressable
+                style={styles.calendarBackdrop}
+                onPress={() => setCalendarTarget(null)}
+              />
+              <View style={styles.calendarCenter}>
+                <BaseCalendar
+                  visible
+                  selectedDate={
+                    calendarTarget === 'start'
+                      ? startDate || dayjs().format('YYYY-MM-DD')
+                      : endDate || startDate || dayjs().format('YYYY-MM-DD')
+                  }
+                  onDayPress={(day) => {
+                    const d = day.dateString;
+                    if (calendarTarget === 'start') {
+                      setStartDate(d);
+                      if (endDate && dayjs(d).isAfter(dayjs(endDate))) setEndDate(d);
+                    } else {
+                      setEndDate(d);
+                      if (startDate && dayjs(d).isBefore(dayjs(startDate))) setStartDate(d);
+                    }
+                    setCalendarTarget(null);
+                  }}
+                  onClose={() => setCalendarTarget(null)}
+                  minDate={calendarTarget === 'end' && startDate ? startDate : undefined}
+                  maxDate={calendarTarget === 'start' && endDate ? endDate : undefined}
+                  autoCloseOnSelect
+                  style={styles.calendarPopup}
+                />
+              </View>
+            </View>
+          )}
+        </View>
+      </BottomSheetModal>
     </>
   );
 }
 
 const styles = StyleSheet.create({
+  contentWrapper: {
+    flex: 1,
+    position: 'relative',
+  },
   content: {
     flex: 1,
     paddingHorizontal: 20,
@@ -277,18 +281,21 @@ const styles = StyleSheet.create({
   submitButtonTextDisabled: {
     color: colors.gray700,
   },
+  calendarOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1000,
+  },
   calendarBackdrop: {
+    ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
   },
-  calendarWrapper: {
-    flex: 1,
-    paddingTop: 80,
-    paddingHorizontal: 24,
-    alignItems: 'center',
+  calendarCenter: {
+    width: 276,
+    zIndex: 1001,
   },
   calendarPopup: {
-    top: 0,
-    left: 0,
-    right: 0,
+    position: 'relative',
   },
 });

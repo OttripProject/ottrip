@@ -59,8 +59,11 @@ export default function PlanSelectModal({
 
   const handlePlanCreated = (plan: Plan) => {
     onSelectPlan(plan);
-    onClose();
     setShowAddPlanModal(false);
+    // AddPlanModal 닫힌 뒤 PlanSelectModal 닫기 (동시 닫힘 시 화면 멈춤 방지)
+    setTimeout(() => {
+      onClose();
+    }, 300);
   };
 
   const handleSelectPlan = (plan: Plan) => {
