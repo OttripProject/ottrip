@@ -1,4 +1,4 @@
-import { StyleSheet } from 'react-native';
+import { StyleSheet, Platform } from 'react-native';
 import { colors, spacing, radii, textStyles } from '@/ui/tokens';
 
 export type InputVariant = 'outlined' | 'filled' | 'underline';
@@ -8,6 +8,27 @@ export type InputState = {
   error?: boolean;
   focused?: boolean;
 };
+
+const baseStyle = Platform.select({
+  web: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: radii.md,
+    ...textStyles.body4,
+    outlineStyle: 'none',
+    outlineWidth: 0,
+  },
+  default: {
+    paddingHorizontal: spacing.md,
+    paddingTop: 10,
+    paddingBottom: 14,
+    borderRadius: radii.md,
+    ...textStyles.body4,
+    lineHeight: 18,
+    textAlignVertical: 'center' as const,
+    includeFontPadding: false,
+  },
+});
 
 export function useInputStyleVariant(variant: InputVariant, state?: InputState) {
   const { disabled, error, focused } = state ?? {};
@@ -20,7 +41,7 @@ export function useInputStyleVariant(variant: InputVariant, state?: InputState) 
     return {
       containerStyle: styles.container,
       style: [
-        styles.base,
+        baseStyle,
         {
           backgroundColor: colors.white,
           borderWidth: 1,
@@ -38,7 +59,7 @@ export function useInputStyleVariant(variant: InputVariant, state?: InputState) 
     return {
       containerStyle: styles.container,
       style: [
-        styles.base,
+        baseStyle,
         {
           backgroundColor: bg,
           borderWidth: 1,
@@ -54,7 +75,7 @@ export function useInputStyleVariant(variant: InputVariant, state?: InputState) 
   return {
     containerStyle: styles.container,
     style: [
-      styles.base,
+      baseStyle,
       {
         backgroundColor: colors.white,
         borderBottomWidth: 1,
@@ -70,16 +91,6 @@ export function useInputStyleVariant(variant: InputVariant, state?: InputState) 
 const styles = StyleSheet.create({
   container: {
     width: '100%',
-  },
-  base: {
-    paddingHorizontal: spacing.md,
-    paddingTop: 10,
-    paddingBottom: 14,
-    borderRadius: radii.md,
-    ...textStyles.body4,
-    lineHeight: 18,
-    textAlignVertical: 'center',
-    includeFontPadding: false,
   },
 });
 
