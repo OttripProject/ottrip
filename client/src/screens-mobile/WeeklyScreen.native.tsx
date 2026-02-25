@@ -4,6 +4,7 @@ import dayjs from 'dayjs';
 import { colors } from '@/ui/tokens/colors';
 import { textStyles } from '@/ui/tokens/typography';
 import { getWeekCalendar, formatTime, convertUTCToLocalTime, formatKoreanDate } from '@/utils/dateUtils';
+import { useQueryClient } from '@tanstack/react-query';
 import { usePlansQuery } from '@/hooks/usePlansQuery';
 import { usePlanDataQuery } from '@/hooks/usePlanDataQuery';
 import { Plan, Itinerary, FlightRead } from '@/types/api';
@@ -11,6 +12,7 @@ import { useSelectedPlan } from '@/contexts/SelectedPlanContext';
 import ProfileModal from '@/components/modals/mobile/ProfileModal.native';
 import PlanSelectModal from '@/components/modals/mobile/PlanSelectModal.native';
 import BaseCalendar from '@/components/popup/calendar/BaseCalendar';
+import WeeklyChecklistCard from '@/components/cards/WeeklyChecklistCard.native';
 import CalendarIcon from '../../assets/mobile_calendar_black.svg';
 import InformIcon from '../../assets/mobile_inform.svg';
 import DropdownIcon from '../../assets/mobile_dropdown.svg';
@@ -20,6 +22,7 @@ import CautionIcon from '../../assets/mobile_caution.svg';
 
 export default function WeeklyScreen() {
   const plansQuery = usePlansQuery();
+  const queryClient = useQueryClient();
   const { selectedPlan, setSelectedPlan } = useSelectedPlan();
   const [showPlanSelector, setShowPlanSelector] = useState(false);
   const [profileModalVisible, setProfileModalVisible] = useState(false);
@@ -234,6 +237,7 @@ export default function WeeklyScreen() {
                   selectedPlan?.publicId
                     ? planData.fetchPlanData(selectedPlan.publicId)
                     : Promise.resolve(),
+                  queryClient.refetchQueries({ queryKey: ['checklist', selectedPlan?.publicId] }),
                 ]);
               } finally {
                 setRefreshing(false);
@@ -372,6 +376,12 @@ export default function WeeklyScreen() {
             );
             })}
             </View>
+
+            <WeeklyChecklistCard
+              planPublicId={selectedPlan?.publicId}
+              selectedDate={selectedDate}
+              itineraries={planData.itineraries}
+            />
           </>
         )}
       </ScrollView>
@@ -434,7 +444,7 @@ export default function WeeklyScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.gray200,
+    backgroundColor: colors.gray300,
   },
   loadingContainer: {
     flex: 1,
@@ -543,7 +553,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingTop: 16,
     paddingBottom: 12,
-    backgroundColor: colors.gray200,
+    backgroundColor: colors.gray300,
   },
   scheduleDate: {
     flexDirection: 'row',
@@ -571,7 +581,7 @@ const styles = StyleSheet.create({
 
   scheduleList: {
     flex: 1,
-    backgroundColor: colors.gray200,
+    backgroundColor: colors.gray300,
   },
   scheduleContent: {
     paddingHorizontal: 16,
@@ -594,9 +604,9 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 10,
     top: 0,
-    bottom: 0,
+    bottom: 16,
     width: 2,
-    backgroundColor: colors.gray500,
+    backgroundColor: colors.gray400,
   },
   scheduleItem: {
     flexDirection: 'column',
@@ -617,7 +627,7 @@ const styles = StyleSheet.create({
     height: 16,
     borderRadius: 8,
     borderWidth: 4,
-    borderColor: colors.gray200,
+    borderColor: colors.gray300,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -625,7 +635,7 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: colors.gray500,
+    backgroundColor: colors.gray400,
   },
   timeDotNow: {
     backgroundColor: colors.primary,
