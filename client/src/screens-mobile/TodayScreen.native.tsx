@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { View, Text, ScrollView, StyleSheet, Pressable, Modal, Animated, RefreshControl, TextInput, Alert, Platform } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, Pressable, Modal, Animated, RefreshControl, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import dayjs from 'dayjs';
 import { getTodayKoreanDate, formatTime, convertUTCToLocalTime } from '@/utils/dateUtils';
@@ -9,8 +9,8 @@ import { spacing } from '@/ui/tokens/spacing';
 import { usePlansQuery } from '@/hooks/usePlansQuery';
 import { usePlanDataQuery } from '@/hooks/usePlanDataQuery';
 import { useExpensesQuery } from '@/hooks/useExpensesQuery';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Plan, Itinerary, TravelChecklistItem, Accommodation, FlightRead, FlightSegmentReadDto } from '@/types/api';
+import { useQueryClient } from '@tanstack/react-query';
+import { Plan, Itinerary, Accommodation, FlightRead, FlightSegmentReadDto } from '@/types/api';
 import { categoryLabels } from '@/types/expense';
 import { useSelectedPlan } from '@/contexts/SelectedPlanContext';
 import ProfileModal from '@/components/modals/mobile/ProfileModal.native';
@@ -22,21 +22,17 @@ import AccommodationEditModal from '@/components/modals/mobile/AccommodationEdit
 import FlightDetailModal from '@/components/modals/mobile/FlightDetailModal.native';
 import FlightEditModal from '@/components/modals/mobile/FlightEditModal.native';
 import TodayExpenseDetailModal from '@/components/modals/mobile/TodayExpenseDetailModal.native';
-import GradientBackground from '@/ui/components/GradientBackground';
-import api from '@/services/api';
+import WeeklyChecklistCard from '@/components/cards/WeeklyChecklistCard.native';
 import { itinerariesApi } from '@/services/itineraries';
 import { accommodationsApi } from '@/services/accommodations';
 import { flightsApi } from '@/services/flights';
 import SettingIcon from '../../assets/mobile_setting.svg';
 import DropdownIcon from '../../assets/mobile_dropdown.svg';
 import LocationIcon from '../../assets/mobile_location.svg';
-import ChecklistIcon from '../../assets/mobile_check.svg';
 import ExpenseIcon from '../../assets/mobile_expense.svg';
 import AccommodationIcon from '../../assets/mobile_accomodation.svg';
 import RightArrowIcon from '../../assets/right_arrow.svg';
 import FlightIcon from '../../assets/airplane.svg';
-import LightningIcon from '../../assets/mobile_lightning.svg';
-import CheckIcon from '../../assets/gender_check.svg';
 
 
 export default function TodayScreen() {
@@ -46,9 +42,6 @@ export default function TodayScreen() {
   const [showPlanSelector, setShowPlanSelector] = useState(false);
   const [currentTime, setCurrentTime] = useState(dayjs());
   const [refreshing, setRefreshing] = useState(false);
-  const [newChecklistItem, setNewChecklistItem] = useState('');
-  const [addingChecklistItem, setAddingChecklistItem] = useState(false);
-  const [aiRecommendLoading, setAiRecommendLoading] = useState(false);
   const [selectedItinerary, setSelectedItinerary] = useState<Itinerary | null>(null);
   const [showItineraryDetail, setShowItineraryDetail] = useState(false);
   const [showItineraryEdit, setShowItineraryEdit] = useState(false);
@@ -64,9 +57,6 @@ export default function TodayScreen() {
   const [editingFlight, setEditingFlight] = useState<FlightRead | null>(null);
   const [showExpenseDetail, setShowExpenseDetail] = useState(false);
 
-  const togglingItems = useRef<Set<number>>(new Set());
-  const deletingItems = useRef<Set<number>>(new Set());
-  
   const queryClient = useQueryClient();
   const plansQuery = usePlansQuery();
   const planData = usePlanDataQuery(selectedPlan?.publicId || null);
@@ -75,25 +65,6 @@ export default function TodayScreen() {
   const todayDateStr = today.format('YYYY-MM-DD');
   
   const { data: todayExpensesFromApi = [], refetch: refetchTodayExpenses } = useExpensesQuery(selectedPlan?.id, todayDateStr);
-  
-  const { data: checklistData, refetch: refetchChecklist } = useQuery({
-    queryKey: ['checklist', selectedPlan?.publicId],
-    queryFn: async () => {
-      if (!selectedPlan?.publicId) return null;
-      try {
-        const response = await api.get(`/private/ai/checklist/${selectedPlan.publicId}`);
-        return response.data;
-      } catch (error: any) {
-        if (error.response?.status === 404) {
-          return null;
-        }
-        throw error;
-      }
-    },
-    enabled: !!selectedPlan?.publicId,
-    staleTime: 1 * 60 * 1000,
-    gcTime: 10 * 60 * 1000,
-  });
   
   const pulseAnim = useRef(new Animated.Value(1)).current;
   
@@ -248,181 +219,8 @@ export default function TodayScreen() {
     return { total, byCategory };
   }, [todayExpensesFromApi]);
 
-  const checklist = useMemo(() => {
-    return checklistData || null;
-  }, [checklistData]);
-
-  const hasChecklist = useMemo(() => {
-    if (!checklist?.categories) {
-      return false;
-    }
-    return Object.values(checklist.categories).some((category: any) => {
-      return Array.isArray(category) && category.length > 0;
-    });
-  }, [checklist]);
-
-  const todayChecklistItems = useMemo(() => {
-    if (!checklist?.categories) {
-      return [];
-    }
-    const items: TravelChecklistItem[] = [];
-    
-    const categories = checklist.categories;
-    if (!categories || typeof categories !== 'object') {
-      return [];
-    }
-    
-    Object.entries(categories).forEach(([categoryKey, category]: [string, any]) => {
-      if (Array.isArray(category)) {
-        category.forEach((item: any) => {
-          if (!item || typeof item !== 'object') {
-            return;
-          }
-          
-          const itemDate = item.date;
-          const isCustom = item.isCustom ?? false;
-          const isChecked = item.isChecked ?? false;
-          
-          if (itemDate === todayDateStr) {
-            items.push({
-              id: item.id || 0,
-              name: item.name || '',
-              reason: item.reason || '',
-              is_checked: isChecked,
-              is_custom: isCustom,
-              date: item.date,
-            });
-          }
-        });
-      }
-    });
-    
-    return items;
-  }, [checklist, todayDateStr]);
-
-  const checklistStats = useMemo(() => {
-    const total = todayChecklistItems.length;
-    const checked = todayChecklistItems.filter((item) => item.is_checked).length;
-    return { total, checked };
-  }, [todayChecklistItems]);
-
   const formatCurrency = (amount: number) => {
     return `₩${amount.toLocaleString('ko-KR')}`;
-  };
-
-  const handleAddChecklistItem = async () => {
-    const name = newChecklistItem.trim();
-    if (!name) return;
-    const publicId = selectedPlan?.publicId;
-    if (!publicId) {
-      Alert.alert('알림', '여행을 선택해주세요.');
-      return;
-    }
-    setAddingChecklistItem(true);
-    try {
-      const response = await api.post(`/private/ai/checklist/${publicId}/item`, {
-        name,
-        reason: '',
-        category: 'basic_required',
-        date: todayDateStr,
-      });
-      setNewChecklistItem('');
-      refetchChecklist();
-    } catch {
-      Alert.alert('오류', '체크리스트 항목 추가에 실패했습니다.');
-    } finally {
-      setAddingChecklistItem(false);
-    }
-  };
-
-  const handleToggleChecklistItem = async (itemId: number, isChecked: boolean) => {
-    const publicId = selectedPlan?.publicId;
-    if (!publicId) return;
-    
-    if (togglingItems.current.has(itemId)) {
-      return;
-    }
-    
-    togglingItems.current.add(itemId);
-    
-    const previousData = queryClient.getQueryData(['checklist', publicId]);
-    
-    queryClient.setQueryData(['checklist', publicId], (old: any) => {
-      if (!old?.categories) return old;
-      
-      const updated = { ...old };
-      const categories = { ...updated.categories };
-      
-      Object.keys(categories).forEach((categoryKey) => {
-        const items = categories[categoryKey];
-        if (Array.isArray(items)) {
-          categories[categoryKey] = items.map((item: any) => {
-            if (item.id === itemId) {
-              return { ...item, isChecked };
-            }
-            return item;
-          });
-        }
-      });
-      
-      return { ...updated, categories };
-    });
-    
-    try {
-      await api.patch(`/private/ai/checklist/${publicId}/item/${itemId}`, {
-        is_checked: isChecked,
-      });
-    } catch {
-      queryClient.setQueryData(['checklist', publicId], previousData);
-      Alert.alert('오류', '체크리스트 항목 업데이트에 실패했습니다.');
-    } finally {
-      togglingItems.current.delete(itemId);
-    }
-  };
-
-  const handleDeleteChecklistItem = async (itemId: number) => {
-    const publicId = selectedPlan?.publicId;
-    if (!publicId) return;
-    
-    if (deletingItems.current.has(itemId)) {
-      return;
-    }
-    
-    deletingItems.current.add(itemId);
-    
-    try {
-      await api.delete(`/private/ai/checklist/${publicId}/item/${itemId}`);
-      refetchChecklist();
-    } catch {
-      Alert.alert('오류', '체크리스트 항목 삭제에 실패했습니다.');
-    } finally {
-      deletingItems.current.delete(itemId);
-    }
-  };
-
-  const handleAiRecommendChecklist = async () => {
-    const publicId = selectedPlan?.publicId;
-    if (!publicId) {
-      Alert.alert('알림', '여행을 선택해주세요.');
-      return;
-    }
-    const activeItineraries = planData.itineraries?.filter((it: any) => !it.is_deleted) || [];
-    if (activeItineraries.length < 2) {
-      Alert.alert('알림', '체크리스트 생성을 위해서는 최소 2개 이상의 세부 일정이 필요합니다.');
-      return;
-    }
-    setAiRecommendLoading(true);
-    try {
-      await api.post(`/private/ai/checklist/${publicId}/generate`, {
-        force_regenerate: true,
-        date: todayDateStr,
-      });
-      refetchChecklist();
-    } catch {
-      Alert.alert('오류', 'AI 체크리스트 생성에 실패했습니다.');
-    } finally {
-      setAiRecommendLoading(false);
-    }
   };
 
   const formatExpenseDetail = () => {
@@ -455,7 +253,7 @@ export default function TodayScreen() {
                     ? planData.fetchPlanData(selectedPlan.publicId)
                     : Promise.resolve(),
                   refetchTodayExpenses(),
-                  refetchChecklist(),
+                  queryClient.refetchQueries({ queryKey: ['checklist', selectedPlan?.publicId] }),
                 ]);
               } finally {
                 setRefreshing(false);
@@ -707,119 +505,12 @@ export default function TodayScreen() {
           </View>
         )}
 
-        {/* 체크리스트 섹션 */}
-        <View style={styles.section}>
-          <View style={styles.cardBase}>
-            <View style={styles.cardHeader}>
-              <View style={styles.cardHeaderLeft}>
-                <ChecklistIcon width={20} height={20} color={colors.black} />
-                <Text style={styles.cardHeaderTitle}>오늘의 체크리스트</Text>
-              </View>
-              {hasChecklist && (
-                <Pressable
-                  onPress={handleAiRecommendChecklist}
-                  disabled={aiRecommendLoading}
-                  style={({ pressed }) => [styles.aiRecommendButtonHeader, pressed && styles.aiRecommendButtonPressed]}
-                >
-                  <GradientBackground
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 0 }}
-                    style={styles.aiRecommendButtonGradient}
-                  >
-                    <LightningIcon width={16} height={16} color={colors.black} />
-                    <Text style={styles.aiRecommendButtonText}>AI 추천</Text>
-                  </GradientBackground>
-                </Pressable>
-              )}
-            </View>
-            {todayChecklistItems.length > 0 ? (
-              <View style={styles.checklistListBox}>
-                {todayChecklistItems.map((item) => (
-                  <View key={item.id} style={styles.checklistListItem}>
-                    <Pressable
-                      onPress={() => handleToggleChecklistItem(item.id, !item.is_checked)}
-                      hitSlop={8}
-                    >
-                      <View style={[styles.checklistItemCheckbox, item.is_checked && styles.checklistItemCheckboxSelected]}>
-                        <CheckIcon width={16} height={16} fill={colors.white} />
-                      </View>
-                    </Pressable>
-                    <View style={styles.checklistItemContent}>
-                      <Text
-                        style={[styles.checklistItemName, item.is_checked && styles.checklistItemNameChecked]}
-                        numberOfLines={1}
-                        ellipsizeMode="tail"
-                      >
-                        {item.name}
-                      </Text>
-                      {!item.is_custom && (
-                        <View style={styles.checklistItemAiTag}>
-                          <Text style={styles.checklistItemAiTagText}>AI</Text>
-                        </View>
-                      )}
-                    </View>
-                    <Pressable
-                      onPress={() => handleDeleteChecklistItem(item.id)}
-                      style={styles.checklistItemDelete}
-                      hitSlop={8}
-                    >
-                      <Ionicons name="close" size={20} color={colors.gray500} />
-                    </Pressable>
-                  </View>
-                ))}
-              </View>
-            ) : (
-              <View style={styles.checklistEmptyBox}>
-                <Text style={styles.emptyTitle}>체크리스트가 비어있어요</Text>
-                <Text style={styles.emptySubtitle}>
-                  AI가 일정에 맞는 준비물을 추천해드려요.
-                </Text>
-                <Pressable
-                  onPress={handleAiRecommendChecklist}
-                  disabled={aiRecommendLoading}
-                  style={({ pressed }) => [pressed && { opacity: 0.8 }]}
-                >
-                  <GradientBackground
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                    style={styles.aiRecommendButton}
-                  >
-                    <View style={styles.aiRecommendButtonContent}>
-                      <LightningIcon width={16} height={16} color={colors.black} />
-                      <Text style={styles.aiRecommendButtonText}>AI 추천받기</Text>
-                    </View>
-                  </GradientBackground>
-                </Pressable>
-              </View>
-            )}
-            {/* 할일 직접 추가 입력창 */}
-            <View style={styles.checklistAddRow}>
-              <TextInput
-                style={[
-                  styles.checklistAddInput,
-                  Platform.OS === 'android' && styles.checklistAddInputAndroid,
-                  Platform.OS === 'ios' && styles.checklistAddInputIOS,
-                ]}
-                placeholder="할일 입력..."
-                placeholderTextColor={colors.gray500}
-                value={newChecklistItem}
-                onChangeText={setNewChecklistItem}
-                maxLength={100}
-                editable={!addingChecklistItem}
-                returnKeyType="done"
-                onSubmitEditing={handleAddChecklistItem}
-              />
-              <Pressable
-                style={({ pressed }) => [styles.checklistAddButton, pressed && styles.checklistAddButtonPressed]}
-                onPress={handleAddChecklistItem}
-                disabled={addingChecklistItem || !newChecklistItem.trim()}
-              >
-                <Text style={[styles.checklistAddButtonText, (!newChecklistItem.trim() || addingChecklistItem) && styles.checklistAddButtonTextDisabled]}>
-                  추가
-                </Text>
-              </Pressable>
-            </View>
-          </View>
+        <View style={styles.checklistWrapper}>
+          <WeeklyChecklistCard
+            planPublicId={selectedPlan?.publicId}
+            selectedDate={today}
+            itineraries={planData.itineraries}
+          />
         </View>
 
         {/* 오늘의 비용 섹션 */}
@@ -1066,7 +757,7 @@ export default function TodayScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.gray100,
+    backgroundColor: colors.gray300,
   },
   overlay: {
     position: 'absolute',
@@ -1087,7 +778,7 @@ const styles = StyleSheet.create({
     paddingTop: 60,
     paddingHorizontal: 24,
     paddingBottom: 24,
-    backgroundColor: colors.gray100,
+    backgroundColor: colors.gray300,
   },
   headerContent: {
     flexDirection: 'row',
@@ -1119,51 +810,6 @@ const styles = StyleSheet.create({
     color: colors.black,
     marginRight: 8,
   },
-  planDropdown: {
-    position: 'absolute',
-    top: '100%',
-    left: 0,
-    right: 0,
-    backgroundColor: colors.white,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: colors.gray200,
-    shadowColor: colors.black,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
-    marginTop: 8,
-    maxHeight: 200,
-    zIndex: 999,
-  },
-  planList: {
-    maxHeight: 200,
-  },
-  planItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.gray100,
-  },
-  planItemFirst: {
-    borderTopLeftRadius: 12,
-    borderTopRightRadius: 12,
-  },
-  planItemSelected: {
-    backgroundColor: colors.gray100,
-  },
-  planItemText: {
-    ...textStyles.h6,
-    color: colors.black,
-    flex: 1,
-  },
-  planItemTextSelected: {
-    color: colors.primary,
-  },
   greeting: {
     ...textStyles.body3,
     color: colors.black,
@@ -1173,7 +819,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 16,
     padding: 20,
     backgroundColor: colors.white,
-    borderRadius: 14,
+    borderRadius: 16,
     shadowColor: colors.gray700,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
@@ -1241,8 +887,13 @@ const styles = StyleSheet.create({
     color: colors.primary,
   },
   
+  checklistWrapper: {
+    marginHorizontal: 16,
+    marginBottom: 16,
+    marginTop: -4,
+  },
   section: {
-    marginTop: 8,
+    marginTop: 4,
     marginBottom: 16,
   },
   sectionHeader: {
@@ -1315,163 +966,6 @@ const styles = StyleSheet.create({
   nextButtonText: {
     ...textStyles.h9,
     color: colors.primary,
-  },
-  
-  cardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  cardHeaderLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  cardHeaderTitle: {
-    ...textStyles.h6,
-    color: colors.black,
-  },
-  aiRecommendButtonHeader: {
-    borderRadius: 999,
-    overflow: 'hidden',
-  },
-  aiRecommendButtonPressed: {
-    opacity: 0.8,
-  },
-  aiRecommendButtonGradient: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 6,
-    paddingHorizontal: 16,
-  },
-  checklistListBox: {
-    marginBottom: 0,
-  },
-  checklistListItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 0,
-    gap: 12,
-  },
-  checklistItemCheckbox: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    borderWidth: 1.5,
-    borderColor: colors.gray300,
-    backgroundColor: colors.gray300,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  checklistItemCheckboxSelected: {
-    borderColor: colors.primary,
-    backgroundColor: colors.primary,
-  },
-  checklistItemContent: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  checklistItemName: {
-    ...textStyles.body3,
-    color: colors.black,
-  },
-  checklistItemNameChecked: {
-    color: colors.gray600,
-  },
-  checklistItemAiTag: {
-    backgroundColor: 'rgba(0, 122, 255, 0.1)',
-    paddingVertical: 2,
-    paddingHorizontal: 8,
-    borderRadius: 6,
-  },
-  checklistItemAiTagText: {
-    ...textStyles.h9,
-    color: colors.primary,
-  },
-  checklistItemDelete: {
-    width: 32,
-    height: 32,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  checklistEmptyBox: {
-    backgroundColor: colors.gray200,
-    borderRadius: 12,
-    padding: 26,
-  },
-  emptyTitle: {
-    ...textStyles.h6,
-    color: colors.gray700,
-    marginBottom: 4,
-    textAlign: 'center',
-  },
-  emptySubtitle: {
-    ...textStyles.body4,
-    color: colors.gray600,
-    marginBottom: 16,
-    textAlign: 'center',
-  },
-  aiRecommendButton: {
-    paddingVertical: 9,
-    paddingHorizontal: 20,
-    borderRadius: 999,
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: '100%',
-  },
-  aiRecommendButtonContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  aiRecommendButtonText: {
-    ...textStyles.h6,
-    color: colors.black,
-  },
-  checklistAddRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.gray200,
-    borderRadius: 12,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    marginTop: 12,
-    gap: 12,
-  },
-  checklistAddInput: {
-    flex: 1,
-    ...textStyles.body3,
-    color: colors.black,
-    paddingHorizontal: 0,
-  },
-  checklistAddInputAndroid: {
-    paddingVertical: 0,
-    textAlignVertical: 'center',
-    includeFontPadding: false,
-  },
-  checklistAddInputIOS: {
-    paddingVertical: 0,
-    lineHeight: textStyles.body3.fontSize ? textStyles.body3.fontSize * 1.2 : 20,
-  },
-  checklistAddButton: {
-    paddingVertical: 4,
-    paddingHorizontal: 8,
-  },
-  checklistAddButtonPressed: {
-    opacity: 0.7,
-  },
-  checklistAddButtonText: {
-    ...textStyles.h6,
-    color: colors.black,
-  },
-  checklistAddButtonTextDisabled: {
-    color: colors.gray500,
   },
   
   accommodationCard: {

@@ -376,12 +376,14 @@ export default function WeeklyScreen() {
             );
             })}
             </View>
+            <View style={styles.checklistWrapper}>
+              <WeeklyChecklistCard
+                planPublicId={selectedPlan?.publicId}
+                selectedDate={selectedDate}
+                itineraries={planData.itineraries}
+              />
+            </View>
 
-            <WeeklyChecklistCard
-              planPublicId={selectedPlan?.publicId}
-              selectedDate={selectedDate}
-              itineraries={planData.itineraries}
-            />
           </>
         )}
       </ScrollView>
@@ -596,7 +598,9 @@ const styles = StyleSheet.create({
     ...textStyles.body3,
     color: colors.gray600,
   },
-
+  checklistWrapper: {
+    marginVertical: 16,
+  },
   timelineWrapper: {
     position: 'relative',
   },

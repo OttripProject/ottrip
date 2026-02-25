@@ -306,12 +306,12 @@ export default function WeeklyChecklistCard({
 
 const styles = StyleSheet.create({
   section: {
-    marginTop: 24,
-    marginBottom: 24,
+    marginTop: 0,
+    marginBottom: 0,
   },
   card: {
     backgroundColor: colors.white,
-    borderRadius: 20,
+    borderRadius: 16,
     paddingVertical: 20,
     paddingHorizontal: 16,
     borderColor: colors.gray200,
