@@ -11,6 +11,7 @@ import GradientBackground from '@/ui/components/GradientBackground';
 import ChecklistIcon from '../../../assets/mobile_check.svg';
 import LightningIcon from '../../../assets/mobile_lightning.svg';
 import CheckIcon from '../../../assets/gender_check.svg';
+import CloseIcon from '../../../assets/mobile_close.svg';
 
 
 export type WeeklyChecklistCardProps = {
@@ -243,7 +244,7 @@ export default function WeeklyChecklistCard({
                   style={styles.deleteButton}
                   hitSlop={8}
                 >
-                  <Ionicons name="close" size={20} color={colors.gray500} />
+                  <CloseIcon width={20} height={20} />
                 </Pressable>
               </View>
             ))}
@@ -324,7 +325,7 @@ const styles = StyleSheet.create({
   headerLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 6,
   },
   title: {
     ...textStyles.h6,
@@ -351,9 +352,8 @@ const styles = StyleSheet.create({
   listItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 0,
-    gap: 12,
+    paddingBottom: 16,
+    gap: 8,
   },
   checkbox: {
     width: 20,
@@ -439,7 +439,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingVertical: 10,
     paddingHorizontal: 16,
-    marginTop: 12,
+    marginTop: 8,
     gap: 12,
   },
   addInput: {
