@@ -7,7 +7,6 @@ import {
   ScrollView,
   TextInput,
   Alert,
-  Platform,
 } from 'react-native';
 import dayjs from 'dayjs';
 import { expensesApi } from '@/services/expenses';
@@ -185,7 +184,6 @@ export default function AddExpenseModal({
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        {/* 카테고리 설정 - 위 3개, 아래 4개 (피그마) */}
         <View style={styles.inputGroup}>
           <Text style={styles.label}>카테고리 설정</Text>
           <View style={styles.categoryRow}>
@@ -224,7 +222,6 @@ export default function AddExpenseModal({
           </View>
         </View>
 
-        {/* 지출 금액 - Figma: "0 원" right-aligned */}
         <View style={styles.inputGroup}>
           <Text style={styles.label}>지출 금액</Text>
           <View style={styles.amountInputWrapper}>
@@ -240,7 +237,6 @@ export default function AddExpenseModal({
           </View>
         </View>
 
-        {/* 내역 메모 - Figma: "어디에 사용하셨나요?" */}
         <View style={styles.inputGroup}>
           <Text style={styles.label}>내역 메모</Text>
           <TextInput
@@ -248,16 +244,12 @@ export default function AddExpenseModal({
             onChangeText={(text) =>
               setFormData((prev) => ({ ...prev, description: text }))
             }
-            style={[styles.input, styles.descriptionInput]}
+            style={styles.input}
             placeholder="어디에 사용하셨나요?"
             placeholderTextColor={colors.gray500}
-            multiline
-            numberOfLines={3}
-            textAlignVertical="top"
           />
         </View>
 
-        {/* 일자 - Figma */}
         <View style={[styles.inputGroup, { zIndex: showDatePicker ? 9999 : 1 }]}>
           <Text style={styles.label}>일자</Text>
           <Pressable
@@ -305,12 +297,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     paddingTop: 12,
   },
   headerTitle: {
     ...textStyles.h4,
-    color: colors.gray900,
+    color: colors.black,
   },
   closeButton: {
     padding: 4,
@@ -325,8 +317,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingHorizontal: 20,
-    paddingTop: 20,
+    paddingHorizontal: 16,
+    paddingTop: 23,
     paddingBottom: 24,
   },
   inputGroup: {
@@ -334,7 +326,7 @@ const styles = StyleSheet.create({
   },
   label: {
     ...textStyles.h7,
-    color: colors.gray800,
+    color: colors.black,
     marginBottom: 8,
   },
   categoryRow: {
@@ -370,17 +362,16 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingHorizontal: 14,
     height: 48,
-    backgroundColor: colors.gray100,
+    backgroundColor: colors.gray200,
   },
   amountInput: {
     flex: 1,
     ...textStyles.body3,
     color: colors.black,
-    paddingVertical: 0,
     textAlign: 'right',
   },
   amountSuffix: {
-    ...textStyles.body3,
+    ...textStyles.h6,
     color: colors.black,
     marginLeft: 4,
   },
@@ -390,7 +381,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     height: 48,
     color: colors.black,
-    backgroundColor: colors.gray100,
+    backgroundColor: colors.gray200,
   },
   dateInput: {
     flexDirection: 'row',
@@ -399,7 +390,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingHorizontal: 14,
     height: 48,
-    backgroundColor: colors.gray100,
+    backgroundColor: colors.gray200,
   },
   dateText: {
     ...textStyles.body3,
@@ -415,13 +406,5 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     zIndex: 1000,
-  },
-  descriptionInput: {
-    height: 88,
-    paddingTop: 12,
-    paddingHorizontal: 14,
-    borderRadius: 12, 
-    backgroundColor: colors.gray100,
-    ...(Platform.OS === 'android' && { textAlignVertical: 'top' }),
   },
 });
