@@ -9,12 +9,12 @@ import {
   Alert,
   Platform,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import dayjs from 'dayjs';
 import { expensesApi } from '@/services/expenses';
 import { ExpenseCategory, ExpenseCurrency, categoryLabels } from '@/types/expense';
 import { Expense } from '@/types/api';
 import BottomSheetModal from '@/ui/components/BottomSheetModal.native';
+import FloatingFooter from '@/ui/components/FloatingFooter.native';
 import BaseCalendar from '@/components/popup/calendar/BaseCalendar';
 import { colors } from '@/ui/tokens/colors';
 import { textStyles } from '@/ui/tokens/typography';
@@ -52,7 +52,6 @@ export default function AddExpenseModal({
   defaultExDate,
   onExpenseAdd,
 }: AddExpenseModalProps) {
-  const insets = useSafeAreaInsets();
   const [showDatePicker, setShowDatePicker] = useState(false);
 
   const CATEGORY_ROW1: ExpenseCategory[] = [
@@ -290,20 +289,13 @@ export default function AddExpenseModal({
         </View>
       </ScrollView>
 
-      <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 16) + 12 }]}>
-        <View style={styles.footerButtons}>
-          <Pressable style={styles.cancelButton} onPress={handleClose}>
-            <Text style={styles.cancelButtonText}>취소</Text>
-          </Pressable>
-          <Pressable
-            style={[styles.saveButton, isSubmitting && styles.saveButtonDisabled]}
-            onPress={handleSubmit}
-            disabled={isSubmitting}
-          >
-            <Text style={styles.saveButtonText}>저장</Text>
-          </Pressable>
-        </View>
-      </View>
+      <FloatingFooter
+        primaryLabel="저장"
+        onPrimaryPress={handleSubmit}
+        primaryDisabled={isSubmitting}
+        secondaryLabel="취소"
+        onSecondaryPress={handleClose}
+      />
     </BottomSheetModal>
   );
 }
@@ -431,41 +423,5 @@ const styles = StyleSheet.create({
     borderRadius: 12, 
     backgroundColor: colors.gray100,
     ...(Platform.OS === 'android' && { textAlignVertical: 'top' }),
-  },
-  footer: {
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    backgroundColor: colors.white,
-  },
-  footerButtons: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  cancelButton: {
-    flex: 1,
-    paddingVertical: 16,
-    borderRadius: 12, 
-    backgroundColor: colors.gray200,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  cancelButtonText: {
-    ...textStyles.h4,
-    color: colors.black,
-  },
-  saveButton: {
-    flex: 1,
-    borderRadius: 12,
-    paddingVertical: 16,
-    backgroundColor: colors.black,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  saveButtonDisabled: {
-    opacity: 0.6,
-  },
-  saveButtonText: {
-    ...textStyles.h4,
-    color: colors.white,
   },
 });
