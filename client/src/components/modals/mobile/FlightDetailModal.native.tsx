@@ -248,7 +248,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingHorizontal: 24,
+    paddingHorizontal: 20,
     paddingTop: 8,
     paddingBottom: 24,
     flexGrow: 0,
@@ -381,7 +381,7 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
   footer: {
-    paddingHorizontal: 24,
+    paddingHorizontal: 16,
     paddingTop: 8,
     paddingBottom: 32,
   },

@@ -227,7 +227,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingHorizontal: 24,
+    paddingHorizontal: 20,
     paddingTop: 8,
     paddingBottom: 24,
   },
@@ -324,7 +324,7 @@ const styles = StyleSheet.create({
     ...textStyles.h6,
   },
   footer: {
-    paddingHorizontal: 24,
+    paddingHorizontal: 16,
     paddingTop: 8,
     paddingBottom: 32,
   },

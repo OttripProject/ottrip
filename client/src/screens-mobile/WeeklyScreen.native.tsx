@@ -190,7 +190,7 @@ export default function WeeklyScreen() {
       </View>
 
       <View style={styles.weekSelector}>
-        <Pressable style={{ marginLeft: 12 }} onPress={handlePrevWeek}>
+        <Pressable style={{ marginLeft: 16 }} onPress={handlePrevWeek}>
           <LeftArrowIcon width={20} height={20} color={colors.gray600}/>
         </Pressable>
         <ScrollView
@@ -217,7 +217,7 @@ export default function WeeklyScreen() {
             );
           })}
         </ScrollView>
-        <Pressable style={{ marginRight: 12 }} onPress={handleNextWeek}>
+        <Pressable style={{ marginRight: 16 }} onPress={handleNextWeek}>
           <RightArrowIcon width={20} height={20} color={colors.gray600}/>
         </Pressable>
       </View>
@@ -470,7 +470,7 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingTop: 60,
-    paddingHorizontal: 24,
+    paddingHorizontal: 16,
     paddingBottom: 12,
     backgroundColor: colors.white,
   },
@@ -504,14 +504,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: colors.white,
     paddingVertical: 12,
-    paddingHorizontal: 8,
     borderBottomLeftRadius: 24,
     borderBottomRightRadius: 24,
   },
   weekArrow: {
-    // width: 20,
-    // height: 73,
-    
     alignItems: 'center',
     justifyContent: 'center',
   },

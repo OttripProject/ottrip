@@ -216,7 +216,7 @@ export default function ItineraryDetailModal({
 
       {/* 지도 앱에서 길찾기 버튼 */}
       {itinerary.location && (
-        <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 16) + 12 }]}>
+        <View style={styles.footer}>
           <Pressable
             style={styles.mapButton}
             onPress={handleOpenMap}
@@ -235,7 +235,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingHorizontal: 24,
+    paddingHorizontal: 20,
     paddingTop: 8,
     paddingBottom: 24,
   },
@@ -292,8 +292,9 @@ const styles = StyleSheet.create({
     ...textStyles.h6,
   },
   footer: {
-    paddingHorizontal: 24,
-    paddingTop: 20,
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    paddingBottom: 32,
   },
   mapButton: {
     backgroundColor: colors.black,

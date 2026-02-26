@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, Pressable, StyleSheet, ScrollView } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import BottomSheetModal from '@/ui/components/BottomSheetModal.native';
 import { colors } from '@/ui/tokens/colors';
 import { textStyles } from '@/ui/tokens/typography';
@@ -11,6 +12,7 @@ import MobileCarIcon from '../../../../assets/mobile_car.svg';
 import MobileTicketIcon from '../../../../assets/mobile_ticket.svg';
 import AccommodationIcon from '../../../../assets/mobile_accomodation.svg';
 import FlightIcon from '../../../../assets/airplane.svg';
+import PlusIcon from '../../../../assets/mobile_plus.svg';
 
 interface TodayExpenseDetailModalProps {
   visible: boolean;
@@ -64,6 +66,7 @@ export default function TodayExpenseDetailModal({
   const categoryEntries = CATEGORY_ORDER.filter((cat) => (byCategory[cat] ?? 0) > 0).map(
     (cat) => [cat, byCategory[cat] ?? 0] as const
   );
+  const insets = useSafeAreaInsets();
 
   return (
     <BottomSheetModal visible={visible} onClose={onClose} height={0.9} >
@@ -131,6 +134,16 @@ export default function TodayExpenseDetailModal({
           <Text style={styles.emptyText}>지출 내역이 없습니다</Text>
         )}
       </ScrollView>
+
+      <View style={styles.footer}>
+        <Pressable
+          style={styles.AddExpenseButton}
+          onPress={() => {}}
+        >
+          <PlusIcon width={20} height={20} color={colors.white}/>
+          <Text style={styles.AddExpenseButtonText}>비용 추가하기</Text>
+        </Pressable>
+      </View>
     </BottomSheetModal>
   );
 }
@@ -140,7 +153,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
+    paddingHorizontal: 20,
     paddingTop: 12,
   },
   headerTitle: {
@@ -160,12 +173,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingHorizontal: 16,
+    paddingHorizontal: 20,
     paddingTop: 20,
     paddingBottom: 40,
   },
   totalCard: {
-    backgroundColor: colors.gray200,
+    backgroundColor: `${colors.primary}1A`,
     borderRadius: 12,
     padding: 16,
     paddingVertical: 20,
@@ -252,5 +265,23 @@ const styles = StyleSheet.create({
     color: colors.gray600,
     textAlign: 'center',
     paddingVertical: 24,
+  },
+  footer: {
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    paddingBottom: 32,
+  },
+  AddExpenseButton: {
+    backgroundColor: colors.black,
+    borderRadius: 12,
+    paddingVertical: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  AddExpenseButtonText: {
+    ...textStyles.h4,
+    color: colors.white,
   },
 });
