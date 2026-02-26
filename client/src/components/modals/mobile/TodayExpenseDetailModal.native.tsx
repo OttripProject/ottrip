@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, Pressable, StyleSheet, ScrollView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import BottomSheetModal from '@/ui/components/BottomSheetModal.native';
+import AddExpenseModal from './AddExpenseModal.native';
 import { colors } from '@/ui/tokens/colors';
 import { textStyles } from '@/ui/tokens/typography';
 import { categoryLabels } from '@/types/expense';
@@ -20,6 +21,11 @@ interface TodayExpenseDetailModalProps {
   expenses: Expense[];
   total: number;
   byCategory: Record<string, number>;
+  planId?: number;
+  planStartDate?: string;
+  planEndDate?: string;
+  exDate?: string;
+  onExpenseAdd?: (expense: Expense) => void;
 }
 
 const formatCurrency = (amount: number) => {
@@ -62,7 +68,22 @@ export default function TodayExpenseDetailModal({
   expenses,
   total,
   byCategory,
+  planId = 0,
+  planStartDate,
+  planEndDate,
+  exDate,
+  onExpenseAdd,
 }: TodayExpenseDetailModalProps) {
+  const [showAddExpense, setShowAddExpense] = useState(false);
+
+  const handleExpenseAdded = (expense: Expense) => {
+    onExpenseAdd?.(expense);
+    setShowAddExpense(false);
+    setTimeout(() => {
+      onClose();
+    }, 300);
+  };
+
   const categoryEntries = CATEGORY_ORDER.filter((cat) => (byCategory[cat] ?? 0) > 0).map(
     (cat) => [cat, byCategory[cat] ?? 0] as const
   );
@@ -138,12 +159,24 @@ export default function TodayExpenseDetailModal({
       <View style={styles.footer}>
         <Pressable
           style={styles.AddExpenseButton}
-          onPress={() => {}}
+          onPress={() => setShowAddExpense(true)}
         >
           <PlusIcon width={20} height={20} color={colors.white}/>
           <Text style={styles.AddExpenseButtonText}>비용 추가하기</Text>
         </Pressable>
       </View>
+
+      {planId > 0 && (
+        <AddExpenseModal
+          visible={showAddExpense}
+          onClose={() => setShowAddExpense(false)}
+          planId={planId}
+          planStartDate={planStartDate}
+          planEndDate={planEndDate}
+          defaultExDate={exDate}
+          onExpenseAdd={handleExpenseAdded}
+        />
+      )}
     </BottomSheetModal>
   );
 }

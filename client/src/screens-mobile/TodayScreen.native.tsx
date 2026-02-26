@@ -628,6 +628,11 @@ export default function TodayScreen() {
         expenses={todayExpensesFromApi ?? []}
         total={todayExpenses.total}
         byCategory={todayExpenses.byCategory}
+        planId={selectedPlan?.id ?? 0}
+        planStartDate={selectedPlan?.startDate}
+        planEndDate={selectedPlan?.endDate}
+        exDate={todayDateStr}
+        onExpenseAdd={() => refetchTodayExpenses()}
       />
 
       <ItineraryDetailModal
