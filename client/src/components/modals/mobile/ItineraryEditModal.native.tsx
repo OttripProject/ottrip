@@ -1,20 +1,28 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, Pressable, StyleSheet, ScrollView, TextInput, Alert } from 'react-native';
+import { View, Text, Pressable, StyleSheet, ScrollView, Alert } from 'react-native';
 import CloseIcon from '../../../../assets/x.svg';
 import dayjs from 'dayjs';
 import { Itinerary, CreateItineraryRequest } from '@/types/api';
 import { colors } from '@/ui/tokens/colors';
-import { spacing } from '@/ui/tokens/spacing';
-import { textStyles } from '@/ui/tokens/typography';
+import { textStyles, typography } from '@/ui/tokens/typography';
 import FullScreenModal from '@/ui/components/FullScreenModal.native';
 import FloatingFooter from '@/ui/components/FloatingFooter.native';
 import { TimePicker, CountryPicker } from '@/ui/components/pickers';
 import Input from '@/ui/components/input/Input';
 import { itinerariesApi } from '@/services/itineraries';
+import { expensesApi } from '@/services/expenses';
 import BaseCalendar from '@/components/popup/calendar/BaseCalendar';
 import CalendarIcon from '../../../../assets/mobile_calendar_black.svg';
 import AccomodationIcon from '../../../../assets/mobile_accomodation.svg';
 import FlightIcon from '../../../../assets/airplane.svg';
+import FoodIcon from '../../../../assets/mobile_food.svg';
+import CarIcon from '../../../../assets/mobile_car.svg';
+import TicketIcon from '../../../../assets/mobile_ticket.svg';
+import BedIcon from '../../../../assets/mobile_bed.svg';
+import FlightIconExpense from '../../../../assets/mobile_flight.svg';
+import ShoppingIcon from '../../../../assets/mobile_shopping.svg';
+import { ExpenseCategory, ExpenseCurrency, categoryLabels } from '@/types/expense';
+import { normalizeAmount, formatAmountWithCommas } from '@/utils/amountUtils';
 
 interface ItineraryEditModalProps {
   visible: boolean;
@@ -43,8 +51,48 @@ export default function ItineraryEditModal({
     startTime: '09:00',
     endTime: '10:00',
   });
+  const [expenseData, setExpenseData] = useState({
+    amount: '',
+    category: ExpenseCategory.FOOD,
+  });
+  const [existingExpenseId, setExistingExpenseId] = useState<number | null>(null);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const CATEGORY_ROW1: ExpenseCategory[] = [
+    ExpenseCategory.FOOD,
+    ExpenseCategory.TRANSPORT,
+    ExpenseCategory.ACTIVITY,
+  ];
+  const CATEGORY_ROW2: ExpenseCategory[] = [
+    ExpenseCategory.ACCOMMODATION,
+    ExpenseCategory.FLIGHT,
+    ExpenseCategory.SHOPPING,
+    ExpenseCategory.ETC,
+  ];
+
+  const getCategoryIcon = (category: ExpenseCategory, isSelected: boolean) => {
+    const size = 16;
+    const iconColor = isSelected ? colors.white : colors.gray600;
+    switch (category) {
+      case ExpenseCategory.FOOD:
+        return <FoodIcon width={size} height={size} color={iconColor} />;
+      case ExpenseCategory.TRANSPORT:
+        return <CarIcon width={size} height={size} color={iconColor} />;
+      case ExpenseCategory.ACTIVITY:
+        return <TicketIcon width={size} height={size} color={iconColor} />;
+      case ExpenseCategory.ETC:
+        return null;
+      case ExpenseCategory.ACCOMMODATION:
+        return <BedIcon width={size} height={size} color={iconColor} />;
+      case ExpenseCategory.FLIGHT:
+        return <FlightIconExpense width={size} height={size} color={iconColor} />;
+      case ExpenseCategory.SHOPPING:
+        return <ShoppingIcon width={size} height={size} color={iconColor} />;
+      default:
+        return <TicketIcon width={size} height={size} color={iconColor} />;
+    }
+  };
 
   useEffect(() => {
     if (visible && itinerary) {
@@ -58,8 +106,25 @@ export default function ItineraryEditModal({
         startTime: itinerary.startTime ? itinerary.startTime.substring(0, 5) : '09:00',
         endTime: itinerary.endTime ? itinerary.endTime.substring(0, 5) : '10:00',
       });
+      const loadExpense = async () => {
+        const expenses = itinerary.expenses?.length
+          ? itinerary.expenses
+          : await expensesApi.getExpensesByItinerary(itinerary.id);
+        const firstExpense = expenses[0];
+        if (firstExpense) {
+          const amountInt = Math.floor(Number(firstExpense.amount));
+          setExpenseData({
+            amount: formatAmountWithCommas(amountInt),
+            category: firstExpense.category as ExpenseCategory,
+          });
+          setExistingExpenseId(firstExpense.id);
+        } else {
+          setExpenseData({ amount: '', category: ExpenseCategory.FOOD });
+          setExistingExpenseId(null);
+        }
+      };
+      loadExpense();
     } else if (visible && !itinerary) {
-      // 새 일정 추가 모드
       setFormData({
         title: '',
         description: '',
@@ -70,8 +135,15 @@ export default function ItineraryEditModal({
         startTime: '09:00',
         endTime: '10:00',
       });
+      setExpenseData({ amount: '', category: ExpenseCategory.FOOD });
+      setExistingExpenseId(null);
     }
   }, [visible, itinerary]);
+
+  const handleExpenseAmountChange = (text: string) => {
+    const formatted = formatAmountWithCommas(text);
+    setExpenseData((prev) => ({ ...prev, amount: formatted }));
+  };
 
   const handleSave = async () => {
     if (!formData.title.trim()) {
@@ -81,29 +153,49 @@ export default function ItineraryEditModal({
 
     setIsSubmitting(true);
     try {
+      let savedItinerary: Itinerary;
       if (itinerary) {
-        // 수정
-        const updated = await itinerariesApi.updateItinerary(itinerary.id, {
+        savedItinerary = await itinerariesApi.updateItinerary(itinerary.id, {
           ...formData,
           planId,
         });
-        if (onSave) {
-          onSave(updated);
-        }
+        if (onSave) onSave(savedItinerary);
         Alert.alert('수정완료', '일정이 수정되었습니다.');
       } else {
-        // 추가
-        const created = await itinerariesApi.createItinerary({
+        savedItinerary = await itinerariesApi.createItinerary({
           ...formData,
           planId,
         });
-        if (onSave) {
-          onSave(created);
-        }
+        if (onSave) onSave(savedItinerary);
         Alert.alert('추가완료', '일정이 추가되었습니다.');
       }
+
+      const amountNum = parseInt(normalizeAmount(expenseData.amount), 10) || 0;
+      if (amountNum > 0 && savedItinerary) {
+        const expensePayload = {
+          planId,
+          itineraryId: savedItinerary.id,
+          category: expenseData.category,
+          amount: amountNum,
+          currency: ExpenseCurrency.KRW,
+          exDate: formData.itineraryDate,
+        };
+        if (existingExpenseId) {
+          await expensesApi.updateExpense(existingExpenseId, {
+            category: expenseData.category,
+            amount: amountNum,
+            currency: ExpenseCurrency.KRW,
+            exDate: formData.itineraryDate,
+          });
+        } else {
+          await expensesApi.createExpense(expensePayload);
+        }
+      } else if (existingExpenseId && amountNum <= 0) {
+        await expensesApi.deleteExpense(existingExpenseId);
+      }
+
       onClose();
-    } catch (error) {
+    } catch {
       Alert.alert('오류', '일정 저장에 실패했습니다.');
     } finally {
       setIsSubmitting(false);
@@ -201,7 +293,7 @@ export default function ItineraryEditModal({
           {/* 내용 (메모) */}
           <View style={styles.inputGroup}>
             <Text style={styles.label}>내용 (메모)</Text>
-            <TextInput
+            <Input
               value={formData.description}
               onChangeText={(text) => setFormData({ ...formData, description: text })}
               style={styles.textArea}
@@ -297,6 +389,64 @@ export default function ItineraryEditModal({
             </View>
          </View>
 
+          {/* 비용 정보 */}
+          <View style={styles.expenseSection}>
+            <View style={styles.expenseDivider} />
+            <Text style={styles.expenseSectionTitle}>비용 정보</Text>            
+            <View style={[styles.inputGroup, { marginBottom: 20 }]}>
+              <Text style={styles.label}>금액</Text>
+              <View style={styles.amountInputWrapper}>
+                <Input
+                  value={expenseData.amount}
+                  onChangeText={handleExpenseAmountChange}
+                  placeholder="0"
+                  placeholderTextColor={colors.gray500}
+                  keyboardType="number-pad"
+                  variant="filled"
+                  containerStyle={styles.amountInputContainer}
+                  style={styles.amountInputStyle}
+                />
+                <Text style={styles.amountSuffix}>KRW</Text>
+              </View>
+            </View>
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>비용 카테고리 설정</Text>
+              <View style={styles.categoryRow}>
+                {CATEGORY_ROW1.map((cat) => {
+                  const isSelected = expenseData.category === cat;
+                  return (
+                    <Pressable
+                      key={cat}
+                      style={[styles.categoryPill, isSelected && styles.categoryPillSelected]}
+                      onPress={() => setExpenseData((prev) => ({ ...prev, category: cat }))}
+                    >
+                      {getCategoryIcon(cat, isSelected)}
+                      <Text style={[styles.categoryPillText, isSelected && styles.categoryPillTextSelected]}>
+                        {categoryLabels[cat as keyof typeof categoryLabels]}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+              <View style={[styles.categoryRow, styles.categoryRowSecond]}>
+                {CATEGORY_ROW2.map((cat) => {
+                  const isSelected = expenseData.category === cat;
+                  return (
+                    <Pressable
+                      key={cat}
+                      style={[styles.categoryPill, isSelected && styles.categoryPillSelected]}
+                      onPress={() => setExpenseData((prev) => ({ ...prev, category: cat }))}
+                    >
+                      {getCategoryIcon(cat, isSelected)}
+                      <Text style={[styles.categoryPillText, isSelected && styles.categoryPillTextSelected]}>
+                        {categoryLabels[cat as keyof typeof categoryLabels]}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </View>
+          </View>
 
         </View>
       </ScrollView>
@@ -336,7 +486,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 16,
     paddingTop: 12,
-    paddingBottom: 330,
+    paddingBottom: 400,
   },
   categoryTabs: {
     flexDirection: 'row',
@@ -452,5 +602,72 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     zIndex: 1000,
+  },
+  expenseSection: {
+    marginTop: 20,
+  },
+  expenseSectionTitle: {
+    ...textStyles.h5,
+    marginTop: 12,
+    marginBottom: 20,
+  },
+  expenseDivider: {
+    height: 1,
+    backgroundColor: colors.gray300,
+    marginBottom: 20,
+  },
+  amountInputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    height: 48,
+    backgroundColor: `${colors.primary}1A`,
+  },
+  amountInputContainer: {
+    flex: 1,
+  },
+  amountInputStyle: {
+    flex: 1,
+    height: 48,
+    textAlign: 'left',
+    backgroundColor: 'transparent',
+    fontFamily: typography.fontFamily.pretendardSemiBold,
+    fontSize: 14,
+    paddingHorizontal: 0,
+    paddingVertical: 0,
+    color: colors.primary,
+  },
+  amountSuffix: {
+    ...textStyles.h6,
+    color: colors.primary,
+    marginLeft: 4,
+  },
+  categoryRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  categoryRowSecond: {
+    marginTop: 8,
+  },
+  categoryPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 999,
+    backgroundColor: colors.gray200,
+  },
+  categoryPillSelected: {
+    backgroundColor: `${colors.primary}1A`,
+  },
+  categoryPillText: {
+    ...textStyles.h6,
+    color: colors.gray600,
+  },
+  categoryPillTextSelected: {
+    color: colors.primary,
   },
 });
