@@ -269,7 +269,7 @@ export default function ItineraryEditModal({
             <Input
               value={formData.title}
               onChangeText={(text) => setFormData({ ...formData, title: text })}
-              style={styles.input}
+              style={[styles.input, !itinerary && styles.inputBorderless]}
             />
           </View>
 
@@ -279,7 +279,7 @@ export default function ItineraryEditModal({
             <Input
               value={formData.description}
               onChangeText={(text) => setFormData({ ...formData, description: text })}
-              style={styles.textArea}
+              style={[styles.textArea, !itinerary && styles.textAreaBorderless]}
               multiline
               numberOfLines={4}
               textAlignVertical="top"
@@ -294,7 +294,7 @@ export default function ItineraryEditModal({
                 value={formData.country}
                 onChange={(country) => setFormData({ ...formData, country })}
                 containerStyle={styles.pickerContainer}
-                style={styles.pickerInput}
+                style={StyleSheet.flatten([styles.pickerInput, !itinerary && styles.pickerInputBorderless])}
                 dropDownContainerStyle={styles.pickerDropDownContainer}
                 listItemLabelStyle={styles.pickerListItemLabel}
                 selectedItemContainerStyle={styles.selectedItemContainerStyle}
@@ -305,7 +305,7 @@ export default function ItineraryEditModal({
               <Input
                 value={formData.city}
                 onChangeText={(text) => setFormData({ ...formData, city: text })}
-                style={styles.input}
+                style={[styles.input, !itinerary && styles.inputBorderless]}
               />
             </View>
           </View>
@@ -316,7 +316,7 @@ export default function ItineraryEditModal({
             <Input
               value={formData.location}
               onChangeText={(text) => setFormData({ ...formData, location: text })}
-              style={styles.input}
+              style={[styles.input, !itinerary && styles.inputBorderless]}
             />
           </View>
 
@@ -325,7 +325,7 @@ export default function ItineraryEditModal({
                 날짜 및 시간<Text style={styles.required}>*</Text>
               </Text>
               <Pressable
-                style={styles.dateInput}
+                style={[styles.dateInput, !itinerary && styles.dateInputBorderless]}
                 onPress={() => setShowDatePicker(true)}
               >
                 <Text style={formData.itineraryDate ? styles.dateText : styles.placeholderText}>
@@ -351,7 +351,7 @@ export default function ItineraryEditModal({
                     value={formData.startTime}
                     onChange={(time) => setFormData({ ...formData, startTime: time })}
                     containerStyle={styles.pickerContainer}
-                    style={styles.pickerInput}
+                    style={StyleSheet.flatten([styles.pickerInput, !itinerary && styles.pickerInputBorderless])}
                     dropDownContainerStyle={styles.pickerDropDownContainer}
                     listItemLabelStyle={styles.pickerListItemLabel}
                     selectedItemContainerStyle={styles.selectedItemContainerStyle}
@@ -363,7 +363,7 @@ export default function ItineraryEditModal({
                     onChange={(time) => setFormData({ ...formData, endTime: time })}
                     minTime={formData.startTime}
                     containerStyle={styles.pickerContainer}
-                    style={styles.pickerInput}
+                    style={StyleSheet.flatten([styles.pickerInput, !itinerary && styles.pickerInputBorderless])}
                     dropDownContainerStyle={styles.pickerDropDownContainer}
                     listItemLabelStyle={styles.pickerListItemLabel}
                     selectedItemContainerStyle={styles.selectedItemContainerStyle}
@@ -501,7 +501,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.gray400,
     borderRadius: 12,
-    backgroundColor: colors.gray100,
+    backgroundColor: colors.gray200,
+  },
+  inputBorderless: {
+    borderWidth: 0,
+    borderColor: 'transparent',
   },
   textArea: {
     ...textStyles.body4,
@@ -511,7 +515,11 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingHorizontal: 12,
     paddingVertical: 8,
-    backgroundColor: colors.gray100,
+    backgroundColor: colors.gray200,
+  },
+  textAreaBorderless: {
+    borderWidth: 0,
+    borderColor: 'transparent',
   },
   row: {
     flexDirection: 'row',
@@ -528,21 +536,23 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.gray400,
     borderRadius: 12,
-    backgroundColor: colors.gray100,
+    backgroundColor: colors.gray200,
+  },
+  pickerInputBorderless: {
+    borderWidth: 0,
+    borderColor: 'transparent',
   },
   pickerDropDownContainer: {
-    borderWidth: 1,
-    borderColor: colors.gray400,
     borderRadius: 12,
-    backgroundColor: colors.gray100,
+    backgroundColor: colors.gray200,
   },
   pickerListItemLabel: {
     ...textStyles.body4,
     color: colors.gray500,
-    backgroundColor: colors.gray100,
+    backgroundColor: colors.gray200,
   },
   selectedItemContainerStyle: {
-    backgroundColor: colors.gray100,
+    backgroundColor: colors.gray200,
   },
   dateInput: {
     paddingVertical: 10,
@@ -553,7 +563,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.gray400,
     borderRadius: 12,
-    backgroundColor: colors.gray100,
+    backgroundColor: colors.gray200,
+  },
+  dateInputBorderless: {
+    borderWidth: 0,
+    borderColor: 'transparent',
   },
   dateText: {
     ...textStyles.body3,
