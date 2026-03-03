@@ -23,6 +23,7 @@ interface FlightEditModalProps {
   flight: FlightRead | null;
   planId: number;
   planStartDate?: string;
+  embedded?: boolean;
   onSave?: (flight: FlightRead) => void;
   onDelete?: (flightId: number) => void;
 }
@@ -56,6 +57,7 @@ export default function FlightEditModal({
   flight,
   planId,
   planStartDate,
+  embedded,
   onSave,
   onDelete,
 }: FlightEditModalProps) {
@@ -72,7 +74,31 @@ export default function FlightEditModal({
   const isSubmittingRef = useRef(false);
 
   useEffect(() => {
-    if (visible && flight) {
+    if (visible && !flight) {
+      const baseDate = planStartDate || dayjs().format('YYYY-MM-DD');
+      setFlightSegments([
+        {
+          airline: '',
+          flight_number: '',
+          departure_airport: '',
+          arrival_airport: '',
+          departure_date: baseDate,
+          departure_time: '09:00',
+          arrival_date: baseDate,
+          arrival_time: '10:00',
+          terminal: '',
+          gate: '',
+          seat_number: '',
+        },
+      ]);
+      setFormData({
+        reservation_number: '',
+        passenger_name: '',
+        ticket_number: '',
+        booking_reference: '',
+      });
+      setExpenseAmount('');
+    } else if (visible && flight) {
       setFormData({
         reservation_number: flight.reservationNumber || '',
         passenger_name: flight.passengerName || '',
@@ -133,7 +159,7 @@ export default function FlightEditModal({
   };
 
   const handleSave = async () => {
-    if (!flight || isSubmittingRef.current) return;
+    if (isSubmittingRef.current) return;
     const first = flightSegments[0];
     if (
       !first?.departure_airport?.trim() ||
@@ -150,38 +176,63 @@ export default function FlightEditModal({
     isSubmittingRef.current = true;
     setIsSubmitting(true);
     try {
-      await flightsApi.updateFlight(flight.id, {
-        reservationNumber: formData.reservation_number?.trim() || null,
-        passengerName: formData.passenger_name?.trim() || null,
-        ticketNumber: formData.ticket_number?.trim() || null,
-        bookingReference: formData.booking_reference?.trim() || null,
-        segments: flightSegments.map((s) => ({
-          id: s.id,
-          airline: s.airline?.trim() || null,
-          flightNumber: s.flight_number?.trim() || null,
-          departureAirport: s.departure_airport.trim(),
-          arrivalAirport: s.arrival_airport.trim(),
-          departureTime: toIso(s.departure_date, s.departure_time),
-          arrivalTime: toIso(s.arrival_date, s.arrival_time),
-          terminal: s.terminal?.trim() || null,
-          gate: s.gate?.trim() || null,
-          seatNumber: s.seat_number?.trim() || null,
-        })),
-        expense: {
-          exDate: first.departure_date,
-          amount: parseInt(expenseAmount.replace(/[^0-9]/g, ''), 10) || 0,
-          currency: ExpenseCurrency.KRW,
-          category: ExpenseCategory.FLIGHT as any,
+      const amount = parseInt(expenseAmount.replace(/[^0-9]/g, ''), 10) || 0;
+      const segmentPayload = flightSegments.map((s) => ({
+        ...(s.id && { id: s.id }),
+        airline: s.airline?.trim() || null,
+        flightNumber: s.flight_number?.trim() || null,
+        departureAirport: s.departure_airport.trim(),
+        arrivalAirport: s.arrival_airport.trim(),
+        departureTime: toIso(s.departure_date, s.departure_time),
+        arrivalTime: toIso(s.arrival_date, s.arrival_time),
+        terminal: s.terminal?.trim() || null,
+        gate: s.gate?.trim() || null,
+        seatNumber: s.seat_number?.trim() || null,
+      }));
+
+      if (flight) {
+        await flightsApi.updateFlight(flight.id, {
+          reservationNumber: formData.reservation_number?.trim() || null,
+          passengerName: formData.passenger_name?.trim() || null,
+          ticketNumber: formData.ticket_number?.trim() || null,
+          bookingReference: formData.booking_reference?.trim() || null,
+          segments: segmentPayload,
+          expense: {
+            exDate: first.departure_date,
+            amount,
+            currency: ExpenseCurrency.KRW,
+            category: ExpenseCategory.FLIGHT as any,
+            planId,
+            description: formData.reservation_number?.trim() || null,
+          },
+        });
+        const updated = await flightsApi.getFlight(flight.id);
+        if (onSave) onSave(updated);
+        Alert.alert('수정완료', '항공 편이 수정되었습니다.');
+      } else {
+        const createRes = await flightsApi.createFlight({
           planId,
-          description: formData.reservation_number?.trim() || null,
-        },
-      });
-      const updated = await flightsApi.getFlight(flight.id);
-      if (onSave) onSave(updated);
-      Alert.alert('수정완료', '항공 편이 수정되었습니다.');
+          reservationNumber: formData.reservation_number?.trim() || null,
+          passengerName: formData.passenger_name?.trim() || null,
+          ticketNumber: formData.ticket_number?.trim() || null,
+          bookingReference: formData.booking_reference?.trim() || null,
+          segments: segmentPayload.map(({ id, ...rest }) => rest),
+          expense: {
+            exDate: first.departure_date,
+            amount,
+            currency: ExpenseCurrency.KRW,
+            category: ExpenseCategory.FLIGHT as any,
+            planId,
+            description: formData.reservation_number?.trim() || null,
+          },
+        });
+        const created = await flightsApi.getFlight(createRes.id);
+        if (onSave) onSave(created);
+        Alert.alert('추가완료', '항공 편이 추가되었습니다.');
+      }
       onClose();
     } catch (error) {
-      Alert.alert('오류', '항공 편 수정에 실패했습니다.');
+      Alert.alert('오류', flight ? '항공 편 수정에 실패했습니다.' : '항공 편 추가에 실패했습니다.');
     } finally {
       isSubmittingRef.current = false;
       setIsSubmitting(false);
@@ -253,16 +304,16 @@ export default function FlightEditModal({
     });
   };
 
-  if (!flight && visible) return null;
-
-  return (
-    <FullScreenModal visible={visible} onClose={onClose}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>항공 수정</Text>
-        <Pressable style={styles.closeButton} onPress={onClose} hitSlop={8}>
-          <CloseIcon width={24} height={24} />
-        </Pressable>
-      </View>
+  const content = (
+    <>
+      {!embedded && (
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>{flight ? '항공 수정' : '항공 추가'}</Text>
+          <Pressable style={styles.closeButton} onPress={onClose} hitSlop={8}>
+            <CloseIcon width={24} height={24} />
+          </Pressable>
+        </View>
+      )}
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
@@ -484,12 +535,22 @@ export default function FlightEditModal({
       </ScrollView>
 
       <FloatingFooter
-        primaryLabel="수정 완료"
+        primaryLabel={flight ? '수정 완료' : '일정 저장'}
         onPrimaryPress={handleSave}
         primaryDisabled={isSubmitting}
-        secondaryLabel="삭제"
+        secondaryLabel={flight && !embedded ? '삭제' : undefined}
         onSecondaryPress={handleDelete}
       />
+    </>
+  );
+
+  if (embedded) {
+    return <View style={{ flex: 1 }}>{content}</View>;
+  }
+
+  return (
+    <FullScreenModal visible={visible} onClose={onClose}>
+      {content}
     </FullScreenModal>
   );
 }

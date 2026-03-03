@@ -27,6 +27,7 @@ interface ItineraryEditModalProps {
   onClose: () => void;
   itinerary: Itinerary | null;
   planId: number;
+  embedded?: boolean;
   onSave?: (itinerary: Itinerary) => void;
   onDelete?: (itineraryId: number) => void;
 }
@@ -36,6 +37,7 @@ export default function ItineraryEditModal({
   onClose,
   itinerary,
   planId,
+  embedded,
   onSave,
   onDelete,
 }: ItineraryEditModalProps) {
@@ -71,7 +73,7 @@ export default function ItineraryEditModal({
 
   const getCategoryIcon = (category: ExpenseCategory, isSelected: boolean) => {
     const size = 16;
-    const iconColor = isSelected ? colors.white : colors.gray600;
+    const iconColor = isSelected ? colors.primary : colors.gray600;
     switch (category) {
       case ExpenseCategory.FOOD:
         return <FoodIcon width={size} height={size} color={iconColor} />;
@@ -240,19 +242,18 @@ export default function ItineraryEditModal({
     return `${period} ${displayHour.toString().padStart(2, '0')}:${minute}`;
   };
 
-  return (
-    <FullScreenModal
-      visible={visible}
-      onClose={onClose}
-    >
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>
-          {itinerary ? '일정 수정' : '일정 추가'}
-        </Text>
-        <Pressable style={styles.closeButton} onPress={onClose} hitSlop={8}>
-          <CloseIcon width={24} height={24} />
-        </Pressable>
-      </View>
+  const content = (
+    <>
+      {!embedded && (
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>
+            {itinerary ? '일정 수정' : '새 일정 추가'}
+          </Text>
+          <Pressable style={styles.closeButton} onPress={onClose} hitSlop={8}>
+            <CloseIcon width={24} height={24} />
+          </Pressable>
+        </View>
+      )}
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
@@ -434,12 +435,22 @@ export default function ItineraryEditModal({
       </ScrollView>
 
       <FloatingFooter
-        primaryLabel={itinerary ? '수정 완료' : '추가 완료'}
+        primaryLabel={itinerary ? '수정 완료' : '일정 저장'}
         onPrimaryPress={handleSave}
         primaryDisabled={isSubmitting}
-        secondaryLabel={itinerary ? '삭제' : undefined}
+        secondaryLabel={itinerary && !embedded ? '삭제' : undefined}
         onSecondaryPress={itinerary ? handleDelete : undefined}
       />
+    </>
+  );
+
+  if (embedded) {
+    return <View style={{ flex: 1 }}>{content}</View>;
+  }
+
+  return (
+    <FullScreenModal visible={visible} onClose={onClose}>
+      {content}
     </FullScreenModal>
   );
 }

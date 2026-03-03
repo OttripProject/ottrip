@@ -11,6 +11,7 @@ import { Plan, Itinerary, FlightRead } from '@/types/api';
 import { useSelectedPlan } from '@/contexts/SelectedPlanContext';
 import ProfileModal from '@/components/modals/mobile/ProfileModal.native';
 import PlanSelectModal from '@/components/modals/mobile/PlanSelectModal.native';
+import AddScheduleModal from '@/components/modals/mobile/AddScheduleModal.native';
 import BaseCalendar from '@/components/popup/calendar/BaseCalendar';
 import WeeklyChecklistCard from '@/components/cards/WeeklyChecklistCard.native';
 import CalendarIcon from '../../assets/mobile_calendar_black.svg';
@@ -19,6 +20,7 @@ import DropdownIcon from '../../assets/mobile_dropdown.svg';
 import LeftArrowIcon from '../../assets/left_arrow.svg';
 import RightArrowIcon from '../../assets/right_arrow.svg';
 import CautionIcon from '../../assets/mobile_caution.svg';
+import PlusIcon from '../../assets/mobile_plus2.svg';
 
 export default function WeeklyScreen() {
   const plansQuery = usePlansQuery();
@@ -27,6 +29,7 @@ export default function WeeklyScreen() {
   const [showPlanSelector, setShowPlanSelector] = useState(false);
   const [profileModalVisible, setProfileModalVisible] = useState(false);
   const [calendarModalVisible, setCalendarModalVisible] = useState(false);
+  const [showAddScheduleModal, setShowAddScheduleModal] = useState(false);
   const [weekBaseDate, setWeekBaseDate] = useState<dayjs.Dayjs | null>(null);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -439,6 +442,38 @@ export default function WeeklyScreen() {
           </View>
         </Modal>
       )}
+
+      {selectedPlan && (
+        <Pressable
+          style={styles.fab}
+          onPress={() => setShowAddScheduleModal(true)}
+          hitSlop={8}
+        >
+          <PlusIcon width={24} height={24} color={colors.white} />
+        </Pressable>
+      )}
+
+      <AddScheduleModal
+        visible={showAddScheduleModal}
+        onClose={() => setShowAddScheduleModal(false)}
+        planId={selectedPlan?.id ?? 0}
+        planStartDate={selectedPlan?.startDate}
+        planEndDate={selectedPlan?.endDate}
+        selectedDate={selectedDate}
+        planData={{
+          addItinerary: planData.addItinerary,
+          addAccommodation: planData.addAccommodation,
+          addFlight: planData.addFlight,
+          removeItinerary: planData.removeItinerary,
+          removeAccommodation: planData.removeAccommodation,
+          removeFlight: planData.removeFlight,
+        }}
+        onRefresh={() => {
+          if (selectedPlan?.publicId) {
+            planData.fetchPlanData(selectedPlan.publicId);
+          }
+        }}
+      />
     </View>
   );
 }
@@ -737,5 +772,16 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
     right: 0,
+  },
+  fab: {
+    position: 'absolute',
+    right: 12,
+    bottom: 92,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: colors.black,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

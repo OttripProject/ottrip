@@ -54,7 +54,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   footerButton: {
-    height: 52,
+    paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
@@ -64,7 +64,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.warning,
   },
   secondaryButtonText: {
-    ...textStyles.h6,
+    ...textStyles.h4,
     color: colors.white,
   },
   primaryButton: {
@@ -75,7 +75,7 @@ const styles = StyleSheet.create({
     flex: 2,
   },
   primaryButtonText: {
-    ...textStyles.h6,
+    ...textStyles.h4,
     color: colors.white,
   },
 });

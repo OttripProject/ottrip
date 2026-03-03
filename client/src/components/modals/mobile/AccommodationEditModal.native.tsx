@@ -19,6 +19,7 @@ interface AccommodationEditModalProps {
   onClose: () => void;
   accommodation: Accommodation | null;
   planId: number;
+  embedded?: boolean;
   onSave?: (accommodation: Accommodation) => void;
   onDelete?: (accommodationId: number) => void;
 }
@@ -38,6 +39,7 @@ export default function AccommodationEditModal({
   onClose,
   accommodation,
   planId,
+  embedded,
   onSave,
   onDelete,
 }: AccommodationEditModalProps) {
@@ -85,12 +87,11 @@ export default function AccommodationEditModal({
       return;
     }
 
-    if (!accommodation) return;
-
     setIsSubmitting(true);
     try {
       const amount = parseInt(normalizeAmount(expenseAmount), 10) || 0;
-      const updated = await accommodationsApi.updateAccommodation(accommodation.id, {
+      if (accommodation) {
+        const updated = await accommodationsApi.updateAccommodation(accommodation.id, {
         name: formData.name.trim(),
         description: formData.description?.trim() || undefined,
         country: formData.country?.trim() || undefined,
@@ -108,11 +109,34 @@ export default function AccommodationEditModal({
           description: formData.name.trim(),
         },
       });
-      if (onSave) onSave(updated);
-      Alert.alert('수정완료', '숙소가 수정되었습니다.');
+        if (onSave) onSave(updated);
+        Alert.alert('수정완료', '숙소가 수정되었습니다.');
+      } else {
+        const created = await accommodationsApi.createAccommodation({
+          planId,
+          name: formData.name.trim(),
+          description: formData.description?.trim() || undefined,
+          country: formData.country?.trim() || undefined,
+          city: formData.city?.trim() || undefined,
+          place: formData.place?.trim() || undefined,
+          checkinDate: formData.checkinDate,
+          checkoutDate: formData.checkoutDate,
+          checkinTime: `${formData.checkinTime}:00`,
+          checkoutTime: `${formData.checkoutTime}:00`,
+          expense: {
+            exDate: formData.checkinDate,
+            amount,
+            category: 'accommodation' as any,
+            currency: ExpenseCurrency.KRW,
+            description: formData.name.trim(),
+          },
+        });
+        if (onSave) onSave(created);
+        Alert.alert('추가완료', '숙소가 추가되었습니다.');
+      }
       onClose();
     } catch (error) {
-      Alert.alert('오류', '숙소 수정에 실패했습니다.');
+      Alert.alert('오류', accommodation ? '숙소 수정에 실패했습니다.' : '숙소 추가에 실패했습니다.');
     } finally {
       setIsSubmitting(false);
     }
@@ -150,16 +174,16 @@ export default function AccommodationEditModal({
     setExpenseAmount(formatted);
   };
 
-  if (!accommodation && visible) return null;
-
-  return (
-    <FullScreenModal visible={visible} onClose={onClose}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>숙소 수정</Text>
-        <Pressable style={styles.closeButton} onPress={onClose} hitSlop={8}>
-          <CloseIcon width={24} height={24} />
-        </Pressable>
-      </View>
+  const content = (
+    <>
+      {!embedded && (
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>{accommodation ? '숙소 수정' : '숙소 추가'}</Text>
+          <Pressable style={styles.closeButton} onPress={onClose} hitSlop={8}>
+            <CloseIcon width={24} height={24} />
+          </Pressable>
+        </View>
+      )}
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
@@ -322,12 +346,22 @@ export default function AccommodationEditModal({
       </ScrollView>
 
       <FloatingFooter
-        primaryLabel="수정 완료"
+        primaryLabel={accommodation ? '수정 완료' : '일정 저장'}
         onPrimaryPress={handleSave}
         primaryDisabled={isSubmitting}
-        secondaryLabel="삭제"
+        secondaryLabel={accommodation && !embedded ? '삭제' : undefined}
         onSecondaryPress={handleDelete}
       />
+    </>
+  );
+
+  if (embedded) {
+    return <View style={{ flex: 1 }}>{content}</View>;
+  }
+
+  return (
+    <FullScreenModal visible={visible} onClose={onClose}>
+      {content}
     </FullScreenModal>
   );
 }
