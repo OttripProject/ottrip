@@ -507,7 +507,7 @@ const styles = StyleSheet.create({
     zIndex: 1000,
   },
   currencyWrap: {
-    flex: 1,
+    flex: 0.3,
   },
   currencyDisplay: {
     minHeight: 44,
