@@ -448,7 +448,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.gray200,
   },
   timeInput: {
-    minHeight: 42,
+    minHeight: 44,
     borderRadius: 12,
     backgroundColor: colors.white,
   },
@@ -488,8 +488,10 @@ const styles = StyleSheet.create({
   checkinoutLabel: {
     ...textStyles.h8,
     color: colors.gray700,
+    marginBottom: 8,
   },
   dateInput: {
+    minHeight: 44,
     paddingVertical: 10,
     paddingHorizontal: 12,
     flexDirection: 'row',
