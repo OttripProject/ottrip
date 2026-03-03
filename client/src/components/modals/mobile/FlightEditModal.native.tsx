@@ -325,7 +325,7 @@ export default function FlightEditModal({
             <Input
               value={formData.reservation_number}
               onChangeText={(t) => setFormData({ ...formData, reservation_number: t })}
-              style={styles.input}
+              style={[styles.input, !flight && styles.inputBorderless]}
               placeholder={PLACEHOLDERS.flight.reservationNumber}
               placeholderTextColor={colors.gray600}
             />
@@ -336,7 +336,7 @@ export default function FlightEditModal({
               <Input
                 value={formData.passenger_name}
                 onChangeText={(t) => setFormData({ ...formData, passenger_name: t })}
-                style={styles.input}
+                style={[styles.input, !flight && styles.inputBorderless]}
                 placeholder={PLACEHOLDERS.flight.passengerName}
                 placeholderTextColor={colors.gray600}
               />
@@ -346,7 +346,7 @@ export default function FlightEditModal({
               <Input
                 value={expenseAmount}
                 onChangeText={handleAmountChange}
-                style={styles.input}
+                style={[styles.input, !flight && styles.inputBorderless]}
                 placeholder="0"
                 placeholderTextColor={colors.gray600}
                 keyboardType="number-pad"
@@ -359,7 +359,7 @@ export default function FlightEditModal({
               <Input
                 value={formData.booking_reference}
                 onChangeText={(t) => setFormData({ ...formData, booking_reference: t })}
-                style={styles.input}
+                style={[styles.input, !flight && styles.inputBorderless]}
                 placeholder={PLACEHOLDERS.flight.bookingReference}
                 placeholderTextColor={colors.gray600}
               />
@@ -369,7 +369,7 @@ export default function FlightEditModal({
               <Input
                 value={formData.ticket_number}
                 onChangeText={(t) => setFormData({ ...formData, ticket_number: t })}
-                style={styles.input}
+                style={[styles.input, !flight && styles.inputBorderless]}
                 placeholder={PLACEHOLDERS.flight.ticketNumber}
                 placeholderTextColor={colors.gray600}
               />
@@ -404,7 +404,7 @@ export default function FlightEditModal({
                     <Input
                       value={seg.airline}
                       onChangeText={(t) => updateSegment(idx, 'airline', t)}
-                      style={styles.input}
+                      style={[styles.input, {backgroundColor: colors.white}, !flight && styles.inputBorderless]}
                       placeholder={PLACEHOLDERS.flight.airline}
                       placeholderTextColor={colors.gray600}
                     />
@@ -413,7 +413,7 @@ export default function FlightEditModal({
                     <Input
                       value={seg.flight_number}
                       onChangeText={(t) => updateSegment(idx, 'flight_number', t)}
-                      style={styles.input}
+                      style={[styles.input, {backgroundColor: colors.white}, !flight && styles.inputBorderless]}
                       placeholder={PLACEHOLDERS.flight.flightNumber}
                       placeholderTextColor={colors.gray600}
                     />
@@ -425,7 +425,7 @@ export default function FlightEditModal({
                       value={seg.departure_airport}
                       onChange={(code) => updateSegment(idx, 'departure_airport', code)}
                       placeholder={PLACEHOLDERS.flight.departureAirport}
-                      style={styles.pickerInput}
+                      style={StyleSheet.flatten([styles.pickerInput, {backgroundColor: colors.white}, !flight && styles.pickerInputBorderless])}
                     />
                   </View>
                   <View style={[styles.inputGroup, styles.halfWidth, { zIndex: 2000 - idx }]}>
@@ -433,14 +433,14 @@ export default function FlightEditModal({
                       value={seg.arrival_airport}
                       onChange={(code) => updateSegment(idx, 'arrival_airport', code)}
                       placeholder={PLACEHOLDERS.flight.arrivalAirport}
-                      style={styles.pickerInput}
+                      style={StyleSheet.flatten([styles.pickerInput, {backgroundColor: colors.white}, !flight && styles.pickerInputBorderless])}
                     />
                   </View>
                 </View>
                 <View style={styles.row}>
                   <View style={[styles.inputGroup, styles.halfWidth]}>
                     <Pressable
-                      style={styles.dateInput}
+                      style={[styles.dateInput, {backgroundColor: colors.white}, !flight && styles.dateInputBorderless]}
                       onPress={() => setSegmentDatePicker({ idx, type: 'dep' })}
                     >
                       <Text style={styles.dateText}>{formatDate(seg.departure_date)}</Text>
@@ -461,7 +461,7 @@ export default function FlightEditModal({
                   </View>
                   <View style={[styles.inputGroup, styles.halfWidth]}>
                     <Pressable
-                      style={styles.dateInput}
+                      style={[styles.dateInput, {backgroundColor: colors.white}, {backgroundColor: colors.white}, !flight && styles.dateInputBorderless]}
                       onPress={() => setSegmentDatePicker({ idx, type: 'arr' })}
                     >
                       <Text style={styles.dateText}>{formatDate(seg.arrival_date)}</Text>
@@ -487,7 +487,7 @@ export default function FlightEditModal({
                       value={seg.departure_time}
                       onChange={(t) => updateSegment(idx, 'departure_time', t)}
                       containerStyle={styles.pickerContainer}
-                      style={styles.pickerInput}
+                      style={StyleSheet.flatten([styles.pickerInput, {backgroundColor: colors.white}, !flight && styles.pickerInputBorderless])}
                     />
                   </View>
                   <View style={[styles.inputGroup, styles.halfWidth]}>
@@ -495,7 +495,7 @@ export default function FlightEditModal({
                       value={seg.arrival_time}
                       onChange={(t) => updateSegment(idx, 'arrival_time', t)}
                       containerStyle={styles.pickerContainer}
-                      style={styles.pickerInput}
+                      style={StyleSheet.flatten([styles.pickerInput, {backgroundColor: colors.white}, !flight && styles.pickerInputBorderless])}
                     />
                   </View>
                 </View>
@@ -592,7 +592,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.gray400,
     borderRadius: 12,
-    backgroundColor: colors.gray100,
+    backgroundColor: colors.gray200,
+  },
+  inputBorderless: {
+    borderWidth: 0,
+    borderColor: 'transparent',
   },
   row: { flexDirection: 'row', gap: 9 },
   halfWidth: { flex: 1 },
@@ -639,7 +643,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.gray400,
     borderRadius: 12,
-    backgroundColor: colors.gray100,
+    backgroundColor: colors.gray200,
+  },
+  dateInputBorderless: {
+    borderWidth: 0,
+    borderColor: 'transparent',
   },
   dateText: { ...textStyles.body3 },
   calendarPopup: {
@@ -658,6 +666,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.gray400,
     borderRadius: 12,
-    backgroundColor: colors.gray100,
+    backgroundColor: colors.gray200,
+  },
+  pickerInputBorderless: {
+    borderWidth: 0,
+    borderColor: 'transparent',
   },
 });
