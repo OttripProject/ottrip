@@ -13,8 +13,6 @@ import { itinerariesApi } from '@/services/itineraries';
 import { expensesApi } from '@/services/expenses';
 import BaseCalendar from '@/components/popup/calendar/BaseCalendar';
 import CalendarIcon from '../../../../assets/mobile_calendar_black.svg';
-import AccomodationIcon from '../../../../assets/mobile_accomodation.svg';
-import FlightIcon from '../../../../assets/airplane.svg';
 import FoodIcon from '../../../../assets/mobile_food.svg';
 import CarIcon from '../../../../assets/mobile_car.svg';
 import TicketIcon from '../../../../assets/mobile_ticket.svg';
@@ -260,22 +258,6 @@ export default function ItineraryEditModal({
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* 카테고리 탭 (고정 표시) */}
-        <View style={styles.categoryTabs}>
-          <View style={styles.categoryTab}>
-            <AccomodationIcon width={16} height={16} color={colors.gray600} />
-            <Text style={styles.categoryTabText}>숙소</Text>
-          </View>
-          <View style={styles.categoryTab}>
-            <FlightIcon width={16} height={16} color={colors.gray600} />
-            <Text style={styles.categoryTabText}>항공</Text>
-          </View>
-          <View style={[styles.categoryTab, styles.categoryTabActive]}>
-            <CalendarIcon width={16} height={16} color={colors.primary} />
-            <Text style={[styles.categoryTabText, styles.categoryTabTextActive]}>일정</Text>
-          </View>
-        </View>
-
         {/* 입력 필드들 */}
         <View style={styles.form}>
           {/* 일정명 */}
@@ -487,33 +469,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 12,
     paddingBottom: 400,
-  },
-  categoryTabs: {
-    flexDirection: 'row',
-    marginBottom: 24,
-    backgroundColor: colors.gray200,
-    borderRadius: 12,
-    padding: 4,
-  },
-  categoryTab: {
-    flex: 1,
-    flexDirection: 'row',
-    paddingVertical: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 4,
-    borderRadius: 12,
-  },
-  categoryTabActive: {
-    backgroundColor: colors.white,
-  },
-  categoryTabText: {
-    ...textStyles.h6,
-    color: colors.gray600,
-  },
-  categoryTabTextActive: {
-    ...textStyles.h6,
-    color: colors.primary,
   },
   form: {
     gap: 20,

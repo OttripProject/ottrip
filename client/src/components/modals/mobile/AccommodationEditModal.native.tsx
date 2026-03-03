@@ -13,8 +13,6 @@ import BaseCalendar from '@/components/popup/calendar/BaseCalendar';
 import { ExpenseCurrency, currencyLabels } from '@/types/expense';
 import CloseIcon from '../../../../assets/x.svg';
 import CalendarIcon from '../../../../assets/mobile_calendar_black.svg';
-import AccommodationIcon from '../../../../assets/mobile_accomodation.svg';
-import FlightIcon from '../../../../assets/airplane.svg';
 
 interface AccommodationEditModalProps {
   visible: boolean;
@@ -167,22 +165,6 @@ export default function AccommodationEditModal({
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* 카테고리 탭 (숙소만 활성화) */}
-        <View style={styles.categoryTabs}>
-          <View style={[styles.categoryTab, styles.categoryTabActive]}>
-            <AccommodationIcon width={16} height={16} color={colors.primary} />
-            <Text style={[styles.categoryTabText, styles.categoryTabTextActive]}>숙소</Text>
-          </View>
-          <View style={styles.categoryTab}>
-            <FlightIcon width={16} height={16} color={colors.gray600} />
-            <Text style={styles.categoryTabText}>항공</Text>
-          </View>
-          <View style={styles.categoryTab}>
-            <CalendarIcon width={16} height={16} color={colors.gray600} />
-            <Text style={styles.categoryTabText}>일정</Text>
-          </View>
-        </View>
-
         {/* 입력 필드들 */}
         <View style={styles.form}>
           <View style={styles.inputGroup}>
@@ -375,33 +357,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 12,
     paddingBottom: 240,
-  },
-  categoryTabs: {
-    flexDirection: 'row',
-    marginBottom: 24,
-    backgroundColor: colors.gray200,
-    borderRadius: 12,
-    padding: 4,
-  },
-  categoryTab: {
-    flex: 1,
-    flexDirection: 'row',
-    paddingVertical: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 4,
-    borderRadius: 12,
-  },
-  categoryTabActive: {
-    backgroundColor: colors.white,
-  },
-  categoryTabText: {
-    ...textStyles.h6,
-    color: colors.gray600,
-  },
-  categoryTabTextActive: {
-    ...textStyles.h6,
-    color: colors.primary,
   },
   form: {
     gap: 20,

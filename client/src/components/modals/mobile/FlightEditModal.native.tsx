@@ -14,8 +14,6 @@ import { PLACEHOLDERS } from '@/constants/placeholders';
 import BaseCalendar from '@/components/popup/calendar/BaseCalendar';
 import CloseIcon from '../../../../assets/x.svg';
 import CalendarIcon from '../../../../assets/mobile_calendar_black.svg';
-import AccommodationIcon from '../../../../assets/mobile_accomodation.svg';
-import FlightIcon from '../../../../assets/airplane.svg';
 import AddIcon from '../../../../assets/mobile_plan_add.svg';
 import DeleteIcon from '../../../../assets/delete.svg';
 
@@ -270,21 +268,6 @@ export default function FlightEditModal({
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.categoryTabs}>
-          <View style={styles.categoryTab}>
-            <AccommodationIcon width={16} height={16} color={colors.gray600} />
-            <Text style={styles.categoryTabText}>숙소</Text>
-          </View>
-          <View style={[styles.categoryTab, styles.categoryTabActive]}>
-            <FlightIcon width={16} height={16} color={colors.primary} />
-            <Text style={[styles.categoryTabText, styles.categoryTabTextActive]}>항공</Text>
-          </View>
-          <View style={styles.categoryTab}>
-            <CalendarIcon width={16} height={16} color={colors.gray600} />
-            <Text style={styles.categoryTabText}>일정</Text>
-          </View>
-        </View>
-
         <View style={styles.form}>
           <View style={styles.inputGroup}>
             <Text style={styles.label}>예약번호 (PNR)</Text>
@@ -533,25 +516,6 @@ const styles = StyleSheet.create({
     paddingTop: 12,
     paddingBottom: 240,
   },
-  categoryTabs: {
-    flexDirection: 'row',
-    marginBottom: 24,
-    backgroundColor: colors.gray200,
-    borderRadius: 12,
-    padding: 4,
-  },
-  categoryTab: {
-    flex: 1,
-    flexDirection: 'row',
-    paddingVertical: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 4,
-    borderRadius: 12,
-  },
-  categoryTabActive: { backgroundColor: colors.white },
-  categoryTabText: { ...textStyles.h6, color: colors.gray600 },
-  categoryTabTextActive: { ...textStyles.h6, color: colors.primary },
   form: { gap: 20, marginBottom: 24 },
   sectionDivider: {
     height: 1,
