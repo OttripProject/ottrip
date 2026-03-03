@@ -5,7 +5,6 @@ import {
   Pressable,
   StyleSheet,
   ScrollView,
-  TextInput,
   Alert,
 } from 'react-native';
 import dayjs from 'dayjs';
@@ -15,8 +14,9 @@ import { Expense } from '@/types/api';
 import BottomSheetModal from '@/ui/components/BottomSheetModal.native';
 import FloatingFooter from '@/ui/components/FloatingFooter.native';
 import BaseCalendar from '@/components/popup/calendar/BaseCalendar';
+import Input from '@/ui/components/input/Input';
 import { colors } from '@/ui/tokens/colors';
-import { textStyles } from '@/ui/tokens/typography';
+import { textStyles, typography } from '@/ui/tokens/typography';
 import CloseIcon from '../../../../assets/mobile_close.svg';
 import CalendarIcon from '../../../../assets/mobile_calendar_black.svg';
 import FoodIcon from '../../../../assets/mobile_food.svg';
@@ -225,13 +225,15 @@ export default function AddExpenseModal({
         <View style={styles.inputGroup}>
           <Text style={styles.label}>지출 금액</Text>
           <View style={styles.amountInputWrapper}>
-            <TextInput
+            <Input
               value={formData.amount}
               onChangeText={handleAmountChange}
-              style={styles.amountInput}
               placeholder="0"
               placeholderTextColor={colors.gray500}
               keyboardType="number-pad"
+              variant="filled"
+              containerStyle={styles.amountInputContainer}
+              style={styles.amountInputStyle}
             />
             <Text style={styles.amountSuffix}>원</Text>
           </View>
@@ -239,14 +241,15 @@ export default function AddExpenseModal({
 
         <View style={styles.inputGroup}>
           <Text style={styles.label}>내역 메모</Text>
-          <TextInput
+          <Input
             value={formData.description}
             onChangeText={(text) =>
               setFormData((prev) => ({ ...prev, description: text }))
             }
-            style={styles.input}
             placeholder="어디에 사용하셨나요?"
             placeholderTextColor={colors.gray500}
+            variant="filled"
+            style={styles.modalInputStyle}
           />
         </View>
 
@@ -364,24 +367,34 @@ const styles = StyleSheet.create({
     height: 48,
     backgroundColor: colors.gray200,
   },
-  amountInput: {
+  amountInputContainer: {
     flex: 1,
-    ...textStyles.body3,
-    color: colors.black,
+  },
+  amountInputStyle: {
+    flex: 1,
+    height: 48,
     textAlign: 'right',
+    backgroundColor: 'transparent',
+    paddingHorizontal: 0,
+    paddingVertical: 0,
+    fontFamily: typography.fontFamily.pretendardRegular,
+    fontSize: 14,
+    color: colors.black,
   },
   amountSuffix: {
-    ...textStyles.h6,
+    fontFamily: typography.fontFamily.pretendardSemiBold,
+    fontSize: 14,
     color: colors.black,
     marginLeft: 4,
   },
-  input: {
-    ...textStyles.body3,
+  modalInputStyle: {
     borderRadius: 12,
     paddingHorizontal: 14,
     height: 48,
-    color: colors.black,
     backgroundColor: colors.gray200,
+    fontFamily: typography.fontFamily.pretendardRegular,
+    fontSize: 14,
+    color: colors.black,
   },
   dateInput: {
     flexDirection: 'row',
