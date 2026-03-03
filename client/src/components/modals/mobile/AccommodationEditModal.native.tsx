@@ -278,7 +278,7 @@ export default function AccommodationEditModal({
                   value={formData.checkinTime}
                   onChange={(time) => setFormData({ ...formData, checkinTime: time })}
                   containerStyle={styles.pickerContainer}
-                  style={StyleSheet.flatten([styles.pickerInput, !accommodation && styles.pickerInputBorderless])}
+                  style={StyleSheet.flatten([styles.pickerInput, !accommodation && styles.pickerInputBorderless, styles.timeInput])}
                   dropDownContainerStyle={styles.pickerDropDownContainer}
                   listItemLabelStyle={styles.pickerListItemLabel}
                   selectedItemContainerStyle={styles.selectedItemContainerStyle}
@@ -314,7 +314,7 @@ export default function AccommodationEditModal({
                   value={formData.checkoutTime}
                   onChange={(time) => setFormData({ ...formData, checkoutTime: time })}
                   containerStyle={styles.pickerContainer}
-                  style={StyleSheet.flatten([styles.pickerInput, !accommodation && styles.pickerInputBorderless])}
+                  style={StyleSheet.flatten([styles.pickerInput, !accommodation && styles.pickerInputBorderless, styles.timeInput])}
                   dropDownContainerStyle={styles.pickerDropDownContainer}
                   listItemLabelStyle={styles.pickerListItemLabel}
                   selectedItemContainerStyle={styles.selectedItemContainerStyle}
@@ -444,6 +444,11 @@ const styles = StyleSheet.create({
     minHeight: 44,
     borderWidth: 1,
     borderColor: colors.gray400,
+    borderRadius: 12,
+    backgroundColor: colors.gray200,
+  },
+  timeInput: {
+    minHeight: 42,
     borderRadius: 12,
     backgroundColor: colors.white,
   },
