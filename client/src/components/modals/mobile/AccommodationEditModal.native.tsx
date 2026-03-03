@@ -198,7 +198,7 @@ export default function AccommodationEditModal({
             <Input
               value={formData.name}
               onChangeText={(text) => setFormData({ ...formData, name: text })}
-              style={styles.input}
+              style={[styles.input, !accommodation && styles.inputBorderless]}
             />
           </View>
 
@@ -207,7 +207,7 @@ export default function AccommodationEditModal({
             <TextInput
               value={formData.description}
               onChangeText={(text) => setFormData({ ...formData, description: text })}
-              style={styles.textArea}
+              style={[styles.textArea, !accommodation && styles.textAreaBorderless]}
               multiline
               numberOfLines={4}
               textAlignVertical="top"
@@ -221,7 +221,7 @@ export default function AccommodationEditModal({
                 value={formData.country}
                 onChange={(country) => setFormData({ ...formData, country })}
                 containerStyle={styles.pickerContainer}
-                style={styles.pickerInput}
+                style={StyleSheet.flatten([styles.pickerInput, !accommodation && styles.pickerInputBorderless])}
                 dropDownContainerStyle={styles.pickerDropDownContainer}
                 listItemLabelStyle={styles.pickerListItemLabel}
                 selectedItemContainerStyle={styles.selectedItemContainerStyle}
@@ -232,7 +232,7 @@ export default function AccommodationEditModal({
               <Input
                 value={formData.city}
                 onChangeText={(text) => setFormData({ ...formData, city: text })}
-                style={styles.input}
+                style={[styles.input, !accommodation && styles.inputBorderless]}
               />
             </View>
           </View>
@@ -242,7 +242,7 @@ export default function AccommodationEditModal({
             <Input
               value={formData.place}
               onChangeText={(text) => setFormData({ ...formData, place: text })}
-              style={styles.input}
+              style={[styles.input, !accommodation && styles.inputBorderless]}
             />
           </View>
 
@@ -253,7 +253,7 @@ export default function AccommodationEditModal({
               <View style={[styles.inputGroup, styles.halfWidth]}>
                 <Text style={styles.checkinoutLabel}>체크인 날짜</Text>
                 <Pressable
-                  style={styles.dateInput}
+                  style={[styles.dateInput, !accommodation && styles.dateInputBorderless]}
                   onPress={() => setShowCheckinDatePicker(true)}
                 >
                   <Text style={styles.dateText}>{formatDate(formData.checkinDate)}</Text>
@@ -278,7 +278,7 @@ export default function AccommodationEditModal({
                   value={formData.checkinTime}
                   onChange={(time) => setFormData({ ...formData, checkinTime: time })}
                   containerStyle={styles.pickerContainer}
-                  style={styles.pickerInput}
+                  style={StyleSheet.flatten([styles.pickerInput, !accommodation && styles.pickerInputBorderless])}
                   dropDownContainerStyle={styles.pickerDropDownContainer}
                   listItemLabelStyle={styles.pickerListItemLabel}
                   selectedItemContainerStyle={styles.selectedItemContainerStyle}
@@ -289,7 +289,7 @@ export default function AccommodationEditModal({
               <View style={[styles.inputGroup, styles.halfWidth]}>
                 <Text style={styles.checkinoutLabel}>체크아웃 날짜</Text>
                 <Pressable
-                  style={styles.dateInput}
+                  style={[styles.dateInput, !accommodation && styles.dateInputBorderless]}
                   onPress={() => setShowCheckoutDatePicker(true)}
                 >
                   <Text style={styles.dateText}>{formatDate(formData.checkoutDate)}</Text>
@@ -314,7 +314,7 @@ export default function AccommodationEditModal({
                   value={formData.checkoutTime}
                   onChange={(time) => setFormData({ ...formData, checkoutTime: time })}
                   containerStyle={styles.pickerContainer}
-                  style={styles.pickerInput}
+                  style={StyleSheet.flatten([styles.pickerInput, !accommodation && styles.pickerInputBorderless])}
                   dropDownContainerStyle={styles.pickerDropDownContainer}
                   listItemLabelStyle={styles.pickerListItemLabel}
                   selectedItemContainerStyle={styles.selectedItemContainerStyle}
@@ -330,14 +330,14 @@ export default function AccommodationEditModal({
               <TextInput
                 value={expenseAmount}
                 onChangeText={handleAmountChange}
-                style={styles.input}
+                style={[styles.input, !accommodation && styles.inputBorderless]}
                 placeholder="0"
                 keyboardType="number-pad"
               />
             </View>
             <View style={[styles.inputGroup, styles.currencyWrap]}>
               <Text style={styles.label}>통화</Text>
-              <View style={styles.currencyDisplay}>
+              <View style={[styles.currencyDisplay, !accommodation && styles.currencyDisplayBorderless]}>
                 <Text style={styles.currencyText}>{currencyLabels[ExpenseCurrency.KRW]}</Text>
               </View>
             </View>
@@ -410,7 +410,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.gray400,
     borderRadius: 12,
-    backgroundColor: colors.gray100,
+    backgroundColor: colors.gray200,
+  },
+  inputBorderless: {
+    borderWidth: 0,
+    borderColor: 'transparent',
   },
   textArea: {
     ...textStyles.body4,
@@ -420,7 +424,11 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingHorizontal: 12,
     paddingVertical: 8,
-    backgroundColor: colors.gray100,
+    backgroundColor: colors.gray200,
+  },
+  textAreaBorderless: {
+    borderWidth: 0,
+    borderColor: 'transparent',
   },
   row: {
     flexDirection: 'row',
@@ -437,21 +445,23 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.gray400,
     borderRadius: 12,
-    backgroundColor: colors.gray100,
+    backgroundColor: colors.white,
+  },
+  pickerInputBorderless: {
+    borderWidth: 0,
+    borderColor: 'transparent',
   },
   pickerDropDownContainer: {
-    borderWidth: 1,
-    borderColor: colors.gray400,
     borderRadius: 12,
-    backgroundColor: colors.gray100,
+    backgroundColor: colors.gray200,
   },
   pickerListItemLabel: {
     ...textStyles.body4,
     color: colors.gray500,
-    backgroundColor: colors.gray100,
+    backgroundColor: colors.gray200,
   },
   selectedItemContainerStyle: {
-    backgroundColor: colors.gray100,
+    backgroundColor: colors.gray200,
   },
   checkinoutSection: {
     backgroundColor: `${colors.primary}1A`,
@@ -483,7 +493,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.gray400,
     borderRadius: 12,
-    backgroundColor: colors.gray100,
+    backgroundColor: colors.white,
+  },
+  dateInputBorderless: {
+    borderWidth: 0,
+    borderColor: 'transparent',
   },
   dateText: {
     ...textStyles.body3,
@@ -505,8 +519,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.gray400,
     borderRadius: 12,
-    backgroundColor: colors.gray100,
+    backgroundColor: colors.gray200,
     justifyContent: 'center',
+  },
+  currencyDisplayBorderless: {
+    borderWidth: 0,
+    borderColor: 'transparent',
   },
   currencyText: {
     ...textStyles.body4,
