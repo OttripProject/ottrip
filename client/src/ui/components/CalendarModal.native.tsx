@@ -41,9 +41,13 @@ function DayCell({
     dayjs(date.dateString).format('YYYY-MM') === dayjs(currentMonth).format('YYYY-MM');
 
   return (
-    <Pressable style={styles.dayCell} onPress={() => onPress?.(date)}>
-      {isToday && <View style={styles.todayCircle} />}
-      {isSelected && <View style={styles.selectedCircle} />}
+    <Pressable
+      style={styles.dayCell}
+      onPress={() => onPress?.(date)}
+      hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+    >
+      {isToday && <View style={styles.todayCircle} pointerEvents="none" />}
+      {isSelected && <View style={styles.selectedCircle} pointerEvents="none" />}
       <Text
         style={[
           styles.dayText,
@@ -152,6 +156,7 @@ export default function CalendarModal({
             firstDay={1}
             markedDates={markedDates}
             customHeader={customHeader}
+            allowSelectionOutOfRange
             dayComponent={({ date, marking, onPress }) => (
               <DayCell
                 date={date as DateData}
