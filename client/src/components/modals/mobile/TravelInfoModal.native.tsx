@@ -14,8 +14,7 @@ import MemberIcon from '../../../../assets/mobile_member.svg';
 import ItineraryIcon from '../../../../assets/mobile_check_backup.svg';
 import CheckIcon from '../../../../assets/mobile_check.svg';
 import LightningIcon from '../../../../assets/mobile_lightning.svg';
-import MobileLocationIcon from '../../../../assets/mobile_location.svg';
-import AddIcon from '../../../../assets/add.svg';
+import AddIcon from '../../../../assets/mobile_plus.svg';
 import api from '@/services/api';
 
 interface TravelInfoModalProps {
@@ -23,6 +22,7 @@ interface TravelInfoModalProps {
   onClose: () => void;
   plan: Plan | null;
   itineraries: Itinerary[];
+
   expenses: Expense[];
   planPublicId: string | null;
   planId: number;
@@ -258,10 +258,10 @@ export default function TravelInfoModal({
         </View>
 
         {/* Card 5: 여행 준비 체크리스트 - 흰색 카드, pin+제목+plus, 빈 상태: AI 추천받기 */}
-        <View style={styles.card}>
+        <View style={[styles.card, { marginTop: 12 }]}>
           <View style={styles.checklistHeader}>
             <View style={styles.checklistHeaderLeft}>
-              <MobileLocationIcon width={20} height={20} color={colors.black} />
+              <CheckIcon width={20} height={20} color={colors.black} />
               <Text style={styles.checklistTitle}>여행 준비 체크리스트</Text>
             </View>
             <Pressable onPress={() => {}} hitSlop={8}>
@@ -278,7 +278,6 @@ export default function TravelInfoModal({
                     hitSlop={8}
                   >
                     <View style={[styles.checkbox, item.is_checked && styles.checkboxSelected]}>
-                      <CheckIcon width={16} height={16} fill={colors.white} />
                     </View>
                   </Pressable>
                   <Text
