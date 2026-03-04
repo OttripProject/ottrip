@@ -16,14 +16,20 @@ import CloseIcon from '../../../assets/mobile_close.svg';
 
 export type WeeklyChecklistCardProps = {
   planPublicId: string | undefined;
-  selectedDate: dayjs.Dayjs;
+  mode?: 'weekly' | 'full';
+  selectedDate?: dayjs.Dayjs;
+  planStartDate?: string;
   itineraries?: Itinerary[];
+  titleOverride?: string;
 };
 
 export default function WeeklyChecklistCard({
   planPublicId,
-  selectedDate,
+  mode = 'weekly',
+  selectedDate = dayjs(),
+  planStartDate,
   itineraries = [],
+  titleOverride,
 }: WeeklyChecklistCardProps) {
   const queryClient = useQueryClient();
   const [newChecklistItem, setNewChecklistItem] = useState('');
@@ -33,6 +39,7 @@ export default function WeeklyChecklistCard({
   const deletingItems = useRef<Set<number>>(new Set());
 
   const selectedDateStr = selectedDate.format('YYYY-MM-DD');
+  const dateForApi = mode === 'full' ? (planStartDate || dayjs().format('YYYY-MM-DD')) : selectedDateStr;
 
   const { data: checklistData, refetch: refetchChecklist } = useQuery({
     queryKey: ['checklist', planPublicId],
@@ -62,7 +69,7 @@ export default function WeeklyChecklistCard({
     );
   }, [checklist]);
 
-  const dateChecklistItems = useMemo(() => {
+  const checklistItems = useMemo(() => {
     if (!checklist?.categories) return [];
     const items: TravelChecklistItem[] = [];
     const categories = checklist.categories;
@@ -74,7 +81,8 @@ export default function WeeklyChecklistCard({
           const itemDate = item.date;
           const isCustom = item.is_custom ?? item.isCustom ?? false;
           const isChecked = item.is_checked ?? item.isChecked ?? false;
-          if (itemDate === selectedDateStr) {
+          const include = mode === 'full' ? true : itemDate === selectedDateStr;
+          if (include) {
             items.push({
               id: item.id || 0,
               name: item.name || '',
@@ -88,7 +96,9 @@ export default function WeeklyChecklistCard({
       }
     });
     return items;
-  }, [checklist, selectedDateStr]);
+  }, [checklist, selectedDateStr, mode]);
+
+  const dateChecklistItems = checklistItems;
 
   const handleAddChecklistItem = async () => {
     const name = newChecklistItem.trim();
@@ -102,7 +112,7 @@ export default function WeeklyChecklistCard({
         name,
         reason: '',
         category: 'basic_required',
-        date: selectedDateStr,
+        date: dateForApi,
       });
       setNewChecklistItem('');
       refetchChecklist();
@@ -126,7 +136,7 @@ export default function WeeklyChecklistCard({
         const items = categories[categoryKey];
         if (Array.isArray(items)) {
           categories[categoryKey] = items.map((item: any) =>
-            item.id === itemId ? { ...item, isChecked } : item
+            item.id === itemId ? { ...item, is_checked: isChecked } : item
           );
         }
       });
@@ -172,7 +182,7 @@ export default function WeeklyChecklistCard({
     try {
       await api.post(`/private/ai/checklist/${planPublicId}/generate`, {
         force_regenerate: true,
-        date: selectedDateStr,
+        date: dateForApi,
       });
       refetchChecklist();
     } catch {
@@ -182,9 +192,11 @@ export default function WeeklyChecklistCard({
     }
   };
 
-  const title = dayjs().isSame(selectedDate, 'day')
-    ? '오늘의 체크리스트'
-    : `${selectedDate.date()}일 체크리스트`;
+  const title = titleOverride ?? (mode === 'full'
+    ? '여행 준비 체크리스트'
+    : dayjs().isSame(selectedDate, 'day')
+      ? '오늘의 체크리스트'
+      : `${selectedDate.date()}일 체크리스트`);
 
   if (!planPublicId) return null;
 
