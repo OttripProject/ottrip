@@ -12,6 +12,7 @@ import { useSelectedPlan } from '@/contexts/SelectedPlanContext';
 import ProfileModal from '@/components/modals/mobile/ProfileModal.native';
 import PlanSelectModal from '@/components/modals/mobile/PlanSelectModal.native';
 import AddScheduleModal from '@/components/modals/mobile/AddScheduleModal.native';
+import TravelInfoModal from '@/components/modals/mobile/TravelInfoModal.native';
 import BaseCalendar from '@/components/popup/calendar/BaseCalendar';
 import WeeklyChecklistCard from '@/components/cards/WeeklyChecklistCard.native';
 import CalendarIcon from '../../assets/mobile_calendar_black.svg';
@@ -30,6 +31,7 @@ export default function WeeklyScreen() {
   const [profileModalVisible, setProfileModalVisible] = useState(false);
   const [calendarModalVisible, setCalendarModalVisible] = useState(false);
   const [showAddScheduleModal, setShowAddScheduleModal] = useState(false);
+  const [travelInfoModalVisible, setTravelInfoModalVisible] = useState(false);
   const [weekBaseDate, setWeekBaseDate] = useState<dayjs.Dayjs | null>(null);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -176,7 +178,7 @@ export default function WeeklyScreen() {
             >
               <CalendarIcon width={24} height={24} color={colors.gray600} />
             </Pressable>
-            <Pressable onPress={() => {}}>
+            <Pressable onPress={() => setTravelInfoModalVisible(true)}>
               <InformIcon width={24} height={24} />
             </Pressable>
           </View>
@@ -474,6 +476,25 @@ export default function WeeklyScreen() {
           }
         }}
       />
+
+      {selectedPlan && (
+        <TravelInfoModal
+          visible={travelInfoModalVisible}
+          onClose={() => setTravelInfoModalVisible(false)}
+          plan={planData.plan ?? selectedPlan}
+          itineraries={planData.itineraries ?? []}
+          expenses={planData.expenses ?? []}
+          planPublicId={selectedPlan.publicId}
+          planId={selectedPlan.id}
+          planStartDate={selectedPlan.startDate}
+          planEndDate={selectedPlan.endDate}
+          onExpenseAdd={(expense) => planData.addExpense?.(expense)}
+          onRefreshExpenses={async () => {
+            await planData.refreshExpenses?.();
+            await planData.fetchPlanData?.(selectedPlan.publicId);
+          }}
+        />
+      )}
     </View>
   );
 }
