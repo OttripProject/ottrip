@@ -1,10 +1,11 @@
-import React, { useState, useMemo } from 'react';
-import { View, Text, Pressable, StyleSheet, ScrollView } from 'react-native';
+import React, { useState, useMemo, useEffect } from 'react';
+import { View, Text, Pressable, StyleSheet, ScrollView, TextInput } from 'react-native';
+import { useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
-import { Ionicons } from '@expo/vector-icons';
 import { Plan, Itinerary, Expense } from '@/types/api';
 import { colors } from '@/ui/tokens/colors';
 import { textStyles } from '@/ui/tokens/typography';
+import { plansApi } from '@/services/plans';
 import FullScreenModal from '@/ui/components/FullScreenModal.native';
 import TodayExpenseDetailModal from './TodayExpenseDetailModal.native';
 import WeeklyChecklistCard from '@/components/cards/WeeklyChecklistCard.native';
@@ -25,6 +26,7 @@ interface TravelInfoModalProps {
   planEndDate?: string;
   onExpenseAdd?: (expense: Expense) => void;
   onRefreshExpenses?: () => Promise<void>;
+  onRefreshPlan?: () => Promise<void>;
 }
 
 const formatCurrency = (amount: number) => `${amount.toLocaleString('ko-KR')}원`;
@@ -44,8 +46,17 @@ export default function TravelInfoModal({
   planEndDate,
   onExpenseAdd,
   onRefreshExpenses,
+  onRefreshPlan,
 }: TravelInfoModalProps) {
+  const queryClient = useQueryClient();
   const [showExpenseDetail, setShowExpenseDetail] = useState(false);
+  const [memo, setMemo] = useState(plan?.memo ?? '');
+
+  useEffect(() => {
+    if (visible && plan) {
+      setMemo(plan.memo ?? '');
+    }
+  }, [visible, plan?.id, plan?.memo]);
 
   const totalExpenses = useMemo(() => {
     let total = 0;
@@ -71,6 +82,19 @@ export default function TravelInfoModal({
     onExpenseAdd?.(expense);
     setShowExpenseDetail(false);
     await onRefreshExpenses?.();
+  };
+
+  const handleMemoBlur = async () => {
+    if (!plan?.id) return;
+    const trimmed = memo.trim();
+    if (trimmed === (plan.memo ?? '')) return;
+    try {
+      await plansApi.setMemo(plan.id, trimmed);
+      queryClient.invalidateQueries({ queryKey: ['plan', planPublicId ?? undefined] });
+      await onRefreshPlan?.();
+    } catch {
+      setMemo(plan.memo ?? '');
+    }
   };
 
   if (!plan) return null;
@@ -122,18 +146,21 @@ export default function TravelInfoModal({
           </View>
         </View>
 
-        {/* Card 4: 공유 메모 - 흰색 카드, 연한 파란 박스, 파란 텍스트 */}
+        {/* Card 4: 공유 메모 - 흰색 카드, 연한 파란 박스, 편집 가능, blur 시 저장 */}
         <View style={styles.card}>
           <Text style={styles.cardLabel}>공유 메모</Text>
-          {plan.memo ? (
-            <View style={styles.memoBox}>
-              <Text style={styles.memoText}>{plan.memo}</Text>
-            </View>
-          ) : (
-            <View style={styles.memoBox}>
-              <Text style={styles.memoPlaceholder}>메모가 없습니다</Text>
-            </View>
-          )}
+          <View style={styles.memoBox}>
+            <TextInput
+              style={styles.memoInput}
+              value={memo}
+              onChangeText={setMemo}
+              onBlur={handleMemoBlur}
+              placeholder="메모를 입력하세요"
+              placeholderTextColor={colors.gray500}
+              multiline
+              textAlignVertical="top"
+            />
+          </View>
         </View>
 
         {/* Card 5: 여행 준비 체크리스트 - plan 전체용 */}
@@ -253,13 +280,11 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
   },
-  memoText: {
+  memoInput: {
     ...textStyles.body3,
     color: colors.primary,
-  },
-  memoPlaceholder: {
-    ...textStyles.body4,
-    color: colors.gray500,
+    minHeight: 60,
+    padding: 0,
   },
   checklistCardWrapper: {
     marginTop: 12,

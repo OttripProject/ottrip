@@ -493,6 +493,11 @@ export default function WeeklyScreen() {
             await planData.refreshExpenses?.();
             await planData.fetchPlanData?.(selectedPlan.publicId);
           }}
+          onRefreshPlan={async () => {
+            if (selectedPlan?.publicId) {
+              await planData.fetchPlanData?.(selectedPlan.publicId);
+            }
+          }}
         />
       )}
     </View>
