@@ -6,8 +6,8 @@ import { colors } from '@/ui/tokens/colors';
 import { textStyles, typography } from '@/ui/tokens/typography';
 import { radii } from '@/ui/tokens/radii';
 import CloseIcon from '../../../assets/mobile_close.svg';
-import LeftArrowIcon from '../../../assets/left_arrow.svg';
-import RightArrowIcon from '../../../assets/right_arrow.svg';
+import LeftArrowIcon from '../../../assets/cal_left_arrow.svg';
+import RightArrowIcon from '../../../assets/cal_right_arrow.svg';
 
 export interface CalendarModalProps {
   visible: boolean;
@@ -20,34 +20,34 @@ export interface CalendarModalProps {
 
 function DayCell({
   date,
-  state,
   marking,
   onPress,
+  currentMonth,
 }: {
   date?: DateData;
   state?: string;
   marking?: { selected?: boolean };
   onPress?: (date: DateData) => void;
+  currentMonth: string;
+  minDate?: string;
+  maxDate?: string;
 }) {
   if (!date) {
     return <View style={styles.dayCell} />;
   }
-  const isDisabled = state === 'disabled';
   const isSelected = marking?.selected;
   const isToday = dayjs().isSame(dayjs(date.dateString), 'day') && !isSelected;
+  const isCurrentMonth =
+    dayjs(date.dateString).format('YYYY-MM') === dayjs(currentMonth).format('YYYY-MM');
 
   return (
-    <Pressable
-      style={styles.dayCell}
-      disabled={isDisabled}
-      onPress={() => onPress?.(date)}
-    >
+    <Pressable style={styles.dayCell} onPress={() => onPress?.(date)}>
       {isToday && <View style={styles.todayCircle} />}
       {isSelected && <View style={styles.selectedCircle} />}
       <Text
         style={[
           styles.dayText,
-          isDisabled && styles.dayTextDisabled,
+          !isCurrentMonth && !isSelected && styles.dayTextOtherMonth,
           isSelected && styles.dayTextSelected,
           isToday && !isSelected && styles.dayTextToday,
         ]}
@@ -99,15 +99,15 @@ export default function CalendarModal({
 
   const calendarHeader = () => (
     <View style={styles.calendarHeader}>
-      <Text style={styles.monthYearText}>{monthYearLabel}</Text>
-      <View style={styles.arrowRow}>
-        <Pressable style={styles.arrowButton} onPress={handlePrevMonth} hitSlop={8}>
-          <LeftArrowIcon width={24} height={24} color={colors.black} />
-        </Pressable>
-        <Pressable style={styles.arrowButton} onPress={handleNextMonth} hitSlop={8}>
-          <RightArrowIcon width={24} height={24} color={colors.black} />
-        </Pressable>
+      <Pressable style={styles.arrowButton} onPress={handlePrevMonth} hitSlop={8}>
+        <LeftArrowIcon width={18} height={18} color={colors.black} />
+      </Pressable>
+      <View style={styles.monthYearCenter}>
+        <Text style={styles.monthYearText}>{monthYearLabel}</Text>
       </View>
+      <Pressable style={styles.arrowButton} onPress={handleNextMonth} hitSlop={8}>
+        <RightArrowIcon width={18} height={18} color={colors.black} />
+      </Pressable>
     </View>
   );
 
@@ -137,7 +137,7 @@ export default function CalendarModal({
         <View style={styles.modalContent}>
           <View style={styles.header}>
             <Text style={styles.title}>달력 설정</Text>
-            <Pressable onPress={onClose} style={styles.closeButton} hitSlop={8}>
+            <Pressable onPress={onClose} hitSlop={8}>
               <CloseIcon width={24} height={24} color={colors.gray500} />
             </Pressable>
           </View>
@@ -152,12 +152,12 @@ export default function CalendarModal({
             firstDay={1}
             markedDates={markedDates}
             customHeader={customHeader}
-            dayComponent={({ date, state, marking, onPress }) => (
+            dayComponent={({ date, marking, onPress }) => (
               <DayCell
                 date={date as DateData}
-                state={state ?? ''}
                 marking={marking as { selected?: boolean }}
                 onPress={onPress}
+                currentMonth={currentMonth}
               />
             )}
             onMonthChange={(month) => setCurrentMonth(month.dateString)}
@@ -202,10 +202,8 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 400,
     backgroundColor: colors.white,
-    borderRadius: radii.lg,
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 24,
+    borderRadius: 24,
+    padding: 20,
   },
   header: {
     flexDirection: 'row',
@@ -215,31 +213,29 @@ const styles = StyleSheet.create({
   },
   title: {
     ...textStyles.h3,
-    color: colors.black,
-  },
-  closeButton: {
-    padding: 4,
   },
   customHeaderWrapper: {
     marginBottom: 8,
   },
   calendarHeader: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 12,
+  },
+  arrowButton: {
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  monthYearCenter: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   monthYearText: {
     ...textStyles.h4,
     color: colors.black,
-  },
-  arrowRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 16,
-  },
-  arrowButton: {
-    padding: 4,
   },
   weekDayRow: {
     flexDirection: 'row',
@@ -252,15 +248,15 @@ const styles = StyleSheet.create({
   },
   weekDayText: {
     ...textStyles.body5,
-    color: colors.gray600,
+    color: colors.gray700,
   },
   calendar: {
     paddingTop: 0,
     marginTop: 0,
   },
   dayCell: {
-    width: 36,
-    height: 36,
+    width: 32,
+    height: 32,
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
@@ -285,9 +281,13 @@ const styles = StyleSheet.create({
     ...textStyles.h7,
     lineHeight: 18,
     zIndex: 2,
+    color: colors.black,
   },
   dayTextDisabled: {
-    color: colors.black,
+    color: colors.gray400,
+  },
+  dayTextOtherMonth: {
+    color: colors.gray400,
   },
   dayTextSelected: {
     color: colors.primary,
