@@ -13,7 +13,7 @@ import ProfileModal from '@/components/modals/mobile/ProfileModal.native';
 import PlanSelectModal from '@/components/modals/mobile/PlanSelectModal.native';
 import AddScheduleModal from '@/components/modals/mobile/AddScheduleModal.native';
 import TravelInfoModal from '@/components/modals/mobile/TravelInfoModal.native';
-import BaseCalendar from '@/components/popup/calendar/BaseCalendar';
+import CalendarModal from '@/ui/components/CalendarModal.native';
 import WeeklyChecklistCard from '@/components/cards/WeeklyChecklistCard.native';
 import CalendarIcon from '../../assets/mobile_calendar_black.svg';
 import InformIcon from '../../assets/mobile_inform.svg';
@@ -424,26 +424,14 @@ export default function WeeklyScreen() {
         }}
       />
 
-      {calendarModalVisible && (
-        <Modal visible transparent animationType="fade">
-          <Pressable
-            style={[StyleSheet.absoluteFill, styles.calendarBackdrop]}
-            onPress={() => setCalendarModalVisible(false)}
-          />
-          <View style={styles.calendarWrapper}>
-            <BaseCalendar
-              visible
-              selectedDate={selectedDate.format('YYYY-MM-DD')}
-              onDayPress={handleCalendarDayPress}
-              onClose={() => setCalendarModalVisible(false)}
-              minDate={planMinMax?.minDate}
-              maxDate={planMinMax?.maxDate}
-              autoCloseOnSelect
-              style={styles.calendarPopup}
-            />
-          </View>
-        </Modal>
-      )}
+      <CalendarModal
+        visible={calendarModalVisible}
+        onClose={() => setCalendarModalVisible(false)}
+        selectedDate={selectedDate.format('YYYY-MM-DD')}
+        onDayPress={handleCalendarDayPress}
+        minDate={planMinMax?.minDate}
+        maxDate={planMinMax?.maxDate}
+      />
 
       {selectedPlan && (
         <Pressable
@@ -784,20 +772,6 @@ const styles = StyleSheet.create({
   flightSegments:{
     ...textStyles.body6,
     color: colors.gray500,
-  },
-  calendarBackdrop: {
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-  },
-  calendarWrapper: {
-    flex: 1,
-    paddingTop: 80,
-    paddingHorizontal: 24,
-    alignItems: 'center',
-  },
-  calendarPopup: {
-    top: 0,
-    left: 0,
-    right: 0,
   },
   fab: {
     position: 'absolute',
