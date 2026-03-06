@@ -8,6 +8,7 @@ import { textStyles } from '@/ui/tokens/typography';
 import { plansApi } from '@/services/plans';
 import FullScreenModal from '@/ui/components/FullScreenModal.native';
 import TodayExpenseDetailModal from './TodayExpenseDetailModal.native';
+import SharedMembersModal from './SharedMembersModal.native';
 import WeeklyChecklistCard from '@/components/cards/WeeklyChecklistCard.native';
 import CloseIcon from '../../../../assets/x.svg';
 import MemberIcon from '../../../../assets/mobile_member.svg';
@@ -50,6 +51,7 @@ export default function TravelInfoModal({
 }: TravelInfoModalProps) {
   const queryClient = useQueryClient();
   const [showExpenseDetail, setShowExpenseDetail] = useState(false);
+  const [showSharedMembers, setShowSharedMembers] = useState(false);
   const [memo, setMemo] = useState(plan?.memo ?? '');
 
   useEffect(() => {
@@ -134,11 +136,14 @@ export default function TravelInfoModal({
 
         {/* Card 3: 참여 멤버 / 등록 일정 - 카드 2개, 같은 줄, gap 9 */}
         <View style={styles.twoCardRow}>
-          <View style={styles.smallCard}>
+          <Pressable
+            style={styles.smallCard}
+            onPress={() => setShowSharedMembers(true)}
+          >
             <MemberIcon width={20} height={20} color={colors.black} />
             <Text style={styles.twoColValue}>{memberCount}명</Text>
             <Text style={styles.twoColLabel}>참여 멤버</Text>
-          </View>
+          </Pressable>
           <View style={styles.smallCard}>
             <ItineraryIcon width={20} height={20} color={colors.black} />
             <Text style={styles.twoColValue}>{itineraryCount}개</Text>
@@ -187,6 +192,12 @@ export default function TravelInfoModal({
         planStartDate={planStartDate}
         planEndDate={planEndDate}
         onExpenseAdd={handleExpenseAdded}
+      />
+
+      <SharedMembersModal
+        visible={showSharedMembers}
+        onClose={() => setShowSharedMembers(false)}
+        planId={planId}
       />
     </FullScreenModal>
   );

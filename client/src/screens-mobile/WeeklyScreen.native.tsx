@@ -171,7 +171,7 @@ export default function WeeklyScreen() {
     <View style={styles.container}>
       <View style={styles.header}>
         <View style={styles.headerTopRow}>
-          <Text style={styles.todayDate}>{formatKoreanDate(dayjs())}</Text>
+          <Text style={styles.todayDate}>{formatKoreanDate(selectedDate)}</Text>
           <View style={styles.headerIcons}>
             <Pressable
               onPress={() => setCalendarModalVisible(true)}
