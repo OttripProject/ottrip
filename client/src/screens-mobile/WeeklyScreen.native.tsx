@@ -260,6 +260,7 @@ export default function WeeklyScreen() {
                     planData.refreshAccommodations?.(),
                     planData.refreshExpenses?.(),
                   ].filter(Boolean));
+                  queryClient.invalidateQueries({ queryKey: ['expenses', selectedPlan.id] });
                   queryClient.invalidateQueries({ queryKey: ['checklist', selectedPlan.publicId] });
                 }
               } finally {
@@ -495,6 +496,7 @@ export default function WeeklyScreen() {
             planData.refreshFlights?.();
             planData.refreshAccommodations?.();
             planData.refreshExpenses?.();
+            queryClient.invalidateQueries({ queryKey: ['expenses', selectedPlan.id] });
             queryClient.invalidateQueries({ queryKey: ['checklist', selectedPlan.publicId] });
           }
         }}
@@ -519,6 +521,7 @@ export default function WeeklyScreen() {
             if (selectedPlan?.publicId && planData.plan?.id) {
               planData.refreshItineraries?.();
               planData.refreshExpenses?.();
+              queryClient.invalidateQueries({ queryKey: ['expenses', selectedPlan.id] });
               queryClient.invalidateQueries({ queryKey: ['checklist', selectedPlan.publicId] });
             }
             Alert.alert('삭제완료', '일정이 삭제되었습니다.');
@@ -540,6 +543,7 @@ export default function WeeklyScreen() {
           if (selectedPlan?.publicId && planData.plan?.id) {
             planData.refreshItineraries?.();
             planData.refreshExpenses?.();
+            queryClient.invalidateQueries({ queryKey: ['expenses', selectedPlan.id] });
             queryClient.invalidateQueries({ queryKey: ['checklist', selectedPlan.publicId] });
           }
         }}
@@ -548,6 +552,7 @@ export default function WeeklyScreen() {
           if (selectedPlan?.publicId) {
             planData.refreshItineraries?.();
             planData.refreshExpenses?.();
+            queryClient.invalidateQueries({ queryKey: ['expenses', selectedPlan.id] });
             queryClient.invalidateQueries({ queryKey: ['checklist', selectedPlan.publicId] });
           }
         }}
@@ -574,6 +579,7 @@ export default function WeeklyScreen() {
             if (selectedPlan?.publicId && planData.plan?.id) {
               planData.refreshFlights?.();
               planData.refreshExpenses?.();
+              queryClient.invalidateQueries({ queryKey: ['expenses', selectedPlan.id] });
               queryClient.invalidateQueries({ queryKey: ['checklist', selectedPlan.publicId] });
             }
             Alert.alert('삭제완료', '항공 편이 삭제되었습니다.');
@@ -596,6 +602,7 @@ export default function WeeklyScreen() {
           if (selectedPlan?.publicId && planData.plan?.id) {
             planData.refreshFlights?.();
             planData.refreshExpenses?.();
+            queryClient.invalidateQueries({ queryKey: ['expenses', selectedPlan.id] });
             queryClient.invalidateQueries({ queryKey: ['checklist', selectedPlan.publicId] });
           }
         }}
@@ -604,6 +611,7 @@ export default function WeeklyScreen() {
           if (selectedPlan?.publicId) {
             planData.refreshFlights?.();
             planData.refreshExpenses?.();
+            queryClient.invalidateQueries({ queryKey: ['expenses', selectedPlan.id] });
             queryClient.invalidateQueries({ queryKey: ['checklist', selectedPlan.publicId] });
           }
         }}
@@ -624,6 +632,7 @@ export default function WeeklyScreen() {
           onRefreshExpenses={async () => {
             if (selectedPlan?.publicId && planData.plan?.id) {
               planData.refreshExpenses?.();
+              queryClient.invalidateQueries({ queryKey: ['expenses', selectedPlan.id] });
             }
           }}
           onRefreshPlan={async () => {
@@ -632,6 +641,7 @@ export default function WeeklyScreen() {
               planData.refreshFlights?.();
               planData.refreshAccommodations?.();
               planData.refreshExpenses?.();
+              queryClient.invalidateQueries({ queryKey: ['expenses', selectedPlan.id] });
             }
           }}
         />
