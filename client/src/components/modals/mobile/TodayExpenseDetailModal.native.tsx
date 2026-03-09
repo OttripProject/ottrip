@@ -138,8 +138,7 @@ export default function TodayExpenseDetailModal({
                   </View>
                   <View style={styles.detailContent}>
                     <Text style={styles.detailTitle}>
-                      {categoryLabels[expense.category as keyof typeof categoryLabels] || expense.category}{' '}
-                      <Text style={styles.detailDate}>{expense.exDate}</Text>
+                      {categoryLabels[expense.category as keyof typeof categoryLabels] || expense.category}
                     </Text>
                     
                     <Text style={styles.detailDescription} numberOfLines={1}>
@@ -277,11 +276,6 @@ const styles = StyleSheet.create({
     ...textStyles.h7,
     color: colors.gray600,
     marginBottom: 2,
-  },
-  detailDate: {
-    ...textStyles.body4,
-    color: colors.gray600,
-    marginLeft: 8,
   },
   detailDescription: {
     ...textStyles.h6,
