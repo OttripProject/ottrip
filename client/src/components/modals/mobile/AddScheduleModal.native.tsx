@@ -52,6 +52,7 @@ export default function AddScheduleModal({
           onClose={onClose}
           itinerary={null}
           planId={planId}
+          defaultDate={selectedDate?.format('YYYY-MM-DD')}
           embedded
           onSave={(itinerary) => {
             planData.addItinerary(itinerary);
@@ -68,6 +69,7 @@ export default function AddScheduleModal({
           onClose={onClose}
           accommodation={null}
           planId={planId}
+          defaultDate={selectedDate?.format('YYYY-MM-DD')}
           embedded
           onSave={(accommodation) => {
             planData.addAccommodation(accommodation);
@@ -84,6 +86,7 @@ export default function AddScheduleModal({
         flight={null}
         planId={planId}
         planStartDate={planStartDate}
+        defaultDate={selectedDate?.format('YYYY-MM-DD')}
         embedded
         onSave={(flight) => {
           planData.addFlight(flight);

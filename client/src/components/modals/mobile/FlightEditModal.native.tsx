@@ -23,6 +23,7 @@ interface FlightEditModalProps {
   flight: FlightRead | null;
   planId: number;
   planStartDate?: string;
+  defaultDate?: string;
   embedded?: boolean;
   onSave?: (flight: FlightRead) => void;
   onDelete?: (flightId: number) => void;
@@ -57,6 +58,7 @@ export default function FlightEditModal({
   flight,
   planId,
   planStartDate,
+  defaultDate,
   embedded,
   onSave,
   onDelete,
@@ -75,7 +77,7 @@ export default function FlightEditModal({
 
   useEffect(() => {
     if (visible && !flight) {
-      const baseDate = planStartDate || dayjs().format('YYYY-MM-DD');
+      const baseDate = defaultDate || planStartDate || dayjs().format('YYYY-MM-DD');
       setFlightSegments([
         {
           airline: '',
@@ -150,7 +152,7 @@ export default function FlightEditModal({
             ];
       setFlightSegments(segList);
     }
-  }, [visible, flight, planStartDate]);
+  }, [visible, flight, planStartDate, defaultDate]);
 
   const toIso = (date: string, time: string) => {
     if (!date || !time) return '';

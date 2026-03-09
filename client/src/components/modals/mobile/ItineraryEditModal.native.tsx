@@ -27,6 +27,7 @@ interface ItineraryEditModalProps {
   onClose: () => void;
   itinerary: Itinerary | null;
   planId: number;
+  defaultDate?: string;
   embedded?: boolean;
   onSave?: (itinerary: Itinerary) => void;
   onDelete?: (itineraryId: number) => void;
@@ -37,6 +38,7 @@ export default function ItineraryEditModal({
   onClose,
   itinerary,
   planId,
+  defaultDate,
   embedded,
   onSave,
   onDelete,
@@ -125,20 +127,21 @@ export default function ItineraryEditModal({
       };
       loadExpense();
     } else if (visible && !itinerary) {
+      const initDate = defaultDate || dayjs().format('YYYY-MM-DD');
       setFormData({
         title: '',
         description: '',
         country: '',
         city: '',
         location: '',
-        itineraryDate: dayjs().format('YYYY-MM-DD'),
+        itineraryDate: initDate,
         startTime: '09:00',
         endTime: '10:00',
       });
       setExpenseData({ amount: '', category: ExpenseCategory.FOOD });
       setExistingExpenseId(null);
     }
-  }, [visible, itinerary]);
+  }, [visible, itinerary, defaultDate]);
 
   const handleExpenseAmountChange = (text: string) => {
     const formatted = formatAmountWithCommas(text);

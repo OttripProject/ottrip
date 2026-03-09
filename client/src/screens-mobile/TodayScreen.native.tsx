@@ -22,6 +22,7 @@ import AccommodationEditModal from '@/components/modals/mobile/AccommodationEdit
 import FlightDetailModal from '@/components/modals/mobile/FlightDetailModal.native';
 import FlightEditModal from '@/components/modals/mobile/FlightEditModal.native';
 import TodayExpenseDetailModal from '@/components/modals/mobile/TodayExpenseDetailModal.native';
+import AddScheduleModal from '@/components/modals/mobile/AddScheduleModal.native';
 import WeeklyChecklistCard from '@/components/cards/WeeklyChecklistCard.native';
 import { itinerariesApi } from '@/services/itineraries';
 import { accommodationsApi } from '@/services/accommodations';
@@ -33,6 +34,7 @@ import ExpenseIcon from '../../assets/mobile_expense.svg';
 import AccommodationIcon from '../../assets/mobile_accomodation.svg';
 import RightArrowIcon from '../../assets/right_arrow.svg';
 import FlightIcon from '../../assets/airplane.svg';
+import PlusIcon from '../../assets/mobile_plus2.svg';
 
 
 export default function TodayScreen() {
@@ -56,6 +58,7 @@ export default function TodayScreen() {
   const [showFlightEdit, setShowFlightEdit] = useState(false);
   const [editingFlight, setEditingFlight] = useState<FlightRead | null>(null);
   const [showExpenseDetail, setShowExpenseDetail] = useState(false);
+  const [showAddScheduleModal, setShowAddScheduleModal] = useState(false);
 
   const queryClient = useQueryClient();
   const plansQuery = usePlansQuery();
@@ -783,6 +786,39 @@ export default function TodayScreen() {
         }}
         onDelete={(flightId) => planData.removeFlight(flightId)}
       />
+
+      {selectedPlan && (
+        <Pressable
+          style={styles.fab}
+          onPress={() => setShowAddScheduleModal(true)}
+          hitSlop={8}
+        >
+          <PlusIcon width={24} height={24} color={colors.white} />
+        </Pressable>
+      )}
+
+      <AddScheduleModal
+        visible={showAddScheduleModal}
+        onClose={() => setShowAddScheduleModal(false)}
+        planId={selectedPlan?.id ?? 0}
+        planStartDate={selectedPlan?.startDate}
+        planEndDate={selectedPlan?.endDate}
+        selectedDate={dayjs()}
+        planData={{
+          addItinerary: planData.addItinerary,
+          addAccommodation: planData.addAccommodation,
+          addFlight: planData.addFlight,
+          removeItinerary: planData.removeItinerary,
+          removeAccommodation: planData.removeAccommodation,
+          removeFlight: planData.removeFlight,
+        }}
+        onRefresh={() => {
+          if (selectedPlan?.publicId) {
+            planData.fetchPlanData(selectedPlan.publicId);
+          }
+          refetchTodayExpenses();
+        }}
+      />
     </View>
   );
 }
@@ -1071,6 +1107,17 @@ const styles = StyleSheet.create({
     ...textStyles.body3,
     color: colors.white,
     opacity: 0.9,
+  },
+  fab: {
+    position: 'absolute',
+    right: 12,
+    bottom: 12,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: colors.black,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   emptyText: {
     ...textStyles.body3,

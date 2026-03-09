@@ -19,6 +19,7 @@ interface AccommodationEditModalProps {
   onClose: () => void;
   accommodation: Accommodation | null;
   planId: number;
+  defaultDate?: string;
   embedded?: boolean;
   onSave?: (accommodation: Accommodation) => void;
   onDelete?: (accommodationId: number) => void;
@@ -39,6 +40,7 @@ export default function AccommodationEditModal({
   onClose,
   accommodation,
   planId,
+  defaultDate,
   embedded,
   onSave,
   onDelete,
@@ -78,8 +80,15 @@ export default function AccommodationEditModal({
           ? String(amountNum).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
           : ''
       );
+    } else if (visible && !accommodation) {
+      const initDate = defaultDate || dayjs().format('YYYY-MM-DD');
+      setFormData((prev) => ({
+        ...prev,
+        checkinDate: initDate,
+        checkoutDate: dayjs(initDate).add(1, 'day').format('YYYY-MM-DD'),
+      }));
     }
-  }, [visible, accommodation]);
+  }, [visible, accommodation, defaultDate]);
 
   const handleSave = async () => {
     if (!formData.name.trim()) {
