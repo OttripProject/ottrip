@@ -822,10 +822,8 @@ export default function TodayScreen() {
           removeFlight: planData.removeFlight,
         }}
         onRefresh={async () => {
-          if (selectedPlan?.publicId) {
-            await planData.fetchPlanData(selectedPlan.publicId);
-          }
-          await refetchTodayExpenses();
+          queryClient.invalidateQueries({ queryKey: ['expenses', selectedPlan?.id] });
+          refetchTodayExpenses();
         }}
       />
     </View>
