@@ -7,11 +7,15 @@ import { getWeekCalendar, formatTime, convertUTCToLocalTime, formatKoreanDate } 
 import { useQueryClient } from '@tanstack/react-query';
 import { usePlansQuery } from '@/hooks/usePlansQuery';
 import { usePlanDataQuery } from '@/hooks/usePlanDataQuery';
-import { Plan, Itinerary, FlightRead } from '@/types/api';
+import { Plan, Itinerary, FlightRead, FlightSegmentReadDto } from '@/types/api';
 import { useSelectedPlan } from '@/contexts/SelectedPlanContext';
 import ProfileModal from '@/components/modals/mobile/ProfileModal.native';
 import PlanSelectModal from '@/components/modals/mobile/PlanSelectModal.native';
 import AddScheduleModal from '@/components/modals/mobile/AddScheduleModal.native';
+import ItineraryDetailModal from '@/components/modals/mobile/ItineraryDetailModal.native';
+import ItineraryEditModal from '@/components/modals/mobile/ItineraryEditModal.native';
+import FlightDetailModal from '@/components/modals/mobile/FlightDetailModal.native';
+import FlightEditModal from '@/components/modals/mobile/FlightEditModal.native';
 import TravelInfoModal from '@/components/modals/mobile/TravelInfoModal.native';
 import CalendarModal from '@/ui/components/CalendarModal.native';
 import WeeklyChecklistCard from '@/components/cards/WeeklyChecklistCard.native';
@@ -22,6 +26,8 @@ import LeftArrowIcon from '../../assets/left_arrow.svg';
 import RightArrowIcon from '../../assets/right_arrow.svg';
 import CautionIcon from '../../assets/mobile_caution.svg';
 import PlusIcon from '../../assets/mobile_plus2.svg';
+import { itinerariesApi } from '@/services/itineraries';
+import { flightsApi } from '@/services/flights';
 
 export default function WeeklyScreen() {
   const plansQuery = usePlansQuery();
@@ -34,6 +40,15 @@ export default function WeeklyScreen() {
   const [travelInfoModalVisible, setTravelInfoModalVisible] = useState(false);
   const [weekBaseDate, setWeekBaseDate] = useState<dayjs.Dayjs | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [showItineraryDetail, setShowItineraryDetail] = useState(false);
+  const [selectedItinerary, setSelectedItinerary] = useState<Itinerary | null>(null);
+  const [showItineraryEdit, setShowItineraryEdit] = useState(false);
+  const [editingItinerary, setEditingItinerary] = useState<Itinerary | null>(null);
+  const [showFlightDetail, setShowFlightDetail] = useState(false);
+  const [selectedFlight, setSelectedFlight] = useState<FlightRead | null>(null);
+  const [selectedFlightSegment, setSelectedFlightSegment] = useState<FlightSegmentReadDto | null>(null);
+  const [showFlightEdit, setShowFlightEdit] = useState(false);
+  const [editingFlight, setEditingFlight] = useState<FlightRead | null>(null);
 
   const planData = usePlanDataQuery(selectedPlan?.publicId || null);
 
@@ -320,7 +335,14 @@ export default function WeeklyScreen() {
                       </View>
                     )}
                   </View>
-                  <View style={[styles.scheduleCard, isCurrentTime && styles.currentCard]}>
+                  <Pressable
+                    style={[styles.scheduleCard, isCurrentTime && styles.currentCard]}
+                    onPress={() => {
+                      setSelectedFlight(flight);
+                      setSelectedFlightSegment(segment);
+                      setShowFlightDetail(true);
+                    }}
+                  >
                     <View style={styles.scheduleCardRow}>
                       <Text style={[styles.scheduleCardTime, isCurrentTime && styles.scheduleTimeTextNow]}>
                         {schedule.time}
@@ -339,7 +361,7 @@ export default function WeeklyScreen() {
                         {segment.flightNumber}
                       </Text>
                     )}
-                  </View>
+                  </Pressable>
                 </View>
               );
             }
@@ -368,7 +390,13 @@ export default function WeeklyScreen() {
                     </View>
                   )}
                 </View>
-                <View style={[styles.scheduleCard, isCurrentTime && styles.currentCard]}>
+                <Pressable
+                  style={[styles.scheduleCard, isCurrentTime && styles.currentCard]}
+                  onPress={() => {
+                    setSelectedItinerary(itinerary);
+                    setShowItineraryDetail(true);
+                  }}
+                >
                   <Text style={[styles.scheduleCardTime, isCurrentTime && styles.scheduleCardTimeNow]}>
                     {schedule.time}
                   </Text>
@@ -376,7 +404,7 @@ export default function WeeklyScreen() {
                   {itinerary.location && (
                     <Text style={styles.scheduleLocation} numberOfLines={1} ellipsizeMode="tail">{itinerary.location}</Text>
                   )}
-                </View>
+                </Pressable>
               </View>
             );
             })}
@@ -463,6 +491,100 @@ export default function WeeklyScreen() {
             planData.fetchPlanData(selectedPlan.publicId);
           }
         }}
+      />
+
+      <ItineraryDetailModal
+        visible={showItineraryDetail}
+        onClose={() => {
+          setShowItineraryDetail(false);
+          setSelectedItinerary(null);
+        }}
+        itinerary={selectedItinerary}
+        onEdit={(itinerary) => {
+          setShowItineraryDetail(false);
+          setEditingItinerary(itinerary);
+          setShowItineraryEdit(true);
+        }}
+        onDelete={async (itinerary) => {
+          try {
+            await itinerariesApi.deleteItinerary(itinerary.id);
+            planData.removeItinerary(itinerary.id);
+            if (selectedPlan?.publicId) {
+              planData.fetchPlanData(selectedPlan.publicId);
+            }
+            Alert.alert('삭제완료', '일정이 삭제되었습니다.');
+          } catch {
+            Alert.alert('오류', '일정 삭제에 실패했습니다.');
+          }
+        }}
+      />
+
+      <ItineraryEditModal
+        visible={showItineraryEdit}
+        onClose={() => {
+          setShowItineraryEdit(false);
+          setEditingItinerary(null);
+        }}
+        itinerary={editingItinerary}
+        planId={selectedPlan?.id ?? 0}
+        onSave={(itinerary) => {
+          planData.addItinerary(itinerary);
+          if (selectedPlan?.publicId) {
+            planData.fetchPlanData(selectedPlan.publicId);
+          }
+        }}
+        onDelete={(itineraryId) => {
+          planData.removeItinerary(itineraryId);
+          if (selectedPlan?.publicId) {
+            planData.fetchPlanData(selectedPlan.publicId);
+          }
+        }}
+      />
+
+      <FlightDetailModal
+        visible={showFlightDetail}
+        onClose={() => {
+          setShowFlightDetail(false);
+          setSelectedFlight(null);
+          setSelectedFlightSegment(null);
+        }}
+        flight={selectedFlight}
+        segment={selectedFlightSegment}
+        onEdit={(flight) => {
+          setShowFlightDetail(false);
+          setEditingFlight(flight);
+          setShowFlightEdit(true);
+        }}
+        onDelete={async (flight) => {
+          try {
+            await flightsApi.deleteFlight(flight.id);
+            planData.removeFlight(flight.id);
+            if (selectedPlan?.publicId) {
+              planData.fetchPlanData(selectedPlan.publicId);
+            }
+            Alert.alert('삭제완료', '항공 편이 삭제되었습니다.');
+          } catch {
+            Alert.alert('오류', '항공 편 삭제에 실패했습니다.');
+          }
+        }}
+      />
+
+      <FlightEditModal
+        visible={showFlightEdit}
+        onClose={() => {
+          setShowFlightEdit(false);
+          setEditingFlight(null);
+        }}
+        flight={editingFlight}
+        planId={selectedPlan?.id ?? 0}
+        planStartDate={selectedPlan?.startDate}
+        onSave={(updated) => {
+          planData.addFlight(updated);
+          if (selectedPlan?.publicId) {
+            planData.fetchPlanData(selectedPlan.publicId);
+          }
+        }}
+        onDelete={(flightId) => planData.removeFlight(flightId)}
       />
 
       {selectedPlan && (
