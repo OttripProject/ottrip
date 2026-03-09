@@ -623,6 +623,8 @@ export default function WeeklyScreen() {
           onClose={() => setTravelInfoModalVisible(false)}
           plan={planData.plan ?? selectedPlan}
           itineraries={planData.itineraries ?? []}
+          accommodations={planData.accommodations ?? []}
+          flights={planData.flights ?? []}
           expenses={planData.expenses ?? []}
           planPublicId={selectedPlan.publicId}
           planId={selectedPlan.id}

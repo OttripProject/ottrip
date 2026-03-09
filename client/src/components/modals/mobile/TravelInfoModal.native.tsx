@@ -1,8 +1,8 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import { View, Text, Pressable, StyleSheet, ScrollView, TextInput } from 'react-native';
+import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
+import { View, Text, Pressable, StyleSheet, ScrollView, TextInput, Keyboard } from 'react-native';
 import { useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
-import { Plan, Itinerary, Expense } from '@/types/api';
+import { Plan, Itinerary, Accommodation, FlightRead, Expense } from '@/types/api';
 import { colors } from '@/ui/tokens/colors';
 import { textStyles } from '@/ui/tokens/typography';
 import { plansApi } from '@/services/plans';
@@ -19,7 +19,8 @@ interface TravelInfoModalProps {
   onClose: () => void;
   plan: Plan | null;
   itineraries: Itinerary[];
-
+  accommodations?: Accommodation[];
+  flights?: FlightRead[];
   expenses: Expense[];
   planPublicId: string | null;
   planId: number;
@@ -40,6 +41,8 @@ export default function TravelInfoModal({
   onClose,
   plan,
   itineraries,
+  accommodations = [],
+  flights = [],
   expenses,
   planPublicId,
   planId,
@@ -78,7 +81,7 @@ export default function TravelInfoModal({
   }, [expenses]);
 
   const memberCount = 1; // TODO: 공유 기능 추가 후 실제 멤버 수
-  const itineraryCount = itineraries?.length ?? 0;
+  const scheduleCount = (itineraries?.length ?? 0) + (accommodations?.length ?? 0) + (flights?.length ?? 0);
 
   const handleExpenseAdded = async (expense: Expense) => {
     onExpenseAdd?.(expense);
@@ -86,7 +89,7 @@ export default function TravelInfoModal({
     await onRefreshExpenses?.();
   };
 
-  const handleMemoBlur = async () => {
+  const handleMemoBlur = useCallback(async () => {
     if (!plan?.id) return;
     const trimmed = memo.trim();
     if (trimmed === (plan.memo ?? '')) return;
@@ -97,16 +100,22 @@ export default function TravelInfoModal({
     } catch {
       setMemo(plan.memo ?? '');
     }
-  };
+  }, [plan?.id, plan?.memo, memo, planPublicId, onRefreshPlan, queryClient]);
+
+  const handleClose = useCallback(async () => {
+    Keyboard.dismiss();
+    await handleMemoBlur();
+    onClose();
+  }, [handleMemoBlur, onClose]);
 
   if (!plan) return null;
 
   return (
-    <FullScreenModal visible={visible} onClose={onClose} containerBackgroundColor={colors.gray300}>
+    <FullScreenModal visible={visible} onClose={handleClose} containerBackgroundColor={colors.gray300}>
       {/* Header - Figma: 여행 정보 + 닫기 */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>여행 정보</Text>
-        <Pressable style={styles.closeButton} onPress={onClose} hitSlop={8}>
+        <Pressable style={styles.closeButton} onPress={handleClose} hitSlop={8}>
           <CloseIcon width={24} height={24} color={colors.black} />
         </Pressable>
       </View>
@@ -146,7 +155,7 @@ export default function TravelInfoModal({
           </Pressable>
           <View style={styles.smallCard}>
             <ItineraryIcon width={20} height={20} color={colors.black} />
-            <Text style={styles.twoColValue}>{itineraryCount}개</Text>
+            <Text style={styles.twoColValue}>{scheduleCount}개</Text>
             <Text style={styles.twoColLabel}>등록 일정</Text>
           </View>
         </View>
