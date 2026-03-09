@@ -30,7 +30,7 @@ interface AddScheduleModalProps {
     removeAccommodation: (id: number) => void;
     removeFlight: (id: number) => void;
   };
-  onRefresh?: () => void;
+  onRefresh?: () => void | Promise<void>;
 }
 
 export default function AddScheduleModal({
@@ -54,9 +54,9 @@ export default function AddScheduleModal({
           planId={planId}
           defaultDate={selectedDate?.format('YYYY-MM-DD')}
           embedded
-          onSave={(itinerary) => {
+          onSave={async (itinerary) => {
             planData.addItinerary(itinerary);
-            onRefresh?.();
+            await onRefresh?.();
             onClose();
           }}
         />
@@ -71,9 +71,9 @@ export default function AddScheduleModal({
           planId={planId}
           defaultDate={selectedDate?.format('YYYY-MM-DD')}
           embedded
-          onSave={(accommodation) => {
+          onSave={async (accommodation) => {
             planData.addAccommodation(accommodation);
-            onRefresh?.();
+            await onRefresh?.();
             onClose();
           }}
         />
@@ -88,9 +88,9 @@ export default function AddScheduleModal({
         planStartDate={planStartDate}
         defaultDate={selectedDate?.format('YYYY-MM-DD')}
         embedded
-        onSave={(flight) => {
+        onSave={async (flight) => {
           planData.addFlight(flight);
-          onRefresh?.();
+          await onRefresh?.();
           onClose();
         }}
       />

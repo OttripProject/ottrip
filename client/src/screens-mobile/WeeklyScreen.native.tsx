@@ -486,9 +486,9 @@ export default function WeeklyScreen() {
           removeAccommodation: planData.removeAccommodation,
           removeFlight: planData.removeFlight,
         }}
-        onRefresh={() => {
+        onRefresh={async () => {
           if (selectedPlan?.publicId) {
-            planData.fetchPlanData(selectedPlan.publicId);
+            await planData.fetchPlanData(selectedPlan.publicId);
           }
         }}
       />
@@ -527,16 +527,16 @@ export default function WeeklyScreen() {
         }}
         itinerary={editingItinerary}
         planId={selectedPlan?.id ?? 0}
-        onSave={(itinerary) => {
+        onSave={async (itinerary) => {
           planData.addItinerary(itinerary);
           if (selectedPlan?.publicId) {
-            planData.fetchPlanData(selectedPlan.publicId);
+            await planData.fetchPlanData(selectedPlan.publicId);
           }
         }}
-        onDelete={(itineraryId) => {
+        onDelete={async (itineraryId) => {
           planData.removeItinerary(itineraryId);
           if (selectedPlan?.publicId) {
-            planData.fetchPlanData(selectedPlan.publicId);
+            await planData.fetchPlanData(selectedPlan.publicId);
           }
         }}
       />
@@ -578,13 +578,18 @@ export default function WeeklyScreen() {
         flight={editingFlight}
         planId={selectedPlan?.id ?? 0}
         planStartDate={selectedPlan?.startDate}
-        onSave={(updated) => {
+        onSave={async (updated) => {
           planData.addFlight(updated);
           if (selectedPlan?.publicId) {
-            planData.fetchPlanData(selectedPlan.publicId);
+            await planData.fetchPlanData(selectedPlan.publicId);
           }
         }}
-        onDelete={(flightId) => planData.removeFlight(flightId)}
+        onDelete={async (flightId) => {
+          planData.removeFlight(flightId);
+          if (selectedPlan?.publicId) {
+            await planData.fetchPlanData(selectedPlan.publicId);
+          }
+        }}
       />
 
       {selectedPlan && (

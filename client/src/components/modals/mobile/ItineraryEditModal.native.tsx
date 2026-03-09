@@ -162,14 +162,12 @@ export default function ItineraryEditModal({
           ...formData,
           planId,
         });
-        if (onSave) onSave(savedItinerary);
         Alert.alert('수정완료', '일정이 수정되었습니다.');
       } else {
         savedItinerary = await itinerariesApi.createItinerary({
           ...formData,
           planId,
         });
-        if (onSave) onSave(savedItinerary);
         Alert.alert('추가완료', '일정이 추가되었습니다.');
       }
 
@@ -197,6 +195,7 @@ export default function ItineraryEditModal({
         await expensesApi.deleteExpense(existingExpenseId);
       }
 
+      await onSave?.(savedItinerary);
       onClose();
     } catch {
       Alert.alert('오류', '일정 저장에 실패했습니다.');

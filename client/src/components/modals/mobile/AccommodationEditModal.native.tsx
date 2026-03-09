@@ -118,7 +118,7 @@ export default function AccommodationEditModal({
           description: formData.name.trim(),
         },
       });
-        if (onSave) onSave(updated);
+        await onSave?.(updated);
         Alert.alert('수정완료', '숙소가 수정되었습니다.');
       } else {
         const created = await accommodationsApi.createAccommodation({
@@ -140,7 +140,7 @@ export default function AccommodationEditModal({
             description: formData.name.trim(),
           },
         });
-        if (onSave) onSave(created);
+        await onSave?.(created);
         Alert.alert('추가완료', '숙소가 추가되었습니다.');
       }
       onClose();

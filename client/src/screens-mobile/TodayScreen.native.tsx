@@ -698,13 +698,13 @@ export default function TodayScreen() {
         }}
         itinerary={editingItinerary}
         planId={selectedPlan?.id ?? 0}
-        onSave={(itinerary) => {
+        onSave={async (itinerary) => {
           planData.addItinerary(itinerary);
-          refetchTodayExpenses();
+          await refetchTodayExpenses();
         }}
-        onDelete={(itineraryId) => {
+        onDelete={async (itineraryId) => {
           planData.removeItinerary(itineraryId);
-          refetchTodayExpenses();
+          await refetchTodayExpenses();
         }}
       />
 
@@ -739,11 +739,14 @@ export default function TodayScreen() {
         }}
         accommodation={editingAccommodation}
         planId={selectedPlan?.id ?? 0}
-        onSave={(updated) => {
+        onSave={async (updated) => {
           planData.addAccommodation(updated);
-          refetchTodayExpenses();
+          await refetchTodayExpenses();
         }}
-        onDelete={(accommodationId) => planData.removeAccommodation(accommodationId)}
+        onDelete={async (accommodationId) => {
+          planData.removeAccommodation(accommodationId);
+          await refetchTodayExpenses();
+        }}
       />
 
       <FlightDetailModal
@@ -780,11 +783,14 @@ export default function TodayScreen() {
         flight={editingFlight}
         planId={selectedPlan?.id ?? 0}
         planStartDate={selectedPlan?.startDate}
-        onSave={(updated) => {
+        onSave={async (updated) => {
           planData.addFlight(updated);
-          refetchTodayExpenses();
+          await refetchTodayExpenses();
         }}
-        onDelete={(flightId) => planData.removeFlight(flightId)}
+        onDelete={async (flightId) => {
+          planData.removeFlight(flightId);
+          await refetchTodayExpenses();
+        }}
       />
 
       {selectedPlan && (
@@ -812,11 +818,11 @@ export default function TodayScreen() {
           removeAccommodation: planData.removeAccommodation,
           removeFlight: planData.removeFlight,
         }}
-        onRefresh={() => {
+        onRefresh={async () => {
           if (selectedPlan?.publicId) {
-            planData.fetchPlanData(selectedPlan.publicId);
+            await planData.fetchPlanData(selectedPlan.publicId);
           }
-          refetchTodayExpenses();
+          await refetchTodayExpenses();
         }}
       />
     </View>
