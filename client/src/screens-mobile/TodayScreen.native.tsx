@@ -546,11 +546,11 @@ export default function TodayScreen() {
           </Pressable>
         </View>
 
-        {/* 숙박 섹션 */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>여행 정보 (Reference)</Text>
-          {todayAccommodations.length > 0 ? (
-            todayAccommodations.map((accommodation: Accommodation) => (
+        {/* 여행 정보(숙박) 섹션 - 데이터 있을 때만 노출 */}
+        {todayAccommodations.length > 0 && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>여행 정보 (Reference)</Text>
+            {todayAccommodations.map((accommodation: Accommodation) => (
               <Pressable
                 key={accommodation.id}
                 style={[styles.cardBase, styles.accommodationCard]}
@@ -577,14 +577,9 @@ export default function TodayScreen() {
                 </View>
                 <RightArrowIcon width={12} height={12} color={colors.gray600} />
               </Pressable>
-            ))
-          ) : (
-            <View style={styles.cardBase}>
-              <Text style={styles.emptyText}>오늘 숙박 정보가 없습니다</Text>
-            </View>
-          )}
-        </View>
-
+            ))}
+          </View>
+        )}
 
       </ScrollView>
 
