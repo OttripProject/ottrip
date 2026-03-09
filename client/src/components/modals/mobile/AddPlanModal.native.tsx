@@ -84,7 +84,7 @@ export default function AddPlanModal({
       <BottomSheetModal
         visible={visible}
         onClose={onClose}
-        height={0.45}
+        height={0.5}
       >
         <View style={styles.contentWrapper}>
         <KeyboardAvoidingView

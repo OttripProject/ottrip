@@ -256,7 +256,7 @@ export default function WeeklyChecklistCard({
                   style={styles.deleteButton}
                   hitSlop={8}
                 >
-                  <CloseIcon width={20} height={20} />
+                  <CloseIcon width={20} height={20} color={colors.gray500} />
                 </Pressable>
               </View>
             ))}

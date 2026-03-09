@@ -65,9 +65,6 @@ export default function SharedMembersModal({
         <View style={styles.header}>
           <Text style={styles.headerTitle}>참여 멤버</Text>
           <View style={styles.headerRight}>
-            <Pressable style={styles.iconButton} onPress={() => {}} hitSlop={8}>
-              <DeleteIcon width={20} height={20} color={colors.gray600} />
-            </Pressable>
             <Pressable style={styles.iconButton} onPress={onClose} hitSlop={8}>
               <CloseIcon width={24} height={24} color={colors.black} />
             </Pressable>
