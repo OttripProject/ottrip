@@ -724,6 +724,8 @@ export default function TodayScreen() {
           try {
             await accommodationsApi.deleteAccommodation(accommodation.id);
             planData.removeAccommodation(accommodation.id);
+            queryClient.invalidateQueries({ queryKey: ['expenses', selectedPlan?.id] });
+            await refetchTodayExpenses();
             Alert.alert('삭제완료', '숙소가 삭제되었습니다.');
           } catch (error) {
             Alert.alert('오류', '숙소 삭제에 실패했습니다.');
@@ -745,6 +747,7 @@ export default function TodayScreen() {
         }}
         onDelete={async (accommodationId) => {
           planData.removeAccommodation(accommodationId);
+          queryClient.invalidateQueries({ queryKey: ['expenses', selectedPlan?.id] });
           await refetchTodayExpenses();
         }}
       />
