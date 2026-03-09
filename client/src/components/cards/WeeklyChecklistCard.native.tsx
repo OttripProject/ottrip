@@ -62,13 +62,6 @@ export default function WeeklyChecklistCard({
 
   const checklist = useMemo(() => checklistData || null, [checklistData]);
 
-  const hasChecklist = useMemo(() => {
-    if (!checklist?.categories) return false;
-    return Object.values(checklist.categories).some((category: any) =>
-      Array.isArray(category) && category.length > 0
-    );
-  }, [checklist]);
-
   const checklistItems = useMemo(() => {
     if (!checklist?.categories) return [];
     const items: TravelChecklistItem[] = [];
@@ -99,6 +92,7 @@ export default function WeeklyChecklistCard({
   }, [checklist, selectedDateStr, mode]);
 
   const dateChecklistItems = checklistItems;
+  const hasChecklist = dateChecklistItems.length > 0;
 
   const handleAddChecklistItem = async () => {
     const name = newChecklistItem.trim();
