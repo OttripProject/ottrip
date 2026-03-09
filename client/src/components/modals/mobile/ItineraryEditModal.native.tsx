@@ -189,6 +189,7 @@ export default function ItineraryEditModal({
 
       const amountNum = parseInt(normalizeAmount(expenseData.amount), 10) || 0;
       if (amountNum > 0 && savedItinerary) {
+        const expenseDescription = formData.title.trim();
         const expensePayload = {
           planId,
           itineraryId: savedItinerary.id,
@@ -196,6 +197,7 @@ export default function ItineraryEditModal({
           amount: amountNum,
           currency: ExpenseCurrency.KRW,
           exDate: formData.itineraryDate,
+          description: expenseDescription,
         };
         if (existingExpenseId) {
           await expensesApi.updateExpense(existingExpenseId, {
@@ -203,6 +205,7 @@ export default function ItineraryEditModal({
             amount: amountNum,
             currency: ExpenseCurrency.KRW,
             exDate: formData.itineraryDate,
+            description: expenseDescription,
           });
         } else {
           await expensesApi.createExpense(expensePayload);
