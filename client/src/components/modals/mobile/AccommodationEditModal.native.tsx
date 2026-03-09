@@ -3,14 +3,14 @@ import { View, Text, Pressable, StyleSheet, ScrollView, TextInput, Alert } from 
 import dayjs from 'dayjs';
 import { Accommodation } from '@/types/api';
 import { colors } from '@/ui/tokens/colors';
-import { textStyles } from '@/ui/tokens/typography';
+import { textStyles, typography } from '@/ui/tokens/typography';
 import FullScreenModal from '@/ui/components/FullScreenModal.native';
 import FloatingFooter from '@/ui/components/FloatingFooter.native';
 import { TimePicker, CountryPicker } from '@/ui/components/pickers';
 import Input from '@/ui/components/input/Input';
 import { accommodationsApi } from '@/services/accommodations';
 import BaseCalendar from '@/components/popup/calendar/BaseCalendar';
-import { ExpenseCurrency, currencyLabels } from '@/types/expense';
+import { ExpenseCurrency } from '@/types/expense';
 import CloseIcon from '../../../../assets/x.svg';
 import CalendarIcon from '../../../../assets/mobile_calendar_black.svg';
 
@@ -340,22 +340,24 @@ export default function AccommodationEditModal({
             </View>
           </View>
 
-          {/* 숙박 비용 */}
-          <View style={styles.row}>
-            <View style={[styles.inputGroup, styles.halfWidth]}>
-              <Text style={styles.label}>숙박 비용</Text>
-              <TextInput
-                value={expenseAmount}
-                onChangeText={handleAmountChange}
-                style={[styles.input, !accommodation && styles.inputBorderless]}
-                placeholder="0"
-                keyboardType="number-pad"
-              />
-            </View>
-            <View style={[styles.inputGroup, styles.currencyWrap]}>
-              <Text style={styles.label}>통화</Text>
-              <View style={[styles.currencyDisplay, !accommodation && styles.currencyDisplayBorderless]}>
-                <Text style={styles.currencyText}>{currencyLabels[ExpenseCurrency.KRW]}</Text>
+          {/* 비용 정보 */}
+          <View style={styles.expenseSection}>
+            <View style={styles.expenseDivider} />
+            <Text style={styles.expenseSectionTitle}>비용 정보</Text>
+            <View style={[styles.inputGroup, { marginBottom: 20 }]}>
+              <Text style={styles.label}>금액</Text>
+              <View style={styles.amountInputWrapper}>
+                <Input
+                  value={expenseAmount}
+                  onChangeText={handleAmountChange}
+                  placeholder="0"
+                  placeholderTextColor={colors.gray500}
+                  keyboardType="number-pad"
+                  variant="filled"
+                  containerStyle={styles.amountInputContainer}
+                  style={styles.amountInputStyle}
+                />
+                <Text style={styles.amountSuffix}>KRW</Text>
               </View>
             </View>
           </View>
@@ -533,24 +535,44 @@ const styles = StyleSheet.create({
     right: 0,
     zIndex: 1000,
   },
-  currencyWrap: {
-    flex: 0.3,
+  expenseSection: {
+    marginTop: 20,
   },
-  currencyDisplay: {
-    minHeight: 44,
-    paddingVertical: 14,
-    paddingHorizontal: 12,
-    borderWidth: 1,
-    borderColor: colors.gray400,
+  expenseDivider: {
+    height: 1,
+    backgroundColor: colors.gray300,
+    marginBottom: 20,
+  },
+  expenseSectionTitle: {
+    ...textStyles.h5,
+    marginTop: 12,
+    marginBottom: 20,
+  },
+  amountInputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
     borderRadius: 12,
-    backgroundColor: colors.gray200,
-    justifyContent: 'center',
+    paddingHorizontal: 14,
+    height: 48,
+    backgroundColor: `${colors.primary}1A`,
   },
-  currencyDisplayBorderless: {
-    borderWidth: 0,
-    borderColor: 'transparent',
+  amountInputContainer: {
+    flex: 1,
   },
-  currencyText: {
-    ...textStyles.body4,
+  amountInputStyle: {
+    flex: 1,
+    height: 48,
+    textAlign: 'left',
+    backgroundColor: 'transparent',
+    fontFamily: typography.fontFamily.pretendardSemiBold,
+    fontSize: 14,
+    paddingHorizontal: 0,
+    paddingVertical: 0,
+    color: colors.primary,
+  },
+  amountSuffix: {
+    ...textStyles.h6,
+    color: colors.primary,
+    marginLeft: 4,
   },
 });

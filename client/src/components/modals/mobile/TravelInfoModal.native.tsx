@@ -191,6 +191,7 @@ export default function TravelInfoModal({
         planId={planId}
         planStartDate={planStartDate}
         planEndDate={planEndDate}
+        title="전체 여행 비용"
         onExpenseAdd={handleExpenseAdded}
       />
 

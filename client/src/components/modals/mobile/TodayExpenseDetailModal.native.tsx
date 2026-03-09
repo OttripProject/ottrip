@@ -25,6 +25,7 @@ interface TodayExpenseDetailModalProps {
   planStartDate?: string;
   planEndDate?: string;
   exDate?: string;
+  title?: string;
   onExpenseAdd?: (expense: Expense) => void;
 }
 
@@ -72,6 +73,7 @@ export default function TodayExpenseDetailModal({
   planStartDate,
   planEndDate,
   exDate,
+  title = '오늘의 여행 비용',
   onExpenseAdd,
 }: TodayExpenseDetailModalProps) {
   const [showAddExpense, setShowAddExpense] = useState(false);
@@ -92,7 +94,7 @@ export default function TodayExpenseDetailModal({
   return (
     <BottomSheetModal visible={visible} onClose={onClose} height={0.9} >
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>오늘의 여행 비용</Text>
+        <Text style={styles.headerTitle}>{title}</Text>
         <Pressable style={styles.closeButton} onPress={onClose} hitSlop={8}>
           <CloseIcon width={20} height={20} color={colors.gray700} />
         </Pressable>

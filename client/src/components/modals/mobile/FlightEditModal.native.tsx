@@ -3,13 +3,13 @@ import { View, Text, Pressable, StyleSheet, ScrollView, Alert } from 'react-nati
 import dayjs from 'dayjs';
 import { FlightRead } from '@/types/api';
 import { colors } from '@/ui/tokens/colors';
-import { textStyles } from '@/ui/tokens/typography';
+import { textStyles, typography } from '@/ui/tokens/typography';
 import FullScreenModal from '@/ui/components/FullScreenModal.native';
 import FloatingFooter from '@/ui/components/FloatingFooter.native';
 import { TimePicker, AirportPicker } from '@/ui/components/pickers';
 import Input from '@/ui/components/input/Input';
 import { flightsApi } from '@/services/flights';
-import { ExpenseCurrency, ExpenseCategory, currencyLabels } from '@/types/expense';
+import { ExpenseCurrency, ExpenseCategory } from '@/types/expense';
 import { PLACEHOLDERS } from '@/constants/placeholders';
 import BaseCalendar from '@/components/popup/calendar/BaseCalendar';
 import CloseIcon from '../../../../assets/x.svg';
@@ -542,6 +542,28 @@ export default function FlightEditModal({
             </View>
           ))}
         </View>
+
+        {/* 비용 정보 */}
+        <View style={styles.expenseSection}>
+          <View style={styles.expenseDivider} />
+          <Text style={styles.expenseSectionTitle}>비용 정보</Text>
+          <View style={[styles.inputGroup, { marginBottom: 20 }]}>
+            <Text style={styles.label}>금액</Text>
+            <View style={styles.amountInputWrapper}>
+              <Input
+                value={expenseAmount}
+                onChangeText={handleAmountChange}
+                placeholder="0"
+                placeholderTextColor={colors.gray500}
+                keyboardType="number-pad"
+                variant="filled"
+                containerStyle={styles.amountInputContainer}
+                style={styles.amountInputStyle}
+              />
+              <Text style={styles.amountSuffix}>KRW</Text>
+            </View>
+          </View>
+        </View>
       </ScrollView>
 
       <FloatingFooter
@@ -681,5 +703,45 @@ const styles = StyleSheet.create({
   pickerInputBorderless: {
     borderWidth: 0,
     borderColor: 'transparent',
+  },
+  expenseSection: {
+    marginTop: 20,
+  },
+  expenseDivider: {
+    height: 1,
+    backgroundColor: colors.gray300,
+    marginBottom: 20,
+  },
+  expenseSectionTitle: {
+    ...textStyles.h5,
+    marginTop: 12,
+    marginBottom: 20,
+  },
+  amountInputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    height: 48,
+    backgroundColor: `${colors.primary}1A`,
+  },
+  amountInputContainer: {
+    flex: 1,
+  },
+  amountInputStyle: {
+    flex: 1,
+    height: 48,
+    textAlign: 'left',
+    backgroundColor: 'transparent',
+    fontFamily: typography.fontFamily.pretendardSemiBold,
+    fontSize: 14,
+    paddingHorizontal: 0,
+    paddingVertical: 0,
+    color: colors.primary,
+  },
+  amountSuffix: {
+    ...textStyles.h6,
+    color: colors.primary,
+    marginLeft: 4,
   },
 });
