@@ -252,13 +252,16 @@ export default function WeeklyScreen() {
             onRefresh={async () => {
               setRefreshing(true);
               try {
-                await Promise.all([
-                  plansQuery.fetchPlans(),
-                  selectedPlan?.publicId
-                    ? planData.fetchPlanData(selectedPlan.publicId)
-                    : Promise.resolve(),
-                  queryClient.refetchQueries({ queryKey: ['checklist', selectedPlan?.publicId] }),
-                ]);
+                await plansQuery.fetchPlans();
+                if (selectedPlan?.publicId && planData.plan?.id) {
+                  await Promise.all([
+                    planData.refreshItineraries?.(),
+                    planData.refreshFlights?.(),
+                    planData.refreshAccommodations?.(),
+                    planData.refreshExpenses?.(),
+                  ].filter(Boolean));
+                  queryClient.invalidateQueries({ queryKey: ['checklist', selectedPlan.publicId] });
+                }
               } finally {
                 setRefreshing(false);
               }
@@ -486,9 +489,13 @@ export default function WeeklyScreen() {
           removeAccommodation: planData.removeAccommodation,
           removeFlight: planData.removeFlight,
         }}
-        onRefresh={async () => {
-          if (selectedPlan?.publicId) {
-            await planData.fetchPlanData(selectedPlan.publicId);
+        onRefresh={() => {
+          if (selectedPlan?.publicId && planData.plan?.id) {
+            planData.refreshItineraries?.();
+            planData.refreshFlights?.();
+            planData.refreshAccommodations?.();
+            planData.refreshExpenses?.();
+            queryClient.invalidateQueries({ queryKey: ['checklist', selectedPlan.publicId] });
           }
         }}
       />
@@ -509,8 +516,10 @@ export default function WeeklyScreen() {
           try {
             await itinerariesApi.deleteItinerary(itinerary.id);
             planData.removeItinerary(itinerary.id);
-            if (selectedPlan?.publicId) {
-              planData.fetchPlanData(selectedPlan.publicId);
+            if (selectedPlan?.publicId && planData.plan?.id) {
+              planData.refreshItineraries?.();
+              planData.refreshExpenses?.();
+              queryClient.invalidateQueries({ queryKey: ['checklist', selectedPlan.publicId] });
             }
             Alert.alert('삭제완료', '일정이 삭제되었습니다.');
           } catch {
@@ -527,16 +536,19 @@ export default function WeeklyScreen() {
         }}
         itinerary={editingItinerary}
         planId={selectedPlan?.id ?? 0}
-        onSave={async (itinerary) => {
-          planData.addItinerary(itinerary);
-          if (selectedPlan?.publicId) {
-            await planData.fetchPlanData(selectedPlan.publicId);
+        onSave={() => {
+          if (selectedPlan?.publicId && planData.plan?.id) {
+            planData.refreshItineraries?.();
+            planData.refreshExpenses?.();
+            queryClient.invalidateQueries({ queryKey: ['checklist', selectedPlan.publicId] });
           }
         }}
         onDelete={async (itineraryId) => {
           planData.removeItinerary(itineraryId);
           if (selectedPlan?.publicId) {
-            await planData.fetchPlanData(selectedPlan.publicId);
+            planData.refreshItineraries?.();
+            planData.refreshExpenses?.();
+            queryClient.invalidateQueries({ queryKey: ['checklist', selectedPlan.publicId] });
           }
         }}
       />
@@ -559,8 +571,10 @@ export default function WeeklyScreen() {
           try {
             await flightsApi.deleteFlight(flight.id);
             planData.removeFlight(flight.id);
-            if (selectedPlan?.publicId) {
-              planData.fetchPlanData(selectedPlan.publicId);
+            if (selectedPlan?.publicId && planData.plan?.id) {
+              planData.refreshFlights?.();
+              planData.refreshExpenses?.();
+              queryClient.invalidateQueries({ queryKey: ['checklist', selectedPlan.publicId] });
             }
             Alert.alert('삭제완료', '항공 편이 삭제되었습니다.');
           } catch {
@@ -578,16 +592,19 @@ export default function WeeklyScreen() {
         flight={editingFlight}
         planId={selectedPlan?.id ?? 0}
         planStartDate={selectedPlan?.startDate}
-        onSave={async (updated) => {
-          planData.addFlight(updated);
-          if (selectedPlan?.publicId) {
-            await planData.fetchPlanData(selectedPlan.publicId);
+        onSave={() => {
+          if (selectedPlan?.publicId && planData.plan?.id) {
+            planData.refreshFlights?.();
+            planData.refreshExpenses?.();
+            queryClient.invalidateQueries({ queryKey: ['checklist', selectedPlan.publicId] });
           }
         }}
         onDelete={async (flightId) => {
           planData.removeFlight(flightId);
           if (selectedPlan?.publicId) {
-            await planData.fetchPlanData(selectedPlan.publicId);
+            planData.refreshFlights?.();
+            planData.refreshExpenses?.();
+            queryClient.invalidateQueries({ queryKey: ['checklist', selectedPlan.publicId] });
           }
         }}
       />
@@ -605,12 +622,16 @@ export default function WeeklyScreen() {
           planEndDate={selectedPlan.endDate}
           onExpenseAdd={(expense) => planData.addExpense?.(expense)}
           onRefreshExpenses={async () => {
-            await planData.refreshExpenses?.();
-            await planData.fetchPlanData?.(selectedPlan.publicId);
+            if (selectedPlan?.publicId && planData.plan?.id) {
+              planData.refreshExpenses?.();
+            }
           }}
           onRefreshPlan={async () => {
-            if (selectedPlan?.publicId) {
-              await planData.fetchPlanData?.(selectedPlan.publicId);
+            if (selectedPlan?.publicId && planData.plan?.id) {
+              planData.refreshItineraries?.();
+              planData.refreshFlights?.();
+              planData.refreshAccommodations?.();
+              planData.refreshExpenses?.();
             }
           }}
         />

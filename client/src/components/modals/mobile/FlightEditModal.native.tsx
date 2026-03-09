@@ -209,7 +209,11 @@ export default function FlightEditModal({
           },
         });
         const updated = await flightsApi.getFlight(flight.id);
-        await onSave?.(updated);
+        try {
+          await onSave?.(updated);
+        } catch {
+          // Refetch 실패해도 저장은 완료됨
+        }
         Alert.alert('수정완료', '항공 편이 수정되었습니다.');
       } else {
         const createRes = await flightsApi.createFlight({
@@ -229,7 +233,11 @@ export default function FlightEditModal({
           },
         });
         const created = await flightsApi.getFlight(createRes.id);
-        await onSave?.(created);
+        try {
+          await onSave?.(created);
+        } catch {
+          // Refetch 실패해도 저장은 완료됨
+        }
         Alert.alert('추가완료', '항공 편이 추가되었습니다.');
       }
       onClose();

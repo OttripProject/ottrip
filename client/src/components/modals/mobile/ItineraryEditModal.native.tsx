@@ -98,34 +98,50 @@ export default function ItineraryEditModal({
 
   useEffect(() => {
     if (visible && itinerary) {
-      setFormData({
-        title: itinerary.title || '',
-        description: itinerary.description || '',
-        country: itinerary.country || '',
-        city: itinerary.city || '',
-        location: itinerary.location || '',
-        itineraryDate: itinerary.itineraryDate || dayjs().format('YYYY-MM-DD'),
-        startTime: itinerary.startTime ? itinerary.startTime.substring(0, 5) : '09:00',
-        endTime: itinerary.endTime ? itinerary.endTime.substring(0, 5) : '10:00',
-      });
-      const loadExpense = async () => {
-        const expenses = itinerary.expenses?.length
-          ? itinerary.expenses
-          : await expensesApi.getExpensesByItinerary(itinerary.id);
-        const firstExpense = expenses[0];
-        if (firstExpense) {
-          const amountInt = Math.floor(Number(firstExpense.amount));
-          setExpenseData({
-            amount: formatAmountWithCommas(amountInt),
-            category: firstExpense.category as ExpenseCategory,
+      const loadLatest = async () => {
+        try {
+          const [latestItinerary, expenses] = await Promise.all([
+            itinerariesApi.getItinerary(itinerary.id),
+            expensesApi.getExpensesByItinerary(itinerary.id),
+          ]);
+          setFormData({
+            title: latestItinerary.title || '',
+            description: latestItinerary.description || '',
+            country: latestItinerary.country || '',
+            city: latestItinerary.city || '',
+            location: latestItinerary.location || '',
+            itineraryDate: latestItinerary.itineraryDate || dayjs().format('YYYY-MM-DD'),
+            startTime: latestItinerary.startTime ? latestItinerary.startTime.substring(0, 5) : '09:00',
+            endTime: latestItinerary.endTime ? latestItinerary.endTime.substring(0, 5) : '10:00',
           });
-          setExistingExpenseId(firstExpense.id);
-        } else {
+          const firstExpense = expenses[0];
+          if (firstExpense) {
+            const amountInt = Math.floor(Number(firstExpense.amount));
+            setExpenseData({
+              amount: formatAmountWithCommas(amountInt),
+              category: firstExpense.category as ExpenseCategory,
+            });
+            setExistingExpenseId(firstExpense.id);
+          } else {
+            setExpenseData({ amount: '', category: ExpenseCategory.FOOD });
+            setExistingExpenseId(null);
+          }
+        } catch {
+          setFormData({
+            title: itinerary.title || '',
+            description: itinerary.description || '',
+            country: itinerary.country || '',
+            city: itinerary.city || '',
+            location: itinerary.location || '',
+            itineraryDate: itinerary.itineraryDate || dayjs().format('YYYY-MM-DD'),
+            startTime: itinerary.startTime ? itinerary.startTime.substring(0, 5) : '09:00',
+            endTime: itinerary.endTime ? itinerary.endTime.substring(0, 5) : '10:00',
+          });
           setExpenseData({ amount: '', category: ExpenseCategory.FOOD });
           setExistingExpenseId(null);
         }
       };
-      loadExpense();
+      loadLatest();
     } else if (visible && !itinerary) {
       const initDate = defaultDate || dayjs().format('YYYY-MM-DD');
       setFormData({
@@ -195,7 +211,11 @@ export default function ItineraryEditModal({
         await expensesApi.deleteExpense(existingExpenseId);
       }
 
-      await onSave?.(savedItinerary);
+      try {
+        await onSave?.(savedItinerary);
+      } catch {
+        // Refetch 실패해도 저장은 완료됨 → 모달 닫기
+      }
       onClose();
     } catch {
       Alert.alert('오류', '일정 저장에 실패했습니다.');
