@@ -203,6 +203,11 @@ export default function TodayScreen() {
     });
   }, [planData.accommodations, todayDateStr]);
 
+  const todayFlights = useMemo(
+    () => todaySchedules.filter((item): item is Extract<ScheduleItem, { type: 'flight' }> => item.type === 'flight'),
+    [todaySchedules]
+  );
+
   const todayExpenses = useMemo(() => {
     let total = 0;
     const byCategory: Record<string, number> = {};
@@ -546,8 +551,8 @@ export default function TodayScreen() {
           </Pressable>
         </View>
 
-        {/* 여행 정보(숙박) 섹션 - 데이터 있을 때만 노출 */}
-        {todayAccommodations.length > 0 && (
+        {/* 여행 정보(숙박/항공) 섹션 - 데이터 있을 때만 노출 */}
+        {(todayAccommodations.length > 0 || todayFlights.length > 0) && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>여행 정보 (Reference)</Text>
             {todayAccommodations.map((accommodation: Accommodation) => (
@@ -572,6 +577,34 @@ export default function TodayScreen() {
                     <Text style={styles.itemTitle}>{accommodation.name}</Text>
                     <Text style={styles.accommodationCheckin}>
                       체크인 {formatTime(accommodation.checkinTime)}
+                    </Text>
+                  </View>
+                </View>
+                <RightArrowIcon width={12} height={12} color={colors.gray600} />
+              </Pressable>
+            ))}
+            {todayFlights.map((item) => (
+              <Pressable
+                key={item.id}
+                style={[styles.cardBase, styles.accommodationCard]}
+                onPress={() => {
+                  setSelectedFlight(item.data);
+                  setSelectedFlightSegment(item.segment);
+                  setShowFlightDetail(true);
+                }}
+              >
+                <View style={styles.accommodationHeader}>
+                  <View style={styles.accommodationIconBox}>
+                    <FlightIcon width={20} height={20} color={colors.primary} />
+                  </View>
+                  <View style={styles.accommodationHeaderText}>
+                    <Text style={styles.accommodationLabel}>오늘의 항공</Text>
+                    <Text style={styles.itemTitle}>
+                      {item.segment.departureAirport} → {item.segment.arrivalAirport}
+                    </Text>
+                    <Text style={styles.accommodationCheckin}>
+                      출발 {item.time}
+                      {item.segment.flightNumber && ` · ${item.segment.flightNumber}`}
                     </Text>
                   </View>
                 </View>
