@@ -13,7 +13,7 @@ import { ExpenseCategory, ExpenseCurrency, categoryLabels } from '@/types/expens
 import { Expense } from '@/types/api';
 import BottomSheetModal from '@/ui/components/BottomSheetModal.native';
 import FloatingFooter from '@/ui/components/FloatingFooter.native';
-import BaseCalendar from '@/components/popup/calendar/BaseCalendar';
+import CalendarModal from '@/ui/components/CalendarModal.native';
 import Input from '@/ui/components/input/Input';
 import { colors } from '@/ui/tokens/colors';
 import { textStyles, typography } from '@/ui/tokens/typography';
@@ -253,34 +253,28 @@ export default function AddExpenseModal({
           />
         </View>
 
-        <View style={[styles.inputGroup, { zIndex: showDatePicker ? 9999 : 1 }]}>
+        <View style={styles.inputGroup}>
           <Text style={styles.label}>일자</Text>
           <Pressable
             style={styles.dateInput}
-            onPress={() => setShowDatePicker(!showDatePicker)}
+            onPress={() => setShowDatePicker(true)}
           >
             <Text style={styles.dateText}>
               {dayjs(formData.ex_date).format('YYYY.MM.DD')}
             </Text>
             <CalendarIcon width={20} height={20} color={colors.gray600} />
           </Pressable>
-          {showDatePicker && (
-            <View style={styles.calendarWrapper}>
-              <BaseCalendar
-                visible
-                selectedDate={formData.ex_date}
-                minDate={planStartDate}
-                maxDate={planEndDate}
-                onDayPress={(day) => {
-                  setFormData((prev) => ({ ...prev, ex_date: day.dateString }));
-                  setShowDatePicker(false);
-                }}
-                onClose={() => setShowDatePicker(false)}
-                style={styles.calendarPopup}
-                autoCloseOnSelect
-              />
-            </View>
-          )}
+          <CalendarModal
+            visible={showDatePicker}
+            selectedDate={formData.ex_date}
+            onDayPress={(day) => {
+              setFormData((prev) => ({ ...prev, ex_date: day.dateString }));
+              setShowDatePicker(false);
+            }}
+            onClose={() => setShowDatePicker(false)}
+            minDate={planStartDate}
+            maxDate={planEndDate}
+          />
         </View>
       </ScrollView>
 
@@ -408,16 +402,5 @@ const styles = StyleSheet.create({
   dateText: {
     ...textStyles.body3,
     color: colors.black,
-  },
-  calendarWrapper: {
-    marginTop: 8,
-    position: 'relative' as const,
-  },
-  calendarPopup: {
-    position: 'absolute' as const,
-    top: 0,
-    left: 0,
-    right: 0,
-    zIndex: 1000,
   },
 });

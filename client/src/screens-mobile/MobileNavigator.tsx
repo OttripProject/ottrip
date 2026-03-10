@@ -117,7 +117,7 @@ export default function MobileNavigator() {
         <Tab.Navigator
         screenOptions={{
           headerShown: false,
-          lazy: true, 
+          lazy: false, 
           tabBarActiveTintColor: colors.primary,
           tabBarInactiveTintColor: colors.gray600,
           tabBarStyle: {

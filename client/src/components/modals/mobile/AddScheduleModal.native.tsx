@@ -56,7 +56,7 @@ export default function AddScheduleModal({
           embedded
           onSave={async (itinerary) => {
             planData.addItinerary(itinerary);
-            await onRefresh?.();
+            onRefresh?.();
             onClose();
           }}
         />
@@ -73,7 +73,7 @@ export default function AddScheduleModal({
           embedded
           onSave={async (accommodation) => {
             planData.addAccommodation(accommodation);
-            await onRefresh?.();
+            onRefresh?.();
             onClose();
           }}
         />
@@ -90,7 +90,7 @@ export default function AddScheduleModal({
         embedded
         onSave={async (flight) => {
           planData.addFlight(flight);
-          await onRefresh?.();
+          onRefresh?.();
           onClose();
         }}
       />

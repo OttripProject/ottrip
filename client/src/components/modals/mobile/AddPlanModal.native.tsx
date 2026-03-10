@@ -7,7 +7,7 @@ import { textStyles } from '@/ui/tokens/typography';
 import { radii } from '@/ui/tokens/radii';
 import { spacing } from '@/ui/tokens/spacing';
 import BottomSheetModal from '@/ui/components/BottomSheetModal.native';
-import BaseCalendar from '@/components/popup/calendar/BaseCalendar';
+import CalendarModal from '@/ui/components/CalendarModal.native';
 import CloseIcon from '../../../../assets/mobile_close.svg';
 import CalendarIcon from '../../../../assets/mobile_calendar_black.svg';
 
@@ -152,41 +152,29 @@ export default function AddPlanModal({
           </Pressable>
         </KeyboardAvoidingView>
 
-          {/* 날짜 선택 캘린더 - 화면 중앙 팝업 */}
-          {calendarTarget && (
-            <View style={styles.calendarOverlay}>
-              <Pressable
-                style={styles.calendarBackdrop}
-                onPress={() => setCalendarTarget(null)}
-              />
-              <View style={styles.calendarCenter}>
-                <BaseCalendar
-                  visible
-                  selectedDate={
-                    calendarTarget === 'start'
-                      ? startDate || dayjs().format('YYYY-MM-DD')
-                      : endDate || startDate || dayjs().format('YYYY-MM-DD')
-                  }
-                  onDayPress={(day) => {
-                    const d = day.dateString;
-                    if (calendarTarget === 'start') {
-                      setStartDate(d);
-                      if (endDate && dayjs(d).isAfter(dayjs(endDate))) setEndDate(d);
-                    } else {
-                      setEndDate(d);
-                      if (startDate && dayjs(d).isBefore(dayjs(startDate))) setStartDate(d);
-                    }
-                    setCalendarTarget(null);
-                  }}
-                  onClose={() => setCalendarTarget(null)}
-                  minDate={calendarTarget === 'end' && startDate ? startDate : undefined}
-                  maxDate={calendarTarget === 'start' && endDate ? endDate : undefined}
-                  autoCloseOnSelect
-                  style={styles.calendarPopup}
-                />
-              </View>
-            </View>
-          )}
+          {/* 날짜 선택 캘린더 */}
+          <CalendarModal
+            visible={!!calendarTarget}
+            selectedDate={
+              calendarTarget === 'start'
+                ? startDate || dayjs().format('YYYY-MM-DD')
+                : endDate || startDate || dayjs().format('YYYY-MM-DD')
+            }
+            onDayPress={(day) => {
+              const d = day.dateString;
+              if (calendarTarget === 'start') {
+                setStartDate(d);
+                if (endDate && dayjs(d).isAfter(dayjs(endDate))) setEndDate(d);
+              } else {
+                setEndDate(d);
+                if (startDate && dayjs(d).isBefore(dayjs(startDate))) setStartDate(d);
+              }
+              setCalendarTarget(null);
+            }}
+            onClose={() => setCalendarTarget(null)}
+            minDate={calendarTarget === 'end' && startDate ? startDate : undefined}
+            maxDate={calendarTarget === 'start' && endDate ? endDate : undefined}
+          />
         </View>
       </BottomSheetModal>
     </>
@@ -280,22 +268,5 @@ const styles = StyleSheet.create({
   },
   submitButtonTextDisabled: {
     color: colors.gray700,
-  },
-  calendarOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 1000,
-  },
-  calendarBackdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-  },
-  calendarCenter: {
-    width: 276,
-    zIndex: 1001,
-  },
-  calendarPopup: {
-    position: 'relative',
   },
 });

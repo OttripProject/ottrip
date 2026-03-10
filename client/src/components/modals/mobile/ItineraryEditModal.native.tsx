@@ -11,7 +11,7 @@ import { TimePicker, CountryPicker } from '@/ui/components/pickers';
 import Input from '@/ui/components/input/Input';
 import { itinerariesApi } from '@/services/itineraries';
 import { expensesApi } from '@/services/expenses';
-import BaseCalendar from '@/components/popup/calendar/BaseCalendar';
+import CalendarModal from '@/ui/components/CalendarModal.native';
 import CalendarIcon from '../../../../assets/mobile_calendar_black.svg';
 import FoodIcon from '../../../../assets/mobile_food.svg';
 import CarIcon from '../../../../assets/mobile_car.svg';
@@ -358,18 +358,15 @@ export default function ItineraryEditModal({
                 </Text>
                 <CalendarIcon width={16} height={16} color={colors.black} />
               </Pressable>
-              {showDatePicker && (
-                <BaseCalendar
-                  visible={true}
-                  selectedDate={formData.itineraryDate}
-                  onDayPress={(day) => {
-                    setFormData({ ...formData, itineraryDate: day.dateString });
-                    setShowDatePicker(false);
-                  }}
-                  onClose={() => setShowDatePicker(false)}
-                  style={styles.calendarPopup}
-                />
-              )}
+              <CalendarModal
+                visible={showDatePicker}
+                selectedDate={formData.itineraryDate}
+                onDayPress={(day) => {
+                  setFormData({ ...formData, itineraryDate: day.dateString });
+                  setShowDatePicker(false);
+                }}
+                onClose={() => setShowDatePicker(false)}
+              />
             <View style={styles.row}>
                 <View style={[styles.halfWidth]}>
                 <TimePicker
@@ -600,13 +597,6 @@ const styles = StyleSheet.create({
   placeholderText: {
     ...textStyles.body3,
     color: colors.gray400,
-  },
-  calendarPopup: {
-    position: 'absolute',
-    top: 56,
-    left: 0,
-    right: 0,
-    zIndex: 1000,
   },
   expenseSection: {
     marginTop: 20,

@@ -9,7 +9,7 @@ import FloatingFooter from '@/ui/components/FloatingFooter.native';
 import { TimePicker, CountryPicker } from '@/ui/components/pickers';
 import Input from '@/ui/components/input/Input';
 import { accommodationsApi } from '@/services/accommodations';
-import BaseCalendar from '@/components/popup/calendar/BaseCalendar';
+import CalendarModal from '@/ui/components/CalendarModal.native';
 import { ExpenseCurrency } from '@/types/expense';
 import CloseIcon from '../../../../assets/x.svg';
 import CalendarIcon from '../../../../assets/mobile_calendar_black.svg';
@@ -276,18 +276,15 @@ export default function AccommodationEditModal({
                   <Text style={styles.dateText}>{formatDate(formData.checkinDate)}</Text>
                   <CalendarIcon width={16} height={16} color={colors.black} />
                 </Pressable>
-                {showCheckinDatePicker && (
-                  <BaseCalendar
-                    visible={true}
-                    selectedDate={formData.checkinDate}
-                    onDayPress={(day) => {
-                      setFormData({ ...formData, checkinDate: day.dateString });
-                      setShowCheckinDatePicker(false);
-                    }}
-                    onClose={() => setShowCheckinDatePicker(false)}
-                    style={styles.calendarPopup}
-                  />
-                )}
+                <CalendarModal
+                  visible={showCheckinDatePicker}
+                  selectedDate={formData.checkinDate}
+                  onDayPress={(day) => {
+                    setFormData({ ...formData, checkinDate: day.dateString });
+                    setShowCheckinDatePicker(false);
+                  }}
+                  onClose={() => setShowCheckinDatePicker(false)}
+                />
               </View>
               <View style={[styles.inputGroup, styles.halfWidth]}>
                 <Text style={styles.checkinoutLabel}>시간</Text>
@@ -312,18 +309,16 @@ export default function AccommodationEditModal({
                   <Text style={styles.dateText}>{formatDate(formData.checkoutDate)}</Text>
                   <CalendarIcon width={16} height={16} color={colors.black} />
                 </Pressable>
-                {showCheckoutDatePicker && (
-                  <BaseCalendar
-                    visible={true}
-                    selectedDate={formData.checkoutDate}
-                    onDayPress={(day) => {
-                      setFormData({ ...formData, checkoutDate: day.dateString });
-                      setShowCheckoutDatePicker(false);
-                    }}
-                    onClose={() => setShowCheckoutDatePicker(false)}
-                    style={styles.calendarPopup}
-                  />
-                )}
+                <CalendarModal
+                  visible={showCheckoutDatePicker}
+                  selectedDate={formData.checkoutDate}
+                  onDayPress={(day) => {
+                    setFormData({ ...formData, checkoutDate: day.dateString });
+                    setShowCheckoutDatePicker(false);
+                  }}
+                  onClose={() => setShowCheckoutDatePicker(false)}
+                  minDate={formData.checkinDate}
+                />
               </View>
               <View style={[styles.inputGroup, styles.halfWidth]}>
                 <Text style={styles.checkinoutLabel}>시간</Text>
@@ -527,13 +522,6 @@ const styles = StyleSheet.create({
   },
   dateText: {
     ...textStyles.body3,
-  },
-  calendarPopup: {
-    position: 'absolute',
-    top: 56,
-    left: 0,
-    right: 0,
-    zIndex: 1000,
   },
   expenseSection: {
     marginTop: 20,

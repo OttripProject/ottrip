@@ -11,7 +11,7 @@ import Input from '@/ui/components/input/Input';
 import { flightsApi } from '@/services/flights';
 import { ExpenseCurrency, ExpenseCategory } from '@/types/expense';
 import { PLACEHOLDERS } from '@/constants/placeholders';
-import BaseCalendar from '@/components/popup/calendar/BaseCalendar';
+import CalendarModal from '@/ui/components/CalendarModal.native';
 import CloseIcon from '../../../../assets/x.svg';
 import CalendarIcon from '../../../../assets/mobile_calendar_black.svg';
 import AddIcon from '../../../../assets/mobile_plan_add.svg';
@@ -456,18 +456,15 @@ export default function FlightEditModal({
                       <Text style={styles.dateText}>{formatDate(seg.departure_date)}</Text>
                       <CalendarIcon width={16} height={16} color={colors.black} />
                     </Pressable>
-                    {segmentDatePicker?.idx === idx && segmentDatePicker?.type === 'dep' && (
-                      <BaseCalendar
-                        visible
-                        selectedDate={seg.departure_date}
-                        onDayPress={(day) => {
-                          updateSegment(idx, 'departure_date', day.dateString);
-                          setSegmentDatePicker(null);
-                        }}
-                        onClose={() => setSegmentDatePicker(null)}
-                        style={styles.calendarPopup}
-                      />
-                    )}
+                    <CalendarModal
+                      visible={segmentDatePicker?.idx === idx && segmentDatePicker?.type === 'dep'}
+                      selectedDate={seg.departure_date}
+                      onDayPress={(day) => {
+                        updateSegment(idx, 'departure_date', day.dateString);
+                        setSegmentDatePicker(null);
+                      }}
+                      onClose={() => setSegmentDatePicker(null)}
+                    />
                   </View>
                   <View style={[styles.inputGroup, styles.halfWidth]}>
                     <Pressable
@@ -477,18 +474,16 @@ export default function FlightEditModal({
                       <Text style={styles.dateText}>{formatDate(seg.arrival_date)}</Text>
                       <CalendarIcon width={16} height={16} color={colors.black} />
                     </Pressable>
-                    {segmentDatePicker?.idx === idx && segmentDatePicker?.type === 'arr' && (
-                      <BaseCalendar
-                        visible
-                        selectedDate={seg.arrival_date}
-                        onDayPress={(day) => {
-                          updateSegment(idx, 'arrival_date', day.dateString);
-                          setSegmentDatePicker(null);
-                        }}
-                        onClose={() => setSegmentDatePicker(null)}
-                        style={styles.calendarPopup}
-                      />
-                    )}
+                    <CalendarModal
+                      visible={segmentDatePicker?.idx === idx && segmentDatePicker?.type === 'arr'}
+                      selectedDate={seg.arrival_date}
+                      onDayPress={(day) => {
+                        updateSegment(idx, 'arrival_date', day.dateString);
+                        setSegmentDatePicker(null);
+                      }}
+                      onClose={() => setSegmentDatePicker(null)}
+                      minDate={seg.departure_date}
+                    />
                   </View>
                 </View>
                 <View style={styles.row}>
@@ -682,13 +677,6 @@ const styles = StyleSheet.create({
     borderColor: 'transparent',
   },
   dateText: { ...textStyles.body3 },
-  calendarPopup: {
-    position: 'absolute',
-    top: 56,
-    left: 0,
-    right: 0,
-    zIndex: 1000,
-  },
   pickerContainer: { zIndex: 1 },
   pickerInput: {
     height: 48,
