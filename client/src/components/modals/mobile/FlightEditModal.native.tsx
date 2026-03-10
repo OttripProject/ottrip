@@ -19,7 +19,7 @@ import DeleteIcon from '../../../../assets/delete.svg';
 
 interface FlightEditModalProps {
   visible: boolean;
-  onClose: () => void;
+  onClose?: (opts?: { fromSave?: boolean }) => void;
   flight: FlightRead | null;
   planId: number;
   planStartDate?: string;
@@ -240,7 +240,7 @@ export default function FlightEditModal({
         }
         Alert.alert('추가완료', '항공 편이 추가되었습니다.');
       }
-      onClose();
+      onClose?.({ fromSave: true });
     } catch (error) {
       Alert.alert('오류', flight ? '항공 편 수정에 실패했습니다.' : '항공 편 추가에 실패했습니다.');
     } finally {
@@ -264,7 +264,7 @@ export default function FlightEditModal({
               await flightsApi.deleteFlight(flight.id);
               if (onDelete) onDelete(flight.id);
               Alert.alert('삭제완료', '항공 편이 삭제되었습니다.');
-              onClose();
+              onClose?.({ fromSave: true });
             } catch (error) {
               Alert.alert('오류', '항공 편 삭제에 실패했습니다.');
             }
@@ -319,7 +319,7 @@ export default function FlightEditModal({
       {!embedded && (
         <View style={styles.header}>
           <Text style={styles.headerTitle}>{flight ? '항공 수정' : '항공 추가'}</Text>
-          <Pressable style={styles.closeButton} onPress={onClose} hitSlop={8}>
+          <Pressable style={styles.closeButton} onPress={() => onClose?.()} hitSlop={8}>
             <CloseIcon width={24} height={24} />
           </Pressable>
         </View>
@@ -576,7 +576,7 @@ export default function FlightEditModal({
   }
 
   return (
-    <FullScreenModal visible={visible} onClose={onClose}>
+    <FullScreenModal visible={visible} onClose={() => onClose?.()}>
       {content}
     </FullScreenModal>
   );

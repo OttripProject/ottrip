@@ -24,7 +24,7 @@ import { normalizeAmount, formatAmountWithCommas } from '@/utils/amountUtils';
 
 interface ItineraryEditModalProps {
   visible: boolean;
-  onClose: () => void;
+  onClose?: (opts?: { fromSave?: boolean }) => void;
   itinerary: Itinerary | null;
   planId: number;
   defaultDate?: string;
@@ -219,7 +219,7 @@ export default function ItineraryEditModal({
       } catch {
         // Refetch 실패해도 저장은 완료됨 → 모달 닫기
       }
-      onClose();
+      onClose?.({ fromSave: true });
     } catch {
       Alert.alert('오류', '일정 저장에 실패했습니다.');
     } finally {
@@ -245,7 +245,7 @@ export default function ItineraryEditModal({
                 onDelete(itinerary.id);
               }
               Alert.alert('삭제완료', '일정이 삭제되었습니다.');
-              onClose();
+              onClose?.({ fromSave: true });
             } catch (error) {
               Alert.alert('오류', '일정 삭제에 실패했습니다.');
             }
@@ -274,7 +274,7 @@ export default function ItineraryEditModal({
           <Text style={styles.headerTitle}>
             {itinerary ? '일정 수정' : '새 일정 추가'}
           </Text>
-          <Pressable style={styles.closeButton} onPress={onClose} hitSlop={8}>
+          <Pressable style={styles.closeButton} onPress={() => onClose?.()} hitSlop={8}>
             <CloseIcon width={24} height={24} />
           </Pressable>
         </View>
@@ -471,7 +471,7 @@ export default function ItineraryEditModal({
   }
 
   return (
-    <FullScreenModal visible={visible} onClose={onClose}>
+    <FullScreenModal visible={visible} onClose={() => onClose?.()}>
       {content}
     </FullScreenModal>
   );

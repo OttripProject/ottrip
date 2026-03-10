@@ -533,9 +533,14 @@ export default function WeeklyScreen() {
 
       <ItineraryEditModal
         visible={showItineraryEdit}
-        onClose={() => {
+        onClose={(opts) => {
+          const itineraryToShow = editingItinerary;
           setShowItineraryEdit(false);
           setEditingItinerary(null);
+          if (!opts?.fromSave && itineraryToShow) {
+            setSelectedItinerary(itineraryToShow);
+            setShowItineraryDetail(true);
+          }
         }}
         itinerary={editingItinerary}
         planId={selectedPlan?.id ?? 0}
@@ -591,9 +596,15 @@ export default function WeeklyScreen() {
 
       <FlightEditModal
         visible={showFlightEdit}
-        onClose={() => {
+        onClose={(opts) => {
+          const flightToShow = editingFlight;
           setShowFlightEdit(false);
           setEditingFlight(null);
+          if (!opts?.fromSave && flightToShow) {
+            setSelectedFlight(flightToShow);
+            setSelectedFlightSegment(null);
+            setShowFlightDetail(true);
+          }
         }}
         flight={editingFlight}
         planId={selectedPlan?.id ?? 0}

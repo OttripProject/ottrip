@@ -692,9 +692,14 @@ export default function TodayScreen() {
 
       <ItineraryEditModal
         visible={showItineraryEdit}
-        onClose={() => {
+        onClose={(opts) => {
+          const itineraryToShow = editingItinerary;
           setShowItineraryEdit(false);
           setEditingItinerary(null);
+          if (!opts?.fromSave && itineraryToShow) {
+            setSelectedItinerary(itineraryToShow);
+            setShowItineraryDetail(true);
+          }
         }}
         itinerary={editingItinerary}
         planId={selectedPlan?.id ?? 0}
@@ -735,9 +740,14 @@ export default function TodayScreen() {
 
       <AccommodationEditModal
         visible={showAccommodationEdit}
-        onClose={() => {
+        onClose={(opts) => {
+          const accommodationToShow = editingAccommodation;
           setShowAccommodationEdit(false);
           setEditingAccommodation(null);
+          if (!opts?.fromSave && accommodationToShow) {
+            setSelectedAccommodation(accommodationToShow);
+            setShowAccommodationDetail(true);
+          }
         }}
         accommodation={editingAccommodation}
         planId={selectedPlan?.id ?? 0}
@@ -779,9 +789,15 @@ export default function TodayScreen() {
 
       <FlightEditModal
         visible={showFlightEdit}
-        onClose={() => {
+        onClose={(opts) => {
+          const flightToShow = editingFlight;
           setShowFlightEdit(false);
           setEditingFlight(null);
+          if (!opts?.fromSave && flightToShow) {
+            setSelectedFlight(flightToShow);
+            setSelectedFlightSegment(null);
+            setShowFlightDetail(true);
+          }
         }}
         flight={editingFlight}
         planId={selectedPlan?.id ?? 0}

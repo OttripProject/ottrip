@@ -16,7 +16,7 @@ import CalendarIcon from '../../../../assets/mobile_calendar_black.svg';
 
 interface AccommodationEditModalProps {
   visible: boolean;
-  onClose: () => void;
+  onClose?: (opts?: { fromSave?: boolean }) => void;
   accommodation: Accommodation | null;
   planId: number;
   defaultDate?: string;
@@ -151,7 +151,7 @@ export default function AccommodationEditModal({
         }
         Alert.alert('추가완료', '숙소가 추가되었습니다.');
       }
-      onClose();
+      onClose?.({ fromSave: true });
     } catch (error) {
       Alert.alert('오류', accommodation ? '숙소 수정에 실패했습니다.' : '숙소 추가에 실패했습니다.');
     } finally {
@@ -175,7 +175,7 @@ export default function AccommodationEditModal({
               await accommodationsApi.deleteAccommodation(accommodation.id);
               if (onDelete) onDelete(accommodation.id);
               Alert.alert('삭제완료', '숙소가 삭제되었습니다.');
-              onClose();
+              onClose?.({ fromSave: true });
             } catch (error) {
               Alert.alert('오류', '숙소 삭제에 실패했습니다.');
             }
@@ -196,7 +196,7 @@ export default function AccommodationEditModal({
       {!embedded && (
         <View style={styles.header}>
           <Text style={styles.headerTitle}>{accommodation ? '숙소 수정' : '숙소 추가'}</Text>
-          <Pressable style={styles.closeButton} onPress={onClose} hitSlop={8}>
+          <Pressable style={styles.closeButton} onPress={() => onClose?.()} hitSlop={8}>
             <CloseIcon width={24} height={24} />
           </Pressable>
         </View>
@@ -374,7 +374,7 @@ export default function AccommodationEditModal({
   }
 
   return (
-    <FullScreenModal visible={visible} onClose={onClose}>
+    <FullScreenModal visible={visible} onClose={() => onClose?.()}>
       {content}
     </FullScreenModal>
   );
