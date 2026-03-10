@@ -28,7 +28,7 @@ import ShoppingIcon from '../../../../assets/mobile_shopping.svg';
 
 interface AddExpenseModalProps {
   visible: boolean;
-  onClose: () => void;
+  onClose?: (opts?: { fromSave?: boolean }) => void;
   planId: number;
   planStartDate?: string;
   planEndDate?: string;
@@ -149,7 +149,7 @@ export default function AddExpenseModal({
         description: '',
         ex_date: getDefaultDate(),
       });
-      onClose();
+      onClose?.({ fromSave: true });
       onExpenseAdd?.(newExpense);
     } catch {
       Alert.alert('오류', '비용 추가에 실패했습니다.');
@@ -166,7 +166,7 @@ export default function AddExpenseModal({
       description: '',
       ex_date: getDefaultDate(),
     });
-    onClose();
+    onClose?.();
   };
 
   return (

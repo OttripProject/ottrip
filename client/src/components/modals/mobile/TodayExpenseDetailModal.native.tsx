@@ -1,8 +1,6 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { View, Text, Pressable, StyleSheet, ScrollView } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import BottomSheetModal from '@/ui/components/BottomSheetModal.native';
-import AddExpenseModal from './AddExpenseModal.native';
 import { colors } from '@/ui/tokens/colors';
 import { textStyles } from '@/ui/tokens/typography';
 import { categoryLabels } from '@/types/expense';
@@ -27,6 +25,7 @@ interface TodayExpenseDetailModalProps {
   exDate?: string;
   title?: string;
   onExpenseAdd?: (expense: Expense) => void;
+  onAddExpensePress?: () => void;
 }
 
 const formatCurrency = (amount: number) => {
@@ -75,24 +74,14 @@ export default function TodayExpenseDetailModal({
   exDate,
   title = '오늘의 여행 비용',
   onExpenseAdd,
+  onAddExpensePress,
 }: TodayExpenseDetailModalProps) {
-  const [showAddExpense, setShowAddExpense] = useState(false);
-
-  const handleExpenseAdded = (expense: Expense) => {
-    onExpenseAdd?.(expense);
-    setShowAddExpense(false);
-    setTimeout(() => {
-      onClose();
-    }, 300);
-  };
-
   const categoryEntries = CATEGORY_ORDER.filter((cat) => (byCategory[cat] ?? 0) > 0).map(
     (cat) => [cat, byCategory[cat] ?? 0] as const
   );
-  const insets = useSafeAreaInsets();
 
   return (
-    <BottomSheetModal visible={visible} onClose={onClose} height={0.9} >
+    <BottomSheetModal visible={visible} onClose={onClose} height={0.85} >
       <View style={styles.header}>
         <Text style={styles.headerTitle}>{title}</Text>
         <Pressable style={styles.closeButton} onPress={onClose} hitSlop={8}>
@@ -157,26 +146,16 @@ export default function TodayExpenseDetailModal({
         )}
       </ScrollView>
 
-      <View style={styles.footer}>
-        <Pressable
-          style={styles.AddExpenseButton}
-          onPress={() => setShowAddExpense(true)}
-        >
-          <PlusIcon width={20} height={20} color={colors.white}/>
-          <Text style={styles.AddExpenseButtonText}>비용 추가하기</Text>
-        </Pressable>
-      </View>
-
-      {planId > 0 && (
-        <AddExpenseModal
-          visible={showAddExpense}
-          onClose={() => setShowAddExpense(false)}
-          planId={planId}
-          planStartDate={planStartDate}
-          planEndDate={planEndDate}
-          defaultExDate={exDate}
-          onExpenseAdd={handleExpenseAdded}
-        />
+      {planId > 0 && onAddExpensePress && (
+        <View style={styles.footer}>
+          <Pressable
+            style={styles.AddExpenseButton}
+            onPress={onAddExpensePress}
+          >
+            <PlusIcon width={20} height={20} color={colors.white}/>
+            <Text style={styles.AddExpenseButtonText}>비용 추가하기</Text>
+          </Pressable>
+        </View>
       )}
     </BottomSheetModal>
   );

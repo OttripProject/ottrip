@@ -22,6 +22,7 @@ import AccommodationEditModal from '@/components/modals/mobile/AccommodationEdit
 import FlightDetailModal from '@/components/modals/mobile/FlightDetailModal.native';
 import FlightEditModal from '@/components/modals/mobile/FlightEditModal.native';
 import TodayExpenseDetailModal from '@/components/modals/mobile/TodayExpenseDetailModal.native';
+import AddExpenseModal from '@/components/modals/mobile/AddExpenseModal.native';
 import AddScheduleModal from '@/components/modals/mobile/AddScheduleModal.native';
 import WeeklyChecklistCard from '@/components/cards/WeeklyChecklistCard.native';
 import { itinerariesApi } from '@/services/itineraries';
@@ -58,6 +59,7 @@ export default function TodayScreen() {
   const [showFlightEdit, setShowFlightEdit] = useState(false);
   const [editingFlight, setEditingFlight] = useState<FlightRead | null>(null);
   const [showExpenseDetail, setShowExpenseDetail] = useState(false);
+  const [showAddExpenseFromDetail, setShowAddExpenseFromDetail] = useState(false);
   const [showAddScheduleModal, setShowAddScheduleModal] = useState(false);
 
   const queryClient = useQueryClient();
@@ -654,7 +656,7 @@ export default function TodayScreen() {
       />
 
       <TodayExpenseDetailModal
-        visible={showExpenseDetail}
+        visible={showExpenseDetail && !showAddExpenseFromDetail}
         onClose={() => setShowExpenseDetail(false)}
         expenses={todayExpensesFromApi ?? []}
         total={todayExpenses.total}
@@ -664,6 +666,30 @@ export default function TodayScreen() {
         planEndDate={selectedPlan?.endDate}
         exDate={todayDateStr}
         onExpenseAdd={() => refetchTodayExpenses()}
+        onAddExpensePress={() => {
+          setShowExpenseDetail(false);
+          setShowAddExpenseFromDetail(true);
+        }}
+      />
+
+      <AddExpenseModal
+        visible={showAddExpenseFromDetail}
+        onClose={(opts) => {
+          setShowAddExpenseFromDetail(false);
+          if (opts?.fromSave) {
+            setShowExpenseDetail(false);
+          } else {
+            setShowExpenseDetail(true);
+          }
+        }}
+        planId={selectedPlan?.id ?? 0}
+        planStartDate={selectedPlan?.startDate}
+        planEndDate={selectedPlan?.endDate}
+        defaultExDate={todayDateStr}
+        onExpenseAdd={() => {
+          refetchTodayExpenses();
+          setShowExpenseDetail(false);
+        }}
       />
 
       <ItineraryDetailModal

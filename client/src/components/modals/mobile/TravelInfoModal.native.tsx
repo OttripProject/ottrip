@@ -8,6 +8,7 @@ import { textStyles } from '@/ui/tokens/typography';
 import { plansApi } from '@/services/plans';
 import FullScreenModal from '@/ui/components/FullScreenModal.native';
 import TodayExpenseDetailModal from './TodayExpenseDetailModal.native';
+import AddExpenseModal from './AddExpenseModal.native';
 import SharedMembersModal from './SharedMembersModal.native';
 import WeeklyChecklistCard from '@/components/cards/WeeklyChecklistCard.native';
 import CloseIcon from '../../../../assets/x.svg';
@@ -54,6 +55,7 @@ export default function TravelInfoModal({
 }: TravelInfoModalProps) {
   const queryClient = useQueryClient();
   const [showExpenseDetail, setShowExpenseDetail] = useState(false);
+  const [showAddExpenseFromDetail, setShowAddExpenseFromDetail] = useState(false);
   const [showSharedMembers, setShowSharedMembers] = useState(false);
   const [memo, setMemo] = useState(plan?.memo ?? '');
 
@@ -192,7 +194,7 @@ export default function TravelInfoModal({
       </ScrollView>
 
       <TodayExpenseDetailModal
-        visible={showExpenseDetail}
+        visible={showExpenseDetail && !showAddExpenseFromDetail}
         onClose={() => setShowExpenseDetail(false)}
         expenses={expenses || []}
         total={totalExpenses}
@@ -201,6 +203,26 @@ export default function TravelInfoModal({
         planStartDate={planStartDate}
         planEndDate={planEndDate}
         title="전체 여행 비용"
+        onExpenseAdd={handleExpenseAdded}
+        onAddExpensePress={() => {
+          setShowExpenseDetail(false);
+          setShowAddExpenseFromDetail(true);
+        }}
+      />
+
+      <AddExpenseModal
+        visible={showAddExpenseFromDetail}
+        onClose={(opts) => {
+          setShowAddExpenseFromDetail(false);
+          if (opts?.fromSave) {
+            setShowExpenseDetail(false);
+          } else {
+            setShowExpenseDetail(true);
+          }
+        }}
+        planId={planId}
+        planStartDate={planStartDate}
+        planEndDate={planEndDate}
         onExpenseAdd={handleExpenseAdded}
       />
 
