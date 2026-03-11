@@ -7,7 +7,7 @@ import { colors } from '@/ui/tokens/colors';
 import { textStyles } from '@/ui/tokens/typography';
 import { plansApi } from '@/services/plans';
 import FullScreenModal from '@/ui/components/FullScreenModal.native';
-import TodayExpenseDetailModal from './TodayExpenseDetailModal.native';
+import ExpenseDetailModal from './ExpenseDetailModal.native';
 import AddExpenseModal from './AddExpenseModal.native';
 import SharedMembersModal from './SharedMembersModal.native';
 import WeeklyChecklistCard from '@/components/cards/WeeklyChecklistCard.native';
@@ -199,7 +199,7 @@ export default function TravelInfoModal({
         )}
       </ScrollView>
 
-      <TodayExpenseDetailModal
+      <ExpenseDetailModal
         visible={showExpenseDetail && !showAddExpenseFromDetail}
         onClose={() => setShowExpenseDetail(false)}
         expenses={expenses || []}

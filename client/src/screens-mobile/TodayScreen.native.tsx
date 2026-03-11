@@ -22,7 +22,7 @@ import AccommodationDetailModal from '@/components/modals/mobile/AccommodationDe
 import AccommodationEditModal from '@/components/modals/mobile/AccommodationEditModal.native';
 import FlightDetailModal from '@/components/modals/mobile/FlightDetailModal.native';
 import FlightEditModal from '@/components/modals/mobile/FlightEditModal.native';
-import TodayExpenseDetailModal from '@/components/modals/mobile/TodayExpenseDetailModal.native';
+import ExpenseDetailModal from '@/components/modals/mobile/ExpenseDetailModal.native';
 import AddExpenseModal from '@/components/modals/mobile/AddExpenseModal.native';
 import AddScheduleModal from '@/components/modals/mobile/AddScheduleModal.native';
 import WeeklyChecklistCard from '@/components/cards/WeeklyChecklistCard.native';
@@ -688,7 +688,7 @@ export default function TodayScreen() {
         />
       )}
 
-      <TodayExpenseDetailModal
+      <ExpenseDetailModal
         visible={showExpenseDetail && !showAddExpenseFromDetail}
         onClose={() => setShowExpenseDetail(false)}
         expenses={todayExpensesFromApi ?? []}
