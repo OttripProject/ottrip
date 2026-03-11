@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { View, Text, Pressable, StyleSheet, ScrollView, Alert } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import dayjs from 'dayjs';
@@ -6,7 +6,6 @@ import { Plan, CreatePlanRequest } from '@/types/api';
 import { colors } from '@/ui/tokens/colors';
 import { textStyles } from '@/ui/tokens/typography';
 import BottomSheetModal from '@/ui/components/BottomSheetModal.native';
-import AddPlanModal from './AddPlanModal.native';
 import CheckedIcon from '../../../../assets/mobile_plan_checked.svg';
 import UnCheckedIcon from '../../../../assets/mobile_plan_unchecked.svg';
 import AddPlanIcon from '../../../../assets/mobile_plan_add.svg';
@@ -27,6 +26,7 @@ interface PlanSelectModalProps {
   onSelectPlan: (plan: Plan) => void;
   addPlan?: (data: CreatePlanRequest) => Promise<Plan>;
   onAddTrip?: () => void;
+  onAddTripPress?: () => void;
   onEditPlan?: (plan: Plan) => void;
   onDeletePlan?: (plan: Plan) => void;
 }
@@ -39,14 +39,13 @@ export default function PlanSelectModal({
   onSelectPlan,
   addPlan,
   onAddTrip,
+  onAddTripPress,
   onEditPlan,
   onDeletePlan,
 }: PlanSelectModalProps) {
-  const [showAddPlanModal, setShowAddPlanModal] = useState(false);
-
   const handleAddTripPress = () => {
-    if (addPlan) {
-      setShowAddPlanModal(true);
+    if (addPlan && onAddTripPress) {
+      onAddTripPress();
       return;
     }
     if (onAddTrip) {
@@ -55,15 +54,6 @@ export default function PlanSelectModal({
       return;
     }
     Alert.alert('새 여행 추가', '새로운 여행 만들기 기능이 곧 제공될 예정입니다.');
-  };
-
-  const handlePlanCreated = (plan: Plan) => {
-    onSelectPlan(plan);
-    setShowAddPlanModal(false);
-    // AddPlanModal 닫힌 뒤 PlanSelectModal 닫기 (동시 닫힘 시 화면 멈춤 방지)
-    setTimeout(() => {
-      onClose();
-    }, 300);
   };
 
   const handleSelectPlan = (plan: Plan) => {
@@ -172,15 +162,6 @@ export default function PlanSelectModal({
           )}
         </ScrollView>
       </GestureDetector>
-
-      {addPlan && (
-        <AddPlanModal
-          visible={showAddPlanModal}
-          onClose={() => setShowAddPlanModal(false)}
-          onPlanCreated={handlePlanCreated}
-          addPlan={addPlan}
-        />
-      )}
     </BottomSheetModal>
   );
 }

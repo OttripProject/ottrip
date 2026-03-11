@@ -11,6 +11,7 @@ import { Plan, Itinerary, FlightRead, FlightSegmentReadDto } from '@/types/api';
 import { useSelectedPlan } from '@/contexts/SelectedPlanContext';
 import ProfileModal from '@/components/modals/mobile/ProfileModal.native';
 import PlanSelectModal from '@/components/modals/mobile/PlanSelectModal.native';
+import AddPlanModal from '@/components/modals/mobile/AddPlanModal.native';
 import AddScheduleModal from '@/components/modals/mobile/AddScheduleModal.native';
 import ItineraryDetailModal from '@/components/modals/mobile/ItineraryDetailModal.native';
 import ItineraryEditModal from '@/components/modals/mobile/ItineraryEditModal.native';
@@ -34,6 +35,7 @@ export default function WeeklyScreen() {
   const queryClient = useQueryClient();
   const { selectedPlan, setSelectedPlan } = useSelectedPlan();
   const [showPlanSelector, setShowPlanSelector] = useState(false);
+  const [showAddPlanModal, setShowAddPlanModal] = useState(false);
   const [profileModalVisible, setProfileModalVisible] = useState(false);
   const [calendarModalVisible, setCalendarModalVisible] = useState(false);
   const [showAddScheduleModal, setShowAddScheduleModal] = useState(false);
@@ -441,6 +443,10 @@ export default function WeeklyScreen() {
         selectedPlan={selectedPlan}
         onSelectPlan={setSelectedPlan}
         addPlan={plansQuery.addPlan}
+        onAddTripPress={() => {
+          setShowPlanSelector(false);
+          setShowAddPlanModal(true);
+        }}
         onEditPlan={() => {}}
         onDeletePlan={async (plan) => {
           try {
@@ -449,12 +455,29 @@ export default function WeeklyScreen() {
               const remaining = (plansQuery.plans || []).filter((p) => p.id !== plan.id);
               setSelectedPlan(remaining[0] ?? null);
             }
+            setShowPlanSelector(false);
             Alert.alert('성공', '여행이 삭제되었습니다.');
           } catch (error) {
             Alert.alert('오류', '여행 삭제에 실패했습니다.');
           }
         }}
       />
+
+      {plansQuery.addPlan && (
+        <AddPlanModal
+          visible={showAddPlanModal}
+          onClose={() => {
+            setShowAddPlanModal(false);
+            setShowPlanSelector(true);
+          }}
+          onPlanCreated={(plan) => {
+            setSelectedPlan(plan);
+            setShowAddPlanModal(false);
+            setTimeout(() => setShowPlanSelector(false), 300);
+          }}
+          addPlan={plansQuery.addPlan}
+        />
+      )}
 
       <CalendarModal
         visible={calendarModalVisible}
