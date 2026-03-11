@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, Pressable, StyleSheet, Alert, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
 import dayjs from 'dayjs';
-import { Plan, CreatePlanRequest } from '@/types/api';
+import { Plan, CreatePlanRequest, UpdatePlanRequest } from '@/types/api';
 import { colors } from '@/ui/tokens/colors';
 import { textStyles } from '@/ui/tokens/typography';
 import { radii } from '@/ui/tokens/radii';
@@ -16,6 +16,8 @@ interface AddPlanModalProps {
   onClose: () => void;
   onPlanCreated: (plan: Plan) => void;
   addPlan: (data: CreatePlanRequest) => Promise<Plan>;
+  planToEdit?: Plan | null;
+  updatePlan?: (planId: number, planData: UpdatePlanRequest) => Promise<Plan>;
 }
 
 export default function AddPlanModal({
@@ -23,6 +25,8 @@ export default function AddPlanModal({
   onClose,
   onPlanCreated,
   addPlan,
+  planToEdit,
+  updatePlan,
 }: AddPlanModalProps) {
   const [title, setTitle] = useState('');
   const [startDate, setStartDate] = useState('');
@@ -32,12 +36,18 @@ export default function AddPlanModal({
 
   useEffect(() => {
     if (visible) {
-      setTitle('');
-      setStartDate('');
-      setEndDate('');
+      if (planToEdit) {
+        setTitle(planToEdit.title || '');
+        setStartDate(planToEdit.startDate || '');
+        setEndDate(planToEdit.endDate || '');
+      } else {
+        setTitle('');
+        setStartDate('');
+        setEndDate('');
+      }
       setCalendarTarget(null);
     }
-  }, [visible]);
+  }, [visible, planToEdit]);
 
   const formatDateDisplay = (dateStr: string) =>
     dateStr ? dayjs(dateStr).format('YYYY.MM.DD') : '';
@@ -63,15 +73,24 @@ export default function AddPlanModal({
 
     setIsSubmitting(true);
     try {
-      const newPlan = await addPlan({
-        title: trimmedTitle,
-        startDate,
-        endDate,
-      });
-      onPlanCreated(newPlan);
+      if (planToEdit && updatePlan) {
+        const updatedPlan = await updatePlan(planToEdit.id, {
+          title: trimmedTitle,
+          startDate,
+          endDate,
+        });
+        onPlanCreated(updatedPlan);
+      } else {
+        const newPlan = await addPlan({
+          title: trimmedTitle,
+          startDate,
+          endDate,
+        });
+        onPlanCreated(newPlan);
+      }
       // onClose는 호출하지 않음 - onPlanCreated에서 부모가 모달 닫기 처리
     } catch (error) {
-      Alert.alert('오류', '여행 생성에 실패했습니다.');
+      Alert.alert('오류', planToEdit ? '여행 수정에 실패했습니다.' : '여행 생성에 실패했습니다.');
     } finally {
       setIsSubmitting(false);
     }
@@ -93,7 +112,7 @@ export default function AddPlanModal({
         >
           {/* 헤더 */}
           <View style={styles.header}>
-            <Text style={styles.headerTitle}>새로운 여행 만들기</Text>
+            <Text style={styles.headerTitle}>{planToEdit ? '여행 수정' : '새로운 여행 만들기'}</Text>
             <Pressable onPress={onClose} style={styles.closeButton} hitSlop={8}>
               <CloseIcon width={20} height={20} color={colors.gray700} />
             </Pressable>
@@ -140,14 +159,14 @@ export default function AddPlanModal({
             </View>
           </View>
 
-          {/* 여행 생성하기 */}
+          {/* 여행 생성하기 / 수정 */}
           <Pressable
             style={[styles.submitButton, isSubmitDisabled && styles.submitButtonDisabled]}
             onPress={handleSubmit}
             disabled={isSubmitDisabled}
           >
             <Text style={[styles.submitButtonText, isSubmitDisabled && styles.submitButtonTextDisabled]}>
-              여행 생성하기
+              {planToEdit ? '수정' : '여행 생성하기'}
             </Text>
           </Pressable>
         </KeyboardAvoidingView>

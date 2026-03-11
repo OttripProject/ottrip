@@ -45,6 +45,7 @@ export default function TodayScreen() {
   const [profileModalVisible, setProfileModalVisible] = useState(false);
   const [showPlanSelector, setShowPlanSelector] = useState(false);
   const [showAddPlanModal, setShowAddPlanModal] = useState(false);
+  const [editingPlan, setEditingPlan] = useState<Plan | null>(null);
   const [currentTime, setCurrentTime] = useState(dayjs());
   const [refreshing, setRefreshing] = useState(false);
   const [selectedItinerary, setSelectedItinerary] = useState<Itinerary | null>(null);
@@ -643,10 +644,15 @@ export default function TodayScreen() {
         onSelectPlan={setSelectedPlan}
         addPlan={plansQuery.addPlan}
         onAddTripPress={() => {
+          setEditingPlan(null);
           setShowPlanSelector(false);
           setShowAddPlanModal(true);
         }}
-        onEditPlan={() => {}}
+        onEditPlan={(plan) => {
+          setEditingPlan(plan);
+          setShowPlanSelector(false);
+          setShowAddPlanModal(true);
+        }}
         onDeletePlan={async (plan) => {
           try {
             await plansQuery.deletePlan(plan.id);
@@ -667,14 +673,18 @@ export default function TodayScreen() {
           visible={showAddPlanModal}
           onClose={() => {
             setShowAddPlanModal(false);
+            setEditingPlan(null);
             setShowPlanSelector(true);
           }}
           onPlanCreated={(plan) => {
             setSelectedPlan(plan);
             setShowAddPlanModal(false);
+            setEditingPlan(null);
             setTimeout(() => setShowPlanSelector(false), 300);
           }}
           addPlan={plansQuery.addPlan}
+          planToEdit={editingPlan}
+          updatePlan={plansQuery.updatePlan}
         />
       )}
 

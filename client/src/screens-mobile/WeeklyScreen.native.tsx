@@ -36,6 +36,7 @@ export default function WeeklyScreen() {
   const { selectedPlan, setSelectedPlan } = useSelectedPlan();
   const [showPlanSelector, setShowPlanSelector] = useState(false);
   const [showAddPlanModal, setShowAddPlanModal] = useState(false);
+  const [editingPlan, setEditingPlan] = useState<Plan | null>(null);
   const [profileModalVisible, setProfileModalVisible] = useState(false);
   const [calendarModalVisible, setCalendarModalVisible] = useState(false);
   const [showAddScheduleModal, setShowAddScheduleModal] = useState(false);
@@ -444,10 +445,15 @@ export default function WeeklyScreen() {
         onSelectPlan={setSelectedPlan}
         addPlan={plansQuery.addPlan}
         onAddTripPress={() => {
+          setEditingPlan(null);
           setShowPlanSelector(false);
           setShowAddPlanModal(true);
         }}
-        onEditPlan={() => {}}
+        onEditPlan={(plan) => {
+          setEditingPlan(plan);
+          setShowPlanSelector(false);
+          setShowAddPlanModal(true);
+        }}
         onDeletePlan={async (plan) => {
           try {
             await plansQuery.deletePlan(plan.id);
@@ -468,14 +474,18 @@ export default function WeeklyScreen() {
           visible={showAddPlanModal}
           onClose={() => {
             setShowAddPlanModal(false);
+            setEditingPlan(null);
             setShowPlanSelector(true);
           }}
           onPlanCreated={(plan) => {
             setSelectedPlan(plan);
             setShowAddPlanModal(false);
+            setEditingPlan(null);
             setTimeout(() => setShowPlanSelector(false), 300);
           }}
           addPlan={plansQuery.addPlan}
+          planToEdit={editingPlan}
+          updatePlan={plansQuery.updatePlan}
         />
       )}
 
