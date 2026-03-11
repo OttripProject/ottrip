@@ -620,7 +620,7 @@ export default function WeeklyScreen() {
               queryClient.invalidateQueries({ queryKey: ['expenses', selectedPlan.id] });
               queryClient.invalidateQueries({ queryKey: ['checklist', selectedPlan.publicId] });
             }
-            Alert.alert('삭제완료', '항공 편이 삭제되었습니다.');
+            Alert.alert('삭제완료', '항공편이 삭제되었습니다.');
           } catch {
             Alert.alert('오류', '항공 편 삭제에 실패했습니다.');
           }

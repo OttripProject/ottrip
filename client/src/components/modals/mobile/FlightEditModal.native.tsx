@@ -214,7 +214,7 @@ export default function FlightEditModal({
         } catch {
           // Refetch 실패해도 저장은 완료됨
         }
-        Alert.alert('수정완료', '항공 편이 수정되었습니다.');
+        Alert.alert('수정완료', '항공편이 수정되었습니다.');
       } else {
         const createRes = await flightsApi.createFlight({
           planId,
@@ -238,7 +238,7 @@ export default function FlightEditModal({
         } catch {
           // Refetch 실패해도 저장은 완료됨
         }
-        Alert.alert('추가완료', '항공 편이 추가되었습니다.');
+        Alert.alert('추가완료', '항공편이 추가되었습니다.');
       }
       onClose?.({ fromSave: true });
     } catch (error) {
@@ -263,7 +263,7 @@ export default function FlightEditModal({
             try {
               await flightsApi.deleteFlight(flight.id);
               if (onDelete) onDelete(flight.id);
-              Alert.alert('삭제완료', '항공 편이 삭제되었습니다.');
+              Alert.alert('삭제완료', '항공편이 삭제되었습니다.');
               onClose?.({ fromSave: true });
             } catch (error) {
               Alert.alert('오류', '항공 편 삭제에 실패했습니다.');

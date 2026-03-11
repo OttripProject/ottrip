@@ -839,7 +839,7 @@ export default function TodayScreen() {
           try {
             await flightsApi.deleteFlight(flight.id);
             planData.removeFlight(flight.id);
-            Alert.alert('삭제완료', '항공 편이 삭제되었습니다.');
+            Alert.alert('삭제완료', '항공편이 삭제되었습니다.');
           } catch (error) {
             Alert.alert('오류', '항공 편 삭제에 실패했습니다.');
           }
