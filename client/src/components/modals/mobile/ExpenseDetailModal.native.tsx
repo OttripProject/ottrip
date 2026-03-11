@@ -1,5 +1,5 @@
-import React from 'react';
 import { View, Text, Pressable, StyleSheet, ScrollView } from 'react-native';
+import dayjs from 'dayjs';
 import BottomSheetModal from '@/ui/components/BottomSheetModal.native';
 import { colors } from '@/ui/tokens/colors';
 import { textStyles } from '@/ui/tokens/typography';
@@ -80,6 +80,8 @@ export default function ExpenseDetailModal({
     (cat) => [cat, byCategory[cat] ?? 0] as const
   );
 
+  const showDatePerExpense = !exDate;
+
   return (
     <BottomSheetModal visible={visible} onClose={onClose} height={0.85} >
       <View style={styles.header}>
@@ -128,15 +130,24 @@ export default function ExpenseDetailModal({
                     {getCategoryIcon(expense.category)}
                   </View>
                   <View style={styles.detailContent}>
-                    <Text style={styles.detailTitle}>
-                      {categoryLabels[expense.category as keyof typeof categoryLabels] || expense.category}
-                    </Text>
+                    <View style={styles.detailTitleRow}>
+                      <Text style={styles.detailTitle}>
+                        {categoryLabels[expense.category as keyof typeof categoryLabels] || expense.category}
+                      </Text>
+                      {showDatePerExpense && expense.exDate && (
+                        <Text style={styles.detailDate}>
+                          {dayjs(expense.exDate).format('YYYY-MM-DD')}
+                        </Text>
+                      )}
+                    </View>
                     
                     <Text style={styles.detailDescription} numberOfLines={1}>
                       {expense.description || ''}
                     </Text>
                   </View>
-                  <Text style={styles.detailAmount}>{formatCurrency(expense.amount)}</Text>
+                  <Text style={styles.detailAmount}>
+                    {formatCurrency(expense.amount)}
+                  </Text>
                 </View>
               </View>
             ))}
@@ -253,10 +264,19 @@ const styles = StyleSheet.create({
     flex: 1,
     minWidth: 0,
   },
+  detailTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 2,
+  },
   detailTitle: {
     ...textStyles.h7,
     color: colors.gray600,
-    marginBottom: 2,
+  },
+  detailDate: {
+    ...textStyles.body4,
+    color: colors.gray600,
+    marginLeft: 8,
   },
   detailDescription: {
     ...textStyles.h6,
