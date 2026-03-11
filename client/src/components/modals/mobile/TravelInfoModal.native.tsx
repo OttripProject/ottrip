@@ -65,6 +65,12 @@ export default function TravelInfoModal({
     }
   }, [visible, plan?.id, plan?.memo]);
 
+  useEffect(() => {
+    if (visible && onRefreshExpenses) {
+      onRefreshExpenses();
+    }
+  }, [visible]);
+
   const totalExpenses = useMemo(() => {
     let total = 0;
     (expenses || []).forEach((e: Expense) => {

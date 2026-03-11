@@ -698,7 +698,11 @@ export default function TodayScreen() {
         planStartDate={selectedPlan?.startDate}
         planEndDate={selectedPlan?.endDate}
         exDate={todayDateStr}
-        onExpenseAdd={() => refetchTodayExpenses()}
+        onExpenseAdd={() => {
+          planData.refreshExpenses?.();
+          queryClient.invalidateQueries({ queryKey: ['expenses', selectedPlan?.id] });
+          refetchTodayExpenses();
+        }}
         onAddExpensePress={() => {
           setShowExpenseDetail(false);
           setShowAddExpenseFromDetail(true);
@@ -719,7 +723,10 @@ export default function TodayScreen() {
         planStartDate={selectedPlan?.startDate}
         planEndDate={selectedPlan?.endDate}
         defaultExDate={todayDateStr}
-        onExpenseAdd={() => {
+        onExpenseAdd={(expense) => {
+          planData.addExpense?.(expense);
+          planData.refreshExpenses?.();
+          queryClient.invalidateQueries({ queryKey: ['expenses', selectedPlan?.id] });
           refetchTodayExpenses();
           setShowExpenseDetail(false);
         }}
@@ -741,6 +748,8 @@ export default function TodayScreen() {
           try {
             await itinerariesApi.deleteItinerary(itinerary.id);
             planData.removeItinerary(itinerary.id);
+            planData.refreshExpenses?.();
+            queryClient.invalidateQueries({ queryKey: ['expenses', selectedPlan?.id] });
             refetchTodayExpenses();
             Alert.alert('삭제완료', '일정이 삭제되었습니다.');
           } catch (error) {
@@ -764,10 +773,14 @@ export default function TodayScreen() {
         planId={selectedPlan?.id ?? 0}
         onSave={async (itinerary) => {
           planData.addItinerary(itinerary);
+          planData.refreshExpenses?.();
+          queryClient.invalidateQueries({ queryKey: ['expenses', selectedPlan?.id] });
           await refetchTodayExpenses();
         }}
         onDelete={async (itineraryId) => {
           planData.removeItinerary(itineraryId);
+          planData.refreshExpenses?.();
+          queryClient.invalidateQueries({ queryKey: ['expenses', selectedPlan?.id] });
           await refetchTodayExpenses();
         }}
       />
@@ -897,7 +910,14 @@ export default function TodayScreen() {
           removeFlight: planData.removeFlight,
         }}
         onRefresh={async () => {
-          queryClient.invalidateQueries({ queryKey: ['expenses', selectedPlan?.id] });
+          if (selectedPlan?.publicId) {
+            planData.refreshExpenses?.();
+            planData.refreshItineraries?.();
+            planData.refreshFlights?.();
+            planData.refreshAccommodations?.();
+            queryClient.invalidateQueries({ queryKey: ['expenses', selectedPlan.id] });
+            queryClient.invalidateQueries({ queryKey: ['checklist', selectedPlan.publicId] });
+          }
           refetchTodayExpenses();
         }}
       />
