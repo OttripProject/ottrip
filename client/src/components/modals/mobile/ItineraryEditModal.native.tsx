@@ -7,12 +7,14 @@ import { colors } from '@/ui/tokens/colors';
 import { textStyles, typography } from '@/ui/tokens/typography';
 import FullScreenModal from '@/ui/components/FullScreenModal.native';
 import FloatingFooter from '@/ui/components/FloatingFooter.native';
-import { TimePicker, CountryPicker } from '@/ui/components/pickers';
+import { TimePicker } from '@/ui/components/pickers';
+import CountrySearchModal from './CountrySearchModal.native';
 import Input from '@/ui/components/input/Input';
 import { itinerariesApi } from '@/services/itineraries';
 import { expensesApi } from '@/services/expenses';
 import CalendarModal from '@/ui/components/CalendarModal.native';
 import CalendarIcon from '../../../../assets/mobile_calendar_black.svg';
+import DownArrowIcon from '../../../../assets/down_arrow.svg';
 import FoodIcon from '../../../../assets/mobile_food.svg';
 import CarIcon from '../../../../assets/mobile_car.svg';
 import TicketIcon from '../../../../assets/mobile_ticket.svg';
@@ -59,6 +61,7 @@ export default function ItineraryEditModal({
   });
   const [existingExpenseId, setExistingExpenseId] = useState<number | null>(null);
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showCountrySearch, setShowCountrySearch] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const CATEGORY_ROW1: ExpenseCategory[] = [
@@ -315,14 +318,32 @@ export default function ItineraryEditModal({
           <View style={styles.row}>
             <View style={[styles.inputGroup, styles.halfWidth]}>
               <Text style={styles.label}>국가</Text>
-              <CountryPicker
-                value={formData.country}
-                onChange={(country) => setFormData({ ...formData, country })}
-                containerStyle={styles.pickerContainer}
-                style={StyleSheet.flatten([styles.pickerInput, !itinerary && styles.pickerInputBorderless])}
-                dropDownContainerStyle={styles.pickerDropDownContainer}
-                listItemLabelStyle={styles.pickerListItemLabel}
-                selectedItemContainerStyle={styles.selectedItemContainerStyle}
+              <Pressable
+                style={[
+                  styles.pickerInput,
+                  styles.countryPickerTouchable,
+                  !itinerary && styles.pickerInputBorderless,
+                ]}
+                onPress={() => setShowCountrySearch(true)}
+              >
+                <Text
+                  style={
+                    formData.country
+                      ? styles.pickerValueText
+                      : styles.pickerPlaceholderText
+                  }
+                >
+                  {formData.country || '국가 선택'}
+                </Text>
+                <DownArrowIcon width={20} height={20} color={colors.gray600} />
+              </Pressable>
+              <CountrySearchModal
+                visible={showCountrySearch}
+                onClose={() => setShowCountrySearch(false)}
+                onSelect={(country) => {
+                  setFormData({ ...formData, country });
+                  setShowCountrySearch(false);
+                }}
               />
             </View>
             <View style={[styles.inputGroup, styles.halfWidth]}>
@@ -563,6 +584,21 @@ const styles = StyleSheet.create({
   pickerInputBorderless: {
     borderWidth: 0,
     borderColor: 'transparent',
+  },
+  countryPickerTouchable: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+  },
+  pickerValueText: {
+    ...textStyles.body3,
+    color: colors.black,
+  },
+  pickerPlaceholderText: {
+    ...textStyles.body3,
+    color: colors.gray600,
   },
   pickerDropDownContainer: {
     borderRadius: 12,
