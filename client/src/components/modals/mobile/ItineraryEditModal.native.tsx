@@ -327,11 +327,14 @@ export default function ItineraryEditModal({
                 onPress={() => setShowCountrySearch(true)}
               >
                 <Text
-                  style={
+                  style={[
                     formData.country
                       ? styles.pickerValueText
-                      : styles.pickerPlaceholderText
-                  }
+                      : styles.pickerPlaceholderText,
+                    styles.countryTextTruncate,
+                  ]}
+                  numberOfLines={1}
+                  ellipsizeMode="tail"
                 >
                   {formData.country || '국가 선택'}
                 </Text>
@@ -599,6 +602,10 @@ const styles = StyleSheet.create({
   pickerPlaceholderText: {
     ...textStyles.body3,
     color: colors.gray600,
+  },
+  countryTextTruncate: {
+    flex: 1,
+    minWidth: 0,
   },
   pickerDropDownContainer: {
     borderRadius: 12,
