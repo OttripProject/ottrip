@@ -42,6 +42,12 @@ export const typography = {
 };
 
 export const textStyles: Record<string, TextStyle> = {
+  h1: {
+    fontFamily: typography.fontFamily.poppinsSemiBold,
+    fontSize: 32,
+    lineHeight: 48,
+    color: colors.black,
+  },
   h2: {
     fontFamily: typography.fontFamily.pretendardSemiBold,
     fontSize: 24,

@@ -1,6 +1,7 @@
 import DashboardScreen from "@/screens/DashboardScreen";
 import InviteAcceptScreen from "@/screens/InviteAcceptScreen";
 import LoginScreen from "@/screens/LoginScreen";
+import LoginScreenNative from "@/screens-mobile/LoginScreen.native";
 import AuthCallbackScreen from "../screens/AuthCallbackScreen";
 import ProfileScreen from "@/screens/ProfileScreen";
 import TermsConsentScreen from "@/screens/TermsConsentScreen";
@@ -206,7 +207,10 @@ export default function RootNavigator() {
                 title: 'OTTRIP',
               }}
             />
-            <Stack.Screen name="로그인" component={LoginScreen} />
+            <Stack.Screen
+              name="로그인"
+              component={Platform.OS === 'web' ? LoginScreen : LoginScreenNative}
+            />
             <Stack.Screen name="약관동의" component={TermsConsentScreen} />
             <Stack.Screen name="프로필 입력" component={RegisterProfileScreen} />
             <Stack.Screen name="상세내용" component={TermsDetailScreen} />
