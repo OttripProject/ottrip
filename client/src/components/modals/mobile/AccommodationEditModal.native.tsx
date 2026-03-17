@@ -6,13 +6,15 @@ import { colors } from '@/ui/tokens/colors';
 import { textStyles, typography } from '@/ui/tokens/typography';
 import FullScreenModal from '@/ui/components/FullScreenModal.native';
 import FloatingFooter from '@/ui/components/FloatingFooter.native';
-import { TimePicker, CountryPicker } from '@/ui/components/pickers';
+import { TimePicker } from '@/ui/components/pickers';
+import CountrySearchModal from './CountrySearchModal.native';
 import Input from '@/ui/components/input/Input';
 import { accommodationsApi } from '@/services/accommodations';
 import CalendarModal from '@/ui/components/CalendarModal.native';
 import { ExpenseCurrency } from '@/types/expense';
 import CloseIcon from '../../../../assets/x.svg';
 import CalendarIcon from '../../../../assets/mobile_calendar_black.svg';
+import DownArrowIcon from '../../../../assets/down_arrow.svg';
 
 interface AccommodationEditModalProps {
   visible: boolean;
@@ -59,6 +61,7 @@ export default function AccommodationEditModal({
   const [expenseAmount, setExpenseAmount] = useState('');
   const [showCheckinDatePicker, setShowCheckinDatePicker] = useState(false);
   const [showCheckoutDatePicker, setShowCheckoutDatePicker] = useState(false);
+  const [showCountrySearch, setShowCountrySearch] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
@@ -234,14 +237,35 @@ export default function AccommodationEditModal({
           <View style={styles.row}>
             <View style={[styles.inputGroup, styles.halfWidth]}>
               <Text style={styles.label}>국가</Text>
-              <CountryPicker
-                value={formData.country}
-                onChange={(country) => setFormData({ ...formData, country })}
-                containerStyle={styles.pickerContainer}
-                style={StyleSheet.flatten([styles.pickerInput, !accommodation && styles.pickerInputBorderless])}
-                dropDownContainerStyle={styles.pickerDropDownContainer}
-                listItemLabelStyle={styles.pickerListItemLabel}
-                selectedItemContainerStyle={styles.selectedItemContainerStyle}
+              <Pressable
+                style={[
+                  styles.pickerInput,
+                  styles.countryPickerTouchable,
+                  !accommodation && styles.pickerInputBorderless,
+                ]}
+                onPress={() => setShowCountrySearch(true)}
+              >
+                <Text
+                  style={[
+                    formData.country
+                      ? styles.pickerValueText
+                      : styles.pickerPlaceholderText,
+                    styles.countryTextTruncate,
+                  ]}
+                  numberOfLines={1}
+                  ellipsizeMode="tail"
+                >
+                  {formData.country || '국가 선택'}
+                </Text>
+                <DownArrowIcon width={16} height={16} color={colors.gray600} />
+              </Pressable>
+              <CountrySearchModal
+                visible={showCountrySearch}
+                onClose={() => setShowCountrySearch(false)}
+                onSelect={(country) => {
+                  setFormData({ ...formData, country });
+                  setShowCountrySearch(false);
+                }}
               />
             </View>
             <View style={[styles.inputGroup, styles.halfWidth]}>
@@ -469,6 +493,25 @@ const styles = StyleSheet.create({
   pickerInputBorderless: {
     borderWidth: 0,
     borderColor: 'transparent',
+  },
+  countryPickerTouchable: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+  },
+  pickerValueText: {
+    ...textStyles.h6,
+    color: colors.black,
+  },
+  pickerPlaceholderText: {
+    ...textStyles.body3,
+    color: colors.gray600,
+  },
+  countryTextTruncate: {
+    flex: 1,
+    minWidth: 0,
   },
   pickerDropDownContainer: {
     borderRadius: 12,

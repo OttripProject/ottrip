@@ -6,13 +6,16 @@ import { colors } from '@/ui/tokens/colors';
 import { textStyles, typography } from '@/ui/tokens/typography';
 import FullScreenModal from '@/ui/components/FullScreenModal.native';
 import FloatingFooter from '@/ui/components/FloatingFooter.native';
-import { TimePicker, AirportPicker } from '@/ui/components/pickers';
+import { TimePicker } from '@/ui/components/pickers';
 import Input from '@/ui/components/input/Input';
 import { flightsApi } from '@/services/flights';
 import { ExpenseCurrency, ExpenseCategory } from '@/types/expense';
 import { PLACEHOLDERS } from '@/constants/placeholders';
+import { getAirportLabelByIata } from '@/utils/airportList';
 import CalendarModal from '@/ui/components/CalendarModal.native';
+import AirportSearchModal from './AirportSearchModal.native';
 import CloseIcon from '../../../../assets/x.svg';
+import DownArrowIcon from '../../../../assets/down_arrow.svg';
 import CalendarIcon from '../../../../assets/mobile_calendar_black.svg';
 import AddIcon from '../../../../assets/mobile_plan_add.svg';
 import DeleteIcon from '../../../../assets/delete.svg';
@@ -72,6 +75,10 @@ export default function FlightEditModal({
   const [expenseAmount, setExpenseAmount] = useState('');
   const [flightSegments, setFlightSegments] = useState<SegmentForm[]>([]);
   const [segmentDatePicker, setSegmentDatePicker] = useState<{ idx: number; type: 'dep' | 'arr' } | null>(null);
+  const [airportSearchTarget, setAirportSearchTarget] = useState<{
+    idx: number;
+    type: 'dep' | 'arr';
+  } | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isSubmittingRef = useRef(false);
 
@@ -430,21 +437,69 @@ export default function FlightEditModal({
                   </View>
                 </View>
                 <View style={styles.row}>
-                  <View style={[styles.inputGroup, styles.halfWidth, { zIndex: 2000 - idx }]}>
-                    <AirportPicker
-                      value={seg.departure_airport}
-                      onChange={(code) => updateSegment(idx, 'departure_airport', code)}
-                      placeholder={PLACEHOLDERS.flight.departureAirport}
-                      style={StyleSheet.flatten([styles.pickerInput, {backgroundColor: colors.white}, !flight && styles.pickerInputBorderless])}
-                    />
+                  <View style={[styles.inputGroup, styles.halfWidth]}>
+                    <Pressable
+                      style={[
+                        styles.pickerInput,
+                        styles.airportPickerTouchable,
+                        { backgroundColor: colors.white },
+                        !flight && styles.pickerInputBorderless,
+                      ]}
+                      onPress={() => setAirportSearchTarget({ idx, type: 'dep' })}
+                    >
+                      <Text
+                        style={[
+                          seg.departure_airport
+                            ? styles.pickerValueText
+                            : styles.pickerPlaceholderText,
+                          styles.airportTextTruncate,
+                        ]}
+                        numberOfLines={1}
+                        ellipsizeMode="tail"
+                      >
+                        {seg.departure_airport
+                          ? getAirportLabelByIata(seg.departure_airport) ||
+                            seg.departure_airport
+                          : '출발 공항'}
+                      </Text>
+                      <DownArrowIcon
+                        width={16}
+                        height={16}
+                        color={colors.gray600}
+                      />
+                    </Pressable>
                   </View>
-                  <View style={[styles.inputGroup, styles.halfWidth, { zIndex: 2000 - idx }]}>
-                    <AirportPicker
-                      value={seg.arrival_airport}
-                      onChange={(code) => updateSegment(idx, 'arrival_airport', code)}
-                      placeholder={PLACEHOLDERS.flight.arrivalAirport}
-                      style={StyleSheet.flatten([styles.pickerInput, {backgroundColor: colors.white}, !flight && styles.pickerInputBorderless])}
-                    />
+                  <View style={[styles.inputGroup, styles.halfWidth]}>
+                    <Pressable
+                      style={[
+                        styles.pickerInput,
+                        styles.airportPickerTouchable,
+                        { backgroundColor: colors.white },
+                        !flight && styles.pickerInputBorderless,
+                      ]}
+                      onPress={() => setAirportSearchTarget({ idx, type: 'arr' })}
+                    >
+                      <Text
+                        style={[
+                          seg.arrival_airport
+                            ? styles.pickerValueText
+                            : styles.pickerPlaceholderText,
+                          styles.airportTextTruncate,
+                        ]}
+                        numberOfLines={1}
+                        ellipsizeMode="tail"
+                      >
+                        {seg.arrival_airport
+                          ? getAirportLabelByIata(seg.arrival_airport) ||
+                            seg.arrival_airport
+                          : '도착 공항'}
+                      </Text>
+                      <DownArrowIcon
+                        width={16}
+                        height={16}
+                        color={colors.gray600}
+                      />
+                    </Pressable>
                   </View>
                 </View>
                 <View style={styles.row}>
@@ -560,6 +615,21 @@ export default function FlightEditModal({
           </View>
         </View>
       </ScrollView>
+
+      <AirportSearchModal
+        visible={airportSearchTarget !== null}
+        onClose={() => setAirportSearchTarget(null)}
+        onSelect={(code) => {
+          if (airportSearchTarget) {
+            const field =
+              airportSearchTarget.type === 'dep'
+                ? 'departure_airport'
+                : 'arrival_airport';
+            updateSegment(airportSearchTarget.idx, field, code);
+            setAirportSearchTarget(null);
+          }
+        }}
+      />
 
       <FloatingFooter
         primaryLabel={flight ? '수정 완료' : '일정 저장'}
@@ -691,6 +761,25 @@ const styles = StyleSheet.create({
   pickerInputBorderless: {
     borderWidth: 0,
     borderColor: 'transparent',
+  },
+  airportPickerTouchable: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+  },
+  pickerValueText: {
+    ...textStyles.h6,
+    color: colors.black,
+  },
+  pickerPlaceholderText: {
+    ...textStyles.body3,
+    color: colors.gray600,
+  },
+  airportTextTruncate: {
+    flex: 1,
+    minWidth: 0,
   },
   expenseSection: {
     marginTop: 20,
