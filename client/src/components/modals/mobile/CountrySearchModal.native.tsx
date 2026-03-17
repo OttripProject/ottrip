@@ -16,7 +16,6 @@ import { getKoreanCountryOptions } from '@/utils/countryListKo';
 import Input from '@/ui/components/input/Input';
 import CloseIcon from '../../../../assets/mobile_close.svg';
 import SearchIcon from '../../../../assets/search.svg';
-import DeleteIcon from '../../../../assets/delete_gray.svg';
 
 interface CountrySearchModalProps {
   visible: boolean;
@@ -58,10 +57,6 @@ export default function CountrySearchModal({
     onClose();
   };
 
-  const handleClearRecent = () => {
-    setRecentSearches([]);
-  };
-
   const handleClose = () => {
     setSearchQuery('');
     Keyboard.dismiss();
@@ -82,17 +77,8 @@ export default function CountrySearchModal({
       <View style={styles.header}>
         <Text style={styles.headerTitle}>국가 선택</Text>
         <View style={styles.headerRight}>
-          {recentSearches.length > 0 && (
-            <Pressable
-              style={styles.iconButton}
-              onPress={handleClearRecent}
-              hitSlop={8}
-            >
-              <DeleteIcon width={20} height={20} color={colors.gray600} />
-            </Pressable>
-          )}
-          <Pressable style={styles.iconButton} onPress={handleClose} hitSlop={8}>
-            <CloseIcon width={20} height={20} color={colors.black} />
+          <Pressable style={styles.closeButton} onPress={handleClose} hitSlop={8}>
+            <CloseIcon width={20} height={20} color={colors.gray700} />
           </Pressable>
         </View>
       </View>
@@ -178,12 +164,15 @@ const styles = StyleSheet.create({
   headerRight: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
   },
-  iconButton: {
+  closeButton: {
     padding: 4,
-    justifyContent: 'center',
+    backgroundColor: colors.gray200,
+    borderRadius: 16,
+    height: 32,
+    width: 32,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   searchWrapper: {
     position: 'relative',
@@ -220,9 +209,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   recentItem: {
-    paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.gray200,
+    paddingBottom: 16,
   },
   recentItemText: {
     ...textStyles.h5,
@@ -236,7 +223,7 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
   listItem: {
-    paddingVertical: 14,
+    paddingBottom: 14,
   },
   listItemText: {
     ...textStyles.h5,

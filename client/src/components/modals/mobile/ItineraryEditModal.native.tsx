@@ -593,7 +593,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
   },
   pickerValueText: {
-    ...textStyles.body3,
+    ...textStyles.h6,
     color: colors.black,
   },
   pickerPlaceholderText: {
