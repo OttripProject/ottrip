@@ -463,8 +463,8 @@ export default function FlightEditModal({
                           : '출발 공항'}
                       </Text>
                       <DownArrowIcon
-                        width={16}
-                        height={16}
+                        width={20}
+                        height={20}
                         color={colors.gray600}
                       />
                     </Pressable>
@@ -495,8 +495,8 @@ export default function FlightEditModal({
                           : '도착 공항'}
                       </Text>
                       <DownArrowIcon
-                        width={16}
-                        height={16}
+                        width={20}
+                        height={20}
                         color={colors.gray600}
                       />
                     </Pressable>
@@ -629,6 +629,13 @@ export default function FlightEditModal({
             setAirportSearchTarget(null);
           }
         }}
+        selectedValue={
+          airportSearchTarget
+            ? airportSearchTarget.type === 'dep'
+              ? flightSegments[airportSearchTarget.idx]?.departure_airport
+              : flightSegments[airportSearchTarget.idx]?.arrival_airport
+            : undefined
+        }
       />
 
       <FloatingFooter

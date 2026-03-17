@@ -266,6 +266,7 @@ export default function AccommodationEditModal({
                   setFormData({ ...formData, country });
                   setShowCountrySearch(false);
                 }}
+                selectedValue={formData.country}
               />
             </View>
             <View style={[styles.inputGroup, styles.halfWidth]}>

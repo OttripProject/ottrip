@@ -16,11 +16,13 @@ import { getKoreanCountryOptions } from '@/utils/countryListKo';
 import Input from '@/ui/components/input/Input';
 import CloseIcon from '../../../../assets/mobile_close.svg';
 import SearchIcon from '../../../../assets/search.svg';
+import CheckIcon from '../../../../assets/check_black.svg';
 
 interface CountrySearchModalProps {
   visible: boolean;
   onClose: () => void;
   onSelect: (countryName: string) => void;
+  selectedValue?: string;
 }
 
 const RECENT_LIMIT = 10;
@@ -29,6 +31,7 @@ export default function CountrySearchModal({
   visible,
   onClose,
   onSelect,
+  selectedValue,
 }: CountrySearchModalProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
@@ -108,10 +111,15 @@ export default function CountrySearchModal({
           keyExtractor={(item) => item.value}
           renderItem={({ item }) => (
             <Pressable
-              style={styles.listItem}
+              style={[styles.listItem, styles.listItemRow]}
               onPress={() => handleSelect(item.label)}
             >
-              <Text style={styles.listItemText}>{item.label}</Text>
+              <Text style={styles.listItemText} numberOfLines={1} ellipsizeMode="tail">
+                {item.label}
+              </Text>
+              {selectedValue === item.label && (
+                <CheckIcon width={20} height={20} color={colors.black} />
+              )}
             </Pressable>
           )}
           ListEmptyComponent={
@@ -133,10 +141,13 @@ export default function CountrySearchModal({
           {recentSearches.map((name) => (
             <Pressable
               key={name}
-              style={styles.recentItem}
+              style={[styles.recentItem, styles.recentItemRow]}
               onPress={() => handleSelect(name)}
             >
               <Text style={styles.recentItemText}>{name}</Text>
+              {selectedValue === name && (
+                <CheckIcon width={20} height={20} color={colors.black} />
+              )}
             </Pressable>
           ))}
         </ScrollView>
@@ -211,9 +222,17 @@ const styles = StyleSheet.create({
   recentItem: {
     paddingBottom: 16,
   },
+  recentItemRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
   recentItemText: {
     ...textStyles.h5,
     color: colors.black,
+    flex: 1,
+    minWidth: 0,
+    marginRight: 8,
   },
   list: {
     flex: 1,
@@ -225,9 +244,17 @@ const styles = StyleSheet.create({
   listItem: {
     paddingBottom: 14,
   },
+  listItemRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
   listItemText: {
     ...textStyles.h5,
     color: colors.black,
+    flex: 1,
+    minWidth: 0,
+    marginRight: 8,
   },
   emptyText: {
     ...textStyles.body3,

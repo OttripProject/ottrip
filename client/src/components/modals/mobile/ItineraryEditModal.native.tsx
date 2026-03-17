@@ -347,6 +347,7 @@ export default function ItineraryEditModal({
                   setFormData({ ...formData, country });
                   setShowCountrySearch(false);
                 }}
+                selectedValue={formData.country}
               />
             </View>
             <View style={[styles.inputGroup, styles.halfWidth]}>
