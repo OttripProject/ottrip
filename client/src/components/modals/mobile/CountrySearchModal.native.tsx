@@ -1,10 +1,9 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   View,
   Text,
   Pressable,
   StyleSheet,
-  TextInput,
   FlatList,
   ScrollView,
   Keyboard,
@@ -13,6 +12,7 @@ import BottomSheetModal from '@/ui/components/BottomSheetModal.native';
 import { colors } from '@/ui/tokens/colors';
 import { textStyles, typography } from '@/ui/tokens/typography';
 import { getKoreanCountryOptions } from '@/utils/countryListKo';
+import { useRecentSearches } from '@/hooks/useRecentSearches';
 import Input from '@/ui/components/input/Input';
 import CloseIcon from '../../../../assets/mobile_close.svg';
 import SearchIcon from '../../../../assets/search.svg';
@@ -26,6 +26,7 @@ interface CountrySearchModalProps {
 }
 
 const RECENT_LIMIT = 10;
+const STORAGE_KEY = 'recentCountrySearches';
 
 export default function CountrySearchModal({
   visible,
@@ -34,7 +35,16 @@ export default function CountrySearchModal({
   selectedValue,
 }: CountrySearchModalProps) {
   const [searchQuery, setSearchQuery] = useState('');
-  const [recentSearches, setRecentSearches] = useState<string[]>([]);
+  const { items: recentSearches, addItem, load } = useRecentSearches(
+    STORAGE_KEY,
+    RECENT_LIMIT
+  );
+
+  useEffect(() => {
+    if (visible) {
+      load();
+    }
+  }, [visible, load]);
 
   const countryOptions = useMemo(() => getKoreanCountryOptions(), []);
 
@@ -48,13 +58,7 @@ export default function CountrySearchModal({
 
   const handleSelect = (countryName: string) => {
     onSelect(countryName);
-    setRecentSearches((prev) => {
-      const next = [countryName, ...prev.filter((c) => c !== countryName)].slice(
-        0,
-        RECENT_LIMIT
-      );
-      return next;
-    });
+    addItem(countryName);
     setSearchQuery('');
     Keyboard.dismiss();
     onClose();

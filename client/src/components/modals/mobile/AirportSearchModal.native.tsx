@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   View,
   Text,
@@ -15,6 +15,7 @@ import {
   getAirportOptionsBySearch,
   getAirportLabelByIata,
 } from '@/utils/airportList';
+import { useRecentSearches } from '@/hooks/useRecentSearches';
 import Input from '@/ui/components/input/Input';
 import CloseIcon from '../../../../assets/mobile_close.svg';
 import SearchIcon from '../../../../assets/search.svg';
@@ -28,6 +29,7 @@ interface AirportSearchModalProps {
 }
 
 const RECENT_LIMIT = 10;
+const STORAGE_KEY = 'recentAirportSearches';
 
 export default function AirportSearchModal({
   visible,
@@ -36,7 +38,16 @@ export default function AirportSearchModal({
   selectedValue,
 }: AirportSearchModalProps) {
   const [searchQuery, setSearchQuery] = useState('');
-  const [recentSearches, setRecentSearches] = useState<string[]>([]);
+  const { items: recentSearches, addItem, load } = useRecentSearches(
+    STORAGE_KEY,
+    RECENT_LIMIT
+  );
+
+  useEffect(() => {
+    if (visible) {
+      load();
+    }
+  }, [visible, load]);
 
   const filteredAirports = useMemo(() => {
     if (!searchQuery.trim()) return [];
@@ -45,13 +56,7 @@ export default function AirportSearchModal({
 
   const handleSelect = (airportCode: string) => {
     onSelect(airportCode);
-    setRecentSearches((prev) => {
-      const next = [
-        airportCode,
-        ...prev.filter((c) => c !== airportCode),
-      ].slice(0, RECENT_LIMIT);
-      return next;
-    });
+    addItem(airportCode);
     setSearchQuery('');
     Keyboard.dismiss();
     onClose();
