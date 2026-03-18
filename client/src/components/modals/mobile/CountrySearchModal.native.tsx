@@ -12,6 +12,7 @@ import BottomSheetModal from '@/ui/components/BottomSheetModal.native';
 import { colors } from '@/ui/tokens/colors';
 import { textStyles, typography } from '@/ui/tokens/typography';
 import { getKoreanCountryOptions } from '@/utils/countryListKo';
+import { useMe } from '@/hooks/useMe';
 import { useRecentSearches } from '@/hooks/useRecentSearches';
 import Input from '@/ui/components/input/Input';
 import CloseIcon from '../../../../assets/mobile_close.svg';
@@ -26,7 +27,7 @@ interface CountrySearchModalProps {
 }
 
 const RECENT_LIMIT = 10;
-const STORAGE_KEY = 'recentCountrySearches';
+const STORAGE_KEY_PREFIX = 'recentCountrySearches';
 
 export default function CountrySearchModal({
   visible,
@@ -35,8 +36,10 @@ export default function CountrySearchModal({
   selectedValue,
 }: CountrySearchModalProps) {
   const [searchQuery, setSearchQuery] = useState('');
+  const { data: me } = useMe();
+  const storageKey = `${STORAGE_KEY_PREFIX}_${me?.handle ?? 'guest'}`;
   const { items: recentSearches, addItem, load } = useRecentSearches(
-    STORAGE_KEY,
+    storageKey,
     RECENT_LIMIT
   );
 
