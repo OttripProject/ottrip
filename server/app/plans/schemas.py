@@ -51,7 +51,7 @@ class ShareCreate(APISchema):
 
 class ShareRead(APISchema):
     handle: str
-    role: Role
+    role: Role | None = None
     nickname: str
     email: str
 

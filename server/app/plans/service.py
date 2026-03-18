@@ -165,19 +165,27 @@ class PlanService:
         await self.plan_repository.upsert_shared(plan_id=plan_id, user_id=user_id, role=role)
 
     async def list_shares(self, *, plan_id: int) -> list[ShareRead]:
-        plan = await self.plan_repository.exists(plan_id=plan_id)
+        plan = await self.plan_repository.find_by_id_with_owner(plan_id=plan_id)
         if not plan:
             raise HTTPException(status_code=404, detail="계획을 찾을 수 없습니다.")
         shared_plans = await self.plan_repository.list_shared(plan_id=plan_id)
-        return [
+
+        owner_read = ShareRead(
+            handle=plan.owner.handle,
+            role=None,
+            nickname=plan.owner.nickname,
+            email=plan.owner.email or "",
+        )
+        shared_reads = [
             ShareRead(
                 handle=shared_plan.shared_user.handle,
                 role=shared_plan.role,
                 nickname=shared_plan.shared_user.nickname,
-                email=shared_plan.shared_user.email or ""
+                email=shared_plan.shared_user.email or "",
             )
             for shared_plan in shared_plans
         ]
+        return [owner_read] + shared_reads
 
     async def revoke_share(self, *, plan_id: int, handle: str) -> None:
         plan_exists, has_permission = await self.plan_repository.has_edit_permission(
