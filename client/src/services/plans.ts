@@ -3,7 +3,7 @@ import { Plan, CreatePlanRequest, UpdatePlanRequest } from '../types/api';
 
 export type PlanShare = {
   handle: string;
-  role: 'editor' | 'viewer';
+  role: 'editor' | 'viewer' | null;
   nickname: string;
   email: string;
 };

@@ -1,22 +1,24 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
   Pressable,
   StyleSheet,
   ScrollView,
-  TextInput,
   KeyboardAvoidingView,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 import BottomSheetModal from '@/ui/components/BottomSheetModal.native';
+import { plansApi } from '@/services/plans';
 import { colors } from '@/ui/tokens/colors';
 import { textStyles, typography } from '@/ui/tokens/typography';
 import { radii } from '@/ui/tokens/radii';
 import CloseIcon from '../../../../assets/mobile_close.svg';
 import DeleteIcon from '../../../../assets/delete_gray.svg';
 import AddIcon from '../../../../assets/add.svg';
-import DropdownIcon from '../../../../assets/dropdown_time.svg';
+import DropdownIcon from '../../../../assets/mobile_dropdown.svg';
+import { Input } from '@/ui/components/input';
 
 export type SharedMemberRole = 'OWNER' | 'EDITOR' | 'VIEWER';
 
@@ -34,15 +36,43 @@ interface SharedMembersModalProps {
   sharedMembers?: SharedMember[];
 }
 
+function planShareToSharedMember(s: { handle: string; role: 'editor' | 'viewer' | null; nickname: string; email: string }): SharedMember {
+  const role: SharedMemberRole = s.role == null ? 'OWNER' : s.role === 'editor' ? 'EDITOR' : 'VIEWER';
+  const roleLabel = role === 'OWNER' ? '전체 권한' : role === 'EDITOR' ? '편집 가능' : '조회 전용';
+  return { id: s.handle, email: s.email, role, roleLabel };
+}
+
+const ROLE_OPTIONS: { value: 'editor' | 'viewer'; label: string }[] = [
+  { value: 'editor', label: '에디터' },
+  { value: 'viewer', label: '뷰어' },
+];
+
 export default function SharedMembersModal({
   visible,
   onClose,
   planId,
-  sharedMembers = [],
+  sharedMembers: propSharedMembers,
 }: SharedMembersModalProps) {
   const [inviteEmail, setInviteEmail] = useState('');
-  const [selectedRole, setSelectedRole] = useState('에디터');
+  const [selectedRole, setSelectedRole] = useState<'editor' | 'viewer'>('editor');
   const [showRolePicker, setShowRolePicker] = useState(false);
+  const [fetchedMembers, setFetchedMembers] = useState<SharedMember[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (visible && planId) {
+      setLoading(true);
+      plansApi
+        .listShares(planId)
+        .then((shares) => setFetchedMembers(shares.map(planShareToSharedMember)))
+        .finally(() => setLoading(false));
+    } else {
+      setFetchedMembers([]);
+    }
+  }, [visible, planId]);
+
+  const sharedMembers =
+    propSharedMembers != null && propSharedMembers.length > 0 ? propSharedMembers : fetchedMembers;
 
   const handleInvite = () => {
     // TODO: API 연동
@@ -71,16 +101,13 @@ export default function SharedMembersModal({
           </View>
         </View>
 
-        <ScrollView
-          style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-        >
-          {/* 멤버 초대 */}
+        {/* 멤버 초대 - ScrollView 밖에 두어 드롭다운이 위에 표시됨 */}
+        <View style={styles.inviteSection}>
           <Text style={styles.sectionLabel}>멤버 초대</Text>
           <View style={styles.inviteRow}>
-            <TextInput
+            <Input
+              variant="filled"
+              containerStyle={styles.emailInputContainer}
               style={styles.emailInput}
               placeholder="이메일 주소"
               placeholderTextColor={colors.gray600}
@@ -90,23 +117,57 @@ export default function SharedMembersModal({
               autoCapitalize="none"
               autoCorrect={false}
             />
-            <Pressable
-              style={styles.roleButton}
-              onPress={() => setShowRolePicker(!showRolePicker)}
-            >
-              <Text style={styles.roleButtonText}>{selectedRole}</Text>
-              <DropdownIcon width={16} height={16} color={colors.black} />
-            </Pressable>
+            <View style={styles.rolePickerWrap}>
+              <Pressable
+                style={styles.roleButton}
+                onPress={() => setShowRolePicker(!showRolePicker)}
+              >
+                <View style={styles.roleButtonContent}>
+                  <Text style={styles.roleButtonText} numberOfLines={1}>
+                    {ROLE_OPTIONS.find((o) => o.value === selectedRole)?.label ?? '에디터'}
+                  </Text>
+                  <DropdownIcon width={16} height={16} color={colors.gray600} />
+                </View>
+              </Pressable>
+              {showRolePicker && (
+                <View style={styles.roleDropdown}>
+                  {ROLE_OPTIONS.map((opt) => (
+                    <Pressable
+                      key={opt.value}
+                      style={[styles.roleDropdownItem, opt.value === selectedRole && styles.roleDropdownItemActive]}
+                      onPress={() => {
+                        setSelectedRole(opt.value);
+                        setShowRolePicker(false);
+                      }}
+                    >
+                      <Text style={styles.roleDropdownItemText}>{opt.label}</Text>
+                    </Pressable>
+                  ))}
+                </View>
+              )}
+            </View>
           </View>
           <Pressable style={styles.inviteButton} onPress={handleInvite}>
             <AddIcon width={16} height={16} color={colors.white} />
             <Text style={styles.inviteButtonText}>초대하기</Text>
           </Pressable>
+        </View>
 
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          onScrollBeginDrag={() => setShowRolePicker(false)}
+          scrollEventThrottle={16}
+        >
           {/* 참여자 목록 */}
-          <Text style={styles.sectionLabel}>참여자 ({sharedMembers.length})</Text>
+          <Text style={styles.sectionLabel}>참여자 ({loading ? '...' : sharedMembers.length})</Text>
           <View style={styles.memberList}>
-            {sharedMembers.map((member, index) => (
+            {loading ? (
+              <ActivityIndicator color={colors.gray600} style={{ paddingVertical: 24 }} />
+            ) : (
+              sharedMembers.map((member, index) => (
               <React.Fragment key={member.id}>
                 {index > 0 && <View style={styles.divider} />}
                 <View style={styles.memberRow}>
@@ -137,7 +198,8 @@ export default function SharedMembersModal({
                   )}
                 </View>
               </React.Fragment>
-            ))}
+            ))
+            )}
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -175,6 +237,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  inviteSection: {
+    paddingHorizontal: 20,
+    marginBottom: 12,
+    zIndex: 100,
+  },
   scrollView: {
     flex: 1,
   },
@@ -192,27 +259,66 @@ const styles = StyleSheet.create({
     gap: 8,
     marginBottom: 12,
   },
+  emailInputContainer: {
+    flex: 7,
+    height: 48,
+  },
   emailInput: {
-    flex: 1,
     height: 48,
     backgroundColor: colors.gray200,
-    borderRadius: radii.base,
-    paddingHorizontal: 16,
-    ...textStyles.body3,
+    borderRadius: 12,
+    paddingVertical: 0,
+    fontFamily: typography.fontFamily.pretendardRegular,
+    fontSize: 14,
     color: colors.black,
   },
+  rolePickerWrap: {
+    alignItems: 'flex-end',
+    position: 'relative',
+    zIndex: 10,
+  },
   roleButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 4,
     height: 48,
     width: 93,
     backgroundColor: colors.gray200,
-    borderRadius: radii.base,
+    borderRadius: 12,
     paddingHorizontal: 10,
+    justifyContent: 'center',
+  },
+  roleButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    width: '100%',
   },
   roleButtonText: {
+    ...textStyles.h6,
+    color: colors.black,
+    marginLeft: 4,
+    flexShrink: 1,
+  },
+  roleDropdown: {
+    position: 'absolute',
+    top: '100%',
+    left: 0,
+    right: 0,
+    marginTop: 2,
+    zIndex: 1000,
+    elevation: 10,
+    backgroundColor: colors.gray200,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.gray300,
+    overflow: 'hidden',
+  },
+  roleDropdownItem: {
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+  },
+  roleDropdownItemActive: {
+    backgroundColor: colors.gray200,
+  },
+  roleDropdownItemText: {
     ...textStyles.h6,
     color: colors.black,
   },
@@ -223,7 +329,7 @@ const styles = StyleSheet.create({
     gap: 8,
     height: 48,
     backgroundColor: colors.black,
-    borderRadius: radii.base,
+    borderRadius: 12,
     marginBottom: 32,
   },
   inviteButtonText: {
@@ -241,7 +347,7 @@ const styles = StyleSheet.create({
   avatar: {
     width: 36,
     height: 36,
-    borderRadius: radii.base,
+    borderRadius: 12,
     backgroundColor: colors.gray300,
     marginRight: 12,
   },
@@ -266,9 +372,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.sm,
   },
   ownerBadgeText: {
-    fontFamily: typography.fontFamily.pretendardBold,
-    fontSize: 10,
-    lineHeight: 16,
+    ...textStyles.h9,
     color: colors.white,
     letterSpacing: 0.5,
   },
