@@ -13,7 +13,7 @@ import BottomSheetModal from '@/ui/components/BottomSheetModal.native';
 import { colors } from '@/ui/tokens/colors';
 import { textStyles, typography } from '@/ui/tokens/typography';
 import { radii } from '@/ui/tokens/radii';
-import CloseIcon from '../../../../assets/x.svg';
+import CloseIcon from '../../../../assets/mobile_close.svg';
 import DeleteIcon from '../../../../assets/delete_gray.svg';
 import AddIcon from '../../../../assets/add.svg';
 import DropdownIcon from '../../../../assets/dropdown_time.svg';
@@ -65,8 +65,8 @@ export default function SharedMembersModal({
         <View style={styles.header}>
           <Text style={styles.headerTitle}>참여 멤버</Text>
           <View style={styles.headerRight}>
-            <Pressable style={styles.iconButton} onPress={onClose} hitSlop={8}>
-              <CloseIcon width={24} height={24} color={colors.black} />
+            <Pressable style={styles.closeButton} onPress={onClose} hitSlop={8}>
+              <CloseIcon width={20} height={20} color={colors.gray700} />
             </Pressable>
           </View>
         </View>
@@ -166,8 +166,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
   },
-  iconButton: {
+  closeButton: {
     padding: 4,
+    backgroundColor: colors.gray200,
+    borderRadius: 16,
+    height: 32,
+    width: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   scrollView: {
     flex: 1,
