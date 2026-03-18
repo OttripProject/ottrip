@@ -16,7 +16,7 @@ import { textStyles, typography } from '@/ui/tokens/typography';
 import { radii } from '@/ui/tokens/radii';
 import CloseIcon from '../../../../assets/mobile_close.svg';
 import DeleteIcon from '../../../../assets/delete_gray.svg';
-import AddIcon from '../../../../assets/add.svg';
+import ShareAddIcon from '../../../../assets/share_add.svg';
 import DropdownIcon from '../../../../assets/mobile_dropdown.svg';
 import { Input } from '@/ui/components/input';
 
@@ -148,7 +148,7 @@ export default function SharedMembersModal({
             </View>
           </View>
           <Pressable style={styles.inviteButton} onPress={handleInvite}>
-            <AddIcon width={16} height={16} color={colors.white} />
+            <ShareAddIcon width={16} height={16} color={colors.white} />
             <Text style={styles.inviteButtonText}>초대하기</Text>
           </Pressable>
         </View>
@@ -239,7 +239,6 @@ const styles = StyleSheet.create({
   },
   inviteSection: {
     paddingHorizontal: 20,
-    marginBottom: 12,
     zIndex: 100,
   },
   scrollView: {
@@ -252,7 +251,6 @@ const styles = StyleSheet.create({
   sectionLabel: {
     ...textStyles.h7,
     color: colors.black,
-    marginBottom: 12,
   },
   inviteRow: {
     flexDirection: 'row',
@@ -282,7 +280,7 @@ const styles = StyleSheet.create({
     width: 93,
     backgroundColor: colors.gray200,
     borderRadius: 12,
-    paddingHorizontal: 10,
+    paddingHorizontal: 16,
     justifyContent: 'center',
   },
   roleButtonContent: {
@@ -294,7 +292,6 @@ const styles = StyleSheet.create({
   roleButtonText: {
     ...textStyles.h6,
     color: colors.black,
-    marginLeft: 4,
     flexShrink: 1,
   },
   roleDropdown: {
@@ -307,13 +304,11 @@ const styles = StyleSheet.create({
     elevation: 10,
     backgroundColor: colors.gray200,
     borderRadius: 12,
-    borderWidth: 1,
-    borderColor: colors.gray300,
     overflow: 'hidden',
   },
   roleDropdownItem: {
     paddingVertical: 12,
-    paddingHorizontal: 14,
+    paddingHorizontal: 16,
   },
   roleDropdownItemActive: {
     backgroundColor: colors.gray200,
@@ -330,7 +325,7 @@ const styles = StyleSheet.create({
     height: 48,
     backgroundColor: colors.black,
     borderRadius: 12,
-    marginBottom: 32,
+    marginBottom: 24,
   },
   inviteButtonText: {
     ...textStyles.h6,
@@ -342,7 +337,9 @@ const styles = StyleSheet.create({
   memberRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 14,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.gray200,
   },
   avatar: {
     width: 36,
