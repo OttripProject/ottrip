@@ -251,10 +251,8 @@ export default function SharedMembersModal({
             {loading ? (
               <ActivityIndicator color={colors.gray600} style={{ paddingVertical: 24 }} />
             ) : (
-              sharedMembers.map((member, index) => (
-              <React.Fragment key={member.id}>
-                {index > 0 && <View style={styles.divider} />}
-                <View style={styles.memberRow}>
+              sharedMembers.map((member) => (
+              <View key={member.id} style={styles.memberRow}>
                   <View style={styles.avatar} />
                   <View style={styles.memberInfo}>
                     <View style={styles.memberEmailRow}>
@@ -313,7 +311,6 @@ export default function SharedMembersModal({
                     </View>
                   )}
                 </View>
-              </React.Fragment>
             ))
             )}
           </View>
@@ -529,10 +526,5 @@ const styles = StyleSheet.create({
   roleSelectText: {
     ...textStyles.h7,
     color: colors.gray600,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: colors.gray200,
-    marginLeft: 48,
   },
 });
