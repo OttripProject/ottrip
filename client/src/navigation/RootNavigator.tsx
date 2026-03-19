@@ -99,6 +99,13 @@ export default function RootNavigator() {
   }, [isAuthenticated, isLoading, initialRoute]);
 
   const navRef = useRef<NavigationContainerRef<any>>(null);
+
+  useEffect(() => {
+    if (!isAuthenticated && !isLoading && navRef.current?.isReady()) {
+      navRef.current.reset({ index: 0, routes: [{ name: '로그인' }] });
+    }
+  }, [isAuthenticated, isLoading]);
+
   useEffect(() => {
     if (isAuthenticated && initialRoute) {
       const checkRegisterComplete = async () => {
