@@ -8,6 +8,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import BottomSheetModal from '@/ui/components/BottomSheetModal.native';
 import { plansApi } from '@/services/plans';
@@ -19,6 +20,7 @@ import DeleteIcon from '../../../../assets/delete_gray.svg';
 import ShareAddIcon from '../../../../assets/share_add.svg';
 import DropdownIcon from '../../../../assets/mobile_dropdown.svg';
 import { Input } from '@/ui/components/input';
+import { validateEmail } from '@/utils/validationUtils';
 
 export type SharedMemberRole = 'OWNER' | 'EDITOR' | 'VIEWER';
 
@@ -58,14 +60,20 @@ export default function SharedMembersModal({
   const [showRolePicker, setShowRolePicker] = useState(false);
   const [fetchedMembers, setFetchedMembers] = useState<SharedMember[]>([]);
   const [loading, setLoading] = useState(false);
+  const [inviteLoading, setInviteLoading] = useState(false);
+
+  const loadShares = () => {
+    if (!planId) return;
+    setLoading(true);
+    plansApi
+      .listShares(planId)
+      .then((shares) => setFetchedMembers(shares.map(planShareToSharedMember)))
+      .finally(() => setLoading(false));
+  };
 
   useEffect(() => {
     if (visible && planId) {
-      setLoading(true);
-      plansApi
-        .listShares(planId)
-        .then((shares) => setFetchedMembers(shares.map(planShareToSharedMember)))
-        .finally(() => setLoading(false));
+      loadShares();
     } else {
       setFetchedMembers([]);
     }
@@ -74,9 +82,33 @@ export default function SharedMembersModal({
   const sharedMembers =
     propSharedMembers != null && propSharedMembers.length > 0 ? propSharedMembers : fetchedMembers;
 
-  const handleInvite = () => {
-    // TODO: API 연동
-    setInviteEmail('');
+  const handleInvite = async () => {
+    const result = validateEmail(inviteEmail);
+    if (!result.valid) {
+      Alert.alert('알림', result.message);
+      return;
+    }
+    if (!planId) {
+      Alert.alert('알림', '계획 정보를 찾을 수 없습니다.');
+      return;
+    }
+    setInviteLoading(true);
+    try {
+      await plansApi.invite(planId, {
+        email: inviteEmail.trim().toLowerCase(),
+        role: selectedRole,
+      });
+      setInviteEmail('');
+      loadShares();
+    } catch (e: any) {
+      const msg =
+        e?.response?.status === 403
+          ? '권한이 없습니다.'
+          : e?.response?.data?.detail || '초대 전송에 실패했습니다.';
+      Alert.alert('오류', msg);
+    } finally {
+      setInviteLoading(false);
+    }
   };
 
   return (
@@ -147,9 +179,31 @@ export default function SharedMembersModal({
               )}
             </View>
           </View>
-          <Pressable style={styles.inviteButton} onPress={handleInvite}>
-            <ShareAddIcon width={16} height={16} color={colors.white} />
-            <Text style={styles.inviteButtonText}>초대하기</Text>
+          <Pressable
+            style={[
+              styles.inviteButton,
+              (!inviteEmail.trim() || inviteLoading) && styles.inviteButtonDisabled,
+            ]}
+            onPress={handleInvite}
+            disabled={!inviteEmail.trim() || inviteLoading}
+          >
+            {inviteLoading ? (
+              <ActivityIndicator color={colors.gray600} size="small" />
+            ) : (
+              <ShareAddIcon
+                width={16}
+                height={16}
+                color={inviteEmail.trim() ? colors.white : colors.gray600}
+              />
+            )}
+            <Text
+              style={[
+                styles.inviteButtonText,
+                (!inviteEmail.trim() || inviteLoading) && styles.inviteButtonTextDisabled,
+              ]}
+            >
+              초대하기
+            </Text>
           </Pressable>
         </View>
 
@@ -251,6 +305,7 @@ const styles = StyleSheet.create({
   sectionLabel: {
     ...textStyles.h7,
     color: colors.black,
+    marginBottom: 8,
   },
   inviteRow: {
     flexDirection: 'row',
@@ -327,9 +382,15 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     marginBottom: 24,
   },
+  inviteButtonDisabled: {
+    backgroundColor: colors.gray300,
+  },
   inviteButtonText: {
     ...textStyles.h6,
     color: colors.white,
+  },
+  inviteButtonTextDisabled: {
+    color: colors.gray600,
   },
   memberList: {
     backgroundColor: colors.white,
