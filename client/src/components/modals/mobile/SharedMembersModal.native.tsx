@@ -52,6 +52,12 @@ const ROLE_OPTIONS: { value: 'editor' | 'viewer'; label: string }[] = [
   { value: 'viewer', label: '뷰어' },
 ];
 
+const MEMBER_ROLE_OPTIONS: { value: 'editor' | 'viewer' | 'revoke'; label: string }[] = [
+  { value: 'editor', label: '에디터' },
+  { value: 'viewer', label: '뷰어' },
+  { value: 'revoke', label: '공유취소' },
+];
+
 export default function SharedMembersModal({
   visible,
   onClose,
@@ -134,6 +140,37 @@ export default function SharedMembersModal({
     } finally {
       setRoleUpdateLoading(null);
     }
+  };
+
+  const handleRevokeMember = async (memberId: string) => {
+    if (!planId) return;
+    Alert.alert(
+      '공유 취소',
+      '해당 사용자의 공유를 취소하시겠습니까?',
+      [
+        { text: '취소', style: 'cancel', onPress: () => setOpenMemberId(null) },
+        {
+          text: '확인',
+          style: 'destructive',
+          onPress: async () => {
+            setRoleUpdateLoading(memberId);
+            setOpenMemberId(null);
+            try {
+              await plansApi.revokeShare(planId, memberId);
+              loadShares();
+            } catch (e: any) {
+              const msg =
+                e?.response?.status === 403
+                  ? '권한이 없습니다.'
+                  : e?.response?.data?.detail || '공유 취소에 실패했습니다.';
+              Alert.alert('오류', msg);
+            } finally {
+              setRoleUpdateLoading(null);
+            }
+          },
+        },
+      ]
+    );
   };
 
   return (
@@ -291,19 +328,32 @@ export default function SharedMembersModal({
                       </Pressable>
                       {openMemberId === member.id && (
                         <View style={styles.memberRoleDropdown}>
-                          {ROLE_OPTIONS.map((opt) => (
+                          {MEMBER_ROLE_OPTIONS.map((opt) => (
                             <Pressable
                               key={opt.value}
                               style={[
                                 styles.roleDropdownItem,
-                                (member.role === 'EDITOR' ? 'editor' : 'viewer') === opt.value &&
+                                opt.value !== 'revoke' &&
+                                  (member.role === 'EDITOR' ? 'editor' : 'viewer') === opt.value &&
                                   styles.roleDropdownItemActive,
+                                opt.value === 'revoke' && styles.roleDropdownItemRevoke,
                               ]}
-                              onPress={() =>
-                                handleUpdateMemberRole(member.id, opt.value)
-                              }
+                              onPress={() => {
+                                if (opt.value === 'revoke') {
+                                  handleRevokeMember(member.id);
+                                } else {
+                                  handleUpdateMemberRole(member.id, opt.value);
+                                }
+                              }}
                             >
-                              <Text style={styles.roleDropdownItemText}>{opt.label}</Text>
+                              <Text
+                                style={[
+                                  styles.roleDropdownItemText,
+                                  opt.value === 'revoke' && styles.roleDropdownItemRevokeText,
+                                ]}
+                              >
+                                {opt.label}
+                              </Text>
                             </Pressable>
                           ))}
                         </View>
@@ -426,6 +476,13 @@ const styles = StyleSheet.create({
   },
   roleDropdownItemActive: {
     backgroundColor: colors.gray200,
+  },
+  roleDropdownItemRevoke: {
+    borderTopWidth: 1,
+    borderTopColor: colors.gray200,
+  },
+  roleDropdownItemRevokeText: {
+    color: colors.gray600,
   },
   roleDropdownItemText: {
     ...textStyles.h6,
