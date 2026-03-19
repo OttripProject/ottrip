@@ -57,7 +57,26 @@ export default function TravelInfoModal({
   const [showExpenseDetail, setShowExpenseDetail] = useState(false);
   const [showAddExpenseFromDetail, setShowAddExpenseFromDetail] = useState(false);
   const [showSharedMembers, setShowSharedMembers] = useState(false);
+  const [memberCount, setMemberCount] = useState(0);
   const [memo, setMemo] = useState(plan?.memo ?? '');
+
+  const loadMemberCount = useCallback(async () => {
+    if (!planId) return;
+    try {
+      const shares = await plansApi.listShares(planId);
+      setMemberCount(shares.length);
+    } catch {
+      setMemberCount(0);
+    }
+  }, [planId]);
+
+  useEffect(() => {
+    if (visible && planId) {
+      loadMemberCount();
+    } else {
+      setMemberCount(0);
+    }
+  }, [visible, planId, loadMemberCount]);
 
   useEffect(() => {
     if (visible && plan) {
@@ -88,7 +107,6 @@ export default function TravelInfoModal({
     return byCategory;
   }, [expenses]);
 
-  const memberCount = 1; // TODO: 공유 기능 추가 후 실제 멤버 수
   const scheduleCount = (itineraries?.length ?? 0) + (accommodations?.length ?? 0) + (flights?.length ?? 0);
 
   const handleExpenseAdded = async (expense: Expense) => {
@@ -234,7 +252,10 @@ export default function TravelInfoModal({
 
       <SharedMembersModal
         visible={showSharedMembers}
-        onClose={() => setShowSharedMembers(false)}
+        onClose={() => {
+          setShowSharedMembers(false);
+          loadMemberCount();
+        }}
         planId={planId}
       />
     </FullScreenModal>
