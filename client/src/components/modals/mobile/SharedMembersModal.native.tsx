@@ -15,12 +15,14 @@ import { plansApi } from '@/services/plans';
 import { colors } from '@/ui/tokens/colors';
 import { textStyles, typography } from '@/ui/tokens/typography';
 import { radii } from '@/ui/tokens/radii';
+import { Input } from '@/ui/components/input';
+import { validateEmail } from '@/utils/validationUtils';
+
 import CloseIcon from '../../../../assets/mobile_close.svg';
 import DeleteIcon from '../../../../assets/delete_gray.svg';
 import ShareAddIcon from '../../../../assets/share_add.svg';
 import DropdownIcon from '../../../../assets/mobile_dropdown.svg';
-import { Input } from '@/ui/components/input';
-import { validateEmail } from '@/utils/validationUtils';
+
 
 export type SharedMemberRole = 'OWNER' | 'EDITOR' | 'VIEWER';
 
@@ -36,6 +38,7 @@ interface SharedMembersModalProps {
   onClose: () => void;
   planId?: number;
   sharedMembers?: SharedMember[];
+  myRole?: 'owner' | 'editor' | 'viewer';
 }
 
 function planShareToSharedMember(s: { handle: string; role: 'editor' | 'viewer' | null; nickname: string; email: string }): SharedMember {
@@ -54,10 +57,14 @@ export default function SharedMembersModal({
   onClose,
   planId,
   sharedMembers: propSharedMembers,
+  myRole,
 }: SharedMembersModalProps) {
+  const canManage = myRole === 'owner' || myRole === 'editor';
   const [inviteEmail, setInviteEmail] = useState('');
   const [selectedRole, setSelectedRole] = useState<'editor' | 'viewer'>('editor');
   const [showRolePicker, setShowRolePicker] = useState(false);
+  const [openMemberId, setOpenMemberId] = useState<string | null>(null);
+  const [roleUpdateLoading, setRoleUpdateLoading] = useState<string | null>(null);
   const [fetchedMembers, setFetchedMembers] = useState<SharedMember[]>([]);
   const [loading, setLoading] = useState(false);
   const [inviteLoading, setInviteLoading] = useState(false);
@@ -111,6 +118,24 @@ export default function SharedMembersModal({
     }
   };
 
+  const handleUpdateMemberRole = async (memberId: string, role: 'editor' | 'viewer') => {
+    if (!planId) return;
+    setRoleUpdateLoading(memberId);
+    setOpenMemberId(null);
+    try {
+      await plansApi.updateShare(planId, memberId, role);
+      loadShares();
+    } catch (e: any) {
+      const msg =
+        e?.response?.status === 403
+          ? '권한이 없습니다.'
+          : e?.response?.data?.detail || '역할 변경에 실패했습니다.';
+      Alert.alert('오류', msg);
+    } finally {
+      setRoleUpdateLoading(null);
+    }
+  };
+
   return (
     <BottomSheetModal
       visible={visible}
@@ -133,7 +158,8 @@ export default function SharedMembersModal({
           </View>
         </View>
 
-        {/* 멤버 초대 - ScrollView 밖에 두어 드롭다운이 위에 표시됨 */}
+        {/* 멤버 초대 - owner, editor만 표시 */}
+        {canManage && (
         <View style={styles.inviteSection}>
           <Text style={styles.sectionLabel}>멤버 초대</Text>
           <View style={styles.inviteRow}>
@@ -206,13 +232,17 @@ export default function SharedMembersModal({
             </Text>
           </Pressable>
         </View>
+        )}
 
         <ScrollView
           style={styles.scrollView}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
-          onScrollBeginDrag={() => setShowRolePicker(false)}
+          onScrollBeginDrag={() => {
+            setShowRolePicker(false);
+            setOpenMemberId(null);
+          }}
           scrollEventThrottle={16}
         >
           {/* 참여자 목록 */}
@@ -241,14 +271,46 @@ export default function SharedMembersModal({
                       {member.roleLabel}
                     </Text>
                   </View>
-                  {member.role !== 'OWNER' && (
-                    <Pressable
-                      style={styles.roleSelectButton}
-                      onPress={() => {}}
-                    >
-                      <Text style={styles.roleSelectText}>에디터</Text>
-                      <DropdownIcon width={16} height={16} color={colors.gray600} />
-                    </Pressable>
+                  {member.role !== 'OWNER' && canManage && (
+                    <View style={styles.memberRolePickerWrap}>
+                      <Pressable
+                        style={styles.roleSelectButton}
+                        onPress={() =>
+                          setOpenMemberId((prev) => (prev === member.id ? null : member.id))
+                        }
+                        disabled={roleUpdateLoading === member.id}
+                      >
+                        {roleUpdateLoading === member.id ? (
+                          <ActivityIndicator color={colors.gray600} size="small" />
+                        ) : (
+                          <>
+                            <Text style={styles.roleSelectText}>
+                              {member.role === 'EDITOR' ? '에디터' : '뷰어'}
+                            </Text>
+                            <DropdownIcon width={16} height={16} color={colors.gray600} />
+                          </>
+                        )}
+                      </Pressable>
+                      {openMemberId === member.id && (
+                        <View style={styles.memberRoleDropdown}>
+                          {ROLE_OPTIONS.map((opt) => (
+                            <Pressable
+                              key={opt.value}
+                              style={[
+                                styles.roleDropdownItem,
+                                (member.role === 'EDITOR' ? 'editor' : 'viewer') === opt.value &&
+                                  styles.roleDropdownItemActive,
+                              ]}
+                              onPress={() =>
+                                handleUpdateMemberRole(member.id, opt.value)
+                              }
+                            >
+                              <Text style={styles.roleDropdownItemText}>{opt.label}</Text>
+                            </Pressable>
+                          ))}
+                        </View>
+                      )}
+                    </View>
                   )}
                 </View>
               </React.Fragment>
@@ -437,6 +499,21 @@ const styles = StyleSheet.create({
   memberRoleLabel: {
     ...textStyles.h7,
     color: colors.gray600,
+  },
+  memberRolePickerWrap: {
+    position: 'relative',
+    zIndex: 10,
+  },
+  memberRoleDropdown: {
+    position: 'absolute',
+    top: '100%',
+    right: 0,
+    minWidth: 82,
+    zIndex: 1000,
+    elevation: 10,
+    backgroundColor: colors.gray200,
+    borderRadius: radii.md,
+    overflow: 'hidden',
   },
   roleSelectButton: {
     flexDirection: 'row',

@@ -257,6 +257,7 @@ export default function TravelInfoModal({
           loadMemberCount();
         }}
         planId={planId}
+        myRole={plan?.myRole ?? (plan as { my_role?: 'owner' | 'editor' | 'viewer' })?.my_role}
       />
     </FullScreenModal>
   );

@@ -39,6 +39,14 @@ export const plansApi = {
     return res.data as PlanShare[];
   },
 
+  updateShare: async (
+    planId: number,
+    handle: string,
+    role: 'editor' | 'viewer'
+  ): Promise<void> => {
+    await api.patch(`/private/plans/${planId}/shares`, { handle, role });
+  },
+
   revokeShare: async (planId: number, handle: string): Promise<void> => {
     await api.delete(`/private/plans/${planId}/shares/${handle}`);
   },
