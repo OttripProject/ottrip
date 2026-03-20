@@ -187,6 +187,19 @@ class PlanService:
         ]
         return [owner_read] + shared_reads
 
+    async def update_share(self, *, plan_id: int, handle: str, role: Role) -> None:
+        plan_exists, has_permission = await self.plan_repository.has_edit_permission(
+            plan_id=plan_id, user_id=self.current_user.id
+        )
+        if not plan_exists:
+            raise HTTPException(status_code=404, detail="계획을 찾을 수 없습니다.")
+        if not has_permission:
+            raise HTTPException(status_code=403, detail="해당 계획 공유 권한이 없습니다.")
+        user_id = await self.user_repository.find_id_by_handle(user_handle=handle)
+        if not user_id:
+            raise HTTPException(status_code=404, detail="사용자를 찾을 수 없습니다.")
+        await self.plan_repository.upsert_shared(plan_id=plan_id, user_id=user_id, role=role)
+
     async def revoke_share(self, *, plan_id: int, handle: str) -> None:
         plan_exists, has_permission = await self.plan_repository.has_edit_permission(
             plan_id=plan_id, user_id=self.current_user.id

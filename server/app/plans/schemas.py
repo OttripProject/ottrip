@@ -49,6 +49,11 @@ class ShareCreate(APISchema):
     role: Role  # editor, viewer
 
 
+class ShareUpdate(APISchema):
+    handle: str
+    role: Role  # editor, viewer
+
+
 class ShareRead(APISchema):
     handle: str
     role: Role | None = None
