@@ -9,6 +9,7 @@ yarn-debug.*
 yarn-error.*
 pnpm-debug.*
 *.tsbuildinfo
+.pnpm-store/
 
 # Build outputs
 dist/
