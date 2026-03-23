@@ -5,15 +5,14 @@ import { useNavigation } from '@react-navigation/native';
 import { authApi } from '../services/auth';
 import { loadPublicEnv } from '../core/env/schema';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import * as WebBrowser from 'expo-web-browser';
 import * as Crypto from 'expo-crypto';
 import * as SecureStore from 'expo-secure-store';
-import Constants from 'expo-constants';
 import api from '@/services/api';
 import { textStyles, typography } from '../ui/tokens/typography';
 import GradientBackground from '../ui/components/GradientBackground';
 import Card from '../ui/components/Card';
 import GoogleButton from '../ui/components/GoogleButton';
+import { GoogleSignin } from '@react-native-google-signin/google-signin';
 
 const generateNonce = async () => {
   if (Platform.OS === 'web' && typeof crypto !== 'undefined') {
@@ -33,6 +32,27 @@ export default function LoginScreen() {
   const navigation = useNavigation<any>();
   const [isLoading, setIsLoading] = useState(false);
   const [nonce, setNonce] = useState<string>('');
+  
+  // Google Sign-In 초기화 (네이티브만)
+  useEffect(() => {
+    if (Platform.OS === 'web') return;
+    
+    const iosClientId = env.EXPO_PUBLIC_GOOGLE_CLIENT_ID_IOS;
+    const webClientId = env.EXPO_PUBLIC_GOOGLE_CLIENT_ID;
+    
+    if (Platform.OS === 'ios' && iosClientId) {
+      GoogleSignin.configure({
+        iosClientId,
+        webClientId, // 서버 인증용 (id_token 검증)
+        offlineAccess: false,
+      });
+    } else if (Platform.OS === 'android' && webClientId) {
+      GoogleSignin.configure({
+        webClientId,
+        offlineAccess: false,
+      });
+    }
+  }, []);
 
   useEffect(() => {
     if (Platform.OS === 'web') {
@@ -62,18 +82,19 @@ export default function LoginScreen() {
   }, [nonce]);
 
   const onGoogleSignIn = async () => {
+    setIsLoading(true);
+    try {
+      if (Platform.OS === 'web') {
     const clientId = env.EXPO_PUBLIC_GOOGLE_CLIENT_ID;
     
     if (!clientId) {
+          Alert.alert('오류', 'Google OAuth 클라이언트 ID가 설정되지 않았습니다.');
+          setIsLoading(false);
       return;
     }
 
-    setIsLoading(true);
-    try {
       const newNonce = await generateNonce();
       setNonce(newNonce);
-      
-      if (Platform.OS === 'web') {
         const redirectUriRaw = `${window.location.origin}/auth/callback`;
         const redirectUri = encodeURIComponent(redirectUriRaw);
         const scope = encodeURIComponent('openid email profile');
@@ -87,70 +108,37 @@ export default function LoginScreen() {
         } catch (e) {
         }
       } else {
-        // 모바일에서도 웹 redirect URI 사용 (Google Cloud Console에 추가 가능)
-        // 환경에 따라 웹 URL 결정
-        const getWebRedirectUri = (): string => {
-          const channel = env.EXPO_PUBLIC_CHANNEL;
-          if (channel === 'prod') {
-            return 'https://ottrip.today/auth/callback';
-          } else {
-            // dev/alpha 환경은 API URL 기반으로 결정
-            const apiUrl = env.EXPO_PUBLIC_API_URL;
-            // API URL에서 도메인 추출 (예: https://ottrip.onrender.com -> https://ottrip.today)
-            // 또는 환경 변수로 별도 설정 가능
-            return 'https://ottrip-dev-web.onrender.com/auth/callback'; // 임시로 prod와 동일하게 설정
+        // 네이티브: Google Sign-In 패키지 사용
+        try {
+          // Android만 Play Services 확인 필요
+          if (Platform.OS === 'android') {
+            await GoogleSignin.hasPlayServices();
           }
-        };
-        
-        const redirectUri = getWebRedirectUri();
-        const scope = encodeURIComponent('openid email profile');
-        const responseType = 'id_token';
-        const prompt = encodeURIComponent('consent select_account');
-        
-        // redirect_uri를 URL 인코딩
-        const encodedRedirectUri = encodeURIComponent(redirectUri);
-        
-        const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodedRedirectUri}&scope=${scope}&response_type=${responseType}&nonce=${newNonce}&prompt=${prompt}`;
-        
-        // 웹 redirect URI를 사용하므로, 앱 스킴으로 변환하여 처리
-        const appScheme = Platform.OS === 'ios'
-          ? (Constants.expoConfig?.ios?.bundleIdentifier || 'com.ottrip.app.OttripAlpha')
-          : (Constants.expoConfig?.android?.package || 'com.ottrip.app.OttripAlpha');
-        const appRedirectUri = `${appScheme}://oauth2redirect`;
-        
-        const result = await WebBrowser.openAuthSessionAsync(
-          authUrl, 
-          appRedirectUri, // 앱으로 돌아오기 위한 스킴
-          {
-            preferEphemeralSession: false, 
-            showInRecents: true,
-          }
-        );
-        
-        if (result.type === 'success' && result.url) {
-          let idToken: string | null = null;
           
-          try {
-            const url = new URL(result.url);
-            const fragment = url.hash.substring(1);
-            const params = new URLSearchParams(fragment);
-            idToken = params.get('id_token');
-          } catch (urlError) {
-            const urlString = result.url;
-            const idTokenMatch = urlString.match(/id_token=([^&]+)/);
-            idToken = idTokenMatch ? idTokenMatch[1] : null;
-          }
+          const signInResult = await GoogleSignin.signIn();
+          
+          // Google Sign-In 응답에서 idToken 추출
+          // @react-native-google-signin/google-signin의 응답 구조에 따라 조정
+          const idToken = (signInResult as any).data?.idToken || 
+                         (signInResult as any).idToken;
           
           if (idToken) {
             await handleGoogleSignIn(idToken);
           } else {
-            Alert.alert('오류', '로그인에 실패했습니다.');
+            Alert.alert('오류', '로그인에 실패했습니다. id_token을 받을 수 없습니다.');
+            setIsLoading(false);
           }
-        } else if (result.type === 'cancel') {
+        } catch (error: any) {
+          console.error('Google Sign-In 에러:', error);
+          
+          if (error.code === 'SIGN_IN_CANCELLED') {
           setIsLoading(false);
+          } else if (error.code === 'IN_PROGRESS') {
+            // 이미 진행 중 - 로딩 상태 유지
         } else {
-          Alert.alert('오류', '로그인에 실패했습니다.');
+            Alert.alert('오류', '로그인에 실패했습니다: ' + (error.message || '알 수 없는 오류'));
           setIsLoading(false);
+          }
         }
       }
     } catch (error: any) {
@@ -176,9 +164,9 @@ export default function LoginScreen() {
     }
   };
 
-  const handleGoogleSignIn = async (accessToken: string) => {
+  const handleGoogleSignIn = async (idToken: string) => {
     try {
-      const response = await authApi.googleLogin(accessToken);
+      const response = await authApi.googleLogin(idToken);
       
       if (response.isRegistered) {
         await login({
@@ -186,6 +174,8 @@ export default function LoginScreen() {
           accessToken: response.accessToken,
           refreshToken: response.refreshToken,
         });
+        
+        // 초대 토큰 처리
         try {
           const token = Platform.OS === 'web'
             ? window.localStorage.getItem('pendingInviteToken')
@@ -200,9 +190,11 @@ export default function LoginScreen() {
             }
           }
         } catch {}
+        
+        setIsLoading(false);
       } else {
         await login(response);
-        const payload = parseIdToken(accessToken);
+        const payload = parseIdToken(idToken);
         const email = payload?.email ?? '';
         navigation.navigate('약관동의', {
           registerToken: response.registerToken,
@@ -224,6 +216,7 @@ export default function LoginScreen() {
         await authApi.getServerTime();
       } catch (error: any) {
         Alert.alert('연결 오류', '서버에 연결할 수 없습니다. 서버가 실행 중인지 확인해주세요.');
+        setIsLoading(false);
         return;
       }
 

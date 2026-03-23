@@ -12,6 +12,7 @@ export type GoogleButtonProps = {
   text?: string;
   style?: ViewStyle;
   textStyle?: TextStyle;
+  iconSize?: number;
 };
 
 export default function GoogleButton({
@@ -21,6 +22,7 @@ export default function GoogleButton({
   text = 'Google로 로그인하기',
   style,
   textStyle,
+  iconSize = 16,
 }: GoogleButtonProps) {
   return (
     <Pressable
@@ -29,7 +31,7 @@ export default function GoogleButton({
       disabled={disabled || isLoading}
     >
       <View style={styles.content}>
-        <GoogleLogo width={16} height={16} />
+        <GoogleLogo width={iconSize} height={iconSize} />
         <Text style={[styles.text, textStyle]}>
           {isLoading ? '로그인 중...' : text}
         </Text>

@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { TextInput, TextInputProps, View, StyleProp, ViewStyle } from 'react-native';
+import { TextInput, TextInputProps, View, StyleProp, ViewStyle, TextStyle } from 'react-native';
 import { useInputStyleVariant, InputVariant } from './variants';
 
 export type InputProps = TextInputProps & {
@@ -18,7 +18,7 @@ export function Input(props: InputProps) {
     <View style={containerStyle ?? variantStyles.containerStyle}>
       <TextInput
         {...rest}
-        style={[variantStyles.style, style]}
+        style={[variantStyles.style, style] as StyleProp<TextStyle>}
         placeholderTextColor={placeholderTextColor ?? variantStyles.placeholderTextColor}
         editable={editable}
         pointerEvents={editable === false ? 'none' : 'auto'}

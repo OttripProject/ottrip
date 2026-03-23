@@ -15,7 +15,8 @@ declare module 'axios' {
 const env = loadPublicEnv();
 
 let resolvedBaseURL = env.EXPO_PUBLIC_API_URL;
-if (typeof window !== 'undefined') {
+// 웹에서만 localhost 체크 (네이티브에서는 window.location 없음)
+if (Platform.OS === 'web' && typeof window !== 'undefined' && window.location) {
   const h = window.location.hostname;
   if (h === 'localhost' || h === '127.0.0.1') {
     resolvedBaseURL = 'http://localhost:8080';
@@ -59,7 +60,10 @@ export async function refreshToken(checkExpiration: boolean = true): Promise<str
 
   if (checkExpiration) {
     if (Platform.OS === 'web') {
-      if (cachedWebToken && !isTokenExpiringSoon(cachedWebToken, 5)) {
+      if (!cachedWebToken) {
+        return null;
+      }
+      if (!isTokenExpiringSoon(cachedWebToken, 5)) {
         return cachedWebToken;
       }
     } else {

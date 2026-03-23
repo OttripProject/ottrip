@@ -13,6 +13,7 @@ from .schemas import (
     PlanUpdate,
     PlanMemoUpdate,
     ShareCreate,
+    ShareUpdate,
     ShareRead,
     InvitationCreate,
 )
@@ -89,6 +90,15 @@ async def add_share(
     body: ShareCreate,
 ) -> None:
     await plan_service.add_share(plan_id=plan_id, user_id=body.user_id, role=body.role)
+
+
+@router.patch("/{plan_id}/shares", status_code=status.HTTP_204_NO_CONTENT)
+async def update_share(
+    plan_service: PlanService,
+    plan_id: int,
+    body: ShareUpdate,
+) -> None:
+    await plan_service.update_share(plan_id=plan_id, handle=body.handle, role=body.role)
 
 
 @router.delete("/{plan_id}/shares/{handle}", status_code=status.HTTP_204_NO_CONTENT)

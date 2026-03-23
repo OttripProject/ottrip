@@ -1,6 +1,7 @@
 import DashboardScreen from "@/screens/DashboardScreen";
 import InviteAcceptScreen from "@/screens/InviteAcceptScreen";
 import LoginScreen from "@/screens/LoginScreen";
+import LoginScreenNative from "@/screens-mobile/LoginScreen.native";
 import AuthCallbackScreen from "../screens/AuthCallbackScreen";
 import ProfileScreen from "@/screens/ProfileScreen";
 import TermsConsentScreen from "@/screens/TermsConsentScreen";
@@ -18,6 +19,7 @@ import { View, ActivityIndicator, StyleSheet, Platform } from "react-native";
 import { useRef } from "react";
 import type { LinkingOptions } from "@react-navigation/native";
 import * as SecureStore from 'expo-secure-store';
+import MobileNavigator from "@/screens-mobile/MobileNavigator";
 
 const Stack = createStackNavigator();
 
@@ -97,6 +99,13 @@ export default function RootNavigator() {
   }, [isAuthenticated, isLoading, initialRoute]);
 
   const navRef = useRef<NavigationContainerRef<any>>(null);
+
+  useEffect(() => {
+    if (!isAuthenticated && !isLoading && navRef.current?.isReady()) {
+      navRef.current.reset({ index: 0, routes: [{ name: '로그인' }] });
+    }
+  }, [isAuthenticated, isLoading]);
+
   useEffect(() => {
     if (isAuthenticated && initialRoute) {
       const checkRegisterComplete = async () => {
@@ -123,21 +132,25 @@ export default function RootNavigator() {
           return;
         }
 
-        if (!registerComplete && Platform.OS === 'web' && typeof window !== 'undefined') {
-          const redirect = window.localStorage.getItem('postLoginRedirect') || '';
-          if (!redirect) return;
-          try { window.localStorage.removeItem('postLoginRedirect'); } catch {}
-          const publicIdMatch = redirect.match(/^\/plans\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i);
-          if (publicIdMatch) {
-            const publicId = publicIdMatch[1];
-            navRef.current?.reset({ index: 0, routes: [{ name: 'PLAN', params: { publicId } }] });
-            return;
+        if (!registerComplete) {
+          if (Platform.OS === 'web' && typeof window !== 'undefined') {
+            const redirect = window.localStorage.getItem('postLoginRedirect') || '';
+            if (!redirect) return;
+            try { window.localStorage.removeItem('postLoginRedirect'); } catch {}
+            const publicIdMatch = redirect.match(/^\/plans\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i);
+            if (publicIdMatch) {
+              const publicId = publicIdMatch[1];
+              navRef.current?.reset({ index: 0, routes: [{ name: 'PLAN', params: { publicId } }] });
+              return;
+            }
+            if (redirect.startsWith('/profile')) {
+              navRef.current?.reset({ index: 0, routes: [{ name: '프로필' }] });
+              return;
+            }
+            navRef.current?.reset({ index: 0, routes: [{ name: 'OTTRIP' }] });
+          } else {
+            navRef.current?.reset({ index: 0, routes: [{ name: 'OTTRIP' }] });
           }
-          if (redirect.startsWith('/profile')) {
-            navRef.current?.reset({ index: 0, routes: [{ name: '프로필' }] });
-            return;
-          }
-          navRef.current?.reset({ index: 0, routes: [{ name: 'OTTRIP' }] });
         }
       };
       checkRegisterComplete();
@@ -175,18 +188,22 @@ export default function RootNavigator() {
     return <LoadingScreen />;
   }
 
+  const OttripScreen = Platform.OS === 'web' ? DashboardScreen : MobileNavigator;
+
   return (
     <NavigationContainer linking={linking} ref={navRef}>
       <Stack.Navigator screenOptions={{ headerShown: false }} initialRouteName={initialRoute}>
         {isAuthenticated ? (
           <>
-            <Stack.Screen name="OTTRIP" component={DashboardScreen} />
+            <Stack.Screen name="OTTRIP" component={OttripScreen} />
             <Stack.Screen name="프로필" component={ProfileScreen} />
             <Stack.Screen name="INVITE_ACCEPT" component={InviteAcceptScreen} />
             <Stack.Screen name="WELCOME" component={WelcomeScreen} />
             <Stack.Screen name="PLAN" component={DashboardScreen} />
             <Stack.Screen name="NOT FOUND" component={NotFoundScreen} />
             <Stack.Screen name="FORBIDDEN" component={ForbiddenScreen} />
+            {/* 모바일 화면 */}
+            <Stack.Screen name="MOBILE" component={MobileNavigator} />
           </>
         ) : (
           <>
@@ -197,11 +214,16 @@ export default function RootNavigator() {
                 title: 'OTTRIP',
               }}
             />
-            <Stack.Screen name="로그인" component={LoginScreen} />
+            <Stack.Screen
+              name="로그인"
+              component={Platform.OS === 'web' ? LoginScreen : LoginScreenNative}
+            />
             <Stack.Screen name="약관동의" component={TermsConsentScreen} />
             <Stack.Screen name="프로필 입력" component={RegisterProfileScreen} />
             <Stack.Screen name="상세내용" component={TermsDetailScreen} />
             <Stack.Screen name="인증" component={AuthCallbackScreen} />
+            {/* 모바일 화면 (로그인 없이도 접근 가능) */}
+            <Stack.Screen name="MOBILE" component={MobileNavigator} />
           </>
         )}
       </Stack.Navigator>

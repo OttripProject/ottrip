@@ -15,6 +15,7 @@ dist/
 build/
 .expo/
 .next/
+ios/
 
 # Logs
 logs
@@ -39,4 +40,14 @@ __pycache__/
 # DB / local data
 **/*.db
 
-
+# Xcode
+*.xcodeproj/
+*.xcworkspace/
+*.xcuserdata/
+*.xcuserstate
+DerivedData/
+build/
+*.hmap
+*.ipa
+*.dSYM.zip
+*.dSYM

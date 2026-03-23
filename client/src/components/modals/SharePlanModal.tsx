@@ -148,10 +148,12 @@ export default function SharePlanModal({ visible, onClose, onSubmit, planId, pla
                 showsVerticalScrollIndicator={false}
               >
                 {shares.map((s, index) => {
-                  const roleLabel = s.role === 'editor' ? 'EDITOR' : 'VIEWER';
+                  const roleLabel =
+                    s.role == null ? 'OWNER' : s.role === 'editor' ? 'EDITOR' : 'VIEWER';
+                  const isOwner = s.role == null;
                   return (
                     <View
-                      key={`${s.handle}-${s.role}`}
+                      key={`${s.handle}-${s.role ?? 'owner'}`}
                       style={[
                         styles.shareChip,
                         index !== shares.length - 1 && styles.shareChipSpacing,
@@ -162,20 +164,22 @@ export default function SharePlanModal({ visible, onClose, onSubmit, planId, pla
                       </View>
                       <View style={styles.shareChipMeta}>
                         <Text style={styles.shareRoleText}>{roleLabel}</Text>
-                        <Pressable
-                          style={styles.shareRemoveButton}
-                          onPress={async () => {
-                            try {
-                              await plansApi.revokeShare(planId, s.handle);
-                              await loadShares();
-                            } catch (e: any) {
-                              const msg = e?.response?.status === 403 ? '권한이 없습니다.' : (e?.response?.data?.detail || '삭제에 실패했습니다.');
-                              Alert.alert('오류', msg);
-                            }
-                          }}
-                        >
-                          <ShareDeleteIcon width={20} height={20} />
-                        </Pressable>
+                        {!isOwner && (
+                          <Pressable
+                            style={styles.shareRemoveButton}
+                            onPress={async () => {
+                              try {
+                                await plansApi.revokeShare(planId, s.handle);
+                                await loadShares();
+                              } catch (e: any) {
+                                const msg = e?.response?.status === 403 ? '권한이 없습니다.' : (e?.response?.data?.detail || '삭제에 실패했습니다.');
+                                Alert.alert('오류', msg);
+                              }
+                            }}
+                          >
+                            <ShareDeleteIcon width={20} height={20} />
+                          </Pressable>
+                        )}
                       </View>
                     </View>
                   );
