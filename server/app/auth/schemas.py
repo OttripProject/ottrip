@@ -67,6 +67,10 @@ class GoogleAuthRequest(APISchema):
     id_token: str
 
 
+class AppleAuthRequest(APISchema):
+    identity_token: str
+
+
 class ValidateHandleRequest(APISchema):
     handle: str
 

@@ -12,7 +12,9 @@ from .config import auth_settings
 from .deps import CurrentUserOptional, RefreshTokenDep, RegisterAuthDep
 from .providers.google import get_google_login_url
 from app.core.config import core_settings
+from .providers.apple import AppleIdpService
 from .schemas import (
+    AppleAuthRequest,
     AuthResponse,
     GoogleLoginUrlResponse,
     PrefillCreateUser,
@@ -29,6 +31,36 @@ from .service import AuthInfoService
 from .token import TokenType, create_jwt_token, create_token_pair
 
 router = create_router()
+
+
+def _set_auth_cookies(response: Response, access_token: str, refresh_token: str) -> None:
+    """로그인 성공 시 httpOnly 쿠키 (Google / Apple 등 공통)."""
+    is_local = core_settings.ENVIRONMENT == "local"
+    is_prod = core_settings.ENVIRONMENT == "prod"
+    if is_local:
+        samesite_value = "lax"
+    elif is_prod:
+        samesite_value = "strict"
+    else:
+        samesite_value = "none"
+    response.set_cookie(
+        key="access_token",
+        value=access_token,
+        httponly=True,
+        secure=not is_local,
+        samesite=samesite_value,
+        max_age=auth_settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+        path="/",
+    )
+    response.set_cookie(
+        key="refresh_token",
+        value=refresh_token,
+        httponly=True,
+        secure=not is_local,
+        samesite=samesite_value,
+        max_age=auth_settings.REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60,
+        path="/",
+    )
 
 
 #
@@ -275,43 +307,42 @@ async def authenticate_google(
         )
 
     access_token, refresh_token = create_token_pair(auth_info.user_id)
-    
-    # httpOnly 쿠키 설정
-    # 로컬: SameSite=lax, Secure=False (HTTP 허용)
-    # 개발: SameSite=None, Secure=True (cross-site 요청 허용)
-    # 프로덕션: SameSite=strict, Secure=True (동일 사이트만)
-    is_local = core_settings.ENVIRONMENT == "local"
-    is_prod = core_settings.ENVIRONMENT == "prod"
-    
-    # cross-site 요청을 위해 dev 환경에서는 SameSite=None 사용
-    if is_local:
-        samesite_value = "lax"
-    elif is_prod:
-        samesite_value = "strict"
-    else:
-        # dev 환경: cross-site 요청 허용 (ottrip.pages.dev → ottrip.onrender.com)
-        samesite_value = "none"
-
-    response.set_cookie(
-        key="access_token",
-        value=access_token,
-        httponly=True,
-        secure=not is_local,  # 로컬만 HTTP 허용, dev/prod는 HTTPS 필수
-        samesite=samesite_value,
-        max_age=auth_settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,  # 토큰 유효시간과 일치
-        path="/",
-    )
-    response.set_cookie(
-        key="refresh_token",
-        value=refresh_token,
-        httponly=True,
-        secure=not is_local,  # 로컬만 HTTP 허용, dev/prod는 HTTPS 필수
-        samesite=samesite_value,
-        max_age=auth_settings.REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60,  # 토큰 유효시간과 일치
-        path="/",
-    )
-    
+    _set_auth_cookies(response, access_token, refresh_token)
     # 하위 호환: JSON 응답도 유지 (Native 환경용)
+    return RegisteredAuthResponse(
+        access_token=access_token,
+        refresh_token=refresh_token,
+    )
+
+
+@router.post("/apple")
+async def authenticate_apple(
+    payload: AppleAuthRequest,
+    apple_idp: AppleIdpService,
+    auth_info_service: AuthInfoService,
+    response: Response,
+) -> AuthResponse:
+    apple_user = await apple_idp.verify_identity_token(payload.identity_token)
+
+    auth_info = await auth_info_service.authenticate_with_apple(
+        apple_id=apple_user.sub,
+        email=apple_user.email,
+    )
+
+    if auth_info.user_id is None:
+        return UnregisteredAuthResponse(
+            register_token=create_jwt_token(
+                auth_info.id, token_type=TokenType.REGISTER
+            ),
+            prefill=PrefillCreateUser(
+                name=apple_user.name,
+                nickname=None,
+                profile_image=None,
+            ),
+        )
+
+    access_token, refresh_token = create_token_pair(auth_info.user_id)
+    _set_auth_cookies(response, access_token, refresh_token)
     return RegisteredAuthResponse(
         access_token=access_token,
         refresh_token=refresh_token,
