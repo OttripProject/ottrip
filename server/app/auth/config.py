@@ -1,3 +1,5 @@
+from typing import Optional
+
 import jwt
 
 from app.auth.schemas import PrivateJWK, PublicJWK
@@ -17,14 +19,24 @@ class AuthConfig(BaseConfig):
     GOOGLE_CLIENT_ID: str
     GOOGLE_CLIENT_SECRET: str
     GOOGLE_REDIRECT_URI: str
-    """
-    HS256에서는 Private key만 알아도 public key를 알 수 있으나, 보안적으로 안전하게 하기 위해 따로 관리합니다. 
-    키 로테이션을 위해 list 형태로 관리합니다.
-    """
+
+    APPLE_SERVICES_ID: Optional[str] = None
+    APPLE_TEAM_ID: Optional[str] = None
+    APPLE_KEY_ID: Optional[str] = None
+    APPLE_PRIVATE_KEY: Optional[str] = None
+    APPLE_CLIENT_ID: Optional[str] = None
 
     @property
     def PRIVATE_JWK_INSTANCE(self) -> jwt.PyJWK:
         return jwt.PyJWK.from_dict(self.PRIVATE_JWK.model_dump())
+
+    @property
+    def apple_identity_token_audiences(self) -> list[str]:
+        """iOS번들 or 웹 Services ID에서 온게 맞는지."""
+        auds = list(self.APP_BUNDLE_IDS)
+        if self.APPLE_SERVICES_ID:
+            auds.append(self.APPLE_SERVICES_ID)
+        return auds
 
 
 auth_settings = AuthConfig.create()
