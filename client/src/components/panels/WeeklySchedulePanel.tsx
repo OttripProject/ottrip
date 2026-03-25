@@ -1788,7 +1788,7 @@ export default function WeeklySchedulePanel({
                                   }}>
                                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                                       <View style={{ flexShrink: 0 }}>
-                                        <WeekBarAccommodationIcon width={14} height={14} />
+                                        <WeekBarAccommodationIcon width={14} height={14} color="#F59E0B" />
                                       </View>
                                       <Text 
                                         style={{ ...textStyles.h8, color: '#F59E0B', lineHeight: 10 }} 
@@ -1896,7 +1896,7 @@ export default function WeeklySchedulePanel({
                                   }}>
                                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, opacity: 0.6 }}>
                                       <View style={{ flexShrink: 0 }}>
-                                        <WeekBarAccommodationIcon width={14} height={14} />
+                                        <WeekBarAccommodationIcon width={14} height={14} color="#F59E0B" />
                                       </View>
                                       <Text 
                                         style={{ ...textStyles.h8, color: '#F59E0B', lineHeight: 10 }} 
