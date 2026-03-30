@@ -78,7 +78,7 @@ export default function ItineraryEditModal({
 
   const getCategoryIcon = (category: ExpenseCategory, isSelected: boolean) => {
     const size = 16;
-    const iconColor = isSelected ? colors.primary : colors.gray600;
+    const iconColor = isSelected ? colors.white : colors.gray600;
     switch (category) {
       case ExpenseCategory.FOOD:
         return <FoodIcon width={size} height={size} color={iconColor} />;
@@ -700,13 +700,13 @@ const styles = StyleSheet.create({
     backgroundColor: colors.gray200,
   },
   categoryPillSelected: {
-    backgroundColor: `${colors.primary}1A`,
+    backgroundColor: colors.primary,
   },
   categoryPillText: {
     ...textStyles.h6,
     color: colors.gray600,
   },
   categoryPillTextSelected: {
-    color: colors.primary,
+    color: colors.white,
   },
 });
