@@ -7,6 +7,7 @@ import { colors } from '@/ui/tokens/colors';
 import { textStyles, typography } from '@/ui/tokens/typography';
 import FullScreenModal from '@/ui/components/FullScreenModal.native';
 import FloatingFooter from '@/ui/components/FloatingFooter.native';
+import AttachmentSection from '@/ui/components/attachmentSection.native';
 import { TimePicker } from '@/ui/components/pickers';
 import CountrySearchModal from './CountrySearchModal.native';
 import Input from '@/ui/components/input/Input';
@@ -476,6 +477,14 @@ export default function ItineraryEditModal({
                 })}
               </View>
             </View>
+
+            <AttachmentSection
+              showTopDivider
+              style={styles.attachmentSection}
+              onAddPress={() => {
+                // TODO: 이미지/PDF 첨부 플로우 연결
+              }}
+            />
           </View>
 
         </View>
@@ -708,5 +717,8 @@ const styles = StyleSheet.create({
   },
   categoryPillTextSelected: {
     color: colors.white,
+  },
+  attachmentSection: {
+    marginTop: 32,
   },
 });
