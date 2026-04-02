@@ -66,7 +66,7 @@ export default function AddScheduleMethodModal({
           accessibilityRole="button"
         >
           <View style={styles.iconCircle}>
-            <LightningIcon width={20} height={20} color={colors.primary} />
+            <LightningIcon width={20} height={20} />
           </View>
           <View style={styles.cardTextBlock}>
             <Text style={styles.cardTitle}>AI로 간편 추가</Text>
@@ -124,10 +124,10 @@ const styles = StyleSheet.create({
     paddingVertical: 20,
     paddingHorizontal: 16,
     borderRadius: 12,
-    backgroundColor: '#E8F4FF',
+    backgroundColor: `${colors.primary}1A`,
     borderWidth: 1,
-    borderColor: '#B8D9FF',
-    marginBottom: 12,
+    borderColor: colors.primary,
+    marginBottom: 8,
     gap: 12,
   },
   cardManual: {
