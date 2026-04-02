@@ -28,10 +28,7 @@ export default function AddScheduleMethodModal({
   const insets = useSafeAreaInsets();
 
   const handleDirect = () => {
-    onClose();
-    setTimeout(() => {
-      onSelectDirectAdd();
-    }, 320);
+    onSelectDirectAdd();
   };
 
   const handleAi = () => {

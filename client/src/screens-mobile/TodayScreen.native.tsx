@@ -26,6 +26,9 @@ import ExpenseDetailModal from '@/components/modals/mobile/ExpenseDetailModal.na
 import AddExpenseModal from '@/components/modals/mobile/AddExpenseModal.native';
 import AddScheduleModal from '@/components/modals/mobile/AddScheduleModal.native';
 import AddScheduleMethodModal from '@/components/modals/mobile/AddScheduleMethodModal.native';
+import AddScheduleAiPlaceholderModal from '@/components/modals/mobile/AddScheduleAiPlaceholderModal.native';
+
+type AddScheduleFlow = 'closed' | 'method' | 'direct' | 'ai';
 import WeeklyChecklistCard from '@/components/cards/WeeklyChecklistCard.native';
 import { itinerariesApi } from '@/services/itineraries';
 import { accommodationsApi } from '@/services/accommodations';
@@ -64,8 +67,7 @@ export default function TodayScreen() {
   const [editingFlight, setEditingFlight] = useState<FlightRead | null>(null);
   const [showExpenseDetail, setShowExpenseDetail] = useState(false);
   const [showAddExpenseFromDetail, setShowAddExpenseFromDetail] = useState(false);
-  const [showAddScheduleMethodModal, setShowAddScheduleMethodModal] = useState(false);
-  const [showAddScheduleModal, setShowAddScheduleModal] = useState(false);
+  const [addScheduleFlow, setAddScheduleFlow] = useState<AddScheduleFlow>('closed');
 
   const queryClient = useQueryClient();
   const plansQuery = usePlansQuery();
@@ -889,7 +891,7 @@ export default function TodayScreen() {
       {selectedPlan && (
         <Pressable
           style={styles.fab}
-          onPress={() => setShowAddScheduleMethodModal(true)}
+          onPress={() => setAddScheduleFlow('method')}
           hitSlop={8}
         >
           <PlusIcon width={24} height={24} color={colors.white} />
@@ -897,14 +899,21 @@ export default function TodayScreen() {
       )}
 
       <AddScheduleMethodModal
-        visible={showAddScheduleMethodModal}
-        onClose={() => setShowAddScheduleMethodModal(false)}
-        onSelectDirectAdd={() => setShowAddScheduleModal(true)}
+        visible={addScheduleFlow === 'method'}
+        onClose={() => setAddScheduleFlow('closed')}
+        onSelectDirectAdd={() => setAddScheduleFlow('direct')}
+        onSelectAiAdd={() => setAddScheduleFlow('ai')}
+      />
+
+      <AddScheduleAiPlaceholderModal
+        visible={addScheduleFlow === 'ai'}
+        onClose={() => setAddScheduleFlow('method')}
       />
 
       <AddScheduleModal
-        visible={showAddScheduleModal}
-        onClose={() => setShowAddScheduleModal(false)}
+        visible={addScheduleFlow === 'direct'}
+        onClose={() => setAddScheduleFlow('method')}
+        onSaved={() => setAddScheduleFlow('closed')}
         planId={selectedPlan?.id ?? 0}
         planStartDate={selectedPlan?.startDate}
         planEndDate={selectedPlan?.endDate}

@@ -17,7 +17,10 @@ type AddScheduleTab = 'accommodation' | 'flight' | 'itinerary';
 
 interface AddScheduleModalProps {
   visible: boolean;
+  /** 닫기/취소 (저장 완료가 아닐 때) */
   onClose: () => void;
+  /** 일정 저장 성공 시 — 없으면 기존처럼 onClose 호출 */
+  onSaved?: () => void;
   planId: number;
   planStartDate?: string;
   planEndDate?: string;
@@ -36,6 +39,7 @@ interface AddScheduleModalProps {
 export default function AddScheduleModal({
   visible,
   onClose,
+  onSaved,
   planId,
   planStartDate,
   selectedDate,
@@ -43,6 +47,14 @@ export default function AddScheduleModal({
   onRefresh,
 }: AddScheduleModalProps) {
   const [activeTab, setActiveTab] = useState<AddScheduleTab>('itinerary');
+
+  const finishAfterSave = () => {
+    if (onSaved) {
+      onSaved();
+    } else {
+      onClose();
+    }
+  };
 
   const renderContent = () => {
     if (activeTab === 'itinerary') {
@@ -57,7 +69,7 @@ export default function AddScheduleModal({
           onSave={async (itinerary) => {
             planData.addItinerary(itinerary);
             onRefresh?.();
-            onClose();
+            finishAfterSave();
           }}
         />
       );
@@ -74,7 +86,7 @@ export default function AddScheduleModal({
           onSave={async (accommodation) => {
             planData.addAccommodation(accommodation);
             onRefresh?.();
-            onClose();
+            finishAfterSave();
           }}
         />
       );
@@ -91,7 +103,7 @@ export default function AddScheduleModal({
         onSave={async (flight) => {
           planData.addFlight(flight);
           onRefresh?.();
-          onClose();
+          finishAfterSave();
         }}
       />
     );
