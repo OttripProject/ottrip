@@ -4,30 +4,34 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import BottomSheetModal from '@/ui/components/BottomSheetModal.native';
 import { colors } from '@/ui/tokens/colors';
 import { textStyles } from '@/ui/tokens/typography';
+import { spacing } from '@/ui/tokens/spacing';
 import CloseIcon from '../../../../assets/mobile_close.svg';
 
-interface AddScheduleAiPlaceholderModalProps {
+interface AddScheduleWithAiModalProps {
   visible: boolean;
   onClose: () => void;
 }
 
-export default function AddScheduleAiPlaceholderModal({
+export default function AddScheduleWithAiModal({
   visible,
   onClose,
-}: AddScheduleAiPlaceholderModalProps) {
+}: AddScheduleWithAiModalProps) {
   const insets = useSafeAreaInsets();
 
   return (
     <BottomSheetModal
       visible={visible}
       onClose={onClose}
-      height={0.38}
+      height={0.85}
       backdropOpacity={0.7}
       showDragHandle
     >
       <View style={[styles.root, { paddingBottom: Math.max(insets.bottom, 16) }]}>
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>AI로 간편 추가</Text>
+          <View style={styles.titleBlock}>
+            <Text style={styles.headerTitle}>AI 일정 추가</Text>
+            <Text style={styles.body}>대화를 간편하게 일정을 등록하세요.</Text>
+          </View>
           <Pressable
             style={styles.closeButton}
             onPress={onClose}
@@ -38,7 +42,7 @@ export default function AddScheduleAiPlaceholderModal({
             <CloseIcon width={20} height={20} color={colors.gray700} />
           </Pressable>
         </View>
-        <Text style={styles.body}>곧 제공될 예정이에요.</Text>
+        
       </View>
     </BottomSheetModal>
   );
@@ -52,9 +56,14 @@ const styles = StyleSheet.create({
   },
   header: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     justifyContent: 'space-between',
     marginBottom: 16,
+  },
+  titleBlock: {
+    flex: 1,
+    marginRight: 12,
+    gap: spacing.xs,
   },
   headerTitle: {
     ...textStyles.h4,

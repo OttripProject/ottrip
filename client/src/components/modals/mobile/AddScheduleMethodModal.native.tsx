@@ -63,7 +63,7 @@ export default function AddScheduleMethodModal({
           accessibilityRole="button"
         >
           <View style={styles.iconCircle}>
-            <LightningIcon width={20} height={20} />
+            <LightningIcon width={20} height={20} color={colors.primary}/>
           </View>
           <View style={styles.cardTextBlock}>
             <Text style={styles.cardTitle}>AI로 간편 추가</Text>

@@ -14,7 +14,7 @@ import PlanSelectModal from '@/components/modals/mobile/PlanSelectModal.native';
 import AddPlanModal from '@/components/modals/mobile/AddPlanModal.native';
 import AddScheduleModal from '@/components/modals/mobile/AddScheduleModal.native';
 import AddScheduleMethodModal from '@/components/modals/mobile/AddScheduleMethodModal.native';
-import AddScheduleAiPlaceholderModal from '@/components/modals/mobile/AddScheduleAiPlaceholderModal.native';
+import AddScheduleWithAiModal from '@/components/modals/mobile/AddScheduleWithAiModal.native';
 
 type AddScheduleFlow = 'closed' | 'method' | 'direct' | 'ai';
 import ItineraryDetailModal from '@/components/modals/mobile/ItineraryDetailModal.native';
@@ -519,7 +519,7 @@ export default function WeeklyScreen() {
         onSelectAiAdd={() => setAddScheduleFlow('ai')}
       />
 
-      <AddScheduleAiPlaceholderModal
+      <AddScheduleWithAiModal
         visible={addScheduleFlow === 'ai'}
         onClose={() => setAddScheduleFlow('method')}
       />

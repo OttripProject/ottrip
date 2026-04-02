@@ -26,7 +26,7 @@ import ExpenseDetailModal from '@/components/modals/mobile/ExpenseDetailModal.na
 import AddExpenseModal from '@/components/modals/mobile/AddExpenseModal.native';
 import AddScheduleModal from '@/components/modals/mobile/AddScheduleModal.native';
 import AddScheduleMethodModal from '@/components/modals/mobile/AddScheduleMethodModal.native';
-import AddScheduleAiPlaceholderModal from '@/components/modals/mobile/AddScheduleAiPlaceholderModal.native';
+import AddScheduleWithAiModal from '@/components/modals/mobile/AddScheduleWithAiModal.native';
 
 type AddScheduleFlow = 'closed' | 'method' | 'direct' | 'ai';
 import WeeklyChecklistCard from '@/components/cards/WeeklyChecklistCard.native';
@@ -905,7 +905,7 @@ export default function TodayScreen() {
         onSelectAiAdd={() => setAddScheduleFlow('ai')}
       />
 
-      <AddScheduleAiPlaceholderModal
+      <AddScheduleWithAiModal
         visible={addScheduleFlow === 'ai'}
         onClose={() => setAddScheduleFlow('method')}
       />
