@@ -13,6 +13,7 @@ import ProfileModal from '@/components/modals/mobile/ProfileModal.native';
 import PlanSelectModal from '@/components/modals/mobile/PlanSelectModal.native';
 import AddPlanModal from '@/components/modals/mobile/AddPlanModal.native';
 import AddScheduleModal from '@/components/modals/mobile/AddScheduleModal.native';
+import AddScheduleMethodModal from '@/components/modals/mobile/AddScheduleMethodModal.native';
 import ItineraryDetailModal from '@/components/modals/mobile/ItineraryDetailModal.native';
 import ItineraryEditModal from '@/components/modals/mobile/ItineraryEditModal.native';
 import FlightDetailModal from '@/components/modals/mobile/FlightDetailModal.native';
@@ -39,6 +40,7 @@ export default function WeeklyScreen() {
   const [editingPlan, setEditingPlan] = useState<Plan | null>(null);
   const [profileModalVisible, setProfileModalVisible] = useState(false);
   const [calendarModalVisible, setCalendarModalVisible] = useState(false);
+  const [showAddScheduleMethodModal, setShowAddScheduleMethodModal] = useState(false);
   const [showAddScheduleModal, setShowAddScheduleModal] = useState(false);
   const [travelInfoModalVisible, setTravelInfoModalVisible] = useState(false);
   const [weekBaseDate, setWeekBaseDate] = useState<dayjs.Dayjs | null>(null);
@@ -501,12 +503,18 @@ export default function WeeklyScreen() {
       {selectedPlan && (
         <Pressable
           style={styles.fab}
-          onPress={() => setShowAddScheduleModal(true)}
+          onPress={() => setShowAddScheduleMethodModal(true)}
           hitSlop={8}
         >
           <PlusIcon width={24} height={24} color={colors.white} />
         </Pressable>
       )}
+
+      <AddScheduleMethodModal
+        visible={showAddScheduleMethodModal}
+        onClose={() => setShowAddScheduleMethodModal(false)}
+        onSelectDirectAdd={() => setShowAddScheduleModal(true)}
+      />
 
       <AddScheduleModal
         visible={showAddScheduleModal}

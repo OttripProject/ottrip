@@ -25,6 +25,7 @@ import FlightEditModal from '@/components/modals/mobile/FlightEditModal.native';
 import ExpenseDetailModal from '@/components/modals/mobile/ExpenseDetailModal.native';
 import AddExpenseModal from '@/components/modals/mobile/AddExpenseModal.native';
 import AddScheduleModal from '@/components/modals/mobile/AddScheduleModal.native';
+import AddScheduleMethodModal from '@/components/modals/mobile/AddScheduleMethodModal.native';
 import WeeklyChecklistCard from '@/components/cards/WeeklyChecklistCard.native';
 import { itinerariesApi } from '@/services/itineraries';
 import { accommodationsApi } from '@/services/accommodations';
@@ -63,6 +64,7 @@ export default function TodayScreen() {
   const [editingFlight, setEditingFlight] = useState<FlightRead | null>(null);
   const [showExpenseDetail, setShowExpenseDetail] = useState(false);
   const [showAddExpenseFromDetail, setShowAddExpenseFromDetail] = useState(false);
+  const [showAddScheduleMethodModal, setShowAddScheduleMethodModal] = useState(false);
   const [showAddScheduleModal, setShowAddScheduleModal] = useState(false);
 
   const queryClient = useQueryClient();
@@ -887,12 +889,18 @@ export default function TodayScreen() {
       {selectedPlan && (
         <Pressable
           style={styles.fab}
-          onPress={() => setShowAddScheduleModal(true)}
+          onPress={() => setShowAddScheduleMethodModal(true)}
           hitSlop={8}
         >
           <PlusIcon width={24} height={24} color={colors.white} />
         </Pressable>
       )}
+
+      <AddScheduleMethodModal
+        visible={showAddScheduleMethodModal}
+        onClose={() => setShowAddScheduleMethodModal(false)}
+        onSelectDirectAdd={() => setShowAddScheduleModal(true)}
+      />
 
       <AddScheduleModal
         visible={showAddScheduleModal}
