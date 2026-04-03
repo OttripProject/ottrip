@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, Pressable, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, Pressable, StyleSheet, ScrollView, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import BottomSheetModal from '@/ui/components/BottomSheetModal.native';
 import { Input } from '@/ui/components/input';
@@ -65,7 +65,11 @@ export default function AddScheduleWithAiModal({
           <View style={styles.inputField}>
             <Input
               containerStyle={styles.inputContainer}
-              style={styles.inputText}
+              style={[
+                styles.inputText,
+                Platform.OS === 'android' && styles.inputTextAndroid,
+                Platform.OS === 'ios' && styles.inputTextIOS,
+              ]}
               variant="filled"
               placeholder="일정을 입력해주세요..."
               placeholderTextColor={colors.gray600}
@@ -161,30 +165,41 @@ const styles = StyleSheet.create({
   inputField: {
     flexDirection: 'row',
     alignItems: 'center',
-    height: 48,
+    minHeight: 52,
     borderRadius: 12,
     backgroundColor: colors.gray200,
     paddingLeft: 16,
     paddingRight: spacing.xs,
-    paddingVertical: spacing.xs,
   },
   inputContainer: {
     flex: 1,
     minWidth: 0,
+    minHeight: 48,
   },
   inputText: {
     flex: 1,
-    minHeight: 36,
+    width: '100%',
     paddingHorizontal: 0,
     paddingRight: spacing.sm,
-    paddingVertical: 4,
+    paddingTop: 8,
+    paddingBottom: 10,
     backgroundColor: 'transparent',
     borderWidth: 0,
     borderColor: 'transparent',
     fontFamily: typography.fontFamily.pretendardRegular,
-    fontSize: 13,
+    fontSize: 14,
     lineHeight: 20,
     color: colors.black,
+  },
+  inputTextAndroid: {
+    includeFontPadding: true,
+    textAlignVertical: 'center',
+    paddingTop: 9,
+    paddingBottom: 9,
+  },
+  inputTextIOS: {
+    paddingTop: 6,
+    paddingBottom: 12,
   },
   sendInside: {
     justifyContent: 'center',

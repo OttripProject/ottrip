@@ -1,11 +1,13 @@
 import json
-from typing import Dict, Any
+from pathlib import Path
+from typing import Any
+
+import fitz
+import openai
+from google import genai
 from google.cloud import vision
 from google.cloud.vision_v1 import types as vision_types
 from google.oauth2 import service_account
-import fitz
-import openai
-from pathlib import Path
 
 from app.utils.dependency import dependency
 
@@ -233,3 +235,32 @@ class OpenAIClient:
                 success=False,
                 error=f"체크리스트 생성 중 오류 발생: {str(e)}"
             )
+
+
+@dependency
+class GeminiClient:
+    """Google Gemini API 클라이언트 (google-genai SDK)."""
+
+    def __init__(self) -> None:
+        self._client: genai.Client | None = None
+
+    @property
+    def client(self) -> genai.Client:
+        if self._client is None:
+            key = ai_settings.GEMINI_API_KEY or None
+            self._client = genai.Client(api_key=key)
+        return self._client
+
+    async def generate_content(
+        self,
+        contents: str,
+        *,
+        config: genai.types.GenerateContentConfig | dict[str, Any] | None = None,
+    ) -> str:
+        response = await self.client.aio.models.generate_content(
+            model=ai_settings.GEMINI_DEFAULT_MODEL,
+            contents=contents,
+            config=config,
+        )
+        text = getattr(response, "text", None)
+        return text if text else ""

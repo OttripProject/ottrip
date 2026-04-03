@@ -13,7 +13,7 @@ from app.itinerary.repository import ItineraryRepository
 from app.flights.models import Flight
 from app.flights.repository import FlightRepository
 
-from .clients import VisionClient, OpenAIClient
+from .clients import VisionClient, OpenAIClient, GeminiClient
 from .config import ai_settings
 from .schemas import AIFlightRead, ChecklistRead, ChecklistItemsByCategory, ChecklistCreateResponse
 
@@ -23,6 +23,7 @@ class AIService:
     current_user: CurrentUser
     vision_client: VisionClient
     openai_client: OpenAIClient
+    gemini_client: GeminiClient
     plan_repository: PlanRepository
     itinerary_repository: ItineraryRepository
     flight_repository: FlightRepository
@@ -480,4 +481,7 @@ class AIService:
             )
         return "\n".join(formatted)
     
-    
+    async def test_gemini(self):
+        return await self.gemini_client.generate_content(
+            contents="GEMINI 연결 잘 되었나 확인해보는거야. 잘 연결되었니?"
+        )

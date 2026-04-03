@@ -20,6 +20,7 @@ dependencies = [
     "sqlalchemy[asyncio]>=2.0.39",
     "types-aioboto3[full]>=14.1.0",
     "google-cloud-vision>=3.7.0",
+    "google-genai>=1.0.0",
     "pymupdf>=1.26.4",
     "resend>=2.19.0",
     "sentry-sdk[fastapi]>=2.48.0",
