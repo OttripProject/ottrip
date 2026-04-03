@@ -123,6 +123,8 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       backgroundColor: "#ffffff",
     },
     assetBundlePatterns: ["**/*"],
+    // Apple App ID(Sign in with Apple)는 아래 번들 ID와 1:1로 맞춤
+    // local → OttripLocal | dev → OttripDev | alpha → OttripAlpha | prod → Ottrip
     ios: {
       usesAppleSignIn: true,
       supportsTablet: false,

@@ -15,10 +15,10 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.ottrip.app"
+      "bundleIdentifier": "com.ottrip.app.OttripLocal"
     },
     "android": {
-      "package": "com.ottrip.app"
+      "package": "com.ottrip.app.OttripLocal"
     },
     "web": {
       "favicon": "./assets/favicon.png",

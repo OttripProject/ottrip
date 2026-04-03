@@ -1,5 +1,3 @@
-"""Sign in with Apple — identity token 검증 및 (선택) authorization code / revoke."""
-
 import time
 from typing import Annotated, Any, Optional, cast
 
