@@ -10,6 +10,7 @@ import api from '@/services/api';
 import { typography, textStyles } from '@/ui/tokens/typography';
 import { colors } from '@/ui/tokens/colors';
 import GoogleButton from '@/ui/components/GoogleButton';
+import AppleButton from '@/ui/components/AppleButton';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 
 const env = loadPublicEnv();
@@ -144,6 +145,12 @@ export default function LoginScreenNative() {
               iconSize={20}
               textStyle={styles.googleButtonText}
             />
+            <AppleButton
+              onPress={() => {}}
+              style={styles.appleButton}
+              textStyle={styles.appleButtonText}
+              iconSize={34}
+            />
           </View>
         </View>
       </SafeAreaView>
@@ -189,5 +196,16 @@ const styles = StyleSheet.create({
   },
   googleButtonText: {
     ...textStyles.h6,
+  },
+  appleButton: {
+    width: '100%',
+    maxWidth: 327,
+    height: 50,
+    borderRadius: 12,
+    marginTop: 8,
+  },
+  appleButtonText: {
+    ...textStyles.h6,
+    color: colors.white,
   },
 });
