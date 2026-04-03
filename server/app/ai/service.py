@@ -1,21 +1,26 @@
-from typing import Dict, Any, cast, Iterable, Tuple
 import json
+from typing import Any, Dict, Iterable, Tuple, cast
 
 from fastapi import HTTPException
 from sqlalchemy.orm import attributes
 
 from app.auth.deps import CurrentUser
 from app.common.schemas import StatusResponse
-from app.utils.dependency import dependency
-from app.plans.repository import PlanRepository
-from app.itinerary.models import Itinerary
-from app.itinerary.repository import ItineraryRepository
 from app.flights.models import Flight
 from app.flights.repository import FlightRepository
+from app.itinerary.models import Itinerary
+from app.itinerary.repository import ItineraryRepository
+from app.plans.repository import PlanRepository
+from app.utils.dependency import dependency
 
-from .clients import VisionClient, OpenAIClient, GeminiClient
+from .clients import GeminiClient, OpenAIClient, VisionClient
 from .config import ai_settings
-from .schemas import AIFlightRead, ChecklistRead, ChecklistItemsByCategory, ChecklistCreateResponse
+from .schemas import (
+    AIFlightRead,
+    ChecklistCreateResponse,
+    ChecklistItemsByCategory,
+    ChecklistRead,
+)
 
 
 @dependency
@@ -124,14 +129,18 @@ class AIService:
         flights_text = self._format_flights(flights)
         itineraries_text = self._format_itineraries(itineraries)
         
-        ai_result = await self.openai_client.generate_checklist(
+        checklist_kwargs = dict(
             start_date=str(plan.start_date),
             end_date=str(plan.end_date),
             destinations=destinations,
             flights=flights_text,
             itineraries=itineraries_text,
-            existing_checklist=json.dumps(plan.travel_checklist,  ensure_ascii=False, indent=2)
+            existing_checklist=json.dumps(plan.travel_checklist, ensure_ascii=False, indent=2),
         )
+        if ai_settings.CHECKLIST_LLM_PROVIDER.lower() == "openai":
+            ai_result = await self.openai_client.generate_checklist(**checklist_kwargs)
+        else:
+            ai_result = await self.gemini_client.generate_checklist(**checklist_kwargs)
         
         if not ai_result.success:
             return ChecklistCreateResponse(
@@ -140,7 +149,6 @@ class AIService:
                 checklist=None
             )
         
-        # AI 생성 데이터 정규화 (snake_case 키로 통일 + 필드 기본값 보정)
         raw_ai_data = ai_result.data or {}
         ai_data: Dict[str, list[Dict[str, Any]]] = {}
 

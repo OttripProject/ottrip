@@ -24,6 +24,9 @@ class AIConfig(BaseConfig):
     GEMINI_API_KEY: str = ""
     GEMINI_DEFAULT_MODEL: str = "gemini-3-flash-preview"
 
+    # 체크리스트 생성에 사용할 LLM: "gemini" | "openai" (기본 gemini)
+    CHECKLIST_LLM_PROVIDER: str = "gemini"
+
     FLIGHT_SYSTEM_PROMPT: str = (
         "You are an expert in analyzing flight ticket text. Provide accurate and structured JSON responses."
     )
