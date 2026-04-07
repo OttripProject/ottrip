@@ -27,6 +27,9 @@ jobs:
         with:
           version: 10.12.4
 
+      - name: Install EAS CLI
+        run: npm install -g eas-cli
+
       - name: Install dependencies
         working-directory: client
         run: pnpm install --frozen-lockfile
