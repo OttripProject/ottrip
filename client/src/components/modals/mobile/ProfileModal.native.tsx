@@ -126,8 +126,10 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
             >
               {/* 헤더 */}
               <View style={styles.header}>
-                <Text style={styles.title}>프로필 설정</Text>
-                <Pressable style={styles.closeButton} onPress={onClose}>
+                <Text style={styles.title} numberOfLines={1}>
+                  프로필 설정
+                </Text>
+                <Pressable style={styles.closeButton} onPress={onClose} hitSlop={8}>
                   <CloseIcon width={24} height={24} color={colors.gray500}/>
                 </Pressable>
               </View>
@@ -320,12 +322,15 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    width: '100%',
     marginBottom: 4,
   },
   title: {
     ...textStyles.h3,
     color: colors.black,
+    flex: 1,
+    flexShrink: 1,
+    marginRight: 8,
   },
   closeButton: {
     padding: 4,
