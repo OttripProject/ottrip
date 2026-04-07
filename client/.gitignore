@@ -2,7 +2,6 @@
 
 # dependencies
 node_modules/
-# pnpm 전용 프로젝트 — EAS가 npm ci를 쓰지 않도록 package-lock 미사용
 package-lock.json
 
 ios/
