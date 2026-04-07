@@ -1,11 +1,13 @@
 import json
-from typing import Dict, Any
+from pathlib import Path
+from typing import Any
+
+import fitz
+import openai
+from google import genai
 from google.cloud import vision
 from google.cloud.vision_v1 import types as vision_types
 from google.oauth2 import service_account
-import fitz
-import openai
-from pathlib import Path
 
 from app.utils.dependency import dependency
 
@@ -232,4 +234,96 @@ class OpenAIClient:
             return AIParseResponse(
                 success=False,
                 error=f"체크리스트 생성 중 오류 발생: {str(e)}"
+            )
+
+
+@dependency
+class GeminiClient:
+    """Google Gemini API 클라이언트 (google-genai SDK)."""
+
+    def __init__(self) -> None:
+        self._client: genai.Client | None = None
+
+    @property
+    def client(self) -> genai.Client:
+        if self._client is None:
+            key = ai_settings.GEMINI_API_KEY
+            self._client = genai.Client(
+                api_key=key
+            )
+        return self._client
+
+    async def generate_content(
+        self,
+        contents: str,
+        *,
+        config: genai.types.GenerateContentConfig | dict[str, Any] | None = None,
+    ) -> str:
+        response = await self.client.aio.models.generate_content(
+            model=ai_settings.GEMINI_DEFAULT_MODEL,
+            contents=contents,
+            config=config,
+        )
+        text = getattr(response, "text", None)
+        return text if text else ""
+
+    async def generate_checklist(
+        self,
+        start_date: str,
+        end_date: str,
+        destinations: str,
+        flights: str,
+        itineraries: str,
+        existing_checklist: str = "",
+    ) -> AIParseResponse:
+        """여행 체크리스트 생성 (OpenAI `generate_checklist`와 동일 프롬프트·스키마)."""
+        try:
+            prompt_path = Path(__file__).parent / "prompt" / "assistant.txt"
+            with open(prompt_path, "r", encoding="utf-8") as f:
+                prompt_template = f.read()
+
+            prompt = prompt_template.format(
+                start_date=start_date,
+                end_date=end_date,
+                destinations=destinations,
+                flights=flights,
+                itineraries=itineraries,
+                existing_checklist=existing_checklist,
+            )
+
+            config = genai.types.GenerateContentConfig(
+                system_instruction=ai_settings.CHECKLIST_SYSTEM_PROMPT,
+                temperature=0.7,
+                response_mime_type="application/json",
+            )
+
+            response = await self.client.aio.models.generate_content(
+                model=ai_settings.GEMINI_DEFAULT_MODEL,
+                contents=prompt,
+                config=config,
+            )
+
+            ai_response = getattr(response, "text", None) or ""
+            if not ai_response.strip():
+                return AIParseResponse(
+                    success=False,
+                    error="AI 응답이 비어있습니다.",
+                )
+
+            try:
+                result = json.loads(ai_response.strip())
+                return AIParseResponse(
+                    success=True,
+                    data=result,
+                )
+            except json.JSONDecodeError:
+                return AIParseResponse(
+                    success=False,
+                    error="AI 응답을 파싱할 수 없습니다.",
+                )
+
+        except Exception as e:
+            return AIParseResponse(
+                success=False,
+                error=f"체크리스트 생성 중 오류 발생: {str(e)}",
             )

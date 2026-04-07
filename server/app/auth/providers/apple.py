@@ -1,17 +1,14 @@
-"""Sign in with Apple — identity token 검증 및 (선택) authorization code / revoke."""
-
-from __future__ import annotations
-
 import time
-from typing import Any, Optional, cast
+from typing import Annotated, Any, Optional, cast
 
 import jwt
-from fastapi import HTTPException
+from fastapi import Depends, HTTPException
+from httpx import AsyncClient
 from jwt import PyJWK
 from pydantic import BaseModel
 
 from app.auth.config import auth_settings
-from app.common.deps import HTTPClientDep
+from app.common.deps import get_http_client
 from app.utils.dependency import dependency
 
 _CLIENT_SECRET_ALG = "ES256"
@@ -57,7 +54,7 @@ def normalize_boolean(value: bool | str | None) -> bool:
 
 @dependency
 class AppleIdpService:
-    client: HTTPClientDep
+    client: Annotated[AsyncClient, Depends(get_http_client)]
 
     async def verify_identity_token(self, identity_token: str) -> AppleUserResponse:
         """클라이언트가 받은 identity token(JWT)을 JWKS로 검증하고 sub/email을 반환합니다."""

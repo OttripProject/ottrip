@@ -17,10 +17,7 @@
       "extends": "prod",
       "environment": "development",
       "distribution": "internal",
-      "channel": "dev",
-      "ios": {
-        "simulator": true
-      }
+      "channel": "dev"
     },
     "dev": {
       "extends": "alpha",
