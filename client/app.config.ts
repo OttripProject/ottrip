@@ -6,6 +6,9 @@ import { z } from "zod";
 
 const projectId = "760d14be-9546-4b34-bb91-d0348bceaaf9";
 
+/** iOS Bundle ID / Android applicationId — Apple App ID·서버 APP_BUNDLE_IDS와 동일 */
+const BUNDLE_ID = "ottripofficial.ottrip";
+
 // NOTE: app.config.ts는 런타임이 아닌 빌드 시점에 실행됩니다.
 // TS 의존성을 줄이기 위해 로컬 스키마를 사용합니다.
 const envSchema = z.object({
@@ -23,6 +26,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     const basePlugins: NonNullable<ExpoConfig["plugins"]> = [
       "expo-asset",
       "expo-secure-store",
+      "expo-apple-authentication",
       [
         "expo-build-properties",
         {
@@ -68,6 +72,14 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       slug: "ottrip",
       extra: { eas: { projectId } },
       plugins: commonPlugins,
+      ios: {
+        ...(config as ExpoConfig).ios,
+        bundleIdentifier: BUNDLE_ID,
+      },
+      android: {
+        ...(config as ExpoConfig).android,
+        package: BUNDLE_ID,
+      },
     };
   }
 
@@ -123,28 +135,16 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       backgroundColor: "#ffffff",
     },
     assetBundlePatterns: ["**/*"],
-    // Apple App ID(Sign in with Apple)는 아래 번들 ID와 1:1로 맞춤
-    // local → OttripLocal | dev → OttripDev | alpha → OttripAlpha | prod → Ottrip
     ios: {
       usesAppleSignIn: true,
       supportsTablet: false,
-      bundleIdentifier: `com.ottrip.app.${switchProfile({
-        dev: "OttripDev",
-        alpha: "OttripAlpha",
-        prod: "Ottrip",
-        local: "OttripLocal",
-      })}`,
+      bundleIdentifier: BUNDLE_ID,
       infoPlist: {
         ITSAppUsesNonExemptEncryption: false,
       },
     },
     android: {
-      package: `com.ottrip.app.${switchProfile({
-        dev: "OttripDev",
-        alpha: "OttripAlpha",
-        prod: "Ottrip",
-        local: "OttripLocal",
-      })}`,
+      package: BUNDLE_ID,
     },
     web: {
       favicon: "./assets/favicon.png",

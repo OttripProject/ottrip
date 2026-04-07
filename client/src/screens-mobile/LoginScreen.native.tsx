@@ -2,12 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Alert, Platform } from 'react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigation } from '@react-navigation/native';
-import { authApi } from '@/services/auth';
+import { authApi, type AuthResponse } from '@/services/auth';
 import { loadPublicEnv } from '@/core/env/schema';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as SecureStore from 'expo-secure-store';
+import * as AppleAuthentication from 'expo-apple-authentication';
 import api from '@/services/api';
-import { typography, textStyles } from '@/ui/tokens/typography';
+import { textStyles } from '@/ui/tokens/typography';
 import { colors } from '@/ui/tokens/colors';
 import GoogleButton from '@/ui/components/GoogleButton';
 import AppleButton from '@/ui/components/AppleButton';
@@ -40,6 +41,29 @@ export default function LoginScreenNative() {
   const { login } = useAuth();
   const navigation = useNavigation<any>();
   const [isLoading, setIsLoading] = useState(false);
+  const [isAppleAuthAvailable, setIsAppleAuthAvailable] = useState(false);
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      if (Platform.OS !== 'ios') {
+        return;
+      }
+      try {
+        const ok = await AppleAuthentication.isAvailableAsync();
+        if (mounted) {
+          setIsAppleAuthAvailable(ok);
+        }
+      } catch {
+        if (mounted) {
+          setIsAppleAuthAvailable(false);
+        }
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   useEffect(() => {
     const iosClientId = env.EXPO_PUBLIC_GOOGLE_CLIENT_ID_IOS;
@@ -59,37 +83,51 @@ export default function LoginScreenNative() {
     }
   }, []);
 
-  const handleGoogleSignIn = async (idToken: string) => {
+  const completeAuthResponse = async (response: AuthResponse, tokenForEmail: string) => {
+    if (response.isRegistered) {
+      await login({
+        isRegistered: true,
+        accessToken: response.accessToken,
+        refreshToken: response.refreshToken,
+      });
+
+      try {
+        const token = await SecureStore.getItemAsync('pendingInviteToken');
+        if (token) {
+          await api.post(`/private/plans/invitations/${token}/accept`);
+          await SecureStore.deleteItemAsync('pendingInviteToken');
+        }
+      } catch {}
+
+      setIsLoading(false);
+      return;
+    }
+
+    await login(response);
+    const payload = parseIdToken(tokenForEmail);
+    const email = payload?.email ?? '';
+    navigation.navigate('약관동의', {
+      registerToken: response.registerToken,
+      prefill: response.prefill,
+      email,
+    });
+    setIsLoading(false);
+  };
+
+  const submitGoogleToken = async (idToken: string) => {
     try {
       const response = await authApi.googleLogin(idToken);
+      await completeAuthResponse(response, idToken);
+    } catch {
+      setIsLoading(false);
+      Alert.alert('오류', '로그인에 실패했습니다.');
+    }
+  };
 
-      if (response.isRegistered) {
-        await login({
-          isRegistered: true,
-          accessToken: response.accessToken,
-          refreshToken: response.refreshToken,
-        });
-
-        try {
-          const token = await SecureStore.getItemAsync('pendingInviteToken');
-          if (token) {
-            await api.post(`/private/plans/invitations/${token}/accept`);
-            await SecureStore.deleteItemAsync('pendingInviteToken');
-          }
-        } catch {}
-
-        setIsLoading(false);
-      } else {
-        await login(response);
-        const payload = parseIdToken(idToken);
-        const email = payload?.email ?? '';
-        navigation.navigate('약관동의', {
-          registerToken: response.registerToken,
-          prefill: response.prefill,
-          email,
-        });
-        setIsLoading(false);
-      }
+  const submitAppleToken = async (identityToken: string) => {
+    try {
+      const response = await authApi.appleLogin(identityToken);
+      await completeAuthResponse(response, identityToken);
     } catch {
       setIsLoading(false);
       Alert.alert('오류', '로그인에 실패했습니다.');
@@ -114,7 +152,7 @@ export default function LoginScreenNative() {
         (signInResult as any).data?.idToken || (signInResult as any).idToken;
 
       if (idToken) {
-        await handleGoogleSignIn(idToken);
+        await submitGoogleToken(idToken);
       } else {
         Alert.alert('오류', '로그인에 실패했습니다. id_token을 받을 수 없습니다.');
         setIsLoading(false);
@@ -126,6 +164,37 @@ export default function LoginScreenNative() {
         Alert.alert('오류', '로그인에 실패했습니다: ' + (error.message || '알 수 없는 오류'));
         setIsLoading(false);
       }
+    }
+  };
+
+  const onAppleSignIn = async () => {
+    if (Platform.OS !== 'ios') {
+      return;
+    }
+    setIsLoading(true);
+    try {
+      const credential = await AppleAuthentication.signInAsync({
+        requestedScopes: [
+          AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+          AppleAuthentication.AppleAuthenticationScope.EMAIL,
+        ],
+      });
+
+      if (credential.identityToken) {
+        await submitAppleToken(credential.identityToken);
+      } else {
+        setIsLoading(false);
+        Alert.alert('오류', 'Apple 로그인 토큰을 받을 수 없습니다.');
+      }
+    } catch (e: unknown) {
+      const code = e && typeof e === 'object' && 'code' in e ? (e as { code?: string }).code : undefined;
+      if (code === 'ERR_REQUEST_CANCELED') {
+        setIsLoading(false);
+        return;
+      }
+      setIsLoading(false);
+      const message = e instanceof Error ? e.message : 'Apple 로그인에 실패했습니다.';
+      Alert.alert('오류', message);
     }
   };
 
@@ -145,12 +214,16 @@ export default function LoginScreenNative() {
               iconSize={20}
               textStyle={styles.googleButtonText}
             />
-            <AppleButton
-              onPress={() => {}}
-              style={styles.appleButton}
-              textStyle={styles.appleButtonText}
-              iconSize={34}
-            />
+            {isAppleAuthAvailable ? (
+              <AppleButton
+                onPress={onAppleSignIn}
+                disabled={isLoading}
+                isLoading={isLoading}
+                style={styles.appleButton}
+                textStyle={styles.appleButtonText}
+                iconSize={34}
+              />
+            ) : null}
           </View>
         </View>
       </SafeAreaView>
