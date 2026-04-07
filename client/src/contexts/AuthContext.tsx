@@ -3,6 +3,7 @@ import { Platform } from 'react-native';
 import { authApi, TokenResponse, AuthResponse } from '../services/auth';
 import { tokenStores } from '../utils/tokenStores'; 
 import { useTokenRefresh } from '../hooks/useTokenRefresh';
+import { queryClient } from './QueryProvider';
 
 interface AuthContextType {
   isAuthenticated: boolean;
@@ -86,7 +87,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     } catch (error: any) {
       await clearTokens();
     }
-    
+
+    queryClient.clear();
     setIsAuthenticated(false);
     setUser(null);
     if (Platform.OS === 'web' && typeof window !== 'undefined') {
