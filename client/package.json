@@ -75,6 +75,13 @@
     "typescript": "^5.9.3"
   },
   "packageManager": "pnpm@10.12.4",
+  "pnpm": {
+    "overrides": {
+      "react": "19.1.4",
+      "react-dom": "19.1.4",
+      "react-native-renderer": "19.1.4"
+    }
+  },
   "expo": {
     "doctor": {
       "reactNativeDirectoryCheck": {
