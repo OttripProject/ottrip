@@ -71,6 +71,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const login = async (authResponse: AuthResponse) => {
     if (authResponse.isRegistered) {
       await saveTokens(authResponse);
+      queryClient.removeQueries({ queryKey: ['me'] });
       setIsAuthenticated(true);
     } else {
       await tokenStores.registerToken.set(authResponse.registerToken);
