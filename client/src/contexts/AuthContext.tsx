@@ -4,6 +4,7 @@ import { authApi, TokenResponse, AuthResponse } from '../services/auth';
 import { tokenStores } from '../utils/tokenStores'; 
 import { useTokenRefresh } from '../hooks/useTokenRefresh';
 import { queryClient } from './QueryProvider';
+import { isTokenExpiringSoon } from '../utils/jwt';
 
 interface AuthContextType {
   isAuthenticated: boolean;
@@ -27,7 +28,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [user, setUser] = useState<any | null>(null);
 
-  useTokenRefresh();
+  useTokenRefresh(isAuthenticated);
 
   const saveTokens = async (tokens: TokenResponse) => {
     try {
@@ -112,9 +113,25 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           }
         } else {
           const accessToken = await tokenStores.accessToken.get();
-          
-          if (accessToken) {
+
+          if (accessToken && !isTokenExpiringSoon(accessToken, 0)) {
+            // accessToken 유효 → 바로 인증 처리
             setIsAuthenticated(true);
+          } else {
+            // accessToken 없거나 만료 → refreshToken으로 복구 시도
+            const storedRefreshToken = await tokenStores.refreshToken.get();
+            if (storedRefreshToken) {
+              try {
+                const tokenData = await authApi.refreshToken(storedRefreshToken);
+                await tokenStores.setAll({
+                  accessToken: tokenData.accessToken,
+                  refreshToken: tokenData.refreshToken,
+                });
+                setIsAuthenticated(true);
+              } catch {
+                await tokenStores.clearAll();
+              }
+            }
           }
         }
       } catch (error: any) {

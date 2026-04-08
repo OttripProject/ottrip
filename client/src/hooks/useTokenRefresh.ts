@@ -3,11 +3,13 @@ import { Platform, AppState, type AppStateStatus } from 'react-native';
 import { refreshToken } from '@/services/api';
 
 
-export function useTokenRefresh() {
+export function useTokenRefresh(isAuthenticated: boolean = false) {
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const appStateRef = useRef<AppStateStatus>(AppState.currentState);
 
   useEffect(() => {
+    if (!isAuthenticated) return;
+
     const checkAndRefresh = async () => {
       await refreshToken(true);
     };
@@ -57,6 +59,6 @@ export function useTokenRefresh() {
         clearInterval(intervalRef.current);
       }
     };
-  }, []);
+  }, [isAuthenticated]);
 }
 
