@@ -17,9 +17,7 @@ type AddScheduleTab = 'accommodation' | 'flight' | 'itinerary';
 
 interface AddScheduleModalProps {
   visible: boolean;
-  /** 닫기/취소 (저장 완료가 아닐 때) */
   onClose: () => void;
-  /** 일정 저장 성공 시 — 없으면 기존처럼 onClose 호출 */
   onSaved?: () => void;
   planId: number;
   planStartDate?: string;
@@ -56,12 +54,18 @@ export default function AddScheduleModal({
     }
   };
 
+  // fromSave: true일 때는 이미 finishAfterSave가 호출됐으므로 무시
+  const handleClose = (opts?: { fromSave?: boolean }) => {
+    if (opts?.fromSave) return;
+    onClose();
+  };
+
   const renderContent = () => {
     if (activeTab === 'itinerary') {
       return (
         <ItineraryEditModal
           visible={visible}
-          onClose={onClose}
+          onClose={handleClose}
           itinerary={null}
           planId={planId}
           defaultDate={selectedDate?.format('YYYY-MM-DD')}
@@ -78,7 +82,7 @@ export default function AddScheduleModal({
       return (
         <AccommodationEditModal
           visible={visible}
-          onClose={onClose}
+          onClose={handleClose}
           accommodation={null}
           planId={planId}
           defaultDate={selectedDate?.format('YYYY-MM-DD')}
@@ -94,7 +98,7 @@ export default function AddScheduleModal({
     return (
       <FlightEditModal
         visible={visible}
-        onClose={onClose}
+        onClose={handleClose}
         flight={null}
         planId={planId}
         planStartDate={planStartDate}
