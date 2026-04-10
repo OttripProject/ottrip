@@ -5,6 +5,7 @@ import LoginScreenNative from "@/screens-mobile/LoginScreen.native";
 import AuthCallbackScreen from "../screens/AuthCallbackScreen";
 import ProfileScreen from "@/screens/ProfileScreen";
 import TermsConsentScreen from "@/screens/TermsConsentScreen";
+import TermsConsentScreenNative from "@/screens-mobile/TermsConsentScreen.native";
 import RegisterProfileScreen from "@/screens/RegisterProfileScreen";
 import TermsDetailScreen from "@/screens/TermsDetailScreen";
 import WelcomeScreen from "@/screens/auth/WelcomeScreen";
@@ -218,7 +219,10 @@ export default function RootNavigator() {
               name="로그인"
               component={Platform.OS === 'web' ? LoginScreen : LoginScreenNative}
             />
-            <Stack.Screen name="약관동의" component={TermsConsentScreen} />
+            <Stack.Screen
+              name="약관동의"
+              component={Platform.OS === 'web' ? TermsConsentScreen : TermsConsentScreenNative}
+            />
             <Stack.Screen name="프로필 입력" component={RegisterProfileScreen} />
             <Stack.Screen name="상세내용" component={TermsDetailScreen} />
             <Stack.Screen name="인증" component={AuthCallbackScreen} />
