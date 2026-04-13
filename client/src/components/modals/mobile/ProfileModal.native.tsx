@@ -168,7 +168,7 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
                   onPress={() => setGender(Gender.MALE)}
                 >
                   <View style={[styles.radioButton, gender === Gender.MALE && styles.radioButtonSelected]}>
-                    {gender === Gender.MALE && <GenderCheckIcon width={16} height={16} fill={colors.white} />}
+                    <GenderCheckIcon width={16} height={16} fill={colors.white} />
                   </View>
                   <Text style={styles.genderText}>남성</Text>
                 </Pressable>
@@ -177,7 +177,7 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
                   onPress={() => setGender(Gender.FEMALE)}
                 >
                   <View style={[styles.radioButton, gender === Gender.FEMALE && styles.radioButtonSelected]}>
-                    {gender === Gender.FEMALE && <GenderCheckIcon width={16} height={16} fill={colors.white} />}
+                    <GenderCheckIcon width={16} height={16} fill={colors.white} />
                   </View>
                   <Text style={styles.genderText}>여성</Text>
                 </Pressable>
@@ -393,8 +393,8 @@ const styles = StyleSheet.create({
     height: 20,
     borderRadius: 10,
     borderWidth: 1.5,
-    borderColor: colors.gray400,
-    backgroundColor: colors.white,
+    borderColor: colors.gray300,
+    backgroundColor: colors.gray300,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 8,

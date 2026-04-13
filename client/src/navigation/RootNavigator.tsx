@@ -7,6 +7,7 @@ import ProfileScreen from "@/screens/ProfileScreen";
 import TermsConsentScreen from "@/screens/TermsConsentScreen";
 import TermsConsentScreenNative from "@/screens-mobile/TermsConsentScreen.native";
 import RegisterProfileScreen from "@/screens/RegisterProfileScreen";
+import RegisterProfileScreenNative from "@/screens-mobile/RegisterProfileScreen.native";
 import TermsDetailScreen from "@/screens/TermsDetailScreen";
 import WelcomeScreen from "@/screens/auth/WelcomeScreen";
 import LandingScreen from "@/screens/LandingScreen";
@@ -223,7 +224,10 @@ export default function RootNavigator() {
               name="약관동의"
               component={Platform.OS === 'web' ? TermsConsentScreen : TermsConsentScreenNative}
             />
-            <Stack.Screen name="프로필 입력" component={RegisterProfileScreen} />
+            <Stack.Screen
+              name="프로필 입력"
+              component={Platform.OS === 'web' ? RegisterProfileScreen : RegisterProfileScreenNative}
+            />
             <Stack.Screen name="상세내용" component={TermsDetailScreen} />
             <Stack.Screen name="인증" component={AuthCallbackScreen} />
             {/* 모바일 화면 (로그인 없이도 접근 가능) */}
