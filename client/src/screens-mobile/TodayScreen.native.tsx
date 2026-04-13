@@ -531,37 +531,39 @@ export default function TodayScreen() {
         </View>
 
         {/* 오늘의 비용 섹션 */}
-        <View style={styles.section}>
-          <Pressable
-            style={[styles.cardBase, styles.costCardPrimary]}
-            onPress={() => setShowExpenseDetail(true)}
-          >
-            <View style={styles.costCardHeader}>
-              <View style={styles.costCardHeaderLeft}>
-                <ExpenseIcon width={20} height={20} color={colors.white} />
-                <Text style={styles.costCardHeaderTitle}>오늘의 여행 비용</Text>
+        {selectedPlan && (
+          <View style={styles.section}>
+            <Pressable
+              style={[styles.cardBase, styles.costCardPrimary]}
+              onPress={() => setShowExpenseDetail(true)}
+            >
+              <View style={styles.costCardHeader}>
+                <View style={styles.costCardHeaderLeft}>
+                  <ExpenseIcon width={20} height={20} color={colors.white} />
+                  <Text style={styles.costCardHeaderTitle}>오늘의 여행 비용</Text>
+                </View>
+                <RightArrowIcon width={20} height={20} color={colors.white} />
               </View>
-              <RightArrowIcon width={20} height={20} color={colors.white} />
-            </View>
-            {todayExpenses.total > 0 ? (
-              <>
-                <Text style={styles.costAmountPrimary}>
-                  {formatCurrency(todayExpenses.total)}
-                </Text>
-                <Text style={styles.costDetailPrimary}>
-                  터치하여 상세 내역 확인
-                </Text>
-              </>
-            ) : (
-              <>
-                <Text style={styles.costAmountPrimary}>0원</Text>
-                <Text style={styles.costDetailPrimary}>
-                  터치하여 상세 내역 확인
-                </Text>
-              </>
-            )}
-          </Pressable>
-        </View>
+              {todayExpenses.total > 0 ? (
+                <>
+                  <Text style={styles.costAmountPrimary}>
+                    {formatCurrency(todayExpenses.total)}
+                  </Text>
+                  <Text style={styles.costDetailPrimary}>
+                    터치하여 상세 내역 확인
+                  </Text>
+                </>
+              ) : (
+                <>
+                  <Text style={styles.costAmountPrimary}>0원</Text>
+                  <Text style={styles.costDetailPrimary}>
+                    터치하여 상세 내역 확인
+                  </Text>
+                </>
+              )}
+            </Pressable>
+          </View>
+        )}
 
         {/* 여행 정보(숙박/항공) 섹션 - 데이터 있을 때만 노출 */}
         {(todayAccommodations.length > 0 || todayFlights.length > 0) && (
