@@ -13,7 +13,6 @@ import { useRoute, useNavigation } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as SecureStore from 'expo-secure-store';
 import { authApi } from '@/services/auth';
-import { useAuth } from '@/contexts/AuthContext';
 import { useNicknameValidation } from '@/hooks/useNicknameValidation';
 import { Input } from '@/ui/components/input/Input';
 import { colors } from '@/ui/tokens/colors';
@@ -41,7 +40,6 @@ function toHandleFromEmail(email: string): string {
 export default function RegisterProfileScreenNative() {
   const route = useRoute<any>();
   const navigation = useNavigation<any>();
-  const { login } = useAuth();
   const { registerToken, prefill, email, terms } = route.params as RouteParams;
 
   const [nickname, setNickname] = useState(prefill?.name || '');
@@ -83,12 +81,6 @@ export default function RegisterProfileScreenNative() {
         await SecureStore.setItemAsync('registerComplete', 'true');
       } catch {}
 
-      await login({
-        isRegistered: true,
-        accessToken: registerResponse.accessToken,
-        refreshToken: registerResponse.refreshToken,
-      } as any);
-
       try {
         const token = await SecureStore.getItemAsync('pendingInviteToken');
         if (token) {
@@ -96,6 +88,11 @@ export default function RegisterProfileScreenNative() {
           await SecureStore.deleteItemAsync('pendingInviteToken');
         }
       } catch {}
+
+      navigation.navigate('가입완료', {
+        accessToken: registerResponse.accessToken,
+        refreshToken: registerResponse.refreshToken,
+      });
 
     } catch (e: any) {
       Alert.alert('가입 실패', e?.response?.data?.detail || e.message || '알 수 없는 오류');
