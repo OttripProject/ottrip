@@ -2,9 +2,13 @@ from datetime import date
 
 from fastapi import HTTPException
 
+from app.attachments.models import AttachmentEntityType
+from app.attachments.repository import AttachmentRepository
+from app.attachments.service import cascade_delete_attachments
 from app.auth.deps import CurrentUser
 from app.itinerary.repository import ItineraryRepository
 from app.plans.repository import PlanRepository
+from app.storage.deps import S3ClientDep
 from app.utils.dependency import dependency
 
 from .models import Expense
@@ -18,6 +22,8 @@ class ExpenseService:
     expense_repository: ExpenseRepository
     itinerary_repository: ItineraryRepository
     plan_repository: PlanRepository
+    attachment_repository: AttachmentRepository
+    s3_client: S3ClientDep
 
     async def create(self, *, expense_data: ExpenseCreate) -> ExpenseRead:
         plan_exists, has_permission = await self.plan_repository.has_edit_permission(
@@ -172,4 +178,10 @@ class ExpenseService:
                     status_code=403, detail="해당 비용에 대한 수정 권한이 없습니다."
                 )
 
+        await cascade_delete_attachments(
+            entity_type=AttachmentEntityType.EXPENSE,
+            entity_id=expense_id,
+            attachment_repository=self.attachment_repository,
+            s3_client=self.s3_client,
+        )
         await self.expense_repository.remove(expense_id=expense_id)

@@ -2,6 +2,7 @@ from fastapi import Depends
 
 # private
 from app.accomodation.router import router as accomodation_router
+from app.attachments.router import router as attachments_router
 
 from app.auth.deps import get_current_user
 
@@ -32,6 +33,9 @@ private_router.include_router(expenses_router, prefix="/expenses", tags=["Expens
 private_router.include_router(ai_router, prefix="/ai", tags=["AI"])
 private_router.include_router(
     accomodation_router, prefix="/accommodations", tags=["Accommodations"]
+)
+private_router.include_router(
+    attachments_router, prefix="/attachments", tags=["Attachments"]
 )
 
 router.include_router(public_router)

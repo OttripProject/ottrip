@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, Pressable, StyleSheet, ScrollView, Alert } from 'react-native';
 import CloseIcon from '../../../../assets/x.svg';
 import dayjs from 'dayjs';
-import { Itinerary, CreateItineraryRequest } from '@/types/api';
+import { Itinerary, CreateItineraryRequest, LocalFile } from '@/types/api';
 import { colors } from '@/ui/tokens/colors';
 import { textStyles, typography } from '@/ui/tokens/typography';
 import FullScreenModal from '@/ui/components/FullScreenModal.native';
@@ -24,6 +24,8 @@ import FlightIconExpense from '../../../../assets/mobile_flight.svg';
 import ShoppingIcon from '../../../../assets/mobile_shopping.svg';
 import { ExpenseCategory, ExpenseCurrency, categoryLabels } from '@/types/expense';
 import { normalizeAmount, formatAmountWithCommas } from '@/utils/amountUtils';
+import { useFilePicker } from '@/hooks/useFilePicker';
+import { useAttachmentUpload } from '@/hooks/useAttachmentUpload';
 
 interface ItineraryEditModalProps {
   visible: boolean;
@@ -64,6 +66,13 @@ export default function ItineraryEditModal({
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showCountrySearch, setShowCountrySearch] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [pendingFiles, setPendingFiles] = useState<LocalFile[]>([]);
+
+  const { pickImage, pickDocument } = useFilePicker();
+  const { isUploading, uploadFiles } = useAttachmentUpload({
+    planId,
+    entityType: 'itinerary',
+  });
 
   const CATEGORY_ROW1: ExpenseCategory[] = [
     ExpenseCategory.FOOD,
@@ -161,6 +170,9 @@ export default function ItineraryEditModal({
       setExpenseData({ amount: '', category: ExpenseCategory.FOOD });
       setExistingExpenseId(null);
     }
+    if (visible) {
+      setPendingFiles([]);
+    }
   }, [visible, itinerary, defaultDate]);
 
   const handleExpenseAmountChange = (text: string) => {
@@ -216,6 +228,14 @@ export default function ItineraryEditModal({
         }
       } else if (existingExpenseId && amountNum <= 0) {
         await expensesApi.deleteExpense(existingExpenseId);
+      }
+
+      if (pendingFiles.length > 0) {
+        try {
+          await uploadFiles(pendingFiles, savedItinerary.id);
+        } catch {
+          Alert.alert('알림', '일정은 저장됐으나 일부 파일 업로드에 실패했습니다.');
+        }
       }
 
       try {
@@ -481,9 +501,28 @@ export default function ItineraryEditModal({
             <AttachmentSection
               showTopDivider
               style={styles.attachmentSection}
-              onAddPress={() => {
-                // TODO: 이미지/PDF 첨부 플로우 연결
+              pendingFiles={pendingFiles}
+              isUploading={isUploading}
+              disabled={isSubmitting}
+              onPickImage={async () => {
+                try {
+                  const file = await pickImage();
+                  if (file) setPendingFiles(prev => [...prev, file]);
+                } catch (e: any) {
+                  Alert.alert('알림', e.message);
+                }
               }}
+              onPickDocument={async () => {
+                try {
+                  const file = await pickDocument();
+                  if (file) setPendingFiles(prev => [...prev, file]);
+                } catch (e: any) {
+                  Alert.alert('알림', e.message);
+                }
+              }}
+              onRemoveFile={index =>
+                setPendingFiles(prev => prev.filter((_, i) => i !== index))
+              }
             />
           </View>
 
@@ -491,9 +530,9 @@ export default function ItineraryEditModal({
       </ScrollView>
 
       <FloatingFooter
-        primaryLabel={itinerary ? '수정 완료' : '일정 저장'}
+        primaryLabel={isUploading ? '업로드 중...' : itinerary ? '수정 완료' : '일정 저장'}
         onPrimaryPress={handleSave}
-        primaryDisabled={isSubmitting}
+        primaryDisabled={isSubmitting || isUploading}
         secondaryLabel={itinerary && !embedded ? '삭제' : undefined}
         onSecondaryPress={itinerary ? handleDelete : undefined}
       />

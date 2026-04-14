@@ -1,9 +1,13 @@
 from fastapi import HTTPException
 
+from app.attachments.models import AttachmentEntityType
+from app.attachments.repository import AttachmentRepository
+from app.attachments.service import cascade_delete_attachments
 from app.auth.deps import CurrentUser
 from app.expenses.models import Expense, ExpenseCategory, ExpenseCurrency
 from app.expenses.repository import ExpenseRepository
 from app.plans.repository import PlanRepository
+from app.storage.deps import S3ClientDep
 from app.utils.dependency import dependency
 
 from .models import Flight, FlightSegment
@@ -24,6 +28,8 @@ class FlightService:
     flight_repository: FlightRepository
     expense_repository: ExpenseRepository
     plan_repository: PlanRepository
+    attachment_repository: AttachmentRepository
+    s3_client: S3ClientDep
 
     async def create(self, *, flight_data: FlightCreate) -> int:
         plan_exists, has_permission = await self.plan_repository.has_edit_permission(
@@ -253,6 +259,12 @@ class FlightService:
 
         await self.flight_repository.soft_delete_segments_by_flight(flight_id=flight_id)
         await self.expense_repository.soft_delete_by_flight_id(flight_id=flight_id)
+        await cascade_delete_attachments(
+            entity_type=AttachmentEntityType.FLIGHT,
+            entity_id=flight_id,
+            attachment_repository=self.attachment_repository,
+            s3_client=self.s3_client,
+        )
         await self.flight_repository.remove(flight_id=flight_id)
 
     async def add_segment(self, *, data: FlightSegmentCreate) -> FlightSegmentRead:

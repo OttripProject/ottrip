@@ -1,8 +1,12 @@
 from fastapi import HTTPException
 
+from app.attachments.models import AttachmentEntityType
+from app.attachments.repository import AttachmentRepository
+from app.attachments.service import cascade_delete_attachments
 from app.auth.deps import CurrentUser
-from app.plans.repository import PlanRepository
 from app.expenses.repository import ExpenseRepository
+from app.plans.repository import PlanRepository
+from app.storage.deps import S3ClientDep
 from app.utils.dependency import dependency
 
 from .models import Itinerary
@@ -16,6 +20,8 @@ class ItineraryService:
     itinerary_repository: ItineraryRepository
     plan_repository: PlanRepository
     expense_repository: ExpenseRepository
+    attachment_repository: AttachmentRepository
+    s3_client: S3ClientDep
 
     async def create(self, *, itinerary_data: ItineraryCreate) -> ItineraryRead:
         plan_exists, has_permission = await self.plan_repository.has_edit_permission(
@@ -142,5 +148,11 @@ class ItineraryService:
         
         await self.expense_repository.soft_delete_by_itinerary_id(
             itinerary_id=itinerary_id
+        )
+        await cascade_delete_attachments(
+            entity_type=AttachmentEntityType.ITINERARY,
+            entity_id=itinerary_id,
+            attachment_repository=self.attachment_repository,
+            s3_client=self.s3_client,
         )
         await self.itinerary_repository.remove(itinerary_id=itinerary_id)

@@ -9,6 +9,9 @@ const projectId = "760d14be-9546-4b34-bb91-d0348bceaaf9";
 /** iOS Bundle ID / Android applicationId — Apple App ID·서버 APP_BUNDLE_IDS와 동일 */
 const BUNDLE_ID = "ottripofficial.ottrip";
 
+const PHOTO_LIBRARY_USAGE_DESCRIPTION =
+  "이미지를 첨부하기 위해 사진 라이브러리에 접근합니다.";
+
 // NOTE: app.config.ts는 런타임이 아닌 빌드 시점에 실행됩니다.
 // TS 의존성을 줄이기 위해 로컬 스키마를 사용합니다.
 const envSchema = z.object({
@@ -48,6 +51,12 @@ export default ({ config }: ConfigContext): ExpoConfig => {
           ],
         },
       ],
+      [
+        "expo-image-picker",
+        {
+          photosPermission: PHOTO_LIBRARY_USAGE_DESCRIPTION,
+        },
+      ],
     ];
 
     if (iosUrlScheme) {
@@ -75,6 +84,10 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       ios: {
         ...(config as ExpoConfig).ios,
         bundleIdentifier: BUNDLE_ID,
+        infoPlist: {
+          ...((config as ExpoConfig).ios?.infoPlist as Record<string, unknown> | undefined),
+          NSPhotoLibraryUsageDescription: PHOTO_LIBRARY_USAGE_DESCRIPTION,
+        },
       },
       android: {
         ...(config as ExpoConfig).android,
@@ -141,6 +154,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       bundleIdentifier: BUNDLE_ID,
       infoPlist: {
         ITSAppUsesNonExemptEncryption: false,
+        NSPhotoLibraryUsageDescription: PHOTO_LIBRARY_USAGE_DESCRIPTION,
       },
     },
     android: {

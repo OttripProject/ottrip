@@ -260,4 +260,54 @@ export interface UpdateExpenseRequest {
   itineraryId?: number;
   flightId?: number;
   accommodationId?: number;
-} 
+}
+
+// 첨부파일 (Attachment) 관련 타입
+export type AttachmentEntityType = 'itinerary' | 'flight' | 'accommodation' | 'expense';
+
+export interface Attachment {
+  id: number;
+  entityType: AttachmentEntityType;
+  entityId: number;
+  fileName: string;
+  fileUrl: string;
+  contentType: string;
+  fileSize: number;
+  planId: number;
+  uploadedBy: number;
+  createdAt: string;
+}
+
+export interface PresignedUploadRequest {
+  planId: number;
+  entityType: AttachmentEntityType;
+  entityId: number;
+  fileName: string;
+  contentType: string;
+  fileSize: number;
+}
+
+export interface PresignedUploadResponse {
+  uploadUrl: string;
+  fileKey: string;
+  publicUrl: string;
+  expiresIn: number;
+}
+
+export interface AttachmentConfirmRequest {
+  planId: number;
+  entityType: AttachmentEntityType;
+  entityId: number;
+  fileKey: string;
+  fileName: string;
+  contentType: string;
+  fileSize: number;
+  publicUrl: string;
+}
+
+export interface LocalFile {
+  uri: string;
+  name: string;
+  mimeType: string;
+  size: number;
+}
