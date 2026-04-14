@@ -14,8 +14,11 @@ const ALLOWED_MIME_TYPES = [
   'application/pdf',
 ] as const;
 
-/** iOS: avoid NSItemProvider -1000 on public.png — use broad UTIs */
-const DOCUMENT_PICKER_TYPES_IOS = ['public.image', 'com.adobe.pdf'] as const;
+/**
+ * iOS 14+: expo-document-picker maps `type` via UTType(mimeType:), not raw UTIs.
+ * UTI strings (e.g. public.image, com.adobe.pdf) break filtering; files appear grayed out.
+ */
+const DOCUMENT_PICKER_TYPES_IOS = ['image/*', 'application/pdf'] as const;
 
 export const useFilePicker = () => {
   const pickImage = async (): Promise<LocalFile | null> => {
