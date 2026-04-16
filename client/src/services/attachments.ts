@@ -174,12 +174,19 @@ export const attachmentsApi = {
         content_type: request.contentType,
         file_size: request.fileSize,
       });
-      const out = {
-        uploadUrl: response.data.upload_url,
-        fileKey: response.data.file_key,
-        publicUrl: response.data.public_url,
-        expiresIn: response.data.expires_in,
+      // 서버 APISchema는 JSON을 camelCase로 직렬화함(to_camel). snake_case만 읽으면 undefined.
+      const d = response.data as Record<string, unknown>;
+      const out: PresignedUploadResponse = {
+        uploadUrl: String(d.uploadUrl ?? d.upload_url ?? ""),
+        fileKey: String(d.fileKey ?? d.file_key ?? ""),
+        publicUrl: String(d.publicUrl ?? d.public_url ?? ""),
+        expiresIn: Number(d.expiresIn ?? d.expires_in ?? 0),
       };
+      if (!out.uploadUrl || !out.fileKey) {
+        throw new Error(
+          "Presigned 응답에 uploadUrl 또는 fileKey가 없습니다. API 직렬화 키를 확인하세요.",
+        );
+      }
       let uploadHost = "";
       try {
         uploadHost = new URL(out.uploadUrl).host;
@@ -376,16 +383,17 @@ export const attachmentsApi = {
 };
 
 function snakeToCamelAttachment(data: Record<string, unknown>): Attachment {
+  const g = (snake: string, camel: string) => data[snake] ?? data[camel];
   return {
-    id: data.id as number,
-    entityType: data.entity_type as Attachment["entityType"],
-    entityId: data.entity_id as number,
-    fileName: data.file_name as string,
-    fileUrl: data.file_url as string,
-    contentType: data.content_type as string,
-    fileSize: data.file_size as number,
-    planId: data.plan_id as number,
-    uploadedBy: data.uploaded_by as number,
-    createdAt: data.created_at as string,
+    id: g("id", "id") as number,
+    entityType: g("entity_type", "entityType") as Attachment["entityType"],
+    entityId: g("entity_id", "entityId") as number,
+    fileName: g("file_name", "fileName") as string,
+    fileUrl: g("file_url", "fileUrl") as string,
+    contentType: g("content_type", "contentType") as string,
+    fileSize: g("file_size", "fileSize") as number,
+    planId: g("plan_id", "planId") as number,
+    uploadedBy: g("uploaded_by", "uploadedBy") as number,
+    createdAt: g("created_at", "createdAt") as string,
   };
 }
