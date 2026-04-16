@@ -12,6 +12,24 @@ import api from './api';
 
 export const ATTACH_UPLOAD_LOG_PREFIX = '[ATTACH_UPLOAD]';
 
+/** iOS 등: `file:///var/mobile/Containers/.../IMG_x.jpg` 형태인지 확인용 */
+function logLocalUriForDebug(context: string, uri: string) {
+  const trimmed = uri ?? '';
+  const looksLikeIosFile =
+    trimmed.startsWith('file:///') && trimmed.includes('/var/mobile/');
+  attachLog(`DEBUG: local file URI (${context})`, {
+    uri: trimmed,
+    length: trimmed.length,
+    startsWithFileTripleSlash: trimmed.startsWith('file:///'),
+    looksLikeIosFilePath: looksLikeIosFile,
+    isFileScheme: looksLikeFileUri(trimmed),
+  });
+}
+
+function looksLikeFileUri(uri: string): boolean {
+  return /^file:\/\//i.test(uri);
+}
+
 function attachLog(step: string, payload?: Record<string, unknown>) {
   if (payload !== undefined) {
     console.log(`${ATTACH_UPLOAD_LOG_PREFIX} ${step}`, payload);
@@ -24,10 +42,38 @@ function attachLogError(step: string, err: unknown) {
   console.error(`${ATTACH_UPLOAD_LOG_PREFIX} ${step}`, err);
 }
 
+/** 프리사인 URL에 서명된 헤더와 실제 PUT 헤더가 같은지 대조용 (서명 전체는 로그하지 않음) */
+function logPresignedUrlVsPutHeaders(
+  uploadUrl: string,
+  putContentType: string,
+  putContentLength: string,
+) {
+  try {
+    const u = new URL(uploadUrl);
+    const signedHeaders =
+      u.searchParams.get('X-Amz-SignedHeaders') ??
+      u.searchParams.get('x-amz-signedheaders') ??
+      '';
+    attachLog('DEBUG: presigned URL vs PUT (헤더·서명 일치 확인)', {
+      host: u.host,
+      pathPrefix: u.pathname.slice(0, 96),
+      xAmzSignedHeaders: signedHeaders,
+      signedHeadersIncludesContentType: /content-type/i.test(signedHeaders),
+      putContentType,
+      putContentLength,
+      note:
+        'R2(S3 호환): 프리사인 생성 시 넣은 Content-Type 등과 PUT 요청 헤더가 토씨 하나 같아야 합니다.',
+    });
+  } catch (e) {
+    attachLog('DEBUG: presigned URL 파싱 실패', { err: String(e) });
+  }
+}
+
 async function resolveR2PutBody(
   file: LocalFile,
 ): Promise<{ body: BodyInit; byteLength: number }> {
   const uri = file.uri ?? '';
+  logLocalUriForDebug('resolveR2PutBody (File/fetch에 쓰는 uri)', uri);
 
   if (Platform.OS === 'web') {
     const localRes = await fetch(uri);
@@ -120,6 +166,9 @@ export const attachmentsApi = {
         publicUrl: out.publicUrl,
         expiresIn: out.expiresIn,
       });
+      attachLog('DEBUG: 프리사인 요청에 사용한 content_type (이후 PUT Content-Type과 동일해야 함)', {
+        contentTypeSigned: request.contentType,
+      });
       return out;
     } catch (err) {
       attachLogError('presigned: API error', err);
@@ -150,15 +199,24 @@ export const attachmentsApi = {
       contentType,
       contentLength: byteLength,
     });
+    logPresignedUrlVsPutHeaders(
+      uploadUrl,
+      contentType,
+      String(byteLength),
+    );
 
     let putRes: Response;
     try {
+      const putHeaders = {
+        'Content-Type': contentType,
+        'Content-Length': String(byteLength),
+      } as const;
+      attachLog('DEBUG: 실제 PUT headers (프리사인 조건과 바이트 단위로 일치해야 함)', {
+        ...putHeaders,
+      });
       putRes = await fetch(uploadUrl, {
         method: 'PUT',
-        headers: {
-          'Content-Type': contentType,
-          'Content-Length': String(byteLength),
-        },
+        headers: putHeaders,
         body,
       });
     } catch (err) {

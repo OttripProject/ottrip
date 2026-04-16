@@ -47,7 +47,12 @@ export const useAttachmentUpload = ({
           try {
             console.log(
               `${ATTACH_UPLOAD_LOG_PREFIX} ${tag} step: resolve PUT body`,
-              { name: file.name },
+              {
+                name: file.name,
+                uri: file.uri,
+                note:
+                  'expo uploadAsync 등에 넣을 때도 동일한 file:///var/mobile/... 형태인지 확인',
+              },
             );
             const { body, byteLength } =
               await attachmentsApi.resolveR2PutBody(file);
@@ -66,6 +71,15 @@ export const useAttachmentUpload = ({
                 fileSize: byteLength,
               });
 
+            console.log(
+              `${ATTACH_UPLOAD_LOG_PREFIX} ${tag} DEBUG: Content-Type 일치`,
+              {
+                name: file.name,
+                mimeTypeForPresignAndPut: file.mimeType,
+                note:
+                  'getPresignedUploadUrl의 content_type과 uploadToR2의 Content-Type 헤더가 동일해야 함',
+              },
+            );
             console.log(
               `${ATTACH_UPLOAD_LOG_PREFIX} ${tag} step: R2 PUT`,
               { name: file.name, fileKey },
