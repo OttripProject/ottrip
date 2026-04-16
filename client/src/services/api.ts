@@ -1,4 +1,4 @@
-import axios from 'axios';
+import axios, { type InternalAxiosRequestConfig } from 'axios';
 import { Platform } from 'react-native';
 import { loadPublicEnv } from '../core/env/schema';
 import { tokenStores } from '../utils/tokenStores';
@@ -15,6 +15,41 @@ declare module 'axios' {
 const env = loadPublicEnv();
 
 let resolvedBaseURL = env.EXPO_PUBLIC_API_URL;
+
+/** 디버그: 빌드에 박힌 API 베이스와 axios가 실제로 쓰는 baseURL (웹 localhost 오버라이드 반영) */
+export function getApiClientDebugContext() {
+  return {
+    EXPO_PUBLIC_API_URL: env.EXPO_PUBLIC_API_URL,
+    resolvedBaseURL,
+    platform: Platform.OS,
+  } as const;
+}
+
+function logAxiosRequestFailure(error: unknown): void {
+  const err = error as {
+    config?: { method?: string; url?: string };
+    response?: { status?: number };
+    message?: string;
+    code?: string;
+  };
+  const cfg = err.config;
+  let fullUrl = '';
+  try {
+    fullUrl = cfg ? axios.getUri(cfg as InternalAxiosRequestConfig) : '';
+  } catch {
+    fullUrl = '';
+  }
+  const payload = {
+    ...getApiClientDebugContext(),
+    fullUrl,
+    method: (cfg?.method ?? '').toUpperCase(),
+    relativePath: cfg?.url ?? '',
+    httpStatus: err.response?.status ?? null,
+    axiosMessage: err.message ?? '',
+    axiosCode: err.code ?? '',
+  };
+  console.warn('[API_FAIL]', JSON.stringify(payload));
+}
 // 웹에서만 localhost 체크 (네이티브에서는 window.location 없음)
 if (Platform.OS === 'web' && typeof window !== 'undefined' && window.location) {
   const h = window.location.hostname;
@@ -105,6 +140,17 @@ export async function refreshToken(checkExpiration: boolean = true): Promise<str
         return accessToken || null;
       }
     } catch (error: any) {
+      console.warn(
+        '[API_FAIL]',
+        JSON.stringify({
+          ...getApiClientDebugContext(),
+          fullUrl: `${resolvedBaseURL}/public/auth/refresh`,
+          method: 'POST',
+          context: 'refreshToken_direct_axios',
+          axiosMessage: error?.message ?? '',
+          axiosCode: error?.code ?? '',
+        }),
+      );
       if (Platform.OS !== 'web') {
         await tokenStores.clearAll();
       }
@@ -165,6 +211,8 @@ api.interceptors.response.use(
     return response;
   },
   async error => {
+    logAxiosRequestFailure(error);
+
     const originalRequest = error.config;
 
     if (error.response?.status === 401 && !originalRequest._retry) {

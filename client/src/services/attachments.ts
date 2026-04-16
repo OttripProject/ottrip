@@ -8,7 +8,7 @@ import {
 } from '../types/api';
 import { File as FsFile } from 'expo-file-system';
 import { Platform } from 'react-native';
-import api from './api';
+import api, { getApiClientDebugContext } from './api';
 
 export const ATTACH_UPLOAD_LOG_PREFIX = '[ATTACH_UPLOAD]';
 
@@ -183,11 +183,23 @@ export const attachmentsApi = {
         publicUrl: out.publicUrl,
         expiresIn: out.expiresIn,
       });
+      attachDebugLog('presigned: 응답 필드 점검 (넘어온 값 여부)', {
+        ...getApiClientDebugContext(),
+        hasUploadUrl: Boolean(out.uploadUrl?.length),
+        uploadUrlLength: out.uploadUrl?.length ?? 0,
+        hasFileKey: Boolean(out.fileKey?.length),
+        hasPublicUrl: Boolean(out.publicUrl?.length),
+        expiresIn: out.expiresIn,
+        uploadHost,
+      });
       attachDebugLog('프리사인 요청에 사용한 content_type (이후 PUT Content-Type과 동일해야 함)', {
         contentTypeSigned: request.contentType,
       });
       return out;
     } catch (err) {
+      attachDebugLog('presigned: 실패 시점 EXPO_PUBLIC / resolved API base', {
+        ...getApiClientDebugContext(),
+      });
       attachDebugLog('presigned: API 오류 직전 요청 값 (서명·Content-Type 대조용)', {
         fileName: request.fileName,
         contentType: request.contentType,
@@ -243,7 +255,9 @@ export const attachmentsApi = {
         body,
       });
     } catch (err) {
-      attachDebugLog('R2 PUT 직전 네트워크 예외 (보내려던 Content-Type)', {
+      attachDebugLog('R2 PUT 네트워크 예외 — full uploadUrl + API base', {
+        ...getApiClientDebugContext(),
+        uploadUrl,
         contentType,
         byteLength,
       });
@@ -260,6 +274,11 @@ export const attachmentsApi = {
     });
 
     if (!putRes.ok) {
+      attachDebugLog('R2 PUT HTTP 오류 — full uploadUrl + API base', {
+        ...getApiClientDebugContext(),
+        uploadUrl,
+        httpStatus: putRes.status,
+      });
       const msg = `R2 PUT failed HTTP ${putRes.status}: ${errBody.slice(0, 200)}`;
       attachLogError('R2: PUT failed', new Error(msg));
       throw new Error(msg);
@@ -292,6 +311,9 @@ export const attachmentsApi = {
       });
       return row;
     } catch (err) {
+      attachDebugLog('confirm: 실패 시점 EXPO_PUBLIC / resolved API base', {
+        ...getApiClientDebugContext(),
+      });
       attachLogError('confirm: API error', err);
       throw err;
     }
