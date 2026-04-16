@@ -15,6 +15,8 @@ import { LocalFile } from '@/types/api';
 import CameraIcon from '../../../assets/mobile_camera.svg';
 import AddIcon from '../../../assets/mobile_plan_add.svg';
 import DeleteIcon from '../../../assets/mobile_x.svg';
+import AttachmentDocIcon from '../../../assets/mobile_attachment_document.svg';
+import AttachmentImageIcon from '../../../assets/mobile_attachment_image.svg';
 
 export interface AttachmentSectionProps {
   pendingFiles: LocalFile[];
@@ -27,20 +29,17 @@ export interface AttachmentSectionProps {
   disabled?: boolean;
 }
 
-const MIME_LABEL: Record<string, string> = {
-  'image/jpeg': 'JPEG',
-  'image/png': 'PNG',
-  'image/gif': 'GIF',
-  'image/webp': 'WEBP',
-  'image/heic': 'HEIC',
-  'image/heif': 'HEIF',
-  'application/pdf': 'PDF',
-};
 
-function formatFileSize(bytes: number): string {
-  if (bytes === 0) return '';
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)}KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)}MB`;
+
+function getAttachmentKindLabel(mimeType: string | undefined): string {
+  const m = mimeType ?? '';
+  if (m === 'application/pdf') return 'PDF 문서';
+  if (m.startsWith('image/')) return '이미지';
+  return '파일';
+}
+
+function isPdfMime(mimeType: string | undefined): boolean {
+  return mimeType === 'application/pdf';
 }
 
 export default function AttachmentSection({
@@ -97,28 +96,28 @@ export default function AttachmentSection({
         <View style={styles.fileList}>
           {pendingFiles.map((file, index) => (
             <View key={`${file.name}-${index}`} style={styles.fileRow}>
+              <View style={styles.fileIconWrap}>
+                {isPdfMime(file.mimeType) ? (
+                  <AttachmentDocIcon width={20} height={20} />
+                ) : String(file.mimeType ?? '').startsWith('image/') ? (
+                  <AttachmentImageIcon width={20} height={20} />
+                ) : (
+                  <AttachmentDocIcon width={20} height={20} />
+                )}
+              </View>
               <View style={styles.fileInfo}>
-                <View style={styles.fileBadge}>
-                  <Text style={styles.fileBadgeText}>
-                    {MIME_LABEL[file.mimeType] ?? 'FILE'}
-                  </Text>
-                </View>
-                <View style={styles.fileNameWrapper}>
-                  <Text style={styles.fileName} numberOfLines={1} ellipsizeMode="middle">
-                    {file.name}
-                  </Text>
-                  {file.size > 0 && (
-                    <Text style={styles.fileSize}>{formatFileSize(file.size)}</Text>
-                  )}
-                </View>
+                <Text style={styles.fileName} numberOfLines={1} ellipsizeMode="middle">
+                  {file.name}
+                </Text>
+                <Text style={styles.fileKindLabel}>{getAttachmentKindLabel(file.mimeType)}</Text>
               </View>
               <Pressable
                 onPress={() => handleRemove(index)}
                 hitSlop={8}
                 disabled={isUploading}
-                style={({ pressed }) => pressed && styles.pressed}
+                style={({ pressed }) => [styles.removeButton, pressed && styles.pressed]}
               >
-                <DeleteIcon width={16} height={16} color={colors.gray500} />
+                <DeleteIcon width={20} height={20} color={colors.gray600} />
               </Pressable>
             </View>
           ))}
@@ -207,47 +206,40 @@ const styles = StyleSheet.create({
     includeFontPadding: false,
   },
   fileList: {
-    gap: 10,
+    gap: 8,
   },
   fileRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: colors.gray100,
-    borderRadius: 10,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
+    backgroundColor: colors.gray200,
+    borderRadius: 12,
+    paddingVertical: 21,
+    paddingHorizontal: 16,
   },
-  fileInfo: {
-    flexDirection: 'row',
+  fileIconWrap: {
+    paddingHorizontal: 8,
+    paddingVertical: 8,
+    borderRadius: 12,
+    backgroundColor: `${colors.primary}1A`,
     alignItems: 'center',
-    gap: 10,
-    flex: 1,
-    minWidth: 0,
-  },
-  fileBadge: {
-    backgroundColor: colors.primary,
-    borderRadius: 6,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
+    justifyContent: 'center',
+    marginRight: 12,
     flexShrink: 0,
   },
-  fileBadgeText: {
-    ...textStyles.h7,
-    color: colors.white,
-    fontSize: 10,
-  },
-  fileNameWrapper: {
+  fileInfo: {
     flex: 1,
     minWidth: 0,
   },
   fileName: {
     ...textStyles.h6,
-    color: colors.black,
   },
-  fileSize: {
+  fileKindLabel: {
     ...textStyles.body4,
     color: colors.gray600,
-    marginTop: 1,
+    marginTop: 2,
+  },
+  removeButton: {
+    marginLeft: 8,
+    flexShrink: 0,
   },
 });

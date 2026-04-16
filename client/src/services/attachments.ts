@@ -14,153 +14,28 @@ import type {
   PresignedUploadRequest,
   PresignedUploadResponse,
 } from "../types/api";
-import api, { getApiClientDebugContext } from "./api";
+import api from "./api";
 
-export const ATTACH_UPLOAD_LOG_PREFIX = "[ATTACH_UPLOAD]";
-
-/** Metro/Xcode에서 `console.log`(객체 2번째 인자)가 안 보이는 경우가 있어 warn + 한 줄 직렬화 사용 */
-export const ATTACH_UPLOAD_DEBUG_PREFIX = "[ATTACH_UPLOAD_DEBUG]";
-
-export function attachDebugLog(
-  step: string,
-  payload?: Record<string, unknown>,
-) {
-  try {
-    const body = payload !== undefined ? JSON.stringify(payload) : "";
-    const line =
-      payload !== undefined
-        ? `${ATTACH_UPLOAD_DEBUG_PREFIX} ${step} | ${body}`
-        : `${ATTACH_UPLOAD_DEBUG_PREFIX} ${step}`;
-    console.warn(line);
-  } catch {
-    console.warn(`${ATTACH_UPLOAD_DEBUG_PREFIX} ${step} (serialize failed)`);
-  }
-}
-
-/** iOS 등: `file:///var/mobile/Containers/.../IMG_x.jpg` 형태인지 확인용 */
-function logLocalUriForDebug(context: string, uri: string) {
-  const trimmed = uri ?? "";
-  const looksLikeIosFile =
-    trimmed.startsWith("file:///") && trimmed.includes("/var/mobile/");
-  attachDebugLog(`local file URI (${context})`, {
-    uri: trimmed,
-    length: trimmed.length,
-    startsWithFileTripleSlash: trimmed.startsWith("file:///"),
-    looksLikeIosFilePath: looksLikeIosFile,
-    isFileScheme: /^file:\/\//i.test(trimmed),
-  });
-}
-
-function attachLog(step: string, payload?: Record<string, unknown>) {
-  if (payload !== undefined) {
-    console.log(`${ATTACH_UPLOAD_LOG_PREFIX} ${step}`, payload);
-  } else {
-    console.log(`${ATTACH_UPLOAD_LOG_PREFIX} ${step}`);
-  }
-}
-
-function attachLogError(step: string, err: unknown) {
-  console.error(`${ATTACH_UPLOAD_LOG_PREFIX} ${step}`, err);
-}
-
-/** Xcode/Metro에서도 보이게 `console.error` 한 줄로 URL·fileUri 진단 (uploadAsync 직전) */
-function logAndAssertNativeR2UploadArgs(
-  uploadUrl: unknown,
-  fileUri: string,
-): asserts uploadUrl is string {
-  const trimmedFileUri = fileUri.trim();
-  const diag: Record<string, unknown> = {
-    uploadUrlJsType: typeof uploadUrl,
-    uploadUrlIsEmpty:
-      uploadUrl == null ||
-      (typeof uploadUrl === "string" && uploadUrl.trim().length === 0),
-    uploadUrlStringLength:
-      typeof uploadUrl === "string" ? uploadUrl.length : null,
-    fileUriLength: trimmedFileUri.length,
-    fileUriStartsWithFile: trimmedFileUri.startsWith("file://"),
-    urlCanParse: false,
-    urlHost: null as string | null,
-    urlProtocol: null as string | null,
-    parseError: null as string | null,
-  };
-
-  if (typeof uploadUrl === "string") {
-    try {
-      const u = new URL(uploadUrl);
-      diag.urlCanParse = true;
-      diag.urlHost = u.host;
-      diag.urlProtocol = u.protocol;
-    } catch (e) {
-      diag.parseError = String(e);
-    }
-  } else {
-    diag.parseError = "uploadUrl is not a string";
-  }
-
-  const line = {
-    tag: "R2_NATIVE_URL_CHECK",
-    ...diag,
-    // 네이티브 ERR_ARGUMENT_CAST 원인 추적용 — 전체 URL (프리사인 쿼리 포함)
-    uploadUrlFull:
-      typeof uploadUrl === "string" ? uploadUrl : JSON.stringify(uploadUrl),
-    fileUriPrefix120: trimmedFileUri.slice(0, 120),
-  };
-
-  console.error(
-    `${ATTACH_UPLOAD_DEBUG_PREFIX} R2_NATIVE_URL_CHECK ${JSON.stringify(line)}`,
-  );
-
-  if (typeof uploadUrl !== "string" || !uploadUrl.trim()) {
-    throw new Error(
-      `[R2] uploadAsync 1번째 인자: 유효한 URL 문자열이 아님 (type=${typeof uploadUrl}, empty=${diag.uploadUrlIsEmpty})`,
-    );
-  }
-  if (!diag.urlCanParse) {
-    throw new Error(
-      `[R2] uploadUrl을 JavaScript URL로 파싱 실패: ${String(diag.parseError)}`,
-    );
-  }
-  if (!trimmedFileUri.startsWith("file://")) {
-    throw new Error(
-      "[R2] uploadAsync 2번째 인자: file:// 로 시작하는 로컬 경로여야 함",
-    );
-  }
-}
-
-function logPresignedUrlVsPutHeaders(
-  uploadUrl: string,
-  putContentType: string,
-  putContentLength: string,
-) {
-  try {
-    const u = new URL(uploadUrl);
-    const signedHeaders =
-      u.searchParams.get("X-Amz-SignedHeaders") ??
-      u.searchParams.get("x-amz-signedheaders") ??
-      "";
-    attachDebugLog("presigned URL vs PUT (헤더·서명 일치 확인)", {
-      host: u.host,
-      pathPrefix: u.pathname.slice(0, 96),
-      xAmzSignedHeaders: signedHeaders,
-      signedHeadersIncludesContentType: /content-type/i.test(signedHeaders),
-      putContentType,
-      putContentLength,
-      note: "R2(S3 호환): 프리사인에 포함된 Content-Type·Content-Length와 PUT이 같아야 합니다.",
-    });
-  } catch (e) {
-    attachDebugLog("presigned URL 파싱 실패", { err: String(e) });
-  }
-}
-
-/** 웹: Blob / 네이티브: file:// (필요 시 캐시로 복사) + 서버 프리사인과 동일한 바이트 길이 */
 export type PreparedUpload =
   | { platform: "web"; blob: Blob; byteLength: number }
   | { platform: "native"; fileUri: string; byteLength: number };
 
-/**
- * 업로드 직전에 로컬 파일 크기를 확정하고, 네이티브는 네트워크로 보낼 `file://` URI를 준비합니다.
- * (RN fetch에 ArrayBuffer/FsFile을 body로 넣지 않음)
- */
+function ensureNativeR2UploadArgs(uploadUrl: string, fileUri: string): void {
+  const u = uploadUrl.trim();
+  const f = fileUri.trim();
+  if (!u) {
+    throw new Error("R2 uploadUrl이 비어 있습니다.");
+  }
+  try {
+    new URL(u);
+  } catch (e) {
+    throw new Error(`R2 uploadUrl 파싱 실패: ${String(e)}`);
+  }
+  if (!f.startsWith("file://")) {
+    throw new Error("R2 로컬 fileUri는 file:// 로 시작해야 합니다.");
+  }
+}
+
 export async function prepareAttachmentUpload(
   file: LocalFile,
 ): Promise<PreparedUpload> {
@@ -168,10 +43,6 @@ export async function prepareAttachmentUpload(
 
   if (Platform.OS === "web") {
     const localRes = await fetch(uri);
-    attachLog("prepareUpload: web local fetch", {
-      status: localRes.status,
-      ok: localRes.ok,
-    });
     if (!localRes.ok) {
       const t = await localRes.text().catch(() => "");
       throw new Error(
@@ -179,11 +50,8 @@ export async function prepareAttachmentUpload(
       );
     }
     const blob = await localRes.blob();
-    attachLog("prepareUpload: web = Blob", { byteLength: blob.size });
     return { platform: "web", blob, byteLength: blob.size };
   }
-
-  logLocalUriForDebug("prepareAttachmentUpload", uri);
 
   let fileUri = uri;
   if (!uri.startsWith("file://")) {
@@ -201,19 +69,12 @@ export async function prepareAttachmentUpload(
     const dest = `${dir}ottrip_upload_${Date.now()}_${Math.random().toString(36).slice(2, 10)}.${ext}`;
     await copyAsync({ from: uri, to: dest });
     fileUri = dest;
-    attachLog("prepareUpload: copied to cache file://", {
-      destPreview: dest.slice(0, 96),
-    });
   }
 
   const info = await getInfoAsync(fileUri);
   if (!info.exists) {
     throw new Error("업로드할 파일이 존재하지 않습니다.");
   }
-  attachLog("prepareUpload: native file:// + size", {
-    byteLength: info.size,
-    pickerReportedSize: file.size,
-  });
   return { platform: "native", fileUri, byteLength: info.size };
 }
 
@@ -221,93 +82,25 @@ export const attachmentsApi = {
   getPresignedUploadUrl: async (
     request: PresignedUploadRequest,
   ): Promise<PresignedUploadResponse> => {
-    attachLog("presigned: request start", {
-      planId: request.planId,
-      entityType: request.entityType,
-      entityId: request.entityId,
-      fileName: request.fileName,
-      contentType: request.contentType,
-      fileSize: request.fileSize,
+    const response = await api.post("/private/attachments/presigned-upload", {
+      plan_id: request.planId,
+      entity_type: request.entityType,
+      entity_id: request.entityId,
+      file_name: request.fileName,
+      content_type: request.contentType,
+      file_size: request.fileSize,
     });
-    try {
-      const response = await api.post("/private/attachments/presigned-upload", {
-        plan_id: request.planId,
-        entity_type: request.entityType,
-        entity_id: request.entityId,
-        file_name: request.fileName,
-        content_type: request.contentType,
-        file_size: request.fileSize,
-      });
-      // 서버 APISchema는 JSON을 camelCase로 직렬화함(to_camel). snake_case만 읽으면 undefined.
-      const d = response.data as Record<string, unknown>;
-      console.error(
-        `${ATTACH_UPLOAD_DEBUG_PREFIX} presigned_response_keys ${JSON.stringify(
-          {
-            keys: Object.keys(d),
-            uploadUrlCandidates: {
-              uploadUrl: d.uploadUrl,
-              upload_url: d.upload_url,
-            },
-          },
-        )}`,
-      );
-      const out: PresignedUploadResponse = {
-        uploadUrl: String(d.uploadUrl ?? d.upload_url ?? ""),
-        fileKey: String(d.fileKey ?? d.file_key ?? ""),
-        publicUrl: String(d.publicUrl ?? d.public_url ?? ""),
-        expiresIn: Number(d.expiresIn ?? d.expires_in ?? 0),
-      };
-      if (!out.uploadUrl || !out.fileKey) {
-        console.error(
-          `${ATTACH_UPLOAD_DEBUG_PREFIX} presigned_parse_failed ${JSON.stringify(d)}`,
-        );
-        throw new Error(
-          "Presigned 응답에 uploadUrl 또는 fileKey가 없습니다. API 직렬화 키를 확인하세요.",
-        );
-      }
-      let uploadHost = "";
-      try {
-        uploadHost = new URL(out.uploadUrl).host;
-      } catch {
-        /* ignore */
-      }
-      attachLog("presigned: OK", {
-        fileKey: out.fileKey,
-        uploadHost,
-        publicUrl: out.publicUrl,
-        expiresIn: out.expiresIn,
-      });
-      attachDebugLog("presigned: 응답 필드 점검 (넘어온 값 여부)", {
-        ...getApiClientDebugContext(),
-        hasUploadUrl: Boolean(out.uploadUrl?.length),
-        uploadUrlLength: out.uploadUrl?.length ?? 0,
-        hasFileKey: Boolean(out.fileKey?.length),
-        hasPublicUrl: Boolean(out.publicUrl?.length),
-        expiresIn: out.expiresIn,
-        uploadHost,
-      });
-      attachDebugLog(
-        "프리사인 요청에 사용한 content_type (이후 PUT Content-Type과 동일해야 함)",
-        {
-          contentTypeSigned: request.contentType,
-        },
-      );
-      return out;
-    } catch (err) {
-      attachDebugLog("presigned: 실패 시점 EXPO_PUBLIC / resolved API base", {
-        ...getApiClientDebugContext(),
-      });
-      attachDebugLog(
-        "presigned: API 오류 직전 요청 값 (서명·Content-Type 대조용)",
-        {
-          fileName: request.fileName,
-          contentType: request.contentType,
-          fileSize: request.fileSize,
-        },
-      );
-      attachLogError("presigned: API error", err);
-      throw err;
+    const d = response.data as Record<string, unknown>;
+    const out: PresignedUploadResponse = {
+      uploadUrl: String(d.uploadUrl ?? d.upload_url ?? ""),
+      fileKey: String(d.fileKey ?? d.file_key ?? ""),
+      publicUrl: String(d.publicUrl ?? d.public_url ?? ""),
+      expiresIn: Number(d.expiresIn ?? d.expires_in ?? 0),
+    };
+    if (!out.uploadUrl || !out.fileKey) {
+      throw new Error("Presigned 응답에 uploadUrl 또는 fileKey가 없습니다.");
     }
+    return out;
   },
 
   prepareAttachmentUpload,
@@ -318,129 +111,56 @@ export const attachmentsApi = {
     contentType: string,
   ): Promise<void> => {
     const byteLength = prepared.byteLength;
-    let putHost = "";
-    let putPathPreview = "";
-    try {
-      const u = new URL(uploadUrl);
-      putHost = u.host;
-      putPathPreview = u.pathname.slice(0, 72);
-    } catch {
-      /* ignore */
-    }
-
     const putHeaders: Record<string, string> = {
       "Content-Type": contentType,
       "Content-Length": String(byteLength),
     };
 
-    attachLog("R2: PUT start", {
-      host: putHost,
-      pathPreview: putPathPreview,
-      contentType,
-      contentLength: byteLength,
-      transport:
-        prepared.platform === "web" ? "fetch+Blob" : "FileSystem.uploadAsync",
-    });
-    logPresignedUrlVsPutHeaders(uploadUrl, contentType, String(byteLength));
-
     if (prepared.platform === "web") {
-      let putRes: Response;
-      try {
-        putRes = await fetch(uploadUrl, {
-          method: "PUT",
-          headers: putHeaders,
-          body: prepared.blob,
-        });
-      } catch (err) {
-        attachDebugLog("R2 PUT (web fetch) 예외", {
-          ...getApiClientDebugContext(),
-          uploadUrl,
-          contentType,
-          byteLength,
-        });
-        attachLogError("R2: PUT network error (web)", err);
-        throw err;
-      }
+      const putRes = await fetch(uploadUrl, {
+        method: "PUT",
+        headers: putHeaders,
+        body: prepared.blob,
+      });
       const errBody =
         putRes.status >= 400 ? await putRes.text().catch(() => "") : "";
-      attachLog("R2: PUT done (web)", {
-        status: putRes.status,
-        ok: putRes.ok,
-        errBodyPreview: errBody ? errBody.slice(0, 300) : undefined,
-      });
       if (!putRes.ok) {
-        const msg = `R2 PUT failed HTTP ${putRes.status}: ${errBody.slice(0, 200)}`;
-        attachLogError("R2: PUT failed (web)", new Error(msg));
-        throw new Error(msg);
+        throw new Error(
+          `R2 PUT failed HTTP ${putRes.status}: ${errBody.slice(0, 200)}`,
+        );
       }
       return;
     }
 
     const localUri = prepared.fileUri.trim();
-    logAndAssertNativeR2UploadArgs(uploadUrl, localUri);
+    ensureNativeR2UploadArgs(uploadUrl, localUri);
 
-    try {
-      const response = await uploadAsync(uploadUrl.trim(), localUri, {
-        httpMethod: "PUT",
-        uploadType: FileSystemUploadType.BINARY_CONTENT,
-        headers: putHeaders,
-      });
-      attachLog("R2: PUT done (native uploadAsync)", {
-        status: response.status,
-        errBodyPreview: response.body ? response.body.slice(0, 300) : undefined,
-      });
-      if (response.status >= 400) {
-        const msg = `R2 PUT failed HTTP ${response.status}: ${response.body?.slice(0, 200) ?? ""}`;
-        attachLogError("R2: PUT failed (native)", new Error(msg));
-        throw new Error(msg);
-      }
-    } catch (err) {
-      attachDebugLog("R2 PUT (native uploadAsync) 예외", {
-        ...getApiClientDebugContext(),
-        fileUri: prepared.fileUri,
-        uploadUrl,
-        contentType,
-        byteLength,
-      });
-      attachLogError("R2: PUT error (native)", err);
-      throw err;
+    const response = await uploadAsync(uploadUrl.trim(), localUri, {
+      httpMethod: "PUT",
+      uploadType: FileSystemUploadType.BINARY_CONTENT,
+      headers: putHeaders,
+    });
+    if (response.status >= 400) {
+      throw new Error(
+        `R2 PUT failed HTTP ${response.status}: ${response.body?.slice(0, 200) ?? ""}`,
+      );
     }
   },
 
   confirmUpload: async (
     request: AttachmentConfirmRequest,
   ): Promise<Attachment> => {
-    attachLog("confirm: request start", {
-      planId: request.planId,
-      entityType: request.entityType,
-      entityId: request.entityId,
-      fileKey: request.fileKey,
-      fileName: request.fileName,
+    const response = await api.post("/private/attachments/confirm", {
+      plan_id: request.planId,
+      entity_type: request.entityType,
+      entity_id: request.entityId,
+      file_key: request.fileKey,
+      file_name: request.fileName,
+      content_type: request.contentType,
+      file_size: request.fileSize,
+      public_url: request.publicUrl,
     });
-    try {
-      const response = await api.post("/private/attachments/confirm", {
-        plan_id: request.planId,
-        entity_type: request.entityType,
-        entity_id: request.entityId,
-        file_key: request.fileKey,
-        file_name: request.fileName,
-        content_type: request.contentType,
-        file_size: request.fileSize,
-        public_url: request.publicUrl,
-      });
-      const row = snakeToCamelAttachment(response.data);
-      attachLog("confirm: OK", {
-        attachmentId: row.id,
-        fileUrl: row.fileUrl,
-      });
-      return row;
-    } catch (err) {
-      attachDebugLog("confirm: 실패 시점 EXPO_PUBLIC / resolved API base", {
-        ...getApiClientDebugContext(),
-      });
-      attachLogError("confirm: API error", err);
-      throw err;
-    }
+    return snakeToCamelAttachment(response.data);
   },
 
   getAttachments: async (
