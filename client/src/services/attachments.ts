@@ -63,6 +63,70 @@ function attachLogError(step: string, err: unknown) {
   console.error(`${ATTACH_UPLOAD_LOG_PREFIX} ${step}`, err);
 }
 
+/** Xcode/Metro에서도 보이게 `console.error` 한 줄로 URL·fileUri 진단 (uploadAsync 직전) */
+function logAndAssertNativeR2UploadArgs(
+  uploadUrl: unknown,
+  fileUri: string,
+): asserts uploadUrl is string {
+  const trimmedFileUri = fileUri.trim();
+  const diag: Record<string, unknown> = {
+    uploadUrlJsType: typeof uploadUrl,
+    uploadUrlIsEmpty:
+      uploadUrl == null ||
+      (typeof uploadUrl === "string" && uploadUrl.trim().length === 0),
+    uploadUrlStringLength:
+      typeof uploadUrl === "string" ? uploadUrl.length : null,
+    fileUriLength: trimmedFileUri.length,
+    fileUriStartsWithFile: trimmedFileUri.startsWith("file://"),
+    urlCanParse: false,
+    urlHost: null as string | null,
+    urlProtocol: null as string | null,
+    parseError: null as string | null,
+  };
+
+  if (typeof uploadUrl === "string") {
+    try {
+      const u = new URL(uploadUrl);
+      diag.urlCanParse = true;
+      diag.urlHost = u.host;
+      diag.urlProtocol = u.protocol;
+    } catch (e) {
+      diag.parseError = String(e);
+    }
+  } else {
+    diag.parseError = "uploadUrl is not a string";
+  }
+
+  const line = {
+    tag: "R2_NATIVE_URL_CHECK",
+    ...diag,
+    // 네이티브 ERR_ARGUMENT_CAST 원인 추적용 — 전체 URL (프리사인 쿼리 포함)
+    uploadUrlFull:
+      typeof uploadUrl === "string" ? uploadUrl : JSON.stringify(uploadUrl),
+    fileUriPrefix120: trimmedFileUri.slice(0, 120),
+  };
+
+  console.error(
+    `${ATTACH_UPLOAD_DEBUG_PREFIX} R2_NATIVE_URL_CHECK ${JSON.stringify(line)}`,
+  );
+
+  if (typeof uploadUrl !== "string" || !uploadUrl.trim()) {
+    throw new Error(
+      `[R2] uploadAsync 1번째 인자: 유효한 URL 문자열이 아님 (type=${typeof uploadUrl}, empty=${diag.uploadUrlIsEmpty})`,
+    );
+  }
+  if (!diag.urlCanParse) {
+    throw new Error(
+      `[R2] uploadUrl을 JavaScript URL로 파싱 실패: ${String(diag.parseError)}`,
+    );
+  }
+  if (!trimmedFileUri.startsWith("file://")) {
+    throw new Error(
+      "[R2] uploadAsync 2번째 인자: file:// 로 시작하는 로컬 경로여야 함",
+    );
+  }
+}
+
 function logPresignedUrlVsPutHeaders(
   uploadUrl: string,
   putContentType: string,
@@ -176,6 +240,17 @@ export const attachmentsApi = {
       });
       // 서버 APISchema는 JSON을 camelCase로 직렬화함(to_camel). snake_case만 읽으면 undefined.
       const d = response.data as Record<string, unknown>;
+      console.error(
+        `${ATTACH_UPLOAD_DEBUG_PREFIX} presigned_response_keys ${JSON.stringify(
+          {
+            keys: Object.keys(d),
+            uploadUrlCandidates: {
+              uploadUrl: d.uploadUrl,
+              upload_url: d.upload_url,
+            },
+          },
+        )}`,
+      );
       const out: PresignedUploadResponse = {
         uploadUrl: String(d.uploadUrl ?? d.upload_url ?? ""),
         fileKey: String(d.fileKey ?? d.file_key ?? ""),
@@ -183,6 +258,9 @@ export const attachmentsApi = {
         expiresIn: Number(d.expiresIn ?? d.expires_in ?? 0),
       };
       if (!out.uploadUrl || !out.fileKey) {
+        console.error(
+          `${ATTACH_UPLOAD_DEBUG_PREFIX} presigned_parse_failed ${JSON.stringify(d)}`,
+        );
         throw new Error(
           "Presigned 응답에 uploadUrl 또는 fileKey가 없습니다. API 직렬화 키를 확인하세요.",
         );
@@ -298,8 +376,11 @@ export const attachmentsApi = {
       return;
     }
 
+    const localUri = prepared.fileUri.trim();
+    logAndAssertNativeR2UploadArgs(uploadUrl, localUri);
+
     try {
-      const response = await uploadAsync(uploadUrl, prepared.fileUri, {
+      const response = await uploadAsync(uploadUrl.trim(), localUri, {
         httpMethod: "PUT",
         uploadType: FileSystemUploadType.BINARY_CONTENT,
         headers: putHeaders,
