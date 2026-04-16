@@ -12,12 +12,29 @@ import api from './api';
 
 export const ATTACH_UPLOAD_LOG_PREFIX = '[ATTACH_UPLOAD]';
 
+/** Metro/Xcode에서 `console.log`(객체 2번째 인자)가 안 보이는 경우가 있어 warn + 한 줄 직렬화 사용 */
+export const ATTACH_UPLOAD_DEBUG_PREFIX = '[ATTACH_UPLOAD_DEBUG]';
+
+export function attachDebugLog(step: string, payload?: Record<string, unknown>) {
+  try {
+    const body =
+      payload !== undefined ? JSON.stringify(payload) : '';
+    const line =
+      payload !== undefined
+        ? `${ATTACH_UPLOAD_DEBUG_PREFIX} ${step} | ${body}`
+        : `${ATTACH_UPLOAD_DEBUG_PREFIX} ${step}`;
+    console.warn(line);
+  } catch {
+    console.warn(`${ATTACH_UPLOAD_DEBUG_PREFIX} ${step} (serialize failed)`);
+  }
+}
+
 /** iOS 등: `file:///var/mobile/Containers/.../IMG_x.jpg` 형태인지 확인용 */
 function logLocalUriForDebug(context: string, uri: string) {
   const trimmed = uri ?? '';
   const looksLikeIosFile =
     trimmed.startsWith('file:///') && trimmed.includes('/var/mobile/');
-  attachLog(`DEBUG: local file URI (${context})`, {
+  attachDebugLog(`local file URI (${context})`, {
     uri: trimmed,
     length: trimmed.length,
     startsWithFileTripleSlash: trimmed.startsWith('file:///'),
@@ -54,7 +71,7 @@ function logPresignedUrlVsPutHeaders(
       u.searchParams.get('X-Amz-SignedHeaders') ??
       u.searchParams.get('x-amz-signedheaders') ??
       '';
-    attachLog('DEBUG: presigned URL vs PUT (헤더·서명 일치 확인)', {
+    attachDebugLog('presigned URL vs PUT (헤더·서명 일치 확인)', {
       host: u.host,
       pathPrefix: u.pathname.slice(0, 96),
       xAmzSignedHeaders: signedHeaders,
@@ -65,7 +82,7 @@ function logPresignedUrlVsPutHeaders(
         'R2(S3 호환): 프리사인 생성 시 넣은 Content-Type 등과 PUT 요청 헤더가 토씨 하나 같아야 합니다.',
     });
   } catch (e) {
-    attachLog('DEBUG: presigned URL 파싱 실패', { err: String(e) });
+    attachDebugLog('presigned URL 파싱 실패', { err: String(e) });
   }
 }
 
@@ -166,11 +183,16 @@ export const attachmentsApi = {
         publicUrl: out.publicUrl,
         expiresIn: out.expiresIn,
       });
-      attachLog('DEBUG: 프리사인 요청에 사용한 content_type (이후 PUT Content-Type과 동일해야 함)', {
+      attachDebugLog('프리사인 요청에 사용한 content_type (이후 PUT Content-Type과 동일해야 함)', {
         contentTypeSigned: request.contentType,
       });
       return out;
     } catch (err) {
+      attachDebugLog('presigned: API 오류 직전 요청 값 (서명·Content-Type 대조용)', {
+        fileName: request.fileName,
+        contentType: request.contentType,
+        fileSize: request.fileSize,
+      });
       attachLogError('presigned: API error', err);
       throw err;
     }
@@ -211,8 +233,9 @@ export const attachmentsApi = {
         'Content-Type': contentType,
         'Content-Length': String(byteLength),
       } as const;
-      attachLog('DEBUG: 실제 PUT headers (프리사인 조건과 바이트 단위로 일치해야 함)', {
-        ...putHeaders,
+      attachDebugLog('실제 PUT headers (프리사인 조건과 바이트 단위로 일치해야 함)', {
+        'Content-Type': putHeaders['Content-Type'],
+        'Content-Length': putHeaders['Content-Length'],
       });
       putRes = await fetch(uploadUrl, {
         method: 'PUT',
@@ -220,6 +243,10 @@ export const attachmentsApi = {
         body,
       });
     } catch (err) {
+      attachDebugLog('R2 PUT 직전 네트워크 예외 (보내려던 Content-Type)', {
+        contentType,
+        byteLength,
+      });
       attachLogError('R2: PUT network error', err);
       throw err;
     }

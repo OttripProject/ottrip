@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Attachment, AttachmentEntityType, LocalFile } from '../types/api';
 import {
   attachmentsApi,
+  attachDebugLog,
   ATTACH_UPLOAD_LOG_PREFIX,
 } from '../services/attachments';
 
@@ -45,15 +46,12 @@ export const useAttachmentUpload = ({
         files.map(async (file, index) => {
           const tag = `[${index + 1}/${files.length}]`;
           try {
-            console.log(
-              `${ATTACH_UPLOAD_LOG_PREFIX} ${tag} step: resolve PUT body`,
-              {
-                name: file.name,
-                uri: file.uri,
-                note:
-                  'expo uploadAsync 등에 넣을 때도 동일한 file:///var/mobile/... 형태인지 확인',
-              },
-            );
+            attachDebugLog(`${tag} step: resolve PUT body (URI 형식 확인)`, {
+              name: file.name,
+              uri: file.uri ?? '',
+              note:
+                'file:///var/mobile/Containers/.../IMG_x.jpg 형태인지 확인',
+            });
             const { body, byteLength } =
               await attachmentsApi.resolveR2PutBody(file);
 
@@ -71,15 +69,12 @@ export const useAttachmentUpload = ({
                 fileSize: byteLength,
               });
 
-            console.log(
-              `${ATTACH_UPLOAD_LOG_PREFIX} ${tag} DEBUG: Content-Type 일치`,
-              {
-                name: file.name,
-                mimeTypeForPresignAndPut: file.mimeType,
-                note:
-                  'getPresignedUploadUrl의 content_type과 uploadToR2의 Content-Type 헤더가 동일해야 함',
-              },
-            );
+            attachDebugLog(`${tag} Content-Type 일치 (presign ↔ PUT)`, {
+              name: file.name,
+              mimeTypeForPresignAndPut: file.mimeType ?? '',
+              note:
+                'getPresignedUploadUrl의 content_type과 uploadToR2의 Content-Type 헤더가 동일해야 함',
+            });
             console.log(
               `${ATTACH_UPLOAD_LOG_PREFIX} ${tag} step: R2 PUT`,
               { name: file.name, fileKey },
@@ -111,6 +106,11 @@ export const useAttachmentUpload = ({
             );
             return attachment;
           } catch (err) {
+            attachDebugLog(`${tag} pipeline FAILED (직전 상태)`, {
+              name: file.name,
+              uri: file.uri ?? '',
+              mimeType: file.mimeType ?? '',
+            });
             console.error(
               `${ATTACH_UPLOAD_LOG_PREFIX} ${tag} pipeline FAILED`,
               { name: file.name },
