@@ -6,13 +6,14 @@ import { colors } from '@/ui/tokens/colors';
 import { textStyles, typography } from '@/ui/tokens/typography';
 import FullScreenModal from '@/ui/components/FullScreenModal.native';
 import FloatingFooter from '@/ui/components/FloatingFooter.native';
-import { TimePicker } from '@/ui/components/pickers';
+import { TimeModal } from '@/ui/components/TimeModal.native';
 import Input from '@/ui/components/input/Input';
 import { flightsApi } from '@/services/flights';
 import { ExpenseCurrency, ExpenseCategory } from '@/types/expense';
 import { PLACEHOLDERS } from '@/constants/placeholders';
 import { getAirportLabelByIata } from '@/utils/airportList';
 import CalendarModal from '@/ui/components/CalendarModal.native';
+import TimeIcon from '../../../../assets/mobile_time.svg';
 import AirportSearchModal from './AirportSearchModal.native';
 import CloseIcon from '../../../../assets/x.svg';
 import DownArrowIcon from '../../../../assets/down_arrow.svg';
@@ -49,6 +50,14 @@ type SegmentForm = {
 };
 
 const formatDate = (dateStr: string) => dayjs(dateStr).format('YYYY.MM.DD');
+
+const formatTimeDisplay = (timeStr: string) => {
+  const [hour, minute] = (timeStr || '00:00').split(':');
+  const hourNum = parseInt(hour, 10) || 0;
+  const period = hourNum < 12 ? '오전' : '오후';
+  const displayHour = hourNum === 0 ? 12 : hourNum > 12 ? hourNum - 12 : hourNum;
+  return `${period} ${displayHour.toString().padStart(2, '0')}:${minute || '00'}`;
+};
 const normalizeAmount = (value: unknown) => {
   const raw = String(value ?? '').trim();
   if (!raw) return '';
@@ -75,6 +84,10 @@ export default function FlightEditModal({
   const [expenseAmount, setExpenseAmount] = useState('');
   const [flightSegments, setFlightSegments] = useState<SegmentForm[]>([]);
   const [segmentDatePicker, setSegmentDatePicker] = useState<{ idx: number; type: 'dep' | 'arr' } | null>(null);
+  const [segmentTimeModal, setSegmentTimeModal] = useState<{
+    idx: number;
+    field: 'departure_time' | 'arrival_time';
+  } | null>(null);
   const [airportSearchTarget, setAirportSearchTarget] = useState<{
     idx: number;
     type: 'dep' | 'arr';
@@ -509,7 +522,7 @@ export default function FlightEditModal({
                       onPress={() => setSegmentDatePicker({ idx, type: 'dep' })}
                     >
                       <Text style={styles.dateText}>{formatDate(seg.departure_date)}</Text>
-                      <CalendarIcon width={16} height={16} color={colors.black} />
+                      <CalendarIcon width={20} height={20} color={colors.black} />
                     </Pressable>
                     <CalendarModal
                       visible={segmentDatePicker?.idx === idx && segmentDatePicker?.type === 'dep'}
@@ -527,7 +540,7 @@ export default function FlightEditModal({
                       onPress={() => setSegmentDatePicker({ idx, type: 'arr' })}
                     >
                       <Text style={styles.dateText}>{formatDate(seg.arrival_date)}</Text>
-                      <CalendarIcon width={16} height={16} color={colors.black} />
+                      <CalendarIcon width={20} height={20} color={colors.black} />
                     </Pressable>
                     <CalendarModal
                       visible={segmentDatePicker?.idx === idx && segmentDatePicker?.type === 'arr'}
@@ -543,20 +556,46 @@ export default function FlightEditModal({
                 </View>
                 <View style={styles.row}>
                   <View style={[styles.inputGroup, styles.halfWidth]}>
-                    <TimePicker
-                      value={seg.departure_time}
-                      onChange={(t) => updateSegment(idx, 'departure_time', t)}
-                      containerStyle={styles.pickerContainer}
-                      style={StyleSheet.flatten([styles.pickerInput, {backgroundColor: colors.white}, !flight && styles.pickerInputBorderless])}
-                    />
+                    <Pressable
+                      style={[
+                        styles.dateInput,
+                        { backgroundColor: colors.white },
+                        !flight && styles.dateInputBorderless,
+                      ]}
+                      onPress={() =>
+                        setSegmentTimeModal({ idx, field: 'departure_time' })
+                      }
+                    >
+                      <Text style={styles.dateText}>
+                        {formatTimeDisplay(seg.departure_time)}
+                      </Text>
+                      <TimeIcon width={20} height={20} color={colors.black} />
+                    </Pressable>
                   </View>
                   <View style={[styles.inputGroup, styles.halfWidth]}>
-                    <TimePicker
-                      value={seg.arrival_time}
-                      onChange={(t) => updateSegment(idx, 'arrival_time', t)}
-                      containerStyle={styles.pickerContainer}
-                      style={StyleSheet.flatten([styles.pickerInput, {backgroundColor: colors.white}, !flight && styles.pickerInputBorderless])}
-                    />
+                    <Pressable
+                      style={[
+                        styles.dateInput,
+                        { backgroundColor: colors.white },
+                        !flight && styles.dateInputBorderless,
+                      ]}
+                      onPress={() =>
+                        setSegmentTimeModal({ idx, field: 'arrival_time' })
+                      }
+                    >
+                      <Text
+                        style={
+                          seg.arrival_time
+                            ? styles.dateText
+                            : styles.pickerPlaceholderText
+                        }
+                      >
+                        {seg.arrival_time
+                          ? formatTimeDisplay(seg.arrival_time)
+                          : '시간 선택'}
+                      </Text>
+                      <TimeIcon width={20} height={20} color={colors.black} />
+                    </Pressable>
                   </View>
                 </View>
                 {/* <View style={[styles.row, styles.threeCol]}>
@@ -615,6 +654,27 @@ export default function FlightEditModal({
           </View>
         </View>
       </ScrollView>
+
+      <TimeModal
+        visible={segmentTimeModal !== null}
+        onClose={() => setSegmentTimeModal(null)}
+        value={
+          segmentTimeModal
+            ? (() => {
+                const raw =
+                  flightSegments[segmentTimeModal.idx]?.[segmentTimeModal.field];
+                if (typeof raw === 'string' && raw.length >= 4) {
+                  return raw.slice(0, 5);
+                }
+                return '09:00';
+              })()
+            : '09:00'
+        }
+        onConfirm={(time24) => {
+          if (!segmentTimeModal) return;
+          updateSegment(segmentTimeModal.idx, segmentTimeModal.field, time24);
+        }}
+      />
 
       <AirportSearchModal
         visible={airportSearchTarget !== null}
@@ -754,7 +814,6 @@ const styles = StyleSheet.create({
     borderColor: 'transparent',
   },
   dateText: { ...textStyles.body3 },
-  pickerContainer: { zIndex: 1 },
   pickerInput: {
     height: 48,
     minHeight: 48,

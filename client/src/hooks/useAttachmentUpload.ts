@@ -46,8 +46,15 @@ export const useAttachmentUpload = ({
           const tag = `[${index + 1}/${files.length}]`;
           try {
             console.log(
-              `${ATTACH_UPLOAD_LOG_PREFIX} ${tag} step: presigned`,
+              `${ATTACH_UPLOAD_LOG_PREFIX} ${tag} step: resolve PUT body`,
               { name: file.name },
+            );
+            const { body, byteLength } =
+              await attachmentsApi.resolveR2PutBody(file);
+
+            console.log(
+              `${ATTACH_UPLOAD_LOG_PREFIX} ${tag} step: presigned`,
+              { name: file.name, byteLength },
             );
             const { uploadUrl, fileKey, publicUrl } =
               await attachmentsApi.getPresignedUploadUrl({
@@ -56,14 +63,19 @@ export const useAttachmentUpload = ({
                 entityId,
                 fileName: file.name,
                 contentType: file.mimeType,
-                fileSize: file.size,
+                fileSize: byteLength,
               });
 
             console.log(
               `${ATTACH_UPLOAD_LOG_PREFIX} ${tag} step: R2 PUT`,
               { name: file.name, fileKey },
             );
-            await attachmentsApi.uploadToR2(uploadUrl, file);
+            await attachmentsApi.uploadToR2(
+              uploadUrl,
+              body,
+              file.mimeType,
+              byteLength,
+            );
 
             console.log(
               `${ATTACH_UPLOAD_LOG_PREFIX} ${tag} step: confirm`,
@@ -76,7 +88,7 @@ export const useAttachmentUpload = ({
               fileKey,
               fileName: file.name,
               contentType: file.mimeType,
-              fileSize: file.size,
+              fileSize: byteLength,
               publicUrl,
             });
             console.log(

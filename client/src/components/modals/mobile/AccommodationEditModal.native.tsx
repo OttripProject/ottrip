@@ -6,7 +6,7 @@ import { colors } from '@/ui/tokens/colors';
 import { textStyles, typography } from '@/ui/tokens/typography';
 import FullScreenModal from '@/ui/components/FullScreenModal.native';
 import FloatingFooter from '@/ui/components/FloatingFooter.native';
-import { TimePicker } from '@/ui/components/pickers';
+import { TimeModal } from '@/ui/components/TimeModal.native';
 import CountrySearchModal from './CountrySearchModal.native';
 import Input from '@/ui/components/input/Input';
 import { accommodationsApi } from '@/services/accommodations';
@@ -14,6 +14,7 @@ import CalendarModal from '@/ui/components/CalendarModal.native';
 import { ExpenseCurrency } from '@/types/expense';
 import CloseIcon from '../../../../assets/x.svg';
 import CalendarIcon from '../../../../assets/mobile_calendar_black.svg';
+import TimeIcon from '../../../../assets/mobile_time.svg';
 import DownArrowIcon from '../../../../assets/down_arrow.svg';
 
 interface AccommodationEditModalProps {
@@ -29,6 +30,19 @@ interface AccommodationEditModalProps {
 
 const formatDate = (dateStr: string) => {
   return dayjs(dateStr).format('YYYY.MM.DD');
+};
+
+const formatTimeDisplay = (timeStr: string) => {
+  const [hour, minute] = timeStr.split(':');
+  const hourNum = parseInt(hour, 10) || 0;
+  const period = hourNum < 12 ? '오전' : '오후';
+  const displayHour = hourNum === 0 ? 12 : hourNum > 12 ? hourNum - 12 : hourNum;
+  return `${period} ${displayHour.toString().padStart(2, '0')}:${minute || '00'}`;
+};
+
+const timeToMinutes = (timeStr: string) => {
+  const [h, m] = timeStr.split(':');
+  return (parseInt(h, 10) || 0) * 60 + (parseInt(m, 10) || 0);
 };
 
 const normalizeAmount = (value: unknown) => {
@@ -62,6 +76,7 @@ export default function AccommodationEditModal({
   const [showCheckinDatePicker, setShowCheckinDatePicker] = useState(false);
   const [showCheckoutDatePicker, setShowCheckoutDatePicker] = useState(false);
   const [showCountrySearch, setShowCountrySearch] = useState(false);
+  const [timeModalField, setTimeModalField] = useState<'checkin' | 'checkout' | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
@@ -299,7 +314,7 @@ export default function AccommodationEditModal({
                   onPress={() => setShowCheckinDatePicker(true)}
                 >
                   <Text style={styles.dateText}>{formatDate(formData.checkinDate)}</Text>
-                  <CalendarIcon width={16} height={16} color={colors.black} />
+                  <CalendarIcon width={20} height={20} color={colors.black} />
                 </Pressable>
                 <CalendarModal
                   visible={showCheckinDatePicker}
@@ -313,15 +328,15 @@ export default function AccommodationEditModal({
               </View>
               <View style={[styles.inputGroup, styles.halfWidth]}>
                 <Text style={styles.checkinoutLabel}>시간</Text>
-                <TimePicker
-                  value={formData.checkinTime}
-                  onChange={(time) => setFormData({ ...formData, checkinTime: time })}
-                  containerStyle={styles.pickerContainer}
-                  style={StyleSheet.flatten([styles.pickerInput, !accommodation && styles.pickerInputBorderless, styles.timeInput])}
-                  dropDownContainerStyle={styles.pickerDropDownContainer}
-                  listItemLabelStyle={styles.pickerListItemLabel}
-                  selectedItemContainerStyle={styles.selectedItemContainerStyle}
-                />
+                <Pressable
+                  style={[styles.dateInput, !accommodation && styles.dateInputBorderless]}
+                  onPress={() => setTimeModalField('checkin')}
+                >
+                  <Text style={styles.dateText}>
+                    {formatTimeDisplay(formData.checkinTime)}
+                  </Text>
+                  <TimeIcon width={20} height={20} color={colors.black} />
+                </Pressable>
               </View>
             </View>
             <View style={styles.checkinoutRow}>
@@ -347,15 +362,15 @@ export default function AccommodationEditModal({
               </View>
               <View style={[styles.inputGroup, styles.halfWidth]}>
                 <Text style={styles.checkinoutLabel}>시간</Text>
-                <TimePicker
-                  value={formData.checkoutTime}
-                  onChange={(time) => setFormData({ ...formData, checkoutTime: time })}
-                  containerStyle={styles.pickerContainer}
-                  style={StyleSheet.flatten([styles.pickerInput, !accommodation && styles.pickerInputBorderless, styles.timeInput])}
-                  dropDownContainerStyle={styles.pickerDropDownContainer}
-                  listItemLabelStyle={styles.pickerListItemLabel}
-                  selectedItemContainerStyle={styles.selectedItemContainerStyle}
-                />
+                <Pressable
+                  style={[styles.dateInput, !accommodation && styles.dateInputBorderless]}
+                  onPress={() => setTimeModalField('checkout')}
+                >
+                  <Text style={styles.dateText}>
+                    {formatTimeDisplay(formData.checkoutTime)}
+                  </Text>
+                  <TimeIcon width={20} height={20} color={colors.black} />
+                </Pressable>
               </View>
             </View>
           </View>
@@ -383,6 +398,39 @@ export default function AccommodationEditModal({
           </View>
         </View>
       </ScrollView>
+
+      <TimeModal
+        visible={timeModalField === 'checkin'}
+        onClose={() => setTimeModalField(null)}
+        value={formData.checkinTime}
+        onConfirm={(time24) => {
+          setFormData((prev) => {
+            const next = { ...prev, checkinTime: time24 };
+            if (
+              prev.checkinDate === prev.checkoutDate &&
+              timeToMinutes(prev.checkoutTime) < timeToMinutes(time24)
+            ) {
+              next.checkoutTime = time24;
+            }
+            return next;
+          });
+        }}
+      />
+      <TimeModal
+        visible={timeModalField === 'checkout'}
+        onClose={() => setTimeModalField(null)}
+        value={formData.checkoutTime}
+        onConfirm={(time24) => {
+          setFormData((prev) => ({
+            ...prev,
+            checkoutTime:
+              prev.checkinDate === prev.checkoutDate &&
+              timeToMinutes(time24) < timeToMinutes(prev.checkinTime)
+                ? prev.checkinTime
+                : time24,
+          }));
+        }}
+      />
 
       <FloatingFooter
         primaryLabel={accommodation ? '수정 완료' : '일정 저장'}
@@ -476,20 +524,12 @@ const styles = StyleSheet.create({
   halfWidth: {
     flex: 1,
   },
-  pickerContainer: {
-    zIndex: 1,
-  },
   pickerInput: {
     minHeight: 44,
     borderWidth: 1,
     borderColor: colors.gray400,
     borderRadius: 12,
     backgroundColor: colors.gray200,
-  },
-  timeInput: {
-    minHeight: 44,
-    borderRadius: 12,
-    backgroundColor: colors.white,
   },
   pickerInputBorderless: {
     borderWidth: 0,
@@ -513,18 +553,6 @@ const styles = StyleSheet.create({
   countryTextTruncate: {
     flex: 1,
     minWidth: 0,
-  },
-  pickerDropDownContainer: {
-    borderRadius: 12,
-    backgroundColor: colors.gray200,
-  },
-  pickerListItemLabel: {
-    ...textStyles.body4,
-    color: colors.gray500,
-    backgroundColor: colors.gray200,
-  },
-  selectedItemContainerStyle: {
-    backgroundColor: colors.gray200,
   },
   checkinoutSection: {
     backgroundColor: `${colors.primary}1A`,

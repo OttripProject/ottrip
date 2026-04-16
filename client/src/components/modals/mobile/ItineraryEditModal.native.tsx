@@ -8,13 +8,14 @@ import { textStyles, typography } from '@/ui/tokens/typography';
 import FullScreenModal from '@/ui/components/FullScreenModal.native';
 import FloatingFooter from '@/ui/components/FloatingFooter.native';
 import AttachmentSection from '@/ui/components/attachmentSection.native';
-import { TimePicker } from '@/ui/components/pickers';
 import CountrySearchModal from './CountrySearchModal.native';
 import Input from '@/ui/components/input/Input';
 import { itinerariesApi } from '@/services/itineraries';
 import { expensesApi } from '@/services/expenses';
+import { TimeModal } from '@/ui/components/TimeModal.native';
 import CalendarModal from '@/ui/components/CalendarModal.native';
 import CalendarIcon from '../../../../assets/mobile_calendar_black.svg';
+import TimeIcon from '../../../../assets/mobile_time.svg';
 import DownArrowIcon from '../../../../assets/down_arrow.svg';
 import FoodIcon from '../../../../assets/mobile_food.svg';
 import CarIcon from '../../../../assets/mobile_car.svg';
@@ -64,6 +65,8 @@ export default function ItineraryEditModal({
   });
   const [existingExpenseId, setExistingExpenseId] = useState<number | null>(null);
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showStartTimeModal, setShowStartTimeModal] = useState(false);
+  const [showEndTimeModal, setShowEndTimeModal] = useState(false);
   const [showCountrySearch, setShowCountrySearch] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [pendingFiles, setPendingFiles] = useState<LocalFile[]>([]);
@@ -291,6 +294,11 @@ export default function ItineraryEditModal({
     return `${period} ${displayHour.toString().padStart(2, '0')}:${minute}`;
   };
 
+  const timeToMinutes = (timeStr: string) => {
+    const [h, m] = timeStr.split(':');
+    return (parseInt(h, 10) || 0) * 60 + (parseInt(m, 10) || 0);
+  };
+
   const content = (
     <>
       {!embedded && (
@@ -402,7 +410,7 @@ export default function ItineraryEditModal({
                 <Text style={formData.itineraryDate ? styles.dateText : styles.placeholderText}>
                   {formData.itineraryDate ? formatDate(formData.itineraryDate) : '날짜 선택'}
                 </Text>
-                <CalendarIcon width={16} height={16} color={colors.black} />
+                <CalendarIcon width={20} height={20} color={colors.black} />
               </Pressable>
               <CalendarModal
                 visible={showDatePicker}
@@ -414,30 +422,53 @@ export default function ItineraryEditModal({
                 onClose={() => setShowDatePicker(false)}
               />
             <View style={styles.row}>
-                <View style={[styles.halfWidth]}>
-                <TimePicker
-                    value={formData.startTime}
-                    onChange={(time) => setFormData({ ...formData, startTime: time })}
-                    containerStyle={styles.pickerContainer}
-                    style={StyleSheet.flatten([styles.pickerInput, !itinerary && styles.pickerInputBorderless])}
-                    dropDownContainerStyle={styles.pickerDropDownContainer}
-                    listItemLabelStyle={styles.pickerListItemLabel}
-                    selectedItemContainerStyle={styles.selectedItemContainerStyle}
-                />
-                </View>
-                <View style={[styles.halfWidth]}>
-                    <TimePicker
-                    value={formData.endTime}
-                    onChange={(time) => setFormData({ ...formData, endTime: time })}
-                    minTime={formData.startTime}
-                    containerStyle={styles.pickerContainer}
-                    style={StyleSheet.flatten([styles.pickerInput, !itinerary && styles.pickerInputBorderless])}
-                    dropDownContainerStyle={styles.pickerDropDownContainer}
-                    listItemLabelStyle={styles.pickerListItemLabel}
-                    selectedItemContainerStyle={styles.selectedItemContainerStyle}
-                    />
-                </View>
+              <View style={styles.halfWidth}>
+                <Pressable
+                  style={[styles.dateInput, !itinerary && styles.dateInputBorderless]}
+                  onPress={() => setShowStartTimeModal(true)}
+                >
+                  <Text style={styles.dateText}>{formatTimeDisplay(formData.startTime)}</Text>
+                  <TimeIcon width={20} height={20} color={colors.black} />
+                </Pressable>
+              </View>
+              <View style={styles.halfWidth}>
+                <Pressable
+                  style={[styles.dateInput, !itinerary && styles.dateInputBorderless]}
+                  onPress={() => setShowEndTimeModal(true)}
+                >
+                  <Text style={styles.dateText}>{formatTimeDisplay(formData.endTime)}</Text>
+                  <TimeIcon width={20} height={20} color={colors.black} />
+                </Pressable>
+              </View>
             </View>
+            <TimeModal
+              visible={showStartTimeModal}
+              onClose={() => setShowStartTimeModal(false)}
+              value={formData.startTime}
+              onConfirm={(time24) => {
+                setFormData((prev) => {
+                  const next = { ...prev, startTime: time24 };
+                  if (timeToMinutes(prev.endTime) < timeToMinutes(time24)) {
+                    next.endTime = time24;
+                  }
+                  return next;
+                });
+              }}
+            />
+            <TimeModal
+              visible={showEndTimeModal}
+              onClose={() => setShowEndTimeModal(false)}
+              value={formData.endTime}
+              onConfirm={(time24) => {
+                setFormData((prev) => ({
+                  ...prev,
+                  endTime:
+                    timeToMinutes(time24) < timeToMinutes(prev.startTime)
+                      ? prev.startTime
+                      : time24,
+                }));
+              }}
+            />
          </View>
 
           {/* 비용 정보 */}
@@ -623,9 +654,6 @@ const styles = StyleSheet.create({
   halfWidth: {
     flex: 1,
   },
-  pickerContainer: {
-    zIndex: 1,
-  },
   pickerInput: {
     minHeight: 44,
     borderWidth: 1,
@@ -655,18 +683,6 @@ const styles = StyleSheet.create({
   countryTextTruncate: {
     flex: 1,
     minWidth: 0,
-  },
-  pickerDropDownContainer: {
-    borderRadius: 12,
-    backgroundColor: colors.gray200,
-  },
-  pickerListItemLabel: {
-    ...textStyles.body4,
-    color: colors.gray500,
-    backgroundColor: colors.gray200,
-  },
-  selectedItemContainerStyle: {
-    backgroundColor: colors.gray200,
   },
   dateInput: {
     paddingVertical: 10,
