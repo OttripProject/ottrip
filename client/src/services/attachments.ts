@@ -6,6 +6,9 @@ import {
   PresignedUploadRequest,
   PresignedUploadResponse,
 } from '../types/api';
+import { fetch as expoFetch } from 'expo/fetch';
+import { File as FsFile } from 'expo-file-system';
+import { Platform } from 'react-native';
 import api from './api';
 
 /** 기기 로그 검색용 (Console / Xcode에서 `ATTACH_UPLOAD` 필터) */
@@ -21,6 +24,25 @@ function attachLog(step: string, payload?: Record<string, unknown>) {
 
 function attachLogError(step: string, err: unknown) {
   console.error(`${ATTACH_UPLOAD_LOG_PREFIX} ${step}`, err);
+}
+
+async function readLocalFileAsBlob(uri: string): Promise<Blob> {
+  const localRes = await fetch(uri);
+  attachLog('R2: local fetch done', {
+    status: localRes.status,
+    ok: localRes.ok,
+    type: localRes.type,
+  });
+  if (!localRes.ok) {
+    const t = await localRes.text().catch(() => '');
+    throw new Error(`Local file fetch failed: ${localRes.status} ${t.slice(0, 200)}`);
+  }
+  const blob = await localRes.blob();
+  attachLog('R2: blob ready', {
+    blobSize: blob.size,
+    blobType: blob.type,
+  });
+  return blob;
 }
 
 export const attachmentsApi = {
@@ -70,35 +92,42 @@ export const attachmentsApi = {
   },
 
   uploadToR2: async (uploadUrl: string, file: LocalFile): Promise<void> => {
+    const uri = file.uri ?? '';
     attachLog('R2: local file read start', {
       name: file.name,
       mimeType: file.mimeType,
       size: file.size,
-      uriPrefix: file.uri?.slice(0, 96) ?? '',
+      uriPrefix: uri.slice(0, 96),
     });
 
-    let blob: Blob;
-    try {
-      const localRes = await fetch(file.uri);
-      attachLog('R2: local fetch done', {
-        status: localRes.status,
-        ok: localRes.ok,
-        type: localRes.type,
-      });
-      if (!localRes.ok) {
-        const t = await localRes.text().catch(() => '');
-        throw new Error(
-          `Local file fetch failed: ${localRes.status} ${t.slice(0, 200)}`,
-        );
+    let body: Blob | FsFile;
+    const useFsFile =
+      Platform.OS !== 'web' &&
+      (uri.startsWith('file:') || uri.startsWith('content:'));
+
+    if (useFsFile) {
+      try {
+        const fsFile = new FsFile(uri);
+        if (fsFile.exists) {
+          body = fsFile;
+          attachLog('R2: body = expo-file-system File', {
+            fsName: fsFile.name,
+            exists: fsFile.exists,
+          });
+        } else {
+          body = await readLocalFileAsBlob(uri);
+        }
+      } catch (err) {
+        attachLog('R2: FsFile path failed, fallback blob', { err: String(err) });
+        body = await readLocalFileAsBlob(uri);
       }
-      blob = await localRes.blob();
-      attachLog('R2: blob ready', {
-        blobSize: blob.size,
-        blobType: blob.type,
-      });
-    } catch (err) {
-      attachLogError('R2: local file → blob failed', err);
-      throw err;
+    } else {
+      try {
+        body = await readLocalFileAsBlob(uri);
+      } catch (err) {
+        attachLogError('R2: local file → blob failed', err);
+        throw err;
+      }
     }
 
     let putHost = '';
@@ -110,7 +139,7 @@ export const attachmentsApi = {
     } catch {
       /* ignore */
     }
-    attachLog('R2: PUT start', {
+    attachLog('R2: PUT start (expo/fetch)', {
       host: putHost,
       pathPreview: putPathPreview,
       contentType: file.mimeType,
@@ -119,13 +148,13 @@ export const attachmentsApi = {
 
     let putRes: Response;
     try {
-      putRes = await fetch(uploadUrl, {
+      putRes = await expoFetch(uploadUrl, {
         method: 'PUT',
         headers: {
           'Content-Type': file.mimeType,
           'Content-Length': file.size.toString(),
         },
-        body: blob,
+        body: body as BodyInit,
       });
     } catch (err) {
       attachLogError('R2: PUT network error', err);
