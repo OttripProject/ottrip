@@ -7,10 +7,11 @@ import {
   ViewStyle,
   StyleProp,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { colors } from '@/ui/tokens/colors';
 import { textStyles } from '@/ui/tokens/typography';
-import { LocalFile } from '@/types/api';
+import type { Attachment, LocalFile } from '@/types/api';
 
 import CameraIcon from '../../../assets/mobile_camera.svg';
 import AddIcon from '../../../assets/mobile_plan_add.svg';
@@ -23,6 +24,11 @@ export interface AttachmentSectionProps {
   onPickImage: () => void;
   onPickDocument: () => void;
   onRemoveFile: (index: number) => void;
+  /** 서버에 이미 저장된 첨부 (편집 화면) */
+  existingAttachments?: Attachment[];
+  /** 기존 첨부 삭제 (API 호출은 부모에서) */
+  onRemoveExisting?: (attachmentId: number) => void | Promise<void>;
+  isLoadingExisting?: boolean;
   isUploading?: boolean;
   style?: StyleProp<ViewStyle>;
   showTopDivider?: boolean;
@@ -42,17 +48,27 @@ function isPdfMime(mimeType: string | undefined): boolean {
   return mimeType === 'application/pdf';
 }
 
+function formatFileSize(bytes: number): string {
+  if (bytes <= 0) return '';
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)}KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)}MB`;
+}
+
 export default function AttachmentSection({
   pendingFiles,
   onPickImage,
   onPickDocument,
   onRemoveFile,
+  existingAttachments = [],
+  onRemoveExisting,
+  isLoadingExisting = false,
   isUploading = false,
   style,
   showTopDivider = false,
   disabled = false,
 }: AttachmentSectionProps) {
-  const hasFiles = pendingFiles.length > 0;
+  const existing = existingAttachments;
+  const hasFiles = existing.length + pendingFiles.length > 0;
 
   const handleAddPress = () => {
     if (disabled || isUploading) return;
@@ -63,12 +79,64 @@ export default function AttachmentSection({
     ]);
   };
 
-  const handleRemove = (index: number) => {
+  const handleRemovePending = (index: number) => {
     Alert.alert('파일 삭제', '선택한 파일을 삭제하시겠습니까?', [
       { text: '취소', style: 'cancel' },
       { text: '삭제', style: 'destructive', onPress: () => onRemoveFile(index) },
     ]);
   };
+
+  const handleRemoveExisting = (attachmentId: number) => {
+    if (!onRemoveExisting) return;
+    Alert.alert('파일 삭제', '첨부된 파일을 삭제하시겠습니까?', [
+      { text: '취소', style: 'cancel' },
+      {
+        text: '삭제',
+        style: 'destructive',
+        onPress: () => {
+          void Promise.resolve(onRemoveExisting(attachmentId));
+        },
+      },
+    ]);
+  };
+
+  const renderFileRow = (
+    key: string,
+    fileName: string,
+    mimeType: string | undefined,
+    subtitle: string,
+    onRemove?: () => void,
+  ) => (
+    <View key={key} style={styles.fileRow}>
+      <View style={styles.fileIconWrap}>
+        {isPdfMime(mimeType) ? (
+          <AttachmentDocIcon width={20} height={20} />
+        ) : String(mimeType ?? '').startsWith('image/') ? (
+          <AttachmentImageIcon width={20} height={20} />
+        ) : (
+          <AttachmentDocIcon width={20} height={20} />
+        )}
+      </View>
+      <View style={styles.fileInfo}>
+        <Text style={styles.fileName} numberOfLines={1} ellipsizeMode="middle">
+          {fileName}
+        </Text>
+        <Text style={styles.fileKindLabel}>{subtitle}</Text>
+      </View>
+      {onRemove ? (
+        <Pressable
+          onPress={onRemove}
+          hitSlop={8}
+          disabled={isUploading || disabled}
+          style={({ pressed }) => [styles.removeButton, pressed && styles.pressed]}
+        >
+          <DeleteIcon width={20} height={20} color={colors.gray600} />
+        </Pressable>
+      ) : (
+        <View style={styles.removeButton} />
+      )}
+    </View>
+  );
 
   return (
     <View style={[styles.root, style]}>
@@ -92,35 +160,32 @@ export default function AttachmentSection({
         </Pressable>
       </View>
 
-      {hasFiles ? (
+      {isLoadingExisting && !hasFiles ? (
+        <View style={styles.loadingWrap}>
+          <ActivityIndicator size="small" color={colors.primary} />
+        </View>
+      ) : hasFiles ? (
         <View style={styles.fileList}>
-          {pendingFiles.map((file, index) => (
-            <View key={`${file.name}-${index}`} style={styles.fileRow}>
-              <View style={styles.fileIconWrap}>
-                {isPdfMime(file.mimeType) ? (
-                  <AttachmentDocIcon width={20} height={20} />
-                ) : String(file.mimeType ?? '').startsWith('image/') ? (
-                  <AttachmentImageIcon width={20} height={20} />
-                ) : (
-                  <AttachmentDocIcon width={20} height={20} />
-                )}
-              </View>
-              <View style={styles.fileInfo}>
-                <Text style={styles.fileName} numberOfLines={1} ellipsizeMode="middle">
-                  {file.name}
-                </Text>
-                <Text style={styles.fileKindLabel}>{getAttachmentKindLabel(file.mimeType)}</Text>
-              </View>
-              <Pressable
-                onPress={() => handleRemove(index)}
-                hitSlop={8}
-                disabled={isUploading}
-                style={({ pressed }) => [styles.removeButton, pressed && styles.pressed]}
-              >
-                <DeleteIcon width={20} height={20} color={colors.gray600} />
-              </Pressable>
-            </View>
-          ))}
+          {existing.map((a) =>
+            renderFileRow(
+              `existing-${a.id}`,
+              a.fileName,
+              a.contentType,
+              [getAttachmentKindLabel(a.contentType), formatFileSize(a.fileSize)]
+                .filter(Boolean)
+                .join(' · '),
+              onRemoveExisting ? () => handleRemoveExisting(a.id) : undefined,
+            ),
+          )}
+          {pendingFiles.map((file, index) =>
+            renderFileRow(
+              `pending-${file.name}-${index}`,
+              file.name,
+              file.mimeType,
+              getAttachmentKindLabel(file.mimeType),
+              () => handleRemovePending(index),
+            ),
+          )}
         </View>
       ) : (
         <Pressable
@@ -204,6 +269,11 @@ const styles = StyleSheet.create({
     ...textStyles.h6,
     color: colors.gray600,
     includeFontPadding: false,
+  },
+  loadingWrap: {
+    paddingVertical: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   fileList: {
     gap: 8,

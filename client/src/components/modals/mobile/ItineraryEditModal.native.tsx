@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, Pressable, StyleSheet, ScrollView, Alert } from 'react-native';
 import CloseIcon from '../../../../assets/x.svg';
 import dayjs from 'dayjs';
-import { Itinerary, CreateItineraryRequest, LocalFile } from '@/types/api';
+import { Attachment, Itinerary, CreateItineraryRequest, LocalFile } from '@/types/api';
 import { colors } from '@/ui/tokens/colors';
 import { textStyles, typography } from '@/ui/tokens/typography';
 import FullScreenModal from '@/ui/components/FullScreenModal.native';
@@ -12,6 +12,7 @@ import CountrySearchModal from './CountrySearchModal.native';
 import Input from '@/ui/components/input/Input';
 import { itinerariesApi } from '@/services/itineraries';
 import { expensesApi } from '@/services/expenses';
+import { attachmentsApi } from '@/services/attachments';
 import { TimeModal } from '@/ui/components/TimeModal.native';
 import CalendarModal from '@/ui/components/CalendarModal.native';
 import CalendarIcon from '../../../../assets/mobile_calendar_black.svg';
@@ -70,6 +71,8 @@ export default function ItineraryEditModal({
   const [showCountrySearch, setShowCountrySearch] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [pendingFiles, setPendingFiles] = useState<LocalFile[]>([]);
+  const [existingAttachments, setExistingAttachments] = useState<Attachment[]>([]);
+  const [isLoadingAttachments, setIsLoadingAttachments] = useState(false);
 
   const { pickImage, pickDocument } = useFilePicker();
   const { isUploading, uploadFiles } = useAttachmentUpload({
@@ -178,6 +181,39 @@ export default function ItineraryEditModal({
     }
   }, [visible, itinerary, defaultDate]);
 
+  useEffect(() => {
+    if (!visible) return;
+    if (!itinerary) {
+      setExistingAttachments([]);
+      return;
+    }
+    let cancelled = false;
+    setIsLoadingAttachments(true);
+    attachmentsApi
+      .getAttachments(planId, 'itinerary', itinerary.id)
+      .then((list) => {
+        if (!cancelled) setExistingAttachments(list);
+      })
+      .catch(() => {
+        if (!cancelled) setExistingAttachments([]);
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoadingAttachments(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [visible, itinerary?.id, planId]);
+
+  const handleRemoveExistingAttachment = async (attachmentId: number) => {
+    try {
+      await attachmentsApi.deleteAttachment(attachmentId);
+      setExistingAttachments((prev) => prev.filter((a) => a.id !== attachmentId));
+    } catch {
+      Alert.alert('오류', '첨부파일 삭제에 실패했습니다.');
+    }
+  };
+
   const handleExpenseAmountChange = (text: string) => {
     const formatted = formatAmountWithCommas(text);
     setExpenseData((prev) => ({ ...prev, amount: formatted }));
@@ -235,7 +271,9 @@ export default function ItineraryEditModal({
 
       if (pendingFiles.length > 0) {
         try {
-          await uploadFiles(pendingFiles, savedItinerary.id);
+          const uploaded = await uploadFiles(pendingFiles, savedItinerary.id);
+          setExistingAttachments((prev) => [...prev, ...uploaded]);
+          setPendingFiles([]);
         } catch {
           Alert.alert('알림', '일정은 저장됐으나 일부 파일 업로드에 실패했습니다.');
         }
@@ -533,6 +571,9 @@ export default function ItineraryEditModal({
               showTopDivider
               style={styles.attachmentSection}
               pendingFiles={pendingFiles}
+              existingAttachments={existingAttachments}
+              onRemoveExisting={itinerary ? handleRemoveExistingAttachment : undefined}
+              isLoadingExisting={!!itinerary && isLoadingAttachments}
               isUploading={isUploading}
               disabled={isSubmitting}
               onPickImage={async () => {

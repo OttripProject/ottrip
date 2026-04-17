@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, Pressable, StyleSheet, ScrollView, Alert } from 'react-native';
 import dayjs from 'dayjs';
-import { FlightRead, LocalFile } from '@/types/api';
+import { Attachment, FlightRead, LocalFile } from '@/types/api';
 import { colors } from '@/ui/tokens/colors';
 import { textStyles, typography } from '@/ui/tokens/typography';
 import FullScreenModal from '@/ui/components/FullScreenModal.native';
@@ -10,6 +10,7 @@ import AttachmentSection from '@/ui/components/attachmentSection.native';
 import { TimeModal } from '@/ui/components/TimeModal.native';
 import Input from '@/ui/components/input/Input';
 import { flightsApi } from '@/services/flights';
+import { attachmentsApi } from '@/services/attachments';
 import { ExpenseCurrency, ExpenseCategory } from '@/types/expense';
 import { PLACEHOLDERS } from '@/constants/placeholders';
 import { getAirportLabelByIata } from '@/utils/airportList';
@@ -98,6 +99,8 @@ export default function FlightEditModal({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isSubmittingRef = useRef(false);
   const [pendingFiles, setPendingFiles] = useState<LocalFile[]>([]);
+  const [existingAttachments, setExistingAttachments] = useState<Attachment[]>([]);
+  const [isLoadingAttachments, setIsLoadingAttachments] = useState(false);
 
   const { pickImage, pickDocument } = useFilePicker();
   const { isUploading, uploadFiles } = useAttachmentUpload({
@@ -186,6 +189,39 @@ export default function FlightEditModal({
       setPendingFiles([]);
     }
   }, [visible, flight, planStartDate, defaultDate]);
+
+  useEffect(() => {
+    if (!visible) return;
+    if (!flight) {
+      setExistingAttachments([]);
+      return;
+    }
+    let cancelled = false;
+    setIsLoadingAttachments(true);
+    attachmentsApi
+      .getAttachments(planId, 'flight', flight.id)
+      .then((list) => {
+        if (!cancelled) setExistingAttachments(list);
+      })
+      .catch(() => {
+        if (!cancelled) setExistingAttachments([]);
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoadingAttachments(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [visible, flight?.id, planId]);
+
+  const handleRemoveExistingAttachment = async (attachmentId: number) => {
+    try {
+      await attachmentsApi.deleteAttachment(attachmentId);
+      setExistingAttachments((prev) => prev.filter((a) => a.id !== attachmentId));
+    } catch {
+      Alert.alert('오류', '첨부파일 삭제에 실패했습니다.');
+    }
+  };
 
   const toIso = (date: string, time: string) => {
     if (!date || !time) return '';
@@ -279,7 +315,9 @@ export default function FlightEditModal({
 
       if (pendingFiles.length > 0) {
         try {
-          await uploadFiles(pendingFiles, savedFlightId);
+          const uploaded = await uploadFiles(pendingFiles, savedFlightId);
+          setExistingAttachments((prev) => [...prev, ...uploaded]);
+          setPendingFiles([]);
         } catch {
           Alert.alert('알림', '항공편은 저장됐으나 일부 파일 업로드에 실패했습니다.');
         }
@@ -683,6 +721,9 @@ export default function FlightEditModal({
           showTopDivider
           style={styles.attachmentSection}
           pendingFiles={pendingFiles}
+          existingAttachments={existingAttachments}
+          onRemoveExisting={flight ? handleRemoveExistingAttachment : undefined}
+          isLoadingExisting={!!flight && isLoadingAttachments}
           isUploading={isUploading}
           disabled={isSubmitting}
           onPickImage={async () => {
