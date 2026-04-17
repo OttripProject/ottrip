@@ -34,7 +34,7 @@ export interface AttachmentSectionProps {
 function getAttachmentKindLabel(mimeType: string | undefined): string {
   const m = mimeType ?? '';
   if (m === 'application/pdf') return 'PDF 문서';
-  if (m.startsWith('image/')) return '이미지';
+  if (m.startsWith('image/')) return '이미지 파일';
   return '파일';
 }
 
@@ -213,7 +213,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: colors.gray200,
     borderRadius: 12,
-    paddingVertical: 21,
+    paddingVertical: 16,
     paddingHorizontal: 16,
   },
   fileIconWrap: {

@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, Pressable, StyleSheet, ScrollView, TextInput, Alert } from 'react-native';
 import dayjs from 'dayjs';
-import { Accommodation } from '@/types/api';
+import { Accommodation, LocalFile } from '@/types/api';
 import { colors } from '@/ui/tokens/colors';
 import { textStyles, typography } from '@/ui/tokens/typography';
 import FullScreenModal from '@/ui/components/FullScreenModal.native';
 import FloatingFooter from '@/ui/components/FloatingFooter.native';
+import AttachmentSection from '@/ui/components/attachmentSection.native';
 import { TimeModal } from '@/ui/components/TimeModal.native';
 import CountrySearchModal from './CountrySearchModal.native';
 import Input from '@/ui/components/input/Input';
@@ -16,6 +17,8 @@ import CloseIcon from '../../../../assets/x.svg';
 import CalendarIcon from '../../../../assets/mobile_calendar_black.svg';
 import TimeIcon from '../../../../assets/mobile_time.svg';
 import DownArrowIcon from '../../../../assets/down_arrow.svg';
+import { useFilePicker } from '@/hooks/useFilePicker';
+import { useAttachmentUpload } from '@/hooks/useAttachmentUpload';
 
 interface AccommodationEditModalProps {
   visible: boolean;
@@ -78,6 +81,13 @@ export default function AccommodationEditModal({
   const [showCountrySearch, setShowCountrySearch] = useState(false);
   const [timeModalField, setTimeModalField] = useState<'checkin' | 'checkout' | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [pendingFiles, setPendingFiles] = useState<LocalFile[]>([]);
+
+  const { pickImage, pickDocument } = useFilePicker();
+  const { isUploading, uploadFiles } = useAttachmentUpload({
+    planId,
+    entityType: 'accommodation',
+  });
 
   useEffect(() => {
     if (visible && accommodation) {
@@ -106,6 +116,9 @@ export default function AccommodationEditModal({
         checkoutDate: dayjs(initDate).add(1, 'day').format('YYYY-MM-DD'),
       }));
     }
+    if (visible) {
+      setPendingFiles([]);
+    }
   }, [visible, accommodation, defaultDate]);
 
   const handleSave = async () => {
@@ -117,6 +130,7 @@ export default function AccommodationEditModal({
     setIsSubmitting(true);
     try {
       const amount = parseInt(normalizeAmount(expenseAmount), 10) || 0;
+      let savedAccommodationId: number;
       if (accommodation) {
         const updated = await accommodationsApi.updateAccommodation(accommodation.id, {
         name: formData.name.trim(),
@@ -136,6 +150,7 @@ export default function AccommodationEditModal({
           description: formData.name.trim(),
         },
       });
+        savedAccommodationId = updated.id;
         try {
           await onSave?.(updated);
         } catch {
@@ -162,6 +177,7 @@ export default function AccommodationEditModal({
             description: formData.name.trim(),
           },
         });
+        savedAccommodationId = created.id;
         try {
           await onSave?.(created);
         } catch {
@@ -169,6 +185,15 @@ export default function AccommodationEditModal({
         }
         Alert.alert('추가완료', '숙소가 추가되었습니다.');
       }
+
+      if (pendingFiles.length > 0) {
+        try {
+          await uploadFiles(pendingFiles, savedAccommodationId);
+        } catch {
+          Alert.alert('알림', '숙소는 저장됐으나 일부 파일 업로드에 실패했습니다.');
+        }
+      }
+
       onClose?.({ fromSave: true });
     } catch (error) {
       Alert.alert('오류', accommodation ? '숙소 수정에 실패했습니다.' : '숙소 추가에 실패했습니다.');
@@ -396,6 +421,33 @@ export default function AccommodationEditModal({
               </View>
             </View>
           </View>
+
+          <AttachmentSection
+            showTopDivider
+            style={styles.attachmentSection}
+            pendingFiles={pendingFiles}
+            isUploading={isUploading}
+            disabled={isSubmitting}
+            onPickImage={async () => {
+              try {
+                const file = await pickImage();
+                if (file) setPendingFiles((prev) => [...prev, file]);
+              } catch (e: any) {
+                Alert.alert('알림', e.message);
+              }
+            }}
+            onPickDocument={async () => {
+              try {
+                const file = await pickDocument();
+                if (file) setPendingFiles((prev) => [...prev, file]);
+              } catch (e: any) {
+                Alert.alert('알림', e.message);
+              }
+            }}
+            onRemoveFile={(index) =>
+              setPendingFiles((prev) => prev.filter((_, i) => i !== index))
+            }
+          />
         </View>
       </ScrollView>
 
@@ -433,9 +485,9 @@ export default function AccommodationEditModal({
       />
 
       <FloatingFooter
-        primaryLabel={accommodation ? '수정 완료' : '일정 저장'}
+        primaryLabel={isUploading ? '업로드 중...' : accommodation ? '수정 완료' : '일정 저장'}
         onPrimaryPress={handleSave}
-        primaryDisabled={isSubmitting}
+        primaryDisabled={isSubmitting || isUploading}
         secondaryLabel={accommodation && !embedded ? '삭제' : undefined}
         onSecondaryPress={handleDelete}
       />
@@ -634,5 +686,8 @@ const styles = StyleSheet.create({
     ...textStyles.h6,
     color: colors.primary,
     marginLeft: 4,
+  },
+  attachmentSection: {
+    marginTop: 20,
   },
 });

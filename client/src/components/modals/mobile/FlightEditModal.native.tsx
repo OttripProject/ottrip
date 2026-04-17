@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, Pressable, StyleSheet, ScrollView, Alert } from 'react-native';
 import dayjs from 'dayjs';
-import { FlightRead } from '@/types/api';
+import { FlightRead, LocalFile } from '@/types/api';
 import { colors } from '@/ui/tokens/colors';
 import { textStyles, typography } from '@/ui/tokens/typography';
 import FullScreenModal from '@/ui/components/FullScreenModal.native';
 import FloatingFooter from '@/ui/components/FloatingFooter.native';
+import AttachmentSection from '@/ui/components/attachmentSection.native';
 import { TimeModal } from '@/ui/components/TimeModal.native';
 import Input from '@/ui/components/input/Input';
 import { flightsApi } from '@/services/flights';
@@ -20,6 +21,8 @@ import DownArrowIcon from '../../../../assets/down_arrow.svg';
 import CalendarIcon from '../../../../assets/mobile_calendar_black.svg';
 import AddIcon from '../../../../assets/mobile_plan_add.svg';
 import DeleteIcon from '../../../../assets/delete.svg';
+import { useFilePicker } from '@/hooks/useFilePicker';
+import { useAttachmentUpload } from '@/hooks/useAttachmentUpload';
 
 interface FlightEditModalProps {
   visible: boolean;
@@ -94,6 +97,13 @@ export default function FlightEditModal({
   } | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isSubmittingRef = useRef(false);
+  const [pendingFiles, setPendingFiles] = useState<LocalFile[]>([]);
+
+  const { pickImage, pickDocument } = useFilePicker();
+  const { isUploading, uploadFiles } = useAttachmentUpload({
+    planId,
+    entityType: 'flight',
+  });
 
   useEffect(() => {
     if (visible && !flight) {
@@ -172,6 +182,9 @@ export default function FlightEditModal({
             ];
       setFlightSegments(segList);
     }
+    if (visible) {
+      setPendingFiles([]);
+    }
   }, [visible, flight, planStartDate, defaultDate]);
 
   const toIso = (date: string, time: string) => {
@@ -212,6 +225,7 @@ export default function FlightEditModal({
         seatNumber: s.seat_number?.trim() || null,
       }));
 
+      let savedFlightId: number;
       if (flight) {
         await flightsApi.updateFlight(flight.id, {
           reservationNumber: formData.reservation_number?.trim() || null,
@@ -229,6 +243,7 @@ export default function FlightEditModal({
           },
         });
         const updated = await flightsApi.getFlight(flight.id);
+        savedFlightId = updated.id;
         try {
           await onSave?.(updated);
         } catch {
@@ -253,6 +268,7 @@ export default function FlightEditModal({
           },
         });
         const created = await flightsApi.getFlight(createRes.id);
+        savedFlightId = created.id;
         try {
           await onSave?.(created);
         } catch {
@@ -260,6 +276,15 @@ export default function FlightEditModal({
         }
         Alert.alert('추가완료', '항공편이 추가되었습니다.');
       }
+
+      if (pendingFiles.length > 0) {
+        try {
+          await uploadFiles(pendingFiles, savedFlightId);
+        } catch {
+          Alert.alert('알림', '항공편은 저장됐으나 일부 파일 업로드에 실패했습니다.');
+        }
+      }
+
       onClose?.({ fromSave: true });
     } catch (error) {
       Alert.alert('오류', flight ? '항공 편 수정에 실패했습니다.' : '항공 편 추가에 실패했습니다.');
@@ -653,6 +678,33 @@ export default function FlightEditModal({
             </View>
           </View>
         </View>
+
+        <AttachmentSection
+          showTopDivider
+          style={styles.attachmentSection}
+          pendingFiles={pendingFiles}
+          isUploading={isUploading}
+          disabled={isSubmitting}
+          onPickImage={async () => {
+            try {
+              const file = await pickImage();
+              if (file) setPendingFiles((prev) => [...prev, file]);
+            } catch (e: any) {
+              Alert.alert('알림', e.message);
+            }
+          }}
+          onPickDocument={async () => {
+            try {
+              const file = await pickDocument();
+              if (file) setPendingFiles((prev) => [...prev, file]);
+            } catch (e: any) {
+              Alert.alert('알림', e.message);
+            }
+          }}
+          onRemoveFile={(index) =>
+            setPendingFiles((prev) => prev.filter((_, i) => i !== index))
+          }
+        />
       </ScrollView>
 
       <TimeModal
@@ -699,9 +751,9 @@ export default function FlightEditModal({
       />
 
       <FloatingFooter
-        primaryLabel={flight ? '수정 완료' : '일정 저장'}
+        primaryLabel={isUploading ? '업로드 중...' : flight ? '수정 완료' : '일정 저장'}
         onPrimaryPress={handleSave}
-        primaryDisabled={isSubmitting}
+        primaryDisabled={isSubmitting || isUploading}
         secondaryLabel={flight && !embedded ? '삭제' : undefined}
         onSecondaryPress={handleDelete}
       />
@@ -886,5 +938,8 @@ const styles = StyleSheet.create({
     ...textStyles.h6,
     color: colors.primary,
     marginLeft: 4,
+  },
+  attachmentSection: {
+    marginTop: 20,
   },
 });
