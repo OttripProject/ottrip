@@ -1,14 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, Pressable, StyleSheet, ScrollView, Linking, Alert, Platform } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import { Itinerary } from '@/types/api';
+import { Itinerary, Expense } from '@/types/api';
 import { colors } from '@/ui/tokens/colors';
 import { textStyles } from '@/ui/tokens/typography';
 import BottomSheetModal from '@/ui/components/BottomSheetModal.native';
 import { formatTime } from '@/utils/dateUtils';
-import { Ionicons } from '@expo/vector-icons';
-import { expensesApi } from '@/services/expenses';
 import TimeIcon from '../../../../assets/week_bar_time.svg';
 import LocationIcon from '../../../../assets/mobile_location.svg';
 import ExpenseIcon from '../../../../assets/mobile_expense.svg';
@@ -22,39 +18,33 @@ interface ItineraryDetailModalProps {
   visible: boolean;
   onClose: () => void;
   itinerary: Itinerary | null;
+  planExpenses?: Expense[];
   onEdit?: (itinerary: Itinerary) => void;
   onDelete?: (itinerary: Itinerary) => void;
+}
+
+function sumExpenseAmounts(list: Expense[]): number {
+  return list.reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
 }
 
 export default function ItineraryDetailModal({
   visible,
   onClose,
   itinerary,
+  planExpenses = [],
   onEdit,
   onDelete,
 }: ItineraryDetailModalProps) {
-  const insets = useSafeAreaInsets();
-  const [expenseAmount, setExpenseAmount] = useState(0);
-  const [loadingExpenses, setLoadingExpenses] = useState(false);
-
-  useEffect(() => {
-    if (visible && itinerary?.id) {
-      setLoadingExpenses(true);
-      expensesApi.getExpensesByItinerary(itinerary.id)
-        .then((expenses) => {
-          const total = expenses.reduce((sum, expense) => sum + (expense.amount || 0), 0);
-          setExpenseAmount(total);
-        })
-        .catch(() => {
-          setExpenseAmount(0);
-        })
-        .finally(() => {
-          setLoadingExpenses(false);
-        });
-    } else {
-      setExpenseAmount(0);
+  const expenseAmount = useMemo(() => {
+    if (!itinerary) return 0;
+    const nested = itinerary.expenses;
+    if (nested && nested.length > 0) {
+      return sumExpenseAmounts(nested);
     }
-  }, [visible, itinerary?.id]);
+    return sumExpenseAmounts(
+      (planExpenses ?? []).filter((e) => e.itineraryId === itinerary.id),
+    );
+  }, [itinerary, planExpenses]);
 
   if (!itinerary) return null;
 

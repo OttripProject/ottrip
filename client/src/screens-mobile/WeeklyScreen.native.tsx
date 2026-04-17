@@ -559,6 +559,7 @@ export default function WeeklyScreen() {
           setSelectedItinerary(null);
         }}
         itinerary={selectedItinerary}
+        planExpenses={planData.expenses ?? []}
         onEdit={(itinerary) => {
           setShowItineraryDetail(false);
           setEditingItinerary(itinerary);
