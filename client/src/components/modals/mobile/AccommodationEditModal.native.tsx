@@ -688,6 +688,6 @@ const styles = StyleSheet.create({
     marginLeft: 4,
   },
   attachmentSection: {
-    marginTop: 20,
+    marginTop: 0,
   },
 });
