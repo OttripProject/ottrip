@@ -154,9 +154,7 @@ export default function AttachmentSection({
           ]}
         >
           <AddIcon width={16} height={16} />
-          <Text style={[styles.addLabel, (disabled || isUploading) && styles.addLabelDisabled]}>
-            추가
-          </Text>
+          <Text style={styles.addLabel}>추가</Text>
         </Pressable>
       </View>
 
@@ -231,9 +229,6 @@ const styles = StyleSheet.create({
   addLabel: {
     ...textStyles.h6,
     color: colors.primary,
-  },
-  addLabelDisabled: {
-    color: colors.gray500,
   },
   addButtonRow: {
     flexDirection: 'row',
