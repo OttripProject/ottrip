@@ -1,5 +1,6 @@
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { View, Text, ScrollView, StyleSheet, Pressable, Modal, Animated, RefreshControl, Alert } from 'react-native';
+import { Swipeable } from 'react-native-gesture-handler';
 import { Ionicons } from '@expo/vector-icons';
 import dayjs from 'dayjs';
 import { getTodayKoreanDate, formatTime, convertUTCToLocalTime } from '@/utils/dateUtils';
@@ -252,12 +253,39 @@ export default function TodayScreen() {
       .join(' · ');
   };
 
+  const handleDeleteItinerary = useCallback(
+    async (itinerary: Itinerary) => {
+      try {
+        await itinerariesApi.deleteItinerary(itinerary.id);
+        planData.removeItinerary(itinerary.id);
+        planData.refreshExpenses?.();
+        queryClient.invalidateQueries({ queryKey: ['expenses', selectedPlan?.id] });
+        await refetchTodayExpenses();
+        Alert.alert('삭제완료', '일정이 삭제되었습니다.');
+      } catch {
+        Alert.alert('오류', '일정 삭제에 실패했습니다.');
+      }
+    },
+    [planData, queryClient, refetchTodayExpenses, selectedPlan?.id],
+  );
+
+  const itinerarySwipeRefs = useRef<Map<number, Swipeable>>(new Map());
+  const activeItinerarySwipeId = useRef<number | null>(null);
+
+  const closeOpenItinerarySwipe = useCallback(() => {
+    const id = activeItinerarySwipeId.current;
+    if (id == null) return;
+    itinerarySwipeRefs.current.get(id)?.close();
+    activeItinerarySwipeId.current = null;
+  }, []);
+
   return (
     <View style={styles.container}>
       <ScrollView 
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        onScrollBeginDrag={closeOpenItinerarySwipe}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -281,6 +309,10 @@ export default function TodayScreen() {
           />
         }
       >
+        <Pressable
+          style={styles.scrollContentPressable}
+          onPress={closeOpenItinerarySwipe}
+        >
         {/* 헤더 */}
         <View style={styles.header}>
           <View style={styles.headerContent}>
@@ -289,7 +321,10 @@ export default function TodayScreen() {
               <View style={styles.tripTitleWrapper}>
                 <Pressable 
                   style={styles.tripTitleContainer}
-                  onPress={() => setShowPlanSelector(true)}
+                  onPress={() => {
+                    closeOpenItinerarySwipe();
+                    setShowPlanSelector(true);
+                  }}
                 >
                   <Text style={styles.tripTitle}>
                     {selectedPlan?.title || '여행을 선택해주세요'}
@@ -301,7 +336,10 @@ export default function TodayScreen() {
             </View>
             <Pressable
               style={styles.settingsButton}
-              onPress={() => setProfileModalVisible(true)}
+              onPress={() => {
+                closeOpenItinerarySwipe();
+                setProfileModalVisible(true);
+              }}
             >
               <SettingIcon width={24} height={24} color={colors.gray600} />
             </Pressable>
@@ -313,6 +351,7 @@ export default function TodayScreen() {
           <Pressable
             style={[styles.cardBase, styles.currentCard]}
             onPress={() => {
+              closeOpenItinerarySwipe();
               if (currentActivity.type === 'flight') {
                 setSelectedFlight(currentActivity.data);
                 setSelectedFlightSegment(currentActivity.segment);
@@ -422,6 +461,7 @@ export default function TodayScreen() {
                     <Pressable
                       style={styles.cardBase}
                       onPress={() => {
+                        closeOpenItinerarySwipe();
                         setSelectedFlight(item.data);
                         setSelectedFlightSegment(item.segment);
                         setShowFlightDetail(true);
@@ -473,49 +513,94 @@ export default function TodayScreen() {
                     isDone && styles.doneItem,
                   ]}
                 >
-                  <Pressable
-                    style={styles.cardBase}
-                    onPress={() => {
-                      setSelectedItinerary(itinerary);
-                      setShowItineraryDetail(true);
-                    }}
-                  >
-                    <View style={styles.timelineCardHeader}>
-                      <Text style={[styles.timelineTime, isNext && styles.nextTime]}>
-                        {startTime}
+                  <View style={styles.swipeItineraryShadow}>
+                    <View style={styles.swipeItineraryClip}>
+                      <Swipeable
+                        ref={(el) => {
+                          if (el) {
+                            itinerarySwipeRefs.current.set(itinerary.id, el);
+                          } else {
+                            itinerarySwipeRefs.current.delete(itinerary.id);
+                          }
+                        }}
+                        friction={2}
+                        overshootRight={false}
+                        containerStyle={styles.swipeItinerarySwipeable}
+                        onSwipeableOpen={() => {
+                          const prev = activeItinerarySwipeId.current;
+                          if (prev !== null && prev !== itinerary.id) {
+                            itinerarySwipeRefs.current.get(prev)?.close();
+                          }
+                          activeItinerarySwipeId.current = itinerary.id;
+                        }}
+                        onSwipeableClose={() => {
+                          if (activeItinerarySwipeId.current === itinerary.id) {
+                            activeItinerarySwipeId.current = null;
+                          }
+                        }}
+                        renderRightActions={() => (
+                          <View style={styles.swipeDeleteContainer}>
+                            <Pressable
+                              accessibilityRole="button"
+                              accessibilityLabel="일정 삭제"
+                              style={styles.swipeDeleteButton}
+                              onPress={() => handleDeleteItinerary(itinerary)}
+                            >
+                              <Text style={styles.swipeDeleteLabel}>삭제</Text>
+                            </Pressable>
+                          </View>
+                        )}
+                      >
+                        <Pressable
+                          style={styles.timelineItineraryCard}
+                          onPress={() => {
+                            const hadSwipeOpenHere =
+                              activeItinerarySwipeId.current === itinerary.id;
+                            closeOpenItinerarySwipe();
+                            if (hadSwipeOpenHere) return;
+                            setSelectedItinerary(itinerary);
+                            setShowItineraryDetail(true);
+                          }}
+                        >
+                      <View style={styles.timelineCardHeader}>
+                        <Text style={[styles.timelineTime, isNext && styles.nextTime]}>
+                          {startTime}
+                        </Text>
+                        {isNext && (
+                          <Pressable style={styles.nextButton}>
+                            <Text style={styles.nextButtonText}>다음</Text>
+                          </Pressable>
+                        )}
+                      </View>
+                      <Text 
+                        style={styles.itemTitle}
+                        numberOfLines={1}
+                        ellipsizeMode="tail"
+                      >
+                        {itinerary.title || '활동'}
                       </Text>
-                      {isNext && (
-                        <Pressable style={styles.nextButton}>
-                          <Text style={styles.nextButtonText}>다음</Text>
-                        </Pressable>
+                      {itinerary.location && (
+                        <Text 
+                          style={styles.itemLocation}
+                          numberOfLines={1}
+                          ellipsizeMode="tail"
+                        >
+                          {itinerary.location}
+                        </Text>
                       )}
+                      {itinerary.description && (
+                        <Text 
+                          style={styles.itemDescription}
+                          numberOfLines={1}
+                          ellipsizeMode="tail"
+                        >
+                          {itinerary.description}
+                        </Text>
+                      )}
+                    </Pressable>
+                      </Swipeable>
                     </View>
-                    <Text 
-                      style={styles.itemTitle}
-                      numberOfLines={1}
-                      ellipsizeMode="tail"
-                    >
-                      {itinerary.title || '활동'}
-                    </Text>
-                    {itinerary.location && (
-                      <Text 
-                        style={styles.itemLocation}
-                        numberOfLines={1}
-                        ellipsizeMode="tail"
-                      >
-                        {itinerary.location}
-                      </Text>
-                    )}
-                    {itinerary.description && (
-                      <Text 
-                        style={styles.itemDescription}
-                        numberOfLines={1}
-                        ellipsizeMode="tail"
-                      >
-                        {itinerary.description}
-                      </Text>
-                    )}
-                  </Pressable>
+                  </View>
                 </View>
               );
             })}
@@ -535,7 +620,10 @@ export default function TodayScreen() {
           <View style={styles.section}>
             <Pressable
               style={[styles.cardBase, styles.costCardPrimary]}
-              onPress={() => setShowExpenseDetail(true)}
+              onPress={() => {
+                closeOpenItinerarySwipe();
+                setShowExpenseDetail(true);
+              }}
             >
               <View style={styles.costCardHeader}>
                 <View style={styles.costCardHeaderLeft}>
@@ -574,6 +662,7 @@ export default function TodayScreen() {
                 key={accommodation.id}
                 style={[styles.cardBase, styles.accommodationCard]}
                 onPress={() => {
+                  closeOpenItinerarySwipe();
                   setSelectedAccommodation(accommodation);
                   setShowAccommodationDetail(true);
                 }}
@@ -602,6 +691,7 @@ export default function TodayScreen() {
                 key={item.id}
                 style={[styles.cardBase, styles.accommodationCard]}
                 onPress={() => {
+                  closeOpenItinerarySwipe();
                   setSelectedFlight(item.data);
                   setSelectedFlightSegment(item.segment);
                   setShowFlightDetail(true);
@@ -628,6 +718,7 @@ export default function TodayScreen() {
           </View>
         )}
 
+        </Pressable>
       </ScrollView>
 
       <Modal
@@ -751,18 +842,7 @@ export default function TodayScreen() {
           setEditingItinerary(itinerary);
           setShowItineraryEdit(true);
         }}
-        onDelete={async (itinerary) => {
-          try {
-            await itinerariesApi.deleteItinerary(itinerary.id);
-            planData.removeItinerary(itinerary.id);
-            planData.refreshExpenses?.();
-            queryClient.invalidateQueries({ queryKey: ['expenses', selectedPlan?.id] });
-            refetchTodayExpenses();
-            Alert.alert('삭제완료', '일정이 삭제되었습니다.');
-          } catch (error) {
-            Alert.alert('오류', '일정 삭제에 실패했습니다.');
-          }
-        }}
+        onDelete={handleDeleteItinerary}
       />
 
       <ItineraryEditModal
@@ -894,7 +974,10 @@ export default function TodayScreen() {
       {selectedPlan && (
         <Pressable
           style={styles.fab}
-          onPress={() => setAddScheduleFlow('method')}
+          onPress={() => {
+            closeOpenItinerarySwipe();
+            setAddScheduleFlow('method');
+          }}
           hitSlop={8}
         >
           <PlusIcon width={24} height={24} color={colors.white} />
@@ -964,6 +1047,10 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingBottom: 100,
+    flexGrow: 1,
+  },
+  scrollContentPressable: {
+    flexGrow: 1,
   },
   header: {
     paddingTop: 60,
@@ -1106,6 +1193,42 @@ const styles = StyleSheet.create({
     marginHorizontal: 16,
   },
   
+  swipeItineraryShadow: {
+    marginHorizontal: 16,
+    borderRadius: 16,
+    backgroundColor: colors.white,
+    shadowColor: colors.gray700,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  swipeItineraryClip: {
+    borderRadius: 16,
+    overflow: 'hidden',
+  },
+  swipeItinerarySwipeable: {
+    backgroundColor: colors.white,
+  },
+  swipeDeleteContainer: {
+    width: 50,
+    alignSelf: 'stretch',
+  },
+  swipeDeleteButton: {
+    flex: 1,
+    backgroundColor: colors.danger,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  timelineItineraryCard: {
+    padding: 20,
+    backgroundColor: colors.white,
+  },
+  swipeDeleteLabel: {
+    ...textStyles.h9,
+    color: colors.white,
+    fontWeight: '600',
+  },
   timelineItem: {
     marginBottom: 12,
   },
