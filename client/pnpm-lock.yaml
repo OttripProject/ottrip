@@ -41,9 +41,6 @@ importers:
       axios:
         specifier: ^1.6.8
         version: 1.11.0
-      country-state-city:
-        specifier: ^3.2.1
-        version: 3.2.1
       expo:
         specifier: ^54.0.12
         version: 54.0.31(@babel/core@7.28.0)(@expo/metro-runtime@5.0.4(react-native@0.81.5(@babel/core@7.28.0)(@types/react@19.1.17)(react@19.1.0)))(react-native@0.81.5(@babel/core@7.28.0)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0)
@@ -1600,9 +1597,6 @@ packages:
     peerDependenciesMeta:
       typescript:
         optional: true
-
-  country-state-city@3.2.1:
-    resolution: {integrity: sha512-kxbanqMc6izjhc/EHkGPCTabSPZ2G6eG4/97akAYHJUN4stzzFEvQPZoF8oXDQ+10gM/O/yUmISCR1ZVxyb6EA==}
 
   create-require@1.1.1:
     resolution: {integrity: sha512-dcKFX3jn0MpIaXjisoRvexIJVEKzaq7z2rZKxf+MSr9TkdmHmsU4m2lcLojrj/FHl8mk5VxMmYA+ftRkP/3oKQ==}
@@ -5536,8 +5530,6 @@ snapshots:
       path-type: 4.0.0
     optionalDependencies:
       typescript: 5.9.3
-
-  country-state-city@3.2.1: {}
 
   create-require@1.1.1: {}
 
