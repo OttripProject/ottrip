@@ -269,14 +269,30 @@ export default function TodayScreen() {
     [planData, queryClient, refetchTodayExpenses, selectedPlan?.id],
   );
 
-  const itinerarySwipeRefs = useRef<Map<number, Swipeable>>(new Map());
-  const activeItinerarySwipeId = useRef<number | null>(null);
+  const handleDeleteFlight = useCallback(
+    async (flight: FlightRead) => {
+      try {
+        await flightsApi.deleteFlight(flight.id);
+        planData.removeFlight(flight.id);
+        planData.refreshExpenses?.();
+        queryClient.invalidateQueries({ queryKey: ['expenses', selectedPlan?.id] });
+        await refetchTodayExpenses();
+        Alert.alert('삭제완료', '항공편이 삭제되었습니다.');
+      } catch {
+        Alert.alert('오류', '항공편 삭제에 실패했습니다.');
+      }
+    },
+    [planData, queryClient, refetchTodayExpenses, selectedPlan?.id],
+  );
 
-  const closeOpenItinerarySwipe = useCallback(() => {
-    const id = activeItinerarySwipeId.current;
-    if (id == null) return;
-    itinerarySwipeRefs.current.get(id)?.close();
-    activeItinerarySwipeId.current = null;
+  const timelineSwipeRefs = useRef<Map<string, Swipeable>>(new Map());
+  const activeTimelineSwipeKey = useRef<string | null>(null);
+
+  const closeOpenTimelineSwipe = useCallback(() => {
+    const key = activeTimelineSwipeKey.current;
+    if (key == null) return;
+    timelineSwipeRefs.current.get(key)?.close();
+    activeTimelineSwipeKey.current = null;
   }, []);
 
   return (
@@ -285,7 +301,7 @@ export default function TodayScreen() {
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
-        onScrollBeginDrag={closeOpenItinerarySwipe}
+        onScrollBeginDrag={closeOpenTimelineSwipe}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -311,7 +327,7 @@ export default function TodayScreen() {
       >
         <Pressable
           style={styles.scrollContentPressable}
-          onPress={closeOpenItinerarySwipe}
+          onPress={closeOpenTimelineSwipe}
         >
         {/* 헤더 */}
         <View style={styles.header}>
@@ -322,7 +338,7 @@ export default function TodayScreen() {
                 <Pressable 
                   style={styles.tripTitleContainer}
                   onPress={() => {
-                    closeOpenItinerarySwipe();
+                    closeOpenTimelineSwipe();
                     setShowPlanSelector(true);
                   }}
                 >
@@ -337,7 +353,7 @@ export default function TodayScreen() {
             <Pressable
               style={styles.settingsButton}
               onPress={() => {
-                closeOpenItinerarySwipe();
+                closeOpenTimelineSwipe();
                 setProfileModalVisible(true);
               }}
             >
@@ -351,7 +367,7 @@ export default function TodayScreen() {
           <Pressable
             style={[styles.cardBase, styles.currentCard]}
             onPress={() => {
-              closeOpenItinerarySwipe();
+              closeOpenTimelineSwipe();
               if (currentActivity.type === 'flight') {
                 setSelectedFlight(currentActivity.data);
                 setSelectedFlightSegment(currentActivity.segment);
@@ -450,6 +466,8 @@ export default function TodayScreen() {
               const startTime = item.time;
               
               if (item.type === 'flight') {
+                const flightSwipeKey = `flight-${item.id}`;
+                const flight = item.data;
                 return (
                   <View 
                     key={item.id} 
@@ -458,53 +476,97 @@ export default function TodayScreen() {
                       isDone && styles.doneItem,
                     ]}
                   >
-                    <Pressable
-                      style={styles.cardBase}
-                      onPress={() => {
-                        closeOpenItinerarySwipe();
-                        setSelectedFlight(item.data);
-                        setSelectedFlightSegment(item.segment);
-                        setShowFlightDetail(true);
-                      }}
-                    >
-                      <View style={styles.timelineCardHeader}>
-                        <Text style={[styles.timelineTime, isNext && styles.nextTime]}>
-                          {startTime}
-                        </Text>
-                        {isNext && (
-                          <View style={styles.nextButton}>
-                            <Text style={styles.nextButtonText}>다음</Text>
-                          </View>
-                        )}
-                      </View>
-                      <View style={styles.flightTitleRow}>
-                        <View style={styles.flightIconWrap}>
-                          <FlightIcon width={16} height={16} color={colors.black} />
-                        </View>
-                        <Text 
-                          style={styles.itemTitle}
-                          numberOfLines={1}
-                          ellipsizeMode="tail"
+                    <View style={styles.swipeItineraryShadow}>
+                      <View style={styles.swipeItineraryClip}>
+                        <Swipeable
+                          ref={(el) => {
+                            if (el) {
+                              timelineSwipeRefs.current.set(flightSwipeKey, el);
+                            } else {
+                              timelineSwipeRefs.current.delete(flightSwipeKey);
+                            }
+                          }}
+                          friction={2}
+                          overshootRight={false}
+                          containerStyle={styles.swipeItinerarySwipeable}
+                          onSwipeableOpen={() => {
+                            const prev = activeTimelineSwipeKey.current;
+                            if (prev !== null && prev !== flightSwipeKey) {
+                              timelineSwipeRefs.current.get(prev)?.close();
+                            }
+                            activeTimelineSwipeKey.current = flightSwipeKey;
+                          }}
+                          onSwipeableClose={() => {
+                            if (activeTimelineSwipeKey.current === flightSwipeKey) {
+                              activeTimelineSwipeKey.current = null;
+                            }
+                          }}
+                          renderRightActions={() => (
+                            <View style={styles.swipeDeleteContainer}>
+                              <Pressable
+                                accessibilityRole="button"
+                                accessibilityLabel="항공편 삭제"
+                                style={styles.swipeDeleteButton}
+                                onPress={() => handleDeleteFlight(flight)}
+                              >
+                                <Text style={styles.swipeDeleteLabel}>삭제</Text>
+                              </Pressable>
+                            </View>
+                          )}
                         >
-                          {item.segment.departureAirport} → {item.segment.arrivalAirport}
-                        </Text>
+                          <Pressable
+                            style={styles.timelineItineraryCard}
+                            onPress={() => {
+                              const hadSwipeOpenHere =
+                                activeTimelineSwipeKey.current === flightSwipeKey;
+                              closeOpenTimelineSwipe();
+                              if (hadSwipeOpenHere) return;
+                              setSelectedFlight(flight);
+                              setSelectedFlightSegment(item.segment);
+                              setShowFlightDetail(true);
+                            }}
+                          >
+                            <View style={styles.timelineCardHeader}>
+                              <Text style={[styles.timelineTime, isNext && styles.nextTime]}>
+                                {startTime}
+                              </Text>
+                              {isNext && (
+                                <View style={styles.nextButton}>
+                                  <Text style={styles.nextButtonText}>다음</Text>
+                                </View>
+                              )}
+                            </View>
+                            <View style={styles.flightTitleRow}>
+                              <View style={styles.flightIconWrap}>
+                                <FlightIcon width={16} height={16} color={colors.black} />
+                              </View>
+                              <Text 
+                                style={styles.itemTitle}
+                                numberOfLines={1}
+                                ellipsizeMode="tail"
+                              >
+                                {item.segment.departureAirport} → {item.segment.arrivalAirport}
+                              </Text>
+                            </View>
+                            {item.segment.flightNumber && (
+                              <Text 
+                                style={styles.itemLocation}
+                                numberOfLines={1}
+                                ellipsizeMode="tail"
+                              >
+                                {item.segment.flightNumber}
+                              </Text>
+                            )}
+                          </Pressable>
+                        </Swipeable>
                       </View>
-                      {item.segment.flightNumber && (
-                        <Text 
-                          style={styles.itemLocation}
-                          numberOfLines={1}
-                          ellipsizeMode="tail"
-                        >
-                          {item.segment.flightNumber}
-                        </Text>
-                      )}
-                    </Pressable>
-                    
+                    </View>
                   </View>
                 );
               }
 
               const itinerary = item.data;
+              const itinerarySwipeKey = `itinerary-${itinerary.id}`;
               return (
                 <View 
                   key={item.id} 
@@ -518,24 +580,24 @@ export default function TodayScreen() {
                       <Swipeable
                         ref={(el) => {
                           if (el) {
-                            itinerarySwipeRefs.current.set(itinerary.id, el);
+                            timelineSwipeRefs.current.set(itinerarySwipeKey, el);
                           } else {
-                            itinerarySwipeRefs.current.delete(itinerary.id);
+                            timelineSwipeRefs.current.delete(itinerarySwipeKey);
                           }
                         }}
                         friction={2}
                         overshootRight={false}
                         containerStyle={styles.swipeItinerarySwipeable}
                         onSwipeableOpen={() => {
-                          const prev = activeItinerarySwipeId.current;
-                          if (prev !== null && prev !== itinerary.id) {
-                            itinerarySwipeRefs.current.get(prev)?.close();
+                          const prev = activeTimelineSwipeKey.current;
+                          if (prev !== null && prev !== itinerarySwipeKey) {
+                            timelineSwipeRefs.current.get(prev)?.close();
                           }
-                          activeItinerarySwipeId.current = itinerary.id;
+                          activeTimelineSwipeKey.current = itinerarySwipeKey;
                         }}
                         onSwipeableClose={() => {
-                          if (activeItinerarySwipeId.current === itinerary.id) {
-                            activeItinerarySwipeId.current = null;
+                          if (activeTimelineSwipeKey.current === itinerarySwipeKey) {
+                            activeTimelineSwipeKey.current = null;
                           }
                         }}
                         renderRightActions={() => (
@@ -555,8 +617,8 @@ export default function TodayScreen() {
                           style={styles.timelineItineraryCard}
                           onPress={() => {
                             const hadSwipeOpenHere =
-                              activeItinerarySwipeId.current === itinerary.id;
-                            closeOpenItinerarySwipe();
+                              activeTimelineSwipeKey.current === itinerarySwipeKey;
+                            closeOpenTimelineSwipe();
                             if (hadSwipeOpenHere) return;
                             setSelectedItinerary(itinerary);
                             setShowItineraryDetail(true);
@@ -621,7 +683,7 @@ export default function TodayScreen() {
             <Pressable
               style={[styles.cardBase, styles.costCardPrimary]}
               onPress={() => {
-                closeOpenItinerarySwipe();
+                closeOpenTimelineSwipe();
                 setShowExpenseDetail(true);
               }}
             >
@@ -662,7 +724,7 @@ export default function TodayScreen() {
                 key={accommodation.id}
                 style={[styles.cardBase, styles.accommodationCard]}
                 onPress={() => {
-                  closeOpenItinerarySwipe();
+                  closeOpenTimelineSwipe();
                   setSelectedAccommodation(accommodation);
                   setShowAccommodationDetail(true);
                 }}
@@ -691,7 +753,7 @@ export default function TodayScreen() {
                 key={item.id}
                 style={[styles.cardBase, styles.accommodationCard]}
                 onPress={() => {
-                  closeOpenItinerarySwipe();
+                  closeOpenTimelineSwipe();
                   setSelectedFlight(item.data);
                   setSelectedFlightSegment(item.segment);
                   setShowFlightDetail(true);
@@ -935,15 +997,7 @@ export default function TodayScreen() {
           setEditingFlight(flight);
           setShowFlightEdit(true);
         }}
-        onDelete={async (flight) => {
-          try {
-            await flightsApi.deleteFlight(flight.id);
-            planData.removeFlight(flight.id);
-            Alert.alert('삭제완료', '항공편이 삭제되었습니다.');
-          } catch (error) {
-            Alert.alert('오류', '항공 편 삭제에 실패했습니다.');
-          }
-        }}
+        onDelete={handleDeleteFlight}
       />
 
       <FlightEditModal
@@ -975,7 +1029,7 @@ export default function TodayScreen() {
         <Pressable
           style={styles.fab}
           onPress={() => {
-            closeOpenItinerarySwipe();
+            closeOpenTimelineSwipe();
             setAddScheduleFlow('method');
           }}
           hitSlop={8}
