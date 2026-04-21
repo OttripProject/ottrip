@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -8,7 +8,13 @@ import {
   StyleProp,
   Alert,
   ActivityIndicator,
+  Linking,
+  Modal,
+  Image,
+  useWindowDimensions,
+  StatusBar,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '@/ui/tokens/colors';
 import { textStyles } from '@/ui/tokens/typography';
 import type { Attachment, LocalFile } from '@/types/api';
@@ -48,6 +54,10 @@ function isPdfMime(mimeType: string | undefined): boolean {
   return mimeType === 'application/pdf';
 }
 
+function isImageMime(mimeType: string | undefined): boolean {
+  return typeof mimeType === 'string' && mimeType.startsWith('image/');
+}
+
 function formatFileSize(bytes: number): string {
   if (bytes <= 0) return '';
   if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)}KB`;
@@ -69,6 +79,36 @@ export default function AttachmentSection({
 }: AttachmentSectionProps) {
   const existing = existingAttachments;
   const hasFiles = existing.length + pendingFiles.length > 0;
+  const { width: windowWidth, height: windowHeight } = useWindowDimensions();
+  const [previewImageUri, setPreviewImageUri] = useState<string | null>(null);
+  const [isPreviewImageLoading, setIsPreviewImageLoading] = useState(false);
+
+  const handleOpenImage = (uri: string) => {
+    if (!uri) return;
+    setIsPreviewImageLoading(true);
+    setPreviewImageUri(uri);
+  };
+
+  const handleClosePreview = () => {
+    setPreviewImageUri(null);
+    setIsPreviewImageLoading(false);
+  };
+
+  const handleOpenPdf = async (fileUrl: string) => {
+    try {
+      const canOpen = await Linking.canOpenURL(fileUrl);
+      if (!canOpen) {
+        Alert.alert('열 수 없음', '이 URL을 열 수 있는 앱이 없습니다.');
+        return;
+      }
+      await Linking.openURL(fileUrl);
+    } catch (e) {
+      Alert.alert(
+        '파일 열기 실패',
+        e instanceof Error ? e.message : '잠시 후 다시 시도해 주세요.',
+      );
+    }
+  };
 
   const handleAddPress = () => {
     if (disabled || isUploading) return;
@@ -106,37 +146,64 @@ export default function AttachmentSection({
     mimeType: string | undefined,
     subtitle: string,
     onRemove?: () => void,
-  ) => (
-    <View key={key} style={styles.fileRow}>
-      <View style={styles.fileIconWrap}>
-        {isPdfMime(mimeType) ? (
-          <AttachmentDocIcon width={20} height={20} />
-        ) : String(mimeType ?? '').startsWith('image/') ? (
-          <AttachmentImageIcon width={20} height={20} />
+    onOpen?: () => void,
+  ) => {
+    const content = (
+      <>
+        <View style={styles.fileIconWrap}>
+          {isPdfMime(mimeType) ? (
+            <AttachmentDocIcon width={20} height={20} />
+          ) : String(mimeType ?? '').startsWith('image/') ? (
+            <AttachmentImageIcon width={20} height={20} />
+          ) : (
+            <AttachmentDocIcon width={20} height={20} />
+          )}
+        </View>
+        <View style={styles.fileInfo}>
+          <Text style={styles.fileName} numberOfLines={1} ellipsizeMode="middle">
+            {fileName}
+          </Text>
+          <Text style={styles.fileKindLabel}>{subtitle}</Text>
+        </View>
+        {onRemove ? (
+          <Pressable
+            onPress={onRemove}
+            hitSlop={8}
+            disabled={isUploading || disabled}
+            style={({ pressed }) => [
+              styles.removeButton,
+              pressed && styles.pressed,
+            ]}
+          >
+            <DeleteIcon width={20} height={20} color={colors.gray600} />
+          </Pressable>
         ) : (
-          <AttachmentDocIcon width={20} height={20} />
+          <View style={styles.removeButton} />
         )}
-      </View>
-      <View style={styles.fileInfo}>
-        <Text style={styles.fileName} numberOfLines={1} ellipsizeMode="middle">
-          {fileName}
-        </Text>
-        <Text style={styles.fileKindLabel}>{subtitle}</Text>
-      </View>
-      {onRemove ? (
+      </>
+    );
+
+    if (onOpen) {
+      return (
         <Pressable
-          onPress={onRemove}
-          hitSlop={8}
-          disabled={isUploading || disabled}
-          style={({ pressed }) => [styles.removeButton, pressed && styles.pressed]}
+          key={key}
+          onPress={onOpen}
+          style={({ pressed }) => [
+            styles.fileRow,
+            pressed && styles.pressed,
+          ]}
         >
-          <DeleteIcon width={20} height={20} color={colors.gray600} />
+          {content}
         </Pressable>
-      ) : (
-        <View style={styles.removeButton} />
-      )}
-    </View>
-  );
+      );
+    }
+
+    return (
+      <View key={key} style={styles.fileRow}>
+        {content}
+      </View>
+    );
+  };
 
   return (
     <View style={[styles.root, style]}>
@@ -164,8 +231,14 @@ export default function AttachmentSection({
         </View>
       ) : hasFiles ? (
         <View style={styles.fileList}>
-          {existing.map((a) =>
-            renderFileRow(
+          {existing.map((a) => {
+            let onOpen: (() => void) | undefined;
+            if (isPdfMime(a.contentType)) {
+              onOpen = () => handleOpenPdf(a.fileUrl);
+            } else if (isImageMime(a.contentType)) {
+              onOpen = () => handleOpenImage(a.fileUrl);
+            }
+            return renderFileRow(
               `existing-${a.id}`,
               a.fileName,
               a.contentType,
@@ -173,8 +246,9 @@ export default function AttachmentSection({
                 .filter(Boolean)
                 .join(' · '),
               onRemoveExisting ? () => handleRemoveExisting(a.id) : undefined,
-            ),
-          )}
+              onOpen,
+            );
+          })}
           {pendingFiles.map((file, index) =>
             renderFileRow(
               `pending-${file.name}-${index}`,
@@ -182,6 +256,9 @@ export default function AttachmentSection({
               file.mimeType,
               getAttachmentKindLabel(file.mimeType),
               () => handleRemovePending(index),
+              isImageMime(file.mimeType)
+                ? () => handleOpenImage(file.uri)
+                : undefined,
             ),
           )}
         </View>
@@ -203,6 +280,61 @@ export default function AttachmentSection({
           </View>
         </Pressable>
       )}
+
+      <Modal
+        visible={previewImageUri !== null}
+        transparent
+        animationType="fade"
+        statusBarTranslucent
+        onRequestClose={handleClosePreview}
+      >
+        <StatusBar barStyle="light-content" />
+        <Pressable
+          style={styles.previewBackdrop}
+          onPress={handleClosePreview}
+        >
+          {previewImageUri !== null && (
+            <Image
+              source={{ uri: previewImageUri }}
+              style={{
+                width: windowWidth,
+                height: windowHeight,
+              }}
+              resizeMode="contain"
+              onLoadStart={() => setIsPreviewImageLoading(true)}
+              onLoadEnd={() => setIsPreviewImageLoading(false)}
+              onError={() => {
+                setIsPreviewImageLoading(false);
+                Alert.alert(
+                  '이미지 열기 실패',
+                  '이미지를 불러오지 못했습니다.',
+                );
+                handleClosePreview();
+              }}
+            />
+          )}
+          {isPreviewImageLoading && (
+            <View style={styles.previewLoading} pointerEvents="none">
+              <ActivityIndicator size="large" color={colors.white} />
+            </View>
+          )}
+          <SafeAreaView
+            style={styles.previewCloseSafeArea}
+            pointerEvents="box-none"
+          >
+            <Pressable
+              onPress={handleClosePreview}
+              hitSlop={12}
+              style={({ pressed }) => [
+                styles.previewCloseButton,
+                pressed && styles.pressed,
+              ]}
+            >
+              <DeleteIcon width={24} height={24} color={colors.white} />
+            </Pressable>
+          </SafeAreaView>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
@@ -306,5 +438,28 @@ const styles = StyleSheet.create({
   removeButton: {
     marginLeft: 8,
     flexShrink: 0,
+  },
+  previewBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.95)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  previewLoading: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  previewCloseSafeArea: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+  },
+  previewCloseButton: {
+    alignSelf: 'flex-end',
+    padding: 12,
+    marginTop: 8,
+    marginRight: 8,
   },
 });
