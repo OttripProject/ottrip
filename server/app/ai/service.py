@@ -1,21 +1,26 @@
-from typing import Dict, Any, cast, Iterable, Tuple
 import json
+from typing import Any, Dict, Iterable, Tuple, cast
 
 from fastapi import HTTPException
 from sqlalchemy.orm import attributes
 
 from app.auth.deps import CurrentUser
 from app.common.schemas import StatusResponse
-from app.utils.dependency import dependency
-from app.plans.repository import PlanRepository
-from app.itinerary.models import Itinerary
-from app.itinerary.repository import ItineraryRepository
 from app.flights.models import Flight
 from app.flights.repository import FlightRepository
+from app.itinerary.models import Itinerary
+from app.itinerary.repository import ItineraryRepository
+from app.plans.repository import PlanRepository
+from app.utils.dependency import dependency
 
-from .clients import VisionClient, OpenAIClient
+from .clients import GeminiClient, OpenAIClient, VisionClient
 from .config import ai_settings
-from .schemas import AIFlightRead, ChecklistRead, ChecklistItemsByCategory, ChecklistCreateResponse
+from .schemas import (
+    AIFlightRead,
+    ChecklistCreateResponse,
+    ChecklistItemsByCategory,
+    ChecklistRead,
+)
 
 
 @dependency
@@ -23,6 +28,7 @@ class AIService:
     current_user: CurrentUser
     vision_client: VisionClient
     openai_client: OpenAIClient
+    gemini_client: GeminiClient
     plan_repository: PlanRepository
     itinerary_repository: ItineraryRepository
     flight_repository: FlightRepository
@@ -88,7 +94,7 @@ class AIService:
             }
     
     # AI Checklist
-    async def create_checklist(self, public_id: str, force_regenerate: bool = False) -> ChecklistCreateResponse:
+    async def create_checklist(self, public_id: str, force_regenerate: bool = False, date: str | None = None) -> ChecklistCreateResponse:
         plan = await self.plan_repository.find_by_public_id(public_id=public_id)
         if not plan:
             raise HTTPException(status_code=404, detail="해당 계획을 찾을 수 없습니다.")
@@ -123,14 +129,18 @@ class AIService:
         flights_text = self._format_flights(flights)
         itineraries_text = self._format_itineraries(itineraries)
         
-        ai_result = await self.openai_client.generate_checklist(
+        checklist_kwargs = dict(
             start_date=str(plan.start_date),
             end_date=str(plan.end_date),
             destinations=destinations,
             flights=flights_text,
             itineraries=itineraries_text,
-            existing_checklist=json.dumps(plan.travel_checklist,  ensure_ascii=False, indent=2)
+            existing_checklist=json.dumps(plan.travel_checklist, ensure_ascii=False, indent=2),
         )
+        if ai_settings.CHECKLIST_LLM_PROVIDER.lower() == "openai":
+            ai_result = await self.openai_client.generate_checklist(**checklist_kwargs)
+        else:
+            ai_result = await self.gemini_client.generate_checklist(**checklist_kwargs)
         
         if not ai_result.success:
             return ChecklistCreateResponse(
@@ -139,7 +149,6 @@ class AIService:
                 checklist=None
             )
         
-        # AI 생성 데이터 정규화 (snake_case 키로 통일 + 필드 기본값 보정)
         raw_ai_data = ai_result.data or {}
         ai_data: Dict[str, list[Dict[str, Any]]] = {}
 
@@ -157,6 +166,9 @@ class AIService:
                 item_dict["is_custom"] = False
                 if "is_checked" not in item_dict:
                     item_dict["is_checked"] = False
+                # date가 제공된 경우 모든 AI 생성 항목에 date 추가
+                if date is not None:
+                    item_dict["date"] = date
                 ai_data[category_key].append(item_dict)
 
         # force_regenerate=True 인 경우: 기존 체크리스트를 삭제하지 않고 "추가만" 수행
@@ -179,6 +191,7 @@ class AIService:
             merged_categories = self._merge_checklist_add_only(
                 existing=existing_categories,
                 incoming_ai=ai_data,
+                date=date,
             )
             ai_data = merged_categories
         else:
@@ -250,6 +263,7 @@ class AIService:
         self,
         existing: Dict[str, list[Dict[str, Any]]],
         incoming_ai: Dict[str, list[Dict[str, Any]]],
+        date: str | None = None,
     ) -> Dict[str, list[Dict[str, Any]]]:
         merged: Dict[str, list[Dict[str, Any]]] = {k: list(v) for k, v in existing.items()}
 
@@ -276,6 +290,9 @@ class AIService:
                 new_item["is_custom"] = False
                 if "is_checked" not in new_item:
                     new_item["is_checked"] = False
+                # date가 제공된 경우 새로 추가되는 항목에 date 추가
+                if date is not None:
+                    new_item["date"] = date
 
                 merged[category_key_norm].append(new_item)
                 existing_keys.add(key)
@@ -305,7 +322,7 @@ class AIService:
         return ChecklistRead(categories=categories_updated)
     
     async def set_checklist_item_status(self, public_id: str, item_id: int, is_checked: bool) -> StatusResponse:
-        plan = await self.plan_repository.find_by_public_id(public_id=public_id)
+        plan = await self.plan_repository.find_by_public_id_only_plan(public_id=public_id)
         if not plan:
             raise HTTPException(status_code=404, detail="해당 계획을 찾을 수 없습니다.")
         
@@ -327,9 +344,9 @@ class AIService:
         
         raise HTTPException(status_code=404, detail="해당 항목을 찾을 수 없습니다.")
     
-    async def add_checklist_item(self, public_id: str, name: str, reason: str = "", category: str = "basic_required") -> StatusResponse:
+    async def add_checklist_item(self, public_id: str, name: str, reason: str = "", category: str = "basic_required", date: str | None = None) -> StatusResponse:
         """체크리스트 항목 추가 (지정된 카테고리)"""
-        plan = await self.plan_repository.find_by_public_id(public_id=public_id)
+        plan = await self.plan_repository.find_by_public_id_only_plan(public_id=public_id)
         if not plan:
             raise HTTPException(status_code=404, detail="해당 계획을 찾을 수 없습니다.")
         
@@ -388,6 +405,10 @@ class AIService:
             "is_custom": True
         }
         
+        # date가 제공된 경우에만 추가
+        if date is not None:
+            new_item["date"] = date
+        
         categories[category_snake].append(new_item)
         attributes.flag_modified(plan, "travel_checklist")
         await self.plan_repository.save(plan=plan)
@@ -399,7 +420,7 @@ class AIService:
     
     async def delete_checklist_item(self, public_id: str, item_id: int) -> StatusResponse:
         """체크리스트 항목 삭제"""
-        plan = await self.plan_repository.find_by_public_id(public_id=public_id)
+        plan = await self.plan_repository.find_by_public_id_only_plan(public_id=public_id)
         if not plan:
             raise HTTPException(status_code=404, detail="해당 계획을 찾을 수 없습니다.")
         
@@ -468,4 +489,7 @@ class AIService:
             )
         return "\n".join(formatted)
     
-    
+    async def test_gemini(self):
+        return await self.gemini_client.generate_content(
+            contents="GEMINI 연결 잘 되었나 확인해보는거야. 잘 연결되었니?"
+        )

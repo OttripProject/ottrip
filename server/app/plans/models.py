@@ -11,6 +11,7 @@ from app.models import Base
 
 if TYPE_CHECKING:
     from app.accomodation.models import Accommodation
+    from app.attachments.models import Attachment
     from app.expenses.models import Expense
     from app.flights.models import Flight
     from app.itinerary.models import Itinerary
@@ -100,6 +101,12 @@ class Plan(Base):
     )
 
     shared: Mapped[list["PlanShared"]] = relationship(
+        back_populates="plan",
+        cascade="all, delete-orphan",
+        default_factory=list,
+    )
+
+    attachments: Mapped[list["Attachment"]] = relationship(
         back_populates="plan",
         cascade="all, delete-orphan",
         default_factory=list,

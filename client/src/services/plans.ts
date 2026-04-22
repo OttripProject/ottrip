@@ -3,7 +3,7 @@ import { Plan, CreatePlanRequest, UpdatePlanRequest } from '../types/api';
 
 export type PlanShare = {
   handle: string;
-  role: 'editor' | 'viewer';
+  role: 'editor' | 'viewer' | null;
   nickname: string;
   email: string;
 };
@@ -37,6 +37,14 @@ export const plansApi = {
   listShares: async (planId: number): Promise<PlanShare[]> => {
     const res = await api.get(`/private/plans/${planId}/shares`);
     return res.data as PlanShare[];
+  },
+
+  updateShare: async (
+    planId: number,
+    handle: string,
+    role: 'editor' | 'viewer'
+  ): Promise<void> => {
+    await api.patch(`/private/plans/${planId}/shares`, { handle, role });
   },
 
   revokeShare: async (planId: number, handle: string): Promise<void> => {

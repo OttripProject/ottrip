@@ -3,26 +3,96 @@ import "ts-node/register";
 import type { ConfigContext, ExpoConfig } from "expo/config";
 import { match } from "ts-pattern";
 import { z } from "zod";
-import { envSchema as publicEnvSchema } from "./src/core/env/schema";
 
 const projectId = "760d14be-9546-4b34-bb91-d0348bceaaf9";
 
-export const envSchema = publicEnvSchema.extend({
-  EAS_INIT: z.literal("true"),
+/** iOS Bundle ID / Android applicationId — Apple App ID·서버 APP_BUNDLE_IDS와 동일 */
+const BUNDLE_ID = "ottripofficial.ottrip";
+
+const PHOTO_LIBRARY_USAGE_DESCRIPTION =
+  "이미지를 첨부하기 위해 사진 라이브러리에 접근합니다.";
+
+// NOTE: app.config.ts는 런타임이 아닌 빌드 시점에 실행됩니다.
+// TS 의존성을 줄이기 위해 로컬 스키마를 사용합니다.
+const envSchema = z.object({
+  EXPO_PUBLIC_CHANNEL: z.enum(["dev", "prod", "local"]).default("local"),
   DEV_CLIENT: z.coerce.boolean().default(false),
+  EXPO_PUBLIC_GOOGLE_CLIENT_IOS_URL: z.string().optional(),
 });
 
 export default ({ config }: ConfigContext): ExpoConfig => {
+  // iOS URL 스킴(반드시 .env에 세팅 필요)
+  const iosUrlScheme = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_IOS_URL;
+
+  // 공통 플러그인
+  const getPlugins = (): ExpoConfig["plugins"] => {
+    const basePlugins: NonNullable<ExpoConfig["plugins"]> = [
+      "expo-asset",
+      "expo-secure-store",
+      "expo-apple-authentication",
+      [
+        "expo-build-properties",
+        {
+          android: {
+            extraMavenRepos: [
+              "https://devrepo.kakao.com/nexus/content/groups/public/",
+            ],
+          },
+        },
+      ],
+      [
+        "expo-font",
+        {
+          fonts: [
+            "./assets/fonts/Pretendard-Regular.otf",
+            "./assets/fonts/Pretendard-SemiBold.otf",
+            "./assets/fonts/Poppins-Medium.ttf",
+            "./assets/fonts/Poppins-SemiBold.ttf",
+          ],
+        },
+      ],
+      [
+        "expo-image-picker",
+        {
+          photosPermission: PHOTO_LIBRARY_USAGE_DESCRIPTION,
+        },
+      ],
+    ];
+
+    if (iosUrlScheme) {
+      basePlugins.push([
+        "@react-native-google-signin/google-signin",
+        { iosUrlScheme },
+      ]);
+    } else {
+      console.warn("⚠️ EXPO_PUBLIC_GOOGLE_CLIENT_IOS_URL is missing.");
+    }
+
+    return basePlugins;
+  };
+
+  const commonPlugins = getPlugins();
+
+  // EAS_INIT 없을 때도 플러그인 적용
   if (process.env.EAS_INIT == null) {
-    /**
-     * @note EAS에서 env를 가져오기 위해 projectId를 사용하면서 config evaluation이 여러번 되는데,
-     * config validation 실패를 막기 위해 env 로딩 전에는 아래 fallback을 사용합니다.
-     */
     return {
       ...config,
       name: "OTTRIP",
       slug: "ottrip",
       extra: { eas: { projectId } },
+      plugins: commonPlugins,
+      ios: {
+        ...(config as ExpoConfig).ios,
+        bundleIdentifier: BUNDLE_ID,
+        infoPlist: {
+          ...((config as ExpoConfig).ios?.infoPlist as Record<string, unknown> | undefined),
+          NSPhotoLibraryUsageDescription: PHOTO_LIBRARY_USAGE_DESCRIPTION,
+        },
+      },
+      android: {
+        ...(config as ExpoConfig).android,
+        package: BUNDLE_ID,
+      },
     };
   }
 
@@ -48,6 +118,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       dev: "Ottrip Dev",
       alpha: "Ottrip Alpha",
       prod: "Ottrip",
+      local: "Ottrip Local",
     }),
     slug: "ottrip",
     owner: "ottrip",
@@ -55,22 +126,24 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     updates: {
       url: `https://u.expo.dev/${projectId}`,
     },
-    runtimeVersion: "1.4.2", // TODO : 정책 결정하기
+    runtimeVersion: "1.0.0",
     scheme: switchProfile({
       dev: "ottrip-dev",
       alpha: "ottrip-alpha",
       prod: "ottrip",
+      local: "ottrip-local",
     }),
-    version: "1.2.0",
+    version: "1.0.0",
     orientation: "portrait",
     icon: `./assets/${switchProfile({
       dev: "icon-dev.png",
       alpha: "icon-alpha.png",
       prod: "icon.png",
+      local: "icon-dev.png",
     })}`,
     userInterfaceStyle: "light",
     splash: {
-      image: "./assets/splash.png",
+      image: "./assets/icon.png",
       resizeMode: "contain",
       backgroundColor: "#ffffff",
     },
@@ -78,21 +151,14 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     ios: {
       usesAppleSignIn: true,
       supportsTablet: false,
-      bundleIdentifier: `com.ottrip.app.${switchProfile({
-        dev: "OttripDev",
-        alpha: "OttripAlpha",
-        prod: "Ottrip",
-      })}`,
+      bundleIdentifier: BUNDLE_ID,
       infoPlist: {
         ITSAppUsesNonExemptEncryption: false,
+        NSPhotoLibraryUsageDescription: PHOTO_LIBRARY_USAGE_DESCRIPTION,
       },
     },
     android: {
-      package: `com.ottrip.app.${switchProfile({
-        dev: "OttripDev",
-        alpha: "OttripAlpha",
-        prod: "Ottrip",
-      })}`,
+      package: BUNDLE_ID,
     },
     web: {
       favicon: "./assets/favicon.png",
@@ -102,35 +168,6 @@ export default ({ config }: ConfigContext): ExpoConfig => {
         prod: "OTTRIP",
       }),
     },
-    plugins: [
-      "expo-asset",
-      "expo-secure-store",
-      [
-        "expo-build-properties",
-        {
-          android: {
-            extraMavenRepos: [
-              "https://devrepo.kakao.com/nexus/content/groups/public/",
-            ],
-          },
-        },
-      ],
-      [
-        "expo-font",
-        {
-          fonts: [
-            "./assets/fonts/Pretendard-Regular.otf",
-            "./assets/fonts/Pretendard-SemiBold.otf",
-            "./assets/fonts/Poppins-Medium.ttf",
-            "./assets/fonts/Poppins-SemiBold.ttf",
-          ],
-        },
-      ],
-    ],
+    plugins: commonPlugins,
   };
 };
-
-const conditionalPlugin = (
-  condition: boolean,
-  value: NonNullable<ExpoConfig["plugins"]>[number],
-) => (condition ? [value] : []);

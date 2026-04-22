@@ -1,4 +1,5 @@
 from typing import List
+
 from app.config import BaseConfig
 
 
@@ -18,6 +19,13 @@ class AIConfig(BaseConfig):
     DEFAULT_MODEL: str = "gpt-4o-mini"    
     AI_TIMEOUT: int = 30 
     MAX_RETRIES: int = 3 
+
+    # Gemini 설정 (google-genai SDK, GOOGLE_API_KEY 환경변수도 지원)
+    GEMINI_API_KEY: str = ""
+    GEMINI_DEFAULT_MODEL: str = "gemini-3-flash-preview"
+
+    # 체크리스트 생성에 사용할 LLM: "gemini" | "openai" (기본 gemini)
+    CHECKLIST_LLM_PROVIDER: str = "gemini"
 
     FLIGHT_SYSTEM_PROMPT: str = (
         "You are an expert in analyzing flight ticket text. Provide accurate and structured JSON responses."

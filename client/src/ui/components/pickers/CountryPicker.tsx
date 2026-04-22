@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState, useRef } from 'react';
-import { View, StyleSheet, ViewStyle, Pressable } from 'react-native';
+import { View, StyleSheet, ViewStyle, TextStyle, Pressable } from 'react-native';
 import DropDownPicker from 'react-native-dropdown-picker';
 import { getKoreanCountryOptions, codeToKoreanName } from '@/utils/countryListKo';
 import { PLACEHOLDERS } from '@/constants/placeholders';
@@ -17,12 +17,16 @@ interface CountryPickerProps {
   onChange: (countryName: string) => void;
   placeholder?: string;
   containerStyle?: ViewStyle;
+  style?: ViewStyle;
+  dropDownContainerStyle?: ViewStyle;
+  listItemLabelStyle?: ViewStyle | TextStyle;
+  selectedItemContainerStyle?: ViewStyle;
   disabled?: boolean;
   onOpen?: () => void;
   onClose?: () => void;
 }
 
-export default function CountryPicker({ value, onChange, placeholder = '국가 선택', containerStyle, disabled, onOpen, onClose }: CountryPickerProps) {
+export default function CountryPicker({ value, onChange, placeholder = '국가 선택', containerStyle, style, dropDownContainerStyle, listItemLabelStyle, selectedItemContainerStyle, disabled, onOpen, onClose }: CountryPickerProps) {
   const options = useMemo(() => getKoreanCountryOptions(), []);
   const pickerRef = useRef<View>(null);
   const [open, setIsOpen, handleOutsidePress] = useDetectClose(pickerRef, false);
@@ -84,11 +88,16 @@ export default function CountryPicker({ value, onChange, placeholder = '국가 �
         searchPlaceholderTextColor={colors.gray600}
         textStyle={styles.text}
         labelStyle={styles.text}
-        listItemLabelStyle={styles.listItemLabel}
+        listItemLabelStyle={[styles.listItemLabel, listItemLabelStyle]}
         selectedItemLabelStyle={styles.selectedItem}
-        selectedItemContainerStyle={styles.selectedItemContainer}
-        style={disabled ? [styles.dropdown, { borderColor: colors.gray400, borderWidth: 1 }] : [styles.dropdown, { width: '100%' }]}
-        dropDownContainerStyle={[styles.dropdownContainer, { zIndex: 11000, position: 'absolute' }]}
+        selectedItemContainerStyle={[styles.selectedItemContainer, selectedItemContainerStyle]}
+        style={[
+          styles.dropdown,
+          { width: '100%' },
+          disabled && { borderColor: colors.gray400, borderWidth: 1 },
+          style,
+        ]}
+        dropDownContainerStyle={[styles.dropdownContainer, { zIndex: 11000, position: 'absolute' }, dropDownContainerStyle]}
         containerStyle={[styles.dropdownOuter, { width: '100%' }]}
         listMode="FLATLIST"
         dropDownDirection="BOTTOM"

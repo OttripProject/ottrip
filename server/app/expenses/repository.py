@@ -1,3 +1,6 @@
+from datetime import date
+from typing import Optional
+
 from sqlalchemy import select, update
 from sqlalchemy.orm import joinedload
 
@@ -24,12 +27,13 @@ class ExpenseRepository:
         )
         return result.unique().scalar_one_or_none()
 
-    async def find_all_by_plan(self, *, plan_id: int) -> list[Expense]:
-        result = await self.session.execute(
-            select(Expense).where(
-                Expense.plan_id == plan_id, Expense.is_deleted.is_(False)
-            )
+    async def find_all_by_plan(self, *, plan_id: int, ex_date: Optional[date] = None) -> list[Expense]:
+        query = select(Expense).where(
+            Expense.plan_id == plan_id, Expense.is_deleted.is_(False)
         )
+        if ex_date is not None:
+            query = query.where(Expense.ex_date == ex_date)
+        result = await self.session.execute(query)
         return list(result.unique().scalars())
 
     async def find_all_by_itinerary(self, *, itinerary_id: int) -> list[Expense]:

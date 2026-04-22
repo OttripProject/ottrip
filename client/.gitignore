@@ -2,6 +2,7 @@
 
 # dependencies
 node_modules/
+package-lock.json
 
 ios/
 
@@ -10,6 +11,7 @@ ios/
 dist/
 npm-debug.*
 expo-env.d.ts
+ios/
 
 # Native
 .kotlin/

@@ -1,8 +1,14 @@
+from datetime import date
+
 from fastapi import HTTPException
 
+from app.attachments.models import AttachmentEntityType
+from app.attachments.repository import AttachmentRepository
+from app.attachments.service import cascade_delete_attachments
 from app.auth.deps import CurrentUser
 from app.itinerary.repository import ItineraryRepository
 from app.plans.repository import PlanRepository
+from app.storage.deps import S3ClientDep
 from app.utils.dependency import dependency
 
 from .models import Expense
@@ -16,6 +22,8 @@ class ExpenseService:
     expense_repository: ExpenseRepository
     itinerary_repository: ItineraryRepository
     plan_repository: PlanRepository
+    attachment_repository: AttachmentRepository
+    s3_client: S3ClientDep
 
     async def create(self, *, expense_data: ExpenseCreate) -> ExpenseRead:
         plan_exists, has_permission = await self.plan_repository.has_edit_permission(
@@ -93,7 +101,9 @@ class ExpenseService:
 
         return ExpenseRead.model_validate(expense)
 
-    async def read_expenses_by_plan(self, *, plan_id: int) -> list[ExpenseRead]:
+    async def read_expenses_by_plan(
+        self, *, plan_id: int, ex_date: date | None = None
+    ) -> list[ExpenseRead]:
         plan_exists, has_permission = await self.plan_repository.has_read_permission(
             plan_id=plan_id, user_id=self.current_user.id
         )
@@ -102,7 +112,9 @@ class ExpenseService:
         if not has_permission:
             raise HTTPException(status_code=403, detail="해당 비용에 대한 조회 권한이 없습니다.")
 
-        expenses = await self.expense_repository.find_all_by_plan(plan_id=plan_id)
+        expenses = await self.expense_repository.find_all_by_plan(
+            plan_id=plan_id, ex_date=ex_date
+        )
         expenses_list = [ExpenseRead.model_validate(expense) for expense in expenses]
 
         return expenses_list
@@ -166,4 +178,10 @@ class ExpenseService:
                     status_code=403, detail="해당 비용에 대한 수정 권한이 없습니다."
                 )
 
+        await cascade_delete_attachments(
+            entity_type=AttachmentEntityType.EXPENSE,
+            entity_id=expense_id,
+            attachment_repository=self.attachment_repository,
+            s3_client=self.s3_client,
+        )
         await self.expense_repository.remove(expense_id=expense_id)

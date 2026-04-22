@@ -1,10 +1,14 @@
 from fastapi import HTTPException
 
+from app.attachments.models import AttachmentEntityType
+from app.attachments.repository import AttachmentRepository
+from app.attachments.service import cascade_delete_attachments
 from app.auth.deps import CurrentUser
 from app.expenses.models import Expense
 from app.expenses.schemas import ExpenseCategory, ExpenseCurrency
 from app.expenses.repository import ExpenseRepository
 from app.plans.repository import PlanRepository
+from app.storage.deps import S3ClientDep
 from app.utils.dependency import dependency
 
 from .models import Accommodation
@@ -18,6 +22,8 @@ class AccommodationService:
     accommodation_repository: AccommodationRepository
     expense_repository: ExpenseRepository
     plan_repository: PlanRepository
+    attachment_repository: AttachmentRepository
+    s3_client: S3ClientDep
 
     async def create(
         self, *, accommodation_data: AccommodationCreate
@@ -204,5 +210,11 @@ class AccommodationService:
 
         await self.expense_repository.soft_delete_by_accommodation_id(
             accommodation_id=accommodation_id
+        )
+        await cascade_delete_attachments(
+            entity_type=AttachmentEntityType.ACCOMMODATION,
+            entity_id=accommodation_id,
+            attachment_repository=self.attachment_repository,
+            s3_client=self.s3_client,
         )
         await self.accommodation_repository.remove(accommodation_id=accommodation_id)

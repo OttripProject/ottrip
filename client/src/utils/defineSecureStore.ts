@@ -4,7 +4,7 @@ let SecureStore: any = null;
 
 if (Platform.OS !== 'web') {
   try {
-    SecureStore = require('expo-secure-store').default;
+    SecureStore = require('expo-secure-store');
   } catch (error) {
   }
 }

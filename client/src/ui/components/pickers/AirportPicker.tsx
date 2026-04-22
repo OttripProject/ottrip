@@ -11,19 +11,21 @@ import { radii } from '@/ui/tokens/radii';
 import useDetectClose from '@/hooks/useDetectClose';
 
 interface AirportPickerProps {
-  value: string; 
+  value: string;
   onChange: (airportCode: string) => void;
   placeholder?: string;
   containerStyle?: ViewStyle;
+  style?: ViewStyle;
   disabled?: boolean;
 }
 
-export default function AirportPicker({ 
-  value, 
-  onChange, 
-  placeholder, 
-  containerStyle, 
-  disabled 
+export default function AirportPicker({
+  value,
+  onChange,
+  placeholder,
+  containerStyle,
+  style,
+  disabled,
 }: AirportPickerProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [options, setOptions] = useState<Array<{ label: string; value: string }>>([]);
@@ -114,8 +116,8 @@ export default function AirportPicker({
           width: '100%',
           position: 'relative',
         }}
-        placeholder={placeholder} 
-        style={[styles.dropdown, { width: '100%' }]}
+        placeholder={placeholder}
+        style={[styles.dropdown, { width: '100%' }, style]}
         dropDownContainerStyle={[styles.dropdownContainer, { width: '100%', maxHeight: 200, borderTopWidth: 0 }]}
         containerStyle={[styles.dropdownOuter, { width: '100%' }]}
         textStyle={{

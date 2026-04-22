@@ -148,7 +148,8 @@ async def generate_travel_checklist(
     """여행 체크리스트 생성"""
     return await ai_service.create_checklist(
         public_id=public_id,
-        force_regenerate=checklist_request.force_regenerate
+        force_regenerate=checklist_request.force_regenerate,
+        date=checklist_request.date
     ) 
 
 
@@ -197,7 +198,8 @@ async def add_checklist_item(
         public_id=public_id,
         name=request.name,
         reason=request.reason,
-        category=request.category
+        category=request.category,
+        date=request.date
     )
     return result
 
@@ -215,26 +217,8 @@ async def delete_checklist_item(
     )
     return result
         
-# Health Check Endpoints 보류
-# @router.get("/health")
-# async def health_check(
-#     ai_service: AIService
-#     ):
-#     """AI 서비스 상태 확인"""
-#     try:
-#         return {
-#             "success": True,
-#             "message": "AI 서비스가 정상 작동 중입니다.",
-#             "services": {
-#                 "vision_api": "connected" if ai_service._vision_client else "disconnected",
-#                 "openai": "connected" if ai_service._openai_client else "disconnected"
-#             },
-#         }
-#     except Exception as e:
-#         return JSONResponse(
-#             status_code=500,
-#             content={
-#                 "success": False,
-#                 "message": f"AI 서비스 오류: {str(e)}"
-#             }
-#         )
+@router.get("/test/gemini")
+async def test_gemini(
+    ai_service: AIService,
+) -> str:
+    return await ai_service.test_gemini()

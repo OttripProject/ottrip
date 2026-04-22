@@ -63,7 +63,7 @@ export default function RegisterProfileScreen() {
         {
           handle,
           nickname: nickname.trim(),
-          description: '구글 로그인으로 가입한 사용자입니다.',
+          description: '',
           gender,
           agreed_terms: terms?.tos ?? true,
           agreed_privacy: terms?.privacy ?? true,

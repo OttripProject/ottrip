@@ -2,8 +2,9 @@ import api from './api';
 import { Expense, CreateExpenseRequest, UpdateExpenseRequest } from '../types/api';
 
 export const expensesApi = {
-  getExpenses: async (planId?: number): Promise<Expense[]> => {
-    const response = await api.get(`/private/expenses/${planId}/plan`);
+  getExpenses: async (planId?: number, exDate?: string): Promise<Expense[]> => {
+    const params = exDate ? { ex_date: exDate } : {};
+    const response = await api.get(`/private/expenses/${planId}/plan`, { params });
     return (response.data as Expense[]).map((e) => ({
       ...e,
       amount: Number((e as any).amount),

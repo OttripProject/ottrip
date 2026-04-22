@@ -56,6 +56,13 @@ export const authApi = {
     return response.data;
   },
 
+  appleLogin: async (identityToken: string): Promise<AuthResponse> => {
+    const response = await api.post('/public/auth/apple', {
+      identity_token: identityToken,
+    });
+    return response.data;
+  },
+
   refreshToken: async (refreshToken?: string): Promise<TokenResponse> => {
     const payload = refreshToken ? { refresh_token: refreshToken } : {};
     const response = await api.post('/public/auth/refresh', payload);

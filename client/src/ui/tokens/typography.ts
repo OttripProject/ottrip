@@ -5,26 +5,10 @@ export const typography = {
   fontFamily: {
     default: 'System',
     mono: 'Courier',
-    pretendard: 'Pretendard-Regular',
-    pretendardThin: 'Pretendard-Thin',
-    pretendardExtraLight: 'Pretendard-ExtraLight',
-    pretendardLight: 'Pretendard-Light',
     pretendardRegular: 'Pretendard-Regular',
-    pretendardMedium: 'Pretendard-Medium',
     pretendardSemiBold: 'Pretendard-SemiBold',
-    pretendardBold: 'Pretendard-Bold',
-    pretendardExtraBold: 'Pretendard-ExtraBold',
-    pretendardBlack: 'Pretendard-Black',
-    poppins: 'Poppins-Regular',
-    poppinsThin: 'Poppins-Thin',
-    poppinsExtraLight: 'Poppins-ExtraLight',
-    poppinsLight: 'Poppins-Light',
-    poppinsRegular: 'Poppins-Regular',
     poppinsMedium: 'Poppins-Medium',
     poppinsSemiBold: 'Poppins-SemiBold',
-    poppinsBold: 'Poppins-Bold',
-    poppinsExtraBold: 'Poppins-ExtraBold',
-    poppinsBlack: 'Poppins-Black',
   },
   size: {
     xs: 12,
@@ -42,6 +26,12 @@ export const typography = {
 };
 
 export const textStyles: Record<string, TextStyle> = {
+  h1: {
+    fontFamily: typography.fontFamily.poppinsSemiBold,
+    fontSize: 32,
+    lineHeight: 48,
+    color: colors.black,
+  },
   h2: {
     fontFamily: typography.fontFamily.pretendardSemiBold,
     fontSize: 24,

@@ -1,10 +1,10 @@
-import axios from 'axios';
-import { Platform } from 'react-native';
-import { loadPublicEnv } from '../core/env/schema';
-import { tokenStores } from '../utils/tokenStores';
-import { isTokenExpiringSoon } from '../utils/jwt';
+import axios from "axios";
+import { Platform } from "react-native";
+import { loadPublicEnv } from "../core/env/schema";
+import { isTokenExpiringSoon } from "../utils/jwt";
+import { tokenStores } from "../utils/tokenStores";
 
-declare module 'axios' {
+declare module "axios" {
   export interface InternalAxiosRequestConfig {
     metadata?: {
       startTime: number;
@@ -15,10 +15,12 @@ declare module 'axios' {
 const env = loadPublicEnv();
 
 let resolvedBaseURL = env.EXPO_PUBLIC_API_URL;
-if (typeof window !== 'undefined') {
+
+// 웹에서만 localhost 체크 (네이티브에서는 window.location 없음)
+if (Platform.OS === "web" && typeof window !== "undefined" && window.location) {
   const h = window.location.hostname;
-  if (h === 'localhost' || h === '127.0.0.1') {
-    resolvedBaseURL = 'http://localhost:8080';
+  if (h === "localhost" || h === "127.0.0.1") {
+    resolvedBaseURL = "http://localhost:8080";
   }
 }
 
@@ -26,7 +28,7 @@ const api = axios.create({
   baseURL: resolvedBaseURL,
   timeout: 30000,
   headers: {
-    'Content-Type': 'application/json',
+    "Content-Type": "application/json",
   },
   withCredentials: true,
 });
@@ -48,18 +50,23 @@ const processQueue = (error: any, token: string | null = null) => {
       promise.resolve(token);
     }
   });
-  
+
   failedQueue = [];
 };
 
-export async function refreshToken(checkExpiration: boolean = true): Promise<string | null> {
+export async function refreshToken(
+  checkExpiration = true,
+): Promise<string | null> {
   if (isRefreshing && refreshPromise) {
     return refreshPromise;
   }
 
   if (checkExpiration) {
-    if (Platform.OS === 'web') {
-      if (cachedWebToken && !isTokenExpiringSoon(cachedWebToken, 5)) {
+    if (Platform.OS === "web") {
+      if (!cachedWebToken) {
+        return null;
+      }
+      if (!isTokenExpiringSoon(cachedWebToken, 5)) {
         return cachedWebToken;
       }
     } else {
@@ -73,21 +80,23 @@ export async function refreshToken(checkExpiration: boolean = true): Promise<str
   isRefreshing = true;
   refreshPromise = (async () => {
     try {
-      const refreshPayload = Platform.OS === 'web' 
-        ? {} 
-        : { refresh_token: await tokenStores.refreshToken.get() };
+      const refreshPayload =
+        Platform.OS === "web"
+          ? {}
+          : { refresh_token: await tokenStores.refreshToken.get() };
 
       const refreshResponse = await axios.post(
         `${resolvedBaseURL}/public/auth/refresh`,
         refreshPayload,
-        { 
-          headers: { 'Content-Type': 'application/json' },
+        {
+          headers: { "Content-Type": "application/json" },
           withCredentials: true,
-        }
+        },
       );
 
-      if (Platform.OS !== 'web') {
-        const { accessToken, refreshToken: newRefreshToken } = refreshResponse.data;
+      if (Platform.OS !== "web") {
+        const { accessToken, refreshToken: newRefreshToken } =
+          refreshResponse.data;
         await tokenStores.setAll({
           accessToken: accessToken,
           refreshToken: newRefreshToken,
@@ -100,8 +109,8 @@ export async function refreshToken(checkExpiration: boolean = true): Promise<str
         }
         return accessToken || null;
       }
-    } catch (error: any) {
-      if (Platform.OS !== 'web') {
+    } catch (_error: any) {
+      if (Platform.OS !== "web") {
         await tokenStores.clearAll();
       }
       return null;
@@ -120,11 +129,11 @@ export function isTokenRefreshing(): boolean {
 
 api.interceptors.request.use(async config => {
   config.metadata = { startTime: Date.now() };
-  
-  if (Platform.OS === 'web') {
+
+  if (Platform.OS === "web") {
     return config;
   }
-  
+
   try {
     const token = await tokenStores.accessToken.get();
     if (token) {
@@ -132,27 +141,28 @@ api.interceptors.request.use(async config => {
         if (isTokenRefreshing()) {
           return new Promise((resolve, reject) => {
             failedQueue.push({ resolve, reject });
-          }).then(newToken => {
-            config.headers['X-Auth-Token'] = newToken || token;
-            return config;
-          }).catch(() => {
-            config.headers['X-Auth-Token'] = token;
-            return config;
-          });
+          })
+            .then(newToken => {
+              config.headers["X-Auth-Token"] = newToken || token;
+              return config;
+            })
+            .catch(() => {
+              config.headers["X-Auth-Token"] = token;
+              return config;
+            });
         }
-        
+
         const newToken = await refreshToken(true);
         if (newToken) {
           processQueue(null, newToken);
-          config.headers['X-Auth-Token'] = newToken;
+          config.headers["X-Auth-Token"] = newToken;
           return config;
         }
       }
-      
-      config.headers['X-Auth-Token'] = token;
+
+      config.headers["X-Auth-Token"] = token;
     }
-  } catch (error: any) {
-  }
+  } catch (_error: any) {}
   return config;
 });
 
@@ -170,7 +180,7 @@ api.interceptors.response.use(
         })
           .then(token => {
             originalRequest.headers = originalRequest.headers || {};
-            if (Platform.OS !== 'web' && token) {
+            if (Platform.OS !== "web" && token) {
               (originalRequest.headers as any)["X-Auth-Token"] = token;
             }
             return api(originalRequest);
@@ -183,11 +193,11 @@ api.interceptors.response.use(
       originalRequest._retry = true;
 
       const newToken = await refreshToken(false);
-      
+
       if (newToken) {
         originalRequest.headers = originalRequest.headers || {};
-        
-        if (Platform.OS !== 'web') {
+
+        if (Platform.OS !== "web") {
           (originalRequest.headers as any)["X-Auth-Token"] = newToken;
           if ((originalRequest.headers as any)["Authorization"]) {
             delete (originalRequest.headers as any)["Authorization"];
@@ -198,12 +208,12 @@ api.interceptors.response.use(
 
         return api(originalRequest);
       } else {
-        processQueue(new Error('Token refresh failed'), null);
+        processQueue(new Error("Token refresh failed"), null);
       }
     }
 
     return Promise.reject(error);
-  }
+  },
 );
 
-export default api; 
+export default api;

@@ -96,6 +96,20 @@ class PlanRepository:
         )
         return result.unique().scalar_one_or_none()
 
+    async def find_by_id_with_owner(self, *, plan_id: int) -> Plan | None:
+        result = await self.session.execute(
+            select(Plan)
+            .options(joinedload(Plan.owner))
+            .where(Plan.id == plan_id, Plan.is_deleted.is_(False))
+        )
+        return result.unique().scalar_one_or_none()
+
+    async def find_by_public_id_only_plan(self, *, public_id: str) -> Plan | None:
+        result = await self.session.execute(
+            select(Plan).where(Plan.public_id == public_id, Plan.is_deleted.is_(False))
+        )
+        return result.unique().scalar_one_or_none()
+
     async def find_all_by_user(self, *, user_id: int) -> list[Plan]:
         owned_ids = select(Plan.id).where(
             Plan.owner_id == user_id, Plan.is_deleted.is_(False)

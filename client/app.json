@@ -9,16 +9,16 @@
     "newArchEnabled": true,
     "scheme": "ottrip",
     "splash": {
-      "image": "./assets/splash.png",
+      "image": "./assets/icon.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.ottrip.app"
+      "bundleIdentifier": "ottripofficial.ottrip"
     },
     "android": {
-      "package": "com.ottrip.app"
+      "package": "ottripofficial.ottrip"
     },
     "web": {
       "favicon": "./assets/favicon.png",

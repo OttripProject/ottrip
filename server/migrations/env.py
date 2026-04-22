@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 
 # Application models (imported for metadata discovery)
 import app.accomodation.models as _  # noqa: F401
+import app.attachments.models as _  # noqa: F401
 import app.auth.models as _  # noqa: F401
 import app.expenses.models as _  # noqa: F401
 import app.flights.models as _  # noqa: F401

@@ -1,8 +1,12 @@
 from fastapi import HTTPException
 
+from app.attachments.models import AttachmentEntityType
+from app.attachments.repository import AttachmentRepository
+from app.attachments.service import cascade_delete_attachments
 from app.auth.deps import CurrentUser
-from app.plans.repository import PlanRepository
 from app.expenses.repository import ExpenseRepository
+from app.plans.repository import PlanRepository
+from app.storage.deps import S3ClientDep
 from app.utils.dependency import dependency
 
 from .models import Itinerary
@@ -16,6 +20,8 @@ class ItineraryService:
     itinerary_repository: ItineraryRepository
     plan_repository: PlanRepository
     expense_repository: ExpenseRepository
+    attachment_repository: AttachmentRepository
+    s3_client: S3ClientDep
 
     async def create(self, *, itinerary_data: ItineraryCreate) -> ItineraryRead:
         plan_exists, has_permission = await self.plan_repository.has_edit_permission(
@@ -92,6 +98,11 @@ class ItineraryService:
             if not is_editor:
                 raise HTTPException(status_code=403, detail="일정 수정 권한이 없습니다.")
 
+        # 일정 날짜 변경 여부 확인
+        date_changed = False
+        if update_data.itinerary_date and update_data.itinerary_date != itinerary.itinerary_date:
+            date_changed = True
+
         if update_data.title:
             itinerary.title = update_data.title
         if update_data.itinerary_date:
@@ -111,6 +122,15 @@ class ItineraryService:
 
         updated_itinerary = await self.itinerary_repository.save(itinerary=itinerary)
 
+        # 일정 날짜가 변경된 경우 연결된 비용의 날짜도 업데이트
+        if date_changed and update_data.itinerary_date:
+            connected_expenses = await self.expense_repository.find_all_by_itinerary(
+                itinerary_id=itinerary_id
+            )
+            for expense in connected_expenses:
+                expense.ex_date = update_data.itinerary_date
+                await self.expense_repository.save(expense=expense)
+
         return ItineraryRead.model_validate(updated_itinerary)
 
     async def delete(self, *, itinerary_id: int) -> None:
@@ -128,5 +148,11 @@ class ItineraryService:
         
         await self.expense_repository.soft_delete_by_itinerary_id(
             itinerary_id=itinerary_id
+        )
+        await cascade_delete_attachments(
+            entity_type=AttachmentEntityType.ITINERARY,
+            entity_id=itinerary_id,
+            attachment_repository=self.attachment_repository,
+            s3_client=self.s3_client,
         )
         await self.itinerary_repository.remove(itinerary_id=itinerary_id)
