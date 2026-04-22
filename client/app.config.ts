@@ -126,7 +126,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     updates: {
       url: `https://u.expo.dev/${projectId}`,
     },
-    runtimeVersion: "1.4.2", // TODO : 정책 결정하기
+    runtimeVersion: "1.0.0",
     scheme: switchProfile({
       dev: "ottrip-dev",
       alpha: "ottrip-alpha",
