@@ -228,7 +228,7 @@ export default function WeeklyChecklistCard({
                   hitSlop={8}
                 >
                   <View style={[styles.checkbox, item.is_checked && styles.checkboxSelected]}>
-                    <CheckIcon width={16} height={16} fill={colors.white} />
+                    <CheckIcon width={16} height={16} color={colors.white} />
                   </View>
                 </Pressable>
                 <View style={styles.itemContent}>
