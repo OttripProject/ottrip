@@ -77,7 +77,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
   if (process.env.EAS_INIT == null) {
     return {
       ...config,
-      name: "OTTRIP",
+      name: "오티트립",
       slug: "ottrip",
       extra: { eas: { projectId } },
       plugins: commonPlugins,
@@ -115,10 +115,10 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     ...config,
     newArchEnabled: true,
     name: switchProfile({
-      dev: "Ottrip Dev",
-      alpha: "Ottrip Alpha",
-      prod: "Ottrip",
-      local: "Ottrip Local",
+      dev: "오티트립 Dev",
+      alpha: "오티트립 Alpha",
+      prod: "오티트립",
+      local: "오티트립 Local",
     }),
     slug: "ottrip",
     owner: "ottrip",
@@ -163,9 +163,9 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     web: {
       favicon: "./assets/favicon.png",
       name: switchProfile({
-        dev: "Ottrip Dev",
-        alpha: "Ottrip Alpha",
-        prod: "OTTRIP",
+        dev: "오티트립 Dev",
+        alpha: "오티트립 Alpha",
+        prod: "오티트립",
       }),
     },
     plugins: commonPlugins,
