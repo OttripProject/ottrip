@@ -13,7 +13,7 @@ from app.itinerary.repository import ItineraryRepository
 from app.plans.repository import PlanRepository
 from app.utils.dependency import dependency
 
-from .clients import GeminiClient, OpenAIClient, VisionClient
+from .clients import GeminiClient, VisionClient
 from .config import ai_settings
 from .schemas import (
     AIFlightRead,
@@ -27,7 +27,6 @@ from .schemas import (
 class AIService:
     current_user: CurrentUser
     vision_client: VisionClient
-    openai_client: OpenAIClient
     gemini_client: GeminiClient
     plan_repository: PlanRepository
     itinerary_repository: ItineraryRepository
@@ -40,7 +39,7 @@ class AIService:
         return await self.vision_client.extract_text_from_pdf(pdf_data)
     
     async def parse_flight_data_with_ai(self, ocr_text: str):
-        return await self.openai_client.parse_flight_data(ocr_text)
+        return await self.gemini_client.parse_flight_data(ocr_text)
     
     async def process_flight_ticket(self, file_data: bytes, content_type: str, filename: str) -> Dict[str, Any]:
         """항공권 이미지/PDF 전체 처리 (OCR + AI)"""
@@ -137,10 +136,7 @@ class AIService:
             itineraries=itineraries_text,
             existing_checklist=json.dumps(plan.travel_checklist, ensure_ascii=False, indent=2),
         )
-        if ai_settings.CHECKLIST_LLM_PROVIDER.lower() == "openai":
-            ai_result = await self.openai_client.generate_checklist(**checklist_kwargs)
-        else:
-            ai_result = await self.gemini_client.generate_checklist(**checklist_kwargs)
+        ai_result = await self.gemini_client.generate_checklist(**checklist_kwargs)
         
         if not ai_result.success:
             return ChecklistCreateResponse(
