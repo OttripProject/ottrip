@@ -134,7 +134,7 @@ async def get_supported_formats():
         "max_file_size": "10MB",
         "services": {
             "ocr": "Google Cloud Vision API",
-            "ai_parsing": "OpenAI GPT-4o-mini"
+            "ai_parsing": f"Google Gemini ({ai_settings.GEMINI_DEFAULT_MODEL})"
         }
     }
 
