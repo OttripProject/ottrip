@@ -5,7 +5,7 @@ from app.database.deps import SessionDep
 from app.utils.dependency import dependency
 from .schemas import UserRead
 
-from .models import User
+from .models import Gender, User
 from .schemas import UserCreate, UserUpdate
 
 
@@ -32,23 +32,16 @@ class UserRepository:
         )
 
     async def find_user_read_by_id(self, *, user_id: int) -> UserRead | None:
-        result = await self.session.execute(
-            select(User, UserAuthInfo.verified_email)
-            .join(UserAuthInfo, UserAuthInfo.user_id == User.id)
-            .where(User.id == user_id)
-        )
-        row = result.one_or_none()
-        if row is None:
+        user = await self.session.get(User, user_id)
+        if user is None:
             return None
-        user, verified_email = row
-        user_profile = {
-            "handle": user.handle,
-            "nickname": user.nickname,
-            "description": user.description,
-            "gender": user.gender,
-            "email": verified_email,
-        }
-        return UserRead(**user_profile)
+        return UserRead(
+            handle=user.handle,
+            nickname=user.nickname,
+            description=user.description,
+            gender=(user.gender if user.gender is not None else Gender.OTHER),
+            email=user.email,
+        )
 
     async def create(self, *, user_data: UserCreate, email: str | None = None) -> User | None:
         user_dict = user_data.model_dump()

@@ -32,6 +32,7 @@ class UserCreate(UserBase):
     agreed_terms: bool | None = None
     agreed_privacy: bool | None = None
     agreed_marketing: bool | None = None
+    is_guest: bool = False
 
 
 class UserUpdate(APISchema):
@@ -41,4 +42,4 @@ class UserUpdate(APISchema):
 
 
 class UserRead(UserBase):
-    email: EmailStr
+    email: EmailStr | None = None

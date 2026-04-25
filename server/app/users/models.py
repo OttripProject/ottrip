@@ -49,6 +49,8 @@ class User(Base):
 
     gender: Mapped[Gender | None]
 
+    is_guest: Mapped[bool] = mapped_column(default=False, nullable=False)
+
     plans: Mapped[list["Plan"]] = relationship(
         back_populates="owner",
         cascade="all, delete-orphan",

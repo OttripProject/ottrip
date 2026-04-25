@@ -1,6 +1,7 @@
 import re
 
 from fastapi import HTTPException
+import uuid
 
 from app.auth.deps import CurrentUser
 from app.auth.models import UserAuthInfo
@@ -8,7 +9,7 @@ from app.auth.service import AuthInfoService
 from app.common.schemas import ValidationResult
 from app.utils.dependency import dependency
 
-from .models import User
+from .models import User, Gender
 from .repository import UserRepository
 from .schemas import (
     UserCreate,
@@ -63,6 +64,7 @@ class UserService:
             agreed_terms=user_data.agreed_terms,
             agreed_privacy=user_data.agreed_privacy,
             agreed_marketing=user_data.agreed_marketing,
+            is_guest=False,
         )
 
         created_user = await self.user_repository.create(user_data=normalized, email=auth.verified_email)
@@ -70,6 +72,35 @@ class UserService:
             raise HTTPException(status_code=400, detail="사용자 생성에 실패했습니다.")
 
         await self.auth_info_service.connect_to_user(auth=auth, user_id=created_user.id)
+
+        return created_user
+
+    async def create_guest(self) -> User:
+        handle = uuid.uuid4().hex
+
+        handle_validate = await self.validate_handle(handle=handle)
+        if handle_validate.error:
+            raise HTTPException(status_code=400, detail=handle_validate.error)
+
+        nickname = f"Guest_{handle[:8]}"
+        nickname_validate = await self.validate_nickname(nickname=nickname)
+        if nickname_validate.error:
+            raise HTTPException(status_code=400, detail=nickname_validate.error)
+
+        normalized = UserCreate(
+            handle=handle,
+            nickname=nickname,
+            description="",
+            gender=Gender.MALE,
+            is_guest=True,
+            agreed_terms=True,
+            agreed_privacy=True,
+            agreed_marketing=False,
+        )
+
+        created_user = await self.user_repository.create(user_data=normalized, email=None)
+        if created_user is None:
+            raise HTTPException(status_code=400, detail="사용자 생성에 실패했습니다.")
 
         return created_user
 

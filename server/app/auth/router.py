@@ -186,6 +186,20 @@ async def refresh_token(
     return TokenResponse(access_token=access_token, refresh_token=refresh_token)
 
 
+@router.post("/guest")
+async def authenticate_guest(
+    user_service: UserService,
+    response: Response,
+) -> RegisteredAuthResponse:
+    user = await user_service.create_guest()
+    access_token, refresh_token = create_token_pair(user.id)
+    _set_auth_cookies(response, access_token, refresh_token)
+    return RegisteredAuthResponse(
+        access_token=access_token,
+        refresh_token=refresh_token,
+    )
+
+
 @router.get("/valid-token", response_model=bool)
 async def check_login_status(current_user: CurrentUserOptional) -> bool:
     return current_user is not None
