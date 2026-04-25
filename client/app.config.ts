@@ -6,8 +6,11 @@ import { z } from "zod";
 
 const projectId = "760d14be-9546-4b34-bb91-d0348bceaaf9";
 
-/** iOS Bundle ID / Android applicationId — Apple App ID·서버 APP_BUNDLE_IDS와 동일 */
-const BUNDLE_ID = "ottripofficial.ottrip";
+
+const BUNDLE_ID_BY_PROFILE = {
+  prod: "ottripofficial.ottrip",
+  alpha: "ottripofficial.ottrip.alpha",
+} as const;
 
 const PHOTO_LIBRARY_USAGE_DESCRIPTION =
   "이미지를 첨부하기 위해 사진 라이브러리에 접근합니다.";
@@ -73,8 +76,8 @@ export default ({ config }: ConfigContext): ExpoConfig => {
 
   const commonPlugins = getPlugins();
 
-  // EAS_INIT 없을 때도 플러그인 적용
   if (process.env.EAS_INIT == null) {
+    const bundleId = BUNDLE_ID_BY_PROFILE.alpha;
     return {
       ...config,
       name: "오티트립",
@@ -83,7 +86,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       plugins: commonPlugins,
       ios: {
         ...(config as ExpoConfig).ios,
-        bundleIdentifier: BUNDLE_ID,
+        bundleIdentifier: bundleId,
         infoPlist: {
           ...((config as ExpoConfig).ios?.infoPlist as Record<string, unknown> | undefined),
           NSPhotoLibraryUsageDescription: PHOTO_LIBRARY_USAGE_DESCRIPTION,
@@ -91,7 +94,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       },
       android: {
         ...(config as ExpoConfig).android,
-        package: BUNDLE_ID,
+        package: bundleId,
       },
     };
   }
@@ -110,6 +113,8 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     .exhaustive();
 
   const switchProfile = <T>(map: Record<typeof PROFILE, T>) => map[PROFILE];
+
+  const bundleId = switchProfile(BUNDLE_ID_BY_PROFILE);
 
   return {
     ...config,
@@ -151,14 +156,14 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     ios: {
       usesAppleSignIn: true,
       supportsTablet: false,
-      bundleIdentifier: BUNDLE_ID,
+      bundleIdentifier: bundleId,
       infoPlist: {
         ITSAppUsesNonExemptEncryption: false,
         NSPhotoLibraryUsageDescription: PHOTO_LIBRARY_USAGE_DESCRIPTION,
       },
     },
     android: {
-      package: BUNDLE_ID,
+      package: bundleId,
     },
     web: {
       favicon: "./assets/favicon.png",
