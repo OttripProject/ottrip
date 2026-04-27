@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Platform, Alert } from 'react-native';
+import { View, Text, StyleSheet, Platform, Alert, Pressable } from 'react-native';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigation } from '@react-navigation/native';
 import { authApi } from '../services/auth';
@@ -28,7 +28,7 @@ const generateNonce = async () => {
 const env = loadPublicEnv();
 
 export default function LoginScreen() {
-  const { login } = useAuth();
+  const { login, loginAsGuest } = useAuth();
   const navigation = useNavigation<any>();
   const [isLoading, setIsLoading] = useState(false);
   const [nonce, setNonce] = useState<string>('');
@@ -209,6 +209,31 @@ export default function LoginScreen() {
     }
   };
 
+  const onGuestStart = async () => {
+    setIsLoading(true);
+    try {
+      await loginAsGuest();
+      try {
+        const token = Platform.OS === 'web'
+          ? window.localStorage.getItem('pendingInviteToken')
+          : await SecureStore.getItemAsync('pendingInviteToken');
+        if (token) {
+          await api.post(`/private/plans/invitations/${token}/accept`);
+          if (Platform.OS === 'web') {
+            window.localStorage.removeItem('pendingInviteToken');
+            window.dispatchEvent(new Event('plans-refresh'));
+          } else {
+            await SecureStore.deleteItemAsync('pendingInviteToken');
+          }
+        }
+      } catch {}
+    } catch {
+      Alert.alert('오류', '비회원으로 시작할 수 없습니다. 잠시 후 다시 시도해주세요.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleTestLogin = async () => {
     setIsLoading(true);
     try {
@@ -269,6 +294,13 @@ export default function LoginScreen() {
             disabled={isLoading}
               isLoading={isLoading}
             />
+            <Pressable
+              onPress={onGuestStart}
+              disabled={isLoading}
+              style={({ pressed }) => [styles.guestLink, pressed && styles.guestLinkPressed]}
+            >
+              <Text style={styles.guestLinkText}>비회원으로 시작</Text>
+            </Pressable>
           </View>
         </Card>
     </SafeAreaView>
@@ -303,5 +335,18 @@ const styles = StyleSheet.create({
   buttonContainer: {
     width: '100%',
     alignItems: 'center',
+  },
+  guestLink: {
+    marginTop: 20,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+  },
+  guestLinkPressed: {
+    opacity: 0.6,
+  },
+  guestLinkText: {
+    ...textStyles.body2,
+    color: '#0066FF',
+    textDecorationLine: 'underline',
   },
 }); 

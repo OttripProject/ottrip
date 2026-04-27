@@ -24,6 +24,8 @@ import AddIcon from '../../../../assets/mobile_plan_add.svg';
 import DeleteIcon from '../../../../assets/delete.svg';
 import { useFilePicker } from '@/hooks/useFilePicker';
 import { useAttachmentUpload } from '@/hooks/useAttachmentUpload';
+import { useMe } from '@/hooks/useMe';
+import { handleGuestPromptError } from '@/utils/guestPrompt';
 
 interface FlightEditModalProps {
   visible: boolean;
@@ -103,6 +105,7 @@ export default function FlightEditModal({
   const [isLoadingAttachments, setIsLoadingAttachments] = useState(false);
 
   const { pickImage, pickDocument } = useFilePicker();
+  const { data: me } = useMe();
   const { isUploading, uploadFiles } = useAttachmentUpload({
     planId,
     entityType: 'flight',
@@ -218,7 +221,8 @@ export default function FlightEditModal({
     try {
       await attachmentsApi.deleteAttachment(attachmentId);
       setExistingAttachments((prev) => prev.filter((a) => a.id !== attachmentId));
-    } catch {
+    } catch (error) {
+      if (handleGuestPromptError(error)) return;
       Alert.alert('오류', '첨부파일 삭제에 실패했습니다.');
     }
   };
@@ -726,6 +730,7 @@ export default function FlightEditModal({
           isLoadingExisting={!!flight && isLoadingAttachments}
           isUploading={isUploading}
           disabled={isSubmitting}
+          isGuest={!!me?.isGuest}
           onPickImage={async () => {
             try {
               const file = await pickImage();

@@ -34,6 +34,7 @@ import WeeklyChecklistCard from '@/components/cards/WeeklyChecklistCard.native';
 import { itinerariesApi } from '@/services/itineraries';
 import { accommodationsApi } from '@/services/accommodations';
 import { flightsApi } from '@/services/flights';
+import { guestPrompt } from '@/utils/guestPrompt';
 import SettingIcon from '../../assets/mobile_setting.svg';
 import DropdownIcon from '../../assets/mobile_dropdown.svg';
 import LocationIcon from '../../assets/mobile_location.svg';
@@ -69,6 +70,16 @@ export default function TodayScreen() {
   const [showExpenseDetail, setShowExpenseDetail] = useState(false);
   const [showAddExpenseFromDetail, setShowAddExpenseFromDetail] = useState(false);
   const [addScheduleFlow, setAddScheduleFlow] = useState<AddScheduleFlow>('closed');
+
+  useEffect(() => {
+    return guestPrompt.registerBeforeSignUpNavigation(() => {
+      setProfileModalVisible(false);
+      setShowItineraryEdit(false);
+      setShowAccommodationEdit(false);
+      setShowFlightEdit(false);
+      setAddScheduleFlow('closed');
+    });
+  }, []);
 
   const queryClient = useQueryClient();
   const plansQuery = usePlansQuery();

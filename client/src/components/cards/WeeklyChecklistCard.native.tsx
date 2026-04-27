@@ -7,6 +7,8 @@ import { TravelChecklistItem, Itinerary } from '@/types/api';
 import { colors } from '@/ui/tokens/colors';
 import { textStyles } from '@/ui/tokens/typography';
 import api from '@/services/api';
+import { useMe } from '@/hooks/useMe';
+import { guestPrompt, handleGuestPromptError } from '@/utils/guestPrompt';
 import GradientBackground from '@/ui/components/GradientBackground';
 import ChecklistIcon from '../../../assets/mobile_check.svg';
 import LightningIcon from '../../../assets/mobile_lightning.svg';
@@ -32,6 +34,7 @@ export default function WeeklyChecklistCard({
   titleOverride,
 }: WeeklyChecklistCardProps) {
   const queryClient = useQueryClient();
+  const { data: me } = useMe();
   const [newChecklistItem, setNewChecklistItem] = useState('');
   const [addingChecklistItem, setAddingChecklistItem] = useState(false);
   const [aiRecommendLoading, setAiRecommendLoading] = useState(false);
@@ -50,6 +53,9 @@ export default function WeeklyChecklistCard({
         return response.data;
       } catch (error: any) {
         if (error.response?.status === 404) {
+          return null;
+        }
+        if (error.response?.status === 403) {
           return null;
         }
         throw error;
@@ -95,6 +101,10 @@ export default function WeeklyChecklistCard({
   const hasChecklist = dateChecklistItems.length > 0;
 
   const handleAddChecklistItem = async () => {
+    if (me?.isGuest) {
+      guestPrompt.show();
+      return;
+    }
     const name = newChecklistItem.trim();
     if (!name || !planPublicId) {
       if (!planPublicId) Alert.alert('알림', '여행을 선택해주세요.');
@@ -110,7 +120,8 @@ export default function WeeklyChecklistCard({
       });
       setNewChecklistItem('');
       refetchChecklist();
-    } catch {
+    } catch (error) {
+      if (handleGuestPromptError(error)) return;
       Alert.alert('오류', '체크리스트 항목 추가에 실패했습니다.');
     } finally {
       setAddingChecklistItem(false);
@@ -118,6 +129,10 @@ export default function WeeklyChecklistCard({
   };
 
   const handleToggleChecklistItem = async (itemId: number, isChecked: boolean) => {
+    if (me?.isGuest) {
+      guestPrompt.show();
+      return;
+    }
     if (!planPublicId) return;
     if (togglingItems.current.has(itemId)) return;
     togglingItems.current.add(itemId);
@@ -140,8 +155,9 @@ export default function WeeklyChecklistCard({
       await api.patch(`/private/ai/checklist/${planPublicId}/item/${itemId}`, {
         is_checked: isChecked,
       });
-    } catch {
+    } catch (error) {
       queryClient.setQueryData(['checklist', planPublicId], previousData);
+      if (handleGuestPromptError(error)) return;
       Alert.alert('오류', '체크리스트 항목 업데이트에 실패했습니다.');
     } finally {
       togglingItems.current.delete(itemId);
@@ -149,13 +165,18 @@ export default function WeeklyChecklistCard({
   };
 
   const handleDeleteChecklistItem = async (itemId: number) => {
+    if (me?.isGuest) {
+      guestPrompt.show();
+      return;
+    }
     if (!planPublicId) return;
     if (deletingItems.current.has(itemId)) return;
     deletingItems.current.add(itemId);
     try {
       await api.delete(`/private/ai/checklist/${planPublicId}/item/${itemId}`);
       refetchChecklist();
-    } catch {
+    } catch (error) {
+      if (handleGuestPromptError(error)) return;
       Alert.alert('오류', '체크리스트 항목 삭제에 실패했습니다.');
     } finally {
       deletingItems.current.delete(itemId);
@@ -163,6 +184,10 @@ export default function WeeklyChecklistCard({
   };
 
   const handleAiRecommendChecklist = async () => {
+    if (me?.isGuest) {
+      guestPrompt.show();
+      return;
+    }
     if (!planPublicId) {
       Alert.alert('알림', '여행을 선택해주세요.');
       return;
@@ -179,7 +204,8 @@ export default function WeeklyChecklistCard({
         date: dateForApi,
       });
       refetchChecklist();
-    } catch {
+    } catch (error) {
+      if (handleGuestPromptError(error)) return;
       Alert.alert('오류', 'AI 체크리스트 생성에 실패했습니다.');
     } finally {
       setAiRecommendLoading(false);

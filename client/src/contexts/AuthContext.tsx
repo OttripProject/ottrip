@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { Platform } from 'react-native';
-import { authApi, TokenResponse, AuthResponse } from '../services/auth';
+import { authApi, TokenResponse, AuthResponse, RegisteredAuthResponse } from '../services/auth';
 import { tokenStores } from '../utils/tokenStores'; 
 import { useTokenRefresh } from '../hooks/useTokenRefresh';
 import { queryClient } from './QueryProvider';
@@ -11,6 +11,7 @@ interface AuthContextType {
   isLoading: boolean;
   user: any | null;
   login: (authResponse: AuthResponse) => Promise<void>;
+  loginAsGuest: () => Promise<void>;
   logout: () => Promise<void>;
   refreshAuth: () => Promise<void>;
   getStorageInfo: () => any;
@@ -72,6 +73,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const login = async (authResponse: AuthResponse) => {
     if (authResponse.isRegistered) {
       await saveTokens(authResponse);
+      if (Platform.OS !== 'web') {
+        try {
+          await tokenStores.registerToken.clear();
+        } catch {
+          /* noop */
+        }
+      }
       queryClient.removeQueries({ queryKey: ['me'] });
       setIsAuthenticated(true);
     } else {
@@ -79,11 +87,23 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
+  const loginAsGuest = async () => {
+    const res: RegisteredAuthResponse = await authApi.loginAsGuest();
+    await login({
+      isRegistered: true,
+      accessToken: res.accessToken,
+      refreshToken: res.refreshToken,
+    });
+  };
+
   const logout = async () => {
     try {
       if (Platform.OS === 'web') {
         await authApi.logout();
       } else {
+        try {
+          await authApi.logout();
+        } catch {}
         await clearTokens();
       }
     } catch (error: any) {
@@ -149,6 +169,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     isLoading,
     user,
     login,
+    loginAsGuest,
     logout,
     refreshAuth,
     getStorageInfo: () => ({

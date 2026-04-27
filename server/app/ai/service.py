@@ -4,7 +4,7 @@ from typing import Any, Dict, Iterable, Tuple, cast
 from fastapi import HTTPException
 from sqlalchemy.orm import attributes
 
-from app.auth.deps import CurrentUser
+from app.auth.deps import RequireRegisteredUser
 from app.common.schemas import StatusResponse
 from app.flights.models import Flight
 from app.flights.repository import FlightRepository
@@ -25,7 +25,7 @@ from .schemas import (
 
 @dependency
 class AIService:
-    current_user: CurrentUser
+    current_user: RequireRegisteredUser
     vision_client: VisionClient
     gemini_client: GeminiClient
     plan_repository: PlanRepository

@@ -21,6 +21,7 @@ import XIcon from '../../assets/x.svg';
 import CopyIcon from '../../assets/copy.svg';
 import DeleteAccountModal from '@/components/modals/DeleteAccountModal';
 import LogoutModal from '@/components/modals/LogoutModal';
+import { guestPrompt } from '@/utils/guestPrompt';
 
 export default function ProfileScreen() {
   const { logout } = useAuth();
@@ -107,6 +108,14 @@ export default function ProfileScreen() {
 
   const hasChanges = nickname !== me?.nickname || gender !== me?.gender;
   const canSave = isValid && hasChanges;
+  const isGuest = !!me?.isGuest;
+
+  const handleSignUp = () => {
+    guestPrompt.notifyBeforeSignUpNavigation();
+    queueMicrotask(() => {
+      navigation.navigate('소셜회원가입' as never, { guestUpgrade: true } as never);
+    });
+  };
 
   return (
     <GradientBackground>
@@ -205,10 +214,21 @@ export default function ProfileScreen() {
               <Pressable style={styles.footerButton} onPress={() => setLogoutModalOpen(true)}>
                 <Text style={styles.footerButtonText}>로그아웃</Text>
               </Pressable>
-              <View style={styles.footerDivider} />
-              <Pressable style={styles.footerButton} onPress={handleDeleteAccount}>
-                <Text style={styles.footerButtonTextInactive}>계정 삭제</Text>
-              </Pressable>
+              {isGuest ? (
+                <>
+                  <View style={styles.footerDivider} />
+                  <Pressable style={styles.footerButton} onPress={handleSignUp}>
+                    <Text style={styles.footerButtonTextSignUp}>회원가입</Text>
+                  </Pressable>
+                </>
+              ) : (
+                <>
+                  <View style={styles.footerDivider} />
+                  <Pressable style={styles.footerButton} onPress={handleDeleteAccount}>
+                    <Text style={styles.footerButtonTextInactive}>계정 삭제</Text>
+                  </Pressable>
+                </>
+              )}
             </View>
           </Card>
         </View>
@@ -276,6 +296,11 @@ export default function ProfileScreen() {
       <LogoutModal
         visible={logoutModalOpen}
         onClose={() => setLogoutModalOpen(false)}
+        isGuest={isGuest}
+        onSignUp={() => {
+          setLogoutModalOpen(false);
+          handleSignUp();
+        }}
         onConfirm={() => {
           setLogoutModalOpen(false);
           logout();
@@ -485,6 +510,10 @@ const styles = StyleSheet.create({
   footerButtonTextInactive: {
     ...textStyles.h7,
     color: colors.gray500,
+  },
+  footerButtonTextSignUp: {
+    ...textStyles.h7,
+    color: colors.primary,
   },
   modalOverlay: {
     flex: 1,

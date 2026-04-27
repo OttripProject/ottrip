@@ -85,7 +85,7 @@ async def get_current_user_or_none(
     token: TokenDep,  
     access_token: Optional[str] = Cookie(None, include_in_schema=False), 
 ) -> Optional[User]:
-    token_value = access_token or token
+    token_value = token or access_token
     
     if token_value is None:
         return None
@@ -118,4 +118,24 @@ async def get_current_user(
 CurrentUser = Annotated[User, Depends(get_current_user)]
 
 
-__all__ = ["TokenDep", "RegisterAuthDep", "CurrentUserOptional", "CurrentUser"]
+async def require_registered_user(user: CurrentUser) -> User:
+    """회원(비게스트)만 허용. 게스트 토큰이면 403 + code=GUEST_NOT_ALLOWED."""
+    if user.is_guest:
+        raise HTTPException(
+            status_code=403,
+            detail={"code": "GUEST_NOT_ALLOWED"},
+        )
+    return user
+
+
+RequireRegisteredUser = Annotated[User, Depends(require_registered_user)]
+
+
+__all__ = [
+    "TokenDep",
+    "RegisterAuthDep",
+    "CurrentUserOptional",
+    "CurrentUser",
+    "require_registered_user",
+    "RequireRegisteredUser",
+]

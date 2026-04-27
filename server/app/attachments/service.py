@@ -4,7 +4,7 @@ import uuid
 from fastapi import HTTPException
 from types_aiobotocore_s3.client import S3Client
 
-from app.auth.deps import CurrentUser
+from app.auth.deps import RequireRegisteredUser
 from app.plans.repository import PlanRepository
 from app.storage.config import storage_settings
 from app.storage.deps import S3ClientDep
@@ -56,7 +56,7 @@ async def cascade_delete_attachments(
 
 @dependency
 class AttachmentService:
-    current_user: CurrentUser
+    current_user: RequireRegisteredUser
     s3_client: S3ClientDep
     attachment_repository: AttachmentRepository
     plan_repository: PlanRepository

@@ -7,6 +7,7 @@ import RefreshChecklistModal from '../../modals/AiRefreshChecklistModal';
 import InsufficientScheduleModal from '../../modals/AiInsufficientModal';
 import AiChecklistListViewModal from '../../modals/AiChecklistListViewModal';
 import api from '@/services/api';
+import { handleGuestPromptError } from '@/utils/guestPrompt';
 import { colors } from '@/ui/tokens/colors';
 import { textStyles, typography } from '@/ui/tokens/typography';
 import { spacing } from '@/ui/tokens/spacing';
@@ -100,6 +101,7 @@ export default function AIAssistantPanel({ publicId }: AIAssistantPanelProps) {
       }
       
     } catch (error) {
+      if (handleGuestPromptError(error)) return;
       Alert.alert('오류', '체크리스트 생성 중 오류가 발생했습니다.');
     } finally {
       setIsLoading(false);
@@ -137,6 +139,7 @@ export default function AIAssistantPanel({ publicId }: AIAssistantPanelProps) {
         Alert.alert('오류', response.data.message || '체크리스트 새로고침에 실패했습니다.');
       }
     } catch (error) {
+      if (handleGuestPromptError(error)) return;
       Alert.alert('오류', '체크리스트 새로고침 중 오류가 발생했습니다.');
     } finally {
       setIsLoading(false);
@@ -183,6 +186,7 @@ export default function AIAssistantPanel({ publicId }: AIAssistantPanelProps) {
         setChecklist(updatedChecklist);
       }
     } catch (error) {
+      if (handleGuestPromptError(error)) return;
       Alert.alert('오류', '체크리스트 항목 업데이트에 실패했습니다.');
     }
   };
@@ -205,6 +209,7 @@ export default function AIAssistantPanel({ publicId }: AIAssistantPanelProps) {
       setNewItemName('');
       setNewItemReason('');
     } catch (error) {
+      if (handleGuestPromptError(error)) return;
       Alert.alert('오류', '체크리스트 항목 추가에 실패했습니다.');
     }
   };
@@ -239,6 +244,7 @@ export default function AIAssistantPanel({ publicId }: AIAssistantPanelProps) {
       
       await checkExistingChecklist();
     } catch (error) {
+      if (handleGuestPromptError(error)) return;
       Alert.alert('오류', '체크리스트 항목 삭제에 실패했습니다.');
     }
   };
