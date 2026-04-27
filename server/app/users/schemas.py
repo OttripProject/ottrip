@@ -43,3 +43,4 @@ class UserUpdate(APISchema):
 
 class UserRead(UserBase):
     email: EmailStr | None = None
+    is_guest: bool

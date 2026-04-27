@@ -41,6 +41,7 @@ class UserRepository:
             description=user.description,
             gender=(user.gender if user.gender is not None else Gender.OTHER),
             email=user.email,
+            is_guest=user.is_guest,
         )
 
     async def create(self, *, user_data: UserCreate, email: str | None = None) -> User | None:
