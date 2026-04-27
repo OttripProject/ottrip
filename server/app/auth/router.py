@@ -5,6 +5,7 @@ from fastapi import status, HTTPException, Response
 from app.common.deps import HTTPClientDep
 from app.common.schemas import ValidationResult
 from app.core.router import create_router
+from app.users.repository import UserRepository
 from app.users.schemas import UserCreate
 from app.users.service import UserService
 
@@ -31,6 +32,15 @@ from .service import AuthInfoService
 from .token import TokenType, create_jwt_token, create_token_pair
 
 router = create_router()
+
+
+def _registered_response(user_id: int, response: Response) -> RegisteredAuthResponse:
+    access_token, refresh_token = create_token_pair(user_id)
+    _set_auth_cookies(response, access_token, refresh_token)
+    return RegisteredAuthResponse(
+        access_token=access_token,
+        refresh_token=refresh_token,
+    )
 
 
 def _set_auth_cookies(response: Response, access_token: str, refresh_token: str) -> None:
@@ -281,6 +291,8 @@ async def authenticate_google(
     payload: GoogleAuthRequest,
     client: HTTPClientDep,
     auth_info_service: AuthInfoService,
+    user_repository: UserRepository,
+    current_user: CurrentUserOptional,
     response: Response,
 ) -> AuthResponse:
     # 1. Google에 id_token 검증 요청
@@ -308,6 +320,24 @@ async def authenticate_google(
         email=email,
     )
 
+    if current_user is not None and current_user.is_guest:
+        if auth_info.user_id is not None and auth_info.user_id != current_user.id:
+            raise HTTPException(
+                status_code=409,
+                detail="이 Google 계정은 이미 다른 OTTRIP 계정에 연결되어 있습니다.",
+            )
+        if auth_info.user_id == current_user.id:
+            return _registered_response(current_user.id, response)
+        if auth_info.user_id is None:
+            await auth_info_service.connect_to_user(
+                auth=auth_info, user_id=current_user.id
+            )
+            await user_repository.promote_guest_to_registered(
+                user_id=current_user.id,
+                email=email,
+            )
+            return _registered_response(current_user.id, response)
+
     if auth_info.user_id is None:
         return UnregisteredAuthResponse(
             register_token=create_jwt_token(
@@ -320,13 +350,7 @@ async def authenticate_google(
             ),
         )
 
-    access_token, refresh_token = create_token_pair(auth_info.user_id)
-    _set_auth_cookies(response, access_token, refresh_token)
-    # 하위 호환: JSON 응답도 유지 (Native 환경용)
-    return RegisteredAuthResponse(
-        access_token=access_token,
-        refresh_token=refresh_token,
-    )
+    return _registered_response(auth_info.user_id, response)
 
 
 @router.post("/apple")
@@ -334,6 +358,8 @@ async def authenticate_apple(
     payload: AppleAuthRequest,
     apple_idp: AppleIdpService,
     auth_info_service: AuthInfoService,
+    user_repository: UserRepository,
+    current_user: CurrentUserOptional,
     response: Response,
 ) -> AuthResponse:
     apple_user = await apple_idp.verify_identity_token(payload.identity_token)
@@ -342,6 +368,24 @@ async def authenticate_apple(
         apple_id=apple_user.sub,
         email=apple_user.email,
     )
+
+    if current_user is not None and current_user.is_guest:
+        if auth_info.user_id is not None and auth_info.user_id != current_user.id:
+            raise HTTPException(
+                status_code=409,
+                detail="이 Apple 계정은 이미 다른 OTTRIP 계정에 연결되어 있습니다.",
+            )
+        if auth_info.user_id == current_user.id:
+            return _registered_response(current_user.id, response)
+        if auth_info.user_id is None:
+            await auth_info_service.connect_to_user(
+                auth=auth_info, user_id=current_user.id
+            )
+            await user_repository.promote_guest_to_registered(
+                user_id=current_user.id,
+                email=apple_user.email,
+            )
+            return _registered_response(current_user.id, response)
 
     if auth_info.user_id is None:
         return UnregisteredAuthResponse(
@@ -355,9 +399,4 @@ async def authenticate_apple(
             ),
         )
 
-    access_token, refresh_token = create_token_pair(auth_info.user_id)
-    _set_auth_cookies(response, access_token, refresh_token)
-    return RegisteredAuthResponse(
-        access_token=access_token,
-        refresh_token=refresh_token,
-    )
+    return _registered_response(auth_info.user_id, response)

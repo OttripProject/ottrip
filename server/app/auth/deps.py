@@ -85,7 +85,7 @@ async def get_current_user_or_none(
     token: TokenDep,  
     access_token: Optional[str] = Cookie(None, include_in_schema=False), 
 ) -> Optional[User]:
-    token_value = access_token or token
+    token_value = token or access_token
     
     if token_value is None:
         return None

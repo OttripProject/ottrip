@@ -54,6 +54,17 @@ class UserRepository:
 
         return created_user
 
+    async def promote_guest_to_registered(
+        self, *, user_id: int, email: str | None
+    ) -> None:
+        await self.session.execute(
+            update(User)
+            .where(User.id == user_id)
+            .where(User.is_deleted.is_(False))
+            .values(is_guest=False, email=email)
+        )
+        await self.session.flush()
+
     async def update(self, *, user_id: int, updated_data: UserUpdate) -> User | None:
         updated_data_dict = updated_data.model_dump(exclude_unset=True)
 
