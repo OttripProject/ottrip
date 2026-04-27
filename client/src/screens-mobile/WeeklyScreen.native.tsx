@@ -60,6 +60,7 @@ export default function WeeklyScreen() {
 
   useEffect(() => {
     return guestPrompt.registerBeforeSignUpNavigation(() => {
+      setProfileModalVisible(false);
       setTravelInfoModalVisible(false);
       setShowItineraryEdit(false);
       setShowFlightEdit(false);

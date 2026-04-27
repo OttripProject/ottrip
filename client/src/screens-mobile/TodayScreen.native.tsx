@@ -73,6 +73,7 @@ export default function TodayScreen() {
 
   useEffect(() => {
     return guestPrompt.registerBeforeSignUpNavigation(() => {
+      setProfileModalVisible(false);
       setShowItineraryEdit(false);
       setShowAccommodationEdit(false);
       setShowFlightEdit(false);

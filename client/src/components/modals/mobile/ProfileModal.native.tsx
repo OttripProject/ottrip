@@ -21,6 +21,7 @@ import QnaIcon from '../../../../assets/qna.svg';
 import CopyIcon from '../../../../assets/copy.svg';
 import DeleteAccountModal from '@/components/modals/DeleteAccountModal';
 import LogoutModal from '@/components/modals/LogoutModal';
+import { guestPrompt } from '@/utils/guestPrompt';
 
 interface ProfileModalProps {
   visible: boolean;
@@ -104,6 +105,15 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
 
   const hasChanges = nickname !== me?.nickname || gender !== me?.gender;
   const canSave = isValid && hasChanges;
+  const isGuest = !!me?.isGuest;
+
+  const handleSignUp = () => {
+    guestPrompt.notifyBeforeSignUpNavigation();
+    onClose();
+    queueMicrotask(() => {
+      navigation.navigate('소셜회원가입' as never, { guestUpgrade: true } as never);
+    });
+  };
 
   if (!visible) return null;
 
@@ -202,9 +212,15 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
                   <Pressable onPress={() => setLogoutModalOpen(true)}>
                     <Text style={styles.footerLinkRed}>로그아웃</Text>
                   </Pressable>
-                  <Pressable onPress={handleDeleteAccount}>
-                    <Text style={styles.footerLinkGray}>계정 삭제</Text>
-                  </Pressable>
+                  {isGuest ? (
+                    <Pressable onPress={handleSignUp}>
+                      <Text style={styles.footerLinkSignUp}>회원가입</Text>
+                    </Pressable>
+                  ) : (
+                    <Pressable onPress={handleDeleteAccount}>
+                      <Text style={styles.footerLinkGray}>계정 삭제</Text>
+                    </Pressable>
+                  )}
                 </View>
                 <Pressable
                   disabled={!canSave}
@@ -449,6 +465,10 @@ const styles = StyleSheet.create({
   footerLinkGray: {
     ...textStyles.h7,
     color: colors.gray600,
+  },
+  footerLinkSignUp: {
+    ...textStyles.h7,
+    color: colors.primary,
   },
   saveButton: {
     backgroundColor: colors.primary,
