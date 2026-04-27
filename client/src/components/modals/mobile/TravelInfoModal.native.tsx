@@ -6,6 +6,8 @@ import { Plan, Itinerary, Accommodation, FlightRead, Expense } from '@/types/api
 import { colors } from '@/ui/tokens/colors';
 import { textStyles } from '@/ui/tokens/typography';
 import { plansApi } from '@/services/plans';
+import { useMe } from '@/hooks/useMe';
+import { guestPrompt } from '@/utils/guestPrompt';
 import FullScreenModal from '@/ui/components/FullScreenModal.native';
 import ExpenseDetailModal from './ExpenseDetailModal.native';
 import AddExpenseModal from './AddExpenseModal.native';
@@ -54,6 +56,7 @@ export default function TravelInfoModal({
   onRefreshPlan,
 }: TravelInfoModalProps) {
   const queryClient = useQueryClient();
+  const { data: me } = useMe();
   const [showExpenseDetail, setShowExpenseDetail] = useState(false);
   const [showAddExpenseFromDetail, setShowAddExpenseFromDetail] = useState(false);
   const [showSharedMembers, setShowSharedMembers] = useState(false);
@@ -173,7 +176,13 @@ export default function TravelInfoModal({
         <View style={styles.twoCardRow}>
           <Pressable
             style={styles.smallCard}
-            onPress={() => setShowSharedMembers(true)}
+            onPress={() => {
+              if (me?.isGuest) {
+                guestPrompt.show();
+                return;
+              }
+              setShowSharedMembers(true);
+            }}
           >
             <MemberIcon width={20} height={20} color={colors.black} />
             <Text style={styles.twoColValue}>{memberCount}명</Text>
