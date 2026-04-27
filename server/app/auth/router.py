@@ -202,12 +202,7 @@ async def authenticate_guest(
     response: Response,
 ) -> RegisteredAuthResponse:
     user = await user_service.create_guest()
-    access_token, refresh_token = create_token_pair(user.id)
-    _set_auth_cookies(response, access_token, refresh_token)
-    return RegisteredAuthResponse(
-        access_token=access_token,
-        refresh_token=refresh_token,
-    )
+    return _registered_response(user.id, response)
 
 
 @router.get("/valid-token", response_model=bool)
