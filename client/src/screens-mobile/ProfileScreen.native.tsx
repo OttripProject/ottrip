@@ -64,7 +64,12 @@ export default function ProfileScreen() {
       <LogoutModal
         visible={logoutModalOpen}
         onClose={() => setLogoutModalOpen(false)}
+        isGuest={!!profile?.isGuest}
         onConfirm={handleLogout}
+        onSignUp={() => {
+          setLogoutModalOpen(false);
+          logout();
+        }}
       />
     </View>
   );

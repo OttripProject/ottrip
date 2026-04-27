@@ -280,7 +280,12 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
       <LogoutModal
         visible={logoutModalOpen}
         onClose={() => setLogoutModalOpen(false)}
+        isGuest={!!me?.isGuest}
         onConfirm={() => {
+          setLogoutModalOpen(false);
+          logout();
+        }}
+        onSignUp={() => {
           setLogoutModalOpen(false);
           logout();
         }}
