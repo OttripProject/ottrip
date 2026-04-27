@@ -46,8 +46,7 @@ class UserRepository:
 
     async def create(self, *, user_data: UserCreate, email: str | None = None) -> User | None:
         user_dict = user_data.model_dump()
-        if email:
-            user_dict['email'] = email
+        user_dict['email'] = email
         created_user = User(**user_dict)
         self.session.add(created_user)
         await self.session.flush()
