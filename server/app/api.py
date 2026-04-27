@@ -1,13 +1,12 @@
 from fastapi import Depends
 
-# private
-from app.accomodation.router import router as accomodation_router
-from app.attachments.router import router as attachments_router
+
 
 from app.auth.deps import get_current_user
 
-# public
+from app.accomodation.router import router as accomodation_router
 from app.ai.router import router as ai_router
+from app.attachments.router import router as attachments_router
 from app.auth.router import router as auth_router
 from app.core.router import create_router
 from app.expenses.router import router as expenses_router
