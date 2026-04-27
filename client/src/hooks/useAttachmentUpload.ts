@@ -2,6 +2,7 @@ import { useState } from "react";
 
 import { attachmentsApi } from "../services/attachments";
 import type { Attachment, AttachmentEntityType, LocalFile } from "../types/api";
+import { handleGuestPromptError } from "../utils/guestPrompt";
 
 interface UseAttachmentUploadOptions {
   planId: number;
@@ -59,6 +60,9 @@ export const useAttachmentUpload = ({
         }),
       );
       return results;
+    } catch (error) {
+      handleGuestPromptError(error);
+      throw error;
     } finally {
       setIsUploading(false);
     }

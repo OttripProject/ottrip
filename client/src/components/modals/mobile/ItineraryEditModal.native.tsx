@@ -28,6 +28,8 @@ import { ExpenseCategory, ExpenseCurrency, categoryLabels } from '@/types/expens
 import { normalizeAmount, formatAmountWithCommas } from '@/utils/amountUtils';
 import { useFilePicker } from '@/hooks/useFilePicker';
 import { useAttachmentUpload } from '@/hooks/useAttachmentUpload';
+import { useMe } from '@/hooks/useMe';
+import { handleGuestPromptError } from '@/utils/guestPrompt';
 
 interface ItineraryEditModalProps {
   visible: boolean;
@@ -75,6 +77,7 @@ export default function ItineraryEditModal({
   const [isLoadingAttachments, setIsLoadingAttachments] = useState(false);
 
   const { pickImage, pickDocument } = useFilePicker();
+  const { data: me } = useMe();
   const { isUploading, uploadFiles } = useAttachmentUpload({
     planId,
     entityType: 'itinerary',
@@ -209,7 +212,8 @@ export default function ItineraryEditModal({
     try {
       await attachmentsApi.deleteAttachment(attachmentId);
       setExistingAttachments((prev) => prev.filter((a) => a.id !== attachmentId));
-    } catch {
+    } catch (error) {
+      if (handleGuestPromptError(error)) return;
       Alert.alert('오류', '첨부파일 삭제에 실패했습니다.');
     }
   };
@@ -576,6 +580,7 @@ export default function ItineraryEditModal({
               isLoadingExisting={!!itinerary && isLoadingAttachments}
               isUploading={isUploading}
               disabled={isSubmitting}
+              isGuest={!!me?.isGuest}
               onPickImage={async () => {
                 try {
                   const file = await pickImage();

@@ -18,6 +18,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '@/ui/tokens/colors';
 import { textStyles } from '@/ui/tokens/typography';
 import type { Attachment, LocalFile } from '@/types/api';
+import { guestPrompt } from '@/utils/guestPrompt';
 
 import CameraIcon from '../../../assets/mobile_camera.svg';
 import AddIcon from '../../../assets/mobile_plan_add.svg';
@@ -39,6 +40,8 @@ export interface AttachmentSectionProps {
   style?: StyleProp<ViewStyle>;
   showTopDivider?: boolean;
   disabled?: boolean;
+  /** 게스트면 '추가' 시 API 없이 먼저 회원가입 모달(비회원이 첨부 시도하는 진입점) */
+  isGuest?: boolean;
 }
 
 
@@ -76,6 +79,7 @@ export default function AttachmentSection({
   style,
   showTopDivider = false,
   disabled = false,
+  isGuest = false,
 }: AttachmentSectionProps) {
   const existing = existingAttachments;
   const hasFiles = existing.length + pendingFiles.length > 0;
@@ -112,6 +116,10 @@ export default function AttachmentSection({
 
   const handleAddPress = () => {
     if (disabled || isUploading) return;
+    if (isGuest) {
+      guestPrompt.show();
+      return;
+    }
     Alert.alert('파일 추가', '추가할 파일 유형을 선택하세요.', [
       { text: '사진', onPress: onPickImage },
       { text: 'PDF 문서', onPress: onPickDocument },

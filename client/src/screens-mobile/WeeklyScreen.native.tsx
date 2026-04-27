@@ -33,6 +33,7 @@ import CautionIcon from '../../assets/mobile_caution.svg';
 import PlusIcon from '../../assets/mobile_plus2.svg';
 import { itinerariesApi } from '@/services/itineraries';
 import { flightsApi } from '@/services/flights';
+import { guestPrompt } from '@/utils/guestPrompt';
 
 export default function WeeklyScreen() {
   const plansQuery = usePlansQuery();
@@ -56,6 +57,15 @@ export default function WeeklyScreen() {
   const [selectedFlightSegment, setSelectedFlightSegment] = useState<FlightSegmentReadDto | null>(null);
   const [showFlightEdit, setShowFlightEdit] = useState(false);
   const [editingFlight, setEditingFlight] = useState<FlightRead | null>(null);
+
+  useEffect(() => {
+    return guestPrompt.registerBeforeSignUpNavigation(() => {
+      setTravelInfoModalVisible(false);
+      setShowItineraryEdit(false);
+      setShowFlightEdit(false);
+      setAddScheduleFlow('closed');
+    });
+  }, []);
 
   const planData = usePlanDataQuery(selectedPlan?.publicId || null);
 

@@ -23,6 +23,7 @@ import { useRef } from "react";
 import type { LinkingOptions } from "@react-navigation/native";
 import * as SecureStore from 'expo-secure-store';
 import MobileNavigator from "@/screens-mobile/MobileNavigator";
+import GuestPromptModal from "@/components/modals/GuestPromptModal";
 
 const Stack = createStackNavigator();
 
@@ -241,6 +242,7 @@ export default function RootNavigator() {
           </>
         )}
       </Stack.Navigator>
+      {isAuthenticated ? <GuestPromptModal /> : null}
     </NavigationContainer>
   );
 }

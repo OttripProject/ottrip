@@ -1,7 +1,9 @@
-import React, { ReactNode } from 'react';
+import React, { ReactNode, useEffect } from 'react';
 import { View, StyleSheet, Modal } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '@/ui/tokens/colors';
+import GuestPromptModal from '@/components/modals/GuestPromptModal';
+import { guestPrompt } from '@/utils/guestPrompt';
 
 interface FullScreenModalProps {
   visible: boolean;
@@ -19,6 +21,13 @@ export default function FullScreenModal({
 }: FullScreenModalProps) {
   const insets = useSafeAreaInsets();
 
+  /** 부모 모달이 닫히면 게스트 안내(전역)도 끄기 — 이중 RN Modal/상태 꼬임·터치 먹통 방지 */
+  useEffect(() => {
+    if (!visible) {
+      guestPrompt.hide();
+    }
+  }, [visible]);
+
   return (
     <Modal
       visible={visible}
@@ -28,6 +37,7 @@ export default function FullScreenModal({
     >
       <View style={[styles.container, { paddingTop: insets.top, backgroundColor: containerBackgroundColor }]}>
         {children}
+        <GuestPromptModal presentation="overlay" />
       </View>
     </Modal>
   );
