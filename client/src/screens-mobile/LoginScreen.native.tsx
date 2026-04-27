@@ -122,15 +122,6 @@ export default function LoginScreenNative() {
       return;
     }
 
-    if (guestUpgrade) {
-      setIsLoading(false);
-      Alert.alert(
-        '오류',
-        '게스트와 소셜 계정을 연결할 수 없습니다. 이미 사용 중인 계정이거나, 잠시 후 다시 시도해주세요.',
-      );
-      return;
-    }
-
     await login(response);
     const payload = parseIdToken(tokenForEmail);
     const email = payload?.email ?? '';

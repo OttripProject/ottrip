@@ -47,13 +47,21 @@ export default function TermsConsentScreenNative() {
 
   const allRequiredChecked = agree1 && agree2;
 
+  const goBackOrLogin = () => {
+    if (navigation.canGoBack()) {
+      navigation.goBack();
+    } else {
+      navigation.navigate('로그인' as never);
+    }
+  };
+
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-      {/* 헤더 */}
+      {/* 헤더 — 게스트(로그인됨)에서 소셜 → 약관일 때는 스택에 '로그인'이 없을 수 있어 goBack 우선 */}
       <View style={styles.header}>
         <Pressable
           style={styles.headerBtn}
-          onPress={() => navigation.navigate('로그인')}
+          onPress={goBackOrLogin}
           hitSlop={8}
         >
           <LeftArrowIcon width={24} height={24} />
@@ -61,7 +69,7 @@ export default function TermsConsentScreenNative() {
         <Text style={styles.headerTitle}>회원가입</Text>
         <Pressable
           style={styles.headerBtn}
-          onPress={() => navigation.navigate('로그인')}
+          onPress={goBackOrLogin}
           hitSlop={8}
         >
           <CloseIcon width={24} height={24} />
