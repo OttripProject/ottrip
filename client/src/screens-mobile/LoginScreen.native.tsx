@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Alert, Platform, Pressable } from 'react-native';
 import { useAuth } from '@/contexts/AuthContext';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { authApi, type AuthResponse } from '@/services/auth';
 import { loadPublicEnv } from '@/core/env/schema';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -37,9 +37,25 @@ const parseIdToken = (idToken: string): any | null => {
   }
 };
 
+const SOCIAL_LOGIN_CONFLICT_DEFAULT = '이 계정은 다른 사용자와 연결되어 있습니다.';
+const SOCIAL_LOGIN_FAILURE_DEFAULT = '로그인에 실패했습니다.';
+
+function showSocialLoginError(err: unknown) {
+  const e = err as { response?: { status?: number; data?: { detail?: string } } };
+  const is409 = e?.response?.status === 409;
+  const detail = e?.response?.data?.detail;
+  const message = is409
+    ? (typeof detail === 'string' && detail ? detail : SOCIAL_LOGIN_CONFLICT_DEFAULT)
+    : SOCIAL_LOGIN_FAILURE_DEFAULT;
+  Alert.alert(is409 ? '안내' : '오류', message);
+}
+
 export default function LoginScreenNative() {
   const { login, loginAsGuest } = useAuth();
   const navigation = useNavigation<any>();
+  const route = useRoute();
+  const guestUpgrade =
+    (route.params as { guestUpgrade?: boolean } | undefined)?.guestUpgrade === true;
   const [isLoading, setIsLoading] = useState(false);
   const [isAppleAuthAvailable, setIsAppleAuthAvailable] = useState(false);
 
@@ -100,6 +116,18 @@ export default function LoginScreenNative() {
       } catch {}
 
       setIsLoading(false);
+      if (guestUpgrade) {
+        navigation.reset({ index: 0, routes: [{ name: 'OTTRIP' }] });
+      }
+      return;
+    }
+
+    if (guestUpgrade) {
+      setIsLoading(false);
+      Alert.alert(
+        '오류',
+        '게스트와 소셜 계정을 연결할 수 없습니다. 이미 사용 중인 계정이거나, 잠시 후 다시 시도해주세요.',
+      );
       return;
     }
 
@@ -118,9 +146,9 @@ export default function LoginScreenNative() {
     try {
       const response = await authApi.googleLogin(idToken);
       await completeAuthResponse(response, idToken);
-    } catch {
+    } catch (err: unknown) {
       setIsLoading(false);
-      Alert.alert('오류', '로그인에 실패했습니다.');
+      showSocialLoginError(err);
     }
   };
 
@@ -128,9 +156,9 @@ export default function LoginScreenNative() {
     try {
       const response = await authApi.appleLogin(identityToken);
       await completeAuthResponse(response, identityToken);
-    } catch {
+    } catch (err: unknown) {
       setIsLoading(false);
-      Alert.alert('오류', '로그인에 실패했습니다.');
+      showSocialLoginError(err);
     }
   };
 
@@ -164,6 +192,14 @@ export default function LoginScreenNative() {
         Alert.alert('오류', '로그인에 실패했습니다: ' + (error.message || '알 수 없는 오류'));
         setIsLoading(false);
       }
+    }
+  };
+
+  const onGuestPlanContinue = () => {
+    if (navigation.canGoBack()) {
+      navigation.goBack();
+    } else {
+      navigation.reset({ index: 0, routes: [{ name: 'OTTRIP' }] });
     }
   };
 
@@ -221,7 +257,11 @@ export default function LoginScreenNative() {
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.content}>
           <Text style={styles.title}>OTTRIP</Text>
-          <Text style={styles.subtitle}>여행 계획을 더 스마트하게</Text>
+          <Text style={styles.subtitle}>
+            {guestUpgrade
+              ? 'Google 또는 Apple로 가입하고\n기존 여행일정을 유지할 수 있어요'
+              : '여행 계획을 더 스마트하게'}
+          </Text>
 
           <View style={styles.buttonContainer}>
             <GoogleButton
@@ -243,11 +283,13 @@ export default function LoginScreenNative() {
               />
             ) : null}
             <Pressable
-              onPress={onGuestStart}
+              onPress={guestUpgrade ? onGuestPlanContinue : onGuestStart}
               disabled={isLoading}
               style={({ pressed }) => [styles.guestLink, pressed && styles.guestLinkPressed]}
             >
-              <Text style={styles.guestLinkText}>게스트로 시작하기</Text>
+              <Text style={styles.guestLinkText}>
+                {guestUpgrade ? '게스트로 이어하기' : '게스트로 시작하기'}
+              </Text>
             </Pressable>
           </View>
         </View>
@@ -281,6 +323,7 @@ const styles = StyleSheet.create({
     ...textStyles.body2,
     color: colors.gray800,
     marginBottom: 36,
+    textAlign: 'center',
   },
   buttonContainer: {
     width: '100%',

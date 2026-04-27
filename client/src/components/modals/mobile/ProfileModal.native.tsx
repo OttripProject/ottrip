@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { View, Text, Pressable, StyleSheet, ScrollView, Alert, Platform, Modal } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQueryClient } from '@tanstack/react-query';
 import { usersApi, UserProfile } from '@/services/users';
@@ -28,6 +29,7 @@ interface ProfileModalProps {
 
 export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
   const insets = useSafeAreaInsets();
+  const navigation = useNavigation<any>();
   const { logout } = useAuth();
   const queryClient = useQueryClient();
   const [me, setMe] = useState<UserProfile | null>(null);
@@ -287,7 +289,8 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
         }}
         onSignUp={() => {
           setLogoutModalOpen(false);
-          logout();
+          onClose();
+          navigation.navigate('소셜회원가입' as never, { guestUpgrade: true } as never);
         }}
       />
     </View>

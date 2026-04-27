@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, ScrollView, StyleSheet, Pressable, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '@/contexts/AuthContext';
+import { useNavigation } from '@react-navigation/native';
 import { useMe } from '@/hooks/useMe';
 import { colors } from '@/ui/tokens/colors';
 import { textStyles } from '@/ui/tokens/typography';
@@ -10,6 +11,7 @@ import LogoutModal from '@/components/modals/LogoutModal';
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
   const { logout } = useAuth();
+  const navigation = useNavigation<any>();
   const { data: profile, isLoading } = useMe();
   const [logoutModalOpen, setLogoutModalOpen] = useState(false);
 
@@ -68,7 +70,7 @@ export default function ProfileScreen() {
         onConfirm={handleLogout}
         onSignUp={() => {
           setLogoutModalOpen(false);
-          logout();
+          navigation.navigate('소셜회원가입' as never, { guestUpgrade: true } as never);
         }}
       />
     </View>

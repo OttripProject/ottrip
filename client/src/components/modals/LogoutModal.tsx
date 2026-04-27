@@ -122,13 +122,13 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
     borderRadius: 24,
     width: 320,
-    minHeight: 208,
     paddingHorizontal: 24,
     paddingTop: 24,
     paddingBottom: 24,
   },
   logoutModalCardGuest: {
     maxHeight: '80%',
+    minHeight: 208,
   },
   guestScrollContent: {
     paddingBottom: 4,

@@ -94,6 +94,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (Platform.OS === 'web') {
         await authApi.logout();
       } else {
+        try {
+          await authApi.logout();
+        } catch {}
         await clearTokens();
       }
     } catch (error: any) {

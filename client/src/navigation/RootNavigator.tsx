@@ -207,6 +207,10 @@ export default function RootNavigator() {
             <Stack.Screen name="FORBIDDEN" component={ForbiddenScreen} />
             {/* 모바일 화면 */}
             <Stack.Screen name="MOBILE" component={MobileNavigator} />
+            <Stack.Screen
+              name="소셜회원가입"
+              component={Platform.OS === "web" ? LoginScreen : LoginScreenNative}
+            />
           </>
         ) : (
           <>
