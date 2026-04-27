@@ -66,7 +66,7 @@ export default function GuestPromptModal({
   }
 
   const body = (
-    <View style={overlayStyle} pointerEvents="box-none">
+    <View style={overlayStyle} pointerEvents="auto">
       <View style={cardStyle} pointerEvents="auto">
         <Text style={styles.title}>회원 전용 기능이에요</Text>
         <Text style={styles.body}>
@@ -100,14 +100,17 @@ export default function GuestPromptModal({
   );
 
   if (presentation === 'overlay') {
+    /** 풀스크린 RN `Modal` 안: 동일 `View` 오버레이는 z-index로도 안 뜨는 기기가 있어 자식 `Modal`로 쌓는다(부모 닫을 땐 guestPrompt.hide) */
     return (
-      <View
-        style={styles.hostOverlay}
-        pointerEvents="box-none"
-        // RN Modal 뷰는 기본 뒤로 터치가 새지 않도록 이 레이어가 덮는다
+      <Modal
+        visible
+        transparent
+        animationType="fade"
+        onRequestClose={onClose}
+        statusBarTranslucent
       >
         {body}
-      </View>
+      </Modal>
     );
   }
 
@@ -119,11 +122,6 @@ export default function GuestPromptModal({
 }
 
 const styles = StyleSheet.create({
-  hostOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    zIndex: 10000,
-    elevation: 10000,
-  },
   title: {
     ...textStyles.h5,
     textAlign: 'center',
