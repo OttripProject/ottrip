@@ -1,4 +1,4 @@
-from sqlalchemy import delete, exists, select, update
+from sqlalchemy import and_, delete, exists, select, update
 from app.auth.models import UserAuthInfo
 
 from app.database.deps import SessionDep
@@ -21,6 +21,32 @@ class UserRepository:
     async def is_nickname_taken(self, *, nickname: str) -> bool:
         return bool(
             await self.session.scalar(select(exists().where(User.nickname == nickname)))
+        )
+
+    async def is_handle_taken_excluding(
+        self, *, handle: str, except_user_id: int
+    ) -> bool:
+        return bool(
+            await self.session.scalar(
+                select(
+                    exists().where(
+                        and_(User.handle == handle, User.id != except_user_id)
+                    )
+                )
+            )
+        )
+
+    async def is_nickname_taken_excluding(
+        self, *, nickname: str, except_user_id: int
+    ) -> bool:
+        return bool(
+            await self.session.scalar(
+                select(
+                    exists().where(
+                        and_(User.nickname == nickname, User.id != except_user_id)
+                    )
+                )
+            )
         )
 
     async def find_by_id(self, *, user_id: int) -> User | None:
@@ -62,6 +88,30 @@ class UserRepository:
             .where(User.id == user_id)
             .where(User.is_deleted.is_(False))
             .values(is_guest=False, email=email)
+        )
+        await self.session.flush()
+
+    async def upgrade_guest_in_place(
+        self, *, user_id: int, user_data: UserCreate, email: str
+    ) -> None:
+        await self.session.execute(
+            update(User)
+            .where(User.id == user_id)
+            .where(User.is_deleted.is_(False))
+            .where(User.is_guest.is_(True))
+            .values(
+                handle=user_data.handle,
+                nickname=user_data.nickname,
+                description=user_data.description,
+                gender=user_data.gender,
+                agreed_terms=user_data.agreed_terms,
+                agreed_privacy=user_data.agreed_privacy,
+                agreed_marketing=user_data.agreed_marketing
+                if user_data.agreed_marketing is not None
+                else False,
+                is_guest=False,
+                email=email,
+            )
         )
         await self.session.flush()
 

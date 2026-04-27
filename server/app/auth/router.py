@@ -5,7 +5,6 @@ from fastapi import status, HTTPException, Response
 from app.common.deps import HTTPClientDep
 from app.common.schemas import ValidationResult
 from app.core.router import create_router
-from app.users.repository import UserRepository
 from app.users.schemas import UserCreate
 from app.users.service import UserService
 
@@ -107,9 +106,20 @@ async def register_user(
     user_service: UserService,
     user: UserCreate,
     auth: RegisterAuthDep,
+    current_user: CurrentUserOptional,
     response: Response,
 ) -> TokenResponse:
-    registered_user = await user_service.register(user_data=user, auth=auth)
+    if current_user is not None:
+        if not current_user.is_guest:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="이미 로그인된 회원은 이 경로로 가입할 수 없습니다.",
+            )
+        registered_user = await user_service.register_guest_upgrade(
+            user_data=user, auth=auth, guest_user=current_user
+        )
+    else:
+        registered_user = await user_service.register(user_data=user, auth=auth)
 
     access_token, refresh_token = create_token_pair(registered_user.id)
     
@@ -286,7 +296,6 @@ async def authenticate_google(
     payload: GoogleAuthRequest,
     client: HTTPClientDep,
     auth_info_service: AuthInfoService,
-    user_repository: UserRepository,
     current_user: CurrentUserOptional,
     response: Response,
 ) -> AuthResponse:
@@ -323,15 +332,7 @@ async def authenticate_google(
             )
         if auth_info.user_id == current_user.id:
             return _registered_response(current_user.id, response)
-        if auth_info.user_id is None:
-            await auth_info_service.connect_to_user(
-                auth=auth_info, user_id=current_user.id
-            )
-            await user_repository.promote_guest_to_registered(
-                user_id=current_user.id,
-                email=email,
-            )
-            return _registered_response(current_user.id, response)
+        # 소셜이 아직 미연결이면 Unregistered(registerToken) → 클라이언트 약관/닉네임 후 POST /register 로 승급
 
     if auth_info.user_id is None:
         return UnregisteredAuthResponse(
@@ -353,7 +354,6 @@ async def authenticate_apple(
     payload: AppleAuthRequest,
     apple_idp: AppleIdpService,
     auth_info_service: AuthInfoService,
-    user_repository: UserRepository,
     current_user: CurrentUserOptional,
     response: Response,
 ) -> AuthResponse:
@@ -372,15 +372,7 @@ async def authenticate_apple(
             )
         if auth_info.user_id == current_user.id:
             return _registered_response(current_user.id, response)
-        if auth_info.user_id is None:
-            await auth_info_service.connect_to_user(
-                auth=auth_info, user_id=current_user.id
-            )
-            await user_repository.promote_guest_to_registered(
-                user_id=current_user.id,
-                email=apple_user.email,
-            )
-            return _registered_response(current_user.id, response)
+        # 소셜이 아직 미연결이면 Unregistered(registerToken) → 클라이언트 약관/닉네임 후 POST /register 로 승급
 
     if auth_info.user_id is None:
         return UnregisteredAuthResponse(
