@@ -6,7 +6,8 @@ export interface UserProfile {
   nickname: string;
   description: string;
   gender: Gender | null;
-  email: string;
+  email: string | null;
+  isGuest: boolean;
 }
 
 export interface UpdateUserRequest {

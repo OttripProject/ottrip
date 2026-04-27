@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Alert, Platform } from 'react-native';
+import { View, Text, StyleSheet, Alert, Platform, Pressable } from 'react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigation } from '@react-navigation/native';
 import { authApi, type AuthResponse } from '@/services/auth';
@@ -38,7 +38,7 @@ const parseIdToken = (idToken: string): any | null => {
 };
 
 export default function LoginScreenNative() {
-  const { login } = useAuth();
+  const { login, loginAsGuest } = useAuth();
   const navigation = useNavigation<any>();
   const [isLoading, setIsLoading] = useState(false);
   const [isAppleAuthAvailable, setIsAppleAuthAvailable] = useState(false);
@@ -167,6 +167,24 @@ export default function LoginScreenNative() {
     }
   };
 
+  const onGuestStart = async () => {
+    setIsLoading(true);
+    try {
+      await loginAsGuest();
+      try {
+        const token = await SecureStore.getItemAsync('pendingInviteToken');
+        if (token) {
+          await api.post(`/private/plans/invitations/${token}/accept`);
+          await SecureStore.deleteItemAsync('pendingInviteToken');
+        }
+      } catch {}
+    } catch {
+      Alert.alert('오류', '비회원으로 시작할 수 없습니다. 잠시 후 다시 시도해주세요.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const onAppleSignIn = async () => {
     if (Platform.OS !== 'ios') {
       return;
@@ -224,6 +242,13 @@ export default function LoginScreenNative() {
                 iconSize={34}
               />
             ) : null}
+            <Pressable
+              onPress={onGuestStart}
+              disabled={isLoading}
+              style={({ pressed }) => [styles.guestLink, pressed && styles.guestLinkPressed]}
+            >
+              <Text style={styles.guestLinkText}>게스트로 시작하기</Text>
+            </Pressable>
           </View>
         </View>
       </SafeAreaView>
@@ -280,5 +305,16 @@ const styles = StyleSheet.create({
   appleButtonText: {
     ...textStyles.h6,
     color: colors.white,
+  },
+  guestLink: {
+    marginTop: 8,
+  },
+  guestLinkPressed: {
+    opacity: 0.6,
+  },
+  guestLinkText: {
+    ...textStyles.body4,
+    color: colors.gray500,
+    textDecorationLine: 'underline',
   },
 });

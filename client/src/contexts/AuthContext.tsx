@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { Platform } from 'react-native';
-import { authApi, TokenResponse, AuthResponse } from '../services/auth';
+import { authApi, TokenResponse, AuthResponse, RegisteredAuthResponse } from '../services/auth';
 import { tokenStores } from '../utils/tokenStores'; 
 import { useTokenRefresh } from '../hooks/useTokenRefresh';
 import { queryClient } from './QueryProvider';
@@ -11,6 +11,7 @@ interface AuthContextType {
   isLoading: boolean;
   user: any | null;
   login: (authResponse: AuthResponse) => Promise<void>;
+  loginAsGuest: () => Promise<void>;
   logout: () => Promise<void>;
   refreshAuth: () => Promise<void>;
   getStorageInfo: () => any;
@@ -77,6 +78,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     } else {
       await tokenStores.registerToken.set(authResponse.registerToken);
     }
+  };
+
+  const loginAsGuest = async () => {
+    const res: RegisteredAuthResponse = await authApi.loginAsGuest();
+    await login({
+      isRegistered: true,
+      accessToken: res.accessToken,
+      refreshToken: res.refreshToken,
+    });
   };
 
   const logout = async () => {
@@ -149,6 +159,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     isLoading,
     user,
     login,
+    loginAsGuest,
     logout,
     refreshAuth,
     getStorageInfo: () => ({

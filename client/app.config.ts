@@ -15,8 +15,6 @@ const BUNDLE_ID_BY_PROFILE = {
 const PHOTO_LIBRARY_USAGE_DESCRIPTION =
   "이미지를 첨부하기 위해 사진 라이브러리에 접근합니다.";
 
-// NOTE: app.config.ts는 런타임이 아닌 빌드 시점에 실행됩니다.
-// TS 의존성을 줄이기 위해 로컬 스키마를 사용합니다.
 const envSchema = z.object({
   EXPO_PUBLIC_CHANNEL: z.enum(["dev", "prod", "local"]).default("local"),
   DEV_CLIENT: z.coerce.boolean().default(false),
@@ -24,10 +22,8 @@ const envSchema = z.object({
 });
 
 export default ({ config }: ConfigContext): ExpoConfig => {
-  // iOS URL 스킴(반드시 .env에 세팅 필요)
   const iosUrlScheme = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_IOS_URL;
 
-  // 공통 플러그인
   const getPlugins = (): ExpoConfig["plugins"] => {
     const basePlugins: NonNullable<ExpoConfig["plugins"]> = [
       "expo-asset",
