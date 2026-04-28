@@ -1,5 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, Pressable, StyleSheet, Alert, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
+import {
+  View,
+  Text,
+  Pressable,
+  StyleSheet,
+  Alert,
+  TextInput,
+  Platform,
+  ScrollView,
+  Keyboard,
+  KeyboardEvent,
+} from 'react-native';
 import dayjs from 'dayjs';
 import { Plan, CreatePlanRequest, UpdatePlanRequest } from '@/types/api';
 import { colors } from '@/ui/tokens/colors';
@@ -33,6 +44,26 @@ export default function AddPlanModal({
   const [endDate, setEndDate] = useState('');
   const [calendarTarget, setCalendarTarget] = useState<'start' | 'end' | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  /** BottomSheet 안에서 키보드가 입력란을 가릴 때(특히 Android): 스크롤 여유 */
+  const [keyboardBottomInset, setKeyboardBottomInset] = useState(0);
+
+  useEffect(() => {
+    const showEv = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEv = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+
+    const onShow = (e: KeyboardEvent) => {
+      setKeyboardBottomInset(e.endCoordinates.height);
+    };
+    const onHide = () => setKeyboardBottomInset(0);
+
+    const s = Keyboard.addListener(showEv as any, onShow);
+    const h = Keyboard.addListener(hideEv as any, onHide);
+
+    return () => {
+      s.remove();
+      h.remove();
+    };
+  }, []);
 
   useEffect(() => {
     if (visible) {
@@ -106,70 +137,79 @@ export default function AddPlanModal({
         height={0.5}
       >
         <View style={styles.contentWrapper}>
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          style={styles.content}
-        >
-          {/* 헤더 */}
-          <View style={styles.header}>
-            <Text style={styles.headerTitle}>{planToEdit ? '여행 수정' : '새로운 여행 만들기'}</Text>
-            <Pressable onPress={onClose} style={styles.closeButton} hitSlop={8}>
-              <CloseIcon width={20} height={20} color={colors.gray700} />
-            </Pressable>
-          </View>
-
-          {/* 여행 제목 */}
-          <View style={styles.inputSection}>
-            <Text style={styles.inputLabel}>여행 제목</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="예: 스페인 일주 여행"
-              placeholderTextColor={colors.gray500}
-              value={title}
-              onChangeText={setTitle}
-              maxLength={50}
-            />
-          </View>
-
-          {/* 시작일 / 종료일 */}
-          <View style={styles.dateRow}>
-            <View style={styles.dateField}>
-              <Text style={styles.inputLabel}>시작일</Text>
-              <Pressable
-                style={styles.dateInput}
-                onPress={() => setCalendarTarget('start')}
-              >
-                <Text style={startDate ? styles.dateText : styles.datePlaceholder}>
-                  {startDate ? formatDateDisplay(startDate) : '연도.월.일'}
-                </Text>
-                <CalendarIcon width={20} height={20} color={colors.black} />
-              </Pressable>
-            </View>
-            <View style={styles.dateField}>
-              <Text style={styles.inputLabel}>종료일</Text>
-              <Pressable
-                style={styles.dateInput}
-                onPress={() => setCalendarTarget('end')}
-              >
-                <Text style={endDate ? styles.dateText : styles.datePlaceholder}>
-                  {endDate ? formatDateDisplay(endDate) : '연도.월.일'}
-                </Text>
-                <CalendarIcon width={20} height={20} color={colors.black} />
-              </Pressable>
-            </View>
-          </View>
-
-          {/* 여행 생성하기 / 수정 */}
-          <Pressable
-            style={[styles.submitButton, isSubmitDisabled && styles.submitButtonDisabled]}
-            onPress={handleSubmit}
-            disabled={isSubmitDisabled}
+          <ScrollView
+            style={styles.scrollView}
+            contentContainerStyle={[
+              styles.scrollContent,
+              { paddingBottom: Platform.OS === 'android' ? 16 + keyboardBottomInset : 32 },
+            ]}
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+            showsVerticalScrollIndicator={false}
+            {...(Platform.OS === 'ios'
+              ? { automaticallyAdjustKeyboardInsets: true }
+              : {})}
           >
-            <Text style={[styles.submitButtonText, isSubmitDisabled && styles.submitButtonTextDisabled]}>
-              {planToEdit ? '수정' : '여행 생성하기'}
-            </Text>
-          </Pressable>
-        </KeyboardAvoidingView>
+            {/* 헤더 */}
+            <View style={styles.header}>
+              <Text style={styles.headerTitle}>{planToEdit ? '여행 수정' : '새로운 여행 만들기'}</Text>
+              <Pressable onPress={onClose} style={styles.closeButton} hitSlop={8}>
+                <CloseIcon width={20} height={20} color={colors.gray700} />
+              </Pressable>
+            </View>
+
+            {/* 여행 제목 */}
+            <View style={styles.inputSection}>
+              <Text style={styles.inputLabel}>여행 제목</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="예: 스페인 일주 여행"
+                placeholderTextColor={colors.gray500}
+                value={title}
+                onChangeText={setTitle}
+                maxLength={50}
+              />
+            </View>
+
+            {/* 시작일 / 종료일 */}
+            <View style={styles.dateRow}>
+              <View style={styles.dateField}>
+                <Text style={styles.inputLabel}>시작일</Text>
+                <Pressable
+                  style={styles.dateInput}
+                  onPress={() => setCalendarTarget('start')}
+                >
+                  <Text style={startDate ? styles.dateText : styles.datePlaceholder}>
+                    {startDate ? formatDateDisplay(startDate) : '연도.월.일'}
+                  </Text>
+                  <CalendarIcon width={20} height={20} color={colors.black} />
+                </Pressable>
+              </View>
+              <View style={styles.dateField}>
+                <Text style={styles.inputLabel}>종료일</Text>
+                <Pressable
+                  style={styles.dateInput}
+                  onPress={() => setCalendarTarget('end')}
+                >
+                  <Text style={endDate ? styles.dateText : styles.datePlaceholder}>
+                    {endDate ? formatDateDisplay(endDate) : '연도.월.일'}
+                  </Text>
+                  <CalendarIcon width={20} height={20} color={colors.black} />
+                </Pressable>
+              </View>
+            </View>
+
+            {/* 여행 생성하기 / 수정 */}
+            <Pressable
+              style={[styles.submitButton, isSubmitDisabled && styles.submitButtonDisabled]}
+              onPress={handleSubmit}
+              disabled={isSubmitDisabled}
+            >
+              <Text style={[styles.submitButtonText, isSubmitDisabled && styles.submitButtonTextDisabled]}>
+                {planToEdit ? '수정' : '여행 생성하기'}
+              </Text>
+            </Pressable>
+          </ScrollView>
 
           {/* 날짜 선택 캘린더 */}
           <CalendarModal
@@ -205,9 +245,12 @@ const styles = StyleSheet.create({
     flex: 1,
     position: 'relative',
   },
-  content: {
+  scrollView: {
     flex: 1,
     paddingHorizontal: 20,
+  },
+  scrollContent: {
+    flexGrow: 1,
   },
   header: {
     flexDirection: 'row',
