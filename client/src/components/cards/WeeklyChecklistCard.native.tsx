@@ -1,6 +1,5 @@
 import React, { useState, useMemo, useRef } from 'react';
 import { View, Text, StyleSheet, Pressable, TextInput, Alert, Platform } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import dayjs from 'dayjs';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { TravelChecklistItem, Itinerary } from '@/types/api';
@@ -101,10 +100,6 @@ export default function WeeklyChecklistCard({
   const hasChecklist = dateChecklistItems.length > 0;
 
   const handleAddChecklistItem = async () => {
-    if (me?.isGuest) {
-      guestPrompt.show();
-      return;
-    }
     const name = newChecklistItem.trim();
     if (!name || !planPublicId) {
       if (!planPublicId) Alert.alert('알림', '여행을 선택해주세요.');
@@ -129,10 +124,6 @@ export default function WeeklyChecklistCard({
   };
 
   const handleToggleChecklistItem = async (itemId: number, isChecked: boolean) => {
-    if (me?.isGuest) {
-      guestPrompt.show();
-      return;
-    }
     if (!planPublicId) return;
     if (togglingItems.current.has(itemId)) return;
     togglingItems.current.add(itemId);
@@ -165,10 +156,6 @@ export default function WeeklyChecklistCard({
   };
 
   const handleDeleteChecklistItem = async (itemId: number) => {
-    if (me?.isGuest) {
-      guestPrompt.show();
-      return;
-    }
     if (!planPublicId) return;
     if (deletingItems.current.has(itemId)) return;
     deletingItems.current.add(itemId);

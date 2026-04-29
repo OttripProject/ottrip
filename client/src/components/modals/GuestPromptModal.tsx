@@ -71,7 +71,7 @@ export default function GuestPromptModal({
         <Text style={styles.title}>회원 전용 기능이에요</Text>
         <Text style={styles.body}>
           게스트로는 사용할 수 없는 기능입니다.{'\n'}
-          회원가입 후 이용해 주세요.
+          로그인 후 이용해 주세요.
         </Text>
         <View style={styles.buttonRow}>
           <Pressable
@@ -92,7 +92,7 @@ export default function GuestPromptModal({
             ]}
             onPress={onSignUp}
           >
-            <Text style={styles.buttonTextLight}>회원가입</Text>
+            <Text style={styles.buttonTextLight}>로그인</Text>
           </Pressable>
         </View>
       </View>

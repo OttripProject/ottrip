@@ -214,7 +214,7 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
                   </Pressable>
                   {isGuest ? (
                     <Pressable onPress={handleSignUp}>
-                      <Text style={styles.footerLinkSignUp}>회원가입</Text>
+                      <Text style={styles.footerLinkSignUp}>로그인</Text>
                     </Pressable>
                   ) : (
                     <Pressable onPress={handleDeleteAccount}>
