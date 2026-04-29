@@ -4,7 +4,7 @@ from typing import Any, Dict, Iterable, Tuple, cast
 from fastapi import HTTPException
 from sqlalchemy.orm import attributes
 
-from app.auth.deps import RequireRegisteredUser
+from app.auth.deps import CurrentUser
 from app.common.schemas import StatusResponse
 from app.flights.models import Flight
 from app.flights.repository import FlightRepository
@@ -25,24 +25,36 @@ from .schemas import (
 
 @dependency
 class AIService:
-    current_user: RequireRegisteredUser
+    current_user: CurrentUser
     vision_client: VisionClient
     gemini_client: GeminiClient
     plan_repository: PlanRepository
     itinerary_repository: ItineraryRepository
     flight_repository: FlightRepository
+
+    def _require_registered_user(self) -> None:
+        """게스트 금지: 유료 API·AI 체크리스트 생성·항공 OCR+파싱 등."""
+        if self.current_user.is_guest:
+            raise HTTPException(
+                status_code=403,
+                detail={"code": "GUEST_NOT_ALLOWED"},
+            )
       
     async def extract_text_from_image(self, image_data: bytes) -> AIFlightRead:
+        self._require_registered_user()
         return await self.vision_client.extract_text_from_image(image_data)
     
     async def extract_text_from_pdf(self, pdf_data: bytes) -> AIFlightRead:
+        self._require_registered_user()
         return await self.vision_client.extract_text_from_pdf(pdf_data)
     
     async def parse_flight_data_with_ai(self, ocr_text: str):
+        self._require_registered_user()
         return await self.gemini_client.parse_flight_data(ocr_text)
     
     async def process_flight_ticket(self, file_data: bytes, content_type: str, filename: str) -> Dict[str, Any]:
         """항공권 이미지/PDF 전체 처리 (OCR + AI)"""
+        self._require_registered_user()
         try:
             # 파일 크기 검증
             if len(file_data) > ai_settings.MAX_FILE_SIZE:
@@ -94,6 +106,7 @@ class AIService:
     
     # AI Checklist
     async def create_checklist(self, public_id: str, force_regenerate: bool = False, date: str | None = None) -> ChecklistCreateResponse:
+        self._require_registered_user()
         plan = await self.plan_repository.find_by_public_id(public_id=public_id)
         if not plan:
             raise HTTPException(status_code=404, detail="해당 계획을 찾을 수 없습니다.")
@@ -486,6 +499,7 @@ class AIService:
         return "\n".join(formatted)
     
     async def test_gemini(self):
+        self._require_registered_user()
         return await self.gemini_client.generate_content(
             contents="GEMINI 연결 잘 되었나 확인해보는거야. 잘 연결되었니?"
         )
