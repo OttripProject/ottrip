@@ -4,9 +4,12 @@ from fastapi import HTTPException
 from datetime import datetime, timedelta, timezone
 import secrets
 import uuid
+
+from app.attachments.service import delete_r2_objects_by_keys
 from app.auth.deps import CurrentUser
-from app.users.repository import UserRepository
 from app.auth.repository import AuthRepository
+from app.storage.deps import S3ClientDep
+from app.users.repository import UserRepository
 from app.utils.dependency import dependency
 
 from .models import Plan
@@ -32,6 +35,7 @@ class PlanService:
     plan_repository: PlanRepository
     user_repository: UserRepository
     auth_repository: AuthRepository
+    s3_client: S3ClientDep
     
     async def create(self, *, plan_data: PlanCreate) -> PlanRead:
         create_plan_data = Plan(
@@ -116,7 +120,8 @@ class PlanService:
             raise HTTPException(status_code=404, detail="해당 계획을 찾을 수 없습니다.")
         if not has_permission:
             raise HTTPException(status_code=403, detail="해당 계획 삭제 권한이 없습니다.")
-        await self.plan_repository.remove(plan_id=plan_id)
+        file_keys = await self.plan_repository.remove(plan_id=plan_id)
+        await delete_r2_objects_by_keys(s3_client=self.s3_client, keys=file_keys)
 
     async def update(self, *, plan_id: int, update_data: PlanUpdate) -> PlanRead:
         plan = await self.plan_repository.find_by_id_only_plan(plan_id=plan_id)
