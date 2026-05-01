@@ -4,6 +4,7 @@ from sqlalchemy import select, update, insert, delete, exists
 from sqlalchemy.orm import joinedload, with_loader_criteria
 
 from app.database.deps import SessionDep
+from app.attachments.models import Attachment
 from app.expenses.models import Expense
 from app.flights.models import Flight, FlightSegment
 from app.itinerary.models import Itinerary
@@ -125,13 +126,45 @@ class PlanRepository:
         )
         return list(result.unique().scalars())
 
-    async def remove(self, *, plan_id: int) -> None:
-        stmt = (
+    async def remove(self, *, plan_id: int) -> list[str]:
+        """
+        플랜과 하위 엔티티 소프트 삭제, 첨부 DB 행 삭제. R2 삭제는 호출 측에서 file_key 목록으로 수행.
+        반환: 삭제한 첨부의 R2 object key 목록 (요청 종료 시점 commit 전에 R2 삭제에 사용).
+        """
+        key_result = await self.session.execute(
+            select(Attachment.file_key).where(Attachment.plan_id == plan_id)
+        )
+        file_keys = list(key_result.scalars().all())
+
+        flight_ids_subq = select(Flight.id).where(Flight.plan_id == plan_id)
+        await self.session.execute(
+            update(FlightSegment)
+            .where(FlightSegment.flight_id.in_(flight_ids_subq))
+            .values(is_deleted=True)
+        )
+        await self.session.execute(
+            update(Flight).where(Flight.plan_id == plan_id).values(is_deleted=True)
+        )
+        await self.session.execute(
+            update(Itinerary).where(Itinerary.plan_id == plan_id).values(is_deleted=True)
+        )
+        await self.session.execute(
+            update(Accommodation)
+            .where(Accommodation.plan_id == plan_id)
+            .values(is_deleted=True)
+        )
+        await self.session.execute(
+            update(Expense).where(Expense.plan_id == plan_id).values(is_deleted=True)
+        )
+        await self.session.execute(
+            delete(Attachment).where(Attachment.plan_id == plan_id)
+        )
+        await self.session.execute(
             update(Plan)
             .where(Plan.id == plan_id, Plan.is_deleted.is_(False))
             .values(is_deleted=True)
         )
-        await self.session.execute(stmt)
+        return file_keys
 
     # --- Sharing ---
     async def upsert_shared(self, *, plan_id: int, user_id: int, role: Role) -> None:
