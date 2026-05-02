@@ -3,9 +3,12 @@ import re
 from fastapi import HTTPException
 import uuid
 
+from app.attachments.service import delete_r2_objects_by_keys
 from app.auth.deps import CurrentUser
 from app.auth.service import AuthInfoService
 from app.common.schemas import ValidationResult
+from app.plans.repository import PlanRepository
+from app.storage.deps import S3ClientDep
 from app.utils.dependency import dependency
 
 from .models import User, Gender
@@ -22,6 +25,8 @@ from .schemas import (
 class UserService:
     user_repository: UserRepository
     auth_info_service: AuthInfoService
+    plan_repository: PlanRepository
+    s3_client: S3ClientDep
 
     # 닉네임 검증: 한글 1~10자 또는 영문 1~20자, 특수문자 '_', '-', '.' 허용
     _nickname_pattern = re.compile(r"^(?:[가-힣0-9_.-]{1,10}|[A-Za-z0-9_.-]{1,20})$")
@@ -208,6 +213,21 @@ class UserService:
         return profile
 
     async def delete_account(self, *, current_user: CurrentUser) -> None:
-        await self.user_repository.delete_user_auth(user_id=current_user.id)
-        await self.user_repository.soft_delete_user(user_id=current_user.id)
-        
+        user_id = current_user.id
+        plan_ids = await self.plan_repository.find_owned_active_plan_ids(owner_id=user_id)
+        r2_keys: list[str] = []
+        for plan_id in plan_ids:
+            successor_id = await self.plan_repository.pick_owner_successor_on_account_delete(
+                plan_id=plan_id
+            )
+            if successor_id is None:
+                keys = await self.plan_repository.remove(plan_id=plan_id)
+                r2_keys.extend(keys)
+            else:
+                await self.plan_repository.transfer_plan_owner_and_drop_shared_row(
+                    plan_id=plan_id, new_owner_id=successor_id
+                )
+        await self.plan_repository.revoke_all_shared_memberships_for_user(user_id=user_id)
+        await self.user_repository.delete_user_auth(user_id=user_id)
+        await self.user_repository.soft_delete_user(user_id=user_id)
+        await delete_r2_objects_by_keys(s3_client=self.s3_client, keys=r2_keys)
