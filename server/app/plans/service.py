@@ -120,6 +120,30 @@ class PlanService:
             raise HTTPException(status_code=404, detail="해당 계획을 찾을 수 없습니다.")
         if not has_permission:
             raise HTTPException(status_code=403, detail="해당 계획 삭제 권한이 없습니다.")
+
+        plan = await self.plan_repository.find_by_id_only_plan(plan_id=plan_id)
+        if not plan:
+            raise HTTPException(status_code=404, detail="해당 계획을 찾을 수 없습니다.")
+
+        shared_count = await self.plan_repository.count_plan_shared(plan_id=plan_id)
+        if shared_count > 0:
+            if plan.owner_id != self.current_user.id:
+                raise HTTPException(
+                    status_code=403,
+                    detail="공유 중인 플랜의 삭제·소유권 이전은 오너만 할 수 있습니다.",
+                )
+            successor_id = await self.plan_repository.pick_owner_successor_on_account_delete(
+                plan_id=plan_id
+            )
+            if successor_id is None:
+                file_keys = await self.plan_repository.remove(plan_id=plan_id)
+                await delete_r2_objects_by_keys(s3_client=self.s3_client, keys=file_keys)
+                return
+            await self.plan_repository.transfer_plan_owner_and_drop_shared_row(
+                plan_id=plan_id, new_owner_id=successor_id
+            )
+            return
+
         file_keys = await self.plan_repository.remove(plan_id=plan_id)
         await delete_r2_objects_by_keys(s3_client=self.s3_client, keys=file_keys)
 

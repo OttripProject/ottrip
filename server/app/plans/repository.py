@@ -1,6 +1,6 @@
 # from fastapi import HTTPException
 
-from sqlalchemy import select, update, insert, delete, exists
+from sqlalchemy import func, select, update, insert, delete, exists
 from sqlalchemy.orm import joinedload, with_loader_criteria
 
 from app.database.deps import SessionDep
@@ -165,6 +165,70 @@ class PlanRepository:
             .values(is_deleted=True)
         )
         return file_keys
+
+    async def find_owned_active_plan_ids(self, *, owner_id: int) -> list[int]:
+        result = await self.session.execute(
+            select(Plan.id)
+            .where(Plan.owner_id == owner_id, Plan.is_deleted.is_(False))
+            .order_by(Plan.id.asc())
+        )
+        return list(result.scalars().all())
+
+    async def pick_owner_successor_on_account_delete(self, *, plan_id: int) -> int | None:
+        res = await self.session.execute(
+            select(PlanShared.shared_user_id)
+            .where(PlanShared.plan_id == plan_id, PlanShared.role == Role.EDITOR)
+            .order_by(PlanShared.updated_at.asc(), PlanShared.id.asc())
+            .limit(1)
+        )
+        editor_id = res.scalar_one_or_none()
+        if editor_id is not None:
+            return editor_id
+        res = await self.session.execute(
+            select(PlanShared.shared_user_id)
+            .where(PlanShared.plan_id == plan_id, PlanShared.role == Role.VIEWER)
+            .order_by(PlanShared.updated_at.asc(), PlanShared.id.asc())
+            .limit(1)
+        )
+        viewer_id = res.scalar_one_or_none()
+        if viewer_id is not None:
+            return viewer_id
+        res = await self.session.execute(
+            select(PlanShared.shared_user_id)
+            .where(PlanShared.plan_id == plan_id)
+            .order_by(PlanShared.updated_at.asc(), PlanShared.id.asc())
+            .limit(1)
+        )
+        return res.scalar_one_or_none()
+
+    async def transfer_plan_owner_and_drop_shared_row(
+        self, *, plan_id: int, new_owner_id: int
+    ) -> None:
+        await self.session.execute(
+            update(Plan)
+            .where(Plan.id == plan_id, Plan.is_deleted.is_(False))
+            .values(owner_id=new_owner_id)
+        )
+        await self.session.execute(
+            delete(PlanShared).where(
+                PlanShared.plan_id == plan_id,
+                PlanShared.shared_user_id == new_owner_id,
+            )
+        )
+
+    async def revoke_all_shared_memberships_for_user(self, *, user_id: int) -> None:
+        """다른 사용자 플랜에서 이 유저가 공유자(에디터/뷰어)로 남아 있는 plan_shared 행 전부 삭제."""
+        await self.session.execute(
+            delete(PlanShared).where(PlanShared.shared_user_id == user_id)
+        )
+
+    async def count_plan_shared(self, *, plan_id: int) -> int:
+        n = await self.session.scalar(
+            select(func.count())
+            .select_from(PlanShared)
+            .where(PlanShared.plan_id == plan_id)
+        )
+        return int(n or 0)
 
     # --- Sharing ---
     async def upsert_shared(self, *, plan_id: int, user_id: int, role: Role) -> None:
