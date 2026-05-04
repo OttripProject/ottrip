@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { View, Text, Pressable, StyleSheet, ScrollView, Alert, Modal } from 'react-native';
+import { View, Text, Pressable, StyleSheet, ScrollView, Alert, Modal, Platform, Share } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQueryClient } from '@tanstack/react-query';
@@ -147,16 +147,23 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
     );
   };
 
+  const CONTACT_EMAIL = 'ottrip.official@gmail.com';
+
+  /** 웹: 클립보드 API. iOS/Android: 네이티브 클립보드 모듈 없이 재빌드 없이 쓰려면 Share 또는 길게 눌러 복사(selectable). */
   const copyContactEmail = async () => {
     try {
-      await navigator.clipboard.writeText('ottrip.official@gmail.com');
-      setCopied(true);
-      if (copiedTimerRef.current) {
-        clearTimeout(copiedTimerRef.current);
+      if (Platform.OS === 'web') {
+        await navigator.clipboard.writeText(CONTACT_EMAIL);
+        setCopied(true);
+        if (copiedTimerRef.current) {
+          clearTimeout(copiedTimerRef.current);
+        }
+        copiedTimerRef.current = setTimeout(() => setCopied(false), 1500);
+        return;
       }
-      copiedTimerRef.current = setTimeout(() => setCopied(false), 1500);
+      await Share.share({ message: CONTACT_EMAIL, title: '문의 이메일' });
     } catch {
-      // noop
+      // noop (웹 클립보드 실패 / 공유 시트 취소)
     }
   };
 
@@ -194,7 +201,7 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
 
               {isGuest ? (
                 <>
-                  <Text style={styles.guestStatusLine}>게스트 · 여행일정 임시 저장</Text>
+                  <Text style={styles.guestStatusLine}>게스트 · 일정 임시 저장</Text>
                   <Text style={styles.guestDescription}>
                     로그인하면 임시 저장된 일정을 계정과 연동할 수 있어요.
                   </Text>
@@ -215,8 +222,12 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
                   <View style={styles.guestInquirySection}>
                     <Text style={styles.guestInquiryTitle}>문의하기</Text>
                     <View style={styles.guestInquiryEmailBox}>
-                      <Text style={styles.guestInquiryEmailText} numberOfLines={1}>
-                        ottrip.official@gmail.com
+                      <Text
+                        style={styles.guestInquiryEmailText}
+                        numberOfLines={1}
+                        selectable
+                      >
+                        {CONTACT_EMAIL}
                       </Text>
                       <View style={styles.guestInquiryCopyWrap}>
                         {copied ? (
@@ -337,7 +348,9 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
             <Text style={styles.contactModalText}>도움이 필요하거나 피드백이 있으시면 연락주세요.</Text>
             
             <View style={styles.contactModalEmailContainer}>
-              <Text style={styles.contactModalEmailText}>ottrip.official@gmail.com</Text>
+              <Text style={styles.contactModalEmailText} selectable>
+                {CONTACT_EMAIL}
+              </Text>
               <View style={styles.contactModalCopyWrapper}>
                 {copied ? (
                   <Text style={styles.contactModalCopiedText}>복사됨!</Text>
