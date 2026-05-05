@@ -81,6 +81,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         }
       }
       queryClient.removeQueries({ queryKey: ['me'] });
+      queryClient.invalidateQueries({ queryKey: ['plans'] });
       setIsAuthenticated(true);
     } else {
       await tokenStores.registerToken.set(authResponse.registerToken);
