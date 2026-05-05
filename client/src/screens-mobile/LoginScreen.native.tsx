@@ -250,7 +250,7 @@ export default function LoginScreenNative() {
           <Text style={styles.title}>OTTRIP</Text>
           <Text style={styles.subtitle}>
             {guestUpgrade
-              ? 'Google 또는 Apple로 가입하고\n기존 여행일정을 유지할 수 있어요'
+              ? 'Google 또는 Apple로 로그인하고\n기존 여행일정을 유지할 수 있어요'
               : '여행 계획을 더 스마트하게'}
           </Text>
 
