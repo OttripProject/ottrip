@@ -296,6 +296,7 @@ async def authenticate_google(
     payload: GoogleAuthRequest,
     client: HTTPClientDep,
     auth_info_service: AuthInfoService,
+    user_service: UserService,
     current_user: CurrentUserOptional,
     response: Response,
 ) -> AuthResponse:
@@ -326,10 +327,11 @@ async def authenticate_google(
 
     if current_user is not None and current_user.is_guest:
         if auth_info.user_id is not None and auth_info.user_id != current_user.id:
-            raise HTTPException(
-                status_code=409,
-                detail="이 Google 계정은 이미 다른 OTTRIP 계정에 연결되어 있습니다.",
+            await user_service.merge_guest_into_registered_user(
+                guest_user_id=current_user.id,
+                target_user_id=auth_info.user_id,
             )
+            return _registered_response(auth_info.user_id, response)
         if auth_info.user_id == current_user.id:
             return _registered_response(current_user.id, response)
         # 소셜이 아직 미연결이면 Unregistered(registerToken) → 클라이언트 약관/닉네임 후 POST /register 로 승급
@@ -354,6 +356,7 @@ async def authenticate_apple(
     payload: AppleAuthRequest,
     apple_idp: AppleIdpService,
     auth_info_service: AuthInfoService,
+    user_service: UserService,
     current_user: CurrentUserOptional,
     response: Response,
 ) -> AuthResponse:
@@ -366,10 +369,11 @@ async def authenticate_apple(
 
     if current_user is not None and current_user.is_guest:
         if auth_info.user_id is not None and auth_info.user_id != current_user.id:
-            raise HTTPException(
-                status_code=409,
-                detail="이 Apple 계정은 이미 다른 OTTRIP 계정에 연결되어 있습니다.",
+            await user_service.merge_guest_into_registered_user(
+                guest_user_id=current_user.id,
+                target_user_id=auth_info.user_id,
             )
+            return _registered_response(auth_info.user_id, response)
         if auth_info.user_id == current_user.id:
             return _registered_response(current_user.id, response)
         # 소셜이 아직 미연결이면 Unregistered(registerToken) → 클라이언트 약관/닉네임 후 POST /register 로 승급

@@ -212,6 +212,26 @@ class UserService:
         profile = await self.get_profile(user_id=current_user.id)
         return profile
 
+    async def merge_guest_into_registered_user(
+        self, *, guest_user_id: int, target_user_id: int
+    ) -> None:
+        if guest_user_id == target_user_id:
+            return
+        guest = await self.user_repository.find_by_id(user_id=guest_user_id)
+        if guest is None:
+            raise HTTPException(status_code=400, detail="사용자를 찾을 수 없습니다.")
+        if not guest.is_guest:
+            raise HTTPException(status_code=400, detail="게스트 계정만 병합할 수 있습니다.")
+        target = await self.user_repository.find_by_id(user_id=target_user_id)
+        if target is None or target.is_deleted:
+            raise HTTPException(status_code=400, detail="병합 대상 계정을 찾을 수 없습니다.")
+
+        await self.plan_repository.reassign_plans_owner(
+            from_owner_id=guest_user_id, to_owner_id=target_user_id
+        )
+        await self.user_repository.delete_user_auth(user_id=guest_user_id)
+        await self.user_repository.soft_delete_user(user_id=guest_user_id)
+
     async def delete_account(self, *, current_user: CurrentUser) -> None:
         user_id = current_user.id
         plan_ids = await self.plan_repository.find_owned_active_plan_ids(owner_id=user_id)

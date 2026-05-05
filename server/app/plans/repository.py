@@ -166,6 +166,13 @@ class PlanRepository:
         )
         return file_keys
 
+    async def reassign_plans_owner(self, *, from_owner_id: int, to_owner_id: int) -> None:
+        await self.session.execute(
+            update(Plan)
+            .where(Plan.owner_id == from_owner_id)
+            .values(owner_id=to_owner_id)
+        )
+
     async def find_owned_active_plan_ids(self, *, owner_id: int) -> list[int]:
         result = await self.session.execute(
             select(Plan.id)
