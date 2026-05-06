@@ -190,6 +190,23 @@ export default function TodayScreen() {
     return items.sort((a, b) => a.time.localeCompare(b.time));
   }, [todayItineraries, planData.flights, todayDateStr]);
 
+  const hasAnyFlightSegment = useMemo(() => {
+    return (planData.flights || []).some(
+      (f: FlightRead) => Array.isArray(f.flightSegments) && f.flightSegments.length > 0,
+    );
+  }, [planData.flights]);
+
+  /** 플랜은 있으나 이터너리·항공 구간·숙소가 하나도 없을 때 */
+  const planHasNoSchedulesYet = useMemo(() => {
+    if (!selectedPlan) return false;
+    const noItineraries = !planData.itineraries?.length;
+    const noAccommodations = !planData.accommodations?.length;
+    return noItineraries && !hasAnyFlightSegment && noAccommodations;
+  }, [selectedPlan, planData.itineraries, hasAnyFlightSegment, planData.accommodations]);
+
+  const hideChecklistAndExpenseForEmptyPlan =
+    !!selectedPlan && planHasNoSchedulesYet && !planData.isLoading;
+
   const currentActivity = useMemo((): ScheduleItem | null => {
     return todaySchedules.find((item: ScheduleItem) => {
       if (item.type === 'itinerary') {
@@ -305,6 +322,11 @@ export default function TodayScreen() {
     timelineSwipeRefs.current.get(key)?.close();
     activeTimelineSwipeKey.current = null;
   }, []);
+
+  const openAddScheduleFlow = useCallback(() => {
+    closeOpenTimelineSwipe();
+    setAddScheduleFlow('method');
+  }, [closeOpenTimelineSwipe]);
 
   if (plansQuery.isLoading && plansQuery.plans.length === 0) {
     return (
@@ -791,16 +813,37 @@ export default function TodayScreen() {
           </View>
         )}
 
-        <View style={styles.checklistWrapper}>
-          <WeeklyChecklistCard
-            planPublicId={selectedPlan?.publicId}
-            selectedDate={today}
-            itineraries={planData.itineraries}
-          />
-        </View>
+        {planHasNoSchedulesYet && selectedPlan && !planData.isLoading && (
+          <View style={styles.section}>
+            <View style={[styles.cardBase, styles.emptyPlanScheduleCard]}>
+              <Text style={styles.emptyPlanScheduleTitle}>
+                해당 여행에 저장된 일정이 없어요!
+              </Text>
+              <Text style={styles.emptyPlanScheduleSubtitle}>일정을 추가해보세요</Text>
+              <Pressable
+                style={styles.emptyPlanScheduleButton}
+                onPress={openAddScheduleFlow}
+                accessibilityRole="button"
+                accessibilityLabel="일정 추가"
+              >
+                <Text style={styles.emptyPlanScheduleButtonLabel}>일정 추가</Text>
+              </Pressable>
+            </View>
+          </View>
+        )}
+
+        {!hideChecklistAndExpenseForEmptyPlan && (
+          <View style={styles.checklistWrapper}>
+            <WeeklyChecklistCard
+              planPublicId={selectedPlan?.publicId}
+              selectedDate={today}
+              itineraries={planData.itineraries}
+            />
+          </View>
+        )}
 
         {/* 오늘의 비용 섹션 */}
-        {selectedPlan && (
+        {selectedPlan && !hideChecklistAndExpenseForEmptyPlan && (
           <View style={styles.section}>
             <Pressable
               style={[styles.cardBase, styles.costCardPrimary]}
@@ -1150,10 +1193,7 @@ export default function TodayScreen() {
       {selectedPlan && (
         <Pressable
           style={styles.fab}
-          onPress={() => {
-            closeOpenTimelineSwipe();
-            setAddScheduleFlow('method');
-          }}
+          onPress={openAddScheduleFlow}
           hitSlop={8}
         >
           <PlusIcon width={24} height={24} color={colors.white} />
@@ -1376,7 +1416,35 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 3,
   },
-  
+  emptyPlanScheduleCard: {
+    alignItems: 'center',
+    paddingVertical: 20,
+  },
+  emptyPlanScheduleTitle: {
+    ...textStyles.h3,
+    color: colors.black,
+    textAlign: 'center',
+  },
+  emptyPlanScheduleSubtitle: {
+    ...textStyles.body3,
+    color: colors.gray600,
+    textAlign: 'center',
+    marginTop: 6,
+  },
+  emptyPlanScheduleButton: {
+    marginTop: 20,
+    width: '100%',
+    backgroundColor: colors.black,
+    borderRadius: 12,
+    paddingVertical: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyPlanScheduleButtonLabel: {
+    ...textStyles.h5,
+    color: colors.white,
+  },
+
   currentCard: {
     marginBottom: 16,
   },
