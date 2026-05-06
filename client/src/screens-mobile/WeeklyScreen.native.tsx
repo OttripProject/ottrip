@@ -950,7 +950,7 @@ const styles = StyleSheet.create({
     color: colors.white,
   },
   nextDayIndicator: {
-    backgroundColor: colors.white,
+    backgroundColor: colors.gray300,
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 4,

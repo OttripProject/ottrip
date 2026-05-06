@@ -3,7 +3,12 @@ import { View, Text, ScrollView, StyleSheet, Pressable, Modal, Animated, Refresh
 import { Swipeable } from 'react-native-gesture-handler';
 import { Ionicons } from '@expo/vector-icons';
 import dayjs from 'dayjs';
-import { getTodayKoreanDate, formatTime, convertUTCToLocalTime } from '@/utils/dateUtils';
+import {
+  getTodayKoreanDate,
+  formatKoreanDate,
+  formatTime,
+  convertUTCToLocalTime,
+} from '@/utils/dateUtils';
 import { colors } from '@/ui/tokens/colors';
 import { textStyles } from '@/ui/tokens/typography';
 import { spacing } from '@/ui/tokens/spacing';
@@ -44,9 +49,76 @@ import RightArrowIcon from '../../assets/right_arrow.svg';
 import FlightIcon from '../../assets/airplane.svg';
 import PlusIcon from '../../assets/mobile_plus2.svg';
 
+type ScheduleItem =
+  | { type: 'itinerary'; id: number; time: string; endTime: string; data: Itinerary }
+  | { type: 'flight'; id: string; time: string; endTime: string; data: FlightRead; segment: any; segmentIndex: number };
+
+function buildSchedulesForDate(
+  dateStr: string,
+  itineraries: Itinerary[] | undefined,
+  flights: FlightRead[] | undefined,
+): ScheduleItem[] {
+  const items: ScheduleItem[] = [];
+  (itineraries || [])
+    .filter((it) => dayjs(it.itineraryDate).format('YYYY-MM-DD') === dateStr)
+    .sort((a, b) => (a.startTime || '00:00:00').localeCompare(b.startTime || '00:00:00'))
+    .forEach((itinerary) => {
+      items.push({
+        type: 'itinerary',
+        id: itinerary.id,
+        time: formatTime(itinerary.startTime || '00:00:00'),
+        endTime: formatTime(itinerary.endTime || '00:00:00'),
+        data: itinerary,
+      });
+    });
+  (flights || []).forEach((flight) => {
+    if (!flight.flightSegments?.length) return;
+    flight.flightSegments.forEach((segment: any, index: number) => {
+      const departureTime = dayjs(segment.departureTime);
+      if (departureTime.format('YYYY-MM-DD') !== dateStr) return;
+      items.push({
+        type: 'flight',
+        id: `${flight.id}-segment-${index}`,
+        time: convertUTCToLocalTime(segment.departureTime),
+        endTime: convertUTCToLocalTime(segment.arrivalTime),
+        data: flight,
+        segment,
+        segmentIndex: index,
+      });
+    });
+  });
+  return items.sort((a, b) => a.time.localeCompare(b.time));
+}
+
+/** 캘린더 `calendarTodayStr`보다 이후 중, 일정이 있는 가장 빠른 날 (이터너리·항공 출발일·숙박 숙박일) */
+function collectNearestFutureScheduleDateStr(
+  calendarTodayStr: string,
+  itineraries: Itinerary[] | undefined,
+  flights: FlightRead[] | undefined,
+  accommodations: Accommodation[] | undefined,
+): string | null {
+  const dates = new Set<string>();
+  (itineraries || []).forEach((it) => {
+    dates.add(dayjs(it.itineraryDate).format('YYYY-MM-DD'));
+  });
+  (flights || []).forEach((f) => {
+    f.flightSegments?.forEach((seg: any) => {
+      dates.add(dayjs(seg.departureTime).format('YYYY-MM-DD'));
+    });
+  });
+  (accommodations || []).forEach((acc) => {
+    let d = dayjs(acc.checkinDate).startOf('day');
+    const end = dayjs(acc.checkoutDate).startOf('day');
+    while (d.isBefore(end)) {
+      dates.add(d.format('YYYY-MM-DD'));
+      d = d.add(1, 'day');
+    }
+  });
+  const sorted = [...dates].filter((x) => x > calendarTodayStr).sort();
+  return sorted[0] ?? null;
+}
 
 export default function TodayScreen() {
-  const formattedDate = getTodayKoreanDate();
   const { selectedPlan, setSelectedPlan } = useSelectedPlan();
   const [profileModalVisible, setProfileModalVisible] = useState(false);
   const [showPlanSelector, setShowPlanSelector] = useState(false);
@@ -70,6 +142,11 @@ export default function TodayScreen() {
   const [showExpenseDetail, setShowExpenseDetail] = useState(false);
   const [showAddExpenseFromDetail, setShowAddExpenseFromDetail] = useState(false);
   const [addScheduleFlow, setAddScheduleFlow] = useState<AddScheduleFlow>('closed');
+  const [timelineViewDate, setTimelineViewDate] = useState<dayjs.Dayjs | null>(null);
+
+  useEffect(() => {
+    setTimelineViewDate(null);
+  }, [selectedPlan?.id]);
 
   useEffect(() => {
     return guestPrompt.registerBeforeSignUpNavigation(() => {
@@ -78,6 +155,7 @@ export default function TodayScreen() {
       setShowAccommodationEdit(false);
       setShowFlightEdit(false);
       setAddScheduleFlow('closed');
+      setTimelineViewDate(null);
     });
   }, []);
 
@@ -85,10 +163,18 @@ export default function TodayScreen() {
   const plansQuery = usePlansQuery();
   const planData = usePlanDataQuery(selectedPlan?.publicId || null);
   
-  const today = currentTime;
-  const todayDateStr = today.format('YYYY-MM-DD');
-  
-  const { data: todayExpensesFromApi = [], refetch: refetchTodayExpenses } = useExpensesQuery(selectedPlan?.id, todayDateStr);
+  const calendarTodayStr = currentTime.format('YYYY-MM-DD');
+  const timelineDateStr = timelineViewDate?.format('YYYY-MM-DD') ?? calendarTodayStr;
+  const viewingCalendarToday = calendarTodayStr === timelineDateStr;
+  const headerDateLabel = timelineViewDate
+    ? formatKoreanDate(timelineViewDate)
+    : getTodayKoreanDate();
+  const timelineDayForCards = timelineViewDate ?? currentTime;
+
+  const { data: todayExpensesFromApi = [], refetch: refetchTodayExpenses } = useExpensesQuery(
+    selectedPlan?.id,
+    timelineDateStr,
+  );
   
   const pulseAnim = useRef(new Animated.Value(1)).current;
   
@@ -136,59 +222,26 @@ export default function TodayScreen() {
     return () => clearInterval(timer);
   }, []);
 
-  const todayItineraries = useMemo(() => {
-    if (!planData.itineraries || planData.itineraries.length === 0) {
-      return [];
-    }
-    
-    return planData.itineraries
-      .filter((itinerary: Itinerary) => {
-        const itineraryDate = dayjs(itinerary.itineraryDate).format('YYYY-MM-DD');
-        return itineraryDate === todayDateStr;
-      })
-      .sort((a: Itinerary, b: Itinerary) => {
-        const timeA = a.startTime || '00:00:00';
-        const timeB = b.startTime || '00:00:00';
-        return timeA.localeCompare(timeB);
-      });
-  }, [planData.itineraries, todayDateStr]);
+  const realTodaySchedules = useMemo(
+    () => buildSchedulesForDate(calendarTodayStr, planData.itineraries, planData.flights),
+    [calendarTodayStr, planData.itineraries, planData.flights],
+  );
 
-  type ScheduleItem =
-    | { type: 'itinerary'; id: number; time: string; endTime: string; data: Itinerary }
-    | { type: 'flight'; id: string; time: string; endTime: string; data: FlightRead; segment: any; segmentIndex: number };
+  const todaySchedules = useMemo(
+    () => buildSchedulesForDate(timelineDateStr, planData.itineraries, planData.flights),
+    [timelineDateStr, planData.itineraries, planData.flights],
+  );
 
-  const todaySchedules = useMemo((): ScheduleItem[] => {
-    const items: ScheduleItem[] = [];
-
-    todayItineraries.forEach((itinerary: Itinerary) => {
-      items.push({
-        type: 'itinerary',
-        id: itinerary.id,
-        time: formatTime(itinerary.startTime || '00:00:00'),
-        endTime: formatTime(itinerary.endTime || '00:00:00'),
-        data: itinerary,
-      });
-    });
-
-    (planData.flights || []).forEach((flight: FlightRead) => {
-      if (!flight.flightSegments || flight.flightSegments.length === 0) return;
-      flight.flightSegments.forEach((segment: any, index: number) => {
-        const departureTime = dayjs(segment.departureTime);
-        if (departureTime.format('YYYY-MM-DD') !== todayDateStr) return;
-        items.push({
-          type: 'flight',
-          id: `${flight.id}-segment-${index}`,
-          time: convertUTCToLocalTime(segment.departureTime),
-          endTime: convertUTCToLocalTime(segment.arrivalTime),
-          data: flight,
-          segment,
-          segmentIndex: index,
-        });
-      });
-    });
-
-    return items.sort((a, b) => a.time.localeCompare(b.time));
-  }, [todayItineraries, planData.flights, todayDateStr]);
+  const nearestFutureScheduleDateStr = useMemo(
+    () =>
+      collectNearestFutureScheduleDateStr(
+        calendarTodayStr,
+        planData.itineraries,
+        planData.flights,
+        planData.accommodations,
+      ),
+    [calendarTodayStr, planData.itineraries, planData.flights, planData.accommodations],
+  );
 
   const hasAnyFlightSegment = useMemo(() => {
     return (planData.flights || []).some(
@@ -204,22 +257,12 @@ export default function TodayScreen() {
     return noItineraries && !hasAnyFlightSegment && noAccommodations;
   }, [selectedPlan, planData.itineraries, hasAnyFlightSegment, planData.accommodations]);
 
-  /** 오늘 타임라인(이터너리·오늘 항공)이 있을 때만 체크리스트·오늘 비용 노출 */
-  const showTodayTimelineExtras =
-    !!selectedPlan && !planData.isLoading && todaySchedules.length > 0;
-
-  /** 오늘 일정은 없고, 플랜에는 다른 날 일정·항공·숙소 등이 있을 때 */
-  const showNoTodayScheduleOtherDaysCard =
-    !!selectedPlan &&
-    !planData.isLoading &&
-    todaySchedules.length === 0 &&
-    !planHasNoSchedulesYet;
-
   const currentActivity = useMemo((): ScheduleItem | null => {
+    if (!viewingCalendarToday) return null;
     return todaySchedules.find((item: ScheduleItem) => {
       if (item.type === 'itinerary') {
-        const startDateTime = dayjs(`${todayDateStr} ${item.time}`);
-        let endDateTime = dayjs(`${todayDateStr} ${item.endTime}`);
+        const startDateTime = dayjs(`${timelineDateStr} ${item.time}`);
+        let endDateTime = dayjs(`${timelineDateStr} ${item.endTime}`);
         if (item.endTime < item.time) endDateTime = endDateTime.add(1, 'day');
         return currentTime.isAfter(startDateTime) && currentTime.isBefore(endDateTime);
       }
@@ -227,18 +270,21 @@ export default function TodayScreen() {
       const arr = dayjs(item.segment.arrivalTime);
       return currentTime.isAfter(dep) && currentTime.isBefore(arr);
     }) ?? null;
-  }, [todaySchedules, todayDateStr, currentTime]);
+  }, [viewingCalendarToday, todaySchedules, timelineDateStr, currentTime]);
 
   const nextActivityIndex = useMemo(() => {
+    if (!viewingCalendarToday) {
+      return todaySchedules.length > 0 ? 0 : -1;
+    }
     return todaySchedules.findIndex((item: ScheduleItem) => {
       if (item.type === 'itinerary') {
-        const startDateTime = dayjs(`${todayDateStr} ${item.time}`);
+        const startDateTime = dayjs(`${timelineDateStr} ${item.time}`);
         return currentTime.isBefore(startDateTime);
       }
       const dep = dayjs(item.segment.departureTime);
       return currentTime.isBefore(dep);
     });
-  }, [todaySchedules, todayDateStr, currentTime]);
+  }, [viewingCalendarToday, todaySchedules, timelineDateStr, currentTime]);
 
   const todayAccommodations = useMemo(() => {
     if (!planData.accommodations || planData.accommodations.length === 0) {
@@ -248,9 +294,34 @@ export default function TodayScreen() {
     return planData.accommodations.filter((accommodation: any) => {
       const checkinDate = dayjs(accommodation.checkinDate).format('YYYY-MM-DD');
       const checkoutDate = dayjs(accommodation.checkoutDate).format('YYYY-MM-DD');
-      return checkinDate <= todayDateStr && checkoutDate > todayDateStr;
+      return checkinDate <= timelineDateStr && checkoutDate > timelineDateStr;
     });
-  }, [planData.accommodations, todayDateStr]);
+  }, [planData.accommodations, timelineDateStr]);
+
+  /** 실제 오늘(calendarTodayStr)에 해당하는 숙박 — 빈 상태 카드 판별용 */
+  const realTodayAccommodations = useMemo(() => {
+    if (!planData.accommodations?.length) return [];
+    return planData.accommodations.filter((accommodation: any) => {
+      const checkinDate = dayjs(accommodation.checkinDate).format('YYYY-MM-DD');
+      const checkoutDate = dayjs(accommodation.checkoutDate).format('YYYY-MM-DD');
+      return checkinDate <= calendarTodayStr && checkoutDate > calendarTodayStr;
+    });
+  }, [planData.accommodations, calendarTodayStr]);
+
+  /** 조회일에 타임라인 항목 또는 당일 숙박이 있으면 체크리스트·비용 노출 */
+  const showTodayTimelineExtras =
+    !!selectedPlan &&
+    !planData.isLoading &&
+    (todaySchedules.length > 0 || todayAccommodations.length > 0);
+
+  /** 실제 오늘: 타임라인·당일 숙박 모두 없고, 플랜에는 다른 데이터가 있을 때 */
+  const showNoTodayScheduleOtherDaysCard =
+    !!selectedPlan &&
+    !planData.isLoading &&
+    !timelineViewDate &&
+    realTodaySchedules.length === 0 &&
+    realTodayAccommodations.length === 0 &&
+    !planHasNoSchedulesYet;
 
   const todayFlights = useMemo(
     () => todaySchedules.filter((item): item is Extract<ScheduleItem, { type: 'flight' }> => item.type === 'flight'),
@@ -485,7 +556,24 @@ export default function TodayScreen() {
         <View style={styles.header}>
           <View style={styles.headerContent}>
             <View style={styles.headerTextContainer}>
-              <Text style={styles.date}>{formattedDate}</Text>
+              <Text style={styles.date}>{headerDateLabel}</Text>
+              {timelineViewDate && (
+                <View style={styles.timelinePreviewBanner}>
+                  <Text style={styles.timelinePreviewHint}>
+                    오늘이 아닌 {formatKoreanDate(timelineViewDate)} 일정을 보고 있어요
+                  </Text>
+                  <Pressable
+                    onPress={() => {
+                      closeOpenTimelineSwipe();
+                      setTimelineViewDate(null);
+                    }}
+                    hitSlop={8}
+                    style={styles.backToTodayLink}
+                  >
+                    <Text style={styles.backToTodayLinkText}>오늘로 이동</Text>
+                  </Pressable>
+                </View>
+              )}
               <View style={styles.tripTitleWrapper}>
                 <Pressable 
                   style={styles.tripTitleContainer}
@@ -604,12 +692,13 @@ export default function TodayScreen() {
           </Pressable>
         )}
 
-        {/* 타임라인 섹션 */}
-        {todaySchedules.length > 0 && (
+        {/* 타임라인 섹션 (이터너리·항공 또는 당일 숙박이 있으면 헤더 노출) */}
+        {(todaySchedules.length > 0 || todayAccommodations.length > 0) && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>타임라인</Text>
-            
-            {todaySchedules.map((item: ScheduleItem, index: number) => {
+
+            {todaySchedules.length > 0 &&
+            todaySchedules.map((item: ScheduleItem, index: number) => {
               const isDone = currentActivity && 
                 (currentActivity.type === 'itinerary' ? item.type === 'itinerary' && item.id === currentActivity.id : item.type === 'flight' && item.id === currentActivity.id)
                   ? false
@@ -834,12 +923,16 @@ export default function TodayScreen() {
                 style={[
                   styles.scheduleEmptyStateSecondaryButton,
                   styles.scheduleEmptyStateButtonFullWidth,
+                  !nearestFutureScheduleDateStr && styles.scheduleEmptyStateButtonDisabled,
                 ]}
+                disabled={!nearestFutureScheduleDateStr}
                 onPress={() => {
-                  /* TODO: 가장 가까운 일정(첫 날) 미리보기/이동 */
+                  if (!nearestFutureScheduleDateStr) return;
+                  setTimelineViewDate(dayjs(nearestFutureScheduleDateStr));
                 }}
                 accessibilityRole="button"
                 accessibilityLabel="가장 가까운 일정으로 이동"
+                accessibilityState={{ disabled: !nearestFutureScheduleDateStr }}
               >
                 <Text style={styles.scheduleEmptyStateSecondaryButtonLabel}>
                   가장 가까운 일정으로 이동
@@ -892,7 +985,7 @@ export default function TodayScreen() {
           <View style={styles.checklistWrapper}>
             <WeeklyChecklistCard
               planPublicId={selectedPlan?.publicId}
-              selectedDate={today}
+              selectedDate={timelineDayForCards}
               itineraries={planData.itineraries}
             />
           </View>
@@ -1077,7 +1170,7 @@ export default function TodayScreen() {
         planId={selectedPlan?.id ?? 0}
         planStartDate={selectedPlan?.startDate}
         planEndDate={selectedPlan?.endDate}
-        exDate={todayDateStr}
+        exDate={timelineDateStr}
         onExpenseAdd={() => {
           planData.refreshExpenses?.();
           queryClient.invalidateQueries({ queryKey: ['expenses', selectedPlan?.id] });
@@ -1102,7 +1195,7 @@ export default function TodayScreen() {
         planId={selectedPlan?.id ?? 0}
         planStartDate={selectedPlan?.startDate}
         planEndDate={selectedPlan?.endDate}
-        defaultExDate={todayDateStr}
+        defaultExDate={timelineDateStr}
         onExpenseAdd={(expense) => {
           planData.addExpense?.(expense);
           planData.refreshExpenses?.();
@@ -1275,7 +1368,7 @@ export default function TodayScreen() {
         planId={selectedPlan?.id ?? 0}
         planStartDate={selectedPlan?.startDate}
         planEndDate={selectedPlan?.endDate}
-        selectedDate={dayjs()}
+        selectedDate={timelineViewDate ?? dayjs(calendarTodayStr)}
         planData={{
           addItinerary: planData.addItinerary,
           addAccommodation: planData.addAccommodation,
@@ -1443,6 +1536,23 @@ const styles = StyleSheet.create({
     color: colors.gray700,
     marginBottom: 8,
   },
+  timelinePreviewBanner: {
+    alignSelf: 'stretch',
+    marginTop: -4,
+    marginBottom: 8,
+  },
+  timelinePreviewHint: {
+    ...textStyles.body4,
+    color: colors.primary,
+    marginBottom: 6,
+  },
+  backToTodayLink: {
+    alignSelf: 'flex-start',
+  },
+  backToTodayLinkText: {
+    ...textStyles.h7,
+    color: colors.primary,
+  },
   tripTitleWrapper: {
     position: 'relative',
     marginBottom: 8,
@@ -1505,6 +1615,9 @@ const styles = StyleSheet.create({
   scheduleEmptyStateSecondaryButtonLabel: {
     ...textStyles.h5,
     color: colors.black,
+  },
+  scheduleEmptyStateButtonDisabled: {
+    opacity: 0.45,
   },
   scheduleEmptyStatePrimaryButton: {
     width: '100%',
