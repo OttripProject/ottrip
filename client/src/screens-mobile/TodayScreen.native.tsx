@@ -919,38 +919,52 @@ export default function TodayScreen() {
               <Text style={styles.scheduleEmptyStateSubtitle}>
                 다른 날짜의 일정을 보거나 오늘 일정을 추가할 수 있어요
               </Text>
-              <Pressable
-                style={[
-                  styles.scheduleEmptyStateSecondaryButton,
-                  styles.scheduleEmptyStateButtonFullWidth,
-                  !nearestFutureScheduleDateStr && styles.scheduleEmptyStateButtonDisabled,
-                ]}
-                disabled={!nearestFutureScheduleDateStr}
-                onPress={() => {
-                  if (!nearestFutureScheduleDateStr) return;
-                  setTimelineViewDate(dayjs(nearestFutureScheduleDateStr));
-                }}
-                accessibilityRole="button"
-                accessibilityLabel="가장 가까운 일정으로 이동"
-                accessibilityState={{ disabled: !nearestFutureScheduleDateStr }}
-              >
-                <Text style={styles.scheduleEmptyStateSecondaryButtonLabel}>
-                  가장 가까운 일정으로 이동
-                </Text>
-              </Pressable>
-              <Pressable
-                style={[
-                  styles.scheduleEmptyStatePrimaryButton,
-                  styles.scheduleEmptyStatePrimaryButtonStacked,
-                ]}
-                onPress={openAddScheduleFlow}
-                accessibilityRole="button"
-                accessibilityLabel="오늘 일정 추가"
-              >
-                <Text style={styles.scheduleEmptyStatePrimaryButtonLabel}>
-                  오늘 일정 추가
-                </Text>
-              </Pressable>
+              {nearestFutureScheduleDateStr ? (
+                <>
+                  <Pressable
+                    style={[
+                      styles.scheduleEmptyStateSecondaryButton,
+                      styles.scheduleEmptyStateButtonFullWidth,
+                    ]}
+                    onPress={() => {
+                      setTimelineViewDate(dayjs(nearestFutureScheduleDateStr));
+                    }}
+                    accessibilityRole="button"
+                    accessibilityLabel="가장 가까운 일정으로 이동"
+                  >
+                    <Text style={styles.scheduleEmptyStateSecondaryButtonLabel}>
+                      가장 가까운 일정으로 이동
+                    </Text>
+                  </Pressable>
+                  <Pressable
+                    style={[
+                      styles.scheduleEmptyStatePrimaryButton,
+                      styles.scheduleEmptyStatePrimaryButtonStacked,
+                    ]}
+                    onPress={openAddScheduleFlow}
+                    accessibilityRole="button"
+                    accessibilityLabel="오늘 일정 추가"
+                  >
+                    <Text style={styles.scheduleEmptyStatePrimaryButtonLabel}>
+                      오늘 일정 추가
+                    </Text>
+                  </Pressable>
+                </>
+              ) : (
+                <Pressable
+                  style={[
+                    styles.scheduleEmptyStatePrimaryButton,
+                    styles.scheduleEmptyStatePrimaryButtonFirst,
+                  ]}
+                  onPress={openAddScheduleFlow}
+                  accessibilityRole="button"
+                  accessibilityLabel="오늘 일정 추가"
+                >
+                  <Text style={styles.scheduleEmptyStatePrimaryButtonLabel}>
+                    오늘 일정 추가
+                  </Text>
+                </Pressable>
+              )}
             </View>
           </View>
         )}
@@ -1615,9 +1629,6 @@ const styles = StyleSheet.create({
   scheduleEmptyStateSecondaryButtonLabel: {
     ...textStyles.h5,
     color: colors.black,
-  },
-  scheduleEmptyStateButtonDisabled: {
-    opacity: 0.45,
   },
   scheduleEmptyStatePrimaryButton: {
     width: '100%',
