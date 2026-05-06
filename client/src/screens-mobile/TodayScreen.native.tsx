@@ -204,8 +204,16 @@ export default function TodayScreen() {
     return noItineraries && !hasAnyFlightSegment && noAccommodations;
   }, [selectedPlan, planData.itineraries, hasAnyFlightSegment, planData.accommodations]);
 
-  const hideChecklistAndExpenseForEmptyPlan =
-    !!selectedPlan && planHasNoSchedulesYet && !planData.isLoading;
+  /** 오늘 타임라인(이터너리·오늘 항공)이 있을 때만 체크리스트·오늘 비용 노출 */
+  const showTodayTimelineExtras =
+    !!selectedPlan && !planData.isLoading && todaySchedules.length > 0;
+
+  /** 오늘 일정은 없고, 플랜에는 다른 날 일정·항공·숙소 등이 있을 때 */
+  const showNoTodayScheduleOtherDaysCard =
+    !!selectedPlan &&
+    !planData.isLoading &&
+    todaySchedules.length === 0 &&
+    !planHasNoSchedulesYet;
 
   const currentActivity = useMemo((): ScheduleItem | null => {
     return todaySchedules.find((item: ScheduleItem) => {
@@ -813,26 +821,74 @@ export default function TodayScreen() {
           </View>
         )}
 
-        {planHasNoSchedulesYet && selectedPlan && !planData.isLoading && (
+        {showNoTodayScheduleOtherDaysCard && (
           <View style={styles.section}>
-            <View style={[styles.cardBase, styles.emptyPlanScheduleCard]}>
-              <Text style={styles.emptyPlanScheduleTitle}>
-                해당 여행에 저장된 일정이 없어요!
+            <View style={[styles.cardBase, styles.scheduleEmptyStateCard]}>
+              <Text style={styles.scheduleEmptyStateTitle}>
+                해당 여행의 오늘 일정은 없어요!
               </Text>
-              <Text style={styles.emptyPlanScheduleSubtitle}>일정을 추가해보세요</Text>
+              <Text style={styles.scheduleEmptyStateSubtitle}>
+                다른 날짜의 일정을 보거나 오늘 일정을 추가할 수 있어요
+              </Text>
               <Pressable
-                style={styles.emptyPlanScheduleButton}
+                style={[
+                  styles.scheduleEmptyStateSecondaryButton,
+                  styles.scheduleEmptyStateButtonFullWidth,
+                ]}
+                onPress={() => {
+                  /* TODO: 가장 가까운 일정(첫 날) 미리보기/이동 */
+                }}
+                accessibilityRole="button"
+                accessibilityLabel="가장 가까운 일정으로 이동"
+              >
+                <Text style={styles.scheduleEmptyStateSecondaryButtonLabel}>
+                  가장 가까운 일정으로 이동
+                </Text>
+              </Pressable>
+              <Pressable
+                style={[
+                  styles.scheduleEmptyStatePrimaryButton,
+                  styles.scheduleEmptyStatePrimaryButtonStacked,
+                ]}
                 onPress={openAddScheduleFlow}
                 accessibilityRole="button"
-                accessibilityLabel="일정 추가"
+                accessibilityLabel="오늘 일정 추가"
               >
-                <Text style={styles.emptyPlanScheduleButtonLabel}>일정 추가</Text>
+                <Text style={styles.scheduleEmptyStatePrimaryButtonLabel}>
+                  오늘 일정 추가
+                </Text>
               </Pressable>
             </View>
           </View>
         )}
 
-        {!hideChecklistAndExpenseForEmptyPlan && (
+        {planHasNoSchedulesYet && selectedPlan && !planData.isLoading && (
+          <View style={styles.section}>
+            <View style={[styles.cardBase, styles.scheduleEmptyStateCard]}>
+              <Text style={styles.scheduleEmptyStateTitle}>
+                해당 여행에 저장된 일정이 없어요!
+              </Text>
+              <Text style={styles.scheduleEmptyStateSubtitle}>
+                일정을 추가해보세요
+              </Text>
+              <Pressable
+                style={[
+                  styles.scheduleEmptyStatePrimaryButton,
+                  styles.scheduleEmptyStatePrimaryButtonFirst,
+                ]}
+                onPress={openAddScheduleFlow}
+                accessibilityRole="button"
+                accessibilityLabel="일정 추가"
+              >
+                <Text style={styles.scheduleEmptyStatePrimaryButtonLabel}>
+                  일정 추가
+                </Text>
+              </Pressable>
+            </View>
+          </View>
+        )}
+
+        {showTodayTimelineExtras && (
           <View style={styles.checklistWrapper}>
             <WeeklyChecklistCard
               planPublicId={selectedPlan?.publicId}
@@ -843,7 +899,7 @@ export default function TodayScreen() {
         )}
 
         {/* 오늘의 비용 섹션 */}
-        {selectedPlan && !hideChecklistAndExpenseForEmptyPlan && (
+        {showTodayTimelineExtras && (
           <View style={styles.section}>
             <Pressable
               style={[styles.cardBase, styles.costCardPrimary]}
@@ -1416,23 +1472,41 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 3,
   },
-  emptyPlanScheduleCard: {
+  /** 플랜 일정 비어 있음 / 오늘만 비어 있음 등 공통 안내 카드 */
+  scheduleEmptyStateCard: {
     alignItems: 'center',
     paddingVertical: 20,
   },
-  emptyPlanScheduleTitle: {
-    ...textStyles.h3,
+  scheduleEmptyStateTitle: {
+    ...textStyles.h5,
     color: colors.black,
     textAlign: 'center',
   },
-  emptyPlanScheduleSubtitle: {
-    ...textStyles.body3,
+  scheduleEmptyStateSubtitle: {
+    ...textStyles.body4,
     color: colors.gray600,
     textAlign: 'center',
-    marginTop: 6,
+    marginTop: 8,
+    paddingHorizontal: 4,
   },
-  emptyPlanScheduleButton: {
+  scheduleEmptyStateButtonFullWidth: {
+    width: '100%',
+  },
+  scheduleEmptyStateSecondaryButton: {
     marginTop: 20,
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: colors.gray400,
+    borderRadius: 12,
+    paddingVertical: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  scheduleEmptyStateSecondaryButtonLabel: {
+    ...textStyles.h5,
+    color: colors.black,
+  },
+  scheduleEmptyStatePrimaryButton: {
     width: '100%',
     backgroundColor: colors.black,
     borderRadius: 12,
@@ -1440,11 +1514,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  emptyPlanScheduleButtonLabel: {
+  scheduleEmptyStatePrimaryButtonFirst: {
+    marginTop: 20,
+  },
+  scheduleEmptyStatePrimaryButtonStacked: {
+    marginTop: 8,
+  },
+  scheduleEmptyStatePrimaryButtonLabel: {
     ...textStyles.h5,
     color: colors.white,
   },
-
   currentCard: {
     marginBottom: 16,
   },
