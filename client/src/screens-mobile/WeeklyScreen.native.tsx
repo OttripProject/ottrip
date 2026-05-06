@@ -186,8 +186,8 @@ export default function WeeklyScreen() {
     return (
       <View style={styles.container}>
         <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>여행이 없습니다</Text>
-          <Text style={styles.emptySubtext}>새 여행을 만들어보세요</Text>
+          <Text style={styles.emptyText}>아직 만든 여행이 없어요</Text>
+          <Text style={styles.emptySubtext}>여행을 먼저 생성한 후에{'\n'}그 안에 일정·항공·숙소를 추가할 수 있어요{'\n'}오늘 탭에서 여행을 만들 수 있어요</Text>
         </View>
       </View>
     );
@@ -743,12 +743,13 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     ...textStyles.h3,
-    color: colors.gray600,
+    color: colors.black,
     marginBottom: 8,
   },
   emptySubtext: {
-    ...textStyles.body2,
-    color: colors.gray500,
+    ...textStyles.body3,
+    color: colors.gray600,
+    textAlign: 'center',
   },
   header: {
     paddingTop: 60,
