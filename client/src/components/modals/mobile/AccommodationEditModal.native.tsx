@@ -20,6 +20,8 @@ import TimeIcon from '../../../../assets/mobile_time.svg';
 import DownArrowIcon from '../../../../assets/down_arrow.svg';
 import { useFilePicker } from '@/hooks/useFilePicker';
 import { useAttachmentUpload } from '@/hooks/useAttachmentUpload';
+import { useMe } from '@/hooks/useMe';
+import { handleGuestPromptError } from '@/utils/guestPrompt';
 
 interface AccommodationEditModalProps {
   visible: boolean;
@@ -87,6 +89,7 @@ export default function AccommodationEditModal({
   const [isLoadingAttachments, setIsLoadingAttachments] = useState(false);
 
   const { pickImage, pickDocument } = useFilePicker();
+  const { data: me } = useMe();
   const { isUploading, uploadFiles } = useAttachmentUpload({
     planId,
     entityType: 'accommodation',
@@ -152,7 +155,8 @@ export default function AccommodationEditModal({
     try {
       await attachmentsApi.deleteAttachment(attachmentId);
       setExistingAttachments((prev) => prev.filter((a) => a.id !== attachmentId));
-    } catch {
+    } catch (error) {
+      if (handleGuestPromptError(error)) return;
       Alert.alert('오류', '첨부파일 삭제에 실패했습니다.');
     }
   };
@@ -469,6 +473,7 @@ export default function AccommodationEditModal({
             isLoadingExisting={!!accommodation && isLoadingAttachments}
             isUploading={isUploading}
             disabled={isSubmitting}
+            isGuest={!!me?.isGuest}
             onPickImage={async () => {
               try {
                 const file = await pickImage();

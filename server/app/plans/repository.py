@@ -1,9 +1,10 @@
 # from fastapi import HTTPException
 
-from sqlalchemy import select, update, insert, delete, exists
+from sqlalchemy import func, select, update, insert, delete, exists
 from sqlalchemy.orm import joinedload, with_loader_criteria
 
 from app.database.deps import SessionDep
+from app.attachments.models import Attachment
 from app.expenses.models import Expense
 from app.flights.models import Flight, FlightSegment
 from app.itinerary.models import Itinerary
@@ -125,13 +126,116 @@ class PlanRepository:
         )
         return list(result.unique().scalars())
 
-    async def remove(self, *, plan_id: int) -> None:
-        stmt = (
+    async def remove(self, *, plan_id: int) -> list[str]:
+        """
+        플랜과 하위 엔티티 소프트 삭제, 첨부 DB 행 삭제. R2 삭제는 호출 측에서 file_key 목록으로 수행.
+        반환: 삭제한 첨부의 R2 object key 목록 (요청 종료 시점 commit 전에 R2 삭제에 사용).
+        """
+        key_result = await self.session.execute(
+            select(Attachment.file_key).where(Attachment.plan_id == plan_id)
+        )
+        file_keys = list(key_result.scalars().all())
+
+        flight_ids_subq = select(Flight.id).where(Flight.plan_id == plan_id)
+        await self.session.execute(
+            update(FlightSegment)
+            .where(FlightSegment.flight_id.in_(flight_ids_subq))
+            .values(is_deleted=True)
+        )
+        await self.session.execute(
+            update(Flight).where(Flight.plan_id == plan_id).values(is_deleted=True)
+        )
+        await self.session.execute(
+            update(Itinerary).where(Itinerary.plan_id == plan_id).values(is_deleted=True)
+        )
+        await self.session.execute(
+            update(Accommodation)
+            .where(Accommodation.plan_id == plan_id)
+            .values(is_deleted=True)
+        )
+        await self.session.execute(
+            update(Expense).where(Expense.plan_id == plan_id).values(is_deleted=True)
+        )
+        await self.session.execute(
+            delete(Attachment).where(Attachment.plan_id == plan_id)
+        )
+        await self.session.execute(
             update(Plan)
             .where(Plan.id == plan_id, Plan.is_deleted.is_(False))
             .values(is_deleted=True)
         )
-        await self.session.execute(stmt)
+        return file_keys
+
+    async def reassign_plans_owner(self, *, from_owner_id: int, to_owner_id: int) -> None:
+        await self.session.execute(
+            update(Plan)
+            .where(Plan.owner_id == from_owner_id)
+            .values(owner_id=to_owner_id)
+        )
+
+    async def find_owned_active_plan_ids(self, *, owner_id: int) -> list[int]:
+        result = await self.session.execute(
+            select(Plan.id)
+            .where(Plan.owner_id == owner_id, Plan.is_deleted.is_(False))
+            .order_by(Plan.id.asc())
+        )
+        return list(result.scalars().all())
+
+    async def pick_owner_successor_on_account_delete(self, *, plan_id: int) -> int | None:
+        res = await self.session.execute(
+            select(PlanShared.shared_user_id)
+            .where(PlanShared.plan_id == plan_id, PlanShared.role == Role.EDITOR)
+            .order_by(PlanShared.updated_at.asc(), PlanShared.id.asc())
+            .limit(1)
+        )
+        editor_id = res.scalar_one_or_none()
+        if editor_id is not None:
+            return editor_id
+        res = await self.session.execute(
+            select(PlanShared.shared_user_id)
+            .where(PlanShared.plan_id == plan_id, PlanShared.role == Role.VIEWER)
+            .order_by(PlanShared.updated_at.asc(), PlanShared.id.asc())
+            .limit(1)
+        )
+        viewer_id = res.scalar_one_or_none()
+        if viewer_id is not None:
+            return viewer_id
+        res = await self.session.execute(
+            select(PlanShared.shared_user_id)
+            .where(PlanShared.plan_id == plan_id)
+            .order_by(PlanShared.updated_at.asc(), PlanShared.id.asc())
+            .limit(1)
+        )
+        return res.scalar_one_or_none()
+
+    async def transfer_plan_owner_and_drop_shared_row(
+        self, *, plan_id: int, new_owner_id: int
+    ) -> None:
+        await self.session.execute(
+            update(Plan)
+            .where(Plan.id == plan_id, Plan.is_deleted.is_(False))
+            .values(owner_id=new_owner_id)
+        )
+        await self.session.execute(
+            delete(PlanShared).where(
+                PlanShared.plan_id == plan_id,
+                PlanShared.shared_user_id == new_owner_id,
+            )
+        )
+
+    async def revoke_all_shared_memberships_for_user(self, *, user_id: int) -> None:
+        """다른 사용자 플랜에서 이 유저가 공유자(에디터/뷰어)로 남아 있는 plan_shared 행 전부 삭제."""
+        await self.session.execute(
+            delete(PlanShared).where(PlanShared.shared_user_id == user_id)
+        )
+
+    async def count_plan_shared(self, *, plan_id: int) -> int:
+        n = await self.session.scalar(
+            select(func.count())
+            .select_from(PlanShared)
+            .where(PlanShared.plan_id == plan_id)
+        )
+        return int(n or 0)
 
     # --- Sharing ---
     async def upsert_shared(self, *, plan_id: int, user_id: int, role: Role) -> None:

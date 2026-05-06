@@ -23,6 +23,7 @@ import { useRef } from "react";
 import type { LinkingOptions } from "@react-navigation/native";
 import * as SecureStore from 'expo-secure-store';
 import MobileNavigator from "@/screens-mobile/MobileNavigator";
+import GuestPromptModal from "@/components/modals/GuestPromptModal";
 
 const Stack = createStackNavigator();
 
@@ -207,6 +208,21 @@ export default function RootNavigator() {
             <Stack.Screen name="FORBIDDEN" component={ForbiddenScreen} />
             {/* 모바일 화면 */}
             <Stack.Screen name="MOBILE" component={MobileNavigator} />
+            <Stack.Screen
+              name="소셜회원가입"
+              component={Platform.OS === "web" ? LoginScreen : LoginScreenNative}
+            />
+            {/* 게스트 → 소셜 가입(registerToken) 시에도 약관·프로필·가입완료로 이어지게 동일 화면 등록 */}
+            <Stack.Screen
+              name="약관동의"
+              component={Platform.OS === "web" ? TermsConsentScreen : TermsConsentScreenNative}
+            />
+            <Stack.Screen
+              name="프로필 입력"
+              component={Platform.OS === "web" ? RegisterProfileScreen : RegisterProfileScreenNative}
+            />
+            <Stack.Screen name="가입완료" component={RegisterCompleteScreenNative} />
+            <Stack.Screen name="상세내용" component={TermsDetailScreen} />
           </>
         ) : (
           <>
@@ -237,6 +253,7 @@ export default function RootNavigator() {
           </>
         )}
       </Stack.Navigator>
+      {isAuthenticated ? <GuestPromptModal /> : null}
     </NavigationContainer>
   );
 }

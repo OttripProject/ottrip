@@ -33,6 +33,7 @@ import CautionIcon from '../../assets/mobile_caution.svg';
 import PlusIcon from '../../assets/mobile_plus2.svg';
 import { itinerariesApi } from '@/services/itineraries';
 import { flightsApi } from '@/services/flights';
+import { guestPrompt } from '@/utils/guestPrompt';
 
 export default function WeeklyScreen() {
   const plansQuery = usePlansQuery();
@@ -56,6 +57,16 @@ export default function WeeklyScreen() {
   const [selectedFlightSegment, setSelectedFlightSegment] = useState<FlightSegmentReadDto | null>(null);
   const [showFlightEdit, setShowFlightEdit] = useState(false);
   const [editingFlight, setEditingFlight] = useState<FlightRead | null>(null);
+
+  useEffect(() => {
+    return guestPrompt.registerBeforeSignUpNavigation(() => {
+      setProfileModalVisible(false);
+      setTravelInfoModalVisible(false);
+      setShowItineraryEdit(false);
+      setShowFlightEdit(false);
+      setAddScheduleFlow('closed');
+    });
+  }, []);
 
   const planData = usePlanDataQuery(selectedPlan?.publicId || null);
 
@@ -175,8 +186,8 @@ export default function WeeklyScreen() {
     return (
       <View style={styles.container}>
         <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>여행이 없습니다</Text>
-          <Text style={styles.emptySubtext}>새 여행을 만들어보세요</Text>
+          <Text style={styles.emptyText}>아직 만든 여행이 없어요</Text>
+          <Text style={styles.emptySubtext}>여행을 먼저 생성한 후에{'\n'}그 안에 일정·항공·숙소를 추가할 수 있어요{'\n'}오늘 탭에서 여행을 만들 수 있어요</Text>
         </View>
       </View>
     );
@@ -331,13 +342,13 @@ export default function WeeklyScreen() {
                         <View style={[styles.timeDot, isCurrentTime && styles.timeDotNow]} />
                       </View>
                       <Text style={[styles.scheduleTimeText, isCurrentTime && styles.scheduleTimeTextNow]}>{schedule.time}</Text>
+                      {showNextDay && schedule.endTime && (
+                        <Text style={[styles.scheduleTimeText, isCurrentTime && styles.scheduleTimeTextNow]}> →   {schedule.endTime}</Text>
+                      )}
                       {isCurrentTime && (
                         <View style={styles.nowBadge}>
                           <Text style={styles.nowBadgeText}>NOW</Text>
                         </View>
-                      )}
-                      {showNextDay && schedule.endTime && (
-                        <Text style={[styles.scheduleTimeText, isCurrentTime && styles.scheduleTimeTextNow]}> → {schedule.endTime}</Text>
                       )}
                     </View>
                     {showNextDay && (
@@ -385,14 +396,14 @@ export default function WeeklyScreen() {
                     <View style={styles.timeDotRing}>
                       <View style={[styles.timeDot, isCurrentTime && styles.timeDotNow]} />
                     </View>
-    <Text style={[styles.scheduleTimeText, isCurrentTime && styles.scheduleTimeTextNow]}>{schedule.time}</Text>
-                    {isCurrentTime && (
-                        <View style={styles.nowBadge}>
-                        <Text style={styles.nowBadgeText}>NOW</Text>
-                      </View>
-                    )}
+                    <Text style={[styles.scheduleTimeText, isCurrentTime && styles.scheduleTimeTextNow]}>{schedule.time}</Text>
                     {showNextDay && schedule.endTime && (
                       <Text style={[styles.scheduleTimeText, isCurrentTime && styles.scheduleTimeTextNow]}> → {schedule.endTime}</Text>
+                    )}
+                    {isCurrentTime && (
+                      <View style={styles.nowBadge}>
+                        <Text style={styles.nowBadgeText}>NOW</Text>
+                      </View>
                     )}
                   </View>
                   {showNextDay && (
@@ -732,12 +743,13 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     ...textStyles.h3,
-    color: colors.gray600,
+    color: colors.black,
     marginBottom: 8,
   },
   emptySubtext: {
-    ...textStyles.body2,
-    color: colors.gray500,
+    ...textStyles.body3,
+    color: colors.gray600,
+    textAlign: 'center',
   },
   header: {
     paddingTop: 60,
@@ -914,7 +926,6 @@ const styles = StyleSheet.create({
   scheduleTimeText: {
     ...textStyles.h7,
     color: colors.gray700,
-    marginLeft: 16,
   },
   scheduleCardTime: {
     ...textStyles.h7,
@@ -938,7 +949,7 @@ const styles = StyleSheet.create({
     color: colors.white,
   },
   nextDayIndicator: {
-    backgroundColor: colors.white,
+    backgroundColor: colors.gray300,
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 4,

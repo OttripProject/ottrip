@@ -4,9 +4,12 @@ from fastapi import HTTPException
 from datetime import datetime, timedelta, timezone
 import secrets
 import uuid
+
+from app.attachments.service import delete_r2_objects_by_keys
 from app.auth.deps import CurrentUser
-from app.users.repository import UserRepository
 from app.auth.repository import AuthRepository
+from app.storage.deps import S3ClientDep
+from app.users.repository import UserRepository
 from app.utils.dependency import dependency
 
 from .models import Plan
@@ -32,6 +35,7 @@ class PlanService:
     plan_repository: PlanRepository
     user_repository: UserRepository
     auth_repository: AuthRepository
+    s3_client: S3ClientDep
     
     async def create(self, *, plan_data: PlanCreate) -> PlanRead:
         create_plan_data = Plan(
@@ -116,7 +120,32 @@ class PlanService:
             raise HTTPException(status_code=404, detail="해당 계획을 찾을 수 없습니다.")
         if not has_permission:
             raise HTTPException(status_code=403, detail="해당 계획 삭제 권한이 없습니다.")
-        await self.plan_repository.remove(plan_id=plan_id)
+
+        plan = await self.plan_repository.find_by_id_only_plan(plan_id=plan_id)
+        if not plan:
+            raise HTTPException(status_code=404, detail="해당 계획을 찾을 수 없습니다.")
+
+        shared_count = await self.plan_repository.count_plan_shared(plan_id=plan_id)
+        if shared_count > 0:
+            if plan.owner_id != self.current_user.id:
+                raise HTTPException(
+                    status_code=403,
+                    detail="공유 중인 플랜의 삭제·소유권 이전은 오너만 할 수 있습니다.",
+                )
+            successor_id = await self.plan_repository.pick_owner_successor_on_account_delete(
+                plan_id=plan_id
+            )
+            if successor_id is None:
+                file_keys = await self.plan_repository.remove(plan_id=plan_id)
+                await delete_r2_objects_by_keys(s3_client=self.s3_client, keys=file_keys)
+                return
+            await self.plan_repository.transfer_plan_owner_and_drop_shared_row(
+                plan_id=plan_id, new_owner_id=successor_id
+            )
+            return
+
+        file_keys = await self.plan_repository.remove(plan_id=plan_id)
+        await delete_r2_objects_by_keys(s3_client=self.s3_client, keys=file_keys)
 
     async def update(self, *, plan_id: int, update_data: PlanUpdate) -> PlanRead:
         plan = await self.plan_repository.find_by_id_only_plan(plan_id=plan_id)

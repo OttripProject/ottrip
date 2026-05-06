@@ -78,7 +78,7 @@ export default function AddScheduleMethodModal({
           accessibilityRole="button"
         >
           <View style={styles.iconCircle}>
-            <ManualIcon width={20} height={20} />
+            <ManualIcon width={20} height={20} color={colors.black} />
           </View>
           <View style={styles.cardTextBlock}>
             <Text style={styles.cardTitle}>직접 입력</Text>

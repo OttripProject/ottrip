@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { useNavigation, useRoute, CommonActions } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '@/contexts/AuthContext';
 import { colors } from '@/ui/tokens/colors';
@@ -25,6 +25,11 @@ export default function RegisterCompleteScreenNative() {
       accessToken,
       refreshToken,
     } as any);
+    // 게스트 업그레이드는 isAuthenticated가 이미 true → 스택이 자동으로 안 바뀌므로 메인으로 보냄
+    // 비로그인 가입은 스택이 갈아끼워지지만, 동일 reset으로 일관되게 OTTRIP으로 이동
+    navigation.dispatch(
+      CommonActions.reset({ index: 0, routes: [{ name: 'OTTRIP' }] }),
+    );
   };
 
   return (

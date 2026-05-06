@@ -63,6 +63,11 @@ export const authApi = {
     return response.data;
   },
 
+  loginAsGuest: async (): Promise<RegisteredAuthResponse> => {
+    const response = await api.post('/public/auth/guest', {});
+    return response.data;
+  },
+
   refreshToken: async (refreshToken?: string): Promise<TokenResponse> => {
     const payload = refreshToken ? { refresh_token: refreshToken } : {};
     const response = await api.post('/public/auth/refresh', payload);

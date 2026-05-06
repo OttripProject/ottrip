@@ -99,13 +99,21 @@ export default function RegisterProfileScreenNative() {
     }
   };
 
+  const goBackOrLogin = () => {
+    if (navigation.canGoBack()) {
+      navigation.goBack();
+    } else {
+      navigation.navigate('로그인' as never);
+    }
+  };
+
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       {/* 헤더 */}
       <View style={styles.header}>
         <Pressable
           style={styles.headerBtn}
-          onPress={() => navigation.canGoBack() ? navigation.goBack() : navigation.navigate('로그인')}
+          onPress={goBackOrLogin}
           hitSlop={8}
         >
           <LeftArrowIcon width={24} height={24} />
@@ -113,7 +121,7 @@ export default function RegisterProfileScreenNative() {
         <Text style={styles.headerTitle}>회원가입</Text>
         <Pressable
           style={styles.headerBtn}
-          onPress={() => navigation.navigate('로그인')}
+          onPress={goBackOrLogin}
           hitSlop={8}
         >
           <CloseIcon width={24} height={24} />

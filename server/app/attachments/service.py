@@ -4,7 +4,7 @@ import uuid
 from fastapi import HTTPException
 from types_aiobotocore_s3.client import S3Client
 
-from app.auth.deps import CurrentUser
+from app.auth.deps import RequireRegisteredUser
 from app.plans.repository import PlanRepository
 from app.storage.config import storage_settings
 from app.storage.deps import S3ClientDep
@@ -54,9 +54,25 @@ async def cascade_delete_attachments(
     )
 
 
+async def delete_r2_objects_by_keys(*, s3_client: S3Client, keys: list[str]) -> None:
+    """R2에 있는 객체를 병렬 삭제합니다. DB는 호출 전에 이미 반영된 상태여야 합니다."""
+    keys = [k.strip() for k in keys if k and k.strip()]
+    if not keys:
+        return
+    await asyncio.gather(
+        *[
+            s3_client.delete_object(
+                Bucket=storage_settings.R2_BUCKET_NAME,
+                Key=key,
+            )
+            for key in keys
+        ]
+    )
+
+
 @dependency
 class AttachmentService:
-    current_user: CurrentUser
+    current_user: RequireRegisteredUser
     s3_client: S3ClientDep
     attachment_repository: AttachmentRepository
     plan_repository: PlanRepository

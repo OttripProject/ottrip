@@ -33,6 +33,15 @@ from .token import TokenType, create_jwt_token, create_token_pair
 router = create_router()
 
 
+def _registered_response(user_id: int, response: Response) -> RegisteredAuthResponse:
+    access_token, refresh_token = create_token_pair(user_id)
+    _set_auth_cookies(response, access_token, refresh_token)
+    return RegisteredAuthResponse(
+        access_token=access_token,
+        refresh_token=refresh_token,
+    )
+
+
 def _set_auth_cookies(response: Response, access_token: str, refresh_token: str) -> None:
     """로그인 성공 시 httpOnly 쿠키 (Google / Apple 등 공통)."""
     is_local = core_settings.ENVIRONMENT == "local"
@@ -97,9 +106,20 @@ async def register_user(
     user_service: UserService,
     user: UserCreate,
     auth: RegisterAuthDep,
+    current_user: CurrentUserOptional,
     response: Response,
 ) -> TokenResponse:
-    registered_user = await user_service.register(user_data=user, auth=auth)
+    if current_user is not None:
+        if not current_user.is_guest:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="이미 로그인된 회원은 이 경로로 가입할 수 없습니다.",
+            )
+        registered_user = await user_service.register_guest_upgrade(
+            user_data=user, auth=auth, guest_user=current_user
+        )
+    else:
+        registered_user = await user_service.register(user_data=user, auth=auth)
 
     access_token, refresh_token = create_token_pair(registered_user.id)
     
@@ -186,6 +206,15 @@ async def refresh_token(
     return TokenResponse(access_token=access_token, refresh_token=refresh_token)
 
 
+@router.post("/guest")
+async def authenticate_guest(
+    user_service: UserService,
+    response: Response,
+) -> RegisteredAuthResponse:
+    user = await user_service.create_guest()
+    return _registered_response(user.id, response)
+
+
 @router.get("/valid-token", response_model=bool)
 async def check_login_status(current_user: CurrentUserOptional) -> bool:
     return current_user is not None
@@ -267,6 +296,8 @@ async def authenticate_google(
     payload: GoogleAuthRequest,
     client: HTTPClientDep,
     auth_info_service: AuthInfoService,
+    user_service: UserService,
+    current_user: CurrentUserOptional,
     response: Response,
 ) -> AuthResponse:
     # 1. Google에 id_token 검증 요청
@@ -294,6 +325,17 @@ async def authenticate_google(
         email=email,
     )
 
+    if current_user is not None and current_user.is_guest:
+        if auth_info.user_id is not None and auth_info.user_id != current_user.id:
+            await user_service.merge_guest_into_registered_user(
+                guest_user_id=current_user.id,
+                target_user_id=auth_info.user_id,
+            )
+            return _registered_response(auth_info.user_id, response)
+        if auth_info.user_id == current_user.id:
+            return _registered_response(current_user.id, response)
+        # 소셜이 아직 미연결이면 Unregistered(registerToken) → 클라이언트 약관/닉네임 후 POST /register 로 승급
+
     if auth_info.user_id is None:
         return UnregisteredAuthResponse(
             register_token=create_jwt_token(
@@ -306,13 +348,7 @@ async def authenticate_google(
             ),
         )
 
-    access_token, refresh_token = create_token_pair(auth_info.user_id)
-    _set_auth_cookies(response, access_token, refresh_token)
-    # 하위 호환: JSON 응답도 유지 (Native 환경용)
-    return RegisteredAuthResponse(
-        access_token=access_token,
-        refresh_token=refresh_token,
-    )
+    return _registered_response(auth_info.user_id, response)
 
 
 @router.post("/apple")
@@ -320,6 +356,8 @@ async def authenticate_apple(
     payload: AppleAuthRequest,
     apple_idp: AppleIdpService,
     auth_info_service: AuthInfoService,
+    user_service: UserService,
+    current_user: CurrentUserOptional,
     response: Response,
 ) -> AuthResponse:
     apple_user = await apple_idp.verify_identity_token(payload.identity_token)
@@ -328,6 +366,17 @@ async def authenticate_apple(
         apple_id=apple_user.sub,
         email=apple_user.email,
     )
+
+    if current_user is not None and current_user.is_guest:
+        if auth_info.user_id is not None and auth_info.user_id != current_user.id:
+            await user_service.merge_guest_into_registered_user(
+                guest_user_id=current_user.id,
+                target_user_id=auth_info.user_id,
+            )
+            return _registered_response(auth_info.user_id, response)
+        if auth_info.user_id == current_user.id:
+            return _registered_response(current_user.id, response)
+        # 소셜이 아직 미연결이면 Unregistered(registerToken) → 클라이언트 약관/닉네임 후 POST /register 로 승급
 
     if auth_info.user_id is None:
         return UnregisteredAuthResponse(
@@ -341,9 +390,4 @@ async def authenticate_apple(
             ),
         )
 
-    access_token, refresh_token = create_token_pair(auth_info.user_id)
-    _set_auth_cookies(response, access_token, refresh_token)
-    return RegisteredAuthResponse(
-        access_token=access_token,
-        refresh_token=refresh_token,
-    )
+    return _registered_response(auth_info.user_id, response)

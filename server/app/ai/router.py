@@ -2,6 +2,7 @@ from typing import Dict, Any
 from fastapi import UploadFile, File, HTTPException
 from fastapi.responses import JSONResponse
 
+from app.auth.deps import RequireRegisteredUser
 from app.core.router import create_router
 from app.common.schemas import StatusResponse
 
@@ -123,7 +124,7 @@ async def extract_text_only(
 
 # 데브
 @router.get("/supported-formats")
-async def get_supported_formats():
+async def get_supported_formats(_user: RequireRegisteredUser):
     """지원하는 파일 형식 목록"""
     return {
         "success": True,

@@ -13,11 +13,14 @@ import {
   Image,
   useWindowDimensions,
   StatusBar,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '@/ui/tokens/colors';
 import { textStyles } from '@/ui/tokens/typography';
 import type { Attachment, LocalFile } from '@/types/api';
+import { useMe } from '@/hooks/useMe';
+import { guestPrompt } from '@/utils/guestPrompt';
 
 import CameraIcon from '../../../assets/mobile_camera.svg';
 import AddIcon from '../../../assets/mobile_plan_add.svg';
@@ -39,6 +42,11 @@ export interface AttachmentSectionProps {
   style?: StyleProp<ViewStyle>;
   showTopDivider?: boolean;
   disabled?: boolean;
+  /**
+   * 부모에서 넘기면 그걸 우선(테스트/오버라이드).
+   * 생략 시 `useMe().isGuest` (여기서 직접 판별해 부모 동기화 누락 방지)
+   */
+  isGuest?: boolean;
 }
 
 
@@ -76,7 +84,10 @@ export default function AttachmentSection({
   style,
   showTopDivider = false,
   disabled = false,
+  isGuest: isGuestProp,
 }: AttachmentSectionProps) {
+  const { data: me } = useMe();
+  const isGuest = isGuestProp ?? (me?.isGuest === true);
   const existing = existingAttachments;
   const hasFiles = existing.length + pendingFiles.length > 0;
   const { width: windowWidth, height: windowHeight } = useWindowDimensions();
@@ -112,11 +123,23 @@ export default function AttachmentSection({
 
   const handleAddPress = () => {
     if (disabled || isUploading) return;
-    Alert.alert('파일 추가', '추가할 파일 유형을 선택하세요.', [
-      { text: '사진', onPress: onPickImage },
-      { text: 'PDF 문서', onPress: onPickDocument },
-      { text: '취소', style: 'cancel' },
-    ]);
+    if (isGuest) {
+      guestPrompt.show();
+      return;
+    }
+    const showPicker = () => {
+      Alert.alert('파일 추가', '추가할 파일 유형을 선택하세요.', [
+        { text: '사진', onPress: onPickImage },
+        { text: 'PDF 문서', onPress: onPickDocument },
+        { text: '취소', style: 'cancel' },
+      ]);
+    };
+    /** iOS: 다른 RN Modal 위에서 동기 Alert 이 안 뜨는 경우가 있어 한 틱 미룸 */
+    if (Platform.OS === 'ios') {
+      setTimeout(showPicker, 0);
+    } else {
+      showPicker();
+    }
   };
 
   const handleRemovePending = (index: number) => {
