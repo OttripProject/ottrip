@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
-import { View, Text, ScrollView, StyleSheet, Pressable, Modal, Animated, RefreshControl, Alert } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, Pressable, Modal, Animated, RefreshControl, Alert, ActivityIndicator } from 'react-native';
 import { Swipeable } from 'react-native-gesture-handler';
 import { Ionicons } from '@expo/vector-icons';
 import dayjs from 'dayjs';
@@ -305,6 +305,117 @@ export default function TodayScreen() {
     timelineSwipeRefs.current.get(key)?.close();
     activeTimelineSwipeKey.current = null;
   }, []);
+
+  if (plansQuery.isLoading && plansQuery.plans.length === 0) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={colors.primary} />
+        </View>
+      </View>
+    );
+  }
+
+  if (plansQuery.plans.length === 0) {
+    const noPlanFeatures = [
+      '여행 일정 관리에 최적화된 솔루션',
+      'AI로 체크리스트 추천',
+      '친구들과 일정 공유',
+    ] as const;
+
+    return (
+      <View style={styles.container}>
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.noPlanScrollContent}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={async () => {
+                setRefreshing(true);
+                try {
+                  await plansQuery.fetchPlans();
+                } finally {
+                  setRefreshing(false);
+                }
+              }}
+              tintColor={colors.primary}
+              colors={[colors.primary]}
+            />
+          }
+        >
+          <View style={styles.noPlanHeader}>
+            <View style={styles.noPlanHeaderSpacer} />
+            <Pressable
+              style={styles.settingsButton}
+              onPress={() => setProfileModalVisible(true)}
+              hitSlop={8}
+            >
+              <SettingIcon width={24} height={24} color={colors.gray600} />
+            </Pressable>
+          </View>
+          <View style={styles.noPlanCardWrap}>
+            <View style={styles.noPlanCard}>
+              <Text style={styles.noPlanEyebrow}>여행 일정 관리에 맞춘 서비스</Text>
+              <Text style={styles.noPlanHeadline}>새 여행을 만들어보세요</Text>
+              <Text style={styles.noPlanSubcopy}>
+                일정·항공·숙소를 한 곳에서{'\n'}AI 체크리스트와 친구 공유까지
+              </Text>
+              <View style={styles.noPlanFeatureBox}>
+                {noPlanFeatures.map((line) => (
+                  <View key={line} style={styles.noPlanFeatureRow}>
+                    <View style={styles.noPlanBullet} />
+                    <Text style={styles.noPlanFeatureText}>{line}</Text>
+                  </View>
+                ))}
+              </View>
+              <Pressable
+                style={[styles.noPlanCta, !plansQuery.addPlan && styles.noPlanCtaDisabled]}
+                disabled={!plansQuery.addPlan}
+                onPress={() => {
+                  setEditingPlan(null);
+                  setShowAddPlanModal(true);
+                }}
+              >
+                <Text style={styles.noPlanCtaLabel}>여행 일정 생성</Text>
+              </Pressable>
+            </View>
+          </View>
+        </ScrollView>
+
+        <Modal
+          visible={profileModalVisible}
+          animationType="fade"
+          transparent={true}
+          onRequestClose={() => setProfileModalVisible(false)}
+        >
+          <ProfileModal
+            visible={profileModalVisible}
+            onClose={() => setProfileModalVisible(false)}
+          />
+        </Modal>
+
+        {plansQuery.addPlan && (
+          <AddPlanModal
+            visible={showAddPlanModal}
+            onClose={() => {
+              setShowAddPlanModal(false);
+              setEditingPlan(null);
+            }}
+            onPlanCreated={(plan) => {
+              setSelectedPlan(plan);
+              setShowAddPlanModal(false);
+              setEditingPlan(null);
+            }}
+            addPlan={plansQuery.addPlan}
+            planToEdit={editingPlan}
+            updatePlan={plansQuery.updatePlan}
+          />
+        )}
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -1097,6 +1208,102 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.gray300,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  noPlanScrollContent: {
+    flexGrow: 1,
+    paddingBottom: 100,
+  },
+  noPlanHeader: {
+    paddingTop: 60,
+    paddingHorizontal: 16,
+    paddingBottom: 16,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'flex-end',
+  },
+  noPlanHeaderSpacer: {
+    flex: 1,
+  },
+  noPlanCardWrap: {
+    flex: 1,
+    justifyContent: 'center',
+    paddingHorizontal: 30,
+    paddingTop: 80,
+    paddingBottom: 32,
+  },
+  noPlanCard: {
+    width: '100%',
+    marginHorizontal: 30,
+    alignSelf: 'center',
+    backgroundColor: colors.white,
+    borderRadius: 24,
+    paddingHorizontal: 20,
+    paddingTop: 56,
+    paddingBottom: 20,
+    overflow: 'hidden',
+  },
+  noPlanEyebrow: {
+    ...textStyles.h7,
+    color: colors.primary,
+    textAlign: 'center',
+    marginBottom: 6,
+  },
+  noPlanHeadline: {
+    ...textStyles.h3,
+    textAlign: 'center',
+    marginBottom: 12,
+  },
+  noPlanSubcopy: {
+    ...textStyles.body3,
+    color: colors.gray600,
+    textAlign: 'center',
+    marginBottom: 32,
+  },
+  noPlanFeatureBox: {
+    backgroundColor: colors.gray200,
+    borderRadius: 12,
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    marginBottom: 32,
+    gap: 8,
+  },
+  noPlanFeatureRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+  },
+  noPlanBullet: {
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: colors.gray700,
+    marginTop: 8,
+  },
+  noPlanFeatureText: {
+    ...textStyles.body4,
+    color: colors.gray700,
+    flex: 1,
+  },
+  noPlanCta: {
+    paddingVertical: 16,
+    borderRadius: 12,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    alignSelf: 'center',
+    width: '100%',
+  },
+  noPlanCtaDisabled: {
+    opacity: 0.5,
+  },
+  noPlanCtaLabel: {
+    ...textStyles.h5,
+    color: colors.white,
   },
   overlay: {
     position: 'absolute',
