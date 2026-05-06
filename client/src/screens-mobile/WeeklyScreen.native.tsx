@@ -342,13 +342,13 @@ export default function WeeklyScreen() {
                         <View style={[styles.timeDot, isCurrentTime && styles.timeDotNow]} />
                       </View>
                       <Text style={[styles.scheduleTimeText, isCurrentTime && styles.scheduleTimeTextNow]}>{schedule.time}</Text>
+                      {showNextDay && schedule.endTime && (
+                        <Text style={[styles.scheduleTimeText, isCurrentTime && styles.scheduleTimeTextNow]}> →   {schedule.endTime}</Text>
+                      )}
                       {isCurrentTime && (
                         <View style={styles.nowBadge}>
                           <Text style={styles.nowBadgeText}>NOW</Text>
                         </View>
-                      )}
-                      {showNextDay && schedule.endTime && (
-                        <Text style={[styles.scheduleTimeText, isCurrentTime && styles.scheduleTimeTextNow]}> → {schedule.endTime}</Text>
                       )}
                     </View>
                     {showNextDay && (
@@ -396,14 +396,14 @@ export default function WeeklyScreen() {
                     <View style={styles.timeDotRing}>
                       <View style={[styles.timeDot, isCurrentTime && styles.timeDotNow]} />
                     </View>
-    <Text style={[styles.scheduleTimeText, isCurrentTime && styles.scheduleTimeTextNow]}>{schedule.time}</Text>
-                    {isCurrentTime && (
-                        <View style={styles.nowBadge}>
-                        <Text style={styles.nowBadgeText}>NOW</Text>
-                      </View>
-                    )}
+                    <Text style={[styles.scheduleTimeText, isCurrentTime && styles.scheduleTimeTextNow]}>{schedule.time}</Text>
                     {showNextDay && schedule.endTime && (
                       <Text style={[styles.scheduleTimeText, isCurrentTime && styles.scheduleTimeTextNow]}> → {schedule.endTime}</Text>
+                    )}
+                    {isCurrentTime && (
+                      <View style={styles.nowBadge}>
+                        <Text style={styles.nowBadgeText}>NOW</Text>
+                      </View>
                     )}
                   </View>
                   {showNextDay && (
@@ -926,7 +926,6 @@ const styles = StyleSheet.create({
   scheduleTimeText: {
     ...textStyles.h7,
     color: colors.gray700,
-    marginLeft: 16,
   },
   scheduleCardTime: {
     ...textStyles.h7,
