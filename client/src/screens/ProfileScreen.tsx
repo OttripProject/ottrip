@@ -165,7 +165,7 @@ export default function ProfileScreen() {
               onPress={() => setGender(Gender.MALE)}
             >
               <View style={[styles.radioButton, gender === Gender.MALE && styles.radioButtonSelected]}>
-                {gender === Gender.MALE && <GenderCheckIcon width={16} height={16} fill={colors.white} />}
+                {gender === Gender.MALE && <GenderCheckIcon width={16} height={16} color={colors.white} />}
               </View>
             </Pressable>
             <Pressable
@@ -181,7 +181,7 @@ export default function ProfileScreen() {
               onPress={() => setGender(Gender.FEMALE)}
             >
               <View style={[styles.radioButton, gender === Gender.FEMALE && styles.radioButtonSelected]}>
-                {gender === Gender.FEMALE && <GenderCheckIcon width={16} height={16} fill={colors.white} />}
+                {gender === Gender.FEMALE && <GenderCheckIcon width={16} height={16} color={colors.white} />}
               </View>
             </Pressable>
             <Pressable
