@@ -12,7 +12,77 @@ import { textStyles, typography } from '../ui/tokens/typography';
 import GradientBackground from '../ui/components/GradientBackground';
 import Card from '../ui/components/Card';
 import GoogleButton from '../ui/components/GoogleButton';
+import AppleButton from '../ui/components/AppleButton';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
+import { colors } from '../ui/tokens/colors';
+
+let appleAuthJsPromise: Promise<void> | null = null;
+
+function loadAppleAuthJs(): Promise<void> {
+  if (typeof window === 'undefined') return Promise.resolve();
+  const w = window as Window & {
+    AppleID?: { auth: { init: (config: Record<string, unknown>) => void; signIn: () => Promise<AppleSignInResponse> } };
+  };
+  if (w.AppleID?.auth) return Promise.resolve();
+  if (appleAuthJsPromise) return appleAuthJsPromise;
+
+  appleAuthJsPromise = new Promise((resolve, reject) => {
+    const fail = (msg: string) => {
+      appleAuthJsPromise = null;
+      reject(new Error(msg));
+    };
+
+    const existing = document.querySelector('script[data-ottrip-appleid]');
+    if (existing) {
+      if (w.AppleID?.auth) {
+        resolve();
+        return;
+      }
+      const done = () => {
+        if (w.AppleID?.auth) resolve();
+        else fail('Apple JS unavailable');
+      };
+      existing.addEventListener('load', done);
+      existing.addEventListener('error', () => fail('Apple 스크립트 로드 실패'));
+      return;
+    }
+
+    const s = document.createElement('script');
+    s.src = 'https://appleid.cdn-apple.com/appleauth/static/jsapi/appleid/1/en_US/appleid.auth.js';
+    s.async = true;
+    s.defer = true;
+    s.setAttribute('data-ottrip-appleid', '1');
+    s.onload = () => {
+      if (w.AppleID?.auth) resolve();
+      else fail('Apple JS unavailable');
+    };
+    s.onerror = () => fail('Apple 스크립트 로드 실패');
+    document.head.appendChild(s);
+  });
+
+  return appleAuthJsPromise;
+}
+
+type AppleSignInResponse = {
+  authorization?: {
+    id_token?: string;
+    code?: string;
+    state?: string;
+  };
+};
+
+const SOCIAL_LOGIN_CONFLICT_DEFAULT = '이 계정은 다른 사용자와 연결되어 있습니다.';
+const SOCIAL_LOGIN_FAILURE_DEFAULT = '로그인에 실패했습니다.';
+
+function showSocialLoginError(err: unknown) {
+  const e = err as { response?: { status?: number; data?: { detail?: string } } };
+  const is409 = e?.response?.status === 409;
+  const detail = e?.response?.data?.detail;
+  const message = is409
+    ? (typeof detail === 'string' && detail ? detail : SOCIAL_LOGIN_CONFLICT_DEFAULT)
+    : SOCIAL_LOGIN_FAILURE_DEFAULT;
+  Alert.alert(is409 ? '안내' : '오류', message);
+}
 
 const generateNonce = async () => {
   if (Platform.OS === 'web' && typeof crypto !== 'undefined') {
@@ -209,6 +279,91 @@ export default function LoginScreen() {
     }
   };
 
+  const handleAppleSignIn = async (idToken: string) => {
+    try {
+      const response = await authApi.appleLogin(idToken);
+
+      if (response.isRegistered) {
+        await login({
+          isRegistered: true,
+          accessToken: response.accessToken,
+          refreshToken: response.refreshToken,
+        });
+
+        try {
+          const token = Platform.OS === 'web'
+            ? window.localStorage.getItem('pendingInviteToken')
+            : await SecureStore.getItemAsync('pendingInviteToken');
+          if (token) {
+            await api.post(`/private/plans/invitations/${token}/accept`);
+            if (Platform.OS === 'web') {
+              window.localStorage.removeItem('pendingInviteToken');
+              window.dispatchEvent(new Event('plans-refresh'));
+            } else {
+              await SecureStore.deleteItemAsync('pendingInviteToken');
+            }
+          }
+        } catch {}
+
+        setIsLoading(false);
+      } else {
+        await login(response);
+        const payload = parseIdToken(idToken);
+        const email = payload?.email ?? '';
+        navigation.navigate('약관동의', {
+          registerToken: response.registerToken,
+          prefill: response.prefill,
+          email,
+        });
+        setIsLoading(false);
+      }
+    } catch (err: unknown) {
+      setIsLoading(false);
+      showSocialLoginError(err);
+    }
+  };
+
+  const onAppleSignInWeb = async () => {
+    if (Platform.OS !== 'web') return;
+    const clientId = env.EXPO_PUBLIC_APPLE_SERVICES_ID;
+    if (!clientId) {
+      Alert.alert('오류', 'Apple 로그인(Services ID)이 설정되지 않았습니다.');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      await loadAppleAuthJs();
+      const w = window as unknown as {
+        AppleID: { auth: { init: (config: Record<string, unknown>) => void; signIn: () => Promise<AppleSignInResponse> } };
+      };
+      const redirectURI = `${window.location.origin}/auth/callback`;
+      w.AppleID.auth.init({
+        clientId,
+        scope: 'name email',
+        redirectURI,
+        usePopup: true,
+      });
+      const res = await w.AppleID.auth.signIn();
+      const idToken = res?.authorization?.id_token;
+      if (!idToken) {
+        Alert.alert('오류', 'Apple 로그인 토큰을 받을 수 없습니다.');
+        setIsLoading(false);
+        return;
+      }
+      await handleAppleSignIn(idToken);
+    } catch (e: unknown) {
+      const err = e as { error?: string };
+      if (err.error === 'popup_closed_by_user') {
+        setIsLoading(false);
+        return;
+      }
+      const message = e instanceof Error ? e.message : 'Apple 로그인에 실패했습니다.';
+      Alert.alert('오류', message);
+      setIsLoading(false);
+    }
+  };
+
   const onGuestStart = async () => {
     setIsLoading(true);
     try {
@@ -294,12 +449,21 @@ export default function LoginScreen() {
             disabled={isLoading}
               isLoading={isLoading}
             />
+            {Platform.OS === 'web' && !!env.EXPO_PUBLIC_APPLE_SERVICES_ID ? (
+              <AppleButton
+                onPress={onAppleSignInWeb}
+                disabled={isLoading}
+                isLoading={isLoading}
+                style={styles.appleButton}
+                iconSize={30}
+              />
+            ) : null}
             <Pressable
               onPress={onGuestStart}
               disabled={isLoading}
               style={({ pressed }) => [styles.guestLink, pressed && styles.guestLinkPressed]}
             >
-              <Text style={styles.guestLinkText}>비회원으로 시작</Text>
+              <Text style={styles.guestLinkText}>게스트로 시작하기</Text>
             </Pressable>
           </View>
         </Card>
@@ -336,8 +500,10 @@ const styles = StyleSheet.create({
     width: '100%',
     alignItems: 'center',
   },
+  appleButton: {
+    marginTop: 12,
+  },
   guestLink: {
-    marginTop: 20,
     paddingVertical: 8,
     paddingHorizontal: 12,
   },
@@ -345,8 +511,8 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   guestLinkText: {
-    ...textStyles.body2,
-    color: '#0066FF',
+    ...textStyles.body3,
+    color: colors.gray500,
     textDecorationLine: 'underline',
   },
 }); 
