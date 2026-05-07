@@ -157,7 +157,7 @@ export default function RegisterProfileScreen() {
                   onPress={() => setGender(g)}
                 >
                   <View style={[styles.radioButton, gender === g && styles.radioButtonSelected]}>
-                    {gender === g && <GenderCheckIcon width={16} height={16} fill={colors.white} />}
+                    {gender === g && <GenderCheckIcon width={16} height={16} color={colors.white} />}
                   </View>
                   <Text style={styles.genderText}>{g === Gender.MALE ? '남성' : '여성'}</Text>
                 </Pressable>
