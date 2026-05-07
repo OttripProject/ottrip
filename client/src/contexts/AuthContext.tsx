@@ -116,7 +116,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setUser(null);
     if (Platform.OS === 'web' && typeof window !== 'undefined') {
       try { window.localStorage.removeItem('postLoginRedirect'); } catch {}
-      try { window.history.replaceState({}, document.title, '/login'); } catch {}
+      try { window.history.replaceState({}, document.title, '/'); } catch {}
     }
   };
 
