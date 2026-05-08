@@ -63,6 +63,7 @@ export default function AuthCallbackScreen() {
               }
             }
           } catch {}
+          navigation.reset({ index: 0, routes: [{ name: 'OTTRIP' }] });
         } else {
           await login(response);
           // @ts-ignore
