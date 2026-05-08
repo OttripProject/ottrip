@@ -183,6 +183,7 @@ export default function RootNavigator() {
           config: {
             screens: {
               OTTRIP: "",
+              인증: "auth/callback",
               프로필: "profile",
               PLAN: planScreen,
               "NOT FOUND": "not-found",
@@ -245,6 +246,7 @@ export default function RootNavigator() {
             <Stack.Screen name="PLAN" component={DashboardScreen} />
             <Stack.Screen name="NOT FOUND" component={NotFoundScreen} />
             <Stack.Screen name="FORBIDDEN" component={ForbiddenScreen} />
+            <Stack.Screen name="인증" component={AuthCallbackScreen} />
             {/* 모바일 화면 */}
             <Stack.Screen name="MOBILE" component={MobileNavigator} />
             <Stack.Screen
