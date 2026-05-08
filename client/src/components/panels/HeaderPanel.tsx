@@ -36,7 +36,7 @@ export default function HeaderPanel() {
             style={styles.userPill}
           >
             <Text style={styles.userText} numberOfLines={1} ellipsizeMode="tail">
-              {profile?.nickname ?? '프로필'}
+              {profile?.isGuest ? '게스트' : (profile?.nickname ?? '프로필')}
             </Text>
             <RightArrowProfileIcon width={16} height={16} />
           </Pressable>
