@@ -14,6 +14,8 @@ import { itinerariesApi } from '@/services/itineraries';
 import { flightsApi } from '@/services/flights';
 import { Plan, CreatePlanRequest, UpdatePlanRequest } from '@/types/api';
 import { useTripForm } from '@/hooks/useTripForm';
+import { useMe } from '@/hooks/useMe';
+import { guestPrompt } from '@/utils/guestPrompt';
 import PanelLayout from './PanelLayout';
 import Card from '@/ui/components/Card';
 import Input from '@/ui/components/input/Input';
@@ -217,6 +219,8 @@ export default function WeeklySchedulePanel({
     const [resultModalConfig, setResultModalConfig] = useState<{ mode: string; params?: any } | null>(null);
     
     const planForm = useTripForm();
+    const { data: me } = useMe();
+    const isGuest = !!me?.isGuest;
     const [previewEvent, setPreviewEvent] = useState<{
       start: Date;
       end: Date;
@@ -1333,7 +1337,13 @@ export default function WeeklySchedulePanel({
             <View style={styles.actionGroup}>
               {(myRole === 'owner' || myRole === 'editor') && (
                 <Pressable
-                  onPress={() => setShareOpen(true)}
+                  onPress={() => {
+                    if (isGuest) {
+                      guestPrompt.show();
+                      return;
+                    }
+                    setShareOpen(true);
+                  }}
                   style={styles.iconButton}
                 >
                   <ShareIcon width={16} height={16} />
