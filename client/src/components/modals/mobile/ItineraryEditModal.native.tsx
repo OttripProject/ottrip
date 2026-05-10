@@ -188,9 +188,11 @@ export default function ItineraryEditModal({
     if (!visible) return;
     if (!itinerary) {
       setExistingAttachments([]);
+      setIsLoadingAttachments(false);
       return;
     }
     let cancelled = false;
+    setExistingAttachments([]);
     setIsLoadingAttachments(true);
     attachmentsApi
       .getAttachments(planId, 'itinerary', itinerary.id)

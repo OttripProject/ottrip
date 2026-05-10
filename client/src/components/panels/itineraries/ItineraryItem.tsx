@@ -200,9 +200,11 @@ export default function ItineraryItem({
     const id = itineraryAttachmentEntityId;
     if (id == null) {
       setExistingAttachments([]);
+      setIsLoadingAttachments(false);
       return;
     }
     let cancelled = false;
+    setExistingAttachments([]);
     setIsLoadingAttachments(true);
     attachmentsApi
       .getAttachments(planId, 'itinerary', id)

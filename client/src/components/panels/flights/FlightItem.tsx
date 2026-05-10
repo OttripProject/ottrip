@@ -194,9 +194,11 @@ export default function FlightItem({
     const id = flightAttachmentEntityId;
     if (id == null) {
       setExistingAttachments([]);
+      setIsLoadingAttachments(false);
       return;
     }
     let cancelled = false;
+    setExistingAttachments([]);
     setIsLoadingAttachments(true);
     attachmentsApi
       .getAttachments(planId, 'flight', id)

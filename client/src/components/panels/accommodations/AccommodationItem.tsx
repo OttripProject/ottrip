@@ -145,9 +145,11 @@ export default function AccommodationItem({
     const id = accommodationAttachmentEntityId;
     if (id == null) {
       setExistingAttachments([]);
+      setIsLoadingAttachments(false);
       return;
     }
     let cancelled = false;
+    setExistingAttachments([]);
     setIsLoadingAttachments(true);
     attachmentsApi
       .getAttachments(planId, 'accommodation', id)
