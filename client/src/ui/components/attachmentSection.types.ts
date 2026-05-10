@@ -14,6 +14,8 @@ export interface AttachmentSectionProps {
   style?: StyleProp<ViewStyle>;
   showTopDivider?: boolean;
   disabled?: boolean;
+  /** true면 헤더의「추가」·빈 상태 점선 영역을 숨김(읽기 전용 모드) */
+  hideAddControls?: boolean;
   isGuest?: boolean;
   /**
    * 웹: `<input type="file">`로 선택한 파일을 `LocalFile`로 변환해 한 번에 전달.

@@ -109,6 +109,7 @@ export default function AttachmentSection({
   style,
   showTopDivider = false,
   disabled = false,
+  hideAddControls = false,
   isGuest: isGuestProp,
   onAppendPendingFiles,
 }: AttachmentSectionProps) {
@@ -290,19 +291,26 @@ export default function AttachmentSection({
       {hiddenFileInput}
       {showTopDivider && <View style={styles.topDivider} />}
 
-      <View style={styles.headerRow}>
+      <View
+        style={[
+          styles.headerRow,
+          hideAddControls && styles.headerRowTitleOnly,
+        ]}
+      >
         <Text style={styles.title}>첨부 파일 (이미지,PDF)</Text>
-        <Pressable
-          onPress={triggerHiddenFilePicker}
-          disabled={disabled || isUploading}
-          style={({ pressed }) => [
-            styles.addButtonRow,
-            pressed && styles.pressed,
-          ]}
-        >
-          <AddIcon width={16} height={16} />
-          <Text style={styles.addLabel}>추가</Text>
-        </Pressable>
+        {!hideAddControls && (
+          <Pressable
+            onPress={triggerHiddenFilePicker}
+            disabled={disabled || isUploading}
+            style={({ pressed }) => [
+              styles.addButtonRow,
+              pressed && styles.pressed,
+            ]}
+          >
+            <AddIcon width={16} height={16} />
+            <Text style={styles.addLabel}>추가</Text>
+          </Pressable>
+        )}
       </View>
 
       {isLoadingExisting && !hasFiles ? (
@@ -342,7 +350,7 @@ export default function AttachmentSection({
             ),
           )}
         </View>
-      ) : (
+      ) : hideAddControls ? null : (
         <Pressable
           onPress={triggerHiddenFilePicker}
           disabled={disabled || isUploading}
@@ -421,6 +429,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     marginBottom: 8,
+  },
+  headerRowTitleOnly: {
+    justifyContent: 'flex-start',
   },
   title: {
     ...textStyles.h8,

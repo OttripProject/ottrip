@@ -299,7 +299,10 @@ export default function FlightItem({
   };
 
   const showAttachmentSection =
-    !readOnly || flightAttachmentEntityId != null;
+    !readOnly ||
+    (readOnly &&
+      flightAttachmentEntityId != null &&
+      (isLoadingAttachments || existingAttachments.length > 0));
 
   const handleSave = async () => {
     if (isSubmittingRef.current) {
@@ -896,6 +899,7 @@ export default function FlightItem({
               }
               isUploading={isUploading}
               disabled={readOnly || isSubmitting}
+              hideAddControls={readOnly}
             />
           )}
 

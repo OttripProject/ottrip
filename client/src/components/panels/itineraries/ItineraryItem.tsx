@@ -304,9 +304,12 @@ export default function ItineraryItem({
     }
   };
 
-  /** 읽기 전용 상세에서도 저장된 첨부를 불러와 표시하려면 id가 있을 때 항상 블록을 둠 */
+  /** 읽기 전용: 첨부가 없으면 섹션 숨김. 로딩 중이거나 목록이 있으면 표시 */
   const showAttachmentSection =
-    !readOnly || itineraryAttachmentEntityId != null;
+    !readOnly ||
+    (readOnly &&
+      itineraryAttachmentEntityId != null &&
+      (isLoadingAttachments || existingAttachments.length > 0));
 
   const handleSave = async () => {
     if (isSubmittingRef.current) {
@@ -957,6 +960,7 @@ export default function ItineraryItem({
           }
           isUploading={isUploading}
           disabled={readOnly || isSubmitting}
+          hideAddControls={readOnly}
         />
       )}
 
