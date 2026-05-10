@@ -11,12 +11,11 @@ import RegisterProfileScreenNative from "@/screens-mobile/RegisterProfileScreen.
 import RegisterCompleteScreenNative from "@/screens-mobile/RegisterCompleteScreen.native";
 import TermsDetailScreen from "@/screens/TermsDetailScreen";
 import WelcomeScreen from "@/screens/auth/WelcomeScreen";
-import LandingScreen from "@/screens/LandingScreen";
 import { NavigationContainer, type NavigationContainerRef } from "@react-navigation/native";
 import { createStackNavigator } from "@react-navigation/stack";
 import NotFoundScreen from "@/screens/error/NotFoundScreen";
 import ForbiddenScreen from "@/screens/error/ForbiddenScreen";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { View, ActivityIndicator, StyleSheet, Platform } from "react-native";
 import { useRef } from "react";
@@ -89,9 +88,9 @@ export default function RootNavigator() {
     } else if (!isAuthenticated) {
       if (Platform.OS === 'web' && typeof window !== 'undefined') {
         const path = window.location.pathname;
-        if (path === '/' || path === '') {
-          setInitialRoute('OTTRIP_TODAY');
-        } else if (!initialRoute || (initialRoute !== '로그인' && initialRoute !== '약관동의' && initialRoute !== '프로필 입력' && initialRoute !== '인증' && initialRoute !== 'OTTRIP_TODAY')) {
+        if (path === '/' || path === '' || path === '/login') {
+          setInitialRoute('로그인');
+        } else if (!initialRoute || (initialRoute !== '로그인' && initialRoute !== '약관동의' && initialRoute !== '프로필 입력' && initialRoute !== '인증')) {
           setInitialRoute('로그인');
         }
       } else {
@@ -161,32 +160,73 @@ export default function RootNavigator() {
     }
   }, [isAuthenticated, initialRoute]);
 
-  const prefixes = Platform.OS === 'web' && typeof window !== 'undefined'
-    ? [window.location.origin]
-    : ['ottrip://'];
+  const linking = useMemo((): LinkingOptions<Record<string, object | undefined>> => {
+    const prefixes =
+      Platform.OS === "web" && typeof window !== "undefined"
+        ? [window.location.origin]
+        : ["ottrip://"];
 
-  const linking: LinkingOptions<Record<string, object | undefined>> = {
-    prefixes,
-    config: {
-      screens: {
-        OTTRIP_TODAY: "", 
-        "로그인": "login",
-        인증: "auth/callback",
-        프로필: "profile",
-        PLAN: {
-          path: "plans/:publicId",
-          parse: {
-            publicId: (value: string) => value,
+    const planScreen = {
+      path: "plans/:publicId" as const,
+      parse: {
+        publicId: (value: string) => value,
+      },
+      stringify: {
+        publicId: (value: string) => value,
+      },
+    };
+
+    if (Platform.OS === "web") {
+      if (isAuthenticated) {
+        return {
+          prefixes,
+          config: {
+            screens: {
+              OTTRIP: "",
+              인증: "auth/callback",
+              프로필: "profile",
+              PLAN: planScreen,
+              "NOT FOUND": "not-found",
+              FORBIDDEN: "forbidden",
+            },
           },
-          stringify: {
-            publicId: (value: string) => value,
+        };
+      }
+      return {
+        prefixes,
+        config: {
+          screens: {
+            로그인: "",
+            인증: "auth/callback",
           },
         },
-        'NOT FOUND': "not-found",
-        FORBIDDEN: "forbidden",
+      };
+    }
+
+    if (isAuthenticated) {
+      return {
+        prefixes,
+        config: {
+          screens: {
+            프로필: "profile",
+            PLAN: planScreen,
+            "NOT FOUND": "not-found",
+            FORBIDDEN: "forbidden",
+          },
+        },
+      };
+    }
+
+    return {
+      prefixes,
+      config: {
+        screens: {
+          로그인: "login",
+          인증: "auth/callback",
+        },
       },
-    },
-  };
+    };
+  }, [isAuthenticated]);
 
   if (isLoading || !initialRoute) {
     return <LoadingScreen />;
@@ -206,6 +246,7 @@ export default function RootNavigator() {
             <Stack.Screen name="PLAN" component={DashboardScreen} />
             <Stack.Screen name="NOT FOUND" component={NotFoundScreen} />
             <Stack.Screen name="FORBIDDEN" component={ForbiddenScreen} />
+            <Stack.Screen name="인증" component={AuthCallbackScreen} />
             {/* 모바일 화면 */}
             <Stack.Screen name="MOBILE" component={MobileNavigator} />
             <Stack.Screen
@@ -226,13 +267,6 @@ export default function RootNavigator() {
           </>
         ) : (
           <>
-            <Stack.Screen 
-              name="OTTRIP_TODAY" 
-              component={LandingScreen}
-              options={{
-                title: 'OTTRIP',
-              }}
-            />
             <Stack.Screen
               name="로그인"
               component={Platform.OS === 'web' ? LoginScreen : LoginScreenNative}

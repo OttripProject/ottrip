@@ -7,6 +7,8 @@ import { colors } from '@/ui/tokens/colors';
 import { textStyles, typography } from '@/ui/tokens/typography';
 import { spacing } from '@/ui/tokens/spacing';
 import { radii } from '@/ui/tokens/radii';
+import { useMe } from '@/hooks/useMe';
+import { guestPrompt } from '@/utils/guestPrompt';
 import AiRefreshIcon from '../../../assets/ai_refresh.svg';
 import AiCheckIcon from '../../../assets/ai_check.svg';
 import DeleteIcon from '../../../assets/delete_ai.svg';
@@ -98,6 +100,8 @@ export default function AiChecklistListViewModal({
   onDeleteItem,
   onAddItem,
 }: AiChecklistListViewModalProps) {
+  const { data: me } = useMe();
+  const isGuest = !!me?.isGuest;
   const [addingCategory, setAddingCategory] = useState<string | null>(null);
   const [newItemName, setNewItemName] = useState('');
   const [newItemReason, setNewItemReason] = useState('');
@@ -147,7 +151,17 @@ export default function AiChecklistListViewModal({
             <View style={styles.headerSection}>
               <View style={styles.titleContainer}>
                 <Text style={styles.headerTitle}>체크리스트</Text>
-                <TouchableOpacity onPress={onRefresh} style={styles.aiRecommendButton} activeOpacity={0.8}>
+                <TouchableOpacity
+                  onPress={() => {
+                    if (isGuest) {
+                      guestPrompt.show();
+                      return;
+                    }
+                    onRefresh();
+                  }}
+                  style={styles.aiRecommendButton}
+                  activeOpacity={0.8}
+                >
                   <LinearGradient
                     colors={colors.gradientAIRefresh}
                     start={{ x: 0, y: 0 }}

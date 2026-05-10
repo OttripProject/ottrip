@@ -34,7 +34,10 @@ export default function ProfileScreen() {
   const [copied, setCopied] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [logoutModalOpen, setLogoutModalOpen] = useState(false);
+  const [deletingGuestData, setDeletingGuestData] = useState(false);
   const copiedTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const CONTACT_EMAIL = 'ottrip.official@gmail.com';
   
   const { data: profile, isLoading: profileLoading } = useMe();
   
@@ -117,11 +120,55 @@ export default function ProfileScreen() {
     });
   };
 
+  const performDeleteTemporaryRecords = async () => {
+    setDeletingGuestData(true);
+    try {
+      await usersApi.deleteAccount();
+      if (navigation.canGoBack()) {
+        navigation.goBack();
+      } else {
+        navigation.navigate('OTTRIP');
+      }
+      await logout();
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { detail?: string } } };
+      const message =
+        typeof err?.response?.data?.detail === 'string'
+          ? err.response.data.detail
+          : '삭제 중 오류가 발생했습니다.';
+      if (Platform.OS === 'web') {
+        window.alert(`오류: ${message}`);
+      } else {
+        Alert.alert('오류', message);
+      }
+    } finally {
+      setDeletingGuestData(false);
+    }
+  };
+
+  const handleDeleteTemporaryRecords = () => {
+    const message =
+      '이 기기에 저장된 임시 일정이 모두 삭제되며 복구할 수 없습니다. 계속할까요?';
+    if (Platform.OS === 'web') {
+      const ok = window.confirm(`임시 기록 삭제\n\n${message}`);
+      if (ok) void performDeleteTemporaryRecords();
+      return;
+    }
+    Alert.alert('임시 기록 삭제', message, [
+      { text: '취소', style: 'cancel' },
+      {
+        text: '삭제',
+        style: 'destructive',
+        onPress: () => void performDeleteTemporaryRecords(),
+      },
+    ]);
+  };
+
   return (
     <GradientBackground>
       <SafeAreaView style={styles.container}>
         <View style={styles.cardWrapper}>
-          <Card variant="basic" alignItems="flex-start">
+          <Card variant="basic" alignItems="flex-start" minHeight={isGuest ? 520 : undefined}>
             <Pressable
               style={styles.closeButton}
               onPress={() => {
@@ -136,100 +183,147 @@ export default function ProfileScreen() {
             </Pressable>
 
             <Text style={styles.title}>프로필 설정</Text>
-            <Text style={styles.subtitle}>개인정보 및 환경설정을 관리하세요.</Text>
+            {isGuest ? (
+              <>
+                <Text style={styles.guestStatusLine}>게스트 · 일정 임시 저장</Text>
+                <Text style={styles.guestDescription}>
+                  로그인하면 임시 저장된 일정을 계정과 연동할 수 있어요.
+                </Text>
+                <Pressable
+                  disabled={deletingGuestData}
+                  style={[styles.guestLoginButton, deletingGuestData && styles.guestButtonDisabled]}
+                  onPress={handleSignUp}
+                >
+                  <Text style={styles.guestLoginButtonText}>로그인</Text>
+                </Pressable>
+                <Pressable
+                  disabled={deletingGuestData}
+                  style={[styles.guestDeleteRecordsButton, deletingGuestData && styles.guestButtonDisabled]}
+                  onPress={handleDeleteTemporaryRecords}
+                >
+                  <Text style={styles.guestDeleteRecordsButtonText}>임시 기록 삭제</Text>
+                </Pressable>
+                <Text style={styles.guestInquiryTitle}>문의하기</Text>
+                <View style={styles.guestInquiryEmailBox}>
+                  <Text style={styles.guestInquiryEmailText} numberOfLines={1} selectable>
+                    {CONTACT_EMAIL}
+                  </Text>
+                  <View style={styles.guestInquiryCopyWrap}>
+                    {copied ? (
+                      <Text style={styles.guestInquiryCopiedText}>복사됨!</Text>
+                    ) : (
+                      <Pressable
+                        hitSlop={8}
+                        style={styles.guestInquiryCopyIcon}
+                        onPress={async () => {
+                          try {
+                            await navigator.clipboard.writeText(CONTACT_EMAIL);
+                            setCopied(true);
+                            if (copiedTimerRef.current) {
+                              clearTimeout(copiedTimerRef.current);
+                            }
+                            copiedTimerRef.current = setTimeout(() => setCopied(false), 1500);
+                          } catch {
+                            // noop
+                          }
+                        }}
+                      >
+                        <CopyIcon width={16} height={16} fill={colors.gray700} />
+                      </Pressable>
+                    )}
+                  </View>
+                </View>
+                <Text style={styles.guestInquiryReplyText}>최대한 빠르게 답변드리겠습니다.</Text>
+              </>
+            ) : (
+              <>
+                <Text style={styles.subtitle}>개인정보 및 환경설정을 관리하세요.</Text>
 
-            <Text style={styles.emailLabel}>이메일</Text>
-            <View style={styles.emailContainer}>
-              <Text style={styles.emailText}>{me?.email ?? ''}</Text>
-            </View>
+                <Text style={styles.emailLabel}>이메일</Text>
+                <View style={styles.emailContainer}>
+                  <Text style={styles.emailText}>{me?.email ?? ''}</Text>
+                </View>
 
-            <Text style={styles.nicknameLabel}>닉네임</Text>
-            <View style={styles.nicknameInputContainer}>
-              <Input
-                placeholder={PLACEHOLDERS.profile.nickname}
-                value={nickname}
-                onChangeText={handleNicknameChange}
-                style={styles.input}
-              />
-            </View>
-            {nicknameError && <Text style={styles.errorText}>{nicknameError}</Text>}
-            {!nicknameError && !checkingNickname && nickname.trim().length > 0 && nickname !== me?.nickname && (
-              <Text style={styles.successText}>사용 가능한 닉네임입니다.</Text>
+                <Text style={styles.nicknameLabel}>닉네임</Text>
+                <View style={styles.nicknameInputContainer}>
+                  <Input
+                    placeholder={PLACEHOLDERS.profile.nickname}
+                    value={nickname}
+                    onChangeText={handleNicknameChange}
+                    style={styles.input}
+                  />
+                </View>
+                {nicknameError && <Text style={styles.errorText}>{nicknameError}</Text>}
+                {!nicknameError && !checkingNickname && nickname.trim().length > 0 && nickname !== me?.nickname && (
+                  <Text style={styles.successText}>사용 가능한 닉네임입니다.</Text>
+                )}
+
+                <Text style={styles.genderLabel}>성별</Text>
+
+                <Pressable
+                  style={styles.maleRadioButton}
+                  onPress={() => setGender(Gender.MALE)}
+                >
+                  <View style={[styles.radioButton, gender === Gender.MALE && styles.radioButtonSelected]}>
+                    {gender === Gender.MALE && <GenderCheckIcon width={16} height={16} color={colors.white} />}
+                  </View>
+                </Pressable>
+                <Pressable
+                  style={styles.maleTextButton}
+                  onPress={() => setGender(Gender.MALE)}
+                >
+                  <Text style={styles.genderText}>남성</Text>
+                </Pressable>
+
+                <Pressable
+                  style={styles.femaleRadioButton}
+                  onPress={() => setGender(Gender.FEMALE)}
+                >
+                  <View style={[styles.radioButton, gender === Gender.FEMALE && styles.radioButtonSelected]}>
+                    {gender === Gender.FEMALE && <GenderCheckIcon width={16} height={16} color={colors.white} />}
+                  </View>
+                </Pressable>
+                <Pressable
+                  style={styles.femaleTextButton}
+                  onPress={() => setGender(Gender.FEMALE)}
+                >
+                  <Text style={styles.genderText}>여성</Text>
+                </Pressable>
+
+                <View style={styles.divider} />
+
+                <Pressable style={styles.contactIconButton} onPress={() => setContactOpen(true)}>
+                  <QnaIcon width={16} height={16} fill={colors.gray800} />
+                </Pressable>
+                <Pressable style={styles.contactTextButton} onPress={() => setContactOpen(true)}>
+                  <Text style={styles.contactButtonText}>문의하기</Text>
+                </Pressable>
+
+                <Pressable
+                  disabled={!canSave}
+                  style={[styles.saveButton, !canSave && styles.saveButtonDisabled]}
+                  onPress={save}
+                >
+                  <Text style={[styles.saveButtonText, !canSave && styles.saveButtonTextDisabled]}>
+                    저장
+                  </Text>
+                </Pressable>
+              </>
             )}
 
-            <Text style={styles.genderLabel}>성별</Text>
-            
-            {/* 남성 라디오 버튼 */}
-            <Pressable
-              style={styles.maleRadioButton}
-              onPress={() => setGender(Gender.MALE)}
-            >
-              <View style={[styles.radioButton, gender === Gender.MALE && styles.radioButtonSelected]}>
-                {gender === Gender.MALE && <GenderCheckIcon width={16} height={16} fill={colors.white} />}
-              </View>
-            </Pressable>
-            <Pressable
-              style={styles.maleTextButton}
-              onPress={() => setGender(Gender.MALE)}
-            >
-              <Text style={styles.genderText}>남성</Text>
-            </Pressable>
-
-            {/* 여성 라디오 버튼 */}
-            <Pressable
-              style={styles.femaleRadioButton}
-              onPress={() => setGender(Gender.FEMALE)}
-            >
-              <View style={[styles.radioButton, gender === Gender.FEMALE && styles.radioButtonSelected]}>
-                {gender === Gender.FEMALE && <GenderCheckIcon width={16} height={16} fill={colors.white} />}
-              </View>
-            </Pressable>
-            <Pressable
-              style={styles.femaleTextButton}
-              onPress={() => setGender(Gender.FEMALE)}
-            >
-              <Text style={styles.genderText}>여성</Text>
-            </Pressable>
-
-            <View style={styles.divider} />
-
-            <Pressable style={styles.contactIconButton} onPress={() => setContactOpen(true)}>
-              <QnaIcon width={16} height={16} fill={colors.gray800} />
-            </Pressable>
-            <Pressable style={styles.contactTextButton} onPress={() => setContactOpen(true)}>
-              <Text style={styles.contactButtonText}>문의하기</Text>
-            </Pressable>
-
-            <Pressable
-              disabled={!canSave}
-              style={[styles.saveButton, !canSave && styles.saveButtonDisabled]}
-              onPress={save}
-            >
-              <Text style={[styles.saveButtonText, !canSave && styles.saveButtonTextDisabled]}>
-                저장
-              </Text>
-            </Pressable>
-
+            {!isGuest && (
             <View style={styles.footerRow}>
               <Pressable style={styles.footerButton} onPress={() => setLogoutModalOpen(true)}>
                 <Text style={styles.footerButtonText}>로그아웃</Text>
               </Pressable>
-              {isGuest ? (
-                <>
-                  <View style={styles.footerDivider} />
-                  <Pressable style={styles.footerButton} onPress={handleSignUp}>
-                    <Text style={styles.footerButtonTextSignUp}>회원가입</Text>
-                  </Pressable>
-                </>
-              ) : (
-                <>
-                  <View style={styles.footerDivider} />
-                  <Pressable style={styles.footerButton} onPress={handleDeleteAccount}>
-                    <Text style={styles.footerButtonTextInactive}>계정 삭제</Text>
-                  </Pressable>
-                </>
-              )}
+              <>
+                <View style={styles.footerDivider} />
+                <Pressable style={styles.footerButton} onPress={handleDeleteAccount}>
+                  <Text style={styles.footerButtonTextInactive}>계정 삭제</Text>
+                </Pressable>
+              </>
             </View>
+            )}
           </Card>
         </View>
       </SafeAreaView>
@@ -248,7 +342,7 @@ export default function ProfileScreen() {
             <Text style={styles.contactModalText}>도움이 필요하거나 피드백이 있으시면 연락주세요.</Text>
             
             <View style={styles.contactModalEmailContainer}>
-              <Text style={styles.contactModalEmailText}>ottrip.official@gmail.com</Text>
+              <Text style={styles.contactModalEmailText}>{CONTACT_EMAIL}</Text>
               <View style={styles.contactModalCopyWrapper}>
                 {copied ? (
                   <Text style={styles.contactModalCopiedText}>복사됨!</Text>
@@ -257,7 +351,7 @@ export default function ProfileScreen() {
                     style={styles.contactModalCopyIcon}
                     onPress={async () => {
                       try {
-                        await navigator.clipboard.writeText('ottrip.official@gmail.com');
+                        await navigator.clipboard.writeText(CONTACT_EMAIL);
                         setCopied(true);
                         if (copiedTimerRef.current) {
                           clearTimeout(copiedTimerRef.current);
@@ -342,6 +436,107 @@ const styles = StyleSheet.create({
     top: 92,
     ...textStyles.body3,
     color: colors.gray700,
+  },
+  guestStatusLine: {
+    position: 'absolute',
+    left: 40,
+    top: 92,
+    width: 400,
+    ...textStyles.body3,
+    color: colors.gray700,
+  },
+  guestDescription: {
+    position: 'absolute',
+    left: 40,
+    top: 124,
+    width: 400,
+    ...textStyles.body3,
+    color: colors.black,
+  },
+  guestLoginButton: {
+    position: 'absolute',
+    left: 40,
+    top: 196,
+    width: 400,
+    height: 56,
+    backgroundColor: colors.black,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  guestLoginButtonText: {
+    ...textStyles.h5,
+    color: colors.white,
+  },
+  guestDeleteRecordsButton: {
+    position: 'absolute',
+    left: 40,
+    top: 264,
+    width: 400,
+    height: 56,
+    backgroundColor: colors.white,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.danger,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  guestDeleteRecordsButtonText: {
+    ...textStyles.h5,
+    color: colors.danger,
+  },
+  guestButtonDisabled: {
+    opacity: 0.5,
+  },
+  guestInquiryTitle: {
+    position: 'absolute',
+    left: 40,
+    top: 352,
+    width: 400,
+    ...textStyles.h7,
+    color: colors.black,
+  },
+  guestInquiryEmailBox: {
+    position: 'absolute',
+    left: 40,
+    top: 384,
+    width: 400,
+    height: 48,
+    backgroundColor: colors.gray200,
+    borderWidth: 1,
+    borderColor: colors.gray400,
+    borderRadius: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+  },
+  guestInquiryEmailText: {
+    ...textStyles.body4,
+    color: colors.gray700,
+    flex: 1,
+  },
+  guestInquiryCopyWrap: {
+    minWidth: 40,
+    marginLeft: 8,
+    alignItems: 'flex-end',
+    justifyContent: 'center',
+  },
+  guestInquiryCopyIcon: {
+    width: 16,
+    height: 16,
+  },
+  guestInquiryCopiedText: {
+    ...textStyles.body6,
+    color: colors.gray700,
+  },
+  guestInquiryReplyText: {
+    position: 'absolute',
+    left: 40,
+    top: 440,
+    width: 400,
+    ...textStyles.body4,
+    color: colors.success,
   },
   emailLabel: {
     position: 'absolute',
@@ -510,10 +705,6 @@ const styles = StyleSheet.create({
   footerButtonTextInactive: {
     ...textStyles.h7,
     color: colors.gray500,
-  },
-  footerButtonTextSignUp: {
-    ...textStyles.h7,
-    color: colors.primary,
   },
   modalOverlay: {
     flex: 1,

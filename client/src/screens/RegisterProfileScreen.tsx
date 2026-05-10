@@ -72,16 +72,6 @@ export default function RegisterProfileScreen() {
         registerToken
       );
 
-      if (Platform.OS === 'web' && typeof window !== 'undefined') {
-        try {
-          window.localStorage.setItem('registerComplete', 'true');
-        } catch {}
-      } else {
-        try {
-          await SecureStore.setItemAsync('registerComplete', 'true');
-        } catch {}
-      }
-
       await login({
         isRegistered: true,
         accessToken: registerResponse.accessToken,
@@ -102,6 +92,7 @@ export default function RegisterProfileScreen() {
           }
         }
       } catch {}
+      navigation.reset({ index: 0, routes: [{ name: 'WELCOME' }] });
 
     } catch (e: any) {
       Alert.alert('가입 실패', e?.response?.data?.detail || e.message || '알 수 없는 오류');
@@ -157,7 +148,7 @@ export default function RegisterProfileScreen() {
                   onPress={() => setGender(g)}
                 >
                   <View style={[styles.radioButton, gender === g && styles.radioButtonSelected]}>
-                    {gender === g && <GenderCheckIcon width={16} height={16} fill={colors.white} />}
+                    {gender === g && <GenderCheckIcon width={16} height={16} color={colors.white} />}
                   </View>
                   <Text style={styles.genderText}>{g === Gender.MALE ? '남성' : '여성'}</Text>
                 </Pressable>

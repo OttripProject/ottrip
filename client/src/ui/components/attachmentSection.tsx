@@ -1,33 +1,80 @@
-import React, { useState } from 'react';
+import React, { createElement, useRef, useState } from 'react';
 import {
   View,
   Text,
   Pressable,
   StyleSheet,
-  StyleProp,
-  Alert,
   ActivityIndicator,
-  Linking,
   Modal,
   Image,
   useWindowDimensions,
-  StatusBar,
   Platform,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+
 import { colors } from '@/ui/tokens/colors';
 import { textStyles } from '@/ui/tokens/typography';
+import { radii } from '@/ui/tokens/radii';
+import { spacing } from '@/ui/tokens/spacing';
+import type { LocalFile } from '@/types/api';
 import { useMe } from '@/hooks/useMe';
 import { guestPrompt } from '@/utils/guestPrompt';
 import type { AttachmentSectionProps } from '@/ui/components/attachmentSection.types';
+import { showMessage, showPickFileType } from '@/utils/crossPlatformAlert';
 
 import CameraIcon from '../../../assets/mobile_camera.svg';
 import AddIcon from '../../../assets/mobile_plan_add.svg';
-import DeleteIcon from '../../../assets/mobile_x.svg';
+import DeleteIcon from '../../../assets/attach_del.svg';
 import AttachmentDocIcon from '../../../assets/mobile_attachment_document.svg';
 import AttachmentImageIcon from '../../../assets/mobile_attachment_image.svg';
 
 export type { AttachmentSectionProps } from '@/ui/components/attachmentSection.types';
+
+const WEB_FILE_ACCEPT =
+  'image/jpeg,image/png,image/gif,image/webp,image/heic,image/heif,application/pdf,.pdf';
+
+const ALLOWED_MIME_PREFIXES = ['image/'] as const;
+const ALLOWED_EXACT = new Set([
+  'application/pdf',
+  'image/jpeg',
+  'image/png',
+  'image/gif',
+  'image/webp',
+  'image/heic',
+  'image/heif',
+]);
+
+function mimeFromFileName(name: string): string {
+  const lower = name.toLowerCase();
+  if (lower.endsWith('.pdf')) return 'application/pdf';
+  if (lower.endsWith('.png')) return 'image/png';
+  if (lower.endsWith('.gif')) return 'image/gif';
+  if (lower.endsWith('.webp')) return 'image/webp';
+  if (lower.endsWith('.heic')) return 'image/heic';
+  if (lower.endsWith('.heif')) return 'image/heif';
+  if (/\.(jpe?g)$/i.test(lower)) return 'image/jpeg';
+  return 'application/octet-stream';
+}
+
+function isAllowedMime(mime: string): boolean {
+  if (ALLOWED_EXACT.has(mime)) return true;
+  return ALLOWED_MIME_PREFIXES.some(p => mime.startsWith(p));
+}
+
+function fileToLocalFile(file: File): LocalFile | null {
+  const rawType = (file.type || '').trim();
+  const mime = rawType && rawType !== 'application/octet-stream'
+    ? rawType
+    : mimeFromFileName(file.name);
+  if (!isAllowedMime(mime)) {
+    return null;
+  }
+  return {
+    uri: URL.createObjectURL(file),
+    name: file.name || 'file',
+    mimeType: mime,
+    size: file.size ?? 0,
+  };
+}
 
 function getAttachmentKindLabel(mimeType: string | undefined): string {
   const m = mimeType ?? '';
@@ -64,6 +111,7 @@ export default function AttachmentSection({
   disabled = false,
   hideAddControls = false,
   isGuest: isGuestProp,
+  onAppendPendingFiles,
 }: AttachmentSectionProps) {
   const { data: me } = useMe();
   const isGuest = isGuestProp ?? (me?.isGuest === true);
@@ -72,6 +120,7 @@ export default function AttachmentSection({
   const { width: windowWidth, height: windowHeight } = useWindowDimensions();
   const [previewImageUri, setPreviewImageUri] = useState<string | null>(null);
   const [isPreviewImageLoading, setIsPreviewImageLoading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const handleOpenImage = (uri: string) => {
     if (!uri) return;
@@ -84,41 +133,69 @@ export default function AttachmentSection({
     setIsPreviewImageLoading(false);
   };
 
-  const handleOpenPdf = async (fileUrl: string) => {
+  const handleOpenPdf = (fileUrl: string) => {
     try {
-      const canOpen = await Linking.canOpenURL(fileUrl);
-      if (!canOpen) {
-        Alert.alert('열 수 없음', '이 URL을 열 수 있는 앱이 없습니다.');
-        return;
+      if (typeof window !== 'undefined') {
+        window.open(fileUrl, '_blank', 'noopener,noreferrer');
       }
-      await Linking.openURL(fileUrl);
     } catch (e) {
-      Alert.alert(
+      showMessage(
         '파일 열기 실패',
         e instanceof Error ? e.message : '잠시 후 다시 시도해 주세요.',
       );
     }
   };
 
-  const handleAddPress = () => {
+  const flushInput = (el: HTMLInputElement | null) => {
+    if (el) el.value = '';
+  };
+
+  const handleNativeFileInputChange = (event: { target: HTMLInputElement }) => {
+    const input = event.target;
+    const list = input.files;
+    if (!list?.length) {
+      flushInput(input);
+      return;
+    }
+    const next: LocalFile[] = [];
+    for (let i = 0; i < list.length; i += 1) {
+      const lf = fileToLocalFile(list[i]);
+      if (lf) next.push(lf);
+    }
+    flushInput(input);
+    if (next.length === 0) {
+      showMessage(
+        '지원하지 않는 형식',
+        '이미지(JPEG, PNG, GIF, WebP, HEIC/HEIF) 또는 PDF만 추가할 수 있습니다.',
+      );
+      return;
+    }
+    if (onAppendPendingFiles) {
+      onAppendPendingFiles(next);
+      return;
+    }
+    showMessage(
+      '파일 추가',
+      '웹에서 첨부를 사용하려면 onAppendPendingFiles를 연결해 주세요.',
+    );
+  };
+
+  const triggerHiddenFilePicker = () => {
     if (disabled || isUploading) return;
     if (isGuest) {
       guestPrompt.show();
       return;
     }
-    const showPicker = () => {
-      Alert.alert('파일 추가', '추가할 파일 유형을 선택하세요.', [
-        { text: '사진', onPress: onPickImage },
-        { text: 'PDF 문서', onPress: onPickDocument },
-        { text: '취소', style: 'cancel' },
-      ]);
-    };
-    /** iOS: 다른 RN Modal 위에서 동기 Alert 이 안 뜨는 경우가 있어 한 틱 미룸 */
-    if (Platform.OS === 'ios') {
-      setTimeout(showPicker, 0);
-    } else {
-      showPicker();
+    if (onAppendPendingFiles) {
+      fileInputRef.current?.click();
+      return;
     }
+    showPickFileType(
+      '파일 추가',
+      '추가할 파일 유형을 선택하세요.',
+      onPickImage,
+      onPickDocument,
+    );
   };
 
   const handleRemovePending = (index: number) => {
@@ -150,7 +227,7 @@ export default function AttachmentSection({
           )}
         </View>
         <View style={styles.fileInfo}>
-          <Text style={styles.fileName} numberOfLines={1} ellipsizeMode="middle">
+          <Text style={styles.fileName} numberOfLines={1}>
             {fileName}
           </Text>
           <Text style={styles.fileKindLabel}>{subtitle}</Text>
@@ -158,7 +235,6 @@ export default function AttachmentSection({
         {onRemove ? (
           <Pressable
             onPress={onRemove}
-            hitSlop={8}
             disabled={isUploading || disabled}
             style={({ pressed }) => [
               styles.removeButton,
@@ -195,8 +271,24 @@ export default function AttachmentSection({
     );
   };
 
+  const hiddenFileInput =
+    Platform.OS === 'web'
+      ? createElement('input', {
+          key: 'attachment-file-input',
+          ref: (el: HTMLInputElement | null) => {
+            fileInputRef.current = el;
+          },
+          type: 'file',
+          accept: WEB_FILE_ACCEPT,
+          multiple: true,
+          style: { display: 'none' },
+          onChange: handleNativeFileInputChange,
+        })
+      : null;
+
   return (
     <View style={[styles.root, style]}>
+      {hiddenFileInput}
       {showTopDivider && <View style={styles.topDivider} />}
 
       <View
@@ -205,11 +297,10 @@ export default function AttachmentSection({
           hideAddControls && styles.headerRowTitleOnly,
         ]}
       >
-        <Text style={styles.title}>첨부 파일 (이미지, PDF)</Text>
+        <Text style={styles.title}>첨부 파일 (이미지,PDF)</Text>
         {!hideAddControls && (
           <Pressable
-            onPress={handleAddPress}
-            hitSlop={8}
+            onPress={triggerHiddenFilePicker}
             disabled={disabled || isUploading}
             style={({ pressed }) => [
               styles.addButtonRow,
@@ -261,7 +352,7 @@ export default function AttachmentSection({
         </View>
       ) : hideAddControls ? null : (
         <Pressable
-          onPress={handleAddPress}
+          onPress={triggerHiddenFilePicker}
           disabled={disabled || isUploading}
           style={({ pressed }) => [
             styles.dropZone,
@@ -270,7 +361,7 @@ export default function AttachmentSection({
           ]}
         >
           <View style={styles.dropZoneRow}>
-            <CameraIcon width={20} height={20} />
+            <CameraIcon width={16} height={16} />
             <Text style={styles.hint} numberOfLines={1}>
               사진 또는 PDF 추가
             </Text>
@@ -282,14 +373,9 @@ export default function AttachmentSection({
         visible={previewImageUri !== null}
         transparent
         animationType="fade"
-        statusBarTranslucent
         onRequestClose={handleClosePreview}
       >
-        <StatusBar barStyle="light-content" />
-        <Pressable
-          style={styles.previewBackdrop}
-          onPress={handleClosePreview}
-        >
+        <Pressable style={styles.previewBackdrop} onPress={handleClosePreview}>
           {previewImageUri !== null && (
             <Image
               source={{ uri: previewImageUri }}
@@ -302,10 +388,7 @@ export default function AttachmentSection({
               onLoadEnd={() => setIsPreviewImageLoading(false)}
               onError={() => {
                 setIsPreviewImageLoading(false);
-                Alert.alert(
-                  '이미지 열기 실패',
-                  '이미지를 불러오지 못했습니다.',
-                );
+                showMessage('이미지 열기 실패', '이미지를 불러오지 못했습니다.');
                 handleClosePreview();
               }}
             />
@@ -315,13 +398,9 @@ export default function AttachmentSection({
               <ActivityIndicator size="large" color={colors.white} />
             </View>
           )}
-          <SafeAreaView
-            style={styles.previewCloseSafeArea}
-            pointerEvents="box-none"
-          >
+          <View style={styles.previewCloseBar} pointerEvents="box-none">
             <Pressable
               onPress={handleClosePreview}
-              hitSlop={12}
               style={({ pressed }) => [
                 styles.previewCloseButton,
                 pressed && styles.pressed,
@@ -329,7 +408,7 @@ export default function AttachmentSection({
             >
               <DeleteIcon width={24} height={24} color={colors.white} />
             </Pressable>
-          </SafeAreaView>
+          </View>
         </Pressable>
       </Modal>
     </View>
@@ -343,23 +422,23 @@ const styles = StyleSheet.create({
   topDivider: {
     height: 1,
     backgroundColor: colors.gray300,
-    marginBottom: 32,
+    marginBottom: spacing.xl,
   },
   headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 20,
+    marginBottom: 8,
   },
   headerRowTitleOnly: {
     justifyContent: 'flex-start',
   },
   title: {
-    ...textStyles.h5,
+    ...textStyles.h8,
     color: colors.black,
   },
   addLabel: {
-    ...textStyles.h6,
+    ...textStyles.h8,
     color: colors.primary,
   },
   addButtonRow: {
@@ -374,9 +453,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderStyle: 'dashed',
     borderColor: colors.gray400,
-    borderRadius: 12,
+    borderRadius: radii.md,
     backgroundColor: colors.white,
-    paddingVertical: 13,
+    minHeight: 40,
+    paddingVertical: 10,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -393,9 +473,8 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   hint: {
-    ...textStyles.h6,
+    ...textStyles.h8,
     color: colors.gray600,
-    includeFontPadding: false,
   },
   loadingWrap: {
     paddingVertical: 24,
@@ -409,14 +488,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colors.gray200,
-    borderRadius: 12,
+    borderRadius: radii.md,
     paddingVertical: 16,
     paddingHorizontal: 16,
   },
   fileIconWrap: {
     paddingHorizontal: 8,
     paddingVertical: 8,
-    borderRadius: 12,
+    borderRadius: radii.md,
     backgroundColor: `${colors.primary}1A`,
     alignItems: 'center',
     justifyContent: 'center',
@@ -450,16 +529,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  previewCloseSafeArea: {
+  previewCloseBar: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
+    paddingTop: 12,
+    paddingRight: 12,
+    alignItems: 'flex-end',
   },
   previewCloseButton: {
-    alignSelf: 'flex-end',
     padding: 12,
-    marginTop: 8,
-    marginRight: 8,
   },
 });

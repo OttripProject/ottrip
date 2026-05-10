@@ -197,9 +197,11 @@ export default function FlightEditModal({
     if (!visible) return;
     if (!flight) {
       setExistingAttachments([]);
+      setIsLoadingAttachments(false);
       return;
     }
     let cancelled = false;
+    setExistingAttachments([]);
     setIsLoadingAttachments(true);
     attachmentsApi
       .getAttachments(planId, 'flight', flight.id)

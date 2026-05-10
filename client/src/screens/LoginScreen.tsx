@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Platform, Alert, Pressable } from 'react-native';
 import { useAuth } from '../contexts/AuthContext';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { authApi } from '../services/auth';
 import { loadPublicEnv } from '../core/env/schema';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -12,7 +12,86 @@ import { textStyles, typography } from '../ui/tokens/typography';
 import GradientBackground from '../ui/components/GradientBackground';
 import Card from '../ui/components/Card';
 import GoogleButton from '../ui/components/GoogleButton';
+import AppleButton from '../ui/components/AppleButton';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
+import { colors } from '../ui/tokens/colors';
+
+let appleAuthJsPromise: Promise<void> | null = null;
+
+function loadAppleAuthJs(): Promise<void> {
+  if (typeof window === 'undefined') return Promise.resolve();
+  const w = window as Window & {
+    AppleID?: { auth: { init: (config: Record<string, unknown>) => void; signIn: () => Promise<AppleSignInResponse> } };
+  };
+  if (w.AppleID?.auth) return Promise.resolve();
+  if (appleAuthJsPromise) return appleAuthJsPromise;
+
+  appleAuthJsPromise = new Promise((resolve, reject) => {
+    const fail = (msg: string) => {
+      appleAuthJsPromise = null;
+      reject(new Error(msg));
+    };
+
+    const existing = document.querySelector('script[data-ottrip-appleid]');
+    if (existing) {
+      if (w.AppleID?.auth) {
+        resolve();
+        return;
+      }
+      const done = () => {
+        if (w.AppleID?.auth) resolve();
+        else fail('Apple JS unavailable');
+      };
+      existing.addEventListener('load', done);
+      existing.addEventListener('error', () => fail('Apple 스크립트 로드 실패'));
+      return;
+    }
+
+    const s = document.createElement('script');
+    s.src = 'https://appleid.cdn-apple.com/appleauth/static/jsapi/appleid/1/en_US/appleid.auth.js';
+    s.async = true;
+    s.defer = true;
+    s.setAttribute('data-ottrip-appleid', '1');
+    s.onload = () => {
+      if (w.AppleID?.auth) resolve();
+      else fail('Apple JS unavailable');
+    };
+    s.onerror = () => fail('Apple 스크립트 로드 실패');
+    document.head.appendChild(s);
+  });
+
+  return appleAuthJsPromise;
+}
+
+type AppleSignInResponse = {
+  authorization?: {
+    id_token?: string;
+    code?: string;
+    state?: string;
+  };
+};
+
+const SOCIAL_LOGIN_CONFLICT_DEFAULT = '이 계정은 다른 사용자와 연결되어 있습니다.';
+const SOCIAL_LOGIN_FAILURE_DEFAULT = '로그인에 실패했습니다.';
+
+/** RN Web에서 `Alert.alert`가 동작하지 않는 경우가 있어 웹은 `window.alert` 사용 */
+function alertDialog(title: string, message: string) {
+  if (Platform.OS === 'web' && typeof window !== 'undefined') {
+    window.alert(`${title}\n\n${message}`);
+  } else {
+    Alert.alert(title, message);
+  }
+}
+
+function showSocialLoginError(err: unknown) {
+  const e = err as { response?: { status?: number; data?: { detail?: string } } };
+  const is409 = e?.response?.status === 409;
+  const detail = e?.response?.data?.detail;
+  const message = is409
+    ? (typeof detail === 'string' && detail ? detail : SOCIAL_LOGIN_CONFLICT_DEFAULT)
+    : SOCIAL_LOGIN_FAILURE_DEFAULT;
+  alertDialog(is409 ? '안내' : '오류', message);
+}
 
 const generateNonce = async () => {
   if (Platform.OS === 'web' && typeof crypto !== 'undefined') {
@@ -30,6 +109,9 @@ const env = loadPublicEnv();
 export default function LoginScreen() {
   const { login, loginAsGuest } = useAuth();
   const navigation = useNavigation<any>();
+  const route = useRoute();
+  const guestUpgrade =
+    (route.params as { guestUpgrade?: boolean } | undefined)?.guestUpgrade === true;
   const [isLoading, setIsLoading] = useState(false);
   const [nonce, setNonce] = useState<string>('');
   
@@ -82,32 +164,32 @@ export default function LoginScreen() {
   }, [nonce]);
 
   const onGoogleSignIn = async () => {
-    setIsLoading(true);
     try {
       if (Platform.OS === 'web') {
-    const clientId = env.EXPO_PUBLIC_GOOGLE_CLIENT_ID;
-    
-    if (!clientId) {
-          Alert.alert('오류', 'Google OAuth 클라이언트 ID가 설정되지 않았습니다.');
-          setIsLoading(false);
-      return;
-    }
+        const clientId = env.EXPO_PUBLIC_GOOGLE_CLIENT_ID;
 
-      const newNonce = await generateNonce();
-      setNonce(newNonce);
+        if (!clientId) {
+          alertDialog('오류', 'Google OAuth 클라이언트 ID가 설정되지 않았습니다.');
+          return;
+        }
+
+        const newNonce = await generateNonce();
+        setNonce(newNonce);
         const redirectUriRaw = `${window.location.origin}/auth/callback`;
         const redirectUri = encodeURIComponent(redirectUriRaw);
         const scope = encodeURIComponent('openid email profile');
         const responseType = 'id_token';
         const prompt = encodeURIComponent('consent select_account');
-        
+
         const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${redirectUri}&scope=${scope}&response_type=${responseType}&nonce=${newNonce}&prompt=${prompt}`;
-        
+
         try {
-          window.location.href = authUrl;
-        } catch (e) {
+          window.location.assign(authUrl);
+        } catch {
+          alertDialog('오류', 'Google 로그인 페이지로 이동할 수 없습니다.');
         }
       } else {
+        setIsLoading(true);
         // 네이티브: Google Sign-In 패키지 사용
         try {
           // Android만 Play Services 확인 필요
@@ -125,7 +207,7 @@ export default function LoginScreen() {
           if (idToken) {
             await handleGoogleSignIn(idToken);
           } else {
-            Alert.alert('오류', '로그인에 실패했습니다. id_token을 받을 수 없습니다.');
+            alertDialog('오류', '로그인에 실패했습니다. id_token을 받을 수 없습니다.');
             setIsLoading(false);
           }
         } catch (error: any) {
@@ -136,13 +218,13 @@ export default function LoginScreen() {
           } else if (error.code === 'IN_PROGRESS') {
             // 이미 진행 중 - 로딩 상태 유지
         } else {
-            Alert.alert('오류', '로그인에 실패했습니다: ' + (error.message || '알 수 없는 오류'));
+            alertDialog('오류', '로그인에 실패했습니다: ' + (error.message || '알 수 없는 오류'));
           setIsLoading(false);
           }
         }
       }
     } catch (error: any) {
-      Alert.alert('오류', '로그인 중 오류가 발생했습니다.');
+      alertDialog('오류', '로그인 중 오류가 발생했습니다.');
       setIsLoading(false);
     }
   };
@@ -192,6 +274,9 @@ export default function LoginScreen() {
         } catch {}
         
         setIsLoading(false);
+        if (guestUpgrade) {
+          navigation.reset({ index: 0, routes: [{ name: 'OTTRIP' }] });
+        }
       } else {
         await login(response);
         const payload = parseIdToken(idToken);
@@ -203,9 +288,105 @@ export default function LoginScreen() {
         });
         setIsLoading(false);
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       setIsLoading(false);
-      Alert.alert('오류', '로그인에 실패했습니다.');
+      showSocialLoginError(error);
+    }
+  };
+
+  const handleAppleSignIn = async (idToken: string) => {
+    try {
+      const response = await authApi.appleLogin(idToken);
+
+      if (response.isRegistered) {
+        await login({
+          isRegistered: true,
+          accessToken: response.accessToken,
+          refreshToken: response.refreshToken,
+        });
+
+        try {
+          const token = Platform.OS === 'web'
+            ? window.localStorage.getItem('pendingInviteToken')
+            : await SecureStore.getItemAsync('pendingInviteToken');
+          if (token) {
+            await api.post(`/private/plans/invitations/${token}/accept`);
+            if (Platform.OS === 'web') {
+              window.localStorage.removeItem('pendingInviteToken');
+              window.dispatchEvent(new Event('plans-refresh'));
+            } else {
+              await SecureStore.deleteItemAsync('pendingInviteToken');
+            }
+          }
+        } catch {}
+
+        setIsLoading(false);
+        if (guestUpgrade) {
+          navigation.reset({ index: 0, routes: [{ name: 'OTTRIP' }] });
+        }
+      } else {
+        await login(response);
+        const payload = parseIdToken(idToken);
+        const email = payload?.email ?? '';
+        navigation.navigate('약관동의', {
+          registerToken: response.registerToken,
+          prefill: response.prefill,
+          email,
+        });
+        setIsLoading(false);
+      }
+    } catch (err: unknown) {
+      setIsLoading(false);
+      showSocialLoginError(err);
+    }
+  };
+
+  const onAppleSignInWeb = async () => {
+    if (Platform.OS !== 'web') return;
+    const clientId = env.EXPO_PUBLIC_APPLE_SERVICES_ID;
+    if (!clientId) {
+      alertDialog('오류', 'Apple 로그인(Services ID)이 설정되지 않았습니다.');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      await loadAppleAuthJs();
+      const w = window as unknown as {
+        AppleID: { auth: { init: (config: Record<string, unknown>) => void; signIn: () => Promise<AppleSignInResponse> } };
+      };
+      const redirectURI = `${window.location.origin}/auth/callback`;
+      w.AppleID.auth.init({
+        clientId,
+        scope: 'name email',
+        redirectURI,
+        usePopup: true,
+      });
+      const res = await w.AppleID.auth.signIn();
+      const idToken = res?.authorization?.id_token;
+      if (!idToken) {
+        alertDialog('오류', 'Apple 로그인 토큰을 받을 수 없습니다.');
+        setIsLoading(false);
+        return;
+      }
+      await handleAppleSignIn(idToken);
+    } catch (e: unknown) {
+      const err = e as { error?: string };
+      if (err.error === 'popup_closed_by_user') {
+        setIsLoading(false);
+        return;
+      }
+      const message = e instanceof Error ? e.message : 'Apple 로그인에 실패했습니다.';
+      alertDialog('오류', message);
+      setIsLoading(false);
+    }
+  };
+
+  const onGuestPlanContinue = () => {
+    if (navigation.canGoBack()) {
+      navigation.goBack();
+    } else {
+      navigation.reset({ index: 0, routes: [{ name: 'OTTRIP' }] });
     }
   };
 
@@ -228,7 +409,7 @@ export default function LoginScreen() {
         }
       } catch {}
     } catch {
-      Alert.alert('오류', '비회원으로 시작할 수 없습니다. 잠시 후 다시 시도해주세요.');
+      alertDialog('오류', '비회원으로 시작할 수 없습니다. 잠시 후 다시 시도해주세요.');
     } finally {
       setIsLoading(false);
     }
@@ -240,7 +421,7 @@ export default function LoginScreen() {
       try {
         await authApi.getServerTime();
       } catch (error: any) {
-        Alert.alert('연결 오류', '서버에 연결할 수 없습니다. 서버가 실행 중인지 확인해주세요.');
+        alertDialog('연결 오류', '서버에 연결할 수 없습니다. 서버가 실행 중인지 확인해주세요.');
         setIsLoading(false);
         return;
       }
@@ -270,11 +451,11 @@ export default function LoginScreen() {
           errorMessage = error.message;
         }
         
-        Alert.alert('로그인 실패', errorMessage);
+        alertDialog('로그인 실패', errorMessage);
       }
     } catch (error: any) {
       const userErrorMessage = error.response?.data?.detail || error.message || '알 수 없는 오류';
-      Alert.alert('오류', `테스트 로그인 중 오류가 발생했습니다: ${userErrorMessage}`);
+      alertDialog('오류', `테스트 로그인 중 오류가 발생했습니다: ${userErrorMessage}`);
       setIsLoading(false);
     }
   };
@@ -285,7 +466,11 @@ export default function LoginScreen() {
         <Card variant="basic">
         <View style={styles.header}>
           <Text style={styles.title}>OTTRIP</Text>
-          <Text style={styles.subtitle}>여행 계획을 더 스마트하게</Text>
+          <Text style={styles.subtitle}>
+            {guestUpgrade
+              ? 'Google 또는 Apple로 로그인하고\n기존 여행일정을 유지할 수 있어요'
+              : '여행 계획을 더 스마트하게'}
+          </Text>
         </View>
 
         <View style={styles.buttonContainer}>
@@ -294,12 +479,23 @@ export default function LoginScreen() {
             disabled={isLoading}
               isLoading={isLoading}
             />
+            {Platform.OS === 'web' && !!env.EXPO_PUBLIC_APPLE_SERVICES_ID ? (
+              <AppleButton
+                onPress={onAppleSignInWeb}
+                disabled={isLoading}
+                isLoading={isLoading}
+                style={styles.appleButton}
+                iconSize={30}
+              />
+            ) : null}
             <Pressable
-              onPress={onGuestStart}
+              onPress={guestUpgrade ? onGuestPlanContinue : onGuestStart}
               disabled={isLoading}
               style={({ pressed }) => [styles.guestLink, pressed && styles.guestLinkPressed]}
             >
-              <Text style={styles.guestLinkText}>비회원으로 시작</Text>
+              <Text style={styles.guestLinkText}>
+                {guestUpgrade ? '게스트로 이어하기' : '게스트로 시작하기'}
+              </Text>
             </Pressable>
           </View>
         </Card>
@@ -329,6 +525,7 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     ...textStyles.body2,
+    color: colors.gray800,
     textAlign: 'center',
     marginBottom: 48,
   },
@@ -336,8 +533,10 @@ const styles = StyleSheet.create({
     width: '100%',
     alignItems: 'center',
   },
+  appleButton: {
+    marginTop: 12,
+  },
   guestLink: {
-    marginTop: 20,
     paddingVertical: 8,
     paddingHorizontal: 12,
   },
@@ -345,8 +544,8 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   guestLinkText: {
-    ...textStyles.body2,
-    color: '#0066FF',
+    ...textStyles.body3,
+    color: colors.gray500,
     textDecorationLine: 'underline',
   },
 }); 

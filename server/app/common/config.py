@@ -19,7 +19,3 @@ class EmailConfig(BaseConfig):
 
 email_settings = EmailConfig()
 
-
-
-
-
