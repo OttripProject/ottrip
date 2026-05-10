@@ -30,6 +30,32 @@ export function showDestructiveConfirm(
   ]);
 }
 
+/**
+ * 첨부 업로드 실패 시 사용자에게 보여줄 본문.
+ * - R2 직접 PUT 실패 등은 `Error.message`
+ * - API 4xx/5xx는 axios `response.data.detail` (문자열)
+ */
+export function formatAttachmentUploadFailureMessage(
+  error: unknown,
+  fallback: string,
+): string {
+  if (error instanceof Error) {
+    const m = error.message.trim();
+    if (m && !/^Request failed with status code \d+$/i.test(m)) {
+      return `${fallback}\n\n${m}`;
+    }
+  }
+  const err = error as {
+    response?: { data?: { detail?: unknown } };
+    message?: string;
+  };
+  const detail = err?.response?.data?.detail;
+  if (typeof detail === 'string' && detail.trim()) {
+    return `${fallback}\n\n${detail.trim()}`;
+  }
+  return fallback;
+}
+
 export function showPickFileType(
   title: string,
   message: string,

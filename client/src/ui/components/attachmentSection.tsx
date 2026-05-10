@@ -19,15 +19,11 @@ import type { LocalFile } from '@/types/api';
 import { useMe } from '@/hooks/useMe';
 import { guestPrompt } from '@/utils/guestPrompt';
 import type { AttachmentSectionProps } from '@/ui/components/attachmentSection.types';
-import {
-  showDestructiveConfirm,
-  showMessage,
-  showPickFileType,
-} from '@/utils/crossPlatformAlert';
+import { showMessage, showPickFileType } from '@/utils/crossPlatformAlert';
 
 import CameraIcon from '../../../assets/mobile_camera.svg';
 import AddIcon from '../../../assets/mobile_plan_add.svg';
-import DeleteIcon from '../../../assets/mobile_x.svg';
+import DeleteIcon from '../../../assets/attach_del.svg';
 import AttachmentDocIcon from '../../../assets/mobile_attachment_document.svg';
 import AttachmentImageIcon from '../../../assets/mobile_attachment_image.svg';
 
@@ -202,22 +198,12 @@ export default function AttachmentSection({
   };
 
   const handleRemovePending = (index: number) => {
-    showDestructiveConfirm(
-      '파일 삭제',
-      '선택한 파일을 삭제하시겠습니까?',
-      () => onRemoveFile(index),
-    );
+    onRemoveFile(index);
   };
 
   const handleRemoveExisting = (attachmentId: number) => {
     if (!onRemoveExisting) return;
-    showDestructiveConfirm(
-      '파일 삭제',
-      '첨부된 파일을 삭제하시겠습니까?',
-      () => {
-        void Promise.resolve(onRemoveExisting(attachmentId));
-      },
-    );
+    void Promise.resolve(onRemoveExisting(attachmentId));
   };
 
   const renderFileRow = (

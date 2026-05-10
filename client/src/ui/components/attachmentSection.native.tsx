@@ -121,24 +121,12 @@ export default function AttachmentSection({
   };
 
   const handleRemovePending = (index: number) => {
-    Alert.alert('파일 삭제', '선택한 파일을 삭제하시겠습니까?', [
-      { text: '취소', style: 'cancel' },
-      { text: '삭제', style: 'destructive', onPress: () => onRemoveFile(index) },
-    ]);
+    onRemoveFile(index);
   };
 
   const handleRemoveExisting = (attachmentId: number) => {
     if (!onRemoveExisting) return;
-    Alert.alert('파일 삭제', '첨부된 파일을 삭제하시겠습니까?', [
-      { text: '취소', style: 'cancel' },
-      {
-        text: '삭제',
-        style: 'destructive',
-        onPress: () => {
-          void Promise.resolve(onRemoveExisting(attachmentId));
-        },
-      },
-    ]);
+    void Promise.resolve(onRemoveExisting(attachmentId));
   };
 
   const renderFileRow = (

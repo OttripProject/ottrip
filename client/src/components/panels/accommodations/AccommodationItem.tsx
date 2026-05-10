@@ -1,7 +1,17 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { View, Text, Pressable, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, Pressable, StyleSheet, ScrollView, Platform } from 'react-native';
 import dayjs from 'dayjs';
 import { accommodationsApi } from '@/services/accommodations';
+import { attachmentsApi } from '@/services/attachments';
+import { useAttachmentUpload } from '@/hooks/useAttachmentUpload';
+import { useFilePicker } from '@/hooks/useFilePicker';
+import AttachmentSection from '@/ui/components/attachmentSection';
+import type { Attachment, LocalFile } from '@/types/api';
+import { handleGuestPromptError } from '@/utils/guestPrompt';
+import {
+  formatAttachmentUploadFailureMessage,
+  showMessage,
+} from '@/utils/crossPlatformAlert';
 import { CountryPicker, TimePicker } from '@/ui/components/pickers';
 import Input from '@/ui/components/input/Input';
 import { PLACEHOLDERS } from '@/constants/placeholders';
@@ -79,6 +89,16 @@ export default function AccommodationItem({
   const [checkinTimeOpen, setCheckinTimeOpen] = useState(false);
   const [checkoutTimeOpen, setCheckoutTimeOpen] = useState(false);
 
+  const [pendingFiles, setPendingFiles] = useState<LocalFile[]>([]);
+  const [existingAttachments, setExistingAttachments] = useState<Attachment[]>([]);
+  const [isLoadingAttachments, setIsLoadingAttachments] = useState(false);
+
+  const { pickImage, pickDocument } = useFilePicker();
+  const { isUploading, uploadFiles } = useAttachmentUpload({
+    planId,
+    entityType: 'accommodation',
+  });
+
   useEffect(() => {
     if (accommodation) {
       setFormData({
@@ -113,6 +133,124 @@ export default function AccommodationItem({
       });
     }
   }, [formData, readOnly, onPreviewChange]);
+
+  const accommodationAttachmentEntityId = useMemo(() => {
+    const raw = accommodation?.id;
+    if (raw == null || raw === '') return undefined;
+    const n = typeof raw === 'number' ? raw : parseInt(String(raw), 10);
+    return Number.isFinite(n) ? n : undefined;
+  }, [accommodation?.id]);
+
+  useEffect(() => {
+    const id = accommodationAttachmentEntityId;
+    if (id == null) {
+      setExistingAttachments([]);
+      return;
+    }
+    let cancelled = false;
+    setIsLoadingAttachments(true);
+    attachmentsApi
+      .getAttachments(planId, 'accommodation', id)
+      .then((list) => {
+        if (!cancelled) setExistingAttachments(list);
+      })
+      .catch(() => {
+        if (!cancelled) setExistingAttachments([]);
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoadingAttachments(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [accommodationAttachmentEntityId, planId]);
+
+  useEffect(() => {
+    setPendingFiles((prev) => {
+      if (Platform.OS === 'web') {
+        prev.forEach((f) => {
+          if (f.uri?.startsWith('blob:')) {
+            try {
+              URL.revokeObjectURL(f.uri);
+            } catch {
+              /* noop */
+            }
+          }
+        });
+      }
+      return [];
+    });
+  }, [accommodationAttachmentEntityId]);
+
+  useEffect(() => {
+    if (readOnly) {
+      setPendingFiles((prev) => {
+        if (Platform.OS === 'web') {
+          prev.forEach((f) => {
+            if (f.uri?.startsWith('blob:')) {
+              try {
+                URL.revokeObjectURL(f.uri);
+              } catch {
+                /* noop */
+              }
+            }
+          });
+        }
+        return [];
+      });
+    }
+  }, [readOnly]);
+
+  const appendImage = async () => {
+    try {
+      const f = await pickImage();
+      if (f) setPendingFiles((p) => [...p, f]);
+    } catch (e) {
+      showMessage(
+        '알림',
+        e instanceof Error ? e.message : '파일을 선택하지 못했습니다.',
+      );
+    }
+  };
+
+  const appendDocument = async () => {
+    try {
+      const f = await pickDocument();
+      if (f) setPendingFiles((p) => [...p, f]);
+    } catch (e) {
+      showMessage(
+        '알림',
+        e instanceof Error ? e.message : '파일을 선택하지 못했습니다.',
+      );
+    }
+  };
+
+  const removePendingAt = (index: number) => {
+    setPendingFiles((prev) => {
+      const t = prev[index];
+      if (Platform.OS === 'web' && t?.uri?.startsWith('blob:')) {
+        try {
+          URL.revokeObjectURL(t.uri);
+        } catch {
+          /* noop */
+        }
+      }
+      return prev.filter((_, i) => i !== index);
+    });
+  };
+
+  const handleRemoveExistingAttachment = async (attachmentId: number) => {
+    try {
+      await attachmentsApi.deleteAttachment(attachmentId);
+      setExistingAttachments((prev) => prev.filter((a) => a.id !== attachmentId));
+    } catch (error) {
+      if (handleGuestPromptError(error)) return;
+      showMessage('오류', '첨부파일 삭제에 실패했습니다.');
+    }
+  };
+
+  const showAttachmentSection =
+    !readOnly || accommodationAttachmentEntityId != null;
   
   const handleSave = async () => {
     if (isSubmittingRef.current) {
@@ -194,6 +332,28 @@ export default function AccommodationItem({
             description: formData.name,
           },
         });
+      }
+      if (pendingFiles.length > 0 && savedAccommodation?.id) {
+        try {
+          await uploadFiles(pendingFiles, savedAccommodation.id);
+          const list = await attachmentsApi.getAttachments(
+            planId,
+            'accommodation',
+            savedAccommodation.id,
+          );
+          setExistingAttachments(list);
+          setPendingFiles([]);
+        } catch (e) {
+          if (!handleGuestPromptError(e)) {
+            showMessage(
+              '알림',
+              formatAttachmentUploadFailureMessage(
+                e,
+                '숙박은 저장됐으나 일부 파일 업로드에 실패했습니다.',
+              ),
+            );
+          }
+        }
       }
       onSave(savedAccommodation);
     } catch (error) {
@@ -470,6 +630,34 @@ export default function AccommodationItem({
             </View>
           </View>
         </View>
+
+      {showAttachmentSection && (
+        <AttachmentSection
+          style={styles.attachmentSection}
+          showTopDivider
+          pendingFiles={readOnly ? [] : pendingFiles}
+          onPickImage={appendImage}
+          onPickDocument={appendDocument}
+          onRemoveFile={removePendingAt}
+          onAppendPendingFiles={
+            Platform.OS === 'web'
+              ? (files) => setPendingFiles((p) => [...p, ...files])
+              : undefined
+          }
+          existingAttachments={existingAttachments}
+          onRemoveExisting={
+            !readOnly && accommodationAttachmentEntityId != null
+              ? handleRemoveExistingAttachment
+              : undefined
+          }
+          isLoadingExisting={
+            accommodationAttachmentEntityId != null && isLoadingAttachments
+          }
+          isUploading={isUploading}
+          disabled={readOnly || isSubmitting}
+        />
+      )}
+
               {/* 하단 버튼 */}
       {!readOnly ? (
         <View style={[styles.buttonRow, { position: 'relative', zIndex: -1 }]}>
@@ -643,6 +831,10 @@ const styles = StyleSheet.create({
     transform: [{ translateY: -10 }],
     ...textStyles.body4,
     color: colors.black,
+  },
+  attachmentSection: {
+    marginTop: spacing.lg,
+    width: '100%',
   },
   buttonRow: {
     flexDirection: 'row',
