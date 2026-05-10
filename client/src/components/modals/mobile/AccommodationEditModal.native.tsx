@@ -131,9 +131,11 @@ export default function AccommodationEditModal({
     if (!visible) return;
     if (!accommodation) {
       setExistingAttachments([]);
+      setIsLoadingAttachments(false);
       return;
     }
     let cancelled = false;
+    setExistingAttachments([]);
     setIsLoadingAttachments(true);
     attachmentsApi
       .getAttachments(planId, 'accommodation', accommodation.id)
