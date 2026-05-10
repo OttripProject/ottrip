@@ -1,11 +1,21 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { View, Text, Pressable, StyleSheet, Alert, ScrollView, Modal } from 'react-native';
+import { View, Text, Pressable, StyleSheet, Alert, ScrollView, Modal, Platform } from 'react-native';
 import { TimePicker, CountryPicker, CategoryPicker } from '@/ui/components/pickers';
 import Input from '@/ui/components/input/Input';
 import { PLACEHOLDERS } from '@/constants/placeholders';
 import dayjs from 'dayjs';
 import { itinerariesApi } from '@/services/itineraries';
 import { expensesApi } from '@/services/expenses';
+import { attachmentsApi } from '@/services/attachments';
+import { useAttachmentUpload } from '@/hooks/useAttachmentUpload';
+import { useFilePicker } from '@/hooks/useFilePicker';
+import AttachmentSection from '@/ui/components/attachmentSection';
+import type { Attachment, LocalFile } from '@/types/api';
+import { handleGuestPromptError } from '@/utils/guestPrompt';
+import {
+  formatAttachmentUploadFailureMessage,
+  showMessage,
+} from '@/utils/crossPlatformAlert';
 import { ExpenseCategory, ExpenseCurrency, categoryLabels, currencyLabels } from '@/types/expense';
 import { colors } from '@/ui/tokens/colors';
 import { textStyles } from '@/ui/tokens/typography';
@@ -97,6 +107,23 @@ export default function ItineraryItem({
   
   const [draftExpenses, setDraftExpenses] = useState<any[]>([]);
 
+  const [pendingFiles, setPendingFiles] = useState<LocalFile[]>([]);
+  const [existingAttachments, setExistingAttachments] = useState<Attachment[]>([]);
+  const [isLoadingAttachments, setIsLoadingAttachments] = useState(false);
+
+  const { pickImage, pickDocument } = useFilePicker();
+  const { isUploading, uploadFiles } = useAttachmentUpload({
+    planId,
+    entityType: 'itinerary',
+  });
+
+  const itineraryAttachmentEntityId = useMemo(() => {
+    const raw = itinerary?.id;
+    if (raw == null || raw === '') return undefined;
+    const n = typeof raw === 'number' ? raw : parseInt(String(raw), 10);
+    return Number.isFinite(n) ? n : undefined;
+  }, [itinerary?.id]);
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isSubmittingRef = useRef(false);
 
@@ -168,6 +195,118 @@ export default function ItineraryItem({
 
     loadExpenses();
   }, [itinerary?.id, planData?.expenses]);
+
+  useEffect(() => {
+    const id = itineraryAttachmentEntityId;
+    if (id == null) {
+      setExistingAttachments([]);
+      return;
+    }
+    let cancelled = false;
+    setIsLoadingAttachments(true);
+    attachmentsApi
+      .getAttachments(planId, 'itinerary', id)
+      .then((list) => {
+        if (!cancelled) setExistingAttachments(list);
+      })
+      .catch(() => {
+        if (!cancelled) setExistingAttachments([]);
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoadingAttachments(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [itineraryAttachmentEntityId, planId]);
+
+  useEffect(() => {
+    setPendingFiles((prev) => {
+      if (Platform.OS === 'web') {
+        prev.forEach((f) => {
+          if (f.uri?.startsWith('blob:')) {
+            try {
+              URL.revokeObjectURL(f.uri);
+            } catch {
+              /* noop */
+            }
+          }
+        });
+      }
+      return [];
+    });
+  }, [itineraryAttachmentEntityId]);
+
+  useEffect(() => {
+    if (readOnly) {
+      setPendingFiles((prev) => {
+        if (Platform.OS === 'web') {
+          prev.forEach((f) => {
+            if (f.uri?.startsWith('blob:')) {
+              try {
+                URL.revokeObjectURL(f.uri);
+              } catch {
+                /* noop */
+              }
+            }
+          });
+        }
+        return [];
+      });
+    }
+  }, [readOnly]);
+
+  const appendImage = async () => {
+    try {
+      const f = await pickImage();
+      if (f) setPendingFiles((p) => [...p, f]);
+    } catch (e) {
+      showMessage(
+        '알림',
+        e instanceof Error ? e.message : '파일을 선택하지 못했습니다.',
+      );
+    }
+  };
+
+  const appendDocument = async () => {
+    try {
+      const f = await pickDocument();
+      if (f) setPendingFiles((p) => [...p, f]);
+    } catch (e) {
+      showMessage(
+        '알림',
+        e instanceof Error ? e.message : '파일을 선택하지 못했습니다.',
+      );
+    }
+  };
+
+  const removePendingAt = (index: number) => {
+    setPendingFiles((prev) => {
+      const t = prev[index];
+      if (Platform.OS === 'web' && t?.uri?.startsWith('blob:')) {
+        try {
+          URL.revokeObjectURL(t.uri);
+        } catch {
+          /* noop */
+        }
+      }
+      return prev.filter((_, i) => i !== index);
+    });
+  };
+
+  const handleRemoveExistingAttachment = async (attachmentId: number) => {
+    try {
+      await attachmentsApi.deleteAttachment(attachmentId);
+      setExistingAttachments((prev) => prev.filter((a) => a.id !== attachmentId));
+    } catch (error) {
+      if (handleGuestPromptError(error)) return;
+      showMessage('오류', '첨부파일 삭제에 실패했습니다.');
+    }
+  };
+
+  /** 읽기 전용 상세에서도 저장된 첨부를 불러와 표시하려면 id가 있을 때 항상 블록을 둠 */
+  const showAttachmentSection =
+    !readOnly || itineraryAttachmentEntityId != null;
 
   const handleSave = async () => {
     if (isSubmittingRef.current) {
@@ -291,10 +430,33 @@ export default function ItineraryItem({
         }
       }
       
+      if (pendingFiles.length > 0 && savedItinerary?.id) {
+        try {
+          await uploadFiles(pendingFiles, savedItinerary.id);
+          const list = await attachmentsApi.getAttachments(
+            planId,
+            'itinerary',
+            savedItinerary.id,
+          );
+          setExistingAttachments(list);
+          setPendingFiles([]);
+        } catch (e) {
+          if (!handleGuestPromptError(e)) {
+            showMessage(
+              '알림',
+              formatAttachmentUploadFailureMessage(
+                e,
+                '일정은 저장됐으나 일부 파일 업로드에 실패했습니다.',
+              ),
+            );
+          }
+        }
+      }
+
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new CustomEvent('itinerary-preview-clear'));
       }
-      
+
       onSave(savedItinerary);
     } catch (error) {
     } finally {
@@ -771,6 +933,33 @@ export default function ItineraryItem({
         </View>
       )}
 
+      {showAttachmentSection && (
+        <AttachmentSection
+          style={styles.attachmentSection}
+          showTopDivider
+          pendingFiles={readOnly ? [] : pendingFiles}
+          onPickImage={appendImage}
+          onPickDocument={appendDocument}
+          onRemoveFile={removePendingAt}
+          onAppendPendingFiles={
+            Platform.OS === 'web'
+              ? (files) => setPendingFiles((p) => [...p, ...files])
+              : undefined
+          }
+          existingAttachments={existingAttachments}
+          onRemoveExisting={
+            !readOnly && itineraryAttachmentEntityId != null
+              ? handleRemoveExistingAttachment
+              : undefined
+          }
+          isLoadingExisting={
+            itineraryAttachmentEntityId != null && isLoadingAttachments
+          }
+          isUploading={isUploading}
+          disabled={readOnly || isSubmitting}
+        />
+      )}
+
       {!readOnly ? (
         <View style={[styles.buttonRow, { position: 'relative' }]}>
           <Pressable
@@ -1026,6 +1215,10 @@ const styles = StyleSheet.create({
   addExpenseButtonText: {
     ...textStyles.h8,
     color: colors.black,
+  },
+  attachmentSection: {
+    marginTop: spacing.lg,
+    width: '100%',
   },
   expenseForm: {
     backgroundColor: colors.white,

@@ -1,0 +1,23 @@
+import type { StyleProp, ViewStyle } from 'react-native';
+
+import type { Attachment, LocalFile } from '@/types/api';
+
+export interface AttachmentSectionProps {
+  pendingFiles: LocalFile[];
+  onPickImage: () => void;
+  onPickDocument: () => void;
+  onRemoveFile: (index: number) => void;
+  existingAttachments?: Attachment[];
+  onRemoveExisting?: (attachmentId: number) => void | Promise<void>;
+  isLoadingExisting?: boolean;
+  isUploading?: boolean;
+  style?: StyleProp<ViewStyle>;
+  showTopDivider?: boolean;
+  disabled?: boolean;
+  isGuest?: boolean;
+  /**
+   * 웹: `<input type="file">`로 선택한 파일을 `LocalFile`로 변환해 한 번에 전달.
+   * 네이티브에서는 미사용.
+   */
+  onAppendPendingFiles?: (files: LocalFile[]) => void;
+}

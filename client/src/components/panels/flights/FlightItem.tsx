@@ -1,8 +1,18 @@
-import React, { useEffect, useState, useRef } from 'react';
-import { View, Text, Pressable, StyleSheet, ScrollView } from 'react-native';
+import React, { useEffect, useState, useRef, useMemo } from 'react';
+import { View, Text, Pressable, StyleSheet, ScrollView, Platform } from 'react-native';
 import { TimePicker, AirportPicker } from '@/ui/components/pickers';
 import dayjs from 'dayjs';
 import { flightsApi } from '@/services/flights';
+import { attachmentsApi } from '@/services/attachments';
+import { useAttachmentUpload } from '@/hooks/useAttachmentUpload';
+import { useFilePicker } from '@/hooks/useFilePicker';
+import AttachmentSection from '@/ui/components/attachmentSection';
+import type { Attachment, LocalFile } from '@/types/api';
+import { handleGuestPromptError } from '@/utils/guestPrompt';
+import {
+  formatAttachmentUploadFailureMessage,
+  showMessage,
+} from '@/utils/crossPlatformAlert';
 import { ExpenseCurrency, ExpenseCategory, currencyLabels } from '@/types/expense';
 import Input from '@/ui/components/input/Input';
 import { PLACEHOLDERS } from '@/constants/placeholders';
@@ -152,6 +162,23 @@ export default function FlightItem({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isSubmittingRef = useRef(false);
 
+  const [pendingFiles, setPendingFiles] = useState<LocalFile[]>([]);
+  const [existingAttachments, setExistingAttachments] = useState<Attachment[]>([]);
+  const [isLoadingAttachments, setIsLoadingAttachments] = useState(false);
+
+  const { pickImage, pickDocument } = useFilePicker();
+  const { isUploading, uploadFiles } = useAttachmentUpload({
+    planId,
+    entityType: 'flight',
+  });
+
+  const flightAttachmentEntityId = useMemo(() => {
+    const raw = flight?.id;
+    if (raw == null || raw === '') return undefined;
+    const n = typeof raw === 'number' ? raw : parseInt(String(raw), 10);
+    return Number.isFinite(n) ? n : undefined;
+  }, [flight?.id]);
+
   const firstSegment = flightSegments[0];
   const isFirstSegmentValid = Boolean(
     firstSegment &&
@@ -162,6 +189,117 @@ export default function FlightItem({
     String(firstSegment.arrival_date || '').trim() &&
     String(firstSegment.arrival_time || '').trim()
   );
+
+  useEffect(() => {
+    const id = flightAttachmentEntityId;
+    if (id == null) {
+      setExistingAttachments([]);
+      return;
+    }
+    let cancelled = false;
+    setIsLoadingAttachments(true);
+    attachmentsApi
+      .getAttachments(planId, 'flight', id)
+      .then((list) => {
+        if (!cancelled) setExistingAttachments(list);
+      })
+      .catch(() => {
+        if (!cancelled) setExistingAttachments([]);
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoadingAttachments(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [flightAttachmentEntityId, planId]);
+
+  useEffect(() => {
+    setPendingFiles((prev) => {
+      if (Platform.OS === 'web') {
+        prev.forEach((f) => {
+          if (f.uri?.startsWith('blob:')) {
+            try {
+              URL.revokeObjectURL(f.uri);
+            } catch {
+              /* noop */
+            }
+          }
+        });
+      }
+      return [];
+    });
+  }, [flightAttachmentEntityId]);
+
+  useEffect(() => {
+    if (readOnly) {
+      setPendingFiles((prev) => {
+        if (Platform.OS === 'web') {
+          prev.forEach((f) => {
+            if (f.uri?.startsWith('blob:')) {
+              try {
+                URL.revokeObjectURL(f.uri);
+              } catch {
+                /* noop */
+              }
+            }
+          });
+        }
+        return [];
+      });
+    }
+  }, [readOnly]);
+
+  const appendImage = async () => {
+    try {
+      const f = await pickImage();
+      if (f) setPendingFiles((p) => [...p, f]);
+    } catch (e) {
+      showMessage(
+        '알림',
+        e instanceof Error ? e.message : '파일을 선택하지 못했습니다.',
+      );
+    }
+  };
+
+  const appendDocument = async () => {
+    try {
+      const f = await pickDocument();
+      if (f) setPendingFiles((p) => [...p, f]);
+    } catch (e) {
+      showMessage(
+        '알림',
+        e instanceof Error ? e.message : '파일을 선택하지 못했습니다.',
+      );
+    }
+  };
+
+  const removePendingAt = (index: number) => {
+    setPendingFiles((prev) => {
+      const t = prev[index];
+      if (Platform.OS === 'web' && t?.uri?.startsWith('blob:')) {
+        try {
+          URL.revokeObjectURL(t.uri);
+        } catch {
+          /* noop */
+        }
+      }
+      return prev.filter((_, i) => i !== index);
+    });
+  };
+
+  const handleRemoveExistingAttachment = async (attachmentId: number) => {
+    try {
+      await attachmentsApi.deleteAttachment(attachmentId);
+      setExistingAttachments((prev) => prev.filter((a) => a.id !== attachmentId));
+    } catch (error) {
+      if (handleGuestPromptError(error)) return;
+      showMessage('오류', '첨부파일 삭제에 실패했습니다.');
+    }
+  };
+
+  const showAttachmentSection =
+    !readOnly || flightAttachmentEntityId != null;
 
   const handleSave = async () => {
     if (isSubmittingRef.current) {
@@ -281,6 +419,30 @@ export default function FlightItem({
         });
         savedFlight = await flightsApi.getFlight(createResponse.id);
       }
+
+      if (pendingFiles.length > 0 && savedFlight?.id) {
+        try {
+          await uploadFiles(pendingFiles, savedFlight.id);
+          const list = await attachmentsApi.getAttachments(
+            planId,
+            'flight',
+            savedFlight.id,
+          );
+          setExistingAttachments(list);
+          setPendingFiles([]);
+        } catch (e) {
+          if (!handleGuestPromptError(e)) {
+            showMessage(
+              '알림',
+              formatAttachmentUploadFailureMessage(
+                e,
+                '항공편은 저장됐으나 일부 파일 업로드에 실패했습니다.',
+              ),
+            );
+          }
+        }
+      }
+
       onSave(savedFlight);
     } catch (error) {
     } finally {
@@ -709,6 +871,34 @@ export default function FlightItem({
             <Text style={styles.addSegmentButtonText}>항공권 구간 추가</Text>
           </Pressable>
           )}
+
+          {showAttachmentSection && (
+            <AttachmentSection
+              style={styles.attachmentSection}
+              showTopDivider
+              pendingFiles={readOnly ? [] : pendingFiles}
+              onPickImage={appendImage}
+              onPickDocument={appendDocument}
+              onRemoveFile={removePendingAt}
+              onAppendPendingFiles={
+                Platform.OS === 'web'
+                  ? (files) => setPendingFiles((p) => [...p, ...files])
+                  : undefined
+              }
+              existingAttachments={existingAttachments}
+              onRemoveExisting={
+                !readOnly && flightAttachmentEntityId != null
+                  ? handleRemoveExistingAttachment
+                  : undefined
+              }
+              isLoadingExisting={
+                flightAttachmentEntityId != null && isLoadingAttachments
+              }
+              isUploading={isUploading}
+              disabled={readOnly || isSubmitting}
+            />
+          )}
+
           {!readOnly ? (
             <View style={[styles.buttonRow, { position: 'relative', zIndex: 1 }]}>
               <Pressable
@@ -989,6 +1179,10 @@ const styles = StyleSheet.create({
   addSegmentButtonText: {
     ...textStyles.h8,
     color: colors.black,
+  },
+  attachmentSection: {
+    marginTop: spacing.lg,
+    width: '100%',
   },
   buttonRow: {
     flexDirection: 'row',
