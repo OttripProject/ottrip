@@ -54,7 +54,7 @@ export default function InviteAcceptScreen() {
     <View style={styles.container}>
       {status === 'pending' && <ActivityIndicator size="large" color="#111" />}
       {status === 'done' && <Text style={styles.text}>초대가 수락되었습니다.</Text>}
-      {status === 'error' && <Text style={styles.text}>초대 처리 중 오류가 발생했습니다.</Text>}
+      {status === 'error' && <Text style={styles.text}>초대 처리 중 알림가 발생했습니다.</Text>}
     </View>
   );
 }

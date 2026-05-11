@@ -117,7 +117,7 @@ export default function WeeklyChecklistCard({
       refetchChecklist();
     } catch (error) {
       if (handleGuestPromptError(error)) return;
-      Alert.alert('오류', '체크리스트 항목 추가에 실패했습니다.');
+      Alert.alert('알림', '체크리스트 항목 추가에 실패했습니다.');
     } finally {
       setAddingChecklistItem(false);
     }
@@ -149,7 +149,7 @@ export default function WeeklyChecklistCard({
     } catch (error) {
       queryClient.setQueryData(['checklist', planPublicId], previousData);
       if (handleGuestPromptError(error)) return;
-      Alert.alert('오류', '체크리스트 항목 업데이트에 실패했습니다.');
+      Alert.alert('알림', '체크리스트 항목 업데이트에 실패했습니다.');
     } finally {
       togglingItems.current.delete(itemId);
     }
@@ -164,7 +164,7 @@ export default function WeeklyChecklistCard({
       refetchChecklist();
     } catch (error) {
       if (handleGuestPromptError(error)) return;
-      Alert.alert('오류', '체크리스트 항목 삭제에 실패했습니다.');
+      Alert.alert('알림', '체크리스트 항목 삭제에 실패했습니다.');
     } finally {
       deletingItems.current.delete(itemId);
     }
@@ -193,7 +193,7 @@ export default function WeeklyChecklistCard({
       refetchChecklist();
     } catch (error) {
       if (handleGuestPromptError(error)) return;
-      Alert.alert('오류', 'AI 체크리스트 생성에 실패했습니다.');
+      Alert.alert('알림', 'AI 체크리스트 생성에 실패했습니다.');
     } finally {
       setAiRecommendLoading(false);
     }

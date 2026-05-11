@@ -47,7 +47,7 @@ function showSocialLoginError(err: unknown) {
   const message = is409
     ? (typeof detail === 'string' && detail ? detail : SOCIAL_LOGIN_CONFLICT_DEFAULT)
     : SOCIAL_LOGIN_FAILURE_DEFAULT;
-  Alert.alert(is409 ? '안내' : '오류', message);
+  Alert.alert(is409 ? '안내' : '알림', message);
 }
 
 export default function LoginScreenNative() {
@@ -160,7 +160,7 @@ export default function LoginScreenNative() {
         try {
           await GoogleSignin.hasPlayServices();
         } catch {
-          Alert.alert('오류', 'Google Play Services를 사용할 수 없습니다.');
+          Alert.alert('알림', 'Google Play Services를 사용할 수 없습니다.');
           setIsLoading(false);
           return;
         }
@@ -173,14 +173,14 @@ export default function LoginScreenNative() {
       if (idToken) {
         await submitGoogleToken(idToken);
       } else {
-        Alert.alert('오류', '로그인에 실패했습니다. id_token을 받을 수 없습니다.');
+        Alert.alert('알림', '로그인에 실패했습니다. id_token을 받을 수 없습니다.');
         setIsLoading(false);
       }
     } catch (error: any) {
       if (error.code === 'SIGN_IN_CANCELLED') {
         setIsLoading(false);
       } else if (error.code !== 'IN_PROGRESS') {
-        Alert.alert('오류', '로그인에 실패했습니다: ' + (error.message || '알 수 없는 오류'));
+        Alert.alert('알림', '로그인에 실패했습니다: ' + (error.message || '알 수 없는 알림'));
         setIsLoading(false);
       }
     }
@@ -206,7 +206,7 @@ export default function LoginScreenNative() {
         }
       } catch {}
     } catch {
-      Alert.alert('오류', '비회원으로 시작할 수 없습니다. 잠시 후 다시 시도해주세요.');
+      Alert.alert('알림', '비회원으로 시작할 수 없습니다. 잠시 후 다시 시도해주세요.');
     } finally {
       setIsLoading(false);
     }
@@ -229,7 +229,7 @@ export default function LoginScreenNative() {
         await submitAppleToken(credential.identityToken);
       } else {
         setIsLoading(false);
-        Alert.alert('오류', 'Apple 로그인 토큰을 받을 수 없습니다.');
+        Alert.alert('알림', 'Apple 로그인 토큰을 받을 수 없습니다.');
       }
     } catch (e: unknown) {
       const code = e && typeof e === 'object' && 'code' in e ? (e as { code?: string }).code : undefined;
@@ -239,7 +239,7 @@ export default function LoginScreenNative() {
       }
       setIsLoading(false);
       const message = e instanceof Error ? e.message : 'Apple 로그인에 실패했습니다.';
-      Alert.alert('오류', message);
+      Alert.alert('알림', message);
     }
   };
 

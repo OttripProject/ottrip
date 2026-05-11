@@ -302,7 +302,7 @@ export default function ItineraryItem({
       setExistingAttachments((prev) => prev.filter((a) => a.id !== attachmentId));
     } catch (error) {
       if (handleGuestPromptError(error)) return;
-      showMessage('오류', '첨부파일 삭제에 실패했습니다.');
+      showMessage('알림', '첨부파일 삭제에 실패했습니다.');
     }
   };
 
@@ -500,7 +500,7 @@ export default function ItineraryItem({
 
   const handleExpenseSubmit = async () => {
     if (expenseForm.amount <= 0) {
-      Alert.alert('오류', '금액을 입력해주세요.');
+      Alert.alert('알림', '금액을 입력해주세요.');
       return;
     }
 
@@ -531,7 +531,7 @@ export default function ItineraryItem({
         Alert.alert('성공', '비용이 수정되었습니다.');
         return;
       } catch (error) {
-        Alert.alert('오류', '비용 수정에 실패했습니다.');
+        Alert.alert('알림', '비용 수정에 실패했습니다.');
         return;
       }
     }
@@ -615,7 +615,7 @@ export default function ItineraryItem({
       
       Alert.alert('성공', '비용이 삭제되었습니다.');
     } catch (error) {
-      Alert.alert('오류', '비용 삭제에 실패했습니다.');
+      Alert.alert('알림', '비용 삭제에 실패했습니다.');
     }
   };
 

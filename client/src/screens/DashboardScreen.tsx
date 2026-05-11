@@ -138,7 +138,7 @@ export default function DashboardScreen() {
           }
         } catch (e: any) {
           const msg = e?.response?.data?.detail || '초대 수락에 실패했습니다.';
-          Alert.alert('오류', msg);
+          Alert.alert('알림', msg);
         } finally {
           window.history.replaceState({}, document.title, window.location.pathname);
         }

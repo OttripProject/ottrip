@@ -121,7 +121,7 @@ export default function AddPlanModal({
       }
       // onClose는 호출하지 않음 - onPlanCreated에서 부모가 모달 닫기 처리
     } catch (error) {
-      Alert.alert('오류', planToEdit ? '여행 수정에 실패했습니다.' : '여행 생성에 실패했습니다.');
+      Alert.alert('알림', planToEdit ? '여행 수정에 실패했습니다.' : '여행 생성에 실패했습니다.');
     } finally {
       setIsSubmitting(false);
     }

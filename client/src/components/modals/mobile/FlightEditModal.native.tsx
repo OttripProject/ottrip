@@ -225,7 +225,7 @@ export default function FlightEditModal({
       setExistingAttachments((prev) => prev.filter((a) => a.id !== attachmentId));
     } catch (error) {
       if (handleGuestPromptError(error)) return;
-      Alert.alert('오류', '첨부파일 삭제에 실패했습니다.');
+      Alert.alert('알림', '첨부파일 삭제에 실패했습니다.');
     }
   };
 
@@ -331,7 +331,7 @@ export default function FlightEditModal({
 
       onClose?.({ fromSave: true });
     } catch (error) {
-      Alert.alert('오류', flight ? '항공 편 수정에 실패했습니다.' : '항공 편 추가에 실패했습니다.');
+      Alert.alert('알림', flight ? '항공 편 수정에 실패했습니다.' : '항공 편 추가에 실패했습니다.');
     } finally {
       isSubmittingRef.current = false;
       setIsSubmitting(false);
@@ -355,7 +355,7 @@ export default function FlightEditModal({
               Alert.alert('삭제완료', '항공편이 삭제되었습니다.');
               onClose?.({ fromSave: true });
             } catch (error) {
-              Alert.alert('오류', '항공 편 삭제에 실패했습니다.');
+              Alert.alert('알림', '항공 편 삭제에 실패했습니다.');
             }
           },
         },

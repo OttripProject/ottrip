@@ -97,12 +97,12 @@ export default function AIAssistantPanel({ publicId }: AIAssistantPanelProps) {
       if (checklistResponse.data.success) {
         setChecklist(checklistResponse.data.checklist);
       } else {
-        Alert.alert('오류', checklistResponse.data.message || '체크리스트 생성에 실패했습니다.');
+        Alert.alert('알림', checklistResponse.data.message || '체크리스트 생성에 실패했습니다.');
       }
       
     } catch (error) {
       if (handleGuestPromptError(error)) return;
-      Alert.alert('오류', '체크리스트 생성 중 오류가 발생했습니다.');
+      Alert.alert('알림', '체크리스트 생성 중 알림가 발생했습니다.');
     } finally {
       setIsLoading(false);
     }
@@ -136,11 +136,11 @@ export default function AIAssistantPanel({ publicId }: AIAssistantPanelProps) {
       if (response.data.success) {
         setChecklist(response.data.checklist);
       } else {
-        Alert.alert('오류', response.data.message || '체크리스트 새로고침에 실패했습니다.');
+        Alert.alert('알림', response.data.message || '체크리스트 새로고침에 실패했습니다.');
       }
     } catch (error) {
       if (handleGuestPromptError(error)) return;
-      Alert.alert('오류', '체크리스트 새로고침 중 오류가 발생했습니다.');
+      Alert.alert('알림', '체크리스트 새로고침 중 알림가 발생했습니다.');
     } finally {
       setIsLoading(false);
     }
@@ -187,7 +187,7 @@ export default function AIAssistantPanel({ publicId }: AIAssistantPanelProps) {
       }
     } catch (error) {
       if (handleGuestPromptError(error)) return;
-      Alert.alert('오류', '체크리스트 항목 업데이트에 실패했습니다.');
+      Alert.alert('알림', '체크리스트 항목 업데이트에 실패했습니다.');
     }
   };
 
@@ -210,7 +210,7 @@ export default function AIAssistantPanel({ publicId }: AIAssistantPanelProps) {
       setNewItemReason('');
     } catch (error) {
       if (handleGuestPromptError(error)) return;
-      Alert.alert('오류', '체크리스트 항목 추가에 실패했습니다.');
+      Alert.alert('알림', '체크리스트 항목 추가에 실패했습니다.');
     }
   };
 
@@ -245,7 +245,7 @@ export default function AIAssistantPanel({ publicId }: AIAssistantPanelProps) {
       await checkExistingChecklist();
     } catch (error) {
       if (handleGuestPromptError(error)) return;
-      Alert.alert('오류', '체크리스트 항목 삭제에 실패했습니다.');
+      Alert.alert('알림', '체크리스트 항목 삭제에 실패했습니다.');
     }
   };
 

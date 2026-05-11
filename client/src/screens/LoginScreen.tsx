@@ -90,7 +90,7 @@ function showSocialLoginError(err: unknown) {
   const message = is409
     ? (typeof detail === 'string' && detail ? detail : SOCIAL_LOGIN_CONFLICT_DEFAULT)
     : SOCIAL_LOGIN_FAILURE_DEFAULT;
-  alertDialog(is409 ? '안내' : '오류', message);
+  alertDialog(is409 ? '안내' : '알림', message);
 }
 
 const generateNonce = async () => {
@@ -169,7 +169,7 @@ export default function LoginScreen() {
         const clientId = env.EXPO_PUBLIC_GOOGLE_CLIENT_ID;
 
         if (!clientId) {
-          alertDialog('오류', 'Google OAuth 클라이언트 ID가 설정되지 않았습니다.');
+          alertDialog('알림', 'Google OAuth 클라이언트 ID가 설정되지 않았습니다.');
           return;
         }
 
@@ -186,7 +186,7 @@ export default function LoginScreen() {
         try {
           window.location.assign(authUrl);
         } catch {
-          alertDialog('오류', 'Google 로그인 페이지로 이동할 수 없습니다.');
+          alertDialog('알림', 'Google 로그인 페이지로 이동할 수 없습니다.');
         }
       } else {
         setIsLoading(true);
@@ -207,7 +207,7 @@ export default function LoginScreen() {
           if (idToken) {
             await handleGoogleSignIn(idToken);
           } else {
-            alertDialog('오류', '로그인에 실패했습니다. id_token을 받을 수 없습니다.');
+            alertDialog('알림', '로그인에 실패했습니다. id_token을 받을 수 없습니다.');
             setIsLoading(false);
           }
         } catch (error: any) {
@@ -218,13 +218,13 @@ export default function LoginScreen() {
           } else if (error.code === 'IN_PROGRESS') {
             // 이미 진행 중 - 로딩 상태 유지
         } else {
-            alertDialog('오류', '로그인에 실패했습니다: ' + (error.message || '알 수 없는 오류'));
+            alertDialog('알림', '로그인에 실패했습니다: ' + (error.message || '알 수 없는 알림'));
           setIsLoading(false);
           }
         }
       }
     } catch (error: any) {
-      alertDialog('오류', '로그인 중 오류가 발생했습니다.');
+      alertDialog('알림', '로그인 중 알림가 발생했습니다.');
       setIsLoading(false);
     }
   };
@@ -345,7 +345,7 @@ export default function LoginScreen() {
     if (Platform.OS !== 'web') return;
     const clientId = env.EXPO_PUBLIC_APPLE_SERVICES_ID;
     if (!clientId) {
-      alertDialog('오류', 'Apple 로그인(Services ID)이 설정되지 않았습니다.');
+      alertDialog('알림', 'Apple 로그인(Services ID)이 설정되지 않았습니다.');
       return;
     }
 
@@ -365,7 +365,7 @@ export default function LoginScreen() {
       const res = await w.AppleID.auth.signIn();
       const idToken = res?.authorization?.id_token;
       if (!idToken) {
-        alertDialog('오류', 'Apple 로그인 토큰을 받을 수 없습니다.');
+        alertDialog('알림', 'Apple 로그인 토큰을 받을 수 없습니다.');
         setIsLoading(false);
         return;
       }
@@ -377,7 +377,7 @@ export default function LoginScreen() {
         return;
       }
       const message = e instanceof Error ? e.message : 'Apple 로그인에 실패했습니다.';
-      alertDialog('오류', message);
+      alertDialog('알림', message);
       setIsLoading(false);
     }
   };
@@ -409,7 +409,7 @@ export default function LoginScreen() {
         }
       } catch {}
     } catch {
-      alertDialog('오류', '비회원으로 시작할 수 없습니다. 잠시 후 다시 시도해주세요.');
+      alertDialog('알림', '비회원으로 시작할 수 없습니다. 잠시 후 다시 시도해주세요.');
     } finally {
       setIsLoading(false);
     }
@@ -421,7 +421,7 @@ export default function LoginScreen() {
       try {
         await authApi.getServerTime();
       } catch (error: any) {
-        alertDialog('연결 오류', '서버에 연결할 수 없습니다. 서버가 실행 중인지 확인해주세요.');
+        alertDialog('연결 알림', '서버에 연결할 수 없습니다. 서버가 실행 중인지 확인해주세요.');
         setIsLoading(false);
         return;
       }
@@ -440,7 +440,7 @@ export default function LoginScreen() {
         });
         
       } catch (error: any) {
-        let errorMessage = '알 수 없는 오류';
+        let errorMessage = '알 수 없는 알림';
         if (error.response?.data?.detail) {
           errorMessage = error.response.data.detail;
         } else if (error.response?.status === 401) {
@@ -454,8 +454,8 @@ export default function LoginScreen() {
         alertDialog('로그인 실패', errorMessage);
       }
     } catch (error: any) {
-      const userErrorMessage = error.response?.data?.detail || error.message || '알 수 없는 오류';
-      alertDialog('오류', `테스트 로그인 중 오류가 발생했습니다: ${userErrorMessage}`);
+      const userErrorMessage = error.response?.data?.detail || error.message || '알 수 없는 알림';
+      alertDialog('알림', `테스트 로그인 중 알림가 발생했습니다: ${userErrorMessage}`);
       setIsLoading(false);
     }
   };

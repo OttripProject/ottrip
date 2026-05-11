@@ -370,7 +370,7 @@ export default function TodayScreen() {
         await refetchTodayExpenses();
         Alert.alert('삭제완료', '일정이 삭제되었습니다.');
       } catch {
-        Alert.alert('오류', '일정 삭제에 실패했습니다.');
+        Alert.alert('알림', '일정 삭제에 실패했습니다.');
       }
     },
     [planData, queryClient, refetchTodayExpenses, selectedPlan?.id],
@@ -386,7 +386,7 @@ export default function TodayScreen() {
         await refetchTodayExpenses();
         Alert.alert('삭제완료', '항공편이 삭제되었습니다.');
       } catch {
-        Alert.alert('오류', '항공편 삭제에 실패했습니다.');
+        Alert.alert('알림', '항공편 삭제에 실패했습니다.');
       }
     },
     [planData, queryClient, refetchTodayExpenses, selectedPlan?.id],
@@ -1150,7 +1150,7 @@ export default function TodayScreen() {
             setShowPlanSelector(false);
             Alert.alert('성공', '여행이 삭제되었습니다.');
           } catch (error) {
-            Alert.alert('오류', '여행 삭제에 실패했습니다.');
+            Alert.alert('알림', '여행 삭제에 실패했습니다.');
           }
         }}
       />
@@ -1282,7 +1282,7 @@ export default function TodayScreen() {
             await refetchTodayExpenses();
             Alert.alert('삭제완료', '숙소가 삭제되었습니다.');
           } catch (error) {
-            Alert.alert('오류', '숙소 삭제에 실패했습니다.');
+            Alert.alert('알림', '숙소 삭제에 실패했습니다.');
           }
         }}
       />

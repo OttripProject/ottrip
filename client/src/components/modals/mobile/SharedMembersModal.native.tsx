@@ -118,7 +118,7 @@ export default function SharedMembersModal({
         e?.response?.status === 403
           ? '권한이 없습니다.'
           : e?.response?.data?.detail || '초대 전송에 실패했습니다.';
-      Alert.alert('오류', msg);
+      Alert.alert('알림', msg);
     } finally {
       setInviteLoading(false);
     }
@@ -136,7 +136,7 @@ export default function SharedMembersModal({
         e?.response?.status === 403
           ? '권한이 없습니다.'
           : e?.response?.data?.detail || '역할 변경에 실패했습니다.';
-      Alert.alert('오류', msg);
+      Alert.alert('알림', msg);
     } finally {
       setRoleUpdateLoading(null);
     }
@@ -163,7 +163,7 @@ export default function SharedMembersModal({
                 e?.response?.status === 403
                   ? '권한이 없습니다.'
                   : e?.response?.data?.detail || '공유 취소에 실패했습니다.';
-              Alert.alert('오류', msg);
+              Alert.alert('알림', msg);
             } finally {
               setRoleUpdateLoading(null);
             }

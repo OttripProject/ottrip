@@ -247,7 +247,7 @@ export default function AccommodationItem({
       setExistingAttachments((prev) => prev.filter((a) => a.id !== attachmentId));
     } catch (error) {
       if (handleGuestPromptError(error)) return;
-      showMessage('오류', '첨부파일 삭제에 실패했습니다.');
+      showMessage('알림', '첨부파일 삭제에 실패했습니다.');
     }
   };
 
