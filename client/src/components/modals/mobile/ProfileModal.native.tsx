@@ -266,7 +266,7 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
                       style={styles.guestTermsPolicyRow}
                       onPress={() => setTermsPolicyModalOpen(true)}
                     >
-                      <FilesIcon width={16} height={16} />
+                      <FilesIcon width={20} height={20} color={colors.black}/>
                       <Text style={styles.guestTermsPolicyText}>약관 및 정책 확인하기</Text>
                     </Pressable>
                   </View>
@@ -303,19 +303,23 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
                   <View style={styles.genderContainer}>
                     <Pressable
                       style={styles.genderOption}
-                      onPress={() => setGender(Gender.MALE)}
+                      onPress={() => setGender((prev) => (prev === Gender.MALE ? null : Gender.MALE))}
                     >
                       <View style={[styles.radioButton, gender === Gender.MALE && styles.radioButtonSelected]}>
-                        <GenderCheckIcon width={16} height={16} color={colors.white} />
+                        {gender === Gender.MALE ? (
+                          <GenderCheckIcon width={16} height={16} color={colors.white} />
+                        ) : null}
                       </View>
                       <Text style={styles.genderText}>남성</Text>
                     </Pressable>
                     <Pressable
                       style={styles.genderOption}
-                      onPress={() => setGender(Gender.FEMALE)}
+                      onPress={() => setGender((prev) => (prev === Gender.FEMALE ? null : Gender.FEMALE))}
                     >
                       <View style={[styles.radioButton, gender === Gender.FEMALE && styles.radioButtonSelected]}>
-                        <GenderCheckIcon width={16} height={16} color={colors.white} />
+                        {gender === Gender.FEMALE ? (
+                          <GenderCheckIcon width={16} height={16} color={colors.white} />
+                        ) : null}
                       </View>
                       <Text style={styles.genderText}>여성</Text>
                     </Pressable>
@@ -332,7 +336,7 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
                     style={styles.termsPolicyButton}
                     onPress={() => setTermsPolicyModalOpen(true)}
                   >
-                    <FilesIcon width={16} height={16} />
+                    <FilesIcon width={20} height={20} color={colors.black}/>
                     <Text style={styles.termsPolicyButtonText}>약관 및 정책 확인하기</Text>
                   </Pressable>
 
@@ -652,7 +656,6 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     borderWidth: 1.5,
     borderColor: colors.gray300,
-    backgroundColor: colors.gray300,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 8,
@@ -680,9 +683,9 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   termsPolicyButtonText: {
-    ...textStyles.h7,
+    ...textStyles.h6,
     color: colors.gray800,
-    marginLeft: 8,
+    marginLeft: 6,
   },
   contactButtonText: {
     ...textStyles.h6,

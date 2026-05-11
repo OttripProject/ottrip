@@ -289,7 +289,7 @@ export default function ProfileScreen() {
 
                 <Pressable
                   style={styles.maleRadioButton}
-                  onPress={() => setGender(Gender.MALE)}
+                  onPress={() => setGender((prev) => (prev === Gender.MALE ? null : Gender.MALE))}
                 >
                   <View style={[styles.radioButton, gender === Gender.MALE && styles.radioButtonSelected]}>
                     {gender === Gender.MALE && <GenderCheckIcon width={16} height={16} color={colors.white} />}
@@ -297,14 +297,14 @@ export default function ProfileScreen() {
                 </Pressable>
                 <Pressable
                   style={styles.maleTextButton}
-                  onPress={() => setGender(Gender.MALE)}
+                  onPress={() => setGender((prev) => (prev === Gender.MALE ? null : Gender.MALE))}
                 >
                   <Text style={styles.genderText}>남성</Text>
                 </Pressable>
 
                 <Pressable
                   style={styles.femaleRadioButton}
-                  onPress={() => setGender(Gender.FEMALE)}
+                  onPress={() => setGender((prev) => (prev === Gender.FEMALE ? null : Gender.FEMALE))}
                 >
                   <View style={[styles.radioButton, gender === Gender.FEMALE && styles.radioButtonSelected]}>
                     {gender === Gender.FEMALE && <GenderCheckIcon width={16} height={16} color={colors.white} />}
@@ -312,7 +312,7 @@ export default function ProfileScreen() {
                 </Pressable>
                 <Pressable
                   style={styles.femaleTextButton}
-                  onPress={() => setGender(Gender.FEMALE)}
+                  onPress={() => setGender((prev) => (prev === Gender.FEMALE ? null : Gender.FEMALE))}
                 >
                   <Text style={styles.genderText}>여성</Text>
                 </Pressable>
