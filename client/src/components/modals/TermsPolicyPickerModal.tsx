@@ -5,7 +5,6 @@ import {
   Pressable,
   StyleSheet,
   Modal,
-  Platform,
 } from 'react-native';
 import type { TermsKey } from '@/constants/terms';
 import { colors } from '@/ui/tokens/colors';
@@ -23,6 +22,8 @@ export type TermsPolicyPickerModalProps = {
   onPickTerm: (key: TermsKey) => void;
   maxWidth?: number;
   dimBackdrop?: boolean;
+  overlayHorizontalPadding?: number;
+  cardPaddingHorizontal?: number;
 };
 
 export default function TermsPolicyPickerModal({
@@ -31,6 +32,8 @@ export default function TermsPolicyPickerModal({
   onPickTerm,
   maxWidth = DEFAULT_MAX_WIDTH,
   dimBackdrop = true,
+  overlayHorizontalPadding = 20,
+  cardPaddingHorizontal = 40,
 }: TermsPolicyPickerModalProps) {
   const handlePick = (key: TermsKey) => {
     onPickTerm(key);
@@ -38,8 +41,19 @@ export default function TermsPolicyPickerModal({
 
   return (
     <Modal visible={visible} transparent animationType="fade">
-      <View style={[styles.overlay, !dimBackdrop && styles.overlayNoDim]}>
-        <View style={[styles.card, { maxWidth, width: '100%' }]}>
+      <View
+        style={[
+          styles.overlay,
+          !dimBackdrop && styles.overlayNoDim,
+          { paddingHorizontal: overlayHorizontalPadding },
+        ]}
+      >
+        <View
+          style={[
+            styles.card,
+            { maxWidth, width: '100%', paddingHorizontal: cardPaddingHorizontal },
+          ]}
+        >
           <View style={styles.headerRow}>
             <Text style={styles.title}>약관 및 정책</Text>
             <Pressable
@@ -96,7 +110,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.7)',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 20,
+    paddingVertical: 20,
   },
   overlayNoDim: {
     backgroundColor: 'transparent',
@@ -105,7 +119,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
     borderRadius: 24,
     minHeight: FIGMA_CARD_HEIGHT,
-    paddingHorizontal: 40,
     paddingTop: 48,
     paddingBottom: 48,
   },

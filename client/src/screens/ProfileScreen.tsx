@@ -423,7 +423,7 @@ export default function ProfileScreen() {
       </Modal>
 
       <TermsPolicyPickerModal
-        visible={termsPolicyModalOpen}
+        visible={termsPolicyModalOpen && !termsDetailModalOpen}
         dimBackdrop={!termsDetailModalOpen}
         onClose={() => setTermsPolicyModalOpen(false)}
         onPickTerm={openTermsDetailModal}

@@ -161,6 +161,9 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
     setTermsDetailModalOpen(true);
   };
 
+  /** 약관은 별도 RN Modal — 프로필 딤/카드는 숨겨 뒤 앱 화면만 보이게 */
+  const hideProfileLayer = termsPolicyModalOpen || termsDetailModalOpen;
+
   /** 웹: 클립보드 API. iOS/Android: 네이티브 클립보드 모듈 없이 재빌드 없이 쓰려면 Share 또는 길게 눌러 복사(selectable). */
   const copyContactEmail = async () => {
     try {
@@ -181,7 +184,7 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
 
   return (
     <>
-      {visible ? (
+      {visible && !hideProfileLayer ? (
         <View style={styles.modalOverlay}>
       <View style={[styles.safeArea, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
         <ScrollView 
@@ -439,10 +442,12 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
       ) : null}
 
       <TermsPolicyPickerModal
-        visible={visible && termsPolicyModalOpen}
+        visible={visible && termsPolicyModalOpen && !termsDetailModalOpen}
         dimBackdrop={!termsDetailModalOpen}
         onClose={() => setTermsPolicyModalOpen(false)}
         maxWidth={360}
+        overlayHorizontalPadding={12}
+        cardPaddingHorizontal={20}
         onPickTerm={openTermsDetailModal}
       />
 
