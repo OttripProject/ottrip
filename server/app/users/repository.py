@@ -5,7 +5,7 @@ from app.database.deps import SessionDep
 from app.utils.dependency import dependency
 from .schemas import UserRead
 
-from .models import Gender, User
+from .models import User
 from .schemas import UserCreate, UserUpdate
 
 
@@ -65,7 +65,7 @@ class UserRepository:
             handle=user.handle,
             nickname=user.nickname,
             description=user.description,
-            gender=(user.gender if user.gender is not None else Gender.OTHER),
+            gender=user.gender,
             email=user.email,
             is_guest=user.is_guest,
         )

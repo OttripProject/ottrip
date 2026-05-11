@@ -1,6 +1,7 @@
 import api from './api';
 import axios from 'axios';
 import { envSchema } from '../core/env/schema';
+import type { Gender } from '@/types/api';
 
 const env = envSchema.parse(process.env);
 
@@ -37,7 +38,7 @@ export interface UserCreate {
   handle: string;
   nickname: string;
   description: string;
-  gender: string;
+  gender: Gender | null;
   agreed_terms?: boolean;
   agreed_privacy?: boolean;
   agreed_marketing?: boolean;

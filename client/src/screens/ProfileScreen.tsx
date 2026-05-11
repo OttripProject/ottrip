@@ -19,9 +19,15 @@ import GenderCheckIcon from '../../assets/gender_check.svg';
 import QnaIcon from '../../assets/qna.svg';
 import XIcon from '../../assets/x.svg';
 import CopyIcon from '../../assets/copy.svg';
+import FilesIcon from '../../assets/memo.svg';
+import type { TermsKey } from '@/constants/terms';
 import DeleteAccountModal from '@/components/modals/DeleteAccountModal';
 import LogoutModal from '@/components/modals/LogoutModal';
+import TermsPolicyPickerModal from '@/components/modals/TermsPolicyPickerModal';
+import TermsDetailModal from '@/components/modals/TermsDetailModal';
 import { guestPrompt } from '@/utils/guestPrompt';
+
+const MEMBER_PROFILE_CARD_HEIGHT = 652;
 
 export default function ProfileScreen() {
   const { logout } = useAuth();
@@ -34,6 +40,9 @@ export default function ProfileScreen() {
   const [copied, setCopied] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [logoutModalOpen, setLogoutModalOpen] = useState(false);
+  const [termsPolicyModalOpen, setTermsPolicyModalOpen] = useState(false);
+  const [termsDetailModalOpen, setTermsDetailModalOpen] = useState(false);
+  const [termsDetailKey, setTermsDetailKey] = useState<TermsKey>('tos');
   const [deletingGuestData, setDeletingGuestData] = useState(false);
   const copiedTimerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -146,6 +155,11 @@ export default function ProfileScreen() {
     }
   };
 
+  const openTermsDetailModal = (key: TermsKey) => {
+    setTermsDetailKey(key);
+    setTermsDetailModalOpen(true);
+  };
+
   const handleDeleteTemporaryRecords = () => {
     const message =
       '이 기기에 저장된 임시 일정이 모두 삭제되며 복구할 수 없습니다. 계속할까요?';
@@ -168,7 +182,12 @@ export default function ProfileScreen() {
     <GradientBackground>
       <SafeAreaView style={styles.container}>
         <View style={styles.cardWrapper}>
-          <Card variant="basic" alignItems="flex-start" minHeight={isGuest ? 520 : undefined}>
+          <Card
+            variant="basic"
+            alignItems="flex-start"
+            minHeight={isGuest ? 568 : MEMBER_PROFILE_CARD_HEIGHT}
+            maxHeight={isGuest ? undefined : MEMBER_PROFILE_CARD_HEIGHT}
+          >
             <Pressable
               style={styles.closeButton}
               onPress={() => {
@@ -234,6 +253,14 @@ export default function ProfileScreen() {
                   </View>
                 </View>
                 <Text style={styles.guestInquiryReplyText}>최대한 빠르게 답변드리겠습니다.</Text>
+                <Pressable
+                  style={styles.guestTermsPolicyRow}
+                  onPress={() => setTermsPolicyModalOpen(true)}
+                  hitSlop={6}
+                >
+                  <FilesIcon width={16} height={16} />
+                  <Text style={styles.guestTermsPolicyText}>약관 및 정책 확인하기</Text>
+                </Pressable>
               </>
             ) : (
               <>
@@ -262,7 +289,7 @@ export default function ProfileScreen() {
 
                 <Pressable
                   style={styles.maleRadioButton}
-                  onPress={() => setGender(Gender.MALE)}
+                  onPress={() => setGender((prev) => (prev === Gender.MALE ? null : Gender.MALE))}
                 >
                   <View style={[styles.radioButton, gender === Gender.MALE && styles.radioButtonSelected]}>
                     {gender === Gender.MALE && <GenderCheckIcon width={16} height={16} color={colors.white} />}
@@ -270,14 +297,14 @@ export default function ProfileScreen() {
                 </Pressable>
                 <Pressable
                   style={styles.maleTextButton}
-                  onPress={() => setGender(Gender.MALE)}
+                  onPress={() => setGender((prev) => (prev === Gender.MALE ? null : Gender.MALE))}
                 >
                   <Text style={styles.genderText}>남성</Text>
                 </Pressable>
 
                 <Pressable
                   style={styles.femaleRadioButton}
-                  onPress={() => setGender(Gender.FEMALE)}
+                  onPress={() => setGender((prev) => (prev === Gender.FEMALE ? null : Gender.FEMALE))}
                 >
                   <View style={[styles.radioButton, gender === Gender.FEMALE && styles.radioButtonSelected]}>
                     {gender === Gender.FEMALE && <GenderCheckIcon width={16} height={16} color={colors.white} />}
@@ -285,7 +312,7 @@ export default function ProfileScreen() {
                 </Pressable>
                 <Pressable
                   style={styles.femaleTextButton}
-                  onPress={() => setGender(Gender.FEMALE)}
+                  onPress={() => setGender((prev) => (prev === Gender.FEMALE ? null : Gender.FEMALE))}
                 >
                   <Text style={styles.genderText}>여성</Text>
                 </Pressable>
@@ -297,6 +324,21 @@ export default function ProfileScreen() {
                 </Pressable>
                 <Pressable style={styles.contactTextButton} onPress={() => setContactOpen(true)}>
                   <Text style={styles.contactButtonText}>문의하기</Text>
+                </Pressable>
+
+                <Pressable
+                  style={styles.termsPolicyIconButton}
+                  onPress={() => setTermsPolicyModalOpen(true)}
+                  hitSlop={6}
+                >
+                  <FilesIcon width={16} height={16} />
+                </Pressable>
+                <Pressable
+                  style={styles.termsPolicyTextButton}
+                  onPress={() => setTermsPolicyModalOpen(true)}
+                  hitSlop={6}
+                >
+                  <Text style={styles.contactButtonText}>약관 및 정책 확인하기</Text>
                 </Pressable>
 
                 <Pressable
@@ -379,6 +421,19 @@ export default function ProfileScreen() {
           </View>
         </View>
       </Modal>
+
+      <TermsPolicyPickerModal
+        visible={termsPolicyModalOpen && !termsDetailModalOpen}
+        dimBackdrop={!termsDetailModalOpen}
+        onClose={() => setTermsPolicyModalOpen(false)}
+        onPickTerm={openTermsDetailModal}
+      />
+
+      <TermsDetailModal
+        visible={termsDetailModalOpen}
+        termsKey={termsDetailKey}
+        onClose={() => setTermsDetailModalOpen(false)}
+      />
 
       <DeleteAccountModal
         visible={deleteModalOpen}
@@ -538,6 +593,19 @@ const styles = StyleSheet.create({
     ...textStyles.body4,
     color: colors.success,
   },
+  guestTermsPolicyRow: {
+    position: 'absolute',
+    left: 40,
+    top: 476,
+    width: 400,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  guestTermsPolicyText: {
+    ...textStyles.h7,
+    color: colors.gray800,
+  },
   emailLabel: {
     position: 'absolute',
     left: 40,
@@ -657,6 +725,18 @@ const styles = StyleSheet.create({
     left: 64,
     top: 465,
   },
+  termsPolicyIconButton: {
+    position: 'absolute',
+    left: 40,
+    top: 498,
+    width: 16,
+    height: 16,
+  },
+  termsPolicyTextButton: {
+    position: 'absolute',
+    left: 64,
+    top: 497,
+  },
   contactButtonText: {
     ...textStyles.h7,
     color: colors.gray800,
@@ -664,7 +744,7 @@ const styles = StyleSheet.create({
   saveButton: {
     position: 'absolute',
     right: 40,
-    top: 520,
+    top: 556,
     width: 196,
     height: 56,
     backgroundColor: colors.black,
@@ -685,7 +765,7 @@ const styles = StyleSheet.create({
   footerRow: {
     position: 'absolute',
     left: 40,
-    top: 538,
+    top: 574,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 16,
