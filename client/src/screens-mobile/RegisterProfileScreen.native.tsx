@@ -59,10 +59,10 @@ export default function RegisterProfileScreenNative() {
     onNicknameChange(text);
   };
 
-  const canSubmit = isValid && nickname.trim().length > 0 && gender !== null;
+  const canSubmit = isValid && nickname.trim().length > 0;
 
   const onSubmit = async () => {
-    if (!canSubmit || gender === null) return;
+    if (!canSubmit) return;
     try {
       const registerResponse = await authApi.registerUser(
         {
@@ -167,11 +167,22 @@ export default function RegisterProfileScreenNative() {
           ) : null}
 
           {/* 성별 */}
+          <Text style={styles.fieldLabel}>성별</Text>
           <View style={styles.genderRow}>
             {([Gender.MALE, Gender.FEMALE] as Gender[]).map((g) => (
-              <Pressable key={g} style={styles.genderOption} onPress={() => setGender(g)}>
-                <View style={[styles.radio, gender === g ? styles.radioSelected : styles.radioUnselected]}>
-                  <GenderCheckIcon width={16} height={16} color={colors.white} />
+              <Pressable
+                key={g}
+                style={styles.genderOption}
+                onPress={() => setGender((prev) => (prev === g ? null : g))}
+                accessibilityRole="radio"
+                accessibilityState={{ checked: gender === g }}
+              >
+                <View
+                  style={[styles.radio, gender === g ? styles.radioSelected : styles.radioUnselected]}
+                >
+                  {gender === g ? (
+                    <GenderCheckIcon width={16} height={16} color={colors.white} />
+                  ) : null}
                 </View>
                 <Text style={styles.genderLabel}>{g === Gender.MALE ? '남성' : '여성'}</Text>
               </Pressable>
@@ -270,7 +281,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 24,
-    marginTop: 14,
+    marginTop: 8,
   },
   genderOption: {
     flexDirection: 'row',
@@ -286,8 +297,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   radioUnselected: {
-    borderColor: colors.gray400,
-    backgroundColor: colors.gray400,
+    borderColor: colors.gray300,
   },
   radioSelected: {
     borderColor: colors.black,

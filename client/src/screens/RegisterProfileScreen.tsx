@@ -38,7 +38,7 @@ export default function RegisterProfileScreen() {
   const { registerToken, prefill, email, terms } = route.params as RouteParams;
 
   const [nickname, setNickname] = useState(prefill?.name || '');
-  const [gender, setGender] = useState<Gender>(Gender.MALE);
+  const [gender, setGender] = useState<Gender | null>(null);
   const [handle] = useState(() => toHandleFromEmail(email));
   
   const { nicknameError, checkingNickname, onNicknameChange, isValid } = useNicknameValidation();
@@ -145,7 +145,9 @@ export default function RegisterProfileScreen() {
                 <Pressable
                   key={g}
                   style={styles.genderOption}
-                  onPress={() => setGender(g)}
+                  onPress={() => setGender((prev) => (prev === g ? null : g))}
+                  accessibilityRole="radio"
+                  accessibilityState={{ checked: gender === g }}
                 >
                   <View style={[styles.radioButton, gender === g && styles.radioButtonSelected]}>
                     {gender === g && <GenderCheckIcon width={16} height={16} color={colors.white} />}

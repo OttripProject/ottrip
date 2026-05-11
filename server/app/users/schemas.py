@@ -25,7 +25,7 @@ class UserBase(APISchema):
     handle: Handle
     nickname: str = Field(..., max_length=30)
     description: Description
-    gender: Gender
+    gender: Gender | None = None
 
 
 class UserCreate(UserBase):

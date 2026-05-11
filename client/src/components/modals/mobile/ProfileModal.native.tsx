@@ -19,9 +19,13 @@ import GenderCheckIcon from '../../../../assets/gender_check.svg';
 import CloseIcon from '../../../../assets/mobile_close.svg';
 import QnaIcon from '../../../../assets/qna.svg';
 import CopyIcon from '../../../../assets/copy.svg';
+import FilesIcon from '../../../../assets/memo.svg';
 import DeleteAccountModal from '@/components/modals/DeleteAccountModal';
 import LogoutModal from '@/components/modals/LogoutModal';
+import TermsPolicyPickerModal from '@/components/modals/TermsPolicyPickerModal';
+import TermsDetailModal from '@/components/modals/TermsDetailModal';
 import { guestPrompt } from '@/utils/guestPrompt';
+import type { TermsKey } from '@/constants/terms';
 
 interface ProfileModalProps {
   visible: boolean;
@@ -38,6 +42,9 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
   const [nickname, setNickname] = useState('');
   const [gender, setGender] = useState<Gender | null>(null);
   const [contactOpen, setContactOpen] = useState(false);
+  const [termsPolicyModalOpen, setTermsPolicyModalOpen] = useState(false);
+  const [termsDetailModalOpen, setTermsDetailModalOpen] = useState(false);
+  const [termsDetailKey, setTermsDetailKey] = useState<TermsKey>('tos');
   const [copied, setCopied] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [logoutModalOpen, setLogoutModalOpen] = useState(false);
@@ -149,6 +156,14 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
 
   const CONTACT_EMAIL = 'ottrip.official@gmail.com';
 
+  const openTermsDetailModal = (key: TermsKey) => {
+    setTermsDetailKey(key);
+    setTermsDetailModalOpen(true);
+  };
+
+  /** 약관은 별도 RN Modal — 프로필 딤/카드는 숨겨 뒤 앱 화면만 보이게 */
+  const hideProfileLayer = termsPolicyModalOpen || termsDetailModalOpen;
+
   /** 웹: 클립보드 API. iOS/Android: 네이티브 클립보드 모듈 없이 재빌드 없이 쓰려면 Share 또는 길게 눌러 복사(selectable). */
   const copyContactEmail = async () => {
     try {
@@ -167,10 +182,10 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
     }
   };
 
-  if (!visible) return null;
-
   return (
-    <View style={styles.modalOverlay}>
+    <>
+      {visible && !hideProfileLayer ? (
+        <View style={styles.modalOverlay}>
       <View style={[styles.safeArea, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
         <ScrollView 
           style={styles.scrollView}
@@ -183,7 +198,7 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
               variant="basic" 
               alignItems="flex-start"
               maxWidth={360}
-              minHeight={isGuest ? 420 : 380}
+              minHeight={isGuest ? 480 : 380}
               paddingHorizontal={20}
               paddingTop={isGuest ? 16 : 20}
               paddingBottom={isGuest ? 16 : 20}
@@ -250,6 +265,13 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
                       </View>
                     </View>
                     <Text style={styles.guestInquiryReplyText}>최대한 빠르게 답변드리겠습니다.</Text>
+                    <Pressable
+                      style={styles.guestTermsPolicyRow}
+                      onPress={() => setTermsPolicyModalOpen(true)}
+                    >
+                      <FilesIcon width={20} height={20} color={colors.black}/>
+                      <Text style={styles.guestTermsPolicyText}>약관 및 정책 확인하기</Text>
+                    </Pressable>
                   </View>
                 </>
               ) : (
@@ -284,19 +306,23 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
                   <View style={styles.genderContainer}>
                     <Pressable
                       style={styles.genderOption}
-                      onPress={() => setGender(Gender.MALE)}
+                      onPress={() => setGender((prev) => (prev === Gender.MALE ? null : Gender.MALE))}
                     >
                       <View style={[styles.radioButton, gender === Gender.MALE && styles.radioButtonSelected]}>
-                        <GenderCheckIcon width={16} height={16} color={colors.white} />
+                        {gender === Gender.MALE ? (
+                          <GenderCheckIcon width={16} height={16} color={colors.white} />
+                        ) : null}
                       </View>
                       <Text style={styles.genderText}>남성</Text>
                     </Pressable>
                     <Pressable
                       style={styles.genderOption}
-                      onPress={() => setGender(Gender.FEMALE)}
+                      onPress={() => setGender((prev) => (prev === Gender.FEMALE ? null : Gender.FEMALE))}
                     >
                       <View style={[styles.radioButton, gender === Gender.FEMALE && styles.radioButtonSelected]}>
-                        <GenderCheckIcon width={16} height={16} color={colors.white} />
+                        {gender === Gender.FEMALE ? (
+                          <GenderCheckIcon width={16} height={16} color={colors.white} />
+                        ) : null}
                       </View>
                       <Text style={styles.genderText}>여성</Text>
                     </Pressable>
@@ -307,6 +333,14 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
                   <Pressable style={styles.contactButton} onPress={() => setContactOpen(true)}>
                     <QnaIcon width={20} height={20} fill={colors.black} />
                     <Text style={styles.contactButtonText}>문의하기</Text>
+                  </Pressable>
+
+                  <Pressable
+                    style={styles.termsPolicyButton}
+                    onPress={() => setTermsPolicyModalOpen(true)}
+                  >
+                    <FilesIcon width={20} height={20} color={colors.black}/>
+                    <Text style={styles.termsPolicyButtonText}>약관 및 정책 확인하기</Text>
                   </Pressable>
 
                   <View style={styles.footerRow}>
@@ -405,6 +439,25 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
         }}
       />
     </View>
+      ) : null}
+
+      <TermsPolicyPickerModal
+        visible={visible && termsPolicyModalOpen && !termsDetailModalOpen}
+        dimBackdrop={!termsDetailModalOpen}
+        onClose={() => setTermsPolicyModalOpen(false)}
+        maxWidth={360}
+        overlayHorizontalPadding={12}
+        cardPaddingHorizontal={20}
+        onPickTerm={openTermsDetailModal}
+      />
+
+      <TermsDetailModal
+        visible={visible && termsDetailModalOpen}
+        termsKey={termsDetailKey}
+        onClose={() => setTermsDetailModalOpen(false)}
+        maxWidth={360}
+      />
+    </>
   );
 }
 
@@ -544,6 +597,16 @@ const styles = StyleSheet.create({
     ...textStyles.body4,
     color: colors.success,
   },
+  guestTermsPolicyRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 16,
+    gap: 8,
+  },
+  guestTermsPolicyText: {
+    ...textStyles.h7,
+    color: colors.gray800,
+  },
   label: {
     ...textStyles.h7,
     marginBottom: 8,
@@ -598,7 +661,6 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     borderWidth: 1.5,
     borderColor: colors.gray300,
-    backgroundColor: colors.gray300,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 8,
@@ -619,6 +681,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginTop: 16,
+  },
+  termsPolicyButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 12,
+  },
+  termsPolicyButtonText: {
+    ...textStyles.h6,
+    color: colors.gray800,
+    marginLeft: 6,
   },
   contactButtonText: {
     ...textStyles.h6,
