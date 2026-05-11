@@ -134,7 +134,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       prod: "ottrip",
       local: "ottrip-local",
     }),
-    version: "1.0.2",
+    version: "1.0.3",
     orientation: "portrait",
     icon: `./assets/${switchProfile({
       dev: "icon-dev.png",
