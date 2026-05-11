@@ -173,14 +173,14 @@ export default function LoginScreenNative() {
       if (idToken) {
         await submitGoogleToken(idToken);
       } else {
-        Alert.alert('알림', '로그인에 실패했습니다. id_token을 받을 수 없습니다.');
+        Alert.alert('알림', '로그인에 실패했습니다.');
         setIsLoading(false);
       }
     } catch (error: any) {
       if (error.code === 'SIGN_IN_CANCELLED') {
         setIsLoading(false);
       } else if (error.code !== 'IN_PROGRESS') {
-        Alert.alert('알림', '로그인에 실패했습니다: ' + (error.message || '알 수 없는 알림'));
+        Alert.alert('알림', '로그인에 실패했습니다: ' + (error.message || '알 수 없는 오류'));
         setIsLoading(false);
       }
     }
