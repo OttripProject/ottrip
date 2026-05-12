@@ -92,6 +92,14 @@ export default function RegisterProfileScreen() {
           }
         }
       } catch {}
+
+      if (Platform.OS === 'web' && typeof window !== 'undefined') {
+        try {
+          window.localStorage.setItem('registerComplete', 'true');
+        } catch {}
+        window.location.replace(`${window.location.origin}/welcome`);
+        return;
+      }
       navigation.reset({ index: 0, routes: [{ name: 'WELCOME' }] });
 
     } catch (e: any) {

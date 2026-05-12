@@ -69,8 +69,6 @@ export default function AuthCallbackScreen() {
               }
             }
           } catch {}
-          // 비로그인 스택에는 OTTRIP이 없어 reset이 무시되고, 인증 후 /auth/callback 딥링크로
-          // 이 화면이 다시 뜨면 해시 없이 로딩에 갇힘 → 루트로 한 번 이동(세션 쿠키 유지)
           replaceWebLocationToRoot();
           return;
         } else {

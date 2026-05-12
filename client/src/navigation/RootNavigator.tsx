@@ -50,7 +50,8 @@ export default function RootNavigator() {
         path.startsWith('/login') ||
         path.startsWith('/register') ||
         path.startsWith('/terms') ||
-        path.startsWith('/auth');
+        path.startsWith('/auth') ||
+        path.startsWith('/welcome');
 
       if (!isExcluded) {
         try { window.localStorage.setItem('postLoginRedirect', path); } catch {}
@@ -70,18 +71,21 @@ export default function RootNavigator() {
     if (isAuthenticated) {
       if (!initialRoute || initialRoute === '로그인') {
         const checkInitialRoute = async () => {
-          let registerComplete = false;
+          let preferWelcome = false;
           if (Platform.OS === 'web' && typeof window !== 'undefined') {
             try {
-              registerComplete = window.localStorage.getItem('registerComplete') === 'true';
+              const pathBase = window.location.pathname.replace(/\/$/, '') || '/';
+              preferWelcome =
+                window.localStorage.getItem('registerComplete') === 'true' ||
+                pathBase === '/welcome';
             } catch {}
           } else {
             try {
               const value = await SecureStore.getItemAsync('registerComplete');
-              registerComplete = value === 'true';
+              preferWelcome = value === 'true';
             } catch {}
           }
-          setInitialRoute(registerComplete ? 'WELCOME' : 'OTTRIP');
+          setInitialRoute(preferWelcome ? 'WELCOME' : 'OTTRIP');
         };
         checkInitialRoute();
       }
@@ -120,6 +124,10 @@ export default function RootNavigator() {
               window.localStorage.removeItem('registerComplete');
             }
           } catch {}
+          const pathBase = window.location.pathname.replace(/\/$/, '') || '/';
+          if (pathBase === '/welcome') {
+            return;
+          }
         } else {
           try {
             const value = await SecureStore.getItemAsync('registerComplete');
@@ -131,12 +139,18 @@ export default function RootNavigator() {
         }
 
         if (registerComplete && initialRoute !== 'WELCOME') {
-          navRef.current?.reset({ index: 0, routes: [{ name: 'WELCOME' }] });
+          if (Platform.OS !== 'web') {
+            navRef.current?.reset({ index: 0, routes: [{ name: 'WELCOME' }] });
+          }
           return;
         }
 
         if (!registerComplete) {
           if (Platform.OS === 'web' && typeof window !== 'undefined') {
+            // registerComplete 제거 후 이 effect가 다시 돌면 postLoginRedirect만 보고 메인으로 보낼 수 있음
+            if (initialRoute === 'WELCOME') {
+              return;
+            }
             const redirect = window.localStorage.getItem('postLoginRedirect') || '';
             if (!redirect) return;
             try { window.localStorage.removeItem('postLoginRedirect'); } catch {}
@@ -182,6 +196,7 @@ export default function RootNavigator() {
           prefixes,
           config: {
             screens: {
+              WELCOME: "welcome",
               OTTRIP: "",
               인증: "auth/callback",
               프로필: "profile",
@@ -242,7 +257,11 @@ export default function RootNavigator() {
             <Stack.Screen name="OTTRIP" component={OttripScreen} />
             <Stack.Screen name="프로필" component={ProfileScreen} />
             <Stack.Screen name="INVITE_ACCEPT" component={InviteAcceptScreen} />
-            <Stack.Screen name="WELCOME" component={WelcomeScreen} />
+            <Stack.Screen
+              name="WELCOME"
+              component={WelcomeScreen}
+              options={Platform.OS === 'web' ? { animation: 'none' as const } : undefined}
+            />
             <Stack.Screen name="PLAN" component={DashboardScreen} />
             <Stack.Screen name="NOT FOUND" component={NotFoundScreen} />
             <Stack.Screen name="FORBIDDEN" component={ForbiddenScreen} />
