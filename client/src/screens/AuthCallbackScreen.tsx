@@ -6,6 +6,13 @@ import { authApi } from '@/services/auth';
 import api from '@/services/api';
 import * as SecureStore from 'expo-secure-store';
 
+function replaceWebLocationToRoot() {
+  if (Platform.OS !== 'web' || typeof window === 'undefined') return;
+  try {
+    window.location.replace(`${window.location.origin}/`);
+  } catch {}
+}
+
 function base64UrlDecode(input: string): string {
   const base64 = input.replace(/-/g, '+').replace(/_/g, '/');
   const pad = base64.length % 4 === 2 ? '==' : base64.length % 4 === 3 ? '=' : '';
@@ -29,8 +36,7 @@ export default function AuthCallbackScreen() {
     
     const run = async () => {
       if (!idToken) {
-        // @ts-ignore
-        navigation.replace('로그인');
+        replaceWebLocationToRoot();
         return;
       }
       try {
@@ -63,7 +69,8 @@ export default function AuthCallbackScreen() {
               }
             }
           } catch {}
-          navigation.reset({ index: 0, routes: [{ name: 'OTTRIP' }] });
+          replaceWebLocationToRoot();
+          return;
         } else {
           await login(response);
           // @ts-ignore
@@ -71,8 +78,7 @@ export default function AuthCallbackScreen() {
           return;
         }
       } catch (error: any) {
-        // @ts-ignore
-        navigation.replace('로그인');
+        replaceWebLocationToRoot();
       }
     };
     run();

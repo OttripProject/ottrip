@@ -75,7 +75,7 @@ export default function ProfileScreen() {
 
   const save = async () => {
     if (!isValid) {
-      Alert.alert('오류', '닉네임을 확인해주세요.');
+      Alert.alert('알림', '닉네임을 확인해주세요.');
       return;
     }
     
@@ -98,12 +98,12 @@ export default function ProfileScreen() {
     try {
       await usersApi.deleteAccount();
     } catch (error: any) {
-      const errorMessage = error?.response?.data?.detail || '탈퇴 중 오류가 발생했습니다.';
+      const errorMessage = error?.response?.data?.detail || '탈퇴 중 알림가 발생했습니다.';
       setDeleteModalOpen(false);
       if (Platform.OS === 'web') {
-        window.alert(`오류: ${errorMessage}`);
+        window.alert(`알림: ${errorMessage}`);
       } else {
-        Alert.alert('오류', errorMessage);
+        Alert.alert('알림', errorMessage);
       }
       throw error; // 모달에서 에러를 감지할 수 있도록 throw
     }
@@ -144,11 +144,11 @@ export default function ProfileScreen() {
       const message =
         typeof err?.response?.data?.detail === 'string'
           ? err.response.data.detail
-          : '삭제 중 오류가 발생했습니다.';
+          : '삭제 중 알림가 발생했습니다.';
       if (Platform.OS === 'web') {
-        window.alert(`오류: ${message}`);
+        window.alert(`알림: ${message}`);
       } else {
-        Alert.alert('오류', message);
+        Alert.alert('알림', message);
       }
     } finally {
       setDeletingGuestData(false);

@@ -216,7 +216,7 @@ export default function ItineraryEditModal({
       setExistingAttachments((prev) => prev.filter((a) => a.id !== attachmentId));
     } catch (error) {
       if (handleGuestPromptError(error)) return;
-      Alert.alert('오류', '첨부파일 삭제에 실패했습니다.');
+      Alert.alert('알림', '첨부파일 삭제에 실패했습니다.');
     }
   };
 
@@ -292,7 +292,7 @@ export default function ItineraryEditModal({
       }
       onClose?.({ fromSave: true });
     } catch {
-      Alert.alert('오류', '일정 저장에 실패했습니다.');
+      Alert.alert('알림', '일정 저장에 실패했습니다.');
     } finally {
       setIsSubmitting(false);
     }
@@ -318,7 +318,7 @@ export default function ItineraryEditModal({
               Alert.alert('삭제완료', '일정이 삭제되었습니다.');
               onClose?.({ fromSave: true });
             } catch (error) {
-              Alert.alert('오류', '일정 삭제에 실패했습니다.');
+              Alert.alert('알림', '일정 삭제에 실패했습니다.');
             }
           },
         },

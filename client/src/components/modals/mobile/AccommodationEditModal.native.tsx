@@ -159,7 +159,7 @@ export default function AccommodationEditModal({
       setExistingAttachments((prev) => prev.filter((a) => a.id !== attachmentId));
     } catch (error) {
       if (handleGuestPromptError(error)) return;
-      Alert.alert('오류', '첨부파일 삭제에 실패했습니다.');
+      Alert.alert('알림', '첨부파일 삭제에 실패했습니다.');
     }
   };
 
@@ -240,7 +240,7 @@ export default function AccommodationEditModal({
 
       onClose?.({ fromSave: true });
     } catch (error) {
-      Alert.alert('오류', accommodation ? '숙소 수정에 실패했습니다.' : '숙소 추가에 실패했습니다.');
+      Alert.alert('알림', accommodation ? '숙소 수정에 실패했습니다.' : '숙소 추가에 실패했습니다.');
     } finally {
       setIsSubmitting(false);
     }
@@ -264,7 +264,7 @@ export default function AccommodationEditModal({
               Alert.alert('삭제완료', '숙소가 삭제되었습니다.');
               onClose?.({ fromSave: true });
             } catch (error) {
-              Alert.alert('오류', '숙소 삭제에 실패했습니다.');
+              Alert.alert('알림', '숙소 삭제에 실패했습니다.');
             }
           },
         },

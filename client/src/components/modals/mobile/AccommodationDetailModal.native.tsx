@@ -67,12 +67,12 @@ export default function AccommodationDetailModal({
 
     if (url) {
       Linking.openURL(url).catch(() => {
-        Alert.alert('오류', '지도 앱을 열 수 없습니다.');
+        Alert.alert('알림', '지도 앱을 열 수 없습니다.');
       });
     } else {
       const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodedLocation}`;
       Linking.openURL(googleMapsUrl).catch(() => {
-        Alert.alert('오류', '지도 앱을 열 수 없습니다.');
+        Alert.alert('알림', '지도 앱을 열 수 없습니다.');
       });
     }
   };

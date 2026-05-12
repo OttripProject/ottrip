@@ -479,7 +479,7 @@ export default function WeeklyScreen() {
             setShowPlanSelector(false);
             Alert.alert('성공', '여행이 삭제되었습니다.');
           } catch (error) {
-            Alert.alert('오류', '여행 삭제에 실패했습니다.');
+            Alert.alert('알림', '여행 삭제에 실패했습니다.');
           }
         }}
       />
@@ -588,7 +588,7 @@ export default function WeeklyScreen() {
             }
             Alert.alert('삭제완료', '일정이 삭제되었습니다.');
           } catch {
-            Alert.alert('오류', '일정 삭제에 실패했습니다.');
+            Alert.alert('알림', '일정 삭제에 실패했습니다.');
           }
         }}
       />
@@ -651,7 +651,7 @@ export default function WeeklyScreen() {
             }
             Alert.alert('삭제완료', '항공편이 삭제되었습니다.');
           } catch {
-            Alert.alert('오류', '항공 편 삭제에 실패했습니다.');
+            Alert.alert('알림', '항공 편 삭제에 실패했습니다.');
           }
         }}
       />

@@ -725,7 +725,7 @@ export default function WeeklySchedulePanel({
                   }
                 })
                 .catch((error: any) => {
-                  Alert.alert('오류', '일정 업데이트에 실패했습니다.');
+                  Alert.alert('알림', '일정 업데이트에 실패했습니다.');
                   setDroppedEventPosition(null);
                 });
             } else if (draggingEvent.type === 'flight' && flightId !== null && flight && segmentIndex !== null) {
@@ -763,7 +763,7 @@ export default function WeeklySchedulePanel({
                   }
                 })
                 .catch((error: any) => {
-                  Alert.alert('오류', '일정 업데이트에 실패했습니다.');
+                  Alert.alert('알림', '일정 업데이트에 실패했습니다.');
                   setDroppedEventPosition(null);
                 });
             }
@@ -1132,7 +1132,7 @@ export default function WeeklySchedulePanel({
           setResultModalVisible(true);
         }
       } catch (error) {
-        setResultModalConfig({ mode: 'error', params: { message: '여행을 수정하는 중 오류가 발생했습니다.' } });
+        setResultModalConfig({ mode: 'error', params: { message: '여행을 수정하는 중 알림가 발생했습니다.' } });
         setResultModalVisible(true);
       }
     };
@@ -1152,7 +1152,7 @@ export default function WeeklySchedulePanel({
           setResultModalVisible(true);
         }
       } catch (error) {
-        setResultModalConfig({ mode: 'error', params: { message: '여행을 삭제하는 중 오류가 발생했습니다.' } });
+        setResultModalConfig({ mode: 'error', params: { message: '여행을 삭제하는 중 알림가 발생했습니다.' } });
         setResultModalVisible(true);
       }
     };
@@ -2189,7 +2189,7 @@ export default function WeeklySchedulePanel({
                       planData.fetchPlanData && (await planData.fetchPlanData(internalSelectedTrip.publicId));
                     }
                   } catch (e: any) {
-                    Alert.alert('오류', e?.response?.data?.detail || '메모 저장에 실패했습니다.');
+                    Alert.alert('알림', e?.response?.data?.detail || '메모 저장에 실패했습니다.');
                   }
                 }}
                 style={styles.memoModalPrimaryButton}

@@ -56,7 +56,7 @@ export default function SharePlanModal({ visible, onClose, onSubmit, planId, pla
       setEmail('');
       await loadShares();
     } catch (e: any) {
-      Alert.alert('오류', e?.response?.data?.detail || e?.message || '초대 전송에 실패했습니다.');
+      Alert.alert('알림', e?.response?.data?.detail || e?.message || '초대 전송에 실패했습니다.');
     } finally {
       setLoading(false);
     }
@@ -173,7 +173,7 @@ export default function SharePlanModal({ visible, onClose, onSubmit, planId, pla
                                 await loadShares();
                               } catch (e: any) {
                                 const msg = e?.response?.status === 403 ? '권한이 없습니다.' : (e?.response?.data?.detail || '삭제에 실패했습니다.');
-                                Alert.alert('오류', msg);
+                                Alert.alert('알림', msg);
                               }
                             }}
                           >

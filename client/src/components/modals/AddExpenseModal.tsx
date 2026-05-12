@@ -99,7 +99,7 @@ export default function AddExpenseModal({
       onClose();
       onExpenseAdd?.(newExpense);
     } catch (error) {
-      Alert.alert('오류', '비용 추가에 실패했습니다.');
+      Alert.alert('알림', '비용 추가에 실패했습니다.');
     } finally {
       isSubmittingRef.current = false;
       setIsSubmitting(false);
