@@ -6,6 +6,13 @@ import { authApi } from '@/services/auth';
 import api from '@/services/api';
 import * as SecureStore from 'expo-secure-store';
 
+function replaceWebLocationToRoot() {
+  if (Platform.OS !== 'web' || typeof window === 'undefined') return;
+  try {
+    window.location.replace(`${window.location.origin}/`);
+  } catch {}
+}
+
 function base64UrlDecode(input: string): string {
   const base64 = input.replace(/-/g, '+').replace(/_/g, '/');
   const pad = base64.length % 4 === 2 ? '==' : base64.length % 4 === 3 ? '=' : '';
@@ -29,8 +36,7 @@ export default function AuthCallbackScreen() {
     
     const run = async () => {
       if (!idToken) {
-        // @ts-ignore
-        navigation.replace('로그인');
+        replaceWebLocationToRoot();
         return;
       }
       try {
@@ -63,7 +69,10 @@ export default function AuthCallbackScreen() {
               }
             }
           } catch {}
-          navigation.reset({ index: 0, routes: [{ name: 'OTTRIP' }] });
+          // 비로그인 스택에는 OTTRIP이 없어 reset이 무시되고, 인증 후 /auth/callback 딥링크로
+          // 이 화면이 다시 뜨면 해시 없이 로딩에 갇힘 → 루트로 한 번 이동(세션 쿠키 유지)
+          replaceWebLocationToRoot();
+          return;
         } else {
           await login(response);
           // @ts-ignore
@@ -71,8 +80,7 @@ export default function AuthCallbackScreen() {
           return;
         }
       } catch (error: any) {
-        // @ts-ignore
-        navigation.replace('로그인');
+        replaceWebLocationToRoot();
       }
     };
     run();
