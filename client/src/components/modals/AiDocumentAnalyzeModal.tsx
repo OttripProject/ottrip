@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Modal,
   View,
@@ -12,6 +12,8 @@ import {
 
 import { colors } from '@/ui/tokens/colors';
 import { spacing } from '@/ui/tokens/spacing';
+import type { AiDocumentItemType, DocumentUploadAnalyzeResponse } from '@/types/api';
+import { AiAnalyzeResultBody } from '@/components/modals/aiDocumentAnalyzeDraftBody';
 
 const BORDER_INPUT = '#E2E2E2';
 const BLUE_PILL = '#0A84FF';
@@ -42,6 +44,36 @@ function getBluePillText(entityTypeLabel: string): string {
   return 'AI가 추출한 일정 정보';
 }
 
+function getSubtitleFromKind(kind: AiDocumentItemType): string {
+  switch (kind) {
+    case 'flight':
+      return '항공편 정보가 맞는지 확인 후 저장하세요';
+    case 'accommodation':
+      return '숙박 정보가 맞는지 확인 후 저장하세요';
+    case 'itinerary':
+      return '일정 정보가 맞는지 확인 후 저장하세요';
+    case 'expense':
+      return '지출 정보가 맞는지 확인 후 저장하세요';
+    default:
+      return '항목 정보가 맞는지 확인 후 저장하세요';
+  }
+}
+
+function getBluePillTextFromKind(kind: AiDocumentItemType): string {
+  switch (kind) {
+    case 'flight':
+      return 'AI가 추출한 항공편 정보';
+    case 'accommodation':
+      return 'AI가 추출한 숙박 정보';
+    case 'itinerary':
+      return 'AI가 추출한 일정 정보';
+    case 'expense':
+      return 'AI가 추출한 지출 정보';
+    default:
+      return 'AI가 추출한 정보';
+  }
+}
+
 function FieldRow({
   label,
   children,
@@ -62,6 +94,8 @@ export interface AiDocumentAnalyzeModalProps {
   onClose: () => void;
   title?: string;
   entityTypeLabel?: string;
+  /** 성공한 `analyzeDocumentUpload` 응답. `draft`가 있으면 필드에 반영해 표시합니다. */
+  analyzeResult?: DocumentUploadAnalyzeResponse | null;
   children?: React.ReactNode;
   onApply?: () => void;
   applyLabel?: string;
@@ -72,14 +106,30 @@ export default function AiDocumentAnalyzeModal({
   onClose,
   title = '분석 결과 확인',
   entityTypeLabel = '일정',
+  analyzeResult = null,
   children,
   onApply,
   applyLabel = '저장',
 }: AiDocumentAnalyzeModalProps) {
   const { width: windowWidth } = useWindowDimensions();
   const cardWidth = Math.min(460, windowWidth - 32);
-  const subtitle = getEntitySubtitle(entityTypeLabel);
-  const bluePillText = getBluePillText(entityTypeLabel);
+  const [draftBodyKey, setDraftBodyKey] = useState(0);
+
+  useEffect(() => {
+    if (visible && analyzeResult?.draft) {
+      setDraftBodyKey((k) => k + 1);
+    }
+  }, [visible, analyzeResult]);
+
+  const kind: AiDocumentItemType | null =
+    analyzeResult?.inferredItemType ??
+    analyzeResult?.draft?.itemType ??
+    null;
+
+  const subtitle =
+    kind != null ? getSubtitleFromKind(kind) : getEntitySubtitle(entityTypeLabel);
+  const bluePillText =
+    kind != null ? getBluePillTextFromKind(kind) : getBluePillText(entityTypeLabel);
 
   const handleApply = () => {
     onApply?.();
@@ -89,6 +139,20 @@ export default function AiDocumentAnalyzeModal({
   const body =
     children != null ? (
       <View style={styles.childrenWrap}>{children}</View>
+    ) : analyzeResult?.draft ? (
+      <View key={draftBodyKey} style={styles.childrenWrap}>
+        <View style={styles.pillBlue}>
+          <View style={styles.pillDotBlue} />
+          <Text style={styles.pillBlueText}>{bluePillText}</Text>
+        </View>
+        <View style={styles.fieldStack}>
+          <AiAnalyzeResultBody draft={analyzeResult.draft} />
+        </View>
+      </View>
+    ) : analyzeResult && analyzeResult.draft == null ? (
+      <Text style={styles.emptyDraftHint}>
+        분석은 완료됐지만 표시할 초안 데이터가 없습니다.
+      </Text>
     ) : (
       <AiAnalyzeModalDesignMockWithPill bluePillText={bluePillText} />
     );
@@ -329,6 +393,12 @@ const styles = StyleSheet.create({
   },
   childrenWrap: {
     gap: 12,
+  },
+  emptyDraftHint: {
+    fontSize: 12,
+    lineHeight: 18,
+    fontWeight: '400',
+    color: colors.gray600,
   },
   pillBlue: {
     flexDirection: 'row',

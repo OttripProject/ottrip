@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { View, Text, Pressable, StyleSheet, Alert, ScrollView, Modal, Platform } from 'react-native';
 import { TimePicker, CountryPicker, CategoryPicker } from '@/ui/components/pickers';
 import Input from '@/ui/components/input/Input';
@@ -10,7 +10,11 @@ import { attachmentsApi } from '@/services/attachments';
 import { useAttachmentUpload } from '@/hooks/useAttachmentUpload';
 import { useFilePicker } from '@/hooks/useFilePicker';
 import AttachmentSection from '@/ui/components/attachmentSection';
-import type { Attachment, LocalFile } from '@/types/api';
+import type {
+  Attachment,
+  DocumentUploadAnalyzeResponse,
+  LocalFile,
+} from '@/types/api';
 import { handleGuestPromptError } from '@/utils/guestPrompt';
 import {
   formatAttachmentUploadFailureMessage,
@@ -28,6 +32,10 @@ import BaseCalendar from '@/components/popup/calendar/BaseCalendar';
 import CalendarIcon from '../../../../assets/calender.svg';
 import WarningBanner from '@/ui/components/toast/warning';
 import AiDocumentAnalyzeModal from '@/components/modals/AiDocumentAnalyzeModal';
+import AiAnalyzeFailureModal from '@/components/modals/AiAnalyzeFailureModal';
+import type { AiAttachmentAnalyzeSelection } from '@/ui/components/attachmentSection.types';
+import { analyzeDocumentUpload } from '@/services/aiDocument';
+import { buildAnalyzeUploadPayload } from '@/utils/attachmentAiAnalyze';
 
 interface ItineraryItemProps {
   itinerary?: any;
@@ -112,6 +120,11 @@ export default function ItineraryItem({
   const [existingAttachments, setExistingAttachments] = useState<Attachment[]>([]);
   const [isLoadingAttachments, setIsLoadingAttachments] = useState(false);
   const [aiAnalyzeModalVisible, setAiAnalyzeModalVisible] = useState(false);
+  const [aiAnalyzeResult, setAiAnalyzeResult] =
+    useState<DocumentUploadAnalyzeResponse | null>(null);
+  const [isAiAnalyzing, setIsAiAnalyzing] = useState(false);
+  const [aiAnalyzeFailureVisible, setAiAnalyzeFailureVisible] = useState(false);
+  const [aiAnalyzeFailureMessage, setAiAnalyzeFailureMessage] = useState('');
 
   const { pickImage, pickDocument } = useFilePicker();
   const { isUploading, uploadFiles } = useAttachmentUpload({
@@ -627,6 +640,38 @@ export default function ItineraryItem({
     return [...draft, ...saved];
   }, [draftExpenses, expenses]);
 
+  const handleAiAnalyzePress = useCallback(
+    async (selection: AiAttachmentAnalyzeSelection) => {
+      setAiAnalyzeFailureVisible(false);
+      setAiAnalyzeFailureMessage('');
+      setIsAiAnalyzing(true);
+      try {
+        const payload = await buildAnalyzeUploadPayload(selection, {
+          pendingFiles,
+          existingAttachments,
+        });
+        const res = await analyzeDocumentUpload(payload.file, {
+          filename: payload.filename,
+        });
+        const err = res.error?.trim();
+        if (!res.success || err) {
+          setAiAnalyzeFailureMessage(err || '분석에 실패했습니다.');
+          setAiAnalyzeFailureVisible(true);
+          return;
+        }
+        setAiAnalyzeModalVisible(true);
+      } catch (e) {
+        setAiAnalyzeFailureMessage(
+          e instanceof Error ? e.message : '분석 요청에 실패했습니다.',
+        );
+        setAiAnalyzeFailureVisible(true);
+      } finally {
+        setIsAiAnalyzing(false);
+      }
+    },
+    [pendingFiles, existingAttachments],
+  );
+
   return (
     <>
     <ScrollView 
@@ -967,9 +1012,10 @@ export default function ItineraryItem({
           hideAddControls={readOnly}
           onAiAnalyzePress={
             Platform.OS === 'web' && !readOnly
-              ? () => setAiAnalyzeModalVisible(true)
+              ? handleAiAnalyzePress
               : undefined
           }
+          isAiAnalyzing={isAiAnalyzing}
         />
       )}
 
@@ -1025,8 +1071,20 @@ export default function ItineraryItem({
     </ScrollView>
     <AiDocumentAnalyzeModal
       visible={aiAnalyzeModalVisible}
-      onClose={() => setAiAnalyzeModalVisible(false)}
+      analyzeResult={aiAnalyzeResult}
+      onClose={() => {
+        setAiAnalyzeModalVisible(false);
+        setAiAnalyzeResult(null);
+      }}
       entityTypeLabel="일정"
+    />
+    <AiAnalyzeFailureModal
+      visible={aiAnalyzeFailureVisible}
+      message={aiAnalyzeFailureMessage}
+      onClose={() => {
+        setAiAnalyzeFailureVisible(false);
+        setAiAnalyzeFailureMessage('');
+      }}
     />
     </>
   );

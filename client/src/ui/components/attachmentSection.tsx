@@ -19,6 +19,7 @@ import type { LocalFile } from '@/types/api';
 import { useMe } from '@/hooks/useMe';
 import { guestPrompt } from '@/utils/guestPrompt';
 import type { AttachmentSectionProps } from '@/ui/components/attachmentSection.types';
+import { pendingAiFileKey } from '@/ui/components/attachmentSection.types';
 import { showMessage, showPickFileType } from '@/utils/crossPlatformAlert';
 
 import CameraIcon from '../../../assets/mobile_camera.svg';
@@ -97,10 +98,6 @@ function formatFileSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)}MB`;
 }
 
-function pendingFileAiKey(file: LocalFile): string {
-  return `${file.name}:${file.uri}`;
-}
-
 function stopEventBubble<E extends { stopPropagation?: () => void }>(
   e: E,
 ): void {
@@ -128,6 +125,7 @@ export default function AttachmentSection({
   isGuest: isGuestProp,
   onAppendPendingFiles,
   onAiAnalyzePress,
+  isAiAnalyzing = false,
 }: AttachmentSectionProps) {
   const { data: me } = useMe();
   const isGuest = isGuestProp ?? (me?.isGuest === true);
@@ -141,7 +139,8 @@ export default function AttachmentSection({
 
   const showAiToolbar =
     Platform.OS === 'web' && !hideAddControls && !isGuest && hasFiles;
-  const aiRowSelectable = showAiToolbar && !disabled && !isUploading;
+  const aiRowSelectable =
+    showAiToolbar && !disabled && !isUploading && !isAiAnalyzing;
 
   useEffect(() => {
     setAiFileSelection((prev) => {
@@ -150,7 +149,7 @@ export default function AttachmentSection({
         return existing.some((a) => a.id === prev.id) ? prev : null;
       }
       const stillThere = pendingFiles.some(
-        (f) => pendingFileAiKey(f) === prev.key,
+        (f) => pendingAiFileKey(f) === prev.key,
       );
       return stillThere ? prev : null;
     });
@@ -372,7 +371,7 @@ export default function AttachmentSection({
           hideAddControls && styles.headerRowTitleOnly,
         ]}
       >
-        <Text style={styles.title}>첨부 파일 (이미지,PDF)</Text>
+        <Text style={styles.title}>첨부파일 (이미지,PDF)</Text>
         {!hideAddControls && (
           <Pressable
             onPress={triggerHiddenFilePicker}
@@ -443,10 +442,10 @@ export default function AttachmentSection({
               ? {
                   selected:
                     aiFileSelection?.kind === 'pending' &&
-                    aiFileSelection.key === pendingFileAiKey(file),
+                    aiFileSelection.key === pendingAiFileKey(file),
                   onSelect: () => {
                     if (!aiRowSelectable) return;
-                    const key = pendingFileAiKey(file);
+                    const key = pendingAiFileKey(file);
                     setAiFileSelection((prev) => {
                       if (
                         prev?.kind === 'pending' &&
@@ -493,10 +492,12 @@ export default function AttachmentSection({
         <View style={styles.aiToolbar}>
           <Pressable
             onPress={() => {
-              if (!aiFileSelection) return;
-              onAiAnalyzePress?.();
+              if (!aiFileSelection || isAiAnalyzing) return;
+              onAiAnalyzePress?.(aiFileSelection);
             }}
-            disabled={!aiFileSelection || disabled || isUploading}
+            disabled={
+              !aiFileSelection || disabled || isUploading || isAiAnalyzing
+            }
             style={({ pressed }) => [
               styles.aiAnalyzeButton,
               (!aiFileSelection || disabled || isUploading) &&
@@ -505,14 +506,24 @@ export default function AttachmentSection({
                 aiFileSelection &&
                 !disabled &&
                 !isUploading &&
+                !isAiAnalyzing &&
                 styles.aiAnalyzeButtonPressed,
             ]}
           >
-            <Text style={styles.aiAnalyzeButtonText}>
-              {aiFileSelection
-                ? 'AI 분석으로 일정 자동 입력'
-                : '분석할 첨부파일을 선택해주세요'}
-            </Text>
+            {isAiAnalyzing ? (
+              <View style={styles.aiAnalyzeLoadingInner}>
+                <ActivityIndicator size="small" color={colors.white} />
+                <Text style={styles.aiAnalyzeLoadingText}>
+                  분석 중{'\n'}AI가 첨부파일 내용을 정리하고 있어요
+                </Text>
+              </View>
+            ) : (
+              <Text style={styles.aiAnalyzeButtonText}>
+                {aiFileSelection
+                  ? 'AI 분석으로 일정 자동 입력'
+                  : '분석할 첨부파일을 선택해주세요'}
+              </Text>
+            )}
           </Pressable>
         </View>
       ) : null}
@@ -707,6 +718,18 @@ const styles = StyleSheet.create({
     ...textStyles.h8,
     color: colors.white,
     textAlign: 'center',
+  },
+  aiAnalyzeLoadingInner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 2,
+  },
+  aiAnalyzeLoadingText: {
+    ...textStyles.h8,
+    color: colors.white,
+    flex: 1,
+    lineHeight: 20,
   },
   previewBackdrop: {
     flex: 1,

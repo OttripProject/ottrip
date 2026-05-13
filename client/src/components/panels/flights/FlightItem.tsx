@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef, useMemo } from 'react';
+import React, { useEffect, useState, useRef, useMemo, useCallback } from 'react';
 import { View, Text, Pressable, StyleSheet, ScrollView, Platform } from 'react-native';
 import { TimePicker, AirportPicker } from '@/ui/components/pickers';
 import dayjs from 'dayjs';
@@ -7,7 +7,11 @@ import { attachmentsApi } from '@/services/attachments';
 import { useAttachmentUpload } from '@/hooks/useAttachmentUpload';
 import { useFilePicker } from '@/hooks/useFilePicker';
 import AttachmentSection from '@/ui/components/attachmentSection';
-import type { Attachment, LocalFile } from '@/types/api';
+import type {
+  Attachment,
+  DocumentUploadAnalyzeResponse,
+  LocalFile,
+} from '@/types/api';
 import { handleGuestPromptError } from '@/utils/guestPrompt';
 import {
   formatAttachmentUploadFailureMessage,
@@ -27,6 +31,10 @@ import DeleteIcon from '../../../../assets/delete.svg';
 import CloseIcon from '../../../../assets/delete_ai.svg';
 import WarningBanner from '@/ui/components/toast/warning';
 import AiDocumentAnalyzeModal from '@/components/modals/AiDocumentAnalyzeModal';
+import AiAnalyzeFailureModal from '@/components/modals/AiAnalyzeFailureModal';
+import type { AiAttachmentAnalyzeSelection } from '@/ui/components/attachmentSection.types';
+import { analyzeDocumentUpload } from '@/services/aiDocument';
+import { buildAnalyzeUploadPayload } from '@/utils/attachmentAiAnalyze';
 
 interface FlightItemProps {
   flight?: any;
@@ -167,6 +175,11 @@ export default function FlightItem({
   const [existingAttachments, setExistingAttachments] = useState<Attachment[]>([]);
   const [isLoadingAttachments, setIsLoadingAttachments] = useState(false);
   const [aiAnalyzeModalVisible, setAiAnalyzeModalVisible] = useState(false);
+  const [aiAnalyzeResult, setAiAnalyzeResult] =
+    useState<DocumentUploadAnalyzeResponse | null>(null);
+  const [isAiAnalyzing, setIsAiAnalyzing] = useState(false);
+  const [aiAnalyzeFailureVisible, setAiAnalyzeFailureVisible] = useState(false);
+  const [aiAnalyzeFailureMessage, setAiAnalyzeFailureMessage] = useState('');
 
   const { pickImage, pickDocument } = useFilePicker();
   const { isUploading, uploadFiles } = useAttachmentUpload({
@@ -180,6 +193,39 @@ export default function FlightItem({
     const n = typeof raw === 'number' ? raw : parseInt(String(raw), 10);
     return Number.isFinite(n) ? n : undefined;
   }, [flight?.id]);
+
+  const handleAiAnalyzePress = useCallback(
+    async (selection: AiAttachmentAnalyzeSelection) => {
+      setAiAnalyzeFailureVisible(false);
+      setAiAnalyzeFailureMessage('');
+      setIsAiAnalyzing(true);
+      try {
+        const payload = await buildAnalyzeUploadPayload(selection, {
+          pendingFiles,
+          existingAttachments,
+        });
+        const res = await analyzeDocumentUpload(payload.file, {
+          filename: payload.filename,
+        });
+        const err = res.error?.trim();
+        if (!res.success || err) {
+          setAiAnalyzeFailureMessage(err || '분석에 실패했습니다.');
+          setAiAnalyzeFailureVisible(true);
+          return;
+        }
+        setAiAnalyzeResult(res);
+        setAiAnalyzeModalVisible(true);
+      } catch (e) {
+        setAiAnalyzeFailureMessage(
+          e instanceof Error ? e.message : '분석 요청에 실패했습니다.',
+        );
+        setAiAnalyzeFailureVisible(true);
+      } finally {
+        setIsAiAnalyzing(false);
+      }
+    },
+    [pendingFiles, existingAttachments],
+  );
 
   const firstSegment = flightSegments[0];
   const isFirstSegmentValid = Boolean(
@@ -907,9 +953,10 @@ export default function FlightItem({
               hideAddControls={readOnly}
               onAiAnalyzePress={
                 Platform.OS === 'web' && !readOnly
-                  ? () => setAiAnalyzeModalVisible(true)
+                  ? handleAiAnalyzePress
                   : undefined
               }
+              isAiAnalyzing={isAiAnalyzing}
             />
           )}
 
@@ -968,8 +1015,20 @@ export default function FlightItem({
     </ScrollView>
     <AiDocumentAnalyzeModal
       visible={aiAnalyzeModalVisible}
-      onClose={() => setAiAnalyzeModalVisible(false)}
+      analyzeResult={aiAnalyzeResult}
+      onClose={() => {
+        setAiAnalyzeModalVisible(false);
+        setAiAnalyzeResult(null);
+      }}
       entityTypeLabel="항공"
+    />
+    <AiAnalyzeFailureModal
+      visible={aiAnalyzeFailureVisible}
+      message={aiAnalyzeFailureMessage}
+      onClose={() => {
+        setAiAnalyzeFailureVisible(false);
+        setAiAnalyzeFailureMessage('');
+      }}
     />
     </>
   );
