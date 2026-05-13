@@ -24,6 +24,7 @@ import CalendarIcon from '../../../../assets/calender.svg';
 import CloseIcon from '../../../../assets/delete_ai.svg';
 import { ExpenseCurrency, currencyLabels } from '@/types/expense';
 import WarningBanner from '@/ui/components/toast/warning';
+import AiDocumentAnalyzeModal from '@/components/modals/AiDocumentAnalyzeModal';
 
 interface AccommodationItemProps {
   accommodation?: any;
@@ -92,6 +93,7 @@ export default function AccommodationItem({
   const [pendingFiles, setPendingFiles] = useState<LocalFile[]>([]);
   const [existingAttachments, setExistingAttachments] = useState<Attachment[]>([]);
   const [isLoadingAttachments, setIsLoadingAttachments] = useState(false);
+  const [aiAnalyzeModalVisible, setAiAnalyzeModalVisible] = useState(false);
 
   const { pickImage, pickDocument } = useFilePicker();
   const { isUploading, uploadFiles } = useAttachmentUpload({
@@ -403,6 +405,7 @@ export default function AccommodationItem({
   ], []);
 
   return (
+    <>
     <ScrollView 
       style={[styles.container, { position: 'relative', overflow: 'visible' }]}
       contentContainerStyle={[styles.contentContainer, { overflow: 'visible' }]}
@@ -661,6 +664,11 @@ export default function AccommodationItem({
           isUploading={isUploading}
           disabled={readOnly || isSubmitting}
           hideAddControls={readOnly}
+          onAiAnalyzePress={
+            Platform.OS === 'web' && !readOnly
+              ? () => setAiAnalyzeModalVisible(true)
+              : undefined
+          }
         />
       )}
 
@@ -718,6 +726,12 @@ export default function AccommodationItem({
 
 
     </ScrollView>
+    <AiDocumentAnalyzeModal
+      visible={aiAnalyzeModalVisible}
+      onClose={() => setAiAnalyzeModalVisible(false)}
+      entityTypeLabel="숙박"
+    />
+    </>
   );
 }
 

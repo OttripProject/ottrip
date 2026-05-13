@@ -698,7 +698,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.black,
   },
   aiAnalyzeButtonDisabled: {
-    opacity: 0.35,
+    backgroundColor: colors.gray400,
   },
   aiAnalyzeButtonPressed: {
     opacity: 0.85,

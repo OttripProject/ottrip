@@ -26,6 +26,7 @@ import AddIcon from '../../../../assets/add.svg';
 import DeleteIcon from '../../../../assets/delete.svg';
 import CloseIcon from '../../../../assets/delete_ai.svg';
 import WarningBanner from '@/ui/components/toast/warning';
+import AiDocumentAnalyzeModal from '@/components/modals/AiDocumentAnalyzeModal';
 
 interface FlightItemProps {
   flight?: any;
@@ -165,6 +166,7 @@ export default function FlightItem({
   const [pendingFiles, setPendingFiles] = useState<LocalFile[]>([]);
   const [existingAttachments, setExistingAttachments] = useState<Attachment[]>([]);
   const [isLoadingAttachments, setIsLoadingAttachments] = useState(false);
+  const [aiAnalyzeModalVisible, setAiAnalyzeModalVisible] = useState(false);
 
   const { pickImage, pickDocument } = useFilePicker();
   const { isUploading, uploadFiles } = useAttachmentUpload({
@@ -493,6 +495,7 @@ export default function FlightItem({
   };
 
   return (
+    <>
     <ScrollView 
       style={[styles.container, { position: 'relative', overflow: 'visible' }]}
       contentContainerStyle={[styles.contentContainer, { overflow: 'visible' }]}
@@ -902,6 +905,11 @@ export default function FlightItem({
               isUploading={isUploading}
               disabled={readOnly || isSubmitting}
               hideAddControls={readOnly}
+              onAiAnalyzePress={
+                Platform.OS === 'web' && !readOnly
+                  ? () => setAiAnalyzeModalVisible(true)
+                  : undefined
+              }
             />
           )}
 
@@ -958,6 +966,12 @@ export default function FlightItem({
 
 
     </ScrollView>
+    <AiDocumentAnalyzeModal
+      visible={aiAnalyzeModalVisible}
+      onClose={() => setAiAnalyzeModalVisible(false)}
+      entityTypeLabel="항공"
+    />
+    </>
   );
 }
 

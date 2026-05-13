@@ -27,6 +27,7 @@ import AddIcon from '../../../../assets/add.svg';
 import BaseCalendar from '@/components/popup/calendar/BaseCalendar';
 import CalendarIcon from '../../../../assets/calender.svg';
 import WarningBanner from '@/ui/components/toast/warning';
+import AiDocumentAnalyzeModal from '@/components/modals/AiDocumentAnalyzeModal';
 
 interface ItineraryItemProps {
   itinerary?: any;
@@ -110,6 +111,7 @@ export default function ItineraryItem({
   const [pendingFiles, setPendingFiles] = useState<LocalFile[]>([]);
   const [existingAttachments, setExistingAttachments] = useState<Attachment[]>([]);
   const [isLoadingAttachments, setIsLoadingAttachments] = useState(false);
+  const [aiAnalyzeModalVisible, setAiAnalyzeModalVisible] = useState(false);
 
   const { pickImage, pickDocument } = useFilePicker();
   const { isUploading, uploadFiles } = useAttachmentUpload({
@@ -963,6 +965,11 @@ export default function ItineraryItem({
           isUploading={isUploading}
           disabled={readOnly || isSubmitting}
           hideAddControls={readOnly}
+          onAiAnalyzePress={
+            Platform.OS === 'web' && !readOnly
+              ? () => setAiAnalyzeModalVisible(true)
+              : undefined
+          }
         />
       )}
 
@@ -1016,6 +1023,11 @@ export default function ItineraryItem({
       />
       </View>
     </ScrollView>
+    <AiDocumentAnalyzeModal
+      visible={aiAnalyzeModalVisible}
+      onClose={() => setAiAnalyzeModalVisible(false)}
+      entityTypeLabel="일정"
+    />
     </>
   );
 }
