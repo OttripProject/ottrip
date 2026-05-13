@@ -67,8 +67,6 @@ DocumentItemDraft = Annotated[
 
 
 class DocumentUploadAnalyzeResponse(APISchema):
-    """단일 업로드 파이프라인: 1-call로 추론된 아이템 타입 및 초안."""
-
     success: bool
     inferred_item_type: ItemType | None = None
     draft: DocumentItemDraft | None = None
