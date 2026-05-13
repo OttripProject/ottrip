@@ -254,3 +254,41 @@ class GeminiClient:
                 success=False,
                 error=f"체크리스트 생성 중 오류 발생: {str(e)}",
             )
+
+    async def analyze_document_upload(self, ocr_text: str) -> dict[str, Any]:
+        from google import genai
+
+        err = {"success": False, "inferred_item_type": None, "error": "", "draft": None}
+
+        try:
+            prompt_path = Path(__file__).parent / "prompt" / "document_upload_analyze.txt"
+            with open(prompt_path, "r", encoding="utf-8") as f:
+                prompt_template = f.read()
+            prompt = prompt_template.replace("{ocr_text}", ocr_text)
+
+            config = genai.types.GenerateContentConfig(
+                system_instruction=ai_settings.DOCUMENT_UPLOAD_ANALYZE_SYSTEM_PROMPT,
+                temperature=0.2,
+                response_mime_type="application/json",
+            )
+
+            response = await self.client.aio.models.generate_content(
+                model=ai_settings.GEMINI_DEFAULT_MODEL,
+                contents=prompt,
+                config=config,
+            )
+            raw = (getattr(response, "text", None) or "").strip()
+            if not raw:
+                err["error"] = "AI 응답이 비어있습니다."
+                return err
+            parsed = json.loads(raw)
+            if not isinstance(parsed, dict):
+                err["error"] = "AI 응답이 객체 형태가 아닙니다."
+                return err
+            return parsed
+        except json.JSONDecodeError:
+            err["error"] = "AI 응답을 JSON으로 파싱할 수 없습니다."
+            return err
+        except Exception as e:
+            err["error"] = f"문서 분석 중 오류: {str(e)}"
+            return err
