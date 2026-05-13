@@ -137,47 +137,6 @@ class GeminiClient:
             self._client = genai.Client(api_key=key)
         return self._client
 
-    async def parse_flight_data(self, ocr_text: str) -> AIParseResponse:
-        """OCR 텍스트를 구조화된 항공권 JSON으로 파싱 (Gemini)."""
-        from google import genai
-
-        try:
-            prompt_path = Path(__file__).parent / "prompt" / "flights.txt"
-            with open(prompt_path, "r", encoding="utf-8") as f:
-                prompt_template = f.read()
-            prompt = prompt_template.format(ocr_text=ocr_text)
-
-            config = genai.types.GenerateContentConfig(
-                system_instruction=ai_settings.FLIGHT_SYSTEM_PROMPT,
-                temperature=0.1,
-                response_mime_type="application/json",
-            )
-
-            response = await self.client.aio.models.generate_content(
-                model=ai_settings.GEMINI_DEFAULT_MODEL,
-                contents=prompt,
-                config=config,
-            )
-            ai_response = (getattr(response, "text", None) or "").strip()
-            if not ai_response:
-                return AIParseResponse(
-                    success=False,
-                    error="AI 응답이 비어있습니다.",
-                )
-            try:
-                result = json.loads(ai_response)
-                return AIParseResponse(**result)
-            except json.JSONDecodeError:
-                return AIParseResponse(
-                    success=False,
-                    error="AI 응답을 파싱할 수 없습니다.",
-                )
-        except Exception as e:
-            return AIParseResponse(
-                success=False,
-                error=f"AI 파싱 중 오류 발생: {str(e)}",
-            )
-
     async def generate_content(
         self,
         contents: str,

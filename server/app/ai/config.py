@@ -20,9 +20,6 @@ class AIConfig(BaseConfig):
     GEMINI_API_KEY: str = ""
     GEMINI_DEFAULT_MODEL: str = "gemini-3-flash-preview"
 
-    FLIGHT_SYSTEM_PROMPT: str = (
-        "You are an expert in analyzing flight ticket text. Provide accurate and structured JSON responses."
-    )
     CHECKLIST_SYSTEM_PROMPT: str = (
         "You are a travel packing checklist expert. Respond strictly in JSON format matching the example output. "
     )
