@@ -6,3 +6,8 @@ export { accommodationsApi } from './accommodations';
 export { expensesApi } from './expenses';
 export { authApi } from './auth';
 export { attachmentsApi } from './attachments';
+export {
+  aiDocumentApi,
+  analyzeDocumentUpload,
+  type AnalyzeUploadFileInput,
+} from './aiDocument';
