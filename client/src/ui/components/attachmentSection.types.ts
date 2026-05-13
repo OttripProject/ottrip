@@ -22,4 +22,6 @@ export interface AttachmentSectionProps {
    * 네이티브에서는 미사용.
    */
   onAppendPendingFiles?: (files: LocalFile[]) => void;
+  /** 웹 AI 분석 버튼 클릭 시 (선택된 파일이 있을 때만 호출). 미연결이면 no-op. */
+  onAiAnalyzePress?: () => void;
 }

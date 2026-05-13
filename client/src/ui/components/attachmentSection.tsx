@@ -1,4 +1,4 @@
-import React, { createElement, useRef, useState } from 'react';
+import React, { createElement, useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -97,6 +97,21 @@ function formatFileSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)}MB`;
 }
 
+function pendingFileAiKey(file: LocalFile): string {
+  return `${file.name}:${file.uri}`;
+}
+
+function stopEventBubble<E extends { stopPropagation?: () => void }>(
+  e: E,
+): void {
+  e.stopPropagation?.();
+}
+
+type AiFileSelection =
+  | null
+  | { kind: 'existing'; id: number }
+  | { kind: 'pending'; key: string };
+
 export default function AttachmentSection({
   pendingFiles,
   onPickImage,
@@ -112,6 +127,7 @@ export default function AttachmentSection({
   hideAddControls = false,
   isGuest: isGuestProp,
   onAppendPendingFiles,
+  onAiAnalyzePress,
 }: AttachmentSectionProps) {
   const { data: me } = useMe();
   const isGuest = isGuestProp ?? (me?.isGuest === true);
@@ -120,7 +136,25 @@ export default function AttachmentSection({
   const { width: windowWidth, height: windowHeight } = useWindowDimensions();
   const [previewImageUri, setPreviewImageUri] = useState<string | null>(null);
   const [isPreviewImageLoading, setIsPreviewImageLoading] = useState(false);
+  const [aiFileSelection, setAiFileSelection] = useState<AiFileSelection>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const showAiToolbar =
+    Platform.OS === 'web' && !hideAddControls && !isGuest && hasFiles;
+  const aiRowSelectable = showAiToolbar && !disabled && !isUploading;
+
+  useEffect(() => {
+    setAiFileSelection((prev) => {
+      if (!prev) return prev;
+      if (prev.kind === 'existing') {
+        return existing.some((a) => a.id === prev.id) ? prev : null;
+      }
+      const stillThere = pendingFiles.some(
+        (f) => pendingFileAiKey(f) === prev.key,
+      );
+      return stillThere ? prev : null;
+    });
+  }, [existing, pendingFiles]);
 
   const handleOpenImage = (uri: string) => {
     if (!uri) return;
@@ -214,8 +248,9 @@ export default function AttachmentSection({
     subtitle: string,
     onRemove?: () => void,
     onOpen?: () => void,
+    aiSelect?: { selected: boolean; onSelect: () => void },
   ) => {
-    const content = (
+    const iconAndInfo = (
       <>
         <View style={styles.fileIconWrap}>
           {isPdfMime(mimeType) ? (
@@ -232,41 +267,81 @@ export default function AttachmentSection({
           </Text>
           <Text style={styles.fileKindLabel}>{subtitle}</Text>
         </View>
-        {onRemove ? (
-          <Pressable
-            onPress={onRemove}
-            disabled={isUploading || disabled}
-            style={({ pressed }) => [
-              styles.removeButton,
-              pressed && styles.pressed,
-            ]}
-          >
-            <DeleteIcon width={20} height={20} color={colors.gray600} />
-          </Pressable>
-        ) : (
-          <View style={styles.removeButton} />
-        )}
       </>
     );
 
-    if (onOpen) {
+    const openControl = onOpen ? (
+      <Pressable
+        onPress={e => {
+          stopEventBubble(e);
+          onOpen();
+        }}
+        disabled={isUploading || disabled}
+        style={({ pressed }) => [
+          styles.openLinkHit,
+          pressed && styles.pressed,
+        ]}
+        hitSlop={6}
+      >
+        <Text style={styles.openLinkText}>열기</Text>
+      </Pressable>
+    ) : (
+      <View style={styles.openLinkHit} />
+    );
+
+    const removeControl = onRemove ? (
+      <Pressable
+        onPress={e => {
+          stopEventBubble(e);
+          onRemove();
+        }}
+        disabled={isUploading || disabled}
+        style={({ pressed }) => [
+          styles.removeButton,
+          pressed && styles.pressed,
+        ]}
+        hitSlop={6}
+      >
+        <DeleteIcon width={20} height={20} color={colors.gray600} />
+      </Pressable>
+    ) : (
+      <View style={styles.removeButton} />
+    );
+
+    const rowStyle = [
+      styles.fileRow,
+      aiSelect?.selected && styles.fileRowAiSelected,
+    ];
+
+    const inner = (
+      <>
+        {iconAndInfo}
+        {openControl}
+        {removeControl}
+      </>
+    );
+
+    if (showAiToolbar && aiSelect) {
       return (
         <Pressable
           key={key}
-          onPress={onOpen}
+          onPress={() => {
+            if (!aiRowSelectable) return;
+            aiSelect.onSelect();
+          }}
           style={({ pressed }) => [
-            styles.fileRow,
-            pressed && styles.pressed,
+            ...rowStyle,
+            pressed && aiRowSelectable && styles.fileRowAiPressablePressed,
           ]}
         >
-          {content}
+          {inner}
         </Pressable>
       );
     }
 
     return (
-      <View key={key} style={styles.fileRow}>
-        {content}
+      <View key={key} style={rowStyle}>
+        {inner}
       </View>
     );
   };
@@ -326,6 +401,25 @@ export default function AttachmentSection({
             } else if (isImageMime(a.contentType)) {
               onOpen = () => handleOpenImage(a.fileUrl);
             }
+            const aiSelect = showAiToolbar
+              ? {
+                  selected:
+                    aiFileSelection?.kind === 'existing' &&
+                    aiFileSelection.id === a.id,
+                  onSelect: () => {
+                    if (!aiRowSelectable) return;
+                    setAiFileSelection((prev) => {
+                      if (
+                        prev?.kind === 'existing' &&
+                        prev.id === a.id
+                      ) {
+                        return null;
+                      }
+                      return { kind: 'existing', id: a.id };
+                    });
+                  },
+                }
+              : undefined;
             return renderFileRow(
               `existing-${a.id}`,
               a.fileName,
@@ -335,20 +429,46 @@ export default function AttachmentSection({
                 .join(' · '),
               onRemoveExisting ? () => handleRemoveExisting(a.id) : undefined,
               onOpen,
+              aiSelect,
             );
           })}
-          {pendingFiles.map((file, index) =>
-            renderFileRow(
+          {pendingFiles.map((file, index) => {
+            let onOpen: (() => void) | undefined;
+            if (isPdfMime(file.mimeType)) {
+              onOpen = () => handleOpenPdf(file.uri);
+            } else if (isImageMime(file.mimeType)) {
+              onOpen = () => handleOpenImage(file.uri);
+            }
+            const aiSelect = showAiToolbar
+              ? {
+                  selected:
+                    aiFileSelection?.kind === 'pending' &&
+                    aiFileSelection.key === pendingFileAiKey(file),
+                  onSelect: () => {
+                    if (!aiRowSelectable) return;
+                    const key = pendingFileAiKey(file);
+                    setAiFileSelection((prev) => {
+                      if (
+                        prev?.kind === 'pending' &&
+                        prev.key === key
+                      ) {
+                        return null;
+                      }
+                      return { kind: 'pending', key };
+                    });
+                  },
+                }
+              : undefined;
+            return renderFileRow(
               `pending-${file.name}-${index}`,
               file.name,
               file.mimeType,
               getAttachmentKindLabel(file.mimeType),
               () => handleRemovePending(index),
-              isImageMime(file.mimeType)
-                ? () => handleOpenImage(file.uri)
-                : undefined,
-            ),
-          )}
+              onOpen,
+              aiSelect,
+            );
+          })}
         </View>
       ) : hideAddControls ? null : (
         <Pressable
@@ -368,6 +488,34 @@ export default function AttachmentSection({
           </View>
         </Pressable>
       )}
+
+      {showAiToolbar ? (
+        <View style={styles.aiToolbar}>
+          <Pressable
+            onPress={() => {
+              if (!aiFileSelection) return;
+              onAiAnalyzePress?.();
+            }}
+            disabled={!aiFileSelection || disabled || isUploading}
+            style={({ pressed }) => [
+              styles.aiAnalyzeButton,
+              (!aiFileSelection || disabled || isUploading) &&
+                styles.aiAnalyzeButtonDisabled,
+              pressed &&
+                aiFileSelection &&
+                !disabled &&
+                !isUploading &&
+                styles.aiAnalyzeButtonPressed,
+            ]}
+          >
+            <Text style={styles.aiAnalyzeButtonText}>
+              {aiFileSelection
+                ? 'AI 분석으로 일정 자동 입력'
+                : '분석할 첨부파일을 선택해주세요'}
+            </Text>
+          </Pressable>
+        </View>
+      ) : null}
 
       <Modal
         visible={previewImageUri !== null}
@@ -492,6 +640,24 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     paddingHorizontal: 16,
   },
+  fileRowAiSelected: {
+    backgroundColor: colors.gray400,
+  },
+  fileRowAiPressablePressed: {
+    opacity: 0.92,
+  },
+  openLinkHit: {
+    flexShrink: 0,
+    marginLeft: 8,
+    marginRight: 4,
+    paddingVertical: 4,
+    paddingHorizontal: 4,
+    justifyContent: 'center',
+  },
+  openLinkText: {
+    ...textStyles.h8,
+    color: colors.primary,
+  },
   fileIconWrap: {
     paddingHorizontal: 8,
     paddingVertical: 8,
@@ -515,8 +681,32 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   removeButton: {
-    marginLeft: 8,
+    marginLeft: 4,
     flexShrink: 0,
+  },
+  aiToolbar: {
+    marginTop: spacing.md,
+    width: '100%',
+  },
+  aiAnalyzeButton: {
+    width: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: spacing.md,
+    borderRadius: radii.md,
+    backgroundColor: colors.black,
+  },
+  aiAnalyzeButtonDisabled: {
+    opacity: 0.35,
+  },
+  aiAnalyzeButtonPressed: {
+    opacity: 0.85,
+  },
+  aiAnalyzeButtonText: {
+    ...textStyles.h8,
+    color: colors.white,
+    textAlign: 'center',
   },
   previewBackdrop: {
     flex: 1,
