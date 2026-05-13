@@ -16,7 +16,7 @@ from app.utils.dependency import dependency
 from .clients import GeminiClient, VisionClient
 from .config import ai_settings
 from .schemas import (
-    AIFlightRead,
+    DocumentTextExtraction,
     ChecklistCreateResponse,
     ChecklistItemsByCategory,
     ChecklistRead,
@@ -40,11 +40,11 @@ class AIService:
                 detail={"code": "GUEST_NOT_ALLOWED"},
             )
       
-    async def extract_text_from_image(self, image_data: bytes) -> AIFlightRead:
+    async def extract_text_from_image(self, image_data: bytes) -> DocumentTextExtraction:
         self._require_registered_user()
         return await self.vision_client.extract_text_from_image(image_data)
     
-    async def extract_text_from_pdf(self, pdf_data: bytes) -> AIFlightRead:
+    async def extract_text_from_pdf(self, pdf_data: bytes) -> DocumentTextExtraction:
         self._require_registered_user()
         return await self.vision_client.extract_text_from_pdf(pdf_data)
     

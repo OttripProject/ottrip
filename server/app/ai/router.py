@@ -8,13 +8,9 @@ from app.common.schemas import StatusResponse
 
 from .config import ai_settings
 from .service import AIService
-from .schemas import AIFlightRead, ChecklistCreateRequest, ChecklistCreateResponse, ChecklistRead, ChecklistItemCheckRequest, ChecklistItemAddRequest
+from .schemas import ChecklistCreateRequest, ChecklistCreateResponse, ChecklistItemAddRequest, ChecklistItemCheckRequest, ChecklistRead, DocumentTextExtraction
 
 router = create_router()
-
-
-
-
 
 @router.post("/extract-flight-data", response_model=Dict[str, Any])
 async def extract_flight_data_from_image(
@@ -23,18 +19,15 @@ async def extract_flight_data_from_image(
 ):
     """항공권 이미지/PDF에서 데이터 추출 (OCR + AI)"""
     try:
-        # 파일 검증
         if not file.filename:
             raise HTTPException(status_code=400, detail="파일명이 없습니다.")
         
-        # 파일 크기 제한
         if file.size and file.size > 10 * 1024 * 1024:
             raise HTTPException(
                 status_code=400, 
                 detail="파일 크기는 10MB를 초과할 수 없습니다."
             )
         
-        # 지원하는 파일 타입 확인
         allowed_types = [
             "image/jpeg", "image/png", "image/gif", "image/bmp", 
             "image/webp", "image/tiff", "application/pdf"
@@ -46,10 +39,8 @@ async def extract_flight_data_from_image(
                 detail="지원하지 않는 파일 형식입니다. 지원 형식: 이미지 (JPEG, PNG, GIF, BMP, WEBP, TIFF), PDF"
             )
         
-        # 파일 읽기
         file_data = await file.read()
         
-        # AI 서비스로 처리
         result = await ai_service.process_flight_ticket(
             file_data=file_data,
             content_type=file.content_type,
@@ -66,7 +57,6 @@ async def extract_flight_data_from_image(
                 }
             )
         
-        # 성공 응답
         return {
             "success": True,
             "message": "항공권 데이터 추출이 완료되었습니다.",
@@ -93,7 +83,7 @@ async def extract_flight_data_from_image(
 async def extract_text_only(
     ai_service: AIService,
     file: UploadFile = File(...),
-) -> AIFlightRead:
+) -> DocumentTextExtraction:
     if not file.filename:
         raise HTTPException(status_code=400, detail="파일명이 없습니다.")
     

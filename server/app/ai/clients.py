@@ -5,7 +5,7 @@ from typing import Any
 from app.utils.dependency import dependency
 
 from .config import ai_settings
-from .schemas import AIFlightRead, AIParseResponse
+from .schemas import AIParseResponse, DocumentTextExtraction
 
 
 @dependency
@@ -23,7 +23,7 @@ class VisionClient:
 
         return self._client
 
-    async def extract_text_from_image(self, image_data: bytes) -> AIFlightRead:
+    async def extract_text_from_image(self, image_data: bytes) -> DocumentTextExtraction:
         from google.cloud.vision_v1 import types as vision_types
 
         image_content = vision_types.Image(content=image_data)
@@ -35,7 +35,7 @@ class VisionClient:
             raise Exception(f"Vision API 오류: {response.error.message}")
 
         if not texts:
-            return AIFlightRead(
+            return DocumentTextExtraction(
                 success=False,
                 text="",
                 confidence=0.0,
@@ -50,13 +50,13 @@ class VisionClient:
             else 0.0
         )
 
-        return AIFlightRead(
+        return DocumentTextExtraction(
             success=True,
             text=full_text,
             confidence=avg_confidence,
         )
 
-    async def extract_text_from_pdf(self, pdf_data: bytes) -> AIFlightRead:
+    async def extract_text_from_pdf(self, pdf_data: bytes) -> DocumentTextExtraction:
         import fitz
 
         doc = fitz.open(stream=pdf_data, filetype="pdf")
@@ -68,7 +68,7 @@ class VisionClient:
 
         doc.close()
 
-        return AIFlightRead(
+        return DocumentTextExtraction(
             success=True,
             text=full_text,
             confidence=0.0,
@@ -84,7 +84,7 @@ class VisionClient:
 
         #     full_text_annotation = response.full_text_annotation
         #     if not full_text_annotation:
-        #         return AIFlightRead(
+        #         return DocumentTextExtraction(
         #             success=False,
         #             text="",
         #             confidence=0.0,
@@ -107,14 +107,14 @@ class VisionClient:
 
         #     avg_confidence = total_confidence / valid_pages if valid_pages > 0 else 0.0
 
-        #     return AIFlightRead(
+        #     return DocumentTextExtraction(
         #         success=True,
         #         text=extracted_text,
         #         confidence=avg_confidence,
         #     )
 
         # except Exception as e:
-        #     return AIFlightRead(
+        #     return DocumentTextExtraction(
         #         success=False,
         #         text="",
         #         confidence=0.0,
