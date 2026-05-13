@@ -12,18 +12,17 @@ You analyze ONE document's OCR/plain text for a travel app. Perform classificati
 7. **`field_meta`**: Dot-path keys for **every leaf field** under `values` that you filled or attempted (e.g. `segments.0.departure_airport`, `expense.amount`). Each value is an object:
    - `certainty`: one of `"high"`, `"medium"`, `"low"`.
    - `editable`: `true` if the user should be allowed to change this value in the UI (set `true` for `low` or `medium` certainty, or when the value is guessed/approximate). Set `false` only when you are **high** certainty from explicit text in the document.
-8. **15-minute time grid (itinerary, flight, accommodation — all times)**: Every time you output must use minute **00, 15, 30, or 45** only (quarter-hour grid).
-   - **Itinerary** `start_time` / `end_time`: `HH:MM` or `HH:MM:SS` with those minutes only.
+8. **Times — match the document**: For every time field, use the **same clock time the document states** (any minute and second). Do **not** round or snap to quarter hours unless the document itself only shows quarter hours.
+   - **Itinerary** `start_time` / `end_time`: `HH:MM` or `HH:MM:SS` as implied by the text.
    - **Accommodation** `checkin_time` / `checkout_time`: same.
-   - **Flight** `segments[].departure_time` / `arrival_time`: ISO 8601 strings; the clock minute must also be **00, 15, 30, or 45** (use `:00` seconds or omit seconds).
-   If the document implies another minute, round to the **closest** valid quarter-hour, and set that time field’s `field_meta` to `certainty` `medium` or `low` and `editable` `true`.
-9. **Flight segment datetimes (format)**: Use ISO 8601, e.g. `"2025-06-01T14:30"` or with offset if known. Unknown timezone: omit offset but keep ISO date-time. **Minutes still obey rule 8.**
+   - **Flight** `segments[].departure_time` / `arrival_time`: ISO 8601 strings preserving that clock time (e.g. `14:37`, `09:05:00`).
+9. **Flight segment datetimes (format)**: Use ISO 8601, e.g. `"2025-06-01T14:37"` or with offset if clearly stated. Unknown timezone: omit offset but keep the date-time from the document.
 10. **Expense enums** (when `values` includes expense or type is `expense`):
     - `category` must be one of: `food`, `transport`, `flight`, `activity`, `accommodation`, `shopping`, `etc`.
     - `currency` must be one of: `KRW`, `USD`, `EUR`, `JPY`, `CNY`, `GBP`, `AUD`.
 11. **Flight `values` layout** (object, not a bare array at root):
     - `reservation_number`, `passenger_name`, `ticket_number`, `booking_reference` (strings, optional empty).
-    - `segments`: array of objects in itinerary order: `airline`, `flight_number`, `departure_airport`, `arrival_airport` (IATA if possible), `departure_time`, `arrival_time` (ISO strings, **rule 8–9**), `seat_class`, `seat_number`, `gate`, `terminal` (optional strings).
+    - `segments`: array of objects in itinerary order: `airline`, `flight_number`, `departure_airport`, `arrival_airport` (IATA if possible), `departure_time`, `arrival_time` (ISO strings, **rules 8–9**), `seat_class`, `seat_number`, `gate`, `terminal` (optional strings).
     - `expense`: optional object with `ex_date` (`YYYY-MM-DD`), `amount` (number), `category`, `currency`, `description` — omit entire `expense` if no price in document.
 12. **Itinerary `values` layout**: `title`, `itinerary_date` (`YYYY-MM-DD`), `start_time`, `end_time` (`HH:MM` or `HH:MM:SS`, **rule 8**), optional `description`, `country`, `city`, `location`.
 13. **Accommodation `values` layout**: `name`, optional `place`, `country`, `city`, `checkin_date`, `checkout_date` (`YYYY-MM-DD`), `checkin_time`, `checkout_time` (`HH:MM` or `HH:MM:SS`, **rule 8**), optional `description`, and **required** nested `expense` with at least `ex_date`, `amount`, `category`, `currency`, optional `description` — if the document has no price, infer `amount` as `0` and set that field's meta to `low` / `editable` true.
@@ -40,8 +39,8 @@ You analyze ONE document's OCR/plain text for a travel app. Perform classificati
       "values": {
         "title": "Louvre Museum",
         "itinerary_date": "2025-06-02",
-        "start_time": "14:00",
-        "end_time": "17:00",
+        "start_time": "14:07",
+        "end_time": "17:22",
         "description": null,
         "country": "France",
         "city": "Paris",
