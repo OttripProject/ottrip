@@ -52,15 +52,29 @@ function coerceFieldMetaEntry(raw: unknown): AiDocumentFieldMetaEntry | null {
   return { certainty, editable };
 }
 
+/** 프록시/중간 계층에서 객체가 JSON 문자열로 한 번 더 감싸진 경우 */
+function tryParseJsonIfString(value: unknown): unknown {
+  if (typeof value !== "string") return value;
+  const s = value.trim();
+  if (!s.startsWith("{") && !s.startsWith("[")) return value;
+  try {
+    return JSON.parse(s) as unknown;
+  } catch {
+    return value;
+  }
+}
+
 function normalizeDraftPayload(raw: unknown): {
   values: Record<string, unknown>;
   fieldMeta: Record<string, AiDocumentFieldMetaEntry>;
 } {
-  if (!raw || typeof raw !== "object") {
+  const unwrapped = tryParseJsonIfString(raw);
+  if (!unwrapped || typeof unwrapped !== "object" || Array.isArray(unwrapped)) {
     return { values: {}, fieldMeta: {} };
   }
-  const p = raw as Record<string, unknown>;
-  const valuesRaw = p.values ?? p.Values;
+  const p = unwrapped as Record<string, unknown>;
+  let valuesRaw: unknown = p.values ?? p.Values;
+  valuesRaw = tryParseJsonIfString(valuesRaw);
   const metaRaw = p.fieldMeta ?? p.field_meta ?? p.FieldMeta;
 
   const values =
@@ -82,7 +96,9 @@ function normalizeDraftPayload(raw: unknown): {
 function normalizeItemDraft(raw: unknown): AiDocumentItemDraft | null {
   if (!raw || typeof raw !== "object") return null;
   const d = raw as Record<string, unknown>;
-  const itemType = (d.itemType ?? d.item_type) as string | undefined;
+  const rawType = d.itemType ?? d.item_type ?? d.ItemType;
+  const itemType =
+    typeof rawType === "string" ? rawType.trim().toLowerCase() : "";
   if (
     itemType !== "flight" &&
     itemType !== "itinerary" &&
@@ -91,7 +107,8 @@ function normalizeItemDraft(raw: unknown): AiDocumentItemDraft | null {
   ) {
     return null;
   }
-  const payload = normalizeDraftPayload(d.payload);
+  const payloadRaw = tryParseJsonIfString(d.payload ?? d.Payload);
+  const payload = normalizeDraftPayload(payloadRaw);
   switch (itemType) {
     case "flight":
       return {
@@ -130,20 +147,42 @@ function normalizeAnalyzeResponse(
     };
   }
   const o = data as Record<string, unknown>;
-  const success = Boolean(o.success ?? o.Success);
-  const err = o.error ?? o.Error;
-  const inferredRaw = o.inferredItemType ?? o.inferred_item_type;
+  const nested =
+    o.data && typeof o.data === "object" && !Array.isArray(o.data)
+      ? (o.data as Record<string, unknown>)
+      : null;
+
+  const success = Boolean(
+    o.success ?? o.Success ?? nested?.success ?? nested?.Success,
+  );
+  const err =
+    o.error ?? o.Error ?? nested?.error ?? nested?.Error;
+  const inferredRaw =
+    o.inferredItemType ??
+    o.inferred_item_type ??
+    o.InferredItemType ??
+    nested?.inferredItemType ??
+    nested?.inferred_item_type ??
+    nested?.InferredItemType;
+  const inferredNorm =
+    typeof inferredRaw === "string" ? inferredRaw.trim().toLowerCase() : "";
   let inferredItemType: AiDocumentItemType | null = null;
   if (
-    inferredRaw === "flight" ||
-    inferredRaw === "itinerary" ||
-    inferredRaw === "accommodation" ||
-    inferredRaw === "expense"
+    inferredNorm === "flight" ||
+    inferredNorm === "itinerary" ||
+    inferredNorm === "accommodation" ||
+    inferredNorm === "expense"
   ) {
-    inferredItemType = inferredRaw;
+    inferredItemType = inferredNorm as AiDocumentItemType;
   }
 
-  const draft = normalizeItemDraft(o.draft ?? o.Draft);
+  const draftSource =
+    o.draft ??
+    o.Draft ??
+    nested?.draft ??
+    nested?.Draft;
+
+  const draft = normalizeItemDraft(draftSource);
 
   return {
     success,
@@ -153,9 +192,55 @@ function normalizeAnalyzeResponse(
   };
 }
 
+/** FastAPI 400/422 등 본문이 표준 분석 스키마가 아닐 때 */
+function normalizeAnalyzeHttpError(
+  status: number,
+  data: unknown,
+): DocumentUploadAnalyzeResponse {
+  if (data && typeof data === "object") {
+    const o = data as Record<string, unknown>;
+    const detail = o.detail ?? o.Detail;
+    if (typeof detail === "string" && detail.trim()) {
+      return {
+        success: false,
+        inferredItemType: null,
+        draft: null,
+        error: detail.trim(),
+      };
+    }
+    if (Array.isArray(detail)) {
+      const parts = detail
+        .map((item) => {
+          if (item && typeof item === "object" && "msg" in (item as object)) {
+            return String((item as { msg?: unknown }).msg ?? "").trim();
+          }
+          return "";
+        })
+        .filter(Boolean);
+      if (parts.length > 0) {
+        return {
+          success: false,
+          inferredItemType: null,
+          draft: null,
+          error: parts.join("; "),
+        };
+      }
+    }
+  }
+  return {
+    success: false,
+    inferredItemType: null,
+    draft: null,
+    error:
+      status === 422
+        ? "요청 형식이 올바르지 않습니다. (422)"
+        : "요청을 처리하지 못했습니다.",
+  };
+}
+
 /**
  * 업로드 파일 OCR + AI 1-call 분석.
- * 서버가 HTTP 400을 주어도 본문이 있으면 throw 하지 않고 동일 스키마로 반환한다.
+ * 서버가 HTTP 400/422를 주어도 throw 하지 않고 동일 스키마로 반환한다.
  */
 export async function analyzeDocumentUpload(
   file: AnalyzeUploadFileInput,
@@ -166,7 +251,8 @@ export async function analyzeDocumentUpload(
   appendAnalyzeUploadFile(form, file, fallbackName);
 
   const response = await api.post<unknown>("/private/ai/analyze-upload", form, {
-    validateStatus: status => status === 200 || status === 400,
+    validateStatus: status =>
+      status === 200 || status === 400 || status === 422,
     transformRequest: [
       (data, headers) => {
         if (typeof FormData !== "undefined" && data instanceof FormData) {
@@ -177,7 +263,12 @@ export async function analyzeDocumentUpload(
     ],
   });
 
-  return normalizeAnalyzeResponse(response.data);
+  const { status, data } = response;
+  if (status === 200) {
+    return normalizeAnalyzeResponse(data);
+  }
+  const parsed = normalizeAnalyzeResponse(data);
+  return parsed.error ? parsed : normalizeAnalyzeHttpError(status, data);
 }
 
 export const aiDocumentApi = {

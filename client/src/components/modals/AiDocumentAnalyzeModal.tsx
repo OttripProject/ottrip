@@ -74,6 +74,20 @@ function getBluePillTextFromKind(kind: AiDocumentItemType): string {
   }
 }
 
+/** 공백만 있는 `children`은 없는 것과 같이 취급 (분석 결과 분기로 가야 함) */
+function hasMeaningfulModalChildren(children: React.ReactNode): boolean {
+  if (children == null || children === false || children === true) {
+    return false;
+  }
+  if (typeof children === 'string') {
+    return children.trim().length > 0;
+  }
+  if (Array.isArray(children)) {
+    return children.some(hasMeaningfulModalChildren);
+  }
+  return true;
+}
+
 function FieldRow({
   label,
   children,
@@ -136,10 +150,9 @@ export default function AiDocumentAnalyzeModal({
     onClose();
   };
 
-  const body =
-    children != null ? (
-      <View style={styles.childrenWrap}>{children}</View>
-    ) : analyzeResult?.draft ? (
+  const body = hasMeaningfulModalChildren(children) ? (
+    <View style={styles.childrenWrap}>{children}</View>
+  ) : analyzeResult?.draft ? (
       <View key={draftBodyKey} style={styles.childrenWrap}>
         <View style={styles.pillBlue}>
           <View style={styles.pillDotBlue} />
@@ -152,6 +165,11 @@ export default function AiDocumentAnalyzeModal({
     ) : analyzeResult && analyzeResult.draft == null ? (
       <Text style={styles.emptyDraftHint}>
         분석은 완료됐지만 표시할 초안 데이터가 없습니다.
+      </Text>
+    ) : visible ? (
+      <Text style={styles.emptyDraftHint}>
+        분석은 완료된 것으로 보이나, 결과 화면에 데이터가 전달되지 않았습니다. 창을 닫은 뒤
+        새로고침하고 다시 시도해 주세요.
       </Text>
     ) : (
       <AiAnalyzeModalDesignMockWithPill bluePillText={bluePillText} />

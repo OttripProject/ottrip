@@ -2,7 +2,6 @@ import React from 'react';
 import { View, Text, TextInput, StyleSheet } from 'react-native';
 
 import { colors } from '@/ui/tokens/colors';
-import { spacing } from '@/ui/tokens/spacing';
 import type { AiDocumentItemDraft } from '@/types/api';
 
 const BORDER = '#E2E2E2';
@@ -15,6 +14,102 @@ export function pickStr(obj: Record<string, unknown>, keys: string[]): string {
     if (typeof raw === 'number' || typeof raw === 'boolean') return String(raw);
   }
   return '';
+}
+
+/** segments: 배열 | 단일 객체 | JSON 문자열 */
+function coerceFlightSegments(segRaw: unknown): Record<string, unknown>[] {
+  let raw: unknown = segRaw;
+  if (typeof raw === 'string') {
+    const t = raw.trim();
+    if (t.startsWith('[') || t.startsWith('{')) {
+      try {
+        raw = JSON.parse(t) as unknown;
+      } catch {
+        return [];
+      }
+    } else {
+      return [];
+    }
+  }
+  if (Array.isArray(raw)) {
+    return raw.filter(
+      (item): item is Record<string, unknown> =>
+        item != null && typeof item === 'object' && !Array.isArray(item),
+    );
+  }
+  if (raw != null && typeof raw === 'object' && !Array.isArray(raw)) {
+    return [raw as Record<string, unknown>];
+  }
+  return [];
+}
+
+function FlightSegmentFields({
+  index,
+  seg,
+}: {
+  index: number;
+  seg: Record<string, unknown>;
+}) {
+  return (
+    <View
+      style={[styles.segmentBlock, index > 0 && styles.segmentBlockDivider]}
+    >
+      <Text style={styles.segmentTitle}>구간 {index + 1}</Text>
+      <FieldRow
+        label="항공사"
+        value={pickStr(seg, ['airline', 'Airline'])}
+      />
+      <FieldRow
+        label="편명"
+        value={pickStr(seg, [
+          'flight_number',
+          'flightNumber',
+          'FlightNumber',
+        ])}
+      />
+      <FieldRow
+        label="출발"
+        value={pickStr(seg, [
+          'departure_airport',
+          'departureAirport',
+          'DepartureAirport',
+        ])}
+      />
+      <FieldRow
+        label="도착"
+        value={pickStr(seg, [
+          'arrival_airport',
+          'arrivalAirport',
+          'ArrivalAirport',
+        ])}
+      />
+      <FieldRow
+        label="출발일시"
+        value={pickStr(seg, [
+          'departure_time',
+          'departureTime',
+          'DepartureTime',
+        ])}
+      />
+      <FieldRow
+        label="도착일시"
+        value={pickStr(seg, ['arrival_time', 'arrivalTime', 'ArrivalTime'])}
+      />
+      <FieldRow
+        label="좌석등급"
+        value={pickStr(seg, ['seat_class', 'seatClass', 'SeatClass'])}
+      />
+      <FieldRow
+        label="좌석번호"
+        value={pickStr(seg, ['seat_number', 'seatNumber', 'SeatNumber'])}
+      />
+      <FieldRow label="게이트" value={pickStr(seg, ['gate', 'Gate'])} />
+      <FieldRow
+        label="터미널"
+        value={pickStr(seg, ['terminal', 'Terminal'])}
+      />
+    </View>
+  );
 }
 
 function readExpenseNested(
@@ -39,6 +134,7 @@ function FieldRow({
       <Text style={styles.fieldLabel}>{label}</Text>
       <View style={styles.fieldControl}>
         <TextInput
+          key={`${label}-${value.length}-${value.slice(0, 48)}`}
           defaultValue={value}
           style={styles.input}
           multiline={value.length > 80}
@@ -56,6 +152,7 @@ function FieldRowMultiline({ label, value }: { label: string; value: string }) {
       <Text style={styles.fieldLabel}>{label}</Text>
       <View style={styles.fieldControl}>
         <TextInput
+          key={`${label}-ml-${value.length}-${value.slice(0, 48)}`}
           defaultValue={value}
           style={[styles.input, styles.textarea]}
           multiline
@@ -141,18 +238,13 @@ function ItineraryBody({ values }: { values: Record<string, unknown> }) {
 
 function FlightBody({ values }: { values: Record<string, unknown> }) {
   const segRaw = values.segments ?? values.Segments;
-  let segmentsText = '';
-  if (Array.isArray(segRaw)) {
+  const segments = coerceFlightSegments(segRaw);
+  let segmentsFallback = '';
+  if (segments.length === 0 && segRaw != null && segRaw !== '') {
     try {
-      segmentsText = JSON.stringify(segRaw, null, 2);
+      segmentsFallback = JSON.stringify(segRaw, null, 2);
     } catch {
-      segmentsText = String(segRaw);
-    }
-  } else if (segRaw && typeof segRaw === 'object') {
-    try {
-      segmentsText = JSON.stringify(segRaw, null, 2);
-    } catch {
-      segmentsText = '';
+      segmentsFallback = String(segRaw);
     }
   }
 
@@ -210,7 +302,14 @@ function FlightBody({ values }: { values: Record<string, unknown> }) {
           'BookingReference',
         ])}
       />
-      <FieldRowMultiline label="구간" value={segmentsText} />
+
+      {segments.length > 0 ? (
+        segments.map((seg, idx) => (
+          <FlightSegmentFields key={idx} index={idx} seg={seg} />
+        ))
+      ) : segmentsFallback.length > 0 ? (
+        <FieldRowMultiline label="구간 (원시)" value={segmentsFallback} />
+      ) : null}
 
       {showExpense ? (
         <>
@@ -333,7 +432,11 @@ function ExpenseOnlyBody({ values }: { values: Record<string, unknown> }) {
 }
 
 export function AiAnalyzeResultBody({ draft }: { draft: AiDocumentItemDraft }) {
-  const values = draft.payload.values as Record<string, unknown>;
+  const raw = draft.payload?.values;
+  const values: Record<string, unknown> =
+    raw && typeof raw === 'object' && !Array.isArray(raw)
+      ? (raw as Record<string, unknown>)
+      : {};
   switch (draft.itemType) {
     case 'itinerary':
       return <ItineraryBody values={values} />;
@@ -387,6 +490,22 @@ const styles = StyleSheet.create({
   },
   textarea: {
     minHeight: 72,
+  },
+  segmentBlock: {
+    gap: 8,
+  },
+  segmentBlockDivider: {
+    marginTop: 4,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: BORDER,
+  },
+  segmentTitle: {
+    fontSize: 12,
+    lineHeight: 18,
+    fontWeight: '700',
+    color: colors.gray900,
+    marginBottom: 2,
   },
   pillOrange: {
     flexDirection: 'row',

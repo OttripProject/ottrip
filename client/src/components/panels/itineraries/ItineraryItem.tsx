@@ -659,6 +659,7 @@ export default function ItineraryItem({
           setAiAnalyzeFailureVisible(true);
           return;
         }
+        setAiAnalyzeResult(res);
         setAiAnalyzeModalVisible(true);
       } catch (e) {
         setAiAnalyzeFailureMessage(

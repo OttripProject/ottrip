@@ -964,7 +964,7 @@ export default function FlightItem({
             <View style={[styles.buttonRow, { position: 'relative', zIndex: 1 }]}>
               <Pressable
                 style={styles.deleteButton}
-                onPress={flight? handleDelete : onCancel}
+                onPress={flight ? handleDelete : onCancel}
                 disabled={isSubmitting}
               >
                 <Text style={styles.deleteButtonText}>
