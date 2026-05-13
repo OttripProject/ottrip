@@ -1,9 +1,13 @@
 import type {
+  AiDocumentDraftPayloadAccommodation,
+  AiDocumentDraftPayloadExpense,
+  AiDocumentDraftPayloadFlight,
+  AiDocumentDraftPayloadItinerary,
   AiDocumentFieldMetaEntry,
   AiDocumentItemDraft,
   AiDocumentItemType,
   DocumentUploadAnalyzeResponse,
-} from "../types/aiDocument";
+} from "../types/api";
 import api from "./api";
 
 /** 웹 `File`/`Blob` 또는 RN `FormData`에 넣는 파일 객체 */
@@ -90,13 +94,25 @@ function normalizeItemDraft(raw: unknown): AiDocumentItemDraft | null {
   const payload = normalizeDraftPayload(d.payload);
   switch (itemType) {
     case "flight":
-      return { itemType: "flight", payload };
+      return {
+        itemType: "flight",
+        payload: payload as AiDocumentDraftPayloadFlight,
+      };
     case "itinerary":
-      return { itemType: "itinerary", payload };
+      return {
+        itemType: "itinerary",
+        payload: payload as AiDocumentDraftPayloadItinerary,
+      };
     case "accommodation":
-      return { itemType: "accommodation", payload };
+      return {
+        itemType: "accommodation",
+        payload: payload as AiDocumentDraftPayloadAccommodation,
+      };
     case "expense":
-      return { itemType: "expense", payload };
+      return {
+        itemType: "expense",
+        payload: payload as AiDocumentDraftPayloadExpense,
+      };
     default:
       return null;
   }

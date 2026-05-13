@@ -11,3 +11,17 @@ export {
   analyzeDocumentUpload,
   type AnalyzeUploadFileInput,
 } from './aiDocument';
+export type {
+  AiAccommodationDraftValues,
+  AiDocumentFieldMetaEntry,
+  AiDocumentItemDraft,
+  AiDocumentItemType,
+  AiDraftValues,
+  AiExpenseDraftValues,
+  AiFlightDraftValues,
+  AiItineraryDraftValues,
+  AttachmentEntityType,
+  DocumentUploadAnalyzeResponse,
+  PlanEntityKind,
+} from '../types/api';
+export { PLAN_ENTITY_KIND } from '../types/api';
