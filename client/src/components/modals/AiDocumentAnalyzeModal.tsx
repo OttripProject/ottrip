@@ -3,7 +3,6 @@ import {
   Modal,
   View,
   Text,
-  TextInput,
   Pressable,
   StyleSheet,
   ScrollView,
@@ -15,11 +14,8 @@ import { spacing } from '@/ui/tokens/spacing';
 import type { AiDocumentItemType, DocumentUploadAnalyzeResponse } from '@/types/api';
 import { AiAnalyzeResultBody } from '@/components/modals/aiDocumentAnalyzeDraftBody';
 
-const BORDER_INPUT = '#E2E2E2';
 const BLUE_PILL = '#0A84FF';
 const BLUE_PILL_BG = '#E5F0FF';
-const ORANGE_PILL = '#E07000';
-const ORANGE_PILL_BG = '#FFF1E5';
 const BTN_CANCEL_BG = '#EDEDED';
 
 function getEntitySubtitle(entityTypeLabel: string): string {
@@ -74,35 +70,6 @@ function getBluePillTextFromKind(kind: AiDocumentItemType): string {
   }
 }
 
-/** 공백만 있는 `children`은 없는 것과 같이 취급 (분석 결과 분기로 가야 함) */
-function hasMeaningfulModalChildren(children: React.ReactNode): boolean {
-  if (children == null || children === false || children === true) {
-    return false;
-  }
-  if (typeof children === 'string') {
-    return children.trim().length > 0;
-  }
-  if (Array.isArray(children)) {
-    return children.some(hasMeaningfulModalChildren);
-  }
-  return true;
-}
-
-function FieldRow({
-  label,
-  children,
-}: {
-  label: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <View style={styles.fieldRow}>
-      <Text style={styles.fieldLabel}>{label}</Text>
-      <View style={styles.fieldControl}>{children}</View>
-    </View>
-  );
-}
-
 export interface AiDocumentAnalyzeModalProps {
   visible: boolean;
   onClose: () => void;
@@ -110,7 +77,6 @@ export interface AiDocumentAnalyzeModalProps {
   entityTypeLabel?: string;
   /** 성공한 `analyzeDocumentUpload` 응답. `draft`가 있으면 필드에 반영해 표시합니다. */
   analyzeResult?: DocumentUploadAnalyzeResponse | null;
-  children?: React.ReactNode;
   onApply?: () => void;
   applyLabel?: string;
 }
@@ -121,7 +87,6 @@ export default function AiDocumentAnalyzeModal({
   title = '분석 결과 확인',
   entityTypeLabel = '일정',
   analyzeResult = null,
-  children,
   onApply,
   applyLabel = '저장',
 }: AiDocumentAnalyzeModalProps) {
@@ -150,9 +115,7 @@ export default function AiDocumentAnalyzeModal({
     onClose();
   };
 
-  const body = hasMeaningfulModalChildren(children) ? (
-    <View style={styles.childrenWrap}>{children}</View>
-  ) : analyzeResult?.draft ? (
+  const body = analyzeResult?.draft ? (
       <View key={draftBodyKey} style={styles.childrenWrap}>
         <View style={styles.pillBlue}>
           <View style={styles.pillDotBlue} />
@@ -171,9 +134,7 @@ export default function AiDocumentAnalyzeModal({
         분석은 완료된 것으로 보이나, 결과 화면에 데이터가 전달되지 않았습니다. 창을 닫은 뒤
         새로고침하고 다시 시도해 주세요.
       </Text>
-    ) : (
-      <AiAnalyzeModalDesignMockWithPill bluePillText={bluePillText} />
-    );
+    ) : null;
 
   return (
     <Modal
@@ -241,98 +202,6 @@ export default function AiDocumentAnalyzeModal({
         </Pressable>
       </Pressable>
     </Modal>
-  );
-}
-
-function AiAnalyzeModalDesignMockWithPill({
-  bluePillText,
-}: {
-  bluePillText: string;
-}) {
-  return (
-    <>
-      <View style={styles.pillBlue}>
-        <View style={styles.pillDotBlue} />
-        <Text style={styles.pillBlueText}>{bluePillText}</Text>
-      </View>
-
-      <View style={styles.fieldStack}>
-        <FieldRow label="제목">
-          <TextInput
-            style={styles.mockInput}
-            placeholderTextColor={colors.gray600}
-          />
-        </FieldRow>
-        <FieldRow label="내용">
-          <TextInput
-            style={[styles.mockInput, styles.mockTextarea]}
-            multiline
-            textAlignVertical="top"
-            placeholderTextColor={colors.gray600}
-          />
-        </FieldRow>
-        <FieldRow label="국가">
-          <TextInput
-            style={styles.mockInput}
-            placeholderTextColor={colors.gray600}
-          />
-        </FieldRow>
-        <FieldRow label="도시">
-          <TextInput
-            style={styles.mockInput}
-            placeholderTextColor={colors.gray600}
-          />
-        </FieldRow>
-        <FieldRow label="장소">
-          <TextInput
-            style={styles.mockInput}
-            placeholderTextColor={colors.gray600}
-          />
-        </FieldRow>
-        <FieldRow label="날짜">
-          <TextInput
-            style={styles.mockInput}
-            placeholderTextColor={colors.gray600}
-          />
-        </FieldRow>
-        <FieldRow label="시작시간">
-          <TextInput
-            style={styles.mockInput}
-            placeholderTextColor={colors.gray600}
-          />
-        </FieldRow>
-        <FieldRow label="종료시간">
-          <TextInput
-            style={styles.mockInput}
-            placeholderTextColor={colors.gray600}
-          />
-        </FieldRow>
-      </View>
-
-      <View style={[styles.pillOrange, styles.pillOrangeSpaced]}>
-        <View style={styles.pillDotOrange} />
-        <Text style={styles.pillOrangeText}>비용 내역</Text>
-      </View>
-
-      <View style={styles.fieldStack}>
-        <FieldRow label="카테고리">
-          <View style={styles.mockSelect} />
-        </FieldRow>
-        <FieldRow label="금액 (원)">
-          <TextInput
-            style={styles.mockInput}
-            placeholderTextColor={colors.gray600}
-            keyboardType="numeric"
-          />
-        </FieldRow>
-        <FieldRow label="내용">
-          <TextInput
-            style={styles.mockInput}
-            placeholderTextColor={colors.gray600}
-          />
-        </FieldRow>
-      </View>
-    </>
   );
 }
 
@@ -440,76 +309,9 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: BLUE_PILL,
   },
-  pillOrange: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    gap: 6,
-    paddingVertical: 4,
-    paddingHorizontal: 10,
-    borderRadius: 999,
-    backgroundColor: ORANGE_PILL_BG,
-  },
-  pillOrangeSpaced: {
-    marginTop: 6,
-  },
-  pillDotOrange: {
-    width: 6,
-    height: 6,
-    borderRadius: 999,
-    backgroundColor: ORANGE_PILL,
-  },
-  pillOrangeText: {
-    fontSize: 11,
-    lineHeight: 16,
-    fontWeight: '600',
-    color: ORANGE_PILL,
-  },
   fieldStack: {
     flexDirection: 'column',
     gap: 8,
-  },
-  fieldRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  fieldLabel: {
-    width: 76,
-    fontSize: 12,
-    lineHeight: 18,
-    fontWeight: '600',
-    color: colors.gray700,
-  },
-  fieldControl: {
-    flex: 1,
-    minWidth: 0,
-  },
-  mockInput: {
-    width: '100%',
-    borderWidth: 1,
-    borderColor: BORDER_INPUT,
-    borderRadius: 8,
-    paddingVertical: 8,
-    paddingHorizontal: 10,
-    fontSize: 12,
-    lineHeight: 18,
-    fontWeight: '500',
-    color: colors.gray900,
-  },
-  mockTextarea: {
-    minHeight: 56,
-    textAlignVertical: 'top',
-  },
-  mockSelect: {
-    width: '100%',
-    minHeight: 36,
-    borderWidth: 1,
-    borderColor: BORDER_INPUT,
-    borderRadius: 8,
-    paddingVertical: 8,
-    paddingHorizontal: 10,
-    justifyContent: 'center',
   },
   footer: {
     flexDirection: 'row',
