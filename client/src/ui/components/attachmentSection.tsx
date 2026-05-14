@@ -513,9 +513,14 @@ export default function AttachmentSection({
             {isAiAnalyzing ? (
               <View style={styles.aiAnalyzeLoadingInner}>
                 <ActivityIndicator size="small" color={colors.white} />
-                <Text style={styles.aiAnalyzeLoadingText}>
-                  분석 중{'\n'}AI가 첨부파일 내용을 정리하고 있어요
-                </Text>
+                <View style={styles.aiAnalyzeLoadingTextCol}>
+                  <Text style={styles.aiAnalyzeLoadingTextTitle}>
+                    분석 중
+                  </Text>
+                  <Text style={styles.aiAnalyzeLoadingText}>
+                    AI가 첨부파일 내용을 정리하고 있어요
+                  </Text>
+                </View>
               </View>
             ) : (
               <Text style={styles.aiAnalyzeButtonText}>
@@ -712,6 +717,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.gray400,
   },
   aiAnalyzeButtonPressed: {
+    backgroundColor: colors.gray400,
     opacity: 0.85,
   },
   aiAnalyzeButtonText: {
@@ -725,10 +731,19 @@ const styles = StyleSheet.create({
     gap: 12,
     paddingVertical: 2,
   },
-  aiAnalyzeLoadingText: {
-    ...textStyles.h8,
+  aiAnalyzeLoadingTextCol: {
+    flexDirection: 'column',
+    flexShrink: 1,
+    gap: 2,
+  },
+  aiAnalyzeLoadingTextTitle: {
+    ...textStyles.h5,
     color: colors.white,
-    flex: 1,
+    lineHeight: 20,
+  },
+  aiAnalyzeLoadingText: {
+    ...textStyles.body5,
+    color: colors.white,
     lineHeight: 20,
   },
   previewBackdrop: {
