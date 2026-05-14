@@ -737,7 +737,7 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   aiAnalyzeLoadingTextTitle: {
-    ...textStyles.h5,
+    ...textStyles.h8,
     color: colors.white,
     lineHeight: 20,
   },
