@@ -7,6 +7,7 @@ import { useAttachmentUpload } from '@/hooks/useAttachmentUpload';
 import { useFilePicker } from '@/hooks/useFilePicker';
 import AttachmentSection from '@/ui/components/attachmentSection';
 import type {
+  AiDocumentItemDraft,
   Attachment,
   DocumentUploadAnalyzeResponse,
   LocalFile,
@@ -450,6 +451,39 @@ export default function AccommodationItem({
     [pendingFiles, existingAttachments],
   );
 
+  const applyAiAnalyzeDraftToForm = useCallback((draft: AiDocumentItemDraft) => {
+    if (draft.itemType !== 'accommodation') return;
+    const v = draft.payload.values as Record<string, unknown>;
+    const ci = String(v.checkinDate ?? v.checkin_date ?? '');
+    const co = String(v.checkoutDate ?? v.checkout_date ?? '');
+    const cit = String(v.checkinTime ?? v.checkin_time ?? '15:00');
+    const cot = String(v.checkoutTime ?? v.checkout_time ?? '11:00');
+    const shortTime = (t: string) =>
+      t.length >= 8 && t.includes(':') ? t.substring(0, 5) : t;
+    setFormData({
+      name: String(v.name ?? ''),
+      place: String(v.place ?? ''),
+      country: String(v.country ?? ''),
+      city: String(v.city ?? ''),
+      checkin_date: ci || dayjs().format('YYYY-MM-DD'),
+      checkout_date: co || dayjs().add(1, 'day').format('YYYY-MM-DD'),
+      checkin_time: shortTime(cit),
+      checkout_time: shortTime(cot),
+      description: String(v.description ?? ''),
+    });
+    const ex = v.expense as Record<string, unknown> | undefined;
+    if (ex) {
+      const cur = String(ex.currency ?? 'KRW').toUpperCase();
+      const curOk = (Object.values(ExpenseCurrency) as string[]).includes(cur)
+        ? (cur as ExpenseCurrency)
+        : ExpenseCurrency.KRW;
+      setExpenseData({
+        amount: normalizeAmountToIntDigits(ex.amount),
+        currency: curOk,
+      });
+    }
+  }, []);
+
   return (
     <>
     <ScrollView 
@@ -776,6 +810,7 @@ export default function AccommodationItem({
     <AiDocumentAnalyzeModal
       visible={aiAnalyzeModalVisible}
       analyzeResult={aiAnalyzeResult}
+      onApply={applyAiAnalyzeDraftToForm}
       onClose={() => {
         setAiAnalyzeModalVisible(false);
         setAiAnalyzeResult(null);

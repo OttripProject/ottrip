@@ -1,10 +1,35 @@
-import React from 'react';
-import { View, Text, TextInput, StyleSheet } from 'react-native';
-
+import React, {
+  forwardRef,
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useMemo,
+  useState,
+} from 'react';
+import { View, Text, Pressable, StyleSheet } from 'react-native';
+import dayjs from 'dayjs';
+import Input from '@/ui/components/input/Input';
+import {
+  TimePicker,
+  CountryPicker,
+  CategoryPicker,
+  AirportPicker,
+} from '@/ui/components/pickers';
+import BaseCalendar from '@/components/popup/calendar/BaseCalendar';
+import CalendarIcon from '../../../assets/calender.svg';
+import { PLACEHOLDERS } from '@/constants/placeholders';
 import { colors } from '@/ui/tokens/colors';
-import type { AiDocumentItemDraft } from '@/types/api';
+import { textStyles } from '@/ui/tokens/typography';
+import { spacing } from '@/ui/tokens/spacing';
+import { radii } from '@/ui/tokens/radii';
+import type {
+  AiDocumentItemDraft,
+  FlightSegmentBaseDto,
+} from '@/types/api';
+import { ExpenseCategory, ExpenseCurrency, currencyLabels } from '@/types/expense';
 
-const BORDER = '#E2E2E2';
+const ORANGE = '#E07000';
+const ORANGE_BG = '#FFF1E5';
 
 export function pickStr(obj: Record<string, unknown>, keys: string[]): string {
   for (const k of keys) {
@@ -14,6 +39,59 @@ export function pickStr(obj: Record<string, unknown>, keys: string[]): string {
     if (typeof raw === 'number' || typeof raw === 'boolean') return String(raw);
   }
   return '';
+}
+
+export type AiAnalyzeDraftEditorRef = {
+  buildDraft: () => AiDocumentItemDraft;
+};
+
+function readExpenseNested(
+  values: Record<string, unknown>,
+): Record<string, unknown> | null {
+  const e = values.expense ?? values.Expense;
+  if (e && typeof e === 'object' && !Array.isArray(e)) {
+    return e as Record<string, unknown>;
+  }
+  return null;
+}
+
+function normalizeHHmm(raw: string): string {
+  const s = String(raw ?? '').trim();
+  if (!s) return '';
+  if (/^\d{4}-\d{2}-\d{2}/.test(s)) {
+    const d = dayjs(s);
+    if (d.isValid()) return d.format('HH:mm');
+  }
+  if (/^\d{2}:\d{2}$/.test(s)) return s;
+  if (/^\d{2}:\d{2}:\d{2}/.test(s)) return s.slice(0, 5);
+  return s.slice(0, 5);
+}
+
+function coerceExpenseCategory(raw: string): ExpenseCategory {
+  const v = raw.trim().toLowerCase();
+  const all = Object.values(ExpenseCategory) as string[];
+  if (all.includes(v)) return v as ExpenseCategory;
+  return ExpenseCategory.ETC;
+}
+
+function coerceExpenseCurrency(raw: string): ExpenseCurrency {
+  const u = raw.trim().toUpperCase();
+  const all = Object.values(ExpenseCurrency) as string[];
+  if (all.includes(u)) return u as ExpenseCurrency;
+  return ExpenseCurrency.KRW;
+}
+
+function normalizeAmountDigits(value: unknown): string {
+  const raw = String(value ?? '').trim();
+  if (!raw) return '';
+  const integerPart = raw.split('.')[0];
+  return integerPart.replace(/[^0-9]/g, '');
+}
+
+function formatAmountWithCommas(digits: string): string {
+  if (!digits) return '';
+  const normalized = digits.replace(/^0+(?=\d)/, '');
+  return normalized.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 }
 
 /** segments: 배열 | 단일 객체 | JSON 문자열 */
@@ -43,273 +121,412 @@ function coerceFlightSegments(segRaw: unknown): Record<string, unknown>[] {
   return [];
 }
 
-function FlightSegmentFields({
-  index,
-  seg,
-}: {
-  index: number;
-  seg: Record<string, unknown>;
-}) {
-  return (
-    <View
-      style={[styles.segmentBlock, index > 0 && styles.segmentBlockDivider]}
-    >
-      <Text style={styles.segmentTitle}>구간 {index + 1}</Text>
-      <FieldRow
-        label="항공사"
-        value={pickStr(seg, ['airline', 'Airline'])}
-      />
-      <FieldRow
-        label="편명"
-        value={pickStr(seg, [
-          'flight_number',
-          'flightNumber',
-          'FlightNumber',
-        ])}
-      />
-      <FieldRow
-        label="출발"
-        value={pickStr(seg, [
-          'departure_airport',
-          'departureAirport',
-          'DepartureAirport',
-        ])}
-      />
-      <FieldRow
-        label="도착"
-        value={pickStr(seg, [
-          'arrival_airport',
-          'arrivalAirport',
-          'ArrivalAirport',
-        ])}
-      />
-      <FieldRow
-        label="출발일시"
-        value={pickStr(seg, [
-          'departure_time',
-          'departureTime',
-          'DepartureTime',
-        ])}
-      />
-      <FieldRow
-        label="도착일시"
-        value={pickStr(seg, ['arrival_time', 'arrivalTime', 'ArrivalTime'])}
-      />
-      <FieldRow
-        label="좌석등급"
-        value={pickStr(seg, ['seat_class', 'seatClass', 'SeatClass'])}
-      />
-      <FieldRow
-        label="좌석번호"
-        value={pickStr(seg, ['seat_number', 'seatNumber', 'SeatNumber'])}
-      />
-      <FieldRow label="게이트" value={pickStr(seg, ['gate', 'Gate'])} />
-      <FieldRow
-        label="터미널"
-        value={pickStr(seg, ['terminal', 'Terminal'])}
-      />
-    </View>
-  );
-}
+type SegmentForm = {
+  airline: string;
+  flight_number: string;
+  departure_airport: string;
+  arrival_airport: string;
+  departure_date: string;
+  departure_time: string;
+  arrival_date: string;
+  arrival_time: string;
+  seat_class: string;
+  seat_number: string;
+  gate: string;
+  terminal: string;
+};
 
-function readExpenseNested(
-  values: Record<string, unknown>,
-): Record<string, unknown> | null {
-  const e = values.expense ?? values.Expense;
-  if (e && typeof e === 'object' && !Array.isArray(e)) {
-    return e as Record<string, unknown>;
+function segmentFromLoose(seg: Record<string, unknown>): SegmentForm {
+  const depRaw = pickStr(seg, ['departure_time', 'departureTime', 'DepartureTime']);
+  const arrRaw = pickStr(seg, ['arrival_time', 'arrivalTime', 'ArrivalTime']);
+  let depD = dayjs(depRaw);
+  let arrD = dayjs(arrRaw);
+  if (!depD.isValid()) {
+    const dd = pickStr(seg, ['departure_date', 'departureDate', 'DepartureDate']);
+    const tt =
+      normalizeHHmm(
+        pickStr(seg, ['departure_time_local', 'departureTimeLocal']) || '09:00',
+      ) || '09:00';
+    depD = dd
+      ? dayjs(`${dd}T${tt.length === 5 ? `${tt}:00` : tt}`)
+      : dayjs();
   }
-  return null;
+  if (!arrD.isValid()) {
+    const ad = pickStr(seg, ['arrival_date', 'arrivalDate', 'ArrivalDate']);
+    const at =
+      normalizeHHmm(
+        pickStr(seg, ['arrival_time_local', 'arrivalTimeLocal']) || '10:00',
+      ) || '10:00';
+    arrD = ad
+      ? dayjs(`${ad}T${at.length === 5 ? `${at}:00` : at}`)
+      : depD.add(1, 'hour');
+  }
+  return {
+    airline: pickStr(seg, ['airline', 'Airline']),
+    flight_number: pickStr(seg, [
+      'flight_number',
+      'flightNumber',
+      'FlightNumber',
+    ]),
+    departure_airport: pickStr(seg, [
+      'departure_airport',
+      'departureAirport',
+      'DepartureAirport',
+    ]),
+    arrival_airport: pickStr(seg, [
+      'arrival_airport',
+      'arrivalAirport',
+      'ArrivalAirport',
+    ]),
+    departure_date: depD.format('YYYY-MM-DD'),
+    departure_time: depD.format('HH:mm'),
+    arrival_date: arrD.format('YYYY-MM-DD'),
+    arrival_time: arrD.format('HH:mm'),
+    seat_class: pickStr(seg, ['seat_class', 'seatClass', 'SeatClass']),
+    seat_number: pickStr(seg, ['seat_number', 'seatNumber', 'SeatNumber']),
+    gate: pickStr(seg, ['gate', 'Gate']),
+    terminal: pickStr(seg, ['terminal', 'Terminal']),
+  };
 }
 
-function FieldRow({
-  label,
-  value,
-}: {
-  label: string;
-  value: string;
-}) {
-  return (
-    <View style={styles.fieldRow}>
-      <Text style={styles.fieldLabel}>{label}</Text>
-      <View style={styles.fieldControl}>
-        <TextInput
-          key={`${label}-${value.length}-${value.slice(0, 48)}`}
-          defaultValue={value}
-          style={styles.input}
-          multiline={value.length > 80}
-          textAlignVertical="top"
-          placeholderTextColor={colors.gray600}
-        />
-      </View>
-    </View>
-  );
-}
-
-function FieldRowMultiline({ label, value }: { label: string; value: string }) {
-  return (
-    <View style={styles.fieldRow}>
-      <Text style={styles.fieldLabel}>{label}</Text>
-      <View style={styles.fieldControl}>
-        <TextInput
-          key={`${label}-ml-${value.length}-${value.slice(0, 48)}`}
-          defaultValue={value}
-          style={[styles.input, styles.textarea]}
-          multiline
-          textAlignVertical="top"
-          placeholderTextColor={colors.gray600}
-        />
-      </View>
-    </View>
-  );
-}
-
-function ItineraryBody({ values }: { values: Record<string, unknown> }) {
-  const exp = readExpenseNested(values);
-  const cat = exp
-    ? pickStr(exp, ['category', 'Category'])
-    : pickStr(values, [
-        'category',
-        'Category',
-        'expense_category',
-        'expenseCategory',
-      ]);
-  const amt = exp
-    ? pickStr(exp, ['amount', 'Amount'])
-    : pickStr(values, ['amount', 'Amount', 'expense_amount', 'expenseAmount']);
-  const desc = exp
-    ? pickStr(exp, ['description', 'Description'])
-    : pickStr(values, [
-        'expense_description',
-        'expenseDescription',
-        'description',
-        'Description',
-      ]);
-  const showExpense =
-    cat.length > 0 || amt.length > 0 || desc.length > 0 || exp != null;
-
-  return (
-    <>
-      <FieldRow
-        label="제목"
-        value={pickStr(values, ['title', 'Title'])}
-      />
-      <FieldRowMultiline
-        label="내용"
-        value={pickStr(values, ['description', 'Description'])}
-      />
-      <FieldRow label="국가" value={pickStr(values, ['country', 'Country'])} />
-      <FieldRow label="도시" value={pickStr(values, ['city', 'City'])} />
-      <FieldRow
-        label="장소"
-        value={pickStr(values, ['location', 'Location'])}
-      />
-      <FieldRow
-        label="날짜"
-        value={pickStr(values, [
-          'itineraryDate',
-          'itinerary_date',
-          'ItineraryDate',
-        ])}
-      />
-      <FieldRow
-        label="시작시간"
-        value={pickStr(values, ['startTime', 'start_time', 'StartTime'])}
-      />
-      <FieldRow
-        label="종료시간"
-        value={pickStr(values, ['endTime', 'end_time', 'EndTime'])}
-      />
-
-      {showExpense ? (
-        <>
-          <View style={[styles.pillOrange, styles.pillOrangeSpaced]}>
-            <View style={styles.pillDotOrange} />
-            <Text style={styles.pillOrangeText}>비용 내역</Text>
-          </View>
-          <FieldRow label="카테고리" value={cat} />
-          <FieldRow label="금액 (원)" value={amt} />
-          <FieldRow label="내용" value={desc} />
-        </>
-      ) : null}
-    </>
-  );
-}
-
-function FlightBody({ values }: { values: Record<string, unknown> }) {
+function initFlightSegments(values: Record<string, unknown>): SegmentForm[] {
   const segRaw = values.segments ?? values.Segments;
-  const segments = coerceFlightSegments(segRaw);
-  let segmentsFallback = '';
-  if (segments.length === 0 && segRaw != null && segRaw !== '') {
-    try {
-      segmentsFallback = JSON.stringify(segRaw, null, 2);
-    } catch {
-      segmentsFallback = String(segRaw);
-    }
+  const segs = coerceFlightSegments(segRaw);
+  if (segs.length === 0) {
+    const planDate = dayjs().format('YYYY-MM-DD');
+    return [
+      {
+        airline: '',
+        flight_number: '',
+        departure_airport: '',
+        arrival_airport: '',
+        departure_date: planDate,
+        departure_time: '',
+        arrival_date: planDate,
+        arrival_time: '',
+        seat_class: '',
+        seat_number: '',
+        gate: '',
+        terminal: '',
+      },
+    ];
   }
+  return segs.map(segmentFromLoose);
+}
 
-  const exp = readExpenseNested(values);
-  const amt = exp
-    ? pickStr(exp, ['amount', 'Amount'])
-    : pickStr(values, ['amount', 'Amount']);
-  const cur = exp
-    ? pickStr(exp, ['currency', 'Currency'])
-    : pickStr(values, ['currency', 'Currency']);
-  const exDesc = exp
-    ? pickStr(exp, ['description', 'Description'])
-    : pickStr(values, ['description', 'Description']);
-  const exDate = exp
-    ? pickStr(exp, ['exDate', 'ex_date', 'ExDate'])
-    : pickStr(values, ['exDate', 'ex_date', 'ExDate']);
-  const showExpense =
-    amt.length > 0 ||
-    cur.length > 0 ||
-    exDesc.length > 0 ||
-    exDate.length > 0 ||
-    exp != null;
+function toIso(date: string, time: string): string | null {
+  if (!date || !time) return null;
+  const timeWithSeconds = time.length === 5 ? `${time}:00` : time;
+  const localDateTime = new Date(`${date}T${timeWithSeconds}`);
+  if (Number.isNaN(localDateTime.getTime())) return null;
+  return localDateTime.toISOString();
+}
+
+const ItineraryDraftEditor = forwardRef<
+  AiAnalyzeDraftEditorRef,
+  { draft: Extract<AiDocumentItemDraft, { itemType: 'itinerary' }> }
+>(function ItineraryDraftEditor({ draft }, ref) {
+  const base = draft.payload;
+  const values = useMemo(() => {
+    const raw = base.values as Record<string, unknown>;
+    return raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
+  }, [base.values]);
+
+  const [title, setTitle] = useState(() => pickStr(values, ['title', 'Title']));
+  const [description, setDescription] = useState(() =>
+    pickStr(values, ['description', 'Description']),
+  );
+  const [country, setCountry] = useState(() =>
+    pickStr(values, ['country', 'Country']),
+  );
+  const [city, setCity] = useState(() => pickStr(values, ['city', 'City']));
+  const [location, setLocation] = useState(() =>
+    pickStr(values, ['location', 'Location']),
+  );
+  const [itineraryDate, setItineraryDate] = useState(
+    () =>
+      pickStr(values, [
+        'itineraryDate',
+        'itinerary_date',
+        'ItineraryDate',
+      ]) || dayjs().format('YYYY-MM-DD'),
+  );
+  const [startTime, setStartTime] = useState(
+    () =>
+      normalizeHHmm(
+        pickStr(values, ['startTime', 'start_time', 'StartTime']) || '09:00',
+      ) || '09:00',
+  );
+  const [endTime, setEndTime] = useState(
+    () =>
+      normalizeHHmm(
+        pickStr(values, ['endTime', 'end_time', 'EndTime']) || '10:00',
+      ) || '10:00',
+  );
+
+  const expNested = readExpenseNested(values);
+  const initialExpense =
+    expNested ||
+    (pickStr(values, ['amount', 'Amount']).length > 0
+      ? values
+      : null);
+
+  const [showExpense, setShowExpense] = useState(
+    () =>
+      !!(
+        expNested ||
+        pickStr(values, ['category', 'Category']).length > 0 ||
+        pickStr(values, ['amount', 'Amount']).length > 0
+      ),
+  );
+  const [expCategory, setExpCategory] = useState<ExpenseCategory>(() =>
+    initialExpense
+      ? coerceExpenseCategory(
+          pickStr(initialExpense, ['category', 'Category']) || 'etc',
+        )
+      : ExpenseCategory.ETC,
+  );
+  const [expAmount, setExpAmount] = useState(() =>
+    normalizeAmountDigits(
+      initialExpense
+        ? pickStr(initialExpense, ['amount', 'Amount'])
+        : '',
+    ),
+  );
+  const [expDescription, setExpDescription] = useState(() =>
+    initialExpense
+      ? pickStr(initialExpense, ['description', 'Description'])
+      : '',
+  );
+
+  const [countryOpen, setCountryOpen] = useState(false);
+  const [timeOpen, setTimeOpen] = useState(false);
+  const [expenseOpen, setExpenseOpen] = useState(false);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+
+  useEffect(() => {
+    setTitle(pickStr(values, ['title', 'Title']));
+    setDescription(pickStr(values, ['description', 'Description']));
+    setCountry(pickStr(values, ['country', 'Country']));
+    setCity(pickStr(values, ['city', 'City']));
+    setLocation(pickStr(values, ['location', 'Location']));
+    setItineraryDate(
+      pickStr(values, [
+        'itineraryDate',
+        'itinerary_date',
+        'ItineraryDate',
+      ]) || dayjs().format('YYYY-MM-DD'),
+    );
+    setStartTime(
+      normalizeHHmm(
+        pickStr(values, ['startTime', 'start_time', 'StartTime']) || '09:00',
+      ) || '09:00',
+    );
+    setEndTime(
+      normalizeHHmm(
+        pickStr(values, ['endTime', 'end_time', 'EndTime']) || '10:00',
+      ) || '10:00',
+    );
+    const ex = readExpenseNested(values);
+    const hasEx =
+      !!ex ||
+      pickStr(values, ['category', 'Category']).length > 0 ||
+      pickStr(values, ['amount', 'Amount']).length > 0;
+    setShowExpense(hasEx);
+    const src = ex || values;
+    setExpCategory(
+      coerceExpenseCategory(pickStr(src, ['category', 'Category']) || 'etc'),
+    );
+    setExpAmount(normalizeAmountDigits(pickStr(src, ['amount', 'Amount'])));
+    setExpDescription(pickStr(src, ['description', 'Description']));
+  }, [values]);
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      buildDraft: (): AiDocumentItemDraft => {
+        const nextValues: Record<string, unknown> = {
+          ...values,
+          title,
+          description,
+          country,
+          city,
+          location,
+          itineraryDate,
+          startTime,
+          endTime,
+        };
+        if (showExpense && (expAmount.length > 0 || expDescription.length > 0)) {
+          nextValues.expense = {
+            category: expCategory,
+            amount: parseInt(expAmount, 10) || 0,
+            description: expDescription,
+            exDate: itineraryDate,
+            currency: ExpenseCurrency.KRW,
+          };
+        } else {
+          delete nextValues.expense;
+        }
+        return {
+          itemType: 'itinerary',
+          payload: {
+            ...base,
+            values: nextValues as typeof base.values,
+          },
+        };
+      },
+    }),
+    [
+      base,
+      values,
+      title,
+      description,
+      country,
+      city,
+      location,
+      itineraryDate,
+      startTime,
+      endTime,
+      showExpense,
+      expCategory,
+      expAmount,
+      expDescription,
+    ],
+  );
 
   return (
-    <>
-      <FieldRow
-        label="예약번호"
-        value={pickStr(values, [
-          'reservationNumber',
-          'reservation_number',
-          'ReservationNumber',
-        ])}
-      />
-      <FieldRow
-        label="탑승객"
-        value={pickStr(values, [
-          'passengerName',
-          'passenger_name',
-          'PassengerName',
-        ])}
-      />
-      <FieldRow
-        label="항공권 번호"
-        value={pickStr(values, [
-          'ticketNumber',
-          'ticket_number',
-          'TicketNumber',
-        ])}
-      />
-      <FieldRow
-        label="예약번호(여행사)"
-        value={pickStr(values, [
-          'bookingReference',
-          'booking_reference',
-          'BookingReference',
-        ])}
-      />
+    <View style={styles.formSection}>
+      <View style={styles.inputGroup}>
+        <Text style={styles.label}>제목*</Text>
+        <Input
+          variant="filled"
+          placeholder={PLACEHOLDERS.itinerary.titleForm}
+          value={title}
+          onChangeText={setTitle}
+          style={styles.input}
+          placeholderTextColor={colors.gray600}
+        />
+      </View>
 
-      {segments.length > 0 ? (
-        segments.map((seg, idx) => (
-          <FlightSegmentFields key={idx} index={idx} seg={seg} />
-        ))
-      ) : segmentsFallback.length > 0 ? (
-        <FieldRowMultiline label="구간 (원시)" value={segmentsFallback} />
-      ) : null}
+      <View style={styles.inputGroup}>
+        <Text style={styles.label}>내용</Text>
+        <Input
+          variant="filled"
+          placeholder={PLACEHOLDERS.itinerary.descriptionForm}
+          value={description}
+          onChangeText={setDescription}
+          multiline
+          numberOfLines={3}
+          textAlignVertical="top"
+          style={styles.textArea}
+          placeholderTextColor={colors.gray600}
+        />
+      </View>
+
+      <View
+        style={[
+          styles.row,
+          styles.pickerRowWrapper,
+          { zIndex: countryOpen ? 10001 : 1 },
+        ]}
+      >
+        <View
+          style={[
+            styles.inputGroup,
+            styles.halfWidth,
+            styles.countryPickerWrapper,
+          ]}
+        >
+          <Text style={styles.label}>국가</Text>
+          <CountryPicker
+            value={country}
+            onChange={setCountry}
+            onOpen={() => setCountryOpen(true)}
+            onClose={() => setCountryOpen(false)}
+            placeholder={PLACEHOLDERS.itinerary.countryForm}
+          />
+        </View>
+        <View style={[styles.inputGroup, styles.halfWidth]}>
+          <Text style={styles.label}>도시</Text>
+          <Input
+            variant="filled"
+            placeholder={PLACEHOLDERS.itinerary.cityForm}
+            value={city}
+            onChangeText={setCity}
+            style={styles.input}
+            placeholderTextColor={colors.gray600}
+          />
+        </View>
+      </View>
+
+      <View style={styles.inputGroup}>
+        <Text style={styles.label}>장소</Text>
+        <Input
+          variant="filled"
+          placeholder="장소를 입력하세요."
+          value={location}
+          onChangeText={setLocation}
+          style={styles.input}
+          placeholderTextColor={colors.gray600}
+        />
+      </View>
+
+      <View
+        style={[
+          styles.inputGroup,
+          styles.datePickerWrapper,
+          { zIndex: showDatePicker ? 20000 : 1 },
+        ]}
+      >
+        <Text style={styles.label}>날짜*</Text>
+        <Pressable
+          style={styles.dateInput}
+          onPress={() => setShowDatePicker(!showDatePicker)}
+        >
+          <View style={styles.dateTextContainer}>
+            <Text style={styles.dateText}>
+              {dayjs(itineraryDate).format('YYYY년 M월 D일')}
+            </Text>
+            <View style={styles.iconWrapper}>
+              <CalendarIcon width={16} height={16} />
+            </View>
+          </View>
+        </Pressable>
+        <BaseCalendar
+          visible={showDatePicker}
+          selectedDate={itineraryDate}
+          onDayPress={(day) => {
+            setItineraryDate(day.dateString);
+            setShowDatePicker(false);
+          }}
+          onClose={() => setShowDatePicker(false)}
+          style={styles.calendarPopup}
+          hideButtons
+          autoCloseOnSelect
+        />
+      </View>
+
+      <View style={[styles.row, styles.pickerRowWrapper, { zIndex: timeOpen ? 10001 : 1 }]}>
+        <View style={[styles.inputGroup, styles.halfWidth]}>
+          <Text style={styles.label}>시작 시간*</Text>
+          <TimePicker
+            value={startTime}
+            onChange={setStartTime}
+            onOpen={() => setTimeOpen(true)}
+            onClose={() => setTimeOpen(false)}
+          />
+        </View>
+        <View style={[styles.inputGroup, styles.halfWidth]}>
+          <Text style={styles.label}>종료 시간*</Text>
+          <TimePicker
+            value={endTime}
+            onChange={setEndTime}
+            onOpen={() => setTimeOpen(true)}
+            onClose={() => setTimeOpen(false)}
+            minTime={startTime}
+          />
+        </View>
+      </View>
 
       {showExpense ? (
         <>
@@ -317,195 +534,1199 @@ function FlightBody({ values }: { values: Record<string, unknown> }) {
             <View style={styles.pillDotOrange} />
             <Text style={styles.pillOrangeText}>비용 내역</Text>
           </View>
-          <FieldRow label="금액" value={amt} />
-          <FieldRow label="통화" value={cur} />
-          <FieldRow label="내용" value={exDesc} />
-          <FieldRow label="비용일" value={exDate} />
-        </>
-      ) : null}
-    </>
-  );
-}
-
-function AccommodationBody({ values }: { values: Record<string, unknown> }) {
-  const exp = readExpenseNested(values);
-  const amt = exp
-    ? pickStr(exp, ['amount', 'Amount'])
-    : pickStr(values, ['amount', 'Amount']);
-  const cur = exp
-    ? pickStr(exp, ['currency', 'Currency'])
-    : pickStr(values, ['currency', 'Currency']);
-  const exDesc = exp
-    ? pickStr(exp, ['description', 'Description'])
-    : pickStr(values, ['description', 'Description']);
-  const exDate = exp
-    ? pickStr(exp, ['exDate', 'ex_date', 'ExDate'])
-    : pickStr(values, ['exDate', 'ex_date', 'ExDate']);
-  const showExpense =
-    amt.length > 0 ||
-    cur.length > 0 ||
-    exDesc.length > 0 ||
-    exDate.length > 0 ||
-    exp != null;
-
-  return (
-    <>
-      <FieldRow label="이름" value={pickStr(values, ['name', 'Name'])} />
-      <FieldRow label="장소" value={pickStr(values, ['place', 'Place'])} />
-      <FieldRow label="국가" value={pickStr(values, ['country', 'Country'])} />
-      <FieldRow label="도시" value={pickStr(values, ['city', 'City'])} />
-      <FieldRow
-        label="체크인"
-        value={pickStr(values, [
-          'checkinDate',
-          'checkin_date',
-          'CheckinDate',
-        ])}
-      />
-      <FieldRow
-        label="체크아웃"
-        value={pickStr(values, [
-          'checkoutDate',
-          'checkout_date',
-          'CheckoutDate',
-        ])}
-      />
-      <FieldRow
-        label="체크인 시간"
-        value={pickStr(values, [
-          'checkinTime',
-          'checkin_time',
-          'CheckinTime',
-        ])}
-      />
-      <FieldRow
-        label="체크아웃 시간"
-        value={pickStr(values, [
-          'checkoutTime',
-          'checkout_time',
-          'CheckoutTime',
-        ])}
-      />
-      <FieldRowMultiline
-        label="설명"
-        value={pickStr(values, ['description', 'Description'])}
-      />
-
-      {showExpense ? (
-        <>
-          <View style={[styles.pillOrange, styles.pillOrangeSpaced]}>
-            <View style={styles.pillDotOrange} />
-            <Text style={styles.pillOrangeText}>비용 내역</Text>
+          <View style={[styles.row, { zIndex: expenseOpen ? 10001 : 1 }]}>
+            <View style={[styles.inputGroup, styles.halfWidth]}>
+              <Text style={styles.label}>카테고리</Text>
+              <CategoryPicker
+                value={expCategory}
+                onChange={setExpCategory}
+                onOpen={() => setExpenseOpen(true)}
+                onClose={() => setExpenseOpen(false)}
+              />
+            </View>
+            <View style={[styles.inputGroup, styles.halfWidth]}>
+              <Text style={styles.label}>통화</Text>
+              <View style={styles.currencyDisplay}>
+                <Text style={styles.currencyText}>
+                  {currencyLabels[ExpenseCurrency.KRW]}
+                </Text>
+              </View>
+            </View>
           </View>
-          <FieldRow label="금액" value={amt} />
-          <FieldRow label="통화" value={cur} />
-          <FieldRow label="내용" value={exDesc} />
-          <FieldRow label="비용일" value={exDate} />
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>금액*</Text>
+            <Input
+              variant="outlined"
+              placeholder={PLACEHOLDERS.expense.amount}
+              value={formatAmountWithCommas(expAmount)}
+              onChangeText={(text) =>
+                setExpAmount(normalizeAmountDigits(text.replace(/,/g, '')))
+              }
+              keyboardType="numeric"
+              style={styles.expenseInput}
+            />
+          </View>
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>내용</Text>
+            <Input
+              variant="outlined"
+              placeholder={PLACEHOLDERS.expense.descriptionForm}
+              value={expDescription}
+              onChangeText={setExpDescription}
+              style={styles.expenseInput}
+            />
+          </View>
         </>
       ) : null}
-    </>
+    </View>
   );
-}
+});
 
-function ExpenseOnlyBody({ values }: { values: Record<string, unknown> }) {
+const FlightDraftEditor = forwardRef<
+  AiAnalyzeDraftEditorRef,
+  { draft: Extract<AiDocumentItemDraft, { itemType: 'flight' }> }
+>(function FlightDraftEditor({ draft }, ref) {
+  const base = draft.payload;
+  const values = useMemo(() => {
+    const raw = base.values as Record<string, unknown>;
+    return raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
+  }, [base.values]);
+
+  const [reservationNumber, setReservationNumber] = useState('');
+  const [passengerName, setPassengerName] = useState('');
+  const [ticketNumber, setTicketNumber] = useState('');
+  const [bookingReference, setBookingReference] = useState('');
+  const [segments, setSegments] = useState<SegmentForm[]>([]);
+  const [expenseAmount, setExpenseAmount] = useState('');
+  const [segmentCal, setSegmentCal] = useState<{
+    idx: number;
+    field: 'dep' | 'arr';
+  } | null>(null);
+
+  const syncFromValues = useCallback((v: Record<string, unknown>) => {
+    setReservationNumber(
+      pickStr(v, [
+        'reservationNumber',
+        'reservation_number',
+        'ReservationNumber',
+      ]),
+    );
+    setPassengerName(
+      pickStr(v, ['passengerName', 'passenger_name', 'PassengerName']),
+    );
+    setTicketNumber(
+      pickStr(v, ['ticketNumber', 'ticket_number', 'TicketNumber']),
+    );
+    setBookingReference(
+      pickStr(v, [
+        'bookingReference',
+        'booking_reference',
+        'BookingReference',
+      ]),
+    );
+    setSegments(initFlightSegments(v));
+    const ex = readExpenseNested(v);
+    const amtSrc = ex || v;
+    setExpenseAmount(
+      normalizeAmountDigits(pickStr(amtSrc, ['amount', 'Amount'])),
+    );
+  }, []);
+
+  useEffect(() => {
+    syncFromValues(values);
+  }, [values, syncFromValues]);
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      buildDraft: (): AiDocumentItemDraft => {
+        const apiSegments: FlightSegmentBaseDto[] = segments.map((s) => {
+          const depIso = toIso(s.departure_date, s.departure_time);
+          const arrIso = toIso(s.arrival_date, s.arrival_time);
+          return {
+            airline: s.airline || null,
+            flightNumber: s.flight_number || null,
+            departureAirport: s.departure_airport,
+            arrivalAirport: s.arrival_airport,
+            departureTime: depIso || new Date().toISOString(),
+            arrivalTime: arrIso || new Date().toISOString(),
+            seatClass: s.seat_class || null,
+            seatNumber: s.seat_number || null,
+            gate: s.gate || null,
+            terminal: s.terminal || null,
+          };
+        });
+        const exDate =
+          segments[0]?.departure_date ||
+          dayjs().format('YYYY-MM-DD');
+        const nextValues: Record<string, unknown> = {
+          ...values,
+          reservationNumber,
+          passengerName,
+          ticketNumber,
+          bookingReference,
+          segments: apiSegments,
+          expense: {
+            exDate,
+            amount: parseInt(expenseAmount, 10) || 0,
+            currency: ExpenseCurrency.KRW,
+            category: ExpenseCategory.FLIGHT,
+            description: reservationNumber || null,
+          },
+        };
+        return {
+          itemType: 'flight',
+          payload: {
+            ...base,
+            values: nextValues as typeof base.values,
+          },
+        };
+      },
+    }),
+    [
+      base,
+      values,
+      reservationNumber,
+      passengerName,
+      ticketNumber,
+      bookingReference,
+      segments,
+      expenseAmount,
+    ],
+  );
+
   return (
-    <>
-      <FieldRow
-        label="카테고리"
-        value={pickStr(values, ['category', 'Category'])}
-      />
-      <FieldRow label="금액" value={pickStr(values, ['amount', 'Amount'])} />
-      <FieldRow
-        label="통화"
-        value={pickStr(values, ['currency', 'Currency'])}
-      />
-      <FieldRow
-        label="내용"
-        value={pickStr(values, ['description', 'Description'])}
-      />
-      <FieldRow
-        label="비용일"
-        value={pickStr(values, ['exDate', 'ex_date', 'ExDate'])}
-      />
-    </>
-  );
-}
+    <View style={styles.formSection}>
+      <View style={[styles.row, { gap: spacing.sm }]}>
+        <View style={[styles.inputGroup, styles.halfWidth]}>
+          <Text style={styles.label}>예약번호 (PNR)</Text>
+          <Input
+            variant="filled"
+            placeholder={PLACEHOLDERS.flight.reservationNumber}
+            value={reservationNumber}
+            onChangeText={setReservationNumber}
+            style={styles.input}
+            placeholderTextColor={colors.gray600}
+          />
+        </View>
+        <View style={[styles.inputGroup, styles.halfWidth]}>
+          <Text style={styles.label}>승객명</Text>
+          <Input
+            variant="filled"
+            placeholder={PLACEHOLDERS.flight.passengerName}
+            value={passengerName}
+            onChangeText={setPassengerName}
+            style={styles.input}
+            placeholderTextColor={colors.gray600}
+          />
+        </View>
+      </View>
 
-export function AiAnalyzeResultBody({ draft }: { draft: AiDocumentItemDraft }) {
-  const raw = draft.payload?.values;
-  const values: Record<string, unknown> =
-    raw && typeof raw === 'object' && !Array.isArray(raw)
-      ? (raw as Record<string, unknown>)
-      : {};
+      <View style={styles.inputGroup}>
+        <Text style={styles.label}>항공권 번호</Text>
+        <Input
+          variant="filled"
+          placeholder={PLACEHOLDERS.flight.ticketNumber}
+          value={ticketNumber}
+          onChangeText={setTicketNumber}
+          style={styles.input}
+          placeholderTextColor={colors.gray600}
+        />
+      </View>
+
+      <View style={styles.inputGroup}>
+        <Text style={styles.label}>예약번호 (여행사 예약 번호)</Text>
+        <Input
+          variant="filled"
+          placeholder={PLACEHOLDERS.flight.bookingReference}
+          value={bookingReference}
+          onChangeText={setBookingReference}
+          style={styles.input}
+          placeholderTextColor={colors.gray600}
+        />
+      </View>
+
+      <View style={styles.inputGroup}>
+        <Text style={styles.label}>항공료</Text>
+        <View style={styles.amountInputWrapper}>
+          <Input
+            variant="filled"
+            placeholder={PLACEHOLDERS.expense.amount}
+            value={formatAmountWithCommas(expenseAmount)}
+            onChangeText={(text) =>
+              setExpenseAmount(normalizeAmountDigits(text.replace(/,/g, '')))
+            }
+            keyboardType="numeric"
+            style={[styles.input, styles.amountInputPadding]}
+            placeholderTextColor={colors.gray600}
+          />
+          <Text style={styles.amountSuffix} pointerEvents="none">
+            {currencyLabels[ExpenseCurrency.KRW]}
+          </Text>
+        </View>
+      </View>
+
+      <View style={[styles.inputGroup, { zIndex: 5000 }]}>
+        {segments.map((segment, idx) => (
+          <View
+            key={`seg-${idx}`}
+            style={[
+              styles.segmentContainer,
+              { zIndex: (segments.length - idx) * 1000 },
+            ]}
+          >
+            <View style={styles.segmentTitleRow}>
+              <Text style={styles.segmentTitle}>구간{idx + 1}</Text>
+            </View>
+
+            <View style={styles.segmentContent}>
+              <View style={[styles.row, { gap: spacing.sm, zIndex: 3000 }]}>
+                <View style={[styles.inputGroup, styles.halfWidth]}>
+                  <Text style={styles.label}>항공사</Text>
+                  <Input
+                    variant="outlined"
+                    placeholder={PLACEHOLDERS.flight.airline}
+                    value={segment.airline}
+                    onChangeText={(text) => {
+                      const next = [...segments];
+                      next[idx] = { ...next[idx], airline: text };
+                      setSegments(next);
+                    }}
+                    style={styles.segmentInput}
+                    placeholderTextColor={colors.gray600}
+                  />
+                </View>
+                <View style={[styles.inputGroup, styles.halfWidth]}>
+                  <Text style={styles.label}>항공편명</Text>
+                  <Input
+                    variant="outlined"
+                    placeholder={PLACEHOLDERS.flight.flightNumber}
+                    value={segment.flight_number}
+                    onChangeText={(text) => {
+                      const next = [...segments];
+                      next[idx] = { ...next[idx], flight_number: text };
+                      setSegments(next);
+                    }}
+                    style={styles.segmentInput}
+                    placeholderTextColor={colors.gray600}
+                  />
+                </View>
+              </View>
+
+              <View style={[styles.row, { gap: spacing.sm, zIndex: 2000 }]}>
+                <View
+                  style={[
+                    styles.inputGroup,
+                    styles.halfWidth,
+                    styles.airportPickerWrapper,
+                  ]}
+                >
+                  <Text style={styles.label}>출발 공항*</Text>
+                  <AirportPicker
+                    value={segment.departure_airport}
+                    onChange={(code) => {
+                      const next = [...segments];
+                      next[idx] = { ...next[idx], departure_airport: code };
+                      setSegments(next);
+                    }}
+                    placeholder={PLACEHOLDERS.flight.departureAirport}
+                  />
+                </View>
+                <View
+                  style={[
+                    styles.inputGroup,
+                    styles.halfWidth,
+                    styles.airportPickerWrapper,
+                  ]}
+                >
+                  <Text style={styles.label}>도착 공항*</Text>
+                  <AirportPicker
+                    value={segment.arrival_airport}
+                    onChange={(code) => {
+                      const next = [...segments];
+                      next[idx] = { ...next[idx], arrival_airport: code };
+                      setSegments(next);
+                    }}
+                    placeholder={PLACEHOLDERS.flight.arrivalAirport}
+                  />
+                </View>
+              </View>
+
+              <View style={[styles.row, { gap: spacing.sm, zIndex: 1000 }]}>
+                <View style={[styles.inputGroup, styles.halfWidth]}>
+                  <Text style={styles.label}>출발 일자*</Text>
+                  <Pressable
+                    style={styles.segmentDateInput}
+                    onPress={() => setSegmentCal({ idx, field: 'dep' })}
+                  >
+                    <View style={styles.segmentDateTextContainer}>
+                      <Text
+                        style={
+                          segment.departure_date
+                            ? styles.segmentDateText
+                            : styles.segmentPlaceholderText
+                        }
+                      >
+                        {segment.departure_date
+                          ? dayjs(segment.departure_date).format('YYYY.MM.DD')
+                          : '기타'}
+                      </Text>
+                      <View style={styles.iconWrapper}>
+                        <CalendarIcon width={16} height={16} />
+                      </View>
+                    </View>
+                  </Pressable>
+                  {segmentCal?.idx === idx && segmentCal.field === 'dep' ? (
+                    <BaseCalendar
+                      visible
+                      selectedDate={segment.departure_date}
+                      onDayPress={(day) => {
+                        const next = [...segments];
+                        next[idx] = {
+                          ...next[idx],
+                          departure_date: day.dateString,
+                        };
+                        setSegments(next);
+                        setSegmentCal(null);
+                      }}
+                      onClose={() => setSegmentCal(null)}
+                      style={styles.calendarPopup}
+                      minDate={
+                        idx > 0
+                          ? segments[idx - 1].arrival_date
+                          : undefined
+                      }
+                      hideButtons
+                      autoCloseOnSelect
+                    />
+                  ) : null}
+                </View>
+                <View style={[styles.inputGroup, styles.halfWidth]}>
+                  <Text style={styles.label}>출발 시간*</Text>
+                  <TimePicker
+                    value={segment.departure_time}
+                    onChange={(time) => {
+                      const next = [...segments];
+                      next[idx] = { ...next[idx], departure_time: time };
+                      setSegments(next);
+                    }}
+                    minTime={
+                      idx > 0 &&
+                      segment.departure_date === segments[idx - 1].arrival_date
+                        ? segments[idx - 1].arrival_time
+                        : undefined
+                    }
+                    style={styles.segmentTimePicker}
+                  />
+                </View>
+              </View>
+
+              <View style={[styles.row, { gap: spacing.sm, zIndex: 500 }]}>
+                <View style={[styles.inputGroup, styles.halfWidth]}>
+                  <Text style={styles.label}>도착 일자*</Text>
+                  <Pressable
+                    style={styles.segmentDateInput}
+                    onPress={() => setSegmentCal({ idx, field: 'arr' })}
+                  >
+                    <View style={styles.segmentDateTextContainer}>
+                      <Text
+                        style={
+                          segment.arrival_date
+                            ? styles.segmentDateText
+                            : styles.segmentPlaceholderText
+                        }
+                      >
+                        {segment.arrival_date
+                          ? dayjs(segment.arrival_date).format('YYYY.MM.DD')
+                          : '기타'}
+                      </Text>
+                      <View style={styles.iconWrapper}>
+                        <CalendarIcon width={16} height={16} />
+                      </View>
+                    </View>
+                  </Pressable>
+                  {segmentCal?.idx === idx && segmentCal.field === 'arr' ? (
+                    <BaseCalendar
+                      visible
+                      selectedDate={segment.arrival_date}
+                      onDayPress={(day) => {
+                        const next = [...segments];
+                        next[idx] = {
+                          ...next[idx],
+                          arrival_date: day.dateString,
+                        };
+                        setSegments(next);
+                        setSegmentCal(null);
+                      }}
+                      onClose={() => setSegmentCal(null)}
+                      style={styles.calendarPopup}
+                      hideButtons
+                      autoCloseOnSelect
+                    />
+                  ) : null}
+                </View>
+                <View style={[styles.inputGroup, styles.halfWidth]}>
+                  <Text style={styles.label}>도착 시간*</Text>
+                  <TimePicker
+                    value={segment.arrival_time}
+                    onChange={(time) => {
+                      const next = [...segments];
+                      next[idx] = { ...next[idx], arrival_time: time };
+                      setSegments(next);
+                    }}
+                    style={styles.segmentTimePicker}
+                  />
+                </View>
+              </View>
+
+              <View style={[styles.row, { gap: spacing.sm }]}>
+                <View style={[styles.inputGroup, styles.halfWidth]}>
+                  <Text style={styles.label}>좌석등급</Text>
+                  <Input
+                    variant="outlined"
+                    value={segment.seat_class}
+                    onChangeText={(text) => {
+                      const next = [...segments];
+                      next[idx] = { ...next[idx], seat_class: text };
+                      setSegments(next);
+                    }}
+                    style={styles.segmentInput}
+                    placeholderTextColor={colors.gray600}
+                  />
+                </View>
+                <View style={[styles.inputGroup, styles.halfWidth]}>
+                  <Text style={styles.label}>좌석번호</Text>
+                  <Input
+                    variant="outlined"
+                    value={segment.seat_number}
+                    onChangeText={(text) => {
+                      const next = [...segments];
+                      next[idx] = { ...next[idx], seat_number: text };
+                      setSegments(next);
+                    }}
+                    style={styles.segmentInput}
+                    placeholderTextColor={colors.gray600}
+                  />
+                </View>
+              </View>
+
+              <View style={[styles.row, { gap: spacing.sm }]}>
+                <View style={[styles.inputGroup, styles.halfWidth]}>
+                  <Text style={styles.label}>게이트</Text>
+                  <Input
+                    variant="outlined"
+                    value={segment.gate}
+                    onChangeText={(text) => {
+                      const next = [...segments];
+                      next[idx] = { ...next[idx], gate: text };
+                      setSegments(next);
+                    }}
+                    style={styles.segmentInput}
+                    placeholderTextColor={colors.gray600}
+                  />
+                </View>
+                <View style={[styles.inputGroup, styles.halfWidth]}>
+                  <Text style={styles.label}>터미널</Text>
+                  <Input
+                    variant="outlined"
+                    value={segment.terminal}
+                    onChangeText={(text) => {
+                      const next = [...segments];
+                      next[idx] = { ...next[idx], terminal: text };
+                      setSegments(next);
+                    }}
+                    style={styles.segmentInput}
+                    placeholderTextColor={colors.gray600}
+                  />
+                </View>
+              </View>
+            </View>
+          </View>
+        ))}
+      </View>
+    </View>
+  );
+});
+
+const AccommodationDraftEditor = forwardRef<
+  AiAnalyzeDraftEditorRef,
+  { draft: Extract<AiDocumentItemDraft, { itemType: 'accommodation' }> }
+>(function AccommodationDraftEditor({ draft }, ref) {
+  const base = draft.payload;
+  const values = useMemo(() => {
+    const raw = base.values as Record<string, unknown>;
+    return raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
+  }, [base.values]);
+
+  const [name, setName] = useState('');
+  const [place, setPlace] = useState('');
+  const [country, setCountry] = useState('');
+  const [city, setCity] = useState('');
+  const [description, setDescription] = useState('');
+  const [checkinDate, setCheckinDate] = useState(dayjs().format('YYYY-MM-DD'));
+  const [checkoutDate, setCheckoutDate] = useState(
+    dayjs().add(1, 'day').format('YYYY-MM-DD'),
+  );
+  const [checkinTime, setCheckinTime] = useState('15:00');
+  const [checkoutTime, setCheckoutTime] = useState('11:00');
+  const [expenseAmount, setExpenseAmount] = useState('');
+  const [expenseCurrency, setExpenseCurrency] = useState(ExpenseCurrency.KRW);
+
+  const [countryOpen, setCountryOpen] = useState(false);
+  const [showCheckinCal, setShowCheckinCal] = useState(false);
+  const [showCheckoutCal, setShowCheckoutCal] = useState(false);
+  const [checkinTimeOpen, setCheckinTimeOpen] = useState(false);
+  const [checkoutTimeOpen, setCheckoutTimeOpen] = useState(false);
+
+  const currencyOptions = useMemo(
+    () => [
+      { label: 'KRW', value: ExpenseCurrency.KRW },
+      { label: 'USD', value: ExpenseCurrency.USD },
+      { label: 'EUR', value: ExpenseCurrency.EUR },
+      { label: 'JPY', value: ExpenseCurrency.JPY },
+    ],
+    [],
+  );
+
+  useEffect(() => {
+    setName(pickStr(values, ['name', 'Name']));
+    setPlace(pickStr(values, ['place', 'Place']));
+    setCountry(pickStr(values, ['country', 'Country']));
+    setCity(pickStr(values, ['city', 'City']));
+    setDescription(pickStr(values, ['description', 'Description']));
+    const ci =
+      pickStr(values, ['checkinDate', 'checkin_date', 'CheckinDate']) ||
+      dayjs().format('YYYY-MM-DD');
+    const co =
+      pickStr(values, ['checkoutDate', 'checkout_date', 'CheckoutDate']) ||
+      dayjs(ci).add(1, 'day').format('YYYY-MM-DD');
+    setCheckinDate(ci);
+    setCheckoutDate(co);
+    setCheckinTime(
+      normalizeHHmm(
+        pickStr(values, ['checkinTime', 'checkin_time', 'CheckinTime']) ||
+          '15:00',
+      ) || '15:00',
+    );
+    setCheckoutTime(
+      normalizeHHmm(
+        pickStr(values, ['checkoutTime', 'checkout_time', 'CheckoutTime']) ||
+          '11:00',
+      ) || '11:00',
+    );
+    const ex = readExpenseNested(values);
+    const amtSrc = ex || values;
+    setExpenseAmount(
+      normalizeAmountDigits(pickStr(amtSrc, ['amount', 'Amount'])),
+    );
+    setExpenseCurrency(
+      coerceExpenseCurrency(pickStr(amtSrc, ['currency', 'Currency']) || 'KRW'),
+    );
+  }, [values]);
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      buildDraft: (): AiDocumentItemDraft => {
+        const nextValues: Record<string, unknown> = {
+          ...values,
+          name,
+          place,
+          country,
+          city,
+          description,
+          checkinDate,
+          checkoutDate,
+          checkinTime: `${checkinTime}:00`,
+          checkoutTime: `${checkoutTime}:00`,
+          expense: {
+            exDate: checkinDate,
+            amount: parseInt(expenseAmount, 10) || 0,
+            category: ExpenseCategory.ACCOMMODATION,
+            currency: expenseCurrency,
+            description: name,
+          },
+        };
+        return {
+          itemType: 'accommodation',
+          payload: {
+            ...base,
+            values: nextValues as typeof base.values,
+          },
+        };
+      },
+    }),
+    [
+      base,
+      values,
+      name,
+      place,
+      country,
+      city,
+      description,
+      checkinDate,
+      checkoutDate,
+      checkinTime,
+      checkoutTime,
+      expenseAmount,
+      expenseCurrency,
+    ],
+  );
+
+  return (
+    <View style={styles.formSection}>
+      <View style={styles.inputGroup}>
+        <Text style={styles.label}>숙소명*</Text>
+        <Input
+          variant="filled"
+          placeholder={PLACEHOLDERS.accommodation.name}
+          value={name}
+          onChangeText={setName}
+          style={styles.input}
+          placeholderTextColor={colors.gray600}
+        />
+      </View>
+
+      <View style={styles.inputGroup}>
+        <Text style={styles.label}>내용</Text>
+        <Input
+          variant="filled"
+          placeholder={PLACEHOLDERS.itinerary.descriptionForm}
+          value={description}
+          onChangeText={setDescription}
+          multiline
+          numberOfLines={3}
+          textAlignVertical="top"
+          style={styles.textArea}
+          placeholderTextColor={colors.gray600}
+        />
+      </View>
+
+      <View style={[styles.row, { gap: spacing.sm, zIndex: countryOpen ? 10000 : 1 }]}>
+        <View style={[styles.inputGroup, styles.halfWidth]}>
+          <Text style={styles.label}>국가</Text>
+          <CountryPicker
+            value={country}
+            onChange={setCountry}
+            placeholder={PLACEHOLDERS.picker.country}
+            onOpen={() => setCountryOpen(true)}
+            onClose={() => setCountryOpen(false)}
+          />
+        </View>
+        <View style={[styles.inputGroup, styles.halfWidth]}>
+          <Text style={styles.label}>도시</Text>
+          <Input
+            variant="filled"
+            placeholder={PLACEHOLDERS.accommodation.city}
+            value={city}
+            onChangeText={setCity}
+            style={styles.input}
+            placeholderTextColor={colors.gray600}
+          />
+        </View>
+      </View>
+
+      <View style={styles.inputGroup}>
+        <Text style={styles.label}>장소</Text>
+        <Input
+          variant="filled"
+          placeholder={PLACEHOLDERS.accommodation.place}
+          value={place}
+          onChangeText={setPlace}
+          style={styles.input}
+          placeholderTextColor={colors.gray600}
+        />
+      </View>
+
+      <View
+        style={[
+          styles.row,
+          { gap: spacing.sm, zIndex: showCheckinCal ? 30000 : checkinTimeOpen ? 20002 : 1 },
+        ]}
+      >
+        <View style={[styles.inputGroup, styles.halfWidth, { position: 'relative' }]}>
+          <Text style={styles.label}>체크인 날짜</Text>
+          <Pressable
+            style={styles.dateInput}
+            onPress={() => setShowCheckinCal(true)}
+          >
+            <View style={styles.dateTextContainer}>
+              <Text style={checkinDate ? styles.dateText : styles.placeholderText}>
+                {checkinDate
+                  ? dayjs(checkinDate).format('YYYY.MM.DD')
+                  : '기타'}
+              </Text>
+              <View style={styles.iconWrapper}>
+                <CalendarIcon width={16} height={16} />
+              </View>
+            </View>
+          </Pressable>
+          {showCheckinCal ? (
+            <BaseCalendar
+              visible
+              selectedDate={checkinDate}
+              onDayPress={(day) => {
+                setCheckinDate(day.dateString);
+                setShowCheckinCal(false);
+              }}
+              onClose={() => setShowCheckinCal(false)}
+              style={styles.calendarPopup}
+              minDate={dayjs().format('YYYY-MM-DD')}
+              hideButtons
+              autoCloseOnSelect
+            />
+          ) : null}
+        </View>
+        <View style={[styles.inputGroup, styles.halfWidth]}>
+          <Text style={styles.label}>체크인 시간</Text>
+          <TimePicker
+            value={checkinTime}
+            onChange={setCheckinTime}
+            onOpen={() => {
+              setCheckinTimeOpen(true);
+              if (checkoutTimeOpen) setCheckoutTimeOpen(false);
+            }}
+            onClose={() => setCheckinTimeOpen(false)}
+            style={styles.timePicker}
+          />
+        </View>
+      </View>
+
+      <View
+        style={[
+          styles.row,
+          { gap: spacing.sm, zIndex: showCheckoutCal ? 30000 : checkoutTimeOpen ? 20001 : 1 },
+        ]}
+      >
+        <View style={[styles.inputGroup, styles.halfWidth, { position: 'relative' }]}>
+          <Text style={styles.label}>체크아웃 날짜</Text>
+          <Pressable
+            style={styles.dateInput}
+            onPress={() => setShowCheckoutCal(true)}
+          >
+            <View style={styles.dateTextContainer}>
+              <Text style={checkoutDate ? styles.dateText : styles.placeholderText}>
+                {checkoutDate
+                  ? dayjs(checkoutDate).format('YYYY.MM.DD')
+                  : '기타'}
+              </Text>
+              <View style={styles.iconWrapper}>
+                <CalendarIcon width={16} height={16} />
+              </View>
+            </View>
+          </Pressable>
+          {showCheckoutCal ? (
+            <BaseCalendar
+              visible
+              selectedDate={checkoutDate}
+              onDayPress={(day) => {
+                setCheckoutDate(day.dateString);
+                setShowCheckoutCal(false);
+              }}
+              onClose={() => setShowCheckoutCal(false)}
+              style={styles.calendarPopup}
+              minDate={checkinDate}
+              hideButtons
+              autoCloseOnSelect
+            />
+          ) : null}
+        </View>
+        <View style={[styles.inputGroup, styles.halfWidth]}>
+          <Text style={styles.label}>체크아웃 시간</Text>
+          <TimePicker
+            value={checkoutTime}
+            onChange={setCheckoutTime}
+            onOpen={() => {
+              setCheckoutTimeOpen(true);
+              if (checkinTimeOpen) setCheckinTimeOpen(false);
+            }}
+            onClose={() => setCheckoutTimeOpen(false)}
+            style={styles.timePicker}
+          />
+        </View>
+      </View>
+
+      <View style={[styles.row, { gap: spacing.sm }]}>
+        <View style={[styles.inputGroup, { flex: 1 }]}>
+          <Text style={styles.label}>숙박료</Text>
+          <View style={styles.amountInputWrapper}>
+            <Input
+              variant="filled"
+              placeholder={PLACEHOLDERS.expense.amount}
+              value={formatAmountWithCommas(expenseAmount)}
+              onChangeText={(text) =>
+                setExpenseAmount(normalizeAmountDigits(text.replace(/,/g, '')))
+              }
+              keyboardType="numeric"
+              style={[styles.input, styles.amountInputPadding]}
+              placeholderTextColor={colors.gray600}
+            />
+            <Text style={styles.amountSuffix} pointerEvents="none">
+              {currencyLabels[ExpenseCurrency.KRW]}
+            </Text>
+          </View>
+        </View>
+      </View>
+
+      <View style={styles.inputGroup}>
+        <Text style={styles.label}>결제 통화</Text>
+        <View style={[styles.row, { flexWrap: 'wrap', gap: spacing.sm }]}>
+          {currencyOptions.map((opt) => (
+            <Pressable
+              key={opt.value}
+              onPress={() => setExpenseCurrency(opt.value)}
+              style={[
+                styles.currencyChip,
+                expenseCurrency === opt.value && styles.currencyChipSelected,
+              ]}
+            >
+              <Text
+                style={[
+                  styles.currencyChipText,
+                  expenseCurrency === opt.value &&
+                    styles.currencyChipTextSelected,
+                ]}
+              >
+                {opt.label}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+      </View>
+    </View>
+  );
+});
+
+const ExpenseDraftEditor = forwardRef<
+  AiAnalyzeDraftEditorRef,
+  { draft: Extract<AiDocumentItemDraft, { itemType: 'expense' }> }
+>(function ExpenseDraftEditor({ draft }, ref) {
+  const base = draft.payload;
+  const values = useMemo(() => {
+    const raw = base.values as Record<string, unknown>;
+    return raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
+  }, [base.values]);
+
+  const [category, setCategory] = useState(ExpenseCategory.ETC);
+  const [amount, setAmount] = useState('');
+  const [currency, setCurrency] = useState(ExpenseCurrency.KRW);
+  const [description, setDescription] = useState('');
+  const [exDate, setExDate] = useState(dayjs().format('YYYY-MM-DD'));
+  const [catOpen, setCatOpen] = useState(false);
+  const [showCal, setShowCal] = useState(false);
+
+  useEffect(() => {
+    setCategory(
+      coerceExpenseCategory(pickStr(values, ['category', 'Category']) || 'etc'),
+    );
+    setAmount(normalizeAmountDigits(pickStr(values, ['amount', 'Amount'])));
+    setCurrency(
+      coerceExpenseCurrency(pickStr(values, ['currency', 'Currency']) || 'KRW'),
+    );
+    setDescription(pickStr(values, ['description', 'Description']));
+    setExDate(
+      pickStr(values, ['exDate', 'ex_date', 'ExDate']) ||
+        dayjs().format('YYYY-MM-DD'),
+    );
+  }, [values]);
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      buildDraft: (): AiDocumentItemDraft => ({
+        itemType: 'expense',
+        payload: {
+          ...base,
+          values: {
+            ...values,
+            category,
+            amount: parseInt(amount, 10) || 0,
+            currency,
+            description,
+            exDate,
+          } as typeof base.values,
+        },
+      }),
+    }),
+    [base, values, category, amount, currency, description, exDate],
+  );
+
+  const currencyOptions = useMemo(
+    () => [
+      { label: 'KRW', value: ExpenseCurrency.KRW },
+      { label: 'USD', value: ExpenseCurrency.USD },
+      { label: 'EUR', value: ExpenseCurrency.EUR },
+      { label: 'JPY', value: ExpenseCurrency.JPY },
+    ],
+    [],
+  );
+
+  return (
+    <View style={styles.formSection}>
+      <View style={[styles.inputGroup, { zIndex: catOpen ? 10001 : 1 }]}>
+        <Text style={styles.label}>카테고리</Text>
+        <CategoryPicker
+          value={category}
+          onChange={setCategory}
+          onOpen={() => setCatOpen(true)}
+          onClose={() => setCatOpen(false)}
+        />
+      </View>
+      <View style={styles.inputGroup}>
+        <Text style={styles.label}>금액</Text>
+        <Input
+          variant="filled"
+          value={formatAmountWithCommas(amount)}
+          onChangeText={(text) =>
+            setAmount(normalizeAmountDigits(text.replace(/,/g, '')))
+          }
+          keyboardType="numeric"
+          style={styles.input}
+          placeholderTextColor={colors.gray600}
+        />
+      </View>
+      <View style={styles.inputGroup}>
+        <Text style={styles.label}>통화</Text>
+        <View style={[styles.row, { flexWrap: 'wrap', gap: spacing.sm }]}>
+          {currencyOptions.map((opt) => (
+            <Pressable
+              key={opt.value}
+              onPress={() => setCurrency(opt.value)}
+              style={[
+                styles.currencyChip,
+                currency === opt.value && styles.currencyChipSelected,
+              ]}
+            >
+              <Text
+                style={[
+                  styles.currencyChipText,
+                  currency === opt.value && styles.currencyChipTextSelected,
+                ]}
+              >
+                {opt.label}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+      </View>
+      <View style={styles.inputGroup}>
+        <Text style={styles.label}>내용</Text>
+        <Input
+          variant="filled"
+          value={description}
+          onChangeText={setDescription}
+          style={styles.textArea}
+          multiline
+          placeholderTextColor={colors.gray600}
+        />
+      </View>
+      <View style={[styles.inputGroup, { zIndex: showCal ? 20000 : 1 }]}>
+        <Text style={styles.label}>비용일</Text>
+        <Pressable style={styles.dateInput} onPress={() => setShowCal(true)}>
+          <View style={styles.dateTextContainer}>
+            <Text style={styles.dateText}>
+              {dayjs(exDate).format('YYYY년 M월 D일')}
+            </Text>
+            <View style={styles.iconWrapper}>
+              <CalendarIcon width={16} height={16} />
+            </View>
+          </View>
+        </Pressable>
+        {showCal ? (
+          <BaseCalendar
+            visible
+            selectedDate={exDate}
+            onDayPress={(day) => {
+              setExDate(day.dateString);
+              setShowCal(false);
+            }}
+            onClose={() => setShowCal(false)}
+            style={styles.calendarPopup}
+            hideButtons
+            autoCloseOnSelect
+          />
+        ) : null}
+      </View>
+    </View>
+  );
+});
+
+export const AiAnalyzeResultBody = forwardRef<
+  AiAnalyzeDraftEditorRef,
+  { draft: AiDocumentItemDraft }
+>(function AiAnalyzeResultBody({ draft }, ref) {
+  const itineraryRef = React.useRef<AiAnalyzeDraftEditorRef>(null);
+  const flightRef = React.useRef<AiAnalyzeDraftEditorRef>(null);
+  const accommodationRef = React.useRef<AiAnalyzeDraftEditorRef>(null);
+  const expenseRef = React.useRef<AiAnalyzeDraftEditorRef>(null);
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      buildDraft: () => {
+        switch (draft.itemType) {
+          case 'itinerary':
+            return itineraryRef.current?.buildDraft() ?? draft;
+          case 'flight':
+            return flightRef.current?.buildDraft() ?? draft;
+          case 'accommodation':
+            return accommodationRef.current?.buildDraft() ?? draft;
+          case 'expense':
+            return expenseRef.current?.buildDraft() ?? draft;
+          default:
+            return draft;
+        }
+      },
+    }),
+    [draft],
+  );
+
   switch (draft.itemType) {
     case 'itinerary':
-      return <ItineraryBody values={values} />;
+      return (
+        <ItineraryDraftEditor ref={itineraryRef} draft={draft} />
+      );
     case 'flight':
-      return <FlightBody values={values} />;
+      return <FlightDraftEditor ref={flightRef} draft={draft} />;
     case 'accommodation':
-      return <AccommodationBody values={values} />;
+      return (
+        <AccommodationDraftEditor ref={accommodationRef} draft={draft} />
+      );
     case 'expense':
-      return <ExpenseOnlyBody values={values} />;
+      return <ExpenseDraftEditor ref={expenseRef} draft={draft} />;
     default:
       return (
-        <FieldRowMultiline
-          label="데이터"
-          value={JSON.stringify(values, null, 2)}
-        />
+        <Text style={styles.fallbackText}>
+          지원하지 않는 항목 유형입니다.
+        </Text>
       );
   }
-}
-
-const ORANGE = '#E07000';
-const ORANGE_BG = '#FFF1E5';
+});
 
 const styles = StyleSheet.create({
-  fieldRow: {
+  formSection: {
+    gap: spacing.lg,
+  },
+  inputGroup: {
+    gap: spacing.sm,
+  },
+  row: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
+    gap: spacing.sm,
+    overflow: 'visible',
+    position: 'relative',
   },
-  fieldLabel: {
-    width: 76,
-    fontSize: 12,
-    lineHeight: 18,
-    fontWeight: '600',
-    color: colors.gray700,
-  },
-  fieldControl: {
+  halfWidth: {
     flex: 1,
-    minWidth: 0,
+  },
+  label: {
+    ...textStyles.h8,
+    color: colors.black,
   },
   input: {
-    width: '100%',
+    backgroundColor: colors.gray200,
+    height: 40,
+    borderRadius: radii.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+    ...textStyles.body4,
+  },
+  textArea: {
+    backgroundColor: colors.gray200,
+    height: 80,
+    borderRadius: radii.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 10,
+    ...textStyles.body4,
+  },
+  expenseInput: {
+    backgroundColor: colors.white,
+    height: 40,
+    borderRadius: radii.md,
+    paddingHorizontal: spacing.md,
     borderWidth: 1,
-    borderColor: BORDER,
-    borderRadius: 8,
-    paddingVertical: 8,
-    paddingHorizontal: 10,
-    fontSize: 12,
-    lineHeight: 18,
-    fontWeight: '500',
-    color: colors.gray900,
+    borderColor: colors.gray400,
+    ...textStyles.body4,
   },
-  textarea: {
-    minHeight: 72,
+  dateInput: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.gray400,
+    borderRadius: radii.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 10,
+    backgroundColor: colors.gray200,
+    minHeight: 40,
   },
-  segmentBlock: {
-    gap: 8,
+  dateTextContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    flex: 1,
   },
-  segmentBlockDivider: {
-    marginTop: 4,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: BORDER,
+  dateText: {
+    ...textStyles.body4,
+    color: colors.gray800,
   },
-  segmentTitle: {
-    fontSize: 12,
-    lineHeight: 18,
-    fontWeight: '700',
-    color: colors.gray900,
-    marginBottom: 2,
+  placeholderText: {
+    ...textStyles.body4,
+    color: colors.gray600,
+  },
+  iconWrapper: {
+    marginTop: 0,
+  },
+  calendarPopup: {
+    position: 'absolute',
+    top: 70,
+    left: 0,
+    zIndex: 20000,
+  },
+  datePickerWrapper: {
+    position: 'relative',
+    overflow: 'visible',
+  },
+  pickerRowWrapper: {
+    overflow: 'visible',
+    position: 'relative',
+  },
+  countryPickerWrapper: {
+    overflow: 'visible',
+    position: 'relative',
+  },
+  currencyDisplay: {
+    backgroundColor: colors.gray200,
+    height: 40,
+    borderRadius: radii.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+    justifyContent: 'center',
+  },
+  currencyText: {
+    ...textStyles.body4,
+    color: colors.gray600,
+  },
+  amountInputWrapper: {
+    position: 'relative',
+  },
+  amountInputPadding: {
+    paddingRight: 36,
+    textAlign: 'right',
+  },
+  amountSuffix: {
+    position: 'absolute',
+    right: spacing.sm,
+    top: '50%',
+    transform: [{ translateY: -10 }],
+    ...textStyles.body4,
+    color: colors.black,
+  },
+  timePicker: {
+    borderWidth: 1,
+    borderColor: colors.gray400,
+    borderRadius: radii.md,
+    backgroundColor: colors.white,
+    height: 40,
   },
   pillOrange: {
     flexDirection: 'row',
@@ -531,5 +1752,91 @@ const styles = StyleSheet.create({
     lineHeight: 16,
     fontWeight: '600',
     color: ORANGE,
+  },
+  segmentContainer: {
+    borderWidth: 1,
+    borderColor: colors.gray400,
+    borderRadius: radii.md,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+    gap: spacing.lg,
+    backgroundColor: colors.white,
+  },
+  segmentTitleRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  segmentTitle: {
+    ...textStyles.h6,
+    color: colors.black,
+  },
+  segmentContent: {
+    gap: spacing.lg,
+  },
+  segmentInput: {
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: colors.gray400,
+    borderRadius: radii.md,
+    height: 40,
+    color: colors.black,
+  },
+  segmentDateInput: {
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: colors.gray400,
+    borderRadius: radii.md,
+    height: 40,
+    paddingHorizontal: spacing.md,
+    justifyContent: 'center',
+  },
+  segmentDateTextContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    flex: 1,
+  },
+  segmentDateText: {
+    ...textStyles.body4,
+    color: colors.gray800,
+  },
+  segmentPlaceholderText: {
+    ...textStyles.body4,
+    color: colors.gray600,
+  },
+  segmentTimePicker: {
+    borderWidth: 1,
+    borderColor: colors.gray400,
+    borderRadius: radii.md,
+    backgroundColor: colors.white,
+    height: 40,
+  },
+  airportPickerWrapper: {
+    overflow: 'visible',
+    position: 'relative',
+  },
+  currencyChip: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    borderColor: colors.gray400,
+    backgroundColor: colors.white,
+  },
+  currencyChipSelected: {
+    backgroundColor: colors.gray900,
+    borderColor: colors.gray900,
+  },
+  currencyChipText: {
+    ...textStyles.h8,
+    color: colors.black,
+  },
+  currencyChipTextSelected: {
+    color: colors.white,
+  },
+  fallbackText: {
+    ...textStyles.body4,
+    color: colors.gray600,
   },
 });

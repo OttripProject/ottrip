@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Modal,
   View,
@@ -11,8 +11,15 @@ import {
 
 import { colors } from '@/ui/tokens/colors';
 import { spacing } from '@/ui/tokens/spacing';
-import type { AiDocumentItemType, DocumentUploadAnalyzeResponse } from '@/types/api';
-import { AiAnalyzeResultBody } from '@/components/modals/aiDocumentAnalyzeDraftBody';
+import type {
+  AiDocumentItemDraft,
+  AiDocumentItemType,
+  DocumentUploadAnalyzeResponse,
+} from '@/types/api';
+import {
+  AiAnalyzeResultBody,
+  type AiAnalyzeDraftEditorRef,
+} from '@/components/modals/aiDocumentAnalyzeDraftBody';
 
 const BLUE_PILL = '#0A84FF';
 const BLUE_PILL_BG = '#E5F0FF';
@@ -77,7 +84,8 @@ export interface AiDocumentAnalyzeModalProps {
   entityTypeLabel?: string;
   /** 성공한 `analyzeDocumentUpload` 응답. `draft`가 있으면 필드에 반영해 표시합니다. */
   analyzeResult?: DocumentUploadAnalyzeResponse | null;
-  onApply?: () => void;
+  /** 저장: 모달에서 편집한 초안을 패널에 반영합니다. */
+  onApply?: (draft: AiDocumentItemDraft) => void;
   applyLabel?: string;
 }
 
@@ -93,6 +101,7 @@ export default function AiDocumentAnalyzeModal({
   const { width: windowWidth } = useWindowDimensions();
   const cardWidth = Math.min(460, windowWidth - 32);
   const [draftBodyKey, setDraftBodyKey] = useState(0);
+  const draftEditorRef = useRef<AiAnalyzeDraftEditorRef>(null);
 
   useEffect(() => {
     if (visible && analyzeResult?.draft) {
@@ -111,7 +120,12 @@ export default function AiDocumentAnalyzeModal({
     kind != null ? getBluePillTextFromKind(kind) : getBluePillText(entityTypeLabel);
 
   const handleApply = () => {
-    onApply?.();
+    if (analyzeResult?.draft) {
+      const next = draftEditorRef.current?.buildDraft();
+      if (next) {
+        onApply?.(next);
+      }
+    }
     onClose();
   };
 
@@ -122,7 +136,11 @@ export default function AiDocumentAnalyzeModal({
           <Text style={styles.pillBlueText}>{bluePillText}</Text>
         </View>
         <View style={styles.fieldStack}>
-          <AiAnalyzeResultBody draft={analyzeResult.draft} />
+          <AiAnalyzeResultBody
+            key={draftBodyKey}
+            ref={draftEditorRef}
+            draft={analyzeResult.draft}
+          />
         </View>
       </View>
     ) : analyzeResult && analyzeResult.draft == null ? (
