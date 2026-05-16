@@ -369,3 +369,9 @@ export interface DocumentUploadAnalyzeResponse {
   draft: AiDocumentItemDraft | null;
   error: string | null;
 }
+
+/** 분석 직후 올바른 상세 패널로 전환한 뒤 확인 모달을 한 번 열 때 사용 */
+export type StagedDocumentAnalyzePayload = {
+  result: DocumentUploadAnalyzeResponse;
+  seq: number;
+};

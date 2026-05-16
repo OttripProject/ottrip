@@ -1,11 +1,12 @@
 import { View, StyleSheet, Alert, Platform, useWindowDimensions } from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import api from "@/services/api";
 import { plansApi } from "@/services/plans";
 import { usePlanDataQuery } from "@/hooks/usePlanDataQuery";
 import { usePlansQuery } from "@/hooks/usePlansQuery";
 import dayjs from "dayjs";
+import type { DocumentUploadAnalyzeResponse, StagedDocumentAnalyzePayload } from "@/types/api";
 import { colors } from "@/ui/tokens/colors";
 import GradientBackground from "@/ui/components/GradientBackground";
 
@@ -31,7 +32,62 @@ export default function DashboardScreen() {
   const [openNewAccommodationForm, setOpenNewAccommodationForm] = useState<boolean>(false);
   const [newAccommodationDraft, setNewAccommodationDraft] = useState<any | null>(null);
   const [previewAccommodation, setPreviewAccommodation] = useState<any>(null);
-  
+  const documentAnalyzeSeqRef = useRef(0);
+  const [stagedDocumentAnalyze, setStagedDocumentAnalyze] =
+    useState<StagedDocumentAnalyzePayload | null>(null);
+
+  const onConsumeStagedDocumentAnalyze = useCallback(() => {
+    setStagedDocumentAnalyze(null);
+  }, []);
+
+  /** 첨부 분석 성공 시: 결과 종류에 맞는 상세 탭으로 전환하고 확인 모달용 payload를 스테이징합니다. */
+  const routeDocumentAnalyzeSuccess = useCallback(
+    (res: DocumentUploadAnalyzeResponse): boolean => {
+      const kind = res.inferredItemType ?? res.draft?.itemType;
+      if (kind !== "itinerary" && kind !== "flight" && kind !== "accommodation") {
+        return false;
+      }
+      documentAnalyzeSeqRef.current += 1;
+      setStagedDocumentAnalyze({
+        result: res,
+        seq: documentAnalyzeSeqRef.current,
+      });
+
+      if (kind === "itinerary") {
+        setSelectedFlight(null);
+        setSelectedAccommodation(null);
+        setActiveTab("itinerary");
+        if (!selectedItinerary?.id) {
+          setSelectedItinerary(null);
+          setOpenNewItineraryForm(true);
+        }
+      } else if (kind === "flight") {
+        setSelectedItinerary(null);
+        setSelectedAccommodation(null);
+        setActiveTab("flight");
+        if (!selectedFlight?.id) {
+          setSelectedFlight(null);
+          setOpenNewFlightForm(true);
+        }
+      } else {
+        setSelectedItinerary(null);
+        setSelectedFlight(null);
+        setActiveTab("accommodation");
+        if (!selectedAccommodation?.id) {
+          setSelectedAccommodation({});
+          setOpenNewAccommodationForm(true);
+          setNewAccommodationDraft(null);
+        }
+      }
+      return true;
+    },
+    [
+      selectedItinerary?.id,
+      selectedFlight?.id,
+      selectedAccommodation?.id,
+    ],
+  );
+
   const getResponsiveRatio = () => {
     if (width < 768) {
       return { left: 1, right: 0 };
@@ -393,6 +449,9 @@ export default function DashboardScreen() {
               selectedFlight={selectedFlight}
               selectedAccommodation={selectedAccommodation}
               activeTab={activeTab}
+              stagedDocumentAnalyze={stagedDocumentAnalyze}
+              onConsumeStagedDocumentAnalyze={onConsumeStagedDocumentAnalyze}
+              routeDocumentAnalyzeSuccess={routeDocumentAnalyzeSuccess}
               onItineraryAdd={handleItineraryAdd}
               onItineraryClear={() => {
                 setSelectedItinerary(null);

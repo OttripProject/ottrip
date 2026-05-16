@@ -4,6 +4,10 @@ import PanelLayout from './PanelLayout';
 import ItinerarySection from './itineraries/ItinerarySection';
 import FlightSection from './flights/FlightSection';
 import AccommodationSection from './accommodations/AccommodationSection';
+import type {
+  DocumentUploadAnalyzeResponse,
+  StagedDocumentAnalyzePayload,
+} from '@/types/api';
 
 interface DetailsPanelProps {
   planData?: {
@@ -41,6 +45,9 @@ interface DetailsPanelProps {
   onConsumeOpenNewAccommodationForm?: () => void;
   newAccommodationDraft?: any | null;
   onPreviewAccommodationChange?: (preview: any) => void;
+  stagedDocumentAnalyze?: StagedDocumentAnalyzePayload | null;
+  onConsumeStagedDocumentAnalyze?: () => void;
+  routeDocumentAnalyzeSuccess?: (res: DocumentUploadAnalyzeResponse) => boolean;
 }
 
 
@@ -67,6 +74,9 @@ export default function DetailsPanel({
   onConsumeOpenNewAccommodationForm,
   newAccommodationDraft,
   onPreviewAccommodationChange,
+  stagedDocumentAnalyze,
+  onConsumeStagedDocumentAnalyze,
+  routeDocumentAnalyzeSuccess,
 }: DetailsPanelProps) {
   if (!planData?.plan) {
     return (
@@ -92,6 +102,9 @@ export default function DetailsPanel({
           openNewItineraryForm={openNewItineraryForm}
           onConsumeOpenNewItineraryForm={onConsumeOpenNewItineraryForm}
           selectedItineraryDate={selectedItineraryDate}
+          stagedDocumentAnalyze={stagedDocumentAnalyze}
+          onConsumeStagedDocumentAnalyze={onConsumeStagedDocumentAnalyze}
+          routeDocumentAnalyzeSuccess={routeDocumentAnalyzeSuccess}
         />
       );
     }
@@ -106,6 +119,9 @@ export default function DetailsPanel({
           onFlightClear={onFlightClear}
           openNewFlightForm={openNewFlightForm}
           onConsumeOpenNewFlightForm={onConsumeOpenNewFlightForm}
+          stagedDocumentAnalyze={stagedDocumentAnalyze}
+          onConsumeStagedDocumentAnalyze={onConsumeStagedDocumentAnalyze}
+          routeDocumentAnalyzeSuccess={routeDocumentAnalyzeSuccess}
         />
       );
     }
@@ -123,6 +139,9 @@ export default function DetailsPanel({
           onConsumeOpenNewAccommodationForm={onConsumeOpenNewAccommodationForm}
           newAccommodationDraft={newAccommodationDraft}
           onPreviewChange={onPreviewAccommodationChange}
+          stagedDocumentAnalyze={stagedDocumentAnalyze}
+          onConsumeStagedDocumentAnalyze={onConsumeStagedDocumentAnalyze}
+          routeDocumentAnalyzeSuccess={routeDocumentAnalyzeSuccess}
         />
       );
     }
@@ -147,6 +166,9 @@ export default function DetailsPanel({
             openNewItineraryForm={openNewItineraryForm}
             onConsumeOpenNewItineraryForm={onConsumeOpenNewItineraryForm}
             selectedItineraryDate={selectedItineraryDate}
+            stagedDocumentAnalyze={stagedDocumentAnalyze}
+            onConsumeStagedDocumentAnalyze={onConsumeStagedDocumentAnalyze}
+            routeDocumentAnalyzeSuccess={routeDocumentAnalyzeSuccess}
           />
         );
 
@@ -159,6 +181,9 @@ export default function DetailsPanel({
             onFlightClear={onFlightClear}
             openNewFlightForm={openNewFlightForm}
             onConsumeOpenNewFlightForm={onConsumeOpenNewFlightForm}
+            stagedDocumentAnalyze={stagedDocumentAnalyze}
+            onConsumeStagedDocumentAnalyze={onConsumeStagedDocumentAnalyze}
+            routeDocumentAnalyzeSuccess={routeDocumentAnalyzeSuccess}
           />
         );
 
@@ -174,6 +199,9 @@ export default function DetailsPanel({
             openNewAccommodationForm={openNewAccommodationForm}
             onConsumeOpenNewAccommodationForm={onConsumeOpenNewAccommodationForm}
             newAccommodationDraft={newAccommodationDraft}
+            stagedDocumentAnalyze={stagedDocumentAnalyze}
+            onConsumeStagedDocumentAnalyze={onConsumeStagedDocumentAnalyze}
+            routeDocumentAnalyzeSuccess={routeDocumentAnalyzeSuccess}
           />
         );
 

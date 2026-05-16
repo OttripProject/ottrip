@@ -12,6 +12,7 @@ import type {
   Attachment,
   DocumentUploadAnalyzeResponse,
   LocalFile,
+  StagedDocumentAnalyzePayload,
 } from '@/types/api';
 import { handleGuestPromptError } from '@/utils/guestPrompt';
 import {
@@ -48,7 +49,10 @@ interface FlightItemProps {
   existingFlights?: any[]; 
   onShowWarning?: (message?: string) => void;
   readOnly?: boolean; 
-  onEdit?: () => void; 
+  onEdit?: () => void;
+  stagedDocumentAnalyze?: StagedDocumentAnalyzePayload | null;
+  onConsumeStagedDocumentAnalyze?: () => void;
+  routeDocumentAnalyzeSuccess?: (res: DocumentUploadAnalyzeResponse) => boolean;
 }
 
 export default function FlightItem({ 
@@ -62,6 +66,9 @@ export default function FlightItem({
   onShowWarning,
   readOnly = false,
   onEdit,
+  stagedDocumentAnalyze,
+  onConsumeStagedDocumentAnalyze,
+  routeDocumentAnalyzeSuccess,
 }: FlightItemProps) {
   const formatAmountWithCommas = (digits: string) => {
     if (!digits) return '';
@@ -182,6 +189,21 @@ export default function FlightItem({
   const [isAiAnalyzing, setIsAiAnalyzing] = useState(false);
   const [aiAnalyzeFailureVisible, setAiAnalyzeFailureVisible] = useState(false);
   const [aiAnalyzeFailureMessage, setAiAnalyzeFailureMessage] = useState('');
+  const lastHandledAiAnalyzeSeqRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (!stagedDocumentAnalyze) return;
+    const kind =
+      stagedDocumentAnalyze.result.inferredItemType ??
+      stagedDocumentAnalyze.result.draft?.itemType;
+    if (kind !== 'flight') return;
+    if (readOnly) return;
+    const { seq, result } = stagedDocumentAnalyze;
+    if (lastHandledAiAnalyzeSeqRef.current === seq) return;
+    lastHandledAiAnalyzeSeqRef.current = seq;
+    setAiAnalyzeResult(result);
+    setAiAnalyzeModalVisible(true);
+  }, [stagedDocumentAnalyze, readOnly]);
 
   const { pickImage, pickDocument } = useFilePicker();
   const { isUploading, uploadFiles } = useAttachmentUpload({
@@ -215,6 +237,9 @@ export default function FlightItem({
           setAiAnalyzeFailureVisible(true);
           return;
         }
+        if (routeDocumentAnalyzeSuccess?.(res)) {
+          return;
+        }
         setAiAnalyzeResult(res);
         setAiAnalyzeModalVisible(true);
       } catch (e) {
@@ -226,7 +251,7 @@ export default function FlightItem({
         setIsAiAnalyzing(false);
       }
     },
-    [pendingFiles, existingAttachments],
+    [pendingFiles, existingAttachments, routeDocumentAnalyzeSuccess],
   );
 
   const applyAiAnalyzeDraftToForm = useCallback((draft: AiDocumentItemDraft) => {
@@ -1032,6 +1057,7 @@ export default function FlightItem({
       onClose={() => {
         setAiAnalyzeModalVisible(false);
         setAiAnalyzeResult(null);
+        onConsumeStagedDocumentAnalyze?.();
       }}
       entityTypeLabel="항공"
     />

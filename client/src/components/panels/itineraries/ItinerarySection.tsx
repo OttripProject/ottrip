@@ -1,5 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useLayoutEffect } from 'react';
 import ItineraryItem from './ItineraryItem';
+import type {
+  DocumentUploadAnalyzeResponse,
+  StagedDocumentAnalyzePayload,
+} from '@/types/api';
 
 interface ItinerarySectionProps {
   planData: {
@@ -20,6 +24,9 @@ interface ItinerarySectionProps {
   onConsumeOpenNewItineraryForm?: () => void;
   selectedItineraryDate?: Date | null;
   onEdit?: (itinerary: any) => void;
+  stagedDocumentAnalyze?: StagedDocumentAnalyzePayload | null;
+  onConsumeStagedDocumentAnalyze?: () => void;
+  routeDocumentAnalyzeSuccess?: (res: DocumentUploadAnalyzeResponse) => boolean;
 }
 
 export default function ItinerarySection({
@@ -32,6 +39,9 @@ export default function ItinerarySection({
   onConsumeOpenNewItineraryForm,
   selectedItineraryDate,
   onEdit,
+  stagedDocumentAnalyze,
+  onConsumeStagedDocumentAnalyze,
+  routeDocumentAnalyzeSuccess,
 }: ItinerarySectionProps) {
   const [showItineraryForm, setShowItineraryForm] = useState(openNewItineraryForm || false);
   const [editingItinerary, setEditingItinerary] = useState<any | null>(null);
@@ -55,6 +65,18 @@ export default function ItinerarySection({
       setShowItineraryForm(true);
     }
   }, [activeTab, selectedItinerary]);
+
+  useLayoutEffect(() => {
+    if (!stagedDocumentAnalyze) return;
+    const kind =
+      stagedDocumentAnalyze.result.inferredItemType ??
+      stagedDocumentAnalyze.result.draft?.itemType;
+    if (kind !== 'itinerary') return;
+    if (selectedItinerary?.id && !showItineraryForm) {
+      setEditingItinerary(selectedItinerary);
+      setShowItineraryForm(true);
+    }
+  }, [stagedDocumentAnalyze, selectedItinerary, showItineraryForm]);
 
   const handleItinerarySave = async (itinerary: any) => {
     onItineraryAdd?.(itinerary);
@@ -89,6 +111,9 @@ export default function ItinerarySection({
         onDelete={handleItineraryDelete}
         selectedDate={selectedItineraryDate || undefined}
         readOnly={true}
+        stagedDocumentAnalyze={stagedDocumentAnalyze}
+        onConsumeStagedDocumentAnalyze={onConsumeStagedDocumentAnalyze}
+        routeDocumentAnalyzeSuccess={routeDocumentAnalyzeSuccess}
         onEdit={() => {
           setEditingItinerary(selectedItinerary);
           setShowItineraryForm(true);
@@ -113,6 +138,9 @@ export default function ItinerarySection({
         onDelete={handleItineraryDelete}
         selectedDate={selectedItineraryDate || undefined}
         readOnly={false}
+        stagedDocumentAnalyze={stagedDocumentAnalyze}
+        onConsumeStagedDocumentAnalyze={onConsumeStagedDocumentAnalyze}
+        routeDocumentAnalyzeSuccess={routeDocumentAnalyzeSuccess}
       />
     );
   }

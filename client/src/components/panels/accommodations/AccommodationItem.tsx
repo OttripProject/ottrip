@@ -11,6 +11,7 @@ import type {
   Attachment,
   DocumentUploadAnalyzeResponse,
   LocalFile,
+  StagedDocumentAnalyzePayload,
 } from '@/types/api';
 import { handleGuestPromptError } from '@/utils/guestPrompt';
 import {
@@ -48,6 +49,9 @@ interface AccommodationItemProps {
   readOnly?: boolean;
   onEdit?: () => void;
   onPreviewChange?: (preview: any) => void;
+  stagedDocumentAnalyze?: StagedDocumentAnalyzePayload | null;
+  onConsumeStagedDocumentAnalyze?: () => void;
+  routeDocumentAnalyzeSuccess?: (res: DocumentUploadAnalyzeResponse) => boolean;
 }
 
 export default function AccommodationItem({ 
@@ -61,6 +65,9 @@ export default function AccommodationItem({
   readOnly = false,
   onEdit,
   onPreviewChange,
+  stagedDocumentAnalyze,
+  onConsumeStagedDocumentAnalyze,
+  routeDocumentAnalyzeSuccess,
 }: AccommodationItemProps) {
   const formatAmountWithCommas = (digits: string) => {
     if (!digits) return '';
@@ -109,6 +116,21 @@ export default function AccommodationItem({
   const [isAiAnalyzing, setIsAiAnalyzing] = useState(false);
   const [aiAnalyzeFailureVisible, setAiAnalyzeFailureVisible] = useState(false);
   const [aiAnalyzeFailureMessage, setAiAnalyzeFailureMessage] = useState('');
+  const lastHandledAiAnalyzeSeqRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (!stagedDocumentAnalyze) return;
+    const kind =
+      stagedDocumentAnalyze.result.inferredItemType ??
+      stagedDocumentAnalyze.result.draft?.itemType;
+    if (kind !== 'accommodation') return;
+    if (readOnly) return;
+    const { seq, result } = stagedDocumentAnalyze;
+    if (lastHandledAiAnalyzeSeqRef.current === seq) return;
+    lastHandledAiAnalyzeSeqRef.current = seq;
+    setAiAnalyzeResult(result);
+    setAiAnalyzeModalVisible(true);
+  }, [stagedDocumentAnalyze, readOnly]);
 
   const { pickImage, pickDocument } = useFilePicker();
   const { isUploading, uploadFiles } = useAttachmentUpload({
@@ -438,6 +460,9 @@ export default function AccommodationItem({
           setAiAnalyzeFailureVisible(true);
           return;
         }
+        if (routeDocumentAnalyzeSuccess?.(res)) {
+          return;
+        }
         setAiAnalyzeResult(res);
         setAiAnalyzeModalVisible(true);
       } catch (e) {
@@ -449,7 +474,7 @@ export default function AccommodationItem({
         setIsAiAnalyzing(false);
       }
     },
-    [pendingFiles, existingAttachments],
+    [pendingFiles, existingAttachments, routeDocumentAnalyzeSuccess],
   );
 
   const applyAiAnalyzeDraftToForm = useCallback((draft: AiDocumentItemDraft) => {
@@ -786,6 +811,7 @@ export default function AccommodationItem({
       onClose={() => {
         setAiAnalyzeModalVisible(false);
         setAiAnalyzeResult(null);
+        onConsumeStagedDocumentAnalyze?.();
       }}
       entityTypeLabel="숙박"
     />

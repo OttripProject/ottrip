@@ -15,6 +15,7 @@ import type {
   AiDocumentItemDraft,
   DocumentUploadAnalyzeResponse,
   LocalFile,
+  StagedDocumentAnalyzePayload,
 } from '@/types/api';
 import { handleGuestPromptError } from '@/utils/guestPrompt';
 import {
@@ -49,7 +50,10 @@ interface ItineraryItemProps {
   selectedDate?: Date; 
   onShowWarning?: () => void;
   readOnly?: boolean; 
-  onEdit?: () => void; 
+  onEdit?: () => void;
+  stagedDocumentAnalyze?: StagedDocumentAnalyzePayload | null;
+  onConsumeStagedDocumentAnalyze?: () => void;
+  routeDocumentAnalyzeSuccess?: (res: DocumentUploadAnalyzeResponse) => boolean;
 }
 
 export default function ItineraryItem({ 
@@ -62,7 +66,10 @@ export default function ItineraryItem({
   selectedDate,
   onShowWarning,
   readOnly = false,
-  onEdit
+  onEdit,
+  stagedDocumentAnalyze,
+  onConsumeStagedDocumentAnalyze,
+  routeDocumentAnalyzeSuccess,
 }: ItineraryItemProps) {
   const [showWarning, setShowWarning] = useState(false);
   const [warningMessage, setWarningMessage] = useState('');
@@ -127,6 +134,21 @@ export default function ItineraryItem({
   const [isAiAnalyzing, setIsAiAnalyzing] = useState(false);
   const [aiAnalyzeFailureVisible, setAiAnalyzeFailureVisible] = useState(false);
   const [aiAnalyzeFailureMessage, setAiAnalyzeFailureMessage] = useState('');
+  const lastHandledAiAnalyzeSeqRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (!stagedDocumentAnalyze) return;
+    const kind =
+      stagedDocumentAnalyze.result.inferredItemType ??
+      stagedDocumentAnalyze.result.draft?.itemType;
+    if (kind !== 'itinerary') return;
+    if (readOnly) return;
+    const { seq, result } = stagedDocumentAnalyze;
+    if (lastHandledAiAnalyzeSeqRef.current === seq) return;
+    lastHandledAiAnalyzeSeqRef.current = seq;
+    setAiAnalyzeResult(result);
+    setAiAnalyzeModalVisible(true);
+  }, [stagedDocumentAnalyze, readOnly]);
 
   const { pickImage, pickDocument } = useFilePicker();
   const { isUploading, uploadFiles } = useAttachmentUpload({
@@ -661,6 +683,9 @@ export default function ItineraryItem({
           setAiAnalyzeFailureVisible(true);
           return;
         }
+        if (routeDocumentAnalyzeSuccess?.(res)) {
+          return;
+        }
         setAiAnalyzeResult(res);
         setAiAnalyzeModalVisible(true);
       } catch (e) {
@@ -672,7 +697,7 @@ export default function ItineraryItem({
         setIsAiAnalyzing(false);
       }
     },
-    [pendingFiles, existingAttachments],
+    [pendingFiles, existingAttachments, routeDocumentAnalyzeSuccess],
   );
 
   const applyAiAnalyzeDraftToForm = useCallback((draft: AiDocumentItemDraft) => {
@@ -1083,6 +1108,7 @@ export default function ItineraryItem({
       onClose={() => {
         setAiAnalyzeModalVisible(false);
         setAiAnalyzeResult(null);
+        onConsumeStagedDocumentAnalyze?.();
       }}
       entityTypeLabel="일정"
     />
