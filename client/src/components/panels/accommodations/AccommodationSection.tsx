@@ -2,6 +2,7 @@ import React, { useState, useEffect, useLayoutEffect } from 'react';
 import AccommodationItem from './AccommodationItem';
 import type {
   DocumentUploadAnalyzeResponse,
+  LocalFile,
   StagedDocumentAnalyzePayload,
 } from '@/types/api';
 
@@ -26,7 +27,12 @@ interface AccommodationSectionProps {
   onPreviewChange?: (preview: any) => void;
   stagedDocumentAnalyze?: StagedDocumentAnalyzePayload | null;
   onConsumeStagedDocumentAnalyze?: () => void;
-  routeDocumentAnalyzeSuccess?: (res: DocumentUploadAnalyzeResponse) => boolean;
+  routeDocumentAnalyzeSuccess?: (
+    res: DocumentUploadAnalyzeResponse,
+    carryPendingFiles?: LocalFile[],
+  ) => boolean;
+  carryoverPendingFiles?: LocalFile[] | null;
+  onConsumeCarryoverPendingFiles?: () => void;
 }
 
 export default function AccommodationSection({
@@ -44,6 +50,8 @@ export default function AccommodationSection({
   stagedDocumentAnalyze,
   onConsumeStagedDocumentAnalyze,
   routeDocumentAnalyzeSuccess,
+  carryoverPendingFiles,
+  onConsumeCarryoverPendingFiles,
 }: AccommodationSectionProps) {
   const [showAccommodationForm, setShowAccommodationForm] = useState(false);
   const [editingAccommodation, setEditingAccommodation] = useState<any | null>(null);
@@ -127,6 +135,8 @@ export default function AccommodationSection({
         stagedDocumentAnalyze={stagedDocumentAnalyze}
         onConsumeStagedDocumentAnalyze={onConsumeStagedDocumentAnalyze}
         routeDocumentAnalyzeSuccess={routeDocumentAnalyzeSuccess}
+        carryoverPendingFiles={carryoverPendingFiles}
+        onConsumeCarryoverPendingFiles={onConsumeCarryoverPendingFiles}
         onEdit={() => {
           setEditingAccommodation(selectedAccommodation);
           setShowAccommodationForm(true);
@@ -156,6 +166,8 @@ export default function AccommodationSection({
         stagedDocumentAnalyze={stagedDocumentAnalyze}
         onConsumeStagedDocumentAnalyze={onConsumeStagedDocumentAnalyze}
         routeDocumentAnalyzeSuccess={routeDocumentAnalyzeSuccess}
+        carryoverPendingFiles={carryoverPendingFiles}
+        onConsumeCarryoverPendingFiles={onConsumeCarryoverPendingFiles}
       />
     );
   }

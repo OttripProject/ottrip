@@ -2,6 +2,7 @@ import React, { useState, useEffect, useLayoutEffect } from 'react';
 import FlightItem from './FlightItem';
 import type {
   DocumentUploadAnalyzeResponse,
+  LocalFile,
   StagedDocumentAnalyzePayload,
 } from '@/types/api';
 
@@ -25,7 +26,12 @@ interface FlightSectionProps {
   onEdit?: (flight: any) => void;
   stagedDocumentAnalyze?: StagedDocumentAnalyzePayload | null;
   onConsumeStagedDocumentAnalyze?: () => void;
-  routeDocumentAnalyzeSuccess?: (res: DocumentUploadAnalyzeResponse) => boolean;
+  routeDocumentAnalyzeSuccess?: (
+    res: DocumentUploadAnalyzeResponse,
+    carryPendingFiles?: LocalFile[],
+  ) => boolean;
+  carryoverPendingFiles?: LocalFile[] | null;
+  onConsumeCarryoverPendingFiles?: () => void;
 }
 
 export default function FlightSection({
@@ -40,6 +46,8 @@ export default function FlightSection({
   stagedDocumentAnalyze,
   onConsumeStagedDocumentAnalyze,
   routeDocumentAnalyzeSuccess,
+  carryoverPendingFiles,
+  onConsumeCarryoverPendingFiles,
 }: FlightSectionProps) {
   const [showFlightForm, setShowFlightForm] = useState(false);
   const [editingFlight, setEditingFlight] = useState<any | null>(null);
@@ -114,6 +122,8 @@ export default function FlightSection({
         stagedDocumentAnalyze={stagedDocumentAnalyze}
         onConsumeStagedDocumentAnalyze={onConsumeStagedDocumentAnalyze}
         routeDocumentAnalyzeSuccess={routeDocumentAnalyzeSuccess}
+        carryoverPendingFiles={carryoverPendingFiles}
+        onConsumeCarryoverPendingFiles={onConsumeCarryoverPendingFiles}
         onEdit={() => {
           setEditingFlight(selectedFlight);
           setShowFlightForm(true);
@@ -142,6 +152,8 @@ export default function FlightSection({
         stagedDocumentAnalyze={stagedDocumentAnalyze}
         onConsumeStagedDocumentAnalyze={onConsumeStagedDocumentAnalyze}
         routeDocumentAnalyzeSuccess={routeDocumentAnalyzeSuccess}
+        carryoverPendingFiles={carryoverPendingFiles}
+        onConsumeCarryoverPendingFiles={onConsumeCarryoverPendingFiles}
       />
     );
   }

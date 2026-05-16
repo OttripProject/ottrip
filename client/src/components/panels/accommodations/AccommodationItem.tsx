@@ -33,6 +33,7 @@ import WarningBanner from '@/ui/components/toast/warning';
 import AiDocumentAnalyzeModal from '@/components/modals/AiDocumentAnalyzeModal';
 import AiAnalyzeFailureModal from '@/components/modals/AiAnalyzeFailureModal';
 import type { AiAttachmentAnalyzeSelection } from '@/ui/components/attachmentSection.types';
+import { pendingAiFileKey } from '@/ui/components/attachmentSection.types';
 import { analyzeDocumentUpload } from '@/services/aiDocument';
 import { buildAnalyzeUploadPayload } from '@/utils/attachmentAiAnalyze';
 import { applyAccommodationDraftFromAi } from '@/utils/applyAiDocumentDraft';
@@ -51,7 +52,12 @@ interface AccommodationItemProps {
   onPreviewChange?: (preview: any) => void;
   stagedDocumentAnalyze?: StagedDocumentAnalyzePayload | null;
   onConsumeStagedDocumentAnalyze?: () => void;
-  routeDocumentAnalyzeSuccess?: (res: DocumentUploadAnalyzeResponse) => boolean;
+  routeDocumentAnalyzeSuccess?: (
+    res: DocumentUploadAnalyzeResponse,
+    carryPendingFiles?: LocalFile[],
+  ) => boolean;
+  carryoverPendingFiles?: LocalFile[] | null;
+  onConsumeCarryoverPendingFiles?: () => void;
 }
 
 export default function AccommodationItem({ 
@@ -68,6 +74,8 @@ export default function AccommodationItem({
   stagedDocumentAnalyze,
   onConsumeStagedDocumentAnalyze,
   routeDocumentAnalyzeSuccess,
+  carryoverPendingFiles,
+  onConsumeCarryoverPendingFiles,
 }: AccommodationItemProps) {
   const formatAmountWithCommas = (digits: string) => {
     if (!digits) return '';
@@ -110,6 +118,7 @@ export default function AccommodationItem({
   const [pendingFiles, setPendingFiles] = useState<LocalFile[]>([]);
   const [existingAttachments, setExistingAttachments] = useState<Attachment[]>([]);
   const [isLoadingAttachments, setIsLoadingAttachments] = useState(false);
+
   const [aiAnalyzeModalVisible, setAiAnalyzeModalVisible] = useState(false);
   const [aiAnalyzeResult, setAiAnalyzeResult] =
     useState<DocumentUploadAnalyzeResponse | null>(null);
@@ -241,6 +250,23 @@ export default function AccommodationItem({
       });
     }
   }, [readOnly]);
+
+  useEffect(() => {
+    if (!carryoverPendingFiles?.length) return;
+    setPendingFiles(prev => {
+      const keys = new Set(prev.map(pendingAiFileKey));
+      const merged = [...prev];
+      for (const f of carryoverPendingFiles) {
+        const k = pendingAiFileKey(f);
+        if (!keys.has(k)) {
+          keys.add(k);
+          merged.push(f);
+        }
+      }
+      return merged;
+    });
+    onConsumeCarryoverPendingFiles?.();
+  }, [carryoverPendingFiles, onConsumeCarryoverPendingFiles]);
 
   const appendImage = async () => {
     try {
@@ -460,7 +486,7 @@ export default function AccommodationItem({
           setAiAnalyzeFailureVisible(true);
           return;
         }
-        if (routeDocumentAnalyzeSuccess?.(res)) {
+        if (routeDocumentAnalyzeSuccess?.(res, pendingFiles)) {
           return;
         }
         setAiAnalyzeResult(res);

@@ -6,6 +6,7 @@ import FlightSection from './flights/FlightSection';
 import AccommodationSection from './accommodations/AccommodationSection';
 import type {
   DocumentUploadAnalyzeResponse,
+  LocalFile,
   StagedDocumentAnalyzePayload,
 } from '@/types/api';
 
@@ -47,7 +48,12 @@ interface DetailsPanelProps {
   onPreviewAccommodationChange?: (preview: any) => void;
   stagedDocumentAnalyze?: StagedDocumentAnalyzePayload | null;
   onConsumeStagedDocumentAnalyze?: () => void;
-  routeDocumentAnalyzeSuccess?: (res: DocumentUploadAnalyzeResponse) => boolean;
+  routeDocumentAnalyzeSuccess?: (
+    res: DocumentUploadAnalyzeResponse,
+    carryPendingFiles?: LocalFile[],
+  ) => boolean;
+  carryoverPendingFiles?: LocalFile[] | null;
+  onConsumeCarryoverPendingFiles?: () => void;
 }
 
 
@@ -77,6 +83,8 @@ export default function DetailsPanel({
   stagedDocumentAnalyze,
   onConsumeStagedDocumentAnalyze,
   routeDocumentAnalyzeSuccess,
+  carryoverPendingFiles,
+  onConsumeCarryoverPendingFiles,
 }: DetailsPanelProps) {
   if (!planData?.plan) {
     return (
@@ -105,6 +113,8 @@ export default function DetailsPanel({
           stagedDocumentAnalyze={stagedDocumentAnalyze}
           onConsumeStagedDocumentAnalyze={onConsumeStagedDocumentAnalyze}
           routeDocumentAnalyzeSuccess={routeDocumentAnalyzeSuccess}
+          carryoverPendingFiles={carryoverPendingFiles}
+          onConsumeCarryoverPendingFiles={onConsumeCarryoverPendingFiles}
         />
       );
     }
@@ -122,6 +132,8 @@ export default function DetailsPanel({
           stagedDocumentAnalyze={stagedDocumentAnalyze}
           onConsumeStagedDocumentAnalyze={onConsumeStagedDocumentAnalyze}
           routeDocumentAnalyzeSuccess={routeDocumentAnalyzeSuccess}
+          carryoverPendingFiles={carryoverPendingFiles}
+          onConsumeCarryoverPendingFiles={onConsumeCarryoverPendingFiles}
         />
       );
     }
@@ -142,6 +154,8 @@ export default function DetailsPanel({
           stagedDocumentAnalyze={stagedDocumentAnalyze}
           onConsumeStagedDocumentAnalyze={onConsumeStagedDocumentAnalyze}
           routeDocumentAnalyzeSuccess={routeDocumentAnalyzeSuccess}
+          carryoverPendingFiles={carryoverPendingFiles}
+          onConsumeCarryoverPendingFiles={onConsumeCarryoverPendingFiles}
         />
       );
     }
@@ -169,6 +183,8 @@ export default function DetailsPanel({
             stagedDocumentAnalyze={stagedDocumentAnalyze}
             onConsumeStagedDocumentAnalyze={onConsumeStagedDocumentAnalyze}
             routeDocumentAnalyzeSuccess={routeDocumentAnalyzeSuccess}
+            carryoverPendingFiles={carryoverPendingFiles}
+            onConsumeCarryoverPendingFiles={onConsumeCarryoverPendingFiles}
           />
         );
 
@@ -184,6 +200,8 @@ export default function DetailsPanel({
             stagedDocumentAnalyze={stagedDocumentAnalyze}
             onConsumeStagedDocumentAnalyze={onConsumeStagedDocumentAnalyze}
             routeDocumentAnalyzeSuccess={routeDocumentAnalyzeSuccess}
+            carryoverPendingFiles={carryoverPendingFiles}
+            onConsumeCarryoverPendingFiles={onConsumeCarryoverPendingFiles}
           />
         );
 
@@ -202,6 +220,8 @@ export default function DetailsPanel({
             stagedDocumentAnalyze={stagedDocumentAnalyze}
             onConsumeStagedDocumentAnalyze={onConsumeStagedDocumentAnalyze}
             routeDocumentAnalyzeSuccess={routeDocumentAnalyzeSuccess}
+            carryoverPendingFiles={carryoverPendingFiles}
+            onConsumeCarryoverPendingFiles={onConsumeCarryoverPendingFiles}
           />
         );
 

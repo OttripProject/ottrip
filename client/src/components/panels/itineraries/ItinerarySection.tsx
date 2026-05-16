@@ -2,6 +2,7 @@ import React, { useState, useEffect, useLayoutEffect } from 'react';
 import ItineraryItem from './ItineraryItem';
 import type {
   DocumentUploadAnalyzeResponse,
+  LocalFile,
   StagedDocumentAnalyzePayload,
 } from '@/types/api';
 
@@ -26,7 +27,12 @@ interface ItinerarySectionProps {
   onEdit?: (itinerary: any) => void;
   stagedDocumentAnalyze?: StagedDocumentAnalyzePayload | null;
   onConsumeStagedDocumentAnalyze?: () => void;
-  routeDocumentAnalyzeSuccess?: (res: DocumentUploadAnalyzeResponse) => boolean;
+  routeDocumentAnalyzeSuccess?: (
+    res: DocumentUploadAnalyzeResponse,
+    carryPendingFiles?: LocalFile[],
+  ) => boolean;
+  carryoverPendingFiles?: LocalFile[] | null;
+  onConsumeCarryoverPendingFiles?: () => void;
 }
 
 export default function ItinerarySection({
@@ -42,6 +48,8 @@ export default function ItinerarySection({
   stagedDocumentAnalyze,
   onConsumeStagedDocumentAnalyze,
   routeDocumentAnalyzeSuccess,
+  carryoverPendingFiles,
+  onConsumeCarryoverPendingFiles,
 }: ItinerarySectionProps) {
   const [showItineraryForm, setShowItineraryForm] = useState(openNewItineraryForm || false);
   const [editingItinerary, setEditingItinerary] = useState<any | null>(null);
@@ -114,6 +122,8 @@ export default function ItinerarySection({
         stagedDocumentAnalyze={stagedDocumentAnalyze}
         onConsumeStagedDocumentAnalyze={onConsumeStagedDocumentAnalyze}
         routeDocumentAnalyzeSuccess={routeDocumentAnalyzeSuccess}
+        carryoverPendingFiles={carryoverPendingFiles}
+        onConsumeCarryoverPendingFiles={onConsumeCarryoverPendingFiles}
         onEdit={() => {
           setEditingItinerary(selectedItinerary);
           setShowItineraryForm(true);
@@ -141,6 +151,8 @@ export default function ItinerarySection({
         stagedDocumentAnalyze={stagedDocumentAnalyze}
         onConsumeStagedDocumentAnalyze={onConsumeStagedDocumentAnalyze}
         routeDocumentAnalyzeSuccess={routeDocumentAnalyzeSuccess}
+        carryoverPendingFiles={carryoverPendingFiles}
+        onConsumeCarryoverPendingFiles={onConsumeCarryoverPendingFiles}
       />
     );
   }

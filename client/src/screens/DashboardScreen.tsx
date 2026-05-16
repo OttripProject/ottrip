@@ -6,7 +6,7 @@ import { plansApi } from "@/services/plans";
 import { usePlanDataQuery } from "@/hooks/usePlanDataQuery";
 import { usePlansQuery } from "@/hooks/usePlansQuery";
 import dayjs from "dayjs";
-import type { DocumentUploadAnalyzeResponse, StagedDocumentAnalyzePayload } from "@/types/api";
+import type { DocumentUploadAnalyzeResponse, LocalFile, StagedDocumentAnalyzePayload } from "@/types/api";
 import { colors } from "@/ui/tokens/colors";
 import GradientBackground from "@/ui/components/GradientBackground";
 
@@ -35,17 +35,27 @@ export default function DashboardScreen() {
   const documentAnalyzeSeqRef = useRef(0);
   const [stagedDocumentAnalyze, setStagedDocumentAnalyze] =
     useState<StagedDocumentAnalyzePayload | null>(null);
+  const [carryoverPendingFiles, setCarryoverPendingFiles] = useState<LocalFile[] | null>(null);
 
   const onConsumeStagedDocumentAnalyze = useCallback(() => {
     setStagedDocumentAnalyze(null);
   }, []);
 
+  const onConsumeCarryoverPendingFiles = useCallback(() => {
+    setCarryoverPendingFiles(null);
+  }, []);
+
   /** 첨부 분석 성공 시: 결과 종류에 맞는 상세 탭으로 전환하고 확인 모달용 payload를 스테이징합니다. */
   const routeDocumentAnalyzeSuccess = useCallback(
-    (res: DocumentUploadAnalyzeResponse): boolean => {
+    (res: DocumentUploadAnalyzeResponse, carryPendingFiles?: LocalFile[]): boolean => {
       const kind = res.inferredItemType ?? res.draft?.itemType;
       if (kind !== "itinerary" && kind !== "flight" && kind !== "accommodation") {
         return false;
+      }
+      if (carryPendingFiles && carryPendingFiles.length > 0) {
+        setCarryoverPendingFiles([...carryPendingFiles]);
+      } else {
+        setCarryoverPendingFiles(null);
       }
       documentAnalyzeSeqRef.current += 1;
       setStagedDocumentAnalyze({
@@ -144,6 +154,8 @@ export default function DashboardScreen() {
     setSelectedAccommodation(null);
     setActiveTab(undefined);
     setOpenNewFlightForm(false);
+    setStagedDocumentAnalyze(null);
+    setCarryoverPendingFiles(null);
   }, [selectedPlanId]);
 
 
@@ -452,6 +464,8 @@ export default function DashboardScreen() {
               stagedDocumentAnalyze={stagedDocumentAnalyze}
               onConsumeStagedDocumentAnalyze={onConsumeStagedDocumentAnalyze}
               routeDocumentAnalyzeSuccess={routeDocumentAnalyzeSuccess}
+              carryoverPendingFiles={carryoverPendingFiles}
+              onConsumeCarryoverPendingFiles={onConsumeCarryoverPendingFiles}
               onItineraryAdd={handleItineraryAdd}
               onItineraryClear={() => {
                 setSelectedItinerary(null);
