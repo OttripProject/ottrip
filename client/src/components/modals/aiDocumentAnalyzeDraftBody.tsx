@@ -74,13 +74,6 @@ function coerceExpenseCategory(raw: string): ExpenseCategory {
   return ExpenseCategory.ETC;
 }
 
-function coerceExpenseCurrency(raw: string): ExpenseCurrency {
-  const u = raw.trim().toUpperCase();
-  const all = Object.values(ExpenseCurrency) as string[];
-  if (all.includes(u)) return u as ExpenseCurrency;
-  return ExpenseCurrency.KRW;
-}
-
 function normalizeAmountDigits(value: unknown): string {
   const raw = String(value ?? '').trim();
   if (!raw) return '';
@@ -545,7 +538,7 @@ const ItineraryDraftEditor = forwardRef<
               />
             </View>
             <View style={[styles.inputGroup, styles.halfWidth]}>
-              <Text style={styles.label}>통화</Text>
+              <Text style={styles.label}>원(KRW)</Text>
               <View style={styles.currencyDisplay}>
                 <Text style={styles.currencyText}>
                   {currencyLabels[ExpenseCurrency.KRW]}
@@ -556,7 +549,7 @@ const ItineraryDraftEditor = forwardRef<
           <View style={styles.inputGroup}>
             <Text style={styles.label}>금액*</Text>
             <Input
-              variant="outlined"
+              variant="filled"
               placeholder={PLACEHOLDERS.expense.amount}
               value={formatAmountWithCommas(expAmount)}
               onChangeText={(text) =>
@@ -569,7 +562,7 @@ const ItineraryDraftEditor = forwardRef<
           <View style={styles.inputGroup}>
             <Text style={styles.label}>내용</Text>
             <Input
-              variant="outlined"
+              variant="filled"
               placeholder={PLACEHOLDERS.expense.descriptionForm}
               value={expDescription}
               onChangeText={setExpDescription}
@@ -784,7 +777,7 @@ const FlightDraftEditor = forwardRef<
                 <View style={[styles.inputGroup, styles.halfWidth]}>
                   <Text style={styles.label}>항공사</Text>
                   <Input
-                    variant="outlined"
+                    variant="filled"
                     placeholder={PLACEHOLDERS.flight.airline}
                     value={segment.airline}
                     onChangeText={(text) => {
@@ -799,7 +792,7 @@ const FlightDraftEditor = forwardRef<
                 <View style={[styles.inputGroup, styles.halfWidth]}>
                   <Text style={styles.label}>항공편명</Text>
                   <Input
-                    variant="outlined"
+                    variant="filled"
                     placeholder={PLACEHOLDERS.flight.flightNumber}
                     value={segment.flight_number}
                     onChangeText={(text) => {
@@ -830,6 +823,9 @@ const FlightDraftEditor = forwardRef<
                       setSegments(next);
                     }}
                     placeholder={PLACEHOLDERS.flight.departureAirport}
+                    style={styles.draftAirportPicker}
+                    dropDownContainerStyle={styles.draftAirportPickerList}
+                    searchTextInputStyle={styles.draftAirportPickerSearch}
                   />
                 </View>
                 <View
@@ -848,6 +844,9 @@ const FlightDraftEditor = forwardRef<
                       setSegments(next);
                     }}
                     placeholder={PLACEHOLDERS.flight.arrivalAirport}
+                    style={styles.draftAirportPicker}
+                    dropDownContainerStyle={styles.draftAirportPickerList}
+                    searchTextInputStyle={styles.draftAirportPickerSearch}
                   />
                 </View>
               </View>
@@ -983,7 +982,7 @@ const FlightDraftEditor = forwardRef<
                 <View style={[styles.inputGroup, styles.halfWidth]}>
                   <Text style={styles.label}>좌석등급</Text>
                   <Input
-                    variant="outlined"
+                    variant="filled"
                     value={segment.seat_class}
                     onChangeText={(text) => {
                       const next = [...segments];
@@ -997,7 +996,7 @@ const FlightDraftEditor = forwardRef<
                 <View style={[styles.inputGroup, styles.halfWidth]}>
                   <Text style={styles.label}>좌석번호</Text>
                   <Input
-                    variant="outlined"
+                    variant="filled"
                     value={segment.seat_number}
                     onChangeText={(text) => {
                       const next = [...segments];
@@ -1014,7 +1013,7 @@ const FlightDraftEditor = forwardRef<
                 <View style={[styles.inputGroup, styles.halfWidth]}>
                   <Text style={styles.label}>게이트</Text>
                   <Input
-                    variant="outlined"
+                    variant="filled"
                     value={segment.gate}
                     onChangeText={(text) => {
                       const next = [...segments];
@@ -1028,7 +1027,7 @@ const FlightDraftEditor = forwardRef<
                 <View style={[styles.inputGroup, styles.halfWidth]}>
                   <Text style={styles.label}>터미널</Text>
                   <Input
-                    variant="outlined"
+                    variant="filled"
                     value={segment.terminal}
                     onChangeText={(text) => {
                       const next = [...segments];
@@ -1070,23 +1069,12 @@ const AccommodationDraftEditor = forwardRef<
   const [checkinTime, setCheckinTime] = useState('15:00');
   const [checkoutTime, setCheckoutTime] = useState('11:00');
   const [expenseAmount, setExpenseAmount] = useState('');
-  const [expenseCurrency, setExpenseCurrency] = useState(ExpenseCurrency.KRW);
 
   const [countryOpen, setCountryOpen] = useState(false);
   const [showCheckinCal, setShowCheckinCal] = useState(false);
   const [showCheckoutCal, setShowCheckoutCal] = useState(false);
   const [checkinTimeOpen, setCheckinTimeOpen] = useState(false);
   const [checkoutTimeOpen, setCheckoutTimeOpen] = useState(false);
-
-  const currencyOptions = useMemo(
-    () => [
-      { label: 'KRW', value: ExpenseCurrency.KRW },
-      { label: 'USD', value: ExpenseCurrency.USD },
-      { label: 'EUR', value: ExpenseCurrency.EUR },
-      { label: 'JPY', value: ExpenseCurrency.JPY },
-    ],
-    [],
-  );
 
   useEffect(() => {
     setName(pickStr(values, ['name', 'Name']));
@@ -1119,9 +1107,6 @@ const AccommodationDraftEditor = forwardRef<
     setExpenseAmount(
       normalizeAmountDigits(pickStr(amtSrc, ['amount', 'Amount'])),
     );
-    setExpenseCurrency(
-      coerceExpenseCurrency(pickStr(amtSrc, ['currency', 'Currency']) || 'KRW'),
-    );
   }, [values]);
 
   useImperativeHandle(
@@ -1143,7 +1128,7 @@ const AccommodationDraftEditor = forwardRef<
             exDate: checkinDate,
             amount: parseInt(expenseAmount, 10) || 0,
             category: ExpenseCategory.ACCOMMODATION,
-            currency: expenseCurrency,
+            currency: ExpenseCurrency.KRW,
             description: name,
           },
         };
@@ -1169,7 +1154,6 @@ const AccommodationDraftEditor = forwardRef<
       checkinTime,
       checkoutTime,
       expenseAmount,
-      expenseCurrency,
     ],
   );
 
@@ -1367,32 +1351,6 @@ const AccommodationDraftEditor = forwardRef<
           </View>
         </View>
       </View>
-
-      <View style={styles.inputGroup}>
-        <Text style={styles.label}>결제 통화</Text>
-        <View style={[styles.row, { flexWrap: 'wrap', gap: spacing.sm }]}>
-          {currencyOptions.map((opt) => (
-            <Pressable
-              key={opt.value}
-              onPress={() => setExpenseCurrency(opt.value)}
-              style={[
-                styles.currencyChip,
-                expenseCurrency === opt.value && styles.currencyChipSelected,
-              ]}
-            >
-              <Text
-                style={[
-                  styles.currencyChipText,
-                  expenseCurrency === opt.value &&
-                    styles.currencyChipTextSelected,
-                ]}
-              >
-                {opt.label}
-              </Text>
-            </Pressable>
-          ))}
-        </View>
-      </View>
     </View>
   );
 });
@@ -1409,7 +1367,6 @@ const ExpenseDraftEditor = forwardRef<
 
   const [category, setCategory] = useState(ExpenseCategory.ETC);
   const [amount, setAmount] = useState('');
-  const [currency, setCurrency] = useState(ExpenseCurrency.KRW);
   const [description, setDescription] = useState('');
   const [exDate, setExDate] = useState(dayjs().format('YYYY-MM-DD'));
   const [catOpen, setCatOpen] = useState(false);
@@ -1420,9 +1377,6 @@ const ExpenseDraftEditor = forwardRef<
       coerceExpenseCategory(pickStr(values, ['category', 'Category']) || 'etc'),
     );
     setAmount(normalizeAmountDigits(pickStr(values, ['amount', 'Amount'])));
-    setCurrency(
-      coerceExpenseCurrency(pickStr(values, ['currency', 'Currency']) || 'KRW'),
-    );
     setDescription(pickStr(values, ['description', 'Description']));
     setExDate(
       pickStr(values, ['exDate', 'ex_date', 'ExDate']) ||
@@ -1441,24 +1395,14 @@ const ExpenseDraftEditor = forwardRef<
             ...values,
             category,
             amount: parseInt(amount, 10) || 0,
-            currency,
+            currency: ExpenseCurrency.KRW,
             description,
             exDate,
           } as typeof base.values,
         },
       }),
     }),
-    [base, values, category, amount, currency, description, exDate],
-  );
-
-  const currencyOptions = useMemo(
-    () => [
-      { label: 'KRW', value: ExpenseCurrency.KRW },
-      { label: 'USD', value: ExpenseCurrency.USD },
-      { label: 'EUR', value: ExpenseCurrency.EUR },
-      { label: 'JPY', value: ExpenseCurrency.JPY },
-    ],
-    [],
+    [base, values, category, amount, description, exDate],
   );
 
   return (
@@ -1484,30 +1428,6 @@ const ExpenseDraftEditor = forwardRef<
           style={styles.input}
           placeholderTextColor={colors.gray600}
         />
-      </View>
-      <View style={styles.inputGroup}>
-        <Text style={styles.label}>통화</Text>
-        <View style={[styles.row, { flexWrap: 'wrap', gap: spacing.sm }]}>
-          {currencyOptions.map((opt) => (
-            <Pressable
-              key={opt.value}
-              onPress={() => setCurrency(opt.value)}
-              style={[
-                styles.currencyChip,
-                currency === opt.value && styles.currencyChipSelected,
-              ]}
-            >
-              <Text
-                style={[
-                  styles.currencyChipText,
-                  currency === opt.value && styles.currencyChipTextSelected,
-                ]}
-              >
-                {opt.label}
-              </Text>
-            </Pressable>
-          ))}
-        </View>
       </View>
       <View style={styles.inputGroup}>
         <Text style={styles.label}>내용</Text>
@@ -1630,6 +1550,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.md,
     ...textStyles.body4,
+    borderWidth: 0,
   },
   textArea: {
     backgroundColor: colors.gray200,
@@ -1638,21 +1559,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: 10,
     ...textStyles.body4,
+    borderWidth: 0,
   },
   expenseInput: {
-    backgroundColor: colors.white,
+    backgroundColor: colors.gray200,
     height: 40,
     borderRadius: radii.md,
     paddingHorizontal: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.gray400,
     ...textStyles.body4,
+    borderWidth: 0,
   },
   dateInput: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: colors.gray400,
+    borderWidth: 0,
     borderRadius: radii.md,
     paddingHorizontal: spacing.md,
     paddingVertical: 10,
@@ -1701,6 +1621,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.md,
     justifyContent: 'center',
+    borderWidth: 0,
   },
   currencyText: {
     ...textStyles.body4,
@@ -1722,10 +1643,9 @@ const styles = StyleSheet.create({
     color: colors.black,
   },
   timePicker: {
-    borderWidth: 1,
-    borderColor: colors.gray400,
+    borderWidth: 0,
     borderRadius: radii.md,
-    backgroundColor: colors.white,
+    backgroundColor: colors.gray200,
     height: 40,
   },
   pillOrange: {
@@ -1754,8 +1674,8 @@ const styles = StyleSheet.create({
     color: ORANGE,
   },
   segmentContainer: {
-    borderWidth: 1,
     borderColor: colors.gray400,
+    borderWidth: 1,
     borderRadius: radii.md,
     padding: spacing.md,
     marginBottom: spacing.md,
@@ -1775,17 +1695,15 @@ const styles = StyleSheet.create({
     gap: spacing.lg,
   },
   segmentInput: {
-    backgroundColor: colors.white,
-    borderWidth: 1,
-    borderColor: colors.gray400,
+    backgroundColor: colors.gray200,
+    borderWidth: 0,
     borderRadius: radii.md,
     height: 40,
     color: colors.black,
   },
   segmentDateInput: {
-    backgroundColor: colors.white,
-    borderWidth: 1,
-    borderColor: colors.gray400,
+    backgroundColor: colors.gray200,
+    borderWidth: 0,
     borderRadius: radii.md,
     height: 40,
     paddingHorizontal: spacing.md,
@@ -1806,34 +1724,32 @@ const styles = StyleSheet.create({
     color: colors.gray600,
   },
   segmentTimePicker: {
-    borderWidth: 1,
-    borderColor: colors.gray400,
+    borderWidth: 0,
     borderRadius: radii.md,
-    backgroundColor: colors.white,
+    backgroundColor: colors.gray200,
     height: 40,
   },
   airportPickerWrapper: {
     overflow: 'visible',
     position: 'relative',
   },
-  currencyChip: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
+  /** AI 분석 모달 전용: 공항 피커 트리거·목록·검색을 다른 입력과 동일한 회색 무테 */
+  draftAirportPicker: {
+    backgroundColor: colors.gray200,
+    borderWidth: 0,
     borderRadius: radii.md,
-    borderWidth: 1,
-    borderColor: colors.gray400,
-    backgroundColor: colors.white,
+    minHeight: 40,
   },
-  currencyChipSelected: {
-    backgroundColor: colors.gray900,
-    borderColor: colors.gray900,
+  draftAirportPickerList: {
+    backgroundColor: colors.gray200,
+    borderWidth: 0,
+    borderTopWidth: 0,
+    borderRadius: radii.md,
   },
-  currencyChipText: {
-    ...textStyles.h8,
-    color: colors.black,
-  },
-  currencyChipTextSelected: {
-    color: colors.white,
+  draftAirportPickerSearch: {
+    backgroundColor: colors.gray200,
+    borderWidth: 0,
+    borderRadius: radii.xs,
   },
   fallbackText: {
     ...textStyles.body4,

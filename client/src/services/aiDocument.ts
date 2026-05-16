@@ -251,6 +251,7 @@ export async function analyzeDocumentUpload(
   appendAnalyzeUploadFile(form, file, fallbackName);
 
   const response = await api.post<unknown>("/private/ai/analyze-upload", form, {
+    timeout: 120_000,
     validateStatus: status =>
       status === 200 || status === 400 || status === 422,
     transformRequest: [
