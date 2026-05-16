@@ -37,6 +37,7 @@ import AiAnalyzeFailureModal from '@/components/modals/AiAnalyzeFailureModal';
 import type { AiAttachmentAnalyzeSelection } from '@/ui/components/attachmentSection.types';
 import { analyzeDocumentUpload } from '@/services/aiDocument';
 import { buildAnalyzeUploadPayload } from '@/utils/attachmentAiAnalyze';
+import { applyItineraryDraftFromAi } from '@/utils/applyAiDocumentDraft';
 
 interface ItineraryItemProps {
   itinerary?: any;
@@ -675,56 +676,7 @@ export default function ItineraryItem({
   );
 
   const applyAiAnalyzeDraftToForm = useCallback((draft: AiDocumentItemDraft) => {
-    if (draft.itemType !== 'itinerary') return;
-    const v = draft.payload.values as Record<string, unknown>;
-    const itineraryDateStr = String(
-      v.itineraryDate ?? v.itinerary_date ?? '',
-    );
-    const startRaw = String(v.startTime ?? v.start_time ?? '09:00');
-    const endRaw = String(v.endTime ?? v.end_time ?? '10:00');
-    let endTime = endRaw.substring(0, 5);
-    if (endTime === '23:59' || endRaw.startsWith('23:59:')) {
-      endTime = '24:00';
-    }
-    setFormData(prev => ({
-      ...prev,
-      title: String(v.title ?? prev.title),
-      description: String(v.description ?? prev.description),
-      country: String(v.country ?? prev.country),
-      city: String(v.city ?? prev.city),
-      location: String(v.location ?? prev.location),
-      itineraryDate: itineraryDateStr || prev.itineraryDate,
-      startTime: startRaw.substring(0, 5),
-      endTime,
-    }));
-    const ex = v.expense;
-    if (!ex || typeof ex !== 'object' || Array.isArray(ex)) {
-      setDraftExpenses([]);
-    } else {
-      const eo = ex as Record<string, unknown>;
-      const amount = Number(eo.amount) || 0;
-      const catRaw = String(eo.category ?? 'etc').toLowerCase();
-      const cat = (Object.values(ExpenseCategory) as string[]).includes(catRaw)
-        ? (catRaw as ExpenseCategory)
-        : ExpenseCategory.ETC;
-      if (amount > 0 || String(eo.description ?? '').trim().length > 0) {
-        setDraftExpenses([
-          {
-            category: cat,
-            amount,
-            description: String(eo.description ?? ''),
-            exDate: String(
-              eo.exDate ??
-                eo.ex_date ??
-                (itineraryDateStr || dayjs().format('YYYY-MM-DD')),
-            ),
-            currency: ExpenseCurrency.KRW,
-          },
-        ]);
-      } else {
-        setDraftExpenses([]);
-      }
-    }
+    applyItineraryDraftFromAi(draft, setFormData, setDraftExpenses);
   }, []);
 
   return (

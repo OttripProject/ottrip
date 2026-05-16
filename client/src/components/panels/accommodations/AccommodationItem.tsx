@@ -34,6 +34,7 @@ import AiAnalyzeFailureModal from '@/components/modals/AiAnalyzeFailureModal';
 import type { AiAttachmentAnalyzeSelection } from '@/ui/components/attachmentSection.types';
 import { analyzeDocumentUpload } from '@/services/aiDocument';
 import { buildAnalyzeUploadPayload } from '@/utils/attachmentAiAnalyze';
+import { applyAccommodationDraftFromAi } from '@/utils/applyAiDocumentDraft';
 
 interface AccommodationItemProps {
   accommodation?: any;
@@ -452,36 +453,7 @@ export default function AccommodationItem({
   );
 
   const applyAiAnalyzeDraftToForm = useCallback((draft: AiDocumentItemDraft) => {
-    if (draft.itemType !== 'accommodation') return;
-    const v = draft.payload.values as Record<string, unknown>;
-    const ci = String(v.checkinDate ?? v.checkin_date ?? '');
-    const co = String(v.checkoutDate ?? v.checkout_date ?? '');
-    const cit = String(v.checkinTime ?? v.checkin_time ?? '15:00');
-    const cot = String(v.checkoutTime ?? v.checkout_time ?? '11:00');
-    const shortTime = (t: string) =>
-      t.length >= 8 && t.includes(':') ? t.substring(0, 5) : t;
-    setFormData({
-      name: String(v.name ?? ''),
-      place: String(v.place ?? ''),
-      country: String(v.country ?? ''),
-      city: String(v.city ?? ''),
-      checkin_date: ci || dayjs().format('YYYY-MM-DD'),
-      checkout_date: co || dayjs().add(1, 'day').format('YYYY-MM-DD'),
-      checkin_time: shortTime(cit),
-      checkout_time: shortTime(cot),
-      description: String(v.description ?? ''),
-    });
-    const ex = v.expense as Record<string, unknown> | undefined;
-    if (ex) {
-      const cur = String(ex.currency ?? 'KRW').toUpperCase();
-      const curOk = (Object.values(ExpenseCurrency) as string[]).includes(cur)
-        ? (cur as ExpenseCurrency)
-        : ExpenseCurrency.KRW;
-      setExpenseData({
-        amount: normalizeAmountToIntDigits(ex.amount),
-        currency: curOk,
-      });
-    }
+    applyAccommodationDraftFromAi(draft, setFormData, setExpenseData);
   }, []);
 
   return (

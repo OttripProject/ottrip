@@ -36,6 +36,7 @@ import AiAnalyzeFailureModal from '@/components/modals/AiAnalyzeFailureModal';
 import type { AiAttachmentAnalyzeSelection } from '@/ui/components/attachmentSection.types';
 import { analyzeDocumentUpload } from '@/services/aiDocument';
 import { buildAnalyzeUploadPayload } from '@/utils/attachmentAiAnalyze';
+import { applyFlightDraftFromAi } from '@/utils/applyAiDocumentDraft';
 
 interface FlightItemProps {
   flight?: any;
@@ -229,57 +230,13 @@ export default function FlightItem({
   );
 
   const applyAiAnalyzeDraftToForm = useCallback((draft: AiDocumentItemDraft) => {
-    if (draft.itemType !== 'flight') return;
-    const v = draft.payload.values as Record<string, unknown>;
-    setFormData({
-      reservation_number: String(
-        v.reservationNumber ?? v.reservation_number ?? '',
-      ),
-      passenger_name: String(v.passengerName ?? v.passenger_name ?? ''),
-      ticket_number: String(v.ticketNumber ?? v.ticket_number ?? ''),
-      booking_reference: String(
-        v.bookingReference ?? v.booking_reference ?? '',
-      ),
-    });
-    const rawSegs = v.segments;
-    if (Array.isArray(rawSegs) && rawSegs.length > 0) {
-      setFlightSegments(
-        rawSegs.map((segment: any) => {
-          const depTime = segment.departureTime
-            ? dayjs(segment.departureTime)
-            : dayjs();
-          const arrTime = segment.arrivalTime
-            ? dayjs(segment.arrivalTime)
-            : dayjs().add(1, 'hour');
-          return {
-            id: segment.id,
-            airline: segment.airline || '',
-            flight_number:
-              segment.flightNumber || segment.flight_number || '',
-            departure_airport:
-              segment.departureAirport || segment.departure_airport || '',
-            arrival_airport:
-              segment.arrivalAirport || segment.arrival_airport || '',
-            departure_date: depTime.format('YYYY-MM-DD'),
-            departure_time: depTime.format('HH:mm'),
-            arrival_date: arrTime.format('YYYY-MM-DD'),
-            arrival_time: arrTime.format('HH:mm'),
-            seat_class: segment.seatClass || segment.seat_class || '',
-            seat_number: segment.seatNumber || segment.seat_number || '',
-            gate: segment.gate || '',
-            terminal: segment.terminal || '',
-          };
-        }),
-      );
-    }
-    const ex = v.expense as Record<string, unknown> | undefined;
-    if (ex) {
-      setExpenseData({
-        amount: normalizeAmountToIntDigits(ex.amount),
-      });
-      const ed = ex.exDate ?? ex.ex_date;
-      if (ed) setExpenseDate(String(ed));
-    }
+    applyFlightDraftFromAi(
+      draft,
+      setFormData,
+      setFlightSegments,
+      setExpenseData,
+      setExpenseDate,
+    );
   }, []);
 
   const firstSegment = flightSegments[0];
