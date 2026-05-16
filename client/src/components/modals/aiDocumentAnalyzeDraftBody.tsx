@@ -535,6 +535,10 @@ const ItineraryDraftEditor = forwardRef<
                 onChange={setExpCategory}
                 onOpen={() => setExpenseOpen(true)}
                 onClose={() => setExpenseOpen(false)}
+                style={styles.draftCategoryPicker}
+                dropDownContainerStyle={styles.draftCategoryPickerList}
+                listItemLabelStyle={styles.draftCategoryListItem}
+                selectedItemContainerStyle={styles.draftCategorySelectedRow}
               />
             </View>
             <View style={[styles.inputGroup, styles.halfWidth]}>
@@ -1414,6 +1418,10 @@ const ExpenseDraftEditor = forwardRef<
           onChange={setCategory}
           onOpen={() => setCatOpen(true)}
           onClose={() => setCatOpen(false)}
+          style={styles.draftCategoryPicker}
+          dropDownContainerStyle={styles.draftCategoryPickerList}
+          listItemLabelStyle={styles.draftCategoryListItem}
+          selectedItemContainerStyle={styles.draftCategorySelectedRow}
         />
       </View>
       <View style={styles.inputGroup}>
@@ -1750,6 +1758,28 @@ const styles = StyleSheet.create({
     backgroundColor: colors.gray200,
     borderWidth: 0,
     borderRadius: radii.xs,
+  },
+  draftCategoryPicker: {
+    backgroundColor: colors.gray200,
+    borderWidth: 0,
+    borderRadius: radii.md,
+    minHeight: 40,
+  },
+  draftCategoryPickerList: {
+    backgroundColor: colors.gray200,
+    borderWidth: 0,
+    borderTopWidth: 0,
+    borderRadius: radii.md,
+  },
+  draftCategoryListItem: {
+    ...textStyles.body4,
+    color: colors.gray800,
+    backgroundColor: colors.gray200,
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+  },
+  draftCategorySelectedRow: {
+    backgroundColor: colors.gray200,
   },
   fallbackText: {
     ...textStyles.body4,
