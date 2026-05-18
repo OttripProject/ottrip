@@ -40,7 +40,9 @@ export default function AiAnalyzeFailureModal({
           onPress={e => e.stopPropagation?.()}
         >
           <Text style={styles.title}>첨부파일 분석 실패</Text>
-          <Text style={styles.message}>{'분석에 실패했습니다.'}</Text>
+          <Text style={styles.message}>
+            {message.trim() ? message : '분석에 실패했습니다.'}
+          </Text>
           <Pressable
             onPress={onClose}
             style={({ pressed }) => [
