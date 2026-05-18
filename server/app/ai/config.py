@@ -18,7 +18,8 @@ class AIConfig(BaseConfig):
 
     # Gemini 설정 (google-genai SDK, GOOGLE_API_KEY 환경변수도 지원)
     GEMINI_API_KEY: str = ""
-    GEMINI_DEFAULT_MODEL: str = "gemini-3-flash-preview"
+    GEMINI_DEFAULT_MODEL: str = "gemini-2.5-flash-lite"
+    # "gemini-3-flash-preview"
 
     CHECKLIST_SYSTEM_PROMPT: str = (
         "You are a travel packing checklist expert. Respond strictly in JSON format matching the example output. "
