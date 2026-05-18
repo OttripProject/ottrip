@@ -1,5 +1,5 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, Pressable, StyleSheet, Alert, Modal, ScrollView } from 'react-native';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { View, Text, Pressable, StyleSheet, Alert, Modal, ScrollView, Platform } from 'react-native';
 import { CategoryPicker } from '@/ui/components/pickers';
 import dayjs from 'dayjs';
 import { expensesApi } from '@/services/expenses';
@@ -15,6 +15,14 @@ import { radii } from '@/ui/tokens/radii';
 import WarningBanner from '@/ui/components/toast/warning';
 import XIcon from '../../../assets/x.svg';
 import CalendarIcon from '../../../assets/calender.svg';
+import AttachmentSection from '@/ui/components/attachmentSection';
+import { useAttachmentUpload } from '@/hooks/useAttachmentUpload';
+import { useFilePicker } from '@/hooks/useFilePicker';
+import { PLAN_ENTITY_KIND, type LocalFile } from '@/types/api';
+import {
+  formatAttachmentUploadFailureMessage,
+  showMessage,
+} from '@/utils/crossPlatformAlert';
 
 interface AddExpenseModalProps {
   visible: boolean;
@@ -38,6 +46,68 @@ export default function AddExpenseModal({
   const [warningMessage, setWarningMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isSubmittingRef = useRef(false);
+  const [pendingFiles, setPendingFiles] = useState<LocalFile[]>([]);
+
+  const { pickImage, pickDocument } = useFilePicker();
+  const { isUploading, uploadFiles } = useAttachmentUpload({
+    planId,
+    entityType: PLAN_ENTITY_KIND.EXPENSE,
+  });
+
+  const clearPendingFilesWithRevoke = useCallback(() => {
+    setPendingFiles((prev) => {
+      if (Platform.OS === 'web') {
+        prev.forEach((f) => {
+          if (f.uri?.startsWith('blob:')) {
+            try {
+              URL.revokeObjectURL(f.uri);
+            } catch {
+              /* noop */
+            }
+          }
+        });
+      }
+      return [];
+    });
+  }, []);
+
+  const removePendingAt = useCallback((index: number) => {
+    setPendingFiles((prev) => {
+      const t = prev[index];
+      if (Platform.OS === 'web' && t?.uri?.startsWith('blob:')) {
+        try {
+          URL.revokeObjectURL(t.uri);
+        } catch {
+          /* noop */
+        }
+      }
+      return prev.filter((_, i) => i !== index);
+    });
+  }, []);
+
+  const appendImage = async () => {
+    try {
+      const f = await pickImage();
+      if (f) setPendingFiles((p) => [...p, f]);
+    } catch (e) {
+      showMessage(
+        '알림',
+        e instanceof Error ? e.message : '파일을 선택하지 못했습니다.',
+      );
+    }
+  };
+
+  const appendDocument = async () => {
+    try {
+      const f = await pickDocument();
+      if (f) setPendingFiles((p) => [...p, f]);
+    } catch (e) {
+      showMessage(
+        '알림',
+        e instanceof Error ? e.message : '파일을 선택하지 못했습니다.',
+      );
+    }
+  };
 
   const getDefaultDate = () => planStartDate || selectedDate || dayjs().format('YYYY-MM-DD');
 
@@ -88,7 +158,29 @@ export default function AddExpenseModal({
         exDate: expenseForm.ex_date,
         currency: expenseForm.currency as any,
       });
-      Alert.alert('성공', '비용이 추가되었습니다.');
+
+      let uploadError: unknown = null;
+      if (pendingFiles.length > 0) {
+        try {
+          await uploadFiles(pendingFiles, newExpense.id);
+        } catch (e) {
+          uploadError = e;
+        }
+      }
+      clearPendingFilesWithRevoke();
+
+      if (uploadError) {
+        Alert.alert(
+          '알림',
+          formatAttachmentUploadFailureMessage(
+            uploadError,
+            '비용은 추가되었으나 첨부 파일 업로드에 실패했습니다.',
+          ),
+        );
+      } else {
+        Alert.alert('성공', '비용이 추가되었습니다.');
+      }
+
       setExpenseForm({
         category: ExpenseCategory.FOOD,
         amount: 0,
@@ -107,6 +199,7 @@ export default function AddExpenseModal({
   };
 
   const handleClose = () => {
+    clearPendingFilesWithRevoke();
     setExpenseForm({
       category: ExpenseCategory.ETC,
       amount: 0,
@@ -220,6 +313,22 @@ export default function AddExpenseModal({
               </View>
             </View>
 
+            <AttachmentSection
+              style={styles.attachmentSection}
+              showTopDivider
+              pendingFiles={pendingFiles}
+              onPickImage={appendImage}
+              onPickDocument={appendDocument}
+              onRemoveFile={removePendingAt}
+              onAppendPendingFiles={
+                Platform.OS === 'web'
+                  ? (files) => setPendingFiles((p) => [...p, ...files])
+                  : undefined
+              }
+              isUploading={isUploading}
+              disabled={isSubmitting}
+            />
+
             <View style={styles.modalButtons}>
               <Pressable
                 style={[styles.modalButton, styles.cancelButton]}
@@ -230,7 +339,7 @@ export default function AddExpenseModal({
               <Pressable
                 style={[styles.modalButton, styles.submitButton]}
                 onPress={handleExpenseSubmit}
-                disabled={isSubmitting}
+                disabled={isSubmitting || isUploading}
               >
                 <Text style={styles.submitButtonText}>저장</Text>
               </Pressable>
@@ -394,6 +503,10 @@ const styles = StyleSheet.create({
   descriptionInput: {
     backgroundColor: colors.white,
     height: 48,
+  },
+  attachmentSection: {
+    marginTop: spacing.lg,
+    width: '100%',
   },
   modalButtons: {
     flexDirection: 'row',

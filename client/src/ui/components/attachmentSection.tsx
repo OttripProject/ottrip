@@ -138,7 +138,11 @@ export default function AttachmentSection({
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const showAiToolbar =
-    Platform.OS === 'web' && !hideAddControls && !isGuest && hasFiles;
+    Platform.OS === 'web' &&
+    !hideAddControls &&
+    !isGuest &&
+    hasFiles &&
+    !!onAiAnalyzePress;
   const aiRowSelectable =
     showAiToolbar && !disabled && !isUploading && !isAiAnalyzing;
 
