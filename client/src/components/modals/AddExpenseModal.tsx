@@ -157,7 +157,7 @@ export default function AddExpenseModal({
                   ? '숙박'
                   : '다른 항목';
           setAiAnalyzeFailureMessage(
-            `문서가 [${label}]으로 분석되었습니다. 비용 추가 화면에는 반영할 수 없습니다.`,
+            `문서가 [${label}]으로 분석되었습니다.\n비용 추가 화면에는 반영할 수 없습니다.`,
           );
           setAiAnalyzeFailureVisible(true);
           return;

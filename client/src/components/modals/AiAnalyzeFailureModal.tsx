@@ -1,7 +1,6 @@
 import React from 'react';
 import {
   Modal,
-  View,
   Text,
   Pressable,
   StyleSheet,
@@ -26,6 +25,7 @@ export default function AiAnalyzeFailureModal({
 }: AiAnalyzeFailureModalProps) {
   const { width: windowWidth } = useWindowDimensions();
   const cardWidth = Math.min(360, windowWidth - 48);
+  const displayMessage = message.trim() || '분석에 실패했습니다.';
 
   return (
     <Modal
@@ -40,9 +40,7 @@ export default function AiAnalyzeFailureModal({
           onPress={e => e.stopPropagation?.()}
         >
           <Text style={styles.title}>첨부파일 분석 실패</Text>
-          <Text style={styles.message}>
-            {message.trim() ? message : '분석에 실패했습니다.'}
-          </Text>
+          <Text style={styles.message}>{displayMessage}</Text>
           <Pressable
             onPress={onClose}
             style={({ pressed }) => [
@@ -71,15 +69,20 @@ const styles = StyleSheet.create({
     borderRadius: radii.lg,
     padding: spacing.xl,
     gap: spacing.md,
+    alignItems: 'center',
   },
   title: {
     ...textStyles.h5,
     color: colors.black,
+    textAlign: 'center',
+    width: '100%',
   },
   message: {
     ...textStyles.body4,
     color: colors.gray700,
-    lineHeight: 20,
+    lineHeight: 22,
+    textAlign: 'center',
+    width: '100%',
   },
   confirmBtn: {
     marginTop: spacing.sm,
@@ -88,10 +91,12 @@ const styles = StyleSheet.create({
     backgroundColor: colors.gray900,
     alignItems: 'center',
     justifyContent: 'center',
+    alignSelf: 'stretch',
   },
   confirmBtnText: {
     ...textStyles.h8,
     color: colors.white,
+    textAlign: 'center',
   },
   pressed: {
     opacity: 0.85,
