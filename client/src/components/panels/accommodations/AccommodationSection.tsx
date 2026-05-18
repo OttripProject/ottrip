@@ -1,5 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useLayoutEffect } from 'react';
 import AccommodationItem from './AccommodationItem';
+import type {
+  DocumentUploadAnalyzeResponse,
+  LocalFile,
+  StagedDocumentAnalyzePayload,
+} from '@/types/api';
 
 interface AccommodationSectionProps {
   planData: {
@@ -20,6 +25,14 @@ interface AccommodationSectionProps {
   newAccommodationDraft?: any | null;
   onEdit?: (accommodation: any) => void;
   onPreviewChange?: (preview: any) => void;
+  stagedDocumentAnalyze?: StagedDocumentAnalyzePayload | null;
+  onConsumeStagedDocumentAnalyze?: () => void;
+  routeDocumentAnalyzeSuccess?: (
+    res: DocumentUploadAnalyzeResponse,
+    carryPendingFiles?: LocalFile[],
+  ) => boolean;
+  carryoverPendingFiles?: LocalFile[] | null;
+  onConsumeCarryoverPendingFiles?: () => void;
 }
 
 export default function AccommodationSection({
@@ -34,6 +47,11 @@ export default function AccommodationSection({
   newAccommodationDraft,
   onEdit,
   onPreviewChange,
+  stagedDocumentAnalyze,
+  onConsumeStagedDocumentAnalyze,
+  routeDocumentAnalyzeSuccess,
+  carryoverPendingFiles,
+  onConsumeCarryoverPendingFiles,
 }: AccommodationSectionProps) {
   const [showAccommodationForm, setShowAccommodationForm] = useState(false);
   const [editingAccommodation, setEditingAccommodation] = useState<any | null>(null);
@@ -46,6 +64,18 @@ export default function AccommodationSection({
       onConsumeOpenNewAccommodationForm?.();
     }
   }, [activeTab, openNewAccommodationForm, selectedAccommodation, onConsumeOpenNewAccommodationForm]);
+
+  useLayoutEffect(() => {
+    if (!stagedDocumentAnalyze) return;
+    const kind =
+      stagedDocumentAnalyze.result.inferredItemType ??
+      stagedDocumentAnalyze.result.draft?.itemType;
+    if (kind !== 'accommodation') return;
+    if (selectedAccommodation?.id && !showAccommodationForm) {
+      setEditingAccommodation(selectedAccommodation);
+      setShowAccommodationForm(true);
+    }
+  }, [stagedDocumentAnalyze, selectedAccommodation, showAccommodationForm]);
 
   // selectedAccommodation 변경 시 editingAccommodation 동기화
   useEffect(() => {
@@ -102,6 +132,11 @@ export default function AccommodationSection({
         }}
         onDelete={handleAccommodationDelete}
         readOnly={true}
+        stagedDocumentAnalyze={stagedDocumentAnalyze}
+        onConsumeStagedDocumentAnalyze={onConsumeStagedDocumentAnalyze}
+        routeDocumentAnalyzeSuccess={routeDocumentAnalyzeSuccess}
+        carryoverPendingFiles={carryoverPendingFiles}
+        onConsumeCarryoverPendingFiles={onConsumeCarryoverPendingFiles}
         onEdit={() => {
           setEditingAccommodation(selectedAccommodation);
           setShowAccommodationForm(true);
@@ -128,6 +163,11 @@ export default function AccommodationSection({
         existingAccommodations={planData.accommodations}
         readOnly={false}
         onPreviewChange={onPreviewChange}
+        stagedDocumentAnalyze={stagedDocumentAnalyze}
+        onConsumeStagedDocumentAnalyze={onConsumeStagedDocumentAnalyze}
+        routeDocumentAnalyzeSuccess={routeDocumentAnalyzeSuccess}
+        carryoverPendingFiles={carryoverPendingFiles}
+        onConsumeCarryoverPendingFiles={onConsumeCarryoverPendingFiles}
       />
     );
   }

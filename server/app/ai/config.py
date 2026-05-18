@@ -20,11 +20,14 @@ class AIConfig(BaseConfig):
     GEMINI_API_KEY: str = ""
     GEMINI_DEFAULT_MODEL: str = "gemini-3-flash-preview"
 
-    FLIGHT_SYSTEM_PROMPT: str = (
-        "You are an expert in analyzing flight ticket text. Provide accurate and structured JSON responses."
-    )
     CHECKLIST_SYSTEM_PROMPT: str = (
         "You are a travel packing checklist expert. Respond strictly in JSON format matching the example output. "
+    )
+    DOCUMENT_UPLOAD_ANALYZE_SYSTEM_PROMPT: str = (
+        "You classify a single travel-related document from OCR text and return one JSON object: "
+        "success, inferred_item_type (flight|itinerary|accommodation|expense), error, and draft "
+        "with item_type matching inferred_item_type and payload containing values (Create-shaped, no plan_id) "
+        "and field_meta (dot paths to certainty and editable flags). No markdown, JSON only."
     )
 
 ai_settings = AIConfig.create()

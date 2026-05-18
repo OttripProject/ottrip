@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef, useMemo } from 'react';
+import React, { useEffect, useState, useRef, useMemo, useCallback } from 'react';
 import { View, Text, Pressable, StyleSheet, ScrollView, Platform } from 'react-native';
 import { TimePicker, AirportPicker } from '@/ui/components/pickers';
 import dayjs from 'dayjs';
@@ -7,7 +7,13 @@ import { attachmentsApi } from '@/services/attachments';
 import { useAttachmentUpload } from '@/hooks/useAttachmentUpload';
 import { useFilePicker } from '@/hooks/useFilePicker';
 import AttachmentSection from '@/ui/components/attachmentSection';
-import type { Attachment, LocalFile } from '@/types/api';
+import type {
+  AiDocumentItemDraft,
+  Attachment,
+  DocumentUploadAnalyzeResponse,
+  LocalFile,
+  StagedDocumentAnalyzePayload,
+} from '@/types/api';
 import { handleGuestPromptError } from '@/utils/guestPrompt';
 import {
   formatAttachmentUploadFailureMessage,
@@ -26,6 +32,13 @@ import AddIcon from '../../../../assets/add.svg';
 import DeleteIcon from '../../../../assets/delete.svg';
 import CloseIcon from '../../../../assets/delete_ai.svg';
 import WarningBanner from '@/ui/components/toast/warning';
+import AiDocumentAnalyzeModal from '@/components/modals/AiDocumentAnalyzeModal';
+import AiAnalyzeFailureModal from '@/components/modals/AiAnalyzeFailureModal';
+import type { AiAttachmentAnalyzeSelection } from '@/ui/components/attachmentSection.types';
+import { pendingAiFileKey } from '@/ui/components/attachmentSection.types';
+import { analyzeDocumentUpload } from '@/services/aiDocument';
+import { buildAnalyzeUploadPayload } from '@/utils/attachmentAiAnalyze';
+import { applyFlightDraftFromAi } from '@/utils/applyAiDocumentDraft';
 
 interface FlightItemProps {
   flight?: any;
@@ -37,7 +50,15 @@ interface FlightItemProps {
   existingFlights?: any[]; 
   onShowWarning?: (message?: string) => void;
   readOnly?: boolean; 
-  onEdit?: () => void; 
+  onEdit?: () => void;
+  stagedDocumentAnalyze?: StagedDocumentAnalyzePayload | null;
+  onConsumeStagedDocumentAnalyze?: () => void;
+  routeDocumentAnalyzeSuccess?: (
+    res: DocumentUploadAnalyzeResponse,
+    carryPendingFiles?: LocalFile[],
+  ) => boolean;
+  carryoverPendingFiles?: LocalFile[] | null;
+  onConsumeCarryoverPendingFiles?: () => void;
 }
 
 export default function FlightItem({ 
@@ -51,6 +72,11 @@ export default function FlightItem({
   onShowWarning,
   readOnly = false,
   onEdit,
+  stagedDocumentAnalyze,
+  onConsumeStagedDocumentAnalyze,
+  routeDocumentAnalyzeSuccess,
+  carryoverPendingFiles,
+  onConsumeCarryoverPendingFiles,
 }: FlightItemProps) {
   const formatAmountWithCommas = (digits: string) => {
     if (!digits) return '';
@@ -166,6 +192,28 @@ export default function FlightItem({
   const [existingAttachments, setExistingAttachments] = useState<Attachment[]>([]);
   const [isLoadingAttachments, setIsLoadingAttachments] = useState(false);
 
+  const [aiAnalyzeModalVisible, setAiAnalyzeModalVisible] = useState(false);
+  const [aiAnalyzeResult, setAiAnalyzeResult] =
+    useState<DocumentUploadAnalyzeResponse | null>(null);
+  const [isAiAnalyzing, setIsAiAnalyzing] = useState(false);
+  const [aiAnalyzeFailureVisible, setAiAnalyzeFailureVisible] = useState(false);
+  const [aiAnalyzeFailureMessage, setAiAnalyzeFailureMessage] = useState('');
+  const lastHandledAiAnalyzeSeqRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (!stagedDocumentAnalyze) return;
+    const kind =
+      stagedDocumentAnalyze.result.inferredItemType ??
+      stagedDocumentAnalyze.result.draft?.itemType;
+    if (kind !== 'flight') return;
+    if (readOnly) return;
+    const { seq, result } = stagedDocumentAnalyze;
+    if (lastHandledAiAnalyzeSeqRef.current === seq) return;
+    lastHandledAiAnalyzeSeqRef.current = seq;
+    setAiAnalyzeResult(result);
+    setAiAnalyzeModalVisible(true);
+  }, [stagedDocumentAnalyze, readOnly]);
+
   const { pickImage, pickDocument } = useFilePicker();
   const { isUploading, uploadFiles } = useAttachmentUpload({
     planId,
@@ -178,6 +226,52 @@ export default function FlightItem({
     const n = typeof raw === 'number' ? raw : parseInt(String(raw), 10);
     return Number.isFinite(n) ? n : undefined;
   }, [flight?.id]);
+
+  const handleAiAnalyzePress = useCallback(
+    async (selection: AiAttachmentAnalyzeSelection) => {
+      setAiAnalyzeFailureVisible(false);
+      setAiAnalyzeFailureMessage('');
+      setIsAiAnalyzing(true);
+      try {
+        const payload = await buildAnalyzeUploadPayload(selection, {
+          pendingFiles,
+          existingAttachments,
+        });
+        const res = await analyzeDocumentUpload(payload.file, {
+          filename: payload.filename,
+        });
+        const err = res.error?.trim();
+        if (!res.success || err) {
+          setAiAnalyzeFailureMessage(err || '분석에 실패했습니다.');
+          setAiAnalyzeFailureVisible(true);
+          return;
+        }
+        if (routeDocumentAnalyzeSuccess?.(res, pendingFiles)) {
+          return;
+        }
+        setAiAnalyzeResult(res);
+        setAiAnalyzeModalVisible(true);
+      } catch (e) {
+        setAiAnalyzeFailureMessage(
+          e instanceof Error ? e.message : '분석 요청에 실패했습니다.',
+        );
+        setAiAnalyzeFailureVisible(true);
+      } finally {
+        setIsAiAnalyzing(false);
+      }
+    },
+    [pendingFiles, existingAttachments, routeDocumentAnalyzeSuccess],
+  );
+
+  const applyAiAnalyzeDraftToForm = useCallback((draft: AiDocumentItemDraft) => {
+    applyFlightDraftFromAi(
+      draft,
+      setFormData,
+      setFlightSegments,
+      setExpenseData,
+      setExpenseDate,
+    );
+  }, []);
 
   const firstSegment = flightSegments[0];
   const isFirstSegmentValid = Boolean(
@@ -251,6 +345,23 @@ export default function FlightItem({
       });
     }
   }, [readOnly]);
+
+  useEffect(() => {
+    if (!carryoverPendingFiles?.length) return;
+    setPendingFiles(prev => {
+      const keys = new Set(prev.map(pendingAiFileKey));
+      const merged = [...prev];
+      for (const f of carryoverPendingFiles) {
+        const k = pendingAiFileKey(f);
+        if (!keys.has(k)) {
+          keys.add(k);
+          merged.push(f);
+        }
+      }
+      return merged;
+    });
+    onConsumeCarryoverPendingFiles?.();
+  }, [carryoverPendingFiles, onConsumeCarryoverPendingFiles]);
 
   const appendImage = async () => {
     try {
@@ -493,6 +604,7 @@ export default function FlightItem({
   };
 
   return (
+    <>
     <ScrollView 
       style={[styles.container, { position: 'relative', overflow: 'visible' }]}
       contentContainerStyle={[styles.contentContainer, { overflow: 'visible' }]}
@@ -902,6 +1014,12 @@ export default function FlightItem({
               isUploading={isUploading}
               disabled={readOnly || isSubmitting}
               hideAddControls={readOnly}
+              onAiAnalyzePress={
+                Platform.OS === 'web' && !readOnly
+                  ? handleAiAnalyzePress
+                  : undefined
+              }
+              isAiAnalyzing={isAiAnalyzing}
             />
           )}
 
@@ -909,7 +1027,7 @@ export default function FlightItem({
             <View style={[styles.buttonRow, { position: 'relative', zIndex: 1 }]}>
               <Pressable
                 style={styles.deleteButton}
-                onPress={flight? handleDelete : onCancel}
+                onPress={flight ? handleDelete : onCancel}
                 disabled={isSubmitting}
               >
                 <Text style={styles.deleteButtonText}>
@@ -958,6 +1076,26 @@ export default function FlightItem({
 
 
     </ScrollView>
+    <AiDocumentAnalyzeModal
+      visible={aiAnalyzeModalVisible}
+      analyzeResult={aiAnalyzeResult}
+      onApply={applyAiAnalyzeDraftToForm}
+      onClose={() => {
+        setAiAnalyzeModalVisible(false);
+        setAiAnalyzeResult(null);
+        onConsumeStagedDocumentAnalyze?.();
+      }}
+      entityTypeLabel="항공"
+    />
+    <AiAnalyzeFailureModal
+      visible={aiAnalyzeFailureVisible}
+      message={aiAnalyzeFailureMessage}
+      onClose={() => {
+        setAiAnalyzeFailureVisible(false);
+        setAiAnalyzeFailureMessage('');
+      }}
+    />
+    </>
   );
 }
 

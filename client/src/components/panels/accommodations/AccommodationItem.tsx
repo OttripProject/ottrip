@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { View, Text, Pressable, StyleSheet, ScrollView, Platform } from 'react-native';
 import dayjs from 'dayjs';
 import { accommodationsApi } from '@/services/accommodations';
@@ -6,7 +6,13 @@ import { attachmentsApi } from '@/services/attachments';
 import { useAttachmentUpload } from '@/hooks/useAttachmentUpload';
 import { useFilePicker } from '@/hooks/useFilePicker';
 import AttachmentSection from '@/ui/components/attachmentSection';
-import type { Attachment, LocalFile } from '@/types/api';
+import type {
+  AiDocumentItemDraft,
+  Attachment,
+  DocumentUploadAnalyzeResponse,
+  LocalFile,
+  StagedDocumentAnalyzePayload,
+} from '@/types/api';
 import { handleGuestPromptError } from '@/utils/guestPrompt';
 import {
   formatAttachmentUploadFailureMessage,
@@ -24,6 +30,13 @@ import CalendarIcon from '../../../../assets/calender.svg';
 import CloseIcon from '../../../../assets/delete_ai.svg';
 import { ExpenseCurrency, currencyLabels } from '@/types/expense';
 import WarningBanner from '@/ui/components/toast/warning';
+import AiDocumentAnalyzeModal from '@/components/modals/AiDocumentAnalyzeModal';
+import AiAnalyzeFailureModal from '@/components/modals/AiAnalyzeFailureModal';
+import type { AiAttachmentAnalyzeSelection } from '@/ui/components/attachmentSection.types';
+import { pendingAiFileKey } from '@/ui/components/attachmentSection.types';
+import { analyzeDocumentUpload } from '@/services/aiDocument';
+import { buildAnalyzeUploadPayload } from '@/utils/attachmentAiAnalyze';
+import { applyAccommodationDraftFromAi } from '@/utils/applyAiDocumentDraft';
 
 interface AccommodationItemProps {
   accommodation?: any;
@@ -37,6 +50,14 @@ interface AccommodationItemProps {
   readOnly?: boolean;
   onEdit?: () => void;
   onPreviewChange?: (preview: any) => void;
+  stagedDocumentAnalyze?: StagedDocumentAnalyzePayload | null;
+  onConsumeStagedDocumentAnalyze?: () => void;
+  routeDocumentAnalyzeSuccess?: (
+    res: DocumentUploadAnalyzeResponse,
+    carryPendingFiles?: LocalFile[],
+  ) => boolean;
+  carryoverPendingFiles?: LocalFile[] | null;
+  onConsumeCarryoverPendingFiles?: () => void;
 }
 
 export default function AccommodationItem({ 
@@ -50,6 +71,11 @@ export default function AccommodationItem({
   readOnly = false,
   onEdit,
   onPreviewChange,
+  stagedDocumentAnalyze,
+  onConsumeStagedDocumentAnalyze,
+  routeDocumentAnalyzeSuccess,
+  carryoverPendingFiles,
+  onConsumeCarryoverPendingFiles,
 }: AccommodationItemProps) {
   const formatAmountWithCommas = (digits: string) => {
     if (!digits) return '';
@@ -92,6 +118,28 @@ export default function AccommodationItem({
   const [pendingFiles, setPendingFiles] = useState<LocalFile[]>([]);
   const [existingAttachments, setExistingAttachments] = useState<Attachment[]>([]);
   const [isLoadingAttachments, setIsLoadingAttachments] = useState(false);
+
+  const [aiAnalyzeModalVisible, setAiAnalyzeModalVisible] = useState(false);
+  const [aiAnalyzeResult, setAiAnalyzeResult] =
+    useState<DocumentUploadAnalyzeResponse | null>(null);
+  const [isAiAnalyzing, setIsAiAnalyzing] = useState(false);
+  const [aiAnalyzeFailureVisible, setAiAnalyzeFailureVisible] = useState(false);
+  const [aiAnalyzeFailureMessage, setAiAnalyzeFailureMessage] = useState('');
+  const lastHandledAiAnalyzeSeqRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (!stagedDocumentAnalyze) return;
+    const kind =
+      stagedDocumentAnalyze.result.inferredItemType ??
+      stagedDocumentAnalyze.result.draft?.itemType;
+    if (kind !== 'accommodation') return;
+    if (readOnly) return;
+    const { seq, result } = stagedDocumentAnalyze;
+    if (lastHandledAiAnalyzeSeqRef.current === seq) return;
+    lastHandledAiAnalyzeSeqRef.current = seq;
+    setAiAnalyzeResult(result);
+    setAiAnalyzeModalVisible(true);
+  }, [stagedDocumentAnalyze, readOnly]);
 
   const { pickImage, pickDocument } = useFilePicker();
   const { isUploading, uploadFiles } = useAttachmentUpload({
@@ -202,6 +250,23 @@ export default function AccommodationItem({
       });
     }
   }, [readOnly]);
+
+  useEffect(() => {
+    if (!carryoverPendingFiles?.length) return;
+    setPendingFiles(prev => {
+      const keys = new Set(prev.map(pendingAiFileKey));
+      const merged = [...prev];
+      for (const f of carryoverPendingFiles) {
+        const k = pendingAiFileKey(f);
+        if (!keys.has(k)) {
+          keys.add(k);
+          merged.push(f);
+        }
+      }
+      return merged;
+    });
+    onConsumeCarryoverPendingFiles?.();
+  }, [carryoverPendingFiles, onConsumeCarryoverPendingFiles]);
 
   const appendImage = async () => {
     try {
@@ -402,7 +467,48 @@ export default function AccommodationItem({
     { label: 'JPY', value: ExpenseCurrency.JPY },
   ], []);
 
+  const handleAiAnalyzePress = useCallback(
+    async (selection: AiAttachmentAnalyzeSelection) => {
+      setAiAnalyzeFailureVisible(false);
+      setAiAnalyzeFailureMessage('');
+      setIsAiAnalyzing(true);
+      try {
+        const payload = await buildAnalyzeUploadPayload(selection, {
+          pendingFiles,
+          existingAttachments,
+        });
+        const res = await analyzeDocumentUpload(payload.file, {
+          filename: payload.filename,
+        });
+        const err = res.error?.trim();
+        if (!res.success || err) {
+          setAiAnalyzeFailureMessage(err || '분석에 실패했습니다.');
+          setAiAnalyzeFailureVisible(true);
+          return;
+        }
+        if (routeDocumentAnalyzeSuccess?.(res, pendingFiles)) {
+          return;
+        }
+        setAiAnalyzeResult(res);
+        setAiAnalyzeModalVisible(true);
+      } catch (e) {
+        setAiAnalyzeFailureMessage(
+          e instanceof Error ? e.message : '분석 요청에 실패했습니다.',
+        );
+        setAiAnalyzeFailureVisible(true);
+      } finally {
+        setIsAiAnalyzing(false);
+      }
+    },
+    [pendingFiles, existingAttachments, routeDocumentAnalyzeSuccess],
+  );
+
+  const applyAiAnalyzeDraftToForm = useCallback((draft: AiDocumentItemDraft) => {
+    applyAccommodationDraftFromAi(draft, setFormData, setExpenseData);
+  }, []);
+
   return (
+    <>
     <ScrollView 
       style={[styles.container, { position: 'relative', overflow: 'visible' }]}
       contentContainerStyle={[styles.contentContainer, { overflow: 'visible' }]}
@@ -661,6 +767,12 @@ export default function AccommodationItem({
           isUploading={isUploading}
           disabled={readOnly || isSubmitting}
           hideAddControls={readOnly}
+          onAiAnalyzePress={
+            Platform.OS === 'web' && !readOnly
+              ? handleAiAnalyzePress
+              : undefined
+          }
+          isAiAnalyzing={isAiAnalyzing}
         />
       )}
 
@@ -718,6 +830,26 @@ export default function AccommodationItem({
 
 
     </ScrollView>
+    <AiDocumentAnalyzeModal
+      visible={aiAnalyzeModalVisible}
+      analyzeResult={aiAnalyzeResult}
+      onApply={applyAiAnalyzeDraftToForm}
+      onClose={() => {
+        setAiAnalyzeModalVisible(false);
+        setAiAnalyzeResult(null);
+        onConsumeStagedDocumentAnalyze?.();
+      }}
+      entityTypeLabel="숙박"
+    />
+    <AiAnalyzeFailureModal
+      visible={aiAnalyzeFailureVisible}
+      message={aiAnalyzeFailureMessage}
+      onClose={() => {
+        setAiAnalyzeFailureVisible(false);
+        setAiAnalyzeFailureMessage('');
+      }}
+    />
+    </>
   );
 }
 

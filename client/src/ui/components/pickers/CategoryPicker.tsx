@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState, useRef } from 'react';
-import { View, StyleSheet, ViewStyle, Pressable } from 'react-native';
+import { View, StyleSheet, ViewStyle, Pressable, TextStyle } from 'react-native';
 import DropDownPicker from 'react-native-dropdown-picker';
 import { categoryLabels, ExpenseCategory } from '@/types/expense';
 import { PLACEHOLDERS } from '@/constants/placeholders';
@@ -12,12 +12,30 @@ interface CategoryPickerProps {
   onChange: (category: ExpenseCategory) => void;
   placeholder?: string;
   containerStyle?: ViewStyle;
+  /** 트리거(닫힌 상태) 스타일 — 기본 스타일 뒤에 병합 */
+  style?: ViewStyle;
+  /** 열린 목록 컨테이너 — 기본 스타일 뒤에 병합 */
+  dropDownContainerStyle?: ViewStyle;
+  listItemLabelStyle?: TextStyle;
+  selectedItemContainerStyle?: ViewStyle;
   disabled?: boolean;
   onOpen?: () => void;
   onClose?: () => void;
 }
 
-export default function CategoryPicker({ value, onChange, placeholder = PLACEHOLDERS.picker.category, containerStyle, disabled, onOpen, onClose }: CategoryPickerProps) {
+export default function CategoryPicker({
+  value,
+  onChange,
+  placeholder = PLACEHOLDERS.picker.category,
+  containerStyle,
+  style,
+  dropDownContainerStyle,
+  listItemLabelStyle,
+  selectedItemContainerStyle,
+  disabled,
+  onOpen,
+  onClose,
+}: CategoryPickerProps) {
   const items = useMemo(() =>
     Object.entries(categoryLabels).map(([v, label]) => ({ label, value: v as ExpenseCategory })), []);
   const pickerRef = useRef<View>(null);
@@ -60,8 +78,20 @@ export default function CategoryPicker({ value, onChange, placeholder = PLACEHOL
         }}
         disabled={disabled}
         placeholder={placeholder}
-        style={[styles.dropdown, dropdownHeight ? { height: dropdownHeight, minHeight: dropdownHeight } : {}]}
-        dropDownContainerStyle={[styles.dropdownContainer, { zIndex: 11000, position: 'absolute', borderTopWidth: 0 }]}
+        style={[
+          styles.dropdown,
+          dropdownHeight ? { height: dropdownHeight, minHeight: dropdownHeight } : {},
+          style,
+        ]}
+        dropDownContainerStyle={[
+          styles.dropdownContainer,
+          { zIndex: 11000, position: 'absolute' as const, borderTopWidth: 0 },
+          dropDownContainerStyle,
+        ]}
+        {...(listItemLabelStyle != null ? { listItemLabelStyle } : {})}
+        {...(selectedItemContainerStyle != null
+          ? { selectedItemContainerStyle }
+          : {})}
         listMode="SCROLLVIEW"
         dropDownDirection="BOTTOM"
         scrollViewProps={{ showsVerticalScrollIndicator: false }}

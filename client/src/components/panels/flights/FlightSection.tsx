@@ -1,5 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useLayoutEffect } from 'react';
 import FlightItem from './FlightItem';
+import type {
+  DocumentUploadAnalyzeResponse,
+  LocalFile,
+  StagedDocumentAnalyzePayload,
+} from '@/types/api';
 
 interface FlightSectionProps {
   planData: {
@@ -19,6 +24,14 @@ interface FlightSectionProps {
   openNewFlightForm?: boolean;
   onConsumeOpenNewFlightForm?: () => void;
   onEdit?: (flight: any) => void;
+  stagedDocumentAnalyze?: StagedDocumentAnalyzePayload | null;
+  onConsumeStagedDocumentAnalyze?: () => void;
+  routeDocumentAnalyzeSuccess?: (
+    res: DocumentUploadAnalyzeResponse,
+    carryPendingFiles?: LocalFile[],
+  ) => boolean;
+  carryoverPendingFiles?: LocalFile[] | null;
+  onConsumeCarryoverPendingFiles?: () => void;
 }
 
 export default function FlightSection({
@@ -30,6 +43,11 @@ export default function FlightSection({
   openNewFlightForm,
   onConsumeOpenNewFlightForm,
   onEdit,
+  stagedDocumentAnalyze,
+  onConsumeStagedDocumentAnalyze,
+  routeDocumentAnalyzeSuccess,
+  carryoverPendingFiles,
+  onConsumeCarryoverPendingFiles,
 }: FlightSectionProps) {
   const [showFlightForm, setShowFlightForm] = useState(false);
   const [editingFlight, setEditingFlight] = useState<any | null>(null);
@@ -46,6 +64,18 @@ export default function FlightSection({
       }
     }
   }, [activeTab, openNewFlightForm, onConsumeOpenNewFlightForm, selectedFlight, showFlightForm]);
+
+  useLayoutEffect(() => {
+    if (!stagedDocumentAnalyze) return;
+    const kind =
+      stagedDocumentAnalyze.result.inferredItemType ??
+      stagedDocumentAnalyze.result.draft?.itemType;
+    if (kind !== 'flight') return;
+    if (selectedFlight?.id && !showFlightForm) {
+      setEditingFlight(selectedFlight);
+      setShowFlightForm(true);
+    }
+  }, [stagedDocumentAnalyze, selectedFlight, showFlightForm]);
 
   useEffect(() => {
     if (activeTab === 'flight' && selectedFlight) {
@@ -89,6 +119,11 @@ export default function FlightSection({
         }}
         onDelete={handleFlightDelete}
         readOnly={true}
+        stagedDocumentAnalyze={stagedDocumentAnalyze}
+        onConsumeStagedDocumentAnalyze={onConsumeStagedDocumentAnalyze}
+        routeDocumentAnalyzeSuccess={routeDocumentAnalyzeSuccess}
+        carryoverPendingFiles={carryoverPendingFiles}
+        onConsumeCarryoverPendingFiles={onConsumeCarryoverPendingFiles}
         onEdit={() => {
           setEditingFlight(selectedFlight);
           setShowFlightForm(true);
@@ -114,6 +149,11 @@ export default function FlightSection({
         onDelete={handleFlightDelete}
         existingFlights={planData.flights}
         readOnly={false}
+        stagedDocumentAnalyze={stagedDocumentAnalyze}
+        onConsumeStagedDocumentAnalyze={onConsumeStagedDocumentAnalyze}
+        routeDocumentAnalyzeSuccess={routeDocumentAnalyzeSuccess}
+        carryoverPendingFiles={carryoverPendingFiles}
+        onConsumeCarryoverPendingFiles={onConsumeCarryoverPendingFiles}
       />
     );
   }

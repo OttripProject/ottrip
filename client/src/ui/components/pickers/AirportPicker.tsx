@@ -1,5 +1,11 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { View, StyleSheet, ViewStyle, Pressable } from 'react-native';
+import {
+  View,
+  StyleSheet,
+  ViewStyle,
+  Pressable,
+  TextStyle,
+} from 'react-native';
 import DropDownPicker from 'react-native-dropdown-picker';
 import { getAirportOptionsBySearch, getAirportLabelByIata } from '@/utils/airportList';
 import { PLACEHOLDERS } from '@/constants/placeholders';
@@ -16,8 +22,22 @@ interface AirportPickerProps {
   placeholder?: string;
   containerStyle?: ViewStyle;
   style?: ViewStyle;
+  dropDownContainerStyle?: ViewStyle;
+  searchTextInputStyle?: TextStyle;
   disabled?: boolean;
 }
+
+const defaultSearchTextInputStyle: TextStyle = {
+  height: 30,
+  paddingVertical: 6,
+  paddingLeft: 32,
+  paddingRight: 10,
+  fontSize: 14,
+  width: '100%',
+  borderWidth: 1,
+  borderColor: colors.gray400,
+  borderRadius: radii.xs,
+};
 
 export default function AirportPicker({
   value,
@@ -25,6 +45,8 @@ export default function AirportPicker({
   placeholder,
   containerStyle,
   style,
+  dropDownContainerStyle,
+  searchTextInputStyle,
   disabled,
 }: AirportPickerProps) {
   const [searchQuery, setSearchQuery] = useState('');
@@ -97,17 +119,10 @@ export default function AirportPicker({
         searchPlaceholder={PLACEHOLDERS.picker.search}
         onChangeSearchText={handleSearch}
         disableLocalSearch={true}
-        searchTextInputStyle={{ 
-          height: 30, 
-          paddingVertical: 6, 
-          paddingLeft: 32,
-          paddingRight: 10, 
-          fontSize: 14, 
-          width: '100%',
-          borderWidth: 1,
-          borderColor: colors.gray400,
-          borderRadius: radii.xs,
-        }}
+        searchTextInputStyle={[
+          defaultSearchTextInputStyle,
+          searchTextInputStyle,
+        ]}
         searchContainerStyle={{ 
           paddingVertical: 5, 
           paddingHorizontal: 8, 
@@ -118,7 +133,11 @@ export default function AirportPicker({
         }}
         placeholder={placeholder}
         style={[styles.dropdown, { width: '100%' }, style]}
-        dropDownContainerStyle={[styles.dropdownContainer, { width: '100%', maxHeight: 200, borderTopWidth: 0 }]}
+        dropDownContainerStyle={[
+          styles.dropdownContainer,
+          { width: '100%', maxHeight: 200, borderTopWidth: 0 },
+          dropDownContainerStyle,
+        ]}
         containerStyle={[styles.dropdownOuter, { width: '100%' }]}
         textStyle={{
           fontSize: 14,

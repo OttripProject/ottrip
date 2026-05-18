@@ -8,7 +8,9 @@ import DownArrowIcon from '../../../assets/mobile_time_down.svg';
 import UpperArrowIcon from '../../../assets/mobile_time_up.svg';
 
 const HOURS_12 = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12] as const;
-const MINUTES_STEP = [0, 15, 30, 45] as const;
+const MINUTES_STEP = [
+  0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55,
+] as const;
 
 const ARROW_SIZE = 24;
 

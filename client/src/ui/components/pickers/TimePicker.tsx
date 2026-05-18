@@ -12,6 +12,8 @@ import UpperArrowIcon from '../../../../assets/upper_arrow.svg';
 import CheckBlackIcon from '../../../../assets/check_black.svg';
 import { PLACEHOLDERS } from '@/constants/placeholders';
 
+const MINUTES_5_STEP = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55];
+
 interface TimePickerProps {
   value: string; // 'HH:mm' 형식
   onChange: (time: string) => void;
@@ -50,7 +52,7 @@ export default function TimePicker({
   const timeOptions = useMemo(() => {
     const options: { label: string; value: string }[] = [];
     for (let hour = 0; hour <= 24; hour++) {
-      const minutes = hour === 24 ? [0] : [0, 15, 30, 45];
+      const minutes = hour === 24 ? [0] : MINUTES_5_STEP;
       for (const minute of minutes) {
         const timeString = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
         

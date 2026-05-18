@@ -2,6 +2,14 @@ import type { StyleProp, ViewStyle } from 'react-native';
 
 import type { Attachment, LocalFile } from '@/types/api';
 
+export type AiAttachmentAnalyzeSelection =
+  | { kind: 'pending'; key: string }
+  | { kind: 'existing'; id: number };
+
+export function pendingAiFileKey(file: LocalFile): string {
+  return `${file.name}:${file.uri}`;
+}
+
 export interface AttachmentSectionProps {
   pendingFiles: LocalFile[];
   onPickImage: () => void;
@@ -22,4 +30,6 @@ export interface AttachmentSectionProps {
    * 네이티브에서는 미사용.
    */
   onAppendPendingFiles?: (files: LocalFile[]) => void;
+  onAiAnalyzePress?: (selection: AiAttachmentAnalyzeSelection) => void;
+  isAiAnalyzing?: boolean;
 }

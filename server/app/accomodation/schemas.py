@@ -21,9 +21,7 @@ class AccommodationBase(APISchema):
         if self.checkout_date < self.checkin_date:
             raise ValueError("체크아웃 날짜는 체크인 날짜 이후여야 합니다.")
         if self.checkout_date == self.checkin_date and self.checkout_time <= self.checkin_time:
-            raise ValueError("같은 날짜에서는 체크아웃 시간이 체f크인 시간보다 늦어야 합니다.")
-        if self.checkin_time.minute % 15 != 0 or self.checkout_time.minute % 15 != 0:
-            raise ValueError("체크인/아웃 시간은 15분 단위여야 합니다.")
+            raise ValueError("같은 날짜에서는 체크아웃 시간이 체크인 시간보다 늦어야 합니다.")
         return self
 
 
