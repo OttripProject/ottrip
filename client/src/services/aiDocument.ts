@@ -272,6 +272,29 @@ export async function analyzeDocumentUpload(
   return parsed.error ? parsed : normalizeAnalyzeHttpError(status, data);
 }
 
+export async function parseTextToItem(
+  text: string,
+  planPublicId: string,
+): Promise<DocumentUploadAnalyzeResponse> {
+  const response = await api.post<unknown>(
+    "/private/ai/parse-text",
+    { text, plan_public_id: planPublicId },
+    {
+      timeout: 60_000,
+      validateStatus: (status) =>
+        status === 200 || status === 400 || status === 422,
+    },
+  );
+
+  const { status, data } = response;
+  if (status === 200) {
+    return normalizeAnalyzeResponse(data);
+  }
+  const parsed = normalizeAnalyzeResponse(data);
+  return parsed.error ? parsed : normalizeAnalyzeHttpError(status, data);
+}
+
 export const aiDocumentApi = {
   analyzeUpload: analyzeDocumentUpload,
+  parseText: parseTextToItem,
 };

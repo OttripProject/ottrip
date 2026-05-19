@@ -209,6 +209,38 @@ class AIService:
                 error=f"파일 처리 중 오류가 발생했습니다: {str(e)}",
             )
 
+    async def parse_text_to_item(self, text: str, plan_public_id: str) -> DocumentUploadAnalyzeResponse:
+        """자연어 텍스트 → Gemini 1-call로 아이템 유형·초안 분석."""
+        self._require_registered_user()
+        try:
+            plan = await self.plan_repository.find_by_public_id(public_id=plan_public_id)
+            if not plan:
+                return DocumentUploadAnalyzeResponse(
+                    success=False,
+                    error="해당 여행 계획을 찾을 수 없습니다.",
+                )
+
+            plan_context = (
+                f"여행 기간: {plan.start_date} ~ {plan.end_date}\n"
+                f"오늘 날짜: {__import__('datetime').date.today().isoformat()}"
+            )
+
+            raw = await self.gemini_client.parse_text_to_item(
+                user_text=text,
+                plan_context=plan_context,
+            )
+            if not isinstance(raw, dict):
+                return DocumentUploadAnalyzeResponse(
+                    success=False,
+                    error="AI 분석 응답 형식이 올바르지 않습니다.",
+                )
+            return _normalize_ai_document_response(raw)
+        except Exception as e:
+            return DocumentUploadAnalyzeResponse(
+                success=False,
+                error=f"텍스트 파싱 중 오류가 발생했습니다: {str(e)}",
+            )
+
     # AI Checklist
     async def create_checklist(self, public_id: str, force_regenerate: bool = False, date: str | None = None) -> ChecklistCreateResponse:
         self._require_registered_user()

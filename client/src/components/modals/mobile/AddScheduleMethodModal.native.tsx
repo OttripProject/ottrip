@@ -57,7 +57,7 @@ export default function AddScheduleMethodModal({
           </Pressable>
         </View>
 
-        {/* <Pressable
+        <Pressable
           style={({ pressed }) => [styles.cardAi, pressed && styles.cardPressed]}
           onPress={handleAi}
           accessibilityRole="button"
@@ -70,7 +70,7 @@ export default function AddScheduleMethodModal({
             <Text style={styles.cardSubtitleAi}>대화하듯 편하게 등록하세요.</Text>
           </View>
           <RightArrowIcon width={20} height={20} color={colors.primary} />
-        </Pressable> */}
+        </Pressable>
 
         <Pressable
           style={({ pressed }) => [styles.cardManual, pressed && styles.cardPressed]}

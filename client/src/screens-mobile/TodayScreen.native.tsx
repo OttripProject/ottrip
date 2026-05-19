@@ -1373,6 +1373,18 @@ export default function TodayScreen() {
       <AddScheduleWithAiModal
         visible={addScheduleFlow === 'ai'}
         onClose={() => setAddScheduleFlow('method')}
+        planId={selectedPlan?.id ?? 0}
+        planPublicId={selectedPlan?.publicId ?? ''}
+        onSaved={() => {
+          if (selectedPlan?.publicId) {
+            planData.refreshItineraries?.();
+            planData.refreshFlights?.();
+            planData.refreshAccommodations?.();
+            planData.refreshExpenses?.();
+            queryClient.invalidateQueries({ queryKey: ['expenses', selectedPlan.id] });
+          }
+          refetchTodayExpenses();
+        }}
       />
 
       <AddScheduleModal
