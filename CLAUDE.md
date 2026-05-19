@@ -2,6 +2,12 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Code Style Rules
+- 커밋 메시지는 한글로 작성
+- 주석은 작성하지 않음
+- 모든 코드 수정은 계획 후 컨펌 이후 수정시작
+- 모든 결과값과 설명은 한글로 작성
+
 ## Monorepo Structure
 
 ```
