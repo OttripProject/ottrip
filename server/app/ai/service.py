@@ -201,7 +201,7 @@ class AIService:
             if not isinstance(raw, dict):
                 return DocumentUploadAnalyzeResponse(
                     success=False,
-                    error="어떤 내용인지 조금 더 명확한 파일로 시도해주세요.",
+                    error="파일의 내용이 여행 일정과 관련이 없거나 명확하지 않습니다. 다른 파일로 시도해주세요.",
                 )
 
             return _normalize_ai_document_response(raw)

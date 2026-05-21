@@ -38,16 +38,13 @@ const parseIdToken = (idToken: string): any | null => {
 };
 
 const SOCIAL_LOGIN_CONFLICT_DEFAULT = '이 계정은 다른 사용자와 연결되어 있습니다.';
-const SOCIAL_LOGIN_FAILURE_DEFAULT = '로그인에 실패했습니다.';
 
 function showSocialLoginError(err: unknown) {
   const e = err as { response?: { status?: number; data?: { detail?: string } } };
-  const is409 = e?.response?.status === 409;
+  if (e?.response?.status !== 409) return;
   const detail = e?.response?.data?.detail;
-  const message = is409
-    ? (typeof detail === 'string' && detail ? detail : SOCIAL_LOGIN_CONFLICT_DEFAULT)
-    : SOCIAL_LOGIN_FAILURE_DEFAULT;
-  Alert.alert(is409 ? '안내' : '알림', message);
+  const message = typeof detail === 'string' && detail ? detail : SOCIAL_LOGIN_CONFLICT_DEFAULT;
+  Alert.alert('안내', message);
 }
 
 export default function LoginScreenNative() {
@@ -160,7 +157,6 @@ export default function LoginScreenNative() {
         try {
           await GoogleSignin.hasPlayServices();
         } catch {
-          Alert.alert('알림', 'Google Play Services를 사용할 수 없습니다.');
           setIsLoading(false);
           return;
         }
@@ -173,16 +169,10 @@ export default function LoginScreenNative() {
       if (idToken) {
         await submitGoogleToken(idToken);
       } else {
-        Alert.alert('알림', '로그인에 실패했습니다.');
         setIsLoading(false);
       }
     } catch (error: any) {
-      if (error.code === 'SIGN_IN_CANCELLED') {
-        setIsLoading(false);
-      } else if (error.code !== 'IN_PROGRESS') {
-        Alert.alert('알림', '로그인에 실패했습니다: ' + (error.message || '알 수 없는 오류'));
-        setIsLoading(false);
-      }
+      setIsLoading(false);
     }
   };
 
@@ -206,7 +196,6 @@ export default function LoginScreenNative() {
         }
       } catch {}
     } catch {
-      Alert.alert('알림', '비회원으로 시작할 수 없습니다. 잠시 후 다시 시도해주세요.');
     } finally {
       setIsLoading(false);
     }
@@ -229,17 +218,9 @@ export default function LoginScreenNative() {
         await submitAppleToken(credential.identityToken);
       } else {
         setIsLoading(false);
-        Alert.alert('알림', 'Apple 로그인 토큰을 받을 수 없습니다.');
       }
-    } catch (e: unknown) {
-      const code = e && typeof e === 'object' && 'code' in e ? (e as { code?: string }).code : undefined;
-      if (code === 'ERR_REQUEST_CANCELED') {
-        setIsLoading(false);
-        return;
-      }
+    } catch {
       setIsLoading(false);
-      const message = e instanceof Error ? e.message : 'Apple 로그인에 실패했습니다.';
-      Alert.alert('알림', message);
     }
   };
 
