@@ -1,5 +1,8 @@
 import json
+import logging
 from typing import Any, Dict, Iterable, Tuple, cast
+
+logger = logging.getLogger(__name__)
 
 from fastapi import HTTPException
 from sqlalchemy.orm import attributes
@@ -198,15 +201,16 @@ class AIService:
             if not isinstance(raw, dict):
                 return DocumentUploadAnalyzeResponse(
                     success=False,
-                    error="AI 분석 응답 형식이 올바르지 않습니다.",
+                    error="어떤 내용인지 조금 더 명확한 파일로 시도해주세요.",
                 )
 
             return _normalize_ai_document_response(raw)
 
-        except Exception as e:
+        except Exception:
+            logger.exception("파일 처리 중 오류")
             return DocumentUploadAnalyzeResponse(
                 success=False,
-                error=f"파일 처리 중 오류가 발생했습니다: {str(e)}",
+                error="일시적인 오류가 발생했습니다. 잠시 후 다시 시도해주세요.",
             )
 
     async def parse_text_to_item(self, text: str, plan_public_id: str) -> DocumentUploadAnalyzeResponse:
@@ -232,13 +236,14 @@ class AIService:
             if not isinstance(raw, dict):
                 return DocumentUploadAnalyzeResponse(
                     success=False,
-                    error="AI 분석 응답 형식이 올바르지 않습니다.",
+                    error="어떤 일정인지 조금 더 구체적으로 알려주세요.",
                 )
             return _normalize_ai_document_response(raw)
-        except Exception as e:
+        except Exception:
+            logger.exception("텍스트 파싱 중 오류")
             return DocumentUploadAnalyzeResponse(
                 success=False,
-                error=f"텍스트 파싱 중 오류가 발생했습니다: {str(e)}",
+                error="일시적인 오류가 발생했습니다. 잠시 후 다시 시도해주세요.",
             )
 
     # AI Checklist

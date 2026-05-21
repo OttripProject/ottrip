@@ -1,6 +1,9 @@
 import json
+import logging
 from pathlib import Path
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 from app.utils.dependency import dependency
 
@@ -208,10 +211,11 @@ class GeminiClient:
                     error="AI 응답을 파싱할 수 없습니다.",
                 )
 
-        except Exception as e:
+        except Exception:
+            logger.exception("체크리스트 생성 중 오류")
             return AIParseResponse(
                 success=False,
-                error=f"체크리스트 생성 중 오류 발생: {str(e)}",
+                error="일시적인 오류가 발생했습니다. 잠시 후 다시 시도해주세요.",
             )
 
     async def parse_text_to_item(self, user_text: str, plan_context: str) -> dict[str, Any]:
@@ -242,18 +246,19 @@ class GeminiClient:
             )
             raw = (getattr(response, "text", None) or "").strip()
             if not raw:
-                err["error"] = "AI 응답이 비어있습니다."
+                err["error"] = "어떤 일정인지 조금 더 구체적으로 알려주세요."
                 return err
             parsed = json.loads(raw)
             if not isinstance(parsed, dict):
-                err["error"] = "AI 응답이 객체 형태가 아닙니다."
+                err["error"] = "어떤 일정인지 조금 더 구체적으로 알려주세요."
                 return err
             return parsed
         except json.JSONDecodeError:
-            err["error"] = "AI 응답을 JSON으로 파싱할 수 없습니다."
+            err["error"] = "어떤 일정인지 조금 더 구체적으로 알려주세요."
             return err
-        except Exception as e:
-            err["error"] = f"텍스트 분석 중 오류: {str(e)}"
+        except Exception:
+            logger.exception("텍스트 파싱 중 오류")
+            err["error"] = "일시적인 오류가 발생했습니다. 잠시 후 다시 시도해주세요."
             return err
 
     async def analyze_document_upload(self, ocr_text: str) -> dict[str, Any]:
