@@ -116,5 +116,10 @@ class ChecklistItemCheckRequest(APISchema):
 class ChecklistItemAddRequest(APISchema):
     name: str
     reason: str = ""
-    category: str = "basic_required" 
+    category: str = "basic_required"
     date: str | None = None
+
+
+class AiTextParseRequest(APISchema):
+    text: str
+    plan_public_id: str

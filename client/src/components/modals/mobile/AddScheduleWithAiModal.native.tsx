@@ -1,18 +1,37 @@
-import React, { useState } from 'react';
-import { View, Text, Pressable, StyleSheet, ScrollView, Platform } from 'react-native';
+import React, { useRef, useState } from 'react';
+import {
+  View,
+  Text,
+  Pressable,
+  StyleSheet,
+  ScrollView,
+  Platform,
+  ActivityIndicator,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import BottomSheetModal from '@/ui/components/BottomSheetModal.native';
 import { Input } from '@/ui/components/input';
 import { colors } from '@/ui/tokens/colors';
 import { textStyles, typography } from '@/ui/tokens/typography';
 import { spacing } from '@/ui/tokens/spacing';
+import { parseTextToItem } from '@/services/aiDocument';
+import type { DocumentUploadAnalyzeResponse } from '@/types/api';
+import AiResultCard from './AiResultCard.native';
 import CloseIcon from '../../../../assets/mobile_close.svg';
 import ShareIcon from '../../../../assets/share.svg';
 
 interface AddScheduleWithAiModalProps {
   visible: boolean;
   onClose: () => void;
+  planId: number;
+  planPublicId: string;
+  onSaved?: () => void;
 }
+
+type Message =
+  | { role: 'ai'; text: string }
+  | { role: 'user'; text: string }
+  | { role: 'result'; result: DocumentUploadAnalyzeResponse };
 
 const AI_INTRO =
   '안녕하세요! 어떤 일정을 추가해 드릴까요?\n예: "내일 오후 2시에 루브르 박물관 가고 싶어", "3월 10일에 파리 하얏트 호텔 체크인해줘"';
@@ -20,9 +39,58 @@ const AI_INTRO =
 export default function AddScheduleWithAiModal({
   visible,
   onClose,
+  planId,
+  planPublicId,
+  onSaved,
 }: AddScheduleWithAiModalProps) {
   const insets = useSafeAreaInsets();
   const [message, setMessage] = useState('');
+  const [messages, setMessages] = useState<Message[]>([
+    { role: 'ai', text: AI_INTRO },
+  ]);
+  const [loading, setLoading] = useState(false);
+  const scrollRef = useRef<ScrollView>(null);
+
+  const handleSend = async () => {
+    const text = message.trim();
+    if (!text || loading) return;
+
+    setMessage('');
+    setMessages((prev) => [...prev, { role: 'user', text }]);
+    setLoading(true);
+
+    try {
+      const result = await parseTextToItem(text, planPublicId);
+      if (result.success && result.draft) {
+        setMessages((prev) => [...prev, { role: 'result', result }]);
+      } else {
+        setMessages((prev) => [
+          ...prev,
+          {
+            role: 'ai',
+            text: result.error || '분석에 실패했습니다. 다시 시도해주세요.',
+          },
+        ]);
+      }
+    } catch {
+      setMessages((prev) => [
+        ...prev,
+        { role: 'ai', text: '오류가 발생했습니다. 잠시 후 다시 시도해주세요.' },
+      ]);
+    } finally {
+      setLoading(false);
+      setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
+    }
+  };
+
+  const handleSaved = () => {
+    setMessages((prev) => [
+      ...prev,
+      { role: 'ai', text: '저장됐어요!✅ 다른 일정도 추가해드릴까요?' },
+    ]);
+    onSaved?.();
+    setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
+  };
 
   return (
     <BottomSheetModal
@@ -50,14 +118,44 @@ export default function AddScheduleWithAiModal({
         </View>
 
         <ScrollView
+          ref={scrollRef}
           style={styles.chatScroll}
           contentContainerStyle={styles.chatScrollContent}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
+          onContentSizeChange={() =>
+            scrollRef.current?.scrollToEnd({ animated: false })
+          }
         >
-          <View style={styles.aiBubble}>
-            <Text style={styles.aiBubbleText}>{AI_INTRO}</Text>
-          </View>
+          {messages.map((msg, idx) => {
+            if (msg.role === 'result') {
+              return (
+                <AiResultCard
+                  key={idx}
+                  result={msg.result}
+                  planId={planId}
+                  onSaved={handleSaved}
+                />
+              );
+            }
+            if (msg.role === 'ai') {
+              return (
+                <View key={idx} style={styles.aiBubble}>
+                  <Text style={styles.aiBubbleText}>{msg.text}</Text>
+                </View>
+              );
+            }
+            return (
+              <View key={idx} style={styles.userBubble}>
+                <Text style={styles.userBubbleText}>{msg.text}</Text>
+              </View>
+            );
+          })}
+          {loading && (
+            <View style={styles.aiBubble}>
+              <ActivityIndicator size="small" color={colors.white} />
+            </View>
+          )}
         </ScrollView>
 
         <View style={styles.footer}>
@@ -76,16 +174,23 @@ export default function AddScheduleWithAiModal({
               value={message}
               onChangeText={setMessage}
               returnKeyType="send"
+              onSubmitEditing={handleSend}
               multiline={false}
+              editable={!loading}
             />
             <Pressable
-              style={({ pressed }) => [styles.sendInside, pressed && styles.sendInsidePressed]}
-              onPress={() => {}}
+              style={({ pressed }) => [
+                styles.sendInside,
+                pressed && styles.sendInsidePressed,
+                loading && styles.sendInsideDisabled,
+              ]}
+              onPress={handleSend}
+              disabled={loading}
               accessibilityRole="button"
               accessibilityLabel="전송"
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 4 }}
             >
-              <View style={styles.sendIconWrap}>
+              <View style={[styles.sendIconWrap, loading && styles.sendIconWrapDisabled]}>
                 <ShareIcon width={30} height={30} color={colors.white} />
               </View>
             </Pressable>
@@ -137,11 +242,12 @@ const styles = StyleSheet.create({
   chatScrollContent: {
     paddingBottom: 12,
     flexGrow: 1,
+    gap: 8,
   },
   aiBubble: {
     alignSelf: 'flex-start',
     maxWidth: '83%',
-    backgroundColor: colors.gray200,
+    backgroundColor: colors.primary,
     borderTopLeftRadius: 0,
     borderTopRightRadius: 16,
     borderBottomLeftRadius: 16,
@@ -150,6 +256,21 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
   },
   aiBubbleText: {
+    ...textStyles.body3,
+    color: colors.white,
+  },
+  userBubble: {
+    alignSelf: 'flex-end',
+    maxWidth: '83%',
+    backgroundColor: colors.gray200,
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 0,
+    borderBottomLeftRadius: 16,
+    borderBottomRightRadius: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+  },
+  userBubbleText: {
     ...textStyles.body3,
     color: colors.black,
   },
@@ -208,6 +329,9 @@ const styles = StyleSheet.create({
   sendInsidePressed: {
     opacity: 0.7,
   },
+  sendInsideDisabled: {
+    opacity: 0.5,
+  },
   sendIconWrap: {
     width: 42,
     height: 40,
@@ -215,5 +339,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.black,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  sendIconWrapDisabled: {
+    backgroundColor: colors.gray400,
   },
 });

@@ -1,13 +1,13 @@
-from fastapi import UploadFile, File, HTTPException
+from fastapi import File, HTTPException, UploadFile
 from fastapi.responses import JSONResponse
 
 from app.auth.deps import RequireRegisteredUser
-from app.core.router import create_router
 from app.common.schemas import StatusResponse
+from app.core.router import create_router
 
 from .config import ai_settings
-from .service import AIService
 from .schemas import (
+    AiTextParseRequest,
     ChecklistCreateRequest,
     ChecklistCreateResponse,
     ChecklistItemAddRequest,
@@ -16,6 +16,7 @@ from .schemas import (
     DocumentTextExtraction,
     DocumentUploadAnalyzeResponse,
 )
+from .service import AIService
 
 router = create_router()
 
@@ -100,6 +101,20 @@ async def get_supported_formats(_user: RequireRegisteredUser):
             "document_analyze": f"Google Gemini ({ai_settings.GEMINI_DEFAULT_MODEL})",
         },
     }
+
+
+@router.post("/parse-text")
+async def parse_text_to_item(
+    request: AiTextParseRequest,
+    ai_service: AIService,
+) -> DocumentUploadAnalyzeResponse:
+    """자연어 텍스트 → 아이템 유형·초안 분석 (일정/항공/숙박/비용)."""
+    if not request.text.strip():
+        raise HTTPException(status_code=400, detail="텍스트를 입력해주세요.")
+    return await ai_service.parse_text_to_item(
+        text=request.text.strip(),
+        plan_public_id=request.plan_public_id,
+    )
 
 
 # Travel Checklist Endpoints

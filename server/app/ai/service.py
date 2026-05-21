@@ -1,5 +1,8 @@
 import json
+import logging
 from typing import Any, Dict, Iterable, Tuple, cast
+
+logger = logging.getLogger(__name__)
 
 from fastapi import HTTPException
 from sqlalchemy.orm import attributes
@@ -198,15 +201,49 @@ class AIService:
             if not isinstance(raw, dict):
                 return DocumentUploadAnalyzeResponse(
                     success=False,
-                    error="AI 분석 응답 형식이 올바르지 않습니다.",
+                    error="파일의 내용이 여행 일정과 관련이 없거나 명확하지 않습니다. 다른 파일로 시도해주세요.",
                 )
 
             return _normalize_ai_document_response(raw)
 
-        except Exception as e:
+        except Exception:
+            logger.exception("파일 처리 중 오류")
             return DocumentUploadAnalyzeResponse(
                 success=False,
-                error=f"파일 처리 중 오류가 발생했습니다: {str(e)}",
+                error="일시적인 오류가 발생했습니다. 잠시 후 다시 시도해주세요.",
+            )
+
+    async def parse_text_to_item(self, text: str, plan_public_id: str) -> DocumentUploadAnalyzeResponse:
+        """자연어 텍스트 → Gemini 1-call로 아이템 유형·초안 분석."""
+        self._require_registered_user()
+        try:
+            plan = await self.plan_repository.find_by_public_id(public_id=plan_public_id)
+            if not plan:
+                return DocumentUploadAnalyzeResponse(
+                    success=False,
+                    error="해당 여행 계획을 찾을 수 없습니다.",
+                )
+
+            plan_context = (
+                f"여행 기간: {plan.start_date} ~ {plan.end_date}\n"
+                f"오늘 날짜: {__import__('datetime').date.today().isoformat()}"
+            )
+
+            raw = await self.gemini_client.parse_text_to_item(
+                user_text=text,
+                plan_context=plan_context,
+            )
+            if not isinstance(raw, dict):
+                return DocumentUploadAnalyzeResponse(
+                    success=False,
+                    error="어떤 일정인지 조금 더 구체적으로 알려주세요.",
+                )
+            return _normalize_ai_document_response(raw)
+        except Exception:
+            logger.exception("텍스트 파싱 중 오류")
+            return DocumentUploadAnalyzeResponse(
+                success=False,
+                error="일시적인 오류가 발생했습니다. 잠시 후 다시 시도해주세요.",
             )
 
     # AI Checklist

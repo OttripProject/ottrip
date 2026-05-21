@@ -40,6 +40,7 @@ import { itinerariesApi } from '@/services/itineraries';
 import { accommodationsApi } from '@/services/accommodations';
 import { flightsApi } from '@/services/flights';
 import { guestPrompt } from '@/utils/guestPrompt';
+import { useMe } from '@/hooks/useMe';
 import SettingIcon from '../../assets/mobile_setting.svg';
 import DropdownIcon from '../../assets/mobile_dropdown.svg';
 import LocationIcon from '../../assets/mobile_location.svg';
@@ -119,6 +120,7 @@ function collectNearestFutureScheduleDateStr(
 }
 
 export default function TodayScreen() {
+  const { data: me } = useMe();
   const { selectedPlan, setSelectedPlan } = useSelectedPlan();
   const [profileModalVisible, setProfileModalVisible] = useState(false);
   const [showPlanSelector, setShowPlanSelector] = useState(false);
@@ -1367,12 +1369,31 @@ export default function TodayScreen() {
         visible={addScheduleFlow === 'method'}
         onClose={() => setAddScheduleFlow('closed')}
         onSelectDirectAdd={() => setAddScheduleFlow('direct')}
-        onSelectAiAdd={() => setAddScheduleFlow('ai')}
+        onSelectAiAdd={() => {
+                if (me?.isGuest) {
+                  setAddScheduleFlow('closed');
+                  setTimeout(() => guestPrompt.show(), 300);
+                  return;
+                }
+                setAddScheduleFlow('ai');
+              }}
       />
 
       <AddScheduleWithAiModal
         visible={addScheduleFlow === 'ai'}
         onClose={() => setAddScheduleFlow('method')}
+        planId={selectedPlan?.id ?? 0}
+        planPublicId={selectedPlan?.publicId ?? ''}
+        onSaved={() => {
+          if (selectedPlan?.publicId) {
+            planData.refreshItineraries?.();
+            planData.refreshFlights?.();
+            planData.refreshAccommodations?.();
+            planData.refreshExpenses?.();
+            queryClient.invalidateQueries({ queryKey: ['expenses', selectedPlan.id] });
+          }
+          refetchTodayExpenses();
+        }}
       />
 
       <AddScheduleModal

@@ -34,8 +34,10 @@ import PlusIcon from '../../assets/mobile_plus2.svg';
 import { itinerariesApi } from '@/services/itineraries';
 import { flightsApi } from '@/services/flights';
 import { guestPrompt } from '@/utils/guestPrompt';
+import { useMe } from '@/hooks/useMe';
 
 export default function WeeklyScreen() {
+  const { data: me } = useMe();
   const plansQuery = usePlansQuery();
   const queryClient = useQueryClient();
   const { selectedPlan, setSelectedPlan } = useSelectedPlan();
@@ -527,12 +529,30 @@ export default function WeeklyScreen() {
         visible={addScheduleFlow === 'method'}
         onClose={() => setAddScheduleFlow('closed')}
         onSelectDirectAdd={() => setAddScheduleFlow('direct')}
-        onSelectAiAdd={() => setAddScheduleFlow('ai')}
+        onSelectAiAdd={() => {
+                if (me?.isGuest) {
+                  setAddScheduleFlow('closed');
+                  setTimeout(() => guestPrompt.show(), 300);
+                  return;
+                }
+                setAddScheduleFlow('ai');
+              }}
       />
 
       <AddScheduleWithAiModal
         visible={addScheduleFlow === 'ai'}
         onClose={() => setAddScheduleFlow('method')}
+        planId={selectedPlan?.id ?? 0}
+        planPublicId={selectedPlan?.publicId ?? ''}
+        onSaved={() => {
+          if (selectedPlan?.publicId) {
+            planData.refreshItineraries?.();
+            planData.refreshFlights?.();
+            planData.refreshAccommodations?.();
+            planData.refreshExpenses?.();
+            queryClient.invalidateQueries({ queryKey: ['expenses', selectedPlan.id] });
+          }
+        }}
       />
 
       <AddScheduleModal

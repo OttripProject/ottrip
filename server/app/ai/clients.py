@@ -1,6 +1,9 @@
 import json
+import logging
 from pathlib import Path
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 from app.utils.dependency import dependency
 
@@ -208,11 +211,55 @@ class GeminiClient:
                     error="AI 응답을 파싱할 수 없습니다.",
                 )
 
-        except Exception as e:
+        except Exception:
+            logger.exception("체크리스트 생성 중 오류")
             return AIParseResponse(
                 success=False,
-                error=f"체크리스트 생성 중 오류 발생: {str(e)}",
+                error="일시적인 오류가 발생했습니다. 잠시 후 다시 시도해주세요.",
             )
+
+    async def parse_text_to_item(self, user_text: str, plan_context: str) -> dict[str, Any]:
+        from google import genai
+
+        err = {"success": False, "inferred_item_type": None, "error": "", "draft": None}
+
+        try:
+            prompt_path = Path(__file__).parent / "prompt" / "text_parse.txt"
+            with open(prompt_path, "r", encoding="utf-8") as f:
+                prompt_template = f.read()
+            prompt = (
+                prompt_template
+                .replace("{user_text}", user_text)
+                .replace("{plan_context}", plan_context)
+            )
+
+            config = genai.types.GenerateContentConfig(
+                system_instruction=ai_settings.DOCUMENT_UPLOAD_ANALYZE_SYSTEM_PROMPT,
+                temperature=0.2,
+                response_mime_type="application/json",
+            )
+
+            response = await self.client.aio.models.generate_content(
+                model=ai_settings.GEMINI_DEFAULT_MODEL,
+                contents=prompt,
+                config=config,
+            )
+            raw = (getattr(response, "text", None) or "").strip()
+            if not raw:
+                err["error"] = "어떤 일정인지 조금 더 구체적으로 알려주세요."
+                return err
+            parsed = json.loads(raw)
+            if not isinstance(parsed, dict):
+                err["error"] = "어떤 일정인지 조금 더 구체적으로 알려주세요."
+                return err
+            return parsed
+        except json.JSONDecodeError:
+            err["error"] = "어떤 일정인지 조금 더 구체적으로 알려주세요."
+            return err
+        except Exception:
+            logger.exception("텍스트 파싱 중 오류")
+            err["error"] = "일시적인 오류가 발생했습니다. 잠시 후 다시 시도해주세요."
+            return err
 
     async def analyze_document_upload(self, ocr_text: str) -> dict[str, Any]:
         from google import genai
