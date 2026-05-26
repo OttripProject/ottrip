@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { View, Text, Pressable, StyleSheet, ScrollView } from 'react-native';
 import dayjs from 'dayjs';
 import BottomSheetModal from '@/ui/components/BottomSheetModal.native';
@@ -76,11 +77,21 @@ export default function ExpenseDetailModal({
   onExpenseAdd,
   onAddExpensePress,
 }: ExpenseDetailModalProps) {
+  const [selectedCategory, setSelectedCategory] = useState<ExpenseCategory | null>(null);
+
   const categoryEntries = CATEGORY_ORDER.filter((cat) => (byCategory[cat] ?? 0) > 0).map(
     (cat) => [cat, byCategory[cat] ?? 0] as const
   );
 
   const showDatePerExpense = !exDate;
+
+  const filteredExpenses = selectedCategory
+    ? expenses.filter((e) => e.category === selectedCategory)
+    : expenses;
+
+  const sectionTitle = selectedCategory
+    ? `${categoryLabels[selectedCategory as keyof typeof categoryLabels] || selectedCategory} 상세 내역`
+    : '전체 상세 내역';
 
   return (
     <BottomSheetModal visible={visible} onClose={onClose} height={0.85} >
@@ -97,32 +108,44 @@ export default function ExpenseDetailModal({
         showsVerticalScrollIndicator={false}
       >
         {/* 총 비용 */}
-        <View style={styles.totalCard}>
+        <Pressable
+          style={[styles.totalCard, selectedCategory === null && styles.totalCardSelected]}
+          onPress={() => setSelectedCategory(null)}
+        >
           <Text style={styles.totalLabel}>총 비용(Total Cost)</Text>
           <Text style={styles.totalAmount}>
             {total.toLocaleString('ko-KR')}원
           </Text>
-        </View>
+        </Pressable>
 
         {/* 카테고리별 금액 */}
         {categoryEntries.length > 0 && (
           <View style={styles.categoryGrid}>
-            {categoryEntries.map(([category, amount]) => (
-              <View key={category} style={styles.categoryCard}>
-                <Text style={styles.categoryLabel}>
-                  {categoryLabels[category as keyof typeof categoryLabels] || category}
-                </Text>
-                <Text style={styles.categoryAmount}>{formatCurrency(amount)}</Text>
-              </View>
-            ))}
+            {categoryEntries.map(([category, amount]) => {
+              const isSelected = selectedCategory === category;
+              return (
+                <Pressable
+                  key={category}
+                  style={[styles.categoryCard, isSelected && styles.categoryCardSelected]}
+                  onPress={() => setSelectedCategory(isSelected ? null : category)}
+                >
+                  <Text style={[styles.categoryLabel, isSelected && styles.categoryLabelSelected]}>
+                    {categoryLabels[category as keyof typeof categoryLabels] || category}
+                  </Text>
+                  <Text style={[styles.categoryAmount, isSelected && styles.categoryAmountSelected]}>
+                    {formatCurrency(amount)}
+                  </Text>
+                </Pressable>
+              );
+            })}
           </View>
         )}
 
-        {/* 전체 상세 내역 */}
-        <Text style={styles.sectionTitle}>전체 상세 내역</Text>
-        {expenses.length > 0 ? (
+        {/* 카테고리별 / 전체 상세 내역 */}
+        <Text style={styles.sectionTitle}>{sectionTitle}</Text>
+        {filteredExpenses.length > 0 ? (
           <View style={styles.detailList}>
-            {expenses.map((expense, index) => (
+            {filteredExpenses.map((expense, index) => (
               <View key={expense.id}>
                 {index > 0 && <View style={styles.divider} />}
                 <View style={styles.detailRow}>
@@ -153,7 +176,9 @@ export default function ExpenseDetailModal({
             ))}
           </View>
         ) : (
-          <Text style={styles.emptyText}>지출 내역이 없습니다</Text>
+          <Text style={styles.emptyText}>
+            {selectedCategory ? '해당 카테고리 내역이 없습니다' : '지출 내역이 없습니다'}
+          </Text>
         )}
       </ScrollView>
 
@@ -207,6 +232,11 @@ const styles = StyleSheet.create({
     padding: 16,
     paddingVertical: 20,
     marginBottom: 8,
+    borderWidth: 1,
+    borderColor: 'transparent',
+  },
+  totalCardSelected: {
+    borderColor: colors.primary,
   },
   totalLabel: {
     ...textStyles.h7,
@@ -229,14 +259,25 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
   },
+  categoryCardSelected: {
+    backgroundColor: `${colors.primary}1A`,
+    borderWidth: 1,
+    borderColor: colors.primary,
+  },
   categoryLabel: {
     ...textStyles.h7,
     color: colors.gray600,
     marginBottom: 4,
   },
+  categoryLabelSelected: {
+    color: colors.primary,
+  },
   categoryAmount: {
     ...textStyles.h5,
     color: colors.black,
+  },
+  categoryAmountSelected: {
+    color: colors.primary,
   },
   sectionTitle: {
     ...textStyles.h7,
