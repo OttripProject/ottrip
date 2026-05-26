@@ -17,6 +17,8 @@ import { useTripForm } from '@/hooks/useTripForm';
 import { useMe } from '@/hooks/useMe';
 import { guestPrompt } from '@/utils/guestPrompt';
 import PanelLayout from './PanelLayout';
+import GradientBackground from '@/ui/components/GradientBackground';
+import AddScheduleWithAiModal from '@/components/modals/AddScheduleWithAiModal';
 import Card from '@/ui/components/Card';
 import Input from '@/ui/components/input/Input';
 import { PLACEHOLDERS } from '@/constants/placeholders';
@@ -32,6 +34,7 @@ import TodayIcon from '../../../assets/today.svg';
 import ShareIcon from '../../../assets/share.svg';
 import AirplaneIcon from '../../../assets/airplane.svg';
 import MemoIcon from '../../../assets/memo.svg';
+import LightningIcon from '../../../assets/mobile_lightning.svg';
 import XIcon from '../../../assets/x.svg';
 import FilesIcon from '../../../assets/files.svg';
 import AccommodationIcon from '../../../assets/accomodation.svg';
@@ -209,6 +212,7 @@ export default function WeeklySchedulePanel({
     const [showMonthPicker, setShowMonthPicker] = useState(false);
     const [selectedDate, setSelectedDate] = useState<string | undefined>(undefined);
     const [shareOpen, setShareOpen] = useState(false);
+    const [aiChatOpen, setAiChatOpen] = useState(false);
     const [memoOpen, setMemoOpen] = useState(false);
     const [memoDraft, setMemoDraft] = useState('');
     const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
@@ -1332,7 +1336,22 @@ export default function WeeklySchedulePanel({
             open={openTripSelector}
           />
 
-          
+
+          {internalSelectedTrip ? (
+            <Pressable
+              onPress={() => {
+                if (isGuest) { guestPrompt.show(); return; }
+                setAiChatOpen(true);
+              }}
+              style={styles.aiChatButton}
+            >
+              <GradientBackground style={styles.aiChatButtonGradient}>
+                <LightningIcon width={13} height={13} color={colors.black} />
+                <Text style={styles.aiChatButtonText}>대화로 일정 추가</Text>
+              </GradientBackground>
+            </Pressable>
+          ) : null}
+
           {internalSelectedTrip ? (
             <View style={styles.actionGroup}>
               {(myRole === 'owner' || myRole === 'editor') && (
@@ -2119,6 +2138,19 @@ export default function WeeklySchedulePanel({
 
 
       
+      <AddScheduleWithAiModal
+        visible={aiChatOpen}
+        onClose={() => setAiChatOpen(false)}
+        planId={internalSelectedTrip ? parseInt(internalSelectedTrip.id) : 0}
+        planPublicId={internalSelectedTrip?.publicId ?? ''}
+        onSaved={() => {
+          if (externalPlanData?.refreshItineraries) externalPlanData.refreshItineraries().catch(() => {});
+          if (externalPlanData?.refreshFlights) externalPlanData.refreshFlights().catch(() => {});
+          if (externalPlanData?.refreshAccommodations) externalPlanData.refreshAccommodations().catch(() => {});
+          if (externalPlanData?.refreshExpenses) externalPlanData.refreshExpenses().catch(() => {});
+        }}
+      />
+
       <SharePlanModal
         visible={shareOpen}
         onClose={() => setShareOpen(false)}
@@ -2331,6 +2363,25 @@ const styles = StyleSheet.create({
       alignItems: 'center',
       gap: spacing.xs,
       marginLeft: spacing.lg,
+    },
+    aiChatButton: {
+      height: 32,
+      borderRadius: 20,
+      overflow: 'hidden',
+      marginLeft: spacing.lg,
+    },
+    aiChatButtonGradient: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      paddingHorizontal: 14,
+      paddingVertical: 0,
+      height: 32,
+    },
+    aiChatButtonText: {
+      ...textStyles.h8,
+      color: colors.black,
+      fontSize: 13,
     },
     todayBtn: {
       borderWidth: 1,
