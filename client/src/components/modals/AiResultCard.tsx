@@ -9,6 +9,10 @@ import { itinerariesApi } from '@/services/itineraries';
 import { flightsApi } from '@/services/flights';
 import { accommodationsApi } from '@/services/accommodations';
 import { expensesApi } from '@/services/expenses';
+import FileIcon from '../../../assets/attachment.svg';
+import CalendarIcon from '../../../assets/mobile_calendar_black.svg';
+import TimeIcon from '../../../assets/mobile_time.svg';
+import LocationIcon from '../../../assets/mobile_location.svg';
 
 interface AiResultCardProps {
   result: DocumentUploadAnalyzeResponse;
@@ -24,11 +28,25 @@ function getVal(v: Record<string, unknown>, ...keys: string[]): string {
   return '';
 }
 
-function FieldRow({ label, value }: { label: string; value: string }) {
+function FieldRow({
+  label,
+  value,
+  icon: Icon,
+}: {
+  label: string;
+  value: string;
+  icon?: React.FC<{ width: number; height: number; color: string }>;
+}) {
   if (!value) return null;
   return (
     <View style={styles.fieldRow}>
-      <Text style={styles.fieldLabel}>{label}</Text>
+      {Icon ? (
+        <View style={styles.iconBox}>
+          <Icon width={16} height={16} color={colors.black} />
+        </View>
+      ) : (
+        <Text style={styles.fieldLabel}>{label}</Text>
+      )}
       <Text style={styles.fieldValue} numberOfLines={1}>{value}</Text>
     </View>
   );
@@ -62,10 +80,10 @@ export default function AiResultCard({ result, planId, onSaved }: AiResultCardPr
         const location = getVal(v, 'location') || getVal(v, 'city');
         return (
           <>
-            <FieldRow label="제목" value={title} />
-            <FieldRow label="날짜" value={date} />
-            <FieldRow label="시간" value={time} />
-            <FieldRow label="장소" value={location} />
+            <FieldRow label="제목" value={title} icon={FileIcon}/>
+            <FieldRow label="날짜" value={date} icon={CalendarIcon}/>
+            <FieldRow label="시간" value={time} icon={TimeIcon}/>
+            <FieldRow label="장소" value={location} icon={LocationIcon}/>
           </>
         );
       }
@@ -80,11 +98,11 @@ export default function AiResultCard({ result, planId, onSaved }: AiResultCardPr
         const depTime = depTimeRaw ? dayjs(depTimeRaw).format('HH:mm') : '';
         return (
           <>
-            {flightNo ? <FieldRow label="항공편" value={flightNo} /> : null}
-            <FieldRow label="출발" value={dep} />
-            <FieldRow label="도착" value={arr} />
-            <FieldRow label="날짜" value={depDate} />
-            {depTime ? <FieldRow label="시간" value={depTime} /> : null}
+            {flightNo ? <FieldRow label="항공편" value={flightNo} icon={FileIcon} /> : null}
+            <FieldRow label="출발" value={dep} icon={LocationIcon} />
+            <FieldRow label="도착" value={arr} icon={LocationIcon} />
+            <FieldRow label="날짜" value={depDate} icon={CalendarIcon} />
+            {depTime ? <FieldRow label="시간" value={depTime} icon={TimeIcon} /> : null}
           </>
         );
       }
@@ -95,10 +113,10 @@ export default function AiResultCard({ result, planId, onSaved }: AiResultCardPr
         const city = getVal(v, 'city');
         return (
           <>
-            <FieldRow label="숙소명" value={name} />
-            <FieldRow label="체크인" value={checkin} />
-            <FieldRow label="체크아웃" value={checkout} />
-            <FieldRow label="도시" value={city} />
+            <FieldRow label="숙소명" value={name} icon={FileIcon} />
+            <FieldRow label="체크인" value={checkin} icon={CalendarIcon} />
+            <FieldRow label="체크아웃" value={checkout} icon={CalendarIcon} />
+            <FieldRow label="도시" value={city} icon={LocationIcon} />
           </>
         );
       }
@@ -109,9 +127,9 @@ export default function AiResultCard({ result, planId, onSaved }: AiResultCardPr
         const exDate = getVal(v, 'exDate', 'ex_date');
         return (
           <>
-            <FieldRow label="금액" value={amount > 0 ? `${amount.toLocaleString()} ${currency}` : ''} />
-            <FieldRow label="카테고리" value={category} />
-            <FieldRow label="날짜" value={exDate} />
+            <FieldRow label="금액" value={amount > 0 ? `${amount.toLocaleString()} ${currency}` : ''} icon={FileIcon} />
+            <FieldRow label="카테고리" value={category} icon={FileIcon} />
+            <FieldRow label="날짜" value={exDate} icon={CalendarIcon} />
           </>
         );
       }
@@ -271,6 +289,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
   },
+  iconBox: {
+    width: 36,
+    height: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 10,
+    flexShrink: 0,
+    backgroundColor: colors.white,
+    borderRadius: 10,
+  },
   fieldLabel: {
     ...textStyles.h7,
     color: colors.gray600,
@@ -283,7 +311,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   saveButton: {
-    backgroundColor: colors.white,
+    backgroundColor: colors.primary,
     borderRadius: 12,
     paddingVertical: 14,
     alignItems: 'center',
@@ -297,7 +325,7 @@ const styles = StyleSheet.create({
   },
   saveButtonText: {
     ...textStyles.h6,
-    color: colors.primary,
+    color: colors.white,
   },
   saveButtonTextSaved: {
     color: colors.gray600,
