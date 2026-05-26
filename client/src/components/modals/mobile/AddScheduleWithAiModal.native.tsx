@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,6 +7,7 @@ import {
   ScrollView,
   Platform,
   ActivityIndicator,
+  Keyboard,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import BottomSheetModal from '@/ui/components/BottomSheetModal.native';
@@ -49,7 +50,22 @@ export default function AddScheduleWithAiModal({
     { role: 'ai', text: AI_INTRO },
   ]);
   const [loading, setLoading] = useState(false);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
   const scrollRef = useRef<ScrollView>(null);
+
+  useEffect(() => {
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+    const showSub = Keyboard.addListener(showEvent, (e) => {
+      setKeyboardHeight(e.endCoordinates.height);
+      setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 50);
+    });
+    const hideSub = Keyboard.addListener(hideEvent, () => setKeyboardHeight(0));
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
 
   const handleSend = async () => {
     const text = message.trim();
@@ -100,7 +116,7 @@ export default function AddScheduleWithAiModal({
       backdropOpacity={0.7}
       showDragHandle
     >
-      <View style={[styles.shell, { paddingBottom: Math.max(insets.bottom, 12) }]}>
+      <View style={[styles.shell, { paddingBottom: keyboardHeight > 0 ? keyboardHeight : Math.max(insets.bottom, 12) }]}>
         <View style={styles.header}>
           <View style={styles.titleBlock}>
             <Text style={styles.headerTitle}>AI 일정 추가</Text>
