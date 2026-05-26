@@ -102,7 +102,7 @@ export default function AddScheduleWithAiModal({
   const handleSaved = () => {
     setMessages((prev) => [
       ...prev,
-      { role: 'ai', text: '저장됐어요!✅ 다른 일정도 추가해드릴까요?' },
+      { role: 'ai', text: '✅ 저장됐어요! 다른 일정도 추가해드릴까요?' },
     ]);
     onSaved?.();
     setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
