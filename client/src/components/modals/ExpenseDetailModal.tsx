@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { View, Text, Pressable, StyleSheet, Modal, ScrollView } from 'react-native';
 import { Expense } from '@/types/api';
 import { ExpenseCategory, ExpenseCurrency, categoryLabels, currencyLabels } from '@/types/expense';
@@ -76,6 +76,8 @@ export default function ExpenseDetailModal({
     return grouped;
   }, [expenses]);
 
+  const [selectedCategory, setSelectedCategory] = useState<ExpenseCategory | null>(null);
+
   const handleDelete = async (expenseId: number) => {
     try {
       await expensesApi.deleteExpense(expenseId);
@@ -104,11 +106,14 @@ export default function ExpenseDetailModal({
             </Pressable>
           </View>
 
-          <View style={styles.totalSection}>
+          <Pressable
+            style={styles.totalSection}
+            onPress={() => setSelectedCategory(null)}
+          >
             <Text style={styles.totalText}>
               총 지출 : {formatAmount(totalExpenses)} {currencyLabels[ExpenseCurrency.KRW]}
             </Text>
-          </View>
+          </Pressable>
 
           <View style={styles.divider} />
 
@@ -116,16 +121,21 @@ export default function ExpenseDetailModal({
             {categoryOrder.map((category) => {
               const total = categoryTotals[category];
               if (total === 0) return null;
+              const isSelected = selectedCategory === category;
 
               return (
-                <View key={category} style={styles.summaryRow}>
+                <Pressable
+                  key={category}
+                  style={styles.summaryRow}
+                  onPress={() => setSelectedCategory(isSelected ? null : category)}
+                >
                   <Text style={styles.summaryCategory}>
                     {categoryLabels[category]}
                   </Text>
                   <Text style={styles.summaryAmount}>
                     {formatAmount(total)} {currencyLabels[ExpenseCurrency.KRW]}
                   </Text>
-                </View>
+                </Pressable>
               );
             })}
           </View>
@@ -140,6 +150,7 @@ export default function ExpenseDetailModal({
             {categoryOrder.map((category) => {
               const categoryExpenses = expensesByCategory[category];
               if (categoryExpenses.length === 0) return null;
+              if (selectedCategory !== null && selectedCategory !== category) return null;
 
               return (
                 <View key={category} style={styles.categorySection}>
