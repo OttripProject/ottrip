@@ -147,7 +147,7 @@ export default function AiResultCard({ result, planId, onSaved }: AiResultCardPr
           const date = getVal(v, 'itineraryDate', 'itinerary_date') || dayjs().format('YYYY-MM-DD');
           const startTime = getVal(v, 'startTime', 'start_time') || '00:00';
           const rawEnd = getVal(v, 'endTime', 'end_time');
-          const endTime = rawEnd || startTime;
+          const endTime = rawEnd || dayjs(`2000-01-01 ${startTime.substring(0, 5)}`).add(1, 'hour').format('HH:mm');
           await itinerariesApi.createItinerary({
             title: getVal(v, 'title') || '일정',
             description: getVal(v, 'description') || undefined,
