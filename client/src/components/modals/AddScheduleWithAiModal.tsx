@@ -1,4 +1,4 @@
-import React, { createElement, useRef, useState } from 'react';
+import React, { createElement, useEffect, useRef, useState } from 'react';
 import {
   Modal,
   View,
@@ -83,7 +83,8 @@ export default function AddScheduleWithAiModal({
   const scrollRef = useRef<ScrollView>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const pendingFileRef = useRef<File | null>(null);
-  const dragCounterRef = useRef(0);
+  const dragZoneRef = useRef<View>(null);
+  const handleFileAttachRef = useRef<(file: File) => Promise<void>>(null as any);
 
   const handleSend = async () => {
     const text = message.trim();
@@ -313,7 +314,6 @@ export default function AddScheduleWithAiModal({
     setAnalyzeResult(null);
     setAnalyzeModalVisible(false);
     setIsDragging(false);
-    dragCounterRef.current = 0;
     pendingFileRef.current = null;
     onClose();
   };
@@ -326,30 +326,53 @@ export default function AddScheduleWithAiModal({
     void handleFileAttach(file);
   };
 
-  const handleDragEnter = (e: React.DragEvent) => {
-    e.preventDefault();
-    dragCounterRef.current += 1;
-    if (dragCounterRef.current === 1) setIsDragging(true);
-  };
+  handleFileAttachRef.current = handleFileAttach;
 
-  const handleDragLeave = (e: React.DragEvent) => {
-    e.preventDefault();
-    dragCounterRef.current -= 1;
-    if (dragCounterRef.current === 0) setIsDragging(false);
-  };
+  useEffect(() => {
+    if (!visible) return;
+    const prevent = (e: DragEvent) => e.preventDefault();
+    document.addEventListener('dragover', prevent);
+    document.addEventListener('drop', prevent);
+    return () => {
+      document.removeEventListener('dragover', prevent);
+      document.removeEventListener('drop', prevent);
+    };
+  }, [visible]);
 
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-  };
+  useEffect(() => {
+    if (!visible) return;
+    const el = dragZoneRef.current as unknown as HTMLElement | null;
+    if (!el) return;
 
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    dragCounterRef.current = 0;
-    setIsDragging(false);
-    const file = e.dataTransfer.files?.[0];
-    if (!file) return;
-    void handleFileAttach(file);
-  };
+    const onDragEnter = (e: DragEvent) => {
+      e.preventDefault();
+      setIsDragging(true);
+    };
+    const onDragLeave = (e: DragEvent) => {
+      e.preventDefault();
+      if (!el.contains(e.relatedTarget as Node)) setIsDragging(false);
+    };
+    const onDragOver = (e: DragEvent) => { e.preventDefault(); };
+    const onDrop = (e: DragEvent) => {
+      e.preventDefault();
+      setIsDragging(false);
+      const file = e.dataTransfer?.files?.[0];
+      if (file) void handleFileAttachRef.current(file);
+    };
+
+    el.addEventListener('dragenter', onDragEnter);
+    el.addEventListener('dragleave', onDragLeave);
+    el.addEventListener('dragover', onDragOver);
+    el.addEventListener('drop', onDrop);
+
+    return () => {
+      el.removeEventListener('dragenter', onDragEnter);
+      el.removeEventListener('dragleave', onDragLeave);
+      el.removeEventListener('dragover', onDragOver);
+      el.removeEventListener('drop', onDrop);
+      setIsDragging(false);
+    };
+  }, [visible]);
 
   const hiddenFileInput = createElement('input', {
     key: 'ai-modal-file-input',
@@ -385,15 +408,7 @@ export default function AddScheduleWithAiModal({
             </Pressable>
           </View>
 
-          <View
-            style={styles.chatScrollWrapper}
-            {...({
-              onDragEnter: handleDragEnter,
-              onDragLeave: handleDragLeave,
-              onDragOver: handleDragOver,
-              onDrop: handleDrop,
-            } as any)}
-          >
+          <View ref={dragZoneRef} style={styles.chatScrollWrapper}>
             <ScrollView
               ref={scrollRef}
               style={styles.chatScroll}
@@ -478,7 +493,6 @@ export default function AddScheduleWithAiModal({
                 pointerEvents="none"
               >
                 <View style={styles.dragOverlayInner}>
-                  <FileIcon width={32} height={32} color={colors.primary} />
                   <Text style={styles.dragOverlayText}>파일을 놓아 분석하기</Text>
                 </View>
               </View>
