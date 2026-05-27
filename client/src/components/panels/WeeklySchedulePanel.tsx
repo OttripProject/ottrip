@@ -18,7 +18,7 @@ import { useMe } from '@/hooks/useMe';
 import { guestPrompt } from '@/utils/guestPrompt';
 import PanelLayout from './PanelLayout';
 import GradientBackground from '@/ui/components/GradientBackground';
-import AddScheduleWithAiModal from '@/components/modals/AddScheduleWithAiModal';
+import AddScheduleWithAiModal, { type Message as AiMessage, AI_INTRO } from '@/components/modals/AddScheduleWithAiModal';
 import Card from '@/ui/components/Card';
 import Input from '@/ui/components/input/Input';
 import { PLACEHOLDERS } from '@/constants/placeholders';
@@ -213,6 +213,7 @@ export default function WeeklySchedulePanel({
     const [selectedDate, setSelectedDate] = useState<string | undefined>(undefined);
     const [shareOpen, setShareOpen] = useState(false);
     const [aiChatOpen, setAiChatOpen] = useState(false);
+    const [aiMessages, setAiMessages] = useState<AiMessage[]>([{ role: 'ai', text: AI_INTRO }]);
     const [memoOpen, setMemoOpen] = useState(false);
     const [memoDraft, setMemoDraft] = useState('');
     const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
@@ -949,6 +950,10 @@ export default function WeeklySchedulePanel({
         setCurrentWeekStart(startDateWeekStart);
       }
     }, [internalSelectedTrip?.startDate]);
+
+    useEffect(() => {
+      setAiMessages([{ role: 'ai', text: AI_INTRO }]);
+    }, [internalSelectedTrip?.id]);
 
     const myRole = useMemo(() => {
       const r = (planData.plan as any)?.myRole;
@@ -2143,6 +2148,8 @@ export default function WeeklySchedulePanel({
         onClose={() => setAiChatOpen(false)}
         planId={internalSelectedTrip ? parseInt(internalSelectedTrip.id) : 0}
         planPublicId={internalSelectedTrip?.publicId ?? ''}
+        messages={aiMessages}
+        onMessagesChange={setAiMessages}
         onSaved={() => {
           if (externalPlanData?.refreshItineraries) externalPlanData.refreshItineraries().catch(() => {});
           if (externalPlanData?.refreshFlights) externalPlanData.refreshFlights().catch(() => {});

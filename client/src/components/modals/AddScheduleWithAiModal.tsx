@@ -35,16 +35,18 @@ interface AddScheduleWithAiModalProps {
   planId: number;
   planPublicId: string;
   onSaved?: () => void;
+  messages: Message[];
+  onMessagesChange: React.Dispatch<React.SetStateAction<Message[]>>;
 }
 
-type Message =
+export type Message =
   | { role: 'ai'; text: string }
   | { role: 'user'; text: string }
   | { role: 'user-file'; fileName: string; mimeType: string }
   | { role: 'ai-analyzing'; id: string }
   | { role: 'result'; result: DocumentUploadAnalyzeResponse };
 
-const AI_INTRO =
+export const AI_INTRO =
   '안녕하세요! 어떤 일정을 추가해 드릴까요?\n예: "내일 오후 2시에 루브르 박물관 가고 싶어", "3월 10일에 파리 하얏트 호텔 체크인해줘"';
 
 const WEB_FILE_ACCEPT =
@@ -70,11 +72,10 @@ export default function AddScheduleWithAiModal({
   planId,
   planPublicId,
   onSaved,
+  messages,
+  onMessagesChange: setMessages,
 }: AddScheduleWithAiModalProps) {
   const [message, setMessage] = useState('');
-  const [messages, setMessages] = useState<Message[]>([
-    { role: 'ai', text: AI_INTRO },
-  ]);
   const [loading, setLoading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [analyzeResult, setAnalyzeResult] = useState<DocumentUploadAnalyzeResponse | null>(null);
@@ -308,7 +309,6 @@ export default function AddScheduleWithAiModal({
   };
 
   const handleClose = () => {
-    setMessages([{ role: 'ai', text: AI_INTRO }]);
     setMessage('');
     setAnalyzeResult(null);
     setAnalyzeModalVisible(false);
