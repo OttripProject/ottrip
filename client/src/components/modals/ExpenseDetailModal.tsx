@@ -385,7 +385,6 @@ const styles = StyleSheet.create({
   },
   expenseDate: {
     ...textStyles.body6,
-    fontFamily: typography.fontFamily.poppinsMedium,
     color: colors.gray600,
   },
   expenseAmount: {
