@@ -110,8 +110,9 @@ export default function ExpenseDetailModal({
             style={styles.totalSection}
             onPress={() => setSelectedCategory(null)}
           >
-            <Text style={styles.totalText}>
-              총 지출 : {formatAmount(totalExpenses)} {currencyLabels[ExpenseCurrency.KRW]}
+            <Text style={styles.totalLabel}>총 지출</Text>
+            <Text style={styles.totalAmount}>
+              {formatAmount(totalExpenses)} {currencyLabels[ExpenseCurrency.KRW]}
             </Text>
           </Pressable>
 
@@ -221,14 +222,23 @@ const styles = StyleSheet.create({
     marginRight: -spacing.xs,
   },
   totalSection: {
-    paddingHorizontal: spacing.xl,
-    paddingTop: spacing.xl,
-    paddingBottom: spacing.none,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginHorizontal: spacing.xl,
+    marginTop: spacing.xl,
+    paddingHorizontal: spacing.lg + 2,
+    paddingVertical: spacing.md + 2,
+    backgroundColor: colors.gray900,
+    borderRadius: radii.lg,
   },
-  totalText: {
-    ...textStyles.h6,
-    fontWeight: typography.weight.semibold,
-    color: colors.black,
+  totalLabel: {
+    ...textStyles.h7,
+    color: 'rgba(255, 255, 255, 0.7)',
+  },
+  totalAmount: {
+    ...textStyles.h5,
+    color: colors.white,
   },
   divider: {
     height: 1,
