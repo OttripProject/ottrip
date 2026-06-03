@@ -1,42 +1,49 @@
-import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { View, Text, Pressable, StyleSheet, ScrollView, Platform } from 'react-native';
-import dayjs from 'dayjs';
-import { accommodationsApi } from '@/services/accommodations';
-import { attachmentsApi } from '@/services/attachments';
-import { useAttachmentUpload } from '@/hooks/useAttachmentUpload';
-import { useFilePicker } from '@/hooks/useFilePicker';
-import AttachmentSection from '@/ui/components/attachmentSection';
+import AiAnalyzeFailureModal from "@/components/modals/AiAnalyzeFailureModal";
+import AiDocumentAnalyzeModal from "@/components/modals/AiDocumentAnalyzeModal";
+import BaseCalendar from "@/components/popup/calendar/BaseCalendar";
+import { PLACEHOLDERS } from "@/constants/placeholders";
+import { useAttachmentUpload } from "@/hooks/useAttachmentUpload";
+import { useFilePicker } from "@/hooks/useFilePicker";
+import { accommodationsApi } from "@/services/accommodations";
+import { analyzeDocumentUpload } from "@/services/aiDocument";
+import { attachmentsApi } from "@/services/attachments";
 import type {
   AiDocumentItemDraft,
   Attachment,
   DocumentUploadAnalyzeResponse,
   LocalFile,
   StagedDocumentAnalyzePayload,
-} from '@/types/api';
-import { handleGuestPromptError } from '@/utils/guestPrompt';
+} from "@/types/api";
+import { ExpenseCurrency, currencyLabels } from "@/types/expense";
+import AttachmentSection from "@/ui/components/attachmentSection";
+import type { AiAttachmentAnalyzeSelection } from "@/ui/components/attachmentSection.types";
+import { pendingAiFileKey } from "@/ui/components/attachmentSection.types";
+import Input from "@/ui/components/input/Input";
+import { CountryPicker, TimePicker } from "@/ui/components/pickers";
+import WarningBanner from "@/ui/components/toast/warning";
+import { colors } from "@/ui/tokens/colors";
+import { radii } from "@/ui/tokens/radii";
+import { spacing } from "@/ui/tokens/spacing";
+import { textStyles } from "@/ui/tokens/typography";
+import { applyAccommodationDraftFromAi } from "@/utils/applyAiDocumentDraft";
+import { buildAnalyzeUploadPayload } from "@/utils/attachmentAiAnalyze";
 import {
   formatAttachmentUploadFailureMessage,
   showMessage,
-} from '@/utils/crossPlatformAlert';
-import { CountryPicker, TimePicker } from '@/ui/components/pickers';
-import Input from '@/ui/components/input/Input';
-import { PLACEHOLDERS } from '@/constants/placeholders';
-import { colors } from '@/ui/tokens/colors';
-import { textStyles } from '@/ui/tokens/typography';
-import { spacing } from '@/ui/tokens/spacing';
-import { radii } from '@/ui/tokens/radii';
-import BaseCalendar from '@/components/popup/calendar/BaseCalendar';
-import CalendarIcon from '../../../../assets/calender.svg';
-import CloseIcon from '../../../../assets/delete_ai.svg';
-import { ExpenseCurrency, currencyLabels } from '@/types/expense';
-import WarningBanner from '@/ui/components/toast/warning';
-import AiDocumentAnalyzeModal from '@/components/modals/AiDocumentAnalyzeModal';
-import AiAnalyzeFailureModal from '@/components/modals/AiAnalyzeFailureModal';
-import type { AiAttachmentAnalyzeSelection } from '@/ui/components/attachmentSection.types';
-import { pendingAiFileKey } from '@/ui/components/attachmentSection.types';
-import { analyzeDocumentUpload } from '@/services/aiDocument';
-import { buildAnalyzeUploadPayload } from '@/utils/attachmentAiAnalyze';
-import { applyAccommodationDraftFromAi } from '@/utils/applyAiDocumentDraft';
+} from "@/utils/crossPlatformAlert";
+import { handleGuestPromptError } from "@/utils/guestPrompt";
+import dayjs from "dayjs";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
+import CalendarIcon from "../../../../assets/calender.svg";
+import CloseIcon from "../../../../assets/delete_ai.svg";
 
 interface AccommodationItemProps {
   accommodation?: any;
@@ -60,12 +67,12 @@ interface AccommodationItemProps {
   onConsumeCarryoverPendingFiles?: () => void;
 }
 
-export default function AccommodationItem({ 
-  accommodation, 
+export default function AccommodationItem({
+  accommodation,
   draft,
-  planId, 
-  onSave, 
-  onCancel, 
+  planId,
+  onSave,
+  onCancel,
   onDelete,
   existingAccommodations = [],
   readOnly = false,
@@ -78,29 +85,36 @@ export default function AccommodationItem({
   onConsumeCarryoverPendingFiles,
 }: AccommodationItemProps) {
   const formatAmountWithCommas = (digits: string) => {
-    if (!digits) return '';
-    const normalized = digits.replace(/^0+(?=\d)/, '');
-    return normalized.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    if (!digits) return "";
+    const normalized = digits.replace(/^0+(?=\d)/, "");
+    return normalized.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
   };
 
   const normalizeAmountToIntDigits = (value: unknown) => {
-    const raw = String(value ?? '').trim();
-    if (!raw) return '';
-    const integerPart = raw.split('.')[0];
-    return integerPart.replace(/[^0-9]/g, '');
+    const raw = String(value ?? "").trim();
+    if (!raw) return "";
+    const integerPart = raw.split(".")[0];
+    return integerPart.replace(/[^0-9]/g, "");
   };
   const [showWarning, setShowWarning] = useState(false);
-  const [warningMessage, setWarningMessage] = useState('');
+  const [warningMessage, setWarningMessage] = useState("");
   const [formData, setFormData] = useState({
-    name: accommodation?.name || '',
-    place: accommodation?.place || '',
-    country: accommodation?.country || '',
-    city: accommodation?.city || '',
-    checkin_date: (accommodation?.checkinDate) || draft?.checkinDate || dayjs().format('YYYY-MM-DD'),
-    checkout_date: (accommodation?.checkoutDate) || draft?.checkoutDate || dayjs().add(1, 'day').format('YYYY-MM-DD'),
-    checkin_time: (accommodation?.checkinTime) || draft?.checkinTime || '15:00',
-    checkout_time: (accommodation?.checkoutTime) || draft?.checkoutTime || '11:00',
-    description: accommodation?.description || '',
+    name: accommodation?.name || "",
+    place: accommodation?.place || "",
+    country: accommodation?.country || "",
+    city: accommodation?.city || "",
+    checkin_date:
+      accommodation?.checkinDate ||
+      draft?.checkinDate ||
+      dayjs().format("YYYY-MM-DD"),
+    checkout_date:
+      accommodation?.checkoutDate ||
+      draft?.checkoutDate ||
+      dayjs().add(1, "day").format("YYYY-MM-DD"),
+    checkin_time: accommodation?.checkinTime || draft?.checkinTime || "15:00",
+    checkout_time:
+      accommodation?.checkoutTime || draft?.checkoutTime || "11:00",
+    description: accommodation?.description || "",
   });
 
   const [expenseData, setExpenseData] = useState({
@@ -116,7 +130,9 @@ export default function AccommodationItem({
   const [checkoutTimeOpen, setCheckoutTimeOpen] = useState(false);
 
   const [pendingFiles, setPendingFiles] = useState<LocalFile[]>([]);
-  const [existingAttachments, setExistingAttachments] = useState<Attachment[]>([]);
+  const [existingAttachments, setExistingAttachments] = useState<Attachment[]>(
+    [],
+  );
   const [isLoadingAttachments, setIsLoadingAttachments] = useState(false);
 
   const [aiAnalyzeModalVisible, setAiAnalyzeModalVisible] = useState(false);
@@ -124,7 +140,7 @@ export default function AccommodationItem({
     useState<DocumentUploadAnalyzeResponse | null>(null);
   const [isAiAnalyzing, setIsAiAnalyzing] = useState(false);
   const [aiAnalyzeFailureVisible, setAiAnalyzeFailureVisible] = useState(false);
-  const [aiAnalyzeFailureMessage, setAiAnalyzeFailureMessage] = useState('');
+  const [aiAnalyzeFailureMessage, setAiAnalyzeFailureMessage] = useState("");
   const lastHandledAiAnalyzeSeqRef = useRef<number | null>(null);
 
   useEffect(() => {
@@ -132,7 +148,7 @@ export default function AccommodationItem({
     const kind =
       stagedDocumentAnalyze.result.inferredItemType ??
       stagedDocumentAnalyze.result.draft?.itemType;
-    if (kind !== 'accommodation') return;
+    if (kind !== "accommodation") return;
     if (readOnly) return;
     const { seq, result } = stagedDocumentAnalyze;
     if (lastHandledAiAnalyzeSeqRef.current === seq) return;
@@ -144,27 +160,32 @@ export default function AccommodationItem({
   const { pickImage, pickDocument } = useFilePicker();
   const { isUploading, uploadFiles } = useAttachmentUpload({
     planId,
-    entityType: 'accommodation',
+    entityType: "accommodation",
   });
 
   useEffect(() => {
     if (accommodation) {
       setFormData({
-        name: accommodation.name || '',
-        place: accommodation.place || '',
-        country: accommodation.country || '',
-        city: accommodation.city || '',
-        checkin_date: (accommodation.checkinDate) || dayjs().format('YYYY-MM-DD'),
-        checkout_date: (accommodation.checkoutDate) || dayjs().add(1, 'day').format('YYYY-MM-DD'),
-        checkin_time: (accommodation.checkinTime || '15:00').substring(0,5),
-        checkout_time: (accommodation.checkoutTime || '11:00').substring(0,5),
-        description: accommodation.description || '',
+        name: accommodation.name || "",
+        place: accommodation.place || "",
+        country: accommodation.country || "",
+        city: accommodation.city || "",
+        checkin_date: accommodation.checkinDate || dayjs().format("YYYY-MM-DD"),
+        checkout_date:
+          accommodation.checkoutDate ||
+          dayjs().add(1, "day").format("YYYY-MM-DD"),
+        checkin_time: (accommodation.checkinTime || "15:00").substring(0, 5),
+        checkout_time: (accommodation.checkoutTime || "11:00").substring(0, 5),
+        description: accommodation.description || "",
       });
 
-      setExpenseData((prev) => ({
+      setExpenseData(prev => ({
         ...prev,
         amount: normalizeAmountToIntDigits(accommodation?.expense?.amount),
-        currency: (accommodation?.expense?.currency as ExpenseCurrency) || prev.currency || ExpenseCurrency.KRW,
+        currency:
+          (accommodation?.expense?.currency as ExpenseCurrency) ||
+          prev.currency ||
+          ExpenseCurrency.KRW,
       }));
     }
   }, [accommodation]);
@@ -184,8 +205,8 @@ export default function AccommodationItem({
 
   const accommodationAttachmentEntityId = useMemo(() => {
     const raw = accommodation?.id;
-    if (raw == null || raw === '') return undefined;
-    const n = typeof raw === 'number' ? raw : parseInt(String(raw), 10);
+    if (raw == null || raw === "") return undefined;
+    const n = typeof raw === "number" ? raw : Number.parseInt(String(raw), 10);
     return Number.isFinite(n) ? n : undefined;
   }, [accommodation?.id]);
 
@@ -200,8 +221,8 @@ export default function AccommodationItem({
     setExistingAttachments([]);
     setIsLoadingAttachments(true);
     attachmentsApi
-      .getAttachments(planId, 'accommodation', id)
-      .then((list) => {
+      .getAttachments(planId, "accommodation", id)
+      .then(list => {
         if (!cancelled) setExistingAttachments(list);
       })
       .catch(() => {
@@ -216,10 +237,10 @@ export default function AccommodationItem({
   }, [accommodationAttachmentEntityId, planId]);
 
   useEffect(() => {
-    setPendingFiles((prev) => {
-      if (Platform.OS === 'web') {
-        prev.forEach((f) => {
-          if (f.uri?.startsWith('blob:')) {
+    setPendingFiles(prev => {
+      if (Platform.OS === "web") {
+        prev.forEach(f => {
+          if (f.uri?.startsWith("blob:")) {
             try {
               URL.revokeObjectURL(f.uri);
             } catch {
@@ -234,10 +255,10 @@ export default function AccommodationItem({
 
   useEffect(() => {
     if (readOnly) {
-      setPendingFiles((prev) => {
-        if (Platform.OS === 'web') {
-          prev.forEach((f) => {
-            if (f.uri?.startsWith('blob:')) {
+      setPendingFiles(prev => {
+        if (Platform.OS === "web") {
+          prev.forEach(f => {
+            if (f.uri?.startsWith("blob:")) {
               try {
                 URL.revokeObjectURL(f.uri);
               } catch {
@@ -271,11 +292,11 @@ export default function AccommodationItem({
   const appendImage = async () => {
     try {
       const f = await pickImage();
-      if (f) setPendingFiles((p) => [...p, f]);
+      if (f) setPendingFiles(p => [...p, f]);
     } catch (e) {
       showMessage(
-        '알림',
-        e instanceof Error ? e.message : '파일을 선택하지 못했습니다.',
+        "알림",
+        e instanceof Error ? e.message : "파일을 선택하지 못했습니다.",
       );
     }
   };
@@ -283,19 +304,19 @@ export default function AccommodationItem({
   const appendDocument = async () => {
     try {
       const f = await pickDocument();
-      if (f) setPendingFiles((p) => [...p, f]);
+      if (f) setPendingFiles(p => [...p, f]);
     } catch (e) {
       showMessage(
-        '알림',
-        e instanceof Error ? e.message : '파일을 선택하지 못했습니다.',
+        "알림",
+        e instanceof Error ? e.message : "파일을 선택하지 못했습니다.",
       );
     }
   };
 
   const removePendingAt = (index: number) => {
-    setPendingFiles((prev) => {
+    setPendingFiles(prev => {
       const t = prev[index];
-      if (Platform.OS === 'web' && t?.uri?.startsWith('blob:')) {
+      if (Platform.OS === "web" && t?.uri?.startsWith("blob:")) {
         try {
           URL.revokeObjectURL(t.uri);
         } catch {
@@ -309,10 +330,10 @@ export default function AccommodationItem({
   const handleRemoveExistingAttachment = async (attachmentId: number) => {
     try {
       await attachmentsApi.deleteAttachment(attachmentId);
-      setExistingAttachments((prev) => prev.filter((a) => a.id !== attachmentId));
+      setExistingAttachments(prev => prev.filter(a => a.id !== attachmentId));
     } catch (error) {
       if (handleGuestPromptError(error)) return;
-      showMessage('알림', '첨부파일 삭제에 실패했습니다.');
+      showMessage("알림", "첨부파일 삭제에 실패했습니다.");
     }
   };
 
@@ -321,38 +342,55 @@ export default function AccommodationItem({
     (readOnly &&
       accommodationAttachmentEntityId != null &&
       (isLoadingAttachments || existingAttachments.length > 0));
-  
+
   const handleSave = async () => {
     if (isSubmittingRef.current) {
       return;
     }
 
-    if (!formData.name.trim() || 
-        !formData.checkin_date || !formData.checkout_date || !formData.checkin_time || !formData.checkout_time) {
-      setWarningMessage('입력되지 않은 값이 있어요.');
+    if (
+      !formData.name.trim() ||
+      !formData.checkin_date ||
+      !formData.checkout_date ||
+      !formData.checkin_time ||
+      !formData.checkout_time
+    ) {
+      setWarningMessage("입력되지 않은 값이 있어요.");
       setShowWarning(true);
       return;
     }
 
-    const newCheckin = dayjs(`${formData.checkin_date} ${formData.checkin_time}`);
-    const newCheckout = dayjs(`${formData.checkout_date} ${formData.checkout_time}`);
+    const newCheckin = dayjs(
+      `${formData.checkin_date} ${formData.checkin_time}`,
+    );
+    const newCheckout = dayjs(
+      `${formData.checkout_date} ${formData.checkout_time}`,
+    );
 
     for (const existingAccommodation of existingAccommodations) {
       if (accommodation && existingAccommodation.id === accommodation.id) {
         continue;
       }
 
-      const existingCheckin = dayjs(`${existingAccommodation.checkinDate} ${existingAccommodation.checkinTime || '00:00:00'}`);
-      const existingCheckout = dayjs(`${existingAccommodation.checkoutDate} ${existingAccommodation.checkoutTime || '00:00:00'}`);
-
-      const hasOverlap = (
-        (newCheckin.isAfter(existingCheckin) || newCheckin.isSame(existingCheckin)) && newCheckin.isBefore(existingCheckout) ||
-        newCheckout.isAfter(existingCheckin) && (newCheckout.isBefore(existingCheckout) || newCheckout.isSame(existingCheckout)) ||
-        (newCheckin.isBefore(existingCheckin) && newCheckout.isAfter(existingCheckout))
+      const existingCheckin = dayjs(
+        `${existingAccommodation.checkinDate} ${existingAccommodation.checkinTime || "00:00:00"}`,
+      );
+      const existingCheckout = dayjs(
+        `${existingAccommodation.checkoutDate} ${existingAccommodation.checkoutTime || "00:00:00"}`,
       );
 
+      const hasOverlap =
+        ((newCheckin.isAfter(existingCheckin) ||
+          newCheckin.isSame(existingCheckin)) &&
+          newCheckin.isBefore(existingCheckout)) ||
+        (newCheckout.isAfter(existingCheckin) &&
+          (newCheckout.isBefore(existingCheckout) ||
+            newCheckout.isSame(existingCheckout))) ||
+        (newCheckin.isBefore(existingCheckin) &&
+          newCheckout.isAfter(existingCheckout));
+
       if (hasOverlap) {
-        setWarningMessage('겹치는 숙박 일정이 있어요');
+        setWarningMessage("겹치는 숙박 일정이 있어요");
         setShowWarning(true);
         return;
       }
@@ -363,24 +401,27 @@ export default function AccommodationItem({
     try {
       let savedAccommodation;
       if (accommodation && accommodation.id) {
-        savedAccommodation = await accommodationsApi.updateAccommodation(accommodation.id, {
-          name: formData.name,
-          place: formData.place || undefined,
-          country: formData.country?.trim() || undefined,
-          city: formData.city?.trim() || undefined,
-          checkinDate: formData.checkin_date,
-          checkoutDate: formData.checkout_date,
-          checkinTime: formData.checkin_time + ':00',
-          checkoutTime: formData.checkout_time + ':00',
-          description: formData.description || undefined,
-          expense: {
-            exDate: formData.checkin_date,
-            amount: parseInt(expenseData.amount || '0', 10) || 0,
-            category: 'accommodation' as any,
-            currency: expenseData.currency as ExpenseCurrency,
-            description: formData.name,
+        savedAccommodation = await accommodationsApi.updateAccommodation(
+          accommodation.id,
+          {
+            name: formData.name,
+            place: formData.place || undefined,
+            country: formData.country?.trim() || undefined,
+            city: formData.city?.trim() || undefined,
+            checkinDate: formData.checkin_date,
+            checkoutDate: formData.checkout_date,
+            checkinTime: formData.checkin_time + ":00",
+            checkoutTime: formData.checkout_time + ":00",
+            description: formData.description || undefined,
+            expense: {
+              exDate: formData.checkin_date,
+              amount: Number.parseInt(expenseData.amount || "0", 10) || 0,
+              category: "accommodation" as any,
+              currency: expenseData.currency as ExpenseCurrency,
+              description: formData.name,
+            },
           },
-        });
+        );
       } else {
         // 추가
         savedAccommodation = await accommodationsApi.createAccommodation({
@@ -391,13 +432,13 @@ export default function AccommodationItem({
           city: formData.city?.trim() || undefined,
           checkinDate: formData.checkin_date,
           checkoutDate: formData.checkout_date,
-          checkinTime: formData.checkin_time + ':00',
-          checkoutTime: formData.checkout_time + ':00',
+          checkinTime: formData.checkin_time + ":00",
+          checkoutTime: formData.checkout_time + ":00",
           description: formData.description || undefined,
           expense: {
             exDate: formData.checkin_date,
-            amount: parseInt(expenseData.amount || '0', 10) || 0,
-            category: 'accommodation' as any,
+            amount: Number.parseInt(expenseData.amount || "0", 10) || 0,
+            category: "accommodation" as any,
             currency: expenseData.currency as ExpenseCurrency,
             description: formData.name,
           },
@@ -408,7 +449,7 @@ export default function AccommodationItem({
           await uploadFiles(pendingFiles, savedAccommodation.id);
           const list = await attachmentsApi.getAttachments(
             planId,
-            'accommodation',
+            "accommodation",
             savedAccommodation.id,
           );
           setExistingAttachments(list);
@@ -416,17 +457,17 @@ export default function AccommodationItem({
         } catch (e) {
           if (!handleGuestPromptError(e)) {
             showMessage(
-              '알림',
+              "알림",
               formatAttachmentUploadFailureMessage(
                 e,
-                '숙박은 저장됐으나 일부 파일 업로드에 실패했습니다.',
+                "숙박은 저장됐으나 일부 파일 업로드에 실패했습니다.",
               ),
             );
           }
         }
       }
       onSave(savedAccommodation);
-    } catch (error) {
+    } catch (_error) {
       // Silent fail
     } finally {
       isSubmittingRef.current = false;
@@ -443,16 +484,19 @@ export default function AccommodationItem({
       onCancel();
       return;
     }
-    
+
     if (accommodation && accommodation.id && onDelete) {
       isSubmittingRef.current = true;
       setIsSubmitting(true);
       try {
         await accommodationsApi.deleteAccommodation(accommodation.id);
-        const id = typeof accommodation.id === 'string' ? accommodation.id : accommodation.id.toString();
+        const id =
+          typeof accommodation.id === "string"
+            ? accommodation.id
+            : accommodation.id.toString();
         onDelete(id);
         onCancel();
-      } catch (error) {
+      } catch (_error) {
       } finally {
         isSubmittingRef.current = false;
         setIsSubmitting(false);
@@ -460,17 +504,20 @@ export default function AccommodationItem({
     }
   };
 
-  const currencyOptions = useMemo(() => [
-    { label: 'KRW', value: ExpenseCurrency.KRW },
-    { label: 'USD', value: ExpenseCurrency.USD },
-    { label: 'EUR', value: ExpenseCurrency.EUR },
-    { label: 'JPY', value: ExpenseCurrency.JPY },
-  ], []);
+  const _currencyOptions = useMemo(
+    () => [
+      { label: "KRW", value: ExpenseCurrency.KRW },
+      { label: "USD", value: ExpenseCurrency.USD },
+      { label: "EUR", value: ExpenseCurrency.EUR },
+      { label: "JPY", value: ExpenseCurrency.JPY },
+    ],
+    [],
+  );
 
   const handleAiAnalyzePress = useCallback(
     async (selection: AiAttachmentAnalyzeSelection) => {
       setAiAnalyzeFailureVisible(false);
-      setAiAnalyzeFailureMessage('');
+      setAiAnalyzeFailureMessage("");
       setIsAiAnalyzing(true);
       try {
         const payload = await buildAnalyzeUploadPayload(selection, {
@@ -482,7 +529,7 @@ export default function AccommodationItem({
         });
         const err = res.error?.trim();
         if (!res.success || err) {
-          setAiAnalyzeFailureMessage(err || '분석에 실패했습니다.');
+          setAiAnalyzeFailureMessage(err || "분석에 실패했습니다.");
           setAiAnalyzeFailureVisible(true);
           return;
         }
@@ -493,7 +540,7 @@ export default function AccommodationItem({
         setAiAnalyzeModalVisible(true);
       } catch (e) {
         setAiAnalyzeFailureMessage(
-          e instanceof Error ? e.message : '분석 요청에 실패했습니다.',
+          e instanceof Error ? e.message : "분석 요청에 실패했습니다.",
         );
         setAiAnalyzeFailureVisible(true);
       } finally {
@@ -503,352 +550,473 @@ export default function AccommodationItem({
     [pendingFiles, existingAttachments, routeDocumentAnalyzeSuccess],
   );
 
-  const applyAiAnalyzeDraftToForm = useCallback((draft: AiDocumentItemDraft) => {
-    applyAccommodationDraftFromAi(draft, setFormData, setExpenseData);
-  }, []);
+  const applyAiAnalyzeDraftToForm = useCallback(
+    (draft: AiDocumentItemDraft) => {
+      applyAccommodationDraftFromAi(draft, setFormData, setExpenseData);
+    },
+    [],
+  );
 
   return (
     <>
-    <ScrollView 
-      style={[styles.container, { position: 'relative', overflow: 'visible' }]}
-      contentContainerStyle={[styles.contentContainer, { overflow: 'visible' }]}
-    >
-      <View style={styles.titleRow}>
-        <Text style={styles.title}>
-          {readOnly ? '숙박 정보' : (accommodation && accommodation.id ? '숙박 수정' : '숙박 추가')}
-        </Text>
-        {readOnly || accommodation ? (
-          <Pressable
-            onPress={onCancel}
-            style={styles.closeButton}
-          >
-            <CloseIcon width={24} height={24} />
-          </Pressable>
-        ) : null}
-      </View>
-
-      {/* 기본 정보 섹션 */}
-      <View style={styles.formSection}>
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>숙소명*</Text>
-          <Input
-            variant="filled"
-            placeholder={PLACEHOLDERS.accommodation.name}
-            value={formData.name}
-            onChangeText={(text) => !readOnly && setFormData({ ...formData, name: text })}
-            style={readOnly ? styles.readOnlyInput : styles.input}
-            placeholderTextColor={colors.gray600}
-            editable={!readOnly}
-          />
+      <ScrollView
+        style={[
+          styles.container,
+          { position: "relative", overflow: "visible" },
+        ]}
+        contentContainerStyle={[
+          styles.contentContainer,
+          { overflow: "visible" },
+        ]}
+      >
+        <View style={styles.titleRow}>
+          <Text style={styles.title}>
+            {readOnly
+              ? "숙박 정보"
+              : accommodation && accommodation.id
+                ? "숙박 수정"
+                : "숙박 추가"}
+          </Text>
+          {readOnly || accommodation ? (
+            <Pressable onPress={onCancel} style={styles.closeButton}>
+              <CloseIcon width={24} height={24} />
+            </Pressable>
+          ) : null}
         </View>
 
-        <View style={styles.inputGroup}>
-        <Text style={styles.label}>내용</Text>
-        <Input
-            variant="filled"
-            placeholder={PLACEHOLDERS.itinerary.descriptionForm}
-          value={formData.description}
-          onChangeText={(text) => !readOnly && setFormData({ ...formData, description: text })}
-          multiline
-          numberOfLines={3}
-          textAlignVertical="top"
-            style={readOnly ? styles.readOnlyTextArea : styles.textArea}
-            placeholderTextColor={colors.gray600}
-            editable={!readOnly}
-        />
-        </View>
-
-        <View style={[styles.row, { gap: spacing.sm, zIndex: countryOpen ? 10000 : 1 }]}>
-          <View style={[styles.inputGroup, styles.halfWidth, { zIndex: countryOpen ? 10000 : 1 }]}>
-            <Text style={styles.label}>국가</Text>
-            <CountryPicker
-              value={formData.country}
-              onChange={(name: string) => !readOnly && setFormData({ ...formData, country: name })}
-              placeholder={PLACEHOLDERS.picker.country}
-              onOpen={() => !readOnly && setCountryOpen(true)}
-              onClose={() => setCountryOpen(false)}
-              disabled={readOnly}
-            />
-          </View>
-          <View style={[styles.inputGroup, styles.halfWidth]}>
-            <Text style={styles.label}>도시</Text>
+        {/* 기본 정보 섹션 */}
+        <View style={styles.formSection}>
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>숙소명*</Text>
             <Input
               variant="filled"
-              placeholder={PLACEHOLDERS.accommodation.city}
-              value={formData.city}
-              onChangeText={(text) => !readOnly && setFormData({ ...formData, city: text })}
+              placeholder={PLACEHOLDERS.accommodation.name}
+              value={formData.name}
+              onChangeText={text =>
+                !readOnly && setFormData({ ...formData, name: text })
+              }
               style={readOnly ? styles.readOnlyInput : styles.input}
               placeholderTextColor={colors.gray600}
               editable={!readOnly}
             />
           </View>
-        </View>
 
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>장소</Text>
-          <Input
-            variant="filled"
-            placeholder={PLACEHOLDERS.accommodation.place}
-            value={formData.place}
-            onChangeText={(text) => !readOnly && setFormData({ ...formData, place: text })}
-            style={readOnly ? styles.readOnlyInput : styles.input}
-            placeholderTextColor={colors.gray600}
-            editable={!readOnly}
-          />
-        </View>
-
-        <View style={[styles.row, { gap: spacing.sm, zIndex: showCheckinDatePicker ? 30000 : checkinTimeOpen ? 20002 : 1 }]}>
-          <View style={[styles.inputGroup, styles.halfWidth, { position: 'relative' }]}>
-            <Text style={styles.label}>체크인 날짜</Text>
-            <Pressable 
-              style={readOnly ? [styles.dateInput, { borderColor: colors.gray400, borderWidth: 1 }] : styles.dateInput}
-              onPress={() => !readOnly && setShowCheckinDatePicker(true)}
-              disabled={readOnly}
-            >
-              <View style={styles.dateTextContainer}>
-                <Text style={formData.checkin_date ? styles.dateText : styles.placeholderText}>
-                  {formData.checkin_date ? dayjs(formData.checkin_date).format('YYYY.MM.DD') : '기타'}
-                </Text>
-                {!readOnly && (
-                  <View style={styles.iconWrapper}>
-                    <CalendarIcon width={16} height={16} />
-                  </View>
-                )}
-              </View>
-            </Pressable>
-            {!readOnly && showCheckinDatePicker && (
-              <BaseCalendar
-                visible={true}
-                selectedDate={formData.checkin_date}
-                onDayPress={(day) => {
-                  setFormData({ ...formData, checkin_date: day.dateString });
-                  setShowCheckinDatePicker(false);
-                }}
-                onClose={() => setShowCheckinDatePicker(false)}
-                style={styles.calendarPopup}
-                minDate={dayjs().format('YYYY-MM-DD')}
-                hideButtons={true}
-                autoCloseOnSelect={true}
-              />
-            )}
-          </View>
-          <View style={[styles.inputGroup, styles.halfWidth, { position: 'relative' }]}>
-            <Text style={styles.label}>체크인 시간</Text>
-            <TimePicker
-              value={formData.checkin_time}
-              onChange={(time) => !readOnly && setFormData({ ...formData, checkin_time: time })}
-              onOpen={() => {
-                if (!readOnly) {
-                  setCheckinTimeOpen(true);
-                  if (checkoutTimeOpen) {
-                    setCheckoutTimeOpen(false);
-                  }
-                }
-              }}
-              onClose={() => setCheckinTimeOpen(false)}
-              style={readOnly ? {
-                backgroundColor: colors.gray200,
-                borderColor: colors.gray400,
-                borderWidth: 1,
-              } : styles.timePicker}
-              disabled={readOnly}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>내용</Text>
+            <Input
+              variant="filled"
+              placeholder={PLACEHOLDERS.itinerary.descriptionForm}
+              value={formData.description}
+              onChangeText={text =>
+                !readOnly && setFormData({ ...formData, description: text })
+              }
+              multiline
+              numberOfLines={3}
+              textAlignVertical="top"
+              style={readOnly ? styles.readOnlyTextArea : styles.textArea}
+              placeholderTextColor={colors.gray600}
+              editable={!readOnly}
             />
           </View>
-        </View>
 
-        <View style={[styles.row, { gap: spacing.sm, zIndex: showCheckoutDatePicker ? 30000 : checkoutTimeOpen ? 20001 : 1 }]}>
-          <View style={[styles.inputGroup, styles.halfWidth, { position: 'relative' }]}>
-            <Text style={styles.label}>체크아웃 날짜</Text>
-            <Pressable 
-              style={readOnly ? [styles.dateInput, { borderColor: colors.gray400, borderWidth: 1 }] : styles.dateInput}
-              onPress={() => !readOnly && setShowCheckoutDatePicker(true)}
-              disabled={readOnly}
+          <View
+            style={[
+              styles.row,
+              { gap: spacing.sm, zIndex: countryOpen ? 10000 : 1 },
+            ]}
+          >
+            <View
+              style={[
+                styles.inputGroup,
+                styles.halfWidth,
+                { zIndex: countryOpen ? 10000 : 1 },
+              ]}
             >
-              <View style={styles.dateTextContainer}>
-                <Text style={formData.checkout_date ? styles.dateText : styles.placeholderText}>
-                  {formData.checkout_date ? dayjs(formData.checkout_date).format('YYYY.MM.DD') : '기타'}
-                </Text>
-                {!readOnly && (
-                  <View style={styles.iconWrapper}>
-                    <CalendarIcon width={16} height={16} />
-                  </View>
-                )}
-              </View>
-            </Pressable>
-            {!readOnly && showCheckoutDatePicker && (
-              <BaseCalendar
-                visible={true}
-                selectedDate={formData.checkout_date}
-                onDayPress={(day) => {
-                  setFormData({ ...formData, checkout_date: day.dateString });
-                  setShowCheckoutDatePicker(false);
-                }}
-                onClose={() => setShowCheckoutDatePicker(false)}
-                style={styles.calendarPopup}
-                minDate={formData.checkin_date}
-                hideButtons={true}
-                autoCloseOnSelect={true}
-              />
-            )}
-          </View>
-          <View style={[styles.inputGroup, styles.halfWidth, { position: 'relative' }]}>
-            <Text style={styles.label}>체크아웃 시간</Text>
-            <TimePicker
-              value={formData.checkout_time}
-              onChange={(time) => !readOnly && setFormData({ ...formData, checkout_time: time })}
-              onOpen={() => {
-                if (!readOnly) {
-                  setCheckoutTimeOpen(true);
-                  if (checkinTimeOpen) {
-                    setCheckinTimeOpen(false);
-                  }
+              <Text style={styles.label}>국가</Text>
+              <CountryPicker
+                value={formData.country}
+                onChange={(name: string) =>
+                  !readOnly && setFormData({ ...formData, country: name })
                 }
-              }}
-              onClose={() => setCheckoutTimeOpen(false)}
-              style={readOnly ? {
-                backgroundColor: colors.gray200,
-                borderColor: colors.gray400,
-                borderWidth: 1,
-              } : styles.timePicker}
-              disabled={readOnly}
-            />
-          </View>
-        </View>
-
-        <View style={[styles.row, { gap: spacing.sm }]}>
-          <View style={[styles.inputGroup, { flex: 1 }]}>
-            <Text style={styles.label}>숙박료</Text>
-            <View style={styles.amountInputWrapper}>
+                placeholder={PLACEHOLDERS.picker.country}
+                onOpen={() => !readOnly && setCountryOpen(true)}
+                onClose={() => setCountryOpen(false)}
+                disabled={readOnly}
+              />
+            </View>
+            <View style={[styles.inputGroup, styles.halfWidth]}>
+              <Text style={styles.label}>도시</Text>
               <Input
                 variant="filled"
-                placeholder={PLACEHOLDERS.expense.amount}
-                value={formatAmountWithCommas(expenseData.amount.toString())}
-                onChangeText={(text) => {
-                  if (readOnly) return;
-                  setExpenseData({ ...expenseData, amount: normalizeAmountToIntDigits(text) });
-                }}
-                keyboardType="numeric"
-                style={[
-                  readOnly ? styles.readOnlyInput : styles.input,
-                  styles.amountInputPadding,
-                ]}
+                placeholder={PLACEHOLDERS.accommodation.city}
+                value={formData.city}
+                onChangeText={text =>
+                  !readOnly && setFormData({ ...formData, city: text })
+                }
+                style={readOnly ? styles.readOnlyInput : styles.input}
                 placeholderTextColor={colors.gray600}
                 editable={!readOnly}
               />
-              <Text style={styles.amountSuffix} pointerEvents="none">
-                {currencyLabels[ExpenseCurrency.KRW]}
-              </Text>
             </View>
           </View>
-        </View>
 
-      {showAttachmentSection && (
-        <AttachmentSection
-          style={styles.attachmentSection}
-          showTopDivider
-          pendingFiles={readOnly ? [] : pendingFiles}
-          onPickImage={appendImage}
-          onPickDocument={appendDocument}
-          onRemoveFile={removePendingAt}
-          onAppendPendingFiles={
-            Platform.OS === 'web'
-              ? (files) => setPendingFiles((p) => [...p, ...files])
-              : undefined
-          }
-          existingAttachments={existingAttachments}
-          onRemoveExisting={
-            !readOnly && accommodationAttachmentEntityId != null
-              ? handleRemoveExistingAttachment
-              : undefined
-          }
-          isLoadingExisting={
-            accommodationAttachmentEntityId != null && isLoadingAttachments
-          }
-          isUploading={isUploading}
-          disabled={readOnly || isSubmitting}
-          hideAddControls={readOnly}
-          onAiAnalyzePress={
-            Platform.OS === 'web' && !readOnly
-              ? handleAiAnalyzePress
-              : undefined
-          }
-          isAiAnalyzing={isAiAnalyzing}
-        />
-      )}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>장소</Text>
+            <Input
+              variant="filled"
+              placeholder={PLACEHOLDERS.accommodation.place}
+              value={formData.place}
+              onChangeText={text =>
+                !readOnly && setFormData({ ...formData, place: text })
+              }
+              style={readOnly ? styles.readOnlyInput : styles.input}
+              placeholderTextColor={colors.gray600}
+              editable={!readOnly}
+            />
+          </View>
 
-              {/* 하단 버튼 */}
-      {!readOnly ? (
-        <View style={[styles.buttonRow, { position: 'relative', zIndex: -1 }]}>
-          <Pressable
-            style={styles.deleteButton}
-            onPress={accommodation.id ? handleDelete : onCancel}
-            disabled={isSubmitting}
+          <View
+            style={[
+              styles.row,
+              {
+                gap: spacing.sm,
+                zIndex: showCheckinDatePicker
+                  ? 30000
+                  : checkinTimeOpen
+                    ? 20002
+                    : 1,
+              },
+            ]}
           >
-            <Text style={styles.deleteButtonText}>
-              {accommodation.id ? '삭제' : '취소'}
-            </Text>
-          </Pressable>
-          <Pressable
-            style={styles.saveButton}
-            onPress={handleSave}
-            disabled={isSubmitting}
+            <View
+              style={[
+                styles.inputGroup,
+                styles.halfWidth,
+                { position: "relative" },
+              ]}
+            >
+              <Text style={styles.label}>체크인 날짜</Text>
+              <Pressable
+                style={
+                  readOnly
+                    ? [
+                        styles.dateInput,
+                        { borderColor: colors.gray400, borderWidth: 1 },
+                      ]
+                    : styles.dateInput
+                }
+                onPress={() => !readOnly && setShowCheckinDatePicker(true)}
+                disabled={readOnly}
+              >
+                <View style={styles.dateTextContainer}>
+                  <Text
+                    style={
+                      formData.checkin_date
+                        ? styles.dateText
+                        : styles.placeholderText
+                    }
+                  >
+                    {formData.checkin_date
+                      ? dayjs(formData.checkin_date).format("YYYY.MM.DD")
+                      : "기타"}
+                  </Text>
+                  {!readOnly && (
+                    <View style={styles.iconWrapper}>
+                      <CalendarIcon width={16} height={16} />
+                    </View>
+                  )}
+                </View>
+              </Pressable>
+              {!readOnly && showCheckinDatePicker && (
+                <BaseCalendar
+                  visible={true}
+                  selectedDate={formData.checkin_date}
+                  onDayPress={day => {
+                    setFormData({ ...formData, checkin_date: day.dateString });
+                    setShowCheckinDatePicker(false);
+                  }}
+                  onClose={() => setShowCheckinDatePicker(false)}
+                  style={styles.calendarPopup}
+                  minDate={dayjs().format("YYYY-MM-DD")}
+                  hideButtons={true}
+                  autoCloseOnSelect={true}
+                />
+              )}
+            </View>
+            <View
+              style={[
+                styles.inputGroup,
+                styles.halfWidth,
+                { position: "relative" },
+              ]}
+            >
+              <Text style={styles.label}>체크인 시간</Text>
+              <TimePicker
+                value={formData.checkin_time}
+                onChange={time =>
+                  !readOnly && setFormData({ ...formData, checkin_time: time })
+                }
+                onOpen={() => {
+                  if (!readOnly) {
+                    setCheckinTimeOpen(true);
+                    if (checkoutTimeOpen) {
+                      setCheckoutTimeOpen(false);
+                    }
+                  }
+                }}
+                onClose={() => setCheckinTimeOpen(false)}
+                style={
+                  readOnly
+                    ? {
+                        backgroundColor: colors.gray200,
+                        borderColor: colors.gray400,
+                        borderWidth: 1,
+                      }
+                    : styles.timePicker
+                }
+                disabled={readOnly}
+              />
+            </View>
+          </View>
+
+          <View
+            style={[
+              styles.row,
+              {
+                gap: spacing.sm,
+                zIndex: showCheckoutDatePicker
+                  ? 30000
+                  : checkoutTimeOpen
+                    ? 20001
+                    : 1,
+              },
+            ]}
           >
-            <Text style={styles.saveButtonText}>
-              저장
-            </Text>
-          </Pressable>
+            <View
+              style={[
+                styles.inputGroup,
+                styles.halfWidth,
+                { position: "relative" },
+              ]}
+            >
+              <Text style={styles.label}>체크아웃 날짜</Text>
+              <Pressable
+                style={
+                  readOnly
+                    ? [
+                        styles.dateInput,
+                        { borderColor: colors.gray400, borderWidth: 1 },
+                      ]
+                    : styles.dateInput
+                }
+                onPress={() => !readOnly && setShowCheckoutDatePicker(true)}
+                disabled={readOnly}
+              >
+                <View style={styles.dateTextContainer}>
+                  <Text
+                    style={
+                      formData.checkout_date
+                        ? styles.dateText
+                        : styles.placeholderText
+                    }
+                  >
+                    {formData.checkout_date
+                      ? dayjs(formData.checkout_date).format("YYYY.MM.DD")
+                      : "기타"}
+                  </Text>
+                  {!readOnly && (
+                    <View style={styles.iconWrapper}>
+                      <CalendarIcon width={16} height={16} />
+                    </View>
+                  )}
+                </View>
+              </Pressable>
+              {!readOnly && showCheckoutDatePicker && (
+                <BaseCalendar
+                  visible={true}
+                  selectedDate={formData.checkout_date}
+                  onDayPress={day => {
+                    setFormData({ ...formData, checkout_date: day.dateString });
+                    setShowCheckoutDatePicker(false);
+                  }}
+                  onClose={() => setShowCheckoutDatePicker(false)}
+                  style={styles.calendarPopup}
+                  minDate={formData.checkin_date}
+                  hideButtons={true}
+                  autoCloseOnSelect={true}
+                />
+              )}
+            </View>
+            <View
+              style={[
+                styles.inputGroup,
+                styles.halfWidth,
+                { position: "relative" },
+              ]}
+            >
+              <Text style={styles.label}>체크아웃 시간</Text>
+              <TimePicker
+                value={formData.checkout_time}
+                onChange={time =>
+                  !readOnly && setFormData({ ...formData, checkout_time: time })
+                }
+                onOpen={() => {
+                  if (!readOnly) {
+                    setCheckoutTimeOpen(true);
+                    if (checkinTimeOpen) {
+                      setCheckinTimeOpen(false);
+                    }
+                  }
+                }}
+                onClose={() => setCheckoutTimeOpen(false)}
+                style={
+                  readOnly
+                    ? {
+                        backgroundColor: colors.gray200,
+                        borderColor: colors.gray400,
+                        borderWidth: 1,
+                      }
+                    : styles.timePicker
+                }
+                disabled={readOnly}
+              />
+            </View>
+          </View>
+
+          <View style={[styles.row, { gap: spacing.sm }]}>
+            <View style={[styles.inputGroup, { flex: 1 }]}>
+              <Text style={styles.label}>숙박료</Text>
+              <View style={styles.amountInputWrapper}>
+                <Input
+                  variant="filled"
+                  placeholder={PLACEHOLDERS.expense.amount}
+                  value={formatAmountWithCommas(expenseData.amount.toString())}
+                  onChangeText={text => {
+                    if (readOnly) return;
+                    setExpenseData({
+                      ...expenseData,
+                      amount: normalizeAmountToIntDigits(text),
+                    });
+                  }}
+                  keyboardType="numeric"
+                  style={[
+                    readOnly ? styles.readOnlyInput : styles.input,
+                    styles.amountInputPadding,
+                  ]}
+                  placeholderTextColor={colors.gray600}
+                  editable={!readOnly}
+                />
+                <Text style={styles.amountSuffix} pointerEvents="none">
+                  {currencyLabels[ExpenseCurrency.KRW]}
+                </Text>
+              </View>
+            </View>
+          </View>
+
+          {showAttachmentSection && (
+            <AttachmentSection
+              style={styles.attachmentSection}
+              showTopDivider
+              pendingFiles={readOnly ? [] : pendingFiles}
+              onPickImage={appendImage}
+              onPickDocument={appendDocument}
+              onRemoveFile={removePendingAt}
+              onAppendPendingFiles={
+                Platform.OS === "web"
+                  ? files => setPendingFiles(p => [...p, ...files])
+                  : undefined
+              }
+              existingAttachments={existingAttachments}
+              onRemoveExisting={
+                !readOnly && accommodationAttachmentEntityId != null
+                  ? handleRemoveExistingAttachment
+                  : undefined
+              }
+              isLoadingExisting={
+                accommodationAttachmentEntityId != null && isLoadingAttachments
+              }
+              isUploading={isUploading}
+              disabled={readOnly || isSubmitting}
+              hideAddControls={readOnly}
+              onAiAnalyzePress={
+                Platform.OS === "web" && !readOnly
+                  ? handleAiAnalyzePress
+                  : undefined
+              }
+              isAiAnalyzing={isAiAnalyzing}
+            />
+          )}
+
+          {/* 하단 버튼 */}
+          {!readOnly ? (
+            <View
+              style={[styles.buttonRow, { position: "relative", zIndex: -1 }]}
+            >
+              <Pressable
+                style={styles.deleteButton}
+                onPress={accommodation.id ? handleDelete : onCancel}
+                disabled={isSubmitting}
+              >
+                <Text style={styles.deleteButtonText}>
+                  {accommodation.id ? "삭제" : "취소"}
+                </Text>
+              </Pressable>
+              <Pressable
+                style={styles.saveButton}
+                onPress={handleSave}
+                disabled={isSubmitting}
+              >
+                <Text style={styles.saveButtonText}>저장</Text>
+              </Pressable>
+            </View>
+          ) : (
+            <View style={[styles.buttonRow, { position: "relative" }]}>
+              <Pressable
+                style={styles.deleteButton}
+                onPress={handleDelete}
+                disabled={isSubmitting}
+              >
+                <Text style={styles.deleteButtonText}>삭제</Text>
+              </Pressable>
+              <Pressable
+                style={[styles.saveButton, { backgroundColor: colors.gray900 }]}
+                onPress={onEdit}
+              >
+                <Text style={styles.saveButtonText}>수정</Text>
+              </Pressable>
+            </View>
+          )}
+          <WarningBanner
+            message={warningMessage}
+            visible={showWarning}
+            duration={3000}
+            bottomOffset={70}
+            onHide={() => {
+              setShowWarning(false);
+              setWarningMessage("");
+            }}
+          />
         </View>
-      ) : (
-        <View style={[styles.buttonRow, { position: 'relative' }]}>
-          <Pressable
-            style={styles.deleteButton}
-            onPress={handleDelete}
-            disabled={isSubmitting}
-          >
-            <Text style={styles.deleteButtonText}>삭제</Text>
-          </Pressable>
-          <Pressable
-            style={[styles.saveButton, { backgroundColor: colors.gray900 }]}
-            onPress={onEdit}
-          >
-            <Text style={styles.saveButtonText}>수정</Text>
-          </Pressable>
-        </View>
-      )}
-      <WarningBanner
-        message={warningMessage}
-        visible={showWarning}
-        duration={3000}
-        bottomOffset={70}
-        onHide={() => {
-          setShowWarning(false);
-          setWarningMessage('');
+      </ScrollView>
+      <AiDocumentAnalyzeModal
+        visible={aiAnalyzeModalVisible}
+        analyzeResult={aiAnalyzeResult}
+        onApply={applyAiAnalyzeDraftToForm}
+        onClose={() => {
+          setAiAnalyzeModalVisible(false);
+          setAiAnalyzeResult(null);
+          onConsumeStagedDocumentAnalyze?.();
+        }}
+        entityTypeLabel="숙박"
+      />
+      <AiAnalyzeFailureModal
+        visible={aiAnalyzeFailureVisible}
+        message={aiAnalyzeFailureMessage}
+        onClose={() => {
+          setAiAnalyzeFailureVisible(false);
+          setAiAnalyzeFailureMessage("");
         }}
       />
-      </View>
-
-
-
-    </ScrollView>
-    <AiDocumentAnalyzeModal
-      visible={aiAnalyzeModalVisible}
-      analyzeResult={aiAnalyzeResult}
-      onApply={applyAiAnalyzeDraftToForm}
-      onClose={() => {
-        setAiAnalyzeModalVisible(false);
-        setAiAnalyzeResult(null);
-        onConsumeStagedDocumentAnalyze?.();
-      }}
-      entityTypeLabel="숙박"
-    />
-    <AiAnalyzeFailureModal
-      visible={aiAnalyzeFailureVisible}
-      message={aiAnalyzeFailureMessage}
-      onClose={() => {
-        setAiAnalyzeFailureVisible(false);
-        setAiAnalyzeFailureMessage('');
-      }}
-    />
     </>
   );
 }
@@ -863,9 +1031,9 @@ const styles = StyleSheet.create({
     gap: spacing.xl,
   },
   titleRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: spacing.xl,
   },
   title: {
@@ -873,17 +1041,17 @@ const styles = StyleSheet.create({
   },
   closeButton: {
     padding: spacing.xs,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   formSection: {
     gap: spacing.lg,
   },
   row: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: spacing.sm,
-    overflow: 'visible',
-    position: 'relative',
+    overflow: "visible",
+    position: "relative",
   },
   inputGroup: {
     gap: spacing.sm,
@@ -904,8 +1072,8 @@ const styles = StyleSheet.create({
     ...textStyles.body4,
   },
   dateInput: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     borderWidth: 0,
     borderRadius: radii.md,
     paddingHorizontal: spacing.md,
@@ -914,8 +1082,8 @@ const styles = StyleSheet.create({
     maxHeight: 40,
   },
   dateTextContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: spacing.sm,
     flex: 1,
   },
@@ -931,7 +1099,7 @@ const styles = StyleSheet.create({
     marginTop: 0,
   },
   calendarPopup: {
-    position: 'absolute',
+    position: "absolute",
     top: 70,
     left: 0,
     zIndex: 30000,
@@ -948,34 +1116,34 @@ const styles = StyleSheet.create({
     borderRadius: radii.md,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.md,
-    justifyContent: 'center',
+    justifyContent: "center",
   },
   currencyText: {
     ...textStyles.body4,
     color: colors.gray600,
   },
   amountInputWrapper: {
-    position: 'relative',
+    position: "relative",
   },
   amountInputPadding: {
     // suffix(원) 공간만큼만 비우고, 숫자는 오른쪽으로 붙여서 "숫자 + 원"이 바로 붙어 보이게 함
     paddingRight: 20,
-    textAlign: 'right',
+    textAlign: "right",
   },
   amountSuffix: {
-    position: 'absolute',
+    position: "absolute",
     right: spacing.sm,
-    top: '50%',
+    top: "50%",
     transform: [{ translateY: -10 }],
     ...textStyles.body4,
     color: colors.black,
   },
   attachmentSection: {
     marginTop: spacing.lg,
-    width: '100%',
+    width: "100%",
   },
   buttonRow: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: spacing.sm,
     marginTop: spacing.sm,
     paddingBottom: spacing.xl,
@@ -985,8 +1153,8 @@ const styles = StyleSheet.create({
     height: 40,
     borderRadius: radii.md,
     paddingHorizontal: spacing.lg,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     minWidth: 90,
   },
   deleteButtonText: {
@@ -998,8 +1166,8 @@ const styles = StyleSheet.create({
     height: 40,
     borderRadius: radii.md,
     paddingHorizontal: spacing.lg,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     flex: 1,
   },
   saveButtonText: {

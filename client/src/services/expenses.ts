@@ -1,19 +1,27 @@
-import api from './api';
-import { Expense, CreateExpenseRequest, UpdateExpenseRequest } from '../types/api';
+import type {
+  CreateExpenseRequest,
+  Expense,
+  UpdateExpenseRequest,
+} from "../types/api";
+import api from "./api";
 
 export const expensesApi = {
   getExpenses: async (planId?: number, exDate?: string): Promise<Expense[]> => {
     const params = exDate ? { ex_date: exDate } : {};
-    const response = await api.get(`/private/expenses/${planId}/plan`, { params });
-    return (response.data as Expense[]).map((e) => ({
+    const response = await api.get(`/private/expenses/${planId}/plan`, {
+      params,
+    });
+    return (response.data as Expense[]).map(e => ({
       ...e,
       amount: Number((e as any).amount),
     }));
   },
 
   getExpensesByItinerary: async (itineraryId: number): Promise<Expense[]> => {
-    const response = await api.get(`/private/expenses/${itineraryId}/itinerary`);
-    return (response.data as Expense[]).map((e) => ({
+    const response = await api.get(
+      `/private/expenses/${itineraryId}/itinerary`,
+    );
+    return (response.data as Expense[]).map(e => ({
       ...e,
       amount: Number((e as any).amount),
     }));
@@ -25,12 +33,17 @@ export const expensesApi = {
     return { ...e, amount: Number((e as any).amount) } as Expense;
   },
 
-  createExpense: async (expenseData: CreateExpenseRequest): Promise<Expense> => {
+  createExpense: async (
+    expenseData: CreateExpenseRequest,
+  ): Promise<Expense> => {
     if (expenseData.itineraryId) {
-      const response = await api.post(`/private/expenses/${expenseData.itineraryId}/itinerary`, expenseData);
+      const response = await api.post(
+        `/private/expenses/${expenseData.itineraryId}/itinerary`,
+        expenseData,
+      );
       return response.data;
     }
-    const response = await api.post('/private/expenses', expenseData);
+    const response = await api.post("/private/expenses", expenseData);
     return response.data;
   },
 
@@ -47,15 +60,21 @@ export const expensesApi = {
       exDate: string;
     }>;
   }): Promise<Expense[]> => {
-    const response = await api.post('/private/expenses/batch', batchData);
-    return (response.data as Expense[]).map((e) => ({
+    const response = await api.post("/private/expenses/batch", batchData);
+    return (response.data as Expense[]).map(e => ({
       ...e,
       amount: Number((e as any).amount),
     }));
   },
 
-  updateExpense: async (expenseId: number, expenseData: UpdateExpenseRequest): Promise<Expense> => {
-    const response = await api.patch(`/private/expenses/${expenseId}`, expenseData);
+  updateExpense: async (
+    expenseId: number,
+    expenseData: UpdateExpenseRequest,
+  ): Promise<Expense> => {
+    const response = await api.patch(
+      `/private/expenses/${expenseId}`,
+      expenseData,
+    );
     return response.data;
   },
 
@@ -64,9 +83,11 @@ export const expensesApi = {
     return response.data;
   },
 
-  getExpenseStats: async (planId?: number): Promise<{ category: string; total: number }[]> => {
+  getExpenseStats: async (
+    planId?: number,
+  ): Promise<{ category: string; total: number }[]> => {
     const params = planId ? { plan_id: planId } : {};
-    const response = await api.get('/private/expenses/stats', { params });
+    const response = await api.get("/private/expenses/stats", { params });
     return response.data;
   },
-}; 
+};

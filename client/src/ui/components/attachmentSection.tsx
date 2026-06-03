@@ -1,59 +1,59 @@
-import React, { createElement, useEffect, useRef, useState } from 'react';
+import { createElement, useEffect, useRef, useState } from "react";
 import {
-  View,
-  Text,
+  ActivityIndicator,
+  Image,
+  Modal,
+  Platform,
   Pressable,
   StyleSheet,
-  ActivityIndicator,
-  Modal,
-  Image,
+  Text,
+  View,
   useWindowDimensions,
-  Platform,
-} from 'react-native';
+} from "react-native";
 
-import { colors } from '@/ui/tokens/colors';
-import { textStyles } from '@/ui/tokens/typography';
-import { radii } from '@/ui/tokens/radii';
-import { spacing } from '@/ui/tokens/spacing';
-import type { LocalFile } from '@/types/api';
-import { useMe } from '@/hooks/useMe';
-import { guestPrompt } from '@/utils/guestPrompt';
-import type { AttachmentSectionProps } from '@/ui/components/attachmentSection.types';
-import { pendingAiFileKey } from '@/ui/components/attachmentSection.types';
-import { showMessage, showPickFileType } from '@/utils/crossPlatformAlert';
+import { useMe } from "@/hooks/useMe";
+import type { LocalFile } from "@/types/api";
+import type { AttachmentSectionProps } from "@/ui/components/attachmentSection.types";
+import { pendingAiFileKey } from "@/ui/components/attachmentSection.types";
+import { colors } from "@/ui/tokens/colors";
+import { radii } from "@/ui/tokens/radii";
+import { spacing } from "@/ui/tokens/spacing";
+import { textStyles } from "@/ui/tokens/typography";
+import { showMessage, showPickFileType } from "@/utils/crossPlatformAlert";
+import { guestPrompt } from "@/utils/guestPrompt";
 
-import CameraIcon from '../../../assets/mobile_camera.svg';
-import AddIcon from '../../../assets/mobile_plan_add.svg';
-import DeleteIcon from '../../../assets/attach_del.svg';
-import AttachmentDocIcon from '../../../assets/mobile_attachment_document.svg';
-import AttachmentImageIcon from '../../../assets/mobile_attachment_image.svg';
+import DeleteIcon from "../../../assets/attach_del.svg";
+import AttachmentDocIcon from "../../../assets/mobile_attachment_document.svg";
+import AttachmentImageIcon from "../../../assets/mobile_attachment_image.svg";
+import CameraIcon from "../../../assets/mobile_camera.svg";
+import AddIcon from "../../../assets/mobile_plan_add.svg";
 
-export type { AttachmentSectionProps } from '@/ui/components/attachmentSection.types';
+export type { AttachmentSectionProps } from "@/ui/components/attachmentSection.types";
 
 const WEB_FILE_ACCEPT =
-  'image/jpeg,image/png,image/gif,image/webp,image/heic,image/heif,application/pdf,.pdf';
+  "image/jpeg,image/png,image/gif,image/webp,image/heic,image/heif,application/pdf,.pdf";
 
-const ALLOWED_MIME_PREFIXES = ['image/'] as const;
+const ALLOWED_MIME_PREFIXES = ["image/"] as const;
 const ALLOWED_EXACT = new Set([
-  'application/pdf',
-  'image/jpeg',
-  'image/png',
-  'image/gif',
-  'image/webp',
-  'image/heic',
-  'image/heif',
+  "application/pdf",
+  "image/jpeg",
+  "image/png",
+  "image/gif",
+  "image/webp",
+  "image/heic",
+  "image/heif",
 ]);
 
 function mimeFromFileName(name: string): string {
   const lower = name.toLowerCase();
-  if (lower.endsWith('.pdf')) return 'application/pdf';
-  if (lower.endsWith('.png')) return 'image/png';
-  if (lower.endsWith('.gif')) return 'image/gif';
-  if (lower.endsWith('.webp')) return 'image/webp';
-  if (lower.endsWith('.heic')) return 'image/heic';
-  if (lower.endsWith('.heif')) return 'image/heif';
-  if (/\.(jpe?g)$/i.test(lower)) return 'image/jpeg';
-  return 'application/octet-stream';
+  if (lower.endsWith(".pdf")) return "application/pdf";
+  if (lower.endsWith(".png")) return "image/png";
+  if (lower.endsWith(".gif")) return "image/gif";
+  if (lower.endsWith(".webp")) return "image/webp";
+  if (lower.endsWith(".heic")) return "image/heic";
+  if (lower.endsWith(".heif")) return "image/heif";
+  if (/\.(jpe?g)$/i.test(lower)) return "image/jpeg";
+  return "application/octet-stream";
 }
 
 function isAllowedMime(mime: string): boolean {
@@ -62,38 +62,39 @@ function isAllowedMime(mime: string): boolean {
 }
 
 function fileToLocalFile(file: File): LocalFile | null {
-  const rawType = (file.type || '').trim();
-  const mime = rawType && rawType !== 'application/octet-stream'
-    ? rawType
-    : mimeFromFileName(file.name);
+  const rawType = (file.type || "").trim();
+  const mime =
+    rawType && rawType !== "application/octet-stream"
+      ? rawType
+      : mimeFromFileName(file.name);
   if (!isAllowedMime(mime)) {
     return null;
   }
   return {
     uri: URL.createObjectURL(file),
-    name: file.name || 'file',
+    name: file.name || "file",
     mimeType: mime,
     size: file.size ?? 0,
   };
 }
 
 function getAttachmentKindLabel(mimeType: string | undefined): string {
-  const m = mimeType ?? '';
-  if (m === 'application/pdf') return 'PDF 문서';
-  if (m.startsWith('image/')) return '이미지 파일';
-  return '파일';
+  const m = mimeType ?? "";
+  if (m === "application/pdf") return "PDF 문서";
+  if (m.startsWith("image/")) return "이미지 파일";
+  return "파일";
 }
 
 function isPdfMime(mimeType: string | undefined): boolean {
-  return mimeType === 'application/pdf';
+  return mimeType === "application/pdf";
 }
 
 function isImageMime(mimeType: string | undefined): boolean {
-  return typeof mimeType === 'string' && mimeType.startsWith('image/');
+  return typeof mimeType === "string" && mimeType.startsWith("image/");
 }
 
 function formatFileSize(bytes: number): string {
-  if (bytes <= 0) return '';
+  if (bytes <= 0) return "";
   if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)}KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)}MB`;
 }
@@ -106,8 +107,8 @@ function stopEventBubble<E extends { stopPropagation?: () => void }>(
 
 type AiFileSelection =
   | null
-  | { kind: 'existing'; id: number }
-  | { kind: 'pending'; key: string };
+  | { kind: "existing"; id: number }
+  | { kind: "pending"; key: string };
 
 export default function AttachmentSection({
   pendingFiles,
@@ -128,7 +129,7 @@ export default function AttachmentSection({
   isAiAnalyzing = false,
 }: AttachmentSectionProps) {
   const { data: me } = useMe();
-  const isGuest = isGuestProp ?? (me?.isGuest === true);
+  const isGuest = isGuestProp ?? me?.isGuest === true;
   const existing = existingAttachments;
   const hasFiles = existing.length + pendingFiles.length > 0;
   const { width: windowWidth, height: windowHeight } = useWindowDimensions();
@@ -138,7 +139,7 @@ export default function AttachmentSection({
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const showAiToolbar =
-    Platform.OS === 'web' &&
+    Platform.OS === "web" &&
     !hideAddControls &&
     !isGuest &&
     hasFiles &&
@@ -147,13 +148,13 @@ export default function AttachmentSection({
     showAiToolbar && !disabled && !isUploading && !isAiAnalyzing;
 
   useEffect(() => {
-    setAiFileSelection((prev) => {
+    setAiFileSelection(prev => {
       if (!prev) return prev;
-      if (prev.kind === 'existing') {
-        return existing.some((a) => a.id === prev.id) ? prev : null;
+      if (prev.kind === "existing") {
+        return existing.some(a => a.id === prev.id) ? prev : null;
       }
       const stillThere = pendingFiles.some(
-        (f) => pendingAiFileKey(f) === prev.key,
+        f => pendingAiFileKey(f) === prev.key,
       );
       return stillThere ? prev : null;
     });
@@ -172,19 +173,19 @@ export default function AttachmentSection({
 
   const handleOpenPdf = (fileUrl: string) => {
     try {
-      if (typeof window !== 'undefined') {
-        window.open(fileUrl, '_blank', 'noopener,noreferrer');
+      if (typeof window !== "undefined") {
+        window.open(fileUrl, "_blank", "noopener,noreferrer");
       }
     } catch (e) {
       showMessage(
-        '파일 열기 실패',
-        e instanceof Error ? e.message : '잠시 후 다시 시도해 주세요.',
+        "파일 열기 실패",
+        e instanceof Error ? e.message : "잠시 후 다시 시도해 주세요.",
       );
     }
   };
 
   const flushInput = (el: HTMLInputElement | null) => {
-    if (el) el.value = '';
+    if (el) el.value = "";
   };
 
   const handleNativeFileInputChange = (event: { target: HTMLInputElement }) => {
@@ -202,8 +203,8 @@ export default function AttachmentSection({
     flushInput(input);
     if (next.length === 0) {
       showMessage(
-        '지원하지 않는 형식',
-        '이미지(JPEG, PNG, GIF, WebP, HEIC/HEIF) 또는 PDF만 추가할 수 있습니다.',
+        "지원하지 않는 형식",
+        "이미지(JPEG, PNG, GIF, WebP, HEIC/HEIF) 또는 PDF만 추가할 수 있습니다.",
       );
       return;
     }
@@ -212,8 +213,8 @@ export default function AttachmentSection({
       return;
     }
     showMessage(
-      '파일 추가',
-      '웹에서 첨부를 사용하려면 onAppendPendingFiles를 연결해 주세요.',
+      "파일 추가",
+      "웹에서 첨부를 사용하려면 onAppendPendingFiles를 연결해 주세요.",
     );
   };
 
@@ -228,8 +229,8 @@ export default function AttachmentSection({
       return;
     }
     showPickFileType(
-      '파일 추가',
-      '추가할 파일 유형을 선택하세요.',
+      "파일 추가",
+      "추가할 파일 유형을 선택하세요.",
       onPickImage,
       onPickDocument,
     );
@@ -258,7 +259,7 @@ export default function AttachmentSection({
         <View style={styles.fileIconWrap}>
           {isPdfMime(mimeType) ? (
             <AttachmentDocIcon width={20} height={20} />
-          ) : String(mimeType ?? '').startsWith('image/') ? (
+          ) : String(mimeType ?? "").startsWith("image/") ? (
             <AttachmentImageIcon width={20} height={20} />
           ) : (
             <AttachmentDocIcon width={20} height={20} />
@@ -280,10 +281,7 @@ export default function AttachmentSection({
           onOpen();
         }}
         disabled={isUploading || disabled}
-        style={({ pressed }) => [
-          styles.openLinkHit,
-          pressed && styles.pressed,
-        ]}
+        style={({ pressed }) => [styles.openLinkHit, pressed && styles.pressed]}
         hitSlop={6}
       >
         <Text style={styles.openLinkText}>열기</Text>
@@ -350,16 +348,16 @@ export default function AttachmentSection({
   };
 
   const hiddenFileInput =
-    Platform.OS === 'web'
-      ? createElement('input', {
-          key: 'attachment-file-input',
+    Platform.OS === "web"
+      ? createElement("input", {
+          key: "attachment-file-input",
           ref: (el: HTMLInputElement | null) => {
             fileInputRef.current = el;
           },
-          type: 'file',
+          type: "file",
           accept: WEB_FILE_ACCEPT,
           multiple: true,
-          style: { display: 'none' },
+          style: { display: "none" },
           onChange: handleNativeFileInputChange,
         })
       : null;
@@ -370,10 +368,7 @@ export default function AttachmentSection({
       {showTopDivider && <View style={styles.topDivider} />}
 
       <View
-        style={[
-          styles.headerRow,
-          hideAddControls && styles.headerRowTitleOnly,
-        ]}
+        style={[styles.headerRow, hideAddControls && styles.headerRowTitleOnly]}
       >
         <Text style={styles.title}>첨부파일 (이미지,PDF)</Text>
         {!hideAddControls && (
@@ -397,7 +392,7 @@ export default function AttachmentSection({
         </View>
       ) : hasFiles ? (
         <View style={styles.fileList}>
-          {existing.map((a) => {
+          {existing.map(a => {
             let onOpen: (() => void) | undefined;
             if (isPdfMime(a.contentType)) {
               onOpen = () => handleOpenPdf(a.fileUrl);
@@ -407,18 +402,15 @@ export default function AttachmentSection({
             const aiSelect = showAiToolbar
               ? {
                   selected:
-                    aiFileSelection?.kind === 'existing' &&
+                    aiFileSelection?.kind === "existing" &&
                     aiFileSelection.id === a.id,
                   onSelect: () => {
                     if (!aiRowSelectable) return;
-                    setAiFileSelection((prev) => {
-                      if (
-                        prev?.kind === 'existing' &&
-                        prev.id === a.id
-                      ) {
+                    setAiFileSelection(prev => {
+                      if (prev?.kind === "existing" && prev.id === a.id) {
                         return null;
                       }
-                      return { kind: 'existing', id: a.id };
+                      return { kind: "existing", id: a.id };
                     });
                   },
                 }
@@ -427,9 +419,12 @@ export default function AttachmentSection({
               `existing-${a.id}`,
               a.fileName,
               a.contentType,
-              [getAttachmentKindLabel(a.contentType), formatFileSize(a.fileSize)]
+              [
+                getAttachmentKindLabel(a.contentType),
+                formatFileSize(a.fileSize),
+              ]
                 .filter(Boolean)
-                .join(' · '),
+                .join(" · "),
               onRemoveExisting ? () => handleRemoveExisting(a.id) : undefined,
               onOpen,
               aiSelect,
@@ -445,19 +440,16 @@ export default function AttachmentSection({
             const aiSelect = showAiToolbar
               ? {
                   selected:
-                    aiFileSelection?.kind === 'pending' &&
+                    aiFileSelection?.kind === "pending" &&
                     aiFileSelection.key === pendingAiFileKey(file),
                   onSelect: () => {
                     if (!aiRowSelectable) return;
                     const key = pendingAiFileKey(file);
-                    setAiFileSelection((prev) => {
-                      if (
-                        prev?.kind === 'pending' &&
-                        prev.key === key
-                      ) {
+                    setAiFileSelection(prev => {
+                      if (prev?.kind === "pending" && prev.key === key) {
                         return null;
                       }
-                      return { kind: 'pending', key };
+                      return { kind: "pending", key };
                     });
                   },
                 }
@@ -518,9 +510,7 @@ export default function AttachmentSection({
               <View style={styles.aiAnalyzeLoadingInner}>
                 <ActivityIndicator size="small" color={colors.white} />
                 <View style={styles.aiAnalyzeLoadingTextCol}>
-                  <Text style={styles.aiAnalyzeLoadingTextTitle}>
-                    분석 중
-                  </Text>
+                  <Text style={styles.aiAnalyzeLoadingTextTitle}>분석 중</Text>
                   <Text style={styles.aiAnalyzeLoadingText}>
                     AI가 첨부파일 내용을 정리하고 있어요
                   </Text>
@@ -529,8 +519,8 @@ export default function AttachmentSection({
             ) : (
               <Text style={styles.aiAnalyzeButtonText}>
                 {aiFileSelection
-                  ? 'AI 분석으로 일정 자동 입력'
-                  : '분석할 첨부파일을 선택해주세요'}
+                  ? "AI 분석으로 일정 자동 입력"
+                  : "분석할 첨부파일을 선택해주세요"}
               </Text>
             )}
           </Pressable>
@@ -556,7 +546,10 @@ export default function AttachmentSection({
               onLoadEnd={() => setIsPreviewImageLoading(false)}
               onError={() => {
                 setIsPreviewImageLoading(false);
-                showMessage('이미지 열기 실패', '이미지를 불러오지 못했습니다.');
+                showMessage(
+                  "이미지 열기 실패",
+                  "이미지를 불러오지 못했습니다.",
+                );
                 handleClosePreview();
               }}
             />
@@ -585,7 +578,7 @@ export default function AttachmentSection({
 
 const styles = StyleSheet.create({
   root: {
-    width: '100%',
+    width: "100%",
   },
   topDivider: {
     height: 1,
@@ -593,13 +586,13 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xl,
   },
   headerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     marginBottom: 8,
   },
   headerRowTitleOnly: {
-    justifyContent: 'flex-start',
+    justifyContent: "flex-start",
   },
   title: {
     ...textStyles.h8,
@@ -610,8 +603,8 @@ const styles = StyleSheet.create({
     color: colors.primary,
   },
   addButtonRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 4,
   },
   pressed: {
@@ -619,19 +612,19 @@ const styles = StyleSheet.create({
   },
   dropZone: {
     borderWidth: 1,
-    borderStyle: 'dashed',
+    borderStyle: "dashed",
     borderColor: colors.gray400,
     borderRadius: radii.md,
     backgroundColor: colors.white,
     minHeight: 40,
     paddingVertical: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   dropZoneRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     gap: 8,
   },
   dropZonePressed: {
@@ -646,15 +639,15 @@ const styles = StyleSheet.create({
   },
   loadingWrap: {
     paddingVertical: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   fileList: {
     gap: 8,
   },
   fileRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     backgroundColor: colors.gray200,
     borderRadius: radii.md,
     paddingVertical: 16,
@@ -672,7 +665,7 @@ const styles = StyleSheet.create({
     marginRight: 4,
     paddingVertical: 4,
     paddingHorizontal: 4,
-    justifyContent: 'center',
+    justifyContent: "center",
   },
   openLinkText: {
     ...textStyles.h8,
@@ -683,8 +676,8 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: radii.md,
     backgroundColor: `${colors.primary}1A`,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     marginRight: 12,
     flexShrink: 0,
   },
@@ -706,12 +699,12 @@ const styles = StyleSheet.create({
   },
   aiToolbar: {
     marginTop: spacing.md,
-    width: '100%',
+    width: "100%",
   },
   aiAnalyzeButton: {
-    width: '100%',
-    alignItems: 'center',
-    justifyContent: 'center',
+    width: "100%",
+    alignItems: "center",
+    justifyContent: "center",
     paddingVertical: 14,
     paddingHorizontal: spacing.md,
     borderRadius: radii.md,
@@ -727,16 +720,16 @@ const styles = StyleSheet.create({
   aiAnalyzeButtonText: {
     ...textStyles.h8,
     color: colors.white,
-    textAlign: 'center',
+    textAlign: "center",
   },
   aiAnalyzeLoadingInner: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 12,
     paddingVertical: 2,
   },
   aiAnalyzeLoadingTextCol: {
-    flexDirection: 'column',
+    flexDirection: "column",
     flexShrink: 1,
     gap: 2,
   },
@@ -752,23 +745,23 @@ const styles = StyleSheet.create({
   },
   previewBackdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.95)',
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: "rgba(0, 0, 0, 0.95)",
+    alignItems: "center",
+    justifyContent: "center",
   },
   previewLoading: {
     ...StyleSheet.absoluteFillObject,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   previewCloseBar: {
-    position: 'absolute',
+    position: "absolute",
     top: 0,
     left: 0,
     right: 0,
     paddingTop: 12,
     paddingRight: 12,
-    alignItems: 'flex-end',
+    alignItems: "flex-end",
   },
   previewCloseButton: {
     padding: 12,

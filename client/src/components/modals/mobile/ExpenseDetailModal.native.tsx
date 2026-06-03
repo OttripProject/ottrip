@@ -1,18 +1,18 @@
-import { useState } from 'react';
-import { View, Text, Pressable, StyleSheet, ScrollView } from 'react-native';
-import dayjs from 'dayjs';
-import BottomSheetModal from '@/ui/components/BottomSheetModal.native';
-import { colors } from '@/ui/tokens/colors';
-import { textStyles } from '@/ui/tokens/typography';
-import { categoryLabels } from '@/types/expense';
-import { Expense, ExpenseCategory } from '@/types/api';
-import CloseIcon from '../../../../assets/mobile_close.svg';
-import MobileFoodIcon from '../../../../assets/mobile_food.svg';
-import MobileCarIcon from '../../../../assets/mobile_car.svg';
-import MobileTicketIcon from '../../../../assets/mobile_ticket.svg';
-import AccommodationIcon from '../../../../assets/mobile_accomodation.svg';
-import FlightIcon from '../../../../assets/airplane.svg';
-import PlusIcon from '../../../../assets/mobile_plus.svg';
+import { type Expense, ExpenseCategory } from "@/types/api";
+import { categoryLabels } from "@/types/expense";
+import BottomSheetModal from "@/ui/components/BottomSheetModal.native";
+import { colors } from "@/ui/tokens/colors";
+import { textStyles } from "@/ui/tokens/typography";
+import dayjs from "dayjs";
+import { useState } from "react";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import FlightIcon from "../../../../assets/airplane.svg";
+import AccommodationIcon from "../../../../assets/mobile_accomodation.svg";
+import MobileCarIcon from "../../../../assets/mobile_car.svg";
+import CloseIcon from "../../../../assets/mobile_close.svg";
+import MobileFoodIcon from "../../../../assets/mobile_food.svg";
+import PlusIcon from "../../../../assets/mobile_plus.svg";
+import MobileTicketIcon from "../../../../assets/mobile_ticket.svg";
 
 interface ExpenseDetailModalProps {
   visible: boolean;
@@ -30,7 +30,7 @@ interface ExpenseDetailModalProps {
 }
 
 const formatCurrency = (amount: number) => {
-  return `${amount.toLocaleString('ko-KR')}원`;
+  return `${amount.toLocaleString("ko-KR")}원`;
 };
 
 const getCategoryIcon = (category: ExpenseCategory) => {
@@ -73,28 +73,29 @@ export default function ExpenseDetailModal({
   planStartDate,
   planEndDate,
   exDate,
-  title = '오늘의 여행 비용',
+  title = "오늘의 여행 비용",
   onExpenseAdd,
   onAddExpensePress,
 }: ExpenseDetailModalProps) {
-  const [selectedCategory, setSelectedCategory] = useState<ExpenseCategory | null>(null);
+  const [selectedCategory, setSelectedCategory] =
+    useState<ExpenseCategory | null>(null);
 
-  const categoryEntries = CATEGORY_ORDER.filter((cat) => (byCategory[cat] ?? 0) > 0).map(
-    (cat) => [cat, byCategory[cat] ?? 0] as const
-  );
+  const categoryEntries = CATEGORY_ORDER.filter(
+    cat => (byCategory[cat] ?? 0) > 0,
+  ).map(cat => [cat, byCategory[cat] ?? 0] as const);
 
   const showDatePerExpense = !exDate;
 
   const filteredExpenses = selectedCategory
-    ? expenses.filter((e) => e.category === selectedCategory)
+    ? expenses.filter(e => e.category === selectedCategory)
     : expenses;
 
   const sectionTitle = selectedCategory
     ? `${categoryLabels[selectedCategory as keyof typeof categoryLabels] || selectedCategory} 상세 내역`
-    : '전체 상세 내역';
+    : "전체 상세 내역";
 
   return (
-    <BottomSheetModal visible={visible} onClose={onClose} height={0.85} >
+    <BottomSheetModal visible={visible} onClose={onClose} height={0.85}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>{title}</Text>
         <Pressable style={styles.closeButton} onPress={onClose} hitSlop={8}>
@@ -109,12 +110,15 @@ export default function ExpenseDetailModal({
       >
         {/* 총 비용 */}
         <Pressable
-          style={[styles.totalCard, selectedCategory === null && styles.totalCardSelected]}
+          style={[
+            styles.totalCard,
+            selectedCategory === null && styles.totalCardSelected,
+          ]}
           onPress={() => setSelectedCategory(null)}
         >
           <Text style={styles.totalLabel}>총 비용(Total Cost)</Text>
           <Text style={styles.totalAmount}>
-            {total.toLocaleString('ko-KR')}원
+            {total.toLocaleString("ko-KR")}원
           </Text>
         </Pressable>
 
@@ -126,13 +130,29 @@ export default function ExpenseDetailModal({
               return (
                 <Pressable
                   key={category}
-                  style={[styles.categoryCard, isSelected && styles.categoryCardSelected]}
-                  onPress={() => setSelectedCategory(isSelected ? null : category)}
+                  style={[
+                    styles.categoryCard,
+                    isSelected && styles.categoryCardSelected,
+                  ]}
+                  onPress={() =>
+                    setSelectedCategory(isSelected ? null : category)
+                  }
                 >
-                  <Text style={[styles.categoryLabel, isSelected && styles.categoryLabelSelected]}>
-                    {categoryLabels[category as keyof typeof categoryLabels] || category}
+                  <Text
+                    style={[
+                      styles.categoryLabel,
+                      isSelected && styles.categoryLabelSelected,
+                    ]}
+                  >
+                    {categoryLabels[category as keyof typeof categoryLabels] ||
+                      category}
                   </Text>
-                  <Text style={[styles.categoryAmount, isSelected && styles.categoryAmountSelected]}>
+                  <Text
+                    style={[
+                      styles.categoryAmount,
+                      isSelected && styles.categoryAmountSelected,
+                    ]}
+                  >
                     {formatCurrency(amount)}
                   </Text>
                 </Pressable>
@@ -155,17 +175,19 @@ export default function ExpenseDetailModal({
                   <View style={styles.detailContent}>
                     <View style={styles.detailTitleRow}>
                       <Text style={styles.detailTitle}>
-                        {categoryLabels[expense.category as keyof typeof categoryLabels] || expense.category}
+                        {categoryLabels[
+                          expense.category as keyof typeof categoryLabels
+                        ] || expense.category}
                       </Text>
                       {showDatePerExpense && expense.exDate && (
                         <Text style={styles.detailDate}>
-                          {dayjs(expense.exDate).format('YYYY-MM-DD')}
+                          {dayjs(expense.exDate).format("YYYY-MM-DD")}
                         </Text>
                       )}
                     </View>
-                    
+
                     <Text style={styles.detailDescription} numberOfLines={1}>
-                      {expense.description || ''}
+                      {expense.description || ""}
                     </Text>
                   </View>
                   <Text style={styles.detailAmount}>
@@ -177,7 +199,9 @@ export default function ExpenseDetailModal({
           </View>
         ) : (
           <Text style={styles.emptyText}>
-            {selectedCategory ? '해당 카테고리 내역이 없습니다' : '지출 내역이 없습니다'}
+            {selectedCategory
+              ? "해당 카테고리 내역이 없습니다"
+              : "지출 내역이 없습니다"}
           </Text>
         )}
       </ScrollView>
@@ -188,7 +212,7 @@ export default function ExpenseDetailModal({
             style={styles.AddExpenseButton}
             onPress={onAddExpensePress}
           >
-            <PlusIcon width={20} height={20} color={colors.white}/>
+            <PlusIcon width={20} height={20} color={colors.white} />
             <Text style={styles.AddExpenseButtonText}>비용 추가하기</Text>
           </Pressable>
         </View>
@@ -199,9 +223,9 @@ export default function ExpenseDetailModal({
 
 const styles = StyleSheet.create({
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: 20,
     paddingTop: 12,
   },
@@ -215,8 +239,8 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     height: 32,
     width: 32,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   scrollView: {
     flex: 1,
@@ -233,7 +257,7 @@ const styles = StyleSheet.create({
     paddingVertical: 20,
     marginBottom: 8,
     borderWidth: 1,
-    borderColor: 'transparent',
+    borderColor: "transparent",
   },
   totalCardSelected: {
     borderColor: colors.primary,
@@ -247,14 +271,14 @@ const styles = StyleSheet.create({
     color: colors.primary,
   },
   categoryGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    flexWrap: "wrap",
     gap: 8,
     marginBottom: 32,
   },
   categoryCard: {
     flex: 1,
-    minWidth: '47%',
+    minWidth: "47%",
     backgroundColor: colors.gray200,
     borderRadius: 12,
     padding: 16,
@@ -285,11 +309,11 @@ const styles = StyleSheet.create({
   detailList: {
     backgroundColor: colors.white,
     borderRadius: 12,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
   detailRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingVertical: 20,
   },
   detailIconBox: {
@@ -297,8 +321,8 @@ const styles = StyleSheet.create({
     height: 36,
     borderRadius: 12,
     backgroundColor: `${colors.primary}1A`,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     marginRight: 12,
   },
   detailContent: {
@@ -306,8 +330,8 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   detailTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginBottom: 2,
   },
   detailTitle: {
@@ -332,7 +356,7 @@ const styles = StyleSheet.create({
   emptyText: {
     ...textStyles.h5,
     color: colors.gray600,
-    textAlign: 'center',
+    textAlign: "center",
     paddingVertical: 24,
   },
   footer: {
@@ -344,9 +368,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.black,
     borderRadius: 12,
     paddingVertical: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     gap: 8,
   },
   AddExpenseButtonText: {

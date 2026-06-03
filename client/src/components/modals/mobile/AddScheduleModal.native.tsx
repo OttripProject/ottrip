@@ -1,19 +1,19 @@
-import React, { useState } from 'react';
-import { View, Text, Pressable, StyleSheet } from 'react-native';
-import FullScreenModal from '@/ui/components/FullScreenModal.native';
-import ItineraryEditModal from '@/components/modals/mobile/ItineraryEditModal.native';
-import AccommodationEditModal from '@/components/modals/mobile/AccommodationEditModal.native';
-import FlightEditModal from '@/components/modals/mobile/FlightEditModal.native';
-import { colors } from '@/ui/tokens/colors';
-import { textStyles } from '@/ui/tokens/typography';
-import CloseIcon from '../../../../assets/x.svg';
-import AccommodationIcon from '../../../../assets/mobile_accomodation.svg';
-import FlightIcon from '../../../../assets/airplane.svg';
-import CalendarIcon from '../../../../assets/mobile_calendar_black.svg';
-import { Itinerary, Accommodation, FlightRead } from '@/types/api';
-import dayjs from 'dayjs';
+import AccommodationEditModal from "@/components/modals/mobile/AccommodationEditModal.native";
+import FlightEditModal from "@/components/modals/mobile/FlightEditModal.native";
+import ItineraryEditModal from "@/components/modals/mobile/ItineraryEditModal.native";
+import type { Accommodation, FlightRead, Itinerary } from "@/types/api";
+import FullScreenModal from "@/ui/components/FullScreenModal.native";
+import { colors } from "@/ui/tokens/colors";
+import { textStyles } from "@/ui/tokens/typography";
+import type dayjs from "dayjs";
+import { useState } from "react";
+import { Pressable, StyleSheet, Text, View } from "react-native";
+import FlightIcon from "../../../../assets/airplane.svg";
+import AccommodationIcon from "../../../../assets/mobile_accomodation.svg";
+import CalendarIcon from "../../../../assets/mobile_calendar_black.svg";
+import CloseIcon from "../../../../assets/x.svg";
 
-type AddScheduleTab = 'accommodation' | 'flight' | 'itinerary';
+type AddScheduleTab = "accommodation" | "flight" | "itinerary";
 
 interface AddScheduleModalProps {
   visible: boolean;
@@ -44,7 +44,7 @@ export default function AddScheduleModal({
   planData,
   onRefresh,
 }: AddScheduleModalProps) {
-  const [activeTab, setActiveTab] = useState<AddScheduleTab>('itinerary');
+  const [activeTab, setActiveTab] = useState<AddScheduleTab>("itinerary");
 
   const finishAfterSave = () => {
     if (onSaved) {
@@ -61,16 +61,16 @@ export default function AddScheduleModal({
   };
 
   const renderContent = () => {
-    if (activeTab === 'itinerary') {
+    if (activeTab === "itinerary") {
       return (
         <ItineraryEditModal
           visible={visible}
           onClose={handleClose}
           itinerary={null}
           planId={planId}
-          defaultDate={selectedDate?.format('YYYY-MM-DD')}
+          defaultDate={selectedDate?.format("YYYY-MM-DD")}
           embedded
-          onSave={async (itinerary) => {
+          onSave={async itinerary => {
             planData.addItinerary(itinerary);
             onRefresh?.();
             finishAfterSave();
@@ -78,16 +78,16 @@ export default function AddScheduleModal({
         />
       );
     }
-    if (activeTab === 'accommodation') {
+    if (activeTab === "accommodation") {
       return (
         <AccommodationEditModal
           visible={visible}
           onClose={handleClose}
           accommodation={null}
           planId={planId}
-          defaultDate={selectedDate?.format('YYYY-MM-DD')}
+          defaultDate={selectedDate?.format("YYYY-MM-DD")}
           embedded
-          onSave={async (accommodation) => {
+          onSave={async accommodation => {
             planData.addAccommodation(accommodation);
             onRefresh?.();
             finishAfterSave();
@@ -102,9 +102,9 @@ export default function AddScheduleModal({
         flight={null}
         planId={planId}
         planStartDate={planStartDate}
-        defaultDate={selectedDate?.format('YYYY-MM-DD')}
+        defaultDate={selectedDate?.format("YYYY-MM-DD")}
         embedded
-        onSave={async (flight) => {
+        onSave={async flight => {
           planData.addFlight(flight);
           onRefresh?.();
           finishAfterSave();
@@ -125,25 +125,71 @@ export default function AddScheduleModal({
         </View>
         <View style={styles.categoryTabs}>
           <Pressable
-            style={[styles.categoryTab, activeTab === 'accommodation' && styles.categoryTabActive]}
-            onPress={() => setActiveTab('accommodation')}
+            style={[
+              styles.categoryTab,
+              activeTab === "accommodation" && styles.categoryTabActive,
+            ]}
+            onPress={() => setActiveTab("accommodation")}
           >
-            <AccommodationIcon width={16} height={16} color={activeTab === 'accommodation' ? colors.primary : colors.gray600} />
-            <Text style={[styles.categoryTabText, activeTab === 'accommodation' && styles.categoryTabTextActive]}>숙소</Text>
+            <AccommodationIcon
+              width={16}
+              height={16}
+              color={
+                activeTab === "accommodation" ? colors.primary : colors.gray600
+              }
+            />
+            <Text
+              style={[
+                styles.categoryTabText,
+                activeTab === "accommodation" && styles.categoryTabTextActive,
+              ]}
+            >
+              숙소
+            </Text>
           </Pressable>
           <Pressable
-            style={[styles.categoryTab, activeTab === 'flight' && styles.categoryTabActive]}
-            onPress={() => setActiveTab('flight')}
+            style={[
+              styles.categoryTab,
+              activeTab === "flight" && styles.categoryTabActive,
+            ]}
+            onPress={() => setActiveTab("flight")}
           >
-            <FlightIcon width={16} height={16} color={activeTab === 'flight' ? colors.primary : colors.gray600} />
-            <Text style={[styles.categoryTabText, activeTab === 'flight' && styles.categoryTabTextActive]}>항공</Text>
+            <FlightIcon
+              width={16}
+              height={16}
+              color={activeTab === "flight" ? colors.primary : colors.gray600}
+            />
+            <Text
+              style={[
+                styles.categoryTabText,
+                activeTab === "flight" && styles.categoryTabTextActive,
+              ]}
+            >
+              항공
+            </Text>
           </Pressable>
           <Pressable
-            style={[styles.categoryTab, activeTab === 'itinerary' && styles.categoryTabActive]}
-            onPress={() => setActiveTab('itinerary')}
+            style={[
+              styles.categoryTab,
+              activeTab === "itinerary" && styles.categoryTabActive,
+            ]}
+            onPress={() => setActiveTab("itinerary")}
           >
-            <CalendarIcon width={16} height={16} color={activeTab === 'itinerary' ? colors.primary : colors.gray600} />
-            <Text style={[styles.categoryTabText, activeTab === 'itinerary' && styles.categoryTabTextActive]}>일정</Text>
+            <CalendarIcon
+              width={16}
+              height={16}
+              color={
+                activeTab === "itinerary" ? colors.primary : colors.gray600
+              }
+            />
+            <Text
+              style={[
+                styles.categoryTabText,
+                activeTab === "itinerary" && styles.categoryTabTextActive,
+              ]}
+            >
+              일정
+            </Text>
           </Pressable>
         </View>
       </View>
@@ -161,9 +207,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
   },
   titleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     marginBottom: 28,
   },
   titleSpacer: {
@@ -172,25 +218,25 @@ const styles = StyleSheet.create({
   headerTitle: {
     ...textStyles.h4,
     flex: 1,
-    textAlign: 'center',
+    textAlign: "center",
   },
   closeButton: {
     width: 32,
-    alignItems: 'flex-end',
+    alignItems: "flex-end",
   },
   categoryTabs: {
-    flexDirection: 'row',
-    width: '100%',
+    flexDirection: "row",
+    width: "100%",
     backgroundColor: colors.gray200,
     borderRadius: 12,
     padding: 6,
   },
   categoryTab: {
     flex: 1,
-    flexDirection: 'row',
+    flexDirection: "row",
     paddingVertical: 9,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     gap: 4,
     borderRadius: 8,
   },

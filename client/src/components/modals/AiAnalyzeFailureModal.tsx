@@ -1,16 +1,15 @@
-import React from 'react';
 import {
   Modal,
-  Text,
   Pressable,
   StyleSheet,
+  Text,
   useWindowDimensions,
-} from 'react-native';
+} from "react-native";
 
-import { colors } from '@/ui/tokens/colors';
-import { textStyles } from '@/ui/tokens/typography';
-import { spacing } from '@/ui/tokens/spacing';
-import { radii } from '@/ui/tokens/radii';
+import { colors } from "@/ui/tokens/colors";
+import { radii } from "@/ui/tokens/radii";
+import { spacing } from "@/ui/tokens/spacing";
+import { textStyles } from "@/ui/tokens/typography";
 
 interface AiAnalyzeFailureModalProps {
   visible: boolean;
@@ -25,7 +24,7 @@ export default function AiAnalyzeFailureModal({
 }: AiAnalyzeFailureModalProps) {
   const { width: windowWidth } = useWindowDimensions();
   const cardWidth = Math.min(360, windowWidth - 48);
-  const displayMessage = message.trim() || '분석에 실패했습니다.';
+  const displayMessage = message.trim() || "분석에 실패했습니다.";
 
   return (
     <Modal
@@ -60,8 +59,8 @@ const styles = StyleSheet.create({
   overlay: {
     flex: 1,
     backgroundColor: colors.overlayBackground,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     padding: spacing.lg,
   },
   card: {
@@ -69,34 +68,34 @@ const styles = StyleSheet.create({
     borderRadius: radii.lg,
     padding: spacing.xl,
     gap: spacing.md,
-    alignItems: 'center',
+    alignItems: "center",
   },
   title: {
     ...textStyles.h5,
     color: colors.black,
-    textAlign: 'center',
-    width: '100%',
+    textAlign: "center",
+    width: "100%",
   },
   message: {
     ...textStyles.body4,
     color: colors.gray700,
     lineHeight: 22,
-    textAlign: 'center',
-    width: '100%',
+    textAlign: "center",
+    width: "100%",
   },
   confirmBtn: {
     marginTop: spacing.sm,
     height: 40,
     borderRadius: radii.md,
     backgroundColor: colors.gray900,
-    alignItems: 'center',
-    justifyContent: 'center',
-    alignSelf: 'stretch',
+    alignItems: "center",
+    justifyContent: "center",
+    alignSelf: "stretch",
   },
   confirmBtnText: {
     ...textStyles.h8,
     color: colors.white,
-    textAlign: 'center',
+    textAlign: "center",
   },
   pressed: {
     opacity: 0.85,

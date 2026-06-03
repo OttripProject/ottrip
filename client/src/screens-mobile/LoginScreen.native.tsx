@@ -1,24 +1,32 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Alert, Platform, Pressable } from 'react-native';
-import { useAuth } from '@/contexts/AuthContext';
-import { useNavigation, useRoute } from '@react-navigation/native';
-import { authApi, type AuthResponse } from '@/services/auth';
-import { loadPublicEnv } from '@/core/env/schema';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import * as SecureStore from 'expo-secure-store';
-import * as AppleAuthentication from 'expo-apple-authentication';
-import api from '@/services/api';
-import { textStyles } from '@/ui/tokens/typography';
-import { colors } from '@/ui/tokens/colors';
-import GoogleButton from '@/ui/components/GoogleButton';
-import AppleButton from '@/ui/components/AppleButton';
-import { GoogleSignin } from '@react-native-google-signin/google-signin';
+import { useAuth } from "@/contexts/AuthContext";
+import { loadPublicEnv } from "@/core/env/schema";
+import api from "@/services/api";
+import { type AuthResponse, authApi } from "@/services/auth";
+import AppleButton from "@/ui/components/AppleButton";
+import GoogleButton from "@/ui/components/GoogleButton";
+import { colors } from "@/ui/tokens/colors";
+import { textStyles } from "@/ui/tokens/typography";
+import { GoogleSignin } from "@react-native-google-signin/google-signin";
+import { useNavigation, useRoute } from "@react-navigation/native";
+import * as AppleAuthentication from "expo-apple-authentication";
+import * as SecureStore from "expo-secure-store";
+import { useEffect, useState } from "react";
+import {
+  Alert,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 const env = loadPublicEnv();
 
 const base64UrlDecode = (input: string) => {
-  const base64 = input.replace(/-/g, '+').replace(/_/g, '/');
-  const pad = base64.length % 4 === 2 ? '==' : base64.length % 4 === 3 ? '=' : '';
+  const base64 = input.replace(/-/g, "+").replace(/_/g, "/");
+  const pad =
+    base64.length % 4 === 2 ? "==" : base64.length % 4 === 3 ? "=" : "";
   const str = atob(base64 + pad);
   try {
     return decodeURIComponent(escape(str));
@@ -29,7 +37,7 @@ const base64UrlDecode = (input: string) => {
 
 const parseIdToken = (idToken: string): any | null => {
   try {
-    const [, payload] = idToken.split('.');
+    const [, payload] = idToken.split(".");
     const json = base64UrlDecode(payload);
     return JSON.parse(json);
   } catch {
@@ -37,14 +45,20 @@ const parseIdToken = (idToken: string): any | null => {
   }
 };
 
-const SOCIAL_LOGIN_CONFLICT_DEFAULT = '이 계정은 다른 사용자와 연결되어 있습니다.';
+const SOCIAL_LOGIN_CONFLICT_DEFAULT =
+  "이 계정은 다른 사용자와 연결되어 있습니다.";
 
 function showSocialLoginError(err: unknown) {
-  const e = err as { response?: { status?: number; data?: { detail?: string } } };
+  const e = err as {
+    response?: { status?: number; data?: { detail?: string } };
+  };
   if (e?.response?.status !== 409) return;
   const detail = e?.response?.data?.detail;
-  const message = typeof detail === 'string' && detail ? detail : SOCIAL_LOGIN_CONFLICT_DEFAULT;
-  Alert.alert('안내', message);
+  const message =
+    typeof detail === "string" && detail
+      ? detail
+      : SOCIAL_LOGIN_CONFLICT_DEFAULT;
+  Alert.alert("안내", message);
 }
 
 export default function LoginScreenNative() {
@@ -52,14 +66,15 @@ export default function LoginScreenNative() {
   const navigation = useNavigation<any>();
   const route = useRoute();
   const guestUpgrade =
-    (route.params as { guestUpgrade?: boolean } | undefined)?.guestUpgrade === true;
+    (route.params as { guestUpgrade?: boolean } | undefined)?.guestUpgrade ===
+    true;
   const [isLoading, setIsLoading] = useState(false);
   const [isAppleAuthAvailable, setIsAppleAuthAvailable] = useState(false);
 
   useEffect(() => {
     let mounted = true;
     (async () => {
-      if (Platform.OS !== 'ios') {
+      if (Platform.OS !== "ios") {
         return;
       }
       try {
@@ -96,7 +111,10 @@ export default function LoginScreenNative() {
     }
   }, []);
 
-  const completeAuthResponse = async (response: AuthResponse, tokenForEmail: string) => {
+  const completeAuthResponse = async (
+    response: AuthResponse,
+    tokenForEmail: string,
+  ) => {
     if (response.isRegistered) {
       await login({
         isRegistered: true,
@@ -105,24 +123,24 @@ export default function LoginScreenNative() {
       });
 
       try {
-        const token = await SecureStore.getItemAsync('pendingInviteToken');
+        const token = await SecureStore.getItemAsync("pendingInviteToken");
         if (token) {
           await api.post(`/private/plans/invitations/${token}/accept`);
-          await SecureStore.deleteItemAsync('pendingInviteToken');
+          await SecureStore.deleteItemAsync("pendingInviteToken");
         }
       } catch {}
 
       setIsLoading(false);
       if (guestUpgrade) {
-        navigation.reset({ index: 0, routes: [{ name: 'OTTRIP' }] });
+        navigation.reset({ index: 0, routes: [{ name: "OTTRIP" }] });
       }
       return;
     }
 
     await login(response);
     const payload = parseIdToken(tokenForEmail);
-    const email = payload?.email ?? '';
-    navigation.navigate('약관동의', {
+    const email = payload?.email ?? "";
+    navigation.navigate("약관동의", {
       registerToken: response.registerToken,
       prefill: response.prefill,
       email,
@@ -153,7 +171,7 @@ export default function LoginScreenNative() {
   const onGoogleSignIn = async () => {
     setIsLoading(true);
     try {
-      if (Platform.OS === 'android') {
+      if (Platform.OS === "android") {
         try {
           await GoogleSignin.hasPlayServices();
         } catch {
@@ -171,7 +189,7 @@ export default function LoginScreenNative() {
       } else {
         setIsLoading(false);
       }
-    } catch (error: any) {
+    } catch (_error: any) {
       setIsLoading(false);
     }
   };
@@ -180,7 +198,7 @@ export default function LoginScreenNative() {
     if (navigation.canGoBack()) {
       navigation.goBack();
     } else {
-      navigation.reset({ index: 0, routes: [{ name: 'OTTRIP' }] });
+      navigation.reset({ index: 0, routes: [{ name: "OTTRIP" }] });
     }
   };
 
@@ -189,10 +207,10 @@ export default function LoginScreenNative() {
     try {
       await loginAsGuest();
       try {
-        const token = await SecureStore.getItemAsync('pendingInviteToken');
+        const token = await SecureStore.getItemAsync("pendingInviteToken");
         if (token) {
           await api.post(`/private/plans/invitations/${token}/accept`);
-          await SecureStore.deleteItemAsync('pendingInviteToken');
+          await SecureStore.deleteItemAsync("pendingInviteToken");
         }
       } catch {}
     } catch {
@@ -202,7 +220,7 @@ export default function LoginScreenNative() {
   };
 
   const onAppleSignIn = async () => {
-    if (Platform.OS !== 'ios') {
+    if (Platform.OS !== "ios") {
       return;
     }
     setIsLoading(true);
@@ -231,8 +249,8 @@ export default function LoginScreenNative() {
           <Text style={styles.title}>OTTRIP</Text>
           <Text style={styles.subtitle}>
             {guestUpgrade
-              ? 'Google 또는 Apple로 로그인하고\n기존 여행일정을 유지할 수 있어요'
-              : '여행 계획을 더 스마트하게'}
+              ? "Google 또는 Apple로 로그인하고\n기존 여행일정을 유지할 수 있어요"
+              : "여행 계획을 더 스마트하게"}
           </Text>
 
           <View style={styles.buttonContainer}>
@@ -257,10 +275,13 @@ export default function LoginScreenNative() {
             <Pressable
               onPress={guestUpgrade ? onGuestPlanContinue : onGuestStart}
               disabled={isLoading}
-              style={({ pressed }) => [styles.guestLink, pressed && styles.guestLinkPressed]}
+              style={({ pressed }) => [
+                styles.guestLink,
+                pressed && styles.guestLinkPressed,
+              ]}
             >
               <Text style={styles.guestLinkText}>
-                {guestUpgrade ? '게스트로 이어하기' : '게스트로 시작하기'}
+                {guestUpgrade ? "게스트로 이어하기" : "게스트로 시작하기"}
               </Text>
             </Pressable>
           </View>
@@ -277,14 +298,14 @@ const styles = StyleSheet.create({
   },
   safeArea: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     paddingHorizontal: 24,
   },
   content: {
-    width: '100%',
+    width: "100%",
     maxWidth: 327,
-    alignItems: 'center',
+    alignItems: "center",
   },
   title: {
     ...textStyles.h1,
@@ -295,14 +316,14 @@ const styles = StyleSheet.create({
     ...textStyles.body2,
     color: colors.gray800,
     marginBottom: 36,
-    textAlign: 'center',
+    textAlign: "center",
   },
   buttonContainer: {
-    width: '100%',
-    alignItems: 'center',
+    width: "100%",
+    alignItems: "center",
   },
   googleButton: {
-    width: '100%',
+    width: "100%",
     maxWidth: 327,
     height: 50,
     borderRadius: 12,
@@ -311,7 +332,7 @@ const styles = StyleSheet.create({
     ...textStyles.h6,
   },
   appleButton: {
-    width: '100%',
+    width: "100%",
     maxWidth: 327,
     height: 50,
     borderRadius: 12,
@@ -330,6 +351,6 @@ const styles = StyleSheet.create({
   guestLinkText: {
     ...textStyles.body4,
     color: colors.gray500,
-    textDecorationLine: 'underline',
+    textDecorationLine: "underline",
   },
 });

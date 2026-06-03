@@ -1,7 +1,7 @@
-import type { Dispatch, SetStateAction } from 'react';
-import dayjs from 'dayjs';
-import type { AiDocumentItemDraft } from '@/types/api';
-import { ExpenseCategory, ExpenseCurrency } from '@/types/expense';
+import type { AiDocumentItemDraft } from "@/types/api";
+import { ExpenseCategory, ExpenseCurrency } from "@/types/expense";
+import dayjs from "dayjs";
+import type { Dispatch, SetStateAction } from "react";
 
 /** AI 분석 모달 저장 시 draft → 일정 패널 `formData` / `draftExpenses` 반영 */
 export function applyItineraryDraftFromAi(
@@ -20,7 +20,7 @@ export function applyItineraryDraftFromAi(
   >,
   setDraftExpenses: Dispatch<SetStateAction<any[]>>,
 ): boolean {
-  if (draft.itemType !== 'itinerary') return false;
+  if (draft.itemType !== "itinerary") return false;
   const v = draft.payload.values as Record<string, unknown>;
 
   setFormData(prev => {
@@ -30,11 +30,11 @@ export function applyItineraryDraftFromAi(
     const startRaw = String(v.startTime ?? v.start_time ?? prev.startTime);
     const startTime =
       startRaw.trim().length >= 4 ? startRaw.substring(0, 5) : prev.startTime;
-    let endRaw = String(v.endTime ?? v.end_time ?? '').trim();
+    let endRaw = String(v.endTime ?? v.end_time ?? "").trim();
     if (!endRaw) endRaw = prev.endTime;
     let endTime = endRaw.substring(0, 5);
-    if (endTime === '23:59' || endRaw.startsWith('23:59:')) {
-      endTime = '24:00';
+    if (endTime === "23:59" || endRaw.startsWith("23:59:")) {
+      endTime = "24:00";
     }
     if (!endTime || endTime.length < 4) {
       endTime = prev.endTime;
@@ -53,27 +53,25 @@ export function applyItineraryDraftFromAi(
   });
 
   const ex = v.expense;
-  if (!ex || typeof ex !== 'object' || Array.isArray(ex)) {
+  if (!ex || typeof ex !== "object" || Array.isArray(ex)) {
     setDraftExpenses([]);
   } else {
     const eo = ex as Record<string, unknown>;
     const amount = Number(eo.amount) || 0;
-    const catRaw = String(eo.category ?? 'etc').toLowerCase();
+    const catRaw = String(eo.category ?? "etc").toLowerCase();
     const cat = (Object.values(ExpenseCategory) as string[]).includes(catRaw)
       ? (catRaw as ExpenseCategory)
       : ExpenseCategory.ETC;
-    if (amount > 0 || String(eo.description ?? '').trim().length > 0) {
+    if (amount > 0 || String(eo.description ?? "").trim().length > 0) {
       const dateStr = String(
-        v.itineraryDate ?? v.itinerary_date ?? dayjs().format('YYYY-MM-DD'),
+        v.itineraryDate ?? v.itinerary_date ?? dayjs().format("YYYY-MM-DD"),
       );
       setDraftExpenses([
         {
           category: cat,
           amount,
-          description: String(eo.description ?? ''),
-          exDate: String(
-            eo.exDate ?? eo.ex_date ?? dateStr,
-          ),
+          description: String(eo.description ?? ""),
+          exDate: String(eo.exDate ?? eo.ex_date ?? dateStr),
           currency: ExpenseCurrency.KRW,
         },
       ]);
@@ -85,17 +83,17 @@ export function applyItineraryDraftFromAi(
 }
 
 function normalizeAmountDigits(value: unknown): string {
-  const raw = String(value ?? '').trim();
-  if (!raw) return '';
-  const integerPart = raw.split('.')[0];
-  return integerPart.replace(/[^0-9]/g, '');
+  const raw = String(value ?? "").trim();
+  if (!raw) return "";
+  const integerPart = raw.split(".")[0];
+  return integerPart.replace(/[^0-9]/g, "");
 }
 
 function coerceFlightSegmentsArray(raw: unknown): unknown[] {
   if (Array.isArray(raw)) return raw;
-  if (typeof raw === 'string') {
+  if (typeof raw === "string") {
     const t = raw.trim();
-    if (!t.startsWith('[')) return [];
+    if (!t.startsWith("[")) return [];
     try {
       const p = JSON.parse(t) as unknown;
       return Array.isArray(p) ? p : [];
@@ -137,18 +135,16 @@ export function applyFlightDraftFromAi(
   setExpenseData: Dispatch<SetStateAction<{ amount: string }>>,
   setExpenseDate: Dispatch<SetStateAction<string>>,
 ): boolean {
-  if (draft.itemType !== 'flight') return false;
+  if (draft.itemType !== "flight") return false;
   const v = draft.payload.values as Record<string, unknown>;
 
   setFormData({
     reservation_number: String(
-      v.reservationNumber ?? v.reservation_number ?? '',
+      v.reservationNumber ?? v.reservation_number ?? "",
     ),
-    passenger_name: String(v.passengerName ?? v.passenger_name ?? ''),
-    ticket_number: String(v.ticketNumber ?? v.ticket_number ?? ''),
-    booking_reference: String(
-      v.bookingReference ?? v.booking_reference ?? '',
-    ),
+    passenger_name: String(v.passengerName ?? v.passenger_name ?? ""),
+    ticket_number: String(v.ticketNumber ?? v.ticket_number ?? ""),
+    booking_reference: String(v.bookingReference ?? v.booking_reference ?? ""),
   });
 
   const rawSegs = coerceFlightSegmentsArray(v.segments ?? v.Segments);
@@ -160,38 +156,37 @@ export function applyFlightDraftFromAi(
           : dayjs();
         const arrTime = segment.arrivalTime
           ? dayjs(segment.arrivalTime)
-          : dayjs().add(1, 'hour');
+          : dayjs().add(1, "hour");
         return {
           id: segment.id,
-          airline: segment.airline || '',
-          flight_number:
-            segment.flightNumber || segment.flight_number || '',
+          airline: segment.airline || "",
+          flight_number: segment.flightNumber || segment.flight_number || "",
           departure_airport:
-            segment.departureAirport || segment.departure_airport || '',
+            segment.departureAirport || segment.departure_airport || "",
           arrival_airport:
-            segment.arrivalAirport || segment.arrival_airport || '',
-          departure_date: depTime.format('YYYY-MM-DD'),
-          departure_time: depTime.format('HH:mm'),
-          arrival_date: arrTime.format('YYYY-MM-DD'),
-          arrival_time: arrTime.format('HH:mm'),
-          seat_class: segment.seatClass || segment.seat_class || '',
-          seat_number: segment.seatNumber || segment.seat_number || '',
-          gate: segment.gate || '',
-          terminal: segment.terminal || '',
+            segment.arrivalAirport || segment.arrival_airport || "",
+          departure_date: depTime.format("YYYY-MM-DD"),
+          departure_time: depTime.format("HH:mm"),
+          arrival_date: arrTime.format("YYYY-MM-DD"),
+          arrival_time: arrTime.format("HH:mm"),
+          seat_class: segment.seatClass || segment.seat_class || "",
+          seat_number: segment.seatNumber || segment.seat_number || "",
+          gate: segment.gate || "",
+          terminal: segment.terminal || "",
         };
       }),
     );
   }
 
   const ex = v.expense as Record<string, unknown> | undefined;
-  if (ex && typeof ex === 'object' && !Array.isArray(ex)) {
+  if (ex && typeof ex === "object" && !Array.isArray(ex)) {
     setExpenseData({
       amount: normalizeAmountDigits(ex.amount),
     });
     const ed = ex.exDate ?? ex.ex_date;
     if (ed) setExpenseDate(String(ed));
   } else {
-    setExpenseData({ amount: '' });
+    setExpenseData({ amount: "" });
   }
   return true;
 }
@@ -216,30 +211,30 @@ export function applyAccommodationDraftFromAi(
     SetStateAction<{ amount: string; currency: ExpenseCurrency }>
   >,
 ): boolean {
-  if (draft.itemType !== 'accommodation') return false;
+  if (draft.itemType !== "accommodation") return false;
   const v = draft.payload.values as Record<string, unknown>;
-  const ci = String(v.checkinDate ?? v.checkin_date ?? '');
-  const co = String(v.checkoutDate ?? v.checkout_date ?? '');
-  const cit = String(v.checkinTime ?? v.checkin_time ?? '15:00');
-  const cot = String(v.checkoutTime ?? v.checkout_time ?? '11:00');
+  const ci = String(v.checkinDate ?? v.checkin_date ?? "");
+  const co = String(v.checkoutDate ?? v.checkout_date ?? "");
+  const cit = String(v.checkinTime ?? v.checkin_time ?? "15:00");
+  const cot = String(v.checkoutTime ?? v.checkout_time ?? "11:00");
   const shortTime = (t: string) =>
-    t.length >= 8 && t.includes(':') ? t.substring(0, 5) : t;
+    t.length >= 8 && t.includes(":") ? t.substring(0, 5) : t;
 
   setFormData({
-    name: String(v.name ?? ''),
-    place: String(v.place ?? ''),
-    country: String(v.country ?? ''),
-    city: String(v.city ?? ''),
-    checkin_date: ci || dayjs().format('YYYY-MM-DD'),
-    checkout_date: co || dayjs().add(1, 'day').format('YYYY-MM-DD'),
+    name: String(v.name ?? ""),
+    place: String(v.place ?? ""),
+    country: String(v.country ?? ""),
+    city: String(v.city ?? ""),
+    checkin_date: ci || dayjs().format("YYYY-MM-DD"),
+    checkout_date: co || dayjs().add(1, "day").format("YYYY-MM-DD"),
     checkin_time: shortTime(cit),
     checkout_time: shortTime(cot),
-    description: String(v.description ?? ''),
+    description: String(v.description ?? ""),
   });
 
   const ex = v.expense as Record<string, unknown> | undefined;
-  if (ex && typeof ex === 'object' && !Array.isArray(ex)) {
-    const cur = String(ex.currency ?? 'KRW').toUpperCase();
+  if (ex && typeof ex === "object" && !Array.isArray(ex)) {
+    const cur = String(ex.currency ?? "KRW").toUpperCase();
     const curOk = (Object.values(ExpenseCurrency) as string[]).includes(cur)
       ? (cur as ExpenseCurrency)
       : ExpenseCurrency.KRW;
@@ -250,7 +245,7 @@ export function applyAccommodationDraftFromAi(
   } else {
     setExpenseData(prev => ({
       ...prev,
-      amount: '',
+      amount: "",
     }));
   }
   return true;

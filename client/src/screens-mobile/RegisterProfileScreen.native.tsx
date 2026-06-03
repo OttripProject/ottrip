@@ -1,28 +1,28 @@
-import React, { useState, useEffect } from 'react';
+import { useNicknameValidation } from "@/hooks/useNicknameValidation";
+import api from "@/services/api";
+import { authApi } from "@/services/auth";
+import { Gender } from "@/types/api";
+import { Input } from "@/ui/components/input/Input";
+import { colors } from "@/ui/tokens/colors";
+import { textStyles } from "@/ui/tokens/typography";
+import { useNavigation, useRoute } from "@react-navigation/native";
+import * as SecureStore from "expo-secure-store";
+import { useEffect, useState } from "react";
 import {
-  View,
-  Text,
-  Pressable,
-  StyleSheet,
-  ScrollView,
+  Alert,
   KeyboardAvoidingView,
   Platform,
-  Alert,
-} from 'react-native';
-import { useRoute, useNavigation } from '@react-navigation/native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import * as SecureStore from 'expo-secure-store';
-import { authApi } from '@/services/auth';
-import { useNicknameValidation } from '@/hooks/useNicknameValidation';
-import { Input } from '@/ui/components/input/Input';
-import { colors } from '@/ui/tokens/colors';
-import { textStyles } from '@/ui/tokens/typography';
-import { Gender } from '@/types/api';
-import api from '@/services/api';
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
-import LeftArrowIcon from '../../assets/left_arrow_L.svg';
-import CloseIcon from '../../assets/mobile_x.svg';
-import GenderCheckIcon from '../../assets/gender_check.svg';
+import GenderCheckIcon from "../../assets/gender_check.svg";
+import LeftArrowIcon from "../../assets/left_arrow_L.svg";
+import CloseIcon from "../../assets/mobile_x.svg";
 
 type RouteParams = {
   registerToken: string;
@@ -32,9 +32,9 @@ type RouteParams = {
 };
 
 function toHandleFromEmail(email: string): string {
-  const local = email.split('@')[0] || '';
-  const base = local.toLowerCase().replace(/[^a-z0-9_.-]/g, '');
-  return base.slice(0, 20) || 'user123';
+  const local = email.split("@")[0] || "";
+  const base = local.toLowerCase().replace(/[^a-z0-9_.-]/g, "");
+  return base.slice(0, 20) || "user123";
 }
 
 export default function RegisterProfileScreenNative() {
@@ -42,11 +42,12 @@ export default function RegisterProfileScreenNative() {
   const navigation = useNavigation<any>();
   const { registerToken, prefill, email, terms } = route.params as RouteParams;
 
-  const [nickname, setNickname] = useState(prefill?.name || '');
+  const [nickname, setNickname] = useState(prefill?.name || "");
   const [gender, setGender] = useState<Gender | null>(null);
   const [handle] = useState(() => toHandleFromEmail(email));
 
-  const { nicknameError, checkingNickname, onNicknameChange, isValid } = useNicknameValidation();
+  const { nicknameError, checkingNickname, onNicknameChange, isValid } =
+    useNicknameValidation();
 
   useEffect(() => {
     if (nickname.trim().length > 0) {
@@ -68,34 +69,36 @@ export default function RegisterProfileScreenNative() {
         {
           handle,
           nickname: nickname.trim(),
-          description: '',
+          description: "",
           gender,
           agreed_terms: terms?.tos ?? true,
           agreed_privacy: terms?.privacy ?? true,
           agreed_marketing: terms?.marketing ?? false,
         },
-        registerToken
+        registerToken,
       );
 
       try {
-        await SecureStore.setItemAsync('registerComplete', 'true');
+        await SecureStore.setItemAsync("registerComplete", "true");
       } catch {}
 
       try {
-        const token = await SecureStore.getItemAsync('pendingInviteToken');
+        const token = await SecureStore.getItemAsync("pendingInviteToken");
         if (token) {
           await api.post(`/private/plans/invitations/${token}/accept`);
-          await SecureStore.deleteItemAsync('pendingInviteToken');
+          await SecureStore.deleteItemAsync("pendingInviteToken");
         }
       } catch {}
 
-      navigation.navigate('가입완료', {
+      navigation.navigate("가입완료", {
         accessToken: registerResponse.accessToken,
         refreshToken: registerResponse.refreshToken,
       });
-
     } catch (e: any) {
-      Alert.alert('가입 실패', e?.response?.data?.detail || e.message || '알 수 없는 오류');
+      Alert.alert(
+        "가입 실패",
+        e?.response?.data?.detail || e.message || "알 수 없는 오류",
+      );
     }
   };
 
@@ -103,34 +106,26 @@ export default function RegisterProfileScreenNative() {
     if (navigation.canGoBack()) {
       navigation.goBack();
     } else {
-      navigation.navigate('로그인' as never);
+      navigation.navigate("로그인" as never);
     }
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+    <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
       {/* 헤더 */}
       <View style={styles.header}>
-        <Pressable
-          style={styles.headerBtn}
-          onPress={goBackOrLogin}
-          hitSlop={8}
-        >
+        <Pressable style={styles.headerBtn} onPress={goBackOrLogin} hitSlop={8}>
           <LeftArrowIcon width={24} height={24} />
         </Pressable>
         <Text style={styles.headerTitle}>회원가입</Text>
-        <Pressable
-          style={styles.headerBtn}
-          onPress={goBackOrLogin}
-          hitSlop={8}
-        >
+        <Pressable style={styles.headerBtn} onPress={goBackOrLogin} hitSlop={8}>
           <CloseIcon width={24} height={24} />
         </Pressable>
       </View>
 
       <KeyboardAvoidingView
         style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
         keyboardVerticalOffset={0}
       >
         <ScrollView
@@ -141,7 +136,9 @@ export default function RegisterProfileScreenNative() {
         >
           {/* 타이틀 */}
           <Text style={styles.title}>프로필 설정</Text>
-          <Text style={styles.subtitle}>개인정보 및 환경설정을 관리하세요.</Text>
+          <Text style={styles.subtitle}>
+            개인정보 및 환경설정을 관리하세요.
+          </Text>
 
           {/* 이메일 */}
           <Text style={styles.fieldLabel}>이메일</Text>
@@ -169,22 +166,33 @@ export default function RegisterProfileScreenNative() {
           {/* 성별 */}
           <Text style={styles.fieldLabel}>성별</Text>
           <View style={styles.genderRow}>
-            {([Gender.MALE, Gender.FEMALE] as Gender[]).map((g) => (
+            {([Gender.MALE, Gender.FEMALE] as Gender[]).map(g => (
               <Pressable
                 key={g}
                 style={styles.genderOption}
-                onPress={() => setGender((prev) => (prev === g ? null : g))}
+                onPress={() => setGender(prev => (prev === g ? null : g))}
                 accessibilityRole="radio"
                 accessibilityState={{ checked: gender === g }}
               >
                 <View
-                  style={[styles.radio, gender === g ? styles.radioSelected : styles.radioUnselected]}
+                  style={[
+                    styles.radio,
+                    gender === g
+                      ? styles.radioSelected
+                      : styles.radioUnselected,
+                  ]}
                 >
                   {gender === g ? (
-                    <GenderCheckIcon width={16} height={16} color={colors.white} />
+                    <GenderCheckIcon
+                      width={16}
+                      height={16}
+                      color={colors.white}
+                    />
                   ) : null}
                 </View>
-                <Text style={styles.genderLabel}>{g === Gender.MALE ? '남성' : '여성'}</Text>
+                <Text style={styles.genderLabel}>
+                  {g === Gender.MALE ? "남성" : "여성"}
+                </Text>
               </Pressable>
             ))}
           </View>
@@ -214,9 +222,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: 16,
     height: 56,
     backgroundColor: colors.white,
@@ -224,8 +232,8 @@ const styles = StyleSheet.create({
   headerBtn: {
     width: 24,
     height: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   headerTitle: {
     ...textStyles.h5,
@@ -257,7 +265,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.gray400,
     borderRadius: 12,
-    justifyContent: 'center',
+    justifyContent: "center",
     paddingHorizontal: 16,
     marginBottom: 20,
   },
@@ -278,14 +286,14 @@ const styles = StyleSheet.create({
     color: colors.success,
   },
   genderRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 24,
     marginTop: 8,
   },
   genderOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 6,
   },
   radio: {
@@ -293,8 +301,8 @@ const styles = StyleSheet.create({
     height: 20,
     borderRadius: 10,
     borderWidth: 1.5,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   radioUnselected: {
     borderColor: colors.gray300,
@@ -316,8 +324,8 @@ const styles = StyleSheet.create({
     height: 56,
     backgroundColor: colors.primary,
     borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   nextButtonDisabled: {
     backgroundColor: colors.gray400,

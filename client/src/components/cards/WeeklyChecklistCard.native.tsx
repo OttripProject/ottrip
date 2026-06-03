@@ -1,23 +1,30 @@
-import React, { useState, useMemo, useRef } from 'react';
-import { View, Text, StyleSheet, Pressable, TextInput, Alert, Platform } from 'react-native';
-import dayjs from 'dayjs';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { TravelChecklistItem, Itinerary } from '@/types/api';
-import { colors } from '@/ui/tokens/colors';
-import { textStyles } from '@/ui/tokens/typography';
-import api from '@/services/api';
-import { useMe } from '@/hooks/useMe';
-import { guestPrompt, handleGuestPromptError } from '@/utils/guestPrompt';
-import GradientBackground from '@/ui/components/GradientBackground';
-import ChecklistIcon from '../../../assets/mobile_check.svg';
-import LightningIcon from '../../../assets/mobile_lightning.svg';
-import CheckIcon from '../../../assets/gender_check.svg';
-import CloseIcon from '../../../assets/mobile_close.svg';
-
+import { useMe } from "@/hooks/useMe";
+import api from "@/services/api";
+import type { Itinerary, TravelChecklistItem } from "@/types/api";
+import GradientBackground from "@/ui/components/GradientBackground";
+import { colors } from "@/ui/tokens/colors";
+import { textStyles } from "@/ui/tokens/typography";
+import { guestPrompt, handleGuestPromptError } from "@/utils/guestPrompt";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import dayjs from "dayjs";
+import { useMemo, useRef, useState } from "react";
+import {
+  Alert,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
+import CheckIcon from "../../../assets/gender_check.svg";
+import ChecklistIcon from "../../../assets/mobile_check.svg";
+import CloseIcon from "../../../assets/mobile_close.svg";
+import LightningIcon from "../../../assets/mobile_lightning.svg";
 
 export type WeeklyChecklistCardProps = {
   planPublicId: string | undefined;
-  mode?: 'weekly' | 'full';
+  mode?: "weekly" | "full";
   selectedDate?: dayjs.Dayjs;
   planStartDate?: string;
   itineraries?: Itinerary[];
@@ -26,7 +33,7 @@ export type WeeklyChecklistCardProps = {
 
 export default function WeeklyChecklistCard({
   planPublicId,
-  mode = 'weekly',
+  mode = "weekly",
   selectedDate = dayjs(),
   planStartDate,
   itineraries = [],
@@ -34,17 +41,20 @@ export default function WeeklyChecklistCard({
 }: WeeklyChecklistCardProps) {
   const queryClient = useQueryClient();
   const { data: me } = useMe();
-  const [newChecklistItem, setNewChecklistItem] = useState('');
+  const [newChecklistItem, setNewChecklistItem] = useState("");
   const [addingChecklistItem, setAddingChecklistItem] = useState(false);
   const [aiRecommendLoading, setAiRecommendLoading] = useState(false);
   const togglingItems = useRef<Set<number>>(new Set());
   const deletingItems = useRef<Set<number>>(new Set());
 
-  const selectedDateStr = selectedDate.format('YYYY-MM-DD');
-  const dateForApi = mode === 'full' ? (planStartDate || dayjs().format('YYYY-MM-DD')) : selectedDateStr;
+  const selectedDateStr = selectedDate.format("YYYY-MM-DD");
+  const dateForApi =
+    mode === "full"
+      ? planStartDate || dayjs().format("YYYY-MM-DD")
+      : selectedDateStr;
 
   const { data: checklistData, refetch: refetchChecklist } = useQuery({
-    queryKey: ['checklist', planPublicId],
+    queryKey: ["checklist", planPublicId],
     queryFn: async () => {
       if (!planPublicId) return null;
       try {
@@ -71,20 +81,20 @@ export default function WeeklyChecklistCard({
     if (!checklist?.categories) return [];
     const items: TravelChecklistItem[] = [];
     const categories = checklist.categories;
-    if (!categories || typeof categories !== 'object') return [];
+    if (!categories || typeof categories !== "object") return [];
     Object.entries(categories).forEach(([_, category]: [string, any]) => {
       if (Array.isArray(category)) {
         category.forEach((item: any) => {
-          if (!item || typeof item !== 'object') return;
+          if (!item || typeof item !== "object") return;
           const itemDate = item.date;
           const isCustom = item.is_custom ?? item.isCustom ?? false;
           const isChecked = item.is_checked ?? item.isChecked ?? false;
-          const include = mode === 'full' ? true : itemDate === selectedDateStr;
+          const include = mode === "full" ? true : itemDate === selectedDateStr;
           if (include) {
             items.push({
               id: item.id || 0,
-              name: item.name || '',
-              reason: item.reason || '',
+              name: item.name || "",
+              reason: item.reason || "",
               is_checked: isChecked,
               is_custom: isCustom,
               date: item.date,
@@ -102,41 +112,44 @@ export default function WeeklyChecklistCard({
   const handleAddChecklistItem = async () => {
     const name = newChecklistItem.trim();
     if (!name || !planPublicId) {
-      if (!planPublicId) Alert.alert('알림', '여행을 선택해주세요.');
+      if (!planPublicId) Alert.alert("알림", "여행을 선택해주세요.");
       return;
     }
     setAddingChecklistItem(true);
     try {
       await api.post(`/private/ai/checklist/${planPublicId}/item`, {
         name,
-        reason: '',
-        category: 'basic_required',
+        reason: "",
+        category: "basic_required",
         date: dateForApi,
       });
-      setNewChecklistItem('');
+      setNewChecklistItem("");
       refetchChecklist();
     } catch (error) {
       if (handleGuestPromptError(error)) return;
-      Alert.alert('알림', '체크리스트 항목 추가에 실패했습니다.');
+      Alert.alert("알림", "체크리스트 항목 추가에 실패했습니다.");
     } finally {
       setAddingChecklistItem(false);
     }
   };
 
-  const handleToggleChecklistItem = async (itemId: number, isChecked: boolean) => {
+  const handleToggleChecklistItem = async (
+    itemId: number,
+    isChecked: boolean,
+  ) => {
     if (!planPublicId) return;
     if (togglingItems.current.has(itemId)) return;
     togglingItems.current.add(itemId);
-    const previousData = queryClient.getQueryData(['checklist', planPublicId]);
-    queryClient.setQueryData(['checklist', planPublicId], (old: any) => {
+    const previousData = queryClient.getQueryData(["checklist", planPublicId]);
+    queryClient.setQueryData(["checklist", planPublicId], (old: any) => {
       if (!old?.categories) return old;
       const updated = { ...old };
       const categories = { ...updated.categories };
-      Object.keys(categories).forEach((categoryKey) => {
+      Object.keys(categories).forEach(categoryKey => {
         const items = categories[categoryKey];
         if (Array.isArray(items)) {
           categories[categoryKey] = items.map((item: any) =>
-            item.id === itemId ? { ...item, is_checked: isChecked } : item
+            item.id === itemId ? { ...item, is_checked: isChecked } : item,
           );
         }
       });
@@ -147,9 +160,9 @@ export default function WeeklyChecklistCard({
         is_checked: isChecked,
       });
     } catch (error) {
-      queryClient.setQueryData(['checklist', planPublicId], previousData);
+      queryClient.setQueryData(["checklist", planPublicId], previousData);
       if (handleGuestPromptError(error)) return;
-      Alert.alert('알림', '체크리스트 항목 업데이트에 실패했습니다.');
+      Alert.alert("알림", "체크리스트 항목 업데이트에 실패했습니다.");
     } finally {
       togglingItems.current.delete(itemId);
     }
@@ -164,7 +177,7 @@ export default function WeeklyChecklistCard({
       refetchChecklist();
     } catch (error) {
       if (handleGuestPromptError(error)) return;
-      Alert.alert('알림', '체크리스트 항목 삭제에 실패했습니다.');
+      Alert.alert("알림", "체크리스트 항목 삭제에 실패했습니다.");
     } finally {
       deletingItems.current.delete(itemId);
     }
@@ -176,12 +189,16 @@ export default function WeeklyChecklistCard({
       return;
     }
     if (!planPublicId) {
-      Alert.alert('알림', '여행을 선택해주세요.');
+      Alert.alert("알림", "여행을 선택해주세요.");
       return;
     }
-    const activeItineraries = itineraries?.filter((it: any) => !it.is_deleted) || [];
+    const activeItineraries =
+      itineraries?.filter((it: any) => !it.is_deleted) || [];
     if (activeItineraries.length < 2) {
-      Alert.alert('알림', '체크리스트 생성을 위해서는 최소 2개 이상의 세부 일정이 필요합니다.');
+      Alert.alert(
+        "알림",
+        "체크리스트 생성을 위해서는 최소 2개 이상의 세부 일정이 필요합니다.",
+      );
       return;
     }
     setAiRecommendLoading(true);
@@ -193,17 +210,19 @@ export default function WeeklyChecklistCard({
       refetchChecklist();
     } catch (error) {
       if (handleGuestPromptError(error)) return;
-      Alert.alert('알림', 'AI 체크리스트 생성에 실패했습니다.');
+      Alert.alert("알림", "AI 체크리스트 생성에 실패했습니다.");
     } finally {
       setAiRecommendLoading(false);
     }
   };
 
-  const title = titleOverride ?? (mode === 'full'
-    ? '여행 준비 체크리스트'
-    : dayjs().isSame(selectedDate, 'day')
-      ? '오늘의 체크리스트'
-      : `${selectedDate.date()}일 체크리스트`);
+  const title =
+    titleOverride ??
+    (mode === "full"
+      ? "여행 준비 체크리스트"
+      : dayjs().isSame(selectedDate, "day")
+        ? "오늘의 체크리스트"
+        : `${selectedDate.date()}일 체크리스트`);
 
   if (!planPublicId) return null;
 
@@ -219,7 +238,10 @@ export default function WeeklyChecklistCard({
             <Pressable
               onPress={handleAiRecommendChecklist}
               disabled={aiRecommendLoading}
-              style={({ pressed }) => [styles.aiRecommendButtonHeader, pressed && styles.aiRecommendButtonPressed]}
+              style={({ pressed }) => [
+                styles.aiRecommendButtonHeader,
+                pressed && styles.aiRecommendButtonPressed,
+              ]}
             >
               <GradientBackground
                 start={{ x: 0, y: 0 }}
@@ -234,19 +256,29 @@ export default function WeeklyChecklistCard({
         </View>
         {dateChecklistItems.length > 0 ? (
           <View style={styles.listBox}>
-            {dateChecklistItems.map((item) => (
+            {dateChecklistItems.map(item => (
               <View key={item.id} style={styles.listItem}>
                 <Pressable
-                  onPress={() => handleToggleChecklistItem(item.id, !item.is_checked)}
+                  onPress={() =>
+                    handleToggleChecklistItem(item.id, !item.is_checked)
+                  }
                   hitSlop={8}
                 >
-                  <View style={[styles.checkbox, item.is_checked && styles.checkboxSelected]}>
+                  <View
+                    style={[
+                      styles.checkbox,
+                      item.is_checked && styles.checkboxSelected,
+                    ]}
+                  >
                     <CheckIcon width={16} height={16} color={colors.white} />
                   </View>
                 </Pressable>
                 <View style={styles.itemContent}>
                   <Text
-                    style={[styles.itemName, item.is_checked && styles.itemNameChecked]}
+                    style={[
+                      styles.itemName,
+                      item.is_checked && styles.itemNameChecked,
+                    ]}
                     numberOfLines={1}
                     ellipsizeMode="tail"
                   >
@@ -296,8 +328,8 @@ export default function WeeklyChecklistCard({
           <TextInput
             style={[
               styles.addInput,
-              Platform.OS === 'android' && styles.addInputAndroid,
-              Platform.OS === 'ios' && styles.addInputIOS,
+              Platform.OS === "android" && styles.addInputAndroid,
+              Platform.OS === "ios" && styles.addInputIOS,
             ]}
             placeholder="할일 입력..."
             placeholderTextColor={colors.gray500}
@@ -309,11 +341,20 @@ export default function WeeklyChecklistCard({
             onSubmitEditing={handleAddChecklistItem}
           />
           <Pressable
-            style={({ pressed }) => [styles.addButton, pressed && styles.addButtonPressed]}
+            style={({ pressed }) => [
+              styles.addButton,
+              pressed && styles.addButtonPressed,
+            ]}
             onPress={handleAddChecklistItem}
             disabled={addingChecklistItem || !newChecklistItem.trim()}
           >
-            <Text style={[styles.addButtonText, (!newChecklistItem.trim() || addingChecklistItem) && styles.addButtonTextDisabled]}>
+            <Text
+              style={[
+                styles.addButtonText,
+                (!newChecklistItem.trim() || addingChecklistItem) &&
+                  styles.addButtonTextDisabled,
+              ]}
+            >
               추가
             </Text>
           </Pressable>
@@ -336,14 +377,14 @@ const styles = StyleSheet.create({
     borderColor: colors.gray200,
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 16,
   },
   headerLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 6,
   },
   title: {
@@ -352,15 +393,15 @@ const styles = StyleSheet.create({
   },
   aiRecommendButtonHeader: {
     borderRadius: 999,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
   aiRecommendButtonPressed: {
     opacity: 0.8,
   },
   aiRecommendButtonGradient: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     gap: 6,
     paddingVertical: 6,
     paddingHorizontal: 16,
@@ -369,8 +410,8 @@ const styles = StyleSheet.create({
     marginBottom: 0,
   },
   listItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingBottom: 16,
     gap: 8,
   },
@@ -381,8 +422,8 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: colors.gray300,
     backgroundColor: colors.gray300,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   checkboxSelected: {
     borderColor: colors.primary,
@@ -390,8 +431,8 @@ const styles = StyleSheet.create({
   },
   itemContent: {
     flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 8,
   },
   itemName: {
@@ -402,7 +443,7 @@ const styles = StyleSheet.create({
     color: colors.gray600,
   },
   aiTag: {
-    backgroundColor: 'rgba(0, 122, 255, 0.1)',
+    backgroundColor: "rgba(0, 122, 255, 0.1)",
     paddingVertical: 2,
     paddingHorizontal: 8,
     borderRadius: 6,
@@ -414,8 +455,8 @@ const styles = StyleSheet.create({
   deleteButton: {
     width: 32,
     height: 32,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   emptyBox: {
     backgroundColor: colors.gray200,
@@ -426,25 +467,25 @@ const styles = StyleSheet.create({
     ...textStyles.h6,
     color: colors.gray700,
     marginBottom: 4,
-    textAlign: 'center',
+    textAlign: "center",
   },
   emptySubtitle: {
     ...textStyles.body4,
     color: colors.gray600,
     marginBottom: 16,
-    textAlign: 'center',
+    textAlign: "center",
   },
   aiRecommendButton: {
     paddingVertical: 9,
     paddingHorizontal: 20,
     borderRadius: 999,
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: '100%',
+    alignItems: "center",
+    justifyContent: "center",
+    width: "100%",
   },
   aiRecommendButtonContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 6,
   },
   aiRecommendButtonText: {
@@ -452,8 +493,8 @@ const styles = StyleSheet.create({
     color: colors.black,
   },
   addRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     backgroundColor: colors.gray200,
     borderRadius: 12,
     paddingVertical: 10,
@@ -469,12 +510,14 @@ const styles = StyleSheet.create({
   },
   addInputAndroid: {
     paddingVertical: 0,
-    textAlignVertical: 'center',
+    textAlignVertical: "center",
     includeFontPadding: false,
   },
   addInputIOS: {
     paddingVertical: 0,
-    lineHeight: textStyles.body3.fontSize ? textStyles.body3.fontSize * 1.2 : 20,
+    lineHeight: textStyles.body3.fontSize
+      ? textStyles.body3.fontSize * 1.2
+      : 20,
   },
   addButton: {
     paddingVertical: 4,

@@ -1,9 +1,9 @@
-import api from './api';
-import { FlightRead } from '../types/api';
+import type { FlightRead } from "../types/api";
+import api from "./api";
 
 export const flightsApi = {
   createFlight: async (payload: any): Promise<{ id: number }> => {
-    const res = await api.post('/private/flights', payload);
+    const res = await api.post("/private/flights", payload);
     return res.data as { id: number };
   },
   updateFlight: async (flightId: number, payload: any): Promise<void> => {
@@ -22,4 +22,4 @@ export const flightsApi = {
     const res = await api.get(`/private/flights/${flightId}`);
     return res.data as FlightRead;
   },
-}; 
+};

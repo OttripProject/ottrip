@@ -22,7 +22,7 @@ export interface Plan {
   startDate: string;
   endDate: string;
   memo?: string;
-  myRole?: 'owner' | 'editor' | 'viewer';
+  myRole?: "owner" | "editor" | "viewer";
   createdAt: string;
   updatedAt: string;
   travel_checklist?: {
@@ -88,7 +88,7 @@ export interface FlightSegmentBaseDto {
   departureAirport: string;
   arrivalAirport: string;
   departureTime: string;
-  arrivalTime: string;   
+  arrivalTime: string;
   seatClass?: string | null;
   seatNumber?: string | null;
   gate?: string | null;
@@ -106,7 +106,7 @@ export interface FlightCreateRequest {
   passengerName?: string | null;
   ticketNumber?: string | null;
   bookingReference?: string | null;
-  segments: FlightSegmentBaseDto[]; 
+  segments: FlightSegmentBaseDto[];
   expense?: {
     exDate?: string; // 서버에서 첫 출발일을 기본 사용
     amount: number;
@@ -227,7 +227,7 @@ export enum Gender {
 export interface Expense {
   id: number;
   category: ExpenseCategory;
-  amount: number; 
+  amount: number;
   currency: ExpenseCurrency;
   description?: string;
   exDate: string;
@@ -241,7 +241,7 @@ export interface Expense {
 
 export interface CreateExpenseRequest {
   category: ExpenseCategory;
-  amount: number; 
+  amount: number;
   currency: ExpenseCurrency;
   description?: string;
   exDate: string;

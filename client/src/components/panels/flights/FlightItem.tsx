@@ -1,44 +1,55 @@
-import React, { useEffect, useState, useRef, useMemo, useCallback } from 'react';
-import { View, Text, Pressable, StyleSheet, ScrollView, Platform } from 'react-native';
-import { TimePicker, AirportPicker } from '@/ui/components/pickers';
-import dayjs from 'dayjs';
-import { flightsApi } from '@/services/flights';
-import { attachmentsApi } from '@/services/attachments';
-import { useAttachmentUpload } from '@/hooks/useAttachmentUpload';
-import { useFilePicker } from '@/hooks/useFilePicker';
-import AttachmentSection from '@/ui/components/attachmentSection';
+import AiAnalyzeFailureModal from "@/components/modals/AiAnalyzeFailureModal";
+import AiDocumentAnalyzeModal from "@/components/modals/AiDocumentAnalyzeModal";
+import BaseCalendar from "@/components/popup/calendar/BaseCalendar";
+import { PLACEHOLDERS } from "@/constants/placeholders";
+import { useAttachmentUpload } from "@/hooks/useAttachmentUpload";
+import { useFilePicker } from "@/hooks/useFilePicker";
+import { analyzeDocumentUpload } from "@/services/aiDocument";
+import { attachmentsApi } from "@/services/attachments";
+import { flightsApi } from "@/services/flights";
 import type {
   AiDocumentItemDraft,
   Attachment,
   DocumentUploadAnalyzeResponse,
   LocalFile,
   StagedDocumentAnalyzePayload,
-} from '@/types/api';
-import { handleGuestPromptError } from '@/utils/guestPrompt';
+} from "@/types/api";
+import {
+  ExpenseCategory,
+  ExpenseCurrency,
+  currencyLabels,
+} from "@/types/expense";
+import AttachmentSection from "@/ui/components/attachmentSection";
+import type { AiAttachmentAnalyzeSelection } from "@/ui/components/attachmentSection.types";
+import { pendingAiFileKey } from "@/ui/components/attachmentSection.types";
+import Input from "@/ui/components/input/Input";
+import { AirportPicker, TimePicker } from "@/ui/components/pickers";
+import WarningBanner from "@/ui/components/toast/warning";
+import { colors } from "@/ui/tokens/colors";
+import { radii } from "@/ui/tokens/radii";
+import { spacing } from "@/ui/tokens/spacing";
+import { textStyles } from "@/ui/tokens/typography";
+import { applyFlightDraftFromAi } from "@/utils/applyAiDocumentDraft";
+import { buildAnalyzeUploadPayload } from "@/utils/attachmentAiAnalyze";
 import {
   formatAttachmentUploadFailureMessage,
   showMessage,
-} from '@/utils/crossPlatformAlert';
-import { ExpenseCurrency, ExpenseCategory, currencyLabels } from '@/types/expense';
-import Input from '@/ui/components/input/Input';
-import { PLACEHOLDERS } from '@/constants/placeholders';
-import { colors } from '@/ui/tokens/colors';
-import { textStyles } from '@/ui/tokens/typography';
-import { spacing } from '@/ui/tokens/spacing';
-import { radii } from '@/ui/tokens/radii';
-import BaseCalendar from '@/components/popup/calendar/BaseCalendar';
-import CalendarIcon from '../../../../assets/calender.svg';
-import AddIcon from '../../../../assets/add.svg';
-import DeleteIcon from '../../../../assets/delete.svg';
-import CloseIcon from '../../../../assets/delete_ai.svg';
-import WarningBanner from '@/ui/components/toast/warning';
-import AiDocumentAnalyzeModal from '@/components/modals/AiDocumentAnalyzeModal';
-import AiAnalyzeFailureModal from '@/components/modals/AiAnalyzeFailureModal';
-import type { AiAttachmentAnalyzeSelection } from '@/ui/components/attachmentSection.types';
-import { pendingAiFileKey } from '@/ui/components/attachmentSection.types';
-import { analyzeDocumentUpload } from '@/services/aiDocument';
-import { buildAnalyzeUploadPayload } from '@/utils/attachmentAiAnalyze';
-import { applyFlightDraftFromAi } from '@/utils/applyAiDocumentDraft';
+} from "@/utils/crossPlatformAlert";
+import { handleGuestPromptError } from "@/utils/guestPrompt";
+import dayjs from "dayjs";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
+import AddIcon from "../../../../assets/add.svg";
+import CalendarIcon from "../../../../assets/calender.svg";
+import DeleteIcon from "../../../../assets/delete.svg";
+import CloseIcon from "../../../../assets/delete_ai.svg";
 
 interface FlightItemProps {
   flight?: any;
@@ -47,9 +58,9 @@ interface FlightItemProps {
   onSave: (flight: any) => void;
   onCancel: () => void;
   onDelete?: (flightId: string) => void;
-  existingFlights?: any[]; 
+  existingFlights?: any[];
   onShowWarning?: (message?: string) => void;
-  readOnly?: boolean; 
+  readOnly?: boolean;
   onEdit?: () => void;
   stagedDocumentAnalyze?: StagedDocumentAnalyzePayload | null;
   onConsumeStagedDocumentAnalyze?: () => void;
@@ -61,12 +72,12 @@ interface FlightItemProps {
   onConsumeCarryoverPendingFiles?: () => void;
 }
 
-export default function FlightItem({ 
-  flight, 
-  planId, 
+export default function FlightItem({
+  flight,
+  planId,
   planData,
-  onSave, 
-  onCancel, 
+  onSave,
+  onCancel,
   onDelete,
   existingFlights = [],
   onShowWarning,
@@ -79,28 +90,32 @@ export default function FlightItem({
   onConsumeCarryoverPendingFiles,
 }: FlightItemProps) {
   const formatAmountWithCommas = (digits: string) => {
-    if (!digits) return '';
-    const normalized = digits.replace(/^0+(?=\d)/, '');
-    return normalized.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    if (!digits) return "";
+    const normalized = digits.replace(/^0+(?=\d)/, "");
+    return normalized.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
   };
 
   const normalizeAmountToIntDigits = (value: unknown) => {
-    const raw = String(value ?? '').trim();
-    if (!raw) return '';
-    const integerPart = raw.split('.')[0];
-    return integerPart.replace(/[^0-9]/g, '');
+    const raw = String(value ?? "").trim();
+    if (!raw) return "";
+    const integerPart = raw.split(".")[0];
+    return integerPart.replace(/[^0-9]/g, "");
   };
   const [formData, setFormData] = useState({
-    reservation_number: flight?.reservationNumber || flight?.reservation_number || '',
-    passenger_name: flight?.passengerName || flight?.passenger_name || '',
-    ticket_number: flight?.ticketNumber || flight?.ticket_number || '',
-    booking_reference: flight?.bookingReference || flight?.booking_reference || '',
+    reservation_number:
+      flight?.reservationNumber || flight?.reservation_number || "",
+    passenger_name: flight?.passengerName || flight?.passenger_name || "",
+    ticket_number: flight?.ticketNumber || flight?.ticket_number || "",
+    booking_reference:
+      flight?.bookingReference || flight?.booking_reference || "",
   });
 
-  const [airportOpen, setAirportOpen] = useState(false);
-  const [timeOpen, setTimeOpen] = useState(false);
-  const [showDatePicker, setShowDatePicker] = useState(false);
-  const [segmentDatePickerOpen, setSegmentDatePickerOpen] = useState<Record<string, boolean>>({});
+  const [_airportOpen, _setAirportOpen] = useState(false);
+  const [_timeOpen, setTimeOpen] = useState(false);
+  const [_showDatePicker, _setShowDatePicker] = useState(false);
+  const [segmentDatePickerOpen, setSegmentDatePickerOpen] = useState<
+    Record<string, boolean>
+  >({});
 
   const [expenseData, setExpenseData] = useState({
     amount: normalizeAmountToIntDigits(flight?.expense?.amount),
@@ -113,7 +128,7 @@ export default function FlightItem({
   }, [flight]);
 
   const [showWarning, setShowWarning] = useState(false);
-  const [warningMessage, setWarningMessage] = useState('');
+  const [warningMessage, setWarningMessage] = useState("");
 
   type SegmentForm = {
     id?: number;
@@ -121,10 +136,10 @@ export default function FlightItem({
     flight_number: string;
     departure_airport: string;
     arrival_airport: string;
-    departure_date: string; 
-    departure_time: string; 
-    arrival_date: string;   
-    arrival_time: string;   
+    departure_date: string;
+    departure_time: string;
+    arrival_date: string;
+    arrival_time: string;
     seat_class?: string;
     seat_number?: string;
     gate?: string;
@@ -133,44 +148,53 @@ export default function FlightItem({
 
   const [flightSegments, setFlightSegments] = useState<SegmentForm[]>(() => {
     if (flight?.flightSegments && flight.flightSegments.length > 0) {
-      const sortedSegments = [...flight.flightSegments].sort((a: any, b: any) => (a.order ?? 0) - (b.order ?? 0));
+      const sortedSegments = [...flight.flightSegments].sort(
+        (a: any, b: any) => (a.order ?? 0) - (b.order ?? 0),
+      );
       return sortedSegments.map((segment: any) => {
-        const depTime = segment.departureTime ? dayjs(segment.departureTime) : dayjs();
-        const arrTime = segment.arrivalTime ? dayjs(segment.arrivalTime) : dayjs().add(1, 'hour');
+        const depTime = segment.departureTime
+          ? dayjs(segment.departureTime)
+          : dayjs();
+        const arrTime = segment.arrivalTime
+          ? dayjs(segment.arrivalTime)
+          : dayjs().add(1, "hour");
         return {
-          id: segment.id, 
-          airline: segment.airline || '',
-          flight_number: segment.flightNumber || '',
-          departure_airport: segment.departureAirport || '',
-          arrival_airport: segment.arrivalAirport || '',
-          departure_date: depTime.format('YYYY-MM-DD'),
-          departure_time: depTime.format('HH:mm'),
-          arrival_date: arrTime.format('YYYY-MM-DD'),
-          arrival_time: arrTime.format('HH:mm'),
-          seat_class: segment.seatClass || '',
-          seat_number: segment.seatNumber || '',
-          gate: segment.gate || '',
-          terminal: segment.terminal || '',
+          id: segment.id,
+          airline: segment.airline || "",
+          flight_number: segment.flightNumber || "",
+          departure_airport: segment.departureAirport || "",
+          arrival_airport: segment.arrivalAirport || "",
+          departure_date: depTime.format("YYYY-MM-DD"),
+          departure_time: depTime.format("HH:mm"),
+          arrival_date: arrTime.format("YYYY-MM-DD"),
+          arrival_time: arrTime.format("HH:mm"),
+          seat_class: segment.seatClass || "",
+          seat_number: segment.seatNumber || "",
+          gate: segment.gate || "",
+          terminal: segment.terminal || "",
         };
       });
     } else {
-      const planStartDate = planData?.plan?.startDate || planData?.plan?.start_date;
+      const planStartDate =
+        planData?.plan?.startDate || planData?.plan?.start_date;
       const defaultDate = planStartDate ? dayjs(planStartDate) : dayjs();
-      const later = defaultDate.add(1, 'hour');
-      return [{
-        airline: '',
-        flight_number: '',
-        departure_airport: '',
-        arrival_airport: '',
-        departure_date: defaultDate.format('YYYY-MM-DD'),
-        departure_time: '',
-        arrival_date: later.format('YYYY-MM-DD'),
-        arrival_time: '',
-        seat_class: '',
-        seat_number: '',
-        gate: '',
-        terminal: '',
-      }];
+      const later = defaultDate.add(1, "hour");
+      return [
+        {
+          airline: "",
+          flight_number: "",
+          departure_airport: "",
+          arrival_airport: "",
+          departure_date: defaultDate.format("YYYY-MM-DD"),
+          departure_time: "",
+          arrival_date: later.format("YYYY-MM-DD"),
+          arrival_time: "",
+          seat_class: "",
+          seat_number: "",
+          gate: "",
+          terminal: "",
+        },
+      ];
     }
   });
 
@@ -181,15 +205,20 @@ export default function FlightItem({
     if (flightSegments.length > 0) {
       return flightSegments[0].departure_date;
     }
-    const planStartDate = planData?.plan?.startDate || planData?.plan?.start_date;
-    return planStartDate ? dayjs(planStartDate).format('YYYY-MM-DD') : dayjs().format('YYYY-MM-DD');
+    const planStartDate =
+      planData?.plan?.startDate || planData?.plan?.start_date;
+    return planStartDate
+      ? dayjs(planStartDate).format("YYYY-MM-DD")
+      : dayjs().format("YYYY-MM-DD");
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isSubmittingRef = useRef(false);
 
   const [pendingFiles, setPendingFiles] = useState<LocalFile[]>([]);
-  const [existingAttachments, setExistingAttachments] = useState<Attachment[]>([]);
+  const [existingAttachments, setExistingAttachments] = useState<Attachment[]>(
+    [],
+  );
   const [isLoadingAttachments, setIsLoadingAttachments] = useState(false);
 
   const [aiAnalyzeModalVisible, setAiAnalyzeModalVisible] = useState(false);
@@ -197,7 +226,7 @@ export default function FlightItem({
     useState<DocumentUploadAnalyzeResponse | null>(null);
   const [isAiAnalyzing, setIsAiAnalyzing] = useState(false);
   const [aiAnalyzeFailureVisible, setAiAnalyzeFailureVisible] = useState(false);
-  const [aiAnalyzeFailureMessage, setAiAnalyzeFailureMessage] = useState('');
+  const [aiAnalyzeFailureMessage, setAiAnalyzeFailureMessage] = useState("");
   const lastHandledAiAnalyzeSeqRef = useRef<number | null>(null);
 
   useEffect(() => {
@@ -205,7 +234,7 @@ export default function FlightItem({
     const kind =
       stagedDocumentAnalyze.result.inferredItemType ??
       stagedDocumentAnalyze.result.draft?.itemType;
-    if (kind !== 'flight') return;
+    if (kind !== "flight") return;
     if (readOnly) return;
     const { seq, result } = stagedDocumentAnalyze;
     if (lastHandledAiAnalyzeSeqRef.current === seq) return;
@@ -217,20 +246,20 @@ export default function FlightItem({
   const { pickImage, pickDocument } = useFilePicker();
   const { isUploading, uploadFiles } = useAttachmentUpload({
     planId,
-    entityType: 'flight',
+    entityType: "flight",
   });
 
   const flightAttachmentEntityId = useMemo(() => {
     const raw = flight?.id;
-    if (raw == null || raw === '') return undefined;
-    const n = typeof raw === 'number' ? raw : parseInt(String(raw), 10);
+    if (raw == null || raw === "") return undefined;
+    const n = typeof raw === "number" ? raw : Number.parseInt(String(raw), 10);
     return Number.isFinite(n) ? n : undefined;
   }, [flight?.id]);
 
   const handleAiAnalyzePress = useCallback(
     async (selection: AiAttachmentAnalyzeSelection) => {
       setAiAnalyzeFailureVisible(false);
-      setAiAnalyzeFailureMessage('');
+      setAiAnalyzeFailureMessage("");
       setIsAiAnalyzing(true);
       try {
         const payload = await buildAnalyzeUploadPayload(selection, {
@@ -242,7 +271,7 @@ export default function FlightItem({
         });
         const err = res.error?.trim();
         if (!res.success || err) {
-          setAiAnalyzeFailureMessage(err || '분석에 실패했습니다.');
+          setAiAnalyzeFailureMessage(err || "분석에 실패했습니다.");
           setAiAnalyzeFailureVisible(true);
           return;
         }
@@ -253,7 +282,7 @@ export default function FlightItem({
         setAiAnalyzeModalVisible(true);
       } catch (e) {
         setAiAnalyzeFailureMessage(
-          e instanceof Error ? e.message : '분석 요청에 실패했습니다.',
+          e instanceof Error ? e.message : "분석 요청에 실패했습니다.",
         );
         setAiAnalyzeFailureVisible(true);
       } finally {
@@ -263,25 +292,28 @@ export default function FlightItem({
     [pendingFiles, existingAttachments, routeDocumentAnalyzeSuccess],
   );
 
-  const applyAiAnalyzeDraftToForm = useCallback((draft: AiDocumentItemDraft) => {
-    applyFlightDraftFromAi(
-      draft,
-      setFormData,
-      setFlightSegments,
-      setExpenseData,
-      setExpenseDate,
-    );
-  }, []);
+  const applyAiAnalyzeDraftToForm = useCallback(
+    (draft: AiDocumentItemDraft) => {
+      applyFlightDraftFromAi(
+        draft,
+        setFormData,
+        setFlightSegments,
+        setExpenseData,
+        setExpenseDate,
+      );
+    },
+    [],
+  );
 
   const firstSegment = flightSegments[0];
   const isFirstSegmentValid = Boolean(
     firstSegment &&
-    firstSegment.departure_airport.trim() &&
-    firstSegment.arrival_airport.trim() &&
-    String(firstSegment.departure_date || '').trim() &&
-    String(firstSegment.departure_time || '').trim() &&
-    String(firstSegment.arrival_date || '').trim() &&
-    String(firstSegment.arrival_time || '').trim()
+      firstSegment.departure_airport.trim() &&
+      firstSegment.arrival_airport.trim() &&
+      String(firstSegment.departure_date || "").trim() &&
+      String(firstSegment.departure_time || "").trim() &&
+      String(firstSegment.arrival_date || "").trim() &&
+      String(firstSegment.arrival_time || "").trim(),
   );
 
   useEffect(() => {
@@ -295,8 +327,8 @@ export default function FlightItem({
     setExistingAttachments([]);
     setIsLoadingAttachments(true);
     attachmentsApi
-      .getAttachments(planId, 'flight', id)
-      .then((list) => {
+      .getAttachments(planId, "flight", id)
+      .then(list => {
         if (!cancelled) setExistingAttachments(list);
       })
       .catch(() => {
@@ -311,10 +343,10 @@ export default function FlightItem({
   }, [flightAttachmentEntityId, planId]);
 
   useEffect(() => {
-    setPendingFiles((prev) => {
-      if (Platform.OS === 'web') {
-        prev.forEach((f) => {
-          if (f.uri?.startsWith('blob:')) {
+    setPendingFiles(prev => {
+      if (Platform.OS === "web") {
+        prev.forEach(f => {
+          if (f.uri?.startsWith("blob:")) {
             try {
               URL.revokeObjectURL(f.uri);
             } catch {
@@ -329,10 +361,10 @@ export default function FlightItem({
 
   useEffect(() => {
     if (readOnly) {
-      setPendingFiles((prev) => {
-        if (Platform.OS === 'web') {
-          prev.forEach((f) => {
-            if (f.uri?.startsWith('blob:')) {
+      setPendingFiles(prev => {
+        if (Platform.OS === "web") {
+          prev.forEach(f => {
+            if (f.uri?.startsWith("blob:")) {
               try {
                 URL.revokeObjectURL(f.uri);
               } catch {
@@ -366,11 +398,11 @@ export default function FlightItem({
   const appendImage = async () => {
     try {
       const f = await pickImage();
-      if (f) setPendingFiles((p) => [...p, f]);
+      if (f) setPendingFiles(p => [...p, f]);
     } catch (e) {
       showMessage(
-        '알림',
-        e instanceof Error ? e.message : '파일을 선택하지 못했습니다.',
+        "알림",
+        e instanceof Error ? e.message : "파일을 선택하지 못했습니다.",
       );
     }
   };
@@ -378,19 +410,19 @@ export default function FlightItem({
   const appendDocument = async () => {
     try {
       const f = await pickDocument();
-      if (f) setPendingFiles((p) => [...p, f]);
+      if (f) setPendingFiles(p => [...p, f]);
     } catch (e) {
       showMessage(
-        '알림',
-        e instanceof Error ? e.message : '파일을 선택하지 못했습니다.',
+        "알림",
+        e instanceof Error ? e.message : "파일을 선택하지 못했습니다.",
       );
     }
   };
 
   const removePendingAt = (index: number) => {
-    setPendingFiles((prev) => {
+    setPendingFiles(prev => {
       const t = prev[index];
-      if (Platform.OS === 'web' && t?.uri?.startsWith('blob:')) {
+      if (Platform.OS === "web" && t?.uri?.startsWith("blob:")) {
         try {
           URL.revokeObjectURL(t.uri);
         } catch {
@@ -404,10 +436,10 @@ export default function FlightItem({
   const handleRemoveExistingAttachment = async (attachmentId: number) => {
     try {
       await attachmentsApi.deleteAttachment(attachmentId);
-      setExistingAttachments((prev) => prev.filter((a) => a.id !== attachmentId));
+      setExistingAttachments(prev => prev.filter(a => a.id !== attachmentId));
     } catch (error) {
       if (handleGuestPromptError(error)) return;
-      showMessage('알림', '첨부파일 삭제에 실패했습니다.');
+      showMessage("알림", "첨부파일 삭제에 실패했습니다.");
     }
   };
 
@@ -423,7 +455,7 @@ export default function FlightItem({
     }
 
     if (!isFirstSegmentValid) {
-      setWarningMessage('입력되지 않은 값이 있어요.');
+      setWarningMessage("입력되지 않은 값이 있어요.");
       setShowWarning(true);
       return;
     }
@@ -433,26 +465,37 @@ export default function FlightItem({
         continue;
       }
 
-      if (!existingFlight.flightSegments || existingFlight.flightSegments.length === 0) {
+      if (
+        !existingFlight.flightSegments ||
+        existingFlight.flightSegments.length === 0
+      ) {
         continue;
       }
 
       for (const newSegment of flightSegments) {
-        const newDepTime = dayjs(`${newSegment.departure_date} ${newSegment.departure_time}`);
-        const newArrTime = dayjs(`${newSegment.arrival_date} ${newSegment.arrival_time}`);
+        const newDepTime = dayjs(
+          `${newSegment.departure_date} ${newSegment.departure_time}`,
+        );
+        const newArrTime = dayjs(
+          `${newSegment.arrival_date} ${newSegment.arrival_time}`,
+        );
 
         for (const existingSegment of existingFlight.flightSegments) {
           const existingDepTime = dayjs(existingSegment.departureTime);
           const existingArrTime = dayjs(existingSegment.arrivalTime);
-          
-          const hasOverlap = (
-            (newDepTime.isAfter(existingDepTime) || newDepTime.isSame(existingDepTime)) && newDepTime.isBefore(existingArrTime) ||
-            newArrTime.isAfter(existingDepTime) && (newArrTime.isBefore(existingArrTime) || newArrTime.isSame(existingArrTime)) ||
-            (newDepTime.isBefore(existingDepTime) && newArrTime.isAfter(existingArrTime))
-          );
+
+          const hasOverlap =
+            ((newDepTime.isAfter(existingDepTime) ||
+              newDepTime.isSame(existingDepTime)) &&
+              newDepTime.isBefore(existingArrTime)) ||
+            (newArrTime.isAfter(existingDepTime) &&
+              (newArrTime.isBefore(existingArrTime) ||
+                newArrTime.isSame(existingArrTime))) ||
+            (newDepTime.isBefore(existingDepTime) &&
+              newArrTime.isAfter(existingArrTime));
 
           if (hasOverlap) {
-            setWarningMessage('겹치는 항공 일정이 있어요');
+            setWarningMessage("겹치는 항공 일정이 있어요");
             setShowWarning(true);
             return;
           }
@@ -466,8 +509,8 @@ export default function FlightItem({
       let savedFlight;
       const toIso = (date: string, time: string) => {
         if (!date || !time) return null;
-        const timeWithSeconds = (time.length === 5) ? `${time}:00` : time;
-        
+        const timeWithSeconds = time.length === 5 ? `${time}:00` : time;
+
         const localDateTime = new Date(`${date}T${timeWithSeconds}`);
         return localDateTime.toISOString();
       };
@@ -492,10 +535,11 @@ export default function FlightItem({
             terminal: s.terminal || null,
           })),
           expense: {
-            exDate: flightSegments.length > 0 && flightSegments[0].departure_date 
-              ? flightSegments[0].departure_date 
-              : expenseDate,
-            amount: parseInt(expenseData.amount || '0', 10) || 0,
+            exDate:
+              flightSegments.length > 0 && flightSegments[0].departure_date
+                ? flightSegments[0].departure_date
+                : expenseDate,
+            amount: Number.parseInt(expenseData.amount || "0", 10) || 0,
             currency: ExpenseCurrency.KRW,
             category: ExpenseCategory.FLIGHT as any,
             planId: planId,
@@ -523,10 +567,11 @@ export default function FlightItem({
             terminal: s.terminal || null,
           })),
           expense: {
-            exDate: flightSegments.length > 0 && flightSegments[0].departure_date 
-              ? flightSegments[0].departure_date 
-              : expenseDate,
-            amount: parseInt(expenseData.amount || '0', 10) || 0,
+            exDate:
+              flightSegments.length > 0 && flightSegments[0].departure_date
+                ? flightSegments[0].departure_date
+                : expenseDate,
+            amount: Number.parseInt(expenseData.amount || "0", 10) || 0,
             currency: ExpenseCurrency.KRW,
             category: ExpenseCategory.FLIGHT as any,
             planId: planId,
@@ -541,7 +586,7 @@ export default function FlightItem({
           await uploadFiles(pendingFiles, savedFlight.id);
           const list = await attachmentsApi.getAttachments(
             planId,
-            'flight',
+            "flight",
             savedFlight.id,
           );
           setExistingAttachments(list);
@@ -549,10 +594,10 @@ export default function FlightItem({
         } catch (e) {
           if (!handleGuestPromptError(e)) {
             showMessage(
-              '알림',
+              "알림",
               formatAttachmentUploadFailureMessage(
                 e,
-                '항공편은 저장됐으나 일부 파일 업로드에 실패했습니다.',
+                "항공편은 저장됐으나 일부 파일 업로드에 실패했습니다.",
               ),
             );
           }
@@ -560,7 +605,7 @@ export default function FlightItem({
       }
 
       onSave(savedFlight);
-    } catch (error) {
+    } catch (_error) {
     } finally {
       isSubmittingRef.current = false;
       setIsSubmitting(false);
@@ -576,7 +621,7 @@ export default function FlightItem({
       onCancel();
       return;
     }
-    
+
     if (flight && onDelete) {
       isSubmittingRef.current = true;
       setIsSubmitting(true);
@@ -584,7 +629,7 @@ export default function FlightItem({
         await flightsApi.deleteFlight(flight.id);
         onDelete(flight.id);
         onCancel();
-      } catch (error) {
+      } catch (_error) {
       } finally {
         isSubmittingRef.current = false;
         setIsSubmitting(false);
@@ -605,16 +650,24 @@ export default function FlightItem({
 
   return (
     <>
-    <ScrollView 
-      style={[styles.container, { position: 'relative', overflow: 'visible' }]}
-      contentContainerStyle={[styles.contentContainer, { overflow: 'visible' }]}
-    >
+      <ScrollView
+        style={[
+          styles.container,
+          { position: "relative", overflow: "visible" },
+        ]}
+        contentContainerStyle={[
+          styles.contentContainer,
+          { overflow: "visible" },
+        ]}
+      >
         <View style={styles.titleRow}>
           <Text style={styles.title}>
-            {readOnly ? '항공편 정보' : (flight ? '항공편 수정' : '항공편 추가')}
+            {readOnly ? "항공편 정보" : flight ? "항공편 수정" : "항공편 추가"}
           </Text>
           <Pressable
-            onPress={() => {onCancel();}}
+            onPress={() => {
+              onCancel();
+            }}
             style={styles.closeButton}
           >
             <CloseIcon width={24} height={24} />
@@ -629,7 +682,10 @@ export default function FlightItem({
                 variant={readOnly ? "outlined" : "filled"}
                 placeholder={PLACEHOLDERS.flight.reservationNumber}
                 value={formData.reservation_number}
-                onChangeText={(text) => !readOnly && setFormData({ ...formData, reservation_number: text })}
+                onChangeText={text =>
+                  !readOnly &&
+                  setFormData({ ...formData, reservation_number: text })
+                }
                 style={readOnly ? styles.readOnlyInput : styles.input}
                 placeholderTextColor={colors.gray600}
                 editable={!readOnly}
@@ -641,7 +697,10 @@ export default function FlightItem({
                 variant={readOnly ? "outlined" : "filled"}
                 placeholder={PLACEHOLDERS.flight.passengerName}
                 value={formData.passenger_name}
-                onChangeText={(text) => !readOnly && setFormData({ ...formData, passenger_name: text })}
+                onChangeText={text =>
+                  !readOnly &&
+                  setFormData({ ...formData, passenger_name: text })
+                }
                 style={readOnly ? styles.readOnlyInput : styles.input}
                 placeholderTextColor={colors.gray600}
                 editable={!readOnly}
@@ -655,7 +714,9 @@ export default function FlightItem({
               variant={readOnly ? "outlined" : "filled"}
               placeholder={PLACEHOLDERS.flight.ticketNumber}
               value={formData.ticket_number}
-              onChangeText={(text) => !readOnly && setFormData({ ...formData, ticket_number: text })}
+              onChangeText={text =>
+                !readOnly && setFormData({ ...formData, ticket_number: text })
+              }
               style={readOnly ? styles.readOnlyInput : styles.input}
               placeholderTextColor={colors.gray600}
               editable={!readOnly}
@@ -668,7 +729,10 @@ export default function FlightItem({
               variant={readOnly ? "outlined" : "filled"}
               placeholder={PLACEHOLDERS.flight.bookingReference}
               value={formData.booking_reference}
-              onChangeText={(text) => !readOnly && setFormData({ ...formData, booking_reference: text })}
+              onChangeText={text =>
+                !readOnly &&
+                setFormData({ ...formData, booking_reference: text })
+              }
               style={readOnly ? styles.readOnlyInput : styles.input}
               placeholderTextColor={colors.gray600}
               editable={!readOnly}
@@ -683,9 +747,12 @@ export default function FlightItem({
                   variant={readOnly ? "outlined" : "filled"}
                   placeholder={PLACEHOLDERS.expense.amount}
                   value={formatAmountWithCommas(expenseData.amount.toString())}
-                  onChangeText={(text) => {
+                  onChangeText={text => {
                     if (readOnly) return;
-                    setExpenseData({ ...expenseData, amount: normalizeAmountToIntDigits(text) });
+                    setExpenseData({
+                      ...expenseData,
+                      amount: normalizeAmountToIntDigits(text),
+                    });
                   }}
                   keyboardType="numeric"
                   style={[
@@ -707,14 +774,14 @@ export default function FlightItem({
           {flightSegments.map((segment, idx) => {
             const isComplete = isSegmentComplete(segment);
             return (
-              <View 
-                key={idx} 
+              <View
+                key={idx}
                 style={[
                   styles.segmentContainer,
-                  { 
+                  {
                     zIndex: (flightSegments.length - idx) * 1000,
-                    backgroundColor: isComplete ? colors.gray200 : colors.white
-                  }
+                    backgroundColor: isComplete ? colors.gray200 : colors.white,
+                  },
                 ]}
               >
                 <View style={styles.segmentTitleRow}>
@@ -722,7 +789,9 @@ export default function FlightItem({
                   {!readOnly && flightSegments.length > 1 && (
                     <Pressable
                       onPress={() => {
-                        setFlightSegments(prev => prev.filter((_, i) => i !== idx));
+                        setFlightSegments(prev =>
+                          prev.filter((_, i) => i !== idx),
+                        );
                       }}
                       style={styles.segmentDeleteButton}
                     >
@@ -730,7 +799,7 @@ export default function FlightItem({
                     </Pressable>
                   )}
                 </View>
-                
+
                 <View style={styles.segmentContent}>
                   <View style={[styles.row, { gap: spacing.sm, zIndex: 3000 }]}>
                     <View style={[styles.inputGroup, styles.halfWidth]}>
@@ -739,14 +808,21 @@ export default function FlightItem({
                         variant={readOnly ? "outlined" : "filled"}
                         placeholder={PLACEHOLDERS.flight.airline}
                         value={segment.airline}
-                        onChangeText={(text) => {
+                        onChangeText={text => {
                           if (!readOnly) {
                             const newSegments = [...flightSegments];
                             newSegments[idx].airline = text;
                             setFlightSegments(newSegments);
                           }
                         }}
-                        style={readOnly ? [styles.segmentInput, { borderColor: colors.gray400 }] : styles.segmentInput}
+                        style={
+                          readOnly
+                            ? [
+                                styles.segmentInput,
+                                { borderColor: colors.gray400 },
+                              ]
+                            : styles.segmentInput
+                        }
                         placeholderTextColor={colors.gray600}
                         editable={!readOnly}
                       />
@@ -757,14 +833,21 @@ export default function FlightItem({
                         variant="outlined"
                         placeholder={PLACEHOLDERS.flight.flightNumber}
                         value={segment.flight_number}
-                        onChangeText={(text) => {
+                        onChangeText={text => {
                           if (!readOnly) {
                             const newSegments = [...flightSegments];
                             newSegments[idx].flight_number = text;
                             setFlightSegments(newSegments);
                           }
                         }}
-                        style={readOnly ? [styles.segmentInput, { borderColor: colors.gray400 }] : styles.segmentInput}
+                        style={
+                          readOnly
+                            ? [
+                                styles.segmentInput,
+                                { borderColor: colors.gray400 },
+                              ]
+                            : styles.segmentInput
+                        }
                         placeholderTextColor={colors.gray600}
                         editable={!readOnly}
                       />
@@ -772,11 +855,17 @@ export default function FlightItem({
                   </View>
 
                   <View style={[styles.row, { gap: spacing.sm, zIndex: 2000 }]}>
-                    <View style={[styles.inputGroup, styles.halfWidth, styles.airportPickerWrapper]}>
+                    <View
+                      style={[
+                        styles.inputGroup,
+                        styles.halfWidth,
+                        styles.airportPickerWrapper,
+                      ]}
+                    >
                       <Text style={styles.label}>출발 공항*</Text>
                       <AirportPicker
                         value={segment.departure_airport}
-                        onChange={(code) => {
+                        onChange={code => {
                           if (!readOnly) {
                             const newSegments = [...flightSegments];
                             newSegments[idx].departure_airport = code;
@@ -787,11 +876,17 @@ export default function FlightItem({
                         disabled={readOnly}
                       />
                     </View>
-                    <View style={[styles.inputGroup, styles.halfWidth, styles.airportPickerWrapper]}>
+                    <View
+                      style={[
+                        styles.inputGroup,
+                        styles.halfWidth,
+                        styles.airportPickerWrapper,
+                      ]}
+                    >
                       <Text style={styles.label}>도착 공항*</Text>
                       <AirportPicker
                         value={segment.arrival_airport}
-                        onChange={(code) => {
+                        onChange={code => {
                           if (!readOnly) {
                             const newSegments = [...flightSegments];
                             newSegments[idx].arrival_airport = code;
@@ -807,24 +902,34 @@ export default function FlightItem({
                   <View style={[styles.row, { gap: spacing.sm, zIndex: 1000 }]}>
                     <View style={[styles.inputGroup, styles.halfWidth]}>
                       <Text style={styles.label}>출발 일자*</Text>
-                      <Pressable 
-                        style={styles.segmentDateInput} 
+                      <Pressable
+                        style={styles.segmentDateInput}
                         onPress={() => {
                           if (!readOnly) {
                             const depKey = `dep_${idx}`;
                             const arrKey = `arr_${idx}`;
-                            setSegmentDatePickerOpen({ 
-                              ...segmentDatePickerOpen, 
+                            setSegmentDatePickerOpen({
+                              ...segmentDatePickerOpen,
                               [depKey]: true,
-                              [arrKey]: false 
+                              [arrKey]: false,
                             });
                           }
                         }}
                         disabled={readOnly}
                       >
                         <View style={styles.segmentDateTextContainer}>
-                          <Text style={segment.departure_date ? styles.segmentDateText : styles.segmentPlaceholderText}>
-                            {segment.departure_date ? dayjs(segment.departure_date).format('YYYY.MM.DD') : '기타'}
+                          <Text
+                            style={
+                              segment.departure_date
+                                ? styles.segmentDateText
+                                : styles.segmentPlaceholderText
+                            }
+                          >
+                            {segment.departure_date
+                              ? dayjs(segment.departure_date).format(
+                                  "YYYY.MM.DD",
+                                )
+                              : "기타"}
                           </Text>
                           <View style={styles.iconWrapper}>
                             <CalendarIcon width={16} height={16} />
@@ -835,21 +940,31 @@ export default function FlightItem({
                         <BaseCalendar
                           visible={true}
                           selectedDate={segment.departure_date}
-                          onDayPress={(day) => {
+                          onDayPress={day => {
                             if (!readOnly) {
                               const newSegments = [...flightSegments];
                               newSegments[idx].departure_date = day.dateString;
                               setFlightSegments(newSegments);
                               const key = `dep_${idx}`;
-                              setSegmentDatePickerOpen({ ...segmentDatePickerOpen, [key]: false });
+                              setSegmentDatePickerOpen({
+                                ...segmentDatePickerOpen,
+                                [key]: false,
+                              });
                             }
                           }}
                           onClose={() => {
                             const key = `dep_${idx}`;
-                            setSegmentDatePickerOpen({ ...segmentDatePickerOpen, [key]: false });
+                            setSegmentDatePickerOpen({
+                              ...segmentDatePickerOpen,
+                              [key]: false,
+                            });
                           }}
                           style={styles.calendarPopup}
-                          minDate={idx > 0 ? flightSegments[idx - 1].arrival_date : undefined}
+                          minDate={
+                            idx > 0
+                              ? flightSegments[idx - 1].arrival_date
+                              : undefined
+                          }
                           hideButtons={true}
                           autoCloseOnSelect={true}
                         />
@@ -859,7 +974,7 @@ export default function FlightItem({
                       <Text style={styles.label}>출발 시간*</Text>
                       <TimePicker
                         value={segment.departure_time}
-                        onChange={(time) => {
+                        onChange={time => {
                           if (!readOnly) {
                             const newSegments = [...flightSegments];
                             newSegments[idx].departure_time = time;
@@ -868,7 +983,13 @@ export default function FlightItem({
                         }}
                         onOpen={() => !readOnly && setTimeOpen(true)}
                         onClose={() => setTimeOpen(false)}
-                        minTime={idx > 0 && segment.departure_date === flightSegments[idx - 1].arrival_date ? flightSegments[idx - 1].arrival_time : undefined}
+                        minTime={
+                          idx > 0 &&
+                          segment.departure_date ===
+                            flightSegments[idx - 1].arrival_date
+                            ? flightSegments[idx - 1].arrival_time
+                            : undefined
+                        }
                         style={styles.segmentTimePicker}
                         disabled={readOnly}
                       />
@@ -878,24 +999,32 @@ export default function FlightItem({
                   <View style={[styles.row, { gap: spacing.sm, zIndex: 500 }]}>
                     <View style={[styles.inputGroup, styles.halfWidth]}>
                       <Text style={styles.label}>도착 일자*</Text>
-                      <Pressable 
-                        style={styles.segmentDateInput} 
+                      <Pressable
+                        style={styles.segmentDateInput}
                         onPress={() => {
                           if (!readOnly) {
                             const depKey = `dep_${idx}`;
                             const arrKey = `arr_${idx}`;
-                            setSegmentDatePickerOpen({ 
-                              ...segmentDatePickerOpen, 
+                            setSegmentDatePickerOpen({
+                              ...segmentDatePickerOpen,
                               [depKey]: false,
-                              [arrKey]: true 
+                              [arrKey]: true,
                             });
                           }
                         }}
                         disabled={readOnly}
                       >
                         <View style={styles.segmentDateTextContainer}>
-                          <Text style={segment.arrival_date ? styles.segmentDateText : styles.segmentPlaceholderText}>
-                            {segment.arrival_date ? dayjs(segment.arrival_date).format('YYYY.MM.DD') : '기타'}
+                          <Text
+                            style={
+                              segment.arrival_date
+                                ? styles.segmentDateText
+                                : styles.segmentPlaceholderText
+                            }
+                          >
+                            {segment.arrival_date
+                              ? dayjs(segment.arrival_date).format("YYYY.MM.DD")
+                              : "기타"}
                           </Text>
                           <View style={styles.iconWrapper}>
                             <CalendarIcon width={16} height={16} />
@@ -906,18 +1035,24 @@ export default function FlightItem({
                         <BaseCalendar
                           visible={true}
                           selectedDate={segment.arrival_date}
-                          onDayPress={(day) => {
+                          onDayPress={day => {
                             if (!readOnly) {
                               const newSegments = [...flightSegments];
                               newSegments[idx].arrival_date = day.dateString;
                               setFlightSegments(newSegments);
                               const key = `arr_${idx}`;
-                              setSegmentDatePickerOpen({ ...segmentDatePickerOpen, [key]: false });
+                              setSegmentDatePickerOpen({
+                                ...segmentDatePickerOpen,
+                                [key]: false,
+                              });
                             }
                           }}
                           onClose={() => {
                             const key = `arr_${idx}`;
-                            setSegmentDatePickerOpen({ ...segmentDatePickerOpen, [key]: false });
+                            setSegmentDatePickerOpen({
+                              ...segmentDatePickerOpen,
+                              [key]: false,
+                            });
                           }}
                           style={styles.calendarPopup}
                           hideButtons={true}
@@ -929,7 +1064,7 @@ export default function FlightItem({
                       <Text style={styles.label}>도착 시간*</Text>
                       <TimePicker
                         value={segment.arrival_time}
-                        onChange={(time) => {
+                        onChange={time => {
                           if (!readOnly) {
                             const newSegments = [...flightSegments];
                             newSegments[idx].arrival_time = time;
@@ -952,41 +1087,44 @@ export default function FlightItem({
             <Pressable
               style={[styles.addSegmentButton, { zIndex: 1 }]}
               onPress={() => {
-              const lastSegment = flightSegments[flightSegments.length - 1];
-              let defaultDepartureDate: string;
-              let defaultDepartureTime: string;
-              let defaultArrivalDate: string;
-              
-              if (lastSegment && lastSegment.arrival_date) {
-                defaultDepartureDate = lastSegment.arrival_date;
-                defaultDepartureTime = lastSegment.arrival_time;
-                defaultArrivalDate = lastSegment.arrival_date;
-              } else {
-                const planStartDate = planData?.plan?.startDate || planData?.plan?.start_date;
-                const defaultDate = planStartDate ? dayjs(planStartDate) : dayjs();
-                defaultDepartureDate = defaultDate.format('YYYY-MM-DD');
-                defaultDepartureTime = '';
-                defaultArrivalDate = defaultDate.format('YYYY-MM-DD');
-              }
-              
-              const newSegment: SegmentForm = {
-                airline: '',
-                flight_number: '',
-                departure_airport: '',
-                arrival_airport: '',
-                departure_date: defaultDepartureDate,
-                departure_time: defaultDepartureTime,
-                arrival_date: defaultArrivalDate,
-                arrival_time: '',
-              };
-              setFlightSegments(prev => [...prev, newSegment]);
-            }}
-          >
-            <View style={styles.addIconWrapper}>
-              <AddIcon width={16} height={16} />
-            </View>
-            <Text style={styles.addSegmentButtonText}>항공권 구간 추가</Text>
-          </Pressable>
+                const lastSegment = flightSegments[flightSegments.length - 1];
+                let defaultDepartureDate: string;
+                let defaultDepartureTime: string;
+                let defaultArrivalDate: string;
+
+                if (lastSegment && lastSegment.arrival_date) {
+                  defaultDepartureDate = lastSegment.arrival_date;
+                  defaultDepartureTime = lastSegment.arrival_time;
+                  defaultArrivalDate = lastSegment.arrival_date;
+                } else {
+                  const planStartDate =
+                    planData?.plan?.startDate || planData?.plan?.start_date;
+                  const defaultDate = planStartDate
+                    ? dayjs(planStartDate)
+                    : dayjs();
+                  defaultDepartureDate = defaultDate.format("YYYY-MM-DD");
+                  defaultDepartureTime = "";
+                  defaultArrivalDate = defaultDate.format("YYYY-MM-DD");
+                }
+
+                const newSegment: SegmentForm = {
+                  airline: "",
+                  flight_number: "",
+                  departure_airport: "",
+                  arrival_airport: "",
+                  departure_date: defaultDepartureDate,
+                  departure_time: defaultDepartureTime,
+                  arrival_date: defaultArrivalDate,
+                  arrival_time: "",
+                };
+                setFlightSegments(prev => [...prev, newSegment]);
+              }}
+            >
+              <View style={styles.addIconWrapper}>
+                <AddIcon width={16} height={16} />
+              </View>
+              <Text style={styles.addSegmentButtonText}>항공권 구간 추가</Text>
+            </Pressable>
           )}
 
           {showAttachmentSection && (
@@ -998,8 +1136,8 @@ export default function FlightItem({
               onPickDocument={appendDocument}
               onRemoveFile={removePendingAt}
               onAppendPendingFiles={
-                Platform.OS === 'web'
-                  ? (files) => setPendingFiles((p) => [...p, ...files])
+                Platform.OS === "web"
+                  ? files => setPendingFiles(p => [...p, ...files])
                   : undefined
               }
               existingAttachments={existingAttachments}
@@ -1015,7 +1153,7 @@ export default function FlightItem({
               disabled={readOnly || isSubmitting}
               hideAddControls={readOnly}
               onAiAnalyzePress={
-                Platform.OS === 'web' && !readOnly
+                Platform.OS === "web" && !readOnly
                   ? handleAiAnalyzePress
                   : undefined
               }
@@ -1024,14 +1162,16 @@ export default function FlightItem({
           )}
 
           {!readOnly ? (
-            <View style={[styles.buttonRow, { position: 'relative', zIndex: 1 }]}>
+            <View
+              style={[styles.buttonRow, { position: "relative", zIndex: 1 }]}
+            >
               <Pressable
                 style={styles.deleteButton}
                 onPress={flight ? handleDelete : onCancel}
                 disabled={isSubmitting}
               >
                 <Text style={styles.deleteButtonText}>
-                  {flight ? '삭제' : '취소'}
+                  {flight ? "삭제" : "취소"}
                 </Text>
               </Pressable>
               <Pressable
@@ -1039,13 +1179,11 @@ export default function FlightItem({
                 onPress={handleSave}
                 disabled={isSubmitting}
               >
-                <Text style={styles.saveButtonText}>
-                  저장
-                </Text>
+                <Text style={styles.saveButtonText}>저장</Text>
               </Pressable>
             </View>
           ) : (
-            <View style={[styles.buttonRow, { position: 'relative' }]}>
+            <View style={[styles.buttonRow, { position: "relative" }]}>
               <Pressable
                 style={styles.deleteButton}
                 onPress={handleDelete}
@@ -1061,40 +1199,37 @@ export default function FlightItem({
               </Pressable>
             </View>
           )}
-        <WarningBanner
-          message={warningMessage}
-          visible={showWarning}
-          duration={3000}
-          bottomOffset={70}
-          onHide={() => {
-            setShowWarning(false);
-            setWarningMessage('');
-          }}
-        />
+          <WarningBanner
+            message={warningMessage}
+            visible={showWarning}
+            duration={3000}
+            bottomOffset={70}
+            onHide={() => {
+              setShowWarning(false);
+              setWarningMessage("");
+            }}
+          />
         </View>
-
-
-
-    </ScrollView>
-    <AiDocumentAnalyzeModal
-      visible={aiAnalyzeModalVisible}
-      analyzeResult={aiAnalyzeResult}
-      onApply={applyAiAnalyzeDraftToForm}
-      onClose={() => {
-        setAiAnalyzeModalVisible(false);
-        setAiAnalyzeResult(null);
-        onConsumeStagedDocumentAnalyze?.();
-      }}
-      entityTypeLabel="항공"
-    />
-    <AiAnalyzeFailureModal
-      visible={aiAnalyzeFailureVisible}
-      message={aiAnalyzeFailureMessage}
-      onClose={() => {
-        setAiAnalyzeFailureVisible(false);
-        setAiAnalyzeFailureMessage('');
-      }}
-    />
+      </ScrollView>
+      <AiDocumentAnalyzeModal
+        visible={aiAnalyzeModalVisible}
+        analyzeResult={aiAnalyzeResult}
+        onApply={applyAiAnalyzeDraftToForm}
+        onClose={() => {
+          setAiAnalyzeModalVisible(false);
+          setAiAnalyzeResult(null);
+          onConsumeStagedDocumentAnalyze?.();
+        }}
+        entityTypeLabel="항공"
+      />
+      <AiAnalyzeFailureModal
+        visible={aiAnalyzeFailureVisible}
+        message={aiAnalyzeFailureMessage}
+        onClose={() => {
+          setAiAnalyzeFailureVisible(false);
+          setAiAnalyzeFailureMessage("");
+        }}
+      />
     </>
   );
 }
@@ -1109,14 +1244,14 @@ const styles = StyleSheet.create({
     gap: spacing.xl,
   },
   contentWrapper: {
-    position: 'relative',
-    overflow: 'visible',
+    position: "relative",
+    overflow: "visible",
     gap: spacing.lg,
   },
   titleRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: spacing.xl,
   },
   title: {
@@ -1124,17 +1259,17 @@ const styles = StyleSheet.create({
   },
   closeButton: {
     padding: spacing.xs,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   formSection: {
     gap: spacing.lg,
   },
   row: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: spacing.sm,
-    overflow: 'visible',
-    position: 'relative',
+    overflow: "visible",
+    position: "relative",
   },
   inputGroup: {
     gap: spacing.sm,
@@ -1172,7 +1307,7 @@ const styles = StyleSheet.create({
     marginTop: 0,
   },
   calendarPopup: {
-    position: 'absolute',
+    position: "absolute",
     top: 70,
     left: 0,
     zIndex: 20000,
@@ -1183,23 +1318,23 @@ const styles = StyleSheet.create({
     borderRadius: radii.md,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.md,
-    justifyContent: 'center',
+    justifyContent: "center",
   },
   currencyText: {
     ...textStyles.body4,
     color: colors.gray600,
   },
   amountInputWrapper: {
-    position: 'relative',
+    position: "relative",
   },
   amountInputPadding: {
     paddingRight: 20,
-    textAlign: 'right',
+    textAlign: "right",
   },
   amountSuffix: {
-    position: 'absolute',
+    position: "absolute",
     right: spacing.sm,
-    top: '50%',
+    top: "50%",
     transform: [{ translateY: -10 }],
     ...textStyles.body4,
     color: colors.black,
@@ -1214,9 +1349,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
   },
   segmentTitleRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
   segmentTitle: {
     ...textStyles.h6,
@@ -1224,8 +1359,8 @@ const styles = StyleSheet.create({
   },
   segmentDeleteButton: {
     padding: spacing.xs,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   segmentContent: {
     gap: spacing.lg,
@@ -1245,11 +1380,11 @@ const styles = StyleSheet.create({
     borderRadius: radii.md,
     height: 40,
     paddingHorizontal: spacing.md,
-    justifyContent: 'center',
+    justifyContent: "center",
   },
   segmentDateTextContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: spacing.sm,
     flex: 1,
   },
@@ -1269,11 +1404,11 @@ const styles = StyleSheet.create({
     height: 40,
   },
   airportPickerWrapper: {
-    overflow: 'visible',
-    position: 'relative',
+    overflow: "visible",
+    position: "relative",
   },
   segmentButtonRow: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: spacing.sm,
     marginTop: spacing.sm,
   },
@@ -1284,8 +1419,8 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     height: 32,
     paddingHorizontal: spacing.lg,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     flex: 1,
   },
   segmentCancelButtonText: {
@@ -1297,8 +1432,8 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     height: 32,
     paddingHorizontal: spacing.lg,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     flex: 1,
   },
   segmentAddButtonText: {
@@ -1311,9 +1446,9 @@ const styles = StyleSheet.create({
     borderColor: colors.gray400,
     borderRadius: 8,
     height: 40,
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
     gap: spacing.sm,
     paddingHorizontal: spacing.xl,
   },
@@ -1326,10 +1461,10 @@ const styles = StyleSheet.create({
   },
   attachmentSection: {
     marginTop: spacing.lg,
-    width: '100%',
+    width: "100%",
   },
   buttonRow: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: spacing.sm,
     marginTop: spacing.sm,
     paddingBottom: spacing.xl,
@@ -1341,8 +1476,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.gray400,
     paddingHorizontal: spacing.lg,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     minWidth: 90,
   },
   deleteButtonText: {
@@ -1354,8 +1489,8 @@ const styles = StyleSheet.create({
     height: 40,
     borderRadius: radii.md,
     paddingHorizontal: spacing.lg,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     flex: 1,
   },
   saveButtonText: {

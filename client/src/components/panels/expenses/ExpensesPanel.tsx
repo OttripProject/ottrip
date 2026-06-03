@@ -1,15 +1,21 @@
-import React, { useState } from 'react';
-import { View, Text, Pressable, StyleSheet, Alert, TouchableOpacity } from 'react-native';
-import { expensesApi } from '@/services/expenses';
-import PanelLayout from '../PanelLayout';
-import AddExpenseModal from '@/components/modals/AddExpenseModal';
-import ExpenseDetailModal from '@/components/modals/ExpenseDetailModal';
-import { currencyLabels, ExpenseCurrency } from '@/types/expense';
-import { colors } from '@/ui/tokens/colors';
-import { textStyles, typography } from '@/ui/tokens/typography';
-import { spacing } from '@/ui/tokens/spacing';
-import { radii } from '@/ui/tokens/radii';
-import PlusExpenseIcon from '../../../../assets/add_expense.svg';
+import AddExpenseModal from "@/components/modals/AddExpenseModal";
+import ExpenseDetailModal from "@/components/modals/ExpenseDetailModal";
+import { expensesApi } from "@/services/expenses";
+import { ExpenseCurrency, currencyLabels } from "@/types/expense";
+import { colors } from "@/ui/tokens/colors";
+import { spacing } from "@/ui/tokens/spacing";
+import { textStyles, typography } from "@/ui/tokens/typography";
+import { useState } from "react";
+import {
+  Alert,
+  Pressable,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import PlusExpenseIcon from "../../../../assets/add_expense.svg";
+import PanelLayout from "../PanelLayout";
 
 interface ExpensesPanelProps {
   planData?: {
@@ -35,32 +41,34 @@ interface Expense {
   currency: string;
 }
 
-
-
-export default function ExpensesPanel({ planData, onExpenseAdd }: ExpensesPanelProps) {
+export default function ExpensesPanel({
+  planData,
+  onExpenseAdd,
+}: ExpensesPanelProps) {
   const [showExpenseForm, setShowExpenseForm] = useState(false);
   const [showExpenseDetail, setShowExpenseDetail] = useState(false);
 
-  const handleExpenseDelete = async (expenseId: string) => {
+  const _handleExpenseDelete = async (expenseId: string) => {
     try {
       await expensesApi.deleteExpense(Number(expenseId));
-      Alert.alert('성공', '비용이 삭제되었습니다.');
-      
+      Alert.alert("성공", "비용이 삭제되었습니다.");
+
       await planData?.refreshExpenses();
       await planData?.refreshItineraries?.();
       await planData?.refreshFlights?.();
       await planData?.refreshAccommodations?.();
-    } catch (error) {
-      Alert.alert('알림', '비용 삭제에 실패했습니다.');
+    } catch (_error) {
+      Alert.alert("알림", "비용 삭제에 실패했습니다.");
     }
   };
 
   const getTotalExpenses = () => {
     if (!planData?.expenses) return 0;
-    return planData.expenses.reduce((total, expense) => total + (expense.amount as number), 0);
+    return planData.expenses.reduce(
+      (total, expense) => total + (expense.amount as number),
+      0,
+    );
   };
-
-
 
   if (!planData?.plan) {
     return (
@@ -80,7 +88,10 @@ export default function ExpensesPanel({ planData, onExpenseAdd }: ExpensesPanelP
         <View style={styles.headerSection}>
           <Text style={styles.headerTitle}>여행 비용</Text>
           <View style={styles.headerActions}>
-            <TouchableOpacity onPress={() => setShowExpenseDetail(true)} style={styles.viewAllButton}>
+            <TouchableOpacity
+              onPress={() => setShowExpenseDetail(true)}
+              style={styles.viewAllButton}
+            >
               <Text style={styles.viewAllText}>상세보기</Text>
             </TouchableOpacity>
             <Pressable
@@ -96,7 +107,10 @@ export default function ExpensesPanel({ planData, onExpenseAdd }: ExpensesPanelP
         <Pressable style={styles.totalButton}>
           <Text style={styles.totalButtonLabel}>총 비용</Text>
           <View style={styles.totalButtonRight}>
-            <Text style={styles.totalButtonAmount}>{totalExpenses.toLocaleString()} {currencyLabels[ExpenseCurrency.KRW]}</Text>
+            <Text style={styles.totalButtonAmount}>
+              {totalExpenses.toLocaleString()}{" "}
+              {currencyLabels[ExpenseCurrency.KRW]}
+            </Text>
           </View>
         </Pressable>
       </View>
@@ -106,7 +120,7 @@ export default function ExpensesPanel({ planData, onExpenseAdd }: ExpensesPanelP
         onClose={() => setShowExpenseForm(false)}
         planId={planData?.plan?.id || 0}
         planStartDate={planData?.plan?.startDate}
-        onExpenseAdd={(newExpense) => {
+        onExpenseAdd={newExpense => {
           onExpenseAdd?.(newExpense);
         }}
       />
@@ -136,19 +150,19 @@ const styles = StyleSheet.create({
   },
   placeholder: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     padding: 20,
   },
   placeholderText: {
     fontSize: 16,
-    color: '#666',
-    textAlign: 'center',
+    color: "#666",
+    textAlign: "center",
   },
   headerSection: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.lg,
     paddingBottom: spacing.md,
@@ -157,13 +171,13 @@ const styles = StyleSheet.create({
     ...textStyles.h4,
   },
   headerActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 8,
   },
   addButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: spacing.xs,
     borderRadius: 28,
     backgroundColor: colors.black,
@@ -181,17 +195,17 @@ const styles = StyleSheet.create({
     height: 32,
     borderRadius: 28,
     backgroundColor: colors.gray200,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   viewAllText: {
     ...textStyles.h8,
     color: colors.black,
   },
   totalButton: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     backgroundColor: colors.gray200,
     borderRadius: 12,
     paddingHorizontal: spacing.lg,
@@ -206,8 +220,8 @@ const styles = StyleSheet.create({
     color: colors.black,
   },
   totalButtonRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: spacing.xs,
   },
   totalButtonAmount: {

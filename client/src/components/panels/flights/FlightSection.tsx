@@ -1,10 +1,10 @@
-import React, { useState, useEffect, useLayoutEffect } from 'react';
-import FlightItem from './FlightItem';
 import type {
   DocumentUploadAnalyzeResponse,
   LocalFile,
   StagedDocumentAnalyzePayload,
-} from '@/types/api';
+} from "@/types/api";
+import { useEffect, useLayoutEffect, useState } from "react";
+import FlightItem from "./FlightItem";
 
 interface FlightSectionProps {
   planData: {
@@ -18,7 +18,7 @@ interface FlightSectionProps {
     removeFlight?: (flightId: number) => void;
   };
   selectedFlight?: any;
-  activeTab?: 'itinerary' | 'flight' | 'accommodation' | undefined;
+  activeTab?: "itinerary" | "flight" | "accommodation" | undefined;
   onFlightAdd?: (flight: any) => void;
   onFlightClear?: () => void;
   openNewFlightForm?: boolean;
@@ -53,7 +53,7 @@ export default function FlightSection({
   const [editingFlight, setEditingFlight] = useState<any | null>(null);
 
   useEffect(() => {
-    if (activeTab === 'flight' && !selectedFlight) {
+    if (activeTab === "flight" && !selectedFlight) {
       if (openNewFlightForm) {
         setEditingFlight(null);
         setShowFlightForm(true);
@@ -63,14 +63,20 @@ export default function FlightSection({
         setShowFlightForm(true);
       }
     }
-  }, [activeTab, openNewFlightForm, onConsumeOpenNewFlightForm, selectedFlight, showFlightForm]);
+  }, [
+    activeTab,
+    openNewFlightForm,
+    onConsumeOpenNewFlightForm,
+    selectedFlight,
+    showFlightForm,
+  ]);
 
   useLayoutEffect(() => {
     if (!stagedDocumentAnalyze) return;
     const kind =
       stagedDocumentAnalyze.result.inferredItemType ??
       stagedDocumentAnalyze.result.draft?.itemType;
-    if (kind !== 'flight') return;
+    if (kind !== "flight") return;
     if (selectedFlight?.id && !showFlightForm) {
       setEditingFlight(selectedFlight);
       setShowFlightForm(true);
@@ -78,12 +84,12 @@ export default function FlightSection({
   }, [stagedDocumentAnalyze, selectedFlight, showFlightForm]);
 
   useEffect(() => {
-    if (activeTab === 'flight' && selectedFlight) {
+    if (activeTab === "flight" && selectedFlight) {
       if (selectedFlight.id) {
         setEditingFlight(selectedFlight);
         setShowFlightForm(false);
       }
-    } else if (activeTab === 'flight' && !selectedFlight) {
+    } else if (activeTab === "flight" && !selectedFlight) {
       setEditingFlight(null);
       setShowFlightForm(false);
     }
@@ -96,7 +102,8 @@ export default function FlightSection({
   };
 
   const handleFlightDelete = (flightId: string) => {
-    const id = typeof flightId === 'string' ? parseInt(flightId, 10) : flightId;
+    const id =
+      typeof flightId === "string" ? Number.parseInt(flightId, 10) : flightId;
     if (planData?.removeFlight) {
       planData.removeFlight(id);
     }
@@ -132,11 +139,11 @@ export default function FlightSection({
       />
     );
   }
-  
+
   if (showFlightForm) {
     return (
       <FlightItem
-        key={editingFlight?.id ?? 'new-flight'}
+        key={editingFlight?.id ?? "new-flight"}
         flight={editingFlight}
         planId={planData.plan.id}
         planData={planData}

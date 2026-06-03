@@ -1,11 +1,17 @@
-import { defineSecureStore } from "./defineSecureStore";
 import { STORAGE_KEYS } from "../core/constants";
+import { defineSecureStore } from "./defineSecureStore";
 
-export const accessTokenStore = defineSecureStore<string>(STORAGE_KEYS.ACCESS_TOKEN);
+export const accessTokenStore = defineSecureStore<string>(
+  STORAGE_KEYS.ACCESS_TOKEN,
+);
 
-export const refreshTokenStore = defineSecureStore<string>(STORAGE_KEYS.REFRESH_TOKEN);
+export const refreshTokenStore = defineSecureStore<string>(
+  STORAGE_KEYS.REFRESH_TOKEN,
+);
 
-export const registerTokenStore = defineSecureStore<string>(STORAGE_KEYS.REGISTER_TOKEN);
+export const registerTokenStore = defineSecureStore<string>(
+  STORAGE_KEYS.REGISTER_TOKEN,
+);
 
 export const tokenStores = {
   accessToken: accessTokenStore,
@@ -56,4 +62,4 @@ export const tokenStores = {
     const refreshToken = await refreshTokenStore.get();
     return !!(accessToken && refreshToken);
   },
-}; 
+};

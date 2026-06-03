@@ -1,20 +1,26 @@
-import React from 'react';
-import { View, Text, Pressable, StyleSheet, ScrollView, Alert } from 'react-native';
-import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import dayjs from 'dayjs';
-import { Plan, CreatePlanRequest } from '@/types/api';
-import { colors } from '@/ui/tokens/colors';
-import { textStyles } from '@/ui/tokens/typography';
-import BottomSheetModal from '@/ui/components/BottomSheetModal.native';
-import CheckedIcon from '../../../../assets/mobile_plan_checked.svg';
-import UnCheckedIcon from '../../../../assets/mobile_plan_unchecked.svg';
-import AddPlanIcon from '../../../../assets/mobile_plan_add.svg';
-import UpdateIcon from '../../../../assets/update.svg';
-import DeleteIcon from '../../../../assets/delete_gray.svg';
+import type { CreatePlanRequest, Plan } from "@/types/api";
+import BottomSheetModal from "@/ui/components/BottomSheetModal.native";
+import { colors } from "@/ui/tokens/colors";
+import { textStyles } from "@/ui/tokens/typography";
+import dayjs from "dayjs";
+import {
+  Alert,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
+import { Gesture, GestureDetector } from "react-native-gesture-handler";
+import DeleteIcon from "../../../../assets/delete_gray.svg";
+import AddPlanIcon from "../../../../assets/mobile_plan_add.svg";
+import CheckedIcon from "../../../../assets/mobile_plan_checked.svg";
+import UnCheckedIcon from "../../../../assets/mobile_plan_unchecked.svg";
+import UpdateIcon from "../../../../assets/update.svg";
 
 function formatPlanDateRange(startDate: string, endDate: string): string {
-  const start = dayjs(startDate).format('YYYY.MM.DD');
-  const end = dayjs(endDate).format('YYYY.MM.DD');
+  const start = dayjs(startDate).format("YYYY.MM.DD");
+  const end = dayjs(endDate).format("YYYY.MM.DD");
   return `${start} ~ ${end}`;
 }
 
@@ -53,7 +59,10 @@ export default function PlanSelectModal({
       onAddTrip();
       return;
     }
-    Alert.alert('새 여행 추가', '새로운 여행 만들기 기능이 곧 제공될 예정입니다.');
+    Alert.alert(
+      "새 여행 추가",
+      "새로운 여행 만들기 기능이 곧 제공될 예정입니다.",
+    );
   };
 
   const handleSelectPlan = (plan: Plan) => {
@@ -68,32 +77,28 @@ export default function PlanSelectModal({
 
   const handleDeletePlan = (plan: Plan, e: any) => {
     e?.stopPropagation?.();
-    Alert.alert(
-      '여행 삭제',
-      `"${plan.title}" 여행을 삭제하시겠습니까?`,
-      [
-        { text: '취소', style: 'cancel' },
-        {
-          text: '삭제',
-          style: 'destructive',
-          onPress: () => onDeletePlan?.(plan),
-        },
-      ]
-    );
+    Alert.alert("여행 삭제", `"${plan.title}" 여행을 삭제하시겠습니까?`, [
+      { text: "취소", style: "cancel" },
+      {
+        text: "삭제",
+        style: "destructive",
+        onPress: () => onDeletePlan?.(plan),
+      },
+    ]);
   };
 
   const validPlans = Array.isArray(plans) ? plans : [];
 
   return (
-    <BottomSheetModal
-      visible={visible}
-      onClose={onClose}
-      height={0.5}
-    >
+    <BottomSheetModal visible={visible} onClose={onClose} height={0.5}>
       {/* 헤더 */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>여행 선택</Text>
-        <Pressable style={styles.addTripButton} onPress={handleAddTripPress} hitSlop={8}>
+        <Pressable
+          style={styles.addTripButton}
+          onPress={handleAddTripPress}
+          hitSlop={8}
+        >
           <AddPlanIcon width={16} height={16} color={colors.primary} />
           <Text style={styles.addTripButtonText}>새 여행</Text>
         </Pressable>
@@ -111,7 +116,7 @@ export default function PlanSelectModal({
               <Text style={styles.emptyText}>여행 계획이 없습니다</Text>
             </View>
           ) : (
-            validPlans.map((plan) => {
+            validPlans.map(plan => {
               const isSelected = selectedPlan?.id === plan.id;
               return (
                 <Pressable
@@ -120,12 +125,24 @@ export default function PlanSelectModal({
                   onPress={() => handleSelectPlan(plan)}
                   hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                 >
-
-                  <View style={[styles.planCardCheckWrap, isSelected && styles.planCardCheckWrapSelected]}>
+                  <View
+                    style={[
+                      styles.planCardCheckWrap,
+                      isSelected && styles.planCardCheckWrapSelected,
+                    ]}
+                  >
                     {isSelected ? (
-                      <CheckedIcon width={20} height={20} color={colors.primary} />
+                      <CheckedIcon
+                        width={20}
+                        height={20}
+                        color={colors.primary}
+                      />
                     ) : (
-                      <UnCheckedIcon width={20} height={20} color={colors.gray500} />
+                      <UnCheckedIcon
+                        width={20}
+                        height={20}
+                        color={colors.gray500}
+                      />
                     )}
                   </View>
 
@@ -143,17 +160,25 @@ export default function PlanSelectModal({
                   <View style={styles.planCardActions}>
                     <Pressable
                       style={styles.planCardActionButton}
-                      onPress={(e) => handleEditPlan(plan, e)}
+                      onPress={e => handleEditPlan(plan, e)}
                       hitSlop={8}
                     >
-                      <UpdateIcon width={20} height={20} color={colors.gray600} />
+                      <UpdateIcon
+                        width={20}
+                        height={20}
+                        color={colors.gray600}
+                      />
                     </Pressable>
                     <Pressable
                       style={styles.planCardActionButton}
-                      onPress={(e) => handleDeletePlan(plan, e)}
+                      onPress={e => handleDeletePlan(plan, e)}
                       hitSlop={8}
                     >
-                      <DeleteIcon width={20} height={20} color={colors.gray600} />
+                      <DeleteIcon
+                        width={20}
+                        height={20}
+                        color={colors.gray600}
+                      />
                     </Pressable>
                   </View>
                 </Pressable>
@@ -168,9 +193,9 @@ export default function PlanSelectModal({
 
 const styles = StyleSheet.create({
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     paddingHorizontal: 24,
     paddingBottom: 16,
   },
@@ -181,8 +206,8 @@ const styles = StyleSheet.create({
   addTripButton: {
     paddingHorizontal: 12,
     paddingVertical: 6,
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 4,
   },
   addTripButtonText: {
@@ -202,9 +227,9 @@ const styles = StyleSheet.create({
     flexGrow: 1,
   },
   planCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     backgroundColor: colors.gray200,
     borderRadius: 16,
     paddingVertical: 24,
@@ -212,8 +237,8 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   planCardCenter: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     flex: 1,
     minWidth: 0,
     marginHorizontal: 12,
@@ -225,7 +250,7 @@ const styles = StyleSheet.create({
   planCardTitle: {
     ...textStyles.h5,
     color: colors.black,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   planCardDate: {
     ...textStyles.body4,
@@ -235,24 +260,24 @@ const styles = StyleSheet.create({
   planCardCheckWrap: {
     width: 24,
     height: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   planCardCheckWrapSelected: {
     // 선택 시 아이콘 색상만 primary로 표시
   },
   planCardActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 10,
   },
   planCardActionButton: {
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   emptyContainer: {
     paddingVertical: 40,
-    alignItems: 'center',
+    alignItems: "center",
   },
   emptyText: {
     ...textStyles.body2,

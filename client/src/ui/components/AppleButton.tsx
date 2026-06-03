@@ -1,9 +1,15 @@
-import React from 'react';
-import { Pressable, Text, View, StyleSheet, ViewStyle, TextStyle } from 'react-native';
-import { colors } from '../tokens/colors';
-import { textStyles } from '../tokens/typography';
+import {
+  Pressable,
+  StyleSheet,
+  Text,
+  type TextStyle,
+  View,
+  type ViewStyle,
+} from "react-native";
+import { colors } from "../tokens/colors";
+import { textStyles } from "../tokens/typography";
 
-import AppleLogo from '../../../assets/mobile_apple.svg';
+import AppleLogo from "../../../assets/mobile_apple.svg";
 
 export type AppleButtonProps = {
   onPress?: () => void;
@@ -21,7 +27,7 @@ export default function AppleButton({
   onPress,
   disabled = false,
   isLoading = false,
-  text = 'Apple로 로그인하기',
+  text = "Apple로 로그인하기",
   style,
   textStyle,
   iconSize = 18,
@@ -38,7 +44,7 @@ export default function AppleButton({
       <View style={styles.content}>
         <AppleLogo width={logoW} height={iconSize} color={logoColor} />
         <Text style={[styles.text, textStyle]}>
-          {isLoading ? '로그인 중...' : text}
+          {isLoading ? "로그인 중..." : text}
         </Text>
       </View>
     </Pressable>
@@ -47,17 +53,17 @@ export default function AppleButton({
 
 const styles = StyleSheet.create({
   button: {
-    width: '100%',
+    width: "100%",
     maxWidth: 352,
     height: 56,
     backgroundColor: colors.black,
     borderRadius: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   content: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
   },
   text: {
     ...textStyles.h5,

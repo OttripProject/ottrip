@@ -1,45 +1,49 @@
-import React, { useState, useMemo } from 'react';
-import { View, StyleSheet } from 'react-native';
-import WeeklySchedulePanel, { Itinerary } from '@/components/panels/WeeklySchedulePanel';
-import { usePlanDataQuery } from '@/hooks/usePlanDataQuery';
-import { usePlansQuery } from '@/hooks/usePlansQuery';
+import WeeklySchedulePanel from "@/components/panels/WeeklySchedulePanel";
+import { usePlanDataQuery } from "@/hooks/usePlanDataQuery";
+import { usePlansQuery } from "@/hooks/usePlansQuery";
+import { useMemo, useState } from "react";
+import { StyleSheet, View } from "react-native";
 
 export default function DashboardStack() {
   const [selectedPlanId, setSelectedPlanId] = useState<number | null>(null);
   const [selectedTrip, setSelectedTrip] = useState<any>(null);
-  const [selectedItinerary, setSelectedItinerary] = useState<any>(null);
-  
-  const plansQuery = usePlansQuery();
-  
-  const planData = usePlanDataQuery(selectedTrip?.publicId || null);
-  
-  const trips = useMemo(() => plansQuery.plans.map(plan => ({
-    id: plan.id.toString(),
-    publicId: plan.publicId,
-    name: plan.title,
-    startDate: plan.startDate,
-    endDate: plan.endDate,
-  })), [plansQuery.plans]);
+  const [_selectedItinerary, setSelectedItinerary] = useState<any>(null);
 
-  const handleItineraryAdd = async (newItinerary: any) => {
+  const plansQuery = usePlansQuery();
+
+  const planData = usePlanDataQuery(selectedTrip?.publicId || null);
+
+  const trips = useMemo(
+    () =>
+      plansQuery.plans.map(plan => ({
+        id: plan.id.toString(),
+        publicId: plan.publicId,
+        name: plan.title,
+        startDate: plan.startDate,
+        endDate: plan.endDate,
+      })),
+    [plansQuery.plans],
+  );
+
+  const handleItineraryAdd = async (_newItinerary: any) => {
     if (selectedPlanId) {
       await planData.refreshItineraries();
     }
   };
 
-  const handleFlightAdd = async (newFlight: any) => {
+  const _handleFlightAdd = async (_newFlight: any) => {
     if (selectedPlanId) {
       await planData.refreshFlights();
     }
   };
 
-  const handleAccommodationAdd = async (newAccommodation: any) => {
+  const _handleAccommodationAdd = async (_newAccommodation: any) => {
     if (selectedPlanId) {
       await planData.refreshAccommodations();
     }
   };
 
-  const handleExpenseAdd = async (newExpense: any) => {
+  const _handleExpenseAdd = async (newExpense: any) => {
     if (selectedPlanId) {
       planData.addExpense(newExpense);
     }
@@ -48,7 +52,7 @@ export default function DashboardStack() {
   return (
     <View style={styles.container}>
       <View style={{ height: 400 }}>
-        <WeeklySchedulePanel 
+        <WeeklySchedulePanel
           itineraries={planData.itineraries}
           flights={planData.flights}
           height={400}
@@ -61,13 +65,12 @@ export default function DashboardStack() {
           onPlanUpdate={plansQuery.updatePlan}
           onPlanDelete={plansQuery.deletePlan}
           onItineraryAdd={handleItineraryAdd}
-          onPlanSelect={(trip) => {
+          onPlanSelect={trip => {
             setSelectedTrip(trip);
-            setSelectedPlanId(trip ? parseInt(trip.id) : null);
+            setSelectedPlanId(trip ? Number.parseInt(trip.id) : null);
           }}
           onItinerarySelect={setSelectedItinerary}
-          onRequestNewItinerary={(date) => {
-          }}
+          onRequestNewItinerary={_date => {}}
         />
       </View>
     </View>

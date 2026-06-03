@@ -1,3 +1,23 @@
+import BaseCalendar from "@/components/popup/calendar/BaseCalendar";
+import { PLACEHOLDERS } from "@/constants/placeholders";
+import type { AiDocumentItemDraft, FlightSegmentBaseDto } from "@/types/api";
+import {
+  ExpenseCategory,
+  ExpenseCurrency,
+  currencyLabels,
+} from "@/types/expense";
+import Input from "@/ui/components/input/Input";
+import {
+  AirportPicker,
+  CategoryPicker,
+  CountryPicker,
+  TimePicker,
+} from "@/ui/components/pickers";
+import { colors } from "@/ui/tokens/colors";
+import { radii } from "@/ui/tokens/radii";
+import { spacing } from "@/ui/tokens/spacing";
+import { textStyles } from "@/ui/tokens/typography";
+import dayjs from "dayjs";
 import React, {
   forwardRef,
   useCallback,
@@ -5,40 +25,21 @@ import React, {
   useImperativeHandle,
   useMemo,
   useState,
-} from 'react';
-import { View, Text, Pressable, StyleSheet } from 'react-native';
-import dayjs from 'dayjs';
-import Input from '@/ui/components/input/Input';
-import {
-  TimePicker,
-  CountryPicker,
-  CategoryPicker,
-  AirportPicker,
-} from '@/ui/components/pickers';
-import BaseCalendar from '@/components/popup/calendar/BaseCalendar';
-import CalendarIcon from '../../../assets/calender.svg';
-import { PLACEHOLDERS } from '@/constants/placeholders';
-import { colors } from '@/ui/tokens/colors';
-import { textStyles } from '@/ui/tokens/typography';
-import { spacing } from '@/ui/tokens/spacing';
-import { radii } from '@/ui/tokens/radii';
-import type {
-  AiDocumentItemDraft,
-  FlightSegmentBaseDto,
-} from '@/types/api';
-import { ExpenseCategory, ExpenseCurrency, currencyLabels } from '@/types/expense';
+} from "react";
+import { Pressable, StyleSheet, Text, View } from "react-native";
+import CalendarIcon from "../../../assets/calender.svg";
 
-const ORANGE = '#E07000';
-const ORANGE_BG = '#FFF1E5';
+const ORANGE = "#E07000";
+const ORANGE_BG = "#FFF1E5";
 
 export function pickStr(obj: Record<string, unknown>, keys: string[]): string {
   for (const k of keys) {
     const raw = obj[k];
     if (raw === undefined || raw === null) continue;
-    if (typeof raw === 'string') return raw;
-    if (typeof raw === 'number' || typeof raw === 'boolean') return String(raw);
+    if (typeof raw === "string") return raw;
+    if (typeof raw === "number" || typeof raw === "boolean") return String(raw);
   }
-  return '';
+  return "";
 }
 
 export type AiAnalyzeDraftEditorRef = {
@@ -49,18 +50,18 @@ function readExpenseNested(
   values: Record<string, unknown>,
 ): Record<string, unknown> | null {
   const e = values.expense ?? values.Expense;
-  if (e && typeof e === 'object' && !Array.isArray(e)) {
+  if (e && typeof e === "object" && !Array.isArray(e)) {
     return e as Record<string, unknown>;
   }
   return null;
 }
 
 function normalizeHHmm(raw: string): string {
-  const s = String(raw ?? '').trim();
-  if (!s) return '';
+  const s = String(raw ?? "").trim();
+  if (!s) return "";
   if (/^\d{4}-\d{2}-\d{2}/.test(s)) {
     const d = dayjs(s);
-    if (d.isValid()) return d.format('HH:mm');
+    if (d.isValid()) return d.format("HH:mm");
   }
   if (/^\d{2}:\d{2}$/.test(s)) return s;
   if (/^\d{2}:\d{2}:\d{2}/.test(s)) return s.slice(0, 5);
@@ -75,24 +76,24 @@ function coerceExpenseCategory(raw: string): ExpenseCategory {
 }
 
 function normalizeAmountDigits(value: unknown): string {
-  const raw = String(value ?? '').trim();
-  if (!raw) return '';
-  const integerPart = raw.split('.')[0];
-  return integerPart.replace(/[^0-9]/g, '');
+  const raw = String(value ?? "").trim();
+  if (!raw) return "";
+  const integerPart = raw.split(".")[0];
+  return integerPart.replace(/[^0-9]/g, "");
 }
 
 function formatAmountWithCommas(digits: string): string {
-  if (!digits) return '';
-  const normalized = digits.replace(/^0+(?=\d)/, '');
-  return normalized.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  if (!digits) return "";
+  const normalized = digits.replace(/^0+(?=\d)/, "");
+  return normalized.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 }
 
 /** segments: 배열 | 단일 객체 | JSON 문자열 */
 function coerceFlightSegments(segRaw: unknown): Record<string, unknown>[] {
   let raw: unknown = segRaw;
-  if (typeof raw === 'string') {
+  if (typeof raw === "string") {
     const t = raw.trim();
-    if (t.startsWith('[') || t.startsWith('{')) {
+    if (t.startsWith("[") || t.startsWith("{")) {
       try {
         raw = JSON.parse(t) as unknown;
       } catch {
@@ -105,10 +106,10 @@ function coerceFlightSegments(segRaw: unknown): Record<string, unknown>[] {
   if (Array.isArray(raw)) {
     return raw.filter(
       (item): item is Record<string, unknown> =>
-        item != null && typeof item === 'object' && !Array.isArray(item),
+        item != null && typeof item === "object" && !Array.isArray(item),
     );
   }
-  if (raw != null && typeof raw === 'object' && !Array.isArray(raw)) {
+  if (raw != null && typeof raw === "object" && !Array.isArray(raw)) {
     return [raw as Record<string, unknown>];
   }
   return [];
@@ -130,55 +131,61 @@ type SegmentForm = {
 };
 
 function segmentFromLoose(seg: Record<string, unknown>): SegmentForm {
-  const depRaw = pickStr(seg, ['departure_time', 'departureTime', 'DepartureTime']);
-  const arrRaw = pickStr(seg, ['arrival_time', 'arrivalTime', 'ArrivalTime']);
+  const depRaw = pickStr(seg, [
+    "departure_time",
+    "departureTime",
+    "DepartureTime",
+  ]);
+  const arrRaw = pickStr(seg, ["arrival_time", "arrivalTime", "ArrivalTime"]);
   let depD = dayjs(depRaw);
   let arrD = dayjs(arrRaw);
   if (!depD.isValid()) {
-    const dd = pickStr(seg, ['departure_date', 'departureDate', 'DepartureDate']);
+    const dd = pickStr(seg, [
+      "departure_date",
+      "departureDate",
+      "DepartureDate",
+    ]);
     const tt =
       normalizeHHmm(
-        pickStr(seg, ['departure_time_local', 'departureTimeLocal']) || '09:00',
-      ) || '09:00';
-    depD = dd
-      ? dayjs(`${dd}T${tt.length === 5 ? `${tt}:00` : tt}`)
-      : dayjs();
+        pickStr(seg, ["departure_time_local", "departureTimeLocal"]) || "09:00",
+      ) || "09:00";
+    depD = dd ? dayjs(`${dd}T${tt.length === 5 ? `${tt}:00` : tt}`) : dayjs();
   }
   if (!arrD.isValid()) {
-    const ad = pickStr(seg, ['arrival_date', 'arrivalDate', 'ArrivalDate']);
+    const ad = pickStr(seg, ["arrival_date", "arrivalDate", "ArrivalDate"]);
     const at =
       normalizeHHmm(
-        pickStr(seg, ['arrival_time_local', 'arrivalTimeLocal']) || '10:00',
-      ) || '10:00';
+        pickStr(seg, ["arrival_time_local", "arrivalTimeLocal"]) || "10:00",
+      ) || "10:00";
     arrD = ad
       ? dayjs(`${ad}T${at.length === 5 ? `${at}:00` : at}`)
-      : depD.add(1, 'hour');
+      : depD.add(1, "hour");
   }
   return {
-    airline: pickStr(seg, ['airline', 'Airline']),
+    airline: pickStr(seg, ["airline", "Airline"]),
     flight_number: pickStr(seg, [
-      'flight_number',
-      'flightNumber',
-      'FlightNumber',
+      "flight_number",
+      "flightNumber",
+      "FlightNumber",
     ]),
     departure_airport: pickStr(seg, [
-      'departure_airport',
-      'departureAirport',
-      'DepartureAirport',
+      "departure_airport",
+      "departureAirport",
+      "DepartureAirport",
     ]),
     arrival_airport: pickStr(seg, [
-      'arrival_airport',
-      'arrivalAirport',
-      'ArrivalAirport',
+      "arrival_airport",
+      "arrivalAirport",
+      "ArrivalAirport",
     ]),
-    departure_date: depD.format('YYYY-MM-DD'),
-    departure_time: depD.format('HH:mm'),
-    arrival_date: arrD.format('YYYY-MM-DD'),
-    arrival_time: arrD.format('HH:mm'),
-    seat_class: pickStr(seg, ['seat_class', 'seatClass', 'SeatClass']),
-    seat_number: pickStr(seg, ['seat_number', 'seatNumber', 'SeatNumber']),
-    gate: pickStr(seg, ['gate', 'Gate']),
-    terminal: pickStr(seg, ['terminal', 'Terminal']),
+    departure_date: depD.format("YYYY-MM-DD"),
+    departure_time: depD.format("HH:mm"),
+    arrival_date: arrD.format("YYYY-MM-DD"),
+    arrival_time: arrD.format("HH:mm"),
+    seat_class: pickStr(seg, ["seat_class", "seatClass", "SeatClass"]),
+    seat_number: pickStr(seg, ["seat_number", "seatNumber", "SeatNumber"]),
+    gate: pickStr(seg, ["gate", "Gate"]),
+    terminal: pickStr(seg, ["terminal", "Terminal"]),
   };
 }
 
@@ -186,21 +193,21 @@ function initFlightSegments(values: Record<string, unknown>): SegmentForm[] {
   const segRaw = values.segments ?? values.Segments;
   const segs = coerceFlightSegments(segRaw);
   if (segs.length === 0) {
-    const planDate = dayjs().format('YYYY-MM-DD');
+    const planDate = dayjs().format("YYYY-MM-DD");
     return [
       {
-        airline: '',
-        flight_number: '',
-        departure_airport: '',
-        arrival_airport: '',
+        airline: "",
+        flight_number: "",
+        departure_airport: "",
+        arrival_airport: "",
         departure_date: planDate,
-        departure_time: '',
+        departure_time: "",
         arrival_date: planDate,
-        arrival_time: '',
-        seat_class: '',
-        seat_number: '',
-        gate: '',
-        terminal: '',
+        arrival_time: "",
+        seat_class: "",
+        seat_number: "",
+        gate: "",
+        terminal: "",
       },
     ];
   }
@@ -217,79 +224,72 @@ function toIso(date: string, time: string): string | null {
 
 const ItineraryDraftEditor = forwardRef<
   AiAnalyzeDraftEditorRef,
-  { draft: Extract<AiDocumentItemDraft, { itemType: 'itinerary' }> }
+  { draft: Extract<AiDocumentItemDraft, { itemType: "itinerary" }> }
 >(function ItineraryDraftEditor({ draft }, ref) {
   const base = draft.payload;
   const values = useMemo(() => {
     const raw = base.values as Record<string, unknown>;
-    return raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
+    return raw && typeof raw === "object" && !Array.isArray(raw) ? raw : {};
   }, [base.values]);
 
-  const [title, setTitle] = useState(() => pickStr(values, ['title', 'Title']));
+  const [title, setTitle] = useState(() => pickStr(values, ["title", "Title"]));
   const [description, setDescription] = useState(() =>
-    pickStr(values, ['description', 'Description']),
+    pickStr(values, ["description", "Description"]),
   );
   const [country, setCountry] = useState(() =>
-    pickStr(values, ['country', 'Country']),
+    pickStr(values, ["country", "Country"]),
   );
-  const [city, setCity] = useState(() => pickStr(values, ['city', 'City']));
+  const [city, setCity] = useState(() => pickStr(values, ["city", "City"]));
   const [location, setLocation] = useState(() =>
-    pickStr(values, ['location', 'Location']),
+    pickStr(values, ["location", "Location"]),
   );
   const [itineraryDate, setItineraryDate] = useState(
     () =>
-      pickStr(values, [
-        'itineraryDate',
-        'itinerary_date',
-        'ItineraryDate',
-      ]) || dayjs().format('YYYY-MM-DD'),
+      pickStr(values, ["itineraryDate", "itinerary_date", "ItineraryDate"]) ||
+      dayjs().format("YYYY-MM-DD"),
   );
   const [startTime, setStartTime] = useState(
     () =>
       normalizeHHmm(
-        pickStr(values, ['startTime', 'start_time', 'StartTime']) || '09:00',
-      ) || '09:00',
+        pickStr(values, ["startTime", "start_time", "StartTime"]) || "09:00",
+      ) || "09:00",
   );
   const [endTime, setEndTime] = useState(
     () =>
       normalizeHHmm(
-        pickStr(values, ['endTime', 'end_time', 'EndTime']) || '10:00',
-      ) || '10:00',
+        pickStr(values, ["endTime", "end_time", "EndTime"]) || "10:00",
+      ) || "10:00",
   );
 
   const expNested = readExpenseNested(values);
   const initialExpense =
     expNested ||
-    (pickStr(values, ['amount', 'Amount']).length > 0
-      ? values
-      : null);
+    (pickStr(values, ["amount", "Amount"]).length > 0 ? values : null);
 
   const [showExpense, setShowExpense] = useState(
     () =>
       !!(
         expNested ||
-        pickStr(values, ['category', 'Category']).length > 0 ||
-        pickStr(values, ['amount', 'Amount']).length > 0
+        pickStr(values, ["category", "Category"]).length > 0 ||
+        pickStr(values, ["amount", "Amount"]).length > 0
       ),
   );
   const [expCategory, setExpCategory] = useState<ExpenseCategory>(() =>
     initialExpense
       ? coerceExpenseCategory(
-          pickStr(initialExpense, ['category', 'Category']) || 'etc',
+          pickStr(initialExpense, ["category", "Category"]) || "etc",
         )
       : ExpenseCategory.ETC,
   );
   const [expAmount, setExpAmount] = useState(() =>
     normalizeAmountDigits(
-      initialExpense
-        ? pickStr(initialExpense, ['amount', 'Amount'])
-        : '',
+      initialExpense ? pickStr(initialExpense, ["amount", "Amount"]) : "",
     ),
   );
   const [expDescription, setExpDescription] = useState(() =>
     initialExpense
-      ? pickStr(initialExpense, ['description', 'Description'])
-      : '',
+      ? pickStr(initialExpense, ["description", "Description"])
+      : "",
   );
 
   const [countryOpen, setCountryOpen] = useState(false);
@@ -298,40 +298,37 @@ const ItineraryDraftEditor = forwardRef<
   const [showDatePicker, setShowDatePicker] = useState(false);
 
   useEffect(() => {
-    setTitle(pickStr(values, ['title', 'Title']));
-    setDescription(pickStr(values, ['description', 'Description']));
-    setCountry(pickStr(values, ['country', 'Country']));
-    setCity(pickStr(values, ['city', 'City']));
-    setLocation(pickStr(values, ['location', 'Location']));
+    setTitle(pickStr(values, ["title", "Title"]));
+    setDescription(pickStr(values, ["description", "Description"]));
+    setCountry(pickStr(values, ["country", "Country"]));
+    setCity(pickStr(values, ["city", "City"]));
+    setLocation(pickStr(values, ["location", "Location"]));
     setItineraryDate(
-      pickStr(values, [
-        'itineraryDate',
-        'itinerary_date',
-        'ItineraryDate',
-      ]) || dayjs().format('YYYY-MM-DD'),
+      pickStr(values, ["itineraryDate", "itinerary_date", "ItineraryDate"]) ||
+        dayjs().format("YYYY-MM-DD"),
     );
     setStartTime(
       normalizeHHmm(
-        pickStr(values, ['startTime', 'start_time', 'StartTime']) || '09:00',
-      ) || '09:00',
+        pickStr(values, ["startTime", "start_time", "StartTime"]) || "09:00",
+      ) || "09:00",
     );
     setEndTime(
       normalizeHHmm(
-        pickStr(values, ['endTime', 'end_time', 'EndTime']) || '10:00',
-      ) || '10:00',
+        pickStr(values, ["endTime", "end_time", "EndTime"]) || "10:00",
+      ) || "10:00",
     );
     const ex = readExpenseNested(values);
     const hasEx =
       !!ex ||
-      pickStr(values, ['category', 'Category']).length > 0 ||
-      pickStr(values, ['amount', 'Amount']).length > 0;
+      pickStr(values, ["category", "Category"]).length > 0 ||
+      pickStr(values, ["amount", "Amount"]).length > 0;
     setShowExpense(hasEx);
     const src = ex || values;
     setExpCategory(
-      coerceExpenseCategory(pickStr(src, ['category', 'Category']) || 'etc'),
+      coerceExpenseCategory(pickStr(src, ["category", "Category"]) || "etc"),
     );
-    setExpAmount(normalizeAmountDigits(pickStr(src, ['amount', 'Amount'])));
-    setExpDescription(pickStr(src, ['description', 'Description']));
+    setExpAmount(normalizeAmountDigits(pickStr(src, ["amount", "Amount"])));
+    setExpDescription(pickStr(src, ["description", "Description"]));
   }, [values]);
 
   useImperativeHandle(
@@ -349,10 +346,13 @@ const ItineraryDraftEditor = forwardRef<
           startTime,
           endTime,
         };
-        if (showExpense && (expAmount.length > 0 || expDescription.length > 0)) {
+        if (
+          showExpense &&
+          (expAmount.length > 0 || expDescription.length > 0)
+        ) {
           nextValues.expense = {
             category: expCategory,
-            amount: parseInt(expAmount, 10) || 0,
+            amount: Number.parseInt(expAmount, 10) || 0,
             description: expDescription,
             exDate: itineraryDate,
             currency: ExpenseCurrency.KRW,
@@ -361,7 +361,7 @@ const ItineraryDraftEditor = forwardRef<
           delete nextValues.expense;
         }
         return {
-          itemType: 'itinerary',
+          itemType: "itinerary",
           payload: {
             ...base,
             values: nextValues as typeof base.values,
@@ -478,7 +478,7 @@ const ItineraryDraftEditor = forwardRef<
         >
           <View style={styles.dateTextContainer}>
             <Text style={styles.dateText}>
-              {dayjs(itineraryDate).format('YYYY년 M월 D일')}
+              {dayjs(itineraryDate).format("YYYY년 M월 D일")}
             </Text>
             <View style={styles.iconWrapper}>
               <CalendarIcon width={16} height={16} />
@@ -488,7 +488,7 @@ const ItineraryDraftEditor = forwardRef<
         <BaseCalendar
           visible={showDatePicker}
           selectedDate={itineraryDate}
-          onDayPress={(day) => {
+          onDayPress={day => {
             setItineraryDate(day.dateString);
             setShowDatePicker(false);
           }}
@@ -499,7 +499,13 @@ const ItineraryDraftEditor = forwardRef<
         />
       </View>
 
-      <View style={[styles.row, styles.pickerRowWrapper, { zIndex: timeOpen ? 10001 : 1 }]}>
+      <View
+        style={[
+          styles.row,
+          styles.pickerRowWrapper,
+          { zIndex: timeOpen ? 10001 : 1 },
+        ]}
+      >
         <View style={[styles.inputGroup, styles.halfWidth]}>
           <Text style={styles.label}>시작 시간*</Text>
           <TimePicker
@@ -556,8 +562,8 @@ const ItineraryDraftEditor = forwardRef<
               variant="filled"
               placeholder={PLACEHOLDERS.expense.amount}
               value={formatAmountWithCommas(expAmount)}
-              onChangeText={(text) =>
-                setExpAmount(normalizeAmountDigits(text.replace(/,/g, '')))
+              onChangeText={text =>
+                setExpAmount(normalizeAmountDigits(text.replace(/,/g, "")))
               }
               keyboardType="numeric"
               style={styles.expenseInput}
@@ -581,51 +587,47 @@ const ItineraryDraftEditor = forwardRef<
 
 const FlightDraftEditor = forwardRef<
   AiAnalyzeDraftEditorRef,
-  { draft: Extract<AiDocumentItemDraft, { itemType: 'flight' }> }
+  { draft: Extract<AiDocumentItemDraft, { itemType: "flight" }> }
 >(function FlightDraftEditor({ draft }, ref) {
   const base = draft.payload;
   const values = useMemo(() => {
     const raw = base.values as Record<string, unknown>;
-    return raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
+    return raw && typeof raw === "object" && !Array.isArray(raw) ? raw : {};
   }, [base.values]);
 
-  const [reservationNumber, setReservationNumber] = useState('');
-  const [passengerName, setPassengerName] = useState('');
-  const [ticketNumber, setTicketNumber] = useState('');
-  const [bookingReference, setBookingReference] = useState('');
+  const [reservationNumber, setReservationNumber] = useState("");
+  const [passengerName, setPassengerName] = useState("");
+  const [ticketNumber, setTicketNumber] = useState("");
+  const [bookingReference, setBookingReference] = useState("");
   const [segments, setSegments] = useState<SegmentForm[]>([]);
-  const [expenseAmount, setExpenseAmount] = useState('');
+  const [expenseAmount, setExpenseAmount] = useState("");
   const [segmentCal, setSegmentCal] = useState<{
     idx: number;
-    field: 'dep' | 'arr';
+    field: "dep" | "arr";
   } | null>(null);
 
   const syncFromValues = useCallback((v: Record<string, unknown>) => {
     setReservationNumber(
       pickStr(v, [
-        'reservationNumber',
-        'reservation_number',
-        'ReservationNumber',
+        "reservationNumber",
+        "reservation_number",
+        "ReservationNumber",
       ]),
     );
     setPassengerName(
-      pickStr(v, ['passengerName', 'passenger_name', 'PassengerName']),
+      pickStr(v, ["passengerName", "passenger_name", "PassengerName"]),
     );
     setTicketNumber(
-      pickStr(v, ['ticketNumber', 'ticket_number', 'TicketNumber']),
+      pickStr(v, ["ticketNumber", "ticket_number", "TicketNumber"]),
     );
     setBookingReference(
-      pickStr(v, [
-        'bookingReference',
-        'booking_reference',
-        'BookingReference',
-      ]),
+      pickStr(v, ["bookingReference", "booking_reference", "BookingReference"]),
     );
     setSegments(initFlightSegments(v));
     const ex = readExpenseNested(v);
     const amtSrc = ex || v;
     setExpenseAmount(
-      normalizeAmountDigits(pickStr(amtSrc, ['amount', 'Amount'])),
+      normalizeAmountDigits(pickStr(amtSrc, ["amount", "Amount"])),
     );
   }, []);
 
@@ -637,7 +639,7 @@ const FlightDraftEditor = forwardRef<
     ref,
     () => ({
       buildDraft: (): AiDocumentItemDraft => {
-        const apiSegments: FlightSegmentBaseDto[] = segments.map((s) => {
+        const apiSegments: FlightSegmentBaseDto[] = segments.map(s => {
           const depIso = toIso(s.departure_date, s.departure_time);
           const arrIso = toIso(s.arrival_date, s.arrival_time);
           return {
@@ -654,8 +656,7 @@ const FlightDraftEditor = forwardRef<
           };
         });
         const exDate =
-          segments[0]?.departure_date ||
-          dayjs().format('YYYY-MM-DD');
+          segments[0]?.departure_date || dayjs().format("YYYY-MM-DD");
         const nextValues: Record<string, unknown> = {
           ...values,
           reservationNumber,
@@ -665,14 +666,14 @@ const FlightDraftEditor = forwardRef<
           segments: apiSegments,
           expense: {
             exDate,
-            amount: parseInt(expenseAmount, 10) || 0,
+            amount: Number.parseInt(expenseAmount, 10) || 0,
             currency: ExpenseCurrency.KRW,
             category: ExpenseCategory.FLIGHT,
             description: reservationNumber || null,
           },
         };
         return {
-          itemType: 'flight',
+          itemType: "flight",
           payload: {
             ...base,
             values: nextValues as typeof base.values,
@@ -750,8 +751,8 @@ const FlightDraftEditor = forwardRef<
             variant="filled"
             placeholder={PLACEHOLDERS.expense.amount}
             value={formatAmountWithCommas(expenseAmount)}
-            onChangeText={(text) =>
-              setExpenseAmount(normalizeAmountDigits(text.replace(/,/g, '')))
+            onChangeText={text =>
+              setExpenseAmount(normalizeAmountDigits(text.replace(/,/g, "")))
             }
             keyboardType="numeric"
             style={[styles.input, styles.amountInputPadding]}
@@ -784,7 +785,7 @@ const FlightDraftEditor = forwardRef<
                     variant="filled"
                     placeholder={PLACEHOLDERS.flight.airline}
                     value={segment.airline}
-                    onChangeText={(text) => {
+                    onChangeText={text => {
                       const next = [...segments];
                       next[idx] = { ...next[idx], airline: text };
                       setSegments(next);
@@ -799,7 +800,7 @@ const FlightDraftEditor = forwardRef<
                     variant="filled"
                     placeholder={PLACEHOLDERS.flight.flightNumber}
                     value={segment.flight_number}
-                    onChangeText={(text) => {
+                    onChangeText={text => {
                       const next = [...segments];
                       next[idx] = { ...next[idx], flight_number: text };
                       setSegments(next);
@@ -821,7 +822,7 @@ const FlightDraftEditor = forwardRef<
                   <Text style={styles.label}>출발 공항*</Text>
                   <AirportPicker
                     value={segment.departure_airport}
-                    onChange={(code) => {
+                    onChange={code => {
                       const next = [...segments];
                       next[idx] = { ...next[idx], departure_airport: code };
                       setSegments(next);
@@ -842,7 +843,7 @@ const FlightDraftEditor = forwardRef<
                   <Text style={styles.label}>도착 공항*</Text>
                   <AirportPicker
                     value={segment.arrival_airport}
-                    onChange={(code) => {
+                    onChange={code => {
                       const next = [...segments];
                       next[idx] = { ...next[idx], arrival_airport: code };
                       setSegments(next);
@@ -860,7 +861,7 @@ const FlightDraftEditor = forwardRef<
                   <Text style={styles.label}>출발 일자*</Text>
                   <Pressable
                     style={styles.segmentDateInput}
-                    onPress={() => setSegmentCal({ idx, field: 'dep' })}
+                    onPress={() => setSegmentCal({ idx, field: "dep" })}
                   >
                     <View style={styles.segmentDateTextContainer}>
                       <Text
@@ -871,19 +872,19 @@ const FlightDraftEditor = forwardRef<
                         }
                       >
                         {segment.departure_date
-                          ? dayjs(segment.departure_date).format('YYYY.MM.DD')
-                          : '기타'}
+                          ? dayjs(segment.departure_date).format("YYYY.MM.DD")
+                          : "기타"}
                       </Text>
                       <View style={styles.iconWrapper}>
                         <CalendarIcon width={16} height={16} />
                       </View>
                     </View>
                   </Pressable>
-                  {segmentCal?.idx === idx && segmentCal.field === 'dep' ? (
+                  {segmentCal?.idx === idx && segmentCal.field === "dep" ? (
                     <BaseCalendar
                       visible
                       selectedDate={segment.departure_date}
-                      onDayPress={(day) => {
+                      onDayPress={day => {
                         const next = [...segments];
                         next[idx] = {
                           ...next[idx],
@@ -895,9 +896,7 @@ const FlightDraftEditor = forwardRef<
                       onClose={() => setSegmentCal(null)}
                       style={styles.calendarPopup}
                       minDate={
-                        idx > 0
-                          ? segments[idx - 1].arrival_date
-                          : undefined
+                        idx > 0 ? segments[idx - 1].arrival_date : undefined
                       }
                       hideButtons
                       autoCloseOnSelect
@@ -908,7 +907,7 @@ const FlightDraftEditor = forwardRef<
                   <Text style={styles.label}>출발 시간*</Text>
                   <TimePicker
                     value={segment.departure_time}
-                    onChange={(time) => {
+                    onChange={time => {
                       const next = [...segments];
                       next[idx] = { ...next[idx], departure_time: time };
                       setSegments(next);
@@ -929,7 +928,7 @@ const FlightDraftEditor = forwardRef<
                   <Text style={styles.label}>도착 일자*</Text>
                   <Pressable
                     style={styles.segmentDateInput}
-                    onPress={() => setSegmentCal({ idx, field: 'arr' })}
+                    onPress={() => setSegmentCal({ idx, field: "arr" })}
                   >
                     <View style={styles.segmentDateTextContainer}>
                       <Text
@@ -940,19 +939,19 @@ const FlightDraftEditor = forwardRef<
                         }
                       >
                         {segment.arrival_date
-                          ? dayjs(segment.arrival_date).format('YYYY.MM.DD')
-                          : '기타'}
+                          ? dayjs(segment.arrival_date).format("YYYY.MM.DD")
+                          : "기타"}
                       </Text>
                       <View style={styles.iconWrapper}>
                         <CalendarIcon width={16} height={16} />
                       </View>
                     </View>
                   </Pressable>
-                  {segmentCal?.idx === idx && segmentCal.field === 'arr' ? (
+                  {segmentCal?.idx === idx && segmentCal.field === "arr" ? (
                     <BaseCalendar
                       visible
                       selectedDate={segment.arrival_date}
-                      onDayPress={(day) => {
+                      onDayPress={day => {
                         const next = [...segments];
                         next[idx] = {
                           ...next[idx],
@@ -972,7 +971,7 @@ const FlightDraftEditor = forwardRef<
                   <Text style={styles.label}>도착 시간*</Text>
                   <TimePicker
                     value={segment.arrival_time}
-                    onChange={(time) => {
+                    onChange={time => {
                       const next = [...segments];
                       next[idx] = { ...next[idx], arrival_time: time };
                       setSegments(next);
@@ -988,7 +987,7 @@ const FlightDraftEditor = forwardRef<
                   <Input
                     variant="filled"
                     value={segment.seat_class}
-                    onChangeText={(text) => {
+                    onChangeText={text => {
                       const next = [...segments];
                       next[idx] = { ...next[idx], seat_class: text };
                       setSegments(next);
@@ -1002,7 +1001,7 @@ const FlightDraftEditor = forwardRef<
                   <Input
                     variant="filled"
                     value={segment.seat_number}
-                    onChangeText={(text) => {
+                    onChangeText={text => {
                       const next = [...segments];
                       next[idx] = { ...next[idx], seat_number: text };
                       setSegments(next);
@@ -1019,7 +1018,7 @@ const FlightDraftEditor = forwardRef<
                   <Input
                     variant="filled"
                     value={segment.gate}
-                    onChangeText={(text) => {
+                    onChangeText={text => {
                       const next = [...segments];
                       next[idx] = { ...next[idx], gate: text };
                       setSegments(next);
@@ -1033,7 +1032,7 @@ const FlightDraftEditor = forwardRef<
                   <Input
                     variant="filled"
                     value={segment.terminal}
-                    onChangeText={(text) => {
+                    onChangeText={text => {
                       const next = [...segments];
                       next[idx] = { ...next[idx], terminal: text };
                       setSegments(next);
@@ -1053,26 +1052,26 @@ const FlightDraftEditor = forwardRef<
 
 const AccommodationDraftEditor = forwardRef<
   AiAnalyzeDraftEditorRef,
-  { draft: Extract<AiDocumentItemDraft, { itemType: 'accommodation' }> }
+  { draft: Extract<AiDocumentItemDraft, { itemType: "accommodation" }> }
 >(function AccommodationDraftEditor({ draft }, ref) {
   const base = draft.payload;
   const values = useMemo(() => {
     const raw = base.values as Record<string, unknown>;
-    return raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
+    return raw && typeof raw === "object" && !Array.isArray(raw) ? raw : {};
   }, [base.values]);
 
-  const [name, setName] = useState('');
-  const [place, setPlace] = useState('');
-  const [country, setCountry] = useState('');
-  const [city, setCity] = useState('');
-  const [description, setDescription] = useState('');
-  const [checkinDate, setCheckinDate] = useState(dayjs().format('YYYY-MM-DD'));
+  const [name, setName] = useState("");
+  const [place, setPlace] = useState("");
+  const [country, setCountry] = useState("");
+  const [city, setCity] = useState("");
+  const [description, setDescription] = useState("");
+  const [checkinDate, setCheckinDate] = useState(dayjs().format("YYYY-MM-DD"));
   const [checkoutDate, setCheckoutDate] = useState(
-    dayjs().add(1, 'day').format('YYYY-MM-DD'),
+    dayjs().add(1, "day").format("YYYY-MM-DD"),
   );
-  const [checkinTime, setCheckinTime] = useState('15:00');
-  const [checkoutTime, setCheckoutTime] = useState('11:00');
-  const [expenseAmount, setExpenseAmount] = useState('');
+  const [checkinTime, setCheckinTime] = useState("15:00");
+  const [checkoutTime, setCheckoutTime] = useState("11:00");
+  const [expenseAmount, setExpenseAmount] = useState("");
 
   const [countryOpen, setCountryOpen] = useState(false);
   const [showCheckinCal, setShowCheckinCal] = useState(false);
@@ -1081,35 +1080,35 @@ const AccommodationDraftEditor = forwardRef<
   const [checkoutTimeOpen, setCheckoutTimeOpen] = useState(false);
 
   useEffect(() => {
-    setName(pickStr(values, ['name', 'Name']));
-    setPlace(pickStr(values, ['place', 'Place']));
-    setCountry(pickStr(values, ['country', 'Country']));
-    setCity(pickStr(values, ['city', 'City']));
-    setDescription(pickStr(values, ['description', 'Description']));
+    setName(pickStr(values, ["name", "Name"]));
+    setPlace(pickStr(values, ["place", "Place"]));
+    setCountry(pickStr(values, ["country", "Country"]));
+    setCity(pickStr(values, ["city", "City"]));
+    setDescription(pickStr(values, ["description", "Description"]));
     const ci =
-      pickStr(values, ['checkinDate', 'checkin_date', 'CheckinDate']) ||
-      dayjs().format('YYYY-MM-DD');
+      pickStr(values, ["checkinDate", "checkin_date", "CheckinDate"]) ||
+      dayjs().format("YYYY-MM-DD");
     const co =
-      pickStr(values, ['checkoutDate', 'checkout_date', 'CheckoutDate']) ||
-      dayjs(ci).add(1, 'day').format('YYYY-MM-DD');
+      pickStr(values, ["checkoutDate", "checkout_date", "CheckoutDate"]) ||
+      dayjs(ci).add(1, "day").format("YYYY-MM-DD");
     setCheckinDate(ci);
     setCheckoutDate(co);
     setCheckinTime(
       normalizeHHmm(
-        pickStr(values, ['checkinTime', 'checkin_time', 'CheckinTime']) ||
-          '15:00',
-      ) || '15:00',
+        pickStr(values, ["checkinTime", "checkin_time", "CheckinTime"]) ||
+          "15:00",
+      ) || "15:00",
     );
     setCheckoutTime(
       normalizeHHmm(
-        pickStr(values, ['checkoutTime', 'checkout_time', 'CheckoutTime']) ||
-          '11:00',
-      ) || '11:00',
+        pickStr(values, ["checkoutTime", "checkout_time", "CheckoutTime"]) ||
+          "11:00",
+      ) || "11:00",
     );
     const ex = readExpenseNested(values);
     const amtSrc = ex || values;
     setExpenseAmount(
-      normalizeAmountDigits(pickStr(amtSrc, ['amount', 'Amount'])),
+      normalizeAmountDigits(pickStr(amtSrc, ["amount", "Amount"])),
     );
   }, [values]);
 
@@ -1130,14 +1129,14 @@ const AccommodationDraftEditor = forwardRef<
           checkoutTime: `${checkoutTime}:00`,
           expense: {
             exDate: checkinDate,
-            amount: parseInt(expenseAmount, 10) || 0,
+            amount: Number.parseInt(expenseAmount, 10) || 0,
             category: ExpenseCategory.ACCOMMODATION,
             currency: ExpenseCurrency.KRW,
             description: name,
           },
         };
         return {
-          itemType: 'accommodation',
+          itemType: "accommodation",
           payload: {
             ...base,
             values: nextValues as typeof base.values,
@@ -1190,7 +1189,12 @@ const AccommodationDraftEditor = forwardRef<
         />
       </View>
 
-      <View style={[styles.row, { gap: spacing.sm, zIndex: countryOpen ? 10000 : 1 }]}>
+      <View
+        style={[
+          styles.row,
+          { gap: spacing.sm, zIndex: countryOpen ? 10000 : 1 },
+        ]}
+      >
         <View style={[styles.inputGroup, styles.halfWidth]}>
           <Text style={styles.label}>국가</Text>
           <CountryPicker
@@ -1229,20 +1233,29 @@ const AccommodationDraftEditor = forwardRef<
       <View
         style={[
           styles.row,
-          { gap: spacing.sm, zIndex: showCheckinCal ? 30000 : checkinTimeOpen ? 20002 : 1 },
+          {
+            gap: spacing.sm,
+            zIndex: showCheckinCal ? 30000 : checkinTimeOpen ? 20002 : 1,
+          },
         ]}
       >
-        <View style={[styles.inputGroup, styles.halfWidth, { position: 'relative' }]}>
+        <View
+          style={[
+            styles.inputGroup,
+            styles.halfWidth,
+            { position: "relative" },
+          ]}
+        >
           <Text style={styles.label}>체크인 날짜</Text>
           <Pressable
             style={styles.dateInput}
             onPress={() => setShowCheckinCal(true)}
           >
             <View style={styles.dateTextContainer}>
-              <Text style={checkinDate ? styles.dateText : styles.placeholderText}>
-                {checkinDate
-                  ? dayjs(checkinDate).format('YYYY.MM.DD')
-                  : '기타'}
+              <Text
+                style={checkinDate ? styles.dateText : styles.placeholderText}
+              >
+                {checkinDate ? dayjs(checkinDate).format("YYYY.MM.DD") : "기타"}
               </Text>
               <View style={styles.iconWrapper}>
                 <CalendarIcon width={16} height={16} />
@@ -1253,13 +1266,13 @@ const AccommodationDraftEditor = forwardRef<
             <BaseCalendar
               visible
               selectedDate={checkinDate}
-              onDayPress={(day) => {
+              onDayPress={day => {
                 setCheckinDate(day.dateString);
                 setShowCheckinCal(false);
               }}
               onClose={() => setShowCheckinCal(false)}
               style={styles.calendarPopup}
-              minDate={dayjs().format('YYYY-MM-DD')}
+              minDate={dayjs().format("YYYY-MM-DD")}
               hideButtons
               autoCloseOnSelect
             />
@@ -1283,20 +1296,31 @@ const AccommodationDraftEditor = forwardRef<
       <View
         style={[
           styles.row,
-          { gap: spacing.sm, zIndex: showCheckoutCal ? 30000 : checkoutTimeOpen ? 20001 : 1 },
+          {
+            gap: spacing.sm,
+            zIndex: showCheckoutCal ? 30000 : checkoutTimeOpen ? 20001 : 1,
+          },
         ]}
       >
-        <View style={[styles.inputGroup, styles.halfWidth, { position: 'relative' }]}>
+        <View
+          style={[
+            styles.inputGroup,
+            styles.halfWidth,
+            { position: "relative" },
+          ]}
+        >
           <Text style={styles.label}>체크아웃 날짜</Text>
           <Pressable
             style={styles.dateInput}
             onPress={() => setShowCheckoutCal(true)}
           >
             <View style={styles.dateTextContainer}>
-              <Text style={checkoutDate ? styles.dateText : styles.placeholderText}>
+              <Text
+                style={checkoutDate ? styles.dateText : styles.placeholderText}
+              >
                 {checkoutDate
-                  ? dayjs(checkoutDate).format('YYYY.MM.DD')
-                  : '기타'}
+                  ? dayjs(checkoutDate).format("YYYY.MM.DD")
+                  : "기타"}
               </Text>
               <View style={styles.iconWrapper}>
                 <CalendarIcon width={16} height={16} />
@@ -1307,7 +1331,7 @@ const AccommodationDraftEditor = forwardRef<
             <BaseCalendar
               visible
               selectedDate={checkoutDate}
-              onDayPress={(day) => {
+              onDayPress={day => {
                 setCheckoutDate(day.dateString);
                 setShowCheckoutCal(false);
               }}
@@ -1342,8 +1366,8 @@ const AccommodationDraftEditor = forwardRef<
               variant="filled"
               placeholder={PLACEHOLDERS.expense.amount}
               value={formatAmountWithCommas(expenseAmount)}
-              onChangeText={(text) =>
-                setExpenseAmount(normalizeAmountDigits(text.replace(/,/g, '')))
+              onChangeText={text =>
+                setExpenseAmount(normalizeAmountDigits(text.replace(/,/g, "")))
               }
               keyboardType="numeric"
               style={[styles.input, styles.amountInputPadding]}
@@ -1361,30 +1385,30 @@ const AccommodationDraftEditor = forwardRef<
 
 const ExpenseDraftEditor = forwardRef<
   AiAnalyzeDraftEditorRef,
-  { draft: Extract<AiDocumentItemDraft, { itemType: 'expense' }> }
+  { draft: Extract<AiDocumentItemDraft, { itemType: "expense" }> }
 >(function ExpenseDraftEditor({ draft }, ref) {
   const base = draft.payload;
   const values = useMemo(() => {
     const raw = base.values as Record<string, unknown>;
-    return raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
+    return raw && typeof raw === "object" && !Array.isArray(raw) ? raw : {};
   }, [base.values]);
 
   const [category, setCategory] = useState(ExpenseCategory.ETC);
-  const [amount, setAmount] = useState('');
-  const [description, setDescription] = useState('');
-  const [exDate, setExDate] = useState(dayjs().format('YYYY-MM-DD'));
+  const [amount, setAmount] = useState("");
+  const [description, setDescription] = useState("");
+  const [exDate, setExDate] = useState(dayjs().format("YYYY-MM-DD"));
   const [catOpen, setCatOpen] = useState(false);
   const [showCal, setShowCal] = useState(false);
 
   useEffect(() => {
     setCategory(
-      coerceExpenseCategory(pickStr(values, ['category', 'Category']) || 'etc'),
+      coerceExpenseCategory(pickStr(values, ["category", "Category"]) || "etc"),
     );
-    setAmount(normalizeAmountDigits(pickStr(values, ['amount', 'Amount'])));
-    setDescription(pickStr(values, ['description', 'Description']));
+    setAmount(normalizeAmountDigits(pickStr(values, ["amount", "Amount"])));
+    setDescription(pickStr(values, ["description", "Description"]));
     setExDate(
-      pickStr(values, ['exDate', 'ex_date', 'ExDate']) ||
-        dayjs().format('YYYY-MM-DD'),
+      pickStr(values, ["exDate", "ex_date", "ExDate"]) ||
+        dayjs().format("YYYY-MM-DD"),
     );
   }, [values]);
 
@@ -1392,13 +1416,13 @@ const ExpenseDraftEditor = forwardRef<
     ref,
     () => ({
       buildDraft: (): AiDocumentItemDraft => ({
-        itemType: 'expense',
+        itemType: "expense",
         payload: {
           ...base,
           values: {
             ...values,
             category,
-            amount: parseInt(amount, 10) || 0,
+            amount: Number.parseInt(amount, 10) || 0,
             currency: ExpenseCurrency.KRW,
             description,
             exDate,
@@ -1429,8 +1453,8 @@ const ExpenseDraftEditor = forwardRef<
         <Input
           variant="filled"
           value={formatAmountWithCommas(amount)}
-          onChangeText={(text) =>
-            setAmount(normalizeAmountDigits(text.replace(/,/g, '')))
+          onChangeText={text =>
+            setAmount(normalizeAmountDigits(text.replace(/,/g, "")))
           }
           keyboardType="numeric"
           style={styles.input}
@@ -1453,7 +1477,7 @@ const ExpenseDraftEditor = forwardRef<
         <Pressable style={styles.dateInput} onPress={() => setShowCal(true)}>
           <View style={styles.dateTextContainer}>
             <Text style={styles.dateText}>
-              {dayjs(exDate).format('YYYY년 M월 D일')}
+              {dayjs(exDate).format("YYYY년 M월 D일")}
             </Text>
             <View style={styles.iconWrapper}>
               <CalendarIcon width={16} height={16} />
@@ -1464,7 +1488,7 @@ const ExpenseDraftEditor = forwardRef<
           <BaseCalendar
             visible
             selectedDate={exDate}
-            onDayPress={(day) => {
+            onDayPress={day => {
               setExDate(day.dateString);
               setShowCal(false);
             }}
@@ -1493,13 +1517,13 @@ export const AiAnalyzeResultBody = forwardRef<
     () => ({
       buildDraft: () => {
         switch (draft.itemType) {
-          case 'itinerary':
+          case "itinerary":
             return itineraryRef.current?.buildDraft() ?? draft;
-          case 'flight':
+          case "flight":
             return flightRef.current?.buildDraft() ?? draft;
-          case 'accommodation':
+          case "accommodation":
             return accommodationRef.current?.buildDraft() ?? draft;
-          case 'expense':
+          case "expense":
             return expenseRef.current?.buildDraft() ?? draft;
           default:
             return draft;
@@ -1510,23 +1534,17 @@ export const AiAnalyzeResultBody = forwardRef<
   );
 
   switch (draft.itemType) {
-    case 'itinerary':
-      return (
-        <ItineraryDraftEditor ref={itineraryRef} draft={draft} />
-      );
-    case 'flight':
+    case "itinerary":
+      return <ItineraryDraftEditor ref={itineraryRef} draft={draft} />;
+    case "flight":
       return <FlightDraftEditor ref={flightRef} draft={draft} />;
-    case 'accommodation':
-      return (
-        <AccommodationDraftEditor ref={accommodationRef} draft={draft} />
-      );
-    case 'expense':
+    case "accommodation":
+      return <AccommodationDraftEditor ref={accommodationRef} draft={draft} />;
+    case "expense":
       return <ExpenseDraftEditor ref={expenseRef} draft={draft} />;
     default:
       return (
-        <Text style={styles.fallbackText}>
-          지원하지 않는 항목 유형입니다.
-        </Text>
+        <Text style={styles.fallbackText}>지원하지 않는 항목 유형입니다.</Text>
       );
   }
 });
@@ -1539,10 +1557,10 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   row: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: spacing.sm,
-    overflow: 'visible',
-    position: 'relative',
+    overflow: "visible",
+    position: "relative",
   },
   halfWidth: {
     flex: 1,
@@ -1578,8 +1596,8 @@ const styles = StyleSheet.create({
     borderWidth: 0,
   },
   dateInput: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     borderWidth: 0,
     borderRadius: radii.md,
     paddingHorizontal: spacing.md,
@@ -1588,9 +1606,9 @@ const styles = StyleSheet.create({
     minHeight: 40,
   },
   dateTextContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     flex: 1,
   },
   dateText: {
@@ -1605,22 +1623,22 @@ const styles = StyleSheet.create({
     marginTop: 0,
   },
   calendarPopup: {
-    position: 'absolute',
+    position: "absolute",
     top: 70,
     left: 0,
     zIndex: 20000,
   },
   datePickerWrapper: {
-    position: 'relative',
-    overflow: 'visible',
+    position: "relative",
+    overflow: "visible",
   },
   pickerRowWrapper: {
-    overflow: 'visible',
-    position: 'relative',
+    overflow: "visible",
+    position: "relative",
   },
   countryPickerWrapper: {
-    overflow: 'visible',
-    position: 'relative',
+    overflow: "visible",
+    position: "relative",
   },
   currencyDisplay: {
     backgroundColor: colors.gray200,
@@ -1628,7 +1646,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.md,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.md,
-    justifyContent: 'center',
+    justifyContent: "center",
     borderWidth: 0,
   },
   currencyText: {
@@ -1636,16 +1654,16 @@ const styles = StyleSheet.create({
     color: colors.gray600,
   },
   amountInputWrapper: {
-    position: 'relative',
+    position: "relative",
   },
   amountInputPadding: {
     paddingRight: 36,
-    textAlign: 'right',
+    textAlign: "right",
   },
   amountSuffix: {
-    position: 'absolute',
+    position: "absolute",
     right: spacing.sm,
-    top: '50%',
+    top: "50%",
     transform: [{ translateY: -10 }],
     ...textStyles.body4,
     color: colors.black,
@@ -1657,9 +1675,9 @@ const styles = StyleSheet.create({
     height: 40,
   },
   pillOrange: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'flex-start',
+    flexDirection: "row",
+    alignItems: "center",
+    alignSelf: "flex-start",
     gap: 6,
     paddingVertical: 4,
     paddingHorizontal: 10,
@@ -1678,7 +1696,7 @@ const styles = StyleSheet.create({
   pillOrangeText: {
     fontSize: 11,
     lineHeight: 16,
-    fontWeight: '600',
+    fontWeight: "600",
     color: ORANGE,
   },
   segmentContainer: {
@@ -1691,9 +1709,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
   },
   segmentTitleRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
   segmentTitle: {
     ...textStyles.h6,
@@ -1715,11 +1733,11 @@ const styles = StyleSheet.create({
     borderRadius: radii.md,
     height: 40,
     paddingHorizontal: spacing.md,
-    justifyContent: 'center',
+    justifyContent: "center",
   },
   segmentDateTextContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: spacing.sm,
     flex: 1,
   },
@@ -1738,8 +1756,8 @@ const styles = StyleSheet.create({
     height: 40,
   },
   airportPickerWrapper: {
-    overflow: 'visible',
-    position: 'relative',
+    overflow: "visible",
+    position: "relative",
   },
   /** AI 분석 모달 전용: 공항 피커 트리거·목록·검색을 다른 입력과 동일한 회색 무테 */
   draftAirportPicker: {

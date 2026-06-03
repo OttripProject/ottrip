@@ -41,11 +41,7 @@ function coerceFieldMetaEntry(raw: unknown): AiDocumentFieldMetaEntry | null {
   const o = raw as Record<string, unknown>;
   const certainty = o.certainty ?? o.Certainty;
   const editable = o.editable ?? o.Editable;
-  if (
-    certainty !== "high" &&
-    certainty !== "medium" &&
-    certainty !== "low"
-  ) {
+  if (certainty !== "high" && certainty !== "medium" && certainty !== "low") {
     return null;
   }
   if (typeof editable !== "boolean") return null;
@@ -155,8 +151,7 @@ function normalizeAnalyzeResponse(
   const success = Boolean(
     o.success ?? o.Success ?? nested?.success ?? nested?.Success,
   );
-  const err =
-    o.error ?? o.Error ?? nested?.error ?? nested?.Error;
+  const err = o.error ?? o.Error ?? nested?.error ?? nested?.Error;
   const inferredRaw =
     o.inferredItemType ??
     o.inferred_item_type ??
@@ -176,11 +171,7 @@ function normalizeAnalyzeResponse(
     inferredItemType = inferredNorm as AiDocumentItemType;
   }
 
-  const draftSource =
-    o.draft ??
-    o.Draft ??
-    nested?.draft ??
-    nested?.Draft;
+  const draftSource = o.draft ?? o.Draft ?? nested?.draft ?? nested?.Draft;
 
   const draft = normalizeItemDraft(draftSource);
 
@@ -210,7 +201,7 @@ function normalizeAnalyzeHttpError(
     }
     if (Array.isArray(detail)) {
       const parts = detail
-        .map((item) => {
+        .map(item => {
           if (item && typeof item === "object" && "msg" in (item as object)) {
             return String((item as { msg?: unknown }).msg ?? "").trim();
           }
@@ -281,7 +272,7 @@ export async function parseTextToItem(
     { text, plan_public_id: planPublicId },
     {
       timeout: 60_000,
-      validateStatus: (status) =>
+      validateStatus: status =>
         status === 200 || status === 400 || status === 422,
     },
   );

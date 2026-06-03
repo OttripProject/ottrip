@@ -1,15 +1,15 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, Pressable, StyleSheet } from 'react-native';
-import { useRoute, useNavigation } from '@react-navigation/native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import GradientBackground from '@/ui/components/GradientBackground';
-import Card from '@/ui/components/Card';
-import { colors } from '@/ui/tokens/colors';
-import { textStyles } from '@/ui/tokens/typography';
+import Card from "@/ui/components/Card";
+import GradientBackground from "@/ui/components/GradientBackground";
+import { colors } from "@/ui/tokens/colors";
+import { textStyles } from "@/ui/tokens/typography";
+import { useNavigation, useRoute } from "@react-navigation/native";
+import { useEffect, useState } from "react";
+import { Pressable, StyleSheet, Text, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
-import LeftArrowIcon from '../../assets/left_arrow.svg';
-import CheckIcon from '../../assets/check.svg';
-import RightArrowTermIcon from '../../assets/right_arrow_term.svg';
+import CheckIcon from "../../assets/check.svg";
+import LeftArrowIcon from "../../assets/left_arrow.svg";
+import RightArrowTermIcon from "../../assets/right_arrow_term.svg";
 
 type RouteParams = {
   registerToken: string;
@@ -46,92 +46,132 @@ export default function TermsConsentScreen() {
       <SafeAreaView style={styles.container}>
         <View style={styles.cardWrapper}>
           <Card variant="basic" alignItems="flex-start">
-            <Pressable 
+            <Pressable
               style={styles.backButton}
-              onPress={() => navigation.navigate('로그인')}
+              onPress={() => navigation.navigate("로그인")}
             >
               <LeftArrowIcon width={24} height={24} fill={colors.black} />
             </Pressable>
 
             <Text style={styles.title}>
-              Ottrip 계정{'\n'}서비스 약관에 동의해주세요
+              Ottrip 계정{"\n"}서비스 약관에 동의해주세요
             </Text>
 
             <View style={styles.checkboxAllWrapper}>
-        <Pressable 
+              <Pressable
                 style={styles.checkboxAllContainer}
                 onPress={handleAgreeAll}
               >
-                <View style={[styles.checkbox, agreeAll && styles.checkboxChecked]}>
-                  {agreeAll && <CheckIcon width={14} height={14} fill={colors.white} />}
+                <View
+                  style={[styles.checkbox, agreeAll && styles.checkboxChecked]}
+                >
+                  {agreeAll && (
+                    <CheckIcon width={14} height={14} fill={colors.white} />
+                  )}
                 </View>
                 <Text style={styles.checkboxLabel}>모두 동의</Text>
-        </Pressable>
-      </View>
+              </Pressable>
+            </View>
 
             <View style={styles.divider} />
 
             <View style={[styles.checkboxRow, { top: 377 }]}>
-              <Pressable 
+              <Pressable
                 style={styles.checkboxContainer}
                 onPress={() => setAgree1(!agree1)}
               >
-                <View style={[styles.checkbox, agree1 && styles.checkboxChecked]}>
-                  {agree1 && <CheckIcon width={14} height={14} fill={colors.white} />}
+                <View
+                  style={[styles.checkbox, agree1 && styles.checkboxChecked]}
+                >
+                  {agree1 && (
+                    <CheckIcon width={14} height={14} fill={colors.white} />
+                  )}
                 </View>
-                <Text style={styles.checkboxLabel}>[필수] 서비스 이용 약관</Text>
-          </Pressable>
-          <Pressable onPress={() => navigation.navigate('상세내용', { key: 'tos' })}>
+                <Text style={styles.checkboxLabel}>
+                  [필수] 서비스 이용 약관
+                </Text>
+              </Pressable>
+              <Pressable
+                onPress={() => navigation.navigate("상세내용", { key: "tos" })}
+              >
                 <RightArrowTermIcon style={styles.termsChevron} />
-          </Pressable>
-        </View>
+              </Pressable>
+            </View>
 
             <View style={[styles.checkboxRow, { top: 417 }]}>
-              <Pressable 
+              <Pressable
                 style={styles.checkboxContainer}
                 onPress={() => setAgree2(!agree2)}
               >
-                <View style={[styles.checkbox, agree2 && styles.checkboxChecked]}>
-                  {agree2 && <CheckIcon width={14} height={14} fill={colors.white} />}
+                <View
+                  style={[styles.checkbox, agree2 && styles.checkboxChecked]}
+                >
+                  {agree2 && (
+                    <CheckIcon width={14} height={14} fill={colors.white} />
+                  )}
                 </View>
-                <Text style={styles.checkboxLabel}>[필수] 개인정보 수집 및 이용</Text>
-          </Pressable>
-          <Pressable onPress={() => navigation.navigate('상세내용', { key: 'privacy' })}>
+                <Text style={styles.checkboxLabel}>
+                  [필수] 개인정보 수집 및 이용
+                </Text>
+              </Pressable>
+              <Pressable
+                onPress={() =>
+                  navigation.navigate("상세내용", { key: "privacy" })
+                }
+              >
                 <RightArrowTermIcon style={styles.termsChevron} />
-          </Pressable>
-        </View>
+              </Pressable>
+            </View>
 
             <View style={[styles.checkboxRow, { top: 457 }]}>
-              <Pressable 
+              <Pressable
                 style={styles.checkboxContainer}
                 onPress={() => setAgree3(!agree3)}
               >
-                <View style={[styles.checkbox, agree3 && styles.checkboxChecked]}>
-                  {agree3 && <CheckIcon width={14} height={14} fill={colors.white} />}
+                <View
+                  style={[styles.checkbox, agree3 && styles.checkboxChecked]}
+                >
+                  {agree3 && (
+                    <CheckIcon width={14} height={14} fill={colors.white} />
+                  )}
                 </View>
-                <Text style={styles.checkboxLabel}>[선택] 이벤트*혜택 정보 수신 및 활용 동의</Text>
-          </Pressable>
-          <Pressable onPress={() => navigation.navigate('상세내용', { key: 'marketing' })}>
+                <Text style={styles.checkboxLabel}>
+                  [선택] 이벤트*혜택 정보 수신 및 활용 동의
+                </Text>
+              </Pressable>
+              <Pressable
+                onPress={() =>
+                  navigation.navigate("상세내용", { key: "marketing" })
+                }
+              >
                 <RightArrowTermIcon style={styles.termsChevron} />
-          </Pressable>
-      </View>
+              </Pressable>
+            </View>
 
-      <Pressable
-        disabled={!allChecked}
-              style={[styles.nextButton, !allChecked && styles.nextButtonDisabled]}
-        onPress={() =>
-          navigation.navigate('프로필 입력', {
-            registerToken,
-            prefill,
-            email,
-            terms: { tos: agree1, privacy: agree2, marketing: agree3 },
-          })
-        }
-      >
-              <Text style={[styles.nextButtonText, !allChecked && styles.nextButtonTextDisabled]}>
+            <Pressable
+              disabled={!allChecked}
+              style={[
+                styles.nextButton,
+                !allChecked && styles.nextButtonDisabled,
+              ]}
+              onPress={() =>
+                navigation.navigate("프로필 입력", {
+                  registerToken,
+                  prefill,
+                  email,
+                  terms: { tos: agree1, privacy: agree2, marketing: agree3 },
+                })
+              }
+            >
+              <Text
+                style={[
+                  styles.nextButtonText,
+                  !allChecked && styles.nextButtonTextDisabled,
+                ]}
+              >
                 다음
               </Text>
-      </Pressable>
+            </Pressable>
           </Card>
         </View>
       </SafeAreaView>
@@ -142,17 +182,17 @@ export default function TermsConsentScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: 'transparent',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "transparent",
+    justifyContent: "center",
+    alignItems: "center",
   },
   cardWrapper: {
-    width: '100%',
-    alignItems: 'center', 
-    justifyContent: 'center',
+    width: "100%",
+    alignItems: "center",
+    justifyContent: "center",
   },
   backButton: {
-    position: 'absolute',
+    position: "absolute",
     left: 40,
     top: 50,
     width: 24,
@@ -160,31 +200,31 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
   title: {
-    position: 'absolute',
+    position: "absolute",
     left: 40,
     top: 106,
     ...textStyles.h2,
   },
   checkboxAllWrapper: {
-    position: 'absolute',
+    position: "absolute",
     left: 43,
     top: 304,
   },
   checkboxAllContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
   },
   checkboxRow: {
-    position: 'absolute',
+    position: "absolute",
     left: 43,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     width: 400,
   },
   checkboxContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
   },
   checkbox: {
     width: 18,
@@ -194,8 +234,8 @@ const styles = StyleSheet.create({
     borderColor: colors.gray400,
     backgroundColor: colors.white,
     marginRight: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   checkboxChecked: {
     backgroundColor: colors.black,
@@ -205,7 +245,7 @@ const styles = StyleSheet.create({
     ...textStyles.body2,
   },
   divider: {
-    position: 'absolute',
+    position: "absolute",
     left: 40,
     top: 349,
     width: 400,
@@ -218,15 +258,15 @@ const styles = StyleSheet.create({
     paddingLeft: 8,
   },
   nextButton: {
-    position: 'absolute',
+    position: "absolute",
     left: 40,
     top: 518,
     width: 400,
     height: 56,
     backgroundColor: colors.black,
     borderRadius: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   nextButtonDisabled: {
     backgroundColor: colors.gray300,

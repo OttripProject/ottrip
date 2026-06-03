@@ -1,10 +1,10 @@
-import React, { useState, useEffect, useLayoutEffect } from 'react';
-import ItineraryItem from './ItineraryItem';
 import type {
   DocumentUploadAnalyzeResponse,
   LocalFile,
   StagedDocumentAnalyzePayload,
-} from '@/types/api';
+} from "@/types/api";
+import { useEffect, useLayoutEffect, useState } from "react";
+import ItineraryItem from "./ItineraryItem";
 
 interface ItinerarySectionProps {
   planData: {
@@ -18,7 +18,7 @@ interface ItinerarySectionProps {
     removeItinerary?: (itineraryId: number) => void;
   };
   selectedItinerary?: any;
-  activeTab?: 'itinerary' | 'flight' | 'accommodation' | undefined;
+  activeTab?: "itinerary" | "flight" | "accommodation" | undefined;
   onItineraryAdd?: (itinerary: any) => void;
   onItineraryClear?: () => void;
   openNewItineraryForm?: boolean;
@@ -51,11 +51,13 @@ export default function ItinerarySection({
   carryoverPendingFiles,
   onConsumeCarryoverPendingFiles,
 }: ItinerarySectionProps) {
-  const [showItineraryForm, setShowItineraryForm] = useState(openNewItineraryForm || false);
+  const [showItineraryForm, setShowItineraryForm] = useState(
+    openNewItineraryForm || false,
+  );
   const [editingItinerary, setEditingItinerary] = useState<any | null>(null);
 
   useEffect(() => {
-    if (activeTab === 'itinerary' && openNewItineraryForm) {
+    if (activeTab === "itinerary" && openNewItineraryForm) {
       setEditingItinerary(null);
       setShowItineraryForm(true);
       onConsumeOpenNewItineraryForm?.();
@@ -63,12 +65,12 @@ export default function ItinerarySection({
   }, [activeTab, openNewItineraryForm, onConsumeOpenNewItineraryForm]);
 
   useEffect(() => {
-    if (activeTab === 'itinerary' && selectedItinerary) {
+    if (activeTab === "itinerary" && selectedItinerary) {
       if (selectedItinerary.id) {
         setEditingItinerary(selectedItinerary);
         setShowItineraryForm(false);
       }
-    } else if (activeTab === 'itinerary' && !selectedItinerary) {
+    } else if (activeTab === "itinerary" && !selectedItinerary) {
       setEditingItinerary(null);
       setShowItineraryForm(true);
     }
@@ -79,7 +81,7 @@ export default function ItinerarySection({
     const kind =
       stagedDocumentAnalyze.result.inferredItemType ??
       stagedDocumentAnalyze.result.draft?.itemType;
-    if (kind !== 'itinerary') return;
+    if (kind !== "itinerary") return;
     if (selectedItinerary?.id && !showItineraryForm) {
       setEditingItinerary(selectedItinerary);
       setShowItineraryForm(true);
@@ -94,7 +96,10 @@ export default function ItinerarySection({
 
   const handleItineraryDelete = (itineraryId?: string | number) => {
     if (itineraryId) {
-      const id = typeof itineraryId === 'string' ? parseInt(itineraryId) : itineraryId;
+      const id =
+        typeof itineraryId === "string"
+          ? Number.parseInt(itineraryId)
+          : itineraryId;
       if (planData?.removeItinerary) {
         planData.removeItinerary(id);
       }
@@ -159,4 +164,3 @@ export default function ItinerarySection({
 
   return null;
 }
-

@@ -1,5 +1,5 @@
-import { useState, useCallback, useEffect } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useCallback, useState } from "react";
 
 export function useRecentSearches(storageKey: string, limit = 10) {
   const [items, setItems] = useState<string[]>([]);
@@ -16,13 +16,13 @@ export function useRecentSearches(storageKey: string, limit = 10) {
 
   const addItem = useCallback(
     (item: string) => {
-      setItems((prev) => {
-        const next = [item, ...prev.filter((c) => c !== item)].slice(0, limit);
+      setItems(prev => {
+        const next = [item, ...prev.filter(c => c !== item)].slice(0, limit);
         AsyncStorage.setItem(storageKey, JSON.stringify(next)).catch(() => {});
         return next;
       });
     },
-    [storageKey, limit]
+    [storageKey, limit],
   );
 
   return { items, addItem, load };

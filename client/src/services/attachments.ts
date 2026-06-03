@@ -167,7 +167,9 @@ export const attachmentsApi = {
     const response = await api.get("/private/attachments/plan", {
       params: { plan_id: planId },
     });
-    return (response.data as Record<string, unknown>[]).map(snakeToCamelAttachment);
+    return (response.data as Record<string, unknown>[]).map(
+      snakeToCamelAttachment,
+    );
   },
 
   getAttachments: async (

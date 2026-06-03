@@ -1,5 +1,5 @@
 // @ts-ignore
-import aircodes from 'aircodes';
+import aircodes from "aircodes";
 
 export type AirportData = {
   iata: string;
@@ -9,7 +9,7 @@ export type AirportData = {
   searchKeyword: string;
 };
 
-export type AirportOption = { 
+export type AirportOption = {
   label: string;
   value: string;
   searchKeyword?: string;
@@ -21,38 +21,38 @@ function loadKoreanAirportsData(): Record<string, AirportData> {
   if (cachedAirportsData) {
     return cachedAirportsData;
   }
-  
+
   try {
-    cachedAirportsData = require('../data/airports.json');
+    cachedAirportsData = require("../data/airports.json");
     return cachedAirportsData || {};
-  } catch (error) {
+  } catch (_error) {
     return {};
   }
 }
 
-export function getAirportOptionsBySearch(searchQuery: string = ''): AirportOption[] {
+export function getAirportOptionsBySearch(searchQuery = ""): AirportOption[] {
   const query = searchQuery.trim().toLowerCase();
-  
+
   if (!query || query.length < 1) {
     return [];
   }
-  
+
   const airportsData = loadKoreanAirportsData();
   if (!airportsData) {
     return [];
   }
-  
+
   const matched: AirportOption[] = [];
-  
+
   for (const iata in airportsData) {
     const airport = airportsData[iata];
     if (!airport || !airport.searchKeyword) {
       continue;
     }
-    
+
     if (airport.searchKeyword.toLowerCase().includes(query)) {
       const label = `${airport.nameKorean} (${airport.iata})`;
-      
+
       matched.push({
         label,
         value: airport.iata,
@@ -79,30 +79,28 @@ export function getAirportLabelByIata(iata: string): string | null {
   return `${airport.nameKorean} (${airport.iata})`;
 }
 
-
 export function getAirportName(code: string): string | undefined {
   try {
     const airport = aircodes.getAirportByIata(code);
     return airport?.name;
-  } catch (e) {
+  } catch (_e) {
     return undefined;
   }
 }
-
 
 export function getAirportLabel(code: string): string | undefined {
   const koreanLabel = getAirportLabelByIata(code);
   if (koreanLabel) {
     return koreanLabel;
   }
-  
+
   try {
     const airport = aircodes.getAirportByIata(code);
     if (airport && airport.iata && airport.name) {
       return `${airport.iata} - ${airport.name}`;
     }
     return undefined;
-  } catch (e) {
+  } catch (_e) {
     return undefined;
   }
 }

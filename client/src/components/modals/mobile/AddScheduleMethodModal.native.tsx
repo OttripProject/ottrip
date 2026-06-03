@@ -1,14 +1,12 @@
-import React from 'react';
-import { View, Text, Pressable, StyleSheet } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import BottomSheetModal from '@/ui/components/BottomSheetModal.native';
-import { colors } from '@/ui/tokens/colors';
-import { textStyles } from '@/ui/tokens/typography';
-import CloseIcon from '../../../../assets/mobile_close.svg';
-import LightningIcon from '../../../../assets/mobile_lightning.svg';
-import RightArrowIcon from '../../../../assets/right_arrow.svg';
-import ManualIcon from '../../../../assets/update.svg';
-
+import BottomSheetModal from "@/ui/components/BottomSheetModal.native";
+import { colors } from "@/ui/tokens/colors";
+import { textStyles } from "@/ui/tokens/typography";
+import { Pressable, StyleSheet, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import CloseIcon from "../../../../assets/mobile_close.svg";
+import LightningIcon from "../../../../assets/mobile_lightning.svg";
+import RightArrowIcon from "../../../../assets/right_arrow.svg";
+import ManualIcon from "../../../../assets/update.svg";
 
 interface AddScheduleMethodModalProps {
   visible: boolean;
@@ -43,7 +41,9 @@ export default function AddScheduleMethodModal({
       backdropOpacity={0.7}
       showDragHandle
     >
-      <View style={[styles.root, { paddingBottom: Math.max(insets.bottom, 16) }]}>
+      <View
+        style={[styles.root, { paddingBottom: Math.max(insets.bottom, 16) }]}
+      >
         <View style={styles.header}>
           <Text style={styles.headerTitle}>일정 추가 방법 선택</Text>
           <Pressable
@@ -58,22 +58,30 @@ export default function AddScheduleMethodModal({
         </View>
 
         <Pressable
-          style={({ pressed }) => [styles.cardAi, pressed && styles.cardPressed]}
+          style={({ pressed }) => [
+            styles.cardAi,
+            pressed && styles.cardPressed,
+          ]}
           onPress={handleAi}
           accessibilityRole="button"
         >
           <View style={styles.iconCircle}>
-            <LightningIcon width={20} height={20} color={colors.primary}/>
+            <LightningIcon width={20} height={20} color={colors.primary} />
           </View>
           <View style={styles.cardTextBlock}>
             <Text style={styles.cardTitle}>AI로 간편 추가</Text>
-            <Text style={styles.cardSubtitleAi}>대화하듯 편하게 등록하세요.</Text>
+            <Text style={styles.cardSubtitleAi}>
+              대화하듯 편하게 등록하세요.
+            </Text>
           </View>
           <RightArrowIcon width={20} height={20} color={colors.primary} />
         </Pressable>
 
         <Pressable
-          style={({ pressed }) => [styles.cardManual, pressed && styles.cardPressed]}
+          style={({ pressed }) => [
+            styles.cardManual,
+            pressed && styles.cardPressed,
+          ]}
           onPress={handleDirect}
           accessibilityRole="button"
         >
@@ -82,7 +90,9 @@ export default function AddScheduleMethodModal({
           </View>
           <View style={styles.cardTextBlock}>
             <Text style={styles.cardTitle}>직접 입력</Text>
-            <Text style={styles.cardSubtitleManual}>상세 정보를 직접 입력하세요.</Text>
+            <Text style={styles.cardSubtitleManual}>
+              상세 정보를 직접 입력하세요.
+            </Text>
           </View>
           <RightArrowIcon width={20} height={20} color={colors.gray500} />
         </Pressable>
@@ -98,9 +108,9 @@ const styles = StyleSheet.create({
     paddingTop: 4,
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     marginBottom: 13,
   },
   headerTitle: {
@@ -112,12 +122,12 @@ const styles = StyleSheet.create({
     height: 32,
     borderRadius: 16,
     backgroundColor: colors.gray200,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   cardAi: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingVertical: 20,
     paddingHorizontal: 16,
     borderRadius: 12,
@@ -128,8 +138,8 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   cardManual: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingVertical: 20,
     paddingHorizontal: 16,
     borderRadius: 12,
@@ -144,8 +154,8 @@ const styles = StyleSheet.create({
     height: 36,
     borderRadius: 12,
     backgroundColor: colors.white,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   cardTextBlock: {
     flex: 1,

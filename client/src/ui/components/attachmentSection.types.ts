@@ -1,10 +1,10 @@
-import type { StyleProp, ViewStyle } from 'react-native';
+import type { StyleProp, ViewStyle } from "react-native";
 
-import type { Attachment, LocalFile } from '@/types/api';
+import type { Attachment, LocalFile } from "@/types/api";
 
 export type AiAttachmentAnalyzeSelection =
-  | { kind: 'pending'; key: string }
-  | { kind: 'existing'; id: number };
+  | { kind: "pending"; key: string }
+  | { kind: "existing"; id: number };
 
 export function pendingAiFileKey(file: LocalFile): string {
   return `${file.name}:${file.uri}`;

@@ -1,5 +1,5 @@
-import api from './api';
-import { Itinerary, CreateItineraryRequest } from '../types/api';
+import type { CreateItineraryRequest, Itinerary } from "../types/api";
+import api from "./api";
 
 export const itinerariesApi = {
   getItineraries: async (planId?: number): Promise<Itinerary[]> => {
@@ -12,13 +12,21 @@ export const itinerariesApi = {
     return response.data;
   },
 
-  createItinerary: async (itineraryData: CreateItineraryRequest): Promise<Itinerary> => {
-    const response = await api.post('/private/itinerary', itineraryData);
+  createItinerary: async (
+    itineraryData: CreateItineraryRequest,
+  ): Promise<Itinerary> => {
+    const response = await api.post("/private/itinerary", itineraryData);
     return response.data;
   },
 
-  updateItinerary: async (itineraryId: number, itineraryData: Partial<CreateItineraryRequest>): Promise<Itinerary> => {
-    const response = await api.patch(`/private/itinerary/${itineraryId}`, itineraryData);
+  updateItinerary: async (
+    itineraryId: number,
+    itineraryData: Partial<CreateItineraryRequest>,
+  ): Promise<Itinerary> => {
+    const response = await api.patch(
+      `/private/itinerary/${itineraryId}`,
+      itineraryData,
+    );
     return response.data;
   },
 
@@ -28,9 +36,13 @@ export const itinerariesApi = {
   },
 
   assist: async (
-    itineraryId: number
-  ): Promise<{ packing: string[]; attractions: string[]; local_tips: string[] }> => {
+    itineraryId: number,
+  ): Promise<{
+    packing: string[];
+    attractions: string[];
+    local_tips: string[];
+  }> => {
     const response = await api.post(`/private/itinerary/${itineraryId}/assist`);
     return response.data;
   },
-}; 
+};

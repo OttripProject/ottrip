@@ -1,7 +1,7 @@
-import api from './api';
-import axios from 'axios';
-import { envSchema } from '../core/env/schema';
-import type { Gender } from '@/types/api';
+import type { Gender } from "@/types/api";
+import axios from "axios";
+import { envSchema } from "../core/env/schema";
+import api from "./api";
 
 const env = envSchema.parse(process.env);
 
@@ -9,7 +9,7 @@ const devApi = axios.create({
   baseURL: env.EXPO_PUBLIC_API_URL,
   timeout: 10000,
   headers: {
-    'Content-Type': 'application/json',
+    "Content-Type": "application/json",
   },
 });
 
@@ -46,73 +46,80 @@ export interface UserCreate {
 
 export const authApi = {
   getServerTime: async (): Promise<{ time: string }> => {
-    const response = await api.get('/public/auth/time');
+    const response = await api.get("/public/auth/time");
     return response.data;
   },
 
   googleLogin: async (idToken: string): Promise<AuthResponse> => {
-    const response = await api.post('/public/auth/google', {
+    const response = await api.post("/public/auth/google", {
       id_token: idToken,
     });
     return response.data;
   },
 
   appleLogin: async (identityToken: string): Promise<AuthResponse> => {
-    const response = await api.post('/public/auth/apple', {
+    const response = await api.post("/public/auth/apple", {
       identity_token: identityToken,
     });
     return response.data;
   },
 
   loginAsGuest: async (): Promise<RegisteredAuthResponse> => {
-    const response = await api.post('/public/auth/guest', {});
+    const response = await api.post("/public/auth/guest", {});
     return response.data;
   },
 
   refreshToken: async (refreshToken?: string): Promise<TokenResponse> => {
     const payload = refreshToken ? { refresh_token: refreshToken } : {};
-    const response = await api.post('/public/auth/refresh', payload);
+    const response = await api.post("/public/auth/refresh", payload);
     return response.data;
   },
 
   checkLoginStatus: async (): Promise<boolean> => {
-    const response = await api.get('/public/auth/valid-token');
+    const response = await api.get("/public/auth/valid-token");
     return response.data;
   },
 
   validateHandle: async (handle: string): Promise<{ error: string | null }> => {
-    const response = await api.post('/public/auth/validate/handle', { handle }, 
-    );
+    const response = await api.post("/public/auth/validate/handle", { handle });
     return response.data;
   },
 
-  validateNickname: async (nickname: string): Promise<{ error: string | null }> => {
-    const response = await api.post('/public/auth/validate/nickname', { nickname }, 
-    );
+  validateNickname: async (
+    nickname: string,
+  ): Promise<{ error: string | null }> => {
+    const response = await api.post("/public/auth/validate/nickname", {
+      nickname,
+    });
     return response.data;
   },
 
-  registerUser: async (userData: UserCreate, registerToken: string): Promise<TokenResponse> => {
+  registerUser: async (
+    userData: UserCreate,
+    registerToken: string,
+  ): Promise<TokenResponse> => {
     const requestData = {
       user: userData,
       registerToken: registerToken,
     };
-    
-    const response = await api.post('/public/auth/register', requestData);
+
+    const response = await api.post("/public/auth/register", requestData);
     return response.data;
   },
 
   createTestUser: async (): Promise<TokenResponse> => {
-    const response = await devApi.post('/dev/create-test-user');
+    const response = await devApi.post("/dev/create-test-user");
     return response.data;
   },
 
   createTestUserToken: async (userId: number): Promise<string> => {
-    const response = await devApi.get(`/dev/create-test-user-token?user_id=${userId}`);
+    const response = await devApi.get(
+      `/dev/create-test-user-token?user_id=${userId}`,
+    );
     return response.data;
   },
 
   logout: async (): Promise<void> => {
-    await api.post('/public/auth/logout');
+    await api.post("/public/auth/logout");
   },
-}; 
+};

@@ -1,13 +1,13 @@
-import { useEffect, useState, RefObject, useCallback } from 'react';
-import { Platform } from 'react-native';
+import { type RefObject, useCallback, useEffect, useState } from "react";
+import { Platform } from "react-native";
 
-const useDetectClose = <T extends any>(
+const useDetectClose = <T>(
   elem: RefObject<T>,
-  initialState: boolean = false
+  initialState = false,
 ): [
   boolean,
   (value: boolean | ((prev: boolean) => boolean)) => void,
-  () => void
+  () => void,
 ] => {
   const [isOpen, setIsOpen] = useState(initialState);
 
@@ -20,21 +20,24 @@ const useDetectClose = <T extends any>(
   useEffect(() => {
     if (!isOpen) return;
 
-    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+    if (Platform.OS === "web" && typeof window !== "undefined") {
       const onClick = (e: MouseEvent) => {
         const target = e.target as Node;
-        if (elem.current !== null && !(elem.current as any).contains?.(target)) {
+        if (
+          elem.current !== null &&
+          !(elem.current as any).contains?.(target)
+        ) {
           setIsOpen(false);
         }
       };
 
       const timeoutId = setTimeout(() => {
-        window.addEventListener('click', onClick, true);
+        window.addEventListener("click", onClick, true);
       }, 0);
 
       return () => {
         clearTimeout(timeoutId);
-        window.removeEventListener('click', onClick, true);
+        window.removeEventListener("click", onClick, true);
       };
     }
   }, [isOpen, elem]);
@@ -43,4 +46,3 @@ const useDetectClose = <T extends any>(
 };
 
 export default useDetectClose;
-

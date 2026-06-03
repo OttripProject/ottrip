@@ -1,79 +1,79 @@
-import React, { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from "react";
 import {
   Modal,
-  View,
-  Text,
   Pressable,
-  StyleSheet,
   ScrollView,
+  StyleSheet,
+  Text,
+  View,
   useWindowDimensions,
-} from 'react-native';
+} from "react-native";
 
-import { colors } from '@/ui/tokens/colors';
-import { spacing } from '@/ui/tokens/spacing';
+import {
+  type AiAnalyzeDraftEditorRef,
+  AiAnalyzeResultBody,
+} from "@/components/modals/aiDocumentAnalyzeDraftBody";
 import type {
   AiDocumentItemDraft,
   AiDocumentItemType,
   DocumentUploadAnalyzeResponse,
-} from '@/types/api';
-import {
-  AiAnalyzeResultBody,
-  type AiAnalyzeDraftEditorRef,
-} from '@/components/modals/aiDocumentAnalyzeDraftBody';
+} from "@/types/api";
+import { colors } from "@/ui/tokens/colors";
+import { spacing } from "@/ui/tokens/spacing";
 
-const BLUE_PILL = '#0A84FF';
-const BLUE_PILL_BG = '#E5F0FF';
-const BTN_CANCEL_BG = '#EDEDED';
+const BLUE_PILL = "#0A84FF";
+const BLUE_PILL_BG = "#E5F0FF";
+const BTN_CANCEL_BG = "#EDEDED";
 
 function getEntitySubtitle(entityTypeLabel: string): string {
   const t = entityTypeLabel.trim();
-  if (t === '항공' || t.includes('항공')) {
-    return '항공편 정보가 맞는지 확인 후 저장하세요';
+  if (t === "항공" || t.includes("항공")) {
+    return "항공편 정보가 맞는지 확인 후 저장하세요";
   }
-  if (t === '숙박' || t.includes('숙박')) {
-    return '숙박 정보가 맞는지 확인 후 저장하세요';
+  if (t === "숙박" || t.includes("숙박")) {
+    return "숙박 정보가 맞는지 확인 후 저장하세요";
   }
-  return '일정 정보가 맞는지 확인 후 저장하세요';
+  return "일정 정보가 맞는지 확인 후 저장하세요";
 }
 
 function getBluePillText(entityTypeLabel: string): string {
   const t = entityTypeLabel.trim();
-  if (t === '항공' || t.includes('항공')) {
-    return 'AI가 추출한 항공편 정보';
+  if (t === "항공" || t.includes("항공")) {
+    return "AI가 추출한 항공편 정보";
   }
-  if (t === '숙박' || t.includes('숙박')) {
-    return 'AI가 추출한 숙박 정보';
+  if (t === "숙박" || t.includes("숙박")) {
+    return "AI가 추출한 숙박 정보";
   }
-  return 'AI가 추출한 일정 정보';
+  return "AI가 추출한 일정 정보";
 }
 
 function getSubtitleFromKind(kind: AiDocumentItemType): string {
   switch (kind) {
-    case 'flight':
-      return '항공편 정보가 맞는지 확인 후 저장하세요';
-    case 'accommodation':
-      return '숙박 정보가 맞는지 확인 후 저장하세요';
-    case 'itinerary':
-      return '일정 정보가 맞는지 확인 후 저장하세요';
-    case 'expense':
-      return '지출 정보가 맞는지 확인 후 저장하세요';
+    case "flight":
+      return "항공편 정보가 맞는지 확인 후 저장하세요";
+    case "accommodation":
+      return "숙박 정보가 맞는지 확인 후 저장하세요";
+    case "itinerary":
+      return "일정 정보가 맞는지 확인 후 저장하세요";
+    case "expense":
+      return "지출 정보가 맞는지 확인 후 저장하세요";
     default:
-      return '항목 정보가 맞는지 확인 후 저장하세요';
+      return "항목 정보가 맞는지 확인 후 저장하세요";
   }
 }
 
 function getBluePillTextFromKind(kind: AiDocumentItemType): string {
   switch (kind) {
-    case 'flight':
-      return 'AI가 추출한 항공편 정보';
-    case 'accommodation':
-      return 'AI가 추출한 숙박 정보';
-    case 'itinerary':
-      return 'AI가 추출한 일정 정보';
-    case 'expense':
-      return 'AI가 추출한 지출 정보';
+    case "flight":
+      return "AI가 추출한 항공편 정보";
+    case "accommodation":
+      return "AI가 추출한 숙박 정보";
+    case "itinerary":
+      return "AI가 추출한 일정 정보";
+    case "expense":
+      return "AI가 추출한 지출 정보";
     default:
-      return 'AI가 추출한 정보';
+      return "AI가 추출한 정보";
   }
 }
 
@@ -92,11 +92,11 @@ export interface AiDocumentAnalyzeModalProps {
 export default function AiDocumentAnalyzeModal({
   visible,
   onClose,
-  title = '분석 결과 확인',
-  entityTypeLabel = '일정',
+  title = "분석 결과 확인",
+  entityTypeLabel = "일정",
   analyzeResult = null,
   onApply,
-  applyLabel = '저장',
+  applyLabel = "저장",
 }: AiDocumentAnalyzeModalProps) {
   const { width: windowWidth } = useWindowDimensions();
   const cardWidth = Math.min(460, windowWidth - 32);
@@ -105,19 +105,21 @@ export default function AiDocumentAnalyzeModal({
 
   useEffect(() => {
     if (visible && analyzeResult?.draft) {
-      setDraftBodyKey((k) => k + 1);
+      setDraftBodyKey(k => k + 1);
     }
   }, [visible, analyzeResult]);
 
   const kind: AiDocumentItemType | null =
-    analyzeResult?.inferredItemType ??
-    analyzeResult?.draft?.itemType ??
-    null;
+    analyzeResult?.inferredItemType ?? analyzeResult?.draft?.itemType ?? null;
 
   const subtitle =
-    kind != null ? getSubtitleFromKind(kind) : getEntitySubtitle(entityTypeLabel);
+    kind != null
+      ? getSubtitleFromKind(kind)
+      : getEntitySubtitle(entityTypeLabel);
   const bluePillText =
-    kind != null ? getBluePillTextFromKind(kind) : getBluePillText(entityTypeLabel);
+    kind != null
+      ? getBluePillTextFromKind(kind)
+      : getBluePillText(entityTypeLabel);
 
   const handleApply = () => {
     if (analyzeResult?.draft) {
@@ -130,29 +132,29 @@ export default function AiDocumentAnalyzeModal({
   };
 
   const body = analyzeResult?.draft ? (
-      <View key={draftBodyKey} style={styles.childrenWrap}>
-        <View style={styles.pillBlue}>
-          <View style={styles.pillDotBlue} />
-          <Text style={styles.pillBlueText}>{bluePillText}</Text>
-        </View>
-        <View style={styles.fieldStack}>
-          <AiAnalyzeResultBody
-            key={draftBodyKey}
-            ref={draftEditorRef}
-            draft={analyzeResult.draft}
-          />
-        </View>
+    <View key={draftBodyKey} style={styles.childrenWrap}>
+      <View style={styles.pillBlue}>
+        <View style={styles.pillDotBlue} />
+        <Text style={styles.pillBlueText}>{bluePillText}</Text>
       </View>
-    ) : analyzeResult && analyzeResult.draft == null ? (
-      <Text style={styles.emptyDraftHint}>
-        분석은 완료됐지만 표시할 초안 데이터가 없습니다.
-      </Text>
-    ) : visible ? (
-      <Text style={styles.emptyDraftHint}>
-        분석은 완료된 것으로 보이나, 결과 화면에 데이터가 전달되지 않았습니다. 창을 닫은 뒤
-        새로고침하고 다시 시도해 주세요.
-      </Text>
-    ) : null;
+      <View style={styles.fieldStack}>
+        <AiAnalyzeResultBody
+          key={draftBodyKey}
+          ref={draftEditorRef}
+          draft={analyzeResult.draft}
+        />
+      </View>
+    </View>
+  ) : analyzeResult && analyzeResult.draft == null ? (
+    <Text style={styles.emptyDraftHint}>
+      분석은 완료됐지만 표시할 초안 데이터가 없습니다.
+    </Text>
+  ) : visible ? (
+    <Text style={styles.emptyDraftHint}>
+      분석은 완료된 것으로 보이나, 결과 화면에 데이터가 전달되지 않았습니다.
+      창을 닫은 뒤 새로고침하고 다시 시도해 주세요.
+    </Text>
+  ) : null;
 
   return (
     <Modal
@@ -226,18 +228,18 @@ export default function AiDocumentAnalyzeModal({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.45)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "rgba(0, 0, 0, 0.45)",
+    justifyContent: "center",
+    alignItems: "center",
     padding: spacing.md,
   },
   card: {
-    maxWidth: '100%',
-    maxHeight: '90%',
+    maxWidth: "100%",
+    maxHeight: "90%",
     backgroundColor: colors.white,
     borderRadius: 16,
-    overflow: 'visible',
-    shadowColor: '#000',
+    overflow: "visible",
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 24 },
     shadowOpacity: 0.22,
     shadowRadius: 30,
@@ -250,9 +252,9 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   headerRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
     gap: 10,
   },
   headerTextBlock: {
@@ -263,26 +265,26 @@ const styles = StyleSheet.create({
     margin: 0,
     fontSize: 16,
     lineHeight: 24,
-    fontWeight: '700',
+    fontWeight: "700",
     color: colors.gray900,
   },
   modalSubtitle: {
     marginTop: 4,
     fontSize: 12,
     lineHeight: 18,
-    fontWeight: '400',
+    fontWeight: "400",
     color: colors.gray600,
   },
   closeButton: {
     width: 24,
     height: 24,
     marginTop: 2,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   closeGlyph: {
     fontSize: 14,
-    fontWeight: '300',
+    fontWeight: "300",
     color: colors.gray900,
     lineHeight: 16,
   },
@@ -302,13 +304,13 @@ const styles = StyleSheet.create({
   emptyDraftHint: {
     fontSize: 12,
     lineHeight: 18,
-    fontWeight: '400',
+    fontWeight: "400",
     color: colors.gray600,
   },
   pillBlue: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'flex-start',
+    flexDirection: "row",
+    alignItems: "center",
+    alignSelf: "flex-start",
     gap: 6,
     paddingVertical: 4,
     paddingHorizontal: 10,
@@ -324,17 +326,17 @@ const styles = StyleSheet.create({
   pillBlueText: {
     fontSize: 11,
     lineHeight: 16,
-    fontWeight: '600',
+    fontWeight: "600",
     color: BLUE_PILL,
   },
   fieldStack: {
-    flexDirection: 'column',
+    flexDirection: "column",
     gap: 8,
   },
   footer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'flex-end',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "flex-end",
     gap: 8,
     paddingTop: 4,
   },
@@ -342,8 +344,8 @@ const styles = StyleSheet.create({
     height: 36,
     paddingHorizontal: 16,
     borderRadius: 9,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   footerBtnCancel: {
     backgroundColor: BTN_CANCEL_BG,
@@ -351,7 +353,7 @@ const styles = StyleSheet.create({
   footerBtnCancelText: {
     fontSize: 12,
     lineHeight: 18,
-    fontWeight: '700',
+    fontWeight: "700",
     color: colors.gray900,
   },
   footerBtnSave: {
@@ -360,7 +362,7 @@ const styles = StyleSheet.create({
   footerBtnSaveText: {
     fontSize: 12,
     lineHeight: 18,
-    fontWeight: '700',
+    fontWeight: "700",
     color: colors.white,
   },
 });

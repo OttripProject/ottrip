@@ -21,21 +21,21 @@ export enum ExpenseCurrency {
 }
 
 export const categoryLabels = {
-  [ExpenseCategory.FOOD]: '식비',
-  [ExpenseCategory.TRANSPORT]: '교통비',
-  [ExpenseCategory.ACTIVITY]: '액티비티',
-  [ExpenseCategory.ACCOMMODATION]: '숙박비',
-  [ExpenseCategory.FLIGHT]: '항공료',
-  [ExpenseCategory.SHOPPING]: '쇼핑',
-  [ExpenseCategory.ETC]: '기타',
+  [ExpenseCategory.FOOD]: "식비",
+  [ExpenseCategory.TRANSPORT]: "교통비",
+  [ExpenseCategory.ACTIVITY]: "액티비티",
+  [ExpenseCategory.ACCOMMODATION]: "숙박비",
+  [ExpenseCategory.FLIGHT]: "항공료",
+  [ExpenseCategory.SHOPPING]: "쇼핑",
+  [ExpenseCategory.ETC]: "기타",
 };
 
 export const currencyLabels = {
-  [ExpenseCurrency.KRW]: '원',
-  [ExpenseCurrency.USD]: '$',
-  [ExpenseCurrency.EUR]: '€',
-  [ExpenseCurrency.JPY]: '¥',
-  [ExpenseCurrency.CNY]: '¥',
-  [ExpenseCurrency.GBP]: '£',
-  [ExpenseCurrency.AUD]: 'A$',
+  [ExpenseCurrency.KRW]: "원",
+  [ExpenseCurrency.USD]: "$",
+  [ExpenseCurrency.EUR]: "€",
+  [ExpenseCurrency.JPY]: "¥",
+  [ExpenseCurrency.CNY]: "¥",
+  [ExpenseCurrency.GBP]: "£",
+  [ExpenseCurrency.AUD]: "A$",
 };

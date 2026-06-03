@@ -1,23 +1,23 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import { useMe } from "@/hooks/useMe";
+import { useRecentSearches } from "@/hooks/useRecentSearches";
+import BottomSheetModal from "@/ui/components/BottomSheetModal.native";
+import Input from "@/ui/components/input/Input";
+import { colors } from "@/ui/tokens/colors";
+import { textStyles, typography } from "@/ui/tokens/typography";
+import { getKoreanCountryOptions } from "@/utils/countryListKo";
+import { useEffect, useMemo, useState } from "react";
 import {
-  View,
-  Text,
-  Pressable,
-  StyleSheet,
   FlatList,
-  ScrollView,
   Keyboard,
-} from 'react-native';
-import BottomSheetModal from '@/ui/components/BottomSheetModal.native';
-import { colors } from '@/ui/tokens/colors';
-import { textStyles, typography } from '@/ui/tokens/typography';
-import { getKoreanCountryOptions } from '@/utils/countryListKo';
-import { useMe } from '@/hooks/useMe';
-import { useRecentSearches } from '@/hooks/useRecentSearches';
-import Input from '@/ui/components/input/Input';
-import CloseIcon from '../../../../assets/mobile_close.svg';
-import SearchIcon from '../../../../assets/search.svg';
-import CheckIcon from '../../../../assets/check_black.svg';
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
+import CheckIcon from "../../../../assets/check_black.svg";
+import CloseIcon from "../../../../assets/mobile_close.svg";
+import SearchIcon from "../../../../assets/search.svg";
 
 interface CountrySearchModalProps {
   visible: boolean;
@@ -27,7 +27,7 @@ interface CountrySearchModalProps {
 }
 
 const RECENT_LIMIT = 10;
-const STORAGE_KEY_PREFIX = 'recentCountrySearches';
+const STORAGE_KEY_PREFIX = "recentCountrySearches";
 
 export default function CountrySearchModal({
   visible,
@@ -35,13 +35,14 @@ export default function CountrySearchModal({
   onSelect,
   selectedValue,
 }: CountrySearchModalProps) {
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
   const { data: me } = useMe();
-  const storageKey = `${STORAGE_KEY_PREFIX}_${me?.handle ?? 'guest'}`;
-  const { items: recentSearches, addItem, load } = useRecentSearches(
-    storageKey,
-    RECENT_LIMIT
-  );
+  const storageKey = `${STORAGE_KEY_PREFIX}_${me?.handle ?? "guest"}`;
+  const {
+    items: recentSearches,
+    addItem,
+    load,
+  } = useRecentSearches(storageKey, RECENT_LIMIT);
 
   useEffect(() => {
     if (visible) {
@@ -54,21 +55,19 @@ export default function CountrySearchModal({
   const filteredCountries = useMemo(() => {
     if (!searchQuery.trim()) return [];
     const q = searchQuery.trim().toLowerCase();
-    return countryOptions.filter((opt) =>
-      opt.label.toLowerCase().includes(q)
-    );
+    return countryOptions.filter(opt => opt.label.toLowerCase().includes(q));
   }, [searchQuery, countryOptions]);
 
   const handleSelect = (countryName: string) => {
     onSelect(countryName);
     addItem(countryName);
-    setSearchQuery('');
+    setSearchQuery("");
     Keyboard.dismiss();
     onClose();
   };
 
   const handleClose = () => {
-    setSearchQuery('');
+    setSearchQuery("");
     Keyboard.dismiss();
     onClose();
   };
@@ -87,7 +86,11 @@ export default function CountrySearchModal({
       <View style={styles.header}>
         <Text style={styles.headerTitle}>국가 선택</Text>
         <View style={styles.headerRight}>
-          <Pressable style={styles.closeButton} onPress={handleClose} hitSlop={8}>
+          <Pressable
+            style={styles.closeButton}
+            onPress={handleClose}
+            hitSlop={8}
+          >
             <CloseIcon width={20} height={20} color={colors.gray700} />
           </Pressable>
         </View>
@@ -115,13 +118,17 @@ export default function CountrySearchModal({
       {showSearchResults ? (
         <FlatList
           data={filteredCountries}
-          keyExtractor={(item) => item.value}
+          keyExtractor={item => item.value}
           renderItem={({ item }) => (
             <Pressable
               style={[styles.listItem, styles.listItemRow]}
               onPress={() => handleSelect(item.label)}
             >
-              <Text style={styles.listItemText} numberOfLines={1} ellipsizeMode="tail">
+              <Text
+                style={styles.listItemText}
+                numberOfLines={1}
+                ellipsizeMode="tail"
+              >
                 {item.label}
               </Text>
               {selectedValue === item.label && (
@@ -145,7 +152,7 @@ export default function CountrySearchModal({
           keyboardShouldPersistTaps="handled"
         >
           <Text style={styles.recentLabel}>최근 검색</Text>
-          {recentSearches.map((name) => (
+          {recentSearches.map(name => (
             <Pressable
               key={name}
               style={[styles.recentItem, styles.recentItemRow]}
@@ -169,9 +176,9 @@ export default function CountrySearchModal({
 
 const styles = StyleSheet.create({
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: 20,
     paddingBottom: 16,
   },
@@ -180,8 +187,8 @@ const styles = StyleSheet.create({
     color: colors.black,
   },
   headerRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
   },
   closeButton: {
     padding: 4,
@@ -189,11 +196,11 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     height: 32,
     width: 32,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   searchWrapper: {
-    position: 'relative',
+    position: "relative",
     marginHorizontal: 20,
     marginBottom: 24,
   },
@@ -208,11 +215,11 @@ const styles = StyleSheet.create({
     color: colors.black,
   },
   searchIcon: {
-    position: 'absolute',
+    position: "absolute",
     right: 14,
     top: 0,
     bottom: 0,
-    justifyContent: 'center',
+    justifyContent: "center",
   },
   recentScroll: {
     flex: 1,
@@ -230,9 +237,9 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
   },
   recentItemRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
   },
   recentItemText: {
     ...textStyles.h5,
@@ -252,9 +259,9 @@ const styles = StyleSheet.create({
     paddingBottom: 14,
   },
   listItemRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
   },
   listItemText: {
     ...textStyles.h5,
@@ -266,7 +273,7 @@ const styles = StyleSheet.create({
   emptyText: {
     ...textStyles.body3,
     color: colors.gray600,
-    textAlign: 'center',
+    textAlign: "center",
     paddingVertical: 32,
   },
   emptyState: {
@@ -276,6 +283,6 @@ const styles = StyleSheet.create({
   emptyHint: {
     ...textStyles.body3,
     color: colors.gray600,
-    textAlign: 'center',
+    textAlign: "center",
   },
 });

@@ -35,9 +35,7 @@ export const guestPrompt = {
    * `GuestPromptModal`에서 "회원가입" 누르기 직전 호출.
    * 풀스크린 모달(여행 정보 등)을 먼저 닫지 않으면 그 위에 `소셜회원가입`이 가려짐.
    */
-  registerBeforeSignUpNavigation(
-    fn: BeforeSignUpNavListener,
-  ): () => void {
+  registerBeforeSignUpNavigation(fn: BeforeSignUpNavListener): () => void {
     beforeSignUpNavListeners.add(fn);
     return () => {
       beforeSignUpNavListeners.delete(fn);

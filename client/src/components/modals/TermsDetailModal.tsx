@@ -1,19 +1,18 @@
-import React, { useMemo } from 'react';
+import { TERMS, type TermsKey } from "@/constants/terms";
+import { colors } from "@/ui/tokens/colors";
+import { textStyles } from "@/ui/tokens/typography";
+import { useMemo } from "react";
 import {
-  View,
-  Text,
-  StyleSheet,
   Modal,
-  ScrollView,
   Pressable,
-  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
   useWindowDimensions,
-} from 'react-native';
-import { TERMS, type TermsKey } from '@/constants/terms';
-import { textStyles } from '@/ui/tokens/typography';
-import { colors } from '@/ui/tokens/colors';
+} from "react-native";
 
-import XIcon from '../../../assets/x.svg';
+import XIcon from "../../../assets/x.svg";
 
 const FIGMA_CARD_WIDTH = 480;
 const FIGMA_SCROLL_BODY_HEIGHT = 333;
@@ -54,7 +53,12 @@ export default function TermsDetailModal({
   const horizontalPad = isCompact ? 20 : 40;
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      onRequestClose={onClose}
+    >
       <View style={styles.overlay}>
         <View
           style={[
@@ -116,22 +120,22 @@ export default function TermsDetailModal({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.55)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "rgba(0, 0, 0, 0.55)",
+    justifyContent: "center",
+    alignItems: "center",
     padding: 20,
   },
   card: {
-    width: '100%',
+    width: "100%",
     backgroundColor: colors.white,
     borderRadius: 24,
     paddingTop: 40,
     paddingBottom: 40,
   },
   headerRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
     marginBottom: 12,
     gap: 12,
   },
@@ -144,8 +148,8 @@ const styles = StyleSheet.create({
     width: 24,
     height: 24,
     marginTop: 6,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   effectiveDate: {
     ...textStyles.body3,
@@ -158,12 +162,12 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   scrollBox: {
-    width: '100%',
-    overflow: 'hidden',
+    width: "100%",
+    overflow: "hidden",
     backgroundColor: colors.white,
   },
   scrollView: {
-    width: '100%',
+    width: "100%",
     flex: 1,
   },
   scrollContent: {
@@ -175,16 +179,16 @@ const styles = StyleSheet.create({
   },
   footer: {
     marginTop: 12,
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
+    flexDirection: "row",
+    justifyContent: "flex-end",
   },
   confirmButton: {
     width: FIGMA_CONFIRM_WIDTH,
     height: FIGMA_CONFIRM_HEIGHT,
     backgroundColor: colors.gray900,
     borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   confirmButtonText: {
     ...textStyles.h5,

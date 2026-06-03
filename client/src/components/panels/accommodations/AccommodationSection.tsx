@@ -1,10 +1,10 @@
-import React, { useState, useEffect, useLayoutEffect } from 'react';
-import AccommodationItem from './AccommodationItem';
 import type {
   DocumentUploadAnalyzeResponse,
   LocalFile,
   StagedDocumentAnalyzePayload,
-} from '@/types/api';
+} from "@/types/api";
+import { useEffect, useLayoutEffect, useState } from "react";
+import AccommodationItem from "./AccommodationItem";
 
 interface AccommodationSectionProps {
   planData: {
@@ -16,7 +16,7 @@ interface AccommodationSectionProps {
     removeAccommodation?: (accommodationId: number) => void;
   };
   selectedAccommodation?: any;
-  activeTab?: 'itinerary' | 'flight' | 'accommodation' | undefined;
+  activeTab?: "itinerary" | "flight" | "accommodation" | undefined;
   onAccommodationAdd?: (accommodation: any) => void;
   onAccommodationSelect?: (accommodation: any) => void;
   onAccommodationClear?: () => void;
@@ -54,23 +54,34 @@ export default function AccommodationSection({
   onConsumeCarryoverPendingFiles,
 }: AccommodationSectionProps) {
   const [showAccommodationForm, setShowAccommodationForm] = useState(false);
-  const [editingAccommodation, setEditingAccommodation] = useState<any | null>(null);
+  const [editingAccommodation, setEditingAccommodation] = useState<any | null>(
+    null,
+  );
 
   // 외부 트리거: 숙박 탭에서 즉시 새 숙박 추가 폼 열기 (selectedAccommodation이 없을 때)
   useEffect(() => {
-    if (activeTab === 'accommodation' && openNewAccommodationForm && !selectedAccommodation) {
+    if (
+      activeTab === "accommodation" &&
+      openNewAccommodationForm &&
+      !selectedAccommodation
+    ) {
       setEditingAccommodation(null);
       setShowAccommodationForm(true);
       onConsumeOpenNewAccommodationForm?.();
     }
-  }, [activeTab, openNewAccommodationForm, selectedAccommodation, onConsumeOpenNewAccommodationForm]);
+  }, [
+    activeTab,
+    openNewAccommodationForm,
+    selectedAccommodation,
+    onConsumeOpenNewAccommodationForm,
+  ]);
 
   useLayoutEffect(() => {
     if (!stagedDocumentAnalyze) return;
     const kind =
       stagedDocumentAnalyze.result.inferredItemType ??
       stagedDocumentAnalyze.result.draft?.itemType;
-    if (kind !== 'accommodation') return;
+    if (kind !== "accommodation") return;
     if (selectedAccommodation?.id && !showAccommodationForm) {
       setEditingAccommodation(selectedAccommodation);
       setShowAccommodationForm(true);
@@ -79,7 +90,7 @@ export default function AccommodationSection({
 
   // selectedAccommodation 변경 시 editingAccommodation 동기화
   useEffect(() => {
-    if (activeTab === 'accommodation' && selectedAccommodation) {
+    if (activeTab === "accommodation" && selectedAccommodation) {
       // 새 숙박 추가인 경우(id가 없고 openNewAccommodationForm이 true) - 편집 폼 열기
       if (!selectedAccommodation.id && openNewAccommodationForm) {
         setEditingAccommodation(selectedAccommodation);
@@ -93,7 +104,7 @@ export default function AccommodationSection({
         setEditingAccommodation(selectedAccommodation);
         setShowAccommodationForm(false);
       }
-    } else if (activeTab === 'accommodation' && !selectedAccommodation) {
+    } else if (activeTab === "accommodation" && !selectedAccommodation) {
       // selectedAccommodation이 null이면 폼 닫기
       setEditingAccommodation(null);
       setShowAccommodationForm(false);
@@ -109,7 +120,10 @@ export default function AccommodationSection({
 
   const handleAccommodationDelete = (accommodationId: string | number) => {
     // 캐시에서 바로 제거 (accommodation + 관련 expense)
-    const id = typeof accommodationId === 'string' ? parseInt(accommodationId, 10) : accommodationId;
+    const id =
+      typeof accommodationId === "string"
+        ? Number.parseInt(accommodationId, 10)
+        : accommodationId;
     if (planData?.removeAccommodation) {
       planData.removeAccommodation(id);
     }
@@ -174,4 +188,3 @@ export default function AccommodationSection({
 
   return null;
 }
-
