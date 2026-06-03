@@ -1,18 +1,32 @@
-import React, { useMemo, useState } from 'react';
-import { View, Text, Pressable, StyleSheet, Modal, ScrollView, Image } from 'react-native';
-import type { Attachment } from '@/types/api';
-import { Expense } from '@/types/api';
-import { ExpenseCategory, ExpenseCurrency, categoryLabels, currencyLabels } from '@/types/expense';
-import { expensesApi } from '@/services/expenses';
-import { colors } from '@/ui/tokens/colors';
-import { textStyles, typography } from '@/ui/tokens/typography';
-import { spacing } from '@/ui/tokens/spacing';
-import { radii } from '@/ui/tokens/radii';
-import XIcon from '../../../assets/x.svg';
-import DeleteIcon from '../../../assets/delete.svg';
-import AttachmentIcon from '../../../assets/attachment.svg';
-import AttachmentImageIcon from '../../../assets/mobile_attachment_image.svg';
-import AttachmentDocumentIcon from '../../../assets/mobile_attachment_document.svg';
+import { expensesApi } from "@/services/expenses";
+import type { Attachment } from "@/types/api";
+import type { Expense } from "@/types/api";
+import {
+  ExpenseCategory,
+  ExpenseCurrency,
+  categoryLabels,
+  currencyLabels,
+} from "@/types/expense";
+import { colors } from "@/ui/tokens/colors";
+import { radii } from "@/ui/tokens/radii";
+import { spacing } from "@/ui/tokens/spacing";
+import { textStyles } from "@/ui/tokens/typography";
+import { formatFileSize } from "@/utils/fileUtils";
+import { useMemo, useState } from "react";
+import {
+  Modal,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
+import AttachmentIcon from "../../../assets/attachment.svg";
+import DeleteIcon from "../../../assets/delete.svg";
+import AttachmentDocumentIcon from "../../../assets/mobile_attachment_document.svg";
+import AttachmentImageIcon from "../../../assets/mobile_attachment_image.svg";
+import XIcon from "../../../assets/x.svg";
+import ImagePreviewModal, { type ImagePreviewItem } from "./ImagePreviewModal";
 
 interface ExpenseDetailModalProps {
   visible: boolean;
@@ -32,12 +46,6 @@ const categoryOrder = [
   ExpenseCategory.ETC,
 ];
 
-function formatFileSize(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
-
 export default function ExpenseDetailModal({
   visible,
   onClose,
@@ -45,18 +53,21 @@ export default function ExpenseDetailModal({
   attachments = [],
   onExpenseDelete,
 }: ExpenseDetailModalProps) {
-  const [tab, setTab] = useState<'expenses' | 'attachments'>('expenses');
-  const [selectedCategory, setSelectedCategory] = useState<ExpenseCategory | null>(null);
-  const [previewAttachment, setPreviewAttachment] = useState<Attachment | null>(null);
+  const [tab, setTab] = useState<"expenses" | "attachments">("expenses");
+  const [selectedCategory, setSelectedCategory] =
+    useState<ExpenseCategory | null>(null);
+  const [previewVisible, setPreviewVisible] = useState(false);
+  const [previewImages, setPreviewImages] = useState<ImagePreviewItem[]>([]);
+  const [previewInitialIndex, setPreviewInitialIndex] = useState(0);
 
   const expenseAttachments = useMemo(
-    () => attachments.filter((a) => a.entityType === 'expense'),
+    () => attachments.filter(a => a.entityType === "expense"),
     [attachments],
   );
 
   const attachmentsMap = useMemo(() => {
     const map: Record<number, Attachment[]> = {};
-    expenseAttachments.forEach((a) => {
+    expenseAttachments.forEach(a => {
       if (!map[a.entityId]) map[a.entityId] = [];
       map[a.entityId].push(a);
     });
@@ -65,9 +76,19 @@ export default function ExpenseDetailModal({
 
   const expenseMap = useMemo(() => {
     const map: Record<number, Expense> = {};
-    expenses.forEach((e) => { map[e.id] = e; });
+    expenses.forEach(e => {
+      map[e.id] = e;
+    });
     return map;
   }, [expenses]);
+
+  const imagePreviewItems = useMemo<ImagePreviewItem[]>(
+    () =>
+      expenseAttachments
+        .filter(a => a.contentType.startsWith("image/"))
+        .map(a => ({ attachment: a, expense: expenseMap[a.entityId] })),
+    [expenseAttachments, expenseMap],
+  );
 
   const totalExpenses = useMemo(
     () => expenses.reduce((sum, expense) => sum + expense.amount, 0),
@@ -84,8 +105,9 @@ export default function ExpenseDetailModal({
       [ExpenseCategory.SHOPPING]: 0,
       [ExpenseCategory.ETC]: 0,
     };
-    expenses.forEach((expense) => {
-      if (expense.category in totals) totals[expense.category] += expense.amount;
+    expenses.forEach(expense => {
+      if (expense.category in totals)
+        totals[expense.category] += expense.amount;
     });
     return totals;
   }, [expenses]);
@@ -100,7 +122,7 @@ export default function ExpenseDetailModal({
       [ExpenseCategory.SHOPPING]: [],
       [ExpenseCategory.ETC]: [],
     };
-    expenses.forEach((expense) => {
+    expenses.forEach(expense => {
       if (expense.category in grouped) grouped[expense.category].push(expense);
     });
     return grouped;
@@ -113,20 +135,46 @@ export default function ExpenseDetailModal({
     } catch {}
   };
 
-  const handleAttachmentPress = (attachment: Attachment) => {
-    if (attachment.contentType.startsWith('image/')) {
-      setPreviewAttachment(attachment);
-    } else if (typeof window !== 'undefined') {
-      window.open(attachment.fileUrl, '_blank');
+  const handleAttachmentCardPress = (attachment: Attachment) => {
+    if (attachment.contentType.startsWith("image/")) {
+      const idx = imagePreviewItems.findIndex(
+        item => item.attachment.id === attachment.id,
+      );
+      setPreviewImages(imagePreviewItems);
+      setPreviewInitialIndex(Math.max(0, idx));
+      setPreviewVisible(true);
+    } else if (typeof window !== "undefined") {
+      window.open(attachment.fileUrl, "_blank");
+    }
+  };
+
+  const handleExpenseAttachmentPress = (
+    expense: Expense,
+    expAttachments: Attachment[],
+  ) => {
+    const images = expAttachments
+      .filter(a => a.contentType.startsWith("image/"))
+      .map(a => ({ attachment: a, expense }));
+    if (images.length > 0) {
+      setPreviewImages(images);
+      setPreviewInitialIndex(0);
+      setPreviewVisible(true);
+    } else if (expAttachments.length > 0 && typeof window !== "undefined") {
+      window.open(expAttachments[0].fileUrl, "_blank");
     }
   };
 
   const formatAmount = (amount: number) => amount.toLocaleString();
-  const formatDate = (exDate: string) => exDate.slice(5).replace('-', '.');
+  const formatDate = (exDate: string) => exDate.slice(5).replace("-", ".");
 
   return (
     <>
-      <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <Modal
+        visible={visible}
+        transparent
+        animationType="fade"
+        onRequestClose={onClose}
+      >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.header}>
@@ -136,55 +184,93 @@ export default function ExpenseDetailModal({
               </Pressable>
             </View>
 
-            <Pressable style={styles.totalSection} onPress={() => setSelectedCategory(null)}>
+            <Pressable
+              style={styles.totalSection}
+              onPress={() => setSelectedCategory(null)}
+            >
               <Text style={styles.totalLabel}>총 지출</Text>
               <Text style={styles.totalAmount}>
-                {formatAmount(totalExpenses)} {currencyLabels[ExpenseCurrency.KRW]}
+                {formatAmount(totalExpenses)}{" "}
+                {currencyLabels[ExpenseCurrency.KRW]}
               </Text>
             </Pressable>
 
             <View style={styles.tabBar}>
               <Pressable
-                style={[styles.tabItem, tab === 'expenses' && styles.tabItemActive]}
-                onPress={() => setTab('expenses')}
+                style={[
+                  styles.tabItem,
+                  tab === "expenses" && styles.tabItemActive,
+                ]}
+                onPress={() => setTab("expenses")}
               >
-                <Text style={[styles.tabText, tab === 'expenses' && styles.tabTextActive]}>
+                <Text
+                  style={[
+                    styles.tabText,
+                    tab === "expenses" && styles.tabTextActive,
+                  ]}
+                >
                   내역
                 </Text>
               </Pressable>
               <Pressable
-                style={[styles.tabItem, tab === 'attachments' && styles.tabItemActive]}
-                onPress={() => setTab('attachments')}
+                style={[
+                  styles.tabItem,
+                  tab === "attachments" && styles.tabItemActive,
+                ]}
+                onPress={() => setTab("attachments")}
               >
-                <Text style={[styles.tabText, tab === 'attachments' && styles.tabTextActive]}>
+                <Text
+                  style={[
+                    styles.tabText,
+                    tab === "attachments" && styles.tabTextActive,
+                  ]}
+                >
                   첨부파일
                 </Text>
                 {expenseAttachments.length > 0 && (
                   <View style={styles.tabBadge}>
-                    <Text style={styles.tabBadgeText}>{expenseAttachments.length}</Text>
+                    <Text style={styles.tabBadgeText}>
+                      {expenseAttachments.length}
+                    </Text>
                   </View>
                 )}
               </Pressable>
             </View>
 
-            {tab === 'expenses' ? (
+            {tab === "expenses" ? (
               <>
                 <View style={styles.summarySection}>
-                  {categoryOrder.map((category) => {
+                  {categoryOrder.map(category => {
                     const total = categoryTotals[category];
                     if (total === 0) return null;
                     const isSelected = selectedCategory === category;
                     return (
                       <Pressable
                         key={category}
-                        style={[styles.summaryRow, isSelected && styles.summaryRowSelected]}
-                        onPress={() => setSelectedCategory(isSelected ? null : category)}
+                        style={[
+                          styles.summaryRow,
+                          isSelected && styles.summaryRowSelected,
+                        ]}
+                        onPress={() =>
+                          setSelectedCategory(isSelected ? null : category)
+                        }
                       >
-                        <Text style={[styles.summaryCategory, isSelected && styles.summaryCategorySelected]}>
+                        <Text
+                          style={[
+                            styles.summaryCategory,
+                            isSelected && styles.summaryCategorySelected,
+                          ]}
+                        >
                           {categoryLabels[category]}
                         </Text>
-                        <Text style={[styles.summaryAmount, isSelected && styles.summaryAmountSelected]}>
-                          {formatAmount(total)} {currencyLabels[ExpenseCurrency.KRW]}
+                        <Text
+                          style={[
+                            styles.summaryAmount,
+                            isSelected && styles.summaryAmountSelected,
+                          ]}
+                        >
+                          {formatAmount(total)}{" "}
+                          {currencyLabels[ExpenseCurrency.KRW]}
                         </Text>
                       </Pressable>
                     );
@@ -198,38 +284,65 @@ export default function ExpenseDetailModal({
                   contentContainerStyle={styles.detailScrollContent}
                   showsVerticalScrollIndicator={false}
                 >
-                  {categoryOrder.map((category) => {
+                  {categoryOrder.map(category => {
                     const categoryExpenses = expensesByCategory[category];
                     if (categoryExpenses.length === 0) return null;
-                    if (selectedCategory !== null && selectedCategory !== category) return null;
+                    if (
+                      selectedCategory !== null &&
+                      selectedCategory !== category
+                    )
+                      return null;
                     return (
                       <View key={category} style={styles.categorySection}>
-                        <Text style={styles.categoryHeader}>{categoryLabels[category]}</Text>
-                        {categoryExpenses.map((expense) => {
-                          const expAttachments = attachmentsMap[expense.id] ?? [];
+                        <Text style={styles.categoryHeader}>
+                          {categoryLabels[category]}
+                        </Text>
+                        {categoryExpenses.map(expense => {
+                          const expAttachments =
+                            attachmentsMap[expense.id] ?? [];
                           return (
                             <View key={expense.id} style={styles.expenseCard}>
                               <View style={styles.expenseCardLeft}>
-                                <Text style={styles.expenseDescription} numberOfLines={1}>
-                                  {expense.description || '내용 없음'}
+                                <Text
+                                  style={styles.expenseDescription}
+                                  numberOfLines={1}
+                                >
+                                  {expense.description || "내용 없음"}
                                 </Text>
-                                <Text style={styles.expenseDate}>{formatDate(expense.exDate)}</Text>
+                                <Text style={styles.expenseDate}>
+                                  {formatDate(expense.exDate)}
+                                </Text>
                               </View>
                               <View style={styles.expenseCardRight}>
                                 <Text style={styles.expenseAmount}>
-                                  {formatAmount(expense.amount)} {currencyLabels[expense.currency]}
+                                  {formatAmount(expense.amount)}{" "}
+                                  {currencyLabels[expense.currency]}
                                 </Text>
                                 <View style={styles.expenseCardActions}>
                                   {expAttachments.length > 0 && (
                                     <Pressable
                                       style={styles.attachmentButton}
-                                      onPress={() => handleAttachmentPress(expAttachments[0])}
+                                      onPress={() =>
+                                        handleExpenseAttachmentPress(
+                                          expense,
+                                          expAttachments,
+                                        )
+                                      }
                                     >
-                                      <AttachmentIcon width={11} height={11} color={colors.gray700} />
-                                      <Text style={styles.attachmentCount}>{expAttachments.length}</Text>
+                                      <AttachmentIcon
+                                        width={11}
+                                        height={11}
+                                        color={colors.gray700}
+                                      />
+                                      <Text style={styles.attachmentCount}>
+                                        {expAttachments.length}
+                                      </Text>
                                     </Pressable>
                                   )}
-                                  <Pressable onPress={() => handleDelete(expense.id)} style={styles.deleteButton}>
+                                  <Pressable
+                                    onPress={() => handleDelete(expense.id)}
+                                    style={styles.deleteButton}
+                                  >
                                     <DeleteIcon width={14} height={14} />
                                   </Pressable>
                                 </View>
@@ -250,37 +363,58 @@ export default function ExpenseDetailModal({
               >
                 {expenseAttachments.length === 0 ? (
                   <View style={styles.emptyState}>
-                    <Text style={styles.emptyStateText}>첨부파일이 없습니다</Text>
+                    <Text style={styles.emptyStateText}>
+                      첨부파일이 없습니다
+                    </Text>
                   </View>
                 ) : (
-                  expenseAttachments.map((attachment) => {
+                  expenseAttachments.map(attachment => {
                     const expense = expenseMap[attachment.entityId];
-                    const isImage = attachment.contentType.startsWith('image/');
+                    const isImage = attachment.contentType.startsWith("image/");
                     return (
                       <Pressable
                         key={attachment.id}
                         style={styles.attachmentCard}
-                        onPress={() => handleAttachmentPress(attachment)}
+                        onPress={() => handleAttachmentCardPress(attachment)}
                       >
-                        <View style={[styles.fileTypeBadge, isImage ? styles.fileTypeBadgeImage : styles.fileTypeBadgeDoc]}>
-                          {isImage
-                            ? <AttachmentImageIcon width={20} height={20} />
-                            : <AttachmentDocumentIcon width={20} height={20} />
-                          }
+                        <View
+                          style={[
+                            styles.fileTypeBadge,
+                            isImage
+                              ? styles.fileTypeBadgeImage
+                              : styles.fileTypeBadgeDoc,
+                          ]}
+                        >
+                          {isImage ? (
+                            <AttachmentImageIcon width={20} height={20} />
+                          ) : (
+                            <AttachmentDocumentIcon width={20} height={20} />
+                          )}
                         </View>
                         <View style={styles.attachmentCardInfo}>
-                          <Text style={styles.attachmentFileName} numberOfLines={1}>
+                          <Text
+                            style={styles.attachmentFileName}
+                            numberOfLines={1}
+                          >
                             {attachment.fileName}
                           </Text>
                           {expense && (
                             <View style={styles.attachmentMeta}>
-                              <Text style={styles.attachmentCategory} numberOfLines={1}>
+                              <Text
+                                style={styles.attachmentCategory}
+                                numberOfLines={1}
+                              >
                                 {categoryLabels[expense.category]}
                               </Text>
                               {expense.description ? (
                                 <>
-                                  <Text style={styles.attachmentMetaDot}>·</Text>
-                                  <Text style={styles.attachmentDescription} numberOfLines={1}>
+                                  <Text style={styles.attachmentMetaDot}>
+                                    ·
+                                  </Text>
+                                  <Text
+                                    style={styles.attachmentDescription}
+                                    numberOfLines={1}
+                                  >
                                     {expense.description}
                                   </Text>
                                 </>
@@ -301,22 +435,12 @@ export default function ExpenseDetailModal({
         </View>
       </Modal>
 
-      {previewAttachment && (
-        <Modal
-          visible
-          transparent
-          animationType="fade"
-          onRequestClose={() => setPreviewAttachment(null)}
-        >
-          <Pressable style={styles.previewOverlay} onPress={() => setPreviewAttachment(null)}>
-            <Image
-              source={{ uri: previewAttachment.fileUrl }}
-              style={styles.previewImage}
-              resizeMode="contain"
-            />
-          </Pressable>
-        </Modal>
-      )}
+      <ImagePreviewModal
+        visible={previewVisible}
+        onClose={() => setPreviewVisible(false)}
+        images={previewImages}
+        initialIndex={previewInitialIndex}
+      />
     </>
   );
 }
@@ -325,23 +449,23 @@ const styles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
     backgroundColor: colors.overlayBackground,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   modalContent: {
     backgroundColor: colors.white,
     borderRadius: radii.xl,
-    width: '90%',
+    width: "90%",
     maxWidth: 420,
     maxHeight: 648,
     flex: 1,
     minHeight: 0,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     paddingHorizontal: spacing.xl,
     paddingTop: spacing.xl + 8,
     paddingBottom: spacing.lg,
@@ -356,9 +480,9 @@ const styles = StyleSheet.create({
     marginRight: -spacing.xs,
   },
   totalSection: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginHorizontal: spacing.xl,
     paddingHorizontal: spacing.lg + 2,
     paddingVertical: spacing.md + 2,
@@ -367,14 +491,14 @@ const styles = StyleSheet.create({
   },
   totalLabel: {
     ...textStyles.h7,
-    color: 'rgba(255, 255, 255, 0.7)',
+    color: "rgba(255, 255, 255, 0.7)",
   },
   totalAmount: {
     ...textStyles.h5,
     color: colors.white,
   },
   tabBar: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: spacing.sm,
     paddingHorizontal: spacing.xl,
     paddingTop: spacing.md,
@@ -382,13 +506,13 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.gray300,
   },
   tabItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: spacing.xs,
     paddingVertical: 6,
     paddingHorizontal: spacing.xs,
     borderBottomWidth: 2,
-    borderBottomColor: 'transparent',
+    borderBottomColor: "transparent",
     marginBottom: -1,
   },
   tabItemActive: {
@@ -406,9 +530,9 @@ const styles = StyleSheet.create({
     height: 18,
     paddingHorizontal: 5,
     borderRadius: radii.pill,
-    backgroundColor: '#E7EEFF',
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: "#E7EEFF",
+    alignItems: "center",
+    justifyContent: "center",
   },
   tabBadgeText: {
     ...textStyles.h9,
@@ -425,9 +549,9 @@ const styles = StyleSheet.create({
     paddingTop: spacing.md,
   },
   summaryRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginHorizontal: spacing.xl,
     paddingHorizontal: spacing.lg + 2,
     paddingVertical: spacing.md + 2,
@@ -478,9 +602,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.gray100,
     borderRadius: radii.md,
     padding: spacing.md + 2,
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
     gap: spacing.md,
   },
   expenseCardLeft: {
@@ -490,7 +614,7 @@ const styles = StyleSheet.create({
   },
   expenseCardRight: {
     flexShrink: 0,
-    alignItems: 'flex-end',
+    alignItems: "flex-end",
     gap: spacing.xs,
   },
   expenseDescription: {
@@ -506,13 +630,13 @@ const styles = StyleSheet.create({
     color: colors.gray900,
   },
   expenseCardActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: spacing.xs,
   },
   attachmentButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 3,
     height: 24,
     paddingHorizontal: spacing.sm,
@@ -528,12 +652,12 @@ const styles = StyleSheet.create({
   deleteButton: {
     width: 24,
     height: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   attachmentCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: spacing.md,
     padding: spacing.sm + 2,
     paddingHorizontal: spacing.md,
@@ -545,14 +669,14 @@ const styles = StyleSheet.create({
     height: 36,
     borderRadius: radii.base,
     flexShrink: 0,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   fileTypeBadgeImage: {
-    backgroundColor: '#E7EEFF',
+    backgroundColor: "#E7EEFF",
   },
   fileTypeBadgeDoc: {
-    backgroundColor: '#FFE9D6',
+    backgroundColor: "#FFE9D6",
   },
   attachmentCardInfo: {
     flex: 1,
@@ -564,8 +688,8 @@ const styles = StyleSheet.create({
     color: colors.gray900,
   },
   attachmentMeta: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 5,
     minWidth: 0,
   },
@@ -590,21 +714,11 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   emptyState: {
-    paddingVertical: spacing['2xl'],
-    alignItems: 'center',
+    paddingVertical: spacing["2xl"],
+    alignItems: "center",
   },
   emptyStateText: {
     ...textStyles.body3,
     color: colors.gray500,
   },
-  previewOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.85)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  previewImage: {
-    width: '90%',
-    height: '80%',
-  } as any,
 });
