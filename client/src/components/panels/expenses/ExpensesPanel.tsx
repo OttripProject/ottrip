@@ -15,6 +15,7 @@ interface ExpensesPanelProps {
   planData?: {
     plan: any;
     expenses: any[];
+    attachments?: any[];
     isLoading: boolean;
     error: string | null;
     refreshExpenses: () => Promise<void>;
@@ -114,6 +115,7 @@ export default function ExpensesPanel({ planData, onExpenseAdd }: ExpensesPanelP
         visible={showExpenseDetail}
         onClose={() => setShowExpenseDetail(false)}
         expenses={planData?.expenses || []}
+        attachments={planData?.attachments || []}
         onExpenseDelete={async () => {
           await planData?.refreshExpenses();
           await planData?.refreshItineraries?.();

@@ -2155,6 +2155,7 @@ export default function WeeklySchedulePanel({
           if (externalPlanData?.refreshFlights) externalPlanData.refreshFlights().catch(() => {});
           if (externalPlanData?.refreshAccommodations) externalPlanData.refreshAccommodations().catch(() => {});
           if (externalPlanData?.refreshExpenses) externalPlanData.refreshExpenses().catch(() => {});
+          if ((externalPlanData as any)?.refreshAttachments) (externalPlanData as any).refreshAttachments().catch(() => {});
         }}
       />
 

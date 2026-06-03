@@ -4,7 +4,8 @@ import { itinerariesApi } from '../services/itineraries';
 import { flightsApi } from '../services/flights';
 import { accommodationsApi } from '../services/accommodations';
 import { expensesApi } from '../services/expenses';
-import { Plan, Itinerary, FlightRead, Accommodation, Expense } from '../types/api';
+import { attachmentsApi } from '../services/attachments';
+import { Plan, Itinerary, FlightRead, Accommodation, Expense, Attachment } from '../types/api';
 
 interface PlanData {
   plan: Plan | null;
@@ -12,6 +13,7 @@ interface PlanData {
   flights: FlightRead[];
   accommodations: Accommodation[];
   expenses: Expense[];
+  attachments: Attachment[];
 }
 
 export const usePlanDataQuery = (publicId: string | null) => {
@@ -27,6 +29,7 @@ export const usePlanDataQuery = (publicId: string | null) => {
           flights: [],
           accommodations: [],
           expenses: [],
+          attachments: [],
         };
       }
 
@@ -37,12 +40,20 @@ export const usePlanDataQuery = (publicId: string | null) => {
         amount: Number(e?.amount),
       }));
 
+      let attachments: Attachment[] = [];
+      if (planData?.id) {
+        try {
+          attachments = await attachmentsApi.getAttachmentsByPlan(planData.id);
+        } catch {}
+      }
+
       return {
         plan: planData,
         itineraries: planData?.itineraries ?? [],
         flights: planData?.flights ?? [],
         accommodations: planData?.accommodations ?? [],
         expenses: normalizedExpenses,
+        attachments,
       };
     },
     enabled: !!publicId,
@@ -57,6 +68,7 @@ export const usePlanDataQuery = (publicId: string | null) => {
     flights: [],
     accommodations: [],
     expenses: [],
+    attachments: [],
   };
 
   const refreshItineraries = async () => {
@@ -105,6 +117,24 @@ export const usePlanDataQuery = (publicId: string | null) => {
       }));
     } catch (err: any) {
     }
+  };
+
+  const refreshAttachments = async () => {
+    if (!planData.plan?.id) return;
+    try {
+      const attachments = await attachmentsApi.getAttachmentsByPlan(planData.plan.id);
+      queryClient.setQueryData<PlanData>(['plan', publicId], (old = planData) => ({
+        ...old,
+        attachments,
+      }));
+    } catch {}
+  };
+
+  const addAttachment = (newAttachment: Attachment) => {
+    queryClient.setQueryData<PlanData>(['plan', publicId], (old) => {
+      if (!old) return old;
+      return { ...old, attachments: [...old.attachments, newAttachment] };
+    });
   };
 
   const addAccommodation = (newAccommodation: Accommodation) => {
@@ -337,6 +367,8 @@ export const usePlanDataQuery = (publicId: string | null) => {
     refreshFlights,
     refreshAccommodations,
     refreshExpenses,
+    refreshAttachments,
+    addAttachment,
     addAccommodation,
     addExpense,
     removeExpense,

@@ -1,10 +1,9 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { View, Text, Pressable, StyleSheet, Modal, ScrollView, Image } from 'react-native';
 import type { Attachment } from '@/types/api';
-import { Expense, PLAN_ENTITY_KIND } from '@/types/api';
+import { Expense } from '@/types/api';
 import { ExpenseCategory, ExpenseCurrency, categoryLabels, currencyLabels } from '@/types/expense';
 import { expensesApi } from '@/services/expenses';
-import { attachmentsApi } from '@/services/attachments';
 import { colors } from '@/ui/tokens/colors';
 import { textStyles, typography } from '@/ui/tokens/typography';
 import { spacing } from '@/ui/tokens/spacing';
@@ -17,6 +16,7 @@ interface ExpenseDetailModalProps {
   visible: boolean;
   onClose: () => void;
   expenses: Expense[];
+  attachments?: Attachment[];
   onExpenseDelete?: () => void;
 }
 
@@ -34,35 +34,22 @@ export default function ExpenseDetailModal({
   visible,
   onClose,
   expenses,
+  attachments = [],
   onExpenseDelete,
 }: ExpenseDetailModalProps) {
   const [selectedCategory, setSelectedCategory] = useState<ExpenseCategory | null>(null);
-  const [attachmentsMap, setAttachmentsMap] = useState<Record<number, Attachment[]>>({});
   const [previewAttachment, setPreviewAttachment] = useState<Attachment | null>(null);
 
-  useEffect(() => {
-    if (!visible || expenses.length === 0) return;
-    const fetchAll = async () => {
-      const results = await Promise.all(
-        expenses.map(async (expense) => {
-          try {
-            const list = await attachmentsApi.getAttachments(
-              expense.planId,
-              PLAN_ENTITY_KIND.EXPENSE,
-              expense.id,
-            );
-            return { id: expense.id, list };
-          } catch {
-            return { id: expense.id, list: [] };
-          }
-        })
-      );
-      const map: Record<number, Attachment[]> = {};
-      results.forEach(({ id, list }) => { map[id] = list; });
-      setAttachmentsMap(map);
-    };
-    void fetchAll();
-  }, [visible, expenses]);
+  const attachmentsMap = useMemo(() => {
+    const map: Record<number, Attachment[]> = {};
+    attachments.forEach((a) => {
+      if (a.entityType === 'expense') {
+        if (!map[a.entityId]) map[a.entityId] = [];
+        map[a.entityId].push(a);
+      }
+    });
+    return map;
+  }, [attachments]);
 
   const totalExpenses = useMemo(() => {
     return expenses.reduce((sum, expense) => sum + expense.amount, 0);

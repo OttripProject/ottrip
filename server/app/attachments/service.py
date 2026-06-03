@@ -92,9 +92,15 @@ class AttachmentService:
         if not plan_exists:
             raise HTTPException(status_code=404, detail="해당 계획을 찾을 수 없습니다.")
         if not has_permission:
-            raise HTTPException(status_code=403, detail="첨부파일 업로드 권한이 없습니다.")
+            raise HTTPException(
+                status_code=403, detail="첨부파일 업로드 권한이 없습니다."
+            )
 
-        ext = request.file_name.rsplit(".", 1)[-1].lower() if "." in request.file_name else ""
+        ext = (
+            request.file_name.rsplit(".", 1)[-1].lower()
+            if "." in request.file_name
+            else ""
+        )
         file_key = (
             f"attachments/{request.plan_id}"
             f"/{request.entity_type.value}"
@@ -138,7 +144,9 @@ class AttachmentService:
             f"/{request.entity_id}/"
         )
         if not request.file_key.startswith(expected_prefix):
-            raise HTTPException(status_code=400, detail="유효하지 않은 파일 경로입니다.")
+            raise HTTPException(
+                status_code=400, detail="유효하지 않은 파일 경로입니다."
+            )
 
         plan_exists, has_permission = await self.plan_repository.has_edit_permission(
             plan_id=request.plan_id, user_id=self.current_user.id
@@ -146,9 +154,13 @@ class AttachmentService:
         if not plan_exists:
             raise HTTPException(status_code=404, detail="해당 계획을 찾을 수 없습니다.")
         if not has_permission:
-            raise HTTPException(status_code=403, detail="첨부파일 등록 권한이 없습니다.")
+            raise HTTPException(
+                status_code=403, detail="첨부파일 등록 권한이 없습니다."
+            )
 
-        existing = await self.attachment_repository.find_by_key(file_key=request.file_key)
+        existing = await self.attachment_repository.find_by_key(
+            file_key=request.file_key
+        )
         if existing:
             raise HTTPException(status_code=409, detail="이미 등록된 파일입니다.")
 
@@ -179,12 +191,27 @@ class AttachmentService:
         if not plan_exists:
             raise HTTPException(status_code=404, detail="해당 계획을 찾을 수 없습니다.")
         if not has_permission:
-            raise HTTPException(status_code=403, detail="첨부파일 조회 권한이 없습니다.")
+            raise HTTPException(
+                status_code=403, detail="첨부파일 조회 권한이 없습니다."
+            )
 
         attachments = await self.attachment_repository.find_by_entity(
             entity_type=entity_type,
             entity_id=entity_id,
         )
+        return [AttachmentRead.model_validate(a) for a in attachments]
+
+    async def list_by_plan(self, *, plan_id: int) -> list[AttachmentRead]:
+        plan_exists, has_permission = await self.plan_repository.has_read_permission(
+            plan_id=plan_id, user_id=self.current_user.id
+        )
+        if not plan_exists:
+            raise HTTPException(status_code=404, detail="해당 계획을 찾을 수 없습니다.")
+        if not has_permission:
+            raise HTTPException(
+                status_code=403, detail="첨부파일 조회 권한이 없습니다."
+            )
+        attachments = await self.attachment_repository.find_by_plan(plan_id=plan_id)
         return [AttachmentRead.model_validate(a) for a in attachments]
 
     async def delete(self, *, attachment_id: int) -> None:
@@ -201,7 +228,9 @@ class AttachmentService:
         if not plan_exists:
             raise HTTPException(status_code=404, detail="해당 계획을 찾을 수 없습니다.")
         if not has_permission:
-            raise HTTPException(status_code=403, detail="첨부파일 삭제 권한이 없습니다.")
+            raise HTTPException(
+                status_code=403, detail="첨부파일 삭제 권한이 없습니다."
+            )
 
         await self.s3_client.delete_object(
             Bucket=storage_settings.R2_BUCKET_NAME,
