@@ -30,7 +30,7 @@ async def confirm_upload(
     return await attachment_service.confirm_upload(request=request)
 
 
-@router.get("/by-plan", status_code=status.HTTP_200_OK)
+@router.get("/plan", status_code=status.HTTP_200_OK)
 async def list_attachments_by_plan(
     attachment_service: AttachmentService,
     plan_id: int = Query(...),

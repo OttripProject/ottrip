@@ -164,7 +164,7 @@ export const attachmentsApi = {
   },
 
   getAttachmentsByPlan: async (planId: number): Promise<Attachment[]> => {
-    const response = await api.get("/private/attachments/by-plan", {
+    const response = await api.get("/private/attachments/plan", {
       params: { plan_id: planId },
     });
     return (response.data as Record<string, unknown>[]).map(snakeToCamelAttachment);
