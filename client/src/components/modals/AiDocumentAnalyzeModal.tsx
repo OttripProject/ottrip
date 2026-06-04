@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Modal,
   Pressable,
@@ -20,6 +20,8 @@ import type {
 } from "@/types/api";
 import { colors } from "@/ui/tokens/colors";
 import { spacing } from "@/ui/tokens/spacing";
+import WarningCircleIcon from "../../../assets/warning_circle.svg";
+import { textStyles } from "@/ui/tokens/typography";
 
 const BLUE_PILL = "#0A84FF";
 const BLUE_PILL_BG = "#E5F0FF";
@@ -112,6 +114,18 @@ export default function AiDocumentAnalyzeModal({
   const kind: AiDocumentItemType | null =
     analyzeResult?.inferredItemType ?? analyzeResult?.draft?.itemType ?? null;
 
+  // const isPartialRecognition = useMemo(() => {
+  //   if (!analyzeResult?.draft?.payload) return false;
+  //   const { values, fieldMeta } = analyzeResult.draft.payload;
+  //   const hasUncertain = Object.values(fieldMeta).some(m => m.certainty !== "high");
+  //   const hasEmptyValues = Object.values(values).some(
+  //     v => v === null || v === undefined || v === "",
+  //   );
+  //   return hasUncertain || hasEmptyValues;
+  // }, [analyzeResult]);
+
+  const isPartialRecognition = true;
+
   const subtitle =
     kind != null
       ? getSubtitleFromKind(kind)
@@ -137,6 +151,14 @@ export default function AiDocumentAnalyzeModal({
         <View style={styles.pillDotBlue} />
         <Text style={styles.pillBlueText}>{bluePillText}</Text>
       </View>
+      {isPartialRecognition && (
+        <View style={styles.partialBanner}>
+          <WarningCircleIcon width={14} height={14} style={styles.partialBannerIcon} />
+          <Text style={styles.partialBannerText}>
+            일부 항목만 인식했어요. 비어 있는 칸을 확인해 직접 채워 주세요.
+          </Text>
+        </View>
+      )}
       <View style={styles.fieldStack}>
         <AiAnalyzeResultBody
           key={draftBodyKey}
@@ -239,7 +261,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
     borderRadius: 16,
     overflow: "visible",
-    shadowColor: "#000",
+    shadowColor: colors.black,
     shadowOffset: { width: 0, height: 24 },
     shadowOpacity: 0.22,
     shadowRadius: 30,
@@ -263,16 +285,12 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     margin: 0,
-    fontSize: 16,
-    lineHeight: 24,
-    fontWeight: "700",
+    ...textStyles.h6,
     color: colors.gray900,
   },
   modalSubtitle: {
     marginTop: 4,
-    fontSize: 12,
-    lineHeight: 18,
-    fontWeight: "400",
+    ...textStyles.body5,
     color: colors.gray600,
   },
   closeButton: {
@@ -283,10 +301,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   closeGlyph: {
-    fontSize: 14,
-    fontWeight: "300",
+    ...textStyles.h8,
     color: colors.gray900,
-    lineHeight: 16,
   },
   pressed: {
     opacity: 0.75,
@@ -302,9 +318,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   emptyDraftHint: {
-    fontSize: 12,
-    lineHeight: 18,
-    fontWeight: "400",
+    ...textStyles.body5,
     color: colors.gray600,
   },
   pillBlue: {
@@ -324,14 +338,32 @@ const styles = StyleSheet.create({
     backgroundColor: BLUE_PILL,
   },
   pillBlueText: {
-    fontSize: 11,
-    lineHeight: 16,
-    fontWeight: "600",
+    ...textStyles.h9,
     color: BLUE_PILL,
   },
   fieldStack: {
     flexDirection: "column",
     gap: 8,
+  },
+  partialBanner: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 7,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    borderRadius: 9,
+    backgroundColor: "rgb(255, 248, 232)",
+    borderWidth: 1,
+    borderColor: "rgb(242, 223, 168)",
+  },
+  partialBannerIcon: {
+    flexShrink: 0,
+    marginTop: 1,
+  },
+  partialBannerText: {
+    flex: 1,
+    ...textStyles.body6,
+    color: "rgb(122, 84, 8)",
   },
   footer: {
     flexDirection: "row",
@@ -351,18 +383,14 @@ const styles = StyleSheet.create({
     backgroundColor: BTN_CANCEL_BG,
   },
   footerBtnCancelText: {
-    fontSize: 12,
-    lineHeight: 18,
-    fontWeight: "700",
+    ...textStyles.body5,
     color: colors.gray900,
   },
   footerBtnSave: {
     backgroundColor: colors.gray900,
   },
   footerBtnSaveText: {
-    fontSize: 12,
-    lineHeight: 18,
-    fontWeight: "700",
+    ...textStyles.body5,
     color: colors.white,
   },
 });
