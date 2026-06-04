@@ -13,6 +13,9 @@ import {
 
 import { useMe } from "@/hooks/useMe";
 import type { LocalFile } from "@/types/api";
+import ImagePreviewModal, {
+  type ImagePreviewItem,
+} from "@/components/modals/ImagePreviewModal";
 import type { AttachmentSectionProps } from "@/ui/components/attachmentSection.types";
 import { pendingAiFileKey } from "@/ui/components/attachmentSection.types";
 import { colors } from "@/ui/tokens/colors";
@@ -135,6 +138,9 @@ export default function AttachmentSection({
   const { width: windowWidth, height: windowHeight } = useWindowDimensions();
   const [previewImageUri, setPreviewImageUri] = useState<string | null>(null);
   const [isPreviewImageLoading, setIsPreviewImageLoading] = useState(false);
+  const [previewItems, setPreviewItems] = useState<ImagePreviewItem[]>([]);
+  const [previewInitialIndex, setPreviewInitialIndex] = useState(0);
+  const [previewVisible, setPreviewVisible] = useState(false);
   const [aiFileSelection, setAiFileSelection] = useState<AiFileSelection>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -160,7 +166,17 @@ export default function AttachmentSection({
     });
   }, [existing, pendingFiles]);
 
-  const handleOpenImage = (uri: string) => {
+  const handleOpenExistingImage = (attachmentId: number) => {
+    const imageItems: ImagePreviewItem[] = existing
+      .filter(a => isImageMime(a.contentType))
+      .map(a => ({ attachment: a }));
+    const idx = imageItems.findIndex(item => item.attachment.id === attachmentId);
+    setPreviewItems(imageItems);
+    setPreviewInitialIndex(Math.max(0, idx));
+    setPreviewVisible(true);
+  };
+
+  const handleOpenPendingImage = (uri: string) => {
     if (!uri) return;
     setIsPreviewImageLoading(true);
     setPreviewImageUri(uri);
@@ -280,7 +296,7 @@ export default function AttachmentSection({
           stopEventBubble(e);
           onOpen();
         }}
-        disabled={isUploading || disabled}
+        disabled={isUploading}
         style={({ pressed }) => [styles.openLinkHit, pressed && styles.pressed]}
         hitSlop={6}
       >
@@ -397,7 +413,7 @@ export default function AttachmentSection({
             if (isPdfMime(a.contentType)) {
               onOpen = () => handleOpenPdf(a.fileUrl);
             } else if (isImageMime(a.contentType)) {
-              onOpen = () => handleOpenImage(a.fileUrl);
+              onOpen = () => handleOpenExistingImage(a.id);
             }
             const aiSelect = showAiToolbar
               ? {
@@ -435,7 +451,7 @@ export default function AttachmentSection({
             if (isPdfMime(file.mimeType)) {
               onOpen = () => handleOpenPdf(file.uri);
             } else if (isImageMime(file.mimeType)) {
-              onOpen = () => handleOpenImage(file.uri);
+              onOpen = () => handleOpenPendingImage(file.uri);
             }
             const aiSelect = showAiToolbar
               ? {
@@ -526,6 +542,13 @@ export default function AttachmentSection({
           </Pressable>
         </View>
       ) : null}
+
+      <ImagePreviewModal
+        visible={previewVisible}
+        onClose={() => setPreviewVisible(false)}
+        images={previewItems}
+        initialIndex={previewInitialIndex}
+      />
 
       <Modal
         visible={previewImageUri !== null}
