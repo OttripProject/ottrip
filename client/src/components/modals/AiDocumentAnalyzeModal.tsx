@@ -114,17 +114,15 @@ export default function AiDocumentAnalyzeModal({
   const kind: AiDocumentItemType | null =
     analyzeResult?.inferredItemType ?? analyzeResult?.draft?.itemType ?? null;
 
-  // const isPartialRecognition = useMemo(() => {
-  //   if (!analyzeResult?.draft?.payload) return false;
-  //   const { values, fieldMeta } = analyzeResult.draft.payload;
-  //   const hasUncertain = Object.values(fieldMeta).some(m => m.certainty !== "high");
-  //   const hasEmptyValues = Object.values(values).some(
-  //     v => v === null || v === undefined || v === "",
-  //   );
-  //   return hasUncertain || hasEmptyValues;
-  // }, [analyzeResult]);
-
-  const isPartialRecognition = true;
+  const isPartialRecognition = useMemo(() => {
+    if (!analyzeResult?.draft?.payload) return false;
+    const { values, fieldMeta } = analyzeResult.draft.payload;
+    const hasUncertain = Object.values(fieldMeta).some(m => m.certainty !== "high");
+    const hasEmptyValues = Object.values(values).some(
+      v => v === null || v === undefined || v === "",
+    );
+    return hasUncertain || hasEmptyValues;
+  }, [analyzeResult]);
 
   const subtitle =
     kind != null
