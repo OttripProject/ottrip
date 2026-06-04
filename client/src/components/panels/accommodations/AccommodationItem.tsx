@@ -141,6 +141,7 @@ export default function AccommodationItem({
   const [isAiAnalyzing, setIsAiAnalyzing] = useState(false);
   const [aiAnalyzeInlineError, setAiAnalyzeInlineError] = useState(false);
   const [aiAnalyzeInlineErrorMessage, setAiAnalyzeInlineErrorMessage] = useState("");
+  const [aiAnalyzeSizeErrorMessage, setAiAnalyzeSizeErrorMessage] = useState("");
   const [lastAiSelection, setLastAiSelection] = useState<AiAttachmentAnalyzeSelection | null>(null);
   const lastHandledAiAnalyzeSeqRef = useRef<number | null>(null);
 
@@ -519,6 +520,24 @@ export default function AccommodationItem({
     async (selection: AiAttachmentAnalyzeSelection) => {
       setAiAnalyzeInlineError(false);
       setAiAnalyzeInlineErrorMessage("");
+      setAiAnalyzeSizeErrorMessage("");
+      const AI_MAX_SIZE = 10 * 1024 * 1024;
+      const oversizeFile =
+        selection.kind === "pending"
+          ? pendingFiles.find(f => pendingAiFileKey(f) === selection.key)
+          : undefined;
+      const oversizeExisting =
+        selection.kind === "existing"
+          ? existingAttachments.find(a => a.id === selection.id)
+          : undefined;
+      const oversizeBytes =
+        oversizeFile?.size ?? oversizeExisting?.fileSize;
+      const oversizeName =
+        oversizeFile?.name ?? oversizeExisting?.fileName ?? "파일";
+      if (oversizeBytes !== undefined && oversizeBytes > AI_MAX_SIZE) {
+        setAiAnalyzeSizeErrorMessage(`"${oversizeName}"은(는) 10MB를 넘어 분석할 수 없어요.`);
+        return;
+      }
       setIsAiAnalyzing(true);
       try {
         const payload = await buildAnalyzeUploadPayload(selection, {
@@ -954,6 +973,13 @@ export default function AccommodationItem({
                 setAiAnalyzeInlineErrorMessage("");
                 handleAiAnalyzePress(lastAiSelection);
               }}
+            />
+          )}
+          {!!aiAnalyzeSizeErrorMessage && (
+            <AiAnalyzeErrorBanner
+              message={aiAnalyzeSizeErrorMessage}
+              showTitle={false}
+              showRetry={false}
             />
           )}
 

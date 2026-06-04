@@ -4,31 +4,40 @@ import ErrorTriangleIcon from "../../assets/error_triangle.svg";
 import RetryIcon from "../../assets/retry.svg";
 
 interface AiAnalyzeErrorBannerProps {
-  onRetry: () => void;
+  onRetry?: () => void;
   message?: string;
+  showTitle?: boolean;
+  showRetry?: boolean;
 }
 
-export default function AiAnalyzeErrorBanner({ onRetry, message }: AiAnalyzeErrorBannerProps) {
+export default function AiAnalyzeErrorBanner({
+  onRetry,
+  message,
+  showTitle = true,
+  showRetry = true,
+}: AiAnalyzeErrorBannerProps) {
   return (
     <View style={styles.container}>
       <View style={styles.topRow}>
         <ErrorTriangleIcon width={16} height={16} style={styles.icon} />
         <View style={styles.textBlock}>
-          <Text style={styles.title}>분석 실패</Text>
-          <Text style={styles.subtitle}>
+          {showTitle && <Text style={styles.title}>분석 실패</Text>}
+          <Text style={[styles.subtitle, !showTitle && styles.subtitleNoTitle]}>
             {message ?? "첨부 파일에서 일정 정보를 읽지 못했어요. 더 선명한 자료로 다시 시도해 주세요."}
           </Text>
         </View>
       </View>
-      <View style={styles.bottomRow}>
-        <Pressable
-          onPress={onRetry}
-          style={({ pressed }) => [styles.retryBtn, pressed && styles.retryBtnPressed]}
-        >
-          <RetryIcon width={12} height={12} style={styles.retryIcon} />
-          <Text style={styles.retryBtnText}>다시 시도</Text>
-        </Pressable>
-      </View>
+      {showRetry && onRetry && (
+        <View style={styles.bottomRow}>
+          <Pressable
+            onPress={onRetry}
+            style={({ pressed }) => [styles.retryBtn, pressed && styles.retryBtnPressed]}
+          >
+            <RetryIcon width={12} height={12} style={styles.retryIcon} />
+            <Text style={styles.retryBtnText}>다시 시도</Text>
+          </Pressable>
+        </View>
+      )}
     </View>
   );
 }
@@ -64,6 +73,9 @@ const styles = StyleSheet.create({
     ...textStyles.body6,
     color: "rgb(154, 44, 32)",
     marginTop: 2,
+  },
+  subtitleNoTitle: {
+    marginTop: 0,
   },
   bottomRow: {
     flexDirection: "row",
