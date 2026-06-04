@@ -1,3 +1,4 @@
+import AiAnalyzeErrorBanner from "@/components/AiAnalyzeErrorBanner";
 import AiAnalyzeFailureModal from "@/components/modals/AiAnalyzeFailureModal";
 import AiDocumentAnalyzeModal from "@/components/modals/AiDocumentAnalyzeModal";
 import BaseCalendar from "@/components/popup/calendar/BaseCalendar";
@@ -227,6 +228,8 @@ export default function FlightItem({
   const [isAiAnalyzing, setIsAiAnalyzing] = useState(false);
   const [aiAnalyzeFailureVisible, setAiAnalyzeFailureVisible] = useState(false);
   const [aiAnalyzeFailureMessage, setAiAnalyzeFailureMessage] = useState("");
+  const [aiAnalyzeInlineError, setAiAnalyzeInlineError] = useState(false);
+  const [lastAiSelection, setLastAiSelection] = useState<AiAttachmentAnalyzeSelection | null>(null);
   const lastHandledAiAnalyzeSeqRef = useRef<number | null>(null);
 
   useEffect(() => {
@@ -260,6 +263,7 @@ export default function FlightItem({
     async (selection: AiAttachmentAnalyzeSelection) => {
       setAiAnalyzeFailureVisible(false);
       setAiAnalyzeFailureMessage("");
+      setAiAnalyzeInlineError(false);
       setIsAiAnalyzing(true);
       try {
         const payload = await buildAnalyzeUploadPayload(selection, {
@@ -271,8 +275,8 @@ export default function FlightItem({
         });
         const err = res.error?.trim();
         if (!res.success || err) {
-          setAiAnalyzeFailureMessage(err || "분석에 실패했습니다.");
-          setAiAnalyzeFailureVisible(true);
+          setLastAiSelection(selection);
+          setAiAnalyzeInlineError(true);
           return;
         }
         if (routeDocumentAnalyzeSuccess?.(res, pendingFiles)) {
@@ -1158,6 +1162,14 @@ export default function FlightItem({
                   : undefined
               }
               isAiAnalyzing={isAiAnalyzing}
+            />
+          )}
+          {aiAnalyzeInlineError && lastAiSelection && (
+            <AiAnalyzeErrorBanner
+              onRetry={() => {
+                setAiAnalyzeInlineError(false);
+                handleAiAnalyzePress(lastAiSelection);
+              }}
             />
           )}
 
