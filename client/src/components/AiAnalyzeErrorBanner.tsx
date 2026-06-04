@@ -5,9 +5,10 @@ import RetryIcon from "../../assets/retry.svg";
 
 interface AiAnalyzeErrorBannerProps {
   onRetry: () => void;
+  message?: string;
 }
 
-export default function AiAnalyzeErrorBanner({ onRetry }: AiAnalyzeErrorBannerProps) {
+export default function AiAnalyzeErrorBanner({ onRetry, message }: AiAnalyzeErrorBannerProps) {
   return (
     <View style={styles.container}>
       <View style={styles.topRow}>
@@ -15,7 +16,7 @@ export default function AiAnalyzeErrorBanner({ onRetry }: AiAnalyzeErrorBannerPr
         <View style={styles.textBlock}>
           <Text style={styles.title}>분석 실패</Text>
           <Text style={styles.subtitle}>
-            첨부 파일에서 일정 정보를 읽지 못했어요. 더 선명한 자료로 다시 시도해 주세요.
+            {message ?? "첨부 파일에서 일정 정보를 읽지 못했어요. 더 선명한 자료로 다시 시도해 주세요."}
           </Text>
         </View>
       </View>

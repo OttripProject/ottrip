@@ -1,5 +1,4 @@
 import AiAnalyzeErrorBanner from "@/components/AiAnalyzeErrorBanner";
-import AiAnalyzeFailureModal from "@/components/modals/AiAnalyzeFailureModal";
 import AiDocumentAnalyzeModal from "@/components/modals/AiDocumentAnalyzeModal";
 import BaseCalendar from "@/components/popup/calendar/BaseCalendar";
 import { PLACEHOLDERS } from "@/constants/placeholders";
@@ -140,9 +139,8 @@ export default function AccommodationItem({
   const [aiAnalyzeResult, setAiAnalyzeResult] =
     useState<DocumentUploadAnalyzeResponse | null>(null);
   const [isAiAnalyzing, setIsAiAnalyzing] = useState(false);
-  const [aiAnalyzeFailureVisible, setAiAnalyzeFailureVisible] = useState(false);
-  const [aiAnalyzeFailureMessage, setAiAnalyzeFailureMessage] = useState("");
   const [aiAnalyzeInlineError, setAiAnalyzeInlineError] = useState(false);
+  const [aiAnalyzeInlineErrorMessage, setAiAnalyzeInlineErrorMessage] = useState("");
   const [lastAiSelection, setLastAiSelection] = useState<AiAttachmentAnalyzeSelection | null>(null);
   const lastHandledAiAnalyzeSeqRef = useRef<number | null>(null);
 
@@ -519,9 +517,8 @@ export default function AccommodationItem({
 
   const handleAiAnalyzePress = useCallback(
     async (selection: AiAttachmentAnalyzeSelection) => {
-      setAiAnalyzeFailureVisible(false);
-      setAiAnalyzeFailureMessage("");
       setAiAnalyzeInlineError(false);
+      setAiAnalyzeInlineErrorMessage("");
       setIsAiAnalyzing(true);
       try {
         const payload = await buildAnalyzeUploadPayload(selection, {
@@ -543,10 +540,9 @@ export default function AccommodationItem({
         setAiAnalyzeResult(res);
         setAiAnalyzeModalVisible(true);
       } catch (e) {
-        setAiAnalyzeFailureMessage(
-          e instanceof Error ? e.message : "분석 요청에 실패했습니다.",
-        );
-        setAiAnalyzeFailureVisible(true);
+        setLastAiSelection(selection);
+        setAiAnalyzeInlineErrorMessage("분석 서버에 연결하지 못했어요. 잠시 후 다시 시도해 주세요.");
+        setAiAnalyzeInlineError(true);
       } finally {
         setIsAiAnalyzing(false);
       }
@@ -952,8 +948,10 @@ export default function AccommodationItem({
           )}
           {aiAnalyzeInlineError && lastAiSelection && (
             <AiAnalyzeErrorBanner
+              message={aiAnalyzeInlineErrorMessage || undefined}
               onRetry={() => {
                 setAiAnalyzeInlineError(false);
+                setAiAnalyzeInlineErrorMessage("");
                 handleAiAnalyzePress(lastAiSelection);
               }}
             />
@@ -1020,14 +1018,6 @@ export default function AccommodationItem({
           onConsumeStagedDocumentAnalyze?.();
         }}
         entityTypeLabel="숙박"
-      />
-      <AiAnalyzeFailureModal
-        visible={aiAnalyzeFailureVisible}
-        message={aiAnalyzeFailureMessage}
-        onClose={() => {
-          setAiAnalyzeFailureVisible(false);
-          setAiAnalyzeFailureMessage("");
-        }}
       />
     </>
   );
