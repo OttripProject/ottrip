@@ -1,14 +1,14 @@
-import { TextStyle } from 'react-native';
-import { colors } from './colors';
+import type { TextStyle } from "react-native";
+import { colors } from "./colors";
 
 export const typography = {
   fontFamily: {
-    default: 'System',
-    mono: 'Courier',
-    pretendardRegular: 'Pretendard-Regular',
-    pretendardSemiBold: 'Pretendard-SemiBold',
-    poppinsMedium: 'Poppins-Medium',
-    poppinsSemiBold: 'Poppins-SemiBold',
+    default: "System",
+    mono: "Courier",
+    pretendardRegular: "Pretendard-Regular",
+    pretendardSemiBold: "Pretendard-SemiBold",
+    poppinsMedium: "Poppins-Medium",
+    poppinsSemiBold: "Poppins-SemiBold",
   },
   size: {
     xs: 12,
@@ -18,10 +18,10 @@ export const typography = {
     xl: 20,
   },
   weight: {
-    regular: '400' as const,
-    medium: '500' as const,
-    semibold: '600' as const,
-    bold: '700' as const,
+    regular: "400" as const,
+    medium: "500" as const,
+    semibold: "600" as const,
+    bold: "700" as const,
   },
 };
 
@@ -126,5 +126,3 @@ export const textStyles: Record<string, TextStyle> = {
 
 export type FontSizeName = keyof typeof typography.size;
 export type TextStyleName = keyof typeof textStyles;
-
-

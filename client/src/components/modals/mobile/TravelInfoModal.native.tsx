@@ -1,21 +1,35 @@
-import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
-import { View, Text, Pressable, StyleSheet, ScrollView, TextInput, Keyboard } from 'react-native';
-import { useQueryClient } from '@tanstack/react-query';
-import dayjs from 'dayjs';
-import { Plan, Itinerary, Accommodation, FlightRead, Expense } from '@/types/api';
-import { colors } from '@/ui/tokens/colors';
-import { textStyles } from '@/ui/tokens/typography';
-import { plansApi } from '@/services/plans';
-import { useMe } from '@/hooks/useMe';
-import { guestPrompt } from '@/utils/guestPrompt';
-import FullScreenModal from '@/ui/components/FullScreenModal.native';
-import ExpenseDetailModal from './ExpenseDetailModal.native';
-import AddExpenseModal from './AddExpenseModal.native';
-import SharedMembersModal from './SharedMembersModal.native';
-import WeeklyChecklistCard from '@/components/cards/WeeklyChecklistCard.native';
-import CloseIcon from '../../../../assets/x.svg';
-import MemberIcon from '../../../../assets/mobile_member.svg';
-import ItineraryIcon from '../../../../assets/mobile_check_backup.svg';
+import WeeklyChecklistCard from "@/components/cards/WeeklyChecklistCard.native";
+import { useMe } from "@/hooks/useMe";
+import { plansApi } from "@/services/plans";
+import type {
+  Accommodation,
+  Expense,
+  FlightRead,
+  Itinerary,
+  Plan,
+} from "@/types/api";
+import FullScreenModal from "@/ui/components/FullScreenModal.native";
+import { colors } from "@/ui/tokens/colors";
+import { textStyles } from "@/ui/tokens/typography";
+import { guestPrompt } from "@/utils/guestPrompt";
+import { useQueryClient } from "@tanstack/react-query";
+import dayjs from "dayjs";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  Keyboard,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
+import ItineraryIcon from "../../../../assets/mobile_check_backup.svg";
+import MemberIcon from "../../../../assets/mobile_member.svg";
+import CloseIcon from "../../../../assets/x.svg";
+import AddExpenseModal from "./AddExpenseModal.native";
+import ExpenseDetailModal from "./ExpenseDetailModal.native";
+import SharedMembersModal from "./SharedMembersModal.native";
 
 interface TravelInfoModalProps {
   visible: boolean;
@@ -34,10 +48,11 @@ interface TravelInfoModalProps {
   onRefreshPlan?: () => Promise<void>;
 }
 
-const formatCurrency = (amount: number) => `${amount.toLocaleString('ko-KR')}원`;
+const formatCurrency = (amount: number) =>
+  `${amount.toLocaleString("ko-KR")}원`;
 
 const formatPeriod = (start: string, end: string) =>
-  `${dayjs(start).format('YYYY.MM.DD')} ~ ${dayjs(end).format('YYYY.MM.DD')}`;
+  `${dayjs(start).format("YYYY.MM.DD")} ~ ${dayjs(end).format("YYYY.MM.DD")}`;
 
 export default function TravelInfoModal({
   visible,
@@ -58,10 +73,11 @@ export default function TravelInfoModal({
   const queryClient = useQueryClient();
   const { data: me } = useMe();
   const [showExpenseDetail, setShowExpenseDetail] = useState(false);
-  const [showAddExpenseFromDetail, setShowAddExpenseFromDetail] = useState(false);
+  const [showAddExpenseFromDetail, setShowAddExpenseFromDetail] =
+    useState(false);
   const [showSharedMembers, setShowSharedMembers] = useState(false);
   const [memberCount, setMemberCount] = useState(0);
-  const [memo, setMemo] = useState(plan?.memo ?? '');
+  const [memo, setMemo] = useState(plan?.memo ?? "");
 
   const loadMemberCount = useCallback(async () => {
     if (!planId) return;
@@ -83,7 +99,7 @@ export default function TravelInfoModal({
 
   useEffect(() => {
     if (visible && plan) {
-      setMemo(plan.memo ?? '');
+      setMemo(plan.memo ?? "");
     }
   }, [visible, plan?.id, plan?.memo]);
 
@@ -104,13 +120,16 @@ export default function TravelInfoModal({
   const expensesByCategory = useMemo(() => {
     const byCategory: Record<string, number> = {};
     (expenses || []).forEach((e: Expense) => {
-      const cat = e?.category || '기타';
+      const cat = e?.category || "기타";
       byCategory[cat] = (byCategory[cat] || 0) + Number(e?.amount || 0);
     });
     return byCategory;
   }, [expenses]);
 
-  const scheduleCount = (itineraries?.length ?? 0) + (accommodations?.length ?? 0) + (flights?.length ?? 0);
+  const scheduleCount =
+    (itineraries?.length ?? 0) +
+    (accommodations?.length ?? 0) +
+    (flights?.length ?? 0);
 
   const handleExpenseAdded = async (expense: Expense) => {
     onExpenseAdd?.(expense);
@@ -121,13 +140,15 @@ export default function TravelInfoModal({
   const handleMemoBlur = useCallback(async () => {
     if (!plan?.id) return;
     const trimmed = memo.trim();
-    if (trimmed === (plan.memo ?? '')) return;
+    if (trimmed === (plan.memo ?? "")) return;
     try {
       await plansApi.setMemo(plan.id, trimmed);
-      queryClient.invalidateQueries({ queryKey: ['plan', planPublicId ?? undefined] });
+      queryClient.invalidateQueries({
+        queryKey: ["plan", planPublicId ?? undefined],
+      });
       await onRefreshPlan?.();
     } catch {
-      setMemo(plan.memo ?? '');
+      setMemo(plan.memo ?? "");
     }
   }, [plan?.id, plan?.memo, memo, planPublicId, onRefreshPlan, queryClient]);
 
@@ -140,7 +161,11 @@ export default function TravelInfoModal({
   if (!plan) return null;
 
   return (
-    <FullScreenModal visible={visible} onClose={handleClose} containerBackgroundColor={colors.gray300}>
+    <FullScreenModal
+      visible={visible}
+      onClose={handleClose}
+      containerBackgroundColor={colors.gray300}
+    >
       {/* Header - Figma: 여행 정보 + 닫기 */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>여행 정보</Text>
@@ -157,18 +182,24 @@ export default function TravelInfoModal({
         {/* Card 1: 여행제목 + 기간 - 흰색 카드 */}
         <View style={styles.card}>
           <Text style={styles.planTitle}>{plan.title}</Text>
-          <Text style={styles.planPeriod}>{formatPeriod(plan.startDate, plan.endDate)}</Text>
+          <Text style={styles.planPeriod}>
+            {formatPeriod(plan.startDate, plan.endDate)}
+          </Text>
         </View>
 
         {/* Card 2: 여행 총 경비 - 흰색 카드, 라벨 gray, 금액 black, 검정 버튼 */}
         <View style={styles.card}>
           <Text style={styles.cardLabel}>여행 총 경비</Text>
-          <Text style={styles.expenseAmount}>{formatCurrency(totalExpenses)}</Text>
+          <Text style={styles.expenseAmount}>
+            {formatCurrency(totalExpenses)}
+          </Text>
           <Pressable
             style={styles.expenseDetailButton}
             onPress={() => setShowExpenseDetail(true)}
           >
-            <Text style={styles.expenseDetailButtonText}>상세 내역 및 비용 추가</Text>
+            <Text style={styles.expenseDetailButtonText}>
+              상세 내역 및 비용 추가
+            </Text>
           </Pressable>
         </View>
 
@@ -245,7 +276,7 @@ export default function TravelInfoModal({
 
       <AddExpenseModal
         visible={showAddExpenseFromDetail}
-        onClose={(opts) => {
+        onClose={opts => {
           setShowAddExpenseFromDetail(false);
           if (opts?.fromSave) {
             setShowExpenseDetail(false);
@@ -266,7 +297,10 @@ export default function TravelInfoModal({
           loadMemberCount();
         }}
         planId={planId}
-        myRole={plan?.myRole ?? (plan as { my_role?: 'owner' | 'editor' | 'viewer' })?.my_role}
+        myRole={
+          plan?.myRole ??
+          (plan as { my_role?: "owner" | "editor" | "viewer" })?.my_role
+        }
       />
     </FullScreenModal>
   );
@@ -274,9 +308,9 @@ export default function TravelInfoModal({
 
 const styles = StyleSheet.create({
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     paddingHorizontal: 16,
     paddingVertical: 12,
     backgroundColor: colors.gray300,
@@ -285,7 +319,7 @@ const styles = StyleSheet.create({
     ...textStyles.h5,
   },
   closeButton: {
-    position: 'absolute',
+    position: "absolute",
     right: 16,
   },
   scrollView: {
@@ -301,7 +335,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
     borderRadius: 16,
     paddingVertical: 20,
-    paddingHorizontal: 16,  
+    paddingHorizontal: 16,
     marginBottom: 8,
   },
   planTitle: {
@@ -326,15 +360,15 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingVertical: 13,
     marginBottom: 4,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   expenseDetailButtonText: {
     ...textStyles.h6,
     color: colors.white,
   },
   twoCardRow: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 9,
     marginBottom: 8,
   },
@@ -344,7 +378,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     paddingVertical: 20,
     paddingHorizontal: 16,
-    alignItems: 'flex-start',
+    alignItems: "flex-start",
   },
   twoColValue: {
     ...textStyles.h3,

@@ -1,12 +1,15 @@
-import React from 'react';
-import { View, Text, Pressable, StyleSheet } from 'react-native';
-import { useNavigation, useRoute, CommonActions } from '@react-navigation/native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useAuth } from '@/contexts/AuthContext';
-import { colors } from '@/ui/tokens/colors';
-import { textStyles, typography } from '@/ui/tokens/typography';
+import { useAuth } from "@/contexts/AuthContext";
+import { colors } from "@/ui/tokens/colors";
+import { textStyles } from "@/ui/tokens/typography";
+import {
+  CommonActions,
+  useNavigation,
+  useRoute,
+} from "@react-navigation/native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
-import CheckIcon from '../../assets/mobile_plan_checked.svg';
+import CheckIcon from "../../assets/mobile_plan_checked.svg";
 
 type RouteParams = {
   accessToken: string;
@@ -26,19 +29,19 @@ export default function RegisterCompleteScreenNative() {
       refreshToken,
     } as any);
     navigation.dispatch(
-      CommonActions.reset({ index: 0, routes: [{ name: 'OTTRIP' }] }),
+      CommonActions.reset({ index: 0, routes: [{ name: "OTTRIP" }] }),
     );
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+    <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
       <View style={styles.content}>
         <View style={styles.iconCircle}>
           <CheckIcon width={56} height={56} />
         </View>
         <Text style={styles.title}>가입이 완료되었어요!</Text>
         <Text style={styles.subtitle}>
-          {'이제 ottrip의 모든 서비스를 자유롭게\n이용할 수 있어요.'}
+          {"이제 ottrip의 모든 서비스를 자유롭게\n이용할 수 있어요."}
         </Text>
       </View>
 
@@ -58,25 +61,25 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     paddingHorizontal: 16,
     marginTop: -240,
   },
   iconCircle: {
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     marginBottom: 20,
   },
   title: {
     ...textStyles.h2,
-    textAlign: 'center',
+    textAlign: "center",
     marginBottom: 10,
   },
   subtitle: {
     ...textStyles.body3,
     color: colors.gray600,
-    textAlign: 'center',
+    textAlign: "center",
     lineHeight: 22,
   },
   bottomArea: {
@@ -89,8 +92,8 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     backgroundColor: colors.black,
     borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   startButtonText: {
     ...textStyles.h4,

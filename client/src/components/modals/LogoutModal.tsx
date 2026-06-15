@@ -1,14 +1,13 @@
-import React from 'react';
+import { colors } from "@/ui/tokens/colors";
+import { textStyles } from "@/ui/tokens/typography";
 import {
-  View,
-  Text,
-  Pressable,
-  StyleSheet,
   Modal,
+  Pressable,
   ScrollView,
-} from 'react-native';
-import { colors } from '@/ui/tokens/colors';
-import { textStyles } from '@/ui/tokens/typography';
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 
 interface LogoutModalProps {
   visible: boolean;
@@ -44,8 +43,8 @@ export default function LogoutModal({
                 정말로 로그아웃 하시겠어요?
               </Text>
               <Text style={styles.logoutModalText}>
-                현재 게스트로 사용중입니다. {'\n'}
-                로그아웃 시 모든 데이터가 삭제됩니다. {'\n'}
+                현재 게스트로 사용중입니다. {"\n"}
+                로그아웃 시 모든 데이터가 삭제됩니다. {"\n"}
                 그래도 로그아웃 하시겠습니까?
               </Text>
               <View style={styles.logoutModalButtonRow}>
@@ -112,13 +111,13 @@ export default function LogoutModal({
 const styles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.7)',
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: "rgba(0,0,0,0.7)",
+    alignItems: "center",
+    justifyContent: "center",
     padding: 20,
   },
   logoutModalCard: {
-    position: 'relative',
+    position: "relative",
     backgroundColor: colors.white,
     borderRadius: 24,
     width: 320,
@@ -127,7 +126,7 @@ const styles = StyleSheet.create({
     paddingBottom: 24,
   },
   logoutModalCardGuest: {
-    maxHeight: '80%',
+    maxHeight: "80%",
     minHeight: 208,
   },
   guestScrollContent: {
@@ -135,27 +134,27 @@ const styles = StyleSheet.create({
   },
   logoutModalTitle: {
     ...textStyles.h5,
-    textAlign: 'center',
+    textAlign: "center",
     marginBottom: 8,
   },
   logoutModalText: {
     ...textStyles.body4,
     color: colors.gray600,
-    textAlign: 'center',
+    textAlign: "center",
     lineHeight: 20,
     marginBottom: 20,
   },
   logoutModalButtonRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
   },
   footerButton: {
     width: 132,
     height: 40,
     borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   footerButtonGray: {
     backgroundColor: colors.gray300,
@@ -178,4 +177,3 @@ const styles = StyleSheet.create({
     opacity: 0.85,
   },
 });
-

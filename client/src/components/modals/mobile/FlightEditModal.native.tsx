@@ -1,31 +1,38 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, Pressable, StyleSheet, ScrollView, Alert } from 'react-native';
-import dayjs from 'dayjs';
-import { Attachment, FlightRead, LocalFile } from '@/types/api';
-import { colors } from '@/ui/tokens/colors';
-import { textStyles, typography } from '@/ui/tokens/typography';
-import FullScreenModal from '@/ui/components/FullScreenModal.native';
-import FloatingFooter from '@/ui/components/FloatingFooter.native';
-import AttachmentSection from '@/ui/components/attachmentSection.native';
-import { TimeModal } from '@/ui/components/TimeModal.native';
-import Input from '@/ui/components/input/Input';
-import { flightsApi } from '@/services/flights';
-import { attachmentsApi } from '@/services/attachments';
-import { ExpenseCurrency, ExpenseCategory } from '@/types/expense';
-import { PLACEHOLDERS } from '@/constants/placeholders';
-import { getAirportLabelByIata } from '@/utils/airportList';
-import CalendarModal from '@/ui/components/CalendarModal.native';
-import TimeIcon from '../../../../assets/mobile_time.svg';
-import AirportSearchModal from './AirportSearchModal.native';
-import CloseIcon from '../../../../assets/x.svg';
-import DownArrowIcon from '../../../../assets/down_arrow.svg';
-import CalendarIcon from '../../../../assets/mobile_calendar_black.svg';
-import AddIcon from '../../../../assets/mobile_plan_add.svg';
-import DeleteIcon from '../../../../assets/delete.svg';
-import { useFilePicker } from '@/hooks/useFilePicker';
-import { useAttachmentUpload } from '@/hooks/useAttachmentUpload';
-import { useMe } from '@/hooks/useMe';
-import { handleGuestPromptError } from '@/utils/guestPrompt';
+import { PLACEHOLDERS } from "@/constants/placeholders";
+import { useAttachmentUpload } from "@/hooks/useAttachmentUpload";
+import { useFilePicker } from "@/hooks/useFilePicker";
+import { useMe } from "@/hooks/useMe";
+import { attachmentsApi } from "@/services/attachments";
+import { flightsApi } from "@/services/flights";
+import type { Attachment, FlightRead, LocalFile } from "@/types/api";
+import { ExpenseCategory, ExpenseCurrency } from "@/types/expense";
+import CalendarModal from "@/ui/components/CalendarModal.native";
+import FloatingFooter from "@/ui/components/FloatingFooter.native";
+import FullScreenModal from "@/ui/components/FullScreenModal.native";
+import { TimeModal } from "@/ui/components/TimeModal.native";
+import AttachmentSection from "@/ui/components/attachmentSection.native";
+import Input from "@/ui/components/input/Input";
+import { colors } from "@/ui/tokens/colors";
+import { textStyles, typography } from "@/ui/tokens/typography";
+import { getAirportLabelByIata } from "@/utils/airportList";
+import { handleGuestPromptError } from "@/utils/guestPrompt";
+import dayjs from "dayjs";
+import { useEffect, useRef, useState } from "react";
+import {
+  Alert,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
+import DeleteIcon from "../../../../assets/delete.svg";
+import DownArrowIcon from "../../../../assets/down_arrow.svg";
+import CalendarIcon from "../../../../assets/mobile_calendar_black.svg";
+import AddIcon from "../../../../assets/mobile_plan_add.svg";
+import TimeIcon from "../../../../assets/mobile_time.svg";
+import CloseIcon from "../../../../assets/x.svg";
+import AirportSearchModal from "./AirportSearchModal.native";
 
 interface FlightEditModalProps {
   visible: boolean;
@@ -55,19 +62,20 @@ type SegmentForm = {
   seat_number?: string;
 };
 
-const formatDate = (dateStr: string) => dayjs(dateStr).format('YYYY.MM.DD');
+const formatDate = (dateStr: string) => dayjs(dateStr).format("YYYY.MM.DD");
 
 const formatTimeDisplay = (timeStr: string) => {
-  const [hour, minute] = (timeStr || '00:00').split(':');
-  const hourNum = parseInt(hour, 10) || 0;
-  const period = hourNum < 12 ? '오전' : '오후';
-  const displayHour = hourNum === 0 ? 12 : hourNum > 12 ? hourNum - 12 : hourNum;
-  return `${period} ${displayHour.toString().padStart(2, '0')}:${minute || '00'}`;
+  const [hour, minute] = (timeStr || "00:00").split(":");
+  const hourNum = Number.parseInt(hour, 10) || 0;
+  const period = hourNum < 12 ? "오전" : "오후";
+  const displayHour =
+    hourNum === 0 ? 12 : hourNum > 12 ? hourNum - 12 : hourNum;
+  return `${period} ${displayHour.toString().padStart(2, "0")}:${minute || "00"}`;
 };
-const normalizeAmount = (value: unknown) => {
-  const raw = String(value ?? '').trim();
-  if (!raw) return '';
-  return raw.replace(/[^0-9]/g, '');
+const _normalizeAmount = (value: unknown) => {
+  const raw = String(value ?? "").trim();
+  if (!raw) return "";
+  return raw.replace(/[^0-9]/g, "");
 };
 
 export default function FlightEditModal({
@@ -82,108 +90,122 @@ export default function FlightEditModal({
   onDelete,
 }: FlightEditModalProps) {
   const [formData, setFormData] = useState({
-    reservation_number: '',
-    passenger_name: '',
-    ticket_number: '',
-    booking_reference: '',
+    reservation_number: "",
+    passenger_name: "",
+    ticket_number: "",
+    booking_reference: "",
   });
-  const [expenseAmount, setExpenseAmount] = useState('');
+  const [expenseAmount, setExpenseAmount] = useState("");
   const [flightSegments, setFlightSegments] = useState<SegmentForm[]>([]);
-  const [segmentDatePicker, setSegmentDatePicker] = useState<{ idx: number; type: 'dep' | 'arr' } | null>(null);
+  const [segmentDatePicker, setSegmentDatePicker] = useState<{
+    idx: number;
+    type: "dep" | "arr";
+  } | null>(null);
   const [segmentTimeModal, setSegmentTimeModal] = useState<{
     idx: number;
-    field: 'departure_time' | 'arrival_time';
+    field: "departure_time" | "arrival_time";
   } | null>(null);
   const [airportSearchTarget, setAirportSearchTarget] = useState<{
     idx: number;
-    type: 'dep' | 'arr';
+    type: "dep" | "arr";
   } | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isSubmittingRef = useRef(false);
   const [pendingFiles, setPendingFiles] = useState<LocalFile[]>([]);
-  const [existingAttachments, setExistingAttachments] = useState<Attachment[]>([]);
+  const [existingAttachments, setExistingAttachments] = useState<Attachment[]>(
+    [],
+  );
   const [isLoadingAttachments, setIsLoadingAttachments] = useState(false);
 
   const { pickImage, pickDocument } = useFilePicker();
   const { data: me } = useMe();
   const { isUploading, uploadFiles } = useAttachmentUpload({
     planId,
-    entityType: 'flight',
+    entityType: "flight",
   });
 
   useEffect(() => {
     if (visible && !flight) {
-      const baseDate = defaultDate || planStartDate || dayjs().format('YYYY-MM-DD');
+      const baseDate =
+        defaultDate || planStartDate || dayjs().format("YYYY-MM-DD");
       setFlightSegments([
         {
-          airline: '',
-          flight_number: '',
-          departure_airport: '',
-          arrival_airport: '',
+          airline: "",
+          flight_number: "",
+          departure_airport: "",
+          arrival_airport: "",
           departure_date: baseDate,
-          departure_time: '09:00',
+          departure_time: "09:00",
           arrival_date: baseDate,
-          arrival_time: '10:00',
-          terminal: '',
-          gate: '',
-          seat_number: '',
+          arrival_time: "10:00",
+          terminal: "",
+          gate: "",
+          seat_number: "",
         },
       ]);
       setFormData({
-        reservation_number: '',
-        passenger_name: '',
-        ticket_number: '',
-        booking_reference: '',
+        reservation_number: "",
+        passenger_name: "",
+        ticket_number: "",
+        booking_reference: "",
       });
-      setExpenseAmount('');
+      setExpenseAmount("");
     } else if (visible && flight) {
       setFormData({
-        reservation_number: flight.reservationNumber || '',
-        passenger_name: flight.passengerName || '',
-        ticket_number: flight.ticketNumber || '',
-        booking_reference: flight.bookingReference || '',
+        reservation_number: flight.reservationNumber || "",
+        passenger_name: flight.passengerName || "",
+        ticket_number: flight.ticketNumber || "",
+        booking_reference: flight.bookingReference || "",
       });
       const amountNum = Math.floor(Number(flight.expense?.amount) || 0);
       setExpenseAmount(
-        amountNum ? String(amountNum).replace(/\B(?=(\d{3})+(?!\d))/g, ',') : ''
+        amountNum
+          ? String(amountNum).replace(/\B(?=(\d{3})+(?!\d))/g, ",")
+          : "",
       );
       const segments = flight.flightSegments || [];
-      const sorted = [...segments].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
-      const baseDate = planStartDate || dayjs().format('YYYY-MM-DD');
+      const sorted = [...segments].sort(
+        (a, b) => (a.order ?? 0) - (b.order ?? 0),
+      );
+      const baseDate = planStartDate || dayjs().format("YYYY-MM-DD");
       const segList =
         sorted.length > 0
-          ? sorted.map((seg) => {
-          const dep = seg.departureTime ? dayjs(seg.departureTime) : dayjs();
-          const arr = seg.arrivalTime ? dayjs(seg.arrivalTime) : dayjs().add(1, 'hour');
-          return {
-            id: seg.id,
-            order: (seg as any).order,
-            airline: seg.airline || '',
-            flight_number: seg.flightNumber || '',
-            departure_airport: seg.departureAirport || '',
-            arrival_airport: seg.arrivalAirport || '',
-            departure_date: dep.format('YYYY-MM-DD'),
-            departure_time: dep.format('HH:mm'),
-            arrival_date: arr.format('YYYY-MM-DD'),
-            arrival_time: arr.format('HH:mm'),
-            terminal: seg.terminal || '',
-            gate: seg.gate || '',
-            seat_number: seg.seatNumber || '',
-          };
-        })
+          ? sorted.map(seg => {
+              const dep = seg.departureTime
+                ? dayjs(seg.departureTime)
+                : dayjs();
+              const arr = seg.arrivalTime
+                ? dayjs(seg.arrivalTime)
+                : dayjs().add(1, "hour");
+              return {
+                id: seg.id,
+                order: (seg as any).order,
+                airline: seg.airline || "",
+                flight_number: seg.flightNumber || "",
+                departure_airport: seg.departureAirport || "",
+                arrival_airport: seg.arrivalAirport || "",
+                departure_date: dep.format("YYYY-MM-DD"),
+                departure_time: dep.format("HH:mm"),
+                arrival_date: arr.format("YYYY-MM-DD"),
+                arrival_time: arr.format("HH:mm"),
+                terminal: seg.terminal || "",
+                gate: seg.gate || "",
+                seat_number: seg.seatNumber || "",
+              };
+            })
           : [
               {
-                airline: '',
-                flight_number: '',
-                departure_airport: '',
-                arrival_airport: '',
+                airline: "",
+                flight_number: "",
+                departure_airport: "",
+                arrival_airport: "",
                 departure_date: baseDate,
-                departure_time: '09:00',
+                departure_time: "09:00",
                 arrival_date: baseDate,
-                arrival_time: '10:00',
-                terminal: '',
-                gate: '',
-                seat_number: '',
+                arrival_time: "10:00",
+                terminal: "",
+                gate: "",
+                seat_number: "",
               },
             ];
       setFlightSegments(segList);
@@ -204,8 +226,8 @@ export default function FlightEditModal({
     setExistingAttachments([]);
     setIsLoadingAttachments(true);
     attachmentsApi
-      .getAttachments(planId, 'flight', flight.id)
-      .then((list) => {
+      .getAttachments(planId, "flight", flight.id)
+      .then(list => {
         if (!cancelled) setExistingAttachments(list);
       })
       .catch(() => {
@@ -222,15 +244,15 @@ export default function FlightEditModal({
   const handleRemoveExistingAttachment = async (attachmentId: number) => {
     try {
       await attachmentsApi.deleteAttachment(attachmentId);
-      setExistingAttachments((prev) => prev.filter((a) => a.id !== attachmentId));
+      setExistingAttachments(prev => prev.filter(a => a.id !== attachmentId));
     } catch (error) {
       if (handleGuestPromptError(error)) return;
-      Alert.alert('알림', '첨부파일 삭제에 실패했습니다.');
+      Alert.alert("알림", "첨부파일 삭제에 실패했습니다.");
     }
   };
 
   const toIso = (date: string, time: string) => {
-    if (!date || !time) return '';
+    if (!date || !time) return "";
     const ts = time.length === 5 ? `${time}:00` : time;
     return new Date(`${date}T${ts}`).toISOString();
   };
@@ -246,15 +268,16 @@ export default function FlightEditModal({
       !first?.arrival_date ||
       !first?.arrival_time
     ) {
-      Alert.alert('알림', '입력되지 않은 필수 값이 있습니다.');
+      Alert.alert("알림", "입력되지 않은 필수 값이 있습니다.");
       return;
     }
 
     isSubmittingRef.current = true;
     setIsSubmitting(true);
     try {
-      const amount = parseInt(expenseAmount.replace(/[^0-9]/g, ''), 10) || 0;
-      const segmentPayload = flightSegments.map((s) => ({
+      const amount =
+        Number.parseInt(expenseAmount.replace(/[^0-9]/g, ""), 10) || 0;
+      const segmentPayload = flightSegments.map(s => ({
         ...(s.id && { id: s.id }),
         airline: s.airline?.trim() || null,
         flightNumber: s.flight_number?.trim() || null,
@@ -291,7 +314,7 @@ export default function FlightEditModal({
         } catch {
           // Refetch 실패해도 저장은 완료됨
         }
-        Alert.alert('수정완료', '항공편이 수정되었습니다.');
+        Alert.alert("수정완료", "항공편이 수정되었습니다.");
       } else {
         const createRes = await flightsApi.createFlight({
           planId,
@@ -316,22 +339,30 @@ export default function FlightEditModal({
         } catch {
           // Refetch 실패해도 저장은 완료됨
         }
-        Alert.alert('추가완료', '항공편이 추가되었습니다.');
+        Alert.alert("추가완료", "항공편이 추가되었습니다.");
       }
 
       if (pendingFiles.length > 0) {
         try {
           const uploaded = await uploadFiles(pendingFiles, savedFlightId);
-          setExistingAttachments((prev) => [...prev, ...uploaded]);
+          setExistingAttachments(prev => [...prev, ...uploaded]);
           setPendingFiles([]);
         } catch {
-          Alert.alert('알림', '항공편은 저장됐으나 일부 파일 업로드에 실패했습니다.');
+          Alert.alert(
+            "알림",
+            "항공편은 저장됐으나 일부 파일 업로드에 실패했습니다.",
+          );
         }
       }
 
       onClose?.({ fromSave: true });
-    } catch (error) {
-      Alert.alert('알림', flight ? '항공 편 수정에 실패했습니다.' : '항공 편 추가에 실패했습니다.');
+    } catch (_error) {
+      Alert.alert(
+        "알림",
+        flight
+          ? "항공 편 수정에 실패했습니다."
+          : "항공 편 추가에 실패했습니다.",
+      );
     } finally {
       isSubmittingRef.current = false;
       setIsSubmitting(false);
@@ -340,63 +371,64 @@ export default function FlightEditModal({
 
   const handleDelete = () => {
     if (!flight) return;
-    Alert.alert(
-      '항공 편 삭제',
-      '이 항공 편을 삭제하시겠습니까?',
-      [
-        { text: '취소', style: 'cancel' },
-        {
-          text: '삭제',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await flightsApi.deleteFlight(flight.id);
-              if (onDelete) onDelete(flight.id);
-              Alert.alert('삭제완료', '항공편이 삭제되었습니다.');
-              onClose?.({ fromSave: true });
-            } catch (error) {
-              Alert.alert('알림', '항공 편 삭제에 실패했습니다.');
-            }
-          },
+    Alert.alert("항공 편 삭제", "이 항공 편을 삭제하시겠습니까?", [
+      { text: "취소", style: "cancel" },
+      {
+        text: "삭제",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            await flightsApi.deleteFlight(flight.id);
+            if (onDelete) onDelete(flight.id);
+            Alert.alert("삭제완료", "항공편이 삭제되었습니다.");
+            onClose?.({ fromSave: true });
+          } catch (_error) {
+            Alert.alert("알림", "항공 편 삭제에 실패했습니다.");
+          }
         },
-      ]
-    );
+      },
+    ]);
   };
 
   const handleAmountChange = (text: string) => {
-    const digits = text.replace(/[^0-9]/g, '');
-    setExpenseAmount(digits.replace(/\B(?=(\d{3})+(?!\d))/g, ','));
+    const digits = text.replace(/[^0-9]/g, "");
+    setExpenseAmount(digits.replace(/\B(?=(\d{3})+(?!\d))/g, ","));
   };
 
   const addSegment = () => {
     const last = flightSegments[flightSegments.length - 1];
-    const baseDate = last?.arrival_date || planStartDate || dayjs().format('YYYY-MM-DD');
-    const baseTime = last?.arrival_time || '12:00';
-    setFlightSegments((prev) => [
+    const baseDate =
+      last?.arrival_date || planStartDate || dayjs().format("YYYY-MM-DD");
+    const baseTime = last?.arrival_time || "12:00";
+    setFlightSegments(prev => [
       ...prev,
       {
-        airline: '',
-        flight_number: '',
-        departure_airport: '',
-        arrival_airport: '',
+        airline: "",
+        flight_number: "",
+        departure_airport: "",
+        arrival_airport: "",
         departure_date: baseDate,
         departure_time: baseTime,
         arrival_date: baseDate,
-        arrival_time: '',
-        terminal: '',
-        gate: '',
-        seat_number: '',
+        arrival_time: "",
+        terminal: "",
+        gate: "",
+        seat_number: "",
       },
     ]);
   };
 
   const removeSegment = (idx: number) => {
     if (flightSegments.length <= 1) return;
-    setFlightSegments((prev) => prev.filter((_, i) => i !== idx));
+    setFlightSegments(prev => prev.filter((_, i) => i !== idx));
   };
 
-  const updateSegment = (idx: number, field: keyof SegmentForm, value: string) => {
-    setFlightSegments((prev) => {
+  const updateSegment = (
+    idx: number,
+    field: keyof SegmentForm,
+    value: string,
+  ) => {
+    setFlightSegments(prev => {
       const next = [...prev];
       (next[idx] as any)[field] = value;
       return next;
@@ -407,8 +439,14 @@ export default function FlightEditModal({
     <>
       {!embedded && (
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>{flight ? '항공 수정' : '항공 추가'}</Text>
-          <Pressable style={styles.closeButton} onPress={() => onClose?.()} hitSlop={8}>
+          <Text style={styles.headerTitle}>
+            {flight ? "항공 수정" : "항공 추가"}
+          </Text>
+          <Pressable
+            style={styles.closeButton}
+            onPress={() => onClose?.()}
+            hitSlop={8}
+          >
             <CloseIcon width={24} height={24} />
           </Pressable>
         </View>
@@ -423,7 +461,9 @@ export default function FlightEditModal({
             <Text style={styles.label}>예약번호 (PNR)</Text>
             <Input
               value={formData.reservation_number}
-              onChangeText={(t) => setFormData({ ...formData, reservation_number: t })}
+              onChangeText={t =>
+                setFormData({ ...formData, reservation_number: t })
+              }
               style={[styles.input, !flight && styles.inputBorderless]}
               placeholder={PLACEHOLDERS.flight.reservationNumber}
               placeholderTextColor={colors.gray600}
@@ -434,7 +474,9 @@ export default function FlightEditModal({
               <Text style={styles.label}>승객명</Text>
               <Input
                 value={formData.passenger_name}
-                onChangeText={(t) => setFormData({ ...formData, passenger_name: t })}
+                onChangeText={t =>
+                  setFormData({ ...formData, passenger_name: t })
+                }
                 style={[styles.input, !flight && styles.inputBorderless]}
                 placeholder={PLACEHOLDERS.flight.passengerName}
                 placeholderTextColor={colors.gray600}
@@ -457,7 +499,9 @@ export default function FlightEditModal({
               <Text style={styles.label}>여행사 예약번호</Text>
               <Input
                 value={formData.booking_reference}
-                onChangeText={(t) => setFormData({ ...formData, booking_reference: t })}
+                onChangeText={t =>
+                  setFormData({ ...formData, booking_reference: t })
+                }
                 style={[styles.input, !flight && styles.inputBorderless]}
                 placeholder={PLACEHOLDERS.flight.bookingReference}
                 placeholderTextColor={colors.gray600}
@@ -467,7 +511,9 @@ export default function FlightEditModal({
               <Text style={styles.label}>항공권 번호</Text>
               <Input
                 value={formData.ticket_number}
-                onChangeText={(t) => setFormData({ ...formData, ticket_number: t })}
+                onChangeText={t =>
+                  setFormData({ ...formData, ticket_number: t })
+                }
                 style={[styles.input, !flight && styles.inputBorderless]}
                 placeholder={PLACEHOLDERS.flight.ticketNumber}
                 placeholderTextColor={colors.gray600}
@@ -502,8 +548,12 @@ export default function FlightEditModal({
                   <View style={[styles.inputGroup, styles.halfWidth]}>
                     <Input
                       value={seg.airline}
-                      onChangeText={(t) => updateSegment(idx, 'airline', t)}
-                      style={[styles.input, {backgroundColor: colors.white}, !flight && styles.inputBorderless]}
+                      onChangeText={t => updateSegment(idx, "airline", t)}
+                      style={[
+                        styles.input,
+                        { backgroundColor: colors.white },
+                        !flight && styles.inputBorderless,
+                      ]}
                       placeholder={PLACEHOLDERS.flight.airline}
                       placeholderTextColor={colors.gray600}
                     />
@@ -511,8 +561,12 @@ export default function FlightEditModal({
                   <View style={[styles.inputGroup, styles.halfWidth]}>
                     <Input
                       value={seg.flight_number}
-                      onChangeText={(t) => updateSegment(idx, 'flight_number', t)}
-                      style={[styles.input, {backgroundColor: colors.white}, !flight && styles.inputBorderless]}
+                      onChangeText={t => updateSegment(idx, "flight_number", t)}
+                      style={[
+                        styles.input,
+                        { backgroundColor: colors.white },
+                        !flight && styles.inputBorderless,
+                      ]}
                       placeholder={PLACEHOLDERS.flight.flightNumber}
                       placeholderTextColor={colors.gray600}
                     />
@@ -527,7 +581,9 @@ export default function FlightEditModal({
                         { backgroundColor: colors.white },
                         !flight && styles.pickerInputBorderless,
                       ]}
-                      onPress={() => setAirportSearchTarget({ idx, type: 'dep' })}
+                      onPress={() =>
+                        setAirportSearchTarget({ idx, type: "dep" })
+                      }
                     >
                       <Text
                         style={[
@@ -542,7 +598,7 @@ export default function FlightEditModal({
                         {seg.departure_airport
                           ? getAirportLabelByIata(seg.departure_airport) ||
                             seg.departure_airport
-                          : '출발 공항'}
+                          : "출발 공항"}
                       </Text>
                       <DownArrowIcon
                         width={20}
@@ -559,7 +615,9 @@ export default function FlightEditModal({
                         { backgroundColor: colors.white },
                         !flight && styles.pickerInputBorderless,
                       ]}
-                      onPress={() => setAirportSearchTarget({ idx, type: 'arr' })}
+                      onPress={() =>
+                        setAirportSearchTarget({ idx, type: "arr" })
+                      }
                     >
                       <Text
                         style={[
@@ -574,7 +632,7 @@ export default function FlightEditModal({
                         {seg.arrival_airport
                           ? getAirportLabelByIata(seg.arrival_airport) ||
                             seg.arrival_airport
-                          : '도착 공항'}
+                          : "도착 공항"}
                       </Text>
                       <DownArrowIcon
                         width={20}
@@ -587,17 +645,30 @@ export default function FlightEditModal({
                 <View style={styles.row}>
                   <View style={[styles.inputGroup, styles.halfWidth]}>
                     <Pressable
-                      style={[styles.dateInput, {backgroundColor: colors.white}, !flight && styles.dateInputBorderless]}
-                      onPress={() => setSegmentDatePicker({ idx, type: 'dep' })}
+                      style={[
+                        styles.dateInput,
+                        { backgroundColor: colors.white },
+                        !flight && styles.dateInputBorderless,
+                      ]}
+                      onPress={() => setSegmentDatePicker({ idx, type: "dep" })}
                     >
-                      <Text style={styles.dateText}>{formatDate(seg.departure_date)}</Text>
-                      <CalendarIcon width={20} height={20} color={colors.black} />
+                      <Text style={styles.dateText}>
+                        {formatDate(seg.departure_date)}
+                      </Text>
+                      <CalendarIcon
+                        width={20}
+                        height={20}
+                        color={colors.black}
+                      />
                     </Pressable>
                     <CalendarModal
-                      visible={segmentDatePicker?.idx === idx && segmentDatePicker?.type === 'dep'}
+                      visible={
+                        segmentDatePicker?.idx === idx &&
+                        segmentDatePicker?.type === "dep"
+                      }
                       selectedDate={seg.departure_date}
-                      onDayPress={(day) => {
-                        updateSegment(idx, 'departure_date', day.dateString);
+                      onDayPress={day => {
+                        updateSegment(idx, "departure_date", day.dateString);
                         setSegmentDatePicker(null);
                       }}
                       onClose={() => setSegmentDatePicker(null)}
@@ -605,17 +676,31 @@ export default function FlightEditModal({
                   </View>
                   <View style={[styles.inputGroup, styles.halfWidth]}>
                     <Pressable
-                      style={[styles.dateInput, {backgroundColor: colors.white}, {backgroundColor: colors.white}, !flight && styles.dateInputBorderless]}
-                      onPress={() => setSegmentDatePicker({ idx, type: 'arr' })}
+                      style={[
+                        styles.dateInput,
+                        { backgroundColor: colors.white },
+                        { backgroundColor: colors.white },
+                        !flight && styles.dateInputBorderless,
+                      ]}
+                      onPress={() => setSegmentDatePicker({ idx, type: "arr" })}
                     >
-                      <Text style={styles.dateText}>{formatDate(seg.arrival_date)}</Text>
-                      <CalendarIcon width={20} height={20} color={colors.black} />
+                      <Text style={styles.dateText}>
+                        {formatDate(seg.arrival_date)}
+                      </Text>
+                      <CalendarIcon
+                        width={20}
+                        height={20}
+                        color={colors.black}
+                      />
                     </Pressable>
                     <CalendarModal
-                      visible={segmentDatePicker?.idx === idx && segmentDatePicker?.type === 'arr'}
+                      visible={
+                        segmentDatePicker?.idx === idx &&
+                        segmentDatePicker?.type === "arr"
+                      }
                       selectedDate={seg.arrival_date}
-                      onDayPress={(day) => {
-                        updateSegment(idx, 'arrival_date', day.dateString);
+                      onDayPress={day => {
+                        updateSegment(idx, "arrival_date", day.dateString);
                         setSegmentDatePicker(null);
                       }}
                       onClose={() => setSegmentDatePicker(null)}
@@ -632,7 +717,7 @@ export default function FlightEditModal({
                         !flight && styles.dateInputBorderless,
                       ]}
                       onPress={() =>
-                        setSegmentTimeModal({ idx, field: 'departure_time' })
+                        setSegmentTimeModal({ idx, field: "departure_time" })
                       }
                     >
                       <Text style={styles.dateText}>
@@ -649,7 +734,7 @@ export default function FlightEditModal({
                         !flight && styles.dateInputBorderless,
                       ]}
                       onPress={() =>
-                        setSegmentTimeModal({ idx, field: 'arrival_time' })
+                        setSegmentTimeModal({ idx, field: "arrival_time" })
                       }
                     >
                       <Text
@@ -661,7 +746,7 @@ export default function FlightEditModal({
                       >
                         {seg.arrival_time
                           ? formatTimeDisplay(seg.arrival_time)
-                          : '시간 선택'}
+                          : "시간 선택"}
                       </Text>
                       <TimeIcon width={20} height={20} color={colors.black} />
                     </Pressable>
@@ -736,21 +821,21 @@ export default function FlightEditModal({
           onPickImage={async () => {
             try {
               const file = await pickImage();
-              if (file) setPendingFiles((prev) => [...prev, file]);
+              if (file) setPendingFiles(prev => [...prev, file]);
             } catch (e: any) {
-              Alert.alert('알림', e.message);
+              Alert.alert("알림", e.message);
             }
           }}
           onPickDocument={async () => {
             try {
               const file = await pickDocument();
-              if (file) setPendingFiles((prev) => [...prev, file]);
+              if (file) setPendingFiles(prev => [...prev, file]);
             } catch (e: any) {
-              Alert.alert('알림', e.message);
+              Alert.alert("알림", e.message);
             }
           }}
-          onRemoveFile={(index) =>
-            setPendingFiles((prev) => prev.filter((_, i) => i !== index))
+          onRemoveFile={index =>
+            setPendingFiles(prev => prev.filter((_, i) => i !== index))
           }
         />
       </ScrollView>
@@ -762,15 +847,17 @@ export default function FlightEditModal({
           segmentTimeModal
             ? (() => {
                 const raw =
-                  flightSegments[segmentTimeModal.idx]?.[segmentTimeModal.field];
-                if (typeof raw === 'string' && raw.length >= 4) {
+                  flightSegments[segmentTimeModal.idx]?.[
+                    segmentTimeModal.field
+                  ];
+                if (typeof raw === "string" && raw.length >= 4) {
                   return raw.slice(0, 5);
                 }
-                return '09:00';
+                return "09:00";
               })()
-            : '09:00'
+            : "09:00"
         }
-        onConfirm={(time24) => {
+        onConfirm={time24 => {
           if (!segmentTimeModal) return;
           updateSegment(segmentTimeModal.idx, segmentTimeModal.field, time24);
         }}
@@ -779,19 +866,19 @@ export default function FlightEditModal({
       <AirportSearchModal
         visible={airportSearchTarget !== null}
         onClose={() => setAirportSearchTarget(null)}
-        onSelect={(code) => {
+        onSelect={code => {
           if (airportSearchTarget) {
             const field =
-              airportSearchTarget.type === 'dep'
-                ? 'departure_airport'
-                : 'arrival_airport';
+              airportSearchTarget.type === "dep"
+                ? "departure_airport"
+                : "arrival_airport";
             updateSegment(airportSearchTarget.idx, field, code);
             setAirportSearchTarget(null);
           }
         }}
         selectedValue={
           airportSearchTarget
-            ? airportSearchTarget.type === 'dep'
+            ? airportSearchTarget.type === "dep"
               ? flightSegments[airportSearchTarget.idx]?.departure_airport
               : flightSegments[airportSearchTarget.idx]?.arrival_airport
             : undefined
@@ -799,10 +886,12 @@ export default function FlightEditModal({
       />
 
       <FloatingFooter
-        primaryLabel={isUploading ? '업로드 중...' : flight ? '수정 완료' : '일정 저장'}
+        primaryLabel={
+          isUploading ? "업로드 중..." : flight ? "수정 완료" : "일정 저장"
+        }
         onPrimaryPress={handleSave}
         primaryDisabled={isSubmitting || isUploading}
-        secondaryLabel={flight && !embedded ? '삭제' : undefined}
+        secondaryLabel={flight && !embedded ? "삭제" : undefined}
         onSecondaryPress={handleDelete}
       />
     </>
@@ -821,18 +910,18 @@ export default function FlightEditModal({
 
 const styles = StyleSheet.create({
   header: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    alignItems: "center",
     paddingHorizontal: 16,
     paddingVertical: 12,
   },
   headerTitle: {
     ...textStyles.h4,
-    position: 'absolute',
+    position: "absolute",
     left: 0,
     right: 0,
-    textAlign: 'center',
+    textAlign: "center",
   },
   closeButton: { padding: 4 },
   scrollView: { flex: 1 },
@@ -860,21 +949,21 @@ const styles = StyleSheet.create({
   },
   inputBorderless: {
     borderWidth: 0,
-    borderColor: 'transparent',
+    borderColor: "transparent",
   },
-  row: { flexDirection: 'row', gap: 9 },
+  row: { flexDirection: "row", gap: 9 },
   halfWidth: { flex: 1 },
   segmentSection: { marginBottom: 24 },
   segmentSectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 12,
   },
   segmentSectionTitle: { ...textStyles.h5 },
   addSegmentBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 4,
   },
   addSegmentBtnText: { ...textStyles.h6, color: colors.primary },
@@ -887,9 +976,9 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   segmentCardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 16,
   },
   segmentCardHeaderText: { ...textStyles.h6, color: colors.primary },
@@ -901,9 +990,9 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 12,
     paddingRight: 14,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     borderWidth: 1,
     borderColor: colors.gray400,
     borderRadius: 12,
@@ -911,13 +1000,13 @@ const styles = StyleSheet.create({
   },
   dateInputBorderless: {
     borderWidth: 0,
-    borderColor: 'transparent',
+    borderColor: "transparent",
   },
   dateText: { ...textStyles.body3 },
   pickerInput: {
     height: 48,
     minHeight: 48,
-    overflow: 'hidden',
+    overflow: "hidden",
     paddingRight: 14,
     borderWidth: 1,
     borderColor: colors.gray400,
@@ -926,12 +1015,12 @@ const styles = StyleSheet.create({
   },
   pickerInputBorderless: {
     borderWidth: 0,
-    borderColor: 'transparent',
+    borderColor: "transparent",
   },
   airportPickerTouchable: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingVertical: 10,
     paddingHorizontal: 12,
   },
@@ -961,8 +1050,8 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   amountInputWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     borderRadius: 12,
     paddingHorizontal: 14,
     height: 48,
@@ -974,8 +1063,8 @@ const styles = StyleSheet.create({
   amountInputStyle: {
     flex: 1,
     height: 48,
-    textAlign: 'left',
-    backgroundColor: 'transparent',
+    textAlign: "left",
+    backgroundColor: "transparent",
     fontFamily: typography.fontFamily.pretendardSemiBold,
     fontSize: 14,
     paddingHorizontal: 0,

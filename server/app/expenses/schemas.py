@@ -1,5 +1,4 @@
 from datetime import date
-
 from decimal import Decimal
 from typing import Annotated
 
@@ -32,6 +31,7 @@ class ExpenseCreateWithItinerary(ExpenseCreate):
 
 class ExpenseBatchCreate(APISchema):
     """여러 비용을 한 번에 생성하기 위한 스키마"""
+
     plan_id: int
     itinerary_id: int | None = None
     flight_id: int | None = None
@@ -41,6 +41,7 @@ class ExpenseBatchCreate(APISchema):
 
 class ExpenseRead(ExpenseBase):
     id: int
+    plan_id: int
     itinerary_id: int | None = None
     flight_id: int | None = None
     accommodation_id: int | None = None

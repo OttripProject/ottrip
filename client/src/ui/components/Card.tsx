@@ -1,8 +1,14 @@
-import React from 'react';
-import { View, StyleSheet, ViewStyle, Platform, DimensionValue } from 'react-native';
-import { colors } from '../tokens/colors';
+import type React from "react";
+import {
+  type DimensionValue,
+  Platform,
+  StyleSheet,
+  View,
+  type ViewStyle,
+} from "react-native";
+import { colors } from "../tokens/colors";
 
-export type CardVariant = 'default' | 'basic';
+export type CardVariant = "default" | "basic";
 
 export type ShadowConfig = {
   shadowColor?: string;
@@ -26,7 +32,7 @@ export type CardProps = {
   paddingVertical?: number;
   paddingTop?: number;
   paddingBottom?: number;
-  alignItems?: ViewStyle['alignItems'];
+  alignItems?: ViewStyle["alignItems"];
   backgroundColor?: string;
   borderRadius?: number;
   shadow?: ShadowConfig | false;
@@ -35,7 +41,7 @@ export type CardProps = {
 export default function Card({
   children,
   style,
-  variant = 'default',
+  variant = "default",
   width,
   maxWidth,
   height,
@@ -51,17 +57,18 @@ export default function Card({
   borderRadius,
   shadow,
 }: CardProps) {
-  const variantStyle = variant === 'basic' ? styles.basicCard : {};
+  const variantStyle = variant === "basic" ? styles.basicCard : {};
 
-  const shadowConfig = shadow === false 
-    ? undefined 
-    : shadow || {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.1,
-        shadowRadius: 12,
-        elevation: 8,
-      };
+  const shadowConfig =
+    shadow === false
+      ? undefined
+      : shadow || {
+          shadowColor: "#000",
+          shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: 0.1,
+          shadowRadius: 12,
+          elevation: 8,
+        };
 
   const cardStyle: ViewStyle = {
     ...variantStyle,
@@ -78,34 +85,31 @@ export default function Card({
     ...(alignItems !== undefined && { alignItems }),
     ...(backgroundColor !== undefined && { backgroundColor }),
     ...(borderRadius !== undefined && { borderRadius }),
-    ...(shadowConfig && Platform.select({
-      ios: {
-        shadowColor: shadowConfig.shadowColor || '#000',
-        shadowOffset: shadowConfig.shadowOffset || { width: 0, height: 4 },
-        shadowOpacity: shadowConfig.shadowOpacity ?? 0.1,
-        shadowRadius: shadowConfig.shadowRadius || 12,
-      },
-      android: {
-        elevation: shadowConfig.elevation || 8,
-      },
-    })),
+    ...(shadowConfig &&
+      Platform.select({
+        ios: {
+          shadowColor: shadowConfig.shadowColor || "#000",
+          shadowOffset: shadowConfig.shadowOffset || { width: 0, height: 4 },
+          shadowOpacity: shadowConfig.shadowOpacity ?? 0.1,
+          shadowRadius: shadowConfig.shadowRadius || 12,
+        },
+        android: {
+          elevation: shadowConfig.elevation || 8,
+        },
+      })),
   };
 
-  return (
-    <View style={[styles.card, cardStyle, style]}>
-      {children}
-    </View>
-  );
+  return <View style={[styles.card, cardStyle, style]}>{children}</View>;
 }
 
 const styles = StyleSheet.create({
   card: {
     backgroundColor: colors.white,
     borderRadius: 24,
-    alignItems: 'center',
+    alignItems: "center",
   },
   basicCard: {
-    width: '100%',
+    width: "100%",
     maxWidth: 480,
     maxHeight: 624,
     minHeight: 624,
@@ -114,4 +118,3 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
 });
-

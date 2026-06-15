@@ -1,30 +1,34 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { expensesApi } from "@/services/expenses";
+import type { Expense } from "@/types/api";
 import {
-  View,
-  Text,
-  Pressable,
-  StyleSheet,
-  ScrollView,
+  ExpenseCategory,
+  ExpenseCurrency,
+  categoryLabels,
+} from "@/types/expense";
+import BottomSheetModal from "@/ui/components/BottomSheetModal.native";
+import CalendarModal from "@/ui/components/CalendarModal.native";
+import FloatingFooter from "@/ui/components/FloatingFooter.native";
+import Input from "@/ui/components/input/Input";
+import { colors } from "@/ui/tokens/colors";
+import { textStyles, typography } from "@/ui/tokens/typography";
+import dayjs from "dayjs";
+import { useEffect, useRef, useState } from "react";
+import {
   Alert,
-} from 'react-native';
-import dayjs from 'dayjs';
-import { expensesApi } from '@/services/expenses';
-import { ExpenseCategory, ExpenseCurrency, categoryLabels } from '@/types/expense';
-import { Expense } from '@/types/api';
-import BottomSheetModal from '@/ui/components/BottomSheetModal.native';
-import FloatingFooter from '@/ui/components/FloatingFooter.native';
-import CalendarModal from '@/ui/components/CalendarModal.native';
-import Input from '@/ui/components/input/Input';
-import { colors } from '@/ui/tokens/colors';
-import { textStyles, typography } from '@/ui/tokens/typography';
-import CloseIcon from '../../../../assets/mobile_close.svg';
-import CalendarIcon from '../../../../assets/mobile_calendar_black.svg';
-import FoodIcon from '../../../../assets/mobile_food.svg';
-import CarIcon from '../../../../assets/mobile_car.svg';
-import TicketIcon from '../../../../assets/mobile_ticket.svg';
-import BedIcon from '../../../../assets/mobile_bed.svg';
-import FlightIcon from '../../../../assets/mobile_flight.svg';
-import ShoppingIcon from '../../../../assets/mobile_shopping.svg';
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
+import BedIcon from "../../../../assets/mobile_bed.svg";
+import CalendarIcon from "../../../../assets/mobile_calendar_black.svg";
+import CarIcon from "../../../../assets/mobile_car.svg";
+import CloseIcon from "../../../../assets/mobile_close.svg";
+import FlightIcon from "../../../../assets/mobile_flight.svg";
+import FoodIcon from "../../../../assets/mobile_food.svg";
+import ShoppingIcon from "../../../../assets/mobile_shopping.svg";
+import TicketIcon from "../../../../assets/mobile_ticket.svg";
 
 interface AddExpenseModalProps {
   visible: boolean;
@@ -37,9 +41,9 @@ interface AddExpenseModalProps {
 }
 
 const normalizeAmount = (value: unknown) => {
-  const raw = String(value ?? '').trim();
-  if (!raw) return '';
-  return raw.replace(/[^0-9]/g, '');
+  const raw = String(value ?? "").trim();
+  if (!raw) return "";
+  return raw.replace(/[^0-9]/g, "");
 };
 
 export default function AddExpenseModal({
@@ -91,19 +95,20 @@ export default function AddExpenseModal({
   const isSubmittingRef = useRef(false);
 
   const getDefaultDate = () =>
-    defaultExDate || planStartDate || dayjs().format('YYYY-MM-DD');
+    defaultExDate || planStartDate || dayjs().format("YYYY-MM-DD");
 
   const [formData, setFormData] = useState({
     category: ExpenseCategory.FOOD,
-    amount: '',
-    description: '',
+    amount: "",
+    description: "",
     ex_date: getDefaultDate(),
   });
 
   useEffect(() => {
     if (visible) {
-      const date = defaultExDate || planStartDate || dayjs().format('YYYY-MM-DD');
-      setFormData((prev) => ({
+      const date =
+        defaultExDate || planStartDate || dayjs().format("YYYY-MM-DD");
+      setFormData(prev => ({
         ...prev,
         ex_date: date,
       }));
@@ -112,21 +117,22 @@ export default function AddExpenseModal({
 
   const handleAmountChange = (text: string) => {
     const digits = normalizeAmount(text);
-    const formatted = digits.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-    setFormData((prev) => ({ ...prev, amount: formatted }));
+    const formatted = digits.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+    setFormData(prev => ({ ...prev, amount: formatted }));
   };
 
   const handleSubmit = async () => {
     if (isSubmittingRef.current) return;
 
     if (!planId) {
-      Alert.alert('알림', '여행을 먼저 선택해주세요.');
+      Alert.alert("알림", "여행을 먼저 선택해주세요.");
       return;
     }
 
-    const amountNum = parseInt(normalizeAmount(formData.amount), 10) || 0;
+    const amountNum =
+      Number.parseInt(normalizeAmount(formData.amount), 10) || 0;
     if (amountNum <= 0) {
-      Alert.alert('알림', '금액을 입력해주세요.');
+      Alert.alert("알림", "금액을 입력해주세요.");
       return;
     }
 
@@ -142,17 +148,17 @@ export default function AddExpenseModal({
         exDate: formData.ex_date,
         currency: ExpenseCurrency.KRW,
       });
-      Alert.alert('성공', '비용이 추가되었습니다.');
+      Alert.alert("성공", "비용이 추가되었습니다.");
       setFormData({
         category: ExpenseCategory.FOOD,
-        amount: '',
-        description: '',
+        amount: "",
+        description: "",
         ex_date: getDefaultDate(),
       });
       onClose?.({ fromSave: true });
       onExpenseAdd?.(newExpense);
     } catch {
-      Alert.alert('알림', '비용 추가에 실패했습니다.');
+      Alert.alert("알림", "비용 추가에 실패했습니다.");
     } finally {
       isSubmittingRef.current = false;
       setIsSubmitting(false);
@@ -162,8 +168,8 @@ export default function AddExpenseModal({
   const handleClose = () => {
     setFormData({
       category: ExpenseCategory.FOOD,
-      amount: '',
-      description: '',
+      amount: "",
+      description: "",
       ex_date: getDefaultDate(),
     });
     onClose?.();
@@ -187,16 +193,26 @@ export default function AddExpenseModal({
         <View style={styles.inputGroup}>
           <Text style={styles.label}>카테고리 설정</Text>
           <View style={styles.categoryRow}>
-            {CATEGORY_ROW1.map((cat) => {
+            {CATEGORY_ROW1.map(cat => {
               const isSelected = formData.category === cat;
               return (
                 <Pressable
                   key={cat}
-                  style={[styles.categoryPill, isSelected && styles.categoryPillSelected]}
-                  onPress={() => setFormData((prev) => ({ ...prev, category: cat }))}
+                  style={[
+                    styles.categoryPill,
+                    isSelected && styles.categoryPillSelected,
+                  ]}
+                  onPress={() =>
+                    setFormData(prev => ({ ...prev, category: cat }))
+                  }
                 >
                   {getCategoryIcon(cat, isSelected)}
-                  <Text style={[styles.categoryPillText, isSelected && styles.categoryPillTextSelected]}>
+                  <Text
+                    style={[
+                      styles.categoryPillText,
+                      isSelected && styles.categoryPillTextSelected,
+                    ]}
+                  >
                     {categoryLabels[cat as keyof typeof categoryLabels]}
                   </Text>
                 </Pressable>
@@ -204,16 +220,26 @@ export default function AddExpenseModal({
             })}
           </View>
           <View style={[styles.categoryRow, styles.categoryRowSecond]}>
-            {CATEGORY_ROW2.map((cat) => {
+            {CATEGORY_ROW2.map(cat => {
               const isSelected = formData.category === cat;
               return (
                 <Pressable
                   key={cat}
-                  style={[styles.categoryPill, isSelected && styles.categoryPillSelected]}
-                  onPress={() => setFormData((prev) => ({ ...prev, category: cat }))}
+                  style={[
+                    styles.categoryPill,
+                    isSelected && styles.categoryPillSelected,
+                  ]}
+                  onPress={() =>
+                    setFormData(prev => ({ ...prev, category: cat }))
+                  }
                 >
                   {getCategoryIcon(cat, isSelected)}
-                  <Text style={[styles.categoryPillText, isSelected && styles.categoryPillTextSelected]}>
+                  <Text
+                    style={[
+                      styles.categoryPillText,
+                      isSelected && styles.categoryPillTextSelected,
+                    ]}
+                  >
                     {categoryLabels[cat as keyof typeof categoryLabels]}
                   </Text>
                 </Pressable>
@@ -243,8 +269,8 @@ export default function AddExpenseModal({
           <Text style={styles.label}>내역 메모</Text>
           <Input
             value={formData.description}
-            onChangeText={(text) =>
-              setFormData((prev) => ({ ...prev, description: text }))
+            onChangeText={text =>
+              setFormData(prev => ({ ...prev, description: text }))
             }
             placeholder="어디에 사용하셨나요?"
             placeholderTextColor={colors.gray500}
@@ -260,15 +286,15 @@ export default function AddExpenseModal({
             onPress={() => setShowDatePicker(true)}
           >
             <Text style={styles.dateText}>
-              {dayjs(formData.ex_date).format('YYYY.MM.DD')}
+              {dayjs(formData.ex_date).format("YYYY.MM.DD")}
             </Text>
             <CalendarIcon width={20} height={20} color={colors.gray600} />
           </Pressable>
           <CalendarModal
             visible={showDatePicker}
             selectedDate={formData.ex_date}
-            onDayPress={(day) => {
-              setFormData((prev) => ({ ...prev, ex_date: day.dateString }));
+            onDayPress={day => {
+              setFormData(prev => ({ ...prev, ex_date: day.dateString }));
               setShowDatePicker(false);
             }}
             onClose={() => setShowDatePicker(false)}
@@ -291,9 +317,9 @@ export default function AddExpenseModal({
 
 const styles = StyleSheet.create({
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: 16,
     paddingTop: 12,
   },
@@ -307,8 +333,8 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     height: 32,
     width: 32,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   scrollView: {
     flex: 1,
@@ -327,16 +353,16 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   categoryRow: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 8,
   },
   categoryRowSecond: {
     marginTop: 8,
   },
   categoryPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     gap: 6,
     paddingVertical: 10,
     paddingHorizontal: 16,
@@ -354,8 +380,8 @@ const styles = StyleSheet.create({
     color: colors.white,
   },
   amountInputWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     borderRadius: 12,
     paddingHorizontal: 14,
     height: 48,
@@ -367,8 +393,8 @@ const styles = StyleSheet.create({
   amountInputStyle: {
     flex: 1,
     height: 48,
-    textAlign: 'right',
-    backgroundColor: 'transparent',
+    textAlign: "right",
+    backgroundColor: "transparent",
     paddingHorizontal: 0,
     paddingVertical: 0,
     fontFamily: typography.fontFamily.pretendardRegular,
@@ -391,9 +417,9 @@ const styles = StyleSheet.create({
     color: colors.black,
   },
   dateInput: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     borderRadius: 12,
     paddingHorizontal: 14,
     height: 48,

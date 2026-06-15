@@ -1,31 +1,39 @@
-import React, { useEffect, useState, useRef } from 'react';
-import { View, Text, Pressable, StyleSheet, Modal, Alert, Platform } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useQueryClient } from '@tanstack/react-query';
-import { usersApi, UserProfile } from '@/services/users';
-import { useAuth } from '@/contexts/AuthContext';
-import { useNicknameValidation } from '@/hooks/useNicknameValidation';
-import { useMe } from '@/hooks/useMe';
-import Input from '@/ui/components/input/Input';
-import { PLACEHOLDERS } from '@/constants/placeholders';
-import GradientBackground from '@/ui/components/GradientBackground';
-import Card from '@/ui/components/Card';
-import { colors } from '@/ui/tokens/colors';
-import { textStyles } from '@/ui/tokens/typography';
-import { Gender } from '@/types/api';
+import { PLACEHOLDERS } from "@/constants/placeholders";
+import { useAuth } from "@/contexts/AuthContext";
+import { useMe } from "@/hooks/useMe";
+import { useNicknameValidation } from "@/hooks/useNicknameValidation";
+import { type UserProfile, usersApi } from "@/services/users";
+import { Gender } from "@/types/api";
+import Card from "@/ui/components/Card";
+import GradientBackground from "@/ui/components/GradientBackground";
+import Input from "@/ui/components/input/Input";
+import { colors } from "@/ui/tokens/colors";
+import { textStyles } from "@/ui/tokens/typography";
+import { useNavigation } from "@react-navigation/native";
+import { useQueryClient } from "@tanstack/react-query";
+import { useEffect, useRef, useState } from "react";
+import {
+  Alert,
+  Modal,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
-import GenderCheckIcon from '../../assets/gender_check.svg';
-import QnaIcon from '../../assets/qna.svg';
-import XIcon from '../../assets/x.svg';
-import CopyIcon from '../../assets/copy.svg';
-import FilesIcon from '../../assets/memo.svg';
-import type { TermsKey } from '@/constants/terms';
-import DeleteAccountModal from '@/components/modals/DeleteAccountModal';
-import LogoutModal from '@/components/modals/LogoutModal';
-import TermsPolicyPickerModal from '@/components/modals/TermsPolicyPickerModal';
-import TermsDetailModal from '@/components/modals/TermsDetailModal';
-import { guestPrompt } from '@/utils/guestPrompt';
+import DeleteAccountModal from "@/components/modals/DeleteAccountModal";
+import LogoutModal from "@/components/modals/LogoutModal";
+import TermsDetailModal from "@/components/modals/TermsDetailModal";
+import TermsPolicyPickerModal from "@/components/modals/TermsPolicyPickerModal";
+import type { TermsKey } from "@/constants/terms";
+import { guestPrompt } from "@/utils/guestPrompt";
+import CopyIcon from "../../assets/copy.svg";
+import GenderCheckIcon from "../../assets/gender_check.svg";
+import FilesIcon from "../../assets/memo.svg";
+import QnaIcon from "../../assets/qna.svg";
+import XIcon from "../../assets/x.svg";
 
 const MEMBER_PROFILE_CARD_HEIGHT = 652;
 
@@ -34,7 +42,7 @@ export default function ProfileScreen() {
   const navigation = useNavigation<any>();
   const queryClient = useQueryClient();
   const [me, setMe] = useState<UserProfile | null>(null);
-  const [nickname, setNickname] = useState('');
+  const [nickname, setNickname] = useState("");
   const [gender, setGender] = useState<Gender | null>(null);
   const [contactOpen, setContactOpen] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -42,14 +50,14 @@ export default function ProfileScreen() {
   const [logoutModalOpen, setLogoutModalOpen] = useState(false);
   const [termsPolicyModalOpen, setTermsPolicyModalOpen] = useState(false);
   const [termsDetailModalOpen, setTermsDetailModalOpen] = useState(false);
-  const [termsDetailKey, setTermsDetailKey] = useState<TermsKey>('tos');
+  const [termsDetailKey, setTermsDetailKey] = useState<TermsKey>("tos");
   const [deletingGuestData, setDeletingGuestData] = useState(false);
   const copiedTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  const CONTACT_EMAIL = 'ottrip.official@gmail.com';
-  
+  const CONTACT_EMAIL = "ottrip.official@gmail.com";
+
   const { data: profile, isLoading: profileLoading } = useMe();
-  
+
   useEffect(() => {
     if (profile) {
       setMe(profile);
@@ -66,7 +74,8 @@ export default function ProfileScreen() {
     };
   }, []);
 
-  const { nicknameError, checkingNickname, onNicknameChange, isValid } = useNicknameValidation(me?.nickname);
+  const { nicknameError, checkingNickname, onNicknameChange, isValid } =
+    useNicknameValidation(me?.nickname);
 
   const handleNicknameChange = (text: string) => {
     setNickname(text);
@@ -75,18 +84,18 @@ export default function ProfileScreen() {
 
   const save = async () => {
     if (!isValid) {
-      Alert.alert('알림', '닉네임을 확인해주세요.');
+      Alert.alert("알림", "닉네임을 확인해주세요.");
       return;
     }
-    
+
     const updated = await usersApi.updateMe({ nickname, gender });
     setMe(updated);
-    queryClient.setQueryData(['me'], updated);
+    queryClient.setQueryData(["me"], updated);
 
     if (navigation.canGoBack()) {
       navigation.goBack();
     } else {
-      navigation.navigate('OTTRIP');
+      navigation.navigate("OTTRIP");
     }
   };
 
@@ -98,12 +107,13 @@ export default function ProfileScreen() {
     try {
       await usersApi.deleteAccount();
     } catch (error: any) {
-      const errorMessage = error?.response?.data?.detail || '탈퇴 중 알림가 발생했습니다.';
+      const errorMessage =
+        error?.response?.data?.detail || "탈퇴 중 알림가 발생했습니다.";
       setDeleteModalOpen(false);
-      if (Platform.OS === 'web') {
+      if (Platform.OS === "web") {
         window.alert(`알림: ${errorMessage}`);
       } else {
-        Alert.alert('알림', errorMessage);
+        Alert.alert("알림", errorMessage);
       }
       throw error; // 모달에서 에러를 감지할 수 있도록 throw
     }
@@ -125,7 +135,10 @@ export default function ProfileScreen() {
   const handleSignUp = () => {
     guestPrompt.notifyBeforeSignUpNavigation();
     queueMicrotask(() => {
-      navigation.navigate('소셜회원가입' as never, { guestUpgrade: true } as never);
+      navigation.navigate(
+        "소셜회원가입" as never,
+        { guestUpgrade: true } as never,
+      );
     });
   };
 
@@ -136,19 +149,19 @@ export default function ProfileScreen() {
       if (navigation.canGoBack()) {
         navigation.goBack();
       } else {
-        navigation.navigate('OTTRIP');
+        navigation.navigate("OTTRIP");
       }
       await logout();
     } catch (error: unknown) {
       const err = error as { response?: { data?: { detail?: string } } };
       const message =
-        typeof err?.response?.data?.detail === 'string'
+        typeof err?.response?.data?.detail === "string"
           ? err.response.data.detail
-          : '삭제 중 알림가 발생했습니다.';
-      if (Platform.OS === 'web') {
+          : "삭제 중 알림가 발생했습니다.";
+      if (Platform.OS === "web") {
         window.alert(`알림: ${message}`);
       } else {
-        Alert.alert('알림', message);
+        Alert.alert("알림", message);
       }
     } finally {
       setDeletingGuestData(false);
@@ -162,17 +175,17 @@ export default function ProfileScreen() {
 
   const handleDeleteTemporaryRecords = () => {
     const message =
-      '이 기기에 저장된 임시 일정이 모두 삭제되며 복구할 수 없습니다. 계속할까요?';
-    if (Platform.OS === 'web') {
+      "이 기기에 저장된 임시 일정이 모두 삭제되며 복구할 수 없습니다. 계속할까요?";
+    if (Platform.OS === "web") {
       const ok = window.confirm(`임시 기록 삭제\n\n${message}`);
       if (ok) void performDeleteTemporaryRecords();
       return;
     }
-    Alert.alert('임시 기록 삭제', message, [
-      { text: '취소', style: 'cancel' },
+    Alert.alert("임시 기록 삭제", message, [
+      { text: "취소", style: "cancel" },
       {
-        text: '삭제',
-        style: 'destructive',
+        text: "삭제",
+        style: "destructive",
         onPress: () => void performDeleteTemporaryRecords(),
       },
     ]);
@@ -194,7 +207,7 @@ export default function ProfileScreen() {
                 if (navigation.canGoBack()) {
                   navigation.goBack();
                 } else {
-                  navigation.navigate('OTTRIP');
+                  navigation.navigate("OTTRIP");
                 }
               }}
             >
@@ -204,27 +217,41 @@ export default function ProfileScreen() {
             <Text style={styles.title}>프로필 설정</Text>
             {isGuest ? (
               <>
-                <Text style={styles.guestStatusLine}>게스트 · 일정 임시 저장</Text>
+                <Text style={styles.guestStatusLine}>
+                  게스트 · 일정 임시 저장
+                </Text>
                 <Text style={styles.guestDescription}>
                   로그인하면 임시 저장된 일정을 계정과 연동할 수 있어요.
                 </Text>
                 <Pressable
                   disabled={deletingGuestData}
-                  style={[styles.guestLoginButton, deletingGuestData && styles.guestButtonDisabled]}
+                  style={[
+                    styles.guestLoginButton,
+                    deletingGuestData && styles.guestButtonDisabled,
+                  ]}
                   onPress={handleSignUp}
                 >
                   <Text style={styles.guestLoginButtonText}>로그인</Text>
                 </Pressable>
                 <Pressable
                   disabled={deletingGuestData}
-                  style={[styles.guestDeleteRecordsButton, deletingGuestData && styles.guestButtonDisabled]}
+                  style={[
+                    styles.guestDeleteRecordsButton,
+                    deletingGuestData && styles.guestButtonDisabled,
+                  ]}
                   onPress={handleDeleteTemporaryRecords}
                 >
-                  <Text style={styles.guestDeleteRecordsButtonText}>임시 기록 삭제</Text>
+                  <Text style={styles.guestDeleteRecordsButtonText}>
+                    임시 기록 삭제
+                  </Text>
                 </Pressable>
                 <Text style={styles.guestInquiryTitle}>문의하기</Text>
                 <View style={styles.guestInquiryEmailBox}>
-                  <Text style={styles.guestInquiryEmailText} numberOfLines={1} selectable>
+                  <Text
+                    style={styles.guestInquiryEmailText}
+                    numberOfLines={1}
+                    selectable
+                  >
                     {CONTACT_EMAIL}
                   </Text>
                   <View style={styles.guestInquiryCopyWrap}>
@@ -241,34 +268,47 @@ export default function ProfileScreen() {
                             if (copiedTimerRef.current) {
                               clearTimeout(copiedTimerRef.current);
                             }
-                            copiedTimerRef.current = setTimeout(() => setCopied(false), 1500);
+                            copiedTimerRef.current = setTimeout(
+                              () => setCopied(false),
+                              1500,
+                            );
                           } catch {
                             // noop
                           }
                         }}
                       >
-                        <CopyIcon width={16} height={16} fill={colors.gray700} />
+                        <CopyIcon
+                          width={16}
+                          height={16}
+                          fill={colors.gray700}
+                        />
                       </Pressable>
                     )}
                   </View>
                 </View>
-                <Text style={styles.guestInquiryReplyText}>최대한 빠르게 답변드리겠습니다.</Text>
+                <Text style={styles.guestInquiryReplyText}>
+                  최대한 빠르게 답변드리겠습니다.
+                </Text>
                 <Pressable
                   style={styles.guestTermsPolicyRow}
                   onPress={() => setTermsPolicyModalOpen(true)}
                   hitSlop={6}
                 >
                   <FilesIcon width={16} height={16} />
-                  <Text style={styles.guestTermsPolicyText}>약관 및 정책 확인하기</Text>
+                  <Text style={styles.guestTermsPolicyText}>
+                    약관 및 정책 확인하기
+                  </Text>
                 </Pressable>
               </>
             ) : (
               <>
-                <Text style={styles.subtitle}>개인정보 및 환경설정을 관리하세요.</Text>
+                <Text style={styles.subtitle}>
+                  개인정보 및 환경설정을 관리하세요.
+                </Text>
 
                 <Text style={styles.emailLabel}>이메일</Text>
                 <View style={styles.emailContainer}>
-                  <Text style={styles.emailText}>{me?.email ?? ''}</Text>
+                  <Text style={styles.emailText}>{me?.email ?? ""}</Text>
                 </View>
 
                 <Text style={styles.nicknameLabel}>닉네임</Text>
@@ -280,49 +320,100 @@ export default function ProfileScreen() {
                     style={styles.input}
                   />
                 </View>
-                {nicknameError && <Text style={styles.errorText}>{nicknameError}</Text>}
-                {!nicknameError && !checkingNickname && nickname.trim().length > 0 && nickname !== me?.nickname && (
-                  <Text style={styles.successText}>사용 가능한 닉네임입니다.</Text>
+                {nicknameError && (
+                  <Text style={styles.errorText}>{nicknameError}</Text>
                 )}
+                {!nicknameError &&
+                  !checkingNickname &&
+                  nickname.trim().length > 0 &&
+                  nickname !== me?.nickname && (
+                    <Text style={styles.successText}>
+                      사용 가능한 닉네임입니다.
+                    </Text>
+                  )}
 
                 <Text style={styles.genderLabel}>성별</Text>
 
                 <Pressable
                   style={styles.maleRadioButton}
-                  onPress={() => setGender((prev) => (prev === Gender.MALE ? null : Gender.MALE))}
+                  onPress={() =>
+                    setGender(prev =>
+                      prev === Gender.MALE ? null : Gender.MALE,
+                    )
+                  }
                 >
-                  <View style={[styles.radioButton, gender === Gender.MALE && styles.radioButtonSelected]}>
-                    {gender === Gender.MALE && <GenderCheckIcon width={16} height={16} color={colors.white} />}
+                  <View
+                    style={[
+                      styles.radioButton,
+                      gender === Gender.MALE && styles.radioButtonSelected,
+                    ]}
+                  >
+                    {gender === Gender.MALE && (
+                      <GenderCheckIcon
+                        width={16}
+                        height={16}
+                        color={colors.white}
+                      />
+                    )}
                   </View>
                 </Pressable>
                 <Pressable
                   style={styles.maleTextButton}
-                  onPress={() => setGender((prev) => (prev === Gender.MALE ? null : Gender.MALE))}
+                  onPress={() =>
+                    setGender(prev =>
+                      prev === Gender.MALE ? null : Gender.MALE,
+                    )
+                  }
                 >
                   <Text style={styles.genderText}>남성</Text>
                 </Pressable>
 
                 <Pressable
                   style={styles.femaleRadioButton}
-                  onPress={() => setGender((prev) => (prev === Gender.FEMALE ? null : Gender.FEMALE))}
+                  onPress={() =>
+                    setGender(prev =>
+                      prev === Gender.FEMALE ? null : Gender.FEMALE,
+                    )
+                  }
                 >
-                  <View style={[styles.radioButton, gender === Gender.FEMALE && styles.radioButtonSelected]}>
-                    {gender === Gender.FEMALE && <GenderCheckIcon width={16} height={16} color={colors.white} />}
+                  <View
+                    style={[
+                      styles.radioButton,
+                      gender === Gender.FEMALE && styles.radioButtonSelected,
+                    ]}
+                  >
+                    {gender === Gender.FEMALE && (
+                      <GenderCheckIcon
+                        width={16}
+                        height={16}
+                        color={colors.white}
+                      />
+                    )}
                   </View>
                 </Pressable>
                 <Pressable
                   style={styles.femaleTextButton}
-                  onPress={() => setGender((prev) => (prev === Gender.FEMALE ? null : Gender.FEMALE))}
+                  onPress={() =>
+                    setGender(prev =>
+                      prev === Gender.FEMALE ? null : Gender.FEMALE,
+                    )
+                  }
                 >
                   <Text style={styles.genderText}>여성</Text>
                 </Pressable>
 
                 <View style={styles.divider} />
 
-                <Pressable style={styles.contactIconButton} onPress={() => setContactOpen(true)}>
+                <Pressable
+                  style={styles.contactIconButton}
+                  onPress={() => setContactOpen(true)}
+                >
                   <QnaIcon width={16} height={16} fill={colors.gray800} />
                 </Pressable>
-                <Pressable style={styles.contactTextButton} onPress={() => setContactOpen(true)}>
+                <Pressable
+                  style={styles.contactTextButton}
+                  onPress={() => setContactOpen(true)}
+                >
                   <Text style={styles.contactButtonText}>문의하기</Text>
                 </Pressable>
 
@@ -338,15 +429,25 @@ export default function ProfileScreen() {
                   onPress={() => setTermsPolicyModalOpen(true)}
                   hitSlop={6}
                 >
-                  <Text style={styles.contactButtonText}>약관 및 정책 확인하기</Text>
+                  <Text style={styles.contactButtonText}>
+                    약관 및 정책 확인하기
+                  </Text>
                 </Pressable>
 
                 <Pressable
                   disabled={!canSave}
-                  style={[styles.saveButton, !canSave && styles.saveButtonDisabled]}
+                  style={[
+                    styles.saveButton,
+                    !canSave && styles.saveButtonDisabled,
+                  ]}
                   onPress={save}
                 >
-                  <Text style={[styles.saveButtonText, !canSave && styles.saveButtonTextDisabled]}>
+                  <Text
+                    style={[
+                      styles.saveButtonText,
+                      !canSave && styles.saveButtonTextDisabled,
+                    ]}
+                  >
                     저장
                   </Text>
                 </Pressable>
@@ -354,17 +455,25 @@ export default function ProfileScreen() {
             )}
 
             {!isGuest && (
-            <View style={styles.footerRow}>
-              <Pressable style={styles.footerButton} onPress={() => setLogoutModalOpen(true)}>
-                <Text style={styles.footerButtonText}>로그아웃</Text>
-              </Pressable>
-              <>
-                <View style={styles.footerDivider} />
-                <Pressable style={styles.footerButton} onPress={handleDeleteAccount}>
-                  <Text style={styles.footerButtonTextInactive}>계정 삭제</Text>
+              <View style={styles.footerRow}>
+                <Pressable
+                  style={styles.footerButton}
+                  onPress={() => setLogoutModalOpen(true)}
+                >
+                  <Text style={styles.footerButtonText}>로그아웃</Text>
                 </Pressable>
-              </>
-            </View>
+                <>
+                  <View style={styles.footerDivider} />
+                  <Pressable
+                    style={styles.footerButton}
+                    onPress={handleDeleteAccount}
+                  >
+                    <Text style={styles.footerButtonTextInactive}>
+                      계정 삭제
+                    </Text>
+                  </Pressable>
+                </>
+              </View>
             )}
           </Card>
         </View>
@@ -379,10 +488,12 @@ export default function ProfileScreen() {
             >
               <XIcon width={24} height={24} fill={colors.black} />
             </Pressable>
-            
+
             <Text style={styles.contactModalTitle}>문의하기</Text>
-            <Text style={styles.contactModalText}>도움이 필요하거나 피드백이 있으시면 연락주세요.</Text>
-            
+            <Text style={styles.contactModalText}>
+              도움이 필요하거나 피드백이 있으시면 연락주세요.
+            </Text>
+
             <View style={styles.contactModalEmailContainer}>
               <Text style={styles.contactModalEmailText}>{CONTACT_EMAIL}</Text>
               <View style={styles.contactModalCopyWrapper}>
@@ -398,7 +509,10 @@ export default function ProfileScreen() {
                         if (copiedTimerRef.current) {
                           clearTimeout(copiedTimerRef.current);
                         }
-                        copiedTimerRef.current = setTimeout(() => setCopied(false), 1500);
+                        copiedTimerRef.current = setTimeout(
+                          () => setCopied(false),
+                          1500,
+                        );
                       } catch {
                         // noop
                       }
@@ -409,11 +523,13 @@ export default function ProfileScreen() {
                 )}
               </View>
             </View>
-            
-            <Text style={styles.contactModalReplyText}>최대한 빠르게 답변드리겠습니다.</Text>
-            
-            <Pressable 
-              style={styles.contactModalConfirmButton} 
+
+            <Text style={styles.contactModalReplyText}>
+              최대한 빠르게 답변드리겠습니다.
+            </Text>
+
+            <Pressable
+              style={styles.contactModalConfirmButton}
               onPress={() => setContactOpen(false)}
             >
               <Text style={styles.contactModalConfirmButtonText}>확인</Text>
@@ -462,17 +578,17 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: 'transparent',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "transparent",
+    justifyContent: "center",
+    alignItems: "center",
   },
   cardWrapper: {
-    width: '100%',
-    alignItems: 'center',
-    justifyContent: 'center',
+    width: "100%",
+    alignItems: "center",
+    justifyContent: "center",
   },
   closeButton: {
-    position: 'absolute',
+    position: "absolute",
     right: 40,
     top: 48,
     width: 24,
@@ -480,20 +596,20 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
   title: {
-    position: 'absolute',
+    position: "absolute",
     left: 40,
     top: 48,
     ...textStyles.h2,
   },
   subtitle: {
-    position: 'absolute',
+    position: "absolute",
     left: 40,
     top: 92,
     ...textStyles.body3,
     color: colors.gray700,
   },
   guestStatusLine: {
-    position: 'absolute',
+    position: "absolute",
     left: 40,
     top: 92,
     width: 400,
@@ -501,7 +617,7 @@ const styles = StyleSheet.create({
     color: colors.gray700,
   },
   guestDescription: {
-    position: 'absolute',
+    position: "absolute",
     left: 40,
     top: 124,
     width: 400,
@@ -509,22 +625,22 @@ const styles = StyleSheet.create({
     color: colors.black,
   },
   guestLoginButton: {
-    position: 'absolute',
+    position: "absolute",
     left: 40,
     top: 196,
     width: 400,
     height: 56,
     backgroundColor: colors.black,
     borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   guestLoginButtonText: {
     ...textStyles.h5,
     color: colors.white,
   },
   guestDeleteRecordsButton: {
-    position: 'absolute',
+    position: "absolute",
     left: 40,
     top: 264,
     width: 400,
@@ -533,8 +649,8 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     borderColor: colors.danger,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   guestDeleteRecordsButtonText: {
     ...textStyles.h5,
@@ -544,7 +660,7 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   guestInquiryTitle: {
-    position: 'absolute',
+    position: "absolute",
     left: 40,
     top: 352,
     width: 400,
@@ -552,7 +668,7 @@ const styles = StyleSheet.create({
     color: colors.black,
   },
   guestInquiryEmailBox: {
-    position: 'absolute',
+    position: "absolute",
     left: 40,
     top: 384,
     width: 400,
@@ -561,9 +677,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.gray400,
     borderRadius: 10,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: 16,
   },
   guestInquiryEmailText: {
@@ -574,8 +690,8 @@ const styles = StyleSheet.create({
   guestInquiryCopyWrap: {
     minWidth: 40,
     marginLeft: 8,
-    alignItems: 'flex-end',
-    justifyContent: 'center',
+    alignItems: "flex-end",
+    justifyContent: "center",
   },
   guestInquiryCopyIcon: {
     width: 16,
@@ -586,7 +702,7 @@ const styles = StyleSheet.create({
     color: colors.gray700,
   },
   guestInquiryReplyText: {
-    position: 'absolute',
+    position: "absolute",
     left: 40,
     top: 440,
     width: 400,
@@ -594,12 +710,12 @@ const styles = StyleSheet.create({
     color: colors.success,
   },
   guestTermsPolicyRow: {
-    position: 'absolute',
+    position: "absolute",
     left: 40,
     top: 476,
     width: 400,
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 8,
   },
   guestTermsPolicyText: {
@@ -607,13 +723,13 @@ const styles = StyleSheet.create({
     color: colors.gray800,
   },
   emailLabel: {
-    position: 'absolute',
+    position: "absolute",
     left: 40,
     top: 163,
     ...textStyles.h7,
   },
   emailContainer: {
-    position: 'absolute',
+    position: "absolute",
     left: 40,
     top: 191,
     width: 400,
@@ -622,7 +738,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.gray400,
     borderRadius: 10,
-    justifyContent: 'center',
+    justifyContent: "center",
     paddingHorizontal: 16,
   },
   emailText: {
@@ -630,13 +746,13 @@ const styles = StyleSheet.create({
     color: colors.gray700,
   },
   nicknameLabel: {
-    position: 'absolute',
+    position: "absolute",
     left: 40,
     top: 263,
     ...textStyles.h7,
   },
   nicknameInputContainer: {
-    position: 'absolute',
+    position: "absolute",
     left: 40,
     top: 291,
     width: 400,
@@ -645,21 +761,21 @@ const styles = StyleSheet.create({
     height: 48,
   },
   errorText: {
-    position: 'absolute',
+    position: "absolute",
     left: 40,
     top: 347,
     ...textStyles.body5,
     color: colors.danger,
   },
   successText: {
-    position: 'absolute',
+    position: "absolute",
     left: 40,
     top: 347,
     ...textStyles.body5,
     color: colors.success,
   },
   genderLabel: {
-    position: 'absolute',
+    position: "absolute",
     left: 40,
     top: 363,
     ...textStyles.h7,
@@ -671,34 +787,34 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: colors.gray400,
     backgroundColor: colors.white,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   radioButtonSelected: {
     borderColor: colors.black,
     backgroundColor: colors.black,
   },
   maleRadioButton: {
-    position: 'absolute',
+    position: "absolute",
     left: 40,
     top: 391,
     width: 20,
     height: 20,
   },
   maleTextButton: {
-    position: 'absolute',
+    position: "absolute",
     left: 68,
     top: 390,
   },
   femaleRadioButton: {
-    position: 'absolute',
+    position: "absolute",
     left: 112,
     top: 391,
     width: 20,
     height: 20,
   },
   femaleTextButton: {
-    position: 'absolute',
+    position: "absolute",
     left: 140,
     top: 390,
   },
@@ -706,7 +822,7 @@ const styles = StyleSheet.create({
     ...textStyles.body2,
   },
   divider: {
-    position: 'absolute',
+    position: "absolute",
     left: 40,
     top: 439,
     width: 400,
@@ -714,26 +830,26 @@ const styles = StyleSheet.create({
     backgroundColor: colors.gray300,
   },
   contactIconButton: {
-    position: 'absolute',
+    position: "absolute",
     left: 40,
     top: 466,
     width: 16,
     height: 16,
   },
   contactTextButton: {
-    position: 'absolute',
+    position: "absolute",
     left: 64,
     top: 465,
   },
   termsPolicyIconButton: {
-    position: 'absolute',
+    position: "absolute",
     left: 40,
     top: 498,
     width: 16,
     height: 16,
   },
   termsPolicyTextButton: {
-    position: 'absolute',
+    position: "absolute",
     left: 64,
     top: 497,
   },
@@ -742,15 +858,15 @@ const styles = StyleSheet.create({
     color: colors.gray800,
   },
   saveButton: {
-    position: 'absolute',
+    position: "absolute",
     right: 40,
     top: 556,
     width: 196,
     height: 56,
     backgroundColor: colors.black,
     borderRadius: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   saveButtonDisabled: {
     backgroundColor: colors.gray300,
@@ -763,11 +879,11 @@ const styles = StyleSheet.create({
     color: colors.black,
   },
   footerRow: {
-    position: 'absolute',
+    position: "absolute",
     left: 40,
     top: 574,
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 16,
   },
   footerButton: {
@@ -788,20 +904,20 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.7)',
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: "rgba(0,0,0,0.7)",
+    alignItems: "center",
+    justifyContent: "center",
     padding: 20,
   },
   contactModalCard: {
-    position: 'relative',
+    position: "relative",
     backgroundColor: colors.white,
     borderRadius: 24,
     width: 480,
     height: 360,
   },
   contactModalCloseButton: {
-    position: 'absolute',
+    position: "absolute",
     right: 40,
     top: 48,
     width: 24,
@@ -809,13 +925,13 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
   contactModalTitle: {
-    position: 'absolute',
+    position: "absolute",
     left: 40,
     top: 48,
     ...textStyles.h2,
   },
   contactModalText: {
-    position: 'absolute',
+    position: "absolute",
     left: 40,
     top: 92,
     width: 400,
@@ -823,7 +939,7 @@ const styles = StyleSheet.create({
     color: colors.gray700,
   },
   contactModalEmailContainer: {
-    position: 'absolute',
+    position: "absolute",
     left: 40,
     top: 146,
     width: 400,
@@ -832,9 +948,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.gray400,
     borderRadius: 10,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: 16,
   },
   contactModalEmailText: {
@@ -846,8 +962,8 @@ const styles = StyleSheet.create({
     minWidth: 40,
     height: 16,
     marginLeft: 8,
-    alignItems: 'flex-end',
-    justifyContent: 'center',
+    alignItems: "flex-end",
+    justifyContent: "center",
   },
   contactModalCopyIcon: {
     width: 16,
@@ -858,27 +974,25 @@ const styles = StyleSheet.create({
     color: colors.gray700,
   },
   contactModalReplyText: {
-    position: 'absolute',
+    position: "absolute",
     left: 40,
     top: 202,
     ...textStyles.body4,
     color: colors.success,
   },
   contactModalConfirmButton: {
-    position: 'absolute',
+    position: "absolute",
     left: 40,
     bottom: 48,
     width: 400,
     height: 56,
     backgroundColor: colors.black,
     borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   contactModalConfirmButtonText: {
     ...textStyles.h5,
     color: colors.white,
   },
 });
-
-

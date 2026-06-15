@@ -1,11 +1,14 @@
 import json
+import logging
 from pathlib import Path
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 from app.utils.dependency import dependency
 
 from .config import ai_settings
-from .schemas import AIFlightRead, AIParseResponse
+from .schemas import AIParseResponse, DocumentTextExtraction
 
 
 @dependency
@@ -23,7 +26,7 @@ class VisionClient:
 
         return self._client
 
-    async def extract_text_from_image(self, image_data: bytes) -> AIFlightRead:
+    async def extract_text_from_image(self, image_data: bytes) -> DocumentTextExtraction:
         from google.cloud.vision_v1 import types as vision_types
 
         image_content = vision_types.Image(content=image_data)
@@ -35,7 +38,7 @@ class VisionClient:
             raise Exception(f"Vision API 오류: {response.error.message}")
 
         if not texts:
-            return AIFlightRead(
+            return DocumentTextExtraction(
                 success=False,
                 text="",
                 confidence=0.0,
@@ -50,13 +53,13 @@ class VisionClient:
             else 0.0
         )
 
-        return AIFlightRead(
+        return DocumentTextExtraction(
             success=True,
             text=full_text,
             confidence=avg_confidence,
         )
 
-    async def extract_text_from_pdf(self, pdf_data: bytes) -> AIFlightRead:
+    async def extract_text_from_pdf(self, pdf_data: bytes) -> DocumentTextExtraction:
         import fitz
 
         doc = fitz.open(stream=pdf_data, filetype="pdf")
@@ -68,7 +71,7 @@ class VisionClient:
 
         doc.close()
 
-        return AIFlightRead(
+        return DocumentTextExtraction(
             success=True,
             text=full_text,
             confidence=0.0,
@@ -84,7 +87,7 @@ class VisionClient:
 
         #     full_text_annotation = response.full_text_annotation
         #     if not full_text_annotation:
-        #         return AIFlightRead(
+        #         return DocumentTextExtraction(
         #             success=False,
         #             text="",
         #             confidence=0.0,
@@ -107,14 +110,14 @@ class VisionClient:
 
         #     avg_confidence = total_confidence / valid_pages if valid_pages > 0 else 0.0
 
-        #     return AIFlightRead(
+        #     return DocumentTextExtraction(
         #         success=True,
         #         text=extracted_text,
         #         confidence=avg_confidence,
         #     )
 
         # except Exception as e:
-        #     return AIFlightRead(
+        #     return DocumentTextExtraction(
         #         success=False,
         #         text="",
         #         confidence=0.0,
@@ -136,47 +139,6 @@ class GeminiClient:
             key = ai_settings.GEMINI_API_KEY
             self._client = genai.Client(api_key=key)
         return self._client
-
-    async def parse_flight_data(self, ocr_text: str) -> AIParseResponse:
-        """OCR 텍스트를 구조화된 항공권 JSON으로 파싱 (Gemini)."""
-        from google import genai
-
-        try:
-            prompt_path = Path(__file__).parent / "prompt" / "flights.txt"
-            with open(prompt_path, "r", encoding="utf-8") as f:
-                prompt_template = f.read()
-            prompt = prompt_template.format(ocr_text=ocr_text)
-
-            config = genai.types.GenerateContentConfig(
-                system_instruction=ai_settings.FLIGHT_SYSTEM_PROMPT,
-                temperature=0.1,
-                response_mime_type="application/json",
-            )
-
-            response = await self.client.aio.models.generate_content(
-                model=ai_settings.GEMINI_DEFAULT_MODEL,
-                contents=prompt,
-                config=config,
-            )
-            ai_response = (getattr(response, "text", None) or "").strip()
-            if not ai_response:
-                return AIParseResponse(
-                    success=False,
-                    error="AI 응답이 비어있습니다.",
-                )
-            try:
-                result = json.loads(ai_response)
-                return AIParseResponse(**result)
-            except json.JSONDecodeError:
-                return AIParseResponse(
-                    success=False,
-                    error="AI 응답을 파싱할 수 없습니다.",
-                )
-        except Exception as e:
-            return AIParseResponse(
-                success=False,
-                error=f"AI 파싱 중 오류 발생: {str(e)}",
-            )
 
     async def generate_content(
         self,
@@ -249,8 +211,90 @@ class GeminiClient:
                     error="AI 응답을 파싱할 수 없습니다.",
                 )
 
-        except Exception as e:
+        except Exception:
+            logger.exception("체크리스트 생성 중 오류")
             return AIParseResponse(
                 success=False,
-                error=f"체크리스트 생성 중 오류 발생: {str(e)}",
+                error="일시적인 오류가 발생했습니다. 잠시 후 다시 시도해주세요.",
             )
+
+    async def parse_text_to_item(self, user_text: str, plan_context: str) -> dict[str, Any]:
+        from google import genai
+
+        err = {"success": False, "inferred_item_type": None, "error": "", "draft": None}
+
+        try:
+            prompt_path = Path(__file__).parent / "prompt" / "text_parse.txt"
+            with open(prompt_path, "r", encoding="utf-8") as f:
+                prompt_template = f.read()
+            prompt = (
+                prompt_template
+                .replace("{user_text}", user_text)
+                .replace("{plan_context}", plan_context)
+            )
+
+            config = genai.types.GenerateContentConfig(
+                system_instruction=ai_settings.DOCUMENT_UPLOAD_ANALYZE_SYSTEM_PROMPT,
+                temperature=0.2,
+                response_mime_type="application/json",
+            )
+
+            response = await self.client.aio.models.generate_content(
+                model=ai_settings.GEMINI_DEFAULT_MODEL,
+                contents=prompt,
+                config=config,
+            )
+            raw = (getattr(response, "text", None) or "").strip()
+            if not raw:
+                err["error"] = "어떤 일정인지 조금 더 구체적으로 알려주세요."
+                return err
+            parsed = json.loads(raw)
+            if not isinstance(parsed, dict):
+                err["error"] = "어떤 일정인지 조금 더 구체적으로 알려주세요."
+                return err
+            return parsed
+        except json.JSONDecodeError:
+            err["error"] = "어떤 일정인지 조금 더 구체적으로 알려주세요."
+            return err
+        except Exception:
+            logger.exception("텍스트 파싱 중 오류")
+            err["error"] = "일시적인 오류가 발생했습니다. 잠시 후 다시 시도해주세요."
+            return err
+
+    async def analyze_document_upload(self, ocr_text: str) -> dict[str, Any]:
+        from google import genai
+
+        err = {"success": False, "inferred_item_type": None, "error": "", "draft": None}
+
+        try:
+            prompt_path = Path(__file__).parent / "prompt" / "document_upload_analyze.txt"
+            with open(prompt_path, "r", encoding="utf-8") as f:
+                prompt_template = f.read()
+            prompt = prompt_template.replace("{ocr_text}", ocr_text)
+
+            config = genai.types.GenerateContentConfig(
+                system_instruction=ai_settings.DOCUMENT_UPLOAD_ANALYZE_SYSTEM_PROMPT,
+                temperature=0.2,
+                response_mime_type="application/json",
+            )
+
+            response = await self.client.aio.models.generate_content(
+                model=ai_settings.GEMINI_DEFAULT_MODEL,
+                contents=prompt,
+                config=config,
+            )
+            raw = (getattr(response, "text", None) or "").strip()
+            if not raw:
+                err["error"] = "AI 응답이 비어있습니다."
+                return err
+            parsed = json.loads(raw)
+            if not isinstance(parsed, dict):
+                err["error"] = "AI 응답이 객체 형태가 아닙니다."
+                return err
+            return parsed
+        except json.JSONDecodeError:
+            err["error"] = "AI 응답을 JSON으로 파싱할 수 없습니다."
+            return err
+        except Exception as e:
+            err["error"] = f"문서 분석 중 오류: {str(e)}"
+            return err

@@ -1,21 +1,15 @@
-import React, { useState, useEffect } from 'react';
-import {
-  View,
-  Text,
-  Pressable,
-  StyleSheet,
-  ScrollView,
-} from 'react-native';
-import { useRoute, useNavigation } from '@react-navigation/native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { colors } from '@/ui/tokens/colors';
-import { textStyles } from '@/ui/tokens/typography';
+import { colors } from "@/ui/tokens/colors";
+import { textStyles } from "@/ui/tokens/typography";
+import { useNavigation, useRoute } from "@react-navigation/native";
+import { useEffect, useState } from "react";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
-import LeftArrowIcon from '../../assets/left_arrow_L.svg';
-import CloseIcon from '../../assets/mobile_x.svg';
-import TermCheckIcon from '../../assets/check_black.svg';
-import CheckWithCircleIcon from '../../assets/mobile_agreed.svg';
-import RightArrowTermIcon from '../../assets/right_arrow_term.svg';
+import TermCheckIcon from "../../assets/check_black.svg";
+import LeftArrowIcon from "../../assets/left_arrow_L.svg";
+import CheckWithCircleIcon from "../../assets/mobile_agreed.svg";
+import CloseIcon from "../../assets/mobile_x.svg";
+import RightArrowTermIcon from "../../assets/right_arrow_term.svg";
 
 type RouteParams = {
   registerToken: string;
@@ -51,27 +45,19 @@ export default function TermsConsentScreenNative() {
     if (navigation.canGoBack()) {
       navigation.goBack();
     } else {
-      navigation.navigate('로그인' as never);
+      navigation.navigate("로그인" as never);
     }
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+    <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
       {/* 헤더 — 게스트(로그인됨)에서 소셜 → 약관일 때는 스택에 '로그인'이 없을 수 있어 goBack 우선 */}
       <View style={styles.header}>
-        <Pressable
-          style={styles.headerBtn}
-          onPress={goBackOrLogin}
-          hitSlop={8}
-        >
+        <Pressable style={styles.headerBtn} onPress={goBackOrLogin} hitSlop={8}>
           <LeftArrowIcon width={24} height={24} />
         </Pressable>
         <Text style={styles.headerTitle}>회원가입</Text>
-        <Pressable
-          style={styles.headerBtn}
-          onPress={goBackOrLogin}
-          hitSlop={8}
-        >
+        <Pressable style={styles.headerBtn} onPress={goBackOrLogin} hitSlop={8}>
           <CloseIcon width={24} height={24} />
         </Pressable>
       </View>
@@ -83,7 +69,7 @@ export default function TermsConsentScreenNative() {
       >
         {/* 타이틀 */}
         <Text style={styles.title}>
-          Ottrip 계정{'\n'}서비스 약관에 동의해주세요
+          Ottrip 계정{"\n"}서비스 약관에 동의해주세요
         </Text>
 
         {/* 모두 동의 */}
@@ -116,7 +102,7 @@ export default function TermsConsentScreenNative() {
             <Text style={styles.termLabel}>[필수] 서비스 이용 약관</Text>
           </Pressable>
           <Pressable
-            onPress={() => navigation.navigate('상세내용', { key: 'tos' })}
+            onPress={() => navigation.navigate("상세내용", { key: "tos" })}
             hitSlop={8}
           >
             <RightArrowTermIcon width={16} height={16} />
@@ -139,7 +125,7 @@ export default function TermsConsentScreenNative() {
             <Text style={styles.termLabel}>[필수] 개인정보 수집 및 이용</Text>
           </Pressable>
           <Pressable
-            onPress={() => navigation.navigate('상세내용', { key: 'privacy' })}
+            onPress={() => navigation.navigate("상세내용", { key: "privacy" })}
             hitSlop={8}
           >
             <RightArrowTermIcon width={16} height={16} />
@@ -159,10 +145,14 @@ export default function TermsConsentScreenNative() {
                 color={agree3 ? colors.black : colors.gray400}
               />
             </View>
-            <Text style={styles.termLabel}>[선택] 이벤트*혜택 정보 수신 및 활용 동의</Text>
+            <Text style={styles.termLabel}>
+              [선택] 이벤트*혜택 정보 수신 및 활용 동의
+            </Text>
           </Pressable>
           <Pressable
-            onPress={() => navigation.navigate('상세내용', { key: 'marketing' })}
+            onPress={() =>
+              navigation.navigate("상세내용", { key: "marketing" })
+            }
             hitSlop={8}
           >
             <RightArrowTermIcon width={16} height={16} />
@@ -173,10 +163,13 @@ export default function TermsConsentScreenNative() {
       {/* 하단 버튼 */}
       <View style={styles.bottomArea}>
         <Pressable
-          style={[styles.nextButton, !allRequiredChecked && styles.nextButtonDisabled]}
+          style={[
+            styles.nextButton,
+            !allRequiredChecked && styles.nextButtonDisabled,
+          ]}
           disabled={!allRequiredChecked}
           onPress={() =>
-            navigation.navigate('프로필 입력', {
+            navigation.navigate("프로필 입력", {
               registerToken,
               prefill,
               email,
@@ -184,7 +177,12 @@ export default function TermsConsentScreenNative() {
             })
           }
         >
-          <Text style={[styles.nextButtonText, !allRequiredChecked && styles.nextButtonTextDisabled]}>
+          <Text
+            style={[
+              styles.nextButtonText,
+              !allRequiredChecked && styles.nextButtonTextDisabled,
+            ]}
+          >
             다음
           </Text>
         </Pressable>
@@ -199,9 +197,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: 16,
     height: 56,
     backgroundColor: colors.white,
@@ -209,8 +207,8 @@ const styles = StyleSheet.create({
   headerBtn: {
     width: 24,
     height: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   headerTitle: {
     ...textStyles.h5,
@@ -228,16 +226,16 @@ const styles = StyleSheet.create({
     marginBottom: 36,
   },
   agreeAllRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingVertical: 12,
   },
   agreeAllIconWrap: {
     width: 24,
     height: 24,
     marginRight: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   agreeAllLabel: {
     ...textStyles.h6,
@@ -248,14 +246,14 @@ const styles = StyleSheet.create({
     marginVertical: 6,
   },
   termRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingVertical: 12,
   },
   termCheckArea: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     flex: 1,
     marginRight: 8,
   },
@@ -267,8 +265,8 @@ const styles = StyleSheet.create({
     width: 24,
     height: 24,
     marginRight: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   bottomArea: {
     paddingHorizontal: 16,
@@ -280,8 +278,8 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     backgroundColor: colors.primary,
     borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   nextButtonDisabled: {
     backgroundColor: colors.gray400,

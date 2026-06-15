@@ -1,7 +1,7 @@
-import React from 'react';
-import { StyleSheet, ViewStyle } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { colors } from '../tokens/colors';
+import { LinearGradient } from "expo-linear-gradient";
+import type React from "react";
+import { StyleSheet, type ViewStyle } from "react-native";
+import { colors } from "../tokens/colors";
 
 export type GradientBackgroundProps = {
   colors?: readonly string[];
@@ -24,8 +24,12 @@ export default function GradientBackground({
   children,
 }: GradientBackgroundProps) {
   const defaultColors = [colors.gradientStart, colors.gradientEnd] as const;
-  const gradientColors = (colorsProp || defaultColors) as readonly [string, string, ...string[]];
-  
+  const gradientColors = (colorsProp || defaultColors) as readonly [
+    string,
+    string,
+    ...string[],
+  ];
+
   return (
     <LinearGradient
       colors={gradientColors}
@@ -43,6 +47,4 @@ const styles = StyleSheet.create({
   gradient: {
     flex: 1,
   },
-  
 });
-

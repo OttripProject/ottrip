@@ -1,9 +1,9 @@
-import React, { ReactNode, useEffect } from 'react';
-import { View, StyleSheet, Modal } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors } from '@/ui/tokens/colors';
-import GuestPromptModal from '@/components/modals/GuestPromptModal';
-import { guestPrompt } from '@/utils/guestPrompt';
+import GuestPromptModal from "@/components/modals/GuestPromptModal";
+import { colors } from "@/ui/tokens/colors";
+import { guestPrompt } from "@/utils/guestPrompt";
+import { type ReactNode, useEffect } from "react";
+import { Modal, StyleSheet, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 interface FullScreenModalProps {
   visible: boolean;
@@ -35,7 +35,12 @@ export default function FullScreenModal({
       animationType="slide"
       onRequestClose={onClose}
     >
-      <View style={[styles.container, { paddingTop: insets.top, backgroundColor: containerBackgroundColor }]}>
+      <View
+        style={[
+          styles.container,
+          { paddingTop: insets.top, backgroundColor: containerBackgroundColor },
+        ]}
+      >
         {children}
         <GuestPromptModal presentation="overlay" />
       </View>

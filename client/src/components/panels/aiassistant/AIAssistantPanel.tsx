@@ -1,24 +1,31 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert, Platform } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import MaskedView from '@react-native-masked-view/masked-view';
-import PanelLayout from '../PanelLayout';
-import RefreshChecklistModal from '../../modals/AiRefreshChecklistModal';
-import InsufficientScheduleModal from '../../modals/AiInsufficientModal';
-import AiChecklistListViewModal from '../../modals/AiChecklistListViewModal';
-import api from '@/services/api';
-import { handleGuestPromptError } from '@/utils/guestPrompt';
-import { colors } from '@/ui/tokens/colors';
-import { textStyles, typography } from '@/ui/tokens/typography';
-import { spacing } from '@/ui/tokens/spacing';
-import { radii } from '@/ui/tokens/radii';
+import api from "@/services/api";
+import { colors } from "@/ui/tokens/colors";
+import { radii } from "@/ui/tokens/radii";
+import { spacing } from "@/ui/tokens/spacing";
+import { textStyles, typography } from "@/ui/tokens/typography";
+import { handleGuestPromptError } from "@/utils/guestPrompt";
+import MaskedView from "@react-native-masked-view/masked-view";
+import { LinearGradient } from "expo-linear-gradient";
+import { useCallback, useEffect, useState } from "react";
+import {
+  Alert,
+  Platform,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import AiChecklistListViewModal from "../../modals/AiChecklistListViewModal";
+import InsufficientScheduleModal from "../../modals/AiInsufficientModal";
+import RefreshChecklistModal from "../../modals/AiRefreshChecklistModal";
+import PanelLayout from "../PanelLayout";
 
 interface ChecklistItem {
   id: number;
   name: string;
   reason: string;
   isChecked: boolean;
-  isCustom: boolean;  // true: 사용자 추가, false: AI 생성
+  isCustom: boolean; // true: 사용자 추가, false: AI 생성
 }
 
 interface ChecklistCategory {
@@ -39,28 +46,30 @@ export default function AIAssistantPanel({ publicId }: AIAssistantPanelProps) {
   const [showRefreshModal, setShowRefreshModal] = useState(false);
   const [showInsufficientModal, setShowInsufficientModal] = useState(false);
   const [showListViewModal, setShowListViewModal] = useState(false);
-  const [showAddItemModal, setShowAddItemModal] = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [hoveredItemId, setHoveredItemId] = useState<number | null>(null);
+  const [_showAddItemModal, _setShowAddItemModal] = useState(false);
+  const [_selectedCategory, _setSelectedCategory] = useState<string | null>(
+    null,
+  );
+  const [_hoveredItemId, _setHoveredItemId] = useState<number | null>(null);
   const [addingCategory, setAddingCategory] = useState<string | null>(null);
-  const [newItemName, setNewItemName] = useState('');
-  const [newItemReason, setNewItemReason] = useState('');
+  const [newItemName, setNewItemName] = useState("");
+  const [newItemReason, setNewItemReason] = useState("");
 
   const checkExistingChecklist = useCallback(async () => {
     if (!publicId) {
       setChecklist(null);
       return;
     }
-    
+
     try {
       const response = await api.get(`/private/ai/checklist/${publicId}`);
-      
+
       if (response.data && response.data.categories) {
         setChecklist(response.data);
       } else {
         setChecklist(null);
       }
-    } catch (error) {
+    } catch (_error) {
       setChecklist(null);
     }
   }, [publicId]);
@@ -72,37 +81,43 @@ export default function AIAssistantPanel({ publicId }: AIAssistantPanelProps) {
       setChecklist(null);
     }
   }, [publicId, checkExistingChecklist]);
-  
-  const handleGenerateChecklist = async () => {
+
+  const _handleGenerateChecklist = async () => {
     if (!publicId) return;
-    
+
     try {
       setIsLoading(true);
-      
+
       const response = await api.get(`/private/plans/${publicId}`);
       const plan = response.data;
-      
-      const activeItineraries = plan.itineraries?.filter((it: any) => !it.is_deleted) || [];
-      
+
+      const activeItineraries =
+        plan.itineraries?.filter((it: any) => !it.is_deleted) || [];
+
       if (activeItineraries.length < 2) {
         setIsLoading(false);
         setShowInsufficientModal(true);
         return;
       }
-      
-      const checklistResponse = await api.post(`/private/ai/checklist/${publicId}/generate`, {
-        force_regenerate: true
-      });
-      
+
+      const checklistResponse = await api.post(
+        `/private/ai/checklist/${publicId}/generate`,
+        {
+          force_regenerate: true,
+        },
+      );
+
       if (checklistResponse.data.success) {
         setChecklist(checklistResponse.data.checklist);
       } else {
-        Alert.alert('알림', checklistResponse.data.message || '체크리스트 생성에 실패했습니다.');
+        Alert.alert(
+          "알림",
+          checklistResponse.data.message || "체크리스트 생성에 실패했습니다.",
+        );
       }
-      
     } catch (error) {
       if (handleGuestPromptError(error)) return;
-      Alert.alert('알림', '체크리스트 생성 중 알림가 발생했습니다.');
+      Alert.alert("알림", "체크리스트 생성 중 알림가 발생했습니다.");
     } finally {
       setIsLoading(false);
     }
@@ -114,33 +129,40 @@ export default function AIAssistantPanel({ publicId }: AIAssistantPanelProps) {
 
   const performRefresh = async () => {
     if (!publicId) return;
-    
+
     try {
       setIsLoading(true);
-      
+
       const planResponse = await api.get(`/private/plans/${publicId}`);
       const plan = planResponse.data;
-      
-      const activeItineraries = plan.itineraries?.filter((it: any) => !it.is_deleted) || [];
-      
+
+      const activeItineraries =
+        plan.itineraries?.filter((it: any) => !it.is_deleted) || [];
+
       if (activeItineraries.length < 2) {
         setIsLoading(false);
         setShowInsufficientModal(true);
         return;
       }
-      
-      const response = await api.post(`/private/ai/checklist/${publicId}/generate`, {
-        force_regenerate: true
-      });
-      
+
+      const response = await api.post(
+        `/private/ai/checklist/${publicId}/generate`,
+        {
+          force_regenerate: true,
+        },
+      );
+
       if (response.data.success) {
         setChecklist(response.data.checklist);
       } else {
-        Alert.alert('알림', response.data.message || '체크리스트 새로고침에 실패했습니다.');
+        Alert.alert(
+          "알림",
+          response.data.message || "체크리스트 새로고침에 실패했습니다.",
+        );
       }
     } catch (error) {
       if (handleGuestPromptError(error)) return;
-      Alert.alert('알림', '체크리스트 새로고침 중 알림가 발생했습니다.');
+      Alert.alert("알림", "체크리스트 새로고침 중 알림가 발생했습니다.");
     } finally {
       setIsLoading(false);
     }
@@ -154,26 +176,26 @@ export default function AIAssistantPanel({ publicId }: AIAssistantPanelProps) {
     setShowListViewModal(false);
   };
 
-  const getCategoryTitle = (categoryKey: string) => {
+  const _getCategoryTitle = (categoryKey: string) => {
     const titles: { [key: string]: string } = {
-      'basicRequired': '꼭 챙겨야 해요',
-      'scheduleRequired': '이번 일정에 필요해요', 
-      'recommended': '있으면 더 좋아요',
-      'optional': '선택이에요'
+      basicRequired: "꼭 챙겨야 해요",
+      scheduleRequired: "이번 일정에 필요해요",
+      recommended: "있으면 더 좋아요",
+      optional: "선택이에요",
     };
     return titles[categoryKey] || categoryKey;
   };
 
   const handleToggleItem = async (itemId: number, isChecked: boolean) => {
     if (!publicId) return;
-    
+
     try {
       const endpoint = `/private/ai/checklist/${publicId}/item/${itemId}`;
-      
+
       await api.patch(endpoint, {
-        is_checked: isChecked
+        is_checked: isChecked,
       });
-      
+
       if (checklist) {
         const updatedChecklist = { ...checklist };
         Object.values(updatedChecklist.categories).forEach(category => {
@@ -187,48 +209,52 @@ export default function AIAssistantPanel({ publicId }: AIAssistantPanelProps) {
       }
     } catch (error) {
       if (handleGuestPromptError(error)) return;
-      Alert.alert('알림', '체크리스트 항목 업데이트에 실패했습니다.');
+      Alert.alert("알림", "체크리스트 항목 업데이트에 실패했습니다.");
     }
   };
 
-  const handleAddItem = async (name: string, reason: string, category: string) => {
+  const handleAddItem = async (
+    name: string,
+    reason: string,
+    category: string,
+  ) => {
     if (!publicId) return;
-    
+
     try {
       const endpoint = `/private/ai/checklist/${publicId}/item`;
-      
+
       await api.post(endpoint, {
         name,
         reason,
-        category
+        category,
       });
-      
+
       await checkExistingChecklist();
-      
+
       setAddingCategory(null);
-      setNewItemName('');
-      setNewItemReason('');
+      setNewItemName("");
+      setNewItemReason("");
     } catch (error) {
       if (handleGuestPromptError(error)) return;
-      Alert.alert('알림', '체크리스트 항목 추가에 실패했습니다.');
+      Alert.alert("알림", "체크리스트 항목 추가에 실패했습니다.");
     }
   };
 
-  const handleStartAdding = (categoryKey: string) => {
+  const _handleStartAdding = (categoryKey: string) => {
     setAddingCategory(categoryKey);
-    setNewItemName('');
-    setNewItemReason('');
+    setNewItemName("");
+    setNewItemReason("");
   };
 
-  const handleCancelAdding = () => {
+  const _handleCancelAdding = () => {
     setAddingCategory(null);
-    setNewItemName('');
-    setNewItemReason('');
+    setNewItemName("");
+    setNewItemReason("");
   };
 
-  const handleSaveAdding = () => {
+  const _handleSaveAdding = () => {
     if (!addingCategory || !newItemName.trim()) {
-      Alert.alert('알림', '항목명을 입력해주세요.');
+      Alert.alert("알림", "항목명을 입력해주세요.");
       return;
     }
     handleAddItem(newItemName.trim(), newItemReason.trim(), addingCategory);
@@ -236,75 +262,77 @@ export default function AIAssistantPanel({ publicId }: AIAssistantPanelProps) {
 
   const handleDeleteItem = async (itemId: number) => {
     if (!publicId) return;
-    
+
     try {
       const endpoint = `/private/ai/checklist/${publicId}/item/${itemId}`;
-      
+
       await api.delete(endpoint);
-      
+
       await checkExistingChecklist();
     } catch (error) {
       if (handleGuestPromptError(error)) return;
-      Alert.alert('알림', '체크리스트 항목 삭제에 실패했습니다.');
+      Alert.alert("알림", "체크리스트 항목 삭제에 실패했습니다.");
     }
   };
 
   const hasChecklistItems = () => {
     if (!checklist || !checklist.categories) return false;
-    
+
     return Object.values(checklist.categories).some(
-      (category: any) => category && Array.isArray(category) && category.length > 0
+      (category: any) =>
+        category && Array.isArray(category) && category.length > 0,
     );
   };
 
   // 미리보기 통계 계산
   const getPreviewStats = () => {
     if (!checklist) return { total: 0, checked: 0 };
-    
+
     let total = 0;
     let checked = 0;
-    
+
     Object.values(checklist.categories).forEach(category => {
       category.forEach(item => {
         total++;
         if (item.isChecked) checked++;
       });
     });
-    
+
     return { total, checked };
   };
 
   const stats = getPreviewStats();
-  const hasItems = hasChecklistItems();
+  const _hasItems = hasChecklistItems();
 
-  const GradientText = ({ children, style }: { children: string; style?: any }) => {
-    if (Platform.OS === 'web') {
+  const _GradientText = ({
+    children,
+    style,
+  }: { children: string; style?: any }) => {
+    if (Platform.OS === "web") {
       return (
-        <Text 
+        <Text
           style={[
             style,
             {
-              background: 'linear-gradient(90deg, #FF2391 0%, #1F96FF 100%)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              backgroundClip: 'text',
-            } as any
+              background: "linear-gradient(90deg, #FF2391 0%, #1F96FF 100%)",
+              WebkitBackgroundClip: "text",
+              WebkitTextFillColor: "transparent",
+              backgroundClip: "text",
+            } as any,
           ]}
         >
           {children}
         </Text>
       );
     }
-    
+
     return (
       <MaskedView
-        maskElement={
-          <Text style={style}>{children}</Text>
-        }
-        style={{ flexDirection: 'row', height: 24 }}
+        maskElement={<Text style={style}>{children}</Text>}
+        style={{ flexDirection: "row", height: 24 }}
       >
         <LinearGradient
-          colors={['#FF2391', '#1F96FF']}
+          colors={["#FF2391", "#1F96FF"]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 0 }}
           style={{ flex: 1 }}
@@ -318,29 +346,32 @@ export default function AIAssistantPanel({ publicId }: AIAssistantPanelProps) {
   return (
     <PanelLayout style={{ flex: 1 }}>
       <View style={styles.contentContainer}>
-          {!publicId ? (
-            <View style={styles.placeholder}>
-              <Text style={styles.placeholderText}>여행을 선택해주세요</Text>
-            </View>
-          ) : (
-            <View
-              style={styles.previewContainer}
-            >
+        {!publicId ? (
+          <View style={styles.placeholder}>
+            <Text style={styles.placeholderText}>여행을 선택해주세요</Text>
+          </View>
+        ) : (
+          <View style={styles.previewContainer}>
             <View style={styles.headerSection}>
               <View style={styles.titleContainer}>
                 {/* <GradientText style={styles.headerTitle}>체크리스트</GradientText> */}
                 <Text style={styles.headerTitle}>체크리스트</Text>
               </View>
-              <TouchableOpacity onPress={handleViewAll} style={styles.viewAllButton}>
+              <TouchableOpacity
+                onPress={handleViewAll}
+                style={styles.viewAllButton}
+              >
                 <Text style={styles.viewAllText}>상세보기</Text>
               </TouchableOpacity>
             </View>
-            
+
             {/* 작은 통계 버튼 */}
             <View style={styles.simpleStatsContainer}>
               <View style={styles.simpleStatButton}>
                 <Text style={styles.simpleStatLabel}>준비 필요</Text>
-                <Text style={styles.simpleStatNumber}>{stats.total - stats.checked}개</Text>
+                <Text style={styles.simpleStatNumber}>
+                  {stats.total - stats.checked}개
+                </Text>
               </View>
               <View style={styles.simpleStatButton}>
                 <Text style={styles.simpleStatLabel}>준비 됨</Text>
@@ -350,7 +381,7 @@ export default function AIAssistantPanel({ publicId }: AIAssistantPanelProps) {
 
             {/* (리스트 제거) */}
           </View>
-          )}
+        )}
       </View>
 
       {/* 리스트 보기 Modal */}
@@ -380,7 +411,6 @@ export default function AIAssistantPanel({ publicId }: AIAssistantPanelProps) {
         visible={showInsufficientModal}
         onClose={() => setShowInsufficientModal(false)}
       />
-
     </PanelLayout>
   );
 }
@@ -396,15 +426,15 @@ const styles = StyleSheet.create({
   },
   initialState: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     padding: 20,
   },
   generateButton: {
     backgroundColor: colors.gray400,
     padding: spacing.xs,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     borderRadius: radii.sm,
   },
   generateButtonText: {
@@ -412,8 +442,8 @@ const styles = StyleSheet.create({
     color: colors.white,
   },
   loadingContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: spacing.xs,
   },
   loadingText: {
@@ -424,16 +454,16 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   headerSection: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.lg,
     paddingBottom: spacing.sm,
   },
   titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: spacing.xs,
   },
   headerTitle: {
@@ -443,37 +473,37 @@ const styles = StyleSheet.create({
     opacity: 0,
   },
   headerActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
   },
   viewAllButton: {
     width: 74,
     height: 32,
     borderRadius: 28,
     backgroundColor: colors.gray200,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   viewAllText: {
     ...textStyles.h8,
     color: colors.black,
   },
   simpleStatsContainer: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: spacing.md,
     marginTop: spacing.lg, // headerSection과의 간격
     marginHorizontal: spacing.lg,
     marginBottom: spacing.lg,
     flex: 1, // 남은 높이 채우기
-    alignItems: 'stretch',
+    alignItems: "stretch",
   },
   simpleStatButton: {
     backgroundColor: colors.gray200,
     borderRadius: radii.md,
     flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
   },
   simpleStatLabel: {
     ...textStyles.h6,
@@ -491,9 +521,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xl,
   },
   previewCategoryTitleRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: spacing.sm,
   },
   previewCategoryTitle: {
@@ -501,13 +531,13 @@ const styles = StyleSheet.create({
     color: colors.black,
   },
   previewAddItemButtonCard: {
-    position: 'absolute',
+    position: "absolute",
     top: spacing.sm,
     right: spacing.sm,
     width: 24,
     height: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     zIndex: 1,
   },
   previewAddItemButtonTextCard: {
@@ -520,11 +550,11 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
     borderRadius: radii.md,
     padding: spacing.md,
-    position: 'relative',
+    position: "relative",
   },
   previewChecklistItemWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
   },
   previewChecklistItem: {
     flex: 1,
@@ -532,15 +562,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
   },
   previewItemContent: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
+    flexDirection: "row",
+    alignItems: "flex-start",
   },
   previewEmptyCategory: {
     backgroundColor: colors.white,
     borderRadius: radii.md,
     padding: spacing.lg,
-    alignItems: 'center',
-    position: 'relative',
+    alignItems: "center",
+    position: "relative",
   },
   previewEmptyCategoryText: {
     ...textStyles.body4,
@@ -548,8 +578,8 @@ const styles = StyleSheet.create({
   },
   emptyChecklistMessage: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     padding: spacing.xl,
   },
   emptyChecklistText: {
@@ -563,19 +593,19 @@ const styles = StyleSheet.create({
     paddingTop: spacing.md + 3,
   },
   statsContainer: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: spacing.md,
-    width: '100%',
+    width: "100%",
   },
   statGroup: {
     flex: 1,
   },
   statCard: {
-    width: '100%',
+    width: "100%",
     aspectRatio: 5 / 4.55,
     borderRadius: radii.md + 2,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   statCardWarning: {
     backgroundColor: colors.white,
@@ -587,8 +617,8 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm + 1,
   },
   statHeaderContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: spacing.xs + 1,
   },
   statTitleWarning: {
@@ -602,12 +632,12 @@ const styles = StyleSheet.create({
   checkIconWrapper: {
     width: 16,
     height: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
-    position: 'relative',
+    justifyContent: "center",
+    alignItems: "center",
+    position: "relative",
   },
   checkIconBackground: {
-    position: 'absolute',
+    position: "absolute",
     width: 12,
     height: 12,
     borderRadius: 6,
@@ -617,7 +647,7 @@ const styles = StyleSheet.create({
   },
   checkIconContainer: {
     zIndex: 1,
-    position: 'relative',
+    position: "relative",
   },
   statNumber: {
     fontFamily: typography.fontFamily.poppinsSemiBold,
@@ -628,24 +658,24 @@ const styles = StyleSheet.create({
   // Placeholder 상태 스타일
   placeholder: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     padding: 20,
   },
   placeholderText: {
     fontSize: 16,
-    color: '#666',
-    textAlign: 'center',
+    color: "#666",
+    textAlign: "center",
   },
   // Modal 스타일
   modalOverlay: {
     flex: 1,
     backgroundColor: colors.overlayBackground,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   modalContent: {
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     borderRadius: 12,
     padding: 24,
     margin: 20,
@@ -654,20 +684,20 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     fontSize: 18,
-    fontWeight: '600',
-    color: '#333',
-    textAlign: 'center',
+    fontWeight: "600",
+    color: "#333",
+    textAlign: "center",
     marginBottom: 16,
   },
   modalMessage: {
     fontSize: 14,
-    color: '#666',
-    textAlign: 'center',
+    color: "#666",
+    textAlign: "center",
     lineHeight: 20,
     marginBottom: 24,
   },
   modalButtons: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 12,
   },
   modalButton: {
@@ -675,7 +705,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderRadius: 8,
-    alignItems: 'center',
+    alignItems: "center",
   },
   confirmButton: {
     backgroundColor: colors.black,
@@ -694,16 +724,16 @@ const styles = StyleSheet.create({
   checklistScrollView: {
     flex: 1,
     paddingHorizontal: spacing.xl,
-    backgroundColor: 'transparent',
+    backgroundColor: "transparent",
   },
   scrollWrapper: {
     flex: 1,
     minHeight: 0,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
   checklistHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: spacing.xs,
     marginBottom: spacing.lg,
     paddingTop: spacing.xs,
@@ -716,9 +746,9 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
   },
   categoryTitleRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: spacing.sm,
   },
   categoryTitle: {
@@ -741,16 +771,16 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     borderWidth: 1,
     borderColor: colors.gray300,
-    position: 'relative',
+    position: "relative",
   },
   addItemButtonCard: {
-    position: 'absolute',
+    position: "absolute",
     top: spacing.sm,
     right: spacing.sm,
     width: 24,
     height: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     zIndex: 1,
   },
   addItemButtonTextCard: {
@@ -760,8 +790,8 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   checklistItemWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
   },
   checklistItem: {
     flex: 1,
@@ -774,7 +804,7 @@ const styles = StyleSheet.create({
   },
   emptyCategory: {
     padding: spacing.lg,
-    alignItems: 'center',
+    alignItems: "center",
   },
   emptyCategoryText: {
     ...textStyles.body4,
@@ -782,14 +812,14 @@ const styles = StyleSheet.create({
   },
   // 아이템 추가 row 스타일
   addingItemRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginBottom: spacing.sm,
     gap: spacing.sm,
   },
   addingItemInputs: {
     flex: 1,
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: spacing.xs,
   },
   addingItemNameInput: {
@@ -813,7 +843,7 @@ const styles = StyleSheet.create({
     color: colors.black,
   },
   addingItemButtons: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: spacing.xs,
   },
   addingItemCancelButton: {
@@ -838,36 +868,36 @@ const styles = StyleSheet.create({
   },
   // 간단히 보기용 추가 row 스타일
   previewAddingItemRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginBottom: spacing.sm,
     gap: spacing.sm,
   },
   previewAddingItemInputs: {
     flex: 1,
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: spacing.xs,
   },
   itemContent: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
+    flexDirection: "row",
+    alignItems: "flex-start",
   },
   aiBadge: {
     width: 18,
     height: 18,
     borderRadius: 9,
     backgroundColor: colors.gray200,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     marginRight: spacing.sm,
     marginTop: 2,
   },
   aiBadgeText: {
     fontSize: 9,
     lineHeight: 18,
-    fontWeight: '500',
+    fontWeight: "500",
     fontFamily: typography.fontFamily.poppinsMedium,
-    textAlign: 'center',
+    textAlign: "center",
   },
   checkboxContainer: {
     width: 15,
@@ -876,8 +906,8 @@ const styles = StyleSheet.create({
     borderWidth: 1.3,
     borderColor: colors.gray400,
     backgroundColor: colors.white,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     marginRight: spacing.md,
     marginTop: 2,
   },
@@ -895,10 +925,10 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   itemTextRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: spacing.xs,
-    flexWrap: 'wrap',
+    flexWrap: "wrap",
   },
   itemText: {
     ...textStyles.body4,

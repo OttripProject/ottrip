@@ -1,17 +1,10 @@
-import React from 'react';
-import {
-  View,
-  Text,
-  Pressable,
-  StyleSheet,
-  Modal,
-} from 'react-native';
-import type { TermsKey } from '@/constants/terms';
-import { colors } from '@/ui/tokens/colors';
-import { textStyles } from '@/ui/tokens/typography';
+import type { TermsKey } from "@/constants/terms";
+import { colors } from "@/ui/tokens/colors";
+import { textStyles } from "@/ui/tokens/typography";
+import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
 
-import XIcon from '../../../assets/x.svg';
-import RightArrowTermIcon from '../../../assets/right_arrow_term.svg';
+import RightArrowTermIcon from "../../../assets/right_arrow_term.svg";
+import XIcon from "../../../assets/x.svg";
 
 const FIGMA_CARD_HEIGHT = 327;
 const DEFAULT_MAX_WIDTH = 480;
@@ -51,7 +44,11 @@ export default function TermsPolicyPickerModal({
         <View
           style={[
             styles.card,
-            { maxWidth, width: '100%', paddingHorizontal: cardPaddingHorizontal },
+            {
+              maxWidth,
+              width: "100%",
+              paddingHorizontal: cardPaddingHorizontal,
+            },
           ]}
         >
           <View style={styles.headerRow}>
@@ -69,7 +66,7 @@ export default function TermsPolicyPickerModal({
           <View style={styles.options}>
             <Pressable
               style={styles.optionBox}
-              onPress={() => handlePick('tos')}
+              onPress={() => handlePick("tos")}
               accessibilityRole="button"
             >
               <Text style={styles.optionLabel} numberOfLines={2}>
@@ -79,7 +76,7 @@ export default function TermsPolicyPickerModal({
             </Pressable>
             <Pressable
               style={styles.optionBox}
-              onPress={() => handlePick('privacy')}
+              onPress={() => handlePick("privacy")}
               accessibilityRole="button"
             >
               <Text style={styles.optionLabel} numberOfLines={2}>
@@ -89,7 +86,7 @@ export default function TermsPolicyPickerModal({
             </Pressable>
             <Pressable
               style={styles.optionBox}
-              onPress={() => handlePick('marketing')}
+              onPress={() => handlePick("marketing")}
               accessibilityRole="button"
             >
               <Text style={styles.optionLabel} numberOfLines={2}>
@@ -107,13 +104,13 @@ export default function TermsPolicyPickerModal({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.7)',
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: "rgba(0,0,0,0.7)",
+    alignItems: "center",
+    justifyContent: "center",
     paddingVertical: 20,
   },
   overlayNoDim: {
-    backgroundColor: 'transparent',
+    backgroundColor: "transparent",
   },
   card: {
     backgroundColor: colors.white,
@@ -123,9 +120,9 @@ const styles = StyleSheet.create({
     paddingBottom: 48,
   },
   headerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     marginBottom: 28,
   },
   title: {
@@ -137,20 +134,20 @@ const styles = StyleSheet.create({
   closeButton: {
     width: 24,
     height: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   options: {
     gap: 8,
   },
   optionBox: {
-    width: '100%',
+    width: "100%",
     borderWidth: 1,
     borderColor: colors.gray400,
     borderRadius: 10,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: 16,
     paddingVertical: 14,
   },

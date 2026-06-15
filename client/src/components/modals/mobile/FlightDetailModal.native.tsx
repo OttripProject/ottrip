@@ -1,17 +1,24 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, Pressable, StyleSheet, ScrollView, Alert } from 'react-native';
-import dayjs from 'dayjs';
-import { FlightRead, FlightSegmentReadDto } from '@/types/api';
-import { colors } from '@/ui/tokens/colors';
-import { textStyles } from '@/ui/tokens/typography';
-import BottomSheetModal from '@/ui/components/BottomSheetModal.native';
-import { convertUTCToLocalTime } from '@/utils/dateUtils';
-import FlightIcon from '../../../../assets/airplane.svg';
-import ExpenseIcon from '../../../../assets/mobile_expense.svg';
-import UpdateIcon from '../../../../assets/update.svg';
-import DeleteIcon from '../../../../assets/delete_gray.svg';
-import CloseIcon from '../../../../assets/mobile_close.svg';
-import PNRIcon from '../../../../assets/memo.svg';
+import type { FlightRead, FlightSegmentReadDto } from "@/types/api";
+import BottomSheetModal from "@/ui/components/BottomSheetModal.native";
+import { colors } from "@/ui/tokens/colors";
+import { textStyles } from "@/ui/tokens/typography";
+import { convertUTCToLocalTime } from "@/utils/dateUtils";
+import dayjs from "dayjs";
+import React, { useState, useEffect } from "react";
+import {
+  Alert,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
+import FlightIcon from "../../../../assets/airplane.svg";
+import DeleteIcon from "../../../../assets/delete_gray.svg";
+import PNRIcon from "../../../../assets/memo.svg";
+import CloseIcon from "../../../../assets/mobile_close.svg";
+import ExpenseIcon from "../../../../assets/mobile_expense.svg";
+import UpdateIcon from "../../../../assets/update.svg";
 
 interface FlightDetailModalProps {
   visible: boolean;
@@ -42,13 +49,13 @@ export default function FlightDetailModal({
   }, [visible]);
 
   const formatSegmentDate = (dateTime: string) => {
-    return dayjs(dateTime).format('MM/DD');
+    return dayjs(dateTime).format("MM/DD");
   };
 
   const formatLayover = (prevArrival: string, nextDeparture: string) => {
     const prev = dayjs(prevArrival);
     const next = dayjs(nextDeparture);
-    const minutes = next.diff(prev, 'minute');
+    const minutes = next.diff(prev, "minute");
     if (minutes <= 0) return null;
     const hours = Math.floor(minutes / 60);
     const mins = minutes % 60;
@@ -65,21 +72,17 @@ export default function FlightDetailModal({
   };
 
   const handleDelete = () => {
-    Alert.alert(
-      '항공 편 삭제',
-      '이 항공 편을 삭제하시겠습니까?',
-      [
-        { text: '취소', style: 'cancel' },
-        {
-          text: '삭제',
-          style: 'destructive',
-          onPress: () => {
-            if (onDelete) onDelete(flight);
-            onClose();
-          },
+    Alert.alert("항공 편 삭제", "이 항공 편을 삭제하시겠습니까?", [
+      { text: "취소", style: "cancel" },
+      {
+        text: "삭제",
+        style: "destructive",
+        onPress: () => {
+          if (onDelete) onDelete(flight);
+          onClose();
         },
-      ]
-    );
+      },
+    ]);
   };
 
   const handleViewTicket = () => {
@@ -100,16 +103,28 @@ export default function FlightDetailModal({
           </Text>
           <View style={styles.headerActions}>
             {onEdit && (
-              <Pressable style={styles.actionButton} onPress={handleEdit} hitSlop={8}>
+              <Pressable
+                style={styles.actionButton}
+                onPress={handleEdit}
+                hitSlop={8}
+              >
                 <UpdateIcon width={20} height={20} color={colors.gray600} />
               </Pressable>
             )}
             {onDelete && (
-              <Pressable style={styles.actionButton} onPress={handleDelete} hitSlop={8}>
+              <Pressable
+                style={styles.actionButton}
+                onPress={handleDelete}
+                hitSlop={8}
+              >
                 <DeleteIcon width={20} height={20} color={colors.gray600} />
               </Pressable>
             )}
-            <Pressable style={styles.actionButton} onPress={onClose} hitSlop={8}>
+            <Pressable
+              style={styles.actionButton}
+              onPress={onClose}
+              hitSlop={8}
+            >
               <CloseIcon width={20} height={20} color={colors.gray600} />
             </Pressable>
           </View>
@@ -117,7 +132,6 @@ export default function FlightDetailModal({
 
         {/* 상세 정보 */}
         <View style={styles.details}>
-
           {/* 탑승자 */}
           {flight.passengerName && (
             <View style={styles.detailItem}>
@@ -139,7 +153,9 @@ export default function FlightDetailModal({
               </View>
               <View style={styles.detailContent}>
                 <Text style={styles.detailLabel}>예약번호 (PNR)</Text>
-                <Text style={styles.detailValue}>{flight.reservationNumber}</Text>
+                <Text style={styles.detailValue}>
+                  {flight.reservationNumber}
+                </Text>
               </View>
             </View>
           )}
@@ -153,12 +169,14 @@ export default function FlightDetailModal({
               <View style={styles.detailContent}>
                 <Text style={styles.detailLabel}>비용</Text>
                 <Text style={styles.detailValue}>
-                  {Number(expenseAmount).toLocaleString('ko-KR', { maximumFractionDigits: 0 })}원
+                  {Number(expenseAmount).toLocaleString("ko-KR", {
+                    maximumFractionDigits: 0,
+                  })}
+                  원
                 </Text>
               </View>
             </View>
           )}
-
         </View>
 
         {/* 항공 정보 섹션 - 모든 구간 나열 */}
@@ -175,7 +193,10 @@ export default function FlightDetailModal({
           const flightNumber = seg.flightNumber ?? null;
           const layover =
             index > 0
-              ? formatLayover(segments[index - 1].arrivalTime, seg.departureTime)
+              ? formatLayover(
+                  segments[index - 1].arrivalTime,
+                  seg.departureTime,
+                )
               : null;
 
           return (
@@ -188,7 +209,9 @@ export default function FlightDetailModal({
               <View style={styles.flightSection}>
                 <View style={styles.flightSectionHeader}>
                   <FlightIcon width={20} height={20} color={colors.primary} />
-                  <Text style={styles.flightSectionTitle}>구간 {seg.order}</Text>
+                  <Text style={styles.flightSectionTitle}>
+                    구간 {seg.order}
+                  </Text>
                 </View>
                 <View style={styles.routeRow}>
                   <Text style={styles.routeText}>{routeText}</Text>
@@ -207,7 +230,7 @@ export default function FlightDetailModal({
           <>
             <Pressable
               style={styles.additionalInfoToggle}
-              onPress={() => setShowAdditionalInfo((v) => !v)}
+              onPress={() => setShowAdditionalInfo(v => !v)}
             >
               <Text style={styles.additionalInfoToggleText}>추가정보</Text>
             </Pressable>
@@ -216,20 +239,25 @@ export default function FlightDetailModal({
                 {flight.ticketNumber && (
                   <View style={styles.additionalInfoRow}>
                     <Text style={styles.additionalInfoLabel}>항공권번호</Text>
-                    <Text style={styles.additionalInfoValue}>{flight.ticketNumber}</Text>
+                    <Text style={styles.additionalInfoValue}>
+                      {flight.ticketNumber}
+                    </Text>
                   </View>
                 )}
                 {flight.bookingReference && (
                   <View style={styles.additionalInfoRow}>
-                    <Text style={styles.additionalInfoLabel}>여행사 예약번호</Text>
-                    <Text style={styles.additionalInfoValue}>{flight.bookingReference}</Text>
+                    <Text style={styles.additionalInfoLabel}>
+                      여행사 예약번호
+                    </Text>
+                    <Text style={styles.additionalInfoValue}>
+                      {flight.bookingReference}
+                    </Text>
                   </View>
                 )}
               </View>
             )}
           </>
         )}
-        
       </ScrollView>
 
       {/* 항공권 보기 버튼 */}
@@ -254,9 +282,9 @@ const styles = StyleSheet.create({
     flexGrow: 0,
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
     marginBottom: 24,
   },
   title: {
@@ -264,22 +292,22 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   headerActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 6,
   },
   actionButton: {
     padding: 4,
     width: 32,
     height: 32,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     backgroundColor: colors.gray200,
     borderRadius: 16,
   },
   layoverRow: {
     paddingHorizontal: 4,
-    alignItems: 'center',
+    alignItems: "center",
   },
   layoverText: {
     ...textStyles.body5,
@@ -292,8 +320,8 @@ const styles = StyleSheet.create({
     marginVertical: 12,
   },
   flightSectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 6,
     marginBottom: 12,
   },
@@ -321,21 +349,21 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   detailItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
   },
   detailIcon: {
     width: 36,
     height: 36,
     borderRadius: 12,
     backgroundColor: `${colors.primary}1A`,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     marginRight: 12,
   },
   detailContent: {
     flex: 1,
-    justifyContent: 'center',
+    justifyContent: "center",
   },
   detailLabel: {
     ...textStyles.h7,
@@ -346,9 +374,9 @@ const styles = StyleSheet.create({
     ...textStyles.h6,
   },
   additionalInfoToggle: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     backgroundColor: colors.gray200,
     borderRadius: 12,
     paddingVertical: 12,
@@ -366,9 +394,9 @@ const styles = StyleSheet.create({
     marginTop: -16,
   },
   additionalInfoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
   additionalInfoLabel: {
     ...textStyles.h8,
@@ -377,7 +405,7 @@ const styles = StyleSheet.create({
   additionalInfoValue: {
     ...textStyles.h6,
     flex: 1,
-    textAlign: 'right',
+    textAlign: "right",
     marginLeft: 8,
   },
   footer: {
@@ -389,9 +417,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.black,
     borderRadius: 12,
     paddingVertical: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     gap: 8,
   },
   ticketButtonText: {

@@ -1,9 +1,15 @@
-import React from 'react';
-import { Pressable, Text, View, StyleSheet, ViewStyle, TextStyle } from 'react-native';
-import { colors } from '../tokens/colors';
-import { textStyles } from '../tokens/typography';
+import {
+  Pressable,
+  StyleSheet,
+  Text,
+  type TextStyle,
+  View,
+  type ViewStyle,
+} from "react-native";
+import { colors } from "../tokens/colors";
+import { textStyles } from "../tokens/typography";
 
-import GoogleLogo from '../../../assets/google_logo.svg';
+import GoogleLogo from "../../../assets/google_logo.svg";
 
 export type GoogleButtonProps = {
   onPress?: () => void;
@@ -19,7 +25,7 @@ export default function GoogleButton({
   onPress,
   disabled = false,
   isLoading = false,
-  text = 'Google로 로그인하기',
+  text = "Google로 로그인하기",
   style,
   textStyle,
   iconSize = 16,
@@ -33,7 +39,7 @@ export default function GoogleButton({
       <View style={styles.content}>
         <GoogleLogo width={iconSize} height={iconSize} />
         <Text style={[styles.text, textStyle]}>
-          {isLoading ? '로그인 중...' : text}
+          {isLoading ? "로그인 중..." : text}
         </Text>
       </View>
     </Pressable>
@@ -42,19 +48,19 @@ export default function GoogleButton({
 
 const styles = StyleSheet.create({
   button: {
-    width: '100%',
+    width: "100%",
     maxWidth: 352,
     height: 56,
     backgroundColor: colors.white,
     borderWidth: 1,
     borderColor: colors.gray400,
     borderRadius: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   content: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
   },
   text: {
     ...textStyles.h5,
@@ -66,4 +72,3 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
 });
-

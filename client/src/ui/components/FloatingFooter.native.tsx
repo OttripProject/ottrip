@@ -1,8 +1,7 @@
-import React from 'react';
-import { View, Text, Pressable, StyleSheet } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors } from '@/ui/tokens/colors';
-import { textStyles } from '@/ui/tokens/typography';
+import { colors } from "@/ui/tokens/colors";
+import { textStyles } from "@/ui/tokens/typography";
+import { Pressable, StyleSheet, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 interface FloatingFooterProps {
   primaryLabel: string;
@@ -23,15 +22,24 @@ export default function FloatingFooter({
   const hasSecondary = Boolean(secondaryLabel && onSecondaryPress);
 
   return (
-    <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 12) }]}>
+    <View
+      style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 12) }]}
+    >
       <View style={styles.footerButtons}>
         {hasSecondary && (
-          <Pressable style={[styles.footerButton, styles.secondaryButton]} onPress={onSecondaryPress}>
+          <Pressable
+            style={[styles.footerButton, styles.secondaryButton]}
+            onPress={onSecondaryPress}
+          >
             <Text style={styles.secondaryButtonText}>{secondaryLabel}</Text>
           </Pressable>
         )}
         <Pressable
-          style={[styles.footerButton, styles.primaryButton, hasSecondary && styles.primaryButtonWithSecondary]}
+          style={[
+            styles.footerButton,
+            styles.primaryButton,
+            hasSecondary && styles.primaryButtonWithSecondary,
+          ]}
           onPress={onPrimaryPress}
           disabled={primaryDisabled}
         >
@@ -50,14 +58,14 @@ const styles = StyleSheet.create({
     paddingBottom: 32,
   },
   footerButtons: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 8,
   },
   footerButton: {
     paddingVertical: 16,
     borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   secondaryButton: {
     flex: 1,

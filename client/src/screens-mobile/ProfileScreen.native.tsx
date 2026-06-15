@@ -1,12 +1,19 @@
-import React, { useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, Pressable, ActivityIndicator } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useAuth } from '@/contexts/AuthContext';
-import { useNavigation } from '@react-navigation/native';
-import { useMe } from '@/hooks/useMe';
-import { colors } from '@/ui/tokens/colors';
-import { textStyles } from '@/ui/tokens/typography';
-import LogoutModal from '@/components/modals/LogoutModal';
+import LogoutModal from "@/components/modals/LogoutModal";
+import { useAuth } from "@/contexts/AuthContext";
+import { useMe } from "@/hooks/useMe";
+import { colors } from "@/ui/tokens/colors";
+import { textStyles } from "@/ui/tokens/typography";
+import { useNavigation } from "@react-navigation/native";
+import { useState } from "react";
+import {
+  ActivityIndicator,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
@@ -22,7 +29,12 @@ export default function ProfileScreen() {
 
   if (isLoading) {
     return (
-      <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
+      <View
+        style={[
+          styles.container,
+          { paddingTop: insets.top, paddingBottom: insets.bottom },
+        ]}
+      >
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={colors.black} />
         </View>
@@ -31,8 +43,13 @@ export default function ProfileScreen() {
   }
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
-      <ScrollView 
+    <View
+      style={[
+        styles.container,
+        { paddingTop: insets.top, paddingBottom: insets.bottom },
+      ]}
+    >
+      <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
@@ -44,14 +61,14 @@ export default function ProfileScreen() {
         <View style={styles.profileCard}>
           <View style={styles.infoRow}>
             <Text style={styles.label}>이메일</Text>
-            <Text style={styles.value}>{profile?.email ?? ''}</Text>
+            <Text style={styles.value}>{profile?.email ?? ""}</Text>
           </View>
-          
+
           <View style={styles.divider} />
-          
+
           <View style={styles.infoRow}>
             <Text style={styles.label}>닉네임</Text>
-            <Text style={styles.value}>{profile?.nickname ?? ''}</Text>
+            <Text style={styles.value}>{profile?.nickname ?? ""}</Text>
           </View>
         </View>
 
@@ -70,7 +87,10 @@ export default function ProfileScreen() {
         onConfirm={handleLogout}
         onSignUp={() => {
           setLogoutModalOpen(false);
-          navigation.navigate('소셜회원가입' as never, { guestUpgrade: true } as never);
+          navigation.navigate(
+            "소셜회원가입" as never,
+            { guestUpgrade: true } as never,
+          );
         }}
       />
     </View>
@@ -84,15 +104,15 @@ const styles = StyleSheet.create({
   },
   loadingContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
     flexGrow: 1,
-    justifyContent: 'center',
+    justifyContent: "center",
     paddingBottom: 100,
   },
   header: {
@@ -111,7 +131,7 @@ const styles = StyleSheet.create({
     padding: 20,
     backgroundColor: colors.white,
     borderRadius: 16,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
@@ -140,8 +160,8 @@ const styles = StyleSheet.create({
     padding: 16,
     backgroundColor: colors.gray400,
     borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   logoutButtonText: {
     ...textStyles.h5,

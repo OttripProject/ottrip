@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
-import { View, StyleSheet, Text, Pressable } from 'react-native';
-import { Calendar, DateData } from 'react-native-calendars';
-import dayjs from 'dayjs';
-import { colors } from '@/ui/tokens/colors';
-import { textStyles } from '@/ui/tokens/typography';
-import LeftArrowIcon from '../../../assets/cal_left_arrow.svg';
-import RightArrowIcon from '../../../assets/cal_right_arrow.svg';
+import { colors } from "@/ui/tokens/colors";
+import { textStyles } from "@/ui/tokens/typography";
+import dayjs from "dayjs";
+import { useState } from "react";
+import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Calendar, type DateData } from "react-native-calendars";
+import LeftArrowIcon from "../../../assets/cal_left_arrow.svg";
+import RightArrowIcon from "../../../assets/cal_right_arrow.svg";
 
 interface MonthCalendarPopupProps {
   visible: boolean;
@@ -13,7 +13,7 @@ interface MonthCalendarPopupProps {
   onDayPress: (day: { dateString: string }) => void;
   onClose?: () => void;
   style?: any;
-  currentWeekStart?: string; 
+  currentWeekStart?: string;
 }
 
 function DayCell({
@@ -37,15 +37,17 @@ function DayCell({
     return <View style={styles.dayContainer} />;
   }
 
-  const isDisabled = state === 'disabled';
+  const isDisabled = state === "disabled";
   const isSelected = marking?.selected;
-  const isToday = dayjs().isSame(dayjs(date.dateString), 'day');
+  const isToday = dayjs().isSame(dayjs(date.dateString), "day");
   const dateObj = dayjs(date.dateString);
-  const dayOfWeek = dateObj.day() === 0 ? 6 : dateObj.day() - 1; 
-  const weekKey = dateObj.subtract(dayOfWeek, 'day').format('YYYY-MM-DD');
+  const dayOfWeek = dateObj.day() === 0 ? 6 : dateObj.day() - 1;
+  const weekKey = dateObj.subtract(dayOfWeek, "day").format("YYYY-MM-DD");
   const isHoveredWeek = hoveredWeek === weekKey;
-  
-  const isCurrentWeek = currentWeekStart && weekKey === dayjs(currentWeekStart).format('YYYY-MM-DD');
+
+  const isCurrentWeek =
+    currentWeekStart &&
+    weekKey === dayjs(currentWeekStart).format("YYYY-MM-DD");
 
   return (
     <Pressable
@@ -56,14 +58,15 @@ function DayCell({
       onHoverOut={() => setHoveredWeek?.(null)}
     >
       {(isHoveredWeek || isCurrentWeek) && (
-        <View style={[styles.weekBackground, isCurrentWeek && styles.currentWeekBackground]} />
+        <View
+          style={[
+            styles.weekBackground,
+            isCurrentWeek && styles.currentWeekBackground,
+          ]}
+        />
       )}
-      {isToday && !isSelected && (
-        <View style={styles.todayCircle} />
-      )}
-      {isSelected && (
-        <View style={styles.selectedCircle} />
-      )}
+      {isToday && !isSelected && <View style={styles.todayCircle} />}
+      {isSelected && <View style={styles.selectedCircle} />}
       <Text
         style={[
           styles.dayText,
@@ -92,47 +95,48 @@ export default function MonthCalendarPopup({
   if (!visible) return null;
 
   const currentDate = dayjs(currentMonth);
-  const monthYearText = `${currentDate.format('YYYY')}년 ${currentDate.format('M')}월`;
+  const monthYearText = `${currentDate.format("YYYY")}년 ${currentDate.format("M")}월`;
 
-  const handleMonthChange = (direction: 'prev' | 'next') => {
-    const newDate = direction === 'prev' 
-      ? currentDate.subtract(1, 'month')
-      : currentDate.add(1, 'month');
-    setCurrentMonth(newDate.format('YYYY-MM-DD'));
+  const handleMonthChange = (direction: "prev" | "next") => {
+    const newDate =
+      direction === "prev"
+        ? currentDate.subtract(1, "month")
+        : currentDate.add(1, "month");
+    setCurrentMonth(newDate.format("YYYY-MM-DD"));
   };
 
   const getCurrentWeekDates = () => {
     if (!currentWeekStart) return {};
     const weekStart = dayjs(currentWeekStart);
     const weekDates: Record<string, any> = {};
-    
+
     for (let i = 0; i < 7; i++) {
-      const date = weekStart.add(i, 'day');
-      const dateString = date.format('YYYY-MM-DD');
-      weekDates[dateString] = { 
+      const date = weekStart.add(i, "day");
+      const dateString = date.format("YYYY-MM-DD");
+      weekDates[dateString] = {
         marked: true,
-        dotColor: 'transparent',
+        dotColor: "transparent",
       };
     }
     return weekDates;
   };
 
-  const dayNames = ['월', '화', '수', '목', '금', '토', '일'];
+  const dayNames = ["월", "화", "수", "목", "금", "토", "일"];
 
   const customHeader = () => (
     <View>
       <View style={styles.header}>
         <Text style={styles.headerText}>{monthYearText}</Text>
         <View style={styles.arrowContainer}>
-          <Pressable 
+          <Pressable
             style={styles.arrowButton}
-            onPress={() => handleMonthChange('prev')}
+            onPress={() => handleMonthChange("prev")}
           >
             <LeftArrowIcon width={24} height={24} />
           </Pressable>
-          <Pressable 
+          <Pressable
             style={styles.arrowButton}
-            onPress={() => handleMonthChange('next')}
+            onPress={() => handleMonthChange("next")}
           >
             <RightArrowIcon width={24} height={24} />
           </Pressable>
@@ -153,7 +157,7 @@ export default function MonthCalendarPopup({
       <Calendar
         key={currentMonth}
         current={currentMonth}
-        onDayPress={(day) => {
+        onDayPress={day => {
           onDayPress(day);
           onClose?.();
         }}
@@ -166,7 +170,7 @@ export default function MonthCalendarPopup({
         dayComponent={({ date, state, marking, onPress }) => (
           <DayCell
             date={date as DateData}
-            state={state ?? ''}
+            state={state ?? ""}
             marking={marking}
             onPress={onPress}
             hoveredWeek={hoveredWeek}
@@ -174,23 +178,25 @@ export default function MonthCalendarPopup({
             currentWeekStart={currentWeekStart}
           />
         )}
-        onMonthChange={(month) => {
+        onMonthChange={month => {
           setCurrentMonth(month.dateString);
         }}
         style={styles.calendar}
-        theme={{
-          arrowColor: 'transparent',
-          todayTextColor: colors.white,
-          selectedDayBackgroundColor: 'transparent',
-          selectedDayTextColor: colors.white,
-        } as any}
+        theme={
+          {
+            arrowColor: "transparent",
+            todayTextColor: colors.white,
+            selectedDayBackgroundColor: "transparent",
+            selectedDayTextColor: colors.white,
+          } as any
+        }
       />
     </View>
   );
 }
 const styles = StyleSheet.create({
   popup: {
-    position: 'absolute',
+    position: "absolute",
     width: 276,
     backgroundColor: colors.white,
     borderRadius: 10,
@@ -198,16 +204,16 @@ const styles = StyleSheet.create({
     paddingBottom: 12,
     paddingHorizontal: 12,
     elevation: 8,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
     zIndex: 10000,
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     paddingHorizontal: 12,
     minHeight: 40,
     marginBottom: 8,
@@ -217,15 +223,15 @@ const styles = StyleSheet.create({
     color: colors.black,
   },
   dayHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    justifyContent: "space-between",
     paddingHorizontal: 1,
     marginBottom: 4,
   },
   dayHeaderCell: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     marginHorizontal: 17,
   },
   dayHeaderText: {
@@ -233,15 +239,15 @@ const styles = StyleSheet.create({
     color: colors.gray600,
   },
   arrowContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 8,
   },
   arrowButton: {
     width: 18,
     height: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   calendar: {
     paddingTop: 0,
@@ -250,26 +256,26 @@ const styles = StyleSheet.create({
   dayContainer: {
     width: 36,
     height: 36,
-    alignItems: 'center',
-    justifyContent: 'center',
-    position: 'relative',
-    overflow: 'visible',
+    alignItems: "center",
+    justifyContent: "center",
+    position: "relative",
+    overflow: "visible",
   },
   weekBackground: {
-    position: 'absolute',
+    position: "absolute",
     left: 0,
     right: 0,
-    top: '50%',
+    top: "50%",
     height: 32,
     marginTop: -16,
-    backgroundColor: '#E8F1FF',
+    backgroundColor: "#E8F1FF",
     zIndex: 0,
   },
   currentWeekBackground: {
-    backgroundColor: '#E8F1FF',
+    backgroundColor: "#E8F1FF",
   },
   todayCircle: {
-    position: 'absolute',
+    position: "absolute",
     width: 32,
     height: 32,
     borderRadius: 16,
@@ -277,7 +283,7 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
   selectedCircle: {
-    position: 'absolute',
+    position: "absolute",
     width: 32,
     height: 32,
     borderRadius: 16,
@@ -291,19 +297,17 @@ const styles = StyleSheet.create({
     height: 14,
     color: colors.black,
     zIndex: 3,
-    textAlignVertical: 'center',
+    textAlignVertical: "center",
   },
   dayTextDisabled: {
     color: colors.gray300,
   },
   dayTextSelected: {
     color: colors.white,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   dayTextToday: {
     color: colors.white,
-    fontWeight: '600',
+    fontWeight: "600",
   },
 });
-
-

@@ -1,19 +1,30 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { Plan } from '@/types/api';
-import { usePlansQuery } from '@/hooks/usePlansQuery';
+import { usePlansQuery } from "@/hooks/usePlansQuery";
+import type { Plan } from "@/types/api";
+import type React from "react";
+import {
+  type ReactNode,
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+} from "react";
 
 interface SelectedPlanContextType {
   selectedPlan: Plan | null;
   setSelectedPlan: (plan: Plan | null) => void;
 }
 
-const SelectedPlanContext = createContext<SelectedPlanContextType | undefined>(undefined);
+const SelectedPlanContext = createContext<SelectedPlanContextType | undefined>(
+  undefined,
+);
 
 interface SelectedPlanProviderProps {
   children: ReactNode;
 }
 
-export const SelectedPlanProvider: React.FC<SelectedPlanProviderProps> = ({ children }) => {
+export const SelectedPlanProvider: React.FC<SelectedPlanProviderProps> = ({
+  children,
+}) => {
   const plansQuery = usePlansQuery();
   const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
 
@@ -33,7 +44,7 @@ export const SelectedPlanProvider: React.FC<SelectedPlanProviderProps> = ({ chil
 export const useSelectedPlan = () => {
   const context = useContext(SelectedPlanContext);
   if (context === undefined) {
-    throw new Error('useSelectedPlan must be used within SelectedPlanProvider');
+    throw new Error("useSelectedPlan must be used within SelectedPlanProvider");
   }
   return context;
 };

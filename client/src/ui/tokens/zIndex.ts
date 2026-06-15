@@ -6,5 +6,3 @@ export const zIndex = {
 };
 
 export type ZIndexName = keyof typeof zIndex;
-
-

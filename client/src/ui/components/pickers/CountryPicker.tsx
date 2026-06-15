@@ -1,16 +1,25 @@
-import React, { useEffect, useMemo, useState, useRef } from 'react';
-import { View, StyleSheet, ViewStyle, TextStyle, Pressable } from 'react-native';
-import DropDownPicker from 'react-native-dropdown-picker';
-import { getKoreanCountryOptions, codeToKoreanName } from '@/utils/countryListKo';
-import { PLACEHOLDERS } from '@/constants/placeholders';
-import { radii } from '@/ui/tokens/radii';
-import { colors } from '@/ui/tokens/colors';
-import { textStyles } from '@/ui/tokens/typography';
-import DownArrowIcon from '../../../../assets/down_arrow.svg';
-import UpperArrowIcon from '../../../../assets/upper_arrow.svg';
-import CheckBlackIcon from '../../../../assets/check_black.svg';
-import SearchIcon from '../../../../assets/search.svg';
-import useDetectClose from '@/hooks/useDetectClose'; 
+import { PLACEHOLDERS } from "@/constants/placeholders";
+import useDetectClose from "@/hooks/useDetectClose";
+import { colors } from "@/ui/tokens/colors";
+import { radii } from "@/ui/tokens/radii";
+import { textStyles } from "@/ui/tokens/typography";
+import {
+  codeToKoreanName,
+  getKoreanCountryOptions,
+} from "@/utils/countryListKo";
+import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  Pressable,
+  StyleSheet,
+  type TextStyle,
+  View,
+  type ViewStyle,
+} from "react-native";
+import DropDownPicker from "react-native-dropdown-picker";
+import CheckBlackIcon from "../../../../assets/check_black.svg";
+import DownArrowIcon from "../../../../assets/down_arrow.svg";
+import SearchIcon from "../../../../assets/search.svg";
+import UpperArrowIcon from "../../../../assets/upper_arrow.svg";
 
 interface CountryPickerProps {
   value: string; // country name in Korean
@@ -26,21 +35,36 @@ interface CountryPickerProps {
   onClose?: () => void;
 }
 
-export default function CountryPicker({ value, onChange, placeholder = '국가 선택', containerStyle, style, dropDownContainerStyle, listItemLabelStyle, selectedItemContainerStyle, disabled, onOpen, onClose }: CountryPickerProps) {
+export default function CountryPicker({
+  value,
+  onChange,
+  placeholder = "국가 선택",
+  containerStyle,
+  style,
+  dropDownContainerStyle,
+  listItemLabelStyle,
+  selectedItemContainerStyle,
+  disabled,
+  onOpen,
+  onClose,
+}: CountryPickerProps) {
   const options = useMemo(() => getKoreanCountryOptions(), []);
   const pickerRef = useRef<View>(null);
-  const [open, setIsOpen, handleOutsidePress] = useDetectClose(pickerRef, false);
+  const [open, setIsOpen, handleOutsidePress] = useDetectClose(
+    pickerRef,
+    false,
+  );
   const [code, setCode] = useState<string | null>(null);
 
   const ITEM_HEIGHT = 32;
 
   const selectedIndex = useMemo(() => {
     if (!value) return -1;
-    return options.findIndex((opt) => opt.label === value);
+    return options.findIndex(opt => opt.label === value);
   }, [value, options]);
 
   useEffect(() => {
-    const matched = options.find((opt) => opt.label === value);
+    const matched = options.find(opt => opt.label === value);
     setCode(matched ? matched.value : null);
   }, [value, options]);
 
@@ -48,89 +72,99 @@ export default function CountryPicker({ value, onChange, placeholder = '국가 �
     <>
       {/* 외부 클릭 감지를 위한 투명 오버레이 */}
       {open && (
-        <Pressable 
+        <Pressable
           style={[StyleSheet.absoluteFill, { zIndex: 9999 }]}
           onPress={handleOutsidePress}
         />
       )}
-      <View ref={pickerRef} style={[styles.wrapper, containerStyle, { zIndex: open ? 10000 : 1 }]}> 
+      <View
+        ref={pickerRef}
+        style={[styles.wrapper, containerStyle, { zIndex: open ? 10000 : 1 }]}
+      >
         {open && (
           <View style={styles.searchIconOverlay}>
             <SearchIcon width={16} height={16} />
           </View>
         )}
-      <DropDownPicker
-        open={open}
-        value={code}
-        items={options}
-        setOpen={(value) => {
-          const isOpen = typeof value === 'function' ? value(open) : value;
-          setIsOpen(isOpen);
-          if (isOpen) {
-            onOpen?.();
-          } else {
-            onClose?.();
-          }
-        }}
-        setValue={(callback: any) => {
-          const next = callback(code) as string | null;
-          setCode(next);
-          const name = codeToKoreanName(next || undefined) || '';
-          onChange(name);
-        }}
-        disabled={disabled}
-        searchable
-        searchPlaceholder={PLACEHOLDERS.picker.search}
-        searchTextInputStyle={styles.searchInput}
-        searchContainerStyle={styles.searchContainer}
-        placeholder={placeholder}
-        placeholderStyle={styles.placeholder}
-        searchPlaceholderTextColor={colors.gray600}
-        textStyle={styles.text}
-        labelStyle={styles.text}
-        listItemLabelStyle={[styles.listItemLabel, listItemLabelStyle]}
-        selectedItemLabelStyle={styles.selectedItem}
-        selectedItemContainerStyle={[styles.selectedItemContainer, selectedItemContainerStyle]}
-        style={[
-          styles.dropdown,
-          { width: '100%' },
-          disabled && { borderColor: colors.gray400, borderWidth: 1 },
-          style,
-        ]}
-        dropDownContainerStyle={[styles.dropdownContainer, { zIndex: 11000, position: 'absolute' }, dropDownContainerStyle]}
-        containerStyle={[styles.dropdownOuter, { width: '100%' }]}
-        listMode="FLATLIST"
-        dropDownDirection="BOTTOM"
-        scrollViewProps={{ 
-          nestedScrollEnabled: true, 
-          keyboardShouldPersistTaps: 'handled',
-          showsVerticalScrollIndicator: false 
-        }}
-        ArrowDownIconComponent={() => <DownArrowIcon width={16} height={16} />}
-        ArrowUpIconComponent={() => <UpperArrowIcon width={16} height={16} />}
-        translation={{ NOTHING_TO_SHOW: '결과가 없습니다' }}
-        TickIconComponent={() => (
-          <CheckBlackIcon width={16} height={16} />
-        )}
-        flatListProps={{
-          initialScrollIndex: selectedIndex > 0 ? selectedIndex : 0,
-          getItemLayout: (data, index) => ({
-            length: ITEM_HEIGHT,
-            offset: ITEM_HEIGHT * index,
-            index,
-          }),
-          nestedScrollEnabled: true,
-          keyboardShouldPersistTaps: 'handled',
-          showsVerticalScrollIndicator: false,
-        }}
-      />
+        <DropDownPicker
+          open={open}
+          value={code}
+          items={options}
+          setOpen={value => {
+            const isOpen = typeof value === "function" ? value(open) : value;
+            setIsOpen(isOpen);
+            if (isOpen) {
+              onOpen?.();
+            } else {
+              onClose?.();
+            }
+          }}
+          setValue={(callback: any) => {
+            const next = callback(code) as string | null;
+            setCode(next);
+            const name = codeToKoreanName(next || undefined) || "";
+            onChange(name);
+          }}
+          disabled={disabled}
+          searchable
+          searchPlaceholder={PLACEHOLDERS.picker.search}
+          searchTextInputStyle={styles.searchInput}
+          searchContainerStyle={styles.searchContainer}
+          placeholder={placeholder}
+          placeholderStyle={styles.placeholder}
+          searchPlaceholderTextColor={colors.gray600}
+          textStyle={styles.text}
+          labelStyle={styles.text}
+          listItemLabelStyle={[styles.listItemLabel, listItemLabelStyle]}
+          selectedItemLabelStyle={styles.selectedItem}
+          selectedItemContainerStyle={[
+            styles.selectedItemContainer,
+            selectedItemContainerStyle,
+          ]}
+          style={[
+            styles.dropdown,
+            { width: "100%" },
+            disabled && { borderColor: colors.gray400, borderWidth: 1 },
+            style,
+          ]}
+          dropDownContainerStyle={[
+            styles.dropdownContainer,
+            { zIndex: 11000, position: "absolute" },
+            dropDownContainerStyle,
+          ]}
+          containerStyle={[styles.dropdownOuter, { width: "100%" }]}
+          listMode="FLATLIST"
+          dropDownDirection="BOTTOM"
+          scrollViewProps={{
+            nestedScrollEnabled: true,
+            keyboardShouldPersistTaps: "handled",
+            showsVerticalScrollIndicator: false,
+          }}
+          ArrowDownIconComponent={() => (
+            <DownArrowIcon width={16} height={16} />
+          )}
+          ArrowUpIconComponent={() => <UpperArrowIcon width={16} height={16} />}
+          translation={{ NOTHING_TO_SHOW: "결과가 없습니다" }}
+          TickIconComponent={() => <CheckBlackIcon width={16} height={16} />}
+          flatListProps={{
+            initialScrollIndex: selectedIndex > 0 ? selectedIndex : 0,
+            getItemLayout: (_data, index) => ({
+              length: ITEM_HEIGHT,
+              offset: ITEM_HEIGHT * index,
+              index,
+            }),
+            nestedScrollEnabled: true,
+            keyboardShouldPersistTaps: "handled",
+            showsVerticalScrollIndicator: false,
+          }}
+        />
       </View>
     </>
   );
 }
 
 const styles = StyleSheet.create({
-  wrapper: { position: 'relative' },
+  wrapper: { position: "relative" },
   dropdown: {
     borderWidth: 0,
     borderRadius: radii.md,
@@ -138,7 +172,7 @@ const styles = StyleSheet.create({
     height: 40,
     minHeight: 40,
     maxHeight: 40,
-    position: 'relative',
+    position: "relative",
     zIndex: 9999,
     paddingHorizontal: 12,
     paddingVertical: 10,
@@ -149,9 +183,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.gray200,
     zIndex: 9999,
     elevation: 6,
-    position: 'absolute'
+    position: "absolute",
   },
-  dropdownOuter: { position: 'relative', zIndex: 9999 },
+  dropdownOuter: { position: "relative", zIndex: 9999 },
   placeholder: {
     ...textStyles.body4,
     color: colors.gray600,
@@ -181,7 +215,7 @@ const styles = StyleSheet.create({
     paddingLeft: 32,
     paddingRight: 10,
     fontSize: 14,
-    width: '100%',
+    width: "100%",
     borderWidth: 0,
     borderRadius: radii.xs,
     backgroundColor: colors.white,
@@ -190,18 +224,16 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
     paddingHorizontal: 8,
     borderBottomWidth: 0,
-    width: '100%',
-    position: 'relative',
+    width: "100%",
+    position: "relative",
   },
   searchIconOverlay: {
-    position: 'absolute',
+    position: "absolute",
     left: 20,
     top: 56,
     zIndex: 12000,
-    justifyContent: 'center',
-    alignItems: 'center',
-    pointerEvents: 'none',
+    justifyContent: "center",
+    alignItems: "center",
+    pointerEvents: "none",
   },
 });
-
-

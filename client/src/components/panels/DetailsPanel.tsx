@@ -1,9 +1,13 @@
-import React from 'react';
-import { ScrollView, View, Text, StyleSheet } from 'react-native';
-import PanelLayout from './PanelLayout';
-import ItinerarySection from './itineraries/ItinerarySection';
-import FlightSection from './flights/FlightSection';
-import AccommodationSection from './accommodations/AccommodationSection';
+import type {
+  DocumentUploadAnalyzeResponse,
+  LocalFile,
+  StagedDocumentAnalyzePayload,
+} from "@/types/api";
+import { ScrollView, StyleSheet, Text, View } from "react-native";
+import PanelLayout from "./PanelLayout";
+import AccommodationSection from "./accommodations/AccommodationSection";
+import FlightSection from "./flights/FlightSection";
+import ItinerarySection from "./itineraries/ItinerarySection";
 
 interface DetailsPanelProps {
   planData?: {
@@ -22,7 +26,7 @@ interface DetailsPanelProps {
   selectedItinerary?: any;
   selectedFlight?: any;
   selectedAccommodation?: any;
-  activeTab?: 'itinerary' | 'flight' | 'accommodation' | undefined;
+  activeTab?: "itinerary" | "flight" | "accommodation" | undefined;
   onItineraryAdd?: (itinerary: any) => void;
   onItineraryClear?: () => void;
   onFlightAdd?: (flight: any) => void;
@@ -41,8 +45,15 @@ interface DetailsPanelProps {
   onConsumeOpenNewAccommodationForm?: () => void;
   newAccommodationDraft?: any | null;
   onPreviewAccommodationChange?: (preview: any) => void;
+  stagedDocumentAnalyze?: StagedDocumentAnalyzePayload | null;
+  onConsumeStagedDocumentAnalyze?: () => void;
+  routeDocumentAnalyzeSuccess?: (
+    res: DocumentUploadAnalyzeResponse,
+    carryPendingFiles?: LocalFile[],
+  ) => boolean;
+  carryoverPendingFiles?: LocalFile[] | null;
+  onConsumeCarryoverPendingFiles?: () => void;
 }
-
 
 export default function DetailsPanel({
   planData,
@@ -67,6 +78,11 @@ export default function DetailsPanel({
   onConsumeOpenNewAccommodationForm,
   newAccommodationDraft,
   onPreviewAccommodationChange,
+  stagedDocumentAnalyze,
+  onConsumeStagedDocumentAnalyze,
+  routeDocumentAnalyzeSuccess,
+  carryoverPendingFiles,
+  onConsumeCarryoverPendingFiles,
 }: DetailsPanelProps) {
   if (!planData?.plan) {
     return (
@@ -92,6 +108,11 @@ export default function DetailsPanel({
           openNewItineraryForm={openNewItineraryForm}
           onConsumeOpenNewItineraryForm={onConsumeOpenNewItineraryForm}
           selectedItineraryDate={selectedItineraryDate}
+          stagedDocumentAnalyze={stagedDocumentAnalyze}
+          onConsumeStagedDocumentAnalyze={onConsumeStagedDocumentAnalyze}
+          routeDocumentAnalyzeSuccess={routeDocumentAnalyzeSuccess}
+          carryoverPendingFiles={carryoverPendingFiles}
+          onConsumeCarryoverPendingFiles={onConsumeCarryoverPendingFiles}
         />
       );
     }
@@ -106,6 +127,11 @@ export default function DetailsPanel({
           onFlightClear={onFlightClear}
           openNewFlightForm={openNewFlightForm}
           onConsumeOpenNewFlightForm={onConsumeOpenNewFlightForm}
+          stagedDocumentAnalyze={stagedDocumentAnalyze}
+          onConsumeStagedDocumentAnalyze={onConsumeStagedDocumentAnalyze}
+          routeDocumentAnalyzeSuccess={routeDocumentAnalyzeSuccess}
+          carryoverPendingFiles={carryoverPendingFiles}
+          onConsumeCarryoverPendingFiles={onConsumeCarryoverPendingFiles}
         />
       );
     }
@@ -123,6 +149,11 @@ export default function DetailsPanel({
           onConsumeOpenNewAccommodationForm={onConsumeOpenNewAccommodationForm}
           newAccommodationDraft={newAccommodationDraft}
           onPreviewChange={onPreviewAccommodationChange}
+          stagedDocumentAnalyze={stagedDocumentAnalyze}
+          onConsumeStagedDocumentAnalyze={onConsumeStagedDocumentAnalyze}
+          routeDocumentAnalyzeSuccess={routeDocumentAnalyzeSuccess}
+          carryoverPendingFiles={carryoverPendingFiles}
+          onConsumeCarryoverPendingFiles={onConsumeCarryoverPendingFiles}
         />
       );
     }
@@ -137,7 +168,7 @@ export default function DetailsPanel({
     }
 
     switch (activeTab) {
-      case 'itinerary':
+      case "itinerary":
         return (
           <ItinerarySection
             planData={planData}
@@ -147,10 +178,15 @@ export default function DetailsPanel({
             openNewItineraryForm={openNewItineraryForm}
             onConsumeOpenNewItineraryForm={onConsumeOpenNewItineraryForm}
             selectedItineraryDate={selectedItineraryDate}
+            stagedDocumentAnalyze={stagedDocumentAnalyze}
+            onConsumeStagedDocumentAnalyze={onConsumeStagedDocumentAnalyze}
+            routeDocumentAnalyzeSuccess={routeDocumentAnalyzeSuccess}
+            carryoverPendingFiles={carryoverPendingFiles}
+            onConsumeCarryoverPendingFiles={onConsumeCarryoverPendingFiles}
           />
         );
 
-      case 'flight':
+      case "flight":
         return (
           <FlightSection
             planData={planData}
@@ -159,10 +195,15 @@ export default function DetailsPanel({
             onFlightClear={onFlightClear}
             openNewFlightForm={openNewFlightForm}
             onConsumeOpenNewFlightForm={onConsumeOpenNewFlightForm}
+            stagedDocumentAnalyze={stagedDocumentAnalyze}
+            onConsumeStagedDocumentAnalyze={onConsumeStagedDocumentAnalyze}
+            routeDocumentAnalyzeSuccess={routeDocumentAnalyzeSuccess}
+            carryoverPendingFiles={carryoverPendingFiles}
+            onConsumeCarryoverPendingFiles={onConsumeCarryoverPendingFiles}
           />
         );
 
-      case 'accommodation':
+      case "accommodation":
         return (
           <AccommodationSection
             planData={planData}
@@ -172,8 +213,15 @@ export default function DetailsPanel({
             onAccommodationClear={onAccommodationClear}
             onPreviewChange={onPreviewAccommodationChange}
             openNewAccommodationForm={openNewAccommodationForm}
-            onConsumeOpenNewAccommodationForm={onConsumeOpenNewAccommodationForm}
+            onConsumeOpenNewAccommodationForm={
+              onConsumeOpenNewAccommodationForm
+            }
             newAccommodationDraft={newAccommodationDraft}
+            stagedDocumentAnalyze={stagedDocumentAnalyze}
+            onConsumeStagedDocumentAnalyze={onConsumeStagedDocumentAnalyze}
+            routeDocumentAnalyzeSuccess={routeDocumentAnalyzeSuccess}
+            carryoverPendingFiles={carryoverPendingFiles}
+            onConsumeCarryoverPendingFiles={onConsumeCarryoverPendingFiles}
           />
         );
 
@@ -186,14 +234,22 @@ export default function DetailsPanel({
     }
   };
 
-  const isInitial = !activeTab && !selectedItinerary && !selectedFlight && !selectedAccommodation;
+  const isInitial =
+    !activeTab &&
+    !selectedItinerary &&
+    !selectedFlight &&
+    !selectedAccommodation;
 
   return (
     <PanelLayout style={styles.container}>
       <View style={styles.scrollWrapper}>
-        <ScrollView 
+        <ScrollView
           style={styles.scrollView}
-          contentContainerStyle={isInitial ? [styles.scrollContent, styles.centerScroll] : styles.scrollContent}
+          contentContainerStyle={
+            isInitial
+              ? [styles.scrollContent, styles.centerScroll]
+              : styles.scrollContent
+          }
           showsVerticalScrollIndicator
           bounces={false}
         >
@@ -219,23 +275,23 @@ const styles = StyleSheet.create({
   scrollWrapper: {
     flex: 1,
     minHeight: 0,
-    overflow: 'visible',
-    position: 'relative',
+    overflow: "visible",
+    position: "relative",
   },
   centerScroll: {
     flexGrow: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   placeholder: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     padding: 20,
   },
   placeholderText: {
     fontSize: 16,
-    color: '#666',
-    textAlign: 'center',
+    color: "#666",
+    textAlign: "center",
   },
 });

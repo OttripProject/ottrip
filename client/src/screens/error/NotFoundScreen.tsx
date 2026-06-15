@@ -1,4 +1,4 @@
-import ErrorScreen from './ErrorScreen';
+import ErrorScreen from "./ErrorScreen";
 
 export default function NotFoundScreen() {
   return (
@@ -8,5 +8,3 @@ export default function NotFoundScreen() {
     />
   );
 }
-
-
