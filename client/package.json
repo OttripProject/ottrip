@@ -18,7 +18,7 @@
     "build:prod": "eas build --profile prod",
     "build:alpha:ios": "eas build --profile alpha --platform ios",
     "deploy:dev": "eas update --environment=development --branch=dev --auto",
-    "deploy:prod": "eas update --environment=production --branch=prod --auto",
+    "deploy:prod": "eas update --environment=production --branch=production --auto",
     "clean": "rm -rf node_modules && pnpm install",
     "prebuild": "pnpm typecheck && pnpm lint:check",
     "postinstall": "patch-package"
