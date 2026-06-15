@@ -1,17 +1,16 @@
-import { Platform } from 'react-native';
+import { Platform } from "react-native";
 
 let SecureStore: any = null;
 
-if (Platform.OS !== 'web') {
+if (Platform.OS !== "web") {
   try {
-    SecureStore = require('expo-secure-store');
-  } catch (error) {
-  }
+    SecureStore = require("expo-secure-store");
+  } catch (_error) {}
 }
 
 export function defineSecureStore<T extends string>(key: string) {
-  const isWeb = Platform.OS === 'web';
-  
+  const isWeb = Platform.OS === "web";
+
   return {
     getSync: (): T | null => {
       try {
@@ -21,7 +20,7 @@ export function defineSecureStore<T extends string>(key: string) {
           return SecureStore.getItem(key) as T | null;
         }
         return null;
-      } catch (error) {
+      } catch (_error) {
         return null;
       }
     },
@@ -46,12 +45,15 @@ export function defineSecureStore<T extends string>(key: string) {
           const value = await SecureStore.getItemAsync(key);
           return value as T | null;
         } else {
-          if ((global as any).__tempStorage && (global as any).__tempStorage[key]) {
+          if (
+            (global as any).__tempStorage &&
+            (global as any).__tempStorage[key]
+          ) {
             return (global as any).__tempStorage[key] as T;
           }
           return null;
         }
-      } catch (error) {
+      } catch (_error) {
         return null;
       }
     },
@@ -78,8 +80,7 @@ export function defineSecureStore<T extends string>(key: string) {
         if (isWeb) {
           try {
             localStorage.removeItem(key);
-          } catch {
-          }
+          } catch {}
         } else if (SecureStore) {
           await SecureStore.deleteItemAsync(key);
         } else {
@@ -94,4 +95,4 @@ export function defineSecureStore<T extends string>(key: string) {
 
     key,
   };
-} 
+}

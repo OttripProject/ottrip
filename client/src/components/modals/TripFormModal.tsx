@@ -1,53 +1,56 @@
-import React from 'react';
-import { View, Text, Pressable, StyleSheet, Modal } from 'react-native';
-import { Calendar, DateData } from 'react-native-calendars';
-import dayjs from 'dayjs';
-import Input from '@/ui/components/input/Input';
-import { PLACEHOLDERS } from '@/constants/placeholders';
-import { colors } from '@/ui/tokens/colors';
-import { textStyles } from '@/ui/tokens/typography';
-import LeftArrowIcon from '../../../assets/cal_left_arrow.svg';
-import RightArrowIcon from '../../../assets/cal_right_arrow.svg';
-import XIcon from '../../../assets/x.svg';
+import { PLACEHOLDERS } from "@/constants/placeholders";
+import Input from "@/ui/components/input/Input";
+import { colors } from "@/ui/tokens/colors";
+import { textStyles } from "@/ui/tokens/typography";
+import dayjs from "dayjs";
+import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
+import { Calendar, type DateData } from "react-native-calendars";
+import LeftArrowIcon from "../../../assets/cal_left_arrow.svg";
+import RightArrowIcon from "../../../assets/cal_right_arrow.svg";
+import XIcon from "../../../assets/x.svg";
 
 const CALENDAR_THEME = {
-  selectedDayBackgroundColor: '#007AFF',
-  selectedDayTextColor: '#ffffff',
-  todayTextColor: '#007AFF',
-  dayTextColor: '#2d4150',
-  textDisabledColor: '#d9e1e8',
-  monthTextColor: '#2d4150',
-  indicatorColor: '#007AFF',
-  textDayFontWeight: '400' as const,
-  textMonthFontWeight: '600' as const,
-  textDayHeaderFontWeight: '500' as const,
+  selectedDayBackgroundColor: "#007AFF",
+  selectedDayTextColor: "#ffffff",
+  todayTextColor: "#007AFF",
+  dayTextColor: "#2d4150",
+  textDisabledColor: "#d9e1e8",
+  monthTextColor: "#2d4150",
+  indicatorColor: "#007AFF",
+  textDayFontWeight: "400" as const,
+  textMonthFontWeight: "600" as const,
+  textDayHeaderFontWeight: "500" as const,
   textDayFontSize: 13,
   textMonthFontSize: 16,
   textDayHeaderFontSize: 11,
   textSectionTitleColor: colors.gray600,
-  'stylesheet.calendar.main': {
+  "stylesheet.calendar.main": {
     week: {
       marginVertical: 2,
-      flexDirection: 'row',
-      justifyContent: 'space-between',
+      flexDirection: "row",
+      justifyContent: "space-between",
     },
   },
 };
 
-type SelectionType = 'single' | 'start' | 'end' | 'range' | undefined;
+type SelectionType = "single" | "start" | "end" | "range" | undefined;
 type CalendarDayMark = { selection?: SelectionType; selected?: boolean };
 type CalendarMarkedDates = Record<string, CalendarDayMark>;
 
 interface TripFormModalProps {
   visible: boolean;
   onClose: () => void;
-  mode: 'add' | 'edit';
+  mode: "add" | "edit";
   tripData: {
     name: string;
     startDate: string;
     endDate: string;
   };
-  onTripDataChange: (data: { name?: string; startDate?: string; endDate?: string }) => void;
+  onTripDataChange: (data: {
+    name?: string;
+    startDate?: string;
+    endDate?: string;
+  }) => void;
   markedDates: CalendarMarkedDates;
   onDateSelect: (dateString: string) => void;
   onSubmit: () => void;
@@ -70,15 +73,15 @@ function DayCell({
   }
 
   const selection = marking?.selection;
-  const isDisabled = state === 'disabled';
-  const isStart = selection === 'start';
-  const isEnd = selection === 'end';
-  const isRange = selection === 'range';
-  const isSingle = selection === 'single';
-  const isToday = dayjs().isSame(dayjs(date.dateString), 'day');
+  const isDisabled = state === "disabled";
+  const isStart = selection === "start";
+  const isEnd = selection === "end";
+  const isRange = selection === "range";
+  const isSingle = selection === "single";
+  const isToday = dayjs().isSame(dayjs(date.dateString), "day");
 
   const rangeStyle: any = {
-    opacity: (isStart || isEnd || isRange) ? 1 : 0,
+    opacity: isStart || isEnd || isRange ? 1 : 0,
   };
 
   if (isStart) {
@@ -96,7 +99,7 @@ function DayCell({
   if (isSingle || isStart || isEnd) {
     circleStyle.backgroundColor = colors.primary;
   } else if (isToday && !selection) {
-    circleStyle.backgroundColor = '#E8F1FF';
+    circleStyle.backgroundColor = "#E8F1FF";
   }
 
   return (
@@ -105,18 +108,8 @@ function DayCell({
       disabled={isDisabled}
       onPress={() => onPress?.(date)}
     >
-      <View
-        style={[
-          styles.rangeBase,
-          rangeStyle,
-        ]}
-      />
-      <View
-        style={[
-          styles.circleBase,
-          circleStyle,
-        ]}
-      >
+      <View style={[styles.rangeBase, rangeStyle]} />
+      <View style={[styles.circleBase, circleStyle]}>
         <Text
           style={[
             styles.dayText,
@@ -143,11 +136,12 @@ export default function TripFormModal({
   onSubmit,
   isSubmitDisabled,
 }: TripFormModalProps) {
-  const title = mode === 'add' ? '새 여행 추가' : '여행 수정';
-  const description = mode === 'add' 
-    ? '새로운 여행을 만들어 계획을 시작하세요.' 
-    : '여행 정보를 수정하세요.';
-  const submitButtonText = mode === 'add' ? '여행 저장' : '여행 수정';
+  const title = mode === "add" ? "새 여행 추가" : "여행 수정";
+  const description =
+    mode === "add"
+      ? "새로운 여행을 만들어 계획을 시작하세요."
+      : "여행 정보를 수정하세요.";
+  const submitButtonText = mode === "add" ? "여행 저장" : "여행 수정";
 
   return (
     <Modal
@@ -163,25 +157,22 @@ export default function TripFormModal({
               <Text style={styles.modalTitle}>{title}</Text>
               <Text style={styles.modalDescription}>{description}</Text>
             </View>
-            <Pressable
-              onPress={onClose}
-              style={styles.closeButton}
-            >
+            <Pressable onPress={onClose} style={styles.closeButton}>
               <XIcon width={24} height={24} />
             </Pressable>
           </View>
-          
+
           <View style={styles.inputSection}>
             <Text style={styles.inputLabel}>여행명</Text>
             <Input
               style={styles.input}
               placeholder={PLACEHOLDERS.plan.name}
               value={tripData.name}
-              onChangeText={(text) => onTripDataChange({ name: text })}
+              onChangeText={text => onTripDataChange({ name: text })}
               maxLength={50}
             />
           </View>
-          
+
           <View style={styles.inputSection}>
             <Text style={styles.inputLabel}>여행 기간 선택</Text>
             <View style={styles.calendarWrapper}>
@@ -191,8 +182,8 @@ export default function TripFormModal({
                 markingType="custom"
                 theme={CALENDAR_THEME}
                 firstDay={1}
-                renderArrow={(direction) =>
-                  direction === 'left' ? (
+                renderArrow={direction =>
+                  direction === "left" ? (
                     <LeftArrowIcon width={18} height={18} />
                   ) : (
                     <RightArrowIcon width={18} height={18} />
@@ -201,25 +192,25 @@ export default function TripFormModal({
                 dayComponent={({ date, state, marking, onPress }) => (
                   <DayCell
                     date={date as DateData}
-                    state={state ?? ''}
+                    state={state ?? ""}
                     marking={marking as CalendarDayMark}
                     onPress={onPress}
                   />
                 )}
-                onDayPress={(day) => onDateSelect(day.dateString)}
+                onDayPress={day => onDateSelect(day.dateString)}
                 style={styles.calendar}
               />
             </View>
           </View>
-          
+
           <View style={styles.modalButtons}>
-            <Pressable 
+            <Pressable
               style={[styles.modalButton, styles.cancelButton]}
               onPress={onClose}
             >
               <Text style={styles.cancelButtonText}>취소</Text>
             </Pressable>
-            <Pressable 
+            <Pressable
               style={[
                 styles.modalButton,
                 styles.addButton,
@@ -228,10 +219,14 @@ export default function TripFormModal({
               onPress={onSubmit}
               disabled={isSubmitDisabled}
             >
-              <Text style={[
-                styles.addButtonText,
-                isSubmitDisabled && styles.addButtonTextDisabled,
-              ]}>{submitButtonText}</Text>
+              <Text
+                style={[
+                  styles.addButtonText,
+                  isSubmitDisabled && styles.addButtonTextDisabled,
+                ]}
+              >
+                {submitButtonText}
+              </Text>
             </Pressable>
           </View>
         </View>
@@ -244,8 +239,8 @@ const styles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
     backgroundColor: colors.overlayBackground,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     paddingHorizontal: 16,
   },
   modalContent: {
@@ -258,9 +253,9 @@ const styles = StyleSheet.create({
     maxHeight: 724,
   },
   modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
     marginBottom: 24,
   },
   modalHeaderText: {
@@ -269,7 +264,7 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     ...textStyles.h3,
-    textAlign: 'left',
+    textAlign: "left",
     marginBottom: 4,
     marginLeft: 10,
   },
@@ -277,13 +272,13 @@ const styles = StyleSheet.create({
     ...textStyles.body4,
     color: colors.gray700,
     marginLeft: 10,
-    textAlign: 'left',
+    textAlign: "left",
   },
   closeButton: {
     width: 24,
     height: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   inputSection: {
     marginBottom: 16,
@@ -304,7 +299,7 @@ const styles = StyleSheet.create({
     height: 48,
     fontSize: 14,
     backgroundColor: colors.white,
-    alignSelf: 'center',
+    alignSelf: "center",
   },
   calendarWrapper: {
     width: 356,
@@ -314,24 +309,24 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     paddingVertical: 24,
     paddingHorizontal: 40,
-    alignSelf: 'center',
-    justifyContent: 'center',
+    alignSelf: "center",
+    justifyContent: "center",
   },
   calendar: {
-    alignSelf: 'center',
+    alignSelf: "center",
     width: 276,
-    backgroundColor: 'transparent',
+    backgroundColor: "transparent",
   },
   modalButtons: {
-    flexDirection: 'row',
-    justifyContent: 'center',
+    flexDirection: "row",
+    justifyContent: "center",
   },
   modalButton: {
     width: 174,
     height: 50,
     borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   cancelButton: {
     backgroundColor: colors.gray300,
@@ -357,30 +352,30 @@ const styles = StyleSheet.create({
   dayContainer: {
     width: 32,
     height: 32,
-    justifyContent: 'center',
-    alignItems: 'center',
-    position: 'relative',
-    overflow: 'visible',
+    justifyContent: "center",
+    alignItems: "center",
+    position: "relative",
+    overflow: "visible",
     marginVertical: 2,
   },
   rangeBase: {
-    position: 'absolute',
+    position: "absolute",
     left: -12,
     right: -12,
-    top: '50%',
+    top: "50%",
     height: 32,
     marginTop: -16,
-    backgroundColor: '#E8F1FF',
+    backgroundColor: "#E8F1FF",
     zIndex: 1,
   },
   circleBase: {
-    position: 'absolute',
+    position: "absolute",
     width: 32,
     height: 32,
     borderRadius: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'transparent',
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "transparent",
     zIndex: 2,
   },
   dayText: {
@@ -393,11 +388,10 @@ const styles = StyleSheet.create({
   },
   dayTextSelected: {
     color: colors.white,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   dayTextToday: {
     color: colors.primary,
-    fontWeight: '600',
+    fontWeight: "600",
   },
 });
-

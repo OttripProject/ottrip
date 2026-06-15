@@ -1,6 +1,13 @@
-import React, { useMemo, useState } from 'react';
-import { TextInput, TextInputProps, View, StyleProp, ViewStyle, TextStyle } from 'react-native';
-import { useInputStyleVariant, InputVariant } from './variants';
+import { useMemo, useState } from "react";
+import {
+  type StyleProp,
+  TextInput,
+  type TextInputProps,
+  type TextStyle,
+  View,
+  type ViewStyle,
+} from "react-native";
+import { type InputVariant, useInputStyleVariant } from "./variants";
 
 export type InputProps = TextInputProps & {
   containerStyle?: StyleProp<ViewStyle>;
@@ -9,9 +16,22 @@ export type InputProps = TextInputProps & {
 };
 
 export function Input(props: InputProps) {
-  const { containerStyle, style, variant = 'outlined', editable, error, onFocus, onBlur, placeholderTextColor, ...rest } = props;
+  const {
+    containerStyle,
+    style,
+    variant = "outlined",
+    editable,
+    error,
+    onFocus,
+    onBlur,
+    placeholderTextColor,
+    ...rest
+  } = props;
   const [focused, setFocused] = useState(false);
-  const state = useMemo(() => ({ disabled: editable === false, error, focused }), [editable, error, focused]);
+  const state = useMemo(
+    () => ({ disabled: editable === false, error, focused }),
+    [editable, error, focused],
+  );
   const variantStyles = useInputStyleVariant(variant, state);
 
   return (
@@ -19,14 +39,16 @@ export function Input(props: InputProps) {
       <TextInput
         {...rest}
         style={[variantStyles.style, style] as StyleProp<TextStyle>}
-        placeholderTextColor={placeholderTextColor ?? variantStyles.placeholderTextColor}
+        placeholderTextColor={
+          placeholderTextColor ?? variantStyles.placeholderTextColor
+        }
         editable={editable}
-        pointerEvents={editable === false ? 'none' : 'auto'}
-        onFocus={(e) => {
+        pointerEvents={editable === false ? "none" : "auto"}
+        onFocus={e => {
           setFocused(true);
           onFocus?.(e);
         }}
-        onBlur={(e) => {
+        onBlur={e => {
           setFocused(false);
           onBlur?.(e);
         }}
@@ -36,5 +58,3 @@ export function Input(props: InputProps) {
 }
 
 export default Input;
-
-

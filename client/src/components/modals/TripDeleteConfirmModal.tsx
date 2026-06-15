@@ -1,8 +1,7 @@
-import React from 'react';
-import { View, Text, Pressable, StyleSheet, Modal } from 'react-native';
-import { colors } from '@/ui/tokens/colors';
-import { textStyles } from '@/ui/tokens/typography';
-import { getJosa } from '@/utils/koreanUtils';
+import { colors } from "@/ui/tokens/colors";
+import { textStyles } from "@/ui/tokens/typography";
+import { getJosa } from "@/utils/koreanUtils";
+import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
 
 interface TripDeleteConfirmModalProps {
   visible: boolean;
@@ -18,30 +17,29 @@ export default function TripDeleteConfirmModal({
   onConfirm,
 }: TripDeleteConfirmModalProps) {
   return (
-    <Modal 
-      visible={visible} 
-      transparent 
+    <Modal
+      visible={visible}
+      transparent
       animationType="fade"
       onRequestClose={onClose}
     >
       <View style={styles.deleteModalOverlay}>
         <View style={styles.deleteModalCard}>
-          <Text style={styles.deleteModalTitle}>정말 이 여행을 삭제하시겠어요?</Text>
+          <Text style={styles.deleteModalTitle}>
+            정말 이 여행을 삭제하시겠어요?
+          </Text>
           <Text style={styles.deleteModalText}>
-            "{tripName}"{getJosa(tripName, 'delete')} 삭제하면{'\n'}
-            이 여행에 속한 모든 일정, 항공편,{'\n'}
-            숙소 및 비용 데이터가 영구적으로 삭제됩니다.{'\n'}
-            이 작업은 되돌릴 수 없습니다.
+            "{tripName}"{getJosa(tripName, "delete")} 삭제하면{"\n"}이 여행에
+            속한 모든 일정, 항공편,{"\n"}
+            숙소 및 비용 데이터가 영구적으로 삭제됩니다.{"\n"}이 작업은 되돌릴
+            수 없습니다.
           </Text>
           <View style={styles.deleteModalButtons}>
-            <Pressable 
-              style={styles.deleteModalCancelButton} 
-              onPress={onClose}
-            >
+            <Pressable style={styles.deleteModalCancelButton} onPress={onClose}>
               <Text style={styles.deleteModalCancelButtonText}>취소</Text>
             </Pressable>
-            <Pressable 
-              style={styles.deleteModalDeleteButton} 
+            <Pressable
+              style={styles.deleteModalDeleteButton}
               onPress={onConfirm}
             >
               <Text style={styles.deleteModalDeleteButtonText}>삭제</Text>
@@ -57,8 +55,8 @@ const styles = StyleSheet.create({
   deleteModalOverlay: {
     flex: 1,
     backgroundColor: colors.overlayBackground,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   deleteModalCard: {
     width: 320,
@@ -67,31 +65,31 @@ const styles = StyleSheet.create({
     paddingTop: 32,
     paddingBottom: 24,
     paddingHorizontal: 24,
-    alignItems: 'center',
+    alignItems: "center",
   },
   deleteModalTitle: {
     ...textStyles.h5,
-    textAlign: 'center',
+    textAlign: "center",
     marginBottom: 16,
   },
   deleteModalText: {
     ...textStyles.body4,
     color: colors.gray600,
-    textAlign: 'center',
+    textAlign: "center",
     marginBottom: 32,
     lineHeight: 20,
   },
   deleteModalButtons: {
-    flexDirection: 'row',
-    width: '100%',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    width: "100%",
+    justifyContent: "space-between",
   },
   deleteModalCancelButton: {
     flex: 1,
     height: 40,
     borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     backgroundColor: colors.gray300,
     marginRight: 6,
   },
@@ -102,9 +100,9 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 40,
     borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#ff4242',
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#ff4242",
     marginLeft: 6,
   },
   deleteModalDeleteButtonText: {
@@ -112,4 +110,3 @@ const styles = StyleSheet.create({
     color: colors.white,
   },
 });
-

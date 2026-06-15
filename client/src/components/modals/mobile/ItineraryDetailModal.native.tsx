@@ -1,18 +1,27 @@
-import React, { useMemo } from 'react';
-import { View, Text, Pressable, StyleSheet, ScrollView, Linking, Alert, Platform } from 'react-native';
-import { Itinerary, Expense } from '@/types/api';
-import { colors } from '@/ui/tokens/colors';
-import { textStyles } from '@/ui/tokens/typography';
-import BottomSheetModal from '@/ui/components/BottomSheetModal.native';
-import { formatTime } from '@/utils/dateUtils';
-import TimeIcon from '../../../../assets/week_bar_time.svg';
-import LocationIcon from '../../../../assets/mobile_location.svg';
-import ExpenseIcon from '../../../../assets/mobile_expense.svg';
-import MemoIcon from '../../../../assets/memo.svg';
-import UpdateIcon from '../../../../assets/update.svg';
-import DeleteIcon from '../../../../assets/delete_gray.svg';
-import CloseIcon from '../../../../assets/mobile_close.svg';
-import MapIcon from '../../../../assets/mobile_map.svg';
+import type { Expense, Itinerary } from "@/types/api";
+import BottomSheetModal from "@/ui/components/BottomSheetModal.native";
+import { colors } from "@/ui/tokens/colors";
+import { textStyles } from "@/ui/tokens/typography";
+import { formatTime } from "@/utils/dateUtils";
+import { useMemo } from "react";
+import {
+  Alert,
+  Linking,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
+import DeleteIcon from "../../../../assets/delete_gray.svg";
+import MemoIcon from "../../../../assets/memo.svg";
+import CloseIcon from "../../../../assets/mobile_close.svg";
+import ExpenseIcon from "../../../../assets/mobile_expense.svg";
+import LocationIcon from "../../../../assets/mobile_location.svg";
+import MapIcon from "../../../../assets/mobile_map.svg";
+import UpdateIcon from "../../../../assets/update.svg";
+import TimeIcon from "../../../../assets/week_bar_time.svg";
 
 interface ItineraryDetailModalProps {
   visible: boolean;
@@ -42,7 +51,7 @@ export default function ItineraryDetailModal({
       return sumExpenseAmounts(nested);
     }
     return sumExpenseAmounts(
-      (planExpenses ?? []).filter((e) => e.itineraryId === itinerary.id),
+      (planExpenses ?? []).filter(e => e.itineraryId === itinerary.id),
     );
   }, [itinerary, planExpenses]);
 
@@ -50,7 +59,7 @@ export default function ItineraryDetailModal({
 
   const handleOpenMap = () => {
     if (!itinerary.location) {
-      Alert.alert('알림', '장소 정보가 없습니다.');
+      Alert.alert("알림", "장소 정보가 없습니다.");
       return;
     }
 
@@ -62,12 +71,12 @@ export default function ItineraryDetailModal({
 
     if (url) {
       Linking.openURL(url).catch(() => {
-        Alert.alert('오류', '지도 앱을 열 수 없습니다.');
+        Alert.alert("알림", "지도 앱을 열 수 없습니다.");
       });
     } else {
       const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodedLocation}`;
       Linking.openURL(googleMapsUrl).catch(() => {
-        Alert.alert('오류', '지도 앱을 열 수 없습니다.');
+        Alert.alert("알림", "지도 앱을 열 수 없습니다.");
       });
     }
   };
@@ -80,35 +89,29 @@ export default function ItineraryDetailModal({
   };
 
   const handleDelete = () => {
-    Alert.alert(
-      '일정 삭제',
-      '이 일정을 삭제하시겠습니까?',
-      [
-        { text: '취소', style: 'cancel' },
-        {
-          text: '삭제',
-          style: 'destructive',
-          onPress: () => {
-            if (onDelete) {
-              onDelete(itinerary);
-            }
-            onClose();
-          },
+    Alert.alert("일정 삭제", "이 일정을 삭제하시겠습니까?", [
+      { text: "취소", style: "cancel" },
+      {
+        text: "삭제",
+        style: "destructive",
+        onPress: () => {
+          if (onDelete) {
+            onDelete(itinerary);
+          }
+          onClose();
         },
-      ]
-    );
+      },
+    ]);
   };
 
-  const startTime = itinerary.startTime ? formatTime(itinerary.startTime) : '00:00';
-  const endTime = itinerary.endTime ? formatTime(itinerary.endTime) : '00:00';
+  const startTime = itinerary.startTime
+    ? formatTime(itinerary.startTime)
+    : "00:00";
+  const endTime = itinerary.endTime ? formatTime(itinerary.endTime) : "00:00";
   const timeRange = `${startTime} ~ ${endTime}`;
 
   return (
-    <BottomSheetModal
-      visible={visible}
-      onClose={onClose}
-      height={0.6}
-    >
+    <BottomSheetModal visible={visible} onClose={onClose} height={0.6}>
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
@@ -117,7 +120,7 @@ export default function ItineraryDetailModal({
         {/* 헤더 */}
         <View style={styles.header}>
           <Text style={styles.title} numberOfLines={2}>
-            {itinerary.title || '활동'}
+            {itinerary.title || "활동"}
           </Text>
           <View style={styles.headerActions}>
             {onEdit && (
@@ -126,7 +129,7 @@ export default function ItineraryDetailModal({
                 onPress={handleEdit}
                 hitSlop={8}
               >
-                  <UpdateIcon width={20} height={20} color={colors.gray600} />
+                <UpdateIcon width={20} height={20} color={colors.gray600} />
               </Pressable>
             )}
             {onDelete && (
@@ -183,7 +186,7 @@ export default function ItineraryDetailModal({
               <View style={styles.detailContent}>
                 <Text style={styles.detailLabel}>비용</Text>
                 <Text style={styles.detailValue}>
-                  {expenseAmount.toLocaleString('ko-KR')}원
+                  {expenseAmount.toLocaleString("ko-KR")}원
                 </Text>
               </View>
             </View>
@@ -207,11 +210,8 @@ export default function ItineraryDetailModal({
       {/* 지도 앱에서 길찾기 버튼 */}
       {itinerary.location && (
         <View style={styles.footer}>
-          <Pressable
-            style={styles.mapButton}
-            onPress={handleOpenMap}
-          >
-            <MapIcon width={20} height={20}/>
+          <Pressable style={styles.mapButton} onPress={handleOpenMap}>
+            <MapIcon width={20} height={20} />
             <Text style={styles.mapButtonText}>지도 앱에서 길찾기</Text>
           </Pressable>
         </View>
@@ -230,9 +230,9 @@ const styles = StyleSheet.create({
     paddingBottom: 24,
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
     marginBottom: 24,
   },
   title: {
@@ -240,16 +240,16 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   headerActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 6,
   },
   actionButton: {
     padding: 4,
     width: 32,
     height: 32,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     backgroundColor: colors.gray200,
     borderRadius: 16,
   },
@@ -257,21 +257,21 @@ const styles = StyleSheet.create({
     gap: 20,
   },
   detailItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
   },
   detailIcon: {
     width: 36,
     height: 36,
     borderRadius: 12,
     backgroundColor: `${colors.primary}1A`,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     marginRight: 12,
   },
   detailContent: {
     flex: 1,
-    justifyContent: 'center',
+    justifyContent: "center",
   },
   detailLabel: {
     ...textStyles.h7,
@@ -290,9 +290,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.black,
     borderRadius: 12,
     paddingVertical: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     gap: 8,
   },
   mapButtonText: {

@@ -1,15 +1,27 @@
-import React, { useEffect } from 'react';
-import { View, ActivityIndicator, StyleSheet, Platform } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-import { useAuth } from '@/contexts/AuthContext';
-import { authApi } from '@/services/auth';
-import api from '@/services/api';
-import * as SecureStore from 'expo-secure-store';
+import { useAuth } from "@/contexts/AuthContext";
+import api from "@/services/api";
+import { authApi } from "@/services/auth";
+import { useNavigation } from "@react-navigation/native";
+import * as SecureStore from "expo-secure-store";
+import { useEffect } from "react";
+import { ActivityIndicator, Platform, StyleSheet, View } from "react-native";
+
+function replaceWebLocationToRoot() {
+  if (Platform.OS !== "web" || typeof window === "undefined") return;
+  try {
+    window.location.replace(`${window.location.origin}/`);
+  } catch {}
+}
 
 function base64UrlDecode(input: string): string {
-  const base64 = input.replace(/-/g, '+').replace(/_/g, '/');
-  const pad = base64.length % 4 === 2 ? '==' : base64.length % 4 === 3 ? '=' : '';
-  try { return decodeURIComponent(escape(atob(base64 + pad))); } catch { return atob(base64 + pad); }
+  const base64 = input.replace(/-/g, "+").replace(/_/g, "/");
+  const pad =
+    base64.length % 4 === 2 ? "==" : base64.length % 4 === 3 ? "=" : "";
+  try {
+    return decodeURIComponent(escape(atob(base64 + pad)));
+  } catch {
+    return atob(base64 + pad);
+  }
 }
 
 export default function AuthCallbackScreen() {
@@ -17,30 +29,31 @@ export default function AuthCallbackScreen() {
   const { login } = useAuth();
 
   useEffect(() => {
-    if (Platform.OS !== 'web') return;
+    if (Platform.OS !== "web") return;
     const hash = window.location.hash;
-    
+
     try {
       window.history.replaceState({}, document.title, window.location.pathname);
     } catch {}
-    
-    const params = new URLSearchParams(hash.startsWith('#') ? hash.substring(1) : hash);
-    const idToken = params.get('id_token');
-    
+
+    const params = new URLSearchParams(
+      hash.startsWith("#") ? hash.substring(1) : hash,
+    );
+    const idToken = params.get("id_token");
+
     const run = async () => {
       if (!idToken) {
-        // @ts-ignore
-        navigation.replace('로그인');
+        replaceWebLocationToRoot();
         return;
       }
       try {
         const response = await authApi.googleLogin(idToken);
         let email: string | undefined = undefined;
         try {
-          const [, payload] = idToken.split('.') as [string, string, string];
+          const [, payload] = idToken.split(".") as [string, string, string];
           const json = base64UrlDecode(payload);
           const obj = JSON.parse(json);
-          email = typeof obj?.email === 'string' ? obj.email : undefined;
+          email = typeof obj?.email === "string" ? obj.email : undefined;
         } catch {}
         if (response.isRegistered) {
           await login({
@@ -48,31 +61,36 @@ export default function AuthCallbackScreen() {
             accessToken: response.accessToken,
             refreshToken: response.refreshToken,
           });
-          
+
           try {
-            const token = Platform.OS === 'web'
-              ? window.localStorage.getItem('pendingInviteToken')
-              : await SecureStore.getItemAsync('pendingInviteToken');
+            const token =
+              Platform.OS === "web"
+                ? window.localStorage.getItem("pendingInviteToken")
+                : await SecureStore.getItemAsync("pendingInviteToken");
             if (token) {
               await api.post(`/private/plans/invitations/${token}/accept`);
-              if (Platform.OS === 'web') {
-                window.localStorage.removeItem('pendingInviteToken');
-                window.dispatchEvent(new Event('plans-refresh'));
+              if (Platform.OS === "web") {
+                window.localStorage.removeItem("pendingInviteToken");
+                window.dispatchEvent(new Event("plans-refresh"));
               } else {
-                await SecureStore.deleteItemAsync('pendingInviteToken');
+                await SecureStore.deleteItemAsync("pendingInviteToken");
               }
             }
           } catch {}
-          navigation.reset({ index: 0, routes: [{ name: 'OTTRIP' }] });
+          replaceWebLocationToRoot();
+          return;
         } else {
           await login(response);
           // @ts-ignore
-          navigation.replace('약관동의', { registerToken: response.registerToken, prefill: response.prefill, email });
+          navigation.replace("약관동의", {
+            registerToken: response.registerToken,
+            prefill: response.prefill,
+            email,
+          });
           return;
         }
-      } catch (error: any) {
-        // @ts-ignore
-        navigation.replace('로그인');
+      } catch (_error: any) {
+        replaceWebLocationToRoot();
       }
     };
     run();
@@ -86,7 +104,10 @@ export default function AuthCallbackScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#fff' },
+  container: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#fff",
+  },
 });
-
-

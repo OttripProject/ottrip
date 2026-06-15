@@ -22,7 +22,7 @@ export interface Plan {
   startDate: string;
   endDate: string;
   memo?: string;
-  myRole?: 'owner' | 'editor' | 'viewer';
+  myRole?: "owner" | "editor" | "viewer";
   createdAt: string;
   updatedAt: string;
   travel_checklist?: {
@@ -88,7 +88,7 @@ export interface FlightSegmentBaseDto {
   departureAirport: string;
   arrivalAirport: string;
   departureTime: string;
-  arrivalTime: string;   
+  arrivalTime: string;
   seatClass?: string | null;
   seatNumber?: string | null;
   gate?: string | null;
@@ -106,7 +106,7 @@ export interface FlightCreateRequest {
   passengerName?: string | null;
   ticketNumber?: string | null;
   bookingReference?: string | null;
-  segments: FlightSegmentBaseDto[]; 
+  segments: FlightSegmentBaseDto[];
   expense?: {
     exDate?: string; // 서버에서 첫 출발일을 기본 사용
     amount: number;
@@ -227,7 +227,7 @@ export enum Gender {
 export interface Expense {
   id: number;
   category: ExpenseCategory;
-  amount: number; 
+  amount: number;
   currency: ExpenseCurrency;
   description?: string;
   exDate: string;
@@ -241,7 +241,7 @@ export interface Expense {
 
 export interface CreateExpenseRequest {
   category: ExpenseCategory;
-  amount: number; 
+  amount: number;
   currency: ExpenseCurrency;
   description?: string;
   exDate: string;
@@ -262,8 +262,18 @@ export interface UpdateExpenseRequest {
   accommodationId?: number;
 }
 
-// 첨부파일 (Attachment) 관련 타입
-export type AttachmentEntityType = 'itinerary' | 'flight' | 'accommodation' | 'expense';
+export const PLAN_ENTITY_KIND = {
+  ITINERARY: "itinerary",
+  FLIGHT: "flight",
+  ACCOMMODATION: "accommodation",
+  EXPENSE: "expense",
+} as const;
+
+export type PlanEntityKind =
+  (typeof PLAN_ENTITY_KIND)[keyof typeof PLAN_ENTITY_KIND];
+
+export type AttachmentEntityType = PlanEntityKind;
+export type AiDocumentItemType = PlanEntityKind;
 
 export interface Attachment {
   id: number;
@@ -311,3 +321,57 @@ export interface LocalFile {
   mimeType: string;
   size: number;
 }
+
+export interface AiDocumentFieldMetaEntry {
+  certainty: "high" | "medium" | "low";
+  editable: boolean;
+}
+
+export type AiDraftValues<T> = Partial<T> & Record<string, unknown>;
+
+export type AiFlightDraftValues = Omit<FlightCreateRequest, "planId">;
+export type AiItineraryDraftValues = Omit<CreateItineraryRequest, "planId">;
+export type AiAccommodationDraftValues = Omit<
+  CreateAccommodationRequest,
+  "planId"
+>;
+export type AiExpenseDraftValues = Omit<CreateExpenseRequest, "planId">;
+
+export interface AiDocumentDraftPayloadFlight {
+  values: AiDraftValues<AiFlightDraftValues>;
+  fieldMeta: Record<string, AiDocumentFieldMetaEntry>;
+}
+
+export interface AiDocumentDraftPayloadItinerary {
+  values: AiDraftValues<AiItineraryDraftValues>;
+  fieldMeta: Record<string, AiDocumentFieldMetaEntry>;
+}
+
+export interface AiDocumentDraftPayloadAccommodation {
+  values: AiDraftValues<AiAccommodationDraftValues>;
+  fieldMeta: Record<string, AiDocumentFieldMetaEntry>;
+}
+
+export interface AiDocumentDraftPayloadExpense {
+  values: AiDraftValues<AiExpenseDraftValues>;
+  fieldMeta: Record<string, AiDocumentFieldMetaEntry>;
+}
+
+export type AiDocumentItemDraft =
+  | { itemType: "flight"; payload: AiDocumentDraftPayloadFlight }
+  | { itemType: "itinerary"; payload: AiDocumentDraftPayloadItinerary }
+  | { itemType: "accommodation"; payload: AiDocumentDraftPayloadAccommodation }
+  | { itemType: "expense"; payload: AiDocumentDraftPayloadExpense };
+
+export interface DocumentUploadAnalyzeResponse {
+  success: boolean;
+  inferredItemType: AiDocumentItemType | null;
+  draft: AiDocumentItemDraft | null;
+  error: string | null;
+}
+
+/** 분석 직후 올바른 상세 패널로 전환한 뒤 확인 모달을 한 번 열 때 사용 */
+export type StagedDocumentAnalyzePayload = {
+  result: DocumentUploadAnalyzeResponse;
+  seq: number;
+};

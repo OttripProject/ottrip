@@ -1,10 +1,22 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { Platform } from 'react-native';
-import { authApi, TokenResponse, AuthResponse, RegisteredAuthResponse } from '../services/auth';
-import { tokenStores } from '../utils/tokenStores'; 
-import { useTokenRefresh } from '../hooks/useTokenRefresh';
-import { queryClient } from './QueryProvider';
-import { isTokenExpiringSoon } from '../utils/jwt';
+import type React from "react";
+import {
+  type ReactNode,
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+} from "react";
+import { Platform } from "react-native";
+import { useTokenRefresh } from "../hooks/useTokenRefresh";
+import {
+  type AuthResponse,
+  type RegisteredAuthResponse,
+  type TokenResponse,
+  authApi,
+} from "../services/auth";
+import { isTokenExpiringSoon } from "../utils/jwt";
+import { tokenStores } from "../utils/tokenStores";
+import { queryClient } from "./QueryProvider";
 
 interface AuthContextType {
   isAuthenticated: boolean;
@@ -15,7 +27,10 @@ interface AuthContextType {
   logout: () => Promise<void>;
   refreshAuth: () => Promise<void>;
   getStorageInfo: () => any;
-  debugTokens: () => Promise<{ accessToken: string | null; refreshToken: string | null }>;
+  debugTokens: () => Promise<{
+    accessToken: string | null;
+    refreshToken: string | null;
+  }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -33,39 +48,37 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const saveTokens = async (tokens: TokenResponse) => {
     try {
-      if (Platform.OS !== 'web') {
+      if (Platform.OS !== "web") {
         await tokenStores.setAll({
           accessToken: tokens.accessToken,
           refreshToken: tokens.refreshToken,
         });
       }
-    } catch (error: any) {
-    }
+    } catch (_error: any) {}
   };
 
   const clearTokens = async () => {
     try {
       await tokenStores.clearAll();
-    } catch (error: any) {
-    }
+    } catch (_error: any) {}
   };
 
   const refreshAuth = async () => {
     try {
-      if (Platform.OS === 'web') {
-        const tokenData = await authApi.refreshToken('');
+      if (Platform.OS === "web") {
+        const _tokenData = await authApi.refreshToken("");
         setIsAuthenticated(true);
       } else {
         const refreshToken = await tokenStores.refreshToken.get();
         if (!refreshToken) {
-          throw new Error('No refresh token');
+          throw new Error("No refresh token");
         }
 
         const tokenData = await authApi.refreshToken(refreshToken);
         await saveTokens(tokenData);
         setIsAuthenticated(true);
       }
-    } catch (error: any) {
+    } catch (_error: any) {
       await logout();
     }
   };
@@ -73,15 +86,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const login = async (authResponse: AuthResponse) => {
     if (authResponse.isRegistered) {
       await saveTokens(authResponse);
-      if (Platform.OS !== 'web') {
+      if (Platform.OS !== "web") {
         try {
           await tokenStores.registerToken.clear();
         } catch {
           /* noop */
         }
       }
-      queryClient.removeQueries({ queryKey: ['me'] });
-      queryClient.invalidateQueries({ queryKey: ['plans'] });
+      queryClient.removeQueries({ queryKey: ["me"] });
+      queryClient.invalidateQueries({ queryKey: ["plans"] });
       setIsAuthenticated(true);
     } else {
       await tokenStores.registerToken.set(authResponse.registerToken);
@@ -99,7 +112,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const logout = async () => {
     try {
-      if (Platform.OS === 'web') {
+      if (Platform.OS === "web") {
         await authApi.logout();
       } else {
         try {
@@ -107,29 +120,33 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         } catch {}
         await clearTokens();
       }
-    } catch (error: any) {
+    } catch (_error: any) {
       await clearTokens();
     }
 
     queryClient.clear();
     setIsAuthenticated(false);
     setUser(null);
-    if (Platform.OS === 'web' && typeof window !== 'undefined') {
-      try { window.localStorage.removeItem('postLoginRedirect'); } catch {}
-      try { window.history.replaceState({}, document.title, '/'); } catch {}
+    if (Platform.OS === "web" && typeof window !== "undefined") {
+      try {
+        window.localStorage.removeItem("postLoginRedirect");
+      } catch {}
+      try {
+        window.history.replaceState({}, document.title, "/");
+      } catch {}
     }
   };
 
   useEffect(() => {
     const checkAuthStatus = async () => {
       try {
-        if (Platform.OS === 'web') {
+        if (Platform.OS === "web") {
           try {
             const isLoggedIn = await authApi.checkLoginStatus();
             if (isLoggedIn) {
               setIsAuthenticated(true);
             }
-          } catch (error: any) {
+          } catch (_error: any) {
             setIsAuthenticated(false);
           }
         } else {
@@ -143,7 +160,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             const storedRefreshToken = await tokenStores.refreshToken.get();
             if (storedRefreshToken) {
               try {
-                const tokenData = await authApi.refreshToken(storedRefreshToken);
+                const tokenData =
+                  await authApi.refreshToken(storedRefreshToken);
                 await tokenStores.setAll({
                   accessToken: tokenData.accessToken,
                   refreshToken: tokenData.refreshToken,
@@ -155,7 +173,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             }
           }
         }
-      } catch (error: any) {
+      } catch (_error: any) {
         await logout();
       } finally {
         setIsLoading(false);
@@ -179,7 +197,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         accessToken: tokenStores.accessToken.key,
         refreshToken: tokenStores.refreshToken.key,
         registerToken: tokenStores.registerToken.key,
-      }
+      },
     }),
     debugTokens: async () => {
       const accessToken = await tokenStores.accessToken.get();
@@ -194,7 +212,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
-}; 
+};

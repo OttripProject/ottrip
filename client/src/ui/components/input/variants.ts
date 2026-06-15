@@ -1,7 +1,7 @@
-import { StyleSheet, Platform } from 'react-native';
-import { colors, spacing, radii, textStyles } from '@/ui/tokens';
+import { colors, radii, spacing, textStyles } from "@/ui/tokens";
+import { Platform, StyleSheet } from "react-native";
 
-export type InputVariant = 'outlined' | 'filled' | 'underline';
+export type InputVariant = "outlined" | "filled" | "underline";
 
 export type InputState = {
   disabled?: boolean;
@@ -15,7 +15,7 @@ const baseStyle = Platform.select({
     paddingVertical: spacing.sm,
     borderRadius: radii.md,
     ...textStyles.body4,
-    outlineStyle: 'none',
+    outlineStyle: "none",
     outlineWidth: 0,
   },
   default: {
@@ -25,18 +25,21 @@ const baseStyle = Platform.select({
     borderRadius: radii.md,
     ...textStyles.body4,
     lineHeight: 18,
-    textAlignVertical: 'center' as const,
+    textAlignVertical: "center" as const,
     includeFontPadding: false,
   },
 });
 
-export function useInputStyleVariant(variant: InputVariant, state?: InputState) {
+export function useInputStyleVariant(
+  variant: InputVariant,
+  state?: InputState,
+) {
   const { disabled, error, focused } = state ?? {};
 
   const baseTextColor = disabled ? colors.gray400 : colors.black;
   const basePlaceholder = disabled ? colors.gray300 : colors.gray700;
 
-  if (variant === 'outlined') {
+  if (variant === "outlined") {
     const borderColor = error ? colors.danger : colors.gray400;
     return {
       containerStyle: styles.container,
@@ -53,9 +56,9 @@ export function useInputStyleVariant(variant: InputVariant, state?: InputState) 
     } as const;
   }
 
-  if (variant === 'filled') {
-    const bg = disabled ? '#F8FAFC' : colors.gray100;
-    const borderColor = error ? colors.danger : 'transparent';
+  if (variant === "filled") {
+    const bg = disabled ? "#F8FAFC" : colors.gray100;
+    const borderColor = error ? colors.danger : "transparent";
     return {
       containerStyle: styles.container,
       style: [
@@ -90,8 +93,6 @@ export function useInputStyleVariant(variant: InputVariant, state?: InputState) 
 
 const styles = StyleSheet.create({
   container: {
-    width: '100%',
+    width: "100%",
   },
 });
-
-

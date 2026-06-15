@@ -1,35 +1,46 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, Pressable, StyleSheet, ScrollView, Alert } from 'react-native';
-import CloseIcon from '../../../../assets/x.svg';
-import dayjs from 'dayjs';
-import { Attachment, Itinerary, CreateItineraryRequest, LocalFile } from '@/types/api';
-import { colors } from '@/ui/tokens/colors';
-import { textStyles, typography } from '@/ui/tokens/typography';
-import FullScreenModal from '@/ui/components/FullScreenModal.native';
-import FloatingFooter from '@/ui/components/FloatingFooter.native';
-import AttachmentSection from '@/ui/components/attachmentSection.native';
-import CountrySearchModal from './CountrySearchModal.native';
-import Input from '@/ui/components/input/Input';
-import { itinerariesApi } from '@/services/itineraries';
-import { expensesApi } from '@/services/expenses';
-import { attachmentsApi } from '@/services/attachments';
-import { TimeModal } from '@/ui/components/TimeModal.native';
-import CalendarModal from '@/ui/components/CalendarModal.native';
-import CalendarIcon from '../../../../assets/mobile_calendar_black.svg';
-import TimeIcon from '../../../../assets/mobile_time.svg';
-import DownArrowIcon from '../../../../assets/down_arrow.svg';
-import FoodIcon from '../../../../assets/mobile_food.svg';
-import CarIcon from '../../../../assets/mobile_car.svg';
-import TicketIcon from '../../../../assets/mobile_ticket.svg';
-import BedIcon from '../../../../assets/mobile_bed.svg';
-import FlightIconExpense from '../../../../assets/mobile_flight.svg';
-import ShoppingIcon from '../../../../assets/mobile_shopping.svg';
-import { ExpenseCategory, ExpenseCurrency, categoryLabels } from '@/types/expense';
-import { normalizeAmount, formatAmountWithCommas } from '@/utils/amountUtils';
-import { useFilePicker } from '@/hooks/useFilePicker';
-import { useAttachmentUpload } from '@/hooks/useAttachmentUpload';
-import { useMe } from '@/hooks/useMe';
-import { handleGuestPromptError } from '@/utils/guestPrompt';
+import { useAttachmentUpload } from "@/hooks/useAttachmentUpload";
+import { useFilePicker } from "@/hooks/useFilePicker";
+import { useMe } from "@/hooks/useMe";
+import { attachmentsApi } from "@/services/attachments";
+import { expensesApi } from "@/services/expenses";
+import { itinerariesApi } from "@/services/itineraries";
+import type { Attachment, Itinerary, LocalFile } from "@/types/api";
+import {
+  ExpenseCategory,
+  ExpenseCurrency,
+  categoryLabels,
+} from "@/types/expense";
+import CalendarModal from "@/ui/components/CalendarModal.native";
+import FloatingFooter from "@/ui/components/FloatingFooter.native";
+import FullScreenModal from "@/ui/components/FullScreenModal.native";
+import { TimeModal } from "@/ui/components/TimeModal.native";
+import AttachmentSection from "@/ui/components/attachmentSection.native";
+import Input from "@/ui/components/input/Input";
+import { colors } from "@/ui/tokens/colors";
+import { textStyles, typography } from "@/ui/tokens/typography";
+import { formatAmountWithCommas, normalizeAmount } from "@/utils/amountUtils";
+import { handleGuestPromptError } from "@/utils/guestPrompt";
+import dayjs from "dayjs";
+import { useEffect, useState } from "react";
+import {
+  Alert,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
+import DownArrowIcon from "../../../../assets/down_arrow.svg";
+import BedIcon from "../../../../assets/mobile_bed.svg";
+import CalendarIcon from "../../../../assets/mobile_calendar_black.svg";
+import CarIcon from "../../../../assets/mobile_car.svg";
+import FlightIconExpense from "../../../../assets/mobile_flight.svg";
+import FoodIcon from "../../../../assets/mobile_food.svg";
+import ShoppingIcon from "../../../../assets/mobile_shopping.svg";
+import TicketIcon from "../../../../assets/mobile_ticket.svg";
+import TimeIcon from "../../../../assets/mobile_time.svg";
+import CloseIcon from "../../../../assets/x.svg";
+import CountrySearchModal from "./CountrySearchModal.native";
 
 interface ItineraryEditModalProps {
   visible: boolean;
@@ -53,34 +64,38 @@ export default function ItineraryEditModal({
   onDelete,
 }: ItineraryEditModalProps) {
   const [formData, setFormData] = useState({
-    title: '',
-    description: '',
-    country: '',
-    city: '',
-    location: '',
-    itineraryDate: dayjs().format('YYYY-MM-DD'),
-    startTime: '09:00',
-    endTime: '10:00',
+    title: "",
+    description: "",
+    country: "",
+    city: "",
+    location: "",
+    itineraryDate: dayjs().format("YYYY-MM-DD"),
+    startTime: "09:00",
+    endTime: "10:00",
   });
   const [expenseData, setExpenseData] = useState({
-    amount: '',
+    amount: "",
     category: ExpenseCategory.FOOD,
   });
-  const [existingExpenseId, setExistingExpenseId] = useState<number | null>(null);
+  const [existingExpenseId, setExistingExpenseId] = useState<number | null>(
+    null,
+  );
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showStartTimeModal, setShowStartTimeModal] = useState(false);
   const [showEndTimeModal, setShowEndTimeModal] = useState(false);
   const [showCountrySearch, setShowCountrySearch] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [pendingFiles, setPendingFiles] = useState<LocalFile[]>([]);
-  const [existingAttachments, setExistingAttachments] = useState<Attachment[]>([]);
+  const [existingAttachments, setExistingAttachments] = useState<Attachment[]>(
+    [],
+  );
   const [isLoadingAttachments, setIsLoadingAttachments] = useState(false);
 
   const { pickImage, pickDocument } = useFilePicker();
   const { data: me } = useMe();
   const { isUploading, uploadFiles } = useAttachmentUpload({
     planId,
-    entityType: 'itinerary',
+    entityType: "itinerary",
   });
 
   const CATEGORY_ROW1: ExpenseCategory[] = [
@@ -110,7 +125,9 @@ export default function ItineraryEditModal({
       case ExpenseCategory.ACCOMMODATION:
         return <BedIcon width={size} height={size} color={iconColor} />;
       case ExpenseCategory.FLIGHT:
-        return <FlightIconExpense width={size} height={size} color={iconColor} />;
+        return (
+          <FlightIconExpense width={size} height={size} color={iconColor} />
+        );
       case ExpenseCategory.SHOPPING:
         return <ShoppingIcon width={size} height={size} color={iconColor} />;
       default:
@@ -127,14 +144,19 @@ export default function ItineraryEditModal({
             expensesApi.getExpensesByItinerary(itinerary.id),
           ]);
           setFormData({
-            title: latestItinerary.title || '',
-            description: latestItinerary.description || '',
-            country: latestItinerary.country || '',
-            city: latestItinerary.city || '',
-            location: latestItinerary.location || '',
-            itineraryDate: latestItinerary.itineraryDate || dayjs().format('YYYY-MM-DD'),
-            startTime: latestItinerary.startTime ? latestItinerary.startTime.substring(0, 5) : '09:00',
-            endTime: latestItinerary.endTime ? latestItinerary.endTime.substring(0, 5) : '10:00',
+            title: latestItinerary.title || "",
+            description: latestItinerary.description || "",
+            country: latestItinerary.country || "",
+            city: latestItinerary.city || "",
+            location: latestItinerary.location || "",
+            itineraryDate:
+              latestItinerary.itineraryDate || dayjs().format("YYYY-MM-DD"),
+            startTime: latestItinerary.startTime
+              ? latestItinerary.startTime.substring(0, 5)
+              : "09:00",
+            endTime: latestItinerary.endTime
+              ? latestItinerary.endTime.substring(0, 5)
+              : "10:00",
           });
           const firstExpense = expenses[0];
           if (firstExpense) {
@@ -145,38 +167,43 @@ export default function ItineraryEditModal({
             });
             setExistingExpenseId(firstExpense.id);
           } else {
-            setExpenseData({ amount: '', category: ExpenseCategory.FOOD });
+            setExpenseData({ amount: "", category: ExpenseCategory.FOOD });
             setExistingExpenseId(null);
           }
         } catch {
           setFormData({
-            title: itinerary.title || '',
-            description: itinerary.description || '',
-            country: itinerary.country || '',
-            city: itinerary.city || '',
-            location: itinerary.location || '',
-            itineraryDate: itinerary.itineraryDate || dayjs().format('YYYY-MM-DD'),
-            startTime: itinerary.startTime ? itinerary.startTime.substring(0, 5) : '09:00',
-            endTime: itinerary.endTime ? itinerary.endTime.substring(0, 5) : '10:00',
+            title: itinerary.title || "",
+            description: itinerary.description || "",
+            country: itinerary.country || "",
+            city: itinerary.city || "",
+            location: itinerary.location || "",
+            itineraryDate:
+              itinerary.itineraryDate || dayjs().format("YYYY-MM-DD"),
+            startTime: itinerary.startTime
+              ? itinerary.startTime.substring(0, 5)
+              : "09:00",
+            endTime: itinerary.endTime
+              ? itinerary.endTime.substring(0, 5)
+              : "10:00",
           });
-          setExpenseData({ amount: '', category: ExpenseCategory.FOOD });
+          setExpenseData({ amount: "", category: ExpenseCategory.FOOD });
           setExistingExpenseId(null);
         }
       };
       loadLatest();
     } else if (visible && !itinerary) {
-      const initDate = defaultDate || dayjs().format('YYYY-MM-DD');
+      const initDate = defaultDate || dayjs().format("YYYY-MM-DD");
       setFormData({
-        title: '',
-        description: '',
-        country: '',
-        city: '',
-        location: '',
+        title: "",
+        description: "",
+        country: "",
+        city: "",
+        location: "",
         itineraryDate: initDate,
-        startTime: '09:00',
-        endTime: '10:00',
+        startTime: "09:00",
+        endTime: "10:00",
       });
-      setExpenseData({ amount: '', category: ExpenseCategory.FOOD });
+      setExpenseData({ amount: "", category: ExpenseCategory.FOOD });
       setExistingExpenseId(null);
     }
     if (visible) {
@@ -195,8 +222,8 @@ export default function ItineraryEditModal({
     setExistingAttachments([]);
     setIsLoadingAttachments(true);
     attachmentsApi
-      .getAttachments(planId, 'itinerary', itinerary.id)
-      .then((list) => {
+      .getAttachments(planId, "itinerary", itinerary.id)
+      .then(list => {
         if (!cancelled) setExistingAttachments(list);
       })
       .catch(() => {
@@ -213,21 +240,21 @@ export default function ItineraryEditModal({
   const handleRemoveExistingAttachment = async (attachmentId: number) => {
     try {
       await attachmentsApi.deleteAttachment(attachmentId);
-      setExistingAttachments((prev) => prev.filter((a) => a.id !== attachmentId));
+      setExistingAttachments(prev => prev.filter(a => a.id !== attachmentId));
     } catch (error) {
       if (handleGuestPromptError(error)) return;
-      Alert.alert('오류', '첨부파일 삭제에 실패했습니다.');
+      Alert.alert("알림", "첨부파일 삭제에 실패했습니다.");
     }
   };
 
   const handleExpenseAmountChange = (text: string) => {
     const formatted = formatAmountWithCommas(text);
-    setExpenseData((prev) => ({ ...prev, amount: formatted }));
+    setExpenseData(prev => ({ ...prev, amount: formatted }));
   };
 
   const handleSave = async () => {
     if (!formData.title.trim()) {
-      Alert.alert('알림', '일정 제목을 입력해주세요.');
+      Alert.alert("알림", "일정 제목을 입력해주세요.");
       return;
     }
 
@@ -239,16 +266,17 @@ export default function ItineraryEditModal({
           ...formData,
           planId,
         });
-        Alert.alert('수정완료', '일정이 수정되었습니다.');
+        Alert.alert("수정완료", "일정이 수정되었습니다.");
       } else {
         savedItinerary = await itinerariesApi.createItinerary({
           ...formData,
           planId,
         });
-        Alert.alert('추가완료', '일정이 추가되었습니다.');
+        Alert.alert("추가완료", "일정이 추가되었습니다.");
       }
 
-      const amountNum = parseInt(normalizeAmount(expenseData.amount), 10) || 0;
+      const amountNum =
+        Number.parseInt(normalizeAmount(expenseData.amount), 10) || 0;
       if (amountNum > 0 && savedItinerary) {
         const expenseDescription = formData.title.trim();
         const expensePayload = {
@@ -278,10 +306,13 @@ export default function ItineraryEditModal({
       if (pendingFiles.length > 0) {
         try {
           const uploaded = await uploadFiles(pendingFiles, savedItinerary.id);
-          setExistingAttachments((prev) => [...prev, ...uploaded]);
+          setExistingAttachments(prev => [...prev, ...uploaded]);
           setPendingFiles([]);
         } catch {
-          Alert.alert('알림', '일정은 저장됐으나 일부 파일 업로드에 실패했습니다.');
+          Alert.alert(
+            "알림",
+            "일정은 저장됐으나 일부 파일 업로드에 실패했습니다.",
+          );
         }
       }
 
@@ -292,7 +323,7 @@ export default function ItineraryEditModal({
       }
       onClose?.({ fromSave: true });
     } catch {
-      Alert.alert('오류', '일정 저장에 실패했습니다.');
+      Alert.alert("알림", "일정 저장에 실패했습니다.");
     } finally {
       setIsSubmitting(false);
     }
@@ -300,47 +331,44 @@ export default function ItineraryEditModal({
 
   const handleDelete = () => {
     if (!itinerary) return;
-    
-    Alert.alert(
-      '일정 삭제',
-      '이 일정을 삭제하시겠습니까?',
-      [
-        { text: '취소', style: 'cancel' },
-        {
-          text: '삭제',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await itinerariesApi.deleteItinerary(itinerary.id);
-              if (onDelete) {
-                onDelete(itinerary.id);
-              }
-              Alert.alert('삭제완료', '일정이 삭제되었습니다.');
-              onClose?.({ fromSave: true });
-            } catch (error) {
-              Alert.alert('오류', '일정 삭제에 실패했습니다.');
+
+    Alert.alert("일정 삭제", "이 일정을 삭제하시겠습니까?", [
+      { text: "취소", style: "cancel" },
+      {
+        text: "삭제",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            await itinerariesApi.deleteItinerary(itinerary.id);
+            if (onDelete) {
+              onDelete(itinerary.id);
             }
-          },
+            Alert.alert("삭제완료", "일정이 삭제되었습니다.");
+            onClose?.({ fromSave: true });
+          } catch (_error) {
+            Alert.alert("알림", "일정 삭제에 실패했습니다.");
+          }
         },
-      ]
-    );
+      },
+    ]);
   };
 
   const formatDate = (dateStr: string) => {
-    return dayjs(dateStr).format('YYYY.MM.DD');
+    return dayjs(dateStr).format("YYYY.MM.DD");
   };
 
   const formatTimeDisplay = (timeStr: string) => {
-    const [hour, minute] = timeStr.split(':');
-    const hourNum = parseInt(hour);
-    const period = hourNum < 12 ? '오전' : '오후';
-    const displayHour = hourNum === 0 ? 12 : hourNum > 12 ? hourNum - 12 : hourNum;
-    return `${period} ${displayHour.toString().padStart(2, '0')}:${minute}`;
+    const [hour, minute] = timeStr.split(":");
+    const hourNum = Number.parseInt(hour);
+    const period = hourNum < 12 ? "오전" : "오후";
+    const displayHour =
+      hourNum === 0 ? 12 : hourNum > 12 ? hourNum - 12 : hourNum;
+    return `${period} ${displayHour.toString().padStart(2, "0")}:${minute}`;
   };
 
   const timeToMinutes = (timeStr: string) => {
-    const [h, m] = timeStr.split(':');
-    return (parseInt(h, 10) || 0) * 60 + (parseInt(m, 10) || 0);
+    const [h, m] = timeStr.split(":");
+    return (Number.parseInt(h, 10) || 0) * 60 + (Number.parseInt(m, 10) || 0);
   };
 
   const content = (
@@ -348,9 +376,13 @@ export default function ItineraryEditModal({
       {!embedded && (
         <View style={styles.header}>
           <Text style={styles.headerTitle}>
-            {itinerary ? '일정 수정' : '새 일정 추가'}
+            {itinerary ? "일정 수정" : "새 일정 추가"}
           </Text>
-          <Pressable style={styles.closeButton} onPress={() => onClose?.()} hitSlop={8}>
+          <Pressable
+            style={styles.closeButton}
+            onPress={() => onClose?.()}
+            hitSlop={8}
+          >
             <CloseIcon width={24} height={24} />
           </Pressable>
         </View>
@@ -369,7 +401,7 @@ export default function ItineraryEditModal({
             </Text>
             <Input
               value={formData.title}
-              onChangeText={(text) => setFormData({ ...formData, title: text })}
+              onChangeText={text => setFormData({ ...formData, title: text })}
               style={[styles.input, !itinerary && styles.inputBorderless]}
             />
           </View>
@@ -379,7 +411,9 @@ export default function ItineraryEditModal({
             <Text style={styles.label}>내용 (메모)</Text>
             <Input
               value={formData.description}
-              onChangeText={(text) => setFormData({ ...formData, description: text })}
+              onChangeText={text =>
+                setFormData({ ...formData, description: text })
+              }
               style={[styles.textArea, !itinerary && styles.textAreaBorderless]}
               multiline
               numberOfLines={4}
@@ -409,14 +443,14 @@ export default function ItineraryEditModal({
                   numberOfLines={1}
                   ellipsizeMode="tail"
                 >
-                  {formData.country || '국가 선택'}
+                  {formData.country || "국가 선택"}
                 </Text>
                 <DownArrowIcon width={20} height={20} color={colors.gray600} />
               </Pressable>
               <CountrySearchModal
                 visible={showCountrySearch}
                 onClose={() => setShowCountrySearch(false)}
-                onSelect={(country) => {
+                onSelect={country => {
                   setFormData({ ...formData, country });
                   setShowCountrySearch(false);
                 }}
@@ -427,7 +461,7 @@ export default function ItineraryEditModal({
               <Text style={styles.label}>도시</Text>
               <Input
                 value={formData.city}
-                onChangeText={(text) => setFormData({ ...formData, city: text })}
+                onChangeText={text => setFormData({ ...formData, city: text })}
                 style={[styles.input, !itinerary && styles.inputBorderless]}
               />
             </View>
@@ -438,49 +472,72 @@ export default function ItineraryEditModal({
             <Text style={styles.label}>장소 (주소)</Text>
             <Input
               value={formData.location}
-              onChangeText={(text) => setFormData({ ...formData, location: text })}
+              onChangeText={text =>
+                setFormData({ ...formData, location: text })
+              }
               style={[styles.input, !itinerary && styles.inputBorderless]}
             />
           </View>
 
           <View style={[styles.inputGroup, styles.halfWidth, { gap: 8 }]}>
-              <Text style={[styles.label, {marginBottom: 0}]}>
-                날짜 및 시간<Text style={styles.required}>*</Text>
-              </Text>
-              <Pressable
-                style={[styles.dateInput, !itinerary && styles.dateInputBorderless]}
-                onPress={() => setShowDatePicker(true)}
+            <Text style={[styles.label, { marginBottom: 0 }]}>
+              날짜 및 시간<Text style={styles.required}>*</Text>
+            </Text>
+            <Pressable
+              style={[
+                styles.dateInput,
+                !itinerary && styles.dateInputBorderless,
+              ]}
+              onPress={() => setShowDatePicker(true)}
+            >
+              <Text
+                style={
+                  formData.itineraryDate
+                    ? styles.dateText
+                    : styles.placeholderText
+                }
               >
-                <Text style={formData.itineraryDate ? styles.dateText : styles.placeholderText}>
-                  {formData.itineraryDate ? formatDate(formData.itineraryDate) : '날짜 선택'}
-                </Text>
-                <CalendarIcon width={20} height={20} color={colors.black} />
-              </Pressable>
-              <CalendarModal
-                visible={showDatePicker}
-                selectedDate={formData.itineraryDate}
-                onDayPress={(day) => {
-                  setFormData({ ...formData, itineraryDate: day.dateString });
-                  setShowDatePicker(false);
-                }}
-                onClose={() => setShowDatePicker(false)}
-              />
+                {formData.itineraryDate
+                  ? formatDate(formData.itineraryDate)
+                  : "날짜 선택"}
+              </Text>
+              <CalendarIcon width={20} height={20} color={colors.black} />
+            </Pressable>
+            <CalendarModal
+              visible={showDatePicker}
+              selectedDate={formData.itineraryDate}
+              onDayPress={day => {
+                setFormData({ ...formData, itineraryDate: day.dateString });
+                setShowDatePicker(false);
+              }}
+              onClose={() => setShowDatePicker(false)}
+            />
             <View style={styles.row}>
               <View style={styles.halfWidth}>
                 <Pressable
-                  style={[styles.dateInput, !itinerary && styles.dateInputBorderless]}
+                  style={[
+                    styles.dateInput,
+                    !itinerary && styles.dateInputBorderless,
+                  ]}
                   onPress={() => setShowStartTimeModal(true)}
                 >
-                  <Text style={styles.dateText}>{formatTimeDisplay(formData.startTime)}</Text>
+                  <Text style={styles.dateText}>
+                    {formatTimeDisplay(formData.startTime)}
+                  </Text>
                   <TimeIcon width={20} height={20} color={colors.black} />
                 </Pressable>
               </View>
               <View style={styles.halfWidth}>
                 <Pressable
-                  style={[styles.dateInput, !itinerary && styles.dateInputBorderless]}
+                  style={[
+                    styles.dateInput,
+                    !itinerary && styles.dateInputBorderless,
+                  ]}
                   onPress={() => setShowEndTimeModal(true)}
                 >
-                  <Text style={styles.dateText}>{formatTimeDisplay(formData.endTime)}</Text>
+                  <Text style={styles.dateText}>
+                    {formatTimeDisplay(formData.endTime)}
+                  </Text>
                   <TimeIcon width={20} height={20} color={colors.black} />
                 </Pressable>
               </View>
@@ -489,8 +546,8 @@ export default function ItineraryEditModal({
               visible={showStartTimeModal}
               onClose={() => setShowStartTimeModal(false)}
               value={formData.startTime}
-              onConfirm={(time24) => {
-                setFormData((prev) => {
+              onConfirm={time24 => {
+                setFormData(prev => {
                   const next = { ...prev, startTime: time24 };
                   if (timeToMinutes(prev.endTime) < timeToMinutes(time24)) {
                     next.endTime = time24;
@@ -503,8 +560,8 @@ export default function ItineraryEditModal({
               visible={showEndTimeModal}
               onClose={() => setShowEndTimeModal(false)}
               value={formData.endTime}
-              onConfirm={(time24) => {
-                setFormData((prev) => ({
+              onConfirm={time24 => {
+                setFormData(prev => ({
                   ...prev,
                   endTime:
                     timeToMinutes(time24) < timeToMinutes(prev.startTime)
@@ -513,12 +570,12 @@ export default function ItineraryEditModal({
                 }));
               }}
             />
-         </View>
+          </View>
 
           {/* 비용 정보 */}
           <View style={styles.expenseSection}>
             <View style={styles.expenseDivider} />
-            <Text style={styles.expenseSectionTitle}>비용 정보</Text>            
+            <Text style={styles.expenseSectionTitle}>비용 정보</Text>
             <View style={[styles.inputGroup, { marginBottom: 20 }]}>
               <Text style={styles.label}>금액</Text>
               <View style={styles.amountInputWrapper}>
@@ -538,16 +595,26 @@ export default function ItineraryEditModal({
             <View style={styles.inputGroup}>
               <Text style={styles.label}>비용 카테고리 설정</Text>
               <View style={styles.categoryRow}>
-                {CATEGORY_ROW1.map((cat) => {
+                {CATEGORY_ROW1.map(cat => {
                   const isSelected = expenseData.category === cat;
                   return (
                     <Pressable
                       key={cat}
-                      style={[styles.categoryPill, isSelected && styles.categoryPillSelected]}
-                      onPress={() => setExpenseData((prev) => ({ ...prev, category: cat }))}
+                      style={[
+                        styles.categoryPill,
+                        isSelected && styles.categoryPillSelected,
+                      ]}
+                      onPress={() =>
+                        setExpenseData(prev => ({ ...prev, category: cat }))
+                      }
                     >
                       {getCategoryIcon(cat, isSelected)}
-                      <Text style={[styles.categoryPillText, isSelected && styles.categoryPillTextSelected]}>
+                      <Text
+                        style={[
+                          styles.categoryPillText,
+                          isSelected && styles.categoryPillTextSelected,
+                        ]}
+                      >
                         {categoryLabels[cat as keyof typeof categoryLabels]}
                       </Text>
                     </Pressable>
@@ -555,16 +622,26 @@ export default function ItineraryEditModal({
                 })}
               </View>
               <View style={[styles.categoryRow, styles.categoryRowSecond]}>
-                {CATEGORY_ROW2.map((cat) => {
+                {CATEGORY_ROW2.map(cat => {
                   const isSelected = expenseData.category === cat;
                   return (
                     <Pressable
                       key={cat}
-                      style={[styles.categoryPill, isSelected && styles.categoryPillSelected]}
-                      onPress={() => setExpenseData((prev) => ({ ...prev, category: cat }))}
+                      style={[
+                        styles.categoryPill,
+                        isSelected && styles.categoryPillSelected,
+                      ]}
+                      onPress={() =>
+                        setExpenseData(prev => ({ ...prev, category: cat }))
+                      }
                     >
                       {getCategoryIcon(cat, isSelected)}
-                      <Text style={[styles.categoryPillText, isSelected && styles.categoryPillTextSelected]}>
+                      <Text
+                        style={[
+                          styles.categoryPillText,
+                          isSelected && styles.categoryPillTextSelected,
+                        ]}
+                      >
                         {categoryLabels[cat as keyof typeof categoryLabels]}
                       </Text>
                     </Pressable>
@@ -578,7 +655,9 @@ export default function ItineraryEditModal({
               style={styles.attachmentSection}
               pendingFiles={pendingFiles}
               existingAttachments={existingAttachments}
-              onRemoveExisting={itinerary ? handleRemoveExistingAttachment : undefined}
+              onRemoveExisting={
+                itinerary ? handleRemoveExistingAttachment : undefined
+              }
               isLoadingExisting={!!itinerary && isLoadingAttachments}
               isUploading={isUploading}
               disabled={isSubmitting}
@@ -588,7 +667,7 @@ export default function ItineraryEditModal({
                   const file = await pickImage();
                   if (file) setPendingFiles(prev => [...prev, file]);
                 } catch (e: any) {
-                  Alert.alert('알림', e.message);
+                  Alert.alert("알림", e.message);
                 }
               }}
               onPickDocument={async () => {
@@ -596,7 +675,7 @@ export default function ItineraryEditModal({
                   const file = await pickDocument();
                   if (file) setPendingFiles(prev => [...prev, file]);
                 } catch (e: any) {
-                  Alert.alert('알림', e.message);
+                  Alert.alert("알림", e.message);
                 }
               }}
               onRemoveFile={index =>
@@ -604,15 +683,16 @@ export default function ItineraryEditModal({
               }
             />
           </View>
-
         </View>
       </ScrollView>
 
       <FloatingFooter
-        primaryLabel={isUploading ? '업로드 중...' : itinerary ? '수정 완료' : '일정 저장'}
+        primaryLabel={
+          isUploading ? "업로드 중..." : itinerary ? "수정 완료" : "일정 저장"
+        }
         onPrimaryPress={handleSave}
         primaryDisabled={isSubmitting || isUploading}
-        secondaryLabel={itinerary && !embedded ? '삭제' : undefined}
+        secondaryLabel={itinerary && !embedded ? "삭제" : undefined}
         onSecondaryPress={itinerary ? handleDelete : undefined}
       />
     </>
@@ -631,18 +711,18 @@ export default function ItineraryEditModal({
 
 const styles = StyleSheet.create({
   header: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    alignItems: "center",
     paddingHorizontal: 16,
     paddingVertical: 12,
   },
   headerTitle: {
     ...textStyles.h4,
-    position: 'absolute',
+    position: "absolute",
     left: 0,
     right: 0,
-    textAlign: 'center',
+    textAlign: "center",
   },
   closeButton: {
     padding: 4,
@@ -679,7 +759,7 @@ const styles = StyleSheet.create({
   },
   inputBorderless: {
     borderWidth: 0,
-    borderColor: 'transparent',
+    borderColor: "transparent",
   },
   textArea: {
     ...textStyles.body4,
@@ -693,10 +773,10 @@ const styles = StyleSheet.create({
   },
   textAreaBorderless: {
     borderWidth: 0,
-    borderColor: 'transparent',
+    borderColor: "transparent",
   },
   row: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 8,
   },
   halfWidth: {
@@ -711,12 +791,12 @@ const styles = StyleSheet.create({
   },
   pickerInputBorderless: {
     borderWidth: 0,
-    borderColor: 'transparent',
+    borderColor: "transparent",
   },
   countryPickerTouchable: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingVertical: 10,
     paddingHorizontal: 12,
   },
@@ -735,9 +815,9 @@ const styles = StyleSheet.create({
   dateInput: {
     paddingVertical: 10,
     paddingHorizontal: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     borderWidth: 1,
     borderColor: colors.gray400,
     borderRadius: 12,
@@ -745,7 +825,7 @@ const styles = StyleSheet.create({
   },
   dateInputBorderless: {
     borderWidth: 0,
-    borderColor: 'transparent',
+    borderColor: "transparent",
   },
   dateText: {
     ...textStyles.body3,
@@ -768,8 +848,8 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   amountInputWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     borderRadius: 12,
     paddingHorizontal: 14,
     height: 48,
@@ -781,8 +861,8 @@ const styles = StyleSheet.create({
   amountInputStyle: {
     flex: 1,
     height: 48,
-    textAlign: 'left',
-    backgroundColor: 'transparent',
+    textAlign: "left",
+    backgroundColor: "transparent",
     fontFamily: typography.fontFamily.pretendardSemiBold,
     fontSize: 14,
     paddingHorizontal: 0,
@@ -795,16 +875,16 @@ const styles = StyleSheet.create({
     marginLeft: 4,
   },
   categoryRow: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 8,
   },
   categoryRowSecond: {
     marginTop: 8,
   },
   categoryPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     gap: 6,
     paddingVertical: 10,
     paddingHorizontal: 16,

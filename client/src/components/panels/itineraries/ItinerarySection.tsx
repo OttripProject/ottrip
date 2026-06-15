@@ -1,5 +1,10 @@
-import React, { useState, useEffect } from 'react';
-import ItineraryItem from './ItineraryItem';
+import type {
+  DocumentUploadAnalyzeResponse,
+  LocalFile,
+  StagedDocumentAnalyzePayload,
+} from "@/types/api";
+import { useEffect, useLayoutEffect, useState } from "react";
+import ItineraryItem from "./ItineraryItem";
 
 interface ItinerarySectionProps {
   planData: {
@@ -13,13 +18,21 @@ interface ItinerarySectionProps {
     removeItinerary?: (itineraryId: number) => void;
   };
   selectedItinerary?: any;
-  activeTab?: 'itinerary' | 'flight' | 'accommodation' | undefined;
+  activeTab?: "itinerary" | "flight" | "accommodation" | undefined;
   onItineraryAdd?: (itinerary: any) => void;
   onItineraryClear?: () => void;
   openNewItineraryForm?: boolean;
   onConsumeOpenNewItineraryForm?: () => void;
   selectedItineraryDate?: Date | null;
   onEdit?: (itinerary: any) => void;
+  stagedDocumentAnalyze?: StagedDocumentAnalyzePayload | null;
+  onConsumeStagedDocumentAnalyze?: () => void;
+  routeDocumentAnalyzeSuccess?: (
+    res: DocumentUploadAnalyzeResponse,
+    carryPendingFiles?: LocalFile[],
+  ) => boolean;
+  carryoverPendingFiles?: LocalFile[] | null;
+  onConsumeCarryoverPendingFiles?: () => void;
 }
 
 export default function ItinerarySection({
@@ -32,12 +45,19 @@ export default function ItinerarySection({
   onConsumeOpenNewItineraryForm,
   selectedItineraryDate,
   onEdit,
+  stagedDocumentAnalyze,
+  onConsumeStagedDocumentAnalyze,
+  routeDocumentAnalyzeSuccess,
+  carryoverPendingFiles,
+  onConsumeCarryoverPendingFiles,
 }: ItinerarySectionProps) {
-  const [showItineraryForm, setShowItineraryForm] = useState(openNewItineraryForm || false);
+  const [showItineraryForm, setShowItineraryForm] = useState(
+    openNewItineraryForm || false,
+  );
   const [editingItinerary, setEditingItinerary] = useState<any | null>(null);
 
   useEffect(() => {
-    if (activeTab === 'itinerary' && openNewItineraryForm) {
+    if (activeTab === "itinerary" && openNewItineraryForm) {
       setEditingItinerary(null);
       setShowItineraryForm(true);
       onConsumeOpenNewItineraryForm?.();
@@ -45,16 +65,28 @@ export default function ItinerarySection({
   }, [activeTab, openNewItineraryForm, onConsumeOpenNewItineraryForm]);
 
   useEffect(() => {
-    if (activeTab === 'itinerary' && selectedItinerary) {
+    if (activeTab === "itinerary" && selectedItinerary) {
       if (selectedItinerary.id) {
         setEditingItinerary(selectedItinerary);
         setShowItineraryForm(false);
       }
-    } else if (activeTab === 'itinerary' && !selectedItinerary) {
+    } else if (activeTab === "itinerary" && !selectedItinerary) {
       setEditingItinerary(null);
       setShowItineraryForm(true);
     }
   }, [activeTab, selectedItinerary]);
+
+  useLayoutEffect(() => {
+    if (!stagedDocumentAnalyze) return;
+    const kind =
+      stagedDocumentAnalyze.result.inferredItemType ??
+      stagedDocumentAnalyze.result.draft?.itemType;
+    if (kind !== "itinerary") return;
+    if (selectedItinerary?.id && !showItineraryForm) {
+      setEditingItinerary(selectedItinerary);
+      setShowItineraryForm(true);
+    }
+  }, [stagedDocumentAnalyze, selectedItinerary, showItineraryForm]);
 
   const handleItinerarySave = async (itinerary: any) => {
     onItineraryAdd?.(itinerary);
@@ -64,7 +96,10 @@ export default function ItinerarySection({
 
   const handleItineraryDelete = (itineraryId?: string | number) => {
     if (itineraryId) {
-      const id = typeof itineraryId === 'string' ? parseInt(itineraryId) : itineraryId;
+      const id =
+        typeof itineraryId === "string"
+          ? Number.parseInt(itineraryId)
+          : itineraryId;
       if (planData?.removeItinerary) {
         planData.removeItinerary(id);
       }
@@ -89,6 +124,11 @@ export default function ItinerarySection({
         onDelete={handleItineraryDelete}
         selectedDate={selectedItineraryDate || undefined}
         readOnly={true}
+        stagedDocumentAnalyze={stagedDocumentAnalyze}
+        onConsumeStagedDocumentAnalyze={onConsumeStagedDocumentAnalyze}
+        routeDocumentAnalyzeSuccess={routeDocumentAnalyzeSuccess}
+        carryoverPendingFiles={carryoverPendingFiles}
+        onConsumeCarryoverPendingFiles={onConsumeCarryoverPendingFiles}
         onEdit={() => {
           setEditingItinerary(selectedItinerary);
           setShowItineraryForm(true);
@@ -113,10 +153,14 @@ export default function ItinerarySection({
         onDelete={handleItineraryDelete}
         selectedDate={selectedItineraryDate || undefined}
         readOnly={false}
+        stagedDocumentAnalyze={stagedDocumentAnalyze}
+        onConsumeStagedDocumentAnalyze={onConsumeStagedDocumentAnalyze}
+        routeDocumentAnalyzeSuccess={routeDocumentAnalyzeSuccess}
+        carryoverPendingFiles={carryoverPendingFiles}
+        onConsumeCarryoverPendingFiles={onConsumeCarryoverPendingFiles}
       />
     );
   }
 
   return null;
 }
-

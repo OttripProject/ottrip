@@ -27,4 +27,4 @@ export const NAVIGATION_CONSTANTS = {
   LOGIN_SCREEN: "Login",
   DASHBOARD_SCREEN: "Dashboard",
   SETTINGS_SCREEN: "Settings",
-} as const; 
+} as const;

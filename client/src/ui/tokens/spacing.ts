@@ -5,9 +5,7 @@ export const spacing = {
   md: 12,
   lg: 16,
   xl: 24,
-  '2xl': 32,
+  "2xl": 32,
 };
 
 export type SpacingName = keyof typeof spacing;
-
-

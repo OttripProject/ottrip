@@ -1,4 +1,4 @@
-export type TermsKey = 'tos' | 'privacy' | 'marketing';
+export type TermsKey = "tos" | "privacy" | "marketing";
 
 export type TermsDoc = {
   title: string;
@@ -11,9 +11,9 @@ export type TermsDoc = {
 
 export const TERMS: Record<TermsKey, TermsDoc> = {
   tos: {
-    title: 'OTTRIP 서비스 이용약관',
-    effectiveDate: '2026.03.15 시행',
-    detailModalTitle: '[필수] 서비스 이용 약관',
+    title: "OTTRIP 서비스 이용약관",
+    effectiveDate: "2026.03.15 시행",
+    detailModalTitle: "[필수] 서비스 이용 약관",
     content: `제1조 목적
 이 약관은 OTTRIP(이하 “회사”)이 제공하는 서비스(이하 “서비스”)의 이용과 관련하여 회사와 회원 간의 권리, 의무 및 책임 사항을 규정함을 목적으로 합니다.
 
@@ -87,9 +87,9 @@ export const TERMS: Record<TermsKey, TermsDoc> = {
 `,
   },
   privacy: {
-    title: '개인정보 수집 및 이용 동의',
-    effectiveDate: '2026.03.15 시행',
-    detailModalTitle: '[필수] 개인정보 수집 및 이용',
+    title: "개인정보 수집 및 이용 동의",
+    effectiveDate: "2026.03.15 시행",
+    detailModalTitle: "[필수] 개인정보 수집 및 이용",
     content: `1. 수집 항목
     - 필수: 이메일(구글 계정 로그인 시 제공), 닉네임, 성별(이모지 선택)
     - 자동 수집: 접속 기록, 서비스 이용 기록, 쿠키, 기기 정보(브라우저 종류, OS 등)
@@ -115,9 +115,9 @@ export const TERMS: Record<TermsKey, TermsDoc> = {
 `,
   },
   marketing: {
-    title: '이벤트/혜택 정보 수신 및 활용 동의',
-    effectiveDate: '2026.03.15 시행',
-    detailModalTitle: '[선택] 이벤트·혜택 정보 수신 및 활용 동의',
+    title: "이벤트/혜택 정보 수신 및 활용 동의",
+    effectiveDate: "2026.03.15 시행",
+    detailModalTitle: "[선택] 이벤트·혜택 정보 수신 및 활용 동의",
     content: `1. 수집 항목
     - 이메일 주소
     - 푸시 알림 토큰(앱 사용 시)
@@ -138,5 +138,3 @@ export const TERMS: Record<TermsKey, TermsDoc> = {
 `,
   },
 };
-
-

@@ -1,10 +1,18 @@
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { plansApi } from '../services/plans';
-import { itinerariesApi } from '../services/itineraries';
-import { flightsApi } from '../services/flights';
-import { accommodationsApi } from '../services/accommodations';
-import { expensesApi } from '../services/expenses';
-import { Plan, Itinerary, FlightRead, Accommodation, Expense } from '../types/api';
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { accommodationsApi } from "../services/accommodations";
+import { attachmentsApi } from "../services/attachments";
+import { expensesApi } from "../services/expenses";
+import { flightsApi } from "../services/flights";
+import { itinerariesApi } from "../services/itineraries";
+import { plansApi } from "../services/plans";
+import type {
+  Accommodation,
+  Attachment,
+  Expense,
+  FlightRead,
+  Itinerary,
+  Plan,
+} from "../types/api";
 
 interface PlanData {
   plan: Plan | null;
@@ -12,13 +20,14 @@ interface PlanData {
   flights: FlightRead[];
   accommodations: Accommodation[];
   expenses: Expense[];
+  attachments: Attachment[];
 }
 
 export const usePlanDataQuery = (publicId: string | null) => {
   const queryClient = useQueryClient();
 
   const { data, isLoading, error, isError, refetch } = useQuery<PlanData>({
-    queryKey: ['plan', publicId],
+    queryKey: ["plan", publicId],
     queryFn: async () => {
       if (!publicId) {
         return {
@@ -27,6 +36,7 @@ export const usePlanDataQuery = (publicId: string | null) => {
           flights: [],
           accommodations: [],
           expenses: [],
+          attachments: [],
         };
       }
 
@@ -37,12 +47,20 @@ export const usePlanDataQuery = (publicId: string | null) => {
         amount: Number(e?.amount),
       }));
 
+      let attachments: Attachment[] = [];
+      if (planData?.id) {
+        try {
+          attachments = await attachmentsApi.getAttachmentsByPlan(planData.id);
+        } catch {}
+      }
+
       return {
         plan: planData,
         itineraries: planData?.itineraries ?? [],
         flights: planData?.flights ?? [],
         accommodations: planData?.accommodations ?? [],
         expenses: normalizedExpenses,
+        attachments,
       };
     },
     enabled: !!publicId,
@@ -57,62 +75,96 @@ export const usePlanDataQuery = (publicId: string | null) => {
     flights: [],
     accommodations: [],
     expenses: [],
+    attachments: [],
   };
 
   const refreshItineraries = async () => {
     if (!planData.plan?.id) return;
     try {
       const itineraries = await itinerariesApi.getItineraries(planData.plan.id);
-      queryClient.setQueryData<PlanData>(['plan', publicId], (old = planData) => ({
-        ...old,
-        itineraries,
-      }));
-    } catch (err: any) {
-    }
+      queryClient.setQueryData<PlanData>(
+        ["plan", publicId],
+        (old = planData) => ({
+          ...old,
+          itineraries,
+        }),
+      );
+    } catch (_err: any) {}
   };
 
   const refreshFlights = async () => {
     if (!planData.plan?.id) return;
     try {
       const flights = await flightsApi.getFlightsByPlan(planData.plan.id);
-      queryClient.setQueryData<PlanData>(['plan', publicId], (old = planData) => ({
-        ...old,
-        flights,
-      }));
-    } catch (err: any) {
-    }
+      queryClient.setQueryData<PlanData>(
+        ["plan", publicId],
+        (old = planData) => ({
+          ...old,
+          flights,
+        }),
+      );
+    } catch (_err: any) {}
   };
 
   const refreshAccommodations = async () => {
     if (!planData.plan?.id) return;
     try {
-      const accommodations = await accommodationsApi.getAccommodations(planData.plan.id);
-      queryClient.setQueryData<PlanData>(['plan', publicId], (old = planData) => ({
-        ...old,
-        accommodations,
-      }));
-    } catch (err: any) {
-    }
+      const accommodations = await accommodationsApi.getAccommodations(
+        planData.plan.id,
+      );
+      queryClient.setQueryData<PlanData>(
+        ["plan", publicId],
+        (old = planData) => ({
+          ...old,
+          accommodations,
+        }),
+      );
+    } catch (_err: any) {}
   };
 
   const refreshExpenses = async () => {
     if (!planData.plan?.id) return;
     try {
       const expenses = await expensesApi.getExpenses(planData.plan.id);
-      queryClient.setQueryData<PlanData>(['plan', publicId], (old = planData) => ({
-        ...old,
-        expenses,
-      }));
-    } catch (err: any) {
-    }
+      queryClient.setQueryData<PlanData>(
+        ["plan", publicId],
+        (old = planData) => ({
+          ...old,
+          expenses,
+        }),
+      );
+    } catch (_err: any) {}
+  };
+
+  const refreshAttachments = async () => {
+    if (!planData.plan?.id) return;
+    try {
+      const attachments = await attachmentsApi.getAttachmentsByPlan(
+        planData.plan.id,
+      );
+      queryClient.setQueryData<PlanData>(
+        ["plan", publicId],
+        (old = planData) => ({
+          ...old,
+          attachments,
+        }),
+      );
+    } catch {}
+  };
+
+  const addAttachment = (newAttachment: Attachment) => {
+    queryClient.setQueryData<PlanData>(["plan", publicId], old => {
+      if (!old) return old;
+      return { ...old, attachments: [...old.attachments, newAttachment] };
+    });
   };
 
   const addAccommodation = (newAccommodation: Accommodation) => {
-    queryClient.setQueryData<PlanData>(['plan', publicId], (old) => {
+    queryClient.setQueryData<PlanData>(["plan", publicId], old => {
       if (!old) return old;
 
       const existingIndex = old.accommodations.findIndex(
-        (acc) => acc.id === newAccommodation.id
+        acc => acc.id === newAccommodation.id,
       );
       let updatedAccommodations: Accommodation[];
       if (existingIndex >= 0) {
@@ -122,14 +174,14 @@ export const usePlanDataQuery = (publicId: string | null) => {
         updatedAccommodations = [...old.accommodations, newAccommodation];
       }
 
-      let updatedExpenses = [...old.expenses];
+      const updatedExpenses = [...old.expenses];
       if (newAccommodation.expense) {
         const expense = {
           ...newAccommodation.expense,
           amount: Number(newAccommodation.expense.amount), // amount 정규화
         };
         const existingExpenseIndex = updatedExpenses.findIndex(
-          (e) => e.id === expense.id
+          e => e.id === expense.id,
         );
         if (existingExpenseIndex >= 0) {
           updatedExpenses[existingExpenseIndex] = expense;
@@ -147,7 +199,7 @@ export const usePlanDataQuery = (publicId: string | null) => {
   };
 
   const addExpense = (newExpense: Expense) => {
-    queryClient.setQueryData<PlanData>(['plan', publicId], (old) => {
+    queryClient.setQueryData<PlanData>(["plan", publicId], old => {
       if (!old) return old;
 
       const normalizedExpense = {
@@ -155,7 +207,7 @@ export const usePlanDataQuery = (publicId: string | null) => {
         amount: Number(newExpense.amount), // amount 정규화
       };
       const existingIndex = old.expenses.findIndex(
-        (e) => e.id === normalizedExpense.id
+        e => e.id === normalizedExpense.id,
       );
       let updatedExpenses: Expense[];
       if (existingIndex >= 0) {
@@ -173,12 +225,10 @@ export const usePlanDataQuery = (publicId: string | null) => {
   };
 
   const removeExpense = (expenseId: number) => {
-    queryClient.setQueryData<PlanData>(['plan', publicId], (old) => {
+    queryClient.setQueryData<PlanData>(["plan", publicId], old => {
       if (!old) return old;
 
-      const updatedExpenses = old.expenses.filter(
-        (e) => e.id !== expenseId
-      );
+      const updatedExpenses = old.expenses.filter(e => e.id !== expenseId);
 
       return {
         ...old,
@@ -188,15 +238,15 @@ export const usePlanDataQuery = (publicId: string | null) => {
   };
 
   const removeAccommodation = (accommodationId: number) => {
-    queryClient.setQueryData<PlanData>(['plan', publicId], (old) => {
+    queryClient.setQueryData<PlanData>(["plan", publicId], old => {
       if (!old) return old;
 
       const updatedAccommodations = old.accommodations.filter(
-        (acc) => acc.id !== accommodationId
+        acc => acc.id !== accommodationId,
       );
 
       const updatedExpenses = old.expenses.filter(
-        (e) => e.accommodationId !== accommodationId
+        e => e.accommodationId !== accommodationId,
       );
 
       return {
@@ -208,11 +258,11 @@ export const usePlanDataQuery = (publicId: string | null) => {
   };
 
   const addItinerary = (newItinerary: Itinerary) => {
-    queryClient.setQueryData<PlanData>(['plan', publicId], (old) => {
+    queryClient.setQueryData<PlanData>(["plan", publicId], old => {
       if (!old) return old;
 
       const existingIndex = old.itineraries.findIndex(
-        (it) => it.id === newItinerary.id
+        it => it.id === newItinerary.id,
       );
       let updatedItineraries: Itinerary[];
       if (existingIndex >= 0) {
@@ -230,15 +280,15 @@ export const usePlanDataQuery = (publicId: string | null) => {
   };
 
   const removeItinerary = (itineraryId: number) => {
-    queryClient.setQueryData<PlanData>(['plan', publicId], (old) => {
+    queryClient.setQueryData<PlanData>(["plan", publicId], old => {
       if (!old) return old;
 
       const updatedItineraries = old.itineraries.filter(
-        (it) => it.id !== itineraryId
+        it => it.id !== itineraryId,
       );
 
       const updatedExpenses = old.expenses.filter(
-        (e) => e.itineraryId !== itineraryId
+        e => e.itineraryId !== itineraryId,
       );
 
       return {
@@ -250,12 +300,10 @@ export const usePlanDataQuery = (publicId: string | null) => {
   };
 
   const addFlight = (newFlight: FlightRead) => {
-    queryClient.setQueryData<PlanData>(['plan', publicId], (old) => {
+    queryClient.setQueryData<PlanData>(["plan", publicId], old => {
       if (!old) return old;
 
-      const existingIndex = old.flights.findIndex(
-        (f) => f.id === newFlight.id
-      );
+      const existingIndex = old.flights.findIndex(f => f.id === newFlight.id);
       let updatedFlights: FlightRead[];
       if (existingIndex >= 0) {
         updatedFlights = [...old.flights];
@@ -264,14 +312,14 @@ export const usePlanDataQuery = (publicId: string | null) => {
         updatedFlights = [...old.flights, newFlight];
       }
 
-      let updatedExpenses = [...old.expenses];
+      const updatedExpenses = [...old.expenses];
       if (newFlight.expense) {
         const expense = {
           ...newFlight.expense,
           amount: Number(newFlight.expense.amount), // amount 정규화
         };
         const existingExpenseIndex = updatedExpenses.findIndex(
-          (e) => e.id === expense.id
+          e => e.id === expense.id,
         );
         if (existingExpenseIndex >= 0) {
           updatedExpenses[existingExpenseIndex] = expense;
@@ -289,16 +337,12 @@ export const usePlanDataQuery = (publicId: string | null) => {
   };
 
   const removeFlight = (flightId: number) => {
-    queryClient.setQueryData<PlanData>(['plan', publicId], (old) => {
+    queryClient.setQueryData<PlanData>(["plan", publicId], old => {
       if (!old) return old;
 
-      const updatedFlights = old.flights.filter(
-        (f) => f.id !== flightId
-      );
+      const updatedFlights = old.flights.filter(f => f.id !== flightId);
 
-      const updatedExpenses = old.expenses.filter(
-        (e) => e.flightId !== flightId
-      );
+      const updatedExpenses = old.expenses.filter(e => e.flightId !== flightId);
 
       return {
         ...old,
@@ -312,17 +356,16 @@ export const usePlanDataQuery = (publicId: string | null) => {
     if (pId === publicId) {
       await refetch();
     } else {
-      queryClient.invalidateQueries({ queryKey: ['plan', pId] });
+      queryClient.invalidateQueries({ queryKey: ["plan", pId] });
     }
   };
 
   let errorStatus: number | null = null;
-  
+
   if (isError && error) {
     if ((error as any)?.response?.status) {
       errorStatus = (error as any).response.status;
-    }
-    else if ((error as any)?.status) {
+    } else if ((error as any)?.status) {
       errorStatus = (error as any).status;
     }
   }
@@ -330,13 +373,17 @@ export const usePlanDataQuery = (publicId: string | null) => {
   return {
     ...planData,
     isLoading,
-    error: error ? (error as any).response?.data?.detail || (error as any).message : null,
+    error: error
+      ? (error as any).response?.data?.detail || (error as any).message
+      : null,
     errorStatus,
     fetchPlanData,
     refreshItineraries,
     refreshFlights,
     refreshAccommodations,
     refreshExpenses,
+    refreshAttachments,
+    addAttachment,
     addAccommodation,
     addExpense,
     removeExpense,
@@ -347,4 +394,3 @@ export const usePlanDataQuery = (publicId: string | null) => {
     removeFlight,
   };
 };
-

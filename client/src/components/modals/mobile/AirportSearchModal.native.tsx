@@ -1,26 +1,26 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import { useMe } from "@/hooks/useMe";
+import { useRecentSearches } from "@/hooks/useRecentSearches";
+import BottomSheetModal from "@/ui/components/BottomSheetModal.native";
+import Input from "@/ui/components/input/Input";
+import { colors } from "@/ui/tokens/colors";
+import { textStyles, typography } from "@/ui/tokens/typography";
 import {
-  View,
-  Text,
-  Pressable,
-  StyleSheet,
-  FlatList,
-  ScrollView,
-  Keyboard,
-} from 'react-native';
-import BottomSheetModal from '@/ui/components/BottomSheetModal.native';
-import { colors } from '@/ui/tokens/colors';
-import { textStyles, typography } from '@/ui/tokens/typography';
-import {
-  getAirportOptionsBySearch,
   getAirportLabelByIata,
-} from '@/utils/airportList';
-import { useMe } from '@/hooks/useMe';
-import { useRecentSearches } from '@/hooks/useRecentSearches';
-import Input from '@/ui/components/input/Input';
-import CloseIcon from '../../../../assets/mobile_close.svg';
-import SearchIcon from '../../../../assets/search.svg';
-import CheckIcon from '../../../../assets/check_black.svg';
+  getAirportOptionsBySearch,
+} from "@/utils/airportList";
+import { useEffect, useMemo, useState } from "react";
+import {
+  FlatList,
+  Keyboard,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
+import CheckIcon from "../../../../assets/check_black.svg";
+import CloseIcon from "../../../../assets/mobile_close.svg";
+import SearchIcon from "../../../../assets/search.svg";
 
 interface AirportSearchModalProps {
   visible: boolean;
@@ -30,7 +30,7 @@ interface AirportSearchModalProps {
 }
 
 const RECENT_LIMIT = 10;
-const STORAGE_KEY_PREFIX = 'recentAirportSearches';
+const STORAGE_KEY_PREFIX = "recentAirportSearches";
 
 export default function AirportSearchModal({
   visible,
@@ -38,13 +38,14 @@ export default function AirportSearchModal({
   onSelect,
   selectedValue,
 }: AirportSearchModalProps) {
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
   const { data: me } = useMe();
-  const storageKey = `${STORAGE_KEY_PREFIX}_${me?.handle ?? 'guest'}`;
-  const { items: recentSearches, addItem, load } = useRecentSearches(
-    storageKey,
-    RECENT_LIMIT
-  );
+  const storageKey = `${STORAGE_KEY_PREFIX}_${me?.handle ?? "guest"}`;
+  const {
+    items: recentSearches,
+    addItem,
+    load,
+  } = useRecentSearches(storageKey, RECENT_LIMIT);
 
   useEffect(() => {
     if (visible) {
@@ -60,13 +61,13 @@ export default function AirportSearchModal({
   const handleSelect = (airportCode: string) => {
     onSelect(airportCode);
     addItem(airportCode);
-    setSearchQuery('');
+    setSearchQuery("");
     Keyboard.dismiss();
     onClose();
   };
 
   const handleClose = () => {
-    setSearchQuery('');
+    setSearchQuery("");
     Keyboard.dismiss();
     onClose();
   };
@@ -85,7 +86,11 @@ export default function AirportSearchModal({
       <View style={styles.header}>
         <Text style={styles.headerTitle}>공항 선택</Text>
         <View style={styles.headerRight}>
-          <Pressable style={styles.closeButton} onPress={handleClose} hitSlop={8}>
+          <Pressable
+            style={styles.closeButton}
+            onPress={handleClose}
+            hitSlop={8}
+          >
             <CloseIcon width={20} height={20} color={colors.gray700} />
           </Pressable>
         </View>
@@ -113,7 +118,7 @@ export default function AirportSearchModal({
       {showSearchResults ? (
         <FlatList
           data={filteredAirports}
-          keyExtractor={(item) => item.value}
+          keyExtractor={item => item.value}
           renderItem={({ item }) => (
             <Pressable
               style={[styles.listItem, styles.listItemRow]}
@@ -147,7 +152,7 @@ export default function AirportSearchModal({
           keyboardShouldPersistTaps="handled"
         >
           <Text style={styles.recentLabel}>최근 검색</Text>
-          {recentSearches.map((code) => {
+          {recentSearches.map(code => {
             const label = getAirportLabelByIata(code) || code;
             return (
               <Pressable
@@ -180,9 +185,9 @@ export default function AirportSearchModal({
 
 const styles = StyleSheet.create({
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: 20,
     paddingBottom: 16,
   },
@@ -191,8 +196,8 @@ const styles = StyleSheet.create({
     color: colors.black,
   },
   headerRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
   },
   closeButton: {
     padding: 4,
@@ -200,11 +205,11 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     height: 32,
     width: 32,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   searchWrapper: {
-    position: 'relative',
+    position: "relative",
     marginHorizontal: 20,
     marginBottom: 24,
   },
@@ -219,11 +224,11 @@ const styles = StyleSheet.create({
     color: colors.black,
   },
   searchIcon: {
-    position: 'absolute',
+    position: "absolute",
     right: 14,
     top: 0,
     bottom: 0,
-    justifyContent: 'center',
+    justifyContent: "center",
   },
   recentScroll: {
     flex: 1,
@@ -241,9 +246,9 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
   },
   recentItemRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
   },
   recentItemText: {
     ...textStyles.h5,
@@ -263,9 +268,9 @@ const styles = StyleSheet.create({
     paddingBottom: 14,
   },
   listItemRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
   },
   listItemText: {
     ...textStyles.h5,
@@ -277,7 +282,7 @@ const styles = StyleSheet.create({
   emptyText: {
     ...textStyles.body3,
     color: colors.gray600,
-    textAlign: 'center',
+    textAlign: "center",
     paddingVertical: 32,
   },
   emptyState: {
@@ -287,6 +292,6 @@ const styles = StyleSheet.create({
   emptyHint: {
     ...textStyles.body3,
     color: colors.gray600,
-    textAlign: 'center',
+    textAlign: "center",
   },
 });

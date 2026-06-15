@@ -1,16 +1,16 @@
-import api from './api';
-import { Plan, CreatePlanRequest, UpdatePlanRequest } from '../types/api';
+import type { CreatePlanRequest, Plan, UpdatePlanRequest } from "../types/api";
+import api from "./api";
 
 export type PlanShare = {
   handle: string;
-  role: 'editor' | 'viewer' | null;
+  role: "editor" | "viewer" | null;
   nickname: string;
   email: string;
 };
 
 export const plansApi = {
   getPlans: async (): Promise<Plan[]> => {
-    const response = await api.get('/private/plans/me');
+    const response = await api.get("/private/plans/me");
     return response.data.plans;
   },
 
@@ -20,11 +20,14 @@ export const plansApi = {
   },
 
   createPlan: async (planData: CreatePlanRequest): Promise<Plan> => {
-    const response = await api.post('/private/plans', planData);
+    const response = await api.post("/private/plans", planData);
     return response.data;
   },
 
-  updatePlan: async (planId: number, planData: UpdatePlanRequest): Promise<Plan> => {
+  updatePlan: async (
+    planId: number,
+    planData: UpdatePlanRequest,
+  ): Promise<Plan> => {
     const response = await api.patch(`/private/plans/${planId}`, planData);
     return response.data;
   },
@@ -42,7 +45,7 @@ export const plansApi = {
   updateShare: async (
     planId: number,
     handle: string,
-    role: 'editor' | 'viewer'
+    role: "editor" | "viewer",
   ): Promise<void> => {
     await api.patch(`/private/plans/${planId}/shares`, { handle, role });
   },
@@ -53,7 +56,7 @@ export const plansApi = {
 
   invite: async (
     planId: number,
-    body: { email: string; role: 'editor' | 'viewer'; expires_days?: number }
+    body: { email: string; role: "editor" | "viewer"; expires_days?: number },
   ): Promise<void> => {
     await api.post(`/private/plans/${planId}/invitations`, body);
   },
@@ -61,4 +64,4 @@ export const plansApi = {
   setMemo: async (planId: number, memo: string): Promise<void> => {
     await api.patch(`/private/plans/${planId}/memo`, { memo });
   },
-}; 
+};

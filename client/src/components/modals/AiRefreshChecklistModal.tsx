@@ -1,7 +1,6 @@
-import React from 'react';
-import { View, Text, Pressable, StyleSheet, Modal } from 'react-native';
-import { colors } from '@/ui/tokens/colors';
-import { textStyles } from '@/ui/tokens/typography';
+import { colors } from "@/ui/tokens/colors";
+import { textStyles } from "@/ui/tokens/typography";
+import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
 
 interface RefreshChecklistModalProps {
   visible: boolean;
@@ -25,7 +24,7 @@ export default function RefreshChecklistModal({
         <View style={styles.modalContent}>
           <Text style={styles.modalTitle}>계속 진행할까요?</Text>
           <Text style={styles.modalMessage}>
-            추천 체크리스트가 추가됩니다.{'\n'}
+            추천 체크리스트가 추가됩니다.{"\n"}
           </Text>
           <View style={styles.modalButtons}>
             <Pressable
@@ -51,8 +50,8 @@ const styles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
     backgroundColor: colors.overlayBackground,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   modalContent: {
     backgroundColor: colors.white,
@@ -65,17 +64,17 @@ const styles = StyleSheet.create({
   modalTitle: {
     ...textStyles.h5,
     color: colors.black,
-    textAlign: 'center',
+    textAlign: "center",
     marginBottom: 8,
   },
   modalMessage: {
     ...textStyles.body4,
     color: colors.gray700,
-    textAlign: 'center',
+    textAlign: "center",
     marginBottom: 20,
   },
   modalButtons: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 8,
   },
   modalButton: {
@@ -83,7 +82,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 16,
     borderRadius: 10,
-    alignItems: 'center',
+    alignItems: "center",
   },
   cancelButton: {
     backgroundColor: colors.gray200,
@@ -104,4 +103,3 @@ const styles = StyleSheet.create({
     color: colors.white,
   },
 });
-

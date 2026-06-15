@@ -5,12 +5,12 @@
  */
 
 export function normalizeAmount(value: unknown): string {
-  const raw = String(value ?? '').trim();
-  if (!raw) return '';
-  return raw.replace(/[^0-9]/g, '');
+  const raw = String(value ?? "").trim();
+  if (!raw) return "";
+  return raw.replace(/[^0-9]/g, "");
 }
 
 export function formatAmountWithCommas(value: unknown): string {
   const digits = normalizeAmount(value);
-  return digits.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  return digits.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 }

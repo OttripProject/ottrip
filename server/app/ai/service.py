@@ -1,5 +1,8 @@
 import json
+import logging
 from typing import Any, Dict, Iterable, Tuple, cast
+
+logger = logging.getLogger(__name__)
 
 from fastapi import HTTPException
 from sqlalchemy.orm import attributes
@@ -16,11 +19,123 @@ from app.utils.dependency import dependency
 from .clients import GeminiClient, VisionClient
 from .config import ai_settings
 from .schemas import (
-    AIFlightRead,
+    AccommodationItemDraft,
     ChecklistCreateResponse,
     ChecklistItemsByCategory,
     ChecklistRead,
+    DocumentTextExtraction,
+    DocumentUploadAnalyzeResponse,
+    ExpenseItemDraft,
+    FlightItemDraft,
+    ItemType,
+    ItineraryItemDraft,
 )
+
+
+def _coerce_item_type(value: Any) -> ItemType | None:
+    if value is None:
+        return None
+    if isinstance(value, ItemType):
+        return value
+    if isinstance(value, str):
+        try:
+            return ItemType(value)
+        except ValueError:
+            return None
+    return None
+
+
+def _normalize_ai_document_response(raw: dict[str, Any]) -> DocumentUploadAnalyzeResponse:
+    err_default = "문서 분석에 실패했습니다."
+    success_flag = bool(raw.get("success"))
+    err_raw = raw.get("error")
+    err_str = err_raw.strip() if isinstance(err_raw, str) and err_raw.strip() else None
+
+    if not success_flag:
+        return DocumentUploadAnalyzeResponse(
+            success=False,
+            inferred_item_type=_coerce_item_type(raw.get("inferred_item_type")),
+            draft=None,
+            error=err_str or err_default,
+        )
+
+    inferred = _coerce_item_type(raw.get("inferred_item_type"))
+    if inferred is None:
+        return DocumentUploadAnalyzeResponse(
+            success=False,
+            inferred_item_type=None,
+            draft=None,
+            error=err_str or "문서 유형을 판별하지 못했습니다.",
+        )
+
+    draft_raw = raw.get("draft")
+    if not isinstance(draft_raw, dict):
+        return DocumentUploadAnalyzeResponse(
+            success=False,
+            inferred_item_type=inferred,
+            draft=None,
+            error=err_str or "초안 형식이 올바르지 않습니다.",
+        )
+
+    payload = draft_raw.get("payload")
+    if not isinstance(payload, dict):
+        return DocumentUploadAnalyzeResponse(
+            success=False,
+            inferred_item_type=inferred,
+            draft=None,
+            error="payload가 객체 형태가 아닙니다.",
+        )
+
+    if "values" not in payload:
+        return DocumentUploadAnalyzeResponse(
+            success=False,
+            inferred_item_type=inferred,
+            draft=None,
+            error="payload에 values가 없습니다.",
+        )
+
+    values = payload.get("values")
+    if not isinstance(values, dict):
+        return DocumentUploadAnalyzeResponse(
+            success=False,
+            inferred_item_type=inferred,
+            draft=None,
+            error="values는 객체여야 합니다.",
+        )
+
+    normalized_payload = dict(payload)
+    normalized_payload["values"] = values
+    field_meta = normalized_payload.get("field_meta")
+    if not isinstance(field_meta, dict):
+        normalized_payload["field_meta"] = {}
+    else:
+        normalized_payload["field_meta"] = field_meta
+
+    try:
+        if inferred == ItemType.FLIGHT:
+            draft: FlightItemDraft | ItineraryItemDraft | AccommodationItemDraft | ExpenseItemDraft = FlightItemDraft(
+                payload=normalized_payload
+            )
+        elif inferred == ItemType.ITINERARY:
+            draft = ItineraryItemDraft(payload=normalized_payload)
+        elif inferred == ItemType.ACCOMMODATION:
+            draft = AccommodationItemDraft(payload=normalized_payload)
+        else:
+            draft = ExpenseItemDraft(payload=normalized_payload)
+    except Exception:
+        return DocumentUploadAnalyzeResponse(
+            success=False,
+            inferred_item_type=inferred,
+            draft=None,
+            error="초안 데이터를 해석할 수 없습니다.",
+        )
+
+    return DocumentUploadAnalyzeResponse(
+        success=True,
+        inferred_item_type=inferred,
+        draft=draft,
+        error=None,
+    )
 
 
 @dependency
@@ -40,70 +155,97 @@ class AIService:
                 detail={"code": "GUEST_NOT_ALLOWED"},
             )
       
-    async def extract_text_from_image(self, image_data: bytes) -> AIFlightRead:
+    async def extract_text_from_image(self, image_data: bytes) -> DocumentTextExtraction:
         self._require_registered_user()
         return await self.vision_client.extract_text_from_image(image_data)
     
-    async def extract_text_from_pdf(self, pdf_data: bytes) -> AIFlightRead:
+    async def extract_text_from_pdf(self, pdf_data: bytes) -> DocumentTextExtraction:
         self._require_registered_user()
         return await self.vision_client.extract_text_from_pdf(pdf_data)
     
-    async def parse_flight_data_with_ai(self, ocr_text: str):
-        self._require_registered_user()
-        return await self.gemini_client.parse_flight_data(ocr_text)
-    
-    async def process_flight_ticket(self, file_data: bytes, content_type: str, filename: str) -> Dict[str, Any]:
-        """항공권 이미지/PDF 전체 처리 (OCR + AI)"""
+    async def analyze_uploaded_document(
+        self,
+        file_data: bytes,
+        content_type: str,
+        filename: str,
+    ) -> DocumentUploadAnalyzeResponse:
+        """이미지/PDF OCR 후 Gemini 1-call로 문서 유형·초안(`values` + `field_meta`) 분석."""
         self._require_registered_user()
         try:
-            # 파일 크기 검증
             if len(file_data) > ai_settings.MAX_FILE_SIZE:
-                return {
-                    "success": False,
-                    "error": f"파일 크기가 너무 큽니다. 최대 {ai_settings.MAX_FILE_SIZE // (1024*1024)}MB까지 지원합니다."
-                }
-            
-            # 파일 타입에 따른 OCR 처리
-            if content_type in ai_settings.ALLOWED_IMAGE_TYPES:         
+                return DocumentUploadAnalyzeResponse(
+                    success=False,
+                    error=(
+                        f"파일 크기가 너무 큽니다. 최대 "
+                        f"{ai_settings.MAX_FILE_SIZE // (1024 * 1024)}MB까지 지원합니다."
+                    ),
+                )
+
+            if content_type in ai_settings.ALLOWED_IMAGE_TYPES:
                 ocr_result = await self.extract_text_from_image(file_data)
-                
             elif content_type in ai_settings.ALLOWED_PDF_TYPES:
                 ocr_result = await self.extract_text_from_pdf(file_data)
-                
             else:
-                return {
-                    "success": False,
-                    "error": "지원하지 않는 파일 형식입니다."
-                }
-            
-            if not ocr_result.success:
-                return {
-                    "success": False,
-                    "error": ocr_result.text or "텍스트 추출에 실패했습니다."
-                }
+                return DocumentUploadAnalyzeResponse(
+                    success=False,
+                    error="지원하지 않는 파일 형식입니다.",
+                )
 
-            # AI로 항공권 데이터 파싱
-            ai_result = await self.parse_flight_data_with_ai(ocr_result.text)
-            
-            # 결과 통합
-            return {
-                "success": True,
-                "ocr_result": ocr_result,
-                "ai_result": ai_result,
-                "flight_data": ai_result.data if ai_result.success else {},
-                "file_info": {
-                    "filename": filename,
-                    "content_type": content_type,
-                    "size": len(file_data)
-                }
-            }
-            
-        except Exception as e:
-            return {
-                "success": False,
-                "error": f"파일 처리 중 오류 발생: {str(e)}"
-            }
-    
+            if not ocr_result.success:
+                return DocumentUploadAnalyzeResponse(
+                    success=False,
+                    error=ocr_result.text or "텍스트 추출에 실패했습니다.",
+                )
+
+            raw = await self.gemini_client.analyze_document_upload(ocr_result.text)
+            if not isinstance(raw, dict):
+                return DocumentUploadAnalyzeResponse(
+                    success=False,
+                    error="파일의 내용이 여행 일정과 관련이 없거나 명확하지 않습니다. 다른 파일로 시도해주세요.",
+                )
+
+            return _normalize_ai_document_response(raw)
+
+        except Exception:
+            logger.exception("파일 처리 중 오류")
+            return DocumentUploadAnalyzeResponse(
+                success=False,
+                error="일시적인 오류가 발생했습니다. 잠시 후 다시 시도해주세요.",
+            )
+
+    async def parse_text_to_item(self, text: str, plan_public_id: str) -> DocumentUploadAnalyzeResponse:
+        """자연어 텍스트 → Gemini 1-call로 아이템 유형·초안 분석."""
+        self._require_registered_user()
+        try:
+            plan = await self.plan_repository.find_by_public_id(public_id=plan_public_id)
+            if not plan:
+                return DocumentUploadAnalyzeResponse(
+                    success=False,
+                    error="해당 여행 계획을 찾을 수 없습니다.",
+                )
+
+            plan_context = (
+                f"여행 기간: {plan.start_date} ~ {plan.end_date}\n"
+                f"오늘 날짜: {__import__('datetime').date.today().isoformat()}"
+            )
+
+            raw = await self.gemini_client.parse_text_to_item(
+                user_text=text,
+                plan_context=plan_context,
+            )
+            if not isinstance(raw, dict):
+                return DocumentUploadAnalyzeResponse(
+                    success=False,
+                    error="어떤 일정인지 조금 더 구체적으로 알려주세요.",
+                )
+            return _normalize_ai_document_response(raw)
+        except Exception:
+            logger.exception("텍스트 파싱 중 오류")
+            return DocumentUploadAnalyzeResponse(
+                success=False,
+                error="일시적인 오류가 발생했습니다. 잠시 후 다시 시도해주세요.",
+            )
+
     # AI Checklist
     async def create_checklist(self, public_id: str, force_regenerate: bool = False, date: str | None = None) -> ChecklistCreateResponse:
         self._require_registered_user()

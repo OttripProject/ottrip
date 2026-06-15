@@ -1,30 +1,29 @@
-import React from 'react';
+import type { Accommodation } from "@/types/api";
+import BottomSheetModal from "@/ui/components/BottomSheetModal.native";
+import { colors } from "@/ui/tokens/colors";
+import { textStyles } from "@/ui/tokens/typography";
+import { formatTime } from "@/utils/dateUtils";
+import dayjs from "dayjs";
 import {
-  View,
-  Text,
-  Pressable,
-  StyleSheet,
-  ScrollView,
-  Linking,
   Alert,
+  Linking,
   Platform,
-} from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Accommodation } from '@/types/api';
-import { colors } from '@/ui/tokens/colors';
-import { textStyles } from '@/ui/tokens/typography';
-import BottomSheetModal from '@/ui/components/BottomSheetModal.native';
-import { formatTime } from '@/utils/dateUtils';
-import AccommodationIcon from '../../../../assets/mobile_accomodation.svg';
-import TimeIcon from '../../../../assets/week_bar_time.svg';
-import LocationIcon from '../../../../assets/mobile_location.svg';
-import ExpenseIcon from '../../../../assets/mobile_expense.svg';
-import MemoIcon from '../../../../assets/memo.svg';
-import UpdateIcon from '../../../../assets/update.svg';
-import DeleteIcon from '../../../../assets/delete_gray.svg';
-import CloseIcon from '../../../../assets/mobile_close.svg';
-import MapIcon from '../../../../assets/mobile_map.svg';
-import dayjs from 'dayjs';
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import DeleteIcon from "../../../../assets/delete_gray.svg";
+import MemoIcon from "../../../../assets/memo.svg";
+import AccommodationIcon from "../../../../assets/mobile_accomodation.svg";
+import CloseIcon from "../../../../assets/mobile_close.svg";
+import ExpenseIcon from "../../../../assets/mobile_expense.svg";
+import LocationIcon from "../../../../assets/mobile_location.svg";
+import MapIcon from "../../../../assets/mobile_map.svg";
+import UpdateIcon from "../../../../assets/update.svg";
+import TimeIcon from "../../../../assets/week_bar_time.svg";
 
 interface AccommodationDetailModalProps {
   visible: boolean;
@@ -41,21 +40,28 @@ export default function AccommodationDetailModal({
   onEdit,
   onDelete,
 }: AccommodationDetailModalProps) {
-  const insets = useSafeAreaInsets();
+  const _insets = useSafeAreaInsets();
   if (!accommodation) return null;
 
-  const location = accommodation.place || [accommodation.city, accommodation.country].filter(Boolean).join(', ') || undefined;
+  const location =
+    accommodation.place ||
+    [accommodation.city, accommodation.country].filter(Boolean).join(", ") ||
+    undefined;
   const expenseAmount = accommodation.expense?.amount ?? 0;
   const checkinTime = formatTime(accommodation.checkinTime);
   const checkoutTime = formatTime(accommodation.checkoutTime);
-  const checkinDate = accommodation.checkinDate ? dayjs(accommodation.checkinDate).format('YYYY-MM-DD') : '';
-  const checkoutDate = accommodation.checkoutDate ? dayjs(accommodation.checkoutDate).format('YYYY-MM-DD') : '';
+  const checkinDate = accommodation.checkinDate
+    ? dayjs(accommodation.checkinDate).format("YYYY-MM-DD")
+    : "";
+  const checkoutDate = accommodation.checkoutDate
+    ? dayjs(accommodation.checkoutDate).format("YYYY-MM-DD")
+    : "";
   const timeRange = `${checkinTime} ~ ${checkoutTime}`;
 
   const handleOpenMap = () => {
     const address = location || accommodation.name;
     if (!address) {
-      Alert.alert('알림', '장소 정보가 없습니다.');
+      Alert.alert("알림", "장소 정보가 없습니다.");
       return;
     }
 
@@ -67,12 +73,12 @@ export default function AccommodationDetailModal({
 
     if (url) {
       Linking.openURL(url).catch(() => {
-        Alert.alert('오류', '지도 앱을 열 수 없습니다.');
+        Alert.alert("알림", "지도 앱을 열 수 없습니다.");
       });
     } else {
       const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodedLocation}`;
       Linking.openURL(googleMapsUrl).catch(() => {
-        Alert.alert('오류', '지도 앱을 열 수 없습니다.');
+        Alert.alert("알림", "지도 앱을 열 수 없습니다.");
       });
     }
   };
@@ -85,23 +91,19 @@ export default function AccommodationDetailModal({
   };
 
   const handleDelete = () => {
-    Alert.alert(
-      '숙소 삭제',
-      '이 숙소를 삭제하시겠습니까?',
-      [
-        { text: '취소', style: 'cancel' },
-        {
-          text: '삭제',
-          style: 'destructive',
-          onPress: () => {
-            if (onDelete) {
-              onDelete(accommodation);
-            }
-            onClose();
-          },
+    Alert.alert("숙소 삭제", "이 숙소를 삭제하시겠습니까?", [
+      { text: "취소", style: "cancel" },
+      {
+        text: "삭제",
+        style: "destructive",
+        onPress: () => {
+          if (onDelete) {
+            onDelete(accommodation);
+          }
+          onClose();
         },
-      ]
-    );
+      },
+    ]);
   };
 
   return (
@@ -114,20 +116,32 @@ export default function AccommodationDetailModal({
         {/* 헤더 */}
         <View style={styles.header}>
           <Text style={styles.title} numberOfLines={2}>
-            {accommodation.name || '숙소'}
+            {accommodation.name || "숙소"}
           </Text>
           <View style={styles.headerActions}>
             {onEdit && (
-              <Pressable style={styles.actionButton} onPress={handleEdit} hitSlop={8}>
+              <Pressable
+                style={styles.actionButton}
+                onPress={handleEdit}
+                hitSlop={8}
+              >
                 <UpdateIcon width={20} height={20} color={colors.gray600} />
               </Pressable>
             )}
             {onDelete && (
-              <Pressable style={styles.actionButton} onPress={handleDelete} hitSlop={8}>
+              <Pressable
+                style={styles.actionButton}
+                onPress={handleDelete}
+                hitSlop={8}
+              >
                 <DeleteIcon width={20} height={20} color={colors.gray600} />
               </Pressable>
             )}
-            <Pressable style={styles.actionButton} onPress={onClose} hitSlop={8}>
+            <Pressable
+              style={styles.actionButton}
+              onPress={onClose}
+              hitSlop={8}
+            >
               <CloseIcon width={20} height={20} color={colors.gray600} />
             </Pressable>
           </View>
@@ -188,7 +202,10 @@ export default function AccommodationDetailModal({
               <View style={styles.detailContent}>
                 <Text style={styles.detailLabel}>비용</Text>
                 <Text style={styles.detailValue}>
-                  {Number(expenseAmount).toLocaleString('ko-KR', { maximumFractionDigits: 0 })}원
+                  {Number(expenseAmount).toLocaleString("ko-KR", {
+                    maximumFractionDigits: 0,
+                  })}
+                  원
                 </Text>
               </View>
             </View>
@@ -202,7 +219,9 @@ export default function AccommodationDetailModal({
               </View>
               <View style={styles.detailContent}>
                 <Text style={styles.detailLabel}>설명</Text>
-                <Text style={styles.detailValue}>{accommodation.description}</Text>
+                <Text style={styles.detailValue}>
+                  {accommodation.description}
+                </Text>
               </View>
             </View>
           )}
@@ -232,9 +251,9 @@ const styles = StyleSheet.create({
     paddingBottom: 24,
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
     marginBottom: 20,
   },
   title: {
@@ -242,16 +261,16 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   headerActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 8,
   },
   actionButton: {
     padding: 4,
     width: 32,
     height: 32,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     backgroundColor: colors.gray200,
     borderRadius: 16,
   },
@@ -262,8 +281,8 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   accommodationSectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 6,
     marginBottom: 16,
   },
@@ -272,15 +291,15 @@ const styles = StyleSheet.create({
     color: colors.primary,
   },
   checkinoutRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    justifyContent: "space-between",
     marginBottom: 12,
   },
   checkinoutItem: {
     flex: 1,
   },
   checkinoutItemRight: {
-    alignItems: 'flex-end',
+    alignItems: "flex-end",
   },
   checkinoutLabel: {
     ...textStyles.h8,
@@ -299,21 +318,21 @@ const styles = StyleSheet.create({
     gap: 20,
   },
   detailItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
   },
   detailIcon: {
     width: 36,
     height: 36,
     borderRadius: 12,
     backgroundColor: `${colors.primary}1A`,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     marginRight: 12,
   },
   detailContent: {
     flex: 1,
-    justifyContent: 'center',
+    justifyContent: "center",
   },
   detailLabel: {
     ...textStyles.h7,
@@ -332,9 +351,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.black,
     borderRadius: 12,
     paddingVertical: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     gap: 8,
   },
   mapButtonText: {

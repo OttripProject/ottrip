@@ -1,22 +1,29 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, Pressable, StyleSheet, Alert, Platform } from 'react-native';
-import { useRoute, useNavigation } from '@react-navigation/native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { authApi } from '@/services/auth';
-import { useAuth } from '@/contexts/AuthContext';
-import { useNicknameValidation } from '@/hooks/useNicknameValidation';
-import * as SecureStore from 'expo-secure-store';
-import api from '@/services/api';
-import Input from '@/ui/components/input/Input';
-import { PLACEHOLDERS } from '@/constants/placeholders';
-import GradientBackground from '@/ui/components/GradientBackground';
-import Card from '@/ui/components/Card';
-import { colors } from '@/ui/tokens/colors';
-import { textStyles } from '@/ui/tokens/typography';
-import { Gender } from '@/types/api';
+import { PLACEHOLDERS } from "@/constants/placeholders";
+import { useAuth } from "@/contexts/AuthContext";
+import { useNicknameValidation } from "@/hooks/useNicknameValidation";
+import api from "@/services/api";
+import { authApi } from "@/services/auth";
+import { Gender } from "@/types/api";
+import Card from "@/ui/components/Card";
+import GradientBackground from "@/ui/components/GradientBackground";
+import Input from "@/ui/components/input/Input";
+import { colors } from "@/ui/tokens/colors";
+import { textStyles } from "@/ui/tokens/typography";
+import { useNavigation, useRoute } from "@react-navigation/native";
+import * as SecureStore from "expo-secure-store";
+import { useEffect, useState } from "react";
+import {
+  Alert,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
-import LeftArrowIcon from '../../assets/left_arrow.svg';
-import GenderCheckIcon from '../../assets/gender_check.svg';
+import GenderCheckIcon from "../../assets/gender_check.svg";
+import LeftArrowIcon from "../../assets/left_arrow.svg";
 
 type RouteParams = {
   registerToken: string;
@@ -26,9 +33,9 @@ type RouteParams = {
 };
 
 function toHandleFromEmail(email: string): string {
-  const local = email.split('@')[0] || '';
-  const base = local.toLowerCase().replace(/[^a-z0-9_.-]/g, '');
-  return base.slice(0, 20) || 'user123';
+  const local = email.split("@")[0] || "";
+  const base = local.toLowerCase().replace(/[^a-z0-9_.-]/g, "");
+  return base.slice(0, 20) || "user123";
 }
 
 export default function RegisterProfileScreen() {
@@ -37,11 +44,12 @@ export default function RegisterProfileScreen() {
   const { login } = useAuth();
   const { registerToken, prefill, email, terms } = route.params as RouteParams;
 
-  const [nickname, setNickname] = useState(prefill?.name || '');
+  const [nickname, setNickname] = useState(prefill?.name || "");
   const [gender, setGender] = useState<Gender | null>(null);
   const [handle] = useState(() => toHandleFromEmail(email));
-  
-  const { nicknameError, checkingNickname, onNicknameChange, isValid } = useNicknameValidation();
+
+  const { nicknameError, checkingNickname, onNicknameChange, isValid } =
+    useNicknameValidation();
 
   useEffect(() => {
     if (nickname.trim().length > 0) {
@@ -63,13 +71,13 @@ export default function RegisterProfileScreen() {
         {
           handle,
           nickname: nickname.trim(),
-          description: '',
+          description: "",
           gender,
           agreed_terms: terms?.tos ?? true,
           agreed_privacy: terms?.privacy ?? true,
           agreed_marketing: terms?.marketing ?? false,
         },
-        registerToken
+        registerToken,
       );
 
       await login({
@@ -79,23 +87,34 @@ export default function RegisterProfileScreen() {
       } as any);
 
       try {
-        const token = Platform.OS === 'web'
-          ? window.localStorage.getItem('pendingInviteToken')
-          : await SecureStore.getItemAsync('pendingInviteToken');
+        const token =
+          Platform.OS === "web"
+            ? window.localStorage.getItem("pendingInviteToken")
+            : await SecureStore.getItemAsync("pendingInviteToken");
         if (token) {
           await api.post(`/private/plans/invitations/${token}/accept`);
-          if (Platform.OS === 'web') {
-            window.localStorage.removeItem('pendingInviteToken');
-            window.dispatchEvent(new Event('plans-refresh'));
+          if (Platform.OS === "web") {
+            window.localStorage.removeItem("pendingInviteToken");
+            window.dispatchEvent(new Event("plans-refresh"));
           } else {
-            await SecureStore.deleteItemAsync('pendingInviteToken');
+            await SecureStore.deleteItemAsync("pendingInviteToken");
           }
         }
       } catch {}
-      navigation.reset({ index: 0, routes: [{ name: 'WELCOME' }] });
 
+      if (Platform.OS === "web" && typeof window !== "undefined") {
+        try {
+          window.localStorage.setItem("registerComplete", "true");
+        } catch {}
+        window.location.replace(`${window.location.origin}/welcome`);
+        return;
+      }
+      navigation.reset({ index: 0, routes: [{ name: "WELCOME" }] });
     } catch (e: any) {
-      Alert.alert('가입 실패', e?.response?.data?.detail || e.message || '알 수 없는 오류');
+      Alert.alert(
+        "가입 실패",
+        e?.response?.data?.detail || e.message || "알 수 없는 오류",
+      );
     }
   };
 
@@ -110,7 +129,7 @@ export default function RegisterProfileScreen() {
                 if (navigation.canGoBack()) {
                   navigation.goBack();
                 } else {
-                  navigation.navigate('로그인');
+                  navigation.navigate("로그인");
                 }
               }}
             >
@@ -118,7 +137,9 @@ export default function RegisterProfileScreen() {
             </Pressable>
 
             <Text style={styles.title}>프로필 설정</Text>
-            <Text style={styles.subtitle}>개인정보 및 환경설정을 관리하세요.</Text>
+            <Text style={styles.subtitle}>
+              개인정보 및 환경설정을 관리하세요.
+            </Text>
 
             <Text style={styles.emailLabel}>이메일</Text>
             <View style={styles.emailContainer}>
@@ -134,35 +155,62 @@ export default function RegisterProfileScreen() {
                 style={styles.input}
               />
             </View>
-            {nicknameError && <Text style={styles.errorText}>{nicknameError}</Text>}
-            {!nicknameError && !checkingNickname && nickname.trim().length > 0 && (
-              <Text style={styles.successText}>사용 가능한 닉네임입니다.</Text>
+            {nicknameError && (
+              <Text style={styles.errorText}>{nicknameError}</Text>
             )}
+            {!nicknameError &&
+              !checkingNickname &&
+              nickname.trim().length > 0 && (
+                <Text style={styles.successText}>
+                  사용 가능한 닉네임입니다.
+                </Text>
+              )}
 
             <Text style={styles.genderLabel}>성별</Text>
             <View style={styles.genderContainer}>
-              {[Gender.MALE, Gender.FEMALE].map((g) => (
+              {[Gender.MALE, Gender.FEMALE].map(g => (
                 <Pressable
                   key={g}
                   style={styles.genderOption}
-                  onPress={() => setGender((prev) => (prev === g ? null : g))}
+                  onPress={() => setGender(prev => (prev === g ? null : g))}
                   accessibilityRole="radio"
                   accessibilityState={{ checked: gender === g }}
                 >
-                  <View style={[styles.radioButton, gender === g && styles.radioButtonSelected]}>
-                    {gender === g && <GenderCheckIcon width={16} height={16} color={colors.white} />}
+                  <View
+                    style={[
+                      styles.radioButton,
+                      gender === g && styles.radioButtonSelected,
+                    ]}
+                  >
+                    {gender === g && (
+                      <GenderCheckIcon
+                        width={16}
+                        height={16}
+                        color={colors.white}
+                      />
+                    )}
                   </View>
-                  <Text style={styles.genderText}>{g === Gender.MALE ? '남성' : '여성'}</Text>
+                  <Text style={styles.genderText}>
+                    {g === Gender.MALE ? "남성" : "여성"}
+                  </Text>
                 </Pressable>
               ))}
             </View>
 
             <Pressable
               disabled={!canSubmit}
-              style={[styles.submitButton, !canSubmit && styles.submitButtonDisabled]}
+              style={[
+                styles.submitButton,
+                !canSubmit && styles.submitButtonDisabled,
+              ]}
               onPress={onSubmit}
             >
-              <Text style={[styles.submitButtonText, !canSubmit && styles.submitButtonTextDisabled]}>
+              <Text
+                style={[
+                  styles.submitButtonText,
+                  !canSubmit && styles.submitButtonTextDisabled,
+                ]}
+              >
                 회원가입
               </Text>
             </Pressable>
@@ -176,17 +224,17 @@ export default function RegisterProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: 'transparent',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "transparent",
+    justifyContent: "center",
+    alignItems: "center",
   },
   cardWrapper: {
-    width: '100%',
-    alignItems: 'center',
-    justifyContent: 'center',
+    width: "100%",
+    alignItems: "center",
+    justifyContent: "center",
   },
   backButton: {
-    position: 'absolute',
+    position: "absolute",
     left: 40,
     top: 50,
     width: 24,
@@ -194,26 +242,26 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
   title: {
-    position: 'absolute',
+    position: "absolute",
     left: 40,
     top: 96,
     ...textStyles.h2,
   },
   subtitle: {
-    position: 'absolute',
+    position: "absolute",
     left: 40,
     top: 140,
     ...textStyles.body3,
     color: colors.gray700,
   },
   emailLabel: {
-    position: 'absolute',
+    position: "absolute",
     left: 40,
     top: 206,
     ...textStyles.h7,
   },
   emailContainer: {
-    position: 'absolute',
+    position: "absolute",
     left: 40,
     top: 234,
     width: 400,
@@ -222,7 +270,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.gray400,
     borderRadius: 10,
-    justifyContent: 'center',
+    justifyContent: "center",
     paddingHorizontal: 16,
   },
   emailText: {
@@ -230,13 +278,13 @@ const styles = StyleSheet.create({
     color: colors.gray700,
   },
   nicknameLabel: {
-    position: 'absolute',
+    position: "absolute",
     left: 40,
     top: 306,
     ...textStyles.h7,
   },
   nicknameInputContainer: {
-    position: 'absolute',
+    position: "absolute",
     left: 40,
     top: 334,
     width: 400,
@@ -245,36 +293,36 @@ const styles = StyleSheet.create({
     height: 48,
   },
   errorText: {
-    position: 'absolute',
+    position: "absolute",
     left: 40,
     top: 390,
     ...textStyles.body5,
     color: colors.danger,
   },
   successText: {
-    position: 'absolute',
+    position: "absolute",
     left: 40,
     top: 390,
     ...textStyles.body5,
     color: colors.success,
   },
   genderLabel: {
-    position: 'absolute',
+    position: "absolute",
     left: 40,
     top: 432,
     ...textStyles.h7,
   },
   genderContainer: {
-    position: 'absolute',
+    position: "absolute",
     left: 40,
     top: 460,
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 24,
   },
   genderOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 8,
   },
   radioButton: {
@@ -284,8 +332,8 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: colors.gray400,
     backgroundColor: colors.white,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   radioButtonSelected: {
     borderColor: colors.black,
@@ -295,15 +343,15 @@ const styles = StyleSheet.create({
     ...textStyles.body2,
   },
   submitButton: {
-    position: 'absolute',
+    position: "absolute",
     left: 40,
     top: 520,
     width: 400,
     height: 56,
     backgroundColor: colors.black,
     borderRadius: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   submitButtonDisabled: {
     backgroundColor: colors.gray300,

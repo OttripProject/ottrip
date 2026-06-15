@@ -1,7 +1,6 @@
-import React from 'react';
-import { View, Text, Pressable, StyleSheet, Modal } from 'react-native';
-import { colors } from '@/ui/tokens/colors';
-import { textStyles } from '@/ui/tokens/typography';
+import { colors } from "@/ui/tokens/colors";
+import { textStyles } from "@/ui/tokens/typography";
+import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
 
 interface InsufficientScheduleModalProps {
   visible: boolean;
@@ -23,8 +22,8 @@ export default function InsufficientScheduleModal({
         <View style={styles.modalContent}>
           <Text style={styles.modalTitle}>일정이 부족해요</Text>
           <Text style={styles.modalMessage}>
-            여행 일정이 아직 충분하지 않아{'\n'}
-            AI 체크리스트를 만들 수 없어요.{'\n'}
+            여행 일정이 아직 충분하지 않아{"\n"}
+            AI 체크리스트를 만들 수 없어요.{"\n"}
             일정을 조금 더 추가해 주세요.
           </Text>
           <View style={styles.modalButtons}>
@@ -45,8 +44,8 @@ const styles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
     backgroundColor: colors.overlayBackground,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   modalContent: {
     backgroundColor: colors.white,
@@ -59,18 +58,18 @@ const styles = StyleSheet.create({
   modalTitle: {
     ...textStyles.h5,
     color: colors.black,
-    textAlign: 'center',
+    textAlign: "center",
     marginBottom: 16,
   },
   modalMessage: {
     ...textStyles.body4,
     color: colors.gray700,
-    textAlign: 'center',
+    textAlign: "center",
     lineHeight: 20,
     marginBottom: 24,
   },
   modalButtons: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 12,
   },
   modalButton: {
@@ -78,7 +77,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderRadius: 8,
-    alignItems: 'center',
+    alignItems: "center",
   },
   confirmButton: {
     backgroundColor: colors.black,
@@ -90,4 +89,3 @@ const styles = StyleSheet.create({
     color: colors.white,
   },
 });
-

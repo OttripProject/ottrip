@@ -1,5 +1,10 @@
-import React, { useState, useEffect } from 'react';
-import FlightItem from './FlightItem';
+import type {
+  DocumentUploadAnalyzeResponse,
+  LocalFile,
+  StagedDocumentAnalyzePayload,
+} from "@/types/api";
+import { useEffect, useLayoutEffect, useState } from "react";
+import FlightItem from "./FlightItem";
 
 interface FlightSectionProps {
   planData: {
@@ -13,12 +18,20 @@ interface FlightSectionProps {
     removeFlight?: (flightId: number) => void;
   };
   selectedFlight?: any;
-  activeTab?: 'itinerary' | 'flight' | 'accommodation' | undefined;
+  activeTab?: "itinerary" | "flight" | "accommodation" | undefined;
   onFlightAdd?: (flight: any) => void;
   onFlightClear?: () => void;
   openNewFlightForm?: boolean;
   onConsumeOpenNewFlightForm?: () => void;
   onEdit?: (flight: any) => void;
+  stagedDocumentAnalyze?: StagedDocumentAnalyzePayload | null;
+  onConsumeStagedDocumentAnalyze?: () => void;
+  routeDocumentAnalyzeSuccess?: (
+    res: DocumentUploadAnalyzeResponse,
+    carryPendingFiles?: LocalFile[],
+  ) => boolean;
+  carryoverPendingFiles?: LocalFile[] | null;
+  onConsumeCarryoverPendingFiles?: () => void;
 }
 
 export default function FlightSection({
@@ -30,12 +43,17 @@ export default function FlightSection({
   openNewFlightForm,
   onConsumeOpenNewFlightForm,
   onEdit,
+  stagedDocumentAnalyze,
+  onConsumeStagedDocumentAnalyze,
+  routeDocumentAnalyzeSuccess,
+  carryoverPendingFiles,
+  onConsumeCarryoverPendingFiles,
 }: FlightSectionProps) {
   const [showFlightForm, setShowFlightForm] = useState(false);
   const [editingFlight, setEditingFlight] = useState<any | null>(null);
 
   useEffect(() => {
-    if (activeTab === 'flight' && !selectedFlight) {
+    if (activeTab === "flight" && !selectedFlight) {
       if (openNewFlightForm) {
         setEditingFlight(null);
         setShowFlightForm(true);
@@ -45,15 +63,33 @@ export default function FlightSection({
         setShowFlightForm(true);
       }
     }
-  }, [activeTab, openNewFlightForm, onConsumeOpenNewFlightForm, selectedFlight, showFlightForm]);
+  }, [
+    activeTab,
+    openNewFlightForm,
+    onConsumeOpenNewFlightForm,
+    selectedFlight,
+    showFlightForm,
+  ]);
+
+  useLayoutEffect(() => {
+    if (!stagedDocumentAnalyze) return;
+    const kind =
+      stagedDocumentAnalyze.result.inferredItemType ??
+      stagedDocumentAnalyze.result.draft?.itemType;
+    if (kind !== "flight") return;
+    if (selectedFlight?.id && !showFlightForm) {
+      setEditingFlight(selectedFlight);
+      setShowFlightForm(true);
+    }
+  }, [stagedDocumentAnalyze, selectedFlight, showFlightForm]);
 
   useEffect(() => {
-    if (activeTab === 'flight' && selectedFlight) {
+    if (activeTab === "flight" && selectedFlight) {
       if (selectedFlight.id) {
         setEditingFlight(selectedFlight);
         setShowFlightForm(false);
       }
-    } else if (activeTab === 'flight' && !selectedFlight) {
+    } else if (activeTab === "flight" && !selectedFlight) {
       setEditingFlight(null);
       setShowFlightForm(false);
     }
@@ -66,7 +102,8 @@ export default function FlightSection({
   };
 
   const handleFlightDelete = (flightId: string) => {
-    const id = typeof flightId === 'string' ? parseInt(flightId, 10) : flightId;
+    const id =
+      typeof flightId === "string" ? Number.parseInt(flightId, 10) : flightId;
     if (planData?.removeFlight) {
       planData.removeFlight(id);
     }
@@ -89,6 +126,11 @@ export default function FlightSection({
         }}
         onDelete={handleFlightDelete}
         readOnly={true}
+        stagedDocumentAnalyze={stagedDocumentAnalyze}
+        onConsumeStagedDocumentAnalyze={onConsumeStagedDocumentAnalyze}
+        routeDocumentAnalyzeSuccess={routeDocumentAnalyzeSuccess}
+        carryoverPendingFiles={carryoverPendingFiles}
+        onConsumeCarryoverPendingFiles={onConsumeCarryoverPendingFiles}
         onEdit={() => {
           setEditingFlight(selectedFlight);
           setShowFlightForm(true);
@@ -97,11 +139,11 @@ export default function FlightSection({
       />
     );
   }
-  
+
   if (showFlightForm) {
     return (
       <FlightItem
-        key={editingFlight?.id ?? 'new-flight'}
+        key={editingFlight?.id ?? "new-flight"}
         flight={editingFlight}
         planId={planData.plan.id}
         planData={planData}
@@ -114,6 +156,11 @@ export default function FlightSection({
         onDelete={handleFlightDelete}
         existingFlights={planData.flights}
         readOnly={false}
+        stagedDocumentAnalyze={stagedDocumentAnalyze}
+        onConsumeStagedDocumentAnalyze={onConsumeStagedDocumentAnalyze}
+        routeDocumentAnalyzeSuccess={routeDocumentAnalyzeSuccess}
+        carryoverPendingFiles={carryoverPendingFiles}
+        onConsumeCarryoverPendingFiles={onConsumeCarryoverPendingFiles}
       />
     );
   }

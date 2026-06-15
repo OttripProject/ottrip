@@ -6,7 +6,6 @@ import { z } from "zod";
 
 const projectId = "760d14be-9546-4b34-bb91-d0348bceaaf9";
 
-
 const BUNDLE_ID_BY_PROFILE = {
   prod: "ottripofficial.ottrip",
   alpha: "ottripofficial.ottrip.alpha",
@@ -84,7 +83,9 @@ export default ({ config }: ConfigContext): ExpoConfig => {
         ...(config as ExpoConfig).ios,
         bundleIdentifier: bundleId,
         infoPlist: {
-          ...((config as ExpoConfig).ios?.infoPlist as Record<string, unknown> | undefined),
+          ...((config as ExpoConfig).ios?.infoPlist as
+            | Record<string, unknown>
+            | undefined),
           NSPhotoLibraryUsageDescription: PHOTO_LIBRARY_USAGE_DESCRIPTION,
         },
       },
@@ -97,7 +98,10 @@ export default ({ config }: ConfigContext): ExpoConfig => {
 
   const { data: env, error } = envSchema.safeParse(process.env);
   if (!env) {
-    console.error("❌ 환경 변수 검증 실패 상세 사유:", JSON.stringify(error.format(), null, 2));
+    console.error(
+      "❌ 환경 변수 검증 실패 상세 사유:",
+      JSON.stringify(error.format(), null, 2),
+    );
     throw new Error("Env parse fail", { cause: error });
   }
 

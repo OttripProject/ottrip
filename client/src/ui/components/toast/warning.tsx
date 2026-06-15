@@ -1,10 +1,10 @@
-import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Animated } from 'react-native';
-import { colors } from '@/ui/tokens/colors';
-import { textStyles } from '@/ui/tokens/typography';
-import { spacing } from '@/ui/tokens/spacing';
-import { radii } from '@/ui/tokens/radii';
-import WarnIcon from '../../../../assets/warn.svg';
+import { colors } from "@/ui/tokens/colors";
+import { radii } from "@/ui/tokens/radii";
+import { spacing } from "@/ui/tokens/spacing";
+import { textStyles } from "@/ui/tokens/typography";
+import { useEffect, useRef } from "react";
+import { Animated, StyleSheet, Text } from "react-native";
+import WarnIcon from "../../../../assets/warn.svg";
 
 interface WarningBannerProps {
   message: string;
@@ -14,19 +14,19 @@ interface WarningBannerProps {
   bottomOffset?: number; // 버튼 위로부터의 거리 (기본값: 44, undefined면 상단 고정)
 }
 
-export default function WarningBanner({ 
-  message, 
-  visible, 
+export default function WarningBanner({
+  message,
+  visible,
   duration = 3000,
   onHide,
-  bottomOffset = 70
+  bottomOffset = 70,
 }: WarningBannerProps) {
   const opacity = useRef(new Animated.Value(0)).current;
   const scale = useRef(new Animated.Value(0.8)).current;
 
   useEffect(() => {
     let timer: NodeJS.Timeout | null = null;
-    
+
     if (visible) {
       Animated.parallel([
         Animated.timing(opacity, {
@@ -73,14 +73,16 @@ export default function WarningBanner({
   if (!visible) return null;
 
   return (
-    <Animated.View 
+    <Animated.View
       style={[
         styles.banner,
         {
           opacity,
           transform: [{ scale }],
-          ...(bottomOffset !== undefined ? { bottom: bottomOffset } : { top: 0 }),
-        }
+          ...(bottomOffset !== undefined
+            ? { bottom: bottomOffset }
+            : { top: 0 }),
+        },
       ]}
     >
       <WarnIcon width={16} height={16} />
@@ -91,15 +93,15 @@ export default function WarningBanner({
 
 const styles = StyleSheet.create({
   banner: {
-    position: 'absolute',
+    position: "absolute",
     left: 0,
     right: 0,
     backgroundColor: colors.gray700,
     height: 40,
     borderRadius: radii.md,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     paddingHorizontal: spacing.md,
     gap: spacing.sm,
     zIndex: 99999, // 제일 위에 표시
@@ -114,4 +116,3 @@ const styles = StyleSheet.create({
     color: colors.white,
   },
 });
-

@@ -1,19 +1,18 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
-import { useRoute, useNavigation } from '@react-navigation/native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { TERMS, TermsKey } from '@/constants/terms';
-import { textStyles } from '@/ui/tokens/typography';
-import { colors } from '@/ui/tokens/colors';
+import { TERMS, type TermsKey } from "@/constants/terms";
+import { colors } from "@/ui/tokens/colors";
+import { textStyles } from "@/ui/tokens/typography";
+import { useNavigation, useRoute } from "@react-navigation/native";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function TermsDetailScreen() {
   const route = useRoute<any>();
   const navigation = useNavigation<any>();
-  const key = (route.params?.key || 'tos') as TermsKey;
+  const key = (route.params?.key || "tos") as TermsKey;
   const doc = TERMS[key];
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+    <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
       <View style={styles.header}>
         <Text style={styles.title}>{doc.title}</Text>
         <Pressable
@@ -40,9 +39,9 @@ export default function TermsDetailScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.white },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: 16,
     paddingTop: 16,
     paddingBottom: 12,
@@ -53,8 +52,8 @@ const styles = StyleSheet.create({
     height: 32,
     borderRadius: 16,
     backgroundColor: colors.gray200,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     marginLeft: 12,
   },
   closeButtonText: { ...textStyles.h6, color: colors.gray600 },
@@ -66,7 +65,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.gray300,
     borderRadius: 12,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
   scrollView: {
     flex: 1,

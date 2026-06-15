@@ -1,64 +1,72 @@
-import React, { useState, useRef } from 'react';
-import { View, Text, Pressable, StyleSheet, Modal, ScrollView, Dimensions } from 'react-native';
-import useDetectClose from '@/hooks/useDetectClose';
-import { useTripForm } from '@/hooks/useTripForm';
-import { LocaleConfig } from 'react-native-calendars';
-import dayjs from 'dayjs';
-import { colors } from '@/ui/tokens/colors';
-import { textStyles } from '@/ui/tokens/typography';
-import DotsIcon from '../../../assets/dots.svg';
-import TripAddIcon from '../../../assets/trip_add.svg';
-import DownArrowIcon from '../../../assets/down_arrow.svg';
-import UpperArrowIcon from '../../../assets/upper_arrow.svg';
-import UpdateIcon from '../../../assets/update.svg';
-import DeleteIcon from '../../../assets/delete.svg';
-import ResultModal from '../modals/ResultModal';
-import TripFormModal from '../modals/TripFormModal';
-import TripDeleteConfirmModal from '../modals/TripDeleteConfirmModal';
+import useDetectClose from "@/hooks/useDetectClose";
+import { useTripForm } from "@/hooks/useTripForm";
+import { colors } from "@/ui/tokens/colors";
+import { textStyles } from "@/ui/tokens/typography";
+import dayjs from "dayjs";
+import React, { useState, useRef } from "react";
+import {
+  Dimensions,
+  Modal,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
+import { LocaleConfig } from "react-native-calendars";
+import DeleteIcon from "../../../assets/delete.svg";
+import DotsIcon from "../../../assets/dots.svg";
+import DownArrowIcon from "../../../assets/down_arrow.svg";
+import TripAddIcon from "../../../assets/trip_add.svg";
+import UpdateIcon from "../../../assets/update.svg";
+import UpperArrowIcon from "../../../assets/upper_arrow.svg";
+import ResultModal from "../modals/ResultModal";
+import TripDeleteConfirmModal from "../modals/TripDeleteConfirmModal";
+import TripFormModal from "../modals/TripFormModal";
 
-LocaleConfig.locales['ko'] = {
+LocaleConfig.locales["ko"] = {
   monthNames: [
-    '01월',
-    '02월',
-    '03월',
-    '04월',
-    '05월',
-    '06월',
-    '07월',
-    '08월',
-    '09월',
-    '10월',
-    '11월',
-    '12월',
+    "01월",
+    "02월",
+    "03월",
+    "04월",
+    "05월",
+    "06월",
+    "07월",
+    "08월",
+    "09월",
+    "10월",
+    "11월",
+    "12월",
   ],
   monthNamesShort: [
-    '1월',
-    '2월',
-    '3월',
-    '4월',
-    '5월',
-    '6월',
-    '7월',
-    '8월',
-    '9월',
-    '10월',
-    '11월',
-    '12월',
+    "1월",
+    "2월",
+    "3월",
+    "4월",
+    "5월",
+    "6월",
+    "7월",
+    "8월",
+    "9월",
+    "10월",
+    "11월",
+    "12월",
   ],
   dayNames: [
-    '일요일',
-    '월요일',
-    '화요일',
-    '수요일',
-    '목요일',
-    '금요일',
-    '토요일',
+    "일요일",
+    "월요일",
+    "화요일",
+    "수요일",
+    "목요일",
+    "금요일",
+    "토요일",
   ],
-  dayNamesShort: ['일', '월', '화', '수', '목', '금', '토'],
-  today: '오늘',
+  dayNamesShort: ["일", "월", "화", "수", "목", "금", "토"],
+  today: "오늘",
   firstDayOfWeek: 1,
 };
-LocaleConfig.defaultLocale = 'ko';
+LocaleConfig.defaultLocale = "ko";
 
 interface Trip {
   id: string;
@@ -73,18 +81,28 @@ interface TripSelectorProps {
   onTripSelect: (trip: Trip) => void;
   trips: Trip[];
   onTripAdd: (
-    trip: Omit<Trip, 'id'>
+    trip: Omit<Trip, "id">,
   ) => Promise<Trip | null | false | void> | Trip | null | false | void;
-  onTripUpdate?: (id: string, trip: Omit<Trip, 'id'>) => void;
+  onTripUpdate?: (id: string, trip: Omit<Trip, "id">) => void;
   onTripDelete?: (id: string) => void;
-  open?: boolean; 
+  open?: boolean;
 }
 
-
-export default function TripSelector({ selectedTrip, onTripSelect, trips, onTripAdd, onTripUpdate, onTripDelete, open }: TripSelectorProps) {
+export default function TripSelector({
+  selectedTrip,
+  onTripSelect,
+  trips,
+  onTripAdd,
+  onTripUpdate,
+  onTripDelete,
+  open,
+}: TripSelectorProps) {
   const dropdownRef = useRef<View>(null);
-  const [showDropdown, setIsDropdownOpen, handleOutsidePress] = useDetectClose(dropdownRef, false);
-  
+  const [showDropdown, setIsDropdownOpen, handleOutsidePress] = useDetectClose(
+    dropdownRef,
+    false,
+  );
+
   React.useEffect(() => {
     if (open) {
       setIsDropdownOpen(true);
@@ -93,20 +111,26 @@ export default function TripSelector({ selectedTrip, onTripSelect, trips, onTrip
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingTrip, setEditingTrip] = useState<Trip | null>(null);
-  
+
   const addTripForm = useTripForm();
-  
+
   const editTripForm = useTripForm();
   const [hoveredTripId, setHoveredTripId] = useState<string | null>(null);
   const [openMenuTripId, setOpenMenuTripId] = useState<string | null>(null);
   const [deleteConfirmModalOpen, setDeleteConfirmModalOpen] = useState(false);
   const [tripToDelete, setTripToDelete] = useState<string | null>(null);
-  const [tripNameToDelete, setTripNameToDelete] = useState('');
-  const [menuPosition, setMenuPosition] = useState<{ top: number; right: number } | null>(null);
+  const [tripNameToDelete, setTripNameToDelete] = useState("");
+  const [menuPosition, setMenuPosition] = useState<{
+    top: number;
+    right: number;
+  } | null>(null);
   const [resultModalVisible, setResultModalVisible] = useState(false);
-  const [resultModalConfig, setResultModalConfig] = useState<{ mode: string; params?: any } | null>(null);
+  const [resultModalConfig, setResultModalConfig] = useState<{
+    mode: string;
+    params?: any;
+  } | null>(null);
   const tripItemRefs = React.useRef<{ [key: string]: View | null }>({});
-  const [isSubmittingAdd, setIsSubmittingAdd] = useState(false); 
+  const [isSubmittingAdd, setIsSubmittingAdd] = useState(false);
   const [isSubmittingEdit, setIsSubmittingEdit] = useState(false);
   const isSubmittingAddRef = useRef(false);
   const isSubmittingEditRef = useRef(false);
@@ -123,7 +147,7 @@ export default function TripSelector({ selectedTrip, onTripSelect, trips, onTrip
         startDate: editingTrip.startDate,
         endDate: editingTrip.endDate,
       });
-      }
+    }
   }, [editingTrip, showEditModal]);
 
   const handleAddTrip = async () => {
@@ -141,14 +165,15 @@ export default function TripSelector({ selectedTrip, onTripSelect, trips, onTrip
         return;
       }
 
-      const tripName = createdTrip && typeof createdTrip === 'object' && 'name' in createdTrip 
-        ? createdTrip.name 
-        : addTripForm.tripData.name;
+      const tripName =
+        createdTrip && typeof createdTrip === "object" && "name" in createdTrip
+          ? createdTrip.name
+          : addTripForm.tripData.name;
 
       addTripForm.resetForm();
       setShowAddModal(false);
       setIsDropdownOpen(false);
-      setResultModalConfig({ mode: 'add', params: { tripName } });
+      setResultModalConfig({ mode: "add", params: { tripName } });
       setResultModalVisible(true);
     } finally {
       isSubmittingAddRef.current = false;
@@ -175,15 +200,15 @@ export default function TripSelector({ selectedTrip, onTripSelect, trips, onTrip
         startDate: editTripForm.tripData.startDate,
         endDate: editTripForm.tripData.endDate,
       });
-      
-      if (result && typeof result === 'object' && 'then' in result) {
+
+      if (result && typeof result === "object" && "then" in result) {
         await result;
       }
-      
+
       setEditingTrip(null);
       setShowEditModal(false);
       setIsDropdownOpen(false);
-      setResultModalConfig({ mode: 'edit' });
+      setResultModalConfig({ mode: "edit" });
       setResultModalVisible(true);
     } finally {
       isSubmittingEditRef.current = false;
@@ -207,7 +232,7 @@ export default function TripSelector({ selectedTrip, onTripSelect, trips, onTrip
       setIsDropdownOpen(false);
       setDeleteConfirmModalOpen(false);
       setTripToDelete(null);
-      setResultModalConfig({ mode: 'delete' });
+      setResultModalConfig({ mode: "delete" });
       setResultModalVisible(true);
     }
   };
@@ -238,15 +263,20 @@ export default function TripSelector({ selectedTrip, onTripSelect, trips, onTrip
   const formatDateRange = (startDate: string, endDate: string) => {
     const start = dayjs(startDate);
     const end = dayjs(endDate);
-    return `${start.format('M월 D일')} - ${end.format('M월 D일')}`;
+    return `${start.format("M월 D일")} - ${end.format("M월 D일")}`;
   };
 
   const containerRef = React.useRef<View>(null);
-  const [containerLayout, setContainerLayout] = React.useState<{ x: number; y: number; width: number; height: number } | null>(null);
+  const [containerLayout, setContainerLayout] = React.useState<{
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  } | null>(null);
 
   React.useEffect(() => {
     if (openMenuTripId && containerRef.current) {
-      containerRef.current.measure((x, y, width, height, pageX, pageY) => {
+      containerRef.current.measure((_x, _y, width, height, pageX, pageY) => {
         setContainerLayout({ x: pageX, y: pageY, width, height });
       });
     }
@@ -267,16 +297,13 @@ export default function TripSelector({ selectedTrip, onTripSelect, trips, onTrip
 
   return (
     <View style={styles.container} ref={containerRef}>
-      <Pressable 
-        style={[
-          styles.selector,
-          showDropdown && styles.selectorOpen
-        ]}
+      <Pressable
+        style={[styles.selector, showDropdown && styles.selectorOpen]}
         onPress={() => setIsDropdownOpen(!showDropdown)}
       >
         <View style={styles.selectorContent}>
           <Text style={styles.selectorText}>
-            {selectedTrip ? selectedTrip.name : '여행 선택'}
+            {selectedTrip ? selectedTrip.name : "여행 선택"}
           </Text>
         </View>
         {showDropdown ? (
@@ -288,105 +315,138 @@ export default function TripSelector({ selectedTrip, onTripSelect, trips, onTrip
 
       {showDropdown && (
         <>
-          <Pressable 
+          <Pressable
             style={[StyleSheet.absoluteFill, { zIndex: 9998 }]}
             onPress={handleOutsidePress}
           />
-          <View 
-            style={styles.dropdownContainer} 
+          <View
+            style={styles.dropdownContainer}
             ref={dropdownRef}
             onStartShouldSetResponder={() => true}
-            onResponderGrant={(e) => e.stopPropagation()}
+            onResponderGrant={e => e.stopPropagation()}
           >
             <View style={styles.dropdown} pointerEvents="box-none">
-            <ScrollView 
-              style={styles.tripList}
-              contentContainerStyle={styles.tripListContent}
-              showsVerticalScrollIndicator={false}
-            >
-              {trips.map((trip) => (
-                <Pressable
-                  key={trip.id}
-                  ref={(ref) => {
-                    tripItemRefs.current[trip.id] = ref;
-                  }}
-                  style={[
-                    styles.tripItem,
-                    selectedTrip?.id === trip.id && styles.selectedTripItem,
-                    hoveredTripId === trip.id && styles.tripItemHovered
-                  ]}
-                  onPress={() => {
-                    if (openMenuTripId) {
-                      setOpenMenuTripId(null);
-                    } else {
-                      handleTripSelect(trip);
-                    }
-                  }}
-                  onHoverIn={() => setHoveredTripId(trip.id)}
-                  onHoverOut={() => setHoveredTripId(null)}
-                >
-                  <View style={styles.tripInfo}>
-                    <Text style={[
-                      styles.tripName,
-                      selectedTrip?.id === trip.id && styles.selectedTripText
-                    ]}>
-                      {trip.name}
-                    </Text>
-                    <Text style={[
-                      styles.tripDate,
-                      selectedTrip?.id === trip.id && styles.selectedTripText
-                    ]}>
-                      {formatDateRange(trip.startDate, trip.endDate)}
-                    </Text>
-                  </View>
-                  <View style={styles.dotsButtonContainer}>
-                    <Pressable
-                      style={styles.dotsButton}
-                      onPress={(e) => {
-                        e.stopPropagation();
-                        const itemRef = tripItemRefs.current[trip.id];
-                        if (itemRef) {
-                          itemRef.measure((x, y, width, height, pageX, pageY) => {
-                            const menuTop = pageY + height / 2 + 16; 
-                            const screenWidth = Dimensions.get('window').width;
-                            const menuRight = screenWidth - (pageX + width) - 54;
-                            setMenuPosition({ top: menuTop, right: menuRight });
-                            setOpenMenuTripId(openMenuTripId === trip.id ? null : trip.id);
-                          });
-                        } else {
-                          const tripIndex = trips.findIndex(t => t.id === trip.id);
-                          if (containerLayout) {
-                            const selectorHeight = 32;
-                            const menuTop = containerLayout.y + selectorHeight + 4 + (tripIndex * 64) + 16 + 28;
-                            const screenWidth = Dimensions.get('window').width;
-                            const menuRight = screenWidth - containerLayout.x - containerLayout.width + 50;
-                            setMenuPosition({ top: menuTop, right: menuRight });
+              <ScrollView
+                style={styles.tripList}
+                contentContainerStyle={styles.tripListContent}
+                showsVerticalScrollIndicator={false}
+              >
+                {trips.map(trip => (
+                  <Pressable
+                    key={trip.id}
+                    ref={ref => {
+                      tripItemRefs.current[trip.id] = ref;
+                    }}
+                    style={[
+                      styles.tripItem,
+                      selectedTrip?.id === trip.id && styles.selectedTripItem,
+                      hoveredTripId === trip.id && styles.tripItemHovered,
+                    ]}
+                    onPress={() => {
+                      if (openMenuTripId) {
+                        setOpenMenuTripId(null);
+                      } else {
+                        handleTripSelect(trip);
+                      }
+                    }}
+                    onHoverIn={() => setHoveredTripId(trip.id)}
+                    onHoverOut={() => setHoveredTripId(null)}
+                  >
+                    <View style={styles.tripInfo}>
+                      <Text
+                        style={[
+                          styles.tripName,
+                          selectedTrip?.id === trip.id &&
+                            styles.selectedTripText,
+                        ]}
+                      >
+                        {trip.name}
+                      </Text>
+                      <Text
+                        style={[
+                          styles.tripDate,
+                          selectedTrip?.id === trip.id &&
+                            styles.selectedTripText,
+                        ]}
+                      >
+                        {formatDateRange(trip.startDate, trip.endDate)}
+                      </Text>
+                    </View>
+                    <View style={styles.dotsButtonContainer}>
+                      <Pressable
+                        style={styles.dotsButton}
+                        onPress={e => {
+                          e.stopPropagation();
+                          const itemRef = tripItemRefs.current[trip.id];
+                          if (itemRef) {
+                            itemRef.measure(
+                              (_x, _y, width, height, pageX, pageY) => {
+                                const menuTop = pageY + height / 2 + 16;
+                                const screenWidth =
+                                  Dimensions.get("window").width;
+                                const menuRight =
+                                  screenWidth - (pageX + width) - 54;
+                                setMenuPosition({
+                                  top: menuTop,
+                                  right: menuRight,
+                                });
+                                setOpenMenuTripId(
+                                  openMenuTripId === trip.id ? null : trip.id,
+                                );
+                              },
+                            );
+                          } else {
+                            const tripIndex = trips.findIndex(
+                              t => t.id === trip.id,
+                            );
+                            if (containerLayout) {
+                              const selectorHeight = 32;
+                              const menuTop =
+                                containerLayout.y +
+                                selectorHeight +
+                                4 +
+                                tripIndex * 64 +
+                                16 +
+                                28;
+                              const screenWidth =
+                                Dimensions.get("window").width;
+                              const menuRight =
+                                screenWidth -
+                                containerLayout.x -
+                                containerLayout.width +
+                                50;
+                              setMenuPosition({
+                                top: menuTop,
+                                right: menuRight,
+                              });
+                            }
+                            setOpenMenuTripId(
+                              openMenuTripId === trip.id ? null : trip.id,
+                            );
                           }
-                          setOpenMenuTripId(openMenuTripId === trip.id ? null : trip.id);
-                        }
-                      }}
-                    >
-                      <DotsIcon width={16} height={16} />
-                    </Pressable>
+                        }}
+                      >
+                        <DotsIcon width={16} height={16} />
+                      </Pressable>
+                    </View>
+                  </Pressable>
+                ))}
+              </ScrollView>
+
+              <Pressable
+                style={styles.addTripButton}
+                onPress={() => {
+                  setOpenMenuTripId(null);
+                  setShowAddModal(true);
+                }}
+              >
+                <View style={styles.addTripButtonBox}>
+                  <View style={{ marginRight: 4 }}>
+                    <TripAddIcon width={14} height={14} />
                   </View>
-                </Pressable>
-              ))}
-            </ScrollView>
-            
-            <Pressable 
-              style={styles.addTripButton}
-              onPress={() => {
-                setOpenMenuTripId(null);
-                setShowAddModal(true);
-              }}
-            >
-              <View style={styles.addTripButtonBox}>
-                <View style={{ marginRight: 4 }}>
-                  <TripAddIcon width={14} height={14} />
+                  <Text style={styles.addTripButtonText}>새 여행 추가</Text>
                 </View>
-                <Text style={styles.addTripButtonText}>새 여행 추가</Text>
-              </View>
-            </Pressable>
+              </Pressable>
             </View>
           </View>
         </>
@@ -399,16 +459,21 @@ export default function TripSelector({ selectedTrip, onTripSelect, trips, onTrip
           animationType="fade"
           onRequestClose={() => setOpenMenuTripId(null)}
         >
-          <Pressable 
+          <Pressable
             style={styles.menuModalOverlay}
             onPress={() => setOpenMenuTripId(null)}
           >
             {(() => {
               const trip = trips.find(t => t.id === openMenuTripId);
               if (!trip || !menuPosition) return null;
-              
+
               return (
-                <View style={[styles.menuContainerModal, { top: menuPosition.top, right: menuPosition.right }]}>
+                <View
+                  style={[
+                    styles.menuContainerModal,
+                    { top: menuPosition.top, right: menuPosition.right },
+                  ]}
+                >
                   <Pressable
                     style={styles.menuItem}
                     onPress={() => {
@@ -481,7 +546,7 @@ export default function TripSelector({ selectedTrip, onTripSelect, trips, onTrip
           setResultModalVisible(false);
           setResultModalConfig(null);
         }}
-        mode={resultModalConfig?.mode || ''}
+        mode={resultModalConfig?.mode || ""}
         params={resultModalConfig?.params}
       />
     </View>
@@ -490,12 +555,12 @@ export default function TripSelector({ selectedTrip, onTripSelect, trips, onTrip
 
 const styles = StyleSheet.create({
   container: {
-    position: 'relative',
+    position: "relative",
   },
   selector: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     backgroundColor: colors.white,
     borderWidth: 1,
     borderColor: colors.gray300,
@@ -504,7 +569,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     minWidth: 220,
     height: 32,
-    alignSelf: 'flex-start',
+    alignSelf: "flex-start",
   },
   selectorOpen: {
     borderBottomLeftRadius: 0,
@@ -520,8 +585,8 @@ const styles = StyleSheet.create({
     color: colors.black,
   },
   dropdownContainer: {
-    position: 'absolute',
-    top: '100%',
+    position: "absolute",
+    top: "100%",
     left: 0,
     right: 0,
     zIndex: 9999,
@@ -536,18 +601,18 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderTopWidth: 0,
     borderColor: colors.gray300,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 5,
-    width: '100%',
+    width: "100%",
     maxHeight: 212,
   },
   selectedTripHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderBottomWidth: 1,
@@ -567,16 +632,16 @@ const styles = StyleSheet.create({
   tripListContent: {
     paddingHorizontal: 4,
     paddingVertical: 4,
-    alignItems: 'center',
+    alignItems: "center",
   },
   tripItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    width: '100%',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    width: "100%",
     height: 62,
     paddingHorizontal: 16,
-    backgroundColor: 'transparent',
+    backgroundColor: "transparent",
     marginBottom: 2,
     borderRadius: 8,
   },
@@ -604,22 +669,22 @@ const styles = StyleSheet.create({
     color: colors.black,
   },
   dotsButtonContainer: {
-    position: 'relative',
+    position: "relative",
   },
   dotsButton: {
     padding: 4,
   },
   menuModalOverlay: {
     flex: 1,
-    backgroundColor: 'transparent',
+    backgroundColor: "transparent",
   },
   menuContainerModal: {
-    position: 'absolute',
+    position: "absolute",
     backgroundColor: colors.white,
     borderRadius: 10,
     width: 89,
     height: 72,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.12,
     shadowRadius: 24,
@@ -628,8 +693,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
   },
   menuItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingVertical: 6,
     paddingHorizontal: 8,
   },
@@ -643,8 +708,8 @@ const styles = StyleSheet.create({
     marginLeft: 6,
   },
   addTripButton: {
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     paddingHorizontal: 16,
     paddingTop: 4,
     paddingBottom: 4,
@@ -655,12 +720,12 @@ const styles = StyleSheet.create({
     borderBottomRightRadius: 10,
   },
   addTripButtonBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: '112%',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    width: "112%",
     height: 40,
-    backgroundColor: 'rgba(0, 102, 255, 0.08)',
+    backgroundColor: "rgba(0, 102, 255, 0.08)",
     borderRadius: 10,
   },
   addTripButtonText: {
@@ -669,4 +734,4 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     color: colors.success,
   },
-}); 
+});
