@@ -183,6 +183,7 @@ export default function ItineraryItem({
   const [aiAnalyzeSizeErrorMessage, setAiAnalyzeSizeErrorMessage] = useState("");
   const [lastAiSelection, setLastAiSelection] = useState<AiAttachmentAnalyzeSelection | null>(null);
   const lastHandledAiAnalyzeSeqRef = useRef<number | null>(null);
+  const aiAnalyzeCancelledRef = useRef(false);
 
   useEffect(() => {
     if (!stagedDocumentAnalyze) return;
@@ -794,6 +795,7 @@ export default function ItineraryItem({
         setAiAnalyzeSizeErrorMessage(`"${oversizeName}"은(는) 10MB를 넘어 분석할 수 없어요.`);
         return;
       }
+      aiAnalyzeCancelledRef.current = false;
       setIsAiAnalyzing(true);
       try {
         const payload = await buildAnalyzeUploadPayload(selection, {
@@ -803,6 +805,7 @@ export default function ItineraryItem({
         const res = await analyzeDocumentUpload(payload.file, {
           filename: payload.filename,
         });
+        if (aiAnalyzeCancelledRef.current) return;
         const err = res.error?.trim();
         if (!res.success || err) {
           setLastAiSelection(selection);
@@ -815,6 +818,7 @@ export default function ItineraryItem({
         setAiAnalyzeResult(res);
         setAiAnalyzeModalVisible(true);
       } catch (e) {
+        if (aiAnalyzeCancelledRef.current) return;
         setLastAiSelection(selection);
         setAiAnalyzeInlineErrorMessage("분석 서버에 연결하지 못했어요. 잠시 후 다시 시도해 주세요.");
         setAiAnalyzeInlineError(true);
@@ -1259,6 +1263,10 @@ export default function ItineraryItem({
                   : undefined
               }
               isAiAnalyzing={isAiAnalyzing}
+              onCancelAiAnalyze={() => {
+                aiAnalyzeCancelledRef.current = true;
+                setIsAiAnalyzing(false);
+              }}
             />
           )}
           {aiAnalyzeInlineError && lastAiSelection && (

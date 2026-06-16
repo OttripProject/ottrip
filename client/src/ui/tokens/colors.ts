@@ -12,6 +12,7 @@ export const colors = {
   gray900: "#1F1F1F",
   primary: "#007AFF",
   primaryDark: "#0059B2",
+  red: "rgb(154, 44, 32)",
   danger: "#EF4444",
   success: "#0066FF",
   warning: "#FF4242",
@@ -20,6 +21,15 @@ export const colors = {
   gradientAIColors: ["#D7D0FF4D", "#CBDDFF99"] as const,
   gradientAIRefresh: ["#9CBEFF", "#B4A7FF"] as const,
   overlayBackground: "rgba(0, 0, 0, 0.7)",
+  aiGrad: ["#7B6CFF", "#A06CFF"] as const,
+  aiGradHover: ["#6E5DF5", "#9559FB"] as const,
+  aiGradPress: ["#5F4FE8", "#8748F2"] as const,
+  aiGlow: "rgba(123, 108, 255, 0.34)",
+  aiGlowPress: "rgba(123, 108, 255, 0.30)",
+  aiTint: "#F0EBFF",
+  aiTintHover: "#E7DEFF",
+  aiTintPress: "#DCCFFF",
+  aiInk: "#7B6CFF",
 };
 
 export type ColorName = keyof typeof colors;

@@ -1,4 +1,5 @@
-import { createElement, useEffect, useRef, useState } from "react";
+import { LinearGradient } from "expo-linear-gradient";
+import { createElement, useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Image,
@@ -28,8 +29,11 @@ import { guestPrompt } from "@/utils/guestPrompt";
 import DeleteIcon from "../../../assets/attach_del.svg";
 import AttachmentDocIcon from "../../../assets/mobile_attachment_document.svg";
 import AttachmentImageIcon from "../../../assets/mobile_attachment_image.svg";
-import CameraIcon from "../../../assets/mobile_camera.svg";
+import UploadIcon from "../../../assets/upload_icon.svg";
 import AddIcon from "../../../assets/mobile_plan_add.svg";
+import CheckWhiteIcon from "../../../assets/check_white.svg";
+import ErrorTriangleIcon from "../../../assets/error_triangle.svg";
+import CloseErrorIcon from "../../../assets/close_error.svg";
 
 export type { AttachmentSectionProps } from "@/ui/components/attachmentSection.types";
 
@@ -130,6 +134,7 @@ export default function AttachmentSection({
   onAppendPendingFiles,
   onAiAnalyzePress,
   isAiAnalyzing = false,
+  onCancelAiAnalyze,
 }: AttachmentSectionProps) {
   const { data: me } = useMe();
   const isGuest = isGuestProp ?? me?.isGuest === true;
@@ -142,7 +147,10 @@ export default function AttachmentSection({
   const [previewInitialIndex, setPreviewInitialIndex] = useState(0);
   const [previewVisible, setPreviewVisible] = useState(false);
   const [aiFileSelection, setAiFileSelection] = useState<AiFileSelection>(null);
+  const [isDragOver, setIsDragOver] = useState(false);
+  const [fileFormatError, setFileFormatError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const dropZoneRef = useRef<any>(null);
 
   const showAiToolbar =
     Platform.OS === "web" &&
@@ -187,6 +195,74 @@ export default function AttachmentSection({
     setIsPreviewImageLoading(false);
   };
 
+  const handleDragOver = useCallback((e: DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!disabled && !isUploading) setIsDragOver(true);
+  }, [disabled, isUploading]);
+
+  const handleDragLeave = useCallback((e: DragEvent) => {
+    e.preventDefault();
+    if ((e.currentTarget as HTMLElement)?.contains?.(e.relatedTarget as Node)) return;
+    setIsDragOver(false);
+  }, []);
+
+  const AI_MAX_SIZE = 10 * 1024 * 1024;
+
+  const buildFileError = (invalidNames: string[], oversizeNames: string[]): string | null => {
+    if (oversizeNames.length > 0) {
+      const first = oversizeNames[0];
+      const rest = oversizeNames.length - 1;
+      return rest > 0
+        ? `"${first}" 외 ${rest}건은(는) 10MB를 넘어 업로드할 수 없어요.`
+        : `"${first}"은(는) 10MB를 넘어 업로드할 수 없어요.`;
+    }
+    if (invalidNames.length > 0) {
+      const first = invalidNames[0];
+      const rest = invalidNames.length - 1;
+      return rest > 0
+        ? `"${first}" 외 ${rest}건은(는) 지원하지 않는 형식이에요. (이미지·PDF)`
+        : `"${first}"은(는) 지원하지 않는 형식이에요. (이미지·PDF)`;
+    }
+    return null;
+  };
+
+  const handleDrop = useCallback((e: DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(false);
+    if (disabled || isUploading) return;
+    const files = e.dataTransfer?.files;
+    if (!files?.length) return;
+    const next: LocalFile[] = [];
+    const invalidNames: string[] = [];
+    const oversizeNames: string[] = [];
+    for (let i = 0; i < files.length; i += 1) {
+      const lf = fileToLocalFile(files[i]);
+      if (!lf) { invalidNames.push(files[i].name); continue; }
+      if (files[i].size > AI_MAX_SIZE) { oversizeNames.push(files[i].name); continue; }
+      next.push(lf);
+    }
+    setFileFormatError(buildFileError(invalidNames, oversizeNames));
+    if (next.length > 0 && onAppendPendingFiles) onAppendPendingFiles(next);
+  }, [disabled, isUploading, onAppendPendingFiles]);
+
+  useEffect(() => {
+    if (Platform.OS !== "web") return;
+    const el = dropZoneRef.current;
+    if (!el) return;
+    el.addEventListener("dragover", handleDragOver);
+    el.addEventListener("dragenter", handleDragOver);
+    el.addEventListener("dragleave", handleDragLeave);
+    el.addEventListener("drop", handleDrop);
+    return () => {
+      el.removeEventListener("dragover", handleDragOver);
+      el.removeEventListener("dragenter", handleDragOver);
+      el.removeEventListener("dragleave", handleDragLeave);
+      el.removeEventListener("drop", handleDrop);
+    };
+  }, [handleDragOver, handleDragLeave, handleDrop]);
+
   const handleOpenPdf = (fileUrl: string) => {
     try {
       if (typeof window !== "undefined") {
@@ -212,18 +288,17 @@ export default function AttachmentSection({
       return;
     }
     const next: LocalFile[] = [];
+    const invalidNames: string[] = [];
+    const oversizeNames: string[] = [];
     for (let i = 0; i < list.length; i += 1) {
       const lf = fileToLocalFile(list[i]);
-      if (lf) next.push(lf);
+      if (!lf) { invalidNames.push(list[i].name); continue; }
+      if (list[i].size > AI_MAX_SIZE) { oversizeNames.push(list[i].name); continue; }
+      next.push(lf);
     }
     flushInput(input);
-    if (next.length === 0) {
-      showMessage(
-        "지원하지 않는 형식",
-        "이미지(JPEG, PNG, GIF, WebP, HEIC/HEIF) 또는 PDF만 추가할 수 있습니다.",
-      );
-      return;
-    }
+    setFileFormatError(buildFileError(invalidNames, oversizeNames));
+    if (next.length === 0) return;
     if (onAppendPendingFiles) {
       onAppendPendingFiles(next);
       return;
@@ -396,11 +471,24 @@ export default function AttachmentSection({
               pressed && styles.pressed,
             ]}
           >
-            <AddIcon width={16} height={16} />
-            <Text style={styles.addLabel}>추가</Text>
+            <Text style={styles.addLabel}>+ 추가</Text>
           </Pressable>
         )}
       </View>
+
+      {fileFormatError && (
+        <View style={styles.formatErrorBanner}>
+          <ErrorTriangleIcon width={14} height={14} style={styles.formatErrorIcon} />
+          <Text style={styles.formatErrorText}>{fileFormatError}</Text>
+          <Pressable onPress={() => setFileFormatError(null)} style={styles.formatErrorClose} hitSlop={6}>
+            <CloseErrorIcon width={10} height={10} color={colors.red} />
+          </Pressable>
+        </View>
+      )}
+
+      {showAiToolbar && (
+        <Text style={styles.aiSelectHint}>분석할 파일을 1개 선택하세요.</Text>
+      )}
 
       {isLoadingExisting && !hasFiles ? (
         <View style={styles.loadingWrap}>
@@ -483,63 +571,80 @@ export default function AttachmentSection({
         </View>
       ) : hideAddControls ? null : (
         <Pressable
+          ref={dropZoneRef}
           onPress={triggerHiddenFilePicker}
           disabled={disabled || isUploading}
           style={({ pressed }) => [
             styles.dropZone,
-            pressed && !disabled && styles.dropZonePressed,
+            isDragOver && styles.dropZoneDragOver,
+            pressed && !disabled && !isDragOver && styles.dropZonePressed,
             (disabled || isUploading) && styles.dropZoneDisabled,
           ]}
         >
-          <View style={styles.dropZoneRow}>
-            <CameraIcon width={16} height={16} />
-            <Text style={styles.hint} numberOfLines={1}>
-              사진 또는 PDF 추가
-            </Text>
+          <View style={[styles.dropZoneIconBox, isDragOver && styles.dropZoneIconBoxDragOver]}>
+            <UploadIcon width={24} height={24} color={isDragOver ? colors.primary : colors.gray900} />
           </View>
+          <Text style={styles.dropZoneHint}>파일을 끌어다 놓거나 클릭해서 추가</Text>
+          <Text style={styles.dropZoneSubHint}>PDF · JPG · PNG · 여러 개 가능</Text>
         </Pressable>
+      )}
+      {!hideAddControls && !hasFiles && (
+        <Text style={styles.dropZoneSizeHint}>최대 10MB · PDF, JPG, PNG</Text>
       )}
 
       {showAiToolbar ? (
         <View style={styles.aiToolbar}>
-          <Pressable
-            onPress={() => {
-              if (!aiFileSelection || isAiAnalyzing) return;
-              onAiAnalyzePress?.(aiFileSelection);
-            }}
-            disabled={
-              !aiFileSelection || disabled || isUploading || isAiAnalyzing
-            }
-            style={({ pressed }) => [
-              styles.aiAnalyzeButton,
-              (!aiFileSelection || disabled || isUploading) &&
-                styles.aiAnalyzeButtonDisabled,
-              pressed &&
-                aiFileSelection &&
-                !disabled &&
-                !isUploading &&
-                !isAiAnalyzing &&
-                styles.aiAnalyzeButtonPressed,
-            ]}
-          >
-            {isAiAnalyzing ? (
-              <View style={styles.aiAnalyzeLoadingInner}>
-                <ActivityIndicator size="small" color={colors.white} />
-                <View style={styles.aiAnalyzeLoadingTextCol}>
-                  <Text style={styles.aiAnalyzeLoadingTextTitle}>분석 중</Text>
-                  <Text style={styles.aiAnalyzeLoadingText}>
-                    AI가 첨부파일 내용을 정리하고 있어요
-                  </Text>
-                </View>
+          {isAiAnalyzing ? (
+            <View style={styles.aiAnalyzeLoadingBox}>
+              <ActivityIndicator size="small" color={colors.aiInk} />
+              <View style={styles.aiAnalyzeLoadingTextCol}>
+                <Text style={styles.aiAnalyzeLoadingTextTitle}>분석 중...</Text>
+                <Text style={styles.aiAnalyzeLoadingText}>
+                  AI가 첨부 파일 내용을 정리하고 있어요.
+                </Text>
               </View>
-            ) : (
-              <Text style={styles.aiAnalyzeButtonText}>
-                {aiFileSelection
-                  ? "AI 분석으로 일정 자동 입력"
-                  : "분석할 첨부파일을 선택해주세요"}
-              </Text>
-            )}
-          </Pressable>
+              <Pressable
+                onPress={onCancelAiAnalyze}
+                style={({ pressed }) => [styles.aiCancelButton, pressed && styles.aiCancelButtonPressed]}
+                hitSlop={8}
+              >
+                <Text style={styles.aiCancelButtonText}>취소</Text>
+              </Pressable>
+            </View>
+          ) : (
+            <Pressable
+              onPress={() => {
+                if (!aiFileSelection || isAiAnalyzing) return;
+                onAiAnalyzePress?.(aiFileSelection);
+              }}
+              disabled={!aiFileSelection || disabled || isUploading}
+              style={styles.aiAnalyzeButton}
+            >
+              {({ pressed, hovered }: { pressed: boolean; hovered?: boolean }) => {
+                const isDisabled = !aiFileSelection || disabled || isUploading;
+                const gradColors = isDisabled
+                  ? ([colors.gray400, colors.gray400] as const)
+                  : pressed
+                    ? colors.aiGradPress
+                    : hovered
+                      ? colors.aiGradHover
+                      : colors.aiGrad;
+                return (
+                  <LinearGradient
+                    colors={gradColors}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={styles.aiAnalyzeGradient}
+                  >
+                    <View style={styles.aiAnalyzeButtonInner}>
+                      <CheckWhiteIcon width={14} height={14} />
+                      <Text style={styles.aiAnalyzeButtonText}>AI로 분석</Text>
+                    </View>
+                  </LinearGradient>
+                );
+              }}
+            </Pressable>
+          )}
         </View>
       ) : null}
 
@@ -634,31 +739,54 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   dropZone: {
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderStyle: "dashed",
     borderColor: colors.gray400,
-    borderRadius: radii.md,
-    backgroundColor: colors.white,
-    minHeight: 40,
-    paddingVertical: 10,
+    borderRadius: radii.lg,
+    backgroundColor: colors.gray100,
+    paddingVertical: spacing.xl,
+    paddingHorizontal: spacing.lg,
     alignItems: "center",
     justifyContent: "center",
   },
-  dropZoneRow: {
-    flexDirection: "row",
+  dropZoneIconBox: {
+    width: 44,
+    height: 44,
+    borderRadius: radii.lg,
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: colors.gray300,
     alignItems: "center",
     justifyContent: "center",
-    gap: 8,
+    marginBottom: spacing.sm,
+  },
+  dropZoneHint: {
+    ...textStyles.h7,
+    color: colors.gray900,
+  },
+  dropZoneSubHint: {
+    ...textStyles.body6,
+    color: colors.gray600,
+    marginTop: spacing.xs - 1,
+  },
+  dropZoneSizeHint: {
+    ...textStyles.body6,
+    color: colors.gray600,
+    marginTop: spacing.sm,
+    textAlign: "center",
+  },
+  dropZoneDragOver: {
+    borderColor: colors.primary,
+    backgroundColor: "#EBF4FF",
+  },
+  dropZoneIconBoxDragOver: {
+    borderColor: colors.primary,
   },
   dropZonePressed: {
-    backgroundColor: colors.gray100,
+    backgroundColor: colors.gray200,
   },
   dropZoneDisabled: {
     opacity: 0.5,
-  },
-  hint: {
-    ...textStyles.h8,
-    color: colors.gray600,
   },
   loadingWrap: {
     paddingVertical: 24,
@@ -720,51 +848,104 @@ const styles = StyleSheet.create({
     marginLeft: 4,
     flexShrink: 0,
   },
+  formatErrorBanner: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: spacing.sm,
+    marginTop: spacing.sm,
+    marginBottom: spacing.sm,
+    paddingVertical: 9,
+    paddingHorizontal: spacing.sm + 2,
+    borderRadius: radii.md,
+    backgroundColor: "rgb(255, 241, 239)",
+    borderWidth: 1,
+    borderColor: "rgb(251, 217, 211)",
+  },
+  formatErrorIcon: {
+    flexShrink: 0,
+    marginTop: 1,
+  },
+  formatErrorText: {
+    ...textStyles.body6,
+    flex: 1,
+    color: colors.red,
+  },
+  formatErrorClose: {
+    width: 18,
+    height: 18,
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+  },
+  aiSelectHint: {
+    ...textStyles.body6,
+    color: colors.gray700,
+    marginBottom: spacing.xs,
+  },
   aiToolbar: {
     marginTop: spacing.md,
     width: "100%",
   },
   aiAnalyzeButton: {
     width: "100%",
+    borderRadius: radii.md,
+    overflow: "hidden",
+  },
+  aiAnalyzeGradient: {
+    width: "100%",
     alignItems: "center",
     justifyContent: "center",
     paddingVertical: 14,
     paddingHorizontal: spacing.md,
-    borderRadius: radii.md,
-    backgroundColor: colors.black,
   },
-  aiAnalyzeButtonDisabled: {
-    backgroundColor: colors.gray400,
-  },
-  aiAnalyzeButtonPressed: {
-    backgroundColor: colors.gray400,
-    opacity: 0.85,
+  aiAnalyzeButtonInner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.xs,
   },
   aiAnalyzeButtonText: {
     ...textStyles.h8,
     color: colors.white,
     textAlign: "center",
   },
-  aiAnalyzeLoadingInner: {
+  aiAnalyzeLoadingBox: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
-    paddingVertical: 2,
+    gap: 16,
+    backgroundColor: colors.gray200,
+    borderRadius: radii.md,
+    paddingVertical: 14,
+    paddingHorizontal: spacing.lg,
   },
   aiAnalyzeLoadingTextCol: {
+    flex: 1,
     flexDirection: "column",
-    flexShrink: 1,
     gap: 2,
   },
   aiAnalyzeLoadingTextTitle: {
     ...textStyles.h8,
-    color: colors.white,
-    lineHeight: 20,
+    color: colors.gray900,
   },
   aiAnalyzeLoadingText: {
     ...textStyles.body5,
-    color: colors.white,
-    lineHeight: 20,
+    color: colors.gray600,
+  },
+  aiCancelButton: {
+    flexShrink: 0,
+    marginLeft: "auto" as unknown as number,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: radii.sm,
+    backgroundColor: colors.gray300,
+  },
+  aiCancelButtonPressed: {
+    opacity: 0.7,
+  },
+  aiCancelButtonText: {
+    fontFamily: "Pretendard-SemiBold",
+    fontSize: 11,
+    lineHeight: 14,
+    color: colors.gray900,
   },
   previewBackdrop: {
     flex: 1,

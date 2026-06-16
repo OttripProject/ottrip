@@ -32,4 +32,5 @@ export interface AttachmentSectionProps {
   onAppendPendingFiles?: (files: LocalFile[]) => void;
   onAiAnalyzePress?: (selection: AiAttachmentAnalyzeSelection) => void;
   isAiAnalyzing?: boolean;
+  onCancelAiAnalyze?: () => void;
 }
