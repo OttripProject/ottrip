@@ -304,7 +304,11 @@ export default function FlightEditModal({
             currency: ExpenseCurrency.KRW,
             category: ExpenseCategory.FLIGHT as any,
             planId,
-            description: formData.reservation_number?.trim() || null,
+            description: (() => {
+              const dep = flightSegments[0]?.departure_airport?.trim();
+              const arr = flightSegments[flightSegments.length - 1]?.arrival_airport?.trim();
+              return dep && arr ? `${dep} → ${arr}` : null;
+            })(),
           },
         });
         const updated = await flightsApi.getFlight(flight.id);
@@ -329,7 +333,11 @@ export default function FlightEditModal({
             currency: ExpenseCurrency.KRW,
             category: ExpenseCategory.FLIGHT as any,
             planId,
-            description: formData.reservation_number?.trim() || null,
+            description: (() => {
+              const dep = flightSegments[0]?.departure_airport?.trim();
+              const arr = flightSegments[flightSegments.length - 1]?.arrival_airport?.trim();
+              return dep && arr ? `${dep} → ${arr}` : null;
+            })(),
           },
         });
         const created = await flightsApi.getFlight(createRes.id);
