@@ -188,6 +188,11 @@ export default function CountryPicker({
                 showsVerticalScrollIndicator={false}
                 style={styles.list}
               />
+            ) : searchText.trim().length > 0 ? (
+              <View style={styles.noResultState}>
+                <Text style={styles.noResultTitle}>검색 결과가 없습니다</Text>
+                <Text style={styles.noResultSubtitle}>다른 키워드로 검색해 보세요.</Text>
+              </View>
             ) : (
               <View style={styles.emptyState}>
                 <SearchIcon width={22} height={22} color={colors.gray500} />
@@ -324,6 +329,20 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   emptySubtitle: {
+    ...textStyles.body5,
+    color: colors.gray600,
+  },
+  noResultState: {
+    paddingVertical: 24,
+    paddingHorizontal: 12,
+    alignItems: "center",
+  },
+  noResultTitle: {
+    ...textStyles.h7,
+    color: colors.gray900,
+    marginBottom: 2,
+  },
+  noResultSubtitle: {
     ...textStyles.body5,
     color: colors.gray600,
   },
