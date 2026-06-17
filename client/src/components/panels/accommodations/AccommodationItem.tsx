@@ -621,7 +621,7 @@ export default function AccommodationItem({
         {/* 기본 정보 섹션 */}
         <View style={styles.formSection}>
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>숙소명*</Text>
+            <Text style={styles.label}>숙소명 <Text style={{ color: colors.warning }}>*</Text></Text>
             <Input
               variant="filled"
               placeholder={PLACEHOLDERS.accommodation.name}
@@ -729,7 +729,7 @@ export default function AccommodationItem({
                 { position: "relative" },
               ]}
             >
-              <Text style={styles.label}>체크인 날짜</Text>
+              <Text style={styles.label}>체크인 날짜 <Text style={{ color: colors.warning }}>*</Text></Text>
               <Pressable
                 style={
                   readOnly
@@ -784,7 +784,7 @@ export default function AccommodationItem({
                 { position: "relative" },
               ]}
             >
-              <Text style={styles.label}>체크인 시간</Text>
+              <Text style={styles.label}>체크인 시간 <Text style={{ color: colors.warning }}>*</Text></Text>
               <TimePicker
                 value={formData.checkin_time}
                 onChange={time =>
@@ -799,6 +799,7 @@ export default function AccommodationItem({
                   }
                 }}
                 onClose={() => setCheckinTimeOpen(false)}
+                popupAlign="right"
                 style={
                   readOnly
                     ? {
@@ -833,7 +834,7 @@ export default function AccommodationItem({
                 { position: "relative" },
               ]}
             >
-              <Text style={styles.label}>체크아웃 날짜</Text>
+              <Text style={styles.label}>체크아웃 날짜 <Text style={{ color: colors.warning }}>*</Text></Text>
               <Pressable
                 style={
                   readOnly
@@ -888,7 +889,7 @@ export default function AccommodationItem({
                 { position: "relative" },
               ]}
             >
-              <Text style={styles.label}>체크아웃 시간</Text>
+              <Text style={styles.label}>체크아웃 시간 <Text style={{ color: colors.warning }}>*</Text></Text>
               <TimePicker
                 value={formData.checkout_time}
                 onChange={time =>
@@ -903,6 +904,7 @@ export default function AccommodationItem({
                   }
                 }}
                 onClose={() => setCheckoutTimeOpen(false)}
+                popupAlign="right"
                 style={
                   readOnly
                     ? {

@@ -877,7 +877,7 @@ export default function ItineraryItem({
       >
         <View style={styles.contentWrapper}>
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>제목*</Text>
+            <Text style={styles.label}>제목 <Text style={{ color: colors.warning }}>*</Text></Text>
             <Input
               variant={readOnly ? "outlined" : "filled"}
               placeholder={PLACEHOLDERS.itinerary.titleForm}
@@ -973,7 +973,7 @@ export default function ItineraryItem({
               { zIndex: showDatePicker ? 20000 : 1 },
             ]}
           >
-            <Text style={styles.label}>날짜*</Text>
+            <Text style={styles.label}>날짜 <Text style={{ color: colors.warning }}>*</Text></Text>
             <Pressable
               style={readOnly ? styles.readOnlyDateInput : styles.dateInput}
               onPress={() => !readOnly && setShowDatePicker(!showDatePicker)}
@@ -1012,7 +1012,7 @@ export default function ItineraryItem({
             ]}
           >
             <View style={[styles.inputGroup, styles.halfWidth]}>
-              <Text style={styles.label}>시작 시간*</Text>
+              <Text style={styles.label}>시작 시간 <Text style={{ color: colors.warning }}>*</Text></Text>
               <TimePicker
                 value={formData.startTime}
                 onChange={time =>
@@ -1037,7 +1037,7 @@ export default function ItineraryItem({
               />
             </View>
             <View style={[styles.inputGroup, styles.halfWidth]}>
-              <Text style={styles.label}>종료 시간*</Text>
+              <Text style={styles.label}>종료 시간 <Text style={{ color: colors.warning }}>*</Text></Text>
               <TimePicker
                 value={formData.endTime}
                 onChange={time =>
@@ -1051,6 +1051,7 @@ export default function ItineraryItem({
                 onClose={() => setTimeOpen(false)}
                 minTime={formData.startTime}
                 disabled={readOnly}
+                popupAlign="right"
                 style={
                   readOnly
                     ? {
@@ -1187,7 +1188,7 @@ export default function ItineraryItem({
                   </View>
 
                   <View style={styles.inputGroup}>
-                    <Text style={styles.label}>금액*</Text>
+                    <Text style={styles.label}>금액 <Text style={{ color: colors.warning }}>*</Text></Text>
                     <Input
                       variant="outlined"
                       placeholder={PLACEHOLDERS.expense.amount}

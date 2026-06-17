@@ -886,7 +886,7 @@ export default function FlightItem({
                         styles.airportPickerWrapper,
                       ]}
                     >
-                      <Text style={styles.label}>출발 공항*</Text>
+                      <Text style={styles.label}>출발 공항 <Text style={{ color: colors.warning }}>*</Text></Text>
                       <AirportPicker
                         value={segment.departure_airport}
                         onChange={code => {
@@ -907,7 +907,7 @@ export default function FlightItem({
                         styles.airportPickerWrapper,
                       ]}
                     >
-                      <Text style={styles.label}>도착 공항*</Text>
+                      <Text style={styles.label}>도착 공항 <Text style={{ color: colors.warning }}>*</Text></Text>
                       <AirportPicker
                         value={segment.arrival_airport}
                         onChange={code => {
@@ -925,7 +925,7 @@ export default function FlightItem({
 
                   <View style={[styles.row, { gap: spacing.sm, zIndex: 1000 }]}>
                     <View style={[styles.inputGroup, styles.halfWidth]}>
-                      <Text style={styles.label}>출발 일자*</Text>
+                      <Text style={styles.label}>출발 일자 <Text style={{ color: colors.warning }}>*</Text></Text>
                       <Pressable
                         style={styles.segmentDateInput}
                         onPress={() => {
@@ -995,7 +995,7 @@ export default function FlightItem({
                       )}
                     </View>
                     <View style={[styles.inputGroup, styles.halfWidth]}>
-                      <Text style={styles.label}>출발 시간*</Text>
+                      <Text style={styles.label}>출발 시간 <Text style={{ color: colors.warning }}>*</Text></Text>
                       <TimePicker
                         value={segment.departure_time}
                         onChange={time => {
@@ -1022,7 +1022,7 @@ export default function FlightItem({
 
                   <View style={[styles.row, { gap: spacing.sm, zIndex: 500 }]}>
                     <View style={[styles.inputGroup, styles.halfWidth]}>
-                      <Text style={styles.label}>도착 일자*</Text>
+                      <Text style={styles.label}>도착 일자 <Text style={{ color: colors.warning }}>*</Text></Text>
                       <Pressable
                         style={styles.segmentDateInput}
                         onPress={() => {
@@ -1085,7 +1085,7 @@ export default function FlightItem({
                       )}
                     </View>
                     <View style={[styles.inputGroup, styles.halfWidth]}>
-                      <Text style={styles.label}>도착 시간*</Text>
+                      <Text style={styles.label}>도착 시간 <Text style={{ color: colors.warning }}>*</Text></Text>
                       <TimePicker
                         value={segment.arrival_time}
                         onChange={time => {
@@ -1099,6 +1099,7 @@ export default function FlightItem({
                         onClose={() => setTimeOpen(false)}
                         style={styles.segmentTimePicker}
                         disabled={readOnly}
+                        popupAlign="right"
                       />
                     </View>
                   </View>

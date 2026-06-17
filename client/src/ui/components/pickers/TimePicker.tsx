@@ -2,24 +2,24 @@ import { PLACEHOLDERS } from "@/constants/placeholders";
 import useDetectClose from "@/hooks/useDetectClose";
 import { colors } from "@/ui/tokens/colors";
 import { radii } from "@/ui/tokens/radii";
-import { spacing } from "@/ui/tokens/spacing";
 import { textStyles } from "@/ui/tokens/typography";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
+  Text,
+  TextInput,
   type TextStyle,
   View,
   type ViewStyle,
 } from "react-native";
-import DropDownPicker from "react-native-dropdown-picker";
-import CheckBlackIcon from "../../../../assets/check_black.svg";
 import DownArrowIcon from "../../../../assets/dropdown_time.svg";
-import MobileTimeIcon from "../../../../assets/mobile_time.svg";
 import UpperArrowIcon from "../../../../assets/upper_arrow.svg";
 
 const MINUTES_5_STEP = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55];
+const HOURS = Array.from({ length: 25 }, (_, i) => i); // 0–24
+const ITEM_HEIGHT = 36;
 
 interface TimePickerProps {
   value: string; // 'HH:mm' 형식
@@ -31,11 +31,23 @@ interface TimePickerProps {
   listItemLabelStyle?: ViewStyle | TextStyle;
   selectedItemContainerStyle?: ViewStyle;
   placeholder?: string;
-  minTime?: string; // 'HH:mm' 형식, 이 시간 이후만 선택 가능
-  maxTime?: string; // 'HH:mm' 형식, 이 시간 이전만 선택 가능
+  minTime?: string;
+  maxTime?: string;
   onOpen?: () => void;
   onClose?: () => void;
   disabled?: boolean;
+  popupAlign?: "left" | "right";
+}
+
+const pad = (n: number) => n.toString().padStart(2, "0");
+
+function parseTime(t: string | undefined): { h: number; m: number } | null {
+  if (!t) return null;
+  const [hStr, mStr] = t.split(":");
+  const h = Number.parseInt(hStr, 10);
+  const m = Number.parseInt(mStr, 10);
+  if (Number.isNaN(h) || Number.isNaN(m)) return null;
+  return { h, m };
 }
 
 export default function TimePicker({
@@ -44,190 +56,238 @@ export default function TimePicker({
   containerStyle,
   style,
   textStyle,
-  dropDownContainerStyle,
-  listItemLabelStyle,
-  selectedItemContainerStyle,
   placeholder = PLACEHOLDERS.picker.time,
   minTime,
   maxTime,
   onOpen,
   onClose,
   disabled = false,
+  popupAlign = "left",
 }: TimePickerProps) {
-  const pickerRef = useRef<View>(null);
-  const [open, setIsOpen, handleOutsidePress] = useDetectClose(
-    pickerRef,
-    false,
-  );
-  const [selectedValue, setSelectedValue] = useState<string | null>(
-    value || null,
-  );
+  const wrapperRef = useRef<View>(null);
+  const hourScrollRef = useRef<ScrollView>(null);
+  const minuteScrollRef = useRef<ScrollView>(null);
+  const [open, setIsOpen] = useDetectClose(wrapperRef, false);
+  const [localText, setLocalText] = useState(value || "");
+  const [isFocused, setIsFocused] = useState(false);
 
-  const timeOptions = useMemo(() => {
-    const options: { label: string; value: string }[] = [];
-    for (let hour = 0; hour <= 24; hour++) {
-      const minutes = hour === 24 ? [0] : MINUTES_5_STEP;
-      for (const minute of minutes) {
-        const timeString = `${hour.toString().padStart(2, "0")}:${minute.toString().padStart(2, "0")}`;
+  const parsed = useMemo(() => parseTime(value), [value]);
+  const selectedHour = parsed?.h ?? null;
+  const selectedMinute = parsed?.m ?? null;
 
-        const isAfterMin = !minTime || timeString >= minTime;
-        const isBeforeMax = !maxTime || timeString <= maxTime;
+  useEffect(() => {
+    if (!isFocused) setLocalText(value || "");
+  }, [value, isFocused]);
 
-        if (isAfterMin && isBeforeMax) {
-          options.push({
-            label: timeString,
-            value: timeString,
-          });
+  const isTimeValid = (h: number, m: number) => {
+    const t = `${pad(h)}:${pad(m)}`;
+    return (!minTime || t >= minTime) && (!maxTime || t <= maxTime);
+  };
+
+  const isHourEnabled = (h: number) => {
+    const mins = h === 24 ? [0] : MINUTES_5_STEP;
+    return mins.some(m => isTimeValid(h, m));
+  };
+
+  const isMinuteEnabled = (m: number) => {
+    if (selectedHour === null) return true;
+    return isTimeValid(selectedHour, m);
+  };
+
+  const minutesForHour = selectedHour === 24 ? [0] : MINUTES_5_STEP;
+
+  const handleTextChange = (text: string) => {
+    const digits = text.replace(/\D/g, "").slice(0, 4);
+    const formatted = digits.length > 2
+      ? `${digits.slice(0, 2)}:${digits.slice(2)}`
+      : digits;
+    setLocalText(formatted);
+
+    if (digits.length === 4) {
+      const h = Number.parseInt(digits.slice(0, 2), 10);
+      const m = Number.parseInt(digits.slice(2, 4), 10);
+      if (h <= 24 && m <= 59) {
+        const t = `${pad(h)}:${pad(m)}`;
+        if ((!minTime || t >= minTime) && (!maxTime || t <= maxTime)) {
+          onChange(t);
         }
       }
     }
-    return options;
-  }, [minTime, maxTime]);
-
-  const ITEM_HEIGHT = 32;
-
-  const selectedIndex = useMemo(() => {
-    if (!value) return -1;
-    return timeOptions.findIndex(item => item.value === value);
-  }, [value, timeOptions]);
-
-  useEffect(() => {
-    if (value) {
-      setSelectedValue(value);
-    } else {
-      setSelectedValue(null);
-    }
-  }, [value]);
-
-  useEffect(() => {
-    if (selectedValue) {
-      onChange(selectedValue);
-    }
-  }, [selectedValue]);
-
-  const styleObj = style as any;
-  const customBackgroundColor = styleObj?.backgroundColor;
-  const customBorderColor = styleObj?.borderColor;
-  const customBorderWidth = styleObj?.borderWidth;
-  const customHeight = styleObj?.height;
-  const customBorderRadius = styleObj?.borderRadius;
-
-  const dropdownBgColor = customBackgroundColor || colors.gray200;
-  const dropdownStyle: any = {
-    width: "100%",
-    backgroundColor: dropdownBgColor,
   };
 
-  if (customBorderColor !== undefined) {
-    dropdownStyle.borderColor = customBorderColor;
-    dropdownStyle.borderWidth = customBorderWidth ?? 1;
-  }
+  const handleInputBlur = () => {
+    setIsFocused(false);
+    setLocalText(value || "");
+  };
 
-  if (customHeight !== undefined) {
-    dropdownStyle.height = customHeight;
-    dropdownStyle.minHeight = customHeight;
-  }
+  const handleToggle = () => {
+    if (disabled) return;
+    const next = !open;
+    setIsOpen(next);
+    if (next) onOpen?.();
+    else onClose?.();
+  };
 
-  if (customBorderRadius !== undefined) {
-    dropdownStyle.borderRadius = customBorderRadius;
-  }
+  const handleSelectHour = (h: number) => {
+    if (!isHourEnabled(h)) return;
+    const currentMinute = selectedMinute ?? 0;
+    const mins = h === 24 ? [0] : MINUTES_5_STEP;
+    const minute = mins.includes(currentMinute) && isTimeValid(h, currentMinute)
+      ? currentMinute
+      : (mins.find(m => isTimeValid(h, m)) ?? 0);
+    onChange(`${pad(h)}:${pad(minute)}`);
+  };
+
+  const handleSelectMinute = (m: number) => {
+    if (!isMinuteEnabled(m)) return;
+    const hour = selectedHour ?? 0;
+    onChange(`${pad(hour)}:${pad(m)}`);
+  };
+
+  useEffect(() => {
+    if (!open) return;
+    const hIdx = selectedHour !== null ? selectedHour : 0;
+    const mIdx = selectedMinute !== null ? MINUTES_5_STEP.indexOf(selectedMinute) : 0;
+    setTimeout(() => {
+      hourScrollRef.current?.scrollTo({ y: hIdx * ITEM_HEIGHT, animated: false });
+      minuteScrollRef.current?.scrollTo({ y: Math.max(0, mIdx) * ITEM_HEIGHT, animated: false });
+    }, 50);
+  }, [open]);
+
+  const styleObj = style as any;
+  const triggerBg = styleObj?.backgroundColor ?? colors.gray200;
+  const triggerBorder = styleObj?.borderColor
+    ? { borderWidth: styleObj.borderWidth ?? 1, borderColor: styleObj.borderColor }
+    : {};
+  const triggerBorderRadius = styleObj?.borderRadius !== undefined
+    ? { borderRadius: styleObj.borderRadius }
+    : {};
 
   return (
-    <>
-      {/* 외부 클릭 감지를 위한 투명 오버레이 */}
-      {open && (
-        <Pressable
-          style={[StyleSheet.absoluteFill, { zIndex: 9999 }]}
-          onPress={handleOutsidePress}
-        />
-      )}
+    <View
+      ref={wrapperRef}
+      style={[styles.wrapper, containerStyle, { zIndex: open ? 100 : 1 }]}
+    >
       <View
-        ref={pickerRef}
-        style={[styles.wrapper, containerStyle, { zIndex: open ? 10000 : 1 }]}
+        style={[
+          styles.trigger,
+          { backgroundColor: triggerBg },
+          triggerBorder,
+          triggerBorderRadius,
+          disabled && styles.triggerDisabled,
+        ]}
       >
-        <DropDownPicker
-          open={open}
-          value={selectedValue}
-          items={timeOptions}
-          setOpen={value => {
-            const isOpen = typeof value === "function" ? value(open) : value;
-            setIsOpen(isOpen);
-            if (isOpen) {
-              onOpen?.();
-            } else {
-              onClose?.();
-            }
-          }}
-          setValue={(callback: any) => {
-            const next = callback(selectedValue) as string | null;
-            setSelectedValue(next);
-          }}
-          disabled={disabled}
+        <TextInput
+          style={[styles.triggerInput, textStyle]}
+          value={localText}
+          onChangeText={handleTextChange}
+          onFocus={() => setIsFocused(true)}
+          onBlur={handleInputBlur}
           placeholder={placeholder}
-          placeholderStyle={[styles.placeholder, textStyle]}
-          textStyle={[styles.text, textStyle]}
-          labelStyle={[styles.text, textStyle]}
-          listItemLabelStyle={[
-            styles.listItemLabel,
-            { backgroundColor: dropdownBgColor },
-            listItemLabelStyle,
-            textStyle,
-          ]}
-          selectedItemLabelStyle={styles.selectedItem}
-          selectedItemContainerStyle={[
-            styles.selectedItemContainer,
-            { backgroundColor: dropdownBgColor },
-            selectedItemContainerStyle,
-          ]}
-          style={[
-            styles.dropdown,
-            dropdownStyle,
-            disabled && { borderColor: colors.gray400, borderWidth: 1 },
-            style,
-          ]}
-          dropDownContainerStyle={[
-            styles.dropdownContainer,
-            {
-              width: "100%",
-              backgroundColor: dropdownBgColor,
-              zIndex: 11000,
-              position: "absolute" as const,
-              ...(customBorderColor && {
-                borderColor: customBorderColor,
-                borderWidth: customBorderWidth ?? 1,
-                borderTopWidth: 0,
-              }),
-            },
-            dropDownContainerStyle,
-          ]}
-          containerStyle={[styles.dropdownOuter, { width: "100%" }]}
-          listMode="FLATLIST"
-          dropDownDirection="BOTTOM"
-          autoScroll={false}
-          flatListProps={{
-            initialScrollIndex: selectedIndex > 0 ? selectedIndex : 0,
-            getItemLayout: (_data, index) => ({
-              length: ITEM_HEIGHT,
-              offset: ITEM_HEIGHT * index,
-              index,
-            }),
-            nestedScrollEnabled: true,
-            keyboardShouldPersistTaps: "handled",
-            showsVerticalScrollIndicator: false,
-          }}
-          ArrowDownIconComponent={() =>
-            Platform.OS === "web" ? (
-              <DownArrowIcon width={16} height={16} />
-            ) : (
-              <MobileTimeIcon width={16} height={16} />
-            )
-          }
-          ArrowUpIconComponent={() => <UpperArrowIcon width={16} height={16} />}
-          translation={{ NOTHING_TO_SHOW: "선택 가능한 시간이 없습니다" }}
-          TickIconComponent={() => <CheckBlackIcon width={16} height={16} />}
+          placeholderTextColor={colors.gray600}
+          keyboardType="numeric"
+          maxLength={5}
+          editable={!disabled}
+          selectTextOnFocus
         />
+        <Pressable onPress={handleToggle} disabled={disabled} style={styles.arrowButton}>
+          {open ? (
+            <UpperArrowIcon width={16} height={16} />
+          ) : (
+            <DownArrowIcon width={16} height={16} />
+          )}
+        </Pressable>
       </View>
-    </>
+
+      {open && (
+        <View style={[styles.popup, popupAlign === "right" ? { right: 0, left: undefined } : { left: 0 }]}>
+          <View style={styles.header}>
+            <View style={styles.headerCell}>
+              <Text style={styles.headerLabel}>시</Text>
+            </View>
+            <View style={styles.headerCell}>
+              <Text style={styles.headerLabel}>분</Text>
+            </View>
+          </View>
+
+          <View style={styles.cols}>
+            <ScrollView
+              ref={hourScrollRef}
+              style={styles.col}
+              showsVerticalScrollIndicator={false}
+              nestedScrollEnabled
+            >
+              <View style={styles.colInner}>
+                {HOURS.map(h => {
+                  const enabled = isHourEnabled(h);
+                  const selected = h === selectedHour;
+                  return (
+                    <Pressable
+                      key={h}
+                      style={({ pressed }) => [
+                        styles.item,
+                        selected && styles.itemSelected,
+                        !enabled && styles.itemDisabled,
+                        pressed && enabled && !selected && styles.itemPressed,
+                      ]}
+                      onPress={() => handleSelectHour(h)}
+                      disabled={!enabled}
+                    >
+                      <Text
+                        style={[
+                          styles.itemText,
+                          selected && styles.itemTextSelected,
+                          !enabled && styles.itemTextDisabled,
+                        ]}
+                      >
+                        {pad(h)}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </ScrollView>
+
+            <ScrollView
+              ref={minuteScrollRef}
+              style={styles.col}
+              showsVerticalScrollIndicator={false}
+              nestedScrollEnabled
+            >
+              <View style={styles.colInner}>
+                {minutesForHour.map(m => {
+                  const enabled = isMinuteEnabled(m);
+                  const selected = m === selectedMinute;
+                  return (
+                    <Pressable
+                      key={m}
+                      style={({ pressed }) => [
+                        styles.item,
+                        selected && styles.itemSelected,
+                        !enabled && styles.itemDisabled,
+                        pressed && enabled && !selected && styles.itemPressed,
+                      ]}
+                      onPress={() => handleSelectMinute(m)}
+                      disabled={!enabled}
+                    >
+                      <Text
+                        style={[
+                          styles.itemText,
+                          selected && styles.itemTextSelected,
+                          !enabled && styles.itemTextDisabled,
+                        ]}
+                      >
+                        {pad(m)}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </ScrollView>
+          </View>
+        </View>
+      )}
+    </View>
   );
 }
 
@@ -235,48 +295,97 @@ const styles = StyleSheet.create({
   wrapper: {
     position: "relative",
   },
-  dropdown: {
-    borderWidth: 0,
-    borderRadius: radii.md,
+  trigger: {
+    flexDirection: "row",
+    alignItems: "center",
     backgroundColor: colors.gray200,
+    borderRadius: radii.md,
     height: 40,
-    minHeight: 40,
-    position: "relative",
-    zIndex: 9999,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: 10,
+    paddingLeft: 12,
+    paddingRight: 8,
   },
-  dropdownContainer: {
-    borderWidth: 0,
-    borderRadius: radii.md,
-    backgroundColor: colors.gray200,
-    zIndex: 9999,
-    elevation: 6,
+  triggerDisabled: {
+    borderWidth: 1,
+    borderColor: colors.gray400,
   },
-  dropdownOuter: {
-    position: "relative",
-    zIndex: 9999,
-  },
-  placeholder: {
+  triggerInput: {
     ...textStyles.body4,
+    color: colors.gray900,
+    flex: 1,
+    minWidth: 0,
+    height: 20,
+    padding: 0,
+    outlineStyle: "none",
+  } as any,
+  arrowButton: {
+    width: 24,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  popup: {
+    position: "absolute",
+    top: 46,
+    width: 200,
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: colors.gray300,
+    borderRadius: 12,
+    zIndex: 1000,
+    overflow: "hidden",
+    shadowColor: colors.gray900,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.1,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  header: {
+    flexDirection: "row",
+  },
+  headerCell: {
+    flex: 1,
+    alignItems: "center",
+    paddingVertical: 8,
+  },
+  headerLabel: {
+    ...textStyles.h8,
     color: colors.gray600,
   },
-  text: {
-    ...textStyles.body4,
-    color: colors.black,
+  cols: {
+    flexDirection: "row",
+    maxHeight: 220,
   },
-  listItemLabel: {
+  col: {
+    flex: 1,
+  },
+  colInner: {
+    paddingVertical: 4,
+    paddingHorizontal: 4,
+  },
+  item: {
+    height: ITEM_HEIGHT,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: radii.sm,
+    marginHorizontal: 2,
+  },
+  itemSelected: {
+    backgroundColor: colors.gray900,
+  },
+  itemPressed: {
+    backgroundColor: colors.gray200,
+  },
+  itemDisabled: {
+    opacity: 0.3,
+  },
+  itemText: {
     ...textStyles.body4,
+    color: colors.gray700,
+  },
+  itemTextSelected: {
+    ...textStyles.body4,
+    color: colors.white,
+  },
+  itemTextDisabled: {
     color: colors.gray500,
-    backgroundColor: colors.gray200,
-    paddingHorizontal: 6,
-    paddingVertical: 6,
-  },
-  selectedItem: {
-    ...textStyles.body4,
-    color: colors.black,
-  },
-  selectedItemContainer: {
-    backgroundColor: colors.gray200,
   },
 });
