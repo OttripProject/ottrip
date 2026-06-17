@@ -62,6 +62,7 @@ interface AccommodationItemProps {
   routeDocumentAnalyzeSuccess?: (
     res: DocumentUploadAnalyzeResponse,
     carryPendingFiles?: LocalFile[],
+    originEntityType?: string,
   ) => boolean;
   carryoverPendingFiles?: LocalFile[] | null;
   onConsumeCarryoverPendingFiles?: () => void;
@@ -143,8 +144,11 @@ export default function AccommodationItem({
   const [aiAnalyzeInlineErrorMessage, setAiAnalyzeInlineErrorMessage] = useState("");
   const [aiAnalyzeSizeErrorMessage, setAiAnalyzeSizeErrorMessage] = useState("");
   const [lastAiSelection, setLastAiSelection] = useState<AiAttachmentAnalyzeSelection | null>(null);
+  const [lastAnalyzeFileName, setLastAnalyzeFileName] = useState<string | null>(null);
   const lastHandledAiAnalyzeSeqRef = useRef<number | null>(null);
   const aiAnalyzeCancelledRef = useRef(false);
+
+  const [analyzeOriginEntityType, setAnalyzeOriginEntityType] = useState<string | undefined>(undefined);
 
   useEffect(() => {
     if (!stagedDocumentAnalyze) return;
@@ -153,9 +157,10 @@ export default function AccommodationItem({
       stagedDocumentAnalyze.result.draft?.itemType;
     if (kind !== "accommodation") return;
     if (readOnly) return;
-    const { seq, result } = stagedDocumentAnalyze;
+    const { seq, result, originEntityType } = stagedDocumentAnalyze;
     if (lastHandledAiAnalyzeSeqRef.current === seq) return;
     lastHandledAiAnalyzeSeqRef.current = seq;
+    setAnalyzeOriginEntityType(originEntityType);
     setAiAnalyzeResult(result);
     setAiAnalyzeModalVisible(true);
   }, [stagedDocumentAnalyze, readOnly]);
@@ -546,6 +551,7 @@ export default function AccommodationItem({
           pendingFiles,
           existingAttachments,
         });
+        setLastAnalyzeFileName(payload.filename);
         const res = await analyzeDocumentUpload(payload.file, {
           filename: payload.filename,
         });
@@ -556,7 +562,7 @@ export default function AccommodationItem({
           setAiAnalyzeInlineError(true);
           return;
         }
-        if (routeDocumentAnalyzeSuccess?.(res, pendingFiles)) {
+        if (routeDocumentAnalyzeSuccess?.(res, pendingFiles, "숙박")) {
           return;
         }
         setAiAnalyzeResult(res);
@@ -1045,6 +1051,7 @@ export default function AccommodationItem({
       <AiDocumentAnalyzeModal
         visible={aiAnalyzeModalVisible}
         analyzeResult={aiAnalyzeResult}
+        analyzeFileName={lastAnalyzeFileName ?? undefined}
         onApply={applyAiAnalyzeDraftToForm}
         onClose={() => {
           setAiAnalyzeModalVisible(false);
@@ -1052,6 +1059,7 @@ export default function AccommodationItem({
           onConsumeStagedDocumentAnalyze?.();
         }}
         entityTypeLabel="숙박"
+        originEntityType={analyzeOriginEntityType}
       />
     </>
   );

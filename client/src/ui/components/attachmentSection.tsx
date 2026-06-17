@@ -495,7 +495,7 @@ export default function AttachmentSection({
           <ActivityIndicator size="small" color={colors.primary} />
         </View>
       ) : hasFiles ? (
-        <View style={styles.fileList}>
+        <View style={[styles.fileList, isAiAnalyzing && styles.fileListDimmed]}>
           {existing.map(a => {
             let onOpen: (() => void) | undefined;
             if (isPdfMime(a.contentType)) {
@@ -795,6 +795,9 @@ const styles = StyleSheet.create({
   },
   fileList: {
     gap: 8,
+  },
+  fileListDimmed: {
+    opacity: 0.6,
   },
   fileRow: {
     flexDirection: "row",

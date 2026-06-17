@@ -26,6 +26,7 @@ interface TimePickerProps {
   onChange: (time: string) => void;
   containerStyle?: ViewStyle;
   style?: ViewStyle;
+  textStyle?: TextStyle;
   dropDownContainerStyle?: ViewStyle;
   listItemLabelStyle?: ViewStyle | TextStyle;
   selectedItemContainerStyle?: ViewStyle;
@@ -42,6 +43,7 @@ export default function TimePicker({
   onChange,
   containerStyle,
   style,
+  textStyle,
   dropDownContainerStyle,
   listItemLabelStyle,
   selectedItemContainerStyle,
@@ -162,13 +164,14 @@ export default function TimePicker({
           }}
           disabled={disabled}
           placeholder={placeholder}
-          placeholderStyle={styles.placeholder}
-          textStyle={styles.text}
-          labelStyle={styles.text}
+          placeholderStyle={[styles.placeholder, textStyle]}
+          textStyle={[styles.text, textStyle]}
+          labelStyle={[styles.text, textStyle]}
           listItemLabelStyle={[
             styles.listItemLabel,
             { backgroundColor: dropdownBgColor },
             listItemLabelStyle,
+            textStyle,
           ]}
           selectedItemLabelStyle={styles.selectedItem}
           selectedItemContainerStyle={[
