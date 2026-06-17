@@ -120,8 +120,12 @@ export default function DashboardScreen() {
     [selectedItinerary?.id, selectedFlight?.id, selectedAccommodation?.id],
   );
 
+  const isPanelActive = !!(
+    activeTab || selectedItinerary || selectedFlight || selectedAccommodation
+  );
+
   const getResponsiveRatio = () => {
-    if (width < 768) {
+    if (!isPanelActive || width < 768) {
       return { left: 1, right: 0 };
     } else if (width < 1024) {
       return { left: 0.6, right: 0.4 };
@@ -300,6 +304,16 @@ export default function DashboardScreen() {
       planData.addExpense(newExpense);
     }
   };
+
+  const handleDetailsPanelTabChange = useCallback(
+    (tab: "itinerary" | "flight" | "accommodation") => {
+      setActiveTab(tab);
+      setSelectedItinerary(null);
+      setSelectedFlight(null);
+      setSelectedAccommodation(null);
+    },
+    [],
+  );
 
   const handleShowItineraryModal = useCallback(() => {
     setActiveTab("itinerary");
@@ -529,6 +543,7 @@ export default function DashboardScreen() {
                   selectedFlight={selectedFlight}
                   selectedAccommodation={selectedAccommodation}
                   activeTab={activeTab}
+                  onTabChange={handleDetailsPanelTabChange}
                   stagedDocumentAnalyze={stagedDocumentAnalyze}
                   onConsumeStagedDocumentAnalyze={
                     onConsumeStagedDocumentAnalyze

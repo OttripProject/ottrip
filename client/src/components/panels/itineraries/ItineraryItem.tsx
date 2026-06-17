@@ -59,6 +59,7 @@ import {
   Text,
   View,
 } from "react-native";
+import PanelTabSwitcher from "../PanelTabSwitcher";
 import AddIcon from "../../../../assets/add.svg";
 import CalendarIcon from "../../../../assets/calender.svg";
 import DeleteIcon from "../../../../assets/delete.svg";
@@ -75,6 +76,8 @@ interface ItineraryItemProps {
   onShowWarning?: () => void;
   readOnly?: boolean;
   onEdit?: () => void;
+  activeTab?: "itinerary" | "flight" | "accommodation";
+  onTabChange?: (tab: "itinerary" | "flight" | "accommodation") => void;
   stagedDocumentAnalyze?: StagedDocumentAnalyzePayload | null;
   onConsumeStagedDocumentAnalyze?: () => void;
   routeDocumentAnalyzeSuccess?: (
@@ -97,6 +100,8 @@ export default function ItineraryItem({
   onShowWarning,
   readOnly = false,
   onEdit,
+  activeTab,
+  onTabChange,
   stagedDocumentAnalyze,
   onConsumeStagedDocumentAnalyze,
   routeDocumentAnalyzeSuccess,
@@ -275,6 +280,7 @@ export default function ItineraryItem({
         amount: 0,
         description: "",
       });
+      setPendingFiles([]);
     }
   }, [itinerary, selectedDate]);
 
@@ -843,7 +849,22 @@ export default function ItineraryItem({
   );
 
   return (
-    <>
+    <View style={styles.wrapper}>
+      <View style={styles.titleRow}>
+        <Text style={styles.title}>
+          {readOnly ? "일정 정보" : itinerary ? "일정 수정" : "일정 추가"}
+        </Text>
+
+        <Pressable
+          onPress={() => {
+            onCancel();
+          }}
+          style={styles.closeButton}
+        >
+          <CloseIcon width={24} height={24} />
+        </Pressable>
+      </View>
+      {!readOnly && <PanelTabSwitcher activeTab={activeTab} onTabChange={onTabChange} />}
       <ScrollView
         style={[
           styles.container,
@@ -855,20 +876,6 @@ export default function ItineraryItem({
         ]}
       >
         <View style={styles.contentWrapper}>
-          <View style={styles.titleRow}>
-            <Text style={styles.title}>
-              {readOnly ? "일정 정보" : itinerary ? "일정 수정" : "일정 추가"}
-            </Text>
-
-            <Pressable
-              onPress={() => {
-                onCancel();
-              }}
-              style={styles.closeButton}
-            >
-              <CloseIcon width={24} height={24} />
-            </Pressable>
-          </View>
           <View style={styles.inputGroup}>
             <Text style={styles.label}>제목*</Text>
             <Input
@@ -1354,17 +1361,21 @@ export default function ItineraryItem({
         entityTypeLabel="일정"
         originEntityType={analyzeOriginEntityType}
       />
-    </>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  wrapper: {
+    flex: 1,
+  },
   container: {
     flex: 1,
     backgroundColor: colors.white,
   },
   contentContainer: {
-    padding: spacing.xl,
+    paddingHorizontal: spacing.xl,
+    paddingBottom: spacing.xl,
     gap: spacing.xl,
   },
   contentWrapper: {
@@ -1376,7 +1387,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: spacing.lg,
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.xl,
+    paddingBottom: spacing.md,
   },
   title: {
     ...textStyles.h5,

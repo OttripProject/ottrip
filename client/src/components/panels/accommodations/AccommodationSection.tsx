@@ -3,7 +3,7 @@ import type {
   LocalFile,
   StagedDocumentAnalyzePayload,
 } from "@/types/api";
-import { useEffect, useLayoutEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import AccommodationItem from "./AccommodationItem";
 
 interface AccommodationSectionProps {
@@ -25,6 +25,7 @@ interface AccommodationSectionProps {
   newAccommodationDraft?: any | null;
   onEdit?: (accommodation: any) => void;
   onPreviewChange?: (preview: any) => void;
+  onTabChange?: (tab: "itinerary" | "flight" | "accommodation") => void;
   stagedDocumentAnalyze?: StagedDocumentAnalyzePayload | null;
   onConsumeStagedDocumentAnalyze?: () => void;
   routeDocumentAnalyzeSuccess?: (
@@ -47,6 +48,7 @@ export default function AccommodationSection({
   newAccommodationDraft,
   onEdit,
   onPreviewChange,
+  onTabChange,
   stagedDocumentAnalyze,
   onConsumeStagedDocumentAnalyze,
   routeDocumentAnalyzeSuccess,
@@ -57,6 +59,7 @@ export default function AccommodationSection({
   const [editingAccommodation, setEditingAccommodation] = useState<any | null>(
     null,
   );
+  const newAccommodationRevision = useRef(0);
 
   // 외부 트리거: 숙박 탭에서 즉시 새 숙박 추가 폼 열기 (selectedAccommodation이 없을 때)
   useEffect(() => {
@@ -65,6 +68,7 @@ export default function AccommodationSection({
       openNewAccommodationForm &&
       !selectedAccommodation
     ) {
+      newAccommodationRevision.current += 1;
       setEditingAccommodation(null);
       setShowAccommodationForm(true);
       onConsumeOpenNewAccommodationForm?.();
@@ -93,6 +97,7 @@ export default function AccommodationSection({
     if (activeTab === "accommodation" && selectedAccommodation) {
       // 새 숙박 추가인 경우(id가 없고 openNewAccommodationForm이 true) - 편집 폼 열기
       if (!selectedAccommodation.id && openNewAccommodationForm) {
+        newAccommodationRevision.current += 1;
         setEditingAccommodation(selectedAccommodation);
         setShowAccommodationForm(true);
       } else if (selectedAccommodation.id) {
@@ -105,9 +110,8 @@ export default function AccommodationSection({
         setShowAccommodationForm(false);
       }
     } else if (activeTab === "accommodation" && !selectedAccommodation) {
-      // selectedAccommodation이 null이면 폼 닫기
       setEditingAccommodation(null);
-      setShowAccommodationForm(false);
+      setShowAccommodationForm(true);
     }
   }, [activeTab, selectedAccommodation, openNewAccommodationForm]);
 
@@ -146,6 +150,8 @@ export default function AccommodationSection({
         }}
         onDelete={handleAccommodationDelete}
         readOnly={true}
+        activeTab={activeTab}
+        onTabChange={onTabChange}
         stagedDocumentAnalyze={stagedDocumentAnalyze}
         onConsumeStagedDocumentAnalyze={onConsumeStagedDocumentAnalyze}
         routeDocumentAnalyzeSuccess={routeDocumentAnalyzeSuccess}
@@ -164,6 +170,7 @@ export default function AccommodationSection({
   if (showAccommodationForm) {
     return (
       <AccommodationItem
+        key={editingAccommodation?.id ?? `new-accommodation-${newAccommodationRevision.current}`}
         accommodation={editingAccommodation}
         draft={newAccommodationDraft}
         planId={planData.plan.id}
@@ -177,6 +184,8 @@ export default function AccommodationSection({
         existingAccommodations={planData.accommodations}
         readOnly={false}
         onPreviewChange={onPreviewChange}
+        activeTab={activeTab}
+        onTabChange={onTabChange}
         stagedDocumentAnalyze={stagedDocumentAnalyze}
         onConsumeStagedDocumentAnalyze={onConsumeStagedDocumentAnalyze}
         routeDocumentAnalyzeSuccess={routeDocumentAnalyzeSuccess}

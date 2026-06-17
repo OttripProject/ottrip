@@ -46,6 +46,7 @@ import {
   Text,
   View,
 } from "react-native";
+import PanelTabSwitcher from "../PanelTabSwitcher";
 import AddIcon from "../../../../assets/add.svg";
 import CalendarIcon from "../../../../assets/calender.svg";
 import DeleteIcon from "../../../../assets/delete.svg";
@@ -62,6 +63,8 @@ interface FlightItemProps {
   onShowWarning?: (message?: string) => void;
   readOnly?: boolean;
   onEdit?: () => void;
+  activeTab?: "itinerary" | "flight" | "accommodation";
+  onTabChange?: (tab: "itinerary" | "flight" | "accommodation") => void;
   stagedDocumentAnalyze?: StagedDocumentAnalyzePayload | null;
   onConsumeStagedDocumentAnalyze?: () => void;
   routeDocumentAnalyzeSuccess?: (
@@ -84,6 +87,8 @@ export default function FlightItem({
   onShowWarning,
   readOnly = false,
   onEdit,
+  activeTab,
+  onTabChange,
   stagedDocumentAnalyze,
   onConsumeStagedDocumentAnalyze,
   routeDocumentAnalyzeSuccess,
@@ -667,7 +672,21 @@ export default function FlightItem({
   };
 
   return (
-    <>
+    <View style={styles.wrapper}>
+      <View style={styles.titleRow}>
+        <Text style={styles.title}>
+          {readOnly ? "항공편 정보" : flight ? "항공편 수정" : "항공편 추가"}
+        </Text>
+        <Pressable
+          onPress={() => {
+            onCancel();
+          }}
+          style={styles.closeButton}
+        >
+          <CloseIcon width={24} height={24} />
+        </Pressable>
+      </View>
+      {!readOnly && <PanelTabSwitcher activeTab={activeTab} onTabChange={onTabChange} />}
       <ScrollView
         style={[
           styles.container,
@@ -678,19 +697,6 @@ export default function FlightItem({
           { overflow: "visible" },
         ]}
       >
-        <View style={styles.titleRow}>
-          <Text style={styles.title}>
-            {readOnly ? "항공편 정보" : flight ? "항공편 수정" : "항공편 추가"}
-          </Text>
-          <Pressable
-            onPress={() => {
-              onCancel();
-            }}
-            style={styles.closeButton}
-          >
-            <CloseIcon width={24} height={24} />
-          </Pressable>
-        </View>
 
         <View style={styles.formSection}>
           <View style={[styles.row, { gap: spacing.sm }]}>
@@ -1256,17 +1262,21 @@ export default function FlightItem({
         entityTypeLabel="항공"
         originEntityType={analyzeOriginEntityType}
       />
-    </>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  wrapper: {
+    flex: 1,
+  },
   container: {
     flex: 1,
     backgroundColor: colors.white,
   },
   contentContainer: {
-    padding: spacing.xl,
+    paddingHorizontal: spacing.xl,
+    paddingBottom: spacing.xl,
     gap: spacing.xl,
   },
   contentWrapper: {
@@ -1278,7 +1288,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: spacing.xl,
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.xl,
+    paddingBottom: spacing.md,
   },
   title: {
     ...textStyles.h5,
@@ -1499,8 +1511,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.gray300,
     height: 40,
     borderRadius: radii.md,
-    borderWidth: 1,
-    borderColor: colors.gray400,
     paddingHorizontal: spacing.lg,
     justifyContent: "center",
     alignItems: "center",

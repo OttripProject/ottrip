@@ -42,6 +42,7 @@ import {
   Text,
   View,
 } from "react-native";
+import PanelTabSwitcher from "../PanelTabSwitcher";
 import CalendarIcon from "../../../../assets/calender.svg";
 import CloseIcon from "../../../../assets/delete_ai.svg";
 
@@ -57,6 +58,8 @@ interface AccommodationItemProps {
   readOnly?: boolean;
   onEdit?: () => void;
   onPreviewChange?: (preview: any) => void;
+  activeTab?: "itinerary" | "flight" | "accommodation";
+  onTabChange?: (tab: "itinerary" | "flight" | "accommodation") => void;
   stagedDocumentAnalyze?: StagedDocumentAnalyzePayload | null;
   onConsumeStagedDocumentAnalyze?: () => void;
   routeDocumentAnalyzeSuccess?: (
@@ -79,6 +82,8 @@ export default function AccommodationItem({
   readOnly = false,
   onEdit,
   onPreviewChange,
+  activeTab,
+  onTabChange,
   stagedDocumentAnalyze,
   onConsumeStagedDocumentAnalyze,
   routeDocumentAnalyzeSuccess,
@@ -587,7 +592,22 @@ export default function AccommodationItem({
   );
 
   return (
-    <>
+    <View style={styles.wrapper}>
+      <View style={styles.titleRow}>
+        <Text style={styles.title}>
+          {readOnly
+            ? "숙박 정보"
+            : accommodation && accommodation.id
+              ? "숙박 수정"
+              : "숙박 추가"}
+        </Text>
+        {readOnly || accommodation ? (
+          <Pressable onPress={onCancel} style={styles.closeButton}>
+            <CloseIcon width={24} height={24} />
+          </Pressable>
+        ) : null}
+      </View>
+      {!readOnly && <PanelTabSwitcher activeTab={activeTab} onTabChange={onTabChange} />}
       <ScrollView
         style={[
           styles.container,
@@ -598,21 +618,6 @@ export default function AccommodationItem({
           { overflow: "visible" },
         ]}
       >
-        <View style={styles.titleRow}>
-          <Text style={styles.title}>
-            {readOnly
-              ? "숙박 정보"
-              : accommodation && accommodation.id
-                ? "숙박 수정"
-                : "숙박 추가"}
-          </Text>
-          {readOnly || accommodation ? (
-            <Pressable onPress={onCancel} style={styles.closeButton}>
-              <CloseIcon width={24} height={24} />
-            </Pressable>
-          ) : null}
-        </View>
-
         {/* 기본 정보 섹션 */}
         <View style={styles.formSection}>
           <View style={styles.inputGroup}>
@@ -1004,11 +1009,11 @@ export default function AccommodationItem({
             >
               <Pressable
                 style={styles.deleteButton}
-                onPress={accommodation.id ? handleDelete : onCancel}
+                onPress={accommodation?.id ? handleDelete : onCancel}
                 disabled={isSubmitting}
               >
                 <Text style={styles.deleteButtonText}>
-                  {accommodation.id ? "삭제" : "취소"}
+                  {accommodation?.id ? "삭제" : "취소"}
                 </Text>
               </Pressable>
               <Pressable
@@ -1061,24 +1066,30 @@ export default function AccommodationItem({
         entityTypeLabel="숙박"
         originEntityType={analyzeOriginEntityType}
       />
-    </>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  wrapper: {
+    flex: 1,
+  },
   container: {
     flex: 1,
     backgroundColor: colors.white,
   },
   contentContainer: {
-    padding: spacing.xl,
+    paddingHorizontal: spacing.xl,
+    paddingBottom: spacing.xl,
     gap: spacing.xl,
   },
   titleRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: spacing.xl,
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.xl,
+    paddingBottom: spacing.md,
   },
   title: {
     ...textStyles.h5,

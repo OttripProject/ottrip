@@ -3,7 +3,7 @@ import type {
   LocalFile,
   StagedDocumentAnalyzePayload,
 } from "@/types/api";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 import PanelLayout from "./PanelLayout";
 import AccommodationSection from "./accommodations/AccommodationSection";
 import FlightSection from "./flights/FlightSection";
@@ -45,6 +45,7 @@ interface DetailsPanelProps {
   onConsumeOpenNewAccommodationForm?: () => void;
   newAccommodationDraft?: any | null;
   onPreviewAccommodationChange?: (preview: any) => void;
+  onTabChange?: (tab: "itinerary" | "flight" | "accommodation") => void;
   stagedDocumentAnalyze?: StagedDocumentAnalyzePayload | null;
   onConsumeStagedDocumentAnalyze?: () => void;
   routeDocumentAnalyzeSuccess?: (
@@ -78,6 +79,7 @@ export default function DetailsPanel({
   onConsumeOpenNewAccommodationForm,
   newAccommodationDraft,
   onPreviewAccommodationChange,
+  onTabChange,
   stagedDocumentAnalyze,
   onConsumeStagedDocumentAnalyze,
   routeDocumentAnalyzeSuccess,
@@ -108,6 +110,7 @@ export default function DetailsPanel({
           openNewItineraryForm={openNewItineraryForm}
           onConsumeOpenNewItineraryForm={onConsumeOpenNewItineraryForm}
           selectedItineraryDate={selectedItineraryDate}
+          onTabChange={onTabChange}
           stagedDocumentAnalyze={stagedDocumentAnalyze}
           onConsumeStagedDocumentAnalyze={onConsumeStagedDocumentAnalyze}
           routeDocumentAnalyzeSuccess={routeDocumentAnalyzeSuccess}
@@ -127,6 +130,7 @@ export default function DetailsPanel({
           onFlightClear={onFlightClear}
           openNewFlightForm={openNewFlightForm}
           onConsumeOpenNewFlightForm={onConsumeOpenNewFlightForm}
+          onTabChange={onTabChange}
           stagedDocumentAnalyze={stagedDocumentAnalyze}
           onConsumeStagedDocumentAnalyze={onConsumeStagedDocumentAnalyze}
           routeDocumentAnalyzeSuccess={routeDocumentAnalyzeSuccess}
@@ -149,6 +153,7 @@ export default function DetailsPanel({
           onConsumeOpenNewAccommodationForm={onConsumeOpenNewAccommodationForm}
           newAccommodationDraft={newAccommodationDraft}
           onPreviewChange={onPreviewAccommodationChange}
+          onTabChange={onTabChange}
           stagedDocumentAnalyze={stagedDocumentAnalyze}
           onConsumeStagedDocumentAnalyze={onConsumeStagedDocumentAnalyze}
           routeDocumentAnalyzeSuccess={routeDocumentAnalyzeSuccess}
@@ -178,6 +183,7 @@ export default function DetailsPanel({
             openNewItineraryForm={openNewItineraryForm}
             onConsumeOpenNewItineraryForm={onConsumeOpenNewItineraryForm}
             selectedItineraryDate={selectedItineraryDate}
+            onTabChange={onTabChange}
             stagedDocumentAnalyze={stagedDocumentAnalyze}
             onConsumeStagedDocumentAnalyze={onConsumeStagedDocumentAnalyze}
             routeDocumentAnalyzeSuccess={routeDocumentAnalyzeSuccess}
@@ -195,6 +201,7 @@ export default function DetailsPanel({
             onFlightClear={onFlightClear}
             openNewFlightForm={openNewFlightForm}
             onConsumeOpenNewFlightForm={onConsumeOpenNewFlightForm}
+            onTabChange={onTabChange}
             stagedDocumentAnalyze={stagedDocumentAnalyze}
             onConsumeStagedDocumentAnalyze={onConsumeStagedDocumentAnalyze}
             routeDocumentAnalyzeSuccess={routeDocumentAnalyzeSuccess}
@@ -217,6 +224,7 @@ export default function DetailsPanel({
               onConsumeOpenNewAccommodationForm
             }
             newAccommodationDraft={newAccommodationDraft}
+            onTabChange={onTabChange}
             stagedDocumentAnalyze={stagedDocumentAnalyze}
             onConsumeStagedDocumentAnalyze={onConsumeStagedDocumentAnalyze}
             routeDocumentAnalyzeSuccess={routeDocumentAnalyzeSuccess}
@@ -234,27 +242,10 @@ export default function DetailsPanel({
     }
   };
 
-  const isInitial =
-    !activeTab &&
-    !selectedItinerary &&
-    !selectedFlight &&
-    !selectedAccommodation;
-
   return (
     <PanelLayout style={styles.container}>
-      <View style={styles.scrollWrapper}>
-        <ScrollView
-          style={styles.scrollView}
-          contentContainerStyle={
-            isInitial
-              ? [styles.scrollContent, styles.centerScroll]
-              : styles.scrollContent
-          }
-          showsVerticalScrollIndicator
-          bounces={false}
-        >
-          {renderContent()}
-        </ScrollView>
+      <View style={styles.content}>
+        {renderContent()}
       </View>
     </PanelLayout>
   );
@@ -265,23 +256,9 @@ const styles = StyleSheet.create({
     flex: 1,
     minHeight: 0,
   },
-  scrollView: {
-    flex: 1,
-    padding: 0,
-  },
-  scrollContent: {
-    paddingBottom: 20,
-  },
-  scrollWrapper: {
+  content: {
     flex: 1,
     minHeight: 0,
-    overflow: "visible",
-    position: "relative",
-  },
-  centerScroll: {
-    flexGrow: 1,
-    justifyContent: "center",
-    alignItems: "center",
   },
   placeholder: {
     flex: 1,

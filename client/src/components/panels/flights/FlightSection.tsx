@@ -3,7 +3,7 @@ import type {
   LocalFile,
   StagedDocumentAnalyzePayload,
 } from "@/types/api";
-import { useEffect, useLayoutEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import FlightItem from "./FlightItem";
 
 interface FlightSectionProps {
@@ -24,6 +24,7 @@ interface FlightSectionProps {
   openNewFlightForm?: boolean;
   onConsumeOpenNewFlightForm?: () => void;
   onEdit?: (flight: any) => void;
+  onTabChange?: (tab: "itinerary" | "flight" | "accommodation") => void;
   stagedDocumentAnalyze?: StagedDocumentAnalyzePayload | null;
   onConsumeStagedDocumentAnalyze?: () => void;
   routeDocumentAnalyzeSuccess?: (
@@ -43,6 +44,7 @@ export default function FlightSection({
   openNewFlightForm,
   onConsumeOpenNewFlightForm,
   onEdit,
+  onTabChange,
   stagedDocumentAnalyze,
   onConsumeStagedDocumentAnalyze,
   routeDocumentAnalyzeSuccess,
@@ -51,10 +53,12 @@ export default function FlightSection({
 }: FlightSectionProps) {
   const [showFlightForm, setShowFlightForm] = useState(false);
   const [editingFlight, setEditingFlight] = useState<any | null>(null);
+  const newFlightRevision = useRef(0);
 
   useEffect(() => {
     if (activeTab === "flight" && !selectedFlight) {
       if (openNewFlightForm) {
+        newFlightRevision.current += 1;
         setEditingFlight(null);
         setShowFlightForm(true);
         onConsumeOpenNewFlightForm?.();
@@ -89,9 +93,6 @@ export default function FlightSection({
         setEditingFlight(selectedFlight);
         setShowFlightForm(false);
       }
-    } else if (activeTab === "flight" && !selectedFlight) {
-      setEditingFlight(null);
-      setShowFlightForm(false);
     }
   }, [activeTab, selectedFlight]);
 
@@ -126,6 +127,8 @@ export default function FlightSection({
         }}
         onDelete={handleFlightDelete}
         readOnly={true}
+        activeTab={activeTab}
+        onTabChange={onTabChange}
         stagedDocumentAnalyze={stagedDocumentAnalyze}
         onConsumeStagedDocumentAnalyze={onConsumeStagedDocumentAnalyze}
         routeDocumentAnalyzeSuccess={routeDocumentAnalyzeSuccess}
@@ -143,7 +146,7 @@ export default function FlightSection({
   if (showFlightForm) {
     return (
       <FlightItem
-        key={editingFlight?.id ?? "new-flight"}
+        key={editingFlight?.id ?? `new-flight-${newFlightRevision.current}`}
         flight={editingFlight}
         planId={planData.plan.id}
         planData={planData}
@@ -156,6 +159,8 @@ export default function FlightSection({
         onDelete={handleFlightDelete}
         existingFlights={planData.flights}
         readOnly={false}
+        activeTab={activeTab}
+        onTabChange={onTabChange}
         stagedDocumentAnalyze={stagedDocumentAnalyze}
         onConsumeStagedDocumentAnalyze={onConsumeStagedDocumentAnalyze}
         routeDocumentAnalyzeSuccess={routeDocumentAnalyzeSuccess}
