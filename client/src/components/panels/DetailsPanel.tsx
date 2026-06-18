@@ -3,7 +3,8 @@ import type {
   LocalFile,
   StagedDocumentAnalyzePayload,
 } from "@/types/api";
-import { StyleSheet, Text, View } from "react-native";
+import { useEffect, useRef } from "react";
+import { Animated, Easing, StyleSheet, Text, View } from "react-native";
 import PanelLayout from "./PanelLayout";
 import AccommodationSection from "./accommodations/AccommodationSection";
 import FlightSection from "./flights/FlightSection";
@@ -86,6 +87,22 @@ export default function DetailsPanel({
   carryoverPendingFiles,
   onConsumeCarryoverPendingFiles,
 }: DetailsPanelProps) {
+  const fadeAnim = useRef(new Animated.Value(1)).current;
+  const contentKey = `${activeTab ?? ""}-${selectedItinerary?.id ?? ""}-${selectedFlight?.id ?? ""}-${selectedAccommodation?.id ?? ""}`;
+  const prevKeyRef = useRef(contentKey);
+
+  useEffect(() => {
+    if (prevKeyRef.current === contentKey) return;
+    prevKeyRef.current = contentKey;
+    fadeAnim.setValue(0);
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 1500,
+      easing: Easing.out(Easing.quad),
+      useNativeDriver: true,
+    }).start();
+  }, [contentKey]);
+
   if (!planData?.plan) {
     return (
       <PanelLayout style={styles.container}>
@@ -167,7 +184,6 @@ export default function DetailsPanel({
     if (!activeTab) {
       return (
         <View style={styles.placeholder}>
-          <Text style={styles.placeholderText}>항목을 선택해주세요</Text>
         </View>
       );
     }
@@ -236,7 +252,6 @@ export default function DetailsPanel({
       default:
         return (
           <View style={styles.placeholder}>
-            <Text style={styles.placeholderText}>항목을 선택해주세요</Text>
           </View>
         );
     }
@@ -244,9 +259,11 @@ export default function DetailsPanel({
 
   return (
     <PanelLayout style={styles.container}>
-      <View style={styles.content}>
+      <Animated.View
+        style={[styles.content, { opacity: fadeAnim }]}
+      >
         {renderContent()}
-      </View>
+      </Animated.View>
     </PanelLayout>
   );
 }

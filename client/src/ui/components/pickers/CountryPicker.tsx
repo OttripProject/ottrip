@@ -139,9 +139,9 @@ export default function CountryPicker({
           {value || placeholder}
         </Text>
         {open ? (
-          <UpperArrowIcon width={16} height={16} />
+          <UpperArrowIcon width={10} height={10} style={{ opacity: 0.6 }} />
         ) : (
-          <DownArrowIcon width={16} height={16} />
+          <DownArrowIcon width={10} height={10} style={{ opacity: 0.6 }} />
         )}
       </Pressable>
 

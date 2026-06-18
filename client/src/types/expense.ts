@@ -30,6 +30,16 @@ export const categoryLabels = {
   [ExpenseCategory.ETC]: "기타",
 };
 
+export const categoryColors: Record<ExpenseCategory, string> = {
+  [ExpenseCategory.FOOD]: "#F5A623",
+  [ExpenseCategory.TRANSPORT]: "#3B82F6",
+  [ExpenseCategory.ACTIVITY]: "#10B981",
+  [ExpenseCategory.ACCOMMODATION]: "#8B5CF6",
+  [ExpenseCategory.FLIGHT]: "#06B6D4",
+  [ExpenseCategory.SHOPPING]: "#EC4899",
+  [ExpenseCategory.ETC]: "#9B9B9B",
+};
+
 export const currencyLabels = {
   [ExpenseCurrency.KRW]: "원",
   [ExpenseCurrency.USD]: "$",

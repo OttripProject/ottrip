@@ -12,6 +12,8 @@ import dayjs from "dayjs";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
+  Animated,
+  Easing,
   Platform,
   StyleSheet,
   View,
@@ -124,8 +126,10 @@ export default function DashboardScreen() {
     activeTab || selectedItinerary || selectedFlight || selectedAccommodation
   );
 
+  const isMobile = width < 768;
+
   const getResponsiveRatio = () => {
-    if (!isPanelActive || width < 768) {
+    if (!isPanelActive || isMobile) {
       return { left: 1, right: 0 };
     } else if (width < 1024) {
       return { left: 0.6, right: 0.4 };
@@ -137,6 +141,21 @@ export default function DashboardScreen() {
   };
 
   const ratio = getResponsiveRatio();
+  const targetRight = !isMobile && isPanelActive ? ratio.right : 0;
+
+  const animRightFlex = useRef(new Animated.Value(targetRight)).current;
+  const prevTargetRef = useRef(targetRight);
+
+  useEffect(() => {
+    if (prevTargetRef.current === targetRight) return;
+    prevTargetRef.current = targetRight;
+    Animated.timing(animRightFlex, {
+      toValue: targetRight,
+      duration: 300,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: false,
+    }).start();
+  }, [targetRight]);
   const headerHeight = 64;
   const headerMarginBottom = 16;
   const verticalPadding = 16 * 2;
@@ -528,12 +547,13 @@ export default function DashboardScreen() {
           </View>
 
           {/* 우측 영역 (동적 비율) */}
-          {ratio.right > 0 && (
-            <View
+          {!isMobile && (
+            <Animated.View
               style={[
                 styles.rightArea,
-                { flex: ratio.right, height: availableHeight },
+                { flex: animRightFlex, height: availableHeight, overflow: "hidden" },
               ]}
+              pointerEvents={isPanelActive ? "auto" : "none"}
             >
               {/* 3. 상세 정보 모달 (전체 높이) */}
               <View style={styles.detailsModal}>
@@ -585,7 +605,7 @@ export default function DashboardScreen() {
                   onPreviewAccommodationChange={setPreviewAccommodation}
                 />
               </View>
-            </View>
+            </Animated.View>
           )}
         </View>
       </View>

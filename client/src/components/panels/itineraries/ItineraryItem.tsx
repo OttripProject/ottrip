@@ -18,6 +18,7 @@ import type {
 import {
   ExpenseCategory,
   ExpenseCurrency,
+  categoryColors,
   categoryLabels,
   currencyLabels,
 } from "@/types/expense";
@@ -63,7 +64,7 @@ import PanelTabSwitcher from "../PanelTabSwitcher";
 import AddIcon from "../../../../assets/add.svg";
 import CalendarIcon from "../../../../assets/calender.svg";
 import DeleteIcon from "../../../../assets/delete.svg";
-import CloseIcon from "../../../../assets/delete_ai.svg";
+import CloseIcon from "../../../../assets/close_sm.svg";
 
 interface ItineraryItemProps {
   itinerary?: any;
@@ -775,14 +776,14 @@ export default function ItineraryItem({
   };
 
   const allExpenses = useMemo(() => {
-    const draft = draftExpenses.map((exp, idx) => ({
+    const draft = readOnly ? [] : draftExpenses.map((exp, idx) => ({
       ...exp,
       id: `draft-${idx}`,
       isDraft: true,
     }));
     const saved = expenses.map(exp => ({ ...exp, isDraft: false }));
     return [...draft, ...saved];
-  }, [draftExpenses, expenses]);
+  }, [draftExpenses, expenses, readOnly]);
 
   const handleAiAnalyzePress = useCallback(
     async (selection: AiAttachmentAnalyzeSelection) => {
@@ -861,19 +862,17 @@ export default function ItineraryItem({
           }}
           style={styles.closeButton}
         >
-          <CloseIcon width={24} height={24} />
+          <CloseIcon width={12} height={12} color={colors.gray600} />
         </Pressable>
       </View>
       {!readOnly && <PanelTabSwitcher activeTab={activeTab} onTabChange={onTabChange} />}
       <ScrollView
-        style={[
-          styles.container,
-          { position: "relative", overflow: "visible" },
-        ]}
+        style={styles.container}
         contentContainerStyle={[
           styles.contentContainer,
           { overflow: "visible" },
         ]}
+        showsVerticalScrollIndicator={false}
       >
         <View style={styles.contentWrapper}>
           <View style={styles.inputGroup}>
@@ -1071,68 +1070,58 @@ export default function ItineraryItem({
 
               {allExpenses.length > 0 && (
                 <View style={styles.expenseList}>
-                  {allExpenses.map(expense => (
-                    <Pressable
-                      key={expense.id}
-                      style={[
-                        styles.expenseCard,
-                        readOnly && {
-                          borderWidth: 1,
-                          borderColor: colors.gray400,
-                        },
-                      ]}
-                      onPress={() => {
-                        if (!readOnly) {
-                          setEditingExpense(expense);
-                          setExpenseForm({
-                            category: expense.category as ExpenseCategory,
-                            amount: expense.amount,
-                            description: expense.description || "",
-                          });
-                          setShowExpenseForm(true);
-                        }
-                      }}
-                      disabled={readOnly}
-                    >
-                      <View style={styles.expenseCardContent}>
-                        <View style={styles.expenseCardHeader}>
-                          <Text style={styles.expenseCardTitle}>
-                            {
-                              categoryLabels[
-                                expense.category as ExpenseCategory
-                              ]
-                            }
-                          </Text>
-                          {!readOnly && (
-                            <Pressable
-                              style={styles.deleteExpenseButton}
-                              onPress={e => {
-                                e.stopPropagation();
-                                if (expense.isDraft) {
-                                  setDraftExpenses(prev =>
-                                    prev.filter(
-                                      (_, i) =>
-                                        i !== Number(expense.id.split("-")[1]),
-                                    ),
-                                  );
-                                } else {
-                                  handleExpenseDelete(expense.id);
-                                }
-                              }}
-                            >
-                              <DeleteIcon width={16} height={16} />
-                            </Pressable>
-                          )}
-                        </View>
-                        <Text style={styles.expenseCardDescription}>
-                          {expense.description || ""}
+                  {allExpenses.map(expense => {
+                    const cat = expense.category as ExpenseCategory;
+                    return (
+                      <Pressable
+                        key={expense.id}
+                        style={styles.expenseCard}
+                        onPress={() => {
+                          if (!readOnly) {
+                            setEditingExpense(expense);
+                            setExpenseForm({
+                              category: cat,
+                              amount: expense.amount,
+                              description: expense.description || "",
+                            });
+                            setShowExpenseForm(true);
+                          }
+                        }}
+                        disabled={readOnly}
+                      >
+                        <View style={[styles.expenseDot, { backgroundColor: categoryColors[cat] }]} />
+                        <Text style={styles.expenseCategoryLabel} numberOfLines={1}>
+                          {categoryLabels[cat]}
                         </Text>
-                        <Text style={styles.expenseCardAmount}>
-                          ₩{expense.amount.toLocaleString()}
+                        <Text style={styles.expenseDescription} numberOfLines={1}>
+                          {expense.description || "—"}
                         </Text>
-                      </View>
-                    </Pressable>
-                  ))}
+                        <Text style={styles.expenseAmount}>
+                          {expense.amount.toLocaleString()}원
+                        </Text>
+                        {!readOnly && (
+                          <Pressable
+                            style={styles.expenseDeleteButton}
+                            onPress={e => {
+                              e.stopPropagation();
+                              if (expense.isDraft) {
+                                setDraftExpenses(prev =>
+                                  prev.filter(
+                                    (_, i) =>
+                                      i !== Number(expense.id.split("-")[1]),
+                                  ),
+                                );
+                              } else {
+                                handleExpenseDelete(expense.id);
+                              }
+                            }}
+                          >
+                            <CloseIcon width={8} height={8} color={colors.gray500} />
+                          </Pressable>
+                        )}
+                      </Pressable>
+                    );
+                  })}
                 </View>
               )}
 
@@ -1149,12 +1138,8 @@ export default function ItineraryItem({
                     setShowExpenseForm(!showExpenseForm);
                   }}
                 >
-                  <View style={styles.addIconWrapper}>
-                    <AddIcon width={16} height={16} />
-                  </View>
-                  <Text style={styles.addExpenseButtonText}>
-                    비용 내역 추가
-                  </Text>
+                  <Text style={styles.addButtonPlus}>+</Text>
+                  <Text style={styles.addExpenseButtonText}>비용 내역 추가</Text>
                 </Pressable>
               )}
 
@@ -1249,7 +1234,6 @@ export default function ItineraryItem({
           {showAttachmentSection && (
             <AttachmentSection
               style={styles.attachmentSection}
-              showTopDivider
               pendingFiles={readOnly ? [] : pendingFiles}
               onPickImage={appendImage}
               onPickDocument={appendDocument}
@@ -1396,7 +1380,10 @@ const styles = StyleSheet.create({
     ...textStyles.h5,
   },
   closeButton: {
-    padding: spacing.xs,
+    width: 26,
+    height: 26,
+    borderRadius: radii.pill,
+    backgroundColor: colors.gray200,
     justifyContent: "center",
     alignItems: "center",
   },
@@ -1526,53 +1513,70 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   expenseList: {
-    gap: spacing.xs,
+    gap: 6,
   },
   expenseCard: {
-    backgroundColor: colors.gray200,
-    borderRadius: radii.md,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: 12,
-    height: 96,
-    justifyContent: "center",
-  },
-  expenseCardContent: {
-    gap: spacing.sm,
-  },
-  expenseCardHeader: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    backgroundColor: colors.gray100,
+    borderRadius: radii.md,
   },
-  expenseCardTitle: {
-    ...textStyles.h7,
-    color: colors.black,
+  expenseDot: {
+    width: 8,
+    height: 8,
+    borderRadius: radii.pill,
+    flexShrink: 0,
   },
-  expenseCardDescription: {
+  expenseCategoryLabel: {
     ...textStyles.body5,
-    color: colors.gray700,
+    fontWeight: "600",
+    color: colors.gray900,
+    flexShrink: 0,
   },
-  expenseCardAmount: {
-    ...textStyles.h7,
-    color: colors.black,
+  expenseDescription: {
+    ...textStyles.body5,
+    color: colors.gray600,
+    flex: 1,
+  },
+  expenseAmount: {
+    ...textStyles.body5,
+    fontWeight: "700",
+    color: colors.gray900,
+    flexShrink: 0,
+  },
+  expenseDeleteButton: {
+    width: 18,
+    height: 18,
+    borderRadius: radii.pill,
+    backgroundColor: colors.gray300,
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
   },
   addExpenseButton: {
     backgroundColor: colors.white,
     borderWidth: 1,
+    borderStyle: "dashed",
     borderColor: colors.gray400,
-    borderRadius: 8,
-    height: 40,
+    borderRadius: radii.md,
+    paddingVertical: 10,
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
-    gap: spacing.sm,
+    gap: spacing.xs,
   },
-  addIconWrapper: {
-    marginTop: -2,
+  addButtonPlus: {
+    fontSize: 14,
+    lineHeight: 18,
+    color: colors.gray900,
+    marginRight: 2,
   },
   addExpenseButtonText: {
     ...textStyles.h8,
-    color: colors.black,
+    color: colors.gray900,
   },
   attachmentSection: {
     marginTop: spacing.lg,
@@ -1581,11 +1585,11 @@ const styles = StyleSheet.create({
   expenseForm: {
     backgroundColor: colors.white,
     borderWidth: 1,
-    borderColor: colors.gray400,
-    borderRadius: radii.md,
+    borderColor: colors.gray300,
+    borderRadius: 12,
     padding: spacing.md,
-    marginTop: spacing.sm,
-    gap: spacing.lg,
+    marginTop: spacing.xs,
+    gap: spacing.md,
   },
   expenseFormRow: {
     flexDirection: "row",
@@ -1596,24 +1600,21 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   currencyPicker: {
-    backgroundColor: colors.white,
-    borderWidth: 1,
-    borderColor: colors.gray400,
+    backgroundColor: colors.gray200,
     borderRadius: radii.md,
-    height: 40,
     paddingHorizontal: spacing.md,
+    paddingVertical: 10,
     justifyContent: "center",
   },
   currencyText: {
     ...textStyles.body4,
-    color: colors.gray600,
+    color: colors.gray900,
   },
   expenseInput: {
-    backgroundColor: colors.white,
-    borderWidth: 1,
-    borderColor: colors.gray400,
+    backgroundColor: colors.gray200,
+    borderWidth: 0,
     borderRadius: radii.md,
-    height: 40,
+    paddingVertical: 10,
   },
   countryPickerWrapper: {
     overflow: "visible",
@@ -1626,9 +1627,9 @@ const styles = StyleSheet.create({
   },
   expenseCancelButton: {
     backgroundColor: colors.gray300,
-    borderRadius: 8,
-    height: 32,
-    paddingHorizontal: spacing.lg,
+    borderRadius: radii.md,
+    paddingVertical: 11,
+    paddingHorizontal: 20,
     justifyContent: "center",
     alignItems: "center",
     flex: 1,
@@ -1639,9 +1640,9 @@ const styles = StyleSheet.create({
   },
   expenseSubmitButton: {
     backgroundColor: colors.gray900,
-    borderRadius: 8,
-    height: 32,
-    paddingHorizontal: spacing.lg,
+    borderRadius: radii.md,
+    paddingVertical: 11,
+    paddingHorizontal: 20,
     justifyContent: "center",
     alignItems: "center",
     flex: 1,

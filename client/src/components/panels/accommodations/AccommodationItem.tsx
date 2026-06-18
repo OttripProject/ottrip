@@ -44,7 +44,7 @@ import {
 } from "react-native";
 import PanelTabSwitcher from "../PanelTabSwitcher";
 import CalendarIcon from "../../../../assets/calender.svg";
-import CloseIcon from "../../../../assets/delete_ai.svg";
+import CloseIcon from "../../../../assets/close_sm.svg";
 
 interface AccommodationItemProps {
   accommodation?: any;
@@ -603,20 +603,18 @@ export default function AccommodationItem({
         </Text>
         {readOnly || accommodation ? (
           <Pressable onPress={onCancel} style={styles.closeButton}>
-            <CloseIcon width={24} height={24} />
+            <CloseIcon width={12} height={12} color={colors.gray600} />
           </Pressable>
         ) : null}
       </View>
       {!readOnly && <PanelTabSwitcher activeTab={activeTab} onTabChange={onTabChange} />}
       <ScrollView
-        style={[
-          styles.container,
-          { position: "relative", overflow: "visible" },
-        ]}
+        style={styles.container}
         contentContainerStyle={[
           styles.contentContainer,
           { overflow: "visible" },
         ]}
+        showsVerticalScrollIndicator={false}
       >
         {/* 기본 정보 섹션 */}
         <View style={styles.formSection}>
@@ -952,7 +950,6 @@ export default function AccommodationItem({
           {showAttachmentSection && (
             <AttachmentSection
               style={styles.attachmentSection}
-              showTopDivider
               pendingFiles={readOnly ? [] : pendingFiles}
               onPickImage={appendImage}
               onPickDocument={appendDocument}
@@ -1097,7 +1094,10 @@ const styles = StyleSheet.create({
     ...textStyles.h5,
   },
   closeButton: {
-    padding: spacing.xs,
+    width: 26,
+    height: 26,
+    borderRadius: radii.pill,
+    backgroundColor: colors.gray200,
     justifyContent: "center",
     alignItems: "center",
   },

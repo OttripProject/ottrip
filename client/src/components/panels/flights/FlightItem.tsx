@@ -47,10 +47,9 @@ import {
   View,
 } from "react-native";
 import PanelTabSwitcher from "../PanelTabSwitcher";
-import AddIcon from "../../../../assets/add.svg";
 import CalendarIcon from "../../../../assets/calender.svg";
 import DeleteIcon from "../../../../assets/delete.svg";
-import CloseIcon from "../../../../assets/delete_ai.svg";
+import CloseIcon from "../../../../assets/close_sm.svg";
 
 interface FlightItemProps {
   flight?: any;
@@ -683,19 +682,17 @@ export default function FlightItem({
           }}
           style={styles.closeButton}
         >
-          <CloseIcon width={24} height={24} />
+          <CloseIcon width={12} height={12} color={colors.gray600} />
         </Pressable>
       </View>
       {!readOnly && <PanelTabSwitcher activeTab={activeTab} onTabChange={onTabChange} />}
       <ScrollView
-        style={[
-          styles.container,
-          { position: "relative", overflow: "visible" },
-        ]}
+        style={styles.container}
         contentContainerStyle={[
           styles.contentContainer,
           { overflow: "visible" },
         ]}
+        showsVerticalScrollIndicator={false}
       >
 
         <View style={styles.formSection}>
@@ -1110,7 +1107,7 @@ export default function FlightItem({
 
           {!readOnly && (
             <Pressable
-              style={[styles.addSegmentButton, { zIndex: 1 }]}
+              style={[styles.addSegmentButton, { zIndex: 1, borderStyle: "dashed" }]}
               onPress={() => {
                 const lastSegment = flightSegments[flightSegments.length - 1];
                 let defaultDepartureDate: string;
@@ -1145,9 +1142,7 @@ export default function FlightItem({
                 setFlightSegments(prev => [...prev, newSegment]);
               }}
             >
-              <View style={styles.addIconWrapper}>
-                <AddIcon width={16} height={16} />
-              </View>
+              <Text style={styles.addButtonPlus}>+</Text>
               <Text style={styles.addSegmentButtonText}>항공권 구간 추가</Text>
             </Pressable>
           )}
@@ -1155,7 +1150,6 @@ export default function FlightItem({
           {showAttachmentSection && (
             <AttachmentSection
               style={styles.attachmentSection}
-              showTopDivider
               pendingFiles={readOnly ? [] : pendingFiles}
               onPickImage={appendImage}
               onPickDocument={appendDocument}
@@ -1297,7 +1291,10 @@ const styles = StyleSheet.create({
     ...textStyles.h5,
   },
   closeButton: {
-    padding: spacing.xs,
+    width: 26,
+    height: 26,
+    borderRadius: radii.pill,
+    backgroundColor: colors.gray200,
     justifyContent: "center",
     alignItems: "center",
   },
@@ -1491,8 +1488,11 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     paddingHorizontal: spacing.xl,
   },
-  addIconWrapper: {
-    marginTop: -2,
+  addButtonPlus: {
+    fontSize: 14,
+    lineHeight: 18,
+    color: colors.gray900,
+    marginRight: 2,
   },
   addSegmentButtonText: {
     ...textStyles.h8,

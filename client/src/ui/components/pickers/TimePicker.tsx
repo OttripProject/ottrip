@@ -192,9 +192,9 @@ export default function TimePicker({
         />
         <Pressable onPress={handleToggle} disabled={disabled} style={styles.arrowButton}>
           {open ? (
-            <UpperArrowIcon width={16} height={16} />
+            <UpperArrowIcon width={10} height={10} style={{ opacity: 0.6 }} />
           ) : (
-            <DownArrowIcon width={16} height={16} />
+            <DownArrowIcon width={10} height={10} style={{ opacity: 0.6 }} />
           )}
         </Pressable>
       </View>
