@@ -389,194 +389,200 @@ const ItineraryDraftEditor = forwardRef<
 
   return (
     <View style={styles.formSection}>
-      <View style={styles.inputGroup}>
-        <Text style={styles.label}>제목*</Text>
+      <View style={styles.fieldRow}>
+        <Text style={styles.fieldLabel}>제목*</Text>
         <Input
           variant="filled"
+          containerStyle={{ flex: 1 }}
           placeholder={PLACEHOLDERS.itinerary.titleForm}
           value={title}
           onChangeText={setTitle}
-          style={styles.input}
-          placeholderTextColor={colors.gray600}
+          style={styles.fieldInput}
+          placeholderTextColor={colors.gray500}
         />
       </View>
 
-      <View style={styles.inputGroup}>
-        <Text style={styles.label}>내용</Text>
+      <View style={styles.fieldRowTop}>
+        <Text style={[styles.fieldLabel, styles.fieldLabelTop]}>내용</Text>
         <Input
           variant="filled"
+          containerStyle={{ flex: 1 }}
           placeholder={PLACEHOLDERS.itinerary.descriptionForm}
           value={description}
           onChangeText={setDescription}
           multiline
           numberOfLines={3}
           textAlignVertical="top"
-          style={styles.textArea}
-          placeholderTextColor={colors.gray600}
+          style={styles.fieldTextarea}
+          placeholderTextColor={colors.gray500}
         />
       </View>
 
       <View
         style={[
-          styles.row,
-          styles.pickerRowWrapper,
+          styles.fieldRow,
+          styles.countryPickerWrapper,
           { zIndex: countryOpen ? 10001 : 1 },
         ]}
       >
-        <View
-          style={[
-            styles.inputGroup,
-            styles.halfWidth,
-            styles.countryPickerWrapper,
-          ]}
-        >
-          <Text style={styles.label}>국가</Text>
+        <Text style={styles.fieldLabel}>국가</Text>
+        <View style={styles.fieldPickerWrap}>
           <CountryPicker
             value={country}
             onChange={setCountry}
             onOpen={() => setCountryOpen(true)}
             onClose={() => setCountryOpen(false)}
             placeholder={PLACEHOLDERS.itinerary.countryForm}
-          />
-        </View>
-        <View style={[styles.inputGroup, styles.halfWidth]}>
-          <Text style={styles.label}>도시</Text>
-          <Input
-            variant="filled"
-            placeholder={PLACEHOLDERS.itinerary.cityForm}
-            value={city}
-            onChangeText={setCity}
-            style={styles.input}
-            placeholderTextColor={colors.gray600}
+            style={styles.draftCountryPicker}
           />
         </View>
       </View>
 
-      <View style={styles.inputGroup}>
-        <Text style={styles.label}>장소</Text>
+      <View style={styles.fieldRow}>
+        <Text style={styles.fieldLabel}>도시</Text>
         <Input
           variant="filled"
+          containerStyle={{ flex: 1 }}
+          placeholder={PLACEHOLDERS.itinerary.cityForm}
+          value={city}
+          onChangeText={setCity}
+          style={styles.fieldInput}
+          placeholderTextColor={colors.gray500}
+        />
+      </View>
+
+      <View style={styles.fieldRow}>
+        <Text style={styles.fieldLabel}>장소</Text>
+        <Input
+          variant="filled"
+          containerStyle={{ flex: 1 }}
           placeholder="장소를 입력하세요."
           value={location}
           onChangeText={setLocation}
-          style={styles.input}
-          placeholderTextColor={colors.gray600}
+          style={styles.fieldInput}
+          placeholderTextColor={colors.gray500}
         />
       </View>
 
       <View
         style={[
-          styles.inputGroup,
+          styles.fieldRow,
           styles.datePickerWrapper,
           { zIndex: showDatePicker ? 20000 : 1 },
         ]}
       >
-        <Text style={styles.label}>날짜*</Text>
-        <Pressable
-          style={styles.dateInput}
-          onPress={() => setShowDatePicker(!showDatePicker)}
-        >
-          <View style={styles.dateTextContainer}>
-            <Text style={styles.dateText}>
+        <Text style={styles.fieldLabel}>날짜*</Text>
+        <View style={styles.fieldPickerWrap}>
+          <Pressable
+            style={styles.fieldDateTrigger}
+            onPress={() => setShowDatePicker(!showDatePicker)}
+          >
+            <Text style={styles.fieldDateText}>
               {dayjs(itineraryDate).format("YYYY년 M월 D일")}
             </Text>
-            <View style={styles.iconWrapper}>
-              <CalendarIcon width={16} height={16} />
-            </View>
-          </View>
-        </Pressable>
-        <BaseCalendar
-          visible={showDatePicker}
-          selectedDate={itineraryDate}
-          onDayPress={day => {
-            setItineraryDate(day.dateString);
-            setShowDatePicker(false);
-          }}
-          onClose={() => setShowDatePicker(false)}
-          style={styles.calendarPopup}
-          hideButtons
-          autoCloseOnSelect
-        />
+            <CalendarIcon width={14} height={14} />
+          </Pressable>
+          <BaseCalendar
+            visible={showDatePicker}
+            selectedDate={itineraryDate}
+            onDayPress={day => {
+              setItineraryDate(day.dateString);
+              setShowDatePicker(false);
+            }}
+            onClose={() => setShowDatePicker(false)}
+            style={styles.fieldCalendarPopup}
+            hideButtons
+            autoCloseOnSelect
+          />
+        </View>
       </View>
 
       <View
         style={[
-          styles.row,
+          styles.fieldRow,
           styles.pickerRowWrapper,
           { zIndex: timeOpen ? 10001 : 1 },
         ]}
       >
-        <View style={[styles.inputGroup, styles.halfWidth]}>
-          <Text style={styles.label}>시작 시간*</Text>
+        <Text style={styles.fieldLabel}>시작 시간*</Text>
+        <View style={styles.fieldPickerWrap}>
           <TimePicker
             value={startTime}
             onChange={setStartTime}
             onOpen={() => setTimeOpen(true)}
             onClose={() => setTimeOpen(false)}
+            style={styles.timePicker}
+            textStyle={styles.draftPickerText}
           />
         </View>
-        <View style={[styles.inputGroup, styles.halfWidth]}>
-          <Text style={styles.label}>종료 시간*</Text>
+      </View>
+
+      <View
+        style={[
+          styles.fieldRow,
+          styles.pickerRowWrapper,
+          { zIndex: timeOpen ? 5001 : 1 },
+        ]}
+      >
+        <Text style={styles.fieldLabel}>종료 시간*</Text>
+        <View style={styles.fieldPickerWrap}>
           <TimePicker
             value={endTime}
             onChange={setEndTime}
             onOpen={() => setTimeOpen(true)}
             onClose={() => setTimeOpen(false)}
             minTime={startTime}
+            style={styles.timePicker}
+            textStyle={styles.draftPickerText}
           />
         </View>
       </View>
 
       {showExpense ? (
         <>
-          <View style={[styles.pillOrange, styles.pillOrangeSpaced]}>
-            <View style={styles.pillDotOrange} />
-            <Text style={styles.pillOrangeText}>비용 내역</Text>
+          <View style={styles.expenseSectionHeader}>
+            <View style={styles.expenseSectionDot} />
+            <Text style={styles.expenseSectionText}>비용 내역</Text>
           </View>
-          <View style={[styles.row, { zIndex: expenseOpen ? 10001 : 1 }]}>
-            <View style={[styles.inputGroup, styles.halfWidth]}>
-              <Text style={styles.label}>카테고리</Text>
-              <CategoryPicker
-                value={expCategory}
-                onChange={setExpCategory}
-                onOpen={() => setExpenseOpen(true)}
-                onClose={() => setExpenseOpen(false)}
-                style={styles.draftCategoryPicker}
-                dropDownContainerStyle={styles.draftCategoryPickerList}
-                listItemLabelStyle={styles.draftCategoryListItem}
-                selectedItemContainerStyle={styles.draftCategorySelectedRow}
-              />
-            </View>
-            <View style={[styles.inputGroup, styles.halfWidth]}>
-              <Text style={styles.label}>원(KRW)</Text>
-              <View style={styles.currencyDisplay}>
-                <Text style={styles.currencyText}>
-                  {currencyLabels[ExpenseCurrency.KRW]}
-                </Text>
-              </View>
-            </View>
+
+          <View style={[styles.fieldRow, { zIndex: expenseOpen ? 10001 : 1 }]}>
+            <Text style={styles.fieldLabel}>카테고리</Text>
+            <CategoryPicker
+              value={expCategory}
+              onChange={setExpCategory}
+              onOpen={() => setExpenseOpen(true)}
+              onClose={() => setExpenseOpen(false)}
+              style={styles.draftCategoryPicker}
+              dropDownContainerStyle={styles.draftCategoryPickerList}
+              listItemLabelStyle={styles.draftCategoryListItem}
+              selectedItemContainerStyle={styles.draftCategorySelectedRow}
+            />
           </View>
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>금액*</Text>
+
+          <View style={styles.fieldRow}>
+            <Text style={styles.fieldLabel}>금액 (원)</Text>
             <Input
               variant="filled"
+              containerStyle={{ flex: 1 }}
               placeholder={PLACEHOLDERS.expense.amount}
               value={formatAmountWithCommas(expAmount)}
               onChangeText={text =>
                 setExpAmount(normalizeAmountDigits(text.replace(/,/g, "")))
               }
               keyboardType="numeric"
-              style={styles.expenseInput}
+              style={styles.fieldInput}
             />
           </View>
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>내용</Text>
+
+          <View style={styles.fieldRow}>
+            <Text style={styles.fieldLabel}>내용</Text>
             <Input
               variant="filled"
+              containerStyle={{ flex: 1 }}
               placeholder={PLACEHOLDERS.expense.descriptionForm}
               value={expDescription}
               onChangeText={setExpDescription}
-              style={styles.expenseInput}
+              style={styles.fieldInput}
             />
           </View>
         </>
@@ -695,76 +701,75 @@ const FlightDraftEditor = forwardRef<
 
   return (
     <View style={styles.formSection}>
-      <View style={[styles.row, { gap: spacing.sm }]}>
-        <View style={[styles.inputGroup, styles.halfWidth]}>
-          <Text style={styles.label}>예약번호 (PNR)</Text>
-          <Input
-            variant="filled"
-            placeholder={PLACEHOLDERS.flight.reservationNumber}
-            value={reservationNumber}
-            onChangeText={setReservationNumber}
-            style={styles.input}
-            placeholderTextColor={colors.gray600}
-          />
-        </View>
-        <View style={[styles.inputGroup, styles.halfWidth]}>
-          <Text style={styles.label}>승객명</Text>
-          <Input
-            variant="filled"
-            placeholder={PLACEHOLDERS.flight.passengerName}
-            value={passengerName}
-            onChangeText={setPassengerName}
-            style={styles.input}
-            placeholderTextColor={colors.gray600}
-          />
-        </View>
-      </View>
-
-      <View style={styles.inputGroup}>
-        <Text style={styles.label}>항공권 번호</Text>
+      <View style={styles.fieldRow}>
+        <Text style={styles.fieldLabel}>예약번호(PNR)</Text>
         <Input
           variant="filled"
+          containerStyle={{ flex: 1 }}
+          placeholder={PLACEHOLDERS.flight.reservationNumber}
+          value={reservationNumber}
+          onChangeText={setReservationNumber}
+          style={styles.fieldInput}
+          placeholderTextColor={colors.gray500}
+        />
+      </View>
+
+      <View style={styles.fieldRow}>
+        <Text style={styles.fieldLabel}>승객명</Text>
+        <Input
+          variant="filled"
+          containerStyle={{ flex: 1 }}
+          placeholder={PLACEHOLDERS.flight.passengerName}
+          value={passengerName}
+          onChangeText={setPassengerName}
+          style={styles.fieldInput}
+          placeholderTextColor={colors.gray500}
+        />
+      </View>
+
+      <View style={styles.fieldRow}>
+        <Text style={styles.fieldLabel}>항공권번호</Text>
+        <Input
+          variant="filled"
+          containerStyle={{ flex: 1 }}
           placeholder={PLACEHOLDERS.flight.ticketNumber}
           value={ticketNumber}
           onChangeText={setTicketNumber}
-          style={styles.input}
-          placeholderTextColor={colors.gray600}
+          style={styles.fieldInput}
+          placeholderTextColor={colors.gray500}
         />
       </View>
 
-      <View style={styles.inputGroup}>
-        <Text style={styles.label}>예약번호 (여행사 예약 번호)</Text>
+      <View style={styles.fieldRow}>
+        <Text style={styles.fieldLabel}>여행사 예약번호</Text>
         <Input
           variant="filled"
+          containerStyle={{ flex: 1 }}
           placeholder={PLACEHOLDERS.flight.bookingReference}
           value={bookingReference}
           onChangeText={setBookingReference}
-          style={styles.input}
-          placeholderTextColor={colors.gray600}
+          style={styles.fieldInput}
+          placeholderTextColor={colors.gray500}
         />
       </View>
 
-      <View style={styles.inputGroup}>
-        <Text style={styles.label}>항공료</Text>
-        <View style={styles.amountInputWrapper}>
-          <Input
-            variant="filled"
-            placeholder={PLACEHOLDERS.expense.amount}
-            value={formatAmountWithCommas(expenseAmount)}
-            onChangeText={text =>
-              setExpenseAmount(normalizeAmountDigits(text.replace(/,/g, "")))
-            }
-            keyboardType="numeric"
-            style={[styles.input, styles.amountInputPadding]}
-            placeholderTextColor={colors.gray600}
-          />
-          <Text style={styles.amountSuffix} pointerEvents="none">
-            {currencyLabels[ExpenseCurrency.KRW]}
-          </Text>
-        </View>
+      <View style={styles.fieldRow}>
+        <Text style={styles.fieldLabel}>항공료 (원)</Text>
+        <Input
+          variant="filled"
+          containerStyle={{ flex: 1 }}
+          placeholder={PLACEHOLDERS.expense.amount}
+          value={formatAmountWithCommas(expenseAmount)}
+          onChangeText={text =>
+            setExpenseAmount(normalizeAmountDigits(text.replace(/,/g, "")))
+          }
+          keyboardType="numeric"
+          style={styles.fieldInput}
+          placeholderTextColor={colors.gray500}
+        />
       </View>
 
-      <View style={[styles.inputGroup, { zIndex: 5000 }]}>
+      <View style={{ zIndex: 5000 }}>
         {segments.map((segment, idx) => (
           <View
             key={`seg-${idx}`}
@@ -778,48 +783,49 @@ const FlightDraftEditor = forwardRef<
             </View>
 
             <View style={styles.segmentContent}>
-              <View style={[styles.row, { gap: spacing.sm, zIndex: 3000 }]}>
-                <View style={[styles.inputGroup, styles.halfWidth]}>
-                  <Text style={styles.label}>항공사</Text>
-                  <Input
-                    variant="filled"
-                    placeholder={PLACEHOLDERS.flight.airline}
-                    value={segment.airline}
-                    onChangeText={text => {
-                      const next = [...segments];
-                      next[idx] = { ...next[idx], airline: text };
-                      setSegments(next);
-                    }}
-                    style={styles.segmentInput}
-                    placeholderTextColor={colors.gray600}
-                  />
-                </View>
-                <View style={[styles.inputGroup, styles.halfWidth]}>
-                  <Text style={styles.label}>항공편명</Text>
-                  <Input
-                    variant="filled"
-                    placeholder={PLACEHOLDERS.flight.flightNumber}
-                    value={segment.flight_number}
-                    onChangeText={text => {
-                      const next = [...segments];
-                      next[idx] = { ...next[idx], flight_number: text };
-                      setSegments(next);
-                    }}
-                    style={styles.segmentInput}
-                    placeholderTextColor={colors.gray600}
-                  />
-                </View>
+              <View style={styles.fieldRow}>
+                <Text style={styles.fieldLabel}>항공사</Text>
+                <Input
+                  variant="filled"
+                  containerStyle={{ flex: 1 }}
+                  placeholder={PLACEHOLDERS.flight.airline}
+                  value={segment.airline}
+                  onChangeText={text => {
+                    const next = [...segments];
+                    next[idx] = { ...next[idx], airline: text };
+                    setSegments(next);
+                  }}
+                  style={styles.segmentInput}
+                  placeholderTextColor={colors.gray500}
+                />
               </View>
 
-              <View style={[styles.row, { gap: spacing.sm, zIndex: 2000 }]}>
-                <View
-                  style={[
-                    styles.inputGroup,
-                    styles.halfWidth,
-                    styles.airportPickerWrapper,
-                  ]}
-                >
-                  <Text style={styles.label}>출발 공항*</Text>
+              <View style={styles.fieldRow}>
+                <Text style={styles.fieldLabel}>항공편명</Text>
+                <Input
+                  variant="filled"
+                  containerStyle={{ flex: 1 }}
+                  placeholder={PLACEHOLDERS.flight.flightNumber}
+                  value={segment.flight_number}
+                  onChangeText={text => {
+                    const next = [...segments];
+                    next[idx] = { ...next[idx], flight_number: text };
+                    setSegments(next);
+                  }}
+                  style={styles.segmentInput}
+                  placeholderTextColor={colors.gray500}
+                />
+              </View>
+
+              <View
+                style={[
+                  styles.fieldRow,
+                  styles.airportPickerWrapper,
+                  { zIndex: 2000 },
+                ]}
+              >
+                <Text style={styles.fieldLabel}>출발 공항*</Text>
+                <View style={styles.fieldPickerWrap}>
                   <AirportPicker
                     value={segment.departure_airport}
                     onChange={code => {
@@ -833,14 +839,17 @@ const FlightDraftEditor = forwardRef<
                     searchTextInputStyle={styles.draftAirportPickerSearch}
                   />
                 </View>
-                <View
-                  style={[
-                    styles.inputGroup,
-                    styles.halfWidth,
-                    styles.airportPickerWrapper,
-                  ]}
-                >
-                  <Text style={styles.label}>도착 공항*</Text>
+              </View>
+
+              <View
+                style={[
+                  styles.fieldRow,
+                  styles.airportPickerWrapper,
+                  { zIndex: 1500 },
+                ]}
+              >
+                <Text style={styles.fieldLabel}>도착 공항*</Text>
+                <View style={styles.fieldPickerWrap}>
                   <AirportPicker
                     value={segment.arrival_airport}
                     onChange={code => {
@@ -856,29 +865,30 @@ const FlightDraftEditor = forwardRef<
                 </View>
               </View>
 
-              <View style={[styles.row, { gap: spacing.sm, zIndex: 1000 }]}>
-                <View style={[styles.inputGroup, styles.halfWidth]}>
-                  <Text style={styles.label}>출발 일자*</Text>
+              <View
+                style={[
+                  styles.fieldRow,
+                  styles.datePickerWrapper,
+                  {
+                    zIndex:
+                      segmentCal?.idx === idx && segmentCal.field === "dep"
+                        ? 20000
+                        : 1000,
+                  },
+                ]}
+              >
+                <Text style={styles.fieldLabel}>출발 일자*</Text>
+                <View style={styles.fieldPickerWrap}>
                   <Pressable
-                    style={styles.segmentDateInput}
+                    style={styles.fieldDateTrigger}
                     onPress={() => setSegmentCal({ idx, field: "dep" })}
                   >
-                    <View style={styles.segmentDateTextContainer}>
-                      <Text
-                        style={
-                          segment.departure_date
-                            ? styles.segmentDateText
-                            : styles.segmentPlaceholderText
-                        }
-                      >
-                        {segment.departure_date
-                          ? dayjs(segment.departure_date).format("YYYY.MM.DD")
-                          : "기타"}
-                      </Text>
-                      <View style={styles.iconWrapper}>
-                        <CalendarIcon width={16} height={16} />
-                      </View>
-                    </View>
+                    <Text style={styles.fieldDateText}>
+                      {segment.departure_date
+                        ? dayjs(segment.departure_date).format("YYYY.MM.DD")
+                        : "기타"}
+                    </Text>
+                    <CalendarIcon width={14} height={14} />
                   </Pressable>
                   {segmentCal?.idx === idx && segmentCal.field === "dep" ? (
                     <BaseCalendar
@@ -894,7 +904,7 @@ const FlightDraftEditor = forwardRef<
                         setSegmentCal(null);
                       }}
                       onClose={() => setSegmentCal(null)}
-                      style={styles.calendarPopup}
+                      style={styles.fieldCalendarPopup}
                       minDate={
                         idx > 0 ? segments[idx - 1].arrival_date : undefined
                       }
@@ -903,8 +913,11 @@ const FlightDraftEditor = forwardRef<
                     />
                   ) : null}
                 </View>
-                <View style={[styles.inputGroup, styles.halfWidth]}>
-                  <Text style={styles.label}>출발 시간*</Text>
+              </View>
+
+              <View style={styles.fieldRow}>
+                <Text style={styles.fieldLabel}>출발 시간*</Text>
+                <View style={styles.fieldPickerWrap}>
                   <TimePicker
                     value={segment.departure_time}
                     onChange={time => {
@@ -919,33 +932,35 @@ const FlightDraftEditor = forwardRef<
                         : undefined
                     }
                     style={styles.segmentTimePicker}
+                    textStyle={styles.draftPickerText}
                   />
                 </View>
               </View>
 
-              <View style={[styles.row, { gap: spacing.sm, zIndex: 500 }]}>
-                <View style={[styles.inputGroup, styles.halfWidth]}>
-                  <Text style={styles.label}>도착 일자*</Text>
+              <View
+                style={[
+                  styles.fieldRow,
+                  styles.datePickerWrapper,
+                  {
+                    zIndex:
+                      segmentCal?.idx === idx && segmentCal.field === "arr"
+                        ? 20000
+                        : 500,
+                  },
+                ]}
+              >
+                <Text style={styles.fieldLabel}>도착 일자*</Text>
+                <View style={styles.fieldPickerWrap}>
                   <Pressable
-                    style={styles.segmentDateInput}
+                    style={styles.fieldDateTrigger}
                     onPress={() => setSegmentCal({ idx, field: "arr" })}
                   >
-                    <View style={styles.segmentDateTextContainer}>
-                      <Text
-                        style={
-                          segment.arrival_date
-                            ? styles.segmentDateText
-                            : styles.segmentPlaceholderText
-                        }
-                      >
-                        {segment.arrival_date
-                          ? dayjs(segment.arrival_date).format("YYYY.MM.DD")
-                          : "기타"}
-                      </Text>
-                      <View style={styles.iconWrapper}>
-                        <CalendarIcon width={16} height={16} />
-                      </View>
-                    </View>
+                    <Text style={styles.fieldDateText}>
+                      {segment.arrival_date
+                        ? dayjs(segment.arrival_date).format("YYYY.MM.DD")
+                        : "기타"}
+                    </Text>
+                    <CalendarIcon width={14} height={14} />
                   </Pressable>
                   {segmentCal?.idx === idx && segmentCal.field === "arr" ? (
                     <BaseCalendar
@@ -961,14 +976,17 @@ const FlightDraftEditor = forwardRef<
                         setSegmentCal(null);
                       }}
                       onClose={() => setSegmentCal(null)}
-                      style={styles.calendarPopup}
+                      style={styles.fieldCalendarPopup}
                       hideButtons
                       autoCloseOnSelect
                     />
                   ) : null}
                 </View>
-                <View style={[styles.inputGroup, styles.halfWidth]}>
-                  <Text style={styles.label}>도착 시간*</Text>
+              </View>
+
+              <View style={styles.fieldRow}>
+                <Text style={styles.fieldLabel}>도착 시간*</Text>
+                <View style={styles.fieldPickerWrap}>
                   <TimePicker
                     value={segment.arrival_time}
                     onChange={time => {
@@ -977,70 +995,73 @@ const FlightDraftEditor = forwardRef<
                       setSegments(next);
                     }}
                     style={styles.segmentTimePicker}
+                    textStyle={styles.draftPickerText}
                   />
                 </View>
               </View>
 
-              <View style={[styles.row, { gap: spacing.sm }]}>
-                <View style={[styles.inputGroup, styles.halfWidth]}>
-                  <Text style={styles.label}>좌석등급</Text>
-                  <Input
-                    variant="filled"
-                    value={segment.seat_class}
-                    onChangeText={text => {
-                      const next = [...segments];
-                      next[idx] = { ...next[idx], seat_class: text };
-                      setSegments(next);
-                    }}
-                    style={styles.segmentInput}
-                    placeholderTextColor={colors.gray600}
-                  />
-                </View>
-                <View style={[styles.inputGroup, styles.halfWidth]}>
-                  <Text style={styles.label}>좌석번호</Text>
-                  <Input
-                    variant="filled"
-                    value={segment.seat_number}
-                    onChangeText={text => {
-                      const next = [...segments];
-                      next[idx] = { ...next[idx], seat_number: text };
-                      setSegments(next);
-                    }}
-                    style={styles.segmentInput}
-                    placeholderTextColor={colors.gray600}
-                  />
-                </View>
+              <View style={styles.fieldRow}>
+                <Text style={styles.fieldLabel}>좌석등급</Text>
+                <Input
+                  variant="filled"
+                  containerStyle={{ flex: 1 }}
+                  value={segment.seat_class}
+                  onChangeText={text => {
+                    const next = [...segments];
+                    next[idx] = { ...next[idx], seat_class: text };
+                    setSegments(next);
+                  }}
+                  style={styles.segmentInput}
+                  placeholderTextColor={colors.gray500}
+                />
               </View>
 
-              <View style={[styles.row, { gap: spacing.sm }]}>
-                <View style={[styles.inputGroup, styles.halfWidth]}>
-                  <Text style={styles.label}>게이트</Text>
-                  <Input
-                    variant="filled"
-                    value={segment.gate}
-                    onChangeText={text => {
-                      const next = [...segments];
-                      next[idx] = { ...next[idx], gate: text };
-                      setSegments(next);
-                    }}
-                    style={styles.segmentInput}
-                    placeholderTextColor={colors.gray600}
-                  />
-                </View>
-                <View style={[styles.inputGroup, styles.halfWidth]}>
-                  <Text style={styles.label}>터미널</Text>
-                  <Input
-                    variant="filled"
-                    value={segment.terminal}
-                    onChangeText={text => {
-                      const next = [...segments];
-                      next[idx] = { ...next[idx], terminal: text };
-                      setSegments(next);
-                    }}
-                    style={styles.segmentInput}
-                    placeholderTextColor={colors.gray600}
-                  />
-                </View>
+              <View style={styles.fieldRow}>
+                <Text style={styles.fieldLabel}>좌석번호</Text>
+                <Input
+                  variant="filled"
+                  containerStyle={{ flex: 1 }}
+                  value={segment.seat_number}
+                  onChangeText={text => {
+                    const next = [...segments];
+                    next[idx] = { ...next[idx], seat_number: text };
+                    setSegments(next);
+                  }}
+                  style={styles.segmentInput}
+                  placeholderTextColor={colors.gray500}
+                />
+              </View>
+
+              <View style={styles.fieldRow}>
+                <Text style={styles.fieldLabel}>게이트</Text>
+                <Input
+                  variant="filled"
+                  containerStyle={{ flex: 1 }}
+                  value={segment.gate}
+                  onChangeText={text => {
+                    const next = [...segments];
+                    next[idx] = { ...next[idx], gate: text };
+                    setSegments(next);
+                  }}
+                  style={styles.segmentInput}
+                  placeholderTextColor={colors.gray500}
+                />
+              </View>
+
+              <View style={styles.fieldRow}>
+                <Text style={styles.fieldLabel}>터미널</Text>
+                <Input
+                  variant="filled"
+                  containerStyle={{ flex: 1 }}
+                  value={segment.terminal}
+                  onChangeText={text => {
+                    const next = [...segments];
+                    next[idx] = { ...next[idx], terminal: text };
+                    setSegments(next);
+                  }}
+                  style={styles.segmentInput}
+                  placeholderTextColor={colors.gray500}
+                />
               </View>
             </View>
           </View>
@@ -1162,105 +1183,98 @@ const AccommodationDraftEditor = forwardRef<
 
   return (
     <View style={styles.formSection}>
-      <View style={styles.inputGroup}>
-        <Text style={styles.label}>숙소명*</Text>
+      <View style={styles.fieldRow}>
+        <Text style={styles.fieldLabel}>숙소명*</Text>
         <Input
           variant="filled"
+          containerStyle={{ flex: 1 }}
           placeholder={PLACEHOLDERS.accommodation.name}
           value={name}
           onChangeText={setName}
-          style={styles.input}
-          placeholderTextColor={colors.gray600}
+          style={styles.fieldInput}
+          placeholderTextColor={colors.gray500}
         />
       </View>
 
-      <View style={styles.inputGroup}>
-        <Text style={styles.label}>내용</Text>
+      <View style={styles.fieldRowTop}>
+        <Text style={[styles.fieldLabel, styles.fieldLabelTop]}>내용</Text>
         <Input
           variant="filled"
+          containerStyle={{ flex: 1 }}
           placeholder={PLACEHOLDERS.itinerary.descriptionForm}
           value={description}
           onChangeText={setDescription}
           multiline
           numberOfLines={3}
           textAlignVertical="top"
-          style={styles.textArea}
-          placeholderTextColor={colors.gray600}
+          style={styles.fieldTextarea}
+          placeholderTextColor={colors.gray500}
         />
       </View>
 
       <View
         style={[
-          styles.row,
-          { gap: spacing.sm, zIndex: countryOpen ? 10000 : 1 },
+          styles.fieldRow,
+          styles.countryPickerWrapper,
+          { zIndex: countryOpen ? 10000 : 1 },
         ]}
       >
-        <View style={[styles.inputGroup, styles.halfWidth]}>
-          <Text style={styles.label}>국가</Text>
+        <Text style={styles.fieldLabel}>국가</Text>
+        <View style={styles.fieldPickerWrap}>
           <CountryPicker
             value={country}
             onChange={setCountry}
             placeholder={PLACEHOLDERS.picker.country}
             onOpen={() => setCountryOpen(true)}
             onClose={() => setCountryOpen(false)}
-          />
-        </View>
-        <View style={[styles.inputGroup, styles.halfWidth]}>
-          <Text style={styles.label}>도시</Text>
-          <Input
-            variant="filled"
-            placeholder={PLACEHOLDERS.accommodation.city}
-            value={city}
-            onChangeText={setCity}
-            style={styles.input}
-            placeholderTextColor={colors.gray600}
+            style={styles.draftCountryPicker}
           />
         </View>
       </View>
 
-      <View style={styles.inputGroup}>
-        <Text style={styles.label}>장소</Text>
+      <View style={styles.fieldRow}>
+        <Text style={styles.fieldLabel}>도시</Text>
         <Input
           variant="filled"
+          containerStyle={{ flex: 1 }}
+          placeholder={PLACEHOLDERS.accommodation.city}
+          value={city}
+          onChangeText={setCity}
+          style={styles.fieldInput}
+          placeholderTextColor={colors.gray500}
+        />
+      </View>
+
+      <View style={styles.fieldRow}>
+        <Text style={styles.fieldLabel}>장소</Text>
+        <Input
+          variant="filled"
+          containerStyle={{ flex: 1 }}
           placeholder={PLACEHOLDERS.accommodation.place}
           value={place}
           onChangeText={setPlace}
-          style={styles.input}
-          placeholderTextColor={colors.gray600}
+          style={styles.fieldInput}
+          placeholderTextColor={colors.gray500}
         />
       </View>
 
       <View
         style={[
-          styles.row,
-          {
-            gap: spacing.sm,
-            zIndex: showCheckinCal ? 30000 : checkinTimeOpen ? 20002 : 1,
-          },
+          styles.fieldRow,
+          styles.datePickerWrapper,
+          { zIndex: showCheckinCal ? 30000 : 1 },
         ]}
       >
-        <View
-          style={[
-            styles.inputGroup,
-            styles.halfWidth,
-            { position: "relative" },
-          ]}
-        >
-          <Text style={styles.label}>체크인 날짜</Text>
+        <Text style={styles.fieldLabel}>체크인 날짜</Text>
+        <View style={styles.fieldPickerWrap}>
           <Pressable
-            style={styles.dateInput}
+            style={styles.fieldDateTrigger}
             onPress={() => setShowCheckinCal(true)}
           >
-            <View style={styles.dateTextContainer}>
-              <Text
-                style={checkinDate ? styles.dateText : styles.placeholderText}
-              >
-                {checkinDate ? dayjs(checkinDate).format("YYYY.MM.DD") : "기타"}
-              </Text>
-              <View style={styles.iconWrapper}>
-                <CalendarIcon width={16} height={16} />
-              </View>
-            </View>
+            <Text style={styles.fieldDateText}>
+              {checkinDate ? dayjs(checkinDate).format("YYYY.MM.DD") : "기타"}
+            </Text>
+            <CalendarIcon width={14} height={14} />
           </Pressable>
           {showCheckinCal ? (
             <BaseCalendar
@@ -1271,15 +1285,23 @@ const AccommodationDraftEditor = forwardRef<
                 setShowCheckinCal(false);
               }}
               onClose={() => setShowCheckinCal(false)}
-              style={styles.calendarPopup}
-              minDate={dayjs().format("YYYY-MM-DD")}
+              style={styles.fieldCalendarPopup}
               hideButtons
               autoCloseOnSelect
             />
           ) : null}
         </View>
-        <View style={[styles.inputGroup, styles.halfWidth]}>
-          <Text style={styles.label}>체크인 시간</Text>
+      </View>
+
+      <View
+        style={[
+          styles.fieldRow,
+          styles.pickerRowWrapper,
+          { zIndex: checkinTimeOpen ? 20002 : 1 },
+        ]}
+      >
+        <Text style={styles.fieldLabel}>체크인 시간</Text>
+        <View style={styles.fieldPickerWrap}>
           <TimePicker
             value={checkinTime}
             onChange={setCheckinTime}
@@ -1289,43 +1311,30 @@ const AccommodationDraftEditor = forwardRef<
             }}
             onClose={() => setCheckinTimeOpen(false)}
             style={styles.timePicker}
+            textStyle={styles.draftPickerText}
           />
         </View>
       </View>
 
       <View
         style={[
-          styles.row,
-          {
-            gap: spacing.sm,
-            zIndex: showCheckoutCal ? 30000 : checkoutTimeOpen ? 20001 : 1,
-          },
+          styles.fieldRow,
+          styles.datePickerWrapper,
+          { zIndex: showCheckoutCal ? 30000 : 1 },
         ]}
       >
-        <View
-          style={[
-            styles.inputGroup,
-            styles.halfWidth,
-            { position: "relative" },
-          ]}
-        >
-          <Text style={styles.label}>체크아웃 날짜</Text>
+        <Text style={styles.fieldLabel}>체크아웃 날짜</Text>
+        <View style={styles.fieldPickerWrap}>
           <Pressable
-            style={styles.dateInput}
+            style={styles.fieldDateTrigger}
             onPress={() => setShowCheckoutCal(true)}
           >
-            <View style={styles.dateTextContainer}>
-              <Text
-                style={checkoutDate ? styles.dateText : styles.placeholderText}
-              >
-                {checkoutDate
-                  ? dayjs(checkoutDate).format("YYYY.MM.DD")
-                  : "기타"}
-              </Text>
-              <View style={styles.iconWrapper}>
-                <CalendarIcon width={16} height={16} />
-              </View>
-            </View>
+            <Text style={styles.fieldDateText}>
+              {checkoutDate
+                ? dayjs(checkoutDate).format("YYYY.MM.DD")
+                : "기타"}
+            </Text>
+            <CalendarIcon width={14} height={14} />
           </Pressable>
           {showCheckoutCal ? (
             <BaseCalendar
@@ -1336,15 +1345,24 @@ const AccommodationDraftEditor = forwardRef<
                 setShowCheckoutCal(false);
               }}
               onClose={() => setShowCheckoutCal(false)}
-              style={styles.calendarPopup}
+              style={styles.fieldCalendarPopup}
               minDate={checkinDate}
               hideButtons
               autoCloseOnSelect
             />
           ) : null}
         </View>
-        <View style={[styles.inputGroup, styles.halfWidth]}>
-          <Text style={styles.label}>체크아웃 시간</Text>
+      </View>
+
+      <View
+        style={[
+          styles.fieldRow,
+          styles.pickerRowWrapper,
+          { zIndex: checkoutTimeOpen ? 20001 : 1 },
+        ]}
+      >
+        <Text style={styles.fieldLabel}>체크아웃 시간</Text>
+        <View style={styles.fieldPickerWrap}>
           <TimePicker
             value={checkoutTime}
             onChange={setCheckoutTime}
@@ -1354,30 +1372,25 @@ const AccommodationDraftEditor = forwardRef<
             }}
             onClose={() => setCheckoutTimeOpen(false)}
             style={styles.timePicker}
+            textStyle={styles.draftPickerText}
           />
         </View>
       </View>
 
-      <View style={[styles.row, { gap: spacing.sm }]}>
-        <View style={[styles.inputGroup, { flex: 1 }]}>
-          <Text style={styles.label}>숙박료</Text>
-          <View style={styles.amountInputWrapper}>
-            <Input
-              variant="filled"
-              placeholder={PLACEHOLDERS.expense.amount}
-              value={formatAmountWithCommas(expenseAmount)}
-              onChangeText={text =>
-                setExpenseAmount(normalizeAmountDigits(text.replace(/,/g, "")))
-              }
-              keyboardType="numeric"
-              style={[styles.input, styles.amountInputPadding]}
-              placeholderTextColor={colors.gray600}
-            />
-            <Text style={styles.amountSuffix} pointerEvents="none">
-              {currencyLabels[ExpenseCurrency.KRW]}
-            </Text>
-          </View>
-        </View>
+      <View style={styles.fieldRow}>
+        <Text style={styles.fieldLabel}>숙박료 (원)</Text>
+        <Input
+          variant="filled"
+          containerStyle={{ flex: 1 }}
+          placeholder={PLACEHOLDERS.expense.amount}
+          value={formatAmountWithCommas(expenseAmount)}
+          onChangeText={text =>
+            setExpenseAmount(normalizeAmountDigits(text.replace(/,/g, "")))
+          }
+          keyboardType="numeric"
+          style={styles.fieldInput}
+          placeholderTextColor={colors.gray500}
+        />
       </View>
     </View>
   );
@@ -1435,8 +1448,8 @@ const ExpenseDraftEditor = forwardRef<
 
   return (
     <View style={styles.formSection}>
-      <View style={[styles.inputGroup, { zIndex: catOpen ? 10001 : 1 }]}>
-        <Text style={styles.label}>카테고리</Text>
+      <View style={[styles.fieldRow, { zIndex: catOpen ? 10001 : 1 }]}>
+        <Text style={styles.fieldLabel}>카테고리</Text>
         <CategoryPicker
           value={category}
           onChange={setCategory}
@@ -1448,56 +1461,65 @@ const ExpenseDraftEditor = forwardRef<
           selectedItemContainerStyle={styles.draftCategorySelectedRow}
         />
       </View>
-      <View style={styles.inputGroup}>
-        <Text style={styles.label}>금액</Text>
+      <View style={styles.fieldRow}>
+        <Text style={styles.fieldLabel}>금액 (원)</Text>
         <Input
           variant="filled"
+          containerStyle={{ flex: 1 }}
           value={formatAmountWithCommas(amount)}
           onChangeText={text =>
             setAmount(normalizeAmountDigits(text.replace(/,/g, "")))
           }
           keyboardType="numeric"
-          style={styles.input}
-          placeholderTextColor={colors.gray600}
+          style={styles.fieldInput}
+          placeholderTextColor={colors.gray500}
         />
       </View>
-      <View style={styles.inputGroup}>
-        <Text style={styles.label}>내용</Text>
+      <View style={styles.fieldRowTop}>
+        <Text style={[styles.fieldLabel, styles.fieldLabelTop]}>내용</Text>
         <Input
           variant="filled"
+          containerStyle={{ flex: 1 }}
           value={description}
           onChangeText={setDescription}
-          style={styles.textArea}
+          style={styles.fieldTextarea}
           multiline
-          placeholderTextColor={colors.gray600}
+          placeholderTextColor={colors.gray500}
         />
       </View>
-      <View style={[styles.inputGroup, { zIndex: showCal ? 20000 : 1 }]}>
-        <Text style={styles.label}>비용일</Text>
-        <Pressable style={styles.dateInput} onPress={() => setShowCal(true)}>
-          <View style={styles.dateTextContainer}>
-            <Text style={styles.dateText}>
+      <View
+        style={[
+          styles.fieldRow,
+          styles.datePickerWrapper,
+          { zIndex: showCal ? 20000 : 1 },
+        ]}
+      >
+        <Text style={styles.fieldLabel}>비용일</Text>
+        <View style={styles.fieldPickerWrap}>
+          <Pressable
+            style={styles.fieldDateTrigger}
+            onPress={() => setShowCal(true)}
+          >
+            <Text style={styles.fieldDateText}>
               {dayjs(exDate).format("YYYY년 M월 D일")}
             </Text>
-            <View style={styles.iconWrapper}>
-              <CalendarIcon width={16} height={16} />
-            </View>
-          </View>
-        </Pressable>
-        {showCal ? (
-          <BaseCalendar
-            visible
-            selectedDate={exDate}
-            onDayPress={day => {
-              setExDate(day.dateString);
-              setShowCal(false);
-            }}
-            onClose={() => setShowCal(false)}
-            style={styles.calendarPopup}
-            hideButtons
-            autoCloseOnSelect
-          />
-        ) : null}
+            <CalendarIcon width={14} height={14} />
+          </Pressable>
+          {showCal ? (
+            <BaseCalendar
+              visible
+              selectedDate={exDate}
+              onDayPress={day => {
+                setExDate(day.dateString);
+                setShowCal(false);
+              }}
+              onClose={() => setShowCal(false)}
+              style={styles.fieldCalendarPopup}
+              hideButtons
+              autoCloseOnSelect
+            />
+          ) : null}
+        </View>
       </View>
     </View>
   );
@@ -1551,76 +1573,13 @@ export const AiAnalyzeResultBody = forwardRef<
 
 const styles = StyleSheet.create({
   formSection: {
-    gap: spacing.lg,
-  },
-  inputGroup: {
-    gap: spacing.sm,
+    gap: 10,
   },
   row: {
     flexDirection: "row",
     gap: spacing.sm,
     overflow: "visible",
     position: "relative",
-  },
-  halfWidth: {
-    flex: 1,
-  },
-  label: {
-    ...textStyles.h8,
-    color: colors.black,
-  },
-  input: {
-    backgroundColor: colors.gray200,
-    height: 40,
-    borderRadius: radii.md,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
-    ...textStyles.body4,
-    borderWidth: 0,
-  },
-  textArea: {
-    backgroundColor: colors.gray200,
-    height: 80,
-    borderRadius: radii.md,
-    paddingHorizontal: spacing.md,
-    paddingVertical: 10,
-    ...textStyles.body4,
-    borderWidth: 0,
-  },
-  expenseInput: {
-    backgroundColor: colors.gray200,
-    height: 40,
-    borderRadius: radii.md,
-    paddingHorizontal: spacing.md,
-    ...textStyles.body4,
-    borderWidth: 0,
-  },
-  dateInput: {
-    flexDirection: "row",
-    alignItems: "center",
-    borderWidth: 0,
-    borderRadius: radii.md,
-    paddingHorizontal: spacing.md,
-    paddingVertical: 10,
-    backgroundColor: colors.gray200,
-    minHeight: 40,
-  },
-  dateTextContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    flex: 1,
-  },
-  dateText: {
-    ...textStyles.body4,
-    color: colors.gray800,
-  },
-  placeholderText: {
-    ...textStyles.body4,
-    color: colors.gray600,
-  },
-  iconWrapper: {
-    marginTop: 0,
   },
   calendarPopup: {
     position: "absolute",
@@ -1639,65 +1598,6 @@ const styles = StyleSheet.create({
   countryPickerWrapper: {
     overflow: "visible",
     position: "relative",
-  },
-  currencyDisplay: {
-    backgroundColor: colors.gray200,
-    height: 40,
-    borderRadius: radii.md,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
-    justifyContent: "center",
-    borderWidth: 0,
-  },
-  currencyText: {
-    ...textStyles.body4,
-    color: colors.gray600,
-  },
-  amountInputWrapper: {
-    position: "relative",
-  },
-  amountInputPadding: {
-    paddingRight: 36,
-    textAlign: "right",
-  },
-  amountSuffix: {
-    position: "absolute",
-    right: spacing.sm,
-    top: "50%",
-    transform: [{ translateY: -10 }],
-    ...textStyles.body4,
-    color: colors.black,
-  },
-  timePicker: {
-    borderWidth: 0,
-    borderRadius: radii.md,
-    backgroundColor: colors.gray200,
-    height: 40,
-  },
-  pillOrange: {
-    flexDirection: "row",
-    alignItems: "center",
-    alignSelf: "flex-start",
-    gap: 6,
-    paddingVertical: 4,
-    paddingHorizontal: 10,
-    borderRadius: 999,
-    backgroundColor: ORANGE_BG,
-  },
-  pillOrangeSpaced: {
-    marginTop: 6,
-  },
-  pillDotOrange: {
-    width: 6,
-    height: 6,
-    borderRadius: 999,
-    backgroundColor: ORANGE,
-  },
-  pillOrangeText: {
-    fontSize: 11,
-    lineHeight: 16,
-    fontWeight: "600",
-    color: ORANGE,
   },
   segmentContainer: {
     borderColor: colors.gray400,
@@ -1718,22 +1618,34 @@ const styles = StyleSheet.create({
     color: colors.black,
   },
   segmentContent: {
-    gap: spacing.lg,
+    gap: 10,
   },
   segmentInput: {
-    backgroundColor: colors.gray200,
-    borderWidth: 0,
-    borderRadius: radii.md,
-    height: 40,
-    color: colors.black,
+    flex: 1,
+    borderWidth: 1,
+    borderColor: "rgb(226, 226, 226)",
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    fontFamily: "Pretendard-Regular",
+    fontSize: 12,
+    lineHeight: 18,
+    color: colors.gray900,
+    backgroundColor: colors.white,
+    minHeight: 34,
   },
   segmentDateInput: {
-    backgroundColor: colors.gray200,
-    borderWidth: 0,
-    borderRadius: radii.md,
-    height: 40,
-    paddingHorizontal: spacing.md,
-    justifyContent: "center",
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    borderWidth: 1,
+    borderColor: "rgb(226, 226, 226)",
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    backgroundColor: colors.white,
+    minHeight: 34,
   },
   segmentDateTextContainer: {
     flexDirection: "row",
@@ -1750,27 +1662,34 @@ const styles = StyleSheet.create({
     color: colors.gray600,
   },
   segmentTimePicker: {
-    borderWidth: 0,
-    borderRadius: radii.md,
-    backgroundColor: colors.gray200,
-    height: 40,
+    flex: 1,
+    borderWidth: 1,
+    borderColor: "rgb(226, 226, 226)",
+    borderRadius: 8,
+    backgroundColor: colors.white,
+    height: 34,
+    minHeight: 34,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
   },
   airportPickerWrapper: {
     overflow: "visible",
     position: "relative",
   },
-  /** AI 분석 모달 전용: 공항 피커 트리거·목록·검색을 다른 입력과 동일한 회색 무테 */
   draftAirportPicker: {
-    backgroundColor: colors.gray200,
-    borderWidth: 0,
-    borderRadius: radii.md,
-    minHeight: 40,
+    flex: 1,
+    borderWidth: 1,
+    borderColor: "rgb(226, 226, 226)",
+    borderRadius: 8,
+    minHeight: 34,
+    backgroundColor: colors.white,
   },
   draftAirportPickerList: {
-    backgroundColor: colors.gray200,
-    borderWidth: 0,
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: "rgb(226, 226, 226)",
+    borderRadius: 8,
     borderTopWidth: 0,
-    borderRadius: radii.md,
   },
   draftAirportPickerSearch: {
     backgroundColor: colors.gray200,
@@ -1778,29 +1697,159 @@ const styles = StyleSheet.create({
     borderRadius: radii.xs,
   },
   draftCategoryPicker: {
-    backgroundColor: colors.gray200,
-    borderWidth: 0,
-    borderRadius: radii.md,
-    minHeight: 40,
+    flex: 1,
+    borderWidth: 1,
+    borderColor: "rgb(226, 226, 226)",
+    borderRadius: 8,
+    minHeight: 34,
+    backgroundColor: colors.white,
   },
   draftCategoryPickerList: {
-    backgroundColor: colors.gray200,
-    borderWidth: 0,
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: "rgb(226, 226, 226)",
+    borderRadius: 8,
     borderTopWidth: 0,
-    borderRadius: radii.md,
   },
   draftCategoryListItem: {
     ...textStyles.body4,
     color: colors.gray800,
-    backgroundColor: colors.gray200,
+    backgroundColor: colors.white,
     paddingHorizontal: 8,
     paddingVertical: 6,
   },
   draftCategorySelectedRow: {
-    backgroundColor: colors.gray200,
+    backgroundColor: colors.white,
+  },
+  timePicker: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: "rgb(226, 226, 226)",
+    borderRadius: 8,
+    backgroundColor: colors.white,
+    height: 34,
+    minHeight: 34,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+  },
+  draftPickerText: {
+    fontFamily: "Pretendard-Regular",
+    fontSize: 12,
+    lineHeight: 18,
+    color: colors.gray900,
+  },
+  draftCountryPicker: {
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: "rgb(226, 226, 226)",
+    borderRadius: 8,
+    height: 34,
+    minHeight: 34,
+    maxHeight: 34,
   },
   fallbackText: {
     ...textStyles.body4,
     color: colors.gray600,
+  },
+  fieldRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    overflow: "visible",
+    position: "relative",
+  },
+  fieldRowTop: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 10,
+  },
+  fieldLabel: {
+    width: 76,
+    flexShrink: 0,
+    fontFamily: "Pretendard-SemiBold",
+    fontSize: 12,
+    lineHeight: 18,
+    color: "rgb(108, 108, 108)",
+  },
+  fieldLabelTop: {
+    marginTop: 9,
+  },
+  fieldInput: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: "rgb(226, 226, 226)",
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    fontFamily: "Pretendard-Regular",
+    fontSize: 12,
+    lineHeight: 18,
+    color: colors.gray900,
+    backgroundColor: colors.white,
+    minHeight: 34,
+  },
+  fieldTextarea: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: "rgb(226, 226, 226)",
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    fontFamily: "Pretendard-Regular",
+    fontSize: 12,
+    lineHeight: 18,
+    color: colors.gray900,
+    backgroundColor: colors.white,
+    height: 56,
+    textAlignVertical: "top",
+  },
+  fieldPickerWrap: {
+    flex: 1,
+    overflow: "visible",
+    position: "relative",
+  },
+  fieldDateTrigger: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    borderWidth: 1,
+    borderColor: "rgb(226, 226, 226)",
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    backgroundColor: colors.white,
+    minHeight: 34,
+  },
+  fieldDateText: {
+    fontFamily: "Pretendard-Regular",
+    fontSize: 12,
+    lineHeight: 18,
+    color: colors.gray900,
+  },
+  fieldCalendarPopup: {
+    position: "absolute",
+    top: 38,
+    left: 0,
+    zIndex: 20000,
+  },
+  expenseSectionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginTop: 6,
+  },
+  expenseSectionDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 999,
+    backgroundColor: "rgb(240, 138, 75)",
+    flexShrink: 0,
+  },
+  expenseSectionText: {
+    fontFamily: "Pretendard-SemiBold",
+    fontSize: 12,
+    lineHeight: 18,
+    color: "rgb(184, 83, 26)",
   },
 });

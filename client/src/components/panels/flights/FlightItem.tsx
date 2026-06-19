@@ -67,6 +67,7 @@ interface FlightItemProps {
   routeDocumentAnalyzeSuccess?: (
     res: DocumentUploadAnalyzeResponse,
     carryPendingFiles?: LocalFile[],
+    originEntityType?: string,
   ) => boolean;
   carryoverPendingFiles?: LocalFile[] | null;
   onConsumeCarryoverPendingFiles?: () => void;
@@ -228,8 +229,11 @@ export default function FlightItem({
   const [aiAnalyzeInlineError, setAiAnalyzeInlineError] = useState(false);
   const [aiAnalyzeInlineErrorMessage, setAiAnalyzeInlineErrorMessage] = useState("");
   const [lastAiSelection, setLastAiSelection] = useState<AiAttachmentAnalyzeSelection | null>(null);
+  const [lastAnalyzeFileName, setLastAnalyzeFileName] = useState<string | null>(null);
   const lastHandledAiAnalyzeSeqRef = useRef<number | null>(null);
   const aiAnalyzeCancelledRef = useRef(false);
+
+  const [analyzeOriginEntityType, setAnalyzeOriginEntityType] = useState<string | undefined>(undefined);
 
   useEffect(() => {
     if (!stagedDocumentAnalyze) return;
@@ -238,9 +242,10 @@ export default function FlightItem({
       stagedDocumentAnalyze.result.draft?.itemType;
     if (kind !== "flight") return;
     if (readOnly) return;
-    const { seq, result } = stagedDocumentAnalyze;
+    const { seq, result, originEntityType } = stagedDocumentAnalyze;
     if (lastHandledAiAnalyzeSeqRef.current === seq) return;
     lastHandledAiAnalyzeSeqRef.current = seq;
+    setAnalyzeOriginEntityType(originEntityType);
     setAiAnalyzeResult(result);
     setAiAnalyzeModalVisible(true);
   }, [stagedDocumentAnalyze, readOnly]);
@@ -269,6 +274,7 @@ export default function FlightItem({
           pendingFiles,
           existingAttachments,
         });
+        setLastAnalyzeFileName(payload.filename);
         const res = await analyzeDocumentUpload(payload.file, {
           filename: payload.filename,
         });
@@ -279,7 +285,7 @@ export default function FlightItem({
           setAiAnalyzeInlineError(true);
           return;
         }
-        if (routeDocumentAnalyzeSuccess?.(res, pendingFiles)) {
+        if (routeDocumentAnalyzeSuccess?.(res, pendingFiles, "항공")) {
           return;
         }
         setAiAnalyzeResult(res);
@@ -1240,6 +1246,7 @@ export default function FlightItem({
       <AiDocumentAnalyzeModal
         visible={aiAnalyzeModalVisible}
         analyzeResult={aiAnalyzeResult}
+        analyzeFileName={lastAnalyzeFileName ?? undefined}
         onApply={applyAiAnalyzeDraftToForm}
         onClose={() => {
           setAiAnalyzeModalVisible(false);
@@ -1247,6 +1254,7 @@ export default function FlightItem({
           onConsumeStagedDocumentAnalyze?.();
         }}
         entityTypeLabel="항공"
+        originEntityType={analyzeOriginEntityType}
       />
     </>
   );

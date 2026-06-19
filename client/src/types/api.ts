@@ -374,4 +374,5 @@ export interface DocumentUploadAnalyzeResponse {
 export type StagedDocumentAnalyzePayload = {
   result: DocumentUploadAnalyzeResponse;
   seq: number;
+  originEntityType?: string;
 };

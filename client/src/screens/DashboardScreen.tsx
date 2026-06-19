@@ -67,6 +67,7 @@ export default function DashboardScreen() {
     (
       res: DocumentUploadAnalyzeResponse,
       carryPendingFiles?: LocalFile[],
+      originEntityType?: string,
     ): boolean => {
       const kind = res.inferredItemType ?? res.draft?.itemType;
       if (
@@ -85,6 +86,7 @@ export default function DashboardScreen() {
       setStagedDocumentAnalyze({
         result: res,
         seq: documentAnalyzeSeqRef.current,
+        originEntityType,
       });
 
       if (kind === "itinerary") {
