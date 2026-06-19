@@ -145,27 +145,37 @@ export default function DashboardScreen() {
 
   const animRightFlex = useRef(new Animated.Value(targetRight)).current;
   const prevTargetRef = useRef(targetRight);
+  const [showRightPanel, setShowRightPanel] = useState(targetRight > 0);
 
   useEffect(() => {
     if (prevTargetRef.current === targetRight) return;
     prevTargetRef.current = targetRight;
-    Animated.timing(animRightFlex, {
-      toValue: targetRight,
-      duration: 300,
-      easing: Easing.out(Easing.cubic),
-      useNativeDriver: false,
-    }).start();
+
+    if (targetRight > 0) {
+      setShowRightPanel(true);
+      Animated.timing(animRightFlex, {
+        toValue: targetRight,
+        duration: 300,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: false,
+      }).start();
+    } else {
+      Animated.timing(animRightFlex, {
+        toValue: 0,
+        duration: 300,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: false,
+      }).start(() => setShowRightPanel(false));
+    }
   }, [targetRight]);
-  const headerHeight = 64;
-  const headerMarginBottom = 16;
-  const verticalPadding = 16 * 2;
+  const headerHeight = 56;
+  const verticalPadding = 16 + 20;
   const availableHeight = Math.max(
     360,
     width
       ? (typeof window !== "undefined" ? window.innerHeight : 0) -
           verticalPadding -
-          headerHeight -
-          headerMarginBottom
+          headerHeight
       : 600,
   );
   const innerGap = 16;
@@ -547,7 +557,7 @@ export default function DashboardScreen() {
           </View>
 
           {/* 우측 영역 (동적 비율) */}
-          {!isMobile && (
+          {!isMobile && showRightPanel && (
             <Animated.View
               style={[
                 styles.rightArea,
@@ -620,9 +630,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     paddingTop: 16,
-    paddingBottom: 24,
-    paddingLeft: 32,
-    paddingRight: 32,
+    paddingBottom: 20,
+    paddingLeft: 20,
+    paddingRight: 20,
   },
   headerModal: {
     width: "100%",
