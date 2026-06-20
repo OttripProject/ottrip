@@ -404,6 +404,110 @@ function getHeaderSubtitle(
   return "첨부파일에서 아래 일정 정보를 찾았어요";
 }
 
+export interface AiAnalyzeResultContentProps {
+  analyzeResult: DocumentUploadAnalyzeResponse;
+  analyzeFileName?: string;
+  sourceLabel?: string;
+  originEntityType?: string;
+}
+
+export function AiAnalyzeResultContent({
+  analyzeResult,
+  analyzeFileName,
+  sourceLabel,
+  originEntityType,
+}: AiAnalyzeResultContentProps) {
+  const kind: AiDocumentItemType | null =
+    analyzeResult.inferredItemType ?? analyzeResult.draft?.itemType ?? null;
+
+  const isMismatch = useMemo(() => {
+    if (!kind || !originEntityType) return false;
+    const originKind = ENTITY_LABEL_TO_KIND[originEntityType];
+    return !!originKind && kind !== originKind;
+  }, [kind, originEntityType]);
+
+  const mismatchKindLabel = kind ? (KIND_TO_LABEL[kind] ?? kind) : "";
+
+  const isPartialRecognition = useMemo(() => {
+    if (!analyzeResult.draft?.payload) return false;
+    const { values, fieldMeta } = analyzeResult.draft.payload;
+    const hasUncertain = Object.values(fieldMeta).some(
+      (m) => m.certainty !== "high",
+    );
+    const hasEmptyValues = Object.values(values).some(
+      (v) => v === null || v === undefined || v === "",
+    );
+    return hasUncertain || hasEmptyValues;
+  }, [analyzeResult]);
+
+  return (
+    <>
+      {analyzeFileName ? (
+        <View style={styles.fileCard}>
+          <View style={styles.fileCardIconBox}>
+            {isImageFilename(analyzeFileName) ? (
+              <AttachmentImageIcon width={17} height={17} />
+            ) : (
+              <AttachmentDocIcon width={17} height={17} />
+            )}
+          </View>
+          <Text style={styles.fileCardName} numberOfLines={1}>
+            {analyzeFileName}
+          </Text>
+          <View style={styles.fileCardBadge}>
+            <Text style={styles.fileCardBadgeText}>분석 완료</Text>
+          </View>
+        </View>
+      ) : sourceLabel ? (
+        <View style={styles.sourceCard}>
+          <View style={styles.sourceCardIconBox}>
+            <AttachmentDocIcon width={15} height={15} />
+          </View>
+          <Text style={styles.sourceCardLabel} numberOfLines={1}>
+            {sourceLabel}
+          </Text>
+          <View style={styles.fileCardBadge}>
+            <Text style={styles.fileCardBadgeText}>분석 완료</Text>
+          </View>
+        </View>
+      ) : null}
+
+      {isMismatch && (
+        <View style={styles.mismatchBanner}>
+          <WarningCircleIcon
+            width={14}
+            height={14}
+            style={styles.mismatchBannerIcon}
+          />
+          <Text style={styles.mismatchBannerText}>
+            유형 불일치 : '{originEntityType}' 항목에서 분석을 시작했지만 파일이 '{mismatchKindLabel}' 유형으로 인식됐어요.
+          </Text>
+        </View>
+      )}
+
+      {isPartialRecognition && (
+        <View style={styles.partialBanner}>
+          <WarningCircleIcon
+            width={14}
+            height={14}
+            style={styles.partialBannerIcon}
+          />
+          <Text style={styles.partialBannerText}>
+            일부 항목만 인식했어요. 비어 있는 칸은 직접 확인해 주세요.
+          </Text>
+        </View>
+      )}
+
+      {analyzeResult.draft ? (
+        <ReadOnlyBody draft={analyzeResult.draft} />
+      ) : (
+        <Text style={styles.emptyDraftHint}>
+          분석은 완료됐지만 표시할 초안 데이터가 없습니다.
+        </Text>
+      )}
+    </>
+  );
+}
 
 export interface AiDocumentAnalyzeModalProps {
   visible: boolean;
@@ -443,26 +547,6 @@ export default function AiDocumentAnalyzeModal({
 
   const kind: AiDocumentItemType | null =
     analyzeResult?.inferredItemType ?? analyzeResult?.draft?.itemType ?? null;
-
-  const isMismatch = useMemo(() => {
-    if (!kind || !originEntityType) return false;
-    const originKind = ENTITY_LABEL_TO_KIND[originEntityType];
-    return !!originKind && kind !== originKind;
-  }, [kind, originEntityType]);
-
-  const mismatchKindLabel = kind ? (KIND_TO_LABEL[kind] ?? kind) : "";
-
-  const isPartialRecognition = useMemo(() => {
-    if (!analyzeResult?.draft?.payload) return false;
-    const { values, fieldMeta } = analyzeResult.draft.payload;
-    const hasUncertain = Object.values(fieldMeta).some(
-      (m) => m.certainty !== "high",
-    );
-    const hasEmptyValues = Object.values(values).some(
-      (v) => v === null || v === undefined || v === "",
-    );
-    return hasUncertain || hasEmptyValues;
-  }, [analyzeResult]);
 
   const headerSubtitle = getHeaderSubtitle(kind, entityTypeLabel);
 
@@ -527,65 +611,18 @@ export default function AiDocumentAnalyzeModal({
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
           >
-            {analyzeFileName && (
-              <View style={styles.fileCard}>
-                <View style={styles.fileCardIconBox}>
-                  {isImageFilename(analyzeFileName) ? (
-                    <AttachmentImageIcon width={17} height={17} />
-                  ) : (
-                    <AttachmentDocIcon width={17} height={17} />
-                  )}
-                </View>
-                <Text style={styles.fileCardName} numberOfLines={1}>
-                  {analyzeFileName}
-                </Text>
-                <View style={styles.fileCardBadge}>
-                  <Text style={styles.fileCardBadgeText}>분석 완료</Text>
-                </View>
-              </View>
-            )}
-
-            {isMismatch && (
-              <View style={styles.mismatchBanner}>
-                <WarningCircleIcon
-                  width={14}
-                  height={14}
-                  style={styles.mismatchBannerIcon}
-                />
-                <Text style={styles.mismatchBannerText}>
-                  유형 불일치 : '<b>{originEntityType}</b>' 항목에서 분석을 시작했지만 파일이 '<b>{mismatchKindLabel}</b>' 유형으로 인식됐어요.
-                </Text>
-              </View>
-            )}
-
-            {isPartialRecognition && (
-              <View style={styles.partialBanner}>
-                <WarningCircleIcon
-                  width={14}
-                  height={14}
-                  style={styles.partialBannerIcon}
-                />
-                <Text style={styles.partialBannerText}>
-                  일부 항목만 인식했어요. <b>직접 수정</b>으로 비어 있는 칸을 채워
-                  주세요.
-                </Text>
-              </View>
-            )}
-
-            {hasDraft ? (
-              isEditMode ? (
-                <AiAnalyzeResultBody
-                  key={draftBodyKey}
-                  ref={draftEditorRef}
-                  draft={analyzeResult!.draft!}
-                />
-              ) : (
-                <ReadOnlyBody draft={analyzeResult!.draft!} />
-              )
+            {hasDraft && isEditMode ? (
+              <AiAnalyzeResultBody
+                key={draftBodyKey}
+                ref={draftEditorRef}
+                draft={analyzeResult!.draft!}
+              />
             ) : (
-              <Text style={styles.emptyDraftHint}>
-                분석은 완료됐지만 표시할 초안 데이터가 없습니다.
-              </Text>
+              <AiAnalyzeResultContent
+                analyzeResult={analyzeResult ?? { success: false, inferredItemType: null, draft: null, error: null }}
+                analyzeFileName={analyzeFileName}
+                originEntityType={originEntityType}
+              />
             )}
           </ScrollView>
 
@@ -712,6 +749,32 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     borderRadius: 10,
     backgroundColor: colors.gray200,
+  },
+  sourceCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    backgroundColor: colors.gray200,
+  },
+  sourceCardIconBox: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    backgroundColor: "rgb(238, 234, 255)",
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+  },
+  sourceCardLabel: {
+    fontFamily: "Pretendard-SemiBold",
+    fontSize: 13,
+    lineHeight: 20,
+    color: colors.gray900,
+    flex: 1,
+    minWidth: 0,
   },
   fileCardIconBox: {
     width: 40,

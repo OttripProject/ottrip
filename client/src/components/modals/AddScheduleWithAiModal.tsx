@@ -16,6 +16,7 @@ import {
 } from "@/types/api";
 import { colors } from "@/ui/tokens/colors";
 import { textStyles, typography } from "@/ui/tokens/typography";
+import { LinearGradient } from "expo-linear-gradient";
 import dayjs from "dayjs";
 import type React from "react";
 import { createElement, useEffect, useRef, useState } from "react";
@@ -32,10 +33,11 @@ import {
 import FileIcon from "../../../assets/files.svg";
 import AttachmentDocIcon from "../../../assets/mobile_attachment_document.svg";
 import AttachmentImageIcon from "../../../assets/mobile_attachment_image.svg";
+import LeftArrowIcon from "../../../assets/left_arrow.svg";
 import SendIcon from "../../../assets/share.svg";
 import CloseIcon from "../../../assets/x.svg";
-import AiDocumentAnalyzeModal from "./AiDocumentAnalyzeModal";
-import AiResultCard from "./AiResultCard";
+import CheckWhiteIcon from "../../../assets/check_white.svg";
+import { AiAnalyzeResultContent } from "./AiDocumentAnalyzeModal";
 
 interface AddScheduleWithAiModalProps {
   visible: boolean;
@@ -53,8 +55,7 @@ export type Message =
   | { role: "ai-unclear"; title: string; body: string; suggestions: string[] }
   | { role: "user"; text: string }
   | { role: "user-file"; fileName: string; mimeType: string }
-  | { role: "ai-analyzing"; id: string }
-  | { role: "result"; result: DocumentUploadAnalyzeResponse };
+  | { role: "ai-analyzing"; id: string };
 
 export const AI_INTRO_MESSAGE: Message = {
   role: "ai-intro",
@@ -99,12 +100,16 @@ export default function AddScheduleWithAiModal({
   messages,
   onMessagesChange: setMessages,
 }: AddScheduleWithAiModalProps) {
+  type ResultView = {
+    result: DocumentUploadAnalyzeResponse;
+    source: "text" | "file";
+    fileName?: string;
+  };
+
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
-  const [analyzeResult, setAnalyzeResult] =
-    useState<DocumentUploadAnalyzeResponse | null>(null);
-  const [analyzeModalVisible, setAnalyzeModalVisible] = useState(false);
+  const [resultView, setResultView] = useState<ResultView | null>(null);
   const scrollRef = useRef<ScrollView>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const pendingFileRef = useRef<File | null>(null);
@@ -124,7 +129,7 @@ export default function AddScheduleWithAiModal({
     try {
       const result = await parseTextToItem(text, planPublicId);
       if (result.success && result.draft) {
-        setMessages(prev => [...prev, { role: "result", result }]);
+        setResultView({ result, source: "text" });
       } else {
         setMessages(prev => [
           ...prev,
@@ -201,8 +206,7 @@ export default function AddScheduleWithAiModal({
       );
 
       if (result.success && result.draft) {
-        setAnalyzeResult(result);
-        setAnalyzeModalVisible(true);
+        setResultView({ result, source: "file", fileName: file.name });
       } else {
         setMessages(prev => [
           ...prev,
@@ -271,7 +275,6 @@ export default function AddScheduleWithAiModal({
   };
 
   const handleAnalyzeApply = async (draft: AiDocumentItemDraft) => {
-    setAnalyzeModalVisible(false);
     setLoading(true);
     const v = draft.payload.values as Record<string, unknown>;
     const fileToUpload = pendingFileRef.current;
@@ -431,19 +434,9 @@ export default function AddScheduleWithAiModal({
     }
   };
 
-  const handleSaved = () => {
-    setMessages(prev => [
-      ...prev,
-      { role: "ai", text: "✅ 저장됐어요! 다른 일정도 추가해드릴까요?" },
-    ]);
-    onSaved?.();
-    setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
-  };
-
   const handleClose = () => {
     setMessage("");
-    setAnalyzeResult(null);
-    setAnalyzeModalVisible(false);
+    setResultView(null);
     setIsDragging(false);
     pendingFileRef.current = null;
     onClose();
@@ -530,6 +523,81 @@ export default function AddScheduleWithAiModal({
     >
       <View style={styles.overlay}>
         <View style={styles.card}>
+          {resultView ? (
+            <>
+              <LinearGradient
+                colors={["#EEF0FF", "#F3ECFF"]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.resultHeader}
+              >
+                <Pressable
+                  onPress={() => setResultView(null)}
+                  style={styles.resultBackButton}
+                  accessibilityLabel="대화로 돌아가기"
+                >
+                  <LeftArrowIcon width={16} height={16} color="#4A3DBF" />
+                </Pressable>
+                <LinearGradient
+                  colors={colors.aiGrad as [string, string]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.resultAiBadge}
+                >
+                  <CheckWhiteIcon width={18} height={18} />
+                </LinearGradient>
+                <View style={styles.resultHeaderTextBlock}>
+                  <Text style={styles.resultTitle}>분석 결과를 확인하세요</Text>
+                  <Text style={styles.resultSubtitle}>
+                    {resultView.source === "text"
+                      ? "대화 내용에서 아래 일정 정보를 찾았어요"
+                      : "첨부파일에서 아래 일정 정보를 찾았어요"}
+                  </Text>
+                </View>
+                <Pressable
+                  onPress={handleClose}
+                  style={styles.closeButton}
+                  accessibilityLabel="닫기"
+                >
+                  <CloseIcon width={14} height={14} color="#4A3DBF" />
+                </Pressable>
+              </LinearGradient>
+
+              <ScrollView
+                style={styles.resultScroll}
+                contentContainerStyle={styles.resultScrollContent}
+                showsVerticalScrollIndicator={false}
+                keyboardShouldPersistTaps="handled"
+              >
+                <AiAnalyzeResultContent
+                  analyzeResult={resultView.result}
+                  analyzeFileName={resultView.source === "file" ? resultView.fileName : undefined}
+                  sourceLabel={resultView.source === "text" ? "대화 내용 분석" : undefined}
+                />
+              </ScrollView>
+
+              <View style={styles.resultFooter}>
+                <Pressable
+                  style={({ pressed }) => [styles.resultFooterBtn, styles.resultFooterBtnCancel, pressed && { opacity: 0.75 }]}
+                  onPress={() => setResultView(null)}
+                >
+                  <Text style={styles.resultFooterBtnCancelText}>취소</Text>
+                </Pressable>
+                <Pressable
+                  style={({ pressed }) => [styles.resultFooterBtn, styles.resultFooterBtnApply, pressed && { opacity: 0.85 }]}
+                  onPress={() => {
+                    const draft = resultView.result.draft;
+                    if (!draft) return;
+                    setResultView(null);
+                    handleAnalyzeApply(draft);
+                  }}
+                >
+                  <Text style={styles.resultFooterBtnApplyText}>이대로 추가</Text>
+                </Pressable>
+              </View>
+            </>
+          ) : (
+          <>
           <View style={styles.header}>
             <View style={styles.titleBlock}>
               <Text style={styles.headerTitle}>대화로 일정 추가</Text>
@@ -559,16 +627,6 @@ export default function AddScheduleWithAiModal({
               }
             >
               {messages.map((msg, idx) => {
-                if (msg.role === "result") {
-                  return (
-                    <AiResultCard
-                      key={idx}
-                      result={msg.result}
-                      planId={planId}
-                      onSaved={handleSaved}
-                    />
-                  );
-                }
                 if (msg.role === "user-file") {
                   return (
                     <View key={idx} style={styles.userBubbleWrap}>
@@ -728,16 +786,10 @@ export default function AddScheduleWithAiModal({
               )}
             </Pressable>
           </View>
+          </>
+          )}
         </View>
       </View>
-
-      <AiDocumentAnalyzeModal
-        visible={analyzeModalVisible}
-        onClose={() => setAnalyzeModalVisible(false)}
-        analyzeResult={analyzeResult}
-        onApply={handleAnalyzeApply}
-        applyLabel="저장"
-      />
     </Modal>
   );
 }
@@ -764,6 +816,100 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.22,
     shadowRadius: 60,
     elevation: 24,
+  },
+  resultHeader: {
+    paddingTop: 20,
+    paddingBottom: 16,
+    paddingHorizontal: 22,
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 12,
+  },
+  resultBackButton: {
+    width: 24,
+    height: 24,
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+    marginTop: 6,
+    marginLeft: -4,
+  },
+  resultAiBadge: {
+    width: 36,
+    height: 36,
+    borderRadius: 11,
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+    marginTop: 4,
+    shadowColor: colors.aiInk,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  resultHeaderTextBlock: {
+    flex: 1,
+    minWidth: 0,
+  },
+  resultTitle: {
+    fontFamily: "Pretendard-SemiBold",
+    fontSize: 16,
+    lineHeight: 24,
+    color: colors.gray900,
+  },
+  resultSubtitle: {
+    fontFamily: "Pretendard-Regular",
+    fontSize: 13,
+    lineHeight: 20,
+    color: colors.aiInk,
+    marginTop: 2,
+  },
+  resultScroll: {
+    flex: 1,
+  },
+  resultScrollContent: {
+    padding: 16,
+    paddingHorizontal: 22,
+    paddingBottom: 4,
+    gap: 12,
+  },
+  resultFooter: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingTop: 12,
+    paddingHorizontal: 22,
+    paddingBottom: 18,
+    borderTopWidth: 1,
+    borderTopColor: colors.gray200,
+  },
+  resultFooterBtn: {
+    height: 42,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 20,
+  },
+  resultFooterBtnCancel: {
+    flex: 1,
+    backgroundColor: colors.gray200,
+  },
+  resultFooterBtnApply: {
+    flex: 1.4,
+    backgroundColor: colors.primary,
+  },
+  resultFooterBtnCancelText: {
+    fontFamily: "Pretendard-SemiBold",
+    fontSize: 13,
+    lineHeight: 20,
+    color: colors.gray900,
+  },
+  resultFooterBtnApplyText: {
+    fontFamily: "Pretendard-SemiBold",
+    fontSize: 13,
+    lineHeight: 20,
+    color: colors.white,
   },
   header: {
     flexDirection: "row",
