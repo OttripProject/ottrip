@@ -49,16 +49,31 @@ interface AddScheduleWithAiModalProps {
 
 export type Message =
   | { role: "ai"; text: string }
+  | { role: "ai-intro"; text: string; suggestions: string[] }
+  | { role: "ai-unclear"; title: string; body: string; suggestions: string[] }
   | { role: "user"; text: string }
   | { role: "user-file"; fileName: string; mimeType: string }
   | { role: "ai-analyzing"; id: string }
   | { role: "result"; result: DocumentUploadAnalyzeResponse };
 
-export const AI_INTRO =
-  '안녕하세요! 어떤 일정을 추가해 드릴까요?\n예: "내일 오후 2시에 루브르 박물관 가고 싶어", "3월 10일에 파리 하얏트 호텔 체크인해줘"';
+export const AI_INTRO_MESSAGE: Message = {
+  role: "ai-intro",
+  text: "안녕하세요! 어떤 일정을 추가해 드릴까요?\n텍스트로 알려주시거나, 예약 메일·티켓 이미지를 첨부하면 자동으로 정리해 드려요.\n예를 들어, 이렇게 입력해 보세요.",
+  suggestions: ["4월 15일 오후 2시에 루브르 박물관 가고 싶어",],
+};
 
 const WEB_FILE_ACCEPT =
   "image/jpeg,image/png,image/gif,image/webp,image/heic,image/heif,application/pdf,.pdf";
+
+const MAX_FILE_SIZE = 10 * 1024 * 1024;
+const ALLOWED_MIME_TYPES = ["image/jpeg", "image/png", "application/pdf"];
+
+function getEunNeun(text: string): string {
+  if (!text) return "은";
+  const last = text.charCodeAt(text.length - 1);
+  if (last >= 0xac00 && last <= 0xd7a3) return (last - 0xac00) % 28 !== 0 ? "은" : "는";
+  return "aeiouAEIOU".includes(text[text.length - 1]) ? "는" : "은";
+}
 
 function getFileMimeLabel(mimeType: string): string {
   if (mimeType === "application/pdf") return "PDF 문서";
@@ -114,15 +129,17 @@ export default function AddScheduleWithAiModal({
         setMessages(prev => [
           ...prev,
           {
-            role: "ai",
-            text: result.error || "분석에 실패했습니다. 다시 시도해주세요.",
+            role: "ai-unclear",
+            title: "일정 정보를 찾지 못했어요",
+            body: "날짜와 시간을 포함해서 다시 알려주세요.",
+            suggestions: ["4월 15일 오후 2시에 루브르 박물관 가고 싶어"],
           },
         ]);
       }
     } catch {
       setMessages(prev => [
         ...prev,
-        { role: "ai", text: "오류가 발생했습니다. 잠시 후 다시 시도해주세요." },
+        { role: "ai-unclear", title: "분석 서버에 연결하지 못했어요", body: "잠시 후 다시 시도해 주세요.\n문제가 계속되면 네트워크 상태를 확인해 주세요.", suggestions: [] },
       ]);
     } finally {
       setLoading(false);
@@ -132,6 +149,34 @@ export default function AddScheduleWithAiModal({
 
   const handleFileAttach = async (file: File) => {
     if (loading) return;
+
+    if (file.size > MAX_FILE_SIZE) {
+      setMessages(prev => [
+        ...prev,
+        { role: "user-file", fileName: file.name, mimeType: file.type },
+        {
+          role: "ai-unclear",
+          title: "파일 용량이 너무 커요",
+          body: `"${file.name}"${getEunNeun(file.name)} 10MB를 넘어서 업로드할 수 없어요.\n용량을 줄이거나 일부만 잘라 다시 첨부해 주세요.`,
+          suggestions: [],
+        },
+      ]);
+      return;
+    }
+
+    if (!ALLOWED_MIME_TYPES.includes(file.type)) {
+      setMessages(prev => [
+        ...prev,
+        { role: "user-file", fileName: file.name, mimeType: file.type },
+        {
+          role: "ai-unclear",
+          title: "지원하지 않는 파일 형식이에요",
+          body: "PDF, JPG, PNG 파일만 읽을 수 있어요.\n예약 메일을 PDF로 저장하거나, 티켓 화면을 캡처해서 다시 올려주세요.",
+          suggestions: [],
+        },
+      ]);
+      return;
+    }
 
     pendingFileRef.current = file;
     const analyzingId = `analyzing-${Date.now()}`;
@@ -162,9 +207,10 @@ export default function AddScheduleWithAiModal({
         setMessages(prev => [
           ...prev,
           {
-            role: "ai",
-            text:
-              result.error || "파일 분석에 실패했습니다. 다시 시도해주세요.",
+            role: "ai-unclear",
+            title: "일정 정보를 찾지 못했어요",
+            body: "이미지에서 날짜·시간·장소를 읽어낼 수 없었어요.\n예약 확인 메일이나 티켓처럼 정보가 명확한 자료를 첨부해 보세요.",
+            suggestions: [],
           },
         ]);
       }
@@ -180,7 +226,7 @@ export default function AddScheduleWithAiModal({
       );
       setMessages(prev => [
         ...prev,
-        { role: "ai", text: "오류가 발생했습니다. 잠시 후 다시 시도해주세요." },
+        { role: "ai-unclear", title: "분석 서버에 연결하지 못했어요", body: "잠시 후 다시 시도해 주세요.\n문제가 계속되면 네트워크 상태를 확인해 주세요.", suggestions: [] },
       ]);
     } finally {
       setLoading(false);
@@ -556,6 +602,48 @@ export default function AddScheduleWithAiModal({
                     </View>
                   );
                 }
+                if (msg.role === "ai-intro") {
+                  return (
+                    <View key={idx} style={styles.aiBubbleWrap}>
+                      <View style={styles.aiBubble}>
+                        <Text style={styles.aiBubbleText}>{msg.text}</Text>
+                        <View style={styles.unclearSuggestions}>
+                          {msg.suggestions.map((s, i) => (
+                            <Pressable key={i} style={styles.introSuggestionButton} onPress={() => setMessage(s)}>
+                              <Text style={styles.introSuggestionText} numberOfLines={1}>{`"${s}"`}</Text>
+                            </Pressable>
+                          ))}
+                        </View>
+                      </View>
+                    </View>
+                  );
+                }
+                if (msg.role === "ai-unclear") {
+                  return (
+                    <View key={idx} style={styles.aiBubbleWrap}>
+                      <View style={styles.unclearBubble}>
+                        <View style={styles.unclearHeader}>
+                          {createElement(
+                            "svg",
+                            { width: 16, height: 16, viewBox: "0 0 16 16", fill: "none", style: { flexShrink: 0, marginTop: 1 } },
+                            createElement("path", { d: "M8 1.6l6.8 11.8H1.2L8 1.6z", stroke: "#C0392B", strokeWidth: "1.4", strokeLinejoin: "round", fill: "#FFE2DE" }),
+                            createElement("path", { d: "M8 6.4v3.2", stroke: "#C0392B", strokeWidth: "1.6", strokeLinecap: "round" }),
+                            createElement("circle", { cx: "8", cy: "11.6", r: "0.9", fill: "#C0392B" }),
+                          )}
+                          <Text style={styles.unclearTitle}>{msg.title}</Text>
+                        </View>
+                        <Text style={styles.unclearBody}>{msg.body}</Text>
+                        <View style={styles.unclearSuggestions}>
+                          {msg.suggestions.map((s, i) => (
+                            <Pressable key={i} style={styles.suggestionButton} onPress={() => setMessage(s)}>
+                              <Text style={styles.suggestionText} numberOfLines={1}>{`"${s}"`}</Text>
+                            </Pressable>
+                          ))}
+                        </View>
+                      </View>
+                    </View>
+                  );
+                }
                 if (msg.role === "ai") {
                   return (
                     <View key={idx} style={styles.aiBubbleWrap}>
@@ -576,8 +664,9 @@ export default function AddScheduleWithAiModal({
               {loading &&
                 messages[messages.length - 1]?.role !== "ai-analyzing" && (
                   <View style={styles.aiBubbleWrap}>
-                    <View style={styles.aiBubble}>
+                    <View style={[styles.aiBubble, styles.aiBubbleRow]}>
                       <ActivityIndicator size="small" color={colors.white} />
+                      <Text style={styles.aiBubbleText}>일정을 분석하고 있어요...</Text>
                     </View>
                   </View>
                 )}
@@ -752,6 +841,7 @@ const styles = StyleSheet.create({
   aiBubble: {
     maxWidth: "85%",
     backgroundColor: colors.primary,
+    borderTopLeftRadius: 0,
     borderTopRightRadius: 14,
     borderBottomLeftRadius: 14,
     borderBottomRightRadius: 14,
@@ -767,6 +857,77 @@ const styles = StyleSheet.create({
     ...textStyles.body4,
     color: colors.white,
   },
+  unclearBubble: {
+    maxWidth: "85%",
+    backgroundColor: "rgb(255, 241, 239)",
+    borderWidth: 1,
+    borderColor: "rgb(251, 217, 211)",
+    borderTopLeftRadius: 0,
+    borderTopRightRadius: 14,
+    borderBottomRightRadius: 14,
+    borderBottomLeftRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  unclearHeader: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 8,
+    marginBottom: 4,
+  },
+  unclearTitle: {
+    fontFamily: typography.fontFamily.pretendardSemiBold,
+    fontSize: 13,
+    lineHeight: 20,
+    color: "rgb(192, 57, 43)",
+  },
+  unclearBody: {
+    fontFamily: typography.fontFamily.pretendardRegular,
+    fontSize: 13,
+    lineHeight: 20,
+    color: "rgb(90, 42, 34)",
+  },
+  unclearSuggestions: {
+    flexDirection: "column",
+    gap: 6,
+    marginTop: 10,
+  },
+  suggestionButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: "rgb(242, 187, 177)",
+    backgroundColor: colors.white,
+    borderRadius: 10,
+  },
+  suggestionText: {
+    fontFamily: typography.fontFamily.pretendardRegular,
+    fontSize: 12,
+    lineHeight: 18,
+    color: "rgb(192, 57, 43)",
+    flex: 1,
+  },
+  introSuggestionButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.35)",
+    backgroundColor: "rgba(255, 255, 255, 0.14)",
+    borderRadius: 10,
+  },
+  introSuggestionText: {
+    fontFamily: typography.fontFamily.pretendardRegular,
+    fontSize: 12,
+    lineHeight: 18,
+    color: colors.white,
+    flex: 1,
+  },
   userBubbleWrap: {
     flexDirection: "row",
     justifyContent: "flex-end",
@@ -775,7 +936,7 @@ const styles = StyleSheet.create({
     maxWidth: "85%",
     backgroundColor: colors.gray200,
     borderTopLeftRadius: 14,
-    borderTopRightRadius: 4,
+    borderTopRightRadius: 0,
     borderBottomLeftRadius: 14,
     borderBottomRightRadius: 14,
     paddingHorizontal: 14,

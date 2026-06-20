@@ -1,6 +1,6 @@
 import AddScheduleWithAiModal, {
   type Message as AiMessage,
-  AI_INTRO,
+  AI_INTRO_MESSAGE,
 } from "@/components/modals/AddScheduleWithAiModal";
 import PlanSelectRequiredModal from "@/components/modals/PlanSelectRequiredModal";
 import ResultModal from "@/components/modals/ResultModal";
@@ -236,7 +236,7 @@ export default function WeeklySchedulePanel({
   const [shareOpen, setShareOpen] = useState(false);
   const [aiChatOpen, setAiChatOpen] = useState(false);
   const [aiMessages, setAiMessages] = useState<AiMessage[]>([
-    { role: "ai", text: AI_INTRO },
+    AI_INTRO_MESSAGE,
   ]);
   const [memoOpen, setMemoOpen] = useState(false);
   const [memoDraft, setMemoDraft] = useState("");
@@ -1135,7 +1135,7 @@ export default function WeeklySchedulePanel({
   }, [internalSelectedTrip?.startDate]);
 
   useEffect(() => {
-    setAiMessages([{ role: "ai", text: AI_INTRO }]);
+    setAiMessages([AI_INTRO_MESSAGE]);
   }, [internalSelectedTrip?.id]);
 
   const myRole = useMemo(() => {
