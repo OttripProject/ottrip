@@ -30,6 +30,8 @@ export const colors = {
   aiTintHover: "#E7DEFF",
   aiTintPress: "#DCCFFF",
   aiInk: "#7B6CFF",
+  aiInkDark: "#4A3DBF",
+  aiHeaderGradient: ["#EEF0FF", "#F3ECFF"] as const,
 };
 
 export type ColorName = keyof typeof colors;

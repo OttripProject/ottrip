@@ -2785,6 +2785,13 @@ export default function WeeklySchedulePanel({
           internalSelectedTrip ? Number.parseInt(internalSelectedTrip.id) : 0
         }
         planPublicId={internalSelectedTrip?.publicId ?? ""}
+        planStartDate={internalSelectedTrip?.startDate}
+        planEndDate={internalSelectedTrip?.endDate}
+        onPlanDatesExtended={(newStart, newEnd) => {
+          setInternalSelectedTrip((prev: any) =>
+            prev ? { ...prev, startDate: newStart, endDate: newEnd } : prev,
+          );
+        }}
         messages={aiMessages}
         onMessagesChange={setAiMessages}
         onSaved={() => {

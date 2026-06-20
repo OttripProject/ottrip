@@ -5,6 +5,7 @@ import type { PreparedUpload } from "@/services/attachments";
 import { expensesApi } from "@/services/expenses";
 import { flightsApi } from "@/services/flights";
 import { itinerariesApi } from "@/services/itineraries";
+import { plansApi } from "@/services/plans";
 import type {
   AiDocumentItemDraft,
   DocumentUploadAnalyzeResponse,
@@ -15,7 +16,7 @@ import {
   PLAN_ENTITY_KIND,
 } from "@/types/api";
 import { colors } from "@/ui/tokens/colors";
-import { textStyles, typography } from "@/ui/tokens/typography";
+import { textStyles } from "@/ui/tokens/typography";
 import { LinearGradient } from "expo-linear-gradient";
 import dayjs from "dayjs";
 import type React from "react";
@@ -38,12 +39,16 @@ import SendIcon from "../../../assets/share.svg";
 import CloseIcon from "../../../assets/x.svg";
 import CheckWhiteIcon from "../../../assets/check_white.svg";
 import { AiAnalyzeResultContent } from "./AiDocumentAnalyzeModal";
+import { AiAnalyzeResultBody, type AiAnalyzeDraftEditorRef } from "./aiDocumentAnalyzeDraftBody";
 
 interface AddScheduleWithAiModalProps {
   visible: boolean;
   onClose: () => void;
   planId: number;
   planPublicId: string;
+  planStartDate?: string;
+  planEndDate?: string;
+  onPlanDatesExtended?: (newStart: string, newEnd: string) => void;
   onSaved?: () => void;
   messages: Message[];
   onMessagesChange: React.Dispatch<React.SetStateAction<Message[]>>;
@@ -55,7 +60,8 @@ export type Message =
   | { role: "ai-unclear"; title: string; body: string; suggestions: string[] }
   | { role: "user"; text: string }
   | { role: "user-file"; fileName: string; mimeType: string }
-  | { role: "ai-analyzing"; id: string };
+  | { role: "ai-analyzing"; id: string }
+  | { role: "ai-result-card"; result: DocumentUploadAnalyzeResponse; source: "text" | "file"; fileName?: string };
 
 export const AI_INTRO_MESSAGE: Message = {
   role: "ai-intro",
@@ -91,11 +97,52 @@ function getVal(v: Record<string, unknown>, ...keys: string[]): string {
   return "";
 }
 
+function getItemTypeLabel(type: string | null): string {
+  switch (type) {
+    case "itinerary": return "일정";
+    case "flight": return "항공편";
+    case "accommodation": return "숙소";
+    case "expense": return "지출";
+    default: return "분석 결과";
+  }
+}
+
+function getResultSummary(result: DocumentUploadAnalyzeResponse): string {
+  if (!result.draft) return "";
+  const v = result.draft.payload.values as Record<string, unknown>;
+  switch (result.inferredItemType) {
+    case "itinerary":
+      return getVal(v, "title") || getVal(v, "location") || getVal(v, "itineraryDate", "itinerary_date");
+    case "flight": {
+      const segs = Array.isArray(v.segments) ? (v.segments as Record<string, unknown>[]) : [];
+      if (segs.length > 0) {
+        const dep = getVal(segs[0], "departureAirport", "departure_airport");
+        const arr = getVal(segs[0], "arrivalAirport", "arrival_airport");
+        if (dep && arr) return `${dep} → ${arr}`;
+      }
+      return getVal(v, "reservationNumber", "reservation_number");
+    }
+    case "accommodation":
+      return getVal(v, "name") || getVal(v, "place");
+    case "expense": {
+      const desc = getVal(v, "description");
+      const amount = getVal(v, "amount");
+      const currency = getVal(v, "currency") || "KRW";
+      return desc || (amount ? `${amount} ${currency}` : "");
+    }
+    default:
+      return "";
+  }
+}
+
 export default function AddScheduleWithAiModal({
   visible,
   onClose,
   planId,
   planPublicId,
+  planStartDate,
+  planEndDate,
+  onPlanDatesExtended,
   onSaved,
   messages,
   onMessagesChange: setMessages,
@@ -110,6 +157,8 @@ export default function AddScheduleWithAiModal({
   const [loading, setLoading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [resultView, setResultView] = useState<ResultView | null>(null);
+  const [isResultEditMode, setIsResultEditMode] = useState(false);
+  const [hoveredCardIdx, setHoveredCardIdx] = useState<number | null>(null);
   const scrollRef = useRef<ScrollView>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const pendingFileRef = useRef<File | null>(null);
@@ -117,6 +166,7 @@ export default function AddScheduleWithAiModal({
   const handleFileAttachRef = useRef<(file: File) => Promise<void>>(
     null as any,
   );
+  const resultDraftEditorRef = useRef<AiAnalyzeDraftEditorRef>(null);
 
   const handleSend = async () => {
     const text = message.trim();
@@ -129,6 +179,7 @@ export default function AddScheduleWithAiModal({
     try {
       const result = await parseTextToItem(text, planPublicId);
       if (result.success && result.draft) {
+        setMessages(prev => [...prev, { role: "ai-result-card", result, source: "text" }]);
         setResultView({ result, source: "text" });
       } else {
         setMessages(prev => [
@@ -206,6 +257,7 @@ export default function AddScheduleWithAiModal({
       );
 
       if (result.success && result.draft) {
+        setMessages(prev => [...prev, { role: "ai-result-card", result, source: "file", fileName: file.name }]);
         setResultView({ result, source: "file", fileName: file.name });
       } else {
         setMessages(prev => [
@@ -274,6 +326,26 @@ export default function AddScheduleWithAiModal({
     });
   };
 
+  const extendPlanDatesIfNeeded = async (dates: string[]) => {
+    if (!planStartDate || !planEndDate) return;
+    const validDates = dates
+      .map(d => dayjs(d.substring(0, 10)))
+      .filter(d => d.isValid());
+    if (!validDates.length) return;
+    const minDate = validDates.reduce((a, b) => (b.isBefore(a) ? b : a));
+    const maxDate = validDates.reduce((a, b) => (b.isAfter(a) ? b : a));
+    const newStart = minDate.isBefore(dayjs(planStartDate))
+      ? minDate.format("YYYY-MM-DD")
+      : planStartDate;
+    const newEnd = maxDate.isAfter(dayjs(planEndDate))
+      ? maxDate.format("YYYY-MM-DD")
+      : planEndDate;
+    if (newStart !== planStartDate || newEnd !== planEndDate) {
+      await plansApi.updatePlan(planId, { startDate: newStart, endDate: newEnd });
+      onPlanDatesExtended?.(newStart, newEnd);
+    }
+  };
+
   const handleAnalyzeApply = async (draft: AiDocumentItemDraft) => {
     setLoading(true);
     const v = draft.payload.values as Record<string, unknown>;
@@ -310,6 +382,7 @@ export default function AddScheduleWithAiModal({
               PLAN_ENTITY_KIND.ITINERARY,
               created.id,
             );
+          await extendPlanDatesIfNeeded([date]);
           break;
         }
         case "flight": {
@@ -345,6 +418,11 @@ export default function AddScheduleWithAiModal({
               PLAN_ENTITY_KIND.FLIGHT,
               created.id,
             );
+          const flightDates = segs.flatMap(seg => [
+            getVal(seg, "departureTime", "departure_time"),
+            getVal(seg, "arrivalTime", "arrival_time"),
+          ]).filter(Boolean);
+          await extendPlanDatesIfNeeded(flightDates);
           break;
         }
         case "accommodation": {
@@ -352,6 +430,9 @@ export default function AddScheduleWithAiModal({
           const checkinDate =
             getVal(v, "checkinDate", "checkin_date") ||
             dayjs().format("YYYY-MM-DD");
+          const checkoutDate =
+            getVal(v, "checkoutDate", "checkout_date") ||
+            dayjs().add(1, "day").format("YYYY-MM-DD");
           const catRaw = ex ? getVal(ex, "category") : "";
           const curRaw = ex ? getVal(ex, "currency") : "";
           const validCats = Object.values(ExpenseCategory) as string[];
@@ -362,9 +443,7 @@ export default function AddScheduleWithAiModal({
             country: getVal(v, "country") || undefined,
             city: getVal(v, "city") || undefined,
             checkinDate,
-            checkoutDate:
-              getVal(v, "checkoutDate", "checkout_date") ||
-              dayjs().add(1, "day").format("YYYY-MM-DD"),
+            checkoutDate,
             checkinTime: getVal(v, "checkinTime", "checkin_time") || "15:00",
             checkoutTime: getVal(v, "checkoutTime", "checkout_time") || "11:00",
             description: getVal(v, "description") || undefined,
@@ -388,6 +467,7 @@ export default function AddScheduleWithAiModal({
               PLAN_ENTITY_KIND.ACCOMMODATION,
               created.id,
             );
+          await extendPlanDatesIfNeeded([checkinDate, checkoutDate]);
           break;
         }
         case "expense": {
@@ -395,9 +475,10 @@ export default function AddScheduleWithAiModal({
           const curRaw = getVal(v, "currency");
           const validCats = Object.values(ExpenseCategory) as string[];
           const validCurs = Object.values(ExpenseCurrency) as string[];
+          const exDate =
+            getVal(v, "exDate", "ex_date") || dayjs().format("YYYY-MM-DD");
           const created = await expensesApi.createExpense({
-            exDate:
-              getVal(v, "exDate", "ex_date") || dayjs().format("YYYY-MM-DD"),
+            exDate,
             amount: Number(v.amount) || 0,
             category: (catRaw && validCats.includes(catRaw)
               ? catRaw
@@ -414,6 +495,7 @@ export default function AddScheduleWithAiModal({
               PLAN_ENTITY_KIND.EXPENSE,
               created.id,
             );
+          await extendPlanDatesIfNeeded([exDate]);
           break;
         }
       }
@@ -453,6 +535,10 @@ export default function AddScheduleWithAiModal({
   };
 
   handleFileAttachRef.current = handleFileAttach;
+
+  useEffect(() => {
+    if (resultView) setIsResultEditMode(false);
+  }, [resultView]);
 
   useEffect(() => {
     if (!visible) return;
@@ -526,7 +612,7 @@ export default function AddScheduleWithAiModal({
           {resultView ? (
             <>
               <LinearGradient
-                colors={["#EEF0FF", "#F3ECFF"]}
+                colors={colors.aiHeaderGradient}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
                 style={styles.resultHeader}
@@ -536,7 +622,7 @@ export default function AddScheduleWithAiModal({
                   style={styles.resultBackButton}
                   accessibilityLabel="대화로 돌아가기"
                 >
-                  <LeftArrowIcon width={16} height={16} color="#4A3DBF" />
+                  <LeftArrowIcon width={16} height={16} color={colors.aiInkDark} />
                 </Pressable>
                 <LinearGradient
                   colors={colors.aiGrad as [string, string]}
@@ -557,9 +643,10 @@ export default function AddScheduleWithAiModal({
                 <Pressable
                   onPress={handleClose}
                   style={styles.closeButton}
+                  accessibilityRole="button"
                   accessibilityLabel="닫기"
                 >
-                  <CloseIcon width={14} height={14} color="#4A3DBF" />
+                  <CloseIcon width={16} height={16} color={colors.black} />
                 </Pressable>
               </LinearGradient>
 
@@ -569,30 +656,49 @@ export default function AddScheduleWithAiModal({
                 showsVerticalScrollIndicator={false}
                 keyboardShouldPersistTaps="handled"
               >
-                <AiAnalyzeResultContent
-                  analyzeResult={resultView.result}
-                  analyzeFileName={resultView.source === "file" ? resultView.fileName : undefined}
-                  sourceLabel={resultView.source === "text" ? "대화 내용 분석" : undefined}
-                />
+                {isResultEditMode && resultView.result.draft ? (
+                  <AiAnalyzeResultBody
+                    ref={resultDraftEditorRef}
+                    draft={resultView.result.draft}
+                  />
+                ) : (
+                  <AiAnalyzeResultContent
+                    analyzeResult={resultView.result}
+                    analyzeFileName={resultView.source === "file" ? resultView.fileName : undefined}
+                    sourceLabel={resultView.source === "text" ? "대화 내용 분석" : undefined}
+                  />
+                )}
               </ScrollView>
 
               <View style={styles.resultFooter}>
                 <Pressable
                   style={({ pressed }) => [styles.resultFooterBtn, styles.resultFooterBtnCancel, pressed && { opacity: 0.75 }]}
-                  onPress={() => setResultView(null)}
+                  onPress={() => {
+                    if (isResultEditMode) {
+                      setIsResultEditMode(false);
+                    } else {
+                      setIsResultEditMode(true);
+                    }
+                  }}
                 >
-                  <Text style={styles.resultFooterBtnCancelText}>취소</Text>
+                  <Text style={styles.resultFooterBtnCancelText}>
+                    {isResultEditMode ? "취소" : "직접 수정"}
+                  </Text>
                 </Pressable>
                 <Pressable
                   style={({ pressed }) => [styles.resultFooterBtn, styles.resultFooterBtnApply, pressed && { opacity: 0.85 }]}
                   onPress={() => {
-                    const draft = resultView.result.draft;
+                    const draft = isResultEditMode
+                      ? (resultDraftEditorRef.current?.buildDraft() ?? resultView.result.draft)
+                      : resultView.result.draft;
                     if (!draft) return;
                     setResultView(null);
                     handleAnalyzeApply(draft);
                   }}
                 >
-                  <Text style={styles.resultFooterBtnApplyText}>이대로 추가</Text>
+                  <Text style={styles.resultFooterBtnApplyText}>
+                    {isResultEditMode ? "저장" : "이대로 추가"}
+                  </Text>
                 </Pressable>
               </View>
             </>
@@ -657,6 +763,34 @@ export default function AddScheduleWithAiModal({
                           첨부파일을 분석하고있어요..
                         </Text>
                       </View>
+                    </View>
+                  );
+                }
+                if (msg.role === "ai-result-card") {
+                  const summary = getResultSummary(msg.result);
+                  const typeLabel = getItemTypeLabel(msg.result.inferredItemType);
+                  return (
+                    <View key={idx} style={styles.aiBubbleWrap}>
+                      <Pressable
+                        style={({ pressed }) => [styles.resultCard, hoveredCardIdx === idx && styles.resultCardHovered, pressed && { opacity: 0.82 }]}
+                        onPress={() => setResultView({ result: msg.result, source: msg.source, fileName: msg.fileName })}
+                        {...{ onMouseEnter: () => setHoveredCardIdx(idx), onMouseLeave: () => setHoveredCardIdx(null) } as any}
+                      >
+                        <View style={styles.resultCardHeader}>
+                          <LinearGradient
+                            colors={colors.aiGrad as [string, string]}
+                            start={{ x: 0, y: 0 }}
+                            end={{ x: 1, y: 1 }}
+                            style={styles.resultCardBadge}
+                          >
+                            <CheckWhiteIcon width={12} height={12} />
+                          </LinearGradient>
+                          <Text style={styles.resultCardSourceLabel}>{typeLabel} 분석</Text>
+                        </View>
+                        {!!summary && (
+                          <Text style={styles.resultCardTypeLabel} numberOfLines={2}>{summary}</Text>
+                        )}
+                      </Pressable>
                     </View>
                   );
                 }
@@ -853,15 +987,11 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   resultTitle: {
-    fontFamily: "Pretendard-SemiBold",
-    fontSize: 16,
-    lineHeight: 24,
+    ...textStyles.h5,
     color: colors.gray900,
   },
   resultSubtitle: {
-    fontFamily: "Pretendard-Regular",
-    fontSize: 13,
-    lineHeight: 20,
+    ...textStyles.body4,
     color: colors.aiInk,
     marginTop: 2,
   },
@@ -900,15 +1030,11 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
   },
   resultFooterBtnCancelText: {
-    fontFamily: "Pretendard-SemiBold",
-    fontSize: 13,
-    lineHeight: 20,
+    ...textStyles.h7,
     color: colors.gray900,
   },
   resultFooterBtnApplyText: {
-    fontFamily: "Pretendard-SemiBold",
-    fontSize: 13,
-    lineHeight: 20,
+    ...textStyles.h7,
     color: colors.white,
   },
   header: {
@@ -924,16 +1050,11 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   headerTitle: {
-    fontFamily: typography.fontFamily.pretendardSemiBold,
-    fontSize: 18,
-    lineHeight: 26,
-    color: colors.black,
+    ...textStyles.h4,
   },
   subtitle: {
+    ...textStyles.body5,
     marginTop: 4,
-    fontFamily: typography.fontFamily.pretendardRegular,
-    fontSize: 12,
-    lineHeight: 18,
     color: colors.gray600,
   },
   closeButton: {
@@ -975,9 +1096,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   dragOverlayText: {
-    fontFamily: typography.fontFamily.pretendardSemiBold,
-    fontSize: 14,
-    lineHeight: 20,
+    ...textStyles.h6,
     color: colors.primary,
   },
   aiBubbleWrap: {
@@ -1022,15 +1141,11 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   unclearTitle: {
-    fontFamily: typography.fontFamily.pretendardSemiBold,
-    fontSize: 13,
-    lineHeight: 20,
+    ...textStyles.h7,
     color: "rgb(192, 57, 43)",
   },
   unclearBody: {
-    fontFamily: typography.fontFamily.pretendardRegular,
-    fontSize: 13,
-    lineHeight: 20,
+    ...textStyles.body4,
     color: "rgb(90, 42, 34)",
   },
   unclearSuggestions: {
@@ -1050,9 +1165,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   suggestionText: {
-    fontFamily: typography.fontFamily.pretendardRegular,
-    fontSize: 12,
-    lineHeight: 18,
+    ...textStyles.body5,
     color: "rgb(192, 57, 43)",
     flex: 1,
   },
@@ -1068,9 +1181,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   introSuggestionText: {
-    fontFamily: typography.fontFamily.pretendardRegular,
-    fontSize: 12,
-    lineHeight: 18,
+    ...textStyles.body5,
     color: colors.white,
     flex: 1,
   },
@@ -1137,10 +1248,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.gray200,
     borderRadius: 10,
     paddingHorizontal: 14,
-    fontFamily: typography.fontFamily.pretendardRegular,
-    fontSize: 13,
-    lineHeight: 20,
-    color: colors.black,
+    ...textStyles.body4,
     outlineStyle: "none",
   } as any,
   sendButton: {
@@ -1157,5 +1265,48 @@ const styles = StyleSheet.create({
   },
   sendButtonPressed: {
     opacity: 0.8,
+  },
+  resultCard: {
+    maxWidth: "85%",
+    backgroundColor: colors.white,
+    borderTopLeftRadius: 0,
+    borderTopRightRadius: 14,
+    borderBottomLeftRadius: 14,
+    borderBottomRightRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.gray200,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    gap: 4,
+    shadowColor: colors.black,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    elevation: 2,
+    cursor: "pointer",
+  } as any,
+  resultCardHovered: {
+    backgroundColor: colors.aiTint,
+  },
+  resultCardHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginBottom: 2,
+  },
+  resultCardBadge: {
+    width: 20,
+    height: 20,
+    borderRadius: 6,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  resultCardSourceLabel: {
+    ...textStyles.body5,
+    color: colors.aiInk,
+  },
+  resultCardTypeLabel: {
+    ...textStyles.h6,
+    color: colors.gray900,
   },
 });

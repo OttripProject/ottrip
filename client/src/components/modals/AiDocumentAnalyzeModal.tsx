@@ -32,8 +32,8 @@ import AttachmentDocIcon from "../../../assets/mobile_attachment_document.svg";
 import AttachmentImageIcon from "../../../assets/mobile_attachment_image.svg";
 import WarningCircleIcon from "../../../assets/warning_circle.svg";
 
-const HEADER_GRADIENT: [string, string] = ["#EEF0FF", "#F3ECFF"];
-const CLOSE_PURPLE = "#4A3DBF";
+const HEADER_GRADIENT = colors.aiHeaderGradient;
+const CLOSE_PURPLE = colors.aiInkDark;
 const BTN_CANCEL_BG = "#EDEDED";
 
 const ENTITY_LABEL_TO_KIND: Record<string, string> = {
