@@ -54,6 +54,7 @@ import WeekBarAirplaneIcon from "../../../assets/week_bar_airplane.svg";
 import WeekBarLocationIcon from "../../../assets/week_bar_location.svg";
 import WeekBarTimeIcon from "../../../assets/week_bar_time.svg";
 import XIcon from "../../../assets/x.svg";
+import { Tooltip } from "@/ui/components/Tooltip";
 
 dayjs.locale(ko);
 
@@ -1599,44 +1600,50 @@ export default function WeeklySchedulePanel({
           {internalSelectedTrip ? (
             <View style={styles.actionGroup}>
               {(myRole === "owner" || myRole === "editor") && (
-                <Pressable
-                  onPress={() => {
-                    if (isGuest) {
-                      guestPrompt.show();
-                      return;
-                    }
-                    setShareOpen(true);
-                  }}
-                  style={styles.iconButton}
-                >
-                  <ShareIcon width={16} height={16} />
-                </Pressable>
-              )}
-
-              {(myRole === "owner" || myRole === "editor") && (
-                <Pressable
-                  onPress={() => {
-                    if (onRequestNewFlight) onRequestNewFlight();
-                    else onShowFlightModal?.();
-                  }}
-                  style={styles.iconButton}
-                >
-                  <AirplaneIcon width={13} height={13} />
-                </Pressable>
+                <Tooltip text="항공편 추가">
+                  <Pressable
+                    onPress={() => {
+                      if (onRequestNewFlight) onRequestNewFlight();
+                      else onShowFlightModal?.();
+                    }}
+                    style={styles.iconButton}
+                  >
+                    <AirplaneIcon width={13} height={13} />
+                  </Pressable>
+                </Tooltip>
               )}
 
               {(myRole === "owner" ||
                 myRole === "editor" ||
                 myRole === "viewer") && (
-                <Pressable
-                  onPress={() => {
-                    setMemoDraft((planData.plan as any)?.memo ?? "");
-                    setMemoOpen(true);
-                  }}
-                  style={styles.iconButton}
-                >
-                  <MemoIcon width={13} height={13} />
-                </Pressable>
+                <Tooltip text="메모">
+                  <Pressable
+                    onPress={() => {
+                      setMemoDraft((planData.plan as any)?.memo ?? "");
+                      setMemoOpen(true);
+                    }}
+                    style={styles.iconButton}
+                  >
+                    <MemoIcon width={13} height={13} />
+                  </Pressable>
+                </Tooltip>
+              )}
+
+              {(myRole === "owner" || myRole === "editor") && (
+                <Tooltip text="공유하기">
+                  <Pressable
+                    onPress={() => {
+                      if (isGuest) {
+                        guestPrompt.show();
+                        return;
+                      }
+                      setShareOpen(true);
+                    }}
+                    style={styles.iconButton}
+                  >
+                    <ShareIcon width={16} height={16} />
+                  </Pressable>
+                </Tooltip>
               )}
             </View>
           ) : null}
@@ -2020,7 +2027,6 @@ export default function WeeklySchedulePanel({
                                               style={{
                                                 ...textStyles.h8,
                                                 color: "#F59E0B",
-                                                lineHeight: 10,
                                               }}
                                               numberOfLines={1}
                                               ellipsizeMode="tail"
@@ -2832,14 +2838,15 @@ export default function WeeklySchedulePanel({
         animationType="fade"
         onRequestClose={() => setMemoOpen(false)}
       >
-        <View style={styles.modalOverlay}>
+        <Pressable style={styles.modalOverlay} onPress={() => setMemoOpen(false)}>
+          <Pressable onPress={(e) => e.stopPropagation()}>
           <Card
             width="100%"
             maxWidth={420}
-            minHeight={582}
-            paddingHorizontal={32}
-            paddingVertical={32}
-            borderRadius={24}
+            paddingHorizontal={24}
+            paddingVertical={24}
+            paddingBottom={20}
+            borderRadius={20}
             alignItems="stretch"
             shadow={{
               shadowColor: colors.black,
@@ -2874,7 +2881,7 @@ export default function WeeklySchedulePanel({
                 value={memoDraft}
                 onChangeText={setMemoDraft}
                 textAlignVertical="top"
-                style={styles.memoModalInput}
+                style={[styles.memoModalInput, Platform.OS === "web" && ({ resize: "vertical" } as any)]}
               />
             </View>
 
@@ -2915,7 +2922,8 @@ export default function WeeklySchedulePanel({
               </Pressable>
             </View>
           </Card>
-        </View>
+          </Pressable>
+        </Pressable>
       </Modal>
 
       <PlanSelectRequiredModal
@@ -3126,28 +3134,29 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-start",
-    marginBottom: 40,
+    marginBottom: 18,
+    gap: 12,
   },
   memoModalTextGroup: {
     flex: 1,
-    paddingRight: 16,
   },
   memoModalTitle: {
     ...textStyles.h3,
-    marginBottom: 8,
   },
   memoModalDescription: {
     ...textStyles.body4,
     color: colors.gray700,
+    marginTop: 6,
   },
   memoModalCloseButton: {
-    width: 26,
-    height: 26,
+    width: 28,
+    height: 28,
     alignItems: "center",
     justifyContent: "center",
+    marginTop: 2,
   },
   memoModalFieldGroup: {
-    marginBottom: 24,
+    marginBottom: 18,
   },
   memoModalLabel: {
     ...textStyles.h7,
@@ -3155,46 +3164,41 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   memoModalInput: {
-    minHeight: 300,
-    maxHeight: 356,
+    minHeight: 180,
     borderWidth: 1,
     borderColor: colors.gray400,
-    borderRadius: 10,
+    borderRadius: 12,
     paddingHorizontal: 16,
-    paddingVertical: 16,
+    paddingVertical: 14,
     backgroundColor: colors.white,
-    fontSize: 13,
-    lineHeight: 20,
+    ...textStyles.body3,
+    color: colors.gray900,
   },
   memoModalActions: {
     flexDirection: "row",
-    justifyContent: "flex-end",
     alignItems: "center",
-    columnGap: 8,
+    columnGap: 10,
+    paddingTop: 4,
   },
   memoModalSecondaryButton: {
-    minWidth: 174,
-    height: 50,
+    flex: 1,
+    height: 48,
     borderRadius: 10,
-    borderWidth: 1,
-    borderColor: colors.gray400,
-    backgroundColor: colors.white,
+    backgroundColor: colors.gray200,
     alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: 16,
   },
   memoModalSecondaryButtonText: {
     ...textStyles.h6,
     color: colors.black,
   },
   memoModalPrimaryButton: {
-    minWidth: 174,
-    height: 50,
+    flex: 1,
+    height: 48,
     borderRadius: 10,
-    backgroundColor: colors.black,
+    backgroundColor: colors.primary,
     alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: 16,
   },
   memoModalPrimaryButtonText: {
     ...textStyles.h6,
