@@ -791,11 +791,9 @@ const styles = StyleSheet.create({
     color: colors.white,
   },
   pickerContent: {
-    flex: 1,
-    minHeight: 200,
     paddingHorizontal: 0,
     paddingTop: 4,
-    paddingBottom: 4,
+    paddingBottom: 10,
   },
   monthPickerGrid: {
     flexDirection: "row",

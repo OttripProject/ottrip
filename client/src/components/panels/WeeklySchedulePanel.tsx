@@ -34,6 +34,7 @@ import {
   Text,
   TouchableOpacity,
   View,
+  useWindowDimensions,
 } from "react-native";
 import { Calendar as BigCalendar } from "react-native-big-calendar";
 import TripSelector from "../selector/TripSelector";
@@ -225,7 +226,10 @@ export default function WeeklySchedulePanel({
     dayjs().startOf("week").add(1, "day"),
   );
   const [internalSelectedTrip, setInternalSelectedTrip] = useState<any>(null);
+  const { width: windowWidth } = useWindowDimensions();
   const [showMonthPicker, setShowMonthPicker] = useState(false);
+  const calendarBtnRef = useRef<any>(null);
+  const [calendarPopupPos, setCalendarPopupPos] = useState<{ top: number; left?: number; right?: number }>({ top: 40, left: 8 });
   const [selectedDate, setSelectedDate] = useState<string | undefined>(
     undefined,
   );
@@ -272,6 +276,19 @@ export default function WeeklySchedulePanel({
       setPreviewAccommodation(externalPreviewAccommodation);
     }
   }, [externalPreviewAccommodation]);
+
+  useEffect(() => {
+    if (!showMonthPicker || !calendarBtnRef.current) return;
+    calendarBtnRef.current.measure((_x: number, _y: number, _width: number, _height: number, pageX: number, _pageY: number) => {
+      const popupWidth = 276;
+      const overflows = pageX + 8 + popupWidth > windowWidth;
+      if (overflows) {
+        setCalendarPopupPos({ top: 40, right: 0 });
+      } else {
+        setCalendarPopupPos({ top: 40, left: 8 });
+      }
+    });
+  }, [showMonthPicker, windowWidth]);
 
   const [eventHeights, setEventHeights] = useState<Record<string, number>>({});
 
@@ -1336,8 +1353,18 @@ export default function WeeklySchedulePanel({
 
       if (success) {
         if (internalSelectedTrip && internalSelectedTrip.id === tripId) {
-          setInternalSelectedTrip(null);
-          onPlanSelect?.(null);
+          const today = dayjs().format("YYYY-MM-DD");
+          const remaining = externalTrips.filter((t: any) => t.id !== tripId);
+          const ongoing = remaining.filter((t: any) => t.startDate <= today && t.endDate >= today);
+          const upcoming = remaining
+            .filter((t: any) => t.startDate > today)
+            .sort((a: any, b: any) => a.startDate.localeCompare(b.startDate));
+          const past = remaining
+            .filter((t: any) => t.endDate < today)
+            .sort((a: any, b: any) => b.endDate.localeCompare(a.endDate));
+          const next = [...ongoing, ...upcoming, ...past][0] ?? null;
+          setInternalSelectedTrip(next);
+          onPlanSelect?.(next);
         }
       } else {
         setResultModalConfig({
@@ -1474,16 +1501,16 @@ export default function WeeklySchedulePanel({
           <Text style={styles.title}>여행 일정</Text>
 
           <View style={styles.dateNavigation}>
-            <Pressable onPress={goPrev}>
-              <LeftArrowIcon width={16} height={16} />
+            <Pressable onPress={goPrev} style={styles.navArrowButton}>
+              <LeftArrowIcon width={10} height={10} />
             </Pressable>
 
-            <Text style={styles.dateText}>
+            <Text style={styles.navDateText}>
               {currentWeekStart.format("YYYY년 M월")}
             </Text>
 
-            <Pressable onPress={goNext}>
-              <RightArrowIcon width={16} height={16} />
+            <Pressable onPress={goNext} style={styles.navArrowButton}>
+              <RightArrowIcon width={10} height={10} />
             </Pressable>
           </View>
 
@@ -1492,17 +1519,18 @@ export default function WeeklySchedulePanel({
             style={[styles.actionButton, { marginLeft: spacing.lg }]}
           >
             <View style={{ marginRight: spacing.xs }}>
-              <TodayIcon width={16} height={16} />
+              <TodayIcon width={13} height={13} />
             </View>
             <Text style={styles.actionButtonText}>오늘</Text>
           </Pressable>
 
           <View style={styles.calendarButtonWrapper}>
             <Pressable
+              ref={calendarBtnRef}
               onPress={() => setShowMonthPicker(!showMonthPicker)}
               style={[styles.iconButton, { marginLeft: spacing.xs }]}
             >
-              <CalenderIcon width={16} height={16} />
+              <CalenderIcon width={13} height={13} />
             </Pressable>
             <BaseCalendar
               visible={showMonthPicker}
@@ -1515,11 +1543,13 @@ export default function WeeklySchedulePanel({
                 setCurrentWeekStart(monday);
               }}
               onClose={() => setShowMonthPicker(false)}
-              style={styles.calendarPopup}
+              style={calendarPopupPos}
               currentWeekStart={currentWeekStart.format("YYYY-MM-DD")}
               showToday={true}
               showHover={true}
               scrollToWeek={true}
+              hideButtons={true}
+              autoCloseOnSelect={true}
             />
           </View>
         </View>
@@ -1591,7 +1621,7 @@ export default function WeeklySchedulePanel({
                   }}
                   style={styles.iconButton}
                 >
-                  <AirplaneIcon width={16} height={16} />
+                  <AirplaneIcon width={13} height={13} />
                 </Pressable>
               )}
 
@@ -1605,7 +1635,7 @@ export default function WeeklySchedulePanel({
                   }}
                   style={styles.iconButton}
                 >
-                  <MemoIcon width={16} height={16} />
+                  <MemoIcon width={13} height={13} />
                 </Pressable>
               )}
             </View>
@@ -2931,8 +2961,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 32,
-    paddingVertical: 22,
+    paddingHorizontal: 20,
+    paddingVertical: 14,
     backgroundColor: colors.white,
     zIndex: 9998,
   },
@@ -2941,14 +2971,25 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   title: {
-    ...textStyles.h3,
-    marginRight: spacing.xl,
+    ...textStyles.h5,
+    marginRight: spacing.lg,
   },
   dateNavigation: {
     flexDirection: "row",
     alignItems: "center",
-    gap: spacing.sm,
-    marginLeft: spacing.xl,
+    gap: spacing.xs,
+    marginLeft: spacing.lg,
+  },
+  navArrowButton: {
+    width: 24,
+    height: 24,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  navDateText: {
+    ...textStyles.h7,
+    minWidth: 72,
+    textAlign: "center",
   },
   dateText: {
     ...textStyles.h6,
@@ -2986,7 +3027,9 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 8,
-    backgroundColor: colors.gray300,
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: colors.gray300,
     justifyContent: "center",
     alignItems: "center",
   },
@@ -2994,7 +3037,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     height: 32,
     borderRadius: 8,
-    backgroundColor: colors.gray200,
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: colors.gray300,
     paddingHorizontal: 12,
     justifyContent: "center",
     alignItems: "center",

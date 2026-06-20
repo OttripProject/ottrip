@@ -486,9 +486,9 @@ export default function AddScheduleWithAiModal({
         <View style={styles.card}>
           <View style={styles.header}>
             <View style={styles.titleBlock}>
-              <Text style={styles.headerTitle}>AI 일정 추가</Text>
+              <Text style={styles.headerTitle}>대화로 일정 추가</Text>
               <Text style={styles.subtitle}>
-                AI로 간편하게 일정을 등록하세요.
+                대화 또는 첨부파일을 AI가 분석해 일정을 등록해요.
               </Text>
             </View>
             <Pressable
@@ -497,7 +497,7 @@ export default function AddScheduleWithAiModal({
               accessibilityRole="button"
               accessibilityLabel="닫기"
             >
-              <CloseIcon width={20} height={20} color={colors.black} />
+              <CloseIcon width={16} height={16} color={colors.black} />
             </Pressable>
           </View>
 
@@ -752,7 +752,6 @@ const styles = StyleSheet.create({
   aiBubble: {
     maxWidth: "85%",
     backgroundColor: colors.primary,
-    borderTopLeftRadius: 4,
     borderTopRightRadius: 14,
     borderBottomLeftRadius: 14,
     borderBottomRightRadius: 14,

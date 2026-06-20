@@ -3,9 +3,11 @@ import { useTripForm } from "@/hooks/useTripForm";
 import { colors } from "@/ui/tokens/colors";
 import { textStyles } from "@/ui/tokens/typography";
 import dayjs from "dayjs";
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect, useMemo } from "react";
 import {
+  Animated,
   Dimensions,
+  Easing,
   Modal,
   Pressable,
   ScrollView,
@@ -19,7 +21,6 @@ import DotsIcon from "../../../assets/dots.svg";
 import DownArrowIcon from "../../../assets/down_arrow.svg";
 import TripAddIcon from "../../../assets/trip_add.svg";
 import UpdateIcon from "../../../assets/update.svg";
-import UpperArrowIcon from "../../../assets/upper_arrow.svg";
 import ResultModal from "../modals/ResultModal";
 import TripDeleteConfirmModal from "../modals/TripDeleteConfirmModal";
 import TripFormModal from "../modals/TripFormModal";
@@ -103,6 +104,20 @@ export default function TripSelector({
     false,
   );
 
+  const arrowAnim = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    Animated.timing(arrowAnim, {
+      toValue: showDropdown ? 1 : 0,
+      duration: 200,
+      easing: Easing.out(Easing.quad),
+      useNativeDriver: true,
+    }).start();
+  }, [showDropdown]);
+  const arrowRotate = arrowAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ["0deg", "180deg"],
+  });
+
   React.useEffect(() => {
     if (open) {
       setIsDropdownOpen(true);
@@ -134,6 +149,21 @@ export default function TripSelector({
   const [isSubmittingEdit, setIsSubmittingEdit] = useState(false);
   const isSubmittingAddRef = useRef(false);
   const isSubmittingEditRef = useRef(false);
+
+  const today = dayjs().format("YYYY-MM-DD");
+
+  const sortedTrips = useMemo(() => {
+    const ongoing = trips.filter(t => t.startDate <= today && t.endDate >= today);
+    const upcoming = trips
+      .filter(t => t.startDate > today)
+      .sort((a, b) => a.startDate.localeCompare(b.startDate));
+    const past = trips
+      .filter(t => t.endDate < today)
+      .sort((a, b) => b.endDate.localeCompare(a.endDate));
+    return [...ongoing, ...upcoming, ...past];
+  }, [trips, today]);
+
+  const isPastTrip = (trip: Trip) => trip.endDate < today;
 
   const handleTripSelect = (trip: Trip) => {
     onTripSelect(trip);
@@ -243,21 +273,21 @@ export default function TripSelector({
     setIsDropdownOpen(false);
   };
 
-  React.useEffect(() => {
-    if (showDropdown) {
-      const timer = setTimeout(() => {
-        setIsDropdownOpen(false);
-      }, 5000);
-
-      return () => clearTimeout(timer);
-    }
-  }, [showDropdown]);
 
   React.useEffect(() => {
     if (!showDropdown) {
       setOpenMenuTripId(null);
       setMenuPosition(null);
     }
+  }, [showDropdown]);
+
+  useEffect(() => {
+    if (!showDropdown) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setIsDropdownOpen(false);
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
   }, [showDropdown]);
 
   const formatDateRange = (startDate: string, endDate: string) => {
@@ -298,19 +328,17 @@ export default function TripSelector({
   return (
     <View style={styles.container} ref={containerRef}>
       <Pressable
-        style={[styles.selector, showDropdown && styles.selectorOpen]}
+        style={styles.selector}
         onPress={() => setIsDropdownOpen(!showDropdown)}
       >
         <View style={styles.selectorContent}>
-          <Text style={styles.selectorText}>
+          <Text style={styles.selectorText} numberOfLines={1} ellipsizeMode="tail">
             {selectedTrip ? selectedTrip.name : "여행 선택"}
           </Text>
         </View>
-        {showDropdown ? (
-          <UpperArrowIcon width={12} height={12} />
-        ) : (
+        <Animated.View style={{ transform: [{ rotate: arrowRotate }] }}>
           <DownArrowIcon width={12} height={12} />
-        )}
+        </Animated.View>
       </Pressable>
 
       {showDropdown && (
@@ -331,7 +359,7 @@ export default function TripSelector({
                 contentContainerStyle={styles.tripListContent}
                 showsVerticalScrollIndicator={false}
               >
-                {trips.map(trip => (
+                {sortedTrips.map(trip => (
                   <Pressable
                     key={trip.id}
                     ref={ref => {
@@ -356,9 +384,11 @@ export default function TripSelector({
                       <Text
                         style={[
                           styles.tripName,
-                          selectedTrip?.id === trip.id &&
-                            styles.selectedTripText,
+                          isPastTrip(trip) && styles.tripNamePast,
+                          selectedTrip?.id === trip.id && styles.selectedTripText,
                         ]}
+                        numberOfLines={1}
+                        ellipsizeMode="tail"
                       >
                         {trip.name}
                       </Text>
@@ -440,12 +470,8 @@ export default function TripSelector({
                   setShowAddModal(true);
                 }}
               >
-                <View style={styles.addTripButtonBox}>
-                  <View style={{ marginRight: 4 }}>
-                    <TripAddIcon width={14} height={14} />
-                  </View>
-                  <Text style={styles.addTripButtonText}>새 여행 추가</Text>
-                </View>
+                <TripAddIcon width={11} height={11} color={colors.primary} style={{ marginRight: 4 }} />
+                <Text style={styles.addTripButtonText}>새 여행 추가</Text>
               </Pressable>
             </View>
           </View>
@@ -568,13 +594,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
     minWidth: 220,
+    maxWidth: 260,
     height: 32,
     alignSelf: "flex-start",
   },
-  selectorOpen: {
-    borderBottomLeftRadius: 0,
-    borderBottomRightRadius: 0,
-  },
+  selectorOpen: {},
   selectorContent: {
     flex: 1,
   },
@@ -590,24 +614,19 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     zIndex: 9999,
-    marginTop: 0,
+    marginTop: 6,
   },
   dropdown: {
     backgroundColor: colors.white,
-    borderTopLeftRadius: 0,
-    borderTopRightRadius: 0,
-    borderBottomLeftRadius: 10,
-    borderBottomRightRadius: 10,
+    borderRadius: 12,
     borderWidth: 1,
-    borderTopWidth: 0,
-    borderColor: colors.gray300,
+    borderColor: colors.gray200,
+    padding: 6,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: 16 },
     shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 5,
-    width: "100%",
-    maxHeight: 212,
+    shadowRadius: 36,
+    elevation: 8,
   },
   selectedTripHeader: {
     flexDirection: "row",
@@ -627,52 +646,55 @@ const styles = StyleSheet.create({
     color: colors.black,
   },
   tripList: {
-    maxHeight: 150,
+    maxHeight: 296,
   },
   tripListContent: {
-    paddingHorizontal: 4,
-    paddingVertical: 4,
-    alignItems: "center",
+    gap: 2,
   },
   tripItem: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    width: "100%",
-    height: 62,
-    paddingHorizontal: 16,
-    backgroundColor: "transparent",
-    marginBottom: 2,
+    gap: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
     borderRadius: 8,
   },
   tripItemHovered: {
-    backgroundColor: colors.gray200,
+    backgroundColor: colors.gray100,
   },
   selectedTripItem: {
-    backgroundColor: colors.gray200,
-    borderRadius: 10,
+    backgroundColor: "rgb(246, 248, 251)",
   },
   tripInfo: {
     flex: 1,
+    minWidth: 0,
   },
   tripName: {
-    ...textStyles.h8,
-    marginBottom: 4,
+    ...textStyles.h7,
+    color: colors.gray900,
+  },
+  tripNamePast: {
+    color: colors.gray500,
   },
   tripDate: {
-    ...textStyles.body6,
     fontSize: 11,
     lineHeight: 16,
-    color: colors.gray600,
+    fontFamily: textStyles.body5.fontFamily,
+    color: colors.gray500,
+    marginTop: 1,
   },
   selectedTripText: {
-    color: colors.black,
+    color: colors.gray900,
   },
   dotsButtonContainer: {
-    position: "relative",
+    flexShrink: 0,
   },
   dotsButton: {
-    padding: 4,
+    width: 24,
+    height: 24,
+    borderRadius: 6,
+    alignItems: "center",
+    justifyContent: "center",
   },
   menuModalOverlay: {
     flex: 1,
@@ -708,30 +730,25 @@ const styles = StyleSheet.create({
     marginLeft: 6,
   },
   addTripButton: {
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 16,
-    paddingTop: 4,
-    paddingBottom: 4,
-    borderTopWidth: 1,
-    borderTopColor: colors.white,
-    backgroundColor: colors.white,
-    borderBottomLeftRadius: 10,
-    borderBottomRightRadius: 10,
-  },
-  addTripButtonBox: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    width: "112%",
-    height: 40,
-    backgroundColor: "rgba(0, 102, 255, 0.08)",
-    borderRadius: 10,
+    marginTop: 4,
+    height: 36,
+    backgroundColor: "rgba(26, 102, 224, 0.08)",
+    borderRadius: 8,
+  },
+  addTripPlusText: {
+    fontSize: 14,
+    lineHeight: 14,
+    color: colors.primary,
+    marginRight: 4,
+    marginTop: -1,
   },
   addTripButtonText: {
     ...textStyles.h8,
     fontSize: 12,
     lineHeight: 18,
-    color: colors.success,
+    color: colors.primary,
   },
 });
