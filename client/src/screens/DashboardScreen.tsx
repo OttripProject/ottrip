@@ -380,7 +380,7 @@ export default function DashboardScreen() {
   }, []);
 
   const handleShowAccommodationModal = useCallback(
-    (accommodation: any, date?: string) => {
+    (accommodation: any, date?: string, checkoutDate?: string) => {
       setActiveTab("accommodation");
 
       setSelectedItinerary(null);
@@ -395,7 +395,7 @@ export default function DashboardScreen() {
         if (date) {
           const draft = {
             checkinDate: date,
-            checkoutDate: dayjs(date).add(1, "day").format("YYYY-MM-DD"),
+            checkoutDate: checkoutDate ?? dayjs(date).add(1, "day").format("YYYY-MM-DD"),
             checkinTime: "15:00",
             checkoutTime: "11:00",
           };
