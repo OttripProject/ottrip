@@ -1799,7 +1799,7 @@ export default function WeeklySchedulePanel({
             onPress={goToday}
             style={[styles.actionButton, { marginLeft: spacing.lg }]}
           >
-            <View style={{ marginRight: spacing.xs }}>
+            <View style={styles.todayIconWrapper}>
               <TodayIcon width={13} height={13} />
             </View>
             <Text style={styles.actionButtonText}>오늘</Text>
@@ -1961,7 +1961,7 @@ export default function WeeklySchedulePanel({
           renderHeader={_props => {
             return (
               <View>
-                <View style={{ flexDirection: "row", height: 70 }}>
+                <View style={styles.weekHeaderRow}>
                   <View style={styles.timeColumn} />
                   {weekDays.map((date, _index) => {
                     const isToday =
@@ -1987,17 +1987,7 @@ export default function WeeklySchedulePanel({
                 </View>
 
                 {internalSelectedTrip && (
-                  <View
-                    style={{
-                      flexDirection: "row",
-                      height: 40,
-                      backgroundColor: "",
-                      borderTopWidth: 0.5,
-                      borderBottomWidth: 0.5,
-                      borderTopColor: "#e0e0e0",
-                      borderBottomColor: "#e0e0e0",
-                    }}
-                  >
+                  <View style={styles.accommodationHeaderRow}>
                     <View
                       style={[
                         styles.timeColumn,
@@ -2013,12 +2003,7 @@ export default function WeeklySchedulePanel({
                     </View>
                     <View
                       ref={accCreateRowRef}
-                      style={{
-                        flex: 1,
-                        flexDirection: "row",
-                        position: "relative",
-                        overflow: "visible",
-                      }}
+                      style={styles.accommodationRowInner}
                     >
                       {weekDays.map((date, index) => {
                         const accommodations =
@@ -2129,6 +2114,7 @@ export default function WeeklySchedulePanel({
 
                                   if (clickedAccommodation) {
                                     setSelectedAccommodationId(clickedAccommodation.id);
+                                    setSelectedEventId(null);
                                     onShowAccommodationModal?.(
                                       clickedAccommodation,
                                     );
@@ -2157,6 +2143,7 @@ export default function WeeklySchedulePanel({
 
                               if (accommodations.length > 0) {
                                 setSelectedAccommodationId(accommodations[0].id);
+                                setSelectedEventId(null);
                                 onShowAccommodationModal?.(accommodations[0]);
                                 setPreviewAccommodation(null);
                                 onPreviewAccommodationChange?.(null);
@@ -2869,7 +2856,7 @@ export default function WeeklySchedulePanel({
                   : {})}
               >
                 <TouchableOpacity
-                  style={{ flex: 1, padding: 4, paddingHorizontal: 8 }}
+                  style={styles.eventTouchable}
                   disabled={isPreview || isDragging}
                   onPress={e => {
                     if (isPreview || isDragging) return;
@@ -2888,16 +2875,9 @@ export default function WeeklySchedulePanel({
                     }
                   }}
                 >
-                  <View style={{ flex: 1, justifyContent: "flex-start", gap: 2 }}>
+                  <View style={styles.eventContentCol}>
                     {isFirstBar && showTitle && (
-                      <View
-                        style={{
-                          flexDirection: "row",
-                          alignItems: "center",
-                          gap: 5,
-                          minWidth: 0,
-                        }}
-                      >
+                      <View style={styles.eventTitleRow}>
                         <View
                           style={{
                             width: 5,
@@ -2930,16 +2910,8 @@ export default function WeeklySchedulePanel({
                       (isItinerary || isPreview) &&
                       event.normalizedStartTime &&
                       event.normalizedEndTime && (
-                        <View
-                          style={{
-                            flexDirection: "row",
-                            alignItems: "center",
-                            gap: 4,
-                            minWidth: 0,
-                            opacity: 0.75,
-                          }}
-                        >
-                          <View style={{ flexShrink: 0 }}>
+                        <View style={styles.eventTimeRow}>
+                          <View style={styles.iconWrapper}>
                             <WeekBarTimeIcon width={9} height={9} color={colors.itineraryText} />
                           </View>
                           <Text
@@ -2980,16 +2952,8 @@ export default function WeeklySchedulePanel({
                       isFlight &&
                       event.normalizedStartTime &&
                       event.normalizedEndTime && (
-                        <View
-                          style={{
-                            flexDirection: "row",
-                            alignItems: "center",
-                            gap: 4,
-                            minWidth: 0,
-                            opacity: 0.8,
-                          }}
-                        >
-                          <View style={{ flexShrink: 0 }}>
+                        <View style={styles.eventFlightTimeRow}>
+                          <View style={styles.iconWrapper}>
                             <WeekBarTimeIcon width={9} height={9} color={colors.flightText} />
                           </View>
                           <Text
@@ -3153,15 +3117,9 @@ export default function WeeklySchedulePanel({
                 Platform.OS === "web" ? { position: "fixed" as any } : {},
               ]}
             >
-              <View style={{ flex: 1, justifyContent: "center" }}>
+              <View style={styles.dragEventContent}>
                 {dragShowTitle && (
-                  <View
-                    style={{
-                      flexDirection: "row",
-                      alignItems: "center",
-                      gap: 4,
-                    }}
-                  >
+                  <View style={styles.dragEventTitleRow}>
                     {isFlight && <Text style={{ fontSize: 11, color: colors.flightText }}>✈</Text>}
                     <Text
                       numberOfLines={1}
@@ -3206,14 +3164,7 @@ export default function WeeklySchedulePanel({
                 {dragShowLocation &&
                   isItinerary &&
                   draggedEvent.locationText && (
-                    <View
-                      style={{
-                        flexDirection: "row",
-                        alignItems: "center",
-                        gap: 4,
-                        marginTop: 4,
-                      }}
-                    >
+                    <View style={styles.dragEventLocationRow}>
                       <WeekBarLocationIcon width={14} height={14} />
                       <Text
                         numberOfLines={1}
@@ -3322,7 +3273,7 @@ export default function WeeklySchedulePanel({
               shadowRadius: 48,
               elevation: 24,
             }}
-            style={{ marginHorizontal: 16 }}
+            style={styles.memoModalContainer}
           >
             <View style={styles.memoModalHeader}>
               <View style={styles.memoModalTextGroup}>
@@ -3714,5 +3665,78 @@ const styles = StyleSheet.create({
     color: colors.white,
     fontSize: 10,
     fontWeight: "600",
+  },
+  todayIconWrapper: {
+    marginRight: spacing.xs,
+  },
+  weekHeaderRow: {
+    flexDirection: "row",
+    height: 70,
+  },
+  accommodationHeaderRow: {
+    flexDirection: "row",
+    height: 40,
+    backgroundColor: "",
+    borderTopWidth: 0.5,
+    borderBottomWidth: 0.5,
+    borderTopColor: "#e0e0e0",
+    borderBottomColor: "#e0e0e0",
+  },
+  accommodationRowInner: {
+    flex: 1,
+    flexDirection: "row",
+    position: "relative",
+    overflow: "visible",
+  },
+  eventTouchable: {
+    flex: 1,
+    padding: 4,
+    paddingHorizontal: 8,
+  },
+  eventContentCol: {
+    flex: 1,
+    justifyContent: "flex-start",
+    gap: 2,
+  },
+  eventTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    minWidth: 0,
+  },
+  eventTimeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    minWidth: 0,
+    opacity: 0.75,
+  },
+  iconWrapper: {
+    flexShrink: 0,
+  },
+  eventFlightTimeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    minWidth: 0,
+    opacity: 0.8,
+  },
+  dragEventContent: {
+    flex: 1,
+    justifyContent: "center",
+  },
+  dragEventTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  dragEventLocationRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    marginTop: 4,
+  },
+  memoModalContainer: {
+    marginHorizontal: 16,
   },
 });

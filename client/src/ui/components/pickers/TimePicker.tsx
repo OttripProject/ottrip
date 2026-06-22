@@ -437,7 +437,7 @@ const styles = StyleSheet.create({
   },
   footerBtnTextConfirm: {
     ...textStyles.body4,
-    color: colors.primary,
+    color: colors.gray900,
     fontFamily: "Pretendard-SemiBold",
   },
 });
