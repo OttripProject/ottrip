@@ -2983,20 +2983,32 @@ export default function WeeklySchedulePanel({
                       isFlight &&
                       event.normalizedStartTime &&
                       event.normalizedEndTime && (
-                        <Text
-                          numberOfLines={1}
-                          ellipsizeMode="tail"
+                        <View
                           style={{
-                            fontFamily: typography.fontFamily.pretendardRegular,
-                            fontSize: 10,
-                            lineHeight: 14,
-                            color: colors.flightText,
+                            flexDirection: "row",
+                            alignItems: "center",
+                            gap: 4,
+                            minWidth: 0,
                             opacity: 0.8,
                           }}
                         >
-                          {event.normalizedStartTime} - {event.normalizedEndTime}
-                          {event.durationText ? ` (${event.durationText})` : ""}
-                        </Text>
+                          <View style={{ flexShrink: 0 }}>
+                            <WeekBarTimeIcon width={9} height={9} />
+                          </View>
+                          <Text
+                            numberOfLines={1}
+                            ellipsizeMode="tail"
+                            style={{
+                              fontFamily: typography.fontFamily.pretendardRegular,
+                              fontSize: 10,
+                              lineHeight: 14,
+                              color: colors.flightText,
+                            }}
+                          >
+                            {event.normalizedStartTime} - {event.normalizedEndTime}
+                            {event.durationText ? ` (${event.durationText})` : ""}
+                          </Text>
+                        </View>
                       )}
                     {isFirstBar &&
                       showLocation &&
