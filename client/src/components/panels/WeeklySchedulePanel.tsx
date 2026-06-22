@@ -904,13 +904,15 @@ export default function WeeklySchedulePanel({
           });
 
           if (draggingEvent.type === "itinerary" && itineraryId) {
+            const newDate = dayjs(newStart).format("YYYY-MM-DD");
             itinerariesApi
               .updateItinerary(itineraryId, {
-                itineraryDate: dayjs(newStart).format("YYYY-MM-DD"),
+                itineraryDate: newDate,
                 startTime: dayjs(newStart).format("HH:mm"),
                 endTime: dayjs(newEnd).format("HH:mm"),
               })
-              .then(() => {
+              .then(async () => {
+                await extendPlanDateIfNeeded(newDate);
                 if (planData?.refreshItineraries) {
                   planData.refreshItineraries().catch((_err: any) => {});
                 } else if (onPlansRefresh) {
@@ -955,7 +957,11 @@ export default function WeeklySchedulePanel({
                   terminal: seg.terminal || null,
                 })),
               })
-              .then(() => {
+              .then(async () => {
+                await extendPlanDateIfNeeded(
+                  dayjs(newStart).format("YYYY-MM-DD"),
+                  dayjs(newEnd).format("YYYY-MM-DD"),
+                );
                 if (planData?.refreshFlights) {
                   planData.refreshFlights().catch((_err: any) => {});
                 } else if (onPlansRefresh) {
@@ -1009,6 +1015,33 @@ export default function WeeklySchedulePanel({
   const trips = externalTrips;
   const planData = externalPlanData;
 
+  const extendPlanDateIfNeeded = async (...dates: string[]) => {
+    const planId = internalSelectedTrip?.id
+      ? Number.parseInt(internalSelectedTrip.id)
+      : null;
+    if (!planId || !internalSelectedTrip?.startDate || !internalSelectedTrip?.endDate) return;
+
+    const planStart = dayjs(internalSelectedTrip.startDate);
+    const planEnd = dayjs(internalSelectedTrip.endDate);
+
+    let newStart = planStart;
+    let newEnd = planEnd;
+    for (const d of dates) {
+      const dt = dayjs(d);
+      if (dt.isBefore(newStart, "day")) newStart = dt;
+      if (dt.isAfter(newEnd, "day")) newEnd = dt;
+    }
+
+    if (newStart.isSame(planStart, "day") && newEnd.isSame(planEnd, "day")) return;
+
+    try {
+      await onPlanUpdate(planId, {
+        startDate: newStart.format("YYYY-MM-DD"),
+        endDate: newEnd.format("YYYY-MM-DD"),
+      });
+      if (onPlansRefresh) onPlansRefresh();
+    } catch {}
+  };
 
   useEffect(() => {
     if (Platform.OS !== "web") return;
@@ -1126,6 +1159,10 @@ export default function WeeklySchedulePanel({
           checkinTime,
           checkoutTime,
         });
+        await extendPlanDateIfNeeded(
+          newCheckin.format("YYYY-MM-DD"),
+          newCheckout.format("YYYY-MM-DD"),
+        );
         if (planData?.refreshAccommodations) {
           planData.refreshAccommodations().catch(() => {});
         } else if (onPlansRefresh) {
@@ -1393,6 +1430,7 @@ export default function WeeklySchedulePanel({
       const newPreview = { checkinDate, checkoutDate, checkinTime: "15:00", checkoutTime: "11:00", name: "" };
       setPreviewAccommodation(newPreview);
       onPreviewAccommodationChange?.(newPreview);
+      extendPlanDateIfNeeded(checkinDate, checkoutDate).catch(() => {});
       onShowAccommodationModal?.(null, checkinDate, checkoutDate);
     };
 
