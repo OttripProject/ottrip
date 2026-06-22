@@ -135,6 +135,11 @@ function toFlightEvents(flight: any): any[] {
 
     const normalizedStartTime = normalizeTime(departureTime.format("HH:mm"));
 
+    const totalMinutes = dayjs(segment.arrivalTime).diff(departureTime, "minute");
+    const durationH = Math.floor(totalMinutes / 60);
+    const durationM = totalMinutes % 60;
+    const durationText = durationM > 0 ? `${durationH}h ${durationM}m` : `${durationH}h`;
+
     return {
       id: `flight-${flight.id}-${segment.id ?? index + 1}`,
       title: `${segment.departureAirport} → ${segment.arrivalAirport}`,
@@ -144,6 +149,8 @@ function toFlightEvents(flight: any): any[] {
       originalData: flight,
       normalizedStartTime,
       normalizedEndTime,
+      flightNumber: segment.flightNumber || null,
+      durationText,
     } as any;
   });
 }
@@ -2735,9 +2742,9 @@ export default function WeeklySchedulePanel({
 
             const flightStyle = isFlight
               ? {
-                  backgroundColor: "rgba(139, 92, 246, 0.1)",
+                  backgroundColor: colors.flightBg,
                   borderWidth: borderWidth,
-                  borderColor: "#8B5CF6",
+                  borderColor: isSelected ? colors.flightText : colors.flightBorder,
                   borderRadius: radii.md,
                 }
               : null;
@@ -2853,20 +2860,19 @@ export default function WeeklySchedulePanel({
                           minWidth: 0,
                         }}
                       >
-                        {isFlight ? (
+                        <View
+                          style={{
+                            width: 5,
+                            height: 5,
+                            borderRadius: 999,
+                            backgroundColor: isFlight ? colors.flightDot : colors.itineraryDot,
+                            flexShrink: 0,
+                          }}
+                        />
+                        {isFlight && (
                           <View style={{ flexShrink: 0 }}>
-                            <WeekBarAirplaneIcon width={14} height={14} />
+                            <WeekBarAirplaneIcon width={12} height={12} />
                           </View>
-                        ) : (
-                          <View
-                            style={{
-                              width: 5,
-                              height: 5,
-                              borderRadius: 999,
-                              backgroundColor: colors.itineraryDot,
-                              flexShrink: 0,
-                            }}
-                          />
                         )}
                         <Text
                           numberOfLines={1}
@@ -2875,7 +2881,7 @@ export default function WeeklySchedulePanel({
                             fontFamily: typography.fontFamily.pretendardSemiBold,
                             fontSize: 11,
                             lineHeight: 14,
-                            color: isFlight ? "#8B5CF6" : colors.itineraryText,
+                            color: isFlight ? colors.flightText : colors.itineraryText,
                             flex: 1,
                           }}
                         >
@@ -2933,18 +2939,21 @@ export default function WeeklySchedulePanel({
                       )}
                     {showTime &&
                       isFlight &&
-                      event.normalizedStartTime &&
-                      event.normalizedEndTime && (
+                      (event.flightNumber || event.durationText) && (
                         <Text
                           numberOfLines={1}
                           ellipsizeMode="tail"
                           style={{
-                            ...textStyles.h9,
-                            color: "#8B5CF6",
-                            lineHeight: 10,
+                            fontFamily: typography.fontFamily.pretendardRegular,
+                            fontSize: 10,
+                            lineHeight: 14,
+                            color: colors.flightText,
+                            opacity: 0.8,
                           }}
                         >
-                          {event.normalizedStartTime}-{event.normalizedEndTime}
+                          {[event.flightNumber, event.durationText]
+                            .filter(Boolean)
+                            .join(" · ")}
                         </Text>
                       )}
                   </View>
