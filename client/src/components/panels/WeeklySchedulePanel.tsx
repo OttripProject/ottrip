@@ -2712,14 +2712,10 @@ export default function WeeklySchedulePanel({
             ) {
               const overlapIndex = event.overlapIndex;
               const overlapCount = event.overlapCount;
-
-              const widthPercent = totalWidthPercent / overlapCount;
-              adjustedStyle.width = `${widthPercent}%`;
-
-              const leftPercent =
-                leftMarginPercent + widthPercent * overlapIndex;
-              adjustedStyle.left = `${leftPercent}%`;
-
+              const gapPercent = 1.5;
+              const slotWidth = (totalWidthPercent - gapPercent * (overlapCount - 1)) / overlapCount;
+              adjustedStyle.width = `${slotWidth}%`;
+              adjustedStyle.left = `${leftMarginPercent + (slotWidth + gapPercent) * overlapIndex}%`;
               delete adjustedStyle.minWidth;
             } else {
               adjustedStyle.left = `${leftMarginPercent}%`;
