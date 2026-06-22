@@ -687,12 +687,12 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   scheduleModal: {
-    flex: 0.8,
+    flex: 0.85,
     minHeight: 0,
     overflow: "hidden",
   },
   bottomRow: {
-    flex: 0.2,
+    flex: 0.15,
     flexDirection: "row",
     gap: 16,
     minHeight: 0,

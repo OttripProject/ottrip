@@ -353,10 +353,7 @@ export default function AIAssistantPanel({ publicId }: AIAssistantPanelProps) {
         ) : (
           <View style={styles.previewContainer}>
             <View style={styles.headerSection}>
-              <View style={styles.titleContainer}>
-                {/* <GradientText style={styles.headerTitle}>체크리스트</GradientText> */}
-                <Text style={styles.headerTitle}>체크리스트</Text>
-              </View>
+              <Text style={styles.headerTitle}>체크리스트</Text>
               <TouchableOpacity
                 onPress={handleViewAll}
                 style={styles.viewAllButton}
@@ -365,21 +362,24 @@ export default function AIAssistantPanel({ publicId }: AIAssistantPanelProps) {
               </TouchableOpacity>
             </View>
 
-            {/* 작은 통계 버튼 */}
             <View style={styles.simpleStatsContainer}>
               <View style={styles.simpleStatButton}>
                 <Text style={styles.simpleStatLabel}>준비 필요</Text>
-                <Text style={styles.simpleStatNumber}>
-                  {stats.total - stats.checked}개
-                </Text>
+                <View style={styles.statNumberRow}>
+                  <Text style={styles.simpleStatNumber}>
+                    {stats.total - stats.checked}
+                  </Text>
+                  <Text style={styles.statUnit}>개</Text>
+                </View>
               </View>
               <View style={styles.simpleStatButton}>
                 <Text style={styles.simpleStatLabel}>준비 됨</Text>
-                <Text style={styles.simpleStatNumber}>{stats.checked}개</Text>
+                <View style={styles.statNumberRow}>
+                  <Text style={styles.simpleStatNumber}>{stats.checked}</Text>
+                  <Text style={styles.statUnit}>개</Text>
+                </View>
               </View>
             </View>
-
-            {/* (리스트 제거) */}
           </View>
         )}
       </View>
@@ -455,19 +455,14 @@ const styles = StyleSheet.create({
   },
   headerSection: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
+    gap: 8,
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.lg,
     paddingBottom: spacing.sm,
   },
-  titleContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.xs,
-  },
   headerTitle: {
-    ...textStyles.h4,
+    ...textStyles.h5,
   },
   headerTitleTransparent: {
     opacity: 0,
@@ -477,43 +472,62 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   viewAllButton: {
-    width: 74,
-    height: 32,
-    borderRadius: 28,
-    backgroundColor: colors.gray200,
+    marginLeft: "auto" as any,
+    height: 30,
+    paddingHorizontal: 12,
+    borderRadius: 999,
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: colors.gray300,
     alignItems: "center",
     justifyContent: "center",
   },
   viewAllText: {
-    ...textStyles.h8,
-    color: colors.black,
+    fontFamily: typography.fontFamily.pretendardSemiBold,
+    fontSize: 12,
+    lineHeight: 18,
+    color: colors.gray900,
   },
   simpleStatsContainer: {
     flexDirection: "row",
     gap: spacing.md,
-    marginTop: spacing.lg, // headerSection과의 간격
+    marginTop: 2,
     marginHorizontal: spacing.lg,
     marginBottom: spacing.lg,
-    flex: 1, // 남은 높이 채우기
+    flex: 1,
     alignItems: "stretch",
   },
   simpleStatButton: {
-    backgroundColor: colors.gray200,
-    borderRadius: radii.md,
+    backgroundColor: colors.gray100,
+    borderRadius: 10,
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+    paddingHorizontal: 16,
   },
   simpleStatLabel: {
-    ...textStyles.h6,
+    fontFamily: typography.fontFamily.pretendardRegular,
+    fontSize: 13,
+    lineHeight: 20,
     color: colors.gray700,
-    marginLeft: 16,
+  },
+  statNumberRow: {
+    flexDirection: "row",
+    alignItems: "baseline",
+    gap: 2,
   },
   simpleStatNumber: {
-    ...textStyles.h6,
-    color: colors.black,
-    marginRight: 16,
+    fontFamily: typography.fontFamily.poppinsSemiBold,
+    fontSize: 20,
+    lineHeight: 24,
+    color: colors.gray900,
+  },
+  statUnit: {
+    fontFamily: typography.fontFamily.pretendardSemiBold,
+    fontSize: 13,
+    lineHeight: 20,
+    color: colors.gray900,
   },
   // 간단히 보기 카테고리 섹션
   previewCategorySection: {
