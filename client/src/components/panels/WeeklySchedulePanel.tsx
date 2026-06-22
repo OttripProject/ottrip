@@ -98,6 +98,7 @@ function toEvent(it: Itinerary): any {
     normalizedStartTime,
     normalizedEndTime,
     locationText,
+    startDateStr: it.itineraryDate,
   } as any;
 
   return event;
@@ -151,6 +152,7 @@ function toFlightEvents(flight: any): any[] {
       normalizedEndTime,
       flightNumber: segment.flightNumber || null,
       durationText,
+      startDateStr: departureTime.format("YYYY-MM-DD"),
     } as any;
   });
 }
@@ -2694,6 +2696,19 @@ export default function WeeklySchedulePanel({
             const flatTpStyle = flattenStyle(tpStyle);
             const adjustedStyle = { ...flatTpStyle };
 
+            const rawLeft = flatTpStyle.left;
+            let barDayIndex = 0;
+            if (typeof rawLeft === "string") {
+              const match = rawLeft.match(/([\d.]+)%/);
+              if (match) {
+                barDayIndex = Math.floor(parseFloat(match[1]) / (100 / weekDays.length));
+              }
+            } else if (typeof rawLeft === "number") {
+              barDayIndex = Math.floor(rawLeft / (100 / weekDays.length));
+            }
+            const barDate = weekDays[Math.min(barDayIndex, weekDays.length - 1)];
+            const isFirstBar = !event.startDateStr || event.startDateStr === barDate;
+
             const totalWidthPercent = 90;
             const leftMarginPercent = 3.5;
 
@@ -2850,8 +2865,8 @@ export default function WeeklySchedulePanel({
                     }
                   }}
                 >
-                  <View style={{ flex: 1, justifyContent: "center", gap: 2 }}>
-                    {showTitle && (
+                  <View style={{ flex: 1, justifyContent: "flex-start", gap: 2 }}>
+                    {isFirstBar && showTitle && (
                       <View
                         style={{
                           flexDirection: "row",
@@ -2889,7 +2904,8 @@ export default function WeeklySchedulePanel({
                         </Text>
                       </View>
                     )}
-                    {showTime &&
+                    {isFirstBar &&
+                      showTime &&
                       (isItinerary || isPreview) &&
                       event.normalizedStartTime &&
                       event.normalizedEndTime && (
@@ -2920,7 +2936,8 @@ export default function WeeklySchedulePanel({
                           </Text>
                         </View>
                       )}
-                    {showLocation &&
+                    {isFirstBar &&
+                      showLocation &&
                       (isItinerary || isPreview) &&
                       event.locationText && (
                         <Text
@@ -2937,7 +2954,8 @@ export default function WeeklySchedulePanel({
                           {event.locationText}
                         </Text>
                       )}
-                    {showTime &&
+                    {isFirstBar &&
+                      showTime &&
                       isFlight &&
                       (event.flightNumber || event.durationText) && (
                         <Text
