@@ -2696,10 +2696,8 @@ export default function WeeklySchedulePanel({
             const flatTpStyle = flattenStyle(tpStyle);
             const adjustedStyle = { ...flatTpStyle };
 
-            const rawTop = flatTpStyle.top;
-            const topNum = typeof rawTop === "number" ? rawTop : parseFloat(String(rawTop ?? "1"));
-            const isFirstBar = !event.startDateStr || topNum > 0 ||
-              dayjs(event.start).format("HH:mm") === "00:00";
+            const isFirstBar = !event.startDateStr ||
+              dayjs(event.start).format("YYYY-MM-DD") === event.startDateStr;
 
             const totalWidthPercent = 90;
             const leftMarginPercent = 3.5;
