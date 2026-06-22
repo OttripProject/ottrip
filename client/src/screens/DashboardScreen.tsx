@@ -302,6 +302,27 @@ export default function DashboardScreen() {
     }
   }, []);
 
+  const extendPlanDateIfNeeded = async (...dates: string[]) => {
+    if (!selectedPlanId || !selectedTrip?.startDate || !selectedTrip?.endDate) return;
+    let newStart = dayjs(selectedTrip.startDate);
+    let newEnd = dayjs(selectedTrip.endDate);
+    for (const d of dates) {
+      if (!d) continue;
+      const dt = dayjs(d);
+      if (dt.isBefore(newStart, "day")) newStart = dt;
+      if (dt.isAfter(newEnd, "day")) newEnd = dt;
+    }
+    if (newStart.isSame(dayjs(selectedTrip.startDate), "day") &&
+        newEnd.isSame(dayjs(selectedTrip.endDate), "day")) return;
+    try {
+      await plansQuery.updatePlan(selectedPlanId, {
+        startDate: newStart.format("YYYY-MM-DD"),
+        endDate: newEnd.format("YYYY-MM-DD"),
+      });
+      plansQuery.fetchPlans();
+    } catch {}
+  };
+
   const handleItineraryAdd = async (newItinerary: any) => {
     setSelectedItinerary(newItinerary);
     setActiveTab("itinerary");
@@ -309,6 +330,7 @@ export default function DashboardScreen() {
     setSelectedAccommodation(null);
     if (selectedPlanId) {
       planData.addItinerary(newItinerary);
+      await extendPlanDateIfNeeded(newItinerary.itineraryDate);
     }
   };
 
@@ -317,6 +339,12 @@ export default function DashboardScreen() {
       planData.addFlight(newFlight);
       setSelectedFlight(newFlight);
       setActiveTab("flight");
+      const segments: any[] = newFlight.flightSegments ?? [];
+      const dates = segments.flatMap((s: any) => [
+        s.departureTime ? dayjs(s.departureTime).format("YYYY-MM-DD") : null,
+        s.arrivalTime ? dayjs(s.arrivalTime).format("YYYY-MM-DD") : null,
+      ]).filter(Boolean) as string[];
+      if (dates.length) await extendPlanDateIfNeeded(...dates);
     }
   };
 
@@ -325,6 +353,10 @@ export default function DashboardScreen() {
       planData.addAccommodation(newAccommodation);
       setSelectedAccommodation(newAccommodation);
       setActiveTab("accommodation");
+      await extendPlanDateIfNeeded(
+        newAccommodation.checkinDate,
+        newAccommodation.checkoutDate,
+      );
     }
   };
 
