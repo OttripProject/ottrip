@@ -21,7 +21,7 @@ import Input from "@/ui/components/input/Input";
 import { radii } from "@/ui/tokens";
 import { colors } from "@/ui/tokens/colors";
 import { spacing } from "@/ui/tokens/spacing";
-import { textStyles } from "@/ui/tokens/typography";
+import { textStyles, typography } from "@/ui/tokens/typography";
 import { guestPrompt } from "@/utils/guestPrompt";
 import dayjs from "dayjs";
 import ko from "dayjs/locale/ko";
@@ -2872,9 +2872,10 @@ export default function WeeklySchedulePanel({
                           numberOfLines={1}
                           ellipsizeMode="tail"
                           style={{
-                            ...textStyles.h8,
-                            color: isFlight ? "#8B5CF6" : colors.itineraryText,
+                            fontFamily: typography.fontFamily.pretendardSemiBold,
+                            fontSize: 11,
                             lineHeight: 14,
+                            color: isFlight ? "#8B5CF6" : colors.itineraryText,
                             flex: 1,
                           }}
                         >
@@ -2902,9 +2903,10 @@ export default function WeeklySchedulePanel({
                             numberOfLines={1}
                             ellipsizeMode="tail"
                             style={{
-                              ...textStyles.h9,
-                              color: colors.itineraryText,
+                              fontFamily: typography.fontFamily.pretendardRegular,
+                              fontSize: 10,
                               lineHeight: 14,
+                              color: colors.itineraryText,
                             }}
                           >
                             {event.normalizedStartTime} -{" "}
@@ -2919,9 +2921,10 @@ export default function WeeklySchedulePanel({
                           numberOfLines={1}
                           ellipsizeMode="tail"
                           style={{
-                            ...textStyles.h9,
-                            color: colors.itineraryText,
+                            fontFamily: typography.fontFamily.pretendardRegular,
+                            fontSize: 10,
                             lineHeight: 14,
+                            color: colors.itineraryText,
                             opacity: 0.65,
                           }}
                         >
