@@ -2910,7 +2910,7 @@ export default function WeeklySchedulePanel({
                         />
                         {isFlight && (
                           <View style={{ flexShrink: 0 }}>
-                            <WeekBarAirplaneIcon width={12} height={12} />
+                            <WeekBarAirplaneIcon width={12} height={12} color={colors.flightText} />
                           </View>
                         )}
                         <Text
@@ -2993,7 +2993,7 @@ export default function WeeklySchedulePanel({
                           }}
                         >
                           <View style={{ flexShrink: 0 }}>
-                            <WeekBarTimeIcon width={9} height={9} color={colors.flightDot} />
+                            <WeekBarTimeIcon width={9} height={9} color={colors.flightText} />
                           </View>
                           <Text
                             numberOfLines={1}
