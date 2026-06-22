@@ -50,7 +50,6 @@ import LightningIcon from "../../../assets/mobile_lightning.svg";
 import RightArrowIcon from "../../../assets/right_arrow.svg";
 import ShareIcon from "../../../assets/share.svg";
 import TodayIcon from "../../../assets/today.svg";
-import WeekBarAirplaneIcon from "../../../assets/week_bar_airplane.svg";
 import WeekBarLocationIcon from "../../../assets/week_bar_location.svg";
 import WeekBarTimeIcon from "../../../assets/week_bar_time.svg";
 import XIcon from "../../../assets/x.svg";
@@ -2909,9 +2908,7 @@ export default function WeeklySchedulePanel({
                           }}
                         />
                         {isFlight && (
-                          <View style={{ flexShrink: 0 }}>
-                            <WeekBarAirplaneIcon width={12} height={12} color={colors.flightText} />
-                          </View>
+                          <Text style={{ fontSize: 10, color: colors.flightText, flexShrink: 0 }}>✈</Text>
                         )}
                         <Text
                           numberOfLines={1}
@@ -3165,7 +3162,7 @@ export default function WeeklySchedulePanel({
                       gap: 4,
                     }}
                   >
-                    {isFlight && <WeekBarAirplaneIcon width={14} height={14} />}
+                    {isFlight && <Text style={{ fontSize: 11, color: colors.flightText }}>✈</Text>}
                     <Text
                       numberOfLines={1}
                       ellipsizeMode="tail"
