@@ -136,12 +136,18 @@ export default function TimePicker({
       ? currentMinute
       : (mins.find(m => isTimeValid(h, m)) ?? 0);
     onChange(`${pad(h)}:${pad(minute)}`);
+    if (selectedMinute !== null) {
+      setIsOpen(false);
+      onClose?.();
+    }
   };
 
   const handleSelectMinute = (m: number) => {
     if (!isMinuteEnabled(m)) return;
     const hour = selectedHour ?? 0;
     onChange(`${pad(hour)}:${pad(m)}`);
+    setIsOpen(false);
+    onClose?.();
   };
 
   useEffect(() => {
