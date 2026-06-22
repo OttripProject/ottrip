@@ -75,6 +75,9 @@ export default function TimePicker({
   const selectedHour = parsed?.h ?? null;
   const selectedMinute = parsed?.m ?? null;
 
+  const [pendingHour, setPendingHour] = useState<number | null>(selectedHour);
+  const [pendingMinute, setPendingMinute] = useState<number | null>(selectedMinute);
+
   useEffect(() => {
     if (!isFocused) setLocalText(value || "");
   }, [value, isFocused]);
@@ -90,11 +93,11 @@ export default function TimePicker({
   };
 
   const isMinuteEnabled = (m: number) => {
-    if (selectedHour === null) return true;
-    return isTimeValid(selectedHour, m);
+    if (pendingHour === null) return true;
+    return isTimeValid(pendingHour, m);
   };
 
-  const minutesForHour = selectedHour === 24 ? [0] : MINUTES_5_STEP;
+  const minutesForHour = pendingHour === 24 ? [0] : MINUTES_5_STEP;
 
   const handleTextChange = (text: string) => {
     const digits = text.replace(/\D/g, "").slice(0, 4);
@@ -123,37 +126,47 @@ export default function TimePicker({
   const handleToggle = () => {
     if (disabled) return;
     const next = !open;
+    if (next) {
+      setPendingHour(selectedHour);
+      setPendingMinute(selectedMinute);
+      onOpen?.();
+    } else {
+      onClose?.();
+    }
     setIsOpen(next);
-    if (next) onOpen?.();
-    else onClose?.();
   };
 
   const handleSelectHour = (h: number) => {
     if (!isHourEnabled(h)) return;
-    const currentMinute = selectedMinute ?? 0;
+    setPendingHour(h);
     const mins = h === 24 ? [0] : MINUTES_5_STEP;
-    const minute = mins.includes(currentMinute) && isTimeValid(h, currentMinute)
-      ? currentMinute
-      : (mins.find(m => isTimeValid(h, m)) ?? 0);
-    onChange(`${pad(h)}:${pad(minute)}`);
-    if (selectedMinute !== null) {
-      setIsOpen(false);
-      onClose?.();
+    if (pendingMinute === null || !mins.includes(pendingMinute) || !isTimeValid(h, pendingMinute)) {
+      setPendingMinute(mins.find(m => isTimeValid(h, m)) ?? 0);
     }
   };
 
   const handleSelectMinute = (m: number) => {
-    if (!isMinuteEnabled(m)) return;
-    const hour = selectedHour ?? 0;
-    onChange(`${pad(hour)}:${pad(m)}`);
+    if (pendingHour !== null && !isTimeValid(pendingHour, m)) return;
+    setPendingMinute(m);
+  };
+
+  const handleConfirm = () => {
+    const h = pendingHour ?? 0;
+    const m = pendingMinute ?? 0;
+    onChange(`${pad(h)}:${pad(m)}`);
+    setIsOpen(false);
+    onClose?.();
+  };
+
+  const handleCancel = () => {
     setIsOpen(false);
     onClose?.();
   };
 
   useEffect(() => {
     if (!open) return;
-    const hIdx = selectedHour !== null ? selectedHour : 0;
-    const mIdx = selectedMinute !== null ? MINUTES_5_STEP.indexOf(selectedMinute) : 0;
+    const hIdx = pendingHour !== null ? pendingHour : 0;
+    const mIdx = pendingMinute !== null ? MINUTES_5_STEP.indexOf(pendingMinute) : 0;
     setTimeout(() => {
       hourScrollRef.current?.scrollTo({ y: hIdx * ITEM_HEIGHT, animated: false });
       minuteScrollRef.current?.scrollTo({ y: Math.max(0, mIdx) * ITEM_HEIGHT, animated: false });
@@ -226,7 +239,7 @@ export default function TimePicker({
               <View style={styles.colInner}>
                 {HOURS.map(h => {
                   const enabled = isHourEnabled(h);
-                  const selected = h === selectedHour;
+                  const selected = h === pendingHour;
                   return (
                     <Pressable
                       key={h}
@@ -263,7 +276,7 @@ export default function TimePicker({
               <View style={styles.colInner}>
                 {minutesForHour.map(m => {
                   const enabled = isMinuteEnabled(m);
-                  const selected = m === selectedMinute;
+                  const selected = m === pendingMinute;
                   return (
                     <Pressable
                       key={m}
@@ -290,6 +303,15 @@ export default function TimePicker({
                 })}
               </View>
             </ScrollView>
+          </View>
+
+          <View style={styles.footer}>
+            <Pressable style={styles.footerBtn} onPress={handleCancel}>
+              <Text style={styles.footerBtnTextCancel}>취소</Text>
+            </Pressable>
+            <Pressable style={[styles.footerBtn, styles.footerBtnConfirm]} onPress={handleConfirm}>
+              <Text style={styles.footerBtnTextConfirm}>확인</Text>
+            </Pressable>
           </View>
         </View>
       )}
@@ -393,5 +415,29 @@ const styles = StyleSheet.create({
   },
   itemTextDisabled: {
     color: colors.gray500,
+  },
+  footer: {
+    flexDirection: "row",
+    borderTopWidth: 1,
+    borderTopColor: colors.gray200,
+  },
+  footerBtn: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 12,
+  },
+  footerBtnConfirm: {
+    borderLeftWidth: 1,
+    borderLeftColor: colors.gray200,
+  },
+  footerBtnTextCancel: {
+    ...textStyles.body4,
+    color: colors.gray600,
+  },
+  footerBtnTextConfirm: {
+    ...textStyles.body4,
+    color: colors.primary,
+    fontFamily: "Pretendard-SemiBold",
   },
 });
