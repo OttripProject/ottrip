@@ -2744,18 +2744,18 @@ export default function WeeklySchedulePanel({
 
             const itineraryStyle = isItinerary
               ? {
-                  backgroundColor: "rgba(0, 102, 255, 0.1)",
+                  backgroundColor: colors.itineraryBg,
                   borderWidth: borderWidth,
-                  borderColor: "#0066FF",
+                  borderColor: isSelected ? colors.itineraryText : colors.itineraryBorder,
                   borderRadius: radii.md,
                 }
               : null;
 
             const previewStyle = isPreview
               ? {
-                  backgroundColor: "rgba(0, 102, 255, 0.1)",
+                  backgroundColor: colors.itineraryBg,
                   borderWidth: 1,
-                  borderColor: "#0066FF",
+                  borderColor: colors.itineraryBorder,
                   borderRadius: radii.md,
                   borderStyle: "dashed",
                   opacity: 0.7,
@@ -2824,7 +2824,7 @@ export default function WeeklySchedulePanel({
                   : {})}
               >
                 <TouchableOpacity
-                  style={{ flex: 1, justifyContent: "center", padding: 4 }}
+                  style={{ flex: 1, padding: 4, paddingHorizontal: 8 }}
                   disabled={isPreview || isDragging}
                   onPress={e => {
                     if (isPreview || isDragging) return;
@@ -2843,27 +2843,38 @@ export default function WeeklySchedulePanel({
                     }
                   }}
                 >
-                  <View style={{ flex: 1, justifyContent: "center" }}>
+                  <View style={{ flex: 1, justifyContent: "center", gap: 2 }}>
                     {showTitle && (
                       <View
                         style={{
                           flexDirection: "row",
                           alignItems: "center",
-                          gap: 4,
+                          gap: 5,
+                          minWidth: 0,
                         }}
                       >
-                        {isFlight && (
+                        {isFlight ? (
                           <View style={{ flexShrink: 0 }}>
                             <WeekBarAirplaneIcon width={14} height={14} />
                           </View>
+                        ) : (
+                          <View
+                            style={{
+                              width: 5,
+                              height: 5,
+                              borderRadius: 999,
+                              backgroundColor: colors.itineraryDot,
+                              flexShrink: 0,
+                            }}
+                          />
                         )}
                         <Text
                           numberOfLines={1}
                           ellipsizeMode="tail"
                           style={{
                             ...textStyles.h8,
-                            color: isFlight ? "#8B5CF6" : "#0066FF",
-                            lineHeight: 12,
+                            color: isFlight ? "#8B5CF6" : colors.itineraryText,
+                            lineHeight: 14,
                             flex: 1,
                           }}
                         >
@@ -2880,19 +2891,20 @@ export default function WeeklySchedulePanel({
                             flexDirection: "row",
                             alignItems: "center",
                             gap: 4,
-                            marginTop: showTitle ? 8 : 0,
+                            minWidth: 0,
+                            opacity: 0.75,
                           }}
                         >
                           <View style={{ flexShrink: 0 }}>
-                            <WeekBarTimeIcon width={14} height={14} />
+                            <WeekBarTimeIcon width={9} height={9} />
                           </View>
                           <Text
                             numberOfLines={1}
                             ellipsizeMode="tail"
                             style={{
                               ...textStyles.h9,
-                              color: "#0066FF",
-                              lineHeight: 10,
+                              color: colors.itineraryText,
+                              lineHeight: 14,
                             }}
                           >
                             {event.normalizedStartTime} -{" "}
@@ -2903,29 +2915,18 @@ export default function WeeklySchedulePanel({
                     {showLocation &&
                       (isItinerary || isPreview) &&
                       event.locationText && (
-                        <View
+                        <Text
+                          numberOfLines={1}
+                          ellipsizeMode="tail"
                           style={{
-                            flexDirection: "row",
-                            alignItems: "center",
-                            gap: 4,
-                            marginTop: 4,
+                            ...textStyles.h9,
+                            color: colors.itineraryText,
+                            lineHeight: 14,
+                            opacity: 0.65,
                           }}
                         >
-                          <View style={{ flexShrink: 0 }}>
-                            <WeekBarLocationIcon width={14} height={14} />
-                          </View>
-                          <Text
-                            numberOfLines={1}
-                            ellipsizeMode="tail"
-                            style={{
-                              ...textStyles.h9,
-                              color: "#0066FF",
-                              lineHeight: 10,
-                            }}
-                          >
-                            {event.locationText}
-                          </Text>
-                        </View>
+                          {event.locationText}
+                        </Text>
                       )}
                     {showTime &&
                       isFlight &&
@@ -2938,7 +2939,6 @@ export default function WeeklySchedulePanel({
                             ...textStyles.h9,
                             color: "#8B5CF6",
                             lineHeight: 10,
-                            marginTop: showTitle ? 8 : 0,
                           }}
                         >
                           {event.normalizedStartTime}-{event.normalizedEndTime}
