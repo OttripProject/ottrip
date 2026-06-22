@@ -2696,18 +2696,10 @@ export default function WeeklySchedulePanel({
             const flatTpStyle = flattenStyle(tpStyle);
             const adjustedStyle = { ...flatTpStyle };
 
-            const rawLeft = flatTpStyle.left;
-            let barDayIndex = 0;
-            if (typeof rawLeft === "string") {
-              const match = rawLeft.match(/([\d.]+)%/);
-              if (match) {
-                barDayIndex = Math.floor(parseFloat(match[1]) / (100 / weekDays.length));
-              }
-            } else if (typeof rawLeft === "number") {
-              barDayIndex = Math.floor(rawLeft / (100 / weekDays.length));
-            }
-            const barDate = weekDays[Math.min(barDayIndex, weekDays.length - 1)];
-            const isFirstBar = !event.startDateStr || event.startDateStr === barDate;
+            const rawTop = flatTpStyle.top;
+            const topNum = typeof rawTop === "number" ? rawTop : parseFloat(String(rawTop ?? "1"));
+            const isFirstBar = !event.startDateStr || topNum > 0 ||
+              dayjs(event.start).format("HH:mm") === "00:00";
 
             const totalWidthPercent = 90;
             const leftMarginPercent = 3.5;
