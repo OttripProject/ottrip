@@ -2981,7 +2981,8 @@ export default function WeeklySchedulePanel({
                     {isFirstBar &&
                       showTime &&
                       isFlight &&
-                      (event.flightNumber || event.durationText) && (
+                      event.normalizedStartTime &&
+                      event.normalizedEndTime && (
                         <Text
                           numberOfLines={1}
                           ellipsizeMode="tail"
@@ -2993,9 +2994,26 @@ export default function WeeklySchedulePanel({
                             opacity: 0.8,
                           }}
                         >
-                          {[event.flightNumber, event.durationText]
-                            .filter(Boolean)
-                            .join(" · ")}
+                          {event.normalizedStartTime} - {event.normalizedEndTime}
+                          {event.durationText ? ` (${event.durationText})` : ""}
+                        </Text>
+                      )}
+                    {isFirstBar &&
+                      showLocation &&
+                      isFlight &&
+                      event.flightNumber && (
+                        <Text
+                          numberOfLines={1}
+                          ellipsizeMode="tail"
+                          style={{
+                            fontFamily: typography.fontFamily.pretendardRegular,
+                            fontSize: 10,
+                            lineHeight: 14,
+                            color: colors.flightText,
+                            opacity: 0.65,
+                          }}
+                        >
+                          {event.flightNumber}
                         </Text>
                       )}
                   </View>
