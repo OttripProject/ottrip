@@ -21,7 +21,7 @@ import {
   Text,
   View,
 } from "react-native";
-import AttachmentIcon from "../../../assets/attachment.svg";
+import AttachmentIcon from "../../../assets/attachment_clip.svg";
 import DeleteIcon from "../../../assets/delete.svg";
 import AttachmentDocumentIcon from "../../../assets/mobile_attachment_document.svg";
 import AttachmentImageIcon from "../../../assets/mobile_attachment_image.svg";
@@ -228,11 +228,9 @@ export default function ExpenseDetailModal({
                   첨부파일
                 </Text>
                 {expenseAttachments.length > 0 && (
-                  <View style={styles.tabBadge}>
-                    <Text style={styles.tabBadgeText}>
-                      {expenseAttachments.length}
-                    </Text>
-                  </View>
+                  <Text style={styles.tabBadge}>
+                    {expenseAttachments.length}
+                  </Text>
                 )}
               </Pressable>
             </View>
@@ -455,10 +453,9 @@ const styles = StyleSheet.create({
   modalContent: {
     backgroundColor: colors.white,
     borderRadius: radii.xl,
-    width: "90%",
-    maxWidth: 420,
-    maxHeight: 648,
-    flex: 1,
+    width: "100%",
+    maxWidth: 520,
+    maxHeight: 900,
     minHeight: 0,
     overflow: "hidden",
   },
@@ -526,18 +523,14 @@ const styles = StyleSheet.create({
     color: colors.gray900,
   },
   tabBadge: {
-    minWidth: 18,
-    height: 18,
-    paddingHorizontal: 5,
+    paddingHorizontal: 11,
+    paddingVertical: 2,
     borderRadius: 999,
     backgroundColor: colors.gray300,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  tabBadgeText: {
+    overflow: "hidden",
     fontFamily: typography.fontFamily.poppinsSemiBold,
     fontSize: 10,
-    lineHeight: 18,
+    lineHeight: 14,
     color: colors.gray600,
   },
   divider: {
@@ -624,7 +617,9 @@ const styles = StyleSheet.create({
     color: colors.gray900,
   },
   expenseDate: {
-    ...textStyles.body6,
+    fontFamily: typography.fontFamily.poppinsMedium,
+    fontSize: 11,
+    lineHeight: 16,
     color: colors.gray600,
   },
   expenseAmount: {
@@ -648,7 +643,9 @@ const styles = StyleSheet.create({
     borderColor: colors.gray300,
   },
   attachmentCount: {
-    ...textStyles.h9,
+    fontFamily: typography.fontFamily.poppinsSemiBold,
+    fontSize: 11,
+    lineHeight: 16,
     color: colors.gray700,
   },
   deleteButton: {
@@ -678,7 +675,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#E7EEFF",
   },
   fileTypeBadgeDoc: {
-    backgroundColor: "#FFE9D6",
+    backgroundColor: "#E7EEFF",
   },
   attachmentCardInfo: {
     flex: 1,
