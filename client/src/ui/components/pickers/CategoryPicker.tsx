@@ -21,6 +21,8 @@ interface CategoryPickerProps {
   placeholder?: string;
   containerStyle?: ViewStyle;
   style?: ViewStyle;
+  triggerTextStyle?: TextStyle;
+  iconSize?: number;
   dropDownContainerStyle?: ViewStyle;
   listItemLabelStyle?: TextStyle;
   selectedItemContainerStyle?: ViewStyle;
@@ -44,6 +46,9 @@ export default function CategoryPicker({
   onChange,
   containerStyle,
   style,
+  triggerTextStyle,
+  iconSize = 10,
+  dropDownContainerStyle,
   disabled,
   onOpen,
   onClose,
@@ -85,17 +90,17 @@ export default function CategoryPicker({
       >
         <View style={styles.triggerLeft}>
           <View style={[styles.dot, { backgroundColor: dotColor }]} />
-          <Text style={styles.triggerText} numberOfLines={1}>{label}</Text>
+          <Text style={[styles.triggerText, triggerTextStyle]} numberOfLines={1}>{label}</Text>
         </View>
         {open ? (
-          <UpperArrowIcon width={10} height={10} style={{ opacity: 0.6 }} />
+          <UpperArrowIcon width={iconSize} height={iconSize} style={{ opacity: 0.6 }} />
         ) : (
-          <DownArrowIcon width={10} height={10} style={{ opacity: 0.6 }} />
+          <DownArrowIcon width={iconSize} height={iconSize} style={{ opacity: 0.6 }} />
         )}
       </Pressable>
 
       {open && (
-        <View style={styles.popup}>
+        <View style={[styles.popup, dropDownContainerStyle]}>
           {items.map(item => {
             const isSelected = item.value === value;
             return (
@@ -130,7 +135,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     backgroundColor: colors.gray200,
     borderRadius: radii.md,
-    height: 40,
+    minHeight: 40,
     paddingHorizontal: 12,
   },
   triggerDisabled: {

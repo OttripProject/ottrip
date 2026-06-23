@@ -343,11 +343,9 @@ export default function AddExpenseModal({
               nestedScrollEnabled={true}
             >
               <View style={styles.modalHeader}>
-                <View style={styles.titleContainer}>
-                  <Text style={styles.modalTitle}>비용 추가</Text>
-                </View>
+                <Text style={styles.modalTitle}>비용 추가</Text>
                 <Pressable style={styles.closeButton} onPress={handleClose}>
-                  <XIcon width={24} height={24} />
+                  <XIcon width={16} height={16} />
                 </Pressable>
               </View>
 
@@ -367,7 +365,10 @@ export default function AddExpenseModal({
                     }
                     onOpen={() => setCategoryOpen(true)}
                     onClose={() => setCategoryOpen(false)}
-                    containerStyle={styles.categoryPicker}
+                    style={styles.categoryPickerTrigger}
+                    triggerTextStyle={styles.categoryPickerText}
+                    dropDownContainerStyle={styles.categoryPickerDropdown}
+                    iconSize={14}
                   />
                 </View>
 
@@ -553,46 +554,52 @@ const styles = StyleSheet.create({
   },
   modalContent: {
     backgroundColor: colors.white,
-    borderRadius: radii.lg,
-    width: "90%",
-    maxWidth: 400,
+    borderRadius: 20,
+    width: "100%",
+    maxWidth: 460,
     maxHeight: "90%",
-    overflow: "visible",
+    overflow: "hidden",
   },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
-    padding: spacing.xl,
+    padding: 24,
+    paddingBottom: 20,
+    gap: 20,
   },
   modalHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "flex-start",
-    marginBottom: spacing.xl,
+    alignItems: "center",
   },
   titleContainer: {
     flex: 1,
     gap: spacing.xs,
   },
   modalTitle: {
-    ...textStyles.h5,
-    color: colors.black,
+    fontFamily: typography.fontFamily.pretendardSemiBold,
+    fontSize: 20,
+    lineHeight: 28,
+    color: colors.gray900,
   },
   closeButton: {
-    padding: spacing.xs,
-    marginTop: -spacing.xs,
-    marginRight: -spacing.xs,
+    width: 28,
+    height: 28,
+    alignItems: "center",
+    justifyContent: "center",
   },
   formSection: {
-    gap: spacing.lg,
+    gap: 18,
   },
   inputGroup: {
-    gap: spacing.sm,
+    gap: 9,
   },
   inputLabel: {
-    ...textStyles.h7,
-    color: colors.black,
+    fontFamily: typography.fontFamily.pretendardSemiBold,
+    fontSize: 14,
+    lineHeight: 20,
+    color: colors.gray900,
   },
   pickerWrapper: {
     position: "relative",
@@ -603,12 +610,27 @@ const styles = StyleSheet.create({
     position: "relative",
     overflow: "visible",
   },
-  categoryPicker: {
-    height: 48,
+  categoryPickerDropdown: {
+    top: 56,
+    borderColor: colors.gray400,
+  },
+  categoryPickerTrigger: {
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: colors.gray400,
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+  },
+  categoryPickerText: {
+    fontFamily: typography.fontFamily.pretendardRegular,
+    fontSize: 14,
+    lineHeight: 22,
+    color: colors.gray900,
   },
   amountCurrencyRow: {
     flexDirection: "row",
-    gap: spacing.sm,
+    gap: 12,
   },
   amountGroup: {
     flex: 1,
@@ -618,7 +640,7 @@ const styles = StyleSheet.create({
   },
   amountInput: {
     backgroundColor: colors.white,
-    height: 48,
+    height: 50,
   },
   currencyDisplay: {
     flexDirection: "row",
@@ -626,14 +648,16 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     borderWidth: 1,
     borderColor: colors.gray400,
-    borderRadius: radii.md,
-    paddingHorizontal: spacing.md,
-    height: 48,
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    height: 50,
     backgroundColor: colors.white,
   },
   currencyText: {
-    ...textStyles.body4,
-    color: colors.black,
+    fontFamily: typography.fontFamily.pretendardRegular,
+    fontSize: 14,
+    lineHeight: 22,
+    color: colors.gray900,
   },
   dateInput: {
     flexDirection: "row",
@@ -641,9 +665,9 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     borderWidth: 1,
     borderColor: colors.gray400,
-    borderRadius: radii.md,
-    paddingHorizontal: spacing.md,
-    height: 48,
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    height: 50,
     backgroundColor: colors.white,
   },
   dateTextContainer: {
@@ -652,8 +676,10 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   dateText: {
-    ...textStyles.body4,
-    color: colors.black,
+    fontFamily: typography.fontFamily.pretendardRegular,
+    fontSize: 14,
+    lineHeight: 22,
+    color: colors.gray900,
   },
   iconWrapper: {
     marginTop: -2,
@@ -679,21 +705,17 @@ const styles = StyleSheet.create({
   },
   descriptionInput: {
     backgroundColor: colors.white,
-    height: 48,
+    height: 50,
   },
   attachmentSection: {
-    marginTop: spacing.lg,
     width: "100%",
   },
   modalButtons: {
     flexDirection: "row",
-    marginTop: spacing.xl,
-    marginBottom: spacing.lg,
-    gap: spacing.md,
+    gap: 12,
   },
   modalButton: {
     flex: 1,
-    paddingVertical: spacing.md,
     borderRadius: radii.md,
     alignItems: "center",
     justifyContent: "center",
@@ -703,16 +725,18 @@ const styles = StyleSheet.create({
     backgroundColor: colors.gray300,
   },
   cancelButtonText: {
-    ...textStyles.h6,
-    color: colors.black,
-    fontWeight: typography.weight.semibold,
+    fontFamily: typography.fontFamily.pretendardSemiBold,
+    fontSize: 15,
+    lineHeight: 22,
+    color: colors.gray900,
   },
   submitButton: {
-    backgroundColor: colors.gray900,
+    backgroundColor: colors.primary,
   },
   submitButtonText: {
-    ...textStyles.h6,
+    fontFamily: typography.fontFamily.pretendardSemiBold,
+    fontSize: 15,
+    lineHeight: 22,
     color: colors.white,
-    fontWeight: typography.weight.semibold,
   },
 });
