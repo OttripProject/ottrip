@@ -59,8 +59,8 @@ export default function ImagePreviewModal({
       animationType="fade"
       onRequestClose={onClose}
     >
-      <View style={styles.overlay}>
-        <View style={styles.container}>
+      <Pressable style={styles.overlay} onPress={onClose}>
+        <Pressable style={styles.container} onPress={e => e.stopPropagation()}>
           <View style={styles.header}>
             <View style={styles.headerLeft}>
               <View style={styles.fileBadge}>
@@ -115,8 +115,8 @@ export default function ImagePreviewModal({
               />
             </Pressable>
           </View>
-        </View>
-      </View>
+        </Pressable>
+      </Pressable>
     </Modal>
   );
 }

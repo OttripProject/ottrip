@@ -362,7 +362,7 @@ export default function ExpenseDetailModal({
                 {expenseAttachments.length === 0 ? (
                   <View style={styles.emptyState}>
                     <Text style={styles.emptyStateText}>
-                      첨부파일이 없습니다
+                      업로드 된 첨부파일이 없습니다
                     </Text>
                   </View>
                 ) : (
