@@ -10,7 +10,7 @@ import {
 import { colors } from "@/ui/tokens/colors";
 import { radii } from "@/ui/tokens/radii";
 import { spacing } from "@/ui/tokens/spacing";
-import { textStyles } from "@/ui/tokens/typography";
+import { textStyles, typography } from "@/ui/tokens/typography";
 import { formatFileSize } from "@/utils/fileUtils";
 import { useMemo, useState } from "react";
 import {
@@ -526,17 +526,19 @@ const styles = StyleSheet.create({
     color: colors.gray900,
   },
   tabBadge: {
-    minWidth: 24,
+    minWidth: 18,
     height: 18,
     paddingHorizontal: 5,
-    borderRadius: radii.pill,
-    backgroundColor: "#E7EEFF",
+    borderRadius: 999,
+    backgroundColor: colors.gray300,
     alignItems: "center",
     justifyContent: "center",
   },
   tabBadgeText: {
-    ...textStyles.h9,
-    color: colors.primary,
+    fontFamily: typography.fontFamily.poppinsSemiBold,
+    fontSize: 10,
+    lineHeight: 18,
+    color: colors.gray600,
   },
   divider: {
     height: 1,
