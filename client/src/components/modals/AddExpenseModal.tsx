@@ -325,8 +325,8 @@ export default function AddExpenseModal({
         animationType="fade"
         onRequestClose={handleClose}
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
+        <Pressable style={styles.modalOverlay} onPress={handleClose}>
+          <Pressable style={styles.modalContent} onPress={e => e.stopPropagation()}>
             <WarningBanner
               message={warningMessage}
               visible={showWarning}
@@ -475,7 +475,7 @@ export default function AddExpenseModal({
                 </Pressable>
               </View>
             </ScrollView>
-          </View>
+          </Pressable>
           {showDatePicker && (
             <View style={styles.calendarOverlay} pointerEvents="box-none">
               <BaseCalendar
@@ -492,7 +492,7 @@ export default function AddExpenseModal({
               />
             </View>
           )}
-        </View>
+        </Pressable>
       </Modal>
       <AiAnalyzeFailureModal
         visible={aiAnalyzeFailureVisible}
