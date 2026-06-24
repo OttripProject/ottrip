@@ -1,3 +1,4 @@
+import { LinearGradient } from "expo-linear-gradient";
 import AiAnalyzeFailureModal from "@/components/modals/AiAnalyzeFailureModal";
 import BaseCalendar from "@/components/popup/calendar/BaseCalendar";
 import { PLACEHOLDERS } from "@/constants/placeholders";
@@ -19,6 +20,7 @@ import {
 } from "@/types/expense";
 import AttachmentSection from "@/ui/components/attachmentSection";
 import type { AiAttachmentAnalyzeSelection } from "@/ui/components/attachmentSection.types";
+import { pendingAiFileKey } from "@/ui/components/attachmentSection.types";
 import Input from "@/ui/components/input/Input";
 import { CategoryPicker } from "@/ui/components/pickers";
 import WarningBanner from "@/ui/components/toast/warning";
@@ -42,6 +44,68 @@ import {
 } from "react-native";
 import CalendarIcon from "../../../assets/calender.svg";
 import XIcon from "../../../assets/x.svg";
+
+function AiFilledBadge() {
+  return (
+    <View style={aiBadgeStyles.badge}>
+      <LinearGradient
+        colors={colors.gradientAIRefresh}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={aiBadgeStyles.dot}
+      />
+      <Text style={aiBadgeStyles.text}>AI</Text>
+    </View>
+  );
+}
+
+const aiBadgeStyles = StyleSheet.create({
+  badge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
+    paddingVertical: 1,
+    paddingHorizontal: 6,
+    borderRadius: 999,
+    backgroundColor: colors.aiTint,
+  },
+  dot: {
+    width: 5,
+    height: 5,
+    borderRadius: 999,
+  },
+  text: {
+    fontFamily: "Pretendard-Bold",
+    fontSize: 9,
+    lineHeight: 12,
+    color: colors.aiInk,
+    letterSpacing: 0.02,
+  },
+});
+
+function NeedsCheckBadge() {
+  return (
+    <View style={needsCheckStyles.badge}>
+      <Text style={needsCheckStyles.text}>확인 필요</Text>
+    </View>
+  );
+}
+
+const needsCheckStyles = StyleSheet.create({
+  badge: {
+    paddingVertical: 1,
+    paddingHorizontal: 6,
+    borderRadius: 999,
+    backgroundColor: "rgb(255, 243, 214)",
+  },
+  text: {
+    fontFamily: "Pretendard-Bold",
+    fontSize: 9,
+    lineHeight: 12,
+    color: "rgb(168, 115, 10)",
+    letterSpacing: 0.02,
+  },
+});
 
 interface AddExpenseModalProps {
   visible: boolean;
@@ -69,6 +133,11 @@ export default function AddExpenseModal({
   const [isAiAnalyzing, setIsAiAnalyzing] = useState(false);
   const [aiAnalyzeFailureVisible, setAiAnalyzeFailureVisible] = useState(false);
   const [aiAnalyzeFailureMessage, setAiAnalyzeFailureMessage] = useState("");
+  const [attachmentAnalyzeError, setAttachmentAnalyzeError] = useState<string | null>(null);
+  const [attachmentAnalyzeSuccess, setAttachmentAnalyzeSuccess] = useState(false);
+  const [attachmentAnalyzePartial, setAttachmentAnalyzePartial] = useState(false);
+  const [attachmentAnalyzePartialMessage, setAttachmentAnalyzePartialMessage] = useState<string | undefined>(undefined);
+  const [aiFilledFields, setAiFilledFields] = useState<ReadonlySet<string>>(new Set());
 
   const { pickImage, pickDocument } = useFilePicker();
   const { isUploading, uploadFiles } = useAttachmentUpload({
@@ -155,8 +224,7 @@ export default function AddExpenseModal({
         });
         const err = res.error?.trim();
         if (!res.success || err) {
-          setAiAnalyzeFailureMessage(err || "분석에 실패했습니다.");
-          setAiAnalyzeFailureVisible(true);
+          setAttachmentAnalyzeError("분석 서버에 연결하지 못했어요. 잠시 후 다시 시도해 주세요.");
           return;
         }
         const kind: AiDocumentItemType | null =
@@ -170,18 +238,36 @@ export default function AddExpenseModal({
                 : kind === "accommodation"
                   ? "숙박"
                   : "다른 항목";
-          setAiAnalyzeFailureMessage(
-            `문서가 [${label}]으로 분석되었습니다.\n비용 추가 화면에는 반영할 수 없습니다.`,
+          setAttachmentAnalyzeError(
+            `문서가 [${label}]으로 분석되었습니다. 비용 추가 화면에는 반영할 수 없습니다.`,
           );
-          setAiAnalyzeFailureVisible(true);
           return;
         }
         if (!res.draft || res.draft.itemType !== "expense") {
-          setAiAnalyzeFailureMessage("비용 정보를 추출하지 못했습니다.");
-          setAiAnalyzeFailureVisible(true);
+          setAttachmentAnalyzeError("이미지에서 금액·날짜를 읽지 못했어요. 더 선명한 영수증으로 다시 시도해 주세요.");
           return;
         }
+        setAttachmentAnalyzeError(null);
         const src = mergeExpenseDraftValueSource(res.draft);
+        const filledSet = new Set<string>(["category"]);
+        const amountExtracted = Number.parseInt(normalizeAmountDigitsAi(pickStrAi(src, ["amount", "Amount"])), 10) > 0;
+        const descriptionExtracted = !!pickStrAi(src, ["description", "Description"]);
+        const exRawCheck = pickStrAi(src, ["exDate", "ex_date", "ExDate"]);
+        const dateExtracted = !!(exRawCheck && dayjs(exRawCheck).isValid());
+        if (amountExtracted) filledSet.add("amount");
+        if (descriptionExtracted) filledSet.add("description");
+        if (dateExtracted) filledSet.add("ex_date");
+        setAiFilledFields(filledSet);
+        const isPartial = !amountExtracted || !descriptionExtracted || !dateExtracted;
+        if (isPartial) {
+          setAttachmentAnalyzeSuccess(false);
+          setAttachmentAnalyzePartial(true);
+          setAttachmentAnalyzePartialMessage("일부 항목을 인식하지 못했어요. 확인 필요 항목을 직접 입력해 주세요.");
+        } else {
+          setAttachmentAnalyzeSuccess(true);
+          setAttachmentAnalyzePartial(false);
+          setAttachmentAnalyzePartialMessage(undefined);
+        }
         const categoryRaw = pickStrAi(src, ["category", "Category"]) || "etc";
         const amountDigits = normalizeAmountDigitsAi(
           pickStrAi(src, ["amount", "Amount"]),
@@ -211,10 +297,7 @@ export default function AddExpenseModal({
           currency,
         }));
       } catch (e) {
-        setAiAnalyzeFailureMessage(
-          e instanceof Error ? e.message : "분석 요청에 실패했습니다.",
-        );
-        setAiAnalyzeFailureVisible(true);
+        setAttachmentAnalyzeError("분석 서버에 연결하지 못했어요. 잠시 후 다시 시도해 주세요.");
       } finally {
         setIsAiAnalyzing(false);
       }
@@ -302,10 +385,25 @@ export default function AddExpenseModal({
     }
   };
 
+  const handleRetryAnalyze = useCallback(() => {
+    if (pendingFiles.length === 0) return;
+    setAttachmentAnalyzeError(null);
+    setAttachmentAnalyzeSuccess(false);
+    setAttachmentAnalyzePartial(false);
+    setAttachmentAnalyzePartialMessage(undefined);
+    setAiFilledFields(new Set());
+    void handleAiAnalyzePress({ kind: "pending", key: pendingAiFileKey(pendingFiles[0]) });
+  }, [pendingFiles, handleAiAnalyzePress]);
+
   const handleClose = () => {
     setIsAiAnalyzing(false);
     setAiAnalyzeFailureVisible(false);
     setAiAnalyzeFailureMessage("");
+    setAttachmentAnalyzeError(null);
+    setAttachmentAnalyzeSuccess(false);
+    setAttachmentAnalyzePartial(false);
+    setAttachmentAnalyzePartialMessage(undefined);
+    setAiFilledFields(new Set());
     clearPendingFilesWithRevoke();
     setExpenseForm({
       category: ExpenseCategory.ETC,
@@ -357,7 +455,10 @@ export default function AddExpenseModal({
                     { zIndex: categoryOpen ? 10000 : 1 },
                   ]}
                 >
-                  <Text style={styles.inputLabel}>카테고리</Text>
+                  <View style={styles.labelRow}>
+                    <Text style={styles.inputLabel}>카테고리</Text>
+                    {aiFilledFields.has("category") && <AiFilledBadge />}
+                  </View>
                   <CategoryPicker
                     value={expenseForm.category}
                     onChange={cat =>
@@ -374,7 +475,10 @@ export default function AddExpenseModal({
 
                 <View style={styles.amountCurrencyRow}>
                   <View style={[styles.inputGroup, styles.amountGroup]}>
-                    <Text style={styles.inputLabel}>금액</Text>
+                    <View style={styles.labelRow}>
+                      <Text style={styles.inputLabel}>금액</Text>
+                      {aiFilledFields.has("amount") ? <AiFilledBadge /> : (attachmentAnalyzeSuccess || attachmentAnalyzePartial) ? <NeedsCheckBadge /> : null}
+                    </View>
                     <Input
                       variant="outlined"
                       placeholder={PLACEHOLDERS.expense.amount}
@@ -408,7 +512,10 @@ export default function AddExpenseModal({
                     { zIndex: showDatePicker ? 20000 : 1 },
                   ]}
                 >
-                  <Text style={styles.inputLabel}>날짜</Text>
+                  <View style={styles.labelRow}>
+                    <Text style={styles.inputLabel}>날짜</Text>
+                    {aiFilledFields.has("ex_date") ? <AiFilledBadge /> : (attachmentAnalyzeSuccess || attachmentAnalyzePartial) ? <NeedsCheckBadge /> : null}
+                  </View>
                   <Pressable
                     style={styles.dateInput}
                     onPress={() => setShowDatePicker(!showDatePicker)}
@@ -425,7 +532,10 @@ export default function AddExpenseModal({
                 </View>
 
                 <View style={styles.inputGroup}>
-                  <Text style={styles.inputLabel}>내용</Text>
+                  <View style={styles.labelRow}>
+                    <Text style={styles.inputLabel}>내용</Text>
+                    {aiFilledFields.has("description") ? <AiFilledBadge /> : (attachmentAnalyzeSuccess || attachmentAnalyzePartial) ? <NeedsCheckBadge /> : null}
+                  </View>
                   <Input
                     variant="outlined"
                     placeholder={PLACEHOLDERS.expense.descriptionForm}
@@ -438,6 +548,8 @@ export default function AddExpenseModal({
                   />
                 </View>
               </View>
+
+              <View style={styles.sectionDivider} />
 
               <AttachmentSection
                 variant="expense"
@@ -458,6 +570,13 @@ export default function AddExpenseModal({
                   Platform.OS === "web" ? handleAiAnalyzePress : undefined
                 }
                 isAiAnalyzing={isAiAnalyzing}
+                analyzeError={attachmentAnalyzeError}
+                onRetryAnalyze={
+                  Platform.OS === "web" ? handleRetryAnalyze : undefined
+                }
+                isAiAnalyzeSuccess={attachmentAnalyzeSuccess}
+                isAiAnalyzePartial={attachmentAnalyzePartial}
+                analyzePartialMessage={attachmentAnalyzePartialMessage}
               />
 
               <View style={styles.modalButtons}>
@@ -596,6 +715,11 @@ const styles = StyleSheet.create({
   inputGroup: {
     gap: 9,
   },
+  labelRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
   inputLabel: {
     fontFamily: typography.fontFamily.pretendardSemiBold,
     fontSize: 14,
@@ -707,6 +831,12 @@ const styles = StyleSheet.create({
   descriptionInput: {
     backgroundColor: colors.white,
     height: 50,
+  },
+  sectionDivider: {
+    height: 1,
+    backgroundColor: colors.gray400,
+    marginTop: 2,
+    marginHorizontal: -2,
   },
   attachmentSection: {
     width: "100%",

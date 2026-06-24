@@ -34,6 +34,8 @@ import AddIcon from "../../../assets/mobile_plan_add.svg";
 import CheckWhiteIcon from "../../../assets/check_white.svg";
 import ErrorTriangleIcon from "../../../assets/error_triangle.svg";
 import CloseErrorIcon from "../../../assets/close_error.svg";
+import ExpenseDeleteIcon from "../../../assets/mobile_x.svg";
+import RetryIcon from "../../../assets/retry.svg";
 
 export type { AttachmentSectionProps } from "@/ui/components/attachmentSection.types";
 
@@ -136,6 +138,11 @@ export default function AttachmentSection({
   onAiAnalyzePress,
   isAiAnalyzing = false,
   onCancelAiAnalyze,
+  analyzeError,
+  onRetryAnalyze,
+  isAiAnalyzeSuccess = false,
+  isAiAnalyzePartial = false,
+  analyzePartialMessage,
 }: AttachmentSectionProps) {
   const { data: me } = useMe();
   const isGuest = isGuestProp ?? me?.isGuest === true;
@@ -152,6 +159,11 @@ export default function AttachmentSection({
   const [fileFormatError, setFileFormatError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const dropZoneRef = useRef<any>(null);
+
+  type ExpenseAiTarget = { kind: "pending"; key: string } | { kind: "existing"; id: number } | null;
+  const [selectedExpenseAiTarget, setSelectedExpenseAiTarget] = useState<ExpenseAiTarget>(null);
+  const totalExpenseFiles = variant === "expense" ? pendingFiles.length + existing.length : 0;
+  const showExpenseAiRadio = variant === "expense" && !isAiAnalyzeSuccess && !isAiAnalyzePartial && totalExpenseFiles > 1;
 
   const showAiToolbar =
     Platform.OS === "web" &&
@@ -174,6 +186,21 @@ export default function AttachmentSection({
       return stillThere ? prev : null;
     });
   }, [existing, pendingFiles]);
+
+  useEffect(() => {
+    if (variant !== "expense") return;
+    setSelectedExpenseAiTarget(prev => {
+      const pendingKeys = pendingFiles.map(f => pendingAiFileKey(f));
+      const existingIds = existing.map(a => a.id);
+      if (prev) {
+        if (prev.kind === "pending" && pendingKeys.includes(prev.key)) return prev;
+        if (prev.kind === "existing" && existingIds.includes(prev.id)) return prev;
+      }
+      if (pendingFiles.length > 0) return { kind: "pending", key: pendingAiFileKey(pendingFiles[0]) };
+      if (existing.length > 0) return { kind: "existing", id: existing[0].id };
+      return null;
+    });
+  }, [pendingFiles, existing, variant]);
 
   const handleOpenExistingImage = (attachmentId: number) => {
     const imageItems: ImagePreviewItem[] = existing
@@ -472,9 +499,35 @@ export default function AttachmentSection({
               style={styles.expenseDot}
             />
             <Text style={styles.expenseTitle}>파일 첨부</Text>
+            {!!analyzeError ? (
+              <View style={styles.expenseFailBadge}>
+                <ErrorTriangleIcon width={10} height={10} />
+                <Text style={styles.expenseFailBadgeText}>분석 실패</Text>
+              </View>
+            ) : isAiAnalyzePartial ? (
+              <View style={styles.expensePartialBadge}>
+                {Platform.OS === "web" && createElement("svg", { width: 10, height: 10, viewBox: "0 0 12 12", fill: "none" },
+                  createElement("circle", { cx: "6", cy: "6", r: "5", stroke: "#A8730A", strokeWidth: "1.2" }),
+                  createElement("path", { d: "M6 3.4v3", stroke: "#A8730A", strokeWidth: "1.3", strokeLinecap: "round" }),
+                  createElement("circle", { cx: "6", cy: "8.4", r: "0.7", fill: "#A8730A" })
+                )}
+                <Text style={styles.expensePartialBadgeText}>일부만 인식</Text>
+              </View>
+            ) : isAiAnalyzeSuccess ? (
+              <View style={styles.expenseSuccessBadge}>
+                {Platform.OS === "web" && createElement("svg", { width: 10, height: 10, viewBox: "0 0 10 10", fill: "none" },
+                  createElement("path", { d: "M2 5.2l2 2L8.2 3", stroke: colors.primary, strokeWidth: "1.6", strokeLinecap: "round", strokeLinejoin: "round" })
+                )}
+                <Text style={styles.expenseSuccessBadgeText}>AI 자동 입력 완료</Text>
+              </View>
+            ) : null}
           </View>
           <Text style={styles.expenseSubtitle}>
-            PDF, JPG, PNG · AI가 금액·카테고리를 자동 입력해드려요.
+            {analyzeError
+              ? "자동 입력에 실패했어요. 다시 시도하거나 직접 입력해 주세요."
+              : isAiAnalyzeSuccess || isAiAnalyzePartial
+              ? "결과를 확인하고 필요한 항목만 수정하세요."
+              : "PDF, JPG, PNG · AI가 금액·카테고리를 자동 입력해드려요."}
           </Text>
         </View>
 
@@ -488,68 +541,158 @@ export default function AttachmentSection({
           </View>
         )}
 
-        {showAiToolbar && (
-          <Text style={styles.aiSelectHint}>분석할 파일을 1개 선택하세요.</Text>
-        )}
-
         {isLoadingExisting && !hasFiles ? (
           <View style={styles.loadingWrap}>
             <ActivityIndicator size="small" color={colors.primary} />
           </View>
         ) : hasFiles ? (
-          <View style={[styles.fileList, isAiAnalyzing && styles.fileListDimmed]}>
-            {existing.map(a => {
-              let onOpen: (() => void) | undefined;
-              if (isPdfMime(a.contentType)) onOpen = () => handleOpenPdf(a.fileUrl);
-              else if (isImageMime(a.contentType)) onOpen = () => handleOpenExistingImage(a.id);
-              const aiSelect = showAiToolbar
-                ? {
-                    selected: aiFileSelection?.kind === "existing" && aiFileSelection.id === a.id,
-                    onSelect: () => {
-                      if (!aiRowSelectable) return;
-                      setAiFileSelection(prev =>
-                        prev?.kind === "existing" && prev.id === a.id ? null : { kind: "existing", id: a.id },
+          <>
+            <View style={[styles.expenseFileList, isAiAnalyzing && styles.fileListDimmed]}>
+              {existing.map(a => {
+                const isExistingSelected = showExpenseAiRadio && selectedExpenseAiTarget?.kind === "existing" && selectedExpenseAiTarget.id === a.id;
+                return (
+                <Pressable
+                  key={`existing-${a.id}`}
+                  onPress={showExpenseAiRadio ? () => setSelectedExpenseAiTarget({ kind: "existing", id: a.id }) : undefined}
+                  style={[styles.expenseFileRow, isExistingSelected && styles.expenseFileRowSelected]}
+                >
+                  <View style={styles.expenseFileThumbnail}>
+                    {isImageMime(a.contentType) ? (
+                      <Image source={{ uri: a.fileUrl }} style={styles.expenseFileThumbnailImg} resizeMode="cover" />
+                    ) : (
+                      <AttachmentDocIcon width={20} height={20} />
+                    )}
+                  </View>
+                  <View style={styles.expenseFileInfo}>
+                    <Text style={styles.expenseFileName} numberOfLines={1}>{a.fileName}</Text>
+                    <Text style={styles.expenseFileSize}>{formatFileSize(a.fileSize)}</Text>
+                  </View>
+                  {isAiAnalyzeSuccess && (
+                    <View style={styles.expenseAiFileBadge}>
+                      <Text style={styles.expenseAiFileBadgeText}>AI 분석</Text>
+                    </View>
+                  )}
+                  {onRemoveExisting && (
+                    <Pressable
+                      onPress={e => { stopEventBubble(e); handleRemoveExisting(a.id); }}
+                      disabled={disabled || isUploading}
+                      style={styles.expenseDeleteBtn}
+                      hitSlop={6}
+                    >
+                      <ExpenseDeleteIcon width={11} height={11} color={colors.gray100} />
+                    </Pressable>
+                  )}
+                </Pressable>
+                );
+              })}
+              {pendingFiles.map((file, index) => {
+                const isPendingSelected = showExpenseAiRadio && selectedExpenseAiTarget?.kind === "pending" && selectedExpenseAiTarget.key === pendingAiFileKey(file);
+                return (
+                <Pressable
+                  key={`pending-${file.name}-${index}`}
+                  onPress={showExpenseAiRadio ? () => setSelectedExpenseAiTarget({ kind: "pending", key: pendingAiFileKey(file) }) : undefined}
+                  style={[styles.expenseFileRow, isPendingSelected && styles.expenseFileRowSelected]}
+                >
+                  <View style={styles.expenseFileThumbnail}>
+                    {isImageMime(file.mimeType) ? (
+                      <Image source={{ uri: file.uri }} style={styles.expenseFileThumbnailImg} resizeMode="cover" />
+                    ) : (
+                      <AttachmentDocIcon width={20} height={20} />
+                    )}
+                  </View>
+                  <View style={styles.expenseFileInfo}>
+                    <Text style={styles.expenseFileName} numberOfLines={1}>{file.name}</Text>
+                    <Text style={styles.expenseFileSize}>{formatFileSize(file.size)}</Text>
+                  </View>
+                  {isAiAnalyzeSuccess && (
+                    <View style={styles.expenseAiFileBadge}>
+                      <Text style={styles.expenseAiFileBadgeText}>AI 분석</Text>
+                    </View>
+                  )}
+                  <Pressable
+                    onPress={e => { stopEventBubble(e); handleRemovePending(index); }}
+                    disabled={disabled || isUploading}
+                    style={styles.expenseDeleteBtn}
+                    hitSlop={6}
+                  >
+                    <ExpenseDeleteIcon width={11} height={11} color={colors.gray600} />
+                  </Pressable>
+                </Pressable>
+                );
+              })}
+            </View>
+
+            {onAiAnalyzePress && (
+              <View style={styles.expenseActionRow}>
+                <Pressable
+                  onPress={triggerHiddenFilePicker}
+                  disabled={disabled || isUploading}
+                  style={({ pressed }) => [styles.expenseAddMoreBtn, pressed && styles.pressed]}
+                >
+                  <Text style={styles.expenseAddMoreText}>+ 파일 추가</Text>
+                </Pressable>
+                <View style={styles.expenseActionSpacer} />
+                {isAiAnalyzing ? (
+                  <View style={styles.expenseAiLoadingBtn}>
+                    <ActivityIndicator size="small" color={colors.aiInk} style={{ width: 12, height: 12, transform: [{ scale: 0.7 }] }} />
+                    <Text style={styles.expenseAiLoadingText}>분석 중...</Text>
+                  </View>
+                ) : analyzeError ? (
+                  <Pressable
+                    onPress={onRetryAnalyze}
+                    disabled={disabled || isUploading}
+                    style={({ pressed }) => [styles.expenseRetryBtn, pressed && styles.pressed]}
+                  >
+                    <RetryIcon width={12} height={12} color="rgb(192, 57, 43)" style={{ marginRight: 5 }} />
+                    <Text style={styles.expenseRetryBtnText}>다시 시도</Text>
+                  </Pressable>
+                ) : (
+                  <Pressable
+                    onPress={() => {
+                      const target = selectedExpenseAiTarget ?? (
+                        pendingFiles.length > 0
+                          ? { kind: "pending" as const, key: pendingAiFileKey(pendingFiles[0]) }
+                          : existing.length > 0
+                          ? { kind: "existing" as const, id: existing[0].id }
+                          : null
                       );
-                    },
-                  }
-                : undefined;
-              return renderFileRow(
-                `existing-${a.id}`,
-                a.fileName,
-                a.contentType,
-                [getAttachmentKindLabel(a.contentType), formatFileSize(a.fileSize)].filter(Boolean).join(" · "),
-                onRemoveExisting ? () => handleRemoveExisting(a.id) : undefined,
-                onOpen,
-                aiSelect,
-              );
-            })}
-            {pendingFiles.map((file, index) => {
-              let onOpen: (() => void) | undefined;
-              if (isPdfMime(file.mimeType)) onOpen = () => handleOpenPdf(file.uri);
-              else if (isImageMime(file.mimeType)) onOpen = () => handleOpenPendingImage(file.uri);
-              const aiSelect = showAiToolbar
-                ? {
-                    selected: aiFileSelection?.kind === "pending" && aiFileSelection.key === pendingAiFileKey(file),
-                    onSelect: () => {
-                      if (!aiRowSelectable) return;
-                      const key = pendingAiFileKey(file);
-                      setAiFileSelection(prev =>
-                        prev?.kind === "pending" && prev.key === key ? null : { kind: "pending", key },
-                      );
-                    },
-                  }
-                : undefined;
-              return renderFileRow(
-                `pending-${file.name}-${index}`,
-                file.name,
-                file.mimeType,
-                getAttachmentKindLabel(file.mimeType),
-                () => handleRemovePending(index),
-                onOpen,
-                aiSelect,
-              );
-            })}
-          </View>
+                      if (target) onAiAnalyzePress(target);
+                    }}
+                    disabled={disabled || isUploading}
+                    style={styles.expenseAiAnalyzeBtn}
+                  >
+                    {({ pressed, hovered }: { pressed: boolean; hovered?: boolean }) => (
+                      <LinearGradient
+                        colors={pressed ? colors.aiGradPress : hovered ? colors.aiGradHover : colors.aiGrad}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 1 }}
+                        style={styles.expenseAiAnalyzeGrad}
+                      >
+                        <CheckWhiteIcon width={11} height={11} />
+                        <Text style={styles.expenseAiAnalyzeText}>{isAiAnalyzeSuccess ? "다시 분석" : "AI 분석"}</Text>
+                      </LinearGradient>
+                    )}
+                  </Pressable>
+                )}
+              </View>
+            )}
+            {!!analyzeError && (
+              <View style={styles.expenseAnalyzeErrorBanner}>
+                <ErrorTriangleIcon width={13} height={13} style={styles.expenseAnalyzeErrorIcon} />
+                <Text style={styles.expenseAnalyzeErrorText}>{analyzeError}</Text>
+              </View>
+            )}
+            {isAiAnalyzePartial && !!analyzePartialMessage && (
+              <View style={styles.expensePartialBanner}>
+                {Platform.OS === "web" && createElement("svg", { width: 13, height: 13, viewBox: "0 0 16 16", fill: "none", style: { flexShrink: 0, marginTop: 1 } },
+                  createElement("circle", { cx: "8", cy: "8", r: "6.4", stroke: "#A8730A", strokeWidth: "1.3", fill: "#FFF3D6" }),
+                  createElement("path", { d: "M8 4.6v4", stroke: "#A8730A", strokeWidth: "1.5", strokeLinecap: "round" }),
+                  createElement("circle", { cx: "8", cy: "11", r: "0.8", fill: "#A8730A" })
+                )}
+                <Text style={styles.expensePartialBannerText}>{analyzePartialMessage}</Text>
+              </View>
+            )}
+          </>
         ) : (
           <Pressable
             ref={dropZoneRef}
@@ -571,48 +714,6 @@ export default function AttachmentSection({
             </View>
           </Pressable>
         )}
-
-        {showAiToolbar ? (
-          <View style={styles.aiToolbar}>
-            {isAiAnalyzing ? (
-              <View style={styles.aiAnalyzeLoadingBox}>
-                <ActivityIndicator size="small" color={colors.aiInk} />
-                <View style={styles.aiAnalyzeLoadingTextCol}>
-                  <Text style={styles.aiAnalyzeLoadingTextTitle}>분석 중...</Text>
-                  <Text style={styles.aiAnalyzeLoadingText}>AI가 첨부 파일 내용을 정리하고 있어요.</Text>
-                </View>
-                <Pressable
-                  onPress={onCancelAiAnalyze}
-                  style={({ pressed }) => [styles.aiCancelButton, pressed && styles.aiCancelButtonPressed]}
-                  hitSlop={8}
-                >
-                  <Text style={styles.aiCancelButtonText}>취소</Text>
-                </Pressable>
-              </View>
-            ) : (
-              <Pressable
-                onPress={() => { if (!aiFileSelection || isAiAnalyzing) return; onAiAnalyzePress?.(aiFileSelection); }}
-                disabled={!aiFileSelection || disabled || isUploading}
-                style={styles.aiAnalyzeButton}
-              >
-                {({ pressed, hovered }: { pressed: boolean; hovered?: boolean }) => {
-                  const isDisabled = !aiFileSelection || disabled || isUploading;
-                  const gradColors = isDisabled
-                    ? ([colors.gray400, colors.gray400] as const)
-                    : pressed ? colors.aiGradPress : hovered ? colors.aiGradHover : colors.aiGrad;
-                  return (
-                    <LinearGradient colors={gradColors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.aiAnalyzeGradient}>
-                      <View style={styles.aiAnalyzeButtonInner}>
-                        <CheckWhiteIcon width={14} height={14} />
-                        <Text style={styles.aiAnalyzeButtonText}>AI로 분석</Text>
-                      </View>
-                    </LinearGradient>
-                  );
-                }}
-              </Pressable>
-            )}
-          </View>
-        ) : null}
 
         <ImagePreviewModal
           visible={previewVisible}
@@ -904,13 +1005,13 @@ const styles = StyleSheet.create({
     width: "100%",
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: colors.gray300,
+    borderColor: colors.gray400,
     padding: 14,
     paddingBottom: 12,
     gap: 10,
   },
   expenseHeaderSection: {
-    gap: 2,
+    gap: 4,
   },
   expenseTitleRow: {
     flexDirection: "row",
@@ -934,6 +1035,235 @@ const styles = StyleSheet.create({
     fontSize: 11,
     lineHeight: 16,
     color: colors.gray700,
+  },
+  expenseFileList: {
+    gap: 6,
+  },
+  expenseFileRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    padding: 10,
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: colors.gray300,
+    borderRadius: 10,
+  },
+  expenseFileRowSelected: {
+    borderWidth: 2,
+    borderColor: colors.aiInk,
+  },
+  expenseFileThumbnail: {
+    width: 40,
+    height: 40,
+    borderRadius: 8,
+    backgroundColor: colors.gray300,
+    overflow: "hidden",
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+  },
+  expenseFileThumbnailImg: {
+    width: 40,
+    height: 40,
+  } as any,
+  expenseFileInfo: {
+    flex: 1,
+    minWidth: 0,
+    gap: 1,
+  },
+  expenseFileName: {
+    fontFamily: "Pretendard-SemiBold",
+    fontSize: 12,
+    lineHeight: 16,
+    color: colors.gray900,
+  },
+  expenseFileSize: {
+    fontFamily: "Poppins-Medium",
+    fontSize: 10,
+    lineHeight: 14,
+    color: colors.gray600,
+    marginTop: 1,
+  },
+  expenseDeleteBtn: {
+    width: 22,
+    height: 22,
+    borderRadius: 5,
+    backgroundColor: colors.gray200,
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+  },
+  expenseActionRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  expenseActionSpacer: {
+    flex: 1,
+  },
+  expenseAddMoreBtn: {
+    alignItems: "center",
+    justifyContent: "center",
+    height: 30,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+    backgroundColor: "rgba(255, 255, 255, 0.8)",
+    borderWidth: 1,
+    borderColor: colors.gray400,
+  },
+  expenseAddMoreText: {
+    fontFamily: "Pretendard-SemiBold",
+    fontSize: 11,
+    lineHeight: 16,
+    color: colors.gray900,
+  },
+  expenseAiAnalyzeBtn: {
+    borderRadius: 15,
+    overflow: "hidden",
+  },
+  expenseAiAnalyzeGrad: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    paddingVertical: 7,
+    paddingHorizontal: 14,
+  },
+  expenseAiLoadingBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    height: 30,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: colors.gray400,
+  },
+  expenseAiAnalyzeText: {
+    fontFamily: "Pretendard-SemiBold",
+    fontSize: 11,
+    lineHeight: 16,
+    color: colors.white,
+  },
+  expenseAiLoadingText: {
+    ...textStyles.h9,
+    color: colors.gray700,
+  },
+  expenseFailBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingVertical: 2,
+    paddingHorizontal: 8,
+    borderRadius: 999,
+    backgroundColor: "rgb(255, 231, 226)",
+  },
+  expenseFailBadgeText: {
+    fontFamily: "Pretendard-SemiBold",
+    fontSize: 10,
+    lineHeight: 14,
+    color: "rgb(192, 57, 43)",
+  },
+  expenseSuccessBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingVertical: 2,
+    paddingHorizontal: 8,
+    borderRadius: 999,
+    backgroundColor: colors.itineraryBg,
+  },
+  expenseSuccessBadgeText: {
+    fontFamily: "Pretendard-SemiBold",
+    fontSize: 10,
+    lineHeight: 14,
+    color: colors.primary,
+  },
+  expenseAiFileBadge: {
+    paddingVertical: 2,
+    paddingHorizontal: 7,
+    borderRadius: 999,
+    backgroundColor: colors.itineraryBg,
+    flexShrink: 0,
+  },
+  expenseAiFileBadgeText: {
+    fontFamily: "Pretendard-Bold",
+    fontSize: 9,
+    lineHeight: 12,
+    color: colors.primary,
+    letterSpacing: 0.02,
+  },
+  expenseRetryBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    height: 30,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "rgb(242, 187, 177)",
+    backgroundColor: colors.white,
+  },
+  expenseRetryBtnText: {
+    fontFamily: "Pretendard-SemiBold",
+    fontSize: 11,
+    lineHeight: 16,
+    color: "rgb(192, 57, 43)",
+  },
+  expenseAnalyzeErrorBanner: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 7,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    borderRadius: 9,
+    backgroundColor: "rgb(255, 241, 239)",
+    borderWidth: 1,
+    borderColor: "rgb(251, 217, 211)",
+  },
+  expenseAnalyzeErrorIcon: {
+    flexShrink: 0,
+    marginTop: 1,
+  },
+  expenseAnalyzeErrorText: {
+    flex: 1,
+    fontFamily: "Pretendard-Medium",
+    fontSize: 11,
+    lineHeight: 16,
+    color: colors.red,
+  },
+  expensePartialBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingVertical: 2,
+    paddingHorizontal: 8,
+    borderRadius: 999,
+    backgroundColor: "rgb(255, 243, 214)",
+  },
+  expensePartialBadgeText: {
+    fontFamily: "Pretendard-SemiBold",
+    fontSize: 10,
+    lineHeight: 14,
+    color: "rgb(168, 115, 10)",
+  },
+  expensePartialBanner: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 7,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    borderRadius: 9,
+    backgroundColor: "rgb(255, 248, 232)",
+    borderWidth: 1,
+    borderColor: "rgb(242, 223, 168)",
+  },
+  expensePartialBannerText: {
+    flex: 1,
+    fontFamily: "Pretendard-Medium",
+    fontSize: 11,
+    lineHeight: 16,
+    color: "rgb(122, 84, 8)",
   },
   expenseDropZone: {
     flexDirection: "row",

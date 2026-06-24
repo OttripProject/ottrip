@@ -34,4 +34,9 @@ export interface AttachmentSectionProps {
   onAiAnalyzePress?: (selection: AiAttachmentAnalyzeSelection) => void;
   isAiAnalyzing?: boolean;
   onCancelAiAnalyze?: () => void;
+  analyzeError?: string | null;
+  onRetryAnalyze?: () => void;
+  isAiAnalyzeSuccess?: boolean;
+  isAiAnalyzePartial?: boolean;
+  analyzePartialMessage?: string;
 }
