@@ -440,6 +440,7 @@ export default function AddExpenseModal({
               </View>
 
               <AttachmentSection
+                variant="expense"
                 style={styles.attachmentSection}
                 showTopDivider
                 pendingFiles={pendingFiles}

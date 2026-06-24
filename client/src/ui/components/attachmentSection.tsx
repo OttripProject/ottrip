@@ -118,6 +118,7 @@ type AiFileSelection =
   | { kind: "pending"; key: string };
 
 export default function AttachmentSection({
+  variant,
   pendingFiles,
   onPickImage,
   onPickDocument,
@@ -453,6 +454,197 @@ export default function AttachmentSection({
         })
       : null;
 
+  if (variant === "expense") {
+    return (
+      <LinearGradient
+        colors={colors.gradientAIColors}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={[styles.expenseRoot, style]}
+      >
+        {hiddenFileInput}
+        <View style={styles.expenseHeaderSection}>
+          <View style={styles.expenseTitleRow}>
+            <LinearGradient
+              colors={colors.gradientAIRefresh}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.expenseDot}
+            />
+            <Text style={styles.expenseTitle}>파일 첨부</Text>
+          </View>
+          <Text style={styles.expenseSubtitle}>
+            PDF, JPG, PNG · AI가 금액·카테고리를 자동 입력해드려요.
+          </Text>
+        </View>
+
+        {fileFormatError && (
+          <View style={styles.formatErrorBanner}>
+            <ErrorTriangleIcon width={14} height={14} style={styles.formatErrorIcon} />
+            <Text style={styles.formatErrorText}>{fileFormatError}</Text>
+            <Pressable onPress={() => setFileFormatError(null)} style={styles.formatErrorClose} hitSlop={6}>
+              <CloseErrorIcon width={10} height={10} color={colors.red} />
+            </Pressable>
+          </View>
+        )}
+
+        {showAiToolbar && (
+          <Text style={styles.aiSelectHint}>분석할 파일을 1개 선택하세요.</Text>
+        )}
+
+        {isLoadingExisting && !hasFiles ? (
+          <View style={styles.loadingWrap}>
+            <ActivityIndicator size="small" color={colors.primary} />
+          </View>
+        ) : hasFiles ? (
+          <View style={[styles.fileList, isAiAnalyzing && styles.fileListDimmed]}>
+            {existing.map(a => {
+              let onOpen: (() => void) | undefined;
+              if (isPdfMime(a.contentType)) onOpen = () => handleOpenPdf(a.fileUrl);
+              else if (isImageMime(a.contentType)) onOpen = () => handleOpenExistingImage(a.id);
+              const aiSelect = showAiToolbar
+                ? {
+                    selected: aiFileSelection?.kind === "existing" && aiFileSelection.id === a.id,
+                    onSelect: () => {
+                      if (!aiRowSelectable) return;
+                      setAiFileSelection(prev =>
+                        prev?.kind === "existing" && prev.id === a.id ? null : { kind: "existing", id: a.id },
+                      );
+                    },
+                  }
+                : undefined;
+              return renderFileRow(
+                `existing-${a.id}`,
+                a.fileName,
+                a.contentType,
+                [getAttachmentKindLabel(a.contentType), formatFileSize(a.fileSize)].filter(Boolean).join(" · "),
+                onRemoveExisting ? () => handleRemoveExisting(a.id) : undefined,
+                onOpen,
+                aiSelect,
+              );
+            })}
+            {pendingFiles.map((file, index) => {
+              let onOpen: (() => void) | undefined;
+              if (isPdfMime(file.mimeType)) onOpen = () => handleOpenPdf(file.uri);
+              else if (isImageMime(file.mimeType)) onOpen = () => handleOpenPendingImage(file.uri);
+              const aiSelect = showAiToolbar
+                ? {
+                    selected: aiFileSelection?.kind === "pending" && aiFileSelection.key === pendingAiFileKey(file),
+                    onSelect: () => {
+                      if (!aiRowSelectable) return;
+                      const key = pendingAiFileKey(file);
+                      setAiFileSelection(prev =>
+                        prev?.kind === "pending" && prev.key === key ? null : { kind: "pending", key },
+                      );
+                    },
+                  }
+                : undefined;
+              return renderFileRow(
+                `pending-${file.name}-${index}`,
+                file.name,
+                file.mimeType,
+                getAttachmentKindLabel(file.mimeType),
+                () => handleRemovePending(index),
+                onOpen,
+                aiSelect,
+              );
+            })}
+          </View>
+        ) : (
+          <Pressable
+            ref={dropZoneRef}
+            onPress={triggerHiddenFilePicker}
+            disabled={disabled || isUploading}
+            style={({ pressed }) => [
+              styles.expenseDropZone,
+              isDragOver && styles.expenseDropZoneDragOver,
+              pressed && !disabled && !isDragOver && styles.dropZonePressed,
+              (disabled || isUploading) && styles.dropZoneDisabled,
+            ]}
+          >
+            <View style={[styles.expenseDropZoneIconBox, isDragOver && styles.dropZoneIconBoxDragOver]}>
+              <UploadIcon width={20} height={20} color={isDragOver ? colors.primary : colors.gray900} />
+            </View>
+            <View style={styles.expenseDropZoneTextCol}>
+              <Text style={styles.expenseDropZoneHint}>파일을 끌어다 놓거나 클릭해서 추가</Text>
+              <Text style={styles.expenseDropZoneSub}>PDF · JPG · PNG · 최대 10MB</Text>
+            </View>
+          </Pressable>
+        )}
+
+        {showAiToolbar ? (
+          <View style={styles.aiToolbar}>
+            {isAiAnalyzing ? (
+              <View style={styles.aiAnalyzeLoadingBox}>
+                <ActivityIndicator size="small" color={colors.aiInk} />
+                <View style={styles.aiAnalyzeLoadingTextCol}>
+                  <Text style={styles.aiAnalyzeLoadingTextTitle}>분석 중...</Text>
+                  <Text style={styles.aiAnalyzeLoadingText}>AI가 첨부 파일 내용을 정리하고 있어요.</Text>
+                </View>
+                <Pressable
+                  onPress={onCancelAiAnalyze}
+                  style={({ pressed }) => [styles.aiCancelButton, pressed && styles.aiCancelButtonPressed]}
+                  hitSlop={8}
+                >
+                  <Text style={styles.aiCancelButtonText}>취소</Text>
+                </Pressable>
+              </View>
+            ) : (
+              <Pressable
+                onPress={() => { if (!aiFileSelection || isAiAnalyzing) return; onAiAnalyzePress?.(aiFileSelection); }}
+                disabled={!aiFileSelection || disabled || isUploading}
+                style={styles.aiAnalyzeButton}
+              >
+                {({ pressed, hovered }: { pressed: boolean; hovered?: boolean }) => {
+                  const isDisabled = !aiFileSelection || disabled || isUploading;
+                  const gradColors = isDisabled
+                    ? ([colors.gray400, colors.gray400] as const)
+                    : pressed ? colors.aiGradPress : hovered ? colors.aiGradHover : colors.aiGrad;
+                  return (
+                    <LinearGradient colors={gradColors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.aiAnalyzeGradient}>
+                      <View style={styles.aiAnalyzeButtonInner}>
+                        <CheckWhiteIcon width={14} height={14} />
+                        <Text style={styles.aiAnalyzeButtonText}>AI로 분석</Text>
+                      </View>
+                    </LinearGradient>
+                  );
+                }}
+              </Pressable>
+            )}
+          </View>
+        ) : null}
+
+        <ImagePreviewModal
+          visible={previewVisible}
+          onClose={() => setPreviewVisible(false)}
+          images={previewItems}
+          initialIndex={previewInitialIndex}
+        />
+        <Modal visible={previewImageUri !== null} transparent animationType="fade" onRequestClose={handleClosePreview}>
+          <Pressable style={styles.previewBackdrop} onPress={handleClosePreview}>
+            {previewImageUri !== null && (
+              <Image source={{ uri: previewImageUri }} style={{ width: windowWidth, height: windowHeight }} resizeMode="contain"
+                onLoadStart={() => setIsPreviewImageLoading(true)}
+                onLoadEnd={() => setIsPreviewImageLoading(false)}
+                onError={() => { setIsPreviewImageLoading(false); showMessage("이미지 열기 실패", "이미지를 불러오지 못했습니다."); handleClosePreview(); }}
+              />
+            )}
+            {isPreviewImageLoading && (
+              <View style={styles.previewLoading} pointerEvents="none">
+                <ActivityIndicator size="large" color={colors.white} />
+              </View>
+            )}
+            <View style={styles.previewCloseBar} pointerEvents="box-none">
+              <Pressable onPress={handleClosePreview} style={({ pressed }) => [styles.previewCloseButton, pressed && styles.pressed]}>
+                <DeleteIcon width={24} height={24} color={colors.white} />
+              </Pressable>
+            </View>
+          </Pressable>
+        </Modal>
+      </LinearGradient>
+    );
+  }
+
   return (
     <View style={[styles.root, style]}>
       {hiddenFileInput}
@@ -707,6 +899,84 @@ export default function AttachmentSection({
 const styles = StyleSheet.create({
   root: {
     width: "100%",
+  },
+  expenseRoot: {
+    width: "100%",
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.gray300,
+    padding: 14,
+    paddingBottom: 12,
+    gap: 10,
+  },
+  expenseHeaderSection: {
+    gap: 2,
+  },
+  expenseTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  expenseDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 999,
+    flexShrink: 0,
+  },
+  expenseTitle: {
+    fontFamily: "Pretendard-SemiBold",
+    fontSize: 13,
+    lineHeight: 18,
+    color: colors.gray900,
+  },
+  expenseSubtitle: {
+    fontFamily: "Pretendard-Regular",
+    fontSize: 11,
+    lineHeight: 16,
+    color: colors.gray700,
+  },
+  expenseDropZone: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderRadius: 12,
+    backgroundColor: colors.white,
+    borderWidth: 1.5,
+    borderStyle: "dashed" as const,
+    borderColor: colors.gray400,
+  },
+  expenseDropZoneDragOver: {
+    borderColor: colors.primary,
+    backgroundColor: "#EBF4FF",
+  },
+  expenseDropZoneIconBox: {
+    width: 40,
+    height: 40,
+    borderRadius: 11,
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: colors.gray300,
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+  },
+  expenseDropZoneTextCol: {
+    flex: 1,
+    gap: 2,
+  },
+  expenseDropZoneHint: {
+    fontFamily: "Pretendard-SemiBold",
+    fontSize: 12,
+    lineHeight: 18,
+    color: colors.gray900,
+  },
+  expenseDropZoneSub: {
+    fontFamily: "Pretendard-Regular",
+    fontSize: 11,
+    lineHeight: 16,
+    color: colors.gray600,
   },
   topDivider: {
     height: 1,

@@ -11,6 +11,7 @@ export function pendingAiFileKey(file: LocalFile): string {
 }
 
 export interface AttachmentSectionProps {
+  variant?: "expense";
   pendingFiles: LocalFile[];
   onPickImage: () => void;
   onPickDocument: () => void;
