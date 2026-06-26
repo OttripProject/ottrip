@@ -21,6 +21,7 @@ import {
 } from "react-native";
 
 import DetailsPanel from "@/components/panels/DetailsPanel";
+import EmptyPlanPanel from "@/components/panels/EmptyPlanPanel";
 import HeaderPanel from "@/components/panels/HeaderPanel";
 import WeeklySchedulePanel from "@/components/panels/WeeklySchedulePanel";
 import AIAssistantPanel from "@/components/panels/aiassistant/AIAssistantPanel";
@@ -489,6 +490,23 @@ export default function DashboardScreen() {
     return null;
   }
 
+  const handleTripCreated = (trip: {
+    id: string;
+    publicId: string;
+    name: string;
+    startDate: string;
+    endDate: string;
+  }) => {
+    setSelectedTrip(trip);
+    setSelectedPlanId(Number.parseInt(trip.id));
+    if (Platform.OS === "web") {
+      if (trip.publicId) {
+        // @ts-ignore
+        navigation.navigate("PLAN", { publicId: trip.publicId });
+      }
+    }
+  };
+
   return (
     <GradientBackground
       colors={["#D7D0FF33", "#CBDDFF80"]}
@@ -512,80 +530,89 @@ export default function DashboardScreen() {
               { flex: ratio.left, height: availableHeight },
             ]}
           >
-            {/* 2. 주간 스케줄 모달 (70% 높이) */}
-            <View style={[styles.scheduleModal, { height: leftTopHeight }]}>
-              <WeeklySchedulePanel
-                itineraries={planData.itineraries}
-                flights={planData.flights}
-                height={leftTopHeight}
-                selectedTrip={selectedTrip}
-                planData={planData}
-                plans={plansQuery.plans}
-                trips={trips}
-                onPlansRefresh={plansQuery.fetchPlans}
+            {trips.length === 0 && !plansQuery.isLoading ? (
+              <EmptyPlanPanel
                 onPlanAdd={plansQuery.addPlan}
-                onPlanUpdate={plansQuery.updatePlan}
-                onPlanDelete={plansQuery.deletePlan}
-                onItineraryAdd={handleItineraryAdd}
-                previewAccommodation={previewAccommodation}
-                onPreviewAccommodationChange={setPreviewAccommodation}
-                onPlanSelect={trip => {
-                  setSelectedTrip(trip);
-                  setSelectedPlanId(trip ? Number.parseInt(trip.id) : null);
-                  if (Platform.OS === "web") {
-                    if (trip?.publicId) {
-                      // @ts-ignore
-                      navigation.navigate("PLAN", { publicId: trip.publicId });
-                    } else {
-                      // @ts-ignore
-                      navigation.navigate("OTTRIP");
-                    }
-                  } else {
-                    if (trip?.publicId) {
-                      // @ts-ignore
-                      navigation.navigate("PLAN", { publicId: trip.publicId });
-                    } else {
-                      // @ts-ignore
-                      navigation.navigate("OTTRIP");
-                    }
-                  }
-                }}
-                onItinerarySelect={setSelectedItinerary}
-                onFlightAdd={handleFlightAdd}
-                onAccommodationAdd={handleAccommodationAdd}
-                onShowItineraryModal={handleShowItineraryModal}
-                onShowFlightModal={handleShowFlightModal}
-                onRequestNewFlight={handleRequestNewFlight}
-                onRequestNewItinerary={handleRequestNewItinerary}
-                onShowAccommodationModal={handleShowAccommodationModal}
-                onShowItineraryDetail={handleShowItineraryDetail}
-                onShowFlightDetail={handleShowFlightDetail}
-                onShowAccommodationDetail={handleShowAccommodationDetail}
-                activeTab={activeTab}
-                selectedItinerary={selectedItinerary}
+                onTripCreated={handleTripCreated}
               />
-            </View>
+            ) : (
+              <>
+                {/* 2. 주간 스케줄 모달 (70% 높이) */}
+                <View style={[styles.scheduleModal, { height: leftTopHeight }]}>
+                  <WeeklySchedulePanel
+                    itineraries={planData.itineraries}
+                    flights={planData.flights}
+                    height={leftTopHeight}
+                    selectedTrip={selectedTrip}
+                    planData={planData}
+                    plans={plansQuery.plans}
+                    trips={trips}
+                    onPlansRefresh={plansQuery.fetchPlans}
+                    onPlanAdd={plansQuery.addPlan}
+                    onPlanUpdate={plansQuery.updatePlan}
+                    onPlanDelete={plansQuery.deletePlan}
+                    onItineraryAdd={handleItineraryAdd}
+                    previewAccommodation={previewAccommodation}
+                    onPreviewAccommodationChange={setPreviewAccommodation}
+                    onPlanSelect={trip => {
+                      setSelectedTrip(trip);
+                      setSelectedPlanId(trip ? Number.parseInt(trip.id) : null);
+                      if (Platform.OS === "web") {
+                        if (trip?.publicId) {
+                          // @ts-ignore
+                          navigation.navigate("PLAN", { publicId: trip.publicId });
+                        } else {
+                          // @ts-ignore
+                          navigation.navigate("OTTRIP");
+                        }
+                      } else {
+                        if (trip?.publicId) {
+                          // @ts-ignore
+                          navigation.navigate("PLAN", { publicId: trip.publicId });
+                        } else {
+                          // @ts-ignore
+                          navigation.navigate("OTTRIP");
+                        }
+                      }
+                    }}
+                    onItinerarySelect={setSelectedItinerary}
+                    onFlightAdd={handleFlightAdd}
+                    onAccommodationAdd={handleAccommodationAdd}
+                    onShowItineraryModal={handleShowItineraryModal}
+                    onShowFlightModal={handleShowFlightModal}
+                    onRequestNewFlight={handleRequestNewFlight}
+                    onRequestNewItinerary={handleRequestNewItinerary}
+                    onShowAccommodationModal={handleShowAccommodationModal}
+                    onShowItineraryDetail={handleShowItineraryDetail}
+                    onShowFlightDetail={handleShowFlightDetail}
+                    onShowAccommodationDetail={handleShowAccommodationDetail}
+                    activeTab={activeTab}
+                    selectedItinerary={selectedItinerary}
+                  />
+                </View>
 
-            {/* 하단 모달들 (30% 높이) */}
-            <View style={[styles.bottomRow, { height: leftBottomHeight }]}>
-              {/* 4. 비용 모달 (좌측 하단) */}
-              <View style={styles.expensesModal}>
-                <ExpensesPanel
-                  planData={{
-                    ...planData,
-                    refreshItineraries: planData.refreshItineraries,
-                    refreshFlights: planData.refreshFlights,
-                    refreshAccommodations: planData.refreshAccommodations,
-                  }}
-                  onExpenseAdd={handleExpenseAdd}
-                />
-              </View>
+                {/* 하단 모달들 (30% 높이) */}
+                <View style={[styles.bottomRow, { height: leftBottomHeight }]}>
+                  {/* 4. 비용 모달 (좌측 하단) */}
+                  <View style={styles.expensesModal}>
+                    <ExpensesPanel
+                      planData={{
+                        ...planData,
+                        refreshItineraries: planData.refreshItineraries,
+                        refreshFlights: planData.refreshFlights,
+                        refreshAccommodations: planData.refreshAccommodations,
+                      }}
+                      onExpenseAdd={handleExpenseAdd}
+                    />
+                  </View>
 
-              {/* 5. AI 어시스턴트 모달 (우측 하단) */}
-              <View style={styles.aiModal}>
-                <AIAssistantPanel publicId={planData.plan?.publicId || null} />
-              </View>
-            </View>
+                  {/* 5. AI 어시스턴트 모달 (우측 하단) */}
+                  <View style={styles.aiModal}>
+                    <AIAssistantPanel publicId={planData.plan?.publicId || null} />
+                  </View>
+                </View>
+              </>
+            )}
           </View>
 
           {/* 우측 영역 (동적 비율) */}
