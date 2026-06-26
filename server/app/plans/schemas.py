@@ -2,34 +2,51 @@ from datetime import date
 
 from pydantic import Field
 
+from app.accomodation.schemas import AccommodationRead
 from app.expenses.schemas import ExpenseRead
 from app.flights.schemas import FlightRead
 from app.itinerary.schemas import ItineraryRead
-from app.accomodation.schemas import AccommodationRead
 from app.schemas import APISchema
+
 from .models import Role
+
+
+class PlanSegmentBase(APISchema):
+    country: str
+    city: str
+    start_date: date
+    end_date: date
+
+
+class PlanSegmentCreate(PlanSegmentBase):
+    pass
+
+
+class PlanSegmentRead(PlanSegmentBase):
+    id: int
+    order_index: int
 
 
 class PlanBase(APISchema):
     title: str = Field(..., max_length=50)
-    start_date: date
-    end_date: date
     memo: str = ""
 
 
 class PlanCreate(PlanBase):
-    pass
+    segments: list[PlanSegmentCreate]
 
 
 class PlanUpdate(APISchema):
     title: str | None = Field(None, max_length=50)
-    start_date: date | None = None
-    end_date: date | None = None
+    segments: list[PlanSegmentCreate] | None = None
 
 
 class PlanRead(PlanBase):
     id: int
     public_id: str
+    start_date: date
+    end_date: date
+    segments: list[PlanSegmentRead] = []
 
 
 class PlanReadWithInforms(PlanRead):
