@@ -341,7 +341,6 @@ export default function AddScheduleWithAiModal({
       ? maxDate.format("YYYY-MM-DD")
       : planEndDate;
     if (newStart !== planStartDate || newEnd !== planEndDate) {
-      await plansApi.updatePlan(planId, { startDate: newStart, endDate: newEnd });
       onPlanDatesExtended?.(newStart, newEnd);
     }
   };

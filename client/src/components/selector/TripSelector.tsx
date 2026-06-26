@@ -75,6 +75,12 @@ interface Trip {
   name: string;
   startDate: string;
   endDate: string;
+  segments?: Array<{ country: string; city: string; startDate: string; endDate: string }>;
+}
+
+interface TripAddData {
+  name: string;
+  segments: Array<{ country: string; city: string; startDate: string; endDate: string }>;
 }
 
 interface TripSelectorProps {
@@ -82,9 +88,9 @@ interface TripSelectorProps {
   onTripSelect: (trip: Trip) => void;
   trips: Trip[];
   onTripAdd: (
-    trip: Omit<Trip, "id">,
+    trip: TripAddData,
   ) => Promise<Trip | null | false | void> | Trip | null | false | void;
-  onTripUpdate?: (id: string, trip: Omit<Trip, "id">) => void;
+  onTripUpdate?: (id: string, trip: TripAddData) => void;
   onTripDelete?: (id: string) => void;
   open?: boolean;
 }
@@ -174,8 +180,17 @@ export default function TripSelector({
     if (editingTrip && showEditModal) {
       editTripForm.setFormData({
         name: editingTrip.name,
-        startDate: editingTrip.startDate,
-        endDate: editingTrip.endDate,
+        segments: editingTrip.segments?.map(s => ({
+          country: s.country,
+          city: s.city,
+          startDate: s.startDate,
+          endDate: s.endDate,
+        })) ?? [{
+          country: "",
+          city: "",
+          startDate: editingTrip.startDate,
+          endDate: editingTrip.endDate,
+        }],
       });
     }
   }, [editingTrip, showEditModal]);
@@ -227,8 +242,7 @@ export default function TripSelector({
     try {
       const result = onTripUpdate?.(editingTrip.id, {
         name: editTripForm.tripData.name,
-        startDate: editTripForm.tripData.startDate,
-        endDate: editTripForm.tripData.endDate,
+        segments: editTripForm.tripData.segments,
       });
 
       if (result && typeof result === "object" && "then" in result) {
@@ -534,7 +548,14 @@ export default function TripSelector({
         }}
         mode="add"
         tripData={addTripForm.tripData}
-        onTripDataChange={addTripForm.updateTripData}
+        activeSegmentIndex={addTripForm.activeSegmentIndex}
+        selectionMode={addTripForm.selectionMode}
+        onNameChange={name => addTripForm.updateTripData({ name })}
+        onSegmentUpdate={addTripForm.updateSegment}
+        onSegmentAdd={addTripForm.addSegment}
+        onSegmentRemove={addTripForm.removeSegment}
+        onSegmentMove={addTripForm.moveSegment}
+        onSegmentFocus={addTripForm.setActiveSegmentIndex}
         markedDates={addTripForm.getMarkedDates()}
         onDateSelect={addTripForm.handleDateSelect}
         onSubmit={handleAddTrip}
@@ -549,7 +570,14 @@ export default function TripSelector({
         }}
         mode="edit"
         tripData={editTripForm.tripData}
-        onTripDataChange={editTripForm.updateTripData}
+        activeSegmentIndex={editTripForm.activeSegmentIndex}
+        onNameChange={name => editTripForm.updateTripData({ name })}
+        selectionMode={editTripForm.selectionMode}
+        onSegmentUpdate={editTripForm.updateSegment}
+        onSegmentAdd={editTripForm.addSegment}
+        onSegmentRemove={editTripForm.removeSegment}
+        onSegmentMove={editTripForm.moveSegment}
+        onSegmentFocus={editTripForm.setActiveSegmentIndex}
         markedDates={editTripForm.getMarkedDates()}
         onDateSelect={editTripForm.handleDateSelect}
         onSubmit={handleEditTrip}

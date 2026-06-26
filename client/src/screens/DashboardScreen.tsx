@@ -303,25 +303,7 @@ export default function DashboardScreen() {
     }
   }, []);
 
-  const extendPlanDateIfNeeded = async (...dates: string[]) => {
-    if (!selectedPlanId || !selectedTrip?.startDate || !selectedTrip?.endDate) return;
-    let newStart = dayjs(selectedTrip.startDate);
-    let newEnd = dayjs(selectedTrip.endDate);
-    for (const d of dates) {
-      if (!d) continue;
-      const dt = dayjs(d);
-      if (dt.isBefore(newStart, "day")) newStart = dt;
-      if (dt.isAfter(newEnd, "day")) newEnd = dt;
-    }
-    if (newStart.isSame(dayjs(selectedTrip.startDate), "day") &&
-        newEnd.isSame(dayjs(selectedTrip.endDate), "day")) return;
-    try {
-      await plansQuery.updatePlan(selectedPlanId, {
-        startDate: newStart.format("YYYY-MM-DD"),
-        endDate: newEnd.format("YYYY-MM-DD"),
-      });
-      plansQuery.fetchPlans();
-    } catch {}
+  const extendPlanDateIfNeeded = async (..._dates: string[]) => {
   };
 
   const handleItineraryAdd = async (newItinerary: any) => {

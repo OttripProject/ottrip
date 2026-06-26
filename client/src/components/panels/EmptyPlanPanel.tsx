@@ -30,8 +30,12 @@ export default function EmptyPlanPanel({
     try {
       const created = await onPlanAdd({
         title: planForm.tripData.name,
-        startDate: planForm.tripData.startDate,
-        endDate: planForm.tripData.endDate,
+        segments: planForm.tripData.segments.map(s => ({
+          country: s.country,
+          city: s.city,
+          startDate: s.startDate,
+          endDate: s.endDate,
+        })),
       });
       if (created) {
         const tripData = {
@@ -75,7 +79,14 @@ export default function EmptyPlanPanel({
         }}
         mode="add"
         tripData={planForm.tripData}
-        onTripDataChange={planForm.updateTripData}
+        activeSegmentIndex={planForm.activeSegmentIndex}
+        selectionMode={planForm.selectionMode}
+        onNameChange={name => planForm.updateTripData({ name })}
+        onSegmentUpdate={planForm.updateSegment}
+        onSegmentAdd={planForm.addSegment}
+        onSegmentRemove={planForm.removeSegment}
+        onSegmentMove={planForm.moveSegment}
+        onSegmentFocus={planForm.setActiveSegmentIndex}
         markedDates={planForm.getMarkedDates()}
         onDateSelect={planForm.handleDateSelect}
         onSubmit={handleSubmit}

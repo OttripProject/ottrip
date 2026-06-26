@@ -106,18 +106,17 @@ export default function AddPlanModal({
 
     setIsSubmitting(true);
     try {
+      const singleSegment = [{ country: "", city: "", startDate, endDate }];
       if (planToEdit && updatePlan) {
         const updatedPlan = await updatePlan(planToEdit.id, {
           title: trimmedTitle,
-          startDate,
-          endDate,
+          segments: singleSegment,
         });
         onPlanCreated(updatedPlan);
       } else {
         const newPlan = await addPlan({
           title: trimmedTitle,
-          startDate,
-          endDate,
+          segments: singleSegment,
         });
         onPlanCreated(newPlan);
       }

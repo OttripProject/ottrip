@@ -5,6 +5,23 @@ export interface ApiResponse<T = any> {
   success: boolean;
 }
 
+// 구간 (PlanSegment) 관련 타입
+export interface PlanSegment {
+  id: number;
+  country: string;
+  city: string;
+  startDate: string;
+  endDate: string;
+  orderIndex: number;
+}
+
+export interface PlanSegmentInput {
+  country: string;
+  city: string;
+  startDate: string;
+  endDate: string;
+}
+
 // 계획 (Plan) 관련 타입
 export interface TravelChecklistItem {
   id: number;
@@ -25,6 +42,7 @@ export interface Plan {
   myRole?: "owner" | "editor" | "viewer";
   createdAt: string;
   updatedAt: string;
+  segments?: PlanSegment[];
   travel_checklist?: {
     categories?: Record<string, TravelChecklistItem[]>;
   } | null;
@@ -32,14 +50,12 @@ export interface Plan {
 
 export interface CreatePlanRequest {
   title: string;
-  startDate: string;
-  endDate: string;
+  segments: PlanSegmentInput[];
 }
 
 export interface UpdatePlanRequest {
   title?: string;
-  startDate?: string;
-  endDate?: string;
+  segments?: PlanSegmentInput[];
 }
 
 // 일정 (Itinerary) 관련 타입

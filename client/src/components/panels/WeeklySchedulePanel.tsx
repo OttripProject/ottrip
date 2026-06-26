@@ -1014,32 +1014,7 @@ export default function WeeklySchedulePanel({
   const trips = externalTrips;
   const planData = externalPlanData;
 
-  const extendPlanDateIfNeeded = async (...dates: string[]) => {
-    const planId = internalSelectedTrip?.id
-      ? Number.parseInt(internalSelectedTrip.id)
-      : null;
-    if (!planId || !internalSelectedTrip?.startDate || !internalSelectedTrip?.endDate) return;
-
-    const planStart = dayjs(internalSelectedTrip.startDate);
-    const planEnd = dayjs(internalSelectedTrip.endDate);
-
-    let newStart = planStart;
-    let newEnd = planEnd;
-    for (const d of dates) {
-      const dt = dayjs(d);
-      if (dt.isBefore(newStart, "day")) newStart = dt;
-      if (dt.isAfter(newEnd, "day")) newEnd = dt;
-    }
-
-    if (newStart.isSame(planStart, "day") && newEnd.isSame(planEnd, "day")) return;
-
-    try {
-      await onPlanUpdate(planId, {
-        startDate: newStart.format("YYYY-MM-DD"),
-        endDate: newEnd.format("YYYY-MM-DD"),
-      });
-      if (onPlansRefresh) onPlansRefresh();
-    } catch {}
+  const extendPlanDateIfNeeded = async (..._dates: string[]) => {
   };
 
   useEffect(() => {
@@ -1541,8 +1516,7 @@ export default function WeeklySchedulePanel({
     try {
       const createdPlan = await onPlanAdd({
         title: newTrip.name,
-        startDate: newTrip.startDate,
-        endDate: newTrip.endDate,
+        segments: newTrip.segments ?? [],
       });
 
       if (createdPlan) {
@@ -1592,8 +1566,7 @@ export default function WeeklySchedulePanel({
       const planId = Number.parseInt(tripId);
       const updatedPlan = await onPlanUpdate(planId, {
         title: updatedTrip.name,
-        startDate: updatedTrip.startDate,
-        endDate: updatedTrip.endDate,
+        segments: updatedTrip.segments ?? [],
       });
 
       if (updatedPlan) {
@@ -3360,7 +3333,14 @@ export default function WeeklySchedulePanel({
         }}
         mode="add"
         tripData={planForm.tripData}
-        onTripDataChange={planForm.updateTripData}
+        activeSegmentIndex={planForm.activeSegmentIndex}
+        selectionMode={planForm.selectionMode}
+        onNameChange={name => planForm.updateTripData({ name })}
+        onSegmentUpdate={planForm.updateSegment}
+        onSegmentAdd={planForm.addSegment}
+        onSegmentRemove={planForm.removeSegment}
+        onSegmentMove={planForm.moveSegment}
+        onSegmentFocus={planForm.setActiveSegmentIndex}
         markedDates={planForm.getMarkedDates()}
         onDateSelect={planForm.handleDateSelect}
         onSubmit={handlePlanAddSubmit}
