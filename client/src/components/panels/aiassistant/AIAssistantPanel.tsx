@@ -124,7 +124,7 @@ export default function AIAssistantPanel({ publicId }: AIAssistantPanelProps) {
   };
 
   const handleRefresh = () => {
-    setShowRefreshModal(true);
+    void performRefresh();
   };
 
   const performRefresh = async () => {

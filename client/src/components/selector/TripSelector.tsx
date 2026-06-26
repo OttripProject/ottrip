@@ -516,7 +516,7 @@ export default function TripSelector({
                       handleDeleteTrip(trip.id);
                     }}
                   >
-                    <DeleteIcon width={14} height={14} />
+                    <DeleteIcon width={14} height={14} color={colors.warning} />
                     <Text style={styles.menuItemTextDelete}>삭제</Text>
                   </Pressable>
                 </View>

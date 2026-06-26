@@ -1,17 +1,17 @@
 import { useMe } from "@/hooks/useMe";
-import GradientBackground from "@/ui/components/GradientBackground";
 import { colors } from "@/ui/tokens/colors";
 import { radii } from "@/ui/tokens/radii";
 import { spacing } from "@/ui/tokens/spacing";
-import { textStyles, typography } from "@/ui/tokens/typography";
+import { textStyles } from "@/ui/tokens/typography";
 import { guestPrompt } from "@/utils/guestPrompt";
-import MaskedView from "@react-native-masked-view/masked-view";
 import { LinearGradient } from "expo-linear-gradient";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
-  ActivityIndicator,
+  Animated,
+  Easing,
   Modal,
   Platform,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -19,11 +19,11 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import AddCheckList from "../../../assets/add_checklist.svg";
+import AddCheckList from "../../../assets/mobile_plus.svg";
 import AiCheckIcon from "../../../assets/ai_check.svg";
-import XIcon from "../../../assets/ai_close.svg";
+import XIcon from "../../../assets/close_sm.svg";
 import AiRefreshIcon from "../../../assets/ai_refresh.svg";
-import DeleteIcon from "../../../assets/delete_ai.svg";
+import DeleteIcon from "../../../assets/delete.svg";
 
 interface ChecklistItem {
   id: number;
@@ -52,44 +52,62 @@ interface AiChecklistListViewModalProps {
   onAddItem: (name: string, reason: string, category: string) => void;
 }
 
-const GradientText = ({
-  children,
-  style,
-}: { children: string; style?: any }) => {
+function Spinner({ size = 42, strokeWidth = 3, color = colors.aiInk }: { size?: number; strokeWidth?: number; color?: string }) {
+  const rotation = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (Platform.OS === "web") return;
+    Animated.loop(
+      Animated.timing(rotation, {
+        toValue: 1,
+        duration: 1000,
+        easing: Easing.linear,
+        useNativeDriver: true,
+      })
+    ).start();
+  }, [rotation]);
+
   if (Platform.OS === "web") {
     return (
-      <Text
-        style={[
-          style,
-          {
-            background: "linear-gradient(90deg, #9CBEFF 0%, #B4A7FF 100%)",
-            WebkitBackgroundClip: "text",
-            WebkitTextFillColor: "transparent",
-            backgroundClip: "text",
-          } as any,
-        ]}
-      >
-        {children}
-      </Text>
+      <View
+        style={{
+          width: size,
+          height: size,
+          borderRadius: size / 2,
+          borderWidth: strokeWidth,
+          borderColor: `${color}33`,
+          borderTopColor: color,
+          animationName: "spinner-rotate",
+          animationDuration: "1s",
+          animationTimingFunction: "linear",
+          animationIterationCount: "infinite",
+        } as any}
+      />
     );
   }
 
+  const spin = rotation.interpolate({ inputRange: [0, 1], outputRange: ["0deg", "360deg"] });
   return (
-    <MaskedView
-      maskElement={<Text style={style}>{children}</Text>}
-      style={{ flexDirection: "row", height: 24 }}
-    >
-      <LinearGradient
-        colors={["#FF2391", "#1F96FF"]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 0 }}
-        style={{ flex: 1 }}
-      >
-        <Text style={[style, { opacity: 0 }]}>{children}</Text>
-      </LinearGradient>
-    </MaskedView>
+    <Animated.View
+      style={{
+        width: size,
+        height: size,
+        borderRadius: size / 2,
+        borderWidth: strokeWidth,
+        borderColor: `${color}33`,
+        borderTopColor: color,
+        transform: [{ rotate: spin }],
+      }}
+    />
   );
-};
+}
+
+if (Platform.OS === "web" && typeof document !== "undefined" && !document.getElementById("spinner-keyframes")) {
+  const style = document.createElement("style");
+  style.id = "spinner-keyframes";
+  style.textContent = "@keyframes spinner-rotate { to { transform: rotate(360deg); } }";
+  document.head.appendChild(style);
+}
 
 const getCategoryTitle = (categoryKey: string) => {
   const titles: { [key: string]: string } = {
@@ -117,6 +135,7 @@ export default function AiChecklistListViewModal({
   const [newItemName, setNewItemName] = useState("");
   const [newItemReason, setNewItemReason] = useState("");
   const [hoveredItemId, setHoveredItemId] = useState<number | null>(null);
+  const escapeLockRef = useRef(false);
 
   const handleStartAdding = (categoryKey: string) => {
     setAddingCategory(categoryKey);
@@ -145,211 +164,215 @@ export default function AiChecklistListViewModal({
       visible={visible}
       transparent={true}
       animationType="fade"
-      onRequestClose={onClose}
+      onRequestClose={() => {
+          if (escapeLockRef.current) return;
+          if (addingCategory) {
+            escapeLockRef.current = true;
+            handleCancelAdding();
+            setTimeout(() => { escapeLockRef.current = false; }, 100);
+          } else {
+            onClose();
+          }
+        }}
     >
-      <View style={styles.modalOverlay}>
-        <View style={styles.modalContent}>
-          <View pointerEvents="none" style={StyleSheet.absoluteFillObject} />
-          <GradientBackground
-            colors={colors.gradientAIColors}
-            style={{ flex: 1 }}
-          >
-            {isLoading && (
-              <View style={styles.loadingOverlay}>
-                <View style={styles.loadingContent}>
-                  <ActivityIndicator size="large" color={colors.white} />
-                  <Text style={styles.loadingMessage}>
-                    AI Checklist 생성중..
-                  </Text>
-                </View>
-              </View>
-            )}
-            <View style={styles.headerSection}>
-              <View style={styles.titleContainer}>
-                <Text style={styles.headerTitle}>체크리스트</Text>
-                <TouchableOpacity
-                  onPress={() => {
-                    if (isGuest) {
-                      guestPrompt.show();
-                      return;
-                    }
-                    onRefresh();
-                  }}
-                  style={styles.aiRecommendButton}
-                  activeOpacity={0.8}
+      <Pressable style={styles.modalOverlay} onPress={onClose}>
+        <Pressable style={styles.modalContent} onPress={e => e.stopPropagation()}>
+          {isLoading && (
+            <View style={styles.loadingOverlay}>
+              <Spinner />
+              <Text style={styles.loadingTitle}>AI가 체크리스트를 추천하고 있어요</Text>
+              <Text style={styles.loadingSubtitle}>여행 일정을 분석해 필요한 항목을 추가하는 중...</Text>
+            </View>
+          )}
+          <View style={styles.headerSection}>
+            <View style={styles.titleContainer}>
+              <Text style={styles.headerTitle}>체크리스트</Text>
+              <TouchableOpacity
+                onPress={() => {
+                  if (isGuest) {
+                    guestPrompt.show();
+                    return;
+                  }
+                  onRefresh();
+                }}
+                style={styles.aiRecommendButton}
+                activeOpacity={0.8}
+              >
+                <LinearGradient
+                  colors={colors.aiGrad}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={styles.aiRecommendButtonGradient}
                 >
-                  <LinearGradient
-                    colors={colors.gradientAIRefresh}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 0 }}
-                    style={styles.aiRecommendButtonGradient}
-                  >
-                    <Text style={styles.aiRecommendButtonText}>AI 추천</Text>
-                    <AiRefreshIcon width={14} height={14} />
-                  </LinearGradient>
-                </TouchableOpacity>
-              </View>
-              <TouchableOpacity onPress={onClose} style={styles.viewAllButton}>
-                <XIcon width={20} height={20} />
+                  <AiRefreshIcon width={12} height={12} />
+                  <Text style={styles.aiRecommendButtonText}>AI 추천</Text>
+                </LinearGradient>
               </TouchableOpacity>
             </View>
-            <View style={styles.scrollWrapper}>
-              <ScrollView
-                style={styles.checklistScrollView}
-                showsVerticalScrollIndicator={false}
-              >
-                {checklist &&
-                  Object.entries(checklist.categories).map(
-                    ([categoryKey, items]) => (
-                      <View key={categoryKey} style={styles.categorySection}>
-                        <View style={styles.categoryTitleRow}>
-                          <Text style={styles.categoryTitle}>
-                            {getCategoryTitle(categoryKey)}
-                          </Text>
-                        </View>
-                        <View style={styles.categoryCard}>
-                          {addingCategory !== categoryKey && (
-                            <TouchableOpacity
-                              style={styles.addItemButtonCard}
-                              onPress={() => handleStartAdding(categoryKey)}
+            <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+              <XIcon width={14} height={14} fill={colors.black}/>
+            </TouchableOpacity>
+          </View>
+          <View style={styles.scrollWrapper}>
+            <ScrollView
+              style={styles.checklistScrollView}
+              showsVerticalScrollIndicator={false}
+            >
+              {checklist &&
+                Object.entries(checklist.categories).map(
+                  ([categoryKey, items], sectionIndex) => (
+                    <View
+                      key={categoryKey}
+                      style={[
+                        styles.categorySection,
+                        sectionIndex > 0 && styles.categorySectionBorder,
+                      ]}
+                    >
+                      <View style={styles.categoryHeaderRow}>
+                        <Text style={styles.categoryTitle}>
+                          {getCategoryTitle(categoryKey)}
+                        </Text>
+                        <Text style={styles.categoryProgress}>
+                          {items.filter(i => i.isChecked).length}/{items.length}
+                        </Text>
+                        <View style={styles.categoryHeaderSpacer} />
+                        {addingCategory !== categoryKey && (
+                          <TouchableOpacity
+                            onPress={() => handleStartAdding(categoryKey)}
+                            style={styles.addItemButton}
+                          >
+                            <AddCheckList width={12} height={12} />
+                          </TouchableOpacity>
+                        )}
+                      </View>
+
+                      {items.map(item => {
+                          const isHovered = hoveredItemId === item.id;
+                          return (
+                            <View
+                              key={item.id}
+                              style={styles.checklistItemWrapper}
+                              {...(Platform.OS === "web"
+                                ? {
+                                    onMouseEnter: () =>
+                                      setHoveredItemId(item.id),
+                                    onMouseLeave: () =>
+                                      setHoveredItemId(null),
+                                  }
+                                : {})}
                             >
-                              <AddCheckList width={20} height={20} />
-                            </TouchableOpacity>
-                          )}
-                          {addingCategory === categoryKey && (
-                            <View style={styles.addingItemRow}>
-                              <View style={styles.addingItemInputs}>
-                                <TextInput
-                                  style={styles.addingItemNameInput}
-                                  placeholder="항목명"
-                                  placeholderTextColor={colors.gray700}
-                                  value={newItemName}
-                                  onChangeText={setNewItemName}
-                                  maxLength={50}
-                                  autoFocus
-                                />
-                                <TextInput
-                                  style={styles.addingItemReasonInput}
-                                  placeholder="이유 (선택사항)"
-                                  placeholderTextColor={colors.gray700}
-                                  value={newItemReason}
-                                  onChangeText={setNewItemReason}
-                                  maxLength={100}
-                                />
-                              </View>
-                              <View style={styles.addingItemButtons}>
-                                <TouchableOpacity
-                                  style={styles.addingItemCancelButton}
-                                  onPress={handleCancelAdding}
-                                >
-                                  <Text style={styles.addingItemCancelText}>
-                                    취소
-                                  </Text>
-                                </TouchableOpacity>
-                                <TouchableOpacity
-                                  style={styles.addingItemSaveButton}
-                                  onPress={handleSaveAdding}
-                                >
-                                  <Text style={styles.addingItemSaveText}>
-                                    저장
-                                  </Text>
-                                </TouchableOpacity>
-                              </View>
-                            </View>
-                          )}
-                          {items.length === 0 &&
-                          addingCategory !== categoryKey ? (
-                            <View style={styles.emptyCategory}>
-                              <Text style={styles.emptyCategoryText}>
-                                추가된 항목이 없습니다
-                              </Text>
-                            </View>
-                          ) : (
-                            items.map(item => {
-                              const isHovered = hoveredItemId === item.id;
-                              return (
-                                <View
-                                  key={item.id}
-                                  style={styles.checklistItemWrapper}
-                                  {...(Platform.OS === "web"
-                                    ? {
-                                        onMouseEnter: () =>
-                                          setHoveredItemId(item.id),
-                                        onMouseLeave: () =>
-                                          setHoveredItemId(null),
-                                      }
-                                    : {})}
-                                >
-                                  <TouchableOpacity
-                                    style={styles.checklistItem}
-                                    onPress={() =>
-                                      onToggleItem(item.id, !item.isChecked)
-                                    }
+                              <TouchableOpacity
+                                style={styles.checklistItem}
+                                onPress={() =>
+                                  onToggleItem(item.id, !item.isChecked)
+                                }
+                              >
+                                <View style={styles.itemContent}>
+                                  <View
+                                    style={[
+                                      styles.checkboxContainer,
+                                      item.isChecked &&
+                                        styles.checkboxContainerChecked,
+                                    ]}
                                   >
-                                    <View style={styles.itemContent}>
-                                      <View
+                                    {item.isChecked ? (
+                                      <AiCheckIcon
+                                        width={10}
+                                        height={10}
+                                        color={colors.white}
+                                      />
+                                    ) : null}
+                                  </View>
+                                  {!item.isCustom && (
+                                    <View style={styles.aiBadge}>
+                                      <Text style={styles.aiBadgeText}>AI</Text>
+                                    </View>
+                                  )}
+                                  <View style={styles.itemTextContainer}>
+                                    <Text style={item.isChecked ? styles.itemTextStrikethrough : undefined}>
+                                      <Text
                                         style={[
-                                          styles.checkboxContainer,
-                                          item.isChecked &&
-                                            styles.checkboxContainerChecked,
+                                          styles.itemName,
+                                          item.isChecked && styles.itemNameChecked,
                                         ]}
                                       >
-                                        {item.isChecked ? (
-                                          <AiCheckIcon
-                                            width={13}
-                                            height={13}
-                                            fill={colors.white}
-                                          />
-                                        ) : null}
-                                      </View>
-                                      {!item.isCustom && (
-                                        <View style={styles.aiBadge}>
-                                          <GradientText
-                                            style={styles.aiBadgeText}
-                                          >
-                                            AI
-                                          </GradientText>
-                                        </View>
-                                      )}
-                                      <View style={styles.itemTextContainer}>
-                                        <View style={styles.itemTextRow}>
-                                          <Text
-                                            style={[
-                                              styles.itemText,
-                                              item.isChecked &&
-                                                styles.itemTextChecked,
-                                            ]}
-                                          >
-                                            {item.name} → {item.reason}
-                                          </Text>
-                                        </View>
-                                      </View>
-                                    </View>
-                                  </TouchableOpacity>
-                                  {isHovered && (
-                                    <TouchableOpacity
-                                      style={styles.deleteItemButton}
-                                      onPress={() => onDeleteItem(item.id)}
-                                    >
-                                      <DeleteIcon
-                                        width={18.33}
-                                        height={18.33}
-                                      />
-                                    </TouchableOpacity>
-                                  )}
+                                        {item.name}
+                                      </Text>
+                                      {item.reason ? (
+                                        <Text
+                                          style={[
+                                            styles.itemReason,
+                                            item.isChecked &&
+                                              styles.itemReasonChecked,
+                                          ]}
+                                        >
+                                          {" · "}
+                                          {item.reason}
+                                        </Text>
+                                      ) : null}
+                                    </Text>
+                                  </View>
                                 </View>
-                              );
-                            })
-                          )}
+                              </TouchableOpacity>
+                              <TouchableOpacity
+                                style={[
+                                  styles.deleteItemButton,
+                                  { opacity: isHovered ? 1 : 0 },
+                                ]}
+                                onPress={() => onDeleteItem(item.id)}
+                              >
+                                <DeleteIcon width={11} height={11} color={colors.gray900} />
+                              </TouchableOpacity>
+                            </View>
+                          );
+                      })}
+                      {addingCategory === categoryKey && (
+                        <View style={styles.addingItemRow}>
+                          <View style={styles.addingItemCheckboxPlaceholder} />
+                          <View style={styles.addingItemInputs}>
+                            <TextInput
+                              style={styles.addingItemNameInput}
+                              placeholder="항목명"
+                              placeholderTextColor={colors.gray600}
+                              value={newItemName}
+                              onChangeText={setNewItemName}
+                              maxLength={50}
+                              autoFocus
+                              onSubmitEditing={handleSaveAdding}
+                            />
+                            <TextInput
+                              style={styles.addingItemReasonInput}
+                              placeholder="이유 (선택)"
+                              placeholderTextColor={colors.gray600}
+                              value={newItemReason}
+                              onChangeText={setNewItemReason}
+                              maxLength={100}
+                              onSubmitEditing={handleSaveAdding}
+                            />
+                          </View>
+                          <View style={styles.addingItemButtons}>
+                            <TouchableOpacity
+                              style={styles.addingItemCancelButton}
+                              onPress={handleCancelAdding}
+                            >
+                              <Text style={styles.addingItemCancelText}>취소</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                              style={styles.addingItemSaveButton}
+                              onPress={handleSaveAdding}
+                            >
+                              <Text style={styles.addingItemSaveText}>추가</Text>
+                            </TouchableOpacity>
+                          </View>
                         </View>
-                      </View>
-                    ),
-                  )}
-              </ScrollView>
-            </View>
-          </GradientBackground>
-        </View>
-      </View>
+                      )}
+                    </View>
+                  ),
+                )}
+            </ScrollView>
+          </View>
+        </Pressable>
+      </Pressable>
     </Modal>
   );
 }
@@ -363,14 +386,16 @@ const styles = StyleSheet.create({
     padding: spacing.xl,
   },
   modalContent: {
-    borderRadius: radii.lg,
+    borderRadius: 20,
     width: "100%",
-    maxWidth: 506,
+    maxWidth: 560,
     maxHeight: "90%",
-    flex: 1,
     minHeight: 0,
     overflow: "hidden",
     backgroundColor: colors.white,
+    paddingTop: 24,
+    paddingHorizontal: 24,
+    paddingBottom: 18,
   },
   loadingOverlay: {
     position: "absolute",
@@ -378,26 +403,27 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: "rgba(0, 0, 0, 0.3)",
+    backgroundColor: "rgba(238, 240, 255, 0.95)",
     justifyContent: "center",
     alignItems: "center",
     zIndex: 1000,
+    gap: 10,
   },
-  loadingContent: {
-    alignItems: "center",
-    gap: spacing.md,
-  },
-  loadingMessage: {
+  loadingTitle: {
     ...textStyles.h6,
-    color: colors.white,
+    color: colors.gray900,
+    textAlign: "center",
+  },
+  loadingSubtitle: {
+    ...textStyles.body5,
+    color: colors.gray700,
+    textAlign: "center",
   },
   headerSection: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingHorizontal: spacing.xl,
-    paddingTop: spacing.lg + 4,
-    paddingBottom: spacing.sm,
+    marginBottom: 14,
   },
   titleContainer: {
     flexDirection: "row",
@@ -409,8 +435,8 @@ const styles = StyleSheet.create({
     color: colors.black,
   },
   aiRecommendButton: {
-    width: 88,
-    height: 30,
+    width: 74,
+    height: 28,
     borderRadius: 40,
     overflow: "hidden",
   },
@@ -422,93 +448,72 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   aiRecommendButtonText: {
-    ...textStyles.h7,
+    ...textStyles.h9,
     color: colors.white,
   },
-  viewAllButton: {
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-  },
-  viewAllText: {
-    fontSize: 14,
-    lineHeight: 22,
-    fontWeight: "500",
-    color: colors.gray700,
+  closeButton: {
+    width: 26,
+    height: 26,
+    justifyContent: "center",
+    alignItems: "center",
   },
   scrollWrapper: {
     flex: 1,
     minHeight: 0,
     overflow: "hidden",
-    marginTop: spacing.xl,
   },
   checklistScrollView: {
     flex: 1,
-    paddingHorizontal: spacing.xl,
     backgroundColor: "transparent",
   },
-  checklistHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.xs,
-    marginBottom: spacing.lg,
-    paddingTop: spacing.xs,
-  },
-  checklistHeaderText: {
-    ...textStyles.h5,
-    color: colors.black,
-  },
   categorySection: {
-    marginBottom: spacing.lg,
+    paddingVertical: 14,
   },
-  categoryTitleRow: {
+  categorySectionBorder: {
+    borderTopWidth: 1,
+    borderTopColor: colors.gray300,
+  },
+  categoryHeaderRow: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
     marginBottom: spacing.sm,
+    gap: spacing.sm,
   },
   categoryTitle: {
     ...textStyles.h7,
     color: colors.black,
   },
-  categoryCard: {
-    backgroundColor: colors.white,
-    borderRadius: radii.md,
-    padding: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.gray300,
-    position: "relative",
+  categoryProgress: {
+    ...textStyles.body6,
+    color: colors.gray600,
   },
-  addItemButtonCard: {
-    position: "absolute",
-    top: spacing.sm,
-    right: spacing.sm,
+  categoryHeaderSpacer: {
+    flex: 1,
+  },
+  addItemButton: {
     width: 24,
     height: 24,
     justifyContent: "center",
     alignItems: "center",
-    zIndex: 1,
-  },
-  addItemButtonTextCard: {
-    ...textStyles.body4,
-    color: colors.gray700,
-    fontSize: 16,
-    lineHeight: 20,
   },
   checklistItemWrapper: {
     flexDirection: "row",
     alignItems: "center",
+    paddingVertical: 7,
+    paddingHorizontal: 4,
+    borderRadius: 8,
   },
   checklistItem: {
     flex: 1,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.sm,
   },
   deleteItemButton: {
-    padding: spacing.xs,
-    marginRight: spacing.lg,
+    width: 22,
+    height: 22,
+    justifyContent: "center",
+    alignItems: "center",
   },
   emptyCategory: {
-    padding: spacing.lg,
+    paddingVertical: spacing.md,
     alignItems: "center",
   },
   emptyCategoryText: {
@@ -517,57 +522,76 @@ const styles = StyleSheet.create({
   },
   addingItemRow: {
     flexDirection: "row",
-    alignItems: "center",
-    marginBottom: spacing.sm,
-    gap: spacing.sm,
+    alignItems: "flex-start",
+    gap: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 4,
+    borderRadius: 8,
+  },
+  addingItemCheckboxPlaceholder: {
+    width: 16,
+    height: 16,
+    borderRadius: 4,
+    borderWidth: 1.5,
+    borderColor: colors.gray400,
+    backgroundColor: colors.white,
+    opacity: 0.4,
+    marginTop: 1,
   },
   addingItemInputs: {
     flex: 1,
-    flexDirection: "row",
-    gap: spacing.xs,
+    flexDirection: "column",
+    gap: 6,
   },
   addingItemNameInput: {
-    ...textStyles.body4,
-    flex: 1,
-    borderWidth: 1,
-    borderColor: colors.gray300,
-    borderRadius: radii.sm,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    color: colors.black,
-  },
+    ...textStyles.body5,
+    backgroundColor: colors.gray200,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    color: colors.gray900,
+    outlineWidth: 0,
+    outlineStyle: "none",
+  } as any,
   addingItemReasonInput: {
-    ...textStyles.body4,
-    flex: 1,
-    borderWidth: 1,
-    borderColor: colors.gray300,
-    borderRadius: radii.sm,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    color: colors.black,
-  },
+    ...textStyles.body5,
+    backgroundColor: colors.gray200,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    color: colors.gray900,
+    outlineWidth: 0,
+    outlineStyle: "none",
+  } as any,
   addingItemButtons: {
     flexDirection: "row",
-    gap: spacing.xs,
+    gap: 6,
+    alignSelf: "flex-start",
   },
   addingItemCancelButton: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-    borderRadius: radii.sm,
-    backgroundColor: colors.gray200,
+    height: 30,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: "#E2E2E2",
+    justifyContent: "center",
+    alignItems: "center",
   },
   addingItemCancelText: {
-    ...textStyles.body4,
-    color: colors.gray600,
+    ...textStyles.h8,
+    color: colors.gray900,
   },
   addingItemSaveButton: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-    borderRadius: radii.sm,
-    backgroundColor: colors.black,
+    height: 30,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    backgroundColor: colors.primary,
+    justifyContent: "center",
+    alignItems: "center",
   },
   addingItemSaveText: {
-    ...textStyles.body4,
+    ...textStyles.h8,
     color: colors.white,
   },
   itemContent: {
@@ -575,52 +599,54 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
   },
   checkboxContainer: {
-    width: 15,
-    height: 15,
-    borderRadius: 5,
-    borderWidth: 1.25,
+    width: 16,
+    height: 16,
+    borderRadius: 4,
+    borderWidth: 1.5,
     borderColor: colors.gray400,
-    marginRight: spacing.sm,
+    backgroundColor: colors.white,
+    marginRight: 10,
     justifyContent: "center",
     alignItems: "center",
-    marginTop: 2,
+    marginTop: 1,
   },
   checkboxContainerChecked: {
-    backgroundColor: colors.black,
-    borderColor: colors.black,
+    backgroundColor: colors.gray900,
+    borderColor: colors.gray900,
   },
   aiBadge: {
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    backgroundColor: colors.gray200,
+    height: 16,
+    paddingHorizontal: 5,
+    borderRadius: 4,
+    backgroundColor: colors.aiTint,
     justifyContent: "center",
     alignItems: "center",
-    marginRight: spacing.sm,
-    marginTop: 2,
+    marginRight: 6,
+    marginTop: 1,
   },
   aiBadgeText: {
-    fontSize: 9,
-    lineHeight: 18,
-    fontWeight: "500",
-    fontFamily: typography.fontFamily.poppinsMedium,
-    textAlign: "center",
+    ...textStyles.h10,
+    color: colors.aiInk,
   },
   itemTextContainer: {
     flex: 1,
   },
-  itemTextRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.xs,
-    flexWrap: "wrap",
+  itemName: {
+    ...textStyles.body5,
+    color: colors.gray900,
   },
-  itemText: {
-    ...textStyles.body4,
-    color: colors.black,
-    flex: 1,
+  itemTextStrikethrough: {
+    textDecorationLine: "line-through",
+    textDecorationColor: colors.gray500,
   },
-  itemTextChecked: {
+  itemNameChecked: {
+    color: colors.gray600,
+  },
+  itemReason: {
+    ...textStyles.body5,
     color: colors.gray700,
+  },
+  itemReasonChecked: {
+    color: colors.gray500,
   },
 });

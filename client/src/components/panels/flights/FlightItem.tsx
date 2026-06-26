@@ -816,7 +816,7 @@ export default function FlightItem({
                       }}
                       style={styles.segmentDeleteButton}
                     >
-                      <DeleteIcon width={16} height={16} />
+                      <DeleteIcon width={16} height={16} color={colors.warning} />
                     </Pressable>
                   )}
                 </View>

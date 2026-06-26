@@ -341,7 +341,7 @@ export default function ExpenseDetailModal({
                                     onPress={() => handleDelete(expense.id)}
                                     style={styles.deleteButton}
                                   >
-                                    <DeleteIcon width={14} height={14} />
+                                    <DeleteIcon width={14} height={14} color={colors.warning} />
                                   </Pressable>
                                 </View>
                               </View>
