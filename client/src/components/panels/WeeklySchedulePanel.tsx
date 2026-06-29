@@ -48,6 +48,8 @@ import LeftArrowIcon from "../../../assets/left_arrow.svg";
 import MemoIcon from "../../../assets/memo.svg";
 import LightningIcon from "../../../assets/mobile_lightning.svg";
 import RightArrowIcon from "../../../assets/right_arrow.svg";
+import ExportPlanIcon from "../../../assets/export_plan.svg";
+import ImportFileIcon from "../../../assets/import_file.svg";
 import ShareIcon from "../../../assets/share.svg";
 import TodayIcon from "../../../assets/today.svg";
 import WeekBarLocationIcon from "../../../assets/week_bar_location.svg";
@@ -1896,6 +1898,22 @@ export default function WeeklySchedulePanel({
                     style={styles.iconButton}
                   >
                     <ShareIcon width={16} height={16} />
+                  </Pressable>
+                </Tooltip>
+              )}
+
+              {(myRole === "owner" || myRole === "editor") && (
+                <Tooltip text="파일로 일정 추가">
+                  <Pressable style={styles.iconButton}>
+                    <ImportFileIcon width={14} height={14} color={colors.gray900} />
+                  </Pressable>
+                </Tooltip>
+              )}
+
+              {(myRole === "owner" || myRole === "editor") && (
+                <Tooltip text="내보내기">
+                  <Pressable style={styles.iconButton}>
+                    <ExportPlanIcon width={14} height={14} color={colors.gray900} />
                   </Pressable>
                 </Tooltip>
               )}
