@@ -1,8 +1,11 @@
-from datetime import date
+from datetime import date, datetime, time
+from decimal import Decimal
+from typing import Any
 
 from pydantic import Field
 
 from app.accomodation.schemas import AccommodationRead
+from app.expenses.models import ExpenseCategory, ExpenseCurrency
 from app.expenses.schemas import ExpenseRead
 from app.flights.schemas import FlightRead
 from app.itinerary.schemas import ItineraryRead
@@ -93,3 +96,87 @@ class InvitationPreview(APISchema):
     email: str
     role: int
     expires_at: str | None
+
+
+# --- Export ---
+
+
+class ExportSegment(APISchema):
+    country: str
+    city: str
+    start_date: date
+    end_date: date
+    order_index: int
+
+
+class ExportItinerary(APISchema):
+    title: str
+    country: str | None = None
+    city: str | None = None
+    location: str | None = None
+    itinerary_date: date
+    start_time: time
+    end_time: time
+
+
+class ExportFlightSegment(APISchema):
+    order: int
+    departure_airport: str
+    arrival_airport: str
+    departure_time: datetime
+    arrival_time: datetime
+
+
+class ExportFlight(APISchema):
+    segments: list[ExportFlightSegment] = []
+
+
+class ExportAccommodation(APISchema):
+    name: str
+    checkin_date: date
+    checkout_date: date
+    checkin_time: time
+    checkout_time: time
+
+
+class ExportExpense(APISchema):
+    category: ExpenseCategory
+    amount: Decimal
+    currency: ExpenseCurrency
+    description: str | None = None
+    ex_date: date
+
+
+class ExportPlan(APISchema):
+    title: str
+    start_date: date
+    end_date: date
+    segments: list[ExportSegment] = []
+
+
+class SnapshotData(APISchema):
+    plan: ExportPlan
+    itineraries: list[ExportItinerary] = []
+    flights: list[ExportFlight] = []
+    accommodations: list[ExportAccommodation] = []
+    expenses: list[ExportExpense] | None = None
+    checklist: dict[str, Any] | None = None
+
+
+class PlanExportCreate(APISchema):
+    include_expenses: bool = False
+    include_checklist: bool = False
+
+
+class PlanExportCreateResponse(APISchema):
+    public_id: str
+
+
+class PlanExportViewerResponse(APISchema):
+    public_id: str
+    snapshot: SnapshotData
+    created_at: datetime
+
+
+class PlanExportSaveResponse(APISchema):
+    plan_public_id: str

@@ -203,3 +203,38 @@ class PlanSegment(Base):
     order_index: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 
     plan: Mapped["Plan"] = relationship(back_populates="segments", init=False)
+
+
+class PlanExport(Base):
+    __tablename__ = "plan_export"
+
+    id: Mapped[int] = mapped_column(
+        primary_key=True,
+        init=False,
+        index=True,
+        autoincrement=True,
+    )
+
+    public_id: Mapped[str] = mapped_column(
+        String(36),
+        nullable=False,
+        unique=True,
+        index=True,
+    )
+
+    source_plan_id: Mapped[int] = mapped_column(
+        Integer,
+        ForeignKey("plan.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+
+    snapshot_data: Mapped[dict[str, Any]] = mapped_column(
+        JSONB,
+        nullable=False,
+    )
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        init=False,
+    )

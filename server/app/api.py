@@ -1,24 +1,39 @@
-from fastapi import Depends
-
-
-
-from app.auth.deps import get_current_user
+from fastapi import Depends, HTTPException
 
 from app.accomodation.router import router as accomodation_router
 from app.ai.router import router as ai_router
 from app.attachments.router import router as attachments_router
+from app.auth.deps import get_current_user
 from app.auth.router import router as auth_router
 from app.core.router import create_router
 from app.expenses.router import router as expenses_router
 from app.flights.router import router as flights_router
 from app.itinerary.router import router as itinerary_router
+from app.plans.repository import PlanRepository
 from app.plans.router import router as plans_router
+from app.plans.schemas import PlanExportViewerResponse, SnapshotData
 from app.users.router import router as users_router
 
 router = create_router()
 
 public_router = create_router(prefix="/public")
 public_router.include_router(auth_router, prefix="/auth", tags=["Auth"])
+
+
+@public_router.get("/exports/{public_id}", tags=["Plans"])
+async def get_plan_export(
+    public_id: str,
+    plan_repository: PlanRepository,
+) -> PlanExportViewerResponse:
+    export = await plan_repository.find_export_by_public_id(public_id=public_id)
+    if not export:
+        raise HTTPException(status_code=404, detail="내보내기를 찾을 수 없습니다.")
+    return PlanExportViewerResponse(
+        public_id=export.public_id,
+        snapshot=SnapshotData.model_validate(export.snapshot_data),
+        created_at=export.created_at,
+    )
+
 
 private_router = create_router(
     prefix="/private",

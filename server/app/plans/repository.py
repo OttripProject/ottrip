@@ -14,7 +14,7 @@ from app.flights.models import Flight, FlightSegment
 from app.itinerary.models import Itinerary
 from app.utils.dependency import dependency
 
-from .models import Plan, PlanInvitation, PlanSegment, PlanShared, Role
+from .models import Plan, PlanExport, PlanInvitation, PlanSegment, PlanShared, Role
 
 
 @dependency
@@ -418,3 +418,13 @@ class PlanRepository:
         # categories 추출 및 변환
         categories = travel_checklist.get("categories", {})
         return ChecklistItemsByCategory(**categories)
+
+    async def save_export(self, *, export: PlanExport) -> PlanExport:
+        self.session.add(export)
+        await self.session.flush()
+        return export
+
+    async def find_export_by_public_id(self, *, public_id: str) -> PlanExport | None:
+        return await self.session.scalar(
+            select(PlanExport).where(PlanExport.public_id == public_id)
+        )
