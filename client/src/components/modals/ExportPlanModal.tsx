@@ -4,7 +4,9 @@ import { colors } from "@/ui/tokens/colors";
 import { textStyles } from "@/ui/tokens/typography";
 import { useState } from "react";
 import {
+  ActivityIndicator,
   Alert,
+  Linking,
   Modal,
   Platform,
   Pressable,
@@ -14,11 +16,12 @@ import {
   TextInput,
   View,
 } from "react-native";
-import CopyIcon from "../../../assets/copy.svg";
+import ExternalLinkIcon from "../../../assets/external_link.svg";
 import ExportGuestIcon from "../../../assets/export_guest.svg";
 import ExportImportIcon from "../../../assets/export_import.svg";
 import ExportLinkIcon from "../../../assets/export_link.svg";
 import ExportLockIcon from "../../../assets/export_lock.svg";
+import RefreshIcon from "../../../assets/refresh.svg";
 import XIcon from "../../../assets/x.svg";
 
 type Props = {
@@ -73,6 +76,15 @@ export default function ExportPlanModal({ visible, onClose, planId, planName }: 
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const handleOpenLink = () => {
+    if (!viewerUrl) return;
+    if (Platform.OS === "web") {
+      window.open(viewerUrl, "_blank");
+    } else {
+      Linking.openURL(viewerUrl);
+    }
+  };
+
   const handleClose = () => {
     setExportPublicId(null);
     setIncludeExpenses(false);
@@ -97,7 +109,7 @@ export default function ExportPlanModal({ visible, onClose, planId, planName }: 
           }}
           style={styles.cardStyle}
         >
-          <Pressable onPress={() => {}}>
+          <Pressable onPress={() => {}} style={Platform.OS === "web" ? ({ cursor: "default" } as any) : undefined}>
             <ScrollView
               showsVerticalScrollIndicator={false}
               contentContainerStyle={styles.scroll}
@@ -210,32 +222,63 @@ export default function ExportPlanModal({ visible, onClose, planId, planName }: 
                 </Pressable>
               </View>
 
-              {/* URL 결과 영역 */}
-              {viewerUrl && (
-                <View style={styles.resultRow}>
-                  <TextInput
-                    style={styles.urlInput}
-                    value={viewerUrl}
-                    editable={false}
-                    selectTextOnFocus
-                  />
-                  <Pressable onPress={handleCopy} style={styles.copyButton}>
-                    <CopyIcon width={14} height={14} color={colors.gray700} />
-                    <Text style={styles.copyText}>{copied ? "복사됨" : "복사"}</Text>
+              {/* 생성 완료 후 결과 영역 */}
+              {viewerUrl ? (
+                <View style={styles.resultSection}>
+                  <View style={styles.resultLinkGroup}>
+                    <Text style={styles.resultLabel}>내보내기 링크</Text>
+                    <View style={styles.resultRow}>
+                      <TextInput
+                        style={styles.urlInput}
+                        value={viewerUrl}
+                        editable={false}
+                        selectTextOnFocus
+                      />
+                      <Pressable onPress={handleCopy} style={styles.copyButton}>
+                        <Text style={styles.copyText}>{copied ? "복사됨" : "복사"}</Text>
+                      </Pressable>
+                    </View>
+                  </View>
+
+                  <View style={styles.resultDesc}>
+                    <View style={styles.guestBadge}>
+                      <Text style={styles.guestBadgeText}>게스트</Text>
+                    </View>
+                    <Text style={styles.resultDescText}>
+                      이 링크로 접속한 사람은 일정을 보거나, 내 일정으로 가져와 수정할 수 있어요.
+                    </Text>
+                  </View>
+
+                  <Pressable onPress={handleOpenLink} style={styles.openButton}>
+                    <ExternalLinkIcon width={14} height={14} color={colors.gray900} />
+                    <Text style={styles.openButtonText}>링크로 접속해 보기</Text>
+                  </Pressable>
+
+                  <Pressable
+                    onPress={handleGenerate}
+                    disabled={isGenerating}
+                    style={[styles.regenButton, isGenerating && styles.regenButtonDisabled]}
+                  >
+                    <RefreshIcon width={13} height={13} color={colors.gray700} />
+                    <Text style={styles.regenButtonText}>
+                      {isGenerating ? "생성 중..." : "새 링크 생성"}
+                    </Text>
                   </Pressable>
                 </View>
+              ) : (
+                <Pressable
+                  onPress={handleGenerate}
+                  disabled={isGenerating}
+                  style={[styles.generateButton, isGenerating && styles.generateButtonDisabled]}
+                >
+                  {isGenerating && (
+                    <ActivityIndicator size="small" color={colors.white} />
+                  )}
+                  <Text style={styles.generateButtonText}>
+                    {isGenerating ? "링크 생성 중..." : "내보내기 URL 생성"}
+                  </Text>
+                </Pressable>
               )}
-
-              {/* 생성 버튼 */}
-              <Pressable
-                onPress={handleGenerate}
-                disabled={isGenerating}
-                style={[styles.generateButton, isGenerating && styles.generateButtonDisabled]}
-              >
-                <Text style={styles.generateButtonText}>
-                  {isGenerating ? "생성 중..." : viewerUrl ? "URL 재생성" : "내보내기 URL 생성"}
-                </Text>
-              </Pressable>
             </ScrollView>
           </Pressable>
         </Card>
@@ -317,7 +360,7 @@ const styles = StyleSheet.create({
   },
   infoDesc: {
     ...textStyles.body5,
-    color: colors.gray600,
+    color: colors.gray700,
     marginTop: 2,
   },
   scopeCard: {
@@ -427,35 +470,94 @@ const styles = StyleSheet.create({
   toggleThumbOn: {
     alignSelf: "flex-end",
   },
+  resultSection: {
+    gap: 10,
+  },
+  resultLinkGroup: {
+    gap: 6,
+  },
+  resultLabel: {
+    ...textStyles.h7,
+    color: colors.gray900,
+  },
   resultRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    borderWidth: 1,
-    borderColor: colors.gray300,
-    borderRadius: 10,
-    paddingLeft: 12,
-    paddingRight: 8,
-    paddingVertical: 8,
-    backgroundColor: colors.gray100,
   },
   urlInput: {
     flex: 1,
-    ...textStyles.body5,
-    color: colors.gray800,
     minWidth: 0,
+    backgroundColor: colors.gray100,
+    borderWidth: 1,
+    borderColor: colors.gray300,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    ...textStyles.body5,
+    color: colors.gray900,
   },
   copyButton: {
-    flexDirection: "row",
+    width: 64,
+    height: 46,
+    borderRadius: 10,
+    backgroundColor: colors.gray900,
     alignItems: "center",
-    gap: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 8,
-    backgroundColor: colors.gray200,
+    justifyContent: "center",
     flexShrink: 0,
   },
   copyText: {
+    ...textStyles.h7,
+    color: colors.white,
+  },
+  resultDesc: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  guestBadge: {
+    height: 20,
+    paddingHorizontal: 8,
+    borderRadius: 4,
+    backgroundColor: "#EAF1FE",
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+  },
+  guestBadgeText: {
+    ...textStyles.h9,
+    color: "#007AFF",
+  },
+  resultDescText: {
+    flex: 1,
+    ...textStyles.body6,
+    color: colors.gray700,
+  },
+  openButton: {
+    height: 46,
+    borderWidth: 1,
+    borderColor: colors.gray900,
+    borderRadius: 10,
+    backgroundColor: colors.white,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+  },
+  openButtonText: {
+    ...textStyles.h6,
+    color: colors.gray900,
+  },
+  regenButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    alignSelf: "flex-start",
+  },
+  regenButtonDisabled: {
+    opacity: 0.5,
+  },
+  regenButtonText: {
     ...textStyles.h8,
     color: colors.gray700,
   },
@@ -463,11 +565,13 @@ const styles = StyleSheet.create({
     height: 52,
     borderRadius: 12,
     backgroundColor: colors.gray900,
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
+    gap: 8,
   },
   generateButtonDisabled: {
-    opacity: 0.5,
+    opacity: 0.72,
   },
   generateButtonText: {
     ...textStyles.h6,
