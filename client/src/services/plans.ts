@@ -64,4 +64,12 @@ export const plansApi = {
   setMemo: async (planId: number, memo: string): Promise<void> => {
     await api.patch(`/private/plans/${planId}/memo`, { memo });
   },
+
+  createExport: async (
+    planId: number,
+    body: { includeExpenses: boolean; includeChecklist: boolean },
+  ): Promise<{ publicId: string }> => {
+    const res = await api.post(`/private/plans/${planId}/export`, body);
+    return res.data;
+  },
 };
