@@ -1515,7 +1515,7 @@ export default function WeeklySchedulePanel({
   const handleAddTrip = async (newTrip: any) => {
     try {
       const createdPlan = await onPlanAdd({
-        title: newTrip.name,
+        title: newTrip.name.trim(),
         segments: newTrip.segments ?? [],
       });
 

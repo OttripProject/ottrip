@@ -29,7 +29,7 @@ export default function EmptyPlanPanel({
   const handleSubmit = async () => {
     try {
       const created = await onPlanAdd({
-        title: planForm.tripData.name,
+        title: planForm.tripData.name.trim(),
         segments: planForm.tripData.segments.map(s => ({
           country: s.country,
           city: s.city,

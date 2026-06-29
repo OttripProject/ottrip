@@ -329,11 +329,15 @@ export default function TripFormModal({
                   )}
                 </View>
                 {totalStart && totalEnd && (() => {
-                  const nights = dayjs(totalEnd).diff(dayjs(totalStart), "day");
-                  const days = nights + 1;
+                  const validSegs = tripData.segments.filter(s => s.startDate && s.endDate);
+                  const totalNights = validSegs.reduce(
+                    (acc, s) => acc + dayjs(s.endDate).diff(dayjs(s.startDate), "day"),
+                    0,
+                  );
+                  const totalDays = totalNights + validSegs.length;
                   return (
                     <View style={styles.summaryBadge}>
-                      <Text style={styles.summaryBadgeText}>{nights}박 {days}일</Text>
+                      <Text style={styles.summaryBadgeText}>{totalNights}박 {totalDays}일</Text>
                     </View>
                   );
                 })()}

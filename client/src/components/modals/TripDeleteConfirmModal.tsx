@@ -8,6 +8,10 @@ interface TripDeleteConfirmModalProps {
   onClose: () => void;
   tripName: string;
   onConfirm: () => void;
+  title?: string;
+  description?: string;
+  confirmLabel?: string;
+  confirmButtonColor?: string;
 }
 
 export default function TripDeleteConfirmModal({
@@ -15,7 +19,16 @@ export default function TripDeleteConfirmModal({
   onClose,
   tripName,
   onConfirm,
+  title,
+  description,
+  confirmLabel = "삭제",
+  confirmButtonColor = "#ff4242",
 }: TripDeleteConfirmModalProps) {
+  const resolvedTitle = title ?? "정말 이 여행을 삭제하시겠어요?";
+  const resolvedDescription =
+    description ??
+    `"${tripName}"${getJosa(tripName, "delete")} 삭제하면\n이 여행에 속한 모든 일정, 항공편,\n숙소 및 비용 데이터가 영구적으로 삭제됩니다.\n이 작업은 되돌릴 수 없습니다.`;
+
   return (
     <Modal
       visible={visible}
@@ -25,24 +38,17 @@ export default function TripDeleteConfirmModal({
     >
       <View style={styles.deleteModalOverlay}>
         <View style={styles.deleteModalCard}>
-          <Text style={styles.deleteModalTitle}>
-            정말 이 여행을 삭제하시겠어요?
-          </Text>
-          <Text style={styles.deleteModalText}>
-            "{tripName}"{getJosa(tripName, "delete")} 삭제하면{"\n"}이 여행에
-            속한 모든 일정, 항공편,{"\n"}
-            숙소 및 비용 데이터가 영구적으로 삭제됩니다.{"\n"}이 작업은 되돌릴
-            수 없습니다.
-          </Text>
+          <Text style={styles.deleteModalTitle}>{resolvedTitle}</Text>
+          <Text style={styles.deleteModalText}>{resolvedDescription}</Text>
           <View style={styles.deleteModalButtons}>
             <Pressable style={styles.deleteModalCancelButton} onPress={onClose}>
               <Text style={styles.deleteModalCancelButtonText}>취소</Text>
             </Pressable>
             <Pressable
-              style={styles.deleteModalDeleteButton}
+              style={[styles.deleteModalDeleteButton, { backgroundColor: confirmButtonColor }]}
               onPress={onConfirm}
             >
-              <Text style={styles.deleteModalDeleteButtonText}>삭제</Text>
+              <Text style={styles.deleteModalDeleteButtonText}>{confirmLabel}</Text>
             </Pressable>
           </View>
         </View>

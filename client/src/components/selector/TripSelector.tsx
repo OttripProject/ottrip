@@ -155,6 +155,7 @@ export default function TripSelector({
   const [isSubmittingEdit, setIsSubmittingEdit] = useState(false);
   const isSubmittingAddRef = useRef(false);
   const isSubmittingEditRef = useRef(false);
+  const [periodShrinkConfirmVisible, setPeriodShrinkConfirmVisible] = useState(false);
 
   const today = dayjs().format("YYYY-MM-DD");
 
@@ -226,22 +227,15 @@ export default function TripSelector({
     }
   };
 
-  const handleEditTrip = async () => {
-    if (isSubmittingEditRef.current || isSubmittingEdit) {
-      return;
-    }
-
+  const doEditTrip = async () => {
     if (!editingTrip) return;
-    if (isSubmittingEditRef.current || isSubmittingEdit) {
-      return;
-    }
 
     isSubmittingEditRef.current = true;
     setIsSubmittingEdit(true);
 
     try {
       const result = onTripUpdate?.(editingTrip.id, {
-        name: editTripForm.tripData.name,
+        name: editTripForm.tripData.name.trim(),
         segments: editTripForm.tripData.segments,
       });
 
@@ -258,6 +252,25 @@ export default function TripSelector({
       isSubmittingEditRef.current = false;
       setIsSubmittingEdit(false);
     }
+  };
+
+  const handleEditTrip = async () => {
+    if (isSubmittingEditRef.current || isSubmittingEdit) return;
+    if (!editingTrip) return;
+
+    const newSegments = editTripForm.tripData.segments.filter(s => s.startDate && s.endDate);
+    const newStartDates = newSegments.map(s => s.startDate).sort();
+    const newEndDates = newSegments.map(s => s.endDate).sort();
+    const newStart = newStartDates[0] ?? "";
+    const newEnd = newEndDates[newEndDates.length - 1] ?? "";
+    const periodShrunk = (newStart > editingTrip.startDate) || (newEnd < editingTrip.endDate);
+
+    if (periodShrunk) {
+      setPeriodShrinkConfirmVisible(true);
+      return;
+    }
+
+    await doEditTrip();
   };
 
   const handleDeleteTrip = (tripId: string) => {
@@ -592,6 +605,20 @@ export default function TripSelector({
         }}
         tripName={tripNameToDelete}
         onConfirm={confirmDeleteTrip}
+      />
+
+      <TripDeleteConfirmModal
+        visible={periodShrinkConfirmVisible}
+        onClose={() => setPeriodShrinkConfirmVisible(false)}
+        tripName=""
+        title="여행 기간이 줄어들어요"
+        description={`변경된 기간 밖에 등록된 일정은\n캘린더에 그대로 남아요. 저장할까요?`}
+        confirmLabel="저장"
+        confirmButtonColor={colors.primary}
+        onConfirm={async () => {
+          setPeriodShrinkConfirmVisible(false);
+          await doEditTrip();
+        }}
       />
 
       <ResultModal

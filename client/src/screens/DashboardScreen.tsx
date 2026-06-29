@@ -203,6 +203,12 @@ export default function DashboardScreen() {
         name: plan.title,
         startDate: plan.startDate,
         endDate: plan.endDate,
+        segments: plan.segments?.map(s => ({
+          country: s.country,
+          city: s.city,
+          startDate: s.startDate,
+          endDate: s.endDate,
+        })),
       })),
     [plansQuery.plans],
   );

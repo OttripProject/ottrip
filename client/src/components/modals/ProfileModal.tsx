@@ -30,7 +30,9 @@ import { guestPrompt } from "@/utils/guestPrompt";
 import CopyIcon from "../../../assets/copy.svg";
 import GenderCheckIcon from "../../../assets/gender_check.svg";
 import FilesIcon from "../../../assets/memo.svg";
+import DocumentIcon from "../../../assets/document.svg";
 import QnaIcon from "../../../assets/qna.svg";
+import ChatIcon from "../../../assets/chat.svg";
 import XIcon from "../../../assets/x.svg";
 
 const MEMBER_PROFILE_CARD_HEIGHT = 652;
@@ -282,7 +284,7 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
                     onPress={() => setTermsPolicyModalOpen(true)}
                     hitSlop={6}
                   >
-                    <FilesIcon width={16} height={16} />
+                    <DocumentIcon width={16} height={16} color={colors.gray800} />
                     <Text style={styles.guestTermsPolicyText}>
                       약관 및 정책 확인하기
                     </Text>
@@ -396,7 +398,7 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
                     style={styles.contactIconButton}
                     onPress={() => setContactOpen(true)}
                   >
-                    <QnaIcon width={16} height={16} fill={colors.gray800} />
+                    <ChatIcon width={16} height={16} color={colors.gray800} />
                   </Pressable>
                   <Pressable
                     style={styles.contactTextButton}
@@ -410,7 +412,7 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
                     onPress={() => setTermsPolicyModalOpen(true)}
                     hitSlop={6}
                   >
-                    <FilesIcon width={16} height={16} />
+                    <DocumentIcon width={16} height={16} color={colors.gray800} />
                   </Pressable>
                   <Pressable
                     style={styles.termsPolicyTextButton}
