@@ -21,7 +21,7 @@ import ExportGuestIcon from "../../../assets/export_guest.svg";
 import ExportImportIcon from "../../../assets/export_import.svg";
 import ExportLinkIcon from "../../../assets/export_link.svg";
 import ExportLockIcon from "../../../assets/export_lock.svg";
-import RefreshIcon from "../../../assets/refresh.svg";
+import RefreshIcon from "../../../assets/retry.svg";
 import XIcon from "../../../assets/x.svg";
 
 type Props = {

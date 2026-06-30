@@ -34,6 +34,7 @@ interface ExpenseDetailModalProps {
   expenses: Expense[];
   attachments?: Attachment[];
   onExpenseDelete?: () => void;
+  readOnly?: boolean;
 }
 
 const categoryOrder = [
@@ -52,6 +53,7 @@ export default function ExpenseDetailModal({
   expenses,
   attachments = [],
   onExpenseDelete,
+  readOnly = false,
 }: ExpenseDetailModalProps) {
   const [tab, setTab] = useState<"expenses" | "attachments">("expenses");
   const [selectedCategory, setSelectedCategory] =
@@ -195,45 +197,47 @@ export default function ExpenseDetailModal({
               </Text>
             </Pressable>
 
-            <View style={styles.tabBar}>
-              <Pressable
-                style={[
-                  styles.tabItem,
-                  tab === "expenses" && styles.tabItemActive,
-                ]}
-                onPress={() => setTab("expenses")}
-              >
-                <Text
+            {!readOnly && (
+              <View style={styles.tabBar}>
+                <Pressable
                   style={[
-                    styles.tabText,
-                    tab === "expenses" && styles.tabTextActive,
+                    styles.tabItem,
+                    tab === "expenses" && styles.tabItemActive,
                   ]}
+                  onPress={() => setTab("expenses")}
                 >
-                  내역
-                </Text>
-              </Pressable>
-              <Pressable
-                style={[
-                  styles.tabItem,
-                  tab === "attachments" && styles.tabItemActive,
-                ]}
-                onPress={() => setTab("attachments")}
-              >
-                <Text
-                  style={[
-                    styles.tabText,
-                    tab === "attachments" && styles.tabTextActive,
-                  ]}
-                >
-                  첨부파일
-                </Text>
-                {expenseAttachments.length > 0 && (
-                  <Text style={styles.tabBadge}>
-                    {expenseAttachments.length}
+                  <Text
+                    style={[
+                      styles.tabText,
+                      tab === "expenses" && styles.tabTextActive,
+                    ]}
+                  >
+                    내역
                   </Text>
-                )}
-              </Pressable>
-            </View>
+                </Pressable>
+                <Pressable
+                  style={[
+                    styles.tabItem,
+                    tab === "attachments" && styles.tabItemActive,
+                  ]}
+                  onPress={() => setTab("attachments")}
+                >
+                  <Text
+                    style={[
+                      styles.tabText,
+                      tab === "attachments" && styles.tabTextActive,
+                    ]}
+                  >
+                    첨부파일
+                  </Text>
+                  {expenseAttachments.length > 0 && (
+                    <Text style={styles.tabBadge}>
+                      {expenseAttachments.length}
+                    </Text>
+                  )}
+                </Pressable>
+              </View>
+            )}
 
             {tab === "expenses" ? (
               <>
@@ -316,34 +320,36 @@ export default function ExpenseDetailModal({
                                   {formatAmount(expense.amount)}{" "}
                                   {currencyLabels[expense.currency]}
                                 </Text>
-                                <View style={styles.expenseCardActions}>
-                                  {expAttachments.length > 0 && (
+                                {!readOnly && (
+                                  <View style={styles.expenseCardActions}>
+                                    {expAttachments.length > 0 && (
+                                      <Pressable
+                                        style={styles.attachmentButton}
+                                        onPress={() =>
+                                          handleExpenseAttachmentPress(
+                                            expense,
+                                            expAttachments,
+                                          )
+                                        }
+                                      >
+                                        <AttachmentIcon
+                                          width={11}
+                                          height={11}
+                                          color={colors.gray700}
+                                        />
+                                        <Text style={styles.attachmentCount}>
+                                          {expAttachments.length}
+                                        </Text>
+                                      </Pressable>
+                                    )}
                                     <Pressable
-                                      style={styles.attachmentButton}
-                                      onPress={() =>
-                                        handleExpenseAttachmentPress(
-                                          expense,
-                                          expAttachments,
-                                        )
-                                      }
+                                      onPress={() => handleDelete(expense.id)}
+                                      style={styles.deleteButton}
                                     >
-                                      <AttachmentIcon
-                                        width={11}
-                                        height={11}
-                                        color={colors.gray700}
-                                      />
-                                      <Text style={styles.attachmentCount}>
-                                        {expAttachments.length}
-                                      </Text>
+                                      <DeleteIcon width={14} height={14} color={colors.warning} />
                                     </Pressable>
-                                  )}
-                                  <Pressable
-                                    onPress={() => handleDelete(expense.id)}
-                                    style={styles.deleteButton}
-                                  >
-                                    <DeleteIcon width={14} height={14} color={colors.warning} />
-                                  </Pressable>
-                                </View>
+                                  </View>
+                                )}
                               </View>
                             </View>
                           );
