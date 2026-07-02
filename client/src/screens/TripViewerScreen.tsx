@@ -1,4 +1,5 @@
 import LoginPromptModal from "@/components/modals/LoginPromptModal";
+import TripDeleteConfirmModal from "@/components/modals/TripDeleteConfirmModal";
 import ViewerDetailPanel from "@/components/panels/ViewerDetailPanel";
 import ViewerHeaderPanel from "@/components/panels/ViewerHeaderPanel";
 import ViewerHintPanel from "@/components/panels/ViewerHintPanel";
@@ -19,7 +20,6 @@ import { useNavigation, useRoute } from "@react-navigation/native";
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   Platform,
   StyleSheet,
   View,
@@ -36,6 +36,7 @@ export default function TripViewerScreen() {
 
   const [snapshot, setSnapshot] = useState<PlanExportSnapshot | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
 
   const [selectedType, setSelectedType] = useState<
     "itinerary" | "flight" | "accommodation" | null
@@ -49,6 +50,8 @@ export default function TripViewerScreen() {
     useState<ExportAccommodation | null>(null);
 
   const [loginPromptOpen, setLoginPromptOpen] = useState(false);
+  const [saveSuccessVisible, setSaveSuccessVisible] = useState(false);
+  const [savedPlanPublicId, setSavedPlanPublicId] = useState<string | null>(null);
   const [mainLayoutHeight, setMainLayoutHeight] = useState(600);
   const [hintHeight, setHintHeight] = useState(48);
 
@@ -70,7 +73,7 @@ export default function TripViewerScreen() {
     plansApi
       .getExport(publicId)
       .then(data => setSnapshot(data))
-      .catch(() => Alert.alert("오류", "일정을 불러오지 못했습니다."))
+      .catch(() => setLoadError(true))
       .finally(() => setIsLoading(false));
   }, [publicId]);
 
@@ -81,18 +84,10 @@ export default function TripViewerScreen() {
     }
     try {
       const result = await plansApi.saveExport(publicId);
-      Alert.alert("완료", "내 일정으로 저장했습니다.", [
-        {
-          text: "확인",
-          onPress: () =>
-            navigation.reset({
-              index: 0,
-              routes: [{ name: "PLAN", params: { publicId: result.planPublicId } }],
-            }),
-        },
-      ]);
+      setSavedPlanPublicId(result.planPublicId);
+      setSaveSuccessVisible(true);
     } catch {
-      Alert.alert("오류", "저장에 실패했습니다.");
+      setSaveSuccessVisible(false);
     }
   };
 
@@ -130,6 +125,21 @@ export default function TripViewerScreen() {
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#4285F4" />
       </View>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <TripDeleteConfirmModal
+        visible={true}
+        tripName=""
+        title="일정을 불러오지 못했습니다"
+        description="잠시 후 다시 시도해주세요."
+        confirmLabel="닫기"
+        confirmButtonColor="#1F1F1F"
+        onClose={() => navigation.goBack()}
+        onConfirm={() => navigation.goBack()}
+      />
     );
   }
 
@@ -253,6 +263,25 @@ export default function TripViewerScreen() {
         visible={loginPromptOpen}
         onClose={() => setLoginPromptOpen(false)}
         onLoginPress={handleLoginPress}
+      />
+
+      <TripDeleteConfirmModal
+        visible={saveSuccessVisible}
+        tripName=""
+        title="내 일정으로 저장됐어요"
+        description="저장된 일정으로 이동하시겠어요?"
+        confirmLabel="이동하기"
+        confirmButtonColor="#1F1F1F"
+        onClose={() => setSaveSuccessVisible(false)}
+        onConfirm={() => {
+          setSaveSuccessVisible(false);
+          if (savedPlanPublicId) {
+            navigation.reset({
+              index: 0,
+              routes: [{ name: "PLAN", params: { publicId: savedPlanPublicId } }],
+            });
+          }
+        }}
       />
     </GradientBackground>
   );
