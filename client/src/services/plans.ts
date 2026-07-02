@@ -10,6 +10,7 @@ export type ExportSegment = {
 };
 
 export type ExportItinerary = {
+  id: number;
   title: string;
   itineraryDate: string;
   startTime: string;
@@ -28,10 +29,12 @@ export type ExportFlightSegment = {
 };
 
 export type ExportFlight = {
+  id: number;
   segments: ExportFlightSegment[];
 };
 
 export type ExportAccommodation = {
+  id: number;
   name: string;
   checkinDate: string;
   checkoutDate: string;
@@ -45,6 +48,9 @@ export type ExportExpense = {
   currency: string;
   description?: string | null;
   exDate: string;
+  itineraryId?: number | null;
+  flightId?: number | null;
+  accommodationId?: number | null;
 };
 
 export type ExportSnapshotData = {

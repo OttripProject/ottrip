@@ -110,6 +110,7 @@ class ExportSegment(APISchema):
 
 
 class ExportItinerary(APISchema):
+    id: int
     title: str
     country: str | None = None
     city: str | None = None
@@ -128,10 +129,12 @@ class ExportFlightSegment(APISchema):
 
 
 class ExportFlight(APISchema):
+    id: int
     segments: list[ExportFlightSegment] = []
 
 
 class ExportAccommodation(APISchema):
+    id: int
     name: str
     checkin_date: date
     checkout_date: date
@@ -145,6 +148,9 @@ class ExportExpense(APISchema):
     currency: ExpenseCurrency
     description: str | None = None
     ex_date: date
+    itinerary_id: int | None = None
+    flight_id: int | None = None
+    accommodation_id: int | None = None
 
 
 class ExportPlan(APISchema):

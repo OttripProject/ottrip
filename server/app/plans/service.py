@@ -435,6 +435,7 @@ class PlanService:
             ),
             itineraries=[
                 ExportItinerary(
+                    id=it.id,
                     title=it.title,
                     country=it.country,
                     city=it.city,
@@ -448,6 +449,7 @@ class PlanService:
             ],
             flights=[
                 ExportFlight(
+                    id=flight.id,
                     segments=[
                         ExportFlightSegment(
                             order=seg.order,
@@ -458,13 +460,14 @@ class PlanService:
                         )
                         for seg in flight.flight_segments
                         if not seg.is_deleted
-                    ]
+                    ],
                 )
                 for flight in plan.flights
                 if not flight.is_deleted
             ],
             accommodations=[
                 ExportAccommodation(
+                    id=acc.id,
                     name=acc.name,
                     checkin_date=acc.checkin_date,
                     checkout_date=acc.checkout_date,
@@ -482,6 +485,9 @@ class PlanService:
                         currency=exp.currency,
                         description=exp.description,
                         ex_date=exp.ex_date,
+                        itinerary_id=exp.itinerary_id,
+                        flight_id=exp.flight_id,
+                        accommodation_id=exp.accommodation_id,
                     )
                     for exp in plan.expenses
                     if not exp.is_deleted
@@ -533,20 +539,25 @@ class PlanService:
         session.add(new_plan)
         await session.flush()
 
+        itinerary_id_map: dict[int, int] = {}
+        flight_id_map: dict[int, int] = {}
+        accommodation_id_map: dict[int, int] = {}
+
         for it in snapshot.itineraries:
-            session.add(
-                Itinerary(
-                    title=it.title,
-                    description=None,
-                    country=it.country,
-                    city=it.city,
-                    location=it.location,
-                    itinerary_date=it.itinerary_date,
-                    start_time=it.start_time,
-                    end_time=it.end_time,
-                    plan_id=new_plan.id,
-                )
+            new_it = Itinerary(
+                title=it.title,
+                description=None,
+                country=it.country,
+                city=it.city,
+                location=it.location,
+                itinerary_date=it.itinerary_date,
+                start_time=it.start_time,
+                end_time=it.end_time,
+                plan_id=new_plan.id,
             )
+            session.add(new_it)
+            await session.flush()
+            itinerary_id_map[it.id] = new_it.id
 
         for flight in snapshot.flights:
             new_flight = Flight(
@@ -558,6 +569,7 @@ class PlanService:
             )
             session.add(new_flight)
             await session.flush()
+            flight_id_map[flight.id] = new_flight.id
             for seg in flight.segments:
                 session.add(
                     FlightSegment(
@@ -577,33 +589,44 @@ class PlanService:
                 )
 
         for acc in snapshot.accommodations:
-            session.add(
-                Accommodation(
-                    name=acc.name,
-                    place=None,
-                    country=None,
-                    city=None,
-                    checkin_date=acc.checkin_date,
-                    checkout_date=acc.checkout_date,
-                    checkin_time=acc.checkin_time,
-                    checkout_time=acc.checkout_time,
-                    description=None,
-                    plan_id=new_plan.id,
-                )
+            new_acc = Accommodation(
+                name=acc.name,
+                place=None,
+                country=None,
+                city=None,
+                checkin_date=acc.checkin_date,
+                checkout_date=acc.checkout_date,
+                checkin_time=acc.checkin_time,
+                checkout_time=acc.checkout_time,
+                description=None,
+                plan_id=new_plan.id,
             )
+            session.add(new_acc)
+            await session.flush()
+            accommodation_id_map[acc.id] = new_acc.id
 
         if snapshot.expenses:
             for exp in snapshot.expenses:
-                session.add(
-                    Expense(
-                        category=exp.category,
-                        amount=exp.amount,  # type: ignore[arg-type]
-                        currency=exp.currency,
-                        description=exp.description,
-                        ex_date=exp.ex_date,
-                        plan_id=new_plan.id,
-                    )
+                new_exp = Expense(
+                    category=exp.category,
+                    amount=exp.amount,  # type: ignore[arg-type]
+                    currency=exp.currency,
+                    description=exp.description,
+                    ex_date=exp.ex_date,
+                    plan_id=new_plan.id,
                 )
+                new_exp.itinerary_id = (
+                    itinerary_id_map.get(exp.itinerary_id) if exp.itinerary_id else None
+                )
+                new_exp.flight_id = (
+                    flight_id_map.get(exp.flight_id) if exp.flight_id else None
+                )
+                new_exp.accommodation_id = (
+                    accommodation_id_map.get(exp.accommodation_id)
+                    if exp.accommodation_id
+                    else None
+                )
+                session.add(new_exp)
 
         await session.flush()
         return PlanExportSaveResponse(plan_public_id=new_plan.public_id)

@@ -1,6 +1,6 @@
 import CalendarDetailIcon from "../../../assets/calendar_detail.svg";
 import LockSimpleIcon from "../../../assets/lock_simple.svg";
-import type { ExportAccommodation, ExportFlight, ExportItinerary } from "@/services/plans";
+import type { ExportAccommodation, ExportExpense, ExportFlight, ExportItinerary } from "@/services/plans";
 import { colors } from "@/ui/tokens/colors";
 import { textStyles } from "@/ui/tokens/typography";
 import dayjs from "dayjs";
@@ -15,6 +15,7 @@ interface ViewerDetailPanelProps {
   selectedItinerary?: ExportItinerary | null;
   selectedFlight?: ExportFlight | null;
   selectedAccommodation?: ExportAccommodation | null;
+  expenses?: ExportExpense[] | null;
 }
 
 function InfoRow({ label, value }: { label: string; value: string }) {
@@ -37,6 +38,35 @@ function PrivacyNotice() {
   );
 }
 
+
+const CURRENCY_LABELS: Record<string, string> = {
+  KRW: "원",
+  USD: "달러",
+  EUR: "유로",
+  JPY: "엔",
+  CNY: "위안",
+  GBP: "파운드",
+  AUD: "호주달러",
+};
+
+function LinkedExpenses({ expenses }: { expenses: ExportExpense[] }) {
+  if (expenses.length === 0) return null;
+  return (
+    <>
+      {expenses.map((e, i) => {
+        const currencyLabel = CURRENCY_LABELS[e.currency] ?? e.currency;
+        return (
+          <InfoRow
+            key={i}
+            label="비용"
+            value={`${Number(e.amount).toLocaleString()} ${currencyLabel}`}
+          />
+        );
+      })}
+    </>
+  );
+}
+
 function normalizeTime(t: string) {
   return t.split(":").slice(0, 2).join(":");
 }
@@ -54,6 +84,7 @@ export default function ViewerDetailPanel({
   selectedItinerary,
   selectedFlight,
   selectedAccommodation,
+  expenses,
 }: ViewerDetailPanelProps) {
   if (!selectedType) {
     return (
@@ -75,6 +106,7 @@ export default function ViewerDetailPanel({
     const it = selectedItinerary;
     const startT = normalizeTime(it.startTime);
     const endT = normalizeTime(it.endTime);
+    const linked = (expenses ?? []).filter(e => e.itineraryId === it.id);
 
     return (
       <PanelLayout>
@@ -90,6 +122,7 @@ export default function ViewerDetailPanel({
             {it.location ? <InfoRow label="장소" value={it.location} /> : null}
             <InfoRow label="날짜" value={formatDate(it.itineraryDate)} />
             <InfoRow label="시간" value={`${startT} - ${endT}`} />
+            <LinkedExpenses expenses={linked} />
           </View>
           <PrivacyNotice />
         </ScrollView>
@@ -99,6 +132,10 @@ export default function ViewerDetailPanel({
 
   if (selectedType === "flight" && selectedFlight) {
     const segments = selectedFlight.segments;
+    const linked = (expenses ?? []).filter(e => e.flightId === selectedFlight.id);
+    const flightTitle = segments.length > 0
+      ? `${segments[0].departureAirport} → ${segments[segments.length - 1].arrivalAirport}`
+      : "항공편";
     return (
       <PanelLayout>
         <ScrollView
@@ -106,7 +143,7 @@ export default function ViewerDetailPanel({
           contentContainerStyle={styles.detailContent}
           showsVerticalScrollIndicator={false}
         >
-          <Text style={styles.detailTitle}>항공편</Text>
+          <Text style={styles.detailTitle}>{flightTitle}</Text>
           {segments.map((seg, i) => (
             <View key={i}>
               {segments.length > 1 && (
@@ -118,6 +155,9 @@ export default function ViewerDetailPanel({
               </View>
             </View>
           ))}
+          <View style={styles.infoTable}>
+            <LinkedExpenses expenses={linked} />
+          </View>
           <PrivacyNotice />
         </ScrollView>
       </PanelLayout>
@@ -128,6 +168,7 @@ export default function ViewerDetailPanel({
     const acc = selectedAccommodation;
     const checkinT = normalizeTime(acc.checkinTime);
     const checkoutT = normalizeTime(acc.checkoutTime);
+    const linked = (expenses ?? []).filter(e => e.accommodationId === acc.id);
 
     return (
       <PanelLayout>
@@ -140,6 +181,7 @@ export default function ViewerDetailPanel({
           <View style={styles.infoTable}>
             <InfoRow label="체크인" value={`${formatDate(acc.checkinDate)}  ${checkinT}`} />
             <InfoRow label="체크아웃" value={`${formatDate(acc.checkoutDate)}  ${checkoutT}`} />
+            <LinkedExpenses expenses={linked} />
           </View>
           <PrivacyNotice />
         </ScrollView>
@@ -217,6 +259,47 @@ const styles = StyleSheet.create({
     color: colors.gray600,
     marginTop: 16,
     marginBottom: 2,
+  },
+  expenseSection: {
+    marginTop: 20,
+    marginBottom: 4,
+  },
+  expenseSectionTitle: {
+    ...textStyles.h8,
+    color: colors.gray700,
+    marginBottom: 8,
+  },
+  expenseRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F1F1F1",
+  },
+  expenseLeft: {
+    flex: 1,
+    minWidth: 0,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  expenseCategory: {
+    ...textStyles.body5,
+    color: colors.gray700,
+    flexShrink: 0,
+  },
+  expenseDesc: {
+    ...textStyles.body5,
+    color: colors.gray500,
+    flex: 1,
+    minWidth: 0,
+  },
+  expenseAmount: {
+    ...textStyles.h8,
+    color: colors.gray900,
+    marginLeft: 12,
+    flexShrink: 0,
   },
   privacyBox: {
     flexDirection: "row",

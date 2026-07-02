@@ -252,6 +252,7 @@ export default function TripViewerScreen() {
                   selectedItinerary={selectedItinerary}
                   selectedFlight={selectedFlight}
                   selectedAccommodation={selectedAccommodation}
+                  expenses={expenses}
                 />
               </View>
             </View>
