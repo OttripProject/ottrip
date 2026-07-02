@@ -1,6 +1,7 @@
 import { useAuth } from "@/contexts/AuthContext";
 import api from "@/services/api";
 import { authApi } from "@/services/auth";
+import { plansApi } from "@/services/plans";
 import { useNavigation } from "@react-navigation/native";
 import * as SecureStore from "expo-secure-store";
 import { useEffect } from "react";
@@ -77,6 +78,17 @@ export default function AuthCallbackScreen() {
               }
             }
           } catch {}
+
+          try {
+            const saveId = window.localStorage.getItem("pendingSavePublicId");
+            if (saveId) {
+              window.localStorage.removeItem("pendingSavePublicId");
+              const result = await plansApi.saveExport(saveId);
+              window.location.replace(`${window.location.origin}/plans/${result.planPublicId}`);
+              return;
+            }
+          } catch {}
+
           replaceWebLocationToRoot();
           return;
         } else {

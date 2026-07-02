@@ -20,6 +20,7 @@ import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Platform,
   StyleSheet,
   View,
   useWindowDimensions,
@@ -97,6 +98,9 @@ export default function TripViewerScreen() {
 
   const handleLoginPress = () => {
     setLoginPromptOpen(false);
+    if (Platform.OS === "web" && typeof window !== "undefined") {
+      try { window.localStorage.setItem("pendingSavePublicId", publicId); } catch {}
+    }
     navigation.navigate("로그인");
   };
 
