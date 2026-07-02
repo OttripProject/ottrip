@@ -46,10 +46,22 @@ import PanelTabSwitcher from "../PanelTabSwitcher";
 import CalendarIcon from "../../../../assets/calender.svg";
 import CloseIcon from "../../../../assets/close_sm.svg";
 
+function getCountryCityFromSegments(
+  segments: { startDate: string; endDate: string; country: string; city: string }[] | undefined | null,
+  date: string,
+) {
+  if (!segments || !date) return null;
+  const matches = segments.filter(s => s.startDate <= date && date <= s.endDate);
+  if (matches.length === 0) return null;
+  const last = matches[matches.length - 1];
+  return { country: last.country, city: last.city };
+}
+
 interface AccommodationItemProps {
   accommodation?: any;
   draft?: any;
   planId: number;
+  planData?: any;
   onSave: (accommodation: any) => void;
   onCancel: () => void;
   onDelete?: (accommodationId: number | string) => void;
@@ -75,6 +87,7 @@ export default function AccommodationItem({
   accommodation,
   draft,
   planId,
+  planData,
   onSave,
   onCancel,
   onDelete,
@@ -90,6 +103,14 @@ export default function AccommodationItem({
   carryoverPendingFiles,
   onConsumeCarryoverPendingFiles,
 }: AccommodationItemProps) {
+  const segments = planData?.plan?.segments;
+  const isNewAccommodation = !accommodation?.id;
+
+  const initialCheckinDate = accommodation?.checkinDate || draft?.checkinDate || dayjs().format("YYYY-MM-DD");
+  const initialAutoFill = isNewAccommodation
+    ? getCountryCityFromSegments(segments, initialCheckinDate)
+    : null;
+
   const formatAmountWithCommas = (digits: string) => {
     if (!digits) return "";
     const normalized = digits.replace(/^0+(?=\d)/, "");
@@ -107,8 +128,8 @@ export default function AccommodationItem({
   const [formData, setFormData] = useState({
     name: accommodation?.name || "",
     place: accommodation?.place || "",
-    country: accommodation?.country || "",
-    city: accommodation?.city || "",
+    country: accommodation?.country || initialAutoFill?.country || "",
+    city: accommodation?.city || initialAutoFill?.city || "",
     checkin_date:
       accommodation?.checkinDate ||
       draft?.checkinDate ||
@@ -178,12 +199,16 @@ export default function AccommodationItem({
 
   useEffect(() => {
     if (accommodation) {
+      const checkinDate = accommodation.checkinDate || dayjs().format("YYYY-MM-DD");
+      const segmentFill = !accommodation.id
+        ? getCountryCityFromSegments(segments, checkinDate)
+        : null;
       setFormData({
         name: accommodation.name || "",
         place: accommodation.place || "",
-        country: accommodation.country || "",
-        city: accommodation.city || "",
-        checkin_date: accommodation.checkinDate || dayjs().format("YYYY-MM-DD"),
+        country: accommodation.country || segmentFill?.country || "",
+        city: accommodation.city || segmentFill?.city || "",
+        checkin_date: checkinDate,
         checkout_date:
           accommodation.checkoutDate ||
           dayjs().add(1, "day").format("YYYY-MM-DD"),
@@ -202,6 +227,17 @@ export default function AccommodationItem({
       }));
     }
   }, [accommodation]);
+
+  useEffect(() => {
+    if (isNewAccommodation && segments) {
+      setFormData(prev => {
+        if (prev.country || prev.city) return prev;
+        const autoFill = getCountryCityFromSegments(segments, prev.checkin_date);
+        if (!autoFill) return prev;
+        return { ...prev, country: autoFill.country, city: autoFill.city };
+      });
+    }
+  }, [segments, accommodation]);
 
   const [countryOpen, setCountryOpen] = useState(false);
   useEffect(() => {
@@ -764,7 +800,12 @@ export default function AccommodationItem({
                   visible={true}
                   selectedDate={formData.checkin_date}
                   onDayPress={day => {
-                    setFormData({ ...formData, checkin_date: day.dateString });
+                    const autoFill = !accommodation?.id ? getCountryCityFromSegments(segments, day.dateString) : null;
+                    setFormData({
+                      ...formData,
+                      checkin_date: day.dateString,
+                      ...(autoFill ? { country: autoFill.country, city: autoFill.city } : {}),
+                    });
                     setShowCheckinDatePicker(false);
                   }}
                   onClose={() => setShowCheckinDatePicker(false)}

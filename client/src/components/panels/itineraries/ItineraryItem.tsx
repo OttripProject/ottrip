@@ -66,6 +66,17 @@ import CalendarIcon from "../../../../assets/calender.svg";
 import DeleteIcon from "../../../../assets/delete.svg";
 import CloseIcon from "../../../../assets/close_sm.svg";
 
+function getCountryCityFromSegments(
+  segments: { startDate: string; endDate: string; country: string; city: string }[] | undefined | null,
+  date: string,
+) {
+  if (!segments || !date) return null;
+  const matches = segments.filter(s => s.startDate <= date && date <= s.endDate);
+  if (matches.length === 0) return null;
+  const last = matches[matches.length - 1];
+  return { country: last.country, city: last.city };
+}
+
 interface ItineraryItemProps {
   itinerary?: any;
   planId: number;
@@ -134,11 +145,14 @@ export default function ItineraryItem({
 
   React.useEffect(() => {
     if (selectedDate && !itinerary) {
+      const dateStr = dayjs(selectedDate).format("YYYY-MM-DD");
+      const autoFill = getCountryCityFromSegments(planData?.plan?.segments, dateStr);
       setFormData(prev => ({
         ...prev,
-        itineraryDate: dayjs(selectedDate).format("YYYY-MM-DD"),
+        itineraryDate: dateStr,
         startTime: dayjs(selectedDate).format("HH:mm"),
         endTime: dayjs(selectedDate).add(1, "hour").format("HH:mm"),
+        ...(autoFill ? { country: autoFill.country, city: autoFill.city } : {}),
       }));
     }
   }, [selectedDate, itinerary]);
@@ -262,11 +276,12 @@ export default function ItineraryItem({
         ? dayjs(selectedDate).add(1, "hour").format("HH:mm")
         : "10:00";
 
+      const autoFill = getCountryCityFromSegments(planData?.plan?.segments, defaultDate);
       setFormData({
         title: "",
         description: "",
-        country: "",
-        city: "",
+        country: autoFill?.country || "",
+        city: autoFill?.city || "",
         location: "",
         itineraryDate: defaultDate,
         startTime: defaultStartTime,

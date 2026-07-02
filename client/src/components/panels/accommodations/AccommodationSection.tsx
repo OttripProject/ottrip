@@ -174,6 +174,7 @@ export default function AccommodationSection({
         accommodation={editingAccommodation}
         draft={newAccommodationDraft}
         planId={planData.plan.id}
+        planData={planData}
         onSave={handleAccommodationSave}
         onCancel={() => {
           setShowAccommodationForm(false);
