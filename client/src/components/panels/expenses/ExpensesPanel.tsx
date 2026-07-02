@@ -28,6 +28,7 @@ interface ExpensesPanelProps {
     refreshAccommodations?: () => Promise<void>;
   };
   onExpenseAdd?: (expense: any) => void;
+  readOnly?: boolean;
 }
 
 interface Expense {
@@ -42,6 +43,7 @@ interface Expense {
 export default function ExpensesPanel({
   planData,
   onExpenseAdd,
+  readOnly = false,
 }: ExpensesPanelProps) {
   const [showExpenseForm, setShowExpenseForm] = useState(false);
   const [showExpenseDetail, setShowExpenseDetail] = useState(false);
@@ -92,13 +94,15 @@ export default function ExpensesPanel({
             >
               <Text style={styles.outlineButtonText}>상세보기</Text>
             </TouchableOpacity>
-            <Pressable
-              style={styles.outlineButton}
-              onPress={() => setShowExpenseForm(true)}
-            >
-              <Text style={styles.addButtonPlus}>+</Text>
-              <Text style={styles.outlineButtonText}>비용 추가</Text>
-            </Pressable>
+            {!readOnly && (
+              <Pressable
+                style={styles.outlineButton}
+                onPress={() => setShowExpenseForm(true)}
+              >
+                <Text style={styles.addButtonPlus}>+</Text>
+                <Text style={styles.outlineButtonText}>비용 추가</Text>
+              </Pressable>
+            )}
           </View>
         </View>
 
@@ -113,21 +117,24 @@ export default function ExpensesPanel({
         </Pressable>
       </View>
 
-      <AddExpenseModal
-        visible={showExpenseForm}
-        onClose={() => setShowExpenseForm(false)}
-        planId={planData?.plan?.id || 0}
-        planStartDate={planData?.plan?.startDate}
-        onExpenseAdd={newExpense => {
-          onExpenseAdd?.(newExpense);
-        }}
-      />
+      {!readOnly && (
+        <AddExpenseModal
+          visible={showExpenseForm}
+          onClose={() => setShowExpenseForm(false)}
+          planId={planData?.plan?.id || 0}
+          planStartDate={planData?.plan?.startDate}
+          onExpenseAdd={newExpense => {
+            onExpenseAdd?.(newExpense);
+          }}
+        />
+      )}
 
       <ExpenseDetailModal
         visible={showExpenseDetail}
         onClose={() => setShowExpenseDetail(false)}
         expenses={planData?.expenses || []}
         attachments={planData?.attachments || []}
+        readOnly={readOnly}
         onExpenseDelete={async () => {
           await planData?.refreshExpenses();
           await planData?.refreshItineraries?.();

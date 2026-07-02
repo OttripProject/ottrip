@@ -1,21 +1,23 @@
 import logging
-import time
 
 from fastapi import status
 
 from app.core.router import create_router
 
 from .schemas import (
+    InvitationCreate,
     PlanCreate,
+    PlanExportCreate,
+    PlanExportCreateResponse,
+    PlanExportSaveResponse,
+    PlanMemoUpdate,
     PlanRead,
     PlanReadWithInforms,
     PlansReadByUser,
     PlanUpdate,
-    PlanMemoUpdate,
     ShareCreate,
-    ShareUpdate,
     ShareRead,
-    InvitationCreate,
+    ShareUpdate,
 )
 from .service import PlanService
 
@@ -132,3 +134,23 @@ async def accept_invitation(
     token: str,
 ) -> None:
     await plan_service.accept_invitation(token=token)
+
+
+# --- Export ---
+
+
+@router.post("/{plan_id}/export", status_code=status.HTTP_201_CREATED)
+async def create_plan_export(
+    plan_service: PlanService,
+    plan_id: int,
+    body: PlanExportCreate,
+) -> PlanExportCreateResponse:
+    return await plan_service.create_export(plan_id=plan_id, request=body)
+
+
+@router.post("/exports/{public_id}/save", status_code=status.HTTP_201_CREATED)
+async def save_export_as_plan(
+    plan_service: PlanService,
+    public_id: str,
+) -> PlanExportSaveResponse:
+    return await plan_service.save_as_plan(public_id=public_id)

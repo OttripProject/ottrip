@@ -5,24 +5,39 @@ from datetime import datetime, timedelta, timezone
 
 from fastapi import HTTPException
 
+from app.accomodation.models import Accommodation
 from app.attachments.service import delete_r2_objects_by_keys
 from app.auth.deps import CurrentUser
 from app.auth.repository import AuthRepository
+from app.expenses.models import Expense
+from app.flights.models import Flight, FlightSegment
+from app.itinerary.models import Itinerary
 from app.storage.deps import S3ClientDep
 from app.users.repository import UserRepository
 from app.utils.dependency import dependency
 from app.utils.email import build_invitation_accept_link, send_invitation_email_resend
 
-from .models import InvitationStatus, Plan, PlanSegment, Role
+from .models import InvitationStatus, Plan, PlanExport, PlanSegment, Role
 from .repository import PlanRepository
 from .schemas import (
+    ExportAccommodation,
+    ExportExpense,
+    ExportFlight,
+    ExportFlightSegment,
+    ExportItinerary,
+    ExportPlan,
+    ExportSegment,
     PlanCreate,
+    PlanExportCreate,
+    PlanExportCreateResponse,
+    PlanExportSaveResponse,
     PlanMemoUpdate,
     PlanRead,
     PlanReadWithInforms,
     PlansReadByUser,
     PlanUpdate,
     ShareRead,
+    SnapshotData,
 )
 
 logger = logging.getLogger("api")
@@ -384,3 +399,234 @@ class PlanService:
             invitation_id=invitation.id,
             status=InvitationStatus.ACCEPTED.name,
         )
+
+    # --- Export ---
+
+    async def create_export(
+        self, *, plan_id: int, request: PlanExportCreate
+    ) -> PlanExportCreateResponse:
+        plan = await self.plan_repository.find_by_id(plan_id=plan_id)
+        if not plan:
+            raise HTTPException(status_code=404, detail="계획을 찾을 수 없습니다.")
+
+        has_permission = plan.owner_id == self.current_user.id or (
+            await self.plan_repository.is_editor(
+                plan_id=plan_id, user_id=self.current_user.id
+            )
+        )
+        if not has_permission:
+            raise HTTPException(status_code=403, detail="내보내기 권한이 없습니다.")
+
+        snapshot = SnapshotData(
+            plan=ExportPlan(
+                title=plan.title,
+                start_date=plan.start_date,
+                end_date=plan.end_date,
+                segments=[
+                    ExportSegment(
+                        country=s.country,
+                        city=s.city,
+                        start_date=s.start_date,
+                        end_date=s.end_date,
+                        order_index=s.order_index,
+                    )
+                    for s in plan.segments
+                ],
+            ),
+            itineraries=[
+                ExportItinerary(
+                    id=it.id,
+                    title=it.title,
+                    country=it.country,
+                    city=it.city,
+                    location=it.location,
+                    itinerary_date=it.itinerary_date,
+                    start_time=it.start_time,
+                    end_time=it.end_time,
+                )
+                for it in plan.itineraries
+                if not it.is_deleted
+            ],
+            flights=[
+                ExportFlight(
+                    id=flight.id,
+                    segments=[
+                        ExportFlightSegment(
+                            order=seg.order,
+                            departure_airport=seg.departure_airport,
+                            arrival_airport=seg.arrival_airport,
+                            departure_time=seg.departure_time,
+                            arrival_time=seg.arrival_time,
+                        )
+                        for seg in flight.flight_segments
+                        if not seg.is_deleted
+                    ],
+                )
+                for flight in plan.flights
+                if not flight.is_deleted
+            ],
+            accommodations=[
+                ExportAccommodation(
+                    id=acc.id,
+                    name=acc.name,
+                    checkin_date=acc.checkin_date,
+                    checkout_date=acc.checkout_date,
+                    checkin_time=acc.checkin_time,
+                    checkout_time=acc.checkout_time,
+                )
+                for acc in plan.accommodations
+                if not acc.is_deleted
+            ],
+            expenses=(
+                [
+                    ExportExpense(
+                        category=exp.category,
+                        amount=exp.amount,  # type: ignore[arg-type]
+                        currency=exp.currency,
+                        description=exp.description,
+                        ex_date=exp.ex_date,
+                        itinerary_id=exp.itinerary_id,
+                        flight_id=exp.flight_id,
+                        accommodation_id=exp.accommodation_id,
+                    )
+                    for exp in plan.expenses
+                    if not exp.is_deleted
+                ]
+                if request.include_expenses
+                else None
+            ),
+            checklist=plan.travel_checklist if request.include_checklist else None,
+        )
+
+        export = await self.plan_repository.save_export(
+            export=PlanExport(
+                public_id=str(uuid.uuid4()),
+                source_plan_id=plan.id,
+                snapshot_data=snapshot.model_dump(mode="json"),
+            )
+        )
+        return PlanExportCreateResponse(public_id=export.public_id)
+
+    async def save_as_plan(self, *, public_id: str) -> PlanExportSaveResponse:
+        export = await self.plan_repository.find_export_by_public_id(
+            public_id=public_id
+        )
+        if not export:
+            raise HTTPException(status_code=404, detail="내보내기를 찾을 수 없습니다.")
+
+        snapshot = SnapshotData.model_validate(export.snapshot_data)
+        snap_plan = snapshot.plan
+        session = self.plan_repository.session
+
+        new_plan = Plan(
+            title=snap_plan.title,
+            start_date=snap_plan.start_date,
+            end_date=snap_plan.end_date,
+            owner_id=self.current_user.id,
+            public_id=str(uuid.uuid4()),
+            travel_checklist=snapshot.checklist,
+            segments=[
+                PlanSegment(
+                    country=s.country,
+                    city=s.city,
+                    start_date=s.start_date,
+                    end_date=s.end_date,
+                    order_index=s.order_index,
+                )
+                for s in snap_plan.segments
+            ],
+        )
+        session.add(new_plan)
+        await session.flush()
+
+        itinerary_id_map: dict[int, int] = {}
+        flight_id_map: dict[int, int] = {}
+        accommodation_id_map: dict[int, int] = {}
+
+        for it in snapshot.itineraries:
+            new_it = Itinerary(
+                title=it.title,
+                description=None,
+                country=it.country,
+                city=it.city,
+                location=it.location,
+                itinerary_date=it.itinerary_date,
+                start_time=it.start_time,
+                end_time=it.end_time,
+                plan_id=new_plan.id,
+            )
+            session.add(new_it)
+            await session.flush()
+            itinerary_id_map[it.id] = new_it.id
+
+        for flight in snapshot.flights:
+            new_flight = Flight(
+                reservation_number="",
+                passenger_name="",
+                ticket_number="",
+                booking_reference="",
+                plan_id=new_plan.id,
+            )
+            session.add(new_flight)
+            await session.flush()
+            flight_id_map[flight.id] = new_flight.id
+            for seg in flight.segments:
+                session.add(
+                    FlightSegment(
+                        order=seg.order,
+                        airline="",
+                        flight_number="",
+                        departure_airport=seg.departure_airport,
+                        arrival_airport=seg.arrival_airport,
+                        departure_time=seg.departure_time,
+                        arrival_time=seg.arrival_time,
+                        seat_class="",
+                        seat_number="",
+                        gate="",
+                        terminal="",
+                        flight_id=new_flight.id,
+                    )
+                )
+
+        for acc in snapshot.accommodations:
+            new_acc = Accommodation(
+                name=acc.name,
+                place=None,
+                country=None,
+                city=None,
+                checkin_date=acc.checkin_date,
+                checkout_date=acc.checkout_date,
+                checkin_time=acc.checkin_time,
+                checkout_time=acc.checkout_time,
+                description=None,
+                plan_id=new_plan.id,
+            )
+            session.add(new_acc)
+            await session.flush()
+            accommodation_id_map[acc.id] = new_acc.id
+
+        if snapshot.expenses:
+            for exp in snapshot.expenses:
+                new_exp = Expense(
+                    category=exp.category,
+                    amount=exp.amount,  # type: ignore[arg-type]
+                    currency=exp.currency,
+                    description=exp.description,
+                    ex_date=exp.ex_date,
+                    plan_id=new_plan.id,
+                )
+                new_exp.itinerary_id = (
+                    itinerary_id_map.get(exp.itinerary_id) if exp.itinerary_id else None
+                )
+                new_exp.flight_id = (
+                    flight_id_map.get(exp.flight_id) if exp.flight_id else None
+                )
+                new_exp.accommodation_id = (
+                    accommodation_id_map.get(exp.accommodation_id)
+                    if exp.accommodation_id
+                    else None
+                )
+                session.add(new_exp)
+
+        await session.flush()
+        return PlanExportSaveResponse(plan_public_id=new_plan.public_id)

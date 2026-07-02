@@ -38,9 +38,11 @@ interface ChecklistData {
 
 interface AIAssistantPanelProps {
   publicId: string | null;
+  readOnly?: boolean;
+  initialChecklist?: ChecklistData;
 }
 
-export default function AIAssistantPanel({ publicId }: AIAssistantPanelProps) {
+export default function AIAssistantPanel({ publicId, readOnly = false, initialChecklist }: AIAssistantPanelProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [checklist, setChecklist] = useState<ChecklistData | null>(null);
   const [showRefreshModal, setShowRefreshModal] = useState(false);
@@ -56,6 +58,7 @@ export default function AIAssistantPanel({ publicId }: AIAssistantPanelProps) {
   const [newItemReason, setNewItemReason] = useState("");
 
   const checkExistingChecklist = useCallback(async () => {
+    if (readOnly) return;
     if (!publicId) {
       setChecklist(null);
       return;
@@ -72,15 +75,19 @@ export default function AIAssistantPanel({ publicId }: AIAssistantPanelProps) {
     } catch (_error) {
       setChecklist(null);
     }
-  }, [publicId]);
+  }, [publicId, readOnly]);
 
   useEffect(() => {
+    if (readOnly) {
+      setChecklist(initialChecklist ?? null);
+      return;
+    }
     if (publicId) {
       checkExistingChecklist();
     } else {
       setChecklist(null);
     }
-  }, [publicId, checkExistingChecklist]);
+  }, [publicId, checkExistingChecklist, readOnly, initialChecklist]);
 
   const _handleGenerateChecklist = async () => {
     if (!publicId) return;
@@ -346,7 +353,7 @@ export default function AIAssistantPanel({ publicId }: AIAssistantPanelProps) {
   return (
     <PanelLayout style={{ flex: 1 }}>
       <View style={styles.contentContainer}>
-        {!publicId ? (
+        {!publicId && !readOnly ? (
           <View style={styles.placeholder}>
             <Text style={styles.placeholderText}>여행을 선택해주세요</Text>
           </View>
@@ -362,24 +369,36 @@ export default function AIAssistantPanel({ publicId }: AIAssistantPanelProps) {
               </TouchableOpacity>
             </View>
 
-            <View style={styles.simpleStatsContainer}>
-              <View style={styles.simpleStatButton}>
-                <Text style={styles.simpleStatLabel}>준비 필요</Text>
-                <View style={styles.statNumberRow}>
-                  <Text style={styles.simpleStatNumber}>
-                    {stats.total - stats.checked}
-                  </Text>
-                  <Text style={styles.statUnit}>개</Text>
+            {readOnly ? (
+              <View style={styles.readOnlyStatWrapper}>
+                <View style={styles.simpleStatButton}>
+                  <Text style={styles.simpleStatLabel}>준비물</Text>
+                  <View style={styles.statNumberRow}>
+                    <Text style={styles.simpleStatNumber}>{stats.total}</Text>
+                    <Text style={styles.statUnit}>개</Text>
+                  </View>
                 </View>
               </View>
-              <View style={styles.simpleStatButton}>
-                <Text style={styles.simpleStatLabel}>준비 됨</Text>
-                <View style={styles.statNumberRow}>
-                  <Text style={styles.simpleStatNumber}>{stats.checked}</Text>
-                  <Text style={styles.statUnit}>개</Text>
+            ) : (
+              <View style={styles.simpleStatsContainer}>
+                <View style={styles.simpleStatButton}>
+                  <Text style={styles.simpleStatLabel}>준비 필요</Text>
+                  <View style={styles.statNumberRow}>
+                    <Text style={styles.simpleStatNumber}>
+                      {stats.total - stats.checked}
+                    </Text>
+                    <Text style={styles.statUnit}>개</Text>
+                  </View>
+                </View>
+                <View style={styles.simpleStatButton}>
+                  <Text style={styles.simpleStatLabel}>준비 됨</Text>
+                  <View style={styles.statNumberRow}>
+                    <Text style={styles.simpleStatNumber}>{stats.checked}</Text>
+                    <Text style={styles.statUnit}>개</Text>
+                  </View>
                 </View>
               </View>
-            </View>
+            )}
           </View>
         )}
       </View>
@@ -389,6 +408,7 @@ export default function AIAssistantPanel({ publicId }: AIAssistantPanelProps) {
         visible={showListViewModal}
         checklist={checklist}
         isLoading={isLoading}
+        readOnly={readOnly}
         onClose={handleCloseListViewModal}
         onRefresh={handleRefresh}
         onToggleItem={handleToggleItem}
@@ -497,20 +517,27 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "stretch",
   },
+  readOnlyStatWrapper: {
+    marginTop: 2,
+    marginHorizontal: spacing.lg,
+    marginBottom: spacing.lg,
+    flex: 1,
+  },
   simpleStatButton: {
-    backgroundColor: colors.gray100,
+    backgroundColor: "#FAFAFA",
     borderRadius: 10,
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 16,
+    paddingHorizontal: 18,
+    paddingVertical: 16,
   },
   simpleStatLabel: {
     fontFamily: typography.fontFamily.pretendardRegular,
     fontSize: 13,
     lineHeight: 20,
-    color: colors.gray700,
+    color: "#6C6C6C",
   },
   statNumberRow: {
     flexDirection: "row",

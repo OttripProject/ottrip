@@ -45,6 +45,7 @@ interface AiChecklistListViewModalProps {
   visible: boolean;
   checklist: ChecklistData | null;
   isLoading?: boolean;
+  readOnly?: boolean;
   onClose: () => void;
   onRefresh: () => void;
   onToggleItem: (itemId: number, isChecked: boolean) => void;
@@ -109,20 +110,37 @@ if (Platform.OS === "web" && typeof document !== "undefined" && !document.getEle
   document.head.appendChild(style);
 }
 
+const CATEGORY_ORDER = ["basicRequired", "basic_required", "scheduleRequired", "schedule_required", "recommended", "optional"];
+
+const normalizeCategoryKey = (key: string) =>
+  key.replace(/_([a-z])/g, (_, c: string) => c.toUpperCase());
+
 const getCategoryTitle = (categoryKey: string) => {
   const titles: { [key: string]: string } = {
     basicRequired: "꼭 챙겨야 해요",
+    basic_required: "꼭 챙겨야 해요",
     scheduleRequired: "이번 일정에 필요해요",
+    schedule_required: "이번 일정에 필요해요",
     recommended: "있으면 더 좋아요",
     optional: "선택이에요",
   };
   return titles[categoryKey] || categoryKey;
 };
 
+const sortCategories = (entries: [string, ChecklistItem[]][]) =>
+  [...entries].sort(([a], [b]) => {
+    const normalize = normalizeCategoryKey;
+    const orderKeys = ["basicRequired", "scheduleRequired", "recommended", "optional"];
+    const ai = orderKeys.indexOf(normalize(a));
+    const bi = orderKeys.indexOf(normalize(b));
+    return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
+  });
+
 export default function AiChecklistListViewModal({
   visible,
   checklist,
   isLoading = false,
+  readOnly = false,
   onClose,
   onRefresh,
   onToggleItem,
@@ -187,27 +205,36 @@ export default function AiChecklistListViewModal({
           <View style={styles.headerSection}>
             <View style={styles.titleContainer}>
               <Text style={styles.headerTitle}>체크리스트</Text>
-              <TouchableOpacity
-                onPress={() => {
-                  if (isGuest) {
-                    guestPrompt.show();
-                    return;
-                  }
-                  onRefresh();
-                }}
-                style={styles.aiRecommendButton}
-                activeOpacity={0.8}
-              >
-                <LinearGradient
-                  colors={colors.aiGrad}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
-                  style={styles.aiRecommendButtonGradient}
+              {readOnly && checklist && (
+                <View style={styles.readOnlyCountBadge}>
+                  <Text style={styles.readOnlyCountText}>
+                    전체 {Object.values(checklist.categories).flat().length}개
+                  </Text>
+                </View>
+              )}
+              {!readOnly && (
+                <TouchableOpacity
+                  onPress={() => {
+                    if (isGuest) {
+                      guestPrompt.show();
+                      return;
+                    }
+                    onRefresh();
+                  }}
+                  style={styles.aiRecommendButton}
+                  activeOpacity={0.8}
                 >
-                  <AiRefreshIcon width={12} height={12} />
-                  <Text style={styles.aiRecommendButtonText}>AI 추천</Text>
-                </LinearGradient>
-              </TouchableOpacity>
+                  <LinearGradient
+                    colors={colors.aiGrad}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={styles.aiRecommendButtonGradient}
+                  >
+                    <AiRefreshIcon width={12} height={12} />
+                    <Text style={styles.aiRecommendButtonText}>AI 추천</Text>
+                  </LinearGradient>
+                </TouchableOpacity>
+              )}
             </View>
             <TouchableOpacity onPress={onClose} style={styles.closeButton}>
               <XIcon width={14} height={14} fill={colors.black}/>
@@ -218,8 +245,43 @@ export default function AiChecklistListViewModal({
               style={styles.checklistScrollView}
               showsVerticalScrollIndicator={false}
             >
-              {checklist &&
-                Object.entries(checklist.categories).map(
+              {checklist && readOnly
+                ? sortCategories(Object.entries(checklist.categories))
+                    .filter(([, items]) => items.length > 0)
+                    .map(([categoryKey, items], sectionIndex) => (
+                      <View
+                        key={categoryKey}
+                        style={[
+                          styles.readOnlyCategorySection,
+                          sectionIndex > 0 && styles.readOnlyCategorySectionBorder,
+                        ]}
+                      >
+                        <View style={styles.readOnlyCategoryHeader}>
+                          <Text style={styles.readOnlyCategoryTitle}>
+                            {getCategoryTitle(categoryKey)}
+                          </Text>
+                          <Text style={styles.readOnlyCategoryCount}>{items.length}개</Text>
+                        </View>
+                        {items.map((item, i) => (
+                          <View key={item.id ?? i} style={styles.readOnlyItemRow}>
+                            <View style={styles.readOnlyItemDot} />
+                            {!item.isCustom && (
+                              <View style={styles.readOnlyAiBadge}>
+                                <Text style={styles.readOnlyAiBadgeText}>AI</Text>
+                              </View>
+                            )}
+                            <Text style={styles.readOnlyItemText}>
+                              {item.name}
+                              {item.reason ? (
+                                <Text style={styles.readOnlyItemReason}>{" · "}{item.reason}</Text>
+                              ) : null}
+                            </Text>
+                          </View>
+                        ))}
+                      </View>
+                    ))
+                : checklist &&
+                  sortCategories(Object.entries(checklist.categories)).map(
                   ([categoryKey, items], sectionIndex) => (
                     <View
                       key={categoryKey}
@@ -233,10 +295,10 @@ export default function AiChecklistListViewModal({
                           {getCategoryTitle(categoryKey)}
                         </Text>
                         <Text style={styles.categoryProgress}>
-                          {items.filter(i => i.isChecked).length}/{items.length}
+                          {readOnly ? items.length : `${items.filter(i => i.isChecked).length}/${items.length}`}
                         </Text>
                         <View style={styles.categoryHeaderSpacer} />
-                        {addingCategory !== categoryKey && (
+                        {!readOnly && addingCategory !== categoryKey && (
                           <TouchableOpacity
                             onPress={() => handleStartAdding(categoryKey)}
                             style={styles.addItemButton}
@@ -263,7 +325,7 @@ export default function AiChecklistListViewModal({
                             >
                               <TouchableOpacity
                                 style={styles.checklistItem}
-                                onPress={() =>
+                                onPress={readOnly ? undefined : () =>
                                   onToggleItem(item.id, !item.isChecked)
                                 }
                               >
@@ -314,19 +376,21 @@ export default function AiChecklistListViewModal({
                                   </View>
                                 </View>
                               </TouchableOpacity>
-                              <TouchableOpacity
-                                style={[
-                                  styles.deleteItemButton,
-                                  { opacity: isHovered ? 1 : 0 },
-                                ]}
-                                onPress={() => onDeleteItem(item.id)}
-                              >
-                                <DeleteIcon width={11} height={11} color={colors.gray900} />
-                              </TouchableOpacity>
+                              {!readOnly && (
+                                <TouchableOpacity
+                                  style={[
+                                    styles.deleteItemButton,
+                                    { opacity: isHovered ? 1 : 0 },
+                                  ]}
+                                  onPress={() => onDeleteItem(item.id)}
+                                >
+                                  <DeleteIcon width={11} height={11} color={colors.gray900} />
+                                </TouchableOpacity>
+                              )}
                             </View>
                           );
                       })}
-                      {addingCategory === categoryKey && (
+                      {!readOnly && addingCategory === categoryKey && (
                         <View style={styles.addingItemRow}>
                           <View style={styles.addingItemCheckboxPlaceholder} />
                           <View style={styles.addingItemInputs}>
@@ -368,7 +432,7 @@ export default function AiChecklistListViewModal({
                       )}
                     </View>
                   ),
-                )}
+                  )}
             </ScrollView>
           </View>
         </Pressable>
@@ -648,5 +712,80 @@ const styles = StyleSheet.create({
   },
   itemReasonChecked: {
     color: colors.gray500,
+  },
+  readOnlyCountBadge: {
+    height: 22,
+    paddingHorizontal: 10,
+    borderRadius: 999,
+    backgroundColor: "#F4F4F4",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  readOnlyCountText: {
+    ...textStyles.h9,
+    color: "#6C6C6C",
+  },
+  readOnlyCategorySection: {
+    paddingTop: 4,
+    paddingBottom: 14,
+  },
+  readOnlyCategorySectionBorder: {
+    borderTopWidth: 1,
+    borderTopColor: "#EDEDED",
+    paddingTop: 14,
+  },
+  readOnlyCategoryHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginBottom: 8,
+  },
+  readOnlyCategoryTitle: {
+    ...textStyles.h7,
+    color: "#1F1F1F",
+  },
+  readOnlyCategoryCount: {
+    ...textStyles.h9,
+    color: "#9B9B9B",
+  },
+  readOnlyItemRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    paddingVertical: 8,
+  },
+  readOnlyItemDot: {
+    width: 5,
+    height: 5,
+    borderRadius: 2.5,
+    backgroundColor: "#C4C4C4",
+    marginLeft: 5,
+    marginRight: 10,
+    marginTop: 6,
+    flexShrink: 0,
+  },
+  readOnlyAiBadge: {
+    height: 16,
+    paddingHorizontal: 5,
+    borderRadius: 4,
+    backgroundColor: "#F0EBFF",
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 6,
+    marginTop: 1,
+    flexShrink: 0,
+  },
+  readOnlyAiBadgeText: {
+    ...textStyles.h10,
+    color: "#7B6CFF",
+    letterSpacing: 0.3,
+  },
+  readOnlyItemText: {
+    ...textStyles.body5,
+    color: "#1F1F1F",
+    flex: 1,
+  },
+  readOnlyItemReason: {
+    ...textStyles.body5,
+    color: "#6C6C6C",
   },
 });

@@ -3,6 +3,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useNicknameValidation } from "@/hooks/useNicknameValidation";
 import api from "@/services/api";
 import { authApi } from "@/services/auth";
+import { plansApi } from "@/services/plans";
 import { Gender } from "@/types/api";
 import Card from "@/ui/components/Card";
 import GradientBackground from "@/ui/components/GradientBackground";
@@ -103,6 +104,15 @@ export default function RegisterProfileScreen() {
       } catch {}
 
       if (Platform.OS === "web" && typeof window !== "undefined") {
+        try {
+          const saveId = window.localStorage.getItem("pendingSavePublicId");
+          if (saveId) {
+            window.localStorage.removeItem("pendingSavePublicId");
+            const result = await plansApi.saveExport(saveId);
+            window.location.replace(`${window.location.origin}/plans/${result.planPublicId}`);
+            return;
+          }
+        } catch {}
         try {
           window.localStorage.setItem("registerComplete", "true");
         } catch {}
