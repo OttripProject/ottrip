@@ -1,3 +1,4 @@
+import ViewerPreviewModal from "@/components/modals/ViewerPreviewModal";
 import { plansApi } from "@/services/plans";
 import Card from "@/ui/components/Card";
 import { colors } from "@/ui/tokens/colors";
@@ -6,7 +7,6 @@ import { useState } from "react";
 import {
   ActivityIndicator,
   Alert,
-  Linking,
   Modal,
   Platform,
   Pressable,
@@ -45,6 +45,7 @@ export default function ExportPlanModal({ visible, onClose, planId, planName }: 
   const [isGenerating, setIsGenerating] = useState(false);
   const [exportPublicId, setExportPublicId] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [previewVisible, setPreviewVisible] = useState(false);
 
   const viewerUrl =
     exportPublicId && typeof window !== "undefined"
@@ -77,12 +78,8 @@ export default function ExportPlanModal({ visible, onClose, planId, planName }: 
   };
 
   const handleOpenLink = () => {
-    if (!viewerUrl) return;
-    if (Platform.OS === "web") {
-      window.open(viewerUrl, "_blank");
-    } else {
-      Linking.openURL(viewerUrl);
-    }
+    if (!exportPublicId) return;
+    setPreviewVisible(true);
   };
 
   const handleClose = () => {
@@ -90,11 +87,20 @@ export default function ExportPlanModal({ visible, onClose, planId, planName }: 
     setIncludeExpenses(false);
     setIncludeChecklist(false);
     setCopied(false);
+    setPreviewVisible(false);
     onClose();
   };
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={handleClose}>
+    <>
+      {exportPublicId && (
+        <ViewerPreviewModal
+          visible={previewVisible}
+          publicId={exportPublicId}
+          onClose={() => setPreviewVisible(false)}
+        />
+      )}
+      <Modal visible={visible} transparent animationType="fade" onRequestClose={handleClose}>
       <Pressable style={styles.overlay} onPress={handleClose}>
         <Card
           width="100%"
@@ -190,7 +196,7 @@ export default function ExportPlanModal({ visible, onClose, planId, planName }: 
                 {/* 비용 토글 */}
                 <Pressable
                   style={[styles.scopeToggleRow, includeExpenses && styles.scopeToggleRowOn]}
-                  onPress={() => setIncludeExpenses(v => !v)}
+                  onPress={() => { setIncludeExpenses(v => !v); setExportPublicId(null); }}
                 >
                   <View style={styles.scopeToggleContent}>
                     <Text style={styles.scopeItemTitle}>비용</Text>
@@ -200,14 +206,14 @@ export default function ExportPlanModal({ visible, onClose, planId, planName }: 
                   </View>
                   <Toggle
                     value={includeExpenses}
-                    onToggle={() => setIncludeExpenses(v => !v)}
+                    onToggle={() => { setIncludeExpenses(v => !v); setExportPublicId(null); }}
                   />
                 </Pressable>
 
                 {/* 체크리스트 토글 */}
                 <Pressable
                   style={[styles.scopeToggleRow, includeChecklist && styles.scopeToggleRowOn]}
-                  onPress={() => setIncludeChecklist(v => !v)}
+                  onPress={() => { setIncludeChecklist(v => !v); setExportPublicId(null); }}
                 >
                   <View style={styles.scopeToggleContent}>
                     <Text style={styles.scopeItemTitle}>체크리스트</Text>
@@ -217,7 +223,7 @@ export default function ExportPlanModal({ visible, onClose, planId, planName }: 
                   </View>
                   <Toggle
                     value={includeChecklist}
-                    onToggle={() => setIncludeChecklist(v => !v)}
+                    onToggle={() => { setIncludeChecklist(v => !v); setExportPublicId(null); }}
                   />
                 </Pressable>
               </View>
@@ -284,6 +290,7 @@ export default function ExportPlanModal({ visible, onClose, planId, planName }: 
         </Card>
       </Pressable>
     </Modal>
+    </>
   );
 }
 

@@ -1,5 +1,6 @@
 import BookmarkSaveIcon from "../../../assets/bookmark_save.svg";
 import ViewerPersonIcon from "../../../assets/viewer_person.svg";
+import XIcon from "../../../assets/x.svg";
 import { colors } from "@/ui/tokens/colors";
 import { textStyles } from "@/ui/tokens/typography";
 import { Pressable, StyleSheet, Text, View } from "react-native";
@@ -7,11 +8,13 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 interface ViewerHeaderPanelProps {
   planTitle: string;
   onSave: () => void;
+  onClose?: () => void;
 }
 
 export default function ViewerHeaderPanel({
   planTitle: _planTitle,
   onSave,
+  onClose,
 }: ViewerHeaderPanelProps) {
   return (
     <View style={styles.container}>
@@ -29,6 +32,12 @@ export default function ViewerHeaderPanel({
           <BookmarkSaveIcon width={14} height={14} style={styles.saveButtonIcon} />
           <Text style={styles.saveButtonText}>내 일정으로 저장</Text>
         </Pressable>
+
+        {onClose && (
+          <Pressable onPress={onClose} hitSlop={8} style={styles.closeButton}>
+            <XIcon width={16} height={16} color={colors.gray700} />
+          </Pressable>
+        )}
       </View>
     </View>
   );
@@ -88,5 +97,12 @@ const styles = StyleSheet.create({
     ...textStyles.h7,
     lineHeight: 18,
     color: colors.white,
+  },
+  closeButton: {
+    width: 32,
+    height: 32,
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
   },
 });
