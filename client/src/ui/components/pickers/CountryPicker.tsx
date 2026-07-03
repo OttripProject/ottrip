@@ -3,6 +3,7 @@ import { colors } from "@/ui/tokens/colors";
 import { radii } from "@/ui/tokens/radii";
 import { textStyles } from "@/ui/tokens/typography";
 import {
+  codeToFlag,
   codeToKoreanName,
   getKoreanCountryOptions,
   type CountryOption,
@@ -18,13 +19,12 @@ import {
   View,
   type ViewStyle,
 } from "react-native";
-import CheckBlackIcon from "../../../../assets/check_black.svg";
 import DownArrowIcon from "../../../../assets/down_arrow.svg";
 import SearchIcon from "../../../../assets/search.svg";
 import UpperArrowIcon from "../../../../assets/upper_arrow.svg";
 import XIcon from "../../../../assets/mobile_close.svg";
 
-const ITEM_HEIGHT = 36;
+const ITEM_HEIGHT = 46;
 
 interface CountryPickerProps {
   value: string;
@@ -68,6 +68,7 @@ export default function CountryPicker({
     return options.filter(
       opt =>
         opt.label.toLowerCase().includes(q) ||
+        opt.labelEn.toLowerCase().includes(q) ||
         opt.value.toLowerCase().includes(q),
     );
   }, [searchText, options]);
@@ -100,20 +101,32 @@ export default function CountryPicker({
     const isSelected = item.value === selectedCode;
     return (
       <Pressable
-        style={({ pressed }) => [
+        style={({ hovered }: any) => [
           styles.item,
           isSelected && styles.itemSelected,
-          pressed && styles.itemPressed,
+          hovered && !isSelected && styles.itemHovered,
         ]}
         onPress={() => handleSelect(item)}
       >
-        <Text
-          style={[styles.itemText, isSelected && styles.itemTextSelected]}
-          numberOfLines={1}
-        >
-          {item.label}
-        </Text>
-        {isSelected && <CheckBlackIcon width={14} height={14} />}
+        <View style={styles.itemFlagWrapper}>
+          <Text style={styles.itemFlag}>{item.flag}</Text>
+        </View>
+        <View style={styles.itemNames}>
+          <Text
+            style={[styles.itemText, isSelected && styles.itemTextSelected]}
+            numberOfLines={1}
+          >
+            {item.label}
+          </Text>
+          <Text style={styles.itemTextEn} numberOfLines={1}>
+            {item.labelEn}
+          </Text>
+        </View>
+        <View style={[styles.itemCodeBadge, isSelected && styles.itemCodeBadgeSelected]}>
+          <Text style={[styles.itemCode, isSelected && styles.itemCodeSelected]}>
+            {item.value}
+          </Text>
+        </View>
       </Pressable>
     );
   };
@@ -136,7 +149,9 @@ export default function CountryPicker({
           style={value ? styles.triggerText : styles.triggerPlaceholder}
           numberOfLines={1}
         >
-          {value || placeholder}
+          {value
+            ? `${selectedCode ? codeToFlag(selectedCode) : ""} ${value}`.trim()
+            : placeholder}
         </Text>
         {open ? (
           <UpperArrowIcon width={10} height={10} style={{ opacity: 0.6 }} />
@@ -296,25 +311,65 @@ const styles = StyleSheet.create({
   item: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    height: ITEM_HEIGHT,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: radii.sm,
+    height: 46,
+    marginBottom: 3,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: radii.md,
+    gap: 8,
   },
   itemSelected: {
+    backgroundColor: "rgba(26, 102, 224, 0.08)",
+  },
+  itemHovered: {
     backgroundColor: colors.gray200,
   },
-  itemPressed: {
+  itemFlagWrapper: {
+    width: 32,
+    height: 32,
+    borderRadius: radii.pill,
     backgroundColor: colors.gray200,
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+  },
+  itemFlag: {
+    fontSize: 18,
+    lineHeight: 22,
+  },
+  itemNames: {
+    flex: 1,
+    minWidth: 0,
+    justifyContent: "center",
+    gap: 1,
   },
   itemText: {
-    ...textStyles.body4,
+    ...textStyles.h7,
     color: colors.gray700,
-    flex: 1,
   },
   itemTextSelected: {
     color: colors.gray900,
+  },
+  itemTextEn: {
+    ...textStyles.body6,
+    color: colors.gray500,
+  },
+  itemCodeBadge: {
+    backgroundColor: colors.gray200,
+    borderRadius: radii.sm,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    flexShrink: 0,
+  },
+  itemCodeBadgeSelected: {
+    backgroundColor: colors.gray300,
+  },
+  itemCode: {
+    ...textStyles.body5,
+    color: colors.gray500,
+  },
+  itemCodeSelected: {
+    color: colors.gray700,
   },
   emptyState: {
     paddingVertical: 28,
