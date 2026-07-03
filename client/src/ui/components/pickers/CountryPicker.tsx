@@ -1,4 +1,6 @@
 import useDetectClose from "@/hooks/useDetectClose";
+import { useMe } from "@/hooks/useMe";
+import { useRecentSearches } from "@/hooks/useRecentSearches";
 import { colors } from "@/ui/tokens/colors";
 import { radii } from "@/ui/tokens/radii";
 import { textStyles } from "@/ui/tokens/typography";
@@ -12,6 +14,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import {
   FlatList,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -56,6 +59,11 @@ export default function CountryPicker({
   const [open, setIsOpen, handleOutsidePress] = useDetectClose(wrapperRef, false);
   const [searchText, setSearchText] = useState("");
 
+  const { data: me } = useMe();
+  const storageKey = `recentCountrySearches_${me?.handle ?? "guest"}`;
+  const { items: recentSearches, addItem, load } = useRecentSearches(storageKey, 10);
+
+
   const selectedCode = useMemo(() => {
     if (!value) return null;
     const matched = options.find(opt => opt.label === value);
@@ -79,6 +87,7 @@ export default function CountryPicker({
     setIsOpen(next);
     if (next) {
       onOpen?.();
+      load();
       setTimeout(() => searchRef.current?.focus(), 50);
     } else {
       onClose?.();
@@ -88,6 +97,15 @@ export default function CountryPicker({
 
   const handleSelect = (item: CountryOption) => {
     onChange(item.label);
+    addItem(item.label);
+    setIsOpen(false);
+    setSearchText("");
+    onClose?.();
+  };
+
+  const handleSelectRecent = (name: string) => {
+    onChange(name);
+    addItem(name);
     setIsOpen(false);
     setSearchText("");
     onClose?.();
@@ -208,6 +226,46 @@ export default function CountryPicker({
                 <Text style={styles.noResultTitle}>검색 결과가 없습니다</Text>
                 <Text style={styles.noResultSubtitle}>다른 키워드로 검색해 보세요.</Text>
               </View>
+            ) : recentSearches.length > 0 ? (
+              <ScrollView
+                style={styles.recentList}
+                keyboardShouldPersistTaps="handled"
+                showsVerticalScrollIndicator={false}
+              >
+                <Text style={styles.recentLabel}>최근 검색</Text>
+                {recentSearches.map(name => {
+                  const opt = options.find(o => o.label === name);
+                  const isSelected = value === name;
+                  return (
+                    <Pressable
+                      key={name}
+                      style={({ hovered }: any) => [
+                        styles.item,
+                        isSelected && styles.itemSelected,
+                        hovered && !isSelected && styles.itemHovered,
+                      ]}
+                      onPress={() => handleSelectRecent(name)}
+                    >
+                      <View style={styles.itemFlagWrapper}>
+                        <Text style={styles.itemFlag}>{opt?.flag ?? ""}</Text>
+                      </View>
+                      <View style={styles.itemNames}>
+                        <Text style={[styles.itemText, isSelected && styles.itemTextSelected]} numberOfLines={1}>
+                          {name}
+                        </Text>
+                        <Text style={styles.itemTextEn} numberOfLines={1}>
+                          {opt?.labelEn ?? ""}
+                        </Text>
+                      </View>
+                      <View style={[styles.itemCodeBadge, isSelected && styles.itemCodeBadgeSelected]}>
+                        <Text style={[styles.itemCode, isSelected && styles.itemCodeSelected]}>
+                          {opt?.value ?? ""}
+                        </Text>
+                      </View>
+                    </Pressable>
+                  );
+                })}
+              </ScrollView>
             ) : (
               <View style={styles.emptyState}>
                 <SearchIcon width={22} height={22} color={colors.gray500} />
@@ -370,6 +428,17 @@ const styles = StyleSheet.create({
   },
   itemCodeSelected: {
     color: colors.gray700,
+  },
+  recentList: {
+    maxHeight: 260,
+    paddingVertical: 4,
+    paddingHorizontal: 6,
+  },
+  recentLabel: {
+    ...textStyles.body5,
+    color: colors.gray500,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
   },
   emptyState: {
     paddingVertical: 28,
