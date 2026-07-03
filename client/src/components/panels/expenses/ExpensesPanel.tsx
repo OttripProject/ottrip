@@ -62,12 +62,14 @@ export default function ExpensesPanel({
     }
   };
 
-  const getTotalExpenses = () => {
-    if (!planData?.expenses) return 0;
-    return planData.expenses.reduce(
-      (total, expense) => total + (expense.amount as number),
-      0,
-    );
+  const getTotalsByCurrency = () => {
+    const result = { KRW: 0, USD: 0 };
+    if (!planData?.expenses) return result;
+    for (const expense of planData.expenses) {
+      if (expense.currency === "USD") result.USD += expense.amount as number;
+      else result.KRW += expense.amount as number;
+    }
+    return result;
   };
 
   if (!planData?.plan) {
@@ -80,7 +82,9 @@ export default function ExpensesPanel({
     );
   }
 
-  const totalExpenses = getTotalExpenses();
+  const totals = getTotalsByCurrency();
+  const hasKRW = totals.KRW > 0;
+  const hasUSD = totals.USD > 0;
 
   return (
     <PanelLayout style={{ flex: 1 }}>
@@ -108,11 +112,23 @@ export default function ExpensesPanel({
 
         <Pressable style={styles.totalButton}>
           <Text style={styles.totalButtonLabel}>총 비용</Text>
-          <View style={styles.totalAmountRow}>
-            <Text style={styles.totalButtonAmount}>
-              {totalExpenses.toLocaleString()}
-            </Text>
-            <Text style={styles.totalAmountUnit}>원</Text>
+          <View style={styles.totalAmountColumn}>
+            {(!hasUSD || hasKRW) && (
+              <View style={styles.totalAmountRow}>
+                <Text style={styles.totalButtonAmount}>
+                  {totals.KRW.toLocaleString()}
+                </Text>
+                <Text style={styles.totalAmountUnit}>원</Text>
+              </View>
+            )}
+            {hasUSD && (
+              <View style={styles.totalAmountRow}>
+                <Text style={styles.totalButtonAmount}>
+                  {totals.USD.toLocaleString()}
+                </Text>
+                <Text style={styles.totalAmountUnit}>달러</Text>
+              </View>
+            )}
           </View>
         </Pressable>
       </View>
@@ -220,6 +236,11 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 20,
     color: colors.gray700,
+  },
+  totalAmountColumn: {
+    flexDirection: "column",
+    alignItems: "flex-end",
+    gap: 2,
   },
   totalAmountRow: {
     flexDirection: "row",

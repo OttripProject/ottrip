@@ -42,7 +42,7 @@ export const categoryColors: Record<ExpenseCategory, string> = {
 
 export const currencyLabels = {
   [ExpenseCurrency.KRW]: "원",
-  [ExpenseCurrency.USD]: "$",
+  [ExpenseCurrency.USD]: "달러",
   [ExpenseCurrency.EUR]: "€",
   [ExpenseCurrency.JPY]: "¥",
   [ExpenseCurrency.CNY]: "¥",

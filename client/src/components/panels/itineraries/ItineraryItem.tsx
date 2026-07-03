@@ -20,9 +20,9 @@ import {
   ExpenseCurrency,
   categoryColors,
   categoryLabels,
-  currencyLabels,
 } from "@/types/expense";
 import AttachmentSection from "@/ui/components/attachmentSection";
+import CurrencyToggle from "@/ui/components/CurrencyToggle";
 import type { AiAttachmentAnalyzeSelection } from "@/ui/components/attachmentSection.types";
 import { pendingAiFileKey } from "@/ui/components/attachmentSection.types";
 import Input from "@/ui/components/input/Input";
@@ -184,6 +184,7 @@ export default function ItineraryItem({
     category: ExpenseCategory.ETC,
     amount: 0,
     description: "",
+    currency: ExpenseCurrency.KRW,
   });
   const [expenses, setExpenses] = useState<any[]>([]);
 
@@ -295,6 +296,7 @@ export default function ItineraryItem({
         category: ExpenseCategory.ETC,
         amount: 0,
         description: "",
+        currency: ExpenseCurrency.KRW,
       });
       setPendingFiles([]);
     }
@@ -686,6 +688,7 @@ export default function ItineraryItem({
           category: ExpenseCategory.ETC,
           amount: 0,
           description: "",
+          currency: ExpenseCurrency.KRW,
         });
         setEditingExpense(null);
         setShowExpenseForm(false);
@@ -715,6 +718,7 @@ export default function ItineraryItem({
         category: ExpenseCategory.ETC,
         amount: 0,
         description: "",
+        currency: ExpenseCurrency.KRW,
       });
       setEditingExpense(null);
       setShowExpenseForm(false);
@@ -732,7 +736,7 @@ export default function ItineraryItem({
         amount: expenseForm.amount,
         description: expenseForm.description,
         exDate: formData.itineraryDate,
-        currency: ExpenseCurrency.KRW,
+        currency: expenseForm.currency,
       };
 
       setDraftExpenses(prev => [...prev, newDraftExpense]);
@@ -741,6 +745,7 @@ export default function ItineraryItem({
         category: ExpenseCategory.ETC,
         amount: 0,
         description: "",
+        currency: ExpenseCurrency.KRW,
       });
       setShowExpenseForm(false);
 
@@ -756,7 +761,7 @@ export default function ItineraryItem({
       amount: expenseForm.amount,
       description: expenseForm.description,
       exDate: formData.itineraryDate,
-      currency: ExpenseCurrency.KRW,
+      currency: expenseForm.currency,
     };
 
     setDraftExpenses(prev => [...prev, newDraftExpense]);
@@ -765,6 +770,7 @@ export default function ItineraryItem({
       category: ExpenseCategory.ETC,
       amount: 0,
       description: "",
+      currency: ExpenseCurrency.KRW,
     });
     setShowExpenseForm(false);
 
@@ -1098,6 +1104,7 @@ export default function ItineraryItem({
                               category: cat,
                               amount: expense.amount,
                               description: expense.description || "",
+                              currency: expense.currency || ExpenseCurrency.KRW,
                             });
                             setShowExpenseForm(true);
                           }
@@ -1112,7 +1119,9 @@ export default function ItineraryItem({
                           {expense.description || "—"}
                         </Text>
                         <Text style={styles.expenseAmount}>
-                          {expense.amount.toLocaleString()}원
+                          {expense.currency === ExpenseCurrency.USD
+                            ? `${expense.amount.toLocaleString()}달러`
+                            : `${expense.amount.toLocaleString()}원`}
                         </Text>
                         {!readOnly && (
                           <Pressable
@@ -1149,6 +1158,7 @@ export default function ItineraryItem({
                       category: ExpenseCategory.ETC,
                       amount: 0,
                       description: "",
+                      currency: ExpenseCurrency.KRW,
                     });
                     setShowExpenseForm(!showExpenseForm);
                   }}
@@ -1179,11 +1189,10 @@ export default function ItineraryItem({
                     </View>
                     <View style={styles.expenseFormHalf}>
                       <Text style={styles.label}>통화</Text>
-                      <View style={styles.currencyPicker}>
-                        <Text style={styles.currencyText}>
-                          {currencyLabels[ExpenseCurrency.KRW]}
-                        </Text>
-                      </View>
+                      <CurrencyToggle
+                        value={expenseForm.currency}
+                        onChange={c => setExpenseForm({ ...expenseForm, currency: c })}
+                      />
                     </View>
                   </View>
 
@@ -1226,6 +1235,7 @@ export default function ItineraryItem({
                           category: ExpenseCategory.ETC,
                           amount: 0,
                           description: "",
+                          currency: ExpenseCurrency.KRW,
                         });
                         setShowExpenseForm(false);
                       }}
@@ -1613,17 +1623,6 @@ const styles = StyleSheet.create({
   expenseFormHalf: {
     flex: 1,
     gap: spacing.sm,
-  },
-  currencyPicker: {
-    backgroundColor: colors.gray200,
-    borderRadius: radii.md,
-    paddingHorizontal: spacing.md,
-    paddingVertical: 10,
-    justifyContent: "center",
-  },
-  currencyText: {
-    ...textStyles.body4,
-    color: colors.gray900,
   },
   expenseInput: {
     backgroundColor: colors.gray200,

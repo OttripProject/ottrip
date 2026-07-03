@@ -92,24 +92,34 @@ export default function ExpenseDetailModal({
     [expenseAttachments, expenseMap],
   );
 
-  const totalExpenses = useMemo(
-    () => expenses.reduce((sum, expense) => sum + expense.amount, 0),
-    [expenses],
-  );
+  const totalsByCurrency = useMemo(() => {
+    const result = { KRW: 0, USD: 0 };
+    for (const expense of expenses) {
+      if (expense.currency === ExpenseCurrency.USD) result.USD += expense.amount;
+      else result.KRW += expense.amount;
+    }
+    return result;
+  }, [expenses]);
+
+  const hasKRW = totalsByCurrency.KRW > 0;
+  const hasUSD = totalsByCurrency.USD > 0;
 
   const categoryTotals = useMemo(() => {
-    const totals: Record<ExpenseCategory, number> = {
-      [ExpenseCategory.FOOD]: 0,
-      [ExpenseCategory.TRANSPORT]: 0,
-      [ExpenseCategory.ACTIVITY]: 0,
-      [ExpenseCategory.ACCOMMODATION]: 0,
-      [ExpenseCategory.FLIGHT]: 0,
-      [ExpenseCategory.SHOPPING]: 0,
-      [ExpenseCategory.ETC]: 0,
+    const totals: Record<ExpenseCategory, { KRW: number; USD: number }> = {
+      [ExpenseCategory.FOOD]: { KRW: 0, USD: 0 },
+      [ExpenseCategory.TRANSPORT]: { KRW: 0, USD: 0 },
+      [ExpenseCategory.ACTIVITY]: { KRW: 0, USD: 0 },
+      [ExpenseCategory.ACCOMMODATION]: { KRW: 0, USD: 0 },
+      [ExpenseCategory.FLIGHT]: { KRW: 0, USD: 0 },
+      [ExpenseCategory.SHOPPING]: { KRW: 0, USD: 0 },
+      [ExpenseCategory.ETC]: { KRW: 0, USD: 0 },
     };
     expenses.forEach(expense => {
-      if (expense.category in totals)
-        totals[expense.category] += expense.amount;
+      if (expense.category in totals) {
+        if (expense.currency === ExpenseCurrency.USD)
+          totals[expense.category].USD += expense.amount;
+        else totals[expense.category].KRW += expense.amount;
+      }
     });
     return totals;
   }, [expenses]);
@@ -191,10 +201,18 @@ export default function ExpenseDetailModal({
               onPress={() => setSelectedCategory(null)}
             >
               <Text style={styles.totalLabel}>총 지출</Text>
-              <Text style={styles.totalAmount}>
-                {formatAmount(totalExpenses)}{" "}
-                {currencyLabels[ExpenseCurrency.KRW]}
-              </Text>
+              <View style={styles.totalAmountColumn}>
+                {(!hasUSD || hasKRW) && (
+                  <Text style={styles.totalAmount}>
+                    {formatAmount(totalsByCurrency.KRW)} 원
+                  </Text>
+                )}
+                {hasUSD && (
+                  <Text style={styles.totalAmount}>
+                    {formatAmount(totalsByCurrency.USD)} 달러
+                  </Text>
+                )}
+              </View>
             </Pressable>
 
             {!readOnly && (
@@ -243,9 +261,15 @@ export default function ExpenseDetailModal({
               <>
                 <View style={styles.summarySection}>
                   {categoryOrder.map(category => {
-                    const total = categoryTotals[category];
-                    if (total === 0) return null;
+                    const catTotal = categoryTotals[category];
+                    if (catTotal.KRW === 0 && catTotal.USD === 0) return null;
                     const isSelected = selectedCategory === category;
+                    const amountText = [
+                      catTotal.KRW > 0 ? `${formatAmount(catTotal.KRW)}원` : null,
+                      catTotal.USD > 0 ? `${formatAmount(catTotal.USD)}달러` : null,
+                    ]
+                      .filter(Boolean)
+                      .join(" | ");
                     return (
                       <Pressable
                         key={category}
@@ -271,8 +295,7 @@ export default function ExpenseDetailModal({
                             isSelected && styles.summaryAmountSelected,
                           ]}
                         >
-                          {formatAmount(total)}{" "}
-                          {currencyLabels[ExpenseCurrency.KRW]}
+                          {amountText}
                         </Text>
                       </Pressable>
                     );
@@ -495,6 +518,10 @@ const styles = StyleSheet.create({
   totalLabel: {
     ...textStyles.h7,
     color: "rgba(255, 255, 255, 0.7)",
+  },
+  totalAmountColumn: {
+    alignItems: "flex-end",
+    gap: 2,
   },
   totalAmount: {
     ...textStyles.h5,

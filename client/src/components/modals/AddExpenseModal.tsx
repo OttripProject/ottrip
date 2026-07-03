@@ -16,10 +16,10 @@ import {
 import {
   ExpenseCategory,
   ExpenseCurrency,
-  currencyLabels,
 } from "@/types/expense";
 import AttachmentSection from "@/ui/components/attachmentSection";
 import type { AiAttachmentAnalyzeSelection } from "@/ui/components/attachmentSection.types";
+import CurrencyToggle from "@/ui/components/CurrencyToggle";
 import { pendingAiFileKey } from "@/ui/components/attachmentSection.types";
 import Input from "@/ui/components/input/Input";
 import { CategoryPicker } from "@/ui/components/pickers";
@@ -497,11 +497,12 @@ export default function AddExpenseModal({
 
                   <View style={[styles.inputGroup, styles.currencyGroup]}>
                     <Text style={styles.inputLabel}>통화</Text>
-                    <View style={styles.currencyDisplay}>
-                      <Text style={styles.currencyText}>
-                        {currencyLabels[ExpenseCurrency.KRW]}
-                      </Text>
-                    </View>
+                    <CurrencyToggle
+                      value={expenseForm.currency}
+                      onChange={c => setExpenseForm({ ...expenseForm, currency: c })}
+                      variant="outlined"
+                      style={styles.currencyToggle}
+                    />
                   </View>
                 </View>
 
@@ -767,22 +768,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
     height: 50,
   },
-  currencyDisplay: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    borderWidth: 1,
-    borderColor: colors.gray400,
-    borderRadius: 12,
-    paddingHorizontal: 16,
+  currencyToggle: {
     height: 50,
-    backgroundColor: colors.white,
-  },
-  currencyText: {
-    fontFamily: typography.fontFamily.pretendardRegular,
-    fontSize: 14,
-    lineHeight: 22,
-    color: colors.gray900,
   },
   dateInput: {
     flexDirection: "row",
