@@ -269,7 +269,7 @@ export default function ExpenseDetailModal({
                       catTotal.USD > 0 ? `${formatAmount(catTotal.USD)}달러` : null,
                     ]
                       .filter(Boolean)
-                      .join(" | ");
+                      .join(" · ");
                     return (
                       <Pressable
                         key={category}

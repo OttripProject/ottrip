@@ -1,5 +1,6 @@
 import { ExpenseCurrency } from "@/types/expense";
 import { colors } from "@/ui/tokens/colors";
+import { textStyles } from "@/ui/tokens/typography";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import type { StyleProp, ViewStyle } from "react-native";
 
@@ -69,13 +70,11 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
   },
   optionText: {
-    fontFamily: "Pretendard-Regular",
-    fontSize: 13,
-    lineHeight: 20,
+    ...textStyles.body4,
     color: colors.gray700,
   },
   optionTextActive: {
-    fontFamily: "Pretendard-SemiBold",
+    ...textStyles.h7,
     color: colors.gray900,
   },
 });

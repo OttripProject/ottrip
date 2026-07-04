@@ -1,3 +1,4 @@
+import AddScheduleWithFileModal from "@/components/modals/AddScheduleWithFileModal";
 import AddScheduleWithAiModal, {
   type Message as AiMessage,
   AI_INTRO_MESSAGE,
@@ -247,6 +248,7 @@ export default function WeeklySchedulePanel({
   );
   const [shareOpen, setShareOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
+  const [importFileOpen, setImportFileOpen] = useState(false);
   const [aiChatOpen, setAiChatOpen] = useState(false);
   const [aiMessages, setAiMessages] = useState<AiMessage[]>([
     AI_INTRO_MESSAGE,
@@ -1906,7 +1908,7 @@ export default function WeeklySchedulePanel({
 
               {(myRole === "owner" || myRole === "editor") && (
                 <Tooltip text="파일로 일정 추가">
-                  <Pressable style={styles.iconButton}>
+                  <Pressable style={styles.iconButton} onPress={() => setImportFileOpen(true)}>
                     <ImportFileIcon width={14} height={14} color={colors.gray900} />
                   </Pressable>
                 </Tooltip>
@@ -3223,6 +3225,11 @@ export default function WeeklySchedulePanel({
           if ((externalPlanData as any)?.refreshAttachments)
             (externalPlanData as any).refreshAttachments().catch(() => {});
         }}
+      />
+
+      <AddScheduleWithFileModal
+        visible={importFileOpen}
+        onClose={() => setImportFileOpen(false)}
       />
 
       <ExportPlanModal
