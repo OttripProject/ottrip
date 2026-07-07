@@ -734,9 +734,6 @@ export default function AddScheduleWithFileModal({
           </View>
           <View style={styles.editExpenseRow}>
             <Text style={styles.editExpenseLabel}>비용</Text>
-            <View style={styles.editCategoryFixed}>
-              <Text style={styles.editCategoryFixedText}>항공료</Text>
-            </View>
             <View style={styles.editCurrencyToggle}>
               <Pressable style={styles.editCurrencyOption} onPress={() => setEditNestedField(idx, "expense", "currency", "KRW")}>
                 <Text style={[styles.editCurrencyOptionText, String(expNested.currency ?? "KRW") === "KRW" && styles.editCurrencyOptionTextActive]}>₩</Text>
@@ -776,9 +773,6 @@ export default function AddScheduleWithFileModal({
             placeholderTextColor={colors.gray400}
           />
           <View style={styles.editTimeRow}>
-            <View style={styles.editCategoryFixed}>
-              <Text style={styles.editCategoryFixedText}>숙박</Text>
-            </View>
             <TimePicker
               value={normalizeHHmm(v.checkin_time ?? v.start_time)}
               onChange={val => setEditField(idx, "checkin_time", val)}
@@ -803,9 +797,6 @@ export default function AddScheduleWithFileModal({
           />
           <View style={styles.editExpenseRow}>
             <Text style={styles.editExpenseLabel}>비용</Text>
-            <View style={styles.editCategoryFixed}>
-              <Text style={styles.editCategoryFixedText}>숙박</Text>
-            </View>
             <View style={styles.editCurrencyToggle}>
               <Pressable style={styles.editCurrencyOption} onPress={() => setEditNestedField(idx, "expense", "currency", "KRW")}>
                 <Text style={[styles.editCurrencyOptionText, String(expNested.currency ?? "KRW") === "KRW" && styles.editCurrencyOptionTextActive]}>₩</Text>
