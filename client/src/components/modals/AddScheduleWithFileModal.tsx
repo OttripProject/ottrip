@@ -12,7 +12,7 @@ import { textStyles, typography } from "@/ui/tokens/typography";
 import dayjs from "dayjs";
 import "dayjs/locale/ko";
 import { LinearGradient } from "expo-linear-gradient";
-import { createElement, useCallback, useEffect, useRef, useState } from "react";
+import { createElement, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Modal,
@@ -132,7 +132,16 @@ function getItemDate(draft: AiDocumentItemDraft): string {
       raw = String(first.departure_time ?? first.departureTime ?? "").substring(0, 10);
     }
   }
-  else if (draft.itemType === "accommodation") raw = String(v.checkin_date ?? v.checkinDate ?? "");
+  else if (draft.itemType === "accommodation") {
+    const ci = String(v.checkin_date ?? v.checkinDate ?? "").substring(0, 10);
+    const co = String(v.checkout_date ?? v.checkoutDate ?? "").substring(0, 10);
+    const ciDay = ci ? dayjs(ci) : null;
+    const coDay = co ? dayjs(co) : null;
+    const ciStr = ciDay?.isValid() ? ciDay.format("YYYY. MM. DD (ddd)") : ci;
+    const coStr = coDay?.isValid() ? coDay.format("YYYY. MM. DD (ddd)") : co;
+    if (ciStr && coStr) return `${ciStr} – ${coStr}`;
+    return ciStr || coStr;
+  }
   else if (draft.itemType === "expense") raw = String(v.ex_date ?? v.exDate ?? "");
   if (!raw) return "";
   const d = dayjs(raw.substring(0, 10));
@@ -146,11 +155,8 @@ function getItemTimeRange(draft: AiDocumentItemDraft): string {
     const s = String(v.start_time ?? v.startTime ?? "").substring(0, 5);
     const e = String(v.end_time ?? v.endTime ?? "").substring(0, 5);
     if (s && e) return `${s} – ${e}`;
-  }
-  if (draft.itemType === "accommodation") {
-    const ci = String(v.checkin_date ?? v.checkinDate ?? "").substring(0, 10);
-    const co = String(v.checkout_date ?? v.checkoutDate ?? "").substring(0, 10);
-    if (ci && co) return `${ci} ~ ${co}`;
+    if (s) return s;
+    if (e) return e;
   }
   return "";
 }
@@ -177,7 +183,11 @@ function getItemExpense(draft: AiDocumentItemDraft): { category: string; amount:
   if (!ex) return null;
   const amount = Number(ex.amount ?? 0);
   if (amount <= 0) return null;
-  const cat = String(ex.category ?? "etc");
+  const defaultCat =
+    draft.itemType === "accommodation" ? "accommodation"
+    : draft.itemType === "flight" ? "flight"
+    : "etc";
+  const cat = String(ex.category ?? defaultCat);
   const currency = String(ex.currency ?? "KRW");
   return { category: cat, amount, currency };
 }
@@ -196,10 +206,9 @@ function getExpenseSummary(items: AiDocumentItemDraft[], selectedIndexes: Set<nu
   return { total, count };
 }
 
-function buildItineraryRequest(v: Record<string, unknown>, planId: number) {
+function buildItineraryRequest(v: Record<string, unknown>, planId: number, endTime: string) {
   const dateStr = String(v.itinerary_date ?? v.itineraryDate ?? dayjs().format("YYYY-MM-DD"));
   const startRaw = String(v.start_time ?? v.startTime ?? "09:00");
-  const endRaw = String(v.end_time ?? v.endTime ?? "18:00");
   return {
     planId,
     title: String(v.title ?? "제목 없음"),
@@ -209,7 +218,7 @@ function buildItineraryRequest(v: Record<string, unknown>, planId: number) {
     location: v.location ? String(v.location) : undefined,
     itineraryDate: dateStr,
     startTime: startRaw.substring(0, 5) || "09:00",
-    endTime: endRaw.substring(0, 5) || "18:00",
+    endTime,
   };
 }
 
@@ -238,6 +247,7 @@ function buildFlightRequest(v: Record<string, unknown>, planId: number) {
     expense: ex ? {
       exDate: String(ex.ex_date ?? ex.exDate ?? dayjs().format("YYYY-MM-DD")),
       amount: Number(ex.amount ?? 0),
+      category: ExpenseCategory.FLIGHT,
       currency: ExpenseCurrency[String(ex.currency ?? "KRW").toUpperCase() as keyof typeof ExpenseCurrency] ?? ExpenseCurrency.KRW,
     } : undefined,
   };
@@ -304,6 +314,38 @@ export default function AddScheduleWithFileModal({
   const [selectedIndexes, setSelectedIndexes] = useState<Set<number>>(new Set());
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [draftEdits, setDraftEdits] = useState<Record<number, Record<string, unknown>>>({});
+
+  const itineraryEndTimeMap = useMemo(() => {
+    const result = new Map<number, string>();
+    const sorted = items
+      .map((d, i) => ({ d, i }))
+      .filter(({ d }) => d.itemType === "itinerary")
+      .sort((a, b) => {
+        const va = a.d.payload.values as Record<string, unknown>;
+        const vb = b.d.payload.values as Record<string, unknown>;
+        const ka = `${va.itinerary_date ?? va.itineraryDate ?? ""}${va.start_time ?? va.startTime ?? ""}`;
+        const kb = `${vb.itinerary_date ?? vb.itineraryDate ?? ""}${vb.start_time ?? vb.startTime ?? ""}`;
+        return ka < kb ? -1 : ka > kb ? 1 : 0;
+      });
+    for (let i = 0; i < sorted.length; i++) {
+      const { d, i: idx } = sorted[i];
+      const v = d.payload.values as Record<string, unknown>;
+      const existingEnd = String(v.end_time ?? v.endTime ?? "").substring(0, 5);
+      if (existingEnd) { result.set(idx, existingEnd); continue; }
+      const startRaw = String(v.start_time ?? v.startTime ?? "09:00").substring(0, 5);
+      const date = String(v.itinerary_date ?? v.itineraryDate ?? "");
+      const next = sorted[i + 1];
+      if (next) {
+        const nv = next.d.payload.values as Record<string, unknown>;
+        const nextDate = String(nv.itinerary_date ?? nv.itineraryDate ?? "");
+        const nextStart = String(nv.start_time ?? nv.startTime ?? "").substring(0, 5);
+        if (nextDate === date && nextStart) { result.set(idx, nextStart); continue; }
+      }
+      result.set(idx, dayjs(`2000-01-01T${startRaw}`).add(1, "hour").format("HH:mm"));
+    }
+    return result;
+  }, [items]);
+
   const dropZoneRef = useRef<View>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const handleFileRef = useRef<(file: File) => void>(() => {});
@@ -398,14 +440,35 @@ export default function AddScheduleWithFileModal({
     setError(null);
     try {
       const selected = items.filter((_, i) => selectedIndexes.has(i));
+
       await Promise.allSettled(
-        selected.map(draft => {
+        selected.flatMap((draft, _, arr) => {
           const v = draft.payload.values as Record<string, unknown>;
-          if (draft.itemType === "itinerary") return itinerariesApi.createItinerary(buildItineraryRequest(v, planId));
-          if (draft.itemType === "flight") return flightsApi.createFlight(buildFlightRequest(v, planId));
-          if (draft.itemType === "accommodation") return accommodationsApi.createAccommodation(buildAccommodationRequest(v, planId));
-          if (draft.itemType === "expense") return expensesApi.createExpense(buildExpenseRequest(v, planId));
-          return Promise.resolve();
+          if (draft.itemType === "itinerary") {
+            const idx = items.indexOf(draft);
+            const startRaw = String(v.start_time ?? v.startTime ?? "09:00").substring(0, 5);
+            const endTime = itineraryEndTimeMap.get(idx) ?? dayjs(`2000-01-01T${startRaw}`).add(1, "hour").format("HH:mm");
+            const calls: Promise<unknown>[] = [itinerariesApi.createItinerary(buildItineraryRequest(v, planId, endTime))];
+            const ex = v.expense as Record<string, unknown> | undefined;
+            if (ex && Number(ex.amount ?? 0) > 0) {
+              const catRaw = String(ex.category ?? "etc").toLowerCase();
+              const cat = (Object.values(ExpenseCategory) as string[]).includes(catRaw) ? (catRaw as ExpenseCategory) : ExpenseCategory.ETC;
+              const curRaw = String(ex.currency ?? "KRW").toUpperCase();
+              calls.push(expensesApi.createExpense({
+                planId,
+                category: cat,
+                amount: Number(ex.amount),
+                currency: ExpenseCurrency[curRaw as keyof typeof ExpenseCurrency] ?? ExpenseCurrency.KRW,
+                exDate: String(ex.ex_date ?? ex.exDate ?? v.itinerary_date ?? dayjs().format("YYYY-MM-DD")),
+                description: ex.description ? String(ex.description) : undefined,
+              }));
+            }
+            return calls;
+          }
+          if (draft.itemType === "flight") return [flightsApi.createFlight(buildFlightRequest(v, planId))];
+          if (draft.itemType === "accommodation") return [accommodationsApi.createAccommodation(buildAccommodationRequest(v, planId))];
+          if (draft.itemType === "expense") return [expensesApi.createExpense(buildExpenseRequest(v, planId))];
+          return [Promise.resolve()];
         }),
       );
       onSaveComplete();
@@ -780,7 +843,18 @@ export default function AddScheduleWithFileModal({
                   const badge = ITEM_BADGE[draft.itemType] ?? ITEM_BADGE.itinerary;
                   const title = getItemTitle(draft);
                   const date = getItemDate(draft);
-                  const timeRange = getItemTimeRange(draft);
+                  const timeRange = (() => {
+                    if (draft.itemType === "itinerary") {
+                      const v = draft.payload.values as Record<string, unknown>;
+                      const s = String(v.start_time ?? v.startTime ?? "").substring(0, 5);
+                      const e = itineraryEndTimeMap.get(i) ?? String(v.end_time ?? v.endTime ?? "").substring(0, 5);
+                      if (s && e) return `${s} – ${e}`;
+                      if (s) return s;
+                      if (e) return e;
+                      return "";
+                    }
+                    return getItemTimeRange(draft);
+                  })();
                   const location = getItemLocation(draft);
                   const expense = getItemExpense(draft);
 
@@ -1064,7 +1138,7 @@ const styles = StyleSheet.create({
     fontFamily: typography.fontFamily.pretendardRegular, fontSize: 12, color: colors.gray600,
   },
   editExpenseRow: { flexDirection: "row", alignItems: "center", gap: 6 },
-  editCategoryPickerTrigger: { minHeight: 34, borderWidth: 1, borderColor: colors.gray300, backgroundColor: colors.white },
+  editCategoryPickerTrigger: { minWidth:100, minHeight: 34, borderWidth: 1, borderColor: colors.gray300, backgroundColor: colors.white },
   editExpenseLabel: {
     width: 30, fontFamily: typography.fontFamily.pretendardSemiBold,
     fontSize: 12, lineHeight: 18, color: colors.gray600, flexShrink: 0,
