@@ -1267,12 +1267,12 @@ const styles = StyleSheet.create({
   editButton: { width: 28, height: 28, borderRadius: 8, alignItems: "center", justifyContent: "center", flexShrink: 0 },
   editForm: { flex: 1, gap: 8 },
   editTitleInput: {
-    height: 36, borderWidth: 1, borderColor: colors.gray300, borderRadius: 8,
+    height: 40, borderWidth: 1, borderColor: colors.gray300, borderRadius: 8,
     paddingHorizontal: 10, fontFamily: typography.fontFamily.pretendardSemiBold,
     fontSize: 13, color: colors.gray900, outlineStyle: "none",
   } as any,
   editInput: {
-    height: 34, borderWidth: 1, borderColor: colors.gray300, borderRadius: 8,
+    height: 40, borderWidth: 1, borderColor: colors.gray300, borderRadius: 8,
     paddingHorizontal: 10, fontFamily: typography.fontFamily.pretendardRegular,
     fontSize: 12, color: colors.gray900, outlineStyle: "none",
   } as any,
@@ -1281,14 +1281,14 @@ const styles = StyleSheet.create({
   editFlightCell: { flex: 1, minWidth: 0 },
   editTimeSep: { ...textStyles.body5, color: colors.gray500 },
   editCategoryFixed: {
-    height: 34, paddingHorizontal: 10, borderWidth: 1, borderColor: colors.gray300,
+    height: 40, paddingHorizontal: 16, borderWidth: 1, borderColor: colors.gray300,
     borderRadius: 8, alignItems: "center", justifyContent: "center", flexShrink: 0,
   },
   editCategoryFixedText: {
     fontFamily: typography.fontFamily.pretendardRegular, fontSize: 12, color: colors.gray600,
   },
   editExpenseRow: { flexDirection: "row", alignItems: "center", gap: 6 },
-  editCategoryPickerTrigger: { minWidth:100, minHeight: 34, borderWidth: 1, borderColor: colors.gray300, backgroundColor: colors.white },
+  editCategoryPickerTrigger: { minWidth:100, minHeight: 40, borderWidth: 1, borderColor: colors.gray300, backgroundColor: colors.white },
   editExpenseLabel: {
     width: 30, fontFamily: typography.fontFamily.pretendardSemiBold,
     fontSize: 12, lineHeight: 18, color: colors.gray600, flexShrink: 0,
@@ -1296,7 +1296,7 @@ const styles = StyleSheet.create({
   editAmountWrapper: {
     flex: 1, flexDirection: "row", alignItems: "center",
     borderWidth: 1, borderColor: colors.gray300, borderRadius: 8,
-    height: 34, paddingHorizontal: 8,
+    height: 40, paddingHorizontal: 8,
   },
   editAmountWrapperDisabled: { opacity: 0.45 },
   editCurrencyToggle: {
@@ -1306,7 +1306,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     overflow: "hidden",
     flexShrink: 0,
-    height: 34,
+    height: 40,
   },
   editCurrencyOption: {
     width: 30,
