@@ -787,7 +787,7 @@ export default function AddScheduleWithFileModal({
                   return (
                     <Pressable
                       key={i}
-                      style={[styles.itemCard, isSelected ? styles.itemCardSelected : styles.itemCardUnselected]}
+                      style={[styles.itemCard, isSelected ? styles.itemCardSelected : styles.itemCardUnselected, isEditing && { zIndex: 100 }]}
                       onPress={isEditing ? undefined : () => toggleIndex(i)}
                     >
                       <Pressable
