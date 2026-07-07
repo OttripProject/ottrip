@@ -294,22 +294,14 @@ export default function AddScheduleWithFileModal({
   planName,
   onSaveComplete,
 }: AddScheduleWithFileModalProps) {
-  const DUMMY_ITEMS = [
-    { itemType: "itinerary", payload: { values: { title: "경복궁 관람", itinerary_date: "2025-08-10", start_time: "10:00", end_time: "12:00", location: "경복궁", city: "서울" }, fieldMeta: {} } },
-    { itemType: "flight", payload: { values: { segments: [{ departure_airport: "ICN", arrival_airport: "NRT", departure_time: "2025-08-09T09:00:00" }] }, fieldMeta: {} } },
-    { itemType: "accommodation", payload: { values: { name: "신라호텔", checkin_date: "2025-08-09", checkout_date: "2025-08-12", city: "서울" }, fieldMeta: {} } },
-    { itemType: "expense", payload: { values: { category: "food", amount: 35000, currency: "KRW", ex_date: "2025-08-10" }, fieldMeta: {} } },
-    { itemType: "expense", payload: { values: { category: "transport", amount: 12000, currency: "KRW", ex_date: "2025-08-11" }, fieldMeta: {} } },
-  ];
-
-  const [step, setStep] = useState<Step>("preview");
+  const [step, setStep] = useState<Step>("upload");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [items, setItems] = useState<AiDocumentItemDraft[]>(DUMMY_ITEMS as AiDocumentItemDraft[]);
-  const [selectedIndexes, setSelectedIndexes] = useState<Set<number>>(new Set(DUMMY_ITEMS.map((_, i) => i)));
+  const [items, setItems] = useState<AiDocumentItemDraft[]>([]);
+  const [selectedIndexes, setSelectedIndexes] = useState<Set<number>>(new Set());
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [draftEdits, setDraftEdits] = useState<Record<number, Record<string, unknown>>>({});
   const dropZoneRef = useRef<View>(null);
@@ -1062,7 +1054,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10, fontFamily: typography.fontFamily.pretendardRegular,
     fontSize: 12, color: colors.gray900, outlineStyle: "none",
   } as any,
-  editTimeRow: { flexDirection: "row", alignItems: "center", gap: 6 },
+  editTimeRow: { flexDirection: "row", alignItems: "center", gap: 6, zIndex: 10 },
   editTimeSep: { ...textStyles.body5, color: colors.gray500 },
   editCategoryFixed: {
     height: 34, paddingHorizontal: 10, borderWidth: 1, borderColor: colors.gray300,
