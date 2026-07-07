@@ -1,8 +1,3 @@
-import AccommodationIcon from "../../../assets/week_bar_accommodation.svg";
-import CalenderIcon from "../../../assets/calender.svg";
-import LeftArrowIcon from "../../../assets/left_arrow.svg";
-import RightArrowIcon from "../../../assets/right_arrow.svg";
-import TodayIcon from "../../../assets/today.svg";
 import BaseCalendar from "@/components/popup/calendar/BaseCalendar";
 import type {
   ExportAccommodation,
@@ -14,6 +9,11 @@ import { radii } from "@/ui/tokens/radii";
 import { spacing } from "@/ui/tokens/spacing";
 import { textStyles } from "@/ui/tokens/typography";
 import dayjs from "dayjs";
+import CalenderIcon from "../../../assets/calender.svg";
+import LeftArrowIcon from "../../../assets/left_arrow.svg";
+import RightArrowIcon from "../../../assets/right_arrow.svg";
+import TodayIcon from "../../../assets/today.svg";
+import AccommodationIcon from "../../../assets/week_bar_accommodation.svg";
 import "dayjs/locale/ko";
 import { useMemo, useRef, useState } from "react";
 import {
@@ -96,8 +96,14 @@ export default function ViewerSchedulePanel({
   const { width: windowWidth } = useWindowDimensions();
   const calendarBtnRef = useRef<any>(null);
   const [showMonthPicker, setShowMonthPicker] = useState(false);
-  const [selectedDate, setSelectedDate] = useState<string | undefined>(undefined);
-  const [calendarPopupPos, setCalendarPopupPos] = useState<{ top: number; left?: number; right?: number }>({ top: 40, left: 8 });
+  const [selectedDate, setSelectedDate] = useState<string | undefined>(
+    undefined,
+  );
+  const [calendarPopupPos, setCalendarPopupPos] = useState<{
+    top: number;
+    left?: number;
+    right?: number;
+  }>({ top: 40, left: 8 });
 
   const initialWeekStart = useMemo(() => {
     if (planStartDate) {
@@ -110,7 +116,8 @@ export default function ViewerSchedulePanel({
 
   const goPrev = () => setCurrentWeekStart(prev => prev.subtract(1, "week"));
   const goNext = () => setCurrentWeekStart(prev => prev.add(1, "week"));
-  const goToday = () => setCurrentWeekStart(dayjs().startOf("week").add(1, "day"));
+  const goToday = () =>
+    setCurrentWeekStart(dayjs().startOf("week").add(1, "day"));
 
   const weekDays = useMemo(() => {
     return Array.from({ length: 7 }, (_, i) =>
@@ -194,11 +201,23 @@ export default function ViewerSchedulePanel({
               ref={calendarBtnRef}
               onPress={() => {
                 if (!showMonthPicker && calendarBtnRef.current) {
-                  calendarBtnRef.current.measure((_x: number, _y: number, _w: number, _h: number, pageX: number) => {
-                    const popupWidth = 276;
-                    const overflows = pageX + 8 + popupWidth > windowWidth;
-                    setCalendarPopupPos(overflows ? { top: 40, right: 0 } : { top: 40, left: 8 });
-                  });
+                  calendarBtnRef.current.measure(
+                    (
+                      _x: number,
+                      _y: number,
+                      _w: number,
+                      _h: number,
+                      pageX: number,
+                    ) => {
+                      const popupWidth = 276;
+                      const overflows = pageX + 8 + popupWidth > windowWidth;
+                      setCalendarPopupPos(
+                        overflows
+                          ? { top: 40, right: 0 }
+                          : { top: 40, left: 8 },
+                      );
+                    },
+                  );
                 }
                 setShowMonthPicker(v => !v);
               }}
@@ -211,7 +230,9 @@ export default function ViewerSchedulePanel({
               selectedDate={selectedDate}
               onDayPress={day => {
                 setSelectedDate(day.dateString);
-                const monday = dayjs(day.dateString).startOf("week").add(1, "day");
+                const monday = dayjs(day.dateString)
+                  .startOf("week")
+                  .add(1, "day");
                 setCurrentWeekStart(monday);
               }}
               onClose={() => setShowMonthPicker(false)}
@@ -281,7 +302,11 @@ export default function ViewerSchedulePanel({
                     },
                   ]}
                 >
-                  <AccommodationIcon width={16} height={16} color={colors.gray700} />
+                  <AccommodationIcon
+                    width={16}
+                    height={16}
+                    color={colors.gray700}
+                  />
                 </View>
                 <View style={styles.accommodationRowInner}>
                   {weekDays.map((date, index) => {
@@ -289,10 +314,13 @@ export default function ViewerSchedulePanel({
                     const nextDate =
                       index < weekDays.length - 1 ? weekDays[index + 1] : null;
                     const nextAccs = nextDate
-                      ? (accommodationsByDate.get(nextDate) || [])
+                      ? accommodationsByDate.get(nextDate) || []
                       : [];
                     const hasContinuous = accs.some(a =>
-                      nextAccs.some(b => b.name === a.name && b.checkinDate === a.checkinDate),
+                      nextAccs.some(
+                        b =>
+                          b.name === a.name && b.checkinDate === a.checkinDate,
+                      ),
                     );
                     const firstAcc = accs[0];
                     const isMiddle =
@@ -310,7 +338,9 @@ export default function ViewerSchedulePanel({
                           position: "relative",
                           overflow: "visible",
                           borderRightWidth:
-                            index < weekDays.length - 1 && !hasContinuous && !isMiddle
+                            index < weekDays.length - 1 &&
+                            !hasContinuous &&
+                            !isMiddle
                               ? 1
                               : 0,
                           borderRightColor: "#e0e0e0",
@@ -325,11 +355,18 @@ export default function ViewerSchedulePanel({
                         {accs.map((acc, ai) => {
                           const isStart = isAccStart(acc, date);
                           const isEnd = isAccEnd(acc, date);
-                          const isVisualStart = isStart || (index === 0 && !isEnd);
+                          const isVisualStart =
+                            isStart || (index === 0 && !isEnd);
                           const timeRange = getAccTimeRange(acc, date);
-                          const actualLeft = Math.max(0, Math.min(timeRange.startPercent, 100));
+                          const actualLeft = Math.max(
+                            0,
+                            Math.min(timeRange.startPercent, 100),
+                          );
                           const maxWidth = 100 - actualLeft;
-                          const actualWidth = Math.min(timeRange.widthPercent, maxWidth);
+                          const actualWidth = Math.min(
+                            timeRange.widthPercent,
+                            maxWidth,
+                          );
 
                           return (
                             <View
@@ -370,24 +407,36 @@ export default function ViewerSchedulePanel({
                         if (seen.has(key)) return;
                         const isStart = isAccStart(acc, date);
                         const isEnd = isAccEnd(acc, date);
-                        const isVisualStart = isStart || (index === 0 && !isEnd);
+                        const isVisualStart =
+                          isStart || (index === 0 && !isEnd);
                         if (!isVisualStart) return;
                         seen.add(key);
                         const timeRange = getAccTimeRange(acc, date);
                         const startPercent = timeRange.startPercent;
                         let endIndex = index;
-                        let endPercent = timeRange.startPercent + timeRange.widthPercent;
+                        let endPercent =
+                          timeRange.startPercent + timeRange.widthPercent;
                         for (let i = index + 1; i < weekDays.length; i++) {
-                          const dAccs = accommodationsByDate.get(weekDays[i]) || [];
-                          const dAcc = dAccs.find(a => a.checkinDate === acc.checkinDate && a.name === acc.name);
+                          const dAccs =
+                            accommodationsByDate.get(weekDays[i]) || [];
+                          const dAcc = dAccs.find(
+                            a =>
+                              a.checkinDate === acc.checkinDate &&
+                              a.name === acc.name,
+                          );
                           if (dAcc) {
                             const dRange = getAccTimeRange(dAcc, weekDays[i]);
                             endIndex = i;
-                            endPercent = dRange.startPercent + dRange.widthPercent;
+                            endPercent =
+                              dRange.startPercent + dRange.widthPercent;
                           } else break;
                         }
-                        const leftPct = ((index + startPercent / 100) / weekDays.length) * 100;
-                        const rightPct = ((endIndex + endPercent / 100) / weekDays.length) * 100;
+                        const leftPct =
+                          ((index + startPercent / 100) / weekDays.length) *
+                          100;
+                        const rightPct =
+                          ((endIndex + endPercent / 100) / weekDays.length) *
+                          100;
                         const widthPct = rightPct - leftPct;
                         labels.push(
                           <View
@@ -409,7 +458,11 @@ export default function ViewerSchedulePanel({
                           >
                             <View style={styles.itemDot} />
                             <Text
-                              style={{ ...textStyles.h9, color: colors.accommodationText, flexShrink: 1 }}
+                              style={{
+                                ...textStyles.h9,
+                                color: colors.accommodationText,
+                                flexShrink: 1,
+                              }}
                               numberOfLines={1}
                               ellipsizeMode="tail"
                             >

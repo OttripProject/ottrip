@@ -308,14 +308,20 @@ export default function LoginScreen() {
         } catch {}
 
         try {
-          const saveId = Platform.OS === "web"
-            ? window.localStorage.getItem("pendingSavePublicId")
-            : null;
+          const saveId =
+            Platform.OS === "web"
+              ? window.localStorage.getItem("pendingSavePublicId")
+              : null;
           if (saveId) {
             window.localStorage.removeItem("pendingSavePublicId");
             const result = await plansApi.saveExport(saveId);
             setIsLoading(false);
-            navigation.reset({ index: 0, routes: [{ name: "PLAN", params: { publicId: result.planPublicId } }] });
+            navigation.reset({
+              index: 0,
+              routes: [
+                { name: "PLAN", params: { publicId: result.planPublicId } },
+              ],
+            });
             return;
           }
         } catch {}
@@ -369,14 +375,20 @@ export default function LoginScreen() {
         } catch {}
 
         try {
-          const saveId = Platform.OS === "web"
-            ? window.localStorage.getItem("pendingSavePublicId")
-            : null;
+          const saveId =
+            Platform.OS === "web"
+              ? window.localStorage.getItem("pendingSavePublicId")
+              : null;
           if (saveId) {
             window.localStorage.removeItem("pendingSavePublicId");
             const result = await plansApi.saveExport(saveId);
             setIsLoading(false);
-            navigation.reset({ index: 0, routes: [{ name: "PLAN", params: { publicId: result.planPublicId } }] });
+            navigation.reset({
+              index: 0,
+              routes: [
+                { name: "PLAN", params: { publicId: result.planPublicId } },
+              ],
+            });
             return;
           }
         } catch {}

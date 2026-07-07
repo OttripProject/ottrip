@@ -6,13 +6,13 @@ import RegisterCompleteScreenNative from "@/screens-mobile/RegisterCompleteScree
 import RegisterProfileScreenNative from "@/screens-mobile/RegisterProfileScreen.native";
 import TermsConsentScreenNative from "@/screens-mobile/TermsConsentScreen.native";
 import DashboardScreen from "@/screens/DashboardScreen";
-import TripViewerScreen from "@/screens/TripViewerScreen";
 import InviteAcceptScreen from "@/screens/InviteAcceptScreen";
 import LoginScreen from "@/screens/LoginScreen";
 import ProfileScreen from "@/screens/ProfileScreen";
 import RegisterProfileScreen from "@/screens/RegisterProfileScreen";
 import TermsConsentScreen from "@/screens/TermsConsentScreen";
 import TermsDetailScreen from "@/screens/TermsDetailScreen";
+import TripViewerScreen from "@/screens/TripViewerScreen";
 import WelcomeScreen from "@/screens/auth/WelcomeScreen";
 import ForbiddenScreen from "@/screens/error/ForbiddenScreen";
 import NotFoundScreen from "@/screens/error/NotFoundScreen";

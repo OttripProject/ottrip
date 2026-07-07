@@ -16,11 +16,11 @@ import {
   TextInput,
   View,
 } from "react-native";
-import ExternalLinkIcon from "../../../assets/external_link.svg";
 import ExportGuestIcon from "../../../assets/export_guest.svg";
 import ExportImportIcon from "../../../assets/export_import.svg";
 import ExportLinkIcon from "../../../assets/export_link.svg";
 import ExportLockIcon from "../../../assets/export_lock.svg";
+import ExternalLinkIcon from "../../../assets/external_link.svg";
 import RefreshIcon from "../../../assets/retry.svg";
 import XIcon from "../../../assets/x.svg";
 
@@ -33,13 +33,21 @@ type Props = {
 
 function Toggle({ value, onToggle }: { value: boolean; onToggle: () => void }) {
   return (
-    <Pressable onPress={onToggle} style={[styles.toggle, value && styles.toggleOn]}>
+    <Pressable
+      onPress={onToggle}
+      style={[styles.toggle, value && styles.toggleOn]}
+    >
       <View style={[styles.toggleThumb, value && styles.toggleThumbOn]} />
     </Pressable>
   );
 }
 
-export default function ExportPlanModal({ visible, onClose, planId, planName }: Props) {
+export default function ExportPlanModal({
+  visible,
+  onClose,
+  planId,
+  planName,
+}: Props) {
   const [includeExpenses, setIncludeExpenses] = useState(false);
   const [includeChecklist, setIncludeChecklist] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -100,196 +108,284 @@ export default function ExportPlanModal({ visible, onClose, planId, planName }: 
           onClose={() => setPreviewVisible(false)}
         />
       )}
-      <Modal visible={visible} transparent animationType="fade" onRequestClose={handleClose}>
-      <Pressable style={styles.overlay} onPress={handleClose}>
-        <Card
-          width="100%"
-          maxWidth={468}
-          borderRadius={20}
-          shadow={{
-            shadowColor: colors.black,
-            shadowOffset: { width: 0, height: 24 },
-            shadowOpacity: 0.12,
-            shadowRadius: 48,
-            elevation: 12,
-          }}
-          style={styles.cardStyle}
-        >
-          <Pressable onPress={() => {}} style={Platform.OS === "web" ? ({ cursor: "default" } as any) : undefined}>
-            <ScrollView
-              showsVerticalScrollIndicator={false}
-              contentContainerStyle={styles.scroll}
+      <Modal
+        visible={visible}
+        transparent
+        animationType="fade"
+        onRequestClose={handleClose}
+      >
+        <Pressable style={styles.overlay} onPress={handleClose}>
+          <Card
+            width="100%"
+            maxWidth={468}
+            borderRadius={20}
+            shadow={{
+              shadowColor: colors.black,
+              shadowOffset: { width: 0, height: 24 },
+              shadowOpacity: 0.12,
+              shadowRadius: 48,
+              elevation: 12,
+            }}
+            style={styles.cardStyle}
+          >
+            <Pressable
+              onPress={() => {}}
+              style={
+                Platform.OS === "web"
+                  ? ({ cursor: "default" } as any)
+                  : undefined
+              }
             >
-              {/* 헤더 */}
-              <View style={styles.header}>
-                <View style={styles.headerText}>
-                  <Text style={styles.title}>여행 일정 내보내기</Text>
-                  <Text style={styles.subtitle}>
-                    여행 일정을 누구나 열람할 수 있는 링크로 내보냅니다
-                  </Text>
-                </View>
-                <Pressable onPress={handleClose} hitSlop={8} style={styles.closeButton}>
-                  <XIcon width={16} height={16} color={colors.gray900} />
-                </Pressable>
-              </View>
-
-              {/* 설명 카드 */}
-              <View style={styles.infoCard}>
-                <View style={styles.infoItem}>
-                  <View style={styles.infoIconBox}>
-                    <ExportLinkIcon width={18} height={18} color={colors.primary} />
-                  </View>
-                  <View style={styles.infoContent}>
-                    <Text style={styles.infoTitle}>공개 링크 발급</Text>
-                    <Text style={styles.infoDesc}>
-                      '{planName}' 일정을 담은 열람용 URL을 생성합니다
+              <ScrollView
+                showsVerticalScrollIndicator={false}
+                contentContainerStyle={styles.scroll}
+              >
+                {/* 헤더 */}
+                <View style={styles.header}>
+                  <View style={styles.headerText}>
+                    <Text style={styles.title}>여행 일정 내보내기</Text>
+                    <Text style={styles.subtitle}>
+                      여행 일정을 누구나 열람할 수 있는 링크로 내보냅니다
                     </Text>
                   </View>
+                  <Pressable
+                    onPress={handleClose}
+                    hitSlop={8}
+                    style={styles.closeButton}
+                  >
+                    <XIcon width={16} height={16} color={colors.gray900} />
+                  </Pressable>
                 </View>
 
-                <View style={styles.infoItem}>
-                  <View style={styles.infoIconBox}>
-                    <ExportGuestIcon width={18} height={18} color={colors.primary} />
-                  </View>
-                  <View style={styles.infoContent}>
-                    <Text style={styles.infoTitle}>게스트로 누구나 열람</Text>
-                    <Text style={styles.infoDesc}>
-                      링크를 받은 사람은 로그인 없이 게스트로 일정을 볼 수 있어요
-                    </Text>
-                  </View>
-                </View>
-
-                <View style={styles.infoItem}>
-                  <View style={styles.infoIconBox}>
-                    <ExportImportIcon width={18} height={18} color={colors.primary} />
-                  </View>
-                  <View style={styles.infoContent}>
-                    <Text style={styles.infoTitle}>보거나 내 일정으로 가져오기</Text>
-                    <Text style={styles.infoDesc}>{"열람만 해도 되고, 로그인을 하면 내 여행일정으로 가져와서 자유롭게\n수정 및 저장할 수 있어요"}</Text>
-                  </View>
-                </View>
-              </View>
-
-              {/* 공개 범위 카드 */}
-              <View style={styles.scopeCard}>
-                <View style={styles.scopeHeader}>
-                  <Text style={styles.scopeTitle}>공개 범위</Text>
-                  <Text style={styles.scopeHint}>게스트에게 보여줄 내용을 선택하세요</Text>
-                </View>
-
-                {/* 항상 포함 */}
-                <View style={styles.scopeFixed}>
-                  <View style={styles.scopeFixedIcon}>
-                    <ExportLockIcon width={16} height={16} color={colors.gray700} />
-                  </View>
-                  <View style={styles.scopeFixedContent}>
-                    <Text style={styles.scopeItemTitle}>여행 일정 · 항공 · 숙박</Text>
-                    <Text style={styles.scopeItemDesc}>
-                      {"기본 정보는 항상 공유되고,\n예약번호·요금·메모·첨부파일은 제외됩니다"}
-                    </Text>
-                  </View>
-                  <View style={styles.alwaysBadge}>
-                    <Text style={styles.alwaysBadgeText}>항상 포함</Text>
-                  </View>
-                </View>
-
-                {/* 비용 토글 */}
-                <Pressable
-                  style={[styles.scopeToggleRow, includeExpenses && styles.scopeToggleRowOn]}
-                  onPress={() => { setIncludeExpenses(v => !v); setExportPublicId(null); }}
-                >
-                  <View style={styles.scopeToggleContent}>
-                    <Text style={styles.scopeItemTitle}>비용</Text>
-                    <Text style={styles.infoDesc}>
-                      총 비용과 카테고리별·항목별 내역을 게스트가 볼 수 있어요
-                    </Text>
-                  </View>
-                  <Toggle
-                    value={includeExpenses}
-                    onToggle={() => { setIncludeExpenses(v => !v); setExportPublicId(null); }}
-                  />
-                </Pressable>
-
-                {/* 체크리스트 토글 */}
-                <Pressable
-                  style={[styles.scopeToggleRow, includeChecklist && styles.scopeToggleRowOn]}
-                  onPress={() => { setIncludeChecklist(v => !v); setExportPublicId(null); }}
-                >
-                  <View style={styles.scopeToggleContent}>
-                    <Text style={styles.scopeItemTitle}>체크리스트</Text>
-                    <Text style={styles.infoDesc}>
-                      준비물 체크리스트와 준비 현황을 게스트가 볼 수 있어요
-                    </Text>
-                  </View>
-                  <Toggle
-                    value={includeChecklist}
-                    onToggle={() => { setIncludeChecklist(v => !v); setExportPublicId(null); }}
-                  />
-                </Pressable>
-              </View>
-
-              {/* 생성 완료 후 결과 영역 */}
-              {viewerUrl ? (
-                <View style={styles.resultSection}>
-                  <View style={styles.resultLinkGroup}>
-                    <Text style={styles.resultLabel}>내보내기 링크</Text>
-                    <View style={styles.resultRow}>
-                      <TextInput
-                        style={styles.urlInput}
-                        value={viewerUrl}
-                        editable={false}
-                        selectTextOnFocus
+                {/* 설명 카드 */}
+                <View style={styles.infoCard}>
+                  <View style={styles.infoItem}>
+                    <View style={styles.infoIconBox}>
+                      <ExportLinkIcon
+                        width={18}
+                        height={18}
+                        color={colors.primary}
                       />
-                      <Pressable onPress={handleCopy} style={styles.copyButton}>
-                        <Text style={styles.copyText}>{copied ? "복사됨" : "복사"}</Text>
-                      </Pressable>
+                    </View>
+                    <View style={styles.infoContent}>
+                      <Text style={styles.infoTitle}>공개 링크 발급</Text>
+                      <Text style={styles.infoDesc}>
+                        '{planName}' 일정을 담은 열람용 URL을 생성합니다
+                      </Text>
                     </View>
                   </View>
 
-                  <View style={styles.resultDesc}>
-                    <View style={styles.guestBadge}>
-                      <Text style={styles.guestBadgeText}>게스트</Text>
+                  <View style={styles.infoItem}>
+                    <View style={styles.infoIconBox}>
+                      <ExportGuestIcon
+                        width={18}
+                        height={18}
+                        color={colors.primary}
+                      />
                     </View>
-                    <Text style={styles.resultDescText}>
-                      이 링크로 접속한 사람은 일정을 보거나, 내 일정으로 가져와 수정할 수 있어요.
+                    <View style={styles.infoContent}>
+                      <Text style={styles.infoTitle}>게스트로 누구나 열람</Text>
+                      <Text style={styles.infoDesc}>
+                        링크를 받은 사람은 로그인 없이 게스트로 일정을 볼 수
+                        있어요
+                      </Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.infoItem}>
+                    <View style={styles.infoIconBox}>
+                      <ExportImportIcon
+                        width={18}
+                        height={18}
+                        color={colors.primary}
+                      />
+                    </View>
+                    <View style={styles.infoContent}>
+                      <Text style={styles.infoTitle}>
+                        보거나 내 일정으로 가져오기
+                      </Text>
+                      <Text style={styles.infoDesc}>
+                        {
+                          "열람만 해도 되고, 로그인을 하면 내 여행일정으로 가져와서 자유롭게\n수정 및 저장할 수 있어요"
+                        }
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+
+                {/* 공개 범위 카드 */}
+                <View style={styles.scopeCard}>
+                  <View style={styles.scopeHeader}>
+                    <Text style={styles.scopeTitle}>공개 범위</Text>
+                    <Text style={styles.scopeHint}>
+                      게스트에게 보여줄 내용을 선택하세요
                     </Text>
                   </View>
 
-                  <Pressable onPress={handleOpenLink} style={styles.openButton}>
-                    <ExternalLinkIcon width={14} height={14} color={colors.gray900} />
-                    <Text style={styles.openButtonText}>링크로 접속해 보기</Text>
+                  {/* 항상 포함 */}
+                  <View style={styles.scopeFixed}>
+                    <View style={styles.scopeFixedIcon}>
+                      <ExportLockIcon
+                        width={16}
+                        height={16}
+                        color={colors.gray700}
+                      />
+                    </View>
+                    <View style={styles.scopeFixedContent}>
+                      <Text style={styles.scopeItemTitle}>
+                        여행 일정 · 항공 · 숙박
+                      </Text>
+                      <Text style={styles.scopeItemDesc}>
+                        {
+                          "기본 정보는 항상 공유되고,\n예약번호·요금·메모·첨부파일은 제외됩니다"
+                        }
+                      </Text>
+                    </View>
+                    <View style={styles.alwaysBadge}>
+                      <Text style={styles.alwaysBadgeText}>항상 포함</Text>
+                    </View>
+                  </View>
+
+                  {/* 비용 토글 */}
+                  <Pressable
+                    style={[
+                      styles.scopeToggleRow,
+                      includeExpenses && styles.scopeToggleRowOn,
+                    ]}
+                    onPress={() => {
+                      setIncludeExpenses(v => !v);
+                      setExportPublicId(null);
+                    }}
+                  >
+                    <View style={styles.scopeToggleContent}>
+                      <Text style={styles.scopeItemTitle}>비용</Text>
+                      <Text style={styles.infoDesc}>
+                        총 비용과 카테고리별·항목별 내역을 게스트가 볼 수 있어요
+                      </Text>
+                    </View>
+                    <Toggle
+                      value={includeExpenses}
+                      onToggle={() => {
+                        setIncludeExpenses(v => !v);
+                        setExportPublicId(null);
+                      }}
+                    />
                   </Pressable>
 
+                  {/* 체크리스트 토글 */}
+                  <Pressable
+                    style={[
+                      styles.scopeToggleRow,
+                      includeChecklist && styles.scopeToggleRowOn,
+                    ]}
+                    onPress={() => {
+                      setIncludeChecklist(v => !v);
+                      setExportPublicId(null);
+                    }}
+                  >
+                    <View style={styles.scopeToggleContent}>
+                      <Text style={styles.scopeItemTitle}>체크리스트</Text>
+                      <Text style={styles.infoDesc}>
+                        준비물 체크리스트와 준비 현황을 게스트가 볼 수 있어요
+                      </Text>
+                    </View>
+                    <Toggle
+                      value={includeChecklist}
+                      onToggle={() => {
+                        setIncludeChecklist(v => !v);
+                        setExportPublicId(null);
+                      }}
+                    />
+                  </Pressable>
+                </View>
+
+                {/* 생성 완료 후 결과 영역 */}
+                {viewerUrl ? (
+                  <View style={styles.resultSection}>
+                    <View style={styles.resultLinkGroup}>
+                      <Text style={styles.resultLabel}>내보내기 링크</Text>
+                      <View style={styles.resultRow}>
+                        <TextInput
+                          style={styles.urlInput}
+                          value={viewerUrl}
+                          editable={false}
+                          selectTextOnFocus
+                        />
+                        <Pressable
+                          onPress={handleCopy}
+                          style={styles.copyButton}
+                        >
+                          <Text style={styles.copyText}>
+                            {copied ? "복사됨" : "복사"}
+                          </Text>
+                        </Pressable>
+                      </View>
+                    </View>
+
+                    <View style={styles.resultDesc}>
+                      <View style={styles.guestBadge}>
+                        <Text style={styles.guestBadgeText}>게스트</Text>
+                      </View>
+                      <Text style={styles.resultDescText}>
+                        이 링크로 접속한 사람은 일정을 보거나, 내 일정으로
+                        가져와 수정할 수 있어요.
+                      </Text>
+                    </View>
+
+                    <Pressable
+                      onPress={handleOpenLink}
+                      style={styles.openButton}
+                    >
+                      <ExternalLinkIcon
+                        width={14}
+                        height={14}
+                        color={colors.gray900}
+                      />
+                      <Text style={styles.openButtonText}>
+                        링크로 접속해 보기
+                      </Text>
+                    </Pressable>
+
+                    <Pressable
+                      onPress={handleGenerate}
+                      disabled={isGenerating}
+                      style={[
+                        styles.regenButton,
+                        isGenerating && styles.regenButtonDisabled,
+                      ]}
+                    >
+                      <RefreshIcon
+                        width={13}
+                        height={13}
+                        color={colors.gray700}
+                      />
+                      <Text style={styles.regenButtonText}>
+                        {isGenerating ? "생성 중..." : "새 링크 생성"}
+                      </Text>
+                    </Pressable>
+                  </View>
+                ) : (
                   <Pressable
                     onPress={handleGenerate}
                     disabled={isGenerating}
-                    style={[styles.regenButton, isGenerating && styles.regenButtonDisabled]}
+                    style={[
+                      styles.generateButton,
+                      isGenerating && styles.generateButtonDisabled,
+                    ]}
                   >
-                    <RefreshIcon width={13} height={13} color={colors.gray700} />
-                    <Text style={styles.regenButtonText}>
-                      {isGenerating ? "생성 중..." : "새 링크 생성"}
+                    {isGenerating && (
+                      <ActivityIndicator size="small" color={colors.white} />
+                    )}
+                    <Text style={styles.generateButtonText}>
+                      {isGenerating ? "링크 생성 중..." : "내보내기 URL 생성"}
                     </Text>
                   </Pressable>
-                </View>
-              ) : (
-                <Pressable
-                  onPress={handleGenerate}
-                  disabled={isGenerating}
-                  style={[styles.generateButton, isGenerating && styles.generateButtonDisabled]}
-                >
-                  {isGenerating && (
-                    <ActivityIndicator size="small" color={colors.white} />
-                  )}
-                  <Text style={styles.generateButtonText}>
-                    {isGenerating ? "링크 생성 중..." : "내보내기 URL 생성"}
-                  </Text>
-                </Pressable>
-              )}
-            </ScrollView>
-          </Pressable>
-        </Card>
-      </Pressable>
-    </Modal>
+                )}
+              </ScrollView>
+            </Pressable>
+          </Card>
+        </Pressable>
+      </Modal>
     </>
   );
 }

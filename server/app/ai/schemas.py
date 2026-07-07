@@ -61,7 +61,9 @@ class ExpenseItemDraft(APISchema):
 
 
 DocumentItemDraft = Annotated[
-    Union[FlightItemDraft, ItineraryItemDraft, AccommodationItemDraft, ExpenseItemDraft],
+    Union[
+        FlightItemDraft, ItineraryItemDraft, AccommodationItemDraft, ExpenseItemDraft
+    ],
     Field(discriminator="item_type"),
 ]
 
@@ -73,13 +75,19 @@ class DocumentUploadAnalyzeResponse(APISchema):
     error: str | None = None
 
 
+class PlanUploadAnalyzeResponse(APISchema):
+    success: bool
+    items: list[DocumentItemDraft] = []
+    error: str | None = None
+
+
 # Travel Checklist Schemas
 class ChecklistItem(APISchema):
     id: int
     name: str
     reason: str
     is_checked: bool = False
-    is_custom: bool = False  
+    is_custom: bool = False
     date: str | None = None
 
 
@@ -96,7 +104,7 @@ class ChecklistRead(APISchema):
 
 class ChecklistCreateRequest(APISchema):
     force_regenerate: bool = False
-    date: str | None = None 
+    date: str | None = None
 
 
 class ChecklistCreateResponse(APISchema):

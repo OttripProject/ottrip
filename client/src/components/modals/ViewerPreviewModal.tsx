@@ -9,11 +9,11 @@ import AIAssistantPanel from "@/components/panels/aiassistant/AIAssistantPanel";
 import ExpensesPanel from "@/components/panels/expenses/ExpensesPanel";
 import { useAuth } from "@/contexts/AuthContext";
 import {
-  plansApi,
   type ExportAccommodation,
   type ExportFlight,
   type ExportItinerary,
   type PlanExportSnapshot,
+  plansApi,
 } from "@/services/plans";
 import GradientBackground from "@/ui/components/GradientBackground";
 import { useNavigation } from "@react-navigation/native";
@@ -33,7 +33,11 @@ type Props = {
   onClose: () => void;
 };
 
-export default function ViewerPreviewModal({ visible, publicId, onClose }: Props) {
+export default function ViewerPreviewModal({
+  visible,
+  publicId,
+  onClose,
+}: Props) {
   const navigation = useNavigation<any>();
   const { isAuthenticated } = useAuth();
   const { width } = useWindowDimensions();
@@ -45,13 +49,19 @@ export default function ViewerPreviewModal({ visible, publicId, onClose }: Props
   const [selectedType, setSelectedType] = useState<
     "itinerary" | "flight" | "accommodation" | null
   >(null);
-  const [selectedItinerary, setSelectedItinerary] = useState<ExportItinerary | null>(null);
-  const [selectedFlight, setSelectedFlight] = useState<ExportFlight | null>(null);
-  const [selectedAccommodation, setSelectedAccommodation] = useState<ExportAccommodation | null>(null);
+  const [selectedItinerary, setSelectedItinerary] =
+    useState<ExportItinerary | null>(null);
+  const [selectedFlight, setSelectedFlight] = useState<ExportFlight | null>(
+    null,
+  );
+  const [selectedAccommodation, setSelectedAccommodation] =
+    useState<ExportAccommodation | null>(null);
 
   const [loginPromptOpen, setLoginPromptOpen] = useState(false);
   const [saveSuccessVisible, setSaveSuccessVisible] = useState(false);
-  const [savedPlanPublicId, setSavedPlanPublicId] = useState<string | null>(null);
+  const [savedPlanPublicId, setSavedPlanPublicId] = useState<string | null>(
+    null,
+  );
   const [mainLayoutHeight, setMainLayoutHeight] = useState(600);
   const [hintHeight, setHintHeight] = useState(48);
 
@@ -95,7 +105,9 @@ export default function ViewerPreviewModal({ visible, publicId, onClose }: Props
   const handleLoginPress = () => {
     setLoginPromptOpen(false);
     if (Platform.OS === "web" && typeof window !== "undefined") {
-      try { window.localStorage.setItem("pendingSavePublicId", publicId); } catch {}
+      try {
+        window.localStorage.setItem("pendingSavePublicId", publicId);
+      } catch {}
     }
     onClose();
     navigation.navigate("로그인");
@@ -150,7 +162,8 @@ export default function ViewerPreviewModal({ visible, publicId, onClose }: Props
 
     if (!snapshot) return null;
 
-    const { plan, itineraries, flights, accommodations, expenses, checklist } = snapshot.snapshot;
+    const { plan, itineraries, flights, accommodations, expenses, checklist } =
+      snapshot.snapshot;
 
     const hasExpenses = !!expenses && expenses.length > 0;
     const hasChecklist = !!checklist;
@@ -195,7 +208,11 @@ export default function ViewerPreviewModal({ visible, publicId, onClose }: Props
         style={styles.root}
       >
         <View style={styles.headerWrapper}>
-          <ViewerHeaderPanel planTitle={plan.title} onSave={handleSave} onClose={onClose} />
+          <ViewerHeaderPanel
+            planTitle={plan.title}
+            onSave={handleSave}
+            onClose={onClose}
+          />
         </View>
 
         <View style={styles.container}>
@@ -283,7 +300,9 @@ export default function ViewerPreviewModal({ visible, publicId, onClose }: Props
             if (savedPlanPublicId) {
               navigation.reset({
                 index: 0,
-                routes: [{ name: "PLAN", params: { publicId: savedPlanPublicId } }],
+                routes: [
+                  { name: "PLAN", params: { publicId: savedPlanPublicId } },
+                ],
               });
             }
           }}

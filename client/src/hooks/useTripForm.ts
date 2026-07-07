@@ -112,7 +112,7 @@ export const useTripForm = (initialData?: Partial<TripFormData>) => {
   const getMarkedDates = useCallback((): CalendarMarkedDates => {
     const marked: CalendarMarkedDates = {};
 
-    tripData.segments.forEach((segment, idx) => {
+    tripData.segments.forEach((segment, _idx) => {
       if (!segment.startDate) return;
 
       const start = dayjs(segment.startDate);
@@ -126,7 +126,10 @@ export const useTripForm = (initialData?: Partial<TripFormData>) => {
         return;
       }
 
-      marked[start.format("YYYY-MM-DD")] = { selection: "start", selected: true };
+      marked[start.format("YYYY-MM-DD")] = {
+        selection: "start",
+        selected: true,
+      };
       marked[end.format("YYYY-MM-DD")] = { selection: "end", selected: true };
 
       let current = start.add(1, "day");
@@ -142,12 +145,9 @@ export const useTripForm = (initialData?: Partial<TripFormData>) => {
     return marked;
   }, [tripData.segments]);
 
-  const updateTripData = useCallback(
-    (data: Partial<{ name: string }>) => {
-      setTripData(prev => ({ ...prev, ...data }));
-    },
-    [],
-  );
+  const updateTripData = useCallback((data: Partial<{ name: string }>) => {
+    setTripData(prev => ({ ...prev, ...data }));
+  }, []);
 
   const resetForm = useCallback(() => {
     setTripData({

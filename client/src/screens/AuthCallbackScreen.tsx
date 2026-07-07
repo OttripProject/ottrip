@@ -84,7 +84,9 @@ export default function AuthCallbackScreen() {
             if (saveId) {
               window.localStorage.removeItem("pendingSavePublicId");
               const result = await plansApi.saveExport(saveId);
-              window.location.replace(`${window.location.origin}/plans/${result.planPublicId}`);
+              window.location.replace(
+                `${window.location.origin}/plans/${result.planPublicId}`,
+              );
               return;
             }
           } catch {}

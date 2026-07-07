@@ -1,10 +1,10 @@
-import CalendarIcon from "../../../assets/calendar_outline.svg";
 import type { ExportSegment } from "@/services/plans";
 import { colors } from "@/ui/tokens/colors";
 import { spacing } from "@/ui/tokens/spacing";
 import { textStyles } from "@/ui/tokens/typography";
 import dayjs from "dayjs";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
+import CalendarIcon from "../../../assets/calendar_outline.svg";
 import PanelLayout from "./PanelLayout";
 
 interface ViewerPlanSummaryPanelProps {
@@ -51,10 +51,13 @@ export default function ViewerPlanSummaryPanel({
                     <View style={styles.segmentDot} />
                     <View style={styles.segmentInfo}>
                       <Text style={styles.segmentCity}>
-                        {seg.country ? `${seg.country} · ${seg.city}` : seg.city}
+                        {seg.country
+                          ? `${seg.country} · ${seg.city}`
+                          : seg.city}
                       </Text>
                       <Text style={styles.segmentDate}>
-                        {formatShort(seg.startDate)} – {formatShort(seg.endDate)}
+                        {formatShort(seg.startDate)} –{" "}
+                        {formatShort(seg.endDate)}
                       </Text>
                     </View>
                   </View>
@@ -63,7 +66,6 @@ export default function ViewerPlanSummaryPanel({
             </View>
           </>
         )}
-
       </ScrollView>
     </PanelLayout>
   );

@@ -170,7 +170,10 @@ export default function AccommodationSection({
   if (showAccommodationForm) {
     return (
       <AccommodationItem
-        key={editingAccommodation?.id ?? `new-accommodation-${newAccommodationRevision.current}`}
+        key={
+          editingAccommodation?.id ??
+          `new-accommodation-${newAccommodationRevision.current}`
+        }
         accommodation={editingAccommodation}
         draft={newAccommodationDraft}
         planId={planData.plan.id}

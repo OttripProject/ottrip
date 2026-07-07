@@ -15,6 +15,7 @@ from .schemas import (
     ChecklistRead,
     DocumentTextExtraction,
     DocumentUploadAnalyzeResponse,
+    PlanUploadAnalyzeResponse,
 )
 from .service import AIService
 
@@ -51,6 +52,40 @@ async def analyze_upload(
     )
 
     return result
+
+
+@router.post("/analyze-plan-upload")
+async def analyze_plan_upload(
+    ai_service: AIService,
+    file: UploadFile = File(...),
+) -> PlanUploadAnalyzeResponse:
+    """업로드 파일에서 여행 전체 일정(복수 항목) 추출."""
+    if not file.filename:
+        raise HTTPException(status_code=400, detail="파일명이 없습니다.")
+
+    if file.size and file.size > ai_settings.MAX_FILE_SIZE:
+        raise HTTPException(
+            status_code=400,
+            detail=f"파일 크기는 {ai_settings.MAX_FILE_SIZE // (1024 * 1024)}MB를 초과할 수 없습니다.",
+        )
+
+    allowed = (
+        set(ai_settings.ALLOWED_IMAGE_TYPES)
+        | set(ai_settings.ALLOWED_PDF_TYPES)
+        | set(ai_settings.ALLOWED_EXCEL_TYPES)
+    )
+    if file.content_type not in allowed:
+        raise HTTPException(
+            status_code=400,
+            detail="지원하지 않는 파일 형식입니다. 지원 형식: 이미지, PDF, Excel (xlsx·xls·csv)",
+        )
+
+    file_data = await file.read()
+    return await ai_service.analyze_uploaded_plan(
+        file_data=file_data,
+        content_type=file.content_type or "",
+        filename=file.filename,
+    )
 
 
 @router.post("/test/extract-text-only")

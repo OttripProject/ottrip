@@ -16,12 +16,18 @@ export const codeToFlag = (alpha2: string): string =>
   alpha2
     .toUpperCase()
     .split("")
-    .map((c) => String.fromCodePoint(c.charCodeAt(0) + 127397))
+    .map(c => String.fromCodePoint(c.charCodeAt(0) + 127397))
     .join("");
 
 export function getKoreanCountryOptions(): CountryOption[] {
-  const koNames = countries.getNames("ko", { select: "official" }) as Record<string, string>;
-  const enNames = countries.getNames("en", { select: "official" }) as Record<string, string>;
+  const koNames = countries.getNames("ko", { select: "official" }) as Record<
+    string,
+    string
+  >;
+  const enNames = countries.getNames("en", { select: "official" }) as Record<
+    string,
+    string
+  >;
   return Object.entries(koNames)
     .map(([code, label]) => ({
       label,

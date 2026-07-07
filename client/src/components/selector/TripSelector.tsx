@@ -75,12 +75,22 @@ interface Trip {
   name: string;
   startDate: string;
   endDate: string;
-  segments?: Array<{ country: string; city: string; startDate: string; endDate: string }>;
+  segments?: Array<{
+    country: string;
+    city: string;
+    startDate: string;
+    endDate: string;
+  }>;
 }
 
 interface TripAddData {
   name: string;
-  segments: Array<{ country: string; city: string; startDate: string; endDate: string }>;
+  segments: Array<{
+    country: string;
+    city: string;
+    startDate: string;
+    endDate: string;
+  }>;
 }
 
 interface TripSelectorProps {
@@ -155,12 +165,15 @@ export default function TripSelector({
   const [isSubmittingEdit, setIsSubmittingEdit] = useState(false);
   const isSubmittingAddRef = useRef(false);
   const isSubmittingEditRef = useRef(false);
-  const [periodShrinkConfirmVisible, setPeriodShrinkConfirmVisible] = useState(false);
+  const [periodShrinkConfirmVisible, setPeriodShrinkConfirmVisible] =
+    useState(false);
 
   const today = dayjs().format("YYYY-MM-DD");
 
   const sortedTrips = useMemo(() => {
-    const ongoing = trips.filter(t => t.startDate <= today && t.endDate >= today);
+    const ongoing = trips.filter(
+      t => t.startDate <= today && t.endDate >= today,
+    );
     const upcoming = trips
       .filter(t => t.startDate > today)
       .sort((a, b) => a.startDate.localeCompare(b.startDate));
@@ -186,12 +199,14 @@ export default function TripSelector({
           city: s.city,
           startDate: s.startDate,
           endDate: s.endDate,
-        })) ?? [{
-          country: "",
-          city: "",
-          startDate: editingTrip.startDate,
-          endDate: editingTrip.endDate,
-        }],
+        })) ?? [
+          {
+            country: "",
+            city: "",
+            startDate: editingTrip.startDate,
+            endDate: editingTrip.endDate,
+          },
+        ],
       });
     }
   }, [editingTrip, showEditModal]);
@@ -258,12 +273,15 @@ export default function TripSelector({
     if (isSubmittingEditRef.current || isSubmittingEdit) return;
     if (!editingTrip) return;
 
-    const newSegments = editTripForm.tripData.segments.filter(s => s.startDate && s.endDate);
+    const newSegments = editTripForm.tripData.segments.filter(
+      s => s.startDate && s.endDate,
+    );
     const newStartDates = newSegments.map(s => s.startDate).sort();
     const newEndDates = newSegments.map(s => s.endDate).sort();
     const newStart = newStartDates[0] ?? "";
     const newEnd = newEndDates[newEndDates.length - 1] ?? "";
-    const periodShrunk = (newStart > editingTrip.startDate) || (newEnd < editingTrip.endDate);
+    const periodShrunk =
+      newStart > editingTrip.startDate || newEnd < editingTrip.endDate;
 
     if (periodShrunk) {
       setPeriodShrinkConfirmVisible(true);
@@ -299,7 +317,6 @@ export default function TripSelector({
     setShowEditModal(true);
     setIsDropdownOpen(false);
   };
-
 
   React.useEffect(() => {
     if (!showDropdown) {
@@ -359,7 +376,11 @@ export default function TripSelector({
         onPress={() => setIsDropdownOpen(!showDropdown)}
       >
         <View style={styles.selectorContent}>
-          <Text style={styles.selectorText} numberOfLines={1} ellipsizeMode="tail">
+          <Text
+            style={styles.selectorText}
+            numberOfLines={1}
+            ellipsizeMode="tail"
+          >
             {selectedTrip ? selectedTrip.name : "여행 선택"}
           </Text>
         </View>
@@ -412,7 +433,8 @@ export default function TripSelector({
                         style={[
                           styles.tripName,
                           isPastTrip(trip) && styles.tripNamePast,
-                          selectedTrip?.id === trip.id && styles.selectedTripText,
+                          selectedTrip?.id === trip.id &&
+                            styles.selectedTripText,
                         ]}
                         numberOfLines={1}
                         ellipsizeMode="tail"
@@ -497,7 +519,12 @@ export default function TripSelector({
                   setShowAddModal(true);
                 }}
               >
-                <TripAddIcon width={11} height={11} color={colors.primary} style={{ marginRight: 4 }} />
+                <TripAddIcon
+                  width={11}
+                  height={11}
+                  color={colors.primary}
+                  style={{ marginRight: 4 }}
+                />
                 <Text style={styles.addTripButtonText}>새 여행 추가</Text>
               </Pressable>
             </View>

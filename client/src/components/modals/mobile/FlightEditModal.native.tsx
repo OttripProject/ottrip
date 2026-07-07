@@ -306,7 +306,10 @@ export default function FlightEditModal({
             planId,
             description: (() => {
               const dep = flightSegments[0]?.departure_airport?.trim();
-              const arr = flightSegments[flightSegments.length - 1]?.arrival_airport?.trim();
+              const arr =
+                flightSegments[
+                  flightSegments.length - 1
+                ]?.arrival_airport?.trim();
               return dep && arr ? `${dep} → ${arr}` : null;
             })(),
           },
@@ -335,7 +338,10 @@ export default function FlightEditModal({
             planId,
             description: (() => {
               const dep = flightSegments[0]?.departure_airport?.trim();
-              const arr = flightSegments[flightSegments.length - 1]?.arrival_airport?.trim();
+              const arr =
+                flightSegments[
+                  flightSegments.length - 1
+                ]?.arrival_airport?.trim();
               return dep && arr ? `${dep} → ${arr}` : null;
             })(),
           },

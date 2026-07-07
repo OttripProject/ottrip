@@ -42,16 +42,21 @@ import {
   Text,
   View,
 } from "react-native";
-import PanelTabSwitcher from "../PanelTabSwitcher";
 import CalendarIcon from "../../../../assets/calender.svg";
 import CloseIcon from "../../../../assets/close_sm.svg";
+import PanelTabSwitcher from "../PanelTabSwitcher";
 
 function getCountryCityFromSegments(
-  segments: { startDate: string; endDate: string; country: string; city: string }[] | undefined | null,
+  segments:
+    | { startDate: string; endDate: string; country: string; city: string }[]
+    | undefined
+    | null,
   date: string,
 ) {
   if (!segments || !date) return null;
-  const matches = segments.filter(s => s.startDate <= date && date <= s.endDate);
+  const matches = segments.filter(
+    s => s.startDate <= date && date <= s.endDate,
+  );
   if (matches.length === 0) return null;
   const last = matches[matches.length - 1];
   return { country: last.country, city: last.city };
@@ -106,7 +111,10 @@ export default function AccommodationItem({
   const segments = planData?.plan?.segments;
   const isNewAccommodation = !accommodation?.id;
 
-  const initialCheckinDate = accommodation?.checkinDate || draft?.checkinDate || dayjs().format("YYYY-MM-DD");
+  const initialCheckinDate =
+    accommodation?.checkinDate ||
+    draft?.checkinDate ||
+    dayjs().format("YYYY-MM-DD");
   const initialAutoFill = isNewAccommodation
     ? getCountryCityFromSegments(segments, initialCheckinDate)
     : null;
@@ -167,14 +175,21 @@ export default function AccommodationItem({
     useState<DocumentUploadAnalyzeResponse | null>(null);
   const [isAiAnalyzing, setIsAiAnalyzing] = useState(false);
   const [aiAnalyzeInlineError, setAiAnalyzeInlineError] = useState(false);
-  const [aiAnalyzeInlineErrorMessage, setAiAnalyzeInlineErrorMessage] = useState("");
-  const [aiAnalyzeSizeErrorMessage, setAiAnalyzeSizeErrorMessage] = useState("");
-  const [lastAiSelection, setLastAiSelection] = useState<AiAttachmentAnalyzeSelection | null>(null);
-  const [lastAnalyzeFileName, setLastAnalyzeFileName] = useState<string | null>(null);
+  const [aiAnalyzeInlineErrorMessage, setAiAnalyzeInlineErrorMessage] =
+    useState("");
+  const [aiAnalyzeSizeErrorMessage, setAiAnalyzeSizeErrorMessage] =
+    useState("");
+  const [lastAiSelection, setLastAiSelection] =
+    useState<AiAttachmentAnalyzeSelection | null>(null);
+  const [lastAnalyzeFileName, setLastAnalyzeFileName] = useState<string | null>(
+    null,
+  );
   const lastHandledAiAnalyzeSeqRef = useRef<number | null>(null);
   const aiAnalyzeCancelledRef = useRef(false);
 
-  const [analyzeOriginEntityType, setAnalyzeOriginEntityType] = useState<string | undefined>(undefined);
+  const [analyzeOriginEntityType, setAnalyzeOriginEntityType] = useState<
+    string | undefined
+  >(undefined);
 
   useEffect(() => {
     if (!stagedDocumentAnalyze) return;
@@ -199,7 +214,8 @@ export default function AccommodationItem({
 
   useEffect(() => {
     if (accommodation) {
-      const checkinDate = accommodation.checkinDate || dayjs().format("YYYY-MM-DD");
+      const checkinDate =
+        accommodation.checkinDate || dayjs().format("YYYY-MM-DD");
       const segmentFill = !accommodation.id
         ? getCountryCityFromSegments(segments, checkinDate)
         : null;
@@ -232,7 +248,10 @@ export default function AccommodationItem({
     if (isNewAccommodation && segments) {
       setFormData(prev => {
         if (prev.country || prev.city) return prev;
-        const autoFill = getCountryCityFromSegments(segments, prev.checkin_date);
+        const autoFill = getCountryCityFromSegments(
+          segments,
+          prev.checkin_date,
+        );
         if (!autoFill) return prev;
         return { ...prev, country: autoFill.country, city: autoFill.city };
       });
@@ -577,12 +596,13 @@ export default function AccommodationItem({
         selection.kind === "existing"
           ? existingAttachments.find(a => a.id === selection.id)
           : undefined;
-      const oversizeBytes =
-        oversizeFile?.size ?? oversizeExisting?.fileSize;
+      const oversizeBytes = oversizeFile?.size ?? oversizeExisting?.fileSize;
       const oversizeName =
         oversizeFile?.name ?? oversizeExisting?.fileName ?? "파일";
       if (oversizeBytes !== undefined && oversizeBytes > AI_MAX_SIZE) {
-        setAiAnalyzeSizeErrorMessage(`"${oversizeName}"은(는) 10MB를 넘어 분석할 수 없어요.`);
+        setAiAnalyzeSizeErrorMessage(
+          `"${oversizeName}"은(는) 10MB를 넘어 분석할 수 없어요.`,
+        );
         return;
       }
       aiAnalyzeCancelledRef.current = false;
@@ -608,10 +628,12 @@ export default function AccommodationItem({
         }
         setAiAnalyzeResult(res);
         setAiAnalyzeModalVisible(true);
-      } catch (e) {
+      } catch (_e) {
         if (aiAnalyzeCancelledRef.current) return;
         setLastAiSelection(selection);
-        setAiAnalyzeInlineErrorMessage("분석 서버에 연결하지 못했어요. 잠시 후 다시 시도해 주세요.");
+        setAiAnalyzeInlineErrorMessage(
+          "분석 서버에 연결하지 못했어요. 잠시 후 다시 시도해 주세요.",
+        );
         setAiAnalyzeInlineError(true);
       } finally {
         setIsAiAnalyzing(false);
@@ -643,7 +665,9 @@ export default function AccommodationItem({
           </Pressable>
         ) : null}
       </View>
-      {!readOnly && <PanelTabSwitcher activeTab={activeTab} onTabChange={onTabChange} />}
+      {!readOnly && (
+        <PanelTabSwitcher activeTab={activeTab} onTabChange={onTabChange} />
+      )}
       <ScrollView
         style={styles.container}
         contentContainerStyle={[
@@ -655,7 +679,9 @@ export default function AccommodationItem({
         {/* 기본 정보 섹션 */}
         <View style={styles.formSection}>
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>숙소명 <Text style={{ color: colors.warning }}>*</Text></Text>
+            <Text style={styles.label}>
+              숙소명 <Text style={{ color: colors.warning }}>*</Text>
+            </Text>
             <Input
               variant="filled"
               placeholder={PLACEHOLDERS.accommodation.name}
@@ -763,7 +789,9 @@ export default function AccommodationItem({
                 { position: "relative" },
               ]}
             >
-              <Text style={styles.label}>체크인 날짜 <Text style={{ color: colors.warning }}>*</Text></Text>
+              <Text style={styles.label}>
+                체크인 날짜 <Text style={{ color: colors.warning }}>*</Text>
+              </Text>
               <Pressable
                 style={
                   readOnly
@@ -800,11 +828,15 @@ export default function AccommodationItem({
                   visible={true}
                   selectedDate={formData.checkin_date}
                   onDayPress={day => {
-                    const autoFill = !accommodation?.id ? getCountryCityFromSegments(segments, day.dateString) : null;
+                    const autoFill = !accommodation?.id
+                      ? getCountryCityFromSegments(segments, day.dateString)
+                      : null;
                     setFormData({
                       ...formData,
                       checkin_date: day.dateString,
-                      ...(autoFill ? { country: autoFill.country, city: autoFill.city } : {}),
+                      ...(autoFill
+                        ? { country: autoFill.country, city: autoFill.city }
+                        : {}),
                     });
                     setShowCheckinDatePicker(false);
                   }}
@@ -823,7 +855,9 @@ export default function AccommodationItem({
                 { position: "relative" },
               ]}
             >
-              <Text style={styles.label}>체크인 시간 <Text style={{ color: colors.warning }}>*</Text></Text>
+              <Text style={styles.label}>
+                체크인 시간 <Text style={{ color: colors.warning }}>*</Text>
+              </Text>
               <TimePicker
                 value={formData.checkin_time}
                 onChange={time =>
@@ -873,7 +907,9 @@ export default function AccommodationItem({
                 { position: "relative" },
               ]}
             >
-              <Text style={styles.label}>체크아웃 날짜 <Text style={{ color: colors.warning }}>*</Text></Text>
+              <Text style={styles.label}>
+                체크아웃 날짜 <Text style={{ color: colors.warning }}>*</Text>
+              </Text>
               <Pressable
                 style={
                   readOnly
@@ -928,7 +964,9 @@ export default function AccommodationItem({
                 { position: "relative" },
               ]}
             >
-              <Text style={styles.label}>체크아웃 시간 <Text style={{ color: colors.warning }}>*</Text></Text>
+              <Text style={styles.label}>
+                체크아웃 시간 <Text style={{ color: colors.warning }}>*</Text>
+              </Text>
               <TimePicker
                 value={formData.checkout_time}
                 onChange={time =>

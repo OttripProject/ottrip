@@ -95,7 +95,8 @@ export default function ExpenseDetailModal({
   const totalsByCurrency = useMemo(() => {
     const result = { KRW: 0, USD: 0 };
     for (const expense of expenses) {
-      if (expense.currency === ExpenseCurrency.USD) result.USD += expense.amount;
+      if (expense.currency === ExpenseCurrency.USD)
+        result.USD += expense.amount;
       else result.KRW += expense.amount;
     }
     return result;
@@ -265,8 +266,12 @@ export default function ExpenseDetailModal({
                     if (catTotal.KRW === 0 && catTotal.USD === 0) return null;
                     const isSelected = selectedCategory === category;
                     const amountText = [
-                      catTotal.KRW > 0 ? `${formatAmount(catTotal.KRW)}원` : null,
-                      catTotal.USD > 0 ? `${formatAmount(catTotal.USD)}달러` : null,
+                      catTotal.KRW > 0
+                        ? `${formatAmount(catTotal.KRW)}원`
+                        : null,
+                      catTotal.USD > 0
+                        ? `${formatAmount(catTotal.USD)}달러`
+                        : null,
                     ]
                       .filter(Boolean)
                       .join(" · ");
@@ -369,7 +374,11 @@ export default function ExpenseDetailModal({
                                       onPress={() => handleDelete(expense.id)}
                                       style={styles.deleteButton}
                                     >
-                                      <DeleteIcon width={14} height={14} color={colors.warning} />
+                                      <DeleteIcon
+                                        width={14}
+                                        height={14}
+                                        color={colors.warning}
+                                      />
                                     </Pressable>
                                   </View>
                                 )}

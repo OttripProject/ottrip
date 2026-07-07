@@ -1,4 +1,3 @@
-import { LinearGradient } from "expo-linear-gradient";
 import AiAnalyzeFailureModal from "@/components/modals/AiAnalyzeFailureModal";
 import BaseCalendar from "@/components/popup/calendar/BaseCalendar";
 import { PLACEHOLDERS } from "@/constants/placeholders";
@@ -13,13 +12,10 @@ import {
   type LocalFile,
   PLAN_ENTITY_KIND,
 } from "@/types/api";
-import {
-  ExpenseCategory,
-  ExpenseCurrency,
-} from "@/types/expense";
+import { ExpenseCategory, ExpenseCurrency } from "@/types/expense";
+import CurrencyToggle from "@/ui/components/CurrencyToggle";
 import AttachmentSection from "@/ui/components/attachmentSection";
 import type { AiAttachmentAnalyzeSelection } from "@/ui/components/attachmentSection.types";
-import CurrencyToggle from "@/ui/components/CurrencyToggle";
 import { pendingAiFileKey } from "@/ui/components/attachmentSection.types";
 import Input from "@/ui/components/input/Input";
 import { CategoryPicker } from "@/ui/components/pickers";
@@ -27,10 +23,11 @@ import WarningBanner from "@/ui/components/toast/warning";
 import { colors } from "@/ui/tokens/colors";
 import { radii } from "@/ui/tokens/radii";
 import { spacing } from "@/ui/tokens/spacing";
-import { textStyles, typography } from "@/ui/tokens/typography";
+import { typography } from "@/ui/tokens/typography";
 import { buildAnalyzeUploadPayload } from "@/utils/attachmentAiAnalyze";
 import { formatAttachmentUploadFailureMessage } from "@/utils/crossPlatformAlert";
 import dayjs from "dayjs";
+import { LinearGradient } from "expo-linear-gradient";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Alert,
@@ -133,11 +130,18 @@ export default function AddExpenseModal({
   const [isAiAnalyzing, setIsAiAnalyzing] = useState(false);
   const [aiAnalyzeFailureVisible, setAiAnalyzeFailureVisible] = useState(false);
   const [aiAnalyzeFailureMessage, setAiAnalyzeFailureMessage] = useState("");
-  const [attachmentAnalyzeError, setAttachmentAnalyzeError] = useState<string | null>(null);
-  const [attachmentAnalyzeSuccess, setAttachmentAnalyzeSuccess] = useState(false);
-  const [attachmentAnalyzePartial, setAttachmentAnalyzePartial] = useState(false);
-  const [attachmentAnalyzePartialMessage, setAttachmentAnalyzePartialMessage] = useState<string | undefined>(undefined);
-  const [aiFilledFields, setAiFilledFields] = useState<ReadonlySet<string>>(new Set());
+  const [attachmentAnalyzeError, setAttachmentAnalyzeError] = useState<
+    string | null
+  >(null);
+  const [attachmentAnalyzeSuccess, setAttachmentAnalyzeSuccess] =
+    useState(false);
+  const [attachmentAnalyzePartial, setAttachmentAnalyzePartial] =
+    useState(false);
+  const [attachmentAnalyzePartialMessage, setAttachmentAnalyzePartialMessage] =
+    useState<string | undefined>(undefined);
+  const [aiFilledFields, setAiFilledFields] = useState<ReadonlySet<string>>(
+    new Set(),
+  );
 
   const { pickImage, pickDocument } = useFilePicker();
   const { isUploading, uploadFiles } = useAttachmentUpload({
@@ -224,7 +228,9 @@ export default function AddExpenseModal({
         });
         const err = res.error?.trim();
         if (!res.success || err) {
-          setAttachmentAnalyzeError("분석 서버에 연결하지 못했어요. 잠시 후 다시 시도해 주세요.");
+          setAttachmentAnalyzeError(
+            "분석 서버에 연결하지 못했어요. 잠시 후 다시 시도해 주세요.",
+          );
           return;
         }
         const kind: AiDocumentItemType | null =
@@ -244,25 +250,37 @@ export default function AddExpenseModal({
           return;
         }
         if (!res.draft || res.draft.itemType !== "expense") {
-          setAttachmentAnalyzeError("이미지에서 금액·날짜를 읽지 못했어요. 더 선명한 영수증으로 다시 시도해 주세요.");
+          setAttachmentAnalyzeError(
+            "이미지에서 금액·날짜를 읽지 못했어요. 더 선명한 영수증으로 다시 시도해 주세요.",
+          );
           return;
         }
         setAttachmentAnalyzeError(null);
         const src = mergeExpenseDraftValueSource(res.draft);
         const filledSet = new Set<string>(["category"]);
-        const amountExtracted = Number.parseInt(normalizeAmountDigitsAi(pickStrAi(src, ["amount", "Amount"])), 10) > 0;
-        const descriptionExtracted = !!pickStrAi(src, ["description", "Description"]);
+        const amountExtracted =
+          Number.parseInt(
+            normalizeAmountDigitsAi(pickStrAi(src, ["amount", "Amount"])),
+            10,
+          ) > 0;
+        const descriptionExtracted = !!pickStrAi(src, [
+          "description",
+          "Description",
+        ]);
         const exRawCheck = pickStrAi(src, ["exDate", "ex_date", "ExDate"]);
         const dateExtracted = !!(exRawCheck && dayjs(exRawCheck).isValid());
         if (amountExtracted) filledSet.add("amount");
         if (descriptionExtracted) filledSet.add("description");
         if (dateExtracted) filledSet.add("ex_date");
         setAiFilledFields(filledSet);
-        const isPartial = !amountExtracted || !descriptionExtracted || !dateExtracted;
+        const isPartial =
+          !amountExtracted || !descriptionExtracted || !dateExtracted;
         if (isPartial) {
           setAttachmentAnalyzeSuccess(false);
           setAttachmentAnalyzePartial(true);
-          setAttachmentAnalyzePartialMessage("일부 항목을 인식하지 못했어요. 확인 필요 항목을 직접 입력해 주세요.");
+          setAttachmentAnalyzePartialMessage(
+            "일부 항목을 인식하지 못했어요. 확인 필요 항목을 직접 입력해 주세요.",
+          );
         } else {
           setAttachmentAnalyzeSuccess(true);
           setAttachmentAnalyzePartial(false);
@@ -296,8 +314,10 @@ export default function AddExpenseModal({
               : prev.ex_date,
           currency,
         }));
-      } catch (e) {
-        setAttachmentAnalyzeError("분석 서버에 연결하지 못했어요. 잠시 후 다시 시도해 주세요.");
+      } catch (_e) {
+        setAttachmentAnalyzeError(
+          "분석 서버에 연결하지 못했어요. 잠시 후 다시 시도해 주세요.",
+        );
       } finally {
         setIsAiAnalyzing(false);
       }
@@ -392,7 +412,10 @@ export default function AddExpenseModal({
     setAttachmentAnalyzePartial(false);
     setAttachmentAnalyzePartialMessage(undefined);
     setAiFilledFields(new Set());
-    void handleAiAnalyzePress({ kind: "pending", key: pendingAiFileKey(pendingFiles[0]) });
+    void handleAiAnalyzePress({
+      kind: "pending",
+      key: pendingAiFileKey(pendingFiles[0]),
+    });
   }, [pendingFiles, handleAiAnalyzePress]);
 
   const handleClose = () => {
@@ -424,7 +447,10 @@ export default function AddExpenseModal({
         onRequestClose={handleClose}
       >
         <Pressable style={styles.modalOverlay} onPress={handleClose}>
-          <Pressable style={styles.modalContent} onPress={e => e.stopPropagation()}>
+          <Pressable
+            style={styles.modalContent}
+            onPress={e => e.stopPropagation()}
+          >
             <WarningBanner
               message={warningMessage}
               visible={showWarning}
@@ -477,7 +503,12 @@ export default function AddExpenseModal({
                   <View style={[styles.inputGroup, styles.amountGroup]}>
                     <View style={styles.labelRow}>
                       <Text style={styles.inputLabel}>금액</Text>
-                      {aiFilledFields.has("amount") ? <AiFilledBadge /> : (attachmentAnalyzeSuccess || attachmentAnalyzePartial) ? <NeedsCheckBadge /> : null}
+                      {aiFilledFields.has("amount") ? (
+                        <AiFilledBadge />
+                      ) : attachmentAnalyzeSuccess ||
+                        attachmentAnalyzePartial ? (
+                        <NeedsCheckBadge />
+                      ) : null}
                     </View>
                     <Input
                       variant="outlined"
@@ -499,7 +530,9 @@ export default function AddExpenseModal({
                     <Text style={styles.inputLabel}>통화</Text>
                     <CurrencyToggle
                       value={expenseForm.currency}
-                      onChange={c => setExpenseForm({ ...expenseForm, currency: c })}
+                      onChange={c =>
+                        setExpenseForm({ ...expenseForm, currency: c })
+                      }
                       variant="outlined"
                       style={styles.currencyToggle}
                     />
@@ -515,7 +548,11 @@ export default function AddExpenseModal({
                 >
                   <View style={styles.labelRow}>
                     <Text style={styles.inputLabel}>날짜</Text>
-                    {aiFilledFields.has("ex_date") ? <AiFilledBadge /> : (attachmentAnalyzeSuccess || attachmentAnalyzePartial) ? <NeedsCheckBadge /> : null}
+                    {aiFilledFields.has("ex_date") ? (
+                      <AiFilledBadge />
+                    ) : attachmentAnalyzeSuccess || attachmentAnalyzePartial ? (
+                      <NeedsCheckBadge />
+                    ) : null}
                   </View>
                   <Pressable
                     style={styles.dateInput}
@@ -535,7 +572,11 @@ export default function AddExpenseModal({
                 <View style={styles.inputGroup}>
                   <View style={styles.labelRow}>
                     <Text style={styles.inputLabel}>내용</Text>
-                    {aiFilledFields.has("description") ? <AiFilledBadge /> : (attachmentAnalyzeSuccess || attachmentAnalyzePartial) ? <NeedsCheckBadge /> : null}
+                    {aiFilledFields.has("description") ? (
+                      <AiFilledBadge />
+                    ) : attachmentAnalyzeSuccess || attachmentAnalyzePartial ? (
+                      <NeedsCheckBadge />
+                    ) : null}
                   </View>
                   <Input
                     variant="outlined"

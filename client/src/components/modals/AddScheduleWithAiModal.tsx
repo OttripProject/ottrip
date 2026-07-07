@@ -5,7 +5,6 @@ import type { PreparedUpload } from "@/services/attachments";
 import { expensesApi } from "@/services/expenses";
 import { flightsApi } from "@/services/flights";
 import { itinerariesApi } from "@/services/itineraries";
-import { plansApi } from "@/services/plans";
 import type {
   AiDocumentItemDraft,
   DocumentUploadAnalyzeResponse,
@@ -17,8 +16,8 @@ import {
 } from "@/types/api";
 import { colors } from "@/ui/tokens/colors";
 import { textStyles } from "@/ui/tokens/typography";
-import { LinearGradient } from "expo-linear-gradient";
 import dayjs from "dayjs";
+import { LinearGradient } from "expo-linear-gradient";
 import type React from "react";
 import { createElement, useEffect, useRef, useState } from "react";
 import {
@@ -31,15 +30,18 @@ import {
   TextInput,
   View,
 } from "react-native";
+import CheckWhiteIcon from "../../../assets/check_white.svg";
 import FileIcon from "../../../assets/files.svg";
+import LeftArrowIcon from "../../../assets/left_arrow.svg";
 import AttachmentDocIcon from "../../../assets/mobile_attachment_document.svg";
 import AttachmentImageIcon from "../../../assets/mobile_attachment_image.svg";
-import LeftArrowIcon from "../../../assets/left_arrow.svg";
 import SendIcon from "../../../assets/share.svg";
 import CloseIcon from "../../../assets/x.svg";
-import CheckWhiteIcon from "../../../assets/check_white.svg";
 import { AiAnalyzeResultContent } from "./AiDocumentAnalyzeModal";
-import { AiAnalyzeResultBody, type AiAnalyzeDraftEditorRef } from "./aiDocumentAnalyzeDraftBody";
+import {
+  type AiAnalyzeDraftEditorRef,
+  AiAnalyzeResultBody,
+} from "./aiDocumentAnalyzeDraftBody";
 
 interface AddScheduleWithAiModalProps {
   visible: boolean;
@@ -61,12 +63,17 @@ export type Message =
   | { role: "user"; text: string }
   | { role: "user-file"; fileName: string; mimeType: string }
   | { role: "ai-analyzing"; id: string }
-  | { role: "ai-result-card"; result: DocumentUploadAnalyzeResponse; source: "text" | "file"; fileName?: string };
+  | {
+      role: "ai-result-card";
+      result: DocumentUploadAnalyzeResponse;
+      source: "text" | "file";
+      fileName?: string;
+    };
 
 export const AI_INTRO_MESSAGE: Message = {
   role: "ai-intro",
   text: "안녕하세요! 어떤 일정을 추가해 드릴까요?\n텍스트로 알려주시거나, 예약 메일·티켓 이미지를 첨부하면 자동으로 정리해 드려요.\n예를 들어, 이렇게 입력해 보세요.",
-  suggestions: ["4월 15일 오후 2시에 루브르 박물관 가고 싶어",],
+  suggestions: ["4월 15일 오후 2시에 루브르 박물관 가고 싶어"],
 };
 
 const WEB_FILE_ACCEPT =
@@ -78,7 +85,8 @@ const ALLOWED_MIME_TYPES = ["image/jpeg", "image/png", "application/pdf"];
 function getEunNeun(text: string): string {
   if (!text) return "은";
   const last = text.charCodeAt(text.length - 1);
-  if (last >= 0xac00 && last <= 0xd7a3) return (last - 0xac00) % 28 !== 0 ? "은" : "는";
+  if (last >= 0xac00 && last <= 0xd7a3)
+    return (last - 0xac00) % 28 !== 0 ? "은" : "는";
   return "aeiouAEIOU".includes(text[text.length - 1]) ? "는" : "은";
 }
 
@@ -99,11 +107,16 @@ function getVal(v: Record<string, unknown>, ...keys: string[]): string {
 
 function getItemTypeLabel(type: string | null): string {
   switch (type) {
-    case "itinerary": return "일정";
-    case "flight": return "항공편";
-    case "accommodation": return "숙소";
-    case "expense": return "지출";
-    default: return "분석 결과";
+    case "itinerary":
+      return "일정";
+    case "flight":
+      return "항공편";
+    case "accommodation":
+      return "숙소";
+    case "expense":
+      return "지출";
+    default:
+      return "분석 결과";
   }
 }
 
@@ -112,9 +125,15 @@ function getResultSummary(result: DocumentUploadAnalyzeResponse): string {
   const v = result.draft.payload.values as Record<string, unknown>;
   switch (result.inferredItemType) {
     case "itinerary":
-      return getVal(v, "title") || getVal(v, "location") || getVal(v, "itineraryDate", "itinerary_date");
+      return (
+        getVal(v, "title") ||
+        getVal(v, "location") ||
+        getVal(v, "itineraryDate", "itinerary_date")
+      );
     case "flight": {
-      const segs = Array.isArray(v.segments) ? (v.segments as Record<string, unknown>[]) : [];
+      const segs = Array.isArray(v.segments)
+        ? (v.segments as Record<string, unknown>[])
+        : [];
       if (segs.length > 0) {
         const dep = getVal(segs[0], "departureAirport", "departure_airport");
         const arr = getVal(segs[0], "arrivalAirport", "arrival_airport");
@@ -179,7 +198,10 @@ export default function AddScheduleWithAiModal({
     try {
       const result = await parseTextToItem(text, planPublicId);
       if (result.success && result.draft) {
-        setMessages(prev => [...prev, { role: "ai-result-card", result, source: "text" }]);
+        setMessages(prev => [
+          ...prev,
+          { role: "ai-result-card", result, source: "text" },
+        ]);
         setResultView({ result, source: "text" });
       } else {
         setMessages(prev => [
@@ -195,7 +217,12 @@ export default function AddScheduleWithAiModal({
     } catch {
       setMessages(prev => [
         ...prev,
-        { role: "ai-unclear", title: "분석 서버에 연결하지 못했어요", body: "잠시 후 다시 시도해 주세요.\n문제가 계속되면 네트워크 상태를 확인해 주세요.", suggestions: [] },
+        {
+          role: "ai-unclear",
+          title: "분석 서버에 연결하지 못했어요",
+          body: "잠시 후 다시 시도해 주세요.\n문제가 계속되면 네트워크 상태를 확인해 주세요.",
+          suggestions: [],
+        },
       ]);
     } finally {
       setLoading(false);
@@ -257,7 +284,15 @@ export default function AddScheduleWithAiModal({
       );
 
       if (result.success && result.draft) {
-        setMessages(prev => [...prev, { role: "ai-result-card", result, source: "file", fileName: file.name }]);
+        setMessages(prev => [
+          ...prev,
+          {
+            role: "ai-result-card",
+            result,
+            source: "file",
+            fileName: file.name,
+          },
+        ]);
         setResultView({ result, source: "file", fileName: file.name });
       } else {
         setMessages(prev => [
@@ -282,7 +317,12 @@ export default function AddScheduleWithAiModal({
       );
       setMessages(prev => [
         ...prev,
-        { role: "ai-unclear", title: "분석 서버에 연결하지 못했어요", body: "잠시 후 다시 시도해 주세요.\n문제가 계속되면 네트워크 상태를 확인해 주세요.", suggestions: [] },
+        {
+          role: "ai-unclear",
+          title: "분석 서버에 연결하지 못했어요",
+          body: "잠시 후 다시 시도해 주세요.\n문제가 계속되면 네트워크 상태를 확인해 주세요.",
+          suggestions: [],
+        },
       ]);
     } finally {
       setLoading(false);
@@ -417,10 +457,12 @@ export default function AddScheduleWithAiModal({
               PLAN_ENTITY_KIND.FLIGHT,
               created.id,
             );
-          const flightDates = segs.flatMap(seg => [
-            getVal(seg, "departureTime", "departure_time"),
-            getVal(seg, "arrivalTime", "arrival_time"),
-          ]).filter(Boolean);
+          const flightDates = segs
+            .flatMap(seg => [
+              getVal(seg, "departureTime", "departure_time"),
+              getVal(seg, "arrivalTime", "arrival_time"),
+            ])
+            .filter(Boolean);
           await extendPlanDatesIfNeeded(flightDates);
           break;
         }
@@ -621,7 +663,11 @@ export default function AddScheduleWithAiModal({
                   style={styles.resultBackButton}
                   accessibilityLabel="대화로 돌아가기"
                 >
-                  <LeftArrowIcon width={16} height={16} color={colors.aiInkDark} />
+                  <LeftArrowIcon
+                    width={16}
+                    height={16}
+                    color={colors.aiInkDark}
+                  />
                 </Pressable>
                 <LinearGradient
                   colors={colors.aiGrad as [string, string]}
@@ -663,15 +709,27 @@ export default function AddScheduleWithAiModal({
                 ) : (
                   <AiAnalyzeResultContent
                     analyzeResult={resultView.result}
-                    analyzeFileName={resultView.source === "file" ? resultView.fileName : undefined}
-                    sourceLabel={resultView.source === "text" ? "대화 내용 분석" : undefined}
+                    analyzeFileName={
+                      resultView.source === "file"
+                        ? resultView.fileName
+                        : undefined
+                    }
+                    sourceLabel={
+                      resultView.source === "text"
+                        ? "대화 내용 분석"
+                        : undefined
+                    }
                   />
                 )}
               </ScrollView>
 
               <View style={styles.resultFooter}>
                 <Pressable
-                  style={({ pressed }) => [styles.resultFooterBtn, styles.resultFooterBtnCancel, pressed && { opacity: 0.75 }]}
+                  style={({ pressed }) => [
+                    styles.resultFooterBtn,
+                    styles.resultFooterBtnCancel,
+                    pressed && { opacity: 0.75 },
+                  ]}
                   onPress={() => {
                     if (isResultEditMode) {
                       setIsResultEditMode(false);
@@ -685,10 +743,15 @@ export default function AddScheduleWithAiModal({
                   </Text>
                 </Pressable>
                 <Pressable
-                  style={({ pressed }) => [styles.resultFooterBtn, styles.resultFooterBtnApply, pressed && { opacity: 0.85 }]}
+                  style={({ pressed }) => [
+                    styles.resultFooterBtn,
+                    styles.resultFooterBtnApply,
+                    pressed && { opacity: 0.85 },
+                  ]}
                   onPress={() => {
                     const draft = isResultEditMode
-                      ? (resultDraftEditorRef.current?.buildDraft() ?? resultView.result.draft)
+                      ? (resultDraftEditorRef.current?.buildDraft() ??
+                        resultView.result.draft)
                       : resultView.result.draft;
                     if (!draft) return;
                     setResultView(null);
@@ -702,224 +765,298 @@ export default function AddScheduleWithAiModal({
               </View>
             </>
           ) : (
-          <>
-          <View style={styles.header}>
-            <View style={styles.titleBlock}>
-              <Text style={styles.headerTitle}>대화로 일정 추가</Text>
-              <Text style={styles.subtitle}>
-                대화 또는 첨부파일을 AI가 분석해 일정을 등록해요.
-              </Text>
-            </View>
-            <Pressable
-              style={styles.closeButton}
-              onPress={handleClose}
-              accessibilityRole="button"
-              accessibilityLabel="닫기"
-            >
-              <CloseIcon width={16} height={16} color={colors.black} />
-            </Pressable>
-          </View>
+            <>
+              <View style={styles.header}>
+                <View style={styles.titleBlock}>
+                  <Text style={styles.headerTitle}>대화로 일정 추가</Text>
+                  <Text style={styles.subtitle}>
+                    대화 또는 첨부파일을 AI가 분석해 일정을 등록해요.
+                  </Text>
+                </View>
+                <Pressable
+                  style={styles.closeButton}
+                  onPress={handleClose}
+                  accessibilityRole="button"
+                  accessibilityLabel="닫기"
+                >
+                  <CloseIcon width={16} height={16} color={colors.black} />
+                </Pressable>
+              </View>
 
-          <View ref={dragZoneRef} style={styles.chatScrollWrapper}>
-            <ScrollView
-              ref={scrollRef}
-              style={styles.chatScroll}
-              contentContainerStyle={styles.chatScrollContent}
-              showsVerticalScrollIndicator={false}
-              keyboardShouldPersistTaps="handled"
-              onContentSizeChange={() =>
-                scrollRef.current?.scrollToEnd({ animated: false })
-              }
-            >
-              {messages.map((msg, idx) => {
-                if (msg.role === "user-file") {
-                  return (
-                    <View key={idx} style={styles.userBubbleWrap}>
-                      <View style={[styles.userBubble, styles.userFileBubble]}>
-                        {String(msg.mimeType ?? "").startsWith("image/") ? (
-                          <AttachmentImageIcon width={20} height={20} />
-                        ) : (
-                          <AttachmentDocIcon width={20} height={20} />
-                        )}
-                        <View style={styles.userFileContent}>
-                          <Text style={styles.userBubbleText} numberOfLines={1}>
-                            {msg.fileName}
-                          </Text>
-                          <Text style={styles.fileMimeLabel}>
-                            {getFileMimeLabel(msg.mimeType)}
-                          </Text>
-                        </View>
-                      </View>
-                    </View>
-                  );
-                }
-                if (msg.role === "ai-analyzing") {
-                  return (
-                    <View key={idx} style={styles.aiBubbleWrap}>
-                      <View style={[styles.aiBubble, styles.aiBubbleRow]}>
-                        <ActivityIndicator size="small" color={colors.white} />
-                        <Text style={styles.aiBubbleText}>
-                          첨부파일을 분석하고있어요..
-                        </Text>
-                      </View>
-                    </View>
-                  );
-                }
-                if (msg.role === "ai-result-card") {
-                  const summary = getResultSummary(msg.result);
-                  const typeLabel = getItemTypeLabel(msg.result.inferredItemType);
-                  return (
-                    <View key={idx} style={styles.aiBubbleWrap}>
-                      <Pressable
-                        style={({ pressed }) => [styles.resultCard, hoveredCardIdx === idx && styles.resultCardHovered, pressed && { opacity: 0.82 }]}
-                        onPress={() => setResultView({ result: msg.result, source: msg.source, fileName: msg.fileName })}
-                        {...{ onMouseEnter: () => setHoveredCardIdx(idx), onMouseLeave: () => setHoveredCardIdx(null) } as any}
-                      >
-                        <View style={styles.resultCardHeader}>
-                          <LinearGradient
-                            colors={colors.aiGrad as [string, string]}
-                            start={{ x: 0, y: 0 }}
-                            end={{ x: 1, y: 1 }}
-                            style={styles.resultCardBadge}
+              <View ref={dragZoneRef} style={styles.chatScrollWrapper}>
+                <ScrollView
+                  ref={scrollRef}
+                  style={styles.chatScroll}
+                  contentContainerStyle={styles.chatScrollContent}
+                  showsVerticalScrollIndicator={false}
+                  keyboardShouldPersistTaps="handled"
+                  onContentSizeChange={() =>
+                    scrollRef.current?.scrollToEnd({ animated: false })
+                  }
+                >
+                  {messages.map((msg, idx) => {
+                    if (msg.role === "user-file") {
+                      return (
+                        <View key={idx} style={styles.userBubbleWrap}>
+                          <View
+                            style={[styles.userBubble, styles.userFileBubble]}
                           >
-                            <CheckWhiteIcon width={12} height={12} />
-                          </LinearGradient>
-                          <Text style={styles.resultCardSourceLabel}>{typeLabel} 분석</Text>
+                            {String(msg.mimeType ?? "").startsWith("image/") ? (
+                              <AttachmentImageIcon width={20} height={20} />
+                            ) : (
+                              <AttachmentDocIcon width={20} height={20} />
+                            )}
+                            <View style={styles.userFileContent}>
+                              <Text
+                                style={styles.userBubbleText}
+                                numberOfLines={1}
+                              >
+                                {msg.fileName}
+                              </Text>
+                              <Text style={styles.fileMimeLabel}>
+                                {getFileMimeLabel(msg.mimeType)}
+                              </Text>
+                            </View>
+                          </View>
                         </View>
-                        {!!summary && (
-                          <Text style={styles.resultCardTypeLabel} numberOfLines={2}>{summary}</Text>
-                        )}
-                      </Pressable>
-                    </View>
-                  );
-                }
-                if (msg.role === "ai-intro") {
-                  return (
-                    <View key={idx} style={styles.aiBubbleWrap}>
-                      <View style={styles.aiBubble}>
-                        <Text style={styles.aiBubbleText}>{msg.text}</Text>
-                        <View style={styles.unclearSuggestions}>
-                          {msg.suggestions.map((s, i) => (
-                            <Pressable key={i} style={styles.introSuggestionButton} onPress={() => setMessage(s)}>
-                              <Text style={styles.introSuggestionText} numberOfLines={1}>{`"${s}"`}</Text>
-                            </Pressable>
-                          ))}
+                      );
+                    }
+                    if (msg.role === "ai-analyzing") {
+                      return (
+                        <View key={idx} style={styles.aiBubbleWrap}>
+                          <View style={[styles.aiBubble, styles.aiBubbleRow]}>
+                            <ActivityIndicator
+                              size="small"
+                              color={colors.white}
+                            />
+                            <Text style={styles.aiBubbleText}>
+                              첨부파일을 분석하고있어요..
+                            </Text>
+                          </View>
+                        </View>
+                      );
+                    }
+                    if (msg.role === "ai-result-card") {
+                      const summary = getResultSummary(msg.result);
+                      const typeLabel = getItemTypeLabel(
+                        msg.result.inferredItemType,
+                      );
+                      return (
+                        <View key={idx} style={styles.aiBubbleWrap}>
+                          <Pressable
+                            style={({ pressed }) => [
+                              styles.resultCard,
+                              hoveredCardIdx === idx &&
+                                styles.resultCardHovered,
+                              pressed && { opacity: 0.82 },
+                            ]}
+                            onPress={() =>
+                              setResultView({
+                                result: msg.result,
+                                source: msg.source,
+                                fileName: msg.fileName,
+                              })
+                            }
+                            {...({
+                              onMouseEnter: () => setHoveredCardIdx(idx),
+                              onMouseLeave: () => setHoveredCardIdx(null),
+                            } as any)}
+                          >
+                            <View style={styles.resultCardHeader}>
+                              <LinearGradient
+                                colors={colors.aiGrad as [string, string]}
+                                start={{ x: 0, y: 0 }}
+                                end={{ x: 1, y: 1 }}
+                                style={styles.resultCardBadge}
+                              >
+                                <CheckWhiteIcon width={12} height={12} />
+                              </LinearGradient>
+                              <Text style={styles.resultCardSourceLabel}>
+                                {typeLabel} 분석
+                              </Text>
+                            </View>
+                            {!!summary && (
+                              <Text
+                                style={styles.resultCardTypeLabel}
+                                numberOfLines={2}
+                              >
+                                {summary}
+                              </Text>
+                            )}
+                          </Pressable>
+                        </View>
+                      );
+                    }
+                    if (msg.role === "ai-intro") {
+                      return (
+                        <View key={idx} style={styles.aiBubbleWrap}>
+                          <View style={styles.aiBubble}>
+                            <Text style={styles.aiBubbleText}>{msg.text}</Text>
+                            <View style={styles.unclearSuggestions}>
+                              {msg.suggestions.map((s, i) => (
+                                <Pressable
+                                  key={i}
+                                  style={styles.introSuggestionButton}
+                                  onPress={() => setMessage(s)}
+                                >
+                                  <Text
+                                    style={styles.introSuggestionText}
+                                    numberOfLines={1}
+                                  >{`"${s}"`}</Text>
+                                </Pressable>
+                              ))}
+                            </View>
+                          </View>
+                        </View>
+                      );
+                    }
+                    if (msg.role === "ai-unclear") {
+                      return (
+                        <View key={idx} style={styles.aiBubbleWrap}>
+                          <View style={styles.unclearBubble}>
+                            <View style={styles.unclearHeader}>
+                              {createElement(
+                                "svg",
+                                {
+                                  width: 16,
+                                  height: 16,
+                                  viewBox: "0 0 16 16",
+                                  fill: "none",
+                                  style: { flexShrink: 0, marginTop: 1 },
+                                },
+                                createElement("path", {
+                                  d: "M8 1.6l6.8 11.8H1.2L8 1.6z",
+                                  stroke: "#C0392B",
+                                  strokeWidth: "1.4",
+                                  strokeLinejoin: "round",
+                                  fill: "#FFE2DE",
+                                }),
+                                createElement("path", {
+                                  d: "M8 6.4v3.2",
+                                  stroke: "#C0392B",
+                                  strokeWidth: "1.6",
+                                  strokeLinecap: "round",
+                                }),
+                                createElement("circle", {
+                                  cx: "8",
+                                  cy: "11.6",
+                                  r: "0.9",
+                                  fill: "#C0392B",
+                                }),
+                              )}
+                              <Text style={styles.unclearTitle}>
+                                {msg.title}
+                              </Text>
+                            </View>
+                            <Text style={styles.unclearBody}>{msg.body}</Text>
+                            <View style={styles.unclearSuggestions}>
+                              {msg.suggestions.map((s, i) => (
+                                <Pressable
+                                  key={i}
+                                  style={styles.suggestionButton}
+                                  onPress={() => setMessage(s)}
+                                >
+                                  <Text
+                                    style={styles.suggestionText}
+                                    numberOfLines={1}
+                                  >{`"${s}"`}</Text>
+                                </Pressable>
+                              ))}
+                            </View>
+                          </View>
+                        </View>
+                      );
+                    }
+                    if (msg.role === "ai") {
+                      return (
+                        <View key={idx} style={styles.aiBubbleWrap}>
+                          <View style={styles.aiBubble}>
+                            <Text style={styles.aiBubbleText}>{msg.text}</Text>
+                          </View>
+                        </View>
+                      );
+                    }
+                    return (
+                      <View key={idx} style={styles.userBubbleWrap}>
+                        <View style={styles.userBubble}>
+                          <Text style={styles.userBubbleText}>{msg.text}</Text>
                         </View>
                       </View>
-                    </View>
-                  );
-                }
-                if (msg.role === "ai-unclear") {
-                  return (
-                    <View key={idx} style={styles.aiBubbleWrap}>
-                      <View style={styles.unclearBubble}>
-                        <View style={styles.unclearHeader}>
-                          {createElement(
-                            "svg",
-                            { width: 16, height: 16, viewBox: "0 0 16 16", fill: "none", style: { flexShrink: 0, marginTop: 1 } },
-                            createElement("path", { d: "M8 1.6l6.8 11.8H1.2L8 1.6z", stroke: "#C0392B", strokeWidth: "1.4", strokeLinejoin: "round", fill: "#FFE2DE" }),
-                            createElement("path", { d: "M8 6.4v3.2", stroke: "#C0392B", strokeWidth: "1.6", strokeLinecap: "round" }),
-                            createElement("circle", { cx: "8", cy: "11.6", r: "0.9", fill: "#C0392B" }),
-                          )}
-                          <Text style={styles.unclearTitle}>{msg.title}</Text>
-                        </View>
-                        <Text style={styles.unclearBody}>{msg.body}</Text>
-                        <View style={styles.unclearSuggestions}>
-                          {msg.suggestions.map((s, i) => (
-                            <Pressable key={i} style={styles.suggestionButton} onPress={() => setMessage(s)}>
-                              <Text style={styles.suggestionText} numberOfLines={1}>{`"${s}"`}</Text>
-                            </Pressable>
-                          ))}
+                    );
+                  })}
+                  {loading &&
+                    messages[messages.length - 1]?.role !== "ai-analyzing" && (
+                      <View style={styles.aiBubbleWrap}>
+                        <View style={[styles.aiBubble, styles.aiBubbleRow]}>
+                          <ActivityIndicator
+                            size="small"
+                            color={colors.white}
+                          />
+                          <Text style={styles.aiBubbleText}>
+                            일정을 분석하고 있어요...
+                          </Text>
                         </View>
                       </View>
-                    </View>
-                  );
-                }
-                if (msg.role === "ai") {
-                  return (
-                    <View key={idx} style={styles.aiBubbleWrap}>
-                      <View style={styles.aiBubble}>
-                        <Text style={styles.aiBubbleText}>{msg.text}</Text>
-                      </View>
-                    </View>
-                  );
-                }
-                return (
-                  <View key={idx} style={styles.userBubbleWrap}>
-                    <View style={styles.userBubble}>
-                      <Text style={styles.userBubbleText}>{msg.text}</Text>
-                    </View>
-                  </View>
-                );
-              })}
-              {loading &&
-                messages[messages.length - 1]?.role !== "ai-analyzing" && (
-                  <View style={styles.aiBubbleWrap}>
-                    <View style={[styles.aiBubble, styles.aiBubbleRow]}>
-                      <ActivityIndicator size="small" color={colors.white} />
-                      <Text style={styles.aiBubbleText}>일정을 분석하고 있어요...</Text>
+                    )}
+                </ScrollView>
+
+                {isDragging && (
+                  <View style={styles.dragOverlay} pointerEvents="none">
+                    <View style={styles.dragOverlayInner}>
+                      <Text style={styles.dragOverlayText}>
+                        파일을 놓아 분석하기
+                      </Text>
                     </View>
                   </View>
                 )}
-            </ScrollView>
-
-            {isDragging && (
-              <View style={styles.dragOverlay} pointerEvents="none">
-                <View style={styles.dragOverlayInner}>
-                  <Text style={styles.dragOverlayText}>
-                    파일을 놓아 분석하기
-                  </Text>
-                </View>
               </View>
-            )}
-          </View>
 
-          <View style={styles.footer}>
-            {hiddenFileInput}
-            <Pressable
-              style={({ pressed }) => [
-                styles.attachButton,
-                loading && styles.attachButtonDisabled,
-                pressed && !loading && styles.attachButtonPressed,
-              ]}
-              onPress={() => {
-                if (!loading) fileInputRef.current?.click();
-              }}
-              disabled={loading}
-              accessibilityRole="button"
-              accessibilityLabel="파일 첨부"
-            >
-              <FileIcon width={20} height={20} color={colors.gray600} />
-            </Pressable>
-            <TextInput
-              style={styles.input}
-              placeholder="일정을 입력하거나 첨부파일을 추가해주세요..."
-              placeholderTextColor={colors.gray600}
-              value={message}
-              onChangeText={setMessage}
-              returnKeyType="send"
-              onSubmitEditing={handleSend}
-              editable={!loading}
-            />
-            <Pressable
-              style={({ pressed }) => [
-                styles.sendButton,
-                loading && styles.sendButtonDisabled,
-                pressed && !loading && styles.sendButtonPressed,
-              ]}
-              onPress={handleSend}
-              disabled={loading}
-              accessibilityRole="button"
-              accessibilityLabel="전송"
-            >
-              {loading ? (
-                <ActivityIndicator size="small" color={colors.white} />
-              ) : (
-                <SendIcon width={20} height={20} color={colors.white} />
-              )}
-            </Pressable>
-          </View>
-          </>
+              <View style={styles.footer}>
+                {hiddenFileInput}
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.attachButton,
+                    loading && styles.attachButtonDisabled,
+                    pressed && !loading && styles.attachButtonPressed,
+                  ]}
+                  onPress={() => {
+                    if (!loading) fileInputRef.current?.click();
+                  }}
+                  disabled={loading}
+                  accessibilityRole="button"
+                  accessibilityLabel="파일 첨부"
+                >
+                  <FileIcon width={20} height={20} color={colors.gray600} />
+                </Pressable>
+                <TextInput
+                  style={styles.input}
+                  placeholder="일정을 입력하거나 첨부파일을 추가해주세요..."
+                  placeholderTextColor={colors.gray600}
+                  value={message}
+                  onChangeText={setMessage}
+                  returnKeyType="send"
+                  onSubmitEditing={handleSend}
+                  editable={!loading}
+                />
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.sendButton,
+                    loading && styles.sendButtonDisabled,
+                    pressed && !loading && styles.sendButtonPressed,
+                  ]}
+                  onPress={handleSend}
+                  disabled={loading}
+                  accessibilityRole="button"
+                  accessibilityLabel="전송"
+                >
+                  {loading ? (
+                    <ActivityIndicator size="small" color={colors.white} />
+                  ) : (
+                    <SendIcon width={20} height={20} color={colors.white} />
+                  )}
+                </Pressable>
+              </View>
+            </>
           )}
         </View>
       </View>

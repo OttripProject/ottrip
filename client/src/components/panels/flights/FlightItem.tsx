@@ -46,10 +46,10 @@ import {
   Text,
   View,
 } from "react-native";
-import PanelTabSwitcher from "../PanelTabSwitcher";
 import CalendarIcon from "../../../../assets/calender.svg";
-import DeleteIcon from "../../../../assets/delete.svg";
 import CloseIcon from "../../../../assets/close_sm.svg";
+import DeleteIcon from "../../../../assets/delete.svg";
+import PanelTabSwitcher from "../PanelTabSwitcher";
 
 interface FlightItemProps {
   flight?: any;
@@ -231,13 +231,19 @@ export default function FlightItem({
     useState<DocumentUploadAnalyzeResponse | null>(null);
   const [isAiAnalyzing, setIsAiAnalyzing] = useState(false);
   const [aiAnalyzeInlineError, setAiAnalyzeInlineError] = useState(false);
-  const [aiAnalyzeInlineErrorMessage, setAiAnalyzeInlineErrorMessage] = useState("");
-  const [lastAiSelection, setLastAiSelection] = useState<AiAttachmentAnalyzeSelection | null>(null);
-  const [lastAnalyzeFileName, setLastAnalyzeFileName] = useState<string | null>(null);
+  const [aiAnalyzeInlineErrorMessage, setAiAnalyzeInlineErrorMessage] =
+    useState("");
+  const [lastAiSelection, setLastAiSelection] =
+    useState<AiAttachmentAnalyzeSelection | null>(null);
+  const [lastAnalyzeFileName, setLastAnalyzeFileName] = useState<string | null>(
+    null,
+  );
   const lastHandledAiAnalyzeSeqRef = useRef<number | null>(null);
   const aiAnalyzeCancelledRef = useRef(false);
 
-  const [analyzeOriginEntityType, setAnalyzeOriginEntityType] = useState<string | undefined>(undefined);
+  const [analyzeOriginEntityType, setAnalyzeOriginEntityType] = useState<
+    string | undefined
+  >(undefined);
 
   useEffect(() => {
     if (!stagedDocumentAnalyze) return;
@@ -294,10 +300,12 @@ export default function FlightItem({
         }
         setAiAnalyzeResult(res);
         setAiAnalyzeModalVisible(true);
-      } catch (e) {
+      } catch (_e) {
         if (aiAnalyzeCancelledRef.current) return;
         setLastAiSelection(selection);
-        setAiAnalyzeInlineErrorMessage("분석 서버에 연결하지 못했어요. 잠시 후 다시 시도해 주세요.");
+        setAiAnalyzeInlineErrorMessage(
+          "분석 서버에 연결하지 못했어요. 잠시 후 다시 시도해 주세요.",
+        );
         setAiAnalyzeInlineError(true);
       } finally {
         setIsAiAnalyzing(false);
@@ -559,7 +567,8 @@ export default function FlightItem({
             planId: planId,
             description: (() => {
               const dep = flightSegments[0]?.departure_airport;
-              const arr = flightSegments[flightSegments.length - 1]?.arrival_airport;
+              const arr =
+                flightSegments[flightSegments.length - 1]?.arrival_airport;
               return dep && arr ? `${dep} → ${arr}` : null;
             })(),
           },
@@ -595,7 +604,8 @@ export default function FlightItem({
             planId: planId,
             description: (() => {
               const dep = flightSegments[0]?.departure_airport;
-              const arr = flightSegments[flightSegments.length - 1]?.arrival_airport;
+              const arr =
+                flightSegments[flightSegments.length - 1]?.arrival_airport;
               return dep && arr ? `${dep} → ${arr}` : null;
             })(),
           },
@@ -685,7 +695,9 @@ export default function FlightItem({
           <CloseIcon width={12} height={12} color={colors.gray600} />
         </Pressable>
       </View>
-      {!readOnly && <PanelTabSwitcher activeTab={activeTab} onTabChange={onTabChange} />}
+      {!readOnly && (
+        <PanelTabSwitcher activeTab={activeTab} onTabChange={onTabChange} />
+      )}
       <ScrollView
         style={styles.container}
         contentContainerStyle={[
@@ -694,7 +706,6 @@ export default function FlightItem({
         ]}
         showsVerticalScrollIndicator={false}
       >
-
         <View style={styles.formSection}>
           <View style={[styles.row, { gap: spacing.sm }]}>
             <View style={[styles.inputGroup, styles.halfWidth]}>
@@ -816,7 +827,11 @@ export default function FlightItem({
                       }}
                       style={styles.segmentDeleteButton}
                     >
-                      <DeleteIcon width={16} height={16} color={colors.warning} />
+                      <DeleteIcon
+                        width={16}
+                        height={16}
+                        color={colors.warning}
+                      />
                     </Pressable>
                   )}
                 </View>
@@ -883,7 +898,10 @@ export default function FlightItem({
                         styles.airportPickerWrapper,
                       ]}
                     >
-                      <Text style={styles.label}>출발 공항 <Text style={{ color: colors.warning }}>*</Text></Text>
+                      <Text style={styles.label}>
+                        출발 공항{" "}
+                        <Text style={{ color: colors.warning }}>*</Text>
+                      </Text>
                       <AirportPicker
                         value={segment.departure_airport}
                         onChange={code => {
@@ -904,7 +922,10 @@ export default function FlightItem({
                         styles.airportPickerWrapper,
                       ]}
                     >
-                      <Text style={styles.label}>도착 공항 <Text style={{ color: colors.warning }}>*</Text></Text>
+                      <Text style={styles.label}>
+                        도착 공항{" "}
+                        <Text style={{ color: colors.warning }}>*</Text>
+                      </Text>
                       <AirportPicker
                         value={segment.arrival_airport}
                         onChange={code => {
@@ -922,7 +943,10 @@ export default function FlightItem({
 
                   <View style={[styles.row, { gap: spacing.sm, zIndex: 1000 }]}>
                     <View style={[styles.inputGroup, styles.halfWidth]}>
-                      <Text style={styles.label}>출발 일자 <Text style={{ color: colors.warning }}>*</Text></Text>
+                      <Text style={styles.label}>
+                        출발 일자{" "}
+                        <Text style={{ color: colors.warning }}>*</Text>
+                      </Text>
                       <Pressable
                         style={styles.segmentDateInput}
                         onPress={() => {
@@ -992,7 +1016,10 @@ export default function FlightItem({
                       )}
                     </View>
                     <View style={[styles.inputGroup, styles.halfWidth]}>
-                      <Text style={styles.label}>출발 시간 <Text style={{ color: colors.warning }}>*</Text></Text>
+                      <Text style={styles.label}>
+                        출발 시간{" "}
+                        <Text style={{ color: colors.warning }}>*</Text>
+                      </Text>
                       <TimePicker
                         value={segment.departure_time}
                         onChange={time => {
@@ -1019,7 +1046,10 @@ export default function FlightItem({
 
                   <View style={[styles.row, { gap: spacing.sm, zIndex: 500 }]}>
                     <View style={[styles.inputGroup, styles.halfWidth]}>
-                      <Text style={styles.label}>도착 일자 <Text style={{ color: colors.warning }}>*</Text></Text>
+                      <Text style={styles.label}>
+                        도착 일자{" "}
+                        <Text style={{ color: colors.warning }}>*</Text>
+                      </Text>
                       <Pressable
                         style={styles.segmentDateInput}
                         onPress={() => {
@@ -1082,7 +1112,10 @@ export default function FlightItem({
                       )}
                     </View>
                     <View style={[styles.inputGroup, styles.halfWidth]}>
-                      <Text style={styles.label}>도착 시간 <Text style={{ color: colors.warning }}>*</Text></Text>
+                      <Text style={styles.label}>
+                        도착 시간{" "}
+                        <Text style={{ color: colors.warning }}>*</Text>
+                      </Text>
                       <TimePicker
                         value={segment.arrival_time}
                         onChange={time => {
@@ -1107,7 +1140,10 @@ export default function FlightItem({
 
           {!readOnly && (
             <Pressable
-              style={[styles.addSegmentButton, { zIndex: 1, borderStyle: "dashed" }]}
+              style={[
+                styles.addSegmentButton,
+                { zIndex: 1, borderStyle: "dashed" },
+              ]}
               onPress={() => {
                 const lastSegment = flightSegments[flightSegments.length - 1];
                 let defaultDepartureDate: string;

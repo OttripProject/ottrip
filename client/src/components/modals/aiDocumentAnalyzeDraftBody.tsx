@@ -1,11 +1,7 @@
 import BaseCalendar from "@/components/popup/calendar/BaseCalendar";
 import { PLACEHOLDERS } from "@/constants/placeholders";
 import type { AiDocumentItemDraft, FlightSegmentBaseDto } from "@/types/api";
-import {
-  ExpenseCategory,
-  ExpenseCurrency,
-  currencyLabels,
-} from "@/types/expense";
+import { ExpenseCategory, ExpenseCurrency } from "@/types/expense";
 import Input from "@/ui/components/input/Input";
 import {
   AirportPicker,
@@ -29,8 +25,8 @@ import React, {
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import CalendarIcon from "../../../assets/calender.svg";
 
-const ORANGE = "#E07000";
-const ORANGE_BG = "#FFF1E5";
+const _ORANGE = "#E07000";
+const _ORANGE_BG = "#FFF1E5";
 
 export function pickStr(obj: Record<string, unknown>, keys: string[]): string {
   for (const k of keys) {
@@ -1330,9 +1326,7 @@ const AccommodationDraftEditor = forwardRef<
             onPress={() => setShowCheckoutCal(true)}
           >
             <Text style={styles.fieldDateText}>
-              {checkoutDate
-                ? dayjs(checkoutDate).format("YYYY.MM.DD")
-                : "기타"}
+              {checkoutDate ? dayjs(checkoutDate).format("YYYY.MM.DD") : "기타"}
             </Text>
             <CalendarIcon width={14} height={14} />
           </Pressable>

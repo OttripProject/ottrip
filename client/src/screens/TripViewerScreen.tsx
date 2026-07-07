@@ -9,11 +9,11 @@ import AIAssistantPanel from "@/components/panels/aiassistant/AIAssistantPanel";
 import ExpensesPanel from "@/components/panels/expenses/ExpensesPanel";
 import { useAuth } from "@/contexts/AuthContext";
 import {
-  plansApi,
   type ExportAccommodation,
   type ExportFlight,
   type ExportItinerary,
   type PlanExportSnapshot,
+  plansApi,
 } from "@/services/plans";
 import GradientBackground from "@/ui/components/GradientBackground";
 import { useNavigation, useRoute } from "@react-navigation/native";
@@ -51,7 +51,9 @@ export default function TripViewerScreen() {
 
   const [loginPromptOpen, setLoginPromptOpen] = useState(false);
   const [saveSuccessVisible, setSaveSuccessVisible] = useState(false);
-  const [savedPlanPublicId, setSavedPlanPublicId] = useState<string | null>(null);
+  const [savedPlanPublicId, setSavedPlanPublicId] = useState<string | null>(
+    null,
+  );
   const [mainLayoutHeight, setMainLayoutHeight] = useState(600);
   const [hintHeight, setHintHeight] = useState(48);
 
@@ -94,7 +96,9 @@ export default function TripViewerScreen() {
   const handleLoginPress = () => {
     setLoginPromptOpen(false);
     if (Platform.OS === "web" && typeof window !== "undefined") {
-      try { window.localStorage.setItem("pendingSavePublicId", publicId); } catch {}
+      try {
+        window.localStorage.setItem("pendingSavePublicId", publicId);
+      } catch {}
     }
     navigation.navigate("로그인");
   };
@@ -279,7 +283,9 @@ export default function TripViewerScreen() {
           if (savedPlanPublicId) {
             navigation.reset({
               index: 0,
-              routes: [{ name: "PLAN", params: { publicId: savedPlanPublicId } }],
+              routes: [
+                { name: "PLAN", params: { publicId: savedPlanPublicId } },
+              ],
             });
           }
         }}

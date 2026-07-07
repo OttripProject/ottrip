@@ -13,12 +13,12 @@ import {
   View,
 } from "react-native";
 import { Calendar, type DateData } from "react-native-calendars";
-import CalendarIcon from "../../../assets/calender.svg";
 import LeftArrowIcon from "../../../assets/cal_left_arrow.svg";
 import RightArrowIcon from "../../../assets/cal_right_arrow.svg";
-import DownArrowIcon from "../../../assets/mobile_dropdown.svg";
+import CalendarIcon from "../../../assets/calender.svg";
 import DownChevronIcon from "../../../assets/dropdown_cal.svg";
 import XIcon from "../../../assets/mobile_close.svg";
+import DownArrowIcon from "../../../assets/mobile_dropdown.svg";
 
 const CALENDAR_THEME = {
   selectedDayBackgroundColor: "#007AFF",
@@ -44,7 +44,10 @@ const CALENDAR_THEME = {
   },
 };
 
-type DayMark = { selection?: "single" | "start" | "end" | "range"; selected?: boolean };
+type DayMark = {
+  selection?: "single" | "start" | "end" | "range";
+  selected?: boolean;
+};
 
 function DayCell({
   date,
@@ -70,16 +73,28 @@ function DayCell({
   const rangeStyle: Record<string, unknown> = {
     opacity: isStart || isEnd || isRange ? 1 : 0,
   };
-  if (isStart) { rangeStyle.left = 16; rangeStyle.right = -4; }
-  else if (isEnd) { rangeStyle.left = -4; rangeStyle.right = 16; }
-  else if (isRange) { rangeStyle.left = -4; rangeStyle.right = -4; }
+  if (isStart) {
+    rangeStyle.left = 16;
+    rangeStyle.right = -4;
+  } else if (isEnd) {
+    rangeStyle.left = -4;
+    rangeStyle.right = 16;
+  } else if (isRange) {
+    rangeStyle.left = -4;
+    rangeStyle.right = -4;
+  }
 
   const circleStyle: Record<string, unknown> = {};
-  if (isSingle || isStart || isEnd) circleStyle.backgroundColor = colors.primary;
+  if (isSingle || isStart || isEnd)
+    circleStyle.backgroundColor = colors.primary;
   else if (isToday && !selection) circleStyle.backgroundColor = "#E8F1FF";
 
   return (
-    <Pressable style={styles.dayContainer} disabled={isDisabled} onPress={() => onPress?.(date)}>
+    <Pressable
+      style={styles.dayContainer}
+      disabled={isDisabled}
+      onPress={() => onPress?.(date)}
+    >
       <View style={[styles.rangeBase, rangeStyle]} />
       <View style={[styles.circleBase, circleStyle]}>
         <Text
@@ -138,7 +153,9 @@ export default function TripFormModal({
   const submitButtonText = mode === "add" ? "여행 저장" : "여행 수정";
   const canRemoveSegment = tripData.segments.length > 1;
 
-  const [calendarOpenIndex, setCalendarOpenIndex] = useState<number | null>(null);
+  const [calendarOpenIndex, setCalendarOpenIndex] = useState<number | null>(
+    null,
+  );
   const prevSelectionModeRef = useRef(selectionMode);
 
   useEffect(() => {
@@ -157,8 +174,14 @@ export default function TripFormModal({
   }, [visible]);
 
   const { totalStart, totalEnd } = useMemo(() => {
-    const starts = tripData.segments.map(s => s.startDate).filter(Boolean).sort();
-    const ends = tripData.segments.map(s => s.endDate).filter(Boolean).sort();
+    const starts = tripData.segments
+      .map(s => s.startDate)
+      .filter(Boolean)
+      .sort();
+    const ends = tripData.segments
+      .map(s => s.endDate)
+      .filter(Boolean)
+      .sort();
     return {
       totalStart: starts[0] ?? null,
       totalEnd: ends[ends.length - 1] ?? null,
@@ -172,25 +195,36 @@ export default function TripFormModal({
     return `${start} — ${dayjs(segment.endDate).format("YYYY.MM.DD")}`;
   };
 
-  const calendarTitle = selectionMode === "start" ? "시작일 선택" : "종료일 선택";
+  const calendarTitle =
+    selectionMode === "start" ? "시작일 선택" : "종료일 선택";
 
   return (
     <>
-      <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <Modal
+        visible={visible}
+        transparent
+        animationType="fade"
+        onRequestClose={onClose}
+      >
         <View style={styles.overlay}>
           <View style={styles.modalContent}>
             {/* Header */}
             <View style={styles.header}>
               <View style={styles.headerText}>
                 <Text style={styles.title}>{title}</Text>
-                <Text style={styles.subtitle}>구간별로 나라·도시·기간을 추가해보세요</Text>
+                <Text style={styles.subtitle}>
+                  구간별로 나라·도시·기간을 추가해보세요
+                </Text>
               </View>
               <Pressable onPress={onClose} style={styles.closeButton}>
                 <XIcon width={16} height={16} color={colors.gray600} />
               </Pressable>
             </View>
 
-            <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+            <ScrollView
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+            >
               {/* 여행명 */}
               <View style={styles.section}>
                 <View style={styles.sectionLabelRow}>
@@ -211,7 +245,9 @@ export default function TripFormModal({
               <View style={styles.section}>
                 <View style={styles.sectionLabelRow}>
                   <Text style={styles.sectionLabel}>여행 구간</Text>
-                  <Text style={styles.sectionHint}>나라 · 도시 · 기간을 순서대로 추가하세요</Text>
+                  <Text style={styles.sectionHint}>
+                    나라 · 도시 · 기간을 순서대로 추가하세요
+                  </Text>
                 </View>
 
                 <View style={styles.segs}>
@@ -236,21 +272,44 @@ export default function TripFormModal({
                             onPress={() => onSegmentMove(idx, idx - 1)}
                             disabled={idx === 0}
                           >
-                            <DownArrowIcon width={10} height={10} color={idx === 0 ? colors.gray400 : colors.gray600} style={{ transform: [{ scaleY: -1 }] }} />
+                            <DownArrowIcon
+                              width={10}
+                              height={10}
+                              color={
+                                idx === 0 ? colors.gray400 : colors.gray600
+                              }
+                              style={{ transform: [{ scaleY: -1 }] }}
+                            />
                           </Pressable>
                           <Pressable
                             style={styles.segIconBtn}
                             onPress={() => onSegmentMove(idx, idx + 1)}
                             disabled={idx >= tripData.segments.length - 1}
                           >
-                            <DownArrowIcon width={10} height={10} color={idx >= tripData.segments.length - 1 ? colors.gray400 : colors.gray600} />
+                            <DownArrowIcon
+                              width={10}
+                              height={10}
+                              color={
+                                idx >= tripData.segments.length - 1
+                                  ? colors.gray400
+                                  : colors.gray600
+                              }
+                            />
                           </Pressable>
                           <Pressable
                             style={styles.segIconBtn}
                             onPress={() => onSegmentRemove(idx)}
                             disabled={!canRemoveSegment}
                           >
-                            <XIcon width={12} height={12} color={canRemoveSegment ? colors.gray600 : colors.gray400} />
+                            <XIcon
+                              width={12}
+                              height={12}
+                              color={
+                                canRemoveSegment
+                                  ? colors.gray600
+                                  : colors.gray400
+                              }
+                            />
                           </Pressable>
                         </View>
 
@@ -264,25 +323,55 @@ export default function TripFormModal({
                                 placeholder="국가 선택"
                                 placeholderTextColor={colors.gray500}
                                 value={segment.country}
-                                onChangeText={text => onSegmentUpdate(idx, { country: text })}
+                                onChangeText={text =>
+                                  onSegmentUpdate(idx, { country: text })
+                                }
                                 onFocus={() => onSegmentFocus(idx)}
                               />
-                              <DownChevronIcon width={12} height={10} color={colors.gray700} />
+                              <DownChevronIcon
+                                width={12}
+                                height={10}
+                                color={colors.gray700}
+                              />
                             </View>
                           </View>
                           <View style={styles.segCell}>
                             <Text style={styles.segCellLabel}>도시</Text>
-                            <View style={[styles.segDropdown, !segment.country.trim() && styles.segDropdownDisabled]}>
+                            <View
+                              style={[
+                                styles.segDropdown,
+                                !segment.country.trim() &&
+                                  styles.segDropdownDisabled,
+                              ]}
+                            >
                               <TextInput
-                                style={[styles.segDropdownText, !segment.country.trim() && styles.segDropdownTextDisabled]}
-                                placeholder={segment.country.trim() ? "도시 선택" : "먼저 국가 선택"}
+                                style={[
+                                  styles.segDropdownText,
+                                  !segment.country.trim() &&
+                                    styles.segDropdownTextDisabled,
+                                ]}
+                                placeholder={
+                                  segment.country.trim()
+                                    ? "도시 선택"
+                                    : "먼저 국가 선택"
+                                }
                                 placeholderTextColor={colors.gray500}
                                 value={segment.city}
-                                onChangeText={text => onSegmentUpdate(idx, { city: text })}
+                                onChangeText={text =>
+                                  onSegmentUpdate(idx, { city: text })
+                                }
                                 onFocus={() => onSegmentFocus(idx)}
                                 editable={!!segment.country.trim()}
                               />
-                              <DownChevronIcon width={12} height={10} color={!segment.country.trim() ? colors.gray600 : colors.gray700} />
+                              <DownChevronIcon
+                                width={12}
+                                height={10}
+                                color={
+                                  !segment.country.trim()
+                                    ? colors.gray600
+                                    : colors.gray700
+                                }
+                              />
                             </View>
                           </View>
                         </View>
@@ -291,16 +380,29 @@ export default function TripFormModal({
                         <View style={styles.segCellDate}>
                           <Text style={styles.segCellLabel}>기간</Text>
                           <Pressable
-                            style={[styles.segDateBtn, !!segment.startDate && styles.segDateBtnActive]}
+                            style={[
+                              styles.segDateBtn,
+                              !!segment.startDate && styles.segDateBtnActive,
+                            ]}
                             onPress={() => {
                               onSegmentFocus(idx);
                               setCalendarOpenIndex(idx);
                             }}
                           >
-                            <Text style={[styles.segDateBtnText, !segment.startDate && styles.segDateBtnPlaceholder]}>
+                            <Text
+                              style={[
+                                styles.segDateBtnText,
+                                !segment.startDate &&
+                                  styles.segDateBtnPlaceholder,
+                              ]}
+                            >
                               {formatDateRange(segment) ?? "시작일 — 종료일"}
                             </Text>
-                            <CalendarIcon width={12} height={12} color={colors.gray700} />
+                            <CalendarIcon
+                              width={12}
+                              height={12}
+                              color={colors.gray700}
+                            />
                           </Pressable>
                         </View>
                       </View>
@@ -309,7 +411,10 @@ export default function TripFormModal({
                 </View>
 
                 {/* + 구간 추가 */}
-                <Pressable style={styles.addSegmentButton} onPress={onSegmentAdd}>
+                <Pressable
+                  style={styles.addSegmentButton}
+                  onPress={onSegmentAdd}
+                >
                   <Text style={styles.addSegmentText}>+ 구간 추가</Text>
                 </Pressable>
               </View>
@@ -320,27 +425,40 @@ export default function TripFormModal({
                   <Text style={styles.summaryLabel}>전체 여행 기간</Text>
                   {totalStart && totalEnd ? (
                     <View style={styles.summaryVal}>
-                      <Text style={styles.summaryNum}>{dayjs(totalStart).format("YYYY.MM.DD")}</Text>
+                      <Text style={styles.summaryNum}>
+                        {dayjs(totalStart).format("YYYY.MM.DD")}
+                      </Text>
                       <Text style={styles.summaryDash}>—</Text>
-                      <Text style={styles.summaryNum}>{dayjs(totalEnd).format("YYYY.MM.DD")}</Text>
+                      <Text style={styles.summaryNum}>
+                        {dayjs(totalEnd).format("YYYY.MM.DD")}
+                      </Text>
                     </View>
                   ) : (
-                    <Text style={styles.summaryEmpty}>구간 기간을 입력하면 자동으로 계산됩니다</Text>
+                    <Text style={styles.summaryEmpty}>
+                      구간 기간을 입력하면 자동으로 계산됩니다
+                    </Text>
                   )}
                 </View>
-                {totalStart && totalEnd && (() => {
-                  const validSegs = tripData.segments.filter(s => s.startDate && s.endDate);
-                  const totalNights = validSegs.reduce(
-                    (acc, s) => acc + dayjs(s.endDate).diff(dayjs(s.startDate), "day"),
-                    0,
-                  );
-                  const totalDays = totalNights + validSegs.length;
-                  return (
-                    <View style={styles.summaryBadge}>
-                      <Text style={styles.summaryBadgeText}>{totalNights}박 {totalDays}일</Text>
-                    </View>
-                  );
-                })()}
+                {totalStart &&
+                  totalEnd &&
+                  (() => {
+                    const validSegs = tripData.segments.filter(
+                      s => s.startDate && s.endDate,
+                    );
+                    const totalNights = validSegs.reduce(
+                      (acc, s) =>
+                        acc + dayjs(s.endDate).diff(dayjs(s.startDate), "day"),
+                      0,
+                    );
+                    const totalDays = totalNights + validSegs.length;
+                    return (
+                      <View style={styles.summaryBadge}>
+                        <Text style={styles.summaryBadgeText}>
+                          {totalNights}박 {totalDays}일
+                        </Text>
+                      </View>
+                    );
+                  })()}
               </View>
             </ScrollView>
 
@@ -350,11 +468,19 @@ export default function TripFormModal({
                 <Text style={styles.cancelButtonText}>취소</Text>
               </Pressable>
               <Pressable
-                style={[styles.submitButton, isSubmitDisabled && styles.submitButtonDisabled]}
+                style={[
+                  styles.submitButton,
+                  isSubmitDisabled && styles.submitButtonDisabled,
+                ]}
                 onPress={onSubmit}
                 disabled={isSubmitDisabled}
               >
-                <Text style={[styles.submitButtonText, isSubmitDisabled && styles.submitButtonTextDisabled]}>
+                <Text
+                  style={[
+                    styles.submitButtonText,
+                    isSubmitDisabled && styles.submitButtonTextDisabled,
+                  ]}
+                >
                   {submitButtonText}
                 </Text>
               </Pressable>
@@ -370,8 +496,14 @@ export default function TripFormModal({
         animationType="fade"
         onRequestClose={() => setCalendarOpenIndex(null)}
       >
-        <Pressable style={styles.calendarOverlay} onPress={() => setCalendarOpenIndex(null)}>
-          <Pressable style={styles.calendarPopup} onPress={e => e.stopPropagation()}>
+        <Pressable
+          style={styles.calendarOverlay}
+          onPress={() => setCalendarOpenIndex(null)}
+        >
+          <Pressable
+            style={styles.calendarPopup}
+            onPress={e => e.stopPropagation()}
+          >
             <View style={styles.calendarHeader}>
               <Text style={styles.calendarTitle}>{calendarTitle}</Text>
               <Pressable onPress={() => setCalendarOpenIndex(null)}>

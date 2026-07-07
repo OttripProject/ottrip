@@ -8,10 +8,19 @@ class AIConfig(BaseConfig):
     GOOGLE_CREDENTIALS_JSON: str
     MAX_FILE_SIZE: int = 10 * 1024 * 1024
     ALLOWED_IMAGE_TYPES: List[str] = [
-        "image/jpeg", "image/png", "image/gif", "image/bmp", 
-        "image/webp", "image/tiff"
+        "image/jpeg",
+        "image/png",
+        "image/gif",
+        "image/bmp",
+        "image/webp",
+        "image/tiff",
     ]
     ALLOWED_PDF_TYPES: List[str] = ["application/pdf"]
+    ALLOWED_EXCEL_TYPES: List[str] = [
+        "application/vnd.ms-excel",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "text/csv",
+    ]
 
     AI_TIMEOUT: int = 30
     MAX_RETRIES: int = 3
@@ -21,14 +30,13 @@ class AIConfig(BaseConfig):
     GEMINI_DEFAULT_MODEL: str = "gemini-2.5-flash-lite"
     # "gemini-3-flash-preview"
 
-    CHECKLIST_SYSTEM_PROMPT: str = (
-        "You are a travel packing checklist expert. Respond strictly in JSON format matching the example output. "
-    )
+    CHECKLIST_SYSTEM_PROMPT: str = "You are a travel packing checklist expert. Respond strictly in JSON format matching the example output. "
     DOCUMENT_UPLOAD_ANALYZE_SYSTEM_PROMPT: str = (
         "You classify a single travel-related document from OCR text and return one JSON object: "
         "success, inferred_item_type (flight|itinerary|accommodation|expense), error, and draft "
         "with item_type matching inferred_item_type and payload containing values (Create-shaped, no plan_id) "
         "and field_meta (dot paths to certainty and editable flags). No markdown, JSON only."
     )
+
 
 ai_settings = AIConfig.create()

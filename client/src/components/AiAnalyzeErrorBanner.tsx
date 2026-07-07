@@ -23,7 +23,8 @@ export default function AiAnalyzeErrorBanner({
         <View style={styles.textBlock}>
           {showTitle && <Text style={styles.title}>분석 실패</Text>}
           <Text style={[styles.subtitle, !showTitle && styles.subtitleNoTitle]}>
-            {message ?? "첨부 파일에서 일정 정보를 읽지 못했어요. 더 선명한 자료로 다시 시도해 주세요."}
+            {message ??
+              "첨부 파일에서 일정 정보를 읽지 못했어요. 더 선명한 자료로 다시 시도해 주세요."}
           </Text>
         </View>
       </View>
@@ -31,7 +32,10 @@ export default function AiAnalyzeErrorBanner({
         <View style={styles.bottomRow}>
           <Pressable
             onPress={onRetry}
-            style={({ pressed }) => [styles.retryBtn, pressed && styles.retryBtnPressed]}
+            style={({ pressed }) => [
+              styles.retryBtn,
+              pressed && styles.retryBtnPressed,
+            ]}
           >
             <RetryIcon width={12} height={12} style={styles.retryIcon} />
             <Text style={styles.retryBtnText}>다시 시도</Text>

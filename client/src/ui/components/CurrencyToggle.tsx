@@ -16,10 +16,17 @@ interface CurrencyToggleProps {
   style?: StyleProp<ViewStyle>;
 }
 
-export default function CurrencyToggle({ value, onChange, variant = "filled", style }: CurrencyToggleProps) {
+export default function CurrencyToggle({
+  value,
+  onChange,
+  variant = "filled",
+  style,
+}: CurrencyToggleProps) {
   const isOutlined = variant === "outlined";
   return (
-    <View style={[styles.container, isOutlined && styles.containerOutlined, style]}>
+    <View
+      style={[styles.container, isOutlined && styles.containerOutlined, style]}
+    >
       {OPTIONS.map(opt => {
         const isActive = value === opt.value;
         return (
@@ -27,12 +34,18 @@ export default function CurrencyToggle({ value, onChange, variant = "filled", st
             key={opt.value}
             style={[
               styles.option,
-              isActive && (isOutlined ? styles.optionActiveOutlined : styles.optionActive),
-              isActive && ({ boxShadow: "rgba(0, 0, 0, 0.3) 0px 1px 3px" } as any),
+              isActive &&
+                (isOutlined
+                  ? styles.optionActiveOutlined
+                  : styles.optionActive),
+              isActive &&
+                ({ boxShadow: "rgba(0, 0, 0, 0.3) 0px 1px 3px" } as any),
             ]}
             onPress={() => onChange(opt.value)}
           >
-            <Text style={[styles.optionText, isActive && styles.optionTextActive]}>
+            <Text
+              style={[styles.optionText, isActive && styles.optionTextActive]}
+            >
               {opt.label}
             </Text>
           </Pressable>

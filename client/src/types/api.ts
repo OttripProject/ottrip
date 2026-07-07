@@ -392,3 +392,9 @@ export type StagedDocumentAnalyzePayload = {
   seq: number;
   originEntityType?: string;
 };
+
+export interface PlanUploadAnalyzeResponse {
+  success: boolean;
+  items: AiDocumentItemDraft[];
+  error: string | null;
+}

@@ -1,7 +1,13 @@
 import { colors } from "@/ui/tokens/colors";
 import { spacing } from "@/ui/tokens/spacing";
 import { textStyles } from "@/ui/tokens/typography";
-import { Platform, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import {
+  Platform,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 
 const TABS = [
   { key: "itinerary", label: "일정" },
@@ -16,7 +22,10 @@ interface PanelTabSwitcherProps {
   onTabChange?: (tab: TabKey) => void;
 }
 
-export default function PanelTabSwitcher({ activeTab, onTabChange }: PanelTabSwitcherProps) {
+export default function PanelTabSwitcher({
+  activeTab,
+  onTabChange,
+}: PanelTabSwitcherProps) {
   return (
     <View style={styles.container}>
       {TABS.map(({ key, label }) => {
