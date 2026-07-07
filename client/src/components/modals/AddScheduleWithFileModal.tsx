@@ -129,7 +129,13 @@ function getItemDate(draft: AiDocumentItemDraft): string {
     const segs = v.segments as unknown[] | undefined;
     if (Array.isArray(segs) && segs.length > 0) {
       const first = segs[0] as Record<string, unknown>;
-      raw = String(first.departure_time ?? first.departureTime ?? "").substring(0, 10);
+      const last = segs[segs.length - 1] as Record<string, unknown>;
+      const depRaw = String(first.dep_date ?? String(first.departure_time ?? first.departureTime ?? "").substring(0, 10));
+      const arrRaw = String(last.arr_date ?? String(last.arrival_time ?? last.arrivalTime ?? "").substring(0, 10));
+      const depStr = depRaw && dayjs(depRaw).isValid() ? dayjs(depRaw).format("YYYY. MM. DD (ddd)") : depRaw;
+      const arrStr = arrRaw && dayjs(arrRaw).isValid() ? dayjs(arrRaw).format("YYYY. MM. DD (ddd)") : arrRaw;
+      if (depStr && arrStr && depRaw !== arrRaw) return `${depStr} – ${arrStr}`;
+      return depStr || arrStr;
     }
   }
   else if (draft.itemType === "accommodation") {
@@ -157,6 +163,17 @@ function getItemTimeRange(draft: AiDocumentItemDraft): string {
     if (s && e) return `${s} – ${e}`;
     if (s) return s;
     if (e) return e;
+  }
+  if (draft.itemType === "flight") {
+    const segs = v.segments as unknown[] | undefined;
+    if (Array.isArray(segs) && segs.length > 0) {
+      const first = segs[0] as Record<string, unknown>;
+      const last = segs[segs.length - 1] as Record<string, unknown>;
+      const dep = normalizeHHmm(first.dep_time ?? first.departure_time ?? first.departureTime);
+      const arr = normalizeHHmm(last.arr_time ?? last.arrival_time ?? last.arrivalTime);
+      if (dep && arr) return `${dep} – ${arr}`;
+      if (dep) return dep;
+    }
   }
   return "";
 }
@@ -193,17 +210,19 @@ function getItemExpense(draft: AiDocumentItemDraft): { category: string; amount:
 }
 
 function getExpenseSummary(items: AiDocumentItemDraft[], selectedIndexes: Set<number>) {
-  let total = 0;
+  let krwTotal = 0;
+  let usdTotal = 0;
   let count = 0;
   items.forEach((draft, i) => {
     if (!selectedIndexes.has(i)) return;
     const ex = getItemExpense(draft);
-    if (ex && ex.currency === "KRW") {
-      total += ex.amount;
+    if (ex) {
+      if (ex.currency === "KRW") krwTotal += ex.amount;
+      else if (ex.currency === "USD") usdTotal += ex.amount;
       count++;
     }
   });
-  return { total, count };
+  return { krwTotal, usdTotal, count };
 }
 
 function buildItineraryRequest(v: Record<string, unknown>, planId: number, endTime: string) {
@@ -229,8 +248,14 @@ function buildFlightRequest(v: Record<string, unknown>, planId: number) {
     flightNumber: s.flight_number ?? s.flightNumber ?? null,
     departureAirport: String(s.departure_airport ?? s.departureAirport ?? ""),
     arrivalAirport: String(s.arrival_airport ?? s.arrivalAirport ?? ""),
-    departureTime: String(s.departure_time ?? s.departureTime ?? ""),
-    arrivalTime: String(s.arrival_time ?? s.arrivalTime ?? ""),
+    departureTime: (() => {
+      if (s.dep_date) return `${s.dep_date}T${s.dep_time ?? "00:00"}:00`;
+      return String(s.departure_time ?? s.departureTime ?? "");
+    })(),
+    arrivalTime: (() => {
+      if (s.arr_date) return `${s.arr_date}T${s.arr_time ?? "00:00"}:00`;
+      return String(s.arrival_time ?? s.arrivalTime ?? "");
+    })(),
     seatClass: s.seat_class ?? s.seatClass ?? null,
     seatNumber: s.seat_number ?? s.seatNumber ?? null,
     gate: s.gate ?? null,
@@ -416,6 +441,26 @@ export default function AddScheduleWithFileModal({
     },
   });
 
+  const TEST_EXTRA_ITEMS: AiDocumentItemDraft[] = [
+    {
+      itemType: "flight",
+      payload: {
+        values: {
+          segments: [{ departure_airport: "ICN", arrival_airport: "NRT", departure_time: "2025-03-10T10:30:00", arrival_time: "2025-03-10T12:45:00", airline: "대한항공", flight_number: "KE703" }],
+          expense: { amount: 450000, currency: "KRW", category: "flight" },
+        },
+        fieldMeta: {},
+      },
+    },
+    {
+      itemType: "expense",
+      payload: {
+        values: { category: "food", amount: 15000, currency: "KRW", ex_date: "2025-03-10" },
+        fieldMeta: {},
+      },
+    },
+  ] as AiDocumentItemDraft[];
+
   async function handleAnalyze() {
     if (!selectedFile) return;
     setIsAnalyzing(true);
@@ -423,8 +468,9 @@ export default function AddScheduleWithFileModal({
     try {
       const res = await analyzePlanUpload(selectedFile, { filename: selectedFile.name });
       if (res.success && res.items.length > 0) {
-        setItems(res.items);
-        setSelectedIndexes(new Set(res.items.map((_, i) => i)));
+        const merged = [...res.items, ...TEST_EXTRA_ITEMS];
+        setItems(merged);
+        setSelectedIndexes(new Set(merged.map((_, i) => i)));
         setStep("preview");
       } else {
         setError(res.error || "파일에서 일정 정보를 찾지 못했어요.");
@@ -514,8 +560,25 @@ export default function AddScheduleWithFileModal({
   }
 
   function startEdit(idx: number) {
-    const v = items[idx].payload.values as Record<string, unknown>;
-    setDraftEdits(prev => ({ ...prev, [idx]: { ...v } }));
+    const item = items[idx];
+    const v = item.payload.values as Record<string, unknown>;
+    const initialEdit: Record<string, unknown> = { ...v };
+
+    if (item.itemType === "itinerary") {
+      const ex = (v.expense ?? {}) as Record<string, unknown>;
+      initialEdit.expense = { currency: "KRW", ...ex, category: ex.category ?? "food" };
+    } else if (item.itemType === "flight") {
+      const ex = (v.expense ?? {}) as Record<string, unknown>;
+      initialEdit.expense = { currency: "KRW", ...ex, category: "flight" };
+    } else if (item.itemType === "accommodation") {
+      const ex = (v.expense ?? {}) as Record<string, unknown>;
+      initialEdit.expense = { currency: "KRW", ...ex, category: ex.category ?? "accommodation" };
+    } else if (item.itemType === "expense") {
+      initialEdit.category = v.category ?? "food";
+      initialEdit.currency = v.currency ?? "KRW";
+    }
+
+    setDraftEdits(prev => ({ ...prev, [idx]: initialEdit }));
     setEditingIndex(idx);
   }
 
@@ -577,13 +640,21 @@ export default function AddScheduleWithFileModal({
               onChange={cat => setEditNestedField(idx, "expense", "category", cat)}
               style={styles.editCategoryPickerTrigger}
             />
+            <View style={styles.editCurrencyToggle}>
+              <Pressable style={styles.editCurrencyOption} onPress={() => setEditNestedField(idx, "expense", "currency", "KRW")}>
+                <Text style={[styles.editCurrencyOptionText, String(expNested.currency ?? "KRW") === "KRW" && styles.editCurrencyOptionTextActive]}>₩</Text>
+              </Pressable>
+              <View style={styles.editCurrencyDivider} />
+              <Pressable style={styles.editCurrencyOption} onPress={() => setEditNestedField(idx, "expense", "currency", "USD")}>
+                <Text style={[styles.editCurrencyOptionText, String(expNested.currency ?? "KRW") === "USD" && styles.editCurrencyOptionTextActive]}>$</Text>
+              </Pressable>
+            </View>
             <View style={styles.editAmountWrapper}>
-              <Text style={styles.editCurrencyPrefix}>₩</Text>
               <TextInput
                 style={styles.editAmountInput}
                 value={String(expNested.amount ?? "")}
-                onChangeText={val => setEditNestedField(idx, "expense", "amount", val.replace(/[^0-9]/g, ""))}
-                keyboardType="numeric"
+                onChangeText={val => setEditNestedField(idx, "expense", "amount", val.replace(/[^0-9.]/g, ""))}
+                keyboardType="decimal-pad"
                 placeholder="0"
                 placeholderTextColor={colors.gray400}
               />
@@ -599,11 +670,16 @@ export default function AddScheduleWithFileModal({
     if (draft.itemType === "flight") {
       const segs = Array.isArray(v.segments) ? (v.segments as Record<string, unknown>[]) : [{}];
       const seg = segs[0] ?? {};
+      const expNested = (v.expense ?? {}) as Record<string, unknown>;
+      const depDate = String(seg.dep_date ?? String(seg.departure_time ?? "").substring(0, 10));
+      const depTime = normalizeHHmm(seg.dep_time ?? seg.departure_time);
+      const arrDate = String(seg.arr_date ?? String(seg.arrival_time ?? "").substring(0, 10));
+      const arrTime = normalizeHHmm(seg.arr_time ?? seg.arrival_time);
       return (
         <View style={styles.editForm}>
           <View style={styles.editTimeRow}>
             <TextInput
-              style={[styles.editInput, { flex: 1 }]}
+              style={[styles.editInput, styles.editFlightInput]}
               value={String(seg.departure_airport ?? "")}
               onChangeText={val => setEditSegmentField(idx, "departure_airport", val)}
               placeholder="출발 공항"
@@ -611,18 +687,76 @@ export default function AddScheduleWithFileModal({
             />
             <Text style={styles.editTimeSep}>→</Text>
             <TextInput
-              style={[styles.editInput, { flex: 1 }]}
+              style={[styles.editInput, styles.editFlightInput]}
               value={String(seg.arrival_airport ?? "")}
               onChangeText={val => setEditSegmentField(idx, "arrival_airport", val)}
               placeholder="도착 공항"
               placeholderTextColor={colors.gray400}
             />
           </View>
-          <TimePicker
-            value={normalizeHHmm(seg.departure_time)}
-            onChange={val => setEditSegmentField(idx, "departure_time", val)}
-            style={timerPickerStyle}
-          />
+          <View style={styles.editTimeRow}>
+            <View style={styles.editFlightCell}>
+              <TextInput
+                style={[styles.editInput, { height: 40, width: "100%" }]}
+                value={depDate}
+                onChangeText={val => setEditSegmentField(idx, "dep_date", val)}
+                placeholder="출발 날짜 (YYYY-MM-DD)"
+                placeholderTextColor={colors.gray400}
+              />
+            </View>
+            <View style={styles.editFlightCell}>
+              <TimePicker
+                value={depTime}
+                onChange={val => setEditSegmentField(idx, "dep_time", val)}
+                style={timerPickerStyle}
+                popupAlign="right"
+              />
+            </View>
+          </View>
+          <View style={styles.editTimeRow}>
+            <View style={styles.editFlightCell}>
+              <TextInput
+                style={[styles.editInput, { height: 40, width: "100%" }]}
+                value={arrDate}
+                onChangeText={val => setEditSegmentField(idx, "arr_date", val)}
+                placeholder="도착 날짜 (YYYY-MM-DD)"
+                placeholderTextColor={colors.gray400}
+              />
+            </View>
+            <View style={styles.editFlightCell}>
+              <TimePicker
+                value={arrTime}
+                onChange={val => setEditSegmentField(idx, "arr_time", val)}
+                style={timerPickerStyle}
+                popupAlign="right"
+              />
+            </View>
+          </View>
+          <View style={styles.editExpenseRow}>
+            <Text style={styles.editExpenseLabel}>비용</Text>
+            <View style={styles.editCategoryFixed}>
+              <Text style={styles.editCategoryFixedText}>항공료</Text>
+            </View>
+            <View style={styles.editCurrencyToggle}>
+              <Pressable style={styles.editCurrencyOption} onPress={() => setEditNestedField(idx, "expense", "currency", "KRW")}>
+                <Text style={[styles.editCurrencyOptionText, String(expNested.currency ?? "KRW") === "KRW" && styles.editCurrencyOptionTextActive]}>₩</Text>
+              </Pressable>
+              <View style={styles.editCurrencyDivider} />
+              <Pressable style={styles.editCurrencyOption} onPress={() => setEditNestedField(idx, "expense", "currency", "USD")}>
+                <Text style={[styles.editCurrencyOptionText, String(expNested.currency ?? "KRW") === "USD" && styles.editCurrencyOptionTextActive]}>$</Text>
+              </Pressable>
+            </View>
+            <View style={styles.editAmountWrapper}>
+              <TextInput
+                style={styles.editAmountInput}
+                value={String(expNested.amount ?? "")}
+                onChangeText={val => setEditNestedField(idx, "expense", "amount", val.replace(/[^0-9.]/g, ""))}
+                keyboardType="decimal-pad"
+                placeholder="0"
+                placeholderTextColor={colors.gray400}
+              />
+            </View>
+          </View>
           <Pressable style={styles.editDoneButton} onPress={e => { e.stopPropagation(); finishEdit(idx); }}>
             <Text style={styles.editDoneButtonText}>완료</Text>
           </Pressable>
@@ -672,13 +806,21 @@ export default function AddScheduleWithFileModal({
             <View style={styles.editCategoryFixed}>
               <Text style={styles.editCategoryFixedText}>숙박</Text>
             </View>
+            <View style={styles.editCurrencyToggle}>
+              <Pressable style={styles.editCurrencyOption} onPress={() => setEditNestedField(idx, "expense", "currency", "KRW")}>
+                <Text style={[styles.editCurrencyOptionText, String(expNested.currency ?? "KRW") === "KRW" && styles.editCurrencyOptionTextActive]}>₩</Text>
+              </Pressable>
+              <View style={styles.editCurrencyDivider} />
+              <Pressable style={styles.editCurrencyOption} onPress={() => setEditNestedField(idx, "expense", "currency", "USD")}>
+                <Text style={[styles.editCurrencyOptionText, String(expNested.currency ?? "KRW") === "USD" && styles.editCurrencyOptionTextActive]}>$</Text>
+              </Pressable>
+            </View>
             <View style={styles.editAmountWrapper}>
-              <Text style={styles.editCurrencyPrefix}>₩</Text>
               <TextInput
                 style={styles.editAmountInput}
                 value={String(expNested.amount ?? "")}
-                onChangeText={val => setEditNestedField(idx, "expense", "amount", val.replace(/[^0-9]/g, ""))}
-                keyboardType="numeric"
+                onChangeText={val => setEditNestedField(idx, "expense", "amount", val.replace(/[^0-9.]/g, ""))}
+                keyboardType="decimal-pad"
                 placeholder="0"
                 placeholderTextColor={colors.gray400}
               />
@@ -700,13 +842,21 @@ export default function AddScheduleWithFileModal({
               onChange={cat => setEditField(idx, "category", cat)}
               style={styles.editCategoryPickerTrigger}
             />
+            <View style={styles.editCurrencyToggle}>
+              <Pressable style={styles.editCurrencyOption} onPress={() => setEditField(idx, "currency", "KRW")}>
+                <Text style={[styles.editCurrencyOptionText, String(v.currency ?? "KRW") === "KRW" && styles.editCurrencyOptionTextActive]}>₩</Text>
+              </Pressable>
+              <View style={styles.editCurrencyDivider} />
+              <Pressable style={styles.editCurrencyOption} onPress={() => setEditField(idx, "currency", "USD")}>
+                <Text style={[styles.editCurrencyOptionText, String(v.currency ?? "KRW") === "USD" && styles.editCurrencyOptionTextActive]}>$</Text>
+              </Pressable>
+            </View>
             <View style={styles.editAmountWrapper}>
-              <Text style={styles.editCurrencyPrefix}>₩</Text>
               <TextInput
                 style={styles.editAmountInput}
                 value={String(v.amount ?? "")}
-                onChangeText={val => setEditField(idx, "amount", val.replace(/[^0-9]/g, ""))}
-                keyboardType="numeric"
+                onChangeText={val => setEditField(idx, "amount", val.replace(/[^0-9.]/g, ""))}
+                keyboardType="decimal-pad"
                 placeholder="0"
                 placeholderTextColor={colors.gray400}
               />
@@ -730,7 +880,7 @@ export default function AddScheduleWithFileModal({
   }
 
   const allSelected = items.length > 0 && selectedIndexes.size === items.length;
-  const { total: expenseTotal, count: expenseCount } = getExpenseSummary(items, selectedIndexes);
+  const { krwTotal, usdTotal, count: expenseCount } = getExpenseSummary(items, selectedIndexes);
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
@@ -829,9 +979,14 @@ export default function AddScheduleWithFileModal({
                 <View style={styles.expenseBanner}>
                   <ExpenseCardIcon width={14} height={14} color="#137A41" />
                   <Text style={styles.expenseBannerText}>비용 {expenseCount}건 함께 추가</Text>
-                  <Text style={styles.expenseBannerAmount}>
-                    ₩{expenseTotal.toLocaleString()}
-                  </Text>
+                  <View style={{ alignItems: "flex-end", gap: 2 }}>
+                    {krwTotal > 0 && (
+                      <Text style={styles.expenseBannerAmount}>₩{krwTotal.toLocaleString()}</Text>
+                    )}
+                    {usdTotal > 0 && (
+                      <Text style={styles.expenseBannerAmount}>${usdTotal.toLocaleString()}</Text>
+                    )}
+                  </View>
                 </View>
               )}
 
@@ -907,6 +1062,8 @@ export default function AddScheduleWithFileModal({
                                 <Text style={styles.inlineExpenseAmount}>
                                   {expense.currency === "KRW"
                                     ? `₩${expense.amount.toLocaleString()}`
+                                    : expense.currency === "USD"
+                                    ? `$${expense.amount.toLocaleString()}`
                                     : `${expense.amount.toLocaleString()} ${expense.currency}`}
                                 </Text>
                               </View>
@@ -1129,6 +1286,8 @@ const styles = StyleSheet.create({
     fontSize: 12, color: colors.gray900, outlineStyle: "none",
   } as any,
   editTimeRow: { flexDirection: "row", alignItems: "center", gap: 6, zIndex: 10 },
+  editFlightInput: { flex: 1, height: 40, minWidth: 0 },
+  editFlightCell: { flex: 1, minWidth: 0 },
   editTimeSep: { ...textStyles.body5, color: colors.gray500 },
   editCategoryFixed: {
     height: 34, paddingHorizontal: 10, borderWidth: 1, borderColor: colors.gray300,
@@ -1146,12 +1305,36 @@ const styles = StyleSheet.create({
   editAmountWrapper: {
     flex: 1, flexDirection: "row", alignItems: "center",
     borderWidth: 1, borderColor: colors.gray300, borderRadius: 8,
-    height: 34, paddingHorizontal: 10,
+    height: 34, paddingHorizontal: 8,
   },
   editAmountWrapperDisabled: { opacity: 0.45 },
-  editCurrencyPrefix: {
+  editCurrencyToggle: {
+    flexDirection: "row",
+    borderWidth: 1,
+    borderColor: colors.gray300,
+    borderRadius: 8,
+    overflow: "hidden",
+    flexShrink: 0,
+    height: 34,
+  },
+  editCurrencyOption: {
+    width: 30,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: colors.white,
+  },
+  editCurrencyDivider: {
+    width: 1,
+    alignSelf: "stretch",
+    backgroundColor: colors.gray300,
+  },
+  editCurrencyOptionText: {
     fontFamily: typography.fontFamily.pretendardSemiBold,
-    fontSize: 12, color: colors.gray400, marginRight: 4, flexShrink: 0,
+    fontSize: 12,
+    color: colors.gray400,
+  },
+  editCurrencyOptionTextActive: {
+    color: colors.gray900,
   },
   editAmountInput: {
     flex: 1, borderWidth: 0, fontFamily: typography.fontFamily.poppinsSemiBold,
