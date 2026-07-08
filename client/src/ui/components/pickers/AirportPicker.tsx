@@ -29,6 +29,8 @@ interface AirportPickerProps {
   searchTextInputStyle?: TextStyle;
   textStyle?: TextStyle;
   disabled?: boolean;
+  onOpen?: () => void;
+  onClose?: () => void;
 }
 
 const defaultSearchTextInputStyle: TextStyle = {
@@ -53,6 +55,8 @@ export default function AirportPicker({
   searchTextInputStyle,
   textStyle,
   disabled,
+  onOpen,
+  onClose,
 }: AirportPickerProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [options, setOptions] = useState<
@@ -91,8 +95,11 @@ export default function AirportPicker({
   const handleSetOpen = (value: boolean | ((prev: boolean) => boolean)) => {
     const isOpen = typeof value === "function" ? value(open) : value;
     setIsOpen(isOpen);
-    if (!isOpen) {
+    if (isOpen) {
+      onOpen?.();
+    } else {
       setSearchQuery("");
+      onClose?.();
     }
   };
 

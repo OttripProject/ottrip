@@ -343,6 +343,7 @@ export default function AddScheduleWithFileModal({
   const [draftEdits, setDraftEdits] = useState<Record<number, Record<string, unknown>>>({});
   const [showDepDatePicker, setShowDepDatePicker] = useState(false);
   const [showArrDatePicker, setShowArrDatePicker] = useState(false);
+  const [isPickerOpen, setIsPickerOpen] = useState(false);
 
   const itineraryEndTimeMap = useMemo(() => {
     const result = new Map<number, string>();
@@ -596,6 +597,7 @@ export default function AddScheduleWithFileModal({
     setEditingIndex(null);
     setShowDepDatePicker(false);
     setShowArrDatePicker(false);
+    setIsPickerOpen(false);
   }
 
   function renderEditFormContent(draft: AiDocumentItemDraft, idx: number) {
@@ -645,6 +647,8 @@ export default function AddScheduleWithFileModal({
               value={String(expNested.category ?? "food") as ExpenseCategoryType}
               onChange={cat => setEditNestedField(idx, "expense", "category", cat)}
               style={styles.editCategoryPickerTrigger}
+              onOpen={() => setIsPickerOpen(true)}
+              onClose={() => setIsPickerOpen(false)}
             />
             <View style={styles.editCurrencyToggle}>
               <Pressable style={styles.editCurrencyOption} onPress={() => setEditNestedField(idx, "expense", "currency", "KRW")}>
@@ -692,6 +696,8 @@ export default function AddScheduleWithFileModal({
               style={{ borderColor: colors.gray300, borderWidth: 1, borderRadius: 8 }}
               dropDownContainerStyle={{ borderColor: colors.gray300 }}
               textStyle={{ ...textStyles.body4, color: colors.gray900 }}
+              onOpen={() => setIsPickerOpen(true)}
+              onClose={() => setIsPickerOpen(false)}
             />
             <Text style={styles.editTimeSep}>→</Text>
             <AirportPicker
@@ -702,6 +708,8 @@ export default function AddScheduleWithFileModal({
               style={{ borderColor: colors.gray300, borderWidth: 1, borderRadius: 8 }}
               dropDownContainerStyle={{ borderColor: colors.gray300 }}
               textStyle={{ ...textStyles.body4, color: colors.gray900 }}
+              onOpen={() => setIsPickerOpen(true)}
+              onClose={() => setIsPickerOpen(false)}
             />
           </View>
           <View style={[styles.editTimeRow, { zIndex: showDepDatePicker ? 2000 : 20 }]}>
@@ -733,6 +741,8 @@ export default function AddScheduleWithFileModal({
                 onChange={val => setEditSegmentField(idx, "dep_time", val)}
                 style={timerPickerStyle}
                 popupAlign="right"
+                onOpen={() => setIsPickerOpen(true)}
+                onClose={() => setIsPickerOpen(false)}
               />
             </View>
           </View>
@@ -765,6 +775,8 @@ export default function AddScheduleWithFileModal({
                 onChange={val => setEditSegmentField(idx, "arr_time", val)}
                 style={timerPickerStyle}
                 popupAlign="right"
+                onOpen={() => setIsPickerOpen(true)}
+                onClose={() => setIsPickerOpen(false)}
               />
             </View>
           </View>
@@ -868,6 +880,8 @@ export default function AddScheduleWithFileModal({
               value={String(v.category ?? "food") as ExpenseCategoryType}
               onChange={cat => setEditField(idx, "category", cat)}
               style={styles.editCategoryPickerTrigger}
+              onOpen={() => setIsPickerOpen(true)}
+              onClose={() => setIsPickerOpen(false)}
             />
             <View style={styles.editCurrencyToggle}>
               <Pressable style={styles.editCurrencyOption} onPress={() => setEditField(idx, "currency", "KRW")}>
@@ -1018,7 +1032,11 @@ export default function AddScheduleWithFileModal({
               )}
 
               {/* 아이템 목록 */}
-              <ScrollView style={styles.itemList} showsVerticalScrollIndicator={false}>
+              <ScrollView
+                style={styles.itemList}
+                showsVerticalScrollIndicator={false}
+                contentContainerStyle={(showDepDatePicker || showArrDatePicker || isPickerOpen) ? { paddingBottom: 150 } : undefined}
+              >
                 {items.map((draft, i) => {
                   const isSelected = selectedIndexes.has(i);
                   const isEditing = editingIndex === i;
