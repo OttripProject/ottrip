@@ -27,12 +27,14 @@ import {
 import { AirportPicker, CategoryPicker, TimePicker } from "@/ui/components/pickers";
 import type { ExpenseCategory as ExpenseCategoryType } from "@/types/expense";
 import AiRefreshIcon from "../../../assets/ai_refresh.svg";
+import AttachmentDocIcon from "../../../assets/mobile_attachment_document.svg";
+import AttachmentImageIcon from "../../../assets/mobile_attachment_image.svg";
 import CalendarIcon from "../../../assets/calender.svg";
 import CheckWhiteIcon from "../../../assets/check_white.svg";
 import ExpenseCardIcon from "../../../assets/expense_card.svg";
 import UpdateIcon from "../../../assets/update.svg";
 import UploadIcon from "../../../assets/upload_tray.svg";
-import XIcon from "../../../assets/x.svg";
+import XIcon from "../../../assets/close_sm.svg";
 
 dayjs.locale("ko");
 
@@ -85,6 +87,11 @@ function formatFileSize(bytes: number): string {
   if (bytes < 1024) return `${bytes}B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)}KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)}MB`;
+}
+
+function isImageFile(filename: string): boolean {
+  const ext = filename.split(".").pop()?.toLowerCase() ?? "";
+  return ["jpg", "jpeg", "png"].includes(ext);
 }
 
 function normalizeHHmm(raw: unknown): string {
@@ -965,33 +972,39 @@ export default function AddScheduleWithFileModal({
             <>
               <Pressable
                 ref={dropZoneRef}
-                style={[styles.dropZone, isDragging && styles.dropZoneDragging]}
+                style={[styles.dropZone, selectedFile && styles.dropZoneSelected, isDragging && styles.dropZoneDragging]}
                 onPress={() => fileInputRef.current?.click()}
               >
-                {selectedFile ? (
-                  <>
-                    <View style={styles.fileInfo}>
-                      <Text style={styles.fileName} numberOfLines={1}>{selectedFile.name}</Text>
-                      <Text style={styles.fileSize}>{formatFileSize(selectedFile.size)}</Text>
-                    </View>
-                    <Pressable
-                      style={styles.removeFileButton}
-                      onPress={e => { e.stopPropagation(); setSelectedFile(null); setError(null); }}
-                    >
-                      <XIcon width={12} height={12} />
-                      <Text style={styles.removeFileText}>파일 제거</Text>
-                    </Pressable>
-                  </>
-                ) : (
-                  <>
-                    <View style={styles.uploadIconCircle}>
-                      <UploadIcon width={26} height={26} />
-                    </View>
-                    <Text style={styles.dropZoneTitle}>파일을 끌어다 놓거나 클릭해서 선택</Text>
-                    <Text style={styles.dropZoneHint}>엑셀(xlsx·csv) · 이미지(JPG·PNG) · PDF · 최대 10MB · 1개만 첨부</Text>
-                  </>
-                )}
+                <View style={styles.uploadIconCircle}>
+                  <UploadIcon width={26} height={26} />
+                </View>
+                <Text style={styles.dropZoneTitle}>
+                  {selectedFile ? "다른 파일로 교체하려면 끌어다 놓거나 클릭" : "파일을 끌어다 놓거나 클릭해서 선택"}
+                </Text>
+                <Text style={styles.dropZoneHint}>엑셀(xlsx·csv) · 이미지(JPG·PNG) · PDF · 최대 10MB · 1개만 첨부</Text>
               </Pressable>
+
+              {selectedFile && (
+                <View style={styles.fileInfoRow}>
+                  <View style={styles.fileTypeIcon}>
+                    {isImageFile(selectedFile.name)
+                      ? <AttachmentImageIcon width={20} height={20} />
+                      : <AttachmentDocIcon width={20} height={20} />
+                    }
+                  </View>
+                  <View style={styles.fileInfoText}>
+                    <Text style={styles.fileName} numberOfLines={1}>{selectedFile.name}</Text>
+                    <Text style={styles.fileSize}>{formatFileSize(selectedFile.size)}</Text>
+                  </View>
+                  <Pressable
+                    style={styles.fileRemoveButton}
+                    aria-label="제거"
+                    onPress={() => { setSelectedFile(null); setError(null); }}
+                  >
+                    <XIcon width={14} height={14} color={colors.gray600} />
+                  </Pressable>
+                </View>
+              )}
 
               {error && <Text style={styles.errorText}>{error}</Text>}
 
@@ -1204,22 +1217,30 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderStyle: "dashed",
     borderColor: colors.gray400,
-    borderRadius: radii.lg,
+    borderRadius: 14,
     backgroundColor: colors.gray100,
     alignItems: "center",
-    paddingVertical: 28,
-    paddingHorizontal: spacing.lg,
+    paddingVertical: 34,
+    paddingHorizontal: 20,
     gap: 10,
   },
+  dropZoneSelected: { borderColor: colors.gray900 },
   dropZoneDragging: { borderColor: colors.primary, backgroundColor: colors.gray200 },
   uploadIconCircle: { width: 52, height: 52, borderRadius: radii.pill, backgroundColor: colors.gray300, alignItems: "center", justifyContent: "center" },
-  dropZoneTitle: { ...textStyles.h6, color: colors.gray900 },
-  dropZoneHint: { ...textStyles.body5, color: colors.gray600 },
-  fileInfo: { alignItems: "center", gap: 4 },
-  fileName: { ...textStyles.h6, color: colors.gray900, maxWidth: 360 },
-  fileSize: { ...textStyles.body5, color: colors.gray600 },
-  removeFileButton: { flexDirection: "row", alignItems: "center", gap: 4, paddingVertical: 4, paddingHorizontal: 10, borderRadius: radii.sm, backgroundColor: colors.gray200 },
-  removeFileText: { ...textStyles.body5, color: colors.gray700 },
+  dropZoneTitle: { fontFamily: typography.fontFamily.pretendardSemiBold, fontSize: 14, lineHeight: 20, color: "#1F1F1F" },
+  dropZoneHint: { fontFamily: typography.fontFamily.pretendardRegular, fontSize: 12, lineHeight: 18, color: colors.gray600 },
+  fileInfoRow: {
+    flexDirection: "row", alignItems: "center", gap: 12,
+    backgroundColor: colors.gray200, borderRadius: 10, paddingVertical: 10, paddingHorizontal: 12,
+  },
+  fileTypeIcon: {
+    width: 36, height: 36, borderRadius: 9, backgroundColor: colors.itineraryBg,
+    alignItems: "center", justifyContent: "center", flexShrink: 0,
+  },
+  fileInfoText: { flex: 1, minWidth: 0 },
+  fileName: { fontFamily: typography.fontFamily.pretendardSemiBold, fontSize: 13, lineHeight: 18, color: "#1F1F1F" },
+  fileSize: { fontFamily: typography.fontFamily.poppinsMedium, fontSize: 11, lineHeight: 15, color: colors.gray600, marginTop: 2 },
+  fileRemoveButton: { width: 24, height: 24, alignItems: "center", justifyContent: "center", flexShrink: 0 },
 
   errorText: { ...textStyles.body5, color: "#E53E3E" },
 
