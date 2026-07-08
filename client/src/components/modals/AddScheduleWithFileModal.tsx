@@ -23,7 +23,7 @@ import {
   TextInput,
   View,
 } from "react-native";
-import { CategoryPicker, TimePicker } from "@/ui/components/pickers";
+import { AirportPicker, CategoryPicker, TimePicker } from "@/ui/components/pickers";
 import type { ExpenseCategory as ExpenseCategoryType } from "@/types/expense";
 import AiRefreshIcon from "../../../assets/ai_refresh.svg";
 import CheckWhiteIcon from "../../../assets/check_white.svg";
@@ -677,24 +677,28 @@ export default function AddScheduleWithFileModal({
       const arrTime = normalizeHHmm(seg.arr_time ?? seg.arrival_time);
       return (
         <View style={styles.editForm}>
-          <View style={styles.editTimeRow}>
-            <TextInput
-              style={[styles.editInput, styles.editFlightInput]}
+          <View style={[styles.editTimeRow, { zIndex: 1000 }]}>
+            <AirportPicker
               value={String(seg.departure_airport ?? "")}
-              onChangeText={val => setEditSegmentField(idx, "departure_airport", val)}
+              onChange={val => setEditSegmentField(idx, "departure_airport", val)}
               placeholder="출발 공항"
-              placeholderTextColor={colors.gray400}
+              containerStyle={{ flex: 1 }}
+              style={{ borderColor: colors.gray300, borderWidth: 1, borderRadius: 8 }}
+              dropDownContainerStyle={{ borderColor: colors.gray300 }}
+              textStyle={{ ...textStyles.body4, color: colors.gray900 }}
             />
             <Text style={styles.editTimeSep}>→</Text>
-            <TextInput
-              style={[styles.editInput, styles.editFlightInput]}
+            <AirportPicker
               value={String(seg.arrival_airport ?? "")}
-              onChangeText={val => setEditSegmentField(idx, "arrival_airport", val)}
+              onChange={val => setEditSegmentField(idx, "arrival_airport", val)}
               placeholder="도착 공항"
-              placeholderTextColor={colors.gray400}
+              containerStyle={{ flex: 1 }}
+              style={{ borderColor: colors.gray300, borderWidth: 1, borderRadius: 8 }}
+              dropDownContainerStyle={{ borderColor: colors.gray300 }}
+              textStyle={{ ...textStyles.body4, color: colors.gray900 }}
             />
           </View>
-          <View style={styles.editTimeRow}>
+          <View style={[styles.editTimeRow, { zIndex: 20 }]}>
             <View style={styles.editFlightCell}>
               <TextInput
                 style={[styles.editInput, { height: 40, width: "100%" }]}
@@ -713,7 +717,7 @@ export default function AddScheduleWithFileModal({
               />
             </View>
           </View>
-          <View style={styles.editTimeRow}>
+          <View style={[styles.editTimeRow, { zIndex: 10 }]}>
             <View style={styles.editFlightCell}>
               <TextInput
                 style={[styles.editInput, { height: 40, width: "100%" }]}
@@ -1309,7 +1313,7 @@ const styles = StyleSheet.create({
     height: 40,
   },
   editCurrencyOption: {
-    width: 30,
+    width: 40,
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: colors.white,

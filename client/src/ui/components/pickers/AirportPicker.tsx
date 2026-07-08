@@ -27,6 +27,7 @@ interface AirportPickerProps {
   style?: ViewStyle;
   dropDownContainerStyle?: ViewStyle;
   searchTextInputStyle?: TextStyle;
+  textStyle?: TextStyle;
   disabled?: boolean;
 }
 
@@ -50,6 +51,7 @@ export default function AirportPicker({
   style,
   dropDownContainerStyle,
   searchTextInputStyle,
+  textStyle,
   disabled,
 }: AirportPickerProps) {
   const [searchQuery, setSearchQuery] = useState("");
@@ -150,7 +152,7 @@ export default function AirportPicker({
             dropDownContainerStyle,
           ]}
           containerStyle={[styles.dropdownOuter, { width: "100%" }]}
-          textStyle={{
+          textStyle={textStyle ?? {
             fontSize: 14,
             color: colors.black,
           }}
