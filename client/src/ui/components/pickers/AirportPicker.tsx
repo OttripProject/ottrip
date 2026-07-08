@@ -171,9 +171,9 @@ export default function AirportPicker({
             fontWeight: "bold",
           }}
           ArrowDownIconComponent={() => (
-            <DropdownTimeIcon width={16} height={16} />
+            <DropdownTimeIcon width={10} height={10} style={{ opacity: 0.6 }} />
           )}
-          ArrowUpIconComponent={() => <UpperArrowIcon width={16} height={16} />}
+          ArrowUpIconComponent={() => <UpperArrowIcon width={10} height={10} style={{ opacity: 0.6 }} />}
           translation={{ NOTHING_TO_SHOW: "결과가 없습니다" }}
         />
       </View>
