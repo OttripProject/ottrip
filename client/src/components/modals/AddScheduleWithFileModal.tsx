@@ -35,6 +35,7 @@ import CheckWhiteIcon from "../../../assets/check_white.svg";
 import ExpenseCardIcon from "../../../assets/expense_card.svg";
 import UpdateIcon from "../../../assets/update.svg";
 import UploadIcon from "../../../assets/upload_tray.svg";
+import AiAnalyzeErrorBanner from "@/components/AiAnalyzeErrorBanner";
 import XIcon from "../../../assets/close_sm.svg";
 
 dayjs.locale("ko");
@@ -78,9 +79,9 @@ const EXPENSE_CATEGORY_LABEL: Record<string, string> = {
 };
 
 function validateFile(file: File): string | null {
-  if (file.size > MAX_FILE_SIZE) return "파일 크기는 10MB 이하여야 해요.";
+  if (file.size > MAX_FILE_SIZE) return "파일 크기는 10MB 이하만 분석 해요.";
   if (!ALLOWED_MIME_TYPES.includes(file.type))
-    return "지원하지 않는 파일 형식이에요. (이미지·PDF·Excel·CSV)";
+    return "지원하지 않는 파일 형식이에요. (이미지·PDF·Excel)";
   return null;
 }
 
@@ -1044,7 +1045,14 @@ export default function AddScheduleWithFileModal({
                 </View>
               )}
 
-              {error && <Text style={styles.errorText}>{error}</Text>}
+              {error && (
+                <AiAnalyzeErrorBanner
+                  showTitle={false}
+                  showRetry={false}
+                  message={error}
+                  style={{ paddingVertical: 10, marginTop: 0 }}
+                />
+              )}
 
               <View style={styles.buttonRow}>
                 <Pressable style={styles.cancelButton} onPress={onClose}>
@@ -1303,7 +1311,6 @@ const styles = StyleSheet.create({
   fileRemoveButton: { width: 24, height: 24, alignItems: "center", justifyContent: "center", flexShrink: 0 },
 
   errorText: { ...textStyles.body5, color: "#E53E3E" },
-
   // Empty state
   emptyContainer: {
     flex: 1, alignItems: "center", justifyContent: "center",

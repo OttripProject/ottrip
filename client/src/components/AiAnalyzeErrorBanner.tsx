@@ -1,5 +1,5 @@
 import { textStyles } from "@/ui/tokens/typography";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View, type ViewStyle } from "react-native";
 import ErrorTriangleIcon from "../../assets/error_triangle.svg";
 import RetryIcon from "../../assets/retry.svg";
 
@@ -8,6 +8,7 @@ interface AiAnalyzeErrorBannerProps {
   message?: string;
   showTitle?: boolean;
   showRetry?: boolean;
+  style?: ViewStyle;
 }
 
 export default function AiAnalyzeErrorBanner({
@@ -15,9 +16,10 @@ export default function AiAnalyzeErrorBanner({
   message,
   showTitle = true,
   showRetry = true,
+  style,
 }: AiAnalyzeErrorBannerProps) {
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, style]}>
       <View style={styles.topRow}>
         <ErrorTriangleIcon width={16} height={16} style={styles.icon} />
         <View style={styles.textBlock}>
