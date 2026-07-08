@@ -45,6 +45,7 @@ import {
 import CalendarIcon from "../../../../assets/calender.svg";
 import CloseIcon from "../../../../assets/close_sm.svg";
 import PanelTabSwitcher from "../PanelTabSwitcher";
+import { extendPlanIfNeeded } from "@/utils/extendPlanIfNeeded";
 
 function getCountryCityFromSegments(
   segments:
@@ -511,6 +512,7 @@ export default function AccommodationItem({
             description: formData.name,
           },
         });
+        await extendPlanIfNeeded(planId, planData?.plan, [formData.checkin_date, formData.checkout_date]);
       }
       if (pendingFiles.length > 0 && savedAccommodation?.id) {
         try {

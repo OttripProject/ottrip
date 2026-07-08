@@ -58,6 +58,7 @@ import AccommodationIcon from "../../../assets/week_bar_accommodation.svg";
 import WeekBarLocationIcon from "../../../assets/week_bar_location.svg";
 import WeekBarTimeIcon from "../../../assets/week_bar_time.svg";
 import XIcon from "../../../assets/x.svg";
+import { extendPlanIfNeeded } from "@/utils/extendPlanIfNeeded";
 
 dayjs.locale(ko);
 
@@ -1047,7 +1048,11 @@ export default function WeeklySchedulePanel({
   const trips = externalTrips;
   const planData = externalPlanData;
 
-  const extendPlanDateIfNeeded = async (..._dates: string[]) => {};
+  const extendPlanDateIfNeeded = async (...dates: string[]) => {
+    const plan = planData?.plan;
+    if (!plan?.id) return;
+    await extendPlanIfNeeded(plan.id, plan, dates).catch(() => {});
+  };
 
   useEffect(() => {
     if (Platform.OS !== "web") return;
@@ -3523,10 +3528,10 @@ export default function WeeklySchedulePanel({
         planPublicId={internalSelectedTrip?.publicId ?? ""}
         planStartDate={internalSelectedTrip?.startDate}
         planEndDate={internalSelectedTrip?.endDate}
-        onPlanDatesExtended={(newStart, newEnd) => {
-          setInternalSelectedTrip((prev: any) =>
-            prev ? { ...prev, startDate: newStart, endDate: newEnd } : prev,
-          );
+        onPlanDatesExtended={async (newStart, newEnd) => {
+          const plan = planData?.plan;
+          if (!plan?.id) return;
+          await extendPlanIfNeeded(plan.id, plan, [newStart, newEnd]).catch(() => {});
         }}
         messages={aiMessages}
         onMessagesChange={setAiMessages}
@@ -3551,6 +3556,7 @@ export default function WeeklySchedulePanel({
           internalSelectedTrip ? Number.parseInt(internalSelectedTrip.id) : 0
         }
         planName={internalSelectedTrip?.name ?? ""}
+        plan={planData?.plan ?? undefined}
         onSaveComplete={() => {
           setImportFileOpen(false);
           if (onPlansRefresh) onPlansRefresh();

@@ -50,6 +50,7 @@ import CalendarIcon from "../../../../assets/calender.svg";
 import CloseIcon from "../../../../assets/close_sm.svg";
 import DeleteIcon from "../../../../assets/delete.svg";
 import PanelTabSwitcher from "../PanelTabSwitcher";
+import { extendPlanIfNeeded } from "@/utils/extendPlanIfNeeded";
 
 interface FlightItemProps {
   flight?: any;
@@ -611,6 +612,11 @@ export default function FlightItem({
           },
         });
         savedFlight = await flightsApi.getFlight(createResponse.id);
+        await extendPlanIfNeeded(
+          planId,
+          planData?.plan,
+          flightSegments.flatMap(s => [s.departure_date, s.arrival_date]),
+        );
       }
 
       if (pendingFiles.length > 0 && savedFlight?.id) {

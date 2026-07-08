@@ -63,6 +63,7 @@ import {
 import CalendarIcon from "../../../../assets/calender.svg";
 import CloseIcon from "../../../../assets/close_sm.svg";
 import PanelTabSwitcher from "../PanelTabSwitcher";
+import { extendPlanIfNeeded } from "@/utils/extendPlanIfNeeded";
 
 function getCountryCityFromSegments(
   segments:
@@ -586,6 +587,7 @@ export default function ItineraryItem({
           startTime: formData.startTime,
           endTime: finalEndTime,
         });
+        await extendPlanIfNeeded(planId, planData?.plan, [formData.itineraryDate]);
 
         if (draftExpenses.length > 0) {
           try {

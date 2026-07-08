@@ -4,8 +4,9 @@ import { analyzePlanUpload } from "@/services/aiDocument";
 import { expensesApi } from "@/services/expenses";
 import { flightsApi } from "@/services/flights";
 import { itinerariesApi } from "@/services/itineraries";
-import type { AiDocumentItemDraft } from "@/types/api";
+import type { AiDocumentItemDraft, Plan } from "@/types/api";
 import { ExpenseCategory, ExpenseCurrency } from "@/types/api";
+import { plansApi } from "@/services/plans";
 import { colors } from "@/ui/tokens/colors";
 import { radii } from "@/ui/tokens/radii";
 import { spacing } from "@/ui/tokens/spacing";
@@ -58,6 +59,7 @@ interface AddScheduleWithFileModalProps {
   onClose: () => void;
   planId: number;
   planName: string;
+  plan?: Plan;
   onSaveComplete: () => void;
 }
 
@@ -250,6 +252,35 @@ function getExpenseSummary(items: AiDocumentItemDraft[], selectedIndexes: Set<nu
   return { krwTotal, usdTotal, count };
 }
 
+function collectDatesFromDraft(draft: AiDocumentItemDraft): string[] {
+  const v = draft.payload.values as Record<string, unknown>;
+  const dates: string[] = [];
+  if (draft.itemType === "itinerary") {
+    const d = String(v.itinerary_date ?? v.itineraryDate ?? "").substring(0, 10);
+    if (d) dates.push(d);
+  } else if (draft.itemType === "flight") {
+    const segs = v.segments as unknown[] | undefined;
+    if (Array.isArray(segs)) {
+      for (const seg of segs) {
+        const s = seg as Record<string, unknown>;
+        const dep = String(s.departure_time ?? s.departureTime ?? "").substring(0, 10);
+        const arr = String(s.arrival_time ?? s.arrivalTime ?? "").substring(0, 10);
+        if (dep) dates.push(dep);
+        if (arr) dates.push(arr);
+      }
+    }
+  } else if (draft.itemType === "accommodation") {
+    const ci = String(v.checkin_date ?? v.checkinDate ?? "").substring(0, 10);
+    const co = String(v.checkout_date ?? v.checkoutDate ?? "").substring(0, 10);
+    if (ci) dates.push(ci);
+    if (co) dates.push(co);
+  } else if (draft.itemType === "expense") {
+    const d = String(v.ex_date ?? v.exDate ?? "").substring(0, 10);
+    if (d) dates.push(d);
+  }
+  return dates.filter(d => d && dayjs(d).isValid());
+}
+
 function buildItineraryRequest(v: Record<string, unknown>, planId: number, endTime: string) {
   const dateStr = String(v.itinerary_date ?? v.itineraryDate ?? dayjs().format("YYYY-MM-DD"));
   const startRaw = String(v.start_time ?? v.startTime ?? "09:00");
@@ -295,6 +326,7 @@ function buildFlightRequest(v: Record<string, unknown>, planId: number) {
     bookingReference: (v.booking_reference ?? v.bookingReference) ? String(v.booking_reference ?? v.bookingReference) : null,
     segments,
     expense: ex ? {
+      planId,
       exDate: String(ex.ex_date ?? ex.exDate ?? dayjs().format("YYYY-MM-DD")),
       amount: Number(ex.amount ?? 0),
       category: ExpenseCategory.FLIGHT,
@@ -323,6 +355,7 @@ function buildAccommodationRequest(v: Record<string, unknown>, planId: number) {
     checkoutTime: String(v.checkout_time ?? v.checkoutTime ?? "11:00").substring(0, 5),
     description: v.description ? String(v.description) : undefined,
     expense: {
+      planId,
       exDate: String(ex?.ex_date ?? ex?.exDate ?? ciDate),
       amount: Number(ex?.amount ?? 0),
       category: cat,
@@ -352,6 +385,7 @@ export default function AddScheduleWithFileModal({
   onClose,
   planId,
   planName,
+  plan,
   onSaveComplete,
 }: AddScheduleWithFileModalProps) {
   const [step, setStep] = useState<Step>("upload");
@@ -504,6 +538,8 @@ export default function AddScheduleWithFileModal({
       } else {
         setStep("empty");
       }
+    } catch {
+      setError("파일 분석 중 오류가 발생했어요. 잠시 후 다시 시도해 주세요.");
     } finally {
       setIsAnalyzing(false);
     }
@@ -546,6 +582,25 @@ export default function AddScheduleWithFileModal({
           return [Promise.resolve()];
         }),
       );
+
+      if (plan?.segments && plan.segments.length > 0) {
+        const allDates = selected.flatMap(collectDatesFromDraft);
+        if (allDates.length > 0) {
+          const minDate = allDates.reduce((a, b) => (a < b ? a : b));
+          const maxDate = allDates.reduce((a, b) => (a > b ? a : b));
+          const needsUpdate = minDate < plan.startDate || maxDate > plan.endDate;
+          if (needsUpdate) {
+            const updatedSegments = plan.segments.map((seg, idx) => ({
+              country: seg.country,
+              city: seg.city,
+              startDate: idx === 0 && minDate < seg.startDate ? minDate : seg.startDate,
+              endDate: idx === plan.segments!.length - 1 && maxDate > seg.endDate ? maxDate : seg.endDate,
+            }));
+            await plansApi.updatePlan(planId, { segments: updatedSegments });
+          }
+        }
+      }
+
       onSaveComplete();
       onClose();
     } finally {
