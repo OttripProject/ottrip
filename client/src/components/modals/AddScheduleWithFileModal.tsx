@@ -1,3 +1,4 @@
+import BaseCalendar from "@/components/popup/calendar/BaseCalendar";
 import { accommodationsApi } from "@/services/accommodations";
 import { analyzePlanUpload } from "@/services/aiDocument";
 import { expensesApi } from "@/services/expenses";
@@ -26,6 +27,7 @@ import {
 import { AirportPicker, CategoryPicker, TimePicker } from "@/ui/components/pickers";
 import type { ExpenseCategory as ExpenseCategoryType } from "@/types/expense";
 import AiRefreshIcon from "../../../assets/ai_refresh.svg";
+import CalendarIcon from "../../../assets/calender.svg";
 import CheckWhiteIcon from "../../../assets/check_white.svg";
 import ExpenseCardIcon from "../../../assets/expense_card.svg";
 import UpdateIcon from "../../../assets/update.svg";
@@ -339,6 +341,8 @@ export default function AddScheduleWithFileModal({
   const [selectedIndexes, setSelectedIndexes] = useState<Set<number>>(new Set());
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [draftEdits, setDraftEdits] = useState<Record<number, Record<string, unknown>>>({});
+  const [showDepDatePicker, setShowDepDatePicker] = useState(false);
+  const [showArrDatePicker, setShowArrDatePicker] = useState(false);
 
   const itineraryEndTimeMap = useMemo(() => {
     const result = new Map<number, string>();
@@ -590,6 +594,8 @@ export default function AddScheduleWithFileModal({
       ),
     );
     setEditingIndex(null);
+    setShowDepDatePicker(false);
+    setShowArrDatePicker(false);
   }
 
   function renderEditFormContent(draft: AiDocumentItemDraft, idx: number) {
@@ -698,15 +704,28 @@ export default function AddScheduleWithFileModal({
               textStyle={{ ...textStyles.body4, color: colors.gray900 }}
             />
           </View>
-          <View style={[styles.editTimeRow, { zIndex: 20 }]}>
-            <View style={styles.editFlightCell}>
-              <TextInput
-                style={[styles.editInput, { height: 40, width: "100%" }]}
-                value={depDate}
-                onChangeText={val => setEditSegmentField(idx, "dep_date", val)}
-                placeholder="출발 날짜 (YYYY-MM-DD)"
-                placeholderTextColor={colors.gray400}
-              />
+          <View style={[styles.editTimeRow, { zIndex: showDepDatePicker ? 2000 : 20 }]}>
+            <View style={[styles.editFlightCell, { position: "relative" }]}>
+              <Pressable
+                style={styles.editDateTrigger}
+                onPress={() => { setShowDepDatePicker(true); setShowArrDatePicker(false); }}
+              >
+                <Text style={depDate ? styles.editDateText : styles.editDatePlaceholder}>
+                  {depDate ? dayjs(depDate).format("YYYY.MM.DD") : "출발 날짜"}
+                </Text>
+                <CalendarIcon width={14} height={14} />
+              </Pressable>
+              {showDepDatePicker && (
+                <BaseCalendar
+                  visible
+                  selectedDate={depDate}
+                  onDayPress={day => { setEditSegmentField(idx, "dep_date", day.dateString); setShowDepDatePicker(false); }}
+                  onClose={() => setShowDepDatePicker(false)}
+                  style={styles.editCalendarPopup}
+                  hideButtons
+                  autoCloseOnSelect
+                />
+              )}
             </View>
             <View style={styles.editFlightCell}>
               <TimePicker
@@ -717,15 +736,28 @@ export default function AddScheduleWithFileModal({
               />
             </View>
           </View>
-          <View style={[styles.editTimeRow, { zIndex: 10 }]}>
-            <View style={styles.editFlightCell}>
-              <TextInput
-                style={[styles.editInput, { height: 40, width: "100%" }]}
-                value={arrDate}
-                onChangeText={val => setEditSegmentField(idx, "arr_date", val)}
-                placeholder="도착 날짜 (YYYY-MM-DD)"
-                placeholderTextColor={colors.gray400}
-              />
+          <View style={[styles.editTimeRow, { zIndex: showArrDatePicker ? 2000 : 10 }]}>
+            <View style={[styles.editFlightCell, { position: "relative" }]}>
+              <Pressable
+                style={styles.editDateTrigger}
+                onPress={() => { setShowArrDatePicker(true); setShowDepDatePicker(false); }}
+              >
+                <Text style={arrDate ? styles.editDateText : styles.editDatePlaceholder}>
+                  {arrDate ? dayjs(arrDate).format("YYYY.MM.DD") : "도착 날짜"}
+                </Text>
+                <CalendarIcon width={14} height={14} />
+              </Pressable>
+              {showArrDatePicker && (
+                <BaseCalendar
+                  visible
+                  selectedDate={arrDate}
+                  onDayPress={day => { setEditSegmentField(idx, "arr_date", day.dateString); setShowArrDatePicker(false); }}
+                  onClose={() => setShowArrDatePicker(false)}
+                  style={styles.editCalendarPopup}
+                  hideButtons
+                  autoCloseOnSelect
+                />
+              )}
             </View>
             <View style={styles.editFlightCell}>
               <TimePicker
@@ -1284,6 +1316,14 @@ const styles = StyleSheet.create({
   editFlightInput: { flex: 1, height: 40, minWidth: 0 },
   editFlightCell: { flex: 1, minWidth: 0 },
   editTimeSep: { ...textStyles.body5, color: colors.gray500 },
+  editDateTrigger: {
+    flexDirection: "row", alignItems: "center", justifyContent: "space-between",
+    height: 40, paddingHorizontal: 10, borderWidth: 1, borderColor: colors.gray300,
+    borderRadius: 8, backgroundColor: colors.white,
+  },
+  editDateText: { ...textStyles.body4, color: colors.gray900 },
+  editDatePlaceholder: { ...textStyles.body4, color: colors.gray400 },
+  editCalendarPopup: { position: "absolute", top: 44, left: 0, zIndex: 30000 },
   editCategoryFixed: {
     height: 40, paddingHorizontal: 16, borderWidth: 1, borderColor: colors.gray300,
     borderRadius: 8, alignItems: "center", justifyContent: "center", flexShrink: 0,
