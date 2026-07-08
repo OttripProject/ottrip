@@ -105,8 +105,8 @@ function getFileTypeLabel(filename: string): string {
 
 function getFileTypeBadgeColors(label: string): { bg: string; text: string } {
   if (label === "XLS" || label === "CSV") return { bg: "#E7F7EC", text: "#139D57" };
-  if (label === "IMG") return { bg: "#EAF1FF", text: "#1A66E0" };
-  return { bg: "#FEE2E2", text: "#E53E3E" };
+  if (label === "IMG") return { bg: "#EAF1FF", text: colors.primary };
+  return { bg: "#FFE9D6", text: "#B8531A" };
 }
 
 function normalizeHHmm(raw: unknown): string {
@@ -1288,13 +1288,13 @@ const styles = StyleSheet.create({
   analyzingFileBadge: {
     flexDirection: "row", alignItems: "center", gap: 4,
     backgroundColor: colors.gray100, borderRadius: radii.pill,
-    paddingVertical: 4, paddingHorizontal: 10,
+    paddingVertical: 4, paddingHorizontal: 6,
   },
   analyzingFileBadgeCircle: {
-    width: 28, height: 28, borderRadius: 14,
+    width: 20, height: 20, borderRadius: 4,
     alignItems: "center", justifyContent: "center",
   },
-  analyzingFileBadgeType: { fontFamily: typography.fontFamily.poppinsSemiBold, fontSize: 9 },
+  analyzingFileBadgeType: { fontFamily: typography.fontFamily.poppinsSemiBold, fontSize: 8 },
   analyzingFileBadgeName: { fontFamily: typography.fontFamily.pretendardRegular, fontSize: 11, color: colors.gray600, maxWidth: 160 },
 
   // Preview step — summary
