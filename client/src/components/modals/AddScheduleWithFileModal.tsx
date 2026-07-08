@@ -50,7 +50,7 @@ const ALLOWED_MIME_TYPES = [
 ];
 const FILE_ACCEPT = ".csv,.xlsx,.xls,image/jpeg,image/png,application/pdf";
 
-type Step = "upload" | "preview";
+type Step = "upload" | "preview" | "empty";
 
 interface AddScheduleWithFileModalProps {
   visible: boolean;
@@ -501,7 +501,7 @@ export default function AddScheduleWithFileModal({
         setSelectedIndexes(new Set(merged.map((_, i) => i)));
         setStep("preview");
       } else {
-        setError(res.error || "파일에서 일정 정보를 찾지 못했어요.");
+        setStep("empty");
       }
     } finally {
       setIsAnalyzing(false);
@@ -975,6 +975,8 @@ export default function AddScheduleWithFileModal({
               <Text style={styles.description}>
                 {step === "upload"
                   ? "엑셀·이미지·PDF를 올리면 AI가 일정을 정리해 드려요."
+                  : step === "empty"
+                  ? "파일에서 일정 정보를 찾지 못했어요."
                   : `'${planName}'에 추가할 일정을 선택하세요.`}
               </Text>
             </View>
@@ -983,7 +985,7 @@ export default function AddScheduleWithFileModal({
             </Pressable>
           </View>
 
-          {step === "upload" ? (
+          {step === "upload" && (
             isAnalyzing ? (
               <View style={styles.analyzingContainer}>
                 <Spinner size={42} />
@@ -1061,7 +1063,9 @@ export default function AddScheduleWithFileModal({
               </View>
             </>
             )
-          ) : (
+          )}
+
+          {step === "preview" && (
             <>
               {/* 요약 바 */}
               <View style={styles.summaryRow}>
@@ -1210,6 +1214,28 @@ export default function AddScheduleWithFileModal({
               </View>
             </>
           )}
+
+          {step === "empty" && (
+            <>
+              <View style={styles.emptyContainer}>
+                <View style={styles.emptyIconCircle}>
+                  {createElement("svg" as any, { width: 26, height: 26, viewBox: "0 0 24 24", fill: "none" },
+                    createElement("rect" as any, { x: 4, y: 3.5, width: 16, height: 17, rx: 2.5, stroke: "#C4C4C4", strokeWidth: 1.6 }),
+                    createElement("path" as any, { d: "M8 8.5h8M8 12h8M8 15.5h4", stroke: "#D4D4D4", strokeWidth: 1.6, strokeLinecap: "round" }),
+                    createElement("circle" as any, { cx: 17, cy: 17, r: 4.5, fill: "#fff", stroke: "#9B9B9B", strokeWidth: 1.5 }),
+                    createElement("path" as any, { d: "M15.4 17h3.2", stroke: "#9B9B9B", strokeWidth: 1.5, strokeLinecap: "round" }),
+                  )}
+                </View>
+                <Text style={styles.emptyTitle}>분석된 일정이 없어요</Text>
+                <Text style={styles.emptySubtitle}>{"일정 정보를 찾지 못했어요.\n일정표나 예약 내역처럼 정보가 또렷한 파일로 다시 올려보세요."}</Text>
+              </View>
+              <View style={styles.buttonRow}>
+                <Pressable style={styles.saveButton} onPress={() => { setStep("upload"); setError(null); }}>
+                  <Text style={styles.saveButtonText}>다시 올리기</Text>
+                </Pressable>
+              </View>
+            </>
+          )}
         </Pressable>
       </Pressable>
     </Modal>
@@ -1277,6 +1303,18 @@ const styles = StyleSheet.create({
   fileRemoveButton: { width: 24, height: 24, alignItems: "center", justifyContent: "center", flexShrink: 0 },
 
   errorText: { ...textStyles.body5, color: "#E53E3E" },
+
+  // Empty state
+  emptyContainer: {
+    flex: 1, alignItems: "center", justifyContent: "center",
+    gap: 8, paddingVertical: 40, paddingHorizontal: 20, textAlign: "center" as any,
+  },
+  emptyIconCircle: {
+    width: 56, height: 56, borderRadius: radii.pill,
+    backgroundColor: colors.gray200, alignItems: "center", justifyContent: "center", marginBottom: 6,
+  },
+  emptyTitle: { fontFamily: typography.fontFamily.pretendardSemiBold, fontSize: 15, lineHeight: 22, color: "#1F1F1F" },
+  emptySubtitle: { fontFamily: typography.fontFamily.pretendardRegular, fontSize: 12.5, lineHeight: 19, color: colors.gray600, textAlign: "center" },
 
   // 분석 중 UI
   analyzingContainer: {
