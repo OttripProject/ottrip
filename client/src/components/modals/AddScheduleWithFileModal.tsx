@@ -343,6 +343,7 @@ export default function AddScheduleWithFileModal({
   const [draftEdits, setDraftEdits] = useState<Record<number, Record<string, unknown>>>({});
   const [showDepDatePicker, setShowDepDatePicker] = useState(false);
   const [showArrDatePicker, setShowArrDatePicker] = useState(false);
+  const [showExpenseDatePicker, setShowExpenseDatePicker] = useState(false);
   const [isPickerOpen, setIsPickerOpen] = useState(false);
 
   const itineraryEndTimeMap = useMemo(() => {
@@ -597,6 +598,7 @@ export default function AddScheduleWithFileModal({
     setEditingIndex(null);
     setShowDepDatePicker(false);
     setShowArrDatePicker(false);
+    setShowExpenseDatePicker(false);
     setIsPickerOpen(false);
   }
 
@@ -903,13 +905,28 @@ export default function AddScheduleWithFileModal({
               />
             </View>
           </View>
-          <TextInput
-            style={styles.editInput}
-            value={String(v.ex_date ?? "").substring(0, 10)}
-            onChangeText={val => setEditField(idx, "ex_date", val)}
-            placeholder="날짜 (YYYY-MM-DD)"
-            placeholderTextColor={colors.gray400}
-          />
+          <View style={{ position: "relative", zIndex: showExpenseDatePicker ? 2000 : 1 }}>
+            <Pressable
+              style={styles.editDateTrigger}
+              onPress={() => setShowExpenseDatePicker(true)}
+            >
+              <Text style={String(v.ex_date ?? "") ? styles.editDateText : styles.editDatePlaceholder}>
+                {String(v.ex_date ?? "") ? dayjs(String(v.ex_date).substring(0, 10)).format("YYYY.MM.DD") : "날짜"}
+              </Text>
+              <CalendarIcon width={14} height={14} />
+            </Pressable>
+            {showExpenseDatePicker && (
+              <BaseCalendar
+                visible
+                selectedDate={String(v.ex_date ?? "").substring(0, 10)}
+                onDayPress={day => { setEditField(idx, "ex_date", day.dateString); setShowExpenseDatePicker(false); }}
+                onClose={() => setShowExpenseDatePicker(false)}
+                style={styles.editCalendarPopup}
+                hideButtons
+                autoCloseOnSelect
+              />
+            )}
+          </View>
           <Pressable style={styles.editDoneButton} onPress={e => { e.stopPropagation(); finishEdit(idx); }}>
             <Text style={styles.editDoneButtonText}>완료</Text>
           </Pressable>
@@ -1035,7 +1052,7 @@ export default function AddScheduleWithFileModal({
               <ScrollView
                 style={styles.itemList}
                 showsVerticalScrollIndicator={false}
-                contentContainerStyle={(showDepDatePicker || showArrDatePicker || isPickerOpen) ? { paddingBottom: 150 } : undefined}
+                contentContainerStyle={(showDepDatePicker || showArrDatePicker || showExpenseDatePicker || isPickerOpen) ? { paddingBottom: 120 } : undefined}
               >
                 {items.map((draft, i) => {
                   const isSelected = selectedIndexes.has(i);
