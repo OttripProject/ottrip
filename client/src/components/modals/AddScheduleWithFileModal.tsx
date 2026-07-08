@@ -26,6 +26,7 @@ import {
 } from "react-native";
 import { AirportPicker, CategoryPicker, TimePicker } from "@/ui/components/pickers";
 import type { ExpenseCategory as ExpenseCategoryType } from "@/types/expense";
+import Spinner from "@/ui/components/Spinner";
 import AiRefreshIcon from "../../../assets/ai_refresh.svg";
 import AttachmentDocIcon from "../../../assets/mobile_attachment_document.svg";
 import AttachmentImageIcon from "../../../assets/mobile_attachment_image.svg";
@@ -92,6 +93,20 @@ function formatFileSize(bytes: number): string {
 function isImageFile(filename: string): boolean {
   const ext = filename.split(".").pop()?.toLowerCase() ?? "";
   return ["jpg", "jpeg", "png"].includes(ext);
+}
+
+function getFileTypeLabel(filename: string): string {
+  const ext = filename.split(".").pop()?.toUpperCase() ?? "";
+  if (["XLSX", "XLS"].includes(ext)) return "XLS";
+  if (ext === "CSV") return "CSV";
+  if (ext === "PDF") return "PDF";
+  return "IMG";
+}
+
+function getFileTypeBadgeColors(label: string): { bg: string; text: string } {
+  if (label === "XLS" || label === "CSV") return { bg: "#E7F7EC", text: "#139D57" };
+  if (label === "IMG") return { bg: "#EAF1FF", text: "#1A66E0" };
+  return { bg: "#FEE2E2", text: "#E53E3E" };
 }
 
 function normalizeHHmm(raw: unknown): string {
@@ -969,6 +984,27 @@ export default function AddScheduleWithFileModal({
           </View>
 
           {step === "upload" ? (
+            isAnalyzing ? (
+              <View style={styles.analyzingContainer}>
+                <Spinner size={42} />
+                <View style={styles.analyzingTextGroup}>
+                  <Text style={styles.analyzingTitle}>AI가 일정을 분석하고 있어요</Text>
+                  <Text style={styles.analyzingSubtitle}>날짜·시간·장소를 정리하는 중...</Text>
+                </View>
+                {selectedFile && (() => {
+                  const label = getFileTypeLabel(selectedFile.name);
+                  const { bg, text } = getFileTypeBadgeColors(label);
+                  return (
+                    <View style={styles.analyzingFileBadge}>
+                      <View style={[styles.analyzingFileBadgeCircle, { backgroundColor: bg }]}>
+                        <Text style={[styles.analyzingFileBadgeType, { color: text }]}>{label}</Text>
+                      </View>
+                      <Text style={styles.analyzingFileBadgeName} numberOfLines={1}>{selectedFile.name}</Text>
+                    </View>
+                  );
+                })()}
+              </View>
+            ) : (
             <>
               <Pressable
                 ref={dropZoneRef}
@@ -1018,15 +1054,13 @@ export default function AddScheduleWithFileModal({
                   disabled={!selectedFile || isAnalyzing}
                 >
                   <LinearGradient colors={colors.aiGrad} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.aiButtonGradient}>
-                    {isAnalyzing
-                      ? <ActivityIndicator size="small" color={colors.white} />
-                      : <AiRefreshIcon width={14} height={14} color={colors.white} />
-                    }
-                    <Text style={styles.aiButtonText}>{isAnalyzing ? "분석 중..." : "AI로 분석"}</Text>
+                    <AiRefreshIcon width={14} height={14} color={colors.white} />
+                    <Text style={styles.aiButtonText}>AI로 분석</Text>
                   </LinearGradient>
                 </Pressable>
               </View>
             </>
+            )
           ) : (
             <>
               {/* 요약 바 */}
@@ -1243,6 +1277,25 @@ const styles = StyleSheet.create({
   fileRemoveButton: { width: 24, height: 24, alignItems: "center", justifyContent: "center", flexShrink: 0 },
 
   errorText: { ...textStyles.body5, color: "#E53E3E" },
+
+  // 분석 중 UI
+  analyzingContainer: {
+    flex: 1, alignItems: "center", justifyContent: "center", gap: 20, paddingVertical: 40,
+  },
+  analyzingTextGroup: { alignItems: "center", gap: 6 },
+  analyzingTitle: { ...textStyles.h5, color: colors.gray900 },
+  analyzingSubtitle: { ...textStyles.body5, color: colors.gray500 },
+  analyzingFileBadge: {
+    flexDirection: "row", alignItems: "center", gap: 4,
+    backgroundColor: colors.gray100, borderRadius: radii.pill,
+    paddingVertical: 4, paddingHorizontal: 10,
+  },
+  analyzingFileBadgeCircle: {
+    width: 28, height: 28, borderRadius: 14,
+    alignItems: "center", justifyContent: "center",
+  },
+  analyzingFileBadgeType: { fontFamily: typography.fontFamily.poppinsSemiBold, fontSize: 9 },
+  analyzingFileBadgeName: { fontFamily: typography.fontFamily.pretendardRegular, fontSize: 11, color: colors.gray600, maxWidth: 160 },
 
   // Preview step — summary
   summaryRow: {
