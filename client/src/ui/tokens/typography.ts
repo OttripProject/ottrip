@@ -84,7 +84,7 @@ export const textStyles: Record<string, TextStyle> = {
     fontFamily: typography.fontFamily.pretendardSemiBold,
     fontSize: 9,
     lineHeight: 14,
-    color: colors.black,    
+    color: colors.black,
   },
   body1: {
     fontFamily: typography.fontFamily.pretendardRegular,

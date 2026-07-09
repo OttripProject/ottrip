@@ -43,7 +43,11 @@ export default function HeaderPanel() {
             >
               {profile?.isGuest ? "게스트" : (profile?.nickname ?? "프로필")}
             </Text>
-            <DownArrowIcon width={10} height={10} style={{ opacity: 0.6, marginLeft: 8 }} />
+            <DownArrowIcon
+              width={10}
+              height={10}
+              style={{ opacity: 0.6, marginLeft: 8 }}
+            />
           </Pressable>
         </View>
       </View>

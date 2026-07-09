@@ -7,6 +7,7 @@ import type {
   AiDocumentItemDraft,
   AiDocumentItemType,
   DocumentUploadAnalyzeResponse,
+  PlanUploadAnalyzeResponse,
 } from "../types/api";
 import api from "./api";
 
@@ -89,7 +90,7 @@ function normalizeDraftPayload(raw: unknown): {
   return { values, fieldMeta };
 }
 
-function normalizeItemDraft(raw: unknown): AiDocumentItemDraft | null {
+export function normalizeItemDraft(raw: unknown): AiDocumentItemDraft | null {
   if (!raw || typeof raw !== "object") return null;
   const d = raw as Record<string, unknown>;
   const rawType = d.itemType ?? d.item_type ?? d.ItemType;
@@ -285,7 +286,74 @@ export async function parseTextToItem(
   return parsed.error ? parsed : normalizeAnalyzeHttpError(status, data);
 }
 
+function normalizePlanUploadResponse(data: unknown): PlanUploadAnalyzeResponse {
+  if (!data || typeof data !== "object") {
+    return {
+      success: false,
+      items: [],
+      error: "응답 형식이 올바르지 않습니다.",
+    };
+  }
+  const o = data as Record<string, unknown>;
+  const success = Boolean(o.success ?? o.Success);
+  const err = o.error ?? o.Error;
+  const itemsRaw = o.items ?? o.Items;
+  const items: AiDocumentItemDraft[] = [];
+  if (Array.isArray(itemsRaw)) {
+    for (const raw of itemsRaw) {
+      const draft = normalizeItemDraft(raw);
+      if (draft) items.push(draft);
+    }
+  }
+  return {
+    success,
+    items,
+    error: typeof err === "string" ? err : null,
+  };
+}
+
+export async function analyzePlanUpload(
+  file: AnalyzeUploadFileInput,
+  options?: { filename?: string },
+): Promise<PlanUploadAnalyzeResponse> {
+  const form = new FormData();
+  const fallbackName = options?.filename ?? "upload";
+  appendAnalyzeUploadFile(form, file, fallbackName);
+
+  const response = await api.post<unknown>(
+    "/private/ai/analyze-plan-upload",
+    form,
+    {
+      timeout: 120_000,
+      validateStatus: status =>
+        status === 200 || status === 400 || status === 422,
+      transformRequest: [
+        (data, headers) => {
+          if (typeof FormData !== "undefined" && data instanceof FormData) {
+            delete (headers as Record<string, unknown>)["Content-Type"];
+          }
+          return data;
+        },
+      ],
+    },
+  );
+
+  const { status, data } = response;
+  if (status === 200) {
+    return normalizePlanUploadResponse(data);
+  }
+  if (data && typeof data === "object") {
+    const o = data as Record<string, unknown>;
+    const detail = o.detail;
+    if (typeof detail === "string" && detail.trim()) {
+      return { success: false, items: [], error: detail.trim() };
+    }
+  }
+  return { success: false, items: [], error: "요청을 처리하지 못했습니다." };
+}
+
 export const aiDocumentApi = {
   analyzeUpload: analyzeDocumentUpload,
+  analyzePlanUpload,
   parseText: parseTextToItem,
 };

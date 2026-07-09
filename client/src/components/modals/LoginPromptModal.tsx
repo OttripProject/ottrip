@@ -1,8 +1,8 @@
-import LockKeyholeIcon from "../../../assets/lock_keyhole.svg";
 import { colors } from "@/ui/tokens/colors";
 import { spacing } from "@/ui/tokens/spacing";
 import { textStyles } from "@/ui/tokens/typography";
 import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
+import LockKeyholeIcon from "../../../assets/lock_keyhole.svg";
 
 interface LoginPromptModalProps {
   visible: boolean;
@@ -31,7 +31,9 @@ export default function LoginPromptModal({
           <Text style={styles.title}>로그인이 필요해요</Text>
 
           <Text style={styles.description}>
-            {"이 기능은 로그인이 필요한 기능입니다.\n로그인하시면 내 일정으로 저장할 수 있어요."}
+            {
+              "이 기능은 로그인이 필요한 기능입니다.\n로그인하시면 내 일정으로 저장할 수 있어요."
+            }
           </Text>
 
           <View style={styles.buttonRow}>

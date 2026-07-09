@@ -1,12 +1,12 @@
 import TripFormModal from "@/components/modals/TripFormModal";
 import { useTripForm } from "@/hooks/useTripForm";
 import type { CreatePlanRequest, Plan } from "@/types/api";
-import { textStyles } from "@/ui/tokens/typography";
 import { colors } from "@/ui/tokens/colors";
+import { textStyles } from "@/ui/tokens/typography";
 import { useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import CalenderIcon from "../../../assets/calender.svg";
-import PlusIcon from "../../../assets/mobile_plus.svg"
+import PlusIcon from "../../../assets/mobile_plus.svg";
 
 interface EmptyPlanPanelProps {
   onPlanAdd: (planData: CreatePlanRequest) => Promise<Plan>;
@@ -64,7 +64,9 @@ export default function EmptyPlanPanel({
           />
         </View>
         <Text style={styles.title}>등록된 여행이 없어요</Text>
-        <Text style={styles.subtitle}>새 여행을 추가하고 일정을 만들어 보세요</Text>
+        <Text style={styles.subtitle}>
+          새 여행을 추가하고 일정을 만들어 보세요
+        </Text>
         <Pressable style={styles.button} onPress={() => setShowModal(true)}>
           <PlusIcon width={14} height={14} color={colors.white} />
           <Text style={styles.buttonText}>새 여행 추가</Text>

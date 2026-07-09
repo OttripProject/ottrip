@@ -182,10 +182,7 @@ export default function DetailsPanel({
 
     // 아무것도 선택되지 않은 경우 - 리스트 표시
     if (!activeTab) {
-      return (
-        <View style={styles.placeholder}>
-        </View>
-      );
+      return <View style={styles.placeholder}></View>;
     }
 
     switch (activeTab) {
@@ -250,18 +247,13 @@ export default function DetailsPanel({
         );
 
       default:
-        return (
-          <View style={styles.placeholder}>
-          </View>
-        );
+        return <View style={styles.placeholder}></View>;
     }
   };
 
   return (
     <PanelLayout style={styles.container}>
-      <Animated.View
-        style={[styles.content, { opacity: fadeAnim }]}
-      >
+      <Animated.View style={[styles.content, { opacity: fadeAnim }]}>
         {renderContent()}
       </Animated.View>
     </PanelLayout>

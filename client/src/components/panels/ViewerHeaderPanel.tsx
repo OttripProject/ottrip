@@ -1,9 +1,9 @@
-import BookmarkSaveIcon from "../../../assets/bookmark_save.svg";
-import ViewerPersonIcon from "../../../assets/viewer_person.svg";
-import XIcon from "../../../assets/x.svg";
 import { colors } from "@/ui/tokens/colors";
 import { textStyles } from "@/ui/tokens/typography";
 import { Pressable, StyleSheet, Text, View } from "react-native";
+import BookmarkSaveIcon from "../../../assets/bookmark_save.svg";
+import ViewerPersonIcon from "../../../assets/viewer_person.svg";
+import XIcon from "../../../assets/x.svg";
 
 interface ViewerHeaderPanelProps {
   planTitle: string;
@@ -29,7 +29,11 @@ export default function ViewerHeaderPanel({
         <View style={styles.spacer} />
 
         <Pressable onPress={onSave} style={styles.saveButton}>
-          <BookmarkSaveIcon width={14} height={14} style={styles.saveButtonIcon} />
+          <BookmarkSaveIcon
+            width={14}
+            height={14}
+            style={styles.saveButtonIcon}
+          />
           <Text style={styles.saveButtonText}>내 일정으로 저장</Text>
         </Pressable>
 

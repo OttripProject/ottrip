@@ -21,8 +21,8 @@ import {
   categoryColors,
   categoryLabels,
 } from "@/types/expense";
-import AttachmentSection from "@/ui/components/attachmentSection";
 import CurrencyToggle from "@/ui/components/CurrencyToggle";
+import AttachmentSection from "@/ui/components/attachmentSection";
 import type { AiAttachmentAnalyzeSelection } from "@/ui/components/attachmentSection.types";
 import { pendingAiFileKey } from "@/ui/components/attachmentSection.types";
 import Input from "@/ui/components/input/Input";
@@ -60,18 +60,22 @@ import {
   Text,
   View,
 } from "react-native";
-import PanelTabSwitcher from "../PanelTabSwitcher";
-import AddIcon from "../../../../assets/add.svg";
 import CalendarIcon from "../../../../assets/calender.svg";
-import DeleteIcon from "../../../../assets/delete.svg";
 import CloseIcon from "../../../../assets/close_sm.svg";
+import PanelTabSwitcher from "../PanelTabSwitcher";
+import { extendPlanIfNeeded } from "@/utils/extendPlanIfNeeded";
 
 function getCountryCityFromSegments(
-  segments: { startDate: string; endDate: string; country: string; city: string }[] | undefined | null,
+  segments:
+    | { startDate: string; endDate: string; country: string; city: string }[]
+    | undefined
+    | null,
   date: string,
 ) {
   if (!segments || !date) return null;
-  const matches = segments.filter(s => s.startDate <= date && date <= s.endDate);
+  const matches = segments.filter(
+    s => s.startDate <= date && date <= s.endDate,
+  );
   if (matches.length === 0) return null;
   const last = matches[matches.length - 1];
   return { country: last.country, city: last.city };
@@ -146,7 +150,10 @@ export default function ItineraryItem({
   React.useEffect(() => {
     if (selectedDate && !itinerary) {
       const dateStr = dayjs(selectedDate).format("YYYY-MM-DD");
-      const autoFill = getCountryCityFromSegments(planData?.plan?.segments, dateStr);
+      const autoFill = getCountryCityFromSegments(
+        planData?.plan?.segments,
+        dateStr,
+      );
       setFormData(prev => ({
         ...prev,
         itineraryDate: dateStr,
@@ -201,14 +208,21 @@ export default function ItineraryItem({
     useState<DocumentUploadAnalyzeResponse | null>(null);
   const [isAiAnalyzing, setIsAiAnalyzing] = useState(false);
   const [aiAnalyzeInlineError, setAiAnalyzeInlineError] = useState(false);
-  const [aiAnalyzeInlineErrorMessage, setAiAnalyzeInlineErrorMessage] = useState("");
-  const [aiAnalyzeSizeErrorMessage, setAiAnalyzeSizeErrorMessage] = useState("");
-  const [lastAiSelection, setLastAiSelection] = useState<AiAttachmentAnalyzeSelection | null>(null);
-  const [lastAnalyzeFileName, setLastAnalyzeFileName] = useState<string | null>(null);
+  const [aiAnalyzeInlineErrorMessage, setAiAnalyzeInlineErrorMessage] =
+    useState("");
+  const [aiAnalyzeSizeErrorMessage, setAiAnalyzeSizeErrorMessage] =
+    useState("");
+  const [lastAiSelection, setLastAiSelection] =
+    useState<AiAttachmentAnalyzeSelection | null>(null);
+  const [lastAnalyzeFileName, setLastAnalyzeFileName] = useState<string | null>(
+    null,
+  );
   const lastHandledAiAnalyzeSeqRef = useRef<number | null>(null);
   const aiAnalyzeCancelledRef = useRef(false);
 
-  const [analyzeOriginEntityType, setAnalyzeOriginEntityType] = useState<string | undefined>(undefined);
+  const [analyzeOriginEntityType, setAnalyzeOriginEntityType] = useState<
+    string | undefined
+  >(undefined);
 
   useEffect(() => {
     if (!stagedDocumentAnalyze) return;
@@ -277,7 +291,10 @@ export default function ItineraryItem({
         ? dayjs(selectedDate).add(1, "hour").format("HH:mm")
         : "10:00";
 
-      const autoFill = getCountryCityFromSegments(planData?.plan?.segments, defaultDate);
+      const autoFill = getCountryCityFromSegments(
+        planData?.plan?.segments,
+        defaultDate,
+      );
       setFormData({
         title: "",
         description: "",
@@ -570,6 +587,7 @@ export default function ItineraryItem({
           startTime: formData.startTime,
           endTime: finalEndTime,
         });
+        await extendPlanIfNeeded(planId, planData?.plan, [formData.itineraryDate]);
 
         if (draftExpenses.length > 0) {
           try {
@@ -797,11 +815,13 @@ export default function ItineraryItem({
   };
 
   const allExpenses = useMemo(() => {
-    const draft = readOnly ? [] : draftExpenses.map((exp, idx) => ({
-      ...exp,
-      id: `draft-${idx}`,
-      isDraft: true,
-    }));
+    const draft = readOnly
+      ? []
+      : draftExpenses.map((exp, idx) => ({
+          ...exp,
+          id: `draft-${idx}`,
+          isDraft: true,
+        }));
     const saved = expenses.map(exp => ({ ...exp, isDraft: false }));
     return [...draft, ...saved];
   }, [draftExpenses, expenses, readOnly]);
@@ -820,12 +840,13 @@ export default function ItineraryItem({
         selection.kind === "existing"
           ? existingAttachments.find(a => a.id === selection.id)
           : undefined;
-      const oversizeBytes =
-        oversizeFile?.size ?? oversizeExisting?.fileSize;
+      const oversizeBytes = oversizeFile?.size ?? oversizeExisting?.fileSize;
       const oversizeName =
         oversizeFile?.name ?? oversizeExisting?.fileName ?? "파일";
       if (oversizeBytes !== undefined && oversizeBytes > AI_MAX_SIZE) {
-        setAiAnalyzeSizeErrorMessage(`"${oversizeName}"은(는) 10MB를 넘어 분석할 수 없어요.`);
+        setAiAnalyzeSizeErrorMessage(
+          `"${oversizeName}"은(는) 10MB를 넘어 분석할 수 없어요.`,
+        );
         return;
       }
       aiAnalyzeCancelledRef.current = false;
@@ -851,10 +872,12 @@ export default function ItineraryItem({
         }
         setAiAnalyzeResult(res);
         setAiAnalyzeModalVisible(true);
-      } catch (e) {
+      } catch (_e) {
         if (aiAnalyzeCancelledRef.current) return;
         setLastAiSelection(selection);
-        setAiAnalyzeInlineErrorMessage("분석 서버에 연결하지 못했어요. 잠시 후 다시 시도해 주세요.");
+        setAiAnalyzeInlineErrorMessage(
+          "분석 서버에 연결하지 못했어요. 잠시 후 다시 시도해 주세요.",
+        );
         setAiAnalyzeInlineError(true);
       } finally {
         setIsAiAnalyzing(false);
@@ -886,7 +909,9 @@ export default function ItineraryItem({
           <CloseIcon width={12} height={12} color={colors.gray600} />
         </Pressable>
       </View>
-      {!readOnly && <PanelTabSwitcher activeTab={activeTab} onTabChange={onTabChange} />}
+      {!readOnly && (
+        <PanelTabSwitcher activeTab={activeTab} onTabChange={onTabChange} />
+      )}
       <ScrollView
         style={styles.container}
         contentContainerStyle={[
@@ -897,7 +922,9 @@ export default function ItineraryItem({
       >
         <View style={styles.contentWrapper}>
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>제목 <Text style={{ color: colors.warning }}>*</Text></Text>
+            <Text style={styles.label}>
+              제목 <Text style={{ color: colors.warning }}>*</Text>
+            </Text>
             <Input
               variant={readOnly ? "outlined" : "filled"}
               placeholder={PLACEHOLDERS.itinerary.titleForm}
@@ -993,7 +1020,9 @@ export default function ItineraryItem({
               { zIndex: showDatePicker ? 20000 : 1 },
             ]}
           >
-            <Text style={styles.label}>날짜 <Text style={{ color: colors.warning }}>*</Text></Text>
+            <Text style={styles.label}>
+              날짜 <Text style={{ color: colors.warning }}>*</Text>
+            </Text>
             <Pressable
               style={readOnly ? styles.readOnlyDateInput : styles.dateInput}
               onPress={() => !readOnly && setShowDatePicker(!showDatePicker)}
@@ -1032,7 +1061,9 @@ export default function ItineraryItem({
             ]}
           >
             <View style={[styles.inputGroup, styles.halfWidth]}>
-              <Text style={styles.label}>시작 시간 <Text style={{ color: colors.warning }}>*</Text></Text>
+              <Text style={styles.label}>
+                시작 시간 <Text style={{ color: colors.warning }}>*</Text>
+              </Text>
               <TimePicker
                 value={formData.startTime}
                 onChange={time =>
@@ -1057,7 +1088,9 @@ export default function ItineraryItem({
               />
             </View>
             <View style={[styles.inputGroup, styles.halfWidth]}>
-              <Text style={styles.label}>종료 시간 <Text style={{ color: colors.warning }}>*</Text></Text>
+              <Text style={styles.label}>
+                종료 시간 <Text style={{ color: colors.warning }}>*</Text>
+              </Text>
               <TimePicker
                 value={formData.endTime}
                 onChange={time =>
@@ -1111,11 +1144,22 @@ export default function ItineraryItem({
                         }}
                         disabled={readOnly}
                       >
-                        <View style={[styles.expenseDot, { backgroundColor: categoryColors[cat] }]} />
-                        <Text style={styles.expenseCategoryLabel} numberOfLines={1}>
+                        <View
+                          style={[
+                            styles.expenseDot,
+                            { backgroundColor: categoryColors[cat] },
+                          ]}
+                        />
+                        <Text
+                          style={styles.expenseCategoryLabel}
+                          numberOfLines={1}
+                        >
                           {categoryLabels[cat]}
                         </Text>
-                        <Text style={styles.expenseDescription} numberOfLines={1}>
+                        <Text
+                          style={styles.expenseDescription}
+                          numberOfLines={1}
+                        >
                           {expense.description || "—"}
                         </Text>
                         <Text style={styles.expenseAmount}>
@@ -1140,7 +1184,11 @@ export default function ItineraryItem({
                               }
                             }}
                           >
-                            <CloseIcon width={8} height={8} color={colors.gray500} />
+                            <CloseIcon
+                              width={8}
+                              height={8}
+                              color={colors.gray500}
+                            />
                           </Pressable>
                         )}
                       </Pressable>
@@ -1164,7 +1212,9 @@ export default function ItineraryItem({
                   }}
                 >
                   <Text style={styles.addButtonPlus}>+</Text>
-                  <Text style={styles.addExpenseButtonText}>비용 내역 추가</Text>
+                  <Text style={styles.addExpenseButtonText}>
+                    비용 내역 추가
+                  </Text>
                 </Pressable>
               )}
 
@@ -1191,13 +1241,17 @@ export default function ItineraryItem({
                       <Text style={styles.label}>통화</Text>
                       <CurrencyToggle
                         value={expenseForm.currency}
-                        onChange={c => setExpenseForm({ ...expenseForm, currency: c })}
+                        onChange={c =>
+                          setExpenseForm({ ...expenseForm, currency: c })
+                        }
                       />
                     </View>
                   </View>
 
                   <View style={styles.inputGroup}>
-                    <Text style={styles.label}>금액 <Text style={{ color: colors.warning }}>*</Text></Text>
+                    <Text style={styles.label}>
+                      금액 <Text style={{ color: colors.warning }}>*</Text>
+                    </Text>
                     <Input
                       variant="outlined"
                       placeholder={PLACEHOLDERS.expense.amount}

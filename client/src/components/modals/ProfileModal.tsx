@@ -28,10 +28,9 @@ import TermsDetailModal from "@/components/modals/TermsDetailModal";
 import TermsPolicyPickerModal from "@/components/modals/TermsPolicyPickerModal";
 import type { TermsKey } from "@/constants/terms";
 import { guestPrompt } from "@/utils/guestPrompt";
-import CopyIcon from "../../../assets/copy.svg";
-import GenderCheckIcon from "../../../assets/gender_check.svg";
-import DocumentIcon from "../../../assets/document.svg";
 import ChatIcon from "../../../assets/chat.svg";
+import CopyIcon from "../../../assets/copy.svg";
+import DocumentIcon from "../../../assets/document.svg";
 import XIcon from "../../../assets/x.svg";
 
 const GENDER_OPTIONS = [
@@ -203,57 +202,79 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
 
           {isGuest ? (
             <View style={styles.cardWrapper}>
-              <Card
-                variant="basic"
-                alignItems="flex-start"
-                minHeight={568}
-              >
+              <Card variant="basic" alignItems="flex-start" minHeight={568}>
                 <Pressable style={styles.guestCloseButton} onPress={onClose}>
                   <XIcon width={24} height={24} fill={colors.black} />
                 </Pressable>
 
                 <Text style={styles.guestTitle}>프로필 설정</Text>
-                <Text style={styles.guestStatusLine}>게스트 · 일정 임시 저장</Text>
+                <Text style={styles.guestStatusLine}>
+                  게스트 · 일정 임시 저장
+                </Text>
                 <Text style={styles.guestDescription}>
                   로그인하면 임시 저장된 일정을 계정과 연동할 수 있어요.
                 </Text>
                 <Pressable
                   disabled={deletingGuestData}
-                  style={[styles.guestLoginButton, deletingGuestData && styles.guestButtonDisabled]}
+                  style={[
+                    styles.guestLoginButton,
+                    deletingGuestData && styles.guestButtonDisabled,
+                  ]}
                   onPress={handleSignUp}
                 >
                   <Text style={styles.guestLoginButtonText}>로그인</Text>
                 </Pressable>
                 <Pressable
                   disabled={deletingGuestData}
-                  style={[styles.guestDeleteRecordsButton, deletingGuestData && styles.guestButtonDisabled]}
+                  style={[
+                    styles.guestDeleteRecordsButton,
+                    deletingGuestData && styles.guestButtonDisabled,
+                  ]}
                   onPress={handleDeleteTemporaryRecords}
                 >
-                  <Text style={styles.guestDeleteRecordsButtonText}>임시 기록 삭제</Text>
+                  <Text style={styles.guestDeleteRecordsButtonText}>
+                    임시 기록 삭제
+                  </Text>
                 </Pressable>
                 <Text style={styles.guestInquiryTitle}>문의하기</Text>
                 <View style={styles.guestInquiryEmailBox}>
-                  <Text style={styles.guestInquiryEmailText} numberOfLines={1} selectable>
+                  <Text
+                    style={styles.guestInquiryEmailText}
+                    numberOfLines={1}
+                    selectable
+                  >
                     {CONTACT_EMAIL}
                   </Text>
                   <View style={styles.guestInquiryCopyWrap}>
                     {copied ? (
                       <Text style={styles.guestInquiryCopiedText}>복사됨!</Text>
                     ) : (
-                      <Pressable hitSlop={8} style={styles.guestInquiryCopyIcon} onPress={handleCopy}>
-                        <CopyIcon width={16} height={16} fill={colors.gray700} />
+                      <Pressable
+                        hitSlop={8}
+                        style={styles.guestInquiryCopyIcon}
+                        onPress={handleCopy}
+                      >
+                        <CopyIcon
+                          width={16}
+                          height={16}
+                          fill={colors.gray700}
+                        />
                       </Pressable>
                     )}
                   </View>
                 </View>
-                <Text style={styles.guestInquiryReplyText}>최대한 빠르게 답변드리겠습니다.</Text>
+                <Text style={styles.guestInquiryReplyText}>
+                  최대한 빠르게 답변드리겠습니다.
+                </Text>
                 <Pressable
                   style={styles.guestTermsPolicyRow}
                   onPress={() => setTermsPolicyModalOpen(true)}
                   hitSlop={6}
                 >
                   <DocumentIcon width={16} height={16} color={colors.gray800} />
-                  <Text style={styles.guestTermsPolicyText}>약관 및 정책 확인하기</Text>
+                  <Text style={styles.guestTermsPolicyText}>
+                    약관 및 정책 확인하기
+                  </Text>
                 </Pressable>
               </Card>
             </View>
@@ -268,9 +289,15 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
                 <View style={styles.header}>
                   <View style={styles.headerText}>
                     <Text style={styles.title}>프로필 설정</Text>
-                    <Text style={styles.subtitle}>개인정보 및 환경설정을 관리하세요.</Text>
+                    <Text style={styles.subtitle}>
+                      개인정보 및 환경설정을 관리하세요.
+                    </Text>
                   </View>
-                  <Pressable onPress={onClose} hitSlop={8} style={styles.closeButton}>
+                  <Pressable
+                    onPress={onClose}
+                    hitSlop={8}
+                    style={styles.closeButton}
+                  >
                     <XIcon width={14} height={14} color={colors.gray900} />
                   </Pressable>
                 </View>
@@ -296,8 +323,12 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
                     />
                     {nicknameError ? (
                       <Text style={styles.errorText}>{nicknameError}</Text>
-                    ) : !checkingNickname && nickname.trim().length > 0 && nickname !== me?.nickname ? (
-                      <Text style={styles.successText}>사용 가능한 닉네임입니다.</Text>
+                    ) : !checkingNickname &&
+                      nickname.trim().length > 0 &&
+                      nickname !== me?.nickname ? (
+                      <Text style={styles.successText}>
+                        사용 가능한 닉네임입니다.
+                      </Text>
                     ) : null}
                   </View>
 
@@ -313,10 +344,18 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
                         return (
                           <Pressable
                             key={opt.label}
-                            style={[styles.genderChip, selected && styles.genderChipSelected]}
+                            style={[
+                              styles.genderChip,
+                              selected && styles.genderChipSelected,
+                            ]}
                             onPress={() => setGender(opt.value)}
                           >
-                            <Text style={[styles.genderChipText, selected && styles.genderChipTextSelected]}>
+                            <Text
+                              style={[
+                                styles.genderChipText,
+                                selected && styles.genderChipTextSelected,
+                              ]}
+                            >
                               {opt.label}
                             </Text>
                           </Pressable>
@@ -331,12 +370,23 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
 
                 {/* 링크 */}
                 <View style={styles.links}>
-                  <Pressable style={styles.linkRow} onPress={() => setContactOpen(true)}>
+                  <Pressable
+                    style={styles.linkRow}
+                    onPress={() => setContactOpen(true)}
+                  >
                     <ChatIcon width={13} height={13} color={colors.gray900} />
                     <Text style={styles.linkText}>문의하기</Text>
                   </Pressable>
-                  <Pressable style={styles.linkRow} onPress={() => setTermsPolicyModalOpen(true)} hitSlop={6}>
-                    <DocumentIcon width={13} height={13} color={colors.gray900} />
+                  <Pressable
+                    style={styles.linkRow}
+                    onPress={() => setTermsPolicyModalOpen(true)}
+                    hitSlop={6}
+                  >
+                    <DocumentIcon
+                      width={13}
+                      height={13}
+                      color={colors.gray900}
+                    />
                     <Text style={styles.linkText}>약관 및 정책 확인하기</Text>
                   </Pressable>
                 </View>
@@ -354,7 +404,10 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
                   </View>
                   <Pressable
                     disabled={!canSave}
-                    style={[styles.saveButton, !canSave && styles.saveButtonDisabled]}
+                    style={[
+                      styles.saveButton,
+                      !canSave && styles.saveButtonDisabled,
+                    ]}
                     onPress={save}
                   >
                     <Text style={styles.saveButtonText}>저장</Text>
@@ -368,7 +421,10 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
         <Modal visible={contactOpen} transparent animationType="fade">
           <View style={styles.modalOverlay}>
             <View style={styles.contactModalCard}>
-              <Pressable style={styles.contactModalCloseButton} onPress={() => setContactOpen(false)}>
+              <Pressable
+                style={styles.contactModalCloseButton}
+                onPress={() => setContactOpen(false)}
+              >
                 <XIcon width={24} height={24} fill={colors.black} />
               </Pressable>
               <Text style={styles.contactModalTitle}>문의하기</Text>
@@ -376,19 +432,29 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
                 도움이 필요하거나 피드백이 있으시면 연락주세요.
               </Text>
               <View style={styles.contactModalEmailContainer}>
-                <Text style={styles.contactModalEmailText}>{CONTACT_EMAIL}</Text>
+                <Text style={styles.contactModalEmailText}>
+                  {CONTACT_EMAIL}
+                </Text>
                 <View style={styles.contactModalCopyWrapper}>
                   {copied ? (
                     <Text style={styles.contactModalCopiedText}>복사됨!</Text>
                   ) : (
-                    <Pressable style={styles.contactModalCopyIcon} onPress={handleCopy}>
+                    <Pressable
+                      style={styles.contactModalCopyIcon}
+                      onPress={handleCopy}
+                    >
                       <CopyIcon width={16} height={16} fill={colors.gray700} />
                     </Pressable>
                   )}
                 </View>
               </View>
-              <Text style={styles.contactModalReplyText}>최대한 빠르게 답변드리겠습니다.</Text>
-              <Pressable style={styles.contactModalConfirmButton} onPress={() => setContactOpen(false)}>
+              <Text style={styles.contactModalReplyText}>
+                최대한 빠르게 답변드리겠습니다.
+              </Text>
+              <Pressable
+                style={styles.contactModalConfirmButton}
+                onPress={() => setContactOpen(false)}
+              >
                 <Text style={styles.contactModalConfirmButtonText}>확인</Text>
               </Pressable>
             </View>

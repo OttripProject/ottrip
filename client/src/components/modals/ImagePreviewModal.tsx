@@ -1,10 +1,10 @@
 import type { Attachment, Expense } from "@/types/api";
 import { categoryLabels } from "@/types/expense";
-import { formatFileSize } from "@/utils/fileUtils";
 import { colors } from "@/ui/tokens/colors";
 import { radii } from "@/ui/tokens/radii";
 import { spacing } from "@/ui/tokens/spacing";
-import { textStyles, typography } from "@/ui/tokens/typography";
+import { textStyles } from "@/ui/tokens/typography";
+import { formatFileSize } from "@/utils/fileUtils";
 import { useEffect, useState } from "react";
 import { Image, Modal, Pressable, StyleSheet, Text, View } from "react-native";
 import LeftArrowIcon from "../../../assets/left_arrow.svg";

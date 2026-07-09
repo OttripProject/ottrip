@@ -76,7 +76,9 @@ export default function TimePicker({
   const selectedMinute = parsed?.m ?? null;
 
   const [pendingHour, setPendingHour] = useState<number | null>(selectedHour);
-  const [pendingMinute, setPendingMinute] = useState<number | null>(selectedMinute);
+  const [pendingMinute, setPendingMinute] = useState<number | null>(
+    selectedMinute,
+  );
 
   useEffect(() => {
     if (!isFocused) setLocalText(value || "");
@@ -101,9 +103,8 @@ export default function TimePicker({
 
   const handleTextChange = (text: string) => {
     const digits = text.replace(/\D/g, "").slice(0, 4);
-    const formatted = digits.length > 2
-      ? `${digits.slice(0, 2)}:${digits.slice(2)}`
-      : digits;
+    const formatted =
+      digits.length > 2 ? `${digits.slice(0, 2)}:${digits.slice(2)}` : digits;
     setLocalText(formatted);
 
     if (digits.length === 4) {
@@ -140,7 +141,11 @@ export default function TimePicker({
     if (!isHourEnabled(h)) return;
     setPendingHour(h);
     const mins = h === 24 ? [0] : MINUTES_5_STEP;
-    if (pendingMinute === null || !mins.includes(pendingMinute) || !isTimeValid(h, pendingMinute)) {
+    if (
+      pendingMinute === null ||
+      !mins.includes(pendingMinute) ||
+      !isTimeValid(h, pendingMinute)
+    ) {
       setPendingMinute(mins.find(m => isTimeValid(h, m)) ?? 0);
     }
   };
@@ -166,21 +171,32 @@ export default function TimePicker({
   useEffect(() => {
     if (!open) return;
     const hIdx = pendingHour !== null ? pendingHour : 0;
-    const mIdx = pendingMinute !== null ? MINUTES_5_STEP.indexOf(pendingMinute) : 0;
+    const mIdx =
+      pendingMinute !== null ? MINUTES_5_STEP.indexOf(pendingMinute) : 0;
     setTimeout(() => {
-      hourScrollRef.current?.scrollTo({ y: hIdx * ITEM_HEIGHT, animated: false });
-      minuteScrollRef.current?.scrollTo({ y: Math.max(0, mIdx) * ITEM_HEIGHT, animated: false });
+      hourScrollRef.current?.scrollTo({
+        y: hIdx * ITEM_HEIGHT,
+        animated: false,
+      });
+      minuteScrollRef.current?.scrollTo({
+        y: Math.max(0, mIdx) * ITEM_HEIGHT,
+        animated: false,
+      });
     }, 50);
   }, [open]);
 
   const styleObj = style as any;
   const triggerBg = styleObj?.backgroundColor ?? colors.gray200;
   const triggerBorder = styleObj?.borderColor
-    ? { borderWidth: styleObj.borderWidth ?? 1, borderColor: styleObj.borderColor }
+    ? {
+        borderWidth: styleObj.borderWidth ?? 1,
+        borderColor: styleObj.borderColor,
+      }
     : {};
-  const triggerBorderRadius = styleObj?.borderRadius !== undefined
-    ? { borderRadius: styleObj.borderRadius }
-    : {};
+  const triggerBorderRadius =
+    styleObj?.borderRadius !== undefined
+      ? { borderRadius: styleObj.borderRadius }
+      : {};
 
   return (
     <View
@@ -209,7 +225,11 @@ export default function TimePicker({
           editable={!disabled}
           selectTextOnFocus
         />
-        <Pressable onPress={handleToggle} disabled={disabled} style={styles.arrowButton}>
+        <Pressable
+          onPress={handleToggle}
+          disabled={disabled}
+          style={styles.arrowButton}
+        >
           {open ? (
             <UpperArrowIcon width={10} height={10} style={{ opacity: 0.6 }} />
           ) : (
@@ -219,7 +239,14 @@ export default function TimePicker({
       </View>
 
       {open && (
-        <View style={[styles.popup, popupAlign === "right" ? { right: 0, left: undefined } : { left: 0 }]}>
+        <View
+          style={[
+            styles.popup,
+            popupAlign === "right"
+              ? { right: 0, left: undefined }
+              : { left: 0 },
+          ]}
+        >
           <View style={styles.header}>
             <View style={styles.headerCell}>
               <Text style={styles.headerLabel}>시</Text>
@@ -309,7 +336,10 @@ export default function TimePicker({
             <Pressable style={styles.footerBtn} onPress={handleCancel}>
               <Text style={styles.footerBtnTextCancel}>취소</Text>
             </Pressable>
-            <Pressable style={[styles.footerBtn, styles.footerBtnConfirm]} onPress={handleConfirm}>
+            <Pressable
+              style={[styles.footerBtn, styles.footerBtnConfirm]}
+              onPress={handleConfirm}
+            >
               <Text style={styles.footerBtnTextConfirm}>확인</Text>
             </Pressable>
           </View>

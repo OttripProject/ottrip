@@ -1,5 +1,9 @@
 import useDetectClose from "@/hooks/useDetectClose";
-import { type ExpenseCategory, categoryColors, categoryLabels } from "@/types/expense";
+import {
+  type ExpenseCategory,
+  categoryColors,
+  categoryLabels,
+} from "@/types/expense";
 import { colors } from "@/ui/tokens/colors";
 import { radii } from "@/ui/tokens/radii";
 import { textStyles } from "@/ui/tokens/typography";
@@ -54,10 +58,14 @@ export default function CategoryPicker({
   onClose,
 }: CategoryPickerProps) {
   const wrapperRef = useRef<View>(null);
-  const [open, setIsOpen, handleOutsidePress] = useDetectClose(wrapperRef, false);
+  const [open, setIsOpen, _handleOutsidePress] = useDetectClose(
+    wrapperRef,
+    false,
+  );
 
   const items = useMemo(
-    () => CATEGORY_ORDER.map(cat => ({ value: cat, label: categoryLabels[cat] })),
+    () =>
+      CATEGORY_ORDER.map(cat => ({ value: cat, label: categoryLabels[cat] })),
     [],
   );
 
@@ -90,12 +98,25 @@ export default function CategoryPicker({
       >
         <View style={styles.triggerLeft}>
           <View style={[styles.dot, { backgroundColor: dotColor }]} />
-          <Text style={[styles.triggerText, triggerTextStyle]} numberOfLines={1}>{label}</Text>
+          <Text
+            style={[styles.triggerText, triggerTextStyle]}
+            numberOfLines={1}
+          >
+            {label}
+          </Text>
         </View>
         {open ? (
-          <UpperArrowIcon width={iconSize} height={iconSize} style={{ opacity: 0.6 }} />
+          <UpperArrowIcon
+            width={iconSize}
+            height={iconSize}
+            style={{ opacity: 0.6 }}
+          />
         ) : (
-          <DownArrowIcon width={iconSize} height={iconSize} style={{ opacity: 0.6 }} />
+          <DownArrowIcon
+            width={iconSize}
+            height={iconSize}
+            style={{ opacity: 0.6 }}
+          />
         )}
       </Pressable>
 
@@ -114,7 +135,12 @@ export default function CategoryPicker({
                 ]}
                 onPress={() => handleSelect(item.value)}
               >
-                <View style={[styles.dot, { backgroundColor: categoryColors[item.value] }]} />
+                <View
+                  style={[
+                    styles.dot,
+                    { backgroundColor: categoryColors[item.value] },
+                  ]}
+                />
                 <Text style={styles.itemText}>{item.label}</Text>
               </Pressable>
             );

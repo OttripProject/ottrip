@@ -1,14 +1,12 @@
 import { useMe } from "@/hooks/useMe";
+import Spinner from "@/ui/components/Spinner";
 import { colors } from "@/ui/tokens/colors";
-import { radii } from "@/ui/tokens/radii";
 import { spacing } from "@/ui/tokens/spacing";
 import { textStyles } from "@/ui/tokens/typography";
 import { guestPrompt } from "@/utils/guestPrompt";
 import { LinearGradient } from "expo-linear-gradient";
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import {
-  Animated,
-  Easing,
   Modal,
   Platform,
   Pressable,
@@ -19,11 +17,11 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import AddCheckList from "../../../assets/mobile_plus.svg";
 import AiCheckIcon from "../../../assets/ai_check.svg";
-import XIcon from "../../../assets/close_sm.svg";
 import AiRefreshIcon from "../../../assets/ai_refresh.svg";
+import XIcon from "../../../assets/close_sm.svg";
 import DeleteIcon from "../../../assets/delete.svg";
+import AddCheckList from "../../../assets/mobile_plus.svg";
 
 interface ChecklistItem {
   id: number;
@@ -53,64 +51,15 @@ interface AiChecklistListViewModalProps {
   onAddItem: (name: string, reason: string, category: string) => void;
 }
 
-function Spinner({ size = 42, strokeWidth = 3, color = colors.aiInk }: { size?: number; strokeWidth?: number; color?: string }) {
-  const rotation = useRef(new Animated.Value(0)).current;
 
-  useEffect(() => {
-    if (Platform.OS === "web") return;
-    Animated.loop(
-      Animated.timing(rotation, {
-        toValue: 1,
-        duration: 1000,
-        easing: Easing.linear,
-        useNativeDriver: true,
-      })
-    ).start();
-  }, [rotation]);
-
-  if (Platform.OS === "web") {
-    return (
-      <View
-        style={{
-          width: size,
-          height: size,
-          borderRadius: size / 2,
-          borderWidth: strokeWidth,
-          borderColor: `${color}33`,
-          borderTopColor: color,
-          animationName: "spinner-rotate",
-          animationDuration: "1s",
-          animationTimingFunction: "linear",
-          animationIterationCount: "infinite",
-        } as any}
-      />
-    );
-  }
-
-  const spin = rotation.interpolate({ inputRange: [0, 1], outputRange: ["0deg", "360deg"] });
-  return (
-    <Animated.View
-      style={{
-        width: size,
-        height: size,
-        borderRadius: size / 2,
-        borderWidth: strokeWidth,
-        borderColor: `${color}33`,
-        borderTopColor: color,
-        transform: [{ rotate: spin }],
-      }}
-    />
-  );
-}
-
-if (Platform.OS === "web" && typeof document !== "undefined" && !document.getElementById("spinner-keyframes")) {
-  const style = document.createElement("style");
-  style.id = "spinner-keyframes";
-  style.textContent = "@keyframes spinner-rotate { to { transform: rotate(360deg); } }";
-  document.head.appendChild(style);
-}
-
-const CATEGORY_ORDER = ["basicRequired", "basic_required", "scheduleRequired", "schedule_required", "recommended", "optional"];
+const _CATEGORY_ORDER = [
+  "basicRequired",
+  "basic_required",
+  "scheduleRequired",
+  "schedule_required",
+  "recommended",
+  "optional",
+];
 
 const normalizeCategoryKey = (key: string) =>
   key.replace(/_([a-z])/g, (_, c: string) => c.toUpperCase());
@@ -130,7 +79,12 @@ const getCategoryTitle = (categoryKey: string) => {
 const sortCategories = (entries: [string, ChecklistItem[]][]) =>
   [...entries].sort(([a], [b]) => {
     const normalize = normalizeCategoryKey;
-    const orderKeys = ["basicRequired", "scheduleRequired", "recommended", "optional"];
+    const orderKeys = [
+      "basicRequired",
+      "scheduleRequired",
+      "recommended",
+      "optional",
+    ];
     const ai = orderKeys.indexOf(normalize(a));
     const bi = orderKeys.indexOf(normalize(b));
     return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
@@ -183,23 +137,32 @@ export default function AiChecklistListViewModal({
       transparent={true}
       animationType="fade"
       onRequestClose={() => {
-          if (escapeLockRef.current) return;
-          if (addingCategory) {
-            escapeLockRef.current = true;
-            handleCancelAdding();
-            setTimeout(() => { escapeLockRef.current = false; }, 100);
-          } else {
-            onClose();
-          }
-        }}
+        if (escapeLockRef.current) return;
+        if (addingCategory) {
+          escapeLockRef.current = true;
+          handleCancelAdding();
+          setTimeout(() => {
+            escapeLockRef.current = false;
+          }, 100);
+        } else {
+          onClose();
+        }
+      }}
     >
       <Pressable style={styles.modalOverlay} onPress={onClose}>
-        <Pressable style={styles.modalContent} onPress={e => e.stopPropagation()}>
+        <Pressable
+          style={styles.modalContent}
+          onPress={e => e.stopPropagation()}
+        >
           {isLoading && (
             <View style={styles.loadingOverlay}>
               <Spinner />
-              <Text style={styles.loadingTitle}>AI가 체크리스트를 추천하고 있어요</Text>
-              <Text style={styles.loadingSubtitle}>여행 일정을 분석해 필요한 항목을 추가하는 중...</Text>
+              <Text style={styles.loadingTitle}>
+                AI가 체크리스트를 추천하고 있어요
+              </Text>
+              <Text style={styles.loadingSubtitle}>
+                여행 일정을 분석해 필요한 항목을 추가하는 중...
+              </Text>
             </View>
           )}
           <View style={styles.headerSection}>
@@ -237,7 +200,7 @@ export default function AiChecklistListViewModal({
               )}
             </View>
             <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-              <XIcon width={14} height={14} fill={colors.black}/>
+              <XIcon width={14} height={14} fill={colors.black} />
             </TouchableOpacity>
           </View>
           <View style={styles.scrollWrapper}>
@@ -253,27 +216,38 @@ export default function AiChecklistListViewModal({
                         key={categoryKey}
                         style={[
                           styles.readOnlyCategorySection,
-                          sectionIndex > 0 && styles.readOnlyCategorySectionBorder,
+                          sectionIndex > 0 &&
+                            styles.readOnlyCategorySectionBorder,
                         ]}
                       >
                         <View style={styles.readOnlyCategoryHeader}>
                           <Text style={styles.readOnlyCategoryTitle}>
                             {getCategoryTitle(categoryKey)}
                           </Text>
-                          <Text style={styles.readOnlyCategoryCount}>{items.length}개</Text>
+                          <Text style={styles.readOnlyCategoryCount}>
+                            {items.length}개
+                          </Text>
                         </View>
                         {items.map((item, i) => (
-                          <View key={item.id ?? i} style={styles.readOnlyItemRow}>
+                          <View
+                            key={item.id ?? i}
+                            style={styles.readOnlyItemRow}
+                          >
                             <View style={styles.readOnlyItemDot} />
                             {!item.isCustom && (
                               <View style={styles.readOnlyAiBadge}>
-                                <Text style={styles.readOnlyAiBadgeText}>AI</Text>
+                                <Text style={styles.readOnlyAiBadgeText}>
+                                  AI
+                                </Text>
                               </View>
                             )}
                             <Text style={styles.readOnlyItemText}>
                               {item.name}
                               {item.reason ? (
-                                <Text style={styles.readOnlyItemReason}>{" · "}{item.reason}</Text>
+                                <Text style={styles.readOnlyItemReason}>
+                                  {" · "}
+                                  {item.reason}
+                                </Text>
                               ) : null}
                             </Text>
                           </View>
@@ -282,33 +256,35 @@ export default function AiChecklistListViewModal({
                     ))
                 : checklist &&
                   sortCategories(Object.entries(checklist.categories)).map(
-                  ([categoryKey, items], sectionIndex) => (
-                    <View
-                      key={categoryKey}
-                      style={[
-                        styles.categorySection,
-                        sectionIndex > 0 && styles.categorySectionBorder,
-                      ]}
-                    >
-                      <View style={styles.categoryHeaderRow}>
-                        <Text style={styles.categoryTitle}>
-                          {getCategoryTitle(categoryKey)}
-                        </Text>
-                        <Text style={styles.categoryProgress}>
-                          {readOnly ? items.length : `${items.filter(i => i.isChecked).length}/${items.length}`}
-                        </Text>
-                        <View style={styles.categoryHeaderSpacer} />
-                        {!readOnly && addingCategory !== categoryKey && (
-                          <TouchableOpacity
-                            onPress={() => handleStartAdding(categoryKey)}
-                            style={styles.addItemButton}
-                          >
-                            <AddCheckList width={12} height={12} />
-                          </TouchableOpacity>
-                        )}
-                      </View>
+                    ([categoryKey, items], sectionIndex) => (
+                      <View
+                        key={categoryKey}
+                        style={[
+                          styles.categorySection,
+                          sectionIndex > 0 && styles.categorySectionBorder,
+                        ]}
+                      >
+                        <View style={styles.categoryHeaderRow}>
+                          <Text style={styles.categoryTitle}>
+                            {getCategoryTitle(categoryKey)}
+                          </Text>
+                          <Text style={styles.categoryProgress}>
+                            {readOnly
+                              ? items.length
+                              : `${items.filter(i => i.isChecked).length}/${items.length}`}
+                          </Text>
+                          <View style={styles.categoryHeaderSpacer} />
+                          {!readOnly && addingCategory !== categoryKey && (
+                            <TouchableOpacity
+                              onPress={() => handleStartAdding(categoryKey)}
+                              style={styles.addItemButton}
+                            >
+                              <AddCheckList width={12} height={12} />
+                            </TouchableOpacity>
+                          )}
+                        </View>
 
-                      {items.map(item => {
+                        {items.map(item => {
                           const isHovered = hoveredItemId === item.id;
                           return (
                             <View
@@ -318,15 +294,17 @@ export default function AiChecklistListViewModal({
                                 ? {
                                     onMouseEnter: () =>
                                       setHoveredItemId(item.id),
-                                    onMouseLeave: () =>
-                                      setHoveredItemId(null),
+                                    onMouseLeave: () => setHoveredItemId(null),
                                   }
                                 : {})}
                             >
                               <TouchableOpacity
                                 style={styles.checklistItem}
-                                onPress={readOnly ? undefined : () =>
-                                  onToggleItem(item.id, !item.isChecked)
+                                onPress={
+                                  readOnly
+                                    ? undefined
+                                    : () =>
+                                        onToggleItem(item.id, !item.isChecked)
                                 }
                               >
                                 <View style={styles.itemContent}>
@@ -351,11 +329,18 @@ export default function AiChecklistListViewModal({
                                     </View>
                                   )}
                                   <View style={styles.itemTextContainer}>
-                                    <Text style={item.isChecked ? styles.itemTextStrikethrough : undefined}>
+                                    <Text
+                                      style={
+                                        item.isChecked
+                                          ? styles.itemTextStrikethrough
+                                          : undefined
+                                      }
+                                    >
                                       <Text
                                         style={[
                                           styles.itemName,
-                                          item.isChecked && styles.itemNameChecked,
+                                          item.isChecked &&
+                                            styles.itemNameChecked,
                                         ]}
                                       >
                                         {item.name}
@@ -384,54 +369,64 @@ export default function AiChecklistListViewModal({
                                   ]}
                                   onPress={() => onDeleteItem(item.id)}
                                 >
-                                  <DeleteIcon width={11} height={11} color={colors.gray900} />
+                                  <DeleteIcon
+                                    width={11}
+                                    height={11}
+                                    color={colors.gray900}
+                                  />
                                 </TouchableOpacity>
                               )}
                             </View>
                           );
-                      })}
-                      {!readOnly && addingCategory === categoryKey && (
-                        <View style={styles.addingItemRow}>
-                          <View style={styles.addingItemCheckboxPlaceholder} />
-                          <View style={styles.addingItemInputs}>
-                            <TextInput
-                              style={styles.addingItemNameInput}
-                              placeholder="항목명"
-                              placeholderTextColor={colors.gray600}
-                              value={newItemName}
-                              onChangeText={setNewItemName}
-                              maxLength={50}
-                              autoFocus
-                              onSubmitEditing={handleSaveAdding}
+                        })}
+                        {!readOnly && addingCategory === categoryKey && (
+                          <View style={styles.addingItemRow}>
+                            <View
+                              style={styles.addingItemCheckboxPlaceholder}
                             />
-                            <TextInput
-                              style={styles.addingItemReasonInput}
-                              placeholder="이유 (선택)"
-                              placeholderTextColor={colors.gray600}
-                              value={newItemReason}
-                              onChangeText={setNewItemReason}
-                              maxLength={100}
-                              onSubmitEditing={handleSaveAdding}
-                            />
+                            <View style={styles.addingItemInputs}>
+                              <TextInput
+                                style={styles.addingItemNameInput}
+                                placeholder="항목명"
+                                placeholderTextColor={colors.gray600}
+                                value={newItemName}
+                                onChangeText={setNewItemName}
+                                maxLength={50}
+                                autoFocus
+                                onSubmitEditing={handleSaveAdding}
+                              />
+                              <TextInput
+                                style={styles.addingItemReasonInput}
+                                placeholder="이유 (선택)"
+                                placeholderTextColor={colors.gray600}
+                                value={newItemReason}
+                                onChangeText={setNewItemReason}
+                                maxLength={100}
+                                onSubmitEditing={handleSaveAdding}
+                              />
+                            </View>
+                            <View style={styles.addingItemButtons}>
+                              <TouchableOpacity
+                                style={styles.addingItemCancelButton}
+                                onPress={handleCancelAdding}
+                              >
+                                <Text style={styles.addingItemCancelText}>
+                                  취소
+                                </Text>
+                              </TouchableOpacity>
+                              <TouchableOpacity
+                                style={styles.addingItemSaveButton}
+                                onPress={handleSaveAdding}
+                              >
+                                <Text style={styles.addingItemSaveText}>
+                                  추가
+                                </Text>
+                              </TouchableOpacity>
+                            </View>
                           </View>
-                          <View style={styles.addingItemButtons}>
-                            <TouchableOpacity
-                              style={styles.addingItemCancelButton}
-                              onPress={handleCancelAdding}
-                            >
-                              <Text style={styles.addingItemCancelText}>취소</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity
-                              style={styles.addingItemSaveButton}
-                              onPress={handleSaveAdding}
-                            >
-                              <Text style={styles.addingItemSaveText}>추가</Text>
-                            </TouchableOpacity>
-                          </View>
-                        </View>
-                      )}
-                    </View>
-                  ),
+                        )}
+                      </View>
+                    ),
                   )}
             </ScrollView>
           </View>

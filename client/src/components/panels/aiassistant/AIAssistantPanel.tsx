@@ -42,7 +42,11 @@ interface AIAssistantPanelProps {
   initialChecklist?: ChecklistData;
 }
 
-export default function AIAssistantPanel({ publicId, readOnly = false, initialChecklist }: AIAssistantPanelProps) {
+export default function AIAssistantPanel({
+  publicId,
+  readOnly = false,
+  initialChecklist,
+}: AIAssistantPanelProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [checklist, setChecklist] = useState<ChecklistData | null>(null);
   const [showRefreshModal, setShowRefreshModal] = useState(false);

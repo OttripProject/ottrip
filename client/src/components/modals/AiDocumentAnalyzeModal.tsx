@@ -1,5 +1,5 @@
-import { LinearGradient } from "expo-linear-gradient";
 import dayjs from "dayjs";
+import { LinearGradient } from "expo-linear-gradient";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Modal,
@@ -86,9 +86,7 @@ function formatAmountKRW(raw: unknown): string {
 }
 
 function getCategoryLabel(raw: string): string {
-  return (
-    categoryLabels[raw as keyof typeof categoryLabels] ?? raw
-  );
+  return categoryLabels[raw as keyof typeof categoryLabels] ?? raw;
 }
 
 function isImageFilename(name: string): boolean {
@@ -211,9 +209,7 @@ function getReadOnlyFields(draft: AiDocumentItemDraft): {
       });
       main.push({
         label: `${prefix}도착`,
-        value: formatDateTimeKR(
-          pickStr(seg, ["arrivalTime", "arrival_time"]),
-        ),
+        value: formatDateTimeKR(pickStr(seg, ["arrivalTime", "arrival_time"])),
       });
     });
 
@@ -264,21 +260,13 @@ function getReadOnlyFields(draft: AiDocumentItemDraft): {
         {
           label: "체크아웃",
           value: formatDateKR(
-            pickStr(values, [
-              "checkoutDate",
-              "checkout_date",
-              "CheckoutDate",
-            ]),
+            pickStr(values, ["checkoutDate", "checkout_date", "CheckoutDate"]),
           ),
         },
         {
           label: "체크아웃 시간",
           value: formatTimeHHmm(
-            pickStr(values, [
-              "checkoutTime",
-              "checkout_time",
-              "CheckoutTime",
-            ]),
+            pickStr(values, ["checkoutTime", "checkout_time", "CheckoutTime"]),
           ),
         },
       ],
@@ -310,9 +298,7 @@ function getReadOnlyFields(draft: AiDocumentItemDraft): {
         },
         {
           label: "비용일",
-          value: formatDateKR(
-            pickStr(values, ["exDate", "ex_date", "ExDate"]),
-          ),
+          value: formatDateKR(pickStr(values, ["exDate", "ex_date", "ExDate"])),
         },
       ],
     };
@@ -432,10 +418,10 @@ export function AiAnalyzeResultContent({
     if (!analyzeResult.draft?.payload) return false;
     const { values, fieldMeta } = analyzeResult.draft.payload;
     const hasUncertain = Object.values(fieldMeta).some(
-      (m) => m.certainty !== "high",
+      m => m.certainty !== "high",
     );
     const hasEmptyValues = Object.values(values).some(
-      (v) => v === null || v === undefined || v === "",
+      v => v === null || v === undefined || v === "",
     );
     return hasUncertain || hasEmptyValues;
   }, [analyzeResult]);
@@ -480,7 +466,8 @@ export function AiAnalyzeResultContent({
             style={styles.mismatchBannerIcon}
           />
           <Text style={styles.mismatchBannerText}>
-            유형 불일치 : '{originEntityType}' 항목에서 분석을 시작했지만 파일이 '{mismatchKindLabel}' 유형으로 인식됐어요.
+            유형 불일치 : '{originEntityType}' 항목에서 분석을 시작했지만 파일이
+            '{mismatchKindLabel}' 유형으로 인식됐어요.
           </Text>
         </View>
       )}
@@ -540,7 +527,7 @@ export default function AiDocumentAnalyzeModal({
 
   useEffect(() => {
     if (visible && analyzeResult?.draft) {
-      setDraftBodyKey((k) => k + 1);
+      setDraftBodyKey(k => k + 1);
       setIsEditMode(false);
     }
   }, [visible, analyzeResult]);
@@ -572,7 +559,7 @@ export default function AiDocumentAnalyzeModal({
       <Pressable style={styles.overlay} onPress={onClose}>
         <Pressable
           style={[styles.card, { width: cardWidth }]}
-          onPress={(e) => e.stopPropagation?.()}
+          onPress={e => e.stopPropagation?.()}
         >
           <LinearGradient
             colors={HEADER_GRADIENT}
@@ -619,7 +606,14 @@ export default function AiDocumentAnalyzeModal({
               />
             ) : (
               <AiAnalyzeResultContent
-                analyzeResult={analyzeResult ?? { success: false, inferredItemType: null, draft: null, error: null }}
+                analyzeResult={
+                  analyzeResult ?? {
+                    success: false,
+                    inferredItemType: null,
+                    draft: null,
+                    error: null,
+                  }
+                }
                 analyzeFileName={analyzeFileName}
                 originEntityType={originEntityType}
               />
@@ -629,7 +623,9 @@ export default function AiDocumentAnalyzeModal({
           <View style={styles.footer}>
             <Pressable
               onPress={
-                isEditMode ? () => setIsEditMode(false) : () => setIsEditMode(true)
+                isEditMode
+                  ? () => setIsEditMode(false)
+                  : () => setIsEditMode(true)
               }
               style={({ pressed }) => [
                 styles.footerBtn,
@@ -650,7 +646,7 @@ export default function AiDocumentAnalyzeModal({
               ]}
             >
               <Text style={styles.footerBtnRightText}>
-                {isEditMode ? "저장" : applyLabel ?? "이대로 추가"}
+                {isEditMode ? "저장" : (applyLabel ?? "이대로 추가")}
               </Text>
             </Pressable>
           </View>

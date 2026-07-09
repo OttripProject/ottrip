@@ -124,7 +124,10 @@ export default function DashboardScreen() {
   );
 
   const isPanelActive = !!(
-    activeTab || selectedItinerary || selectedFlight || selectedAccommodation
+    activeTab ||
+    selectedItinerary ||
+    selectedFlight ||
+    selectedAccommodation
   );
 
   const isMobile = width < 768;
@@ -309,8 +312,7 @@ export default function DashboardScreen() {
     }
   }, []);
 
-  const extendPlanDateIfNeeded = async (..._dates: string[]) => {
-  };
+  const extendPlanDateIfNeeded = async (..._dates: string[]) => {};
 
   const handleItineraryAdd = async (newItinerary: any) => {
     setSelectedItinerary(newItinerary);
@@ -329,10 +331,12 @@ export default function DashboardScreen() {
       setSelectedFlight(newFlight);
       setActiveTab("flight");
       const segments: any[] = newFlight.flightSegments ?? [];
-      const dates = segments.flatMap((s: any) => [
-        s.departureTime ? dayjs(s.departureTime).format("YYYY-MM-DD") : null,
-        s.arrivalTime ? dayjs(s.arrivalTime).format("YYYY-MM-DD") : null,
-      ]).filter(Boolean) as string[];
+      const dates = segments
+        .flatMap((s: any) => [
+          s.departureTime ? dayjs(s.departureTime).format("YYYY-MM-DD") : null,
+          s.arrivalTime ? dayjs(s.arrivalTime).format("YYYY-MM-DD") : null,
+        ])
+        .filter(Boolean) as string[];
       if (dates.length) await extendPlanDateIfNeeded(...dates);
     }
   };
@@ -416,7 +420,8 @@ export default function DashboardScreen() {
         if (date) {
           const draft = {
             checkinDate: date,
-            checkoutDate: checkoutDate ?? dayjs(date).add(1, "day").format("YYYY-MM-DD"),
+            checkoutDate:
+              checkoutDate ?? dayjs(date).add(1, "day").format("YYYY-MM-DD"),
             checkinTime: "15:00",
             checkoutTime: "11:00",
           };
@@ -548,7 +553,9 @@ export default function DashboardScreen() {
                       if (Platform.OS === "web") {
                         if (trip?.publicId) {
                           // @ts-ignore
-                          navigation.navigate("PLAN", { publicId: trip.publicId });
+                          navigation.navigate("PLAN", {
+                            publicId: trip.publicId,
+                          });
                         } else {
                           // @ts-ignore
                           navigation.navigate("OTTRIP");
@@ -556,7 +563,9 @@ export default function DashboardScreen() {
                       } else {
                         if (trip?.publicId) {
                           // @ts-ignore
-                          navigation.navigate("PLAN", { publicId: trip.publicId });
+                          navigation.navigate("PLAN", {
+                            publicId: trip.publicId,
+                          });
                         } else {
                           // @ts-ignore
                           navigation.navigate("OTTRIP");
@@ -596,7 +605,9 @@ export default function DashboardScreen() {
 
                   {/* 5. AI 어시스턴트 모달 (우측 하단) */}
                   <View style={styles.aiModal}>
-                    <AIAssistantPanel publicId={planData.plan?.publicId || null} />
+                    <AIAssistantPanel
+                      publicId={planData.plan?.publicId || null}
+                    />
                   </View>
                 </View>
               </>
@@ -608,7 +619,11 @@ export default function DashboardScreen() {
             <Animated.View
               style={[
                 styles.rightArea,
-                { flex: animRightFlex, height: availableHeight, overflow: "hidden" },
+                {
+                  flex: animRightFlex,
+                  height: availableHeight,
+                  overflow: "hidden",
+                },
               ]}
               pointerEvents={isPanelActive ? "auto" : "none"}
             >

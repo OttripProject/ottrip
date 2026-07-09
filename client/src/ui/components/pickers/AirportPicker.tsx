@@ -27,7 +27,10 @@ interface AirportPickerProps {
   style?: ViewStyle;
   dropDownContainerStyle?: ViewStyle;
   searchTextInputStyle?: TextStyle;
+  textStyle?: TextStyle;
   disabled?: boolean;
+  onOpen?: () => void;
+  onClose?: () => void;
 }
 
 const defaultSearchTextInputStyle: TextStyle = {
@@ -50,7 +53,10 @@ export default function AirportPicker({
   style,
   dropDownContainerStyle,
   searchTextInputStyle,
+  textStyle,
   disabled,
+  onOpen,
+  onClose,
 }: AirportPickerProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [options, setOptions] = useState<
@@ -89,8 +95,11 @@ export default function AirportPicker({
   const handleSetOpen = (value: boolean | ((prev: boolean) => boolean)) => {
     const isOpen = typeof value === "function" ? value(open) : value;
     setIsOpen(isOpen);
-    if (!isOpen) {
+    if (isOpen) {
+      onOpen?.();
+    } else {
       setSearchQuery("");
+      onClose?.();
     }
   };
 
@@ -150,7 +159,7 @@ export default function AirportPicker({
             dropDownContainerStyle,
           ]}
           containerStyle={[styles.dropdownOuter, { width: "100%" }]}
-          textStyle={{
+          textStyle={textStyle ?? {
             fontSize: 14,
             color: colors.black,
           }}
@@ -169,9 +178,9 @@ export default function AirportPicker({
             fontWeight: "bold",
           }}
           ArrowDownIconComponent={() => (
-            <DropdownTimeIcon width={16} height={16} />
+            <DropdownTimeIcon width={10} height={10} style={{ opacity: 0.6 }} />
           )}
-          ArrowUpIconComponent={() => <UpperArrowIcon width={16} height={16} />}
+          ArrowUpIconComponent={() => <UpperArrowIcon width={10} height={10} style={{ opacity: 0.6 }} />}
           translation={{ NOTHING_TO_SHOW: "결과가 없습니다" }}
         />
       </View>

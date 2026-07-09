@@ -45,10 +45,15 @@ export default function TripDeleteConfirmModal({
               <Text style={styles.deleteModalCancelButtonText}>취소</Text>
             </Pressable>
             <Pressable
-              style={[styles.deleteModalDeleteButton, { backgroundColor: confirmButtonColor }]}
+              style={[
+                styles.deleteModalDeleteButton,
+                { backgroundColor: confirmButtonColor },
+              ]}
               onPress={onConfirm}
             >
-              <Text style={styles.deleteModalDeleteButtonText}>{confirmLabel}</Text>
+              <Text style={styles.deleteModalDeleteButtonText}>
+                {confirmLabel}
+              </Text>
             </Pressable>
           </View>
         </View>

@@ -1,9 +1,9 @@
-import { useState } from "react";
-import { Platform, StyleSheet, View } from "react-native";
-import ReactDOM from "react-dom";
 import { colors } from "@/ui/tokens/colors";
 import { textStyles } from "@/ui/tokens/typography";
+import { useState } from "react";
 import type React from "react";
+import ReactDOM from "react-dom";
+import { Platform, StyleSheet, View } from "react-native";
 
 interface TooltipProps {
   text: string;
@@ -64,7 +64,10 @@ export function Tooltip({ text, children }: TooltipProps) {
   return (
     <View
       style={styles.container}
-      {...{ onMouseEnter: handleMouseEnter, onMouseLeave: handleMouseLeave } as any}
+      {...({
+        onMouseEnter: handleMouseEnter,
+        onMouseLeave: handleMouseLeave,
+      } as any)}
     >
       {children}
       {tooltip}

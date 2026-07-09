@@ -5,10 +5,9 @@ import { colors } from "@/ui/tokens/colors";
 import { radii } from "@/ui/tokens/radii";
 import { textStyles } from "@/ui/tokens/typography";
 import {
-  codeToFlag,
-  codeToKoreanName,
-  getKoreanCountryOptions,
   type CountryOption,
+  codeToFlag,
+  getKoreanCountryOptions,
 } from "@/utils/countryListKo";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -23,9 +22,9 @@ import {
   type ViewStyle,
 } from "react-native";
 import DownArrowIcon from "../../../../assets/down_arrow.svg";
+import XIcon from "../../../../assets/mobile_close.svg";
 import SearchIcon from "../../../../assets/search.svg";
 import UpperArrowIcon from "../../../../assets/upper_arrow.svg";
-import XIcon from "../../../../assets/mobile_close.svg";
 
 const ITEM_HEIGHT = 46;
 
@@ -56,13 +55,19 @@ export default function CountryPicker({
   const options = useMemo(() => getKoreanCountryOptions(), []);
   const wrapperRef = useRef<View>(null);
   const searchRef = useRef<TextInput>(null);
-  const [open, setIsOpen, handleOutsidePress] = useDetectClose(wrapperRef, false);
+  const [open, setIsOpen, _handleOutsidePress] = useDetectClose(
+    wrapperRef,
+    false,
+  );
   const [searchText, setSearchText] = useState("");
 
   const { data: me } = useMe();
   const storageKey = `recentCountrySearches_${me?.handle ?? "guest"}`;
-  const { items: recentSearches, addItem, load } = useRecentSearches(storageKey, 10);
-
+  const {
+    items: recentSearches,
+    addItem,
+    load,
+  } = useRecentSearches(storageKey, 10);
 
   const selectedCode = useMemo(() => {
     if (!value) return null;
@@ -140,8 +145,15 @@ export default function CountryPicker({
             {item.labelEn}
           </Text>
         </View>
-        <View style={[styles.itemCodeBadge, isSelected && styles.itemCodeBadgeSelected]}>
-          <Text style={[styles.itemCode, isSelected && styles.itemCodeSelected]}>
+        <View
+          style={[
+            styles.itemCodeBadge,
+            isSelected && styles.itemCodeBadgeSelected,
+          ]}
+        >
+          <Text
+            style={[styles.itemCode, isSelected && styles.itemCodeSelected]}
+          >
             {item.value}
           </Text>
         </View>
@@ -155,11 +167,7 @@ export default function CountryPicker({
       style={[styles.wrapper, containerStyle, { zIndex: open ? 100 : 1 }]}
     >
       <Pressable
-        style={[
-          styles.trigger,
-          disabled && styles.triggerDisabled,
-          style,
-        ]}
+        style={[styles.trigger, disabled && styles.triggerDisabled, style]}
         onPress={handleToggle}
         disabled={disabled}
       >
@@ -224,7 +232,9 @@ export default function CountryPicker({
             ) : searchText.trim().length > 0 ? (
               <View style={styles.noResultState}>
                 <Text style={styles.noResultTitle}>검색 결과가 없습니다</Text>
-                <Text style={styles.noResultSubtitle}>다른 키워드로 검색해 보세요.</Text>
+                <Text style={styles.noResultSubtitle}>
+                  다른 키워드로 검색해 보세요.
+                </Text>
               </View>
             ) : recentSearches.length > 0 ? (
               <ScrollView
@@ -250,15 +260,31 @@ export default function CountryPicker({
                         <Text style={styles.itemFlag}>{opt?.flag ?? ""}</Text>
                       </View>
                       <View style={styles.itemNames}>
-                        <Text style={[styles.itemText, isSelected && styles.itemTextSelected]} numberOfLines={1}>
+                        <Text
+                          style={[
+                            styles.itemText,
+                            isSelected && styles.itemTextSelected,
+                          ]}
+                          numberOfLines={1}
+                        >
                           {name}
                         </Text>
                         <Text style={styles.itemTextEn} numberOfLines={1}>
                           {opt?.labelEn ?? ""}
                         </Text>
                       </View>
-                      <View style={[styles.itemCodeBadge, isSelected && styles.itemCodeBadgeSelected]}>
-                        <Text style={[styles.itemCode, isSelected && styles.itemCodeSelected]}>
+                      <View
+                        style={[
+                          styles.itemCodeBadge,
+                          isSelected && styles.itemCodeBadgeSelected,
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.itemCode,
+                            isSelected && styles.itemCodeSelected,
+                          ]}
+                        >
                           {opt?.value ?? ""}
                         </Text>
                       </View>

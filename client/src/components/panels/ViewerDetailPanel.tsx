@@ -1,9 +1,14 @@
-import CalendarDetailIcon from "../../../assets/calendar_detail.svg";
-import LockSimpleIcon from "../../../assets/lock_simple.svg";
-import type { ExportAccommodation, ExportExpense, ExportFlight, ExportItinerary } from "@/services/plans";
+import type {
+  ExportAccommodation,
+  ExportExpense,
+  ExportFlight,
+  ExportItinerary,
+} from "@/services/plans";
 import { colors } from "@/ui/tokens/colors";
 import { textStyles } from "@/ui/tokens/typography";
 import dayjs from "dayjs";
+import CalendarDetailIcon from "../../../assets/calendar_detail.svg";
+import LockSimpleIcon from "../../../assets/lock_simple.svg";
 import "dayjs/locale/ko";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 import PanelLayout from "./PanelLayout";
@@ -30,14 +35,18 @@ function InfoRow({ label, value }: { label: string; value: string }) {
 function PrivacyNotice() {
   return (
     <View style={styles.privacyBox}>
-      <LockSimpleIcon width={13} height={13} color={colors.gray600} style={styles.privacyIcon} />
+      <LockSimpleIcon
+        width={13}
+        height={13}
+        color={colors.gray600}
+        style={styles.privacyIcon}
+      />
       <Text style={styles.privacyText}>
         예약번호·요금·메모·첨부파일 등 민감 정보는 공유되지 않아요.
       </Text>
     </View>
   );
 }
-
 
 const CURRENCY_LABELS: Record<string, string> = {
   KRW: "원",
@@ -132,10 +141,13 @@ export default function ViewerDetailPanel({
 
   if (selectedType === "flight" && selectedFlight) {
     const segments = selectedFlight.segments;
-    const linked = (expenses ?? []).filter(e => e.flightId === selectedFlight.id);
-    const flightTitle = segments.length > 0
-      ? `${segments[0].departureAirport} → ${segments[segments.length - 1].arrivalAirport}`
-      : "항공편";
+    const linked = (expenses ?? []).filter(
+      e => e.flightId === selectedFlight.id,
+    );
+    const flightTitle =
+      segments.length > 0
+        ? `${segments[0].departureAirport} → ${segments[segments.length - 1].arrivalAirport}`
+        : "항공편";
     return (
       <PanelLayout>
         <ScrollView
@@ -150,8 +162,14 @@ export default function ViewerDetailPanel({
                 <Text style={styles.segmentIndex}>{i + 1}번째 구간</Text>
               )}
               <View style={styles.infoTable}>
-                <InfoRow label="출발" value={`${seg.departureAirport}  ${formatDatetime(seg.departureTime)}`} />
-                <InfoRow label="도착" value={`${seg.arrivalAirport}  ${formatDatetime(seg.arrivalTime)}`} />
+                <InfoRow
+                  label="출발"
+                  value={`${seg.departureAirport}  ${formatDatetime(seg.departureTime)}`}
+                />
+                <InfoRow
+                  label="도착"
+                  value={`${seg.arrivalAirport}  ${formatDatetime(seg.arrivalTime)}`}
+                />
               </View>
             </View>
           ))}
@@ -179,8 +197,14 @@ export default function ViewerDetailPanel({
         >
           <Text style={styles.detailTitle}>{acc.name}</Text>
           <View style={styles.infoTable}>
-            <InfoRow label="체크인" value={`${formatDate(acc.checkinDate)}  ${checkinT}`} />
-            <InfoRow label="체크아웃" value={`${formatDate(acc.checkoutDate)}  ${checkoutT}`} />
+            <InfoRow
+              label="체크인"
+              value={`${formatDate(acc.checkinDate)}  ${checkinT}`}
+            />
+            <InfoRow
+              label="체크아웃"
+              value={`${formatDate(acc.checkoutDate)}  ${checkoutT}`}
+            />
             <LinkedExpenses expenses={linked} />
           </View>
           <PrivacyNotice />
