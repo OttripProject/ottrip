@@ -60,7 +60,7 @@ interface AddScheduleWithFileModalProps {
   planId: number;
   planName: string;
   plan?: Plan;
-  onSaveComplete: () => void;
+  onSaveComplete: (firstDate?: string) => void;
 }
 
 const ITEM_BADGE: Record<string, { label: string; bg: string; text: string; dot: string }> = {
@@ -601,7 +601,9 @@ export default function AddScheduleWithFileModal({
         }
       }
 
-      onSaveComplete();
+      const allDates = selected.flatMap(collectDatesFromDraft).filter(Boolean);
+      const firstDate = allDates.length > 0 ? allDates.reduce((a, b) => (a < b ? a : b)) : undefined;
+      onSaveComplete(firstDate);
       onClose();
     } finally {
       setIsSaving(false);

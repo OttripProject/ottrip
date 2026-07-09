@@ -3557,9 +3557,17 @@ export default function WeeklySchedulePanel({
         }
         planName={internalSelectedTrip?.name ?? ""}
         plan={planData?.plan ?? undefined}
-        onSaveComplete={() => {
+        onSaveComplete={(firstDate) => {
           setImportFileOpen(false);
+          if (externalPlanData?.refreshItineraries) externalPlanData.refreshItineraries().catch(() => {});
+          if (externalPlanData?.refreshFlights) externalPlanData.refreshFlights().catch(() => {});
+          if (externalPlanData?.refreshAccommodations) externalPlanData.refreshAccommodations().catch(() => {});
+          if (externalPlanData?.refreshExpenses) externalPlanData.refreshExpenses().catch(() => {});
           if (onPlansRefresh) onPlansRefresh();
+          if (firstDate) {
+            const monday = dayjs(firstDate).startOf("week").add(1, "day");
+            setCurrentWeekStart(monday);
+          }
         }}
       />
 
