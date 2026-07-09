@@ -58,6 +58,7 @@ import AccommodationIcon from "../../../assets/week_bar_accommodation.svg";
 import WeekBarLocationIcon from "../../../assets/week_bar_location.svg";
 import WeekBarTimeIcon from "../../../assets/week_bar_time.svg";
 import XIcon from "../../../assets/x.svg";
+import UploadIcon from "../../../assets/upload_tray.svg";
 import { extendPlanIfNeeded } from "@/utils/extendPlanIfNeeded";
 
 dayjs.locale(ko);
@@ -262,6 +263,9 @@ export default function WeeklySchedulePanel({
   const [shareOpen, setShareOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
   const [importFileOpen, setImportFileOpen] = useState(false);
+  const [dropFileOverlay, setDropFileOverlay] = useState(false);
+  const [pendingDropFile, setPendingDropFile] = useState<File | null>(null);
+  const panelRef = useRef<View>(null);
   const [aiChatOpen, setAiChatOpen] = useState(false);
   const [aiMessages, setAiMessages] = useState<AiMessage[]>([AI_INTRO_MESSAGE]);
   const [memoOpen, setMemoOpen] = useState(false);
@@ -1055,6 +1059,33 @@ export default function WeeklySchedulePanel({
   };
 
   useEffect(() => {
+    if (Platform.OS !== "web" || !panelRef.current) return;
+    const el = panelRef.current as unknown as HTMLElement;
+    const isFileDrag = (e: DragEvent) => e.dataTransfer?.types.includes("Files") ?? false;
+    const onDragEnter = (e: DragEvent) => { if (isFileDrag(e)) { e.preventDefault(); setDropFileOverlay(true); } };
+    const onDragOver = (e: DragEvent) => { if (isFileDrag(e)) e.preventDefault(); };
+    const onDragLeave = (e: DragEvent) => { if (!el.contains(e.relatedTarget as Node)) setDropFileOverlay(false); };
+    const onDrop = (e: DragEvent) => {
+      e.preventDefault();
+      setDropFileOverlay(false);
+      const file = e.dataTransfer?.files[0];
+      if (!file) return;
+      setPendingDropFile(file);
+      setImportFileOpen(true);
+    };
+    el.addEventListener("dragenter", onDragEnter);
+    el.addEventListener("dragover", onDragOver);
+    el.addEventListener("dragleave", onDragLeave);
+    el.addEventListener("drop", onDrop);
+    return () => {
+      el.removeEventListener("dragenter", onDragEnter);
+      el.removeEventListener("dragover", onDragOver);
+      el.removeEventListener("dragleave", onDragLeave);
+      el.removeEventListener("drop", onDrop);
+    };
+  }, []);
+
+  useEffect(() => {
     if (Platform.OS !== "web") return;
     const onMove = (e: MouseEvent) => {
       const p = accDragPendingRef.current;
@@ -1836,6 +1867,16 @@ export default function WeeklySchedulePanel({
     setCurrentWeekStart(dayjs().startOf("week").add(1, "day"));
 
   return (
+    <View ref={panelRef} style={styles.panelWrapper}>
+      {dropFileOverlay && (
+        <View style={styles.dropOverlay} pointerEvents="none">
+          <View style={styles.dropOverlayIconCircle}>
+            <UploadIcon width={28} height={28} />
+          </View>
+          <Text style={styles.dropOverlayTitle}>파일을 놓으면 일정으로 분석해요</Text>
+          <Text style={styles.dropOverlaySubtext}>엑셀 · 이미지 · PDF</Text>
+        </View>
+      )}
     <PanelLayout style={styles.container}>
       <View style={styles.customHeader}>
         <View style={styles.leftSection}>
@@ -3551,14 +3592,20 @@ export default function WeeklySchedulePanel({
 
       <AddScheduleWithFileModal
         visible={importFileOpen}
-        onClose={() => setImportFileOpen(false)}
+        onClose={() => {
+          setImportFileOpen(false);
+          setPendingDropFile(null);
+          setDropFileOverlay(false);
+        }}
         planId={
           internalSelectedTrip ? Number.parseInt(internalSelectedTrip.id) : 0
         }
         planName={internalSelectedTrip?.name ?? ""}
         plan={planData?.plan ?? undefined}
+        initialFile={pendingDropFile ?? undefined}
         onSaveComplete={(firstDate) => {
           setImportFileOpen(false);
+          setPendingDropFile(null);
           if (externalPlanData?.refreshItineraries) externalPlanData.refreshItineraries().catch(() => {});
           if (externalPlanData?.refreshFlights) externalPlanData.refreshFlights().catch(() => {});
           if (externalPlanData?.refreshAccommodations) externalPlanData.refreshAccommodations().catch(() => {});
@@ -3739,10 +3786,49 @@ export default function WeeklySchedulePanel({
         params={resultModalConfig?.params}
       />
     </PanelLayout>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  panelWrapper: {
+    flex: 1,
+    position: "relative",
+  },
+  dropOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(255, 255, 255, 0.88)",
+    zIndex: 9999,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    borderWidth: 2,
+    borderColor: colors.gray500,
+    borderStyle: "dashed",
+    borderRadius: 12,
+  },
+  dropOverlayIconCircle: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: colors.white,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 4,
+    shadowColor: colors.black,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  dropOverlayTitle: {
+    ...textStyles.h6,
+    color: colors.black,
+  },
+  dropOverlaySubtext: {
+    ...textStyles.body5,
+    color: colors.gray700,
+  },
   container: {
     flex: 1,
     minHeight: 0,

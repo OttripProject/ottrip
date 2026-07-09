@@ -60,6 +60,7 @@ interface AddScheduleWithFileModalProps {
   planId: number;
   planName: string;
   plan?: Plan;
+  initialFile?: File;
   onSaveComplete: (firstDate?: string) => void;
 }
 
@@ -386,6 +387,7 @@ export default function AddScheduleWithFileModal({
   planId,
   planName,
   plan,
+  initialFile,
   onSaveComplete,
 }: AddScheduleWithFileModalProps) {
   const [step, setStep] = useState<Step>("upload");
@@ -402,6 +404,7 @@ export default function AddScheduleWithFileModal({
   const [showArrDatePicker, setShowArrDatePicker] = useState(false);
   const [showExpenseDatePicker, setShowExpenseDatePicker] = useState(false);
   const [isPickerOpen, setIsPickerOpen] = useState(false);
+  const [autoAnalyzePending, setAutoAnalyzePending] = useState(false);
 
   function getMergedValues(idx: number, draft: AiDocumentItemDraft): Record<string, unknown> {
     return { ...draft.payload.values as Record<string, unknown>, ...(draftEdits[idx] ?? {}) };
@@ -459,8 +462,25 @@ export default function AddScheduleWithFileModal({
       setItems([]);
       setSelectedIndexes(new Set());
       setIsDragging(false);
+      setAutoAnalyzePending(false);
     }
   }, [visible]);
+
+  useEffect(() => {
+    if (visible && initialFile) {
+      const err = validateFile(initialFile);
+      if (err) { setError(err); return; }
+      setSelectedFile(initialFile);
+      setAutoAnalyzePending(true);
+    }
+  }, [visible, initialFile]);
+
+  useEffect(() => {
+    if (autoAnalyzePending && selectedFile) {
+      setAutoAnalyzePending(false);
+      handleAnalyze();
+    }
+  }, [autoAnalyzePending, selectedFile]);
 
   useEffect(() => {
     if (!visible) return;
