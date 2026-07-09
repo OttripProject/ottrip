@@ -403,28 +403,32 @@ export default function AddScheduleWithFileModal({
   const [showExpenseDatePicker, setShowExpenseDatePicker] = useState(false);
   const [isPickerOpen, setIsPickerOpen] = useState(false);
 
+  function getMergedValues(idx: number, draft: AiDocumentItemDraft): Record<string, unknown> {
+    return { ...draft.payload.values as Record<string, unknown>, ...(draftEdits[idx] ?? {}) };
+  }
+
   const itineraryEndTimeMap = useMemo(() => {
     const result = new Map<number, string>();
     const sorted = items
       .map((d, i) => ({ d, i }))
       .filter(({ d }) => d.itemType === "itinerary")
       .sort((a, b) => {
-        const va = a.d.payload.values as Record<string, unknown>;
-        const vb = b.d.payload.values as Record<string, unknown>;
+        const va = { ...a.d.payload.values as Record<string, unknown>, ...(draftEdits[a.i] ?? {}) };
+        const vb = { ...b.d.payload.values as Record<string, unknown>, ...(draftEdits[b.i] ?? {}) };
         const ka = `${va.itinerary_date ?? va.itineraryDate ?? ""}${va.start_time ?? va.startTime ?? ""}`;
         const kb = `${vb.itinerary_date ?? vb.itineraryDate ?? ""}${vb.start_time ?? vb.startTime ?? ""}`;
         return ka < kb ? -1 : ka > kb ? 1 : 0;
       });
     for (let i = 0; i < sorted.length; i++) {
       const { d, i: idx } = sorted[i];
-      const v = d.payload.values as Record<string, unknown>;
+      const v = { ...d.payload.values as Record<string, unknown>, ...(draftEdits[idx] ?? {}) };
       const existingEnd = String(v.end_time ?? v.endTime ?? "").substring(0, 5);
       if (existingEnd) { result.set(idx, existingEnd); continue; }
       const startRaw = String(v.start_time ?? v.startTime ?? "09:00").substring(0, 5);
       const date = String(v.itinerary_date ?? v.itineraryDate ?? "");
       const next = sorted[i + 1];
       if (next) {
-        const nv = next.d.payload.values as Record<string, unknown>;
+        const nv = { ...next.d.payload.values as Record<string, unknown>, ...(draftEdits[next.i] ?? {}) };
         const nextDate = String(nv.itinerary_date ?? nv.itineraryDate ?? "");
         const nextStart = String(nv.start_time ?? nv.startTime ?? "").substring(0, 5);
         if (nextDate === date && nextStart) { result.set(idx, nextStart); continue; }
@@ -432,7 +436,7 @@ export default function AddScheduleWithFileModal({
       result.set(idx, dayjs(`2000-01-01T${startRaw}`).add(1, "hour").format("HH:mm"));
     }
     return result;
-  }, [items]);
+  }, [items, draftEdits]);
 
   const dropZoneRef = useRef<View>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -554,9 +558,9 @@ export default function AddScheduleWithFileModal({
 
       await Promise.allSettled(
         selected.flatMap((draft, _, arr) => {
-          const v = draft.payload.values as Record<string, unknown>;
+          const idx = items.indexOf(draft);
+          const v = getMergedValues(idx, draft);
           if (draft.itemType === "itinerary") {
-            const idx = items.indexOf(draft);
             const startRaw = String(v.start_time ?? v.startTime ?? "09:00").substring(0, 5);
             const endTime = itineraryEndTimeMap.get(idx) ?? dayjs(`2000-01-01T${startRaw}`).add(1, "hour").format("HH:mm");
             const calls: Promise<unknown>[] = [itinerariesApi.createItinerary(buildItineraryRequest(v, planId, endTime))];
@@ -584,7 +588,10 @@ export default function AddScheduleWithFileModal({
       );
 
       if (plan?.segments && plan.segments.length > 0) {
-        const allDates = selected.flatMap(collectDatesFromDraft);
+        const allDates = selected.flatMap((draft) => {
+          const idx = items.indexOf(draft);
+          return collectDatesFromDraft({ ...draft, payload: { ...draft.payload, values: getMergedValues(idx, draft) as any } });
+        });
         if (allDates.length > 0) {
           const minDate = allDates.reduce((a, b) => (a < b ? a : b));
           const maxDate = allDates.reduce((a, b) => (a > b ? a : b));
@@ -601,7 +608,10 @@ export default function AddScheduleWithFileModal({
         }
       }
 
-      const allDates = selected.flatMap(collectDatesFromDraft).filter(Boolean);
+      const allDates = selected.flatMap((draft) => {
+        const idx = items.indexOf(draft);
+        return collectDatesFromDraft({ ...draft, payload: { ...draft.payload, values: getMergedValues(idx, draft) as any } });
+      }).filter(Boolean);
       const firstDate = allDates.length > 0 ? allDates.reduce((a, b) => (a < b ? a : b)) : undefined;
       onSaveComplete(firstDate);
       onClose();
