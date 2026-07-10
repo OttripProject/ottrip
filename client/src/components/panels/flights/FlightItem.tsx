@@ -1047,6 +1047,7 @@ export default function FlightItem({
                         }
                         style={styles.segmentTimePicker}
                         disabled={readOnly}
+                        popupAlign="right"
                       />
                     </View>
                   </View>
