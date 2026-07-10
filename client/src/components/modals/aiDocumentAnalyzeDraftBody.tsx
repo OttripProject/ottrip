@@ -389,7 +389,7 @@ const ItineraryDraftEditor = forwardRef<
         <Text style={styles.fieldLabel}>제목*</Text>
         <Input
           variant="filled"
-          containerStyle={{ flex: 1 }}
+          containerStyle={{ flex: 1, height: 40 }}
           placeholder={PLACEHOLDERS.itinerary.titleForm}
           value={title}
           onChangeText={setTitle}
@@ -402,7 +402,7 @@ const ItineraryDraftEditor = forwardRef<
         <Text style={[styles.fieldLabel, styles.fieldLabelTop]}>내용</Text>
         <Input
           variant="filled"
-          containerStyle={{ flex: 1 }}
+          containerStyle={{ flex: 1, height: 56 }}
           placeholder={PLACEHOLDERS.itinerary.descriptionForm}
           value={description}
           onChangeText={setDescription}
@@ -438,7 +438,7 @@ const ItineraryDraftEditor = forwardRef<
         <Text style={styles.fieldLabel}>도시</Text>
         <Input
           variant="filled"
-          containerStyle={{ flex: 1 }}
+          containerStyle={{ flex: 1, height: 40 }}
           placeholder={PLACEHOLDERS.itinerary.cityForm}
           value={city}
           onChangeText={setCity}
@@ -451,7 +451,7 @@ const ItineraryDraftEditor = forwardRef<
         <Text style={styles.fieldLabel}>장소</Text>
         <Input
           variant="filled"
-          containerStyle={{ flex: 1 }}
+          containerStyle={{ flex: 1, height: 40 }}
           placeholder="장소를 입력하세요."
           value={location}
           onChangeText={setLocation}
@@ -559,7 +559,7 @@ const ItineraryDraftEditor = forwardRef<
             <Text style={styles.fieldLabel}>금액 (원)</Text>
             <Input
               variant="filled"
-              containerStyle={{ flex: 1 }}
+              containerStyle={{ flex: 1, height: 40 }}
               placeholder={PLACEHOLDERS.expense.amount}
               value={formatAmountWithCommas(expAmount)}
               onChangeText={text =>
@@ -574,7 +574,7 @@ const ItineraryDraftEditor = forwardRef<
             <Text style={styles.fieldLabel}>내용</Text>
             <Input
               variant="filled"
-              containerStyle={{ flex: 1 }}
+              containerStyle={{ flex: 1, height: 40 }}
               placeholder={PLACEHOLDERS.expense.descriptionForm}
               value={expDescription}
               onChangeText={setExpDescription}
@@ -701,7 +701,7 @@ const FlightDraftEditor = forwardRef<
         <Text style={styles.fieldLabel}>예약번호(PNR)</Text>
         <Input
           variant="filled"
-          containerStyle={{ flex: 1 }}
+          containerStyle={{ flex: 1, height: 40 }}
           placeholder={PLACEHOLDERS.flight.reservationNumber}
           value={reservationNumber}
           onChangeText={setReservationNumber}
@@ -714,7 +714,7 @@ const FlightDraftEditor = forwardRef<
         <Text style={styles.fieldLabel}>승객명</Text>
         <Input
           variant="filled"
-          containerStyle={{ flex: 1 }}
+          containerStyle={{ flex: 1, height: 40 }}
           placeholder={PLACEHOLDERS.flight.passengerName}
           value={passengerName}
           onChangeText={setPassengerName}
@@ -727,7 +727,7 @@ const FlightDraftEditor = forwardRef<
         <Text style={styles.fieldLabel}>항공권번호</Text>
         <Input
           variant="filled"
-          containerStyle={{ flex: 1 }}
+          containerStyle={{ flex: 1, height: 40 }}
           placeholder={PLACEHOLDERS.flight.ticketNumber}
           value={ticketNumber}
           onChangeText={setTicketNumber}
@@ -740,7 +740,7 @@ const FlightDraftEditor = forwardRef<
         <Text style={styles.fieldLabel}>여행사 예약번호</Text>
         <Input
           variant="filled"
-          containerStyle={{ flex: 1 }}
+          containerStyle={{ flex: 1, height: 40 }}
           placeholder={PLACEHOLDERS.flight.bookingReference}
           value={bookingReference}
           onChangeText={setBookingReference}
@@ -753,7 +753,7 @@ const FlightDraftEditor = forwardRef<
         <Text style={styles.fieldLabel}>항공료 (원)</Text>
         <Input
           variant="filled"
-          containerStyle={{ flex: 1 }}
+          containerStyle={{ flex: 1, height: 40 }}
           placeholder={PLACEHOLDERS.expense.amount}
           value={formatAmountWithCommas(expenseAmount)}
           onChangeText={text =>
@@ -783,7 +783,7 @@ const FlightDraftEditor = forwardRef<
                 <Text style={styles.fieldLabel}>항공사</Text>
                 <Input
                   variant="filled"
-                  containerStyle={{ flex: 1 }}
+                  containerStyle={{ flex: 1, height: 40 }}
                   placeholder={PLACEHOLDERS.flight.airline}
                   value={segment.airline}
                   onChangeText={text => {
@@ -800,7 +800,7 @@ const FlightDraftEditor = forwardRef<
                 <Text style={styles.fieldLabel}>항공편명</Text>
                 <Input
                   variant="filled"
-                  containerStyle={{ flex: 1 }}
+                  containerStyle={{ flex: 1, height: 40 }}
                   placeholder={PLACEHOLDERS.flight.flightNumber}
                   value={segment.flight_number}
                   onChangeText={text => {
@@ -830,7 +830,7 @@ const FlightDraftEditor = forwardRef<
                       setSegments(next);
                     }}
                     placeholder={PLACEHOLDERS.flight.departureAirport}
-                    containerStyle={{ flex: 1 }}
+                    containerStyle={{ flex: 1, height: 40 }}
                   />
                 </View>
               </View>
@@ -852,7 +852,7 @@ const FlightDraftEditor = forwardRef<
                       setSegments(next);
                     }}
                     placeholder={PLACEHOLDERS.flight.arrivalAirport}
-                    containerStyle={{ flex: 1 }}
+                    containerStyle={{ flex: 1, height: 40 }}
                   />
                 </View>
               </View>
@@ -996,7 +996,7 @@ const FlightDraftEditor = forwardRef<
                 <Text style={styles.fieldLabel}>좌석등급</Text>
                 <Input
                   variant="filled"
-                  containerStyle={{ flex: 1 }}
+                  containerStyle={{ flex: 1, height: 40 }}
                   value={segment.seat_class}
                   onChangeText={text => {
                     const next = [...segments];
@@ -1012,7 +1012,7 @@ const FlightDraftEditor = forwardRef<
                 <Text style={styles.fieldLabel}>좌석번호</Text>
                 <Input
                   variant="filled"
-                  containerStyle={{ flex: 1 }}
+                  containerStyle={{ flex: 1, height: 40 }}
                   value={segment.seat_number}
                   onChangeText={text => {
                     const next = [...segments];
@@ -1028,7 +1028,7 @@ const FlightDraftEditor = forwardRef<
                 <Text style={styles.fieldLabel}>게이트</Text>
                 <Input
                   variant="filled"
-                  containerStyle={{ flex: 1 }}
+                  containerStyle={{ flex: 1, height: 40 }}
                   value={segment.gate}
                   onChangeText={text => {
                     const next = [...segments];
@@ -1044,7 +1044,7 @@ const FlightDraftEditor = forwardRef<
                 <Text style={styles.fieldLabel}>터미널</Text>
                 <Input
                   variant="filled"
-                  containerStyle={{ flex: 1 }}
+                  containerStyle={{ flex: 1, height: 40 }}
                   value={segment.terminal}
                   onChangeText={text => {
                     const next = [...segments];
@@ -1179,7 +1179,7 @@ const AccommodationDraftEditor = forwardRef<
         <Text style={styles.fieldLabel}>숙소명*</Text>
         <Input
           variant="filled"
-          containerStyle={{ flex: 1 }}
+          containerStyle={{ flex: 1, height: 40 }}
           placeholder={PLACEHOLDERS.accommodation.name}
           value={name}
           onChangeText={setName}
@@ -1192,7 +1192,7 @@ const AccommodationDraftEditor = forwardRef<
         <Text style={[styles.fieldLabel, styles.fieldLabelTop]}>내용</Text>
         <Input
           variant="filled"
-          containerStyle={{ flex: 1 }}
+          containerStyle={{ flex: 1, height: 56 }}
           placeholder={PLACEHOLDERS.itinerary.descriptionForm}
           value={description}
           onChangeText={setDescription}
@@ -1228,7 +1228,7 @@ const AccommodationDraftEditor = forwardRef<
         <Text style={styles.fieldLabel}>도시</Text>
         <Input
           variant="filled"
-          containerStyle={{ flex: 1 }}
+          containerStyle={{ flex: 1, height: 40 }}
           placeholder={PLACEHOLDERS.accommodation.city}
           value={city}
           onChangeText={setCity}
@@ -1241,7 +1241,7 @@ const AccommodationDraftEditor = forwardRef<
         <Text style={styles.fieldLabel}>장소</Text>
         <Input
           variant="filled"
-          containerStyle={{ flex: 1 }}
+          containerStyle={{ flex: 1, height: 40 }}
           placeholder={PLACEHOLDERS.accommodation.place}
           value={place}
           onChangeText={setPlace}
@@ -1371,7 +1371,7 @@ const AccommodationDraftEditor = forwardRef<
         <Text style={styles.fieldLabel}>숙박료 (원)</Text>
         <Input
           variant="filled"
-          containerStyle={{ flex: 1 }}
+          containerStyle={{ flex: 1, height: 40 }}
           placeholder={PLACEHOLDERS.expense.amount}
           value={formatAmountWithCommas(expenseAmount)}
           onChangeText={text =>
@@ -1455,7 +1455,7 @@ const ExpenseDraftEditor = forwardRef<
         <Text style={styles.fieldLabel}>금액 (원)</Text>
         <Input
           variant="filled"
-          containerStyle={{ flex: 1 }}
+          containerStyle={{ flex: 1, height: 40 }}
           value={formatAmountWithCommas(amount)}
           onChangeText={text =>
             setAmount(normalizeAmountDigits(text.replace(/,/g, "")))
@@ -1469,7 +1469,7 @@ const ExpenseDraftEditor = forwardRef<
         <Text style={[styles.fieldLabel, styles.fieldLabelTop]}>내용</Text>
         <Input
           variant="filled"
-          containerStyle={{ flex: 1 }}
+          containerStyle={{ flex: 1, height: 56 }}
           value={description}
           onChangeText={setDescription}
           style={styles.fieldTextarea}
@@ -1611,7 +1611,6 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   segmentInput: {
-    flex: 1,
     borderWidth: 1,
     borderColor: colors.gray400,
     borderRadius: radii.md,
@@ -1736,7 +1735,6 @@ const styles = StyleSheet.create({
     marginTop: 9,
   },
   fieldInput: {
-    flex: 1,
     borderWidth: 1,
     borderColor: colors.gray400,
     borderRadius: radii.md,
