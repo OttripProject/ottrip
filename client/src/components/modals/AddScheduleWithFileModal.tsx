@@ -805,9 +805,6 @@ export default function AddScheduleWithFileModal({
               onChange={val => setEditSegmentField(idx, "departure_airport", val)}
               placeholder="출발 공항"
               containerStyle={{ flex: 1 }}
-              style={{ borderColor: colors.gray300, borderWidth: 1, borderRadius: 8 }}
-              dropDownContainerStyle={{ borderColor: colors.gray300 }}
-              textStyle={{ ...textStyles.body4, color: colors.gray900 }}
               onOpen={() => setIsPickerOpen(true)}
               onClose={() => setIsPickerOpen(false)}
             />
@@ -817,9 +814,6 @@ export default function AddScheduleWithFileModal({
               onChange={val => setEditSegmentField(idx, "arrival_airport", val)}
               placeholder="도착 공항"
               containerStyle={{ flex: 1 }}
-              style={{ borderColor: colors.gray300, borderWidth: 1, borderRadius: 8 }}
-              dropDownContainerStyle={{ borderColor: colors.gray300 }}
-              textStyle={{ ...textStyles.body4, color: colors.gray900 }}
               onOpen={() => setIsPickerOpen(true)}
               onClose={() => setIsPickerOpen(false)}
             />

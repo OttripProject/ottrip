@@ -830,9 +830,7 @@ const FlightDraftEditor = forwardRef<
                       setSegments(next);
                     }}
                     placeholder={PLACEHOLDERS.flight.departureAirport}
-                    style={styles.draftAirportPicker}
-                    dropDownContainerStyle={styles.draftAirportPickerList}
-                    searchTextInputStyle={styles.draftAirportPickerSearch}
+                    containerStyle={{ flex: 1 }}
                   />
                 </View>
               </View>
@@ -854,9 +852,7 @@ const FlightDraftEditor = forwardRef<
                       setSegments(next);
                     }}
                     placeholder={PLACEHOLDERS.flight.arrivalAirport}
-                    style={styles.draftAirportPicker}
-                    dropDownContainerStyle={styles.draftAirportPickerList}
-                    searchTextInputStyle={styles.draftAirportPickerSearch}
+                    containerStyle={{ flex: 1 }}
                   />
                 </View>
               </View>
@@ -1669,26 +1665,6 @@ const styles = StyleSheet.create({
   airportPickerWrapper: {
     overflow: "visible",
     position: "relative",
-  },
-  draftAirportPicker: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: "rgb(226, 226, 226)",
-    borderRadius: 8,
-    minHeight: 34,
-    backgroundColor: colors.white,
-  },
-  draftAirportPickerList: {
-    backgroundColor: colors.white,
-    borderWidth: 1,
-    borderColor: "rgb(226, 226, 226)",
-    borderRadius: 8,
-    borderTopWidth: 0,
-  },
-  draftAirportPickerSearch: {
-    backgroundColor: colors.gray200,
-    borderWidth: 0,
-    borderRadius: radii.xs,
   },
   draftCategoryPicker: {
     flex: 1,
