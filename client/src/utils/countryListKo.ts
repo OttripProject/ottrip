@@ -22,6 +22,17 @@ export const codeToFlag = (alpha2: string): string =>
 export const koreanNameToIso2 = (koreanName: string): string | null =>
   countries.getAlpha2Code(koreanName, "ko") ?? null;
 
+export const POPULAR_COUNTRY_CODES = [
+  "KR", "JP", "US", "VN", "TH", "SG", "PH", "TW", "HK", "ID", "MY",
+  "FR", "IT", "ES", "GB", "AU",
+];
+
+export function getPopularCountryOptions(): CountryOption[] {
+  const all = getKoreanCountryOptions();
+  const map = Object.fromEntries(all.map(o => [o.value, o]));
+  return POPULAR_COUNTRY_CODES.flatMap(code => (map[code] ? [map[code]] : []));
+}
+
 export function getKoreanCountryOptions(): CountryOption[] {
   const koNames = countries.getNames("ko", { select: "official" }) as Record<
     string,

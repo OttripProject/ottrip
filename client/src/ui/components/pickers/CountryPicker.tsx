@@ -8,18 +8,19 @@ import {
   type CountryOption,
   codeToFlag,
   getKoreanCountryOptions,
+  getPopularCountryOptions,
 } from "@/utils/countryListKo";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   FlatList,
   Pressable,
-  ScrollView,
+  SectionList,
   StyleSheet,
   Text,
   TextInput,
   type TextStyle,
-  View,
   type ViewStyle,
+  View,
 } from "react-native";
 import DownArrowIcon from "../../../../assets/down_arrow.svg";
 import XIcon from "../../../../assets/mobile_close.svg";
@@ -52,7 +53,8 @@ export default function CountryPicker({
   onOpen,
   onClose,
 }: CountryPickerProps) {
-  const options = useMemo(() => getKoreanCountryOptions(), []);
+  const allOptions = useMemo(() => getKoreanCountryOptions(), []);
+  const popularOptions = useMemo(() => getPopularCountryOptions(), []);
   const wrapperRef = useRef<View>(null);
   const searchRef = useRef<TextInput>(null);
   const [open, setIsOpen, _handleOutsidePress] = useDetectClose(
@@ -71,20 +73,36 @@ export default function CountryPicker({
 
   const selectedCode = useMemo(() => {
     if (!value) return null;
-    const matched = options.find(opt => opt.label === value);
+    const matched = allOptions.find(opt => opt.label === value);
     return matched?.value ?? null;
-  }, [value, options]);
+  }, [value, allOptions]);
 
   const filteredOptions = useMemo(() => {
     if (!searchText.trim()) return [];
     const q = searchText.trim().toLowerCase();
-    return options.filter(
+    return allOptions.filter(
       opt =>
         opt.label.toLowerCase().includes(q) ||
         opt.labelEn.toLowerCase().includes(q) ||
         opt.value.toLowerCase().includes(q),
     );
-  }, [searchText, options]);
+  }, [searchText, allOptions]);
+
+  const recentOptions = useMemo(() => {
+    return recentSearches
+      .map(name => allOptions.find(o => o.label === name))
+      .filter((o): o is CountryOption => !!o);
+  }, [recentSearches, allOptions]);
+
+  const sections = useMemo(() => {
+    const result = [];
+    if (recentOptions.length > 0) {
+      result.push({ title: "최근 검색", data: recentOptions });
+    }
+    result.push({ title: "인기", data: popularOptions });
+    result.push({ title: "전체", data: allOptions });
+    return result;
+  }, [recentOptions, allOptions, popularOptions]);
 
   const handleToggle = () => {
     if (disabled) return;
@@ -103,14 +121,6 @@ export default function CountryPicker({
   const handleSelect = (item: CountryOption) => {
     onChange(item.label);
     addItem(item.label);
-    setIsOpen(false);
-    setSearchText("");
-    onClose?.();
-  };
-
-  const handleSelectRecent = (name: string) => {
-    onChange(name);
-    addItem(name);
     setIsOpen(false);
     setSearchText("");
     onClose?.();
@@ -236,70 +246,19 @@ export default function CountryPicker({
                   다른 키워드로 검색해 보세요.
                 </Text>
               </View>
-            ) : recentSearches.length > 0 ? (
-              <ScrollView
-                style={styles.recentList}
+            ) : (
+              <SectionList
+                sections={sections}
+                keyExtractor={(item, index) => `${item.value}-${index}`}
+                renderSectionHeader={({ section }) => (
+                  <Text style={styles.sectionLabel}>{section.title}</Text>
+                )}
+                renderItem={renderItem}
                 keyboardShouldPersistTaps="handled"
                 showsVerticalScrollIndicator={false}
-              >
-                <Text style={styles.recentLabel}>최근 검색</Text>
-                {recentSearches.map(name => {
-                  const opt = options.find(o => o.label === name);
-                  const isSelected = value === name;
-                  return (
-                    <Pressable
-                      key={name}
-                      style={({ hovered }: any) => [
-                        styles.item,
-                        isSelected && styles.itemSelected,
-                        hovered && !isSelected && styles.itemHovered,
-                      ]}
-                      onPress={() => handleSelectRecent(name)}
-                    >
-                      <View style={styles.itemFlagWrapper}>
-                        <Text style={styles.itemFlag}>{opt?.flag ?? ""}</Text>
-                      </View>
-                      <View style={styles.itemNames}>
-                        <Text
-                          style={[
-                            styles.itemText,
-                            isSelected && styles.itemTextSelected,
-                          ]}
-                          numberOfLines={1}
-                        >
-                          {name}
-                        </Text>
-                        <Text style={styles.itemTextEn} numberOfLines={1}>
-                          {opt?.labelEn ?? ""}
-                        </Text>
-                      </View>
-                      <View
-                        style={[
-                          styles.itemCodeBadge,
-                          isSelected && styles.itemCodeBadgeSelected,
-                        ]}
-                      >
-                        <Text
-                          style={[
-                            styles.itemCode,
-                            isSelected && styles.itemCodeSelected,
-                          ]}
-                        >
-                          {opt?.value ?? ""}
-                        </Text>
-                      </View>
-                    </Pressable>
-                  );
-                })}
-              </ScrollView>
-            ) : (
-              <View style={styles.emptyState}>
-                <SearchIcon width={22} height={22} color={colors.gray500} />
-                <Text style={styles.emptyTitle}>국가를 검색해 보세요</Text>
-                <Text style={styles.emptySubtitle}>
-                  한국어, 영문, 또는 코드(예: KR)
-                </Text>
-              </View>
+                stickySectionHeadersEnabled={false}
+                style={styles.list}
+              />
             )}
           </View>
         </View>
@@ -386,7 +345,7 @@ const styles = StyleSheet.create({
   listContainer: {
     borderTopWidth: 1,
     borderTopColor: colors.gray200,
-    maxHeight: 260,
+    maxHeight: 300,
   },
   list: {
     paddingVertical: 4,
@@ -455,33 +414,17 @@ const styles = StyleSheet.create({
   itemCodeSelected: {
     color: colors.gray700,
   },
-  recentList: {
-    maxHeight: 260,
-    paddingVertical: 4,
-    paddingHorizontal: 6,
-  },
-  recentLabel: {
-    ...textStyles.body5,
-    color: colors.gray500,
+  sectionLabel: {
+    fontFamily: "Pretendard-Bold",
+    fontSize: 10,
+    lineHeight: 14,
+    color: "rgb(155, 155, 155)",
+    letterSpacing: 0.6,
+    textTransform: "uppercase",
+    paddingTop: 10,
     paddingHorizontal: 10,
-    paddingVertical: 6,
-  },
-  emptyState: {
-    paddingVertical: 28,
-    paddingHorizontal: 12,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  emptyTitle: {
-    ...textStyles.h7,
-    color: colors.gray900,
-    marginTop: 6,
-    marginBottom: 2,
-  },
-  emptySubtitle: {
-    ...textStyles.body5,
-    color: colors.gray600,
-  },
+    paddingBottom: 4,
+  } as any,
   noResultState: {
     paddingVertical: 24,
     paddingHorizontal: 12,
