@@ -19,6 +19,9 @@ export const codeToFlag = (alpha2: string): string =>
     .map(c => String.fromCodePoint(c.charCodeAt(0) + 127397))
     .join("");
 
+export const koreanNameToIso2 = (koreanName: string): string | null =>
+  countries.getAlpha2Code(koreanName, "ko") ?? null;
+
 export function getKoreanCountryOptions(): CountryOption[] {
   const koNames = countries.getNames("ko", { select: "official" }) as Record<
     string,

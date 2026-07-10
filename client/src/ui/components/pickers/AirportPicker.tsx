@@ -9,7 +9,9 @@ import {
   type AirportOption,
   getAirportByIata,
   getAirportOptionsBySearch,
+  getCountryIso2ByIata,
 } from "@/utils/airportList";
+import { codeToFlag } from "@/utils/countryListKo";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   FlatList,
@@ -103,6 +105,11 @@ export default function AirportPicker({
     if (!open) setSearchText("");
   }, [open]);
 
+  const getFlag = (iata: string) => {
+    const iso2 = getCountryIso2ByIata(iata);
+    return iso2 ? codeToFlag(iso2) : "✈️";
+  };
+
   const renderItem = ({ item }: { item: AirportOption }) => {
     const airport = getAirportByIata(item.value);
     const isSelected = item.value === value;
@@ -116,7 +123,7 @@ export default function AirportPicker({
         onPress={() => handleSelect(item)}
       >
         <View style={styles.itemIconWrapper}>
-          <Text style={styles.itemIcon}>✈️</Text>
+          <Text style={styles.itemIcon}>{getFlag(item.value)}</Text>
         </View>
         <View style={styles.itemNames}>
           <Text
@@ -232,7 +239,7 @@ export default function AirportPicker({
                       onPress={() => handleSelectRecent(code)}
                     >
                       <View style={styles.itemIconWrapper}>
-                        <Text style={styles.itemIcon}>✈️</Text>
+                        <Text style={styles.itemIcon}>{getFlag(code)}</Text>
                       </View>
                       <View style={styles.itemNames}>
                         <Text
