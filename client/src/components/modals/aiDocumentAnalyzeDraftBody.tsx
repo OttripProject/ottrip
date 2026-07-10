@@ -1764,7 +1764,7 @@ const styles = StyleSheet.create({
     position: "relative",
   },
   fieldDateTrigger: {
-    flex: 1,
+    alignSelf: "stretch",
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
