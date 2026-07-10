@@ -39,6 +39,7 @@ interface AirportPickerProps {
   disabled?: boolean;
   onOpen?: () => void;
   onClose?: () => void;
+  dropdownAlign?: "left" | "right";
 }
 
 export default function AirportPicker({
@@ -50,6 +51,7 @@ export default function AirportPicker({
   disabled,
   onOpen,
   onClose,
+  dropdownAlign = "left",
 }: AirportPickerProps) {
   const wrapperRef = useRef<View>(null);
   const searchRef = useRef<TextInput>(null);
@@ -169,7 +171,7 @@ export default function AirportPicker({
       </Pressable>
 
       {open && (
-        <View style={styles.popup}>
+        <View style={[styles.popup, dropdownAlign === "right" ? { right: 0 } : { left: 0 }]}>
           <View style={styles.searchContainer}>
             <SearchIcon width={14} height={14} color={colors.gray600} />
             <TextInput
@@ -313,7 +315,6 @@ const styles = StyleSheet.create({
   popup: {
     position: "absolute",
     top: 46,
-    left: 0,
     minWidth: 280,
     width: "100%",
     backgroundColor: colors.white,

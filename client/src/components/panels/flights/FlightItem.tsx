@@ -943,6 +943,7 @@ export default function FlightItem({
                         }}
                         placeholder={PLACEHOLDERS.flight.arrivalAirport}
                         disabled={readOnly}
+                        dropdownAlign="right"
                       />
                     </View>
                   </View>
