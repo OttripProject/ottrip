@@ -191,8 +191,8 @@ export default function CountryPicker({
         onClose?.();
       }
     };
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
+    document.addEventListener("keydown", handleKeyDown, true);
+    return () => document.removeEventListener("keydown", handleKeyDown, true);
   }, [open]);
 
   useEffect(() => {
@@ -299,6 +299,7 @@ export default function CountryPicker({
               onChangeText={setSearchText}
               autoCorrect={false}
               autoCapitalize="none"
+              autoFocus={Platform.OS === "web"}
             />
             {searchText.length > 0 && (
               <Pressable
