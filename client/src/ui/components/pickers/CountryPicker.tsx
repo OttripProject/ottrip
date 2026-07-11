@@ -13,6 +13,7 @@ import {
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   FlatList,
+  Platform,
   Pressable,
   SectionList,
   StyleSheet,
@@ -57,11 +58,14 @@ export default function CountryPicker({
   const popularOptions = useMemo(() => getPopularCountryOptions(), []);
   const wrapperRef = useRef<View>(null);
   const searchRef = useRef<TextInput>(null);
+  const flatListRef = useRef<any>(null);
+  const sectionListRef = useRef<any>(null);
   const [open, setIsOpen, _handleOutsidePress] = useDetectClose(
     wrapperRef,
     false,
   );
   const [searchText, setSearchText] = useState("");
+  const [focusedIndex, setFocusedIndex] = useState(-1);
 
   const { data: me } = useMe();
   const storageKey = `recentCountrySearches_${me?.handle ?? "guest"}`;
@@ -104,6 +108,16 @@ export default function CountryPicker({
     return result;
   }, [recentOptions, allOptions, popularOptions]);
 
+  const flatItems = useMemo(() => {
+    if (searchText.trim()) return filteredOptions;
+    return sections.flatMap(s => s.data);
+  }, [searchText, filteredOptions, sections]);
+
+  const flatItemsRef = useRef(flatItems);
+  flatItemsRef.current = flatItems;
+  const focusedIndexRef = useRef(focusedIndex);
+  focusedIndexRef.current = focusedIndex;
+
   const handleToggle = () => {
     if (disabled) return;
     const next = !open;
@@ -130,14 +144,66 @@ export default function CountryPicker({
     if (!open) setSearchText("");
   }, [open]);
 
+  useEffect(() => {
+    setFocusedIndex(-1);
+  }, [open, searchText]);
+
+  useEffect(() => {
+    if (!open || Platform.OS !== "web") return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const items = flatItemsRef.current;
+      const idx = focusedIndexRef.current;
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        setFocusedIndex(prev => Math.min(prev + 1, items.length - 1));
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        setFocusedIndex(prev => Math.max(prev - 1, 0));
+      } else if (e.key === "Enter") {
+        if (idx >= 0 && idx < items.length) {
+          e.preventDefault();
+          handleSelect(items[idx]);
+        }
+      } else if (e.key === "Escape") {
+        e.preventDefault();
+        setIsOpen(false);
+        setSearchText("");
+        onClose?.();
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [open]);
+
+  useEffect(() => {
+    if (focusedIndex < 0) return;
+    if (searchText.trim()) {
+      try {
+        flatListRef.current?.scrollToIndex({ index: focusedIndex, animated: true, viewPosition: 0.5 });
+      } catch {}
+    } else {
+      let remaining = focusedIndex;
+      for (let si = 0; si < sections.length; si++) {
+        if (remaining < sections[si].data.length) {
+          try {
+            sectionListRef.current?.scrollToLocation({ sectionIndex: si, itemIndex: remaining, animated: true, viewPosition: 0.5 });
+          } catch {}
+          break;
+        }
+        remaining -= sections[si].data.length;
+      }
+    }
+  }, [focusedIndex]);
+
   const renderItem = ({ item }: { item: CountryOption }) => {
     const isSelected = item.value === selectedCode;
+    const isFocused = focusedIndex >= 0 && flatItems[focusedIndex]?.value === item.value;
     return (
       <Pressable
         style={({ hovered }: any) => [
           styles.item,
           isSelected && styles.itemSelected,
-          hovered && !isSelected && styles.itemHovered,
+          (hovered || isFocused) && !isSelected && styles.itemHovered,
         ]}
         onPress={() => handleSelect(item)}
       >
@@ -227,6 +293,7 @@ export default function CountryPicker({
           <View style={styles.listContainer}>
             {filteredOptions.length > 0 ? (
               <FlatList
+                ref={flatListRef}
                 data={filteredOptions}
                 keyExtractor={item => item.value}
                 renderItem={renderItem}
@@ -248,6 +315,7 @@ export default function CountryPicker({
               </View>
             ) : (
               <SectionList
+                ref={sectionListRef}
                 sections={sections}
                 keyExtractor={(item, index) => `${item.value}-${index}`}
                 renderSectionHeader={({ section }) => (
@@ -261,6 +329,18 @@ export default function CountryPicker({
               />
             )}
           </View>
+          {Platform.OS === "web" && (
+            <View style={styles.keyboardHint}>
+              <View style={styles.keyboardHintRow}>
+                <Text style={styles.keyboardHintKey}>↑↓</Text>
+                <Text style={styles.keyboardHintText}>이동</Text>
+                <Text style={styles.keyboardHintKey}>↵</Text>
+                <Text style={styles.keyboardHintText}>선택</Text>
+                <Text style={styles.keyboardHintKey}>esc</Text>
+                <Text style={styles.keyboardHintText}>닫기</Text>
+              </View>
+            </View>
+          )}
         </View>
       )}
     </View>
@@ -408,8 +488,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.gray300,
   },
   itemCode: {
-    ...textStyles.body5,
-    color: colors.gray500,
+    ...textStyles.h10,
+    color: colors.gray700,
   },
   itemCodeSelected: {
     color: colors.gray700,
@@ -424,6 +504,38 @@ const styles = StyleSheet.create({
     paddingTop: 10,
     paddingHorizontal: 10,
     paddingBottom: 4,
+  } as any,
+  keyboardHint: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderTopWidth: 1,
+    borderTopColor: "rgb(244, 244, 244)",
+    backgroundColor: "rgb(250, 250, 250)",
+  },
+  keyboardHintRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  keyboardHintText: {
+    fontFamily: "Pretendard",
+    fontSize: 10,
+    lineHeight: 14,
+    color: "rgb(155, 155, 155)",
+  },
+  keyboardHintKey: {
+    ...textStyles.h10,
+    backgroundColor: "rgb(255, 255, 255)",
+    borderWidth: 1,
+    borderColor: "rgb(226, 226, 226)",
+    borderRadius: 5,
+    paddingVertical: 1,
+    paddingHorizontal: 7,
+    color: "rgb(108, 108, 108)",
+    minWidth: 16,
+    textAlign: "center",
   } as any,
   noResultState: {
     paddingVertical: 24,
