@@ -126,6 +126,8 @@ export default function CountryPicker({
   flatItemsRef.current = flatItems;
   const focusedIndexRef = useRef(focusedIndex);
   focusedIndexRef.current = focusedIndex;
+  const searchTextRef = useRef(searchText);
+  searchTextRef.current = searchText;
 
   const handleToggle = () => {
     if (disabled) return;
@@ -162,15 +164,24 @@ export default function CountryPicker({
     const handleKeyDown = (e: KeyboardEvent) => {
       const items = flatItemsRef.current;
       const idx = focusedIndexRef.current;
+      const isSearching = !!searchTextRef.current.trim();
+      const maxIdx = isSearching ? items.length : items.length - 1;
       if (e.key === "ArrowDown") {
         e.preventDefault();
-        setFocusedIndex(prev => Math.min(prev + 1, items.length - 1));
+        setFocusedIndex(prev => Math.min(prev + 1, maxIdx));
       } else if (e.key === "ArrowUp") {
         e.preventDefault();
         setFocusedIndex(prev => Math.max(prev - 1, 0));
       } else if (e.key === "Enter") {
-        if (idx >= 0 && idx < items.length) {
-          e.preventDefault();
+        e.preventDefault();
+        if (isSearching && idx === items.length) {
+          const trimmed = searchTextRef.current.trim();
+          onChange(trimmed);
+          addItem(trimmed);
+          setIsOpen(false);
+          setSearchText("");
+          onClose?.();
+        } else if (idx >= 0 && idx < items.length) {
           handleSelect(items[idx]);
         }
       } else if (e.key === "Escape") {
@@ -187,9 +198,13 @@ export default function CountryPicker({
   useEffect(() => {
     if (focusedIndex < 0) return;
     if (searchText.trim()) {
-      try {
-        flatListRef.current?.scrollToIndex({ index: focusedIndex, animated: true, viewPosition: 0.5 });
-      } catch {}
+      if (focusedIndex >= filteredOptions.length) {
+        flatListRef.current?.scrollToEnd({ animated: true });
+      } else {
+        try {
+          flatListRef.current?.scrollToIndex({ index: focusedIndex, animated: true, viewPosition: 0.5 });
+        } catch {}
+      }
     } else {
       let remaining = focusedIndex;
       for (let si = 0; si < sections.length; si++) {
@@ -314,6 +329,36 @@ export default function CountryPicker({
                 keyboardShouldPersistTaps="handled"
                 showsVerticalScrollIndicator={false}
                 style={styles.list}
+                ListFooterComponent={() => {
+                  const isFocused = focusedIndex === filteredOptions.length;
+                  const trimmed = searchText.trim();
+                  return (
+                    <Pressable
+                      style={({ hovered }: any) => [
+                        styles.directInputItem,
+                        (hovered || isFocused) && styles.directInputItemFocused,
+                      ]}
+                      onPress={() => {
+                        onChange(trimmed);
+                        addItem(trimmed);
+                        setIsOpen(false);
+                        setSearchText("");
+                        onClose?.();
+                      }}
+                    >
+                      <View style={styles.directInputIconCircle}>
+                        <Svg width={14} height={14} viewBox="0 0 24 24">
+                          <Path d="M12 5v14M5 12h14" stroke="rgb(0,122,255)" strokeWidth={1.9} strokeLinecap="round" />
+                        </Svg>
+                      </View>
+                      <View style={styles.directInputNames}>
+                        <Text style={styles.directInputTitle} numberOfLines={1}>'{trimmed}' 직접 입력</Text>
+                        <Text style={styles.directInputSubtitle} numberOfLines={1}>이 이름 그대로 저장</Text>
+                      </View>
+                      <Text style={styles.directInputEnterKey}>↵</Text>
+                    </Pressable>
+                  );
+                }}
               />
             ) : searchText.trim().length > 0 ? (
               <View style={styles.noResultState}>
@@ -563,6 +608,59 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     paddingVertical: 1,
     paddingHorizontal: 7,
+    color: "rgb(108, 108, 108)",
+    minWidth: 16,
+    textAlign: "center",
+  } as any,
+  directInputItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingVertical: 9,
+    paddingHorizontal: 10,
+    borderRadius: 9,
+    marginHorizontal: 6,
+    marginBottom: 4,
+  },
+  directInputItemFocused: {
+    backgroundColor: colors.gray200,
+  },
+  directInputIconCircle: {
+    width: 26,
+    height: 26,
+    borderRadius: 999,
+    backgroundColor: "rgb(234, 241, 254)",
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+  },
+  directInputNames: {
+    flex: 1,
+    minWidth: 0,
+  },
+  directInputTitle: {
+    fontFamily: "Pretendard-SemiBold",
+    fontSize: 13,
+    lineHeight: 18,
+    color: "rgb(0, 122, 255)",
+  },
+  directInputSubtitle: {
+    fontFamily: "Pretendard",
+    fontSize: 11,
+    lineHeight: 15,
+    color: "rgb(155, 155, 155)",
+  },
+  directInputEnterKey: {
+    fontFamily: "Poppins-SemiBold",
+    fontSize: 10,
+    lineHeight: 14,
+    backgroundColor: "rgb(255, 255, 255)",
+    borderWidth: 1,
+    borderColor: "rgb(226, 226, 226)",
+    borderRadius: 5,
+    paddingTop: 1,
+    paddingBottom: 1,
+    paddingHorizontal: 5,
     color: "rgb(108, 108, 108)",
     minWidth: 16,
     textAlign: "center",
