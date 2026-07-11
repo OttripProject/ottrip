@@ -1,4 +1,5 @@
 import useDetectClose from "@/hooks/useDetectClose";
+import Svg, { Circle, Path } from "react-native-svg";
 import { useMe } from "@/hooks/useMe";
 import { useRecentSearches } from "@/hooks/useRecentSearches";
 import { colors } from "@/ui/tokens/colors";
@@ -29,6 +30,14 @@ import SearchIcon from "../../../../assets/search.svg";
 import UpperArrowIcon from "../../../../assets/upper_arrow.svg";
 
 const ITEM_HEIGHT = 46;
+
+const getEulRul = (text: string): string => {
+  const code = text[text.length - 1]?.charCodeAt(0) ?? 0;
+  if (code >= 0xac00 && code <= 0xd7a3) {
+    return (code - 0xac00) % 28 === 0 ? "를" : "을";
+  }
+  return "을(를)";
+};
 
 interface CountryPickerProps {
   value: string;
@@ -308,10 +317,31 @@ export default function CountryPicker({
               />
             ) : searchText.trim().length > 0 ? (
               <View style={styles.noResultState}>
-                <Text style={styles.noResultTitle}>검색 결과가 없습니다</Text>
-                <Text style={styles.noResultSubtitle}>
-                  다른 키워드로 검색해 보세요.
+                <View style={styles.noResultIconCircle}>
+                  <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
+                    <Circle cx={12} cy={12} r={8} stroke="rgb(155,155,155)" strokeWidth={1.6} />
+                    <Path d="M8.5 14c1 1 5 1 7 0" stroke="rgb(155,155,155)" strokeWidth={1.5} strokeLinecap="round" />
+                  </Svg>
+                </View>
+                <Text style={styles.noResultTitle}>
+                  {'\''}
+                  <Text style={styles.noResultKeyword}>{searchText.trim()}</Text>
+                  {`' ${getEulRul(searchText.trim())} 찾을 수 없어요`}
                 </Text>
+                <Text style={styles.noResultSubtitle}>입력한 그대로 저장할 수 있어요</Text>
+                <Pressable
+                  style={styles.noResultButton}
+                  onPress={() => {
+                    const trimmed = searchText.trim();
+                    onChange(trimmed);
+                    addItem(trimmed);
+                    setIsOpen(false);
+                    setSearchText("");
+                    onClose?.();
+                  }}
+                >
+                  <Text style={styles.noResultButtonText}>+ '{searchText.trim()}' 직접 입력</Text>
+                </Pressable>
               </View>
             ) : (
               <SectionList
@@ -538,17 +568,48 @@ const styles = StyleSheet.create({
     textAlign: "center",
   } as any,
   noResultState: {
-    paddingVertical: 24,
-    paddingHorizontal: 12,
+    paddingTop: 20,
+    paddingBottom: 16,
+    paddingHorizontal: 14,
     alignItems: "center",
+    gap: 8,
+  },
+  noResultIconCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 999,
+    backgroundColor: "rgb(244, 244, 244)",
+    alignItems: "center",
+    justifyContent: "center",
   },
   noResultTitle: {
     ...textStyles.h7,
-    color: colors.gray900,
-    marginBottom: 2,
+    color: "rgb(31, 31, 31)",
+    textAlign: "center",
+  },
+  noResultKeyword: {
+    ...textStyles.h7,
+    color: "rgb(0, 122, 255)",
   },
   noResultSubtitle: {
     ...textStyles.body5,
-    color: colors.gray600,
+    color: "rgb(155, 155, 155)",
+    textAlign: "center",
+  },
+  noResultButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: "rgb(0, 122, 255)",
+    borderRadius: 999,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    marginVertical: 4,
+  },
+  noResultButtonText: {
+    fontFamily: "Pretendard-SemiBold",
+    fontSize: 12,
+    lineHeight: 12,
+    color: "rgb(255, 255, 255)",
   },
 });
