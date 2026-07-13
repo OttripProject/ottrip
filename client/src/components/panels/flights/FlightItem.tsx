@@ -951,6 +951,7 @@ export default function FlightItem({
                         }}
                         placeholder={PLACEHOLDERS.flight.departureAirport}
                         disabled={readOnly}
+                        style={readOnly ? { backgroundColor: colors.white } : undefined}
                       />
                     </View>
                     <View
@@ -976,6 +977,7 @@ export default function FlightItem({
                         placeholder={PLACEHOLDERS.flight.arrivalAirport}
                         disabled={readOnly}
                         dropdownAlign="right"
+                        style={readOnly ? { backgroundColor: colors.white } : undefined}
                       />
                     </View>
                   </View>
