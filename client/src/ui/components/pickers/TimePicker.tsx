@@ -79,6 +79,7 @@ export default function TimePicker({
   const [pendingMinute, setPendingMinute] = useState<number | null>(
     selectedMinute,
   );
+  const [originalValue, setOriginalValue] = useState<string>("");
 
   useEffect(() => {
     if (!isFocused) setLocalText(value || "");
@@ -128,6 +129,7 @@ export default function TimePicker({
     if (disabled) return;
     const next = !open;
     if (next) {
+      setOriginalValue(value || "");
       setPendingHour(selectedHour);
       setPendingMinute(selectedMinute);
       onOpen?.();
@@ -141,29 +143,35 @@ export default function TimePicker({
     if (!isHourEnabled(h)) return;
     setPendingHour(h);
     const mins = h === 24 ? [0] : MINUTES_5_STEP;
+    let newMinute = pendingMinute;
     if (
       pendingMinute === null ||
       !mins.includes(pendingMinute) ||
       !isTimeValid(h, pendingMinute)
     ) {
-      setPendingMinute(mins.find(m => isTimeValid(h, m)) ?? 0);
+      newMinute = mins.find(m => isTimeValid(h, m)) ?? 0;
+      setPendingMinute(newMinute);
+    }
+    if (newMinute !== null) {
+      onChange(`${pad(h)}:${pad(newMinute)}`);
     }
   };
 
   const handleSelectMinute = (m: number) => {
     if (pendingHour !== null && !isTimeValid(pendingHour, m)) return;
     setPendingMinute(m);
+    if (pendingHour !== null) {
+      onChange(`${pad(pendingHour)}:${pad(m)}`);
+    }
   };
 
   const handleConfirm = () => {
-    const h = pendingHour ?? 0;
-    const m = pendingMinute ?? 0;
-    onChange(`${pad(h)}:${pad(m)}`);
     setIsOpen(false);
     onClose?.();
   };
 
   const handleCancel = () => {
+    onChange(originalValue);
     setIsOpen(false);
     onClose?.();
   };
