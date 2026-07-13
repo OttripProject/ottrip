@@ -1,4 +1,3 @@
-import ViewerPreviewModal from "@/components/modals/ViewerPreviewModal";
 import { plansApi } from "@/services/plans";
 import Card from "@/ui/components/Card";
 import { colors } from "@/ui/tokens/colors";
@@ -53,7 +52,6 @@ export default function ExportPlanModal({
   const [isGenerating, setIsGenerating] = useState(false);
   const [exportPublicId, setExportPublicId] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
-  const [previewVisible, setPreviewVisible] = useState(false);
 
   const viewerUrl =
     exportPublicId && typeof window !== "undefined"
@@ -86,8 +84,10 @@ export default function ExportPlanModal({
   };
 
   const handleOpenLink = () => {
-    if (!exportPublicId) return;
-    setPreviewVisible(true);
+    if (!viewerUrl) return;
+    if (Platform.OS === "web") {
+      window.open(viewerUrl, "_blank", "noopener,noreferrer");
+    }
   };
 
   const handleClose = () => {
@@ -95,19 +95,11 @@ export default function ExportPlanModal({
     setIncludeExpenses(false);
     setIncludeChecklist(false);
     setCopied(false);
-    setPreviewVisible(false);
     onClose();
   };
 
   return (
     <>
-      {exportPublicId && (
-        <ViewerPreviewModal
-          visible={previewVisible}
-          publicId={exportPublicId}
-          onClose={() => setPreviewVisible(false)}
-        />
-      )}
       <Modal
         visible={visible}
         transparent
