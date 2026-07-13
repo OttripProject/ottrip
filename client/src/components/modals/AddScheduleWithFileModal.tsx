@@ -29,6 +29,7 @@ import { AirportPicker, CategoryPicker, TimePicker } from "@/ui/components/picke
 import type { ExpenseCategory as ExpenseCategoryType } from "@/types/expense";
 import Spinner from "@/ui/components/Spinner";
 import AiRefreshIcon from "../../../assets/ai_refresh.svg";
+import InfoCircleIcon from "../../../assets/info_circle.svg";
 import AttachmentDocIcon from "../../../assets/mobile_attachment_document.svg";
 import AttachmentImageIcon from "../../../assets/mobile_attachment_image.svg";
 import CalendarIcon from "../../../assets/calender.svg";
@@ -1172,8 +1173,16 @@ export default function AddScheduleWithFileModal({
                 </Pressable>
               </View>
 
-              {/* 비용 합계 배너 */}
-              {expenseCount > 0 && (
+              {/* AI 분석 안내 + 비용 합계 배너 */}
+              <View style={{ gap: 10 }}>
+                <View style={styles.aiNotice}>
+                  <View style={{ marginTop: 2 }}>
+                    <InfoCircleIcon width={12} height={12} color={colors.gray600} />
+                  </View>
+                  <Text style={styles.aiNoticeText}>AI 분석 결과라 정확하지 않을 수 있어요. 추가 전에 내용을 확인해 주세요.</Text>
+                </View>
+
+                {expenseCount > 0 && (
                 <View style={styles.expenseBanner}>
                   <ExpenseCardIcon width={14} height={14} color="#137A41" />
                   <Text style={styles.expenseBannerText}>비용 {expenseCount}건 함께 추가</Text>
@@ -1186,7 +1195,8 @@ export default function AddScheduleWithFileModal({
                     )}
                   </View>
                 </View>
-              )}
+                )}
+              </View>
 
               {/* 아이템 목록 */}
               <ScrollView
@@ -1455,6 +1465,18 @@ const styles = StyleSheet.create({
   },
   toggleCheckboxSelected: { backgroundColor: colors.gray900, borderColor: colors.gray900 },
   toggleAllText: { ...textStyles.h8, color: colors.gray900 },
+
+  aiNotice: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 4,
+    paddingHorizontal: 2,
+  },
+  aiNoticeText: {
+    ...textStyles.body6,
+    color: colors.gray600,
+    flex: 1,
+  },
 
   // Expense banner
   expenseBanner: {
