@@ -133,6 +133,38 @@ export default function FlightItem({
     });
   }, [flight]);
 
+  useEffect(() => {
+    if (!flight?.flightSegments?.length) return;
+    const sortedSegments = [...flight.flightSegments].sort(
+      (a: any, b: any) => (a.order ?? 0) - (b.order ?? 0),
+    );
+    setFlightSegments(
+      sortedSegments.map((segment: any) => {
+        const depTime = segment.departureTime
+          ? dayjs(segment.departureTime)
+          : dayjs();
+        const arrTime = segment.arrivalTime
+          ? dayjs(segment.arrivalTime)
+          : dayjs().add(1, "hour");
+        return {
+          id: segment.id,
+          airline: segment.airline || "",
+          flight_number: segment.flightNumber || "",
+          departure_airport: segment.departureAirport || "",
+          arrival_airport: segment.arrivalAirport || "",
+          departure_date: depTime.format("YYYY-MM-DD"),
+          departure_time: depTime.format("HH:mm"),
+          arrival_date: arrTime.format("YYYY-MM-DD"),
+          arrival_time: arrTime.format("HH:mm"),
+          seat_class: segment.seatClass || "",
+          seat_number: segment.seatNumber || "",
+          gate: segment.gate || "",
+          terminal: segment.terminal || "",
+        };
+      }),
+    );
+  }, [flight]);
+
   const [showWarning, setShowWarning] = useState(false);
   const [warningMessage, setWarningMessage] = useState("");
 
