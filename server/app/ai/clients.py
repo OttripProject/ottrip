@@ -271,6 +271,7 @@ class GeminiClient:
         from google.genai import types
 
         err: dict[str, Any] = {"success": False, "items": [], "error": ""}
+        raw = ""
 
         try:
             prompt_path = Path(__file__).parent / "prompt" / "plan_upload_analyze.txt"
@@ -293,19 +294,32 @@ class GeminiClient:
                 contents=contents,
                 config=config,
             )
+            finish_reason = None
+            try:
+                finish_reason = response.candidates[0].finish_reason
+            except Exception:
+                pass
+            logger.info("analyze_plan_upload finish_reason=%s", finish_reason)
+
             raw = (getattr(response, "text", None) or "").strip()
             if not raw:
                 err["error"] = "AI 응답이 비어있습니다."
                 return err
+            logger.info("analyze_plan_upload raw response: %s", raw[:500])
             parsed = json.loads(raw)
             if not isinstance(parsed, dict):
                 err["error"] = "AI 응답이 객체 형태가 아닙니다."
                 return err
             return parsed
         except json.JSONDecodeError:
+            logger.error(
+                "analyze_plan_upload JSON 파싱 실패. raw=%s",
+                raw[:500] if raw else "None",
+            )
             err["error"] = "AI 응답을 JSON으로 파싱할 수 없습니다."
             return err
         except Exception as e:
+            logger.exception("analyze_plan_upload 오류: %s", str(e))
             err["error"] = f"플랜 분석 중 오류: {str(e)}"
             return err
 

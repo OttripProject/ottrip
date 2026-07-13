@@ -560,6 +560,8 @@ export default function AddScheduleWithFileModal({
         setItems(merged);
         setSelectedIndexes(new Set(merged.map((_, i) => i)));
         setStep("preview");
+      } else if (!res.success && res.error) {
+        setError(res.error);
       } else {
         setStep("empty");
       }
