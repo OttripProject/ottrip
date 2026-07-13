@@ -470,7 +470,7 @@ export default function FlightItem({
     !readOnly ||
     (readOnly &&
       flightAttachmentEntityId != null &&
-      (isLoadingAttachments || existingAttachments.length > 0));
+      existingAttachments.length > 0);
 
   const handleSave = async () => {
     if (isSubmittingRef.current) {
@@ -1209,9 +1209,7 @@ export default function FlightItem({
                   ? handleRemoveExistingAttachment
                   : undefined
               }
-              isLoadingExisting={
-                flightAttachmentEntityId != null && isLoadingAttachments
-              }
+              isLoadingExisting={false}
               isUploading={isUploading}
               disabled={readOnly || isSubmitting}
               hideAddControls={readOnly}

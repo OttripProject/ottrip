@@ -477,7 +477,7 @@ export default function ItineraryItem({
     !readOnly ||
     (readOnly &&
       itineraryAttachmentEntityId != null &&
-      (isLoadingAttachments || existingAttachments.length > 0));
+      existingAttachments.length > 0);
 
   const handleSave = async () => {
     if (isSubmittingRef.current) {
@@ -1328,9 +1328,7 @@ export default function ItineraryItem({
                   ? handleRemoveExistingAttachment
                   : undefined
               }
-              isLoadingExisting={
-                itineraryAttachmentEntityId != null && isLoadingAttachments
-              }
+              isLoadingExisting={false}
               isUploading={isUploading}
               disabled={readOnly || isSubmitting}
               hideAddControls={readOnly}
