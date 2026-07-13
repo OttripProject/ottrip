@@ -68,7 +68,7 @@ interface AddScheduleWithFileModalProps {
 const ITEM_BADGE: Record<string, { label: string; bg: string; text: string; dot: string }> = {
   itinerary: { label: "일정", bg: "#EAF1FF", text: "#1A66E0", dot: "#3D7FE6" },
   flight: { label: "항공", bg: "#F3EEFF", text: "#7B2FBE", dot: "#9B5DE5" },
-  accommodation: { label: "숙박", bg: "#E6F9EE", text: "#1A7F50", dot: "#2DB056" },
+  accommodation: { label: "숙박", bg: "rgb(255, 233, 199)", text: "rgb(162, 99, 9)", dot: "rgb(224, 138, 46)" },
   expense: { label: "비용", bg: "#FFF4E5", text: "#C85B0B", dot: "#E8841A" },
 };
 
@@ -754,6 +754,15 @@ export default function AddScheduleWithFileModal({
             placeholder="장소"
             placeholderTextColor={colors.gray400}
           />
+          <TextInput
+            style={styles.editDescriptionInput}
+            value={String(v.description ?? "")}
+            onChangeText={val => setEditField(idx, "description", val)}
+            placeholder="내용"
+            placeholderTextColor={colors.gray400}
+            multiline
+            numberOfLines={3}
+          />
           <View style={styles.editExpenseRow}>
             <Text style={styles.editExpenseLabel}>비용</Text>
             <CategoryPicker
@@ -927,6 +936,8 @@ export default function AddScheduleWithFileModal({
 
     if (draft.itemType === "accommodation") {
       const expNested = ((v.expense ?? {}) as Record<string, unknown>);
+      const ciDate = String(v.checkin_date ?? v.checkinDate ?? "").substring(0, 10);
+      const coDate = String(v.checkout_date ?? v.checkoutDate ?? "").substring(0, 10);
       return (
         <View style={styles.editForm}>
           <TextInput
@@ -936,28 +947,89 @@ export default function AddScheduleWithFileModal({
             placeholder="숙소명"
             placeholderTextColor={colors.gray400}
           />
-          <View style={styles.editTimeRow}>
-            <TimePicker
-              value={normalizeHHmm(v.checkin_time ?? v.start_time)}
-              onChange={val => setEditField(idx, "checkin_time", val)}
-              style={timerPickerStyle}
-              containerStyle={{ flex: 1 }}
-            />
-            <Text style={styles.editTimeSep}>–</Text>
-            <TimePicker
-              value={normalizeHHmm(v.checkout_time ?? v.end_time)}
-              onChange={val => setEditField(idx, "checkout_time", val)}
-              style={timerPickerStyle}
-              containerStyle={{ flex: 1 }}
-              popupAlign="right"
-            />
-          </View>
           <TextInput
             style={styles.editInput}
             value={String(v.place ?? v.city ?? "")}
             onChangeText={val => setEditField(idx, "place", val)}
             placeholder="장소"
             placeholderTextColor={colors.gray400}
+          />
+          <View style={[styles.editTimeRow, { zIndex: showDepDatePicker ? 2000 : 20 }]}>
+            <View style={[styles.editFlightCell, { position: "relative" }]}>
+              <Pressable
+                style={styles.editDateTrigger}
+                onPress={() => { setShowDepDatePicker(true); setShowArrDatePicker(false); }}
+              >
+                <Text style={ciDate ? styles.editDateText : styles.editDatePlaceholder}>
+                  {ciDate ? dayjs(ciDate).format("YYYY.MM.DD") : "체크인 날짜"}
+                </Text>
+                <CalendarIcon width={14} height={14} />
+              </Pressable>
+              {showDepDatePicker && (
+                <BaseCalendar
+                  visible
+                  selectedDate={ciDate}
+                  onDayPress={day => { setEditField(idx, "checkin_date", day.dateString); setShowDepDatePicker(false); }}
+                  onClose={() => setShowDepDatePicker(false)}
+                  style={styles.editCalendarPopup}
+                  hideButtons
+                  autoCloseOnSelect
+                />
+              )}
+            </View>
+            <View style={styles.editFlightCell}>
+              <TimePicker
+                value={normalizeHHmm(v.checkin_time ?? v.start_time)}
+                onChange={val => setEditField(idx, "checkin_time", val)}
+                style={timerPickerStyle}
+                popupAlign="right"
+                onOpen={() => setIsPickerOpen(true)}
+                onClose={() => setIsPickerOpen(false)}
+              />
+            </View>
+          </View>
+          <View style={[styles.editTimeRow, { zIndex: showArrDatePicker ? 2000 : 10 }]}>
+            <View style={[styles.editFlightCell, { position: "relative" }]}>
+              <Pressable
+                style={styles.editDateTrigger}
+                onPress={() => { setShowArrDatePicker(true); setShowDepDatePicker(false); }}
+              >
+                <Text style={coDate ? styles.editDateText : styles.editDatePlaceholder}>
+                  {coDate ? dayjs(coDate).format("YYYY.MM.DD") : "체크아웃 날짜"}
+                </Text>
+                <CalendarIcon width={14} height={14} />
+              </Pressable>
+              {showArrDatePicker && (
+                <BaseCalendar
+                  visible
+                  selectedDate={coDate}
+                  onDayPress={day => { setEditField(idx, "checkout_date", day.dateString); setShowArrDatePicker(false); }}
+                  onClose={() => setShowArrDatePicker(false)}
+                  style={styles.editCalendarPopup}
+                  hideButtons
+                  autoCloseOnSelect
+                />
+              )}
+            </View>
+            <View style={styles.editFlightCell}>
+              <TimePicker
+                value={normalizeHHmm(v.checkout_time ?? v.end_time)}
+                onChange={val => setEditField(idx, "checkout_time", val)}
+                style={timerPickerStyle}
+                popupAlign="right"
+                onOpen={() => setIsPickerOpen(true)}
+                onClose={() => setIsPickerOpen(false)}
+              />
+            </View>
+          </View>
+          <TextInput
+            style={styles.editDescriptionInput}
+            value={String(v.description ?? "")}
+            onChangeText={val => setEditField(idx, "description", val)}
+            placeholder="내용"
+            placeholderTextColor={colors.gray400}
+            multiline
+            numberOfLines={3}
           />
           <View style={styles.editExpenseRow}>
             <Text style={styles.editExpenseLabel}>비용</Text>
@@ -1312,6 +1384,69 @@ export default function AddScheduleWithFileModal({
                                 ) : null}
                               </View>
                             );
+                          })() : draft.itemType === "accommodation" ? (() => {
+                            const av = draft.payload.values as Record<string, unknown>;
+                            const ciDate = String(av.checkin_date ?? av.checkinDate ?? "").substring(0, 10);
+                            const coDate = String(av.checkout_date ?? av.checkoutDate ?? "").substring(0, 10);
+                            const ciTime = String(av.checkin_time ?? av.checkinTime ?? "");
+                            const coTime = String(av.checkout_time ?? av.checkoutTime ?? "");
+                            const ciDay = ciDate ? dayjs(ciDate) : null;
+                            const coDay = coDate ? dayjs(coDate) : null;
+                            const nights = (ciDay?.isValid() && coDay?.isValid()) ? coDay.diff(ciDay, "day") : 0;
+                            const hotelName = String(av.name ?? "");
+                            const place = String(av.place ?? av.location ?? "");
+                            const description = String(av.description ?? "");
+                            const ciStr = [ciDay?.isValid() ? ciDay.format("YYYY. MM. DD (ddd)") : ciDate, ciTime].filter(Boolean).join(" · ");
+                            const coStr = [coDay?.isValid() ? coDay.format("YYYY. MM. DD (ddd)") : coDate, coTime].filter(Boolean).join(" · ");
+                            const expAmt = expense ? (
+                              expense.currency === "KRW" ? `₩${expense.amount.toLocaleString()}`
+                              : expense.currency === "USD" ? `$${expense.amount.toLocaleString()}`
+                              : `${expense.amount.toLocaleString()} ${expense.currency}`
+                            ) : null;
+                            return (
+                              <View style={styles.itemContent}>
+                                <View style={styles.itemTitleRow}>
+                                  <View style={[styles.typeBadge, { backgroundColor: badge.bg }]}>
+                                    <View style={[styles.typeDot, { backgroundColor: badge.dot }]} />
+                                    <Text style={[styles.typeBadgeText, { color: badge.text }]}>{badge.label}</Text>
+                                  </View>
+                                  {hotelName ? <Text style={styles.itemTitle} numberOfLines={1}>{hotelName}</Text> : null}
+                                </View>
+                                <View style={styles.accomInfoCard}>
+                                  <View style={styles.accomInfoRow}>
+                                    <Text style={styles.accomInfoLabel}>체크인</Text>
+                                    <Text style={styles.accomInfoValue}>{ciStr || "-"}</Text>
+                                  </View>
+                                  <View style={styles.accomInfoRow}>
+                                    <Text style={styles.accomInfoLabel}>체크아웃</Text>
+                                    <View style={{ flexDirection: "row", alignItems: "center", gap: 6, flex: 1, minWidth: 0 }}>
+                                      <Text style={[styles.accomInfoValue, { flex: 0, flexShrink: 1 }]} numberOfLines={1}>{coStr || "-"}</Text>
+                                      {nights > 0 && (
+                                        <View style={styles.accomNightBadge}>
+                                          <Text style={styles.accomNightBadgeText}>{nights}박</Text>
+                                        </View>
+                                      )}
+                                    </View>
+                                  </View>
+                                  {place ? (
+                                    <View style={styles.accomInfoRow}>
+                                      <Text style={styles.accomInfoLabel}>장소</Text>
+                                      <Text style={styles.accomInfoValue} numberOfLines={1}>{place}</Text>
+                                    </View>
+                                  ) : null}
+                                  {description ? (
+                                    <Text style={styles.accomDescription} numberOfLines={2}>{description}</Text>
+                                  ) : null}
+                                </View>
+                                {expAmt ? (
+                                  <View style={styles.inlineExpenseBadge}>
+                                    <ExpenseCardIcon width={12} height={12} color="#1F9D57" />
+                                    <Text style={styles.inlineExpenseCategory}>숙박료</Text>
+                                    <Text style={styles.inlineExpenseAmount}>{expAmt}</Text>
+                                  </View>
+                                ) : null}
+                              </View>
+                            );
                           })() : (
                           <View style={styles.itemContent}>
                             <View style={styles.itemTitleRow}>
@@ -1332,6 +1467,12 @@ export default function AddScheduleWithFileModal({
                                   <Text style={styles.itemLocation} numberOfLines={1}>{location}</Text>
                                 ) : null}
                               </View>
+                            ) : null}
+
+                            {draft.itemType === "itinerary" && String((draft.payload.values as Record<string, unknown>).description ?? "") ? (
+                              <Text style={styles.accomDescription} numberOfLines={2}>
+                                {String((draft.payload.values as Record<string, unknown>).description)}
+                              </Text>
                             ) : null}
 
                             {expense ? (
@@ -1613,6 +1754,58 @@ const styles = StyleSheet.create({
   itemTime: { fontFamily: typography.fontFamily.poppinsSemiBold, fontSize: 12, lineHeight: 18, color: colors.gray900 },
   itemLocation: { ...textStyles.body5, color: colors.gray500, maxWidth: 160 },
 
+  accomInfoCard: {
+    marginTop: 8,
+    backgroundColor: "rgb(251, 248, 241)",
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    gap: 4,
+  },
+  accomInfoRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    minWidth: 0,
+  },
+  accomInfoLabel: {
+    width: 50,
+    flexShrink: 0,
+    fontFamily: typography.fontFamily.pretendardSemiBold,
+    fontSize: 11,
+    lineHeight: 16,
+    color: colors.gray500,
+  },
+  accomInfoValue: {
+    fontFamily: typography.fontFamily.pretendardRegular,
+    fontSize: 12,
+    lineHeight: 18,
+    color: colors.black,
+    flex: 1,
+    minWidth: 0,
+  },
+  accomNightBadge: {
+    height: 18,
+    paddingHorizontal: 6,
+    borderRadius: 5,
+    backgroundColor: colors.gray200,
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+  },
+  accomNightBadgeText: {
+    fontFamily: typography.fontFamily.pretendardSemiBold,
+    fontSize: 10,
+    lineHeight: 14,
+    color: colors.gray600,
+  },
+  accomDescription: {
+    fontFamily: typography.fontFamily.pretendardRegular,
+    fontSize: 12,
+    lineHeight: 18,
+    color: colors.gray600,
+    marginTop: 2,
+  },
   flightInfoCard: {
     marginTop: 8,
     backgroundColor: "rgb(247, 248, 253)",
@@ -1705,6 +1898,13 @@ const styles = StyleSheet.create({
     height: 40, borderWidth: 1, borderColor: colors.gray300, borderRadius: 8,
     paddingHorizontal: 10, fontFamily: typography.fontFamily.pretendardRegular,
     fontSize: 12, color: colors.gray900, outlineStyle: "none",
+  } as any,
+  editDescriptionInput: {
+    height: 60, borderWidth: 1, borderColor: colors.gray300, borderRadius: 8,
+    paddingHorizontal: 10, paddingVertical: 8,
+    fontFamily: typography.fontFamily.pretendardRegular,
+    fontSize: 12, lineHeight: 18, color: colors.gray900,
+    outlineStyle: "none", textAlignVertical: "top",
   } as any,
   editTimeRow: { flexDirection: "row", alignItems: "center", gap: 6, zIndex: 10 },
   editFlightInput: { flex: 1, height: 40, minWidth: 0 },
