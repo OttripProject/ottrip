@@ -20,6 +20,7 @@ import {
   StyleSheet,
   Text,
   View,
+  useWindowDimensions,
 } from "react-native";
 import AttachmentIcon from "../../../assets/attachment_clip.svg";
 import DeleteIcon from "../../../assets/delete.svg";
@@ -55,6 +56,7 @@ export default function ExpenseDetailModal({
   onExpenseDelete,
   readOnly = false,
 }: ExpenseDetailModalProps) {
+  const { height: windowHeight } = useWindowDimensions();
   const [tab, setTab] = useState<"expenses" | "attachments">("expenses");
   const [selectedCategory, setSelectedCategory] =
     useState<ExpenseCategory | null>(null);
@@ -189,7 +191,7 @@ export default function ExpenseDetailModal({
         onRequestClose={onClose}
       >
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
+          <View style={[styles.modalContent, { maxHeight: windowHeight * 0.70 }]}>
             <View style={styles.header}>
               <Text style={styles.headerTitle}>지출 내역</Text>
               <Pressable onPress={onClose} style={styles.closeButton}>
@@ -493,7 +495,6 @@ const styles = StyleSheet.create({
     borderRadius: radii.xl,
     width: "100%",
     maxWidth: 520,
-    maxHeight: 900,
     minHeight: 0,
     overflow: "hidden",
   },
