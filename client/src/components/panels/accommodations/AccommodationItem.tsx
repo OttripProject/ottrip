@@ -160,6 +160,7 @@ export default function AccommodationItem({
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isSubmittingRef = useRef(false);
+
   const [showCheckinDatePicker, setShowCheckinDatePicker] = useState(false);
   const [showCheckoutDatePicker, setShowCheckoutDatePicker] = useState(false);
   const [checkinTimeOpen, setCheckinTimeOpen] = useState(false);
@@ -435,6 +436,12 @@ export default function AccommodationItem({
     const newCheckout = dayjs(
       `${formData.checkout_date} ${formData.checkout_time}`,
     );
+
+    if (newCheckout.isSame(newCheckin) || newCheckout.isBefore(newCheckin)) {
+      setWarningMessage("체크아웃은 체크인보다 늦어야 해요.");
+      setShowWarning(true);
+      return;
+    }
 
     for (const existingAccommodation of existingAccommodations) {
       if (accommodation && existingAccommodation.id === accommodation.id) {
@@ -844,7 +851,7 @@ export default function AccommodationItem({
                   }}
                   onClose={() => setShowCheckinDatePicker(false)}
                   style={styles.calendarPopup}
-                  minDate={dayjs().format("YYYY-MM-DD")}
+                  minDate={undefined}
                   hideButtons={true}
                   autoCloseOnSelect={true}
                 />
