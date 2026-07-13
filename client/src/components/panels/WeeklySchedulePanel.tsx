@@ -1839,22 +1839,22 @@ export default function WeeklySchedulePanel({
       const group = overlapGroups.find(g => g.some(e => e.id === event.id));
 
       if (group) {
-        const overlapIndex = group.findIndex(e => e.id === event.id);
-        const overlapCount = group.length;
+        const customOverlapIndex = group.findIndex(e => e.id === event.id);
+        const customOverlapCount = group.length;
 
         return {
           ...event,
           id: String(event.id),
-          overlapIndex,
-          overlapCount,
+          customOverlapIndex,
+          customOverlapCount,
         };
       }
 
       return {
         ...event,
         id: String(event.id),
-        overlapIndex: 0,
-        overlapCount: 1,
+        customOverlapIndex: 0,
+        customOverlapCount: 1,
       };
     });
 
@@ -3054,11 +3054,11 @@ export default function WeeklySchedulePanel({
             }
 
             if (
-              event.overlapCount > 1 &&
-              typeof event.overlapIndex === "number"
+              event.customOverlapCount > 1 &&
+              typeof event.customOverlapIndex === "number"
             ) {
-              const overlapIndex = event.overlapIndex;
-              const overlapCount = event.overlapCount;
+              const overlapIndex = event.customOverlapIndex;
+              const overlapCount = event.customOverlapCount;
               const gapPercent = 1.5;
               const slotWidth =
                 (totalWidthPercent - gapPercent * (overlapCount - 1)) /
