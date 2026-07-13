@@ -819,6 +819,15 @@ export default function AddScheduleWithFileModal({
               onClose={() => setIsPickerOpen(false)}
             />
           </View>
+          <TextInput
+            style={styles.editTitleInput}
+            value={String(v.reservation_number ?? v.reservationNumber ?? "")}
+            onChangeText={val => setEditField(idx, "reservation_number", val)}
+            placeholder="예약번호 (PNR)"
+            placeholderTextColor={colors.gray400}
+            autoCorrect={false}
+            autoCapitalize="characters"
+          />
           <View style={[styles.editTimeRow, { zIndex: showDepDatePicker ? 2000 : 20 }]}>
             <View style={[styles.editFlightCell, { position: "relative" }]}>
               <Pressable
@@ -1244,6 +1253,66 @@ export default function AddScheduleWithFileModal({
                         </View>
                       ) : (
                         <>
+                          {draft.itemType === "flight" ? (() => {
+                            const fv = draft.payload.values as Record<string, unknown>;
+                            const segs = Array.isArray(fv.segments) ? fv.segments as Record<string, unknown>[] : [];
+                            const first = segs[0] ?? {};
+                            const last = segs[segs.length - 1] ?? first;
+                            const depCode = String(first.departure_airport ?? first.departureAirport ?? "");
+                            const arrCode = String(last.arrival_airport ?? last.arrivalAirport ?? "");
+                            const depTimeRaw = String(first.departure_time ?? first.departureTime ?? "");
+                            const arrTimeRaw = String(last.arrival_time ?? last.arrivalTime ?? "");
+                            const depDay = depTimeRaw ? dayjs(depTimeRaw.substring(0, 10)) : null;
+                            const arrDay = arrTimeRaw ? dayjs(arrTimeRaw.substring(0, 10)) : null;
+                            const depTime = normalizeHHmm(first.dep_time ?? first.departure_time ?? first.departureTime);
+                            const arrTime = normalizeHHmm(last.arr_time ?? last.arrival_time ?? last.arrivalTime);
+                            const airline = String(first.airline ?? "");
+                            const flightNum = String(first.flight_number ?? first.flightNumber ?? "");
+                            const flightLabel = [airline, flightNum].filter(Boolean).join(" ");
+                            const reservNum = String(fv.reservation_number ?? fv.reservationNumber ?? fv.booking_reference ?? fv.bookingReference ?? "");
+                            const expAmt = expense ? (
+                              expense.currency === "KRW" ? `₩${expense.amount.toLocaleString()}`
+                              : expense.currency === "USD" ? `$${expense.amount.toLocaleString()}`
+                              : `${expense.amount.toLocaleString()} ${expense.currency}`
+                            ) : null;
+                            return (
+                              <View style={styles.itemContent}>
+                                <View style={styles.itemTitleRow}>
+                                  <View style={[styles.typeBadge, { backgroundColor: badge.bg }]}>
+                                    <View style={[styles.typeDot, { backgroundColor: badge.dot }]} />
+                                    <Text style={[styles.typeBadgeText, { color: badge.text }]}>{badge.label}</Text>
+                                  </View>
+                                  {flightLabel ? <Text style={styles.itemTitle} numberOfLines={1}>{flightLabel}</Text> : null}
+                                </View>
+                                <View style={styles.flightInfoCard}>
+                                  <View style={styles.flightRouteRow}>
+                                    <View style={styles.flightRouteCol}>
+                                      <Text style={styles.flightAirportCode}>{depCode}</Text>
+                                      {depDay?.isValid() ? <Text style={styles.flightRouteDate}>{depDay.format("YYYY. MM. DD (ddd)")}</Text> : null}
+                                      {depTime ? <Text style={styles.flightRouteTime}>{depTime}</Text> : null}
+                                    </View>
+                                    <Text style={styles.flightArrow}>→</Text>
+                                    <View style={[styles.flightRouteCol, { alignItems: "flex-end" }]}>
+                                      <Text style={styles.flightAirportCode}>{arrCode}</Text>
+                                      {arrDay?.isValid() ? <Text style={styles.flightRouteDate}>{arrDay.format("YYYY. MM. DD (ddd)")}</Text> : null}
+                                      {arrTime ? <Text style={styles.flightRouteTime}>{arrTime}</Text> : null}
+                                    </View>
+                                  </View>
+                                  <View style={styles.flightReservRow}>
+                                    <Text style={styles.flightReservLabel}>예약번호</Text>
+                                    <Text style={styles.flightReservValue}>{reservNum || "-"}</Text>
+                                  </View>
+                                </View>
+                                {expAmt ? (
+                                  <View style={styles.inlineExpenseBadge}>
+                                    <ExpenseCardIcon width={12} height={12} color="#1F9D57" />
+                                    <Text style={styles.inlineExpenseCategory}>항공료</Text>
+                                    <Text style={styles.inlineExpenseAmount}>{expAmt}</Text>
+                                  </View>
+                                ) : null}
+                              </View>
+                            );
+                          })() : (
                           <View style={styles.itemContent}>
                             <View style={styles.itemTitleRow}>
                               <View style={[styles.typeBadge, { backgroundColor: badge.bg }]}>
@@ -1281,6 +1350,7 @@ export default function AddScheduleWithFileModal({
                               </View>
                             ) : null}
                           </View>
+                          )}
 
                           <Pressable style={styles.editButton} onPress={e => { e.stopPropagation(); startEdit(i); }}>
                             <UpdateIcon width={14} height={14} color={colors.gray600} />
@@ -1543,6 +1613,73 @@ const styles = StyleSheet.create({
   itemTime: { fontFamily: typography.fontFamily.poppinsSemiBold, fontSize: 12, lineHeight: 18, color: colors.gray900 },
   itemLocation: { ...textStyles.body5, color: colors.gray500, maxWidth: 160 },
 
+  flightInfoCard: {
+    marginTop: 8,
+    backgroundColor: "rgb(247, 248, 253)",
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    gap: 4,
+  },
+  flightRouteRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  flightRouteCol: {
+    flex: 1,
+    gap: 2,
+    minWidth: 0,
+  },
+  flightAirportCode: {
+    fontFamily: typography.fontFamily.poppinsSemiBold,
+    fontSize: 16,
+    lineHeight: 20,
+    color: colors.black,
+    letterSpacing: 0.5,
+  },
+  flightArrow: {
+    fontFamily: typography.fontFamily.pretendardSemiBold,
+    fontSize: 16,
+    lineHeight: 16,
+    color: "#7A66E0",
+    flexShrink: 0,
+  },
+  flightRouteDate: {
+    fontFamily: typography.fontFamily.pretendardRegular,
+    fontSize: 11,
+    lineHeight: 15,
+    color: colors.gray500,
+  },
+  flightRouteTime: {
+    fontFamily: typography.fontFamily.poppinsSemiBold,
+    fontSize: 13,
+    lineHeight: 18,
+    color: colors.black,
+  },
+  flightReservRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginTop: 4,
+    minWidth: 0,
+  },
+  flightReservLabel: {
+    width: 50,
+    flexShrink: 0,
+    fontFamily: typography.fontFamily.pretendardSemiBold,
+    fontSize: 11,
+    lineHeight: 16,
+    color: colors.gray500,
+  },
+  flightReservValue: {
+    fontFamily: typography.fontFamily.pretendardRegular,
+    fontSize: 12,
+    lineHeight: 18,
+    color: colors.black,
+    flex: 1,
+    minWidth: 0,
+  },
   inlineExpenseBadge: {
     flexDirection: "row",
     alignItems: "center",
