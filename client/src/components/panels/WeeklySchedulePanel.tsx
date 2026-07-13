@@ -3073,6 +3073,8 @@ export default function WeeklySchedulePanel({
               delete adjustedStyle.minWidth;
             }
 
+            adjustedStyle.minHeight = 20;
+
             let blockHeight = eventHeights[event.id] || 0;
 
             if (blockHeight === 0) {
@@ -3089,7 +3091,7 @@ export default function WeeklySchedulePanel({
               (new Date(event.end).getTime() - new Date(event.start).getTime()) / (1000 * 60);
             const isCompact = durationMinutes <= 30;
 
-            const showTitle = durationMinutes > 20;
+            const showTitle = durationMinutes > 0;
             const showTime = !isCompact && contentHeight >= 28;
             const showLocation = contentHeight > 52;
 
