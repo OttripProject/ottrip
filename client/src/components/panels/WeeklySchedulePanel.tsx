@@ -81,7 +81,7 @@ function toEvent(it: Itinerary): any {
 
   const normalizedStartTime = normalizeTime(it.startTime);
   let normalizedEndTime = normalizeTime(it.endTime);
-  const locationText = it.location || it.city || "";
+  const locationText = it.location || "";
 
   if (normalizedEndTime === "23:59" || it.endTime?.startsWith("23:59:")) {
     normalizedEndTime = "24:00";
@@ -3085,10 +3085,13 @@ export default function WeeklySchedulePanel({
             }
 
             const contentHeight = Math.max(blockHeight - 8, 0);
+            const durationMinutes =
+              (new Date(event.end).getTime() - new Date(event.start).getTime()) / (1000 * 60);
+            const isCompact = durationMinutes <= 30;
 
-            const showTitle = true;
-            const showTime = contentHeight >= 28;
-            const showLocation = contentHeight >= 44;
+            const showTitle = durationMinutes > 20;
+            const showTime = !isCompact && contentHeight >= 28;
+            const showLocation = contentHeight > 52;
 
             const flightStyle = isFlight
               ? {
@@ -3204,7 +3207,7 @@ export default function WeeklySchedulePanel({
                     }
                   }}
                 >
-                  <View style={styles.eventContentCol}>
+                  <View style={[styles.eventContentCol, blockHeight <= 70 && { justifyContent: "center" }]}>
                     {isFirstBar && showTitle && (
                       <View style={styles.eventTitleRow}>
                         <View
@@ -3245,6 +3248,21 @@ export default function WeeklySchedulePanel({
                         >
                           {event.title}
                         </Text>
+                        {isCompact && event.normalizedStartTime && (
+                          <Text
+                            numberOfLines={1}
+                            style={{
+                              ...textStyles.h9,
+                              color: isFlight
+                                ? colors.flightText
+                                : colors.itineraryText,
+                              opacity: 0.75,
+                              flexShrink: 0,
+                            }}
+                          >
+                            {event.normalizedStartTime}
+                          </Text>
+                        )}
                       </View>
                     )}
                     {isFirstBar &&
