@@ -1132,7 +1132,7 @@ export default function AddScheduleWithFileModal({
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       {hiddenFileInput}
       <Pressable style={styles.overlay} onPress={onClose}>
-        <Pressable style={styles.container} onPress={e => e.stopPropagation()}>
+        <Pressable style={[styles.container, step === "preview" && { minHeight: "80%" } as any]} onPress={e => e.stopPropagation()}>
 
           {/* 헤더 */}
           <View style={styles.header}>
@@ -1564,7 +1564,7 @@ const styles = StyleSheet.create({
   container: {
     width: "100%",
     maxWidth: 530,
-    maxHeight: "60%",
+    maxHeight: "80%",
     backgroundColor: colors.white,
     borderRadius: 20,
     paddingTop: spacing.xl,

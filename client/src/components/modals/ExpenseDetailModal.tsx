@@ -191,7 +191,7 @@ export default function ExpenseDetailModal({
         onRequestClose={onClose}
       >
         <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { maxHeight: windowHeight * 0.70 }]}>
+          <View style={[styles.modalContent, { maxHeight: windowHeight * 0.80, minHeight: windowHeight * 0.30 }]}>
             <View style={styles.header}>
               <Text style={styles.headerTitle}>지출 내역</Text>
               <Pressable onPress={onClose} style={styles.closeButton}>
