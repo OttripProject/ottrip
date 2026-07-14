@@ -2477,7 +2477,8 @@ export default function WeeklySchedulePanel({
                                               : undefined,
                                         } as any
                                       }
-                                      {...(Platform.OS === "web"
+                                      {...(Platform.OS === "web" &&
+                                      (myRole === "owner" || myRole === "editor")
                                         ? {
                                             onMouseDown: (e: any) => {
                                               e.preventDefault();
