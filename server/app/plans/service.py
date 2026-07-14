@@ -495,7 +495,9 @@ class PlanService:
                 if request.include_expenses
                 else None
             ),
-            checklist=plan.travel_checklist if request.include_checklist else None,
+            checklist=(plan.travel_checklist or {})
+            if request.include_checklist
+            else None,
         )
 
         export = await self.plan_repository.save_export(

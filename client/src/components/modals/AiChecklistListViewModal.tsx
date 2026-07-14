@@ -168,7 +168,7 @@ export default function AiChecklistListViewModal({
           <View style={styles.headerSection}>
             <View style={styles.titleContainer}>
               <Text style={styles.headerTitle}>체크리스트</Text>
-              {readOnly && checklist && (
+              {readOnly && checklist && checklist.categories && (
                 <View style={styles.readOnlyCountBadge}>
                   <Text style={styles.readOnlyCountText}>
                     전체 {Object.values(checklist.categories).flat().length}개
@@ -209,7 +209,7 @@ export default function AiChecklistListViewModal({
               showsVerticalScrollIndicator={false}
             >
               {checklist && readOnly
-                ? sortCategories(Object.entries(checklist.categories))
+                ? sortCategories(Object.entries(checklist.categories ?? {}))
                     .filter(([, items]) => items.length > 0)
                     .map(([categoryKey, items], sectionIndex) => (
                       <View
@@ -255,7 +255,7 @@ export default function AiChecklistListViewModal({
                       </View>
                     ))
                 : checklist &&
-                  sortCategories(Object.entries(checklist.categories)).map(
+                  sortCategories(Object.entries(checklist.categories ?? {})).map(
                     ([categoryKey, items], sectionIndex) => (
                       <View
                         key={categoryKey}

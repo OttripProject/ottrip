@@ -297,12 +297,13 @@ export default function AIAssistantPanel({
 
   // 미리보기 통계 계산
   const getPreviewStats = () => {
-    if (!checklist) return { total: 0, checked: 0 };
+    if (!checklist || !checklist.categories) return { total: 0, checked: 0 };
 
     let total = 0;
     let checked = 0;
 
     Object.values(checklist.categories).forEach(category => {
+      if (!Array.isArray(category)) return;
       category.forEach(item => {
         total++;
         if (item.isChecked) checked++;

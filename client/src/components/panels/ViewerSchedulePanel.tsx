@@ -7,13 +7,14 @@ import type {
 import { colors } from "@/ui/tokens/colors";
 import { radii } from "@/ui/tokens/radii";
 import { spacing } from "@/ui/tokens/spacing";
-import { textStyles } from "@/ui/tokens/typography";
+import { textStyles, typography } from "@/ui/tokens/typography";
 import dayjs from "dayjs";
 import CalenderIcon from "../../../assets/calender.svg";
 import LeftArrowIcon from "../../../assets/left_arrow.svg";
 import RightArrowIcon from "../../../assets/right_arrow.svg";
 import TodayIcon from "../../../assets/today.svg";
 import AccommodationIcon from "../../../assets/week_bar_accommodation.svg";
+import WeekBarTimeIcon from "../../../assets/week_bar_time.svg";
 import "dayjs/locale/ko";
 import { useMemo, useRef, useState } from "react";
 import {
@@ -62,6 +63,9 @@ function toItineraryEvent(it: ExportItinerary, index: number) {
     type: "itinerary",
     originalData: it,
     startDateStr: it.itineraryDate,
+    normalizedStartTime: startT,
+    normalizedEndTime: endT === "24:00" ? "23:59" : endT,
+    locationText: it.location || "",
   } as any;
 }
 
@@ -70,6 +74,10 @@ function toFlightEvents(flight: ExportFlight, flightIndex: number) {
     const depTime = dayjs(seg.departureTime);
     const arrTime = dayjs(seg.arrivalTime);
     const depDate = depTime.format("YYYY-MM-DD");
+    const durationMinutes = arrTime.diff(depTime, "minute");
+    const durationH = Math.floor(durationMinutes / 60);
+    const durationM = durationMinutes % 60;
+    const durationText = durationM > 0 ? `${durationH}h ${durationM}m` : `${durationH}h`;
 
     return {
       id: `f-${flightIndex}-${si}`,
@@ -79,6 +87,9 @@ function toFlightEvents(flight: ExportFlight, flightIndex: number) {
       type: "flight",
       originalData: flight,
       startDateStr: depDate,
+      normalizedStartTime: depTime.format("HH:mm"),
+      normalizedEndTime: arrTime.format("HH:mm"),
+      durationText,
     } as any;
   });
 }
@@ -128,7 +139,46 @@ export default function ViewerSchedulePanel({
   const events = useMemo(() => {
     const itEvents = itineraries.map((it, i) => toItineraryEvent(it, i));
     const flEvents = flights.flatMap((f, fi) => toFlightEvents(f, fi));
-    return [...itEvents, ...flEvents];
+    const allEvents = [...itEvents, ...flEvents];
+
+    allEvents.sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime());
+
+    const overlapGroups: any[][] = [];
+
+    allEvents.forEach(event => {
+      const alreadyInGroup = overlapGroups.some(g => g.some(e => e.id === event.id));
+      if (alreadyInGroup) return;
+
+      const overlapping = allEvents.filter(other => {
+        if (other.id === event.id) return false;
+        const eStart = new Date(event.start).getTime();
+        const eEnd = new Date(event.end).getTime();
+        const oStart = new Date(other.start).getTime();
+        const oEnd = new Date(other.end).getTime();
+        return !(eEnd <= oStart || eStart >= oEnd);
+      });
+
+      if (overlapping.length > 0) {
+        const group = [event, ...overlapping].sort((a, b) => {
+          const diff = new Date(a.start).getTime() - new Date(b.start).getTime();
+          return diff !== 0 ? diff : String(a.id).localeCompare(String(b.id));
+        });
+        overlapGroups.push(group);
+      }
+    });
+
+    return allEvents.map(event => {
+      const group = overlapGroups.find(g => g.some(e => e.id === event.id));
+      if (group) {
+        return {
+          ...event,
+          id: String(event.id),
+          customOverlapIndex: group.findIndex(e => e.id === event.id),
+          customOverlapCount: group.length,
+        };
+      }
+      return { ...event, id: String(event.id), customOverlapIndex: 0, customOverlapCount: 1 };
+    });
   }, [itineraries, flights]);
 
   const accommodationsByDate = useMemo(() => {
@@ -500,9 +550,22 @@ export default function ViewerSchedulePanel({
 
           const adjustedStyle = { ...flattenStyle(tpStyle) };
           delete adjustedStyle.marginTop;
-          adjustedStyle.left = "3.5%";
-          adjustedStyle.width = "90%";
           delete adjustedStyle.minWidth;
+          adjustedStyle.minHeight = 20;
+          delete adjustedStyle.overflow;
+
+          const totalWidthPercent = 90;
+          const leftMarginPercent = 3.5;
+
+          if (event.customOverlapCount > 1 && typeof event.customOverlapIndex === "number") {
+            const gapPercent = 1.5;
+            const slotWidth = (totalWidthPercent - gapPercent * (event.customOverlapCount - 1)) / event.customOverlapCount;
+            adjustedStyle.width = `${slotWidth}%`;
+            adjustedStyle.left = `${leftMarginPercent + (slotWidth + gapPercent) * event.customOverlapIndex}%`;
+          } else {
+            adjustedStyle.left = `${leftMarginPercent}%`;
+            adjustedStyle.width = `${totalWidthPercent}%`;
+          }
 
           const eventStyle = isFlight
             ? {
@@ -517,6 +580,20 @@ export default function ViewerSchedulePanel({
                 borderColor: colors.itineraryBorder,
                 borderRadius: radii.md,
               };
+
+          const blockHeight = (() => {
+            const startMs = new Date(event.start).getTime();
+            const endMs = new Date(event.end).getTime();
+            const durationMinutes = (endMs - startMs) / (1000 * 60);
+            const h = (durationMinutes / 15) * (40 / 4);
+            return Math.max(h, 20);
+          })();
+          const durationMinutes =
+            (new Date(event.end).getTime() - new Date(event.start).getTime()) / (1000 * 60);
+          const isCompact = durationMinutes <= 30;
+          const contentHeight = Math.max(blockHeight - 8, 0);
+          const showTime = !isCompact && contentHeight >= 28;
+          const showLocation = contentHeight > 52;
 
           return (
             <View key={eventKey} {...rest} style={[adjustedStyle, eventStyle]}>
@@ -533,42 +610,111 @@ export default function ViewerSchedulePanel({
                   }
                 }}
               >
-                <View style={styles.eventTitleRow}>
-                  <View
-                    style={{
-                      width: 5,
-                      height: 5,
-                      borderRadius: 999,
-                      backgroundColor: isFlight
-                        ? colors.flightDot
-                        : colors.itineraryDot,
-                    }}
-                  />
-                  {isFlight && (
-                    <Text
+                <View style={[styles.eventContentCol, blockHeight <= 70 && { justifyContent: "center" }]}>
+                  {/* 제목 행 */}
+                  <View style={styles.eventTitleRow}>
+                    <View
                       style={{
-                        fontSize: 10,
-                        color: colors.flightText,
+                        width: 5,
+                        height: 5,
+                        borderRadius: 999,
+                        backgroundColor: isFlight ? colors.flightDot : colors.itineraryDot,
                         flexShrink: 0,
                       }}
+                    />
+                    {isFlight && (
+                      <Text style={{ fontSize: 10, color: colors.flightText, flexShrink: 0 }}>
+                        ✈
+                      </Text>
+                    )}
+                    <Text
+                      numberOfLines={1}
+                      ellipsizeMode="tail"
+                      style={{
+                        fontFamily: typography.fontFamily.pretendardSemiBold,
+                        fontSize: 11,
+                        lineHeight: 14,
+                        color: isFlight ? colors.flightText : colors.itineraryText,
+                        flex: 1,
+                      }}
                     >
-                      ✈
+                      {event.title}
+                    </Text>
+                    {isCompact && event.normalizedStartTime && (
+                      <Text
+                        numberOfLines={1}
+                        style={{
+                          ...textStyles.h9,
+                          color: isFlight ? colors.flightText : colors.itineraryText,
+                          opacity: 0.75,
+                          flexShrink: 0,
+                        }}
+                      >
+                        {event.normalizedStartTime}
+                      </Text>
+                    )}
+                  </View>
+
+                  {/* 시간 행 - 일정 */}
+                  {showTime && isItinerary && event.normalizedStartTime && event.normalizedEndTime && (
+                    <View style={styles.eventTimeRow}>
+                      <View style={styles.iconWrapper}>
+                        <WeekBarTimeIcon width={9} height={9} color={colors.itineraryText} />
+                      </View>
+                      <Text
+                        numberOfLines={1}
+                        ellipsizeMode="tail"
+                        style={{
+                          fontFamily: typography.fontFamily.pretendardRegular,
+                          fontSize: 10,
+                          lineHeight: 14,
+                          color: colors.itineraryText,
+                        }}
+                      >
+                        {event.normalizedStartTime} - {event.normalizedEndTime}
+                      </Text>
+                    </View>
+                  )}
+
+                  {/* 장소 - 일정 */}
+                  {showLocation && isItinerary && event.locationText && (
+                    <Text
+                      numberOfLines={1}
+                      ellipsizeMode="tail"
+                      style={{
+                        fontFamily: typography.fontFamily.pretendardRegular,
+                        fontSize: 10,
+                        lineHeight: 14,
+                        color: colors.itineraryText,
+                        opacity: 0.65,
+                      }}
+                    >
+                      {event.locationText}
                     </Text>
                   )}
-                  <Text
-                    numberOfLines={1}
-                    ellipsizeMode="tail"
-                    style={{
-                      ...textStyles.h9,
-                      lineHeight: 14,
-                      color: isFlight
-                        ? colors.flightText
-                        : colors.itineraryText,
-                      flex: 1,
-                    }}
-                  >
-                    {event.title}
-                  </Text>
+
+                  {/* 시간 행 - 항공 */}
+                  {showTime && isFlight && event.normalizedStartTime && event.normalizedEndTime && (
+                    <View style={styles.eventTimeRow}>
+                      <View style={styles.iconWrapper}>
+                        <WeekBarTimeIcon width={9} height={9} color={colors.flightText} />
+                      </View>
+                      <Text
+                        numberOfLines={1}
+                        ellipsizeMode="tail"
+                        style={{
+                          fontFamily: typography.fontFamily.pretendardRegular,
+                          fontSize: 10,
+                          lineHeight: 14,
+                          color: colors.flightText,
+                        }}
+                      >
+                        {event.normalizedStartTime} - {event.normalizedEndTime}
+                        {event.durationText ? ` (${event.durationText})` : ""}
+                      </Text>
+                    </View>
+                  )}
+
                 </View>
               </TouchableOpacity>
             </View>
@@ -704,9 +850,24 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 4,
   },
+  eventContentCol: {
+    flex: 1,
+    gap: 1,
+    justifyContent: "flex-start",
+  },
   eventTitleRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
+  },
+  eventTimeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
+  },
+  iconWrapper: {
+    width: 12,
+    alignItems: "center",
+    flexShrink: 0,
   },
 });

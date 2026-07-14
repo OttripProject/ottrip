@@ -59,6 +59,8 @@ export default function TripViewerScreen() {
 
   const isMobile = width < 768;
 
+  const innerGap = 16;
+
   const getResponsiveRatio = () => {
     if (isMobile) return { left: 1, right: 0 };
     if (width < 1024) return { left: 0.6, right: 0.4 };
@@ -66,8 +68,6 @@ export default function TripViewerScreen() {
     return { left: 0.8, right: 0.2 };
   };
   const ratio = getResponsiveRatio();
-
-  const innerGap = 16;
 
   useEffect(() => {
     if (!publicId) return;
@@ -152,16 +152,16 @@ export default function TripViewerScreen() {
   const { plan, itineraries, flights, accommodations, expenses, checklist } =
     snapshot.snapshot;
 
-  const hasExpenses = !!expenses && expenses.length > 0;
-  const hasChecklist = !!checklist;
+  const hasExpenses = expenses !== null && expenses !== undefined;
+  const hasChecklist = checklist !== null && checklist !== undefined;
   const hasBottomPanel = hasExpenses || hasChecklist;
 
-  const leftContentHeight = mainLayoutHeight - hintHeight - 2 * innerGap;
+  const leftContentHeight = mainLayoutHeight - hintHeight - innerGap;
   const leftTopHeight = hasBottomPanel
-    ? Math.max(200, Math.floor(leftContentHeight * 0.85))
-    : Math.max(200, mainLayoutHeight - hintHeight - innerGap);
+    ? Math.max(240, Math.floor((leftContentHeight - innerGap) * 0.85))
+    : leftContentHeight;
   const leftBottomHeight = hasBottomPanel
-    ? Math.max(120, leftContentHeight - leftTopHeight)
+    ? Math.max(160, leftContentHeight - innerGap - leftTopHeight)
     : 0;
 
   const expensePanelData = hasExpenses
@@ -172,7 +172,7 @@ export default function TripViewerScreen() {
           startDate: plan.startDate,
           endDate: plan.endDate,
         },
-        expenses: expenses!.map((e, i) => ({
+        expenses: (expenses ?? []).map((e, i) => ({
           id: String(i),
           category: e.category,
           amount: Number(e.amount),
@@ -246,7 +246,7 @@ export default function TripViewerScreen() {
           </View>
 
           {!isMobile && (
-            <View style={[styles.rightArea, { flex: ratio.right }]}>
+            <View style={[styles.rightArea, { flex: ratio.right, height: mainLayoutHeight }]}>
               <View style={styles.summaryWrapper}>
                 <ViewerPlanSummaryPanel plan={plan} />
               </View>
