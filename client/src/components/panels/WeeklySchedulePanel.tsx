@@ -982,6 +982,7 @@ export default function WeeklySchedulePanel({
             flightsApi
               .updateFlight(flightId, {
                 segments: updatedSegments.map((seg: any) => ({
+                  id: seg.id ?? undefined,
                   airline: seg.airline || null,
                   flightNumber: seg.flightNumber || null,
                   departureAirport: seg.departureAirport,
