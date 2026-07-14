@@ -14,6 +14,7 @@ import {
   Text,
   TextInput,
   View,
+  useWindowDimensions,
 } from "react-native";
 import ExportGuestIcon from "../../../assets/export_guest.svg";
 import ExportImportIcon from "../../../assets/export_import.svg";
@@ -90,6 +91,8 @@ export default function ExportPlanModal({
     }
   };
 
+  const { height: windowHeight } = useWindowDimensions();
+
   const handleClose = () => {
     setExportPublicId(null);
     setIncludeExpenses(false);
@@ -118,37 +121,36 @@ export default function ExportPlanModal({
               shadowRadius: 48,
               elevation: 12,
             }}
-            style={styles.cardStyle}
+            style={{ ...styles.cardStyle, maxHeight: windowHeight * 0.9 }}
           >
             <Pressable
               onPress={() => {}}
-              style={
-                Platform.OS === "web"
-                  ? ({ cursor: "default" } as any)
-                  : undefined
-              }
+              style={[
+                styles.cardInner,
+                Platform.OS === "web" ? ({ cursor: "default" } as any) : undefined,
+              ]}
             >
+              {/* 고정 헤더 */}
+              <View style={styles.header}>
+                <View style={styles.headerText}>
+                  <Text style={styles.title}>여행 일정 내보내기</Text>
+                  <Text style={styles.subtitle}>
+                    여행 일정을 누구나 열람할 수 있는 링크로 내보냅니다
+                  </Text>
+                </View>
+                <Pressable
+                  onPress={handleClose}
+                  hitSlop={8}
+                  style={styles.closeButton}
+                >
+                  <XIcon width={16} height={16} color={colors.gray900} />
+                </Pressable>
+              </View>
+
               <ScrollView
                 showsVerticalScrollIndicator={false}
                 contentContainerStyle={styles.scroll}
               >
-                {/* 헤더 */}
-                <View style={styles.header}>
-                  <View style={styles.headerText}>
-                    <Text style={styles.title}>여행 일정 내보내기</Text>
-                    <Text style={styles.subtitle}>
-                      여행 일정을 누구나 열람할 수 있는 링크로 내보냅니다
-                    </Text>
-                  </View>
-                  <Pressable
-                    onPress={handleClose}
-                    hitSlop={8}
-                    style={styles.closeButton}
-                  >
-                    <XIcon width={16} height={16} color={colors.gray900} />
-                  </Pressable>
-                </View>
-
                 {/* 설명 카드 */}
                 <View style={styles.infoCard}>
                   <View style={styles.infoItem}>
@@ -376,6 +378,7 @@ export default function ExportPlanModal({
               </ScrollView>
             </Pressable>
           </Card>
+
         </Pressable>
       </Modal>
     </>
@@ -392,11 +395,15 @@ const styles = StyleSheet.create({
   },
   cardStyle: {
     alignItems: "stretch",
-    maxHeight: "90%",
     overflow: "hidden",
+  },
+  cardInner: {
+    flex: 1,
+    minHeight: 0,
   },
   scroll: {
     padding: 24,
+    paddingTop: 0,
     paddingBottom: 20,
     gap: 20,
   },
@@ -405,6 +412,8 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
     justifyContent: "space-between",
     gap: 12,
+    padding: 24,
+    paddingBottom: 20,
   },
   headerText: {
     flex: 1,
