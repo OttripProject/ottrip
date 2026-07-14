@@ -24,6 +24,7 @@ import {
   Text,
   TextInput,
   View,
+  useWindowDimensions,
 } from "react-native";
 import { AirportPicker, CategoryPicker, TimePicker } from "@/ui/components/pickers";
 import type { ExpenseCategory as ExpenseCategoryType } from "@/types/expense";
@@ -391,6 +392,7 @@ export default function AddScheduleWithFileModal({
   initialFile,
   onSaveComplete,
 }: AddScheduleWithFileModalProps) {
+  const { height: windowHeight } = useWindowDimensions();
   const [step, setStep] = useState<Step>("upload");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -1132,7 +1134,7 @@ export default function AddScheduleWithFileModal({
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       {hiddenFileInput}
       <Pressable style={styles.overlay} onPress={onClose}>
-        <Pressable style={[styles.container, step === "preview" && { minHeight: "80%" } as any]} onPress={e => e.stopPropagation()}>
+        <Pressable style={[styles.container, step === "preview" && { minHeight: windowHeight * 0.80 }]} onPress={e => e.stopPropagation()}>
 
           {/* 헤더 */}
           <View style={styles.header}>
