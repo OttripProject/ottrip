@@ -745,6 +745,7 @@ export default function AccommodationItem({
                 onOpen={() => !readOnly && setCountryOpen(true)}
                 onClose={() => setCountryOpen(false)}
                 disabled={readOnly}
+                useModal
               />
             </View>
             <View style={[styles.inputGroup, styles.halfWidth]}>

@@ -980,6 +980,7 @@ export default function ItineraryItem({
                 onClose={() => setCountryOpen(false)}
                 placeholder={PLACEHOLDERS.itinerary.countryForm}
                 disabled={readOnly}
+                useModal
               />
             </View>
             <View style={[styles.inputGroup, styles.halfWidth]}>

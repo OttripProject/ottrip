@@ -1,4 +1,5 @@
 import type { CalendarMarkedDates, SegmentDraft } from "@/hooks/useTripForm";
+import { CountryPicker } from "@/ui/components/pickers";
 import { colors } from "@/ui/tokens/colors";
 import { textStyles, typography } from "@/ui/tokens/typography";
 import dayjs from "dayjs";
@@ -156,6 +157,7 @@ export default function TripFormModal({
   const [calendarOpenIndex, setCalendarOpenIndex] = useState<number | null>(
     null,
   );
+  const [countryPickerOpen, setCountryPickerOpen] = useState(false);
   const prevSelectionModeRef = useRef(selectionMode);
 
   useEffect(() => {
@@ -221,6 +223,7 @@ export default function TripFormModal({
               </Pressable>
             </View>
 
+            <View style={[styles.scrollWrapper, countryPickerOpen && { zIndex: 10 }]}>
             <ScrollView
               showsVerticalScrollIndicator={false}
               keyboardShouldPersistTaps="handled"
@@ -252,7 +255,7 @@ export default function TripFormModal({
 
                 <View style={styles.segs}>
                   {tripData.segments.map((segment, idx) => (
-                    <View key={idx} style={styles.seg}>
+                    <View key={idx} style={[styles.seg, { zIndex: (tripData.segments.length - idx) * 100 }]}>
                       {/* Index column */}
                       <View style={styles.segIdxCol}>
                         <View style={styles.segIdxBadge}>
@@ -317,23 +320,15 @@ export default function TripFormModal({
                         <View style={styles.segRow}>
                           <View style={styles.segCell}>
                             <Text style={styles.segCellLabel}>나라</Text>
-                            <View style={styles.segDropdown}>
-                              <TextInput
-                                style={styles.segDropdownText}
-                                placeholder="국가 선택"
-                                placeholderTextColor={colors.gray500}
-                                value={segment.country}
-                                onChangeText={text =>
-                                  onSegmentUpdate(idx, { country: text })
-                                }
-                                onFocus={() => onSegmentFocus(idx)}
-                              />
-                              <DownChevronIcon
-                                width={12}
-                                height={10}
-                                color={colors.gray700}
-                              />
-                            </View>
+                            <CountryPicker
+                              value={segment.country}
+                              onChange={text => onSegmentUpdate(idx, { country: text })}
+                              placeholder="국가 선택"
+                              style={styles.countryPickerTrigger}
+                              onOpen={() => { onSegmentFocus(idx); setCountryPickerOpen(true); }}
+                              onClose={() => setCountryPickerOpen(false)}
+                              useModal
+                            />
                           </View>
                           <View style={styles.segCell}>
                             <Text style={styles.segCellLabel}>도시</Text>
@@ -461,6 +456,7 @@ export default function TripFormModal({
                   })()}
               </View>
             </ScrollView>
+            </View>
 
             {/* Footer buttons */}
             <View style={styles.footer}>
@@ -700,6 +696,19 @@ const styles = StyleSheet.create({
   segDropdown: {
     flexDirection: "row",
     alignItems: "center",
+    borderWidth: 1,
+    borderColor: colors.gray300,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    height: 36,
+    backgroundColor: colors.white,
+  },
+  scrollWrapper: {
+    flex: 1,
+    minHeight: 0,
+    zIndex: 1,
+  },
+  countryPickerTrigger: {
     borderWidth: 1,
     borderColor: colors.gray300,
     borderRadius: 8,

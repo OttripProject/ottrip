@@ -14,6 +14,7 @@ import {
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   FlatList,
+  Modal,
   Platform,
   Pressable,
   SectionList,
@@ -51,6 +52,7 @@ interface CountryPickerProps {
   disabled?: boolean;
   onOpen?: () => void;
   onClose?: () => void;
+  useModal?: boolean;
 }
 
 export default function CountryPicker({
@@ -62,6 +64,7 @@ export default function CountryPicker({
   disabled,
   onOpen,
   onClose,
+  useModal = false,
 }: CountryPickerProps) {
   const allOptions = useMemo(() => getKoreanCountryOptions(), []);
   const popularOptions = useMemo(() => getPopularCountryOptions(), []);
@@ -75,6 +78,7 @@ export default function CountryPicker({
   );
   const [searchText, setSearchText] = useState("");
   const [focusedIndex, setFocusedIndex] = useState(-1);
+  const [triggerLayout, setTriggerLayout] = useState({ x: 0, y: 0, width: 0, height: 0 });
 
   const { data: me } = useMe();
   const storageKey = `recentCountrySearches_${me?.handle ?? "guest"}`;
@@ -132,6 +136,16 @@ export default function CountryPicker({
   const handleToggle = () => {
     if (disabled) return;
     const next = !open;
+    if (next && useModal) {
+      wrapperRef.current?.measureInWindow((x, y, width, height) => {
+        setTriggerLayout({ x, y, width, height });
+        setIsOpen(true);
+        onOpen?.();
+        load();
+        setTimeout(() => searchRef.current?.focus(), 50);
+      });
+      return;
+    }
     setIsOpen(next);
     if (next) {
       onOpen?.();
@@ -261,10 +275,150 @@ export default function CountryPicker({
     );
   };
 
+  const closeModal = () => {
+    setIsOpen(false);
+    setSearchText("");
+    onClose?.();
+  };
+
+  const popupContent = (
+    <View style={styles.popupInner}>
+      <View style={styles.searchContainer}>
+        <SearchIcon width={14} height={14} color={colors.gray600} />
+        <TextInput
+          ref={searchRef}
+          style={styles.searchInput}
+          placeholder="국가명 또는 코드 검색"
+          placeholderTextColor={colors.gray600}
+          value={searchText}
+          onChangeText={setSearchText}
+          autoCorrect={false}
+          autoCapitalize="none"
+          autoFocus={Platform.OS === "web"}
+        />
+        {searchText.length > 0 && (
+          <Pressable
+            style={styles.clearButton}
+            onPress={() => {
+              setSearchText("");
+              searchRef.current?.focus();
+            }}
+            aria-label="지우기"
+          >
+            <XIcon width={10} height={10} color={colors.gray700} />
+          </Pressable>
+        )}
+      </View>
+
+      <View style={styles.listContainer}>
+        {filteredOptions.length > 0 ? (
+          <FlatList
+            ref={flatListRef}
+            data={filteredOptions}
+            keyExtractor={item => item.value}
+            renderItem={renderItem}
+            getItemLayout={(_data, index) => ({
+              length: ITEM_HEIGHT,
+              offset: ITEM_HEIGHT * index,
+              index,
+            })}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+            style={styles.list}
+            ListFooterComponent={() => {
+              const isFocused = focusedIndex === filteredOptions.length;
+              const trimmed = searchText.trim();
+              return (
+                <Pressable
+                  style={({ hovered }: any) => [
+                    styles.directInputItem,
+                    (hovered || isFocused) && styles.directInputItemFocused,
+                  ]}
+                  onPress={() => {
+                    onChange(trimmed);
+                    addItem(trimmed);
+                    setIsOpen(false);
+                    setSearchText("");
+                    onClose?.();
+                  }}
+                >
+                  <View style={styles.directInputIconCircle}>
+                    <Svg width={14} height={14} viewBox="0 0 24 24">
+                      <Path d="M12 5v14M5 12h14" stroke="rgb(0,122,255)" strokeWidth={1.9} strokeLinecap="round" />
+                    </Svg>
+                  </View>
+                  <View style={styles.directInputNames}>
+                    <Text style={styles.directInputTitle} numberOfLines={1}>'{trimmed}' 직접 입력</Text>
+                    <Text style={styles.directInputSubtitle} numberOfLines={1}>이 이름 그대로 저장</Text>
+                  </View>
+                  <Text style={styles.directInputEnterKey}>↵</Text>
+                </Pressable>
+              );
+            }}
+          />
+        ) : searchText.trim().length > 0 ? (
+          <View style={styles.noResultState}>
+            <View style={styles.noResultIconCircle}>
+              <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
+                <Circle cx={12} cy={12} r={8} stroke="rgb(155,155,155)" strokeWidth={1.6} />
+                <Path d="M8.5 14c1 1 5 1 7 0" stroke="rgb(155,155,155)" strokeWidth={1.5} strokeLinecap="round" />
+              </Svg>
+            </View>
+            <Text style={styles.noResultTitle}>
+              {'\''}
+              <Text style={styles.noResultKeyword}>{searchText.trim()}</Text>
+              {`' ${getEulRul(searchText.trim())} 찾을 수 없어요`}
+            </Text>
+            <Text style={styles.noResultSubtitle}>입력한 그대로 저장할 수 있어요</Text>
+            <Pressable
+              style={styles.noResultButton}
+              onPress={() => {
+                const trimmed = searchText.trim();
+                onChange(trimmed);
+                addItem(trimmed);
+                setIsOpen(false);
+                setSearchText("");
+                onClose?.();
+              }}
+            >
+              <Text style={styles.noResultButtonText}>+ '{searchText.trim()}' 직접 입력</Text>
+            </Pressable>
+          </View>
+        ) : (
+          <SectionList
+            ref={sectionListRef}
+            sections={sections}
+            keyExtractor={(item, index) => `${item.value}-${index}`}
+            renderSectionHeader={({ section }) => (
+              <Text style={styles.sectionLabel}>{section.title}</Text>
+            )}
+            renderItem={renderItem}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+            stickySectionHeadersEnabled={false}
+            style={styles.list}
+          />
+        )}
+      </View>
+      {Platform.OS === "web" && (
+        <View style={styles.keyboardHint}>
+          <View style={styles.keyboardHintRow}>
+            <Text style={styles.keyboardHintKey}>↑↓</Text>
+            <Text style={styles.keyboardHintText}>이동</Text>
+            <Text style={styles.keyboardHintKey}>↵</Text>
+            <Text style={styles.keyboardHintText}>선택</Text>
+            <Text style={styles.keyboardHintKey}>esc</Text>
+            <Text style={styles.keyboardHintText}>닫기</Text>
+          </View>
+        </View>
+      )}
+    </View>
+  );
+
   return (
     <View
       ref={wrapperRef}
-      style={[styles.wrapper, containerStyle, { zIndex: open ? 100 : 1 }]}
+      style={[styles.wrapper, containerStyle, { zIndex: open && !useModal ? 100 : 1 }]}
     >
       <Pressable
         style={[styles.trigger, disabled && styles.triggerDisabled, style]}
@@ -286,138 +440,35 @@ export default function CountryPicker({
         )}
       </Pressable>
 
-      {open && (
+      {open && !useModal && (
         <View style={styles.popup}>
-          <View style={styles.searchContainer}>
-            <SearchIcon width={14} height={14} color={colors.gray600} />
-            <TextInput
-              ref={searchRef}
-              style={styles.searchInput}
-              placeholder="국가명 또는 코드 검색"
-              placeholderTextColor={colors.gray600}
-              value={searchText}
-              onChangeText={setSearchText}
-              autoCorrect={false}
-              autoCapitalize="none"
-              autoFocus={Platform.OS === "web"}
-            />
-            {searchText.length > 0 && (
-              <Pressable
-                style={styles.clearButton}
-                onPress={() => {
-                  setSearchText("");
-                  searchRef.current?.focus();
-                }}
-                aria-label="지우기"
-              >
-                <XIcon width={10} height={10} color={colors.gray700} />
-              </Pressable>
-            )}
-          </View>
-
-          <View style={styles.listContainer}>
-            {filteredOptions.length > 0 ? (
-              <FlatList
-                ref={flatListRef}
-                data={filteredOptions}
-                keyExtractor={item => item.value}
-                renderItem={renderItem}
-                getItemLayout={(_data, index) => ({
-                  length: ITEM_HEIGHT,
-                  offset: ITEM_HEIGHT * index,
-                  index,
-                })}
-                keyboardShouldPersistTaps="handled"
-                showsVerticalScrollIndicator={false}
-                style={styles.list}
-                ListFooterComponent={() => {
-                  const isFocused = focusedIndex === filteredOptions.length;
-                  const trimmed = searchText.trim();
-                  return (
-                    <Pressable
-                      style={({ hovered }: any) => [
-                        styles.directInputItem,
-                        (hovered || isFocused) && styles.directInputItemFocused,
-                      ]}
-                      onPress={() => {
-                        onChange(trimmed);
-                        addItem(trimmed);
-                        setIsOpen(false);
-                        setSearchText("");
-                        onClose?.();
-                      }}
-                    >
-                      <View style={styles.directInputIconCircle}>
-                        <Svg width={14} height={14} viewBox="0 0 24 24">
-                          <Path d="M12 5v14M5 12h14" stroke="rgb(0,122,255)" strokeWidth={1.9} strokeLinecap="round" />
-                        </Svg>
-                      </View>
-                      <View style={styles.directInputNames}>
-                        <Text style={styles.directInputTitle} numberOfLines={1}>'{trimmed}' 직접 입력</Text>
-                        <Text style={styles.directInputSubtitle} numberOfLines={1}>이 이름 그대로 저장</Text>
-                      </View>
-                      <Text style={styles.directInputEnterKey}>↵</Text>
-                    </Pressable>
-                  );
-                }}
-              />
-            ) : searchText.trim().length > 0 ? (
-              <View style={styles.noResultState}>
-                <View style={styles.noResultIconCircle}>
-                  <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
-                    <Circle cx={12} cy={12} r={8} stroke="rgb(155,155,155)" strokeWidth={1.6} />
-                    <Path d="M8.5 14c1 1 5 1 7 0" stroke="rgb(155,155,155)" strokeWidth={1.5} strokeLinecap="round" />
-                  </Svg>
-                </View>
-                <Text style={styles.noResultTitle}>
-                  {'\''}
-                  <Text style={styles.noResultKeyword}>{searchText.trim()}</Text>
-                  {`' ${getEulRul(searchText.trim())} 찾을 수 없어요`}
-                </Text>
-                <Text style={styles.noResultSubtitle}>입력한 그대로 저장할 수 있어요</Text>
-                <Pressable
-                  style={styles.noResultButton}
-                  onPress={() => {
-                    const trimmed = searchText.trim();
-                    onChange(trimmed);
-                    addItem(trimmed);
-                    setIsOpen(false);
-                    setSearchText("");
-                    onClose?.();
-                  }}
-                >
-                  <Text style={styles.noResultButtonText}>+ '{searchText.trim()}' 직접 입력</Text>
-                </Pressable>
-              </View>
-            ) : (
-              <SectionList
-                ref={sectionListRef}
-                sections={sections}
-                keyExtractor={(item, index) => `${item.value}-${index}`}
-                renderSectionHeader={({ section }) => (
-                  <Text style={styles.sectionLabel}>{section.title}</Text>
-                )}
-                renderItem={renderItem}
-                keyboardShouldPersistTaps="handled"
-                showsVerticalScrollIndicator={false}
-                stickySectionHeadersEnabled={false}
-                style={styles.list}
-              />
-            )}
-          </View>
-          {Platform.OS === "web" && (
-            <View style={styles.keyboardHint}>
-              <View style={styles.keyboardHintRow}>
-                <Text style={styles.keyboardHintKey}>↑↓</Text>
-                <Text style={styles.keyboardHintText}>이동</Text>
-                <Text style={styles.keyboardHintKey}>↵</Text>
-                <Text style={styles.keyboardHintText}>선택</Text>
-                <Text style={styles.keyboardHintKey}>esc</Text>
-                <Text style={styles.keyboardHintText}>닫기</Text>
-              </View>
-            </View>
-          )}
+          {popupContent}
         </View>
+      )}
+
+      {useModal && (
+        <Modal
+          visible={open}
+          transparent
+          animationType="none"
+          onRequestClose={closeModal}
+          statusBarTranslucent
+        >
+          <Pressable style={StyleSheet.absoluteFillObject} onPress={closeModal} />
+          <View
+            style={[
+              styles.popup,
+              styles.popupModal,
+              {
+                top: triggerLayout.y + triggerLayout.height + 4,
+                left: triggerLayout.x,
+                width: Math.max(280, triggerLayout.width),
+              },
+            ]}
+          >
+            {popupContent}
+          </View>
+        </Modal>
       )}
     </View>
   );
@@ -470,6 +521,14 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 16,
     elevation: 8,
+  },
+  popupModal: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+  },
+  popupInner: {
+    flex: 1,
   },
   searchContainer: {
     flexDirection: "row",

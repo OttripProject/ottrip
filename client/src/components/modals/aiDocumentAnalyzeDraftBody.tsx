@@ -430,6 +430,7 @@ const ItineraryDraftEditor = forwardRef<
             onClose={() => setCountryOpen(false)}
             placeholder={PLACEHOLDERS.itinerary.countryForm}
             style={styles.draftCountryPicker}
+            useModal
           />
         </View>
       </View>
@@ -1220,6 +1221,7 @@ const AccommodationDraftEditor = forwardRef<
             onOpen={() => setCountryOpen(true)}
             onClose={() => setCountryOpen(false)}
             style={styles.draftCountryPicker}
+            useModal
           />
         </View>
       </View>
