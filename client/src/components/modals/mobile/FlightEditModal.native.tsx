@@ -682,7 +682,14 @@ export default function FlightEditModal({
                       }
                       selectedDate={seg.departure_date}
                       onDayPress={day => {
-                        updateSegment(idx, "departure_date", day.dateString);
+                        setFlightSegments(prev => {
+                          const next = [...prev];
+                          next[idx].departure_date = day.dateString;
+                          if (!next[idx].arrival_date || next[idx].arrival_date < day.dateString) {
+                            next[idx].arrival_date = day.dateString;
+                          }
+                          return next;
+                        });
                         setSegmentDatePicker(null);
                       }}
                       onClose={() => setSegmentDatePicker(null)}

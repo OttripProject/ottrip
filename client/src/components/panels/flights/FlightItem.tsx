@@ -1030,6 +1030,9 @@ export default function FlightItem({
                             if (!readOnly) {
                               const newSegments = [...flightSegments];
                               newSegments[idx].departure_date = day.dateString;
+                              if (!newSegments[idx].arrival_date || newSegments[idx].arrival_date < day.dateString) {
+                                newSegments[idx].arrival_date = day.dateString;
+                              }
                               setFlightSegments(newSegments);
                               const key = `dep_${idx}`;
                               setSegmentDatePickerOpen({
