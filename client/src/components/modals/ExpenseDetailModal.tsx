@@ -262,60 +262,60 @@ export default function ExpenseDetailModal({
 
             {tab === "expenses" ? (
               <>
-                <View style={styles.summarySection}>
-                  {categoryOrder.map(category => {
-                    const catTotal = categoryTotals[category];
-                    if (catTotal.KRW === 0 && catTotal.USD === 0) return null;
-                    const isSelected = selectedCategory === category;
-                    const amountText = [
-                      catTotal.KRW > 0
-                        ? `${formatAmount(catTotal.KRW)}원`
-                        : null,
-                      catTotal.USD > 0
-                        ? `${formatAmount(catTotal.USD)}달러`
-                        : null,
-                    ]
-                      .filter(Boolean)
-                      .join(" · ");
-                    return (
-                      <Pressable
-                        key={category}
-                        style={[
-                          styles.summaryRow,
-                          isSelected && styles.summaryRowSelected,
-                        ]}
-                        onPress={() =>
-                          setSelectedCategory(isSelected ? null : category)
-                        }
-                      >
-                        <Text
-                          style={[
-                            styles.summaryCategory,
-                            isSelected && styles.summaryCategorySelected,
-                          ]}
-                        >
-                          {categoryLabels[category]}
-                        </Text>
-                        <Text
-                          style={[
-                            styles.summaryAmount,
-                            isSelected && styles.summaryAmountSelected,
-                          ]}
-                        >
-                          {amountText}
-                        </Text>
-                      </Pressable>
-                    );
-                  })}
-                </View>
-
-                <View style={styles.divider} />
-
                 <ScrollView
                   style={styles.detailScrollView}
                   contentContainerStyle={styles.detailScrollContent}
                   showsVerticalScrollIndicator={false}
                 >
+                  <View style={styles.summarySection}>
+                    {categoryOrder.map(category => {
+                      const catTotal = categoryTotals[category];
+                      if (catTotal.KRW === 0 && catTotal.USD === 0) return null;
+                      const isSelected = selectedCategory === category;
+                      const amountText = [
+                        catTotal.KRW > 0
+                          ? `${formatAmount(catTotal.KRW)}원`
+                          : null,
+                        catTotal.USD > 0
+                          ? `${formatAmount(catTotal.USD)}달러`
+                          : null,
+                      ]
+                        .filter(Boolean)
+                        .join(" · ");
+                      return (
+                        <Pressable
+                          key={category}
+                          style={[
+                            styles.summaryRow,
+                            isSelected && styles.summaryRowSelected,
+                          ]}
+                          onPress={() =>
+                            setSelectedCategory(isSelected ? null : category)
+                          }
+                        >
+                          <Text
+                            style={[
+                              styles.summaryCategory,
+                              isSelected && styles.summaryCategorySelected,
+                            ]}
+                          >
+                            {categoryLabels[category]}
+                          </Text>
+                          <Text
+                            style={[
+                              styles.summaryAmount,
+                              isSelected && styles.summaryAmountSelected,
+                            ]}
+                          >
+                            {amountText}
+                          </Text>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+
+                  <View style={styles.divider} />
+
                   {categoryOrder.map(category => {
                     const categoryExpenses = expensesByCategory[category];
                     if (categoryExpenses.length === 0) return null;
@@ -619,7 +619,6 @@ const styles = StyleSheet.create({
     minHeight: 0,
   },
   detailScrollContent: {
-    paddingHorizontal: spacing.xl,
     paddingBottom: spacing.xl,
     gap: spacing.lg,
   },
@@ -631,6 +630,7 @@ const styles = StyleSheet.create({
   },
   categorySection: {
     gap: spacing.md,
+    paddingHorizontal: spacing.xl,
   },
   categoryHeader: {
     ...textStyles.h7,
