@@ -26,6 +26,7 @@ import SearchIcon from "../../../../assets/search.svg";
 import UpperArrowIcon from "../../../../assets/upper_arrow.svg";
 
 const LIMIT = 20;
+const ITEM_HEIGHT = 46;
 
 const getEulRul = (text: string): string => {
   const code = text[text.length - 1]?.charCodeAt(0) ?? 0;
@@ -65,6 +66,7 @@ export default function CityPicker({
   const flatListRef = useRef<any>(null);
   const [open, setIsOpen, _handleOutsidePress] = useDetectClose(wrapperRef, false);
   const [searchText, setSearchText] = useState("");
+  const [focusedIndex, setFocusedIndex] = useState(-1);
   const [triggerLayout, setTriggerLayout] = useState({ x: 0, y: 0, width: 0, height: 0 });
 
   const [cities, setCities] = useState<CityResult[]>([]);
@@ -74,6 +76,13 @@ export default function CityPicker({
   const [isFetchingMore, setIsFetchingMore] = useState(false);
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const citiesRef = useRef(cities);
+  citiesRef.current = cities;
+  const focusedIndexRef = useRef(focusedIndex);
+  focusedIndexRef.current = focusedIndex;
+  const searchTextRef = useRef(searchText);
+  searchTextRef.current = searchText;
 
   const { data: me } = useMe();
   const storageKey = `recentCitySearches_${me?.handle ?? "guest"}`;
@@ -131,6 +140,60 @@ export default function CityPicker({
     }
   }, [open]);
 
+  useEffect(() => {
+    setFocusedIndex(-1);
+  }, [open, searchText]);
+
+  useEffect(() => {
+    if (!open || Platform.OS !== "web") return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const items = citiesRef.current;
+      const idx = focusedIndexRef.current;
+      const trimmed = searchTextRef.current.trim();
+      const hasDirectInput = trimmed.length > 0;
+      const maxIdx = hasDirectInput ? items.length : items.length - 1;
+
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        setFocusedIndex(prev => Math.min(prev + 1, maxIdx));
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        setFocusedIndex(prev => Math.max(prev - 1, 0));
+      } else if (e.key === "Enter") {
+        e.preventDefault();
+        if (hasDirectInput && idx === items.length) {
+          onChange(trimmed);
+          addItem(trimmed);
+          setIsOpen(false);
+          onClose?.();
+        } else if (idx >= 0 && idx < items.length) {
+          handleSelect(items[idx]);
+        }
+      } else if (e.key === "Escape") {
+        e.preventDefault();
+        setIsOpen(false);
+        onClose?.();
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown, true);
+    return () => document.removeEventListener("keydown", handleKeyDown, true);
+  }, [open]);
+
+  useEffect(() => {
+    if (focusedIndex < 0) return;
+    if (focusedIndex >= citiesRef.current.length) {
+      flatListRef.current?.scrollToEnd({ animated: true });
+    } else {
+      try {
+        flatListRef.current?.scrollToIndex({
+          index: focusedIndex,
+          animated: true,
+          viewPosition: 0.5,
+        });
+      } catch {}
+    }
+  }, [focusedIndex]);
+
   const handleLoadMore = () => {
     if (!hasMore || isFetchingMore || isLoading) return;
     fetchCities(searchText, offset, true);
@@ -172,15 +235,16 @@ export default function CityPicker({
     onClose?.();
   };
 
-  const renderItem = ({ item }: { item: CityResult }) => {
+  const renderItem = ({ item, index }: { item: CityResult; index: number }) => {
     const displayName = item.cityKo || item.city;
     const isSelected = value === displayName;
+    const isFocused = focusedIndex === index;
     return (
       <Pressable
         style={({ hovered }: any) => [
           styles.item,
           isSelected && styles.itemSelected,
-          hovered && !isSelected && styles.itemHovered,
+          (hovered || isFocused) && !isSelected && styles.itemHovered,
         ]}
         onPress={() => handleSelect(item)}
       >
@@ -210,11 +274,8 @@ export default function CityPicker({
     );
   };
 
-  const recentItems = recentSearches.filter(name =>
-    cities.length === 0 && !searchText.trim() ? true : false
-  );
-
   const showNoResult = !isLoading && searchText.trim().length > 0 && cities.length === 0;
+  const isDirectInputFocused = focusedIndex === cities.length && searchText.trim().length > 0;
 
   const popupContent = (
     <View style={styles.popupInner}>
@@ -283,14 +344,16 @@ export default function CityPicker({
             data={cities}
             keyExtractor={item => String(item.id)}
             renderItem={renderItem}
+            getItemLayout={(_data, index) => ({
+              length: ITEM_HEIGHT,
+              offset: ITEM_HEIGHT * index,
+              index,
+            })}
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
             style={styles.list}
             onEndReached={handleLoadMore}
             onEndReachedThreshold={0.3}
-            ListHeaderComponent={
-              !searchText.trim() && recentSearches.length > 0 && cities.length === 0 ? null : null
-            }
             ListFooterComponent={() => (
               <>
                 {isFetchingMore && (
@@ -302,7 +365,7 @@ export default function CityPicker({
                   <Pressable
                     style={({ hovered }: any) => [
                       styles.directInputItem,
-                      hovered && styles.directInputItemFocused,
+                      (hovered || isDirectInputFocused) && styles.directInputItemFocused,
                     ]}
                     onPress={() => {
                       const trimmed = searchText.trim();
@@ -329,6 +392,19 @@ export default function CityPicker({
           />
         )}
       </View>
+
+      {Platform.OS === "web" && (
+        <View style={styles.keyboardHint}>
+          <View style={styles.keyboardHintRow}>
+            <Text style={styles.keyboardHintKey}>↑↓</Text>
+            <Text style={styles.keyboardHintText}>이동</Text>
+            <Text style={styles.keyboardHintKey}>↵</Text>
+            <Text style={styles.keyboardHintText}>선택</Text>
+            <Text style={styles.keyboardHintKey}>esc</Text>
+            <Text style={styles.keyboardHintText}>닫기</Text>
+          </View>
+        </View>
+      )}
     </View>
   );
 
@@ -492,7 +568,7 @@ const styles = StyleSheet.create({
   item: {
     flexDirection: "row",
     alignItems: "center",
-    height: 46,
+    height: ITEM_HEIGHT,
     marginBottom: 3,
     paddingHorizontal: 10,
     paddingVertical: 6,
@@ -595,6 +671,36 @@ const styles = StyleSheet.create({
     paddingTop: 1,
     paddingBottom: 1,
     paddingHorizontal: 5,
+    color: "rgb(108, 108, 108)",
+    minWidth: 16,
+    textAlign: "center",
+  } as any,
+  keyboardHint: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderTopWidth: 1,
+    borderTopColor: "rgb(244, 244, 244)",
+    backgroundColor: "rgb(250, 250, 250)",
+  },
+  keyboardHintRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  keyboardHintText: {
+    ...textStyles.body6,
+    color: "rgb(155, 155, 155)",
+  },
+  keyboardHintKey: {
+    ...textStyles.h10,
+    backgroundColor: "rgb(255, 255, 255)",
+    borderWidth: 1,
+    borderColor: "rgb(226, 226, 226)",
+    borderRadius: 5,
+    paddingVertical: 1,
+    paddingHorizontal: 7,
     color: "rgb(108, 108, 108)",
     minWidth: 16,
     textAlign: "center",
