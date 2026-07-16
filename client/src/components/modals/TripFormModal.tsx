@@ -321,7 +321,7 @@ export default function TripFormModal({
                             <Text style={styles.segCellLabel}>나라</Text>
                             <CountryPicker
                               value={segment.country}
-                              onChange={text => onSegmentUpdate(idx, { country: text })}
+                              onChange={text => onSegmentUpdate(idx, { country: text, city: "" })}
                               placeholder="국가 선택"
                               style={styles.countryPickerTrigger}
                               onOpen={() => { onSegmentFocus(idx); setCountryPickerOpen(true); }}

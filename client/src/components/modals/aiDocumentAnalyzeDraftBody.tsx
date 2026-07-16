@@ -426,7 +426,7 @@ const ItineraryDraftEditor = forwardRef<
         <View style={styles.fieldPickerWrap}>
           <CountryPicker
             value={country}
-            onChange={setCountry}
+            onChange={name => { setCountry(name); setCity(""); }}
             onOpen={() => setCountryOpen(true)}
             onClose={() => setCountryOpen(false)}
             placeholder={PLACEHOLDERS.itinerary.countryForm}
@@ -1217,7 +1217,7 @@ const AccommodationDraftEditor = forwardRef<
         <View style={styles.fieldPickerWrap}>
           <CountryPicker
             value={country}
-            onChange={setCountry}
+            onChange={name => { setCountry(name); setCity(""); }}
             placeholder={PLACEHOLDERS.picker.country}
             onOpen={() => setCountryOpen(true)}
             onClose={() => setCountryOpen(false)}

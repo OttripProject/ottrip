@@ -975,7 +975,7 @@ export default function ItineraryItem({
               <CountryPicker
                 value={formData.country}
                 onChange={(name: string) =>
-                  !readOnly && setFormData({ ...formData, country: name })
+                  !readOnly && setFormData({ ...formData, country: name, city: "" })
                 }
                 onOpen={() => !readOnly && setCountryOpen(true)}
                 onClose={() => setCountryOpen(false)}

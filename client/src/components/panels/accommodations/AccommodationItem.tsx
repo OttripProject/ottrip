@@ -739,7 +739,7 @@ export default function AccommodationItem({
               <CountryPicker
                 value={formData.country}
                 onChange={(name: string) =>
-                  !readOnly && setFormData({ ...formData, country: name })
+                  !readOnly && setFormData({ ...formData, country: name, city: "" })
                 }
                 placeholder={PLACEHOLDERS.picker.country}
                 onOpen={() => !readOnly && setCountryOpen(true)}
