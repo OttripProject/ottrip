@@ -29,12 +29,12 @@ def get_engine() -> EngineCache:
     if loop not in _engine_cache:
         engine = create_async_engine(
             database_settings.DATABASE_URI,
-            pool_pre_ping=True, 
-            pool_size=15, 
-            max_overflow=0, 
-            pool_recycle=300,  
-            pool_timeout=60,  
-            echo=False, 
+            pool_pre_ping=True,
+            pool_size=15,
+            max_overflow=0,
+            pool_recycle=300,
+            pool_timeout=60,
+            echo=False,
         )
         session_factory = async_sessionmaker(
             bind=engine,

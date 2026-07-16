@@ -13,7 +13,12 @@ class DatabaseConfig(BaseConfig):
     DATABASE_URL: str | None = None
 
     def create_database_uri(self, *, dialect: str, options: dict[str, str] | None):
-        if not (self.POSTGRES_HOST and self.POSTGRES_USER and self.POSTGRES_PASSWORD and self.POSTGRES_DB):
+        if not (
+            self.POSTGRES_HOST
+            and self.POSTGRES_USER
+            and self.POSTGRES_PASSWORD
+            and self.POSTGRES_DB
+        ):
             raise ValueError(
                 "POSTGRES_* variables are required when DATABASE_URL is not set."
             )
@@ -31,15 +36,17 @@ class DatabaseConfig(BaseConfig):
             # Normalize common postgres schemes to asyncpg dialect for SQLAlchemy
             if url.startswith("postgres://"):
                 url = "postgresql+asyncpg://" + url[len("postgres://") :]
-            elif url.startswith("postgresql://") and not url.startswith("postgresql+asyncpg://"):
+            elif url.startswith("postgresql://") and not url.startswith(
+                "postgresql+asyncpg://"
+            ):
                 url = "postgresql+asyncpg://" + url[len("postgresql://") :]
-            
+
             if "ssl=" not in url and "sslmode=" not in url:
                 if "?" in url:
                     url += "&ssl=require"
                 else:
                     url += "?ssl=require"
-            
+
             return url
 
         return self.create_database_uri(

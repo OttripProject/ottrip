@@ -1,4 +1,5 @@
 from datetime import datetime
+
 from pydantic import Field
 
 from app.expenses.schemas import ExpenseCreate, ExpenseRead, ExpenseUpdate
@@ -11,16 +12,19 @@ class FlightBase(APISchema):
     ticket_number: str | None = None
     booking_reference: str | None = None
 
+
 class FlightCreate(FlightBase):
     plan_id: int
     segments: list["FlightSegmentBase"] = Field(min_length=1)
     expense: ExpenseCreate | None = None
+
 
 class FlightRead(FlightBase):
     id: int
     expense: ExpenseRead | None = None
     # ORM 속성명을 맞춰 중첩 세그먼트를 직렬화 (JSON에선 flightSegments)
     flight_segments: list["FlightSegmentRead"] | None = None
+
 
 class FlightUpdate(APISchema):
     reservation_number: str | None = None
@@ -44,12 +48,15 @@ class FlightSegmentBase(APISchema):
     gate: str | None = None
     terminal: str | None = None
 
+
 class FlightSegmentCreate(FlightSegmentBase):
     flight_id: int
+
 
 class FlightSegmentRead(FlightSegmentBase):
     id: int
     order: int
+
 
 class FlightSegmentUpdate(APISchema):
     airline: str | None = None

@@ -27,7 +27,7 @@ class Flight(Base):
     passenger_name: Mapped[str] = mapped_column(nullable=True)
 
     ticket_number: Mapped[str] = mapped_column(nullable=True)
-    
+
     booking_reference: Mapped[str] = mapped_column(nullable=True)
 
     plan_id: Mapped[int] = mapped_column(
@@ -62,7 +62,7 @@ class FlightSegment(Base):
         index=True,
         autoincrement=True,
     )
-    
+
     order: Mapped[int]
 
     airline: Mapped[str] = mapped_column(nullable=True)
@@ -94,7 +94,8 @@ class FlightSegment(Base):
         ForeignKey("flight.id", ondelete="CASCADE"),
         nullable=False,
     )
-    flight: Mapped["Flight"] = relationship(back_populates="flight_segments", init=False)
+    flight: Mapped["Flight"] = relationship(
+        back_populates="flight_segments", init=False
+    )
 
     is_deleted: Mapped[bool] = mapped_column(default=False, nullable=False)
-

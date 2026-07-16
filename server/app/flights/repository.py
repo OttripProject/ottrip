@@ -25,7 +25,9 @@ class FlightRepository:
                 joinedload(Flight.expense),
                 joinedload(Flight.flight_segments),
                 with_loader_criteria(
-                    FlightSegment, FlightSegment.is_deleted.is_(False), include_aliases=True
+                    FlightSegment,
+                    FlightSegment.is_deleted.is_(False),
+                    include_aliases=True,
                 ),
                 with_loader_criteria(
                     Expense, Expense.is_deleted.is_(False), include_aliases=True
@@ -43,7 +45,9 @@ class FlightRepository:
                 joinedload(Flight.expense),
                 joinedload(Flight.flight_segments),
                 with_loader_criteria(
-                    FlightSegment, FlightSegment.is_deleted.is_(False), include_aliases=True
+                    FlightSegment,
+                    FlightSegment.is_deleted.is_(False),
+                    include_aliases=True,
                 ),
                 with_loader_criteria(
                     Expense, Expense.is_deleted.is_(False), include_aliases=True
@@ -77,7 +81,10 @@ class FlightRepository:
     async def find_segments_by_flight(self, *, flight_id: int) -> list[FlightSegment]:
         result = await self.session.execute(
             select(FlightSegment)
-            .where(FlightSegment.flight_id == flight_id, FlightSegment.is_deleted.is_(False))
+            .where(
+                FlightSegment.flight_id == flight_id,
+                FlightSegment.is_deleted.is_(False),
+            )
             .order_by(FlightSegment.order)
         )
         return list(result.scalars())
@@ -94,15 +101,23 @@ class FlightRepository:
     async def soft_delete_segments_by_flight(self, *, flight_id: int) -> None:
         stmt = (
             update(FlightSegment)
-            .where(FlightSegment.flight_id == flight_id, FlightSegment.is_deleted.is_(False))
+            .where(
+                FlightSegment.flight_id == flight_id,
+                FlightSegment.is_deleted.is_(False),
+            )
             .values(is_deleted=True)
         )
         await self.session.execute(stmt)
 
-    async def replace_segments(self, *, flight_id: int, new_segments: list[FlightSegment]) -> list[FlightSegment]:
+    async def replace_segments(
+        self, *, flight_id: int, new_segments: list[FlightSegment]
+    ) -> list[FlightSegment]:
         await self.session.execute(
             update(FlightSegment)
-            .where(FlightSegment.flight_id == flight_id, FlightSegment.is_deleted.is_(False))
+            .where(
+                FlightSegment.flight_id == flight_id,
+                FlightSegment.is_deleted.is_(False),
+            )
             .values(is_deleted=True)
         )
         created: list[FlightSegment] = []

@@ -86,7 +86,9 @@ class AppleIdpService:
                 issuer=_APPLE_ISSUER,
             )
         except jwt.PyJWTError as e:
-            raise HTTPException(status_code=401, detail="Invalid or expired identity token") from e
+            raise HTTPException(
+                status_code=401, detail="Invalid or expired identity token"
+            ) from e
 
         sub = payload.get("sub")
         if not sub or not isinstance(sub, str):
@@ -162,9 +164,13 @@ class AppleIdpService:
             "aud": _APPLE_ISSUER,
             "sub": auth_settings.APPLE_CLIENT_ID,
         }
-        return jwt.encode(payload, key_pem, algorithm=_CLIENT_SECRET_ALG, headers=headers)
+        return jwt.encode(
+            payload, key_pem, algorithm=_CLIENT_SECRET_ALG, headers=headers
+        )
 
-    async def get_access_token_for_authorization_code(self, *, authorization_code: str) -> str:
+    async def get_access_token_for_authorization_code(
+        self, *, authorization_code: str
+    ) -> str:
         """authorization code 로 Apple access_token (웹 리다이렉트 플로우)."""
         self._require_apple_server_credentials()
         data = {
@@ -186,7 +192,9 @@ class AppleIdpService:
         body = response.json()
         token = body.get("access_token")
         if not token:
-            raise HTTPException(status_code=401, detail="Missing access_token from Apple")
+            raise HTTPException(
+                status_code=401, detail="Missing access_token from Apple"
+            )
         return str(token)
 
     async def revoke_by_authorization_code(self, *, authorization_code: str) -> None:

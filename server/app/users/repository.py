@@ -1,12 +1,11 @@
 from sqlalchemy import and_, delete, exists, select, update
-from app.auth.models import UserAuthInfo
 
+from app.auth.models import UserAuthInfo
 from app.database.deps import SessionDep
 from app.utils.dependency import dependency
-from .schemas import UserRead
 
 from .models import User
-from .schemas import UserCreate, UserUpdate
+from .schemas import UserCreate, UserRead, UserUpdate
 
 
 @dependency
@@ -70,9 +69,11 @@ class UserRepository:
             is_guest=user.is_guest,
         )
 
-    async def create(self, *, user_data: UserCreate, email: str | None = None) -> User | None:
+    async def create(
+        self, *, user_data: UserCreate, email: str | None = None
+    ) -> User | None:
         user_dict = user_data.model_dump()
-        user_dict['email'] = email
+        user_dict["email"] = email
         created_user = User(**user_dict)
         self.session.add(created_user)
         await self.session.flush()
@@ -140,5 +141,5 @@ class UserRepository:
                 is_deleted=True,
                 handle=f"deleted_{user_id}",
                 nickname=f"deleted_{user_id}",
-                )
+            )
         )
