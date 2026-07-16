@@ -28,6 +28,7 @@ import { pendingAiFileKey } from "@/ui/components/attachmentSection.types";
 import Input from "@/ui/components/input/Input";
 import {
   CategoryPicker,
+  CityPicker,
   CountryPicker,
   TimePicker,
 } from "@/ui/components/pickers";
@@ -985,16 +986,13 @@ export default function ItineraryItem({
             </View>
             <View style={[styles.inputGroup, styles.halfWidth]}>
               <Text style={styles.label}>도시</Text>
-              <Input
-                variant={readOnly ? "outlined" : "filled"}
-                placeholder={PLACEHOLDERS.itinerary.cityForm}
+              <CityPicker
                 value={formData.city}
-                onChangeText={text =>
-                  !readOnly && setFormData({ ...formData, city: text })
-                }
-                style={readOnly ? styles.readOnlyInput : styles.input}
-                placeholderTextColor={colors.gray600}
-                editable={!readOnly}
+                onChange={name => !readOnly && setFormData({ ...formData, city: name })}
+                countryKo={formData.country}
+                placeholder={PLACEHOLDERS.itinerary.cityForm}
+                disabled={readOnly}
+                useModal
               />
             </View>
           </View>

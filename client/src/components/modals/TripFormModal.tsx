@@ -1,5 +1,5 @@
 import type { CalendarMarkedDates, SegmentDraft } from "@/hooks/useTripForm";
-import { CountryPicker } from "@/ui/components/pickers";
+import { CityPicker, CountryPicker } from "@/ui/components/pickers";
 import { colors } from "@/ui/tokens/colors";
 import { textStyles, typography } from "@/ui/tokens/typography";
 import dayjs from "dayjs";
@@ -17,7 +17,6 @@ import { Calendar, type DateData } from "react-native-calendars";
 import LeftArrowIcon from "../../../assets/cal_left_arrow.svg";
 import RightArrowIcon from "../../../assets/cal_right_arrow.svg";
 import CalendarIcon from "../../../assets/calender.svg";
-import DownChevronIcon from "../../../assets/dropdown_cal.svg";
 import XIcon from "../../../assets/mobile_close.svg";
 import DownArrowIcon from "../../../assets/mobile_dropdown.svg";
 
@@ -332,42 +331,16 @@ export default function TripFormModal({
                           </View>
                           <View style={styles.segCell}>
                             <Text style={styles.segCellLabel}>도시</Text>
-                            <View
-                              style={[
-                                styles.segDropdown,
-                                !segment.country.trim() &&
-                                  styles.segDropdownDisabled,
-                              ]}
-                            >
-                              <TextInput
-                                style={[
-                                  styles.segDropdownText,
-                                  !segment.country.trim() &&
-                                    styles.segDropdownTextDisabled,
-                                ]}
-                                placeholder={
-                                  segment.country.trim()
-                                    ? "도시 선택"
-                                    : "먼저 국가 선택"
-                                }
-                                placeholderTextColor={colors.gray500}
-                                value={segment.city}
-                                onChangeText={text =>
-                                  onSegmentUpdate(idx, { city: text })
-                                }
-                                onFocus={() => onSegmentFocus(idx)}
-                                editable={!!segment.country.trim()}
-                              />
-                              <DownChevronIcon
-                                width={12}
-                                height={10}
-                                color={
-                                  !segment.country.trim()
-                                    ? colors.gray600
-                                    : colors.gray700
-                                }
-                              />
-                            </View>
+                            <CityPicker
+                              value={segment.city}
+                              onChange={text => onSegmentUpdate(idx, { city: text })}
+                              countryKo={segment.country}
+                              placeholder={segment.country.trim() ? "도시 선택" : "먼저 국가 선택"}
+                              disabled={!segment.country.trim()}
+                              style={styles.countryPickerTrigger}
+                              onOpen={() => onSegmentFocus(idx)}
+                              useModal
+                            />
                           </View>
                         </View>
 

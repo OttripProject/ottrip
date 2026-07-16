@@ -19,7 +19,7 @@ import AttachmentSection from "@/ui/components/attachmentSection";
 import type { AiAttachmentAnalyzeSelection } from "@/ui/components/attachmentSection.types";
 import { pendingAiFileKey } from "@/ui/components/attachmentSection.types";
 import Input from "@/ui/components/input/Input";
-import { CountryPicker, TimePicker } from "@/ui/components/pickers";
+import { CityPicker, CountryPicker, TimePicker } from "@/ui/components/pickers";
 import WarningBanner from "@/ui/components/toast/warning";
 import { colors } from "@/ui/tokens/colors";
 import { radii } from "@/ui/tokens/radii";
@@ -750,16 +750,13 @@ export default function AccommodationItem({
             </View>
             <View style={[styles.inputGroup, styles.halfWidth]}>
               <Text style={styles.label}>도시</Text>
-              <Input
-                variant="filled"
-                placeholder={PLACEHOLDERS.accommodation.city}
+              <CityPicker
                 value={formData.city}
-                onChangeText={text =>
-                  !readOnly && setFormData({ ...formData, city: text })
-                }
-                style={readOnly ? styles.readOnlyInput : styles.input}
-                placeholderTextColor={colors.gray600}
-                editable={!readOnly}
+                onChange={name => !readOnly && setFormData({ ...formData, city: name })}
+                countryKo={formData.country}
+                placeholder={PLACEHOLDERS.accommodation.city}
+                disabled={readOnly}
+                useModal
               />
             </View>
           </View>

@@ -6,6 +6,7 @@ import Input from "@/ui/components/input/Input";
 import {
   AirportPicker,
   CategoryPicker,
+  CityPicker,
   CountryPicker,
   TimePicker,
 } from "@/ui/components/pickers";
@@ -437,15 +438,15 @@ const ItineraryDraftEditor = forwardRef<
 
       <View style={styles.fieldRow}>
         <Text style={styles.fieldLabel}>도시</Text>
-        <Input
-          variant="filled"
-          containerStyle={{ flex: 1, height: 40 }}
-          placeholder={PLACEHOLDERS.itinerary.cityForm}
-          value={city}
-          onChangeText={setCity}
-          style={styles.fieldInput}
-          placeholderTextColor={colors.gray500}
-        />
+        <View style={{ flex: 1 }}>
+          <CityPicker
+            value={city}
+            onChange={setCity}
+            countryKo={country}
+            placeholder={PLACEHOLDERS.itinerary.cityForm}
+            useModal
+          />
+        </View>
       </View>
 
       <View style={styles.fieldRow}>
@@ -1228,15 +1229,15 @@ const AccommodationDraftEditor = forwardRef<
 
       <View style={styles.fieldRow}>
         <Text style={styles.fieldLabel}>도시</Text>
-        <Input
-          variant="filled"
-          containerStyle={{ flex: 1, height: 40 }}
-          placeholder={PLACEHOLDERS.accommodation.city}
-          value={city}
-          onChangeText={setCity}
-          style={styles.fieldInput}
-          placeholderTextColor={colors.gray500}
-        />
+        <View style={{ flex: 1 }}>
+          <CityPicker
+            value={city}
+            onChange={setCity}
+            countryKo={country}
+            placeholder={PLACEHOLDERS.accommodation.city}
+            useModal
+          />
+        </View>
       </View>
 
       <View style={styles.fieldRow}>

@@ -1,0 +1,645 @@
+import useDetectClose from "@/hooks/useDetectClose";
+import Svg, { Circle, Path } from "react-native-svg";
+import { useMe } from "@/hooks/useMe";
+import { useRecentSearches } from "@/hooks/useRecentSearches";
+import { citiesApi, type CityResult } from "@/services/cities";
+import { colors } from "@/ui/tokens/colors";
+import { koreanNameToIso2 } from "@/utils/countryListKo";
+import { radii } from "@/ui/tokens/radii";
+import { textStyles } from "@/ui/tokens/typography";
+import { useEffect, useRef, useState } from "react";
+import {
+  ActivityIndicator,
+  FlatList,
+  Modal,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  type ViewStyle,
+  View,
+} from "react-native";
+import DownArrowIcon from "../../../../assets/down_arrow.svg";
+import XIcon from "../../../../assets/mobile_close.svg";
+import SearchIcon from "../../../../assets/search.svg";
+import UpperArrowIcon from "../../../../assets/upper_arrow.svg";
+
+const LIMIT = 20;
+
+const getEulRul = (text: string): string => {
+  const code = text[text.length - 1]?.charCodeAt(0) ?? 0;
+  if (code >= 0xac00 && code <= 0xd7a3) {
+    return (code - 0xac00) % 28 === 0 ? "를" : "을";
+  }
+  return "을(를)";
+};
+
+interface CityPickerProps {
+  value: string;
+  onChange: (cityName: string) => void;
+  countryKo?: string;
+  placeholder?: string;
+  containerStyle?: ViewStyle;
+  style?: ViewStyle;
+  disabled?: boolean;
+  onOpen?: () => void;
+  onClose?: () => void;
+  useModal?: boolean;
+}
+
+export default function CityPicker({
+  value,
+  onChange,
+  countryKo,
+  placeholder = "도시 선택",
+  containerStyle,
+  style,
+  disabled,
+  onOpen,
+  onClose,
+  useModal = false,
+}: CityPickerProps) {
+  const wrapperRef = useRef<View>(null);
+  const searchRef = useRef<TextInput>(null);
+  const flatListRef = useRef<any>(null);
+  const [open, setIsOpen, _handleOutsidePress] = useDetectClose(wrapperRef, false);
+  const [searchText, setSearchText] = useState("");
+  const [triggerLayout, setTriggerLayout] = useState({ x: 0, y: 0, width: 0, height: 0 });
+
+  const [cities, setCities] = useState<CityResult[]>([]);
+  const [offset, setOffset] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isFetchingMore, setIsFetchingMore] = useState(false);
+
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const { data: me } = useMe();
+  const storageKey = `recentCitySearches_${me?.handle ?? "guest"}`;
+  const { items: recentSearches, addItem, load } = useRecentSearches(storageKey, 10);
+
+  const fetchCities = async (q: string, skip: number, append: boolean) => {
+    if (append) {
+      setIsFetchingMore(true);
+    } else {
+      setIsLoading(true);
+    }
+    try {
+      const iso2 = countryKo ? (koreanNameToIso2(countryKo) ?? undefined) : undefined;
+      const results = await citiesApi.search({
+        q: q || undefined,
+        iso2,
+        skip,
+        limit: LIMIT,
+      });
+      if (append) {
+        setCities(prev => [...prev, ...results]);
+      } else {
+        setCities(results);
+      }
+      setOffset(skip + results.length);
+      setHasMore(results.length === LIMIT);
+    } catch {
+      if (!append) setCities([]);
+    } finally {
+      setIsLoading(false);
+      setIsFetchingMore(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!open) return;
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    setCities([]);
+    setOffset(0);
+    setHasMore(true);
+    debounceRef.current = setTimeout(() => {
+      fetchCities(searchText, 0, false);
+    }, searchText ? 300 : 0);
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, [searchText, open, countryKo]);
+
+  useEffect(() => {
+    if (!open) {
+      setSearchText("");
+      setCities([]);
+      setOffset(0);
+      setHasMore(true);
+    }
+  }, [open]);
+
+  const handleLoadMore = () => {
+    if (!hasMore || isFetchingMore || isLoading) return;
+    fetchCities(searchText, offset, true);
+  };
+
+  const handleToggle = () => {
+    if (disabled) return;
+    const next = !open;
+    if (next && useModal) {
+      wrapperRef.current?.measureInWindow((x, y, width, height) => {
+        setTriggerLayout({ x, y, width, height });
+        setIsOpen(true);
+        onOpen?.();
+        load();
+        setTimeout(() => searchRef.current?.focus(), 50);
+      });
+      return;
+    }
+    setIsOpen(next);
+    if (next) {
+      onOpen?.();
+      load();
+      setTimeout(() => searchRef.current?.focus(), 50);
+    } else {
+      onClose?.();
+    }
+  };
+
+  const handleSelect = (item: CityResult) => {
+    const name = item.cityKo || item.city;
+    onChange(name);
+    addItem(name);
+    setIsOpen(false);
+    onClose?.();
+  };
+
+  const closeModal = () => {
+    setIsOpen(false);
+    onClose?.();
+  };
+
+  const renderItem = ({ item }: { item: CityResult }) => {
+    const displayName = item.cityKo || item.city;
+    const isSelected = value === displayName;
+    return (
+      <Pressable
+        style={({ hovered }: any) => [
+          styles.item,
+          isSelected && styles.itemSelected,
+          hovered && !isSelected && styles.itemHovered,
+        ]}
+        onPress={() => handleSelect(item)}
+      >
+        <View style={styles.itemIconWrapper}>
+          <Text style={styles.itemIconText}>
+            {item.city[0]?.toUpperCase() ?? "?"}
+          </Text>
+        </View>
+        <View style={styles.itemNames}>
+          <Text style={[styles.itemText, isSelected && styles.itemTextSelected]} numberOfLines={1}>
+            {item.cityKo || item.city}
+          </Text>
+          {item.cityKo && (
+            <Text style={styles.itemTextEn} numberOfLines={1}>
+              {item.city}
+            </Text>
+          )}
+        </View>
+        {item.iso2 && (
+          <View style={[styles.itemCodeBadge, isSelected && styles.itemCodeBadgeSelected]}>
+            <Text style={[styles.itemCode, isSelected && styles.itemCodeSelected]}>
+              {item.iso2}
+            </Text>
+          </View>
+        )}
+      </Pressable>
+    );
+  };
+
+  const recentItems = recentSearches.filter(name =>
+    cities.length === 0 && !searchText.trim() ? true : false
+  );
+
+  const showNoResult = !isLoading && searchText.trim().length > 0 && cities.length === 0;
+
+  const popupContent = (
+    <View style={styles.popupInner}>
+      <View style={styles.searchContainer}>
+        <SearchIcon width={14} height={14} color={colors.gray600} />
+        <TextInput
+          ref={searchRef}
+          style={styles.searchInput}
+          placeholder="도시명 검색"
+          placeholderTextColor={colors.gray600}
+          value={searchText}
+          onChangeText={setSearchText}
+          autoCorrect={false}
+          autoCapitalize="none"
+          autoFocus={Platform.OS === "web"}
+        />
+        {searchText.length > 0 && (
+          <Pressable
+            style={styles.clearButton}
+            onPress={() => {
+              setSearchText("");
+              searchRef.current?.focus();
+            }}
+            aria-label="지우기"
+          >
+            <XIcon width={10} height={10} color={colors.gray700} />
+          </Pressable>
+        )}
+      </View>
+
+      <View style={styles.listContainer}>
+        {isLoading ? (
+          <View style={styles.loadingState}>
+            <ActivityIndicator size="small" color={colors.gray500} />
+          </View>
+        ) : showNoResult ? (
+          <View style={styles.noResultState}>
+            <View style={styles.noResultIconCircle}>
+              <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
+                <Circle cx={12} cy={12} r={8} stroke="rgb(155,155,155)" strokeWidth={1.6} />
+                <Path d="M8.5 14c1 1 5 1 7 0" stroke="rgb(155,155,155)" strokeWidth={1.5} strokeLinecap="round" />
+              </Svg>
+            </View>
+            <Text style={styles.noResultTitle}>
+              {'\''}
+              <Text style={styles.noResultKeyword}>{searchText.trim()}</Text>
+              {`' ${getEulRul(searchText.trim())} 찾을 수 없어요`}
+            </Text>
+            <Text style={styles.noResultSubtitle}>입력한 그대로 저장할 수 있어요</Text>
+            <Pressable
+              style={styles.noResultButton}
+              onPress={() => {
+                const trimmed = searchText.trim();
+                onChange(trimmed);
+                addItem(trimmed);
+                setIsOpen(false);
+                onClose?.();
+              }}
+            >
+              <Text style={styles.noResultButtonText}>+ '{searchText.trim()}' 직접 입력</Text>
+            </Pressable>
+          </View>
+        ) : (
+          <FlatList
+            ref={flatListRef}
+            data={cities}
+            keyExtractor={item => String(item.id)}
+            renderItem={renderItem}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+            style={styles.list}
+            onEndReached={handleLoadMore}
+            onEndReachedThreshold={0.3}
+            ListHeaderComponent={
+              !searchText.trim() && recentSearches.length > 0 && cities.length === 0 ? null : null
+            }
+            ListFooterComponent={() => (
+              <>
+                {isFetchingMore && (
+                  <View style={styles.footerLoader}>
+                    <ActivityIndicator size="small" color={colors.gray500} />
+                  </View>
+                )}
+                {searchText.trim().length > 0 && (
+                  <Pressable
+                    style={({ hovered }: any) => [
+                      styles.directInputItem,
+                      hovered && styles.directInputItemFocused,
+                    ]}
+                    onPress={() => {
+                      const trimmed = searchText.trim();
+                      onChange(trimmed);
+                      addItem(trimmed);
+                      setIsOpen(false);
+                      onClose?.();
+                    }}
+                  >
+                    <View style={styles.directInputIconCircle}>
+                      <Svg width={14} height={14} viewBox="0 0 24 24">
+                        <Path d="M12 5v14M5 12h14" stroke="rgb(0,122,255)" strokeWidth={1.9} strokeLinecap="round" />
+                      </Svg>
+                    </View>
+                    <View style={styles.directInputNames}>
+                      <Text style={styles.directInputTitle} numberOfLines={1}>'{searchText.trim()}' 직접 입력</Text>
+                      <Text style={styles.directInputSubtitle} numberOfLines={1}>이 이름 그대로 저장</Text>
+                    </View>
+                    <Text style={styles.directInputEnterKey}>↵</Text>
+                  </Pressable>
+                )}
+              </>
+            )}
+          />
+        )}
+      </View>
+    </View>
+  );
+
+  return (
+    <View
+      ref={wrapperRef}
+      style={[styles.wrapper, containerStyle, { zIndex: open && !useModal ? 100 : 1 }]}
+    >
+      <Pressable
+        style={[styles.trigger, disabled && styles.triggerDisabled, style]}
+        onPress={handleToggle}
+        disabled={disabled}
+      >
+        <Text
+          style={value ? styles.triggerText : styles.triggerPlaceholder}
+          numberOfLines={1}
+        >
+          {value || placeholder}
+        </Text>
+        {open ? (
+          <UpperArrowIcon width={10} height={10} style={{ opacity: 0.6 }} />
+        ) : (
+          <DownArrowIcon width={10} height={10} style={{ opacity: 0.6 }} />
+        )}
+      </Pressable>
+
+      {open && !useModal && (
+        <View style={styles.popup}>
+          {popupContent}
+        </View>
+      )}
+
+      {useModal && (
+        <Modal
+          visible={open}
+          transparent
+          animationType="none"
+          onRequestClose={closeModal}
+          statusBarTranslucent
+        >
+          <Pressable style={StyleSheet.absoluteFillObject} onPress={closeModal} />
+          <View
+            style={[
+              styles.popup,
+              styles.popupModal,
+              {
+                top: triggerLayout.y + triggerLayout.height + 4,
+                left: triggerLayout.x,
+                width: Math.max(280, triggerLayout.width),
+              },
+            ]}
+          >
+            {popupContent}
+          </View>
+        </Modal>
+      )}
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  wrapper: {
+    position: "relative",
+  },
+  trigger: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: colors.gray200,
+    borderRadius: radii.md,
+    height: 40,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  triggerDisabled: {
+    borderWidth: 1,
+    borderColor: colors.gray400,
+  },
+  triggerText: {
+    ...textStyles.body4,
+    color: colors.gray900,
+    flex: 1,
+    marginRight: 4,
+  },
+  triggerPlaceholder: {
+    ...textStyles.body4,
+    color: colors.gray600,
+    flex: 1,
+    marginRight: 4,
+  },
+  popup: {
+    position: "absolute",
+    top: 46,
+    left: 0,
+    minWidth: 280,
+    width: "100%",
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: colors.gray300,
+    borderRadius: 12,
+    zIndex: 1000,
+    overflow: "hidden",
+    shadowColor: colors.gray900,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.1,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  popupModal: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+  },
+  popupInner: {
+    flex: 1,
+  },
+  searchContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    margin: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: colors.gray200,
+    borderRadius: radii.md,
+  },
+  searchInput: {
+    flex: 1,
+    minWidth: 0,
+    ...textStyles.body4,
+    color: colors.gray900,
+    padding: 0,
+    outlineStyle: "none",
+  } as any,
+  clearButton: {
+    width: 18,
+    height: 18,
+    borderRadius: radii.pill,
+    backgroundColor: colors.gray300,
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+  },
+  listContainer: {
+    borderTopWidth: 1,
+    borderTopColor: colors.gray200,
+    maxHeight: 300,
+  },
+  list: {
+    paddingVertical: 4,
+    paddingHorizontal: 6,
+  },
+  loadingState: {
+    paddingVertical: 24,
+    alignItems: "center",
+  },
+  footerLoader: {
+    paddingVertical: 12,
+    alignItems: "center",
+  },
+  item: {
+    flexDirection: "row",
+    alignItems: "center",
+    height: 46,
+    marginBottom: 3,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: radii.md,
+    gap: 8,
+  },
+  itemSelected: {
+    backgroundColor: "rgba(26, 102, 224, 0.08)",
+  },
+  itemHovered: {
+    backgroundColor: colors.gray200,
+  },
+  itemIconWrapper: {
+    width: 26,
+    height: 26,
+    borderRadius: 999,
+    backgroundColor: "rgb(244, 244, 244)",
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+  },
+  itemIconText: {
+    ...textStyles.h9,
+    color: "rgb(108, 108, 108)",
+  } as any,
+  itemNames: {
+    flex: 1,
+    minWidth: 0,
+    justifyContent: "center",
+    gap: 1,
+  },
+  itemText: {
+    ...textStyles.h7,
+    color: colors.gray700,
+  },
+  itemTextSelected: {
+    color: colors.gray900,
+  },
+  itemTextEn: {
+    ...textStyles.body6,
+    color: colors.gray500,
+  },
+  itemCodeBadge: {
+    backgroundColor: colors.gray200,
+    borderRadius: radii.sm,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    flexShrink: 0,
+  },
+  itemCodeBadgeSelected: {
+    backgroundColor: colors.gray300,
+  },
+  itemCode: {
+    ...textStyles.h10,
+    color: colors.gray700,
+  },
+  itemCodeSelected: {
+    color: colors.gray700,
+  },
+  directInputItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingVertical: 9,
+    paddingHorizontal: 10,
+    borderRadius: 9,
+    marginHorizontal: 6,
+    marginBottom: 4,
+  },
+  directInputItemFocused: {
+    backgroundColor: colors.gray200,
+  },
+  directInputIconCircle: {
+    width: 26,
+    height: 26,
+    borderRadius: 999,
+    backgroundColor: "rgb(234, 241, 254)",
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+  },
+  directInputNames: {
+    flex: 1,
+    minWidth: 0,
+  },
+  directInputTitle: {
+    ...textStyles.h7,
+    color: "rgb(0, 122, 255)",
+  },
+  directInputSubtitle: {
+    ...textStyles.body6,
+    color: "rgb(155, 155, 155)",
+  },
+  directInputEnterKey: {
+    ...textStyles.h10,
+    backgroundColor: "rgb(255, 255, 255)",
+    borderWidth: 1,
+    borderColor: "rgb(226, 226, 226)",
+    borderRadius: 5,
+    paddingTop: 1,
+    paddingBottom: 1,
+    paddingHorizontal: 5,
+    color: "rgb(108, 108, 108)",
+    minWidth: 16,
+    textAlign: "center",
+  } as any,
+  noResultState: {
+    paddingTop: 20,
+    paddingBottom: 16,
+    paddingHorizontal: 14,
+    alignItems: "center",
+    gap: 8,
+  },
+  noResultIconCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 999,
+    backgroundColor: "rgb(244, 244, 244)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  noResultTitle: {
+    ...textStyles.h7,
+    color: "rgb(31, 31, 31)",
+    textAlign: "center",
+  },
+  noResultKeyword: {
+    ...textStyles.h7,
+    color: "rgb(0, 122, 255)",
+  },
+  noResultSubtitle: {
+    ...textStyles.body5,
+    color: "rgb(155, 155, 155)",
+    textAlign: "center",
+  },
+  noResultButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: "rgb(0, 122, 255)",
+    borderRadius: 999,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    marginVertical: 4,
+  },
+  noResultButtonText: {
+    ...textStyles.h8,
+    color: "rgb(255, 255, 255)",
+  },
+});
