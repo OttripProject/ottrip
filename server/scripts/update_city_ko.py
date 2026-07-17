@@ -40,7 +40,7 @@ def main() -> None:
 
     print(f"파일 {len(files)}개 발견\n")
 
-    with psycopg.connect(get_sync_dsn()) as conn:
+    with psycopg.connect(get_sync_dsn(), options="-c search_path=public") as conn:
         total_updated = 0
 
         for file in files:
