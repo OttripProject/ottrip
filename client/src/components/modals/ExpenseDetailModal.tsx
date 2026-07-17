@@ -64,34 +64,60 @@ export default function ExpenseDetailModal({
   const [previewImages, setPreviewImages] = useState<ImagePreviewItem[]>([]);
   const [previewInitialIndex, setPreviewInitialIndex] = useState(0);
 
-  const expenseAttachments = useMemo(
-    () => attachments.filter(a => a.entityType === "expense"),
-    [attachments],
-  );
+  const expenseMap = useMemo(() => {
+    const map: Record<number, Expense> = {};
+    expenses.forEach(e => { map[e.id] = e; });
+    return map;
+  }, [expenses]);
 
   const attachmentsMap = useMemo(() => {
     const map: Record<number, Attachment[]> = {};
-    expenseAttachments.forEach(a => {
-      if (!map[a.entityId]) map[a.entityId] = [];
-      map[a.entityId].push(a);
-    });
+    for (const expense of expenses) {
+      const list: Attachment[] = [
+        ...attachments.filter(a => a.entityType === "expense" && a.entityId === expense.id),
+        ...(expense.accommodationId
+          ? attachments.filter(a => a.entityType === "accommodation" && a.entityId === expense.accommodationId)
+          : []),
+        ...(expense.flightId
+          ? attachments.filter(a => a.entityType === "flight" && a.entityId === expense.flightId)
+          : []),
+        ...(expense.itineraryId
+          ? attachments.filter(a => a.entityType === "itinerary" && a.entityId === expense.itineraryId)
+          : []),
+      ];
+      if (list.length > 0) map[expense.id] = list;
+    }
     return map;
-  }, [expenseAttachments]);
+  }, [expenses, attachments]);
 
-  const expenseMap = useMemo(() => {
+  const expenseAttachments = useMemo(() => {
+    const seen = new Set<number>();
+    const all: Attachment[] = [];
+    for (const list of Object.values(attachmentsMap)) {
+      for (const a of list) {
+        if (!seen.has(a.id)) { seen.add(a.id); all.push(a); }
+      }
+    }
+    return all;
+  }, [attachmentsMap]);
+
+  const attachmentExpenseMap = useMemo(() => {
     const map: Record<number, Expense> = {};
-    expenses.forEach(e => {
-      map[e.id] = e;
-    });
+    for (const [expenseIdStr, list] of Object.entries(attachmentsMap)) {
+      const expense = expenseMap[Number(expenseIdStr)];
+      if (expense) {
+        for (const a of list) map[a.id] = expense;
+      }
+    }
     return map;
-  }, [expenses]);
+  }, [attachmentsMap, expenseMap]);
 
   const imagePreviewItems = useMemo<ImagePreviewItem[]>(
     () =>
       expenseAttachments
         .filter(a => a.contentType.startsWith("image/"))
-        .map(a => ({ attachment: a, expense: expenseMap[a.entityId] })),
-    [expenseAttachments, expenseMap],
+        .map(a => ({ attachment: a, expense: attachmentExpenseMap[a.id] })),
+    [expenseAttachments, attachmentExpenseMap],
   );
 
   const totalsByCurrency = useMemo(() => {
@@ -407,7 +433,7 @@ export default function ExpenseDetailModal({
                   </View>
                 ) : (
                   expenseAttachments.map(attachment => {
-                    const expense = expenseMap[attachment.entityId];
+                    const expense = attachmentExpenseMap[attachment.id];
                     const isImage = attachment.contentType.startsWith("image/");
                     return (
                       <Pressable
