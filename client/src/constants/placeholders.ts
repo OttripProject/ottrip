@@ -20,7 +20,7 @@ export const PLACEHOLDERS = {
   },
   accommodation: {
     name: "숙소 이름",
-    city: "도시",
+    city: "서울",
     place: "장소",
     description: "내용",
   },

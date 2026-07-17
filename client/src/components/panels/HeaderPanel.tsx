@@ -11,7 +11,7 @@ import DownArrowIcon from "../../../assets/dropdown_time.svg";
 
 export default function HeaderPanel() {
   const navigation = useNavigation<NavigationProp<any>>();
-  const { data: profile } = useMe();
+  const { data: profile, isLoading: profileLoading } = useMe();
   const [profileModalOpen, setProfileModalOpen] = useState(false);
 
   return (
@@ -32,22 +32,26 @@ export default function HeaderPanel() {
         </View>
         <View style={styles.userContainer}>
           <Pressable
-            onPress={() => setProfileModalOpen(true)}
+            onPress={() => !profileLoading && setProfileModalOpen(true)}
             accessibilityRole="button"
             style={styles.userPill}
           >
-            <Text
-              style={styles.userText}
-              numberOfLines={1}
-              ellipsizeMode="tail"
-            >
-              {profile?.isGuest ? "게스트" : (profile?.nickname ?? "프로필")}
-            </Text>
-            <DownArrowIcon
-              width={10}
-              height={10}
-              style={{ opacity: 0.6, marginLeft: 8 }}
-            />
+            {!profileLoading && (
+              <>
+                <Text
+                  style={styles.userText}
+                  numberOfLines={1}
+                  ellipsizeMode="tail"
+                >
+                  {profile?.isGuest ? "게스트" : (profile?.nickname ?? "")}
+                </Text>
+                <DownArrowIcon
+                  width={10}
+                  height={10}
+                  style={{ opacity: 0.6, marginLeft: 8 }}
+                />
+              </>
+            )}
           </Pressable>
         </View>
       </View>
@@ -78,6 +82,7 @@ const styles = StyleSheet.create({
   },
   userPill: {
     height: 32,
+    minWidth: 72,
     borderRadius: radii.base,
     backgroundColor: colors.white,
     borderWidth: 1,
