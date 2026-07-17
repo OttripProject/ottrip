@@ -356,6 +356,7 @@ export default function DashboardScreen() {
   const handleExpenseAdd = async (newExpense: any) => {
     if (selectedPlanId) {
       planData.addExpense(newExpense);
+      planData.refreshAttachments();
     }
   };
 

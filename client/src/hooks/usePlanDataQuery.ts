@@ -40,19 +40,31 @@ export const usePlanDataQuery = (publicId: string | null) => {
         };
       }
 
-      const planData: any = await plansApi.getPlan(publicId);
+      const cachedPlanId = queryClient
+        .getQueryData<Plan[]>(["plans"])
+        ?.find(p => p.publicId === publicId)?.id;
+
+      let planData: any;
+      let attachments: Attachment[] = [];
+
+      if (cachedPlanId) {
+        [planData, attachments] = await Promise.all([
+          plansApi.getPlan(publicId),
+          attachmentsApi.getAttachmentsByPlan(cachedPlanId).catch(() => []),
+        ]);
+      } else {
+        planData = await plansApi.getPlan(publicId);
+        if (planData?.id) {
+          attachments = await attachmentsApi
+            .getAttachmentsByPlan(planData.id)
+            .catch(() => []);
+        }
+      }
 
       const normalizedExpenses = (planData?.expenses ?? []).map((e: any) => ({
         ...e,
         amount: Number(e?.amount),
       }));
-
-      let attachments: Attachment[] = [];
-      if (planData?.id) {
-        try {
-          attachments = await attachmentsApi.getAttachmentsByPlan(planData.id);
-        } catch {}
-      }
 
       return {
         plan: planData,
