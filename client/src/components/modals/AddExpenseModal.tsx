@@ -30,6 +30,7 @@ import dayjs from "dayjs";
 import { LinearGradient } from "expo-linear-gradient";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
+  ActivityIndicator,
   Alert,
   Modal,
   Platform,
@@ -144,7 +145,7 @@ export default function AddExpenseModal({
   );
 
   const { pickImage, pickDocument } = useFilePicker();
-  const { isUploading, uploadFiles } = useAttachmentUpload({
+  const { isUploading, uploadedCount, totalCount, uploadFiles } = useAttachmentUpload({
     planId,
     entityType: PLAN_ENTITY_KIND.EXPENSE,
   });
@@ -633,7 +634,20 @@ export default function AddExpenseModal({
                   onPress={handleExpenseSubmit}
                   disabled={isSubmitting || isUploading || isAiAnalyzing}
                 >
-                  <Text style={styles.submitButtonText}>저장</Text>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                    {(isSubmitting || isUploading) && (
+                      <ActivityIndicator size="small" color="white" />
+                    )}
+                    <Text style={styles.submitButtonText}>
+                      {isUploading
+                        ? totalCount > 1
+                          ? `업로드 중... (${uploadedCount}/${totalCount})`
+                          : "업로드 중..."
+                        : isSubmitting
+                          ? "저장 중..."
+                          : "저장"}
+                    </Text>
+                  </View>
                 </Pressable>
               </View>
             </ScrollView>

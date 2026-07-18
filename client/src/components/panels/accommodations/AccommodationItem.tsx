@@ -35,6 +35,7 @@ import { handleGuestPromptError } from "@/utils/guestPrompt";
 import dayjs from "dayjs";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  ActivityIndicator,
   Platform,
   Pressable,
   ScrollView,
@@ -209,7 +210,7 @@ export default function AccommodationItem({
   }, [stagedDocumentAnalyze, readOnly]);
 
   const { pickImage, pickDocument } = useFilePicker();
-  const { isUploading, uploadFiles } = useAttachmentUpload({
+  const { isUploading, uploadedCount, totalCount, uploadFiles } = useAttachmentUpload({
     planId,
     entityType: "accommodation",
   });
@@ -1102,9 +1103,22 @@ export default function AccommodationItem({
               <Pressable
                 style={styles.saveButton}
                 onPress={handleSave}
-                disabled={isSubmitting}
+                disabled={isSubmitting || isUploading}
               >
-                <Text style={styles.saveButtonText}>저장</Text>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                  {(isSubmitting || isUploading) && (
+                    <ActivityIndicator size="small" color="white" />
+                  )}
+                  <Text style={styles.saveButtonText}>
+                    {isUploading
+                      ? totalCount > 1
+                        ? `업로드 중... (${uploadedCount}/${totalCount})`
+                        : "업로드 중..."
+                      : isSubmitting
+                        ? "저장 중..."
+                        : "저장"}
+                  </Text>
+                </View>
               </Pressable>
             </View>
           ) : (

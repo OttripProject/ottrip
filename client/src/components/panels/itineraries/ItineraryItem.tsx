@@ -53,6 +53,7 @@ import React, {
   useCallback,
 } from "react";
 import {
+  ActivityIndicator,
   Alert,
   Platform,
   Pressable,
@@ -241,7 +242,7 @@ export default function ItineraryItem({
   }, [stagedDocumentAnalyze, readOnly]);
 
   const { pickImage, pickDocument } = useFilePicker();
-  const { isUploading, uploadFiles } = useAttachmentUpload({
+  const { isUploading, uploadedCount, totalCount, uploadFiles } = useAttachmentUpload({
     planId,
     entityType: "itinerary",
   });
@@ -1375,9 +1376,22 @@ export default function ItineraryItem({
               <Pressable
                 style={styles.saveButton}
                 onPress={handleSave}
-                disabled={isSubmitting}
+                disabled={isSubmitting || isUploading}
               >
-                <Text style={styles.saveButtonText}>저장</Text>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                  {(isSubmitting || isUploading) && (
+                    <ActivityIndicator size="small" color="white" />
+                  )}
+                  <Text style={styles.saveButtonText}>
+                    {isUploading
+                      ? totalCount > 1
+                        ? `업로드 중... (${uploadedCount}/${totalCount})`
+                        : "업로드 중..."
+                      : isSubmitting
+                        ? "저장 중..."
+                        : "저장"}
+                  </Text>
+                </View>
               </Pressable>
             </View>
           ) : (
