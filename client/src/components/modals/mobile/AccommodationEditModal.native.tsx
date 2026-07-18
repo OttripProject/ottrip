@@ -15,9 +15,10 @@ import { colors } from "@/ui/tokens/colors";
 import { textStyles, typography } from "@/ui/tokens/typography";
 import { handleGuestPromptError } from "@/utils/guestPrompt";
 import dayjs from "dayjs";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Alert,
+  Keyboard,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -76,6 +77,19 @@ export default function AccommodationEditModal({
   onSave,
   onDelete,
 }: AccommodationEditModalProps) {
+  const scrollRef = useRef<ScrollView>(null);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+
+  useEffect(() => {
+    const show = Keyboard.addListener("keyboardDidShow", e => {
+      setKeyboardHeight(e.endCoordinates.height);
+    });
+    const hide = Keyboard.addListener("keyboardDidHide", () => {
+      setKeyboardHeight(0);
+    });
+    return () => { show.remove(); hide.remove(); };
+  }, []);
+
   const [formData, setFormData] = useState({
     name: "",
     description: "",
@@ -324,8 +338,9 @@ export default function AccommodationEditModal({
         </View>
       )}
       <ScrollView
+        ref={scrollRef}
         style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: keyboardHeight+40 || 24 }]}
         showsVerticalScrollIndicator={false}
       >
         {/* 입력 필드들 */}
@@ -516,6 +531,9 @@ export default function AccommodationEditModal({
                   variant="filled"
                   containerStyle={styles.amountInputContainer}
                   style={styles.amountInputStyle}
+                  onFocus={() => {
+                    setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
+                  }}
                 />
                 <Text style={styles.amountSuffix}>KRW</Text>
               </View>
@@ -641,7 +659,6 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 16,
     paddingTop: 12,
-    paddingBottom: 240,
   },
   form: {
     gap: 20,

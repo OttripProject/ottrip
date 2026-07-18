@@ -21,6 +21,7 @@ import { useEffect, useRef, useState } from "react";
 import {
   Alert,
   Pressable,
+  Keyboard,
   ScrollView,
   StyleSheet,
   Text,
@@ -111,6 +112,18 @@ export default function FlightEditModal({
   } | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isSubmittingRef = useRef(false);
+  const scrollRef = useRef<ScrollView>(null);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+
+  useEffect(() => {
+    const show = Keyboard.addListener("keyboardDidShow", e => {
+      setKeyboardHeight(e.endCoordinates.height);
+    });
+    const hide = Keyboard.addListener("keyboardDidHide", () => {
+      setKeyboardHeight(0);
+    });
+    return () => { show.remove(); hide.remove(); };
+  }, []);
   const [pendingFiles, setPendingFiles] = useState<LocalFile[]>([]);
   const [existingAttachments, setExistingAttachments] = useState<Attachment[]>(
     [],
@@ -466,8 +479,9 @@ export default function FlightEditModal({
         </View>
       )}
       <ScrollView
+        ref={scrollRef}
         style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: keyboardHeight+40 || 24 }]}
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.form}>
@@ -823,6 +837,9 @@ export default function FlightEditModal({
                 variant="filled"
                 containerStyle={styles.amountInputContainer}
                 style={styles.amountInputStyle}
+                onFocus={() => {
+                  setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
+                }}
               />
               <Text style={styles.amountSuffix}>KRW</Text>
             </View>
@@ -949,7 +966,6 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 16,
     paddingTop: 12,
-    paddingBottom: 240,
   },
   form: { gap: 20, marginBottom: 24 },
   sectionDivider: {
