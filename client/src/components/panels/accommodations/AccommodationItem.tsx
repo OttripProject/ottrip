@@ -210,7 +210,7 @@ export default function AccommodationItem({
   }, [stagedDocumentAnalyze, readOnly]);
 
   const { pickImage, pickDocument } = useFilePicker();
-  const { isUploading, uploadedCount, totalCount, uploadFiles } = useAttachmentUpload({
+  const { isUploading, uploadFiles } = useAttachmentUpload({
     planId,
     entityType: "accommodation",
   });
@@ -1110,13 +1110,7 @@ export default function AccommodationItem({
                     <ActivityIndicator size="small" color="white" />
                   )}
                   <Text style={styles.saveButtonText}>
-                    {isUploading
-                      ? totalCount > 1
-                        ? `업로드 중... (${uploadedCount}/${totalCount})`
-                        : "업로드 중..."
-                      : isSubmitting
-                        ? "저장 중..."
-                        : "저장"}
+                    {isSubmitting || isUploading ? "저장 중..." : "저장"}
                   </Text>
                 </View>
               </Pressable>

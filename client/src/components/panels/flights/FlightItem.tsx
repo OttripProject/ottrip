@@ -295,7 +295,7 @@ export default function FlightItem({
   }, [stagedDocumentAnalyze, readOnly]);
 
   const { pickImage, pickDocument } = useFilePicker();
-  const { isUploading, uploadedCount, totalCount, uploadFiles } = useAttachmentUpload({
+  const { isUploading, uploadFiles } = useAttachmentUpload({
     planId,
     entityType: "flight",
   });
@@ -1297,13 +1297,7 @@ export default function FlightItem({
                     <ActivityIndicator size="small" color="white" />
                   )}
                   <Text style={styles.saveButtonText}>
-                    {isUploading
-                      ? totalCount > 1
-                        ? `업로드 중... (${uploadedCount}/${totalCount})`
-                        : "업로드 중..."
-                      : isSubmitting
-                        ? "저장 중..."
-                        : "저장"}
+                    {isSubmitting || isUploading ? "저장 중..." : "저장"}
                   </Text>
                 </View>
               </Pressable>

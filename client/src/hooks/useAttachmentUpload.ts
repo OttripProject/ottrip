@@ -11,8 +11,6 @@ interface UseAttachmentUploadOptions {
 
 interface UseAttachmentUploadReturn {
   isUploading: boolean;
-  uploadedCount: number;
-  totalCount: number;
   uploadFiles: (files: LocalFile[], entityId: number) => Promise<Attachment[]>;
 }
 
@@ -21,8 +19,6 @@ export const useAttachmentUpload = ({
   entityType,
 }: UseAttachmentUploadOptions): UseAttachmentUploadReturn => {
   const [isUploading, setIsUploading] = useState(false);
-  const [uploadedCount, setUploadedCount] = useState(0);
-  const [totalCount, setTotalCount] = useState(0);
 
   const uploadFiles = async (
     files: LocalFile[],
@@ -33,8 +29,6 @@ export const useAttachmentUpload = ({
     }
 
     setIsUploading(true);
-    setUploadedCount(0);
-    setTotalCount(files.length);
     try {
       const results = await Promise.all(
         files.map(async file => {
@@ -53,7 +47,7 @@ export const useAttachmentUpload = ({
             prepared,
             file.mimeType ?? "",
           );
-          const result = await attachmentsApi.confirmUpload({
+          return attachmentsApi.confirmUpload({
             planId,
             entityType,
             entityId,
@@ -63,8 +57,6 @@ export const useAttachmentUpload = ({
             fileSize: prepared.byteLength,
             publicUrl,
           });
-          setUploadedCount(prev => prev + 1);
-          return result;
         }),
       );
       return results;
@@ -73,10 +65,8 @@ export const useAttachmentUpload = ({
       throw error;
     } finally {
       setIsUploading(false);
-      setUploadedCount(0);
-      setTotalCount(0);
     }
   };
 
-  return { isUploading, uploadedCount, totalCount, uploadFiles };
+  return { isUploading, uploadFiles };
 };
