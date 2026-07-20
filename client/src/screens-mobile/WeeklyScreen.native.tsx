@@ -704,6 +704,7 @@ export default function WeeklyScreen() {
         onDayPress={handleCalendarDayPress}
         minDate={planMinMax?.minDate}
         maxDate={planMinMax?.maxDate}
+        datesWithItems={datesWithItems}
       />
 
       {selectedPlan && (
