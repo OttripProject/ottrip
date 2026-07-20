@@ -365,7 +365,7 @@ export default function TodayScreen() {
       const checkoutDate = dayjs(accommodation.checkoutDate).format(
         "YYYY-MM-DD",
       );
-      return checkinDate <= timelineDateStr && checkoutDate > timelineDateStr;
+      return checkinDate <= timelineDateStr && checkoutDate >= timelineDateStr;
     });
   }, [planData.accommodations, timelineDateStr]);
 
@@ -377,7 +377,7 @@ export default function TodayScreen() {
       const checkoutDate = dayjs(accommodation.checkoutDate).format(
         "YYYY-MM-DD",
       );
-      return checkinDate <= calendarTodayStr && checkoutDate > calendarTodayStr;
+      return checkinDate <= calendarTodayStr && checkoutDate >= calendarTodayStr;
     });
   }, [planData.accommodations, calendarTodayStr]);
 
@@ -1200,39 +1200,50 @@ export default function TodayScreen() {
           {(todayAccommodations.length > 0 || todayFlights.length > 0) && (
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>여행 정보 (Reference)</Text>
-              {todayAccommodations.map((accommodation: Accommodation) => (
-                <Pressable
-                  key={accommodation.id}
-                  style={[styles.cardBase, styles.accommodationCard]}
-                  onPress={() => {
-                    closeOpenTimelineSwipe();
-                    setSelectedAccommodation(accommodation);
-                    setShowAccommodationDetail(true);
-                  }}
-                >
-                  <View style={styles.accommodationHeader}>
-                    <View style={styles.accommodationIconBox}>
-                      <AccommodationIcon
-                        width={20}
-                        height={20}
-                        color={colors.primary}
-                      />
+              {todayAccommodations.map((accommodation: Accommodation) => {
+                const isCheckout =
+                  dayjs(accommodation.checkoutDate).format("YYYY-MM-DD") ===
+                  timelineDateStr;
+                return (
+                  <Pressable
+                    key={accommodation.id}
+                    style={[styles.cardBase, styles.accommodationCard]}
+                    onPress={() => {
+                      closeOpenTimelineSwipe();
+                      setSelectedAccommodation(accommodation);
+                      setShowAccommodationDetail(true);
+                    }}
+                  >
+                    <View style={styles.accommodationHeader}>
+                      <View style={styles.accommodationIconBox}>
+                        <AccommodationIcon
+                          width={20}
+                          height={20}
+                          color={colors.primary}
+                        />
+                      </View>
+                      <View style={styles.accommodationHeaderText}>
+                        <Text style={styles.accommodationLabel}>
+                          {isCheckout ? "오늘 체크아웃" : "오늘의 숙소"}
+                        </Text>
+                        <Text style={styles.itemTitle}>
+                          {accommodation.name}
+                        </Text>
+                        <Text style={styles.accommodationCheckin}>
+                          {isCheckout
+                            ? `체크아웃 ${formatTime(accommodation.checkoutTime)}`
+                            : `체크인 ${formatTime(accommodation.checkinTime)}`}
+                        </Text>
+                      </View>
                     </View>
-                    <View style={styles.accommodationHeaderText}>
-                      <Text style={styles.accommodationLabel}>오늘의 숙소</Text>
-                      <Text style={styles.itemTitle}>{accommodation.name}</Text>
-                      <Text style={styles.accommodationCheckin}>
-                        체크인 {formatTime(accommodation.checkinTime)}
-                      </Text>
-                    </View>
-                  </View>
-                  <RightArrowIcon
-                    width={12}
-                    height={12}
-                    color={colors.gray600}
-                  />
-                </Pressable>
-              ))}
+                    <RightArrowIcon
+                      width={12}
+                      height={12}
+                      color={colors.gray600}
+                    />
+                  </Pressable>
+                );
+              })}
               {todayFlights.map(item => (
                 <Pressable
                   key={item.id}
