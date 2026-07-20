@@ -1,10 +1,10 @@
 import type { CalendarMarkedDates, SegmentDraft } from "@/hooks/useTripForm";
 import TripCalendarModal from "../trip/TripCalendarModal";
+import TripDurationBanner from "../trip/TripDurationBanner";
 import TripSegmentList from "../trip/TripSegmentList";
 import { colors } from "@/ui/tokens/colors";
 import { textStyles, typography } from "@/ui/tokens/typography";
-import dayjs from "dayjs";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Modal,
   Pressable,
@@ -74,21 +74,6 @@ export default function TripFormModal({
     if (!visible) setCalendarOpenIndex(null);
   }, [visible]);
 
-  const { totalStart, totalEnd } = useMemo(() => {
-    const starts = tripData.segments
-      .map(s => s.startDate)
-      .filter(Boolean)
-      .sort();
-    const ends = tripData.segments
-      .map(s => s.endDate)
-      .filter(Boolean)
-      .sort();
-    return {
-      totalStart: starts[0] ?? null,
-      totalEnd: ends[ends.length - 1] ?? null,
-    };
-  }, [tripData.segments]);
-
   return (
     <>
       <Modal
@@ -152,46 +137,7 @@ export default function TripFormModal({
                   />
                 </View>
 
-                <View style={styles.durationBanner}>
-                  <View style={styles.summaryLeft}>
-                    <Text style={styles.summaryLabel}>전체 여행 기간</Text>
-                    {totalStart && totalEnd ? (
-                      <View style={styles.summaryVal}>
-                        <Text style={styles.summaryNum}>
-                          {dayjs(totalStart).format("YYYY.MM.DD")}
-                        </Text>
-                        <Text style={styles.summaryDash}>—</Text>
-                        <Text style={styles.summaryNum}>
-                          {dayjs(totalEnd).format("YYYY.MM.DD")}
-                        </Text>
-                      </View>
-                    ) : (
-                      <Text style={styles.summaryEmpty}>
-                        구간 기간을 입력하면 자동으로 계산됩니다
-                      </Text>
-                    )}
-                  </View>
-                  {totalStart &&
-                    totalEnd &&
-                    (() => {
-                      const validSegs = tripData.segments.filter(
-                        s => s.startDate && s.endDate,
-                      );
-                      const totalNights = validSegs.reduce(
-                        (acc, s) =>
-                          acc + dayjs(s.endDate).diff(dayjs(s.startDate), "day"),
-                        0,
-                      );
-                      const totalDays = totalNights + validSegs.length;
-                      return (
-                        <View style={styles.summaryBadge}>
-                          <Text style={styles.summaryBadgeText}>
-                            {totalNights}박 {totalDays}일
-                          </Text>
-                        </View>
-                      );
-                    })()}
-                </View>
+                <TripDurationBanner segments={tripData.segments} />
               </ScrollView>
             </View>
 
@@ -316,61 +262,6 @@ const styles = StyleSheet.create({
     color: colors.gray900,
     outlineStyle: "none",
   } as any,
-  durationBanner: {
-    backgroundColor: colors.black,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    marginBottom: 20,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  summaryLeft: {
-    flex: 1,
-  },
-  summaryLabel: {
-    ...textStyles.body6,
-    color: "rgba(255,255,255,0.5)",
-  },
-  summaryVal: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    marginTop: 2,
-  },
-  summaryNum: {
-    fontFamily: typography.fontFamily.poppinsSemiBold,
-    fontWeight: "700" as const,
-    fontSize: 15,
-    lineHeight: 22,
-    color: colors.white,
-  },
-  summaryDash: {
-    fontFamily: typography.fontFamily.poppinsSemiBold,
-    fontWeight: "400" as const,
-    fontSize: 15,
-    lineHeight: 22,
-    color: "rgba(255,255,255,0.5)",
-  },
-  summaryEmpty: {
-    ...textStyles.body5,
-    color: "rgba(255,255,255,0.5)",
-    marginTop: 2,
-  },
-  summaryBadge: {
-    backgroundColor: "rgba(255,255,255,0.12)",
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-    borderRadius: 999,
-  },
-  summaryBadgeText: {
-    fontFamily: typography.fontFamily.poppinsSemiBold,
-    fontWeight: "700" as const,
-    fontSize: 12,
-    lineHeight: 16,
-    color: colors.white,
-  },
   footer: {
     flexDirection: "row",
     gap: 10,

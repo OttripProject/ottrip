@@ -330,9 +330,9 @@ const styles = StyleSheet.create({
     height: 36,
     backgroundColor: colors.white,
   },
-  // 앱 피커 버튼 스타일 (CountryPicker/CityPicker에 전달 — 내부 height:40 유지용으로 paddingVertical 미설정)
   pickerBtnNative: {
     width: "100%",
+    height: 44,
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: colors.white,
@@ -342,9 +342,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     gap: 10,
   },
-  // 앱 날짜 버튼 스타일 (plain Pressable — paddingVertical로 자체 높이 조정)
   dateBtnNative: {
     width: "100%",
+    height: 44,
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: colors.white,
@@ -352,7 +352,6 @@ const styles = StyleSheet.create({
     borderColor: colors.gray300,
     borderRadius: 10,
     paddingHorizontal: 14,
-    paddingVertical: 12,
     gap: 10,
   },
   pickerText: {

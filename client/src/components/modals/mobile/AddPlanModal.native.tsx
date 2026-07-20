@@ -1,13 +1,13 @@
 import { useTripForm } from "@/hooks/useTripForm";
 import type { CreatePlanRequest, Plan, UpdatePlanRequest } from "@/types/api";
 import TripCalendarModal from "@/components/trip/TripCalendarModal";
+import TripDurationBanner from "@/components/trip/TripDurationBanner";
 import TripSegmentList from "@/components/trip/TripSegmentList";
 import BottomSheetModal from "@/ui/components/BottomSheetModal.native";
 import Input from "@/ui/components/input/Input";
 import { colors } from "@/ui/tokens/colors";
 import { textStyles, typography } from "@/ui/tokens/typography";
-import dayjs from "dayjs";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Alert,
   Pressable,
@@ -27,7 +27,6 @@ interface AddPlanModalProps {
   updatePlan?: (planId: number, planData: UpdatePlanRequest) => Promise<Plan>;
 }
 
-const formatDate = (d: string) => dayjs(d).format("YYYY.MM.DD");
 
 export default function AddPlanModal({
   visible,
@@ -98,15 +97,6 @@ export default function AddPlanModal({
       }
     }
   }, [visible, planToEdit]);
-
-  const { totalStart, totalEnd } = useMemo(() => {
-    const starts = tripData.segments.map(s => s.startDate).filter(Boolean).sort();
-    const ends = tripData.segments.map(s => s.endDate).filter(Boolean).sort();
-    return {
-      totalStart: starts[0] ?? null,
-      totalEnd: ends[ends.length - 1] ?? null,
-    };
-  }, [tripData.segments]);
 
   const handleSubmit = async () => {
     const trimmedName = tripData.name.trim();
@@ -191,18 +181,7 @@ export default function AddPlanModal({
               />
             </View>
 
-            <View style={styles.banner}>
-              <Text style={styles.bannerLabel}>전체 여행 기간</Text>
-              {totalStart && totalEnd ? (
-                <Text style={styles.bannerDates}>
-                  {formatDate(totalStart)} — {formatDate(totalEnd)}
-                </Text>
-              ) : (
-                <Text style={styles.bannerEmpty}>
-                  구간 기간을 입력하면 자동으로 계산됩니다
-                </Text>
-              )}
-            </View>
+            <TripDurationBanner segments={tripData.segments} />
           </ScrollView>
 
           <View style={styles.footer}>
@@ -227,19 +206,20 @@ export default function AddPlanModal({
               </Text>
             </Pressable>
           </View>
+          <TripCalendarModal
+            visible={calendarOpen}
+            onClose={() => setCalendarOpen(false)}
+            selectionMode={selectionMode}
+            markedDates={getMarkedDates()}
+            onDateSelect={handleDateSelect}
+          />
         </View>
       </BottomSheetModal>
-
-      <TripCalendarModal
-        visible={calendarOpen}
-        onClose={() => setCalendarOpen(false)}
-        selectionMode={selectionMode}
-        markedDates={getMarkedDates()}
-        onDateSelect={handleDateSelect}
-      />
     </>
   );
 }
+
+const { lineHeight: _lh, ...body3NoLineHeight } = textStyles.body3;
 
 const styles = StyleSheet.create({
   container: {
@@ -307,34 +287,9 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 14,
-    ...textStyles.body3,
+    ...body3NoLineHeight,
     color: colors.gray900,
     backgroundColor: colors.white,
-  },
-  banner: {
-    backgroundColor: colors.gray900,
-    borderRadius: 16,
-    paddingHorizontal: 20,
-    paddingVertical: 18,
-    marginBottom: 8,
-  },
-  bannerLabel: {
-    ...textStyles.h8,
-    color: colors.white,
-    letterSpacing: -0.1,
-  },
-  bannerDates: {
-    marginTop: 6,
-    fontFamily: typography.fontFamily.poppinsSemiBold,
-    fontSize: 15,
-    lineHeight: 22,
-    color: colors.white,
-    fontWeight: "700",
-  },
-  bannerEmpty: {
-    marginTop: 6,
-    ...textStyles.body5,
-    color: "rgba(255,255,255,0.5)",
   },
   footer: {
     flexDirection: "row",
