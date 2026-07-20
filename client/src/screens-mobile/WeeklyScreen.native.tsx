@@ -8,6 +8,7 @@ import { useSelectedPlan } from "@/contexts/SelectedPlanContext";
 import { usePlanDataQuery } from "@/hooks/usePlanDataQuery";
 import { usePlansQuery } from "@/hooks/usePlansQuery";
 import type {
+  Accommodation,
   FlightRead,
   FlightSegmentReadDto,
   Itinerary,
@@ -212,6 +213,23 @@ export default function WeeklyScreen() {
 
   const scheduleCount = selectedDateSchedules.length;
 
+  const datesWithItems = useMemo(() => {
+    const set = new Set<string>();
+    planData.itineraries?.forEach((item: Itinerary) => {
+      if (item.itineraryDate) set.add(dayjs(item.itineraryDate).format("YYYY-MM-DD"));
+    });
+    planData.flights?.forEach((flight: FlightRead) => {
+      flight.flightSegments?.forEach(seg => {
+        if (seg.departureTime) set.add(dayjs(seg.departureTime).format("YYYY-MM-DD"));
+      });
+    });
+    planData.accommodations?.forEach((acc: Accommodation) => {
+      if (acc.checkinDate) set.add(dayjs(acc.checkinDate).format("YYYY-MM-DD"));
+      if (acc.checkoutDate) set.add(dayjs(acc.checkoutDate).format("YYYY-MM-DD"));
+    });
+    return set;
+  }, [planData.itineraries, planData.flights, planData.accommodations]);
+
   if (plansQuery.isLoading || planData.isLoading) {
     return (
       <View style={styles.container}>
@@ -280,6 +298,7 @@ export default function WeeklyScreen() {
         >
           {weekCalendar.map(item => {
             const isSelected = selectedDate.isSame(item.fullDate, "day");
+            const hasItems = datesWithItems.has(item.fullDate.format("YYYY-MM-DD"));
             return (
               <Pressable
                 key={`${item.year}-${item.month}-${item.date}`}
@@ -289,6 +308,11 @@ export default function WeeklyScreen() {
                 ]}
                 onPress={() => setSelectedDate(item.fullDate)}
               >
+                <View style={styles.dateDotRow}>
+                  {hasItems && (
+                    <View style={[styles.dateDot, isSelected && styles.dateDotSelected]} />
+                  )}
+                </View>
                 <Text
                   style={[
                     styles.dayLabel,
@@ -1046,6 +1070,21 @@ const styles = StyleSheet.create({
   },
   dayDateSelected: {
     color: colors.white,
+  },
+  dateDotRow: {
+    height: 8,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 2,
+  },
+  dateDot: {
+    width: 5,
+    height: 5,
+    borderRadius: 999,
+    backgroundColor: colors.primary,
+  },
+  dateDotSelected: {
+    backgroundColor: colors.white,
   },
 
   scheduleHeader: {
