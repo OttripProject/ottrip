@@ -3,6 +3,7 @@ import { CityPicker, CountryPicker } from "@/ui/components/pickers";
 import { colors } from "@/ui/tokens/colors";
 import { textStyles, typography } from "@/ui/tokens/typography";
 import dayjs from "dayjs";
+import { useState } from "react";
 import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import CalendarIcon from "../../../assets/calender.svg";
 import XIcon from "../../../assets/mobile_close.svg";
@@ -37,6 +38,8 @@ export default function TripSegmentList({
   onDateButtonPress,
 }: TripSegmentListProps) {
   const canRemove = segments.length > 1;
+  const [cityTriggers, setCityTriggers] = useState<Record<number, number>>({});
+  const [countryTriggers, setCountryTriggers] = useState<Record<number, number>>({});
 
   return (
     <View style={styles.container}>
@@ -123,12 +126,17 @@ export default function TripSegmentList({
                     onChange={country => {
                       onSegmentFocus(idx);
                       onSegmentUpdate(idx, { country, city: "" });
+                      if (isNative) {
+                        setCityTriggers(prev => ({ ...prev, [idx]: (prev[idx] ?? 0) + 1 }));
+                      }
                     }}
                     placeholder="국가 선택"
                     style={isNative ? styles.pickerBtnNative : styles.pickerTrigger}
                     containerStyle={styles.pickerWrapper}
                     onOpen={() => onSegmentFocus(idx)}
-                    useModal
+                    useModal={!isNative}
+                    fullScreenModal={isNative}
+                    openTrigger={countryTriggers[idx] ?? 0}
                   />
                 </View>
                 <View style={isNative ? styles.fieldNative : styles.segCell}>
@@ -142,7 +150,10 @@ export default function TripSegmentList({
                     style={isNative ? styles.pickerBtnNative : styles.pickerTrigger}
                     containerStyle={styles.pickerWrapper}
                     onOpen={() => onSegmentFocus(idx)}
-                    useModal
+                    useModal={!isNative}
+                    fullScreenModal={isNative}
+                    openTrigger={cityTriggers[idx] ?? 0}
+                    onBack={() => setCountryTriggers(prev => ({ ...prev, [idx]: (prev[idx] ?? 0) + 1 }))}
                   />
                 </View>
               </View>

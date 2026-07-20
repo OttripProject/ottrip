@@ -14,6 +14,7 @@ import {
   Modal,
   Platform,
   Pressable,
+  SafeAreaView,
   StyleSheet,
   Text,
   TextInput,
@@ -21,6 +22,7 @@ import {
   View,
 } from "react-native";
 import DownArrowIcon from "../../../../assets/down_arrow.svg";
+import LeftArrowIcon from "../../../../assets/left_arrow.svg";
 import XIcon from "../../../../assets/mobile_close.svg";
 import SearchIcon from "../../../../assets/search.svg";
 import UpperArrowIcon from "../../../../assets/upper_arrow.svg";
@@ -47,6 +49,9 @@ interface CityPickerProps {
   onOpen?: () => void;
   onClose?: () => void;
   useModal?: boolean;
+  fullScreenModal?: boolean;
+  openTrigger?: number;
+  onBack?: () => void;
 }
 
 export default function CityPicker({
@@ -60,6 +65,9 @@ export default function CityPicker({
   onOpen,
   onClose,
   useModal = false,
+  fullScreenModal,
+  openTrigger,
+  onBack,
 }: CityPickerProps) {
   const wrapperRef = useRef<View>(null);
   const searchRef = useRef<TextInput>(null);
@@ -68,6 +76,10 @@ export default function CityPicker({
   const [searchText, setSearchText] = useState("");
   const [focusedIndex, setFocusedIndex] = useState(-1);
   const [triggerLayout, setTriggerLayout] = useState({ x: 0, y: 0, width: 0, height: 0 });
+  const [fsOpen, setFsOpen] = useState(false);
+
+  const isNativeEnv = Platform.OS !== "web";
+  const effectiveOpen = open || fsOpen;
 
   const [cities, setCities] = useState<CityResult[]>([]);
   const [offset, setOffset] = useState(0);
@@ -118,7 +130,7 @@ export default function CityPicker({
   };
 
   useEffect(() => {
-    if (!open) return;
+    if (!effectiveOpen) return;
     if (debounceRef.current) clearTimeout(debounceRef.current);
     setCities([]);
     setOffset(0);
@@ -129,20 +141,20 @@ export default function CityPicker({
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
-  }, [searchText, open, countryKo]);
+  }, [searchText, effectiveOpen, countryKo]);
 
   useEffect(() => {
-    if (!open) {
+    if (!effectiveOpen) {
       setSearchText("");
       setCities([]);
       setOffset(0);
       setHasMore(true);
     }
-  }, [open]);
+  }, [effectiveOpen]);
 
   useEffect(() => {
     setFocusedIndex(-1);
-  }, [open, searchText]);
+  }, [effectiveOpen, searchText]);
 
   useEffect(() => {
     if (!open || Platform.OS !== "web") return;
@@ -165,6 +177,7 @@ export default function CityPicker({
           onChange(trimmed);
           addItem(trimmed);
           setIsOpen(false);
+          setFsOpen(false);
           onClose?.();
         } else if (idx >= 0 && idx < items.length) {
           handleSelect(items[idx]);
@@ -172,6 +185,7 @@ export default function CityPicker({
       } else if (e.key === "Escape") {
         e.preventDefault();
         setIsOpen(false);
+        setFsOpen(false);
         onClose?.();
       }
     };
@@ -194,13 +208,35 @@ export default function CityPicker({
     }
   }, [focusedIndex]);
 
+  useEffect(() => {
+    if (!openTrigger || openTrigger <= 0) return;
+    if (!fullScreenModal || !isNativeEnv) return;
+    setFsOpen(true);
+    onOpen?.();
+    setTimeout(() => searchRef.current?.focus(), 150);
+  }, [openTrigger]);
+
   const handleLoadMore = () => {
     if (!hasMore || isFetchingMore || isLoading) return;
     fetchCities(searchText, offset, true);
   };
 
+  const handleClose = () => {
+    setIsOpen(false);
+    setFsOpen(false);
+    setSearchText("");
+    onClose?.();
+  };
+
   const handleToggle = () => {
     if (disabled) return;
+    if (fullScreenModal && isNativeEnv) {
+      setFsOpen(true);
+      onOpen?.();
+      load();
+      setTimeout(() => searchRef.current?.focus(), 150);
+      return;
+    }
     const next = !open;
     if (next && useModal) {
       wrapperRef.current?.measureInWindow((x, y, width, height) => {
@@ -218,7 +254,7 @@ export default function CityPicker({
       load();
       setTimeout(() => searchRef.current?.focus(), 50);
     } else {
-      onClose?.();
+      handleClose();
     }
   };
 
@@ -226,13 +262,11 @@ export default function CityPicker({
     const name = item.cityKo || item.city;
     onChange(name);
     addItem(name);
-    setIsOpen(false);
-    onClose?.();
+    handleClose();
   };
 
   const closeModal = () => {
-    setIsOpen(false);
-    onClose?.();
+    handleClose();
   };
 
   const renderItem = ({ item, index }: { item: CityResult; index: number }) => {
@@ -283,7 +317,7 @@ export default function CityPicker({
         <SearchIcon width={14} height={14} color={colors.gray600} />
         <TextInput
           ref={searchRef}
-          style={styles.searchInput}
+          style={[styles.searchInput, isNativeEnv && { lineHeight: 16 }]}
           placeholder="도시명 검색"
           placeholderTextColor={colors.gray600}
           value={searchText}
@@ -306,7 +340,7 @@ export default function CityPicker({
         )}
       </View>
 
-      <View style={styles.listContainer}>
+      <View style={[styles.listContainer, !fsOpen && styles.listContainerPopup, fsOpen && styles.listContainerFs]}>
         {isLoading ? (
           <View style={styles.loadingState}>
             <ActivityIndicator size="small" color={colors.gray500} />
@@ -331,8 +365,7 @@ export default function CityPicker({
                 const trimmed = searchText.trim();
                 onChange(trimmed);
                 addItem(trimmed);
-                setIsOpen(false);
-                onClose?.();
+                handleClose();
               }}
             >
               <Text style={styles.noResultButtonText}>+ '{searchText.trim()}' 직접 입력</Text>
@@ -371,8 +404,7 @@ export default function CityPicker({
                       const trimmed = searchText.trim();
                       onChange(trimmed);
                       addItem(trimmed);
-                      setIsOpen(false);
-                      onClose?.();
+                      handleClose();
                     }}
                   >
                     <View style={styles.directInputIconCircle}>
@@ -424,7 +456,7 @@ export default function CityPicker({
         >
           {value || placeholder}
         </Text>
-        {open ? (
+        {(open || fsOpen) ? (
           <UpperArrowIcon width={10} height={10} style={{ opacity: 0.6 }} />
         ) : (
           <DownArrowIcon width={10} height={10} style={{ opacity: 0.6 }} />
@@ -459,6 +491,33 @@ export default function CityPicker({
           >
             {popupContent}
           </View>
+        </Modal>
+      )}
+
+      {fullScreenModal && isNativeEnv && (
+        <Modal
+          visible={fsOpen}
+          animationType="slide"
+          onRequestClose={handleClose}
+        >
+          <SafeAreaView style={styles.fsContainer}>
+            <View style={styles.fsHeader}>
+              <Pressable
+                onPress={() => { handleClose(); onBack?.(); }}
+                hitSlop={8}
+                style={styles.fsNavBtn}
+              >
+                <LeftArrowIcon width={22} height={22} color={colors.gray700} />
+              </Pressable>
+              <Text style={styles.fsTitle}>
+                {countryKo ? `${countryKo} 도시 선택` : "도시 선택"}
+              </Text>
+              <Pressable onPress={handleClose} hitSlop={8} style={styles.fsNavBtn}>
+                <XIcon width={22} height={22} color={colors.gray700} />
+              </Pressable>
+            </View>
+            {popupContent}
+          </SafeAreaView>
         </Modal>
       )}
     </View>
@@ -536,7 +595,7 @@ const styles = StyleSheet.create({
     minWidth: 0,
     ...textStyles.body4,
     color: colors.gray900,
-    padding: 0,
+    padding: 3,
     outlineStyle: "none",
   } as any,
   clearButton: {
@@ -551,7 +610,13 @@ const styles = StyleSheet.create({
   listContainer: {
     borderTopWidth: 1,
     borderTopColor: colors.gray200,
+  },
+  listContainerPopup: {
     maxHeight: 300,
+  },
+  listContainerFs: {
+    flex: 1,
+    borderTopWidth: 0,
   },
   list: {
     paddingVertical: 4,
@@ -747,5 +812,27 @@ const styles = StyleSheet.create({
   noResultButtonText: {
     ...textStyles.h8,
     color: "rgb(255, 255, 255)",
+  },
+  fsContainer: {
+    flex: 1,
+    backgroundColor: colors.white,
+  },
+  fsHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  fsNavBtn: {
+    width: 44,
+    height: 44,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  fsTitle: {
+    flex: 1,
+    ...textStyles.h5,
+    color: colors.black,
+    textAlign: "center",
   },
 });
