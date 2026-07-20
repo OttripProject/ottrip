@@ -74,7 +74,11 @@ export function TimeModal({
     setHour12(prev => {
       const idx = HOURS_12.indexOf(prev as (typeof HOURS_12)[number]);
       const nextIdx = (idx + delta + HOURS_12.length) % HOURS_12.length;
-      return HOURS_12[nextIdx];
+      const next = HOURS_12[nextIdx];
+      if ((prev === 11 && delta > 0) || (prev === 12 && delta < 0)) {
+        setIsAm(a => !a);
+      }
+      return next;
     });
   }, []);
 
