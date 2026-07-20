@@ -1,23 +1,21 @@
+import { useTripForm } from "@/hooks/useTripForm";
 import type { CreatePlanRequest, Plan, UpdatePlanRequest } from "@/types/api";
+import TripCalendarModal from "@/components/trip/TripCalendarModal";
+import TripSegmentList from "@/components/trip/TripSegmentList";
 import BottomSheetModal from "@/ui/components/BottomSheetModal.native";
-import CalendarModal from "@/ui/components/CalendarModal.native";
+import Input from "@/ui/components/input/Input";
 import { colors } from "@/ui/tokens/colors";
-import { textStyles } from "@/ui/tokens/typography";
+import { textStyles, typography } from "@/ui/tokens/typography";
 import dayjs from "dayjs";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
-  Keyboard,
-  type KeyboardEvent,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from "react-native";
-import CalendarIcon from "../../../../assets/mobile_calendar_black.svg";
 import CloseIcon from "../../../../assets/mobile_close.svg";
 
 interface AddPlanModalProps {
@@ -29,6 +27,8 @@ interface AddPlanModalProps {
   updatePlan?: (planId: number, planData: UpdatePlanRequest) => Promise<Plan>;
 }
 
+const formatDate = (d: string) => dayjs(d).format("YYYY.MM.DD");
+
 export default function AddPlanModal({
   visible,
   onClose,
@@ -37,258 +37,225 @@ export default function AddPlanModal({
   planToEdit,
   updatePlan,
 }: AddPlanModalProps) {
-  const [title, setTitle] = useState("");
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
-  const [calendarTarget, setCalendarTarget] = useState<"start" | "end" | null>(
-    null,
-  );
+  const {
+    tripData,
+    selectionMode,
+    addSegment,
+    removeSegment,
+    moveSegment,
+    updateSegment,
+    updateTripData,
+    handleDateSelect,
+    getMarkedDates,
+    setActiveSegmentIndex,
+    resetForm,
+    setFormData,
+    isSubmitDisabled,
+  } = useTripForm();
+
   const [isSubmitting, setIsSubmitting] = useState(false);
-  /** BottomSheet 안에서 키보드가 입력란을 가릴 때(특히 Android): 스크롤 여유 */
-  const [keyboardBottomInset, setKeyboardBottomInset] = useState(0);
+  const [calendarOpen, setCalendarOpen] = useState(false);
+  const prevSelectionModeRef = useRef(selectionMode);
 
   useEffect(() => {
-    const showEv =
-      Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
-    const hideEv =
-      Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
+    if (
+      calendarOpen &&
+      prevSelectionModeRef.current === "end" &&
+      selectionMode === "start"
+    ) {
+      setCalendarOpen(false);
+    }
+    prevSelectionModeRef.current = selectionMode;
+  }, [selectionMode, calendarOpen]);
 
-    const onShow = (e: KeyboardEvent) => {
-      setKeyboardBottomInset(e.endCoordinates.height);
-    };
-    const onHide = () => setKeyboardBottomInset(0);
-
-    const s = Keyboard.addListener(showEv as any, onShow);
-    const h = Keyboard.addListener(hideEv as any, onHide);
-
-    return () => {
-      s.remove();
-      h.remove();
-    };
-  }, []);
+  useEffect(() => {
+    if (!visible) setCalendarOpen(false);
+  }, [visible]);
 
   useEffect(() => {
     if (visible) {
       if (planToEdit) {
-        setTitle(planToEdit.title || "");
-        setStartDate(planToEdit.startDate || "");
-        setEndDate(planToEdit.endDate || "");
+        setFormData({
+          name: planToEdit.title || "",
+          segments: planToEdit.segments?.length
+            ? planToEdit.segments.map(s => ({
+                country: s.country,
+                city: s.city,
+                startDate: s.startDate,
+                endDate: s.endDate,
+              }))
+            : [
+                {
+                  country: "",
+                  city: "",
+                  startDate: planToEdit.startDate || "",
+                  endDate: planToEdit.endDate || "",
+                },
+              ],
+        });
       } else {
-        setTitle("");
-        setStartDate("");
-        setEndDate("");
+        resetForm();
       }
-      setCalendarTarget(null);
     }
   }, [visible, planToEdit]);
 
-  const formatDateDisplay = (dateStr: string) =>
-    dateStr ? dayjs(dateStr).format("YYYY.MM.DD") : "";
+  const { totalStart, totalEnd } = useMemo(() => {
+    const starts = tripData.segments.map(s => s.startDate).filter(Boolean).sort();
+    const ends = tripData.segments.map(s => s.endDate).filter(Boolean).sort();
+    return {
+      totalStart: starts[0] ?? null,
+      totalEnd: ends[ends.length - 1] ?? null,
+    };
+  }, [tripData.segments]);
 
   const handleSubmit = async () => {
-    const trimmedTitle = title.trim();
-    if (!trimmedTitle) {
-      Alert.alert("알림", "여행 제목을 입력해주세요.");
-      return;
-    }
-    if (!startDate) {
-      Alert.alert("알림", "시작일을 선택해주세요.");
-      return;
-    }
-    if (!endDate) {
-      Alert.alert("알림", "종료일을 선택해주세요.");
-      return;
-    }
-    if (dayjs(endDate).isBefore(dayjs(startDate))) {
-      Alert.alert("알림", "종료일은 시작일 이후여야 합니다.");
+    const trimmedName = tripData.name.trim();
+    if (!trimmedName) {
+      Alert.alert("알림", "여행 이름을 입력해주세요.");
       return;
     }
 
     setIsSubmitting(true);
     try {
-      const singleSegment = [{ country: "", city: "", startDate, endDate }];
+      const segments = tripData.segments.map(s => ({
+        country: s.country,
+        city: s.city,
+        startDate: s.startDate,
+        endDate: s.endDate,
+      }));
+
       if (planToEdit && updatePlan) {
-        const updatedPlan = await updatePlan(planToEdit.id, {
-          title: trimmedTitle,
-          segments: singleSegment,
-        });
-        onPlanCreated(updatedPlan);
+        const updated = await updatePlan(planToEdit.id, { title: trimmedName, segments });
+        onPlanCreated(updated);
       } else {
-        const newPlan = await addPlan({
-          title: trimmedTitle,
-          segments: singleSegment,
-        });
+        const newPlan = await addPlan({ title: trimmedName, segments });
         onPlanCreated(newPlan);
       }
-      // onClose는 호출하지 않음 - onPlanCreated에서 부모가 모달 닫기 처리
-    } catch (_error) {
-      Alert.alert(
-        "알림",
-        planToEdit ? "여행 수정에 실패했습니다." : "여행 생성에 실패했습니다.",
-      );
+    } catch {
+      Alert.alert("알림", planToEdit ? "여행 수정에 실패했습니다." : "여행 생성에 실패했습니다.");
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const isSubmitDisabled =
-    !title.trim() || !startDate || !endDate || isSubmitting;
-
   return (
     <>
-      <BottomSheetModal visible={visible} onClose={onClose} height={0.5}>
-        <View style={styles.contentWrapper}>
-          <ScrollView
-            style={styles.scrollView}
-            contentContainerStyle={[
-              styles.scrollContent,
-              {
-                paddingBottom:
-                  Platform.OS === "android" ? 16 + keyboardBottomInset : 32,
-              },
-            ]}
-            keyboardShouldPersistTaps="handled"
-            keyboardDismissMode={
-              Platform.OS === "ios" ? "interactive" : "on-drag"
-            }
-            showsVerticalScrollIndicator={false}
-            {...(Platform.OS === "ios"
-              ? { automaticallyAdjustKeyboardInsets: true }
-              : {})}
-          >
-            {/* 헤더 */}
-            <View style={styles.header}>
-              <Text style={styles.headerTitle}>
-                {planToEdit ? "여행 수정" : "새로운 여행 만들기"}
-              </Text>
-              <Pressable
-                onPress={onClose}
-                style={styles.closeButton}
-                hitSlop={8}
-              >
-                <CloseIcon width={20} height={20} color={colors.gray700} />
-              </Pressable>
-            </View>
+      <BottomSheetModal visible={visible} onClose={onClose} height={0.93}>
+        <View style={styles.container}>
+          <View style={styles.header}>
+            <Text style={styles.headerTitle}>
+              {planToEdit ? "여행 수정" : "새로운 여행 만들기"}
+            </Text>
+            <Pressable onPress={onClose} style={styles.closeButton} hitSlop={8}>
+              <CloseIcon width={20} height={20} color={colors.gray700} />
+            </Pressable>
+          </View>
 
-            {/* 여행 제목 */}
-            <View style={styles.inputSection}>
-              <Text style={styles.inputLabel}>여행 제목</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="예: 스페인 일주 여행"
+          <ScrollView
+            style={styles.scroll}
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
+            <View style={styles.section}>
+              <View style={styles.labelRow}>
+                <Text style={styles.sectionLabel}>여행명</Text>
+                <Text style={styles.counter}>{tripData.name.length}/30</Text>
+              </View>
+              <Input
+                style={styles.nameInput}
+                placeholder="ex.도쿄 가을 여행"
                 placeholderTextColor={colors.gray500}
-                value={title}
-                onChangeText={setTitle}
-                maxLength={50}
+                value={tripData.name}
+                onChangeText={name => updateTripData({ name })}
+                maxLength={30}
               />
             </View>
 
-            {/* 시작일 / 종료일 */}
-            <View style={styles.dateRow}>
-              <View style={styles.dateField}>
-                <Text style={styles.inputLabel}>시작일</Text>
-                <Pressable
-                  style={styles.dateInput}
-                  onPress={() => setCalendarTarget("start")}
-                >
-                  <Text
-                    style={startDate ? styles.dateText : styles.datePlaceholder}
-                  >
-                    {startDate ? formatDateDisplay(startDate) : "연도.월.일"}
-                  </Text>
-                  <CalendarIcon width={20} height={20} color={colors.black} />
-                </Pressable>
+            <View style={styles.section}>
+              <View style={styles.labelRow}>
+                <Text style={styles.segSectionLabel}>여행 구간</Text>
+                <Text style={styles.hint}>순서대로 추가하세요</Text>
               </View>
-              <View style={styles.dateField}>
-                <Text style={styles.inputLabel}>종료일</Text>
-                <Pressable
-                  style={styles.dateInput}
-                  onPress={() => setCalendarTarget("end")}
-                >
-                  <Text
-                    style={endDate ? styles.dateText : styles.datePlaceholder}
-                  >
-                    {endDate ? formatDateDisplay(endDate) : "연도.월.일"}
-                  </Text>
-                  <CalendarIcon width={20} height={20} color={colors.black} />
-                </Pressable>
-              </View>
+              <TripSegmentList
+                segments={tripData.segments}
+                onSegmentUpdate={updateSegment}
+                onSegmentAdd={addSegment}
+                onSegmentRemove={removeSegment}
+                onSegmentMove={moveSegment}
+                onSegmentFocus={setActiveSegmentIndex}
+                onDateButtonPress={idx => {
+                  setActiveSegmentIndex(idx);
+                  setCalendarOpen(true);
+                }}
+              />
             </View>
 
-            {/* 여행 생성하기 / 수정 */}
+            <View style={styles.banner}>
+              <Text style={styles.bannerLabel}>전체 여행 기간</Text>
+              {totalStart && totalEnd ? (
+                <Text style={styles.bannerDates}>
+                  {formatDate(totalStart)} — {formatDate(totalEnd)}
+                </Text>
+              ) : (
+                <Text style={styles.bannerEmpty}>
+                  구간 기간을 입력하면 자동으로 계산됩니다
+                </Text>
+              )}
+            </View>
+          </ScrollView>
+
+          <View style={styles.footer}>
+            <Pressable style={styles.cancelBtn} onPress={onClose}>
+              <Text style={styles.cancelText}>취소</Text>
+            </Pressable>
             <Pressable
               style={[
-                styles.submitButton,
-                isSubmitDisabled && styles.submitButtonDisabled,
+                styles.submitBtn,
+                (isSubmitDisabled || isSubmitting) && styles.submitBtnDisabled,
               ]}
               onPress={handleSubmit}
-              disabled={isSubmitDisabled}
+              disabled={isSubmitDisabled || isSubmitting}
             >
               <Text
                 style={[
-                  styles.submitButtonText,
-                  isSubmitDisabled && styles.submitButtonTextDisabled,
+                  styles.submitText,
+                  (isSubmitDisabled || isSubmitting) && styles.submitTextDisabled,
                 ]}
               >
-                {planToEdit ? "수정" : "여행 생성하기"}
+                {planToEdit ? "수정" : "여행 저장"}
               </Text>
             </Pressable>
-          </ScrollView>
-
-          {/* 날짜 선택 캘린더 */}
-          <CalendarModal
-            visible={!!calendarTarget}
-            selectedDate={
-              calendarTarget === "start"
-                ? startDate || dayjs().format("YYYY-MM-DD")
-                : endDate || startDate || dayjs().format("YYYY-MM-DD")
-            }
-            onDayPress={day => {
-              const d = day.dateString;
-              if (calendarTarget === "start") {
-                setStartDate(d);
-                if (endDate && dayjs(d).isAfter(dayjs(endDate))) setEndDate(d);
-              } else {
-                setEndDate(d);
-                if (startDate && dayjs(d).isBefore(dayjs(startDate)))
-                  setStartDate(d);
-              }
-              setCalendarTarget(null);
-            }}
-            onClose={() => setCalendarTarget(null)}
-            minDate={
-              calendarTarget === "end" && startDate ? startDate : undefined
-            }
-            maxDate={
-              calendarTarget === "start" && endDate ? endDate : undefined
-            }
-          />
+          </View>
         </View>
       </BottomSheetModal>
+
+      <TripCalendarModal
+        visible={calendarOpen}
+        onClose={() => setCalendarOpen(false)}
+        selectionMode={selectionMode}
+        markedDates={getMarkedDates()}
+        onDateSelect={handleDateSelect}
+      />
     </>
   );
 }
 
 const styles = StyleSheet.create({
-  contentWrapper: {
+  container: {
     flex: 1,
-    position: "relative",
-  },
-  scrollView: {
-    flex: 1,
-    paddingHorizontal: 20,
-  },
-  scrollContent: {
-    flexGrow: 1,
   },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 24,
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 16,
   },
   headerTitle: {
     ...textStyles.h4,
+    color: colors.black,
   },
   closeButton: {
     width: 32,
@@ -298,66 +265,115 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  inputSection: {
-    marginBottom: 20,
-  },
-  inputLabel: {
-    ...textStyles.h7,
-    marginBottom: 8,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: colors.gray400,
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    height: 48,
-    fontSize: 14,
-    color: colors.black,
-    backgroundColor: colors.gray100,
-  },
-  dateRow: {
-    flexDirection: "row",
-    gap: 12,
-    marginBottom: 40,
-  },
-  dateField: {
+  scroll: {
     flex: 1,
   },
-  dateInput: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    borderWidth: 1,
-    borderColor: colors.gray400,
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    height: 48,
-    backgroundColor: colors.gray100,
+  scrollContent: {
+    paddingHorizontal: 20,
+    paddingBottom: 32,
   },
-  dateText: {
-    ...textStyles.body3,
+  section: {
+    marginBottom: 24,
+  },
+  labelRow: {
+    flexDirection: "row",
+    alignItems: "baseline",
+    marginBottom: 8,
+  },
+  sectionLabel: {
+    ...textStyles.h8,
     color: colors.black,
   },
-  datePlaceholder: {
-    ...textStyles.body3,
+  segSectionLabel: {
+    ...textStyles.h6,
+    color: colors.black,
+  },
+  counter: {
+    marginLeft: "auto",
+    fontFamily: typography.fontFamily.poppinsMedium,
+    fontSize: 12,
+    lineHeight: 16,
     color: colors.gray500,
   },
-  submitButton: {
-    backgroundColor: colors.gray900,
-    height: 56,
+  hint: {
+    marginLeft: "auto",
+    ...textStyles.body6,
+    color: colors.gray500,
+  },
+  nameInput: {
+    width: "100%",
+    borderWidth: 1,
+    borderColor: colors.gray300,
     borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    ...textStyles.body3,
+    color: colors.gray900,
+    backgroundColor: colors.white,
+  },
+  banner: {
+    backgroundColor: colors.gray900,
+    borderRadius: 16,
+    paddingHorizontal: 20,
+    paddingVertical: 18,
+    marginBottom: 8,
+  },
+  bannerLabel: {
+    ...textStyles.h8,
+    color: colors.white,
+    letterSpacing: -0.1,
+  },
+  bannerDates: {
+    marginTop: 6,
+    fontFamily: typography.fontFamily.poppinsSemiBold,
+    fontSize: 15,
+    lineHeight: 22,
+    color: colors.white,
+    fontWeight: "700",
+  },
+  bannerEmpty: {
+    marginTop: 6,
+    ...textStyles.body5,
+    color: "rgba(255,255,255,0.5)",
+  },
+  footer: {
+    flexDirection: "row",
+    gap: 10,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderTopWidth: 1,
+    borderTopColor: colors.gray200,
+  },
+  cancelBtn: {
+    flex: 1,
+    height: 52,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.gray300,
     alignItems: "center",
     justifyContent: "center",
-    marginHorizontal: -4,
+    backgroundColor: colors.white,
   },
-  submitButtonDisabled: {
+  cancelText: {
+    ...textStyles.h7,
+    color: colors.black,
+  },
+  submitBtn: {
+    flex: 1,
+    height: 52,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: colors.gray900,
+  },
+  submitBtnDisabled: {
     backgroundColor: colors.gray300,
   },
-  submitButtonText: {
-    ...textStyles.h5,
+  submitText: {
+    ...textStyles.h7,
     color: colors.white,
   },
-  submitButtonTextDisabled: {
-    color: colors.gray700,
+  submitTextDisabled: {
+    color: colors.gray600,
   },
 });
