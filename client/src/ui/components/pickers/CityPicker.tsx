@@ -1,12 +1,11 @@
 import useDetectClose from "@/hooks/useDetectClose";
-import Svg, { Circle, Path } from "react-native-svg";
 import { useMe } from "@/hooks/useMe";
 import { useRecentSearches } from "@/hooks/useRecentSearches";
-import { citiesApi, type CityResult } from "@/services/cities";
+import { type CityResult, citiesApi } from "@/services/cities";
 import { colors } from "@/ui/tokens/colors";
-import { koreanNameToIso2 } from "@/utils/countryListKo";
 import { radii } from "@/ui/tokens/radii";
 import { textStyles } from "@/ui/tokens/typography";
+import { koreanNameToIso2 } from "@/utils/countryListKo";
 import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -18,9 +17,10 @@ import {
   StyleSheet,
   Text,
   TextInput,
-  type ViewStyle,
   View,
+  type ViewStyle,
 } from "react-native";
+import Svg, { Circle, Path } from "react-native-svg";
 import DownArrowIcon from "../../../../assets/down_arrow.svg";
 import LeftArrowIcon from "../../../../assets/left_arrow.svg";
 import XIcon from "../../../../assets/mobile_close.svg";
@@ -72,10 +72,18 @@ export default function CityPicker({
   const wrapperRef = useRef<View>(null);
   const searchRef = useRef<TextInput>(null);
   const flatListRef = useRef<any>(null);
-  const [open, setIsOpen, _handleOutsidePress] = useDetectClose(wrapperRef, false);
+  const [open, setIsOpen, _handleOutsidePress] = useDetectClose(
+    wrapperRef,
+    false,
+  );
   const [searchText, setSearchText] = useState("");
   const [focusedIndex, setFocusedIndex] = useState(-1);
-  const [triggerLayout, setTriggerLayout] = useState({ x: 0, y: 0, width: 0, height: 0 });
+  const [triggerLayout, setTriggerLayout] = useState({
+    x: 0,
+    y: 0,
+    width: 0,
+    height: 0,
+  });
   const [fsOpen, setFsOpen] = useState(false);
 
   const isNativeEnv = Platform.OS !== "web";
@@ -98,7 +106,11 @@ export default function CityPicker({
 
   const { data: me } = useMe();
   const storageKey = `recentCitySearches_${me?.handle ?? "guest"}`;
-  const { items: recentSearches, addItem, load } = useRecentSearches(storageKey, 10);
+  const {
+    items: recentSearches,
+    addItem,
+    load,
+  } = useRecentSearches(storageKey, 10);
 
   const fetchCities = async (q: string, skip: number, append: boolean) => {
     if (append) {
@@ -107,7 +119,9 @@ export default function CityPicker({
       setIsLoading(true);
     }
     try {
-      const iso2 = countryKo ? (koreanNameToIso2(countryKo) ?? undefined) : undefined;
+      const iso2 = countryKo
+        ? (koreanNameToIso2(countryKo) ?? undefined)
+        : undefined;
       const results = await citiesApi.search({
         q: q || undefined,
         iso2,
@@ -135,9 +149,12 @@ export default function CityPicker({
     setCities([]);
     setOffset(0);
     setHasMore(true);
-    debounceRef.current = setTimeout(() => {
-      fetchCities(searchText, 0, false);
-    }, searchText ? 300 : 0);
+    debounceRef.current = setTimeout(
+      () => {
+        fetchCities(searchText, 0, false);
+      },
+      searchText ? 300 : 0,
+    );
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
@@ -288,7 +305,10 @@ export default function CityPicker({
           </Text>
         </View>
         <View style={styles.itemNames}>
-          <Text style={[styles.itemText, isSelected && styles.itemTextSelected]} numberOfLines={1}>
+          <Text
+            style={[styles.itemText, isSelected && styles.itemTextSelected]}
+            numberOfLines={1}
+          >
             {item.cityKo || item.city}
           </Text>
           {item.cityKo && (
@@ -298,8 +318,15 @@ export default function CityPicker({
           )}
         </View>
         {item.iso2 && (
-          <View style={[styles.itemCodeBadge, isSelected && styles.itemCodeBadgeSelected]}>
-            <Text style={[styles.itemCode, isSelected && styles.itemCodeSelected]}>
+          <View
+            style={[
+              styles.itemCodeBadge,
+              isSelected && styles.itemCodeBadgeSelected,
+            ]}
+          >
+            <Text
+              style={[styles.itemCode, isSelected && styles.itemCodeSelected]}
+            >
               {item.iso2}
             </Text>
           </View>
@@ -308,8 +335,10 @@ export default function CityPicker({
     );
   };
 
-  const showNoResult = !isLoading && searchText.trim().length > 0 && cities.length === 0;
-  const isDirectInputFocused = focusedIndex === cities.length && searchText.trim().length > 0;
+  const showNoResult =
+    !isLoading && searchText.trim().length > 0 && cities.length === 0;
+  const isDirectInputFocused =
+    focusedIndex === cities.length && searchText.trim().length > 0;
 
   const popupContent = (
     <View style={styles.popupInner}>
@@ -340,7 +369,13 @@ export default function CityPicker({
         )}
       </View>
 
-      <View style={[styles.listContainer, !fsOpen && styles.listContainerPopup, fsOpen && styles.listContainerFs]}>
+      <View
+        style={[
+          styles.listContainer,
+          !fsOpen && styles.listContainerPopup,
+          fsOpen && styles.listContainerFs,
+        ]}
+      >
         {isLoading ? (
           <View style={styles.loadingState}>
             <ActivityIndicator size="small" color={colors.gray500} />
@@ -349,16 +384,29 @@ export default function CityPicker({
           <View style={styles.noResultState}>
             <View style={styles.noResultIconCircle}>
               <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
-                <Circle cx={12} cy={12} r={8} stroke="rgb(155,155,155)" strokeWidth={1.6} />
-                <Path d="M8.5 14c1 1 5 1 7 0" stroke="rgb(155,155,155)" strokeWidth={1.5} strokeLinecap="round" />
+                <Circle
+                  cx={12}
+                  cy={12}
+                  r={8}
+                  stroke="rgb(155,155,155)"
+                  strokeWidth={1.6}
+                />
+                <Path
+                  d="M8.5 14c1 1 5 1 7 0"
+                  stroke="rgb(155,155,155)"
+                  strokeWidth={1.5}
+                  strokeLinecap="round"
+                />
               </Svg>
             </View>
             <Text style={styles.noResultTitle}>
-              {'\''}
+              {"'"}
               <Text style={styles.noResultKeyword}>{searchText.trim()}</Text>
               {`' ${getEulRul(searchText.trim())} 찾을 수 없어요`}
             </Text>
-            <Text style={styles.noResultSubtitle}>입력한 그대로 저장할 수 있어요</Text>
+            <Text style={styles.noResultSubtitle}>
+              입력한 그대로 저장할 수 있어요
+            </Text>
             <Pressable
               style={styles.noResultButton}
               onPress={() => {
@@ -368,7 +416,9 @@ export default function CityPicker({
                 handleClose();
               }}
             >
-              <Text style={styles.noResultButtonText}>+ '{searchText.trim()}' 직접 입력</Text>
+              <Text style={styles.noResultButtonText}>
+                + '{searchText.trim()}' 직접 입력
+              </Text>
             </Pressable>
           </View>
         ) : (
@@ -398,7 +448,8 @@ export default function CityPicker({
                   <Pressable
                     style={({ hovered }: any) => [
                       styles.directInputItem,
-                      (hovered || isDirectInputFocused) && styles.directInputItemFocused,
+                      (hovered || isDirectInputFocused) &&
+                        styles.directInputItemFocused,
                     ]}
                     onPress={() => {
                       const trimmed = searchText.trim();
@@ -409,12 +460,24 @@ export default function CityPicker({
                   >
                     <View style={styles.directInputIconCircle}>
                       <Svg width={14} height={14} viewBox="0 0 24 24">
-                        <Path d="M12 5v14M5 12h14" stroke="rgb(0,122,255)" strokeWidth={1.9} strokeLinecap="round" />
+                        <Path
+                          d="M12 5v14M5 12h14"
+                          stroke="rgb(0,122,255)"
+                          strokeWidth={1.9}
+                          strokeLinecap="round"
+                        />
                       </Svg>
                     </View>
                     <View style={styles.directInputNames}>
-                      <Text style={styles.directInputTitle} numberOfLines={1}>'{searchText.trim()}' 직접 입력</Text>
-                      <Text style={styles.directInputSubtitle} numberOfLines={1}>이 이름 그대로 저장</Text>
+                      <Text style={styles.directInputTitle} numberOfLines={1}>
+                        '{searchText.trim()}' 직접 입력
+                      </Text>
+                      <Text
+                        style={styles.directInputSubtitle}
+                        numberOfLines={1}
+                      >
+                        이 이름 그대로 저장
+                      </Text>
                     </View>
                     <Text style={styles.directInputEnterKey}>↵</Text>
                   </Pressable>
@@ -443,7 +506,11 @@ export default function CityPicker({
   return (
     <View
       ref={wrapperRef}
-      style={[styles.wrapper, containerStyle, { zIndex: open && !useModal ? 100 : 1 }]}
+      style={[
+        styles.wrapper,
+        containerStyle,
+        { zIndex: open && !useModal ? 100 : 1 },
+      ]}
     >
       <Pressable
         style={[styles.trigger, disabled && styles.triggerDisabled, style]}
@@ -456,18 +523,14 @@ export default function CityPicker({
         >
           {value || placeholder}
         </Text>
-        {(open || fsOpen) ? (
+        {open || fsOpen ? (
           <UpperArrowIcon width={10} height={10} style={{ opacity: 0.6 }} />
         ) : (
           <DownArrowIcon width={10} height={10} style={{ opacity: 0.6 }} />
         )}
       </Pressable>
 
-      {open && !useModal && (
-        <View style={styles.popup}>
-          {popupContent}
-        </View>
-      )}
+      {open && !useModal && <View style={styles.popup}>{popupContent}</View>}
 
       {useModal && (
         <Modal
@@ -477,7 +540,10 @@ export default function CityPicker({
           onRequestClose={closeModal}
           statusBarTranslucent
         >
-          <Pressable style={StyleSheet.absoluteFillObject} onPress={closeModal} />
+          <Pressable
+            style={StyleSheet.absoluteFillObject}
+            onPress={closeModal}
+          />
           <View
             style={[
               styles.popup,
@@ -502,17 +568,28 @@ export default function CityPicker({
         >
           <SafeAreaView style={styles.fsContainer}>
             <View style={styles.fsHeader}>
+              {onBack ? (
+                <Pressable
+                  onPress={() => {
+                    handleClose();
+                    onBack();
+                  }}
+                  hitSlop={8}
+                  style={styles.fsNavBtn}
+                >
+                  <LeftArrowIcon width={22} height={22} color={colors.gray700} />
+                </Pressable>
+              ) : (
+                <View style={styles.fsNavBtn} />
+              )}
+              <Text style={styles.fsTitle}>
+                {countryKo ? `도시 선택 · ${countryKo}` : "도시 선택"}
+              </Text>
               <Pressable
-                onPress={() => { handleClose(); onBack?.(); }}
+                onPress={handleClose}
                 hitSlop={8}
                 style={styles.fsNavBtn}
               >
-                <LeftArrowIcon width={22} height={22} color={colors.gray700} />
-              </Pressable>
-              <Text style={styles.fsTitle}>
-                {countryKo ? `${countryKo} 도시 선택` : "도시 선택"}
-              </Text>
-              <Pressable onPress={handleClose} hitSlop={8} style={styles.fsNavBtn}>
                 <XIcon width={22} height={22} color={colors.gray700} />
               </Pressable>
             </View>
