@@ -1,4 +1,8 @@
+import { useAttachmentUpload } from "@/hooks/useAttachmentUpload";
+import { useFilePicker } from "@/hooks/useFilePicker";
+import { useMe } from "@/hooks/useMe";
 import { expensesApi } from "@/services/expenses";
+import { type LocalFile, PLAN_ENTITY_KIND } from "@/types/api";
 import type { Expense } from "@/types/api";
 import {
   ExpenseCategory,
@@ -8,6 +12,7 @@ import {
 import BottomSheetModal from "@/ui/components/BottomSheetModal.native";
 import CalendarModal from "@/ui/components/CalendarModal.native";
 import FloatingFooter from "@/ui/components/FloatingFooter.native";
+import AttachmentSection from "@/ui/components/attachmentSection.native";
 import Input from "@/ui/components/input/Input";
 import { colors } from "@/ui/tokens/colors";
 import { textStyles, typography } from "@/ui/tokens/typography";
@@ -91,8 +96,16 @@ export default function AddExpenseModal({
         return <TicketIcon width={size} height={size} color={color} />;
     }
   };
+  const [pendingFiles, setPendingFiles] = useState<LocalFile[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isSubmittingRef = useRef(false);
+
+  const { pickImage, pickDocument } = useFilePicker();
+  const { data: me } = useMe();
+  const { isUploading, uploadFiles } = useAttachmentUpload({
+    planId,
+    entityType: PLAN_ENTITY_KIND.EXPENSE,
+  });
 
   const getDefaultDate = () =>
     defaultExDate || planStartDate || dayjs().format("YYYY-MM-DD");
@@ -108,10 +121,8 @@ export default function AddExpenseModal({
     if (visible) {
       const date =
         defaultExDate || planStartDate || dayjs().format("YYYY-MM-DD");
-      setFormData(prev => ({
-        ...prev,
-        ex_date: date,
-      }));
+      setFormData(prev => ({ ...prev, ex_date: date }));
+      setPendingFiles([]);
     }
   }, [visible, defaultExDate, planStartDate]);
 
@@ -148,13 +159,16 @@ export default function AddExpenseModal({
         exDate: formData.ex_date,
         currency: ExpenseCurrency.KRW,
       });
-      Alert.alert("성공", "비용이 추가되었습니다.");
+      if (pendingFiles.length > 0) {
+        await uploadFiles(pendingFiles, newExpense.id);
+      }
       setFormData({
         category: ExpenseCategory.FOOD,
         amount: "",
         description: "",
         ex_date: getDefaultDate(),
       });
+      setPendingFiles([]);
       onClose?.({ fromSave: true });
       onExpenseAdd?.(newExpense);
     } catch {
@@ -172,11 +186,12 @@ export default function AddExpenseModal({
       description: "",
       ex_date: getDefaultDate(),
     });
+    setPendingFiles([]);
     onClose?.();
   };
 
   return (
-    <BottomSheetModal visible={visible} onClose={handleClose} height={0.85}>
+    <BottomSheetModal visible={visible} onClose={handleClose} height={0.93}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>비용 추가</Text>
         <Pressable style={styles.closeButton} onPress={handleClose} hitSlop={8}>
@@ -302,12 +317,31 @@ export default function AddExpenseModal({
             maxDate={planEndDate}
           />
         </View>
+
+        <AttachmentSection
+          variant="expense"
+          pendingFiles={pendingFiles}
+          onPickImage={async () => {
+            const file = await pickImage();
+            if (file) setPendingFiles(prev => [...prev, file]);
+          }}
+          onPickDocument={async () => {
+            const file = await pickDocument();
+            if (file) setPendingFiles(prev => [...prev, file]);
+          }}
+          onRemoveFile={index =>
+            setPendingFiles(prev => prev.filter((_, i) => i !== index))
+          }
+          isUploading={isUploading}
+          isGuest={!me}
+          showTopDivider
+        />
       </ScrollView>
 
       <FloatingFooter
-        primaryLabel="저장"
+        primaryLabel={isSubmitting ? "저장 중..." : "저장"}
         onPrimaryPress={handleSubmit}
-        primaryDisabled={isSubmitting}
+        primaryDisabled={isSubmitting || isUploading}
         secondaryLabel="취소"
         onSecondaryPress={handleClose}
       />

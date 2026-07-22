@@ -15,6 +15,7 @@ export interface CalendarModalProps {
   onDayPress: (day: { dateString: string }) => void;
   minDate?: string;
   maxDate?: string;
+  datesWithItems?: Set<string>;
 }
 
 function DayCell({
@@ -22,6 +23,9 @@ function DayCell({
   marking,
   onPress,
   currentMonth,
+  minDate,
+  maxDate,
+  hasItems,
 }: {
   date?: DateData;
   state?: string;
@@ -30,6 +34,7 @@ function DayCell({
   currentMonth: string;
   minDate?: string;
   maxDate?: string;
+  hasItems?: boolean;
 }) {
   if (!date) {
     return <View style={styles.dayCell} />;
@@ -39,6 +44,11 @@ function DayCell({
   const isCurrentMonth =
     dayjs(date.dateString).format("YYYY-MM") ===
     dayjs(currentMonth).format("YYYY-MM");
+  const isInPlan =
+    !!minDate &&
+    !!maxDate &&
+    date.dateString >= minDate &&
+    date.dateString <= maxDate;
 
   return (
     <Pressable
@@ -50,9 +60,13 @@ function DayCell({
       {isSelected && (
         <View style={styles.selectedCircle} pointerEvents="none" />
       )}
+      {hasItems && isCurrentMonth && (
+        <View style={styles.itemDot} pointerEvents="none" />
+      )}
       <Text
         style={[
           styles.dayText,
+          isInPlan && styles.dayTextInPlan,
           !isCurrentMonth && !isSelected && styles.dayTextOtherMonth,
           isSelected && styles.dayTextSelected,
           isToday && !isSelected && styles.dayTextToday,
@@ -71,6 +85,7 @@ export default function CalendarModal({
   onDayPress,
   minDate,
   maxDate,
+  datesWithItems,
 }: CalendarModalProps) {
   const [currentMonth, setCurrentMonth] = useState(
     selectedDate || dayjs().format("YYYY-MM-DD"),
@@ -175,6 +190,9 @@ export default function CalendarModal({
                 marking={marking as { selected?: boolean }}
                 onPress={onPress}
                 currentMonth={currentMonth}
+                minDate={minDate}
+                maxDate={maxDate}
+                hasItems={datesWithItems?.has(date?.dateString ?? "")}
               />
             )}
             onMonthChange={month => setCurrentMonth(month.dateString)}
@@ -278,6 +296,15 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     position: "relative",
   },
+  itemDot: {
+    position: "absolute",
+    top: 2,
+    width: 4,
+    height: 4,
+    borderRadius: 999,
+    backgroundColor: colors.primary,
+    zIndex: 3,
+  },
   selectedCircle: {
     position: "absolute",
     width: 32,
@@ -296,9 +323,13 @@ const styles = StyleSheet.create({
   },
   dayText: {
     ...textStyles.h7,
+    fontFamily: typography.fontFamily.pretendardRegular,
     lineHeight: 18,
     zIndex: 2,
     color: colors.black,
+  },
+  dayTextInPlan: {
+    fontFamily: typography.fontFamily.pretendardSemiBold,
   },
   dayTextDisabled: {
     color: colors.gray400,

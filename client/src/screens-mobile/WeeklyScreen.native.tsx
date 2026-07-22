@@ -8,6 +8,7 @@ import { useSelectedPlan } from "@/contexts/SelectedPlanContext";
 import { usePlanDataQuery } from "@/hooks/usePlanDataQuery";
 import { usePlansQuery } from "@/hooks/usePlansQuery";
 import type {
+  Accommodation,
   FlightRead,
   FlightSegmentReadDto,
   Itinerary,
@@ -38,17 +39,22 @@ import {
 
 type AddScheduleFlow = "closed" | "method" | "direct" | "ai";
 import WeeklyChecklistCard from "@/components/cards/WeeklyChecklistCard.native";
+import AccommodationDetailModal from "@/components/modals/mobile/AccommodationDetailModal.native";
+import AccommodationEditModal from "@/components/modals/mobile/AccommodationEditModal.native";
 import FlightDetailModal from "@/components/modals/mobile/FlightDetailModal.native";
 import FlightEditModal from "@/components/modals/mobile/FlightEditModal.native";
 import ItineraryDetailModal from "@/components/modals/mobile/ItineraryDetailModal.native";
 import ItineraryEditModal from "@/components/modals/mobile/ItineraryEditModal.native";
 import TravelInfoModal from "@/components/modals/mobile/TravelInfoModal.native";
 import { useMe } from "@/hooks/useMe";
+import { accommodationsApi } from "@/services/accommodations";
 import { flightsApi } from "@/services/flights";
 import { itinerariesApi } from "@/services/itineraries";
 import CalendarModal from "@/ui/components/CalendarModal.native";
 import { guestPrompt } from "@/utils/guestPrompt";
+import FlightIcon from "../../assets/airplane.svg";
 import LeftArrowIcon from "../../assets/left_arrow.svg";
+import AccommodationIcon from "../../assets/mobile_accomodation.svg";
 import CalendarIcon from "../../assets/mobile_calendar_black.svg";
 import CautionIcon from "../../assets/mobile_caution.svg";
 import DropdownIcon from "../../assets/mobile_dropdown.svg";
@@ -85,12 +91,19 @@ export default function WeeklyScreen() {
     useState<FlightSegmentReadDto | null>(null);
   const [showFlightEdit, setShowFlightEdit] = useState(false);
   const [editingFlight, setEditingFlight] = useState<FlightRead | null>(null);
+  const [selectedAccommodation, setSelectedAccommodation] =
+    useState<Accommodation | null>(null);
+  const [showAccommodationDetail, setShowAccommodationDetail] = useState(false);
+  const [showAccommodationEdit, setShowAccommodationEdit] = useState(false);
+  const [editingAccommodation, setEditingAccommodation] =
+    useState<Accommodation | null>(null);
 
   useEffect(() => {
     return guestPrompt.registerBeforeSignUpNavigation(() => {
       setProfileModalVisible(false);
       setTravelInfoModalVisible(false);
       setShowItineraryEdit(false);
+      setShowAccommodationEdit(false);
       setShowFlightEdit(false);
       setAddScheduleFlow("closed");
     });
@@ -167,11 +180,11 @@ export default function WeeklyScreen() {
 
   const selectedDateSchedules = useMemo(() => {
     const schedules: Array<{
-      type: "itinerary" | "flight";
+      type: "itinerary" | "flight" | "accommodation";
       id: number | string;
       time: string;
       endTime?: string;
-      data: Itinerary | FlightRead;
+      data: Itinerary | FlightRead | Accommodation;
       segment?: any;
       segmentIndex?: number;
     }> = [];
@@ -207,10 +220,61 @@ export default function WeeklyScreen() {
       });
     }
 
-    return schedules.sort((a, b) => a.time.localeCompare(b.time));
-  }, [selectedDateItineraries, planData.flights, selectedDate]);
+    if (planData.accommodations) {
+      const dateStr = selectedDate.format("YYYY-MM-DD");
+      planData.accommodations.forEach((accommodation: Accommodation) => {
+        const checkinDate = dayjs(accommodation.checkinDate).format("YYYY-MM-DD");
+        const checkoutDate = dayjs(accommodation.checkoutDate).format("YYYY-MM-DD");
+        if (checkinDate <= dateStr && checkoutDate >= dateStr) {
+          schedules.push({
+            type: "accommodation",
+            id: accommodation.id,
+            time: formatTime(accommodation.checkinTime || "00:00"),
+            data: accommodation,
+          });
+        }
+      });
+    }
 
-  const scheduleCount = selectedDateSchedules.length;
+    return schedules.sort((a, b) => a.time.localeCompare(b.time));
+  }, [selectedDateItineraries, planData.flights, planData.accommodations, selectedDate]);
+
+  const scheduleCount = selectedDateSchedules.filter(
+    s => s.type !== "accommodation",
+  ).length;
+
+  const selectedDateAccommodations = useMemo(
+    () =>
+      selectedDateSchedules
+        .filter(s => s.type === "accommodation")
+        .map(s => s.data as Accommodation),
+    [selectedDateSchedules],
+  );
+
+  const selectedDateFlights = useMemo(
+    () => selectedDateSchedules.filter(s => s.type === "flight"),
+    [selectedDateSchedules],
+  );
+
+  const datesWithItems = useMemo(() => {
+    const set = new Set<string>();
+    planData.itineraries?.forEach((item: Itinerary) => {
+      if (item.itineraryDate)
+        set.add(dayjs(item.itineraryDate).format("YYYY-MM-DD"));
+    });
+    planData.flights?.forEach((flight: FlightRead) => {
+      flight.flightSegments?.forEach(seg => {
+        if (seg.departureTime)
+          set.add(dayjs(seg.departureTime).format("YYYY-MM-DD"));
+      });
+    });
+    planData.accommodations?.forEach((acc: Accommodation) => {
+      if (acc.checkinDate) set.add(dayjs(acc.checkinDate).format("YYYY-MM-DD"));
+      if (acc.checkoutDate)
+        set.add(dayjs(acc.checkoutDate).format("YYYY-MM-DD"));
+    });
+    return set;
+  }, [planData.itineraries, planData.flights, planData.accommodations]);
 
   if (plansQuery.isLoading || planData.isLoading) {
     return (
@@ -280,6 +344,9 @@ export default function WeeklyScreen() {
         >
           {weekCalendar.map(item => {
             const isSelected = selectedDate.isSame(item.fullDate, "day");
+            const hasItems = datesWithItems.has(
+              item.fullDate.format("YYYY-MM-DD"),
+            );
             return (
               <Pressable
                 key={`${item.year}-${item.month}-${item.date}`}
@@ -289,6 +356,16 @@ export default function WeeklyScreen() {
                 ]}
                 onPress={() => setSelectedDate(item.fullDate)}
               >
+                <View style={styles.dateDotRow}>
+                  {hasItems && (
+                    <View
+                      style={[
+                        styles.dateDot,
+                        isSelected && styles.dateDotSelected,
+                      ]}
+                    />
+                  )}
+                </View>
                 <Text
                   style={[
                     styles.dayLabel,
@@ -347,14 +424,15 @@ export default function WeeklyScreen() {
           />
         }
       >
-        {selectedDateSchedules.length === 0 ? (
+        {scheduleCount === 0 && selectedDateAccommodations.length === 0 && (
           <View style={styles.emptyScheduleContainer}>
             <CautionIcon width={24} height={24} color={colors.gray600} />
             <Text style={styles.emptyScheduleText}>
               등록된 일정이 없습니다.
             </Text>
           </View>
-        ) : (
+        )}
+        {scheduleCount > 0 && (
           <>
             <View style={styles.scheduleHeader}>
               <View style={styles.scheduleDate}>
@@ -374,6 +452,8 @@ export default function WeeklyScreen() {
             <View style={styles.timelineWrapper}>
               <View style={styles.timelineTrack} />
               {selectedDateSchedules.map(schedule => {
+                if (schedule.type === "accommodation") return null;
+
                 const isCurrentTime =
                   dayjs().isSame(selectedDate, "day") &&
                   dayjs().isAfter(
@@ -605,6 +685,91 @@ export default function WeeklyScreen() {
             </View>
           </>
         )}
+
+        {(selectedDateAccommodations.length > 0 ||
+          selectedDateFlights.length > 0) && (
+          <View
+            style={[
+              styles.travelInfoSection,
+              scheduleCount === 0 && styles.travelInfoSectionAlone,
+            ]}
+          >
+            <Text style={styles.travelInfoTitle}>여행 정보 (Reference)</Text>
+            {selectedDateAccommodations.map((accommodation: Accommodation) => {
+              const isCheckout =
+                dayjs(accommodation.checkoutDate).format("YYYY-MM-DD") ===
+                selectedDate.format("YYYY-MM-DD");
+              return (
+                <Pressable
+                  key={accommodation.id}
+                  style={styles.travelInfoCard}
+                  onPress={() => {
+                    setSelectedAccommodation(accommodation);
+                    setShowAccommodationDetail(true);
+                  }}
+                >
+                  <View style={styles.travelInfoCardHeader}>
+                    <View style={styles.travelInfoIconBox}>
+                      <AccommodationIcon
+                        width={20}
+                        height={20}
+                        color={colors.primary}
+                      />
+                    </View>
+                    <View style={styles.travelInfoHeaderText}>
+                      <Text style={styles.travelInfoLabel}>
+                        {isCheckout ? "오늘 체크아웃" : "오늘의 숙소"}
+                      </Text>
+                      <Text style={styles.travelInfoName}>
+                        {accommodation.name}
+                      </Text>
+                      <Text style={styles.travelInfoSub}>
+                        {isCheckout
+                          ? `체크아웃 ${formatTime(accommodation.checkoutTime)}`
+                          : `체크인 ${formatTime(accommodation.checkinTime)}`}
+                      </Text>
+                    </View>
+                  </View>
+                  <RightArrowIcon
+                    width={12}
+                    height={12}
+                    color={colors.gray600}
+                  />
+                </Pressable>
+              );
+            })}
+            {selectedDateFlights.map(item => (
+              <Pressable
+                key={item.id}
+                style={styles.travelInfoCard}
+                onPress={() => {
+                  setSelectedFlight(item.data as FlightRead);
+                  setSelectedFlightSegment(item.segment);
+                  setShowFlightDetail(true);
+                }}
+              >
+                <View style={styles.travelInfoCardHeader}>
+                  <View style={styles.travelInfoIconBox}>
+                    <FlightIcon width={20} height={20} color={colors.primary} />
+                  </View>
+                  <View style={styles.travelInfoHeaderText}>
+                    <Text style={styles.travelInfoLabel}>오늘의 항공</Text>
+                    <Text style={styles.travelInfoName}>
+                      {item.segment.departureAirport} →{" "}
+                      {item.segment.arrivalAirport}
+                    </Text>
+                    <Text style={styles.travelInfoSub}>
+                      출발 {item.time}
+                      {item.segment.flightNumber &&
+                        ` · ${item.segment.flightNumber}`}
+                    </Text>
+                  </View>
+                </View>
+                <RightArrowIcon width={12} height={12} color={colors.gray600} />
+              </Pressable>
+            ))}
+          </View>
+        )}
       </ScrollView>
 
       <Modal
@@ -680,6 +845,7 @@ export default function WeeklyScreen() {
         onDayPress={handleCalendarDayPress}
         minDate={planMinMax?.minDate}
         maxDate={planMinMax?.maxDate}
+        datesWithItems={datesWithItems}
       />
 
       {selectedPlan && (
@@ -907,6 +1073,71 @@ export default function WeeklyScreen() {
         }}
       />
 
+      <AccommodationDetailModal
+        visible={showAccommodationDetail}
+        onClose={() => {
+          setShowAccommodationDetail(false);
+          setSelectedAccommodation(null);
+        }}
+        accommodation={selectedAccommodation}
+        onEdit={accommodation => {
+          setShowAccommodationDetail(false);
+          setEditingAccommodation(accommodation);
+          setShowAccommodationEdit(true);
+        }}
+        onDelete={async accommodation => {
+          try {
+            await accommodationsApi.deleteAccommodation(accommodation.id);
+            planData.removeAccommodation(accommodation.id);
+            if (selectedPlan?.publicId && planData.plan?.id) {
+              planData.refreshAccommodations?.();
+              planData.refreshExpenses?.();
+              queryClient.invalidateQueries({
+                queryKey: ["expenses", selectedPlan.id],
+              });
+            }
+            Alert.alert("삭제완료", "숙소가 삭제되었습니다.");
+          } catch {
+            Alert.alert("알림", "숙소 삭제에 실패했습니다.");
+          }
+        }}
+      />
+
+      <AccommodationEditModal
+        visible={showAccommodationEdit}
+        onClose={opts => {
+          const accommodationToShow = editingAccommodation;
+          setShowAccommodationEdit(false);
+          setEditingAccommodation(null);
+          if (!opts?.fromSave && accommodationToShow) {
+            setSelectedAccommodation(accommodationToShow);
+            setShowAccommodationDetail(true);
+          }
+        }}
+        accommodation={editingAccommodation}
+        planId={selectedPlan?.id ?? 0}
+        onSave={async updated => {
+          planData.addAccommodation(updated);
+          if (selectedPlan?.publicId && planData.plan?.id) {
+            planData.refreshAccommodations?.();
+            planData.refreshExpenses?.();
+            queryClient.invalidateQueries({
+              queryKey: ["expenses", selectedPlan.id],
+            });
+          }
+        }}
+        onDelete={async accommodationId => {
+          planData.removeAccommodation(accommodationId);
+          if (selectedPlan?.publicId) {
+            planData.refreshAccommodations?.();
+            planData.refreshExpenses?.();
+            queryClient.invalidateQueries({
+              queryKey: ["expenses", selectedPlan.id],
+            });
+          }
+        }}
+      />
+
       {selectedPlan && (
         <TravelInfoModal
           visible={travelInfoModalVisible}
@@ -1046,6 +1277,21 @@ const styles = StyleSheet.create({
   },
   dayDateSelected: {
     color: colors.white,
+  },
+  dateDotRow: {
+    height: 8,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 2,
+  },
+  dateDot: {
+    width: 5,
+    height: 5,
+    borderRadius: 999,
+    backgroundColor: colors.primary,
+  },
+  dateDotSelected: {
+    backgroundColor: colors.white,
   },
 
   scheduleHeader: {
@@ -1236,5 +1482,64 @@ const styles = StyleSheet.create({
     backgroundColor: colors.black,
     alignItems: "center",
     justifyContent: "center",
+  },
+  travelInfoSection: {
+    marginTop: 4,
+    marginBottom: 16,
+  },
+  travelInfoSectionAlone: {
+    marginTop: 24,
+  },
+  travelInfoTitle: {
+    ...textStyles.h5,
+    color: colors.black,
+    marginBottom: 16,
+    marginHorizontal: 16,
+  },
+  travelInfoCard: {
+    marginHorizontal: 16,
+    marginBottom: 12,
+    padding: 16,
+    backgroundColor: colors.white,
+    borderRadius: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    shadowColor: colors.gray700,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  travelInfoCardHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    flex: 1,
+  },
+  travelInfoIconBox: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    backgroundColor: `${colors.primary}1F`,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  travelInfoHeaderText: {
+    flex: 1,
+  },
+  travelInfoLabel: {
+    ...textStyles.body4,
+    color: colors.gray600,
+    marginBottom: 4,
+  },
+  travelInfoName: {
+    ...textStyles.h6,
+    color: colors.black,
+    marginBottom: 4,
+  },
+  travelInfoSub: {
+    ...textStyles.body4,
+    color: colors.gray600,
   },
 });

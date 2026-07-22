@@ -1,12 +1,11 @@
 import useDetectClose from "@/hooks/useDetectClose";
-import Svg, { Circle, Path } from "react-native-svg";
 import { useMe } from "@/hooks/useMe";
 import { useRecentSearches } from "@/hooks/useRecentSearches";
-import { citiesApi, type CityResult } from "@/services/cities";
+import { type CityResult, citiesApi } from "@/services/cities";
 import { colors } from "@/ui/tokens/colors";
-import { koreanNameToIso2 } from "@/utils/countryListKo";
 import { radii } from "@/ui/tokens/radii";
 import { textStyles } from "@/ui/tokens/typography";
+import { koreanNameToIso2 } from "@/utils/countryListKo";
 import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -14,13 +13,16 @@ import {
   Modal,
   Platform,
   Pressable,
+  SafeAreaView,
   StyleSheet,
   Text,
   TextInput,
-  type ViewStyle,
   View,
+  type ViewStyle,
 } from "react-native";
+import Svg, { Circle, Path } from "react-native-svg";
 import DownArrowIcon from "../../../../assets/down_arrow.svg";
+import LeftArrowIcon from "../../../../assets/left_arrow.svg";
 import XIcon from "../../../../assets/mobile_close.svg";
 import SearchIcon from "../../../../assets/search.svg";
 import UpperArrowIcon from "../../../../assets/upper_arrow.svg";
@@ -47,6 +49,9 @@ interface CityPickerProps {
   onOpen?: () => void;
   onClose?: () => void;
   useModal?: boolean;
+  fullScreenModal?: boolean;
+  openTrigger?: number;
+  onBack?: () => void;
 }
 
 export default function CityPicker({
@@ -60,14 +65,29 @@ export default function CityPicker({
   onOpen,
   onClose,
   useModal = false,
+  fullScreenModal,
+  openTrigger,
+  onBack,
 }: CityPickerProps) {
   const wrapperRef = useRef<View>(null);
   const searchRef = useRef<TextInput>(null);
   const flatListRef = useRef<any>(null);
-  const [open, setIsOpen, _handleOutsidePress] = useDetectClose(wrapperRef, false);
+  const [open, setIsOpen, _handleOutsidePress] = useDetectClose(
+    wrapperRef,
+    false,
+  );
   const [searchText, setSearchText] = useState("");
   const [focusedIndex, setFocusedIndex] = useState(-1);
-  const [triggerLayout, setTriggerLayout] = useState({ x: 0, y: 0, width: 0, height: 0 });
+  const [triggerLayout, setTriggerLayout] = useState({
+    x: 0,
+    y: 0,
+    width: 0,
+    height: 0,
+  });
+  const [fsOpen, setFsOpen] = useState(false);
+
+  const isNativeEnv = Platform.OS !== "web";
+  const effectiveOpen = open || fsOpen;
 
   const [cities, setCities] = useState<CityResult[]>([]);
   const [offset, setOffset] = useState(0);
@@ -86,7 +106,11 @@ export default function CityPicker({
 
   const { data: me } = useMe();
   const storageKey = `recentCitySearches_${me?.handle ?? "guest"}`;
-  const { items: recentSearches, addItem, load } = useRecentSearches(storageKey, 10);
+  const {
+    items: recentSearches,
+    addItem,
+    load,
+  } = useRecentSearches(storageKey, 10);
 
   const fetchCities = async (q: string, skip: number, append: boolean) => {
     if (append) {
@@ -95,7 +119,9 @@ export default function CityPicker({
       setIsLoading(true);
     }
     try {
-      const iso2 = countryKo ? (koreanNameToIso2(countryKo) ?? undefined) : undefined;
+      const iso2 = countryKo
+        ? (koreanNameToIso2(countryKo) ?? undefined)
+        : undefined;
       const results = await citiesApi.search({
         q: q || undefined,
         iso2,
@@ -118,31 +144,34 @@ export default function CityPicker({
   };
 
   useEffect(() => {
-    if (!open) return;
+    if (!effectiveOpen) return;
     if (debounceRef.current) clearTimeout(debounceRef.current);
     setCities([]);
     setOffset(0);
     setHasMore(true);
-    debounceRef.current = setTimeout(() => {
-      fetchCities(searchText, 0, false);
-    }, searchText ? 300 : 0);
+    debounceRef.current = setTimeout(
+      () => {
+        fetchCities(searchText, 0, false);
+      },
+      searchText ? 300 : 0,
+    );
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
-  }, [searchText, open, countryKo]);
+  }, [searchText, effectiveOpen, countryKo]);
 
   useEffect(() => {
-    if (!open) {
+    if (!effectiveOpen) {
       setSearchText("");
       setCities([]);
       setOffset(0);
       setHasMore(true);
     }
-  }, [open]);
+  }, [effectiveOpen]);
 
   useEffect(() => {
     setFocusedIndex(-1);
-  }, [open, searchText]);
+  }, [effectiveOpen, searchText]);
 
   useEffect(() => {
     if (!open || Platform.OS !== "web") return;
@@ -165,6 +194,7 @@ export default function CityPicker({
           onChange(trimmed);
           addItem(trimmed);
           setIsOpen(false);
+          setFsOpen(false);
           onClose?.();
         } else if (idx >= 0 && idx < items.length) {
           handleSelect(items[idx]);
@@ -172,6 +202,7 @@ export default function CityPicker({
       } else if (e.key === "Escape") {
         e.preventDefault();
         setIsOpen(false);
+        setFsOpen(false);
         onClose?.();
       }
     };
@@ -194,13 +225,35 @@ export default function CityPicker({
     }
   }, [focusedIndex]);
 
+  useEffect(() => {
+    if (!openTrigger || openTrigger <= 0) return;
+    if (!fullScreenModal || !isNativeEnv) return;
+    setFsOpen(true);
+    onOpen?.();
+    setTimeout(() => searchRef.current?.focus(), 150);
+  }, [openTrigger]);
+
   const handleLoadMore = () => {
     if (!hasMore || isFetchingMore || isLoading) return;
     fetchCities(searchText, offset, true);
   };
 
+  const handleClose = () => {
+    setIsOpen(false);
+    setFsOpen(false);
+    setSearchText("");
+    onClose?.();
+  };
+
   const handleToggle = () => {
     if (disabled) return;
+    if (fullScreenModal && isNativeEnv) {
+      setFsOpen(true);
+      onOpen?.();
+      load();
+      setTimeout(() => searchRef.current?.focus(), 150);
+      return;
+    }
     const next = !open;
     if (next && useModal) {
       wrapperRef.current?.measureInWindow((x, y, width, height) => {
@@ -218,7 +271,7 @@ export default function CityPicker({
       load();
       setTimeout(() => searchRef.current?.focus(), 50);
     } else {
-      onClose?.();
+      handleClose();
     }
   };
 
@@ -226,13 +279,11 @@ export default function CityPicker({
     const name = item.cityKo || item.city;
     onChange(name);
     addItem(name);
-    setIsOpen(false);
-    onClose?.();
+    handleClose();
   };
 
   const closeModal = () => {
-    setIsOpen(false);
-    onClose?.();
+    handleClose();
   };
 
   const renderItem = ({ item, index }: { item: CityResult; index: number }) => {
@@ -254,7 +305,10 @@ export default function CityPicker({
           </Text>
         </View>
         <View style={styles.itemNames}>
-          <Text style={[styles.itemText, isSelected && styles.itemTextSelected]} numberOfLines={1}>
+          <Text
+            style={[styles.itemText, isSelected && styles.itemTextSelected]}
+            numberOfLines={1}
+          >
             {item.cityKo || item.city}
           </Text>
           {item.cityKo && (
@@ -264,8 +318,15 @@ export default function CityPicker({
           )}
         </View>
         {item.iso2 && (
-          <View style={[styles.itemCodeBadge, isSelected && styles.itemCodeBadgeSelected]}>
-            <Text style={[styles.itemCode, isSelected && styles.itemCodeSelected]}>
+          <View
+            style={[
+              styles.itemCodeBadge,
+              isSelected && styles.itemCodeBadgeSelected,
+            ]}
+          >
+            <Text
+              style={[styles.itemCode, isSelected && styles.itemCodeSelected]}
+            >
               {item.iso2}
             </Text>
           </View>
@@ -274,8 +335,10 @@ export default function CityPicker({
     );
   };
 
-  const showNoResult = !isLoading && searchText.trim().length > 0 && cities.length === 0;
-  const isDirectInputFocused = focusedIndex === cities.length && searchText.trim().length > 0;
+  const showNoResult =
+    !isLoading && searchText.trim().length > 0 && cities.length === 0;
+  const isDirectInputFocused =
+    focusedIndex === cities.length && searchText.trim().length > 0;
 
   const popupContent = (
     <View style={styles.popupInner}>
@@ -283,7 +346,7 @@ export default function CityPicker({
         <SearchIcon width={14} height={14} color={colors.gray600} />
         <TextInput
           ref={searchRef}
-          style={styles.searchInput}
+          style={[styles.searchInput, isNativeEnv && { lineHeight: 16 }]}
           placeholder="도시명 검색"
           placeholderTextColor={colors.gray600}
           value={searchText}
@@ -306,7 +369,13 @@ export default function CityPicker({
         )}
       </View>
 
-      <View style={styles.listContainer}>
+      <View
+        style={[
+          styles.listContainer,
+          !fsOpen && styles.listContainerPopup,
+          fsOpen && styles.listContainerFs,
+        ]}
+      >
         {isLoading ? (
           <View style={styles.loadingState}>
             <ActivityIndicator size="small" color={colors.gray500} />
@@ -315,27 +384,41 @@ export default function CityPicker({
           <View style={styles.noResultState}>
             <View style={styles.noResultIconCircle}>
               <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
-                <Circle cx={12} cy={12} r={8} stroke="rgb(155,155,155)" strokeWidth={1.6} />
-                <Path d="M8.5 14c1 1 5 1 7 0" stroke="rgb(155,155,155)" strokeWidth={1.5} strokeLinecap="round" />
+                <Circle
+                  cx={12}
+                  cy={12}
+                  r={8}
+                  stroke="rgb(155,155,155)"
+                  strokeWidth={1.6}
+                />
+                <Path
+                  d="M8.5 14c1 1 5 1 7 0"
+                  stroke="rgb(155,155,155)"
+                  strokeWidth={1.5}
+                  strokeLinecap="round"
+                />
               </Svg>
             </View>
             <Text style={styles.noResultTitle}>
-              {'\''}
+              {"'"}
               <Text style={styles.noResultKeyword}>{searchText.trim()}</Text>
               {`' ${getEulRul(searchText.trim())} 찾을 수 없어요`}
             </Text>
-            <Text style={styles.noResultSubtitle}>입력한 그대로 저장할 수 있어요</Text>
+            <Text style={styles.noResultSubtitle}>
+              입력한 그대로 저장할 수 있어요
+            </Text>
             <Pressable
               style={styles.noResultButton}
               onPress={() => {
                 const trimmed = searchText.trim();
                 onChange(trimmed);
                 addItem(trimmed);
-                setIsOpen(false);
-                onClose?.();
+                handleClose();
               }}
             >
-              <Text style={styles.noResultButtonText}>+ '{searchText.trim()}' 직접 입력</Text>
+              <Text style={styles.noResultButtonText}>
+                + '{searchText.trim()}' 직접 입력
+              </Text>
             </Pressable>
           </View>
         ) : (
@@ -365,24 +448,36 @@ export default function CityPicker({
                   <Pressable
                     style={({ hovered }: any) => [
                       styles.directInputItem,
-                      (hovered || isDirectInputFocused) && styles.directInputItemFocused,
+                      (hovered || isDirectInputFocused) &&
+                        styles.directInputItemFocused,
                     ]}
                     onPress={() => {
                       const trimmed = searchText.trim();
                       onChange(trimmed);
                       addItem(trimmed);
-                      setIsOpen(false);
-                      onClose?.();
+                      handleClose();
                     }}
                   >
                     <View style={styles.directInputIconCircle}>
                       <Svg width={14} height={14} viewBox="0 0 24 24">
-                        <Path d="M12 5v14M5 12h14" stroke="rgb(0,122,255)" strokeWidth={1.9} strokeLinecap="round" />
+                        <Path
+                          d="M12 5v14M5 12h14"
+                          stroke="rgb(0,122,255)"
+                          strokeWidth={1.9}
+                          strokeLinecap="round"
+                        />
                       </Svg>
                     </View>
                     <View style={styles.directInputNames}>
-                      <Text style={styles.directInputTitle} numberOfLines={1}>'{searchText.trim()}' 직접 입력</Text>
-                      <Text style={styles.directInputSubtitle} numberOfLines={1}>이 이름 그대로 저장</Text>
+                      <Text style={styles.directInputTitle} numberOfLines={1}>
+                        '{searchText.trim()}' 직접 입력
+                      </Text>
+                      <Text
+                        style={styles.directInputSubtitle}
+                        numberOfLines={1}
+                      >
+                        이 이름 그대로 저장
+                      </Text>
                     </View>
                     <Text style={styles.directInputEnterKey}>↵</Text>
                   </Pressable>
@@ -411,7 +506,11 @@ export default function CityPicker({
   return (
     <View
       ref={wrapperRef}
-      style={[styles.wrapper, containerStyle, { zIndex: open && !useModal ? 100 : 1 }]}
+      style={[
+        styles.wrapper,
+        containerStyle,
+        { zIndex: open && !useModal ? 100 : 1 },
+      ]}
     >
       <Pressable
         style={[styles.trigger, disabled && styles.triggerDisabled, style]}
@@ -424,18 +523,14 @@ export default function CityPicker({
         >
           {value || placeholder}
         </Text>
-        {open ? (
+        {open || fsOpen ? (
           <UpperArrowIcon width={10} height={10} style={{ opacity: 0.6 }} />
         ) : (
           <DownArrowIcon width={10} height={10} style={{ opacity: 0.6 }} />
         )}
       </Pressable>
 
-      {open && !useModal && (
-        <View style={styles.popup}>
-          {popupContent}
-        </View>
-      )}
+      {open && !useModal && <View style={styles.popup}>{popupContent}</View>}
 
       {useModal && (
         <Modal
@@ -445,7 +540,10 @@ export default function CityPicker({
           onRequestClose={closeModal}
           statusBarTranslucent
         >
-          <Pressable style={StyleSheet.absoluteFillObject} onPress={closeModal} />
+          <Pressable
+            style={StyleSheet.absoluteFillObject}
+            onPress={closeModal}
+          />
           <View
             style={[
               styles.popup,
@@ -459,6 +557,44 @@ export default function CityPicker({
           >
             {popupContent}
           </View>
+        </Modal>
+      )}
+
+      {fullScreenModal && isNativeEnv && (
+        <Modal
+          visible={fsOpen}
+          animationType="slide"
+          onRequestClose={handleClose}
+        >
+          <SafeAreaView style={styles.fsContainer}>
+            <View style={styles.fsHeader}>
+              {onBack ? (
+                <Pressable
+                  onPress={() => {
+                    handleClose();
+                    onBack();
+                  }}
+                  hitSlop={8}
+                  style={styles.fsNavBtn}
+                >
+                  <LeftArrowIcon width={22} height={22} color={colors.gray700} />
+                </Pressable>
+              ) : (
+                <View style={styles.fsNavBtn} />
+              )}
+              <Text style={styles.fsTitle}>
+                {countryKo ? `도시 선택 · ${countryKo}` : "도시 선택"}
+              </Text>
+              <Pressable
+                onPress={handleClose}
+                hitSlop={8}
+                style={styles.fsNavBtn}
+              >
+                <XIcon width={22} height={22} color={colors.gray700} />
+              </Pressable>
+            </View>
+            {popupContent}
+          </SafeAreaView>
         </Modal>
       )}
     </View>
@@ -536,7 +672,7 @@ const styles = StyleSheet.create({
     minWidth: 0,
     ...textStyles.body4,
     color: colors.gray900,
-    padding: 0,
+    padding: 3,
     outlineStyle: "none",
   } as any,
   clearButton: {
@@ -551,7 +687,13 @@ const styles = StyleSheet.create({
   listContainer: {
     borderTopWidth: 1,
     borderTopColor: colors.gray200,
+  },
+  listContainerPopup: {
     maxHeight: 300,
+  },
+  listContainerFs: {
+    flex: 1,
+    borderTopWidth: 0,
   },
   list: {
     paddingVertical: 4,
@@ -747,5 +889,27 @@ const styles = StyleSheet.create({
   noResultButtonText: {
     ...textStyles.h8,
     color: "rgb(255, 255, 255)",
+  },
+  fsContainer: {
+    flex: 1,
+    backgroundColor: colors.white,
+  },
+  fsHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  fsNavBtn: {
+    width: 44,
+    height: 44,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  fsTitle: {
+    flex: 1,
+    ...textStyles.h5,
+    color: colors.black,
+    textAlign: "center",
   },
 });

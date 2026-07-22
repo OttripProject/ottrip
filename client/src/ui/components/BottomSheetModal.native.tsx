@@ -148,7 +148,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
-    maxHeight: Dimensions.get("window").height * 0.9,
+    maxHeight: Dimensions.get("window").height * 0.94,
     shadowColor: colors.black,
     shadowOffset: { width: 0, height: -4 },
     shadowOpacity: 0.1,

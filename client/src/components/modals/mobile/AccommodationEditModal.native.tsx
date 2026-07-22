@@ -26,11 +26,11 @@ import {
   TextInput,
   View,
 } from "react-native";
-import DownArrowIcon from "../../../../assets/down_arrow.svg";
 import CalendarIcon from "../../../../assets/mobile_calendar_black.svg";
 import TimeIcon from "../../../../assets/mobile_time.svg";
 import CloseIcon from "../../../../assets/x.svg";
-import CountrySearchModal from "./CountrySearchModal.native";
+import CityPicker from "@/ui/components/pickers/CityPicker";
+import CountryPicker from "@/ui/components/pickers/CountryPicker";
 
 interface AccommodationEditModalProps {
   visible: boolean;
@@ -87,7 +87,10 @@ export default function AccommodationEditModal({
     const hide = Keyboard.addListener("keyboardDidHide", () => {
       setKeyboardHeight(0);
     });
-    return () => { show.remove(); hide.remove(); };
+    return () => {
+      show.remove();
+      hide.remove();
+    };
   }, []);
 
   const [formData, setFormData] = useState({
@@ -104,7 +107,6 @@ export default function AccommodationEditModal({
   const [expenseAmount, setExpenseAmount] = useState("");
   const [showCheckinDatePicker, setShowCheckinDatePicker] = useState(false);
   const [showCheckoutDatePicker, setShowCheckoutDatePicker] = useState(false);
-  const [showCountrySearch, setShowCountrySearch] = useState(false);
   const [timeModalField, setTimeModalField] = useState<
     "checkin" | "checkout" | null
   >(null);
@@ -340,7 +342,10 @@ export default function AccommodationEditModal({
       <ScrollView
         ref={scrollRef}
         style={styles.scrollView}
-        contentContainerStyle={[styles.scrollContent, { paddingBottom: keyboardHeight+40 || 24 }]}
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingBottom: keyboardHeight + 40 || 24 },
+        ]}
         showsVerticalScrollIndicator={false}
       >
         {/* 입력 필드들 */}
@@ -376,44 +381,34 @@ export default function AccommodationEditModal({
           <View style={styles.row}>
             <View style={[styles.inputGroup, styles.halfWidth]}>
               <Text style={styles.label}>국가</Text>
-              <Pressable
-                style={[
-                  styles.pickerInput,
-                  styles.countryPickerTouchable,
-                  !accommodation && styles.pickerInputBorderless,
-                ]}
-                onPress={() => setShowCountrySearch(true)}
-              >
-                <Text
-                  style={[
-                    formData.country
-                      ? styles.pickerValueText
-                      : styles.pickerPlaceholderText,
-                    styles.countryTextTruncate,
-                  ]}
-                  numberOfLines={1}
-                  ellipsizeMode="tail"
-                >
-                  {formData.country || "국가 선택"}
-                </Text>
-                <DownArrowIcon width={16} height={16} color={colors.gray600} />
-              </Pressable>
-              <CountrySearchModal
-                visible={showCountrySearch}
-                onClose={() => setShowCountrySearch(false)}
-                onSelect={country => {
-                  setFormData({ ...formData, country });
-                  setShowCountrySearch(false);
-                }}
-                selectedValue={formData.country}
+              <CountryPicker
+                value={formData.country}
+                onChange={country =>
+                  setFormData({ ...formData, country, city: "" })
+                }
+                placeholder="국가 선택"
+                style={
+                  !accommodation
+                    ? styles.pickerTriggerBorderless
+                    : styles.pickerTrigger
+                }
+                fullScreenModal
               />
             </View>
             <View style={[styles.inputGroup, styles.halfWidth]}>
               <Text style={styles.label}>도시</Text>
-              <Input
+              <CityPicker
                 value={formData.city}
-                onChangeText={text => setFormData({ ...formData, city: text })}
-                style={[styles.input, !accommodation && styles.inputBorderless]}
+                onChange={city => setFormData({ ...formData, city })}
+                countryKo={formData.country}
+                placeholder={formData.country ? "도시 선택" : "먼저 국가 선택"}
+                disabled={!formData.country}
+                style={
+                  !accommodation
+                    ? styles.pickerTriggerBorderless
+                    : styles.pickerTrigger
+                }
+                fullScreenModal
               />
             </View>
           </View>
@@ -532,7 +527,10 @@ export default function AccommodationEditModal({
                   containerStyle={styles.amountInputContainer}
                   style={styles.amountInputStyle}
                   onFocus={() => {
-                    setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
+                    setTimeout(
+                      () => scrollRef.current?.scrollToEnd({ animated: true }),
+                      100,
+                    );
                   }}
                 />
                 <Text style={styles.amountSuffix}>KRW</Text>
@@ -705,35 +703,16 @@ const styles = StyleSheet.create({
   halfWidth: {
     flex: 1,
   },
-  pickerInput: {
-    minHeight: 44,
+  pickerTrigger: {
+    height: 44,
     borderWidth: 1,
     borderColor: colors.gray400,
     borderRadius: 12,
-    backgroundColor: colors.gray200,
   },
-  pickerInputBorderless: {
+  pickerTriggerBorderless: {
+    height: 44,
     borderWidth: 0,
-    borderColor: "transparent",
-  },
-  countryPickerTouchable: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-  },
-  pickerValueText: {
-    ...textStyles.h6,
-    color: colors.black,
-  },
-  pickerPlaceholderText: {
-    ...textStyles.body3,
-    color: colors.gray600,
-  },
-  countryTextTruncate: {
-    flex: 1,
-    minWidth: 0,
+    borderRadius: 12,
   },
   checkinoutSection: {
     backgroundColor: `${colors.primary}1A`,

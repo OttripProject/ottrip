@@ -17,6 +17,7 @@ import {
   Modal,
   Platform,
   Pressable,
+  SafeAreaView,
   SectionList,
   StyleSheet,
   Text,
@@ -53,18 +54,22 @@ interface CountryPickerProps {
   onOpen?: () => void;
   onClose?: () => void;
   useModal?: boolean;
+  fullScreenModal?: boolean;
+  openTrigger?: number;
 }
 
 export default function CountryPicker({
   value,
   onChange,
-  placeholder = "국가 선택",
+  placeholder = "나라 선택",
   containerStyle,
   style,
   disabled,
   onOpen,
   onClose,
   useModal = false,
+  fullScreenModal,
+  openTrigger,
 }: CountryPickerProps) {
   const allOptions = useMemo(() => getKoreanCountryOptions(), []);
   const popularOptions = useMemo(() => getPopularCountryOptions(), []);
@@ -79,6 +84,10 @@ export default function CountryPicker({
   const [searchText, setSearchText] = useState("");
   const [focusedIndex, setFocusedIndex] = useState(-1);
   const [triggerLayout, setTriggerLayout] = useState({ x: 0, y: 0, width: 0, height: 0 });
+  const [fsOpen, setFsOpen] = useState(false);
+
+  const isNativeEnv = Platform.OS !== "web";
+  const effectiveOpen = open || fsOpen;
 
   const { data: me } = useMe();
   const storageKey = `recentCountrySearches_${me?.handle ?? "guest"}`;
@@ -133,8 +142,31 @@ export default function CountryPicker({
   const searchTextRef = useRef(searchText);
   searchTextRef.current = searchText;
 
+  useEffect(() => {
+    if (!openTrigger || openTrigger <= 0) return;
+    if (!fullScreenModal || !isNativeEnv) return;
+    setFsOpen(true);
+    onOpen?.();
+    load();
+    setTimeout(() => searchRef.current?.focus(), 150);
+  }, [openTrigger]);
+
+  const handleClose = () => {
+    setIsOpen(false);
+    setFsOpen(false);
+    setSearchText("");
+    onClose?.();
+  };
+
   const handleToggle = () => {
     if (disabled) return;
+    if (fullScreenModal && isNativeEnv) {
+      setFsOpen(true);
+      onOpen?.();
+      load();
+      setTimeout(() => searchRef.current?.focus(), 150);
+      return;
+    }
     const next = !open;
     if (next && useModal) {
       wrapperRef.current?.measureInWindow((x, y, width, height) => {
@@ -152,26 +184,23 @@ export default function CountryPicker({
       load();
       setTimeout(() => searchRef.current?.focus(), 50);
     } else {
-      onClose?.();
-      setSearchText("");
+      handleClose();
     }
   };
 
   const handleSelect = (item: CountryOption) => {
     onChange(item.label);
     addItem(item.label);
-    setIsOpen(false);
-    setSearchText("");
-    onClose?.();
+    handleClose();
   };
 
   useEffect(() => {
-    if (!open) setSearchText("");
-  }, [open]);
+    if (!effectiveOpen) setSearchText("");
+  }, [effectiveOpen]);
 
   useEffect(() => {
     setFocusedIndex(-1);
-  }, [open, searchText]);
+  }, [effectiveOpen, searchText]);
 
   useEffect(() => {
     if (!open || Platform.OS !== "web") return;
@@ -193,6 +222,7 @@ export default function CountryPicker({
           onChange(trimmed);
           addItem(trimmed);
           setIsOpen(false);
+          setFsOpen(false);
           setSearchText("");
           onClose?.();
         } else if (idx >= 0 && idx < items.length) {
@@ -201,6 +231,7 @@ export default function CountryPicker({
       } else if (e.key === "Escape") {
         e.preventDefault();
         setIsOpen(false);
+        setFsOpen(false);
         setSearchText("");
         onClose?.();
       }
@@ -276,9 +307,7 @@ export default function CountryPicker({
   };
 
   const closeModal = () => {
-    setIsOpen(false);
-    setSearchText("");
-    onClose?.();
+    handleClose();
   };
 
   const popupContent = (
@@ -287,8 +316,8 @@ export default function CountryPicker({
         <SearchIcon width={14} height={14} color={colors.gray600} />
         <TextInput
           ref={searchRef}
-          style={styles.searchInput}
-          placeholder="국가명 또는 코드 검색"
+          style={[styles.searchInput, isNativeEnv && { lineHeight: 16 }]}
+          placeholder="나라이름 또는 코드 검색"
           placeholderTextColor={colors.gray600}
           value={searchText}
           onChangeText={setSearchText}
@@ -310,7 +339,7 @@ export default function CountryPicker({
         )}
       </View>
 
-      <View style={styles.listContainer}>
+      <View style={[styles.listContainer, !fsOpen && styles.listContainerPopup, fsOpen && styles.listContainerFs]}>
         {filteredOptions.length > 0 ? (
           <FlatList
             ref={flatListRef}
@@ -337,9 +366,7 @@ export default function CountryPicker({
                   onPress={() => {
                     onChange(trimmed);
                     addItem(trimmed);
-                    setIsOpen(false);
-                    setSearchText("");
-                    onClose?.();
+                    handleClose();
                   }}
                 >
                   <View style={styles.directInputIconCircle}>
@@ -376,9 +403,7 @@ export default function CountryPicker({
                 const trimmed = searchText.trim();
                 onChange(trimmed);
                 addItem(trimmed);
-                setIsOpen(false);
-                setSearchText("");
-                onClose?.();
+                handleClose();
               }}
             >
               <Text style={styles.noResultButtonText}>+ '{searchText.trim()}' 직접 입력</Text>
@@ -433,7 +458,7 @@ export default function CountryPicker({
             ? `${selectedCode ? codeToFlag(selectedCode) : ""} ${value}`.trim()
             : placeholder}
         </Text>
-        {open ? (
+        {(open || fsOpen) ? (
           <UpperArrowIcon width={10} height={10} style={{ opacity: 0.6 }} />
         ) : (
           <DownArrowIcon width={10} height={10} style={{ opacity: 0.6 }} />
@@ -468,6 +493,25 @@ export default function CountryPicker({
           >
             {popupContent}
           </View>
+        </Modal>
+      )}
+
+      {fullScreenModal && isNativeEnv && (
+        <Modal
+          visible={fsOpen}
+          animationType="slide"
+          onRequestClose={handleClose}
+        >
+          <SafeAreaView style={styles.fsContainer}>
+            <View style={styles.fsHeader}>
+              <View style={styles.fsNavBtn} />
+              <Text style={styles.fsTitle}>나라 선택</Text>
+              <Pressable onPress={handleClose} hitSlop={8} style={styles.fsNavBtn}>
+                <XIcon width={22} height={22} color={colors.gray700} />
+              </Pressable>
+            </View>
+            {popupContent}
+          </SafeAreaView>
         </Modal>
       )}
     </View>
@@ -545,7 +589,7 @@ const styles = StyleSheet.create({
     minWidth: 0,
     ...textStyles.body4,
     color: colors.gray900,
-    padding: 0,
+    padding: 3,
     outlineStyle: "none",
   } as any,
   clearButton: {
@@ -560,7 +604,13 @@ const styles = StyleSheet.create({
   listContainer: {
     borderTopWidth: 1,
     borderTopColor: colors.gray200,
+  },
+  listContainerPopup: {
     maxHeight: 300,
+  },
+  listContainerFs: {
+    flex: 1,
+    borderTopWidth: 0,
   },
   list: {
     paddingVertical: 4,
@@ -769,5 +819,27 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 12,
     color: "rgb(255, 255, 255)",
+  },
+  fsContainer: {
+    flex: 1,
+    backgroundColor: colors.white,
+  },
+  fsHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  fsNavBtn: {
+    width: 44,
+    height: 44,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  fsTitle: {
+    flex: 1,
+    ...textStyles.h5,
+    color: colors.black,
+    textAlign: "center",
   },
 });

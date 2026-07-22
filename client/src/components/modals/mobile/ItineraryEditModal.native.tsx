@@ -31,7 +31,6 @@ import {
   Text,
   View,
 } from "react-native";
-import DownArrowIcon from "../../../../assets/down_arrow.svg";
 import BedIcon from "../../../../assets/mobile_bed.svg";
 import CalendarIcon from "../../../../assets/mobile_calendar_black.svg";
 import CarIcon from "../../../../assets/mobile_car.svg";
@@ -41,7 +40,8 @@ import ShoppingIcon from "../../../../assets/mobile_shopping.svg";
 import TicketIcon from "../../../../assets/mobile_ticket.svg";
 import TimeIcon from "../../../../assets/mobile_time.svg";
 import CloseIcon from "../../../../assets/x.svg";
-import CountrySearchModal from "./CountrySearchModal.native";
+import CityPicker from "@/ui/components/pickers/CityPicker";
+import CountryPicker from "@/ui/components/pickers/CountryPicker";
 
 interface ItineraryEditModalProps {
   visible: boolean;
@@ -74,7 +74,10 @@ export default function ItineraryEditModal({
     const hide = Keyboard.addListener("keyboardDidHide", () => {
       setKeyboardHeight(0);
     });
-    return () => { show.remove(); hide.remove(); };
+    return () => {
+      show.remove();
+      hide.remove();
+    };
   }, []);
 
   const [formData, setFormData] = useState({
@@ -97,7 +100,6 @@ export default function ItineraryEditModal({
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showStartTimeModal, setShowStartTimeModal] = useState(false);
   const [showEndTimeModal, setShowEndTimeModal] = useState(false);
-  const [showCountrySearch, setShowCountrySearch] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [pendingFiles, setPendingFiles] = useState<LocalFile[]>([]);
   const [existingAttachments, setExistingAttachments] = useState<Attachment[]>(
@@ -404,7 +406,10 @@ export default function ItineraryEditModal({
       <ScrollView
         ref={scrollRef}
         style={styles.scrollView}
-        contentContainerStyle={[styles.scrollContent, { paddingBottom: keyboardHeight || 24 }]}
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingBottom: keyboardHeight || 24 },
+        ]}
         showsVerticalScrollIndicator={false}
       >
         {/* 입력 필드들 */}
@@ -440,44 +445,34 @@ export default function ItineraryEditModal({
           <View style={styles.row}>
             <View style={[styles.inputGroup, styles.halfWidth]}>
               <Text style={styles.label}>국가</Text>
-              <Pressable
-                style={[
-                  styles.pickerInput,
-                  styles.countryPickerTouchable,
-                  !itinerary && styles.pickerInputBorderless,
-                ]}
-                onPress={() => setShowCountrySearch(true)}
-              >
-                <Text
-                  style={[
-                    formData.country
-                      ? styles.pickerValueText
-                      : styles.pickerPlaceholderText,
-                    styles.countryTextTruncate,
-                  ]}
-                  numberOfLines={1}
-                  ellipsizeMode="tail"
-                >
-                  {formData.country || "국가 선택"}
-                </Text>
-                <DownArrowIcon width={20} height={20} color={colors.gray600} />
-              </Pressable>
-              <CountrySearchModal
-                visible={showCountrySearch}
-                onClose={() => setShowCountrySearch(false)}
-                onSelect={country => {
-                  setFormData({ ...formData, country });
-                  setShowCountrySearch(false);
-                }}
-                selectedValue={formData.country}
+              <CountryPicker
+                value={formData.country}
+                onChange={country =>
+                  setFormData({ ...formData, country, city: "" })
+                }
+                placeholder="국가 선택"
+                style={
+                  !itinerary
+                    ? styles.pickerTriggerBorderless
+                    : styles.pickerTrigger
+                }
+                fullScreenModal
               />
             </View>
             <View style={[styles.inputGroup, styles.halfWidth]}>
               <Text style={styles.label}>도시</Text>
-              <Input
+              <CityPicker
                 value={formData.city}
-                onChangeText={text => setFormData({ ...formData, city: text })}
-                style={[styles.input, !itinerary && styles.inputBorderless]}
+                onChange={city => setFormData({ ...formData, city })}
+                countryKo={formData.country}
+                placeholder={formData.country ? "도시 선택" : "먼저 국가 선택"}
+                disabled={!formData.country}
+                style={
+                  !itinerary
+                    ? styles.pickerTriggerBorderless
+                    : styles.pickerTrigger
+                }
+                fullScreenModal
               />
             </View>
           </View>
@@ -604,7 +599,10 @@ export default function ItineraryEditModal({
                   containerStyle={styles.amountInputContainer}
                   style={styles.amountInputStyle}
                   onFocus={() => {
-                    setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
+                    setTimeout(
+                      () => scrollRef.current?.scrollToEnd({ animated: true }),
+                      100,
+                    );
                   }}
                 />
                 <Text style={styles.amountSuffix}>KRW</Text>
@@ -799,35 +797,16 @@ const styles = StyleSheet.create({
   halfWidth: {
     flex: 1,
   },
-  pickerInput: {
-    minHeight: 44,
+  pickerTrigger: {
+    height: 44,
     borderWidth: 1,
     borderColor: colors.gray400,
     borderRadius: 12,
-    backgroundColor: colors.gray200,
   },
-  pickerInputBorderless: {
+  pickerTriggerBorderless: {
+    height: 44,
     borderWidth: 0,
-    borderColor: "transparent",
-  },
-  countryPickerTouchable: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-  },
-  pickerValueText: {
-    ...textStyles.h6,
-    color: colors.black,
-  },
-  pickerPlaceholderText: {
-    ...textStyles.body3,
-    color: colors.gray600,
-  },
-  countryTextTruncate: {
-    flex: 1,
-    minWidth: 0,
+    borderRadius: 12,
   },
   dateInput: {
     paddingVertical: 10,
