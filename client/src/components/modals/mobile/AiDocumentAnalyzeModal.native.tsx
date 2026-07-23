@@ -1,8 +1,10 @@
 import { LinearGradient } from "expo-linear-gradient";
 import { useEffect, useRef, useState } from "react";
 import {
+  Modal,
   Pressable,
   ScrollView,
+  StatusBar,
   StyleSheet,
   Text,
   View,
@@ -79,116 +81,124 @@ export default function AiDocumentAnalyzeModal({
 
   const hasDraft = !!analyzeResult?.draft;
 
-  if (!visible) return null;
-
   return (
-    <Pressable style={styles.overlay} onPress={onClose}>
-      <Pressable
-        style={[styles.card, { width: cardWidth }]}
-        onPress={e => e.stopPropagation?.()}
-      >
-        <LinearGradient
-          colors={[...HEADER_GRADIENT] as [string, string]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.header}
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      statusBarTranslucent
+      onRequestClose={onClose}
+    >
+      <StatusBar barStyle="light-content" backgroundColor="rgba(0,0,0,0.45)" />
+      <Pressable style={styles.overlay} onPress={onClose}>
+        <Pressable
+          style={[styles.card, { width: cardWidth }]}
+          onPress={e => e.stopPropagation?.()}
         >
           <LinearGradient
-            colors={[...colors.aiGrad] as [string, string]}
+            colors={[...HEADER_GRADIENT] as [string, string]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
-            style={styles.headerAiBadge}
+            style={styles.header}
           >
-            <CheckWhiteIcon width={18} height={18} />
+            <LinearGradient
+              colors={[...colors.aiGrad] as [string, string]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.headerAiBadge}
+            >
+              <CheckWhiteIcon width={18} height={18} />
+            </LinearGradient>
+            <View style={styles.headerTextBlock}>
+              <Text style={styles.modalTitle}>{title}</Text>
+              <Text style={styles.modalSubtitle}>{headerSubtitle}</Text>
+            </View>
+            <Pressable
+              onPress={onClose}
+              hitSlop={10}
+              style={({ pressed }) => [
+                styles.closeButton,
+                pressed && styles.pressed,
+              ]}
+              accessibilityLabel="닫기"
+            >
+              <CloseErrorIcon width={13} height={13} color={CLOSE_PURPLE} />
+            </Pressable>
           </LinearGradient>
-          <View style={styles.headerTextBlock}>
-            <Text style={styles.modalTitle}>{title}</Text>
-            <Text style={styles.modalSubtitle}>{headerSubtitle}</Text>
-          </View>
-          <Pressable
-            onPress={onClose}
-            hitSlop={10}
-            style={({ pressed }) => [
-              styles.closeButton,
-              pressed && styles.pressed,
-            ]}
-            accessibilityLabel="닫기"
-          >
-            <CloseErrorIcon width={13} height={13} color={CLOSE_PURPLE} />
-          </Pressable>
-        </LinearGradient>
 
-        <ScrollView
-          style={styles.scroll}
-          contentContainerStyle={styles.scrollContent}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
-          {hasDraft && isEditMode ? (
-            <AiAnalyzeResultBody
-              key={draftBodyKey}
-              ref={draftEditorRef}
-              draft={analyzeResult!.draft!}
-            />
-          ) : (
-            <AiAnalyzeResultContent
-              analyzeResult={
-                analyzeResult ?? {
-                  success: false,
-                  inferredItemType: null,
-                  draft: null,
-                  error: null,
+          <ScrollView
+            style={styles.scroll}
+            contentContainerStyle={styles.scrollContent}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          >
+            {hasDraft && isEditMode ? (
+              <AiAnalyzeResultBody
+                key={draftBodyKey}
+                ref={draftEditorRef}
+                draft={analyzeResult!.draft!}
+              />
+            ) : (
+              <AiAnalyzeResultContent
+                analyzeResult={
+                  analyzeResult ?? {
+                    success: false,
+                    inferredItemType: null,
+                    draft: null,
+                    error: null,
+                  }
                 }
-              }
-              analyzeFileName={analyzeFileName}
-              originEntityType={originEntityType}
-            />
-          )}
-        </ScrollView>
+                analyzeFileName={analyzeFileName}
+                originEntityType={originEntityType}
+              />
+            )}
+          </ScrollView>
 
-        <View style={styles.footer}>
-          <Pressable
-            onPress={
-              isEditMode
-                ? () => setIsEditMode(false)
-                : () => setIsEditMode(true)
-            }
-            style={({ pressed }) => [
-              styles.footerBtn,
-              styles.footerBtnLeft,
-              pressed && styles.pressed,
-            ]}
-          >
-            <Text style={styles.footerBtnLeftText}>
-              {isEditMode ? "취소" : "직접 수정"}
-            </Text>
-          </Pressable>
-          <Pressable
-            onPress={handleApply}
-            style={({ pressed }) => [
-              styles.footerBtn,
-              styles.footerBtnRight,
-              pressed && styles.pressed,
-            ]}
-          >
-            <Text style={styles.footerBtnRightText}>
-              {isEditMode ? "저장" : (applyLabel ?? "이대로 추가")}
-            </Text>
-          </Pressable>
-        </View>
+          <View style={styles.footer}>
+            <Pressable
+              onPress={
+                isEditMode
+                  ? () => setIsEditMode(false)
+                  : () => setIsEditMode(true)
+              }
+              style={({ pressed }) => [
+                styles.footerBtn,
+                styles.footerBtnLeft,
+                pressed && styles.pressed,
+              ]}
+            >
+              <Text style={styles.footerBtnLeftText}>
+                {isEditMode ? "취소" : "직접 수정"}
+              </Text>
+            </Pressable>
+            <Pressable
+              onPress={handleApply}
+              style={({ pressed }) => [
+                styles.footerBtn,
+                styles.footerBtnRight,
+                pressed && styles.pressed,
+              ]}
+            >
+              <Text style={styles.footerBtnRightText}>
+                {isEditMode ? "저장" : (applyLabel ?? "이대로 추가")}
+              </Text>
+            </Pressable>
+          </View>
+        </Pressable>
       </Pressable>
-    </Pressable>
+    </Modal>
   );
 }
 
 const styles = StyleSheet.create({
   overlay: {
-    ...StyleSheet.absoluteFillObject,
+    flex: 1,
     backgroundColor: "rgba(0, 0, 0, 0.45)",
-    justifyContent: "center",
+    justifyContent: "flex-start",
     alignItems: "center",
-    padding: spacing.md,
-    zIndex: 9999,
+    paddingTop: 80,
+    paddingHorizontal: spacing.md,
+    paddingBottom: spacing.md,
   },
   card: {
     maxWidth: "100%",
