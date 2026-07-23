@@ -352,7 +352,7 @@ export default function AttachmentSection({
               <ActivityIndicator size="small" color={colors.aiInk} />
               <View style={styles.aiAnalyzingTextCol}>
                 <Text style={styles.aiAnalyzingTitle}>분석 중...</Text>
-                <Text style={styles.aiAnalyzingText}>AI가 첨부 파일 내용을 정리하고 있어요.</Text>
+                <Text style={styles.aiAnalyzingText}>AI가 첨부 파일 내용을 정리하고 있어요</Text>
               </View>
               {onCancelAiAnalyze && (
                 <Pressable
@@ -574,8 +574,8 @@ const styles = StyleSheet.create({
   aiAnalyzingRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-    paddingVertical: 10,
+    gap: 16,
+    paddingVertical: 14,
     paddingHorizontal: 16,
     backgroundColor: colors.gray200,
     borderRadius: 10,
@@ -585,8 +585,8 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   aiAnalyzingTitle: {
-    ...textStyles.body3,
-    color: colors.aiInk,
+    ...textStyles.h8,
+    color: colors.gray900,
   },
   aiAnalyzingText: {
     ...textStyles.body5,
