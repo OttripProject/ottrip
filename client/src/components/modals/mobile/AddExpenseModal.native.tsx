@@ -226,7 +226,6 @@ export default function AddExpenseModal({
   };
 
   return (
-    <>
     <BottomSheetModal visible={visible} onClose={handleClose} height={0.93}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>비용 추가</Text>
@@ -390,8 +389,7 @@ export default function AddExpenseModal({
         secondaryLabel="취소"
         onSecondaryPress={handleClose}
       />
-    </BottomSheetModal>
-    <AiDocumentAnalyzeModal
+      <AiDocumentAnalyzeModal
       visible={!!aiModalResult}
       onClose={() => setAiModalResult(null)}
       entityTypeLabel="비용"
@@ -419,7 +417,7 @@ export default function AddExpenseModal({
       }}
       applyLabel="비용에 반영하기"
     />
-    </>
+    </BottomSheetModal>
   );
 }
 
