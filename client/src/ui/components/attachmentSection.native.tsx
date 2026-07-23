@@ -591,8 +591,7 @@ const styles = StyleSheet.create({
     letterSpacing: -0.14,
   },
   fileRowSelected: {
-    borderWidth: 2,
-    borderColor: colors.aiInk,
+    backgroundColor: colors.gray400,
   },
   aiSelectHint: {
     ...textStyles.body4,
@@ -607,7 +606,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   openButtonText: {
-    ...textStyles.body4,
+    ...textStyles.h8,
     color: colors.primary,
   },
   aiErrorBanner: {
