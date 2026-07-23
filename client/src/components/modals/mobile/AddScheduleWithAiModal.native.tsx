@@ -297,18 +297,12 @@ export default function AddScheduleWithAiModal({
               accessibilityRole="button"
               accessibilityLabel="파일 첨부"
             >
-              <View
-                style={[
-                  styles.attachIconWrap,
-                  pendingFile && styles.attachIconWrapActive,
-                ]}
-              >
-                <AttachClipIcon
-                  width={18}
-                  height={18}
-                  color={pendingFile ? colors.white : colors.gray500}
-                />
-              </View>
+              <AttachClipIcon
+                width={22}
+                height={22}
+                color={colors.gray500}
+                style={{ transform: [{ rotate: "45deg" }] }}
+              />
             </Pressable>
             <Input
               containerStyle={styles.inputContainer}
@@ -486,25 +480,14 @@ const styles = StyleSheet.create({
     minHeight: 52,
     borderRadius: 12,
     backgroundColor: colors.gray200,
-    paddingLeft: spacing.sm,
-    paddingRight: spacing.xs,
-    gap: 4,
+    paddingLeft: spacing.md,
+    paddingRight: spacing.sm,
+    gap: spacing.sm,
   },
   attachButton: {
     alignItems: "center",
     justifyContent: "center",
     flexShrink: 0,
-  },
-  attachIconWrap: {
-    width: 36,
-    height: 36,
-    borderRadius: 12,
-    backgroundColor: colors.gray300,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  attachIconWrapActive: {
-    backgroundColor: `${colors.black}1A`,
   },
   inputContainer: {
     flex: 1,
