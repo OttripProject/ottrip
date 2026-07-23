@@ -39,7 +39,7 @@ export default function AiAnalyzeErrorBanner({
               pressed && styles.retryBtnPressed,
             ]}
           >
-            <RetryIcon width={12} height={12} style={styles.retryIcon} />
+            <RetryIcon width={12} height={12} color="rgb(192, 57, 43)" style={styles.retryIcon} />
             <Text style={styles.retryBtnText}>다시 시도</Text>
           </Pressable>
         </View>
