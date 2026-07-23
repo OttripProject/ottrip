@@ -1,9 +1,13 @@
+import AiDocumentAnalyzeModal from "@/components/modals/AiDocumentAnalyzeModal";
 import { useAttachmentUpload } from "@/hooks/useAttachmentUpload";
 import { useFilePicker } from "@/hooks/useFilePicker";
 import { useMe } from "@/hooks/useMe";
+import { analyzeDocumentUpload } from "@/services/aiDocument";
 import { expensesApi } from "@/services/expenses";
-import { type LocalFile, PLAN_ENTITY_KIND } from "@/types/api";
+import { type DocumentUploadAnalyzeResponse, type LocalFile, PLAN_ENTITY_KIND } from "@/types/api";
 import type { Expense } from "@/types/api";
+import type { AiAttachmentAnalyzeSelection } from "@/ui/components/attachmentSection.types";
+import { buildAnalyzeUploadPayload } from "@/utils/attachmentAiAnalyze";
 import {
   ExpenseCategory,
   ExpenseCurrency,
@@ -99,6 +103,12 @@ export default function AddExpenseModal({
   const [pendingFiles, setPendingFiles] = useState<LocalFile[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isSubmittingRef = useRef(false);
+  const [isAiAnalyzing, setIsAiAnalyzing] = useState(false);
+  const [aiAnalyzeError, setAiAnalyzeError] = useState<string | null>(null);
+  const [aiModalResult, setAiModalResult] = useState<DocumentUploadAnalyzeResponse | null>(null);
+  const [aiAnalyzeFileName, setAiAnalyzeFileName] = useState<string | undefined>();
+  const [lastAiSelection, setLastAiSelection] = useState<AiAttachmentAnalyzeSelection | null>(null);
+  const aiCancelledRef = useRef(false);
 
   const { pickImage, pickDocument } = useFilePicker();
   const { data: me } = useMe();
@@ -125,6 +135,31 @@ export default function AddExpenseModal({
       setPendingFiles([]);
     }
   }, [visible, defaultExDate, planStartDate]);
+
+  const handleAiAnalyzePress = async (selection: AiAttachmentAnalyzeSelection) => {
+    setAiAnalyzeError(null);
+    setIsAiAnalyzing(true);
+    setLastAiSelection(selection);
+    aiCancelledRef.current = false;
+    try {
+      const { file, filename } = await buildAnalyzeUploadPayload(selection, {
+        pendingFiles,
+        existingAttachments: [],
+      });
+      setAiAnalyzeFileName(filename);
+      const result = await analyzeDocumentUpload(file, { filename });
+      if (aiCancelledRef.current) return;
+      if (!result.success) {
+        setAiAnalyzeError(result.error ?? "분석에 실패했습니다.");
+      } else {
+        setAiModalResult(result);
+      }
+    } catch {
+      setAiAnalyzeError("분석 중 오류가 발생했습니다.");
+    } finally {
+      setIsAiAnalyzing(false);
+    }
+  };
 
   const handleAmountChange = (text: string) => {
     const digits = normalizeAmount(text);
@@ -191,6 +226,7 @@ export default function AddExpenseModal({
   };
 
   return (
+    <>
     <BottomSheetModal visible={visible} onClose={handleClose} height={0.93}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>비용 추가</Text>
@@ -335,6 +371,15 @@ export default function AddExpenseModal({
           isUploading={isUploading}
           isGuest={!me}
           showTopDivider
+          onAiAnalyzePress={handleAiAnalyzePress}
+          isAiAnalyzing={isAiAnalyzing}
+          onCancelAiAnalyze={() => {
+            aiCancelledRef.current = true;
+            setIsAiAnalyzing(false);
+          }}
+          analyzeError={aiAnalyzeError}
+          onRetryAnalyze={() => lastAiSelection && handleAiAnalyzePress(lastAiSelection)}
+          isAiAnalyzeSuccess={!!aiModalResult?.success && !aiAnalyzeError}
         />
       </ScrollView>
 
@@ -346,6 +391,35 @@ export default function AddExpenseModal({
         onSecondaryPress={handleClose}
       />
     </BottomSheetModal>
+    <AiDocumentAnalyzeModal
+      visible={!!aiModalResult}
+      onClose={() => setAiModalResult(null)}
+      entityTypeLabel="비용"
+      analyzeResult={aiModalResult}
+      analyzeFileName={aiAnalyzeFileName}
+      onApply={draft => {
+        const v = (draft.payload.values ?? {}) as Record<string, unknown>;
+        const src = (v.expense ?? v.Expense ?? v) as Record<string, unknown>;
+        const amountRaw = String(src.amount ?? src.Amount ?? "").replace(/[^0-9]/g, "");
+        if (amountRaw) {
+          const formatted = amountRaw.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+          setFormData(prev => ({ ...prev, amount: formatted }));
+        }
+        const desc = String(src.description ?? src.Description ?? "").trim();
+        if (desc) setFormData(prev => ({ ...prev, description: desc }));
+        const cat = String(src.category ?? src.Category ?? "").trim();
+        if (cat && Object.values(ExpenseCategory).includes(cat as ExpenseCategory)) {
+          setFormData(prev => ({ ...prev, category: cat as ExpenseCategory }));
+        }
+        const dateRaw = String(src.exDate ?? src.ex_date ?? src.ExDate ?? "").trim();
+        if (dateRaw && dayjs(dateRaw).isValid()) {
+          setFormData(prev => ({ ...prev, ex_date: dayjs(dateRaw).format("YYYY-MM-DD") }));
+        }
+        setAiModalResult(null);
+      }}
+      applyLabel="비용에 반영하기"
+    />
+    </>
   );
 }
 

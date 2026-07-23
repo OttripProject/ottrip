@@ -1,8 +1,14 @@
+import AiAnalyzeErrorBanner from "@/components/AiAnalyzeErrorBanner";
 import { useMe } from "@/hooks/useMe";
 import type { AttachmentSectionProps } from "@/ui/components/attachmentSection.types";
+import {
+  type AiAttachmentAnalyzeSelection,
+  pendingAiFileKey,
+} from "@/ui/components/attachmentSection.types";
 import { colors } from "@/ui/tokens/colors";
 import { textStyles } from "@/ui/tokens/typography";
 import { guestPrompt } from "@/utils/guestPrompt";
+import { LinearGradient } from "expo-linear-gradient";
 import { useState } from "react";
 import {
   ActivityIndicator,
@@ -63,6 +69,14 @@ export default function AttachmentSection({
   disabled = false,
   hideAddControls = false,
   isGuest: isGuestProp,
+  onAiAnalyzePress,
+  isAiAnalyzing = false,
+  onCancelAiAnalyze,
+  analyzeError,
+  onRetryAnalyze,
+  isAiAnalyzeSuccess = false,
+  isAiAnalyzePartial = false,
+  analyzePartialMessage,
 }: AttachmentSectionProps) {
   const { data: me } = useMe();
   const isGuest = isGuestProp ?? me?.isGuest === true;
@@ -118,6 +132,42 @@ export default function AttachmentSection({
     } else {
       showPicker();
     }
+  };
+
+  const handleAiAnalyzePress = () => {
+    if (!onAiAnalyzePress) return;
+    const totalFiles = pendingFiles.length + existing.length;
+    if (totalFiles === 0) return;
+
+    const triggerAnalyze = (selection: AiAttachmentAnalyzeSelection) => {
+      if (Platform.OS === "ios") {
+        setTimeout(() => onAiAnalyzePress(selection), 0);
+      } else {
+        onAiAnalyzePress(selection);
+      }
+    };
+
+    if (totalFiles === 1) {
+      if (pendingFiles.length === 1) {
+        triggerAnalyze({ kind: "pending", key: pendingAiFileKey(pendingFiles[0]) });
+      } else {
+        triggerAnalyze({ kind: "existing", id: existing[0].id });
+      }
+      return;
+    }
+
+    const options = [
+      ...pendingFiles.map(f => ({
+        text: f.name,
+        onPress: () => triggerAnalyze({ kind: "pending", key: pendingAiFileKey(f) }),
+      })),
+      ...existing.map(a => ({
+        text: a.fileName,
+        onPress: () => triggerAnalyze({ kind: "existing", id: a.id }),
+      })),
+      { text: "취소", style: "cancel" as const },
+    ];
+    Alert.alert("분석할 파일 선택", "AI로 분석할 파일을 선택하세요.", options);
   };
 
   const handleRemovePending = (index: number) => {
@@ -278,6 +328,56 @@ export default function AttachmentSection({
         </Pressable>
       )}
 
+      {onAiAnalyzePress && hasFiles && (
+        <View style={styles.aiSection}>
+          {isAiAnalyzing ? (
+            <View style={styles.aiAnalyzingRow}>
+              <ActivityIndicator size="small" color={colors.aiInk} />
+              <Text style={styles.aiAnalyzingText}>AI 분석 중...</Text>
+              {onCancelAiAnalyze && (
+                <Pressable onPress={onCancelAiAnalyze} hitSlop={8}>
+                  <Text style={styles.aiCancelText}>취소</Text>
+                </Pressable>
+              )}
+            </View>
+          ) : (
+            <Pressable
+              onPress={handleAiAnalyzePress}
+              disabled={disabled || isUploading}
+              style={({ pressed }) => [pressed && styles.pressed]}
+            >
+              <LinearGradient
+                colors={colors.gradientAIRefresh}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.aiAnalyzeButton}
+              >
+                <Text style={styles.aiAnalyzeButtonText}>AI로 분석</Text>
+              </LinearGradient>
+            </Pressable>
+          )}
+          {analyzeError && (
+            <AiAnalyzeErrorBanner
+              message={analyzeError}
+              onRetry={onRetryAnalyze}
+              style={styles.aiErrorBanner}
+            />
+          )}
+          {isAiAnalyzeSuccess && !analyzeError && (
+            <View style={styles.aiSuccessBadge}>
+              <Text style={styles.aiSuccessText}>AI 자동 입력 완료</Text>
+            </View>
+          )}
+          {isAiAnalyzePartial && !analyzeError && (
+            <View style={styles.aiPartialBadge}>
+              <Text style={styles.aiPartialText}>
+                {analyzePartialMessage ?? "일부만 인식됨"}
+              </Text>
+            </View>
+          )}
+        </View>
+      )}
+
       <Modal
         visible={previewImageUri !== null}
         transparent
@@ -435,6 +535,63 @@ const styles = StyleSheet.create({
   removeButton: {
     marginLeft: 8,
     flexShrink: 0,
+  },
+  aiSection: {
+    marginTop: 12,
+    gap: 8,
+  },
+  aiAnalyzingRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    backgroundColor: colors.gray100,
+    borderRadius: 10,
+  },
+  aiAnalyzingText: {
+    ...textStyles.body3,
+    color: colors.aiInk,
+    flex: 1,
+  },
+  aiCancelText: {
+    ...textStyles.body3,
+    color: colors.gray600,
+  },
+  aiAnalyzeButton: {
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    alignItems: "center",
+  },
+  aiAnalyzeButtonText: {
+    ...textStyles.h6,
+    color: colors.white,
+  },
+  aiErrorBanner: {
+    marginTop: 4,
+  },
+  aiSuccessBadge: {
+    backgroundColor: "#E6F9F0",
+    borderRadius: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    alignItems: "center",
+  },
+  aiSuccessText: {
+    ...textStyles.body4,
+    color: "#1A8A4A",
+  },
+  aiPartialBadge: {
+    backgroundColor: "#FFF4E5",
+    borderRadius: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    alignItems: "center",
+  },
+  aiPartialText: {
+    ...textStyles.body4,
+    color: "#B85C00",
   },
   previewBackdrop: {
     flex: 1,

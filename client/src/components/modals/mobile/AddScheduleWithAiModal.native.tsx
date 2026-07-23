@@ -1,13 +1,17 @@
-import { parseTextToItem } from "@/services/aiDocument";
-import type { DocumentUploadAnalyzeResponse } from "@/types/api";
+import { useFilePicker } from "@/hooks/useFilePicker";
+import { analyzeDocumentUpload, parseTextToItem } from "@/services/aiDocument";
+import type { DocumentUploadAnalyzeResponse, LocalFile } from "@/types/api";
 import BottomSheetModal from "@/ui/components/BottomSheetModal.native";
 import { Input } from "@/ui/components/input";
 import { colors } from "@/ui/tokens/colors";
+import { radii } from "@/ui/tokens/radii";
 import { spacing } from "@/ui/tokens/spacing";
 import { textStyles, typography } from "@/ui/tokens/typography";
+import { LinearGradient } from "expo-linear-gradient";
 import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Keyboard,
   Platform,
   Pressable,
@@ -17,6 +21,7 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import AttachClipIcon from "../../../../assets/files.svg";
 import CloseIcon from "../../../../assets/mobile_close.svg";
 import ShareIcon from "../../../../assets/share.svg";
 import AiResultCard from "./AiResultCard.native";
@@ -53,6 +58,10 @@ export default function AddScheduleWithAiModal({
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const scrollRef = useRef<ScrollView>(null);
 
+  const [pendingFile, setPendingFile] = useState<LocalFile | null>(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const { pickImage, pickDocument } = useFilePicker();
+
   useEffect(() => {
     const showEvent =
       Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
@@ -68,6 +77,61 @@ export default function AddScheduleWithAiModal({
       hideSub.remove();
     };
   }, []);
+
+  const handleAttachPress = () => {
+    Alert.alert("파일 첨부", "어떤 파일을 첨부하시겠어요?", [
+      {
+        text: "이미지 선택",
+        onPress: async () => {
+          const file = await pickImage();
+          if (file) setPendingFile(file);
+        },
+      },
+      {
+        text: "문서 선택",
+        onPress: async () => {
+          const file = await pickDocument();
+          if (file) setPendingFile(file);
+        },
+      },
+      { text: "취소", style: "cancel" },
+    ]);
+  };
+
+  const handleAiAnalyze = async () => {
+    if (!pendingFile || isAnalyzing) return;
+    setIsAnalyzing(true);
+    setMessages(prev => [
+      ...prev,
+      { role: "user", text: `📎 ${pendingFile.name}` },
+    ]);
+    try {
+      const result = await analyzeDocumentUpload(
+        { uri: pendingFile.uri, name: pendingFile.name, type: pendingFile.mimeType },
+        { filename: pendingFile.name },
+      );
+      if (result.success && result.draft) {
+        setMessages(prev => [...prev, { role: "result", result }]);
+      } else {
+        setMessages(prev => [
+          ...prev,
+          {
+            role: "ai",
+            text: result.error || "분석에 실패했습니다. 다시 시도해주세요.",
+          },
+        ]);
+      }
+    } catch {
+      setMessages(prev => [
+        ...prev,
+        { role: "ai", text: "오류가 발생했습니다. 잠시 후 다시 시도해주세요." },
+      ]);
+    } finally {
+      setIsAnalyzing(false);
+      setPendingFile(null);
+      setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
+    }
+  };
 
   const handleSend = async () => {
     const text = message.trim();
@@ -179,7 +243,7 @@ export default function AddScheduleWithAiModal({
               </View>
             );
           })}
-          {loading && (
+          {(loading || isAnalyzing) && (
             <View style={styles.aiBubble}>
               <ActivityIndicator size="small" color={colors.white} />
             </View>
@@ -188,7 +252,64 @@ export default function AddScheduleWithAiModal({
 
         <View style={styles.footer}>
           <View style={styles.footerDivider} />
+
+          {pendingFile && (
+            <View style={styles.pendingFileRow}>
+              <View style={styles.pendingFileChip}>
+                <Text style={styles.pendingFileName} numberOfLines={1}>
+                  📎 {pendingFile.name}
+                </Text>
+                <Pressable
+                  onPress={() => setPendingFile(null)}
+                  hitSlop={8}
+                  style={styles.pendingFileRemove}
+                >
+                  <CloseIcon width={12} height={12} color={colors.gray600} />
+                </Pressable>
+              </View>
+              <Pressable
+                onPress={handleAiAnalyze}
+                disabled={isAnalyzing}
+                style={styles.analyzeButtonWrap}
+              >
+                <LinearGradient
+                  colors={[...colors.gradientAIColors] as [string, string, ...string[]]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={styles.analyzeButton}
+                >
+                  {isAnalyzing ? (
+                    <ActivityIndicator size="small" color={colors.white} />
+                  ) : (
+                    <Text style={styles.analyzeButtonText}>AI로 분석</Text>
+                  )}
+                </LinearGradient>
+              </Pressable>
+            </View>
+          )}
+
           <View style={styles.inputField}>
+            <Pressable
+              style={styles.attachButton}
+              onPress={handleAttachPress}
+              disabled={loading || isAnalyzing}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel="파일 첨부"
+            >
+              <View
+                style={[
+                  styles.attachIconWrap,
+                  pendingFile && styles.attachIconWrapActive,
+                ]}
+              >
+                <AttachClipIcon
+                  width={18}
+                  height={18}
+                  color={pendingFile ? colors.white : colors.gray500}
+                />
+              </View>
+            </Pressable>
             <Input
               containerStyle={styles.inputContainer}
               style={[
@@ -204,16 +325,17 @@ export default function AddScheduleWithAiModal({
               returnKeyType="send"
               onSubmitEditing={handleSend}
               multiline={false}
-              editable={!loading}
+              editable={!loading && !isAnalyzing}
             />
             <Pressable
               style={({ pressed }) => [
                 styles.sendInside,
                 pressed && styles.sendInsidePressed,
-                loading && styles.sendInsideDisabled,
+                (loading || isAnalyzing || !message.trim()) &&
+                  styles.sendInsideDisabled,
               ]}
               onPress={handleSend}
-              disabled={loading}
+              disabled={loading || isAnalyzing || !message.trim()}
               accessibilityRole="button"
               accessibilityLabel="전송"
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 4 }}
@@ -221,7 +343,8 @@ export default function AddScheduleWithAiModal({
               <View
                 style={[
                   styles.sendIconWrap,
-                  loading && styles.sendIconWrapDisabled,
+                  (loading || isAnalyzing || !message.trim()) &&
+                    styles.sendIconWrapDisabled,
                 ]}
               >
                 <ShareIcon width={30} height={30} color={colors.white} />
@@ -316,14 +439,72 @@ const styles = StyleSheet.create({
     marginHorizontal: -20,
     marginBottom: 12,
   },
+  pendingFileRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  pendingFileChip: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: colors.gray200,
+    borderRadius: radii.sm,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 6,
+    gap: 6,
+    minWidth: 0,
+  },
+  pendingFileName: {
+    ...textStyles.body4,
+    color: colors.gray700,
+    flex: 1,
+  },
+  pendingFileRemove: {
+    flexShrink: 0,
+  },
+  analyzeButtonWrap: {
+    flexShrink: 0,
+  },
+  analyzeButton: {
+    borderRadius: radii.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 8,
+    alignItems: "center",
+    justifyContent: "center",
+    minWidth: 80,
+  },
+  analyzeButtonText: {
+    ...textStyles.body4,
+    color: colors.white,
+    fontFamily: typography.fontFamily.pretendardSemiBold,
+  },
   inputField: {
     flexDirection: "row",
     alignItems: "center",
     minHeight: 52,
     borderRadius: 12,
     backgroundColor: colors.gray200,
-    paddingLeft: 16,
+    paddingLeft: spacing.sm,
     paddingRight: spacing.xs,
+    gap: 4,
+  },
+  attachButton: {
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+  },
+  attachIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    backgroundColor: colors.gray300,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  attachIconWrapActive: {
+    backgroundColor: `${colors.black}1A`,
   },
   inputContainer: {
     flex: 1,
