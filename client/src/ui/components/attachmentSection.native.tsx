@@ -28,6 +28,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import AttachDelIcon from "../../../assets/attach_del.svg";
 import AttachmentDocIcon from "../../../assets/mobile_attachment_document.svg";
 import AttachmentImageIcon from "../../../assets/mobile_attachment_image.svg";
 import CameraIcon from "../../../assets/mobile_camera.svg";
@@ -234,7 +235,7 @@ export default function AttachmentSection({
               pressed && styles.pressed,
             ]}
           >
-            <DeleteIcon width={20} height={20} color={colors.gray600} />
+            <AttachDelIcon width={20} height={20} />
           </Pressable>
         ) : (
           <View style={styles.removeButton} />
@@ -290,7 +291,7 @@ export default function AttachmentSection({
           <ActivityIndicator size="small" color={colors.primary} />
         </View>
       ) : hasFiles ? (
-        <View style={styles.fileList}>
+        <View style={[styles.fileList, isAiAnalyzing && styles.fileListDimmed]}>
           {existing.map(a => {
             let onOpen: (() => void) | undefined;
             if (isPdfMime(a.contentType)) {
@@ -349,9 +350,19 @@ export default function AttachmentSection({
           {isAiAnalyzing ? (
             <View style={styles.aiAnalyzingRow}>
               <ActivityIndicator size="small" color={colors.aiInk} />
-              <Text style={styles.aiAnalyzingText}>AI 분석 중...</Text>
+              <View style={styles.aiAnalyzingTextCol}>
+                <Text style={styles.aiAnalyzingTitle}>분석 중...</Text>
+                <Text style={styles.aiAnalyzingText}>AI가 첨부 파일 내용을 정리하고 있어요.</Text>
+              </View>
               {onCancelAiAnalyze && (
-                <Pressable onPress={onCancelAiAnalyze} hitSlop={8}>
+                <Pressable
+                  onPress={onCancelAiAnalyze}
+                  hitSlop={8}
+                  style={({ pressed }) => [
+                    styles.aiCancelButton,
+                    pressed && styles.pressed,
+                  ]}
+                >
                   <Text style={styles.aiCancelText}>취소</Text>
                 </Pressable>
               )}
@@ -550,12 +561,15 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   removeButton: {
-    marginLeft: 8,
+    marginLeft: 4,
     flexShrink: 0,
   },
   aiSection: {
     marginTop: 12,
     gap: 8,
+  },
+  fileListDimmed: {
+    opacity: 0.6,
   },
   aiAnalyzingRow: {
     flexDirection: "row",
@@ -563,17 +577,30 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingVertical: 10,
     paddingHorizontal: 16,
-    backgroundColor: colors.gray100,
+    backgroundColor: colors.gray200,
     borderRadius: 10,
   },
-  aiAnalyzingText: {
+  aiAnalyzingTextCol: {
+    flex: 1,
+    gap: 2,
+  },
+  aiAnalyzingTitle: {
     ...textStyles.body3,
     color: colors.aiInk,
-    flex: 1,
+  },
+  aiAnalyzingText: {
+    ...textStyles.body5,
+    color: colors.gray600,
+  },
+  aiCancelButton: {
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    borderRadius: 6,
+    backgroundColor: colors.gray300,
   },
   aiCancelText: {
-    ...textStyles.body3,
-    color: colors.gray600,
+    ...textStyles.body4,
+    color: colors.gray700,
   },
   aiAnalyzeButton: {
     borderRadius: radii.md,
