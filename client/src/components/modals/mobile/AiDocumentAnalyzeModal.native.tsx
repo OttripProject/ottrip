@@ -90,9 +90,11 @@ export default function AiDocumentAnalyzeModal({
       onRequestClose={onClose}
     >
       <StatusBar barStyle="light-content" backgroundColor="rgba(0,0,0,0.45)" />
-      <View style={styles.overlay}>
-        <Pressable style={styles.backdrop} onPress={onClose} />
-        <View style={[styles.card, { width: cardWidth }]}>
+      <Pressable style={styles.overlay} onPress={onClose}>
+        <Pressable
+          style={[styles.card, { width: cardWidth }]}
+          onPress={e => e.stopPropagation?.()}
+        >
           <LinearGradient
             colors={[...HEADER_GRADIENT] as [string, string]}
             start={{ x: 0, y: 0 }}
@@ -182,8 +184,8 @@ export default function AiDocumentAnalyzeModal({
               </Text>
             </Pressable>
           </View>
-        </View>
-      </View>
+        </Pressable>
+      </Pressable>
     </Modal>
   );
 }
@@ -191,19 +193,16 @@ export default function AiDocumentAnalyzeModal({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.45)",
     justifyContent: "flex-start",
     alignItems: "center",
     paddingTop: 80,
     paddingHorizontal: spacing.md,
     paddingBottom: spacing.md,
   },
-  backdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0, 0, 0, 0.45)",
-  },
   card: {
     maxWidth: "100%",
-    maxHeight: "85%",
+    maxHeight: "90%",
     backgroundColor: colors.white,
     borderRadius: 18,
     overflow: "hidden",
@@ -266,7 +265,8 @@ const styles = StyleSheet.create({
     opacity: 0.75,
   },
   scroll: {
-    flex: 1,
+    flexGrow: 0,
+    flexShrink: 1,
   },
   scrollContent: {
     padding: 20,
