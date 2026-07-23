@@ -38,6 +38,8 @@ interface AccommodationEditModalProps {
   accommodation: Accommodation | null;
   planId: number;
   defaultDate?: string;
+  defaultCountry?: string;
+  defaultCity?: string;
   embedded?: boolean;
   onSave?: (accommodation: Accommodation) => void;
   onDelete?: (accommodationId: number) => void;
@@ -73,6 +75,8 @@ export default function AccommodationEditModal({
   accommodation,
   planId,
   defaultDate,
+  defaultCountry,
+  defaultCity,
   embedded,
   onSave,
   onDelete,
@@ -153,6 +157,8 @@ export default function AccommodationEditModal({
       const initDate = defaultDate || dayjs().format("YYYY-MM-DD");
       setFormData(prev => ({
         ...prev,
+        country: defaultCountry || "",
+        city: defaultCity || "",
         checkinDate: initDate,
         checkoutDate: dayjs(initDate).add(1, "day").format("YYYY-MM-DD"),
       }));
@@ -160,7 +166,7 @@ export default function AccommodationEditModal({
     if (visible) {
       setPendingFiles([]);
     }
-  }, [visible, accommodation, defaultDate]);
+  }, [visible, accommodation, defaultDate, defaultCountry, defaultCity]);
 
   useEffect(() => {
     if (!visible) return;

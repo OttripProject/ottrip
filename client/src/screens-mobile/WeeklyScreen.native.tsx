@@ -256,6 +256,15 @@ export default function WeeklyScreen() {
     [selectedDateSchedules],
   );
 
+  const selectedDateSegment = useMemo(() => {
+    const segments = planData.plan?.segments;
+    if (!segments) return null;
+    const dateStr = selectedDate.format("YYYY-MM-DD");
+    return segments.find(
+      seg => seg.startDate <= dateStr && dateStr <= seg.endDate,
+    ) ?? null;
+  }, [planData.plan?.segments, selectedDate]);
+
   const datesWithItems = useMemo(() => {
     const set = new Set<string>();
     planData.itineraries?.forEach((item: Itinerary) => {
@@ -898,6 +907,8 @@ export default function WeeklyScreen() {
         planStartDate={selectedPlan?.startDate}
         planEndDate={selectedPlan?.endDate}
         selectedDate={selectedDate}
+        defaultCountry={selectedDateSegment?.country}
+        defaultCity={selectedDateSegment?.city}
         planData={{
           addItinerary: planData.addItinerary,
           addAccommodation: planData.addAccommodation,
@@ -969,6 +980,8 @@ export default function WeeklyScreen() {
         }}
         itinerary={editingItinerary}
         planId={selectedPlan?.id ?? 0}
+        defaultCountry={selectedDateSegment?.country}
+        defaultCity={selectedDateSegment?.city}
         onSave={() => {
           if (selectedPlan?.publicId && planData.plan?.id) {
             planData.refreshItineraries?.();
@@ -1116,6 +1129,8 @@ export default function WeeklyScreen() {
         }}
         accommodation={editingAccommodation}
         planId={selectedPlan?.id ?? 0}
+        defaultCountry={selectedDateSegment?.country}
+        defaultCity={selectedDateSegment?.city}
         onSave={async updated => {
           planData.addAccommodation(updated);
           if (selectedPlan?.publicId && planData.plan?.id) {

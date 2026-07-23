@@ -23,6 +23,8 @@ interface AddScheduleModalProps {
   planStartDate?: string;
   planEndDate?: string;
   selectedDate?: dayjs.Dayjs;
+  defaultCountry?: string;
+  defaultCity?: string;
   planData: {
     addItinerary: (itinerary: Itinerary) => void;
     addAccommodation: (accommodation: Accommodation) => void;
@@ -41,6 +43,8 @@ export default function AddScheduleModal({
   planId,
   planStartDate,
   selectedDate,
+  defaultCountry,
+  defaultCity,
   planData,
   onRefresh,
 }: AddScheduleModalProps) {
@@ -69,6 +73,8 @@ export default function AddScheduleModal({
           itinerary={null}
           planId={planId}
           defaultDate={selectedDate?.format("YYYY-MM-DD")}
+          defaultCountry={defaultCountry}
+          defaultCity={defaultCity}
           embedded
           onSave={async itinerary => {
             planData.addItinerary(itinerary);
@@ -86,6 +92,8 @@ export default function AddScheduleModal({
           accommodation={null}
           planId={planId}
           defaultDate={selectedDate?.format("YYYY-MM-DD")}
+          defaultCountry={defaultCountry}
+          defaultCity={defaultCity}
           embedded
           onSave={async accommodation => {
             planData.addAccommodation(accommodation);

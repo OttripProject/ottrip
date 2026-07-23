@@ -405,6 +405,14 @@ export default function TodayScreen() {
     [todaySchedules],
   );
 
+  const timelineDateSegment = useMemo(() => {
+    const segments = planData.plan?.segments;
+    if (!segments) return null;
+    return segments.find(
+      seg => seg.startDate <= timelineDateStr && timelineDateStr <= seg.endDate,
+    ) ?? null;
+  }, [planData.plan?.segments, timelineDateStr]);
+
   const todayExpenses = useMemo(() => {
     let total = 0;
     const byCategory: Record<string, number> = {};
@@ -1429,6 +1437,8 @@ export default function TodayScreen() {
         }}
         itinerary={editingItinerary}
         planId={selectedPlan?.id ?? 0}
+        defaultCountry={timelineDateSegment?.country}
+        defaultCity={timelineDateSegment?.city}
         onSave={async itinerary => {
           planData.addItinerary(itinerary);
           planData.refreshExpenses?.();
@@ -1487,6 +1497,8 @@ export default function TodayScreen() {
         }}
         accommodation={editingAccommodation}
         planId={selectedPlan?.id ?? 0}
+        defaultCountry={timelineDateSegment?.country}
+        defaultCity={timelineDateSegment?.city}
         onSave={async updated => {
           planData.addAccommodation(updated);
           await refetchTodayExpenses();
@@ -1589,6 +1601,8 @@ export default function TodayScreen() {
         planStartDate={selectedPlan?.startDate}
         planEndDate={selectedPlan?.endDate}
         selectedDate={timelineViewDate ?? dayjs(calendarTodayStr)}
+        defaultCountry={timelineDateSegment?.country}
+        defaultCity={timelineDateSegment?.city}
         planData={{
           addItinerary: planData.addItinerary,
           addAccommodation: planData.addAccommodation,

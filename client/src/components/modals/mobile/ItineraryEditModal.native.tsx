@@ -49,6 +49,8 @@ interface ItineraryEditModalProps {
   itinerary: Itinerary | null;
   planId: number;
   defaultDate?: string;
+  defaultCountry?: string;
+  defaultCity?: string;
   embedded?: boolean;
   onSave?: (itinerary: Itinerary) => void;
   onDelete?: (itineraryId: number) => void;
@@ -60,6 +62,8 @@ export default function ItineraryEditModal({
   itinerary,
   planId,
   defaultDate,
+  defaultCountry,
+  defaultCity,
   embedded,
   onSave,
   onDelete,
@@ -212,8 +216,8 @@ export default function ItineraryEditModal({
       setFormData({
         title: "",
         description: "",
-        country: "",
-        city: "",
+        country: defaultCountry || "",
+        city: defaultCity || "",
         location: "",
         itineraryDate: initDate,
         startTime: "09:00",
@@ -225,7 +229,7 @@ export default function ItineraryEditModal({
     if (visible) {
       setPendingFiles([]);
     }
-  }, [visible, itinerary, defaultDate]);
+  }, [visible, itinerary, defaultDate, defaultCountry, defaultCity]);
 
   useEffect(() => {
     if (!visible) return;
