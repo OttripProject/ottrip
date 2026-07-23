@@ -1042,7 +1042,7 @@ export default function AttachmentSection({
       )}
 
       {showAiToolbar && (
-        <Text style={styles.aiSelectHint}>분석할 파일을 1개 선택하세요.</Text>
+        <Text style={styles.aiSelectHint}>분석할 파일을 1개 선택하세요</Text>
       )}
 
       {isLoadingExisting && !hasFiles ? (

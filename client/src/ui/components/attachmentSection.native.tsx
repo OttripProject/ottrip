@@ -6,10 +6,12 @@ import {
   pendingAiFileKey,
 } from "@/ui/components/attachmentSection.types";
 import { colors } from "@/ui/tokens/colors";
-import { textStyles } from "@/ui/tokens/typography";
+import { radii } from "@/ui/tokens/radii";
+import { textStyles, typography } from "@/ui/tokens/typography";
 import { guestPrompt } from "@/utils/guestPrompt";
 import { LinearGradient } from "expo-linear-gradient";
 import { useState } from "react";
+import CheckWhiteIcon from "../../../assets/check_white.svg";
 import {
   ActivityIndicator,
   Alert,
@@ -85,6 +87,11 @@ export default function AttachmentSection({
   const { width: windowWidth, height: windowHeight } = useWindowDimensions();
   const [previewImageUri, setPreviewImageUri] = useState<string | null>(null);
   const [isPreviewImageLoading, setIsPreviewImageLoading] = useState(false);
+  const [selectedAiTarget, setSelectedAiTarget] =
+    useState<AiAttachmentAnalyzeSelection | null>(null);
+
+  const totalFiles = existing.length + pendingFiles.length;
+  const showAiRadio = !!onAiAnalyzePress && totalFiles > 1;
 
   const handleOpenImage = (uri: string) => {
     if (!uri) return;
@@ -136,38 +143,24 @@ export default function AttachmentSection({
 
   const handleAiAnalyzePress = () => {
     if (!onAiAnalyzePress) return;
-    const totalFiles = pendingFiles.length + existing.length;
     if (totalFiles === 0) return;
 
-    const triggerAnalyze = (selection: AiAttachmentAnalyzeSelection) => {
-      if (Platform.OS === "ios") {
-        setTimeout(() => onAiAnalyzePress(selection), 0);
-      } else {
-        onAiAnalyzePress(selection);
-      }
+    const getTarget = (): AiAttachmentAnalyzeSelection | null => {
+      if (selectedAiTarget) return selectedAiTarget;
+      if (pendingFiles.length > 0)
+        return { kind: "pending", key: pendingAiFileKey(pendingFiles[0]) };
+      if (existing.length > 0) return { kind: "existing", id: existing[0].id };
+      return null;
     };
 
-    if (totalFiles === 1) {
-      if (pendingFiles.length === 1) {
-        triggerAnalyze({ kind: "pending", key: pendingAiFileKey(pendingFiles[0]) });
-      } else {
-        triggerAnalyze({ kind: "existing", id: existing[0].id });
-      }
-      return;
-    }
+    const target = getTarget();
+    if (!target) return;
 
-    const options = [
-      ...pendingFiles.map(f => ({
-        text: f.name,
-        onPress: () => triggerAnalyze({ kind: "pending", key: pendingAiFileKey(f) }),
-      })),
-      ...existing.map(a => ({
-        text: a.fileName,
-        onPress: () => triggerAnalyze({ kind: "existing", id: a.id }),
-      })),
-      { text: "취소", style: "cancel" as const },
-    ];
-    Alert.alert("분석할 파일 선택", "AI로 분석할 파일을 선택하세요.", options);
+    if (Platform.OS === "ios") {
+      setTimeout(() => onAiAnalyzePress(target), 0);
+    } else {
+      onAiAnalyzePress(target);
+    }
   };
 
   const handleRemovePending = (index: number) => {
@@ -186,7 +179,18 @@ export default function AttachmentSection({
     subtitle: string,
     onRemove?: () => void,
     onOpen?: () => void,
+    aiSelection?: AiAttachmentAnalyzeSelection,
   ) => {
+    const isSelected =
+      showAiRadio &&
+      aiSelection !== undefined &&
+      selectedAiTarget !== null &&
+      JSON.stringify(selectedAiTarget) === JSON.stringify(aiSelection);
+
+    const handleRowPress = showAiRadio && aiSelection
+      ? () => setSelectedAiTarget(aiSelection)
+      : undefined;
+
     const content = (
       <>
         <View style={styles.fileIconWrap}>
@@ -208,6 +212,18 @@ export default function AttachmentSection({
           </Text>
           <Text style={styles.fileKindLabel}>{subtitle}</Text>
         </View>
+        {onOpen && (
+          <Pressable
+            onPress={onOpen}
+            hitSlop={8}
+            style={({ pressed }) => [
+              styles.openButton,
+              pressed && styles.pressed,
+            ]}
+          >
+            <Text style={styles.openButtonText}>열기</Text>
+          </Pressable>
+        )}
         {onRemove ? (
           <Pressable
             onPress={onRemove}
@@ -226,22 +242,18 @@ export default function AttachmentSection({
       </>
     );
 
-    if (onOpen) {
-      return (
-        <Pressable
-          key={key}
-          onPress={onOpen}
-          style={({ pressed }) => [styles.fileRow, pressed && styles.pressed]}
-        >
-          {content}
-        </Pressable>
-      );
-    }
-
     return (
-      <View key={key} style={styles.fileRow}>
+      <Pressable
+        key={key}
+        onPress={handleRowPress}
+        style={({ pressed }) => [
+          styles.fileRow,
+          isSelected && styles.fileRowSelected,
+          pressed && showAiRadio && styles.pressed,
+        ]}
+      >
         {content}
-      </View>
+      </Pressable>
     );
   };
 
@@ -269,6 +281,10 @@ export default function AttachmentSection({
         )}
       </View>
 
+      {showAiRadio && (
+        <Text style={styles.aiSelectHint}>분석할 파일을 1개 선택하세요</Text>
+      )}
+
       {isLoadingExisting && !hasFiles ? (
         <View style={styles.loadingWrap}>
           <ActivityIndicator size="small" color={colors.primary} />
@@ -294,6 +310,7 @@ export default function AttachmentSection({
                 .join(" · "),
               onRemoveExisting ? () => handleRemoveExisting(a.id) : undefined,
               onOpen,
+              onAiAnalyzePress ? { kind: "existing" as const, id: a.id } : undefined,
             );
           })}
           {pendingFiles.map((file, index) =>
@@ -303,9 +320,8 @@ export default function AttachmentSection({
               file.mimeType,
               getAttachmentKindLabel(file.mimeType),
               () => handleRemovePending(index),
-              isImageMime(file.mimeType)
-                ? () => handleOpenImage(file.uri)
-                : undefined,
+              isImageMime(file.mimeType) ? () => handleOpenImage(file.uri) : undefined,
+              onAiAnalyzePress ? { kind: "pending" as const, key: pendingAiFileKey(file) } : undefined,
             ),
           )}
         </View>
@@ -347,12 +363,13 @@ export default function AttachmentSection({
               style={({ pressed }) => [pressed && styles.pressed]}
             >
               <LinearGradient
-                colors={colors.gradientAIRefresh}
+                colors={[...colors.aiGrad] as [string, string]}
                 start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
+                end={{ x: 1, y: 1 }}
                 style={styles.aiAnalyzeButton}
               >
-                <Text style={styles.aiAnalyzeButtonText}>AI로 분석</Text>
+                <CheckWhiteIcon width={14} height={14} />
+                <Text style={styles.aiAnalyzeButtonText}>AI 분석</Text>
               </LinearGradient>
             </Pressable>
           )}
@@ -559,14 +576,39 @@ const styles = StyleSheet.create({
     color: colors.gray600,
   },
   aiAnalyzeButton: {
-    borderRadius: 10,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
+    borderRadius: radii.md,
+    height: 48,
     alignItems: "center",
+    justifyContent: "center",
+    flexDirection: "row",
+    gap: 8,
   },
   aiAnalyzeButtonText: {
-    ...textStyles.h6,
     color: colors.white,
+    fontFamily: typography.fontFamily.pretendardSemiBold,
+    fontSize: 14,
+    lineHeight: 18,
+    letterSpacing: -0.14,
+  },
+  fileRowSelected: {
+    borderWidth: 2,
+    borderColor: colors.aiInk,
+  },
+  aiSelectHint: {
+    ...textStyles.body4,
+    color: colors.gray600,
+    marginBottom: 8,
+  },
+  openButton: {
+    flexShrink: 0,
+    marginLeft: 8,
+    marginRight: 4,
+    paddingVertical: 4,
+    paddingHorizontal: 4,
+  },
+  openButtonText: {
+    ...textStyles.body4,
+    color: colors.primary,
   },
   aiErrorBanner: {
     marginTop: 4,

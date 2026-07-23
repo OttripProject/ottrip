@@ -669,18 +669,6 @@ export default function AccommodationEditModal({
         secondaryLabel={accommodation && !embedded ? "삭제" : undefined}
         onSecondaryPress={handleDelete}
       />
-    </>
-  );
-
-  if (embedded) {
-    return <View style={{ flex: 1 }}>{content}</View>;
-  }
-
-  return (
-    <>
-      <FullScreenModal visible={visible} onClose={() => onClose?.()}>
-        {content}
-      </FullScreenModal>
       <AiDocumentAnalyzeModal
         visible={!!aiModalResult}
         onClose={() => setAiModalResult(null)}
@@ -717,6 +705,16 @@ export default function AccommodationEditModal({
         applyLabel="숙박에 반영하기"
       />
     </>
+  );
+
+  if (embedded) {
+    return <View style={{ flex: 1 }}>{content}</View>;
+  }
+
+  return (
+    <FullScreenModal visible={visible} onClose={() => onClose?.()}>
+      {content}
+    </FullScreenModal>
   );
 }
 

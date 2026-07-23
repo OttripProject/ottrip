@@ -373,7 +373,7 @@ function ReadOnlyBody({ draft }: { draft: AiDocumentItemDraft }) {
   );
 }
 
-function getHeaderSubtitle(
+export function getHeaderSubtitle(
   kind: AiDocumentItemType | null,
   entityTypeLabel: string,
 ): string {
