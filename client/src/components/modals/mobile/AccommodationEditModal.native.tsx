@@ -1,9 +1,13 @@
+import AiDocumentAnalyzeModal from "@/components/modals/AiDocumentAnalyzeModal";
 import { useAttachmentUpload } from "@/hooks/useAttachmentUpload";
 import { useFilePicker } from "@/hooks/useFilePicker";
 import { useMe } from "@/hooks/useMe";
+import { analyzeDocumentUpload } from "@/services/aiDocument";
 import { accommodationsApi } from "@/services/accommodations";
 import { attachmentsApi } from "@/services/attachments";
-import type { Accommodation, Attachment, LocalFile } from "@/types/api";
+import type { Accommodation, Attachment, DocumentUploadAnalyzeResponse, LocalFile } from "@/types/api";
+import type { AiAttachmentAnalyzeSelection } from "@/ui/components/attachmentSection.types";
+import { buildAnalyzeUploadPayload } from "@/utils/attachmentAiAnalyze";
 import { ExpenseCurrency } from "@/types/expense";
 import CalendarModal from "@/ui/components/CalendarModal.native";
 import FloatingFooter from "@/ui/components/FloatingFooter.native";
@@ -120,6 +124,12 @@ export default function AccommodationEditModal({
     [],
   );
   const [isLoadingAttachments, setIsLoadingAttachments] = useState(false);
+  const [isAiAnalyzing, setIsAiAnalyzing] = useState(false);
+  const [aiAnalyzeError, setAiAnalyzeError] = useState<string | null>(null);
+  const [aiModalResult, setAiModalResult] = useState<DocumentUploadAnalyzeResponse | null>(null);
+  const [aiAnalyzeFileName, setAiAnalyzeFileName] = useState<string | undefined>();
+  const [lastAiSelection, setLastAiSelection] = useState<AiAttachmentAnalyzeSelection | null>(null);
+  const aiCancelledRef = useRef(false);
 
   const { pickImage, pickDocument } = useFilePicker();
   const { data: me } = useMe();
@@ -201,6 +211,31 @@ export default function AccommodationEditModal({
     } catch (error) {
       if (handleGuestPromptError(error)) return;
       Alert.alert("알림", "첨부파일 삭제에 실패했습니다.");
+    }
+  };
+
+  const handleAiAnalyzePress = async (selection: AiAttachmentAnalyzeSelection) => {
+    setAiAnalyzeError(null);
+    setIsAiAnalyzing(true);
+    setLastAiSelection(selection);
+    aiCancelledRef.current = false;
+    try {
+      const { file, filename } = await buildAnalyzeUploadPayload(selection, {
+        pendingFiles,
+        existingAttachments,
+      });
+      setAiAnalyzeFileName(filename);
+      const result = await analyzeDocumentUpload(file, { filename });
+      if (aiCancelledRef.current) return;
+      if (!result.success) {
+        setAiAnalyzeError(result.error ?? "분석에 실패했습니다.");
+      } else {
+        setAiModalResult(result);
+      }
+    } catch {
+      setAiAnalyzeError("분석 중 오류가 발생했습니다.");
+    } finally {
+      setIsAiAnalyzing(false);
     }
   };
 
@@ -575,6 +610,15 @@ export default function AccommodationEditModal({
             onRemoveFile={index =>
               setPendingFiles(prev => prev.filter((_, i) => i !== index))
             }
+            onAiAnalyzePress={handleAiAnalyzePress}
+            isAiAnalyzing={isAiAnalyzing}
+            onCancelAiAnalyze={() => {
+              aiCancelledRef.current = true;
+              setIsAiAnalyzing(false);
+            }}
+            analyzeError={aiAnalyzeError}
+            onRetryAnalyze={() => lastAiSelection && handleAiAnalyzePress(lastAiSelection)}
+            isAiAnalyzeSuccess={!!aiModalResult?.success && !aiAnalyzeError}
           />
         </View>
       </ScrollView>
@@ -633,9 +677,46 @@ export default function AccommodationEditModal({
   }
 
   return (
-    <FullScreenModal visible={visible} onClose={() => onClose?.()}>
-      {content}
-    </FullScreenModal>
+    <>
+      <FullScreenModal visible={visible} onClose={() => onClose?.()}>
+        {content}
+      </FullScreenModal>
+      <AiDocumentAnalyzeModal
+        visible={!!aiModalResult}
+        onClose={() => setAiModalResult(null)}
+        entityTypeLabel="숙박"
+        analyzeResult={aiModalResult}
+        analyzeFileName={aiAnalyzeFileName}
+        onApply={draft => {
+          if (draft.itemType === "accommodation") {
+            const v = draft.payload.values as Record<string, unknown>;
+            const shortTime = (t: string) =>
+              t.length >= 8 && t.includes(":") ? t.substring(0, 5) : t;
+            const ci = String(v.checkinDate ?? v.checkin_date ?? "");
+            const co = String(v.checkoutDate ?? v.checkout_date ?? "");
+            const cit = String(v.checkinTime ?? v.checkin_time ?? "15:00");
+            const cot = String(v.checkoutTime ?? v.checkout_time ?? "11:00");
+            setFormData({
+              name: String(v.name ?? ""),
+              place: String(v.place ?? ""),
+              country: String(v.country ?? ""),
+              city: String(v.city ?? ""),
+              description: String(v.description ?? ""),
+              checkinDate: ci || dayjs().format("YYYY-MM-DD"),
+              checkoutDate: co || dayjs().add(1, "day").format("YYYY-MM-DD"),
+              checkinTime: shortTime(cit),
+              checkoutTime: shortTime(cot),
+            });
+            const ex = v.expense as Record<string, unknown> | undefined;
+            if (ex && typeof ex === "object" && !Array.isArray(ex)) {
+              setExpenseAmount(String(ex.amount ?? "").replace(/[^0-9]/g, ""));
+            }
+          }
+          setAiModalResult(null);
+        }}
+        applyLabel="숙박에 반영하기"
+      />
+    </>
   );
 }
 

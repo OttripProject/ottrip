@@ -1,4 +1,4 @@
-import BaseCalendar from "@/components/popup/calendar/BaseCalendar";
+import DraftCalendar from "@/components/modals/DraftCalendar";
 import { PLACEHOLDERS } from "@/constants/placeholders";
 import type { AiDocumentItemDraft, FlightSegmentBaseDto } from "@/types/api";
 import { ExpenseCategory, ExpenseCurrency } from "@/types/expense";
@@ -480,7 +480,7 @@ const ItineraryDraftEditor = forwardRef<
             </Text>
             <CalendarIcon width={14} height={14} />
           </Pressable>
-          <BaseCalendar
+          <DraftCalendar
             visible={showDatePicker}
             selectedDate={itineraryDate}
             onDayPress={day => {
@@ -489,8 +489,6 @@ const ItineraryDraftEditor = forwardRef<
             }}
             onClose={() => setShowDatePicker(false)}
             style={styles.fieldCalendarPopup}
-            hideButtons
-            autoCloseOnSelect
           />
         </View>
       </View>
@@ -884,28 +882,24 @@ const FlightDraftEditor = forwardRef<
                     </Text>
                     <CalendarIcon width={14} height={14} />
                   </Pressable>
-                  {segmentCal?.idx === idx && segmentCal.field === "dep" ? (
-                    <BaseCalendar
-                      visible
-                      selectedDate={segment.departure_date}
-                      onDayPress={day => {
-                        const next = [...segments];
-                        next[idx] = {
-                          ...next[idx],
-                          departure_date: day.dateString,
-                        };
-                        setSegments(next);
-                        setSegmentCal(null);
-                      }}
-                      onClose={() => setSegmentCal(null)}
-                      style={styles.fieldCalendarPopup}
-                      minDate={
-                        idx > 0 ? segments[idx - 1].arrival_date : undefined
-                      }
-                      hideButtons
-                      autoCloseOnSelect
-                    />
-                  ) : null}
+                  <DraftCalendar
+                    visible={!!(segmentCal?.idx === idx && segmentCal.field === "dep")}
+                    selectedDate={segment.departure_date}
+                    onDayPress={day => {
+                      const next = [...segments];
+                      next[idx] = {
+                        ...next[idx],
+                        departure_date: day.dateString,
+                      };
+                      setSegments(next);
+                      setSegmentCal(null);
+                    }}
+                    onClose={() => setSegmentCal(null)}
+                    style={styles.fieldCalendarPopup}
+                    minDate={
+                      idx > 0 ? segments[idx - 1].arrival_date : undefined
+                    }
+                  />
                 </View>
               </View>
 
@@ -956,25 +950,21 @@ const FlightDraftEditor = forwardRef<
                     </Text>
                     <CalendarIcon width={14} height={14} />
                   </Pressable>
-                  {segmentCal?.idx === idx && segmentCal.field === "arr" ? (
-                    <BaseCalendar
-                      visible
-                      selectedDate={segment.arrival_date}
-                      onDayPress={day => {
-                        const next = [...segments];
-                        next[idx] = {
-                          ...next[idx],
-                          arrival_date: day.dateString,
-                        };
-                        setSegments(next);
-                        setSegmentCal(null);
-                      }}
-                      onClose={() => setSegmentCal(null)}
-                      style={styles.fieldCalendarPopup}
-                      hideButtons
-                      autoCloseOnSelect
-                    />
-                  ) : null}
+                  <DraftCalendar
+                    visible={!!(segmentCal?.idx === idx && segmentCal.field === "arr")}
+                    selectedDate={segment.arrival_date}
+                    onDayPress={day => {
+                      const next = [...segments];
+                      next[idx] = {
+                        ...next[idx],
+                        arrival_date: day.dateString,
+                      };
+                      setSegments(next);
+                      setSegmentCal(null);
+                    }}
+                    onClose={() => setSegmentCal(null)}
+                    style={styles.fieldCalendarPopup}
+                  />
                 </View>
               </View>
 
@@ -1271,20 +1261,16 @@ const AccommodationDraftEditor = forwardRef<
             </Text>
             <CalendarIcon width={14} height={14} />
           </Pressable>
-          {showCheckinCal ? (
-            <BaseCalendar
-              visible
-              selectedDate={checkinDate}
-              onDayPress={day => {
-                setCheckinDate(day.dateString);
-                setShowCheckinCal(false);
-              }}
-              onClose={() => setShowCheckinCal(false)}
-              style={styles.fieldCalendarPopup}
-              hideButtons
-              autoCloseOnSelect
-            />
-          ) : null}
+          <DraftCalendar
+            visible={showCheckinCal}
+            selectedDate={checkinDate}
+            onDayPress={day => {
+              setCheckinDate(day.dateString);
+              setShowCheckinCal(false);
+            }}
+            onClose={() => setShowCheckinCal(false)}
+            style={styles.fieldCalendarPopup}
+          />
         </View>
       </View>
 
@@ -1329,21 +1315,17 @@ const AccommodationDraftEditor = forwardRef<
             </Text>
             <CalendarIcon width={14} height={14} />
           </Pressable>
-          {showCheckoutCal ? (
-            <BaseCalendar
-              visible
-              selectedDate={checkoutDate}
-              onDayPress={day => {
-                setCheckoutDate(day.dateString);
-                setShowCheckoutCal(false);
-              }}
-              onClose={() => setShowCheckoutCal(false)}
-              style={styles.fieldCalendarPopup}
-              minDate={checkinDate}
-              hideButtons
-              autoCloseOnSelect
-            />
-          ) : null}
+          <DraftCalendar
+            visible={showCheckoutCal}
+            selectedDate={checkoutDate}
+            onDayPress={day => {
+              setCheckoutDate(day.dateString);
+              setShowCheckoutCal(false);
+            }}
+            onClose={() => setShowCheckoutCal(false)}
+            style={styles.fieldCalendarPopup}
+            minDate={checkinDate}
+          />
         </View>
       </View>
 
@@ -1498,20 +1480,16 @@ const ExpenseDraftEditor = forwardRef<
             </Text>
             <CalendarIcon width={14} height={14} />
           </Pressable>
-          {showCal ? (
-            <BaseCalendar
-              visible
-              selectedDate={exDate}
-              onDayPress={day => {
-                setExDate(day.dateString);
-                setShowCal(false);
-              }}
-              onClose={() => setShowCal(false)}
-              style={styles.fieldCalendarPopup}
-              hideButtons
-              autoCloseOnSelect
-            />
-          ) : null}
+          <DraftCalendar
+            visible={showCal}
+            selectedDate={exDate}
+            onDayPress={day => {
+              setExDate(day.dateString);
+              setShowCal(false);
+            }}
+            onClose={() => setShowCal(false)}
+            style={styles.fieldCalendarPopup}
+          />
         </View>
       </View>
     </View>

@@ -1,10 +1,15 @@
+import AiDocumentAnalyzeModal from "@/components/modals/AiDocumentAnalyzeModal";
 import { useAttachmentUpload } from "@/hooks/useAttachmentUpload";
 import { useFilePicker } from "@/hooks/useFilePicker";
 import { useMe } from "@/hooks/useMe";
+import { analyzeDocumentUpload } from "@/services/aiDocument";
 import { attachmentsApi } from "@/services/attachments";
 import { expensesApi } from "@/services/expenses";
 import { itinerariesApi } from "@/services/itineraries";
-import type { Attachment, Itinerary, LocalFile } from "@/types/api";
+import type { Attachment, DocumentUploadAnalyzeResponse, Itinerary, LocalFile } from "@/types/api";
+import type { AiAttachmentAnalyzeSelection } from "@/ui/components/attachmentSection.types";
+import { buildAnalyzeUploadPayload } from "@/utils/attachmentAiAnalyze";
+import { applyItineraryDraftFromAi } from "@/utils/applyAiDocumentDraft";
 import {
   ExpenseCategory,
   ExpenseCurrency,
@@ -110,6 +115,12 @@ export default function ItineraryEditModal({
     [],
   );
   const [isLoadingAttachments, setIsLoadingAttachments] = useState(false);
+  const [isAiAnalyzing, setIsAiAnalyzing] = useState(false);
+  const [aiAnalyzeError, setAiAnalyzeError] = useState<string | null>(null);
+  const [aiModalResult, setAiModalResult] = useState<DocumentUploadAnalyzeResponse | null>(null);
+  const [aiAnalyzeFileName, setAiAnalyzeFileName] = useState<string | undefined>();
+  const [lastAiSelection, setLastAiSelection] = useState<AiAttachmentAnalyzeSelection | null>(null);
+  const aiCancelledRef = useRef(false);
 
   const { pickImage, pickDocument } = useFilePicker();
   const { data: me } = useMe();
@@ -264,6 +275,31 @@ export default function ItineraryEditModal({
     } catch (error) {
       if (handleGuestPromptError(error)) return;
       Alert.alert("알림", "첨부파일 삭제에 실패했습니다.");
+    }
+  };
+
+  const handleAiAnalyzePress = async (selection: AiAttachmentAnalyzeSelection) => {
+    setAiAnalyzeError(null);
+    setIsAiAnalyzing(true);
+    setLastAiSelection(selection);
+    aiCancelledRef.current = false;
+    try {
+      const { file, filename } = await buildAnalyzeUploadPayload(selection, {
+        pendingFiles,
+        existingAttachments,
+      });
+      setAiAnalyzeFileName(filename);
+      const result = await analyzeDocumentUpload(file, { filename });
+      if (aiCancelledRef.current) return;
+      if (!result.success) {
+        setAiAnalyzeError(result.error ?? "분석에 실패했습니다.");
+      } else {
+        setAiModalResult(result);
+      }
+    } catch {
+      setAiAnalyzeError("분석 중 오류가 발생했습니다.");
+    } finally {
+      setIsAiAnalyzing(false);
     }
   };
 
@@ -701,6 +737,15 @@ export default function ItineraryEditModal({
               onRemoveFile={index =>
                 setPendingFiles(prev => prev.filter((_, i) => i !== index))
               }
+              onAiAnalyzePress={handleAiAnalyzePress}
+              isAiAnalyzing={isAiAnalyzing}
+              onCancelAiAnalyze={() => {
+                aiCancelledRef.current = true;
+                setIsAiAnalyzing(false);
+              }}
+              analyzeError={aiAnalyzeError}
+              onRetryAnalyze={() => lastAiSelection && handleAiAnalyzePress(lastAiSelection)}
+              isAiAnalyzeSuccess={!!aiModalResult?.success && !aiAnalyzeError}
             />
           </View>
         </View>
@@ -723,9 +768,23 @@ export default function ItineraryEditModal({
   }
 
   return (
-    <FullScreenModal visible={visible} onClose={() => onClose?.()}>
-      {content}
-    </FullScreenModal>
+    <>
+      <FullScreenModal visible={visible} onClose={() => onClose?.()}>
+        {content}
+      </FullScreenModal>
+      <AiDocumentAnalyzeModal
+        visible={!!aiModalResult}
+        onClose={() => setAiModalResult(null)}
+        entityTypeLabel="일정"
+        analyzeResult={aiModalResult}
+        analyzeFileName={aiAnalyzeFileName}
+        onApply={draft => {
+          applyItineraryDraftFromAi(draft, setFormData, () => {});
+          setAiModalResult(null);
+        }}
+        applyLabel="일정에 반영하기"
+      />
+    </>
   );
 }
 

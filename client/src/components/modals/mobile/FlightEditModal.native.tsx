@@ -1,10 +1,15 @@
+import AiDocumentAnalyzeModal from "@/components/modals/AiDocumentAnalyzeModal";
 import { PLACEHOLDERS } from "@/constants/placeholders";
 import { useAttachmentUpload } from "@/hooks/useAttachmentUpload";
 import { useFilePicker } from "@/hooks/useFilePicker";
 import { useMe } from "@/hooks/useMe";
+import { analyzeDocumentUpload } from "@/services/aiDocument";
 import { attachmentsApi } from "@/services/attachments";
 import { flightsApi } from "@/services/flights";
-import type { Attachment, FlightRead, LocalFile } from "@/types/api";
+import type { Attachment, DocumentUploadAnalyzeResponse, FlightRead, LocalFile } from "@/types/api";
+import type { AiAttachmentAnalyzeSelection } from "@/ui/components/attachmentSection.types";
+import { buildAnalyzeUploadPayload } from "@/utils/attachmentAiAnalyze";
+import { applyFlightDraftFromAi } from "@/utils/applyAiDocumentDraft";
 import { ExpenseCategory, ExpenseCurrency } from "@/types/expense";
 import CalendarModal from "@/ui/components/CalendarModal.native";
 import FloatingFooter from "@/ui/components/FloatingFooter.native";
@@ -129,6 +134,12 @@ export default function FlightEditModal({
     [],
   );
   const [isLoadingAttachments, setIsLoadingAttachments] = useState(false);
+  const [isAiAnalyzing, setIsAiAnalyzing] = useState(false);
+  const [aiAnalyzeError, setAiAnalyzeError] = useState<string | null>(null);
+  const [aiModalResult, setAiModalResult] = useState<DocumentUploadAnalyzeResponse | null>(null);
+  const [aiAnalyzeFileName, setAiAnalyzeFileName] = useState<string | undefined>();
+  const [lastAiSelection, setLastAiSelection] = useState<AiAttachmentAnalyzeSelection | null>(null);
+  const aiCancelledRef = useRef(false);
 
   const { pickImage, pickDocument } = useFilePicker();
   const { data: me } = useMe();
@@ -253,6 +264,31 @@ export default function FlightEditModal({
       cancelled = true;
     };
   }, [visible, flight?.id, planId]);
+
+  const handleAiAnalyzePress = async (selection: AiAttachmentAnalyzeSelection) => {
+    setAiAnalyzeError(null);
+    setIsAiAnalyzing(true);
+    setLastAiSelection(selection);
+    aiCancelledRef.current = false;
+    try {
+      const { file, filename } = await buildAnalyzeUploadPayload(selection, {
+        pendingFiles,
+        existingAttachments,
+      });
+      setAiAnalyzeFileName(filename);
+      const result = await analyzeDocumentUpload(file, { filename });
+      if (aiCancelledRef.current) return;
+      if (!result.success) {
+        setAiAnalyzeError(result.error ?? "분석에 실패했습니다.");
+      } else {
+        setAiModalResult(result);
+      }
+    } catch {
+      setAiAnalyzeError("분석 중 오류가 발생했습니다.");
+    } finally {
+      setIsAiAnalyzing(false);
+    }
+  };
 
   const handleRemoveExistingAttachment = async (attachmentId: number) => {
     try {
@@ -875,6 +911,15 @@ export default function FlightEditModal({
           onRemoveFile={index =>
             setPendingFiles(prev => prev.filter((_, i) => i !== index))
           }
+          onAiAnalyzePress={handleAiAnalyzePress}
+          isAiAnalyzing={isAiAnalyzing}
+          onCancelAiAnalyze={() => {
+            aiCancelledRef.current = true;
+            setIsAiAnalyzing(false);
+          }}
+          analyzeError={aiAnalyzeError}
+          onRetryAnalyze={() => lastAiSelection && handleAiAnalyzePress(lastAiSelection)}
+          isAiAnalyzeSuccess={!!aiModalResult?.success && !aiAnalyzeError}
         />
       </ScrollView>
 
@@ -940,9 +985,32 @@ export default function FlightEditModal({
   }
 
   return (
-    <FullScreenModal visible={visible} onClose={() => onClose?.()}>
-      {content}
-    </FullScreenModal>
+    <>
+      <FullScreenModal visible={visible} onClose={() => onClose?.()}>
+        {content}
+      </FullScreenModal>
+      <AiDocumentAnalyzeModal
+        visible={!!aiModalResult}
+        onClose={() => setAiModalResult(null)}
+        entityTypeLabel="항공"
+        analyzeResult={aiModalResult}
+        analyzeFileName={aiAnalyzeFileName}
+        onApply={draft => {
+          applyFlightDraftFromAi(
+            draft,
+            setFormData,
+            setFlightSegments as Parameters<typeof applyFlightDraftFromAi>[2],
+            ((val: { amount: string } | ((prev: { amount: string }) => { amount: string })) => {
+              const amount = typeof val === "function" ? val({ amount: expenseAmount }).amount : val.amount;
+              setExpenseAmount(amount);
+            }) as Parameters<typeof applyFlightDraftFromAi>[3],
+            (() => {}) as Parameters<typeof applyFlightDraftFromAi>[4],
+          );
+          setAiModalResult(null);
+        }}
+        applyLabel="항공에 반영하기"
+      />
+    </>
   );
 }
 
