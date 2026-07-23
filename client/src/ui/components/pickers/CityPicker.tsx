@@ -524,9 +524,9 @@ export default function CityPicker({
           {value || placeholder}
         </Text>
         {open || fsOpen ? (
-          <UpperArrowIcon width={10} height={10} style={{ opacity: 0.6 }} />
+          <UpperArrowIcon width={10} height={10} color={colors.gray600} />
         ) : (
-          <DownArrowIcon width={10} height={10} style={{ opacity: 0.6 }} />
+          <DownArrowIcon width={10} height={10} color={colors.gray600} />
         )}
       </Pressable>
 
