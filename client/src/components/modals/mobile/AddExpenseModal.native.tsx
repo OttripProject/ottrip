@@ -1,4 +1,4 @@
-import AiDocumentAnalyzeModal from "@/components/modals/AiDocumentAnalyzeModal";
+import AiDocumentAnalyzeModal from "@/components/modals/mobile/AiDocumentAnalyzeModal";
 import { useAttachmentUpload } from "@/hooks/useAttachmentUpload";
 import { useFilePicker } from "@/hooks/useFilePicker";
 import { useMe } from "@/hooks/useMe";

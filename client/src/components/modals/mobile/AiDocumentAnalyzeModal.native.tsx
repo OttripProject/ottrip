@@ -21,7 +21,7 @@ import { colors } from "@/ui/tokens/colors";
 import { spacing } from "@/ui/tokens/spacing";
 import CheckWhiteIcon from "../../../assets/check_white.svg";
 import CloseErrorIcon from "../../../assets/close_error.svg";
-import { AiAnalyzeResultContent, getHeaderSubtitle } from "./AiDocumentAnalyzeModal";
+import { AiAnalyzeResultContent, getHeaderSubtitle } from "../AiDocumentAnalyzeModal";
 
 const HEADER_GRADIENT = ["#EDE9FF", "#E3EDFF"] as const;
 const CLOSE_PURPLE = "#9D8FFF";

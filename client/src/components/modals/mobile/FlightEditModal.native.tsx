@@ -1,4 +1,4 @@
-import AiDocumentAnalyzeModal from "@/components/modals/AiDocumentAnalyzeModal";
+import AiDocumentAnalyzeModal from "@/components/modals/mobile/AiDocumentAnalyzeModal";
 import { PLACEHOLDERS } from "@/constants/placeholders";
 import { useAttachmentUpload } from "@/hooks/useAttachmentUpload";
 import { useFilePicker } from "@/hooks/useFilePicker";
