@@ -25,6 +25,7 @@ import React, {
 } from "react";
 import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import CalendarIcon from "../../../assets/calender.svg";
+import DownArrowIcon from "../../../assets/dropdown_time.svg";
 
 const _ORANGE = "#E07000";
 const _ORANGE_BG = "#FFF1E5";
@@ -445,6 +446,7 @@ const ItineraryDraftEditor = forwardRef<
             onChange={setCity}
             countryKo={country}
             placeholder={PLACEHOLDERS.itinerary.cityForm}
+            style={styles.draftCityPicker}
             useModal
           />
         </View>
@@ -500,6 +502,7 @@ const ItineraryDraftEditor = forwardRef<
           <>
             <Pressable style={styles.timePicker} onPress={() => setStartTimeVisible(true)}>
               <Text style={styles.draftPickerText}>{startTime || "시간 선택"}</Text>
+              <DownArrowIcon width={10} height={10} color={colors.gray600} />
             </Pressable>
             <TimeModal
               visible={startTimeVisible}
@@ -517,6 +520,7 @@ const ItineraryDraftEditor = forwardRef<
           <>
             <Pressable style={styles.timePicker} onPress={() => setEndTimeVisible(true)}>
               <Text style={styles.draftPickerText}>{endTime || "시간 선택"}</Text>
+              <DownArrowIcon width={10} height={10} color={colors.gray600} />
             </Pressable>
             <TimeModal
               visible={endTimeVisible}
@@ -905,6 +909,7 @@ const FlightDraftEditor = forwardRef<
                   <>
                     <Pressable style={styles.segmentTimePicker} onPress={() => setSegmentDepTimeVisible(idx)}>
                       <Text style={styles.draftPickerText}>{segment.departure_time || "시간 선택"}</Text>
+                      <DownArrowIcon width={10} height={10} color={colors.gray600} />
                     </Pressable>
                     <TimeModal
                       visible={segmentDepTimeVisible === idx}
@@ -970,6 +975,7 @@ const FlightDraftEditor = forwardRef<
                   <>
                     <Pressable style={styles.segmentTimePicker} onPress={() => setSegmentArrTimeVisible(idx)}>
                       <Text style={styles.draftPickerText}>{segment.arrival_time || "시간 선택"}</Text>
+                      <DownArrowIcon width={10} height={10} color={colors.gray600} />
                     </Pressable>
                     <TimeModal
                       visible={segmentArrTimeVisible === idx}
@@ -1227,6 +1233,7 @@ const AccommodationDraftEditor = forwardRef<
             onChange={setCity}
             countryKo={country}
             placeholder={PLACEHOLDERS.accommodation.city}
+            style={styles.draftCityPicker}
             useModal
           />
         </View>
@@ -1282,6 +1289,7 @@ const AccommodationDraftEditor = forwardRef<
           <>
             <Pressable style={styles.timePicker} onPress={() => setCheckinTimeVisible(true)}>
               <Text style={styles.draftPickerText}>{checkinTime || "시간 선택"}</Text>
+              <DownArrowIcon width={10} height={10} color={colors.gray600} />
             </Pressable>
             <TimeModal
               visible={checkinTimeVisible}
@@ -1331,6 +1339,7 @@ const AccommodationDraftEditor = forwardRef<
           <>
             <Pressable style={styles.timePicker} onPress={() => setCheckoutTimeVisible(true)}>
               <Text style={styles.draftPickerText}>{checkoutTime || "시간 선택"}</Text>
+              <DownArrowIcon width={10} height={10} color={colors.gray600} />
             </Pressable>
             <TimeModal
               visible={checkoutTimeVisible}
@@ -1623,12 +1632,14 @@ const styles = StyleSheet.create({
   },
   segmentTimePicker: {
     flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     borderWidth: 1,
     borderColor: colors.gray400,
     borderRadius: radii.md,
     backgroundColor: colors.white,
     height: 40,
-    paddingVertical: 8,
     paddingHorizontal: 10,
   },
   airportPickerWrapper: {
@@ -1664,12 +1675,14 @@ const styles = StyleSheet.create({
   },
   timePicker: {
     flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     borderWidth: 1,
     borderColor: colors.gray400,
     borderRadius: radii.md,
     backgroundColor: colors.white,
     height: 40,
-    paddingVertical: 8,
     paddingHorizontal: 10,
   },
   draftPickerText: {
@@ -1683,6 +1696,13 @@ const styles = StyleSheet.create({
     borderRadius: radii.md,
     height: 40,
     maxHeight: 40,
+  },
+  draftCityPicker: {
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: colors.gray400,
+    borderRadius: radii.md,
+    height: 40,
   },
   fallbackText: {
     ...textStyles.body4,
