@@ -140,6 +140,7 @@ export default function FlightEditModal({
   const [aiAnalyzeFileName, setAiAnalyzeFileName] = useState<string | undefined>();
   const [lastAiSelection, setLastAiSelection] = useState<AiAttachmentAnalyzeSelection | null>(null);
   const aiCancelledRef = useRef(false);
+  const formInitializedRef = useRef(false);
 
   const { pickImage, pickDocument } = useFilePicker();
   const { data: me } = useMe();
@@ -149,7 +150,14 @@ export default function FlightEditModal({
   });
 
   useEffect(() => {
-    if (visible && !flight) {
+    if (!visible) {
+      formInitializedRef.current = false;
+      return;
+    }
+    if (formInitializedRef.current) return;
+    formInitializedRef.current = true;
+
+    if (!flight) {
       const baseDate =
         defaultDate || planStartDate || dayjs().format("YYYY-MM-DD");
       setFlightSegments([
@@ -174,7 +182,7 @@ export default function FlightEditModal({
         booking_reference: "",
       });
       setExpenseAmount("");
-    } else if (visible && flight) {
+    } else {
       setFormData({
         reservation_number: flight.reservationNumber || "",
         passenger_name: flight.passengerName || "",
@@ -234,9 +242,7 @@ export default function FlightEditModal({
             ];
       setFlightSegments(segList);
     }
-    if (visible) {
-      setPendingFiles([]);
-    }
+    setPendingFiles([]);
   }, [visible, flight, planStartDate, defaultDate]);
 
   useEffect(() => {

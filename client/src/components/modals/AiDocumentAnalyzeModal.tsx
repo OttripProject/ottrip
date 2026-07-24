@@ -297,7 +297,7 @@ function getReadOnlyFields(draft: AiDocumentItemDraft): {
           value: pickStr(values, ["description", "Description"]),
         },
         {
-          label: "비용일",
+          label: "지출날짜",
           value: formatDateKR(pickStr(values, ["exDate", "ex_date", "ExDate"])),
         },
       ],

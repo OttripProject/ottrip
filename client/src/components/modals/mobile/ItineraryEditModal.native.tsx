@@ -121,6 +121,7 @@ export default function ItineraryEditModal({
   const [aiAnalyzeFileName, setAiAnalyzeFileName] = useState<string | undefined>();
   const [lastAiSelection, setLastAiSelection] = useState<AiAttachmentAnalyzeSelection | null>(null);
   const aiCancelledRef = useRef(false);
+  const formInitializedRef = useRef(false);
 
   const { pickImage, pickDocument } = useFilePicker();
   const { data: me } = useMe();
@@ -167,7 +168,14 @@ export default function ItineraryEditModal({
   };
 
   useEffect(() => {
-    if (visible && itinerary) {
+    if (!visible) {
+      formInitializedRef.current = false;
+      return;
+    }
+    if (formInitializedRef.current) return;
+    formInitializedRef.current = true;
+
+    if (itinerary) {
       const loadLatest = async () => {
         try {
           const [latestItinerary, expenses] = await Promise.all([
@@ -222,7 +230,7 @@ export default function ItineraryEditModal({
         }
       };
       loadLatest();
-    } else if (visible && !itinerary) {
+    } else {
       const initDate = defaultDate || dayjs().format("YYYY-MM-DD");
       setFormData({
         title: "",
@@ -237,9 +245,7 @@ export default function ItineraryEditModal({
       setExpenseData({ amount: "", category: ExpenseCategory.FOOD });
       setExistingExpenseId(null);
     }
-    if (visible) {
-      setPendingFiles([]);
-    }
+    setPendingFiles([]);
   }, [visible, itinerary, defaultDate, defaultCountry, defaultCity]);
 
   useEffect(() => {

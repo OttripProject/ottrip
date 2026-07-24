@@ -130,6 +130,7 @@ export default function AccommodationEditModal({
   const [aiAnalyzeFileName, setAiAnalyzeFileName] = useState<string | undefined>();
   const [lastAiSelection, setLastAiSelection] = useState<AiAttachmentAnalyzeSelection | null>(null);
   const aiCancelledRef = useRef(false);
+  const formInitializedRef = useRef(false);
 
   const { pickImage, pickDocument } = useFilePicker();
   const { data: me } = useMe();
@@ -139,7 +140,14 @@ export default function AccommodationEditModal({
   });
 
   useEffect(() => {
-    if (visible && accommodation) {
+    if (!visible) {
+      formInitializedRef.current = false;
+      return;
+    }
+    if (formInitializedRef.current) return;
+    formInitializedRef.current = true;
+
+    if (accommodation) {
       setFormData({
         name: accommodation.name || "",
         description: accommodation.description || "",
@@ -163,7 +171,7 @@ export default function AccommodationEditModal({
           ? String(amountNum).replace(/\B(?=(\d{3})+(?!\d))/g, ",")
           : "",
       );
-    } else if (visible && !accommodation) {
+    } else {
       const initDate = defaultDate || dayjs().format("YYYY-MM-DD");
       setFormData(prev => ({
         ...prev,
@@ -173,9 +181,7 @@ export default function AccommodationEditModal({
         checkoutDate: dayjs(initDate).add(1, "day").format("YYYY-MM-DD"),
       }));
     }
-    if (visible) {
-      setPendingFiles([]);
-    }
+    setPendingFiles([]);
   }, [visible, accommodation, defaultDate, defaultCountry, defaultCity]);
 
   useEffect(() => {

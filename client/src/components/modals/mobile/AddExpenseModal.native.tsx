@@ -109,6 +109,7 @@ export default function AddExpenseModal({
   const [aiAnalyzeFileName, setAiAnalyzeFileName] = useState<string | undefined>();
   const [lastAiSelection, setLastAiSelection] = useState<AiAttachmentAnalyzeSelection | null>(null);
   const aiCancelledRef = useRef(false);
+  const formInitializedRef = useRef(false);
 
   const { pickImage, pickDocument } = useFilePicker();
   const { data: me } = useMe();
@@ -128,12 +129,17 @@ export default function AddExpenseModal({
   });
 
   useEffect(() => {
-    if (visible) {
-      const date =
-        defaultExDate || planStartDate || dayjs().format("YYYY-MM-DD");
-      setFormData(prev => ({ ...prev, ex_date: date }));
-      setPendingFiles([]);
+    if (!visible) {
+      formInitializedRef.current = false;
+      return;
     }
+    if (formInitializedRef.current) return;
+    formInitializedRef.current = true;
+
+    const date =
+      defaultExDate || planStartDate || dayjs().format("YYYY-MM-DD");
+    setFormData(prev => ({ ...prev, ex_date: date }));
+    setPendingFiles([]);
   }, [visible, defaultExDate, planStartDate]);
 
   const handleAiAnalyzePress = async (selection: AiAttachmentAnalyzeSelection) => {
