@@ -1000,7 +1000,6 @@ export default function FlightEditModal({
         );
         setAiModalResult(null);
       }}
-      applyLabel="항공에 반영하기"
     />
   );
 

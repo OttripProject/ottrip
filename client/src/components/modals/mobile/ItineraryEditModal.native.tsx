@@ -774,7 +774,6 @@ export default function ItineraryEditModal({
         applyItineraryDraftFromAi(draft, setFormData, () => {});
         setAiModalResult(null);
       }}
-      applyLabel="일정에 반영하기"
     />
   );
 

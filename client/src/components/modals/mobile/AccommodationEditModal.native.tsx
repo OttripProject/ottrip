@@ -706,7 +706,6 @@ export default function AccommodationEditModal({
         }
         setAiModalResult(null);
       }}
-      applyLabel="숙박에 반영하기"
     />
   );
 

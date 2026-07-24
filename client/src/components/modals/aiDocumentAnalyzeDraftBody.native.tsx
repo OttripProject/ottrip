@@ -1420,6 +1420,7 @@ const ExpenseDraftEditor = forwardRef<
           onChange={setCategory}
           onOpen={() => setCatOpen(true)}
           onClose={() => setCatOpen(false)}
+          containerStyle={styles.draftCategoryPickerContainer}
           style={styles.draftCategoryPicker}
           dropDownContainerStyle={styles.draftCategoryPickerList}
           listItemLabelStyle={styles.draftCategoryListItem}
@@ -1634,8 +1635,10 @@ const styles = StyleSheet.create({
     overflow: "visible",
     position: "relative",
   },
-  draftCategoryPicker: {
+  draftCategoryPickerContainer: {
     flex: 1,
+  },
+  draftCategoryPicker: {
     borderWidth: 1,
     borderColor: colors.gray400,
     borderRadius: radii.md,

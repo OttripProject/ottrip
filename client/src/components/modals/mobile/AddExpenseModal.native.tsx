@@ -417,7 +417,6 @@ export default function AddExpenseModal({
         }
         setAiModalResult(null);
       }}
-      applyLabel="비용에 반영하기"
     />
   </>
   );

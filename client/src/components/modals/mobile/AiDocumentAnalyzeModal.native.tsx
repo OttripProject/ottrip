@@ -169,6 +169,7 @@ export default function AiDocumentAnalyzeModal({
             style={({ pressed }) => [
               styles.footerBtn,
               styles.footerBtnRight,
+              isEditMode && styles.footerBtnRightEdit,
               pressed && styles.pressed,
             ]}
           >
@@ -262,6 +263,9 @@ const styles = StyleSheet.create({
   },
   footerBtnRight: {
     flex: 1,
+    backgroundColor: colors.gray900,
+  },
+  footerBtnRightEdit: {
     backgroundColor: colors.primary,
   },
   footerBtnRightText: {
