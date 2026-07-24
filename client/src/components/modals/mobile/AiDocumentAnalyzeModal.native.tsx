@@ -1,7 +1,9 @@
 import { LinearGradient } from "expo-linear-gradient";
 import { useEffect, useRef, useState } from "react";
 import {
+  KeyboardAvoidingView,
   Modal,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -86,7 +88,10 @@ export default function AiDocumentAnalyzeModal({
       statusBarTranslucent
       onRequestClose={onClose}
     >
-      <View style={[styles.container, { paddingTop: insets.top }]}>
+      <KeyboardAvoidingView
+        style={[styles.container, { paddingTop: insets.top }]}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+      >
         <LinearGradient
           colors={[...HEADER_GRADIENT] as [string, string]}
           start={{ x: 0, y: 0 }}
@@ -146,7 +151,7 @@ export default function AiDocumentAnalyzeModal({
           )}
         </ScrollView>
 
-        <View style={[styles.footer, { paddingBottom: insets.bottom }]}>
+        <View style={[styles.footer, { paddingBottom: insets.bottom + 18 }]}>
           <Pressable
             onPress={
               isEditMode
@@ -176,7 +181,7 @@ export default function AiDocumentAnalyzeModal({
             </Text>
           </Pressable>
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
@@ -245,28 +250,34 @@ const styles = StyleSheet.create({
   },
   footer: {
     flexDirection: "row",
+    gap: 8,
+    paddingHorizontal: 22,
+    paddingTop: 12,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: colors.gray200,
   },
   footerBtn: {
-    flex: 1,
-    paddingVertical: 16,
+    height: 44,
+    borderRadius: 9,
     alignItems: "center",
     justifyContent: "center",
   },
   footerBtnLeft: {
-    borderRightWidth: StyleSheet.hairlineWidth,
-    borderRightColor: colors.gray200,
+    flex: 1,
+    backgroundColor: "#EDEDED",
   },
   footerBtnLeftText: {
-    fontFamily: "Pretendard-Regular",
-    fontSize: 15,
-    color: colors.gray600,
+    fontFamily: "Pretendard-SemiBold",
+    fontSize: 13,
+    color: colors.gray900,
   },
-  footerBtnRight: {},
+  footerBtnRight: {
+    flex: 1.4,
+    backgroundColor: colors.primary,
+  },
   footerBtnRightText: {
     fontFamily: "Pretendard-SemiBold",
-    fontSize: 15,
-    color: colors.aiInk,
+    fontSize: 13,
+    color: colors.white,
   },
 });
