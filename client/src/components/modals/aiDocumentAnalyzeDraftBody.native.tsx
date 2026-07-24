@@ -25,7 +25,7 @@ import React, {
 } from "react";
 import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import CalendarIcon from "../../../assets/calender.svg";
-import DownArrowIcon from "../../../assets/dropdown_time.svg";
+import DownArrowIcon from "../../../assets/down_arrow.svg";
 
 const _ORANGE = "#E07000";
 const _ORANGE_BG = "#FFF1E5";
@@ -1697,6 +1697,8 @@ const styles = StyleSheet.create({
     borderRadius: radii.md,
     height: 40,
     maxHeight: 40,
+    paddingTop: 10,
+    paddingBottom: 10,
   },
   draftCityPicker: {
     backgroundColor: colors.white,
@@ -1704,6 +1706,8 @@ const styles = StyleSheet.create({
     borderColor: colors.gray400,
     borderRadius: radii.md,
     height: 40,
+    paddingTop: 10,
+    paddingBottom: 10,
   },
   fallbackText: {
     ...textStyles.body4,

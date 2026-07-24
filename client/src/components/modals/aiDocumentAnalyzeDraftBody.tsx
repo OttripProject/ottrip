@@ -1691,6 +1691,8 @@ const styles = StyleSheet.create({
     borderRadius: radii.md,
     height: 40,
     maxHeight: 40,
+    paddingTop: 10,
+    paddingBottom: 10,
   },
   draftCityPicker: {
     backgroundColor: colors.white,
@@ -1698,6 +1700,8 @@ const styles = StyleSheet.create({
     borderColor: colors.gray400,
     borderRadius: radii.md,
     height: 40,
+    paddingTop: 10,
+    paddingBottom: 10,
   },
   fallbackText: {
     ...textStyles.body4,
