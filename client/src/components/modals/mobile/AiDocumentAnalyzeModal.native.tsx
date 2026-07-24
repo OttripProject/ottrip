@@ -252,7 +252,7 @@ const styles = StyleSheet.create({
     paddingTop: 12,
   },
   footerBtn: {
-    height: 44,
+    paddingVertical: 16,
     borderRadius: 9,
     alignItems: "center",
     justifyContent: "center",
@@ -266,7 +266,7 @@ const styles = StyleSheet.create({
     color: colors.gray900,
   },
   footerBtnRight: {
-    flex: 1.4,
+    flex: 1,
     backgroundColor: colors.primary,
   },
   footerBtnRightText: {
