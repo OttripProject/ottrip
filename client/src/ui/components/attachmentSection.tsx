@@ -1168,7 +1168,7 @@ export default function AttachmentSection({
               <View style={styles.aiAnalyzeLoadingTextCol}>
                 <Text style={styles.aiAnalyzeLoadingTextTitle}>분석 중...</Text>
                 <Text style={styles.aiAnalyzeLoadingText}>
-                  AI가 첨부 파일 내용을 정리하고 있어요.
+                  AI가 첨부 파일 내용을 정리하고 있어요
                 </Text>
               </View>
               <Pressable

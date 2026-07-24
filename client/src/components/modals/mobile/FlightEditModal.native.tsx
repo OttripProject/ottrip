@@ -977,38 +977,49 @@ export default function FlightEditModal({
         secondaryLabel={flight && !embedded ? "삭제" : undefined}
         onSecondaryPress={handleDelete}
       />
-      <AiDocumentAnalyzeModal
-        visible={!!aiModalResult}
-        onClose={() => setAiModalResult(null)}
-        entityTypeLabel="항공"
-        analyzeResult={aiModalResult}
-        analyzeFileName={aiAnalyzeFileName}
-        onApply={draft => {
-          applyFlightDraftFromAi(
-            draft,
-            setFormData,
-            setFlightSegments as Parameters<typeof applyFlightDraftFromAi>[2],
-            ((val: { amount: string } | ((prev: { amount: string }) => { amount: string })) => {
-              const amount = typeof val === "function" ? val({ amount: expenseAmount }).amount : val.amount;
-              setExpenseAmount(amount);
-            }) as Parameters<typeof applyFlightDraftFromAi>[3],
-            (() => {}) as Parameters<typeof applyFlightDraftFromAi>[4],
-          );
-          setAiModalResult(null);
-        }}
-        applyLabel="항공에 반영하기"
-      />
     </>
   );
 
+  const aiModal = (
+    <AiDocumentAnalyzeModal
+      visible={!!aiModalResult}
+      onClose={() => setAiModalResult(null)}
+      entityTypeLabel="항공"
+      analyzeResult={aiModalResult}
+      analyzeFileName={aiAnalyzeFileName}
+      onApply={draft => {
+        applyFlightDraftFromAi(
+          draft,
+          setFormData,
+          setFlightSegments as Parameters<typeof applyFlightDraftFromAi>[2],
+          ((val: { amount: string } | ((prev: { amount: string }) => { amount: string })) => {
+            const amount = typeof val === "function" ? val({ amount: expenseAmount }).amount : val.amount;
+            setExpenseAmount(amount);
+          }) as Parameters<typeof applyFlightDraftFromAi>[3],
+          (() => {}) as Parameters<typeof applyFlightDraftFromAi>[4],
+        );
+        setAiModalResult(null);
+      }}
+      applyLabel="항공에 반영하기"
+    />
+  );
+
   if (embedded) {
-    return <View style={{ flex: 1 }}>{content}</View>;
+    return (
+      <>
+        <View style={{ flex: 1 }}>{content}</View>
+        {aiModal}
+      </>
+    );
   }
 
   return (
-    <FullScreenModal visible={visible} onClose={() => onClose?.()}>
-      {content}
-    </FullScreenModal>
+    <>
+      <FullScreenModal visible={visible} onClose={() => onClose?.()}>
+        {content}
+      </FullScreenModal>
+      {aiModal}
+    </>
   );
 }
 

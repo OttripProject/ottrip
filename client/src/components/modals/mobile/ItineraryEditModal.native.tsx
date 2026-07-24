@@ -760,29 +760,40 @@ export default function ItineraryEditModal({
         secondaryLabel={itinerary && !embedded ? "삭제" : undefined}
         onSecondaryPress={itinerary ? handleDelete : undefined}
       />
-      <AiDocumentAnalyzeModal
-        visible={!!aiModalResult}
-        onClose={() => setAiModalResult(null)}
-        entityTypeLabel="일정"
-        analyzeResult={aiModalResult}
-        analyzeFileName={aiAnalyzeFileName}
-        onApply={draft => {
-          applyItineraryDraftFromAi(draft, setFormData, () => {});
-          setAiModalResult(null);
-        }}
-        applyLabel="일정에 반영하기"
-      />
     </>
   );
 
+  const aiModal = (
+    <AiDocumentAnalyzeModal
+      visible={!!aiModalResult}
+      onClose={() => setAiModalResult(null)}
+      entityTypeLabel="일정"
+      analyzeResult={aiModalResult}
+      analyzeFileName={aiAnalyzeFileName}
+      onApply={draft => {
+        applyItineraryDraftFromAi(draft, setFormData, () => {});
+        setAiModalResult(null);
+      }}
+      applyLabel="일정에 반영하기"
+    />
+  );
+
   if (embedded) {
-    return <View style={{ flex: 1 }}>{content}</View>;
+    return (
+      <>
+        <View style={{ flex: 1 }}>{content}</View>
+        {aiModal}
+      </>
+    );
   }
 
   return (
-    <FullScreenModal visible={visible} onClose={() => onClose?.()}>
-      {content}
-    </FullScreenModal>
+    <>
+      <FullScreenModal visible={visible} onClose={() => onClose?.()}>
+        {content}
+      </FullScreenModal>
+      {aiModal}
+    </>
   );
 }
 

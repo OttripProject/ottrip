@@ -1,13 +1,14 @@
 import { LinearGradient } from "expo-linear-gradient";
 import { useEffect, useRef, useState } from "react";
 import {
+  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
   View,
-  useWindowDimensions,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   type AiAnalyzeDraftEditorRef,
   AiAnalyzeResultBody,
@@ -18,7 +19,6 @@ import type {
   DocumentUploadAnalyzeResponse,
 } from "@/types/api";
 import { colors } from "@/ui/tokens/colors";
-import { spacing } from "@/ui/tokens/spacing";
 import CheckWhiteIcon from "../../../../assets/check_white.svg";
 import CloseErrorIcon from "../../../../assets/close_error.svg";
 import { AiAnalyzeResultContent, getHeaderSubtitle } from "../AiDocumentAnalyzeModal";
@@ -49,8 +49,7 @@ export default function AiDocumentAnalyzeModal({
   onApply,
   applyLabel,
 }: AiDocumentAnalyzeModalProps) {
-  const { width: windowWidth } = useWindowDimensions();
-  const cardWidth = Math.min(460, windowWidth - 32);
+  const insets = useSafeAreaInsets();
   const [draftBodyKey, setDraftBodyKey] = useState(0);
   const [isEditMode, setIsEditMode] = useState(false);
   const draftEditorRef = useRef<AiAnalyzeDraftEditorRef>(null);
@@ -79,14 +78,15 @@ export default function AiDocumentAnalyzeModal({
 
   const hasDraft = !!analyzeResult?.draft;
 
-  if (!visible) return null;
-
   return (
-    <Pressable style={styles.overlay} onPress={onClose}>
-      <Pressable
-        style={[styles.card, { width: cardWidth }]}
-        onPress={e => e.stopPropagation?.()}
-      >
+    <Modal
+      visible={visible}
+      transparent={false}
+      animationType="slide"
+      statusBarTranslucent
+      onRequestClose={onClose}
+    >
+      <View style={[styles.container, { paddingTop: insets.top }]}>
         <LinearGradient
           colors={[...HEADER_GRADIENT] as [string, string]}
           start={{ x: 0, y: 0 }}
@@ -146,7 +146,7 @@ export default function AiDocumentAnalyzeModal({
           )}
         </ScrollView>
 
-        <View style={styles.footer}>
+        <View style={[styles.footer, { paddingBottom: insets.bottom }]}>
           <Pressable
             onPress={
               isEditMode
@@ -176,35 +176,17 @@ export default function AiDocumentAnalyzeModal({
             </Text>
           </Pressable>
         </View>
-      </Pressable>
-    </Pressable>
+      </View>
+    </Modal>
   );
 }
 
 const styles = StyleSheet.create({
-  overlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0, 0, 0, 0.45)",
-    justifyContent: "center",
-    alignItems: "center",
-    padding: spacing.md,
-    zIndex: 9999,
-  },
-  card: {
-    maxWidth: "100%",
-    maxHeight: "90%",
+  container: {
+    flex: 1,
     backgroundColor: colors.white,
-    borderRadius: 18,
-    overflow: "hidden",
-    shadowColor: colors.black,
-    shadowOffset: { width: 0, height: 24 },
-    shadowOpacity: 0.22,
-    shadowRadius: 30,
-    elevation: 24,
   },
   header: {
-    borderTopLeftRadius: 18,
-    borderTopRightRadius: 18,
     paddingTop: 20,
     paddingBottom: 16,
     paddingHorizontal: 22,
@@ -255,8 +237,7 @@ const styles = StyleSheet.create({
     opacity: 0.75,
   },
   scroll: {
-    flexGrow: 0,
-    flexShrink: 1,
+    flex: 1,
   },
   scrollContent: {
     padding: 20,
