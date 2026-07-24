@@ -831,6 +831,8 @@ const FlightDraftEditor = forwardRef<
                     }}
                     placeholder={PLACEHOLDERS.flight.departureAirport}
                     containerStyle={{ flex: 1, height: 40 }}
+                    style={styles.draftAirportTrigger}
+                    dropDownContainerStyle={styles.draftAirportDropdown}
                   />
                 </View>
               </View>
@@ -853,6 +855,8 @@ const FlightDraftEditor = forwardRef<
                     }}
                     placeholder={PLACEHOLDERS.flight.arrivalAirport}
                     containerStyle={{ flex: 1, height: 40 }}
+                    style={styles.draftAirportTrigger}
+                    dropDownContainerStyle={styles.draftAirportDropdown}
                   />
                 </View>
               </View>
@@ -1647,6 +1651,14 @@ const styles = StyleSheet.create({
     overflow: "visible",
     position: "relative",
   },
+  draftAirportTrigger: {
+    paddingTop: 0,
+    paddingBottom: 0,
+  },
+  draftAirportDropdown: {
+    minWidth: 0,
+    width: "100%",
+  },
   draftCategoryPickerContainer: {
     flex: 1,
   },
@@ -1697,8 +1709,8 @@ const styles = StyleSheet.create({
     borderRadius: radii.md,
     height: 40,
     maxHeight: 40,
-    paddingTop: 10,
-    paddingBottom: 10,
+    paddingTop: 0,
+    paddingBottom: 0,
   },
   draftCityPicker: {
     backgroundColor: colors.white,
@@ -1706,8 +1718,8 @@ const styles = StyleSheet.create({
     borderColor: colors.gray400,
     borderRadius: radii.md,
     height: 40,
-    paddingTop: 10,
-    paddingBottom: 10,
+    paddingTop: 0,
+    paddingBottom: 0,
   },
   fallbackText: {
     ...textStyles.body4,

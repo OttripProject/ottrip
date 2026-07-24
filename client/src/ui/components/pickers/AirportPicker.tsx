@@ -36,6 +36,7 @@ interface AirportPickerProps {
   placeholder?: string;
   containerStyle?: ViewStyle;
   style?: ViewStyle;
+  dropDownContainerStyle?: ViewStyle;
   disabled?: boolean;
   onOpen?: () => void;
   onClose?: () => void;
@@ -48,6 +49,7 @@ export default function AirportPicker({
   placeholder = "공항 선택",
   containerStyle,
   style,
+  dropDownContainerStyle,
   disabled,
   onOpen,
   onClose,
@@ -171,7 +173,7 @@ export default function AirportPicker({
       </Pressable>
 
       {open && (
-        <View style={[styles.popup, dropdownAlign === "right" ? { right: 0 } : { left: 0 }]}>
+        <View style={[styles.popup, dropdownAlign === "right" ? { right: 0 } : { left: 0 }, dropDownContainerStyle]}>
           <View style={styles.searchContainer}>
             <SearchIcon width={14} height={14} color={colors.gray600} />
             <TextInput
