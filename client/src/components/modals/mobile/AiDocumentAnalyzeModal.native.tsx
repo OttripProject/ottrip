@@ -1,9 +1,7 @@
 import { LinearGradient } from "expo-linear-gradient";
 import { useEffect, useRef, useState } from "react";
 import {
-  KeyboardAvoidingView,
   Modal,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -89,10 +87,7 @@ export default function AiDocumentAnalyzeModal({
       statusBarTranslucent
       onRequestClose={onClose}
     >
-      <KeyboardAvoidingView
-        style={[styles.container, { paddingTop: insets.top }]}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-      >
+      <View style={[styles.container, { paddingTop: insets.top }]}>
         <LinearGradient
           colors={[...HEADER_GRADIENT] as [string, string]}
           start={{ x: 0, y: 0 }}
@@ -182,7 +177,7 @@ export default function AiDocumentAnalyzeModal({
             </Text>
           </Pressable>
         </View>
-      </KeyboardAvoidingView>
+      </View>
     </Modal>
   );
 }
