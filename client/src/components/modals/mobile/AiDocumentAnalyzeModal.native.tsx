@@ -20,6 +20,7 @@ import type {
   AiDocumentItemType,
   DocumentUploadAnalyzeResponse,
 } from "@/types/api";
+import { textStyles } from "@/ui/tokens/typography"
 import { colors } from "@/ui/tokens/colors";
 import CheckWhiteIcon from "../../../../assets/check_white.svg";
 import CloseErrorIcon from "../../../../assets/close_error.svg";
@@ -218,15 +219,11 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   modalTitle: {
-    fontFamily: "Pretendard-SemiBold",
-    fontSize: 16,
-    lineHeight: 24,
+    ...textStyles.h5,
     color: colors.gray900,
   },
   modalSubtitle: {
-    fontFamily: "Pretendard-Regular",
-    fontSize: 13,
-    lineHeight: 20,
+    ...textStyles.body4,
     color: colors.aiInk,
     marginTop: 2,
   },
@@ -253,8 +250,6 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingHorizontal: 22,
     paddingTop: 12,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.gray200,
   },
   footerBtn: {
     height: 44,
@@ -264,11 +259,10 @@ const styles = StyleSheet.create({
   },
   footerBtnLeft: {
     flex: 1,
-    backgroundColor: "#EDEDED",
+    backgroundColor: colors.gray300,
   },
   footerBtnLeftText: {
-    fontFamily: "Pretendard-SemiBold",
-    fontSize: 13,
+    ...textStyles.h6,
     color: colors.gray900,
   },
   footerBtnRight: {
@@ -276,8 +270,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
   },
   footerBtnRightText: {
-    fontFamily: "Pretendard-SemiBold",
-    fontSize: 13,
+    ...textStyles.h6,
     color: colors.white,
   },
 });
