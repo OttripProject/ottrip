@@ -444,6 +444,7 @@ const ItineraryDraftEditor = forwardRef<
             onChange={setCity}
             countryKo={country}
             placeholder={PLACEHOLDERS.itinerary.cityForm}
+            style={styles.draftCityPicker}
             useModal
           />
         </View>
@@ -1225,6 +1226,7 @@ const AccommodationDraftEditor = forwardRef<
             onChange={setCity}
             countryKo={country}
             placeholder={PLACEHOLDERS.accommodation.city}
+            style={styles.draftCityPicker}
             useModal
           />
         </View>
@@ -1469,7 +1471,7 @@ const ExpenseDraftEditor = forwardRef<
           { zIndex: showCal ? 20000 : 1 },
         ]}
       >
-        <Text style={styles.fieldLabel}>비용일</Text>
+        <Text style={styles.fieldLabel}>지출날짜</Text>
         <View style={styles.fieldPickerWrap}>
           <Pressable
             style={styles.fieldDateTrigger}
@@ -1689,6 +1691,13 @@ const styles = StyleSheet.create({
     borderRadius: radii.md,
     height: 40,
     maxHeight: 40,
+  },
+  draftCityPicker: {
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: colors.gray400,
+    borderRadius: radii.md,
+    height: 40,
   },
   fallbackText: {
     ...textStyles.body4,

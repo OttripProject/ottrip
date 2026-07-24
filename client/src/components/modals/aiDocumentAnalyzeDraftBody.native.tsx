@@ -1469,7 +1469,7 @@ const ExpenseDraftEditor = forwardRef<
           { zIndex: showCal ? 20000 : 1 },
         ]}
       >
-        <Text style={styles.fieldLabel}>비용일</Text>
+        <Text style={styles.fieldLabel}>지출날짜</Text>
         <View style={styles.fieldPickerWrap}>
           <Pressable
             style={styles.fieldDateTrigger}
@@ -1596,7 +1596,8 @@ const styles = StyleSheet.create({
     borderColor: colors.gray400,
     borderRadius: radii.md,
     paddingHorizontal: 10,
-    paddingVertical: 8,
+    paddingTop: 8,
+    paddingBottom: 8,
     ...textStyles.body5,
     ...Platform.select({ native: { lineHeight: undefined } }),
     color: colors.gray900,
@@ -1734,7 +1735,8 @@ const styles = StyleSheet.create({
     borderColor: colors.gray400,
     borderRadius: radii.md,
     paddingHorizontal: 10,
-    paddingVertical: 8,
+    paddingTop: 8,
+    paddingBottom: 8,
     ...textStyles.body5,
     ...Platform.select({ native: { lineHeight: undefined } }),
     color: colors.gray900,
