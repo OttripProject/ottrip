@@ -1,4 +1,11 @@
 import AiDocumentAnalyzeModal from "@/components/modals/mobile/AiDocumentAnalyzeModal";
+
+const KIND_TO_LABEL: Record<string, string> = {
+  itinerary: "일정",
+  accommodation: "숙박",
+  flight: "항공",
+  expense: "비용",
+};
 import { useAttachmentUpload } from "@/hooks/useAttachmentUpload";
 import { useFilePicker } from "@/hooks/useFilePicker";
 import { useMe } from "@/hooks/useMe";
@@ -47,6 +54,8 @@ interface AddExpenseModalProps {
   planEndDate?: string;
   defaultExDate?: string;
   onExpenseAdd?: (expense: Expense) => void;
+  pendingAiResult?: { result: DocumentUploadAnalyzeResponse; filename?: string } | null;
+  onRouteMismatchResult?: (result: DocumentUploadAnalyzeResponse, filename?: string) => void;
 }
 
 const normalizeAmount = (value: unknown) => {
@@ -63,6 +72,8 @@ export default function AddExpenseModal({
   planEndDate,
   defaultExDate,
   onExpenseAdd,
+  pendingAiResult,
+  onRouteMismatchResult,
 }: AddExpenseModalProps) {
   const [showDatePicker, setShowDatePicker] = useState(false);
 
@@ -110,6 +121,7 @@ export default function AddExpenseModal({
   const [lastAiSelection, setLastAiSelection] = useState<AiAttachmentAnalyzeSelection | null>(null);
   const aiCancelledRef = useRef(false);
   const formInitializedRef = useRef(false);
+  const [aiApplyLabel, setAiApplyLabel] = useState<string | undefined>();
 
   const { pickImage, pickDocument } = useFilePicker();
   const { data: me } = useMe();
@@ -158,6 +170,12 @@ export default function AddExpenseModal({
       if (!result.success) {
         setAiAnalyzeError(result.error ?? "분석에 실패했습니다.");
       } else {
+        const inferredType = result.inferredItemType ?? result.draft?.itemType;
+        if (inferredType && inferredType !== "expense") {
+          setAiApplyLabel(`${KIND_TO_LABEL[inferredType] ?? inferredType}에 추가`);
+        } else {
+          setAiApplyLabel(undefined);
+        }
         setAiModalResult(result);
       }
     } catch {
@@ -166,6 +184,14 @@ export default function AddExpenseModal({
       setIsAiAnalyzing(false);
     }
   };
+
+  useEffect(() => {
+    if (visible && pendingAiResult) {
+      setAiApplyLabel(undefined);
+      setAiModalResult(pendingAiResult.result);
+      setAiAnalyzeFileName(pendingAiResult.filename);
+    }
+  }, [visible, pendingAiResult]);
 
   const handleAmountChange = (text: string) => {
     const digits = normalizeAmount(text);
@@ -399,29 +425,37 @@ export default function AddExpenseModal({
     </BottomSheetModal>
     <AiDocumentAnalyzeModal
       visible={!!aiModalResult}
-      onClose={() => setAiModalResult(null)}
+      onClose={() => { setAiModalResult(null); setAiApplyLabel(undefined); }}
       entityTypeLabel="비용"
+      originEntityType="비용"
       analyzeResult={aiModalResult}
       analyzeFileName={aiAnalyzeFileName}
+      applyLabel={aiApplyLabel}
       onApply={draft => {
-        const v = (draft.payload.values ?? {}) as Record<string, unknown>;
-        const src = (v.expense ?? v.Expense ?? v) as Record<string, unknown>;
-        const amountRaw = String(src.amount ?? src.Amount ?? "").replace(/[^0-9]/g, "");
-        if (amountRaw) {
-          const formatted = amountRaw.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-          setFormData(prev => ({ ...prev, amount: formatted }));
-        }
-        const desc = String(src.description ?? src.Description ?? "").trim();
-        if (desc) setFormData(prev => ({ ...prev, description: desc }));
-        const cat = String(src.category ?? src.Category ?? "").trim();
-        if (cat && Object.values(ExpenseCategory).includes(cat as ExpenseCategory)) {
-          setFormData(prev => ({ ...prev, category: cat as ExpenseCategory }));
-        }
-        const dateRaw = String(src.exDate ?? src.ex_date ?? src.ExDate ?? "").trim();
-        if (dateRaw && dayjs(dateRaw).isValid()) {
-          setFormData(prev => ({ ...prev, ex_date: dayjs(dateRaw).format("YYYY-MM-DD") }));
+        const inferredType = aiModalResult?.inferredItemType ?? draft.itemType;
+        if (inferredType !== "expense" && onRouteMismatchResult && aiModalResult) {
+          onRouteMismatchResult(aiModalResult, aiAnalyzeFileName);
+        } else {
+          const v = (draft.payload.values ?? {}) as Record<string, unknown>;
+          const src = (v.expense ?? v.Expense ?? v) as Record<string, unknown>;
+          const amountRaw = String(src.amount ?? src.Amount ?? "").replace(/[^0-9]/g, "");
+          if (amountRaw) {
+            const formatted = amountRaw.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+            setFormData(prev => ({ ...prev, amount: formatted }));
+          }
+          const desc = String(src.description ?? src.Description ?? "").trim();
+          if (desc) setFormData(prev => ({ ...prev, description: desc }));
+          const cat = String(src.category ?? src.Category ?? "").trim();
+          if (cat && Object.values(ExpenseCategory).includes(cat as ExpenseCategory)) {
+            setFormData(prev => ({ ...prev, category: cat as ExpenseCategory }));
+          }
+          const dateRaw = String(src.exDate ?? src.ex_date ?? src.ExDate ?? "").trim();
+          if (dateRaw && dayjs(dateRaw).isValid()) {
+            setFormData(prev => ({ ...prev, ex_date: dayjs(dateRaw).format("YYYY-MM-DD") }));
+          }
         }
         setAiModalResult(null);
+        setAiApplyLabel(undefined);
       }}
     />
   </>

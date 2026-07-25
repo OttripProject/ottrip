@@ -1,4 +1,11 @@
 import AiDocumentAnalyzeModal from "@/components/modals/mobile/AiDocumentAnalyzeModal";
+
+const KIND_TO_LABEL: Record<string, string> = {
+  itinerary: "일정",
+  accommodation: "숙박",
+  flight: "항공",
+  expense: "비용",
+};
 import { PLACEHOLDERS } from "@/constants/placeholders";
 import { useAttachmentUpload } from "@/hooks/useAttachmentUpload";
 import { useFilePicker } from "@/hooks/useFilePicker";
@@ -50,6 +57,8 @@ interface FlightEditModalProps {
   embedded?: boolean;
   onSave?: (flight: FlightRead) => void;
   onDelete?: (flightId: number) => void;
+  pendingAiResult?: { result: DocumentUploadAnalyzeResponse; filename?: string } | null;
+  onRouteMismatchResult?: (result: DocumentUploadAnalyzeResponse, filename?: string) => void;
 }
 
 type SegmentForm = {
@@ -94,6 +103,8 @@ export default function FlightEditModal({
   embedded,
   onSave,
   onDelete,
+  pendingAiResult,
+  onRouteMismatchResult,
 }: FlightEditModalProps) {
   const [formData, setFormData] = useState({
     reservation_number: "",
@@ -141,6 +152,7 @@ export default function FlightEditModal({
   const [lastAiSelection, setLastAiSelection] = useState<AiAttachmentAnalyzeSelection | null>(null);
   const aiCancelledRef = useRef(false);
   const formInitializedRef = useRef(false);
+  const [aiApplyLabel, setAiApplyLabel] = useState<string | undefined>();
 
   const { pickImage, pickDocument } = useFilePicker();
   const { data: me } = useMe();
@@ -287,6 +299,12 @@ export default function FlightEditModal({
       if (!result.success) {
         setAiAnalyzeError(result.error ?? "분석에 실패했습니다.");
       } else {
+        const inferredType = result.inferredItemType ?? result.draft?.itemType;
+        if (inferredType && inferredType !== "flight") {
+          setAiApplyLabel(`${KIND_TO_LABEL[inferredType] ?? inferredType}에 추가`);
+        } else {
+          setAiApplyLabel(undefined);
+        }
         setAiModalResult(result);
       }
     } catch {
@@ -295,6 +313,14 @@ export default function FlightEditModal({
       setIsAiAnalyzing(false);
     }
   };
+
+  useEffect(() => {
+    if (visible && pendingAiResult) {
+      setAiApplyLabel(undefined);
+      setAiModalResult(pendingAiResult.result);
+      setAiAnalyzeFileName(pendingAiResult.filename);
+    }
+  }, [visible, pendingAiResult]);
 
   const handleRemoveExistingAttachment = async (attachmentId: number) => {
     try {
@@ -989,22 +1015,30 @@ export default function FlightEditModal({
   const aiModal = (
     <AiDocumentAnalyzeModal
       visible={!!aiModalResult}
-      onClose={() => setAiModalResult(null)}
+      onClose={() => { setAiModalResult(null); setAiApplyLabel(undefined); }}
       entityTypeLabel="항공"
+      originEntityType="항공"
       analyzeResult={aiModalResult}
       analyzeFileName={aiAnalyzeFileName}
+      applyLabel={aiApplyLabel}
       onApply={draft => {
-        applyFlightDraftFromAi(
-          draft,
-          setFormData,
-          setFlightSegments as Parameters<typeof applyFlightDraftFromAi>[2],
-          ((val: { amount: string } | ((prev: { amount: string }) => { amount: string })) => {
-            const amount = typeof val === "function" ? val({ amount: expenseAmount }).amount : val.amount;
-            setExpenseAmount(amount);
-          }) as Parameters<typeof applyFlightDraftFromAi>[3],
-          (() => {}) as Parameters<typeof applyFlightDraftFromAi>[4],
-        );
+        const inferredType = aiModalResult?.inferredItemType ?? draft.itemType;
+        if (inferredType !== "flight" && onRouteMismatchResult && aiModalResult) {
+          onRouteMismatchResult(aiModalResult, aiAnalyzeFileName);
+        } else {
+          applyFlightDraftFromAi(
+            draft,
+            setFormData,
+            setFlightSegments as Parameters<typeof applyFlightDraftFromAi>[2],
+            ((val: { amount: string } | ((prev: { amount: string }) => { amount: string })) => {
+              const amount = typeof val === "function" ? val({ amount: expenseAmount }).amount : val.amount;
+              setExpenseAmount(amount);
+            }) as Parameters<typeof applyFlightDraftFromAi>[3],
+            (() => {}) as Parameters<typeof applyFlightDraftFromAi>[4],
+          );
+        }
         setAiModalResult(null);
+        setAiApplyLabel(undefined);
       }}
     />
   );

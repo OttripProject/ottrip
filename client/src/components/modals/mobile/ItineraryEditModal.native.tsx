@@ -1,4 +1,11 @@
 import AiDocumentAnalyzeModal from "@/components/modals/mobile/AiDocumentAnalyzeModal";
+
+const KIND_TO_LABEL: Record<string, string> = {
+  itinerary: "일정",
+  accommodation: "숙박",
+  flight: "항공",
+  expense: "비용",
+};
 import { useAttachmentUpload } from "@/hooks/useAttachmentUpload";
 import { useFilePicker } from "@/hooks/useFilePicker";
 import { useMe } from "@/hooks/useMe";
@@ -59,6 +66,8 @@ interface ItineraryEditModalProps {
   embedded?: boolean;
   onSave?: (itinerary: Itinerary) => void;
   onDelete?: (itineraryId: number) => void;
+  pendingAiResult?: { result: DocumentUploadAnalyzeResponse; filename?: string } | null;
+  onRouteMismatchResult?: (result: DocumentUploadAnalyzeResponse, filename?: string) => void;
 }
 
 export default function ItineraryEditModal({
@@ -72,6 +81,8 @@ export default function ItineraryEditModal({
   embedded,
   onSave,
   onDelete,
+  pendingAiResult,
+  onRouteMismatchResult,
 }: ItineraryEditModalProps) {
   const scrollRef = useRef<ScrollView>(null);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
@@ -122,6 +133,7 @@ export default function ItineraryEditModal({
   const [lastAiSelection, setLastAiSelection] = useState<AiAttachmentAnalyzeSelection | null>(null);
   const aiCancelledRef = useRef(false);
   const formInitializedRef = useRef(false);
+  const [aiApplyLabel, setAiApplyLabel] = useState<string | undefined>();
 
   const { pickImage, pickDocument } = useFilePicker();
   const { data: me } = useMe();
@@ -300,6 +312,12 @@ export default function ItineraryEditModal({
       if (!result.success) {
         setAiAnalyzeError(result.error ?? "분석에 실패했습니다.");
       } else {
+        const inferredType = result.inferredItemType ?? result.draft?.itemType;
+        if (inferredType && inferredType !== "itinerary") {
+          setAiApplyLabel(`${KIND_TO_LABEL[inferredType] ?? inferredType}에 추가`);
+        } else {
+          setAiApplyLabel(undefined);
+        }
         setAiModalResult(result);
       }
     } catch {
@@ -308,6 +326,14 @@ export default function ItineraryEditModal({
       setIsAiAnalyzing(false);
     }
   };
+
+  useEffect(() => {
+    if (visible && pendingAiResult) {
+      setAiApplyLabel(undefined);
+      setAiModalResult(pendingAiResult.result);
+      setAiAnalyzeFileName(pendingAiResult.filename);
+    }
+  }, [visible, pendingAiResult]);
 
   const handleExpenseAmountChange = (text: string) => {
     const formatted = formatAmountWithCommas(text);
@@ -772,13 +798,21 @@ export default function ItineraryEditModal({
   const aiModal = (
     <AiDocumentAnalyzeModal
       visible={!!aiModalResult}
-      onClose={() => setAiModalResult(null)}
+      onClose={() => { setAiModalResult(null); setAiApplyLabel(undefined); }}
       entityTypeLabel="일정"
+      originEntityType="일정"
       analyzeResult={aiModalResult}
       analyzeFileName={aiAnalyzeFileName}
+      applyLabel={aiApplyLabel}
       onApply={draft => {
-        applyItineraryDraftFromAi(draft, setFormData, () => {});
+        const inferredType = aiModalResult?.inferredItemType ?? draft.itemType;
+        if (inferredType !== "itinerary" && onRouteMismatchResult && aiModalResult) {
+          onRouteMismatchResult(aiModalResult, aiAnalyzeFileName);
+        } else {
+          applyItineraryDraftFromAi(draft, setFormData, () => {});
+        }
         setAiModalResult(null);
+        setAiApplyLabel(undefined);
       }}
     />
   );
