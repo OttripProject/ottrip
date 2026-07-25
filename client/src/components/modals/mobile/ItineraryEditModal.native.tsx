@@ -329,9 +329,10 @@ export default function ItineraryEditModal({
 
   useEffect(() => {
     if (visible && pendingAiResult) {
-      setAiApplyLabel(undefined);
-      setAiModalResult(pendingAiResult.result);
-      setAiAnalyzeFileName(pendingAiResult.filename);
+      const draft = pendingAiResult.result.draft;
+      if (draft?.itemType === "itinerary") {
+        applyItineraryDraftFromAi(draft, setFormData, () => {});
+      }
     }
   }, [visible, pendingAiResult]);
 

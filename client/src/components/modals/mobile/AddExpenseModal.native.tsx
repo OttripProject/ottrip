@@ -187,9 +187,18 @@ export default function AddExpenseModal({
 
   useEffect(() => {
     if (visible && pendingAiResult) {
-      setAiApplyLabel(undefined);
-      setAiModalResult(pendingAiResult.result);
-      setAiAnalyzeFileName(pendingAiResult.filename);
+      const draft = pendingAiResult.result.draft;
+      if (draft?.itemType === "expense") {
+        const v = (draft.payload.values ?? {}) as Record<string, unknown>;
+        const src = (v.expense ?? v.Expense ?? v) as Record<string, unknown>;
+        const amountRaw = String(src.amount ?? src.Amount ?? "").replace(/[^0-9]/g, "");
+        if (amountRaw) {
+          const formatted = amountRaw.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+          setFormData(prev => ({ ...prev, amount: formatted }));
+        }
+        const desc = String(src.description ?? src.Description ?? "").trim();
+        if (desc) setFormData(prev => ({ ...prev, description: desc }));
+      }
     }
   }, [visible, pendingAiResult]);
 

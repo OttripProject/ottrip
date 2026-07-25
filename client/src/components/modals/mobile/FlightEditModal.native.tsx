@@ -316,9 +316,19 @@ export default function FlightEditModal({
 
   useEffect(() => {
     if (visible && pendingAiResult) {
-      setAiApplyLabel(undefined);
-      setAiModalResult(pendingAiResult.result);
-      setAiAnalyzeFileName(pendingAiResult.filename);
+      const draft = pendingAiResult.result.draft;
+      if (draft?.itemType === "flight") {
+        applyFlightDraftFromAi(
+          draft,
+          setFormData,
+          setFlightSegments as Parameters<typeof applyFlightDraftFromAi>[2],
+          ((val: { amount: string } | ((prev: { amount: string }) => { amount: string })) => {
+            const amount = typeof val === "function" ? val({ amount: "" }).amount : val.amount;
+            setExpenseAmount(amount);
+          }) as Parameters<typeof applyFlightDraftFromAi>[3],
+          (() => {}) as Parameters<typeof applyFlightDraftFromAi>[4],
+        );
+      }
     }
   }, [visible, pendingAiResult]);
 
