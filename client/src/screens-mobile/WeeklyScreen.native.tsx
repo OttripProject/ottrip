@@ -430,15 +430,8 @@ export default function WeeklyScreen() {
               setRefreshing(true);
               try {
                 await plansQuery.fetchPlans();
-                if (selectedPlan?.publicId && planData.plan?.id) {
-                  await Promise.all(
-                    [
-                      planData.refreshItineraries?.(),
-                      planData.refreshFlights?.(),
-                      planData.refreshAccommodations?.(),
-                      planData.refreshExpenses?.(),
-                    ].filter(Boolean),
-                  );
+                if (selectedPlan?.publicId) {
+                  await planData.fetchPlanData(selectedPlan.publicId);
                   queryClient.invalidateQueries({
                     queryKey: ["expenses", selectedPlan.id],
                   });
@@ -910,10 +903,9 @@ export default function WeeklyScreen() {
         planPublicId={selectedPlan?.publicId ?? ""}
         onSaved={() => {
           if (selectedPlan?.publicId) {
-            planData.refreshItineraries?.();
-            planData.refreshFlights?.();
-            planData.refreshAccommodations?.();
-            planData.refreshExpenses?.();
+            queryClient.invalidateQueries({
+              queryKey: ["plan", selectedPlan.publicId],
+            });
             queryClient.invalidateQueries({
               queryKey: ["expenses", selectedPlan.id],
             });
@@ -940,11 +932,10 @@ export default function WeeklyScreen() {
           removeFlight: planData.removeFlight,
         }}
         onRefresh={() => {
-          if (selectedPlan?.publicId && planData.plan?.id) {
-            planData.refreshItineraries?.();
-            planData.refreshFlights?.();
-            planData.refreshAccommodations?.();
-            planData.refreshExpenses?.();
+          if (selectedPlan?.publicId) {
+            queryClient.invalidateQueries({
+              queryKey: ["plan", selectedPlan.publicId],
+            });
             queryClient.invalidateQueries({
               queryKey: ["expenses", selectedPlan.id],
             });
@@ -972,9 +963,7 @@ export default function WeeklyScreen() {
           try {
             await itinerariesApi.deleteItinerary(itinerary.id);
             planData.removeItinerary(itinerary.id);
-            if (selectedPlan?.publicId && planData.plan?.id) {
-              planData.refreshItineraries?.();
-              planData.refreshExpenses?.();
+            if (selectedPlan?.publicId) {
               queryClient.invalidateQueries({
                 queryKey: ["expenses", selectedPlan.id],
               });
@@ -1006,9 +995,10 @@ export default function WeeklyScreen() {
         defaultCountry={selectedDateSegment?.country}
         defaultCity={selectedDateSegment?.city}
         onSave={() => {
-          if (selectedPlan?.publicId && planData.plan?.id) {
-            planData.refreshItineraries?.();
-            planData.refreshExpenses?.();
+          if (selectedPlan?.publicId) {
+            queryClient.invalidateQueries({
+              queryKey: ["plan", selectedPlan.publicId],
+            });
             queryClient.invalidateQueries({
               queryKey: ["expenses", selectedPlan.id],
             });
@@ -1020,8 +1010,6 @@ export default function WeeklyScreen() {
         onDelete={async itineraryId => {
           planData.removeItinerary(itineraryId);
           if (selectedPlan?.publicId) {
-            planData.refreshItineraries?.();
-            planData.refreshExpenses?.();
             queryClient.invalidateQueries({
               queryKey: ["expenses", selectedPlan.id],
             });
@@ -1052,9 +1040,7 @@ export default function WeeklyScreen() {
           try {
             await flightsApi.deleteFlight(flight.id);
             planData.removeFlight(flight.id);
-            if (selectedPlan?.publicId && planData.plan?.id) {
-              planData.refreshFlights?.();
-              planData.refreshExpenses?.();
+            if (selectedPlan?.publicId) {
               queryClient.invalidateQueries({
                 queryKey: ["expenses", selectedPlan.id],
               });
@@ -1086,9 +1072,10 @@ export default function WeeklyScreen() {
         planId={selectedPlan?.id ?? 0}
         planStartDate={selectedPlan?.startDate}
         onSave={() => {
-          if (selectedPlan?.publicId && planData.plan?.id) {
-            planData.refreshFlights?.();
-            planData.refreshExpenses?.();
+          if (selectedPlan?.publicId) {
+            queryClient.invalidateQueries({
+              queryKey: ["plan", selectedPlan.publicId],
+            });
             queryClient.invalidateQueries({
               queryKey: ["expenses", selectedPlan.id],
             });
@@ -1100,8 +1087,6 @@ export default function WeeklyScreen() {
         onDelete={async flightId => {
           planData.removeFlight(flightId);
           if (selectedPlan?.publicId) {
-            planData.refreshFlights?.();
-            planData.refreshExpenses?.();
             queryClient.invalidateQueries({
               queryKey: ["expenses", selectedPlan.id],
             });
@@ -1130,9 +1115,7 @@ export default function WeeklyScreen() {
           try {
             await accommodationsApi.deleteAccommodation(accommodation.id);
             planData.removeAccommodation(accommodation.id);
-            if (selectedPlan?.publicId && planData.plan?.id) {
-              planData.refreshAccommodations?.();
-              planData.refreshExpenses?.();
+            if (selectedPlan?.publicId) {
               queryClient.invalidateQueries({
                 queryKey: ["expenses", selectedPlan.id],
               });
@@ -1162,9 +1145,7 @@ export default function WeeklyScreen() {
         defaultCity={selectedDateSegment?.city}
         onSave={async updated => {
           planData.addAccommodation(updated);
-          if (selectedPlan?.publicId && planData.plan?.id) {
-            planData.refreshAccommodations?.();
-            planData.refreshExpenses?.();
+          if (selectedPlan?.publicId) {
             queryClient.invalidateQueries({
               queryKey: ["expenses", selectedPlan.id],
             });
@@ -1173,8 +1154,6 @@ export default function WeeklyScreen() {
         onDelete={async accommodationId => {
           planData.removeAccommodation(accommodationId);
           if (selectedPlan?.publicId) {
-            planData.refreshAccommodations?.();
-            planData.refreshExpenses?.();
             queryClient.invalidateQueries({
               queryKey: ["expenses", selectedPlan.id],
             });
@@ -1199,19 +1178,17 @@ export default function WeeklyScreen() {
           planEndDate={selectedPlan.endDate}
           onExpenseAdd={expense => planData.addExpense?.(expense)}
           onRefreshExpenses={async () => {
-            if (selectedPlan?.publicId && planData.plan?.id) {
-              planData.refreshExpenses?.();
+            if (selectedPlan?.publicId) {
               queryClient.invalidateQueries({
                 queryKey: ["expenses", selectedPlan.id],
               });
             }
           }}
           onRefreshPlan={async () => {
-            if (selectedPlan?.publicId && planData.plan?.id) {
-              planData.refreshItineraries?.();
-              planData.refreshFlights?.();
-              planData.refreshAccommodations?.();
-              planData.refreshExpenses?.();
+            if (selectedPlan?.publicId) {
+              queryClient.invalidateQueries({
+                queryKey: ["plan", selectedPlan.publicId],
+              });
               queryClient.invalidateQueries({
                 queryKey: ["expenses", selectedPlan.id],
               });

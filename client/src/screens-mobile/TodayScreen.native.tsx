@@ -456,17 +456,15 @@ export default function TodayScreen() {
       try {
         await itinerariesApi.deleteItinerary(itinerary.id);
         planData.removeItinerary(itinerary.id);
-        planData.refreshExpenses?.();
         queryClient.invalidateQueries({
           queryKey: ["expenses", selectedPlan?.id],
         });
-        await refetchTodayExpenses();
         Alert.alert("삭제완료", "일정이 삭제되었습니다.");
       } catch {
         Alert.alert("알림", "일정 삭제에 실패했습니다.");
       }
     },
-    [planData, queryClient, refetchTodayExpenses, selectedPlan?.id],
+    [planData, queryClient, selectedPlan?.id],
   );
 
   const handleDeleteFlight = useCallback(
@@ -474,17 +472,15 @@ export default function TodayScreen() {
       try {
         await flightsApi.deleteFlight(flight.id);
         planData.removeFlight(flight.id);
-        planData.refreshExpenses?.();
         queryClient.invalidateQueries({
           queryKey: ["expenses", selectedPlan?.id],
         });
-        await refetchTodayExpenses();
         Alert.alert("삭제완료", "항공편이 삭제되었습니다.");
       } catch {
         Alert.alert("알림", "항공편 삭제에 실패했습니다.");
       }
     },
-    [planData, queryClient, refetchTodayExpenses, selectedPlan?.id],
+    [planData, queryClient, selectedPlan?.id],
   );
 
   const handleRouteMismatchResult = useCallback(
@@ -1404,11 +1400,9 @@ export default function TodayScreen() {
         planEndDate={selectedPlan?.endDate}
         exDate={timelineDateStr}
         onExpenseAdd={() => {
-          planData.refreshExpenses?.();
           queryClient.invalidateQueries({
             queryKey: ["expenses", selectedPlan?.id],
           });
-          refetchTodayExpenses();
         }}
         onAddExpensePress={() => {
           setShowExpenseDetail(false);
@@ -1433,11 +1427,9 @@ export default function TodayScreen() {
         defaultExDate={timelineDateStr}
         onExpenseAdd={expense => {
           planData.addExpense?.(expense);
-          planData.refreshExpenses?.();
           queryClient.invalidateQueries({
             queryKey: ["expenses", selectedPlan?.id],
           });
-          refetchTodayExpenses();
           setShowExpenseDetail(false);
         }}
         pendingAiResult={pendingMismatchResult}
@@ -1478,19 +1470,15 @@ export default function TodayScreen() {
         defaultCity={timelineDateSegment?.city}
         onSave={async itinerary => {
           planData.addItinerary(itinerary);
-          planData.refreshExpenses?.();
           queryClient.invalidateQueries({
             queryKey: ["expenses", selectedPlan?.id],
           });
-          await refetchTodayExpenses();
         }}
         onDelete={async itineraryId => {
           planData.removeItinerary(itineraryId);
-          planData.refreshExpenses?.();
           queryClient.invalidateQueries({
             queryKey: ["expenses", selectedPlan?.id],
           });
-          await refetchTodayExpenses();
         }}
         pendingAiResult={pendingMismatchResult}
         onRouteMismatchResult={handleRouteMismatchResult}
@@ -1515,7 +1503,6 @@ export default function TodayScreen() {
             queryClient.invalidateQueries({
               queryKey: ["expenses", selectedPlan?.id],
             });
-            await refetchTodayExpenses();
             Alert.alert("삭제완료", "숙소가 삭제되었습니다.");
           } catch (_error) {
             Alert.alert("알림", "숙소 삭제에 실패했습니다.");
@@ -1541,14 +1528,15 @@ export default function TodayScreen() {
         defaultCity={timelineDateSegment?.city}
         onSave={async updated => {
           planData.addAccommodation(updated);
-          await refetchTodayExpenses();
+          queryClient.invalidateQueries({
+            queryKey: ["expenses", selectedPlan?.id],
+          });
         }}
         onDelete={async accommodationId => {
           planData.removeAccommodation(accommodationId);
           queryClient.invalidateQueries({
             queryKey: ["expenses", selectedPlan?.id],
           });
-          await refetchTodayExpenses();
         }}
         pendingAiResult={pendingMismatchResult}
         onRouteMismatchResult={handleRouteMismatchResult}
@@ -1589,11 +1577,15 @@ export default function TodayScreen() {
         planStartDate={selectedPlan?.startDate}
         onSave={async updated => {
           planData.addFlight(updated);
-          await refetchTodayExpenses();
+          queryClient.invalidateQueries({
+            queryKey: ["expenses", selectedPlan?.id],
+          });
         }}
         onDelete={async flightId => {
           planData.removeFlight(flightId);
-          await refetchTodayExpenses();
+          queryClient.invalidateQueries({
+            queryKey: ["expenses", selectedPlan?.id],
+          });
         }}
         pendingAiResult={pendingMismatchResult}
         onRouteMismatchResult={handleRouteMismatchResult}
@@ -1626,15 +1618,13 @@ export default function TodayScreen() {
         planPublicId={selectedPlan?.publicId ?? ""}
         onSaved={() => {
           if (selectedPlan?.publicId) {
-            planData.refreshItineraries?.();
-            planData.refreshFlights?.();
-            planData.refreshAccommodations?.();
-            planData.refreshExpenses?.();
+            queryClient.invalidateQueries({
+              queryKey: ["plan", selectedPlan.publicId],
+            });
             queryClient.invalidateQueries({
               queryKey: ["expenses", selectedPlan.id],
             });
           }
-          refetchTodayExpenses();
         }}
       />
 
@@ -1659,10 +1649,9 @@ export default function TodayScreen() {
         }}
         onRefresh={async () => {
           if (selectedPlan?.publicId) {
-            planData.refreshExpenses?.();
-            planData.refreshItineraries?.();
-            planData.refreshFlights?.();
-            planData.refreshAccommodations?.();
+            queryClient.invalidateQueries({
+              queryKey: ["plan", selectedPlan.publicId],
+            });
             queryClient.invalidateQueries({
               queryKey: ["expenses", selectedPlan.id],
             });
@@ -1670,7 +1659,6 @@ export default function TodayScreen() {
               queryKey: ["checklist", selectedPlan.publicId],
             });
           }
-          refetchTodayExpenses();
         }}
       />
     </View>
