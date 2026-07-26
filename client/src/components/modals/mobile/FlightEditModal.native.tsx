@@ -57,8 +57,8 @@ interface FlightEditModalProps {
   embedded?: boolean;
   onSave?: (flight: FlightRead) => void;
   onDelete?: (flightId: number) => void;
-  pendingAiResult?: { result: DocumentUploadAnalyzeResponse; filename?: string } | null;
-  onRouteMismatchResult?: (result: DocumentUploadAnalyzeResponse, filename?: string) => void;
+  pendingAiResult?: { result: DocumentUploadAnalyzeResponse; filename?: string; pendingFiles?: LocalFile[] } | null;
+  onRouteMismatchResult?: (result: DocumentUploadAnalyzeResponse, filename?: string, pendingFiles?: LocalFile[]) => void;
 }
 
 type SegmentForm = {
@@ -328,6 +328,9 @@ export default function FlightEditModal({
           }) as Parameters<typeof applyFlightDraftFromAi>[3],
           (() => {}) as Parameters<typeof applyFlightDraftFromAi>[4],
         );
+      }
+      if (pendingAiResult.pendingFiles?.length) {
+        setPendingFiles(pendingAiResult.pendingFiles);
       }
     }
   }, [visible, pendingAiResult]);
@@ -1034,7 +1037,7 @@ export default function FlightEditModal({
       onApply={draft => {
         const inferredType = aiModalResult?.inferredItemType ?? draft?.itemType;
         if (inferredType !== "flight" && onRouteMismatchResult && aiModalResult) {
-          onRouteMismatchResult(aiModalResult, aiAnalyzeFileName);
+          onRouteMismatchResult(aiModalResult, aiAnalyzeFileName, pendingFiles);
         } else if (draft) {
           applyFlightDraftFromAi(
             draft,

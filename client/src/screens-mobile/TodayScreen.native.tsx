@@ -22,6 +22,7 @@ import type {
   FlightRead,
   FlightSegmentReadDto,
   Itinerary,
+  LocalFile,
   Plan,
 } from "@/types/api";
 import { categoryLabels } from "@/types/expense";
@@ -186,6 +187,7 @@ export default function TodayScreen() {
   const [pendingMismatchResult, setPendingMismatchResult] = useState<{
     result: DocumentUploadAnalyzeResponse;
     filename?: string;
+    pendingFiles?: LocalFile[];
   } | null>(null);
   const [addScheduleFlow, setAddScheduleFlow] =
     useState<AddScheduleFlow>("closed");
@@ -484,7 +486,7 @@ export default function TodayScreen() {
   );
 
   const handleRouteMismatchResult = useCallback(
-    (result: DocumentUploadAnalyzeResponse, filename?: string) => {
+    (result: DocumentUploadAnalyzeResponse, filename?: string, pendingFiles?: LocalFile[]) => {
       const targetType = result.inferredItemType ?? result.draft?.itemType;
       setShowItineraryEdit(false);
       setEditingItinerary(null);
@@ -493,7 +495,7 @@ export default function TodayScreen() {
       setShowFlightEdit(false);
       setEditingFlight(null);
       setShowAddExpenseFromDetail(false);
-      setPendingMismatchResult({ result, filename });
+      setPendingMismatchResult({ result, filename, pendingFiles });
       if (targetType === "flight") setShowFlightEdit(true);
       else if (targetType === "accommodation") setShowAccommodationEdit(true);
       else if (targetType === "itinerary") setShowItineraryEdit(true);
@@ -503,9 +505,9 @@ export default function TodayScreen() {
   );
 
   const handleAddScheduleRouteToExpense = useCallback(
-    (result: DocumentUploadAnalyzeResponse, filename?: string) => {
+    (result: DocumentUploadAnalyzeResponse, filename?: string, pendingFiles?: LocalFile[]) => {
       setAddScheduleFlow("closed");
-      setPendingMismatchResult({ result, filename });
+      setPendingMismatchResult({ result, filename, pendingFiles });
       setShowAddExpenseFromDetail(true);
     },
     [],

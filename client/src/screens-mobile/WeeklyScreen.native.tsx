@@ -13,6 +13,7 @@ import type {
   FlightRead,
   FlightSegmentReadDto,
   Itinerary,
+  LocalFile,
   Plan,
 } from "@/types/api";
 import { colors } from "@/ui/tokens/colors";
@@ -101,10 +102,11 @@ export default function WeeklyScreen() {
   const [pendingMismatchResult, setPendingMismatchResult] = useState<{
     result: DocumentUploadAnalyzeResponse;
     filename?: string;
+    pendingFiles?: LocalFile[];
   } | null>(null);
 
   const handleRouteMismatchResult = useCallback(
-    (result: DocumentUploadAnalyzeResponse, filename?: string) => {
+    (result: DocumentUploadAnalyzeResponse, filename?: string, pendingFiles?: LocalFile[]) => {
       const targetType = result.inferredItemType ?? result.draft?.itemType;
       setShowItineraryEdit(false);
       setEditingItinerary(null);
@@ -112,7 +114,7 @@ export default function WeeklyScreen() {
       setEditingAccommodation(null);
       setShowFlightEdit(false);
       setEditingFlight(null);
-      setPendingMismatchResult({ result, filename });
+      setPendingMismatchResult({ result, filename, pendingFiles });
       if (targetType === "flight") setShowFlightEdit(true);
       else if (targetType === "accommodation") setShowAccommodationEdit(true);
       else if (targetType === "itinerary") setShowItineraryEdit(true);

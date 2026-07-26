@@ -54,8 +54,8 @@ interface AddExpenseModalProps {
   planEndDate?: string;
   defaultExDate?: string;
   onExpenseAdd?: (expense: Expense) => void;
-  pendingAiResult?: { result: DocumentUploadAnalyzeResponse; filename?: string } | null;
-  onRouteMismatchResult?: (result: DocumentUploadAnalyzeResponse, filename?: string) => void;
+  pendingAiResult?: { result: DocumentUploadAnalyzeResponse; filename?: string; pendingFiles?: LocalFile[] } | null;
+  onRouteMismatchResult?: (result: DocumentUploadAnalyzeResponse, filename?: string, pendingFiles?: LocalFile[]) => void;
 }
 
 const normalizeAmount = (value: unknown) => {
@@ -198,6 +198,9 @@ export default function AddExpenseModal({
         }
         const desc = String(src.description ?? src.Description ?? "").trim();
         if (desc) setFormData(prev => ({ ...prev, description: desc }));
+      }
+      if (pendingAiResult.pendingFiles?.length) {
+        setPendingFiles(pendingAiResult.pendingFiles);
       }
     }
   }, [visible, pendingAiResult]);
@@ -443,7 +446,7 @@ export default function AddExpenseModal({
       onApply={draft => {
         const inferredType = aiModalResult?.inferredItemType ?? draft?.itemType;
         if (inferredType !== "expense" && onRouteMismatchResult && aiModalResult) {
-          onRouteMismatchResult(aiModalResult, aiAnalyzeFileName);
+          onRouteMismatchResult(aiModalResult, aiAnalyzeFileName, pendingFiles);
         } else if (draft) {
           const v = (draft.payload.values ?? {}) as Record<string, unknown>;
           const src = (v.expense ?? v.Expense ?? v) as Record<string, unknown>;

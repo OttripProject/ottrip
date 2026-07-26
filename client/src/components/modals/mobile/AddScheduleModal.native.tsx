@@ -1,7 +1,7 @@
 import AccommodationEditModal from "@/components/modals/mobile/AccommodationEditModal.native";
 import FlightEditModal from "@/components/modals/mobile/FlightEditModal.native";
 import ItineraryEditModal from "@/components/modals/mobile/ItineraryEditModal.native";
-import type { Accommodation, DocumentUploadAnalyzeResponse, FlightRead, Itinerary } from "@/types/api";
+import type { Accommodation, DocumentUploadAnalyzeResponse, FlightRead, Itinerary, LocalFile } from "@/types/api";
 import FullScreenModal from "@/ui/components/FullScreenModal.native";
 import { colors } from "@/ui/tokens/colors";
 import { textStyles } from "@/ui/tokens/typography";
@@ -54,6 +54,7 @@ export default function AddScheduleModal({
   const [pendingAiResult, setPendingAiResult] = useState<{
     result: DocumentUploadAnalyzeResponse;
     filename?: string;
+    pendingFiles?: LocalFile[];
   } | null>(null);
 
   useEffect(() => {
@@ -61,13 +62,13 @@ export default function AddScheduleModal({
   }, [activeTab]);
 
   const handleRouteMismatchResult = useCallback(
-    (result: DocumentUploadAnalyzeResponse, filename?: string) => {
+    (result: DocumentUploadAnalyzeResponse, filename?: string, pendingFiles?: LocalFile[]) => {
       const targetType = result.inferredItemType ?? result.draft?.itemType;
       if (targetType === "expense") {
         onRouteToExpense?.(result, filename);
         return;
       }
-      setPendingAiResult({ result, filename });
+      setPendingAiResult({ result, filename, pendingFiles });
       if (targetType === "flight") setActiveTab("flight");
       else if (targetType === "accommodation") setActiveTab("accommodation");
       else if (targetType === "itinerary") setActiveTab("itinerary");

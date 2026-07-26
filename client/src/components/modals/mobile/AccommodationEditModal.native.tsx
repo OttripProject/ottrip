@@ -54,8 +54,8 @@ interface AccommodationEditModalProps {
   embedded?: boolean;
   onSave?: (accommodation: Accommodation) => void;
   onDelete?: (accommodationId: number) => void;
-  pendingAiResult?: { result: DocumentUploadAnalyzeResponse; filename?: string } | null;
-  onRouteMismatchResult?: (result: DocumentUploadAnalyzeResponse, filename?: string) => void;
+  pendingAiResult?: { result: DocumentUploadAnalyzeResponse; filename?: string; pendingFiles?: LocalFile[] } | null;
+  onRouteMismatchResult?: (result: DocumentUploadAnalyzeResponse, filename?: string, pendingFiles?: LocalFile[]) => void;
 }
 
 const formatDate = (dateStr: string) => {
@@ -289,6 +289,9 @@ export default function AccommodationEditModal({
         if (ex && typeof ex === "object" && !Array.isArray(ex)) {
           setExpenseAmount(String(ex.amount ?? "").replace(/[^0-9]/g, ""));
         }
+      }
+      if (pendingAiResult.pendingFiles?.length) {
+        setPendingFiles(pendingAiResult.pendingFiles);
       }
     }
   }, [visible, pendingAiResult]);
@@ -738,7 +741,7 @@ export default function AccommodationEditModal({
       onApply={draft => {
         const inferredType = aiModalResult?.inferredItemType ?? draft?.itemType;
         if (inferredType !== "accommodation" && onRouteMismatchResult && aiModalResult) {
-          onRouteMismatchResult(aiModalResult, aiAnalyzeFileName);
+          onRouteMismatchResult(aiModalResult, aiAnalyzeFileName, pendingFiles);
         } else if (draft?.itemType === "accommodation") {
           const v = draft.payload.values as Record<string, unknown>;
           const shortTime = (t: string) =>

@@ -66,8 +66,8 @@ interface ItineraryEditModalProps {
   embedded?: boolean;
   onSave?: (itinerary: Itinerary) => void;
   onDelete?: (itineraryId: number) => void;
-  pendingAiResult?: { result: DocumentUploadAnalyzeResponse; filename?: string } | null;
-  onRouteMismatchResult?: (result: DocumentUploadAnalyzeResponse, filename?: string) => void;
+  pendingAiResult?: { result: DocumentUploadAnalyzeResponse; filename?: string; pendingFiles?: LocalFile[] } | null;
+  onRouteMismatchResult?: (result: DocumentUploadAnalyzeResponse, filename?: string, pendingFiles?: LocalFile[]) => void;
 }
 
 export default function ItineraryEditModal({
@@ -332,6 +332,9 @@ export default function ItineraryEditModal({
       const draft = pendingAiResult.result.draft;
       if (draft?.itemType === "itinerary") {
         applyItineraryDraftFromAi(draft, setFormData, () => {});
+      }
+      if (pendingAiResult.pendingFiles?.length) {
+        setPendingFiles(pendingAiResult.pendingFiles);
       }
     }
   }, [visible, pendingAiResult]);
@@ -808,7 +811,7 @@ export default function ItineraryEditModal({
       onApply={draft => {
         const inferredType = aiModalResult?.inferredItemType ?? draft?.itemType;
         if (inferredType !== "itinerary" && onRouteMismatchResult && aiModalResult) {
-          onRouteMismatchResult(aiModalResult, aiAnalyzeFileName);
+          onRouteMismatchResult(aiModalResult, aiAnalyzeFileName, pendingFiles);
         } else if (draft) {
           applyItineraryDraftFromAi(draft, setFormData, () => {});
         }
