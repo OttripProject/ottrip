@@ -39,6 +39,7 @@ export default function FloatingFooter({
             styles.footerButton,
             styles.primaryButton,
             hasSecondary && styles.primaryButtonWithSecondary,
+            primaryDisabled && styles.primaryButtonDisabled,
           ]}
           onPress={onPrimaryPress}
           disabled={primaryDisabled}
@@ -78,6 +79,9 @@ const styles = StyleSheet.create({
   primaryButton: {
     flex: 1,
     backgroundColor: colors.black,
+  },
+  primaryButtonDisabled: {
+    backgroundColor: colors.gray400,
   },
   primaryButtonWithSecondary: {
     flex: 2,
