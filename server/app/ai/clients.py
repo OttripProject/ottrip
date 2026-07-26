@@ -13,8 +13,14 @@ from .schemas import AIParseResponse, DocumentTextExtraction
 
 @dependency
 class VisionClient:
+    def __init__(self) -> None:
+        self._client = None
+
     @property
     def client(self):
+        if self._client is not None:
+            return self._client
+
         from google.cloud import vision
         from google.oauth2 import service_account
 
@@ -23,7 +29,6 @@ class VisionClient:
             credentials_info
         )
         self._client = vision.ImageAnnotatorClient(credentials=credentials)
-
         return self._client
 
     async def extract_text_from_image(
