@@ -940,7 +940,10 @@ export default function FlightEditModal({
           onPickImage={async () => {
             try {
               const file = await pickImage();
-              if (file) setPendingFiles(prev => [...prev, file]);
+              if (file) {
+                setPendingFiles(prev => [...prev, file]);
+                setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
+              }
             } catch (e: any) {
               Alert.alert("알림", e.message);
             }
@@ -948,7 +951,10 @@ export default function FlightEditModal({
           onPickDocument={async () => {
             try {
               const file = await pickDocument();
-              if (file) setPendingFiles(prev => [...prev, file]);
+              if (file) {
+                setPendingFiles(prev => [...prev, file]);
+                setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
+              }
             } catch (e: any) {
               Alert.alert("알림", e.message);
             }

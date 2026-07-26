@@ -113,6 +113,7 @@ export default function AddExpenseModal({
   };
   const [pendingFiles, setPendingFiles] = useState<LocalFile[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const scrollRef = useRef<ScrollView>(null);
   const isSubmittingRef = useRef(false);
   const [isAiAnalyzing, setIsAiAnalyzing] = useState(false);
   const [aiAnalyzeError, setAiAnalyzeError] = useState<string | null>(null);
@@ -280,6 +281,7 @@ export default function AddExpenseModal({
       </View>
 
       <ScrollView
+        ref={scrollRef}
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
@@ -403,11 +405,17 @@ export default function AddExpenseModal({
           pendingFiles={pendingFiles}
           onPickImage={async () => {
             const file = await pickImage();
-            if (file) setPendingFiles(prev => [...prev, file]);
+            if (file) {
+              setPendingFiles(prev => [...prev, file]);
+              setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
+            }
           }}
           onPickDocument={async () => {
             const file = await pickDocument();
-            if (file) setPendingFiles(prev => [...prev, file]);
+            if (file) {
+              setPendingFiles(prev => [...prev, file]);
+              setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
+            }
           }}
           onRemoveFile={index =>
             setPendingFiles(prev => prev.filter((_, i) => i !== index))
