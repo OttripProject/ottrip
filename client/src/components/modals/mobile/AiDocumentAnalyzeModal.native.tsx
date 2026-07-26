@@ -35,7 +35,7 @@ interface AiDocumentAnalyzeModalProps {
   originEntityType?: string;
   analyzeResult?: DocumentUploadAnalyzeResponse | null;
   analyzeFileName?: string;
-  onApply?: (draft: AiDocumentItemDraft) => void;
+  onApply?: (draft: AiDocumentItemDraft | null) => void;
   applyLabel?: string;
 }
 
@@ -72,7 +72,7 @@ export default function AiDocumentAnalyzeModal({
       const next = draftEditorRef.current?.buildDraft();
       if (next) onApply?.(next);
     } else {
-      if (analyzeResult?.draft) onApply?.(analyzeResult.draft);
+      onApply?.(analyzeResult?.draft ?? null);
     }
     onClose();
   };

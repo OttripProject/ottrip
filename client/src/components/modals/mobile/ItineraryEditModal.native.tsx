@@ -806,10 +806,10 @@ export default function ItineraryEditModal({
       analyzeFileName={aiAnalyzeFileName}
       applyLabel={aiApplyLabel}
       onApply={draft => {
-        const inferredType = aiModalResult?.inferredItemType ?? draft.itemType;
+        const inferredType = aiModalResult?.inferredItemType ?? draft?.itemType;
         if (inferredType !== "itinerary" && onRouteMismatchResult && aiModalResult) {
           onRouteMismatchResult(aiModalResult, aiAnalyzeFileName);
-        } else {
+        } else if (draft) {
           applyItineraryDraftFromAi(draft, setFormData, () => {});
         }
         setAiModalResult(null);

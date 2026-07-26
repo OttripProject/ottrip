@@ -506,6 +506,15 @@ export default function TodayScreen() {
     [],
   );
 
+  const handleAddScheduleRouteToExpense = useCallback(
+    (result: DocumentUploadAnalyzeResponse, filename?: string) => {
+      setAddScheduleFlow("closed");
+      setPendingMismatchResult({ result, filename });
+      setShowAddExpenseFromDetail(true);
+    },
+    [],
+  );
+
   const timelineSwipeRefs = useRef<Map<string, Swipeable>>(new Map());
   const activeTimelineSwipeKey = useRef<string | null>(null);
 
@@ -1633,6 +1642,7 @@ export default function TodayScreen() {
         visible={addScheduleFlow === "direct"}
         onClose={() => setAddScheduleFlow("method")}
         onSaved={() => setAddScheduleFlow("closed")}
+        onRouteToExpense={handleAddScheduleRouteToExpense}
         planId={selectedPlan?.id ?? 0}
         planStartDate={selectedPlan?.startDate}
         planEndDate={selectedPlan?.endDate}

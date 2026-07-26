@@ -441,10 +441,10 @@ export default function AddExpenseModal({
       analyzeFileName={aiAnalyzeFileName}
       applyLabel={aiApplyLabel}
       onApply={draft => {
-        const inferredType = aiModalResult?.inferredItemType ?? draft.itemType;
+        const inferredType = aiModalResult?.inferredItemType ?? draft?.itemType;
         if (inferredType !== "expense" && onRouteMismatchResult && aiModalResult) {
           onRouteMismatchResult(aiModalResult, aiAnalyzeFileName);
-        } else {
+        } else if (draft) {
           const v = (draft.payload.values ?? {}) as Record<string, unknown>;
           const src = (v.expense ?? v.Expense ?? v) as Record<string, unknown>;
           const amountRaw = String(src.amount ?? src.Amount ?? "").replace(/[^0-9]/g, "");

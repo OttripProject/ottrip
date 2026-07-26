@@ -1032,10 +1032,10 @@ export default function FlightEditModal({
       analyzeFileName={aiAnalyzeFileName}
       applyLabel={aiApplyLabel}
       onApply={draft => {
-        const inferredType = aiModalResult?.inferredItemType ?? draft.itemType;
+        const inferredType = aiModalResult?.inferredItemType ?? draft?.itemType;
         if (inferredType !== "flight" && onRouteMismatchResult && aiModalResult) {
           onRouteMismatchResult(aiModalResult, aiAnalyzeFileName);
-        } else {
+        } else if (draft) {
           applyFlightDraftFromAi(
             draft,
             setFormData,

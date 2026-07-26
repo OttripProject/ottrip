@@ -736,10 +736,10 @@ export default function AccommodationEditModal({
       analyzeFileName={aiAnalyzeFileName}
       applyLabel={aiApplyLabel}
       onApply={draft => {
-        const inferredType = aiModalResult?.inferredItemType ?? draft.itemType;
+        const inferredType = aiModalResult?.inferredItemType ?? draft?.itemType;
         if (inferredType !== "accommodation" && onRouteMismatchResult && aiModalResult) {
           onRouteMismatchResult(aiModalResult, aiAnalyzeFileName);
-        } else if (draft.itemType === "accommodation") {
+        } else if (draft?.itemType === "accommodation") {
           const v = draft.payload.values as Record<string, unknown>;
           const shortTime = (t: string) =>
             t.length >= 8 && t.includes(":") ? t.substring(0, 5) : t;

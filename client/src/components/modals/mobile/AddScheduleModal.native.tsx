@@ -1,12 +1,12 @@
 import AccommodationEditModal from "@/components/modals/mobile/AccommodationEditModal.native";
 import FlightEditModal from "@/components/modals/mobile/FlightEditModal.native";
 import ItineraryEditModal from "@/components/modals/mobile/ItineraryEditModal.native";
-import type { Accommodation, FlightRead, Itinerary } from "@/types/api";
+import type { Accommodation, DocumentUploadAnalyzeResponse, FlightRead, Itinerary } from "@/types/api";
 import FullScreenModal from "@/ui/components/FullScreenModal.native";
 import { colors } from "@/ui/tokens/colors";
 import { textStyles } from "@/ui/tokens/typography";
 import type dayjs from "dayjs";
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import FlightIcon from "../../../../assets/airplane.svg";
 import AccommodationIcon from "../../../../assets/mobile_accomodation.svg";
@@ -34,6 +34,7 @@ interface AddScheduleModalProps {
     removeFlight: (id: number) => void;
   };
   onRefresh?: () => void | Promise<void>;
+  onRouteToExpense?: (result: DocumentUploadAnalyzeResponse, filename?: string) => void;
 }
 
 export default function AddScheduleModal({
@@ -47,8 +48,32 @@ export default function AddScheduleModal({
   defaultCity,
   planData,
   onRefresh,
+  onRouteToExpense,
 }: AddScheduleModalProps) {
   const [activeTab, setActiveTab] = useState<AddScheduleTab>("itinerary");
+  const [pendingAiResult, setPendingAiResult] = useState<{
+    result: DocumentUploadAnalyzeResponse;
+    filename?: string;
+  } | null>(null);
+
+  useEffect(() => {
+    setPendingAiResult(null);
+  }, [activeTab]);
+
+  const handleRouteMismatchResult = useCallback(
+    (result: DocumentUploadAnalyzeResponse, filename?: string) => {
+      const targetType = result.inferredItemType ?? result.draft?.itemType;
+      if (targetType === "expense") {
+        onRouteToExpense?.(result, filename);
+        return;
+      }
+      setPendingAiResult({ result, filename });
+      if (targetType === "flight") setActiveTab("flight");
+      else if (targetType === "accommodation") setActiveTab("accommodation");
+      else if (targetType === "itinerary") setActiveTab("itinerary");
+    },
+    [onRouteToExpense],
+  );
 
   const finishAfterSave = () => {
     if (onSaved) {
@@ -76,6 +101,8 @@ export default function AddScheduleModal({
           defaultCountry={defaultCountry}
           defaultCity={defaultCity}
           embedded
+          pendingAiResult={pendingAiResult}
+          onRouteMismatchResult={handleRouteMismatchResult}
           onSave={async itinerary => {
             planData.addItinerary(itinerary);
             onRefresh?.();
@@ -95,6 +122,8 @@ export default function AddScheduleModal({
           defaultCountry={defaultCountry}
           defaultCity={defaultCity}
           embedded
+          pendingAiResult={pendingAiResult}
+          onRouteMismatchResult={handleRouteMismatchResult}
           onSave={async accommodation => {
             planData.addAccommodation(accommodation);
             onRefresh?.();
@@ -112,6 +141,8 @@ export default function AddScheduleModal({
         planStartDate={planStartDate}
         defaultDate={selectedDate?.format("YYYY-MM-DD")}
         embedded
+        pendingAiResult={pendingAiResult}
+        onRouteMismatchResult={handleRouteMismatchResult}
         onSave={async flight => {
           planData.addFlight(flight);
           onRefresh?.();
