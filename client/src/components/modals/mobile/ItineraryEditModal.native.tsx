@@ -295,6 +295,7 @@ export default function ItineraryEditModal({
   const handleRemoveExistingAttachment = async (attachmentId: number) => {
     try {
       await attachmentsApi.deleteAttachment(attachmentId);
+      setAiAnalyzeError(null);
       setExistingAttachments(prev => prev.filter(a => a.id !== attachmentId));
     } catch (error) {
       if (handleGuestPromptError(error)) return;
@@ -342,8 +343,10 @@ export default function ItineraryEditModal({
 
   useEffect(() => {
     if (visible && pendingAiResult) {
-      setAiModalResult(pendingAiResult.result);
-      setAiAnalyzeFileName(pendingAiResult.filename);
+      const draft = pendingAiResult.result.draft;
+      if (draft?.itemType === "itinerary") {
+        applyItineraryDraftFromAi(draft, setFormData, () => {});
+      }
       if (pendingAiResult.pendingFiles?.length) {
         setPendingFiles(pendingAiResult.pendingFiles);
       }
@@ -796,6 +799,7 @@ export default function ItineraryEditModal({
                 try {
                   const file = await pickImage();
                   if (file) {
+                    setAiAnalyzeError(null);
                     setPendingFiles(prev => [...prev, file]);
                     setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
                   }
@@ -807,6 +811,7 @@ export default function ItineraryEditModal({
                 try {
                   const file = await pickDocument();
                   if (file) {
+                    setAiAnalyzeError(null);
                     setPendingFiles(prev => [...prev, file]);
                     setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
                   }
@@ -814,9 +819,10 @@ export default function ItineraryEditModal({
                   Alert.alert("알림", e.message);
                 }
               }}
-              onRemoveFile={index =>
-                setPendingFiles(prev => prev.filter((_, i) => i !== index))
-              }
+              onRemoveFile={index => {
+                setAiAnalyzeError(null);
+                setPendingFiles(prev => prev.filter((_, i) => i !== index));
+              }}
               onAiAnalyzePress={handleAiAnalyzePress}
               isAiAnalyzing={isAiAnalyzing}
               onCancelAiAnalyze={() => {

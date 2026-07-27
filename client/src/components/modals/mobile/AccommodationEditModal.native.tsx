@@ -231,6 +231,7 @@ export default function AccommodationEditModal({
   const handleRemoveExistingAttachment = async (attachmentId: number) => {
     try {
       await attachmentsApi.deleteAttachment(attachmentId);
+      setAiAnalyzeError(null);
       setExistingAttachments(prev => prev.filter(a => a.id !== attachmentId));
     } catch (error) {
       if (handleGuestPromptError(error)) return;
@@ -278,8 +279,31 @@ export default function AccommodationEditModal({
 
   useEffect(() => {
     if (visible && pendingAiResult) {
-      setAiModalResult(pendingAiResult.result);
-      setAiAnalyzeFileName(pendingAiResult.filename);
+      const draft = pendingAiResult.result.draft;
+      if (draft?.itemType === "accommodation") {
+        const v = draft.payload.values as Record<string, unknown>;
+        const shortTime = (t: string) =>
+          t.length >= 8 && t.includes(":") ? t.substring(0, 5) : t;
+        const ci = String(v.checkinDate ?? v.checkin_date ?? "");
+        const co = String(v.checkoutDate ?? v.checkout_date ?? "");
+        const cit = String(v.checkinTime ?? v.checkin_time ?? "15:00");
+        const cot = String(v.checkoutTime ?? v.checkout_time ?? "11:00");
+        setFormData({
+          name: String(v.name ?? ""),
+          place: String(v.place ?? ""),
+          country: String(v.country ?? ""),
+          city: String(v.city ?? ""),
+          description: String(v.description ?? ""),
+          checkinDate: ci || dayjs().format("YYYY-MM-DD"),
+          checkoutDate: co || dayjs().add(1, "day").format("YYYY-MM-DD"),
+          checkinTime: shortTime(cit),
+          checkoutTime: shortTime(cot),
+        });
+        const ex = v.expense as Record<string, unknown> | undefined;
+        if (ex && typeof ex === "object" && !Array.isArray(ex)) {
+          setExpenseAmount(String(ex.amount ?? "").replace(/[^0-9]/g, ""));
+        }
+      }
       if (pendingAiResult.pendingFiles?.length) {
         setPendingFiles(pendingAiResult.pendingFiles);
       }
@@ -667,6 +691,7 @@ export default function AccommodationEditModal({
               try {
                 const file = await pickImage();
                 if (file) {
+                  setAiAnalyzeError(null);
                   setPendingFiles(prev => [...prev, file]);
                   setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
                 }
@@ -678,6 +703,7 @@ export default function AccommodationEditModal({
               try {
                 const file = await pickDocument();
                 if (file) {
+                  setAiAnalyzeError(null);
                   setPendingFiles(prev => [...prev, file]);
                   setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
                 }
@@ -685,9 +711,10 @@ export default function AccommodationEditModal({
                 Alert.alert("알림", e.message);
               }
             }}
-            onRemoveFile={index =>
-              setPendingFiles(prev => prev.filter((_, i) => i !== index))
-            }
+            onRemoveFile={index => {
+              setAiAnalyzeError(null);
+              setPendingFiles(prev => prev.filter((_, i) => i !== index));
+            }}
             onAiAnalyzePress={handleAiAnalyzePress}
             isAiAnalyzing={isAiAnalyzing}
             onCancelAiAnalyze={() => {

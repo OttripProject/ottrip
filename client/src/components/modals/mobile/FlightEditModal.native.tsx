@@ -329,8 +329,19 @@ export default function FlightEditModal({
 
   useEffect(() => {
     if (visible && pendingAiResult) {
-      setAiModalResult(pendingAiResult.result);
-      setAiAnalyzeFileName(pendingAiResult.filename);
+      const draft = pendingAiResult.result.draft;
+      if (draft?.itemType === "flight") {
+        applyFlightDraftFromAi(
+          draft,
+          setFormData,
+          setFlightSegments as Parameters<typeof applyFlightDraftFromAi>[2],
+          ((val: { amount: string } | ((prev: { amount: string }) => { amount: string })) => {
+            const amount = typeof val === "function" ? val({ amount: "" }).amount : val.amount;
+            setExpenseAmount(amount);
+          }) as Parameters<typeof applyFlightDraftFromAi>[3],
+          (() => {}) as Parameters<typeof applyFlightDraftFromAi>[4],
+        );
+      }
       if (pendingAiResult.pendingFiles?.length) {
         setPendingFiles(pendingAiResult.pendingFiles);
       }
@@ -340,6 +351,7 @@ export default function FlightEditModal({
   const handleRemoveExistingAttachment = async (attachmentId: number) => {
     try {
       await attachmentsApi.deleteAttachment(attachmentId);
+      setAiAnalyzeError(null);
       setExistingAttachments(prev => prev.filter(a => a.id !== attachmentId));
     } catch (error) {
       if (handleGuestPromptError(error)) return;
@@ -968,6 +980,7 @@ export default function FlightEditModal({
             try {
               const file = await pickImage();
               if (file) {
+                setAiAnalyzeError(null);
                 setPendingFiles(prev => [...prev, file]);
                 setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
               }
@@ -979,6 +992,7 @@ export default function FlightEditModal({
             try {
               const file = await pickDocument();
               if (file) {
+                setAiAnalyzeError(null);
                 setPendingFiles(prev => [...prev, file]);
                 setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
               }
@@ -986,9 +1000,10 @@ export default function FlightEditModal({
               Alert.alert("알림", e.message);
             }
           }}
-          onRemoveFile={index =>
-            setPendingFiles(prev => prev.filter((_, i) => i !== index))
-          }
+          onRemoveFile={index => {
+            setAiAnalyzeError(null);
+            setPendingFiles(prev => prev.filter((_, i) => i !== index));
+          }}
           onAiAnalyzePress={handleAiAnalyzePress}
           isAiAnalyzing={isAiAnalyzing}
           onCancelAiAnalyze={() => {
