@@ -355,7 +355,7 @@ export default function AccommodationEditModal({
             exDate: formData.checkinDate,
             amount,
             category: "accommodation" as any,
-            currency: ExpenseCurrency.KRW,
+            currency: expenseCurrency,
             description: formData.name.trim(),
           },
         });
