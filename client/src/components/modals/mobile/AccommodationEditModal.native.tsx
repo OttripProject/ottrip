@@ -29,6 +29,7 @@ import dayjs from "dayjs";
 import { useEffect, useRef, useState } from "react";
 import {
   Alert,
+  Animated,
   Keyboard,
   Pressable,
   ScrollView,
@@ -97,6 +98,7 @@ export default function AccommodationEditModal({
   onRouteMismatchResult,
 }: AccommodationEditModalProps) {
   const scrollRef = useRef<ScrollView>(null);
+  const currencyOpacity = useRef(new Animated.Value(1)).current;
   const [keyboardHeight, setKeyboardHeight] = useState(0);
 
   useEffect(() => {
@@ -124,6 +126,7 @@ export default function AccommodationEditModal({
     checkoutTime: "11:00",
   });
   const [expenseAmount, setExpenseAmount] = useState("");
+  const [expenseCurrency, setExpenseCurrency] = useState(ExpenseCurrency.KRW);
   const [showCheckinDatePicker, setShowCheckinDatePicker] = useState(false);
   const [showCheckoutDatePicker, setShowCheckoutDatePicker] = useState(false);
   const [timeModalField, setTimeModalField] = useState<
@@ -183,6 +186,7 @@ export default function AccommodationEditModal({
           ? String(amountNum).replace(/\B(?=(\d{3})+(?!\d))/g, ",")
           : "",
       );
+      setExpenseCurrency((accommodation.expense?.currency as ExpenseCurrency) ?? ExpenseCurrency.KRW);
     } else {
       const initDate = defaultDate || dayjs().format("YYYY-MM-DD");
       setFormData(prev => ({
@@ -323,7 +327,7 @@ export default function AccommodationEditModal({
               exDate: formData.checkinDate,
               amount,
               category: "accommodation" as any,
-              currency: ExpenseCurrency.KRW,
+              currency: expenseCurrency,
               description: formData.name.trim(),
             },
           },
@@ -631,7 +635,32 @@ export default function AccommodationEditModal({
                     );
                   }}
                 />
-                <Text style={styles.amountSuffix}>KRW</Text>
+                <Pressable
+                  style={styles.currencyBadge}
+                  onPress={() => {
+                    Animated.timing(currencyOpacity, {
+                      toValue: 0,
+                      duration: 100,
+                      useNativeDriver: true,
+                    }).start(() => {
+                      setExpenseCurrency(prev =>
+                        prev === ExpenseCurrency.KRW
+                          ? ExpenseCurrency.USD
+                          : ExpenseCurrency.KRW,
+                      );
+                      Animated.timing(currencyOpacity, {
+                        toValue: 1,
+                        duration: 150,
+                        useNativeDriver: true,
+                      }).start();
+                    });
+                  }}
+                  hitSlop={8}
+                >
+                  <Animated.Text style={[styles.amountSuffix, { opacity: currencyOpacity }]}>
+                    {expenseCurrency === ExpenseCurrency.KRW ? "원" : "달러"}
+                  </Animated.Text>
+                </Pressable>
               </View>
             </View>
           </View>
@@ -954,10 +983,17 @@ const styles = StyleSheet.create({
     paddingVertical: 0,
     color: colors.primary,
   },
+  currencyBadge: {
+    marginLeft: 4,
+    width: 44,
+    paddingVertical: 4,
+    borderRadius: 6,
+    backgroundColor: `${colors.primary}10`,
+    alignItems: "center",
+  },
   amountSuffix: {
     ...textStyles.h6,
     color: colors.primary,
-    marginLeft: 4,
   },
   attachmentSection: {
     marginTop: 0,

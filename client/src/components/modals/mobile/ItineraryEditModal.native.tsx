@@ -36,6 +36,7 @@ import dayjs from "dayjs";
 import { useEffect, useRef, useState } from "react";
 import {
   Alert,
+  Animated,
   Keyboard,
   Pressable,
   ScrollView,
@@ -85,6 +86,7 @@ export default function ItineraryEditModal({
   onRouteMismatchResult,
 }: ItineraryEditModalProps) {
   const scrollRef = useRef<ScrollView>(null);
+  const currencyOpacity = useRef(new Animated.Value(1)).current;
   const [keyboardHeight, setKeyboardHeight] = useState(0);
 
   useEffect(() => {
@@ -113,6 +115,7 @@ export default function ItineraryEditModal({
   const [expenseData, setExpenseData] = useState({
     amount: "",
     category: ExpenseCategory.FOOD,
+    currency: ExpenseCurrency.KRW,
   });
   const [existingExpenseId, setExistingExpenseId] = useState<number | null>(
     null,
@@ -215,10 +218,11 @@ export default function ItineraryEditModal({
             setExpenseData({
               amount: formatAmountWithCommas(amountInt),
               category: firstExpense.category as ExpenseCategory,
+              currency: (firstExpense.currency as ExpenseCurrency) ?? ExpenseCurrency.KRW,
             });
             setExistingExpenseId(firstExpense.id);
           } else {
-            setExpenseData({ amount: "", category: ExpenseCategory.FOOD });
+            setExpenseData({ amount: "", category: ExpenseCategory.FOOD, currency: ExpenseCurrency.KRW });
             setExistingExpenseId(null);
           }
         } catch {
@@ -237,7 +241,7 @@ export default function ItineraryEditModal({
               ? itinerary.endTime.substring(0, 5)
               : "10:00",
           });
-          setExpenseData({ amount: "", category: ExpenseCategory.FOOD });
+          setExpenseData({ amount: "", category: ExpenseCategory.FOOD, currency: ExpenseCurrency.KRW });
           setExistingExpenseId(null);
         }
       };
@@ -254,7 +258,7 @@ export default function ItineraryEditModal({
         startTime: "09:00",
         endTime: "10:00",
       });
-      setExpenseData({ amount: "", category: ExpenseCategory.FOOD });
+      setExpenseData({ amount: "", category: ExpenseCategory.FOOD, currency: ExpenseCurrency.KRW });
       setExistingExpenseId(null);
     }
     setPendingFiles([]);
@@ -376,7 +380,7 @@ export default function ItineraryEditModal({
           itineraryId: savedItinerary.id,
           category: expenseData.category,
           amount: amountNum,
-          currency: ExpenseCurrency.KRW,
+          currency: expenseData.currency,
           exDate: formData.itineraryDate,
           description: expenseDescription,
         };
@@ -384,7 +388,7 @@ export default function ItineraryEditModal({
           await expensesApi.updateExpense(existingExpenseId, {
             category: expenseData.category,
             amount: amountNum,
-            currency: ExpenseCurrency.KRW,
+            currency: expenseData.currency,
             exDate: formData.itineraryDate,
             description: expenseDescription,
           });
@@ -681,7 +685,34 @@ export default function ItineraryEditModal({
                     );
                   }}
                 />
-                <Text style={styles.amountSuffix}>KRW</Text>
+                <Pressable
+                  style={styles.currencyBadge}
+                  onPress={() => {
+                    Animated.timing(currencyOpacity, {
+                      toValue: 0,
+                      duration: 100,
+                      useNativeDriver: true,
+                    }).start(() => {
+                      setExpenseData(prev => ({
+                        ...prev,
+                        currency:
+                          prev.currency === ExpenseCurrency.KRW
+                            ? ExpenseCurrency.USD
+                            : ExpenseCurrency.KRW,
+                      }));
+                      Animated.timing(currencyOpacity, {
+                        toValue: 1,
+                        duration: 150,
+                        useNativeDriver: true,
+                      }).start();
+                    });
+                  }}
+                  hitSlop={8}
+                >
+                  <Animated.Text style={[styles.amountSuffix, { opacity: currencyOpacity }]}>
+                    {expenseData.currency === ExpenseCurrency.KRW ? "원" : "달러"}
+                  </Animated.Text>
+                </Pressable>
               </View>
             </View>
             <View style={styles.inputGroup}>
@@ -986,10 +1017,17 @@ const styles = StyleSheet.create({
     paddingVertical: 0,
     color: colors.primary,
   },
+  currencyBadge: {
+    marginLeft: 4,
+    width: 44,
+    paddingVertical: 4,
+    borderRadius: 6,
+    backgroundColor: `${colors.primary}10`,
+    alignItems: "center",
+  },
   amountSuffix: {
     ...textStyles.h6,
     color: colors.primary,
-    marginLeft: 4,
   },
   categoryRow: {
     flexDirection: "row",

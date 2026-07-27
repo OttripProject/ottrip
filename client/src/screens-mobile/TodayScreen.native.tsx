@@ -2155,8 +2155,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   costAmountPrimary: {
-    fontFamily: typography.fontFamily.poppinsSemiBold,
-    fontSize: 26,
+    ...textStyles.h2,
     color: colors.white,
   },
   costDetailPrimary: {

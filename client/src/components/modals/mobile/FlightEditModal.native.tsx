@@ -32,6 +32,7 @@ import dayjs from "dayjs";
 import { useEffect, useRef, useState } from "react";
 import {
   Alert,
+  Animated,
   Pressable,
   Keyboard,
   ScrollView,
@@ -113,6 +114,7 @@ export default function FlightEditModal({
     booking_reference: "",
   });
   const [expenseAmount, setExpenseAmount] = useState("");
+  const [expenseCurrency, setExpenseCurrency] = useState(ExpenseCurrency.KRW);
   const [flightSegments, setFlightSegments] = useState<SegmentForm[]>([]);
   const [segmentDatePicker, setSegmentDatePicker] = useState<{
     idx: number;
@@ -129,6 +131,7 @@ export default function FlightEditModal({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isSubmittingRef = useRef(false);
   const scrollRef = useRef<ScrollView>(null);
+  const currencyOpacity = useRef(new Animated.Value(1)).current;
   const [keyboardHeight, setKeyboardHeight] = useState(0);
 
   useEffect(() => {
@@ -207,6 +210,7 @@ export default function FlightEditModal({
           ? String(amountNum).replace(/\B(?=(\d{3})+(?!\d))/g, ",")
           : "",
       );
+      setExpenseCurrency((flight.expense?.currency as ExpenseCurrency) ?? ExpenseCurrency.KRW);
       const segments = flight.flightSegments || [];
       const sorted = [...segments].sort(
         (a, b) => (a.order ?? 0) - (b.order ?? 0),
@@ -395,7 +399,7 @@ export default function FlightEditModal({
           expense: {
             exDate: first.departure_date,
             amount,
-            currency: ExpenseCurrency.KRW,
+            currency: expenseCurrency,
             category: ExpenseCategory.FLIGHT as any,
             planId,
             description: (() => {
@@ -427,7 +431,7 @@ export default function FlightEditModal({
           expense: {
             exDate: first.departure_date,
             amount,
-            currency: ExpenseCurrency.KRW,
+            currency: expenseCurrency,
             category: ExpenseCategory.FLIGHT as any,
             planId,
             description: (() => {
@@ -922,7 +926,32 @@ export default function FlightEditModal({
                   setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
                 }}
               />
-              <Text style={styles.amountSuffix}>KRW</Text>
+              <Pressable
+                style={styles.currencyBadge}
+                onPress={() => {
+                  Animated.timing(currencyOpacity, {
+                    toValue: 0,
+                    duration: 100,
+                    useNativeDriver: true,
+                  }).start(() => {
+                    setExpenseCurrency(prev =>
+                      prev === ExpenseCurrency.KRW
+                        ? ExpenseCurrency.USD
+                        : ExpenseCurrency.KRW,
+                    );
+                    Animated.timing(currencyOpacity, {
+                      toValue: 1,
+                      duration: 150,
+                      useNativeDriver: true,
+                    }).start();
+                  });
+                }}
+                hitSlop={8}
+              >
+                <Animated.Text style={[styles.amountSuffix, { opacity: currencyOpacity }]}>
+                  {expenseCurrency === ExpenseCurrency.KRW ? "원" : "달러"}
+                </Animated.Text>
+              </Pressable>
             </View>
           </View>
         </View>
@@ -1243,10 +1272,17 @@ const styles = StyleSheet.create({
     paddingVertical: 0,
     color: colors.primary,
   },
+  currencyBadge: {
+    marginLeft: 4,
+    width: 44,
+    paddingVertical: 4,
+    borderRadius: 6,
+    backgroundColor: `${colors.primary}10`,
+    alignItems: "center",
+  },
   amountSuffix: {
     ...textStyles.h6,
     color: colors.primary,
-    marginLeft: 4,
   },
   attachmentSection: {
     marginTop: 20,
