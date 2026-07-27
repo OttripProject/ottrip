@@ -9,11 +9,9 @@ import { usePlanDataQuery } from "@/hooks/usePlanDataQuery";
 import { usePlansQuery } from "@/hooks/usePlansQuery";
 import type {
   Accommodation,
-  DocumentUploadAnalyzeResponse,
   FlightRead,
   FlightSegmentReadDto,
   Itinerary,
-  LocalFile,
   Plan,
 } from "@/types/api";
 import { colors } from "@/ui/tokens/colors";
@@ -99,29 +97,6 @@ export default function WeeklyScreen() {
   const [showAccommodationEdit, setShowAccommodationEdit] = useState(false);
   const [editingAccommodation, setEditingAccommodation] =
     useState<Accommodation | null>(null);
-  const [pendingMismatchResult, setPendingMismatchResult] = useState<{
-    result: DocumentUploadAnalyzeResponse;
-    filename?: string;
-    pendingFiles?: LocalFile[];
-  } | null>(null);
-
-  const handleRouteMismatchResult = useCallback(
-    (result: DocumentUploadAnalyzeResponse, filename?: string, pendingFiles?: LocalFile[]) => {
-      const targetType = result.inferredItemType ?? result.draft?.itemType;
-      setShowItineraryEdit(false);
-      setEditingItinerary(null);
-      setShowAccommodationEdit(false);
-      setEditingAccommodation(null);
-      setShowFlightEdit(false);
-      setEditingFlight(null);
-      setPendingMismatchResult({ result, filename, pendingFiles });
-      if (targetType === "flight") setShowFlightEdit(true);
-      else if (targetType === "accommodation") setShowAccommodationEdit(true);
-      else if (targetType === "itinerary") setShowItineraryEdit(true);
-    },
-    [],
-  );
-
   useEffect(() => {
     return guestPrompt.registerBeforeSignUpNavigation(() => {
       setProfileModalVisible(false);
@@ -983,7 +958,6 @@ export default function WeeklyScreen() {
       <ItineraryEditModal
         visible={showItineraryEdit}
         onClose={opts => {
-          setPendingMismatchResult(null);
           const itineraryToShow = editingItinerary;
           setShowItineraryEdit(false);
           setEditingItinerary(null);
@@ -1020,8 +994,6 @@ export default function WeeklyScreen() {
             });
           }
         }}
-        pendingAiResult={pendingMismatchResult}
-        onRouteMismatchResult={handleRouteMismatchResult}
       />
 
       <FlightDetailModal
@@ -1060,7 +1032,6 @@ export default function WeeklyScreen() {
       <FlightEditModal
         visible={showFlightEdit}
         onClose={opts => {
-          setPendingMismatchResult(null);
           const flightToShow = editingFlight;
           setShowFlightEdit(false);
           setEditingFlight(null);
@@ -1097,8 +1068,6 @@ export default function WeeklyScreen() {
             });
           }
         }}
-        pendingAiResult={pendingMismatchResult}
-        onRouteMismatchResult={handleRouteMismatchResult}
       />
 
       <AccommodationDetailModal
@@ -1132,7 +1101,6 @@ export default function WeeklyScreen() {
       <AccommodationEditModal
         visible={showAccommodationEdit}
         onClose={opts => {
-          setPendingMismatchResult(null);
           const accommodationToShow = editingAccommodation;
           setShowAccommodationEdit(false);
           setEditingAccommodation(null);
@@ -1161,8 +1129,6 @@ export default function WeeklyScreen() {
             });
           }
         }}
-        pendingAiResult={pendingMismatchResult}
-        onRouteMismatchResult={handleRouteMismatchResult}
       />
 
       {selectedPlan && (

@@ -185,6 +185,8 @@ export default function ItineraryEditModal({
   useEffect(() => {
     if (!visible) {
       formInitializedRef.current = false;
+      setAiModalResult(null);
+      setAiApplyLabel(undefined);
       return;
     }
     if (formInitializedRef.current) return;
@@ -318,11 +320,18 @@ export default function ItineraryEditModal({
       } else {
         const inferredType = result.inferredItemType ?? result.draft?.itemType;
         if (inferredType && inferredType !== "itinerary") {
-          setAiApplyLabel(`${KIND_TO_LABEL[inferredType] ?? inferredType}에 추가`);
+          if (onRouteMismatchResult) {
+            setAiApplyLabel(`${KIND_TO_LABEL[inferredType] ?? inferredType}에 추가`);
+            setAiModalResult(result);
+          } else {
+            setAiAnalyzeError(
+              `문서가 [${KIND_TO_LABEL[inferredType] ?? inferredType}]으로 분석되었습니다. 일정 수정 화면에는 반영할 수 없습니다.`,
+            );
+          }
         } else {
           setAiApplyLabel(undefined);
+          setAiModalResult(result);
         }
-        setAiModalResult(result);
       }
     } catch {
       setAiAnalyzeError("분석 중 오류가 발생했습니다.");
@@ -333,10 +342,8 @@ export default function ItineraryEditModal({
 
   useEffect(() => {
     if (visible && pendingAiResult) {
-      const draft = pendingAiResult.result.draft;
-      if (draft?.itemType === "itinerary") {
-        applyItineraryDraftFromAi(draft, setFormData, () => {});
-      }
+      setAiModalResult(pendingAiResult.result);
+      setAiAnalyzeFileName(pendingAiResult.filename);
       if (pendingAiResult.pendingFiles?.length) {
         setPendingFiles(pendingAiResult.pendingFiles);
       }
@@ -868,12 +875,10 @@ export default function ItineraryEditModal({
   }
 
   return (
-    <>
-      <FullScreenModal visible={visible} onClose={() => onClose?.()}>
-        {content}
-      </FullScreenModal>
+    <FullScreenModal visible={visible} onClose={() => onClose?.()}>
+      {content}
       {aiModal}
-    </>
+    </FullScreenModal>
   );
 }
 

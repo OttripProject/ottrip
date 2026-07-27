@@ -18,11 +18,9 @@ import { usePlanDataQuery } from "@/hooks/usePlanDataQuery";
 import { usePlansQuery } from "@/hooks/usePlansQuery";
 import type {
   Accommodation,
-  DocumentUploadAnalyzeResponse,
   FlightRead,
   FlightSegmentReadDto,
   Itinerary,
-  LocalFile,
   Plan,
 } from "@/types/api";
 import { categoryLabels } from "@/types/expense";
@@ -184,11 +182,6 @@ export default function TodayScreen() {
   const [showExpenseDetail, setShowExpenseDetail] = useState(false);
   const [showAddExpenseFromDetail, setShowAddExpenseFromDetail] =
     useState(false);
-  const [pendingMismatchResult, setPendingMismatchResult] = useState<{
-    result: DocumentUploadAnalyzeResponse;
-    filename?: string;
-    pendingFiles?: LocalFile[];
-  } | null>(null);
   const [addScheduleFlow, setAddScheduleFlow] =
     useState<AddScheduleFlow>("closed");
   const [timelineViewDate, setTimelineViewDate] = useState<dayjs.Dayjs | null>(
@@ -490,25 +483,6 @@ export default function TodayScreen() {
       }
     },
     [planData, queryClient, selectedPlan?.id],
-  );
-
-  const handleRouteMismatchResult = useCallback(
-    (result: DocumentUploadAnalyzeResponse, filename?: string, pendingFiles?: LocalFile[]) => {
-      const targetType = result.inferredItemType ?? result.draft?.itemType;
-      setShowItineraryEdit(false);
-      setEditingItinerary(null);
-      setShowAccommodationEdit(false);
-      setEditingAccommodation(null);
-      setShowFlightEdit(false);
-      setEditingFlight(null);
-      setShowAddExpenseFromDetail(false);
-      setPendingMismatchResult({ result, filename, pendingFiles });
-      if (targetType === "flight") setShowFlightEdit(true);
-      else if (targetType === "accommodation") setShowAccommodationEdit(true);
-      else if (targetType === "itinerary") setShowItineraryEdit(true);
-      else if (targetType === "expense") setShowAddExpenseFromDetail(true);
-    },
-    [],
   );
 
   const timelineSwipeRefs = useRef<Map<string, Swipeable>>(new Map());
@@ -1422,7 +1396,6 @@ export default function TodayScreen() {
       <AddExpenseModal
         visible={showAddExpenseFromDetail}
         onClose={opts => {
-          setPendingMismatchResult(null);
           setShowAddExpenseFromDetail(false);
           if (opts?.fromSave) {
             setShowExpenseDetail(false);
@@ -1462,7 +1435,6 @@ export default function TodayScreen() {
       <ItineraryEditModal
         visible={showItineraryEdit}
         onClose={opts => {
-          setPendingMismatchResult(null);
           const itineraryToShow = editingItinerary;
           setShowItineraryEdit(false);
           setEditingItinerary(null);
@@ -1487,8 +1459,6 @@ export default function TodayScreen() {
             queryKey: ["expenses", selectedPlan?.id],
           });
         }}
-        pendingAiResult={pendingMismatchResult}
-        onRouteMismatchResult={handleRouteMismatchResult}
       />
 
       <AccommodationDetailModal
@@ -1520,7 +1490,6 @@ export default function TodayScreen() {
       <AccommodationEditModal
         visible={showAccommodationEdit}
         onClose={opts => {
-          setPendingMismatchResult(null);
           const accommodationToShow = editingAccommodation;
           setShowAccommodationEdit(false);
           setEditingAccommodation(null);
@@ -1545,8 +1514,6 @@ export default function TodayScreen() {
             queryKey: ["expenses", selectedPlan?.id],
           });
         }}
-        pendingAiResult={pendingMismatchResult}
-        onRouteMismatchResult={handleRouteMismatchResult}
       />
 
       <FlightDetailModal
@@ -1569,7 +1536,6 @@ export default function TodayScreen() {
       <FlightEditModal
         visible={showFlightEdit}
         onClose={opts => {
-          setPendingMismatchResult(null);
           const flightToShow = editingFlight;
           setShowFlightEdit(false);
           setEditingFlight(null);
@@ -1594,8 +1560,6 @@ export default function TodayScreen() {
             queryKey: ["expenses", selectedPlan?.id],
           });
         }}
-        pendingAiResult={pendingMismatchResult}
-        onRouteMismatchResult={handleRouteMismatchResult}
       />
 
       {selectedPlan && (

@@ -157,6 +157,8 @@ export default function AccommodationEditModal({
   useEffect(() => {
     if (!visible) {
       formInitializedRef.current = false;
+      setAiModalResult(null);
+      setAiApplyLabel(undefined);
       return;
     }
     if (formInitializedRef.current) return;
@@ -254,11 +256,18 @@ export default function AccommodationEditModal({
       } else {
         const inferredType = result.inferredItemType ?? result.draft?.itemType;
         if (inferredType && inferredType !== "accommodation") {
-          setAiApplyLabel(`${KIND_TO_LABEL[inferredType] ?? inferredType}에 추가`);
+          if (onRouteMismatchResult) {
+            setAiApplyLabel(`${KIND_TO_LABEL[inferredType] ?? inferredType}에 추가`);
+            setAiModalResult(result);
+          } else {
+            setAiAnalyzeError(
+              `문서가 [${KIND_TO_LABEL[inferredType] ?? inferredType}]으로 분석되었습니다. 숙박 수정 화면에는 반영할 수 없습니다.`,
+            );
+          }
         } else {
           setAiApplyLabel(undefined);
+          setAiModalResult(result);
         }
-        setAiModalResult(result);
       }
     } catch {
       setAiAnalyzeError("분석 중 오류가 발생했습니다.");
@@ -269,31 +278,8 @@ export default function AccommodationEditModal({
 
   useEffect(() => {
     if (visible && pendingAiResult) {
-      const draft = pendingAiResult.result.draft;
-      if (draft?.itemType === "accommodation") {
-        const v = draft.payload.values as Record<string, unknown>;
-        const shortTime = (t: string) =>
-          t.length >= 8 && t.includes(":") ? t.substring(0, 5) : t;
-        const ci = String(v.checkinDate ?? v.checkin_date ?? "");
-        const co = String(v.checkoutDate ?? v.checkout_date ?? "");
-        const cit = String(v.checkinTime ?? v.checkin_time ?? "15:00");
-        const cot = String(v.checkoutTime ?? v.checkout_time ?? "11:00");
-        setFormData({
-          name: String(v.name ?? ""),
-          place: String(v.place ?? ""),
-          country: String(v.country ?? ""),
-          city: String(v.city ?? ""),
-          description: String(v.description ?? ""),
-          checkinDate: ci || dayjs().format("YYYY-MM-DD"),
-          checkoutDate: co || dayjs().add(1, "day").format("YYYY-MM-DD"),
-          checkinTime: shortTime(cit),
-          checkoutTime: shortTime(cot),
-        });
-        const ex = v.expense as Record<string, unknown> | undefined;
-        if (ex && typeof ex === "object" && !Array.isArray(ex)) {
-          setExpenseAmount(String(ex.amount ?? "").replace(/[^0-9]/g, ""));
-        }
-      }
+      setAiModalResult(pendingAiResult.result);
+      setAiAnalyzeFileName(pendingAiResult.filename);
       if (pendingAiResult.pendingFiles?.length) {
         setPendingFiles(pendingAiResult.pendingFiles);
       }
@@ -817,12 +803,10 @@ export default function AccommodationEditModal({
   }
 
   return (
-    <>
-      <FullScreenModal visible={visible} onClose={() => onClose?.()}>
-        {content}
-      </FullScreenModal>
+    <FullScreenModal visible={visible} onClose={() => onClose?.()}>
+      {content}
       {aiModal}
-    </>
+    </FullScreenModal>
   );
 }
 
