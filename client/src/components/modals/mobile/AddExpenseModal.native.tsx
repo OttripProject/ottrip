@@ -55,7 +55,7 @@ interface AddExpenseModalProps {
   planEndDate?: string;
   defaultExDate?: string;
   onExpenseAdd?: (expense: Expense) => void;
-  pendingAiResult?: { result: DocumentUploadAnalyzeResponse; filename?: string } | null;
+  pendingAiResult?: { result: DocumentUploadAnalyzeResponse; filename?: string; pendingFiles?: LocalFile[] } | null;
 }
 
 const normalizeAmount = (value: unknown) => {
@@ -173,6 +173,9 @@ export default function AddExpenseModal({
           ...(cat && Object.values(ExpenseCategory).includes(cat as ExpenseCategory) ? { category: cat as ExpenseCategory } : {}),
           ...(dateRaw && dayjs(dateRaw).isValid() ? { ex_date: dayjs(dateRaw).format("YYYY-MM-DD") } : {}),
         }));
+      }
+      if (pendingAiResult.pendingFiles?.length) {
+        setPendingFiles(pendingAiResult.pendingFiles);
       }
     }
   }, [visible, pendingAiResult]);

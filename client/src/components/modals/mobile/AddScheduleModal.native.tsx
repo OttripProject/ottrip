@@ -59,6 +59,7 @@ export default function AddScheduleModal({
   const [pendingExpenseResult, setPendingExpenseResult] = useState<{
     result: DocumentUploadAnalyzeResponse;
     filename?: string;
+    pendingFiles?: LocalFile[];
   } | null>(null);
   const [showExpenseModal, setShowExpenseModal] = useState(false);
 
@@ -84,7 +85,7 @@ export default function AddScheduleModal({
     (result: DocumentUploadAnalyzeResponse, filename?: string, pendingFiles?: LocalFile[]) => {
       const targetType = result.inferredItemType ?? result.draft?.itemType;
       if (targetType === "expense") {
-        setPendingExpenseResult({ result, filename });
+        setPendingExpenseResult({ result, filename, pendingFiles });
         return;
       }
       setPendingAiResult({ result, filename, pendingFiles });
@@ -261,7 +262,9 @@ export default function AddScheduleModal({
         onClose={opts => {
           setShowExpenseModal(false);
           setPendingExpenseResult(null);
-          if (opts?.fromSave) finishAfterSave();
+          if (opts?.fromSave) {
+            setTimeout(() => finishAfterSave(), 400);
+          }
         }}
         planId={planId}
         planStartDate={planStartDate}
