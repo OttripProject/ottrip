@@ -1,4 +1,5 @@
 import AccommodationEditModal from "@/components/modals/mobile/AccommodationEditModal.native";
+import AddExpenseModal from "@/components/modals/mobile/AddExpenseModal.native";
 import FlightEditModal from "@/components/modals/mobile/FlightEditModal.native";
 import ItineraryEditModal from "@/components/modals/mobile/ItineraryEditModal.native";
 import type { Accommodation, DocumentUploadAnalyzeResponse, FlightRead, Itinerary, LocalFile } from "@/types/api";
@@ -34,7 +35,6 @@ interface AddScheduleModalProps {
     removeFlight: (id: number) => void;
   };
   onRefresh?: () => void | Promise<void>;
-  onRouteToExpense?: (result: DocumentUploadAnalyzeResponse, filename?: string) => void;
 }
 
 export default function AddScheduleModal({
@@ -43,12 +43,12 @@ export default function AddScheduleModal({
   onSaved,
   planId,
   planStartDate,
+  planEndDate,
   selectedDate,
   defaultCountry,
   defaultCity,
   planData,
   onRefresh,
-  onRouteToExpense,
 }: AddScheduleModalProps) {
   const [activeTab, setActiveTab] = useState<AddScheduleTab>("itinerary");
   const [pendingAiResult, setPendingAiResult] = useState<{
@@ -56,16 +56,35 @@ export default function AddScheduleModal({
     filename?: string;
     pendingFiles?: LocalFile[];
   } | null>(null);
+  const [pendingExpenseResult, setPendingExpenseResult] = useState<{
+    result: DocumentUploadAnalyzeResponse;
+    filename?: string;
+  } | null>(null);
+  const [showExpenseModal, setShowExpenseModal] = useState(false);
 
   useEffect(() => {
     setPendingAiResult(null);
   }, [activeTab]);
 
+  useEffect(() => {
+    if (!visible) {
+      setPendingExpenseResult(null);
+      setShowExpenseModal(false);
+    }
+  }, [visible]);
+
+  useEffect(() => {
+    if (pendingExpenseResult && !showExpenseModal) {
+      const timer = setTimeout(() => setShowExpenseModal(true), 350);
+      return () => clearTimeout(timer);
+    }
+  }, [pendingExpenseResult, showExpenseModal]);
+
   const handleRouteMismatchResult = useCallback(
     (result: DocumentUploadAnalyzeResponse, filename?: string, pendingFiles?: LocalFile[]) => {
       const targetType = result.inferredItemType ?? result.draft?.itemType;
       if (targetType === "expense") {
-        onRouteToExpense?.(result, filename);
+        setPendingExpenseResult({ result, filename });
         return;
       }
       setPendingAiResult({ result, filename, pendingFiles });
@@ -73,7 +92,7 @@ export default function AddScheduleModal({
       else if (targetType === "accommodation") setActiveTab("accommodation");
       else if (targetType === "itinerary") setActiveTab("itinerary");
     },
-    [onRouteToExpense],
+    [],
   );
 
   const finishAfterSave = () => {
@@ -163,6 +182,7 @@ export default function AddScheduleModal({
             <CloseIcon width={24} height={24} />
           </Pressable>
         </View>
+
         <View style={styles.categoryTabs}>
           <Pressable
             style={[
@@ -235,6 +255,23 @@ export default function AddScheduleModal({
       </View>
 
       <View style={styles.content}>{renderContent()}</View>
+
+      <AddExpenseModal
+        visible={showExpenseModal}
+        onClose={opts => {
+          setShowExpenseModal(false);
+          setPendingExpenseResult(null);
+          if (opts?.fromSave) finishAfterSave();
+        }}
+        planId={planId}
+        planStartDate={planStartDate}
+        planEndDate={planEndDate}
+        defaultExDate={selectedDate?.format("YYYY-MM-DD")}
+        pendingAiResult={pendingExpenseResult}
+        onExpenseAdd={() => {
+          onRefresh?.();
+        }}
+      />
     </FullScreenModal>
   );
 }

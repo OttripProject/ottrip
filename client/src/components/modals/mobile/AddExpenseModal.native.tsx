@@ -55,6 +55,7 @@ interface AddExpenseModalProps {
   planEndDate?: string;
   defaultExDate?: string;
   onExpenseAdd?: (expense: Expense) => void;
+  pendingAiResult?: { result: DocumentUploadAnalyzeResponse; filename?: string } | null;
 }
 
 const normalizeAmount = (value: unknown) => {
@@ -71,6 +72,7 @@ export default function AddExpenseModal({
   planEndDate,
   defaultExDate,
   onExpenseAdd,
+  pendingAiResult,
 }: AddExpenseModalProps) {
   const [showDatePicker, setShowDatePicker] = useState(false);
 
@@ -141,6 +143,8 @@ export default function AddExpenseModal({
   useEffect(() => {
     if (!visible) {
       formInitializedRef.current = false;
+      setAiModalResult(null);
+      setAiAnalyzeError(null);
       return;
     }
     if (formInitializedRef.current) return;
@@ -151,6 +155,27 @@ export default function AddExpenseModal({
     setFormData(prev => ({ ...prev, ex_date: date }));
     setPendingFiles([]);
   }, [visible, defaultExDate, planStartDate]);
+
+  useEffect(() => {
+    if (visible && pendingAiResult) {
+      const draft = pendingAiResult.result.draft;
+      if (draft?.itemType === "expense") {
+        const v = (draft.payload.values ?? {}) as Record<string, unknown>;
+        const src = (v.expense ?? v.Expense ?? v) as Record<string, unknown>;
+        const amountRaw = String(src.amount ?? src.Amount ?? "").replace(/[^0-9]/g, "");
+        const desc = String(src.description ?? src.Description ?? "").trim();
+        const cat = String(src.category ?? src.Category ?? "").trim();
+        const dateRaw = String(src.exDate ?? src.ex_date ?? src.ExDate ?? "").trim();
+        setFormData(prev => ({
+          ...prev,
+          ...(amountRaw ? { amount: amountRaw.replace(/\B(?=(\d{3})+(?!\d))/g, ",") } : {}),
+          ...(desc ? { description: desc } : {}),
+          ...(cat && Object.values(ExpenseCategory).includes(cat as ExpenseCategory) ? { category: cat as ExpenseCategory } : {}),
+          ...(dateRaw && dayjs(dateRaw).isValid() ? { ex_date: dayjs(dateRaw).format("YYYY-MM-DD") } : {}),
+        }));
+      }
+    }
+  }, [visible, pendingAiResult]);
 
   const handleAiAnalyzePress = async (selection: AiAttachmentAnalyzeSelection) => {
     setAiAnalyzeError(null);
