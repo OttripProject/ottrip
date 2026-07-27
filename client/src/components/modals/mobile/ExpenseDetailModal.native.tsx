@@ -29,7 +29,8 @@ interface ExpenseDetailModalProps {
   onAddExpensePress?: () => void;
 }
 
-const formatCurrency = (amount: number) => {
+const formatCurrency = (amount: number, currency?: string) => {
+  if (currency === "USD") return `${amount.toLocaleString("en-US")}달러`;
   return `${amount.toLocaleString("ko-KR")}원`;
 };
 
@@ -80,9 +81,35 @@ export default function ExpenseDetailModal({
   const [selectedCategory, setSelectedCategory] =
     useState<ExpenseCategory | null>(null);
 
+  const totalKrw = expenses
+    .filter(e => e.currency !== "USD")
+    .reduce((sum, e) => sum + e.amount, 0);
+  const totalUsd = expenses
+    .filter(e => e.currency === "USD")
+    .reduce((sum, e) => sum + e.amount, 0);
+
+  const byCategoryKrw = CATEGORY_ORDER.reduce(
+    (acc, cat) => {
+      acc[cat] = expenses
+        .filter(e => e.category === cat && e.currency !== "USD")
+        .reduce((sum, e) => sum + e.amount, 0);
+      return acc;
+    },
+    {} as Record<string, number>,
+  );
+  const byCategoryUsd = CATEGORY_ORDER.reduce(
+    (acc, cat) => {
+      acc[cat] = expenses
+        .filter(e => e.category === cat && e.currency === "USD")
+        .reduce((sum, e) => sum + e.amount, 0);
+      return acc;
+    },
+    {} as Record<string, number>,
+  );
+
   const categoryEntries = CATEGORY_ORDER.filter(
-    cat => (byCategory[cat] ?? 0) > 0,
-  ).map(cat => [cat, byCategory[cat] ?? 0] as const);
+    cat => (byCategoryKrw[cat] ?? 0) > 0 || (byCategoryUsd[cat] ?? 0) > 0,
+  );
 
   const showDatePerExpense = !exDate;
 
@@ -117,16 +144,31 @@ export default function ExpenseDetailModal({
           onPress={() => setSelectedCategory(null)}
         >
           <Text style={styles.totalLabel}>총 비용(Total Cost)</Text>
-          <Text style={styles.totalAmount}>
-            {total.toLocaleString("ko-KR")}원
-          </Text>
+          {totalKrw > 0 && (
+            <Text style={styles.totalAmount}>
+              {totalKrw.toLocaleString("ko-KR")}원
+            </Text>
+          )}
+          {totalUsd > 0 && (
+            <Text style={styles.totalAmount}>
+              {totalUsd.toLocaleString("en-US")}달러
+            </Text>
+          )}
         </Pressable>
 
         {/* 카테고리별 금액 */}
         {categoryEntries.length > 0 && (
           <View style={styles.categoryGrid}>
-            {categoryEntries.map(([category, amount]) => {
+            {categoryEntries.map(category => {
               const isSelected = selectedCategory === category;
+              const krw = byCategoryKrw[category] ?? 0;
+              const usd = byCategoryUsd[category] ?? 0;
+              const amountText = [
+                krw > 0 ? `${krw.toLocaleString("ko-KR")}원` : null,
+                usd > 0 ? `${usd.toLocaleString("en-US")}달러` : null,
+              ]
+                .filter(Boolean)
+                .join(" · ");
               return (
                 <Pressable
                   key={category}
@@ -153,7 +195,7 @@ export default function ExpenseDetailModal({
                       isSelected && styles.categoryAmountSelected,
                     ]}
                   >
-                    {formatCurrency(amount)}
+                    {amountText}
                   </Text>
                 </Pressable>
               );
@@ -191,7 +233,7 @@ export default function ExpenseDetailModal({
                     </Text>
                   </View>
                   <Text style={styles.detailAmount}>
-                    {formatCurrency(expense.amount)}
+                    {formatCurrency(expense.amount, expense.currency)}
                   </Text>
                 </View>
               </View>

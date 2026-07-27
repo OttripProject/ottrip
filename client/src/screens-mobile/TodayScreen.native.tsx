@@ -27,7 +27,7 @@ import type {
 } from "@/types/api";
 import { categoryLabels } from "@/types/expense";
 import { colors } from "@/ui/tokens/colors";
-import { textStyles } from "@/ui/tokens/typography";
+import { textStyles, typography } from "@/ui/tokens/typography";
 import {
   convertUTCToLocalTime,
   formatKoreanDate,
@@ -422,18 +422,25 @@ export default function TodayScreen() {
 
   const todayExpenses = useMemo(() => {
     let total = 0;
+    let totalKrw = 0;
+    let totalUsd = 0;
     const byCategory: Record<string, number> = {};
 
     if (todayExpensesFromApi && Array.isArray(todayExpensesFromApi)) {
       todayExpensesFromApi.forEach((expense: any) => {
         const amount = expense.amount || 0;
         total += amount;
+        if (expense.currency === "USD") {
+          totalUsd += amount;
+        } else {
+          totalKrw += amount;
+        }
         const category = expense.category || "기타";
         byCategory[category] = (byCategory[category] || 0) + amount;
       });
     }
 
-    return { total, byCategory };
+    return { total, totalKrw, totalUsd, byCategory };
   }, [todayExpensesFromApi]);
 
   const formatCurrency = (amount: number) => {
@@ -1207,16 +1214,25 @@ export default function TodayScreen() {
                 </View>
                 {todayExpenses.total > 0 ? (
                   <>
-                    <Text style={styles.costAmountPrimary}>
-                      {formatCurrency(todayExpenses.total)}
-                    </Text>
+                    <View style={styles.costAmountGroup}>
+                      {todayExpenses.totalKrw > 0 && (
+                        <Text style={styles.costAmountPrimary}>
+                          {todayExpenses.totalKrw.toLocaleString("ko-KR")}원
+                        </Text>
+                      )}
+                      {todayExpenses.totalUsd > 0 && (
+                        <Text style={styles.costAmountPrimary}>
+                          {todayExpenses.totalUsd.toLocaleString("en-US")}달러
+                        </Text>
+                      )}
+                    </View>
                     <Text style={styles.costDetailPrimary}>
                       터치하여 상세 내역 확인
                     </Text>
                   </>
                 ) : (
                   <>
-                    <Text style={styles.costAmountPrimary}>0원</Text>
+                    <Text style={[styles.costAmountPrimary, { marginBottom: 8 }]}>0원</Text>
                     <Text style={styles.costDetailPrimary}>
                       터치하여 상세 내역 확인
                     </Text>
@@ -2134,10 +2150,14 @@ const styles = StyleSheet.create({
     ...textStyles.h6,
     color: colors.white,
   },
-  costAmountPrimary: {
-    ...textStyles.h2,
-    color: colors.white,
+  costAmountGroup: {
+    gap: 0,
     marginBottom: 8,
+  },
+  costAmountPrimary: {
+    fontFamily: typography.fontFamily.poppinsSemiBold,
+    fontSize: 26,
+    color: colors.white,
   },
   costDetailPrimary: {
     ...textStyles.body3,

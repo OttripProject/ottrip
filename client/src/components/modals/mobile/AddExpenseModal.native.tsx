@@ -23,6 +23,7 @@ import {
 import BottomSheetModal from "@/ui/components/BottomSheetModal.native";
 import CalendarModal from "@/ui/components/CalendarModal.native";
 import FloatingFooter from "@/ui/components/FloatingFooter.native";
+import CurrencyToggle from "@/ui/components/CurrencyToggle";
 import AttachmentSection from "@/ui/components/attachmentSection.native";
 import Input from "@/ui/components/input/Input";
 import { colors } from "@/ui/tokens/colors";
@@ -134,6 +135,7 @@ export default function AddExpenseModal({
     amount: "",
     description: "",
     ex_date: getDefaultDate(),
+    currency: ExpenseCurrency.KRW,
   });
 
   useEffect(() => {
@@ -211,7 +213,7 @@ export default function AddExpenseModal({
         amount: amountNum,
         description: formData.description.trim() || undefined,
         exDate: formData.ex_date,
-        currency: ExpenseCurrency.KRW,
+        currency: formData.currency,
       });
       if (pendingFiles.length > 0) {
         await uploadFiles(pendingFiles, newExpense.id);
@@ -221,6 +223,7 @@ export default function AddExpenseModal({
         amount: "",
         description: "",
         ex_date: getDefaultDate(),
+        currency: ExpenseCurrency.KRW,
       });
       setPendingFiles([]);
       onClose?.({ fromSave: true });
@@ -239,6 +242,7 @@ export default function AddExpenseModal({
       amount: "",
       description: "",
       ex_date: getDefaultDate(),
+      currency: ExpenseCurrency.KRW,
     });
     setPendingFiles([]);
     onClose?.();
@@ -321,18 +325,24 @@ export default function AddExpenseModal({
 
         <View style={styles.inputGroup}>
           <Text style={styles.label}>지출 금액</Text>
-          <View style={styles.amountInputWrapper}>
-            <Input
-              value={formData.amount}
-              onChangeText={handleAmountChange}
-              placeholder="0"
-              placeholderTextColor={colors.gray500}
-              keyboardType="number-pad"
-              variant="filled"
-              containerStyle={styles.amountInputContainer}
-              style={styles.amountInputStyle}
+          <View style={styles.amountRow}>
+            <View style={styles.amountInputWrapper}>
+              <Input
+                value={formData.amount}
+                onChangeText={handleAmountChange}
+                placeholder="0"
+                placeholderTextColor={colors.gray500}
+                keyboardType="number-pad"
+                variant="filled"
+                containerStyle={styles.amountInputContainer}
+                style={styles.amountInputStyle}
+              />
+            </View>
+            <CurrencyToggle
+              value={formData.currency}
+              onChange={c => setFormData(prev => ({ ...prev, currency: c }))}
+              style={styles.currencyToggle}
             />
-            <Text style={styles.amountSuffix}>원</Text>
           </View>
         </View>
 
@@ -515,13 +525,23 @@ const styles = StyleSheet.create({
   categoryPillTextSelected: {
     color: colors.white,
   },
+  amountRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
   amountInputWrapper: {
+    flex: 1,
     flexDirection: "row",
     alignItems: "center",
     borderRadius: 12,
     paddingHorizontal: 14,
     height: 48,
     backgroundColor: colors.gray200,
+  },
+  currencyToggle: {
+    flex: 0.5,
+    height: 48,
   },
   amountInputContainer: {
     flex: 1,
