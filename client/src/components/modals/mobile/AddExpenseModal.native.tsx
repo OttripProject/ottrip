@@ -54,8 +54,6 @@ interface AddExpenseModalProps {
   planEndDate?: string;
   defaultExDate?: string;
   onExpenseAdd?: (expense: Expense) => void;
-  pendingAiResult?: { result: DocumentUploadAnalyzeResponse; filename?: string; pendingFiles?: LocalFile[] } | null;
-  onRouteMismatchResult?: (result: DocumentUploadAnalyzeResponse, filename?: string, pendingFiles?: LocalFile[]) => void;
 }
 
 const normalizeAmount = (value: unknown) => {
@@ -72,8 +70,6 @@ export default function AddExpenseModal({
   planEndDate,
   defaultExDate,
   onExpenseAdd,
-  pendingAiResult,
-  onRouteMismatchResult,
 }: AddExpenseModalProps) {
   const [showDatePicker, setShowDatePicker] = useState(false);
 
@@ -122,7 +118,6 @@ export default function AddExpenseModal({
   const [lastAiSelection, setLastAiSelection] = useState<AiAttachmentAnalyzeSelection | null>(null);
   const aiCancelledRef = useRef(false);
   const formInitializedRef = useRef(false);
-  const [aiApplyLabel, setAiApplyLabel] = useState<string | undefined>();
 
   const { pickImage, pickDocument } = useFilePicker();
   const { data: me } = useMe();
@@ -173,11 +168,10 @@ export default function AddExpenseModal({
       } else {
         const inferredType = result.inferredItemType ?? result.draft?.itemType;
         if (inferredType && inferredType !== "expense") {
-          setAiApplyLabel(`${KIND_TO_LABEL[inferredType] ?? inferredType}에 추가`);
+          setAiAnalyzeError(`문서가 [${KIND_TO_LABEL[inferredType] ?? inferredType}]으로 분석되었습니다. 비용 추가 화면에는 반영할 수 없습니다.`);
         } else {
-          setAiApplyLabel(undefined);
+          setAiModalResult(result);
         }
-        setAiModalResult(result);
       }
     } catch {
       setAiAnalyzeError("분석 중 오류가 발생했습니다.");
@@ -185,26 +179,6 @@ export default function AddExpenseModal({
       setIsAiAnalyzing(false);
     }
   };
-
-  useEffect(() => {
-    if (visible && pendingAiResult) {
-      const draft = pendingAiResult.result.draft;
-      if (draft?.itemType === "expense") {
-        const v = (draft.payload.values ?? {}) as Record<string, unknown>;
-        const src = (v.expense ?? v.Expense ?? v) as Record<string, unknown>;
-        const amountRaw = String(src.amount ?? src.Amount ?? "").replace(/[^0-9]/g, "");
-        if (amountRaw) {
-          const formatted = amountRaw.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-          setFormData(prev => ({ ...prev, amount: formatted }));
-        }
-        const desc = String(src.description ?? src.Description ?? "").trim();
-        if (desc) setFormData(prev => ({ ...prev, description: desc }));
-      }
-      if (pendingAiResult.pendingFiles?.length) {
-        setPendingFiles(pendingAiResult.pendingFiles);
-      }
-    }
-  }, [visible, pendingAiResult]);
 
   const handleAmountChange = (text: string) => {
     const digits = normalizeAmount(text);
@@ -445,17 +419,13 @@ export default function AddExpenseModal({
     </BottomSheetModal>
     <AiDocumentAnalyzeModal
       visible={!!aiModalResult}
-      onClose={() => { setAiModalResult(null); setAiApplyLabel(undefined); }}
+      onClose={() => setAiModalResult(null)}
       entityTypeLabel="비용"
       originEntityType="비용"
       analyzeResult={aiModalResult}
       analyzeFileName={aiAnalyzeFileName}
-      applyLabel={aiApplyLabel}
       onApply={draft => {
-        const inferredType = aiModalResult?.inferredItemType ?? draft?.itemType;
-        if (inferredType !== "expense" && onRouteMismatchResult && aiModalResult) {
-          onRouteMismatchResult(aiModalResult, aiAnalyzeFileName, pendingFiles);
-        } else if (draft) {
+        if (draft) {
           const v = (draft.payload.values ?? {}) as Record<string, unknown>;
           const src = (v.expense ?? v.Expense ?? v) as Record<string, unknown>;
           const amountRaw = String(src.amount ?? src.Amount ?? "").replace(/[^0-9]/g, "");
@@ -475,7 +445,6 @@ export default function AddExpenseModal({
           }
         }
         setAiModalResult(null);
-        setAiApplyLabel(undefined);
       }}
     />
   </>
