@@ -552,7 +552,7 @@ export default function FlightEditModal({
   ) => {
     setFlightSegments(prev => {
       const next = [...prev];
-      (next[idx] as any)[field] = value;
+      next[idx] = { ...next[idx], [field]: value };
       return next;
     });
   };
@@ -793,10 +793,11 @@ export default function FlightEditModal({
                       onDayPress={day => {
                         setFlightSegments(prev => {
                           const next = [...prev];
-                          next[idx].departure_date = day.dateString;
-                          if (!next[idx].arrival_date || next[idx].arrival_date < day.dateString) {
-                            next[idx].arrival_date = day.dateString;
+                          const seg = { ...next[idx], departure_date: day.dateString };
+                          if (!seg.arrival_date || seg.arrival_date < day.dateString) {
+                            seg.arrival_date = day.dateString;
                           }
+                          next[idx] = seg;
                           return next;
                         });
                         setSegmentDatePicker(null);

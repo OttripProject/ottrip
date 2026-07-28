@@ -67,7 +67,7 @@ export default function FlightDetailModal({
 
   if (!flight) return null;
 
-  const segments = flight.flightSegments || [];
+  const segments = [...(flight.flightSegments || [])].sort((a, b) => a.order - b.order);
   const expenseAmount = flight.expense?.amount ?? 0;
   const hasAdditionalInfo = !!(flight.ticketNumber || flight.bookingReference);
 
