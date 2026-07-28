@@ -262,7 +262,10 @@ export default function ExpenseDetailModal({
         </View>
 
         <Pressable
-          style={styles.totalCard}
+          style={[
+            styles.totalCard,
+            tab === "expenses" && selectedCategory !== null && styles.totalCardDimmed,
+          ]}
           onPress={() => {
             setSelectedCategory(null);
             setTab("expenses");
@@ -613,6 +616,9 @@ const styles = StyleSheet.create({
   totalLabel: {
     ...textStyles.h7,
     color: "rgba(255,255,255,0.7)",
+  },
+  totalCardDimmed: {
+    opacity: 0.45,
   },
   totalAmountColumn: {
     alignItems: "flex-end",
