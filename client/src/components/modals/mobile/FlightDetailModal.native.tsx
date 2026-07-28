@@ -362,7 +362,7 @@ const styles = StyleSheet.create({
     backgroundColor: `${colors.primary}1A`,
     borderRadius: 12,
     padding: 16,
-    marginVertical: 12,
+    marginVertical: 6,
   },
   flightSectionHeader: {
     flexDirection: "row",
