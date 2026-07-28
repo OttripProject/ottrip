@@ -878,6 +878,8 @@ export default function WeeklyScreen() {
         onClose={() => setAddScheduleFlow("method")}
         planId={selectedPlan?.id ?? 0}
         planPublicId={selectedPlan?.publicId ?? ""}
+        planStartDate={selectedPlan?.startDate}
+        planEndDate={selectedPlan?.endDate}
         onSaved={() => {
           if (selectedPlan?.publicId) {
             queryClient.invalidateQueries({
