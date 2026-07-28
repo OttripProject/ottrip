@@ -25,7 +25,7 @@ import type {
 } from "@/types/api";
 import { categoryLabels } from "@/types/expense";
 import { colors } from "@/ui/tokens/colors";
-import { textStyles, typography } from "@/ui/tokens/typography";
+import { textStyles } from "@/ui/tokens/typography";
 import {
   convertUTCToLocalTime,
   formatKoreanDate,
@@ -377,7 +377,9 @@ export default function TodayScreen() {
       const checkoutDate = dayjs(accommodation.checkoutDate).format(
         "YYYY-MM-DD",
       );
-      return checkinDate <= calendarTodayStr && checkoutDate >= calendarTodayStr;
+      return (
+        checkinDate <= calendarTodayStr && checkoutDate >= calendarTodayStr
+      );
     });
   }, [planData.accommodations, calendarTodayStr]);
 
@@ -408,9 +410,12 @@ export default function TodayScreen() {
   const timelineDateSegment = useMemo(() => {
     const segments = planData.plan?.segments;
     if (!segments) return null;
-    return segments.find(
-      seg => seg.startDate <= timelineDateStr && timelineDateStr <= seg.endDate,
-    ) ?? null;
+    return (
+      segments.find(
+        seg =>
+          seg.startDate <= timelineDateStr && timelineDateStr <= seg.endDate,
+      ) ?? null
+    );
   }, [planData.plan?.segments, timelineDateStr]);
 
   const todayExpenses = useMemo(() => {
@@ -1206,7 +1211,11 @@ export default function TodayScreen() {
                   </>
                 ) : (
                   <>
-                    <Text style={[styles.costAmountPrimary, { marginBottom: 8 }]}>0원</Text>
+                    <Text
+                      style={[styles.costAmountPrimary, { marginBottom: 8 }]}
+                    >
+                      0원
+                    </Text>
                     <Text style={styles.costDetailPrimary}>
                       터치하여 상세 내역 확인
                     </Text>
@@ -1376,12 +1385,19 @@ export default function TodayScreen() {
         visible={showExpenseDetail && !showAddExpenseFromDetail}
         onClose={() => setShowExpenseDetail(false)}
         expenses={todayExpensesFromApi ?? []}
+        attachments={planData.attachments ?? []}
         total={todayExpenses.total}
         byCategory={todayExpenses.byCategory}
         planId={selectedPlan?.id ?? 0}
         planStartDate={selectedPlan?.startDate}
         planEndDate={selectedPlan?.endDate}
         exDate={timelineDateStr}
+        onExpenseDelete={async () => {
+          await refetchTodayExpenses();
+          queryClient.invalidateQueries({
+            queryKey: ["expenses", selectedPlan?.id],
+          });
+        }}
         onExpenseAdd={() => {
           queryClient.invalidateQueries({
             queryKey: ["expenses", selectedPlan?.id],

@@ -3,6 +3,7 @@ import { useMe } from "@/hooks/useMe";
 import { plansApi } from "@/services/plans";
 import type {
   Accommodation,
+  Attachment,
   Expense,
   FlightRead,
   Itinerary,
@@ -39,6 +40,7 @@ interface TravelInfoModalProps {
   accommodations?: Accommodation[];
   flights?: FlightRead[];
   expenses: Expense[];
+  attachments?: Attachment[];
   planPublicId: string | null;
   planId: number;
   planStartDate?: string;
@@ -59,6 +61,7 @@ export default function TravelInfoModal({
   accommodations = [],
   flights = [],
   expenses,
+  attachments = [],
   planPublicId,
   planId,
   planStartDate,
@@ -278,12 +281,14 @@ export default function TravelInfoModal({
         visible={showExpenseDetail && !showAddExpenseFromDetail}
         onClose={() => setShowExpenseDetail(false)}
         expenses={expenses || []}
+        attachments={attachments}
         total={totalExpenses.total}
         byCategory={expensesByCategory}
         planId={planId}
         planStartDate={planStartDate}
         planEndDate={planEndDate}
         title="전체 여행 비용"
+        onExpenseDelete={onRefreshExpenses}
         onExpenseAdd={handleExpenseAdded}
         onAddExpensePress={() => {
           setShowExpenseDetail(false);

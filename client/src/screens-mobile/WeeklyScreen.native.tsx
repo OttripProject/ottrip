@@ -24,7 +24,7 @@ import {
 } from "@/utils/dateUtils";
 import { useQueryClient } from "@tanstack/react-query";
 import dayjs from "dayjs";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -222,8 +222,12 @@ export default function WeeklyScreen() {
     if (planData.accommodations) {
       const dateStr = selectedDate.format("YYYY-MM-DD");
       planData.accommodations.forEach((accommodation: Accommodation) => {
-        const checkinDate = dayjs(accommodation.checkinDate).format("YYYY-MM-DD");
-        const checkoutDate = dayjs(accommodation.checkoutDate).format("YYYY-MM-DD");
+        const checkinDate = dayjs(accommodation.checkinDate).format(
+          "YYYY-MM-DD",
+        );
+        const checkoutDate = dayjs(accommodation.checkoutDate).format(
+          "YYYY-MM-DD",
+        );
         if (checkinDate <= dateStr && checkoutDate >= dateStr) {
           schedules.push({
             type: "accommodation",
@@ -236,7 +240,12 @@ export default function WeeklyScreen() {
     }
 
     return schedules.sort((a, b) => a.time.localeCompare(b.time));
-  }, [selectedDateItineraries, planData.flights, planData.accommodations, selectedDate]);
+  }, [
+    selectedDateItineraries,
+    planData.flights,
+    planData.accommodations,
+    selectedDate,
+  ]);
 
   const scheduleCount = selectedDateSchedules.filter(
     s => s.type !== "accommodation",
@@ -259,9 +268,11 @@ export default function WeeklyScreen() {
     const segments = planData.plan?.segments;
     if (!segments) return null;
     const dateStr = selectedDate.format("YYYY-MM-DD");
-    return segments.find(
-      seg => seg.startDate <= dateStr && dateStr <= seg.endDate,
-    ) ?? null;
+    return (
+      segments.find(
+        seg => seg.startDate <= dateStr && dateStr <= seg.endDate,
+      ) ?? null
+    );
   }, [planData.plan?.segments, selectedDate]);
 
   const datesWithItems = useMemo(() => {
@@ -1142,6 +1153,7 @@ export default function WeeklyScreen() {
           accommodations={planData.accommodations ?? []}
           flights={planData.flights ?? []}
           expenses={planData.expenses ?? []}
+          attachments={planData.attachments ?? []}
           planPublicId={selectedPlan.publicId}
           planId={selectedPlan.id}
           planStartDate={selectedPlan.startDate}
