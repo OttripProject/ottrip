@@ -91,8 +91,8 @@ function getEunNeun(text: string): string {
 }
 
 function getFileMimeLabel(mimeType: string): string {
-  if (mimeType === "application/pdf") return "PDF 문서";
-  if (mimeType.startsWith("image/")) return "이미지 파일";
+  if (mimeType === "application/pdf") return "문서 선택";
+  if (mimeType.startsWith("image/")) return "이미지 선택";
   return "파일";
 }
 

@@ -39,8 +39,8 @@ export type { AttachmentSectionProps } from "@/ui/components/attachmentSection.t
 
 function getAttachmentKindLabel(mimeType: string | undefined): string {
   const m = mimeType ?? "";
-  if (m === "application/pdf") return "PDF 문서";
-  if (m.startsWith("image/")) return "이미지 파일";
+  if (m === "application/pdf") return "문서 선택";
+  if (m.startsWith("image/")) return "이미지 선택";
   return "파일";
 }
 
@@ -130,7 +130,7 @@ export default function AttachmentSection({
     const showPicker = () => {
       Alert.alert("파일 추가", "추가할 파일 유형을 선택하세요.", [
         { text: "사진", onPress: onPickImage },
-        { text: "PDF 문서", onPress: onPickDocument },
+        { text: "문서 선택", onPress: onPickDocument },
         { text: "취소", style: "cancel" },
       ]);
     };

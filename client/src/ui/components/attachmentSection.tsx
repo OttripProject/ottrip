@@ -88,8 +88,8 @@ function fileToLocalFile(file: File): LocalFile | null {
 
 function getAttachmentKindLabel(mimeType: string | undefined): string {
   const m = mimeType ?? "";
-  if (m === "application/pdf") return "PDF 문서";
-  if (m.startsWith("image/")) return "이미지 파일";
+  if (m === "application/pdf") return "문서 선택";
+  if (m.startsWith("image/")) return "이미지 선택";
   return "파일";
 }
 
