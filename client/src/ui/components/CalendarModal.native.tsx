@@ -115,9 +115,7 @@ export default function CalendarModal({
   };
 
   const handleToday = () => {
-    const today = dayjs().format("YYYY-MM-DD");
-    onDayPress({ dateString: today });
-    onClose();
+    setCurrentMonth(dayjs().format("YYYY-MM-DD"));
   };
 
   const calendarHeader = () => (
