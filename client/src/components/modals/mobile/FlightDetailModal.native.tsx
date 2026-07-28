@@ -261,10 +261,15 @@ export default function FlightDetailModal({
         {hasAdditionalInfo && (
           <>
             <Pressable
-              style={styles.additionalInfoToggle}
+              style={[
+                styles.additionalInfoToggle,
+                showAdditionalInfo && styles.additionalInfoToggleOpen,
+              ]}
               onPress={() => setShowAdditionalInfo(v => !v)}
             >
-              <Text style={styles.additionalInfoToggleText}>추가정보</Text>
+              <Text style={styles.additionalInfoToggleText}>
+                {showAdditionalInfo ? "추가정보 닫기" : "추가정보 보기"}
+              </Text>
             </Pressable>
             {showAdditionalInfo && (
               <View style={styles.additionalInfo}>
@@ -424,14 +429,21 @@ const styles = StyleSheet.create({
     gap: 4,
     marginTop: 16,
   },
+  additionalInfoToggleOpen: {
+    borderBottomLeftRadius: 0,
+    borderBottomRightRadius: 0,
+  },
   additionalInfoToggleText: {
     ...textStyles.body5,
     color: colors.gray600,
   },
   additionalInfo: {
+    backgroundColor: colors.gray200,
+    borderBottomLeftRadius: 12,
+    borderBottomRightRadius: 12,
     paddingHorizontal: 16,
-    gap: 4,
-    marginTop: -16,
+    paddingBottom: 12,
+    gap: 8,
   },
   additionalInfoRow: {
     flexDirection: "row",
