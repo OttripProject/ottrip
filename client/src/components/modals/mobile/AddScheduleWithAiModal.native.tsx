@@ -151,6 +151,7 @@ export default function AddScheduleWithAiModal({
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState<Message[]>([AI_INTRO_MESSAGE]);
   const [loading, setLoading] = useState(false);
+  const [loadingLabel, setLoadingLabel] = useState("일정을 분석하고 있어요...");
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const [resultView, setResultView] = useState<ResultView | null>(null);
   const [isResultEditMode, setIsResultEditMode] = useState(false);
@@ -376,6 +377,7 @@ export default function AddScheduleWithAiModal({
   };
 
   const handleAnalyzeApply = async (draft: AiDocumentItemDraft) => {
+    setLoadingLabel("저장 중이에요...");
     setLoading(true);
     const v = draft.payload.values as Record<string, unknown>;
     const fileToUpload = pendingFileRef.current;
@@ -555,6 +557,7 @@ export default function AddScheduleWithAiModal({
       ]);
     } finally {
       setLoading(false);
+      setLoadingLabel("일정을 분석하고 있어요...");
       setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
     }
   };
@@ -872,7 +875,7 @@ export default function AddScheduleWithAiModal({
                     <View style={[styles.aiBubble, styles.aiBubbleRow]}>
                       <ActivityIndicator size="small" color={colors.white} />
                       <Text style={styles.aiBubbleText}>
-                        일정을 분석하고 있어요...
+                        {loadingLabel}
                       </Text>
                     </View>
                   </View>
