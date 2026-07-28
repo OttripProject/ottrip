@@ -618,8 +618,8 @@ const styles = StyleSheet.create({
     color: "rgba(255,255,255,0.7)",
   },
   totalCardSelected: {
-    borderWidth: 2,
-    borderColor: colors.white,
+    borderWidth: 3,
+    borderColor: colors.black,
   },
   totalAmountColumn: {
     alignItems: "flex-end",
