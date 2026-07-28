@@ -231,6 +231,12 @@ export default function BaseCalendar({
             <DropdownCalIcon width={14} height={14} />
           </Pressable>
         </View>
+        <Pressable
+          style={styles.todayButton}
+          onPress={() => setCurrentMonth(dayjs().format("YYYY-MM-DD"))}
+        >
+          <Text style={styles.todayButtonText}>오늘</Text>
+        </Pressable>
         <View style={styles.arrowContainer}>
           <Pressable
             style={styles.arrowButton}
@@ -685,11 +691,23 @@ const styles = StyleSheet.create({
     ...textStyles.body5,
     color: colors.gray600,
   },
+  todayButton: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: colors.gray300,
+    marginLeft: "auto",
+  },
+  todayButtonText: {
+    ...textStyles.body5,
+    color: colors.gray700,
+  },
   arrowContainer: {
     flexDirection: "row",
     alignItems: "center",
     gap: 18,
-    marginLeft: "auto",
+    marginLeft: 8,
   },
   arrowButton: {
     width: 18,
