@@ -1541,6 +1541,7 @@ export default function TodayScreen() {
         }}
         flight={selectedFlight}
         segment={selectedFlightSegment}
+        attachments={planData.attachments ?? []}
         onEdit={flight => {
           setShowFlightDetail(false);
           setEditingFlight(flight);

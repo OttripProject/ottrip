@@ -1,12 +1,16 @@
-import type { FlightRead, FlightSegmentReadDto } from "@/types/api";
+import ImagePreviewModal, {
+  type ImagePreviewItem,
+} from "@/components/modals/ImagePreviewModal";
+import type { Attachment, FlightRead, FlightSegmentReadDto } from "@/types/api";
 import BottomSheetModal from "@/ui/components/BottomSheetModal.native";
 import { colors } from "@/ui/tokens/colors";
 import { textStyles } from "@/ui/tokens/typography";
 import { convertUTCToLocalTime } from "@/utils/dateUtils";
 import dayjs from "dayjs";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   Alert,
+  Linking,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -27,6 +31,7 @@ interface FlightDetailModalProps {
   segment?: FlightSegmentReadDto | null;
   onEdit?: (flight: FlightRead) => void;
   onDelete?: (flight: FlightRead) => void;
+  attachments?: Attachment[];
 }
 
 export default function FlightDetailModal({
@@ -36,17 +41,35 @@ export default function FlightDetailModal({
   segment: _segment,
   onEdit,
   onDelete,
+  attachments = [],
 }: FlightDetailModalProps) {
+  const [showAdditionalInfo, setShowAdditionalInfo] = useState(false);
+  const [previewVisible, setPreviewVisible] = useState(false);
+  const [previewImages, setPreviewImages] = useState<ImagePreviewItem[]>([]);
+  const [previewInitialIndex, setPreviewInitialIndex] = useState(0);
+
+  const flightAttachments = useMemo(
+    () =>
+      flight
+        ? attachments.filter(
+            a => a.entityType === "flight" && a.entityId === flight.id,
+          )
+        : [],
+    [attachments, flight],
+  );
+
+  useEffect(() => {
+    if (!visible) {
+      setShowAdditionalInfo(false);
+      setPreviewVisible(false);
+    }
+  }, [visible]);
+
   if (!flight) return null;
 
   const segments = flight.flightSegments || [];
   const expenseAmount = flight.expense?.amount ?? 0;
-  const [showAdditionalInfo, setShowAdditionalInfo] = useState(false);
   const hasAdditionalInfo = !!(flight.ticketNumber || flight.bookingReference);
-
-  useEffect(() => {
-    if (!visible) setShowAdditionalInfo(false);
-  }, [visible]);
 
   const formatSegmentDate = (dateTime: string) => {
     return dayjs(dateTime).format("MM/DD");
@@ -86,7 +109,16 @@ export default function FlightDetailModal({
   };
 
   const handleViewTicket = () => {
-    // TODO: 항공권 보기 기능 구현
+    const images = flightAttachments.filter(a =>
+      a.contentType.startsWith("image/"),
+    );
+    if (images.length > 0) {
+      setPreviewImages(images.map(a => ({ attachment: a })));
+      setPreviewInitialIndex(0);
+      setPreviewVisible(true);
+    } else if (flightAttachments.length > 0) {
+      Linking.openURL(flightAttachments[0].fileUrl);
+    }
   };
 
   return (
@@ -260,13 +292,21 @@ export default function FlightDetailModal({
         )}
       </ScrollView>
 
-      {/* 항공권 보기 버튼 */}
-      <View style={styles.footer}>
-        <Pressable style={styles.ticketButton} onPress={handleViewTicket}>
-          <FlightIcon width={20} height={20} color={colors.white} />
-          <Text style={styles.ticketButtonText}>항공권 보기</Text>
-        </Pressable>
-      </View>
+      {flightAttachments.length > 0 && (
+        <View style={styles.footer}>
+          <Pressable style={styles.ticketButton} onPress={handleViewTicket}>
+            <FlightIcon width={20} height={20} color={colors.white} />
+            <Text style={styles.ticketButtonText}>항공권 보기</Text>
+          </Pressable>
+        </View>
+      )}
+
+      <ImagePreviewModal
+        visible={previewVisible}
+        onClose={() => setPreviewVisible(false)}
+        images={previewImages}
+        initialIndex={previewInitialIndex}
+      />
     </BottomSheetModal>
   );
 }
