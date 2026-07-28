@@ -253,8 +253,7 @@ export default function ExpenseDetailModal({
   };
 
   return (
-    <>
-      <BottomSheetModal visible={visible} onClose={onClose} height={0.85}>
+    <BottomSheetModal visible={visible} onClose={onClose} height={0.85}>
         <View style={styles.header}>
           <Text style={styles.headerTitle}>{title}</Text>
           <Pressable style={styles.closeButton} onPress={onClose} hitSlop={8}>
@@ -262,7 +261,13 @@ export default function ExpenseDetailModal({
           </Pressable>
         </View>
 
-        <View style={styles.totalCard}>
+        <Pressable
+          style={styles.totalCard}
+          onPress={() => {
+            setSelectedCategory(null);
+            setTab("expenses");
+          }}
+        >
           <Text style={styles.totalLabel}>총 지출</Text>
           <View style={styles.totalAmountColumn}>
             {totalKrw > 0 && (
@@ -279,7 +284,7 @@ export default function ExpenseDetailModal({
               <Text style={styles.totalAmount}>0 원</Text>
             )}
           </View>
-        </View>
+        </Pressable>
 
         <View style={styles.tabBar}>
           <Pressable
@@ -562,15 +567,14 @@ export default function ExpenseDetailModal({
             </Pressable>
           </View>
         )}
-      </BottomSheetModal>
 
-      <ImagePreviewModal
-        visible={previewVisible}
-        onClose={() => setPreviewVisible(false)}
-        images={previewImages}
-        initialIndex={previewInitialIndex}
-      />
-    </>
+        <ImagePreviewModal
+          visible={previewVisible}
+          onClose={() => setPreviewVisible(false)}
+          images={previewImages}
+          initialIndex={previewInitialIndex}
+        />
+    </BottomSheetModal>
   );
 }
 
