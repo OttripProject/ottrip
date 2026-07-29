@@ -506,17 +506,7 @@ export default function TodayScreen() {
     setAddScheduleFlow("method");
   }, [closeOpenTimelineSwipe]);
 
-  if (plansQuery.isLoading && plansQuery.plans.length === 0) {
-    return (
-      <View style={styles.container}>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
-        </View>
-      </View>
-    );
-  }
-
-  if (plansQuery.plans.length === 0) {
+  if (!plansQuery.isLoading && plansQuery.plans.length === 0) {
     const noPlanFeatures = [
       "여행 일정 관리에 최적화된 솔루션",
       "AI로 체크리스트 추천",
@@ -1660,7 +1650,7 @@ export default function TodayScreen() {
         }}
       />
 
-      <PlanLoadingOverlay visible={planData.isLoading && !!selectedPlan} />
+      <PlanLoadingOverlay visible={plansQuery.isLoading || planData.isLoading} />
     </View>
   );
 }

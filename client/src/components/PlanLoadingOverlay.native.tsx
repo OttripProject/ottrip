@@ -1,5 +1,5 @@
 import { colors } from "@/ui/tokens/colors";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Animated, StyleSheet, View } from "react-native";
 import FlightIcon from "../../assets/airplane.svg";
 
@@ -8,13 +8,34 @@ interface PlanLoadingOverlayProps {
 }
 
 export default function PlanLoadingOverlay({ visible }: PlanLoadingOverlayProps) {
+  const [isRendered, setIsRendered] = useState(visible);
+  const opacityAnim = useRef(new Animated.Value(visible ? 1 : 0)).current;
   const dot1Anim = useRef(new Animated.Value(0)).current;
   const dot2Anim = useRef(new Animated.Value(0)).current;
   const dot3Anim = useRef(new Animated.Value(0)).current;
   const dot4Anim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    if (!visible) return;
+    if (visible) {
+      setIsRendered(true);
+      Animated.timing(opacityAnim, {
+        toValue: 1,
+        duration: 200,
+        useNativeDriver: true,
+      }).start();
+    } else {
+      Animated.timing(opacityAnim, {
+        toValue: 0,
+        duration: 350,
+        useNativeDriver: true,
+      }).start(({ finished }) => {
+        if (finished) setIsRendered(false);
+      });
+    }
+  }, [visible, opacityAnim]);
+
+  useEffect(() => {
+    if (!isRendered) return;
 
     dot1Anim.setValue(0);
     dot2Anim.setValue(0);
@@ -38,14 +59,14 @@ export default function PlanLoadingOverlay({ visible }: PlanLoadingOverlayProps)
 
     animation.start();
     return () => animation.stop();
-  }, [visible, dot1Anim, dot2Anim, dot3Anim, dot4Anim]);
+  }, [isRendered, dot1Anim, dot2Anim, dot3Anim, dot4Anim]);
 
-  if (!visible) return null;
+  if (!isRendered) return null;
 
   return (
-    <View style={styles.overlay}>
+    <Animated.View style={[styles.overlay, { opacity: opacityAnim }]}>
       <View style={styles.iconWrapper}>
-        <FlightIcon width={36} height={36} color={colors.primary} />
+        <FlightIcon width={42} height={42} color={`${colors.primary}80`} />
       </View>
       <View style={styles.dotsRow}>
         <Animated.View style={[styles.dot, { opacity: dot1Anim }]} />
@@ -53,7 +74,7 @@ export default function PlanLoadingOverlay({ visible }: PlanLoadingOverlayProps)
         <Animated.View style={[styles.dot, { opacity: dot3Anim }]} />
         <Animated.View style={[styles.dot, { opacity: dot4Anim }]} />
       </View>
-    </View>
+    </Animated.View>
   );
 }
 
@@ -74,9 +95,9 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   dot: {
-    width: 10,
-    height: 10,
+    width: 8,
+    height: 8,
     borderRadius: 2,
-    backgroundColor: colors.primary,
+    backgroundColor: `${colors.primary}80`,
   },
 });

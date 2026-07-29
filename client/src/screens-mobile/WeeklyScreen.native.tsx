@@ -296,17 +296,7 @@ export default function WeeklyScreen() {
     return set;
   }, [planData.itineraries, planData.flights, planData.accommodations]);
 
-  if (plansQuery.isLoading || planData.isLoading) {
-    return (
-      <View style={styles.container}>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
-        </View>
-      </View>
-    );
-  }
-
-  if (plansQuery.plans.length === 0) {
+  if (!plansQuery.isLoading && plansQuery.plans.length === 0) {
     return (
       <View style={styles.container}>
         <View style={styles.emptyContainer}>
@@ -1184,7 +1174,7 @@ export default function WeeklyScreen() {
         />
       )}
 
-      <PlanLoadingOverlay visible={planData.isLoading && !!selectedPlan} />
+      <PlanLoadingOverlay visible={plansQuery.isLoading || planData.isLoading} />
     </View>
   );
 }
