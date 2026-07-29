@@ -649,7 +649,8 @@ export default function ItineraryEditModal({
               onConfirm={time24 => {
                 setFormData(prev => {
                   const next = { ...prev, startTime: time24 };
-                  if (timeToMinutes(prev.endTime) < timeToMinutes(time24)) {
+                  const endMinutes = timeToMinutes(prev.endTime);
+                  if (endMinutes > 0 && endMinutes < timeToMinutes(time24)) {
                     next.endTime = time24;
                   }
                   return next;
@@ -661,13 +662,7 @@ export default function ItineraryEditModal({
               onClose={() => setShowEndTimeModal(false)}
               value={formData.endTime}
               onConfirm={time24 => {
-                setFormData(prev => ({
-                  ...prev,
-                  endTime:
-                    timeToMinutes(time24) < timeToMinutes(prev.startTime)
-                      ? prev.startTime
-                      : time24,
-                }));
+                setFormData(prev => ({ ...prev, endTime: time24 }));
               }}
             />
           </View>
