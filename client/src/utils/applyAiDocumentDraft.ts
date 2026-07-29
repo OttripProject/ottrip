@@ -151,12 +151,10 @@ export function applyFlightDraftFromAi(
   if (rawSegs.length > 0) {
     setFlightSegments(
       rawSegs.map((segment: any) => {
-        const depTime = segment.departureTime
-          ? dayjs(segment.departureTime)
-          : dayjs();
-        const arrTime = segment.arrivalTime
-          ? dayjs(segment.arrivalTime)
-          : dayjs().add(1, "hour");
+        const depRaw = segment.departureTime ?? segment.departure_time;
+        const arrRaw = segment.arrivalTime ?? segment.arrival_time;
+        const depTime = depRaw ? dayjs(depRaw) : dayjs();
+        const arrTime = arrRaw ? dayjs(arrRaw) : dayjs().add(1, "hour");
         return {
           id: segment.id,
           airline: segment.airline || "",
