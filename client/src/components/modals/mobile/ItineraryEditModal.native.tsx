@@ -372,13 +372,11 @@ export default function ItineraryEditModal({
           ...formData,
           planId,
         });
-        Alert.alert("수정완료", "일정이 수정되었습니다.");
       } else {
         savedItinerary = await itinerariesApi.createItinerary({
           ...formData,
           planId,
         });
-        Alert.alert("추가완료", "일정이 추가되었습니다.");
       }
 
       const amountNum =
@@ -421,6 +419,8 @@ export default function ItineraryEditModal({
           );
         }
       }
+
+      Alert.alert(itinerary ? "수정완료" : "추가완료", itinerary ? "일정이 수정되었습니다." : "일정이 추가되었습니다.");
 
       try {
         await onSave?.(savedItinerary);

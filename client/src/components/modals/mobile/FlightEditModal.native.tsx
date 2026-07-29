@@ -398,7 +398,7 @@ export default function FlightEditModal({
         seatNumber: s.seat_number?.trim() || null,
       }));
 
-      let savedFlightId: number;
+      let savedFlight: FlightRead;
       if (flight) {
         await flightsApi.updateFlight(flight.id, {
           reservationNumber: formData.reservation_number?.trim() || null,
@@ -422,14 +422,7 @@ export default function FlightEditModal({
             })(),
           },
         });
-        const updated = await flightsApi.getFlight(flight.id);
-        savedFlightId = updated.id;
-        try {
-          await onSave?.(updated);
-        } catch {
-          // Refetch 실패해도 저장은 완료됨
-        }
-        Alert.alert("수정완료", "항공편이 수정되었습니다.");
+        savedFlight = await flightsApi.getFlight(flight.id);
       } else {
         const createRes = await flightsApi.createFlight({
           planId,
@@ -454,19 +447,12 @@ export default function FlightEditModal({
             })(),
           },
         });
-        const created = await flightsApi.getFlight(createRes.id);
-        savedFlightId = created.id;
-        try {
-          await onSave?.(created);
-        } catch {
-          // Refetch 실패해도 저장은 완료됨
-        }
-        Alert.alert("추가완료", "항공편이 추가되었습니다.");
+        savedFlight = await flightsApi.getFlight(createRes.id);
       }
 
       if (pendingFiles.length > 0) {
         try {
-          const uploaded = await uploadFiles(pendingFiles, savedFlightId);
+          const uploaded = await uploadFiles(pendingFiles, savedFlight.id);
           setExistingAttachments(prev => [...prev, ...uploaded]);
           setPendingFiles([]);
         } catch {
@@ -477,6 +463,13 @@ export default function FlightEditModal({
         }
       }
 
+      Alert.alert(flight ? "수정완료" : "추가완료", flight ? "항공편이 수정되었습니다." : "항공편이 추가되었습니다.");
+
+      try {
+        await onSave?.(savedFlight);
+      } catch {
+        // Refetch 실패해도 저장은 완료됨
+      }
       onClose?.({ fromSave: true });
     } catch (_error) {
       Alert.alert(

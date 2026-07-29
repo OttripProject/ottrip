@@ -319,9 +319,9 @@ export default function AccommodationEditModal({
     setIsSubmitting(true);
     try {
       const amount = Number.parseInt(normalizeAmount(expenseAmount), 10) || 0;
-      let savedAccommodationId: number;
+      let savedAccommodation: Accommodation;
       if (accommodation) {
-        const updated = await accommodationsApi.updateAccommodation(
+        savedAccommodation = await accommodationsApi.updateAccommodation(
           accommodation.id,
           {
             name: formData.name.trim(),
@@ -342,15 +342,8 @@ export default function AccommodationEditModal({
             },
           },
         );
-        savedAccommodationId = updated.id;
-        try {
-          await onSave?.(updated);
-        } catch {
-          // Refetch 실패해도 저장은 완료됨
-        }
-        Alert.alert("수정완료", "숙소가 수정되었습니다.");
       } else {
-        const created = await accommodationsApi.createAccommodation({
+        savedAccommodation = await accommodationsApi.createAccommodation({
           planId,
           name: formData.name.trim(),
           description: formData.description?.trim() || undefined,
@@ -369,20 +362,13 @@ export default function AccommodationEditModal({
             description: formData.name.trim(),
           },
         });
-        savedAccommodationId = created.id;
-        try {
-          await onSave?.(created);
-        } catch {
-          // Refetch 실패해도 저장은 완료됨
-        }
-        Alert.alert("추가완료", "숙소가 추가되었습니다.");
       }
 
       if (pendingFiles.length > 0) {
         try {
           const uploaded = await uploadFiles(
             pendingFiles,
-            savedAccommodationId,
+            savedAccommodation.id,
           );
           setExistingAttachments(prev => [...prev, ...uploaded]);
           setPendingFiles([]);
@@ -394,6 +380,13 @@ export default function AccommodationEditModal({
         }
       }
 
+      Alert.alert(accommodation ? "수정완료" : "추가완료", accommodation ? "숙소가 수정되었습니다." : "숙소가 추가되었습니다.");
+
+      try {
+        await onSave?.(savedAccommodation);
+      } catch {
+        // Refetch 실패해도 저장은 완료됨
+      }
       onClose?.({ fromSave: true });
     } catch (_error) {
       Alert.alert(
