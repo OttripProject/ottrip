@@ -66,7 +66,7 @@ export default function PlanLoadingOverlay({ visible }: PlanLoadingOverlayProps)
   return (
     <Animated.View style={[styles.overlay, { opacity: opacityAnim }]}>
       <View style={styles.iconWrapper}>
-        <FlightIcon width={42} height={42} color={`${colors.primary}80`} />
+        <FlightIcon width={42} height={42} color={`${colors.primary}99`} />
       </View>
       <View style={styles.dotsRow}>
         <Animated.View style={[styles.dot, { opacity: dot1Anim }]} />
@@ -84,7 +84,7 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255, 255, 255, 0.85)",
     alignItems: "center",
     justifyContent: "center",
-    gap: 16,
+    gap: 10,
     zIndex: 100,
   },
   iconWrapper: {
@@ -98,6 +98,6 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 2,
-    backgroundColor: `${colors.primary}80`,
+    backgroundColor: `${colors.primary}99`,
   },
 });

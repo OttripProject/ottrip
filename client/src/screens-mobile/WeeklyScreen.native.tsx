@@ -522,15 +522,19 @@ export default function WeeklyScreen() {
                             {schedule.time}
                           </Text>
                           {showNextDay && schedule.endTime && (
-                            <Text
-                              style={[
-                                styles.scheduleTimeText,
-                                isCurrentTime && styles.scheduleTimeTextNow,
-                              ]}
-                            >
-                              {" "}
-                              → {schedule.endTime}
-                            </Text>
+                            <>
+                              <Text
+                                style={[
+                                  styles.scheduleTimeText,
+                                  isCurrentTime && styles.scheduleTimeTextNow,
+                                ]}
+                              >
+                                → {schedule.endTime}
+                              </Text>
+                              <View style={styles.nextDayIndicator}>
+                                <Text style={styles.nextDayText}>+1 day</Text>
+                              </View>
+                            </>
                           )}
                           {isCurrentTime && (
                             <View style={styles.nowBadge}>
@@ -538,11 +542,6 @@ export default function WeeklyScreen() {
                             </View>
                           )}
                         </View>
-                        {showNextDay && (
-                          <View style={styles.nextDayIndicator}>
-                            <Text style={styles.nextDayText}>+1 day</Text>
-                          </View>
-                        )}
                       </View>
                       <Pressable
                         style={[
@@ -615,15 +614,19 @@ export default function WeeklyScreen() {
                           {schedule.time}
                         </Text>
                         {showNextDay && schedule.endTime && (
-                          <Text
-                            style={[
-                              styles.scheduleTimeText,
-                              isCurrentTime && styles.scheduleTimeTextNow,
-                            ]}
-                          >
-                            {" "}
-                            → {schedule.endTime}
-                          </Text>
+                          <>
+                            <Text
+                              style={[
+                                styles.scheduleTimeText,
+                                isCurrentTime && styles.scheduleTimeTextNow,
+                              ]}
+                            >
+                              → {schedule.endTime}
+                            </Text>
+                            <View style={styles.nextDayIndicator}>
+                              <Text style={styles.nextDayText}>+1 day</Text>
+                            </View>
+                          </>
                         )}
                         {isCurrentTime && (
                           <View style={styles.nowBadge}>
@@ -631,11 +634,6 @@ export default function WeeklyScreen() {
                           </View>
                         )}
                       </View>
-                      {showNextDay && (
-                        <View style={styles.nextDayIndicator}>
-                          <Text style={styles.nextDayText}>+1 day</Text>
-                        </View>
-                      )}
                     </View>
                     <Pressable
                       style={[
@@ -1423,7 +1421,6 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     borderWidth: 1,
     borderColor: colors.gray300,
-    marginTop: 4,
   },
   nextDayText: {
     ...textStyles.body4,

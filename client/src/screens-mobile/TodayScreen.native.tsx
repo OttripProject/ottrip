@@ -736,7 +736,11 @@ export default function TodayScreen() {
                 {currentActivity.endTime && (
                   <View style={styles.endTimeBox}>
                     <Text style={styles.endTime}>
-                      {currentActivity.endTime} 종료
+                      {(currentActivity.type === "flight"
+                        ? dayjs(currentActivity.segment.departureTime).format("YYYY-MM-DD") !== dayjs(currentActivity.segment.arrivalTime).format("YYYY-MM-DD")
+                        : currentActivity.endTime < currentActivity.time)
+                        ? `다음날 ${currentActivity.endTime} 종료`
+                        : `${currentActivity.endTime} 종료`}
                     </Text>
                   </View>
                 )}
