@@ -789,7 +789,7 @@ export default function AccommodationEditModal({
       onApply={draft => {
         const inferredType = aiModalResult?.inferredItemType ?? draft?.itemType;
         if (inferredType !== "accommodation" && onRouteMismatchResult && aiModalResult) {
-          onRouteMismatchResult(aiModalResult, aiAnalyzeFileName, pendingFiles);
+          onRouteMismatchResult({ ...aiModalResult, draft }, aiAnalyzeFileName, pendingFiles);
         } else if (draft?.itemType === "accommodation") {
           const v = draft.payload.values as Record<string, unknown>;
           const shortTime = (t: string) =>

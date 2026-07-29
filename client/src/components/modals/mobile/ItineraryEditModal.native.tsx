@@ -861,7 +861,7 @@ export default function ItineraryEditModal({
       onApply={draft => {
         const inferredType = aiModalResult?.inferredItemType ?? draft?.itemType;
         if (inferredType !== "itinerary" && onRouteMismatchResult && aiModalResult) {
-          onRouteMismatchResult(aiModalResult, aiAnalyzeFileName, pendingFiles);
+          onRouteMismatchResult({ ...aiModalResult, draft }, aiAnalyzeFileName, pendingFiles);
         } else if (draft) {
           applyItineraryDraftFromAi(draft, setFormData, () => {});
         }
