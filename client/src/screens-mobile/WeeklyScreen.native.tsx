@@ -202,12 +202,15 @@ export default function WeeklyScreen() {
     if (planData.flights) {
       planData.flights.forEach((flight: FlightRead) => {
         if (flight.flightSegments?.length) {
-          flight.flightSegments.forEach((segment, index) => {
+          const sortedSegments = [...flight.flightSegments].sort(
+            (a, b) => a.order - b.order,
+          );
+          sortedSegments.forEach((segment, index) => {
             const departureTime = dayjs(segment.departureTime);
             if (departureTime.isSame(selectedDate, "day")) {
               schedules.push({
                 type: "flight",
-                id: `${flight.id}-segment-${index}`,
+                id: `${flight.id}-segment-${segment.id}`,
                 time: convertUTCToLocalTime(segment.departureTime),
                 endTime: convertUTCToLocalTime(segment.arrivalTime),
                 data: flight,
@@ -522,7 +525,7 @@ export default function WeeklyScreen() {
                             {schedule.time}
                           </Text>
                           {showNextDay && schedule.endTime && (
-                            <>
+                            <View style={styles.endTimeWithBadge}>
                               <Text
                                 style={[
                                   styles.scheduleTimeText,
@@ -534,7 +537,7 @@ export default function WeeklyScreen() {
                               <View style={styles.nextDayIndicator}>
                                 <Text style={styles.nextDayText}>+1 day</Text>
                               </View>
-                            </>
+                            </View>
                           )}
                           {isCurrentTime && (
                             <View style={styles.nowBadge}>
@@ -614,7 +617,7 @@ export default function WeeklyScreen() {
                           {schedule.time}
                         </Text>
                         {showNextDay && schedule.endTime && (
-                          <>
+                          <View style={styles.endTimeWithBadge}>
                             <Text
                               style={[
                                 styles.scheduleTimeText,
@@ -626,7 +629,7 @@ export default function WeeklyScreen() {
                             <View style={styles.nextDayIndicator}>
                               <Text style={styles.nextDayText}>+1 day</Text>
                             </View>
-                          </>
+                          </View>
                         )}
                         {isCurrentTime && (
                           <View style={styles.nowBadge}>
@@ -1413,6 +1416,11 @@ const styles = StyleSheet.create({
   nowBadgeText: {
     ...textStyles.h9,
     color: colors.white,
+  },
+  endTimeWithBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
   },
   nextDayIndicator: {
     backgroundColor: colors.gray300,

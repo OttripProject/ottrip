@@ -106,12 +106,15 @@ function buildSchedulesForDate(
     });
   (flights || []).forEach(flight => {
     if (!flight.flightSegments?.length) return;
-    flight.flightSegments.forEach((segment: any, index: number) => {
+    const sortedSegments = [...flight.flightSegments].sort(
+      (a: any, b: any) => a.order - b.order,
+    );
+    sortedSegments.forEach((segment: any, index: number) => {
       const departureTime = dayjs(segment.departureTime);
       if (departureTime.format("YYYY-MM-DD") !== dateStr) return;
       items.push({
         type: "flight",
-        id: `${flight.id}-segment-${index}`,
+        id: `${flight.id}-segment-${segment.id}`,
         time: convertUTCToLocalTime(segment.departureTime),
         endTime: convertUTCToLocalTime(segment.arrivalTime),
         data: flight,
@@ -735,12 +738,13 @@ export default function TodayScreen() {
                 </View>
                 {currentActivity.endTime && (
                   <View style={styles.endTimeBox}>
+                    {(currentActivity.type === "flight"
+                      ? dayjs(currentActivity.segment.departureTime).format("YYYY-MM-DD") !== dayjs(currentActivity.segment.arrivalTime).format("YYYY-MM-DD")
+                      : currentActivity.endTime < currentActivity.time) && (
+                      <Text style={styles.nextDayLabel}>(다음날)</Text>
+                    )}
                     <Text style={styles.endTime}>
-                      {(currentActivity.type === "flight"
-                        ? dayjs(currentActivity.segment.departureTime).format("YYYY-MM-DD") !== dayjs(currentActivity.segment.arrivalTime).format("YYYY-MM-DD")
-                        : currentActivity.endTime < currentActivity.time)
-                        ? `다음날 ${currentActivity.endTime} 종료`
-                        : `${currentActivity.endTime} 종료`}
+                      {currentActivity.endTime} 종료
                     </Text>
                   </View>
                 )}
@@ -1925,10 +1929,18 @@ const styles = StyleSheet.create({
     color: colors.primary,
   },
   endTimeBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
     backgroundColor: colors.gray300,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 8,
+  },
+  nextDayLabel: {
+    ...textStyles.h10,
+    fontSize: 9,
+    color: colors.gray600,
   },
   endTime: {
     ...textStyles.h9,
