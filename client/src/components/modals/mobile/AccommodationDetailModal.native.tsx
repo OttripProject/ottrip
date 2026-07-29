@@ -2,6 +2,7 @@ import ImagePreviewModal, {
   type ImagePreviewItem,
 } from "@/components/modals/ImagePreviewModal";
 import type { Accommodation, Attachment } from "@/types/api";
+import { ExpenseCurrency, currencyLabels } from "@/types/expense";
 import BottomSheetModal from "@/ui/components/BottomSheetModal.native";
 import { colors } from "@/ui/tokens/colors";
 import { radii } from "@/ui/tokens/radii";
@@ -77,6 +78,8 @@ export default function AccommodationDetailModal({
     [accommodation.city, accommodation.country].filter(Boolean).join(", ") ||
     undefined;
   const expenseAmount = accommodation.expense?.amount ?? 0;
+  const expenseCurrency = (accommodation.expense?.currency ??
+    ExpenseCurrency.KRW) as ExpenseCurrency;
   const checkinTime = formatTime(accommodation.checkinTime);
   const checkoutTime = formatTime(accommodation.checkoutTime);
   const checkinDate = accommodation.checkinDate
@@ -251,7 +254,7 @@ export default function AccommodationDetailModal({
                   {Number(expenseAmount).toLocaleString("ko-KR", {
                     maximumFractionDigits: 0,
                   })}
-                  원
+                  {currencyLabels[expenseCurrency]}
                 </Text>
               </View>
             </View>

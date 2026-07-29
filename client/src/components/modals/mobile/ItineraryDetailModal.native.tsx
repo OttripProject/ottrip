@@ -2,6 +2,7 @@ import ImagePreviewModal, {
   type ImagePreviewItem,
 } from "@/components/modals/ImagePreviewModal";
 import type { Attachment, Expense, Itinerary } from "@/types/api";
+import { ExpenseCurrency, currencyLabels } from "@/types/expense";
 import BottomSheetModal from "@/ui/components/BottomSheetModal.native";
 import { colors } from "@/ui/tokens/colors";
 import { radii } from "@/ui/tokens/radii";
@@ -39,10 +40,6 @@ interface ItineraryDetailModalProps {
   onDelete?: (itinerary: Itinerary) => void;
 }
 
-function sumExpenseAmounts(list: Expense[]): number {
-  return list.reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
-}
-
 export default function ItineraryDetailModal({
   visible,
   onClose,
@@ -56,15 +53,18 @@ export default function ItineraryDetailModal({
   const [previewImages, setPreviewImages] = useState<ImagePreviewItem[]>([]);
   const [previewInitialIndex, setPreviewInitialIndex] = useState(0);
 
-  const expenseAmount = useMemo(() => {
-    if (!itinerary) return 0;
-    const nested = itinerary.expenses;
-    if (nested && nested.length > 0) {
-      return sumExpenseAmounts(nested);
+  const expenseByCurrency = useMemo(() => {
+    if (!itinerary) return {} as Record<ExpenseCurrency, number>;
+    const list =
+      itinerary.expenses && itinerary.expenses.length > 0
+        ? itinerary.expenses
+        : (planExpenses ?? []).filter(e => e.itineraryId === itinerary.id);
+    const result = {} as Record<ExpenseCurrency, number>;
+    for (const e of list) {
+      const cur = (e.currency ?? ExpenseCurrency.KRW) as ExpenseCurrency;
+      result[cur] = (result[cur] ?? 0) + (Number(e.amount) || 0);
     }
-    return sumExpenseAmounts(
-      (planExpenses ?? []).filter(e => e.itineraryId === itinerary.id),
-    );
+    return result;
   }, [itinerary, planExpenses]);
 
   const itineraryAttachments = useMemo(
@@ -221,7 +221,7 @@ export default function ItineraryDetailModal({
           )}
 
           {/* 비용 */}
-          {expenseAmount > 0 && (
+          {Object.values(expenseByCurrency).some(v => v > 0) && (
             <View style={styles.detailItem}>
               <View style={styles.detailIcon}>
                 <ExpenseIcon width={20} height={20} color={colors.primary} />
@@ -229,7 +229,18 @@ export default function ItineraryDetailModal({
               <View style={styles.detailContent}>
                 <Text style={styles.detailLabel}>비용</Text>
                 <Text style={styles.detailValue}>
-                  {expenseAmount.toLocaleString("ko-KR")}원
+                  {(
+                    Object.entries(expenseByCurrency) as [
+                      ExpenseCurrency,
+                      number,
+                    ][]
+                  )
+                    .filter(([, amt]) => amt > 0)
+                    .map(
+                      ([cur, amt]) =>
+                        `${amt.toLocaleString("ko-KR")}${currencyLabels[cur]}`,
+                    )
+                    .join(" / ")}
                 </Text>
               </View>
             </View>

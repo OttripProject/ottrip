@@ -2,6 +2,7 @@ import ImagePreviewModal, {
   type ImagePreviewItem,
 } from "@/components/modals/ImagePreviewModal";
 import type { Attachment, FlightRead, FlightSegmentReadDto } from "@/types/api";
+import { ExpenseCurrency, currencyLabels } from "@/types/expense";
 import BottomSheetModal from "@/ui/components/BottomSheetModal.native";
 import { colors } from "@/ui/tokens/colors";
 import { textStyles } from "@/ui/tokens/typography";
@@ -67,8 +68,12 @@ export default function FlightDetailModal({
 
   if (!flight) return null;
 
-  const segments = [...(flight.flightSegments || [])].sort((a, b) => a.order - b.order);
+  const segments = [...(flight.flightSegments || [])].sort(
+    (a, b) => a.order - b.order,
+  );
   const expenseAmount = flight.expense?.amount ?? 0;
+  const expenseCurrency = (flight.expense?.currency ??
+    ExpenseCurrency.KRW) as ExpenseCurrency;
   const hasAdditionalInfo = !!(flight.ticketNumber || flight.bookingReference);
 
   const formatSegmentDate = (dateTime: string) => {
@@ -204,7 +209,7 @@ export default function FlightDetailModal({
                   {Number(expenseAmount).toLocaleString("ko-KR", {
                     maximumFractionDigits: 0,
                   })}
-                  원
+                  {currencyLabels[expenseCurrency]}
                 </Text>
               </View>
             </View>
