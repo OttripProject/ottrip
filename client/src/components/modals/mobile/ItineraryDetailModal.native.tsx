@@ -414,7 +414,7 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   attachmentName: {
-    ...textStyles.body4,
+    ...textStyles.h7,
     color: colors.gray800,
     flex: 1,
   },
