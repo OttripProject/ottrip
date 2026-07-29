@@ -944,6 +944,7 @@ export default function WeeklyScreen() {
         }}
         itinerary={selectedItinerary}
         planExpenses={planData.expenses ?? []}
+        attachments={planData.attachments ?? []}
         onEdit={itinerary => {
           setShowItineraryDetail(false);
           setEditingItinerary(itinerary);
@@ -1091,6 +1092,7 @@ export default function WeeklyScreen() {
           setSelectedAccommodation(null);
         }}
         accommodation={selectedAccommodation}
+        attachments={planData.attachments ?? []}
         onEdit={accommodation => {
           setShowAccommodationDetail(false);
           setEditingAccommodation(accommodation);

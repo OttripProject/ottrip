@@ -1,9 +1,13 @@
-import type { Expense, Itinerary } from "@/types/api";
+import ImagePreviewModal, {
+  type ImagePreviewItem,
+} from "@/components/modals/ImagePreviewModal";
+import type { Attachment, Expense, Itinerary } from "@/types/api";
 import BottomSheetModal from "@/ui/components/BottomSheetModal.native";
 import { colors } from "@/ui/tokens/colors";
+import { radii } from "@/ui/tokens/radii";
 import { textStyles } from "@/ui/tokens/typography";
 import { formatTime } from "@/utils/dateUtils";
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Alert,
   Linking,
@@ -16,6 +20,8 @@ import {
 } from "react-native";
 import DeleteIcon from "../../../../assets/delete_gray.svg";
 import MemoIcon from "../../../../assets/memo.svg";
+import AttachmentDocumentIcon from "../../../../assets/mobile_attachment_document.svg";
+import AttachmentImageIcon from "../../../../assets/mobile_attachment_image.svg";
 import CloseIcon from "../../../../assets/mobile_close.svg";
 import ExpenseIcon from "../../../../assets/mobile_expense.svg";
 import LocationIcon from "../../../../assets/mobile_location.svg";
@@ -28,6 +34,7 @@ interface ItineraryDetailModalProps {
   onClose: () => void;
   itinerary: Itinerary | null;
   planExpenses?: Expense[];
+  attachments?: Attachment[];
   onEdit?: (itinerary: Itinerary) => void;
   onDelete?: (itinerary: Itinerary) => void;
 }
@@ -41,9 +48,14 @@ export default function ItineraryDetailModal({
   onClose,
   itinerary,
   planExpenses = [],
+  attachments = [],
   onEdit,
   onDelete,
 }: ItineraryDetailModalProps) {
+  const [previewVisible, setPreviewVisible] = useState(false);
+  const [previewImages, setPreviewImages] = useState<ImagePreviewItem[]>([]);
+  const [previewInitialIndex, setPreviewInitialIndex] = useState(0);
+
   const expenseAmount = useMemo(() => {
     if (!itinerary) return 0;
     const nested = itinerary.expenses;
@@ -54,6 +66,20 @@ export default function ItineraryDetailModal({
       (planExpenses ?? []).filter(e => e.itineraryId === itinerary.id),
     );
   }, [itinerary, planExpenses]);
+
+  const itineraryAttachments = useMemo(
+    () =>
+      itinerary
+        ? attachments.filter(
+            a => a.entityType === "itinerary" && a.entityId === itinerary.id,
+          )
+        : [],
+    [attachments, itinerary],
+  );
+
+  useEffect(() => {
+    if (!visible) setPreviewVisible(false);
+  }, [visible]);
 
   if (!itinerary) return null;
 
@@ -102,6 +128,23 @@ export default function ItineraryDetailModal({
         },
       },
     ]);
+  };
+
+  const handleAttachmentPress = (index: number) => {
+    const attachment = itineraryAttachments[index];
+    if (attachment.contentType.startsWith("image/")) {
+      const images = itineraryAttachments
+        .filter(a => a.contentType.startsWith("image/"))
+        .map(a => ({ attachment: a }));
+      const imageIndex = itineraryAttachments
+        .slice(0, index)
+        .filter(a => a.contentType.startsWith("image/")).length;
+      setPreviewImages(images);
+      setPreviewInitialIndex(imageIndex);
+      setPreviewVisible(true);
+    } else {
+      Linking.openURL(attachment.fileUrl);
+    }
   };
 
   const startTime = itinerary.startTime
@@ -205,6 +248,45 @@ export default function ItineraryDetailModal({
             </View>
           )}
         </View>
+
+        {/* 첨부파일 섹션 */}
+        {itineraryAttachments.length > 0 && (
+          <View style={styles.attachmentSection}>
+            <View style={styles.attachmentDivider} />
+            <Text style={styles.attachmentHeader}>
+              첨부파일 ({itineraryAttachments.length})
+            </Text>
+            {itineraryAttachments.map((attachment, index) => {
+              const isImage = attachment.contentType.startsWith("image/");
+              return (
+                <Pressable
+                  key={attachment.id}
+                  style={styles.attachmentItem}
+                  onPress={() => handleAttachmentPress(index)}
+                >
+                  <View style={styles.attachmentIconWrapper}>
+                    {isImage ? (
+                      <AttachmentImageIcon
+                        width={20}
+                        height={20}
+                        color={colors.primary}
+                      />
+                    ) : (
+                      <AttachmentDocumentIcon
+                        width={20}
+                        height={20}
+                        color={colors.primary}
+                      />
+                    )}
+                  </View>
+                  <Text style={styles.attachmentName} numberOfLines={1}>
+                    {attachment.fileName}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        )}
       </ScrollView>
 
       {/* 지도 앱에서 길찾기 버튼 */}
@@ -216,6 +298,13 @@ export default function ItineraryDetailModal({
           </Pressable>
         </View>
       )}
+
+      <ImagePreviewModal
+        visible={previewVisible}
+        onClose={() => setPreviewVisible(false)}
+        images={previewImages}
+        initialIndex={previewInitialIndex}
+      />
     </BottomSheetModal>
   );
 }
@@ -280,6 +369,43 @@ const styles = StyleSheet.create({
   },
   detailValue: {
     ...textStyles.h6,
+  },
+  attachmentSection: {
+    marginTop: 24,
+  },
+  attachmentDivider: {
+    height: 1,
+    backgroundColor: colors.gray200,
+    marginBottom: 16,
+  },
+  attachmentHeader: {
+    ...textStyles.h7,
+    color: colors.gray600,
+    marginBottom: 10,
+  },
+  attachmentItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    backgroundColor: colors.gray100,
+    borderRadius: radii.md,
+    marginBottom: 6,
+  },
+  attachmentIconWrapper: {
+    width: 32,
+    height: 32,
+    borderRadius: radii.sm,
+    backgroundColor: `${colors.primary}1A`,
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+  },
+  attachmentName: {
+    ...textStyles.body4,
+    color: colors.gray800,
+    flex: 1,
   },
   footer: {
     paddingHorizontal: 16,

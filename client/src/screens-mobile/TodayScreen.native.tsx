@@ -1440,6 +1440,7 @@ export default function TodayScreen() {
         }}
         itinerary={selectedItinerary}
         planExpenses={planData.expenses ?? []}
+        attachments={planData.attachments ?? []}
         onEdit={itinerary => {
           setShowItineraryDetail(false);
           setEditingItinerary(itinerary);
@@ -1484,6 +1485,7 @@ export default function TodayScreen() {
           setSelectedAccommodation(null);
         }}
         accommodation={selectedAccommodation}
+        attachments={planData.attachments ?? []}
         onEdit={accommodation => {
           setShowAccommodationDetail(false);
           setEditingAccommodation(accommodation);

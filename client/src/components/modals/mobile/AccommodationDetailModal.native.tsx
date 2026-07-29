@@ -1,9 +1,14 @@
-import type { Accommodation } from "@/types/api";
+import ImagePreviewModal, {
+  type ImagePreviewItem,
+} from "@/components/modals/ImagePreviewModal";
+import type { Accommodation, Attachment } from "@/types/api";
 import BottomSheetModal from "@/ui/components/BottomSheetModal.native";
 import { colors } from "@/ui/tokens/colors";
+import { radii } from "@/ui/tokens/radii";
 import { textStyles } from "@/ui/tokens/typography";
 import { formatTime } from "@/utils/dateUtils";
 import dayjs from "dayjs";
+import { useEffect, useMemo, useState } from "react";
 import {
   Alert,
   Linking,
@@ -18,6 +23,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import DeleteIcon from "../../../../assets/delete_gray.svg";
 import MemoIcon from "../../../../assets/memo.svg";
 import AccommodationIcon from "../../../../assets/mobile_accomodation.svg";
+import AttachmentDocumentIcon from "../../../../assets/mobile_attachment_document.svg";
+import AttachmentImageIcon from "../../../../assets/mobile_attachment_image.svg";
 import CloseIcon from "../../../../assets/mobile_close.svg";
 import ExpenseIcon from "../../../../assets/mobile_expense.svg";
 import LocationIcon from "../../../../assets/mobile_location.svg";
@@ -29,6 +36,7 @@ interface AccommodationDetailModalProps {
   visible: boolean;
   onClose: () => void;
   accommodation: Accommodation | null;
+  attachments?: Attachment[];
   onEdit?: (accommodation: Accommodation) => void;
   onDelete?: (accommodation: Accommodation) => void;
 }
@@ -37,10 +45,31 @@ export default function AccommodationDetailModal({
   visible,
   onClose,
   accommodation,
+  attachments = [],
   onEdit,
   onDelete,
 }: AccommodationDetailModalProps) {
   const _insets = useSafeAreaInsets();
+  const [previewVisible, setPreviewVisible] = useState(false);
+  const [previewImages, setPreviewImages] = useState<ImagePreviewItem[]>([]);
+  const [previewInitialIndex, setPreviewInitialIndex] = useState(0);
+
+  const accommodationAttachments = useMemo(
+    () =>
+      accommodation
+        ? attachments.filter(
+            a =>
+              a.entityType === "accommodation" &&
+              a.entityId === accommodation.id,
+          )
+        : [],
+    [attachments, accommodation],
+  );
+
+  useEffect(() => {
+    if (!visible) setPreviewVisible(false);
+  }, [visible]);
+
   if (!accommodation) return null;
 
   const location =
@@ -80,6 +109,23 @@ export default function AccommodationDetailModal({
       Linking.openURL(googleMapsUrl).catch(() => {
         Alert.alert("알림", "지도 앱을 열 수 없습니다.");
       });
+    }
+  };
+
+  const handleAttachmentPress = (index: number) => {
+    const attachment = accommodationAttachments[index];
+    if (attachment.contentType.startsWith("image/")) {
+      const images = accommodationAttachments
+        .filter(a => a.contentType.startsWith("image/"))
+        .map(a => ({ attachment: a }));
+      const imageIndex = accommodationAttachments
+        .slice(0, index)
+        .filter(a => a.contentType.startsWith("image/")).length;
+      setPreviewImages(images);
+      setPreviewInitialIndex(imageIndex);
+      setPreviewVisible(true);
+    } else {
+      Linking.openURL(attachment.fileUrl);
     }
   };
 
@@ -226,6 +272,45 @@ export default function AccommodationDetailModal({
             </View>
           )}
         </View>
+
+        {/* 첨부파일 섹션 */}
+        {accommodationAttachments.length > 0 && (
+          <View style={styles.attachmentSection}>
+            <View style={styles.attachmentDivider} />
+            <Text style={styles.attachmentHeader}>
+              첨부파일 ({accommodationAttachments.length})
+            </Text>
+            {accommodationAttachments.map((attachment, index) => {
+              const isImage = attachment.contentType.startsWith("image/");
+              return (
+                <Pressable
+                  key={attachment.id}
+                  style={styles.attachmentItem}
+                  onPress={() => handleAttachmentPress(index)}
+                >
+                  <View style={styles.attachmentIconWrapper}>
+                    {isImage ? (
+                      <AttachmentImageIcon
+                        width={20}
+                        height={20}
+                        color={colors.primary}
+                      />
+                    ) : (
+                      <AttachmentDocumentIcon
+                        width={20}
+                        height={20}
+                        color={colors.primary}
+                      />
+                    )}
+                  </View>
+                  <Text style={styles.attachmentName} numberOfLines={1}>
+                    {attachment.fileName}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        )}
       </ScrollView>
 
       {/* 지도 앱에서 길찾기 버튼 */}
@@ -237,6 +322,13 @@ export default function AccommodationDetailModal({
           </Pressable>
         </View>
       )}
+
+      <ImagePreviewModal
+        visible={previewVisible}
+        onClose={() => setPreviewVisible(false)}
+        images={previewImages}
+        initialIndex={previewInitialIndex}
+      />
     </BottomSheetModal>
   );
 }
@@ -341,6 +433,43 @@ const styles = StyleSheet.create({
   },
   detailValue: {
     ...textStyles.h6,
+  },
+  attachmentSection: {
+    marginTop: 24,
+  },
+  attachmentDivider: {
+    height: 1,
+    backgroundColor: colors.gray200,
+    marginBottom: 16,
+  },
+  attachmentHeader: {
+    ...textStyles.h7,
+    color: colors.gray600,
+    marginBottom: 10,
+  },
+  attachmentItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    backgroundColor: colors.gray100,
+    borderRadius: radii.md,
+    marginBottom: 6,
+  },
+  attachmentIconWrapper: {
+    width: 32,
+    height: 32,
+    borderRadius: radii.sm,
+    backgroundColor: `${colors.primary}1A`,
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+  },
+  attachmentName: {
+    ...textStyles.body4,
+    color: colors.gray800,
+    flex: 1,
   },
   footer: {
     paddingHorizontal: 16,
