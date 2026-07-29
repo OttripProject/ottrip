@@ -38,6 +38,7 @@ import dayjs from "dayjs";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  useWindowDimensions,
   Alert,
   Animated,
   Modal,
@@ -155,8 +156,10 @@ function collectNearestFutureScheduleDateStr(
 }
 
 export default function TodayScreen() {
+  const { width: windowWidth } = useWindowDimensions();
   const { data: me } = useMe();
   const { selectedPlan, setSelectedPlan } = useSelectedPlan();
+  const [currentActivityPageIndex, setCurrentActivityPageIndex] = useState(0);
   const [profileModalVisible, setProfileModalVisible] = useState(false);
   const [showPlanSelector, setShowPlanSelector] = useState(false);
   const [showAddPlanModal, setShowAddPlanModal] = useState(false);
@@ -325,25 +328,28 @@ export default function TodayScreen() {
     planData.accommodations,
   ]);
 
-  const currentActivity = useMemo((): ScheduleItem | null => {
-    if (!viewingCalendarToday) return null;
-    return (
-      todaySchedules.find((item: ScheduleItem) => {
-        if (item.type === "itinerary") {
-          const startDateTime = dayjs(`${timelineDateStr} ${item.time}`);
-          let endDateTime = dayjs(`${timelineDateStr} ${item.endTime}`);
-          if (item.endTime < item.time) endDateTime = endDateTime.add(1, "day");
-          return (
-            currentTime.isAfter(startDateTime) &&
-            currentTime.isBefore(endDateTime)
-          );
-        }
-        const dep = dayjs(item.segment.departureTime);
-        const arr = dayjs(item.segment.arrivalTime);
-        return currentTime.isAfter(dep) && currentTime.isBefore(arr);
-      }) ?? null
-    );
+  const currentActivities = useMemo((): ScheduleItem[] => {
+    if (!viewingCalendarToday) return [];
+    const active = todaySchedules.filter((item: ScheduleItem) => {
+      if (item.type === "itinerary") {
+        const startDateTime = dayjs(`${timelineDateStr} ${item.time}`);
+        let endDateTime = dayjs(`${timelineDateStr} ${item.endTime}`);
+        if (item.endTime < item.time) endDateTime = endDateTime.add(1, "day");
+        return (
+          currentTime.isAfter(startDateTime) &&
+          currentTime.isBefore(endDateTime)
+        );
+      }
+      const dep = dayjs(item.segment.departureTime);
+      const arr = dayjs(item.segment.arrivalTime);
+      return currentTime.isAfter(dep) && currentTime.isBefore(arr);
+    });
+    return active.sort((a, b) => b.time.localeCompare(a.time));
   }, [viewingCalendarToday, todaySchedules, timelineDateStr, currentTime]);
+
+  useEffect(() => {
+    setCurrentActivityPageIndex(0);
+  }, [currentActivities.length]);
 
   const nextActivityIndex = useMemo(() => {
     if (!viewingCalendarToday) {
@@ -709,104 +715,116 @@ export default function TodayScreen() {
           </View>
 
           {/* 현재 진행 중 활동 카드 */}
-          {currentActivity && (
-            <Pressable
-              style={[styles.cardBase, styles.currentCard]}
-              onPress={() => {
-                closeOpenTimelineSwipe();
-                if (currentActivity.type === "flight") {
-                  setSelectedFlight(currentActivity.data);
-                  setSelectedFlightSegment(currentActivity.segment);
-                  setShowFlightDetail(true);
-                } else {
-                  setSelectedItinerary(currentActivity.data);
-                  setShowItineraryDetail(true);
-                }
-              }}
-            >
-              <View style={styles.currentCardHeader}>
-                <View style={styles.statusBadge}>
-                  <Animated.View
-                    style={[
-                      styles.pulse,
-                      {
-                        opacity: pulseAnim,
-                      },
-                    ]}
-                  />
-                  <Text style={styles.statusText}>진행 중</Text>
-                </View>
-                {currentActivity.endTime && (
-                  <View style={styles.endTimeBox}>
-                    {(currentActivity.type === "flight"
-                      ? dayjs(currentActivity.segment.departureTime).format("YYYY-MM-DD") !== dayjs(currentActivity.segment.arrivalTime).format("YYYY-MM-DD")
-                      : currentActivity.endTime < currentActivity.time) && (
-                      <Text style={styles.nextDayLabel}>(다음날)</Text>
-                    )}
-                    <Text style={styles.endTime}>
-                      {currentActivity.endTime} 종료
-                    </Text>
+          {currentActivities.length > 0 && (() => {
+            const cardWidth = windowWidth - 32;
+            return (
+              <View style={styles.currentCardWrapper}>
+                <ScrollView
+                  horizontal
+                  pagingEnabled
+                  showsHorizontalScrollIndicator={false}
+                  scrollEnabled={currentActivities.length > 1}
+                  onMomentumScrollEnd={e => {
+                    const idx = Math.round(
+                      e.nativeEvent.contentOffset.x / cardWidth,
+                    );
+                    setCurrentActivityPageIndex(idx);
+                  }}
+                  contentContainerStyle={{ width: windowWidth * currentActivities.length }}
+                >
+                  {currentActivities.map(activity => (
+                    <Pressable
+                      key={activity.id}
+                      style={[styles.cardBase, styles.currentCard, { width: cardWidth }]}
+                      onPress={() => {
+                        closeOpenTimelineSwipe();
+                        if (activity.type === "flight") {
+                          setSelectedFlight(activity.data);
+                          setSelectedFlightSegment(activity.segment);
+                          setShowFlightDetail(true);
+                        } else {
+                          setSelectedItinerary(activity.data);
+                          setShowItineraryDetail(true);
+                        }
+                      }}
+                    >
+                      <View style={styles.currentCardHeader}>
+                        <View style={styles.statusBadge}>
+                          <Animated.View style={[styles.pulse, { opacity: pulseAnim }]} />
+                          <Text style={styles.statusText}>진행 중</Text>
+                        </View>
+                        {activity.endTime && (
+                          <View style={styles.endTimeBox}>
+                            {(activity.type === "flight"
+                              ? dayjs(activity.segment.departureTime).format("YYYY-MM-DD") !== dayjs(activity.segment.arrivalTime).format("YYYY-MM-DD")
+                              : activity.endTime < activity.time) && (
+                              <Text style={styles.nextDayLabel}>(다음날)</Text>
+                            )}
+                            <Text style={styles.endTime}>
+                              {activity.endTime} 종료
+                            </Text>
+                          </View>
+                        )}
+                      </View>
+
+                      {activity.type === "flight" ? (
+                        <>
+                          <View style={styles.flightTitleRow}>
+                            <View style={styles.flightIconWrap}>
+                              <FlightIcon width={20} height={20} color={colors.black} />
+                            </View>
+                            <Text style={styles.cardTitle} numberOfLines={1}>
+                              {activity.segment.departureAirport} →{" "}
+                              {activity.segment.arrivalAirport}
+                            </Text>
+                          </View>
+                          {activity.segment.flightNumber && (
+                            <Text style={styles.cardLocation} numberOfLines={1}>
+                              {activity.segment.flightNumber}
+                            </Text>
+                          )}
+                        </>
+                      ) : (
+                        <>
+                          <Text style={styles.cardTitle} numberOfLines={1} ellipsizeMode="tail">
+                            {activity.data.title || "활동"}
+                          </Text>
+                          {activity.data.location && (
+                            <View style={styles.locationRow}>
+                              <LocationIcon width={16} height={16} color={colors.gray600} />
+                              <Text style={styles.cardLocation} numberOfLines={1} ellipsizeMode="tail">
+                                {activity.data.location}
+                              </Text>
+                            </View>
+                          )}
+                          {activity.data.description && (
+                            <View style={styles.noteBox}>
+                              <Text style={styles.note} numberOfLines={1} ellipsizeMode="tail">
+                                "{activity.data.description}"
+                              </Text>
+                            </View>
+                          )}
+                        </>
+                      )}
+                    </Pressable>
+                  ))}
+                </ScrollView>
+                {currentActivities.length > 1 && (
+                  <View style={styles.paginationDots}>
+                    {currentActivities.map((_, i) => (
+                      <View
+                        key={i}
+                        style={[
+                          styles.paginationDot,
+                          i === currentActivityPageIndex && styles.paginationDotActive,
+                        ]}
+                      />
+                    ))}
                   </View>
                 )}
               </View>
-
-              {currentActivity.type === "flight" ? (
-                <>
-                  <View style={styles.flightTitleRow}>
-                    <View style={styles.flightIconWrap}>
-                      <FlightIcon width={20} height={20} color={colors.black} />
-                    </View>
-                    <Text style={styles.cardTitle} numberOfLines={1}>
-                      {currentActivity.segment.departureAirport} →{" "}
-                      {currentActivity.segment.arrivalAirport}
-                    </Text>
-                  </View>
-                  {currentActivity.segment.flightNumber && (
-                    <Text style={styles.cardLocation} numberOfLines={1}>
-                      {currentActivity.segment.flightNumber}
-                    </Text>
-                  )}
-                </>
-              ) : (
-                <>
-                  <Text
-                    style={styles.cardTitle}
-                    numberOfLines={1}
-                    ellipsizeMode="tail"
-                  >
-                    {currentActivity.data.title || "활동"}
-                  </Text>
-                  {currentActivity.data.location && (
-                    <View style={styles.locationRow}>
-                      <LocationIcon
-                        width={16}
-                        height={16}
-                        color={colors.gray600}
-                      />
-                      <Text
-                        style={styles.cardLocation}
-                        numberOfLines={1}
-                        ellipsizeMode="tail"
-                      >
-                        {currentActivity.data.location}
-                      </Text>
-                    </View>
-                  )}
-                  {currentActivity.data.description && (
-                    <View style={styles.noteBox}>
-                      <Text
-                        style={styles.note}
-                        numberOfLines={1}
-                        ellipsizeMode="tail"
-                      >
-                        "{currentActivity.data.description}"
-                      </Text>
-                    </View>
-                  )}
-                </>
-              )}
-            </Pressable>
-          )}
+            );
+          })()}
 
           {/* 타임라인 섹션 (이터너리·항공 또는 당일 숙박이 있으면 헤더 노출) */}
           {(todaySchedules.length > 0 || todayAccommodations.length > 0) && (
@@ -815,18 +833,15 @@ export default function TodayScreen() {
 
               {todaySchedules.length > 0 &&
                 todaySchedules.map((item: ScheduleItem, index: number) => {
+                  const isCurrentlyActive = currentActivities.some(
+                    ca => ca.id === item.id,
+                  );
                   const isDone =
-                    currentActivity &&
-                    (currentActivity.type === "itinerary"
-                      ? item.type === "itinerary" &&
-                        item.id === currentActivity.id
-                      : item.type === "flight" &&
-                        item.id === currentActivity.id)
-                      ? false
-                      : index <
-                        (nextActivityIndex === -1
-                          ? todaySchedules.length
-                          : nextActivityIndex);
+                    !isCurrentlyActive &&
+                    index <
+                      (nextActivityIndex === -1
+                        ? todaySchedules.length
+                        : nextActivityIndex);
                   const isNext = index === nextActivityIndex;
                   const startTime = item.time;
 
@@ -1904,8 +1919,29 @@ const styles = StyleSheet.create({
     ...textStyles.h5,
     color: colors.white,
   },
-  currentCard: {
+  currentCardWrapper: {
     marginBottom: 16,
+  },
+  currentCard: {
+    marginBottom: 0,
+  },
+  paginationDots: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 6,
+    marginTop: 8,
+  },
+  paginationDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: colors.gray400,
+  },
+  paginationDotActive: {
+    backgroundColor: colors.primary,
+    width: 14,
+    borderRadius: 3,
   },
   currentCardHeader: {
     flexDirection: "row",
