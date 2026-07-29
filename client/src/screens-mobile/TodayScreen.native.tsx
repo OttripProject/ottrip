@@ -1469,12 +1469,14 @@ export default function TodayScreen() {
           queryClient.invalidateQueries({
             queryKey: ["expenses", selectedPlan?.id],
           });
+          planData.refreshAttachments();
         }}
         onDelete={async itineraryId => {
           planData.removeItinerary(itineraryId);
           queryClient.invalidateQueries({
             queryKey: ["expenses", selectedPlan?.id],
           });
+          planData.refreshAttachments();
         }}
       />
 
@@ -1525,12 +1527,14 @@ export default function TodayScreen() {
           queryClient.invalidateQueries({
             queryKey: ["expenses", selectedPlan?.id],
           });
+          planData.refreshAttachments();
         }}
         onDelete={async accommodationId => {
           planData.removeAccommodation(accommodationId);
           queryClient.invalidateQueries({
             queryKey: ["expenses", selectedPlan?.id],
           });
+          planData.refreshAttachments();
         }}
       />
 
@@ -1572,12 +1576,14 @@ export default function TodayScreen() {
           queryClient.invalidateQueries({
             queryKey: ["expenses", selectedPlan?.id],
           });
+          planData.refreshAttachments();
         }}
         onDelete={async flightId => {
           planData.removeFlight(flightId);
           queryClient.invalidateQueries({
             queryKey: ["expenses", selectedPlan?.id],
           });
+          planData.refreshAttachments();
         }}
       />
 

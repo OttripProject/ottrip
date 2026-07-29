@@ -984,11 +984,9 @@ export default function WeeklyScreen() {
         planId={selectedPlan?.id ?? 0}
         defaultCountry={selectedDateSegment?.country}
         defaultCity={selectedDateSegment?.city}
-        onSave={() => {
+        onSave={async itinerary => {
+          planData.addItinerary(itinerary);
           if (selectedPlan?.publicId) {
-            queryClient.invalidateQueries({
-              queryKey: ["plan", selectedPlan.publicId],
-            });
             queryClient.invalidateQueries({
               queryKey: ["expenses", selectedPlan.id],
             });
@@ -996,6 +994,7 @@ export default function WeeklyScreen() {
               queryKey: ["checklist", selectedPlan.publicId],
             });
           }
+          planData.refreshAttachments();
         }}
         onDelete={async itineraryId => {
           planData.removeItinerary(itineraryId);
@@ -1007,6 +1006,7 @@ export default function WeeklyScreen() {
               queryKey: ["checklist", selectedPlan.publicId],
             });
           }
+          planData.refreshAttachments();
         }}
       />
 
@@ -1059,11 +1059,9 @@ export default function WeeklyScreen() {
         flight={editingFlight}
         planId={selectedPlan?.id ?? 0}
         planStartDate={selectedPlan?.startDate}
-        onSave={() => {
+        onSave={async updated => {
+          planData.addFlight(updated);
           if (selectedPlan?.publicId) {
-            queryClient.invalidateQueries({
-              queryKey: ["plan", selectedPlan.publicId],
-            });
             queryClient.invalidateQueries({
               queryKey: ["expenses", selectedPlan.id],
             });
@@ -1071,6 +1069,7 @@ export default function WeeklyScreen() {
               queryKey: ["checklist", selectedPlan.publicId],
             });
           }
+          planData.refreshAttachments();
         }}
         onDelete={async flightId => {
           planData.removeFlight(flightId);
@@ -1136,6 +1135,7 @@ export default function WeeklyScreen() {
               queryKey: ["expenses", selectedPlan.id],
             });
           }
+          planData.refreshAttachments();
         }}
         onDelete={async accommodationId => {
           planData.removeAccommodation(accommodationId);
@@ -1144,6 +1144,7 @@ export default function WeeklyScreen() {
               queryKey: ["expenses", selectedPlan.id],
             });
           }
+          planData.refreshAttachments();
         }}
       />
 

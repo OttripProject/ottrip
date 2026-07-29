@@ -1,9 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { accommodationsApi } from "../services/accommodations";
 import { attachmentsApi } from "../services/attachments";
-import { expensesApi } from "../services/expenses";
-import { flightsApi } from "../services/flights";
-import { itinerariesApi } from "../services/itineraries";
 import { plansApi } from "../services/plans";
 import type {
   Accommodation,
@@ -90,62 +86,11 @@ export const usePlanDataQuery = (publicId: string | null) => {
     attachments: [],
   };
 
-  const refreshItineraries = async () => {
-    if (!planData.plan?.id) return;
+  const refreshAll = async () => {
+    if (!publicId) return;
     try {
-      const itineraries = await itinerariesApi.getItineraries(planData.plan.id);
-      queryClient.setQueryData<PlanData>(
-        ["plan", publicId],
-        (old = planData) => ({
-          ...old,
-          itineraries,
-        }),
-      );
-    } catch (_err: any) {}
-  };
-
-  const refreshFlights = async () => {
-    if (!planData.plan?.id) return;
-    try {
-      const flights = await flightsApi.getFlightsByPlan(planData.plan.id);
-      queryClient.setQueryData<PlanData>(
-        ["plan", publicId],
-        (old = planData) => ({
-          ...old,
-          flights,
-        }),
-      );
-    } catch (_err: any) {}
-  };
-
-  const refreshAccommodations = async () => {
-    if (!planData.plan?.id) return;
-    try {
-      const accommodations = await accommodationsApi.getAccommodations(
-        planData.plan.id,
-      );
-      queryClient.setQueryData<PlanData>(
-        ["plan", publicId],
-        (old = planData) => ({
-          ...old,
-          accommodations,
-        }),
-      );
-    } catch (_err: any) {}
-  };
-
-  const refreshExpenses = async () => {
-    if (!planData.plan?.id) return;
-    try {
-      const expenses = await expensesApi.getExpenses(planData.plan.id);
-      queryClient.setQueryData<PlanData>(
-        ["plan", publicId],
-        (old = planData) => ({
-          ...old,
-          expenses,
-        }),
-      );
-    } catch (_err: any) {}
+      await queryClient.invalidateQueries({ queryKey: ["plan", publicId] });
+    } catch {}
   };
 
   const refreshAttachments = async () => {
@@ -390,11 +335,11 @@ export const usePlanDataQuery = (publicId: string | null) => {
       : null,
     errorStatus,
     fetchPlanData,
-    refreshItineraries,
-    refreshFlights,
-    refreshAccommodations,
-    refreshExpenses,
     refreshAttachments,
+    refreshItineraries: refreshAll,
+    refreshFlights: refreshAll,
+    refreshAccommodations: refreshAll,
+    refreshExpenses: refreshAll,
     addAttachment,
     addAccommodation,
     addExpense,
