@@ -1,4 +1,5 @@
 import AddPlanModal from "@/components/modals/mobile/AddPlanModal.native";
+import PlanLoadingOverlay from "@/components/PlanLoadingOverlay.native";
 import AddScheduleMethodModal from "@/components/modals/mobile/AddScheduleMethodModal.native";
 import AddScheduleModal from "@/components/modals/mobile/AddScheduleModal.native";
 import AddScheduleWithAiModal from "@/components/modals/mobile/AddScheduleWithAiModal.native";
@@ -1182,6 +1183,8 @@ export default function WeeklyScreen() {
           }}
         />
       )}
+
+      <PlanLoadingOverlay visible={planData.isLoading && !!selectedPlan} />
     </View>
   );
 }

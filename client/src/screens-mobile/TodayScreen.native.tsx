@@ -1,4 +1,5 @@
 import AccommodationDetailModal from "@/components/modals/mobile/AccommodationDetailModal.native";
+import PlanLoadingOverlay from "@/components/PlanLoadingOverlay.native";
 import AccommodationEditModal from "@/components/modals/mobile/AccommodationEditModal.native";
 import AddExpenseModal from "@/components/modals/mobile/AddExpenseModal.native";
 import AddPlanModal from "@/components/modals/mobile/AddPlanModal.native";
@@ -1658,6 +1659,8 @@ export default function TodayScreen() {
           }
         }}
       />
+
+      <PlanLoadingOverlay visible={planData.isLoading && !!selectedPlan} />
     </View>
   );
 }
