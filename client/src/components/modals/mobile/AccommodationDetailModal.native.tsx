@@ -31,7 +31,6 @@ import ExpenseIcon from "../../../../assets/mobile_expense.svg";
 import LocationIcon from "../../../../assets/mobile_location.svg";
 import MapIcon from "../../../../assets/mobile_map.svg";
 import UpdateIcon from "../../../../assets/update.svg";
-import TimeIcon from "../../../../assets/week_bar_time.svg";
 
 interface AccommodationDetailModalProps {
   visible: boolean;
@@ -88,7 +87,6 @@ export default function AccommodationDetailModal({
   const checkoutDate = accommodation.checkoutDate
     ? dayjs(accommodation.checkoutDate).format("YYYY-MM-DD")
     : "";
-  const timeRange = `${checkinTime} ~ ${checkoutTime}`;
 
   const handleOpenMap = () => {
     const address = location || accommodation.name;
@@ -218,17 +216,6 @@ export default function AccommodationDetailModal({
 
         {/* 상세 정보 */}
         <View style={styles.details}>
-          {/* 시간 */}
-          <View style={styles.detailItem}>
-            <View style={styles.detailIcon}>
-              <TimeIcon width={20} height={20} color={colors.primary} />
-            </View>
-            <View style={styles.detailContent}>
-              <Text style={styles.detailLabel}>시간</Text>
-              <Text style={styles.detailValue}>{timeRange}</Text>
-            </View>
-          </View>
-
           {/* 장소 */}
           {location && (
             <View style={styles.detailItem}>
