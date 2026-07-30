@@ -45,6 +45,7 @@ interface TravelInfoModalProps {
   planId: number;
   planStartDate?: string;
   planEndDate?: string;
+  memberCount?: number;
   onExpenseAdd?: (expense: Expense) => void;
   onRefreshExpenses?: () => Promise<void>;
   onRefreshPlan?: () => Promise<void>;
@@ -66,6 +67,7 @@ export default function TravelInfoModal({
   planId,
   planStartDate,
   planEndDate,
+  memberCount = 0,
   onExpenseAdd,
   onRefreshExpenses,
   onRefreshPlan,
@@ -76,26 +78,7 @@ export default function TravelInfoModal({
   const [showAddExpenseFromDetail, setShowAddExpenseFromDetail] =
     useState(false);
   const [showSharedMembers, setShowSharedMembers] = useState(false);
-  const [memberCount, setMemberCount] = useState(0);
   const [memo, setMemo] = useState(plan?.memo ?? "");
-
-  const loadMemberCount = useCallback(async () => {
-    if (!planId) return;
-    try {
-      const shares = await plansApi.listShares(planId);
-      setMemberCount(shares.length);
-    } catch {
-      setMemberCount(0);
-    }
-  }, [planId]);
-
-  useEffect(() => {
-    if (visible && planId) {
-      loadMemberCount();
-    } else {
-      setMemberCount(0);
-    }
-  }, [visible, planId, loadMemberCount]);
 
   useEffect(() => {
     if (visible && plan) {
@@ -316,7 +299,9 @@ export default function TravelInfoModal({
         visible={showSharedMembers}
         onClose={() => {
           setShowSharedMembers(false);
-          loadMemberCount();
+          if (planPublicId) {
+            queryClient.invalidateQueries({ queryKey: ["plan", planPublicId] });
+          }
         }}
         planId={planId}
         myRole={

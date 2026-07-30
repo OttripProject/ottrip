@@ -1150,6 +1150,7 @@ export default function WeeklyScreen() {
           flights={planData.flights ?? []}
           expenses={planData.expenses ?? []}
           attachments={planData.attachments ?? []}
+          memberCount={planData.shares?.length ?? 0}
           planPublicId={selectedPlan.publicId}
           planId={selectedPlan.id}
           planStartDate={selectedPlan.startDate}

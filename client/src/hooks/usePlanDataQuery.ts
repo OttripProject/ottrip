@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { attachmentsApi } from "../services/attachments";
-import { plansApi } from "../services/plans";
+import { type PlanShare, plansApi } from "../services/plans";
 import type {
   Accommodation,
   Attachment,
@@ -17,6 +17,7 @@ interface PlanData {
   accommodations: Accommodation[];
   expenses: Expense[];
   attachments: Attachment[];
+  shares: PlanShare[];
 }
 
 export const usePlanDataQuery = (publicId: string | null) => {
@@ -33,6 +34,7 @@ export const usePlanDataQuery = (publicId: string | null) => {
           accommodations: [],
           expenses: [],
           attachments: [],
+          shares: [],
         };
       }
 
@@ -42,18 +44,21 @@ export const usePlanDataQuery = (publicId: string | null) => {
 
       let planData: any;
       let attachments: Attachment[] = [];
+      let shares: PlanShare[] = [];
 
       if (cachedPlanId) {
-        [planData, attachments] = await Promise.all([
+        [planData, attachments, shares] = await Promise.all([
           plansApi.getPlan(publicId),
           attachmentsApi.getAttachmentsByPlan(cachedPlanId).catch(() => []),
+          plansApi.listShares(cachedPlanId).catch(() => []),
         ]);
       } else {
         planData = await plansApi.getPlan(publicId);
         if (planData?.id) {
-          attachments = await attachmentsApi
-            .getAttachmentsByPlan(planData.id)
-            .catch(() => []);
+          [attachments, shares] = await Promise.all([
+            attachmentsApi.getAttachmentsByPlan(planData.id).catch(() => []),
+            plansApi.listShares(planData.id).catch(() => []),
+          ]);
         }
       }
 
@@ -69,6 +74,7 @@ export const usePlanDataQuery = (publicId: string | null) => {
         accommodations: planData?.accommodations ?? [],
         expenses: normalizedExpenses,
         attachments,
+        shares,
       };
     },
     enabled: !!publicId,
@@ -84,6 +90,7 @@ export const usePlanDataQuery = (publicId: string | null) => {
     accommodations: [],
     expenses: [],
     attachments: [],
+    shares: [],
   };
 
   const refreshAll = async () => {
