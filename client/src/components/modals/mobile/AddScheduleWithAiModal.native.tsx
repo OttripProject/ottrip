@@ -249,10 +249,8 @@ export default function AddScheduleWithAiModal({
         setMessages(prev => [
           ...prev,
           {
-            role: "ai-unclear",
-            title: "일정 정보를 찾지 못했어요",
-            body: "날짜와 시간을 포함해서 다시 알려주세요.",
-            suggestions: ["4월 15일 오후 2시에 루브르 박물관 가고 싶어"],
+            role: "ai",
+            text: result.error ?? "어떤 일정을 추가할지 조금 더 알려주시겠어요?",
           },
         ]);
       }

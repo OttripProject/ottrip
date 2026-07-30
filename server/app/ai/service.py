@@ -370,10 +370,51 @@ class AIService:
                     error="해당 여행 계획을 찾을 수 없습니다.",
                 )
 
+            import datetime
+
             plan_context = (
                 f"여행 기간: {plan.start_date} ~ {plan.end_date}\n"
-                f"오늘 날짜: {__import__('datetime').date.today().isoformat()}"
+                f"오늘 날짜: {datetime.date.today().isoformat()}"
             )
+
+            if plan.itineraries:
+                lines = ["[기존 일정]"]
+                for iti in plan.itineraries:
+                    time_range = (
+                        f"{iti.start_time}~{iti.end_time}"
+                        if iti.start_time and iti.end_time
+                        else ""
+                    )
+                    location = " ".join(
+                        filter(None, [iti.country, iti.city, iti.location])
+                    )
+                    lines.append(
+                        f"- {iti.itinerary_date} {time_range} {iti.title} {location}".strip()
+                    )
+                plan_context += "\n" + "\n".join(lines)
+
+            if plan.flights:
+                lines = ["[기존 항공편]"]
+                for flight in plan.flights:
+                    segs = flight.flight_segments or []
+                    if segs:
+                        first, last = segs[0], segs[-1]
+                        lines.append(
+                            f"- {first.departure_airport}→{last.arrival_airport} "
+                            f"출발:{first.departure_time.strftime('%Y-%m-%d %H:%M') if first.departure_time else ''}"
+                        )
+                plan_context += "\n" + "\n".join(lines)
+
+            if plan.accommodations:
+                lines = ["[기존 숙소]"]
+                for acc in plan.accommodations:
+                    location = " ".join(
+                        filter(None, [acc.country, acc.city, acc.place])
+                    )
+                    lines.append(
+                        f"- {acc.checkin_date}~{acc.checkout_date} {acc.name} {location}".strip()
+                    )
+                plan_context += "\n" + "\n".join(lines)
 
             raw = await self.gemini_client.parse_text_to_item(
                 user_text=text,
