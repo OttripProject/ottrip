@@ -73,6 +73,13 @@ function coerceExpenseCategory(raw: string): ExpenseCategory {
   return ExpenseCategory.ETC;
 }
 
+function coerceExpenseCurrency(raw: string): ExpenseCurrency {
+  const v = raw.trim().toUpperCase();
+  const all = Object.values(ExpenseCurrency) as string[];
+  if (all.includes(v)) return v as ExpenseCurrency;
+  return ExpenseCurrency.KRW;
+}
+
 function normalizeAmountDigits(value: unknown): string {
   const raw = String(value ?? "").trim();
   if (!raw) return "";
@@ -289,6 +296,11 @@ const ItineraryDraftEditor = forwardRef<
       ? pickStr(initialExpense, ["description", "Description"])
       : "",
   );
+  const [expCurrency, setExpCurrency] = useState<ExpenseCurrency>(() =>
+    initialExpense
+      ? coerceExpenseCurrency(pickStr(initialExpense, ["currency", "Currency"]))
+      : ExpenseCurrency.KRW,
+  );
 
   const [countryOpen, setCountryOpen] = useState(false);
   const [expenseOpen, setExpenseOpen] = useState(false);
@@ -354,7 +366,7 @@ const ItineraryDraftEditor = forwardRef<
             amount: Number.parseInt(expAmount, 10) || 0,
             description: expDescription,
             exDate: itineraryDate,
-            currency: ExpenseCurrency.KRW,
+            currency: expCurrency,
           };
         } else {
           delete nextValues.expense;
@@ -601,6 +613,7 @@ const FlightDraftEditor = forwardRef<
   const [bookingReference, setBookingReference] = useState("");
   const [segments, setSegments] = useState<SegmentForm[]>([]);
   const [expenseAmount, setExpenseAmount] = useState("");
+  const [expenseCurrency, setExpenseCurrency] = useState<ExpenseCurrency>(ExpenseCurrency.KRW);
   const [segmentCal, setSegmentCal] = useState<{
     idx: number;
     field: "dep" | "arr";
@@ -630,6 +643,9 @@ const FlightDraftEditor = forwardRef<
     const amtSrc = ex || v;
     setExpenseAmount(
       normalizeAmountDigits(pickStr(amtSrc, ["amount", "Amount"])),
+    );
+    setExpenseCurrency(
+      coerceExpenseCurrency(pickStr(amtSrc, ["currency", "Currency"])),
     );
   }, []);
 
@@ -669,7 +685,7 @@ const FlightDraftEditor = forwardRef<
           expense: {
             exDate,
             amount: Number.parseInt(expenseAmount, 10) || 0,
-            currency: ExpenseCurrency.KRW,
+            currency: expenseCurrency,
             category: ExpenseCategory.FLIGHT,
             description: reservationNumber || null,
           },
@@ -1089,6 +1105,7 @@ const AccommodationDraftEditor = forwardRef<
   const [checkinTime, setCheckinTime] = useState("15:00");
   const [checkoutTime, setCheckoutTime] = useState("11:00");
   const [expenseAmount, setExpenseAmount] = useState("");
+  const [expenseCurrency, setExpenseCurrency] = useState<ExpenseCurrency>(ExpenseCurrency.KRW);
 
   const [countryOpen, setCountryOpen] = useState(false);
   const [showCheckinCal, setShowCheckinCal] = useState(false);
@@ -1127,6 +1144,9 @@ const AccommodationDraftEditor = forwardRef<
     setExpenseAmount(
       normalizeAmountDigits(pickStr(amtSrc, ["amount", "Amount"])),
     );
+    setExpenseCurrency(
+      coerceExpenseCurrency(pickStr(amtSrc, ["currency", "Currency"])),
+    );
   }, [values]);
 
   useImperativeHandle(
@@ -1148,7 +1168,7 @@ const AccommodationDraftEditor = forwardRef<
             exDate: checkinDate,
             amount: Number.parseInt(expenseAmount, 10) || 0,
             category: ExpenseCategory.ACCOMMODATION,
-            currency: ExpenseCurrency.KRW,
+            currency: expenseCurrency,
             description: name,
           },
         };
@@ -1388,6 +1408,7 @@ const ExpenseDraftEditor = forwardRef<
   const [amount, setAmount] = useState("");
   const [description, setDescription] = useState("");
   const [exDate, setExDate] = useState(dayjs().format("YYYY-MM-DD"));
+  const [currency, setCurrency] = useState<ExpenseCurrency>(ExpenseCurrency.KRW);
   const [catOpen, setCatOpen] = useState(false);
   const [showCal, setShowCal] = useState(false);
 
@@ -1400,6 +1421,9 @@ const ExpenseDraftEditor = forwardRef<
     setExDate(
       pickStr(values, ["exDate", "ex_date", "ExDate"]) ||
         dayjs().format("YYYY-MM-DD"),
+    );
+    setCurrency(
+      coerceExpenseCurrency(pickStr(values, ["currency", "Currency"])),
     );
   }, [values]);
 
@@ -1414,14 +1438,14 @@ const ExpenseDraftEditor = forwardRef<
             ...values,
             category,
             amount: Number.parseInt(amount, 10) || 0,
-            currency: ExpenseCurrency.KRW,
+            currency,
             description,
             exDate,
           } as typeof base.values,
         },
       }),
     }),
-    [base, values, category, amount, description, exDate],
+    [base, values, category, amount, description, exDate, currency],
   );
 
   return (
