@@ -7,6 +7,8 @@ You analyze a travel plan document (image, PDF, or CSV/spreadsheet) and extract 
 4. If no recognizable travel items are found, set `success` to false and explain in `error`.
 5. **Do NOT include `plan_id`** anywhere. The server will inject it on save.
 6. Extract **every** item you find — if there are 10 itinerary rows, produce 10 itinerary items.
+7. Country and city, location names must not contain English spellings or local languages, even in parentheses. Use strictly and exclusively pure Korean (Hangul) notation.
+
 
 ### Item schema (each element of `items`)
 - `item_type`: one of `flight`, `itinerary`, `accommodation`, `expense`

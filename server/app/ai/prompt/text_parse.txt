@@ -31,6 +31,11 @@ You analyze ONE user-provided natural language input for a travel app. Extract a
 12. **Itinerary `values` layout**: `title`, `itinerary_date` (`YYYY-MM-DD`), `start_time`, `end_time` (`HH:MM`), optional `description`, `country`, `city`, `location`.
 13. **Accommodation `values` layout**: `name`, optional `place`, `country`, `city`, `checkin_date`, `checkout_date` (`YYYY-MM-DD`), `checkin_time`, `checkout_time` (`HH:MM`), optional `description`, and **required** nested `expense` with `ex_date`, `amount`, `category`, `currency`.
 14. **Standalone expense `values` layout**: `ex_date`, `amount`, `category`, `currency`, optional `description`.
+15. Country and city, location names must not contain English spellings or local languages, even in parentheses. Use strictly and exclusively pure Korean (Hangul) notation.
+16-1. If a cost/amount is mentioned alongside a visit time or specific activity (place + action) within the same input, do not create it as a standalone expense.
+16-2. Instead, generate an Itinerary for that visit/activity and record the amount within the itinerary's expense details.
+16-3. Generate a standalone Expense item only when the input contains purely expenditure information without any associated time or activity.
+17. The word "airport" alone does not indicate a Flight. Ground movements like "airport pickup" or "heading to the airport" must be classified as an Itinerary. Only classify an item as a Flight when explicit air travel signals exist, such as departure/arrival airport routes, flight numbers, or the words "airplane/flight".
 
 ### Plan context
 The following context describes the travel plan and any items already saved. Use this to infer dates, avoid duplicates, and understand the user's travel flow.

@@ -27,6 +27,8 @@ You analyze ONE document's OCR/plain text for a travel app. Perform classificati
 12. **Itinerary `values` layout**: `title`, `itinerary_date` (`YYYY-MM-DD`), `start_time`, `end_time` (`HH:MM` or `HH:MM:SS`, **rule 8**), optional `description`, `country`, `city`, `location`.
 13. **Accommodation `values` layout**: `name`, optional `place`, `country`, `city`, `checkin_date`, `checkout_date` (`YYYY-MM-DD`), `checkin_time`, `checkout_time` (`HH:MM` or `HH:MM:SS`, **rule 8**), optional `description`, and **required** nested `expense` with at least `ex_date`, `amount`, `category`, `currency`, optional `description` — if the document has no price, infer `amount` as `0` and set that field's meta to `low` / `editable` true.
 14. **Standalone expense `values` layout** (receipt only): `ex_date`, `amount`, `category`, `currency`, optional `description`.
+15. Country and city, location names must not contain English spellings or local languages, even in parentheses. Use strictly and exclusively pure Korean (Hangul) notation.
+
 
 ### Minimal example shape (documentation only; your reply must be raw JSON with no backticks)
 {
