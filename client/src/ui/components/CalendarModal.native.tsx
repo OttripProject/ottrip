@@ -50,6 +50,10 @@ function DayCell({
     date.dateString >= minDate &&
     date.dateString <= maxDate;
 
+  const dayOfWeek = dayjs(date.dateString).day();
+  const isSaturday = dayOfWeek === 6;
+  const isSunday = dayOfWeek === 0;
+
   return (
     <Pressable
       style={styles.dayCell}
@@ -66,8 +70,10 @@ function DayCell({
       <Text
         style={[
           styles.dayText,
+          isSaturday && styles.dayTextSaturday,
+          isSunday && styles.dayTextSunday,
           isInPlan && styles.dayTextInPlan,
-          !isCurrentMonth && !isSelected && styles.dayTextOtherMonth,
+          !isCurrentMonth && !isSelected && styles.dayTextOtherMonth, 
           isSelected && styles.dayTextSelected,
           isToday && !isSelected && styles.dayTextToday,
         ]}
@@ -142,11 +148,24 @@ export default function CalendarModal({
 
   const weekDayHeader = () => (
     <View style={styles.weekDayRow}>
-      {["월", "화", "수", "목", "금", "토", "일"].map((day, i) => (
-        <View key={i} style={styles.weekDayCell}>
-          <Text style={styles.weekDayText}>{day}</Text>
-        </View>
-      ))}
+      {["월", "화", "수", "목", "금", "토", "일"].map((day, i) => {
+        const isSaturday = i === 5;
+        const isSunday = i === 6;
+        
+        return (
+          <View key={i} style={styles.weekDayCell}>
+            <Text 
+              style={[
+                styles.weekDayText,
+                isSaturday && styles.weekDayTextSaturday,
+                isSunday && styles.weekDayTextSunday
+              ]}
+            >
+              {day}
+            </Text>
+          </View>
+        );
+      })}
     </View>
   );
 
@@ -354,5 +373,17 @@ const styles = StyleSheet.create({
   todayButtonText: {
     ...textStyles.h6,
     color: colors.white,
+  },
+  dayTextSaturday: {
+    color: colors.primary,
+  },
+  dayTextSunday: {
+    color: colors.warning,
+  },
+  weekDayTextSaturday: {
+    color: colors.primary,
+  },
+  weekDayTextSunday: {
+    color: colors.warning,
   },
 });
