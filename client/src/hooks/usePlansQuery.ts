@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "../contexts/AuthContext";
 import { plansApi } from "../services/plans";
 import type { CreatePlanRequest, Plan, UpdatePlanRequest } from "../types/api";
+import { sortPlansByDate } from "../utils/planSort"; 
 
 export const usePlansQuery = () => {
   const queryClient = useQueryClient();
@@ -18,6 +19,8 @@ export const usePlansQuery = () => {
     staleTime: 1 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
     enabled: isAuthenticated,
+    // 💡 select 옵션을 추가하여, 데이터를 받아온 직후 정렬 함수를 통과시킵니다.
+    select: (data) => sortPlansByDate(data),
   });
 
   const addPlanMutation = useMutation({
@@ -56,7 +59,7 @@ export const usePlansQuery = () => {
   });
 
   return {
-    plans,
+    plans, // 💡 이제 여기서 반환되는 plans는 항상 완벽하게 정렬된 상태입니다.
     isLoading,
     error: error
       ? (error as any).response?.data?.detail || (error as any).message
