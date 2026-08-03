@@ -134,22 +134,14 @@ export default function WeeklyScreen() {
     const newBase = resolvedWeekBaseDate.subtract(7, "day");
     setWeekBaseDate(newBase);
     const newWeek = getWeekCalendar(newBase);
-    const currentIndex = weekCalendar.findIndex(item =>
-      item.fullDate.isSame(selectedDate, "day"),
-    );
-    const idx = currentIndex >= 0 ? currentIndex : 0;
-    setSelectedDate(newWeek[idx].fullDate);
+    setSelectedDate(newWeek[6].fullDate);
   };
 
   const handleNextWeek = () => {
     const newBase = resolvedWeekBaseDate.add(7, "day");
     setWeekBaseDate(newBase);
     const newWeek = getWeekCalendar(newBase);
-    const currentIndex = weekCalendar.findIndex(item =>
-      item.fullDate.isSame(selectedDate, "day"),
-    );
-    const idx = currentIndex >= 0 ? currentIndex : 0;
-    setSelectedDate(newWeek[idx].fullDate);
+    setSelectedDate(newWeek[0].fullDate);
   };
 
   const handleCalendarDayPress = (day: { dateString: string }) => {
