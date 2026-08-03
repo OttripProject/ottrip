@@ -58,6 +58,7 @@ import { accommodationsApi } from "@/services/accommodations";
 import { flightsApi } from "@/services/flights";
 import { itinerariesApi } from "@/services/itineraries";
 import { extendPlanIfNeeded } from "@/utils/extendPlanIfNeeded";
+import { collectPlanItemDates, shrinkPlanIfNeeded } from "@/utils/shrinkPlanIfNeeded";
 import { guestPrompt } from "@/utils/guestPrompt";
 import FlightIcon from "../../assets/airplane.svg";
 import AccommodationIcon from "../../assets/mobile_accomodation.svg";
@@ -473,32 +474,50 @@ export default function TodayScreen() {
     async (itinerary: Itinerary) => {
       try {
         await itinerariesApi.deleteItinerary(itinerary.id);
+        const remainingDates = collectPlanItemDates(
+          planData.itineraries.filter(it => it.id !== itinerary.id),
+          planData.flights,
+          planData.accommodations,
+        );
+        await shrinkPlanIfNeeded(selectedPlan!.id, planData.plan, remainingDates);
         planData.removeItinerary(itinerary.id);
         queryClient.invalidateQueries({
           queryKey: ["expenses", selectedPlan?.id],
+        });
+        queryClient.invalidateQueries({
+          queryKey: ["plan", selectedPlan?.publicId],
         });
         Alert.alert("삭제완료", "일정이 삭제되었습니다.");
       } catch {
         Alert.alert("알림", "일정 삭제에 실패했습니다.");
       }
     },
-    [planData, queryClient, selectedPlan?.id],
+    [planData, queryClient, selectedPlan],
   );
 
   const handleDeleteFlight = useCallback(
     async (flight: FlightRead) => {
       try {
         await flightsApi.deleteFlight(flight.id);
+        const remainingDates = collectPlanItemDates(
+          planData.itineraries,
+          planData.flights.filter(f => f.id !== flight.id),
+          planData.accommodations,
+        );
+        await shrinkPlanIfNeeded(selectedPlan!.id, planData.plan, remainingDates);
         planData.removeFlight(flight.id);
         queryClient.invalidateQueries({
           queryKey: ["expenses", selectedPlan?.id],
+        });
+        queryClient.invalidateQueries({
+          queryKey: ["plan", selectedPlan?.publicId],
         });
         Alert.alert("삭제완료", "항공편이 삭제되었습니다.");
       } catch {
         Alert.alert("알림", "항공편 삭제에 실패했습니다.");
       }
     },
-    [planData, queryClient, selectedPlan?.id],
+    [planData, queryClient, selectedPlan],
   );
 
   const timelineSwipeRefs = useRef<Map<string, Swipeable>>(new Map());
@@ -1511,9 +1530,18 @@ export default function TodayScreen() {
         onDelete={async accommodation => {
           try {
             await accommodationsApi.deleteAccommodation(accommodation.id);
+            const remainingDates = collectPlanItemDates(
+              planData.itineraries,
+              planData.flights,
+              planData.accommodations.filter(acc => acc.id !== accommodation.id),
+            );
+            await shrinkPlanIfNeeded(selectedPlan!.id, planData.plan, remainingDates);
             planData.removeAccommodation(accommodation.id);
             queryClient.invalidateQueries({
               queryKey: ["expenses", selectedPlan?.id],
+            });
+            queryClient.invalidateQueries({
+              queryKey: ["plan", selectedPlan?.publicId],
             });
             Alert.alert("삭제완료", "숙소가 삭제되었습니다.");
           } catch (_error) {
@@ -1545,9 +1573,18 @@ export default function TodayScreen() {
           planData.refreshAttachments();
         }}
         onDelete={async accommodationId => {
+          const remainingDates = collectPlanItemDates(
+            planData.itineraries,
+            planData.flights,
+            planData.accommodations.filter(acc => acc.id !== accommodationId),
+          );
+          await shrinkPlanIfNeeded(selectedPlan!.id, planData.plan, remainingDates);
           planData.removeAccommodation(accommodationId);
           queryClient.invalidateQueries({
             queryKey: ["expenses", selectedPlan?.id],
+          });
+          queryClient.invalidateQueries({
+            queryKey: ["plan", selectedPlan?.publicId],
           });
           planData.refreshAttachments();
         }}

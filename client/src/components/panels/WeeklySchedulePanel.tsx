@@ -60,6 +60,7 @@ import WeekBarTimeIcon from "../../../assets/week_bar_time.svg";
 import XIcon from "../../../assets/x.svg";
 import UploadIcon from "../../../assets/upload_tray.svg";
 import { extendPlanIfNeeded } from "@/utils/extendPlanIfNeeded";
+import { collectPlanItemDates, shrinkPlanIfNeeded } from "@/utils/shrinkPlanIfNeeded";
 
 dayjs.locale(ko);
 
@@ -950,6 +951,17 @@ export default function WeeklySchedulePanel({
               })
               .then(async () => {
                 await extendPlanDateIfNeeded(newDate);
+                const updatedItineraries = itineraries.map(it =>
+                  it.id === itineraryId ? { ...it, itineraryDate: newDate } : it,
+                );
+                const plan = planData?.plan;
+                if (plan?.id) {
+                  await shrinkPlanIfNeeded(
+                    plan.id,
+                    plan,
+                    collectPlanItemDates(updatedItineraries, flights, planData?.accommodations ?? []),
+                  ).catch(() => {});
+                }
                 if (planData?.refreshItineraries) {
                   planData.refreshItineraries().catch((_err: any) => {});
                 } else if (onPlansRefresh) {
@@ -996,10 +1008,28 @@ export default function WeeklySchedulePanel({
                 })),
               })
               .then(async () => {
-                await extendPlanDateIfNeeded(
-                  dayjs(newStart).format("YYYY-MM-DD"),
-                  dayjs(newEnd).format("YYYY-MM-DD"),
-                );
+                const newDepDate = dayjs(newStart).format("YYYY-MM-DD");
+                const newArrDate = dayjs(newEnd).format("YYYY-MM-DD");
+                await extendPlanDateIfNeeded(newDepDate, newArrDate);
+                const updatedFlights = flights.map((f: any) => {
+                  if (f.id !== flightId) return f;
+                  return {
+                    ...f,
+                    flightSegments: f.flightSegments?.map((seg: any, idx: number) =>
+                      idx === segmentIndex
+                        ? { ...seg, departureTime: dayjs(newStart).toISOString(), arrivalTime: dayjs(newEnd).toISOString() }
+                        : seg,
+                    ),
+                  };
+                });
+                const plan = planData?.plan;
+                if (plan?.id) {
+                  await shrinkPlanIfNeeded(
+                    plan.id,
+                    plan,
+                    collectPlanItemDates(itineraries, updatedFlights, planData?.accommodations ?? []),
+                  ).catch(() => {});
+                }
                 if (planData?.refreshFlights) {
                   planData.refreshFlights().catch((_err: any) => {});
                 } else if (onPlansRefresh) {
@@ -1231,10 +1261,20 @@ export default function WeeklySchedulePanel({
           checkinTime,
           checkoutTime,
         });
-        await extendPlanDateIfNeeded(
-          newCheckin.format("YYYY-MM-DD"),
-          newCheckout.format("YYYY-MM-DD"),
+        const newCheckinDate = newCheckin.format("YYYY-MM-DD");
+        const newCheckoutDate = newCheckout.format("YYYY-MM-DD");
+        await extendPlanDateIfNeeded(newCheckinDate, newCheckoutDate);
+        const updatedAccommodations = (planData?.accommodations ?? []).map((acc: any) =>
+          acc.id === id ? { ...acc, checkinDate: newCheckinDate, checkoutDate: newCheckoutDate } : acc,
         );
+        const plan = planData?.plan;
+        if (plan?.id) {
+          await shrinkPlanIfNeeded(
+            plan.id,
+            plan,
+            collectPlanItemDates(itineraries, flights, updatedAccommodations),
+          ).catch(() => {});
+        }
         if (planData?.refreshAccommodations) {
           planData.refreshAccommodations().catch(() => {});
         } else if (onPlansRefresh) {

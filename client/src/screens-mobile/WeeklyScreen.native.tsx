@@ -53,6 +53,7 @@ import { flightsApi } from "@/services/flights";
 import { itinerariesApi } from "@/services/itineraries";
 import CalendarModal from "@/ui/components/CalendarModal.native";
 import { extendPlanIfNeeded } from "@/utils/extendPlanIfNeeded";
+import { collectPlanItemDates, shrinkPlanIfNeeded } from "@/utils/shrinkPlanIfNeeded";
 import { guestPrompt } from "@/utils/guestPrompt";
 import FlightIcon from "../../assets/airplane.svg";
 import LeftArrowIcon from "../../assets/left_arrow.svg";
@@ -951,6 +952,12 @@ export default function WeeklyScreen() {
         onDelete={async itinerary => {
           try {
             await itinerariesApi.deleteItinerary(itinerary.id);
+            const remainingDates = collectPlanItemDates(
+              planData.itineraries.filter(it => it.id !== itinerary.id),
+              planData.flights,
+              planData.accommodations,
+            );
+            await shrinkPlanIfNeeded(selectedPlan!.id, planData.plan, remainingDates);
             planData.removeItinerary(itinerary.id);
             if (selectedPlan?.publicId) {
               queryClient.invalidateQueries({
@@ -958,6 +965,9 @@ export default function WeeklyScreen() {
               });
               queryClient.invalidateQueries({
                 queryKey: ["checklist", selectedPlan.publicId],
+              });
+              queryClient.invalidateQueries({
+                queryKey: ["plan", selectedPlan.publicId],
               });
             }
             Alert.alert("삭제완료", "일정이 삭제되었습니다.");
@@ -995,6 +1005,12 @@ export default function WeeklyScreen() {
           planData.refreshAttachments();
         }}
         onDelete={async itineraryId => {
+          const remainingDates = collectPlanItemDates(
+            planData.itineraries.filter(it => it.id !== itineraryId),
+            planData.flights,
+            planData.accommodations,
+          );
+          await shrinkPlanIfNeeded(selectedPlan!.id, planData.plan, remainingDates);
           planData.removeItinerary(itineraryId);
           if (selectedPlan?.publicId) {
             queryClient.invalidateQueries({
@@ -1002,6 +1018,9 @@ export default function WeeklyScreen() {
             });
             queryClient.invalidateQueries({
               queryKey: ["checklist", selectedPlan.publicId],
+            });
+            queryClient.invalidateQueries({
+              queryKey: ["plan", selectedPlan.publicId],
             });
           }
           planData.refreshAttachments();
@@ -1026,6 +1045,12 @@ export default function WeeklyScreen() {
         onDelete={async flight => {
           try {
             await flightsApi.deleteFlight(flight.id);
+            const remainingDates = collectPlanItemDates(
+              planData.itineraries,
+              planData.flights.filter(f => f.id !== flight.id),
+              planData.accommodations,
+            );
+            await shrinkPlanIfNeeded(selectedPlan!.id, planData.plan, remainingDates);
             planData.removeFlight(flight.id);
             if (selectedPlan?.publicId) {
               queryClient.invalidateQueries({
@@ -1033,6 +1058,9 @@ export default function WeeklyScreen() {
               });
               queryClient.invalidateQueries({
                 queryKey: ["checklist", selectedPlan.publicId],
+              });
+              queryClient.invalidateQueries({
+                queryKey: ["plan", selectedPlan.publicId],
               });
             }
             Alert.alert("삭제완료", "항공편이 삭제되었습니다.");
@@ -1070,6 +1098,12 @@ export default function WeeklyScreen() {
           planData.refreshAttachments();
         }}
         onDelete={async flightId => {
+          const remainingDates = collectPlanItemDates(
+            planData.itineraries,
+            planData.flights.filter(f => f.id !== flightId),
+            planData.accommodations,
+          );
+          await shrinkPlanIfNeeded(selectedPlan!.id, planData.plan, remainingDates);
           planData.removeFlight(flightId);
           if (selectedPlan?.publicId) {
             queryClient.invalidateQueries({
@@ -1077,6 +1111,9 @@ export default function WeeklyScreen() {
             });
             queryClient.invalidateQueries({
               queryKey: ["checklist", selectedPlan.publicId],
+            });
+            queryClient.invalidateQueries({
+              queryKey: ["plan", selectedPlan.publicId],
             });
           }
         }}
@@ -1098,10 +1135,19 @@ export default function WeeklyScreen() {
         onDelete={async accommodation => {
           try {
             await accommodationsApi.deleteAccommodation(accommodation.id);
+            const remainingDates = collectPlanItemDates(
+              planData.itineraries,
+              planData.flights,
+              planData.accommodations.filter(acc => acc.id !== accommodation.id),
+            );
+            await shrinkPlanIfNeeded(selectedPlan!.id, planData.plan, remainingDates);
             planData.removeAccommodation(accommodation.id);
             if (selectedPlan?.publicId) {
               queryClient.invalidateQueries({
                 queryKey: ["expenses", selectedPlan.id],
+              });
+              queryClient.invalidateQueries({
+                queryKey: ["plan", selectedPlan.publicId],
               });
             }
             Alert.alert("삭제완료", "숙소가 삭제되었습니다.");
@@ -1136,10 +1182,19 @@ export default function WeeklyScreen() {
           planData.refreshAttachments();
         }}
         onDelete={async accommodationId => {
+          const remainingDates = collectPlanItemDates(
+            planData.itineraries,
+            planData.flights,
+            planData.accommodations.filter(acc => acc.id !== accommodationId),
+          );
+          await shrinkPlanIfNeeded(selectedPlan!.id, planData.plan, remainingDates);
           planData.removeAccommodation(accommodationId);
           if (selectedPlan?.publicId) {
             queryClient.invalidateQueries({
               queryKey: ["expenses", selectedPlan.id],
+            });
+            queryClient.invalidateQueries({
+              queryKey: ["plan", selectedPlan.publicId],
             });
           }
           planData.refreshAttachments();
