@@ -487,6 +487,7 @@ export default function TodayScreen() {
         queryClient.invalidateQueries({
           queryKey: ["plan", selectedPlan?.publicId],
         });
+        queryClient.invalidateQueries({ queryKey: ["plans"] });
         Alert.alert("삭제완료", "일정이 삭제되었습니다.");
       } catch {
         Alert.alert("알림", "일정 삭제에 실패했습니다.");
@@ -512,6 +513,7 @@ export default function TodayScreen() {
         queryClient.invalidateQueries({
           queryKey: ["plan", selectedPlan?.publicId],
         });
+        queryClient.invalidateQueries({ queryKey: ["plans"] });
         Alert.alert("삭제완료", "항공편이 삭제되었습니다.");
       } catch {
         Alert.alert("알림", "항공편 삭제에 실패했습니다.");
@@ -1543,6 +1545,7 @@ export default function TodayScreen() {
             queryClient.invalidateQueries({
               queryKey: ["plan", selectedPlan?.publicId],
             });
+            queryClient.invalidateQueries({ queryKey: ["plans"] });
             Alert.alert("삭제완료", "숙소가 삭제되었습니다.");
           } catch (_error) {
             Alert.alert("알림", "숙소 삭제에 실패했습니다.");
@@ -1586,6 +1589,7 @@ export default function TodayScreen() {
           queryClient.invalidateQueries({
             queryKey: ["plan", selectedPlan?.publicId],
           });
+          queryClient.invalidateQueries({ queryKey: ["plans"] });
           planData.refreshAttachments();
         }}
       />
@@ -1669,6 +1673,7 @@ export default function TodayScreen() {
         onPlanDatesExtended={async (newStart, newEnd) => {
           if (selectedPlan?.id) {
             await extendPlanIfNeeded(selectedPlan.id, planData.plan, [newStart, newEnd]);
+            queryClient.invalidateQueries({ queryKey: ["plans"] });
           }
         }}
         onSaved={() => {

@@ -27,6 +27,7 @@ import { textStyles, typography } from "@/ui/tokens/typography";
 import { guestPrompt } from "@/utils/guestPrompt";
 import dayjs from "dayjs";
 import ko from "dayjs/locale/ko";
+import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
@@ -246,6 +247,7 @@ export default function WeeklySchedulePanel({
   previewAccommodation: externalPreviewAccommodation,
   onPreviewAccommodationChange,
 }: Props) {
+  const queryClient = useQueryClient();
   const [currentWeekStart, setCurrentWeekStart] = useState(
     dayjs().startOf("week").add(1, "day"),
   );
@@ -960,7 +962,8 @@ export default function WeeklySchedulePanel({
                     plan.id,
                     plan,
                     collectPlanItemDates(updatedItineraries, flights, planData?.accommodations ?? []),
-                  ).catch(() => {});
+                  ).catch(() => null);
+                  queryClient.invalidateQueries({ queryKey: ["plans"] });
                 }
                 if (planData?.refreshItineraries) {
                   planData.refreshItineraries().catch((_err: any) => {});
@@ -1028,7 +1031,8 @@ export default function WeeklySchedulePanel({
                     plan.id,
                     plan,
                     collectPlanItemDates(itineraries, updatedFlights, planData?.accommodations ?? []),
-                  ).catch(() => {});
+                  ).catch(() => null);
+                  queryClient.invalidateQueries({ queryKey: ["plans"] });
                 }
                 if (planData?.refreshFlights) {
                   planData.refreshFlights().catch((_err: any) => {});
@@ -1087,6 +1091,7 @@ export default function WeeklySchedulePanel({
     const plan = planData?.plan;
     if (!plan?.id) return;
     await extendPlanIfNeeded(plan.id, plan, dates).catch(() => {});
+    queryClient.invalidateQueries({ queryKey: ["plans"] });
   };
 
   useEffect(() => {
@@ -1273,7 +1278,8 @@ export default function WeeklySchedulePanel({
             plan.id,
             plan,
             collectPlanItemDates(itineraries, flights, updatedAccommodations),
-          ).catch(() => {});
+          ).catch(() => null);
+          queryClient.invalidateQueries({ queryKey: ["plans"] });
         }
         if (planData?.refreshAccommodations) {
           planData.refreshAccommodations().catch(() => {});
