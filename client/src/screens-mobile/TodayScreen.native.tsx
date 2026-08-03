@@ -1,3 +1,5 @@
+import axios from "axios";
+
 import AccommodationDetailModal from "@/components/modals/mobile/AccommodationDetailModal.native";
 import PlanLoadingOverlay from "@/components/PlanLoadingOverlay.native";
 import AccommodationEditModal from "@/components/modals/mobile/AccommodationEditModal.native";
@@ -1391,8 +1393,12 @@ export default function TodayScreen() {
             }
             setShowPlanSelector(false);
             Alert.alert("성공", "여행이 삭제되었습니다.");
-          } catch (_error) {
-            Alert.alert("알림", "여행 삭제에 실패했습니다.");
+          } catch (error: any) {
+            if (axios.isAxiosError(error) && error.response?.status === 403) {
+              Alert.alert("알림", "이 여행을 삭제할 권한이 없습니다.");
+            } else {
+              Alert.alert("알림", "여행 삭제에 실패했습니다.");
+            }
           }
         }}
       />
