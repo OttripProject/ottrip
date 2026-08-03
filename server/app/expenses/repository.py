@@ -27,7 +27,9 @@ class ExpenseRepository:
         )
         return result.unique().scalar_one_or_none()
 
-    async def find_all_by_plan(self, *, plan_id: int, ex_date: Optional[date] = None) -> list[Expense]:
+    async def find_all_by_plan(
+        self, *, plan_id: int, ex_date: Optional[date] = None
+    ) -> list[Expense]:
         query = select(Expense).where(
             Expense.plan_id == plan_id, Expense.is_deleted.is_(False)
         )
@@ -51,7 +53,9 @@ class ExpenseRepository:
         )
         return result.unique().scalar_one_or_none()
 
-    async def find_by_accommodation_id(self, *, accommodation_id: int) -> Expense | None:
+    async def find_by_accommodation_id(
+        self, *, accommodation_id: int
+    ) -> Expense | None:
         """Accommodation ID로 expense 찾기 (soft delete 여부 관계없이)"""
         result = await self.session.execute(
             select(Expense).where(Expense.accommodation_id == accommodation_id)

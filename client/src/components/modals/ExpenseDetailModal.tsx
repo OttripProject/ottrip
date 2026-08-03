@@ -10,7 +10,7 @@ import {
 import { colors } from "@/ui/tokens/colors";
 import { radii } from "@/ui/tokens/radii";
 import { spacing } from "@/ui/tokens/spacing";
-import { textStyles } from "@/ui/tokens/typography";
+import { textStyles, typography } from "@/ui/tokens/typography";
 import { formatFileSize } from "@/utils/fileUtils";
 import { useMemo, useState } from "react";
 import {
@@ -20,8 +20,9 @@ import {
   StyleSheet,
   Text,
   View,
+  useWindowDimensions,
 } from "react-native";
-import AttachmentIcon from "../../../assets/attachment.svg";
+import AttachmentIcon from "../../../assets/attachment_clip.svg";
 import DeleteIcon from "../../../assets/delete.svg";
 import AttachmentDocumentIcon from "../../../assets/mobile_attachment_document.svg";
 import AttachmentImageIcon from "../../../assets/mobile_attachment_image.svg";
@@ -34,6 +35,7 @@ interface ExpenseDetailModalProps {
   expenses: Expense[];
   attachments?: Attachment[];
   onExpenseDelete?: () => void;
+  readOnly?: boolean;
 }
 
 const categoryOrder = [
@@ -52,7 +54,9 @@ export default function ExpenseDetailModal({
   expenses,
   attachments = [],
   onExpenseDelete,
+  readOnly = false,
 }: ExpenseDetailModalProps) {
+  const { height: windowHeight } = useWindowDimensions();
   const [tab, setTab] = useState<"expenses" | "attachments">("expenses");
   const [selectedCategory, setSelectedCategory] =
     useState<ExpenseCategory | null>(null);
@@ -60,54 +64,91 @@ export default function ExpenseDetailModal({
   const [previewImages, setPreviewImages] = useState<ImagePreviewItem[]>([]);
   const [previewInitialIndex, setPreviewInitialIndex] = useState(0);
 
-  const expenseAttachments = useMemo(
-    () => attachments.filter(a => a.entityType === "expense"),
-    [attachments],
-  );
+  const expenseMap = useMemo(() => {
+    const map: Record<number, Expense> = {};
+    expenses.forEach(e => { map[e.id] = e; });
+    return map;
+  }, [expenses]);
 
   const attachmentsMap = useMemo(() => {
     const map: Record<number, Attachment[]> = {};
-    expenseAttachments.forEach(a => {
-      if (!map[a.entityId]) map[a.entityId] = [];
-      map[a.entityId].push(a);
-    });
+    for (const expense of expenses) {
+      const list: Attachment[] = [
+        ...attachments.filter(a => a.entityType === "expense" && a.entityId === expense.id),
+        ...(expense.accommodationId
+          ? attachments.filter(a => a.entityType === "accommodation" && a.entityId === expense.accommodationId)
+          : []),
+        ...(expense.flightId
+          ? attachments.filter(a => a.entityType === "flight" && a.entityId === expense.flightId)
+          : []),
+        ...(expense.itineraryId
+          ? attachments.filter(a => a.entityType === "itinerary" && a.entityId === expense.itineraryId)
+          : []),
+      ];
+      if (list.length > 0) map[expense.id] = list;
+    }
     return map;
-  }, [expenseAttachments]);
+  }, [expenses, attachments]);
 
-  const expenseMap = useMemo(() => {
+  const expenseAttachments = useMemo(() => {
+    const seen = new Set<number>();
+    const all: Attachment[] = [];
+    for (const list of Object.values(attachmentsMap)) {
+      for (const a of list) {
+        if (!seen.has(a.id)) { seen.add(a.id); all.push(a); }
+      }
+    }
+    return all;
+  }, [attachmentsMap]);
+
+  const attachmentExpenseMap = useMemo(() => {
     const map: Record<number, Expense> = {};
-    expenses.forEach(e => {
-      map[e.id] = e;
-    });
+    for (const [expenseIdStr, list] of Object.entries(attachmentsMap)) {
+      const expense = expenseMap[Number(expenseIdStr)];
+      if (expense) {
+        for (const a of list) map[a.id] = expense;
+      }
+    }
     return map;
-  }, [expenses]);
+  }, [attachmentsMap, expenseMap]);
 
   const imagePreviewItems = useMemo<ImagePreviewItem[]>(
     () =>
       expenseAttachments
         .filter(a => a.contentType.startsWith("image/"))
-        .map(a => ({ attachment: a, expense: expenseMap[a.entityId] })),
-    [expenseAttachments, expenseMap],
+        .map(a => ({ attachment: a, expense: attachmentExpenseMap[a.id] })),
+    [expenseAttachments, attachmentExpenseMap],
   );
 
-  const totalExpenses = useMemo(
-    () => expenses.reduce((sum, expense) => sum + expense.amount, 0),
-    [expenses],
-  );
+  const totalsByCurrency = useMemo(() => {
+    const result = { KRW: 0, USD: 0 };
+    for (const expense of expenses) {
+      if (expense.currency === ExpenseCurrency.USD)
+        result.USD += expense.amount;
+      else result.KRW += expense.amount;
+    }
+    return result;
+  }, [expenses]);
+
+  const hasKRW = totalsByCurrency.KRW > 0;
+  const hasUSD = totalsByCurrency.USD > 0;
 
   const categoryTotals = useMemo(() => {
-    const totals: Record<ExpenseCategory, number> = {
-      [ExpenseCategory.FOOD]: 0,
-      [ExpenseCategory.TRANSPORT]: 0,
-      [ExpenseCategory.ACTIVITY]: 0,
-      [ExpenseCategory.ACCOMMODATION]: 0,
-      [ExpenseCategory.FLIGHT]: 0,
-      [ExpenseCategory.SHOPPING]: 0,
-      [ExpenseCategory.ETC]: 0,
+    const totals: Record<ExpenseCategory, { KRW: number; USD: number }> = {
+      [ExpenseCategory.FOOD]: { KRW: 0, USD: 0 },
+      [ExpenseCategory.TRANSPORT]: { KRW: 0, USD: 0 },
+      [ExpenseCategory.ACTIVITY]: { KRW: 0, USD: 0 },
+      [ExpenseCategory.ACCOMMODATION]: { KRW: 0, USD: 0 },
+      [ExpenseCategory.FLIGHT]: { KRW: 0, USD: 0 },
+      [ExpenseCategory.SHOPPING]: { KRW: 0, USD: 0 },
+      [ExpenseCategory.ETC]: { KRW: 0, USD: 0 },
     };
     expenses.forEach(expense => {
-      if (expense.category in totals)
-        totals[expense.category] += expense.amount;
+      if (expense.category in totals) {
+        if (expense.currency === ExpenseCurrency.USD)
+          totals[expense.category].USD += expense.amount;
+        else totals[expense.category].KRW += expense.amount;
+      }
     });
     return totals;
   }, [expenses]);
@@ -176,7 +217,7 @@ export default function ExpenseDetailModal({
         onRequestClose={onClose}
       >
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
+          <View style={[styles.modalContent, { maxHeight: windowHeight * 0.80, minHeight: windowHeight * 0.30 }]}>
             <View style={styles.header}>
               <Text style={styles.headerTitle}>지출 내역</Text>
               <Pressable onPress={onClose} style={styles.closeButton}>
@@ -189,101 +230,118 @@ export default function ExpenseDetailModal({
               onPress={() => setSelectedCategory(null)}
             >
               <Text style={styles.totalLabel}>총 지출</Text>
-              <Text style={styles.totalAmount}>
-                {formatAmount(totalExpenses)}{" "}
-                {currencyLabels[ExpenseCurrency.KRW]}
-              </Text>
+              <View style={styles.totalAmountColumn}>
+                {(!hasUSD || hasKRW) && (
+                  <Text style={styles.totalAmount}>
+                    {formatAmount(totalsByCurrency.KRW)} 원
+                  </Text>
+                )}
+                {hasUSD && (
+                  <Text style={styles.totalAmount}>
+                    {formatAmount(totalsByCurrency.USD)} 달러
+                  </Text>
+                )}
+              </View>
             </Pressable>
 
-            <View style={styles.tabBar}>
-              <Pressable
-                style={[
-                  styles.tabItem,
-                  tab === "expenses" && styles.tabItemActive,
-                ]}
-                onPress={() => setTab("expenses")}
-              >
-                <Text
+            {!readOnly && (
+              <View style={styles.tabBar}>
+                <Pressable
                   style={[
-                    styles.tabText,
-                    tab === "expenses" && styles.tabTextActive,
+                    styles.tabItem,
+                    tab === "expenses" && styles.tabItemActive,
                   ]}
+                  onPress={() => setTab("expenses")}
                 >
-                  내역
-                </Text>
-              </Pressable>
-              <Pressable
-                style={[
-                  styles.tabItem,
-                  tab === "attachments" && styles.tabItemActive,
-                ]}
-                onPress={() => setTab("attachments")}
-              >
-                <Text
+                  <Text
+                    style={[
+                      styles.tabText,
+                      tab === "expenses" && styles.tabTextActive,
+                    ]}
+                  >
+                    내역
+                  </Text>
+                </Pressable>
+                <Pressable
                   style={[
-                    styles.tabText,
-                    tab === "attachments" && styles.tabTextActive,
+                    styles.tabItem,
+                    tab === "attachments" && styles.tabItemActive,
                   ]}
+                  onPress={() => setTab("attachments")}
                 >
-                  첨부파일
-                </Text>
-                {expenseAttachments.length > 0 && (
-                  <View style={styles.tabBadge}>
-                    <Text style={styles.tabBadgeText}>
+                  <Text
+                    style={[
+                      styles.tabText,
+                      tab === "attachments" && styles.tabTextActive,
+                    ]}
+                  >
+                    첨부파일
+                  </Text>
+                  {expenseAttachments.length > 0 && (
+                    <Text style={styles.tabBadge}>
                       {expenseAttachments.length}
                     </Text>
-                  </View>
-                )}
-              </Pressable>
-            </View>
+                  )}
+                </Pressable>
+              </View>
+            )}
 
             {tab === "expenses" ? (
               <>
-                <View style={styles.summarySection}>
-                  {categoryOrder.map(category => {
-                    const total = categoryTotals[category];
-                    if (total === 0) return null;
-                    const isSelected = selectedCategory === category;
-                    return (
-                      <Pressable
-                        key={category}
-                        style={[
-                          styles.summaryRow,
-                          isSelected && styles.summaryRowSelected,
-                        ]}
-                        onPress={() =>
-                          setSelectedCategory(isSelected ? null : category)
-                        }
-                      >
-                        <Text
-                          style={[
-                            styles.summaryCategory,
-                            isSelected && styles.summaryCategorySelected,
-                          ]}
-                        >
-                          {categoryLabels[category]}
-                        </Text>
-                        <Text
-                          style={[
-                            styles.summaryAmount,
-                            isSelected && styles.summaryAmountSelected,
-                          ]}
-                        >
-                          {formatAmount(total)}{" "}
-                          {currencyLabels[ExpenseCurrency.KRW]}
-                        </Text>
-                      </Pressable>
-                    );
-                  })}
-                </View>
-
-                <View style={styles.divider} />
-
                 <ScrollView
                   style={styles.detailScrollView}
                   contentContainerStyle={styles.detailScrollContent}
                   showsVerticalScrollIndicator={false}
                 >
+                  <View style={styles.summarySection}>
+                    {categoryOrder.map(category => {
+                      const catTotal = categoryTotals[category];
+                      if (catTotal.KRW === 0 && catTotal.USD === 0) return null;
+                      const isSelected = selectedCategory === category;
+                      const amountText = [
+                        catTotal.KRW > 0
+                          ? `${formatAmount(catTotal.KRW)}원`
+                          : null,
+                        catTotal.USD > 0
+                          ? `${formatAmount(catTotal.USD)}달러`
+                          : null,
+                      ]
+                        .filter(Boolean)
+                        .join(" · ");
+                      return (
+                        <Pressable
+                          key={category}
+                          style={[
+                            styles.summaryRow,
+                            isSelected && styles.summaryRowSelected,
+                          ]}
+                          onPress={() =>
+                            setSelectedCategory(isSelected ? null : category)
+                          }
+                        >
+                          <Text
+                            style={[
+                              styles.summaryCategory,
+                              isSelected && styles.summaryCategorySelected,
+                            ]}
+                          >
+                            {categoryLabels[category]}
+                          </Text>
+                          <Text
+                            style={[
+                              styles.summaryAmount,
+                              isSelected && styles.summaryAmountSelected,
+                            ]}
+                          >
+                            {amountText}
+                          </Text>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+
+                  <View style={styles.divider} />
+
                   {categoryOrder.map(category => {
                     const categoryExpenses = expensesByCategory[category];
                     if (categoryExpenses.length === 0) return null;
@@ -318,34 +376,40 @@ export default function ExpenseDetailModal({
                                   {formatAmount(expense.amount)}{" "}
                                   {currencyLabels[expense.currency]}
                                 </Text>
-                                <View style={styles.expenseCardActions}>
-                                  {expAttachments.length > 0 && (
+                                {!readOnly && (
+                                  <View style={styles.expenseCardActions}>
+                                    {expAttachments.length > 0 && (
+                                      <Pressable
+                                        style={styles.attachmentButton}
+                                        onPress={() =>
+                                          handleExpenseAttachmentPress(
+                                            expense,
+                                            expAttachments,
+                                          )
+                                        }
+                                      >
+                                        <AttachmentIcon
+                                          width={11}
+                                          height={11}
+                                          color={colors.gray700}
+                                        />
+                                        <Text style={styles.attachmentCount}>
+                                          {expAttachments.length}
+                                        </Text>
+                                      </Pressable>
+                                    )}
                                     <Pressable
-                                      style={styles.attachmentButton}
-                                      onPress={() =>
-                                        handleExpenseAttachmentPress(
-                                          expense,
-                                          expAttachments,
-                                        )
-                                      }
+                                      onPress={() => handleDelete(expense.id)}
+                                      style={styles.deleteButton}
                                     >
-                                      <AttachmentIcon
-                                        width={11}
-                                        height={11}
-                                        color={colors.gray700}
+                                      <DeleteIcon
+                                        width={14}
+                                        height={14}
+                                        color={colors.warning}
                                       />
-                                      <Text style={styles.attachmentCount}>
-                                        {expAttachments.length}
-                                      </Text>
                                     </Pressable>
-                                  )}
-                                  <Pressable
-                                    onPress={() => handleDelete(expense.id)}
-                                    style={styles.deleteButton}
-                                  >
-                                    <DeleteIcon width={14} height={14} />
-                                  </Pressable>
-                                </View>
+                                  </View>
+                                )}
                               </View>
                             </View>
                           );
@@ -364,12 +428,12 @@ export default function ExpenseDetailModal({
                 {expenseAttachments.length === 0 ? (
                   <View style={styles.emptyState}>
                     <Text style={styles.emptyStateText}>
-                      첨부파일이 없습니다
+                      업로드 된 첨부파일이 없습니다
                     </Text>
                   </View>
                 ) : (
                   expenseAttachments.map(attachment => {
-                    const expense = expenseMap[attachment.entityId];
+                    const expense = attachmentExpenseMap[attachment.id];
                     const isImage = attachment.contentType.startsWith("image/");
                     return (
                       <Pressable
@@ -455,10 +519,8 @@ const styles = StyleSheet.create({
   modalContent: {
     backgroundColor: colors.white,
     borderRadius: radii.xl,
-    width: "90%",
-    maxWidth: 420,
-    maxHeight: 648,
-    flex: 1,
+    width: "100%",
+    maxWidth: 520,
     minHeight: 0,
     overflow: "hidden",
   },
@@ -493,6 +555,10 @@ const styles = StyleSheet.create({
     ...textStyles.h7,
     color: "rgba(255, 255, 255, 0.7)",
   },
+  totalAmountColumn: {
+    alignItems: "flex-end",
+    gap: 2,
+  },
   totalAmount: {
     ...textStyles.h5,
     color: colors.white,
@@ -526,17 +592,15 @@ const styles = StyleSheet.create({
     color: colors.gray900,
   },
   tabBadge: {
-    minWidth: 24,
-    height: 18,
-    paddingHorizontal: 5,
-    borderRadius: radii.pill,
-    backgroundColor: "#E7EEFF",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  tabBadgeText: {
-    ...textStyles.h9,
-    color: colors.primary,
+    paddingHorizontal: 11,
+    paddingVertical: 2,
+    borderRadius: 999,
+    backgroundColor: colors.gray300,
+    overflow: "hidden",
+    fontFamily: typography.fontFamily.poppinsSemiBold,
+    fontSize: 10,
+    lineHeight: 14,
+    color: colors.gray600,
   },
   divider: {
     height: 1,
@@ -581,7 +645,6 @@ const styles = StyleSheet.create({
     minHeight: 0,
   },
   detailScrollContent: {
-    paddingHorizontal: spacing.xl,
     paddingBottom: spacing.xl,
     gap: spacing.lg,
   },
@@ -593,6 +656,7 @@ const styles = StyleSheet.create({
   },
   categorySection: {
     gap: spacing.md,
+    paddingHorizontal: spacing.xl,
   },
   categoryHeader: {
     ...textStyles.h7,
@@ -622,7 +686,9 @@ const styles = StyleSheet.create({
     color: colors.gray900,
   },
   expenseDate: {
-    ...textStyles.body6,
+    fontFamily: typography.fontFamily.poppinsMedium,
+    fontSize: 11,
+    lineHeight: 16,
     color: colors.gray600,
   },
   expenseAmount: {
@@ -646,7 +712,9 @@ const styles = StyleSheet.create({
     borderColor: colors.gray300,
   },
   attachmentCount: {
-    ...textStyles.h9,
+    fontFamily: typography.fontFamily.poppinsSemiBold,
+    fontSize: 11,
+    lineHeight: 16,
     color: colors.gray700,
   },
   deleteButton: {
@@ -676,7 +744,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#E7EEFF",
   },
   fileTypeBadgeDoc: {
-    backgroundColor: "#FFE9D6",
+    backgroundColor: "#E7EEFF",
   },
   attachmentCardInfo: {
     flex: 1,

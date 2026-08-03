@@ -1,10 +1,22 @@
+import AiDocumentAnalyzeModal from "@/components/modals/mobile/AiDocumentAnalyzeModal";
+
+const KIND_TO_LABEL: Record<string, string> = {
+  itinerary: "일정",
+  accommodation: "숙박",
+  flight: "항공",
+  expense: "비용",
+};
 import { PLACEHOLDERS } from "@/constants/placeholders";
 import { useAttachmentUpload } from "@/hooks/useAttachmentUpload";
 import { useFilePicker } from "@/hooks/useFilePicker";
 import { useMe } from "@/hooks/useMe";
+import { analyzeDocumentUpload } from "@/services/aiDocument";
 import { attachmentsApi } from "@/services/attachments";
 import { flightsApi } from "@/services/flights";
-import type { Attachment, FlightRead, LocalFile } from "@/types/api";
+import type { Attachment, DocumentUploadAnalyzeResponse, FlightRead, LocalFile } from "@/types/api";
+import type { AiAttachmentAnalyzeSelection } from "@/ui/components/attachmentSection.types";
+import { buildAnalyzeUploadPayload } from "@/utils/attachmentAiAnalyze";
+import { applyFlightDraftFromAi } from "@/utils/applyAiDocumentDraft";
 import { ExpenseCategory, ExpenseCurrency } from "@/types/expense";
 import CalendarModal from "@/ui/components/CalendarModal.native";
 import FloatingFooter from "@/ui/components/FloatingFooter.native";
@@ -20,7 +32,9 @@ import dayjs from "dayjs";
 import { useEffect, useRef, useState } from "react";
 import {
   Alert,
+  Animated,
   Pressable,
+  Keyboard,
   ScrollView,
   StyleSheet,
   Text,
@@ -44,6 +58,8 @@ interface FlightEditModalProps {
   embedded?: boolean;
   onSave?: (flight: FlightRead) => void;
   onDelete?: (flightId: number) => void;
+  pendingAiResult?: { result: DocumentUploadAnalyzeResponse; filename?: string; pendingFiles?: LocalFile[] } | null;
+  onRouteMismatchResult?: (result: DocumentUploadAnalyzeResponse, filename?: string, pendingFiles?: LocalFile[]) => void;
 }
 
 type SegmentForm = {
@@ -88,6 +104,8 @@ export default function FlightEditModal({
   embedded,
   onSave,
   onDelete,
+  pendingAiResult,
+  onRouteMismatchResult,
 }: FlightEditModalProps) {
   const [formData, setFormData] = useState({
     reservation_number: "",
@@ -96,6 +114,7 @@ export default function FlightEditModal({
     booking_reference: "",
   });
   const [expenseAmount, setExpenseAmount] = useState("");
+  const [expenseCurrency, setExpenseCurrency] = useState(ExpenseCurrency.KRW);
   const [flightSegments, setFlightSegments] = useState<SegmentForm[]>([]);
   const [segmentDatePicker, setSegmentDatePicker] = useState<{
     idx: number;
@@ -111,11 +130,32 @@ export default function FlightEditModal({
   } | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isSubmittingRef = useRef(false);
+  const scrollRef = useRef<ScrollView>(null);
+  const currencyOpacity = useRef(new Animated.Value(1)).current;
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+
+  useEffect(() => {
+    const show = Keyboard.addListener("keyboardDidShow", e => {
+      setKeyboardHeight(e.endCoordinates.height);
+    });
+    const hide = Keyboard.addListener("keyboardDidHide", () => {
+      setKeyboardHeight(0);
+    });
+    return () => { show.remove(); hide.remove(); };
+  }, []);
   const [pendingFiles, setPendingFiles] = useState<LocalFile[]>([]);
   const [existingAttachments, setExistingAttachments] = useState<Attachment[]>(
     [],
   );
   const [isLoadingAttachments, setIsLoadingAttachments] = useState(false);
+  const [isAiAnalyzing, setIsAiAnalyzing] = useState(false);
+  const [aiAnalyzeError, setAiAnalyzeError] = useState<string | null>(null);
+  const [aiModalResult, setAiModalResult] = useState<DocumentUploadAnalyzeResponse | null>(null);
+  const [aiAnalyzeFileName, setAiAnalyzeFileName] = useState<string | undefined>();
+  const [lastAiSelection, setLastAiSelection] = useState<AiAttachmentAnalyzeSelection | null>(null);
+  const aiCancelledRef = useRef(false);
+  const formInitializedRef = useRef(false);
+  const [aiApplyLabel, setAiApplyLabel] = useState<string | undefined>();
 
   const { pickImage, pickDocument } = useFilePicker();
   const { data: me } = useMe();
@@ -125,7 +165,16 @@ export default function FlightEditModal({
   });
 
   useEffect(() => {
-    if (visible && !flight) {
+    if (!visible) {
+      formInitializedRef.current = false;
+      setAiModalResult(null);
+      setAiApplyLabel(undefined);
+      return;
+    }
+    if (formInitializedRef.current) return;
+    formInitializedRef.current = true;
+
+    if (!flight) {
       const baseDate =
         defaultDate || planStartDate || dayjs().format("YYYY-MM-DD");
       setFlightSegments([
@@ -150,7 +199,7 @@ export default function FlightEditModal({
         booking_reference: "",
       });
       setExpenseAmount("");
-    } else if (visible && flight) {
+    } else {
       setFormData({
         reservation_number: flight.reservationNumber || "",
         passenger_name: flight.passengerName || "",
@@ -163,6 +212,7 @@ export default function FlightEditModal({
           ? String(amountNum).replace(/\B(?=(\d{3})+(?!\d))/g, ",")
           : "",
       );
+      setExpenseCurrency((flight.expense?.currency as ExpenseCurrency) ?? ExpenseCurrency.KRW);
       const segments = flight.flightSegments || [];
       const sorted = [...segments].sort(
         (a, b) => (a.order ?? 0) - (b.order ?? 0),
@@ -210,9 +260,7 @@ export default function FlightEditModal({
             ];
       setFlightSegments(segList);
     }
-    if (visible) {
-      setPendingFiles([]);
-    }
+    setPendingFiles([]);
   }, [visible, flight, planStartDate, defaultDate]);
 
   useEffect(() => {
@@ -241,9 +289,69 @@ export default function FlightEditModal({
     };
   }, [visible, flight?.id, planId]);
 
+  const handleAiAnalyzePress = async (selection: AiAttachmentAnalyzeSelection) => {
+    setAiAnalyzeError(null);
+    setIsAiAnalyzing(true);
+    setLastAiSelection(selection);
+    aiCancelledRef.current = false;
+    try {
+      const { file, filename } = await buildAnalyzeUploadPayload(selection, {
+        pendingFiles,
+        existingAttachments,
+      });
+      setAiAnalyzeFileName(filename);
+      const result = await analyzeDocumentUpload(file, { filename });
+      if (aiCancelledRef.current) return;
+      if (!result.success) {
+        setAiAnalyzeError(result.error ?? "분석에 실패했습니다.");
+      } else {
+        const inferredType = result.inferredItemType ?? result.draft?.itemType;
+        if (inferredType && inferredType !== "flight") {
+          if (onRouteMismatchResult) {
+            setAiApplyLabel(`${KIND_TO_LABEL[inferredType] ?? inferredType}에 추가`);
+            setAiModalResult(result);
+          } else {
+            setAiAnalyzeError(
+              `문서가 [${KIND_TO_LABEL[inferredType] ?? inferredType}]으로 분석되었습니다. 항공 수정 화면에는 반영할 수 없습니다.`,
+            );
+          }
+        } else {
+          setAiApplyLabel(undefined);
+          setAiModalResult(result);
+        }
+      }
+    } catch {
+      setAiAnalyzeError("분석 중 오류가 발생했습니다.");
+    } finally {
+      setIsAiAnalyzing(false);
+    }
+  };
+
+  useEffect(() => {
+    if (visible && pendingAiResult) {
+      const draft = pendingAiResult.result.draft;
+      if (draft?.itemType === "flight") {
+        applyFlightDraftFromAi(
+          draft,
+          setFormData,
+          setFlightSegments as Parameters<typeof applyFlightDraftFromAi>[2],
+          ((val: { amount: string } | ((prev: { amount: string }) => { amount: string })) => {
+            const amount = typeof val === "function" ? val({ amount: "" }).amount : val.amount;
+            setExpenseAmount(amount);
+          }) as Parameters<typeof applyFlightDraftFromAi>[3],
+          (() => {}) as Parameters<typeof applyFlightDraftFromAi>[4],
+        );
+      }
+      if (pendingAiResult.pendingFiles?.length) {
+        setPendingFiles(pendingAiResult.pendingFiles);
+      }
+    }
+  }, [visible, pendingAiResult]);
+
   const handleRemoveExistingAttachment = async (attachmentId: number) => {
     try {
       await attachmentsApi.deleteAttachment(attachmentId);
+      setAiAnalyzeError(null);
       setExistingAttachments(prev => prev.filter(a => a.id !== attachmentId));
     } catch (error) {
       if (handleGuestPromptError(error)) return;
@@ -290,7 +398,7 @@ export default function FlightEditModal({
         seatNumber: s.seat_number?.trim() || null,
       }));
 
-      let savedFlightId: number;
+      let savedFlight: FlightRead;
       if (flight) {
         await flightsApi.updateFlight(flight.id, {
           reservationNumber: formData.reservation_number?.trim() || null,
@@ -301,24 +409,20 @@ export default function FlightEditModal({
           expense: {
             exDate: first.departure_date,
             amount,
-            currency: ExpenseCurrency.KRW,
+            currency: expenseCurrency,
             category: ExpenseCategory.FLIGHT as any,
             planId,
             description: (() => {
               const dep = flightSegments[0]?.departure_airport?.trim();
-              const arr = flightSegments[flightSegments.length - 1]?.arrival_airport?.trim();
+              const arr =
+                flightSegments[
+                  flightSegments.length - 1
+                ]?.arrival_airport?.trim();
               return dep && arr ? `${dep} → ${arr}` : null;
             })(),
           },
         });
-        const updated = await flightsApi.getFlight(flight.id);
-        savedFlightId = updated.id;
-        try {
-          await onSave?.(updated);
-        } catch {
-          // Refetch 실패해도 저장은 완료됨
-        }
-        Alert.alert("수정완료", "항공편이 수정되었습니다.");
+        savedFlight = await flightsApi.getFlight(flight.id);
       } else {
         const createRes = await flightsApi.createFlight({
           planId,
@@ -330,29 +434,25 @@ export default function FlightEditModal({
           expense: {
             exDate: first.departure_date,
             amount,
-            currency: ExpenseCurrency.KRW,
+            currency: expenseCurrency,
             category: ExpenseCategory.FLIGHT as any,
             planId,
             description: (() => {
               const dep = flightSegments[0]?.departure_airport?.trim();
-              const arr = flightSegments[flightSegments.length - 1]?.arrival_airport?.trim();
+              const arr =
+                flightSegments[
+                  flightSegments.length - 1
+                ]?.arrival_airport?.trim();
               return dep && arr ? `${dep} → ${arr}` : null;
             })(),
           },
         });
-        const created = await flightsApi.getFlight(createRes.id);
-        savedFlightId = created.id;
-        try {
-          await onSave?.(created);
-        } catch {
-          // Refetch 실패해도 저장은 완료됨
-        }
-        Alert.alert("추가완료", "항공편이 추가되었습니다.");
+        savedFlight = await flightsApi.getFlight(createRes.id);
       }
 
       if (pendingFiles.length > 0) {
         try {
-          const uploaded = await uploadFiles(pendingFiles, savedFlightId);
+          const uploaded = await uploadFiles(pendingFiles, savedFlight.id);
           setExistingAttachments(prev => [...prev, ...uploaded]);
           setPendingFiles([]);
         } catch {
@@ -363,6 +463,13 @@ export default function FlightEditModal({
         }
       }
 
+      Alert.alert(flight ? "수정완료" : "추가완료", flight ? "항공편이 수정되었습니다." : "항공편이 추가되었습니다.");
+
+      try {
+        await onSave?.(savedFlight);
+      } catch {
+        // Refetch 실패해도 저장은 완료됨
+      }
       onClose?.({ fromSave: true });
     } catch (_error) {
       Alert.alert(
@@ -438,7 +545,7 @@ export default function FlightEditModal({
   ) => {
     setFlightSegments(prev => {
       const next = [...prev];
-      (next[idx] as any)[field] = value;
+      next[idx] = { ...next[idx], [field]: value };
       return next;
     });
   };
@@ -460,8 +567,9 @@ export default function FlightEditModal({
         </View>
       )}
       <ScrollView
+        ref={scrollRef}
         style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: keyboardHeight+40 || 24 }]}
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.form}>
@@ -676,7 +784,15 @@ export default function FlightEditModal({
                       }
                       selectedDate={seg.departure_date}
                       onDayPress={day => {
-                        updateSegment(idx, "departure_date", day.dateString);
+                        setFlightSegments(prev => {
+                          const next = [...prev];
+                          const seg = { ...next[idx], departure_date: day.dateString };
+                          if (!seg.arrival_date || seg.arrival_date < day.dateString) {
+                            seg.arrival_date = day.dateString;
+                          }
+                          next[idx] = seg;
+                          return next;
+                        });
                         setSegmentDatePicker(null);
                       }}
                       onClose={() => setSegmentDatePicker(null)}
@@ -810,8 +926,36 @@ export default function FlightEditModal({
                 variant="filled"
                 containerStyle={styles.amountInputContainer}
                 style={styles.amountInputStyle}
+                onFocus={() => {
+                  setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
+                }}
               />
-              <Text style={styles.amountSuffix}>KRW</Text>
+              <Pressable
+                style={styles.currencyBadge}
+                onPress={() => {
+                  Animated.timing(currencyOpacity, {
+                    toValue: 0,
+                    duration: 100,
+                    useNativeDriver: true,
+                  }).start(() => {
+                    setExpenseCurrency(prev =>
+                      prev === ExpenseCurrency.KRW
+                        ? ExpenseCurrency.USD
+                        : ExpenseCurrency.KRW,
+                    );
+                    Animated.timing(currencyOpacity, {
+                      toValue: 1,
+                      duration: 150,
+                      useNativeDriver: true,
+                    }).start();
+                  });
+                }}
+                hitSlop={8}
+              >
+                <Animated.Text style={[styles.amountSuffix, { opacity: currencyOpacity }]}>
+                  {expenseCurrency === ExpenseCurrency.KRW ? "원" : "달러"}
+                </Animated.Text>
+              </Pressable>
             </View>
           </View>
         </View>
@@ -829,7 +973,11 @@ export default function FlightEditModal({
           onPickImage={async () => {
             try {
               const file = await pickImage();
-              if (file) setPendingFiles(prev => [...prev, file]);
+              if (file) {
+                setAiAnalyzeError(null);
+                setPendingFiles(prev => [...prev, file]);
+                setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
+              }
             } catch (e: any) {
               Alert.alert("알림", e.message);
             }
@@ -837,14 +985,28 @@ export default function FlightEditModal({
           onPickDocument={async () => {
             try {
               const file = await pickDocument();
-              if (file) setPendingFiles(prev => [...prev, file]);
+              if (file) {
+                setAiAnalyzeError(null);
+                setPendingFiles(prev => [...prev, file]);
+                setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
+              }
             } catch (e: any) {
               Alert.alert("알림", e.message);
             }
           }}
-          onRemoveFile={index =>
-            setPendingFiles(prev => prev.filter((_, i) => i !== index))
-          }
+          onRemoveFile={index => {
+            setAiAnalyzeError(null);
+            setPendingFiles(prev => prev.filter((_, i) => i !== index));
+          }}
+          onAiAnalyzePress={handleAiAnalyzePress}
+          isAiAnalyzing={isAiAnalyzing}
+          onCancelAiAnalyze={() => {
+            aiCancelledRef.current = true;
+            setIsAiAnalyzing(false);
+          }}
+          analyzeError={aiAnalyzeError}
+          onRetryAnalyze={() => lastAiSelection && handleAiAnalyzePress(lastAiSelection)}
+          isAiAnalyzeSuccess={!!aiModalResult?.success && !aiAnalyzeError}
         />
       </ScrollView>
 
@@ -905,13 +1067,50 @@ export default function FlightEditModal({
     </>
   );
 
+  const aiModal = (
+    <AiDocumentAnalyzeModal
+      visible={!!aiModalResult}
+      onClose={() => { setAiModalResult(null); setAiApplyLabel(undefined); }}
+      entityTypeLabel="항공"
+      originEntityType="항공"
+      analyzeResult={aiModalResult}
+      analyzeFileName={aiAnalyzeFileName}
+      applyLabel={aiApplyLabel}
+      onApply={draft => {
+        const inferredType = aiModalResult?.inferredItemType ?? draft?.itemType;
+        if (inferredType !== "flight" && onRouteMismatchResult && aiModalResult) {
+          onRouteMismatchResult({ ...aiModalResult, draft }, aiAnalyzeFileName, pendingFiles);
+        } else if (draft) {
+          applyFlightDraftFromAi(
+            draft,
+            setFormData,
+            setFlightSegments as Parameters<typeof applyFlightDraftFromAi>[2],
+            ((val: { amount: string } | ((prev: { amount: string }) => { amount: string })) => {
+              const amount = typeof val === "function" ? val({ amount: expenseAmount }).amount : val.amount;
+              setExpenseAmount(amount);
+            }) as Parameters<typeof applyFlightDraftFromAi>[3],
+            (() => {}) as Parameters<typeof applyFlightDraftFromAi>[4],
+          );
+        }
+        setAiModalResult(null);
+        setAiApplyLabel(undefined);
+      }}
+    />
+  );
+
   if (embedded) {
-    return <View style={{ flex: 1 }}>{content}</View>;
+    return (
+      <>
+        <View style={{ flex: 1 }}>{content}</View>
+        {aiModal}
+      </>
+    );
   }
 
   return (
     <FullScreenModal visible={visible} onClose={() => onClose?.()}>
       {content}
+      {aiModal}
     </FullScreenModal>
   );
 }
@@ -936,7 +1135,6 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 16,
     paddingTop: 12,
-    paddingBottom: 240,
   },
   form: { gap: 20, marginBottom: 24 },
   sectionDivider: {
@@ -1079,10 +1277,17 @@ const styles = StyleSheet.create({
     paddingVertical: 0,
     color: colors.primary,
   },
+  currencyBadge: {
+    marginLeft: 4,
+    width: 44,
+    paddingVertical: 4,
+    borderRadius: 6,
+    backgroundColor: `${colors.primary}10`,
+    alignItems: "center",
+  },
   amountSuffix: {
     ...textStyles.h6,
     color: colors.primary,
-    marginLeft: 4,
   },
   attachmentSection: {
     marginTop: 20,

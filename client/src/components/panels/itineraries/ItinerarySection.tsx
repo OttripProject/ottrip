@@ -25,6 +25,7 @@ interface ItinerarySectionProps {
   onConsumeOpenNewItineraryForm?: () => void;
   selectedItineraryDate?: Date | null;
   onEdit?: (itinerary: any) => void;
+  onTabChange?: (tab: "itinerary" | "flight" | "accommodation") => void;
   stagedDocumentAnalyze?: StagedDocumentAnalyzePayload | null;
   onConsumeStagedDocumentAnalyze?: () => void;
   routeDocumentAnalyzeSuccess?: (
@@ -45,6 +46,7 @@ export default function ItinerarySection({
   onConsumeOpenNewItineraryForm,
   selectedItineraryDate,
   onEdit,
+  onTabChange,
   stagedDocumentAnalyze,
   onConsumeStagedDocumentAnalyze,
   routeDocumentAnalyzeSuccess,
@@ -124,6 +126,8 @@ export default function ItinerarySection({
         onDelete={handleItineraryDelete}
         selectedDate={selectedItineraryDate || undefined}
         readOnly={true}
+        activeTab={activeTab}
+        onTabChange={onTabChange}
         stagedDocumentAnalyze={stagedDocumentAnalyze}
         onConsumeStagedDocumentAnalyze={onConsumeStagedDocumentAnalyze}
         routeDocumentAnalyzeSuccess={routeDocumentAnalyzeSuccess}
@@ -153,6 +157,8 @@ export default function ItinerarySection({
         onDelete={handleItineraryDelete}
         selectedDate={selectedItineraryDate || undefined}
         readOnly={false}
+        activeTab={activeTab}
+        onTabChange={onTabChange}
         stagedDocumentAnalyze={stagedDocumentAnalyze}
         onConsumeStagedDocumentAnalyze={onConsumeStagedDocumentAnalyze}
         routeDocumentAnalyzeSuccess={routeDocumentAnalyzeSuccess}

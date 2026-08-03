@@ -18,15 +18,17 @@ import type {
 import {
   ExpenseCategory,
   ExpenseCurrency,
+  categoryColors,
   categoryLabels,
-  currencyLabels,
 } from "@/types/expense";
+import CurrencyToggle from "@/ui/components/CurrencyToggle";
 import AttachmentSection from "@/ui/components/attachmentSection";
 import type { AiAttachmentAnalyzeSelection } from "@/ui/components/attachmentSection.types";
 import { pendingAiFileKey } from "@/ui/components/attachmentSection.types";
 import Input from "@/ui/components/input/Input";
 import {
   CategoryPicker,
+  CityPicker,
   CountryPicker,
   TimePicker,
 } from "@/ui/components/pickers";
@@ -51,6 +53,7 @@ import React, {
   useCallback,
 } from "react";
 import {
+  ActivityIndicator,
   Alert,
   Platform,
   Pressable,
@@ -59,10 +62,26 @@ import {
   Text,
   View,
 } from "react-native";
-import AddIcon from "../../../../assets/add.svg";
 import CalendarIcon from "../../../../assets/calender.svg";
-import DeleteIcon from "../../../../assets/delete.svg";
-import CloseIcon from "../../../../assets/delete_ai.svg";
+import CloseIcon from "../../../../assets/close_sm.svg";
+import PanelTabSwitcher from "../PanelTabSwitcher";
+import { extendPlanIfNeeded } from "@/utils/extendPlanIfNeeded";
+
+function getCountryCityFromSegments(
+  segments:
+    | { startDate: string; endDate: string; country: string; city: string }[]
+    | undefined
+    | null,
+  date: string,
+) {
+  if (!segments || !date) return null;
+  const matches = segments.filter(
+    s => s.startDate <= date && date <= s.endDate,
+  );
+  if (matches.length === 0) return null;
+  const last = matches[matches.length - 1];
+  return { country: last.country, city: last.city };
+}
 
 interface ItineraryItemProps {
   itinerary?: any;
@@ -75,11 +94,14 @@ interface ItineraryItemProps {
   onShowWarning?: () => void;
   readOnly?: boolean;
   onEdit?: () => void;
+  activeTab?: "itinerary" | "flight" | "accommodation";
+  onTabChange?: (tab: "itinerary" | "flight" | "accommodation") => void;
   stagedDocumentAnalyze?: StagedDocumentAnalyzePayload | null;
   onConsumeStagedDocumentAnalyze?: () => void;
   routeDocumentAnalyzeSuccess?: (
     res: DocumentUploadAnalyzeResponse,
     carryPendingFiles?: LocalFile[],
+    originEntityType?: string,
   ) => boolean;
   carryoverPendingFiles?: LocalFile[] | null;
   onConsumeCarryoverPendingFiles?: () => void;
@@ -96,6 +118,8 @@ export default function ItineraryItem({
   onShowWarning,
   readOnly = false,
   onEdit,
+  activeTab,
+  onTabChange,
   stagedDocumentAnalyze,
   onConsumeStagedDocumentAnalyze,
   routeDocumentAnalyzeSuccess,
@@ -127,11 +151,17 @@ export default function ItineraryItem({
 
   React.useEffect(() => {
     if (selectedDate && !itinerary) {
+      const dateStr = dayjs(selectedDate).format("YYYY-MM-DD");
+      const autoFill = getCountryCityFromSegments(
+        planData?.plan?.segments,
+        dateStr,
+      );
       setFormData(prev => ({
         ...prev,
-        itineraryDate: dayjs(selectedDate).format("YYYY-MM-DD"),
+        itineraryDate: dateStr,
         startTime: dayjs(selectedDate).format("HH:mm"),
         endTime: dayjs(selectedDate).add(1, "hour").format("HH:mm"),
+        ...(autoFill ? { country: autoFill.country, city: autoFill.city } : {}),
       }));
     }
   }, [selectedDate, itinerary]);
@@ -163,6 +193,7 @@ export default function ItineraryItem({
     category: ExpenseCategory.ETC,
     amount: 0,
     description: "",
+    currency: ExpenseCurrency.KRW,
   });
   const [expenses, setExpenses] = useState<any[]>([]);
 
@@ -179,10 +210,21 @@ export default function ItineraryItem({
     useState<DocumentUploadAnalyzeResponse | null>(null);
   const [isAiAnalyzing, setIsAiAnalyzing] = useState(false);
   const [aiAnalyzeInlineError, setAiAnalyzeInlineError] = useState(false);
-  const [aiAnalyzeInlineErrorMessage, setAiAnalyzeInlineErrorMessage] = useState("");
-  const [aiAnalyzeSizeErrorMessage, setAiAnalyzeSizeErrorMessage] = useState("");
-  const [lastAiSelection, setLastAiSelection] = useState<AiAttachmentAnalyzeSelection | null>(null);
+  const [aiAnalyzeInlineErrorMessage, setAiAnalyzeInlineErrorMessage] =
+    useState("");
+  const [aiAnalyzeSizeErrorMessage, setAiAnalyzeSizeErrorMessage] =
+    useState("");
+  const [lastAiSelection, setLastAiSelection] =
+    useState<AiAttachmentAnalyzeSelection | null>(null);
+  const [lastAnalyzeFileName, setLastAnalyzeFileName] = useState<string | null>(
+    null,
+  );
   const lastHandledAiAnalyzeSeqRef = useRef<number | null>(null);
+  const aiAnalyzeCancelledRef = useRef(false);
+
+  const [analyzeOriginEntityType, setAnalyzeOriginEntityType] = useState<
+    string | undefined
+  >(undefined);
 
   useEffect(() => {
     if (!stagedDocumentAnalyze) return;
@@ -191,9 +233,10 @@ export default function ItineraryItem({
       stagedDocumentAnalyze.result.draft?.itemType;
     if (kind !== "itinerary") return;
     if (readOnly) return;
-    const { seq, result } = stagedDocumentAnalyze;
+    const { seq, result, originEntityType } = stagedDocumentAnalyze;
     if (lastHandledAiAnalyzeSeqRef.current === seq) return;
     lastHandledAiAnalyzeSeqRef.current = seq;
+    setAnalyzeOriginEntityType(originEntityType);
     setAiAnalyzeResult(result);
     setAiAnalyzeModalVisible(true);
   }, [stagedDocumentAnalyze, readOnly]);
@@ -250,11 +293,15 @@ export default function ItineraryItem({
         ? dayjs(selectedDate).add(1, "hour").format("HH:mm")
         : "10:00";
 
+      const autoFill = getCountryCityFromSegments(
+        planData?.plan?.segments,
+        defaultDate,
+      );
       setFormData({
         title: "",
         description: "",
-        country: "",
-        city: "",
+        country: autoFill?.country || "",
+        city: autoFill?.city || "",
         location: "",
         itineraryDate: defaultDate,
         startTime: defaultStartTime,
@@ -268,7 +315,9 @@ export default function ItineraryItem({
         category: ExpenseCategory.ETC,
         amount: 0,
         description: "",
+        currency: ExpenseCurrency.KRW,
       });
+      setPendingFiles([]);
     }
   }, [itinerary, selectedDate]);
 
@@ -430,7 +479,7 @@ export default function ItineraryItem({
     !readOnly ||
     (readOnly &&
       itineraryAttachmentEntityId != null &&
-      (isLoadingAttachments || existingAttachments.length > 0));
+      existingAttachments.length > 0);
 
   const handleSave = async () => {
     if (isSubmittingRef.current) {
@@ -540,6 +589,7 @@ export default function ItineraryItem({
           startTime: formData.startTime,
           endTime: finalEndTime,
         });
+        await extendPlanIfNeeded(planId, planData?.plan, [formData.itineraryDate]);
 
         if (draftExpenses.length > 0) {
           try {
@@ -658,6 +708,7 @@ export default function ItineraryItem({
           category: ExpenseCategory.ETC,
           amount: 0,
           description: "",
+          currency: ExpenseCurrency.KRW,
         });
         setEditingExpense(null);
         setShowExpenseForm(false);
@@ -687,6 +738,7 @@ export default function ItineraryItem({
         category: ExpenseCategory.ETC,
         amount: 0,
         description: "",
+        currency: ExpenseCurrency.KRW,
       });
       setEditingExpense(null);
       setShowExpenseForm(false);
@@ -704,7 +756,7 @@ export default function ItineraryItem({
         amount: expenseForm.amount,
         description: expenseForm.description,
         exDate: formData.itineraryDate,
-        currency: ExpenseCurrency.KRW,
+        currency: expenseForm.currency,
       };
 
       setDraftExpenses(prev => [...prev, newDraftExpense]);
@@ -713,6 +765,7 @@ export default function ItineraryItem({
         category: ExpenseCategory.ETC,
         amount: 0,
         description: "",
+        currency: ExpenseCurrency.KRW,
       });
       setShowExpenseForm(false);
 
@@ -728,7 +781,7 @@ export default function ItineraryItem({
       amount: expenseForm.amount,
       description: expenseForm.description,
       exDate: formData.itineraryDate,
-      currency: ExpenseCurrency.KRW,
+      currency: expenseForm.currency,
     };
 
     setDraftExpenses(prev => [...prev, newDraftExpense]);
@@ -737,6 +790,7 @@ export default function ItineraryItem({
       category: ExpenseCategory.ETC,
       amount: 0,
       description: "",
+      currency: ExpenseCurrency.KRW,
     });
     setShowExpenseForm(false);
 
@@ -763,14 +817,16 @@ export default function ItineraryItem({
   };
 
   const allExpenses = useMemo(() => {
-    const draft = draftExpenses.map((exp, idx) => ({
-      ...exp,
-      id: `draft-${idx}`,
-      isDraft: true,
-    }));
+    const draft = readOnly
+      ? []
+      : draftExpenses.map((exp, idx) => ({
+          ...exp,
+          id: `draft-${idx}`,
+          isDraft: true,
+        }));
     const saved = expenses.map(exp => ({ ...exp, isDraft: false }));
     return [...draft, ...saved];
-  }, [draftExpenses, expenses]);
+  }, [draftExpenses, expenses, readOnly]);
 
   const handleAiAnalyzePress = useCallback(
     async (selection: AiAttachmentAnalyzeSelection) => {
@@ -786,37 +842,44 @@ export default function ItineraryItem({
         selection.kind === "existing"
           ? existingAttachments.find(a => a.id === selection.id)
           : undefined;
-      const oversizeBytes =
-        oversizeFile?.size ?? oversizeExisting?.fileSize;
+      const oversizeBytes = oversizeFile?.size ?? oversizeExisting?.fileSize;
       const oversizeName =
         oversizeFile?.name ?? oversizeExisting?.fileName ?? "파일";
       if (oversizeBytes !== undefined && oversizeBytes > AI_MAX_SIZE) {
-        setAiAnalyzeSizeErrorMessage(`"${oversizeName}"은(는) 10MB를 넘어 분석할 수 없어요.`);
+        setAiAnalyzeSizeErrorMessage(
+          `"${oversizeName}"은(는) 10MB를 넘어 분석할 수 없어요.`,
+        );
         return;
       }
+      aiAnalyzeCancelledRef.current = false;
       setIsAiAnalyzing(true);
       try {
         const payload = await buildAnalyzeUploadPayload(selection, {
           pendingFiles,
           existingAttachments,
         });
+        setLastAnalyzeFileName(payload.filename);
         const res = await analyzeDocumentUpload(payload.file, {
           filename: payload.filename,
         });
+        if (aiAnalyzeCancelledRef.current) return;
         const err = res.error?.trim();
         if (!res.success || err) {
           setLastAiSelection(selection);
           setAiAnalyzeInlineError(true);
           return;
         }
-        if (routeDocumentAnalyzeSuccess?.(res, pendingFiles)) {
+        if (routeDocumentAnalyzeSuccess?.(res, pendingFiles, "일정")) {
           return;
         }
         setAiAnalyzeResult(res);
         setAiAnalyzeModalVisible(true);
-      } catch (e) {
+      } catch (_e) {
+        if (aiAnalyzeCancelledRef.current) return;
         setLastAiSelection(selection);
-        setAiAnalyzeInlineErrorMessage("분석 서버에 연결하지 못했어요. 잠시 후 다시 시도해 주세요.");
+        setAiAnalyzeInlineErrorMessage(
+          "분석 서버에 연결하지 못했어요. 잠시 후 다시 시도해 주세요.",
+        );
         setAiAnalyzeInlineError(true);
       } finally {
         setIsAiAnalyzing(false);
@@ -833,34 +896,37 @@ export default function ItineraryItem({
   );
 
   return (
-    <>
+    <View style={styles.wrapper}>
+      <View style={styles.titleRow}>
+        <Text style={styles.title}>
+          {readOnly ? "일정 정보" : itinerary ? "일정 수정" : "일정 추가"}
+        </Text>
+
+        <Pressable
+          onPress={() => {
+            onCancel();
+          }}
+          style={styles.closeButton}
+        >
+          <CloseIcon width={12} height={12} color={colors.gray600} />
+        </Pressable>
+      </View>
+      {!readOnly && (
+        <PanelTabSwitcher activeTab={activeTab} onTabChange={onTabChange} />
+      )}
       <ScrollView
-        style={[
-          styles.container,
-          { position: "relative", overflow: "visible" },
-        ]}
+        style={styles.container}
         contentContainerStyle={[
           styles.contentContainer,
           { overflow: "visible" },
         ]}
+        showsVerticalScrollIndicator={false}
       >
         <View style={styles.contentWrapper}>
-          <View style={styles.titleRow}>
-            <Text style={styles.title}>
-              {readOnly ? "일정 정보" : itinerary ? "일정 수정" : "일정 추가"}
-            </Text>
-
-            <Pressable
-              onPress={() => {
-                onCancel();
-              }}
-              style={styles.closeButton}
-            >
-              <CloseIcon width={24} height={24} />
-            </Pressable>
-          </View>
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>제목*</Text>
+            <Text style={styles.label}>
+              제목 <Text style={{ color: colors.warning }}>*</Text>
+            </Text>
             <Input
               variant={readOnly ? "outlined" : "filled"}
               placeholder={PLACEHOLDERS.itinerary.titleForm}
@@ -910,26 +976,24 @@ export default function ItineraryItem({
               <CountryPicker
                 value={formData.country}
                 onChange={(name: string) =>
-                  !readOnly && setFormData({ ...formData, country: name })
+                  !readOnly && setFormData({ ...formData, country: name, city: "" })
                 }
                 onOpen={() => !readOnly && setCountryOpen(true)}
                 onClose={() => setCountryOpen(false)}
                 placeholder={PLACEHOLDERS.itinerary.countryForm}
                 disabled={readOnly}
+                useModal
               />
             </View>
             <View style={[styles.inputGroup, styles.halfWidth]}>
               <Text style={styles.label}>도시</Text>
-              <Input
-                variant={readOnly ? "outlined" : "filled"}
-                placeholder={PLACEHOLDERS.itinerary.cityForm}
+              <CityPicker
                 value={formData.city}
-                onChangeText={text =>
-                  !readOnly && setFormData({ ...formData, city: text })
-                }
-                style={readOnly ? styles.readOnlyInput : styles.input}
-                placeholderTextColor={colors.gray600}
-                editable={!readOnly}
+                onChange={name => !readOnly && setFormData({ ...formData, city: name })}
+                countryKo={formData.country}
+                placeholder={PLACEHOLDERS.itinerary.cityForm}
+                disabled={readOnly}
+                useModal
               />
             </View>
           </View>
@@ -956,7 +1020,9 @@ export default function ItineraryItem({
               { zIndex: showDatePicker ? 20000 : 1 },
             ]}
           >
-            <Text style={styles.label}>날짜*</Text>
+            <Text style={styles.label}>
+              날짜 <Text style={{ color: colors.warning }}>*</Text>
+            </Text>
             <Pressable
               style={readOnly ? styles.readOnlyDateInput : styles.dateInput}
               onPress={() => !readOnly && setShowDatePicker(!showDatePicker)}
@@ -995,7 +1061,9 @@ export default function ItineraryItem({
             ]}
           >
             <View style={[styles.inputGroup, styles.halfWidth]}>
-              <Text style={styles.label}>시작 시간*</Text>
+              <Text style={styles.label}>
+                시작 시간 <Text style={{ color: colors.warning }}>*</Text>
+              </Text>
               <TimePicker
                 value={formData.startTime}
                 onChange={time =>
@@ -1020,7 +1088,9 @@ export default function ItineraryItem({
               />
             </View>
             <View style={[styles.inputGroup, styles.halfWidth]}>
-              <Text style={styles.label}>종료 시간*</Text>
+              <Text style={styles.label}>
+                종료 시간 <Text style={{ color: colors.warning }}>*</Text>
+              </Text>
               <TimePicker
                 value={formData.endTime}
                 onChange={time =>
@@ -1034,6 +1104,7 @@ export default function ItineraryItem({
                 onClose={() => setTimeOpen(false)}
                 minTime={formData.startTime}
                 disabled={readOnly}
+                popupAlign="right"
                 style={
                   readOnly
                     ? {
@@ -1053,68 +1124,76 @@ export default function ItineraryItem({
 
               {allExpenses.length > 0 && (
                 <View style={styles.expenseList}>
-                  {allExpenses.map(expense => (
-                    <Pressable
-                      key={expense.id}
-                      style={[
-                        styles.expenseCard,
-                        readOnly && {
-                          borderWidth: 1,
-                          borderColor: colors.gray400,
-                        },
-                      ]}
-                      onPress={() => {
-                        if (!readOnly) {
-                          setEditingExpense(expense);
-                          setExpenseForm({
-                            category: expense.category as ExpenseCategory,
-                            amount: expense.amount,
-                            description: expense.description || "",
-                          });
-                          setShowExpenseForm(true);
-                        }
-                      }}
-                      disabled={readOnly}
-                    >
-                      <View style={styles.expenseCardContent}>
-                        <View style={styles.expenseCardHeader}>
-                          <Text style={styles.expenseCardTitle}>
-                            {
-                              categoryLabels[
-                                expense.category as ExpenseCategory
-                              ]
-                            }
-                          </Text>
-                          {!readOnly && (
-                            <Pressable
-                              style={styles.deleteExpenseButton}
-                              onPress={e => {
-                                e.stopPropagation();
-                                if (expense.isDraft) {
-                                  setDraftExpenses(prev =>
-                                    prev.filter(
-                                      (_, i) =>
-                                        i !== Number(expense.id.split("-")[1]),
-                                    ),
-                                  );
-                                } else {
-                                  handleExpenseDelete(expense.id);
-                                }
-                              }}
-                            >
-                              <DeleteIcon width={16} height={16} />
-                            </Pressable>
-                          )}
-                        </View>
-                        <Text style={styles.expenseCardDescription}>
-                          {expense.description || ""}
+                  {allExpenses.map(expense => {
+                    const cat = expense.category as ExpenseCategory;
+                    return (
+                      <Pressable
+                        key={expense.id}
+                        style={styles.expenseCard}
+                        onPress={() => {
+                          if (!readOnly) {
+                            setEditingExpense(expense);
+                            setExpenseForm({
+                              category: cat,
+                              amount: expense.amount,
+                              description: expense.description || "",
+                              currency: expense.currency || ExpenseCurrency.KRW,
+                            });
+                            setShowExpenseForm(true);
+                          }
+                        }}
+                        disabled={readOnly}
+                      >
+                        <View
+                          style={[
+                            styles.expenseDot,
+                            { backgroundColor: categoryColors[cat] },
+                          ]}
+                        />
+                        <Text
+                          style={styles.expenseCategoryLabel}
+                          numberOfLines={1}
+                        >
+                          {categoryLabels[cat]}
                         </Text>
-                        <Text style={styles.expenseCardAmount}>
-                          ₩{expense.amount.toLocaleString()}
+                        <Text
+                          style={styles.expenseDescription}
+                          numberOfLines={1}
+                        >
+                          {expense.description || "—"}
                         </Text>
-                      </View>
-                    </Pressable>
-                  ))}
+                        <Text style={styles.expenseAmount}>
+                          {expense.currency === ExpenseCurrency.USD
+                            ? `${expense.amount.toLocaleString()}달러`
+                            : `${expense.amount.toLocaleString()}원`}
+                        </Text>
+                        {!readOnly && (
+                          <Pressable
+                            style={styles.expenseDeleteButton}
+                            onPress={e => {
+                              e.stopPropagation();
+                              if (expense.isDraft) {
+                                setDraftExpenses(prev =>
+                                  prev.filter(
+                                    (_, i) =>
+                                      i !== Number(expense.id.split("-")[1]),
+                                  ),
+                                );
+                              } else {
+                                handleExpenseDelete(expense.id);
+                              }
+                            }}
+                          >
+                            <CloseIcon
+                              width={8}
+                              height={8}
+                              color={colors.gray500}
+                            />
+                          </Pressable>
+                        )}
+                      </Pressable>
+                    );
+                  })}
                 </View>
               )}
 
@@ -1127,13 +1206,12 @@ export default function ItineraryItem({
                       category: ExpenseCategory.ETC,
                       amount: 0,
                       description: "",
+                      currency: ExpenseCurrency.KRW,
                     });
                     setShowExpenseForm(!showExpenseForm);
                   }}
                 >
-                  <View style={styles.addIconWrapper}>
-                    <AddIcon width={16} height={16} />
-                  </View>
+                  <Text style={styles.addButtonPlus}>+</Text>
                   <Text style={styles.addExpenseButtonText}>
                     비용 내역 추가
                   </Text>
@@ -1161,16 +1239,19 @@ export default function ItineraryItem({
                     </View>
                     <View style={styles.expenseFormHalf}>
                       <Text style={styles.label}>통화</Text>
-                      <View style={styles.currencyPicker}>
-                        <Text style={styles.currencyText}>
-                          {currencyLabels[ExpenseCurrency.KRW]}
-                        </Text>
-                      </View>
+                      <CurrencyToggle
+                        value={expenseForm.currency}
+                        onChange={c =>
+                          setExpenseForm({ ...expenseForm, currency: c })
+                        }
+                      />
                     </View>
                   </View>
 
                   <View style={styles.inputGroup}>
-                    <Text style={styles.label}>금액*</Text>
+                    <Text style={styles.label}>
+                      금액 <Text style={{ color: colors.warning }}>*</Text>
+                    </Text>
                     <Input
                       variant="outlined"
                       placeholder={PLACEHOLDERS.expense.amount}
@@ -1208,6 +1289,7 @@ export default function ItineraryItem({
                           category: ExpenseCategory.ETC,
                           amount: 0,
                           description: "",
+                          currency: ExpenseCurrency.KRW,
                         });
                         setShowExpenseForm(false);
                       }}
@@ -1231,7 +1313,6 @@ export default function ItineraryItem({
           {showAttachmentSection && (
             <AttachmentSection
               style={styles.attachmentSection}
-              showTopDivider
               pendingFiles={readOnly ? [] : pendingFiles}
               onPickImage={appendImage}
               onPickDocument={appendDocument}
@@ -1247,9 +1328,7 @@ export default function ItineraryItem({
                   ? handleRemoveExistingAttachment
                   : undefined
               }
-              isLoadingExisting={
-                itineraryAttachmentEntityId != null && isLoadingAttachments
-              }
+              isLoadingExisting={false}
               isUploading={isUploading}
               disabled={readOnly || isSubmitting}
               hideAddControls={readOnly}
@@ -1259,6 +1338,10 @@ export default function ItineraryItem({
                   : undefined
               }
               isAiAnalyzing={isAiAnalyzing}
+              onCancelAiAnalyze={() => {
+                aiAnalyzeCancelledRef.current = true;
+                setIsAiAnalyzing(false);
+              }}
             />
           )}
           {aiAnalyzeInlineError && lastAiSelection && (
@@ -1293,9 +1376,16 @@ export default function ItineraryItem({
               <Pressable
                 style={styles.saveButton}
                 onPress={handleSave}
-                disabled={isSubmitting}
+                disabled={isSubmitting || isUploading}
               >
-                <Text style={styles.saveButtonText}>저장</Text>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                  {(isSubmitting || isUploading) && (
+                    <ActivityIndicator size="small" color="white" />
+                  )}
+                  <Text style={styles.saveButtonText}>
+                    {isSubmitting || isUploading ? "저장 중..." : "저장"}
+                  </Text>
+                </View>
               </Pressable>
             </View>
           ) : (
@@ -1330,6 +1420,7 @@ export default function ItineraryItem({
       <AiDocumentAnalyzeModal
         visible={aiAnalyzeModalVisible}
         analyzeResult={aiAnalyzeResult}
+        analyzeFileName={lastAnalyzeFileName ?? undefined}
         onApply={applyAiAnalyzeDraftToForm}
         onClose={() => {
           setAiAnalyzeModalVisible(false);
@@ -1337,18 +1428,23 @@ export default function ItineraryItem({
           onConsumeStagedDocumentAnalyze?.();
         }}
         entityTypeLabel="일정"
+        originEntityType={analyzeOriginEntityType}
       />
-    </>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  wrapper: {
+    flex: 1,
+  },
   container: {
     flex: 1,
     backgroundColor: colors.white,
   },
   contentContainer: {
-    padding: spacing.xl,
+    paddingHorizontal: spacing.xl,
+    paddingBottom: spacing.xl,
     gap: spacing.xl,
   },
   contentWrapper: {
@@ -1360,13 +1456,18 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: spacing.lg,
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.xl,
+    paddingBottom: spacing.md,
   },
   title: {
     ...textStyles.h5,
   },
   closeButton: {
-    padding: spacing.xs,
+    width: 26,
+    height: 26,
+    borderRadius: radii.pill,
+    backgroundColor: colors.gray200,
     justifyContent: "center",
     alignItems: "center",
   },
@@ -1496,53 +1597,70 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   expenseList: {
-    gap: spacing.xs,
+    gap: 6,
   },
   expenseCard: {
-    backgroundColor: colors.gray200,
-    borderRadius: radii.md,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: 12,
-    height: 96,
-    justifyContent: "center",
-  },
-  expenseCardContent: {
-    gap: spacing.sm,
-  },
-  expenseCardHeader: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    backgroundColor: colors.gray100,
+    borderRadius: radii.md,
   },
-  expenseCardTitle: {
-    ...textStyles.h7,
-    color: colors.black,
+  expenseDot: {
+    width: 8,
+    height: 8,
+    borderRadius: radii.pill,
+    flexShrink: 0,
   },
-  expenseCardDescription: {
+  expenseCategoryLabel: {
     ...textStyles.body5,
-    color: colors.gray700,
+    fontWeight: "600",
+    color: colors.gray900,
+    flexShrink: 0,
   },
-  expenseCardAmount: {
-    ...textStyles.h7,
-    color: colors.black,
+  expenseDescription: {
+    ...textStyles.body5,
+    color: colors.gray600,
+    flex: 1,
+  },
+  expenseAmount: {
+    ...textStyles.body5,
+    fontWeight: "700",
+    color: colors.gray900,
+    flexShrink: 0,
+  },
+  expenseDeleteButton: {
+    width: 18,
+    height: 18,
+    borderRadius: radii.pill,
+    backgroundColor: colors.gray300,
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
   },
   addExpenseButton: {
     backgroundColor: colors.white,
     borderWidth: 1,
+    borderStyle: "dashed",
     borderColor: colors.gray400,
-    borderRadius: 8,
-    height: 40,
+    borderRadius: radii.md,
+    paddingVertical: 10,
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
-    gap: spacing.sm,
+    gap: spacing.xs,
   },
-  addIconWrapper: {
-    marginTop: -2,
+  addButtonPlus: {
+    fontSize: 14,
+    lineHeight: 18,
+    color: colors.gray900,
+    marginRight: 2,
   },
   addExpenseButtonText: {
     ...textStyles.h8,
-    color: colors.black,
+    color: colors.gray900,
   },
   attachmentSection: {
     marginTop: spacing.lg,
@@ -1551,11 +1669,11 @@ const styles = StyleSheet.create({
   expenseForm: {
     backgroundColor: colors.white,
     borderWidth: 1,
-    borderColor: colors.gray400,
-    borderRadius: radii.md,
+    borderColor: colors.gray300,
+    borderRadius: 12,
     padding: spacing.md,
-    marginTop: spacing.sm,
-    gap: spacing.lg,
+    marginTop: spacing.xs,
+    gap: spacing.md,
   },
   expenseFormRow: {
     flexDirection: "row",
@@ -1565,25 +1683,11 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: spacing.sm,
   },
-  currencyPicker: {
-    backgroundColor: colors.white,
-    borderWidth: 1,
-    borderColor: colors.gray400,
-    borderRadius: radii.md,
-    height: 40,
-    paddingHorizontal: spacing.md,
-    justifyContent: "center",
-  },
-  currencyText: {
-    ...textStyles.body4,
-    color: colors.gray600,
-  },
   expenseInput: {
-    backgroundColor: colors.white,
-    borderWidth: 1,
-    borderColor: colors.gray400,
+    backgroundColor: colors.gray200,
+    borderWidth: 0,
     borderRadius: radii.md,
-    height: 40,
+    paddingVertical: 10,
   },
   countryPickerWrapper: {
     overflow: "visible",
@@ -1596,9 +1700,9 @@ const styles = StyleSheet.create({
   },
   expenseCancelButton: {
     backgroundColor: colors.gray300,
-    borderRadius: 8,
-    height: 32,
-    paddingHorizontal: spacing.lg,
+    borderRadius: radii.md,
+    paddingVertical: 11,
+    paddingHorizontal: 20,
     justifyContent: "center",
     alignItems: "center",
     flex: 1,
@@ -1609,9 +1713,9 @@ const styles = StyleSheet.create({
   },
   expenseSubmitButton: {
     backgroundColor: colors.gray900,
-    borderRadius: 8,
-    height: 32,
-    paddingHorizontal: spacing.lg,
+    borderRadius: radii.md,
+    paddingVertical: 11,
+    paddingHorizontal: 20,
     justifyContent: "center",
     alignItems: "center",
     flex: 1,

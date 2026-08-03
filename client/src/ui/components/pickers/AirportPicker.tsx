@@ -1,23 +1,34 @@
-import { PLACEHOLDERS } from "@/constants/placeholders";
 import useDetectClose from "@/hooks/useDetectClose";
+import { useMe } from "@/hooks/useMe";
+import { useRecentSearches } from "@/hooks/useRecentSearches";
 import { colors } from "@/ui/tokens/colors";
 import { radii } from "@/ui/tokens/radii";
+import { textStyles } from "@/ui/tokens/typography";
+import { zIndex as zIndexTokens } from "@/ui/tokens/zIndex";
 import {
-  getAirportLabelByIata,
+  type AirportOption,
+  getAirportByIata,
   getAirportOptionsBySearch,
+  getCountryIso2ByIata,
 } from "@/utils/airportList";
-import { useEffect, useRef, useState } from "react";
+import { codeToFlag } from "@/utils/countryListKo";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
+  FlatList,
   Pressable,
+  ScrollView,
   StyleSheet,
-  type TextStyle,
-  View,
+  Text,
+  TextInput,
   type ViewStyle,
+  View,
 } from "react-native";
-import DropDownPicker from "react-native-dropdown-picker";
-import DropdownTimeIcon from "../../../../assets/dropdown_time.svg";
+import DownArrowIcon from "../../../../assets/down_arrow.svg";
+import XIcon from "../../../../assets/mobile_close.svg";
 import SearchIcon from "../../../../assets/search.svg";
 import UpperArrowIcon from "../../../../assets/upper_arrow.svg";
+
+const ITEM_HEIGHT = 46;
 
 interface AirportPickerProps {
   value: string;
@@ -26,196 +37,438 @@ interface AirportPickerProps {
   containerStyle?: ViewStyle;
   style?: ViewStyle;
   dropDownContainerStyle?: ViewStyle;
-  searchTextInputStyle?: TextStyle;
   disabled?: boolean;
+  onOpen?: () => void;
+  onClose?: () => void;
+  dropdownAlign?: "left" | "right";
 }
-
-const defaultSearchTextInputStyle: TextStyle = {
-  height: 30,
-  paddingVertical: 6,
-  paddingLeft: 32,
-  paddingRight: 10,
-  fontSize: 14,
-  width: "100%",
-  borderWidth: 1,
-  borderColor: colors.gray400,
-  borderRadius: radii.xs,
-};
 
 export default function AirportPicker({
   value,
   onChange,
-  placeholder,
+  placeholder = "공항 선택",
   containerStyle,
   style,
   dropDownContainerStyle,
-  searchTextInputStyle,
   disabled,
+  onOpen,
+  onClose,
+  dropdownAlign = "left",
 }: AirportPickerProps) {
-  const [searchQuery, setSearchQuery] = useState("");
-  const [options, setOptions] = useState<
-    Array<{ label: string; value: string }>
-  >([]);
+  const wrapperRef = useRef<View>(null);
+  const searchRef = useRef<TextInput>(null);
+  const [open, setIsOpen, _handleOutsidePress] = useDetectClose(wrapperRef, false);
+  const [searchText, setSearchText] = useState("");
 
-  useEffect(() => {
-    if (searchQuery.trim().length >= 1) {
-      const searchResults = getAirportOptionsBySearch(searchQuery);
-      setOptions(searchResults);
-    } else {
-      if (value) {
-        const label = getAirportLabelByIata(value);
-        if (label) {
-          setOptions([{ label, value }]);
-        } else {
-          setOptions([]);
-        }
-      } else {
-        setOptions([]);
-      }
-    }
-  }, [searchQuery, value]);
+  const { data: me } = useMe();
+  const storageKey = `recentAirportSearches_${me?.handle ?? "guest"}`;
+  const { items: recentSearches, addItem, load } = useRecentSearches(storageKey, 10);
 
-  const pickerRef = useRef<View>(null);
-  const [open, setIsOpen, handleOutsidePress] = useDetectClose(
-    pickerRef,
-    false,
-  );
-  const [code, setCode] = useState<string | null>(value || null);
+  const filteredOptions = useMemo(() => {
+    if (!searchText.trim()) return [];
+    return getAirportOptionsBySearch(searchText);
+  }, [searchText]);
 
-  useEffect(() => {
-    setCode(value || null);
+  const selectedLabel = useMemo(() => {
+    if (!value) return null;
+    const airport = getAirportByIata(value);
+    return airport ? `${airport.nameKorean} (${airport.iata})` : value;
   }, [value]);
 
-  const handleSetOpen = (value: boolean | ((prev: boolean) => boolean)) => {
-    const isOpen = typeof value === "function" ? value(open) : value;
-    setIsOpen(isOpen);
-    if (!isOpen) {
-      setSearchQuery("");
+  const handleToggle = () => {
+    if (disabled) return;
+    const next = !open;
+    setIsOpen(next);
+    if (next) {
+      onOpen?.();
+      load();
+      setTimeout(() => searchRef.current?.focus(), 50);
+    } else {
+      onClose?.();
+      setSearchText("");
     }
   };
 
-  const handleSearch = (text: string) => {
-    setSearchQuery(text);
+  const handleSelect = (item: AirportOption) => {
+    onChange(item.value);
+    addItem(item.value);
+    setIsOpen(false);
+    setSearchText("");
+    onClose?.();
+  };
+
+  const handleSelectRecent = (code: string) => {
+    onChange(code);
+    addItem(code);
+    setIsOpen(false);
+    setSearchText("");
+    onClose?.();
+  };
+
+  useEffect(() => {
+    if (!open) setSearchText("");
+  }, [open]);
+
+  const getFlag = (iata: string) => {
+    const iso2 = getCountryIso2ByIata(iata);
+    return iso2 ? codeToFlag(iso2) : "✈️";
+  };
+
+  const renderItem = ({ item }: { item: AirportOption }) => {
+    const airport = getAirportByIata(item.value);
+    const isSelected = item.value === value;
+    return (
+      <Pressable
+        style={({ hovered }: any) => [
+          styles.item,
+          isSelected && styles.itemSelected,
+          hovered && !isSelected && styles.itemHovered,
+        ]}
+        onPress={() => handleSelect(item)}
+      >
+        <View style={styles.itemIconWrapper}>
+          <Text style={styles.itemIcon}>{getFlag(item.value)}</Text>
+        </View>
+        <View style={styles.itemNames}>
+          <Text
+            style={[styles.itemText, isSelected && styles.itemTextSelected]}
+            numberOfLines={1}
+          >
+            {airport?.nameKorean ?? item.label}
+          </Text>
+          <Text style={styles.itemTextSub} numberOfLines={1}>
+            {airport?.countryKorean ?? ""}
+          </Text>
+        </View>
+        <View style={[styles.itemCodeBadge, isSelected && styles.itemCodeBadgeSelected]}>
+          <Text style={[styles.itemCode, isSelected && styles.itemCodeSelected]}>
+            {item.value}
+          </Text>
+        </View>
+      </Pressable>
+    );
   };
 
   return (
-    <>
-      {open && (
-        <Pressable
-          style={[StyleSheet.absoluteFill, { zIndex: 999998 }]}
-          onPress={handleOutsidePress}
-        />
-      )}
-      <View
-        ref={pickerRef}
-        style={[styles.wrapper, containerStyle, { zIndex: open ? 999999 : 1 }]}
+    <View
+      ref={wrapperRef}
+      style={[styles.wrapper, containerStyle, { zIndex: open ? zIndexTokens.dropdown : 1 }]}
+    >
+      <Pressable
+        style={[styles.trigger, disabled && styles.triggerDisabled, style]}
+        onPress={handleToggle}
+        disabled={disabled}
       >
-        {open && (
-          <View style={styles.searchIconOverlay}>
-            <SearchIcon width={16} height={16} />
-          </View>
+        <Text
+          style={selectedLabel ? styles.triggerText : styles.triggerPlaceholder}
+          numberOfLines={1}
+        >
+          {selectedLabel ?? placeholder}
+        </Text>
+        {open ? (
+          <UpperArrowIcon width={10} height={10} style={{ opacity: 0.6 }} />
+        ) : (
+          <DownArrowIcon width={10} height={10} style={{ opacity: 0.6 }} />
         )}
-        <DropDownPicker
-          open={open}
-          value={code}
-          items={options}
-          setOpen={handleSetOpen}
-          setValue={(callback: any) => {
-            const next = callback(code) as string | null;
-            setCode(next);
-            onChange(next || "");
-          }}
-          disabled={disabled}
-          searchable
-          searchPlaceholder={PLACEHOLDERS.picker.search}
-          onChangeSearchText={handleSearch}
-          disableLocalSearch={true}
-          searchTextInputStyle={[
-            defaultSearchTextInputStyle,
-            searchTextInputStyle,
-          ]}
-          searchContainerStyle={{
-            paddingVertical: 5,
-            paddingHorizontal: 8,
-            borderBottomWidth: 0,
-            borderTopWidth: 0,
-            width: "100%",
-            position: "relative",
-          }}
-          placeholder={placeholder}
-          style={[styles.dropdown, { width: "100%" }, style]}
-          dropDownContainerStyle={[
-            styles.dropdownContainer,
-            { width: "100%", maxHeight: 200, borderTopWidth: 0 },
-            dropDownContainerStyle,
-          ]}
-          containerStyle={[styles.dropdownOuter, { width: "100%" }]}
-          textStyle={{
-            fontSize: 14,
-            color: colors.black,
-          }}
-          placeholderStyle={{
-            color: colors.gray600,
-            fontSize: 13,
-          }}
-          listMode="SCROLLVIEW"
-          dropDownDirection="BOTTOM"
-          scrollViewProps={{
-            nestedScrollEnabled: true,
-            keyboardShouldPersistTaps: "handled",
-            showsVerticalScrollIndicator: false,
-          }}
-          selectedItemLabelStyle={{
-            fontWeight: "bold",
-          }}
-          ArrowDownIconComponent={() => (
-            <DropdownTimeIcon width={16} height={16} />
-          )}
-          ArrowUpIconComponent={() => <UpperArrowIcon width={16} height={16} />}
-          translation={{ NOTHING_TO_SHOW: "결과가 없습니다" }}
-        />
-      </View>
-    </>
+      </Pressable>
+
+      {open && (
+        <View style={[styles.popup, dropdownAlign === "right" ? { right: 0 } : { left: 0 }, dropDownContainerStyle]}>
+          <View style={styles.searchContainer}>
+            <SearchIcon width={14} height={14} color={colors.gray600} />
+            <TextInput
+              ref={searchRef}
+              style={styles.searchInput}
+              placeholder="공항명 또는 IATA 코드 검색"
+              placeholderTextColor={colors.gray600}
+              value={searchText}
+              onChangeText={setSearchText}
+              autoCorrect={false}
+              autoCapitalize="none"
+            />
+            {searchText.length > 0 && (
+              <Pressable
+                style={styles.clearButton}
+                onPress={() => {
+                  setSearchText("");
+                  searchRef.current?.focus();
+                }}
+                aria-label="지우기"
+              >
+                <XIcon width={10} height={10} color={colors.gray700} />
+              </Pressable>
+            )}
+          </View>
+
+          <View style={styles.listContainer}>
+            {filteredOptions.length > 0 ? (
+              <FlatList
+                data={filteredOptions}
+                keyExtractor={item => item.value}
+                renderItem={renderItem}
+                getItemLayout={(_data, index) => ({
+                  length: ITEM_HEIGHT,
+                  offset: ITEM_HEIGHT * index,
+                  index,
+                })}
+                keyboardShouldPersistTaps="handled"
+                showsVerticalScrollIndicator={false}
+                style={styles.list}
+              />
+            ) : searchText.trim().length > 0 ? (
+              <View style={styles.noResultState}>
+                <Text style={styles.noResultTitle}>검색 결과가 없습니다</Text>
+                <Text style={styles.noResultSubtitle}>
+                  다른 키워드로 검색해 보세요.
+                </Text>
+              </View>
+            ) : recentSearches.length > 0 ? (
+              <ScrollView
+                style={styles.recentList}
+                keyboardShouldPersistTaps="handled"
+                showsVerticalScrollIndicator={false}
+              >
+                <Text style={styles.recentLabel}>최근 검색</Text>
+                {recentSearches.map(code => {
+                  const airport = getAirportByIata(code);
+                  const isSelected = value === code;
+                  return (
+                    <Pressable
+                      key={code}
+                      style={({ hovered }: any) => [
+                        styles.item,
+                        isSelected && styles.itemSelected,
+                        hovered && !isSelected && styles.itemHovered,
+                      ]}
+                      onPress={() => handleSelectRecent(code)}
+                    >
+                      <View style={styles.itemIconWrapper}>
+                        <Text style={styles.itemIcon}>{getFlag(code)}</Text>
+                      </View>
+                      <View style={styles.itemNames}>
+                        <Text
+                          style={[styles.itemText, isSelected && styles.itemTextSelected]}
+                          numberOfLines={1}
+                        >
+                          {airport?.nameKorean ?? code}
+                        </Text>
+                        <Text style={styles.itemTextSub} numberOfLines={1}>
+                          {airport?.countryKorean ?? ""}
+                        </Text>
+                      </View>
+                      <View
+                        style={[styles.itemCodeBadge, isSelected && styles.itemCodeBadgeSelected]}
+                      >
+                        <Text style={[styles.itemCode, isSelected && styles.itemCodeSelected]}>
+                          {code}
+                        </Text>
+                      </View>
+                    </Pressable>
+                  );
+                })}
+              </ScrollView>
+            ) : (
+              <View style={styles.emptyState}>
+                <SearchIcon width={22} height={22} color={colors.gray500} />
+                <Text style={styles.emptyTitle}>공항을 검색해 보세요</Text>
+                <Text style={styles.emptySubtitle}>
+                  한국어, 영문, 또는 IATA 코드 (예: ICN)
+                </Text>
+              </View>
+            )}
+          </View>
+        </View>
+      )}
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  wrapper: { position: "relative" },
-  dropdown: {
-    backgroundColor: colors.white,
-    borderColor: colors.gray400,
-    borderWidth: 1,
-    borderRadius: 8,
-    minHeight: 40,
+  wrapper: {
     position: "relative",
-    zIndex: 999999,
   },
-  dropdownContainer: {
-    borderColor: colors.gray400,
-    borderWidth: 1,
-    borderRadius: 8,
-    borderTopWidth: 0,
-    backgroundColor: colors.white,
-    position: "absolute",
-    top: "100%",
-    left: 0,
-    right: 0,
-    zIndex: 999999,
-    elevation: 10,
-    maxHeight: 200,
-  },
-  dropdownOuter: {
-    position: "relative",
-    zIndex: 999999,
-    width: "100%",
-  },
-  searchIconOverlay: {
-    position: "absolute",
-    left: 20,
-    top: 53,
-    zIndex: 1000000,
-    justifyContent: "center",
+  trigger: {
+    flexDirection: "row",
     alignItems: "center",
-    pointerEvents: "none",
+    justifyContent: "space-between",
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: colors.gray400,
+    borderRadius: radii.md,
+    height: 40,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  triggerDisabled: {
+    backgroundColor: colors.gray200,
+  },
+  triggerText: {
+    ...textStyles.body4,
+    color: colors.gray900,
+    flex: 1,
+    marginRight: 4,
+  },
+  triggerPlaceholder: {
+    ...textStyles.body4,
+    color: colors.gray600,
+    flex: 1,
+    marginRight: 4,
+  },
+  popup: {
+    position: "absolute",
+    top: 46,
+    minWidth: 280,
+    width: "100%",
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: colors.gray300,
+    borderRadius: 12,
+    zIndex: zIndexTokens.dropdown,
+    overflow: "hidden",
+    shadowColor: colors.gray900,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.1,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  searchContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    margin: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: colors.gray200,
+    borderRadius: radii.md,
+  },
+  searchInput: {
+    flex: 1,
+    minWidth: 0,
+    ...textStyles.body4,
+    color: colors.gray900,
+    padding: 0,
+    outlineStyle: "none",
+  } as any,
+  clearButton: {
+    width: 18,
+    height: 18,
+    borderRadius: radii.pill,
+    backgroundColor: colors.gray300,
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+  },
+  listContainer: {
+    borderTopWidth: 1,
+    borderTopColor: colors.gray200,
+    maxHeight: 260,
+  },
+  list: {
+    paddingVertical: 4,
+    paddingHorizontal: 6,
+  },
+  item: {
+    flexDirection: "row",
+    alignItems: "center",
+    height: 46,
+    marginBottom: 3,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: radii.md,
+    gap: 8,
+  },
+  itemSelected: {
+    backgroundColor: "rgba(26, 102, 224, 0.08)",
+  },
+  itemHovered: {
+    backgroundColor: colors.gray200,
+  },
+  itemIconWrapper: {
+    width: 32,
+    height: 32,
+    borderRadius: radii.pill,
+    backgroundColor: colors.gray200,
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+  },
+  itemIcon: {
+    fontSize: 16,
+    lineHeight: 20,
+  },
+  itemNames: {
+    flex: 1,
+    minWidth: 0,
+    justifyContent: "center",
+    gap: 1,
+  },
+  itemText: {
+    ...textStyles.h7,
+    color: colors.gray700,
+  },
+  itemTextSelected: {
+    color: colors.gray900,
+  },
+  itemTextSub: {
+    ...textStyles.body6,
+    color: colors.gray500,
+  },
+  itemCodeBadge: {
+    backgroundColor: colors.gray200,
+    borderRadius: radii.sm,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    flexShrink: 0,
+  },
+  itemCodeBadgeSelected: {
+    backgroundColor: colors.gray300,
+  },
+  itemCode: {
+    ...textStyles.body5,
+    color: colors.gray500,
+  },
+  itemCodeSelected: {
+    color: colors.gray700,
+  },
+  recentList: {
+    maxHeight: 260,
+    paddingVertical: 4,
+    paddingHorizontal: 6,
+  },
+  recentLabel: {
+    ...textStyles.body5,
+    color: colors.gray500,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  emptyState: {
+    paddingVertical: 28,
+    paddingHorizontal: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  emptyTitle: {
+    ...textStyles.h7,
+    color: colors.gray900,
+    marginTop: 6,
+    marginBottom: 2,
+  },
+  emptySubtitle: {
+    ...textStyles.body5,
+    color: colors.gray600,
+  },
+  noResultState: {
+    paddingVertical: 24,
+    paddingHorizontal: 12,
+    alignItems: "center",
+  },
+  noResultTitle: {
+    ...textStyles.h7,
+    color: colors.gray900,
+    marginBottom: 2,
+  },
+  noResultSubtitle: {
+    ...textStyles.body5,
+    color: colors.gray600,
   },
 });

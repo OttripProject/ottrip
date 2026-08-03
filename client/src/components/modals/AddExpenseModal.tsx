@@ -12,25 +12,25 @@ import {
   type LocalFile,
   PLAN_ENTITY_KIND,
 } from "@/types/api";
-import {
-  ExpenseCategory,
-  ExpenseCurrency,
-  currencyLabels,
-} from "@/types/expense";
+import { ExpenseCategory, ExpenseCurrency } from "@/types/expense";
+import CurrencyToggle from "@/ui/components/CurrencyToggle";
 import AttachmentSection from "@/ui/components/attachmentSection";
 import type { AiAttachmentAnalyzeSelection } from "@/ui/components/attachmentSection.types";
+import { pendingAiFileKey } from "@/ui/components/attachmentSection.types";
 import Input from "@/ui/components/input/Input";
 import { CategoryPicker } from "@/ui/components/pickers";
 import WarningBanner from "@/ui/components/toast/warning";
 import { colors } from "@/ui/tokens/colors";
 import { radii } from "@/ui/tokens/radii";
 import { spacing } from "@/ui/tokens/spacing";
-import { textStyles, typography } from "@/ui/tokens/typography";
+import { typography } from "@/ui/tokens/typography";
 import { buildAnalyzeUploadPayload } from "@/utils/attachmentAiAnalyze";
 import { formatAttachmentUploadFailureMessage } from "@/utils/crossPlatformAlert";
 import dayjs from "dayjs";
+import { LinearGradient } from "expo-linear-gradient";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
+  ActivityIndicator,
   Alert,
   Modal,
   Platform,
@@ -42,6 +42,68 @@ import {
 } from "react-native";
 import CalendarIcon from "../../../assets/calender.svg";
 import XIcon from "../../../assets/x.svg";
+
+function AiFilledBadge() {
+  return (
+    <View style={aiBadgeStyles.badge}>
+      <LinearGradient
+        colors={colors.gradientAIRefresh}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={aiBadgeStyles.dot}
+      />
+      <Text style={aiBadgeStyles.text}>AI</Text>
+    </View>
+  );
+}
+
+const aiBadgeStyles = StyleSheet.create({
+  badge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
+    paddingVertical: 1,
+    paddingHorizontal: 6,
+    borderRadius: 999,
+    backgroundColor: colors.aiTint,
+  },
+  dot: {
+    width: 5,
+    height: 5,
+    borderRadius: 999,
+  },
+  text: {
+    fontFamily: "Pretendard-Bold",
+    fontSize: 9,
+    lineHeight: 12,
+    color: colors.aiInk,
+    letterSpacing: 0.02,
+  },
+});
+
+function NeedsCheckBadge() {
+  return (
+    <View style={needsCheckStyles.badge}>
+      <Text style={needsCheckStyles.text}>확인 필요</Text>
+    </View>
+  );
+}
+
+const needsCheckStyles = StyleSheet.create({
+  badge: {
+    paddingVertical: 1,
+    paddingHorizontal: 6,
+    borderRadius: 999,
+    backgroundColor: "rgb(255, 243, 214)",
+  },
+  text: {
+    fontFamily: "Pretendard-Bold",
+    fontSize: 9,
+    lineHeight: 12,
+    color: "rgb(168, 115, 10)",
+    letterSpacing: 0.02,
+  },
+});
 
 interface AddExpenseModalProps {
   visible: boolean;
@@ -69,6 +131,18 @@ export default function AddExpenseModal({
   const [isAiAnalyzing, setIsAiAnalyzing] = useState(false);
   const [aiAnalyzeFailureVisible, setAiAnalyzeFailureVisible] = useState(false);
   const [aiAnalyzeFailureMessage, setAiAnalyzeFailureMessage] = useState("");
+  const [attachmentAnalyzeError, setAttachmentAnalyzeError] = useState<
+    string | null
+  >(null);
+  const [attachmentAnalyzeSuccess, setAttachmentAnalyzeSuccess] =
+    useState(false);
+  const [attachmentAnalyzePartial, setAttachmentAnalyzePartial] =
+    useState(false);
+  const [attachmentAnalyzePartialMessage, setAttachmentAnalyzePartialMessage] =
+    useState<string | undefined>(undefined);
+  const [aiFilledFields, setAiFilledFields] = useState<ReadonlySet<string>>(
+    new Set(),
+  );
 
   const { pickImage, pickDocument } = useFilePicker();
   const { isUploading, uploadFiles } = useAttachmentUpload({
@@ -155,8 +229,9 @@ export default function AddExpenseModal({
         });
         const err = res.error?.trim();
         if (!res.success || err) {
-          setAiAnalyzeFailureMessage(err || "분석에 실패했습니다.");
-          setAiAnalyzeFailureVisible(true);
+          setAttachmentAnalyzeError(
+            "분석 서버에 연결하지 못했어요. 잠시 후 다시 시도해 주세요.",
+          );
           return;
         }
         const kind: AiDocumentItemType | null =
@@ -170,18 +245,48 @@ export default function AddExpenseModal({
                 : kind === "accommodation"
                   ? "숙박"
                   : "다른 항목";
-          setAiAnalyzeFailureMessage(
-            `문서가 [${label}]으로 분석되었습니다.\n비용 추가 화면에는 반영할 수 없습니다.`,
+          setAttachmentAnalyzeError(
+            `문서가 [${label}]으로 분석되었습니다. 비용 추가 화면에는 반영할 수 없습니다.`,
           );
-          setAiAnalyzeFailureVisible(true);
           return;
         }
         if (!res.draft || res.draft.itemType !== "expense") {
-          setAiAnalyzeFailureMessage("비용 정보를 추출하지 못했습니다.");
-          setAiAnalyzeFailureVisible(true);
+          setAttachmentAnalyzeError(
+            "이미지에서 금액·날짜를 읽지 못했어요. 더 선명한 영수증으로 다시 시도해 주세요.",
+          );
           return;
         }
+        setAttachmentAnalyzeError(null);
         const src = mergeExpenseDraftValueSource(res.draft);
+        const filledSet = new Set<string>(["category"]);
+        const amountExtracted =
+          Number.parseInt(
+            normalizeAmountDigitsAi(pickStrAi(src, ["amount", "Amount"])),
+            10,
+          ) > 0;
+        const descriptionExtracted = !!pickStrAi(src, [
+          "description",
+          "Description",
+        ]);
+        const exRawCheck = pickStrAi(src, ["exDate", "ex_date", "ExDate"]);
+        const dateExtracted = !!(exRawCheck && dayjs(exRawCheck).isValid());
+        if (amountExtracted) filledSet.add("amount");
+        if (descriptionExtracted) filledSet.add("description");
+        if (dateExtracted) filledSet.add("ex_date");
+        setAiFilledFields(filledSet);
+        const isPartial =
+          !amountExtracted || !descriptionExtracted || !dateExtracted;
+        if (isPartial) {
+          setAttachmentAnalyzeSuccess(false);
+          setAttachmentAnalyzePartial(true);
+          setAttachmentAnalyzePartialMessage(
+            "일부 항목을 인식하지 못했어요. 확인 필요 항목을 직접 입력해 주세요.",
+          );
+        } else {
+          setAttachmentAnalyzeSuccess(true);
+          setAttachmentAnalyzePartial(false);
+          setAttachmentAnalyzePartialMessage(undefined);
+        }
         const categoryRaw = pickStrAi(src, ["category", "Category"]) || "etc";
         const amountDigits = normalizeAmountDigitsAi(
           pickStrAi(src, ["amount", "Amount"]),
@@ -210,11 +315,10 @@ export default function AddExpenseModal({
               : prev.ex_date,
           currency,
         }));
-      } catch (e) {
-        setAiAnalyzeFailureMessage(
-          e instanceof Error ? e.message : "분석 요청에 실패했습니다.",
+      } catch (_e) {
+        setAttachmentAnalyzeError(
+          "분석 서버에 연결하지 못했어요. 잠시 후 다시 시도해 주세요.",
         );
-        setAiAnalyzeFailureVisible(true);
       } finally {
         setIsAiAnalyzing(false);
       }
@@ -302,10 +406,28 @@ export default function AddExpenseModal({
     }
   };
 
+  const handleRetryAnalyze = useCallback(() => {
+    if (pendingFiles.length === 0) return;
+    setAttachmentAnalyzeError(null);
+    setAttachmentAnalyzeSuccess(false);
+    setAttachmentAnalyzePartial(false);
+    setAttachmentAnalyzePartialMessage(undefined);
+    setAiFilledFields(new Set());
+    void handleAiAnalyzePress({
+      kind: "pending",
+      key: pendingAiFileKey(pendingFiles[0]),
+    });
+  }, [pendingFiles, handleAiAnalyzePress]);
+
   const handleClose = () => {
     setIsAiAnalyzing(false);
     setAiAnalyzeFailureVisible(false);
     setAiAnalyzeFailureMessage("");
+    setAttachmentAnalyzeError(null);
+    setAttachmentAnalyzeSuccess(false);
+    setAttachmentAnalyzePartial(false);
+    setAttachmentAnalyzePartialMessage(undefined);
+    setAiFilledFields(new Set());
     clearPendingFilesWithRevoke();
     setExpenseForm({
       category: ExpenseCategory.ETC,
@@ -325,8 +447,11 @@ export default function AddExpenseModal({
         animationType="fade"
         onRequestClose={handleClose}
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
+        <Pressable style={styles.modalOverlay} onPress={handleClose}>
+          <Pressable
+            style={styles.modalContent}
+            onPress={e => e.stopPropagation()}
+          >
             <WarningBanner
               message={warningMessage}
               visible={showWarning}
@@ -343,11 +468,9 @@ export default function AddExpenseModal({
               nestedScrollEnabled={true}
             >
               <View style={styles.modalHeader}>
-                <View style={styles.titleContainer}>
-                  <Text style={styles.modalTitle}>비용 추가</Text>
-                </View>
+                <Text style={styles.modalTitle}>비용 추가</Text>
                 <Pressable style={styles.closeButton} onPress={handleClose}>
-                  <XIcon width={24} height={24} />
+                  <XIcon width={16} height={16} />
                 </Pressable>
               </View>
 
@@ -359,7 +482,10 @@ export default function AddExpenseModal({
                     { zIndex: categoryOpen ? 10000 : 1 },
                   ]}
                 >
-                  <Text style={styles.inputLabel}>카테고리</Text>
+                  <View style={styles.labelRow}>
+                    <Text style={styles.inputLabel}>카테고리</Text>
+                    {aiFilledFields.has("category") && <AiFilledBadge />}
+                  </View>
                   <CategoryPicker
                     value={expenseForm.category}
                     onChange={cat =>
@@ -367,13 +493,24 @@ export default function AddExpenseModal({
                     }
                     onOpen={() => setCategoryOpen(true)}
                     onClose={() => setCategoryOpen(false)}
-                    containerStyle={styles.categoryPicker}
+                    style={styles.categoryPickerTrigger}
+                    triggerTextStyle={styles.categoryPickerText}
+                    dropDownContainerStyle={styles.categoryPickerDropdown}
+                    iconSize={14}
                   />
                 </View>
 
                 <View style={styles.amountCurrencyRow}>
                   <View style={[styles.inputGroup, styles.amountGroup]}>
-                    <Text style={styles.inputLabel}>금액</Text>
+                    <View style={styles.labelRow}>
+                      <Text style={styles.inputLabel}>금액</Text>
+                      {aiFilledFields.has("amount") ? (
+                        <AiFilledBadge />
+                      ) : attachmentAnalyzeSuccess ||
+                        attachmentAnalyzePartial ? (
+                        <NeedsCheckBadge />
+                      ) : null}
+                    </View>
                     <Input
                       variant="outlined"
                       placeholder={PLACEHOLDERS.expense.amount}
@@ -392,11 +529,14 @@ export default function AddExpenseModal({
 
                   <View style={[styles.inputGroup, styles.currencyGroup]}>
                     <Text style={styles.inputLabel}>통화</Text>
-                    <View style={styles.currencyDisplay}>
-                      <Text style={styles.currencyText}>
-                        {currencyLabels[ExpenseCurrency.KRW]}
-                      </Text>
-                    </View>
+                    <CurrencyToggle
+                      value={expenseForm.currency}
+                      onChange={c =>
+                        setExpenseForm({ ...expenseForm, currency: c })
+                      }
+                      variant="outlined"
+                      style={styles.currencyToggle}
+                    />
                   </View>
                 </View>
 
@@ -407,7 +547,14 @@ export default function AddExpenseModal({
                     { zIndex: showDatePicker ? 20000 : 1 },
                   ]}
                 >
-                  <Text style={styles.inputLabel}>날짜</Text>
+                  <View style={styles.labelRow}>
+                    <Text style={styles.inputLabel}>날짜</Text>
+                    {aiFilledFields.has("ex_date") ? (
+                      <AiFilledBadge />
+                    ) : attachmentAnalyzeSuccess || attachmentAnalyzePartial ? (
+                      <NeedsCheckBadge />
+                    ) : null}
+                  </View>
                   <Pressable
                     style={styles.dateInput}
                     onPress={() => setShowDatePicker(!showDatePicker)}
@@ -424,7 +571,14 @@ export default function AddExpenseModal({
                 </View>
 
                 <View style={styles.inputGroup}>
-                  <Text style={styles.inputLabel}>내용</Text>
+                  <View style={styles.labelRow}>
+                    <Text style={styles.inputLabel}>내용</Text>
+                    {aiFilledFields.has("description") ? (
+                      <AiFilledBadge />
+                    ) : attachmentAnalyzeSuccess || attachmentAnalyzePartial ? (
+                      <NeedsCheckBadge />
+                    ) : null}
+                  </View>
                   <Input
                     variant="outlined"
                     placeholder={PLACEHOLDERS.expense.descriptionForm}
@@ -438,7 +592,10 @@ export default function AddExpenseModal({
                 </View>
               </View>
 
+              <View style={styles.sectionDivider} />
+
               <AttachmentSection
+                variant="expense"
                 style={styles.attachmentSection}
                 showTopDivider
                 pendingFiles={pendingFiles}
@@ -456,6 +613,13 @@ export default function AddExpenseModal({
                   Platform.OS === "web" ? handleAiAnalyzePress : undefined
                 }
                 isAiAnalyzing={isAiAnalyzing}
+                analyzeError={attachmentAnalyzeError}
+                onRetryAnalyze={
+                  Platform.OS === "web" ? handleRetryAnalyze : undefined
+                }
+                isAiAnalyzeSuccess={attachmentAnalyzeSuccess}
+                isAiAnalyzePartial={attachmentAnalyzePartial}
+                analyzePartialMessage={attachmentAnalyzePartialMessage}
               />
 
               <View style={styles.modalButtons}>
@@ -470,11 +634,18 @@ export default function AddExpenseModal({
                   onPress={handleExpenseSubmit}
                   disabled={isSubmitting || isUploading || isAiAnalyzing}
                 >
-                  <Text style={styles.submitButtonText}>저장</Text>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                    {(isSubmitting || isUploading) && (
+                      <ActivityIndicator size="small" color="white" />
+                    )}
+                    <Text style={styles.submitButtonText}>
+                      {isSubmitting || isUploading ? "저장 중..." : "저장"}
+                    </Text>
+                  </View>
                 </Pressable>
               </View>
             </ScrollView>
-          </View>
+          </Pressable>
           {showDatePicker && (
             <View style={styles.calendarOverlay} pointerEvents="box-none">
               <BaseCalendar
@@ -491,7 +662,7 @@ export default function AddExpenseModal({
               />
             </View>
           )}
-        </View>
+        </Pressable>
       </Modal>
       <AiAnalyzeFailureModal
         visible={aiAnalyzeFailureVisible}
@@ -553,46 +724,57 @@ const styles = StyleSheet.create({
   },
   modalContent: {
     backgroundColor: colors.white,
-    borderRadius: radii.lg,
-    width: "90%",
-    maxWidth: 400,
+    borderRadius: 20,
+    width: "100%",
+    maxWidth: 460,
     maxHeight: "90%",
-    overflow: "visible",
+    overflow: "hidden",
   },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
-    padding: spacing.xl,
+    padding: 24,
+    paddingBottom: 20,
+    gap: 20,
   },
   modalHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "flex-start",
-    marginBottom: spacing.xl,
+    alignItems: "center",
   },
   titleContainer: {
     flex: 1,
     gap: spacing.xs,
   },
   modalTitle: {
-    ...textStyles.h5,
-    color: colors.black,
+    fontFamily: typography.fontFamily.pretendardSemiBold,
+    fontSize: 20,
+    lineHeight: 28,
+    color: colors.gray900,
   },
   closeButton: {
-    padding: spacing.xs,
-    marginTop: -spacing.xs,
-    marginRight: -spacing.xs,
+    width: 28,
+    height: 28,
+    alignItems: "center",
+    justifyContent: "center",
   },
   formSection: {
-    gap: spacing.lg,
+    gap: 18,
   },
   inputGroup: {
-    gap: spacing.sm,
+    gap: 9,
+  },
+  labelRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
   },
   inputLabel: {
-    ...textStyles.h7,
-    color: colors.black,
+    fontFamily: typography.fontFamily.pretendardSemiBold,
+    fontSize: 14,
+    lineHeight: 20,
+    color: colors.gray900,
   },
   pickerWrapper: {
     position: "relative",
@@ -603,12 +785,27 @@ const styles = StyleSheet.create({
     position: "relative",
     overflow: "visible",
   },
-  categoryPicker: {
-    height: 48,
+  categoryPickerDropdown: {
+    top: 56,
+    borderColor: colors.gray400,
+  },
+  categoryPickerTrigger: {
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: colors.gray400,
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+  },
+  categoryPickerText: {
+    fontFamily: typography.fontFamily.pretendardRegular,
+    fontSize: 14,
+    lineHeight: 22,
+    color: colors.gray900,
   },
   amountCurrencyRow: {
     flexDirection: "row",
-    gap: spacing.sm,
+    gap: 12,
   },
   amountGroup: {
     flex: 1,
@@ -618,22 +815,10 @@ const styles = StyleSheet.create({
   },
   amountInput: {
     backgroundColor: colors.white,
-    height: 48,
+    height: 50,
   },
-  currencyDisplay: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    borderWidth: 1,
-    borderColor: colors.gray400,
-    borderRadius: radii.md,
-    paddingHorizontal: spacing.md,
-    height: 48,
-    backgroundColor: colors.white,
-  },
-  currencyText: {
-    ...textStyles.body4,
-    color: colors.black,
+  currencyToggle: {
+    height: 50,
   },
   dateInput: {
     flexDirection: "row",
@@ -641,9 +826,9 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     borderWidth: 1,
     borderColor: colors.gray400,
-    borderRadius: radii.md,
-    paddingHorizontal: spacing.md,
-    height: 48,
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    height: 50,
     backgroundColor: colors.white,
   },
   dateTextContainer: {
@@ -652,8 +837,10 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   dateText: {
-    ...textStyles.body4,
-    color: colors.black,
+    fontFamily: typography.fontFamily.pretendardRegular,
+    fontSize: 14,
+    lineHeight: 22,
+    color: colors.gray900,
   },
   iconWrapper: {
     marginTop: -2,
@@ -679,21 +866,23 @@ const styles = StyleSheet.create({
   },
   descriptionInput: {
     backgroundColor: colors.white,
-    height: 48,
+    height: 50,
+  },
+  sectionDivider: {
+    height: 1,
+    backgroundColor: colors.gray400,
+    marginTop: 2,
+    marginHorizontal: -2,
   },
   attachmentSection: {
-    marginTop: spacing.lg,
     width: "100%",
   },
   modalButtons: {
     flexDirection: "row",
-    marginTop: spacing.xl,
-    marginBottom: spacing.lg,
-    gap: spacing.md,
+    gap: 12,
   },
   modalButton: {
     flex: 1,
-    paddingVertical: spacing.md,
     borderRadius: radii.md,
     alignItems: "center",
     justifyContent: "center",
@@ -703,16 +892,18 @@ const styles = StyleSheet.create({
     backgroundColor: colors.gray300,
   },
   cancelButtonText: {
-    ...textStyles.h6,
-    color: colors.black,
-    fontWeight: typography.weight.semibold,
+    fontFamily: typography.fontFamily.pretendardSemiBold,
+    fontSize: 15,
+    lineHeight: 22,
+    color: colors.gray900,
   },
   submitButton: {
-    backgroundColor: colors.gray900,
+    backgroundColor: colors.primary,
   },
   submitButtonText: {
-    ...textStyles.h6,
+    fontFamily: typography.fontFamily.pretendardSemiBold,
+    fontSize: 15,
+    lineHeight: 22,
     color: colors.white,
-    fontWeight: typography.weight.semibold,
   },
 });

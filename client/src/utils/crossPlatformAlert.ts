@@ -71,7 +71,7 @@ export function showPickFileType(
   }
   Alert.alert(title, message, [
     { text: "사진", onPress: onPickImage },
-    { text: "PDF 문서", onPress: onPickDocument },
+    { text: "문서 선택", onPress: onPickDocument },
     { text: "취소", style: "cancel" },
   ]);
 }

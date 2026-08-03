@@ -12,7 +12,9 @@ def register_exception_handlers(app: FastAPI) -> None:
     @app.exception_handler(HTTPException)
     async def http_exception_handler(request: Request, exc: HTTPException):  # type: ignore
         # 민감한 정보 제외: 상태 코드와 에러 타입만 로깅
-        logger.error(f"HTTPException: status_code={exc.status_code}, detail_type={type(exc.detail).__name__}")
+        logger.error(
+            f"HTTPException: status_code={exc.status_code}, detail_type={type(exc.detail).__name__}"
+        )
         return JSONResponse(
             status_code=exc.status_code,
             content={"detail": exc.detail},

@@ -1,4 +1,7 @@
+import axios from "axios";
+
 import AccommodationDetailModal from "@/components/modals/mobile/AccommodationDetailModal.native";
+import PlanLoadingOverlay from "@/components/PlanLoadingOverlay.native";
 import AccommodationEditModal from "@/components/modals/mobile/AccommodationEditModal.native";
 import AddExpenseModal from "@/components/modals/mobile/AddExpenseModal.native";
 import AddPlanModal from "@/components/modals/mobile/AddPlanModal.native";
@@ -37,6 +40,7 @@ import dayjs from "dayjs";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  useWindowDimensions,
   Alert,
   Animated,
   Modal,
@@ -55,6 +59,8 @@ import { useMe } from "@/hooks/useMe";
 import { accommodationsApi } from "@/services/accommodations";
 import { flightsApi } from "@/services/flights";
 import { itinerariesApi } from "@/services/itineraries";
+import { extendPlanIfNeeded } from "@/utils/extendPlanIfNeeded";
+import { collectPlanItemDates, shrinkPlanIfNeeded } from "@/utils/shrinkPlanIfNeeded";
 import { guestPrompt } from "@/utils/guestPrompt";
 import FlightIcon from "../../assets/airplane.svg";
 import AccommodationIcon from "../../assets/mobile_accomodation.svg";
@@ -105,12 +111,15 @@ function buildSchedulesForDate(
     });
   (flights || []).forEach(flight => {
     if (!flight.flightSegments?.length) return;
-    flight.flightSegments.forEach((segment: any, index: number) => {
+    const sortedSegments = [...flight.flightSegments].sort(
+      (a: any, b: any) => a.order - b.order,
+    );
+    sortedSegments.forEach((segment: any, index: number) => {
       const departureTime = dayjs(segment.departureTime);
       if (departureTime.format("YYYY-MM-DD") !== dateStr) return;
       items.push({
         type: "flight",
-        id: `${flight.id}-segment-${index}`,
+        id: `${flight.id}-segment-${segment.id}`,
         time: convertUTCToLocalTime(segment.departureTime),
         endTime: convertUTCToLocalTime(segment.arrivalTime),
         data: flight,
@@ -151,8 +160,10 @@ function collectNearestFutureScheduleDateStr(
 }
 
 export default function TodayScreen() {
+  const { width: windowWidth } = useWindowDimensions();
   const { data: me } = useMe();
   const { selectedPlan, setSelectedPlan } = useSelectedPlan();
+  const [currentActivityPageIndex, setCurrentActivityPageIndex] = useState(0);
   const [profileModalVisible, setProfileModalVisible] = useState(false);
   const [showPlanSelector, setShowPlanSelector] = useState(false);
   const [showAddPlanModal, setShowAddPlanModal] = useState(false);
@@ -321,25 +332,28 @@ export default function TodayScreen() {
     planData.accommodations,
   ]);
 
-  const currentActivity = useMemo((): ScheduleItem | null => {
-    if (!viewingCalendarToday) return null;
-    return (
-      todaySchedules.find((item: ScheduleItem) => {
-        if (item.type === "itinerary") {
-          const startDateTime = dayjs(`${timelineDateStr} ${item.time}`);
-          let endDateTime = dayjs(`${timelineDateStr} ${item.endTime}`);
-          if (item.endTime < item.time) endDateTime = endDateTime.add(1, "day");
-          return (
-            currentTime.isAfter(startDateTime) &&
-            currentTime.isBefore(endDateTime)
-          );
-        }
-        const dep = dayjs(item.segment.departureTime);
-        const arr = dayjs(item.segment.arrivalTime);
-        return currentTime.isAfter(dep) && currentTime.isBefore(arr);
-      }) ?? null
-    );
+  const currentActivities = useMemo((): ScheduleItem[] => {
+    if (!viewingCalendarToday) return [];
+    const active = todaySchedules.filter((item: ScheduleItem) => {
+      if (item.type === "itinerary") {
+        const startDateTime = dayjs(`${timelineDateStr} ${item.time}`);
+        let endDateTime = dayjs(`${timelineDateStr} ${item.endTime}`);
+        if (item.endTime < item.time) endDateTime = endDateTime.add(1, "day");
+        return (
+          currentTime.isAfter(startDateTime) &&
+          currentTime.isBefore(endDateTime)
+        );
+      }
+      const dep = dayjs(item.segment.departureTime);
+      const arr = dayjs(item.segment.arrivalTime);
+      return currentTime.isAfter(dep) && currentTime.isBefore(arr);
+    });
+    return active.sort((a, b) => b.time.localeCompare(a.time));
   }, [viewingCalendarToday, todaySchedules, timelineDateStr, currentTime]);
+
+  useEffect(() => {
+    setCurrentActivityPageIndex(0);
+  }, [currentActivities.length]);
 
   const nextActivityIndex = useMemo(() => {
     if (!viewingCalendarToday) {
@@ -365,7 +379,7 @@ export default function TodayScreen() {
       const checkoutDate = dayjs(accommodation.checkoutDate).format(
         "YYYY-MM-DD",
       );
-      return checkinDate <= timelineDateStr && checkoutDate > timelineDateStr;
+      return checkinDate <= timelineDateStr && checkoutDate >= timelineDateStr;
     });
   }, [planData.accommodations, timelineDateStr]);
 
@@ -377,7 +391,9 @@ export default function TodayScreen() {
       const checkoutDate = dayjs(accommodation.checkoutDate).format(
         "YYYY-MM-DD",
       );
-      return checkinDate <= calendarTodayStr && checkoutDate > calendarTodayStr;
+      return (
+        checkinDate <= calendarTodayStr && checkoutDate >= calendarTodayStr
+      );
     });
   }, [planData.accommodations, calendarTodayStr]);
 
@@ -405,20 +421,38 @@ export default function TodayScreen() {
     [todaySchedules],
   );
 
+  const timelineDateSegment = useMemo(() => {
+    const segments = planData.plan?.segments;
+    if (!segments) return null;
+    return (
+      segments.find(
+        seg =>
+          seg.startDate <= timelineDateStr && timelineDateStr <= seg.endDate,
+      ) ?? null
+    );
+  }, [planData.plan?.segments, timelineDateStr]);
+
   const todayExpenses = useMemo(() => {
     let total = 0;
+    let totalKrw = 0;
+    let totalUsd = 0;
     const byCategory: Record<string, number> = {};
 
     if (todayExpensesFromApi && Array.isArray(todayExpensesFromApi)) {
       todayExpensesFromApi.forEach((expense: any) => {
         const amount = expense.amount || 0;
         total += amount;
+        if (expense.currency === "USD") {
+          totalUsd += amount;
+        } else {
+          totalKrw += amount;
+        }
         const category = expense.category || "기타";
         byCategory[category] = (byCategory[category] || 0) + amount;
       });
     }
 
-    return { total, byCategory };
+    return { total, totalKrw, totalUsd, byCategory };
   }, [todayExpensesFromApi]);
 
   const formatCurrency = (amount: number) => {
@@ -442,36 +476,52 @@ export default function TodayScreen() {
     async (itinerary: Itinerary) => {
       try {
         await itinerariesApi.deleteItinerary(itinerary.id);
+        const remainingDates = collectPlanItemDates(
+          planData.itineraries.filter(it => it.id !== itinerary.id),
+          planData.flights,
+          planData.accommodations,
+        );
+        await shrinkPlanIfNeeded(selectedPlan!.id, planData.plan, remainingDates);
         planData.removeItinerary(itinerary.id);
-        planData.refreshExpenses?.();
         queryClient.invalidateQueries({
           queryKey: ["expenses", selectedPlan?.id],
         });
-        await refetchTodayExpenses();
+        queryClient.invalidateQueries({
+          queryKey: ["plan", selectedPlan?.publicId],
+        });
+        queryClient.invalidateQueries({ queryKey: ["plans"] });
         Alert.alert("삭제완료", "일정이 삭제되었습니다.");
       } catch {
         Alert.alert("알림", "일정 삭제에 실패했습니다.");
       }
     },
-    [planData, queryClient, refetchTodayExpenses, selectedPlan?.id],
+    [planData, queryClient, selectedPlan],
   );
 
   const handleDeleteFlight = useCallback(
     async (flight: FlightRead) => {
       try {
         await flightsApi.deleteFlight(flight.id);
+        const remainingDates = collectPlanItemDates(
+          planData.itineraries,
+          planData.flights.filter(f => f.id !== flight.id),
+          planData.accommodations,
+        );
+        await shrinkPlanIfNeeded(selectedPlan!.id, planData.plan, remainingDates);
         planData.removeFlight(flight.id);
-        planData.refreshExpenses?.();
         queryClient.invalidateQueries({
           queryKey: ["expenses", selectedPlan?.id],
         });
-        await refetchTodayExpenses();
+        queryClient.invalidateQueries({
+          queryKey: ["plan", selectedPlan?.publicId],
+        });
+        queryClient.invalidateQueries({ queryKey: ["plans"] });
         Alert.alert("삭제완료", "항공편이 삭제되었습니다.");
       } catch {
         Alert.alert("알림", "항공편 삭제에 실패했습니다.");
       }
     },
-    [planData, queryClient, refetchTodayExpenses, selectedPlan?.id],
+    [planData, queryClient, selectedPlan],
   );
 
   const timelineSwipeRefs = useRef<Map<string, Swipeable>>(new Map());
@@ -489,17 +539,7 @@ export default function TodayScreen() {
     setAddScheduleFlow("method");
   }, [closeOpenTimelineSwipe]);
 
-  if (plansQuery.isLoading && plansQuery.plans.length === 0) {
-    return (
-      <View style={styles.container}>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
-        </View>
-      </View>
-    );
-  }
-
-  if (plansQuery.plans.length === 0) {
+  if (!plansQuery.isLoading && plansQuery.plans.length === 0) {
     const noPlanFeatures = [
       "여행 일정 관리에 최적화된 솔루션",
       "AI로 체크리스트 추천",
@@ -699,99 +739,116 @@ export default function TodayScreen() {
           </View>
 
           {/* 현재 진행 중 활동 카드 */}
-          {currentActivity && (
-            <Pressable
-              style={[styles.cardBase, styles.currentCard]}
-              onPress={() => {
-                closeOpenTimelineSwipe();
-                if (currentActivity.type === "flight") {
-                  setSelectedFlight(currentActivity.data);
-                  setSelectedFlightSegment(currentActivity.segment);
-                  setShowFlightDetail(true);
-                } else {
-                  setSelectedItinerary(currentActivity.data);
-                  setShowItineraryDetail(true);
-                }
-              }}
-            >
-              <View style={styles.currentCardHeader}>
-                <View style={styles.statusBadge}>
-                  <Animated.View
-                    style={[
-                      styles.pulse,
-                      {
-                        opacity: pulseAnim,
-                      },
-                    ]}
-                  />
-                  <Text style={styles.statusText}>진행 중</Text>
-                </View>
-                {currentActivity.endTime && (
-                  <View style={styles.endTimeBox}>
-                    <Text style={styles.endTime}>
-                      {currentActivity.endTime} 종료
-                    </Text>
+          {currentActivities.length > 0 && (() => {
+            const cardWidth = windowWidth - 32;
+            return (
+              <View style={styles.currentCardWrapper}>
+                <ScrollView
+                  horizontal
+                  pagingEnabled
+                  showsHorizontalScrollIndicator={false}
+                  scrollEnabled={currentActivities.length > 1}
+                  onMomentumScrollEnd={e => {
+                    const idx = Math.round(
+                      e.nativeEvent.contentOffset.x / cardWidth,
+                    );
+                    setCurrentActivityPageIndex(idx);
+                  }}
+                  contentContainerStyle={{ width: windowWidth * currentActivities.length }}
+                >
+                  {currentActivities.map(activity => (
+                    <Pressable
+                      key={activity.id}
+                      style={[styles.cardBase, styles.currentCard, { width: cardWidth }]}
+                      onPress={() => {
+                        closeOpenTimelineSwipe();
+                        if (activity.type === "flight") {
+                          setSelectedFlight(activity.data);
+                          setSelectedFlightSegment(activity.segment);
+                          setShowFlightDetail(true);
+                        } else {
+                          setSelectedItinerary(activity.data);
+                          setShowItineraryDetail(true);
+                        }
+                      }}
+                    >
+                      <View style={styles.currentCardHeader}>
+                        <View style={styles.statusBadge}>
+                          <Animated.View style={[styles.pulse, { opacity: pulseAnim }]} />
+                          <Text style={styles.statusText}>진행 중</Text>
+                        </View>
+                        {activity.endTime && (
+                          <View style={styles.endTimeBox}>
+                            {(activity.type === "flight"
+                              ? dayjs(activity.segment.departureTime).format("YYYY-MM-DD") !== dayjs(activity.segment.arrivalTime).format("YYYY-MM-DD")
+                              : activity.endTime < activity.time) && (
+                              <Text style={styles.nextDayLabel}>(다음날)</Text>
+                            )}
+                            <Text style={styles.endTime}>
+                              {activity.endTime} 종료
+                            </Text>
+                          </View>
+                        )}
+                      </View>
+
+                      {activity.type === "flight" ? (
+                        <>
+                          <View style={styles.flightTitleRow}>
+                            <View style={styles.flightIconWrap}>
+                              <FlightIcon width={20} height={20} color={colors.black} />
+                            </View>
+                            <Text style={styles.cardTitle} numberOfLines={1}>
+                              {activity.segment.departureAirport} →{" "}
+                              {activity.segment.arrivalAirport}
+                            </Text>
+                          </View>
+                          {activity.segment.flightNumber && (
+                            <Text style={styles.cardLocation} numberOfLines={1}>
+                              {activity.segment.flightNumber}
+                            </Text>
+                          )}
+                        </>
+                      ) : (
+                        <>
+                          <Text style={styles.cardTitle} numberOfLines={1} ellipsizeMode="tail">
+                            {activity.data.title || "활동"}
+                          </Text>
+                          {activity.data.location && (
+                            <View style={styles.locationRow}>
+                              <LocationIcon width={16} height={16} color={colors.gray600} />
+                              <Text style={styles.cardLocation} numberOfLines={1} ellipsizeMode="tail">
+                                {activity.data.location}
+                              </Text>
+                            </View>
+                          )}
+                          {activity.data.description && (
+                            <View style={styles.noteBox}>
+                              <Text style={styles.note} numberOfLines={1} ellipsizeMode="tail">
+                                "{activity.data.description}"
+                              </Text>
+                            </View>
+                          )}
+                        </>
+                      )}
+                    </Pressable>
+                  ))}
+                </ScrollView>
+                {currentActivities.length > 1 && (
+                  <View style={styles.paginationDots}>
+                    {currentActivities.map((_, i) => (
+                      <View
+                        key={i}
+                        style={[
+                          styles.paginationDot,
+                          i === currentActivityPageIndex && styles.paginationDotActive,
+                        ]}
+                      />
+                    ))}
                   </View>
                 )}
               </View>
-
-              {currentActivity.type === "flight" ? (
-                <>
-                  <View style={styles.flightTitleRow}>
-                    <View style={styles.flightIconWrap}>
-                      <FlightIcon width={20} height={20} color={colors.black} />
-                    </View>
-                    <Text style={styles.cardTitle} numberOfLines={1}>
-                      {currentActivity.segment.departureAirport} →{" "}
-                      {currentActivity.segment.arrivalAirport}
-                    </Text>
-                  </View>
-                  {currentActivity.segment.flightNumber && (
-                    <Text style={styles.cardLocation} numberOfLines={1}>
-                      {currentActivity.segment.flightNumber}
-                    </Text>
-                  )}
-                </>
-              ) : (
-                <>
-                  <Text
-                    style={styles.cardTitle}
-                    numberOfLines={1}
-                    ellipsizeMode="tail"
-                  >
-                    {currentActivity.data.title || "활동"}
-                  </Text>
-                  {currentActivity.data.location && (
-                    <View style={styles.locationRow}>
-                      <LocationIcon
-                        width={16}
-                        height={16}
-                        color={colors.gray600}
-                      />
-                      <Text
-                        style={styles.cardLocation}
-                        numberOfLines={1}
-                        ellipsizeMode="tail"
-                      >
-                        {currentActivity.data.location}
-                      </Text>
-                    </View>
-                  )}
-                  {currentActivity.data.description && (
-                    <View style={styles.noteBox}>
-                      <Text
-                        style={styles.note}
-                        numberOfLines={1}
-                        ellipsizeMode="tail"
-                      >
-                        "{currentActivity.data.description}"
-                      </Text>
-                    </View>
-                  )}
-                </>
-              )}
-            </Pressable>
-          )}
+            );
+          })()}
 
           {/* 타임라인 섹션 (이터너리·항공 또는 당일 숙박이 있으면 헤더 노출) */}
           {(todaySchedules.length > 0 || todayAccommodations.length > 0) && (
@@ -800,18 +857,15 @@ export default function TodayScreen() {
 
               {todaySchedules.length > 0 &&
                 todaySchedules.map((item: ScheduleItem, index: number) => {
+                  const isCurrentlyActive = currentActivities.some(
+                    ca => ca.id === item.id,
+                  );
                   const isDone =
-                    currentActivity &&
-                    (currentActivity.type === "itinerary"
-                      ? item.type === "itinerary" &&
-                        item.id === currentActivity.id
-                      : item.type === "flight" &&
-                        item.id === currentActivity.id)
-                      ? false
-                      : index <
-                        (nextActivityIndex === -1
-                          ? todaySchedules.length
-                          : nextActivityIndex);
+                    !isCurrentlyActive &&
+                    index <
+                      (nextActivityIndex === -1
+                        ? todaySchedules.length
+                        : nextActivityIndex);
                   const isNext = index === nextActivityIndex;
                   const startTime = item.time;
 
@@ -1177,16 +1231,29 @@ export default function TodayScreen() {
                 </View>
                 {todayExpenses.total > 0 ? (
                   <>
-                    <Text style={styles.costAmountPrimary}>
-                      {formatCurrency(todayExpenses.total)}
-                    </Text>
+                    <View style={styles.costAmountGroup}>
+                      {todayExpenses.totalKrw > 0 && (
+                        <Text style={styles.costAmountPrimary}>
+                          {todayExpenses.totalKrw.toLocaleString("ko-KR")}원
+                        </Text>
+                      )}
+                      {todayExpenses.totalUsd > 0 && (
+                        <Text style={styles.costAmountPrimary}>
+                          {todayExpenses.totalUsd.toLocaleString("en-US")}달러
+                        </Text>
+                      )}
+                    </View>
                     <Text style={styles.costDetailPrimary}>
                       터치하여 상세 내역 확인
                     </Text>
                   </>
                 ) : (
                   <>
-                    <Text style={styles.costAmountPrimary}>0원</Text>
+                    <Text
+                      style={[styles.costAmountPrimary, { marginBottom: 8 }]}
+                    >
+                      0원
+                    </Text>
                     <Text style={styles.costDetailPrimary}>
                       터치하여 상세 내역 확인
                     </Text>
@@ -1200,39 +1267,50 @@ export default function TodayScreen() {
           {(todayAccommodations.length > 0 || todayFlights.length > 0) && (
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>여행 정보 (Reference)</Text>
-              {todayAccommodations.map((accommodation: Accommodation) => (
-                <Pressable
-                  key={accommodation.id}
-                  style={[styles.cardBase, styles.accommodationCard]}
-                  onPress={() => {
-                    closeOpenTimelineSwipe();
-                    setSelectedAccommodation(accommodation);
-                    setShowAccommodationDetail(true);
-                  }}
-                >
-                  <View style={styles.accommodationHeader}>
-                    <View style={styles.accommodationIconBox}>
-                      <AccommodationIcon
-                        width={20}
-                        height={20}
-                        color={colors.primary}
-                      />
+              {todayAccommodations.map((accommodation: Accommodation) => {
+                const isCheckout =
+                  dayjs(accommodation.checkoutDate).format("YYYY-MM-DD") ===
+                  timelineDateStr;
+                return (
+                  <Pressable
+                    key={accommodation.id}
+                    style={[styles.cardBase, styles.accommodationCard]}
+                    onPress={() => {
+                      closeOpenTimelineSwipe();
+                      setSelectedAccommodation(accommodation);
+                      setShowAccommodationDetail(true);
+                    }}
+                  >
+                    <View style={styles.accommodationHeader}>
+                      <View style={styles.accommodationIconBox}>
+                        <AccommodationIcon
+                          width={20}
+                          height={20}
+                          color={colors.primary}
+                        />
+                      </View>
+                      <View style={styles.accommodationHeaderText}>
+                        <Text style={styles.accommodationLabel}>
+                          {isCheckout ? "오늘 체크아웃" : "오늘의 숙소"}
+                        </Text>
+                        <Text style={styles.itemTitle}>
+                          {accommodation.name}
+                        </Text>
+                        <Text style={styles.accommodationCheckin}>
+                          {isCheckout
+                            ? `체크아웃 ${formatTime(accommodation.checkoutTime)}`
+                            : `체크인 ${formatTime(accommodation.checkinTime)}`}
+                        </Text>
+                      </View>
                     </View>
-                    <View style={styles.accommodationHeaderText}>
-                      <Text style={styles.accommodationLabel}>오늘의 숙소</Text>
-                      <Text style={styles.itemTitle}>{accommodation.name}</Text>
-                      <Text style={styles.accommodationCheckin}>
-                        체크인 {formatTime(accommodation.checkinTime)}
-                      </Text>
-                    </View>
-                  </View>
-                  <RightArrowIcon
-                    width={12}
-                    height={12}
-                    color={colors.gray600}
-                  />
-                </Pressable>
-              ))}
+                    <RightArrowIcon
+                      width={12}
+                      height={12}
+                      color={colors.gray600}
+                    />
+                  </Pressable>
+                );
+              })}
               {todayFlights.map(item => (
                 <Pressable
                   key={item.id}
@@ -1315,8 +1393,12 @@ export default function TodayScreen() {
             }
             setShowPlanSelector(false);
             Alert.alert("성공", "여행이 삭제되었습니다.");
-          } catch (_error) {
-            Alert.alert("알림", "여행 삭제에 실패했습니다.");
+          } catch (error: any) {
+            if (axios.isAxiosError(error) && error.response?.status === 403) {
+              Alert.alert("알림", "이 여행을 삭제할 권한이 없습니다.");
+            } else {
+              Alert.alert("알림", "여행 삭제에 실패했습니다.");
+            }
           }
         }}
       />
@@ -1345,18 +1427,23 @@ export default function TodayScreen() {
         visible={showExpenseDetail && !showAddExpenseFromDetail}
         onClose={() => setShowExpenseDetail(false)}
         expenses={todayExpensesFromApi ?? []}
+        attachments={planData.attachments ?? []}
         total={todayExpenses.total}
         byCategory={todayExpenses.byCategory}
         planId={selectedPlan?.id ?? 0}
         planStartDate={selectedPlan?.startDate}
         planEndDate={selectedPlan?.endDate}
         exDate={timelineDateStr}
-        onExpenseAdd={() => {
-          planData.refreshExpenses?.();
+        onExpenseDelete={async () => {
+          await refetchTodayExpenses();
           queryClient.invalidateQueries({
             queryKey: ["expenses", selectedPlan?.id],
           });
-          refetchTodayExpenses();
+        }}
+        onExpenseAdd={() => {
+          queryClient.invalidateQueries({
+            queryKey: ["expenses", selectedPlan?.id],
+          });
         }}
         onAddExpensePress={() => {
           setShowExpenseDetail(false);
@@ -1380,11 +1467,9 @@ export default function TodayScreen() {
         defaultExDate={timelineDateStr}
         onExpenseAdd={expense => {
           planData.addExpense?.(expense);
-          planData.refreshExpenses?.();
           queryClient.invalidateQueries({
             queryKey: ["expenses", selectedPlan?.id],
           });
-          refetchTodayExpenses();
           setShowExpenseDetail(false);
         }}
       />
@@ -1397,6 +1482,7 @@ export default function TodayScreen() {
         }}
         itinerary={selectedItinerary}
         planExpenses={planData.expenses ?? []}
+        attachments={planData.attachments ?? []}
         onEdit={itinerary => {
           setShowItineraryDetail(false);
           setEditingItinerary(itinerary);
@@ -1418,21 +1504,21 @@ export default function TodayScreen() {
         }}
         itinerary={editingItinerary}
         planId={selectedPlan?.id ?? 0}
+        defaultCountry={timelineDateSegment?.country}
+        defaultCity={timelineDateSegment?.city}
         onSave={async itinerary => {
           planData.addItinerary(itinerary);
-          planData.refreshExpenses?.();
           queryClient.invalidateQueries({
             queryKey: ["expenses", selectedPlan?.id],
           });
-          await refetchTodayExpenses();
+          planData.refreshAttachments();
         }}
         onDelete={async itineraryId => {
           planData.removeItinerary(itineraryId);
-          planData.refreshExpenses?.();
           queryClient.invalidateQueries({
             queryKey: ["expenses", selectedPlan?.id],
           });
-          await refetchTodayExpenses();
+          planData.refreshAttachments();
         }}
       />
 
@@ -1443,6 +1529,7 @@ export default function TodayScreen() {
           setSelectedAccommodation(null);
         }}
         accommodation={selectedAccommodation}
+        attachments={planData.attachments ?? []}
         onEdit={accommodation => {
           setShowAccommodationDetail(false);
           setEditingAccommodation(accommodation);
@@ -1451,11 +1538,20 @@ export default function TodayScreen() {
         onDelete={async accommodation => {
           try {
             await accommodationsApi.deleteAccommodation(accommodation.id);
+            const remainingDates = collectPlanItemDates(
+              planData.itineraries,
+              planData.flights,
+              planData.accommodations.filter(acc => acc.id !== accommodation.id),
+            );
+            await shrinkPlanIfNeeded(selectedPlan!.id, planData.plan, remainingDates);
             planData.removeAccommodation(accommodation.id);
             queryClient.invalidateQueries({
               queryKey: ["expenses", selectedPlan?.id],
             });
-            await refetchTodayExpenses();
+            queryClient.invalidateQueries({
+              queryKey: ["plan", selectedPlan?.publicId],
+            });
+            queryClient.invalidateQueries({ queryKey: ["plans"] });
             Alert.alert("삭제완료", "숙소가 삭제되었습니다.");
           } catch (_error) {
             Alert.alert("알림", "숙소 삭제에 실패했습니다.");
@@ -1476,16 +1572,31 @@ export default function TodayScreen() {
         }}
         accommodation={editingAccommodation}
         planId={selectedPlan?.id ?? 0}
+        defaultCountry={timelineDateSegment?.country}
+        defaultCity={timelineDateSegment?.city}
         onSave={async updated => {
           planData.addAccommodation(updated);
-          await refetchTodayExpenses();
+          queryClient.invalidateQueries({
+            queryKey: ["expenses", selectedPlan?.id],
+          });
+          planData.refreshAttachments();
         }}
         onDelete={async accommodationId => {
+          const remainingDates = collectPlanItemDates(
+            planData.itineraries,
+            planData.flights,
+            planData.accommodations.filter(acc => acc.id !== accommodationId),
+          );
+          await shrinkPlanIfNeeded(selectedPlan!.id, planData.plan, remainingDates);
           planData.removeAccommodation(accommodationId);
           queryClient.invalidateQueries({
             queryKey: ["expenses", selectedPlan?.id],
           });
-          await refetchTodayExpenses();
+          queryClient.invalidateQueries({
+            queryKey: ["plan", selectedPlan?.publicId],
+          });
+          queryClient.invalidateQueries({ queryKey: ["plans"] });
+          planData.refreshAttachments();
         }}
       />
 
@@ -1498,6 +1609,7 @@ export default function TodayScreen() {
         }}
         flight={selectedFlight}
         segment={selectedFlightSegment}
+        attachments={planData.attachments ?? []}
         onEdit={flight => {
           setShowFlightDetail(false);
           setEditingFlight(flight);
@@ -1523,11 +1635,17 @@ export default function TodayScreen() {
         planStartDate={selectedPlan?.startDate}
         onSave={async updated => {
           planData.addFlight(updated);
-          await refetchTodayExpenses();
+          queryClient.invalidateQueries({
+            queryKey: ["expenses", selectedPlan?.id],
+          });
+          planData.refreshAttachments();
         }}
         onDelete={async flightId => {
           planData.removeFlight(flightId);
-          await refetchTodayExpenses();
+          queryClient.invalidateQueries({
+            queryKey: ["expenses", selectedPlan?.id],
+          });
+          planData.refreshAttachments();
         }}
       />
 
@@ -1556,17 +1674,23 @@ export default function TodayScreen() {
         onClose={() => setAddScheduleFlow("method")}
         planId={selectedPlan?.id ?? 0}
         planPublicId={selectedPlan?.publicId ?? ""}
+        planStartDate={selectedPlan?.startDate}
+        planEndDate={selectedPlan?.endDate}
+        onPlanDatesExtended={async (newStart, newEnd) => {
+          if (selectedPlan?.id) {
+            await extendPlanIfNeeded(selectedPlan.id, planData.plan, [newStart, newEnd]);
+            queryClient.invalidateQueries({ queryKey: ["plans"] });
+          }
+        }}
         onSaved={() => {
           if (selectedPlan?.publicId) {
-            planData.refreshItineraries?.();
-            planData.refreshFlights?.();
-            planData.refreshAccommodations?.();
-            planData.refreshExpenses?.();
+            queryClient.invalidateQueries({
+              queryKey: ["plan", selectedPlan.publicId],
+            });
             queryClient.invalidateQueries({
               queryKey: ["expenses", selectedPlan.id],
             });
           }
-          refetchTodayExpenses();
         }}
       />
 
@@ -1578,6 +1702,8 @@ export default function TodayScreen() {
         planStartDate={selectedPlan?.startDate}
         planEndDate={selectedPlan?.endDate}
         selectedDate={timelineViewDate ?? dayjs(calendarTodayStr)}
+        defaultCountry={timelineDateSegment?.country}
+        defaultCity={timelineDateSegment?.city}
         planData={{
           addItinerary: planData.addItinerary,
           addAccommodation: planData.addAccommodation,
@@ -1588,10 +1714,9 @@ export default function TodayScreen() {
         }}
         onRefresh={async () => {
           if (selectedPlan?.publicId) {
-            planData.refreshExpenses?.();
-            planData.refreshItineraries?.();
-            planData.refreshFlights?.();
-            planData.refreshAccommodations?.();
+            queryClient.invalidateQueries({
+              queryKey: ["plan", selectedPlan.publicId],
+            });
             queryClient.invalidateQueries({
               queryKey: ["expenses", selectedPlan.id],
             });
@@ -1599,9 +1724,10 @@ export default function TodayScreen() {
               queryKey: ["checklist", selectedPlan.publicId],
             });
           }
-          refetchTodayExpenses();
         }}
       />
+
+      <PlanLoadingOverlay visible={plansQuery.isLoading || planData.isLoading} />
     </View>
   );
 }
@@ -1847,8 +1973,29 @@ const styles = StyleSheet.create({
     ...textStyles.h5,
     color: colors.white,
   },
-  currentCard: {
+  currentCardWrapper: {
     marginBottom: 16,
+  },
+  currentCard: {
+    marginBottom: 0,
+  },
+  paginationDots: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 6,
+    marginTop: 8,
+  },
+  paginationDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: colors.gray400,
+  },
+  paginationDotActive: {
+    backgroundColor: colors.primary,
+    width: 14,
+    borderRadius: 3,
   },
   currentCardHeader: {
     flexDirection: "row",
@@ -1872,10 +2019,18 @@ const styles = StyleSheet.create({
     color: colors.primary,
   },
   endTimeBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
     backgroundColor: colors.gray300,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 8,
+  },
+  nextDayLabel: {
+    ...textStyles.h10,
+    fontSize: 9,
+    color: colors.gray600,
   },
   endTime: {
     ...textStyles.h9,
@@ -2085,10 +2240,13 @@ const styles = StyleSheet.create({
     ...textStyles.h6,
     color: colors.white,
   },
+  costAmountGroup: {
+    gap: 0,
+    marginBottom: 8,
+  },
   costAmountPrimary: {
     ...textStyles.h2,
     color: colors.white,
-    marginBottom: 8,
   },
   costDetailPrimary: {
     ...textStyles.body3,

@@ -7,18 +7,26 @@ import type {
   StagedDocumentAnalyzePayload,
 } from "@/types/api";
 import GradientBackground from "@/ui/components/GradientBackground";
+import { colors } from "@/ui/tokens/colors";
+import { textStyles } from "@/ui/tokens/typography";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import dayjs from "dayjs";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
+  Animated,
+  Easing,
   Platform,
   StyleSheet,
   View,
   useWindowDimensions,
+  ActivityIndicator,
+  Text
 } from "react-native";
 
+
 import DetailsPanel from "@/components/panels/DetailsPanel";
+import EmptyPlanPanel from "@/components/panels/EmptyPlanPanel";
 import HeaderPanel from "@/components/panels/HeaderPanel";
 import WeeklySchedulePanel from "@/components/panels/WeeklySchedulePanel";
 import AIAssistantPanel from "@/components/panels/aiassistant/AIAssistantPanel";
@@ -67,6 +75,7 @@ export default function DashboardScreen() {
     (
       res: DocumentUploadAnalyzeResponse,
       carryPendingFiles?: LocalFile[],
+      originEntityType?: string,
     ): boolean => {
       const kind = res.inferredItemType ?? res.draft?.itemType;
       if (
@@ -85,6 +94,7 @@ export default function DashboardScreen() {
       setStagedDocumentAnalyze({
         result: res,
         seq: documentAnalyzeSeqRef.current,
+        originEntityType,
       });
 
       if (kind === "itinerary") {
@@ -118,8 +128,17 @@ export default function DashboardScreen() {
     [selectedItinerary?.id, selectedFlight?.id, selectedAccommodation?.id],
   );
 
+  const isPanelActive = !!(
+    activeTab ||
+    selectedItinerary ||
+    selectedFlight ||
+    selectedAccommodation
+  );
+
+  const isMobile = width < 768;
+
   const getResponsiveRatio = () => {
-    if (width < 768) {
+    if (!isPanelActive || isMobile) {
       return { left: 1, right: 0 };
     } else if (width < 1024) {
       return { left: 0.6, right: 0.4 };
@@ -131,16 +150,41 @@ export default function DashboardScreen() {
   };
 
   const ratio = getResponsiveRatio();
-  const headerHeight = 64;
-  const headerMarginBottom = 16;
-  const verticalPadding = 16 * 2;
+  const targetRight = !isMobile && isPanelActive ? ratio.right : 0;
+
+  const animRightFlex = useRef(new Animated.Value(targetRight)).current;
+  const prevTargetRef = useRef(targetRight);
+  const [showRightPanel, setShowRightPanel] = useState(targetRight > 0);
+
+  useEffect(() => {
+    if (prevTargetRef.current === targetRight) return;
+    prevTargetRef.current = targetRight;
+
+    if (targetRight > 0) {
+      setShowRightPanel(true);
+      Animated.timing(animRightFlex, {
+        toValue: targetRight,
+        duration: 300,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: false,
+      }).start();
+    } else {
+      Animated.timing(animRightFlex, {
+        toValue: 0,
+        duration: 300,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: false,
+      }).start(() => setShowRightPanel(false));
+    }
+  }, [targetRight]);
+  const headerHeight = 56;
+  const verticalPadding = 16 + 20;
   const availableHeight = Math.max(
     360,
     width
       ? (typeof window !== "undefined" ? window.innerHeight : 0) -
           verticalPadding -
-          headerHeight -
-          headerMarginBottom
+          headerHeight
       : 600,
   );
   const innerGap = 16;
@@ -167,6 +211,12 @@ export default function DashboardScreen() {
         name: plan.title,
         startDate: plan.startDate,
         endDate: plan.endDate,
+        segments: plan.segments?.map(s => ({
+          country: s.country,
+          city: s.city,
+          startDate: s.startDate,
+          endDate: s.endDate,
+        })),
       })),
     [plansQuery.plans],
   );
@@ -267,6 +317,8 @@ export default function DashboardScreen() {
     }
   }, []);
 
+  const extendPlanDateIfNeeded = async (..._dates: string[]) => {};
+
   const handleItineraryAdd = async (newItinerary: any) => {
     setSelectedItinerary(newItinerary);
     setActiveTab("itinerary");
@@ -274,6 +326,7 @@ export default function DashboardScreen() {
     setSelectedAccommodation(null);
     if (selectedPlanId) {
       planData.addItinerary(newItinerary);
+      await extendPlanDateIfNeeded(newItinerary.itineraryDate);
     }
   };
 
@@ -282,6 +335,14 @@ export default function DashboardScreen() {
       planData.addFlight(newFlight);
       setSelectedFlight(newFlight);
       setActiveTab("flight");
+      const segments: any[] = newFlight.flightSegments ?? [];
+      const dates = segments
+        .flatMap((s: any) => [
+          s.departureTime ? dayjs(s.departureTime).format("YYYY-MM-DD") : null,
+          s.arrivalTime ? dayjs(s.arrivalTime).format("YYYY-MM-DD") : null,
+        ])
+        .filter(Boolean) as string[];
+      if (dates.length) await extendPlanDateIfNeeded(...dates);
     }
   };
 
@@ -290,14 +351,29 @@ export default function DashboardScreen() {
       planData.addAccommodation(newAccommodation);
       setSelectedAccommodation(newAccommodation);
       setActiveTab("accommodation");
+      await extendPlanDateIfNeeded(
+        newAccommodation.checkinDate,
+        newAccommodation.checkoutDate,
+      );
     }
   };
 
   const handleExpenseAdd = async (newExpense: any) => {
     if (selectedPlanId) {
       planData.addExpense(newExpense);
+      planData.refreshAttachments();
     }
   };
+
+  const handleDetailsPanelTabChange = useCallback(
+    (tab: "itinerary" | "flight" | "accommodation") => {
+      setActiveTab(tab);
+      setSelectedItinerary(null);
+      setSelectedFlight(null);
+      setSelectedAccommodation(null);
+    },
+    [],
+  );
 
   const handleShowItineraryModal = useCallback(() => {
     setActiveTab("itinerary");
@@ -335,7 +411,7 @@ export default function DashboardScreen() {
   }, []);
 
   const handleShowAccommodationModal = useCallback(
-    (accommodation: any, date?: string) => {
+    (accommodation: any, date?: string, checkoutDate?: string) => {
       setActiveTab("accommodation");
 
       setSelectedItinerary(null);
@@ -350,7 +426,8 @@ export default function DashboardScreen() {
         if (date) {
           const draft = {
             checkinDate: date,
-            checkoutDate: dayjs(date).add(1, "day").format("YYYY-MM-DD"),
+            checkoutDate:
+              checkoutDate ?? dayjs(date).add(1, "day").format("YYYY-MM-DD"),
             checkinTime: "15:00",
             checkoutTime: "11:00",
           };
@@ -412,6 +489,23 @@ export default function DashboardScreen() {
     return null;
   }
 
+  const handleTripCreated = (trip: {
+    id: string;
+    publicId: string;
+    name: string;
+    startDate: string;
+    endDate: string;
+  }) => {
+    setSelectedTrip(trip);
+    setSelectedPlanId(Number.parseInt(trip.id));
+    if (Platform.OS === "web") {
+      if (trip.publicId) {
+        // @ts-ignore
+        navigation.navigate("PLAN", { publicId: trip.publicId });
+      }
+    }
+  };
+
   return (
     <GradientBackground
       colors={["#D7D0FF33", "#CBDDFF80"]}
@@ -435,89 +529,116 @@ export default function DashboardScreen() {
               { flex: ratio.left, height: availableHeight },
             ]}
           >
-            {/* 2. 주간 스케줄 모달 (70% 높이) */}
-            <View style={[styles.scheduleModal, { height: leftTopHeight }]}>
-              <WeeklySchedulePanel
-                itineraries={planData.itineraries}
-                flights={planData.flights}
-                height={leftTopHeight}
-                selectedTrip={selectedTrip}
-                planData={planData}
-                plans={plansQuery.plans}
-                trips={trips}
-                onPlansRefresh={plansQuery.fetchPlans}
+            {plansQuery.isLoading ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color={colors.primary} />
+                <Text style={styles.loadingText}>여행을 불러오는 중입니다..</Text>
+              </View>
+            ) : trips.length === 0 && !plansQuery.isLoading ? (
+              <EmptyPlanPanel
                 onPlanAdd={plansQuery.addPlan}
-                onPlanUpdate={plansQuery.updatePlan}
-                onPlanDelete={plansQuery.deletePlan}
-                onItineraryAdd={handleItineraryAdd}
-                previewAccommodation={previewAccommodation}
-                onPreviewAccommodationChange={setPreviewAccommodation}
-                onPlanSelect={trip => {
-                  setSelectedTrip(trip);
-                  setSelectedPlanId(trip ? Number.parseInt(trip.id) : null);
-                  if (Platform.OS === "web") {
-                    if (trip?.publicId) {
-                      // @ts-ignore
-                      navigation.navigate("PLAN", { publicId: trip.publicId });
-                    } else {
-                      // @ts-ignore
-                      navigation.navigate("OTTRIP");
-                    }
-                  } else {
-                    if (trip?.publicId) {
-                      // @ts-ignore
-                      navigation.navigate("PLAN", { publicId: trip.publicId });
-                    } else {
-                      // @ts-ignore
-                      navigation.navigate("OTTRIP");
-                    }
-                  }
-                }}
-                onItinerarySelect={setSelectedItinerary}
-                onFlightAdd={handleFlightAdd}
-                onAccommodationAdd={handleAccommodationAdd}
-                onShowItineraryModal={handleShowItineraryModal}
-                onShowFlightModal={handleShowFlightModal}
-                onRequestNewFlight={handleRequestNewFlight}
-                onRequestNewItinerary={handleRequestNewItinerary}
-                onShowAccommodationModal={handleShowAccommodationModal}
-                onShowItineraryDetail={handleShowItineraryDetail}
-                onShowFlightDetail={handleShowFlightDetail}
-                onShowAccommodationDetail={handleShowAccommodationDetail}
-                activeTab={activeTab}
-                selectedItinerary={selectedItinerary}
+                onTripCreated={handleTripCreated}
               />
-            </View>
+            ) : (
+              <>
+                {/* 2. 주간 스케줄 모달 (70% 높이) */}
+                <View style={[styles.scheduleModal, { height: leftTopHeight }]}>
+                  <WeeklySchedulePanel
+                    itineraries={planData.itineraries}
+                    flights={planData.flights}
+                    height={leftTopHeight}
+                    selectedTrip={selectedTrip}
+                    planData={planData}
+                    plans={plansQuery.plans}
+                    trips={trips}
+                    onPlansRefresh={plansQuery.fetchPlans}
+                    onPlanAdd={plansQuery.addPlan}
+                    onPlanUpdate={plansQuery.updatePlan}
+                    onPlanDelete={plansQuery.deletePlan}
+                    onItineraryAdd={handleItineraryAdd}
+                    previewAccommodation={previewAccommodation}
+                    onPreviewAccommodationChange={setPreviewAccommodation}
+                    onPlanSelect={trip => {
+                      setSelectedTrip(trip);
+                      setSelectedPlanId(trip ? Number.parseInt(trip.id) : null);
+                      if (Platform.OS === "web") {
+                        if (trip?.publicId) {
+                          // @ts-ignore
+                          navigation.navigate("PLAN", {
+                            publicId: trip.publicId,
+                          });
+                        } else {
+                          // @ts-ignore
+                          navigation.navigate("OTTRIP");
+                        }
+                      } else {
+                        if (trip?.publicId) {
+                          // @ts-ignore
+                          navigation.navigate("PLAN", {
+                            publicId: trip.publicId,
+                          });
+                        } else {
+                          // @ts-ignore
+                          navigation.navigate("OTTRIP");
+                        }
+                      }
+                    }}
+                    onItinerarySelect={setSelectedItinerary}
+                    onFlightAdd={handleFlightAdd}
+                    onAccommodationAdd={handleAccommodationAdd}
+                    onShowItineraryModal={handleShowItineraryModal}
+                    onShowFlightModal={handleShowFlightModal}
+                    onRequestNewFlight={handleRequestNewFlight}
+                    onRequestNewItinerary={handleRequestNewItinerary}
+                    onShowAccommodationModal={handleShowAccommodationModal}
+                    onShowItineraryDetail={handleShowItineraryDetail}
+                    onShowFlightDetail={handleShowFlightDetail}
+                    onShowAccommodationDetail={handleShowAccommodationDetail}
+                    activeTab={activeTab}
+                    selectedItinerary={selectedItinerary}
+                  />
+                </View>
 
-            {/* 하단 모달들 (30% 높이) */}
-            <View style={[styles.bottomRow, { height: leftBottomHeight }]}>
-              {/* 4. 비용 모달 (좌측 하단) */}
-              <View style={styles.expensesModal}>
-                <ExpensesPanel
-                  planData={{
-                    ...planData,
-                    refreshItineraries: planData.refreshItineraries,
-                    refreshFlights: planData.refreshFlights,
-                    refreshAccommodations: planData.refreshAccommodations,
-                  }}
-                  onExpenseAdd={handleExpenseAdd}
-                />
-              </View>
+                {/* 하단 모달들 (30% 높이) */}
+                <View style={[styles.bottomRow, { height: leftBottomHeight }]}>
+                  {/* 4. 비용 모달 (좌측 하단) */}
+                  <View style={styles.expensesModal}>
+                    <ExpensesPanel
+                      planData={{
+                        ...planData,
+                        refreshItineraries: planData.refreshItineraries,
+                        refreshFlights: planData.refreshFlights,
+                        refreshAccommodations: planData.refreshAccommodations,
+                      }}
+                      onExpenseAdd={handleExpenseAdd}
+                      compact={leftBottomHeight < 300}
+                    />
+                  </View>
 
-              {/* 5. AI 어시스턴트 모달 (우측 하단) */}
-              <View style={styles.aiModal}>
-                <AIAssistantPanel publicId={planData.plan?.publicId || null} />
-              </View>
-            </View>
+                  {/* 5. AI 어시스턴트 모달 (우측 하단) */}
+                  <View style={styles.aiModal}>
+                    <AIAssistantPanel
+                      publicId={planData.plan?.publicId || null}
+                      compact={leftBottomHeight < 300}
+                    />
+                  </View>
+                </View>
+              </>
+            )}
           </View>
 
           {/* 우측 영역 (동적 비율) */}
-          {ratio.right > 0 && (
-            <View
+          {!isMobile && showRightPanel && (
+            <Animated.View
               style={[
                 styles.rightArea,
-                { flex: ratio.right, height: availableHeight },
+                {
+                  flex: animRightFlex,
+                  height: availableHeight,
+                  overflow: "hidden",
+                },
               ]}
+              pointerEvents={isPanelActive ? "auto" : "none"}
             >
               {/* 3. 상세 정보 모달 (전체 높이) */}
               <View style={styles.detailsModal}>
@@ -527,6 +648,7 @@ export default function DashboardScreen() {
                   selectedFlight={selectedFlight}
                   selectedAccommodation={selectedAccommodation}
                   activeTab={activeTab}
+                  onTabChange={handleDetailsPanelTabChange}
                   stagedDocumentAnalyze={stagedDocumentAnalyze}
                   onConsumeStagedDocumentAnalyze={
                     onConsumeStagedDocumentAnalyze
@@ -568,7 +690,7 @@ export default function DashboardScreen() {
                   onPreviewAccommodationChange={setPreviewAccommodation}
                 />
               </View>
-            </View>
+            </Animated.View>
           )}
         </View>
       </View>
@@ -583,9 +705,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     paddingTop: 16,
-    paddingBottom: 24,
-    paddingLeft: 32,
-    paddingRight: 32,
+    paddingBottom: 20,
+    paddingLeft: 20,
+    paddingRight: 20,
   },
   headerModal: {
     width: "100%",
@@ -608,12 +730,12 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   scheduleModal: {
-    flex: 0.8,
+    flex: 0.85,
     minHeight: 0,
     overflow: "hidden",
   },
   bottomRow: {
-    flex: 0.2,
+    flex: 0.15,
     flexDirection: "row",
     gap: 16,
     minHeight: 0,
@@ -630,4 +752,15 @@ const styles = StyleSheet.create({
   aiModal: {
     flex: 1,
   },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "transparent", 
+  },
+  loadingText: {
+    marginTop: 16,
+    color: colors.gray600,
+    ...textStyles.body3,
+  }
 });

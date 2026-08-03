@@ -12,6 +12,7 @@ import ProfileScreen from "@/screens/ProfileScreen";
 import RegisterProfileScreen from "@/screens/RegisterProfileScreen";
 import TermsConsentScreen from "@/screens/TermsConsentScreen";
 import TermsDetailScreen from "@/screens/TermsDetailScreen";
+import TripViewerScreen from "@/screens/TripViewerScreen";
 import WelcomeScreen from "@/screens/auth/WelcomeScreen";
 import ForbiddenScreen from "@/screens/error/ForbiddenScreen";
 import NotFoundScreen from "@/screens/error/NotFoundScreen";
@@ -58,7 +59,8 @@ export default function RootNavigator() {
         path.startsWith("/register") ||
         path.startsWith("/terms") ||
         path.startsWith("/auth") ||
-        path.startsWith("/welcome");
+        path.startsWith("/welcome") ||
+        path.startsWith("/trip");
 
       if (!isExcluded) {
         try {
@@ -106,12 +108,15 @@ export default function RootNavigator() {
         const path = window.location.pathname;
         if (path === "/" || path === "" || path === "/login") {
           setInitialRoute("로그인");
+        } else if (path.startsWith("/trip/")) {
+          setInitialRoute("TRIP");
         } else if (
           !initialRoute ||
           (initialRoute !== "로그인" &&
             initialRoute !== "약관동의" &&
             initialRoute !== "프로필 입력" &&
-            initialRoute !== "인증")
+            initialRoute !== "인증" &&
+            initialRoute !== "TRIP")
         ) {
           setInitialRoute("로그인");
         }
@@ -133,6 +138,13 @@ export default function RootNavigator() {
 
   useEffect(() => {
     if (!isAuthenticated && !isLoading && navRef.current?.isReady()) {
+      if (
+        Platform.OS === "web" &&
+        typeof window !== "undefined" &&
+        window.location.pathname.startsWith("/trip/")
+      ) {
+        return;
+      }
       navRef.current.reset({ index: 0, routes: [{ name: "로그인" }] });
     }
   }, [isAuthenticated, isLoading]);
@@ -225,6 +237,16 @@ export default function RootNavigator() {
       },
     };
 
+    const tripViewerScreen = {
+      path: "trip/:publicId" as const,
+      parse: {
+        publicId: (value: string) => value,
+      },
+      stringify: {
+        publicId: (value: string) => value,
+      },
+    };
+
     if (Platform.OS === "web") {
       if (isAuthenticated) {
         return {
@@ -236,6 +258,7 @@ export default function RootNavigator() {
               인증: "auth/callback",
               프로필: "profile",
               PLAN: planScreen,
+              TRIP: tripViewerScreen,
               "NOT FOUND": "not-found",
               FORBIDDEN: "forbidden",
             },
@@ -248,6 +271,7 @@ export default function RootNavigator() {
           screens: {
             로그인: "",
             인증: "auth/callback",
+            TRIP: tripViewerScreen,
           },
         },
       };
@@ -260,6 +284,7 @@ export default function RootNavigator() {
           screens: {
             프로필: "profile",
             PLAN: planScreen,
+            TRIP: tripViewerScreen,
             "NOT FOUND": "not-found",
             FORBIDDEN: "forbidden",
           },
@@ -273,6 +298,7 @@ export default function RootNavigator() {
         screens: {
           로그인: "login",
           인증: "auth/callback",
+          TRIP: tripViewerScreen,
         },
       },
     };
@@ -306,6 +332,7 @@ export default function RootNavigator() {
               }
             />
             <Stack.Screen name="PLAN" component={DashboardScreen} />
+            <Stack.Screen name="TRIP" component={TripViewerScreen} />
             <Stack.Screen name="NOT FOUND" component={NotFoundScreen} />
             <Stack.Screen name="FORBIDDEN" component={ForbiddenScreen} />
             <Stack.Screen name="인증" component={AuthCallbackScreen} />
@@ -372,6 +399,7 @@ export default function RootNavigator() {
             />
             {/* 모바일 화면 (로그인 없이도 접근 가능) */}
             <Stack.Screen name="MOBILE" component={MobileNavigator} />
+            <Stack.Screen name="TRIP" component={TripViewerScreen} />
           </>
         )}
       </Stack.Navigator>

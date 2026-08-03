@@ -1,19 +1,20 @@
 # from fastapi import HTTPException
 
-from sqlalchemy import func, select, update, insert, delete, exists
+from datetime import datetime
+
+from sqlalchemy import delete, exists, func, insert, select, update
 from sqlalchemy.orm import joinedload, with_loader_criteria
 
-from app.database.deps import SessionDep
+from app.accomodation.models import Accommodation
+from app.ai.schemas import ChecklistItemsByCategory
 from app.attachments.models import Attachment
+from app.database.deps import SessionDep
 from app.expenses.models import Expense
 from app.flights.models import Flight, FlightSegment
 from app.itinerary.models import Itinerary
-from app.accomodation.models import Accommodation
 from app.utils.dependency import dependency
-from app.ai.schemas import ChecklistItemsByCategory
 
-from .models import Plan, PlanInvitation, PlanShared, Role
-from datetime import datetime
+from .models import Plan, PlanExport, PlanInvitation, PlanSegment, PlanShared, Role
 
 
 @dependency
@@ -36,13 +37,16 @@ class PlanRepository:
             select(Plan)
             .options(
                 joinedload(Plan.owner),
+                joinedload(Plan.segments),
                 joinedload(Plan.flights).joinedload(Flight.expense),
                 joinedload(Plan.flights).joinedload(Flight.flight_segments),
                 joinedload(Plan.itineraries).joinedload(Itinerary.expenses),
                 joinedload(Plan.accommodations),
                 joinedload(Plan.expenses),
                 with_loader_criteria(
-                    FlightSegment, FlightSegment.is_deleted.is_(False), include_aliases=True
+                    FlightSegment,
+                    FlightSegment.is_deleted.is_(False),
+                    include_aliases=True,
                 ),
                 with_loader_criteria(
                     Itinerary, Itinerary.is_deleted.is_(False), include_aliases=True
@@ -51,7 +55,9 @@ class PlanRepository:
                     Flight, Flight.is_deleted.is_(False), include_aliases=True
                 ),
                 with_loader_criteria(
-                    Accommodation, Accommodation.is_deleted.is_(False), include_aliases=True
+                    Accommodation,
+                    Accommodation.is_deleted.is_(False),
+                    include_aliases=True,
                 ),
                 with_loader_criteria(
                     Expense, Expense.is_deleted.is_(False), include_aliases=True
@@ -66,13 +72,16 @@ class PlanRepository:
             select(Plan)
             .options(
                 joinedload(Plan.owner),
+                joinedload(Plan.segments),
                 joinedload(Plan.flights).joinedload(Flight.expense),
                 joinedload(Plan.flights).joinedload(Flight.flight_segments),
                 joinedload(Plan.itineraries).joinedload(Itinerary.expenses),
                 joinedload(Plan.accommodations).joinedload(Accommodation.expense),
                 joinedload(Plan.expenses),
                 with_loader_criteria(
-                    FlightSegment, FlightSegment.is_deleted.is_(False), include_aliases=True
+                    FlightSegment,
+                    FlightSegment.is_deleted.is_(False),
+                    include_aliases=True,
                 ),
                 with_loader_criteria(
                     Itinerary, Itinerary.is_deleted.is_(False), include_aliases=True
@@ -81,7 +90,9 @@ class PlanRepository:
                     Flight, Flight.is_deleted.is_(False), include_aliases=True
                 ),
                 with_loader_criteria(
-                    Accommodation, Accommodation.is_deleted.is_(False), include_aliases=True
+                    Accommodation,
+                    Accommodation.is_deleted.is_(False),
+                    include_aliases=True,
                 ),
                 with_loader_criteria(
                     Expense, Expense.is_deleted.is_(False), include_aliases=True
@@ -122,9 +133,19 @@ class PlanRepository:
         )
         union_ids = owned_ids.union(shared_ids).subquery()
         result = await self.session.execute(
-            select(Plan).where(Plan.id.in_(select(union_ids.c.id)))
+            select(Plan)
+            .options(joinedload(Plan.segments))
+            .where(Plan.id.in_(select(union_ids.c.id)))
         )
         return list(result.unique().scalars())
+
+    async def find_by_id_with_segments(self, *, plan_id: int) -> Plan | None:
+        result = await self.session.execute(
+            select(Plan)
+            .options(joinedload(Plan.segments))
+            .where(Plan.id == plan_id, Plan.is_deleted.is_(False))
+        )
+        return result.unique().scalar_one_or_none()
 
     async def remove(self, *, plan_id: int) -> list[str]:
         """
@@ -146,7 +167,9 @@ class PlanRepository:
             update(Flight).where(Flight.plan_id == plan_id).values(is_deleted=True)
         )
         await self.session.execute(
-            update(Itinerary).where(Itinerary.plan_id == plan_id).values(is_deleted=True)
+            update(Itinerary)
+            .where(Itinerary.plan_id == plan_id)
+            .values(is_deleted=True)
         )
         await self.session.execute(
             update(Accommodation)
@@ -160,13 +183,18 @@ class PlanRepository:
             delete(Attachment).where(Attachment.plan_id == plan_id)
         )
         await self.session.execute(
+            delete(PlanSegment).where(PlanSegment.plan_id == plan_id)
+        )
+        await self.session.execute(
             update(Plan)
             .where(Plan.id == plan_id, Plan.is_deleted.is_(False))
             .values(is_deleted=True)
         )
         return file_keys
 
-    async def reassign_plans_owner(self, *, from_owner_id: int, to_owner_id: int) -> None:
+    async def reassign_plans_owner(
+        self, *, from_owner_id: int, to_owner_id: int
+    ) -> None:
         await self.session.execute(
             update(Plan)
             .where(Plan.owner_id == from_owner_id)
@@ -181,7 +209,9 @@ class PlanRepository:
         )
         return list(result.scalars().all())
 
-    async def pick_owner_successor_on_account_delete(self, *, plan_id: int) -> int | None:
+    async def pick_owner_successor_on_account_delete(
+        self, *, plan_id: int
+    ) -> int | None:
         res = await self.session.execute(
             select(PlanShared.shared_user_id)
             .where(PlanShared.plan_id == plan_id, PlanShared.role == Role.EDITOR)
@@ -254,7 +284,9 @@ class PlanRepository:
 
     async def list_shared(self, *, plan_id: int) -> list[PlanShared]:
         result = await self.session.execute(
-            select(PlanShared).options(joinedload(PlanShared.shared_user)).where(PlanShared.plan_id == plan_id)
+            select(PlanShared)
+            .options(joinedload(PlanShared.shared_user))
+            .where(PlanShared.plan_id == plan_id)
         )
         return list(result.scalars())
 
@@ -284,28 +316,34 @@ class PlanRepository:
         )
         return result.scalar_one_or_none() is not None
 
-    async def has_edit_permission(self, *, plan_id: int, user_id: int) -> tuple[bool, bool]:
+    async def has_edit_permission(
+        self, *, plan_id: int, user_id: int
+    ) -> tuple[bool, bool]:
         result = await self.session.execute(
-            select(Plan.id, Plan.owner_id)
-            .where(Plan.id == plan_id, Plan.is_deleted.is_(False))
+            select(Plan.id, Plan.owner_id).where(
+                Plan.id == plan_id, Plan.is_deleted.is_(False)
+            )
         )
         row = result.first()
-        
+
         if row is None:
             return (False, False)
-        
+
         owner_id = row[1]
-        
+
         if owner_id == user_id:
             return (True, True)
-        
+
         is_editor = await self.is_editor(plan_id=plan_id, user_id=user_id)
         return (True, is_editor)
 
-    async def has_read_permission(self, *, plan_id: int, user_id: int) -> tuple[bool, bool]:
+    async def has_read_permission(
+        self, *, plan_id: int, user_id: int
+    ) -> tuple[bool, bool]:
         result = await self.session.execute(
-            select(Plan.id, Plan.owner_id)
-            .where(Plan.id == plan_id, Plan.is_deleted.is_(False))
+            select(Plan.id, Plan.owner_id).where(
+                Plan.id == plan_id, Plan.is_deleted.is_(False)
+            )
         )
         row = result.first()
         if row is None:
@@ -357,15 +395,16 @@ class PlanRepository:
     ) -> ChecklistItemsByCategory | None:
         # Plan 존재 여부와 travel_checklist를 함께 조회
         result = await self.session.execute(
-            select(Plan.id, Plan.travel_checklist)
-            .where(Plan.public_id == public_id, Plan.is_deleted.is_(False))
+            select(Plan.id, Plan.travel_checklist).where(
+                Plan.public_id == public_id, Plan.is_deleted.is_(False)
+            )
         )
         row = result.first()
-        
+
         # Plan이 없으면 None 반환
         if row is None:
             return None
-        
+
         # Plan은 존재하지만 travel_checklist가 없으면 빈 ChecklistItemsByCategory 반환
         travel_checklist = row[1]
         if not travel_checklist:
@@ -375,7 +414,17 @@ class PlanRepository:
                 recommended=[],
                 optional=[],
             )
-        
+
         # categories 추출 및 변환
         categories = travel_checklist.get("categories", {})
         return ChecklistItemsByCategory(**categories)
+
+    async def save_export(self, *, export: PlanExport) -> PlanExport:
+        self.session.add(export)
+        await self.session.flush()
+        return export
+
+    async def find_export_by_public_id(self, *, public_id: str) -> PlanExport | None:
+        return await self.session.scalar(
+            select(PlanExport).where(PlanExport.public_id == public_id)
+        )

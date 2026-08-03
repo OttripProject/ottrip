@@ -1,41 +1,40 @@
 import logging
 
+import sentry_sdk
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.common.config import email_settings
 from app.core.config import core_settings
 from app.core.exceptions import register_exception_handlers
-from app.common.config import email_settings
 from app.core.logging import configure_logging
 from app.dev.router import router as dev_router
 
 from . import api
 
-import sentry_sdk
-
-
 configure_logging()
 
-if core_settings.ENVIRONMENT == "prod" :
+if core_settings.ENVIRONMENT == "prod":
     sentry_sdk.init(
-        dsn=core_settings.SENTRY_DSN,    
+        dsn=core_settings.SENTRY_DSN,
         send_default_pii=True,
     )
+
 
 def create_app() -> FastAPI:
     if core_settings.ENVIRONMENT == "prod":
         app = FastAPI(
-            title="OTTRIP API",  
-            docs_url=None,  
+            title="OTTRIP API",
+            docs_url=None,
             redoc_url=None,
-            openapi_url=None, 
-            redirect_slashes=False, 
+            openapi_url=None,
+            redirect_slashes=False,
         )
     else:
         app = FastAPI(
             title="OTTRIP API",
             swagger_ui_parameters={"persistAuthorization": True},
-            redirect_slashes=False,  
+            redirect_slashes=False,
         )
 
     configured_origins = [

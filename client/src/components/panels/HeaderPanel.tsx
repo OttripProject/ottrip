@@ -1,14 +1,18 @@
+import ProfileModal from "@/components/modals/ProfileModal";
 import { useMe } from "@/hooks/useMe";
 import { colors } from "@/ui/tokens/colors";
+import { radii } from "@/ui/tokens/radii";
 import { textStyles, typography } from "@/ui/tokens/typography";
 import { useNavigation } from "@react-navigation/native";
 import type { NavigationProp } from "@react-navigation/native";
+import { useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import RightArrowProfileIcon from "../../../assets/right_arrow_profile.svg";
+import DownArrowIcon from "../../../assets/dropdown_time.svg";
 
 export default function HeaderPanel() {
   const navigation = useNavigation<NavigationProp<any>>();
-  const { data: profile } = useMe();
+  const { data: profile, isLoading: profileLoading } = useMe();
+  const [profileModalOpen, setProfileModalOpen] = useState(false);
 
   return (
     <View style={styles.container}>
@@ -27,24 +31,33 @@ export default function HeaderPanel() {
           </Pressable>
         </View>
         <View style={styles.userContainer}>
-          <Pressable
-            onPress={() => {
-              (navigation as any).navigate("프로필");
-            }}
-            accessibilityRole="button"
-            style={styles.userPill}
-          >
-            <Text
-              style={styles.userText}
-              numberOfLines={1}
-              ellipsizeMode="tail"
+          {!profileLoading && (
+            <Pressable
+              onPress={() => setProfileModalOpen(true)}
+              accessibilityRole="button"
+              style={styles.userPill}
             >
-              {profile?.isGuest ? "게스트" : (profile?.nickname ?? "프로필")}
-            </Text>
-            <RightArrowProfileIcon width={16} height={16} />
-          </Pressable>
+              <Text
+                style={styles.userText}
+                numberOfLines={1}
+                ellipsizeMode="tail"
+              >
+                {profile?.isGuest ? "게스트" : (profile?.nickname ?? "")}
+              </Text>
+              <DownArrowIcon
+                width={10}
+                height={10}
+                style={{ opacity: 0.6, marginLeft: 8 }}
+              />
+            </Pressable>
+          )}
         </View>
       </View>
+
+      <ProfileModal
+        visible={profileModalOpen}
+        onClose={() => setProfileModalOpen(false)}
+      />
     </View>
   );
 }
@@ -52,39 +65,37 @@ export default function HeaderPanel() {
 const styles = StyleSheet.create({
   container: {
     height: 56,
-    marginTop: 16,
-    marginHorizontal: 32,
-    paddingHorizontal: 16,
+    paddingHorizontal: 40,
     backgroundColor: colors.white,
-    borderRadius: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.gray200,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
   },
   brand: {
-    ...textStyles.h4,
+    ...textStyles.h5,
     fontWeight: typography.weight.bold,
     color: colors.black,
   },
   userPill: {
     height: 32,
-    borderRadius: 40,
-    backgroundColor: colors.gray200,
+    minWidth: 72,
+    borderRadius: radii.base,
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: colors.gray300,
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    alignSelf: "flex-end",
-    minWidth: 84,
+    paddingHorizontal: 14,
     maxWidth: 220,
   },
   userText: {
-    ...textStyles.body4,
+    ...textStyles.body5,
     fontWeight: typography.weight.semibold,
-    color: colors.black,
+    color: colors.gray900,
     flexShrink: 1,
     minWidth: 0,
-    marginRight: 6,
   },
   headerContent: {
     flexDirection: "row",
@@ -95,11 +106,8 @@ const styles = StyleSheet.create({
   brandContainer: {
     flex: 1,
     alignItems: "flex-start",
-    paddingLeft: 16,
   },
   userContainer: {
-    flex: 1,
     alignItems: "flex-end",
-    paddingRight: 0,
   },
 });

@@ -1,5 +1,20 @@
+import AiDocumentAnalyzeModal from "@/components/modals/mobile/AiDocumentAnalyzeModal";
+
+const KIND_TO_LABEL: Record<string, string> = {
+  itinerary: "일정",
+  accommodation: "숙박",
+  flight: "항공",
+  expense: "비용",
+};
+import { useAttachmentUpload } from "@/hooks/useAttachmentUpload";
+import { useFilePicker } from "@/hooks/useFilePicker";
+import { useMe } from "@/hooks/useMe";
+import { analyzeDocumentUpload } from "@/services/aiDocument";
 import { expensesApi } from "@/services/expenses";
+import { type DocumentUploadAnalyzeResponse, type LocalFile, PLAN_ENTITY_KIND } from "@/types/api";
 import type { Expense } from "@/types/api";
+import type { AiAttachmentAnalyzeSelection } from "@/ui/components/attachmentSection.types";
+import { buildAnalyzeUploadPayload } from "@/utils/attachmentAiAnalyze";
 import {
   ExpenseCategory,
   ExpenseCurrency,
@@ -8,6 +23,8 @@ import {
 import BottomSheetModal from "@/ui/components/BottomSheetModal.native";
 import CalendarModal from "@/ui/components/CalendarModal.native";
 import FloatingFooter from "@/ui/components/FloatingFooter.native";
+import CurrencyToggle from "@/ui/components/CurrencyToggle";
+import AttachmentSection from "@/ui/components/attachmentSection.native";
 import Input from "@/ui/components/input/Input";
 import { colors } from "@/ui/tokens/colors";
 import { textStyles, typography } from "@/ui/tokens/typography";
@@ -38,6 +55,7 @@ interface AddExpenseModalProps {
   planEndDate?: string;
   defaultExDate?: string;
   onExpenseAdd?: (expense: Expense) => void;
+  pendingAiResult?: { result: DocumentUploadAnalyzeResponse; filename?: string; pendingFiles?: LocalFile[] } | null;
 }
 
 const normalizeAmount = (value: unknown) => {
@@ -54,6 +72,7 @@ export default function AddExpenseModal({
   planEndDate,
   defaultExDate,
   onExpenseAdd,
+  pendingAiResult,
 }: AddExpenseModalProps) {
   const [showDatePicker, setShowDatePicker] = useState(false);
 
@@ -91,8 +110,24 @@ export default function AddExpenseModal({
         return <TicketIcon width={size} height={size} color={color} />;
     }
   };
+  const [pendingFiles, setPendingFiles] = useState<LocalFile[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const scrollRef = useRef<ScrollView>(null);
   const isSubmittingRef = useRef(false);
+  const [isAiAnalyzing, setIsAiAnalyzing] = useState(false);
+  const [aiAnalyzeError, setAiAnalyzeError] = useState<string | null>(null);
+  const [aiModalResult, setAiModalResult] = useState<DocumentUploadAnalyzeResponse | null>(null);
+  const [aiAnalyzeFileName, setAiAnalyzeFileName] = useState<string | undefined>();
+  const [lastAiSelection, setLastAiSelection] = useState<AiAttachmentAnalyzeSelection | null>(null);
+  const aiCancelledRef = useRef(false);
+  const formInitializedRef = useRef(false);
+
+  const { pickImage, pickDocument } = useFilePicker();
+  const { data: me } = useMe();
+  const { isUploading, uploadFiles } = useAttachmentUpload({
+    planId,
+    entityType: PLAN_ENTITY_KIND.EXPENSE,
+  });
 
   const getDefaultDate = () =>
     defaultExDate || planStartDate || dayjs().format("YYYY-MM-DD");
@@ -102,18 +137,78 @@ export default function AddExpenseModal({
     amount: "",
     description: "",
     ex_date: getDefaultDate(),
+    currency: ExpenseCurrency.KRW,
   });
 
   useEffect(() => {
-    if (visible) {
-      const date =
-        defaultExDate || planStartDate || dayjs().format("YYYY-MM-DD");
-      setFormData(prev => ({
-        ...prev,
-        ex_date: date,
-      }));
+    if (!visible) {
+      formInitializedRef.current = false;
+      setAiModalResult(null);
+      setAiAnalyzeError(null);
+      return;
     }
+    if (formInitializedRef.current) return;
+    formInitializedRef.current = true;
+
+    const date =
+      defaultExDate || planStartDate || dayjs().format("YYYY-MM-DD");
+    setFormData(prev => ({ ...prev, ex_date: date }));
+    setPendingFiles([]);
   }, [visible, defaultExDate, planStartDate]);
+
+  useEffect(() => {
+    if (visible && pendingAiResult) {
+      const draft = pendingAiResult.result.draft;
+      if (draft?.itemType === "expense") {
+        const v = (draft.payload.values ?? {}) as Record<string, unknown>;
+        const src = (v.expense ?? v.Expense ?? v) as Record<string, unknown>;
+        const amountRaw = String(src.amount ?? src.Amount ?? "").replace(/[^0-9]/g, "");
+        const desc = String(src.description ?? src.Description ?? "").trim();
+        const cat = String(src.category ?? src.Category ?? "").trim();
+        const dateRaw = String(src.exDate ?? src.ex_date ?? src.ExDate ?? "").trim();
+        setFormData(prev => ({
+          ...prev,
+          ...(amountRaw ? { amount: amountRaw.replace(/\B(?=(\d{3})+(?!\d))/g, ",") } : {}),
+          ...(desc ? { description: desc } : {}),
+          ...(cat && Object.values(ExpenseCategory).includes(cat as ExpenseCategory) ? { category: cat as ExpenseCategory } : {}),
+          ...(dateRaw && dayjs(dateRaw).isValid() ? { ex_date: dayjs(dateRaw).format("YYYY-MM-DD") } : {}),
+        }));
+      }
+      if (pendingAiResult.pendingFiles?.length) {
+        setPendingFiles(pendingAiResult.pendingFiles);
+      }
+    }
+  }, [visible, pendingAiResult]);
+
+  const handleAiAnalyzePress = async (selection: AiAttachmentAnalyzeSelection) => {
+    setAiAnalyzeError(null);
+    setIsAiAnalyzing(true);
+    setLastAiSelection(selection);
+    aiCancelledRef.current = false;
+    try {
+      const { file, filename } = await buildAnalyzeUploadPayload(selection, {
+        pendingFiles,
+        existingAttachments: [],
+      });
+      setAiAnalyzeFileName(filename);
+      const result = await analyzeDocumentUpload(file, { filename });
+      if (aiCancelledRef.current) return;
+      if (!result.success) {
+        setAiAnalyzeError(result.error ?? "분석에 실패했습니다.");
+      } else {
+        const inferredType = result.inferredItemType ?? result.draft?.itemType;
+        if (inferredType && inferredType !== "expense") {
+          setAiAnalyzeError(`문서가 [${KIND_TO_LABEL[inferredType] ?? inferredType}]으로 분석되었습니다. 비용 추가 화면에는 반영할 수 없습니다.`);
+        } else {
+          setAiModalResult(result);
+        }
+      }
+    } catch {
+      setAiAnalyzeError("분석 중 오류가 발생했습니다.");
+    } finally {
+      setIsAiAnalyzing(false);
+    }
+  };
 
   const handleAmountChange = (text: string) => {
     const digits = normalizeAmount(text);
@@ -146,15 +241,19 @@ export default function AddExpenseModal({
         amount: amountNum,
         description: formData.description.trim() || undefined,
         exDate: formData.ex_date,
-        currency: ExpenseCurrency.KRW,
+        currency: formData.currency,
       });
-      Alert.alert("성공", "비용이 추가되었습니다.");
+      if (pendingFiles.length > 0) {
+        await uploadFiles(pendingFiles, newExpense.id);
+      }
       setFormData({
         category: ExpenseCategory.FOOD,
         amount: "",
         description: "",
         ex_date: getDefaultDate(),
+        currency: ExpenseCurrency.KRW,
       });
+      setPendingFiles([]);
       onClose?.({ fromSave: true });
       onExpenseAdd?.(newExpense);
     } catch {
@@ -171,12 +270,15 @@ export default function AddExpenseModal({
       amount: "",
       description: "",
       ex_date: getDefaultDate(),
+      currency: ExpenseCurrency.KRW,
     });
+    setPendingFiles([]);
     onClose?.();
   };
 
   return (
-    <BottomSheetModal visible={visible} onClose={handleClose} height={0.85}>
+  <>
+    <BottomSheetModal visible={visible} onClose={handleClose} height={0.93}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>비용 추가</Text>
         <Pressable style={styles.closeButton} onPress={handleClose} hitSlop={8}>
@@ -185,6 +287,7 @@ export default function AddExpenseModal({
       </View>
 
       <ScrollView
+        ref={scrollRef}
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
@@ -250,18 +353,24 @@ export default function AddExpenseModal({
 
         <View style={styles.inputGroup}>
           <Text style={styles.label}>지출 금액</Text>
-          <View style={styles.amountInputWrapper}>
-            <Input
-              value={formData.amount}
-              onChangeText={handleAmountChange}
-              placeholder="0"
-              placeholderTextColor={colors.gray500}
-              keyboardType="number-pad"
-              variant="filled"
-              containerStyle={styles.amountInputContainer}
-              style={styles.amountInputStyle}
+          <View style={styles.amountRow}>
+            <View style={styles.amountInputWrapper}>
+              <Input
+                value={formData.amount}
+                onChangeText={handleAmountChange}
+                placeholder="0"
+                placeholderTextColor={colors.gray500}
+                keyboardType="number-pad"
+                variant="filled"
+                containerStyle={styles.amountInputContainer}
+                style={styles.amountInputStyle}
+              />
+            </View>
+            <CurrencyToggle
+              value={formData.currency}
+              onChange={c => setFormData(prev => ({ ...prev, currency: c }))}
+              style={styles.currencyToggle}
             />
-            <Text style={styles.amountSuffix}>원</Text>
           </View>
         </View>
 
@@ -302,16 +411,81 @@ export default function AddExpenseModal({
             maxDate={planEndDate}
           />
         </View>
+
+        <AttachmentSection
+          variant="expense"
+          pendingFiles={pendingFiles}
+          onPickImage={async () => {
+            const file = await pickImage();
+            if (file) {
+              setPendingFiles(prev => [...prev, file]);
+              setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
+            }
+          }}
+          onPickDocument={async () => {
+            const file = await pickDocument();
+            if (file) {
+              setPendingFiles(prev => [...prev, file]);
+              setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
+            }
+          }}
+          onRemoveFile={index =>
+            setPendingFiles(prev => prev.filter((_, i) => i !== index))
+          }
+          isUploading={isUploading}
+          isGuest={!me}
+          showTopDivider
+          onAiAnalyzePress={handleAiAnalyzePress}
+          isAiAnalyzing={isAiAnalyzing}
+          onCancelAiAnalyze={() => {
+            aiCancelledRef.current = true;
+            setIsAiAnalyzing(false);
+          }}
+          analyzeError={aiAnalyzeError}
+          onRetryAnalyze={() => lastAiSelection && handleAiAnalyzePress(lastAiSelection)}
+          isAiAnalyzeSuccess={!!aiModalResult?.success && !aiAnalyzeError}
+        />
       </ScrollView>
 
       <FloatingFooter
-        primaryLabel="저장"
+        primaryLabel={isSubmitting ? "저장 중..." : "저장"}
         onPrimaryPress={handleSubmit}
-        primaryDisabled={isSubmitting}
+        primaryDisabled={isSubmitting || isUploading}
         secondaryLabel="취소"
         onSecondaryPress={handleClose}
       />
     </BottomSheetModal>
+    <AiDocumentAnalyzeModal
+      visible={!!aiModalResult}
+      onClose={() => setAiModalResult(null)}
+      entityTypeLabel="비용"
+      originEntityType="비용"
+      analyzeResult={aiModalResult}
+      analyzeFileName={aiAnalyzeFileName}
+      onApply={draft => {
+        if (draft) {
+          const v = (draft.payload.values ?? {}) as Record<string, unknown>;
+          const src = (v.expense ?? v.Expense ?? v) as Record<string, unknown>;
+          const amountRaw = String(src.amount ?? src.Amount ?? "").replace(/[^0-9]/g, "");
+          if (amountRaw) {
+            const formatted = amountRaw.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+            setFormData(prev => ({ ...prev, amount: formatted }));
+          }
+          const desc = String(src.description ?? src.Description ?? "").trim();
+          if (desc) setFormData(prev => ({ ...prev, description: desc }));
+          const cat = String(src.category ?? src.Category ?? "").trim();
+          if (cat && Object.values(ExpenseCategory).includes(cat as ExpenseCategory)) {
+            setFormData(prev => ({ ...prev, category: cat as ExpenseCategory }));
+          }
+          const dateRaw = String(src.exDate ?? src.ex_date ?? src.ExDate ?? "").trim();
+          if (dateRaw && dayjs(dateRaw).isValid()) {
+            setFormData(prev => ({ ...prev, ex_date: dayjs(dateRaw).format("YYYY-MM-DD") }));
+          }
+        }
+        setAiModalResult(null);
+      }}
+    />
+  </>
   );
 }
 
@@ -379,13 +553,23 @@ const styles = StyleSheet.create({
   categoryPillTextSelected: {
     color: colors.white,
   },
+  amountRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
   amountInputWrapper: {
+    flex: 1,
     flexDirection: "row",
     alignItems: "center",
     borderRadius: 12,
     paddingHorizontal: 14,
     height: 48,
     backgroundColor: colors.gray200,
+  },
+  currencyToggle: {
+    flex: 0.5,
+    height: 48,
   },
   amountInputContainer: {
     flex: 1,

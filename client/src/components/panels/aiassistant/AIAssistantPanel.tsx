@@ -38,9 +38,17 @@ interface ChecklistData {
 
 interface AIAssistantPanelProps {
   publicId: string | null;
+  readOnly?: boolean;
+  initialChecklist?: ChecklistData;
+  compact?: boolean;
 }
 
-export default function AIAssistantPanel({ publicId }: AIAssistantPanelProps) {
+export default function AIAssistantPanel({
+  publicId,
+  readOnly = false,
+  initialChecklist,
+  compact = false,
+}: AIAssistantPanelProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [checklist, setChecklist] = useState<ChecklistData | null>(null);
   const [showRefreshModal, setShowRefreshModal] = useState(false);
@@ -56,6 +64,7 @@ export default function AIAssistantPanel({ publicId }: AIAssistantPanelProps) {
   const [newItemReason, setNewItemReason] = useState("");
 
   const checkExistingChecklist = useCallback(async () => {
+    if (readOnly) return;
     if (!publicId) {
       setChecklist(null);
       return;
@@ -72,15 +81,19 @@ export default function AIAssistantPanel({ publicId }: AIAssistantPanelProps) {
     } catch (_error) {
       setChecklist(null);
     }
-  }, [publicId]);
+  }, [publicId, readOnly]);
 
   useEffect(() => {
+    if (readOnly) {
+      setChecklist(initialChecklist ?? null);
+      return;
+    }
     if (publicId) {
       checkExistingChecklist();
     } else {
       setChecklist(null);
     }
-  }, [publicId, checkExistingChecklist]);
+  }, [publicId, checkExistingChecklist, readOnly, initialChecklist]);
 
   const _handleGenerateChecklist = async () => {
     if (!publicId) return;
@@ -124,7 +137,7 @@ export default function AIAssistantPanel({ publicId }: AIAssistantPanelProps) {
   };
 
   const handleRefresh = () => {
-    setShowRefreshModal(true);
+    void performRefresh();
   };
 
   const performRefresh = async () => {
@@ -286,12 +299,13 @@ export default function AIAssistantPanel({ publicId }: AIAssistantPanelProps) {
 
   // 미리보기 통계 계산
   const getPreviewStats = () => {
-    if (!checklist) return { total: 0, checked: 0 };
+    if (!checklist || !checklist.categories) return { total: 0, checked: 0 };
 
     let total = 0;
     let checked = 0;
 
     Object.values(checklist.categories).forEach(category => {
+      if (!Array.isArray(category)) return;
       category.forEach(item => {
         total++;
         if (item.isChecked) checked++;
@@ -346,17 +360,14 @@ export default function AIAssistantPanel({ publicId }: AIAssistantPanelProps) {
   return (
     <PanelLayout style={{ flex: 1 }}>
       <View style={styles.contentContainer}>
-        {!publicId ? (
+        {!publicId && !readOnly ? (
           <View style={styles.placeholder}>
             <Text style={styles.placeholderText}>여행을 선택해주세요</Text>
           </View>
         ) : (
           <View style={styles.previewContainer}>
-            <View style={styles.headerSection}>
-              <View style={styles.titleContainer}>
-                {/* <GradientText style={styles.headerTitle}>체크리스트</GradientText> */}
-                <Text style={styles.headerTitle}>체크리스트</Text>
-              </View>
+            <View style={[styles.headerSection, compact && styles.headerSectionCompact]}>
+              <Text style={styles.headerTitle}>체크리스트</Text>
               <TouchableOpacity
                 onPress={handleViewAll}
                 style={styles.viewAllButton}
@@ -365,21 +376,36 @@ export default function AIAssistantPanel({ publicId }: AIAssistantPanelProps) {
               </TouchableOpacity>
             </View>
 
-            {/* 작은 통계 버튼 */}
-            <View style={styles.simpleStatsContainer}>
-              <View style={styles.simpleStatButton}>
-                <Text style={styles.simpleStatLabel}>준비 필요</Text>
-                <Text style={styles.simpleStatNumber}>
-                  {stats.total - stats.checked}개
-                </Text>
+            {readOnly ? (
+              <View style={[styles.readOnlyStatWrapper, compact && styles.simpleStatsContainerCompact]}>
+                <View style={[styles.simpleStatButton, compact && styles.simpleStatButtonCompact]}>
+                  <Text style={styles.simpleStatLabel}>준비물</Text>
+                  <View style={styles.statNumberRow}>
+                    <Text style={[styles.simpleStatNumber, compact && styles.simpleStatNumberCompact]}>{stats.total}</Text>
+                    <Text style={styles.statUnit}>개</Text>
+                  </View>
+                </View>
               </View>
-              <View style={styles.simpleStatButton}>
-                <Text style={styles.simpleStatLabel}>준비 됨</Text>
-                <Text style={styles.simpleStatNumber}>{stats.checked}개</Text>
+            ) : (
+              <View style={[styles.simpleStatsContainer, compact && styles.simpleStatsContainerCompact]}>
+                <View style={[styles.simpleStatButton, compact && styles.simpleStatButtonCompact]}>
+                  <Text style={styles.simpleStatLabel}>준비 필요</Text>
+                  <View style={styles.statNumberRow}>
+                    <Text style={[styles.simpleStatNumber, compact && styles.simpleStatNumberCompact]}>
+                      {stats.total - stats.checked}
+                    </Text>
+                    <Text style={styles.statUnit}>개</Text>
+                  </View>
+                </View>
+                <View style={[styles.simpleStatButton, compact && styles.simpleStatButtonCompact]}>
+                  <Text style={styles.simpleStatLabel}>준비 됨</Text>
+                  <View style={styles.statNumberRow}>
+                    <Text style={[styles.simpleStatNumber, compact && styles.simpleStatNumberCompact]}>{stats.checked}</Text>
+                    <Text style={styles.statUnit}>개</Text>
+                  </View>
+                </View>
               </View>
-            </View>
-
-            {/* (리스트 제거) */}
+            )}
           </View>
         )}
       </View>
@@ -389,6 +415,7 @@ export default function AIAssistantPanel({ publicId }: AIAssistantPanelProps) {
         visible={showListViewModal}
         checklist={checklist}
         isLoading={isLoading}
+        readOnly={readOnly}
         onClose={handleCloseListViewModal}
         onRefresh={handleRefresh}
         onToggleItem={handleToggleItem}
@@ -455,19 +482,18 @@ const styles = StyleSheet.create({
   },
   headerSection: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
+    gap: 8,
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.lg,
     paddingBottom: spacing.sm,
   },
-  titleContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.xs,
+  headerSectionCompact: {
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.xs,
   },
   headerTitle: {
-    ...textStyles.h4,
+    ...textStyles.h5,
   },
   headerTitleTransparent: {
     opacity: 0,
@@ -477,43 +503,79 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   viewAllButton: {
-    width: 74,
-    height: 32,
-    borderRadius: 28,
-    backgroundColor: colors.gray200,
+    marginLeft: "auto" as any,
+    height: 30,
+    paddingHorizontal: 12,
+    borderRadius: 999,
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: colors.gray300,
     alignItems: "center",
     justifyContent: "center",
   },
   viewAllText: {
-    ...textStyles.h8,
-    color: colors.black,
+    fontFamily: typography.fontFamily.pretendardSemiBold,
+    fontSize: 12,
+    lineHeight: 18,
+    color: colors.gray900,
   },
   simpleStatsContainer: {
     flexDirection: "row",
     gap: spacing.md,
-    marginTop: spacing.lg, // headerSection과의 간격
+    marginTop: 2,
     marginHorizontal: spacing.lg,
     marginBottom: spacing.lg,
-    flex: 1, // 남은 높이 채우기
+    flex: 1,
     alignItems: "stretch",
   },
+  simpleStatsContainerCompact: {
+    marginBottom: spacing.sm,
+  },
+  readOnlyStatWrapper: {
+    marginTop: 2,
+    marginHorizontal: spacing.lg,
+    marginBottom: spacing.lg,
+    flex: 1,
+  },
   simpleStatButton: {
-    backgroundColor: colors.gray200,
-    borderRadius: radii.md,
+    backgroundColor: "#FAFAFA",
+    borderRadius: 10,
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+    paddingHorizontal: 18,
+    paddingVertical: 16,
+  },
+  simpleStatButtonCompact: {
+    paddingVertical: 8,
   },
   simpleStatLabel: {
-    ...textStyles.h6,
-    color: colors.gray700,
-    marginLeft: 16,
+    fontFamily: typography.fontFamily.pretendardRegular,
+    fontSize: 13,
+    lineHeight: 20,
+    color: "#6C6C6C",
+  },
+  statNumberRow: {
+    flexDirection: "row",
+    alignItems: "baseline",
+    gap: 2,
   },
   simpleStatNumber: {
-    ...textStyles.h6,
-    color: colors.black,
-    marginRight: 16,
+    fontFamily: typography.fontFamily.poppinsSemiBold,
+    fontSize: 20,
+    lineHeight: 24,
+    color: colors.gray900,
+  },
+  simpleStatNumberCompact: {
+    fontSize: 15,
+    lineHeight: 18,
+  },
+  statUnit: {
+    fontFamily: typography.fontFamily.pretendardSemiBold,
+    fontSize: 13,
+    lineHeight: 20,
+    color: colors.gray900,
   },
   // 간단히 보기 카테고리 섹션
   previewCategorySection: {

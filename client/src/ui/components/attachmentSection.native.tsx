@@ -1,9 +1,17 @@
+import AiAnalyzeErrorBanner from "@/components/AiAnalyzeErrorBanner";
 import { useMe } from "@/hooks/useMe";
 import type { AttachmentSectionProps } from "@/ui/components/attachmentSection.types";
+import {
+  type AiAttachmentAnalyzeSelection,
+  pendingAiFileKey,
+} from "@/ui/components/attachmentSection.types";
 import { colors } from "@/ui/tokens/colors";
-import { textStyles } from "@/ui/tokens/typography";
+import { radii } from "@/ui/tokens/radii";
+import { textStyles, typography } from "@/ui/tokens/typography";
 import { guestPrompt } from "@/utils/guestPrompt";
+import { LinearGradient } from "expo-linear-gradient";
 import { useState } from "react";
+import CheckWhiteIcon from "../../../assets/check_white.svg";
 import {
   ActivityIndicator,
   Alert,
@@ -20,6 +28,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import AttachDelIcon from "../../../assets/attach_del.svg";
 import AttachmentDocIcon from "../../../assets/mobile_attachment_document.svg";
 import AttachmentImageIcon from "../../../assets/mobile_attachment_image.svg";
 import CameraIcon from "../../../assets/mobile_camera.svg";
@@ -30,8 +39,8 @@ export type { AttachmentSectionProps } from "@/ui/components/attachmentSection.t
 
 function getAttachmentKindLabel(mimeType: string | undefined): string {
   const m = mimeType ?? "";
-  if (m === "application/pdf") return "PDF 문서";
-  if (m.startsWith("image/")) return "이미지 파일";
+  if (m === "application/pdf") return "문서 선택";
+  if (m.startsWith("image/")) return "이미지 선택";
   return "파일";
 }
 
@@ -63,6 +72,14 @@ export default function AttachmentSection({
   disabled = false,
   hideAddControls = false,
   isGuest: isGuestProp,
+  onAiAnalyzePress,
+  isAiAnalyzing = false,
+  onCancelAiAnalyze,
+  analyzeError,
+  onRetryAnalyze,
+  isAiAnalyzeSuccess = false,
+  isAiAnalyzePartial = false,
+  analyzePartialMessage,
 }: AttachmentSectionProps) {
   const { data: me } = useMe();
   const isGuest = isGuestProp ?? me?.isGuest === true;
@@ -71,6 +88,11 @@ export default function AttachmentSection({
   const { width: windowWidth, height: windowHeight } = useWindowDimensions();
   const [previewImageUri, setPreviewImageUri] = useState<string | null>(null);
   const [isPreviewImageLoading, setIsPreviewImageLoading] = useState(false);
+  const [selectedAiTarget, setSelectedAiTarget] =
+    useState<AiAttachmentAnalyzeSelection | null>(null);
+
+  const totalFiles = existing.length + pendingFiles.length;
+  const showAiRadio = !!onAiAnalyzePress && totalFiles > 1;
 
   const handleOpenImage = (uri: string) => {
     if (!uri) return;
@@ -108,7 +130,7 @@ export default function AttachmentSection({
     const showPicker = () => {
       Alert.alert("파일 추가", "추가할 파일 유형을 선택하세요.", [
         { text: "사진", onPress: onPickImage },
-        { text: "PDF 문서", onPress: onPickDocument },
+        { text: "문서 선택", onPress: onPickDocument },
         { text: "취소", style: "cancel" },
       ]);
     };
@@ -117,6 +139,28 @@ export default function AttachmentSection({
       setTimeout(showPicker, 0);
     } else {
       showPicker();
+    }
+  };
+
+  const handleAiAnalyzePress = () => {
+    if (!onAiAnalyzePress) return;
+    if (totalFiles === 0) return;
+
+    const getTarget = (): AiAttachmentAnalyzeSelection | null => {
+      if (selectedAiTarget) return selectedAiTarget;
+      if (pendingFiles.length > 0)
+        return { kind: "pending", key: pendingAiFileKey(pendingFiles[0]) };
+      if (existing.length > 0) return { kind: "existing", id: existing[0].id };
+      return null;
+    };
+
+    const target = getTarget();
+    if (!target) return;
+
+    if (Platform.OS === "ios") {
+      setTimeout(() => onAiAnalyzePress(target), 0);
+    } else {
+      onAiAnalyzePress(target);
     }
   };
 
@@ -136,7 +180,18 @@ export default function AttachmentSection({
     subtitle: string,
     onRemove?: () => void,
     onOpen?: () => void,
+    aiSelection?: AiAttachmentAnalyzeSelection,
   ) => {
+    const isSelected =
+      showAiRadio &&
+      aiSelection !== undefined &&
+      selectedAiTarget !== null &&
+      JSON.stringify(selectedAiTarget) === JSON.stringify(aiSelection);
+
+    const handleRowPress = showAiRadio && aiSelection
+      ? () => setSelectedAiTarget(aiSelection)
+      : undefined;
+
     const content = (
       <>
         <View style={styles.fileIconWrap}>
@@ -158,6 +213,18 @@ export default function AttachmentSection({
           </Text>
           <Text style={styles.fileKindLabel}>{subtitle}</Text>
         </View>
+        {onOpen && (
+          <Pressable
+            onPress={onOpen}
+            hitSlop={8}
+            style={({ pressed }) => [
+              styles.openButton,
+              pressed && styles.pressed,
+            ]}
+          >
+            <Text style={styles.openButtonText}>열기</Text>
+          </Pressable>
+        )}
         {onRemove ? (
           <Pressable
             onPress={onRemove}
@@ -168,7 +235,7 @@ export default function AttachmentSection({
               pressed && styles.pressed,
             ]}
           >
-            <DeleteIcon width={20} height={20} color={colors.gray600} />
+            <AttachDelIcon width={20} height={20} />
           </Pressable>
         ) : (
           <View style={styles.removeButton} />
@@ -176,22 +243,18 @@ export default function AttachmentSection({
       </>
     );
 
-    if (onOpen) {
-      return (
-        <Pressable
-          key={key}
-          onPress={onOpen}
-          style={({ pressed }) => [styles.fileRow, pressed && styles.pressed]}
-        >
-          {content}
-        </Pressable>
-      );
-    }
-
     return (
-      <View key={key} style={styles.fileRow}>
+      <Pressable
+        key={key}
+        onPress={handleRowPress}
+        style={({ pressed }) => [
+          styles.fileRow,
+          isSelected && styles.fileRowSelected,
+          pressed && showAiRadio && styles.pressed,
+        ]}
+      >
         {content}
-      </View>
+      </Pressable>
     );
   };
 
@@ -219,12 +282,16 @@ export default function AttachmentSection({
         )}
       </View>
 
+      {showAiRadio && (
+        <Text style={styles.aiSelectHint}>분석할 파일을 1개 선택하세요</Text>
+      )}
+
       {isLoadingExisting && !hasFiles ? (
         <View style={styles.loadingWrap}>
           <ActivityIndicator size="small" color={colors.primary} />
         </View>
       ) : hasFiles ? (
-        <View style={styles.fileList}>
+        <View style={[styles.fileList, isAiAnalyzing && styles.fileListDimmed]}>
           {existing.map(a => {
             let onOpen: (() => void) | undefined;
             if (isPdfMime(a.contentType)) {
@@ -244,6 +311,7 @@ export default function AttachmentSection({
                 .join(" · "),
               onRemoveExisting ? () => handleRemoveExisting(a.id) : undefined,
               onOpen,
+              onAiAnalyzePress ? { kind: "existing" as const, id: a.id } : undefined,
             );
           })}
           {pendingFiles.map((file, index) =>
@@ -253,9 +321,8 @@ export default function AttachmentSection({
               file.mimeType,
               getAttachmentKindLabel(file.mimeType),
               () => handleRemovePending(index),
-              isImageMime(file.mimeType)
-                ? () => handleOpenImage(file.uri)
-                : undefined,
+              isImageMime(file.mimeType) ? () => handleOpenImage(file.uri) : undefined,
+              onAiAnalyzePress ? { kind: "pending" as const, key: pendingAiFileKey(file) } : undefined,
             ),
           )}
         </View>
@@ -276,6 +343,67 @@ export default function AttachmentSection({
             </Text>
           </View>
         </Pressable>
+      )}
+
+      {onAiAnalyzePress && hasFiles && (
+        <View style={styles.aiSection}>
+          {isAiAnalyzing ? (
+            <View style={styles.aiAnalyzingRow}>
+              <ActivityIndicator size="small" color={colors.aiInk} />
+              <View style={styles.aiAnalyzingTextCol}>
+                <Text style={styles.aiAnalyzingTitle}>분석 중...</Text>
+                <Text style={styles.aiAnalyzingText}>AI가 첨부 파일 내용을 정리하고 있어요</Text>
+              </View>
+              {onCancelAiAnalyze && (
+                <Pressable
+                  onPress={onCancelAiAnalyze}
+                  hitSlop={8}
+                  style={({ pressed }) => [
+                    styles.aiCancelButton,
+                    pressed && styles.pressed,
+                  ]}
+                >
+                  <Text style={styles.aiCancelText}>취소</Text>
+                </Pressable>
+              )}
+            </View>
+          ) : (
+            <Pressable
+              onPress={handleAiAnalyzePress}
+              disabled={disabled || isUploading}
+              style={({ pressed }) => [pressed && styles.pressed]}
+            >
+              <LinearGradient
+                colors={[...colors.aiGrad] as [string, string]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.aiAnalyzeButton}
+              >
+                <CheckWhiteIcon width={14} height={14} />
+                <Text style={styles.aiAnalyzeButtonText}>AI 분석</Text>
+              </LinearGradient>
+            </Pressable>
+          )}
+          {analyzeError && (
+            <AiAnalyzeErrorBanner
+              message={analyzeError}
+              onRetry={onRetryAnalyze}
+              style={styles.aiErrorBanner}
+            />
+          )}
+          {isAiAnalyzeSuccess && !analyzeError && (
+            <View style={styles.aiSuccessBadge}>
+              <Text style={styles.aiSuccessText}>AI 자동 입력 완료</Text>
+            </View>
+          )}
+          {isAiAnalyzePartial && !analyzeError && (
+            <View style={styles.aiPartialBadge}>
+              <Text style={styles.aiPartialText}>
+                {analyzePartialMessage ?? "일부만 인식됨"}
+              </Text>
+            </View>
+          )}
+        </View>
       )}
 
       <Modal
@@ -433,8 +561,105 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   removeButton: {
-    marginLeft: 8,
+    marginLeft: 4,
     flexShrink: 0,
+  },
+  aiSection: {
+    marginTop: 12,
+    gap: 8,
+  },
+  fileListDimmed: {
+    opacity: 0.6,
+  },
+  aiAnalyzingRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 16,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    backgroundColor: colors.gray200,
+    borderRadius: 10,
+  },
+  aiAnalyzingTextCol: {
+    flex: 1,
+    gap: 2,
+  },
+  aiAnalyzingTitle: {
+    ...textStyles.h8,
+    color: colors.gray900,
+  },
+  aiAnalyzingText: {
+    ...textStyles.body5,
+    color: colors.gray600,
+  },
+  aiCancelButton: {
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    borderRadius: 6,
+    backgroundColor: colors.gray300,
+  },
+  aiCancelText: {
+    ...textStyles.body4,
+    color: colors.gray700,
+  },
+  aiAnalyzeButton: {
+    borderRadius: radii.md,
+    height: 48,
+    alignItems: "center",
+    justifyContent: "center",
+    flexDirection: "row",
+    gap: 8,
+  },
+  aiAnalyzeButtonText: {
+    color: colors.white,
+    fontFamily: typography.fontFamily.pretendardSemiBold,
+    fontSize: 14,
+    lineHeight: 18,
+    letterSpacing: -0.14,
+  },
+  fileRowSelected: {
+    backgroundColor: colors.gray400,
+  },
+  aiSelectHint: {
+    ...textStyles.body4,
+    color: colors.gray600,
+    marginBottom: 8,
+  },
+  openButton: {
+    flexShrink: 0,
+    marginLeft: 8,
+    marginRight: 4,
+    paddingVertical: 4,
+    paddingHorizontal: 4,
+  },
+  openButtonText: {
+    ...textStyles.h8,
+    color: colors.primary,
+  },
+  aiErrorBanner: {
+    marginTop: 4,
+  },
+  aiSuccessBadge: {
+    backgroundColor: "#E6F9F0",
+    borderRadius: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    alignItems: "center",
+  },
+  aiSuccessText: {
+    ...textStyles.body4,
+    color: "#1A8A4A",
+  },
+  aiPartialBadge: {
+    backgroundColor: "#FFF4E5",
+    borderRadius: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    alignItems: "center",
+  },
+  aiPartialText: {
+    ...textStyles.body4,
+    color: "#B85C00",
   },
   previewBackdrop: {
     flex: 1,

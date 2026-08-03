@@ -63,7 +63,9 @@ class ItineraryService:
                 plan_id=itinerary.plan_id, user_id=self.current_user.id
             )
             if not is_shared:
-                raise HTTPException(status_code=403, detail="일정 조회 권한이 없습니다.")
+                raise HTTPException(
+                    status_code=403, detail="일정 조회 권한이 없습니다."
+                )
 
         return ItineraryRead.model_validate(itinerary)
 
@@ -74,7 +76,9 @@ class ItineraryService:
         if not plan_exists:
             raise HTTPException(status_code=404, detail="해당 계획을 찾을 수 없습니다.")
         if not has_permission:
-            raise HTTPException(status_code=403, detail="해당 일정 조회 권한이 없습니다.")
+            raise HTTPException(
+                status_code=403, detail="해당 일정 조회 권한이 없습니다."
+            )
 
         itineraries = await self.itinerary_repository.find_all_by_plan(plan_id=plan_id)
         itineraries_list = [
@@ -96,11 +100,16 @@ class ItineraryService:
                 plan_id=itinerary.plan_id, user_id=self.current_user.id
             )
             if not is_editor:
-                raise HTTPException(status_code=403, detail="일정 수정 권한이 없습니다.")
+                raise HTTPException(
+                    status_code=403, detail="일정 수정 권한이 없습니다."
+                )
 
         # 일정 날짜 변경 여부 확인
         date_changed = False
-        if update_data.itinerary_date and update_data.itinerary_date != itinerary.itinerary_date:
+        if (
+            update_data.itinerary_date
+            and update_data.itinerary_date != itinerary.itinerary_date
+        ):
             date_changed = True
 
         if update_data.title:
@@ -144,8 +153,10 @@ class ItineraryService:
                 plan_id=itinerary.plan_id, user_id=self.current_user.id
             )
             if not is_editor:
-                raise HTTPException(status_code=403, detail="일정 수정 권한이 없습니다.")
-        
+                raise HTTPException(
+                    status_code=403, detail="일정 수정 권한이 없습니다."
+                )
+
         await self.expense_repository.soft_delete_by_itinerary_id(
             itinerary_id=itinerary_id
         )

@@ -1,18 +1,18 @@
 import re
+import uuid
 
 from fastapi import HTTPException
-import uuid
 
 from app.attachments.service import delete_r2_objects_by_keys
 from app.auth.deps import CurrentUser
+from app.auth.models import UserAuthInfo
 from app.auth.service import AuthInfoService
 from app.common.schemas import ValidationResult
 from app.plans.repository import PlanRepository
 from app.storage.deps import S3ClientDep
 from app.utils.dependency import dependency
 
-from .models import User, Gender
-from app.auth.models import UserAuthInfo
+from .models import Gender, User
 from .repository import UserRepository
 from .schemas import (
     UserCreate,
@@ -30,7 +30,7 @@ class UserService:
 
     # 닉네임 검증: 한글 1~10자 또는 영문 1~20자, 특수문자 '_', '-', '.' 허용
     _nickname_pattern = re.compile(r"^(?:[가-힣0-9_.-]{1,10}|[A-Za-z0-9_.-]{1,20})$")
-    
+
     async def validate_nickname(
         self, *, nickname: str, except_user_id: int | None = None
     ) -> ValidationResult:
@@ -66,10 +66,13 @@ class UserService:
 
     async def register(self, *, user_data: UserCreate, auth: UserAuthInfo) -> User:
         if user_data.agreed_terms is not True or user_data.agreed_privacy is not True:
-            raise HTTPException(status_code=400, detail="필수 약관(이용약관/개인정보수집·이용)에 동의해야 합니다.")
+            raise HTTPException(
+                status_code=400,
+                detail="필수 약관(이용약관/개인정보수집·이용)에 동의해야 합니다.",
+            )
 
         handle_validate = await self.validate_handle(handle=user_data.handle)
-        
+
         if handle_validate.error:
             raise HTTPException(status_code=400, detail=handle_validate.error)
 
@@ -88,7 +91,9 @@ class UserService:
             is_guest=False,
         )
 
-        created_user = await self.user_repository.create(user_data=normalized, email=auth.verified_email)
+        created_user = await self.user_repository.create(
+            user_data=normalized, email=auth.verified_email
+        )
         if created_user is None:
             raise HTTPException(status_code=400, detail="사용자 생성에 실패했습니다.")
 
@@ -111,7 +116,8 @@ class UserService:
             )
         if not auth.verified_email:
             raise HTTPException(
-                status_code=400, detail="소셜 인증에 이메일 정보가 없습니다. 다른 로그인 수단을 이용해 주세요."
+                status_code=400,
+                detail="소셜 인증에 이메일 정보가 없습니다. 다른 로그인 수단을 이용해 주세요.",
             )
         email = auth.verified_email
         ex = guest_user.id
@@ -139,9 +145,7 @@ class UserService:
             is_guest=False,
         )
 
-        await self.auth_info_service.connect_to_user(
-            auth=auth, user_id=guest_user.id
-        )
+        await self.auth_info_service.connect_to_user(auth=auth, user_id=guest_user.id)
         await self.user_repository.upgrade_guest_in_place(
             user_id=guest_user.id, user_data=normalized, email=email
         )
@@ -175,7 +179,9 @@ class UserService:
             agreed_marketing=False,
         )
 
-        created_user = await self.user_repository.create(user_data=normalized, email=None)
+        created_user = await self.user_repository.create(
+            user_data=normalized, email=None
+        )
         if created_user is None:
             raise HTTPException(status_code=400, detail="사용자 생성에 실패했습니다.")
 
@@ -203,12 +209,16 @@ class UserService:
             raise HTTPException(status_code=400, detail="사용자를 찾을 수 없습니다.")
         return user_profile
 
-    async def update(self, *, current_user: CurrentUser, updated_data: UserUpdate) -> UserRead:
+    async def update(
+        self, *, current_user: CurrentUser, updated_data: UserUpdate
+    ) -> UserRead:
         updated_user = await self.user_repository.update(
             user_id=current_user.id, updated_data=updated_data
         )
         if not updated_user:
-            raise HTTPException(status_code=400, detail="사용자 업데이트에 실패했습니다.")
+            raise HTTPException(
+                status_code=400, detail="사용자 업데이트에 실패했습니다."
+            )
         profile = await self.get_profile(user_id=current_user.id)
         return profile
 
@@ -221,10 +231,14 @@ class UserService:
         if guest is None:
             raise HTTPException(status_code=400, detail="사용자를 찾을 수 없습니다.")
         if not guest.is_guest:
-            raise HTTPException(status_code=400, detail="게스트 계정만 병합할 수 있습니다.")
+            raise HTTPException(
+                status_code=400, detail="게스트 계정만 병합할 수 있습니다."
+            )
         target = await self.user_repository.find_by_id(user_id=target_user_id)
         if target is None or target.is_deleted:
-            raise HTTPException(status_code=400, detail="병합 대상 계정을 찾을 수 없습니다.")
+            raise HTTPException(
+                status_code=400, detail="병합 대상 계정을 찾을 수 없습니다."
+            )
 
         await self.plan_repository.reassign_plans_owner(
             from_owner_id=guest_user_id, to_owner_id=target_user_id
@@ -234,11 +248,15 @@ class UserService:
 
     async def delete_account(self, *, current_user: CurrentUser) -> None:
         user_id = current_user.id
-        plan_ids = await self.plan_repository.find_owned_active_plan_ids(owner_id=user_id)
+        plan_ids = await self.plan_repository.find_owned_active_plan_ids(
+            owner_id=user_id
+        )
         r2_keys: list[str] = []
         for plan_id in plan_ids:
-            successor_id = await self.plan_repository.pick_owner_successor_on_account_delete(
-                plan_id=plan_id
+            successor_id = (
+                await self.plan_repository.pick_owner_successor_on_account_delete(
+                    plan_id=plan_id
+                )
             )
             if successor_id is None:
                 keys = await self.plan_repository.remove(plan_id=plan_id)
@@ -247,7 +265,9 @@ class UserService:
                 await self.plan_repository.transfer_plan_owner_and_drop_shared_row(
                     plan_id=plan_id, new_owner_id=successor_id
                 )
-        await self.plan_repository.revoke_all_shared_memberships_for_user(user_id=user_id)
+        await self.plan_repository.revoke_all_shared_memberships_for_user(
+            user_id=user_id
+        )
         await self.user_repository.delete_user_auth(user_id=user_id)
         await self.user_repository.soft_delete_user(user_id=user_id)
         await delete_r2_objects_by_keys(s3_client=self.s3_client, keys=r2_keys)

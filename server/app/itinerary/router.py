@@ -1,10 +1,10 @@
 from fastapi import status
-# from typing import Any, List, cast
 
+# from typing import Any, List, cast
 from app.core.router import create_router
+
 # from app.ai.service import OpenAIService, ChatMessage, ChatRequest
 # from app.ai.config import ai_settings
-
 from .schemas import ItineraryCreate, ItineraryRead, ItineraryUpdate
 from .service import ItineraryService
 

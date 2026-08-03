@@ -19,7 +19,7 @@ import AttachmentSection from "@/ui/components/attachmentSection";
 import type { AiAttachmentAnalyzeSelection } from "@/ui/components/attachmentSection.types";
 import { pendingAiFileKey } from "@/ui/components/attachmentSection.types";
 import Input from "@/ui/components/input/Input";
-import { CountryPicker, TimePicker } from "@/ui/components/pickers";
+import { CityPicker, CountryPicker, TimePicker } from "@/ui/components/pickers";
 import WarningBanner from "@/ui/components/toast/warning";
 import { colors } from "@/ui/tokens/colors";
 import { radii } from "@/ui/tokens/radii";
@@ -35,6 +35,7 @@ import { handleGuestPromptError } from "@/utils/guestPrompt";
 import dayjs from "dayjs";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  ActivityIndicator,
   Platform,
   Pressable,
   ScrollView,
@@ -43,12 +44,31 @@ import {
   View,
 } from "react-native";
 import CalendarIcon from "../../../../assets/calender.svg";
-import CloseIcon from "../../../../assets/delete_ai.svg";
+import CloseIcon from "../../../../assets/close_sm.svg";
+import PanelTabSwitcher from "../PanelTabSwitcher";
+import { extendPlanIfNeeded } from "@/utils/extendPlanIfNeeded";
+
+function getCountryCityFromSegments(
+  segments:
+    | { startDate: string; endDate: string; country: string; city: string }[]
+    | undefined
+    | null,
+  date: string,
+) {
+  if (!segments || !date) return null;
+  const matches = segments.filter(
+    s => s.startDate <= date && date <= s.endDate,
+  );
+  if (matches.length === 0) return null;
+  const last = matches[matches.length - 1];
+  return { country: last.country, city: last.city };
+}
 
 interface AccommodationItemProps {
   accommodation?: any;
   draft?: any;
   planId: number;
+  planData?: any;
   onSave: (accommodation: any) => void;
   onCancel: () => void;
   onDelete?: (accommodationId: number | string) => void;
@@ -57,11 +77,14 @@ interface AccommodationItemProps {
   readOnly?: boolean;
   onEdit?: () => void;
   onPreviewChange?: (preview: any) => void;
+  activeTab?: "itinerary" | "flight" | "accommodation";
+  onTabChange?: (tab: "itinerary" | "flight" | "accommodation") => void;
   stagedDocumentAnalyze?: StagedDocumentAnalyzePayload | null;
   onConsumeStagedDocumentAnalyze?: () => void;
   routeDocumentAnalyzeSuccess?: (
     res: DocumentUploadAnalyzeResponse,
     carryPendingFiles?: LocalFile[],
+    originEntityType?: string,
   ) => boolean;
   carryoverPendingFiles?: LocalFile[] | null;
   onConsumeCarryoverPendingFiles?: () => void;
@@ -71,6 +94,7 @@ export default function AccommodationItem({
   accommodation,
   draft,
   planId,
+  planData,
   onSave,
   onCancel,
   onDelete,
@@ -78,12 +102,25 @@ export default function AccommodationItem({
   readOnly = false,
   onEdit,
   onPreviewChange,
+  activeTab,
+  onTabChange,
   stagedDocumentAnalyze,
   onConsumeStagedDocumentAnalyze,
   routeDocumentAnalyzeSuccess,
   carryoverPendingFiles,
   onConsumeCarryoverPendingFiles,
 }: AccommodationItemProps) {
+  const segments = planData?.plan?.segments;
+  const isNewAccommodation = !accommodation?.id;
+
+  const initialCheckinDate =
+    accommodation?.checkinDate ||
+    draft?.checkinDate ||
+    dayjs().format("YYYY-MM-DD");
+  const initialAutoFill = isNewAccommodation
+    ? getCountryCityFromSegments(segments, initialCheckinDate)
+    : null;
+
   const formatAmountWithCommas = (digits: string) => {
     if (!digits) return "";
     const normalized = digits.replace(/^0+(?=\d)/, "");
@@ -101,8 +138,8 @@ export default function AccommodationItem({
   const [formData, setFormData] = useState({
     name: accommodation?.name || "",
     place: accommodation?.place || "",
-    country: accommodation?.country || "",
-    city: accommodation?.city || "",
+    country: accommodation?.country || initialAutoFill?.country || "",
+    city: accommodation?.city || initialAutoFill?.city || "",
     checkin_date:
       accommodation?.checkinDate ||
       draft?.checkinDate ||
@@ -124,6 +161,7 @@ export default function AccommodationItem({
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isSubmittingRef = useRef(false);
+
   const [showCheckinDatePicker, setShowCheckinDatePicker] = useState(false);
   const [showCheckoutDatePicker, setShowCheckoutDatePicker] = useState(false);
   const [checkinTimeOpen, setCheckinTimeOpen] = useState(false);
@@ -140,10 +178,21 @@ export default function AccommodationItem({
     useState<DocumentUploadAnalyzeResponse | null>(null);
   const [isAiAnalyzing, setIsAiAnalyzing] = useState(false);
   const [aiAnalyzeInlineError, setAiAnalyzeInlineError] = useState(false);
-  const [aiAnalyzeInlineErrorMessage, setAiAnalyzeInlineErrorMessage] = useState("");
-  const [aiAnalyzeSizeErrorMessage, setAiAnalyzeSizeErrorMessage] = useState("");
-  const [lastAiSelection, setLastAiSelection] = useState<AiAttachmentAnalyzeSelection | null>(null);
+  const [aiAnalyzeInlineErrorMessage, setAiAnalyzeInlineErrorMessage] =
+    useState("");
+  const [aiAnalyzeSizeErrorMessage, setAiAnalyzeSizeErrorMessage] =
+    useState("");
+  const [lastAiSelection, setLastAiSelection] =
+    useState<AiAttachmentAnalyzeSelection | null>(null);
+  const [lastAnalyzeFileName, setLastAnalyzeFileName] = useState<string | null>(
+    null,
+  );
   const lastHandledAiAnalyzeSeqRef = useRef<number | null>(null);
+  const aiAnalyzeCancelledRef = useRef(false);
+
+  const [analyzeOriginEntityType, setAnalyzeOriginEntityType] = useState<
+    string | undefined
+  >(undefined);
 
   useEffect(() => {
     if (!stagedDocumentAnalyze) return;
@@ -152,9 +201,10 @@ export default function AccommodationItem({
       stagedDocumentAnalyze.result.draft?.itemType;
     if (kind !== "accommodation") return;
     if (readOnly) return;
-    const { seq, result } = stagedDocumentAnalyze;
+    const { seq, result, originEntityType } = stagedDocumentAnalyze;
     if (lastHandledAiAnalyzeSeqRef.current === seq) return;
     lastHandledAiAnalyzeSeqRef.current = seq;
+    setAnalyzeOriginEntityType(originEntityType);
     setAiAnalyzeResult(result);
     setAiAnalyzeModalVisible(true);
   }, [stagedDocumentAnalyze, readOnly]);
@@ -167,12 +217,17 @@ export default function AccommodationItem({
 
   useEffect(() => {
     if (accommodation) {
+      const checkinDate =
+        accommodation.checkinDate || dayjs().format("YYYY-MM-DD");
+      const segmentFill = !accommodation.id
+        ? getCountryCityFromSegments(segments, checkinDate)
+        : null;
       setFormData({
         name: accommodation.name || "",
         place: accommodation.place || "",
-        country: accommodation.country || "",
-        city: accommodation.city || "",
-        checkin_date: accommodation.checkinDate || dayjs().format("YYYY-MM-DD"),
+        country: accommodation.country || segmentFill?.country || "",
+        city: accommodation.city || segmentFill?.city || "",
+        checkin_date: checkinDate,
         checkout_date:
           accommodation.checkoutDate ||
           dayjs().add(1, "day").format("YYYY-MM-DD"),
@@ -191,6 +246,20 @@ export default function AccommodationItem({
       }));
     }
   }, [accommodation]);
+
+  useEffect(() => {
+    if (isNewAccommodation && segments) {
+      setFormData(prev => {
+        if (prev.country || prev.city) return prev;
+        const autoFill = getCountryCityFromSegments(
+          segments,
+          prev.checkin_date,
+        );
+        if (!autoFill) return prev;
+        return { ...prev, country: autoFill.country, city: autoFill.city };
+      });
+    }
+  }, [segments, accommodation]);
 
   const [countryOpen, setCountryOpen] = useState(false);
   useEffect(() => {
@@ -343,7 +412,7 @@ export default function AccommodationItem({
     !readOnly ||
     (readOnly &&
       accommodationAttachmentEntityId != null &&
-      (isLoadingAttachments || existingAttachments.length > 0));
+      existingAttachments.length > 0);
 
   const handleSave = async () => {
     if (isSubmittingRef.current) {
@@ -368,6 +437,12 @@ export default function AccommodationItem({
     const newCheckout = dayjs(
       `${formData.checkout_date} ${formData.checkout_time}`,
     );
+
+    if (newCheckout.isSame(newCheckin) || newCheckout.isBefore(newCheckin)) {
+      setWarningMessage("체크아웃은 체크인보다 늦어야 해요.");
+      setShowWarning(true);
+      return;
+    }
 
     for (const existingAccommodation of existingAccommodations) {
       if (accommodation && existingAccommodation.id === accommodation.id) {
@@ -445,6 +520,7 @@ export default function AccommodationItem({
             description: formData.name,
           },
         });
+        await extendPlanIfNeeded(planId, planData?.plan, [formData.checkin_date, formData.checkout_date]);
       }
       if (pendingFiles.length > 0 && savedAccommodation?.id) {
         try {
@@ -530,37 +606,44 @@ export default function AccommodationItem({
         selection.kind === "existing"
           ? existingAttachments.find(a => a.id === selection.id)
           : undefined;
-      const oversizeBytes =
-        oversizeFile?.size ?? oversizeExisting?.fileSize;
+      const oversizeBytes = oversizeFile?.size ?? oversizeExisting?.fileSize;
       const oversizeName =
         oversizeFile?.name ?? oversizeExisting?.fileName ?? "파일";
       if (oversizeBytes !== undefined && oversizeBytes > AI_MAX_SIZE) {
-        setAiAnalyzeSizeErrorMessage(`"${oversizeName}"은(는) 10MB를 넘어 분석할 수 없어요.`);
+        setAiAnalyzeSizeErrorMessage(
+          `"${oversizeName}"은(는) 10MB를 넘어 분석할 수 없어요.`,
+        );
         return;
       }
+      aiAnalyzeCancelledRef.current = false;
       setIsAiAnalyzing(true);
       try {
         const payload = await buildAnalyzeUploadPayload(selection, {
           pendingFiles,
           existingAttachments,
         });
+        setLastAnalyzeFileName(payload.filename);
         const res = await analyzeDocumentUpload(payload.file, {
           filename: payload.filename,
         });
+        if (aiAnalyzeCancelledRef.current) return;
         const err = res.error?.trim();
         if (!res.success || err) {
           setLastAiSelection(selection);
           setAiAnalyzeInlineError(true);
           return;
         }
-        if (routeDocumentAnalyzeSuccess?.(res, pendingFiles)) {
+        if (routeDocumentAnalyzeSuccess?.(res, pendingFiles, "숙박")) {
           return;
         }
         setAiAnalyzeResult(res);
         setAiAnalyzeModalVisible(true);
-      } catch (e) {
+      } catch (_e) {
+        if (aiAnalyzeCancelledRef.current) return;
         setLastAiSelection(selection);
-        setAiAnalyzeInlineErrorMessage("분석 서버에 연결하지 못했어요. 잠시 후 다시 시도해 주세요.");
+        setAiAnalyzeInlineErrorMessage(
+          "분석 서버에 연결하지 못했어요. 잠시 후 다시 시도해 주세요.",
+        );
         setAiAnalyzeInlineError(true);
       } finally {
         setIsAiAnalyzing(false);
@@ -577,36 +660,38 @@ export default function AccommodationItem({
   );
 
   return (
-    <>
+    <View style={styles.wrapper}>
+      <View style={styles.titleRow}>
+        <Text style={styles.title}>
+          {readOnly
+            ? "숙박 정보"
+            : accommodation && accommodation.id
+              ? "숙박 수정"
+              : "숙박 추가"}
+        </Text>
+        {readOnly || accommodation ? (
+          <Pressable onPress={onCancel} style={styles.closeButton}>
+            <CloseIcon width={12} height={12} color={colors.gray600} />
+          </Pressable>
+        ) : null}
+      </View>
+      {!readOnly && (
+        <PanelTabSwitcher activeTab={activeTab} onTabChange={onTabChange} />
+      )}
       <ScrollView
-        style={[
-          styles.container,
-          { position: "relative", overflow: "visible" },
-        ]}
+        style={styles.container}
         contentContainerStyle={[
           styles.contentContainer,
           { overflow: "visible" },
         ]}
+        showsVerticalScrollIndicator={false}
       >
-        <View style={styles.titleRow}>
-          <Text style={styles.title}>
-            {readOnly
-              ? "숙박 정보"
-              : accommodation && accommodation.id
-                ? "숙박 수정"
-                : "숙박 추가"}
-          </Text>
-          {readOnly || accommodation ? (
-            <Pressable onPress={onCancel} style={styles.closeButton}>
-              <CloseIcon width={24} height={24} />
-            </Pressable>
-          ) : null}
-        </View>
-
         {/* 기본 정보 섹션 */}
         <View style={styles.formSection}>
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>숙소명*</Text>
+            <Text style={styles.label}>
+              숙소명 <Text style={{ color: colors.warning }}>*</Text>
+            </Text>
             <Input
               variant="filled"
               placeholder={PLACEHOLDERS.accommodation.name}
@@ -655,26 +740,24 @@ export default function AccommodationItem({
               <CountryPicker
                 value={formData.country}
                 onChange={(name: string) =>
-                  !readOnly && setFormData({ ...formData, country: name })
+                  !readOnly && setFormData({ ...formData, country: name, city: "" })
                 }
                 placeholder={PLACEHOLDERS.picker.country}
                 onOpen={() => !readOnly && setCountryOpen(true)}
                 onClose={() => setCountryOpen(false)}
                 disabled={readOnly}
+                useModal
               />
             </View>
             <View style={[styles.inputGroup, styles.halfWidth]}>
               <Text style={styles.label}>도시</Text>
-              <Input
-                variant="filled"
-                placeholder={PLACEHOLDERS.accommodation.city}
+              <CityPicker
                 value={formData.city}
-                onChangeText={text =>
-                  !readOnly && setFormData({ ...formData, city: text })
-                }
-                style={readOnly ? styles.readOnlyInput : styles.input}
-                placeholderTextColor={colors.gray600}
-                editable={!readOnly}
+                onChange={name => !readOnly && setFormData({ ...formData, city: name })}
+                countryKo={formData.country}
+                placeholder={PLACEHOLDERS.accommodation.city}
+                disabled={readOnly}
+                useModal
               />
             </View>
           </View>
@@ -714,7 +797,9 @@ export default function AccommodationItem({
                 { position: "relative" },
               ]}
             >
-              <Text style={styles.label}>체크인 날짜</Text>
+              <Text style={styles.label}>
+                체크인 날짜 <Text style={{ color: colors.warning }}>*</Text>
+              </Text>
               <Pressable
                 style={
                   readOnly
@@ -751,12 +836,21 @@ export default function AccommodationItem({
                   visible={true}
                   selectedDate={formData.checkin_date}
                   onDayPress={day => {
-                    setFormData({ ...formData, checkin_date: day.dateString });
+                    const autoFill = !accommodation?.id
+                      ? getCountryCityFromSegments(segments, day.dateString)
+                      : null;
+                    setFormData({
+                      ...formData,
+                      checkin_date: day.dateString,
+                      ...(autoFill
+                        ? { country: autoFill.country, city: autoFill.city }
+                        : {}),
+                    });
                     setShowCheckinDatePicker(false);
                   }}
                   onClose={() => setShowCheckinDatePicker(false)}
                   style={styles.calendarPopup}
-                  minDate={dayjs().format("YYYY-MM-DD")}
+                  minDate={undefined}
                   hideButtons={true}
                   autoCloseOnSelect={true}
                 />
@@ -769,7 +863,9 @@ export default function AccommodationItem({
                 { position: "relative" },
               ]}
             >
-              <Text style={styles.label}>체크인 시간</Text>
+              <Text style={styles.label}>
+                체크인 시간 <Text style={{ color: colors.warning }}>*</Text>
+              </Text>
               <TimePicker
                 value={formData.checkin_time}
                 onChange={time =>
@@ -784,6 +880,7 @@ export default function AccommodationItem({
                   }
                 }}
                 onClose={() => setCheckinTimeOpen(false)}
+                popupAlign="right"
                 style={
                   readOnly
                     ? {
@@ -818,7 +915,9 @@ export default function AccommodationItem({
                 { position: "relative" },
               ]}
             >
-              <Text style={styles.label}>체크아웃 날짜</Text>
+              <Text style={styles.label}>
+                체크아웃 날짜 <Text style={{ color: colors.warning }}>*</Text>
+              </Text>
               <Pressable
                 style={
                   readOnly
@@ -873,7 +972,9 @@ export default function AccommodationItem({
                 { position: "relative" },
               ]}
             >
-              <Text style={styles.label}>체크아웃 시간</Text>
+              <Text style={styles.label}>
+                체크아웃 시간 <Text style={{ color: colors.warning }}>*</Text>
+              </Text>
               <TimePicker
                 value={formData.checkout_time}
                 onChange={time =>
@@ -888,6 +989,7 @@ export default function AccommodationItem({
                   }
                 }}
                 onClose={() => setCheckoutTimeOpen(false)}
+                popupAlign="right"
                 style={
                   readOnly
                     ? {
@@ -935,7 +1037,6 @@ export default function AccommodationItem({
           {showAttachmentSection && (
             <AttachmentSection
               style={styles.attachmentSection}
-              showTopDivider
               pendingFiles={readOnly ? [] : pendingFiles}
               onPickImage={appendImage}
               onPickDocument={appendDocument}
@@ -951,9 +1052,7 @@ export default function AccommodationItem({
                   ? handleRemoveExistingAttachment
                   : undefined
               }
-              isLoadingExisting={
-                accommodationAttachmentEntityId != null && isLoadingAttachments
-              }
+              isLoadingExisting={false}
               isUploading={isUploading}
               disabled={readOnly || isSubmitting}
               hideAddControls={readOnly}
@@ -963,6 +1062,10 @@ export default function AccommodationItem({
                   : undefined
               }
               isAiAnalyzing={isAiAnalyzing}
+              onCancelAiAnalyze={() => {
+                aiAnalyzeCancelledRef.current = true;
+                setIsAiAnalyzing(false);
+              }}
             />
           )}
           {aiAnalyzeInlineError && lastAiSelection && (
@@ -990,19 +1093,26 @@ export default function AccommodationItem({
             >
               <Pressable
                 style={styles.deleteButton}
-                onPress={accommodation.id ? handleDelete : onCancel}
+                onPress={accommodation?.id ? handleDelete : onCancel}
                 disabled={isSubmitting}
               >
                 <Text style={styles.deleteButtonText}>
-                  {accommodation.id ? "삭제" : "취소"}
+                  {accommodation?.id ? "삭제" : "취소"}
                 </Text>
               </Pressable>
               <Pressable
                 style={styles.saveButton}
                 onPress={handleSave}
-                disabled={isSubmitting}
+                disabled={isSubmitting || isUploading}
               >
-                <Text style={styles.saveButtonText}>저장</Text>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                  {(isSubmitting || isUploading) && (
+                    <ActivityIndicator size="small" color="white" />
+                  )}
+                  <Text style={styles.saveButtonText}>
+                    {isSubmitting || isUploading ? "저장 중..." : "저장"}
+                  </Text>
+                </View>
               </Pressable>
             </View>
           ) : (
@@ -1037,6 +1147,7 @@ export default function AccommodationItem({
       <AiDocumentAnalyzeModal
         visible={aiAnalyzeModalVisible}
         analyzeResult={aiAnalyzeResult}
+        analyzeFileName={lastAnalyzeFileName ?? undefined}
         onApply={applyAiAnalyzeDraftToForm}
         onClose={() => {
           setAiAnalyzeModalVisible(false);
@@ -1044,31 +1155,41 @@ export default function AccommodationItem({
           onConsumeStagedDocumentAnalyze?.();
         }}
         entityTypeLabel="숙박"
+        originEntityType={analyzeOriginEntityType}
       />
-    </>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  wrapper: {
+    flex: 1,
+  },
   container: {
     flex: 1,
     backgroundColor: colors.white,
   },
   contentContainer: {
-    padding: spacing.xl,
+    paddingHorizontal: spacing.xl,
+    paddingBottom: spacing.xl,
     gap: spacing.xl,
   },
   titleRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: spacing.xl,
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.xl,
+    paddingBottom: spacing.md,
   },
   title: {
     ...textStyles.h5,
   },
   closeButton: {
-    padding: spacing.xs,
+    width: 26,
+    height: 26,
+    borderRadius: radii.pill,
+    backgroundColor: colors.gray200,
     justifyContent: "center",
     alignItems: "center",
   },

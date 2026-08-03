@@ -39,6 +39,20 @@ interface AuthProviderProps {
   children: ReactNode;
 }
 
+const WEB_LOGIN_HINT_KEY = "ottripIsLoggedIn";
+
+const setWebLoginHint = () => {
+  if (typeof window !== "undefined") {
+    try { window.localStorage.setItem(WEB_LOGIN_HINT_KEY, "1"); } catch {}
+  }
+};
+
+const clearWebLoginHint = () => {
+  if (typeof window !== "undefined") {
+    try { window.localStorage.removeItem(WEB_LOGIN_HINT_KEY); } catch {}
+  }
+};
+
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -67,6 +81,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       if (Platform.OS === "web") {
         const _tokenData = await authApi.refreshToken("");
+        setWebLoginHint();
         setIsAuthenticated(true);
       } else {
         const refreshToken = await tokenStores.refreshToken.get();
@@ -92,6 +107,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         } catch {
           /* noop */
         }
+      }
+      if (Platform.OS === "web") {
+        setWebLoginHint();
       }
       queryClient.removeQueries({ queryKey: ["me"] });
       queryClient.invalidateQueries({ queryKey: ["plans"] });
@@ -128,6 +146,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setIsAuthenticated(false);
     setUser(null);
     if (Platform.OS === "web" && typeof window !== "undefined") {
+      clearWebLoginHint();
       try {
         window.localStorage.removeItem("postLoginRedirect");
       } catch {}
@@ -139,37 +158,59 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   useEffect(() => {
     const checkAuthStatus = async () => {
-      try {
-        if (Platform.OS === "web") {
-          try {
-            const isLoggedIn = await authApi.checkLoginStatus();
-            if (isLoggedIn) {
-              setIsAuthenticated(true);
-            }
-          } catch (_error: any) {
-            setIsAuthenticated(false);
-          }
-        } else {
-          const accessToken = await tokenStores.accessToken.get();
+      if (Platform.OS === "web") {
+        const hasHint =
+          typeof window !== "undefined" &&
+          window.localStorage.getItem(WEB_LOGIN_HINT_KEY) === "1";
 
-          if (accessToken && !isTokenExpiringSoon(accessToken, 0)) {
-            // accessToken 유효 → 바로 인증 처리
+        if (hasHint) {
+          setIsAuthenticated(true);
+          setIsLoading(false);
+          authApi.checkLoginStatus().then(isLoggedIn => {
+            if (!isLoggedIn) {
+              clearWebLoginHint();
+              setIsAuthenticated(false);
+            }
+          }).catch(() => {
+            clearWebLoginHint();
+            setIsAuthenticated(false);
+          });
+          return;
+        }
+
+        try {
+          const isLoggedIn = await authApi.checkLoginStatus();
+          if (isLoggedIn) {
+            setWebLoginHint();
             setIsAuthenticated(true);
           } else {
-            // accessToken 없거나 만료 → refreshToken으로 복구 시도
-            const storedRefreshToken = await tokenStores.refreshToken.get();
-            if (storedRefreshToken) {
-              try {
-                const tokenData =
-                  await authApi.refreshToken(storedRefreshToken);
-                await tokenStores.setAll({
-                  accessToken: tokenData.accessToken,
-                  refreshToken: tokenData.refreshToken,
-                });
-                setIsAuthenticated(true);
-              } catch {
-                await tokenStores.clearAll();
-              }
+            setIsAuthenticated(false);
+          }
+        } catch {
+          setIsAuthenticated(false);
+        } finally {
+          setIsLoading(false);
+        }
+        return;
+      }
+
+      try {
+        const accessToken = await tokenStores.accessToken.get();
+
+        if (accessToken && !isTokenExpiringSoon(accessToken, 0)) {
+          setIsAuthenticated(true);
+        } else {
+          const storedRefreshToken = await tokenStores.refreshToken.get();
+          if (storedRefreshToken) {
+            try {
+              const tokenData = await authApi.refreshToken(storedRefreshToken);
+              await tokenStores.setAll({
+                accessToken: tokenData.accessToken,
+                refreshToken: tokenData.refreshToken,
+              });
+              setIsAuthenticated(true);
+            } catch {
+              await tokenStores.clearAll();
             }
           }
         }

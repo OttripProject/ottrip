@@ -1,7 +1,9 @@
 import AddScheduleWithAiModal, {
   type Message as AiMessage,
-  AI_INTRO,
+  AI_INTRO_MESSAGE,
 } from "@/components/modals/AddScheduleWithAiModal";
+import AddScheduleWithFileModal from "@/components/modals/AddScheduleWithFileModal";
+import ExportPlanModal from "@/components/modals/ExportPlanModal";
 import PlanSelectRequiredModal from "@/components/modals/PlanSelectRequiredModal";
 import ResultModal from "@/components/modals/ResultModal";
 import SharePlanModal from "@/components/modals/SharePlanModal";
@@ -10,6 +12,7 @@ import BaseCalendar from "@/components/popup/calendar/BaseCalendar";
 import { PLACEHOLDERS } from "@/constants/placeholders";
 import { useMe } from "@/hooks/useMe";
 import { useTripForm } from "@/hooks/useTripForm";
+import { accommodationsApi } from "@/services/accommodations";
 import { flightsApi } from "@/services/flights";
 import { itinerariesApi } from "@/services/itineraries";
 import { plansApi } from "@/services/plans";
@@ -20,10 +23,11 @@ import Input from "@/ui/components/input/Input";
 import { radii } from "@/ui/tokens";
 import { colors } from "@/ui/tokens/colors";
 import { spacing } from "@/ui/tokens/spacing";
-import { textStyles } from "@/ui/tokens/typography";
+import { textStyles, typography } from "@/ui/tokens/typography";
 import { guestPrompt } from "@/utils/guestPrompt";
 import dayjs from "dayjs";
 import ko from "dayjs/locale/ko";
+import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
@@ -34,25 +38,30 @@ import {
   Text,
   TouchableOpacity,
   View,
+  useWindowDimensions,
 } from "react-native";
 import { Calendar as BigCalendar } from "react-native-big-calendar";
 import TripSelector from "../selector/TripSelector";
 import PanelLayout from "./PanelLayout";
 
-import AccommodationIcon from "../../../assets/accomodation.svg";
+import { Tooltip } from "@/ui/components/Tooltip";
 import AirplaneIcon from "../../../assets/airplane.svg";
 import CalenderIcon from "../../../assets/calender.svg";
+import ExportPlanIcon from "../../../assets/export_plan.svg";
+import ImportFileIcon from "../../../assets/import_file.svg";
 import LeftArrowIcon from "../../../assets/left_arrow.svg";
-import MemoIcon from "../../../assets/memo.svg";
+import MemoIcon from "../../../assets/memo_note.svg";
 import LightningIcon from "../../../assets/mobile_lightning.svg";
 import RightArrowIcon from "../../../assets/right_arrow.svg";
-import ShareIcon from "../../../assets/share.svg";
+import ShareIcon from "../../../assets/share_nodes.svg";
 import TodayIcon from "../../../assets/today.svg";
-import WeekBarAccommodationIcon from "../../../assets/week_bar_accommodation.svg";
-import WeekBarAirplaneIcon from "../../../assets/week_bar_airplane.svg";
+import AccommodationIcon from "../../../assets/week_bar_accommodation.svg";
 import WeekBarLocationIcon from "../../../assets/week_bar_location.svg";
 import WeekBarTimeIcon from "../../../assets/week_bar_time.svg";
 import XIcon from "../../../assets/x.svg";
+import UploadIcon from "../../../assets/upload_tray.svg";
+import { extendPlanIfNeeded } from "@/utils/extendPlanIfNeeded";
+import { collectPlanItemDates, shrinkPlanIfNeeded } from "@/utils/shrinkPlanIfNeeded";
 
 dayjs.locale(ko);
 
@@ -74,7 +83,7 @@ function toEvent(it: Itinerary): any {
 
   const normalizedStartTime = normalizeTime(it.startTime);
   let normalizedEndTime = normalizeTime(it.endTime);
-  const locationText = it.location || it.city || "";
+  const locationText = it.location || "";
 
   if (normalizedEndTime === "23:59" || it.endTime?.startsWith("23:59:")) {
     normalizedEndTime = "24:00";
@@ -96,6 +105,7 @@ function toEvent(it: Itinerary): any {
     normalizedStartTime,
     normalizedEndTime,
     locationText,
+    startDateStr: it.itineraryDate,
   } as any;
 
   return event;
@@ -133,6 +143,15 @@ function toFlightEvents(flight: any): any[] {
 
     const normalizedStartTime = normalizeTime(departureTime.format("HH:mm"));
 
+    const totalMinutes = dayjs(segment.arrivalTime).diff(
+      departureTime,
+      "minute",
+    );
+    const durationH = Math.floor(totalMinutes / 60);
+    const durationM = totalMinutes % 60;
+    const durationText =
+      durationM > 0 ? `${durationH}h ${durationM}m` : `${durationH}h`;
+
     return {
       id: `flight-${flight.id}-${segment.id ?? index + 1}`,
       title: `${segment.departureAirport} → ${segment.arrivalAirport}`,
@@ -142,6 +161,9 @@ function toFlightEvents(flight: any): any[] {
       originalData: flight,
       normalizedStartTime,
       normalizedEndTime,
+      flightNumber: segment.flightNumber || null,
+      durationText,
+      startDateStr: departureTime.format("YYYY-MM-DD"),
     } as any;
   });
 }
@@ -159,7 +181,11 @@ interface Props {
   onShowFlightModal?: () => void;
   onRequestNewFlight?: () => void;
   onRequestNewItinerary?: (date?: Date) => void;
-  onShowAccommodationModal?: (accommodation: any, date?: string) => void;
+  onShowAccommodationModal?: (
+    accommodation: any,
+    date?: string,
+    checkoutDate?: string,
+  ) => void;
   onShowItineraryDetail?: (itinerary: Itinerary) => void;
   onShowFlightDetail?: (flight: any) => void;
   onShowAccommodationDetail?: (accommodation: any) => void;
@@ -221,19 +247,30 @@ export default function WeeklySchedulePanel({
   previewAccommodation: externalPreviewAccommodation,
   onPreviewAccommodationChange,
 }: Props) {
+  const queryClient = useQueryClient();
   const [currentWeekStart, setCurrentWeekStart] = useState(
     dayjs().startOf("week").add(1, "day"),
   );
   const [internalSelectedTrip, setInternalSelectedTrip] = useState<any>(null);
+  const { width: windowWidth } = useWindowDimensions();
   const [showMonthPicker, setShowMonthPicker] = useState(false);
+  const calendarBtnRef = useRef<any>(null);
+  const [calendarPopupPos, setCalendarPopupPos] = useState<{
+    top: number;
+    left?: number;
+    right?: number;
+  }>({ top: 40, left: 8 });
   const [selectedDate, setSelectedDate] = useState<string | undefined>(
     undefined,
   );
   const [shareOpen, setShareOpen] = useState(false);
+  const [exportOpen, setExportOpen] = useState(false);
+  const [importFileOpen, setImportFileOpen] = useState(false);
+  const [dropFileOverlay, setDropFileOverlay] = useState(false);
+  const [pendingDropFile, setPendingDropFile] = useState<File | null>(null);
+  const panelRef = useRef<View>(null);
   const [aiChatOpen, setAiChatOpen] = useState(false);
-  const [aiMessages, setAiMessages] = useState<AiMessage[]>([
-    { role: "ai", text: AI_INTRO },
-  ]);
+  const [aiMessages, setAiMessages] = useState<AiMessage[]>([AI_INTRO_MESSAGE]);
   const [memoOpen, setMemoOpen] = useState(false);
   const [memoDraft, setMemoDraft] = useState("");
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
@@ -273,6 +310,28 @@ export default function WeeklySchedulePanel({
     }
   }, [externalPreviewAccommodation]);
 
+  useEffect(() => {
+    if (!showMonthPicker || !calendarBtnRef.current) return;
+    calendarBtnRef.current.measure(
+      (
+        _x: number,
+        _y: number,
+        _width: number,
+        _height: number,
+        pageX: number,
+        _pageY: number,
+      ) => {
+        const popupWidth = 276;
+        const overflows = pageX + 8 + popupWidth > windowWidth;
+        if (overflows) {
+          setCalendarPopupPos({ top: 40, right: 0 });
+        } else {
+          setCalendarPopupPos({ top: 40, left: 8 });
+        }
+      },
+    );
+  }, [showMonthPicker, windowWidth]);
+
   const [eventHeights, setEventHeights] = useState<Record<string, number>>({});
 
   const [draggingEvent, setDraggingEvent] = useState<{
@@ -308,6 +367,48 @@ export default function WeeklySchedulePanel({
   } | null>(null);
 
   const [hasOverlap, setHasOverlap] = useState(false);
+
+  const [selectedAccommodationId, setSelectedAccommodationId] = useState<
+    number | null
+  >(null);
+  const [accDragState, setAccDragState] = useState<{
+    id: number;
+    originalCheckinDate: string;
+    originalCheckoutDate: string;
+    checkinTime: string;
+    checkoutTime: string;
+    name: string;
+    targetDate: string | null;
+  } | null>(null);
+  const accDragRafRef = useRef<number | null>(null);
+  const accDragCalendarRectRef = useRef<DOMRect | null>(null);
+  const accDragTargetDateRef = useRef<string | null>(null);
+  const accDragPendingRef = useRef<{
+    id: number;
+    originalCheckinDate: string;
+    originalCheckoutDate: string;
+    checkinTime: string;
+    checkoutTime: string;
+    name: string;
+    startX: number;
+    startY: number;
+  } | null>(null);
+
+  const [accCreateDragState, setAccCreateDragState] = useState<{
+    startDate: string;
+    endDate: string;
+  } | null>(null);
+  const accCreateDragPendingRef = useRef<{
+    date: string;
+    startX: number;
+  } | null>(null);
+  const accCreateDragActiveRef = useRef<{
+    startDate: string;
+    endDate: string;
+  } | null>(null);
+  const accCreateDragOccurredRef = useRef(false);
+  const accCreateRowRef = useRef<any>(null);
+  const accCreateRowRectRef = useRef<DOMRect | null>(null);
 
   const calendarWrapperRef = useRef<View>(null);
   const [calendarLayout, setCalendarLayout] = useState({
@@ -843,13 +944,27 @@ export default function WeeklySchedulePanel({
           });
 
           if (draggingEvent.type === "itinerary" && itineraryId) {
+            const newDate = dayjs(newStart).format("YYYY-MM-DD");
             itinerariesApi
               .updateItinerary(itineraryId, {
-                itineraryDate: dayjs(newStart).format("YYYY-MM-DD"),
+                itineraryDate: newDate,
                 startTime: dayjs(newStart).format("HH:mm"),
                 endTime: dayjs(newEnd).format("HH:mm"),
               })
-              .then(() => {
+              .then(async () => {
+                await extendPlanDateIfNeeded(newDate);
+                const updatedItineraries = itineraries.map(it =>
+                  it.id === itineraryId ? { ...it, itineraryDate: newDate } : it,
+                );
+                const plan = planData?.plan;
+                if (plan?.id) {
+                  await shrinkPlanIfNeeded(
+                    plan.id,
+                    plan,
+                    collectPlanItemDates(updatedItineraries, flights, planData?.accommodations ?? []),
+                  ).catch(() => null);
+                  queryClient.invalidateQueries({ queryKey: ["plans"] });
+                }
                 if (planData?.refreshItineraries) {
                   planData.refreshItineraries().catch((_err: any) => {});
                 } else if (onPlansRefresh) {
@@ -882,6 +997,7 @@ export default function WeeklySchedulePanel({
             flightsApi
               .updateFlight(flightId, {
                 segments: updatedSegments.map((seg: any) => ({
+                  id: seg.id ?? undefined,
                   airline: seg.airline || null,
                   flightNumber: seg.flightNumber || null,
                   departureAirport: seg.departureAirport,
@@ -894,7 +1010,30 @@ export default function WeeklySchedulePanel({
                   terminal: seg.terminal || null,
                 })),
               })
-              .then(() => {
+              .then(async () => {
+                const newDepDate = dayjs(newStart).format("YYYY-MM-DD");
+                const newArrDate = dayjs(newEnd).format("YYYY-MM-DD");
+                await extendPlanDateIfNeeded(newDepDate, newArrDate);
+                const updatedFlights = flights.map((f: any) => {
+                  if (f.id !== flightId) return f;
+                  return {
+                    ...f,
+                    flightSegments: f.flightSegments?.map((seg: any, idx: number) =>
+                      idx === segmentIndex
+                        ? { ...seg, departureTime: dayjs(newStart).toISOString(), arrivalTime: dayjs(newEnd).toISOString() }
+                        : seg,
+                    ),
+                  };
+                });
+                const plan = planData?.plan;
+                if (plan?.id) {
+                  await shrinkPlanIfNeeded(
+                    plan.id,
+                    plan,
+                    collectPlanItemDates(itineraries, updatedFlights, planData?.accommodations ?? []),
+                  ).catch(() => null);
+                  queryClient.invalidateQueries({ queryKey: ["plans"] });
+                }
                 if (planData?.refreshFlights) {
                   planData.refreshFlights().catch((_err: any) => {});
                 } else if (onPlansRefresh) {
@@ -947,6 +1086,228 @@ export default function WeeklySchedulePanel({
   const _plans = externalPlans;
   const trips = externalTrips;
   const planData = externalPlanData;
+
+  const extendPlanDateIfNeeded = async (...dates: string[]) => {
+    const plan = planData?.plan;
+    if (!plan?.id) return;
+    await extendPlanIfNeeded(plan.id, plan, dates).catch(() => {});
+    queryClient.invalidateQueries({ queryKey: ["plans"] });
+  };
+
+  useEffect(() => {
+    if (Platform.OS !== "web" || !panelRef.current) return;
+    const el = panelRef.current as unknown as HTMLElement;
+    const isFileDrag = (e: DragEvent) => e.dataTransfer?.types.includes("Files") ?? false;
+    const onDragEnter = (e: DragEvent) => { if (isFileDrag(e)) { e.preventDefault(); setDropFileOverlay(true); } };
+    const onDragOver = (e: DragEvent) => { if (isFileDrag(e)) e.preventDefault(); };
+    const onDragLeave = (e: DragEvent) => { if (!el.contains(e.relatedTarget as Node)) setDropFileOverlay(false); };
+    const onDrop = (e: DragEvent) => {
+      e.preventDefault();
+      setDropFileOverlay(false);
+      const file = e.dataTransfer?.files[0];
+      if (!file) return;
+      setPendingDropFile(file);
+      setImportFileOpen(true);
+    };
+    el.addEventListener("dragenter", onDragEnter);
+    el.addEventListener("dragover", onDragOver);
+    el.addEventListener("dragleave", onDragLeave);
+    el.addEventListener("drop", onDrop);
+    return () => {
+      el.removeEventListener("dragenter", onDragEnter);
+      el.removeEventListener("dragover", onDragOver);
+      el.removeEventListener("dragleave", onDragLeave);
+      el.removeEventListener("drop", onDrop);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (Platform.OS !== "web") return;
+    const onMove = (e: MouseEvent) => {
+      const p = accDragPendingRef.current;
+      if (!p) return;
+      if (Math.hypot(e.clientX - p.startX, e.clientY - p.startY) > 5) {
+        accDragPendingRef.current = null;
+        setAccDragState({
+          id: p.id,
+          originalCheckinDate: p.originalCheckinDate,
+          originalCheckoutDate: p.originalCheckoutDate,
+          checkinTime: p.checkinTime,
+          checkoutTime: p.checkoutTime,
+          name: p.name,
+          targetDate: null,
+        });
+      }
+    };
+    const onUp = () => {
+      accDragPendingRef.current = null;
+    };
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+    return () => {
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!accDragState || Platform.OS !== "web") return;
+
+    const getTargetDateFromX = (clientX: number): string | null => {
+      let calendarRect = accDragCalendarRectRef.current;
+      if (!calendarRect) {
+        let el: HTMLElement | null = document.querySelector(
+          '[data-testid="calendar-wrapper"]',
+        );
+        if (!el && calendarWrapperRef.current) {
+          const ref = calendarWrapperRef.current as any;
+          if (ref._nativeNode) el = ref._nativeNode;
+          else if (ref._internalFiberInstanceHandleDEV?.stateNode)
+            el = ref._internalFiberInstanceHandleDEV.stateNode;
+        }
+        if (!el && calendarLayout.width > 0) {
+          el =
+            (Array.from(document.querySelectorAll("div")).find((d: any) => {
+              const r = d.getBoundingClientRect();
+              return (
+                Math.abs(r.width - calendarLayout.width) < 20 && r.width > 500
+              );
+            }) as HTMLElement) || null;
+        }
+        if (el) {
+          calendarRect = el.getBoundingClientRect();
+          accDragCalendarRectRef.current = calendarRect;
+        }
+      }
+      if (!calendarRect) return null;
+      const timeColumnWidth = 60;
+      const calendarWidth = calendarRect.width - timeColumnWidth;
+      const dayWidth = calendarWidth / 7;
+      const relativeX = clientX - calendarRect.left;
+      const clampedX = Math.max(
+        timeColumnWidth,
+        Math.min(calendarRect.width - 1, relativeX),
+      );
+      const dayIndex = Math.max(
+        0,
+        Math.min(6, Math.floor((clampedX - timeColumnWidth) / dayWidth)),
+      );
+      return dayjs(currentWeekStart).add(dayIndex, "day").format("YYYY-MM-DD");
+    };
+
+    const handleMouseMove = (e: MouseEvent) => {
+      if (accDragRafRef.current) cancelAnimationFrame(accDragRafRef.current);
+      accDragRafRef.current = requestAnimationFrame(() => {
+        const targetDate = getTargetDateFromX(e.clientX);
+        accDragTargetDateRef.current = targetDate;
+        setAccDragState(prev => (prev ? { ...prev, targetDate } : null));
+      });
+    };
+
+    const handleMouseUp = async () => {
+      if (accDragRafRef.current) {
+        cancelAnimationFrame(accDragRafRef.current);
+        accDragRafRef.current = null;
+      }
+
+      const targetDate = accDragTargetDateRef.current;
+      const {
+        id,
+        originalCheckinDate,
+        originalCheckoutDate,
+        checkinTime,
+        checkoutTime,
+      } = accDragState;
+
+      accDragTargetDateRef.current = null;
+      accDragCalendarRectRef.current = null;
+      setAccDragState(null);
+
+      if (!targetDate) return;
+
+      const originalCheckin = dayjs(originalCheckinDate);
+      const originalCheckout = dayjs(originalCheckoutDate);
+      const stayDays = originalCheckout.diff(originalCheckin, "day");
+      const newCheckin = dayjs(targetDate);
+      const newCheckout = newCheckin.add(stayDays, "day");
+
+      if (newCheckin.isSame(originalCheckin, "day")) return;
+
+      const newCheckinDt = dayjs(
+        `${newCheckin.format("YYYY-MM-DD")} ${checkinTime}`,
+      );
+      const newCheckoutDt = dayjs(
+        `${newCheckout.format("YYYY-MM-DD")} ${checkoutTime}`,
+      );
+
+      const allAccommodations: any[] = planData?.accommodations ?? [];
+      const hasOverlap = allAccommodations.some((acc: any) => {
+        if (acc.id === id) return false;
+        const otherCheckinDt = dayjs(
+          `${acc.checkinDate} ${acc.checkinTime || "15:00"}`,
+        );
+        const otherCheckoutDt = dayjs(
+          `${acc.checkoutDate} ${acc.checkoutTime || "11:00"}`,
+        );
+        return (
+          newCheckinDt.isBefore(otherCheckoutDt) &&
+          newCheckoutDt.isAfter(otherCheckinDt)
+        );
+      });
+      if (hasOverlap) {
+        Alert.alert("알림", "해당 기간에 이미 다른 숙박이 있습니다.");
+        return;
+      }
+
+      try {
+        await accommodationsApi.updateAccommodation(id, {
+          checkinDate: newCheckin.format("YYYY-MM-DD"),
+          checkoutDate: newCheckout.format("YYYY-MM-DD"),
+          checkinTime,
+          checkoutTime,
+        });
+        const newCheckinDate = newCheckin.format("YYYY-MM-DD");
+        const newCheckoutDate = newCheckout.format("YYYY-MM-DD");
+        await extendPlanDateIfNeeded(newCheckinDate, newCheckoutDate);
+        const updatedAccommodations = (planData?.accommodations ?? []).map((acc: any) =>
+          acc.id === id ? { ...acc, checkinDate: newCheckinDate, checkoutDate: newCheckoutDate } : acc,
+        );
+        const plan = planData?.plan;
+        if (plan?.id) {
+          await shrinkPlanIfNeeded(
+            plan.id,
+            plan,
+            collectPlanItemDates(itineraries, flights, updatedAccommodations),
+          ).catch(() => null);
+          queryClient.invalidateQueries({ queryKey: ["plans"] });
+        }
+        if (planData?.refreshAccommodations) {
+          planData.refreshAccommodations().catch(() => {});
+        } else if (onPlansRefresh) {
+          onPlansRefresh();
+        }
+      } catch {
+        Alert.alert("알림", "숙박 업데이트에 실패했습니다.");
+      }
+    };
+
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp);
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+      if (accDragRafRef.current) {
+        cancelAnimationFrame(accDragRafRef.current);
+        accDragRafRef.current = null;
+      }
+    };
+  }, [
+    accDragState,
+    currentWeekStart,
+    calendarLayout,
+    planData,
+    onPlansRefresh,
+  ]);
 
   useEffect(() => {
     const handler = () => {
@@ -1118,7 +1479,7 @@ export default function WeeklySchedulePanel({
   }, [internalSelectedTrip?.startDate]);
 
   useEffect(() => {
-    setAiMessages([{ role: "ai", text: AI_INTRO }]);
+    setAiMessages([AI_INTRO_MESSAGE]);
   }, [internalSelectedTrip?.id]);
 
   const myRole = useMemo(() => {
@@ -1142,6 +1503,81 @@ export default function WeeklySchedulePanel({
     }
     return days;
   }, [currentWeekStart]);
+
+  useEffect(() => {
+    if (Platform.OS !== "web") return;
+
+    const getDateFromX = (clientX: number): string | null => {
+      const rect = accCreateRowRectRef.current;
+      if (!rect || !weekDays.length) return null;
+      const relX = Math.max(0, Math.min(clientX - rect.left, rect.width - 1));
+      const dayIndex = Math.floor((relX / rect.width) * weekDays.length);
+      return weekDays[Math.max(0, Math.min(dayIndex, weekDays.length - 1))];
+    };
+
+    const onMove = (e: MouseEvent) => {
+      const p = accCreateDragPendingRef.current;
+      if (p) {
+        if (Math.abs(e.clientX - p.startX) > 8) {
+          accCreateDragPendingRef.current = null;
+          const endDate = getDateFromX(e.clientX) ?? p.date;
+          const state = { startDate: p.date, endDate };
+          accCreateDragActiveRef.current = state;
+          setAccCreateDragState(state);
+        }
+        return;
+      }
+      if (accCreateDragActiveRef.current) {
+        const endDate = getDateFromX(e.clientX);
+        if (endDate) {
+          const newState = {
+            startDate: accCreateDragActiveRef.current.startDate,
+            endDate,
+          };
+          accCreateDragActiveRef.current = newState;
+          setAccCreateDragState(newState);
+        }
+      }
+    };
+
+    const onUp = () => {
+      accCreateDragPendingRef.current = null;
+      const state = accCreateDragActiveRef.current;
+      accCreateDragActiveRef.current = null;
+      setAccCreateDragState(null);
+      if (!state) return;
+
+      accCreateDragOccurredRef.current = true;
+
+      const startD = dayjs(state.startDate);
+      const endD = dayjs(state.endDate);
+      const checkinDate = (startD.isAfter(endD) ? endD : startD).format(
+        "YYYY-MM-DD",
+      );
+      const checkoutDate = (startD.isAfter(endD) ? startD : endD).format(
+        "YYYY-MM-DD",
+      );
+
+      const newPreview = {
+        checkinDate,
+        checkoutDate,
+        checkinTime: "15:00",
+        checkoutTime: "11:00",
+        name: "",
+      };
+      setPreviewAccommodation(newPreview);
+      onPreviewAccommodationChange?.(newPreview);
+      extendPlanDateIfNeeded(checkinDate, checkoutDate).catch(() => {});
+      onShowAccommodationModal?.(null, checkinDate, checkoutDate);
+    };
+
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+    return () => {
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+    };
+  }, [weekDays, onShowAccommodationModal, onPreviewAccommodationChange]);
 
   const accommodationsByDate = useMemo(() => {
     if (!planData?.accommodations || !Array.isArray(planData.accommodations)) {
@@ -1242,9 +1678,8 @@ export default function WeeklySchedulePanel({
   const handleAddTrip = async (newTrip: any) => {
     try {
       const createdPlan = await onPlanAdd({
-        title: newTrip.name,
-        startDate: newTrip.startDate,
-        endDate: newTrip.endDate,
+        title: newTrip.name.trim(),
+        segments: newTrip.segments ?? [],
       });
 
       if (createdPlan) {
@@ -1294,8 +1729,7 @@ export default function WeeklySchedulePanel({
       const planId = Number.parseInt(tripId);
       const updatedPlan = await onPlanUpdate(planId, {
         title: updatedTrip.name,
-        startDate: updatedTrip.startDate,
-        endDate: updatedTrip.endDate,
+        segments: updatedTrip.segments ?? [],
       });
 
       if (updatedPlan) {
@@ -1336,8 +1770,20 @@ export default function WeeklySchedulePanel({
 
       if (success) {
         if (internalSelectedTrip && internalSelectedTrip.id === tripId) {
-          setInternalSelectedTrip(null);
-          onPlanSelect?.(null);
+          const today = dayjs().format("YYYY-MM-DD");
+          const remaining = externalTrips.filter((t: any) => t.id !== tripId);
+          const ongoing = remaining.filter(
+            (t: any) => t.startDate <= today && t.endDate >= today,
+          );
+          const upcoming = remaining
+            .filter((t: any) => t.startDate > today)
+            .sort((a: any, b: any) => a.startDate.localeCompare(b.startDate));
+          const past = remaining
+            .filter((t: any) => t.endDate < today)
+            .sort((a: any, b: any) => b.endDate.localeCompare(a.endDate));
+          const next = [...ongoing, ...upcoming, ...past][0] ?? null;
+          setInternalSelectedTrip(next);
+          onPlanSelect?.(next);
         }
       } else {
         setResultModalConfig({
@@ -1440,22 +1886,22 @@ export default function WeeklySchedulePanel({
       const group = overlapGroups.find(g => g.some(e => e.id === event.id));
 
       if (group) {
-        const overlapIndex = group.findIndex(e => e.id === event.id);
-        const overlapCount = group.length;
+        const customOverlapIndex = group.findIndex(e => e.id === event.id);
+        const customOverlapCount = group.length;
 
         return {
           ...event,
           id: String(event.id),
-          overlapIndex,
-          overlapCount,
+          customOverlapIndex,
+          customOverlapCount,
         };
       }
 
       return {
         ...event,
         id: String(event.id),
-        overlapIndex: 0,
-        overlapCount: 1,
+        customOverlapIndex: 0,
+        customOverlapCount: 1,
       };
     });
 
@@ -1468,22 +1914,32 @@ export default function WeeklySchedulePanel({
     setCurrentWeekStart(dayjs().startOf("week").add(1, "day"));
 
   return (
+    <View ref={panelRef} style={styles.panelWrapper}>
+      {dropFileOverlay && (
+        <View style={styles.dropOverlay} pointerEvents="none">
+          <View style={styles.dropOverlayIconCircle}>
+            <UploadIcon width={28} height={28} />
+          </View>
+          <Text style={styles.dropOverlayTitle}>파일을 놓으면 일정으로 분석해요</Text>
+          <Text style={styles.dropOverlaySubtext}>엑셀 · 이미지 · PDF</Text>
+        </View>
+      )}
     <PanelLayout style={styles.container}>
       <View style={styles.customHeader}>
         <View style={styles.leftSection}>
           <Text style={styles.title}>여행 일정</Text>
 
           <View style={styles.dateNavigation}>
-            <Pressable onPress={goPrev}>
-              <LeftArrowIcon width={16} height={16} />
+            <Pressable onPress={goPrev} style={styles.navArrowButton}>
+              <LeftArrowIcon width={10} height={10} />
             </Pressable>
 
-            <Text style={styles.dateText}>
+            <Text style={styles.navDateText}>
               {currentWeekStart.format("YYYY년 M월")}
             </Text>
 
-            <Pressable onPress={goNext}>
-              <RightArrowIcon width={16} height={16} />
+            <Pressable onPress={goNext} style={styles.navArrowButton}>
+              <RightArrowIcon width={10} height={10} />
             </Pressable>
           </View>
 
@@ -1491,18 +1947,19 @@ export default function WeeklySchedulePanel({
             onPress={goToday}
             style={[styles.actionButton, { marginLeft: spacing.lg }]}
           >
-            <View style={{ marginRight: spacing.xs }}>
-              <TodayIcon width={16} height={16} />
+            <View style={styles.todayIconWrapper}>
+              <TodayIcon width={13} height={13} />
             </View>
             <Text style={styles.actionButtonText}>오늘</Text>
           </Pressable>
 
           <View style={styles.calendarButtonWrapper}>
             <Pressable
+              ref={calendarBtnRef}
               onPress={() => setShowMonthPicker(!showMonthPicker)}
               style={[styles.iconButton, { marginLeft: spacing.xs }]}
             >
-              <CalenderIcon width={16} height={16} />
+              <CalenderIcon width={13} height={13} />
             </Pressable>
             <BaseCalendar
               visible={showMonthPicker}
@@ -1515,11 +1972,13 @@ export default function WeeklySchedulePanel({
                 setCurrentWeekStart(monday);
               }}
               onClose={() => setShowMonthPicker(false)}
-              style={styles.calendarPopup}
+              style={calendarPopupPos}
               currentWeekStart={currentWeekStart.format("YYYY-MM-DD")}
               showToday={true}
               showHover={true}
               scrollToWeek={true}
+              hideButtons={true}
+              autoCloseOnSelect={true}
             />
           </View>
         </View>
@@ -1569,44 +2028,81 @@ export default function WeeklySchedulePanel({
           {internalSelectedTrip ? (
             <View style={styles.actionGroup}>
               {(myRole === "owner" || myRole === "editor") && (
-                <Pressable
-                  onPress={() => {
-                    if (isGuest) {
-                      guestPrompt.show();
-                      return;
-                    }
-                    setShareOpen(true);
-                  }}
-                  style={styles.iconButton}
-                >
-                  <ShareIcon width={16} height={16} />
-                </Pressable>
-              )}
-
-              {(myRole === "owner" || myRole === "editor") && (
-                <Pressable
-                  onPress={() => {
-                    if (onRequestNewFlight) onRequestNewFlight();
-                    else onShowFlightModal?.();
-                  }}
-                  style={styles.iconButton}
-                >
-                  <AirplaneIcon width={16} height={16} />
-                </Pressable>
+                <Tooltip text="항공편 추가">
+                  <Pressable
+                    onPress={() => {
+                      setSelectedAccommodationId(null);
+                      if (onRequestNewFlight) onRequestNewFlight();
+                      else onShowFlightModal?.();
+                    }}
+                    style={styles.iconButton}
+                  >
+                    <AirplaneIcon width={13} height={13} />
+                  </Pressable>
+                </Tooltip>
               )}
 
               {(myRole === "owner" ||
                 myRole === "editor" ||
                 myRole === "viewer") && (
-                <Pressable
-                  onPress={() => {
-                    setMemoDraft((planData.plan as any)?.memo ?? "");
-                    setMemoOpen(true);
-                  }}
-                  style={styles.iconButton}
-                >
-                  <MemoIcon width={16} height={16} />
-                </Pressable>
+                <Tooltip text="메모">
+                  <Pressable
+                    onPress={() => {
+                      setMemoDraft((planData.plan as any)?.memo ?? "");
+                      setMemoOpen(true);
+                    }}
+                    style={styles.iconButton}
+                  >
+                    <MemoIcon width={13} height={13} />
+                  </Pressable>
+                </Tooltip>
+              )}
+
+              {(myRole === "owner" || myRole === "editor") && (
+                <Tooltip text="공유하기">
+                  <Pressable
+                    onPress={() => {
+                      if (isGuest) {
+                        guestPrompt.show();
+                        return;
+                      }
+                      setShareOpen(true);
+                    }}
+                    style={styles.iconButton}
+                  >
+                    <ShareIcon width={16} height={16} />
+                  </Pressable>
+                </Tooltip>
+              )}
+
+              {(myRole === "owner" || myRole === "editor") && (
+                <Tooltip text="파일로 일정 추가">
+                  <Pressable
+                    style={styles.iconButton}
+                    onPress={() => setImportFileOpen(true)}
+                  >
+                    <ImportFileIcon
+                      width={14}
+                      height={14}
+                      color={colors.gray900}
+                    />
+                  </Pressable>
+                </Tooltip>
+              )}
+
+              {(myRole === "owner" || myRole === "editor") && (
+                <Tooltip text="내보내기">
+                  <Pressable
+                    style={styles.iconButton}
+                    onPress={() => setExportOpen(true)}
+                  >
+                    <ExportPlanIcon
+                      width={14}
+                      height={14}
+                      color={colors.gray900}
+                    />
+                  </Pressable>
+                </Tooltip>
               )}
             </View>
           ) : null}
@@ -1643,7 +2139,7 @@ export default function WeeklySchedulePanel({
           renderHeader={_props => {
             return (
               <View>
-                <View style={{ flexDirection: "row", height: 70 }}>
+                <View style={styles.weekHeaderRow}>
                   <View style={styles.timeColumn} />
                   {weekDays.map((date, _index) => {
                     const isToday =
@@ -1669,17 +2165,7 @@ export default function WeeklySchedulePanel({
                 </View>
 
                 {internalSelectedTrip && (
-                  <View
-                    style={{
-                      flexDirection: "row",
-                      height: 40,
-                      backgroundColor: "",
-                      borderTopWidth: 0.5,
-                      borderBottomWidth: 0.5,
-                      borderTopColor: "#e0e0e0",
-                      borderBottomColor: "#e0e0e0",
-                    }}
-                  >
+                  <View style={styles.accommodationHeaderRow}>
                     <View
                       style={[
                         styles.timeColumn,
@@ -1691,14 +2177,15 @@ export default function WeeklySchedulePanel({
                         },
                       ]}
                     >
-                      <AccommodationIcon width={16} height={16} />
+                      <AccommodationIcon
+                        width={16}
+                        height={16}
+                        color={colors.gray700}
+                      />
                     </View>
                     <View
-                      style={{
-                        flex: 1,
-                        flexDirection: "row",
-                        position: "relative",
-                      }}
+                      ref={accCreateRowRef}
+                      style={styles.accommodationRowInner}
                     >
                       {weekDays.map((date, index) => {
                         const accommodations =
@@ -1736,6 +2223,7 @@ export default function WeeklySchedulePanel({
                               justifyContent: "center",
                               alignItems: "center",
                               position: "relative",
+                              overflow: "visible",
                               borderRightWidth:
                                 index < weekDays.length - 1 &&
                                 !shouldHideRightBorder
@@ -1744,7 +2232,60 @@ export default function WeeklySchedulePanel({
                               borderRightColor: "#e0e0e0",
                               zIndex: 0,
                             }}
+                            {...(Platform.OS === "web"
+                              ? {
+                                  onMouseDown: (e: any) => {
+                                    const clientX =
+                                      e.nativeEvent?.clientX || e.clientX || 0;
+                                    const target =
+                                      e.currentTarget as HTMLElement | null;
+                                    if (target) {
+                                      const rect =
+                                        target.getBoundingClientRect();
+                                      const clickPercent =
+                                        ((clientX - rect.left) / rect.width) *
+                                        100;
+                                      const isOnBar = accommodations.some(
+                                        (acc: any) => {
+                                          const tr = getAccommodationTimeRange(
+                                            acc,
+                                            date,
+                                          );
+                                          return tr
+                                            ? clickPercent >= tr.startPercent &&
+                                                clickPercent <=
+                                                  tr.startPercent +
+                                                    tr.widthPercent
+                                            : false;
+                                        },
+                                      );
+                                      if (isOnBar) return;
+                                    }
+                                    e.preventDefault();
+                                    const rowEl =
+                                      accCreateRowRef.current as any;
+                                    if (rowEl) {
+                                      const node =
+                                        rowEl._nativeNode ??
+                                        rowEl._internalFiberInstanceHandleDEV
+                                          ?.stateNode ??
+                                        rowEl;
+                                      if (node?.getBoundingClientRect)
+                                        accCreateRowRectRef.current =
+                                          node.getBoundingClientRect();
+                                    }
+                                    accCreateDragPendingRef.current = {
+                                      date,
+                                      startX: clientX,
+                                    };
+                                  },
+                                }
+                              : {})}
                             onPress={e => {
+                              if (accCreateDragOccurredRef.current) {
+                                accCreateDragOccurredRef.current = false;
+                                return;
+                              }
                               if (Platform.OS === "web") {
                                 const clickX =
                                   (e.nativeEvent as any)?.clientX ||
@@ -1779,12 +2320,17 @@ export default function WeeklySchedulePanel({
                                   }
 
                                   if (clickedAccommodation) {
+                                    setSelectedAccommodationId(
+                                      clickedAccommodation.id,
+                                    );
+                                    setSelectedEventId(null);
                                     onShowAccommodationModal?.(
                                       clickedAccommodation,
                                     );
                                     setPreviewAccommodation(null);
                                     onPreviewAccommodationChange?.(null);
                                   } else {
+                                    setSelectedAccommodationId(null);
                                     const _checkinDate = date;
                                     const checkoutDate = dayjs(date)
                                       .add(1, "day")
@@ -1805,10 +2351,15 @@ export default function WeeklySchedulePanel({
                               }
 
                               if (accommodations.length > 0) {
+                                setSelectedAccommodationId(
+                                  accommodations[0].id,
+                                );
+                                setSelectedEventId(null);
                                 onShowAccommodationModal?.(accommodations[0]);
                                 setPreviewAccommodation(null);
                                 onPreviewAccommodationChange?.(null);
                               } else {
+                                setSelectedAccommodationId(null);
                                 const _checkinDate = date;
                                 const checkoutDate = dayjs(date)
                                   .add(1, "day")
@@ -1856,7 +2407,7 @@ export default function WeeklySchedulePanel({
                                 };
 
                                 const _spanCount = 1;
-                                let totalWidthPercent = 0;
+                                let _totalWidthPercent = 0;
 
                                 if (isVisualStart) {
                                   const currentLeft = Math.max(
@@ -1869,7 +2420,7 @@ export default function WeeklySchedulePanel({
                                     currentMaxWidth,
                                   );
 
-                                  totalWidthPercent += currentRealWidth;
+                                  _totalWidthPercent += currentRealWidth;
 
                                   for (
                                     let i = index + 1;
@@ -1900,7 +2451,7 @@ export default function WeeklySchedulePanel({
                                         100 - dLeft,
                                       );
 
-                                      totalWidthPercent += dVisualWidth;
+                                      _totalWidthPercent += dVisualWidth;
                                     } else {
                                       break;
                                     }
@@ -1918,281 +2469,551 @@ export default function WeeklySchedulePanel({
                                     maxWidth,
                                   );
 
+                                  const isDraggingThis =
+                                    accDragState?.id === accommodation.id;
+                                  const isSelected =
+                                    selectedAccommodationId ===
+                                      accommodation.id && !isDraggingThis;
+
                                   return (
                                     <View
                                       key={`${accommodation.id}-${date}-${accIndex}`}
-                                      style={{
-                                        position: "absolute",
-                                        left: `${actualLeft}%`,
-                                        width: `${actualWidth}%`,
-                                        top: 0,
-                                        bottom: 0,
-                                        backgroundColor:
-                                          "rgba(245, 158, 11, 0.1)",
-                                        borderTopWidth: 1,
-                                        borderBottomWidth: 1,
-                                        borderLeftWidth: isStart ? 1 : 0,
-                                        borderRightWidth: isEnd ? 1 : 0,
-                                        borderColor: "#F59E0B",
-                                        borderTopLeftRadius: isStart
-                                          ? radii.base
-                                          : 0,
-                                        borderBottomLeftRadius: isStart
-                                          ? radii.base
-                                          : 0,
-                                        borderTopRightRadius: isEnd
-                                          ? radii.base
-                                          : 0,
-                                        borderBottomRightRadius: isEnd
-                                          ? radii.base
-                                          : 0,
-                                        justifyContent: "center",
-                                        minWidth: 1,
-                                        zIndex: isVisualStart
-                                          ? 10
-                                          : hasNextDay
-                                            ? 1
+                                      style={
+                                        {
+                                          position: "absolute",
+                                          left: `${actualLeft}%`,
+                                          width: `${actualWidth}%`,
+                                          top: 2,
+                                          bottom: 2,
+                                          backgroundColor:
+                                            colors.accommodationBg,
+                                          borderTopWidth: isSelected ? 2 : 1,
+                                          borderBottomWidth: isSelected ? 2 : 1,
+                                          borderLeftWidth: isStart
+                                            ? isSelected
+                                              ? 2
+                                              : 1
                                             : 0,
-                                        overflow: "visible",
-                                      }}
-                                    >
-                                      {isVisualStart && (
-                                        <View
-                                          style={{
-                                            position: "absolute",
-                                            left: 0,
-                                            top: 0,
-                                            bottom: 0,
-                                            width: `${(totalWidthPercent / actualWidth) * 100}%`,
-                                            paddingLeft: isStart ? 8 : 8,
-                                            paddingRight: 4,
-                                            paddingVertical: 4,
-                                            justifyContent: "center",
-                                            zIndex: 20,
-                                            overflow: "hidden",
-                                          }}
-                                        >
-                                          <View
-                                            style={{
-                                              flexDirection: "row",
-                                              alignItems: "center",
-                                              gap: 8,
-                                            }}
-                                          >
-                                            <View style={{ flexShrink: 0 }}>
-                                              <WeekBarAccommodationIcon
-                                                width={14}
-                                                height={14}
-                                                color="#F59E0B"
-                                              />
-                                            </View>
-                                            <Text
-                                              style={{
-                                                ...textStyles.h8,
-                                                color: "#F59E0B",
-                                                lineHeight: 10,
-                                              }}
-                                              numberOfLines={1}
-                                              ellipsizeMode="tail"
-                                            >
-                                              {accommodation.name}
-                                            </Text>
-                                          </View>
-                                        </View>
-                                      )}
-                                    </View>
+                                          borderRightWidth: isEnd
+                                            ? isSelected
+                                              ? 2
+                                              : 1
+                                            : 0,
+                                          borderColor: isSelected
+                                            ? colors.accommodationBorder
+                                            : colors.accommodationBorder,
+                                          borderTopLeftRadius: isStart ? 6 : 0,
+                                          borderBottomLeftRadius: isStart
+                                            ? 6
+                                            : 0,
+                                          borderTopRightRadius: isEnd ? 6 : 0,
+                                          borderBottomRightRadius: isEnd
+                                            ? 6
+                                            : 0,
+                                          minWidth: 1,
+                                          zIndex: isVisualStart
+                                            ? 10
+                                            : hasNextDay
+                                              ? 1
+                                              : 0,
+                                          overflow: "visible",
+                                          opacity: isDraggingThis ? 0.3 : 1,
+                                          cursor:
+                                            Platform.OS === "web"
+                                              ? "grab"
+                                              : undefined,
+                                        } as any
+                                      }
+                                      {...(Platform.OS === "web" &&
+                                      (myRole === "owner" || myRole === "editor")
+                                        ? {
+                                            onMouseDown: (e: any) => {
+                                              e.preventDefault();
+                                              const clientX =
+                                                e.nativeEvent?.clientX ||
+                                                e.clientX ||
+                                                0;
+                                              const clientY =
+                                                e.nativeEvent?.clientY ||
+                                                e.clientY ||
+                                                0;
+                                              let calendarEl: HTMLElement | null =
+                                                document.querySelector(
+                                                  '[data-testid="calendar-wrapper"]',
+                                                );
+                                              if (!calendarEl) {
+                                                const ref =
+                                                  calendarWrapperRef.current as any;
+                                                if (ref?._nativeNode)
+                                                  calendarEl = ref._nativeNode;
+                                                else if (
+                                                  ref
+                                                    ?._internalFiberInstanceHandleDEV
+                                                    ?.stateNode
+                                                )
+                                                  calendarEl =
+                                                    ref
+                                                      ._internalFiberInstanceHandleDEV
+                                                      .stateNode;
+                                              }
+                                              if (calendarEl)
+                                                accDragCalendarRectRef.current =
+                                                  calendarEl.getBoundingClientRect();
+                                              accDragPendingRef.current = {
+                                                id: accommodation.id,
+                                                originalCheckinDate:
+                                                  accommodation.checkinDate,
+                                                originalCheckoutDate:
+                                                  accommodation.checkoutDate,
+                                                checkinTime:
+                                                  accommodation.checkinTime ||
+                                                  "15:00",
+                                                checkoutTime:
+                                                  accommodation.checkoutTime ||
+                                                  "11:00",
+                                                name: accommodation.name,
+                                                startX: clientX,
+                                                startY: clientY,
+                                              };
+                                            },
+                                          }
+                                        : {})}
+                                    ></View>
                                   );
                                 })();
                               },
                             )}
 
-                            {previewAccommodation &&
-                              (dayjs(date).isSame(
-                                dayjs(previewAccommodation.checkinDate),
-                                "day",
-                              ) ||
-                                dayjs(date).isSame(
-                                  dayjs(previewAccommodation.checkoutDate),
-                                  "day",
-                                ) ||
-                                (dayjs(date).isAfter(
-                                  dayjs(previewAccommodation.checkinDate),
-                                  "day",
-                                ) &&
-                                  dayjs(date).isBefore(
-                                    dayjs(previewAccommodation.checkoutDate),
-                                    "day",
-                                  ))) &&
+                            {accDragState?.targetDate &&
                               (() => {
-                                const isStart =
-                                  previewAccommodation.checkinDate === date;
-                                const isEnd =
-                                  previewAccommodation.checkoutDate === date;
-                                const isVisualStart =
-                                  isStart || (index === 0 && !isEnd);
-
-                                const timeRange = getAccommodationTimeRange(
-                                  {
-                                    checkinDate:
-                                      previewAccommodation.checkinDate,
-                                    checkoutDate:
-                                      previewAccommodation.checkoutDate,
-                                    checkinTime:
-                                      previewAccommodation.checkinTime,
-                                    checkoutTime:
-                                      previewAccommodation.checkoutTime,
-                                  },
-                                  date,
+                                const newCheckin = dayjs(
+                                  accDragState.targetDate,
                                 );
+                                const stayDays = dayjs(
+                                  accDragState.originalCheckoutDate,
+                                ).diff(
+                                  dayjs(accDragState.originalCheckinDate),
+                                  "day",
+                                );
+                                const newCheckout = newCheckin.add(
+                                  stayDays,
+                                  "day",
+                                );
+                                const previewCheckinDt = dayjs(
+                                  `${newCheckin.format("YYYY-MM-DD")} ${accDragState.checkinTime}`,
+                                );
+                                const previewCheckoutDt = dayjs(
+                                  `${newCheckout.format("YYYY-MM-DD")} ${accDragState.checkoutTime}`,
+                                );
+                                const previewHasOverlap = (
+                                  planData?.accommodations ?? []
+                                ).some((acc: any) => {
+                                  if (acc.id === accDragState.id) return false;
+                                  const oDt = dayjs(
+                                    `${acc.checkinDate} ${acc.checkinTime || "15:00"}`,
+                                  );
+                                  const oDtOut = dayjs(
+                                    `${acc.checkoutDate} ${acc.checkoutTime || "11:00"}`,
+                                  );
+                                  return (
+                                    previewCheckinDt.isBefore(oDtOut) &&
+                                    previewCheckoutDt.isAfter(oDt)
+                                  );
+                                });
 
-                                const finalTimeRange = timeRange || {
-                                  startPercent: 0,
-                                  widthPercent: 100,
+                                const inSpan =
+                                  dayjs(date).isSame(newCheckin, "day") ||
+                                  dayjs(date).isSame(newCheckout, "day") ||
+                                  (dayjs(date).isAfter(newCheckin, "day") &&
+                                    dayjs(date).isBefore(newCheckout, "day"));
+
+                                if (!inSpan) return null;
+
+                                const isPreviewStart = dayjs(date).isSame(
+                                  newCheckin,
+                                  "day",
+                                );
+                                const isPreviewEnd = dayjs(date).isSame(
+                                  newCheckout,
+                                  "day",
+                                );
+                                const _isPreviewVisualStart =
+                                  isPreviewStart ||
+                                  (index === 0 && !isPreviewEnd);
+
+                                const parseHour = (t: string) => {
+                                  const [h, m] = t.split(":").map(Number);
+                                  return h + m / 60;
                                 };
-                                const actualLeft = Math.max(
-                                  0,
-                                  Math.min(finalTimeRange.startPercent, 100),
+                                const checkinHour = parseHour(
+                                  accDragState.checkinTime,
                                 );
-                                const maxWidth = 100 - actualLeft;
-                                const actualWidth = Math.min(
-                                  finalTimeRange.widthPercent,
-                                  maxWidth,
+                                const checkoutHour = parseHour(
+                                  accDragState.checkoutTime,
                                 );
 
-                                let previewTotalWidthPercent = 0;
-                                if (isVisualStart) {
-                                  previewTotalWidthPercent += actualWidth;
-
-                                  for (
-                                    let i = index + 1;
-                                    i < weekDays.length;
-                                    i++
-                                  ) {
-                                    const d = weekDays[i];
-                                    const isDAfterStart = dayjs(d).isAfter(
-                                      dayjs(previewAccommodation.checkinDate),
-                                      "day",
-                                    );
-                                    const isDBeforeEnd = dayjs(d).isBefore(
-                                      dayjs(previewAccommodation.checkoutDate),
-                                      "day",
-                                    );
-                                    const isDEnd = dayjs(d).isSame(
-                                      dayjs(previewAccommodation.checkoutDate),
-                                      "day",
-                                    );
-
-                                    if (isDAfterStart && isDBeforeEnd) {
-                                      previewTotalWidthPercent += 100;
-                                    } else if (isDEnd) {
-                                      const dRange = getAccommodationTimeRange(
-                                        {
-                                          checkinDate:
-                                            previewAccommodation.checkinDate,
-                                          checkoutDate:
-                                            previewAccommodation.checkoutDate,
-                                          checkinTime:
-                                            previewAccommodation.checkinTime,
-                                          checkoutTime:
-                                            previewAccommodation.checkoutTime,
-                                        },
-                                        d,
-                                      );
-                                      previewTotalWidthPercent += dRange
-                                        ? dRange.widthPercent
-                                        : 0;
-                                      break;
-                                    } else {
-                                      break;
-                                    }
-                                  }
+                                let previewLeft = 0;
+                                let previewWidth = 100;
+                                if (isPreviewStart && isPreviewEnd) {
+                                  previewLeft = (checkinHour / 24) * 100;
+                                  previewWidth =
+                                    ((checkoutHour - checkinHour) / 24) * 100;
+                                } else if (isPreviewStart) {
+                                  previewLeft = (checkinHour / 24) * 100;
+                                  previewWidth =
+                                    ((24 - checkinHour) / 24) * 100;
+                                } else if (isPreviewEnd) {
+                                  previewLeft = 0;
+                                  previewWidth = (checkoutHour / 24) * 100;
                                 }
 
                                 return (
                                   <View
-                                    key={`preview-accommodation-${date}`}
+                                    key="acc-drag-preview"
                                     style={{
                                       position: "absolute",
-                                      left: `${actualLeft}%`,
-                                      width: `${actualWidth}%`,
-                                      top: 0,
-                                      bottom: 0,
-                                      backgroundColor:
-                                        "rgba(245, 158, 11, 0.05)",
-                                      borderWidth: 1,
-                                      borderStyle: "dashed",
-                                      borderColor: "rgba(245, 158, 11, 0.5)",
-                                      borderLeftWidth: isStart ? 1 : 0,
-                                      borderRightWidth: isEnd ? 1 : 0,
-                                      borderTopLeftRadius: isStart
-                                        ? radii.base
+                                      left: `${previewLeft}%` as any,
+                                      width: `${previewWidth}%` as any,
+                                      top: 2,
+                                      bottom: 2,
+                                      backgroundColor: previewHasOverlap
+                                        ? "rgba(239,68,68,0.15)"
+                                        : colors.accommodationBg,
+                                      borderTopWidth: 2,
+                                      borderBottomWidth: 2,
+                                      borderLeftWidth: isPreviewStart ? 2 : 0,
+                                      borderRightWidth: isPreviewEnd ? 2 : 0,
+                                      borderStyle: "dashed" as any,
+                                      borderColor: previewHasOverlap
+                                        ? colors.danger
+                                        : colors.accommodationBorder,
+                                      borderTopLeftRadius: isPreviewStart
+                                        ? 6
                                         : 0,
-                                      borderBottomLeftRadius: isStart
-                                        ? radii.base
+                                      borderBottomLeftRadius: isPreviewStart
+                                        ? 6
                                         : 0,
-                                      borderTopRightRadius: isEnd
-                                        ? radii.base
+                                      borderTopRightRadius: isPreviewEnd
+                                        ? 6
                                         : 0,
-                                      borderBottomRightRadius: isEnd
-                                        ? radii.base
+                                      borderBottomRightRadius: isPreviewEnd
+                                        ? 6
                                         : 0,
-                                      justifyContent: "center",
-                                      zIndex: 5,
-                                      pointerEvents: "none",
+                                      zIndex: 15,
+                                      pointerEvents: "none" as const,
                                       overflow: "visible",
                                     }}
-                                  >
-                                    {isVisualStart && (
-                                      <View
-                                        style={{
-                                          position: "absolute",
-                                          left: 0,
-                                          top: 0,
-                                          bottom: 0,
-                                          width: `${(previewTotalWidthPercent / actualWidth) * 100}%`,
-                                          paddingLeft: isStart ? 8 : 8,
-                                          paddingRight: 4,
-                                          paddingVertical: 4,
-                                          justifyContent: "center",
-                                          zIndex: 20,
-                                          overflow: "hidden",
-                                        }}
-                                      >
-                                        <View
-                                          style={{
-                                            flexDirection: "row",
-                                            alignItems: "center",
-                                            gap: 8,
-                                            opacity: 0.6,
-                                          }}
-                                        >
-                                          <View style={{ flexShrink: 0 }}>
-                                            <WeekBarAccommodationIcon
-                                              width={14}
-                                              height={14}
-                                              color="#F59E0B"
-                                            />
-                                          </View>
-                                          <Text
-                                            style={{
-                                              ...textStyles.h8,
-                                              color: "#F59E0B",
-                                              lineHeight: 10,
-                                            }}
-                                            numberOfLines={1}
-                                            ellipsizeMode="tail"
-                                          >
-                                            {previewAccommodation.name || ""}
-                                          </Text>
-                                        </View>
-                                      </View>
-                                    )}
-                                  </View>
+                                  ></View>
                                 );
                               })()}
                           </Pressable>
                         );
                       })}
+                      {(() => {
+                        const labels: React.ReactNode[] = [];
+                        const seen = new Set<number>();
+                        weekDays.forEach((date, index) => {
+                          const accs = getAllAccommodationsForDate(date);
+                          accs.forEach((acc: any) => {
+                            if (seen.has(acc.id)) return;
+                            const isStart = isAccommodationStart(acc, date);
+                            const isEnd = isAccommodationEnd(acc, date);
+                            const isVisualStart =
+                              isStart || (index === 0 && !isEnd);
+                            if (!isVisualStart) return;
+                            seen.add(acc.id);
+
+                            const timeRange = getAccommodationTimeRange(
+                              acc,
+                              date,
+                            );
+                            const startPercent = timeRange
+                              ? timeRange.startPercent
+                              : 0;
+
+                            let endIndex = index;
+                            let endPercent = timeRange
+                              ? timeRange.startPercent + timeRange.widthPercent
+                              : 100;
+                            for (let i = index + 1; i < weekDays.length; i++) {
+                              const dAccs = getAllAccommodationsForDate(
+                                weekDays[i],
+                              );
+                              const dAcc = dAccs.find(
+                                (a: any) => a.id === acc.id,
+                              );
+                              if (dAcc) {
+                                const dRange = getAccommodationTimeRange(
+                                  dAcc,
+                                  weekDays[i],
+                                );
+                                endIndex = i;
+                                endPercent = dRange
+                                  ? dRange.startPercent + dRange.widthPercent
+                                  : 100;
+                              } else break;
+                            }
+
+                            const leftPct =
+                              ((index + startPercent / 100) / weekDays.length) *
+                              100;
+                            const rightPct =
+                              ((endIndex + endPercent / 100) /
+                                weekDays.length) *
+                              100;
+                            const widthPct = rightPct - leftPct;
+
+                            const isDraggingThisLabel =
+                              accDragState?.id === acc.id;
+                            labels.push(
+                              <View
+                                key={`acc-label-${acc.id}`}
+                                style={{
+                                  position: "absolute",
+                                  left: `${leftPct}%` as any,
+                                  width: `${widthPct}%` as any,
+                                  top: 0,
+                                  bottom: 0,
+                                  paddingHorizontal: 10,
+                                  flexDirection: "row",
+                                  alignItems: "center",
+                                  gap: 6,
+                                  overflow: "hidden",
+                                  zIndex: 25,
+                                  pointerEvents: "none" as any,
+                                  opacity: isDraggingThisLabel ? 0.3 : 1,
+                                }}
+                              >
+                                <View style={styles.itemDot} />
+                                <Text
+                                  style={{
+                                    ...textStyles.h9,
+                                    color: colors.accommodationText,
+                                    flexShrink: 1,
+                                  }}
+                                  numberOfLines={1}
+                                  ellipsizeMode="tail"
+                                >
+                                  {acc.name}
+                                </Text>
+                              </View>,
+                            );
+                          });
+                        });
+                        return labels;
+                      })()}
+                      {accCreateDragState &&
+                        (() => {
+                          const startD = dayjs(accCreateDragState.startDate);
+                          const endD = dayjs(accCreateDragState.endDate);
+                          const checkinD = startD.isAfter(endD) ? endD : startD;
+                          const checkoutD = startD.isAfter(endD)
+                            ? startD
+                            : endD;
+
+                          const checkinIndex = weekDays.findIndex(d =>
+                            dayjs(d).isSame(checkinD, "day"),
+                          );
+                          const checkoutIndex = weekDays.findIndex(d =>
+                            dayjs(d).isSame(checkoutD, "day"),
+                          );
+                          if (checkinIndex === -1 && checkoutIndex === -1)
+                            return null;
+
+                          const si = checkinIndex !== -1 ? checkinIndex : 0;
+                          const ei =
+                            checkoutIndex !== -1
+                              ? checkoutIndex
+                              : weekDays.length - 1;
+
+                          const leftPct =
+                            ((si + 15 / 24) / weekDays.length) * 100;
+                          const rightPct =
+                            ((ei + 11 / 24) / weekDays.length) * 100;
+                          const widthPct = rightPct - leftPct;
+                          if (widthPct <= 0) return null;
+
+                          const isOverlap = (
+                            planData?.accommodations ?? []
+                          ).some((acc: any) => {
+                            const oDt = dayjs(
+                              `${acc.checkinDate} ${acc.checkinTime || "15:00"}`,
+                            );
+                            const oDtOut = dayjs(
+                              `${acc.checkoutDate} ${acc.checkoutTime || "11:00"}`,
+                            );
+                            const newDt = dayjs(
+                              `${checkinD.format("YYYY-MM-DD")} 15:00`,
+                            );
+                            const newDtOut = dayjs(
+                              `${checkoutD.format("YYYY-MM-DD")} 11:00`,
+                            );
+                            return (
+                              newDt.isBefore(oDtOut) && newDtOut.isAfter(oDt)
+                            );
+                          });
+
+                          return (
+                            <View
+                              key="acc-create-preview"
+                              style={{
+                                position: "absolute",
+                                left: `${leftPct}%` as any,
+                                width: `${widthPct}%` as any,
+                                top: 2,
+                                bottom: 2,
+                                backgroundColor: isOverlap
+                                  ? "rgba(239,68,68,0.15)"
+                                  : colors.accommodationBg,
+                                borderWidth: 2,
+                                borderStyle: "dashed" as any,
+                                borderColor: isOverlap
+                                  ? colors.danger
+                                  : colors.accommodationBorder,
+                                borderRadius: 6,
+                                opacity: 0.7,
+                                zIndex: 20,
+                                pointerEvents: "none" as any,
+                              }}
+                            />
+                          );
+                        })()}
+                      {previewAccommodation &&
+                        !accCreateDragState &&
+                        (() => {
+                          const parseHour = (t: string) => {
+                            const [h, m] = (t || "00:00")
+                              .split(":")
+                              .map(Number);
+                            return h + m / 60;
+                          };
+                          const checkinD = dayjs(
+                            previewAccommodation.checkinDate,
+                          );
+                          const checkoutD = dayjs(
+                            previewAccommodation.checkoutDate,
+                          );
+                          const checkinHour = parseHour(
+                            previewAccommodation.checkinTime || "15:00",
+                          );
+                          const checkoutHour = parseHour(
+                            previewAccommodation.checkoutTime || "11:00",
+                          );
+
+                          let si = weekDays.findIndex(d =>
+                            dayjs(d).isSame(checkinD, "day"),
+                          );
+                          let ei = weekDays.findIndex(d =>
+                            dayjs(d).isSame(checkoutD, "day"),
+                          );
+                          if (si === -1 && ei === -1) return null;
+                          if (si === -1) si = 0;
+                          if (ei === -1) ei = weekDays.length - 1;
+
+                          const leftPct =
+                            ((si + checkinHour / 24) / weekDays.length) * 100;
+                          const rightPct =
+                            ((ei + checkoutHour / 24) / weekDays.length) * 100;
+                          const widthPct = rightPct - leftPct;
+                          if (widthPct <= 0) return null;
+
+                          return (
+                            <View
+                              key="acc-preview-bar"
+                              style={{
+                                position: "absolute",
+                                left: `${leftPct}%` as any,
+                                width: `${widthPct}%` as any,
+                                top: 2,
+                                bottom: 2,
+                                backgroundColor: colors.accommodationBg,
+                                borderWidth: 2,
+                                borderStyle: "dashed" as any,
+                                borderColor: colors.accommodationBorder,
+                                borderRadius: 6,
+                                opacity: 0.7,
+                                zIndex: 20,
+                                pointerEvents: "none" as any,
+                              }}
+                            />
+                          );
+                        })()}
+                      {accDragState?.targetDate &&
+                        (() => {
+                          const newCheckin = dayjs(accDragState.targetDate);
+                          const stayDays = dayjs(
+                            accDragState.originalCheckoutDate,
+                          ).diff(
+                            dayjs(accDragState.originalCheckinDate),
+                            "day",
+                          );
+                          const newCheckout = newCheckin.add(stayDays, "day");
+
+                          const parseHour = (t: string) => {
+                            const [h, m] = t.split(":").map(Number);
+                            return h + m / 60;
+                          };
+                          const checkinHour = parseHour(
+                            accDragState.checkinTime,
+                          );
+                          const checkoutHour = parseHour(
+                            accDragState.checkoutTime,
+                          );
+
+                          let startIndex = -1;
+                          let endIndex = -1;
+                          weekDays.forEach((d, i) => {
+                            if (dayjs(d).isSame(newCheckin, "day"))
+                              startIndex = i;
+                            if (dayjs(d).isSame(newCheckout, "day"))
+                              endIndex = i;
+                          });
+                          if (startIndex === -1) startIndex = 0;
+                          if (endIndex === -1) endIndex = weekDays.length - 1;
+
+                          const startPct = (checkinHour / 24) * 100;
+                          const endPct = (checkoutHour / 24) * 100;
+
+                          const leftPct =
+                            ((startIndex + startPct / 100) / weekDays.length) *
+                            100;
+                          const rightPct =
+                            ((endIndex + endPct / 100) / weekDays.length) * 100;
+                          const widthPct = rightPct - leftPct;
+
+                          if (widthPct <= 0) return null;
+                          return (
+                            <View
+                              style={{
+                                position: "absolute",
+                                left: `${leftPct}%` as any,
+                                width: `${widthPct}%` as any,
+                                top: 0,
+                                bottom: 0,
+                                paddingHorizontal: 10,
+                                flexDirection: "row",
+                                alignItems: "center",
+                                gap: 6,
+                                overflow: "hidden",
+                                zIndex: 30,
+                                pointerEvents: "none" as any,
+                              }}
+                            >
+                              <View style={styles.itemDot} />
+                              <Text
+                                style={{
+                                  ...textStyles.h9,
+                                  color: colors.accommodationText,
+                                  flexShrink: 1,
+                                }}
+                                numberOfLines={1}
+                                ellipsizeMode="tail"
+                              >
+                                {accDragState.name}
+                              </Text>
+                            </View>
+                          );
+                        })()}
                     </View>
                   </View>
                 )}
@@ -2201,6 +3022,7 @@ export default function WeeklySchedulePanel({
           }}
           onPressCell={(date: Date) => {
             setSelectedEventId(null);
+            setSelectedAccommodationId(null);
 
             const hasPlans = trips.length > 0;
             const isPlanSelected = internalSelectedTrip !== null;
@@ -2268,6 +3090,10 @@ export default function WeeklySchedulePanel({
             const flatTpStyle = flattenStyle(tpStyle);
             const adjustedStyle = { ...flatTpStyle };
 
+            const isFirstBar =
+              !event.startDateStr ||
+              dayjs(event.start).format("YYYY-MM-DD") === event.startDateStr;
+
             const totalWidthPercent = 90;
             const leftMarginPercent = 3.5;
 
@@ -2276,19 +3102,17 @@ export default function WeeklySchedulePanel({
             }
 
             if (
-              event.overlapCount > 1 &&
-              typeof event.overlapIndex === "number"
+              event.customOverlapCount > 1 &&
+              typeof event.customOverlapIndex === "number"
             ) {
-              const overlapIndex = event.overlapIndex;
-              const overlapCount = event.overlapCount;
-
-              const widthPercent = totalWidthPercent / overlapCount;
-              adjustedStyle.width = `${widthPercent}%`;
-
-              const leftPercent =
-                leftMarginPercent + widthPercent * overlapIndex;
-              adjustedStyle.left = `${leftPercent}%`;
-
+              const overlapIndex = event.customOverlapIndex;
+              const overlapCount = event.customOverlapCount;
+              const gapPercent = 1.5;
+              const slotWidth =
+                (totalWidthPercent - gapPercent * (overlapCount - 1)) /
+                overlapCount;
+              adjustedStyle.width = `${slotWidth}%`;
+              adjustedStyle.left = `${leftMarginPercent + (slotWidth + gapPercent) * overlapIndex}%`;
               delete adjustedStyle.minWidth;
             } else {
               adjustedStyle.left = `${leftMarginPercent}%`;
@@ -2296,6 +3120,8 @@ export default function WeeklySchedulePanel({
 
               delete adjustedStyle.minWidth;
             }
+
+            adjustedStyle.minHeight = 20;
 
             let blockHeight = eventHeights[event.id] || 0;
 
@@ -2309,34 +3135,41 @@ export default function WeeklySchedulePanel({
             }
 
             const contentHeight = Math.max(blockHeight - 8, 0);
+            const durationMinutes =
+              (new Date(event.end).getTime() - new Date(event.start).getTime()) / (1000 * 60);
+            const isCompact = durationMinutes <= 30;
 
-            const showTitle = true;
-            const showTime = contentHeight >= 28;
-            const showLocation = contentHeight >= 44;
+            const showTitle = durationMinutes > 0;
+            const showTime = !isCompact && contentHeight >= 28;
+            const showLocation = contentHeight > 52;
 
             const flightStyle = isFlight
               ? {
-                  backgroundColor: "rgba(139, 92, 246, 0.1)",
+                  backgroundColor: colors.flightBg,
                   borderWidth: borderWidth,
-                  borderColor: "#8B5CF6",
+                  borderColor: isSelected
+                    ? colors.flightText
+                    : colors.flightBorder,
                   borderRadius: radii.md,
                 }
               : null;
 
             const itineraryStyle = isItinerary
               ? {
-                  backgroundColor: "rgba(0, 102, 255, 0.1)",
+                  backgroundColor: colors.itineraryBg,
                   borderWidth: borderWidth,
-                  borderColor: "#0066FF",
+                  borderColor: isSelected
+                    ? colors.itineraryText
+                    : colors.itineraryBorder,
                   borderRadius: radii.md,
                 }
               : null;
 
             const previewStyle = isPreview
               ? {
-                  backgroundColor: "rgba(0, 102, 255, 0.1)",
+                  backgroundColor: colors.itineraryBg,
                   borderWidth: 1,
-                  borderColor: "#0066FF",
+                  borderColor: colors.itineraryBorder,
                   borderRadius: radii.md,
                   borderStyle: "dashed",
                   opacity: 0.7,
@@ -2398,13 +3231,14 @@ export default function WeeklySchedulePanel({
                           });
                           setDragOffset({ x: 0, y: 0 });
                           setSelectedEventId(null);
+                          setSelectedAccommodationId(null);
                         }
                       },
                     }
                   : {})}
               >
                 <TouchableOpacity
-                  style={{ flex: 1, justifyContent: "center", padding: 4 }}
+                  style={styles.eventTouchable}
                   disabled={isPreview || isDragging}
                   onPress={e => {
                     if (isPreview || isDragging) return;
@@ -2414,6 +3248,7 @@ export default function WeeklySchedulePanel({
                     } catch {}
 
                     setSelectedEventId(event.id);
+                    setSelectedAccommodationId(null);
 
                     if (isItinerary) {
                       onShowItineraryDetail?.(event.originalData);
@@ -2422,56 +3257,86 @@ export default function WeeklySchedulePanel({
                     }
                   }}
                 >
-                  <View style={{ flex: 1, justifyContent: "center" }}>
-                    {showTitle && (
-                      <View
-                        style={{
-                          flexDirection: "row",
-                          alignItems: "center",
-                          gap: 4,
-                        }}
-                      >
+                  <View style={[styles.eventContentCol, blockHeight <= 70 && { justifyContent: "center" }]}>
+                    {isFirstBar && showTitle && (
+                      <View style={styles.eventTitleRow}>
+                        <View
+                          style={{
+                            width: 5,
+                            height: 5,
+                            borderRadius: 999,
+                            backgroundColor: isFlight
+                              ? colors.flightDot
+                              : colors.itineraryDot,
+                            flexShrink: 0,
+                          }}
+                        />
                         {isFlight && (
-                          <View style={{ flexShrink: 0 }}>
-                            <WeekBarAirplaneIcon width={14} height={14} />
-                          </View>
+                          <Text
+                            style={{
+                              fontSize: 10,
+                              color: colors.flightText,
+                              flexShrink: 0,
+                            }}
+                          >
+                            ✈
+                          </Text>
                         )}
                         <Text
                           numberOfLines={1}
                           ellipsizeMode="tail"
                           style={{
-                            ...textStyles.h8,
-                            color: isFlight ? "#8B5CF6" : "#0066FF",
-                            lineHeight: 12,
+                            fontFamily:
+                              typography.fontFamily.pretendardSemiBold,
+                            fontSize: 11,
+                            lineHeight: 14,
+                            color: isFlight
+                              ? colors.flightText
+                              : colors.itineraryText,
                             flex: 1,
                           }}
                         >
                           {event.title}
                         </Text>
+                        {isCompact && event.normalizedStartTime && (
+                          <Text
+                            numberOfLines={1}
+                            style={{
+                              ...textStyles.h9,
+                              color: isFlight
+                                ? colors.flightText
+                                : colors.itineraryText,
+                              opacity: 0.75,
+                              flexShrink: 0,
+                            }}
+                          >
+                            {event.normalizedStartTime}
+                          </Text>
+                        )}
                       </View>
                     )}
-                    {showTime &&
+                    {isFirstBar &&
+                      showTime &&
                       (isItinerary || isPreview) &&
                       event.normalizedStartTime &&
                       event.normalizedEndTime && (
-                        <View
-                          style={{
-                            flexDirection: "row",
-                            alignItems: "center",
-                            gap: 4,
-                            marginTop: showTitle ? 8 : 0,
-                          }}
-                        >
-                          <View style={{ flexShrink: 0 }}>
-                            <WeekBarTimeIcon width={14} height={14} />
+                        <View style={styles.eventTimeRow}>
+                          <View style={styles.iconWrapper}>
+                            <WeekBarTimeIcon
+                              width={9}
+                              height={9}
+                              color={colors.itineraryText}
+                            />
                           </View>
                           <Text
                             numberOfLines={1}
                             ellipsizeMode="tail"
                             style={{
-                              ...textStyles.h9,
-                              color: "#0066FF",
-                              lineHeight: 10,
+                              fontFamily:
+                                typography.fontFamily.pretendardRegular,
+                              fontSize: 10,
+                              lineHeight: 14,
+                              color: colors.itineraryText,
                             }}
                           >
                             {event.normalizedStartTime} -{" "}
@@ -2479,48 +3344,72 @@ export default function WeeklySchedulePanel({
                           </Text>
                         </View>
                       )}
-                    {showLocation &&
+                    {isFirstBar &&
+                      showLocation &&
                       (isItinerary || isPreview) &&
                       event.locationText && (
-                        <View
+                        <Text
+                          numberOfLines={1}
+                          ellipsizeMode="tail"
                           style={{
-                            flexDirection: "row",
-                            alignItems: "center",
-                            gap: 4,
-                            marginTop: 4,
+                            fontFamily: typography.fontFamily.pretendardRegular,
+                            fontSize: 10,
+                            lineHeight: 14,
+                            color: colors.itineraryText,
+                            opacity: 0.65,
                           }}
                         >
-                          <View style={{ flexShrink: 0 }}>
-                            <WeekBarLocationIcon width={14} height={14} />
+                          {event.locationText}
+                        </Text>
+                      )}
+                    {isFirstBar &&
+                      showTime &&
+                      isFlight &&
+                      event.normalizedStartTime &&
+                      event.normalizedEndTime && (
+                        <View style={styles.eventFlightTimeRow}>
+                          <View style={styles.iconWrapper}>
+                            <WeekBarTimeIcon
+                              width={9}
+                              height={9}
+                              color={colors.flightText}
+                            />
                           </View>
                           <Text
                             numberOfLines={1}
                             ellipsizeMode="tail"
                             style={{
-                              ...textStyles.h9,
-                              color: "#0066FF",
-                              lineHeight: 10,
+                              fontFamily:
+                                typography.fontFamily.pretendardRegular,
+                              fontSize: 10,
+                              lineHeight: 14,
+                              color: colors.flightText,
                             }}
                           >
-                            {event.locationText}
+                            {event.normalizedStartTime} -{" "}
+                            {event.normalizedEndTime}
+                            {event.durationText
+                              ? ` (${event.durationText})`
+                              : ""}
                           </Text>
                         </View>
                       )}
-                    {showTime &&
+                    {isFirstBar &&
+                      showLocation &&
                       isFlight &&
-                      event.normalizedStartTime &&
-                      event.normalizedEndTime && (
+                      event.flightNumber && (
                         <Text
                           numberOfLines={1}
                           ellipsizeMode="tail"
                           style={{
-                            ...textStyles.h9,
-                            color: "#8B5CF6",
-                            lineHeight: 10,
-                            marginTop: showTitle ? 8 : 0,
+                            fontFamily: typography.fontFamily.pretendardRegular,
+                            fontSize: 10,
+                            lineHeight: 14,
+                            color: colors.flightText,
+                            opacity: 0.65,
                           }}
                         >
-                          {event.normalizedStartTime}-{event.normalizedEndTime}
+                          {event.flightNumber}
                         </Text>
                       )}
                   </View>
@@ -2651,16 +3540,14 @@ export default function WeeklySchedulePanel({
                 Platform.OS === "web" ? { position: "fixed" as any } : {},
               ]}
             >
-              <View style={{ flex: 1, justifyContent: "center" }}>
+              <View style={styles.dragEventContent}>
                 {dragShowTitle && (
-                  <View
-                    style={{
-                      flexDirection: "row",
-                      alignItems: "center",
-                      gap: 4,
-                    }}
-                  >
-                    {isFlight && <WeekBarAirplaneIcon width={14} height={14} />}
+                  <View style={styles.dragEventTitleRow}>
+                    {isFlight && (
+                      <Text style={{ fontSize: 11, color: colors.flightText }}>
+                        ✈
+                      </Text>
+                    )}
                     <Text
                       numberOfLines={1}
                       ellipsizeMode="tail"
@@ -2704,14 +3591,7 @@ export default function WeeklySchedulePanel({
                 {dragShowLocation &&
                   isItinerary &&
                   draggedEvent.locationText && (
-                    <View
-                      style={{
-                        flexDirection: "row",
-                        alignItems: "center",
-                        gap: 4,
-                        marginTop: 4,
-                      }}
-                    >
+                    <View style={styles.dragEventLocationRow}>
                       <WeekBarLocationIcon width={14} height={14} />
                       <Text
                         numberOfLines={1}
@@ -2755,6 +3635,13 @@ export default function WeeklySchedulePanel({
           internalSelectedTrip ? Number.parseInt(internalSelectedTrip.id) : 0
         }
         planPublicId={internalSelectedTrip?.publicId ?? ""}
+        planStartDate={internalSelectedTrip?.startDate}
+        planEndDate={internalSelectedTrip?.endDate}
+        onPlanDatesExtended={async (newStart, newEnd) => {
+          const plan = planData?.plan;
+          if (!plan?.id) return;
+          await extendPlanIfNeeded(plan.id, plan, [newStart, newEnd]).catch(() => {});
+        }}
         messages={aiMessages}
         onMessagesChange={setAiMessages}
         onSaved={() => {
@@ -2769,6 +3656,43 @@ export default function WeeklySchedulePanel({
           if ((externalPlanData as any)?.refreshAttachments)
             (externalPlanData as any).refreshAttachments().catch(() => {});
         }}
+      />
+
+      <AddScheduleWithFileModal
+        visible={importFileOpen}
+        onClose={() => {
+          setImportFileOpen(false);
+          setPendingDropFile(null);
+          setDropFileOverlay(false);
+        }}
+        planId={
+          internalSelectedTrip ? Number.parseInt(internalSelectedTrip.id) : 0
+        }
+        planName={internalSelectedTrip?.name ?? ""}
+        plan={planData?.plan ?? undefined}
+        initialFile={pendingDropFile ?? undefined}
+        onSaveComplete={(firstDate) => {
+          setImportFileOpen(false);
+          setPendingDropFile(null);
+          if (externalPlanData?.refreshItineraries) externalPlanData.refreshItineraries().catch(() => {});
+          if (externalPlanData?.refreshFlights) externalPlanData.refreshFlights().catch(() => {});
+          if (externalPlanData?.refreshAccommodations) externalPlanData.refreshAccommodations().catch(() => {});
+          if (externalPlanData?.refreshExpenses) externalPlanData.refreshExpenses().catch(() => {});
+          if (onPlansRefresh) onPlansRefresh();
+          if (firstDate) {
+            const monday = dayjs(firstDate).startOf("week").add(1, "day");
+            setCurrentWeekStart(monday);
+          }
+        }}
+      />
+
+      <ExportPlanModal
+        visible={exportOpen}
+        onClose={() => setExportOpen(false)}
+        planId={
+          internalSelectedTrip ? Number.parseInt(internalSelectedTrip.id) : 0
+        }
+        planName={internalSelectedTrip?.name ?? ""}
       />
 
       <SharePlanModal
@@ -2795,90 +3719,99 @@ export default function WeeklySchedulePanel({
         animationType="fade"
         onRequestClose={() => setMemoOpen(false)}
       >
-        <View style={styles.modalOverlay}>
-          <Card
-            width="100%"
-            maxWidth={420}
-            minHeight={582}
-            paddingHorizontal={32}
-            paddingVertical={32}
-            borderRadius={24}
-            alignItems="stretch"
-            shadow={{
-              shadowColor: colors.black,
-              shadowOffset: { width: 0, height: 24 },
-              shadowOpacity: 0.12,
-              shadowRadius: 48,
-              elevation: 24,
-            }}
-            style={{ marginHorizontal: 16 }}
-          >
-            <View style={styles.memoModalHeader}>
-              <View style={styles.memoModalTextGroup}>
-                <Text style={styles.memoModalTitle}>공유 메모</Text>
-                <Text style={styles.memoModalDescription}>
-                  다른 사람과 여행을 공유하고 함께 계획을 세워보세요.
-                </Text>
+        <Pressable
+          style={styles.modalOverlay}
+          onPress={() => setMemoOpen(false)}
+        >
+          <Pressable onPress={e => e.stopPropagation()}>
+            <Card
+              width="100%"
+              maxWidth={420}
+              paddingHorizontal={24}
+              paddingVertical={24}
+              paddingBottom={20}
+              borderRadius={20}
+              alignItems="stretch"
+              shadow={{
+                shadowColor: colors.black,
+                shadowOffset: { width: 0, height: 24 },
+                shadowOpacity: 0.12,
+                shadowRadius: 48,
+                elevation: 24,
+              }}
+              style={styles.memoModalContainer}
+            >
+              <View style={styles.memoModalHeader}>
+                <View style={styles.memoModalTextGroup}>
+                  <Text style={styles.memoModalTitle}>공유 메모</Text>
+                  <Text style={styles.memoModalDescription}>
+                    다른 사람과 여행을 공유하고 함께 계획을 세워보세요.
+                  </Text>
+                </View>
+                <Pressable
+                  onPress={() => setMemoOpen(false)}
+                  style={styles.memoModalCloseButton}
+                >
+                  <XIcon width={24} height={24} />
+                </Pressable>
               </View>
-              <Pressable
-                onPress={() => setMemoOpen(false)}
-                style={styles.memoModalCloseButton}
-              >
-                <XIcon width={24} height={24} />
-              </Pressable>
-            </View>
 
-            <View style={styles.memoModalFieldGroup}>
-              <Text style={styles.memoModalLabel}>내용</Text>
-              <Input
-                placeholder={PLACEHOLDERS.plan.memo}
-                multiline
-                numberOfLines={8}
-                value={memoDraft}
-                onChangeText={setMemoDraft}
-                textAlignVertical="top"
-                style={styles.memoModalInput}
-              />
-            </View>
+              <View style={styles.memoModalFieldGroup}>
+                <Text style={styles.memoModalLabel}>내용</Text>
+                <Input
+                  placeholder={PLACEHOLDERS.plan.memo}
+                  multiline
+                  numberOfLines={8}
+                  value={memoDraft}
+                  onChangeText={setMemoDraft}
+                  textAlignVertical="top"
+                  style={[
+                    styles.memoModalInput,
+                    Platform.OS === "web" && ({ resize: "vertical" } as any),
+                  ]}
+                />
+              </View>
 
-            <View style={styles.memoModalActions}>
-              <Pressable
-                onPress={() => setMemoOpen(false)}
-                style={styles.memoModalSecondaryButton}
-              >
-                <Text style={styles.memoModalSecondaryButtonText}>닫기</Text>
-              </Pressable>
-              <Pressable
-                onPress={async () => {
-                  try {
-                    if (!internalSelectedTrip?.id)
-                      throw new Error("No plan selected");
-                    await plansApi.setMemo(
-                      Number.parseInt(internalSelectedTrip.id),
-                      memoDraft ?? "",
-                    );
-                    Alert.alert("성공", "메모가 저장되었습니다.");
-                    setMemoOpen(false);
-                    if (internalSelectedTrip?.publicId) {
-                      planData.fetchPlanData &&
-                        (await planData.fetchPlanData(
-                          internalSelectedTrip.publicId,
-                        ));
+              <View style={styles.memoModalActions}>
+                <Pressable
+                  onPress={() => setMemoOpen(false)}
+                  style={styles.memoModalSecondaryButton}
+                >
+                  <Text style={styles.memoModalSecondaryButtonText}>닫기</Text>
+                </Pressable>
+                <Pressable
+                  onPress={async () => {
+                    try {
+                      if (!internalSelectedTrip?.id)
+                        throw new Error("No plan selected");
+                      await plansApi.setMemo(
+                        Number.parseInt(internalSelectedTrip.id),
+                        memoDraft ?? "",
+                      );
+                      Alert.alert("성공", "메모가 저장되었습니다.");
+                      setMemoOpen(false);
+                      if (internalSelectedTrip?.publicId) {
+                        planData.fetchPlanData &&
+                          (await planData.fetchPlanData(
+                            internalSelectedTrip.publicId,
+                          ));
+                      }
+                    } catch (e: any) {
+                      Alert.alert(
+                        "알림",
+                        e?.response?.data?.detail ||
+                          "메모 저장에 실패했습니다.",
+                      );
                     }
-                  } catch (e: any) {
-                    Alert.alert(
-                      "알림",
-                      e?.response?.data?.detail || "메모 저장에 실패했습니다.",
-                    );
-                  }
-                }}
-                style={styles.memoModalPrimaryButton}
-              >
-                <Text style={styles.memoModalPrimaryButtonText}>저장</Text>
-              </Pressable>
-            </View>
-          </Card>
-        </View>
+                  }}
+                  style={styles.memoModalPrimaryButton}
+                >
+                  <Text style={styles.memoModalPrimaryButtonText}>저장</Text>
+                </Pressable>
+              </View>
+            </Card>
+          </Pressable>
+        </Pressable>
       </Modal>
 
       <PlanSelectRequiredModal
@@ -2897,7 +3830,14 @@ export default function WeeklySchedulePanel({
         }}
         mode="add"
         tripData={planForm.tripData}
-        onTripDataChange={planForm.updateTripData}
+        activeSegmentIndex={planForm.activeSegmentIndex}
+        selectionMode={planForm.selectionMode}
+        onNameChange={name => planForm.updateTripData({ name })}
+        onSegmentUpdate={planForm.updateSegment}
+        onSegmentAdd={planForm.addSegment}
+        onSegmentRemove={planForm.removeSegment}
+        onSegmentMove={planForm.moveSegment}
+        onSegmentFocus={planForm.setActiveSegmentIndex}
         markedDates={planForm.getMarkedDates()}
         onDateSelect={planForm.handleDateSelect}
         onSubmit={handlePlanAddSubmit}
@@ -2914,10 +3854,49 @@ export default function WeeklySchedulePanel({
         params={resultModalConfig?.params}
       />
     </PanelLayout>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  panelWrapper: {
+    flex: 1,
+    position: "relative",
+  },
+  dropOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(255, 255, 255, 0.88)",
+    zIndex: 9999,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    borderWidth: 2,
+    borderColor: colors.gray500,
+    borderStyle: "dashed",
+    borderRadius: 12,
+  },
+  dropOverlayIconCircle: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: colors.white,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 4,
+    shadowColor: colors.black,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  dropOverlayTitle: {
+    ...textStyles.h6,
+    color: colors.black,
+  },
+  dropOverlaySubtext: {
+    ...textStyles.body5,
+    color: colors.gray700,
+  },
   container: {
     flex: 1,
     minHeight: 0,
@@ -2931,8 +3910,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 32,
-    paddingVertical: 22,
+    paddingHorizontal: 20,
+    paddingVertical: 14,
     backgroundColor: colors.white,
     zIndex: 9998,
   },
@@ -2941,14 +3920,25 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   title: {
-    ...textStyles.h3,
-    marginRight: spacing.xl,
+    ...textStyles.h5,
+    marginRight: spacing.lg,
   },
   dateNavigation: {
     flexDirection: "row",
     alignItems: "center",
-    gap: spacing.sm,
-    marginLeft: spacing.xl,
+    gap: spacing.xs,
+    marginLeft: spacing.lg,
+  },
+  navArrowButton: {
+    width: 24,
+    height: 24,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  navDateText: {
+    ...textStyles.h7,
+    minWidth: 72,
+    textAlign: "center",
   },
   dateText: {
     ...textStyles.h6,
@@ -2986,7 +3976,9 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 8,
-    backgroundColor: colors.gray300,
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: colors.gray300,
     justifyContent: "center",
     alignItems: "center",
   },
@@ -2994,7 +3986,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     height: 32,
     borderRadius: 8,
-    backgroundColor: colors.gray200,
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: colors.gray300,
     paddingHorizontal: 12,
     justifyContent: "center",
     alignItems: "center",
@@ -3074,28 +4068,29 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-start",
-    marginBottom: 40,
+    marginBottom: 18,
+    gap: 12,
   },
   memoModalTextGroup: {
     flex: 1,
-    paddingRight: 16,
   },
   memoModalTitle: {
     ...textStyles.h3,
-    marginBottom: 8,
   },
   memoModalDescription: {
     ...textStyles.body4,
     color: colors.gray700,
+    marginTop: 6,
   },
   memoModalCloseButton: {
-    width: 26,
-    height: 26,
+    width: 28,
+    height: 28,
     alignItems: "center",
     justifyContent: "center",
+    marginTop: 2,
   },
   memoModalFieldGroup: {
-    marginBottom: 24,
+    marginBottom: 18,
   },
   memoModalLabel: {
     ...textStyles.h7,
@@ -3103,46 +4098,41 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   memoModalInput: {
-    minHeight: 300,
-    maxHeight: 356,
+    minHeight: 180,
     borderWidth: 1,
     borderColor: colors.gray400,
-    borderRadius: 10,
+    borderRadius: 12,
     paddingHorizontal: 16,
-    paddingVertical: 16,
+    paddingVertical: 14,
     backgroundColor: colors.white,
-    fontSize: 13,
-    lineHeight: 20,
+    ...textStyles.body3,
+    color: colors.gray900,
   },
   memoModalActions: {
     flexDirection: "row",
-    justifyContent: "flex-end",
     alignItems: "center",
-    columnGap: 8,
+    columnGap: 10,
+    paddingTop: 4,
   },
   memoModalSecondaryButton: {
-    minWidth: 174,
-    height: 50,
+    flex: 1,
+    height: 48,
     borderRadius: 10,
-    borderWidth: 1,
-    borderColor: colors.gray400,
-    backgroundColor: colors.white,
+    backgroundColor: colors.gray200,
     alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: 16,
   },
   memoModalSecondaryButtonText: {
     ...textStyles.h6,
     color: colors.black,
   },
   memoModalPrimaryButton: {
-    minWidth: 174,
-    height: 50,
+    flex: 1,
+    height: 48,
     borderRadius: 10,
-    backgroundColor: colors.black,
+    backgroundColor: colors.primary,
     alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: 16,
   },
   memoModalPrimaryButtonText: {
     ...textStyles.h6,
@@ -3166,6 +4156,13 @@ const styles = StyleSheet.create({
   accommodationLabelText: {
     fontSize: 16,
   },
+  itemDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 999,
+    backgroundColor: colors.dotAccommodation,
+    flexShrink: 0,
+  },
   accommodationCell: {
     flex: 1,
     justifyContent: "center",
@@ -3184,5 +4181,78 @@ const styles = StyleSheet.create({
     color: colors.white,
     fontSize: 10,
     fontWeight: "600",
+  },
+  todayIconWrapper: {
+    marginRight: spacing.xs,
+  },
+  weekHeaderRow: {
+    flexDirection: "row",
+    height: 70,
+  },
+  accommodationHeaderRow: {
+    flexDirection: "row",
+    height: 40,
+    backgroundColor: "",
+    borderTopWidth: 0.5,
+    borderBottomWidth: 0.5,
+    borderTopColor: "#e0e0e0",
+    borderBottomColor: "#e0e0e0",
+  },
+  accommodationRowInner: {
+    flex: 1,
+    flexDirection: "row",
+    position: "relative",
+    overflow: "visible",
+  },
+  eventTouchable: {
+    flex: 1,
+    padding: 4,
+    paddingHorizontal: 8,
+  },
+  eventContentCol: {
+    flex: 1,
+    justifyContent: "flex-start",
+    gap: 2,
+  },
+  eventTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    minWidth: 0,
+  },
+  eventTimeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    minWidth: 0,
+    opacity: 0.75,
+  },
+  iconWrapper: {
+    flexShrink: 0,
+  },
+  eventFlightTimeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    minWidth: 0,
+    opacity: 0.8,
+  },
+  dragEventContent: {
+    flex: 1,
+    justifyContent: "center",
+  },
+  dragEventTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  dragEventLocationRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    marginTop: 4,
+  },
+  memoModalContainer: {
+    marginHorizontal: 16,
   },
 });

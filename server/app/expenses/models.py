@@ -23,6 +23,7 @@ class ExpenseCategory(enum.Enum):
     SHOPPING = "shopping"
     ETC = "etc"
 
+
 class ExpenseCurrency(enum.Enum):
     KRW = "KRW"
     USD = "USD"
@@ -31,6 +32,7 @@ class ExpenseCurrency(enum.Enum):
     CNY = "CNY"
     GBP = "GBP"
     AUD = "AUD"
+
 
 class Expense(Base):
     __tablename__ = "expense"

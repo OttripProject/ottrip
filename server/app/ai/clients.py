@@ -13,8 +13,14 @@ from .schemas import AIParseResponse, DocumentTextExtraction
 
 @dependency
 class VisionClient:
+    def __init__(self) -> None:
+        self._client = None
+
     @property
     def client(self):
+        if self._client is not None:
+            return self._client
+
         from google.cloud import vision
         from google.oauth2 import service_account
 
@@ -23,10 +29,11 @@ class VisionClient:
             credentials_info
         )
         self._client = vision.ImageAnnotatorClient(credentials=credentials)
-
         return self._client
 
-    async def extract_text_from_image(self, image_data: bytes) -> DocumentTextExtraction:
+    async def extract_text_from_image(
+        self, image_data: bytes
+    ) -> DocumentTextExtraction:
         from google.cloud.vision_v1 import types as vision_types
 
         image_content = vision_types.Image(content=image_data)
@@ -218,7 +225,9 @@ class GeminiClient:
                 error="일시적인 오류가 발생했습니다. 잠시 후 다시 시도해주세요.",
             )
 
-    async def parse_text_to_item(self, user_text: str, plan_context: str) -> dict[str, Any]:
+    async def parse_text_to_item(
+        self, user_text: str, plan_context: str
+    ) -> dict[str, Any]:
         from google import genai
 
         err = {"success": False, "inferred_item_type": None, "error": "", "draft": None}
@@ -227,10 +236,8 @@ class GeminiClient:
             prompt_path = Path(__file__).parent / "prompt" / "text_parse.txt"
             with open(prompt_path, "r", encoding="utf-8") as f:
                 prompt_template = f.read()
-            prompt = (
-                prompt_template
-                .replace("{user_text}", user_text)
-                .replace("{plan_context}", plan_context)
+            prompt = prompt_template.replace("{user_text}", user_text).replace(
+                "{plan_context}", plan_context
             )
 
             config = genai.types.GenerateContentConfig(
@@ -261,13 +268,75 @@ class GeminiClient:
             err["error"] = "일시적인 오류가 발생했습니다. 잠시 후 다시 시도해주세요."
             return err
 
+    async def analyze_plan_upload(
+        self, file_bytes: bytes, mime_type: str
+    ) -> dict[str, Any]:
+        """파일(이미지/PDF/CSV) 전체 일정 분석 — 복수 항목 반환."""
+        from google import genai
+        from google.genai import types
+
+        err: dict[str, Any] = {"success": False, "items": [], "error": ""}
+        raw = ""
+
+        try:
+            prompt_path = Path(__file__).parent / "prompt" / "plan_upload_analyze.txt"
+            with open(prompt_path, "r", encoding="utf-8") as f:
+                prompt_text = f.read()
+
+            config = genai.types.GenerateContentConfig(
+                system_instruction=ai_settings.DOCUMENT_UPLOAD_ANALYZE_SYSTEM_PROMPT,
+                temperature=0.2,
+                response_mime_type="application/json",
+            )
+
+            contents = [
+                types.Part.from_bytes(data=file_bytes, mime_type=mime_type),
+                types.Part.from_text(text=prompt_text),
+            ]
+
+            response = await self.client.aio.models.generate_content(
+                model=ai_settings.GEMINI_DEFAULT_MODEL,
+                contents=contents,
+                config=config,
+            )
+            finish_reason = None
+            try:
+                finish_reason = response.candidates[0].finish_reason
+            except Exception:
+                pass
+            logger.info("analyze_plan_upload finish_reason=%s", finish_reason)
+
+            raw = (getattr(response, "text", None) or "").strip()
+            if not raw:
+                err["error"] = "AI 응답이 비어있습니다."
+                return err
+            logger.info("analyze_plan_upload raw response: %s", raw[:500])
+            parsed = json.loads(raw)
+            if not isinstance(parsed, dict):
+                err["error"] = "AI 응답이 객체 형태가 아닙니다."
+                return err
+            return parsed
+        except json.JSONDecodeError:
+            logger.error(
+                "analyze_plan_upload JSON 파싱 실패. raw=%s",
+                raw[:500] if raw else "None",
+            )
+            err["error"] = "AI 응답을 JSON으로 파싱할 수 없습니다."
+            return err
+        except Exception as e:
+            logger.exception("analyze_plan_upload 오류: %s", str(e))
+            err["error"] = f"플랜 분석 중 오류: {str(e)}"
+            return err
+
     async def analyze_document_upload(self, ocr_text: str) -> dict[str, Any]:
         from google import genai
 
         err = {"success": False, "inferred_item_type": None, "error": "", "draft": None}
 
         try:
-            prompt_path = Path(__file__).parent / "prompt" / "document_upload_analyze.txt"
+            prompt_path = (
+                Path(__file__).parent / "prompt" / "document_upload_analyze.txt"
+            )
             with open(prompt_path, "r", encoding="utf-8") as f:
                 prompt_template = f.read()
             prompt = prompt_template.replace("{ocr_text}", ocr_text)

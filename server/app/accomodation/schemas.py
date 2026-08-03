@@ -1,8 +1,9 @@
 from datetime import date, time
 
+from pydantic import model_validator
+
 from app.expenses.schemas import ExpenseBase, ExpenseRead, ExpenseUpdate
 from app.schemas import APISchema
-from pydantic import model_validator
 
 
 class AccommodationBase(APISchema):
@@ -20,8 +21,13 @@ class AccommodationBase(APISchema):
     def validate_dates_times(self):
         if self.checkout_date < self.checkin_date:
             raise ValueError("체크아웃 날짜는 체크인 날짜 이후여야 합니다.")
-        if self.checkout_date == self.checkin_date and self.checkout_time <= self.checkin_time:
-            raise ValueError("같은 날짜에서는 체크아웃 시간이 체크인 시간보다 늦어야 합니다.")
+        if (
+            self.checkout_date == self.checkin_date
+            and self.checkout_time <= self.checkin_time
+        ):
+            raise ValueError(
+                "같은 날짜에서는 체크아웃 시간이 체크인 시간보다 늦어야 합니다."
+            )
         return self
 
 

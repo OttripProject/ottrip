@@ -1,4 +1,3 @@
-
 from sqlalchemy import select, update
 from sqlalchemy.orm import joinedload, with_loader_criteria
 

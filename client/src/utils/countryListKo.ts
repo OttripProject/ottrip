@@ -1,17 +1,54 @@
 import countries from "i18n-iso-countries";
+import en from "i18n-iso-countries/langs/en.json";
 import ko from "i18n-iso-countries/langs/ko.json";
 
 countries.registerLocale(ko as any);
+countries.registerLocale(en as any);
 
-export type CountryOption = { label: string; value: string };
+export type CountryOption = {
+  label: string;
+  labelEn: string;
+  value: string;
+  flag: string;
+};
+
+export const codeToFlag = (alpha2: string): string =>
+  alpha2
+    .toUpperCase()
+    .split("")
+    .map(c => String.fromCodePoint(c.charCodeAt(0) + 127397))
+    .join("");
+
+export const koreanNameToIso2 = (koreanName: string): string | null =>
+  countries.getAlpha2Code(koreanName, "ko") ?? null;
+
+export const POPULAR_COUNTRY_CODES = [
+  "KR", "JP", "US", "VN", "TH", "SG", "PH", "TW", "HK", "ID", "MY",
+  "FR", "IT", "ES", "GB", "AU",
+];
+
+export function getPopularCountryOptions(): CountryOption[] {
+  const all = getKoreanCountryOptions();
+  const map = Object.fromEntries(all.map(o => [o.value, o]));
+  return POPULAR_COUNTRY_CODES.flatMap(code => (map[code] ? [map[code]] : []));
+}
 
 export function getKoreanCountryOptions(): CountryOption[] {
-  const names = countries.getNames("ko", { select: "official" }) as Record<
+  const koNames = countries.getNames("ko", { select: "official" }) as Record<
     string,
     string
   >;
-  return Object.entries(names)
-    .map(([code, label]) => ({ label, value: code }))
+  const enNames = countries.getNames("en", { select: "official" }) as Record<
+    string,
+    string
+  >;
+  return Object.entries(koNames)
+    .map(([code, label]) => ({
+      label,
+      labelEn: enNames[code] ?? "",
+      value: code,
+      flag: codeToFlag(code),
+    }))
     .sort((a, b) => a.label.localeCompare(b.label, "ko"));
 }
 

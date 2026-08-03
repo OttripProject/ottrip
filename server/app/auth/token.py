@@ -67,7 +67,7 @@ def decode_jwt_token(
     token_type: TokenType = TokenType.AUTH,
 ) -> Optional[int]:
     """JWT 토큰을 디코딩합니다.
-    
+
     Returns:
         Optional[int]: 디코딩된 user_id, 실패 시 None
     """

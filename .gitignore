@@ -40,6 +40,8 @@ __pycache__/
 
 # DB / local data
 **/*.db
+*.dump
+server/src/
 
 # Xcode
 *.xcodeproj/

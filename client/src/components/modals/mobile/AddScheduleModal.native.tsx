@@ -1,12 +1,13 @@
 import AccommodationEditModal from "@/components/modals/mobile/AccommodationEditModal.native";
+import AddExpenseModal from "@/components/modals/mobile/AddExpenseModal.native";
 import FlightEditModal from "@/components/modals/mobile/FlightEditModal.native";
 import ItineraryEditModal from "@/components/modals/mobile/ItineraryEditModal.native";
-import type { Accommodation, FlightRead, Itinerary } from "@/types/api";
+import type { Accommodation, DocumentUploadAnalyzeResponse, FlightRead, Itinerary, LocalFile } from "@/types/api";
 import FullScreenModal from "@/ui/components/FullScreenModal.native";
 import { colors } from "@/ui/tokens/colors";
 import { textStyles } from "@/ui/tokens/typography";
 import type dayjs from "dayjs";
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import FlightIcon from "../../../../assets/airplane.svg";
 import AccommodationIcon from "../../../../assets/mobile_accomodation.svg";
@@ -23,6 +24,8 @@ interface AddScheduleModalProps {
   planStartDate?: string;
   planEndDate?: string;
   selectedDate?: dayjs.Dayjs;
+  defaultCountry?: string;
+  defaultCity?: string;
   planData: {
     addItinerary: (itinerary: Itinerary) => void;
     addAccommodation: (accommodation: Accommodation) => void;
@@ -40,11 +43,58 @@ export default function AddScheduleModal({
   onSaved,
   planId,
   planStartDate,
+  planEndDate,
   selectedDate,
+  defaultCountry,
+  defaultCity,
   planData,
   onRefresh,
 }: AddScheduleModalProps) {
   const [activeTab, setActiveTab] = useState<AddScheduleTab>("itinerary");
+  const [pendingAiResult, setPendingAiResult] = useState<{
+    result: DocumentUploadAnalyzeResponse;
+    filename?: string;
+    pendingFiles?: LocalFile[];
+  } | null>(null);
+  const [pendingExpenseResult, setPendingExpenseResult] = useState<{
+    result: DocumentUploadAnalyzeResponse;
+    filename?: string;
+    pendingFiles?: LocalFile[];
+  } | null>(null);
+  const [showExpenseModal, setShowExpenseModal] = useState(false);
+
+  useEffect(() => {
+    setPendingAiResult(null);
+  }, [activeTab]);
+
+  useEffect(() => {
+    if (!visible) {
+      setPendingExpenseResult(null);
+      setShowExpenseModal(false);
+    }
+  }, [visible]);
+
+  useEffect(() => {
+    if (pendingExpenseResult && !showExpenseModal) {
+      const timer = setTimeout(() => setShowExpenseModal(true), 350);
+      return () => clearTimeout(timer);
+    }
+  }, [pendingExpenseResult, showExpenseModal]);
+
+  const handleRouteMismatchResult = useCallback(
+    (result: DocumentUploadAnalyzeResponse, filename?: string, pendingFiles?: LocalFile[]) => {
+      const targetType = result.inferredItemType ?? result.draft?.itemType;
+      if (targetType === "expense") {
+        setPendingExpenseResult({ result, filename, pendingFiles });
+        return;
+      }
+      setPendingAiResult({ result, filename, pendingFiles });
+      if (targetType === "flight") setActiveTab("flight");
+      else if (targetType === "accommodation") setActiveTab("accommodation");
+      else if (targetType === "itinerary") setActiveTab("itinerary");
+    },
+    [],
+  );
 
   const finishAfterSave = () => {
     if (onSaved) {
@@ -69,7 +119,11 @@ export default function AddScheduleModal({
           itinerary={null}
           planId={planId}
           defaultDate={selectedDate?.format("YYYY-MM-DD")}
+          defaultCountry={defaultCountry}
+          defaultCity={defaultCity}
           embedded
+          pendingAiResult={pendingAiResult}
+          onRouteMismatchResult={handleRouteMismatchResult}
           onSave={async itinerary => {
             planData.addItinerary(itinerary);
             onRefresh?.();
@@ -86,7 +140,11 @@ export default function AddScheduleModal({
           accommodation={null}
           planId={planId}
           defaultDate={selectedDate?.format("YYYY-MM-DD")}
+          defaultCountry={defaultCountry}
+          defaultCity={defaultCity}
           embedded
+          pendingAiResult={pendingAiResult}
+          onRouteMismatchResult={handleRouteMismatchResult}
           onSave={async accommodation => {
             planData.addAccommodation(accommodation);
             onRefresh?.();
@@ -104,6 +162,8 @@ export default function AddScheduleModal({
         planStartDate={planStartDate}
         defaultDate={selectedDate?.format("YYYY-MM-DD")}
         embedded
+        pendingAiResult={pendingAiResult}
+        onRouteMismatchResult={handleRouteMismatchResult}
         onSave={async flight => {
           planData.addFlight(flight);
           onRefresh?.();
@@ -123,6 +183,7 @@ export default function AddScheduleModal({
             <CloseIcon width={24} height={24} />
           </Pressable>
         </View>
+
         <View style={styles.categoryTabs}>
           <Pressable
             style={[
@@ -195,6 +256,25 @@ export default function AddScheduleModal({
       </View>
 
       <View style={styles.content}>{renderContent()}</View>
+
+      <AddExpenseModal
+        visible={showExpenseModal}
+        onClose={opts => {
+          setShowExpenseModal(false);
+          setPendingExpenseResult(null);
+          if (opts?.fromSave) {
+            setTimeout(() => finishAfterSave(), 400);
+          }
+        }}
+        planId={planId}
+        planStartDate={planStartDate}
+        planEndDate={planEndDate}
+        defaultExDate={selectedDate?.format("YYYY-MM-DD")}
+        pendingAiResult={pendingExpenseResult}
+        onExpenseAdd={() => {
+          onRefresh?.();
+        }}
+      />
     </FullScreenModal>
   );
 }

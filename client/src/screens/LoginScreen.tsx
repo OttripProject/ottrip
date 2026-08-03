@@ -10,6 +10,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../contexts/AuthContext";
 import { loadPublicEnv } from "../core/env/schema";
 import { authApi } from "../services/auth";
+import { plansApi } from "../services/plans";
 import AppleButton from "../ui/components/AppleButton";
 import Card from "../ui/components/Card";
 import GoogleButton from "../ui/components/GoogleButton";
@@ -306,6 +307,25 @@ export default function LoginScreen() {
           }
         } catch {}
 
+        try {
+          const saveId =
+            Platform.OS === "web"
+              ? window.localStorage.getItem("pendingSavePublicId")
+              : null;
+          if (saveId) {
+            window.localStorage.removeItem("pendingSavePublicId");
+            const result = await plansApi.saveExport(saveId);
+            setIsLoading(false);
+            navigation.reset({
+              index: 0,
+              routes: [
+                { name: "PLAN", params: { publicId: result.planPublicId } },
+              ],
+            });
+            return;
+          }
+        } catch {}
+
         setIsLoading(false);
         if (guestUpgrade) {
           navigation.reset({ index: 0, routes: [{ name: "OTTRIP" }] });
@@ -351,6 +371,25 @@ export default function LoginScreen() {
             } else {
               await SecureStore.deleteItemAsync("pendingInviteToken");
             }
+          }
+        } catch {}
+
+        try {
+          const saveId =
+            Platform.OS === "web"
+              ? window.localStorage.getItem("pendingSavePublicId")
+              : null;
+          if (saveId) {
+            window.localStorage.removeItem("pendingSavePublicId");
+            const result = await plansApi.saveExport(saveId);
+            setIsLoading(false);
+            navigation.reset({
+              index: 0,
+              routes: [
+                { name: "PLAN", params: { publicId: result.planPublicId } },
+              ],
+            });
+            return;
           }
         } catch {}
 

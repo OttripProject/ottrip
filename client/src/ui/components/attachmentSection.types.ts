@@ -11,6 +11,7 @@ export function pendingAiFileKey(file: LocalFile): string {
 }
 
 export interface AttachmentSectionProps {
+  variant?: "expense";
   pendingFiles: LocalFile[];
   onPickImage: () => void;
   onPickDocument: () => void;
@@ -32,4 +33,10 @@ export interface AttachmentSectionProps {
   onAppendPendingFiles?: (files: LocalFile[]) => void;
   onAiAnalyzePress?: (selection: AiAttachmentAnalyzeSelection) => void;
   isAiAnalyzing?: boolean;
+  onCancelAiAnalyze?: () => void;
+  analyzeError?: string | null;
+  onRetryAnalyze?: () => void;
+  isAiAnalyzeSuccess?: boolean;
+  isAiAnalyzePartial?: boolean;
+  analyzePartialMessage?: string;
 }

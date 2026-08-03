@@ -5,10 +5,11 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from typing import Optional
 
-from app.common.config import email_settings
 # from sendgrid import SendGridAPIClient
 # from sendgrid.helpers.mail import Mail
 import resend
+
+from app.common.config import email_settings
 
 
 def build_invitation_accept_link(token: str) -> str:
@@ -24,7 +25,6 @@ def send_invitation_email(
     accept_link: str,
     expires_at_iso: Optional[str],
 ) -> None:
-
     subject = f"[OTTRIP] '{plan_title}' 계획에 초대되었습니다"
     html = (
         f"<p>여행 계획 '<b>{plan_title}</b>'에 <b>{role}</b> 권한으로 초대되었습니다.</p>"
@@ -38,7 +38,9 @@ def send_invitation_email(
         api_key = email_settings.SENDGRID_API_KEY
         from_email = email_settings.EMAIL_FROM or email_from
         if not api_key or not from_email:
-            raise RuntimeError("SENDGRID_API_KEY/EMAIL_FROM missing for HTTP email provider")
+            raise RuntimeError(
+                "SENDGRID_API_KEY/EMAIL_FROM missing for HTTP email provider"
+            )
         message = Mail(
             from_email=from_email,
             to_emails=to_email,
@@ -49,7 +51,9 @@ def send_invitation_email(
         response = sg.send(message)
 
     if not smtp_host or not smtp_user or not smtp_pass:
-        raise RuntimeError("SMTP configuration is missing. Set SMTP_HOST/SMTP_USER/SMTP_PASS.")
+        raise RuntimeError(
+            "SMTP configuration is missing. Set SMTP_HOST/SMTP_USER/SMTP_PASS."
+        )
 
     msg = MIMEMultipart("alternative")
     msg["From"] = email_from
@@ -86,10 +90,12 @@ def send_invitation_email_resend(
 
     api_key = email_settings.RESEND_API_KEY
     from_email = email_settings.EMAIL_FROM
-    
+
     if not api_key or not from_email:
-        raise RuntimeError("RESEND_API_KEY/EMAIL_FROM missing for Resend email provider")
-    
+        raise RuntimeError(
+            "RESEND_API_KEY/EMAIL_FROM missing for Resend email provider"
+        )
+
     resend.api_key = api_key
     params: resend.Emails.SendParams = {
         "from": from_email,

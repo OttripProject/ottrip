@@ -1,7 +1,6 @@
 from datetime import date, datetime
-from typing import TYPE_CHECKING, Any
-
 from enum import Enum
+from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import Date, DateTime, ForeignKey, Integer, String, Text, func
 from sqlalchemy.dialects.postgresql import JSONB
@@ -112,6 +111,13 @@ class Plan(Base):
         default_factory=list,
     )
 
+    segments: Mapped[list["PlanSegment"]] = relationship(
+        back_populates="plan",
+        cascade="all, delete-orphan",
+        default_factory=list,
+        order_by="PlanSegment.order_index",
+    )
+
     created_at: Mapped[datetime] = mapped_column(
         DateTime, server_default=func.now(), init=False
     )
@@ -139,10 +145,16 @@ class PlanShared(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True, init=False)
     plan_id: Mapped[int] = mapped_column(Integer, ForeignKey("plan.id"), nullable=False)
-    shared_user_id: Mapped[int] = mapped_column(Integer, ForeignKey("user.id"), nullable=False)
+    shared_user_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("user.id"), nullable=False
+    )
     role: Mapped[Role]
-    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), init=False)
-    updated_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), onupdate=func.now(), init=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, server_default=func.now(), init=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, server_default=func.now(), onupdate=func.now(), init=False
+    )
 
     # ORM relationships
     plan: Mapped["Plan"] = relationship(back_populates="shared", init=False)
@@ -158,8 +170,71 @@ class PlanInvitation(Base):
     email: Mapped[str] = mapped_column(String(255), nullable=False)
     role: Mapped[Role]
     token: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
-    invited_by: Mapped[int] = mapped_column(Integer, ForeignKey("user.id"), nullable=False)
-    expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    invited_by: Mapped[int] = mapped_column(
+        Integer, ForeignKey("user.id"), nullable=False
+    )
+    expires_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     status: Mapped[InvitationStatus] = mapped_column(default=InvitationStatus.PENDING)
-    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), init=False)
-    updated_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), onupdate=func.now(), init=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, server_default=func.now(), init=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, server_default=func.now(), onupdate=func.now(), init=False
+    )
+
+
+class PlanSegment(Base):
+    __tablename__ = "plan_segment"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True, init=False)
+    plan_id: Mapped[int] = mapped_column(
+        Integer,
+        ForeignKey("plan.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+        init=False,
+    )
+    country: Mapped[str] = mapped_column(String(100), nullable=False)
+    city: Mapped[str] = mapped_column(String(100), nullable=False)
+    start_date: Mapped[date] = mapped_column(Date, nullable=False)
+    end_date: Mapped[date] = mapped_column(Date, nullable=False)
+    order_index: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+
+    plan: Mapped["Plan"] = relationship(back_populates="segments", init=False)
+
+
+class PlanExport(Base):
+    __tablename__ = "plan_export"
+
+    id: Mapped[int] = mapped_column(
+        primary_key=True,
+        init=False,
+        index=True,
+        autoincrement=True,
+    )
+
+    public_id: Mapped[str] = mapped_column(
+        String(36),
+        nullable=False,
+        unique=True,
+        index=True,
+    )
+
+    source_plan_id: Mapped[int] = mapped_column(
+        Integer,
+        ForeignKey("plan.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+
+    snapshot_data: Mapped[dict[str, Any]] = mapped_column(
+        JSONB,
+        nullable=False,
+    )
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        init=False,
+    )

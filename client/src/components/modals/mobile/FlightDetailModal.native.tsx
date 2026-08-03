@@ -1,12 +1,17 @@
-import type { FlightRead, FlightSegmentReadDto } from "@/types/api";
+import ImagePreviewModal, {
+  type ImagePreviewItem,
+} from "@/components/modals/ImagePreviewModal";
+import type { Attachment, FlightRead, FlightSegmentReadDto } from "@/types/api";
+import { ExpenseCurrency, currencyLabels } from "@/types/expense";
 import BottomSheetModal from "@/ui/components/BottomSheetModal.native";
 import { colors } from "@/ui/tokens/colors";
 import { textStyles } from "@/ui/tokens/typography";
 import { convertUTCToLocalTime } from "@/utils/dateUtils";
 import dayjs from "dayjs";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   Alert,
+  Linking,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -27,6 +32,7 @@ interface FlightDetailModalProps {
   segment?: FlightSegmentReadDto | null;
   onEdit?: (flight: FlightRead) => void;
   onDelete?: (flight: FlightRead) => void;
+  attachments?: Attachment[];
 }
 
 export default function FlightDetailModal({
@@ -36,17 +42,39 @@ export default function FlightDetailModal({
   segment: _segment,
   onEdit,
   onDelete,
+  attachments = [],
 }: FlightDetailModalProps) {
-  if (!flight) return null;
-
-  const segments = flight.flightSegments || [];
-  const expenseAmount = flight.expense?.amount ?? 0;
   const [showAdditionalInfo, setShowAdditionalInfo] = useState(false);
-  const hasAdditionalInfo = !!(flight.ticketNumber || flight.bookingReference);
+  const [previewVisible, setPreviewVisible] = useState(false);
+  const [previewImages, setPreviewImages] = useState<ImagePreviewItem[]>([]);
+  const [previewInitialIndex, setPreviewInitialIndex] = useState(0);
+
+  const flightAttachments = useMemo(
+    () =>
+      flight
+        ? attachments.filter(
+            a => a.entityType === "flight" && a.entityId === flight.id,
+          )
+        : [],
+    [attachments, flight],
+  );
 
   useEffect(() => {
-    if (!visible) setShowAdditionalInfo(false);
+    if (!visible) {
+      setShowAdditionalInfo(false);
+      setPreviewVisible(false);
+    }
   }, [visible]);
+
+  if (!flight) return null;
+
+  const segments = [...(flight.flightSegments || [])].sort(
+    (a, b) => a.order - b.order,
+  );
+  const expenseAmount = flight.expense?.amount ?? 0;
+  const expenseCurrency = (flight.expense?.currency ??
+    ExpenseCurrency.KRW) as ExpenseCurrency;
+  const hasAdditionalInfo = !!(flight.ticketNumber || flight.bookingReference);
 
   const formatSegmentDate = (dateTime: string) => {
     return dayjs(dateTime).format("MM/DD");
@@ -86,7 +114,16 @@ export default function FlightDetailModal({
   };
 
   const handleViewTicket = () => {
-    // TODO: 항공권 보기 기능 구현
+    const images = flightAttachments.filter(a =>
+      a.contentType.startsWith("image/"),
+    );
+    if (images.length > 0) {
+      setPreviewImages(images.map(a => ({ attachment: a })));
+      setPreviewInitialIndex(0);
+      setPreviewVisible(true);
+    } else if (flightAttachments.length > 0) {
+      Linking.openURL(flightAttachments[0].fileUrl);
+    }
   };
 
   return (
@@ -172,7 +209,7 @@ export default function FlightDetailModal({
                   {Number(expenseAmount).toLocaleString("ko-KR", {
                     maximumFractionDigits: 0,
                   })}
-                  원
+                  {currencyLabels[expenseCurrency]}
                 </Text>
               </View>
             </View>
@@ -229,10 +266,15 @@ export default function FlightDetailModal({
         {hasAdditionalInfo && (
           <>
             <Pressable
-              style={styles.additionalInfoToggle}
+              style={[
+                styles.additionalInfoToggle,
+                showAdditionalInfo && styles.additionalInfoToggleOpen,
+              ]}
               onPress={() => setShowAdditionalInfo(v => !v)}
             >
-              <Text style={styles.additionalInfoToggleText}>추가정보</Text>
+              <Text style={styles.additionalInfoToggleText}>
+                {showAdditionalInfo ? "추가정보 닫기" : "추가정보 보기"}
+              </Text>
             </Pressable>
             {showAdditionalInfo && (
               <View style={styles.additionalInfo}>
@@ -260,13 +302,21 @@ export default function FlightDetailModal({
         )}
       </ScrollView>
 
-      {/* 항공권 보기 버튼 */}
-      <View style={styles.footer}>
-        <Pressable style={styles.ticketButton} onPress={handleViewTicket}>
-          <FlightIcon width={20} height={20} color={colors.white} />
-          <Text style={styles.ticketButtonText}>항공권 보기</Text>
-        </Pressable>
-      </View>
+      {flightAttachments.length > 0 && (
+        <View style={styles.footer}>
+          <Pressable style={styles.ticketButton} onPress={handleViewTicket}>
+            <FlightIcon width={20} height={20} color={colors.white} />
+            <Text style={styles.ticketButtonText}>항공권 보기</Text>
+          </Pressable>
+        </View>
+      )}
+
+      <ImagePreviewModal
+        visible={previewVisible}
+        onClose={() => setPreviewVisible(false)}
+        images={previewImages}
+        initialIndex={previewInitialIndex}
+      />
     </BottomSheetModal>
   );
 }
@@ -317,7 +367,7 @@ const styles = StyleSheet.create({
     backgroundColor: `${colors.primary}1A`,
     borderRadius: 12,
     padding: 16,
-    marginVertical: 12,
+    marginVertical: 6,
   },
   flightSectionHeader: {
     flexDirection: "row",
@@ -384,14 +434,21 @@ const styles = StyleSheet.create({
     gap: 4,
     marginTop: 16,
   },
+  additionalInfoToggleOpen: {
+    borderBottomLeftRadius: 0,
+    borderBottomRightRadius: 0,
+  },
   additionalInfoToggleText: {
     ...textStyles.body5,
     color: colors.gray600,
   },
   additionalInfo: {
+    backgroundColor: colors.gray200,
+    borderBottomLeftRadius: 12,
+    borderBottomRightRadius: 12,
     paddingHorizontal: 16,
-    gap: 4,
-    marginTop: -16,
+    paddingBottom: 12,
+    gap: 8,
   },
   additionalInfoRow: {
     flexDirection: "row",

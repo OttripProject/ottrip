@@ -3,6 +3,7 @@ import { useMe } from "@/hooks/useMe";
 import { plansApi } from "@/services/plans";
 import type {
   Accommodation,
+  Attachment,
   Expense,
   FlightRead,
   Itinerary,
@@ -39,17 +40,16 @@ interface TravelInfoModalProps {
   accommodations?: Accommodation[];
   flights?: FlightRead[];
   expenses: Expense[];
+  attachments?: Attachment[];
   planPublicId: string | null;
   planId: number;
   planStartDate?: string;
   planEndDate?: string;
+  memberCount?: number;
   onExpenseAdd?: (expense: Expense) => void;
   onRefreshExpenses?: () => Promise<void>;
   onRefreshPlan?: () => Promise<void>;
 }
-
-const formatCurrency = (amount: number) =>
-  `${amount.toLocaleString("ko-KR")}원`;
 
 const formatPeriod = (start: string, end: string) =>
   `${dayjs(start).format("YYYY.MM.DD")} ~ ${dayjs(end).format("YYYY.MM.DD")}`;
@@ -62,10 +62,12 @@ export default function TravelInfoModal({
   accommodations = [],
   flights = [],
   expenses,
+  attachments = [],
   planPublicId,
   planId,
   planStartDate,
   planEndDate,
+  memberCount = 0,
   onExpenseAdd,
   onRefreshExpenses,
   onRefreshPlan,
@@ -76,26 +78,7 @@ export default function TravelInfoModal({
   const [showAddExpenseFromDetail, setShowAddExpenseFromDetail] =
     useState(false);
   const [showSharedMembers, setShowSharedMembers] = useState(false);
-  const [memberCount, setMemberCount] = useState(0);
   const [memo, setMemo] = useState(plan?.memo ?? "");
-
-  const loadMemberCount = useCallback(async () => {
-    if (!planId) return;
-    try {
-      const shares = await plansApi.listShares(planId);
-      setMemberCount(shares.length);
-    } catch {
-      setMemberCount(0);
-    }
-  }, [planId]);
-
-  useEffect(() => {
-    if (visible && planId) {
-      loadMemberCount();
-    } else {
-      setMemberCount(0);
-    }
-  }, [visible, planId, loadMemberCount]);
 
   useEffect(() => {
     if (visible && plan) {
@@ -111,10 +94,18 @@ export default function TravelInfoModal({
 
   const totalExpenses = useMemo(() => {
     let total = 0;
+    let totalKrw = 0;
+    let totalUsd = 0;
     (expenses || []).forEach((e: Expense) => {
-      total += Number(e?.amount || 0);
+      const amount = Number(e?.amount || 0);
+      total += amount;
+      if (e?.currency === "USD") {
+        totalUsd += amount;
+      } else {
+        totalKrw += amount;
+      }
     });
-    return total;
+    return { total, totalKrw, totalUsd };
   }, [expenses]);
 
   const expensesByCategory = useMemo(() => {
@@ -190,9 +181,21 @@ export default function TravelInfoModal({
         {/* Card 2: 여행 총 경비 - 흰색 카드, 라벨 gray, 금액 black, 검정 버튼 */}
         <View style={styles.card}>
           <Text style={styles.cardLabel}>여행 총 경비</Text>
-          <Text style={styles.expenseAmount}>
-            {formatCurrency(totalExpenses)}
-          </Text>
+          <View style={styles.expenseAmountGroup}>
+            {totalExpenses.totalKrw > 0 && (
+              <Text style={styles.expenseAmount}>
+                {totalExpenses.totalKrw.toLocaleString("ko-KR")}원
+              </Text>
+            )}
+            {totalExpenses.totalUsd > 0 && (
+              <Text style={styles.expenseAmount}>
+                {totalExpenses.totalUsd.toLocaleString("en-US")}달러
+              </Text>
+            )}
+            {totalExpenses.total === 0 && (
+              <Text style={styles.expenseAmount}>0원</Text>
+            )}
+          </View>
           <Pressable
             style={styles.expenseDetailButton}
             onPress={() => setShowExpenseDetail(true)}
@@ -261,12 +264,14 @@ export default function TravelInfoModal({
         visible={showExpenseDetail && !showAddExpenseFromDetail}
         onClose={() => setShowExpenseDetail(false)}
         expenses={expenses || []}
-        total={totalExpenses}
+        attachments={attachments}
+        total={totalExpenses.total}
         byCategory={expensesByCategory}
         planId={planId}
         planStartDate={planStartDate}
         planEndDate={planEndDate}
         title="전체 여행 비용"
+        onExpenseDelete={onRefreshExpenses}
         onExpenseAdd={handleExpenseAdded}
         onAddExpensePress={() => {
           setShowExpenseDetail(false);
@@ -294,7 +299,9 @@ export default function TravelInfoModal({
         visible={showSharedMembers}
         onClose={() => {
           setShowSharedMembers(false);
-          loadMemberCount();
+          if (planPublicId) {
+            queryClient.invalidateQueries({ queryKey: ["plan", planPublicId] });
+          }
         }}
         planId={planId}
         myRole={
@@ -351,9 +358,12 @@ const styles = StyleSheet.create({
     color: colors.gray600,
     marginBottom: 4,
   },
+  expenseAmountGroup: {
+    gap: 2,
+    marginBottom: 16,
+  },
   expenseAmount: {
     ...textStyles.h2,
-    marginBottom: 16,
   },
   expenseDetailButton: {
     backgroundColor: colors.black,

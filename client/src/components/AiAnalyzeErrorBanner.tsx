@@ -1,5 +1,5 @@
 import { textStyles } from "@/ui/tokens/typography";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View, type ViewStyle } from "react-native";
 import ErrorTriangleIcon from "../../assets/error_triangle.svg";
 import RetryIcon from "../../assets/retry.svg";
 
@@ -8,6 +8,7 @@ interface AiAnalyzeErrorBannerProps {
   message?: string;
   showTitle?: boolean;
   showRetry?: boolean;
+  style?: ViewStyle;
 }
 
 export default function AiAnalyzeErrorBanner({
@@ -15,15 +16,17 @@ export default function AiAnalyzeErrorBanner({
   message,
   showTitle = true,
   showRetry = true,
+  style,
 }: AiAnalyzeErrorBannerProps) {
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, style]}>
       <View style={styles.topRow}>
         <ErrorTriangleIcon width={16} height={16} style={styles.icon} />
         <View style={styles.textBlock}>
           {showTitle && <Text style={styles.title}>분석 실패</Text>}
           <Text style={[styles.subtitle, !showTitle && styles.subtitleNoTitle]}>
-            {message ?? "첨부 파일에서 일정 정보를 읽지 못했어요. 더 선명한 자료로 다시 시도해 주세요."}
+            {message ??
+              "첨부 파일에서 일정 정보를 읽지 못했어요. 더 선명한 자료로 다시 시도해 주세요."}
           </Text>
         </View>
       </View>
@@ -31,9 +34,12 @@ export default function AiAnalyzeErrorBanner({
         <View style={styles.bottomRow}>
           <Pressable
             onPress={onRetry}
-            style={({ pressed }) => [styles.retryBtn, pressed && styles.retryBtnPressed]}
+            style={({ pressed }) => [
+              styles.retryBtn,
+              pressed && styles.retryBtnPressed,
+            ]}
           >
-            <RetryIcon width={12} height={12} style={styles.retryIcon} />
+            <RetryIcon width={12} height={12} color="rgb(192, 57, 43)" style={styles.retryIcon} />
             <Text style={styles.retryBtnText}>다시 시도</Text>
           </Pressable>
         </View>

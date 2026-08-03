@@ -39,6 +39,7 @@ import { handleGuestPromptError } from "@/utils/guestPrompt";
 import dayjs from "dayjs";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  ActivityIndicator,
   Platform,
   Pressable,
   ScrollView,
@@ -46,10 +47,11 @@ import {
   Text,
   View,
 } from "react-native";
-import AddIcon from "../../../../assets/add.svg";
 import CalendarIcon from "../../../../assets/calender.svg";
+import CloseIcon from "../../../../assets/close_sm.svg";
 import DeleteIcon from "../../../../assets/delete.svg";
-import CloseIcon from "../../../../assets/delete_ai.svg";
+import PanelTabSwitcher from "../PanelTabSwitcher";
+import { extendPlanIfNeeded } from "@/utils/extendPlanIfNeeded";
 
 interface FlightItemProps {
   flight?: any;
@@ -62,11 +64,14 @@ interface FlightItemProps {
   onShowWarning?: (message?: string) => void;
   readOnly?: boolean;
   onEdit?: () => void;
+  activeTab?: "itinerary" | "flight" | "accommodation";
+  onTabChange?: (tab: "itinerary" | "flight" | "accommodation") => void;
   stagedDocumentAnalyze?: StagedDocumentAnalyzePayload | null;
   onConsumeStagedDocumentAnalyze?: () => void;
   routeDocumentAnalyzeSuccess?: (
     res: DocumentUploadAnalyzeResponse,
     carryPendingFiles?: LocalFile[],
+    originEntityType?: string,
   ) => boolean;
   carryoverPendingFiles?: LocalFile[] | null;
   onConsumeCarryoverPendingFiles?: () => void;
@@ -83,6 +88,8 @@ export default function FlightItem({
   onShowWarning,
   readOnly = false,
   onEdit,
+  activeTab,
+  onTabChange,
   stagedDocumentAnalyze,
   onConsumeStagedDocumentAnalyze,
   routeDocumentAnalyzeSuccess,
@@ -125,6 +132,38 @@ export default function FlightItem({
     setExpenseData({
       amount: normalizeAmountToIntDigits(flight?.expense?.amount),
     });
+  }, [flight]);
+
+  useEffect(() => {
+    if (!flight?.flightSegments?.length) return;
+    const sortedSegments = [...flight.flightSegments].sort(
+      (a: any, b: any) => (a.order ?? 0) - (b.order ?? 0),
+    );
+    setFlightSegments(
+      sortedSegments.map((segment: any) => {
+        const depTime = segment.departureTime
+          ? dayjs(segment.departureTime)
+          : dayjs();
+        const arrTime = segment.arrivalTime
+          ? dayjs(segment.arrivalTime)
+          : dayjs().add(1, "hour");
+        return {
+          id: segment.id,
+          airline: segment.airline || "",
+          flight_number: segment.flightNumber || "",
+          departure_airport: segment.departureAirport || "",
+          arrival_airport: segment.arrivalAirport || "",
+          departure_date: depTime.format("YYYY-MM-DD"),
+          departure_time: depTime.format("HH:mm"),
+          arrival_date: arrTime.format("YYYY-MM-DD"),
+          arrival_time: arrTime.format("HH:mm"),
+          seat_class: segment.seatClass || "",
+          seat_number: segment.seatNumber || "",
+          gate: segment.gate || "",
+          terminal: segment.terminal || "",
+        };
+      }),
+    );
   }, [flight]);
 
   const [showWarning, setShowWarning] = useState(false);
@@ -226,10 +265,19 @@ export default function FlightItem({
     useState<DocumentUploadAnalyzeResponse | null>(null);
   const [isAiAnalyzing, setIsAiAnalyzing] = useState(false);
   const [aiAnalyzeInlineError, setAiAnalyzeInlineError] = useState(false);
-  const [aiAnalyzeInlineErrorMessage, setAiAnalyzeInlineErrorMessage] = useState("");
-  const [aiAnalyzeSizeErrorMessage, setAiAnalyzeSizeErrorMessage] = useState("");
-  const [lastAiSelection, setLastAiSelection] = useState<AiAttachmentAnalyzeSelection | null>(null);
+  const [aiAnalyzeInlineErrorMessage, setAiAnalyzeInlineErrorMessage] =
+    useState("");
+  const [lastAiSelection, setLastAiSelection] =
+    useState<AiAttachmentAnalyzeSelection | null>(null);
+  const [lastAnalyzeFileName, setLastAnalyzeFileName] = useState<string | null>(
+    null,
+  );
   const lastHandledAiAnalyzeSeqRef = useRef<number | null>(null);
+  const aiAnalyzeCancelledRef = useRef(false);
+
+  const [analyzeOriginEntityType, setAnalyzeOriginEntityType] = useState<
+    string | undefined
+  >(undefined);
 
   useEffect(() => {
     if (!stagedDocumentAnalyze) return;
@@ -238,9 +286,10 @@ export default function FlightItem({
       stagedDocumentAnalyze.result.draft?.itemType;
     if (kind !== "flight") return;
     if (readOnly) return;
-    const { seq, result } = stagedDocumentAnalyze;
+    const { seq, result, originEntityType } = stagedDocumentAnalyze;
     if (lastHandledAiAnalyzeSeqRef.current === seq) return;
     lastHandledAiAnalyzeSeqRef.current = seq;
+    setAnalyzeOriginEntityType(originEntityType);
     setAiAnalyzeResult(result);
     setAiAnalyzeModalVisible(true);
   }, [stagedDocumentAnalyze, readOnly]);
@@ -262,47 +311,35 @@ export default function FlightItem({
     async (selection: AiAttachmentAnalyzeSelection) => {
       setAiAnalyzeInlineError(false);
       setAiAnalyzeInlineErrorMessage("");
-      setAiAnalyzeSizeErrorMessage("");
-      const AI_MAX_SIZE = 10 * 1024 * 1024;
-      const oversizeFile =
-        selection.kind === "pending"
-          ? pendingFiles.find(f => pendingAiFileKey(f) === selection.key)
-          : undefined;
-      const oversizeExisting =
-        selection.kind === "existing"
-          ? existingAttachments.find(a => a.id === selection.id)
-          : undefined;
-      const oversizeBytes =
-        oversizeFile?.size ?? oversizeExisting?.fileSize;
-      const oversizeName =
-        oversizeFile?.name ?? oversizeExisting?.fileName ?? "파일";
-      if (oversizeBytes !== undefined && oversizeBytes > AI_MAX_SIZE) {
-        setAiAnalyzeSizeErrorMessage(`"${oversizeName}"은(는) 10MB를 넘어 분석할 수 없어요.`);
-        return;
-      }
+      aiAnalyzeCancelledRef.current = false;
       setIsAiAnalyzing(true);
       try {
         const payload = await buildAnalyzeUploadPayload(selection, {
           pendingFiles,
           existingAttachments,
         });
+        setLastAnalyzeFileName(payload.filename);
         const res = await analyzeDocumentUpload(payload.file, {
           filename: payload.filename,
         });
+        if (aiAnalyzeCancelledRef.current) return;
         const err = res.error?.trim();
         if (!res.success || err) {
           setLastAiSelection(selection);
           setAiAnalyzeInlineError(true);
           return;
         }
-        if (routeDocumentAnalyzeSuccess?.(res, pendingFiles)) {
+        if (routeDocumentAnalyzeSuccess?.(res, pendingFiles, "항공")) {
           return;
         }
         setAiAnalyzeResult(res);
         setAiAnalyzeModalVisible(true);
-      } catch (e) {
+      } catch (_e) {
+        if (aiAnalyzeCancelledRef.current) return;
         setLastAiSelection(selection);
-        setAiAnalyzeInlineErrorMessage("분析 서버에 연결하지 못했어요. 잠시 후 다시 시도해 주세요.");
+        setAiAnalyzeInlineErrorMessage(
+          "분석 서버에 연결하지 못했어요. 잠시 후 다시 시도해 주세요.",
+        );
         setAiAnalyzeInlineError(true);
       } finally {
         setIsAiAnalyzing(false);
@@ -466,7 +503,7 @@ export default function FlightItem({
     !readOnly ||
     (readOnly &&
       flightAttachmentEntityId != null &&
-      (isLoadingAttachments || existingAttachments.length > 0));
+      existingAttachments.length > 0);
 
   const handleSave = async () => {
     if (isSubmittingRef.current) {
@@ -564,7 +601,8 @@ export default function FlightItem({
             planId: planId,
             description: (() => {
               const dep = flightSegments[0]?.departure_airport;
-              const arr = flightSegments[flightSegments.length - 1]?.arrival_airport;
+              const arr =
+                flightSegments[flightSegments.length - 1]?.arrival_airport;
               return dep && arr ? `${dep} → ${arr}` : null;
             })(),
           },
@@ -600,12 +638,18 @@ export default function FlightItem({
             planId: planId,
             description: (() => {
               const dep = flightSegments[0]?.departure_airport;
-              const arr = flightSegments[flightSegments.length - 1]?.arrival_airport;
+              const arr =
+                flightSegments[flightSegments.length - 1]?.arrival_airport;
               return dep && arr ? `${dep} → ${arr}` : null;
             })(),
           },
         });
         savedFlight = await flightsApi.getFlight(createResponse.id);
+        await extendPlanIfNeeded(
+          planId,
+          planData?.plan,
+          flightSegments.flatMap(s => [s.departure_date, s.arrival_date]),
+        );
       }
 
       if (pendingFiles.length > 0 && savedFlight?.id) {
@@ -676,31 +720,31 @@ export default function FlightItem({
   };
 
   return (
-    <>
+    <View style={styles.wrapper}>
+      <View style={styles.titleRow}>
+        <Text style={styles.title}>
+          {readOnly ? "항공편 정보" : flight ? "항공편 수정" : "항공편 추가"}
+        </Text>
+        <Pressable
+          onPress={() => {
+            onCancel();
+          }}
+          style={styles.closeButton}
+        >
+          <CloseIcon width={12} height={12} color={colors.gray600} />
+        </Pressable>
+      </View>
+      {!readOnly && (
+        <PanelTabSwitcher activeTab={activeTab} onTabChange={onTabChange} />
+      )}
       <ScrollView
-        style={[
-          styles.container,
-          { position: "relative", overflow: "visible" },
-        ]}
+        style={styles.container}
         contentContainerStyle={[
           styles.contentContainer,
           { overflow: "visible" },
         ]}
+        showsVerticalScrollIndicator={false}
       >
-        <View style={styles.titleRow}>
-          <Text style={styles.title}>
-            {readOnly ? "항공편 정보" : flight ? "항공편 수정" : "항공편 추가"}
-          </Text>
-          <Pressable
-            onPress={() => {
-              onCancel();
-            }}
-            style={styles.closeButton}
-          >
-            <CloseIcon width={24} height={24} />
-          </Pressable>
-        </View>
-
         <View style={styles.formSection}>
           <View style={[styles.row, { gap: spacing.sm }]}>
             <View style={[styles.inputGroup, styles.halfWidth]}>
@@ -822,7 +866,11 @@ export default function FlightItem({
                       }}
                       style={styles.segmentDeleteButton}
                     >
-                      <DeleteIcon width={16} height={16} />
+                      <DeleteIcon
+                        width={16}
+                        height={16}
+                        color={colors.warning}
+                      />
                     </Pressable>
                   )}
                 </View>
@@ -889,7 +937,10 @@ export default function FlightItem({
                         styles.airportPickerWrapper,
                       ]}
                     >
-                      <Text style={styles.label}>출발 공항*</Text>
+                      <Text style={styles.label}>
+                        출발 공항{" "}
+                        <Text style={{ color: colors.warning }}>*</Text>
+                      </Text>
                       <AirportPicker
                         value={segment.departure_airport}
                         onChange={code => {
@@ -901,6 +952,7 @@ export default function FlightItem({
                         }}
                         placeholder={PLACEHOLDERS.flight.departureAirport}
                         disabled={readOnly}
+                        style={readOnly ? { backgroundColor: colors.white } : undefined}
                       />
                     </View>
                     <View
@@ -910,7 +962,10 @@ export default function FlightItem({
                         styles.airportPickerWrapper,
                       ]}
                     >
-                      <Text style={styles.label}>도착 공항*</Text>
+                      <Text style={styles.label}>
+                        도착 공항{" "}
+                        <Text style={{ color: colors.warning }}>*</Text>
+                      </Text>
                       <AirportPicker
                         value={segment.arrival_airport}
                         onChange={code => {
@@ -922,13 +977,18 @@ export default function FlightItem({
                         }}
                         placeholder={PLACEHOLDERS.flight.arrivalAirport}
                         disabled={readOnly}
+                        dropdownAlign="right"
+                        style={readOnly ? { backgroundColor: colors.white } : undefined}
                       />
                     </View>
                   </View>
 
                   <View style={[styles.row, { gap: spacing.sm, zIndex: 1000 }]}>
                     <View style={[styles.inputGroup, styles.halfWidth]}>
-                      <Text style={styles.label}>출발 일자*</Text>
+                      <Text style={styles.label}>
+                        출발 일자{" "}
+                        <Text style={{ color: colors.warning }}>*</Text>
+                      </Text>
                       <Pressable
                         style={styles.segmentDateInput}
                         onPress={() => {
@@ -971,6 +1031,9 @@ export default function FlightItem({
                             if (!readOnly) {
                               const newSegments = [...flightSegments];
                               newSegments[idx].departure_date = day.dateString;
+                              if (!newSegments[idx].arrival_date || newSegments[idx].arrival_date < day.dateString) {
+                                newSegments[idx].arrival_date = day.dateString;
+                              }
                               setFlightSegments(newSegments);
                               const key = `dep_${idx}`;
                               setSegmentDatePickerOpen({
@@ -998,7 +1061,10 @@ export default function FlightItem({
                       )}
                     </View>
                     <View style={[styles.inputGroup, styles.halfWidth]}>
-                      <Text style={styles.label}>출발 시간*</Text>
+                      <Text style={styles.label}>
+                        출발 시간{" "}
+                        <Text style={{ color: colors.warning }}>*</Text>
+                      </Text>
                       <TimePicker
                         value={segment.departure_time}
                         onChange={time => {
@@ -1019,13 +1085,17 @@ export default function FlightItem({
                         }
                         style={styles.segmentTimePicker}
                         disabled={readOnly}
+                        popupAlign="right"
                       />
                     </View>
                   </View>
 
                   <View style={[styles.row, { gap: spacing.sm, zIndex: 500 }]}>
                     <View style={[styles.inputGroup, styles.halfWidth]}>
-                      <Text style={styles.label}>도착 일자*</Text>
+                      <Text style={styles.label}>
+                        도착 일자{" "}
+                        <Text style={{ color: colors.warning }}>*</Text>
+                      </Text>
                       <Pressable
                         style={styles.segmentDateInput}
                         onPress={() => {
@@ -1088,7 +1158,10 @@ export default function FlightItem({
                       )}
                     </View>
                     <View style={[styles.inputGroup, styles.halfWidth]}>
-                      <Text style={styles.label}>도착 시간*</Text>
+                      <Text style={styles.label}>
+                        도착 시간{" "}
+                        <Text style={{ color: colors.warning }}>*</Text>
+                      </Text>
                       <TimePicker
                         value={segment.arrival_time}
                         onChange={time => {
@@ -1102,6 +1175,7 @@ export default function FlightItem({
                         onClose={() => setTimeOpen(false)}
                         style={styles.segmentTimePicker}
                         disabled={readOnly}
+                        popupAlign="right"
                       />
                     </View>
                   </View>
@@ -1112,7 +1186,10 @@ export default function FlightItem({
 
           {!readOnly && (
             <Pressable
-              style={[styles.addSegmentButton, { zIndex: 1 }]}
+              style={[
+                styles.addSegmentButton,
+                { zIndex: 1, borderStyle: "dashed" },
+              ]}
               onPress={() => {
                 const lastSegment = flightSegments[flightSegments.length - 1];
                 let defaultDepartureDate: string;
@@ -1147,9 +1224,7 @@ export default function FlightItem({
                 setFlightSegments(prev => [...prev, newSegment]);
               }}
             >
-              <View style={styles.addIconWrapper}>
-                <AddIcon width={16} height={16} />
-              </View>
+              <Text style={styles.addButtonPlus}>+</Text>
               <Text style={styles.addSegmentButtonText}>항공권 구간 추가</Text>
             </Pressable>
           )}
@@ -1157,7 +1232,6 @@ export default function FlightItem({
           {showAttachmentSection && (
             <AttachmentSection
               style={styles.attachmentSection}
-              showTopDivider
               pendingFiles={readOnly ? [] : pendingFiles}
               onPickImage={appendImage}
               onPickDocument={appendDocument}
@@ -1173,9 +1247,7 @@ export default function FlightItem({
                   ? handleRemoveExistingAttachment
                   : undefined
               }
-              isLoadingExisting={
-                flightAttachmentEntityId != null && isLoadingAttachments
-              }
+              isLoadingExisting={false}
               isUploading={isUploading}
               disabled={readOnly || isSubmitting}
               hideAddControls={readOnly}
@@ -1185,6 +1257,10 @@ export default function FlightItem({
                   : undefined
               }
               isAiAnalyzing={isAiAnalyzing}
+              onCancelAiAnalyze={() => {
+                aiAnalyzeCancelledRef.current = true;
+                setIsAiAnalyzing(false);
+              }}
             />
           )}
           {aiAnalyzeInlineError && lastAiSelection && (
@@ -1195,13 +1271,6 @@ export default function FlightItem({
                 setAiAnalyzeInlineErrorMessage("");
                 handleAiAnalyzePress(lastAiSelection);
               }}
-            />
-          )}
-          {!!aiAnalyzeSizeErrorMessage && (
-            <AiAnalyzeErrorBanner
-              message={aiAnalyzeSizeErrorMessage}
-              showTitle={false}
-              showRetry={false}
             />
           )}
 
@@ -1221,9 +1290,16 @@ export default function FlightItem({
               <Pressable
                 style={styles.saveButton}
                 onPress={handleSave}
-                disabled={isSubmitting}
+                disabled={isSubmitting || isUploading}
               >
-                <Text style={styles.saveButtonText}>저장</Text>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                  {(isSubmitting || isUploading) && (
+                    <ActivityIndicator size="small" color="white" />
+                  )}
+                  <Text style={styles.saveButtonText}>
+                    {isSubmitting || isUploading ? "저장 중..." : "저장"}
+                  </Text>
+                </View>
               </Pressable>
             </View>
           ) : (
@@ -1258,6 +1334,7 @@ export default function FlightItem({
       <AiDocumentAnalyzeModal
         visible={aiAnalyzeModalVisible}
         analyzeResult={aiAnalyzeResult}
+        analyzeFileName={lastAnalyzeFileName ?? undefined}
         onApply={applyAiAnalyzeDraftToForm}
         onClose={() => {
           setAiAnalyzeModalVisible(false);
@@ -1265,18 +1342,23 @@ export default function FlightItem({
           onConsumeStagedDocumentAnalyze?.();
         }}
         entityTypeLabel="항공"
+        originEntityType={analyzeOriginEntityType}
       />
-    </>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  wrapper: {
+    flex: 1,
+  },
   container: {
     flex: 1,
     backgroundColor: colors.white,
   },
   contentContainer: {
-    padding: spacing.xl,
+    paddingHorizontal: spacing.xl,
+    paddingBottom: spacing.xl,
     gap: spacing.xl,
   },
   contentWrapper: {
@@ -1288,13 +1370,18 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: spacing.xl,
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.xl,
+    paddingBottom: spacing.md,
   },
   title: {
     ...textStyles.h5,
   },
   closeButton: {
-    padding: spacing.xs,
+    width: 26,
+    height: 26,
+    borderRadius: radii.pill,
+    backgroundColor: colors.gray200,
     justifyContent: "center",
     alignItems: "center",
   },
@@ -1488,8 +1575,11 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     paddingHorizontal: spacing.xl,
   },
-  addIconWrapper: {
-    marginTop: -2,
+  addButtonPlus: {
+    fontSize: 14,
+    lineHeight: 18,
+    color: colors.gray900,
+    marginRight: 2,
   },
   addSegmentButtonText: {
     ...textStyles.h8,
@@ -1509,8 +1599,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.gray300,
     height: 40,
     borderRadius: radii.md,
-    borderWidth: 1,
-    borderColor: colors.gray400,
     paddingHorizontal: spacing.lg,
     justifyContent: "center",
     alignItems: "center",

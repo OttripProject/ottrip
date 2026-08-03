@@ -1,5 +1,12 @@
 // @ts-ignore
 import aircodes from "aircodes";
+import countries from "i18n-iso-countries";
+import en from "i18n-iso-countries/langs/en.json";
+import ko from "i18n-iso-countries/langs/ko.json";
+import { koreanNameToIso2 } from "./countryListKo";
+
+countries.registerLocale(ko as any);
+countries.registerLocale(en as any);
 
 export type AirportData = {
   iata: string;
@@ -77,6 +84,21 @@ export function getAirportLabelByIata(iata: string): string | null {
     return null;
   }
   return `${airport.nameKorean} (${airport.iata})`;
+}
+
+export function getCountryIso2ByIata(iata: string): string | null {
+  const airport = getAirportByIata(iata);
+  if (airport?.countryKorean) {
+    const iso2 = koreanNameToIso2(airport.countryKorean);
+    if (iso2) return iso2;
+  }
+  try {
+    const acData = aircodes.getAirportByIata(iata);
+    if (acData?.country) {
+      return countries.getAlpha2Code(acData.country, "en") ?? null;
+    }
+  } catch (_e) {}
+  return null;
 }
 
 export function getAirportName(code: string): string | undefined {

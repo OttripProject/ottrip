@@ -13,7 +13,7 @@ from app.utils.dependency import dependency
 
 from .models import Expense
 from .repository import ExpenseRepository
-from .schemas import ExpenseCreate, ExpenseRead, ExpenseUpdate, ExpenseBatchCreate
+from .schemas import ExpenseBatchCreate, ExpenseCreate, ExpenseRead, ExpenseUpdate
 
 
 @dependency
@@ -32,7 +32,9 @@ class ExpenseService:
         if not plan_exists:
             raise HTTPException(status_code=404, detail="해당 계획을 찾을 수 없습니다.")
         if not has_permission:
-            raise HTTPException(status_code=403, detail="해당 비용에 대한 생성 권한이 없습니다.")
+            raise HTTPException(
+                status_code=403, detail="해당 비용에 대한 생성 권한이 없습니다."
+            )
         create_expense_data = Expense(
             amount=float(expense_data.amount),
             category=expense_data.category,
@@ -53,7 +55,9 @@ class ExpenseService:
 
         return ExpenseRead.model_validate(created_expense)
 
-    async def create_batch(self, *, batch_data: ExpenseBatchCreate) -> list[ExpenseRead]:
+    async def create_batch(
+        self, *, batch_data: ExpenseBatchCreate
+    ) -> list[ExpenseRead]:
         """여러 비용을 한 번에 생성합니다."""
         plan_exists, has_permission = await self.plan_repository.has_edit_permission(
             plan_id=batch_data.plan_id, user_id=self.current_user.id
@@ -61,8 +65,10 @@ class ExpenseService:
         if not plan_exists:
             raise HTTPException(status_code=404, detail="해당 계획을 찾을 수 없습니다.")
         if not has_permission:
-            raise HTTPException(status_code=403, detail="해당 비용에 대한 생성 권한이 없습니다.")
-        
+            raise HTTPException(
+                status_code=403, detail="해당 비용에 대한 생성 권한이 없습니다."
+            )
+
         created_expenses: list[Expense] = []
         for expense_data in batch_data.expenses:
             create_expense_data = Expense(
@@ -73,17 +79,19 @@ class ExpenseService:
                 ex_date=expense_data.ex_date,
                 plan_id=batch_data.plan_id,
             )
-            
+
             if batch_data.itinerary_id:
                 create_expense_data.itinerary_id = batch_data.itinerary_id
             if batch_data.flight_id:
                 create_expense_data.flight_id = batch_data.flight_id
             if batch_data.accommodation_id:
                 create_expense_data.accommodation_id = batch_data.accommodation_id
-            
-            created_expense = await self.expense_repository.save(expense=create_expense_data)
+
+            created_expense = await self.expense_repository.save(
+                expense=create_expense_data
+            )
             created_expenses.append(created_expense)
-        
+
         return [ExpenseRead.model_validate(expense) for expense in created_expenses]
 
     async def read_expense(self, *, expense_id: int) -> ExpenseRead:
@@ -97,7 +105,9 @@ class ExpenseService:
                 plan_id=expense.plan_id, user_id=self.current_user.id
             )
             if not is_shared:
-                raise HTTPException(status_code=403, detail="비용 조회 권한이 없습니다.")
+                raise HTTPException(
+                    status_code=403, detail="비용 조회 권한이 없습니다."
+                )
 
         return ExpenseRead.model_validate(expense)
 
@@ -110,7 +120,9 @@ class ExpenseService:
         if not plan_exists:
             raise HTTPException(status_code=404, detail="해당 계획을 찾을 수 없습니다.")
         if not has_permission:
-            raise HTTPException(status_code=403, detail="해당 비용에 대한 조회 권한이 없습니다.")
+            raise HTTPException(
+                status_code=403, detail="해당 비용에 대한 조회 권한이 없습니다."
+            )
 
         expenses = await self.expense_repository.find_all_by_plan(
             plan_id=plan_id, ex_date=ex_date

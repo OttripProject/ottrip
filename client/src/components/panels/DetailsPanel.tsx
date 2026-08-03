@@ -3,7 +3,8 @@ import type {
   LocalFile,
   StagedDocumentAnalyzePayload,
 } from "@/types/api";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { useEffect, useRef } from "react";
+import { Animated, Easing, StyleSheet, Text, View } from "react-native";
 import PanelLayout from "./PanelLayout";
 import AccommodationSection from "./accommodations/AccommodationSection";
 import FlightSection from "./flights/FlightSection";
@@ -45,6 +46,7 @@ interface DetailsPanelProps {
   onConsumeOpenNewAccommodationForm?: () => void;
   newAccommodationDraft?: any | null;
   onPreviewAccommodationChange?: (preview: any) => void;
+  onTabChange?: (tab: "itinerary" | "flight" | "accommodation") => void;
   stagedDocumentAnalyze?: StagedDocumentAnalyzePayload | null;
   onConsumeStagedDocumentAnalyze?: () => void;
   routeDocumentAnalyzeSuccess?: (
@@ -78,12 +80,29 @@ export default function DetailsPanel({
   onConsumeOpenNewAccommodationForm,
   newAccommodationDraft,
   onPreviewAccommodationChange,
+  onTabChange,
   stagedDocumentAnalyze,
   onConsumeStagedDocumentAnalyze,
   routeDocumentAnalyzeSuccess,
   carryoverPendingFiles,
   onConsumeCarryoverPendingFiles,
 }: DetailsPanelProps) {
+  const fadeAnim = useRef(new Animated.Value(1)).current;
+  const contentKey = `${activeTab ?? ""}-${selectedItinerary?.id ?? ""}-${selectedFlight?.id ?? ""}-${selectedAccommodation?.id ?? ""}`;
+  const prevKeyRef = useRef(contentKey);
+
+  useEffect(() => {
+    if (prevKeyRef.current === contentKey) return;
+    prevKeyRef.current = contentKey;
+    fadeAnim.setValue(0);
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 1500,
+      easing: Easing.out(Easing.quad),
+      useNativeDriver: true,
+    }).start();
+  }, [contentKey]);
+
   if (!planData?.plan) {
     return (
       <PanelLayout style={styles.container}>
@@ -108,6 +127,7 @@ export default function DetailsPanel({
           openNewItineraryForm={openNewItineraryForm}
           onConsumeOpenNewItineraryForm={onConsumeOpenNewItineraryForm}
           selectedItineraryDate={selectedItineraryDate}
+          onTabChange={onTabChange}
           stagedDocumentAnalyze={stagedDocumentAnalyze}
           onConsumeStagedDocumentAnalyze={onConsumeStagedDocumentAnalyze}
           routeDocumentAnalyzeSuccess={routeDocumentAnalyzeSuccess}
@@ -127,6 +147,7 @@ export default function DetailsPanel({
           onFlightClear={onFlightClear}
           openNewFlightForm={openNewFlightForm}
           onConsumeOpenNewFlightForm={onConsumeOpenNewFlightForm}
+          onTabChange={onTabChange}
           stagedDocumentAnalyze={stagedDocumentAnalyze}
           onConsumeStagedDocumentAnalyze={onConsumeStagedDocumentAnalyze}
           routeDocumentAnalyzeSuccess={routeDocumentAnalyzeSuccess}
@@ -149,6 +170,7 @@ export default function DetailsPanel({
           onConsumeOpenNewAccommodationForm={onConsumeOpenNewAccommodationForm}
           newAccommodationDraft={newAccommodationDraft}
           onPreviewChange={onPreviewAccommodationChange}
+          onTabChange={onTabChange}
           stagedDocumentAnalyze={stagedDocumentAnalyze}
           onConsumeStagedDocumentAnalyze={onConsumeStagedDocumentAnalyze}
           routeDocumentAnalyzeSuccess={routeDocumentAnalyzeSuccess}
@@ -160,11 +182,7 @@ export default function DetailsPanel({
 
     // 아무것도 선택되지 않은 경우 - 리스트 표시
     if (!activeTab) {
-      return (
-        <View style={styles.placeholder}>
-          <Text style={styles.placeholderText}>항목을 선택해주세요</Text>
-        </View>
-      );
+      return <View style={styles.placeholder}></View>;
     }
 
     switch (activeTab) {
@@ -178,6 +196,7 @@ export default function DetailsPanel({
             openNewItineraryForm={openNewItineraryForm}
             onConsumeOpenNewItineraryForm={onConsumeOpenNewItineraryForm}
             selectedItineraryDate={selectedItineraryDate}
+            onTabChange={onTabChange}
             stagedDocumentAnalyze={stagedDocumentAnalyze}
             onConsumeStagedDocumentAnalyze={onConsumeStagedDocumentAnalyze}
             routeDocumentAnalyzeSuccess={routeDocumentAnalyzeSuccess}
@@ -195,6 +214,7 @@ export default function DetailsPanel({
             onFlightClear={onFlightClear}
             openNewFlightForm={openNewFlightForm}
             onConsumeOpenNewFlightForm={onConsumeOpenNewFlightForm}
+            onTabChange={onTabChange}
             stagedDocumentAnalyze={stagedDocumentAnalyze}
             onConsumeStagedDocumentAnalyze={onConsumeStagedDocumentAnalyze}
             routeDocumentAnalyzeSuccess={routeDocumentAnalyzeSuccess}
@@ -217,6 +237,7 @@ export default function DetailsPanel({
               onConsumeOpenNewAccommodationForm
             }
             newAccommodationDraft={newAccommodationDraft}
+            onTabChange={onTabChange}
             stagedDocumentAnalyze={stagedDocumentAnalyze}
             onConsumeStagedDocumentAnalyze={onConsumeStagedDocumentAnalyze}
             routeDocumentAnalyzeSuccess={routeDocumentAnalyzeSuccess}
@@ -226,36 +247,15 @@ export default function DetailsPanel({
         );
 
       default:
-        return (
-          <View style={styles.placeholder}>
-            <Text style={styles.placeholderText}>항목을 선택해주세요</Text>
-          </View>
-        );
+        return <View style={styles.placeholder}></View>;
     }
   };
 
-  const isInitial =
-    !activeTab &&
-    !selectedItinerary &&
-    !selectedFlight &&
-    !selectedAccommodation;
-
   return (
     <PanelLayout style={styles.container}>
-      <View style={styles.scrollWrapper}>
-        <ScrollView
-          style={styles.scrollView}
-          contentContainerStyle={
-            isInitial
-              ? [styles.scrollContent, styles.centerScroll]
-              : styles.scrollContent
-          }
-          showsVerticalScrollIndicator
-          bounces={false}
-        >
-          {renderContent()}
-        </ScrollView>
-      </View>
+      <Animated.View style={[styles.content, { opacity: fadeAnim }]}>
+        {renderContent()}
+      </Animated.View>
     </PanelLayout>
   );
 }
@@ -265,23 +265,9 @@ const styles = StyleSheet.create({
     flex: 1,
     minHeight: 0,
   },
-  scrollView: {
-    flex: 1,
-    padding: 0,
-  },
-  scrollContent: {
-    paddingBottom: 20,
-  },
-  scrollWrapper: {
+  content: {
     flex: 1,
     minHeight: 0,
-    overflow: "visible",
-    position: "relative",
-  },
-  centerScroll: {
-    flexGrow: 1,
-    justifyContent: "center",
-    alignItems: "center",
   },
   placeholder: {
     flex: 1,

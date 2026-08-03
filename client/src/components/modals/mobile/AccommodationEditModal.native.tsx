@@ -1,9 +1,20 @@
+import AiDocumentAnalyzeModal from "@/components/modals/mobile/AiDocumentAnalyzeModal";
+
+const KIND_TO_LABEL: Record<string, string> = {
+  itinerary: "일정",
+  accommodation: "숙박",
+  flight: "항공",
+  expense: "비용",
+};
 import { useAttachmentUpload } from "@/hooks/useAttachmentUpload";
 import { useFilePicker } from "@/hooks/useFilePicker";
 import { useMe } from "@/hooks/useMe";
+import { analyzeDocumentUpload } from "@/services/aiDocument";
 import { accommodationsApi } from "@/services/accommodations";
 import { attachmentsApi } from "@/services/attachments";
-import type { Accommodation, Attachment, LocalFile } from "@/types/api";
+import type { Accommodation, Attachment, DocumentUploadAnalyzeResponse, LocalFile } from "@/types/api";
+import type { AiAttachmentAnalyzeSelection } from "@/ui/components/attachmentSection.types";
+import { buildAnalyzeUploadPayload } from "@/utils/attachmentAiAnalyze";
 import { ExpenseCurrency } from "@/types/expense";
 import CalendarModal from "@/ui/components/CalendarModal.native";
 import FloatingFooter from "@/ui/components/FloatingFooter.native";
@@ -15,9 +26,11 @@ import { colors } from "@/ui/tokens/colors";
 import { textStyles, typography } from "@/ui/tokens/typography";
 import { handleGuestPromptError } from "@/utils/guestPrompt";
 import dayjs from "dayjs";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Alert,
+  Animated,
+  Keyboard,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -25,11 +38,11 @@ import {
   TextInput,
   View,
 } from "react-native";
-import DownArrowIcon from "../../../../assets/down_arrow.svg";
 import CalendarIcon from "../../../../assets/mobile_calendar_black.svg";
 import TimeIcon from "../../../../assets/mobile_time.svg";
 import CloseIcon from "../../../../assets/x.svg";
-import CountrySearchModal from "./CountrySearchModal.native";
+import CityPicker from "@/ui/components/pickers/CityPicker";
+import CountryPicker from "@/ui/components/pickers/CountryPicker";
 
 interface AccommodationEditModalProps {
   visible: boolean;
@@ -37,9 +50,13 @@ interface AccommodationEditModalProps {
   accommodation: Accommodation | null;
   planId: number;
   defaultDate?: string;
+  defaultCountry?: string;
+  defaultCity?: string;
   embedded?: boolean;
   onSave?: (accommodation: Accommodation) => void;
   onDelete?: (accommodationId: number) => void;
+  pendingAiResult?: { result: DocumentUploadAnalyzeResponse; filename?: string; pendingFiles?: LocalFile[] } | null;
+  onRouteMismatchResult?: (result: DocumentUploadAnalyzeResponse, filename?: string, pendingFiles?: LocalFile[]) => void;
 }
 
 const formatDate = (dateStr: string) => {
@@ -72,10 +89,31 @@ export default function AccommodationEditModal({
   accommodation,
   planId,
   defaultDate,
+  defaultCountry,
+  defaultCity,
   embedded,
   onSave,
   onDelete,
+  pendingAiResult,
+  onRouteMismatchResult,
 }: AccommodationEditModalProps) {
+  const scrollRef = useRef<ScrollView>(null);
+  const currencyOpacity = useRef(new Animated.Value(1)).current;
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+
+  useEffect(() => {
+    const show = Keyboard.addListener("keyboardDidShow", e => {
+      setKeyboardHeight(e.endCoordinates.height);
+    });
+    const hide = Keyboard.addListener("keyboardDidHide", () => {
+      setKeyboardHeight(0);
+    });
+    return () => {
+      show.remove();
+      hide.remove();
+    };
+  }, []);
+
   const [formData, setFormData] = useState({
     name: "",
     description: "",
@@ -88,9 +126,9 @@ export default function AccommodationEditModal({
     checkoutTime: "11:00",
   });
   const [expenseAmount, setExpenseAmount] = useState("");
+  const [expenseCurrency, setExpenseCurrency] = useState(ExpenseCurrency.KRW);
   const [showCheckinDatePicker, setShowCheckinDatePicker] = useState(false);
   const [showCheckoutDatePicker, setShowCheckoutDatePicker] = useState(false);
-  const [showCountrySearch, setShowCountrySearch] = useState(false);
   const [timeModalField, setTimeModalField] = useState<
     "checkin" | "checkout" | null
   >(null);
@@ -100,6 +138,14 @@ export default function AccommodationEditModal({
     [],
   );
   const [isLoadingAttachments, setIsLoadingAttachments] = useState(false);
+  const [isAiAnalyzing, setIsAiAnalyzing] = useState(false);
+  const [aiAnalyzeError, setAiAnalyzeError] = useState<string | null>(null);
+  const [aiModalResult, setAiModalResult] = useState<DocumentUploadAnalyzeResponse | null>(null);
+  const [aiAnalyzeFileName, setAiAnalyzeFileName] = useState<string | undefined>();
+  const [lastAiSelection, setLastAiSelection] = useState<AiAttachmentAnalyzeSelection | null>(null);
+  const aiCancelledRef = useRef(false);
+  const formInitializedRef = useRef(false);
+  const [aiApplyLabel, setAiApplyLabel] = useState<string | undefined>();
 
   const { pickImage, pickDocument } = useFilePicker();
   const { data: me } = useMe();
@@ -109,7 +155,16 @@ export default function AccommodationEditModal({
   });
 
   useEffect(() => {
-    if (visible && accommodation) {
+    if (!visible) {
+      formInitializedRef.current = false;
+      setAiModalResult(null);
+      setAiApplyLabel(undefined);
+      return;
+    }
+    if (formInitializedRef.current) return;
+    formInitializedRef.current = true;
+
+    if (accommodation) {
       setFormData({
         name: accommodation.name || "",
         description: accommodation.description || "",
@@ -133,18 +188,19 @@ export default function AccommodationEditModal({
           ? String(amountNum).replace(/\B(?=(\d{3})+(?!\d))/g, ",")
           : "",
       );
-    } else if (visible && !accommodation) {
+      setExpenseCurrency((accommodation.expense?.currency as ExpenseCurrency) ?? ExpenseCurrency.KRW);
+    } else {
       const initDate = defaultDate || dayjs().format("YYYY-MM-DD");
       setFormData(prev => ({
         ...prev,
+        country: defaultCountry || "",
+        city: defaultCity || "",
         checkinDate: initDate,
         checkoutDate: dayjs(initDate).add(1, "day").format("YYYY-MM-DD"),
       }));
     }
-    if (visible) {
-      setPendingFiles([]);
-    }
-  }, [visible, accommodation, defaultDate]);
+    setPendingFiles([]);
+  }, [visible, accommodation, defaultDate, defaultCountry, defaultCity]);
 
   useEffect(() => {
     if (!visible) return;
@@ -175,12 +231,84 @@ export default function AccommodationEditModal({
   const handleRemoveExistingAttachment = async (attachmentId: number) => {
     try {
       await attachmentsApi.deleteAttachment(attachmentId);
+      setAiAnalyzeError(null);
       setExistingAttachments(prev => prev.filter(a => a.id !== attachmentId));
     } catch (error) {
       if (handleGuestPromptError(error)) return;
       Alert.alert("알림", "첨부파일 삭제에 실패했습니다.");
     }
   };
+
+  const handleAiAnalyzePress = async (selection: AiAttachmentAnalyzeSelection) => {
+    setAiAnalyzeError(null);
+    setIsAiAnalyzing(true);
+    setLastAiSelection(selection);
+    aiCancelledRef.current = false;
+    try {
+      const { file, filename } = await buildAnalyzeUploadPayload(selection, {
+        pendingFiles,
+        existingAttachments,
+      });
+      setAiAnalyzeFileName(filename);
+      const result = await analyzeDocumentUpload(file, { filename });
+      if (aiCancelledRef.current) return;
+      if (!result.success) {
+        setAiAnalyzeError(result.error ?? "분석에 실패했습니다.");
+      } else {
+        const inferredType = result.inferredItemType ?? result.draft?.itemType;
+        if (inferredType && inferredType !== "accommodation") {
+          if (onRouteMismatchResult) {
+            setAiApplyLabel(`${KIND_TO_LABEL[inferredType] ?? inferredType}에 추가`);
+            setAiModalResult(result);
+          } else {
+            setAiAnalyzeError(
+              `문서가 [${KIND_TO_LABEL[inferredType] ?? inferredType}]으로 분석되었습니다. 숙박 수정 화면에는 반영할 수 없습니다.`,
+            );
+          }
+        } else {
+          setAiApplyLabel(undefined);
+          setAiModalResult(result);
+        }
+      }
+    } catch {
+      setAiAnalyzeError("분석 중 오류가 발생했습니다.");
+    } finally {
+      setIsAiAnalyzing(false);
+    }
+  };
+
+  useEffect(() => {
+    if (visible && pendingAiResult) {
+      const draft = pendingAiResult.result.draft;
+      if (draft?.itemType === "accommodation") {
+        const v = draft.payload.values as Record<string, unknown>;
+        const shortTime = (t: string) =>
+          t.length >= 8 && t.includes(":") ? t.substring(0, 5) : t;
+        const ci = String(v.checkinDate ?? v.checkin_date ?? "");
+        const co = String(v.checkoutDate ?? v.checkout_date ?? "");
+        const cit = String(v.checkinTime ?? v.checkin_time ?? "15:00");
+        const cot = String(v.checkoutTime ?? v.checkout_time ?? "11:00");
+        setFormData({
+          name: String(v.name ?? ""),
+          place: String(v.place ?? ""),
+          country: String(v.country ?? ""),
+          city: String(v.city ?? ""),
+          description: String(v.description ?? ""),
+          checkinDate: ci || dayjs().format("YYYY-MM-DD"),
+          checkoutDate: co || dayjs().add(1, "day").format("YYYY-MM-DD"),
+          checkinTime: shortTime(cit),
+          checkoutTime: shortTime(cot),
+        });
+        const ex = v.expense as Record<string, unknown> | undefined;
+        if (ex && typeof ex === "object" && !Array.isArray(ex)) {
+          setExpenseAmount(String(ex.amount ?? "").replace(/[^0-9]/g, ""));
+        }
+      }
+      if (pendingAiResult.pendingFiles?.length) {
+        setPendingFiles(pendingAiResult.pendingFiles);
+      }
+    }
+  }, [visible, pendingAiResult]);
 
   const handleSave = async () => {
     if (!formData.name.trim()) {
@@ -191,9 +319,9 @@ export default function AccommodationEditModal({
     setIsSubmitting(true);
     try {
       const amount = Number.parseInt(normalizeAmount(expenseAmount), 10) || 0;
-      let savedAccommodationId: number;
+      let savedAccommodation: Accommodation;
       if (accommodation) {
-        const updated = await accommodationsApi.updateAccommodation(
+        savedAccommodation = await accommodationsApi.updateAccommodation(
           accommodation.id,
           {
             name: formData.name.trim(),
@@ -209,20 +337,13 @@ export default function AccommodationEditModal({
               exDate: formData.checkinDate,
               amount,
               category: "accommodation" as any,
-              currency: ExpenseCurrency.KRW,
+              currency: expenseCurrency,
               description: formData.name.trim(),
             },
           },
         );
-        savedAccommodationId = updated.id;
-        try {
-          await onSave?.(updated);
-        } catch {
-          // Refetch 실패해도 저장은 완료됨
-        }
-        Alert.alert("수정완료", "숙소가 수정되었습니다.");
       } else {
-        const created = await accommodationsApi.createAccommodation({
+        savedAccommodation = await accommodationsApi.createAccommodation({
           planId,
           name: formData.name.trim(),
           description: formData.description?.trim() || undefined,
@@ -237,24 +358,17 @@ export default function AccommodationEditModal({
             exDate: formData.checkinDate,
             amount,
             category: "accommodation" as any,
-            currency: ExpenseCurrency.KRW,
+            currency: expenseCurrency,
             description: formData.name.trim(),
           },
         });
-        savedAccommodationId = created.id;
-        try {
-          await onSave?.(created);
-        } catch {
-          // Refetch 실패해도 저장은 완료됨
-        }
-        Alert.alert("추가완료", "숙소가 추가되었습니다.");
       }
 
       if (pendingFiles.length > 0) {
         try {
           const uploaded = await uploadFiles(
             pendingFiles,
-            savedAccommodationId,
+            savedAccommodation.id,
           );
           setExistingAttachments(prev => [...prev, ...uploaded]);
           setPendingFiles([]);
@@ -266,6 +380,13 @@ export default function AccommodationEditModal({
         }
       }
 
+      Alert.alert(accommodation ? "수정완료" : "추가완료", accommodation ? "숙소가 수정되었습니다." : "숙소가 추가되었습니다.");
+
+      try {
+        await onSave?.(savedAccommodation);
+      } catch {
+        // Refetch 실패해도 저장은 완료됨
+      }
       onClose?.({ fromSave: true });
     } catch (_error) {
       Alert.alert(
@@ -324,8 +445,12 @@ export default function AccommodationEditModal({
         </View>
       )}
       <ScrollView
+        ref={scrollRef}
         style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingBottom: keyboardHeight + 40 || 24 },
+        ]}
         showsVerticalScrollIndicator={false}
       >
         {/* 입력 필드들 */}
@@ -361,44 +486,34 @@ export default function AccommodationEditModal({
           <View style={styles.row}>
             <View style={[styles.inputGroup, styles.halfWidth]}>
               <Text style={styles.label}>국가</Text>
-              <Pressable
-                style={[
-                  styles.pickerInput,
-                  styles.countryPickerTouchable,
-                  !accommodation && styles.pickerInputBorderless,
-                ]}
-                onPress={() => setShowCountrySearch(true)}
-              >
-                <Text
-                  style={[
-                    formData.country
-                      ? styles.pickerValueText
-                      : styles.pickerPlaceholderText,
-                    styles.countryTextTruncate,
-                  ]}
-                  numberOfLines={1}
-                  ellipsizeMode="tail"
-                >
-                  {formData.country || "국가 선택"}
-                </Text>
-                <DownArrowIcon width={16} height={16} color={colors.gray600} />
-              </Pressable>
-              <CountrySearchModal
-                visible={showCountrySearch}
-                onClose={() => setShowCountrySearch(false)}
-                onSelect={country => {
-                  setFormData({ ...formData, country });
-                  setShowCountrySearch(false);
-                }}
-                selectedValue={formData.country}
+              <CountryPicker
+                value={formData.country}
+                onChange={country =>
+                  setFormData({ ...formData, country, city: "" })
+                }
+                placeholder="국가 선택"
+                style={
+                  !accommodation
+                    ? styles.pickerTriggerBorderless
+                    : styles.pickerTrigger
+                }
+                fullScreenModal
               />
             </View>
             <View style={[styles.inputGroup, styles.halfWidth]}>
               <Text style={styles.label}>도시</Text>
-              <Input
+              <CityPicker
                 value={formData.city}
-                onChangeText={text => setFormData({ ...formData, city: text })}
-                style={[styles.input, !accommodation && styles.inputBorderless]}
+                onChange={city => setFormData({ ...formData, city })}
+                countryKo={formData.country}
+                placeholder={formData.country ? "도시 선택" : "먼저 국가 선택"}
+                disabled={!formData.country}
+                style={
+                  !accommodation
+                    ? styles.pickerTriggerBorderless
+                    : styles.pickerTrigger
+                }
+                fullScreenModal
               />
             </View>
           </View>
@@ -516,8 +631,39 @@ export default function AccommodationEditModal({
                   variant="filled"
                   containerStyle={styles.amountInputContainer}
                   style={styles.amountInputStyle}
+                  onFocus={() => {
+                    setTimeout(
+                      () => scrollRef.current?.scrollToEnd({ animated: true }),
+                      100,
+                    );
+                  }}
                 />
-                <Text style={styles.amountSuffix}>KRW</Text>
+                <Pressable
+                  style={styles.currencyBadge}
+                  onPress={() => {
+                    Animated.timing(currencyOpacity, {
+                      toValue: 0,
+                      duration: 100,
+                      useNativeDriver: true,
+                    }).start(() => {
+                      setExpenseCurrency(prev =>
+                        prev === ExpenseCurrency.KRW
+                          ? ExpenseCurrency.USD
+                          : ExpenseCurrency.KRW,
+                      );
+                      Animated.timing(currencyOpacity, {
+                        toValue: 1,
+                        duration: 150,
+                        useNativeDriver: true,
+                      }).start();
+                    });
+                  }}
+                  hitSlop={8}
+                >
+                  <Animated.Text style={[styles.amountSuffix, { opacity: currencyOpacity }]}>
+                    {expenseCurrency === ExpenseCurrency.KRW ? "원" : "달러"}
+                  </Animated.Text>
+                </Pressable>
               </View>
             </View>
           </View>
@@ -537,7 +683,11 @@ export default function AccommodationEditModal({
             onPickImage={async () => {
               try {
                 const file = await pickImage();
-                if (file) setPendingFiles(prev => [...prev, file]);
+                if (file) {
+                  setAiAnalyzeError(null);
+                  setPendingFiles(prev => [...prev, file]);
+                  setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
+                }
               } catch (e: any) {
                 Alert.alert("알림", e.message);
               }
@@ -545,14 +695,28 @@ export default function AccommodationEditModal({
             onPickDocument={async () => {
               try {
                 const file = await pickDocument();
-                if (file) setPendingFiles(prev => [...prev, file]);
+                if (file) {
+                  setAiAnalyzeError(null);
+                  setPendingFiles(prev => [...prev, file]);
+                  setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
+                }
               } catch (e: any) {
                 Alert.alert("알림", e.message);
               }
             }}
-            onRemoveFile={index =>
-              setPendingFiles(prev => prev.filter((_, i) => i !== index))
-            }
+            onRemoveFile={index => {
+              setAiAnalyzeError(null);
+              setPendingFiles(prev => prev.filter((_, i) => i !== index));
+            }}
+            onAiAnalyzePress={handleAiAnalyzePress}
+            isAiAnalyzing={isAiAnalyzing}
+            onCancelAiAnalyze={() => {
+              aiCancelledRef.current = true;
+              setIsAiAnalyzing(false);
+            }}
+            analyzeError={aiAnalyzeError}
+            onRetryAnalyze={() => lastAiSelection && handleAiAnalyzePress(lastAiSelection)}
+            isAiAnalyzeSuccess={!!aiModalResult?.success && !aiAnalyzeError}
           />
         </View>
       </ScrollView>
@@ -606,13 +770,62 @@ export default function AccommodationEditModal({
     </>
   );
 
+  const aiModal = (
+    <AiDocumentAnalyzeModal
+      visible={!!aiModalResult}
+      onClose={() => { setAiModalResult(null); setAiApplyLabel(undefined); }}
+      entityTypeLabel="숙박"
+      originEntityType="숙박"
+      analyzeResult={aiModalResult}
+      analyzeFileName={aiAnalyzeFileName}
+      applyLabel={aiApplyLabel}
+      onApply={draft => {
+        const inferredType = aiModalResult?.inferredItemType ?? draft?.itemType;
+        if (inferredType !== "accommodation" && onRouteMismatchResult && aiModalResult) {
+          onRouteMismatchResult({ ...aiModalResult, draft }, aiAnalyzeFileName, pendingFiles);
+        } else if (draft?.itemType === "accommodation") {
+          const v = draft.payload.values as Record<string, unknown>;
+          const shortTime = (t: string) =>
+            t.length >= 8 && t.includes(":") ? t.substring(0, 5) : t;
+          const ci = String(v.checkinDate ?? v.checkin_date ?? "");
+          const co = String(v.checkoutDate ?? v.checkout_date ?? "");
+          const cit = String(v.checkinTime ?? v.checkin_time ?? "15:00");
+          const cot = String(v.checkoutTime ?? v.checkout_time ?? "11:00");
+          setFormData({
+            name: String(v.name ?? ""),
+            place: String(v.place ?? ""),
+            country: String(v.country ?? ""),
+            city: String(v.city ?? ""),
+            description: String(v.description ?? ""),
+            checkinDate: ci || dayjs().format("YYYY-MM-DD"),
+            checkoutDate: co || dayjs().add(1, "day").format("YYYY-MM-DD"),
+            checkinTime: shortTime(cit),
+            checkoutTime: shortTime(cot),
+          });
+          const ex = v.expense as Record<string, unknown> | undefined;
+          if (ex && typeof ex === "object" && !Array.isArray(ex)) {
+            setExpenseAmount(String(ex.amount ?? "").replace(/[^0-9]/g, ""));
+          }
+        }
+        setAiModalResult(null);
+        setAiApplyLabel(undefined);
+      }}
+    />
+  );
+
   if (embedded) {
-    return <View style={{ flex: 1 }}>{content}</View>;
+    return (
+      <>
+        <View style={{ flex: 1 }}>{content}</View>
+        {aiModal}
+      </>
+    );
   }
 
   return (
     <FullScreenModal visible={visible} onClose={() => onClose?.()}>
       {content}
+      {aiModal}
     </FullScreenModal>
   );
 }
@@ -641,7 +854,6 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 16,
     paddingTop: 12,
-    paddingBottom: 240,
   },
   form: {
     gap: 20,
@@ -688,35 +900,16 @@ const styles = StyleSheet.create({
   halfWidth: {
     flex: 1,
   },
-  pickerInput: {
-    minHeight: 44,
+  pickerTrigger: {
+    height: 44,
     borderWidth: 1,
     borderColor: colors.gray400,
     borderRadius: 12,
-    backgroundColor: colors.gray200,
   },
-  pickerInputBorderless: {
+  pickerTriggerBorderless: {
+    height: 44,
     borderWidth: 0,
-    borderColor: "transparent",
-  },
-  countryPickerTouchable: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-  },
-  pickerValueText: {
-    ...textStyles.h6,
-    color: colors.black,
-  },
-  pickerPlaceholderText: {
-    ...textStyles.body3,
-    color: colors.gray600,
-  },
-  countryTextTruncate: {
-    flex: 1,
-    minWidth: 0,
+    borderRadius: 12,
   },
   checkinoutSection: {
     backgroundColor: `${colors.primary}1A`,
@@ -794,10 +987,17 @@ const styles = StyleSheet.create({
     paddingVertical: 0,
     color: colors.primary,
   },
+  currencyBadge: {
+    marginLeft: 4,
+    width: 44,
+    paddingVertical: 4,
+    borderRadius: 6,
+    backgroundColor: `${colors.primary}10`,
+    alignItems: "center",
+  },
   amountSuffix: {
     ...textStyles.h6,
     color: colors.primary,
-    marginLeft: 4,
   },
   attachmentSection: {
     marginTop: 0,

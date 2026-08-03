@@ -1,26 +1,32 @@
-import { PLACEHOLDERS } from "@/constants/placeholders";
 import useDetectClose from "@/hooks/useDetectClose";
-import { type ExpenseCategory, categoryLabels } from "@/types/expense";
+import {
+  type ExpenseCategory,
+  categoryColors,
+  categoryLabels,
+} from "@/types/expense";
 import { colors } from "@/ui/tokens/colors";
 import { radii } from "@/ui/tokens/radii";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { textStyles } from "@/ui/tokens/typography";
+import { useMemo, useRef } from "react";
 import {
   Pressable,
   StyleSheet,
+  Text,
   type TextStyle,
   View,
   type ViewStyle,
 } from "react-native";
-import DropDownPicker from "react-native-dropdown-picker";
+import DownArrowIcon from "../../../../assets/dropdown_time.svg";
+import UpperArrowIcon from "../../../../assets/upper_arrow.svg";
 
 interface CategoryPickerProps {
   value: ExpenseCategory;
   onChange: (category: ExpenseCategory) => void;
   placeholder?: string;
   containerStyle?: ViewStyle;
-  /** 트리거(닫힌 상태) 스타일 — 기본 스타일 뒤에 병합 */
   style?: ViewStyle;
-  /** 열린 목록 컨테이너 — 기본 스타일 뒤에 병합 */
+  triggerTextStyle?: TextStyle;
+  iconSize?: number;
   dropDownContainerStyle?: ViewStyle;
   listItemLabelStyle?: TextStyle;
   selectedItemContainerStyle?: ViewStyle;
@@ -29,114 +35,192 @@ interface CategoryPickerProps {
   onClose?: () => void;
 }
 
+const CATEGORY_ORDER: ExpenseCategory[] = [
+  "food" as ExpenseCategory,
+  "transport" as ExpenseCategory,
+  "activity" as ExpenseCategory,
+  "accommodation" as ExpenseCategory,
+  "flight" as ExpenseCategory,
+  "shopping" as ExpenseCategory,
+  "etc" as ExpenseCategory,
+];
+
 export default function CategoryPicker({
   value,
   onChange,
-  placeholder = PLACEHOLDERS.picker.category,
   containerStyle,
   style,
+  triggerTextStyle,
+  iconSize = 10,
   dropDownContainerStyle,
-  listItemLabelStyle,
-  selectedItemContainerStyle,
   disabled,
   onOpen,
   onClose,
 }: CategoryPickerProps) {
-  const items = useMemo(
-    () =>
-      Object.entries(categoryLabels).map(([v, label]) => ({
-        label,
-        value: v as ExpenseCategory,
-      })),
-    [],
-  );
-  const pickerRef = useRef<View>(null);
-  const [open, setIsOpen, handleOutsidePress] = useDetectClose(
-    pickerRef,
+  const wrapperRef = useRef<View>(null);
+  const [open, setIsOpen, _handleOutsidePress] = useDetectClose(
+    wrapperRef,
     false,
   );
 
-  const [innerValue, setInnerValue] = useState<ExpenseCategory>(value);
-  useEffect(() => setInnerValue(value), [value]);
+  const items = useMemo(
+    () =>
+      CATEGORY_ORDER.map(cat => ({ value: cat, label: categoryLabels[cat] })),
+    [],
+  );
 
-  const dropdownHeight =
-    containerStyle && "height" in containerStyle
-      ? containerStyle.height
-      : undefined;
+  const handleToggle = () => {
+    if (disabled) return;
+    const next = !open;
+    setIsOpen(next);
+    if (next) onOpen?.();
+    else onClose?.();
+  };
+
+  const handleSelect = (cat: ExpenseCategory) => {
+    onChange(cat);
+    setIsOpen(false);
+    onClose?.();
+  };
+
+  const dotColor = categoryColors[value];
+  const label = categoryLabels[value];
 
   return (
-    <>
-      {/* 외부 클릭 감지를 위한 투명 오버레이 */}
-      {open && (
-        <Pressable
-          style={[StyleSheet.absoluteFill, { zIndex: 9999 }]}
-          onPress={handleOutsidePress}
-        />
-      )}
-      <View
-        ref={pickerRef}
-        style={[styles.wrapper, containerStyle, { zIndex: open ? 10000 : 1 }]}
+    <View
+      ref={wrapperRef}
+      style={[styles.wrapper, containerStyle, { zIndex: open ? 100 : 1 }]}
+    >
+      <Pressable
+        style={[styles.trigger, disabled && styles.triggerDisabled, style]}
+        onPress={handleToggle}
+        disabled={disabled}
       >
-        <DropDownPicker
-          open={open}
-          value={innerValue}
-          items={items}
-          setOpen={value => {
-            const isOpen = typeof value === "function" ? value(open) : value;
-            setIsOpen(isOpen);
-            if (isOpen) {
-              onOpen?.();
-            } else {
-              onClose?.();
-            }
-          }}
-          setValue={(callback: any) => {
-            const next = callback(innerValue) as ExpenseCategory;
-            setInnerValue(next);
-            onChange(next);
-          }}
-          disabled={disabled}
-          placeholder={placeholder}
-          style={[
-            styles.dropdown,
-            dropdownHeight
-              ? { height: dropdownHeight, minHeight: dropdownHeight }
-              : {},
-            style,
-          ]}
-          dropDownContainerStyle={[
-            styles.dropdownContainer,
-            { zIndex: 11000, position: "absolute" as const, borderTopWidth: 0 },
-            dropDownContainerStyle,
-          ]}
-          {...(listItemLabelStyle != null ? { listItemLabelStyle } : {})}
-          {...(selectedItemContainerStyle != null
-            ? { selectedItemContainerStyle }
-            : {})}
-          listMode="SCROLLVIEW"
-          dropDownDirection="BOTTOM"
-          scrollViewProps={{ showsVerticalScrollIndicator: false }}
-          zIndex={10000}
-          zIndexInverse={1000}
-        />
-      </View>
-    </>
+        <View style={styles.triggerLeft}>
+          <View style={[styles.dot, { backgroundColor: dotColor }]} />
+          <Text
+            style={[styles.triggerText, triggerTextStyle]}
+            numberOfLines={1}
+          >
+            {label}
+          </Text>
+        </View>
+        {open ? (
+          <UpperArrowIcon
+            width={iconSize}
+            height={iconSize}
+            style={{ opacity: 0.6 }}
+          />
+        ) : (
+          <DownArrowIcon
+            width={iconSize}
+            height={iconSize}
+            style={{ opacity: 0.6 }}
+          />
+        )}
+      </Pressable>
+
+      {open && (
+        <View style={[styles.popup, dropDownContainerStyle]}>
+          {items.map(item => {
+            const isSelected = item.value === value;
+            return (
+              <Pressable
+                key={item.value}
+                style={({ pressed, hovered }: any) => [
+                  styles.item,
+                  isSelected && styles.itemSelected,
+                  hovered && !isSelected && styles.itemHovered,
+                  pressed && styles.itemPressed,
+                ]}
+                onPress={() => handleSelect(item.value)}
+              >
+                <View
+                  style={[
+                    styles.dot,
+                    { backgroundColor: categoryColors[item.value] },
+                  ]}
+                />
+                <Text style={styles.itemText}>{item.label}</Text>
+              </Pressable>
+            );
+          })}
+        </View>
+      )}
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  wrapper: { position: "relative" },
-  dropdown: {
-    borderWidth: 1,
-    borderColor: colors.gray400,
+  wrapper: {
+    position: "relative",
+  },
+  trigger: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: colors.gray200,
     borderRadius: radii.md,
     minHeight: 40,
-    backgroundColor: colors.white,
+    paddingHorizontal: 12,
   },
-  dropdownContainer: {
-    borderWidth: 1,
-    borderColor: colors.gray400,
-    borderRadius: radii.md,
+  triggerDisabled: {
+    opacity: 0.5,
+  },
+  triggerLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    flex: 1,
+  },
+  dot: {
+    width: 8,
+    height: 8,
+    borderRadius: radii.pill,
+    flexShrink: 0,
+  },
+  triggerText: {
+    ...textStyles.body4,
+    color: colors.gray900,
+    flex: 1,
+  },
+  popup: {
+    position: "absolute",
+    top: 46,
+    left: 0,
+    right: 0,
     backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: colors.gray300,
+    borderRadius: radii.md,
+    padding: 4,
+    gap: 2,
+    zIndex: 1000,
+    shadowColor: colors.gray900,
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.08,
+    shadowRadius: 24,
+    elevation: 8,
+  },
+  item: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: radii.base,
+  },
+  itemSelected: {
+    backgroundColor: colors.gray200,
+  },
+  itemHovered: {
+    backgroundColor: colors.gray100,
+  },
+  itemPressed: {
+    backgroundColor: colors.gray200,
+  },
+  itemText: {
+    ...textStyles.body4,
+    color: colors.gray900,
   },
 });

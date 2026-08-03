@@ -80,6 +80,12 @@ export const textStyles: Record<string, TextStyle> = {
     lineHeight: 16,
     color: colors.black,
   },
+  h10: {
+    fontFamily: typography.fontFamily.pretendardSemiBold,
+    fontSize: 9,
+    lineHeight: 14,
+    color: colors.black,
+  },
   body1: {
     fontFamily: typography.fontFamily.pretendardRegular,
     fontSize: 18,

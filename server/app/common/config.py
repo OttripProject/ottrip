@@ -12,10 +12,10 @@ class EmailConfig(BaseConfig):
     SMTP_SSL: bool = False
     SMTP_STARTTLS: bool = True
 
-    EMAIL_PROVIDER: str | None = None 
+    EMAIL_PROVIDER: str | None = None
     SENDGRID_API_KEY: str | None = None
     RESEND_API_KEY: str | None = None
-    EMAIL_FROM: str | None = None 
+    EMAIL_FROM: str | None = None
+
 
 email_settings = EmailConfig()
-
