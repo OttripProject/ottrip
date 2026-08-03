@@ -52,6 +52,7 @@ import { accommodationsApi } from "@/services/accommodations";
 import { flightsApi } from "@/services/flights";
 import { itinerariesApi } from "@/services/itineraries";
 import CalendarModal from "@/ui/components/CalendarModal.native";
+import { extendPlanIfNeeded } from "@/utils/extendPlanIfNeeded";
 import { guestPrompt } from "@/utils/guestPrompt";
 import FlightIcon from "../../assets/airplane.svg";
 import LeftArrowIcon from "../../assets/left_arrow.svg";
@@ -883,6 +884,11 @@ export default function WeeklyScreen() {
         planPublicId={selectedPlan?.publicId ?? ""}
         planStartDate={selectedPlan?.startDate}
         planEndDate={selectedPlan?.endDate}
+        onPlanDatesExtended={async (newStart, newEnd) => {
+          if (selectedPlan?.id) {
+            await extendPlanIfNeeded(selectedPlan.id, planData.plan, [newStart, newEnd]);
+          }
+        }}
         onSaved={() => {
           if (selectedPlan?.publicId) {
             queryClient.invalidateQueries({

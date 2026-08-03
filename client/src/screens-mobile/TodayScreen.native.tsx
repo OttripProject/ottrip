@@ -57,6 +57,7 @@ import { useMe } from "@/hooks/useMe";
 import { accommodationsApi } from "@/services/accommodations";
 import { flightsApi } from "@/services/flights";
 import { itinerariesApi } from "@/services/itineraries";
+import { extendPlanIfNeeded } from "@/utils/extendPlanIfNeeded";
 import { guestPrompt } from "@/utils/guestPrompt";
 import FlightIcon from "../../assets/airplane.svg";
 import AccommodationIcon from "../../assets/mobile_accomodation.svg";
@@ -1628,6 +1629,11 @@ export default function TodayScreen() {
         planPublicId={selectedPlan?.publicId ?? ""}
         planStartDate={selectedPlan?.startDate}
         planEndDate={selectedPlan?.endDate}
+        onPlanDatesExtended={async (newStart, newEnd) => {
+          if (selectedPlan?.id) {
+            await extendPlanIfNeeded(selectedPlan.id, planData.plan, [newStart, newEnd]);
+          }
+        }}
         onSaved={() => {
           if (selectedPlan?.publicId) {
             queryClient.invalidateQueries({
