@@ -31,28 +31,26 @@ export default function HeaderPanel() {
           </Pressable>
         </View>
         <View style={styles.userContainer}>
-          <Pressable
-            onPress={() => !profileLoading && setProfileModalOpen(true)}
-            accessibilityRole="button"
-            style={styles.userPill}
-          >
-            {!profileLoading && (
-              <>
-                <Text
-                  style={styles.userText}
-                  numberOfLines={1}
-                  ellipsizeMode="tail"
-                >
-                  {profile?.isGuest ? "게스트" : (profile?.nickname ?? "")}
-                </Text>
-                <DownArrowIcon
-                  width={10}
-                  height={10}
-                  style={{ opacity: 0.6, marginLeft: 8 }}
-                />
-              </>
-            )}
-          </Pressable>
+          {!profileLoading && (
+            <Pressable
+              onPress={() => setProfileModalOpen(true)}
+              accessibilityRole="button"
+              style={styles.userPill}
+            >
+              <Text
+                style={styles.userText}
+                numberOfLines={1}
+                ellipsizeMode="tail"
+              >
+                {profile?.isGuest ? "게스트" : (profile?.nickname ?? "")}
+              </Text>
+              <DownArrowIcon
+                width={10}
+                height={10}
+                style={{ opacity: 0.6, marginLeft: 8 }}
+              />
+            </Pressable>
+          )}
         </View>
       </View>
 
