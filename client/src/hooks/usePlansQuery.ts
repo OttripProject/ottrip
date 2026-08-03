@@ -19,7 +19,6 @@ export const usePlansQuery = () => {
     staleTime: 1 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
     enabled: isAuthenticated,
-    // 💡 select 옵션을 추가하여, 데이터를 받아온 직후 정렬 함수를 통과시킵니다.
     select: (data) => sortPlansByDate(data),
   });
 
@@ -59,7 +58,7 @@ export const usePlansQuery = () => {
   });
 
   return {
-    plans, // 💡 이제 여기서 반환되는 plans는 항상 완벽하게 정렬된 상태입니다.
+    plans,
     isLoading,
     error: error
       ? (error as any).response?.data?.detail || (error as any).message
