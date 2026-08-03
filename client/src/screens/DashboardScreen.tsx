@@ -7,6 +7,8 @@ import type {
   StagedDocumentAnalyzePayload,
 } from "@/types/api";
 import GradientBackground from "@/ui/components/GradientBackground";
+import { colors } from "@/ui/tokens/colors";
+import { textStyles } from "@/ui/tokens/typography";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import dayjs from "dayjs";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -18,7 +20,10 @@ import {
   StyleSheet,
   View,
   useWindowDimensions,
+  ActivityIndicator,
+  Text
 } from "react-native";
+
 
 import DetailsPanel from "@/components/panels/DetailsPanel";
 import EmptyPlanPanel from "@/components/panels/EmptyPlanPanel";
@@ -524,7 +529,12 @@ export default function DashboardScreen() {
               { flex: ratio.left, height: availableHeight },
             ]}
           >
-            {trips.length === 0 && !plansQuery.isLoading ? (
+            {plansQuery.isLoading ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color={colors.primary} />
+                <Text style={styles.loadingText}>여행을 불러오는 중입니다..</Text>
+              </View>
+            ) : trips.length === 0 && !plansQuery.isLoading ? (
               <EmptyPlanPanel
                 onPlanAdd={plansQuery.addPlan}
                 onTripCreated={handleTripCreated}
@@ -742,4 +752,15 @@ const styles = StyleSheet.create({
   aiModal: {
     flex: 1,
   },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "transparent", 
+  },
+  loadingText: {
+    marginTop: 16,
+    color: colors.gray600,
+    ...textStyles.body3,
+  }
 });
