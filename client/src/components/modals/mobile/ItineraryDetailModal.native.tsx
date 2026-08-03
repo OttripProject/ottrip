@@ -85,7 +85,7 @@ export default function ItineraryDetailModal({
 
   const handleOpenMap = () => {
     if (!itinerary.location) {
-      Alert.alert("알림", "장소 정보가 없습니다.");
+      Alert.alert("알림", "장소 정보가 없습니다");
       return;
     }
 
@@ -97,12 +97,12 @@ export default function ItineraryDetailModal({
 
     if (url) {
       Linking.openURL(url).catch(() => {
-        Alert.alert("알림", "지도 앱을 열 수 없습니다.");
+        Alert.alert("알림", "지도 앱을 열 수 없습니다");
       });
     } else {
       const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodedLocation}`;
       Linking.openURL(googleMapsUrl).catch(() => {
-        Alert.alert("알림", "지도 앱을 열 수 없습니다.");
+        Alert.alert("알림", "지도 앱을 열 수 없습니다");
       });
     }
   };

@@ -61,7 +61,7 @@ export default function PlanSelectModal({
     }
     Alert.alert(
       "새 여행 추가",
-      "새로운 여행 만들기 기능이 곧 제공될 예정입니다.",
+      "새로운 여행 만들기 기능이 곧 제공될 예정입니다",
     );
   };
 

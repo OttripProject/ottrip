@@ -69,7 +69,7 @@ export default function ExportPlanModal({
       });
       setExportPublicId(result.publicId);
     } catch {
-      Alert.alert("오류", "내보내기 링크 생성에 실패했습니다.");
+      Alert.alert("오류", "내보내기 링크 생성에 실패했습니다");
     } finally {
       setIsGenerating(false);
     }

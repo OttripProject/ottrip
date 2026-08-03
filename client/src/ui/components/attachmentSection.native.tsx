@@ -109,14 +109,14 @@ export default function AttachmentSection({
     try {
       const canOpen = await Linking.canOpenURL(fileUrl);
       if (!canOpen) {
-        Alert.alert("열 수 없음", "이 URL을 열 수 있는 앱이 없습니다.");
+        Alert.alert("열 수 없음", "이 URL을 열 수 있는 앱이 없습니다");
         return;
       }
       await Linking.openURL(fileUrl);
     } catch (e) {
       Alert.alert(
         "파일 열기 실패",
-        e instanceof Error ? e.message : "잠시 후 다시 시도해 주세요.",
+        e instanceof Error ? e.message : "잠시 후 다시 시도해 주세요",
       );
     }
   };
@@ -128,7 +128,7 @@ export default function AttachmentSection({
       return;
     }
     const showPicker = () => {
-      Alert.alert("파일 추가", "추가할 파일 유형을 선택하세요.", [
+      Alert.alert("파일 추가", "추가할 파일 유형을 선택하세요", [
         { text: "사진", onPress: onPickImage },
         { text: "문서 선택", onPress: onPickDocument },
         { text: "취소", style: "cancel" },
@@ -429,7 +429,7 @@ export default function AttachmentSection({
                 setIsPreviewImageLoading(false);
                 Alert.alert(
                   "이미지 열기 실패",
-                  "이미지를 불러오지 못했습니다.",
+                  "이미지를 불러오지 못했습니다",
                 );
                 handleClosePreview();
               }}

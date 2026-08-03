@@ -194,7 +194,7 @@ export default function AddExpenseModal({
       const result = await analyzeDocumentUpload(file, { filename });
       if (aiCancelledRef.current) return;
       if (!result.success) {
-        setAiAnalyzeError(result.error ?? "분석에 실패했습니다.");
+        setAiAnalyzeError(result.error ?? "분석에 실패했습니다");
       } else {
         const inferredType = result.inferredItemType ?? result.draft?.itemType;
         if (inferredType && inferredType !== "expense") {
@@ -204,7 +204,7 @@ export default function AddExpenseModal({
         }
       }
     } catch {
-      setAiAnalyzeError("분석 중 오류가 발생했습니다.");
+      setAiAnalyzeError("분석 중 오류가 발생했습니다");
     } finally {
       setIsAiAnalyzing(false);
     }
@@ -220,14 +220,14 @@ export default function AddExpenseModal({
     if (isSubmittingRef.current) return;
 
     if (!planId) {
-      Alert.alert("알림", "여행을 먼저 선택해주세요.");
+      Alert.alert("알림", "여행을 먼저 선택해주세요");
       return;
     }
 
     const amountNum =
       Number.parseInt(normalizeAmount(formData.amount), 10) || 0;
     if (amountNum <= 0) {
-      Alert.alert("알림", "금액을 입력해주세요.");
+      Alert.alert("알림", "금액을 입력해주세요");
       return;
     }
 
@@ -257,7 +257,7 @@ export default function AddExpenseModal({
       onClose?.({ fromSave: true });
       onExpenseAdd?.(newExpense);
     } catch {
-      Alert.alert("알림", "비용 추가에 실패했습니다.");
+      Alert.alert("알림", "비용 추가에 실패했습니다");
     } finally {
       isSubmittingRef.current = false;
       setIsSubmitting(false);

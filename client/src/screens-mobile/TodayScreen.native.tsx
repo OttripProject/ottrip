@@ -490,9 +490,9 @@ export default function TodayScreen() {
           queryKey: ["plan", selectedPlan?.publicId],
         });
         queryClient.invalidateQueries({ queryKey: ["plans"] });
-        Alert.alert("삭제완료", "일정이 삭제되었습니다.");
+        Alert.alert("삭제완료", "일정이 삭제되었습니다");
       } catch {
-        Alert.alert("알림", "일정 삭제에 실패했습니다.");
+        Alert.alert("알림", "일정 삭제에 실패했습니다");
       }
     },
     [planData, queryClient, selectedPlan],
@@ -516,9 +516,9 @@ export default function TodayScreen() {
           queryKey: ["plan", selectedPlan?.publicId],
         });
         queryClient.invalidateQueries({ queryKey: ["plans"] });
-        Alert.alert("삭제완료", "항공편이 삭제되었습니다.");
+        Alert.alert("삭제완료", "항공편이 삭제되었습니다");
       } catch {
-        Alert.alert("알림", "항공편 삭제에 실패했습니다.");
+        Alert.alert("알림", "항공편 삭제에 실패했습니다");
       }
     },
     [planData, queryClient, selectedPlan],
@@ -1392,12 +1392,12 @@ export default function TodayScreen() {
               setSelectedPlan(remaining[0] ?? null);
             }
             setShowPlanSelector(false);
-            Alert.alert("성공", "여행이 삭제되었습니다.");
+            Alert.alert("성공", "여행이 삭제되었습니다");
           } catch (error: any) {
             if (axios.isAxiosError(error) && error.response?.status === 403) {
-              Alert.alert("알림", "이 여행을 삭제할 권한이 없습니다.");
+              Alert.alert("알림", "이 여행을 삭제할 권한이 없습니다");
             } else {
-              Alert.alert("알림", "여행 삭제에 실패했습니다.");
+              Alert.alert("알림", "여행 삭제에 실패했습니다");
             }
           }
         }}
@@ -1552,9 +1552,9 @@ export default function TodayScreen() {
               queryKey: ["plan", selectedPlan?.publicId],
             });
             queryClient.invalidateQueries({ queryKey: ["plans"] });
-            Alert.alert("삭제완료", "숙소가 삭제되었습니다.");
+            Alert.alert("삭제완료", "숙소가 삭제되었습니다");
           } catch (_error) {
-            Alert.alert("알림", "숙소 삭제에 실패했습니다.");
+            Alert.alert("알림", "숙소 삭제에 실패했습니다");
           }
         }}
       />

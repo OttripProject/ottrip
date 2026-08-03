@@ -91,7 +91,7 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
 
   const save = async () => {
     if (!isValid) {
-      Alert.alert("알림", "닉네임을 확인해주세요.");
+      Alert.alert("알림", "닉네임을 확인해주세요");
       return;
     }
     const updated = await usersApi.updateMe({ nickname, gender });
@@ -107,7 +107,7 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
       await usersApi.deleteAccount();
     } catch (error: any) {
       const errorMessage =
-        error?.response?.data?.detail || "탈퇴 중 알림가 발생했습니다.";
+        error?.response?.data?.detail || "탈퇴 중 알림가 발생했습니다";
       setDeleteModalOpen(false);
       if (Platform.OS === "web") {
         window.alert(`알림: ${errorMessage}`);
@@ -151,7 +151,7 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
       const message =
         typeof err?.response?.data?.detail === "string"
           ? err.response.data.detail
-          : "삭제 중 알림가 발생했습니다.";
+          : "삭제 중 알림가 발생했습니다";
       if (Platform.OS === "web") {
         window.alert(`알림: ${message}`);
       } else {

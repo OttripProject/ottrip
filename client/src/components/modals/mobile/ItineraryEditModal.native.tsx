@@ -71,6 +71,13 @@ interface ItineraryEditModalProps {
   onRouteMismatchResult?: (result: DocumentUploadAnalyzeResponse, filename?: string, pendingFiles?: LocalFile[]) => void;
 }
 
+const addOneHour = (time24: string): string => {
+  if (!time24) return "01:00";
+  const [hours, minutes] = time24.split(":").map(Number);
+  const newHours = (hours + 1) % 24; 
+  return `${newHours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}`;
+};
+
 export default function ItineraryEditModal({
   visible,
   onClose,
@@ -299,7 +306,7 @@ export default function ItineraryEditModal({
       setExistingAttachments(prev => prev.filter(a => a.id !== attachmentId));
     } catch (error) {
       if (handleGuestPromptError(error)) return;
-      Alert.alert("알림", "첨부파일 삭제에 실패했습니다.");
+      Alert.alert("알림", "첨부파일 삭제에 실패했습니다");
     }
   };
 
@@ -335,7 +342,7 @@ export default function ItineraryEditModal({
         }
       }
     } catch {
-      setAiAnalyzeError("분석 중 오류가 발생했습니다.");
+      setAiAnalyzeError("분석 중 오류가 발생했습니다");
     } finally {
       setIsAiAnalyzing(false);
     }
@@ -360,7 +367,7 @@ export default function ItineraryEditModal({
 
   const handleSave = async () => {
     if (!formData.title.trim()) {
-      Alert.alert("알림", "일정 제목을 입력해주세요.");
+      Alert.alert("알림", "일정 제목을 입력해주세요");
       return;
     }
 
@@ -415,12 +422,12 @@ export default function ItineraryEditModal({
         } catch {
           Alert.alert(
             "알림",
-            "일정은 저장됐으나 일부 파일 업로드에 실패했습니다.",
+            "일정은 저장됐으나 일부 파일 업로드에 실패했습니다",
           );
         }
       }
 
-      Alert.alert(itinerary ? "수정완료" : "추가완료", itinerary ? "일정이 수정되었습니다." : "일정이 추가되었습니다.");
+      Alert.alert(itinerary ? "수정완료" : "추가완료", itinerary ? "일정이 수정되었습니다" : "일정이 추가되었습니다");
 
       try {
         await onSave?.(savedItinerary);
@@ -429,7 +436,7 @@ export default function ItineraryEditModal({
       }
       onClose?.({ fromSave: true });
     } catch {
-      Alert.alert("알림", "일정 저장에 실패했습니다.");
+      Alert.alert("알림", "일정 저장에 실패했습니다");
     } finally {
       setIsSubmitting(false);
     }
@@ -449,10 +456,10 @@ export default function ItineraryEditModal({
             if (onDelete) {
               onDelete(itinerary.id);
             }
-            Alert.alert("삭제완료", "일정이 삭제되었습니다.");
+            Alert.alert("삭제완료", "일정이 삭제되었습니다");
             onClose?.({ fromSave: true });
           } catch (_error) {
-            Alert.alert("알림", "일정 삭제에 실패했습니다.");
+            Alert.alert("알림", "일정 삭제에 실패했습니다");
           }
         },
       },
@@ -646,13 +653,13 @@ export default function ItineraryEditModal({
               visible={showStartTimeModal}
               onClose={() => setShowStartTimeModal(false)}
               value={formData.startTime}
-              onConfirm={time24 => {
-                setFormData(prev => {
-                  const next = { ...prev, startTime: time24 };
-                  const endMinutes = timeToMinutes(prev.endTime);
-                  if (endMinutes > 0 && endMinutes < timeToMinutes(time24)) {
-                    next.endTime = time24;
-                  }
+              onConfirm={(time24) => {
+                setFormData((prev) => {
+                  const next = {
+                    ...prev,
+                    startTime: time24,
+                    endTime: addOneHour(time24), 
+                  };
                   return next;
                 });
               }}
@@ -661,8 +668,19 @@ export default function ItineraryEditModal({
               visible={showEndTimeModal}
               onClose={() => setShowEndTimeModal(false)}
               value={formData.endTime}
-              onConfirm={time24 => {
-                setFormData(prev => ({ ...prev, endTime: time24 }));
+              onConfirm={(time24) => {
+                setFormData((prev) => {
+                  const endMinutes = timeToMinutes(time24);
+                  const startMinutes = timeToMinutes(prev.startTime);
+                  if (endMinutes <= startMinutes) {
+                    Alert.alert("알림", "종료시간은 시작시간보다 늦어야 합니다");
+                    return {
+                      ...prev,
+                      endTime: addOneHour(prev.startTime), 
+                    };
+                  }            
+                  return { ...prev, endTime: time24 };
+                });
               }}
             />
           </View>

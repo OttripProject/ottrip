@@ -120,7 +120,7 @@ export default function SharedMembersModal({
       return;
     }
     if (!planId) {
-      Alert.alert("알림", "계획 정보를 찾을 수 없습니다.");
+      Alert.alert("알림", "계획 정보를 찾을 수 없습니다");
       return;
     }
     setInviteLoading(true);
@@ -135,7 +135,7 @@ export default function SharedMembersModal({
       const msg =
         e?.response?.status === 403
           ? "권한이 없습니다."
-          : e?.response?.data?.detail || "초대 전송에 실패했습니다.";
+          : e?.response?.data?.detail || "초대 전송에 실패했습니다";
       Alert.alert("알림", msg);
     } finally {
       setInviteLoading(false);
@@ -155,7 +155,7 @@ export default function SharedMembersModal({
     } catch (e: any) {
       const msg =
         e?.response?.status === 403
-          ? "권한이 없습니다."
+          ? "권한이 없습니다"
           : e?.response?.data?.detail || "역할 변경에 실패했습니다.";
       Alert.alert("알림", msg);
     } finally {
@@ -179,8 +179,8 @@ export default function SharedMembersModal({
           } catch (e: any) {
             const msg =
               e?.response?.status === 403
-                ? "권한이 없습니다."
-                : e?.response?.data?.detail || "공유 취소에 실패했습니다.";
+                ? "권한이 없습니다"
+                : e?.response?.data?.detail || "공유 취소에 실패했습니다";
             Alert.alert("알림", msg);
           } finally {
             setRoleUpdateLoading(null);

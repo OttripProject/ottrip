@@ -80,7 +80,7 @@ export default function SharePlanModal({
     setEmailTouched(true);
     setDuplicateEmailError(false);
     if (!email.trim()) {
-      Alert.alert("알림", "이메일을 입력해주세요.");
+      Alert.alert("알림", "이메일을 입력해주세요");
       return;
     }
     if (!isEmailValid(email)) return;
@@ -100,7 +100,7 @@ export default function SharePlanModal({
     } catch (e: any) {
       Alert.alert(
         "알림",
-        e?.response?.data?.detail || e?.message || "초대 전송에 실패했습니다.",
+        e?.response?.data?.detail || e?.message || "초대 전송에 실패했습니다",
       );
     } finally {
       setLoading(false);
@@ -282,9 +282,9 @@ export default function SharePlanModal({
                                 } catch (e: any) {
                                   const msg =
                                     e?.response?.status === 403
-                                      ? "권한이 없습니다."
+                                      ? "권한이 없습니다"
                                       : e?.response?.data?.detail ||
-                                        "삭제에 실패했습니다.";
+                                        "삭제에 실패했습니다";
                                   Alert.alert("알림", msg);
                                 }
                               }}

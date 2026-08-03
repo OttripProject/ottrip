@@ -112,7 +112,7 @@ export default function WeeklyChecklistCard({
   const handleAddChecklistItem = async () => {
     const name = newChecklistItem.trim();
     if (!name || !planPublicId) {
-      if (!planPublicId) Alert.alert("알림", "여행을 선택해주세요.");
+      if (!planPublicId) Alert.alert("알림", "여행을 선택해주세요");
       return;
     }
     setAddingChecklistItem(true);
@@ -127,7 +127,7 @@ export default function WeeklyChecklistCard({
       refetchChecklist();
     } catch (error) {
       if (handleGuestPromptError(error)) return;
-      Alert.alert("알림", "체크리스트 항목 추가에 실패했습니다.");
+      Alert.alert("알림", "체크리스트 항목 추가에 실패했습니다");
     } finally {
       setAddingChecklistItem(false);
     }
@@ -162,7 +162,7 @@ export default function WeeklyChecklistCard({
     } catch (error) {
       queryClient.setQueryData(["checklist", planPublicId], previousData);
       if (handleGuestPromptError(error)) return;
-      Alert.alert("알림", "체크리스트 항목 업데이트에 실패했습니다.");
+      Alert.alert("알림", "체크리스트 항목 업데이트에 실패했습니다");
     } finally {
       togglingItems.current.delete(itemId);
     }
@@ -177,7 +177,7 @@ export default function WeeklyChecklistCard({
       refetchChecklist();
     } catch (error) {
       if (handleGuestPromptError(error)) return;
-      Alert.alert("알림", "체크리스트 항목 삭제에 실패했습니다.");
+      Alert.alert("알림", "체크리스트 항목 삭제에 실패했습니다");
     } finally {
       deletingItems.current.delete(itemId);
     }
@@ -189,7 +189,7 @@ export default function WeeklyChecklistCard({
       return;
     }
     if (!planPublicId) {
-      Alert.alert("알림", "여행을 선택해주세요.");
+      Alert.alert("알림", "여행을 선택해주세요");
       return;
     }
     const activeItineraries =
@@ -197,7 +197,7 @@ export default function WeeklyChecklistCard({
     if (activeItineraries.length < 2) {
       Alert.alert(
         "알림",
-        "체크리스트 생성을 위해서는 최소 2개 이상의 세부 일정이 필요합니다.",
+        "체크리스트 생성을 위해서는 최소 2개 이상의 세부 일정이 필요합니다",
       );
       return;
     }
@@ -210,7 +210,7 @@ export default function WeeklyChecklistCard({
       refetchChecklist();
     } catch (error) {
       if (handleGuestPromptError(error)) return;
-      Alert.alert("알림", "AI 체크리스트 생성에 실패했습니다.");
+      Alert.alert("알림", "AI 체크리스트 생성에 실패했습니다");
     } finally {
       setAiRecommendLoading(false);
     }

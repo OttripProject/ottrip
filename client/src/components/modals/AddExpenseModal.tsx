@@ -188,7 +188,7 @@ export default function AddExpenseModal({
     } catch (e) {
       Alert.alert(
         "알림",
-        e instanceof Error ? e.message : "파일을 선택하지 못했습니다.",
+        e instanceof Error ? e.message : "파일을 선택하지 못했습니다",
       );
     }
   };
@@ -200,7 +200,7 @@ export default function AddExpenseModal({
     } catch (e) {
       Alert.alert(
         "알림",
-        e instanceof Error ? e.message : "파일을 선택하지 못했습니다.",
+        e instanceof Error ? e.message : "파일을 선택하지 못했습니다",
       );
     }
   };
@@ -230,7 +230,7 @@ export default function AddExpenseModal({
         const err = res.error?.trim();
         if (!res.success || err) {
           setAttachmentAnalyzeError(
-            "분석 서버에 연결하지 못했어요. 잠시 후 다시 시도해 주세요.",
+            "분석 서버에 연결하지 못했어요. 잠시 후 다시 시도해 주세요",
           );
           return;
         }
@@ -246,13 +246,13 @@ export default function AddExpenseModal({
                   ? "숙박"
                   : "다른 항목";
           setAttachmentAnalyzeError(
-            `문서가 [${label}]으로 분석되었습니다. 비용 추가 화면에는 반영할 수 없습니다.`,
+            `문서가 [${label}]으로 분석되었습니다. 비용 추가 화면에는 반영할 수 없습니다`,
           );
           return;
         }
         if (!res.draft || res.draft.itemType !== "expense") {
           setAttachmentAnalyzeError(
-            "이미지에서 금액·날짜를 읽지 못했어요. 더 선명한 영수증으로 다시 시도해 주세요.",
+            "이미지에서 금액·날짜를 읽지 못했어요. 더 선명한 영수증으로 다시 시도해 주세요",
           );
           return;
         }
@@ -280,7 +280,7 @@ export default function AddExpenseModal({
           setAttachmentAnalyzeSuccess(false);
           setAttachmentAnalyzePartial(true);
           setAttachmentAnalyzePartialMessage(
-            "일부 항목을 인식하지 못했어요. 확인 필요 항목을 직접 입력해 주세요.",
+            "일부 항목을 인식하지 못했어요. 확인 필요 항목을 직접 입력해 주세요",
           );
         } else {
           setAttachmentAnalyzeSuccess(true);
@@ -317,7 +317,7 @@ export default function AddExpenseModal({
         }));
       } catch (_e) {
         setAttachmentAnalyzeError(
-          "분석 서버에 연결하지 못했어요. 잠시 후 다시 시도해 주세요.",
+          "분석 서버에 연결하지 못했어요. 잠시 후 다시 시도해 주세요",
         );
       } finally {
         setIsAiAnalyzing(false);
@@ -343,13 +343,13 @@ export default function AddExpenseModal({
     }
 
     if (!planId) {
-      setWarningMessage("여행을 먼저 선택해주세요.");
+      setWarningMessage("여행을 먼저 선택해주세요");
       setShowWarning(true);
       return;
     }
 
     if (expenseForm.amount <= 0) {
-      setWarningMessage("금액을 입력해주세요.");
+      setWarningMessage("금액을 입력해주세요");
       setShowWarning(true);
       return;
     }
@@ -382,11 +382,11 @@ export default function AddExpenseModal({
           "알림",
           formatAttachmentUploadFailureMessage(
             uploadError,
-            "비용은 추가되었으나 첨부 파일 업로드에 실패했습니다.",
+            "비용은 추가되었으나 첨부 파일 업로드에 실패했습니다",
           ),
         );
       } else {
-        Alert.alert("성공", "비용이 추가되었습니다.");
+        Alert.alert("성공", "비용이 추가되었습니다");
       }
 
       setExpenseForm({
@@ -399,7 +399,7 @@ export default function AddExpenseModal({
       onClose();
       onExpenseAdd?.(newExpense);
     } catch (_error) {
-      Alert.alert("알림", "비용 추가에 실패했습니다.");
+        Alert.alert("알림", "비용 추가에 실패했습니다");
     } finally {
       isSubmittingRef.current = false;
       setIsSubmitting(false);

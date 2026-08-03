@@ -101,7 +101,7 @@ export default function AddPlanModal({
   const handleSubmit = async () => {
     const trimmedName = tripData.name.trim();
     if (!trimmedName) {
-      Alert.alert("알림", "여행 이름을 입력해주세요.");
+      Alert.alert("알림", "여행 이름을 입력해주세요");
       return;
     }
 
@@ -122,7 +122,7 @@ export default function AddPlanModal({
         onPlanCreated(newPlan);
       }
     } catch {
-      Alert.alert("알림", planToEdit ? "여행 수정에 실패했습니다." : "여행 생성에 실패했습니다.");
+      Alert.alert("알림", planToEdit ? "여행 수정에 실패했습니다" : "여행 생성에 실패했습니다");
     } finally {
       setIsSubmitting(false);
     }
