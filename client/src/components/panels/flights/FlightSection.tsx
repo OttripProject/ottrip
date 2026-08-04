@@ -1,3 +1,5 @@
+import { useToast } from "@/contexts/ToastContext";
+
 import type {
   DocumentUploadAnalyzeResponse,
   LocalFile,
@@ -55,6 +57,8 @@ export default function FlightSection({
   const [editingFlight, setEditingFlight] = useState<any | null>(null);
   const newFlightRevision = useRef(0);
 
+  const { showToast } = useToast();
+
   useEffect(() => {
     if (activeTab === "flight" && !selectedFlight) {
       if (openNewFlightForm) {
@@ -100,6 +104,7 @@ export default function FlightSection({
     onFlightAdd?.(flight);
     setShowFlightForm(false);
     setEditingFlight(null);
+    showToast("항공편을 저장했습니다")
   };
 
   const handleFlightDelete = (flightId: string) => {
@@ -111,6 +116,7 @@ export default function FlightSection({
     setShowFlightForm(false);
     setEditingFlight(null);
     onFlightClear?.();
+    showToast("항공편을 삭제했습니다")
   };
 
   if (selectedFlight && !showFlightForm) {

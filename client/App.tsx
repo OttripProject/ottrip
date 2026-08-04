@@ -1,6 +1,7 @@
 import { AuthProvider } from "@/contexts/AuthContext";
 import { DateProvider } from "@/contexts/DateContext";
 import QueryProvider from "@/contexts/QueryProvider";
+import { ToastProvider } from "@/contexts/ToastContext";
 import { loadPublicEnv } from "@/core/env/schema";
 import RootNavigator from "@/navigation/RootNavigator";
 import { useFonts } from "expo-font";
@@ -35,8 +36,10 @@ export default function App() {
       <AuthProvider>
         <DateProvider>
           <QueryProvider>
-            <RootNavigator />
-            <StatusBar style="auto" />
+            <ToastProvider>
+              <RootNavigator />
+              <StatusBar style="auto" />
+            </ToastProvider>
           </QueryProvider>
         </DateProvider>
       </AuthProvider>

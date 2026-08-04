@@ -1,3 +1,4 @@
+import { useToast, ToastUI } from "@/contexts/ToastContext";
 import { expensesApi } from "@/services/expenses";
 import type { Attachment } from "@/types/api";
 import type { Expense } from "@/types/api";
@@ -63,6 +64,8 @@ export default function ExpenseDetailModal({
   const [previewVisible, setPreviewVisible] = useState(false);
   const [previewImages, setPreviewImages] = useState<ImagePreviewItem[]>([]);
   const [previewInitialIndex, setPreviewInitialIndex] = useState(0);
+
+  const { showToast } = useToast();
 
   const expenseMap = useMemo(() => {
     const map: Record<number, Expense> = {};
@@ -173,6 +176,7 @@ export default function ExpenseDetailModal({
     try {
       await expensesApi.deleteExpense(expenseId);
       onExpenseDelete?.();
+      showToast("지출을 삭제했습니다.")
     } catch {}
   };
 
@@ -497,6 +501,7 @@ export default function ExpenseDetailModal({
             )}
           </View>
         </View>
+        <ToastUI />
       </Modal>
 
       <ImagePreviewModal

@@ -1,3 +1,4 @@
+import { useToast } from "@/contexts/ToastContext";
 import { usePlanDataQuery } from "@/hooks/usePlanDataQuery";
 import { usePlansQuery } from "@/hooks/usePlansQuery";
 import api from "@/services/api";
@@ -69,6 +70,8 @@ export default function DashboardScreen() {
   const onConsumeCarryoverPendingFiles = useCallback(() => {
     setCarryoverPendingFiles(null);
   }, []);
+
+  const { showToast } = useToast();
 
   /** 첨부 분석 성공 시: 결과 종류에 맞는 상세 탭으로 전환하고 확인 모달용 payload를 스테이징합니다. */
   const routeDocumentAnalyzeSuccess = useCallback(
@@ -328,6 +331,7 @@ export default function DashboardScreen() {
       planData.addItinerary(newItinerary);
       await extendPlanDateIfNeeded(newItinerary.itineraryDate);
     }
+    showToast("일정을 저장했습니다")
   };
 
   const handleFlightAdd = async (newFlight: any) => {
@@ -343,6 +347,7 @@ export default function DashboardScreen() {
         ])
         .filter(Boolean) as string[];
       if (dates.length) await extendPlanDateIfNeeded(...dates);
+      showToast("항공편을 저장했습니다")
     }
   };
 
@@ -355,6 +360,7 @@ export default function DashboardScreen() {
         newAccommodation.checkinDate,
         newAccommodation.checkoutDate,
       );
+      showToast("숙박 일정을 저장했습니다")
     }
   };
 
@@ -362,6 +368,7 @@ export default function DashboardScreen() {
     if (selectedPlanId) {
       planData.addExpense(newExpense);
       planData.refreshAttachments();
+      showToast("지출을 저장했습니다")
     }
   };
 
@@ -764,3 +771,6 @@ const styles = StyleSheet.create({
     ...textStyles.body3,
   }
 });
+
+
+{/* <div role="status" style="pointer-events: auto; background: rgb(31, 31, 31); color: rgb(255, 255, 255); border-radius: 14px; padding: 14px 16px; min-width: 288px; max-width: 420px; box-shadow: rgba(0, 0, 0, 0.28) 0px 12px 32px; display: inline-flex; align-items: center; gap: 12px; font: 500 13px / 19px Pretendard; animation: 220ms ease-out 0s 1 normal none running ottripToastInR;"><span style="width:20px;height:20px;border-radius:999px;flex:none;display:inline-flex;align-items:center;justify-content:center;background:#0A84FF;"><svg width="11" height="11" viewBox="0 0 12 12" fill="none"><polyline points="2.5,6.5 5,9 9.5,3.5" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></polyline></svg></span><span style="flex:1;text-wrap:pretty;">일정을 삭제했어요.</span><button data-a="" style="border:0;background:transparent;padding:2px 4px;margin-left:8px;color:#8FC1FF;font:600 12.5px/16px Pretendard;cursor:pointer;flex:none;">되돌리기</button><button data-c="" aria-label="닫기" style="border:0;background:transparent;padding:0;margin-left:2px;cursor:pointer;display:inline-flex;align-items:center;opacity:.55;flex:none;"><svg width="14" height="14" viewBox="0 0 12 12" fill="none"><path d="M2.5 2.5l7 7M9.5 2.5l-7 7" stroke="#fff" stroke-width="1.6" stroke-linecap="round"></path></svg></button></div> */}
