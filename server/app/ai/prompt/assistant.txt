@@ -50,8 +50,8 @@ Do NOT generate the following unless there is a 'special travel context':
     - (Ex: eSIM vs. Roaming, Transport Pass purchase, Pre-booking vs. On-site payment)
 
 2. Item Format:
-   - name: Concise and clear
-   - reason: Include specific schedule/situation details
+   - name: Concise and clear (Strictly maximum 16 characters)
+   - reason: Include specific schedule/situation details (Strictly maximum 24 characters)
 
 3. Data Utilization:
    - Country/City → Consider climate, culture, dress code, voltage/communication
