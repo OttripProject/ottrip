@@ -335,7 +335,7 @@ export default function WeeklyChecklistCard({
             placeholderTextColor={colors.gray500}
             value={newChecklistItem}
             onChangeText={setNewChecklistItem}
-            maxLength={100}
+            maxLength={16}
             editable={!addingChecklistItem}
             returnKeyType="done"
             onSubmitEditing={handleAddChecklistItem}
