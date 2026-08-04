@@ -498,6 +498,13 @@ export default function ItineraryItem({
       return;
     }
 
+    if (formData.startTime && formData.endTime && formData.startTime > formData.endTime) {
+      setWarningMessage("종료시간이 시작시간보다 빠를 수 없습니다.");
+      setShowWarning(true);
+      onShowWarning?.();
+      return; 
+    }
+
     isSubmittingRef.current = true;
     setIsSubmitting(true);
     try {
