@@ -25,6 +25,7 @@ import {
 } from "react-native";
 import AttachmentIcon from "../../../assets/attachment_clip.svg";
 import DeleteIcon from "../../../assets/delete.svg";
+import UpdateIcon from "../../../assets/update.svg"
 import AttachmentDocumentIcon from "../../../assets/mobile_attachment_document.svg";
 import AttachmentImageIcon from "../../../assets/mobile_attachment_image.svg";
 import XIcon from "../../../assets/x.svg";
@@ -403,9 +404,19 @@ export default function ExpenseDetailModal({
                                       </Pressable>
                                     )}
                                     <Pressable
+                                      // onPress={}
+                                      style={styles.updateButton}
+                                    >
+                                      <UpdateIcon
+                                        width={14}
+                                        height={14}
+                                        color={colors.gray700}
+                                      />
+                                    </Pressable>
+                                    <Pressable
                                       onPress={() => handleDelete(expense.id)}
                                       style={styles.deleteButton}
-                                    >
+                                    >                                      
                                       <DeleteIcon
                                         width={14}
                                         height={14}
@@ -721,6 +732,12 @@ const styles = StyleSheet.create({
     fontSize: 11,
     lineHeight: 16,
     color: colors.gray700,
+  },
+  updateButton: {
+    width: 24,
+    height: 24,
+    alignItems: "center",
+    justifyContent: "center",
   },
   deleteButton: {
     width: 24,

@@ -787,12 +787,10 @@ const styles = StyleSheet.create({
   },
   categoryPickerDropdown: {
     top: 56,
-    borderColor: colors.gray400,
+    backgroundColor: colors.gray200,
   },
   categoryPickerTrigger: {
-    backgroundColor: colors.white,
-    borderWidth: 1,
-    borderColor: colors.gray400,
+    backgroundColor: colors.gray200,
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 14,
@@ -814,22 +812,23 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   amountInput: {
-    backgroundColor: colors.white,
+    backgroundColor: colors.gray200,
+    borderWidth: 0,
     height: 50,
   },
   currencyToggle: {
     height: 50,
+    backgroundColor: colors.gray200,
+    borderWidth: 0,
   },
   dateInput: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    borderWidth: 1,
-    borderColor: colors.gray400,
     borderRadius: 12,
     paddingHorizontal: 16,
     height: 50,
-    backgroundColor: colors.white,
+    backgroundColor: colors.gray200,
   },
   dateTextContainer: {
     flexDirection: "row",
@@ -865,7 +864,8 @@ const styles = StyleSheet.create({
     elevation: 11,
   },
   descriptionInput: {
-    backgroundColor: colors.white,
+    backgroundColor: colors.gray200,
+    borderWidth: 0,
     height: 50,
   },
   sectionDivider: {
