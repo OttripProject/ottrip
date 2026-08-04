@@ -829,11 +829,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     height: 50,
     backgroundColor: colors.gray200,
+    width: "100%",
   },
   dateTextContainer: {
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.sm,
+    justifyContent: "space-between",
+    width: "100%",
   },
   dateText: {
     fontFamily: typography.fontFamily.pretendardRegular,
@@ -842,7 +845,7 @@ const styles = StyleSheet.create({
     color: colors.gray900,
   },
   iconWrapper: {
-    marginTop: -2,
+    // marginTop: -4,
   },
   calendarOverlay: {
     position: "absolute",

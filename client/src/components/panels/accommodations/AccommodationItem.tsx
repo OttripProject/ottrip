@@ -1229,12 +1229,15 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     backgroundColor: colors.gray200,
     maxHeight: 40,
+    width: "100%",
   },
   dateTextContainer: {
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.sm,
     flex: 1,
+    justifyContent: "space-between",
+    width: "100%",
   },
   dateText: {
     ...textStyles.body4,

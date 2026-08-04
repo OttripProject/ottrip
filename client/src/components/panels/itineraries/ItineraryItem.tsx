@@ -1039,9 +1039,11 @@ export default function ItineraryItem({
                 <Text style={styles.dateText}>
                   {dayjs(formData.itineraryDate).format("YYYY년 M월 D일")}
                 </Text>
-                <View style={styles.iconWrapper}>
-                  <CalendarIcon width={16} height={16} />
-                </View>
+                {!readOnly && (
+                  <View style={styles.iconWrapper}>
+                    <CalendarIcon width={16} height={16} />
+                  </View>
+                )}
               </View>
             </Pressable>
             {!readOnly && (
@@ -1745,18 +1747,21 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     backgroundColor: colors.gray200,
     minHeight: 40,
+    width: "100%",
   },
   dateTextContainer: {
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.sm,
     flex: 1,
+    justifyContent: "space-between",
+    width: "100%",
   },
   dateText: {
     ...textStyles.body4,
   },
   iconWrapper: {
-    marginTop: -2,
+    // marginTop: -2,
   },
   datePickerWrapper: {
     position: "relative",
