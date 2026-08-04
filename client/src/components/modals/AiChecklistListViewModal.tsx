@@ -396,7 +396,10 @@ export default function AiChecklistListViewModal({
                                 autoFocus
                                 onSubmitEditing={handleSaveAdding}
                               />
-                              <Text style={styles.counterText}>
+                              <Text style={[
+                                styles.counterText,
+                                newItemName.length === 16 && styles.counterTextMax
+                              ]}>
                                 {newItemName.length}/16
                               </Text>
                             </View>
@@ -412,7 +415,10 @@ export default function AiChecklistListViewModal({
                                 maxLength={24}
                                 onSubmitEditing={handleSaveAdding}
                               />
-                              <Text style={styles.counterText}>
+                              <Text style={[
+                                styles.counterText,
+                                newItemReason.length === 24 && styles.counterTextMax
+                              ]}>
                                 {newItemReason.length}/24
                               </Text>
                             </View>
@@ -806,4 +812,7 @@ const styles = StyleSheet.create({
     ...textStyles.body6,
     color: colors.gray500, 
   },
+  counterTextMax:{
+    color: colors.primary,
+  }
 });
