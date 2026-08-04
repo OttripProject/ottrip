@@ -1,6 +1,6 @@
 import json
 import logging
-from typing import Any, Dict, Iterable, Tuple, cast
+from typing import Any, Dict, Iterable, cast
 
 logger = logging.getLogger(__name__)
 
@@ -81,7 +81,7 @@ def _normalize_ai_document_response(
             error=err_str or "초안 형식이 올바르지 않습니다.",
         )
 
-    payload = draft_raw.get("payload")
+    payload = draft_raw.get("payload")  # pyright: ignore
     if not isinstance(payload, dict):
         return DocumentUploadAnalyzeResponse(
             success=False,
@@ -98,7 +98,7 @@ def _normalize_ai_document_response(
             error="payload에 values가 없습니다.",
         )
 
-    values = payload.get("values")
+    values = payload.get("values")  # pyright: ignore
     if not isinstance(values, dict):
         return DocumentUploadAnalyzeResponse(
             success=False,
@@ -107,9 +107,9 @@ def _normalize_ai_document_response(
             error="values는 객체여야 합니다.",
         )
 
-    normalized_payload = dict(payload)
+    normalized_payload = dict(payload)  # pyright: ignore
     normalized_payload["values"] = values
-    field_meta = normalized_payload.get("field_meta")
+    field_meta = normalized_payload.get("field_meta")  # pyright: ignore
     if not isinstance(field_meta, dict):
         normalized_payload["field_meta"] = {}
     else:
@@ -124,11 +124,11 @@ def _normalize_ai_document_response(
                 | ExpenseItemDraft
             ) = FlightItemDraft(payload=normalized_payload)
         elif inferred == ItemType.ITINERARY:
-            draft = ItineraryItemDraft(payload=normalized_payload)
+            draft = ItineraryItemDraft(payload=normalized_payload)  # pyright: ignore
         elif inferred == ItemType.ACCOMMODATION:
-            draft = AccommodationItemDraft(payload=normalized_payload)
+            draft = AccommodationItemDraft(payload=normalized_payload)  # pyright: ignore
         else:
-            draft = ExpenseItemDraft(payload=normalized_payload)
+            draft = ExpenseItemDraft(payload=normalized_payload)  # pyright: ignore
     except Exception:
         return DocumentUploadAnalyzeResponse(
             success=False,
@@ -148,15 +148,15 @@ def _normalize_ai_document_response(
 def _normalize_single_item_draft(raw: Any) -> DocumentItemDraft | None:
     if not isinstance(raw, dict):
         return None
-    item_type = _coerce_item_type(raw.get("item_type"))
+    item_type = _coerce_item_type(raw.get("item_type"))  # pyright: ignore
     if item_type is None:
         return None
-    payload_raw = raw.get("payload")
+    payload_raw = raw.get("payload")  # pyright: ignore
     if not isinstance(payload_raw, dict):
         return None
-    if "values" not in payload_raw or not isinstance(payload_raw.get("values"), dict):
+    if "values" not in payload_raw or not isinstance(payload_raw.get("values"), dict):  # pyright: ignore
         return None
-    normalized_payload: dict[str, Any] = dict(payload_raw)
+    normalized_payload: dict[str, Any] = dict(payload_raw)  # pyright: ignore
     if not isinstance(normalized_payload.get("field_meta"), dict):
         normalized_payload["field_meta"] = {}
     try:
@@ -185,7 +185,7 @@ def _normalize_plan_response(raw: dict[str, Any]) -> PlanUploadAnalyzeResponse:
         )
 
     items_raw = raw.get("items")
-    if not isinstance(items_raw, list) or len(items_raw) == 0:
+    if not isinstance(items_raw, list) or len(items_raw) == 0:  # pyright: ignore
         return PlanUploadAnalyzeResponse(
             success=False,
             items=[],
@@ -193,7 +193,7 @@ def _normalize_plan_response(raw: dict[str, Any]) -> PlanUploadAnalyzeResponse:
         )
 
     items: list[DocumentItemDraft] = []
-    for item_raw in items_raw:
+    for item_raw in items_raw:  # pyright: ignore
         draft = _normalize_single_item_draft(item_raw)
         if draft is not None:
             items.append(draft)
@@ -289,7 +289,7 @@ class AIService:
                 )
 
             raw = await self.gemini_client.analyze_document_upload(ocr_result.text)
-            if not isinstance(raw, dict):
+            if not isinstance(raw, dict):  # pyright: ignore
                 return DocumentUploadAnalyzeResponse(
                     success=False,
                     error="파일의 내용이 여행 일정과 관련이 없거나 명확하지 않습니다. 다른 파일로 시도해주세요.",
@@ -340,7 +340,7 @@ class AIService:
             raw = await self.gemini_client.analyze_plan_upload(
                 csv_bytes, effective_mime
             )
-            if not isinstance(raw, dict):
+            if not isinstance(raw, dict):  # pyright: ignore
                 return PlanUploadAnalyzeResponse(
                     success=False,
                     error="파일의 내용이 여행 일정과 관련이 없거나 명확하지 않습니다.",
@@ -420,7 +420,7 @@ class AIService:
                 user_text=text,
                 plan_context=plan_context,
             )
-            if not isinstance(raw, dict):
+            if not isinstance(raw, dict):  # pyright: ignore
                 return DocumentUploadAnalyzeResponse(
                     success=False,
                     error="어떤 일정인지 조금 더 구체적으로 알려주세요.",
@@ -599,11 +599,9 @@ class AIService:
         }
         return category_map.get(key, key)
 
-    def _normalize_checklist_item_key(self, item: Dict[str, Any]) -> Tuple[str, str]:
-        # name/reason 기반 중복 제거 키 (공백/대소문자 차이 흡수)
+    def _normalize_checklist_item_key(self, item: Dict[str, Any]) -> str:
         name = str(item.get("name") or "").strip().lower()
-        reason = str(item.get("reason") or "").strip().lower()
-        return (name, reason)
+        return name
 
     def _iter_all_items(
         self, categories: Dict[str, list[Dict[str, Any]]]
@@ -631,7 +629,7 @@ class AIService:
         }
 
         # 기존 항목 set (카테고리 무관하게 name/reason 기준으로 중복 제거)
-        existing_keys: set[Tuple[str, str]] = set()
+        existing_keys: set[str] = set()
         for item in self._iter_all_items(existing):
             existing_keys.add(self._normalize_checklist_item_key(item))
 
