@@ -1,6 +1,7 @@
 import AiAnalyzeFailureModal from "@/components/modals/AiAnalyzeFailureModal";
 import BaseCalendar from "@/components/popup/calendar/BaseCalendar";
 import { PLACEHOLDERS } from "@/constants/placeholders";
+import ExpenseForm from "@/components/forms/ExpenseForm";
 import { useDate } from "@/contexts/DateContext";
 import { useAttachmentUpload } from "@/hooks/useAttachmentUpload";
 import { useFilePicker } from "@/hooks/useFilePicker";
@@ -13,12 +14,9 @@ import {
   PLAN_ENTITY_KIND,
 } from "@/types/api";
 import { ExpenseCategory, ExpenseCurrency } from "@/types/expense";
-import CurrencyToggle from "@/ui/components/CurrencyToggle";
 import AttachmentSection from "@/ui/components/attachmentSection";
 import type { AiAttachmentAnalyzeSelection } from "@/ui/components/attachmentSection.types";
 import { pendingAiFileKey } from "@/ui/components/attachmentSection.types";
-import Input from "@/ui/components/input/Input";
-import { CategoryPicker } from "@/ui/components/pickers";
 import WarningBanner from "@/ui/components/toast/warning";
 import { colors } from "@/ui/tokens/colors";
 import { radii } from "@/ui/tokens/radii";
@@ -473,124 +471,10 @@ export default function AddExpenseModal({
                   <XIcon width={16} height={16} />
                 </Pressable>
               </View>
-
-              <View style={styles.formSection}>
-                <View
-                  style={[
-                    styles.inputGroup,
-                    styles.pickerWrapper,
-                    { zIndex: categoryOpen ? 10000 : 1 },
-                  ]}
-                >
-                  <View style={styles.labelRow}>
-                    <Text style={styles.inputLabel}>카테고리</Text>
-                    {aiFilledFields.has("category") && <AiFilledBadge />}
-                  </View>
-                  <CategoryPicker
-                    value={expenseForm.category}
-                    onChange={cat =>
-                      setExpenseForm({ ...expenseForm, category: cat })
-                    }
-                    onOpen={() => setCategoryOpen(true)}
-                    onClose={() => setCategoryOpen(false)}
-                    style={styles.categoryPickerTrigger}
-                    triggerTextStyle={styles.categoryPickerText}
-                    dropDownContainerStyle={styles.categoryPickerDropdown}
-                    iconSize={14}
-                  />
-                </View>
-
-                <View style={styles.amountCurrencyRow}>
-                  <View style={[styles.inputGroup, styles.amountGroup]}>
-                    <View style={styles.labelRow}>
-                      <Text style={styles.inputLabel}>금액</Text>
-                      {aiFilledFields.has("amount") ? (
-                        <AiFilledBadge />
-                      ) : attachmentAnalyzeSuccess ||
-                        attachmentAnalyzePartial ? (
-                        <NeedsCheckBadge />
-                      ) : null}
-                    </View>
-                    <Input
-                      variant="outlined"
-                      placeholder={PLACEHOLDERS.expense.amount}
-                      placeholderTextColor={colors.gray700}
-                      value={expenseForm.amount.toString()}
-                      onChangeText={text =>
-                        setExpenseForm({
-                          ...expenseForm,
-                          amount: Number.parseInt(text) || 0,
-                        })
-                      }
-                      keyboardType="numeric"
-                      style={styles.amountInput}
-                    />
-                  </View>
-
-                  <View style={[styles.inputGroup, styles.currencyGroup]}>
-                    <Text style={styles.inputLabel}>통화</Text>
-                    <CurrencyToggle
-                      value={expenseForm.currency}
-                      onChange={c =>
-                        setExpenseForm({ ...expenseForm, currency: c })
-                      }
-                      variant="outlined"
-                      style={styles.currencyToggle}
-                    />
-                  </View>
-                </View>
-
-                <View
-                  style={[
-                    styles.inputGroup,
-                    styles.datePickerWrapper,
-                    { zIndex: showDatePicker ? 20000 : 1 },
-                  ]}
-                >
-                  <View style={styles.labelRow}>
-                    <Text style={styles.inputLabel}>날짜</Text>
-                    {aiFilledFields.has("ex_date") ? (
-                      <AiFilledBadge />
-                    ) : attachmentAnalyzeSuccess || attachmentAnalyzePartial ? (
-                      <NeedsCheckBadge />
-                    ) : null}
-                  </View>
-                  <Pressable
-                    style={styles.dateInput}
-                    onPress={() => setShowDatePicker(!showDatePicker)}
-                  >
-                    <View style={styles.dateTextContainer}>
-                      <Text style={styles.dateText}>
-                        {dayjs(expenseForm.ex_date).format("YYYY.MM.DD")}
-                      </Text>
-                      <View style={styles.iconWrapper}>
-                        <CalendarIcon width={16} height={16} />
-                      </View>
-                    </View>
-                  </Pressable>
-                </View>
-
-                <View style={styles.inputGroup}>
-                  <View style={styles.labelRow}>
-                    <Text style={styles.inputLabel}>내용</Text>
-                    {aiFilledFields.has("description") ? (
-                      <AiFilledBadge />
-                    ) : attachmentAnalyzeSuccess || attachmentAnalyzePartial ? (
-                      <NeedsCheckBadge />
-                    ) : null}
-                  </View>
-                  <Input
-                    variant="outlined"
-                    placeholder={PLACEHOLDERS.expense.descriptionForm}
-                    placeholderTextColor={colors.gray600}
-                    value={expenseForm.description}
-                    onChangeText={text =>
-                      setExpenseForm({ ...expenseForm, description: text })
-                    }
-                    style={styles.descriptionInput}
-                  />
-                </View>
-              </View>
+              <ExpenseForm 
+                data={expenseForm} 
+                onChange={setExpenseForm} 
+              />
 
               <View style={styles.sectionDivider} />
 
@@ -759,94 +643,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  formSection: {
-    gap: 18,
-  },
-  inputGroup: {
-    gap: 9,
-  },
-  labelRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
-  inputLabel: {
-    fontFamily: typography.fontFamily.pretendardSemiBold,
-    fontSize: 14,
-    lineHeight: 20,
-    color: colors.gray900,
-  },
-  pickerWrapper: {
-    position: "relative",
-    overflow: "visible",
-    zIndex: 1,
-  },
-  datePickerWrapper: {
-    position: "relative",
-    overflow: "visible",
-  },
-  categoryPickerDropdown: {
-    top: 56,
-    backgroundColor: colors.gray200,
-  },
-  categoryPickerTrigger: {
-    backgroundColor: colors.gray200,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-  },
-  categoryPickerText: {
-    fontFamily: typography.fontFamily.pretendardRegular,
-    fontSize: 14,
-    lineHeight: 22,
-    color: colors.gray900,
-  },
-  amountCurrencyRow: {
-    flexDirection: "row",
-    gap: 12,
-  },
-  amountGroup: {
-    flex: 1,
-  },
-  currencyGroup: {
-    flex: 1,
-  },
-  amountInput: {
-    backgroundColor: colors.gray200,
-    borderWidth: 0,
-    height: 50,
-  },
-  currencyToggle: {
-    height: 50,
-    backgroundColor: colors.gray200,
-    borderWidth: 0,
-  },
-  dateInput: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    height: 50,
-    backgroundColor: colors.gray200,
-    width: "100%",
-  },
-  dateTextContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.sm,
-    justifyContent: "space-between",
-    width: "100%",
-  },
-  dateText: {
-    fontFamily: typography.fontFamily.pretendardRegular,
-    fontSize: 14,
-    lineHeight: 22,
-    color: colors.gray900,
-  },
-  iconWrapper: {
-    // marginTop: -4,
-  },
   calendarOverlay: {
     position: "absolute",
     top: 0,
@@ -865,11 +661,6 @@ const styles = StyleSheet.create({
     marginLeft: -138,
     zIndex: 20002,
     elevation: 11,
-  },
-  descriptionInput: {
-    backgroundColor: colors.gray200,
-    borderWidth: 0,
-    height: 50,
   },
   sectionDivider: {
     height: 1,

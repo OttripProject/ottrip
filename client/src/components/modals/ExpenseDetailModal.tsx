@@ -1,3 +1,5 @@
+import ExpenseCard from "@/components/cards/ExpenseCard"
+import ImagePreviewModal, { type ImagePreviewItem } from "@/components/modals/ImagePreviewModal";
 import { useToast, ToastUI } from "@/contexts/ToastContext";
 import { expensesApi } from "@/services/expenses";
 import type { Attachment } from "@/types/api";
@@ -29,7 +31,7 @@ import UpdateIcon from "../../../assets/update.svg"
 import AttachmentDocumentIcon from "../../../assets/mobile_attachment_document.svg";
 import AttachmentImageIcon from "../../../assets/mobile_attachment_image.svg";
 import XIcon from "../../../assets/x.svg";
-import ImagePreviewModal, { type ImagePreviewItem } from "./ImagePreviewModal";
+
 
 interface ExpenseDetailModalProps {
   visible: boolean;
@@ -37,6 +39,7 @@ interface ExpenseDetailModalProps {
   expenses: Expense[];
   attachments?: Attachment[];
   onExpenseDelete?: () => void;
+  onExpenseUpdate?: () => void;
   readOnly?: boolean;
 }
 
@@ -56,6 +59,7 @@ export default function ExpenseDetailModal({
   expenses,
   attachments = [],
   onExpenseDelete,
+  onExpenseUpdate,
   readOnly = false,
 }: ExpenseDetailModalProps) {
   const { height: windowHeight } = useWindowDimensions();
@@ -360,75 +364,17 @@ export default function ExpenseDetailModal({
                         <Text style={styles.categoryHeader}>
                           {categoryLabels[category]}
                         </Text>
-                        {categoryExpenses.map(expense => {
-                          const expAttachments =
-                            attachmentsMap[expense.id] ?? [];
-                          return (
-                            <View key={expense.id} style={styles.expenseCard}>
-                              <View style={styles.expenseCardLeft}>
-                                <Text
-                                  style={styles.expenseDescription}
-                                  numberOfLines={1}
-                                >
-                                  {expense.description || "내용 없음"}
-                                </Text>
-                                <Text style={styles.expenseDate}>
-                                  {formatDate(expense.exDate)}
-                                </Text>
-                              </View>
-                              <View style={styles.expenseCardRight}>
-                                <Text style={styles.expenseAmount}>
-                                  {formatAmount(expense.amount)}{" "}
-                                  {currencyLabels[expense.currency]}
-                                </Text>
-                                {!readOnly && (
-                                  <View style={styles.expenseCardActions}>
-                                    {expAttachments.length > 0 && (
-                                      <Pressable
-                                        style={styles.attachmentButton}
-                                        onPress={() =>
-                                          handleExpenseAttachmentPress(
-                                            expense,
-                                            expAttachments,
-                                          )
-                                        }
-                                      >
-                                        <AttachmentIcon
-                                          width={11}
-                                          height={11}
-                                          color={colors.gray700}
-                                        />
-                                        <Text style={styles.attachmentCount}>
-                                          {expAttachments.length}
-                                        </Text>
-                                      </Pressable>
-                                    )}
-                                    <Pressable
-                                      // onPress={}
-                                      style={styles.updateButton}
-                                    >
-                                      <UpdateIcon
-                                        width={14}
-                                        height={14}
-                                        color={colors.gray700}
-                                      />
-                                    </Pressable>
-                                    <Pressable
-                                      onPress={() => handleDelete(expense.id)}
-                                      style={styles.deleteButton}
-                                    >                                      
-                                      <DeleteIcon
-                                        width={14}
-                                        height={14}
-                                        color={colors.warning}
-                                      />
-                                    </Pressable>
-                                  </View>
-                                )}
-                              </View>
-                            </View>
-                          );
-                        })}
+                        {categoryExpenses.map(expense => (
+                          <ExpenseCard
+                            key={expense.id}
+                            expense={expense}
+                            attachments={attachmentsMap[expense.id] ?? []}
+                            readOnly={readOnly}
+                            onDelete={handleDelete}
+                            onUpdate={onExpenseUpdate}
+                            onAttachmentPress={handleExpenseAttachmentPress}
+                          />
+                        ))}
                       </View>
                     );
                   })}

@@ -7,6 +7,7 @@ import { radii } from "@/ui/tokens/radii";
 import { spacing } from "@/ui/tokens/spacing";
 import { textStyles, typography } from "@/ui/tokens/typography";
 import { expensesApi } from "@/services/expenses";
+import ExpenseForm, { type ExpenseFormData } from "@/components/forms/ExpenseForm";
 import { useToast } from "@/contexts/ToastContext";
 
 import AttachmentIcon from "../../../assets/attachment_clip.svg";
@@ -22,49 +23,76 @@ interface ExpenseCardProps {
   onAttachmentPress: (expense: Expense, attachments: Attachment[]) => void;
 }
 
-export default function ExpenseCard({
-  expense,
-  attachments,
-  readOnly,
-  onDelete,
-  onUpdate,
-  onAttachmentPress,
-}: ExpenseCardProps) {
-  const { showToast } = useToast();
+export default function ExpenseCard({ 
+    expense,
+    attachments,
+    readOnly,
+    onDelete,
+    onAttachmentPress,
+    onUpdate,
+ }: ExpenseCardProps) {
+    const [isEditing, setIsEditing] = useState(false);
+    
+    const [editFormData, setEditFormData] = useState<ExpenseFormData | null>(null);
   
-  // 💡 카드 내부에서 자신의 수정 상태를 독립적으로 관리합니다!
-  const [isEditing, setIsEditing] = useState(false);
-  const [editFormData, setEditFormData] = useState<Partial<Expense>>({});
+    const { showToast } = useToast();
 
-  const formatAmount = (amount: number) => amount.toLocaleString();
-  const formatDate = (exDate: string) => exDate.slice(5).replace("-", ".");
+    const formatAmount = (amount: number) => amount.toLocaleString();
+    const formatDate = (exDate: string) => exDate.slice(5).replace("-", ".");
 
-  const handleEditStart = () => {
-    setIsEditing(true);
-    setEditFormData({ ...expense });
-  };
-
-  const handleEditCancel = () => {
-    setIsEditing(false);
-    setEditFormData({});
-  };
-
-  const handleEditSave = async () => {
-    try {
-      await expensesApi.updateExpense(expense.id, editFormData);
-      onUpdate?.();
-      showToast("지출이 수정되었습니다.");
+    const handleEditStart = () => {
+      setIsEditing(true);
+      setEditFormData({
+        category: expense.category,
+        amount: expense.amount,
+        currency: expense.currency,
+        ex_date: expense.exDate, 
+        description: expense.description || "",
+      });
+    };
+  
+    const handleEditCancel = () => {
       setIsEditing(false);
-    } catch {
-      showToast("지출 수정에 실패했습니다.");
-    }
-  };
+      setEditFormData(null);
+    };
+  
+    const handleEditSave = async () => {
+      if (!editFormData) return;
+      try {
+        await expensesApi.updateExpense(expense.id, {
+          category: editFormData.category,
+          amount: editFormData.amount,
+          currency: editFormData.currency,
+          exDate: editFormData.ex_date, 
+          description: editFormData.description,
+        });
+        onUpdate?.();
+        showToast("지출이 수정되었습니다.");
+        setIsEditing(false);
+      } catch {
+        showToast("지출 수정에 실패했습니다.");
+      }
+    };
 
   // 1. 수정 모드 UI
-  if (isEditing) {
+  if (isEditing && editFormData) {
     return (
       <View style={[styles.expenseCard, styles.editingCard]}>
-        {/* 방금 전 논의했던 TextInput 및 수정 폼 UI들... */}
+
+        <ExpenseForm 
+          data={editFormData} 
+          onChange={setEditFormData} 
+          compact 
+        />
+
+        <View style={styles.editActions}>
+          <Pressable style={styles.editCancelBtn} onPress={handleEditCancel}>
+            <Text style={styles.editCancelText}>취소</Text>
+          </Pressable>
+          <Pressable style={styles.editSaveBtn} onPress={handleEditSave}>
+            <Text style={styles.editSaveText}>저장</Text>
+          </Pressable>
+        </View>
       </View>
     );
   }
@@ -168,9 +196,7 @@ const styles = StyleSheet.create({
         borderColor: colors.gray300,
       },
       attachmentCount: {
-        fontFamily: typography.fontFamily.poppinsSemiBold,
-        fontSize: 11,
-        lineHeight: 16,
+        ...textStyles.h9,
         color: colors.gray700,
       },
       updateButton: {
@@ -184,5 +210,50 @@ const styles = StyleSheet.create({
         height: 24,
         alignItems: "center",
         justifyContent: "center",
+      },
+      editingCard: {
+        backgroundColor: colors.white,
+        borderWidth: 1,
+        borderColor: colors.gray200,
+        borderRadius: 12,
+        padding: 14,
+        flexDirection: "column",
+        alignItems: "stretch", 
+        width: "100%",
+        gap: 10,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 6,
+        elevation: 2,
+      },
+      editActions: {
+        flexDirection: "row", 
+        gap: 8,
+        marginTop: 2,
+      },
+      editCancelBtn: {
+        flex: 1, 
+        height: 40,
+        borderRadius: 10,
+        backgroundColor: colors.gray400,
+        alignItems: "center",
+        justifyContent: "center",
+      },
+      editSaveBtn: {
+        flex: 1,
+        height: 40,
+        borderRadius: 10,
+        backgroundColor: colors.primary,
+        alignItems: "center",
+        justifyContent: "center",
+      },
+      editCancelText: {
+        ...textStyles.h7,
+        color: colors.gray900,
+      },
+      editSaveText: {
+        ...textStyles.h7,
+        color: colors.white,
       },
 });

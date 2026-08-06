@@ -156,6 +156,12 @@ export default function ExpensesPanel({
         expenses={planData?.expenses || []}
         attachments={planData?.attachments || []}
         readOnly={readOnly}
+        onExpenseUpdate={async () => {
+          await planData?.refreshExpenses();
+          await planData?.refreshItineraries?.();
+          await planData?.refreshFlights?.();
+          await planData?.refreshAccommodations?.();
+        }}
         onExpenseDelete={async () => {
           await planData?.refreshExpenses();
           await planData?.refreshItineraries?.();
