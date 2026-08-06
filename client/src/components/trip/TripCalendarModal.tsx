@@ -267,11 +267,11 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   dayTextToday: {
-    color: colors.primary,
+    color: colors.black,
     fontWeight: "600",
   },
   dayTextSaturday: {
-    color: colors.primary,
+    color: colors.black,
   },
   dayTextSunday: {
     color: colors.warning,

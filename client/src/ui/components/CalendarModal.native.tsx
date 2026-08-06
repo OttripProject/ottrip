@@ -375,13 +375,13 @@ const styles = StyleSheet.create({
     color: colors.white,
   },
   dayTextSaturday: {
-    color: colors.primary,
+    color: colors.black,
   },
   dayTextSunday: {
     color: colors.warning,
   },
   weekDayTextSaturday: {
-    color: colors.primary,
+    color: colors.black,
   },
   weekDayTextSunday: {
     color: colors.warning,
