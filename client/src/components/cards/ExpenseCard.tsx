@@ -15,7 +15,7 @@ import { expensesApi } from "@/services/expenses";
 import ExpenseForm, { type ExpenseFormData } from "@/components/forms/ExpenseForm";
 import { useToast } from "@/contexts/ToastContext";
 
-import AttachmentIcon from "../../../assets/attachment_clip.svg";
+import AttachmentIcon from "../../../assets/files.svg";
 import DeleteIcon from "../../../assets/delete.svg";
 import UpdateIcon from "../../../assets/update.svg"
 
@@ -246,9 +246,10 @@ export default function ExpenseCard({
                 onPress={() => onAttachmentPress(expense, attachments)}
               >
                 <AttachmentIcon
-                    width={11}
-                    height={11}
-                    color={colors.gray700}
+                  width={11}
+                  height={11}
+                  color={colors.gray500}
+                  style={{ transform: [{ rotate: "45deg" }] }}
                 />
               </Pressable>
             )}
