@@ -116,9 +116,9 @@ class ItineraryService:
             itinerary.title = update_data.title
         if update_data.itinerary_date:
             itinerary.itinerary_date = update_data.itinerary_date
-        if update_data.start_time:
+        if update_data.start_time is not None:
             itinerary.start_time = update_data.start_time
-        if update_data.end_time:
+        if update_data.end_time is not None:
             itinerary.end_time = update_data.end_time
         if update_data.description is not None:
             itinerary.description = update_data.description
