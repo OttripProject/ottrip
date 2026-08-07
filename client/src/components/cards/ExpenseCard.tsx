@@ -1,11 +1,16 @@
-import React, { useState } from "react";
-import { View, Text, Pressable, TextInput, StyleSheet } from "react-native";
-import type { Expense, Attachment } from "@/types/api";
+import { useCallback, useState } from "react";
+import { View, Text, Platform, Pressable, StyleSheet } from "react-native";
+import { useAttachmentUpload } from "@/hooks/useAttachmentUpload";
+import { useExpenseAi } from "@/hooks/useExpenseAi";
+import { useFilePicker } from "@/hooks/useFilePicker";
+import type { LocalFile } from "@/types/api";
+import { type Expense, type Attachment, PLAN_ENTITY_KIND } from "@/types/api";
 import { ExpenseCurrency, currencyLabels } from "@/types/expense";
 import { colors } from "@/ui/tokens/colors";
 import { radii } from "@/ui/tokens/radii";
 import { spacing } from "@/ui/tokens/spacing";
 import { textStyles, typography } from "@/ui/tokens/typography";
+import { attachmentsApi } from "@/services/attachments";
 import { expensesApi } from "@/services/expenses";
 import ExpenseForm, { type ExpenseFormData } from "@/components/forms/ExpenseForm";
 import { useToast } from "@/contexts/ToastContext";
@@ -35,6 +40,65 @@ export default function ExpenseCard({
     
     const [editFormData, setEditFormData] = useState<ExpenseFormData | null>(null);
   
+    const { isUploading, uploadFiles } = useAttachmentUpload({
+      planId: expense.planId,
+      entityType: PLAN_ENTITY_KIND.EXPENSE,
+    });
+    const [deletedAttachmentIds, setDeletedAttachmentIds] = useState<number[]>([]);
+
+    const [pendingFiles, setPendingFiles] = useState<LocalFile[]>([]);
+
+    const clearPendingFilesWithRevoke = useCallback(() => {
+      setPendingFiles(prev => {
+        if (Platform.OS === "web") {
+          prev.forEach(f => {
+            if (f.uri?.startsWith("blob:")) {
+              try {
+                URL.revokeObjectURL(f.uri);
+              } catch {
+                /* noop */
+              }
+            }
+          });
+        }
+        return [];
+      });
+    }, []);
+    
+    const { pickImage, pickDocument } = useFilePicker();
+  
+    const aiState = useExpenseAi({
+      pendingFiles,
+      existingAttachments: attachments,
+      onUpdateForm: setEditFormData,
+    });
+
+    const appendImage = async () => {
+      try {
+        const file = await pickImage();
+        if (file) {
+          setPendingFiles((prev) => [...prev, file]);
+        }
+      } catch (error) {
+        console.error("이미지 선택 중 오류 발생:", error);
+      }
+    };
+  
+    const appendDocument = async () => {
+      try {
+        const file = await pickDocument();
+        if (file) {
+          setPendingFiles((prev) => [...prev, file]);
+        }
+      } catch (error) {
+        console.error("문서 선택 중 오류 발생:", error);
+      }
+    };
+  
+    const removePendingFile = (index: number) => {
+      setPendingFiles((prev) => prev.filter((_, i) => i !== index));
+    };    
+
     const { showToast } = useToast();
 
     const formatAmount = (amount: number) => amount.toLocaleString();
@@ -49,6 +113,8 @@ export default function ExpenseCard({
         ex_date: expense.exDate, 
         description: expense.description || "",
       });
+      setPendingFiles([]);
+      setDeletedAttachmentIds([]);
     };
   
     const handleEditCancel = () => {
@@ -58,6 +124,7 @@ export default function ExpenseCard({
   
     const handleEditSave = async () => {
       if (!editFormData) return;
+      
       try {
         await expensesApi.updateExpense(expense.id, {
           category: editFormData.category,
@@ -66,13 +133,50 @@ export default function ExpenseCard({
           exDate: editFormData.ex_date, 
           description: editFormData.description,
         });
+  
+        if (deletedAttachmentIds.length > 0) {
+          await Promise.all(
+            deletedAttachmentIds.map((attachmentId) => 
+              attachmentsApi.deleteAttachment(attachmentId) 
+            )
+          );
+        }
+  
+        let uploadError: unknown = null;
+        if (pendingFiles.length > 0) {
+          try {
+            await uploadFiles(pendingFiles, expense.id);
+          } catch (e) {
+            uploadError = e;
+          }
+        }
+        
+        if (clearPendingFilesWithRevoke) {
+          clearPendingFilesWithRevoke();
+        }
+  
+        if (uploadError) {
+          showToast("내용은 수정되었으나, 파일 업로드에 실패했습니다.");
+        } else {
+          showToast("지출이 수정되었습니다.");
+        }
+        
         onUpdate?.();
-        showToast("지출이 수정되었습니다.");
         setIsEditing(false);
-      } catch {
+        
+      } catch (error) {
         showToast("지출 수정에 실패했습니다.");
+        console.error("지출 수정 중 전체 에러:", error);
       }
     };
+
+    const handleRemoveExisting = (attachmentId: number) => {
+      setDeletedAttachmentIds((prev) => [...prev, attachmentId]);
+    };
+  
+    const displayAttachments = attachments?.filter(
+      (a) => !deletedAttachmentIds.includes(a.id)
+    ) || [];
 
   // 1. 수정 모드 UI
   if (isEditing && editFormData) {
@@ -83,6 +187,30 @@ export default function ExpenseCard({
           data={editFormData} 
           onChange={setEditFormData} 
           compact 
+          
+          existingAttachments={displayAttachments}
+          pendingFiles={pendingFiles}
+          onPickImage={appendImage}
+          onPickDocument={appendDocument}
+          onRemoveExisting={handleRemoveExisting}
+          onRemovePending={removePendingFile}
+          onAppendPendingFiles={
+            Platform.OS === "web"
+              ? (files) => setPendingFiles((prev) => [...prev, ...files])
+              : undefined
+          }
+          isAiAnalyzing={aiState.isAiAnalyzing}
+          onAiAnalyzePress={
+            Platform.OS === "web" ? aiState.handleAiAnalyzePress : undefined
+          }
+          analyzeError={aiState.analyzeError}
+          onRetryAnalyze={
+            Platform.OS === "web" ? aiState.handleRetryAnalyze : undefined
+          }
+          isAiAnalyzeSuccess={aiState.isAiAnalyzeSuccess}
+          isAiAnalyzePartial={aiState.isAiAnalyzePartial}
+          analyzePartialMessage={aiState.analyzePartialMessage}
+          aiFilledFields={aiState.aiFilledFields}
         />
 
         <View style={styles.editActions}>

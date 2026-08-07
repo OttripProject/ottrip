@@ -4,6 +4,7 @@ import { PLACEHOLDERS } from "@/constants/placeholders";
 import ExpenseForm from "@/components/forms/ExpenseForm";
 import { useDate } from "@/contexts/DateContext";
 import { useAttachmentUpload } from "@/hooks/useAttachmentUpload";
+import { useExpenseAi } from "@/hooks/useExpenseAi";
 import { useFilePicker } from "@/hooks/useFilePicker";
 import { analyzeDocumentUpload } from "@/services/aiDocument";
 import { expensesApi } from "@/services/expenses";
@@ -126,21 +127,8 @@ export default function AddExpenseModal({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isSubmittingRef = useRef(false);
   const [pendingFiles, setPendingFiles] = useState<LocalFile[]>([]);
-  const [isAiAnalyzing, setIsAiAnalyzing] = useState(false);
   const [aiAnalyzeFailureVisible, setAiAnalyzeFailureVisible] = useState(false);
   const [aiAnalyzeFailureMessage, setAiAnalyzeFailureMessage] = useState("");
-  const [attachmentAnalyzeError, setAttachmentAnalyzeError] = useState<
-    string | null
-  >(null);
-  const [attachmentAnalyzeSuccess, setAttachmentAnalyzeSuccess] =
-    useState(false);
-  const [attachmentAnalyzePartial, setAttachmentAnalyzePartial] =
-    useState(false);
-  const [attachmentAnalyzePartialMessage, setAttachmentAnalyzePartialMessage] =
-    useState<string | undefined>(undefined);
-  const [aiFilledFields, setAiFilledFields] = useState<ReadonlySet<string>>(
-    new Set(),
-  );
 
   const { pickImage, pickDocument } = useFilePicker();
   const { isUploading, uploadFiles } = useAttachmentUpload({
@@ -213,116 +201,6 @@ export default function AddExpenseModal({
     ex_date: getDefaultDate(),
     currency: ExpenseCurrency.KRW,
   });
-
-  const handleAiAnalyzePress = useCallback(
-    async (selection: AiAttachmentAnalyzeSelection) => {
-      setIsAiAnalyzing(true);
-      try {
-        const payload = await buildAnalyzeUploadPayload(selection, {
-          pendingFiles,
-          existingAttachments: [],
-        });
-        const res = await analyzeDocumentUpload(payload.file, {
-          filename: payload.filename,
-        });
-        const err = res.error?.trim();
-        if (!res.success || err) {
-          setAttachmentAnalyzeError(
-            "분석 서버에 연결하지 못했어요. 잠시 후 다시 시도해 주세요",
-          );
-          return;
-        }
-        const kind: AiDocumentItemType | null =
-          res.inferredItemType ?? res.draft?.itemType ?? null;
-        if (kind !== "expense") {
-          const label =
-            kind === "flight"
-              ? "항공"
-              : kind === "itinerary"
-                ? "일정"
-                : kind === "accommodation"
-                  ? "숙박"
-                  : "다른 항목";
-          setAttachmentAnalyzeError(
-            `문서가 [${label}]으로 분석되었습니다. 비용 추가 화면에는 반영할 수 없습니다`,
-          );
-          return;
-        }
-        if (!res.draft || res.draft.itemType !== "expense") {
-          setAttachmentAnalyzeError(
-            "이미지에서 금액·날짜를 읽지 못했어요. 더 선명한 영수증으로 다시 시도해 주세요",
-          );
-          return;
-        }
-        setAttachmentAnalyzeError(null);
-        const src = mergeExpenseDraftValueSource(res.draft);
-        const filledSet = new Set<string>(["category"]);
-        const amountExtracted =
-          Number.parseInt(
-            normalizeAmountDigitsAi(pickStrAi(src, ["amount", "Amount"])),
-            10,
-          ) > 0;
-        const descriptionExtracted = !!pickStrAi(src, [
-          "description",
-          "Description",
-        ]);
-        const exRawCheck = pickStrAi(src, ["exDate", "ex_date", "ExDate"]);
-        const dateExtracted = !!(exRawCheck && dayjs(exRawCheck).isValid());
-        if (amountExtracted) filledSet.add("amount");
-        if (descriptionExtracted) filledSet.add("description");
-        if (dateExtracted) filledSet.add("ex_date");
-        setAiFilledFields(filledSet);
-        const isPartial =
-          !amountExtracted || !descriptionExtracted || !dateExtracted;
-        if (isPartial) {
-          setAttachmentAnalyzeSuccess(false);
-          setAttachmentAnalyzePartial(true);
-          setAttachmentAnalyzePartialMessage(
-            "일부 항목을 인식하지 못했어요. 확인 필요 항목을 직접 입력해 주세요",
-          );
-        } else {
-          setAttachmentAnalyzeSuccess(true);
-          setAttachmentAnalyzePartial(false);
-          setAttachmentAnalyzePartialMessage(undefined);
-        }
-        const categoryRaw = pickStrAi(src, ["category", "Category"]) || "etc";
-        const amountDigits = normalizeAmountDigitsAi(
-          pickStrAi(src, ["amount", "Amount"]),
-        );
-        const amountNum = Number.parseInt(amountDigits, 10) || 0;
-        const description = pickStrAi(src, ["description", "Description"]);
-        const exRaw = pickStrAi(src, ["exDate", "ex_date", "ExDate"]);
-        const currencyRaw = pickStrAi(src, [
-          "currency",
-          "Currency",
-        ]).toUpperCase();
-        const currency = (Object.values(ExpenseCurrency) as string[]).includes(
-          currencyRaw,
-        )
-          ? (currencyRaw as ExpenseCurrency)
-          : ExpenseCurrency.KRW;
-
-        setExpenseForm(prev => ({
-          ...prev,
-          category: coerceExpenseCategoryAi(categoryRaw),
-          amount: amountNum,
-          description,
-          ex_date:
-            exRaw && dayjs(exRaw).isValid()
-              ? dayjs(exRaw).format("YYYY-MM-DD")
-              : prev.ex_date,
-          currency,
-        }));
-      } catch (_e) {
-        setAttachmentAnalyzeError(
-          "분석 서버에 연결하지 못했어요. 잠시 후 다시 시도해 주세요",
-        );
-      } finally {
-        setIsAiAnalyzing(false);
-      }
-    },
-    [pendingFiles],
-  );
 
   useEffect(() => {
     if (visible) {
@@ -404,28 +282,8 @@ export default function AddExpenseModal({
     }
   };
 
-  const handleRetryAnalyze = useCallback(() => {
-    if (pendingFiles.length === 0) return;
-    setAttachmentAnalyzeError(null);
-    setAttachmentAnalyzeSuccess(false);
-    setAttachmentAnalyzePartial(false);
-    setAttachmentAnalyzePartialMessage(undefined);
-    setAiFilledFields(new Set());
-    void handleAiAnalyzePress({
-      kind: "pending",
-      key: pendingAiFileKey(pendingFiles[0]),
-    });
-  }, [pendingFiles, handleAiAnalyzePress]);
-
   const handleClose = () => {
-    setIsAiAnalyzing(false);
-    setAiAnalyzeFailureVisible(false);
-    setAiAnalyzeFailureMessage("");
-    setAttachmentAnalyzeError(null);
-    setAttachmentAnalyzeSuccess(false);
-    setAttachmentAnalyzePartial(false);
-    setAttachmentAnalyzePartialMessage(undefined);
-    setAiFilledFields(new Set());
+    aiState.resetAiState();
     clearPendingFilesWithRevoke();
     setExpenseForm({
       category: ExpenseCategory.ETC,
@@ -436,6 +294,12 @@ export default function AddExpenseModal({
     });
     onClose();
   };
+
+  const aiState = useExpenseAi({
+    pendingFiles,
+    existingAttachments: [], 
+    onUpdateForm: setExpenseForm,
+  });
 
   return (
     <>
@@ -473,37 +337,25 @@ export default function AddExpenseModal({
               </View>
               <ExpenseForm 
                 data={expenseForm} 
-                onChange={setExpenseForm} 
-              />
-
-              <View style={styles.sectionDivider} />
-
-              <AttachmentSection
-                variant="expense"
-                style={styles.attachmentSection}
-                showTopDivider
+                onChange={setExpenseForm}                
                 pendingFiles={pendingFiles}
                 onPickImage={appendImage}
                 onPickDocument={appendDocument}
-                onRemoveFile={removePendingAt}
+                onRemovePending={removePendingAt}
                 onAppendPendingFiles={
                   Platform.OS === "web"
                     ? files => setPendingFiles(p => [...p, ...files])
                     : undefined
                 }
                 isUploading={isUploading}
-                disabled={isSubmitting || isAiAnalyzing}
-                onAiAnalyzePress={
-                  Platform.OS === "web" ? handleAiAnalyzePress : undefined
-                }
-                isAiAnalyzing={isAiAnalyzing}
-                analyzeError={attachmentAnalyzeError}
-                onRetryAnalyze={
-                  Platform.OS === "web" ? handleRetryAnalyze : undefined
-                }
-                isAiAnalyzeSuccess={attachmentAnalyzeSuccess}
-                isAiAnalyzePartial={attachmentAnalyzePartial}
-                analyzePartialMessage={attachmentAnalyzePartialMessage}
+                isAiAnalyzing={aiState.isAiAnalyzing}
+                onAiAnalyzePress={Platform.OS === "web" ? aiState.handleAiAnalyzePress : undefined}
+                analyzeError={aiState.analyzeError}
+                onRetryAnalyze={Platform.OS === "web" ? aiState.handleRetryAnalyze : undefined}
+                isAiAnalyzeSuccess={aiState.isAiAnalyzeSuccess}
+                isAiAnalyzePartial={aiState.isAiAnalyzePartial}
+                analyzePartialMessage={aiState.analyzePartialMessage}
+                aiFilledFields={aiState.aiFilledFields}
               />
 
               <View style={styles.modalButtons}>
@@ -516,7 +368,7 @@ export default function AddExpenseModal({
                 <Pressable
                   style={[styles.modalButton, styles.submitButton]}
                   onPress={handleExpenseSubmit}
-                  disabled={isSubmitting || isUploading || isAiAnalyzing}
+                  disabled={isSubmitting || isUploading || aiState.isAiAnalyzing}
                 >
                   <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
                     {(isSubmitting || isUploading) && (
@@ -558,45 +410,6 @@ export default function AddExpenseModal({
       />
     </>
   );
-}
-
-function pickStrAi(obj: Record<string, unknown>, keys: string[]): string {
-  for (const k of keys) {
-    const raw = obj[k];
-    if (raw === undefined || raw === null) continue;
-    if (typeof raw === "string") return raw;
-    if (typeof raw === "number" || typeof raw === "boolean") return String(raw);
-  }
-  return "";
-}
-
-function coerceExpenseCategoryAi(raw: string): ExpenseCategory {
-  const v = raw.trim().toLowerCase();
-  const all = Object.values(ExpenseCategory) as string[];
-  if (all.includes(v)) return v as ExpenseCategory;
-  return ExpenseCategory.ETC;
-}
-
-function normalizeAmountDigitsAi(value: unknown): string {
-  const raw = String(value ?? "").trim();
-  if (!raw) return "";
-  const integerPart = raw.split(".")[0];
-  return integerPart.replace(/[^0-9]/g, "");
-}
-
-function mergeExpenseDraftValueSource(
-  draft: Extract<AiDocumentItemDraft, { itemType: "expense" }>,
-): Record<string, unknown> {
-  const raw = draft.payload.values;
-  const base =
-    raw && typeof raw === "object" && !Array.isArray(raw)
-      ? ({ ...(raw as Record<string, unknown>) } as Record<string, unknown>)
-      : {};
-  const nested = base.expense ?? base.Expense;
-  if (nested && typeof nested === "object" && !Array.isArray(nested)) {
-    return { ...base, ...(nested as Record<string, unknown>) };
-  }
-  return base;
 }
 
 const styles = StyleSheet.create({

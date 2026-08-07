@@ -10,6 +10,9 @@ import { colors } from "@/ui/tokens/colors";
 import { typography, textStyles } from "@/ui/tokens/typography";
 import { PLACEHOLDERS } from "@/constants/placeholders";
 
+import AttachmentSection from "@/ui/components/attachmentSection";
+import type { LocalFile, Attachment } from "@/types/api";
+
 export interface ExpenseFormData {
   category: any;
   amount: number;
@@ -22,9 +25,49 @@ interface ExpenseFormProps {
   data: ExpenseFormData;
   onChange: (data: ExpenseFormData) => void;
   compact?: boolean; 
+   // 새로 추가 
+   existingAttachments?: Attachment[];
+   pendingFiles?: LocalFile[];
+   onPickImage?: () => void;
+   onPickDocument?: () => void;
+   onRemoveExisting?: (attachmentId: number) => void;
+   onRemovePending?: (index: number) => void;
+   onAppendPendingFiles?: (files: LocalFile[]) => void;
+   isUploading?: boolean;
+   disabled?: boolean;
+ 
+   isAiAnalyzing?: boolean;
+   onAiAnalyzePress?: any;
+   analyzeError?: string | null;
+   onRetryAnalyze?: () => void;
+   isAiAnalyzeSuccess?: boolean;
+   isAiAnalyzePartial?: boolean;
+   analyzePartialMessage?: string;
+   aiFilledFields?: ReadonlySet<string>;
 }
 
-export default function ExpenseForm({ data, onChange, compact = false }: ExpenseFormProps) {
+export default function ExpenseForm({
+    data,
+    onChange,
+    compact = false,
+    existingAttachments = [],
+    pendingFiles = [],
+    onPickImage = () => {},
+    onPickDocument = () => {},
+    onRemoveExisting = () => {},
+    onRemovePending = () => {},
+    onAppendPendingFiles,
+    isUploading,
+    disabled,
+    isAiAnalyzing,
+    onAiAnalyzePress,
+    analyzeError,
+    onRetryAnalyze,
+    isAiAnalyzeSuccess,
+    isAiAnalyzePartial,
+    analyzePartialMessage,
+    aiFilledFields = new Set(),
+  }: ExpenseFormProps) {
   const [categoryOpen, setCategoryOpen] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
 
@@ -101,6 +144,31 @@ export default function ExpenseForm({ data, onChange, compact = false }: Expense
         />
       </View>
 
+      {/* 첨부파일 */}
+      {!compact && <View style={styles.sectionDivider} />}
+      
+      <AttachmentSection
+        variant="expense"
+        style={styles.attachmentSection}
+        showTopDivider={compact}
+        existingAttachments={existingAttachments}
+        pendingFiles={pendingFiles}
+        onPickImage={onPickImage}
+        onPickDocument={onPickDocument}
+        onRemoveExisting={onRemoveExisting}
+        onRemoveFile={onRemovePending}
+        onAppendPendingFiles={onAppendPendingFiles}
+        isUploading={isUploading}
+        disabled={disabled || isAiAnalyzing}
+        isAiAnalyzing={isAiAnalyzing}
+        onAiAnalyzePress={onAiAnalyzePress}
+        analyzeError={analyzeError}
+        onRetryAnalyze={onRetryAnalyze}
+        isAiAnalyzeSuccess={isAiAnalyzeSuccess}
+        isAiAnalyzePartial={isAiAnalyzePartial}
+        analyzePartialMessage={analyzePartialMessage}
+      />
+
       {/* 달력 팝업 */}
       {showDatePicker && (
         <View style={styles.calendarOverlay} pointerEvents="box-none">
@@ -157,4 +225,13 @@ const styles = StyleSheet.create({
   pickerTrigger: { backgroundColor: colors.gray200, borderRadius: 12, paddingHorizontal: 16, paddingVertical: 14 },
   pickerDropdown: { top: 56, backgroundColor: colors.gray200 },
   calendarOverlay: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, zIndex: 20001, elevation: 10 },
+  sectionDivider: {
+    height: 1,
+    backgroundColor: colors.gray400,
+    marginTop: 2,
+    marginHorizontal: -2,
+  },
+  attachmentSection: {
+    width: "100%",
+  },
 });
