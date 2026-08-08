@@ -50,7 +50,8 @@ mise.local.toml
 # database
 **/*.db
 
-
+# google-services
+google-services.json
 
 
 

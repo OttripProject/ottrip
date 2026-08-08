@@ -92,6 +92,11 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       android: {
         ...(config as ExpoConfig).android,
         package: bundleId,
+        googleServicesFile: "./google-services.json",
+        adaptiveIcon: {
+          foregroundImage: "./assets/adaptive-icon.png",
+          backgroundColor: "#ffffff",
+        },
       },
     };
   }
@@ -164,6 +169,11 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     },
     android: {
       package: bundleId,
+      googleServicesFile: process.env.GOOGLE_SERVICES_JSON ?? "./google-services.json",
+      adaptiveIcon: {
+        foregroundImage: "./assets/adaptive-icon.png",
+        backgroundColor: "#ffffff",
+      },
     },
     web: {
       favicon: "./assets/favicon.png",

@@ -4,6 +4,7 @@ import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { useFocusEffect } from "@react-navigation/native";
 import React, { useRef } from "react";
 import { Platform, StyleSheet, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -106,6 +107,8 @@ function WeeklyScreenWithAnimation() {
 }
 
 export default function MobileNavigator() {
+  const insets = useSafeAreaInsets();
+
   return (
     <SelectedPlanProvider>
       <View style={styles.navigatorContainer}>
@@ -119,9 +122,9 @@ export default function MobileNavigator() {
               backgroundColor: "rgba(255, 255, 255, 0.8)",
               borderTopWidth: 1,
               borderTopColor: "rgba(255, 255, 255, 0.5)",
-              paddingBottom: Platform.OS === "ios" ? 24 : 8,
+              paddingBottom: Platform.OS === "ios" ? 24 : insets.bottom + 8,
               paddingTop: 8,
-              height: Platform.OS === "ios" ? 88 : 64,
+              height: Platform.OS === "ios" ? 88 : 64 + insets.bottom,
             },
             tabBarLabelStyle: {
               fontSize: 10,
