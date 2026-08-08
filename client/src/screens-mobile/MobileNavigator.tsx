@@ -119,12 +119,13 @@ export default function MobileNavigator() {
             tabBarActiveTintColor: colors.primary,
             tabBarInactiveTintColor: colors.gray600,
             tabBarStyle: {
-              backgroundColor: "rgba(255, 255, 255, 0.8)",
+              backgroundColor: Platform.OS === "ios" ? "rgba(255, 255, 255, 0.8)" : colors.white,
               borderTopWidth: 1,
-              borderTopColor: "rgba(255, 255, 255, 0.5)",
+              borderTopColor: Platform.OS === "ios" ? "rgba(255, 255, 255, 0.5)" : colors.gray100,
               paddingBottom: Platform.OS === "ios" ? 24 : insets.bottom + 8,
               paddingTop: 8,
               height: Platform.OS === "ios" ? 88 : 64 + insets.bottom,
+              elevation: 0,
             },
             tabBarLabelStyle: {
               fontSize: 10,
