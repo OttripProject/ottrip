@@ -219,7 +219,6 @@ export default function AddPlanModal({
   );
 }
 
-const { lineHeight: _lh, ...body3NoLineHeight } = textStyles.body3;
 
 const styles = StyleSheet.create({
   container: {
@@ -287,7 +286,8 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 14,
-    ...body3NoLineHeight,
+    fontFamily: typography.fontFamily.pretendardRegular,
+    fontSize: 14,
     color: colors.gray900,
     backgroundColor: colors.white,
   },
