@@ -13,13 +13,13 @@ import {
   Modal,
   Platform,
   Pressable,
-  SafeAreaView,
   StyleSheet,
   Text,
   TextInput,
   View,
   type ViewStyle,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import Svg, { Circle, Path } from "react-native-svg";
 import DownArrowIcon from "../../../../assets/down_arrow.svg";
 import LeftArrowIcon from "../../../../assets/left_arrow.svg";
