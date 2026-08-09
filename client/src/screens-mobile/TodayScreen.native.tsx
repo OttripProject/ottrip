@@ -1963,8 +1963,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 8,
     elevation: Platform.OS === "android" ? 0 : 3,
-    borderWidth: Platform.OS === "android" ? 1 : 0,
-    borderColor: Platform.OS === "android" ? colors.gray200 : "transparent",
   },
   /** 플랜 일정 비어 있음 / 오늘만 비어 있음 등 공통 안내 카드 */
   scheduleEmptyStateCard: {
@@ -2144,8 +2142,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 8,
     elevation: Platform.OS === "android" ? 0 : 3,
-    borderWidth: Platform.OS === "android" ? 1 : 0,
-    borderColor: Platform.OS === "android" ? colors.gray200 : "transparent",
   },
   swipeItineraryClip: {
     borderRadius: 16,
