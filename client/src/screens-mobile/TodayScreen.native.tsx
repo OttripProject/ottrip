@@ -540,6 +540,48 @@ export default function TodayScreen() {
     setAddScheduleFlow("method");
   }, [closeOpenTimelineSwipe]);
 
+  if (plansQuery.error) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.noPlanHeader}>
+          <View style={styles.noPlanHeaderSpacer} />
+          <Pressable
+            style={styles.settingsButton}
+            onPress={() => setProfileModalVisible(true)}
+            hitSlop={8}
+          >
+            <SettingIcon width={24} height={24} color={colors.gray600} />
+          </Pressable>
+        </View>
+        <View style={[styles.noPlanCardWrap, { justifyContent: "center", flex: 1 }]}>
+          <View style={styles.noPlanCard}>
+            <Text style={styles.noPlanHeadline}>서버에 연결할 수 없어요</Text>
+            <Text style={styles.noPlanSubcopy}>
+              잠시 후 다시 시도해주세요
+            </Text>
+            <Pressable
+              style={styles.noPlanCta}
+              onPress={() => plansQuery.fetchPlans()}
+            >
+              <Text style={styles.noPlanCtaLabel}>다시 시도</Text>
+            </Pressable>
+          </View>
+        </View>
+        <Modal
+          visible={profileModalVisible}
+          animationType="fade"
+          transparent={true}
+          onRequestClose={() => setProfileModalVisible(false)}
+        >
+          <ProfileModal
+            visible={profileModalVisible}
+            onClose={() => setProfileModalVisible(false)}
+          />
+        </Modal>
+      </View>
+    );
+  }
+
   if (!plansQuery.isLoading && plansQuery.plans.length === 0) {
     const noPlanFeatures = [
       "여행 일정 관리에 최적화된 솔루션",
