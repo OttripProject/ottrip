@@ -2101,7 +2101,9 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
-    elevation: 3,
+    elevation: Platform.OS === "android" ? 0 : 3,
+    borderWidth: Platform.OS === "android" ? 1 : 0,
+    borderColor: Platform.OS === "android" ? colors.gray100 : "transparent",
   },
   swipeItineraryClip: {
     borderRadius: 16,
