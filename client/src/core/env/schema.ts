@@ -11,6 +11,7 @@ export const envSchema = z.object({
   EXPO_PUBLIC_GOOGLE_CLIENT_IOS_URL: z.string().optional(),
   EXPO_PUBLIC_APP_VERSION: z.string().optional(),
   EXPO_PUBLIC_BUILD_NUMBER: z.string().optional(),
+  EXPO_PUBLIC_GOOGLE_MAPS_API_KEY_WEB: z.string().optional(),
 });
 
 export type PublicEnv = z.infer<typeof envSchema>;
@@ -34,4 +35,5 @@ export const loadPublicEnv = (): PublicEnv =>
       process.env.EXPO_PUBLIC_GOOGLE_CLIENT_IOS_URL,
     EXPO_PUBLIC_APP_VERSION: process.env.EXPO_PUBLIC_APP_VERSION,
     EXPO_PUBLIC_BUILD_NUMBER: process.env.EXPO_PUBLIC_BUILD_NUMBER,
+    EXPO_PUBLIC_GOOGLE_MAPS_API_KEY_WEB: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY_WEB,
   });

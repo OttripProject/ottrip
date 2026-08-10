@@ -10,6 +10,7 @@ from app.core.router import create_router
 from app.expenses.router import router as expenses_router
 from app.flights.router import router as flights_router
 from app.itinerary.router import router as itinerary_router
+from app.locations.router import router as locations_router
 from app.plans.repository import PlanRepository
 from app.plans.router import router as plans_router
 from app.plans.schemas import PlanExportViewerResponse, SnapshotData
@@ -53,6 +54,7 @@ private_router.include_router(
 private_router.include_router(
     attachments_router, prefix="/attachments", tags=["Attachments"]
 )
+private_router.include_router(locations_router, prefix="/locations", tags=["Locations"])
 
 router.include_router(public_router)
 router.include_router(private_router)

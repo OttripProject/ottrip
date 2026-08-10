@@ -1,5 +1,5 @@
 from datetime import date, time
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
 from sqlalchemy import ForeignKey, Integer
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -8,6 +8,7 @@ from app.models import Base
 
 if TYPE_CHECKING:
     from app.expenses.models import Expense
+    from app.locations.models import Location
     from app.plans.models import Plan
 
 
@@ -33,9 +34,6 @@ class Itinerary(Base):
     city: Mapped[str | None] = mapped_column(nullable=True)
     """도시"""
 
-    location: Mapped[str | None] = mapped_column(nullable=True)
-    """장소"""
-
     itinerary_date: Mapped[date]
     """날짜"""
 
@@ -58,5 +56,10 @@ class Itinerary(Base):
     )
     plan: Mapped["Plan"] = relationship(init=False, back_populates="itineraries")
     """해당 여행"""
+
+    location_id: Mapped[int | None] = mapped_column(
+        Integer, ForeignKey("location.id"), nullable=True, default=None
+    )
+    location: Mapped[Optional["Location"]] = relationship(init=False, lazy="joined")
 
     is_deleted: Mapped[bool] = mapped_column(default=False, nullable=False)

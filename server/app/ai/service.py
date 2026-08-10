@@ -386,7 +386,14 @@ class AIService:
                         else ""
                     )
                     location = " ".join(
-                        filter(None, [iti.country, iti.city, iti.location])
+                        filter(
+                            None,
+                            [
+                                iti.country,
+                                iti.city,
+                                iti.location.name if iti.location else None,
+                            ],
+                        )
                     )
                     lines.append(
                         f"- {iti.itinerary_date} {time_range} {iti.title} {location}".strip()
@@ -409,7 +416,14 @@ class AIService:
                 lines = ["[기존 숙소]"]
                 for acc in plan.accommodations:
                     location = " ".join(
-                        filter(None, [acc.country, acc.city, acc.place])
+                        filter(
+                            None,
+                            [
+                                acc.country,
+                                acc.city,
+                                acc.location.name if acc.location else None,
+                            ],
+                        )
                     )
                     lines.append(
                         f"- {acc.checkin_date}~{acc.checkout_date} {acc.name} {location}".strip()
