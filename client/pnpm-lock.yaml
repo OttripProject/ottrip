@@ -57,8 +57,8 @@ importers:
         specifier: ^55.0.13
         version: 55.0.13(expo@54.0.31(@babel/core@7.28.0)(@expo/metro-runtime@5.0.4(react-native@0.81.5(@babel/core@7.28.0)(@types/react@19.1.17)(react@19.1.0)))(react-native@0.81.5(@babel/core@7.28.0)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0))
       expo-image-picker:
-        specifier: ^55.0.18
-        version: 55.0.18(expo@54.0.31(@babel/core@7.28.0)(@expo/metro-runtime@5.0.4(react-native@0.81.5(@babel/core@7.28.0)(@types/react@19.1.17)(react@19.1.0)))(react-native@0.81.5(@babel/core@7.28.0)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0))
+        specifier: ^17.0.11
+        version: 17.0.11(expo@54.0.31(@babel/core@7.28.0)(@expo/metro-runtime@5.0.4(react-native@0.81.5(@babel/core@7.28.0)(@types/react@19.1.17)(react@19.1.0)))(react-native@0.81.5(@babel/core@7.28.0)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0))
       expo-linear-gradient:
         specifier: ~15.0.7
         version: 15.0.7(expo@54.0.31(@babel/core@7.28.0)(@expo/metro-runtime@5.0.4(react-native@0.81.5(@babel/core@7.28.0)(@types/react@19.1.17)(react@19.1.0)))(react-native@0.81.5(@babel/core@7.28.0)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0))(react-native@0.81.5(@babel/core@7.28.0)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0)
@@ -1875,13 +1875,13 @@ packages:
       react: '*'
       react-native: '*'
 
-  expo-image-loader@55.0.0:
-    resolution: {integrity: sha512-NOjp56wDrfuA5aiNAybBIjqIn1IxKeGJ8CECWZncQ/GzjZfyTYAHTCyeApYkdKkMBLHINzI4BbTGSlbCa0fXXQ==}
+  expo-image-loader@6.0.0:
+    resolution: {integrity: sha512-nKs/xnOGw6ACb4g26xceBD57FKLFkSwEUTDXEDF3Gtcu3MqF3ZIYd3YM+sSb1/z9AKV1dYT7rMSGVNgsveXLIQ==}
     peerDependencies:
       expo: '*'
 
-  expo-image-picker@55.0.18:
-    resolution: {integrity: sha512-lGpPGRu+7mE8qN0ma2boRsCmfOGbdHZ2bXTpWVeWly0JCZdogGlTrYFnhTqgS8+lmiRb/UCOs7iTm2P5Rra6kw==}
+  expo-image-picker@17.0.11:
+    resolution: {integrity: sha512-/apkoyukDvsCHHb9fzP+F34A1uQqSzUtYH/2P/xJACNEwq+mwEXjXvVU8bzlJq6ih0Qo1+tpVivIa7B9kYSwOQ==}
     peerDependencies:
       expo: '*'
 
@@ -5769,14 +5769,14 @@ snapshots:
       react: 19.1.0
       react-native: 0.81.5(@babel/core@7.28.0)(@types/react@19.1.17)(react@19.1.0)
 
-  expo-image-loader@55.0.0(expo@54.0.31(@babel/core@7.28.0)(@expo/metro-runtime@5.0.4(react-native@0.81.5(@babel/core@7.28.0)(@types/react@19.1.17)(react@19.1.0)))(react-native@0.81.5(@babel/core@7.28.0)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0)):
+  expo-image-loader@6.0.0(expo@54.0.31(@babel/core@7.28.0)(@expo/metro-runtime@5.0.4(react-native@0.81.5(@babel/core@7.28.0)(@types/react@19.1.17)(react@19.1.0)))(react-native@0.81.5(@babel/core@7.28.0)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0)):
     dependencies:
       expo: 54.0.31(@babel/core@7.28.0)(@expo/metro-runtime@5.0.4(react-native@0.81.5(@babel/core@7.28.0)(@types/react@19.1.17)(react@19.1.0)))(react-native@0.81.5(@babel/core@7.28.0)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0)
 
-  expo-image-picker@55.0.18(expo@54.0.31(@babel/core@7.28.0)(@expo/metro-runtime@5.0.4(react-native@0.81.5(@babel/core@7.28.0)(@types/react@19.1.17)(react@19.1.0)))(react-native@0.81.5(@babel/core@7.28.0)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0)):
+  expo-image-picker@17.0.11(expo@54.0.31(@babel/core@7.28.0)(@expo/metro-runtime@5.0.4(react-native@0.81.5(@babel/core@7.28.0)(@types/react@19.1.17)(react@19.1.0)))(react-native@0.81.5(@babel/core@7.28.0)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0)):
     dependencies:
       expo: 54.0.31(@babel/core@7.28.0)(@expo/metro-runtime@5.0.4(react-native@0.81.5(@babel/core@7.28.0)(@types/react@19.1.17)(react@19.1.0)))(react-native@0.81.5(@babel/core@7.28.0)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0)
-      expo-image-loader: 55.0.0(expo@54.0.31(@babel/core@7.28.0)(@expo/metro-runtime@5.0.4(react-native@0.81.5(@babel/core@7.28.0)(@types/react@19.1.17)(react@19.1.0)))(react-native@0.81.5(@babel/core@7.28.0)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0))
+      expo-image-loader: 6.0.0(expo@54.0.31(@babel/core@7.28.0)(@expo/metro-runtime@5.0.4(react-native@0.81.5(@babel/core@7.28.0)(@types/react@19.1.17)(react@19.1.0)))(react-native@0.81.5(@babel/core@7.28.0)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0))
 
   expo-json-utils@0.15.0: {}
 
