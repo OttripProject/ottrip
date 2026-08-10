@@ -36,6 +36,12 @@ export default ({ config }: ConfigContext): ExpoConfig => {
               "https://devrepo.kakao.com/nexus/content/groups/public/",
             ],
           },
+          ios: {
+            extraPods: [
+              { name: "GoogleUtilities", modular_headers: true },
+              { name: "RecaptchaInterop", modular_headers: true },
+            ],
+          },
         },
       ],
       [
