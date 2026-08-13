@@ -15,6 +15,7 @@ import app.cities.models as _  # noqa: F401
 import app.expenses.models as _  # noqa: F401
 import app.flights.models as _  # noqa: F401
 import app.itinerary.models as _  # noqa: F401
+import app.locations.models as _  # noqa: F401
 import app.plans.models as _  # noqa: F401
 import app.users.models as _  # noqa: F401
 

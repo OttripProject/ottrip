@@ -61,7 +61,7 @@ export default function PlanSelectModal({
     }
     Alert.alert(
       "새 여행 추가",
-      "새로운 여행 만들기 기능이 곧 제공될 예정입니다.",
+      "새로운 여행 만들기 기능이 곧 제공될 예정입니다",
     );
   };
 
@@ -88,6 +88,7 @@ export default function PlanSelectModal({
   };
 
   const validPlans = Array.isArray(plans) ? plans : [];
+  const todayStr = dayjs().format("YYYY-MM-DD");
 
   return (
     <BottomSheetModal visible={visible} onClose={onClose} height={0.5}>
@@ -118,10 +119,12 @@ export default function PlanSelectModal({
           ) : (
             validPlans.map(plan => {
               const isSelected = selectedPlan?.id === plan.id;
+              const isPastTrip = plan.endDate && plan.endDate < todayStr;
+
               return (
                 <Pressable
                   key={plan.id}
-                  style={styles.planCard}
+                  style={[styles.planCard, isPastTrip && styles.pastPlanCard]}
                   onPress={() => handleSelectPlan(plan)}
                   hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                 >
@@ -282,5 +285,8 @@ const styles = StyleSheet.create({
   emptyText: {
     ...textStyles.body2,
     color: colors.gray500,
+  },
+  pastPlanCard: {
+    opacity: 0.4,
   },
 });

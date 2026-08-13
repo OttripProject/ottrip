@@ -17,7 +17,6 @@ import {
   Modal,
   Platform,
   Pressable,
-  SafeAreaView,
   SectionList,
   StyleSheet,
   Text,
@@ -26,6 +25,7 @@ import {
   type ViewStyle,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import DownArrowIcon from "../../../../assets/down_arrow.svg";
 import XIcon from "../../../../assets/mobile_close.svg";
 import SearchIcon from "../../../../assets/search.svg";

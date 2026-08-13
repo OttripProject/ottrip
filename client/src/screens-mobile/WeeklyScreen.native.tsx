@@ -134,22 +134,14 @@ export default function WeeklyScreen() {
     const newBase = resolvedWeekBaseDate.subtract(7, "day");
     setWeekBaseDate(newBase);
     const newWeek = getWeekCalendar(newBase);
-    const currentIndex = weekCalendar.findIndex(item =>
-      item.fullDate.isSame(selectedDate, "day"),
-    );
-    const idx = currentIndex >= 0 ? currentIndex : 0;
-    setSelectedDate(newWeek[idx].fullDate);
+    setSelectedDate(newWeek[6].fullDate);
   };
 
   const handleNextWeek = () => {
     const newBase = resolvedWeekBaseDate.add(7, "day");
     setWeekBaseDate(newBase);
     const newWeek = getWeekCalendar(newBase);
-    const currentIndex = weekCalendar.findIndex(item =>
-      item.fullDate.isSame(selectedDate, "day"),
-    );
-    const idx = currentIndex >= 0 ? currentIndex : 0;
-    setSelectedDate(newWeek[idx].fullDate);
+    setSelectedDate(newWeek[0].fullDate);
   };
 
   const handleCalendarDayPress = (day: { dateString: string }) => {
@@ -819,12 +811,12 @@ export default function WeeklyScreen() {
               setSelectedPlan(remaining[0] ?? null);
             }
             setShowPlanSelector(false);
-            Alert.alert("성공", "여행이 삭제되었습니다.");
+            Alert.alert("성공", "여행이 삭제되었습니다");
           } catch (error: any) {
             if (axios.isAxiosError(error) && error.response?.status === 403) {
-              Alert.alert("알림", "이 여행을 삭제할 권한이 없습니다.");
+              Alert.alert("알림", "이 여행을 삭제할 권한이 없습니다");
             } else {
-              Alert.alert("알림", "여행 삭제에 실패했습니다.");
+              Alert.alert("알림", "여행 삭제에 실패했습니다");
             }
           }
         }}
@@ -978,9 +970,9 @@ export default function WeeklyScreen() {
               });
             }
             queryClient.invalidateQueries({ queryKey: ["plans"] });
-            Alert.alert("삭제완료", "일정이 삭제되었습니다.");
+            Alert.alert("삭제완료", "일정이 삭제되었습니다");
           } catch {
-            Alert.alert("알림", "일정 삭제에 실패했습니다.");
+            Alert.alert("알림", "일정 삭제에 실패했습니다");
           }
         }}
       />
@@ -1073,9 +1065,9 @@ export default function WeeklyScreen() {
               });
             }
             queryClient.invalidateQueries({ queryKey: ["plans"] });
-            Alert.alert("삭제완료", "항공편이 삭제되었습니다.");
+            Alert.alert("삭제완료", "항공편이 삭제되었습니다");
           } catch {
-            Alert.alert("알림", "항공 편 삭제에 실패했습니다.");
+            Alert.alert("알림", "항공 편 삭제에 실패했습니다");
           }
         }}
       />

@@ -1,10 +1,10 @@
 from datetime import date, time
 
 from app.expenses.schemas import ExpenseRead
+from app.locations.schemas import LocationRead
 from app.schemas import APISchema
 
 
-# - 입력 항목: 제목 / 시작~종료 시간 / 상세 내용 / 국가·도시 / 비용 항목
 class ItineraryBase(APISchema):
     title: str
     itinerary_date: date
@@ -13,15 +13,16 @@ class ItineraryBase(APISchema):
     description: str | None = None
     country: str | None = None
     city: str | None = None
-    location: str | None = None
 
 
 class ItineraryCreate(ItineraryBase):
     plan_id: int
+    location_id: int | None = None
 
 
 class ItineraryRead(ItineraryBase):
     id: int
+    location: LocationRead | None = None
     expenses: list[ExpenseRead] | None = None
 
 
@@ -33,7 +34,7 @@ class ItineraryUpdate(APISchema):
     description: str | None = None
     country: str | None = None
     city: str | None = None
-    location: str | None = None
+    location_id: int | None = None
 
 
 class ItineraryAssistResponse(APISchema):

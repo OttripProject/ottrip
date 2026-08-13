@@ -1,3 +1,4 @@
+import { useToast } from "@/contexts/ToastContext";
 import type {
   DocumentUploadAnalyzeResponse,
   LocalFile,
@@ -58,6 +59,8 @@ export default function ItinerarySection({
   );
   const [editingItinerary, setEditingItinerary] = useState<any | null>(null);
 
+  const { showToast } = useToast();
+
   useEffect(() => {
     if (activeTab === "itinerary" && openNewItineraryForm) {
       setEditingItinerary(null);
@@ -94,6 +97,7 @@ export default function ItinerarySection({
     onItineraryAdd?.(itinerary);
     setShowItineraryForm(false);
     setEditingItinerary(null);
+    showToast("일정을 저장했습니다")
   };
 
   const handleItineraryDelete = (itineraryId?: string | number) => {
@@ -109,6 +113,7 @@ export default function ItinerarySection({
     setShowItineraryForm(false);
     setEditingItinerary(null);
     onItineraryClear?.();
+    showToast("일정을 삭제했습니다")
   };
 
   if (selectedItinerary && !showItineraryForm) {

@@ -120,7 +120,7 @@ export default function SharedMembersModal({
       return;
     }
     if (!planId) {
-      Alert.alert("알림", "계획 정보를 찾을 수 없습니다.");
+      Alert.alert("알림", "계획 정보를 찾을 수 없습니다");
       return;
     }
     setInviteLoading(true);
@@ -135,7 +135,7 @@ export default function SharedMembersModal({
       const msg =
         e?.response?.status === 403
           ? "권한이 없습니다."
-          : e?.response?.data?.detail || "초대 전송에 실패했습니다.";
+          : e?.response?.data?.detail || "초대 전송에 실패했습니다";
       Alert.alert("알림", msg);
     } finally {
       setInviteLoading(false);
@@ -155,7 +155,7 @@ export default function SharedMembersModal({
     } catch (e: any) {
       const msg =
         e?.response?.status === 403
-          ? "권한이 없습니다."
+          ? "권한이 없습니다"
           : e?.response?.data?.detail || "역할 변경에 실패했습니다.";
       Alert.alert("알림", msg);
     } finally {
@@ -179,8 +179,8 @@ export default function SharedMembersModal({
           } catch (e: any) {
             const msg =
               e?.response?.status === 403
-                ? "권한이 없습니다."
-                : e?.response?.data?.detail || "공유 취소에 실패했습니다.";
+                ? "권한이 없습니다"
+                : e?.response?.data?.detail || "공유 취소에 실패했습니다";
             Alert.alert("알림", msg);
           } finally {
             setRoleUpdateLoading(null);
@@ -202,6 +202,17 @@ export default function SharedMembersModal({
         behavior={Platform.OS === "ios" ? "padding" : undefined}
         keyboardVerticalOffset={0}
       >
+        
+        {(showRolePicker || openMemberId !== null) && (
+          <Pressable
+            style={[StyleSheet.absoluteFill, { zIndex: 99, elevation: 99 }]}
+            onPress={() => {
+              setShowRolePicker(false);
+              setOpenMemberId(null);
+            }}
+          />
+        )}
+
         {/* Header */}
         <View style={styles.header}>
           <Text style={styles.headerTitle}>참여 멤버</Text>
@@ -216,7 +227,7 @@ export default function SharedMembersModal({
         {canManage && (
           <View style={styles.inviteSection}>
             <Text style={styles.sectionLabel}>멤버 초대</Text>
-            <View style={styles.inviteRow}>
+            <View style={[styles.inviteRow, showRolePicker && { zIndex: 100, elevation: 100 }]}>
               <Input
                 variant="filled"
                 containerStyle={styles.emailInputContainer}
@@ -229,10 +240,15 @@ export default function SharedMembersModal({
                 autoCapitalize="none"
                 autoCorrect={false}
               />
-              <View style={styles.rolePickerWrap}>
+              <View 
+                style={[styles.rolePickerWrap, showRolePicker && { zIndex: 101, elevation: 101 }]}
+              >
                 <Pressable
                   style={styles.roleButton}
-                  onPress={() => setShowRolePicker(!showRolePicker)}
+                  onPress={() => {
+                    setOpenMemberId(null);
+                    setShowRolePicker(!showRolePicker);
+                  }}
                 >
                   <View style={styles.roleButtonContent}>
                     <Text style={styles.roleButtonText} numberOfLines={1}>
@@ -302,7 +318,7 @@ export default function SharedMembersModal({
         )}
 
         <ScrollView
-          style={styles.scrollView}
+          style={[styles.scrollView, openMemberId !== null && { zIndex: 100, elevation: 100 }]}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
@@ -316,7 +332,9 @@ export default function SharedMembersModal({
           <Text style={styles.sectionLabel}>
             참여자 ({loading ? "..." : sharedMembers.length})
           </Text>
-          <View style={styles.memberList}>
+          <View 
+            style={[styles.memberList, openMemberId !== null && { zIndex: 101, elevation: 101 }]}
+          >
             {loading ? (
               <ActivityIndicator
                 color={colors.gray600}
@@ -324,7 +342,10 @@ export default function SharedMembersModal({
               />
             ) : (
               sharedMembers.map(member => (
-                <View key={member.id} style={styles.memberRow}>
+                <View 
+                  key={member.id} 
+                  style={[styles.memberRow, openMemberId === member.id && { zIndex: 102, elevation: 102 }]}
+                >
                   <View style={styles.avatar} />
                   <View style={styles.memberInfo}>
                     <View style={styles.memberEmailRow}>
@@ -342,14 +363,17 @@ export default function SharedMembersModal({
                     </Text>
                   </View>
                   {member.role !== "OWNER" && canManage && (
-                    <View style={styles.memberRolePickerWrap}>
+                    <View 
+                    style={[styles.memberRolePickerWrap, openMemberId === member.id && { zIndex: 103, elevation: 103 }]}
+                    >
                       <Pressable
                         style={styles.roleSelectButton}
-                        onPress={() =>
+                        onPress={() => {
+                          setShowRolePicker(false);
                           setOpenMemberId(prev =>
                             prev === member.id ? null : member.id,
-                          )
-                        }
+                          );
+                        }}
                         disabled={roleUpdateLoading === member.id}
                       >
                         {roleUpdateLoading === member.id ? (

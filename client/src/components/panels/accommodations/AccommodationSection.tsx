@@ -1,3 +1,4 @@
+import { useToast } from "@/contexts/ToastContext";
 import type {
   DocumentUploadAnalyzeResponse,
   LocalFile,
@@ -61,7 +62,8 @@ export default function AccommodationSection({
   );
   const newAccommodationRevision = useRef(0);
 
-  // 외부 트리거: 숙박 탭에서 즉시 새 숙박 추가 폼 열기 (selectedAccommodation이 없을 때)
+  const { showToast } = useToast();
+
   useEffect(() => {
     if (
       activeTab === "accommodation" &&
@@ -120,6 +122,7 @@ export default function AccommodationSection({
     setShowAccommodationForm(false);
     setEditingAccommodation(null);
     onAccommodationSelect?.(accommodation);
+    showToast("숙박 일정을 저장했습니다")
   };
 
   const handleAccommodationDelete = (accommodationId: string | number) => {
@@ -134,6 +137,7 @@ export default function AccommodationSection({
     setShowAccommodationForm(false);
     setEditingAccommodation(null);
     onAccommodationClear?.();
+    showToast("숙박 일정을 삭제했습니다")
   };
 
   // 선택된 숙박이 있고 편집 모드가 아닐 때 - 읽기 전용 폼 표시

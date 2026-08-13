@@ -445,8 +445,16 @@ export default function AddScheduleWithAiModal({
                 "departure_airport",
               ),
               arrivalAirport: getVal(seg, "arrivalAirport", "arrival_airport"),
-              departureTime: getVal(seg, "departureTime", "departure_time"),
-              arrivalTime: getVal(seg, "arrivalTime", "arrival_time"),
+              departureTime: (() => {
+                const raw = String(getVal(seg, "departureTime", "departure_time") ?? "");
+                const d = new Date(raw);
+                return !isNaN(d.getTime()) ? d.toISOString() : raw;
+              })(),
+              arrivalTime: (() => {
+                const raw = String(getVal(seg, "arrivalTime", "arrival_time") ?? "");
+                const d = new Date(raw);
+                return !isNaN(d.getTime()) ? d.toISOString() : raw;
+              })(),
               seatClass: getVal(seg, "seatClass", "seat_class") || undefined,
               seatNumber: getVal(seg, "seatNumber", "seat_number") || undefined,
               gate: getVal(seg, "gate") || undefined,

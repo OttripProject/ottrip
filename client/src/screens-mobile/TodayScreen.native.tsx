@@ -44,6 +44,7 @@ import {
   Alert,
   Animated,
   Modal,
+  Platform,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -490,9 +491,9 @@ export default function TodayScreen() {
           queryKey: ["plan", selectedPlan?.publicId],
         });
         queryClient.invalidateQueries({ queryKey: ["plans"] });
-        Alert.alert("삭제완료", "일정이 삭제되었습니다.");
+        Alert.alert("삭제완료", "일정이 삭제되었습니다");
       } catch {
-        Alert.alert("알림", "일정 삭제에 실패했습니다.");
+        Alert.alert("알림", "일정 삭제에 실패했습니다");
       }
     },
     [planData, queryClient, selectedPlan],
@@ -516,9 +517,9 @@ export default function TodayScreen() {
           queryKey: ["plan", selectedPlan?.publicId],
         });
         queryClient.invalidateQueries({ queryKey: ["plans"] });
-        Alert.alert("삭제완료", "항공편이 삭제되었습니다.");
+        Alert.alert("삭제완료", "항공편이 삭제되었습니다");
       } catch {
-        Alert.alert("알림", "항공편 삭제에 실패했습니다.");
+        Alert.alert("알림", "항공편 삭제에 실패했습니다");
       }
     },
     [planData, queryClient, selectedPlan],
@@ -538,6 +539,48 @@ export default function TodayScreen() {
     closeOpenTimelineSwipe();
     setAddScheduleFlow("method");
   }, [closeOpenTimelineSwipe]);
+
+  if (plansQuery.error) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.noPlanHeader}>
+          <View style={styles.noPlanHeaderSpacer} />
+          <Pressable
+            style={styles.settingsButton}
+            onPress={() => setProfileModalVisible(true)}
+            hitSlop={8}
+          >
+            <SettingIcon width={24} height={24} color={colors.gray600} />
+          </Pressable>
+        </View>
+        <View style={[styles.noPlanCardWrap, { justifyContent: "center", flex: 1 }]}>
+          <View style={styles.noPlanCard}>
+            <Text style={styles.noPlanHeadline}>서버에 연결할 수 없어요</Text>
+            <Text style={styles.noPlanSubcopy}>
+              잠시 후 다시 시도해주세요
+            </Text>
+            <Pressable
+              style={styles.noPlanCta}
+              onPress={() => plansQuery.fetchPlans()}
+            >
+              <Text style={styles.noPlanCtaLabel}>다시 시도</Text>
+            </Pressable>
+          </View>
+        </View>
+        <Modal
+          visible={profileModalVisible}
+          animationType="fade"
+          transparent={true}
+          onRequestClose={() => setProfileModalVisible(false)}
+        >
+          <ProfileModal
+            visible={profileModalVisible}
+            onClose={() => setProfileModalVisible(false)}
+          />
+        </Modal>
+      </View>
+    );
+  }
 
   if (!plansQuery.isLoading && plansQuery.plans.length === 0) {
     const noPlanFeatures = [
@@ -1392,12 +1435,12 @@ export default function TodayScreen() {
               setSelectedPlan(remaining[0] ?? null);
             }
             setShowPlanSelector(false);
-            Alert.alert("성공", "여행이 삭제되었습니다.");
+            Alert.alert("성공", "여행이 삭제되었습니다");
           } catch (error: any) {
             if (axios.isAxiosError(error) && error.response?.status === 403) {
-              Alert.alert("알림", "이 여행을 삭제할 권한이 없습니다.");
+              Alert.alert("알림", "이 여행을 삭제할 권한이 없습니다");
             } else {
-              Alert.alert("알림", "여행 삭제에 실패했습니다.");
+              Alert.alert("알림", "여행 삭제에 실패했습니다");
             }
           }
         }}
@@ -1552,9 +1595,9 @@ export default function TodayScreen() {
               queryKey: ["plan", selectedPlan?.publicId],
             });
             queryClient.invalidateQueries({ queryKey: ["plans"] });
-            Alert.alert("삭제완료", "숙소가 삭제되었습니다.");
+            Alert.alert("삭제완료", "숙소가 삭제되었습니다");
           } catch (_error) {
-            Alert.alert("알림", "숙소 삭제에 실패했습니다.");
+            Alert.alert("알림", "숙소 삭제에 실패했습니다");
           }
         }}
       />
@@ -1919,7 +1962,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
-    elevation: 3,
+    elevation: Platform.OS === "android" ? 0 : 3,
   },
   /** 플랜 일정 비어 있음 / 오늘만 비어 있음 등 공통 안내 카드 */
   scheduleEmptyStateCard: {
@@ -2098,7 +2141,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
-    elevation: 3,
+    elevation: Platform.OS === "android" ? 0 : 3,
   },
   swipeItineraryClip: {
     borderRadius: 16,

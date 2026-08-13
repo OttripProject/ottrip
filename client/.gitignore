@@ -4,6 +4,7 @@
 node_modules/
 package-lock.json
 
+android/
 ios/
 
 # Expo
@@ -50,7 +51,8 @@ mise.local.toml
 # database
 **/*.db
 
-
+# google-services
+google-services.json
 
 
 

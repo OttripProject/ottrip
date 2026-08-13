@@ -3,12 +3,12 @@ from datetime import date, time
 from pydantic import model_validator
 
 from app.expenses.schemas import ExpenseBase, ExpenseRead, ExpenseUpdate
+from app.locations.schemas import LocationRead
 from app.schemas import APISchema
 
 
 class AccommodationBase(APISchema):
     name: str
-    place: str | None = None
     country: str | None = None
     city: str | None = None
     checkin_date: date
@@ -33,18 +33,20 @@ class AccommodationBase(APISchema):
 
 class AccommodationCreate(AccommodationBase):
     plan_id: int
+    location_id: int | None = None
     expense: ExpenseBase
 
 
 class AccommodationRead(AccommodationBase):
     id: int
+    location: LocationRead | None = None
     expense: ExpenseRead | None = None
 
 
 class AccommodationUpdate(APISchema):
     name: str | None = None
-    place: str | None = None
     country: str | None = None
+    location_id: int | None = None
     city: str | None = None
     checkin_date: date | None = None
     checkout_date: date | None = None

@@ -308,11 +308,23 @@ function buildFlightRequest(v: Record<string, unknown>, planId: number) {
     departureAirport: String(s.departure_airport ?? s.departureAirport ?? ""),
     arrivalAirport: String(s.arrival_airport ?? s.arrivalAirport ?? ""),
     departureTime: (() => {
-      if (s.dep_date) return `${s.dep_date}T${s.dep_time ?? "00:00"}:00`;
+      const date = String(s.dep_date ?? "");
+      const time = String(s.dep_time ?? "00:00");
+      if (date) {
+        const t = time.length === 5 ? `${time}:00` : time;
+        const d = new Date(`${date}T${t}`);
+        if (!isNaN(d.getTime())) return d.toISOString();
+      }
       return String(s.departure_time ?? s.departureTime ?? "");
     })(),
     arrivalTime: (() => {
-      if (s.arr_date) return `${s.arr_date}T${s.arr_time ?? "00:00"}:00`;
+      const date = String(s.arr_date ?? "");
+      const time = String(s.arr_time ?? "00:00");
+      if (date) {
+        const t = time.length === 5 ? `${time}:00` : time;
+        const d = new Date(`${date}T${t}`);
+        if (!isNaN(d.getTime())) return d.toISOString();
+      }
       return String(s.arrival_time ?? s.arrivalTime ?? "");
     })(),
     seatClass: s.seat_class ?? s.seatClass ?? null,

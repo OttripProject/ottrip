@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "../contexts/AuthContext";
 import { plansApi } from "../services/plans";
 import type { CreatePlanRequest, Plan, UpdatePlanRequest } from "../types/api";
+import { sortPlansByDate } from "../utils/planSort"; 
 
 export const usePlansQuery = () => {
   const queryClient = useQueryClient();
@@ -18,6 +19,7 @@ export const usePlansQuery = () => {
     staleTime: 1 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
     enabled: isAuthenticated,
+    select: (data) => sortPlansByDate(data),
   });
 
   const addPlanMutation = useMutation({

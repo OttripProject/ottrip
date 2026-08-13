@@ -235,7 +235,7 @@ export default function AccommodationEditModal({
       setExistingAttachments(prev => prev.filter(a => a.id !== attachmentId));
     } catch (error) {
       if (handleGuestPromptError(error)) return;
-      Alert.alert("알림", "첨부파일 삭제에 실패했습니다.");
+      Alert.alert("알림", "첨부파일 삭제에 실패했습니다");
     }
   };
 
@@ -253,7 +253,7 @@ export default function AccommodationEditModal({
       const result = await analyzeDocumentUpload(file, { filename });
       if (aiCancelledRef.current) return;
       if (!result.success) {
-        setAiAnalyzeError(result.error ?? "분석에 실패했습니다.");
+        setAiAnalyzeError(result.error ?? "분석에 실패했습니다");
       } else {
         const inferredType = result.inferredItemType ?? result.draft?.itemType;
         if (inferredType && inferredType !== "accommodation") {
@@ -271,7 +271,7 @@ export default function AccommodationEditModal({
         }
       }
     } catch {
-      setAiAnalyzeError("분석 중 오류가 발생했습니다.");
+      setAiAnalyzeError("분석 중 오류가 발생했습니다");
     } finally {
       setIsAiAnalyzing(false);
     }
@@ -312,7 +312,7 @@ export default function AccommodationEditModal({
 
   const handleSave = async () => {
     if (!formData.name.trim()) {
-      Alert.alert("알림", "숙소명을 입력해주세요.");
+      Alert.alert("알림", "숙소명을 입력해주세요");
       return;
     }
 
@@ -375,12 +375,12 @@ export default function AccommodationEditModal({
         } catch {
           Alert.alert(
             "알림",
-            "숙소는 저장됐으나 일부 파일 업로드에 실패했습니다.",
+            "숙소는 저장됐으나 일부 파일 업로드에 실패했습니다",
           );
         }
       }
 
-      Alert.alert(accommodation ? "수정완료" : "추가완료", accommodation ? "숙소가 수정되었습니다." : "숙소가 추가되었습니다.");
+      Alert.alert(accommodation ? "수정완료" : "추가완료", accommodation ? "숙소가 수정되었습니다" : "숙소가 추가되었습니다");
 
       try {
         await onSave?.(savedAccommodation);
@@ -392,8 +392,8 @@ export default function AccommodationEditModal({
       Alert.alert(
         "알림",
         accommodation
-          ? "숙소 수정에 실패했습니다."
-          : "숙소 추가에 실패했습니다.",
+          ? "숙소 수정에 실패했습니다"
+          : "숙소 추가에 실패했습니다",
       );
     } finally {
       setIsSubmitting(false);
@@ -412,10 +412,10 @@ export default function AccommodationEditModal({
           try {
             await accommodationsApi.deleteAccommodation(accommodation.id);
             if (onDelete) onDelete(accommodation.id);
-            Alert.alert("삭제완료", "숙소가 삭제되었습니다.");
+            Alert.alert("삭제완료", "숙소가 삭제되었습니다");
             onClose?.({ fromSave: true });
           } catch (_error) {
-            Alert.alert("알림", "숙소 삭제에 실패했습니다.");
+            Alert.alert("알림", "숙소 삭제에 실패했습니다");
           }
         },
       },

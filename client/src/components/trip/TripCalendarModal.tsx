@@ -58,6 +58,10 @@ function DayCell({
   const isSingle = selection === "single";
   const isToday = dayjs().isSame(dayjs(date.dateString), "day");
 
+  const dayOfWeek = dayjs(date.dateString).day();
+  const isSaturday = dayOfWeek === 6;
+  const isSunday = dayOfWeek === 0;
+
   const rangeStyle: Record<string, unknown> = {
     opacity: isStart || isEnd || isRange ? 1 : 0,
   };
@@ -88,6 +92,8 @@ function DayCell({
         <Text
           style={[
             styles.dayText,
+            isSaturday && styles.dayTextSaturday,
+            isSunday && styles.dayTextSunday,
             isDisabled && styles.dayTextDisabled,
             (isSingle || isStart || isEnd) && styles.dayTextSelected,
             isToday && !selection && styles.dayTextToday,
@@ -136,18 +142,41 @@ export default function TripCalendarModal({
             </Pressable>
           </View>
           <Calendar
-            monthFormat="yyyy년 M월"
             markedDates={markedDates}
             markingType="custom"
             theme={CALENDAR_THEME}
             firstDay={1}
-            renderArrow={direction =>
-              direction === "left" ? (
-                <LeftArrowIcon width={18} height={18} />
-              ) : (
-                <RightArrowIcon width={18} height={18} />
-              )
-            }
+            customHeader={(props: any) => {
+              const monthYearLabel = dayjs(props.month.getTime()).format("YYYY년 M월");
+              return (
+                <View style={styles.customHeaderWrapper}>
+                  <View style={styles.monthHeaderRow}>
+                    <Pressable onPress={() => props.addMonth(-1)} hitSlop={8}>
+                      <LeftArrowIcon width={18} height={18} color={colors.gray700} />
+                    </Pressable>
+                    <Text style={styles.monthYearText}>{monthYearLabel}</Text>
+                    <Pressable onPress={() => props.addMonth(1)} hitSlop={8}>
+                      <RightArrowIcon width={18} height={18} color={colors.gray700} />
+                    </Pressable>
+                  </View>
+                  <View style={styles.weekDayRow}>
+                    {["월", "화", "수", "목", "금", "토", "일"].map((day, i) => (
+                      <View key={i} style={styles.weekDayCell}>
+                        <Text
+                          style={[
+                            styles.weekDayText,
+                            i === 5 && styles.weekDayTextSaturday, 
+                            i === 6 && styles.weekDayTextSunday,   
+                          ]}
+                        >
+                          {day}
+                        </Text>
+                      </View>
+                    ))}
+                  </View>
+                </View>
+              );
+            }}
             dayComponent={({ date, state, marking, onPress }) => (
               <DayCell
                 date={date as DateData}
@@ -238,7 +267,46 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   dayTextToday: {
-    color: colors.primary,
+    color: colors.black,
     fontWeight: "600",
+  },
+  dayTextSaturday: {
+    color: colors.black,
+  },
+  dayTextSunday: {
+    color: colors.warning,
+  },
+  // styles 내부에 추가
+  customHeaderWrapper: {
+    marginBottom: 8,
+  },
+  monthHeaderRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 8,
+    marginBottom: 16,
+  },
+  monthYearText: {
+    ...textStyles.h5, 
+    color: colors.black,
+  },
+  weekDayRow: {
+    flexDirection: "row",
+    justifyContent: "space-between", 
+  },
+  weekDayCell: {
+    flex: 1,
+    alignItems: "center",
+  },
+  weekDayText: {
+    ...textStyles.body4,
+    color: colors.gray500,
+  },
+  weekDayTextSaturday: {
+    color: "#2D8CFF", 
+  },
+  weekDayTextSunday: {
+    color: "#FF3B30",
   },
 });

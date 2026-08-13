@@ -1,3 +1,4 @@
+import { useToast } from "@/contexts/ToastContext";
 import AddExpenseModal from "@/components/modals/AddExpenseModal";
 import ExpenseDetailModal from "@/components/modals/ExpenseDetailModal";
 import { expensesApi } from "@/services/expenses";
@@ -50,10 +51,12 @@ export default function ExpensesPanel({
   const [showExpenseForm, setShowExpenseForm] = useState(false);
   const [showExpenseDetail, setShowExpenseDetail] = useState(false);
 
+  const { showToast } = useToast();
+
   const _handleExpenseDelete = async (expenseId: string) => {
     try {
       await expensesApi.deleteExpense(Number(expenseId));
-      Alert.alert("성공", "비용이 삭제되었습니다.");
+      showToast("지출을 삭제했습니다")
 
       await planData?.refreshExpenses();
       await planData?.refreshItineraries?.();
@@ -153,6 +156,12 @@ export default function ExpensesPanel({
         expenses={planData?.expenses || []}
         attachments={planData?.attachments || []}
         readOnly={readOnly}
+        onExpenseUpdate={async () => {
+          await planData?.refreshExpenses();
+          await planData?.refreshItineraries?.();
+          await planData?.refreshFlights?.();
+          await planData?.refreshAccommodations?.();
+        }}
         onExpenseDelete={async () => {
           await planData?.refreshExpenses();
           await planData?.refreshItineraries?.();

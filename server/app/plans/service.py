@@ -439,7 +439,7 @@ class PlanService:
                     title=it.title,
                     country=it.country,
                     city=it.city,
-                    location=it.location,
+                    location=it.location.name if it.location else None,
                     itinerary_date=it.itinerary_date,
                     start_time=it.start_time,
                     end_time=it.end_time,
@@ -551,7 +551,6 @@ class PlanService:
                 description=None,
                 country=it.country,
                 city=it.city,
-                location=it.location,
                 itinerary_date=it.itinerary_date,
                 start_time=it.start_time,
                 end_time=it.end_time,
@@ -593,7 +592,6 @@ class PlanService:
         for acc in snapshot.accommodations:
             new_acc = Accommodation(
                 name=acc.name,
-                place=None,
                 country=None,
                 city=None,
                 checkin_date=acc.checkin_date,

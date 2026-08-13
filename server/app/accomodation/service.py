@@ -39,7 +39,7 @@ class AccommodationService:
             )
         create_accommodation_data = Accommodation(
             name=accommodation_data.name,
-            place=accommodation_data.place,
+            location_id=accommodation_data.location_id,
             country=accommodation_data.country,
             city=accommodation_data.city,
             checkin_date=accommodation_data.checkin_date,
@@ -129,8 +129,8 @@ class AccommodationService:
 
         if update_data.name:
             accommodation.name = update_data.name
-        if update_data.place is not None:
-            accommodation.place = update_data.place
+        if update_data.location_id is not None:
+            accommodation.location_id = update_data.location_id
         if update_data.country is not None:
             accommodation.country = update_data.country
         if update_data.city is not None:

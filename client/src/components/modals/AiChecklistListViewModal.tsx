@@ -385,25 +385,43 @@ export default function AiChecklistListViewModal({
                               style={styles.addingItemCheckboxPlaceholder}
                             />
                             <View style={styles.addingItemInputs}>
+                            <View style={styles.inputWrapper}>
                               <TextInput
-                                style={styles.addingItemNameInput}
+                                style={[styles.addingItemNameInput, { paddingRight: 40 }]}
                                 placeholder="항목명"
                                 placeholderTextColor={colors.gray600}
                                 value={newItemName}
                                 onChangeText={setNewItemName}
-                                maxLength={50}
+                                maxLength={16}
                                 autoFocus
                                 onSubmitEditing={handleSaveAdding}
                               />
+                              <Text style={[
+                                styles.counterText,
+                                newItemName.length === 16 && styles.counterTextMax
+                              ]}>
+                                {newItemName.length}/16
+                              </Text>
+                            </View>
+
+                            {/* 2. 이유 입력창 (24자 제한) */}
+                            <View style={styles.inputWrapper}>
                               <TextInput
-                                style={styles.addingItemReasonInput}
+                                style={[styles.addingItemReasonInput, { paddingRight: 40 }]}
                                 placeholder="이유 (선택)"
                                 placeholderTextColor={colors.gray600}
                                 value={newItemReason}
                                 onChangeText={setNewItemReason}
-                                maxLength={100}
+                                maxLength={24}
                                 onSubmitEditing={handleSaveAdding}
                               />
+                              <Text style={[
+                                styles.counterText,
+                                newItemReason.length === 24 && styles.counterTextMax
+                              ]}>
+                                {newItemReason.length}/24
+                              </Text>
+                            </View>
                             </View>
                             <View style={styles.addingItemButtons}>
                               <TouchableOpacity
@@ -783,4 +801,18 @@ const styles = StyleSheet.create({
     ...textStyles.body5,
     color: "#6C6C6C",
   },
+  inputWrapper: {
+    position: "relative",
+    justifyContent: "center",
+    marginBottom: 4, 
+  },
+  counterText: {
+    position: "absolute",
+    right: 12,
+    ...textStyles.body6,
+    color: colors.gray500, 
+  },
+  counterTextMax:{
+    color: colors.primary,
+  }
 });

@@ -1152,12 +1152,9 @@ export default function AttachmentSection({
             파일을 끌어다 놓거나 클릭해서 추가
           </Text>
           <Text style={styles.dropZoneSubHint}>
-            PDF · JPG · PNG · 여러 개 가능
+            PDF · JPG · PNG · 여러 개 가능 · 최대 10MB
           </Text>
         </Pressable>
-      )}
-      {!hideAddControls && !hasFiles && (
-        <Text style={styles.dropZoneSizeHint}>최대 10MB · PDF, JPG, PNG</Text>
       )}
 
       {showAiToolbar ? (
@@ -1649,12 +1646,6 @@ const styles = StyleSheet.create({
     ...textStyles.body6,
     color: colors.gray600,
     marginTop: spacing.xs - 1,
-  },
-  dropZoneSizeHint: {
-    ...textStyles.body6,
-    color: colors.gray600,
-    marginTop: spacing.sm,
-    textAlign: "center",
   },
   dropZoneDragOver: {
     borderColor: colors.primary,

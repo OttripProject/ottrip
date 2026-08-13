@@ -101,7 +101,7 @@ export default function AddPlanModal({
   const handleSubmit = async () => {
     const trimmedName = tripData.name.trim();
     if (!trimmedName) {
-      Alert.alert("알림", "여행 이름을 입력해주세요.");
+      Alert.alert("알림", "여행 이름을 입력해주세요");
       return;
     }
 
@@ -122,7 +122,7 @@ export default function AddPlanModal({
         onPlanCreated(newPlan);
       }
     } catch {
-      Alert.alert("알림", planToEdit ? "여행 수정에 실패했습니다." : "여행 생성에 실패했습니다.");
+      Alert.alert("알림", planToEdit ? "여행 수정에 실패했습니다" : "여행 생성에 실패했습니다");
     } finally {
       setIsSubmitting(false);
     }
@@ -219,7 +219,6 @@ export default function AddPlanModal({
   );
 }
 
-const { lineHeight: _lh, ...body3NoLineHeight } = textStyles.body3;
 
 const styles = StyleSheet.create({
   container: {
@@ -286,8 +285,10 @@ const styles = StyleSheet.create({
     borderColor: colors.gray300,
     borderRadius: 12,
     paddingHorizontal: 16,
-    paddingVertical: 14,
-    ...body3NoLineHeight,
+    paddingTop: 12,
+    paddingBottom: 12,
+    fontFamily: typography.fontFamily.pretendardRegular,
+    fontSize: 14,
     color: colors.gray900,
     backgroundColor: colors.white,
   },

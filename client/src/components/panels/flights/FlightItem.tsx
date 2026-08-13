@@ -1018,9 +1018,11 @@ export default function FlightItem({
                                 )
                               : "기타"}
                           </Text>
-                          <View style={styles.iconWrapper}>
-                            <CalendarIcon width={16} height={16} />
-                          </View>
+                          {!readOnly && (
+                            <View style={styles.iconWrapper}>
+                              <CalendarIcon width={16} height={16} />
+                            </View>
+                          )}
                         </View>
                       </Pressable>
                       {segmentDatePickerOpen[`dep_${idx}`] && (
@@ -1123,9 +1125,11 @@ export default function FlightItem({
                               ? dayjs(segment.arrival_date).format("YYYY.MM.DD")
                               : "기타"}
                           </Text>
-                          <View style={styles.iconWrapper}>
-                            <CalendarIcon width={16} height={16} />
-                          </View>
+                          {!readOnly && (
+                            <View style={styles.iconWrapper}>
+                              <CalendarIcon width={16} height={16} />
+                            </View>
+                          )}
                         </View>
                       </Pressable>
                       {segmentDatePickerOpen[`arr_${idx}`] && (
@@ -1510,10 +1514,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: spacing.sm,
     flex: 1,
+    width: "100%",
   },
   segmentDateText: {
     ...textStyles.body4,
     color: colors.gray800,
+    justifyContent: "space-between",
+    width: "100%",
   },
   segmentPlaceholderText: {
     ...textStyles.body4,

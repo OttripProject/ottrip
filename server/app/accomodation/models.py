@@ -8,6 +8,7 @@ from app.models import Base
 
 if TYPE_CHECKING:
     from app.expenses.models import Expense
+    from app.locations.models import Location
     from app.plans.models import Plan
 
 
@@ -23,9 +24,6 @@ class Accommodation(Base):
 
     name: Mapped[str] = mapped_column(nullable=False)
     """숙소 이름"""
-
-    place: Mapped[str | None] = mapped_column(nullable=True)
-    """장소"""
 
     country: Mapped[str | None] = mapped_column(nullable=True)
     """국가"""
@@ -60,5 +58,10 @@ class Accommodation(Base):
         uselist=False,
         cascade="all, delete-orphan",
     )
+
+    location_id: Mapped[int | None] = mapped_column(
+        Integer, ForeignKey("location.id"), nullable=True, default=None
+    )
+    location: Mapped[Optional["Location"]] = relationship(init=False, lazy="joined")
 
     is_deleted: Mapped[bool] = mapped_column(default=False, nullable=False)
