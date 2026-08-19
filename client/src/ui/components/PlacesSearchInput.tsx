@@ -1,6 +1,6 @@
 import { colors, radii, spacing, textStyles } from "@/ui/tokens";
 import { useLoadScript } from "@react-google-maps/api";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 
 export type PlaceResult = {
@@ -23,13 +23,17 @@ interface PlacesSearchInputProps {
 export default function PlacesSearchInput({
   value,
   onSelect,
+  onClear,
   placeholder = "장소를 검색하세요.",
   disabled,
   readOnly,
 }: PlacesSearchInputProps) {
   const apiKey = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY_WEB ?? "";
   const { isLoaded } = useLoadScript({ googleMapsApiKey: apiKey });
-  const containerRef = useRef<HTMLDivElement>(null);
+  const [inputValue, setInputValue] = useState(value ?? "");
+  const [suggestions, setSuggestions] = useState<any[]>([]);
+  const [open, setOpen] = useState(false);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const onSelectRef = useRef(onSelect);
 
   useEffect(() => {
@@ -37,47 +41,55 @@ export default function PlacesSearchInput({
   });
 
   useEffect(() => {
-    if (!isLoaded || !containerRef.current || !apiKey) return;
+    setInputValue(value ?? "");
+  }, [value]);
 
-    let element: HTMLElement | null = null;
-    let mounted = true;
-    let removeHandler: (() => void) | null = null;
-
-    (async () => {
-      const { PlaceAutocompleteElement } = await (
+  const fetchSuggestions = async (input: string) => {
+    if (!input.trim() || !isLoaded) {
+      setSuggestions([]);
+      return;
+    }
+    try {
+      const { AutocompleteSuggestion } = await (
         google.maps as any
       ).importLibrary("places");
-      if (!mounted || !containerRef.current) return;
+      const { suggestions: results } =
+        await AutocompleteSuggestion.fetchAutocompleteSuggestions({ input });
+      setSuggestions(results.map((s: any) => s.placePrediction));
+    } catch {
+      setSuggestions([]);
+    }
+  };
 
-      element = new PlaceAutocompleteElement() as HTMLElement;
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setInputValue(val);
+    setOpen(true);
+    if (val === "") {
+      setSuggestions([]);
+      onClear?.();
+    }
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => fetchSuggestions(val), 300);
+  };
 
-      const handleSelect = async (event: any) => {
-        const { place } = event;
-        await place.fetchFields({
-          fields: ["displayName", "location", "formattedAddress", "id"],
-        });
-        if (!mounted) return;
-        onSelectRef.current({
-          name: place.displayName ?? place.formattedAddress ?? "",
-          placeId: place.id ?? "",
-          latitude: place.location?.lat() ?? 0,
-          longitude: place.location?.lng() ?? 0,
-          address: place.formattedAddress ?? undefined,
-        });
-      };
-
-      element.addEventListener("gmp-placeselect", handleSelect);
-      removeHandler = () =>
-        element!.removeEventListener("gmp-placeselect", handleSelect);
-      containerRef.current.appendChild(element);
-    })();
-
-    return () => {
-      mounted = false;
-      removeHandler?.();
-      element?.remove();
-    };
-  }, [isLoaded, apiKey]);
+  const handleSelect = async (prediction: any) => {
+    const place = prediction.toPlace();
+    await place.fetchFields({
+      fields: ["displayName", "location", "formattedAddress", "id"],
+    });
+    const name: string = place.displayName ?? place.formattedAddress ?? "";
+    setInputValue(name);
+    setSuggestions([]);
+    setOpen(false);
+    onSelectRef.current({
+      name,
+      placeId: place.id ?? "",
+      latitude: place.location?.lat() ?? 0,
+      longitude: place.location?.lng() ?? 0,
+      address: place.formattedAddress ?? undefined,
+    });
+  };
 
   if (readOnly) {
     return (
@@ -87,46 +99,94 @@ export default function PlacesSearchInput({
     );
   }
 
-  if (!apiKey) {
-    return (
+  return (
+    <div style={{ position: "relative", width: "100%" }}>
+      <style>{`input.places-input::placeholder { color: ${colors.gray600}; }`}</style>
       <input
+        className="places-input"
         style={inputStyle(disabled)}
         placeholder={placeholder}
-        defaultValue={value}
+        value={inputValue}
+        onChange={handleChange}
+        onFocus={() => suggestions.length > 0 && setOpen(true)}
+        onBlur={() => setTimeout(() => setOpen(false), 150)}
         disabled={disabled}
         autoComplete="off"
       />
-    );
-  }
-
-  return (
-    <View style={styles.wrapper}>
-      <div ref={containerRef} style={{ width: "100%" }} />
-    </View>
+      {open && suggestions.length > 0 && (
+        <div style={dropdownStyle}>
+          {suggestions.map((prediction, i) => (
+            <div
+              key={i}
+              style={suggestionItemStyle}
+              onMouseDown={() => handleSelect(prediction)}
+              onMouseEnter={e =>
+                ((e.currentTarget as HTMLDivElement).style.backgroundColor =
+                  colors.gray100)
+              }
+              onMouseLeave={e =>
+                ((e.currentTarget as HTMLDivElement).style.backgroundColor =
+                  "white")
+              }
+            >
+              <span style={{ fontSize: 13, color: colors.black, fontWeight: 500 }}>
+                {prediction.mainText?.text ?? prediction.text?.text ?? ""}
+              </span>
+              {prediction.secondaryText?.text && (
+                <span
+                  style={{ fontSize: 11, color: colors.gray500, marginLeft: 4 }}
+                >
+                  {prediction.secondaryText.text}
+                </span>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 
 function inputStyle(disabled?: boolean): React.CSSProperties {
   return {
     width: "100%",
+    boxSizing: "border-box",
     height: 40,
     backgroundColor: colors.gray200,
     border: "none",
     borderRadius: radii.md,
     paddingLeft: spacing.md,
     paddingRight: spacing.md,
-    fontSize: 13,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.md,
+    fontSize: textStyles.body4.fontSize,
+    lineHeight: `${textStyles.body4.lineHeight}px`,
+    fontFamily: textStyles.body4.fontFamily as string,
     color: disabled ? colors.gray400 : colors.black,
     outline: "none",
-    fontFamily: "inherit",
-    boxSizing: "border-box",
   };
 }
 
+const dropdownStyle: React.CSSProperties = {
+  position: "absolute",
+  top: "calc(100% + 4px)",
+  left: 0,
+  right: 0,
+  backgroundColor: "white",
+  borderRadius: radii.md,
+  boxShadow: "0 4px 12px rgba(0,0,0,0.12)",
+  zIndex: 9999,
+  overflow: "hidden",
+};
+
+const suggestionItemStyle: React.CSSProperties = {
+  padding: "10px 14px",
+  cursor: "pointer",
+  backgroundColor: "white",
+  transition: "background-color 0.1s",
+};
+
 const styles = StyleSheet.create({
-  wrapper: {
-    width: "100%",
-  },
   readOnly: {
     backgroundColor: colors.gray200,
     borderWidth: 1,
