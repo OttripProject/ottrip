@@ -1,7 +1,13 @@
 import { colors, radii, spacing, textStyles } from "@/ui/tokens";
 import { useLoadScript } from "@react-google-maps/api";
 import { useEffect, useRef, useState } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import {
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
 
 export type PlaceResult = {
   name: string;
@@ -61,8 +67,7 @@ export default function PlacesSearchInput({
     }
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = e.target.value;
+  const handleChangeText = (val: string) => {
     setInputValue(val);
     setOpen(true);
     if (val === "") {
@@ -100,93 +105,98 @@ export default function PlacesSearchInput({
   }
 
   return (
-    <div style={{ position: "relative", width: "100%" }}>
-      <style>{`input.places-input::placeholder { color: ${colors.gray600}; }`}</style>
-      <input
-        className="places-input"
-        style={inputStyle(disabled)}
+    <View style={styles.container}>
+      <TextInput
+        style={[styles.input, disabled && styles.inputDisabled]}
         placeholder={placeholder}
+        placeholderTextColor={colors.gray600}
         value={inputValue}
-        onChange={handleChange}
+        onChangeText={handleChangeText}
         onFocus={() => suggestions.length > 0 && setOpen(true)}
         onBlur={() => setTimeout(() => setOpen(false), 150)}
-        disabled={disabled}
+        editable={!disabled}
         autoComplete="off"
       />
       {open && suggestions.length > 0 && (
-        <div style={dropdownStyle}>
+        <View style={styles.dropdown}>
           {suggestions.map((prediction, i) => (
-            <div
+            <Pressable
               key={i}
-              style={suggestionItemStyle}
-              onMouseDown={() => handleSelect(prediction)}
-              onMouseEnter={e =>
-                ((e.currentTarget as HTMLDivElement).style.backgroundColor =
-                  colors.gray100)
-              }
-              onMouseLeave={e =>
-                ((e.currentTarget as HTMLDivElement).style.backgroundColor =
-                  "white")
-              }
+              style={({ hovered }: any) => [
+                styles.suggestionItem,
+                hovered && styles.suggestionItemHovered,
+              ]}
+              onPress={() => handleSelect(prediction)}
             >
-              <span style={{ fontSize: 13, color: colors.black, fontWeight: 500 }}>
+              <Text style={styles.suggestionMain}>
                 {prediction.mainText?.text ?? prediction.text?.text ?? ""}
-              </span>
+              </Text>
               {prediction.secondaryText?.text && (
-                <span
-                  style={{ fontSize: 11, color: colors.gray500, marginLeft: 4 }}
-                >
+                <Text style={styles.suggestionSub}>
                   {prediction.secondaryText.text}
-                </span>
+                </Text>
               )}
-            </div>
+            </Pressable>
           ))}
-        </div>
+        </View>
       )}
-    </div>
+    </View>
   );
 }
 
-function inputStyle(disabled?: boolean): React.CSSProperties {
-  return {
+const styles = StyleSheet.create({
+  container: {
     width: "100%",
-    boxSizing: "border-box",
+    position: "relative",
+  },
+  input: {
+    width: "100%",
     height: 40,
     backgroundColor: colors.gray200,
-    border: "none",
     borderRadius: radii.md,
-    paddingLeft: spacing.md,
-    paddingRight: spacing.md,
-    paddingTop: spacing.md,
-    paddingBottom: spacing.md,
-    fontSize: textStyles.body4.fontSize,
-    lineHeight: `${textStyles.body4.lineHeight}px`,
-    fontFamily: textStyles.body4.fontFamily as string,
-    color: disabled ? colors.gray400 : colors.black,
-    outline: "none",
-  };
-}
-
-const dropdownStyle: React.CSSProperties = {
-  position: "absolute",
-  top: "calc(100% + 4px)",
-  left: 0,
-  right: 0,
-  backgroundColor: "white",
-  borderRadius: radii.md,
-  boxShadow: "0 4px 12px rgba(0,0,0,0.12)",
-  zIndex: 9999,
-  overflow: "hidden",
-};
-
-const suggestionItemStyle: React.CSSProperties = {
-  padding: "10px 14px",
-  cursor: "pointer",
-  backgroundColor: "white",
-  transition: "background-color 0.1s",
-};
-
-const styles = StyleSheet.create({
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+    ...textStyles.body4,
+    color: colors.black,
+  },
+  inputDisabled: {
+    color: colors.gray400,
+  },
+  dropdown: {
+    position: "absolute",
+    top: 44,
+    left: 0,
+    right: 0,
+    backgroundColor: colors.white,
+    borderRadius: radii.md,
+    shadowColor: colors.black,
+    shadowOpacity: 0.12,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
+    zIndex: 9999,
+    overflow: "hidden",
+  },
+  suggestionItem: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    backgroundColor: colors.white,
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
+  },
+  suggestionItemHovered: {
+    backgroundColor: colors.gray100,
+  },
+  suggestionMain: {
+    ...textStyles.body4,
+    color: colors.black,
+    fontWeight: "500",
+  },
+  suggestionSub: {
+    fontSize: 11,
+    color: colors.gray500,
+    marginLeft: 4,
+  },
   readOnly: {
     backgroundColor: colors.gray200,
     borderWidth: 1,
