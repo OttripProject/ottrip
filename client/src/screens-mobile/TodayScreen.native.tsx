@@ -856,11 +856,11 @@ export default function TodayScreen() {
                           <Text style={styles.cardTitle} numberOfLines={1} ellipsizeMode="tail">
                             {activity.data.title || "활동"}
                           </Text>
-                          {activity.data.location && (
+                          {activity.data.location?.name && (
                             <View style={styles.locationRow}>
                               <LocationIcon width={16} height={16} color={colors.gray600} />
                               <Text style={styles.cardLocation} numberOfLines={1} ellipsizeMode="tail">
-                                {activity.data.location}
+                                {activity.data.location.name}
                               </Text>
                             </View>
                           )}
@@ -1126,13 +1126,13 @@ export default function TodayScreen() {
                               >
                                 {itinerary.title || "활동"}
                               </Text>
-                              {itinerary.location && (
+                              {itinerary.location?.name && (
                                 <Text
                                   style={styles.itemLocation}
                                   numberOfLines={1}
                                   ellipsizeMode="tail"
                                 >
-                                  {itinerary.location}
+                                  {itinerary.location.name}
                                 </Text>
                               )}
                               {itinerary.description && (

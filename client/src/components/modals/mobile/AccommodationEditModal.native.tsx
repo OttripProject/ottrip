@@ -170,7 +170,7 @@ export default function AccommodationEditModal({
         description: accommodation.description || "",
         country: accommodation.country || "",
         city: accommodation.city || "",
-        place: accommodation.place || "",
+        place: accommodation.location?.name || "",
         checkinDate: accommodation.checkinDate || dayjs().format("YYYY-MM-DD"),
         checkoutDate:
           accommodation.checkoutDate ||
@@ -290,7 +290,7 @@ export default function AccommodationEditModal({
         const cot = String(v.checkoutTime ?? v.checkout_time ?? "11:00");
         setFormData({
           name: String(v.name ?? ""),
-          place: String(v.place ?? ""),
+          place: "",
           country: String(v.country ?? ""),
           city: String(v.city ?? ""),
           description: String(v.description ?? ""),
@@ -328,7 +328,6 @@ export default function AccommodationEditModal({
             description: formData.description?.trim() || undefined,
             country: formData.country?.trim() || undefined,
             city: formData.city?.trim() || undefined,
-            place: formData.place?.trim() || undefined,
             checkinDate: formData.checkinDate,
             checkoutDate: formData.checkoutDate,
             checkinTime: `${formData.checkinTime}:00`,
@@ -349,7 +348,6 @@ export default function AccommodationEditModal({
           description: formData.description?.trim() || undefined,
           country: formData.country?.trim() || undefined,
           city: formData.city?.trim() || undefined,
-          place: formData.place?.trim() || undefined,
           checkinDate: formData.checkinDate,
           checkoutDate: formData.checkoutDate,
           checkinTime: `${formData.checkinTime}:00`,
@@ -793,7 +791,7 @@ export default function AccommodationEditModal({
           const cot = String(v.checkoutTime ?? v.checkout_time ?? "11:00");
           setFormData({
             name: String(v.name ?? ""),
-            place: String(v.place ?? ""),
+            place: "",
             country: String(v.country ?? ""),
             city: String(v.city ?? ""),
             description: String(v.description ?? ""),

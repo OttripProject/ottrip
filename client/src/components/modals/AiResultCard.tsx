@@ -193,7 +193,6 @@ export default function AiResultCard({
             description: getVal(v, "description") || undefined,
             country: getVal(v, "country") || undefined,
             city: getVal(v, "city") || undefined,
-            location: getVal(v, "location") || undefined,
             itineraryDate: date,
             startTime: startTime.substring(0, 5),
             endTime: endTime.substring(0, 5),
@@ -241,7 +240,6 @@ export default function AiResultCard({
           const validCurs = Object.values(ExpenseCurrency) as string[];
           await accommodationsApi.createAccommodation({
             name: getVal(v, "name") || "숙소",
-            place: getVal(v, "place") || undefined,
             country: getVal(v, "country") || undefined,
             city: getVal(v, "city") || undefined,
             checkinDate,

@@ -662,13 +662,13 @@ export default function WeeklyScreen() {
                       >
                         {itinerary.title}
                       </Text>
-                      {itinerary.location && (
+                      {itinerary.location?.name && (
                         <Text
                           style={styles.scheduleLocation}
                           numberOfLines={1}
                           ellipsizeMode="tail"
                         >
-                          {itinerary.location}
+                          {itinerary.location.name}
                         </Text>
                       )}
                     </Pressable>
