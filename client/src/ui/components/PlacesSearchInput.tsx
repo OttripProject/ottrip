@@ -1,6 +1,7 @@
 import { colors, radii, spacing, textStyles } from "@/ui/tokens";
 import { useLoadScript } from "@react-google-maps/api";
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   Pressable,
   StyleSheet,
@@ -39,6 +40,12 @@ export default function PlacesSearchInput({
   const [inputValue, setInputValue] = useState(value ?? "");
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const [open, setOpen] = useState(false);
+  const [dropdownRect, setDropdownRect] = useState({
+    top: 0,
+    left: 0,
+    width: 0,
+  });
+  const containerRef = useRef<View>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const onSelectRef = useRef(onSelect);
 
@@ -49,6 +56,12 @@ export default function PlacesSearchInput({
   useEffect(() => {
     setInputValue(value ?? "");
   }, [value]);
+
+  const measureContainer = () => {
+    containerRef.current?.measure((_x, _y, width, height, pageX, pageY) => {
+      setDropdownRect({ top: pageY + height + 4, left: pageX, width });
+    });
+  };
 
   const fetchSuggestions = async (input: string) => {
     if (!input.trim() || !isLoaded) {
@@ -69,6 +82,7 @@ export default function PlacesSearchInput({
 
   const handleChangeText = (val: string) => {
     setInputValue(val);
+    measureContainer();
     setOpen(true);
     if (val === "") {
       setSuggestions([]);
@@ -104,42 +118,62 @@ export default function PlacesSearchInput({
     );
   }
 
+  const dropdown =
+    open && suggestions.length > 0
+      ? createPortal(
+          <View
+            style={[
+              styles.dropdown,
+              {
+                top: dropdownRect.top,
+                left: dropdownRect.left,
+                width: dropdownRect.width,
+              },
+            ]}
+          >
+            {suggestions.map((prediction, i) => (
+              <Pressable
+                key={i}
+                style={({ hovered }: any) => [
+                  styles.suggestionItem,
+                  hovered && styles.suggestionItemHovered,
+                ]}
+                onPress={() => handleSelect(prediction)}
+              >
+                <Text style={styles.suggestionMain}>
+                  {prediction.mainText?.text ?? prediction.text?.text ?? ""}
+                </Text>
+                {prediction.secondaryText?.text && (
+                  <Text style={styles.suggestionSub}>
+                    {prediction.secondaryText.text}
+                  </Text>
+                )}
+              </Pressable>
+            ))}
+          </View>,
+          document.body,
+        )
+      : null;
+
   return (
-    <View style={styles.container}>
+    <View ref={containerRef} style={styles.container}>
       <TextInput
         style={[styles.input, disabled && styles.inputDisabled]}
         placeholder={placeholder}
         placeholderTextColor={colors.gray600}
         value={inputValue}
         onChangeText={handleChangeText}
-        onFocus={() => suggestions.length > 0 && setOpen(true)}
+        onFocus={() => {
+          if (suggestions.length > 0) {
+            measureContainer();
+            setOpen(true);
+          }
+        }}
         onBlur={() => setTimeout(() => setOpen(false), 150)}
         editable={!disabled}
         autoComplete="off"
       />
-      {open && suggestions.length > 0 && (
-        <View style={styles.dropdown}>
-          {suggestions.map((prediction, i) => (
-            <Pressable
-              key={i}
-              style={({ hovered }: any) => [
-                styles.suggestionItem,
-                hovered && styles.suggestionItemHovered,
-              ]}
-              onPress={() => handleSelect(prediction)}
-            >
-              <Text style={styles.suggestionMain}>
-                {prediction.mainText?.text ?? prediction.text?.text ?? ""}
-              </Text>
-              {prediction.secondaryText?.text && (
-                <Text style={styles.suggestionSub}>
-                  {prediction.secondaryText.text}
-                </Text>
-              )}
-            </Pressable>
-          ))}
-        </View>
-      )}
+      {dropdown}
     </View>
   );
 }
@@ -147,7 +181,6 @@ export default function PlacesSearchInput({
 const styles = StyleSheet.create({
   container: {
     width: "100%",
-    position: "relative",
   },
   input: {
     width: "100%",
@@ -163,17 +196,14 @@ const styles = StyleSheet.create({
     color: colors.gray400,
   },
   dropdown: {
-    position: "absolute",
-    top: 44,
-    left: 0,
-    right: 0,
+    position: "fixed" as any,
     backgroundColor: colors.white,
     borderRadius: radii.md,
     shadowColor: colors.black,
     shadowOpacity: 0.12,
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 4 },
-    zIndex: 9999,
+    zIndex: 99999,
     overflow: "hidden",
   },
   suggestionItem: {
