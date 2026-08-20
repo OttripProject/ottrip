@@ -930,10 +930,6 @@ export default function ItineraryItem({
   }, [itinerary?.location?.id]);
 
   const handlePlaceSelect = useCallback(async (place: PlaceResult) => {
-    if (!place.fromGoogle) {
-      setFormData(prev => ({ ...prev, location: place.name, locationId: undefined }));
-      return;
-    }
     try {
       const location = await locationsApi.createLocation({
         name: place.name,
@@ -941,7 +937,7 @@ export default function ItineraryItem({
         latitude: place.latitude,
         longitude: place.longitude,
         address: place.address,
-        fromGoogle: true,
+        fromGoogle: place.fromGoogle,
       });
       setFormData(prev => ({ ...prev, location: location.name, locationId: location.id }));
     } catch {
@@ -1064,7 +1060,7 @@ export default function ItineraryItem({
                   disabled={readOnly}
                   readOnly={readOnly}
                   initialCoords={
-                    itinerary?.location
+                    itinerary?.location?.fromGoogle
                       ? { lat: itinerary.location.latitude, lng: itinerary.location.longitude }
                       : undefined
                   }

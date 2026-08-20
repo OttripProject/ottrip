@@ -686,10 +686,6 @@ export default function AccommodationItem({
   }, [accommodation?.location?.id]);
 
   const handlePlaceSelect = useCallback(async (place: PlaceResult) => {
-    if (!place.fromGoogle) {
-      setFormData(prev => ({ ...prev, place: place.name, locationId: undefined }));
-      return;
-    }
     try {
       const location = await locationsApi.createLocation({
         name: place.name,
@@ -697,7 +693,7 @@ export default function AccommodationItem({
         latitude: place.latitude,
         longitude: place.longitude,
         address: place.address,
-        fromGoogle: true,
+        fromGoogle: place.fromGoogle,
       });
       setFormData(prev => ({ ...prev, place: location.name, locationId: location.id }));
     } catch {
@@ -820,7 +816,7 @@ export default function AccommodationItem({
                   disabled={readOnly}
                   readOnly={readOnly}
                   initialCoords={
-                    accommodation?.location
+                    accommodation?.location?.fromGoogle
                       ? { lat: accommodation.location.latitude, lng: accommodation.location.longitude }
                       : undefined
                   }
