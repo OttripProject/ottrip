@@ -89,7 +89,7 @@ export default function PlacesSearchInput({
       onClear?.();
     }
     if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => fetchSuggestions(val), 300);
+    debounceRef.current = setTimeout(() => fetchSuggestions(val), 350);
   };
 
   const handleSelect = async (prediction: any) => {
