@@ -64,6 +64,7 @@ export default function PlacesSearchInput({
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [searchError, setSearchError] = useState(false);
   const [mapCoords, setMapCoords] = useState<{ lat: number; lng: number; name: string } | null>(
     initialCoords && value ? { ...initialCoords, name: value } : null,
   );
@@ -196,8 +197,10 @@ export default function PlacesSearchInput({
       const { suggestions: results } =
         await AutocompleteSuggestion.fetchAutocompleteSuggestions({ input });
       setSuggestions(results.map((s: any) => s.placePrediction));
+      setSearchError(false);
     } catch {
       setSuggestions([]);
+      setSearchError(true);
     } finally {
       setLoading(false);
     }
@@ -206,6 +209,7 @@ export default function PlacesSearchInput({
   const handleChangeText = (val: string) => {
     setInputValue(val);
     setMapCoords(null);
+    setSearchError(false);
     measureContainer();
     setOpen(true);
     if (val === "") {
@@ -280,7 +284,12 @@ export default function PlacesSearchInput({
           {suggestions.length > 0 && (
             <div style={css.header}>검색 결과 · {suggestions.length}</div>
           )}
-          {!loading && suggestions.length === 0 && inputValue.trim().length > 0 && (
+          {!loading && searchError && inputValue.trim().length > 0 && (
+            <div style={css.noResult}>
+              검색을 사용할 수 없어요. 입력한 이름 그대로 저장할 수 있어요.
+            </div>
+          )}
+          {!loading && !searchError && suggestions.length === 0 && inputValue.trim().length > 0 && (
             <div style={css.noResult}>
               '{inputValue.trim()}' 검색 결과가 없어요. 입력한 이름 그대로 저장할 수 있어요.
             </div>
