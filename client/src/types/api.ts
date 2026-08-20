@@ -66,11 +66,21 @@ export interface Location {
   latitude: number;
   longitude: number;
   address?: string;
+  fromGoogle: boolean;
+  updatedAt: string;
 }
 
 export interface CreateLocationRequest {
   name: string;
   placeId: string;
+  latitude: number;
+  longitude: number;
+  address?: string;
+  fromGoogle?: boolean;
+}
+
+export interface UpdateLocationRequest {
+  name: string;
   latitude: number;
   longitude: number;
   address?: string;

@@ -8,7 +8,7 @@ import { analyzeDocumentUpload } from "@/services/aiDocument";
 import { attachmentsApi } from "@/services/attachments";
 import { expensesApi } from "@/services/expenses";
 import { itinerariesApi } from "@/services/itineraries";
-import { locationsApi } from "@/services/locations";
+import { isLocationStale, locationsApi } from "@/services/locations";
 import type {
   AiDocumentItemDraft,
   Attachment,
@@ -908,6 +908,27 @@ export default function ItineraryItem({
     },
     [],
   );
+
+  useEffect(() => {
+    if (!itinerary?.location || !isLocationStale(itinerary.location)) return;
+    const loc = itinerary.location;
+    (async () => {
+      try {
+        const { PlacesService } = await (google.maps as any).importLibrary("places");
+        const map = new google.maps.Map(document.createElement("div"));
+        const service = new PlacesService(map);
+        service.getDetails({ placeId: loc.placeId, fields: ["name", "geometry", "formatted_address"] }, async (result: any, status: any) => {
+          if (status !== "OK" || !result) return;
+          await locationsApi.updateLocation(loc.id, {
+            name: result.name ?? loc.name,
+            latitude: result.geometry?.location?.lat() ?? loc.latitude,
+            longitude: result.geometry?.location?.lng() ?? loc.longitude,
+            address: result.formatted_address ?? loc.address,
+          });
+        });
+      } catch {}
+    })();
+  }, [itinerary?.location?.id]);
 
   const handlePlaceSelect = useCallback(async (place: PlaceResult) => {
     try {
