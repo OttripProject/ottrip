@@ -24,23 +24,27 @@ export default function MiniMapView({ latitude, longitude, name }: MiniMapViewPr
   if (!apiKey || !isLoaded) return null;
 
   return (
-    <Pressable onPress={openInMaps} style={styles.container}>
+    <View style={styles.container}>
       <GoogleMap
         mapContainerStyle={MAP_CONTAINER_STYLE}
         center={center}
         zoom={15}
         options={{
           disableDefaultUI: true,
-          gestureHandling: "none",
+          zoomControl: true,
+          controlSize: 24,
+          zoomControlOptions: { position: 7 },
+          gestureHandling: "greedy",
+          keyboardShortcuts: false,
           clickableIcons: false,
         }}
       >
         <Marker position={center} title={name} />
       </GoogleMap>
-      <View style={styles.overlay}>
-        <Text style={styles.overlayText}>지도에서 보기</Text>
-      </View>
-    </Pressable>
+      <Pressable onPress={openInMaps} style={styles.overlay}>
+        <Text style={styles.overlayText}>지도에서 보기 ↗</Text>
+      </Pressable>
+    </View>
   );
 }
 
@@ -55,13 +59,13 @@ const styles = StyleSheet.create({
   },
   overlay: {
     position: "absolute",
-    bottom: 8,
+    bottom: 12,
     right: 8,
     backgroundColor: colors.white,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: radii.sm,
-    shadowColor: "#000",
+    shadowColor: colors.black,
     shadowOpacity: 0.15,
     shadowRadius: 4,
     shadowOffset: { width: 0, height: 1 },

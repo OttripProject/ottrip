@@ -19,7 +19,6 @@ import { ExpenseCurrency, currencyLabels } from "@/types/expense";
 import AttachmentSection from "@/ui/components/attachmentSection";
 import type { AiAttachmentAnalyzeSelection } from "@/ui/components/attachmentSection.types";
 import { pendingAiFileKey } from "@/ui/components/attachmentSection.types";
-import MiniMapView from "@/ui/components/MiniMapView";
 import PlacesSearchInput from "@/ui/components/PlacesSearchInput";
 import type { PlaceResult } from "@/ui/components/PlacesSearchInput";
 import Input from "@/ui/components/input/Input";
@@ -687,6 +686,10 @@ export default function AccommodationItem({
   }, [accommodation?.location?.id]);
 
   const handlePlaceSelect = useCallback(async (place: PlaceResult) => {
+    if (!place.fromGoogle) {
+      setFormData(prev => ({ ...prev, place: place.name, locationId: undefined }));
+      return;
+    }
     try {
       const location = await locationsApi.createLocation({
         name: place.name,
@@ -694,6 +697,7 @@ export default function AccommodationItem({
         latitude: place.latitude,
         longitude: place.longitude,
         address: place.address,
+        fromGoogle: true,
       });
       setFormData(prev => ({ ...prev, place: location.name, locationId: location.id }));
     } catch {
@@ -815,14 +819,12 @@ export default function AccommodationItem({
                   placeholder={PLACEHOLDERS.accommodation.place}
                   disabled={readOnly}
                   readOnly={readOnly}
+                  initialCoords={
+                    accommodation?.location
+                      ? { lat: accommodation.location.latitude, lng: accommodation.location.longitude }
+                      : undefined
+                  }
                 />
-                {formData.locationId && accommodation?.location && (
-                  <MiniMapView
-                    latitude={accommodation.location.latitude}
-                    longitude={accommodation.location.longitude}
-                    name={accommodation.location.name}
-                  />
-                )}
               </>
             ) : (
               <Input

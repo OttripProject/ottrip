@@ -23,7 +23,6 @@ import {
   categoryLabels,
 } from "@/types/expense";
 import CurrencyToggle from "@/ui/components/CurrencyToggle";
-import MiniMapView from "@/ui/components/MiniMapView";
 import PlacesSearchInput from "@/ui/components/PlacesSearchInput";
 import type { PlaceResult } from "@/ui/components/PlacesSearchInput";
 import AttachmentSection from "@/ui/components/attachmentSection";
@@ -931,6 +930,10 @@ export default function ItineraryItem({
   }, [itinerary?.location?.id]);
 
   const handlePlaceSelect = useCallback(async (place: PlaceResult) => {
+    if (!place.fromGoogle) {
+      setFormData(prev => ({ ...prev, location: place.name, locationId: undefined }));
+      return;
+    }
     try {
       const location = await locationsApi.createLocation({
         name: place.name,
@@ -938,6 +941,7 @@ export default function ItineraryItem({
         latitude: place.latitude,
         longitude: place.longitude,
         address: place.address,
+        fromGoogle: true,
       });
       setFormData(prev => ({ ...prev, location: location.name, locationId: location.id }));
     } catch {
@@ -1059,14 +1063,12 @@ export default function ItineraryItem({
                   placeholder="장소를 검색하세요."
                   disabled={readOnly}
                   readOnly={readOnly}
+                  initialCoords={
+                    itinerary?.location
+                      ? { lat: itinerary.location.latitude, lng: itinerary.location.longitude }
+                      : undefined
+                  }
                 />
-                {formData.locationId && itinerary?.location && (
-                  <MiniMapView
-                    latitude={itinerary.location.latitude}
-                    longitude={itinerary.location.longitude}
-                    name={itinerary.location.name}
-                  />
-                )}
               </>
             ) : (
               <Input
