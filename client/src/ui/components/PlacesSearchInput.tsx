@@ -37,6 +37,12 @@ const PLUS_ICON = (
   </svg>
 );
 
+const manualPlaceId = (name: string) => {
+  const nameHash = [...name].reduce((a, c) => (Math.imul(31, a) + c.charCodeAt(0)) >>> 0, 0).toString(16);
+  const rand = Math.random().toString(16).slice(2, 10);
+  return `m_${nameHash}_${rand}`;
+};
+
 const SEARCH_ICON = (
   <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true" style={{ display: "block" }}>
     <path fillRule="evenodd" clipRule="evenodd" d="M6.66704 1.3999C3.75835 1.3999 1.40039 3.75787 1.40039 6.66657C1.40039 9.57527 3.75835 11.9332 6.66704 11.9332C7.90523 11.9332 9.04363 11.5059 9.94282 10.7908L13.2428 14.0908C13.4772 14.3251 13.8571 14.3251 14.0914 14.0908C14.3257 13.8565 14.3257 13.4766 14.0914 13.2423L10.7913 9.94223C11.5064 9.04306 11.9337 7.90471 11.9337 6.66657C11.9337 3.75787 9.57573 1.3999 6.66704 1.3999ZM2.60039 6.66657C2.60039 4.42061 4.42109 2.5999 6.66704 2.5999C8.91299 2.5999 10.7337 4.42061 10.7337 6.66657C10.7337 8.91253 8.91299 10.7332 6.66704 10.7332C4.42109 10.7332 2.60039 8.91253 2.60039 6.66657Z" fill="#9B9B9B" />
@@ -136,7 +142,7 @@ export default function PlacesSearchInput({
             setSuggestions([]);
             setOpen(false);
             setMapCoords(null);
-            onSelectRef.current({ name: currentInput, placeId: "", latitude: 0, longitude: 0, fromGoogle: false });
+            onSelectRef.current({ name: currentInput, placeId: manualPlaceId(currentInput), latitude: 0, longitude: 0, fromGoogle: false });
           }
           setSelectedIndex(-1);
           break;
@@ -234,13 +240,13 @@ export default function PlacesSearchInput({
   handleSelectSuggestionRef.current = handleSelectSuggestion;
 
   const handleManualSelect = () => {
-    const domValue = (inputRef.current as HTMLInputElement | null)?.value?.trim() ?? "";
-    const name = domValue || inputValue.trim();
+    const domValue = (inputRef.current as HTMLInputElement | null)?.value ?? "";
+    const name = domValue.trim() || inputValue.trim();
     if (!name) return;
     setSuggestions([]);
     setOpen(false);
     setMapCoords(null);
-    onSelectRef.current({ name, placeId: "", latitude: 0, longitude: 0, fromGoogle: false });
+    onSelectRef.current({ name, placeId: manualPlaceId(name), latitude: 0, longitude: 0, fromGoogle: false });
   };
 
   if (readOnly) {

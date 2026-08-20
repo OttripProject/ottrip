@@ -21,9 +21,10 @@ async def get_location_by_place_id(
 
 
 async def create_location(session: SessionDep, data: LocationCreate) -> Location:
-    existing = await get_location_by_place_id(session, data.place_id)
-    if existing:
-        return existing
+    if data.place_id:
+        existing = await get_location_by_place_id(session, data.place_id)
+        if existing:
+            return existing
 
     location = Location(
         name=data.name,
