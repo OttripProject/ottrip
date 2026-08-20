@@ -8,6 +8,7 @@ import { analyzeDocumentUpload } from "@/services/aiDocument";
 import { attachmentsApi } from "@/services/attachments";
 import { expensesApi } from "@/services/expenses";
 import { itinerariesApi } from "@/services/itineraries";
+import { isLocationStale, locationsApi } from "@/services/locations";
 import type {
   AiDocumentItemDraft,
   Attachment,
@@ -22,6 +23,8 @@ import {
   categoryLabels,
 } from "@/types/expense";
 import CurrencyToggle from "@/ui/components/CurrencyToggle";
+import PlacesSearchInput from "@/ui/components/PlacesSearchInput";
+import type { PlaceResult } from "@/ui/components/PlacesSearchInput";
 import AttachmentSection from "@/ui/components/attachmentSection";
 import type { AiAttachmentAnalyzeSelection } from "@/ui/components/attachmentSection.types";
 import { pendingAiFileKey } from "@/ui/components/attachmentSection.types";
@@ -133,7 +136,8 @@ export default function ItineraryItem({
     description: itinerary?.description || "",
     country: itinerary?.country || "",
     city: itinerary?.city || "",
-    location: itinerary?.location || "",
+    location: itinerary?.location?.name || "",
+    locationId: itinerary?.location?.id as number | undefined,
     itineraryDate:
       itinerary?.itinerary_date ||
       (selectedDate
@@ -270,7 +274,8 @@ export default function ItineraryItem({
         description: itinerary.description || "",
         country: itinerary.country || "",
         city: itinerary.city || "",
-        location: itinerary.location || "",
+        location: itinerary.location?.name || "",
+        locationId: itinerary.location?.id,
         itineraryDate:
           itinerary.itinerary_date ||
           itinerary.itineraryDate ||
@@ -303,6 +308,7 @@ export default function ItineraryItem({
         country: autoFill?.country || "",
         city: autoFill?.city || "",
         location: "",
+        locationId: undefined,
         itineraryDate: defaultDate,
         startTime: defaultStartTime,
         endTime: defaultEndTime,
@@ -518,7 +524,7 @@ export default function ItineraryItem({
           description: formData.description,
           country: formData.country?.trim() || undefined,
           city: formData.city?.trim() || undefined,
-          location: formData.location,
+          locationId: formData.locationId,
           itineraryDate: formData.itineraryDate,
           startTime: formData.startTime,
           endTime: finalEndTime,
@@ -591,7 +597,7 @@ export default function ItineraryItem({
           description: formData.description,
           country: formData.country?.trim() || undefined,
           city: formData.city?.trim() || undefined,
-          location: formData.location,
+          locationId: formData.locationId,
           itineraryDate: formData.itineraryDate,
           startTime: formData.startTime,
           endTime: finalEndTime,
@@ -897,10 +903,47 @@ export default function ItineraryItem({
 
   const applyAiAnalyzeDraftToForm = useCallback(
     (draft: AiDocumentItemDraft) => {
-      applyItineraryDraftFromAi(draft, setFormData, setDraftExpenses);
+      applyItineraryDraftFromAi(draft, setFormData as any, setDraftExpenses);
     },
     [],
   );
+
+  useEffect(() => {
+    if (!itinerary?.location || !isLocationStale(itinerary.location)) return;
+    const loc = itinerary.location;
+    (async () => {
+      try {
+        const { PlacesService } = await (google.maps as any).importLibrary("places");
+        const map = new google.maps.Map(document.createElement("div"));
+        const service = new PlacesService(map);
+        service.getDetails({ placeId: loc.placeId, fields: ["name", "geometry", "formatted_address"] }, async (result: any, status: any) => {
+          if (status !== "OK" || !result) return;
+          await locationsApi.updateLocation(loc.id, {
+            name: result.name ?? loc.name,
+            latitude: result.geometry?.location?.lat() ?? loc.latitude,
+            longitude: result.geometry?.location?.lng() ?? loc.longitude,
+            address: result.formatted_address ?? loc.address,
+          });
+        });
+      } catch {}
+    })();
+  }, [itinerary?.location?.id]);
+
+  const handlePlaceSelect = useCallback(async (place: PlaceResult) => {
+    try {
+      const location = await locationsApi.createLocation({
+        name: place.name,
+        placeId: place.placeId,
+        latitude: place.latitude,
+        longitude: place.longitude,
+        address: place.address,
+        fromGoogle: place.fromGoogle,
+      });
+      setFormData(prev => ({ ...prev, location: location.name, locationId: location.id }));
+    } catch {
+      setFormData(prev => ({ ...prev, location: place.name, locationId: undefined }));
+    }
+  }, []);
 
   return (
     <View style={styles.wrapper}>
@@ -1007,17 +1050,35 @@ export default function ItineraryItem({
 
           <View style={styles.inputGroup}>
             <Text style={styles.label}>장소</Text>
-            <Input
-              variant={readOnly ? "outlined" : "filled"}
-              placeholder="장소를 입력하세요."
-              value={formData.location}
-              onChangeText={text =>
-                !readOnly && setFormData({ ...formData, location: text })
-              }
-              style={readOnly ? styles.readOnlyInput : styles.input}
-              placeholderTextColor={colors.gray600}
-              editable={!readOnly}
-            />
+            {Platform.OS === "web" ? (
+              <>
+                <PlacesSearchInput
+                  value={formData.location}
+                  onSelect={handlePlaceSelect}
+                  onClear={() => setFormData(prev => ({ ...prev, location: "", locationId: undefined }))}
+                  placeholder="장소를 검색하세요."
+                  disabled={readOnly}
+                  readOnly={readOnly}
+                  initialCoords={
+                    itinerary?.location?.fromGoogle
+                      ? { lat: itinerary.location.latitude, lng: itinerary.location.longitude }
+                      : undefined
+                  }
+                />
+              </>
+            ) : (
+              <Input
+                variant={readOnly ? "outlined" : "filled"}
+                placeholder="장소를 입력하세요."
+                value={formData.location}
+                onChangeText={text =>
+                  !readOnly && setFormData({ ...formData, location: text })
+                }
+                style={readOnly ? styles.readOnlyInput : styles.input}
+                placeholderTextColor={colors.gray600}
+                editable={!readOnly}
+              />
+            )}
           </View>
 
           <View

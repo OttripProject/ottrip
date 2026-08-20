@@ -71,7 +71,7 @@ export interface Itinerary {
   itineraryDate: string;
   startTime: string;
   endTime: string;
-  location?: string;
+  location?: { id: number; name: string; placeId: string; latitude: number; longitude: number; address?: string } | string;
   city?: string;
   color?: string;
 }
@@ -83,7 +83,7 @@ function toEvent(it: Itinerary): any {
 
   const normalizedStartTime = normalizeTime(it.startTime);
   let normalizedEndTime = normalizeTime(it.endTime);
-  const locationText = it.location || "";
+  const locationText = typeof it.location === "object" ? (it.location?.name ?? "") : (it.location || "");
 
   if (normalizedEndTime === "23:59" || it.endTime?.startsWith("23:59:")) {
     normalizedEndTime = "24:00";

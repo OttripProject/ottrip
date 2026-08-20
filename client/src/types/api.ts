@@ -58,6 +58,34 @@ export interface UpdatePlanRequest {
   segments?: PlanSegmentInput[];
 }
 
+// 장소 (Location) 관련 타입
+export interface Location {
+  id: number;
+  name: string;
+  placeId: string;
+  latitude: number;
+  longitude: number;
+  address?: string;
+  fromGoogle: boolean;
+  updatedAt: string;
+}
+
+export interface CreateLocationRequest {
+  name: string;
+  placeId: string;
+  latitude: number;
+  longitude: number;
+  address?: string;
+  fromGoogle?: boolean;
+}
+
+export interface UpdateLocationRequest {
+  name: string;
+  latitude: number;
+  longitude: number;
+  address?: string;
+}
+
 // 일정 (Itinerary) 관련 타입
 export interface Itinerary {
   id: number;
@@ -65,7 +93,7 @@ export interface Itinerary {
   description?: string;
   country?: string;
   city?: string;
-  location?: string;
+  location?: Location;
   itineraryDate: string;
   startTime: string;
   endTime: string;
@@ -78,7 +106,7 @@ export interface CreateItineraryRequest {
   description?: string;
   country?: string;
   city?: string;
-  location?: string;
+  locationId?: number;
   itineraryDate: string;
   startTime: string;
   endTime: string;
@@ -90,7 +118,7 @@ export interface UpdateItineraryRequest {
   description?: string;
   country?: string;
   city?: string;
-  location?: string;
+  locationId?: number;
   itineraryDate?: string;
   startTime?: string;
   endTime?: string;
@@ -160,7 +188,7 @@ export interface FlightRead {
 export interface Accommodation {
   id: number;
   name: string;
-  place?: string;
+  location?: Location;
   country?: string;
   city?: string;
   checkinDate: string;
@@ -176,7 +204,7 @@ export interface Accommodation {
 
 export interface CreateAccommodationRequest {
   name: string;
-  place?: string;
+  locationId?: number;
   country?: string;
   city?: string;
   checkinDate: string;
@@ -196,7 +224,7 @@ export interface CreateAccommodationRequest {
 
 export interface UpdateAccommodationRequest {
   name?: string;
-  place?: string;
+  locationId?: number;
   country?: string;
   city?: string;
   checkinDate?: string;

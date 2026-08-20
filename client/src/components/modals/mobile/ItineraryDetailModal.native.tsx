@@ -84,12 +84,12 @@ export default function ItineraryDetailModal({
   if (!itinerary) return null;
 
   const handleOpenMap = () => {
-    if (!itinerary.location) {
+    if (!itinerary.location?.name) {
       Alert.alert("알림", "장소 정보가 없습니다");
       return;
     }
 
-    const encodedLocation = encodeURIComponent(itinerary.location);
+    const encodedLocation = encodeURIComponent(itinerary.location.name);
     const url = Platform.select({
       ios: `maps://maps.apple.com/?q=${encodedLocation}`,
       android: `geo:0,0?q=${encodedLocation}`,
@@ -208,14 +208,14 @@ export default function ItineraryDetailModal({
           </View>
 
           {/* 장소 */}
-          {itinerary.location && (
+          {itinerary.location?.name && (
             <View style={styles.detailItem}>
               <View style={styles.detailIcon}>
                 <LocationIcon width={20} height={20} color={colors.primary} />
               </View>
               <View style={styles.detailContent}>
                 <Text style={styles.detailLabel}>장소</Text>
-                <Text style={styles.detailValue}>{itinerary.location}</Text>
+                <Text style={styles.detailValue}>{itinerary.location.name}</Text>
               </View>
             </View>
           )}
@@ -301,7 +301,7 @@ export default function ItineraryDetailModal({
       </ScrollView>
 
       {/* 지도 앱에서 길찾기 버튼 */}
-      {itinerary.location && (
+      {itinerary.location?.name && (
         <View style={styles.footer}>
           <Pressable style={styles.mapButton} onPress={handleOpenMap}>
             <MapIcon width={20} height={20} />

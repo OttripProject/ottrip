@@ -73,7 +73,7 @@ export default function AccommodationDetailModal({
   if (!accommodation) return null;
 
   const location =
-    accommodation.place ||
+    accommodation.location?.name ||
     [accommodation.city, accommodation.country].filter(Boolean).join(", ") ||
     undefined;
   const expenseAmount = accommodation.expense?.amount ?? 0;
