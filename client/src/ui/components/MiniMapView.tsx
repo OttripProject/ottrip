@@ -42,7 +42,7 @@ export default function MiniMapView({ latitude, longitude, name }: MiniMapViewPr
         <Marker position={center} title={name} />
       </GoogleMap>
       <Pressable onPress={openInMaps} style={styles.overlay}>
-        <Text style={styles.overlayText}>지도에서 보기 ↗</Text>
+        <Text style={styles.overlayText}>큰 지도 보기 ↗</Text>
       </Pressable>
     </View>
   );

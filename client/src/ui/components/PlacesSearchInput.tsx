@@ -61,11 +61,20 @@ export default function PlacesSearchInput({
   const [mapCoords, setMapCoords] = useState<{ lat: number; lng: number; name: string } | null>(
     initialCoords && value ? { ...initialCoords, name: value } : null,
   );
+  const [selectedIndex, setSelectedIndex] = useState(-1);
   const [dropdownRect, setDropdownRect] = useState({ top: 0, left: 0, width: 0 });
   const containerRef = useRef<View>(null);
+  const dropdownRef = useRef<HTMLDivElement | null>(null);
+  const inputRef = useRef<any>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const scrollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const onSelectRef = useRef(onSelect);
+  const openRef = useRef(open);
+  const suggestionsRef = useRef(suggestions);
+  const selectedIndexRef = useRef(selectedIndex);
+  openRef.current = open;
+  suggestionsRef.current = suggestions;
+  selectedIndexRef.current = selectedIndex;
 
   useEffect(() => {
     onSelectRef.current = onSelect;
@@ -85,6 +94,74 @@ export default function PlacesSearchInput({
     `;
     document.head.appendChild(style);
   }, []);
+
+  useEffect(() => {
+    setSelectedIndex(-1);
+  }, [suggestions]);
+
+  const handleSelectSuggestionRef = useRef<typeof handleSelectSuggestion | null>(null);
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (!openRef.current) return;
+      const currentSuggestions = suggestionsRef.current;
+      const currentSelectedIndex = selectedIndexRef.current;
+      const rawValue = (inputRef.current as HTMLInputElement | null)?.value ?? "";
+      const currentInput = rawValue.trim();
+      const totalItems = currentSuggestions.length + (currentInput ? 1 : 0);
+
+      switch (e.key) {
+        case "ArrowDown":
+          e.preventDefault();
+          e.stopPropagation();
+          setSelectedIndex(prev => Math.min(prev + 1, totalItems - 1));
+          break;
+        case "ArrowUp":
+          e.preventDefault();
+          e.stopPropagation();
+          setSelectedIndex(prev => Math.max(prev - 1, -1));
+          break;
+        case "Escape":
+          e.preventDefault();
+          e.stopPropagation();
+          setOpen(false);
+          setSelectedIndex(-1);
+          break;
+        case "Enter":
+          e.preventDefault();
+          e.stopPropagation();
+          if (currentSelectedIndex >= 0 && currentSelectedIndex < currentSuggestions.length) {
+            handleSelectSuggestionRef.current(currentSuggestions[currentSelectedIndex]);
+          } else if (currentInput) {
+            setSuggestions([]);
+            setOpen(false);
+            setMapCoords(null);
+            onSelectRef.current({ name: currentInput, placeId: "", latitude: 0, longitude: 0, fromGoogle: false });
+          }
+          setSelectedIndex(-1);
+          break;
+      }
+    };
+    document.addEventListener("keydown", handler, true);
+    return () => document.removeEventListener("keydown", handler, true);
+  }, []);
+
+  useEffect(() => {
+    if (selectedIndex < 0 || !dropdownRef.current) return;
+    const item = dropdownRef.current.querySelector(`[data-idx="${selectedIndex}"]`);
+    item?.scrollIntoView({ block: "nearest" });
+  }, [selectedIndex]);
+
+  useEffect(() => {
+    if (!open) return;
+    const update = () => measureContainer();
+    window.addEventListener("scroll", update, true);
+    window.addEventListener("resize", update);
+    return () => {
+      window.removeEventListener("scroll", update, true);
+      window.removeEventListener("resize", update);
+    };
+  }, [open]);
 
   useEffect(() => {
     setInputValue(value ?? "");
@@ -154,19 +231,16 @@ export default function PlacesSearchInput({
       fromGoogle: true,
     });
   };
+  handleSelectSuggestionRef.current = handleSelectSuggestion;
 
   const handleManualSelect = () => {
-    if (!inputValue.trim()) return;
+    const domValue = (inputRef.current as HTMLInputElement | null)?.value?.trim() ?? "";
+    const name = domValue || inputValue.trim();
+    if (!name) return;
     setSuggestions([]);
     setOpen(false);
     setMapCoords(null);
-    onSelectRef.current({
-      name: inputValue.trim(),
-      placeId: "",
-      latitude: 0,
-      longitude: 0,
-      fromGoogle: false,
-    });
+    onSelectRef.current({ name, placeId: "", latitude: 0, longitude: 0, fromGoogle: false });
   };
 
   if (readOnly) {
@@ -187,6 +261,7 @@ export default function PlacesSearchInput({
   const dropdown = showDropdown
     ? createPortal(
         <div
+          ref={el => { dropdownRef.current = el; }}
           className="places-dropdown"
           style={{ ...css.dropdown, top: dropdownRect.top, left: dropdownRect.left, width: dropdownRect.width }}
           onScroll={e => {
@@ -207,10 +282,11 @@ export default function PlacesSearchInput({
           {suggestions.map((prediction, i) => (
             <div
               key={i}
-              style={css.item}
+              data-idx={i}
+              style={{ ...css.item, background: selectedIndex === i ? colors.gray200 : "transparent" }}
               onMouseDown={() => handleSelectSuggestion(prediction)}
-              onMouseEnter={e => ((e.currentTarget as HTMLDivElement).style.background = colors.gray200)}
-              onMouseLeave={e => ((e.currentTarget as HTMLDivElement).style.background = "transparent")}
+              onMouseEnter={() => setSelectedIndex(i)}
+              onMouseLeave={() => setSelectedIndex(-1)}
             >
               <span style={css.iconWrap}>{PIN_ICON}</span>
               <div style={css.textWrap}>
@@ -225,10 +301,11 @@ export default function PlacesSearchInput({
           ))}
           {inputValue.trim().length > 0 && (
             <div
-              style={{ ...css.item, alignItems: "center", padding: "12px 12px 8px" }}
+              data-idx={suggestions.length}
+              style={{ ...css.item, alignItems: "center", padding: "12px 12px 8px", background: selectedIndex === suggestions.length ? colors.gray200 : "transparent" }}
               onMouseDown={handleManualSelect}
-              onMouseEnter={e => ((e.currentTarget as HTMLDivElement).style.background = colors.gray200)}
-              onMouseLeave={e => ((e.currentTarget as HTMLDivElement).style.background = "transparent")}
+              onMouseEnter={() => setSelectedIndex(suggestions.length)}
+              onMouseLeave={() => setSelectedIndex(-1)}
             >
               <span style={{ ...css.iconWrap, color: colors.primary, paddingTop: 0 }}>
                 {PLUS_ICON}
@@ -250,6 +327,7 @@ export default function PlacesSearchInput({
     <View ref={containerRef} style={styles.container}>
       <View style={styles.inputWrapper}>
         <TextInput
+          ref={inputRef}
           style={[styles.input, disabled && styles.inputDisabled]}
           placeholder={placeholder}
           placeholderTextColor={colors.gray600}
@@ -261,7 +339,7 @@ export default function PlacesSearchInput({
               setOpen(true);
             }
           }}
-          onBlur={() => setTimeout(() => setOpen(false), 150)}
+          onBlur={() => setTimeout(() => { setOpen(false); setSelectedIndex(-1); }, 150)}
           editable={!disabled}
           autoComplete="off"
         />
