@@ -64,11 +64,27 @@ export default function PlacesSearchInput({
   const [dropdownRect, setDropdownRect] = useState({ top: 0, left: 0, width: 0 });
   const containerRef = useRef<View>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const scrollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const onSelectRef = useRef(onSelect);
 
   useEffect(() => {
     onSelectRef.current = onSelect;
   });
+
+  useEffect(() => {
+    const id = "places-dropdown-style";
+    if (document.getElementById(id)) return;
+    const style = document.createElement("style");
+    style.id = id;
+    style.textContent = `
+      .places-dropdown::-webkit-scrollbar { width: 4px; }
+      .places-dropdown::-webkit-scrollbar-thumb { background: transparent; border-radius: 4px; transition: background 0.4s; }
+      .places-dropdown.scrolling::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.15); }
+      .places-dropdown { scrollbar-width: thin; scrollbar-color: transparent transparent; }
+      .places-dropdown.scrolling { scrollbar-color: rgba(0,0,0,0.15) transparent; }
+    `;
+    document.head.appendChild(style);
+  }, []);
 
   useEffect(() => {
     setInputValue(value ?? "");
@@ -170,7 +186,16 @@ export default function PlacesSearchInput({
 
   const dropdown = showDropdown
     ? createPortal(
-        <div style={{ ...css.dropdown, top: dropdownRect.top, left: dropdownRect.left, width: dropdownRect.width }}>
+        <div
+          className="places-dropdown"
+          style={{ ...css.dropdown, top: dropdownRect.top, left: dropdownRect.left, width: dropdownRect.width }}
+          onScroll={e => {
+            const el = e.currentTarget;
+            el.classList.add("scrolling");
+            if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current);
+            scrollTimeoutRef.current = setTimeout(() => el.classList.remove("scrolling"), 800);
+          }}
+        >
           {suggestions.length > 0 && (
             <div style={css.header}>검색 결과 · {suggestions.length}</div>
           )}
