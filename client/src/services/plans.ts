@@ -16,6 +16,9 @@ export type ExportItinerary = {
   startTime: string;
   endTime: string;
   location?: string | null;
+  locationLatitude?: number | null;
+  locationLongitude?: number | null;
+  locationFromGoogle?: boolean | null;
   city?: string | null;
   country?: string | null;
 };
@@ -40,6 +43,10 @@ export type ExportAccommodation = {
   checkoutDate: string;
   checkinTime: string;
   checkoutTime: string;
+  locationName?: string | null;
+  locationLatitude?: number | null;
+  locationLongitude?: number | null;
+  locationFromGoogle?: boolean | null;
 };
 
 export type ExportExpense = {

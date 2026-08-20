@@ -3,21 +3,23 @@ import { ExpenseCategory, ExpenseCurrency } from "@/types/expense";
 import dayjs from "dayjs";
 import type { Dispatch, SetStateAction } from "react";
 
+type ItineraryFormData = {
+  title: string;
+  description: string;
+  country: string;
+  city: string;
+  location: string;
+  locationId?: number | undefined;
+  itineraryDate: string;
+  startTime: string;
+  endTime: string;
+  [key: string]: unknown;
+};
+
 /** AI 분석 모달 저장 시 draft → 일정 패널 `formData` / `draftExpenses` 반영 */
 export function applyItineraryDraftFromAi(
   draft: AiDocumentItemDraft,
-  setFormData: Dispatch<
-    SetStateAction<{
-      title: string;
-      description: string;
-      country: string;
-      city: string;
-      location: string;
-      itineraryDate: string;
-      startTime: string;
-      endTime: string;
-    }>
-  >,
+  setFormData: Dispatch<SetStateAction<ItineraryFormData>>,
   setDraftExpenses: Dispatch<SetStateAction<any[]>>,
 ): boolean {
   if (draft.itemType !== "itinerary") return false;
@@ -192,6 +194,7 @@ export function applyFlightDraftFromAi(
 export type AccommodationFormState = {
   name: string;
   place: string;
+  locationId?: number | undefined;
   country: string;
   city: string;
   checkin_date: string;
@@ -199,6 +202,7 @@ export type AccommodationFormState = {
   checkin_time: string;
   checkout_time: string;
   description: string;
+  [key: string]: unknown;
 };
 
 /** AI 분석 모달 저장 시 draft → 숙박 패널 `formData` / `expenseData` 반영 */

@@ -4,6 +4,7 @@ import type {
   ExportFlight,
   ExportItinerary,
 } from "@/services/plans";
+import MiniMapView from "@/ui/components/MiniMapView";
 import { colors } from "@/ui/tokens/colors";
 import { textStyles } from "@/ui/tokens/typography";
 import dayjs from "dayjs";
@@ -133,6 +134,13 @@ export default function ViewerDetailPanel({
             <InfoRow label="시간" value={`${startT} - ${endT}`} />
             <LinkedExpenses expenses={linked} />
           </View>
+          {it.locationFromGoogle && it.locationLatitude != null && it.locationLongitude != null && (
+            <MiniMapView
+              latitude={it.locationLatitude}
+              longitude={it.locationLongitude}
+              name={it.location ?? undefined}
+            />
+          )}
           <PrivacyNotice />
         </ScrollView>
       </PanelLayout>
@@ -197,6 +205,7 @@ export default function ViewerDetailPanel({
         >
           <Text style={styles.detailTitle}>{acc.name}</Text>
           <View style={styles.infoTable}>
+            {acc.locationName ? <InfoRow label="장소" value={acc.locationName} /> : null}
             <InfoRow
               label="체크인"
               value={`${formatDate(acc.checkinDate)}  ${checkinT}`}
@@ -207,6 +216,13 @@ export default function ViewerDetailPanel({
             />
             <LinkedExpenses expenses={linked} />
           </View>
+          {acc.locationFromGoogle && acc.locationLatitude != null && acc.locationLongitude != null && (
+            <MiniMapView
+              latitude={acc.locationLatitude}
+              longitude={acc.locationLongitude}
+              name={acc.locationName ?? undefined}
+            />
+          )}
           <PrivacyNotice />
         </ScrollView>
       </PanelLayout>

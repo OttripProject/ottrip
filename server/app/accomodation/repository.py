@@ -15,6 +15,7 @@ class AccommodationRepository:
     async def save(self, *, accommodation: Accommodation) -> Accommodation:
         self.session.add(accommodation)
         await self.session.flush()
+        await self.session.refresh(accommodation, attribute_names=["location"])
         return accommodation
 
     async def find_by_id(self, *, accommodation_id: int) -> Accommodation | None:

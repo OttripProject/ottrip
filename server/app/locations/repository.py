@@ -3,7 +3,7 @@ from sqlalchemy import select
 from app.database.deps import SessionDep
 
 from .models import Location
-from .schemas import LocationCreate
+from .schemas import LocationCreate, LocationUpdate
 
 
 async def get_location(session: SessionDep, location_id: int) -> Location | None:
@@ -21,9 +21,10 @@ async def get_location_by_place_id(
 
 
 async def create_location(session: SessionDep, data: LocationCreate) -> Location:
-    existing = await get_location_by_place_id(session, data.place_id)
-    if existing:
-        return existing
+    if data.place_id:
+        existing = await get_location_by_place_id(session, data.place_id)
+        if existing:
+            return existing
 
     location = Location(
         name=data.name,
@@ -31,7 +32,24 @@ async def create_location(session: SessionDep, data: LocationCreate) -> Location
         latitude=data.latitude,
         longitude=data.longitude,
         address=data.address,
+        from_google=data.from_google,
     )
     session.add(location)
+    await session.flush()
+    return location
+
+
+async def update_location(
+    session: SessionDep, location_id: int, data: LocationUpdate
+) -> Location | None:
+    location = await get_location(session, location_id)
+    if not location:
+        return None
+
+    location.name = data.name
+    location.latitude = data.latitude
+    location.longitude = data.longitude
+    location.address = data.address
+
     await session.flush()
     return location

@@ -1,4 +1,6 @@
-from sqlalchemy import Float, String
+from datetime import datetime
+
+from sqlalchemy import DateTime, Float, String, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models import Base
@@ -23,3 +25,9 @@ class Location(Base):
     longitude: Mapped[float] = mapped_column(Float, nullable=False)
 
     address: Mapped[str | None] = mapped_column(String, nullable=True, default=None)
+
+    from_google: Mapped[bool] = mapped_column(default=True, nullable=False)
+
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, server_default=func.now(), onupdate=func.now(), init=False
+    )

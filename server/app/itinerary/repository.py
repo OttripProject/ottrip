@@ -15,6 +15,7 @@ class ItineraryRepository:
     async def save(self, *, itinerary: Itinerary) -> Itinerary:
         self.session.add(itinerary)
         await self.session.flush()
+        await self.session.refresh(itinerary, attribute_names=["location"])
         return itinerary
 
     async def find_by_id(self, *, itinerary_id: int) -> Itinerary | None:

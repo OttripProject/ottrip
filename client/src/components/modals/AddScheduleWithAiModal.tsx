@@ -411,7 +411,6 @@ export default function AddScheduleWithAiModal({
             description: getVal(v, "description") || undefined,
             country: getVal(v, "country") || undefined,
             city: getVal(v, "city") || undefined,
-            location: getVal(v, "location") || undefined,
             itineraryDate: date,
             startTime: startTime.substring(0, 5),
             endTime: endTime.substring(0, 5),
@@ -490,7 +489,6 @@ export default function AddScheduleWithAiModal({
           const validCurs = Object.values(ExpenseCurrency) as string[];
           const created = await accommodationsApi.createAccommodation({
             name: getVal(v, "name") || "숙소",
-            place: getVal(v, "place") || undefined,
             country: getVal(v, "country") || undefined,
             city: getVal(v, "city") || undefined,
             checkinDate,

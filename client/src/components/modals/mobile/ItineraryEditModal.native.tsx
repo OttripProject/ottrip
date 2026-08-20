@@ -211,7 +211,7 @@ export default function ItineraryEditModal({
             description: latestItinerary.description || "",
             country: latestItinerary.country || "",
             city: latestItinerary.city || "",
-            location: latestItinerary.location || "",
+            location: latestItinerary.location?.name || "",
             itineraryDate:
               latestItinerary.itineraryDate || dayjs().format("YYYY-MM-DD"),
             startTime: latestItinerary.startTime
@@ -240,7 +240,7 @@ export default function ItineraryEditModal({
             description: itinerary.description || "",
             country: itinerary.country || "",
             city: itinerary.city || "",
-            location: itinerary.location || "",
+            location: itinerary.location?.name || "",
             itineraryDate:
               itinerary.itineraryDate || dayjs().format("YYYY-MM-DD"),
             startTime: itinerary.startTime

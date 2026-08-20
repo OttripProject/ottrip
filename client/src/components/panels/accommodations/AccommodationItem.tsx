@@ -7,6 +7,7 @@ import { useFilePicker } from "@/hooks/useFilePicker";
 import { accommodationsApi } from "@/services/accommodations";
 import { analyzeDocumentUpload } from "@/services/aiDocument";
 import { attachmentsApi } from "@/services/attachments";
+import { isLocationStale, locationsApi } from "@/services/locations";
 import type {
   AiDocumentItemDraft,
   Attachment,
@@ -18,6 +19,8 @@ import { ExpenseCurrency, currencyLabels } from "@/types/expense";
 import AttachmentSection from "@/ui/components/attachmentSection";
 import type { AiAttachmentAnalyzeSelection } from "@/ui/components/attachmentSection.types";
 import { pendingAiFileKey } from "@/ui/components/attachmentSection.types";
+import PlacesSearchInput from "@/ui/components/PlacesSearchInput";
+import type { PlaceResult } from "@/ui/components/PlacesSearchInput";
 import Input from "@/ui/components/input/Input";
 import { CityPicker, CountryPicker, TimePicker } from "@/ui/components/pickers";
 import WarningBanner from "@/ui/components/toast/warning";
@@ -137,7 +140,8 @@ export default function AccommodationItem({
   const [warningMessage, setWarningMessage] = useState("");
   const [formData, setFormData] = useState({
     name: accommodation?.name || "",
-    place: accommodation?.place || "",
+    place: accommodation?.location?.name || "",
+    locationId: accommodation?.location?.id as number | undefined,
     country: accommodation?.country || initialAutoFill?.country || "",
     city: accommodation?.city || initialAutoFill?.city || "",
     checkin_date:
@@ -224,7 +228,8 @@ export default function AccommodationItem({
         : null;
       setFormData({
         name: accommodation.name || "",
-        place: accommodation.place || "",
+        place: accommodation.location?.name || "",
+        locationId: accommodation.location?.id,
         country: accommodation.country || segmentFill?.country || "",
         city: accommodation.city || segmentFill?.city || "",
         checkin_date: checkinDate,
@@ -482,7 +487,7 @@ export default function AccommodationItem({
           accommodation.id,
           {
             name: formData.name,
-            place: formData.place || undefined,
+            locationId: formData.locationId,
             country: formData.country?.trim() || undefined,
             city: formData.city?.trim() || undefined,
             checkinDate: formData.checkin_date,
@@ -504,7 +509,7 @@ export default function AccommodationItem({
         savedAccommodation = await accommodationsApi.createAccommodation({
           planId: planId,
           name: formData.name,
-          place: formData.place || undefined,
+          locationId: formData.locationId,
           country: formData.country?.trim() || undefined,
           city: formData.city?.trim() || undefined,
           checkinDate: formData.checkin_date,
@@ -654,10 +659,47 @@ export default function AccommodationItem({
 
   const applyAiAnalyzeDraftToForm = useCallback(
     (draft: AiDocumentItemDraft) => {
-      applyAccommodationDraftFromAi(draft, setFormData, setExpenseData);
+      applyAccommodationDraftFromAi(draft, setFormData as any, setExpenseData);
     },
     [],
   );
+
+  useEffect(() => {
+    if (!accommodation?.location || !isLocationStale(accommodation.location)) return;
+    const loc = accommodation.location;
+    (async () => {
+      try {
+        const { PlacesService } = await (google.maps as any).importLibrary("places");
+        const map = new google.maps.Map(document.createElement("div"));
+        const service = new PlacesService(map);
+        service.getDetails({ placeId: loc.placeId, fields: ["name", "geometry", "formatted_address"] }, async (result: any, status: any) => {
+          if (status !== "OK" || !result) return;
+          await locationsApi.updateLocation(loc.id, {
+            name: result.name ?? loc.name,
+            latitude: result.geometry?.location?.lat() ?? loc.latitude,
+            longitude: result.geometry?.location?.lng() ?? loc.longitude,
+            address: result.formatted_address ?? loc.address,
+          });
+        });
+      } catch {}
+    })();
+  }, [accommodation?.location?.id]);
+
+  const handlePlaceSelect = useCallback(async (place: PlaceResult) => {
+    try {
+      const location = await locationsApi.createLocation({
+        name: place.name,
+        placeId: place.placeId,
+        latitude: place.latitude,
+        longitude: place.longitude,
+        address: place.address,
+        fromGoogle: place.fromGoogle,
+      });
+      setFormData(prev => ({ ...prev, place: location.name, locationId: location.id }));
+    } catch {
+      setFormData(prev => ({ ...prev, place: place.name, locationId: undefined }));
+    }
+  }, []);
 
   return (
     <View style={styles.wrapper}>
@@ -764,17 +806,35 @@ export default function AccommodationItem({
 
           <View style={styles.inputGroup}>
             <Text style={styles.label}>장소</Text>
-            <Input
-              variant="filled"
-              placeholder={PLACEHOLDERS.accommodation.place}
-              value={formData.place}
-              onChangeText={text =>
-                !readOnly && setFormData({ ...formData, place: text })
-              }
-              style={readOnly ? styles.readOnlyInput : styles.input}
-              placeholderTextColor={colors.gray600}
-              editable={!readOnly}
-            />
+            {Platform.OS === "web" ? (
+              <>
+                <PlacesSearchInput
+                  value={formData.place}
+                  onSelect={handlePlaceSelect}
+                  onClear={() => setFormData(prev => ({ ...prev, place: "", locationId: undefined }))}
+                  placeholder={PLACEHOLDERS.accommodation.place}
+                  disabled={readOnly}
+                  readOnly={readOnly}
+                  initialCoords={
+                    accommodation?.location?.fromGoogle
+                      ? { lat: accommodation.location.latitude, lng: accommodation.location.longitude }
+                      : undefined
+                  }
+                />
+              </>
+            ) : (
+              <Input
+                variant="filled"
+                placeholder={PLACEHOLDERS.accommodation.place}
+                value={formData.place}
+                onChangeText={text =>
+                  !readOnly && setFormData({ ...formData, place: text })
+                }
+                style={readOnly ? styles.readOnlyInput : styles.input}
+                placeholderTextColor={colors.gray600}
+                editable={!readOnly}
+              />
+            )}
           </View>
 
           <View
