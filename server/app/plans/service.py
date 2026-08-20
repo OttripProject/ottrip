@@ -440,6 +440,11 @@ class PlanService:
                     country=it.country,
                     city=it.city,
                     location=it.location.name if it.location else None,
+                    location_latitude=it.location.latitude if it.location else None,
+                    location_longitude=it.location.longitude if it.location else None,
+                    location_from_google=it.location.from_google
+                    if it.location
+                    else None,
                     itinerary_date=it.itinerary_date,
                     start_time=it.start_time,
                     end_time=it.end_time,
@@ -473,6 +478,12 @@ class PlanService:
                     checkout_date=acc.checkout_date,
                     checkin_time=acc.checkin_time,
                     checkout_time=acc.checkout_time,
+                    location_name=acc.location.name if acc.location else None,
+                    location_latitude=acc.location.latitude if acc.location else None,
+                    location_longitude=acc.location.longitude if acc.location else None,
+                    location_from_google=acc.location.from_google
+                    if acc.location
+                    else None,
                 )
                 for acc in plan.accommodations
                 if not acc.is_deleted
