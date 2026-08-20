@@ -174,6 +174,11 @@ export default function PlacesSearchInput({
           {suggestions.length > 0 && (
             <div style={css.header}>검색 결과 · {suggestions.length}</div>
           )}
+          {!loading && suggestions.length === 0 && inputValue.trim().length > 0 && (
+            <div style={css.noResult}>
+              '{inputValue.trim()}' 검색 결과가 없어요. 입력한 이름 그대로 저장할 수 있어요.
+            </div>
+          )}
           {suggestions.map((prediction, i) => (
             <div
               key={i}
@@ -269,10 +274,19 @@ const css: Record<string, React.CSSProperties> = {
     zIndex: 99999,
   },
   header: {
-    font: `600 11px / 16px Pretendard`,
+    fontFamily: textStyles.h9.fontFamily as string,
+    fontSize: textStyles.h9.fontSize,
+    lineHeight: `${textStyles.h9.lineHeight}px`,
     color: colors.gray600,
     letterSpacing: "0.14em",
     padding: "8px 12px 4px",
+  },
+  noResult: {
+    fontFamily: textStyles.body5.fontFamily as string,
+    fontSize: textStyles.body5.fontSize,
+    lineHeight: `${textStyles.body5.lineHeight}px`,
+    color: colors.gray600,
+    padding: "12px 12px 4px",
   },
   item: {
     display: "flex",
@@ -295,21 +309,27 @@ const css: Record<string, React.CSSProperties> = {
     minWidth: 0,
   },
   mainText: {
-    font: `600 13px / 20px Pretendard`,
+    fontFamily: textStyles.h7.fontFamily as string,
+    fontSize: textStyles.h7.fontSize,
+    lineHeight: `${textStyles.h7.lineHeight}px`,
     color: colors.gray900,
     overflow: "hidden",
     textOverflow: "ellipsis",
     whiteSpace: "nowrap",
   },
   subText: {
-    font: `400 11px / 16px Pretendard`,
+    fontFamily: textStyles.body6.fontFamily as string,
+    fontSize: textStyles.body6.fontSize,
+    lineHeight: `${textStyles.body6.lineHeight}px`,
     color: colors.gray700,
     overflow: "hidden",
     textOverflow: "ellipsis",
     whiteSpace: "nowrap",
   },
   footer: {
-    font: `400 11px / 16px Pretendard`,
+    fontFamily: textStyles.body6.fontFamily as string,
+    fontSize: textStyles.body6.fontSize,
+    lineHeight: `${textStyles.body6.lineHeight}px`,
     color: colors.gray400,
     padding: "4px 12px 8px",
     textAlign: "right",
