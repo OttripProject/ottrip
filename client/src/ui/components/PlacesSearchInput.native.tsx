@@ -1,8 +1,6 @@
 import { colors, radii, spacing, textStyles } from "@/ui/tokens";
-import { useEffect, useRef, useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
-import { GooglePlacesAutocomplete } from "react-native-google-places-autocomplete";
-import type { GooglePlacesAutocompleteRef } from "react-native-google-places-autocomplete";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import MiniMapView from "@/ui/components/MiniMapView";
 import LocationIcon from "../../../assets/week_bar_location.svg";
 import XIcon from "../../../assets/mobile_x.svg";
@@ -35,6 +33,46 @@ const manualPlaceId = (name: string) => {
 
 const apiKey = process.env.EXPO_PUBLIC_GOOGLE_PLCAES_API_KEY ?? "";
 
+type Suggestion = {
+  placeId: string;
+  mainText: string;
+  secondaryText: string;
+};
+
+async function fetchSuggestions(input: string): Promise<Suggestion[]> {
+  const res = await fetch("https://places.googleapis.com/v1/places:autocomplete", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Goog-Api-Key": apiKey,
+    },
+    body: JSON.stringify({ input, languageCode: "ko" }),
+  });
+  if (!res.ok) return [];
+  const data = await res.json();
+  return (data.suggestions ?? []).map((s: any) => ({
+    placeId: s.placePrediction.placeId,
+    mainText: s.placePrediction.structuredFormat?.mainText?.text ?? s.placePrediction.text?.text ?? "",
+    secondaryText: s.placePrediction.structuredFormat?.secondaryText?.text ?? "",
+  }));
+}
+
+async function fetchPlaceDetails(placeId: string): Promise<{ latitude: number; longitude: number; address: string } | null> {
+  const res = await fetch(`https://places.googleapis.com/v1/places/${placeId}`, {
+    headers: {
+      "X-Goog-Api-Key": apiKey,
+      "X-Goog-FieldMask": "location,formattedAddress",
+    },
+  });
+  if (!res.ok) return null;
+  const data = await res.json();
+  return {
+    latitude: data.location?.latitude ?? 0,
+    longitude: data.location?.longitude ?? 0,
+    address: data.formattedAddress ?? "",
+  };
+}
+
 export default function PlacesSearchInput({
   value,
   onSelect,
@@ -44,16 +82,21 @@ export default function PlacesSearchInput({
   readOnly,
   initialCoords,
 }: PlacesSearchInputProps) {
-  const acRef = useRef<GooglePlacesAutocompleteRef>(null);
+  const [text, setText] = useState(value ?? "");
+  const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
+  const [showList, setShowList] = useState(false);
   const [mapCoords, setMapCoords] = useState<{ lat: number; lng: number; name: string } | null>(
     initialCoords && value ? { ...initialCoords, name: value } : null,
   );
-  const [isClearable, setIsClearable] = useState(!!value);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    acRef.current?.setAddressText(value ?? "");
-    setIsClearable(!!value);
-    if (!value) setMapCoords(null);
+    setText(value ?? "");
+    if (!value) {
+      setSuggestions([]);
+      setShowList(false);
+      setMapCoords(null);
+    }
   }, [value]);
 
   useEffect(() => {
@@ -62,11 +105,59 @@ export default function PlacesSearchInput({
     }
   }, [initialCoords?.lat, initialCoords?.lng]);
 
+  const handleChangeText = useCallback((t: string) => {
+    setText(t);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    if (t.length === 0) {
+      setSuggestions([]);
+      setShowList(false);
+      return;
+    }
+    debounceRef.current = setTimeout(async () => {
+      const results = await fetchSuggestions(t);
+      setSuggestions(results);
+      setShowList(results.length > 0);
+    }, 350);
+  }, []);
+
+  const handleSelect = async (suggestion: Suggestion) => {
+    setText(suggestion.mainText);
+    setSuggestions([]);
+    setShowList(false);
+    const details = await fetchPlaceDetails(suggestion.placeId);
+    const lat = details?.latitude ?? 0;
+    const lng = details?.longitude ?? 0;
+    setMapCoords({ lat, lng, name: suggestion.mainText });
+    onSelect({
+      name: suggestion.mainText,
+      placeId: suggestion.placeId,
+      latitude: lat,
+      longitude: lng,
+      address: details?.address,
+      fromGoogle: true,
+    });
+  };
+
   const handleClear = () => {
-    acRef.current?.clear();
+    setText("");
+    setSuggestions([]);
+    setShowList(false);
     setMapCoords(null);
-    setIsClearable(false);
     onClear?.();
+  };
+
+  const handleSubmit = () => {
+    const trimmed = text.trim();
+    if (!trimmed) return;
+    setSuggestions([]);
+    setShowList(false);
+    onSelect({
+      name: trimmed,
+      placeId: manualPlaceId(trimmed),
+      latitude: 0,
+      longitude: 0,
+      fromGoogle: false,
+    });
   };
 
   if (readOnly) {
@@ -84,99 +175,51 @@ export default function PlacesSearchInput({
 
   return (
     <View style={styles.container}>
-      <View style={styles.autocompleteWrapper}>
-        <GooglePlacesAutocomplete
-          ref={acRef}
+      <View style={styles.inputWrapper}>
+        <TextInput
+          value={text}
+          onChangeText={handleChangeText}
+          onSubmitEditing={handleSubmit}
           placeholder={placeholder}
-          fetchDetails
-          onPress={(data, details) => {
-            if (!details) return;
-            const lat = details.geometry.location.lat;
-            const lng = details.geometry.location.lng;
-            const name = data.structured_formatting.main_text || data.description;
-            setMapCoords({ lat, lng, name });
-            setIsClearable(true);
-            onSelect({
-              name,
-              placeId: data.place_id,
-              latitude: lat,
-              longitude: lng,
-              address: details.formatted_address,
-              fromGoogle: true,
-            });
-          }}
-          query={{ key: apiKey, language: "ko" }}
-          enablePoweredByContainer={false}
-          minLength={1}
-          debounce={350}
-          keyboardShouldPersistTaps="handled"
-          listViewDisplayed="auto"
-          disableScroll
-          textInputProps={{
-            editable: !disabled,
-            placeholderTextColor: colors.gray600,
-            clearButtonMode: "never",
-            style: styles.textInput,
-            onChangeText: (text) => setIsClearable(text.length > 0),
-            onSubmitEditing: (e) => {
-              const text = e.nativeEvent.text.trim();
-              if (!text) return;
-              setMapCoords(null);
-              setIsClearable(true);
-              onSelect({
-                name: text,
-                placeId: manualPlaceId(text),
-                latitude: 0,
-                longitude: 0,
-                fromGoogle: false,
-              });
-            },
-            returnKeyType: "search",
-          }}
-          renderRightButton={() => (
-            <View style={styles.iconButton}>
-              {isClearable ? (
-                <Pressable onPress={handleClear} hitSlop={8}>
-                  <View style={styles.clearIcon}>
-                    <XIcon
-                      width={12}
-                      height={12}
-                      color={colors.white}
-                    />
+          placeholderTextColor={colors.gray600}
+          editable={!disabled}
+          returnKeyType="search"
+          style={styles.textInput}
+        />
+        <View style={styles.iconButton}>
+          {text.length > 0 ? (
+            <Pressable onPress={handleClear} hitSlop={8}>
+              <View style={styles.clearIcon}>
+                <XIcon width={12} height={12} color={colors.white} />
+              </View>
+            </Pressable>
+          ) : (
+            <SearchIcon width={16} height={16} />
+          )}
+        </View>
+      </View>
+
+      {showList && (
+        <View style={styles.listView}>
+          <ScrollView keyboardShouldPersistTaps="handled" nestedScrollEnabled>
+            {suggestions.map((item, index) => (
+              <View key={item.placeId}>
+                <Pressable onPress={() => handleSelect(item)} style={styles.row}>
+                  <LocationIcon width={16} height={16} style={{ marginTop: 2 }} />
+                  <View style={styles.rowText}>
+                    <Text style={styles.mainText} numberOfLines={1}>{item.mainText}</Text>
+                    {!!item.secondaryText && (
+                      <Text style={styles.subText} numberOfLines={1}>{item.secondaryText}</Text>
+                    )}
                   </View>
                 </Pressable>
-              ) : (
-                <SearchIcon width={16} height={16} />
-              )}
-            </View>
-          )}
-          styles={{
-            container: { flex: 0 },
-            textInputContainer: styles.textInputContainer,
-            textInput: styles.textInput,
-            listView: styles.listView,
-            row: styles.row,
-            description: styles.description,
-            separator: styles.separator,
-            poweredContainer: { display: "none" } as any,
-          }}
-          renderRow={(data) => (
-            <View style={styles.rowContent}>
-              <LocationIcon width={16} height={16} style={{ marginTop: 2 }} />
-              <View style={styles.rowText}>
-                <Text style={styles.mainText} numberOfLines={1}>
-                  {data.structured_formatting.main_text}
-                </Text>
-                {!!data.structured_formatting.secondary_text && (
-                  <Text style={styles.subText} numberOfLines={1}>
-                    {data.structured_formatting.secondary_text}
-                  </Text>
-                )}
+                {index < suggestions.length - 1 && <View style={styles.separator} />}
               </View>
-            </View>
-          )}
-        />
-      </View>
+            ))}
+          </ScrollView>
+        </View>
+      )}
+
       {mapCoords && (
         <MiniMapView latitude={mapCoords.lat} longitude={mapCoords.lng} name={mapCoords.name} />
       )}
@@ -188,26 +231,20 @@ const styles = StyleSheet.create({
   container: {
     width: "100%",
   },
-  autocompleteWrapper: {
+  inputWrapper: {
+    position: "relative",
     zIndex: 10,
   },
-  textInputContainer: {
-    height: 44,
-    backgroundColor: "transparent",
-    paddingHorizontal: 0,
-  },
   textInput: {
-    flex: 1,
+    height: 44,
     backgroundColor: colors.gray200,
     borderRadius: 12,
-    paddingVertical: 12,
     paddingLeft: 16,
     paddingRight: 40,
     fontFamily: textStyles.body4.fontFamily,
     fontSize: textStyles.body4.fontSize,
     lineHeight: 0,
     color: colors.black,
-    marginBottom: 0,
   },
   iconButton: {
     position: "absolute",
@@ -238,14 +275,10 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
+    maxHeight: 220,
+    zIndex: 100,
   },
   row: {
-    paddingHorizontal: 0,
-    paddingVertical: 0,
-    height: "auto" as any,
-    backgroundColor: "transparent",
-  },
-  rowContent: {
     flexDirection: "row",
     alignItems: "flex-start",
     gap: 10,
@@ -264,10 +297,6 @@ const styles = StyleSheet.create({
     ...textStyles.body6,
     color: colors.gray700,
     marginTop: 1,
-  },
-  description: {
-    ...textStyles.body4,
-    color: colors.gray900,
   },
   separator: {
     height: 1,
