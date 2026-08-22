@@ -28,6 +28,8 @@ import FullScreenModal from "@/ui/components/FullScreenModal.native";
 import { TimeModal } from "@/ui/components/TimeModal.native";
 import AttachmentSection from "@/ui/components/attachmentSection.native";
 import Input from "@/ui/components/input/Input";
+import PlacesSearchInput, { type PlaceResult } from "@/ui/components/PlacesSearchInput";
+import { locationsApi } from "@/services/locations";
 import { colors } from "@/ui/tokens/colors";
 import { textStyles, typography } from "@/ui/tokens/typography";
 import { formatAmountWithCommas, normalizeAmount } from "@/utils/amountUtils";
@@ -115,6 +117,7 @@ export default function ItineraryEditModal({
     country: "",
     city: "",
     location: "",
+    locationId: undefined as number | undefined,
     itineraryDate: dayjs().format("YYYY-MM-DD"),
     startTime: "09:00",
     endTime: "10:00",
@@ -212,6 +215,7 @@ export default function ItineraryEditModal({
             country: latestItinerary.country || "",
             city: latestItinerary.city || "",
             location: latestItinerary.location?.name || "",
+            locationId: latestItinerary.location?.id,
             itineraryDate:
               latestItinerary.itineraryDate || dayjs().format("YYYY-MM-DD"),
             startTime: latestItinerary.startTime
@@ -241,6 +245,7 @@ export default function ItineraryEditModal({
             country: itinerary.country || "",
             city: itinerary.city || "",
             location: itinerary.location?.name || "",
+            locationId: itinerary.location?.id,
             itineraryDate:
               itinerary.itineraryDate || dayjs().format("YYYY-MM-DD"),
             startTime: itinerary.startTime
@@ -263,6 +268,7 @@ export default function ItineraryEditModal({
         country: defaultCountry || "",
         city: defaultCity || "",
         location: "",
+        locationId: undefined,
         itineraryDate: initDate,
         startTime: "09:00",
         endTime: "10:00",
@@ -352,13 +358,29 @@ export default function ItineraryEditModal({
     if (visible && pendingAiResult) {
       const draft = pendingAiResult.result.draft;
       if (draft?.itemType === "itinerary") {
-        applyItineraryDraftFromAi(draft, setFormData, () => {});
+        applyItineraryDraftFromAi(draft, setFormData as any, () => {});
       }
       if (pendingAiResult.pendingFiles?.length) {
         setPendingFiles(pendingAiResult.pendingFiles);
       }
     }
   }, [visible, pendingAiResult]);
+
+  const handlePlaceSelect = async (place: PlaceResult) => {
+    try {
+      const loc = await locationsApi.createLocation({
+        name: place.name,
+        placeId: place.placeId,
+        latitude: place.latitude,
+        longitude: place.longitude,
+        address: place.address,
+        fromGoogle: place.fromGoogle,
+      });
+      setFormData(prev => ({ ...prev, location: loc.name, locationId: loc.id }));
+    } catch {
+      setFormData(prev => ({ ...prev, location: place.name, locationId: undefined }));
+    }
+  };
 
   const handleExpenseAmountChange = (text: string) => {
     const formatted = formatAmountWithCommas(text);
@@ -508,6 +530,7 @@ export default function ItineraryEditModal({
           { paddingBottom: keyboardHeight || 24 },
         ]}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
       >
         {/* 입력 필드들 */}
         <View style={styles.form}>
@@ -577,12 +600,16 @@ export default function ItineraryEditModal({
           {/* 장소 */}
           <View style={styles.inputGroup}>
             <Text style={styles.label}>장소 (주소)</Text>
-            <Input
+            <PlacesSearchInput
               value={formData.location}
-              onChangeText={text =>
-                setFormData({ ...formData, location: text })
+              onSelect={handlePlaceSelect}
+              onClear={() => setFormData(prev => ({ ...prev, location: "", locationId: undefined }))}
+              placeholder="장소를 검색하세요."
+              initialCoords={
+                itinerary?.location?.fromGoogle
+                  ? { lat: itinerary.location.latitude, lng: itinerary.location.longitude }
+                  : undefined
               }
-              style={[styles.input, !itinerary && styles.inputBorderless]}
             />
           </View>
 
@@ -876,7 +903,7 @@ export default function ItineraryEditModal({
         if (inferredType !== "itinerary" && onRouteMismatchResult && aiModalResult) {
           onRouteMismatchResult({ ...aiModalResult, draft }, aiAnalyzeFileName, pendingFiles);
         } else if (draft) {
-          applyItineraryDraftFromAi(draft, setFormData, () => {});
+          applyItineraryDraftFromAi(draft, setFormData as any, () => {});
         }
         setAiModalResult(null);
         setAiApplyLabel(undefined);

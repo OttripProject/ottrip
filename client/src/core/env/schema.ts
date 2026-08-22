@@ -12,6 +12,8 @@ export const envSchema = z.object({
   EXPO_PUBLIC_APP_VERSION: z.string().optional(),
   EXPO_PUBLIC_BUILD_NUMBER: z.string().optional(),
   EXPO_PUBLIC_GOOGLE_MAPS_API_KEY_WEB: z.string().optional(),
+  EXPO_PUBLIC_GOOGLE_MAPS_API_KEY_IOS: z.string().optional(),
+  EXPO_PUBLIC_GOOGLE_MAPS_API_KEY_ANDROID: z.string().optional(),
 });
 
 export type PublicEnv = z.infer<typeof envSchema>;
@@ -36,4 +38,6 @@ export const loadPublicEnv = (): PublicEnv =>
     EXPO_PUBLIC_APP_VERSION: process.env.EXPO_PUBLIC_APP_VERSION,
     EXPO_PUBLIC_BUILD_NUMBER: process.env.EXPO_PUBLIC_BUILD_NUMBER,
     EXPO_PUBLIC_GOOGLE_MAPS_API_KEY_WEB: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY_WEB,
+    EXPO_PUBLIC_GOOGLE_MAPS_API_KEY_IOS: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY_IOS,
+    EXPO_PUBLIC_GOOGLE_MAPS_API_KEY_ANDROID: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY_ANDROID,
   });
