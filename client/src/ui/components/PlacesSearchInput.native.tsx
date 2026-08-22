@@ -1,6 +1,6 @@
 import { colors, radii, spacing, textStyles } from "@/ui/tokens";
 import { useEffect, useRef, useState } from "react";
-import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import { GooglePlacesAutocomplete } from "react-native-google-places-autocomplete";
 import type { GooglePlacesAutocompleteRef } from "react-native-google-places-autocomplete";
 import MiniMapView from "@/ui/components/MiniMapView";
@@ -33,9 +33,7 @@ const manualPlaceId = (name: string) => {
   return `m_${nameHash}_${rand}`;
 };
 
-const apiKey = Platform.OS === "ios"
-  ? (process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY_IOS ?? "")
-  : (process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY_ANDROID ?? "");
+const apiKey = process.env.EXPO_PUBLIC_GOOGLE_PLCAES_API_KEY ?? "";
 
 export default function PlacesSearchInput({
   value,
