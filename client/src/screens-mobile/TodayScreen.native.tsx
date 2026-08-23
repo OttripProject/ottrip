@@ -1551,6 +1551,7 @@ export default function TodayScreen() {
         defaultCity={timelineDateSegment?.city}
         onSave={async itinerary => {
           planData.addItinerary(itinerary);
+          await refetchTodayExpenses();
           queryClient.invalidateQueries({
             queryKey: ["expenses", selectedPlan?.id],
           });
@@ -1619,6 +1620,7 @@ export default function TodayScreen() {
         defaultCity={timelineDateSegment?.city}
         onSave={async updated => {
           planData.addAccommodation(updated);
+          await refetchTodayExpenses();
           queryClient.invalidateQueries({
             queryKey: ["expenses", selectedPlan?.id],
           });
@@ -1678,6 +1680,7 @@ export default function TodayScreen() {
         planStartDate={selectedPlan?.startDate}
         onSave={async updated => {
           planData.addFlight(updated);
+          await refetchTodayExpenses();
           queryClient.invalidateQueries({
             queryKey: ["expenses", selectedPlan?.id],
           });
