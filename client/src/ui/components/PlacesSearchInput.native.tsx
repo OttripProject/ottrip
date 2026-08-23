@@ -1,6 +1,6 @@
 import { colors, radii, spacing, textStyles } from "@/ui/tokens";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, Keyboard, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import MiniMapView from "@/ui/components/MiniMapView";
 import LocationIcon from "../../../assets/week_bar_location.svg";
 import PlusIcon from "../../../assets/trip_add.svg";
@@ -196,7 +196,7 @@ export default function PlacesSearchInput({
         <TextInput
           value={text}
           onChangeText={handleChangeText}
-          onSubmitEditing={handleManualSelect}
+          onSubmitEditing={Keyboard.dismiss}
           placeholder={placeholder}
           placeholderTextColor={colors.gray600}
           editable={!disabled}
