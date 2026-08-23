@@ -609,6 +609,7 @@ export default function ItineraryEditModal({
               value={formData.location}
               onSelect={handlePlaceSelect}
               onClear={() => setFormData(prev => ({ ...prev, location: "", locationId: undefined }))}
+              bordered={!!itinerary}
               onFocus={() => {
                 setTimeout(() => {
                   scrollRef.current?.scrollTo({

@@ -25,6 +25,7 @@ interface PlacesSearchInputProps {
   placeholder?: string;
   disabled?: boolean;
   readOnly?: boolean;
+  bordered?: boolean;
   initialCoords?: { lat: number; lng: number };
 }
 

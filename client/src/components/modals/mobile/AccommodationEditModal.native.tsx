@@ -551,6 +551,7 @@ export default function AccommodationEditModal({
               value={formData.place}
               onSelect={handlePlaceSelect}
               onClear={() => setFormData(prev => ({ ...prev, place: "", locationId: undefined }))}
+              bordered={!!accommodation}
               onFocus={() => {
                 setTimeout(() => {
                   scrollRef.current?.scrollTo({

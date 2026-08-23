@@ -24,6 +24,7 @@ interface PlacesSearchInputProps {
   placeholder?: string;
   disabled?: boolean;
   readOnly?: boolean;
+  bordered?: boolean;
   initialCoords?: { lat: number; lng: number };
 }
 
@@ -83,6 +84,7 @@ export default function PlacesSearchInput({
   placeholder = "장소를 검색하세요.",
   disabled,
   readOnly,
+  bordered,
   initialCoords,
 }: PlacesSearchInputProps) {
   const [text, setText] = useState(value ?? "");
@@ -204,7 +206,7 @@ export default function PlacesSearchInput({
           placeholderTextColor={colors.gray600}
           editable={!disabled}
           returnKeyType="search"
-          style={styles.textInput}
+          style={[styles.textInput, bordered && styles.textInputBordered]}
         />
         <View style={styles.iconButton}>
           {loading ? (
@@ -300,6 +302,10 @@ const styles = StyleSheet.create({
     fontSize: textStyles.body4.fontSize,
     lineHeight: 0,
     color: colors.black,
+  },
+  textInputBordered: {
+    borderWidth: 1,
+    borderColor: colors.gray400,
   },
   iconButton: {
     position: "absolute",
