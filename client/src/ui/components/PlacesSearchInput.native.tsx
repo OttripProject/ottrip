@@ -1,8 +1,9 @@
 import { colors, radii, spacing, textStyles } from "@/ui/tokens";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import MiniMapView from "@/ui/components/MiniMapView";
 import LocationIcon from "../../../assets/week_bar_location.svg";
+import PlusIcon from "../../../assets/trip_add.svg";
 import XIcon from "../../../assets/mobile_x.svg";
 import SearchIcon from "../../../assets/search.svg";
 
@@ -48,7 +49,7 @@ async function fetchSuggestions(input: string): Promise<Suggestion[]> {
     },
     body: JSON.stringify({ input, languageCode: "ko" }),
   });
-  if (!res.ok) return [];
+  if (!res.ok) throw new Error(`${res.status}`);
   const data = await res.json();
   return (data.suggestions ?? []).map((s: any) => ({
     placeId: s.placePrediction.placeId,
@@ -85,6 +86,8 @@ export default function PlacesSearchInput({
   const [text, setText] = useState(value ?? "");
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [showList, setShowList] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [searchError, setSearchError] = useState(false);
   const [mapCoords, setMapCoords] = useState<{ lat: number; lng: number; name: string } | null>(
     initialCoords && value ? { ...initialCoords, name: value } : null,
   );
@@ -96,6 +99,8 @@ export default function PlacesSearchInput({
       setSuggestions([]);
       setShowList(false);
       setMapCoords(null);
+    } else if (initialCoords) {
+      setMapCoords({ ...initialCoords, name: value });
     }
   }, [value]);
 
@@ -107,16 +112,27 @@ export default function PlacesSearchInput({
 
   const handleChangeText = useCallback((t: string) => {
     setText(t);
+    setSearchError(false);
     if (debounceRef.current) clearTimeout(debounceRef.current);
-    if (t.length === 0) {
+    if (t.trim().length === 0) {
       setSuggestions([]);
       setShowList(false);
+      setLoading(false);
       return;
     }
+    setShowList(true);
+    setLoading(true);
     debounceRef.current = setTimeout(async () => {
-      const results = await fetchSuggestions(t);
-      setSuggestions(results);
-      setShowList(results.length > 0);
+      try {
+        const results = await fetchSuggestions(t);
+        setSuggestions(results);
+        setSearchError(false);
+      } catch {
+        setSuggestions([]);
+        setSearchError(true);
+      } finally {
+        setLoading(false);
+      }
     }, 350);
   }, []);
 
@@ -138,19 +154,12 @@ export default function PlacesSearchInput({
     });
   };
 
-  const handleClear = () => {
-    setText("");
-    setSuggestions([]);
-    setShowList(false);
-    setMapCoords(null);
-    onClear?.();
-  };
-
-  const handleSubmit = () => {
+  const handleManualSelect = () => {
     const trimmed = text.trim();
     if (!trimmed) return;
     setSuggestions([]);
     setShowList(false);
+    setMapCoords(null);
     onSelect({
       name: trimmed,
       placeId: manualPlaceId(trimmed),
@@ -158,6 +167,14 @@ export default function PlacesSearchInput({
       longitude: 0,
       fromGoogle: false,
     });
+  };
+
+  const handleClear = () => {
+    setText("");
+    setSuggestions([]);
+    setShowList(false);
+    setMapCoords(null);
+    onClear?.();
   };
 
   if (readOnly) {
@@ -179,7 +196,7 @@ export default function PlacesSearchInput({
         <TextInput
           value={text}
           onChangeText={handleChangeText}
-          onSubmitEditing={handleSubmit}
+          onSubmitEditing={handleManualSelect}
           placeholder={placeholder}
           placeholderTextColor={colors.gray600}
           editable={!disabled}
@@ -187,7 +204,9 @@ export default function PlacesSearchInput({
           style={styles.textInput}
         />
         <View style={styles.iconButton}>
-          {text.length > 0 ? (
+          {loading ? (
+            <ActivityIndicator size={14} color={colors.gray600} />
+          ) : text.length > 0 ? (
             <Pressable onPress={handleClear} hitSlop={8}>
               <View style={styles.clearIcon}>
                 <XIcon width={12} height={12} color={colors.white} />
@@ -202,20 +221,53 @@ export default function PlacesSearchInput({
       {showList && (
         <View style={styles.listView}>
           <ScrollView keyboardShouldPersistTaps="handled" nestedScrollEnabled>
-            {suggestions.map((item, index) => (
-              <View key={item.placeId}>
-                <Pressable onPress={() => handleSelect(item)} style={styles.row}>
-                  <LocationIcon width={16} height={16} style={{ marginTop: 2 }} />
-                  <View style={styles.rowText}>
-                    <Text style={styles.mainText} numberOfLines={1}>{item.mainText}</Text>
-                    {!!item.secondaryText && (
-                      <Text style={styles.subText} numberOfLines={1}>{item.secondaryText}</Text>
-                    )}
-                  </View>
-                </Pressable>
-                {index < suggestions.length - 1 && <View style={styles.separator} />}
-              </View>
+            {suggestions.length > 0 && (
+              <Text style={styles.listHeader}>검색 결과</Text>
+            )}
+
+            {!loading && searchError && (
+              <Text style={styles.noResult}>
+                검색을 사용할 수 없어요. 입력한 이름 그대로 저장할 수 있어요.
+              </Text>
+            )}
+
+            {!loading && !searchError && suggestions.length === 0 && (
+              <Text style={styles.noResult}>
+                '{text.trim()}' 검색 결과가 없어요. 입력한 이름 그대로 저장할 수 있어요.
+              </Text>
+            )}
+
+            {suggestions.map((item) => (
+              <Pressable
+                key={item.placeId}
+                onPress={() => handleSelect(item)}
+                style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
+              >
+                <LocationIcon width={16} height={16} style={styles.rowIcon} />
+                <View style={styles.rowText}>
+                  <Text style={styles.mainText} numberOfLines={1}>{item.mainText}</Text>
+                  {!!item.secondaryText && (
+                    <Text style={styles.subText} numberOfLines={1}>{item.secondaryText}</Text>
+                  )}
+                </View>
+              </Pressable>
             ))}
+
+            {text.trim().length > 0 && (
+              <Pressable
+                onPress={handleManualSelect}
+                style={({ pressed }) => [styles.row, styles.manualRow, pressed && styles.rowPressed]}
+              >
+                <PlusIcon width={16} height={16} color={colors.primary} style={styles.rowIcon} />
+                <View style={styles.rowText}>
+                  <Text style={styles.manualText} numberOfLines={1}>
+                    '{text.trim()}' 직접 입력
+                  </Text>
+                </View>
+              </Pressable>
+            )}
+
+            <Text style={styles.footer}>© Google</Text>
           </ScrollView>
         </View>
       )}
@@ -277,13 +329,40 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     maxHeight: 220,
     zIndex: 100,
+    padding: 4,
+  },
+  listHeader: {
+    ...textStyles.h9,
+    color: colors.gray600,
+    paddingHorizontal: 12,
+    paddingTop: 8,
+    paddingBottom: 4,
+  },
+  noResult: {
+    ...textStyles.body5,
+    color: colors.gray600,
+    paddingHorizontal: 12,
+    paddingTop: 12,
+    paddingBottom: 4,
   },
   row: {
     flexDirection: "row",
     alignItems: "flex-start",
-    gap: 10,
+    gap: 12,
     paddingHorizontal: 12,
-    paddingVertical: 10,
+    paddingVertical: 8,
+    borderRadius: 10,
+  },
+  manualRow: {
+    alignItems: "center",
+    paddingTop: 12,
+    paddingBottom: 8,
+  },
+  rowPressed: {
+    backgroundColor: colors.gray200,
+  },
+  rowIcon: {
+    marginTop: 2,
   },
   rowText: {
     flex: 1,
@@ -298,9 +377,17 @@ const styles = StyleSheet.create({
     color: colors.gray700,
     marginTop: 1,
   },
-  separator: {
-    height: 1,
-    backgroundColor: colors.gray300,
+  manualText: {
+    ...textStyles.h7,
+    color: colors.primary,
+  },
+  footer: {
+    ...textStyles.body6,
+    color: colors.gray400,
+    paddingHorizontal: 12,
+    paddingTop: 4,
+    paddingBottom: 8,
+    textAlign: "right",
   },
   readOnly: {
     backgroundColor: colors.gray200,
