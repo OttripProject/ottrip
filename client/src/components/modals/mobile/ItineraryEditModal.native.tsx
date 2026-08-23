@@ -95,6 +95,8 @@ export default function ItineraryEditModal({
   onRouteMismatchResult,
 }: ItineraryEditModalProps) {
   const scrollRef = useRef<ScrollView>(null);
+  const formY = useRef(0);
+  const locationGroupY = useRef(0);
   const currencyOpacity = useRef(new Animated.Value(1)).current;
   const [keyboardHeight, setKeyboardHeight] = useState(0);
 
@@ -533,7 +535,7 @@ export default function ItineraryEditModal({
         keyboardShouldPersistTaps="handled"
       >
         {/* 입력 필드들 */}
-        <View style={styles.form}>
+        <View style={styles.form} onLayout={e => { formY.current = e.nativeEvent.layout.y; }}>
           {/* 일정명 */}
           <View style={styles.inputGroup}>
             <Text style={styles.label}>
@@ -598,12 +600,23 @@ export default function ItineraryEditModal({
           </View>
 
           {/* 장소 */}
-          <View style={styles.inputGroup}>
+          <View
+            style={styles.inputGroup}
+            onLayout={e => { locationGroupY.current = e.nativeEvent.layout.y; }}
+          >
             <Text style={styles.label}>장소 (주소)</Text>
             <PlacesSearchInput
               value={formData.location}
               onSelect={handlePlaceSelect}
               onClear={() => setFormData(prev => ({ ...prev, location: "", locationId: undefined }))}
+              onFocus={() => {
+                setTimeout(() => {
+                  scrollRef.current?.scrollTo({
+                    y: Math.max(0, formY.current + locationGroupY.current - 16),
+                    animated: true,
+                  });
+                }, 100);
+              }}
               placeholder="장소를 검색하세요."
               initialCoords={
                 itinerary?.location?.fromGoogle

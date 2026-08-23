@@ -20,6 +20,7 @@ interface PlacesSearchInputProps {
   value?: string;
   onSelect: (place: PlaceResult) => void;
   onClear?: () => void;
+  onFocus?: () => void;
   placeholder?: string;
   disabled?: boolean;
   readOnly?: boolean;
@@ -78,6 +79,7 @@ export default function PlacesSearchInput({
   value,
   onSelect,
   onClear,
+  onFocus,
   placeholder = "장소를 검색하세요.",
   disabled,
   readOnly,
@@ -197,6 +199,7 @@ export default function PlacesSearchInput({
           value={text}
           onChangeText={handleChangeText}
           onSubmitEditing={Keyboard.dismiss}
+          onFocus={onFocus}
           placeholder={placeholder}
           placeholderTextColor={colors.gray600}
           editable={!disabled}

@@ -21,6 +21,7 @@ interface PlacesSearchInputProps {
   value?: string;
   onSelect: (place: PlaceResult) => void;
   onClear?: () => void;
+  onFocus?: () => void;
   placeholder?: string;
   disabled?: boolean;
   readOnly?: boolean;
@@ -37,6 +38,7 @@ export default function PlacesSearchInput({
   value,
   onSelect,
   onClear,
+  onFocus,
   placeholder = "장소를 검색하세요.",
   disabled,
   readOnly,
@@ -122,7 +124,7 @@ export default function PlacesSearchInput({
           e.preventDefault();
           e.stopPropagation();
           if (currentSelectedIndex >= 0 && currentSelectedIndex < currentSuggestions.length) {
-            handleSelectSuggestionRef.current(currentSuggestions[currentSelectedIndex]);
+            handleSelectSuggestionRef.current?.(currentSuggestions[currentSelectedIndex]);
           } else if (currentInput) {
             setSuggestions([]);
             setOpen(false);
@@ -333,6 +335,7 @@ export default function PlacesSearchInput({
           value={inputValue}
           onChangeText={handleChangeText}
           onFocus={() => {
+            onFocus?.();
             if (!mapCoords && (suggestions.length > 0 || inputValue.trim().length > 0)) {
               measureContainer();
               setOpen(true);

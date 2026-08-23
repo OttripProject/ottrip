@@ -100,6 +100,8 @@ export default function AccommodationEditModal({
   onRouteMismatchResult,
 }: AccommodationEditModalProps) {
   const scrollRef = useRef<ScrollView>(null);
+  const formY = useRef(0);
+  const locationGroupY = useRef(0);
   const currencyOpacity = useRef(new Animated.Value(1)).current;
   const [keyboardHeight, setKeyboardHeight] = useState(0);
 
@@ -476,7 +478,7 @@ export default function AccommodationEditModal({
         keyboardShouldPersistTaps="handled"
       >
         {/* 입력 필드들 */}
-        <View style={styles.form}>
+        <View style={styles.form} onLayout={e => { formY.current = e.nativeEvent.layout.y; }}>
           <View style={styles.inputGroup}>
             <Text style={styles.label}>
               숙소명<Text style={styles.required}>*</Text>
@@ -540,12 +542,23 @@ export default function AccommodationEditModal({
             </View>
           </View>
 
-          <View style={styles.inputGroup}>
+          <View
+            style={styles.inputGroup}
+            onLayout={e => { locationGroupY.current = e.nativeEvent.layout.y; }}
+          >
             <Text style={styles.label}>장소 (주소)</Text>
             <PlacesSearchInput
               value={formData.place}
               onSelect={handlePlaceSelect}
               onClear={() => setFormData(prev => ({ ...prev, place: "", locationId: undefined }))}
+              onFocus={() => {
+                setTimeout(() => {
+                  scrollRef.current?.scrollTo({
+                    y: Math.max(0, formY.current + locationGroupY.current - 16),
+                    animated: true,
+                  });
+                }, 100);
+              }}
               placeholder="장소를 검색하세요."
               initialCoords={
                 accommodation?.location?.fromGoogle
