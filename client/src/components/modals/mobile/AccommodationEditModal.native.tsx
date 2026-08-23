@@ -22,6 +22,8 @@ import FullScreenModal from "@/ui/components/FullScreenModal.native";
 import { TimeModal } from "@/ui/components/TimeModal.native";
 import AttachmentSection from "@/ui/components/attachmentSection.native";
 import Input from "@/ui/components/input/Input";
+import PlacesSearchInput, { type PlaceResult } from "@/ui/components/PlacesSearchInput";
+import { locationsApi } from "@/services/locations";
 import { colors } from "@/ui/tokens/colors";
 import { textStyles, typography } from "@/ui/tokens/typography";
 import { handleGuestPromptError } from "@/utils/guestPrompt";
@@ -120,6 +122,7 @@ export default function AccommodationEditModal({
     country: "",
     city: "",
     place: "",
+    locationId: undefined as number | undefined,
     checkinDate: dayjs().format("YYYY-MM-DD"),
     checkoutDate: dayjs().add(1, "day").format("YYYY-MM-DD"),
     checkinTime: "15:00",
@@ -171,6 +174,7 @@ export default function AccommodationEditModal({
         country: accommodation.country || "",
         city: accommodation.city || "",
         place: accommodation.location?.name || "",
+        locationId: accommodation.location?.id,
         checkinDate: accommodation.checkinDate || dayjs().format("YYYY-MM-DD"),
         checkoutDate:
           accommodation.checkoutDate ||
@@ -291,6 +295,7 @@ export default function AccommodationEditModal({
         setFormData({
           name: String(v.name ?? ""),
           place: "",
+          locationId: undefined,
           country: String(v.country ?? ""),
           city: String(v.city ?? ""),
           description: String(v.description ?? ""),
@@ -310,6 +315,22 @@ export default function AccommodationEditModal({
     }
   }, [visible, pendingAiResult]);
 
+  const handlePlaceSelect = async (place: PlaceResult) => {
+    try {
+      const loc = await locationsApi.createLocation({
+        name: place.name,
+        placeId: place.placeId,
+        latitude: place.latitude,
+        longitude: place.longitude,
+        address: place.address,
+        fromGoogle: place.fromGoogle,
+      });
+      setFormData(prev => ({ ...prev, place: loc.name, locationId: loc.id }));
+    } catch {
+      setFormData(prev => ({ ...prev, place: place.name, locationId: undefined }));
+    }
+  };
+
   const handleSave = async () => {
     if (!formData.name.trim()) {
       Alert.alert("알림", "숙소명을 입력해주세요");
@@ -325,6 +346,7 @@ export default function AccommodationEditModal({
           accommodation.id,
           {
             name: formData.name.trim(),
+            locationId: formData.locationId,
             description: formData.description?.trim() || undefined,
             country: formData.country?.trim() || undefined,
             city: formData.city?.trim() || undefined,
@@ -345,6 +367,7 @@ export default function AccommodationEditModal({
         savedAccommodation = await accommodationsApi.createAccommodation({
           planId,
           name: formData.name.trim(),
+          locationId: formData.locationId,
           description: formData.description?.trim() || undefined,
           country: formData.country?.trim() || undefined,
           city: formData.city?.trim() || undefined,
@@ -450,6 +473,7 @@ export default function AccommodationEditModal({
           { paddingBottom: keyboardHeight + 40 || 24 },
         ]}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
       >
         {/* 입력 필드들 */}
         <View style={styles.form}>
@@ -518,10 +542,16 @@ export default function AccommodationEditModal({
 
           <View style={styles.inputGroup}>
             <Text style={styles.label}>장소 (주소)</Text>
-            <Input
+            <PlacesSearchInput
               value={formData.place}
-              onChangeText={text => setFormData({ ...formData, place: text })}
-              style={[styles.input, !accommodation && styles.inputBorderless]}
+              onSelect={handlePlaceSelect}
+              onClear={() => setFormData(prev => ({ ...prev, place: "", locationId: undefined }))}
+              placeholder="장소를 검색하세요."
+              initialCoords={
+                accommodation?.location?.fromGoogle
+                  ? { lat: accommodation.location.latitude, lng: accommodation.location.longitude }
+                  : undefined
+              }
             />
           </View>
 
@@ -792,6 +822,7 @@ export default function AccommodationEditModal({
           setFormData({
             name: String(v.name ?? ""),
             place: "",
+            locationId: undefined,
             country: String(v.country ?? ""),
             city: String(v.city ?? ""),
             description: String(v.description ?? ""),

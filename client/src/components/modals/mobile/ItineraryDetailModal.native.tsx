@@ -4,6 +4,7 @@ import ImagePreviewModal, {
 import type { Attachment, Expense, Itinerary } from "@/types/api";
 import { ExpenseCurrency, currencyLabels } from "@/types/expense";
 import BottomSheetModal from "@/ui/components/BottomSheetModal.native";
+import MiniMapView from "@/ui/components/MiniMapView";
 import { colors } from "@/ui/tokens/colors";
 import { radii } from "@/ui/tokens/radii";
 import { textStyles } from "@/ui/tokens/typography";
@@ -219,6 +220,15 @@ export default function ItineraryDetailModal({
               </View>
             </View>
           )}
+          {itinerary.location?.fromGoogle &&
+            !!itinerary.location.latitude &&
+            !!itinerary.location.longitude && (
+              <MiniMapView
+                latitude={itinerary.location.latitude}
+                longitude={itinerary.location.longitude}
+                name={itinerary.location.name}
+              />
+            )}
 
           {/* 비용 */}
           {Object.values(expenseByCurrency).some(v => v > 0) && (
