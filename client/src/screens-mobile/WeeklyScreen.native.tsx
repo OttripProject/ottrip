@@ -28,6 +28,7 @@ import {
 import { useQueryClient } from "@tanstack/react-query";
 import dayjs from "dayjs";
 import { useEffect, useMemo, useState } from "react";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   ActivityIndicator,
   Alert,
@@ -68,6 +69,7 @@ import PlusIcon from "../../assets/mobile_plus2.svg";
 import RightArrowIcon from "../../assets/right_arrow.svg";
 
 export default function WeeklyScreen() {
+  const insets = useSafeAreaInsets();
   const { data: me } = useMe();
   const plansQuery = usePlansQuery();
   const queryClient = useQueryClient();
@@ -318,7 +320,7 @@ export default function WeeklyScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
         <View style={styles.headerTopRow}>
           <Text style={styles.todayDate}>{formatKoreanDate(selectedDate)}</Text>
           <View style={styles.headerIcons}>
@@ -1274,7 +1276,6 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   header: {
-    paddingTop: 60,
     paddingHorizontal: 16,
     paddingBottom: 12,
     backgroundColor: colors.white,

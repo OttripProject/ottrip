@@ -38,6 +38,7 @@ import {
 import { useQueryClient } from "@tanstack/react-query";
 import dayjs from "dayjs";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   ActivityIndicator,
   useWindowDimensions,
@@ -161,6 +162,7 @@ function collectNearestFutureScheduleDateStr(
 }
 
 export default function TodayScreen() {
+  const insets = useSafeAreaInsets();
   const { width: windowWidth } = useWindowDimensions();
   const { data: me } = useMe();
   const { selectedPlan, setSelectedPlan } = useSelectedPlan();
@@ -725,7 +727,7 @@ export default function TodayScreen() {
           onPress={closeOpenTimelineSwipe}
         >
           {/* 헤더 */}
-          <View style={styles.header}>
+          <View style={[styles.header, { paddingTop: insets.top + 4 }]}>
             <View style={styles.headerContent}>
               <View style={styles.headerTextContainer}>
                 <Text style={styles.date}>{headerDateLabel}</Text>
@@ -1899,7 +1901,6 @@ const styles = StyleSheet.create({
     flexGrow: 1,
   },
   header: {
-    paddingTop: 60,
     paddingHorizontal: 16,
     paddingBottom: 24,
     backgroundColor: colors.gray300,
