@@ -12,7 +12,7 @@ const OPTIONS: { value: ExpenseCurrency; label: string }[] = [
 interface CurrencyToggleProps {
   value: ExpenseCurrency;
   onChange: (currency: ExpenseCurrency) => void;
-  variant?: "filled" | "outlined";
+  variant?: "filled" | "outlined" | "primary";
   style?: StyleProp<ViewStyle>;
 }
 
@@ -23,6 +23,29 @@ export default function CurrencyToggle({
   style,
 }: CurrencyToggleProps) {
   const isOutlined = variant === "outlined";
+  const isPrimary = variant === "primary";
+
+  if (isPrimary) {
+    return (
+      <View style={[styles.primaryContainer, style]}>
+        {OPTIONS.map(opt => {
+          const isActive = value === opt.value;
+          return (
+            <Pressable
+              key={opt.value}
+              style={[styles.primaryOption, isActive && styles.primaryOptionActive]}
+              onPress={() => onChange(opt.value)}
+            >
+              <Text style={[styles.primaryOptionText, isActive && styles.primaryOptionTextActive]}>
+                {opt.label}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
+    );
+  }
+
   return (
     <View
       style={[styles.container, isOutlined && styles.containerOutlined, style]}
@@ -89,5 +112,27 @@ const styles = StyleSheet.create({
   optionTextActive: {
     ...textStyles.h7,
     color: colors.gray900,
+  },
+  primaryContainer: {
+    flexDirection: "row",
+    gap: 4,
+  },
+  primaryOption: {
+    borderRadius: 6,
+    paddingVertical: 4,
+    paddingHorizontal: 12,
+    backgroundColor: colors.white,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  primaryOptionActive: {
+    backgroundColor: colors.primary,
+  },
+  primaryOptionText: {
+    ...textStyles.h7,
+    color: colors.gray400,
+  },
+  primaryOptionTextActive: {
+    color: colors.white,
   },
 });

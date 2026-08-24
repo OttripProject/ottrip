@@ -23,6 +23,7 @@ import {
   categoryLabels,
 } from "@/types/expense";
 import CalendarModal from "@/ui/components/CalendarModal.native";
+import CurrencyToggle from "@/ui/components/CurrencyToggle";
 import FloatingFooter from "@/ui/components/FloatingFooter.native";
 import FullScreenModal from "@/ui/components/FullScreenModal.native";
 import { TimeModal } from "@/ui/components/TimeModal.native";
@@ -38,7 +39,6 @@ import dayjs from "dayjs";
 import { useEffect, useRef, useState } from "react";
 import {
   Alert,
-  Animated,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -95,7 +95,6 @@ export default function ItineraryEditModal({
   onRouteMismatchResult,
 }: ItineraryEditModalProps) {
   const scrollRef = useRef<KeyboardAwareScrollViewRef>(null);
-  const currencyOpacity = useRef(new Animated.Value(1)).current;
 
   const [formData, setFormData] = useState({
     title: "",
@@ -714,34 +713,11 @@ export default function ItineraryEditModal({
                   containerStyle={styles.amountInputContainer}
                   style={styles.amountInputStyle}
                 />
-                <Pressable
-                  style={styles.currencyBadge}
-                  onPress={() => {
-                    Animated.timing(currencyOpacity, {
-                      toValue: 0,
-                      duration: 100,
-                      useNativeDriver: true,
-                    }).start(() => {
-                      setExpenseData(prev => ({
-                        ...prev,
-                        currency:
-                          prev.currency === ExpenseCurrency.KRW
-                            ? ExpenseCurrency.USD
-                            : ExpenseCurrency.KRW,
-                      }));
-                      Animated.timing(currencyOpacity, {
-                        toValue: 1,
-                        duration: 150,
-                        useNativeDriver: true,
-                      }).start();
-                    });
-                  }}
-                  hitSlop={8}
-                >
-                  <Animated.Text style={[styles.amountSuffix, { opacity: currencyOpacity }]}>
-                    {expenseData.currency === ExpenseCurrency.KRW ? "원" : "달러"}
-                  </Animated.Text>
-                </Pressable>
+                <CurrencyToggle
+                  value={expenseData.currency}
+                  onChange={c => setExpenseData(prev => ({ ...prev, currency: c }))}
+                  variant="primary"
+                />
               </View>
             </View>
             <View style={styles.inputGroup}>
@@ -1029,8 +1005,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     borderRadius: 12,
-    paddingHorizontal: 14,
-    height: 48,
+    paddingHorizontal: 16,
+    paddingVertical: 2,
+    gap: 8,
     backgroundColor: `${colors.primary}1A`,
   },
   amountInputContainer: {
@@ -1038,25 +1015,12 @@ const styles = StyleSheet.create({
   },
   amountInputStyle: {
     flex: 1,
-    height: 48,
     textAlign: "left",
     backgroundColor: "transparent",
     fontFamily: typography.fontFamily.pretendardSemiBold,
     fontSize: 14,
     paddingHorizontal: 0,
     paddingVertical: 0,
-    color: colors.primary,
-  },
-  currencyBadge: {
-    marginLeft: 4,
-    width: 44,
-    paddingVertical: 4,
-    borderRadius: 6,
-    backgroundColor: `${colors.primary}10`,
-    alignItems: "center",
-  },
-  amountSuffix: {
-    ...textStyles.h6,
     color: colors.primary,
   },
   categoryRow: {
