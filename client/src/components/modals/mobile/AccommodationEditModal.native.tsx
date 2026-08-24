@@ -33,6 +33,7 @@ import {
   Alert,
   Animated,
   Keyboard,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -106,10 +107,12 @@ export default function AccommodationEditModal({
   const [keyboardHeight, setKeyboardHeight] = useState(0);
 
   useEffect(() => {
-    const show = Keyboard.addListener("keyboardDidShow", e => {
+    const showEvent = Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
+    const hideEvent = Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
+    const show = Keyboard.addListener(showEvent, e => {
       setKeyboardHeight(e.endCoordinates.height);
     });
-    const hide = Keyboard.addListener("keyboardDidHide", () => {
+    const hide = Keyboard.addListener(hideEvent, () => {
       setKeyboardHeight(0);
     });
     return () => {
@@ -472,7 +475,7 @@ export default function AccommodationEditModal({
         style={styles.scrollView}
         contentContainerStyle={[
           styles.scrollContent,
-          { paddingBottom: keyboardHeight + 40 || 24 },
+          { paddingBottom: keyboardHeight > 0 ? keyboardHeight + 40 : 0 },
         ]}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"

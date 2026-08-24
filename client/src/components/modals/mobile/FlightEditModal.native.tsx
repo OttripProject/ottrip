@@ -33,8 +33,9 @@ import { useEffect, useRef, useState } from "react";
 import {
   Alert,
   Animated,
-  Pressable,
   Keyboard,
+  Platform,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -135,10 +136,12 @@ export default function FlightEditModal({
   const [keyboardHeight, setKeyboardHeight] = useState(0);
 
   useEffect(() => {
-    const show = Keyboard.addListener("keyboardDidShow", e => {
+    const showEvent = Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
+    const hideEvent = Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
+    const show = Keyboard.addListener(showEvent, e => {
       setKeyboardHeight(e.endCoordinates.height);
     });
-    const hide = Keyboard.addListener("keyboardDidHide", () => {
+    const hide = Keyboard.addListener(hideEvent, () => {
       setKeyboardHeight(0);
     });
     return () => { show.remove(); hide.remove(); };
@@ -569,7 +572,7 @@ export default function FlightEditModal({
       <ScrollView
         ref={scrollRef}
         style={styles.scrollView}
-        contentContainerStyle={[styles.scrollContent, { paddingBottom: keyboardHeight+40 || 24 }]}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: keyboardHeight > 0 ? keyboardHeight + 40 : 0 }]}
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.form}>

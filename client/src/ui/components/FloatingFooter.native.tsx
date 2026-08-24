@@ -1,7 +1,6 @@
 import { colors } from "@/ui/tokens/colors";
 import { textStyles } from "@/ui/tokens/typography";
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 interface FloatingFooterProps {
   primaryLabel: string;
@@ -18,13 +17,10 @@ export default function FloatingFooter({
   secondaryLabel,
   onSecondaryPress,
 }: FloatingFooterProps) {
-  const insets = useSafeAreaInsets();
   const hasSecondary = Boolean(secondaryLabel && onSecondaryPress);
 
   return (
-    <View
-      style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 12) }]}
-    >
+    <View style={styles.footer}>
       <View style={styles.footerButtons}>
         {hasSecondary && (
           <Pressable
@@ -56,7 +52,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
     paddingHorizontal: 16,
     paddingTop: 8,
-    paddingBottom: 32,
+    paddingBottom: 12,
   },
   footerButtons: {
     flexDirection: "row",
