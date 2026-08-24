@@ -885,7 +885,7 @@ const styles = StyleSheet.create({
   footer: {
     paddingHorizontal: spacing.xl,
     paddingTop: spacing.sm,
-    paddingBottom: 32,
+    paddingBottom: 16,
   },
   addExpenseButton: {
     backgroundColor: colors.black,

@@ -37,7 +37,6 @@ import {
   TextInput,
   View,
 } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import CheckWhiteIcon from "../../../../assets/check_white.svg";
 import AttachClipIcon from "../../../../assets/files.svg";
 import LeftArrowIcon from "../../../../assets/left_arrow.svg";
@@ -147,7 +146,6 @@ export default function AddScheduleWithAiModal({
     fileName?: string;
   };
 
-  const insets = useSafeAreaInsets();
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState<Message[]>([AI_INTRO_MESSAGE]);
   const [loading, setLoading] = useState(false);
@@ -570,10 +568,7 @@ export default function AddScheduleWithAiModal({
         style={[
           styles.shell,
           {
-            paddingBottom:
-              keyboardHeight > 0
-                ? keyboardHeight
-                : Math.max(insets.bottom, 12),
+            paddingBottom: keyboardHeight > 0 ? keyboardHeight : 0,
           },
         ]}
       >

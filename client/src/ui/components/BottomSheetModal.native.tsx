@@ -36,7 +36,7 @@ export default function BottomSheetModal({
   showDragHandle = true,
   backdropOpacity = 0.5,
 }: BottomSheetModalProps) {
-  const _insets = useSafeAreaInsets();
+  const insets = useSafeAreaInsets();
   const modalHeight =
     typeof height === "number" && height <= 1
       ? Dimensions.get("window").height * height
@@ -119,7 +119,7 @@ export default function BottomSheetModal({
               animatedStyle,
             ]}
           >
-            <View style={styles.safeArea}>
+            <View style={[styles.safeArea, { paddingBottom: Math.max(insets.bottom, 8) }]}>
               {/* 드래그 핸들 */}
               {showDragHandle && (
                 <View style={styles.dragHandleContainer}>
