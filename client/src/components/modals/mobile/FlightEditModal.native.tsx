@@ -33,14 +33,13 @@ import { useEffect, useRef, useState } from "react";
 import {
   Alert,
   Animated,
-  Keyboard,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
   View,
 } from "react-native";
+import { KeyboardAwareScrollView, type KeyboardAwareScrollViewRef } from "react-native-keyboard-controller";
 import DeleteIcon from "../../../../assets/delete.svg";
 import DownArrowIcon from "../../../../assets/down_arrow.svg";
 import CalendarIcon from "../../../../assets/mobile_calendar_black.svg";
@@ -131,21 +130,8 @@ export default function FlightEditModal({
   } | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isSubmittingRef = useRef(false);
-  const scrollRef = useRef<ScrollView>(null);
+  const scrollRef = useRef<KeyboardAwareScrollViewRef>(null);
   const currencyOpacity = useRef(new Animated.Value(1)).current;
-  const [keyboardHeight, setKeyboardHeight] = useState(0);
-
-  useEffect(() => {
-    const showEvent = Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
-    const hideEvent = Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
-    const show = Keyboard.addListener(showEvent, e => {
-      setKeyboardHeight(e.endCoordinates.height);
-    });
-    const hide = Keyboard.addListener(hideEvent, () => {
-      setKeyboardHeight(0);
-    });
-    return () => { show.remove(); hide.remove(); };
-  }, []);
   const [pendingFiles, setPendingFiles] = useState<LocalFile[]>([]);
   const [existingAttachments, setExistingAttachments] = useState<Attachment[]>(
     [],
@@ -569,11 +555,12 @@ export default function FlightEditModal({
           </Pressable>
         </View>
       )}
-      <ScrollView
+      <KeyboardAwareScrollView
         ref={scrollRef}
         style={styles.scrollView}
-        contentContainerStyle={[styles.scrollContent, { paddingBottom: keyboardHeight > 0 ? keyboardHeight + 40 : 0 }]}
+        contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        bottomOffset={40}
       >
         <View style={styles.form}>
           <View style={styles.inputGroup}>
@@ -929,9 +916,6 @@ export default function FlightEditModal({
                 variant="filled"
                 containerStyle={styles.amountInputContainer}
                 style={styles.amountInputStyle}
-                onFocus={() => {
-                  setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
-                }}
               />
               <Pressable
                 style={styles.currencyBadge}
@@ -1011,7 +995,7 @@ export default function FlightEditModal({
           onRetryAnalyze={() => lastAiSelection && handleAiAnalyzePress(lastAiSelection)}
           isAiAnalyzeSuccess={!!aiModalResult?.success && !aiAnalyzeError}
         />
-      </ScrollView>
+      </KeyboardAwareScrollView>
 
       <TimeModal
         visible={segmentTimeModal !== null}

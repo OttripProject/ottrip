@@ -9,14 +9,13 @@ import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
-  KeyboardAvoidingView,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
   View,
 } from "react-native";
+import { KeyboardAvoidingView } from "react-native-keyboard-controller";
 
 import CloseIcon from "../../../../assets/mobile_close.svg";
 import DropdownIcon from "../../../../assets/mobile_dropdown.svg";
@@ -199,7 +198,7 @@ export default function SharedMembersModal({
     >
       <KeyboardAvoidingView
         style={styles.keyboardView}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        behavior="padding"
         keyboardVerticalOffset={0}
       >
         

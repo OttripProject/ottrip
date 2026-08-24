@@ -39,14 +39,13 @@ import { useEffect, useRef, useState } from "react";
 import {
   Alert,
   Animated,
-  Keyboard,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
   View,
 } from "react-native";
+import { KeyboardAwareScrollView, type KeyboardAwareScrollViewRef } from "react-native-keyboard-controller";
 import BedIcon from "../../../../assets/mobile_bed.svg";
 import CalendarIcon from "../../../../assets/mobile_calendar_black.svg";
 import CarIcon from "../../../../assets/mobile_car.svg";
@@ -95,26 +94,8 @@ export default function ItineraryEditModal({
   pendingAiResult,
   onRouteMismatchResult,
 }: ItineraryEditModalProps) {
-  const scrollRef = useRef<ScrollView>(null);
-  const formY = useRef(0);
-  const locationGroupY = useRef(0);
+  const scrollRef = useRef<KeyboardAwareScrollViewRef>(null);
   const currencyOpacity = useRef(new Animated.Value(1)).current;
-  const [keyboardHeight, setKeyboardHeight] = useState(0);
-
-  useEffect(() => {
-    const showEvent = Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
-    const hideEvent = Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
-    const show = Keyboard.addListener(showEvent, e => {
-      setKeyboardHeight(e.endCoordinates.height);
-    });
-    const hide = Keyboard.addListener(hideEvent, () => {
-      setKeyboardHeight(0);
-    });
-    return () => {
-      show.remove();
-      hide.remove();
-    };
-  }, []);
 
   const [formData, setFormData] = useState({
     title: "",
@@ -527,18 +508,16 @@ export default function ItineraryEditModal({
           </Pressable>
         </View>
       )}
-      <ScrollView
+      <KeyboardAwareScrollView
         ref={scrollRef}
         style={styles.scrollView}
-        contentContainerStyle={[
-          styles.scrollContent,
-          { paddingBottom: keyboardHeight > 0 ? keyboardHeight + 40 : 0 },
-        ]}
+        contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
+        bottomOffset={40}
       >
         {/* 입력 필드들 */}
-        <View style={styles.form} onLayout={e => { formY.current = e.nativeEvent.layout.y; }}>
+        <View style={styles.form}>
           {/* 일정명 */}
           <View style={styles.inputGroup}>
             <Text style={styles.label}>
@@ -603,24 +582,13 @@ export default function ItineraryEditModal({
           </View>
 
           {/* 장소 */}
-          <View
-            style={styles.inputGroup}
-            onLayout={e => { locationGroupY.current = e.nativeEvent.layout.y; }}
-          >
+          <View style={styles.inputGroup}>
             <Text style={styles.label}>장소 (주소)</Text>
             <PlacesSearchInput
               value={formData.location}
               onSelect={handlePlaceSelect}
               onClear={() => setFormData(prev => ({ ...prev, location: "", locationId: undefined }))}
               bordered={!!itinerary}
-              onFocus={() => {
-                setTimeout(() => {
-                  scrollRef.current?.scrollTo({
-                    y: Math.max(0, formY.current + locationGroupY.current - 16),
-                    animated: true,
-                  });
-                }, 100);
-              }}
               placeholder="장소를 검색하세요."
               initialCoords={
                 itinerary?.location?.fromGoogle
@@ -745,12 +713,6 @@ export default function ItineraryEditModal({
                   variant="filled"
                   containerStyle={styles.amountInputContainer}
                   style={styles.amountInputStyle}
-                  onFocus={() => {
-                    setTimeout(
-                      () => scrollRef.current?.scrollToEnd({ animated: true }),
-                      100,
-                    );
-                  }}
                 />
                 <Pressable
                   style={styles.currencyBadge}
@@ -892,7 +854,7 @@ export default function ItineraryEditModal({
             />
           </View>
         </View>
-      </ScrollView>
+      </KeyboardAwareScrollView>
 
       <FloatingFooter
         primaryLabel={

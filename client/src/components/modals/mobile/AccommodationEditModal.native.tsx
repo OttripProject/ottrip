@@ -32,8 +32,6 @@ import { useEffect, useRef, useState } from "react";
 import {
   Alert,
   Animated,
-  Keyboard,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -41,6 +39,7 @@ import {
   TextInput,
   View,
 } from "react-native";
+import { KeyboardAwareScrollView, type KeyboardAwareScrollViewRef } from "react-native-keyboard-controller";
 import CalendarIcon from "../../../../assets/mobile_calendar_black.svg";
 import TimeIcon from "../../../../assets/mobile_time.svg";
 import CloseIcon from "../../../../assets/x.svg";
@@ -100,26 +99,8 @@ export default function AccommodationEditModal({
   pendingAiResult,
   onRouteMismatchResult,
 }: AccommodationEditModalProps) {
-  const scrollRef = useRef<ScrollView>(null);
-  const formY = useRef(0);
-  const locationGroupY = useRef(0);
+  const scrollRef = useRef<KeyboardAwareScrollViewRef>(null);
   const currencyOpacity = useRef(new Animated.Value(1)).current;
-  const [keyboardHeight, setKeyboardHeight] = useState(0);
-
-  useEffect(() => {
-    const showEvent = Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
-    const hideEvent = Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
-    const show = Keyboard.addListener(showEvent, e => {
-      setKeyboardHeight(e.endCoordinates.height);
-    });
-    const hide = Keyboard.addListener(hideEvent, () => {
-      setKeyboardHeight(0);
-    });
-    return () => {
-      show.remove();
-      hide.remove();
-    };
-  }, []);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -470,18 +451,16 @@ export default function AccommodationEditModal({
           </Pressable>
         </View>
       )}
-      <ScrollView
+      <KeyboardAwareScrollView
         ref={scrollRef}
         style={styles.scrollView}
-        contentContainerStyle={[
-          styles.scrollContent,
-          { paddingBottom: keyboardHeight > 0 ? keyboardHeight + 40 : 0 },
-        ]}
+        contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        bottomOffset={40}
         keyboardShouldPersistTaps="handled"
       >
         {/* 입력 필드들 */}
-        <View style={styles.form} onLayout={e => { formY.current = e.nativeEvent.layout.y; }}>
+        <View style={styles.form}>
           <View style={styles.inputGroup}>
             <Text style={styles.label}>
               숙소명<Text style={styles.required}>*</Text>
@@ -545,24 +524,13 @@ export default function AccommodationEditModal({
             </View>
           </View>
 
-          <View
-            style={styles.inputGroup}
-            onLayout={e => { locationGroupY.current = e.nativeEvent.layout.y; }}
-          >
+          <View style={styles.inputGroup}>
             <Text style={styles.label}>장소 (주소)</Text>
             <PlacesSearchInput
               value={formData.place}
               onSelect={handlePlaceSelect}
               onClear={() => setFormData(prev => ({ ...prev, place: "", locationId: undefined }))}
               bordered={!!accommodation}
-              onFocus={() => {
-                setTimeout(() => {
-                  scrollRef.current?.scrollTo({
-                    y: Math.max(0, formY.current + locationGroupY.current - 16),
-                    animated: true,
-                  });
-                }, 100);
-              }}
               placeholder="장소를 검색하세요."
               initialCoords={
                 accommodation?.location?.fromGoogle
@@ -676,12 +644,6 @@ export default function AccommodationEditModal({
                   variant="filled"
                   containerStyle={styles.amountInputContainer}
                   style={styles.amountInputStyle}
-                  onFocus={() => {
-                    setTimeout(
-                      () => scrollRef.current?.scrollToEnd({ animated: true }),
-                      100,
-                    );
-                  }}
                 />
                 <Pressable
                   style={styles.currencyBadge}
@@ -764,7 +726,7 @@ export default function AccommodationEditModal({
             isAiAnalyzeSuccess={!!aiModalResult?.success && !aiAnalyzeError}
           />
         </View>
-      </ScrollView>
+      </KeyboardAwareScrollView>
 
       <TimeModal
         visible={timeModalField === "checkin"}
