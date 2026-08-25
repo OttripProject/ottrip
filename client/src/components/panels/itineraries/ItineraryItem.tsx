@@ -1059,6 +1059,7 @@ export default function ItineraryItem({
                   placeholder="장소를 검색하세요."
                   disabled={readOnly}
                   readOnly={readOnly}
+                  cityContext={formData.city || formData.country || undefined}
                   initialCoords={
                     itinerary?.location?.fromGoogle
                       ? { lat: itinerary.location.latitude, lng: itinerary.location.longitude }

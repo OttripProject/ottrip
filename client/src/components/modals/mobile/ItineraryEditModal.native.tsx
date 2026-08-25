@@ -589,6 +589,7 @@ export default function ItineraryEditModal({
               onClear={() => setFormData(prev => ({ ...prev, location: "", locationId: undefined }))}
               bordered={!!itinerary}
               placeholder="장소를 검색하세요."
+              cityContext={formData.city || formData.country || undefined}
               initialCoords={
                 itinerary?.location?.fromGoogle
                   ? { lat: itinerary.location.latitude, lng: itinerary.location.longitude }

@@ -26,6 +26,7 @@ interface PlacesSearchInputProps {
   readOnly?: boolean;
   bordered?: boolean;
   initialCoords?: { lat: number; lng: number };
+  cityContext?: string;
 }
 
 const manualPlaceId = (name: string) => {
@@ -86,6 +87,7 @@ export default function PlacesSearchInput({
   readOnly,
   bordered,
   initialCoords,
+  cityContext,
 }: PlacesSearchInputProps) {
   const [text, setText] = useState(value ?? "");
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
@@ -128,7 +130,7 @@ export default function PlacesSearchInput({
     setLoading(true);
     debounceRef.current = setTimeout(async () => {
       try {
-        const results = await fetchSuggestions(t);
+        const results = await fetchSuggestions(cityContext ? `${cityContext} ${t}` : t);
         setSuggestions(results);
         setSearchError(false);
       } catch {
@@ -138,7 +140,7 @@ export default function PlacesSearchInput({
         setLoading(false);
       }
     }, 350);
-  }, []);
+  }, [cityContext]);
 
   const handleSelect = async (suggestion: Suggestion) => {
     setText(suggestion.mainText);

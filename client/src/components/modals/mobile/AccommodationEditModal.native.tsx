@@ -531,6 +531,7 @@ export default function AccommodationEditModal({
               onClear={() => setFormData(prev => ({ ...prev, place: "", locationId: undefined }))}
               bordered={!!accommodation}
               placeholder="장소를 검색하세요."
+              cityContext={formData.city || formData.country || undefined}
               initialCoords={
                 accommodation?.location?.fromGoogle
                   ? { lat: accommodation.location.latitude, lng: accommodation.location.longitude }

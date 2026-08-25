@@ -815,6 +815,7 @@ export default function AccommodationItem({
                   placeholder={PLACEHOLDERS.accommodation.place}
                   disabled={readOnly}
                   readOnly={readOnly}
+                  cityContext={formData.city || formData.country || undefined}
                   initialCoords={
                     accommodation?.location?.fromGoogle
                       ? { lat: accommodation.location.latitude, lng: accommodation.location.longitude }

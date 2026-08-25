@@ -27,6 +27,7 @@ interface PlacesSearchInputProps {
   readOnly?: boolean;
   bordered?: boolean;
   initialCoords?: { lat: number; lng: number };
+  cityContext?: string;
 }
 
 const manualPlaceId = (name: string) => {
@@ -44,6 +45,7 @@ export default function PlacesSearchInput({
   disabled,
   readOnly,
   initialCoords,
+  cityContext,
 }: PlacesSearchInputProps) {
   const apiKey = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY_WEB ?? "";
   const { isLoaded } = useLoadScript({ googleMapsApiKey: apiKey });
@@ -204,7 +206,7 @@ export default function PlacesSearchInput({
       onClear?.();
     }
     if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => fetchSuggestions(val), 350);
+    debounceRef.current = setTimeout(() => fetchSuggestions(cityContext ? `${cityContext} ${val}` : val), 350);
   };
 
   const handleSelectSuggestion = async (prediction: any) => {
