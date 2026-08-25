@@ -44,6 +44,14 @@ export const colors = {
   aiInk: "#7B6CFF",
   aiInkDark: "#4A3DBF",
   aiHeaderGradient: ["#EEF0FF", "#F3ECFF"] as const,
+  categoryMeal: "#B76800",
+  categoryTransport: "#373737",
+  categoryActivity: "#D91CB5",
+  categorySightseeing: "#D91CB5",
+  categoryShopping: "#1F9D57",
+  categoryEtc: "#6C6C6C",
+  expenseAccommodation: "#8B5CF6",
+  expenseFlight: "#06B6D4",
 };
 
 export type ColorName = keyof typeof colors;

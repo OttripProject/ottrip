@@ -62,6 +62,7 @@ import XIcon from "../../../assets/x.svg";
 import UploadIcon from "../../../assets/upload_tray.svg";
 import { extendPlanIfNeeded } from "@/utils/extendPlanIfNeeded";
 import { collectPlanItemDates, shrinkPlanIfNeeded } from "@/utils/shrinkPlanIfNeeded";
+import { type ItineraryCategory, itineraryCategoryColors } from "@/types/itinerary";
 
 dayjs.locale(ko);
 
@@ -74,6 +75,7 @@ export interface Itinerary {
   location?: { id: number; name: string; placeId: string; latitude: number; longitude: number; address?: string } | string;
   city?: string;
   color?: string;
+  category?: ItineraryCategory;
 }
 
 function toEvent(it: Itinerary): any {
@@ -294,6 +296,7 @@ export default function WeeklySchedulePanel({
     startTime: string;
     endTime: string;
     location?: string;
+    category?: ItineraryCategory;
   } | null>(null);
 
   const [previewAccommodation, setPreviewAccommodation] = useState<{
@@ -1323,7 +1326,7 @@ export default function WeeklySchedulePanel({
 
   useEffect(() => {
     const handler = (e: CustomEvent) => {
-      const { title, startTime, endTime, location, itineraryDate } = e.detail;
+      const { title, startTime, endTime, location, itineraryDate, category } = e.detail;
       if (previewEvent) {
         setPreviewEvent(prev =>
           prev
@@ -1333,6 +1336,7 @@ export default function WeeklySchedulePanel({
                 startTime: startTime !== undefined ? startTime : prev.startTime,
                 endTime: endTime !== undefined ? endTime : prev.endTime,
                 location: location !== undefined ? location : prev.location,
+                category: category !== undefined ? category : prev.category,
                 start:
                   itineraryDate && startTime
                     ? dayjs(`${itineraryDate}T${startTime}:00`).toDate()
@@ -1820,6 +1824,7 @@ export default function WeeklySchedulePanel({
             normalizedStartTime: previewEvent.startTime,
             normalizedEndTime: previewEvent.endTime,
             locationText: previewEvent.location || "",
+            originalData: { category: previewEvent.category },
           },
         ]
       : [];
@@ -3154,22 +3159,36 @@ export default function WeeklySchedulePanel({
                 }
               : null;
 
+            const itineraryCategory = (isItinerary || isPreview)
+              ? (event.originalData?.category as ItineraryCategory | undefined)
+              : undefined;
+            const itineraryCategoryColor = itineraryCategory
+              ? itineraryCategoryColors[itineraryCategory]
+              : null;
             const itineraryStyle = isItinerary
               ? {
-                  backgroundColor: colors.itineraryBg,
+                  backgroundColor: itineraryCategoryColor
+                    ? `${itineraryCategoryColor}1A`
+                    : colors.itineraryBg,
                   borderWidth: borderWidth,
                   borderColor: isSelected
-                    ? colors.itineraryText
-                    : colors.itineraryBorder,
+                    ? (itineraryCategoryColor ?? colors.itineraryText)
+                    : itineraryCategoryColor
+                      ? `${itineraryCategoryColor}59`
+                      : colors.itineraryBorder,
                   borderRadius: radii.md,
                 }
               : null;
 
             const previewStyle = isPreview
               ? {
-                  backgroundColor: colors.itineraryBg,
+                  backgroundColor: itineraryCategoryColor
+                    ? `${itineraryCategoryColor}1A`
+                    : colors.itineraryBg,
                   borderWidth: 1,
-                  borderColor: colors.itineraryBorder,
+                  borderColor: itineraryCategoryColor
+                    ? `${itineraryCategoryColor}59`
+                    : colors.itineraryBorder,
                   borderRadius: radii.md,
                   borderStyle: "dashed",
                   opacity: 0.7,
@@ -3267,7 +3286,7 @@ export default function WeeklySchedulePanel({
                             borderRadius: 999,
                             backgroundColor: isFlight
                               ? colors.flightDot
-                              : colors.itineraryDot,
+                              : (itineraryCategoryColor ?? colors.itineraryDot),
                             flexShrink: 0,
                           }}
                         />
@@ -3292,7 +3311,7 @@ export default function WeeklySchedulePanel({
                             lineHeight: 14,
                             color: isFlight
                               ? colors.flightText
-                              : colors.itineraryText,
+                              : (itineraryCategoryColor ?? colors.itineraryText),
                             flex: 1,
                           }}
                         >
@@ -3305,7 +3324,7 @@ export default function WeeklySchedulePanel({
                               ...textStyles.h9,
                               color: isFlight
                                 ? colors.flightText
-                                : colors.itineraryText,
+                                : (itineraryCategoryColor ?? colors.itineraryText),
                               opacity: 0.75,
                               flexShrink: 0,
                             }}
@@ -3325,7 +3344,7 @@ export default function WeeklySchedulePanel({
                             <WeekBarTimeIcon
                               width={9}
                               height={9}
-                              color={colors.itineraryText}
+                              color={itineraryCategoryColor ?? colors.itineraryText}
                             />
                           </View>
                           <Text
@@ -3336,7 +3355,7 @@ export default function WeeklySchedulePanel({
                                 typography.fontFamily.pretendardRegular,
                               fontSize: 10,
                               lineHeight: 14,
-                              color: colors.itineraryText,
+                              color: itineraryCategoryColor ?? colors.itineraryText,
                             }}
                           >
                             {event.normalizedStartTime} -{" "}
@@ -3355,7 +3374,7 @@ export default function WeeklySchedulePanel({
                             fontFamily: typography.fontFamily.pretendardRegular,
                             fontSize: 10,
                             lineHeight: 14,
-                            color: colors.itineraryText,
+                            color: itineraryCategoryColor ?? colors.itineraryText,
                             opacity: 0.65,
                           }}
                         >
@@ -3468,6 +3487,13 @@ export default function WeeklySchedulePanel({
           const isItinerary = draggedEvent.type === "itinerary";
           const isFlight = draggedEvent.type === "flight";
 
+          const dragCategory = isItinerary
+            ? (draggedEvent.originalData?.category as ItineraryCategory | undefined)
+            : undefined;
+          const dragCategoryColor = dragCategory
+            ? itineraryCategoryColors[dragCategory]
+            : "#0066FF";
+
           let displayStartTime = draggedEvent.normalizedStartTime;
           let displayEndTime = draggedEvent.normalizedEndTime;
 
@@ -3501,9 +3527,9 @@ export default function WeeklySchedulePanel({
             : null;
           const itineraryStyle = isItinerary
             ? {
-                backgroundColor: "rgba(0, 102, 255, 0.1)",
+                backgroundColor: `${dragCategoryColor}1A`,
                 borderWidth: 1,
-                borderColor: "#0066FF",
+                borderColor: dragCategoryColor,
                 borderRadius: radii.md,
               }
             : null;
@@ -3543,6 +3569,15 @@ export default function WeeklySchedulePanel({
               <View style={styles.dragEventContent}>
                 {dragShowTitle && (
                   <View style={styles.dragEventTitleRow}>
+                    <View
+                      style={{
+                        width: 5,
+                        height: 5,
+                        borderRadius: 999,
+                        backgroundColor: isFlight ? colors.flightDot : dragCategoryColor,
+                        flexShrink: 0,
+                      }}
+                    />
                     {isFlight && (
                       <Text style={{ fontSize: 11, color: colors.flightText }}>
                         ✈
@@ -3552,9 +3587,10 @@ export default function WeeklySchedulePanel({
                       numberOfLines={1}
                       ellipsizeMode="tail"
                       style={{
-                        ...textStyles.h8,
-                        color: isFlight ? "#8B5CF6" : "#0066FF",
-                        lineHeight: 12,
+                        fontFamily: typography.fontFamily.pretendardSemiBold,
+                        fontSize: 11,
+                        lineHeight: 14,
+                        color: isFlight ? "#8B5CF6" : dragCategoryColor,
                         flex: 1,
                       }}
                     >
@@ -3574,14 +3610,15 @@ export default function WeeklySchedulePanel({
                         marginTop: dragShowTitle ? 8 : 0,
                       }}
                     >
-                      <WeekBarTimeIcon width={14} height={14} />
+                      <WeekBarTimeIcon width={9} height={9} color={dragCategoryColor} />
                       <Text
                         numberOfLines={1}
                         ellipsizeMode="tail"
                         style={{
-                          ...textStyles.h9,
-                          color: "#0066FF",
-                          lineHeight: 10,
+                          fontFamily: typography.fontFamily.pretendardRegular,
+                          fontSize: 10,
+                          lineHeight: 14,
+                          color: dragCategoryColor,
                         }}
                       >
                         {displayStartTime} - {displayEndTime}
@@ -3592,14 +3629,15 @@ export default function WeeklySchedulePanel({
                   isItinerary &&
                   draggedEvent.locationText && (
                     <View style={styles.dragEventLocationRow}>
-                      <WeekBarLocationIcon width={14} height={14} />
                       <Text
                         numberOfLines={1}
                         ellipsizeMode="tail"
                         style={{
-                          ...textStyles.h9,
-                          color: "#0066FF",
-                          lineHeight: 10,
+                          fontFamily: typography.fontFamily.pretendardRegular,
+                          fontSize: 10,
+                          lineHeight: 14,
+                          color: dragCategoryColor,
+                          opacity: 0.65,
                         }}
                       >
                         {draggedEvent.locationText}
