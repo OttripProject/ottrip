@@ -3480,6 +3480,13 @@ export default function WeeklySchedulePanel({
           const isItinerary = draggedEvent.type === "itinerary";
           const isFlight = draggedEvent.type === "flight";
 
+          const dragCategory = isItinerary
+            ? (draggedEvent.originalData?.category as ItineraryCategory | undefined)
+            : undefined;
+          const dragCategoryColor = dragCategory
+            ? itineraryCategoryColors[dragCategory]
+            : "#0066FF";
+
           let displayStartTime = draggedEvent.normalizedStartTime;
           let displayEndTime = draggedEvent.normalizedEndTime;
 
@@ -3513,9 +3520,9 @@ export default function WeeklySchedulePanel({
             : null;
           const itineraryStyle = isItinerary
             ? {
-                backgroundColor: "rgba(0, 102, 255, 0.1)",
+                backgroundColor: `${dragCategoryColor}1A`,
                 borderWidth: 1,
-                borderColor: "#0066FF",
+                borderColor: dragCategoryColor,
                 borderRadius: radii.md,
               }
             : null;
@@ -3555,6 +3562,15 @@ export default function WeeklySchedulePanel({
               <View style={styles.dragEventContent}>
                 {dragShowTitle && (
                   <View style={styles.dragEventTitleRow}>
+                    <View
+                      style={{
+                        width: 5,
+                        height: 5,
+                        borderRadius: 999,
+                        backgroundColor: isFlight ? colors.flightDot : dragCategoryColor,
+                        flexShrink: 0,
+                      }}
+                    />
                     {isFlight && (
                       <Text style={{ fontSize: 11, color: colors.flightText }}>
                         ✈
@@ -3564,9 +3580,10 @@ export default function WeeklySchedulePanel({
                       numberOfLines={1}
                       ellipsizeMode="tail"
                       style={{
-                        ...textStyles.h8,
-                        color: isFlight ? "#8B5CF6" : "#0066FF",
-                        lineHeight: 12,
+                        fontFamily: typography.fontFamily.pretendardSemiBold,
+                        fontSize: 11,
+                        lineHeight: 14,
+                        color: isFlight ? "#8B5CF6" : dragCategoryColor,
                         flex: 1,
                       }}
                     >
@@ -3586,14 +3603,15 @@ export default function WeeklySchedulePanel({
                         marginTop: dragShowTitle ? 8 : 0,
                       }}
                     >
-                      <WeekBarTimeIcon width={14} height={14} />
+                      <WeekBarTimeIcon width={9} height={9} color={dragCategoryColor} />
                       <Text
                         numberOfLines={1}
                         ellipsizeMode="tail"
                         style={{
-                          ...textStyles.h9,
-                          color: "#0066FF",
-                          lineHeight: 10,
+                          fontFamily: typography.fontFamily.pretendardRegular,
+                          fontSize: 10,
+                          lineHeight: 14,
+                          color: dragCategoryColor,
                         }}
                       >
                         {displayStartTime} - {displayEndTime}
@@ -3604,14 +3622,15 @@ export default function WeeklySchedulePanel({
                   isItinerary &&
                   draggedEvent.locationText && (
                     <View style={styles.dragEventLocationRow}>
-                      <WeekBarLocationIcon width={14} height={14} />
                       <Text
                         numberOfLines={1}
                         ellipsizeMode="tail"
                         style={{
-                          ...textStyles.h9,
-                          color: "#0066FF",
-                          lineHeight: 10,
+                          fontFamily: typography.fontFamily.pretendardRegular,
+                          fontSize: 10,
+                          lineHeight: 14,
+                          color: dragCategoryColor,
+                          opacity: 0.65,
                         }}
                       >
                         {draggedEvent.locationText}
