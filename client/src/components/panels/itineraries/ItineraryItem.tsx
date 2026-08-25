@@ -22,6 +22,7 @@ import {
   categoryColors,
   categoryLabels,
 } from "@/types/expense";
+import { ItineraryCategory, itineraryCategoryColors, itineraryCategoryLabels } from "@/types/itinerary";
 import CurrencyToggle from "@/ui/components/CurrencyToggle";
 import PlacesSearchInput from "@/ui/components/PlacesSearchInput";
 import type { PlaceResult } from "@/ui/components/PlacesSearchInput";
@@ -47,6 +48,7 @@ import {
   showMessage,
 } from "@/utils/crossPlatformAlert";
 import { handleGuestPromptError } from "@/utils/guestPrompt";
+import useDetectClose from "@/hooks/useDetectClose";
 import dayjs from "dayjs";
 import React, {
   useState,
@@ -67,6 +69,8 @@ import {
 } from "react-native";
 import CalendarIcon from "../../../../assets/calender.svg";
 import CloseIcon from "../../../../assets/close_sm.svg";
+import DownArrowIcon from "../../../../assets/dropdown_time.svg";
+import UpperArrowIcon from "../../../../assets/upper_arrow.svg";
 import PanelTabSwitcher from "../PanelTabSwitcher";
 import { extendPlanIfNeeded } from "@/utils/extendPlanIfNeeded";
 
@@ -186,6 +190,12 @@ export default function ItineraryItem({
     }
   }, [formData, itinerary, readOnly]);
 
+  const [selectedCategory, setSelectedCategory] = useState<ItineraryCategory | null>(
+    (itinerary?.category as ItineraryCategory) ?? null,
+  );
+  const categoryRef = useRef<View>(null);
+  const [categoryOpen, setCategoryOpen] = useDetectClose(categoryRef, false);
+  const [hoveredCategoryKey, setHoveredCategoryKey] = useState<string | null>(null);
   const [countryOpen, setCountryOpen] = useState(false);
   const [timeOpen, setTimeOpen] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -269,6 +279,7 @@ export default function ItineraryItem({
         endTime = "24:00";
       }
 
+      setSelectedCategory((itinerary.category as ItineraryCategory) ?? null);
       setFormData({
         title: itinerary.title || "",
         description: itinerary.description || "",
@@ -528,6 +539,7 @@ export default function ItineraryItem({
           itineraryDate: formData.itineraryDate,
           startTime: formData.startTime,
           endTime: finalEndTime,
+          category: selectedCategory,
         });
 
         const originalDate =
@@ -601,6 +613,7 @@ export default function ItineraryItem({
           itineraryDate: formData.itineraryDate,
           startTime: formData.startTime,
           endTime: finalEndTime,
+          category: selectedCategory !== null ? selectedCategory : undefined,
         });
         await extendPlanIfNeeded(planId, planData?.plan, [formData.itineraryDate]);
 
@@ -988,6 +1001,47 @@ export default function ItineraryItem({
               placeholderTextColor={colors.gray600}
               editable={!readOnly}
             />
+          </View>
+
+          <View ref={categoryRef} style={[styles.inputGroup, { overflow: "visible", position: "relative", zIndex: categoryOpen ? 1000 : 1 }]}>
+            <Text style={styles.label}>카테고리</Text>
+            <Pressable
+              onPress={() => !readOnly && setCategoryOpen(prev => !prev)}
+              style={[styles.categoryTrigger, readOnly && styles.categoryTriggerReadOnly]}
+            >
+              {selectedCategory && (
+                <View style={[styles.dot, { backgroundColor: itineraryCategoryColors[selectedCategory] }]} />
+              )}
+              <Text style={[styles.categoryTriggerText, !selectedCategory && styles.categoryTriggerTextNone]}>
+                {selectedCategory ? itineraryCategoryLabels[selectedCategory] : "카테고리 선택"}
+              </Text>
+              {!readOnly && (categoryOpen
+                ? <UpperArrowIcon width={10} height={10} style={{ opacity: 0.6 }}/>
+                : <DownArrowIcon width={10} height={10} style={{ opacity: 0.6 }}/>)}
+            </Pressable>
+            {categoryOpen && (
+              <View style={styles.categoryDropdown}>
+                <Pressable
+                  onPress={() => { setSelectedCategory(null); setCategoryOpen(false); }}
+                  {...{ onMouseEnter: () => setHoveredCategoryKey("none"), onMouseLeave: () => setHoveredCategoryKey(null) }}
+                  style={[styles.categoryOption, hoveredCategoryKey === "none" && styles.categoryOptionPressed]}
+                >
+                  <View style={styles.dotOutline} />
+                  <Text style={styles.categoryOptionTextNone}>선택 안 함</Text>
+                </Pressable>
+                {Object.values(ItineraryCategory).map(cat => (
+                  <Pressable
+                    key={cat}
+                    onPress={() => { setSelectedCategory(cat); setCategoryOpen(false); }}
+                    {...{ onMouseEnter: () => setHoveredCategoryKey(cat), onMouseLeave: () => setHoveredCategoryKey(null) }}
+                    style={[styles.categoryOption, hoveredCategoryKey === cat && styles.categoryOptionPressed]}
+                  >
+                    <View style={[styles.dot, { backgroundColor: itineraryCategoryColors[cat] }]} />
+                    <Text style={styles.categoryOptionText}>{itineraryCategoryLabels[cat]}</Text>
+                  </Pressable>
+                ))}
+              </View>
+            )}
           </View>
 
           <View style={styles.inputGroup}>
@@ -1799,6 +1853,82 @@ const styles = StyleSheet.create({
     padding: 4,
     justifyContent: "center",
     alignItems: "center",
+  },
+  categoryTrigger: {
+    height: 40,
+    backgroundColor: colors.gray200,
+    borderRadius: radii.md,
+    paddingHorizontal: spacing.md,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    cursor: "pointer",
+  } as any,
+  categoryTriggerReadOnly: {
+    borderWidth: 1,
+    borderColor: colors.gray400,
+    cursor: "default",
+  } as any,
+  categoryTriggerText: {
+    ...textStyles.body4,
+    flex: 1,
+    color: colors.gray900,
+  },
+  categoryTriggerTextNone: {
+    color: colors.gray600,
+  },
+  categoryChevron: {
+    ...textStyles.body6,
+    color: colors.gray600,
+  },
+  categoryDropdown: {
+    position: "absolute",
+    top: "calc(100% + 6px)",
+    left: 0,
+    right: 0,
+    zIndex: 1000,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.gray300,
+    backgroundColor: colors.white,
+    shadowColor: colors.gray900,
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.08,
+    shadowRadius: 24,
+    elevation: 8,
+    padding: 4,
+  } as any,
+  categoryOption: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
+    cursor: "pointer",
+  } as any,
+  categoryOptionPressed: {
+    backgroundColor: colors.gray200,
+  },
+  dot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  dotOutline: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    borderWidth: 1.5,
+    borderColor: colors.gray400,
+  },
+  categoryOptionText: {
+    ...textStyles.h8,
+    color: colors.gray900,
+  },
+  categoryOptionTextNone: {
+    ...textStyles.h8,
+    color: colors.gray600,
   },
   dateInput: {
     flexDirection: "row",

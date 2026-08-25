@@ -22,6 +22,7 @@ import {
   ExpenseCurrency,
   categoryLabels,
 } from "@/types/expense";
+import { ItineraryCategory, itineraryCategoryColors, itineraryCategoryLabels } from "@/types/itinerary";
 import CalendarModal from "@/ui/components/CalendarModal.native";
 import CurrencyToggle from "@/ui/components/CurrencyToggle";
 import FloatingFooter from "@/ui/components/FloatingFooter.native";
@@ -39,6 +40,7 @@ import dayjs from "dayjs";
 import { useEffect, useRef, useState } from "react";
 import {
   Alert,
+  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -55,6 +57,9 @@ import ShoppingIcon from "../../../../assets/mobile_shopping.svg";
 import TicketIcon from "../../../../assets/mobile_ticket.svg";
 import TimeIcon from "../../../../assets/mobile_time.svg";
 import CloseIcon from "../../../../assets/x.svg";
+import ModalCloseIcon from "../../../../assets/mobile_close.svg";
+import DownArrowIcon from "../../../../assets/down_arrow.svg";
+import UpperArrowIcon from "../../../../assets/upper_arrow.svg";
 import CityPicker from "@/ui/components/pickers/CityPicker";
 import CountryPicker from "@/ui/components/pickers/CountryPicker";
 
@@ -115,6 +120,8 @@ export default function ItineraryEditModal({
   const [existingExpenseId, setExistingExpenseId] = useState<number | null>(
     null,
   );
+  const [selectedCategory, setSelectedCategory] = useState<ItineraryCategory | null>(null);
+  const [categoryOpen, setCategoryOpen] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showStartTimeModal, setShowStartTimeModal] = useState(false);
   const [showEndTimeModal, setShowEndTimeModal] = useState(false);
@@ -182,6 +189,7 @@ export default function ItineraryEditModal({
       formInitializedRef.current = false;
       setAiModalResult(null);
       setAiApplyLabel(undefined);
+      setCategoryOpen(false);
       return;
     }
     if (formInitializedRef.current) return;
@@ -210,6 +218,7 @@ export default function ItineraryEditModal({
               ? latestItinerary.endTime.substring(0, 5)
               : "10:00",
           });
+          setSelectedCategory((latestItinerary.category as ItineraryCategory) ?? null);
           const firstExpense = expenses[0];
           if (firstExpense) {
             const amountInt = Math.floor(Number(firstExpense.amount));
@@ -224,6 +233,7 @@ export default function ItineraryEditModal({
             setExistingExpenseId(null);
           }
         } catch {
+          setSelectedCategory((itinerary.category as ItineraryCategory) ?? null);
           setFormData({
             title: itinerary.title || "",
             description: itinerary.description || "",
@@ -258,6 +268,7 @@ export default function ItineraryEditModal({
         startTime: "09:00",
         endTime: "10:00",
       });
+      setSelectedCategory(null);
       setExpenseData({ amount: "", category: ExpenseCategory.FOOD, currency: ExpenseCurrency.KRW });
       setExistingExpenseId(null);
     }
@@ -384,12 +395,13 @@ export default function ItineraryEditModal({
       if (itinerary) {
         savedItinerary = await itinerariesApi.updateItinerary(itinerary.id, {
           ...formData,
-          planId,
+          category: selectedCategory,
         });
       } else {
         savedItinerary = await itinerariesApi.createItinerary({
           ...formData,
           planId,
+          category: selectedCategory !== null ? selectedCategory : undefined,
         });
       }
 
@@ -527,6 +539,66 @@ export default function ItineraryEditModal({
               onChangeText={text => setFormData({ ...formData, title: text })}
               style={[styles.input, !itinerary && styles.inputBorderless]}
             />
+          </View>
+
+          {/* 카테고리 */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>카테고리</Text>
+            <Pressable
+              onPress={() => setCategoryOpen(true)}
+              style={[styles.categoryTrigger, !!itinerary && styles.categoryTriggerBordered]}
+            >
+              {selectedCategory && (
+                <View style={[styles.dot, { backgroundColor: itineraryCategoryColors[selectedCategory] }]} />
+              )}
+              <Text style={[styles.categoryTriggerText, !selectedCategory && styles.categoryTriggerTextNone]}>
+                {selectedCategory ? itineraryCategoryLabels[selectedCategory] : "카테고리 선택"}
+              </Text>
+              <DownArrowIcon width={10} height={10} color={colors.gray600} />
+            </Pressable>
+            <Modal
+              visible={categoryOpen}
+              transparent
+              animationType="fade"
+              onRequestClose={() => setCategoryOpen(false)}
+            >
+              <Pressable style={styles.categoryModalOverlay} onPress={() => setCategoryOpen(false)}>
+                <Pressable style={styles.categoryModalSheet} onPress={e => e.stopPropagation()}>
+                  <View style={styles.categoryModalHeader}>
+                    <Text style={styles.categoryModalTitle}>카테고리</Text>
+                    <Pressable onPress={() => setCategoryOpen(false)} hitSlop={12}>
+                      <ModalCloseIcon width={24} height={24} color={colors.gray500} />
+                    </Pressable>
+                  </View>
+                  <View style={styles.categoryModalList}>
+                    {[null, ...Object.values(ItineraryCategory)].map(cat => (
+                      <Pressable
+                        key={cat ?? "none"}
+                        onPress={() => { setSelectedCategory(cat); setCategoryOpen(false); }}
+                        style={({ pressed }) => [
+                          styles.categoryModalOption,
+                          selectedCategory === cat && styles.categoryModalOptionSelected,
+                          pressed && styles.categoryModalOptionPressed,
+                        ]}
+                      >
+                        {cat ? (
+                          <View style={[styles.dot, { backgroundColor: itineraryCategoryColors[cat] }]} />
+                        ) : (
+                          <View style={styles.dotOutline} />
+                        )}
+                        <Text style={[
+                          styles.categoryModalOptionText,
+                          !cat && styles.categoryOptionTextNone,
+                          selectedCategory === cat && styles.categoryModalOptionTextSelected,
+                        ]}>
+                          {cat ? itineraryCategoryLabels[cat] : "선택 안 함"}
+                        </Text>
+                      </Pressable>
+                    ))}
+                  </View>
+                </Pressable>
+              </Pressable>
+            </Modal>
           </View>
 
           {/* 내용 (메모) */}
@@ -1053,5 +1125,117 @@ const styles = StyleSheet.create({
   },
   attachmentSection: {
     marginTop: 32,
+  },
+  categoryTrigger: {
+    height: 44,
+    backgroundColor: colors.gray200,
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  categoryTriggerBordered: {
+    borderWidth: 1,
+    borderColor: colors.gray400,
+  },
+  categoryTriggerText: {
+    ...textStyles.body4,
+    flex: 1,
+    color: colors.gray900,
+  },
+  categoryTriggerTextNone: {
+    color: colors.gray600,
+  },
+  categoryChevron: {
+    ...textStyles.body6,
+    color: colors.gray600,
+  },
+  categoryModalOverlay: {
+    flex: 1,
+    backgroundColor: colors.overlayBackground,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 32,
+  },
+  categoryModalSheet: {
+    width: "100%",
+    backgroundColor: colors.white,
+    borderRadius: 16,
+    overflow: "hidden",
+  },
+  categoryModalHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 20,
+    paddingTop: 16,
+  },
+  categoryModalTitle: {
+    ...textStyles.h5,
+  },
+  categoryModalList: {
+    padding: 16,
+    gap: 8,
+  },
+  categoryModalOption: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderRadius: 12,
+    backgroundColor: colors.gray100,
+  },
+  categoryModalOptionSelected: {
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: colors.gray300,
+    shadowColor: colors.gray900,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  categoryModalOptionPressed: {
+    backgroundColor: colors.gray200,
+  },
+  categoryModalOptionText: {
+    ...textStyles.h7,
+    color: colors.gray900,
+  },
+  categoryModalOptionTextSelected: {
+    color: colors.gray900,
+  },
+  categoryOption: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
+  },
+  categoryOptionPressed: {
+    backgroundColor: colors.gray200,
+  },
+  dot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  dotOutline: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    borderWidth: 1.5,
+    borderColor: colors.gray400,
+  },
+  categoryOptionText: {
+    ...textStyles.h7,
+    color: colors.gray900,
+  },
+  categoryOptionTextNone: {
+    ...textStyles.h7,
+    color: colors.gray600,
   },
 });
