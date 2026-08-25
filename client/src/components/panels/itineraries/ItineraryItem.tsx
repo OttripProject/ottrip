@@ -334,6 +334,7 @@ export default function ItineraryItem({
         endTime: defaultEndTime,
       });
 
+      setSelectedCategory(null);
       setExpenses([]);
       setDraftExpenses([]);
       setShowExpenseForm(false);
