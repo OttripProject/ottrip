@@ -183,6 +183,10 @@ export default function ItineraryItem({
     }
   }, [selectedDate, itinerary]);
 
+  const [selectedCategory, setSelectedCategory] = useState<ItineraryCategory | null>(
+    (itinerary?.category as ItineraryCategory) ?? null,
+  );
+
   React.useEffect(() => {
     if (!itinerary && !readOnly && typeof window !== "undefined") {
       window.dispatchEvent(
@@ -193,15 +197,12 @@ export default function ItineraryItem({
             endTime: formData.endTime,
             location: formData.location,
             itineraryDate: formData.itineraryDate,
+            category: selectedCategory,
           },
         }),
       );
     }
-  }, [formData, itinerary, readOnly]);
-
-  const [selectedCategory, setSelectedCategory] = useState<ItineraryCategory | null>(
-    (itinerary?.category as ItineraryCategory) ?? null,
-  );
+  }, [formData, selectedCategory, itinerary, readOnly]);
   const categoryRef = useRef<View>(null);
   const [categoryOpen, setCategoryOpen] = useDetectClose(categoryRef, false);
   const [hoveredCategoryKey, setHoveredCategoryKey] = useState<string | null>(null);

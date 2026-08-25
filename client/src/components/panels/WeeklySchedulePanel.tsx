@@ -296,6 +296,7 @@ export default function WeeklySchedulePanel({
     startTime: string;
     endTime: string;
     location?: string;
+    category?: ItineraryCategory;
   } | null>(null);
 
   const [previewAccommodation, setPreviewAccommodation] = useState<{
@@ -1325,7 +1326,7 @@ export default function WeeklySchedulePanel({
 
   useEffect(() => {
     const handler = (e: CustomEvent) => {
-      const { title, startTime, endTime, location, itineraryDate } = e.detail;
+      const { title, startTime, endTime, location, itineraryDate, category } = e.detail;
       if (previewEvent) {
         setPreviewEvent(prev =>
           prev
@@ -1335,6 +1336,7 @@ export default function WeeklySchedulePanel({
                 startTime: startTime !== undefined ? startTime : prev.startTime,
                 endTime: endTime !== undefined ? endTime : prev.endTime,
                 location: location !== undefined ? location : prev.location,
+                category: category !== undefined ? category : prev.category,
                 start:
                   itineraryDate && startTime
                     ? dayjs(`${itineraryDate}T${startTime}:00`).toDate()
@@ -1822,6 +1824,7 @@ export default function WeeklySchedulePanel({
             normalizedStartTime: previewEvent.startTime,
             normalizedEndTime: previewEvent.endTime,
             locationText: previewEvent.location || "",
+            originalData: { category: previewEvent.category },
           },
         ]
       : [];
@@ -3156,7 +3159,7 @@ export default function WeeklySchedulePanel({
                 }
               : null;
 
-            const itineraryCategory = isItinerary
+            const itineraryCategory = (isItinerary || isPreview)
               ? (event.originalData?.category as ItineraryCategory | undefined)
               : undefined;
             const itineraryCategoryColor = itineraryCategory
@@ -3179,9 +3182,13 @@ export default function WeeklySchedulePanel({
 
             const previewStyle = isPreview
               ? {
-                  backgroundColor: colors.itineraryBg,
+                  backgroundColor: itineraryCategoryColor
+                    ? `${itineraryCategoryColor}1A`
+                    : colors.itineraryBg,
                   borderWidth: 1,
-                  borderColor: colors.itineraryBorder,
+                  borderColor: itineraryCategoryColor
+                    ? `${itineraryCategoryColor}59`
+                    : colors.itineraryBorder,
                   borderRadius: radii.md,
                   borderStyle: "dashed",
                   opacity: 0.7,
