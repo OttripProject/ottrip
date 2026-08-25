@@ -23,6 +23,15 @@ import {
   categoryLabels,
 } from "@/types/expense";
 import { ItineraryCategory, itineraryCategoryColors, itineraryCategoryLabels } from "@/types/itinerary";
+
+const itineraryCategoryToExpenseCategory: Partial<Record<ItineraryCategory, ExpenseCategory>> = {
+  [ItineraryCategory.MEAL]: ExpenseCategory.FOOD,
+  [ItineraryCategory.TRANSPORT]: ExpenseCategory.TRANSPORT,
+  [ItineraryCategory.ACTIVITY]: ExpenseCategory.ACTIVITY,
+  [ItineraryCategory.SIGHTSEEING]: ExpenseCategory.ACTIVITY,
+  [ItineraryCategory.SHOPPING]: ExpenseCategory.SHOPPING,
+  [ItineraryCategory.ETC]: ExpenseCategory.ETC,
+};
 import CalendarModal from "@/ui/components/CalendarModal.native";
 import CurrencyToggle from "@/ui/components/CurrencyToggle";
 import FloatingFooter from "@/ui/components/FloatingFooter.native";
@@ -349,6 +358,16 @@ export default function ItineraryEditModal({
       setIsAiAnalyzing(false);
     }
   };
+
+  useEffect(() => {
+    if (existingExpenseId !== null) return;
+    const mapped = selectedCategory
+      ? itineraryCategoryToExpenseCategory[selectedCategory]
+      : undefined;
+    if (mapped) {
+      setExpenseData(prev => ({ ...prev, category: mapped }));
+    }
+  }, [selectedCategory]);
 
   useEffect(() => {
     if (visible && pendingAiResult) {

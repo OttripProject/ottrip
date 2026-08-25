@@ -23,6 +23,15 @@ import {
   categoryLabels,
 } from "@/types/expense";
 import { ItineraryCategory, itineraryCategoryColors, itineraryCategoryLabels } from "@/types/itinerary";
+
+const itineraryCategoryToExpenseCategory: Partial<Record<ItineraryCategory, ExpenseCategory>> = {
+  [ItineraryCategory.MEAL]: ExpenseCategory.FOOD,
+  [ItineraryCategory.TRANSPORT]: ExpenseCategory.TRANSPORT,
+  [ItineraryCategory.ACTIVITY]: ExpenseCategory.ACTIVITY,
+  [ItineraryCategory.SIGHTSEEING]: ExpenseCategory.ACTIVITY,
+  [ItineraryCategory.SHOPPING]: ExpenseCategory.SHOPPING,
+  [ItineraryCategory.ETC]: ExpenseCategory.ETC,
+};
 import CurrencyToggle from "@/ui/components/CurrencyToggle";
 import PlacesSearchInput from "@/ui/components/PlacesSearchInput";
 import type { PlaceResult } from "@/ui/components/PlacesSearchInput";
@@ -1327,8 +1336,11 @@ export default function ItineraryItem({
                   style={styles.addExpenseButton}
                   onPress={() => {
                     setEditingExpense(null);
+                    const mappedCategory = selectedCategory
+                      ? (itineraryCategoryToExpenseCategory[selectedCategory] ?? ExpenseCategory.ETC)
+                      : ExpenseCategory.ETC;
                     setExpenseForm({
-                      category: ExpenseCategory.ETC,
+                      category: mappedCategory,
                       amount: 0,
                       description: "",
                       currency: ExpenseCurrency.KRW,

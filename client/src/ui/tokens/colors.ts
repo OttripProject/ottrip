@@ -50,6 +50,8 @@ export const colors = {
   categorySightseeing: "#D91CB5",
   categoryShopping: "#1F9D57",
   categoryEtc: "#6C6C6C",
+  expenseAccommodation: "#8B5CF6",
+  expenseFlight: "#06B6D4",
 };
 
 export type ColorName = keyof typeof colors;
