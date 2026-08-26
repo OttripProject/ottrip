@@ -24,6 +24,17 @@ import {
 } from "@/types/expense";
 import { ItineraryCategory, itineraryCategoryColors, itineraryCategoryLabels } from "@/types/itinerary";
 
+const NEARBY_BADGE_COLORS: Record<string, { color: string; bg: string }> = {
+  문화시설: { color: "#0A84FF", bg: "#EFF4FF" },
+  여행코스: { color: "#3E5BD9", bg: "#ECEFFF" },
+  관광지: { color: "#34C759", bg: "#EDFFF2" },
+  레포츠: { color: "#FF6B35", bg: "#FFF0EB" },
+  음식점: { color: "#FF3B30", bg: "#FFF0EF" },
+  숙박: { color: "#AF52DE", bg: "#F7EFFF" },
+  쇼핑: { color: "#FF9500", bg: "#FFF8ED" },
+};
+const DEFAULT_NEARBY_BADGE = { color: "#6C6C6C", bg: "#F5F5F5" };
+
 const itineraryCategoryToExpenseCategory: Partial<Record<ItineraryCategory, ExpenseCategory>> = {
   [ItineraryCategory.MEAL]: ExpenseCategory.FOOD,
   [ItineraryCategory.TRANSPORT]: ExpenseCategory.TRANSPORT,
@@ -69,6 +80,9 @@ import React, {
 import {
   ActivityIndicator,
   Alert,
+  Image,
+  Linking,
+  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -76,6 +90,8 @@ import {
   Text,
   View,
 } from "react-native";
+import { tourismApi } from "@/services/tourism";
+import type { NearbyAttraction, TourismDetail } from "@/services/tourism";
 import CalendarIcon from "../../../../assets/calender.svg";
 import CloseIcon from "../../../../assets/close_sm.svg";
 import DownArrowIcon from "../../../../assets/dropdown_time.svg";
@@ -277,6 +293,10 @@ export default function ItineraryItem({
     const n = typeof raw === "number" ? raw : Number.parseInt(String(raw), 10);
     return Number.isFinite(n) ? n : undefined;
   }, [itinerary?.id]);
+
+  const [nearbyAttractions, setNearbyAttractions] = useState<NearbyAttraction[]>([]);
+  const [tourismDetail, setTourismDetail] = useState<TourismDetail | null>(null);
+  const [tourismDetailVisible, setTourismDetailVisible] = useState(false);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isSubmittingRef = useRef(false);
@@ -953,6 +973,24 @@ export default function ItineraryItem({
     })();
   }, [itinerary?.location?.id]);
 
+  useEffect(() => {
+    if (!readOnly || !itinerary?.id || !itinerary?.location) {
+      setNearbyAttractions([]);
+      return;
+    }
+    tourismApi.getNearbyAttractions(itinerary.id)
+      .then(setNearbyAttractions)
+      .catch(() => {});
+  }, [readOnly, itinerary?.id, itinerary?.location?.id]);
+
+  const handleAttractionPress = async (item: NearbyAttraction) => {
+    try {
+      const detail = await tourismApi.getTourismDetail(item.title);
+      setTourismDetail(detail);
+      setTourismDetailVisible(true);
+    } catch {}
+  };
+
   const handlePlaceSelect = useCallback(async (place: PlaceResult) => {
     try {
       const location = await locationsApi.createLocation({
@@ -1146,6 +1184,43 @@ export default function ItineraryItem({
               />
             )}
           </View>
+
+          {readOnly && nearbyAttractions.length > 0 && (
+            <View style={styles.nearbySection}>
+              <View style={styles.nearbyHeader}>
+                <Text style={styles.nearbyTitle}>주변 추천</Text>
+                <Text style={styles.nearbyCount}>{nearbyAttractions.length}곳</Text>
+              </View>
+              <View style={styles.nearbyList}>
+                {nearbyAttractions.map((item, index) => {
+                  const badge = NEARBY_BADGE_COLORS[item.contentTypeId] ?? DEFAULT_NEARBY_BADGE;
+                  return (
+                    <Pressable
+                      key={index}
+                      style={styles.nearbyCard}
+                      onPress={() => handleAttractionPress(item)}
+                    >
+                      <View style={styles.nearbyCardRow}>
+                        <View style={[styles.nearbyBadge, { backgroundColor: badge.bg }]}>
+                          <Text style={[styles.nearbyBadgeText, { color: badge.color }]}>
+                            {item.contentTypeId}
+                          </Text>
+                        </View>
+                        <Text style={styles.nearbyCardTitle} numberOfLines={1}>
+                          {item.title}
+                        </Text>
+                      </View>
+                      {item.address && (
+                        <Text style={styles.nearbyCardSub} numberOfLines={1}>
+                          {item.address}
+                        </Text>
+                      )}
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </View>
+          )}
 
           <View
             style={[
@@ -1569,6 +1644,46 @@ export default function ItineraryItem({
         entityTypeLabel="일정"
         originEntityType={analyzeOriginEntityType}
       />
+      <Modal
+        visible={tourismDetailVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setTourismDetailVisible(false)}
+      >
+        <Pressable style={styles.tourismModalOverlay} onPress={() => setTourismDetailVisible(false)}>
+          <Pressable style={styles.tourismModal} onPress={() => {}}>
+            <View style={styles.tourismModalHeader}>
+              <Text style={styles.tourismModalTitle} numberOfLines={2}>
+                {tourismDetail?.title}
+              </Text>
+              <Pressable onPress={() => setTourismDetailVisible(false)} style={styles.closeButton}>
+                <CloseIcon width={12} height={12} color={colors.gray600} />
+              </Pressable>
+            </View>
+            <ScrollView showsVerticalScrollIndicator={false}>
+              {tourismDetail?.imageUrl && (
+                <Image source={{ uri: tourismDetail.imageUrl }} style={styles.tourismDetailImage} resizeMode="cover" />
+              )}
+              <View style={styles.tourismDetailBody}>
+                {tourismDetail?.address && (
+                  <Text style={styles.tourismDetailField}>{tourismDetail.address}</Text>
+                )}
+                {tourismDetail?.tel && (
+                  <Text style={styles.tourismDetailField}>{tourismDetail.tel}</Text>
+                )}
+                {tourismDetail?.overview && (
+                  <Text style={styles.tourismDetailOverview}>{tourismDetail.overview}</Text>
+                )}
+                {tourismDetail?.homepage && (
+                  <Pressable onPress={() => Linking.openURL(tourismDetail.homepage!)}>
+                    <Text style={styles.tourismDetailHomepage}>{tourismDetail.homepage}</Text>
+                  </Pressable>
+                )}
+              </View>
+            </ScrollView>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
@@ -1977,5 +2092,109 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: 70,
     left: 0,
+  },
+  nearbySection: {
+    marginTop: spacing.sm,
+  },
+  nearbyHeader: {
+    flexDirection: "row",
+    alignItems: "baseline",
+    justifyContent: "space-between",
+    marginBottom: 8,
+  },
+  nearbyTitle: {
+    ...textStyles.h8,
+    color: colors.gray600,
+  },
+  nearbyCount: {
+    ...textStyles.body6,
+    fontWeight: "500",
+    color: colors.gray400,
+  },
+  nearbyList: {
+    gap: 4,
+  },
+  nearbyCard: {
+    gap: 4,
+    padding: 12,
+    borderRadius: 10,
+    backgroundColor: colors.white,
+    cursor: "pointer",
+  } as any,
+  nearbyCardRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    minWidth: 0,
+  },
+  nearbyBadge: {
+    borderRadius: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    flexShrink: 0,
+  },
+  nearbyBadgeText: {
+    fontSize: 11,
+    fontWeight: "600",
+    lineHeight: 11,
+  } as any,
+  nearbyCardTitle: {
+    ...textStyles.h7,
+    color: colors.gray900,
+    flex: 1,
+    minWidth: 0,
+  },
+  nearbyCardSub: {
+    ...textStyles.body6,
+    color: colors.gray600,
+  },
+  tourismModalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.4)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: spacing.xl,
+  },
+  tourismModal: {
+    backgroundColor: colors.white,
+    borderRadius: 16,
+    width: "100%",
+    maxHeight: "80%",
+    overflow: "hidden",
+  } as any,
+  tourismModalHeader: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    padding: spacing.xl,
+    paddingBottom: spacing.md,
+    gap: spacing.md,
+  },
+  tourismModalTitle: {
+    ...textStyles.h5,
+    color: colors.gray900,
+    flex: 1,
+  },
+  tourismDetailImage: {
+    width: "100%",
+    height: 180,
+  } as any,
+  tourismDetailBody: {
+    padding: spacing.xl,
+    gap: spacing.sm,
+  },
+  tourismDetailField: {
+    ...textStyles.body4,
+    color: colors.gray700,
+  },
+  tourismDetailOverview: {
+    ...textStyles.body5,
+    color: colors.gray600,
+    lineHeight: 20,
+  },
+  tourismDetailHomepage: {
+    ...textStyles.body5,
+    color: colors.primary,
+    textDecorationLine: "underline",
   },
 });
