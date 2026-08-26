@@ -295,6 +295,7 @@ export default function ItineraryItem({
   }, [itinerary?.id]);
 
   const [nearbyAttractions, setNearbyAttractions] = useState<NearbyAttraction[]>([]);
+  const [hoveredNearbyIndex, setHoveredNearbyIndex] = useState<number | null>(null);
   const [tourismDetail, setTourismDetail] = useState<TourismDetail | null>(null);
   const [tourismDetailVisible, setTourismDetailVisible] = useState(false);
 
@@ -1191,14 +1192,19 @@ export default function ItineraryItem({
                 <Text style={styles.nearbyTitle}>주변 추천</Text>
                 <Text style={styles.nearbyCount}>{nearbyAttractions.length}곳</Text>
               </View>
-              <View style={styles.nearbyList}>
+              <ScrollView
+                style={styles.nearbyList}
+                nestedScrollEnabled
+                showsVerticalScrollIndicator={false}
+              >
                 {nearbyAttractions.map((item, index) => {
                   const badge = NEARBY_BADGE_COLORS[item.contentTypeId] ?? DEFAULT_NEARBY_BADGE;
                   return (
                     <Pressable
                       key={index}
-                      style={styles.nearbyCard}
+                      style={[styles.nearbyCard, hoveredNearbyIndex === index && styles.nearbyCardHovered]}
                       onPress={() => handleAttractionPress(item)}
+                      {...{ onMouseEnter: () => setHoveredNearbyIndex(index), onMouseLeave: () => setHoveredNearbyIndex(null) }}
                     >
                       <View style={styles.nearbyCardRow}>
                         <View style={[styles.nearbyBadge, { backgroundColor: badge.bg }]}>
@@ -1218,7 +1224,7 @@ export default function ItineraryItem({
                     </Pressable>
                   );
                 })}
-              </View>
+              </ScrollView>
             </View>
           )}
 
@@ -2112,7 +2118,7 @@ const styles = StyleSheet.create({
     color: colors.gray400,
   },
   nearbyList: {
-    gap: 4,
+    maxHeight: 340,
   },
   nearbyCard: {
     gap: 4,
@@ -2120,7 +2126,11 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     backgroundColor: colors.white,
     cursor: "pointer",
+    marginBottom: 4,
   } as any,
+  nearbyCardHovered: {
+    backgroundColor: colors.gray100,
+  },
   nearbyCardRow: {
     flexDirection: "row",
     alignItems: "center",

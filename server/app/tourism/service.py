@@ -57,8 +57,8 @@ def _base_ym_3months_ago() -> str:
 async def get_related_attractions(
     keyword: str, area_cd: str, signgu_cd: str
 ) -> list[NearbyAttraction]:
-    """연관관광지 API 호출 → 관광지 목록 반환"""
-    params = {
+    """연관관광지 API 호출 → 전체 관광지 목록 반환"""
+    base_params = {
         "MobileOS": _MOBILE_OS,
         "MobileApp": _MOBILE_APP,
         "serviceKey": tourism_settings.TOUR_SERVICE_KEY,
@@ -67,13 +67,21 @@ async def get_related_attractions(
         "signguCd": signgu_cd,
         "keyword": keyword,
         "_type": "json",
-        "numOfRows": "10",
     }
     async with httpx.AsyncClient(timeout=10.0) as client:
-        response = await client.get(
-            f"{_KOR_RELATION_URL}/searchKeyword1", params=params
+        r1 = await client.get(
+            f"{_KOR_RELATION_URL}/searchKeyword1",
+            params={**base_params, "numOfRows": "1"},
         )
-        items = _extract_items(response.json())
+        body1: Any = r1.json().get("response", {}).get("body", {})  # type: ignore[union-attr]
+        total = int(body1.get("totalCount", 0)) if isinstance(body1, dict) else 0  # type: ignore[union-attr]
+        if not total:
+            return []
+        r2 = await client.get(
+            f"{_KOR_RELATION_URL}/searchKeyword1",
+            params={**base_params, "numOfRows": str(total)},
+        )
+        items = _extract_items(r2.json())
 
     result: list[NearbyAttraction] = []
     for item in items:
