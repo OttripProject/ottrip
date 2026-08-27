@@ -17,7 +17,7 @@ import { colors } from "@/ui/tokens/colors";
 import { radii } from "@/ui/tokens/radii";
 import { spacing } from "@/ui/tokens/spacing";
 import { textStyles } from "@/ui/tokens/typography";
-import { formatWalkTime } from "@/utils/distanceUtils";
+import { formatWalkTime, haversineDistance } from "@/utils/distanceUtils";
 import CloseIcon from "../../../assets/close_sm.svg";
 
 const BADGE_COLORS: Record<string, { color: string; bg: string }> = {
@@ -146,12 +146,14 @@ interface Props {
   visible: boolean;
   onClose: () => void;
   item: NearbyAttraction | null;
+  itineraryLocation: { latitude: number; longitude: number } | null;
 }
 
 export default function TourismDetailModal({
   visible,
   onClose,
   item,
+  itineraryLocation,
 }: Props) {
   const apiKey = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY_WEB ?? "";
   const { isLoaded } = useLoadScript({ googleMapsApiKey: apiKey });
@@ -182,7 +184,19 @@ export default function TourismDetailModal({
   if (!visible) return null;
 
   const badge = item ? (BADGE_COLORS[item.contentTypeId] ?? DEFAULT_BADGE) : DEFAULT_BADGE;
-  const walkTime = item?.dist ? formatWalkTime(item.dist) : null;
+  const walkTime = (() => {
+    if (item?.dist) return formatWalkTime(item.dist);
+    if (itineraryLocation && detail?.mapy && detail?.mapx) {
+      const dist = haversineDistance(
+        itineraryLocation.latitude,
+        itineraryLocation.longitude,
+        detail.mapy,
+        detail.mapx,
+      );
+      return formatWalkTime(dist);
+    }
+    return null;
+  })();
   const destCoords =
     detail?.mapy && detail?.mapx ? { lat: detail.mapy, lng: detail.mapx } : null;
 

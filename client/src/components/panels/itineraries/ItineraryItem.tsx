@@ -1678,6 +1678,11 @@ export default function ItineraryItem({
         visible={tourismDetailVisible}
         onClose={() => setTourismDetailVisible(false)}
         item={selectedAttraction}
+        itineraryLocation={
+          itinerary?.location?.latitude != null
+            ? { latitude: itinerary.location.latitude, longitude: itinerary.location.longitude }
+            : null
+        }
       />
     </View>
   );
