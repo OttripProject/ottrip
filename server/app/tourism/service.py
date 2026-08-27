@@ -69,19 +69,11 @@ async def get_related_attractions(
         "_type": "json",
     }
     async with httpx.AsyncClient(timeout=10.0) as client:
-        r1 = await client.get(
+        response = await client.get(
             f"{_KOR_RELATION_URL}/searchKeyword1",
-            params={**base_params, "numOfRows": "1"},
+            params={**base_params, "numOfRows": "100"},
         )
-        body1: Any = r1.json().get("response", {}).get("body", {})  # type: ignore[union-attr]
-        total = int(body1.get("totalCount", 0)) if isinstance(body1, dict) else 0  # type: ignore[union-attr]
-        if not total:
-            return []
-        r2 = await client.get(
-            f"{_KOR_RELATION_URL}/searchKeyword1",
-            params={**base_params, "numOfRows": str(total)},
-        )
-        items = _extract_items(r2.json())
+        items = _extract_items(response.json())
 
     result: list[NearbyAttraction] = []
     for item in items:

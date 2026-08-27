@@ -80,6 +80,7 @@ import React, {
 import {
   ActivityIndicator,
   Alert,
+  Animated,
   Image,
   Linking,
   Modal,
@@ -295,6 +296,7 @@ export default function ItineraryItem({
   }, [itinerary?.id]);
 
   const [nearbyAttractions, setNearbyAttractions] = useState<NearbyAttraction[]>([]);
+  const nearbyCardAnims = useRef<Animated.Value[]>([]);
   const [hoveredNearbyIndex, setHoveredNearbyIndex] = useState<number | null>(null);
   const [tourismDetail, setTourismDetail] = useState<TourismDetail | null>(null);
   const [tourismDetailVisible, setTourismDetailVisible] = useState(false);
@@ -975,12 +977,25 @@ export default function ItineraryItem({
   }, [itinerary?.location?.id]);
 
   useEffect(() => {
+    nearbyCardAnims.current = [];
     if (!readOnly || !itinerary?.id || !itinerary?.location) {
       setNearbyAttractions([]);
       return;
     }
+    setNearbyAttractions([]);
     tourismApi.getNearbyAttractions(itinerary.id)
-      .then(setNearbyAttractions)
+      .then(data => {
+        nearbyCardAnims.current = data.slice(0, 10).map(() => new Animated.Value(0));
+        setNearbyAttractions(data);
+        if (data.length > 0) {
+          Animated.stagger(
+            40,
+            nearbyCardAnims.current.map(anim =>
+              Animated.timing(anim, { toValue: 1, duration: 250, useNativeDriver: true }),
+            ),
+          ).start();
+        }
+      })
       .catch(() => {});
   }, [readOnly, itinerary?.id, itinerary?.location?.id]);
 
@@ -1199,9 +1214,16 @@ export default function ItineraryItem({
               >
                 {nearbyAttractions.map((item, index) => {
                   const badge = NEARBY_BADGE_COLORS[item.contentTypeId] ?? DEFAULT_NEARBY_BADGE;
+                  const anim = index < 10 ? nearbyCardAnims.current[index] : null;
                   return (
-                    <Pressable
+                    <Animated.View
                       key={index}
+                      style={{
+                        opacity: anim ?? 1,
+                        transform: [{ translateY: anim ? anim.interpolate({ inputRange: [0, 1], outputRange: [-8, 0] }) : 0 }],
+                      }}
+                    >
+                    <Pressable
                       style={[styles.nearbyCard, hoveredNearbyIndex === index && styles.nearbyCardHovered]}
                       onPress={() => handleAttractionPress(item)}
                       {...{ onMouseEnter: () => setHoveredNearbyIndex(index), onMouseLeave: () => setHoveredNearbyIndex(null) }}
@@ -1222,6 +1244,7 @@ export default function ItineraryItem({
                         </Text>
                       )}
                     </Pressable>
+                    </Animated.View>
                   );
                 })}
               </ScrollView>
