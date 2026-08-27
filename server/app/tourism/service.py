@@ -104,7 +104,7 @@ async def get_related_attractions(
 _CONTENT_TYPE_LABELS: dict[str, str] = {
     "12": "관광지",
     "14": "문화시설",
-    "15": "축제행사",
+    "15": "축제·공연",
     "25": "여행코스",
     "28": "레포츠",
     "32": "숙박",

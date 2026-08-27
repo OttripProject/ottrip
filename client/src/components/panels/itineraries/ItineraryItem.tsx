@@ -25,23 +25,16 @@ import {
 import { ItineraryCategory, itineraryCategoryColors, itineraryCategoryLabels } from "@/types/itinerary";
 
 const NEARBY_BADGE_COLORS: Record<string, { color: string; bg: string }> = {
-  문화시설: { color: "#0A84FF", bg: "#EFF4FF" },
-  여행코스: { color: "#3E5BD9", bg: "#ECEFFF" },
-  관광지: { color: "#34C759", bg: "#EDFFF2" },
-  레포츠: { color: "#FF6B35", bg: "#FFF0EB" },
-  음식점: { color: "#C8A400", bg: "#FFF8DC" },
-  숙박: { color: "#AF52DE", bg: "#F7EFFF" },
-  쇼핑: { color: "#FF9500", bg: "#FFF8ED" },
+  여행코스: { color: "rgb(62, 91, 217)", bg: "rgb(236, 239, 254)" },
+  쇼핑: { color: "rgb(31, 157, 87)", bg: "rgb(231, 247, 236)" },
+  레포츠: { color: "rgb(55, 55, 55)", bg: "rgb(244, 244, 244)" },
+  "축제·공연": { color: "rgb(14, 138, 138)", bg: "rgb(227, 246, 246)" },
+  문화시설: { color: "rgb(10, 132, 255)", bg: "rgb(239, 244, 255)" },
+  음식점: { color: "rgb(183, 104, 0)", bg: "rgb(255, 244, 224)" },
+  숙박: { color: "rgb(109, 59, 224)", bg: "rgb(245, 239, 255)" },
+  관광지: { color: "rgb(217, 28, 181)", bg: "rgb(255, 235, 251)" },
 };
 const DEFAULT_NEARBY_BADGE = { color: "#6C6C6C", bg: "#F5F5F5" };
-
-function formatWalkTime(dist: number): string | null {
-  if (dist <= 0) return null;
-  if (dist < 100) return "바로 옆";
-  const minutes = Math.ceil((dist * 1.3) / 67);
-  if (minutes > 20) return `${(dist / 1000).toFixed(1)}km`;
-  return `도보 ${minutes}분`;
-}
 
 const itineraryCategoryToExpenseCategory: Partial<Record<ItineraryCategory, ExpenseCategory>> = {
   [ItineraryCategory.MEAL]: ExpenseCategory.FOOD,
@@ -70,6 +63,7 @@ import { radii } from "@/ui/tokens/radii";
 import { spacing } from "@/ui/tokens/spacing";
 import { textStyles } from "@/ui/tokens/typography";
 import { applyItineraryDraftFromAi } from "@/utils/applyAiDocumentDraft";
+import { formatWalkTime } from "@/utils/distanceUtils";
 import { buildAnalyzeUploadPayload } from "@/utils/attachmentAiAnalyze";
 import {
   formatAttachmentUploadFailureMessage,
