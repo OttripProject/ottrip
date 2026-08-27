@@ -1,3 +1,5 @@
+import asyncio
+
 from fastapi import HTTPException, Query, status
 
 from app.core.router import create_router
@@ -27,17 +29,34 @@ async def get_nearby_attractions(
         return []
 
     keyword_result = await service.search_kor_keyword(location.name)
-    if not keyword_result:
-        return []
-
-    area_cd = str(keyword_result.get("lDongRegnCd") or "")
-    signgu_cd = area_cd + str(keyword_result.get("lDongSignguCd") or "")
-    if not area_cd or not signgu_cd:
-        return []
-
-    return await service.get_related_attractions(
-        keyword=location.name, area_cd=area_cd, signgu_cd=signgu_cd
+    area_cd = str(keyword_result.get("lDongRegnCd") or "") if keyword_result else ""
+    signgu_cd = (
+        area_cd + str(keyword_result.get("lDongSignguCd") or "")
+        if keyword_result
+        else ""
     )
+
+    async def _get_related() -> list[NearbyAttraction]:
+        if not area_cd or not signgu_cd:
+            return []
+        return await service.get_related_attractions(
+            keyword=location.name, area_cd=area_cd, signgu_cd=signgu_cd
+        )
+
+    async def _get_location_based() -> list[NearbyAttraction]:
+        return await service.get_location_based_attractions(
+            mapx=location.longitude,
+            mapy=location.latitude,
+            area_cd=area_cd,
+            signgu_cd=signgu_cd,
+        )
+
+    related, location_based = await asyncio.gather(
+        _get_related(), _get_location_based()
+    )
+
+    seen_titles = {a.title for a in related}
+    return list(related) + [a for a in location_based if a.title not in seen_titles]
 
 
 @router.get(

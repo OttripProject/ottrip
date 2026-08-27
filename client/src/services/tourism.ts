@@ -8,6 +8,7 @@ export interface NearbyAttraction {
   imageUrl: string | null;
   address: string | null;
   rank: number | null;
+  dist: number | null;
 }
 
 export interface TourismDetail {

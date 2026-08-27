@@ -83,10 +83,11 @@ async def get_related_attractions(
         except (ValueError, TypeError):
             rank = None
         category_sub_raw = item.get("rlteCtgrySclsNm")
+        raw_type = str(item.get("rlteCtgryLclsNm") or "")
         result.append(
             NearbyAttraction(
                 content_id=str(item.get("rlteTatsCd") or ""),
-                content_type_id=str(item.get("rlteCtgryLclsNm") or ""),
+                content_type_id=_CATEGORY_NORMALIZE.get(raw_type, raw_type),
                 category_sub=str(category_sub_raw) if category_sub_raw else None,
                 title=str(item.get("rlteTatsNm") or ""),
                 image_url=None,
@@ -97,6 +98,77 @@ async def get_related_attractions(
             )
         )
     result.sort(key=lambda x: (x.rank is None, x.rank))
+    return result
+
+
+_CONTENT_TYPE_LABELS: dict[str, str] = {
+    "12": "관광지",
+    "14": "문화시설",
+    "15": "축제행사",
+    "25": "여행코스",
+    "28": "레포츠",
+    "32": "숙박",
+    "38": "쇼핑",
+    "39": "음식점",
+}
+
+# 연관관광지 API 카테고리명 정규화 (배지 통일)
+_CATEGORY_NORMALIZE: dict[str, str] = {
+    "음식": "음식점",
+}
+
+
+async def get_location_based_attractions(
+    mapx: float, mapy: float, area_cd: str, signgu_cd: str
+) -> list[NearbyAttraction]:
+    """위치 기반 관광지 조회 (1km 이내 3곳 미만이면 2km로 재시도)"""
+    params: dict[str, str] = {
+        "MobileOS": _MOBILE_OS,
+        "MobileApp": _MOBILE_APP,
+        "serviceKey": tourism_settings.TOUR_SERVICE_KEY,
+        "mapX": str(mapx),
+        "mapY": str(mapy),
+        "_type": "json",
+    }
+    if area_cd:
+        params["lDongRegnCd"] = area_cd
+    if signgu_cd:
+        params["lDongSignguCd"] = signgu_cd
+
+    async with httpx.AsyncClient(timeout=10.0) as client:
+        resp = await client.get(
+            f"{_KOR_SERVICE_URL}/locationBasedList2",
+            params={**params, "radius": "1000"},
+        )
+        items = _extract_items(resp.json())
+        if len(items) < 3:
+            resp = await client.get(
+                f"{_KOR_SERVICE_URL}/locationBasedList2",
+                params={**params, "radius": "2000"},
+            )
+            items = _extract_items(resp.json())
+
+    result: list[NearbyAttraction] = []
+    for item in items:
+        type_id = str(item.get("contenttypeid") or "")
+        addr_parts = (item.get("addr1") or "").split()
+        address = " ".join(addr_parts[:2]) if addr_parts else None
+        try:
+            dist = float(item["dist"]) if item.get("dist") else None
+        except (ValueError, TypeError):
+            dist = None
+        result.append(
+            NearbyAttraction(
+                content_id=str(item.get("contentid") or ""),
+                content_type_id=_CONTENT_TYPE_LABELS.get(type_id, type_id),
+                category_sub=None,
+                title=str(item.get("title") or ""),
+                image_url=str(item["firstimage"]) if item.get("firstimage") else None,
+                address=address,
+                rank=None,
+                dist=dist,
+            )
+        )
     return result
 
 

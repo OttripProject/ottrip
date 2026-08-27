@@ -9,6 +9,7 @@ class NearbyAttraction(APISchema):
     image_url: str | None = None
     address: str | None = None
     rank: int | None = None
+    dist: float | None = None
 
 
 class TourismDetail(APISchema):

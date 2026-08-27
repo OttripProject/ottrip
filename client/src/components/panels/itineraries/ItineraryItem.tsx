@@ -29,11 +29,19 @@ const NEARBY_BADGE_COLORS: Record<string, { color: string; bg: string }> = {
   여행코스: { color: "#3E5BD9", bg: "#ECEFFF" },
   관광지: { color: "#34C759", bg: "#EDFFF2" },
   레포츠: { color: "#FF6B35", bg: "#FFF0EB" },
-  음식점: { color: "#FF3B30", bg: "#FFF0EF" },
+  음식점: { color: "#C8A400", bg: "#FFF8DC" },
   숙박: { color: "#AF52DE", bg: "#F7EFFF" },
   쇼핑: { color: "#FF9500", bg: "#FFF8ED" },
 };
 const DEFAULT_NEARBY_BADGE = { color: "#6C6C6C", bg: "#F5F5F5" };
+
+function formatWalkTime(dist: number): string | null {
+  if (dist <= 0) return null;
+  if (dist < 100) return "바로 옆";
+  const minutes = Math.ceil((dist * 1.3) / 67);
+  if (minutes > 20) return `${(dist / 1000).toFixed(1)}km`;
+  return `도보 ${minutes}분`;
+}
 
 const itineraryCategoryToExpenseCategory: Partial<Record<ItineraryCategory, ExpenseCategory>> = {
   [ItineraryCategory.MEAL]: ExpenseCategory.FOOD,
@@ -1238,11 +1246,15 @@ export default function ItineraryItem({
                           {item.title}
                         </Text>
                       </View>
-                      {(item.address || item.categorySub) && (
-                        <Text style={styles.nearbyCardSub} numberOfLines={1}>
-                          {[item.address, item.categorySub].filter(Boolean).join(" · ")}
-                        </Text>
-                      )}
+                      {(() => {
+                        const walkTime = item.dist ? formatWalkTime(item.dist) : null;
+                        const sub = item.dist != null
+                          ? [item.address, walkTime].filter(Boolean).join(" · ")
+                          : [item.address, item.categorySub].filter(Boolean).join(" · ");
+                        return sub ? (
+                          <Text style={styles.nearbyCardSub} numberOfLines={1}>{sub}</Text>
+                        ) : null;
+                      })()}
                     </Pressable>
                     </Animated.View>
                   );
