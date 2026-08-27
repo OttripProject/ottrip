@@ -196,7 +196,6 @@ export default function TourismDetailModal({
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <Pressable style={styles.overlay} onPress={onClose}>
         <Pressable style={styles.modal} onPress={() => {}}>
-          <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false}>
             {/* 헤더 */}
             <View style={styles.header}>
               <View style={styles.headerRow}>
@@ -227,6 +226,7 @@ export default function TourismDetailModal({
               )}
             </View>
 
+          <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false}>
             {!loading && detail && (
               <>
                 {/* 여행코스 등 hero 스탯 */}
