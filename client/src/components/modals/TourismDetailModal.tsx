@@ -10,7 +10,7 @@ import {
   Text,
   View,
 } from "react-native";
-import { DirectionsRenderer, GoogleMap, Marker, useLoadScript } from "@react-google-maps/api";
+import { GoogleMap, Marker, useLoadScript } from "@react-google-maps/api";
 import type { NearbyAttraction, TourismDetail } from "@/services/tourism";
 import { tourismApi } from "@/services/tourism";
 import { colors } from "@/ui/tokens/colors";
@@ -146,14 +146,12 @@ interface Props {
   visible: boolean;
   onClose: () => void;
   item: NearbyAttraction | null;
-  itineraryLocation: { latitude: number; longitude: number } | null;
 }
 
 export default function TourismDetailModal({
   visible,
   onClose,
   item,
-  itineraryLocation,
 }: Props) {
   const apiKey = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY_WEB ?? "";
   const { isLoaded } = useLoadScript({ googleMapsApiKey: apiKey });
@@ -162,32 +160,6 @@ export default function TourismDetailModal({
   const [loading, setLoading] = useState(false);
   const [loadFailed, setLoadFailed] = useState(false);
   const [overviewExpanded, setOverviewExpanded] = useState(false);
-  const [directions, setDirections] = useState<google.maps.DirectionsResult | null>(null);
-
-  useEffect(() => {
-    setDirections(null);
-  }, [item?.contentId]);
-
-  useEffect(() => {
-    if (!isLoaded || !detail?.mapy || !detail?.mapx || !itineraryLocation) {
-      setDirections(null);
-      return;
-    }
-    const svc = new google.maps.DirectionsService();
-    svc.route(
-      {
-        origin: { lat: itineraryLocation.latitude, lng: itineraryLocation.longitude },
-        destination: { lat: detail.mapy, lng: detail.mapx },
-        travelMode: google.maps.TravelMode.WALKING,
-      },
-      (result, status) => {
-        if (status === google.maps.DirectionsStatus.OK && result) {
-          setDirections(result);
-        }
-      },
-    );
-  }, [isLoaded, detail?.mapy, detail?.mapx, itineraryLocation]);
-
   useEffect(() => {
     if (!item || !visible) return;
     setDetail(null);
@@ -306,11 +278,7 @@ export default function TourismDetailModal({
                           clickableIcons: false,
                         }}
                       >
-                        {directions ? (
-                          <DirectionsRenderer directions={directions} />
-                        ) : (
-                          <Marker position={destCoords} title={detail?.title ?? undefined} />
-                        )}
+                        <Marker position={destCoords} title={detail?.title ?? undefined} />
                       </GoogleMap>
                       {walkTime && (
                         <View style={styles.mapBadge}>
