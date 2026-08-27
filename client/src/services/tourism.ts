@@ -3,9 +3,11 @@ import api from "./api";
 export interface NearbyAttraction {
   contentId: string;
   contentTypeId: string;
+  categorySub: string | null;
   title: string;
   imageUrl: string | null;
   address: string | null;
+  rank: number | null;
 }
 
 export interface TourismDetail {

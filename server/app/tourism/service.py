@@ -77,17 +77,26 @@ async def get_related_attractions(
 
     result: list[NearbyAttraction] = []
     for item in items:
+        raw_rank = item.get("rlteRank")
+        try:
+            rank = int(raw_rank) if raw_rank is not None else None
+        except (ValueError, TypeError):
+            rank = None
+        category_sub_raw = item.get("rlteCtgrySclsNm")
         result.append(
             NearbyAttraction(
                 content_id=str(item.get("rlteTatsCd") or ""),
                 content_type_id=str(item.get("rlteCtgryLclsNm") or ""),
+                category_sub=str(category_sub_raw) if category_sub_raw else None,
                 title=str(item.get("rlteTatsNm") or ""),
                 image_url=None,
                 address=str(item.get("rlteRegnNm") or "")
                 + " "
                 + str(item.get("rlteSignguNm") or ""),
+                rank=rank,
             )
         )
+    result.sort(key=lambda x: (x.rank is None, x.rank))
     return result
 
 

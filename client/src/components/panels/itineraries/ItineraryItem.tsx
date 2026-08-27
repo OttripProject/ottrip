@@ -1238,9 +1238,9 @@ export default function ItineraryItem({
                           {item.title}
                         </Text>
                       </View>
-                      {item.address && (
+                      {(item.address || item.categorySub) && (
                         <Text style={styles.nearbyCardSub} numberOfLines={1}>
-                          {item.address}
+                          {[item.address, item.categorySub].filter(Boolean).join(" · ")}
                         </Text>
                       )}
                     </Pressable>

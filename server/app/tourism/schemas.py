@@ -4,9 +4,11 @@ from app.schemas import APISchema
 class NearbyAttraction(APISchema):
     content_id: str
     content_type_id: str
+    category_sub: str | None = None
     title: str
     image_url: str | None = None
     address: str | None = None
+    rank: int | None = None
 
 
 class TourismDetail(APISchema):
