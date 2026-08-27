@@ -296,7 +296,9 @@ export default function TourismDetailModal({
                       </GoogleMap>
                       {walkTime && (
                         <View style={styles.mapBadge}>
-                          <Text style={styles.mapBadgeText}>{walkTime}</Text>
+                          <Text style={styles.mapBadgeText}>
+                            {walkTime === "바로 옆" ? "현재 일정 바로 옆" : `현재 일정에서 ${walkTime}`}
+                          </Text>
                         </View>
                       )}
                       <Pressable
