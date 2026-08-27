@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Linking,
@@ -10,6 +10,7 @@ import {
   Text,
   View,
 } from "react-native";
+import { DirectionsRenderer, GoogleMap, Marker, useLoadScript } from "@react-google-maps/api";
 import type { NearbyAttraction, TourismDetail } from "@/services/tourism";
 import { tourismApi } from "@/services/tourism";
 import { colors } from "@/ui/tokens/colors";
@@ -154,10 +155,38 @@ export default function TourismDetailModal({
   item,
   itineraryLocation,
 }: Props) {
+  const apiKey = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY_WEB ?? "";
+  const { isLoaded } = useLoadScript({ googleMapsApiKey: apiKey });
+
   const [detail, setDetail] = useState<TourismDetail | null>(null);
   const [loading, setLoading] = useState(false);
   const [loadFailed, setLoadFailed] = useState(false);
   const [overviewExpanded, setOverviewExpanded] = useState(false);
+  const [directions, setDirections] = useState<google.maps.DirectionsResult | null>(null);
+
+  useEffect(() => {
+    setDirections(null);
+  }, [item?.contentId]);
+
+  useEffect(() => {
+    if (!isLoaded || !detail?.mapy || !detail?.mapx || !itineraryLocation) {
+      setDirections(null);
+      return;
+    }
+    const svc = new google.maps.DirectionsService();
+    svc.route(
+      {
+        origin: { lat: itineraryLocation.latitude, lng: itineraryLocation.longitude },
+        destination: { lat: detail.mapy, lng: detail.mapx },
+        travelMode: google.maps.TravelMode.WALKING,
+      },
+      (result, status) => {
+        if (status === google.maps.DirectionsStatus.OK && result) {
+          setDirections(result);
+        }
+      },
+    );
+  }, [isLoaded, detail?.mapy, detail?.mapx, itineraryLocation]);
 
   useEffect(() => {
     if (!item || !visible) return;
@@ -182,19 +211,8 @@ export default function TourismDetailModal({
 
   const badge = item ? (BADGE_COLORS[item.contentTypeId] ?? DEFAULT_BADGE) : DEFAULT_BADGE;
   const walkTime = item?.dist ? formatWalkTime(item.dist) : null;
-  const mapsKey = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY_WEB ?? "";
-
-  const mapUrl = (() => {
-    if (!detail) return null;
-    const dest =
-      detail.mapy && detail.mapx
-        ? `${detail.mapy},${detail.mapx}`
-        : encodeURIComponent(`${detail.title ?? ""} ${detail.address ?? ""}`.trim());
-    if (itineraryLocation) {
-      return `https://www.google.com/maps/embed/v1/directions?key=${mapsKey}&origin=${itineraryLocation.latitude},${itineraryLocation.longitude}&destination=${dest}&mode=walking&language=ko`;
-    }
-    return `https://www.google.com/maps/embed/v1/place?key=${mapsKey}&q=${dest}&language=ko`;
-  })();
+  const destCoords =
+    detail?.mapy && detail?.mapx ? { lat: detail.mapy, lng: detail.mapx } : null;
 
   const { heroStats, tableRows } = detail
     ? getCategoryFields(detail)
@@ -270,22 +288,45 @@ export default function TourismDetailModal({
                 )}
 
                 {/* 지도 */}
-                {mapUrl && Platform.OS === "web" && (
+                {Platform.OS === "web" && destCoords && isLoaded && (
                   <View style={styles.section}>
                     <Text style={styles.sectionTitle}>장소</Text>
                     <View style={styles.mapContainer}>
-                      {React.createElement("iframe", {
-                        src: mapUrl,
-                        style: { width: "100%", height: "100%", border: "none", display: "block" },
-                        title: "지도",
-                        loading: "lazy",
-                        allowFullScreen: true,
-                      })}
+                      <GoogleMap
+                        mapContainerStyle={{ width: "100%", height: "100%" }}
+                        center={destCoords}
+                        zoom={15}
+                        options={{
+                          disableDefaultUI: true,
+                          zoomControl: true,
+                          controlSize: 24,
+                          zoomControlOptions: { position: 7 },
+                          gestureHandling: "greedy",
+                          keyboardShortcuts: false,
+                          clickableIcons: false,
+                        }}
+                      >
+                        {directions ? (
+                          <DirectionsRenderer directions={directions} />
+                        ) : (
+                          <Marker position={destCoords} title={detail?.title ?? undefined} />
+                        )}
+                      </GoogleMap>
                       {walkTime && (
                         <View style={styles.mapBadge}>
                           <Text style={styles.mapBadgeText}>{walkTime}</Text>
                         </View>
                       )}
+                      <Pressable
+                        style={styles.mapOverlay}
+                        onPress={() =>
+                          Linking.openURL(
+                            `https://www.google.com/maps/search/?api=1&query=${destCoords.lat},${destCoords.lng}`,
+                          )
+                        }
+                      >
+                        <Text style={styles.mapOverlayText}>큰 지도 ↗</Text>
+                      </Pressable>
                     </View>
                   </View>
                 )}
@@ -505,6 +546,23 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: colors.gray900,
   } as any,
+  mapOverlay: {
+    position: "absolute",
+    bottom: 12,
+    right: 8,
+    backgroundColor: colors.white,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: radii.sm,
+    shadowColor: colors.black,
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 1 },
+  },
+  mapOverlayText: {
+    fontSize: 11,
+    color: colors.gray700,
+  },
   table: {
     width: "100%",
   },
