@@ -83,9 +83,6 @@ import {
   ActivityIndicator,
   Alert,
   Animated,
-  Image,
-  Linking,
-  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -93,8 +90,9 @@ import {
   Text,
   View,
 } from "react-native";
+import type { NearbyAttraction } from "@/services/tourism";
 import { tourismApi } from "@/services/tourism";
-import type { NearbyAttraction, TourismDetail } from "@/services/tourism";
+import TourismDetailModal from "@/components/modals/TourismDetailModal";
 import CalendarIcon from "../../../../assets/calender.svg";
 import CloseIcon from "../../../../assets/close_sm.svg";
 import DownArrowIcon from "../../../../assets/dropdown_time.svg";
@@ -300,7 +298,7 @@ export default function ItineraryItem({
   const [nearbyAttractions, setNearbyAttractions] = useState<NearbyAttraction[]>([]);
   const nearbyCardAnims = useRef<Animated.Value[]>([]);
   const [hoveredNearbyIndex, setHoveredNearbyIndex] = useState<number | null>(null);
-  const [tourismDetail, setTourismDetail] = useState<TourismDetail | null>(null);
+  const [selectedAttraction, setSelectedAttraction] = useState<NearbyAttraction | null>(null);
   const [tourismDetailVisible, setTourismDetailVisible] = useState(false);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -1001,12 +999,9 @@ export default function ItineraryItem({
       .catch(() => {});
   }, [readOnly, itinerary?.id, itinerary?.location?.id]);
 
-  const handleAttractionPress = async (item: NearbyAttraction) => {
-    try {
-      const detail = await tourismApi.getTourismDetail(item.title);
-      setTourismDetail(detail);
-      setTourismDetailVisible(true);
-    } catch {}
+  const handleAttractionPress = (item: NearbyAttraction) => {
+    setSelectedAttraction(item);
+    setTourismDetailVisible(true);
   };
 
   const handlePlaceSelect = useCallback(async (place: PlaceResult) => {
@@ -1679,46 +1674,16 @@ export default function ItineraryItem({
         entityTypeLabel="일정"
         originEntityType={analyzeOriginEntityType}
       />
-      <Modal
+      <TourismDetailModal
         visible={tourismDetailVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setTourismDetailVisible(false)}
-      >
-        <Pressable style={styles.tourismModalOverlay} onPress={() => setTourismDetailVisible(false)}>
-          <Pressable style={styles.tourismModal} onPress={() => {}}>
-            <View style={styles.tourismModalHeader}>
-              <Text style={styles.tourismModalTitle} numberOfLines={2}>
-                {tourismDetail?.title}
-              </Text>
-              <Pressable onPress={() => setTourismDetailVisible(false)} style={styles.closeButton}>
-                <CloseIcon width={12} height={12} color={colors.gray600} />
-              </Pressable>
-            </View>
-            <ScrollView showsVerticalScrollIndicator={false}>
-              {tourismDetail?.imageUrl && (
-                <Image source={{ uri: tourismDetail.imageUrl }} style={styles.tourismDetailImage} resizeMode="cover" />
-              )}
-              <View style={styles.tourismDetailBody}>
-                {tourismDetail?.address && (
-                  <Text style={styles.tourismDetailField}>{tourismDetail.address}</Text>
-                )}
-                {tourismDetail?.tel && (
-                  <Text style={styles.tourismDetailField}>{tourismDetail.tel}</Text>
-                )}
-                {tourismDetail?.overview && (
-                  <Text style={styles.tourismDetailOverview}>{tourismDetail.overview}</Text>
-                )}
-                {tourismDetail?.homepage && (
-                  <Pressable onPress={() => Linking.openURL(tourismDetail.homepage!)}>
-                    <Text style={styles.tourismDetailHomepage}>{tourismDetail.homepage}</Text>
-                  </Pressable>
-                )}
-              </View>
-            </ScrollView>
-          </Pressable>
-        </Pressable>
-      </Modal>
+        onClose={() => setTourismDetailVisible(false)}
+        item={selectedAttraction}
+        itineraryLocation={
+          itinerary?.location?.latitude != null
+            ? { latitude: itinerary.location.latitude, longitude: itinerary.location.longitude }
+            : null
+        }
+      />
     </View>
   );
 }
@@ -2186,54 +2151,5 @@ const styles = StyleSheet.create({
   nearbyCardSub: {
     ...textStyles.body6,
     color: colors.gray600,
-  },
-  tourismModalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.4)",
-    justifyContent: "center",
-    alignItems: "center",
-    padding: spacing.xl,
-  },
-  tourismModal: {
-    backgroundColor: colors.white,
-    borderRadius: 16,
-    width: "100%",
-    maxHeight: "80%",
-    overflow: "hidden",
-  } as any,
-  tourismModalHeader: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    justifyContent: "space-between",
-    padding: spacing.xl,
-    paddingBottom: spacing.md,
-    gap: spacing.md,
-  },
-  tourismModalTitle: {
-    ...textStyles.h5,
-    color: colors.gray900,
-    flex: 1,
-  },
-  tourismDetailImage: {
-    width: "100%",
-    height: 180,
-  } as any,
-  tourismDetailBody: {
-    padding: spacing.xl,
-    gap: spacing.sm,
-  },
-  tourismDetailField: {
-    ...textStyles.body4,
-    color: colors.gray700,
-  },
-  tourismDetailOverview: {
-    ...textStyles.body5,
-    color: colors.gray600,
-    lineHeight: 20,
-  },
-  tourismDetailHomepage: {
-    ...textStyles.body5,
-    color: colors.primary,
-    textDecorationLine: "underline",
   },
 });

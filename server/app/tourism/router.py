@@ -65,9 +65,19 @@ async def get_nearby_attractions(
     tags=["Tourism"],
 )
 async def get_tourism_detail(
-    name: str = Query(...),
+    name: str | None = Query(None),
+    content_id: str | None = Query(None),
+    content_type_id: str | None = Query(None),
 ) -> TourismDetail:
-    detail = await service.get_tourism_detail_by_name(name=name)
+    if not name and not content_id:
+        raise HTTPException(
+            status_code=422, detail="name 또는 content_id가 필요합니다."
+        )
+    detail = await service.get_tourism_detail(
+        name=name,
+        content_id=content_id,
+        content_type_id=content_type_id,
+    )
     if not detail:
         raise HTTPException(status_code=404, detail="관광지 정보를 찾을 수 없습니다.")
     return detail
