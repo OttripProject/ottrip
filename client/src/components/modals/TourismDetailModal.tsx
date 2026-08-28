@@ -23,6 +23,8 @@ import { formatWalkTime, haversineDistance } from "@/utils/distanceUtils";
 import CloseIcon from "../../../assets/close_sm.svg";
 import TimeIcon from "../../../assets/week_bar_time.svg";
 import CalendarIcon from "../../../assets/calendar_outline.svg";
+import HourglassIcon from "../../../assets/hourglass.svg";
+import WonIcon from "../../../assets/won.svg";
 
 const CONTENT_TYPE_LABELS: Record<string, string> = {
   "12": "관광지",
@@ -60,7 +62,7 @@ function isAccommodationType(contentTypeId: string | null): boolean {
 }
 
 type CategoryRow = { label: string; value: string };
-type IconRow = { label: string; value: string; icon: "clock" | "calendar" };
+type IconRow = { label: string; value: string; icon: "clock" | "calendar" | "hourglass" | "won" };
 
 function getCategoryFields(detail: TourismDetail): {
   iconRows: IconRow[];
@@ -93,13 +95,14 @@ function getCategoryFields(detail: TourismDetail): {
   }
   if (is("14", "문화시설")) {
     return {
-      iconRows: [],
+      iconRows: iconRows(
+        ir("이용시간", detail.usetimeculture, "clock"),
+        ir("휴관일", detail.restdateculture, "calendar"),
+        ir("관람소요시간", detail.spendtime, "hourglass"),
+        ir("이용요금", detail.usefee, "won"),
+      ),
       heroStats: [],
       tableRows: rows(
-        r("이용시간", detail.usetimeculture),
-        r("쉬는날", detail.restdateculture),
-        r("이용요금", detail.usefee),
-        r("관람소요시간", detail.spendtime),
         r("주차", detail.parkingculture),
       ),
     };
@@ -339,6 +342,18 @@ export default function TourismDetailModal({
 
   const hasUsageInfo = !!(detail?.tel || detail?.infocenter || detail?.homepage);
 
+  const feeValue = (() => {
+    if (!detail) return null;
+    const t = detail.contentTypeId;
+    if (t === "14" || t === "문화시설") return detail.usefee;
+    if (t === "15" || t === "축제·공연") return detail.usetimefestival;
+    if (t === "28" || t === "레포츠") return detail.usefeeleports;
+    return null;
+  })();
+  const feeBadge = feeValue
+    ? (feeValue.includes("유료") || /\d+원/.test(feeValue) || !feeValue.includes("무료") ? "유료" : "무료")
+    : null;
+
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <Pressable style={styles.overlay} onPress={onClose}>
@@ -346,10 +361,19 @@ export default function TourismDetailModal({
             {/* 헤더 */}
             <View style={styles.header}>
               <View style={styles.headerRow}>
-                <View style={[styles.badge, { backgroundColor: badge.bg }]}>
-                  <Text style={[styles.badgeText, { color: badge.color }]}>
-                    {badgeText}
-                  </Text>
+                <View style={{ flexDirection: "row", gap: 8, alignItems: "center" }}>
+                  <View style={[styles.badge, { backgroundColor: badge.bg }]}>
+                    <Text style={[styles.badgeText, { color: badge.color }]}>
+                      {badgeText}
+                    </Text>
+                  </View>
+                  {feeBadge && (
+                    <View style={[styles.badge, feeBadge === "무료" ? styles.feeBadgeFree : styles.feeBadgePaid]}>
+                      <Text style={[styles.badgeText, feeBadge === "무료" ? styles.feeBadgeFreeText : styles.feeBadgePaidText]}>
+                        {feeBadge}
+                      </Text>
+                    </View>
+                  )}
                 </View>
                 <Pressable onPress={onClose} style={styles.closeBtn}>
                   <CloseIcon width={16} height={16} color={colors.gray600} />
@@ -382,7 +406,11 @@ export default function TourismDetailModal({
                     <View style={styles.iconBox}>
                       {row.icon === "clock"
                         ? <TimeIcon width={22} height={22} color={colors.primary} />
-                        : <CalendarIcon width={22} height={22} color={colors.primary} />}
+                        : row.icon === "calendar"
+                        ? <CalendarIcon width={22} height={22} color={colors.primary} />
+                        : row.icon === "hourglass"
+                        ? <HourglassIcon width={22} height={22} color={colors.primary} />
+                        : <WonIcon width={22} height={22} color={colors.primary} />}
                     </View>
                     <View style={styles.iconRowText}>
                       <Text style={styles.iconRowLabel}>{row.label}</Text>
@@ -605,6 +633,18 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     lineHeight: 12,
   } as any,
+  feeBadgeFree: {
+    backgroundColor: colors.gray200,
+  },
+  feeBadgeFreeText: {
+    color: colors.gray700,
+  },
+  feeBadgePaid: {
+    backgroundColor: colors.gray200,
+  },
+  feeBadgePaidText: {
+    color: colors.gray700,
+  },
   closeBtn: {
     width: 36,
     height: 36,
