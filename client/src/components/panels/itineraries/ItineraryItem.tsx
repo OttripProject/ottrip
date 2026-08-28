@@ -138,6 +138,7 @@ interface ItineraryItemProps {
   ) => boolean;
   carryoverPendingFiles?: LocalFile[] | null;
   onConsumeCarryoverPendingFiles?: () => void;
+  onOpenNewItinerary?: (draft: any) => void;
 }
 
 export default function ItineraryItem({
@@ -158,6 +159,7 @@ export default function ItineraryItem({
   routeDocumentAnalyzeSuccess,
   carryoverPendingFiles,
   onConsumeCarryoverPendingFiles,
+  onOpenNewItinerary,
 }: ItineraryItemProps) {
   const [showWarning, setShowWarning] = useState(false);
   const [warningMessage, setWarningMessage] = useState("");
@@ -305,7 +307,7 @@ export default function ItineraryItem({
   const isSubmittingRef = useRef(false);
 
   useEffect(() => {
-    if (itinerary) {
+    if (itinerary?.id) {
       const endTimeRaw = itinerary.end_time || itinerary.endTime || "10:00";
       let endTime = endTimeRaw.substring(0, 5);
       if (endTime === "23:59" || endTimeRaw.startsWith("23:59:")) {
@@ -331,6 +333,42 @@ export default function ItineraryItem({
         ).substring(0, 5),
         endTime: endTime,
       });
+    } else if (itinerary && !itinerary.id) {
+      // draft (id 없음) - pre-fill
+      const endTimeRaw = itinerary.end_time || itinerary.endTime || "10:00";
+      let endTime = endTimeRaw.substring(0, 5);
+      if (endTime === "23:59" || endTimeRaw.startsWith("23:59:")) {
+        endTime = "24:00";
+      }
+      setSelectedCategory((itinerary.category as ItineraryCategory) ?? null);
+      setFormData({
+        title: itinerary.title || "",
+        description: itinerary.description || "",
+        country: itinerary.country || "",
+        city: itinerary.city || "",
+        location: itinerary.location?.name || "",
+        locationId: itinerary.location?.id,
+        itineraryDate:
+          itinerary.itinerary_date ||
+          itinerary.itineraryDate ||
+          dayjs().format("YYYY-MM-DD"),
+        startTime: (
+          itinerary.start_time ||
+          itinerary.startTime ||
+          "09:00"
+        ).substring(0, 5),
+        endTime,
+      });
+      setExpenses([]);
+      setDraftExpenses([]);
+      setShowExpenseForm(false);
+      setExpenseForm({
+        category: ExpenseCategory.ETC,
+        amount: 0,
+        description: "",
+        currency: ExpenseCurrency.KRW,
+      });
+      setPendingFiles([]);
     } else {
       const defaultDate = selectedDate
         ? dayjs(selectedDate).format("YYYY-MM-DD")
@@ -563,7 +601,7 @@ export default function ItineraryItem({
         formData.endTime === "24:00" ? "23:59:59" : formData.endTime;
 
       let savedItinerary;
-      if (itinerary) {
+      if (itinerary?.id) {
         savedItinerary = await itinerariesApi.updateItinerary(itinerary.id, {
           title: formData.title,
           description: formData.description,
@@ -1024,7 +1062,7 @@ export default function ItineraryItem({
     <View style={styles.wrapper}>
       <View style={styles.titleRow}>
         <Text style={styles.title}>
-          {readOnly ? "일정 정보" : itinerary ? "일정 수정" : "일정 추가"}
+          {readOnly ? "일정 정보" : itinerary?.id ? "일정 수정" : "일정 추가"}
         </Text>
 
         <Pressable
@@ -1683,6 +1721,9 @@ export default function ItineraryItem({
             ? { latitude: itinerary.location.latitude, longitude: itinerary.location.longitude }
             : null
         }
+        itinerary={itinerary}
+        onOpenNewItinerary={onOpenNewItinerary ?? (() => {})}
+        onSwitchToAccommodation={() => onTabChange?.("accommodation")}
       />
     </View>
   );

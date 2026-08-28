@@ -46,6 +46,29 @@ async def search_kor_keyword(keyword: str) -> dict[str, Any] | None:
     return items[0] if items else None
 
 
+async def _search_best_match(keyword: str) -> dict[str, Any] | None:
+    """키워드로 검색해 제목이 정확히 일치하는 항목 반환, 없으면 첫 번째"""
+    params = {
+        "MobileOS": _MOBILE_OS,
+        "MobileApp": _MOBILE_APP,
+        "serviceKey": tourism_settings.TOUR_SERVICE_KEY,
+        "keyword": keyword,
+        "_type": "json",
+        "numOfRows": "10",
+    }
+    async with httpx.AsyncClient(timeout=10.0) as client:
+        response = await client.get(f"{_KOR_SERVICE_URL}/searchKeyword2", params=params)
+        data: dict[str, Any] = response.json()
+    items = _extract_items(data)
+    if not items:
+        return None
+    kw = keyword.strip()
+    for item in items:
+        if str(item.get("title") or "").strip() == kw:
+            return item
+    return None
+
+
 def _base_ym_3months_ago() -> str:
     now = datetime.now()
     month = now.month - 3
@@ -234,7 +257,7 @@ async def get_tourism_detail(
     else:
         if not name:
             return None
-        keyword_result = await search_kor_keyword(name)
+        keyword_result = await _search_best_match(name)
         if not keyword_result:
             return None
         cid = str(keyword_result.get("contentid") or "")

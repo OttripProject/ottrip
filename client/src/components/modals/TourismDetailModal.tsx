@@ -13,6 +13,7 @@ import {
 import { GoogleMap, Marker, useLoadScript } from "@react-google-maps/api";
 import type { NearbyAttraction, TourismDetail } from "@/services/tourism";
 import { tourismApi } from "@/services/tourism";
+import { ItineraryCategory } from "@/types/itinerary";
 import { colors } from "@/ui/tokens/colors";
 import { radii } from "@/ui/tokens/radii";
 import { spacing } from "@/ui/tokens/spacing";
@@ -31,6 +32,18 @@ const BADGE_COLORS: Record<string, { color: string; bg: string }> = {
   관광지: { color: "rgb(217, 28, 181)", bg: "rgb(255, 235, 251)" },
 };
 const DEFAULT_BADGE = { color: "#6C6C6C", bg: "#F5F5F5" };
+
+function mapContentTypeToCategory(contentTypeId: string | null): ItineraryCategory {
+  switch (contentTypeId) {
+    case "39": case "음식점": return ItineraryCategory.MEAL;
+    case "38": case "쇼핑": return ItineraryCategory.SHOPPING;
+    default: return ItineraryCategory.ACTIVITY;
+  }
+}
+
+function isAccommodationType(contentTypeId: string | null): boolean {
+  return contentTypeId === "32" || contentTypeId === "숙박";
+}
 
 type CategoryRow = { label: string; value: string };
 
@@ -147,6 +160,9 @@ interface Props {
   onClose: () => void;
   item: NearbyAttraction | null;
   itineraryLocation: { latitude: number; longitude: number } | null;
+  itinerary: any;
+  onOpenNewItinerary: (draft: any) => void;
+  onSwitchToAccommodation?: () => void;
 }
 
 export default function TourismDetailModal({
@@ -154,6 +170,9 @@ export default function TourismDetailModal({
   onClose,
   item,
   itineraryLocation,
+  itinerary,
+  onOpenNewItinerary,
+  onSwitchToAccommodation,
 }: Props) {
   const apiKey = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY_WEB ?? "";
   const { isLoaded } = useLoadScript({ googleMapsApiKey: apiKey });
@@ -162,24 +181,82 @@ export default function TourismDetailModal({
   const [loading, setLoading] = useState(false);
   const [loadFailed, setLoadFailed] = useState(false);
   const [overviewExpanded, setOverviewExpanded] = useState(false);
+  const [geocodedCoords, setGeocodedCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const isAccommodation = isAccommodationType(detail?.contentTypeId ?? item?.contentTypeId ?? null);
+
+  const handleAddToItinerary = () => {
+    if (isAccommodation) {
+      onClose();
+      onSwitchToAccommodation?.();
+      return;
+    }
+    if (!item) return;
+
+    const raw = itinerary?.end_time ?? itinerary?.endTime ?? "09:00:00";
+    const [h, m] = raw.split(":").map(Number);
+    const startMins = h * 60 + m;
+    const endMins = Math.min(startMins + 60, 24 * 60);
+    const fmt = (n: number) =>
+      `${String(Math.floor(n / 60)).padStart(2, "0")}:${String(n % 60).padStart(2, "0")}`;
+
+    onOpenNewItinerary({
+      title: detail?.title ?? item.title,
+      description: detail?.overview ?? undefined,
+      country: itinerary?.country || undefined,
+      city: itinerary?.city || undefined,
+      itineraryDate: itinerary?.itinerary_date ?? itinerary?.itineraryDate ?? "",
+      startTime: fmt(startMins),
+      endTime: fmt(endMins),
+      category: mapContentTypeToCategory(detail?.contentTypeId ?? item.contentTypeId),
+    });
+    onClose();
+  };
   useEffect(() => {
     if (!item || !visible) return;
     setDetail(null);
     setLoadFailed(false);
     setOverviewExpanded(false);
+    setGeocodedCoords(null);
     setLoading(true);
 
     const isRealContentId = /^\d+$/.test(item.contentId);
-    tourismApi
-      .getTourismDetail(
-        isRealContentId
-          ? { contentId: item.contentId, contentTypeId: item.contentTypeId }
-          : { name: item.title },
-      )
+    const fetchDetail = isRealContentId
+      ? tourismApi.getTourismDetail({ contentId: item.contentId, contentTypeId: item.contentTypeId })
+      : tourismApi.getTourismDetail({ name: item.title });
+
+    fetchDetail
+      .then(async (d) => {
+        // contentId 기반 조회 결과가 item.title과 전혀 다르면 이름으로 재조회
+        if (
+          isRealContentId &&
+          d.title &&
+          !d.title.includes(item.title) &&
+          !item.title.includes(d.title)
+        ) {
+          return tourismApi.getTourismDetail({ name: item.title });
+        }
+        return d;
+      })
       .then(setDetail)
       .catch(() => setLoadFailed(true))
       .finally(() => setLoading(false));
   }, [item?.contentId, visible]);
+
+  const destCoords =
+    detail?.mapy && detail?.mapx ? { lat: detail.mapy, lng: detail.mapx } : null;
+
+  useEffect(() => {
+    if (!isLoaded || destCoords || !item?.title || loading) return;
+    const geocoder = new google.maps.Geocoder();
+    geocoder.geocode({ address: item.title }, (results, status) => {
+      if (status === "OK" && results?.[0]) {
+        const loc = results[0].geometry.location;
+        setGeocodedCoords({ lat: loc.lat(), lng: loc.lng() });
+      }
+    });
+  }, [isLoaded, destCoords, item?.title, loading]);
+
+  const mapCoords = destCoords ?? geocodedCoords;
 
   if (!visible) return null;
 
@@ -197,8 +274,6 @@ export default function TourismDetailModal({
     }
     return null;
   })();
-  const destCoords =
-    detail?.mapy && detail?.mapx ? { lat: detail.mapy, lng: detail.mapx } : null;
 
   const { heroStats, tableRows } = detail
     ? getCategoryFields(detail)
@@ -227,20 +302,64 @@ export default function TourismDetailModal({
                 <ActivityIndicator style={{ marginTop: 32 }} color={colors.gray400} />
               ) : (
                 <>
-                  <Text style={styles.title}>{detail?.title ?? item?.title}</Text>
+                  <Text style={styles.title}>{item?.title}</Text>
                   {(detail?.address || walkTime) && (
                     <Text style={styles.metaText}>
                       {[detail?.address, walkTime].filter(Boolean).join(" · ")}
                     </Text>
                   )}
-                  {loadFailed && (
-                    <Text style={styles.failedText}>상세 정보를 불러올 수 없습니다.</Text>
+                  {item?.address && loadFailed && (
+                    <Text style={styles.metaText}>{item.address}</Text>
                   )}
                 </>
               )}
             </View>
 
           <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false}>
+            {/* 지도 */}
+            {!loading && Platform.OS === "web" && mapCoords && isLoaded && (
+                  <View style={styles.section}>
+                    <Text style={styles.sectionTitle}>장소</Text>
+                    <View style={styles.mapContainer}>
+                      <GoogleMap
+                        mapContainerStyle={{ width: "100%", height: "100%" }}
+                        center={mapCoords}
+                        zoom={15}
+                        options={{
+                          disableDefaultUI: true,
+                          zoomControl: true,
+                          controlSize: 24,
+                          zoomControlOptions: { position: 7 },
+                          gestureHandling: "greedy",
+                          keyboardShortcuts: false,
+                          clickableIcons: false,
+                        }}
+                      >
+                        <Marker position={mapCoords} title={item?.title ?? undefined} />
+                      </GoogleMap>
+                      {walkTime && (
+                        <View style={styles.mapBadge}>
+                          <Text style={styles.mapBadgeText}>
+                            {walkTime === "바로 옆" ? "현재 일정 바로 옆" : `현재 일정에서 ${walkTime}`}
+                          </Text>
+                        </View>
+                      )}
+                      <Pressable
+                        style={styles.mapOverlay}
+                        onPress={() =>
+                          Linking.openURL(
+                            destCoords
+                              ? `https://www.google.com/maps/search/?api=1&query=${destCoords.lat},${destCoords.lng}`
+                              : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(item?.title ?? "")}`,
+                          )
+                        }
+                      >
+                        <Text style={styles.mapOverlayText}>큰 지도 ↗</Text>
+                      </Pressable>
+                    </View>
+                  </View>
+                )}
+
             {!loading && detail && (
               <>
                 {/* 여행코스 등 hero 스탯 */}
@@ -270,48 +389,6 @@ export default function TourismDetailModal({
                         {overviewExpanded ? "접기" : "더보기"}
                       </Text>
                     </Pressable>
-                  </View>
-                )}
-
-                {/* 지도 */}
-                {Platform.OS === "web" && destCoords && isLoaded && (
-                  <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>장소</Text>
-                    <View style={styles.mapContainer}>
-                      <GoogleMap
-                        mapContainerStyle={{ width: "100%", height: "100%" }}
-                        center={destCoords}
-                        zoom={15}
-                        options={{
-                          disableDefaultUI: true,
-                          zoomControl: true,
-                          controlSize: 24,
-                          zoomControlOptions: { position: 7 },
-                          gestureHandling: "greedy",
-                          keyboardShortcuts: false,
-                          clickableIcons: false,
-                        }}
-                      >
-                        <Marker position={destCoords} title={detail?.title ?? undefined} />
-                      </GoogleMap>
-                      {walkTime && (
-                        <View style={styles.mapBadge}>
-                          <Text style={styles.mapBadgeText}>
-                            {walkTime === "바로 옆" ? "현재 일정 바로 옆" : `현재 일정에서 ${walkTime}`}
-                          </Text>
-                        </View>
-                      )}
-                      <Pressable
-                        style={styles.mapOverlay}
-                        onPress={() =>
-                          Linking.openURL(
-                            `https://www.google.com/maps/search/?api=1&query=${destCoords.lat},${destCoords.lng}`,
-                          )
-                        }
-                      >
-                        <Text style={styles.mapOverlayText}>큰 지도 ↗</Text>
-                      </Pressable>
-                    </View>
                   </View>
                 )}
 
@@ -373,8 +450,13 @@ export default function TourismDetailModal({
             <Pressable style={styles.closeButton} onPress={onClose}>
               <Text style={styles.closeButtonText}>닫기</Text>
             </Pressable>
-            <Pressable style={styles.addButton}>
-              <Text style={styles.addButtonText}>일정에 추가</Text>
+            <Pressable
+              style={styles.addButton}
+              onPress={handleAddToItinerary}
+            >
+              <Text style={styles.addButtonText}>
+                {isAccommodation ? "숙박에 추가" : "일정에 추가"}
+              </Text>
             </Pressable>
           </View>
         </Pressable>
