@@ -21,6 +21,19 @@ import { spacing } from "@/ui/tokens/spacing";
 import { textStyles } from "@/ui/tokens/typography";
 import { formatWalkTime, haversineDistance } from "@/utils/distanceUtils";
 import CloseIcon from "../../../assets/close_sm.svg";
+import TimeIcon from "../../../assets/week_bar_time.svg";
+import CalendarIcon from "../../../assets/calendar_outline.svg";
+
+const CONTENT_TYPE_LABELS: Record<string, string> = {
+  "12": "관광지",
+  "14": "문화시설",
+  "15": "축제·공연",
+  "25": "여행코스",
+  "28": "레포츠",
+  "32": "숙박",
+  "38": "쇼핑",
+  "39": "음식점",
+};
 
 const BADGE_COLORS: Record<string, { color: string; bg: string }> = {
   여행코스: { color: "rgb(62, 91, 217)", bg: "rgb(236, 239, 254)" },
@@ -47,8 +60,10 @@ function isAccommodationType(contentTypeId: string | null): boolean {
 }
 
 type CategoryRow = { label: string; value: string };
+type IconRow = { label: string; value: string; icon: "clock" | "calendar" };
 
 function getCategoryFields(detail: TourismDetail): {
+  iconRows: IconRow[];
   heroStats: CategoryRow[];
   tableRows: CategoryRow[];
 } {
@@ -59,12 +74,19 @@ function getCategoryFields(detail: TourismDetail): {
   const rows = (...items: (CategoryRow | null)[]) =>
     items.filter(Boolean) as CategoryRow[];
 
+  const ir = (label: string, v: string | null | undefined, icon: IconRow["icon"]): IconRow | null =>
+    v ? { label, value: v, icon } : null;
+  const iconRows = (...items: (IconRow | null)[]) =>
+    items.filter(Boolean) as IconRow[];
+
   if (is("12", "관광지")) {
     return {
+      iconRows: iconRows(
+        ir("이용시간", detail.usetime, "clock"),
+        ir("휴관일", detail.restdate, "calendar"),
+      ),
       heroStats: [],
       tableRows: rows(
-        r("이용시간", detail.usetime),
-        r("쉬는날", detail.restdate),
         r("주차", detail.parking),
         r("문의", detail.infocenter || detail.tel),
       ),
@@ -72,6 +94,7 @@ function getCategoryFields(detail: TourismDetail): {
   }
   if (is("14", "문화시설")) {
     return {
+      iconRows: [],
       heroStats: [],
       tableRows: rows(
         r("이용시간", detail.usetimeculture),
@@ -84,6 +107,7 @@ function getCategoryFields(detail: TourismDetail): {
   }
   if (is("15", "축제·공연")) {
     return {
+      iconRows: [],
       heroStats: [],
       tableRows: rows(
         r("행사기간", detail.eventdate),
@@ -97,6 +121,7 @@ function getCategoryFields(detail: TourismDetail): {
   }
   if (is("25", "여행코스")) {
     return {
+      iconRows: [],
       heroStats: rows(r("총거리", detail.distance), r("소요시간", detail.taketime)),
       tableRows: rows(
         r("코스기간", detail.schedule),
@@ -106,6 +131,7 @@ function getCategoryFields(detail: TourismDetail): {
   }
   if (is("28", "레포츠")) {
     return {
+      iconRows: [],
       heroStats: [],
       tableRows: rows(
         r("이용시간", detail.usetimeleports),
@@ -118,6 +144,7 @@ function getCategoryFields(detail: TourismDetail): {
   }
   if (is("32", "숙박")) {
     return {
+      iconRows: [],
       heroStats: [],
       tableRows: rows(
         r("체크인", detail.checkintime),
@@ -131,6 +158,7 @@ function getCategoryFields(detail: TourismDetail): {
   }
   if (is("38", "쇼핑")) {
     return {
+      iconRows: [],
       heroStats: [],
       tableRows: rows(
         r("영업시간", detail.opentime),
@@ -142,6 +170,7 @@ function getCategoryFields(detail: TourismDetail): {
   }
   if (is("39", "음식점")) {
     return {
+      iconRows: [],
       heroStats: [],
       tableRows: rows(
         r("영업시간", detail.opentimefood),
@@ -153,7 +182,7 @@ function getCategoryFields(detail: TourismDetail): {
       ),
     };
   }
-  return { heroStats: [], tableRows: [] };
+  return { iconRows: [], heroStats: [], tableRows: [] };
 }
 
 interface Props {
@@ -279,6 +308,14 @@ export default function TourismDetailModal({
   if (!visible) return null;
 
   const badge = item ? (BADGE_COLORS[item.contentTypeId] ?? DEFAULT_BADGE) : DEFAULT_BADGE;
+  const detailCategoryLabel = detail
+    ? (CONTENT_TYPE_LABELS[detail.contentTypeId] ?? detail.contentTypeId)
+    : null;
+  const badgeText = (() => {
+    if (!item) return "";
+    if (!detailCategoryLabel || detailCategoryLabel === item.contentTypeId) return item.contentTypeId;
+    return `${item.contentTypeId}/${detailCategoryLabel}`;
+  })();
   const walkTime = (() => {
     if (item?.dist) return formatWalkTime(item.dist);
     if (itineraryLocation && detail?.mapy && detail?.mapx) {
@@ -293,9 +330,9 @@ export default function TourismDetailModal({
     return null;
   })();
 
-  const { heroStats, tableRows } = detail
+  const { iconRows, heroStats, tableRows } = detail
     ? getCategoryFields(detail)
-    : { heroStats: [], tableRows: [] };
+    : { iconRows: [], heroStats: [], tableRows: [] };
 
   const hasUsageInfo = !!(detail?.tel || detail?.homepage);
 
@@ -308,7 +345,7 @@ export default function TourismDetailModal({
               <View style={styles.headerRow}>
                 <View style={[styles.badge, { backgroundColor: badge.bg }]}>
                   <Text style={[styles.badgeText, { color: badge.color }]}>
-                    {item?.contentTypeId}
+                    {badgeText}
                   </Text>
                 </View>
                 <Pressable onPress={onClose} style={styles.closeBtn}>
@@ -334,49 +371,92 @@ export default function TourismDetailModal({
             </View>
 
           <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false}>
-            {/* 지도 */}
-            {!loading && Platform.OS === "web" && mapCoords && isLoaded && (
-                  <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>장소</Text>
-                    <View style={styles.mapContainer}>
-                      <GoogleMap
-                        mapContainerStyle={{ width: "100%", height: "100%" }}
-                        center={mapCoords}
-                        zoom={15}
-                        options={{
-                          disableDefaultUI: true,
-                          zoomControl: true,
-                          controlSize: 24,
-                          zoomControlOptions: { position: 7 },
-                          gestureHandling: "greedy",
-                          keyboardShortcuts: false,
-                          clickableIcons: false,
-                        }}
-                      >
-                        <Marker position={mapCoords} title={item?.title ?? undefined} />
-                      </GoogleMap>
-                      {walkTime && (
-                        <View style={styles.mapBadge}>
-                          <Text style={styles.mapBadgeText}>
-                            {walkTime === "바로 옆" ? "현재 일정 바로 옆" : `현재 일정에서 ${walkTime}`}
-                          </Text>
-                        </View>
-                      )}
-                      <Pressable
-                        style={styles.mapOverlay}
-                        onPress={() =>
-                          Linking.openURL(
-                            destCoords
-                              ? `https://www.google.com/maps/search/?api=1&query=${destCoords.lat},${destCoords.lng}`
-                              : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(item?.title ?? "")}`,
-                          )
-                        }
-                      >
-                        <Text style={styles.mapOverlayText}>큰 지도 ↗</Text>
-                      </Pressable>
+            {/* 아이콘 행 (이용시간·휴관일 등) */}
+            {!loading && detail && iconRows.length > 0 && (
+              <View style={styles.iconRowContainer}>
+                {iconRows.map((row, i) => (
+                  <View key={i} style={styles.iconRow}>
+                    <View style={styles.iconBox}>
+                      {row.icon === "clock"
+                        ? <TimeIcon width={22} height={22} color={colors.primary} />
+                        : <CalendarIcon width={22} height={22} color={colors.primary} />}
+                    </View>
+                    <View style={styles.iconRowText}>
+                      <Text style={styles.iconRowLabel}>{row.label}</Text>
+                      <Text style={styles.iconRowValue}>{row.value}</Text>
                     </View>
                   </View>
-                )}
+                ))}
+              </View>
+            )}
+
+            {/* 소개 */}
+            {!loading && detail?.overview && (
+              <>
+                <View style={styles.divider} />
+                <View style={styles.section}>
+                  <Text style={styles.sectionTitle}>소개</Text>
+                  <Text
+                    style={styles.overviewText}
+                    numberOfLines={overviewExpanded ? undefined : 3}
+                  >
+                    {detail.overview}
+                  </Text>
+                  <Pressable onPress={() => setOverviewExpanded((v) => !v)}>
+                    <Text style={styles.expandBtn}>
+                      {overviewExpanded ? "접기" : "더보기"}
+                    </Text>
+                  </Pressable>
+                </View>
+              </>
+            )}
+
+            {/* 지도 */}
+            {!loading && Platform.OS === "web" && mapCoords && isLoaded && (
+              <>
+                <View style={styles.divider} />
+                <View style={styles.section}>
+                  <Text style={styles.sectionTitle}>장소</Text>
+                  <View style={styles.mapContainer}>
+                    <GoogleMap
+                      mapContainerStyle={{ width: "100%", height: "100%" }}
+                      center={mapCoords}
+                      zoom={15}
+                      options={{
+                        disableDefaultUI: true,
+                        zoomControl: true,
+                        controlSize: 24,
+                        zoomControlOptions: { position: 7 },
+                        gestureHandling: "greedy",
+                        keyboardShortcuts: false,
+                        clickableIcons: false,
+                      }}
+                    >
+                      <Marker position={mapCoords} title={item?.title ?? undefined} />
+                    </GoogleMap>
+                    {walkTime && (
+                      <View style={styles.mapBadge}>
+                        <Text style={styles.mapBadgeText}>
+                          {walkTime === "바로 옆" ? "현재 일정 바로 옆" : `현재 일정에서 ${walkTime}`}
+                        </Text>
+                      </View>
+                    )}
+                    <Pressable
+                      style={styles.mapOverlay}
+                      onPress={() =>
+                        Linking.openURL(
+                          destCoords
+                            ? `https://www.google.com/maps/search/?api=1&query=${destCoords.lat},${destCoords.lng}`
+                            : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(item?.title ?? "")}`,
+                        )
+                      }
+                    >
+                      <Text style={styles.mapOverlayText}>큰 지도 ↗</Text>
+                    </Pressable>
+                  </View>
+                </View>
+              </>
+            )}
 
             {!loading && detail && (
               <>
@@ -392,72 +472,60 @@ export default function TourismDetailModal({
                   </View>
                 )}
 
-                {/* 소개 */}
-                {detail.overview && (
-                  <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>소개</Text>
-                    <Text
-                      style={styles.overviewText}
-                      numberOfLines={overviewExpanded ? undefined : 3}
-                    >
-                      {detail.overview}
-                    </Text>
-                    <Pressable onPress={() => setOverviewExpanded((v) => !v)}>
-                      <Text style={styles.expandBtn}>
-                        {overviewExpanded ? "접기" : "더보기"}
-                      </Text>
-                    </Pressable>
-                  </View>
-                )}
-
                 {/* 카테고리별 정보 */}
                 {tableRows.length > 0 && (
-                  <View style={styles.section}>
-                    <View style={styles.table}>
-                      {tableRows.map((row, i) => (
-                        <View
-                          key={i}
-                          style={[
-                            styles.tableRow,
-                            i < tableRows.length - 1 && styles.tableRowBorder,
-                          ]}
-                        >
-                          <Text style={styles.tableLabel}>{row.label}</Text>
-                          <Text style={styles.tableValue}>{row.value}</Text>
-                        </View>
-                      ))}
+                  <>
+                    <View style={styles.divider} />
+                    <View style={styles.section}>
+                      <View style={styles.table}>
+                        {tableRows.map((row, i) => (
+                          <View
+                            key={i}
+                            style={[
+                              styles.tableRow,
+                              i < tableRows.length - 1 && styles.tableRowBorder,
+                            ]}
+                          >
+                            <Text style={styles.tableLabel}>{row.label}</Text>
+                            <Text style={styles.tableValue}>{row.value}</Text>
+                          </View>
+                        ))}
+                      </View>
                     </View>
-                  </View>
+                  </>
                 )}
 
                 {/* 이용 정보 */}
                 {hasUsageInfo && (
-                  <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>이용 정보</Text>
-                    <View style={styles.table}>
-                      {detail.tel && (
-                        <View
-                          style={[
-                            styles.tableRow,
-                            detail.homepage ? styles.tableRowBorder : undefined,
-                          ]}
-                        >
-                          <Text style={styles.tableLabel}>문의</Text>
-                          <Text style={styles.tableValue}>{detail.tel}</Text>
-                        </View>
-                      )}
-                      {detail.homepage && (
-                        <View style={styles.tableRow}>
-                          <Text style={styles.tableLabel}>홈페이지</Text>
-                          <Pressable onPress={() => Linking.openURL(detail.homepage!)}>
-                            <Text style={[styles.tableValue, styles.link]} numberOfLines={1}>
-                              {detail.homepage}
-                            </Text>
-                          </Pressable>
-                        </View>
-                      )}
+                  <>
+                    <View style={styles.divider} />
+                    <View style={styles.section}>
+                      <Text style={styles.sectionTitle}>이용 정보</Text>
+                      <View style={styles.table}>
+                        {detail.tel && (
+                          <View
+                            style={[
+                              styles.tableRow,
+                              detail.homepage ? styles.tableRowBorder : undefined,
+                            ]}
+                          >
+                            <Text style={styles.tableLabel}>문의</Text>
+                            <Text style={styles.tableValue}>{detail.tel}</Text>
+                          </View>
+                        )}
+                        {detail.homepage && (
+                          <View style={styles.tableRow}>
+                            <Text style={styles.tableLabel}>홈페이지</Text>
+                            <Pressable onPress={() => Linking.openURL(detail.homepage!)}>
+                              <Text style={[styles.tableValue, styles.link]} numberOfLines={1}>
+                                {detail.homepage}
+                              </Text>
+                            </Pressable>
+                          </View>
+                        )}
+                      </View>
                     </View>
-                  </View>
+                  </>
                 )}
               </>
             )}
@@ -553,6 +621,47 @@ const styles = StyleSheet.create({
     ...textStyles.body5,
     color: colors.gray500,
   },
+  iconRowContainer: {
+    flexDirection: "column",
+    paddingHorizontal: 32,
+    marginTop: spacing.md,
+  },
+  iconRow: {
+    flexDirection: "row",
+    gap: 16,
+    alignItems: "flex-start",
+    paddingVertical: 12,
+  },
+  iconRowBorder: {
+    borderBottomWidth: 1,
+    borderBottomColor: colors.gray100,
+  },
+  iconBox: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    backgroundColor: "rgb(234, 241, 254)",
+    flexShrink: 0,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  iconRowText: {
+    flex: 1,
+    flexDirection: "column",
+    gap: 4,
+  },
+  iconRowLabel: {
+    fontSize: 13,
+    fontWeight: "500",
+    lineHeight: 20,
+    color: colors.gray500,
+  },
+  iconRowValue: {
+    fontSize: 18,
+    fontWeight: "600",
+    lineHeight: 28,
+    color: colors.gray900,
+  },
   heroRow: {
     flexDirection: "row",
     gap: 16,
@@ -576,12 +685,15 @@ const styles = StyleSheet.create({
     lineHeight: 32,
     color: colors.gray900,
   } as any,
+  divider: {
+    height: 1,
+    backgroundColor: colors.gray200,
+    marginHorizontal: 32,
+  },
   section: {
     paddingHorizontal: 32,
     paddingTop: 16,
     paddingBottom: 16,
-    borderTopWidth: 1,
-    borderTopColor: colors.gray200,
     gap: 12,
   },
   sectionTitle: {
