@@ -88,7 +88,6 @@ function getCategoryFields(detail: TourismDetail): {
       heroStats: [],
       tableRows: rows(
         r("주차", detail.parking),
-        r("문의", detail.infocenter || detail.tel),
       ),
     };
   }
@@ -330,11 +329,15 @@ export default function TourismDetailModal({
     return null;
   })();
 
-  const { iconRows, heroStats, tableRows } = detail
+  const { iconRows, heroStats, tableRows: categoryRows } = detail
     ? getCategoryFields(detail)
     : { iconRows: [], heroStats: [], tableRows: [] };
+  const tableRows = [
+    ...(detail?.address ? [{ label: "주소", value: detail.address }] : []),
+    ...categoryRows,
+  ];
 
-  const hasUsageInfo = !!(detail?.tel || detail?.homepage);
+  const hasUsageInfo = !!(detail?.tel || detail?.infocenter || detail?.homepage);
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
@@ -383,7 +386,10 @@ export default function TourismDetailModal({
                     </View>
                     <View style={styles.iconRowText}>
                       <Text style={styles.iconRowLabel}>{row.label}</Text>
-                      <Text style={styles.iconRowValue}>{row.value}</Text>
+                      <Text style={[
+                        styles.iconRowValue,
+                        row.value.length > 15 && styles.iconRowValueSmall,
+                      ] as any}>{row.value}</Text>
                     </View>
                   </View>
                 ))}
@@ -415,7 +421,7 @@ export default function TourismDetailModal({
             {!loading && Platform.OS === "web" && mapCoords && isLoaded && (
               <>
                 <View style={styles.divider} />
-                <View style={styles.section}>
+                <View style={[styles.section, { paddingBottom: 0 }]}>
                   <Text style={styles.sectionTitle}>장소</Text>
                   <View style={styles.mapContainer}>
                     <GoogleMap
@@ -475,7 +481,6 @@ export default function TourismDetailModal({
                 {/* 카테고리별 정보 */}
                 {tableRows.length > 0 && (
                   <>
-                    <View style={styles.divider} />
                     <View style={styles.section}>
                       <View style={styles.table}>
                         {tableRows.map((row, i) => (
@@ -502,7 +507,7 @@ export default function TourismDetailModal({
                     <View style={styles.section}>
                       <Text style={styles.sectionTitle}>이용 정보</Text>
                       <View style={styles.table}>
-                        {detail.tel && (
+                        {(detail.tel || detail.infocenter) && (
                           <View
                             style={[
                               styles.tableRow,
@@ -510,13 +515,13 @@ export default function TourismDetailModal({
                             ]}
                           >
                             <Text style={styles.tableLabel}>문의</Text>
-                            <Text style={styles.tableValue}>{detail.tel}</Text>
+                            <Text style={styles.tableValue}>{detail.tel || detail.infocenter}</Text>
                           </View>
                         )}
                         {detail.homepage && (
                           <View style={styles.tableRow}>
                             <Text style={styles.tableLabel}>홈페이지</Text>
-                            <Pressable onPress={() => Linking.openURL(detail.homepage!)}>
+                            <Pressable style={{ flex: 1 }} onPress={() => Linking.openURL(detail.homepage!)}>
                               <Text style={[styles.tableValue, styles.link]} numberOfLines={1}>
                                 {detail.homepage}
                               </Text>
@@ -629,7 +634,7 @@ const styles = StyleSheet.create({
   iconRow: {
     flexDirection: "row",
     gap: 16,
-    alignItems: "flex-start",
+    alignItems: "center",
     paddingVertical: 12,
   },
   iconRowBorder: {
@@ -661,6 +666,12 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     lineHeight: 28,
     color: colors.gray900,
+    whiteSpace: "pre-line",
+  } as any,
+  iconRowValueSmall: {
+    fontSize: 14,
+    fontWeight: "500",
+    lineHeight: 22,
   },
   heroRow: {
     flexDirection: "row",
@@ -765,7 +776,7 @@ const styles = StyleSheet.create({
   tableRow: {
     flexDirection: "row",
     gap: 16,
-    alignItems: "flex-start",
+    alignItems: "center",
     paddingVertical: 8,
   },
   tableRowBorder: {
