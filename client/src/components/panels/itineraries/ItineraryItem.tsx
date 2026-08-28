@@ -346,8 +346,10 @@ export default function ItineraryItem({
         description: itinerary.description || "",
         country: itinerary.country || "",
         city: itinerary.city || "",
-        location: itinerary.location?.name || "",
-        locationId: itinerary.location?.id,
+        location: typeof itinerary.location === "string"
+          ? itinerary.location
+          : itinerary.location?.name || "",
+        locationId: itinerary.locationId ?? (typeof itinerary.location === "string" ? undefined : itinerary.location?.id),
         itineraryDate:
           itinerary.itinerary_date ||
           itinerary.itineraryDate ||

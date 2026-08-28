@@ -13,6 +13,7 @@ import {
 import { GoogleMap, Marker, useLoadScript } from "@react-google-maps/api";
 import type { NearbyAttraction, TourismDetail } from "@/services/tourism";
 import { tourismApi } from "@/services/tourism";
+import { locationsApi } from "@/services/locations";
 import { ItineraryCategory } from "@/types/itinerary";
 import { colors } from "@/ui/tokens/colors";
 import { radii } from "@/ui/tokens/radii";
@@ -184,7 +185,7 @@ export default function TourismDetailModal({
   const [geocodedCoords, setGeocodedCoords] = useState<{ lat: number; lng: number } | null>(null);
   const isAccommodation = isAccommodationType(detail?.contentTypeId ?? item?.contentTypeId ?? null);
 
-  const handleAddToItinerary = () => {
+  const handleAddToItinerary = async () => {
     if (isAccommodation) {
       onClose();
       onSwitchToAccommodation?.();
@@ -199,9 +200,26 @@ export default function TourismDetailModal({
     const fmt = (n: number) =>
       `${String(Math.floor(n / 60)).padStart(2, "0")}:${String(n % 60).padStart(2, "0")}`;
 
+    const coords = mapCoords;
+    let locationId: number | undefined;
+    try {
+      const nameHash = [...item.title].reduce((a, c) => (Math.imul(31, a) + c.charCodeAt(0)) >>> 0, 0).toString(16);
+      const loc = await locationsApi.createLocation({
+        name: item.title,
+        placeId: `m_${nameHash}_${Math.random().toString(16).slice(2, 10)}`,
+        latitude: coords?.lat ?? 0,
+        longitude: coords?.lng ?? 0,
+        address: detail?.address ?? undefined,
+        fromGoogle: !!coords,
+      });
+      locationId = loc.id;
+    } catch {}
+
     onOpenNewItinerary({
       title: detail?.title ?? item.title,
       description: detail?.overview ?? undefined,
+      location: item.title,
+      locationId,
       country: itinerary?.country || undefined,
       city: itinerary?.city || undefined,
       itineraryDate: itinerary?.itinerary_date ?? itinerary?.itineraryDate ?? "",
