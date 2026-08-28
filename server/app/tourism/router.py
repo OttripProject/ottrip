@@ -43,7 +43,12 @@ async def get_nearby_attractions(
             keyword=location.name, area_cd=area_cd, signgu_cd=signgu_cd
         )
 
+    def _is_valid_korea_coords(lat: float, lng: float) -> bool:
+        return 33.0 <= lat <= 38.9 and 124.0 <= lng <= 132.0
+
     async def _get_location_based() -> list[NearbyAttraction]:
+        if not _is_valid_korea_coords(location.latitude, location.longitude):
+            return []
         return await service.get_location_based_attractions(
             mapx=location.longitude,
             mapy=location.latitude,
