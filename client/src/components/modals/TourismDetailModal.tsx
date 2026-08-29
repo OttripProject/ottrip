@@ -199,7 +199,7 @@ interface Props {
   itineraryLocation: { latitude: number; longitude: number } | null;
   itinerary: any;
   onOpenNewItinerary: (draft: any) => void;
-  onSwitchToAccommodation?: () => void;
+  onSwitchToAccommodation?: (draft: any) => void;
 }
 
 export default function TourismDetailModal({
@@ -224,7 +224,35 @@ export default function TourismDetailModal({
   const handleAddToItinerary = async () => {
     if (isAccommodation) {
       onClose();
-      onSwitchToAccommodation?.();
+      const itineraryDate = itinerary?.itinerary_date ?? itinerary?.itineraryDate ?? "";
+      const hotelName = detail?.title ?? item?.title ?? "";
+      let locationId: number | undefined;
+      try {
+        const coords = mapCoords;
+        const nameHash = [...hotelName].reduce((a, c) => (Math.imul(31, a) + c.charCodeAt(0)) >>> 0, 0).toString(16);
+        const loc = await locationsApi.createLocation({
+          name: hotelName,
+          placeId: `m_${nameHash}_${Math.random().toString(16).slice(2, 10)}`,
+          latitude: coords?.lat ?? 0,
+          longitude: coords?.lng ?? 0,
+          address: detail?.address ?? undefined,
+          fromGoogle: !!coords,
+        });
+        locationId = loc.id;
+      } catch {}
+      onSwitchToAccommodation?.({
+        name: hotelName,
+        place: hotelName,
+        locationId,
+        checkinTime: detail?.checkintime ?? "15:00",
+        checkoutTime: detail?.checkouttime ?? "11:00",
+        checkinDate: itineraryDate || undefined,
+        checkoutDate: itineraryDate
+          ? new Date(new Date(itineraryDate).getTime() + 86400000).toISOString().slice(0, 10)
+          : undefined,
+        country: itinerary?.country || undefined,
+        city: itinerary?.city || undefined,
+      });
       return;
     }
     if (!item) return;

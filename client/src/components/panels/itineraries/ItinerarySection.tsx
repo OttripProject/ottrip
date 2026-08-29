@@ -26,7 +26,7 @@ interface ItinerarySectionProps {
   onConsumeOpenNewItineraryForm?: () => void;
   selectedItineraryDate?: Date | null;
   onEdit?: (itinerary: any) => void;
-  onTabChange?: (tab: "itinerary" | "flight" | "accommodation") => void;
+  onTabChange?: (tab: "itinerary" | "flight" | "accommodation", draft?: any) => void;
   stagedDocumentAnalyze?: StagedDocumentAnalyzePayload | null;
   onConsumeStagedDocumentAnalyze?: () => void;
   routeDocumentAnalyzeSuccess?: (

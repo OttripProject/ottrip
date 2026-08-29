@@ -46,7 +46,7 @@ interface DetailsPanelProps {
   onConsumeOpenNewAccommodationForm?: () => void;
   newAccommodationDraft?: any | null;
   onPreviewAccommodationChange?: (preview: any) => void;
-  onTabChange?: (tab: "itinerary" | "flight" | "accommodation") => void;
+  onTabChange?: (tab: "itinerary" | "flight" | "accommodation", draft?: any) => void;
   stagedDocumentAnalyze?: StagedDocumentAnalyzePayload | null;
   onConsumeStagedDocumentAnalyze?: () => void;
   routeDocumentAnalyzeSuccess?: (

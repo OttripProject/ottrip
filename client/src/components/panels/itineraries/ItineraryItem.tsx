@@ -128,7 +128,7 @@ interface ItineraryItemProps {
   readOnly?: boolean;
   onEdit?: () => void;
   activeTab?: "itinerary" | "flight" | "accommodation";
-  onTabChange?: (tab: "itinerary" | "flight" | "accommodation") => void;
+  onTabChange?: (tab: "itinerary" | "flight" | "accommodation", draft?: any) => void;
   stagedDocumentAnalyze?: StagedDocumentAnalyzePayload | null;
   onConsumeStagedDocumentAnalyze?: () => void;
   routeDocumentAnalyzeSuccess?: (
@@ -1725,7 +1725,7 @@ export default function ItineraryItem({
         }
         itinerary={itinerary}
         onOpenNewItinerary={onOpenNewItinerary ?? (() => {})}
-        onSwitchToAccommodation={() => onTabChange?.("accommodation")}
+        onSwitchToAccommodation={(draft) => onTabChange?.("accommodation", draft)}
       />
     </View>
   );
