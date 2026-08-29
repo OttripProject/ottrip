@@ -25,6 +25,9 @@ import TimeIcon from "../../../assets/week_bar_time.svg";
 import CalendarIcon from "../../../assets/calendar_outline.svg";
 import HourglassIcon from "../../../assets/hourglass.svg";
 import WonIcon from "../../../assets/won.svg";
+import RouteIcon from "../../../assets/route.svg";
+import RoomIcon from "../../../assets/room.svg";
+import CutleryIcon from "../../../assets/cutlery.svg";
 
 const CONTENT_TYPE_LABELS: Record<string, string> = {
   "12": "관광지",
@@ -62,12 +65,15 @@ function isAccommodationType(contentTypeId: string | null): boolean {
 }
 
 type CategoryRow = { label: string; value: string };
-type IconRow = { label: string; value: string; icon: "clock" | "calendar" | "hourglass" | "won" };
+type IconRow = { label: string; value: string; icon: "clock" | "calendar" | "hourglass" | "won" | "route" | "checkinout" | "room" | "cutlery" };
 
 function getCategoryFields(detail: TourismDetail): {
   iconRows: IconRow[];
   heroStats: CategoryRow[];
+  prefixRows: CategoryRow[];
   tableRows: CategoryRow[];
+  usageRows: CategoryRow[];
+  badgeSection: { title: string; items: string[] } | null;
 } {
   const t = detail.contentTypeId;
   const is = (...ids: string[]) => ids.some((id) => t === id);
@@ -83,14 +89,9 @@ function getCategoryFields(detail: TourismDetail): {
 
   if (is("12", "관광지")) {
     return {
-      iconRows: iconRows(
-        ir("이용시간", detail.usetime, "clock"),
-        ir("휴관일", detail.restdate, "calendar"),
-      ),
-      heroStats: [],
-      tableRows: rows(
-        r("주차", detail.parking),
-      ),
+      iconRows: iconRows(ir("이용시간", detail.usetime, "clock"), ir("휴관일", detail.restdate, "calendar")),
+      heroStats: [], prefixRows: [], usageRows: [], badgeSection: null,
+      tableRows: rows(r("주차", detail.parking)),
     };
   }
   if (is("14", "문화시설")) {
@@ -101,90 +102,94 @@ function getCategoryFields(detail: TourismDetail): {
         ir("관람소요시간", detail.spendtime, "hourglass"),
         ir("이용요금", detail.usefee, "won"),
       ),
-      heroStats: [],
-      tableRows: rows(
-        r("주차", detail.parkingculture),
-      ),
+      heroStats: [], prefixRows: [], usageRows: [], badgeSection: null,
+      tableRows: rows(r("주차", detail.parkingculture)),
     };
   }
   if (is("15", "축제·공연")) {
     return {
-      iconRows: [],
-      heroStats: [],
-      tableRows: rows(
-        r("행사기간", detail.eventdate),
-        r("행사장소", detail.eventplace),
-        r("공연시간", detail.playtime),
-        r("이용요금", detail.usetimefestival),
-        r("예매처", detail.bookingplace),
-        r("관람연령", detail.agelimit),
+      iconRows: iconRows(
+        ir("행사기간", detail.eventdate, "calendar"),
+        ir("공연시간", detail.playtime, "clock"),
+        ir("이용요금", detail.usetimefestival, "won"),
       ),
+      heroStats: [],
+      prefixRows: rows(r("행사장소", detail.eventplace)),
+      usageRows: rows(r("예매처", detail.bookingplace)),
+      badgeSection: null,
+      tableRows: rows(r("관람연령", detail.agelimit)),
     };
   }
   if (is("25", "여행코스")) {
     return {
-      iconRows: [],
-      heroStats: rows(r("총거리", detail.distance), r("소요시간", detail.taketime)),
-      tableRows: rows(
-        r("코스기간", detail.schedule),
-        r("문의", detail.infocentertourcourse || detail.tel),
-      ),
+      iconRows: iconRows(ir("총거리", detail.distance, "route"), ir("소요시간", detail.taketime, "hourglass")),
+      heroStats: [],
+      prefixRows: rows(r("코스", detail.schedule)),
+      usageRows: rows(r("문의", detail.infocentertourcourse || detail.tel)),
+      badgeSection: null,
+      tableRows: [],
     };
   }
   if (is("28", "레포츠")) {
     return {
-      iconRows: [],
-      heroStats: [],
-      tableRows: rows(
-        r("이용시간", detail.usetimeleports),
-        r("쉬는날", detail.restdateleports),
-        r("입장료", detail.usefeeleports),
-        r("예약안내", detail.reservation),
-        r("주차", detail.parkingleports),
+      iconRows: iconRows(
+        ir("이용시간", detail.usetimeleports, "clock"),
+        ir("휴관일", detail.restdateleports, "calendar"),
+        ir("입장료", detail.usefeeleports, "won"),
       ),
+      heroStats: [], prefixRows: [],
+      usageRows: rows(r("예약안내", detail.reservation)),
+      badgeSection: null,
+      tableRows: rows(r("주차", detail.parkingleports)),
     };
   }
   if (is("32", "숙박")) {
+    const checkinCheckout =
+      detail.checkintime && detail.checkouttime
+        ? `${detail.checkintime}@@${detail.checkouttime}`
+        : detail.checkintime ?? detail.checkouttime ?? null;
     return {
-      iconRows: [],
-      heroStats: [],
-      tableRows: rows(
-        r("체크인", detail.checkintime),
-        r("체크아웃", detail.checkouttime),
-        r("객실수", detail.roomcount),
+      iconRows: iconRows(
+        checkinCheckout ? { label: "체크인 / 체크아웃", value: checkinCheckout, icon: "checkinout" } : null,
+        ir("객실수", detail.roomcount, "room"),
+      ),
+      heroStats: [], prefixRows: [],
+      usageRows: rows(
         r("예약안내", detail.reservationlodging),
         r("환불규정", detail.refundregulation),
-        r("부대시설", detail.subfacility),
       ),
+      badgeSection: detail.subfacility
+        ? { title: "부대시설", items: detail.subfacility.split(/[,·\/]/).map((s) => s.trim().replace(/\s*등$/, "")).filter(Boolean) }
+        : null,
+      tableRows: rows(r("주차", detail.parkinglodging)),
     };
   }
   if (is("38", "쇼핑")) {
     return {
-      iconRows: [],
-      heroStats: [],
-      tableRows: rows(
-        r("영업시간", detail.opentime),
-        r("쉬는날", detail.restdateshopping),
-        r("판매품목", detail.saleitem),
-        r("주차", detail.parkingshopping),
+      iconRows: iconRows(
+        ir("영업시간", detail.opentime, "clock"),
+        ir("휴무일", detail.restdateshopping, "calendar"),
       ),
+      heroStats: [], prefixRows: [], usageRows: [],
+      badgeSection: detail.saleitem
+        ? { title: "판매품목", items: detail.saleitem.split(/[,·\/]/).map((s) => s.trim().replace(/\s*등$/, "")).filter(Boolean) }
+        : null,
+      tableRows: rows(r("주차", detail.parkingshopping)),
     };
   }
   if (is("39", "음식점")) {
     return {
-      iconRows: [],
-      heroStats: [],
-      tableRows: rows(
-        r("영업시간", detail.opentimefood),
-        r("쉬는날", detail.restdatefood),
-        r("대표메뉴", detail.firstmenu),
-        r("포장", detail.packing),
-        r("예약안내", detail.reservationfood),
-        r("주차", detail.parkingfood),
+      iconRows: iconRows(
+        ir("영업시간", detail.opentimefood, "clock"),
+        ir("휴무일", detail.restdatefood, "calendar"),
+        ir("대표메뉴", detail.firstmenu, "cutlery"),
       ),
+      heroStats: [], prefixRows: [], badgeSection: null,
+      usageRows: rows(r("포장", detail.packing), r("예약안내", detail.reservationfood)),
+      tableRows: rows(r("주차", detail.parkingfood)),
     };
   }
-  return { iconRows: [], heroStats: [], tableRows: [] };
+  return { iconRows: [], heroStats: [], prefixRows: [], usageRows: [], badgeSection: null, tableRows: [] };
 }
 
 interface Props {
@@ -311,7 +316,7 @@ export default function TourismDetailModal({
 
   const badge = item ? (BADGE_COLORS[item.contentTypeId] ?? DEFAULT_BADGE) : DEFAULT_BADGE;
   const detailCategoryLabel = detail
-    ? (CONTENT_TYPE_LABELS[detail.contentTypeId] ?? detail.contentTypeId)
+    ? (CONTENT_TYPE_LABELS[detail.contentTypeId ?? ""] ?? detail.contentTypeId)
     : null;
   const badgeText = (() => {
     if (!item) return "";
@@ -332,15 +337,16 @@ export default function TourismDetailModal({
     return null;
   })();
 
-  const { iconRows, heroStats, tableRows: categoryRows } = detail
+  const { iconRows, heroStats, prefixRows, usageRows, badgeSection, tableRows: categoryRows } = detail
     ? getCategoryFields(detail)
-    : { iconRows: [], heroStats: [], tableRows: [] };
+    : { iconRows: [], heroStats: [], prefixRows: [], usageRows: [], badgeSection: null, tableRows: [] };
   const tableRows = [
+    ...prefixRows,
     ...(detail?.address ? [{ label: "주소", value: detail.address }] : []),
     ...categoryRows,
   ];
 
-  const hasUsageInfo = !!(detail?.tel || detail?.infocenter || detail?.homepage);
+  const hasUsageInfo = !!(detail?.tel || detail?.infocenter || detail?.infocenterlodging || detail?.homepage || usageRows.length > 0);
 
   const feeValue = (() => {
     if (!detail) return null;
@@ -401,26 +407,59 @@ export default function TourismDetailModal({
             {/* 아이콘 행 (이용시간·휴관일 등) */}
             {!loading && detail && iconRows.length > 0 && (
               <View style={styles.iconRowContainer}>
-                {iconRows.map((row, i) => (
-                  <View key={i} style={styles.iconRow}>
-                    <View style={styles.iconBox}>
-                      {row.icon === "clock"
-                        ? <TimeIcon width={22} height={22} color={colors.primary} />
-                        : row.icon === "calendar"
-                        ? <CalendarIcon width={22} height={22} color={colors.primary} />
-                        : row.icon === "hourglass"
-                        ? <HourglassIcon width={22} height={22} color={colors.primary} />
-                        : <WonIcon width={22} height={22} color={colors.primary} />}
+                {iconRows.map((row, i) => {
+                  if (row.icon === "checkinout") {
+                    const parts = row.value.split("@@");
+                    const checkin = parts[0] ?? "";
+                    const checkout = parts[1] ?? "";
+                    return (
+                      <View key={i} style={styles.iconRow}>
+                        <View style={styles.iconBox}>
+                          <TimeIcon width={22} height={22} color={colors.primary} />
+                        </View>
+                        <View style={[styles.iconRowText, { gap: 2 }]}>
+                          <View style={styles.checkinOutRow}>
+                            <View style={styles.checkinOutItem}>
+                              <Text style={styles.iconRowLabel}>체크인</Text>
+                              <Text style={styles.iconRowValue}>{checkin}</Text>
+                            </View>
+                            <Text style={styles.checkinOutArrow}>→</Text>
+                            <View style={styles.checkinOutItem}>
+                              <Text style={styles.iconRowLabel}>체크아웃</Text>
+                              <Text style={styles.iconRowValue}>{checkout}</Text>
+                            </View>
+                          </View>
+                        </View>
+                      </View>
+                    );
+                  }
+                  return (
+                    <View key={i} style={styles.iconRow}>
+                      <View style={styles.iconBox}>
+                        {row.icon === "clock"
+                          ? <TimeIcon width={22} height={22} color={colors.primary} />
+                          : row.icon === "calendar"
+                          ? <CalendarIcon width={22} height={22} color={colors.primary} />
+                          : row.icon === "hourglass"
+                          ? <HourglassIcon width={22} height={22} color={colors.primary} />
+                          : row.icon === "route"
+                          ? <RouteIcon width={22} height={22} color={colors.primary} />
+                          : row.icon === "room"
+                          ? <RoomIcon width={22} height={22} color={colors.primary} />
+                          : row.icon === "cutlery"
+                          ? <CutleryIcon width={22} height={22} color={colors.primary} />
+                          : <WonIcon width={22} height={22} color={colors.primary} />}
+                      </View>
+                      <View style={styles.iconRowText}>
+                        <Text style={styles.iconRowLabel}>{row.label}</Text>
+                        <Text style={[
+                          styles.iconRowValue,
+                          row.value.length > 15 && styles.iconRowValueSmall,
+                        ] as any}>{row.value}</Text>
+                      </View>
                     </View>
-                    <View style={styles.iconRowText}>
-                      <Text style={styles.iconRowLabel}>{row.label}</Text>
-                      <Text style={[
-                        styles.iconRowValue,
-                        row.value.length > 15 && styles.iconRowValueSmall,
-                      ] as any}>{row.value}</Text>
-                    </View>
-                  </View>
-                ))}
+                  );
+                })}
               </View>
             )}
 
@@ -441,6 +480,23 @@ export default function TourismDetailModal({
                       {overviewExpanded ? "접기" : "더보기"}
                     </Text>
                   </Pressable>
+                </View>
+              </>
+            )}
+
+            {/* 뱃지 섹션 (부대시설·판매품목 등) */}
+            {!loading && detail && badgeSection && badgeSection.items.length > 0 && (
+              <>
+                <View style={styles.divider} />
+                <View style={styles.section}>
+                  <Text style={styles.sectionTitle}>{badgeSection.title}</Text>
+                  <View style={styles.facilityBadgeRow}>
+                    {badgeSection.items.map((item, i) => (
+                      <View key={i} style={styles.facilityBadge}>
+                        <Text style={styles.facilityBadgeText}>{item}</Text>
+                      </View>
+                    ))}
+                  </View>
                 </View>
               </>
             )}
@@ -535,7 +591,13 @@ export default function TourismDetailModal({
                     <View style={styles.section}>
                       <Text style={styles.sectionTitle}>이용 정보</Text>
                       <View style={styles.table}>
-                        {(detail.tel || detail.infocenter) && (
+                        {usageRows.map((row, i) => (
+                          <View key={i} style={[styles.tableRow, styles.tableRowBorder]}>
+                            <Text style={styles.tableLabel}>{row.label}</Text>
+                            <Text style={styles.tableValue}>{row.value}</Text>
+                          </View>
+                        ))}
+                        {(detail.tel || detail.infocenter || detail.infocenterlodging) && (
                           <View
                             style={[
                               styles.tableRow,
@@ -543,7 +605,7 @@ export default function TourismDetailModal({
                             ]}
                           >
                             <Text style={styles.tableLabel}>문의</Text>
-                            <Text style={styles.tableValue}>{detail.tel || detail.infocenter}</Text>
+                            <Text style={styles.tableValue}>{detail.tel || detail.infocenter || detail.infocenterlodging}</Text>
                           </View>
                         )}
                         {detail.homepage && (
@@ -713,6 +775,46 @@ const styles = StyleSheet.create({
     fontWeight: "500",
     lineHeight: 22,
   },
+  checkinOutRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  checkinOutItem: {
+    flexDirection: "column",
+    gap: 2,
+  },
+  checkinOutArrow: {
+    fontSize: 18,
+    fontWeight: "500",
+    color: colors.gray400,
+    lineHeight: 28,
+  } as any,
+  checkinOutLabel: {
+    fontSize: 12,
+    fontWeight: "500",
+    color: colors.gray700,
+    lineHeight: 18,
+  } as any,
+  facilityBadgeRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  facilityBadge: {
+    height: 28,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    backgroundColor: colors.gray200,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  facilityBadgeText: {
+    fontSize: 13,
+    fontWeight: "500",
+    color: "rgb(55,55,55)",
+    lineHeight: 18,
+  } as any,
   heroRow: {
     flexDirection: "row",
     gap: 16,

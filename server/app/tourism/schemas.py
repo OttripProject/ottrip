@@ -59,6 +59,8 @@ class TourismDetail(APISchema):
     reservationlodging: str | None = None
     refundregulation: str | None = None
     subfacility: str | None = None
+    infocenterlodging: str | None = None
+    parkinglodging: str | None = None
     # 쇼핑
     opentime: str | None = None
     restdateshopping: str | None = None

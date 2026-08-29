@@ -334,6 +334,8 @@ async def get_tourism_detail(
         reservationlodging=_s(i.get("reservationlodging")),
         refundregulation=_s(i.get("refundregulation")),
         subfacility=_s(i.get("subfacility")),
+        infocenterlodging=_s(i.get("infocenterlodging")),
+        parkinglodging=_s(i.get("parkinglodging")),
         # 쇼핑
         opentime=_s(i.get("opentime")),
         restdateshopping=_s(i.get("restdateshopping")),

@@ -58,6 +58,8 @@ export interface TourismDetail {
   reservationlodging: string | null;
   refundregulation: string | null;
   subfacility: string | null;
+  infocenterlodging: string | null;
+  parkinglodging: string | null;
   // 쇼핑
   opentime: string | null;
   restdateshopping: string | null;
