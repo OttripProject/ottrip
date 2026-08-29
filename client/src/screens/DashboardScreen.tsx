@@ -373,11 +373,15 @@ export default function DashboardScreen() {
   };
 
   const handleDetailsPanelTabChange = useCallback(
-    (tab: "itinerary" | "flight" | "accommodation") => {
+    (tab: "itinerary" | "flight" | "accommodation", draft?: any) => {
       setActiveTab(tab);
       setSelectedItinerary(null);
       setSelectedFlight(null);
       setSelectedAccommodation(null);
+      if (tab === "accommodation" && draft) {
+        setNewAccommodationDraft(draft);
+        setOpenNewAccommodationForm(true);
+      }
     },
     [],
   );

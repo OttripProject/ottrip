@@ -26,7 +26,7 @@ interface ItinerarySectionProps {
   onConsumeOpenNewItineraryForm?: () => void;
   selectedItineraryDate?: Date | null;
   onEdit?: (itinerary: any) => void;
-  onTabChange?: (tab: "itinerary" | "flight" | "accommodation") => void;
+  onTabChange?: (tab: "itinerary" | "flight" | "accommodation", draft?: any) => void;
   stagedDocumentAnalyze?: StagedDocumentAnalyzePayload | null;
   onConsumeStagedDocumentAnalyze?: () => void;
   routeDocumentAnalyzeSuccess?: (
@@ -93,6 +93,11 @@ export default function ItinerarySection({
     }
   }, [stagedDocumentAnalyze, selectedItinerary, showItineraryForm]);
 
+  const handleOpenNewItinerary = (draft: any) => {
+    setEditingItinerary(draft);
+    setShowItineraryForm(true);
+  };
+
   const handleItinerarySave = async (itinerary: any) => {
     onItineraryAdd?.(itinerary);
     setShowItineraryForm(false);
@@ -119,6 +124,7 @@ export default function ItinerarySection({
   if (selectedItinerary && !showItineraryForm) {
     return (
       <ItineraryItem
+        key={`view-${selectedItinerary.id}`}
         itinerary={selectedItinerary}
         planId={planData.plan.id}
         planData={planData}
@@ -143,6 +149,7 @@ export default function ItinerarySection({
           setShowItineraryForm(true);
           onEdit?.(selectedItinerary);
         }}
+        onOpenNewItinerary={handleOpenNewItinerary}
       />
     );
   }
@@ -150,6 +157,7 @@ export default function ItinerarySection({
   if (showItineraryForm) {
     return (
       <ItineraryItem
+        key={`form-${editingItinerary?.id ?? "new"}`}
         itinerary={editingItinerary}
         planId={planData.plan.id}
         planData={planData}

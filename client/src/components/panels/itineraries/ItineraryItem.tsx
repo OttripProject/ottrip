@@ -24,6 +24,18 @@ import {
 } from "@/types/expense";
 import { ItineraryCategory, itineraryCategoryColors, itineraryCategoryLabels } from "@/types/itinerary";
 
+const NEARBY_BADGE_COLORS: Record<string, { color: string; bg: string }> = {
+  여행코스: { color: "rgb(62, 91, 217)", bg: "rgb(236, 239, 254)" },
+  쇼핑: { color: "rgb(31, 157, 87)", bg: "rgb(231, 247, 236)" },
+  레포츠: { color: "rgb(55, 55, 55)", bg: "rgb(244, 244, 244)" },
+  "축제·공연": { color: "rgb(14, 138, 138)", bg: "rgb(227, 246, 246)" },
+  문화시설: { color: "rgb(10, 132, 255)", bg: "rgb(239, 244, 255)" },
+  음식점: { color: "rgb(183, 104, 0)", bg: "rgb(255, 244, 224)" },
+  숙박: { color: "rgb(109, 59, 224)", bg: "rgb(245, 239, 255)" },
+  관광지: { color: "rgb(217, 28, 181)", bg: "rgb(255, 235, 251)" },
+};
+const DEFAULT_NEARBY_BADGE = { color: "#6C6C6C", bg: "#F5F5F5" };
+
 const itineraryCategoryToExpenseCategory: Partial<Record<ItineraryCategory, ExpenseCategory>> = {
   [ItineraryCategory.MEAL]: ExpenseCategory.FOOD,
   [ItineraryCategory.TRANSPORT]: ExpenseCategory.TRANSPORT,
@@ -51,6 +63,7 @@ import { radii } from "@/ui/tokens/radii";
 import { spacing } from "@/ui/tokens/spacing";
 import { textStyles } from "@/ui/tokens/typography";
 import { applyItineraryDraftFromAi } from "@/utils/applyAiDocumentDraft";
+import { formatWalkTime } from "@/utils/distanceUtils";
 import { buildAnalyzeUploadPayload } from "@/utils/attachmentAiAnalyze";
 import {
   formatAttachmentUploadFailureMessage,
@@ -69,6 +82,7 @@ import React, {
 import {
   ActivityIndicator,
   Alert,
+  Animated,
   Platform,
   Pressable,
   ScrollView,
@@ -76,6 +90,9 @@ import {
   Text,
   View,
 } from "react-native";
+import type { NearbyAttraction } from "@/services/tourism";
+import { tourismApi } from "@/services/tourism";
+import TourismDetailModal from "@/components/modals/TourismDetailModal";
 import CalendarIcon from "../../../../assets/calender.svg";
 import CloseIcon from "../../../../assets/close_sm.svg";
 import DownArrowIcon from "../../../../assets/dropdown_time.svg";
@@ -111,7 +128,7 @@ interface ItineraryItemProps {
   readOnly?: boolean;
   onEdit?: () => void;
   activeTab?: "itinerary" | "flight" | "accommodation";
-  onTabChange?: (tab: "itinerary" | "flight" | "accommodation") => void;
+  onTabChange?: (tab: "itinerary" | "flight" | "accommodation", draft?: any) => void;
   stagedDocumentAnalyze?: StagedDocumentAnalyzePayload | null;
   onConsumeStagedDocumentAnalyze?: () => void;
   routeDocumentAnalyzeSuccess?: (
@@ -121,6 +138,7 @@ interface ItineraryItemProps {
   ) => boolean;
   carryoverPendingFiles?: LocalFile[] | null;
   onConsumeCarryoverPendingFiles?: () => void;
+  onOpenNewItinerary?: (draft: any) => void;
 }
 
 export default function ItineraryItem({
@@ -141,6 +159,7 @@ export default function ItineraryItem({
   routeDocumentAnalyzeSuccess,
   carryoverPendingFiles,
   onConsumeCarryoverPendingFiles,
+  onOpenNewItinerary,
 }: ItineraryItemProps) {
   const [showWarning, setShowWarning] = useState(false);
   const [warningMessage, setWarningMessage] = useState("");
@@ -278,11 +297,17 @@ export default function ItineraryItem({
     return Number.isFinite(n) ? n : undefined;
   }, [itinerary?.id]);
 
+  const [nearbyAttractions, setNearbyAttractions] = useState<NearbyAttraction[]>([]);
+  const nearbyCardAnims = useRef<Animated.Value[]>([]);
+  const [hoveredNearbyIndex, setHoveredNearbyIndex] = useState<number | null>(null);
+  const [selectedAttraction, setSelectedAttraction] = useState<NearbyAttraction | null>(null);
+  const [tourismDetailVisible, setTourismDetailVisible] = useState(false);
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isSubmittingRef = useRef(false);
 
   useEffect(() => {
-    if (itinerary) {
+    if (itinerary?.id) {
       const endTimeRaw = itinerary.end_time || itinerary.endTime || "10:00";
       let endTime = endTimeRaw.substring(0, 5);
       if (endTime === "23:59" || endTimeRaw.startsWith("23:59:")) {
@@ -308,6 +333,44 @@ export default function ItineraryItem({
         ).substring(0, 5),
         endTime: endTime,
       });
+    } else if (itinerary && !itinerary.id) {
+      // draft (id 없음) - pre-fill
+      const endTimeRaw = itinerary.end_time || itinerary.endTime || "10:00";
+      let endTime = endTimeRaw.substring(0, 5);
+      if (endTime === "23:59" || endTimeRaw.startsWith("23:59:")) {
+        endTime = "24:00";
+      }
+      setSelectedCategory((itinerary.category as ItineraryCategory) ?? null);
+      setFormData({
+        title: itinerary.title || "",
+        description: itinerary.description || "",
+        country: itinerary.country || "",
+        city: itinerary.city || "",
+        location: typeof itinerary.location === "string"
+          ? itinerary.location
+          : itinerary.location?.name || "",
+        locationId: itinerary.locationId ?? (typeof itinerary.location === "string" ? undefined : itinerary.location?.id),
+        itineraryDate:
+          itinerary.itinerary_date ||
+          itinerary.itineraryDate ||
+          dayjs().format("YYYY-MM-DD"),
+        startTime: (
+          itinerary.start_time ||
+          itinerary.startTime ||
+          "09:00"
+        ).substring(0, 5),
+        endTime,
+      });
+      setExpenses([]);
+      setDraftExpenses([]);
+      setShowExpenseForm(false);
+      setExpenseForm({
+        category: ExpenseCategory.ETC,
+        amount: 0,
+        description: "",
+        currency: ExpenseCurrency.KRW,
+      });
+      setPendingFiles([]);
     } else {
       const defaultDate = selectedDate
         ? dayjs(selectedDate).format("YYYY-MM-DD")
@@ -540,7 +603,7 @@ export default function ItineraryItem({
         formData.endTime === "24:00" ? "23:59:59" : formData.endTime;
 
       let savedItinerary;
-      if (itinerary) {
+      if (itinerary?.id) {
         savedItinerary = await itinerariesApi.updateItinerary(itinerary.id, {
           title: formData.title,
           description: formData.description,
@@ -953,6 +1016,34 @@ export default function ItineraryItem({
     })();
   }, [itinerary?.location?.id]);
 
+  useEffect(() => {
+    nearbyCardAnims.current = [];
+    if (!readOnly || !itinerary?.id || !itinerary?.location) {
+      setNearbyAttractions([]);
+      return;
+    }
+    setNearbyAttractions([]);
+    tourismApi.getNearbyAttractions(itinerary.id)
+      .then(data => {
+        nearbyCardAnims.current = data.slice(0, 10).map(() => new Animated.Value(0));
+        setNearbyAttractions(data);
+        if (data.length > 0) {
+          Animated.stagger(
+            40,
+            nearbyCardAnims.current.map(anim =>
+              Animated.timing(anim, { toValue: 1, duration: 250, useNativeDriver: true }),
+            ),
+          ).start();
+        }
+      })
+      .catch(() => {});
+  }, [readOnly, itinerary?.id, itinerary?.location?.id]);
+
+  const handleAttractionPress = (item: NearbyAttraction) => {
+    setSelectedAttraction(item);
+    setTourismDetailVisible(true);
+  };
+
   const handlePlaceSelect = useCallback(async (place: PlaceResult) => {
     try {
       const location = await locationsApi.createLocation({
@@ -973,7 +1064,7 @@ export default function ItineraryItem({
     <View style={styles.wrapper}>
       <View style={styles.titleRow}>
         <Text style={styles.title}>
-          {readOnly ? "일정 정보" : itinerary ? "일정 수정" : "일정 추가"}
+          {readOnly ? "일정 정보" : itinerary?.id ? "일정 수정" : "일정 추가"}
         </Text>
 
         <Pressable
@@ -1146,6 +1237,60 @@ export default function ItineraryItem({
               />
             )}
           </View>
+
+          {readOnly && nearbyAttractions.length > 0 && (
+            <View style={styles.nearbySection}>
+              <View style={styles.nearbyHeader}>
+                <Text style={styles.nearbyTitle}>주변 추천</Text>
+                <Text style={styles.nearbyCount}>{nearbyAttractions.length}곳</Text>
+              </View>
+              <ScrollView
+                style={styles.nearbyList}
+                nestedScrollEnabled
+                showsVerticalScrollIndicator={false}
+              >
+                {nearbyAttractions.map((item, index) => {
+                  const badge = NEARBY_BADGE_COLORS[item.contentTypeId] ?? DEFAULT_NEARBY_BADGE;
+                  const anim = index < 10 ? nearbyCardAnims.current[index] : null;
+                  return (
+                    <Animated.View
+                      key={index}
+                      style={{
+                        opacity: anim ?? 1,
+                        transform: [{ translateY: anim ? anim.interpolate({ inputRange: [0, 1], outputRange: [-8, 0] }) : 0 }],
+                      }}
+                    >
+                    <Pressable
+                      style={[styles.nearbyCard, hoveredNearbyIndex === index && styles.nearbyCardHovered]}
+                      onPress={() => handleAttractionPress(item)}
+                      {...{ onMouseEnter: () => setHoveredNearbyIndex(index), onMouseLeave: () => setHoveredNearbyIndex(null) }}
+                    >
+                      <View style={styles.nearbyCardRow}>
+                        <View style={[styles.nearbyBadge, { backgroundColor: badge.bg }]}>
+                          <Text style={[styles.nearbyBadgeText, { color: badge.color }]}>
+                            {item.contentTypeId}
+                          </Text>
+                        </View>
+                        <Text style={styles.nearbyCardTitle} numberOfLines={1}>
+                          {item.title}
+                        </Text>
+                      </View>
+                      {(() => {
+                        const walkTime = item.dist ? formatWalkTime(item.dist) : null;
+                        const sub = item.dist != null
+                          ? [item.address, walkTime].filter(Boolean).join(" · ")
+                          : [item.address, item.categorySub].filter(Boolean).join(" · ");
+                        return sub ? (
+                          <Text style={styles.nearbyCardSub} numberOfLines={1}>{sub}</Text>
+                        ) : null;
+                      })()}
+                    </Pressable>
+                    </Animated.View>
+                  );
+                })}
+              </ScrollView>
+            </View>
+          )}
 
           <View
             style={[
@@ -1569,6 +1714,19 @@ export default function ItineraryItem({
         entityTypeLabel="일정"
         originEntityType={analyzeOriginEntityType}
       />
+      <TourismDetailModal
+        visible={tourismDetailVisible}
+        onClose={() => setTourismDetailVisible(false)}
+        item={selectedAttraction}
+        itineraryLocation={
+          itinerary?.location?.latitude != null
+            ? { latitude: itinerary.location.latitude, longitude: itinerary.location.longitude }
+            : null
+        }
+        itinerary={itinerary}
+        onOpenNewItinerary={onOpenNewItinerary ?? (() => {})}
+        onSwitchToAccommodation={(draft) => onTabChange?.("accommodation", draft)}
+      />
     </View>
   );
 }
@@ -1977,5 +2135,64 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: 70,
     left: 0,
+  },
+  nearbySection: {
+    marginTop: spacing.sm,
+  },
+  nearbyHeader: {
+    flexDirection: "row",
+    alignItems: "baseline",
+    justifyContent: "space-between",
+    marginBottom: 8,
+  },
+  nearbyTitle: {
+    ...textStyles.h8,
+    color: colors.gray600,
+  },
+  nearbyCount: {
+    ...textStyles.body6,
+    fontWeight: "500",
+    color: colors.gray400,
+  },
+  nearbyList: {
+    maxHeight: 340,
+  },
+  nearbyCard: {
+    gap: 4,
+    padding: 12,
+    borderRadius: 10,
+    backgroundColor: colors.white,
+    cursor: "pointer",
+    marginBottom: 4,
+  } as any,
+  nearbyCardHovered: {
+    backgroundColor: colors.gray100,
+  },
+  nearbyCardRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    minWidth: 0,
+  },
+  nearbyBadge: {
+    borderRadius: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    flexShrink: 0,
+  },
+  nearbyBadgeText: {
+    fontSize: 11,
+    fontWeight: "600",
+    lineHeight: 11,
+  } as any,
+  nearbyCardTitle: {
+    ...textStyles.h7,
+    color: colors.gray900,
+    flex: 1,
+    minWidth: 0,
+  },
+  nearbyCardSub: {
+    ...textStyles.body6,
+    color: colors.gray600,
   },
 });

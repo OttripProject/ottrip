@@ -14,6 +14,7 @@ from app.locations.router import router as locations_router
 from app.plans.repository import PlanRepository
 from app.plans.router import router as plans_router
 from app.plans.schemas import PlanExportViewerResponse, SnapshotData
+from app.tourism.router import router as tourism_router
 from app.users.router import router as users_router
 
 router = create_router()
@@ -55,6 +56,7 @@ private_router.include_router(
     attachments_router, prefix="/attachments", tags=["Attachments"]
 )
 private_router.include_router(locations_router, prefix="/locations", tags=["Locations"])
+private_router.include_router(tourism_router, prefix="/tourism", tags=["Tourism"])
 
 router.include_router(public_router)
 router.include_router(private_router)

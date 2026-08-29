@@ -139,11 +139,11 @@ export default function AccommodationItem({
   const [showWarning, setShowWarning] = useState(false);
   const [warningMessage, setWarningMessage] = useState("");
   const [formData, setFormData] = useState({
-    name: accommodation?.name || "",
-    place: accommodation?.location?.name || "",
-    locationId: accommodation?.location?.id as number | undefined,
-    country: accommodation?.country || initialAutoFill?.country || "",
-    city: accommodation?.city || initialAutoFill?.city || "",
+    name: accommodation?.name || draft?.name || "",
+    place: accommodation?.location?.name || draft?.place || "",
+    locationId: (accommodation?.location?.id ?? draft?.locationId) as number | undefined,
+    country: accommodation?.country || draft?.country || initialAutoFill?.country || "",
+    city: accommodation?.city || draft?.city || initialAutoFill?.city || "",
     checkin_date:
       accommodation?.checkinDate ||
       draft?.checkinDate ||
