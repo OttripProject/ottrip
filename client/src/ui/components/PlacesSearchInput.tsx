@@ -1,4 +1,5 @@
 import { colors, radii, spacing, textStyles } from "@/ui/tokens";
+import { manualPlaceId } from "@/services/locations";
 import MiniMapView from "@/ui/components/MiniMapView";
 import { useLoadScript } from "@react-google-maps/api";
 import { useEffect, useRef, useState } from "react";
@@ -31,11 +32,6 @@ interface PlacesSearchInputProps {
   cityContext?: string;
 }
 
-const manualPlaceId = (name: string) => {
-  const nameHash = [...name].reduce((a, c) => (Math.imul(31, a) + c.charCodeAt(0)) >>> 0, 0).toString(16);
-  const rand = Math.random().toString(16).slice(2, 10);
-  return `m_${nameHash}_${rand}`;
-};
 
 export default function PlacesSearchInput({
   value,

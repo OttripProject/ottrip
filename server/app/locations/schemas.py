@@ -16,9 +16,13 @@ class LocationCreate(APISchema):
 
 class LocationUpdate(APISchema):
     name: str
+    place_id: str | None = None
     latitude: float
     longitude: float
     address: str | None = None
+    from_google: bool | None = None
+    area_cd: str | None = None
+    signgu_cd: str | None = None
 
 
 class LocationRead(APISchema):

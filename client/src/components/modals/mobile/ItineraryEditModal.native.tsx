@@ -40,7 +40,7 @@ import { TimeModal } from "@/ui/components/TimeModal.native";
 import AttachmentSection from "@/ui/components/attachmentSection.native";
 import Input from "@/ui/components/input/Input";
 import PlacesSearchInput, { type PlaceResult } from "@/ui/components/PlacesSearchInput";
-import { locationsApi } from "@/services/locations";
+import { locationsApi, manualPlaceId } from "@/services/locations";
 import { colors } from "@/ui/tokens/colors";
 import { textStyles, typography } from "@/ui/tokens/typography";
 import { formatAmountWithCommas, normalizeAmount } from "@/utils/amountUtils";
@@ -109,7 +109,8 @@ export default function ItineraryEditModal({
   onRouteMismatchResult,
 }: ItineraryEditModalProps) {
   const scrollRef = useRef<KeyboardAwareScrollViewRef>(null);
-  const pendingRawLocationRef = useRef<string | null>(null);
+  const locationDraftRef = useRef<PlaceResult | null>(null);
+  const rawLocationTextRef = useRef<string>("");
 
   const [formData, setFormData] = useState({
     title: "",
@@ -382,21 +383,9 @@ export default function ItineraryEditModal({
     }
   }, [visible, pendingAiResult]);
 
-  const handlePlaceSelect = async (place: PlaceResult) => {
-    pendingRawLocationRef.current = null;
-    try {
-      const loc = await locationsApi.createLocation({
-        name: place.name,
-        placeId: place.placeId,
-        latitude: place.latitude,
-        longitude: place.longitude,
-        address: place.address,
-        fromGoogle: place.fromGoogle,
-      });
-      setFormData(prev => ({ ...prev, location: loc.name, locationId: loc.id }));
-    } catch {
-      setFormData(prev => ({ ...prev, location: place.name, locationId: undefined }));
-    }
+  const handlePlaceSelect = (place: PlaceResult) => {
+    locationDraftRef.current = place;
+    setFormData(prev => ({ ...prev, location: place.name }));
   };
 
   const handleExpenseAmountChange = (text: string) => {
@@ -412,23 +401,43 @@ export default function ItineraryEditModal({
 
     setIsSubmitting(true);
     try {
-      // 미확정 입력값 처리 (직접 타이핑 후 저장 버튼 바로 클릭한 경우)
+      // 장소 draft → 저장 시점에 create/update
       let finalLocationId = formData.locationId;
-      const rawText = pendingRawLocationRef.current?.trim();
-      if (rawText && rawText !== formData.location) {
+      const draft = locationDraftRef.current;
+      if (draft) {
         try {
-          const loc = await locationsApi.createLocation({
-            name: rawText,
-            placeId: `manual:${rawText}`,
-            latitude: 0,
-            longitude: 0,
-            fromGoogle: false,
-          });
-          finalLocationId = loc.id;
+          if (typeof finalLocationId === "number") {
+            await locationsApi.updateLocation(finalLocationId, {
+              name: draft.name, placeId: draft.placeId, latitude: draft.latitude, longitude: draft.longitude, address: draft.address, fromGoogle: draft.fromGoogle,
+            });
+          } else {
+            const loc = await locationsApi.createLocation({
+              name: draft.name, placeId: draft.placeId, latitude: draft.latitude,
+              longitude: draft.longitude, address: draft.address, fromGoogle: draft.fromGoogle,
+            });
+            finalLocationId = loc.id;
+          }
         } catch {
-          finalLocationId = undefined;
+          finalLocationId = formData.locationId;
         }
-        pendingRawLocationRef.current = null;
+        locationDraftRef.current = null;
+      } else {
+        const rawText = rawLocationTextRef.current.trim() || formData.location.trim();
+        const originalName = itinerary?.location?.name ?? "";
+        if (rawText && rawText !== originalName) {
+          try {
+            if (typeof finalLocationId === "number") {
+              await locationsApi.updateLocation(finalLocationId, {
+                name: rawText, placeId: manualPlaceId(rawText), latitude: 0, longitude: 0, address: undefined, fromGoogle: false,
+              });
+            } else {
+              const loc = await locationsApi.createLocation({
+                name: rawText, placeId: manualPlaceId(rawText), latitude: 0, longitude: 0, fromGoogle: false,
+              });
+              finalLocationId = loc.id;
+            }
+          } catch { /* ignore */ }
+        }
       }
 
       let savedItinerary: Itinerary;
@@ -700,8 +709,8 @@ export default function ItineraryEditModal({
             <PlacesSearchInput
               value={formData.location}
               onSelect={handlePlaceSelect}
-              onClear={() => { pendingRawLocationRef.current = null; setFormData(prev => ({ ...prev, location: "", locationId: null })); }}
-              onRawInputChange={(t) => { pendingRawLocationRef.current = t; }}
+              onClear={() => { locationDraftRef.current = null; rawLocationTextRef.current = ""; setFormData(prev => ({ ...prev, location: "", locationId: null })); }}
+              onRawInputChange={(t) => { locationDraftRef.current = null; rawLocationTextRef.current = t; }}
               bordered={!!itinerary}
               placeholder="장소를 검색하세요."
               cityContext={formData.city || formData.country || undefined}

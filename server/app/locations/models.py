@@ -18,7 +18,7 @@ class Location(Base):
 
     name: Mapped[str] = mapped_column(String, nullable=False)
 
-    place_id: Mapped[str] = mapped_column(String, nullable=False, unique=True)
+    place_id: Mapped[str] = mapped_column(String, nullable=False)
 
     latitude: Mapped[float] = mapped_column(Float, nullable=False)
 

@@ -1,4 +1,5 @@
 import { colors, radii, spacing, textStyles } from "@/ui/tokens";
+import { manualPlaceId } from "@/services/locations";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ActivityIndicator, Keyboard, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import MiniMapView from "@/ui/components/MiniMapView";
@@ -30,11 +31,6 @@ interface PlacesSearchInputProps {
   cityContext?: string;
 }
 
-const manualPlaceId = (name: string) => {
-  const nameHash = [...name].reduce((a, c) => (Math.imul(31, a) + c.charCodeAt(0)) >>> 0, 0).toString(16);
-  const rand = Math.random().toString(16).slice(2, 10);
-  return `m_${nameHash}_${rand}`;
-};
 
 const apiKey = process.env.EXPO_PUBLIC_GOOGLE_PLCAES_API_KEY ?? "";
 

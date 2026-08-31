@@ -83,9 +83,11 @@ export interface CreateLocationRequest {
 
 export interface UpdateLocationRequest {
   name: string;
+  placeId?: string;
   latitude: number;
   longitude: number;
   address?: string;
+  fromGoogle?: boolean;
 }
 
 // 일정 (Itinerary) 관련 타입

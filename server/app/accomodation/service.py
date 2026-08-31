@@ -4,9 +4,11 @@ from app.attachments.models import AttachmentEntityType
 from app.attachments.repository import AttachmentRepository
 from app.attachments.service import cascade_delete_attachments
 from app.auth.deps import CurrentUser
+from app.database.deps import SessionDep
 from app.expenses.models import Expense
 from app.expenses.repository import ExpenseRepository
 from app.expenses.schemas import ExpenseCategory, ExpenseCurrency
+from app.locations.repository import delete_location
 from app.plans.repository import PlanRepository
 from app.storage.deps import S3ClientDep
 from app.utils.dependency import dependency
@@ -19,6 +21,7 @@ from .schemas import AccommodationCreate, AccommodationRead, AccommodationUpdate
 @dependency
 class AccommodationService:
     current_user: CurrentUser
+    session: SessionDep
     accommodation_repository: AccommodationRepository
     expense_repository: ExpenseRepository
     plan_repository: PlanRepository
@@ -129,8 +132,11 @@ class AccommodationService:
 
         if update_data.name:
             accommodation.name = update_data.name
-        if update_data.location_id is not None:
+        if "location_id" in update_data.model_fields_set:
+            old_location_id = accommodation.location_id
             accommodation.location_id = update_data.location_id
+            if old_location_id and update_data.location_id is None:
+                await delete_location(self.session, old_location_id)
         if update_data.country is not None:
             accommodation.country = update_data.country
         if update_data.city is not None:
@@ -224,6 +230,12 @@ class AccommodationService:
                     status_code=403, detail="해당 숙소에 대한 수정 권한이 없습니다."
                 )
 
+        location_id_to_delete = accommodation.location_id
+
+        if location_id_to_delete:
+            accommodation.location_id = None
+            await self.accommodation_repository.save(accommodation=accommodation)
+
         await self.expense_repository.soft_delete_by_accommodation_id(
             accommodation_id=accommodation_id
         )
@@ -234,3 +246,6 @@ class AccommodationService:
             s3_client=self.s3_client,
         )
         await self.accommodation_repository.remove(accommodation_id=accommodation_id)
+
+        if location_id_to_delete:
+            await delete_location(self.session, location_id_to_delete)

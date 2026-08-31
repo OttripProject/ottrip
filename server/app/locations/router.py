@@ -46,6 +46,10 @@ async def update_location_endpoint(
     data: LocationUpdate,
     session: SessionDep,
 ) -> LocationRead:
+    if not data.area_cd or not data.signgu_cd:
+        area_cd, signgu_cd = await _fetch_area_codes(data.name)
+        data = data.model_copy(update={"area_cd": area_cd, "signgu_cd": signgu_cd})
+
     location = await update_location(session, location_id, data)
     if not location:
         raise HTTPException(status_code=404, detail="Location을 찾을 수 없습니다.")
