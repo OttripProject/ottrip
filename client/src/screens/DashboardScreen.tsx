@@ -256,11 +256,29 @@ export default function DashboardScreen() {
     setCarryoverPendingFiles(null);
   }, [selectedPlanId]);
 
+  const itineraryKey = planData.itineraries
+    .map((it: any) => `${it.id}-${it.location?.id ?? ""}`)
+    .join(",");
+
+  const prevFestivalsKeyRef = useRef("");
+
+  useEffect(() => {
+    setFestivals([]);
+    setBannerDismissed(false);
+  }, [selectedPlanId]);
+
   useEffect(() => {
     if (!selectedPlanId) return;
-    setBannerDismissed(false);
     tourismApi.getFestivalsForPlan(selectedPlanId).then(setFestivals).catch(() => {});
-  }, [selectedPlanId]);
+  }, [selectedPlanId, itineraryKey]);
+
+  useEffect(() => {
+    const key = festivals.map((f) => f.contentId).sort().join(",");
+    if (key && key !== prevFestivalsKeyRef.current) {
+      setBannerDismissed(false);
+    }
+    prevFestivalsKeyRef.current = key;
+  }, [festivals]);
 
   useEffect(() => {
     if (selectedItinerary?.id && planData.itineraries.length > 0) {

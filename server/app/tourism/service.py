@@ -367,7 +367,7 @@ def _haversine_m(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
 async def get_festivals_near_itineraries(
     plan_start: str,
     plan_end: str,
-    locations: list[tuple[float, float, str]],  # (lat, lng, date)
+    locations: list[tuple[float, float, str, str]],  # (lat, lng, date, location_name)
     radius_m: float = 1000.0,
 ) -> list[FestivalItem]:
     """플랜 기간 축제 조회 후 일정 좌표와 1km 이내 + 날짜 겹침 필터링"""
@@ -399,20 +399,21 @@ async def get_festivals_near_itineraries(
         start = str(item.get("eventstartdate") or "")
         end = str(item.get("eventenddate") or start)
         matched_dist: float | None = None
-        for lat, lng, idate in locations:
+        matched_location_name: str | None = None
+        matched_date: str | None = None
+        for lat, lng, idate, loc_name in locations:
             # 날짜 겹침 확인 (YYYYMMDD 형식)
             idate_fmt = idate.replace("-", "")
             if not (start <= idate_fmt <= end):
                 continue
             # 거리 확인
-            if fx and fy:
-                dist = _haversine_m(lat, lng, fy, fx)
-                if dist <= radius_m:
-                    matched_dist = dist
-                    break
-            else:
-                # 좌표 없으면 날짜만 맞아도 포함 (테스트용)
-                matched_dist = None
+            if not (fx and fy):
+                continue
+            dist = _haversine_m(lat, lng, fy, fx)
+            if dist <= radius_m:
+                matched_dist = dist
+                matched_location_name = loc_name
+                matched_date = idate
                 break
         else:
             continue
@@ -429,6 +430,8 @@ async def get_festivals_near_itineraries(
                 mapx=fx,
                 mapy=fy,
                 dist=matched_dist,
+                matched_location_name=matched_location_name,
+                matched_date=matched_date,
             )
         )
     return result

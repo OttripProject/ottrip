@@ -81,7 +81,12 @@ async def get_festivals_for_plan(
 
     itineraries = await itinerary_repository.find_all_by_plan(plan_id=plan_id)
     locations = [
-        (it.location.latitude, it.location.longitude, str(it.itinerary_date))
+        (
+            it.location.latitude,
+            it.location.longitude,
+            str(it.itinerary_date),
+            it.location.name,
+        )
         for it in itineraries
         if it.location and it.location.latitude and it.location.longitude
     ]

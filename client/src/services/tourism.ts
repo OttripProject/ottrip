@@ -85,6 +85,8 @@ export interface FestivalItem {
   mapx: number | null;
   mapy: number | null;
   dist: number | null;
+  matchedLocationName: string | null;
+  matchedDate: string | null;
 }
 
 export const tourismApi = {

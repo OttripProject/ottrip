@@ -1,45 +1,123 @@
 import { colors } from "@/ui/tokens/colors";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { useEffect, useRef } from "react";
+import { Animated, Pressable, StyleSheet, Text, View } from "react-native";
+import CloseIcon from "../../assets/close_sm.svg";
 
 interface Props {
-  festivals: { title: string; eventStartDate: string | null; eventEndDate: string | null }[];
+  festivals: {
+    matchedLocationName: string | null;
+    matchedDate: string | null;
+  }[];
   onDismiss: () => void;
 }
 
-function formatDateRange(start: string | null, end: string | null): string {
-  const fmt = (d: string) => {
-    const m = d.slice(4, 6).replace(/^0/, "");
-    const day = d.slice(6, 8).replace(/^0/, "");
-    return `${m}.${day}`;
-  };
-  if (!start) return "";
-  if (!end || start === end) return fmt(start);
-  return `${fmt(start)}–${fmt(end)}`;
+const fmtDate = (d: string) => {
+  const m = d.slice(5, 7).replace(/^0/, "");
+  const day = d.slice(8, 10).replace(/^0/, "");
+  return `${m}.${day}`;
+};
+
+type Segment = { text: string; bold?: boolean };
+
+function buildBannerSegments(
+  festivals: { matchedLocationName: string | null; matchedDate: string | null }[],
+): Segment[] {
+  const dates = [
+    ...new Set(festivals.map((f) => f.matchedDate).filter(Boolean) as string[]),
+  ].sort();
+
+  const allLocations = [
+    ...new Set(festivals.map((f) => f.matchedLocationName).filter(Boolean)),
+  ].join(", ");
+
+  if (dates.length === 0) {
+    return [{ text: `${allLocations} 일대가 축제·공연으로 붐빌 수 있어요.` }];
+  }
+
+  const isConsecutive = dates.every((d, i) => {
+    if (i === 0) return true;
+    return new Date(d).getTime() - new Date(dates[i - 1]).getTime() === 86_400_000;
+  });
+
+  if (isConsecutive) {
+    const dateStr =
+      dates.length === 1
+        ? fmtDate(dates[0])
+        : `${fmtDate(dates[0])}–${fmtDate(dates[dates.length - 1])}`;
+    return [
+      { text: `${dateStr} `, bold: true },
+      { text: `${allLocations} 일대가 축제·공연으로 붐빌 수 있어요.` },
+    ];
+  }
+
+  // 비연속: 날짜별로 장소명 그룹핑, 날짜는 bold
+  const byDate = new Map<string, Set<string>>();
+  for (const f of festivals) {
+    if (!f.matchedDate) continue;
+    if (!byDate.has(f.matchedDate)) byDate.set(f.matchedDate, new Set());
+    if (f.matchedLocationName) byDate.get(f.matchedDate)!.add(f.matchedLocationName);
+  }
+  const entries = [...byDate.entries()].sort(([a], [b]) => a.localeCompare(b));
+  const segments: Segment[] = [];
+  entries.forEach(([d, locs], i) => {
+    if (i > 0) segments.push({ text: ", " });
+    segments.push({ text: fmtDate(d), bold: true });
+    segments.push({ text: ` ${[...locs].join("·")}` });
+  });
+  segments.push({ text: " 일대가 축제·공연으로 붐빌 수 있어요." });
+  return segments;
 }
 
 export default function CongestionBanner({ festivals, onDismiss }: Props) {
-  const dateRange = formatDateRange(
-    festivals[0]?.eventStartDate ?? null,
-    festivals[0]?.eventEndDate ?? null,
-  );
-  const places = festivals.map((f) => f.title).join("·");
-  const text = `${places} 일대가 축제·공연으로 붐빌 수 있어요.`;
+  const segments = buildBannerSegments(festivals);
+  const opacity = useRef(new Animated.Value(0)).current;
+  const isMounted = useRef(false);
+
+  useEffect(() => {
+    opacity.setValue(0);
+    Animated.timing(opacity, {
+      toValue: 1,
+      duration: 300,
+      useNativeDriver: true,
+    }).start();
+    isMounted.current = true;
+  }, [opacity]);
+
+  const festivalsKey = festivals.map((f) => `${f.matchedDate ?? ""}${f.matchedLocationName ?? ""}`).join(",");
+  useEffect(() => {
+    if (!isMounted.current) return;
+    opacity.setValue(0);
+    Animated.timing(opacity, {
+      toValue: 1,
+      duration: 300,
+      useNativeDriver: true,
+    }).start();
+  }, [festivalsKey, opacity]);
+
+  const handleDismiss = () => {
+    Animated.timing(opacity, {
+      toValue: 0,
+      duration: 200,
+      useNativeDriver: true,
+    }).start(() => onDismiss());
+  };
 
   return (
-    <View style={styles.container}>
+    <Animated.View style={[styles.container, { opacity }]}>
       <View style={styles.badge}>
         <Text style={styles.badgeText}>혼잡 주의</Text>
       </View>
       <Text style={styles.message} numberOfLines={1}>
-        {dateRange ? <Text style={styles.bold}>{dateRange} </Text> : null}
-        {text}
+        {segments.map((seg, i) => (
+          <Text key={i} style={seg.bold ? styles.bold : undefined}>
+            {seg.text}
+          </Text>
+        ))}
       </Text>
-      <Pressable onPress={onDismiss} style={styles.closeBtn} aria-label="닫기">
-        <svg width="16" height="16" viewBox="0 0 14 14" fill="none" aria-hidden="true" style={{ display: "block", color: "rgb(108,108,108)" } as any}>
-          <path d="M3 3l8 8M11 3l-8 8" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-        </svg>
+      <Pressable onPress={handleDismiss} style={styles.closeBtn} aria-label="닫기">
+        <CloseIcon width={16} height={16} color={colors.gray600} />
       </Pressable>
-    </View>
+    </Animated.View>
   );
 }
 

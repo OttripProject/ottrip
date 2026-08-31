@@ -12,6 +12,8 @@ class FestivalItem(APISchema):
     mapx: float | None = None
     mapy: float | None = None
     dist: float | None = None
+    matched_location_name: str | None = None
+    matched_date: str | None = None
 
 
 class NearbyAttraction(APISchema):
