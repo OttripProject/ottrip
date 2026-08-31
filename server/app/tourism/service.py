@@ -49,6 +49,43 @@ async def search_kor_keyword(keyword: str) -> dict[str, Any] | None:
     return items[0] if items else None
 
 
+async def find_area_codes(
+    keyword: str, lat: float | None = None, lng: float | None = None
+) -> tuple[str | None, str | None]:
+    """키워드 검색 후 좌표가 있으면 가장 가까운 결과로 area/signgu 코드 반환"""
+    params = {
+        "MobileOS": _MOBILE_OS,
+        "MobileApp": _MOBILE_APP,
+        "serviceKey": tourism_settings.TOUR_SERVICE_KEY,
+        "keyword": keyword,
+        "_type": "json",
+        "numOfRows": "10",
+    }
+    async with httpx.AsyncClient(timeout=10.0) as client:
+        response = await client.get(f"{_KOR_SERVICE_URL}/searchKeyword2", params=params)
+        data: dict[str, Any] = response.json()
+    items = _extract_items(data)
+    if not items:
+        return None, None
+
+    if lat and lng:
+
+        def _dist(item: dict[str, Any]) -> float:
+            try:
+                return _haversine_m(lat, lng, float(item["mapy"]), float(item["mapx"]))
+            except (KeyError, TypeError, ValueError):
+                return float("inf")
+
+        best = min(items, key=_dist)
+    else:
+        best = items[0]
+
+    area_cd = str(best.get("lDongRegnCd") or "") or None
+    signgu_raw = str(best.get("lDongSignguCd") or "") or None
+    signgu_cd = (area_cd + signgu_raw) if area_cd and signgu_raw else None
+    return area_cd, signgu_cd
+
+
 async def _search_best_match(keyword: str) -> dict[str, Any] | None:
     """키워드로 검색해 제목이 정확히 일치하는 항목 반환, 없으면 첫 번째"""
     params = {
