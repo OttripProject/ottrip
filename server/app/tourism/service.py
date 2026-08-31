@@ -6,10 +6,13 @@ from typing import Any
 import httpx
 
 from .config import tourism_settings
-from .schemas import FestivalItem, NearbyAttraction, TourismDetail
+from .schemas import CongestionItem, FestivalItem, NearbyAttraction, TourismDetail
+
+_CONGESTION_THRESHOLD = 70.0  # CDF 지수 임계값 (상위 30% 혼잡 판정)
 
 _KOR_SERVICE_URL = "http://apis.data.go.kr/B551011/KorService2"
 _KOR_RELATION_URL = "http://apis.data.go.kr/B551011/TarRlteTarService1"
+_TATS_CNCTR_URL = "http://apis.data.go.kr/B551011/TatsCnctrRateService"
 _MOBILE_OS = "ETC"
 _MOBILE_APP = "Ottrip"
 
@@ -435,3 +438,54 @@ async def get_festivals_near_itineraries(
             )
         )
     return result
+
+
+async def get_congestion_rate(
+    area_cd: str,
+    signgu_cd: str,
+    itinerary_date: str,
+    location_name: str | None = None,
+) -> list[CongestionItem]:
+    """예정일 집중률이 예측기간 평균의 RATIO배 이상 + 절대 하한 이상이면 혼잡 항목 반환"""
+    params: dict[str, str] = {
+        "MobileOS": _MOBILE_OS,
+        "MobileApp": _MOBILE_APP,
+        "serviceKey": tourism_settings.TOUR_SERVICE_KEY,
+        "areaCd": area_cd,
+        "signguCd": signgu_cd,
+        "_type": "json",
+        "numOfRows": "31",
+    }
+    if location_name:
+        params["tAtsNm"] = location_name
+
+    async with httpx.AsyncClient(timeout=10.0) as client:
+        resp = await client.get(f"{_TATS_CNCTR_URL}/tatsCnctrRatedList", params=params)
+        items = _extract_items(resp.json())
+
+    if not items:
+        return []
+
+    idate_fmt = itinerary_date.replace("-", "")
+    target = next(
+        (item for item in items if _s(item.get("baseYmd")) == idate_fmt), None
+    )
+    if not target:
+        return []
+
+    try:
+        rate = (
+            float(target["cnctrRate"]) if target.get("cnctrRate") is not None else None
+        )
+    except (ValueError, TypeError):
+        rate = None
+
+    if rate is not None and rate >= _CONGESTION_THRESHOLD:
+        return [
+            CongestionItem(
+                tats_nm=_s(target.get("tAtsNm")),
+                cnctr_rate=rate,
+                base_ymd=_s(target.get("baseYmd")),
+            )
+        ]
+    return []

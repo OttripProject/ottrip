@@ -291,7 +291,7 @@ export default function PlacesSearchInput({
               key={i}
               data-idx={i}
               style={{ ...css.item, background: selectedIndex === i ? colors.gray200 : "transparent" }}
-              onMouseDown={() => handleSelectSuggestion(prediction)}
+              onMouseDown={(e) => { e.preventDefault(); handleSelectSuggestion(prediction); }}
               onMouseEnter={() => setSelectedIndex(i)}
               onMouseLeave={() => setSelectedIndex(-1)}
             >
@@ -310,7 +310,7 @@ export default function PlacesSearchInput({
             <div
               data-idx={suggestions.length}
               style={{ ...css.item, alignItems: "center", padding: "12px 12px 8px", background: selectedIndex === suggestions.length ? colors.gray200 : "transparent" }}
-              onMouseDown={handleManualSelect}
+              onMouseDown={(e) => { e.preventDefault(); handleManualSelect(); }}
               onMouseEnter={() => setSelectedIndex(suggestions.length)}
               onMouseLeave={() => setSelectedIndex(-1)}
             >

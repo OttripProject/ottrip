@@ -1,6 +1,12 @@
 from app.schemas import APISchema
 
 
+class CongestionItem(APISchema):
+    tats_nm: str | None = None
+    cnctr_rate: float | None = None
+    base_ymd: str | None = None
+
+
 class FestivalItem(APISchema):
     content_id: str
     content_type_id: str | None = None

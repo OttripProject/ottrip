@@ -1,4 +1,5 @@
 import asyncio
+from datetime import date, timedelta
 
 from fastapi import HTTPException, Query, status
 
@@ -7,7 +8,7 @@ from app.itinerary.repository import ItineraryRepository
 from app.plans.repository import PlanRepository
 
 from . import service
-from .schemas import FestivalItem, NearbyAttraction, TourismDetail
+from .schemas import CongestionItem, FestivalItem, NearbyAttraction, TourismDetail
 
 router = create_router()
 
@@ -29,13 +30,18 @@ async def get_nearby_attractions(
     if not location:
         return []
 
-    keyword_result = await service.search_kor_keyword(location.name)
-    area_cd = str(keyword_result.get("lDongRegnCd") or "") if keyword_result else ""
-    signgu_cd = (
-        area_cd + str(keyword_result.get("lDongSignguCd") or "")
-        if keyword_result
-        else ""
-    )
+    # 저장된 코드 우선 사용, 없으면 KOR_SERVICE2 조회
+    if location.area_cd and location.signgu_cd:
+        area_cd = location.area_cd
+        signgu_cd = location.signgu_cd
+    else:
+        keyword_result = await service.search_kor_keyword(location.name)
+        area_cd = str(keyword_result.get("lDongRegnCd") or "") if keyword_result else ""
+        signgu_cd = (
+            area_cd + str(keyword_result.get("lDongSignguCd") or "")
+            if keyword_result
+            else ""
+        )
 
     async def _get_related() -> list[NearbyAttraction]:
         if not area_cd or not signgu_cd:
@@ -63,6 +69,35 @@ async def get_nearby_attractions(
 
     seen_titles = {a.title for a in related}
     return list(related) + [a for a in location_based if a.title not in seen_titles]
+
+
+@router.get(
+    "/congestion/{itinerary_id}",
+    status_code=status.HTTP_200_OK,
+    tags=["Tourism"],
+)
+async def get_congestion(
+    itinerary_id: int,
+    itinerary_repository: ItineraryRepository,
+) -> list[CongestionItem]:
+    itinerary = await itinerary_repository.find_by_id(itinerary_id=itinerary_id)
+    if not itinerary:
+        raise HTTPException(status_code=404, detail="일정을 찾을 수 없습니다.")
+
+    today = date.today()
+    if not (today <= itinerary.itinerary_date <= today + timedelta(days=30)):
+        return []
+
+    location = itinerary.location
+    if not location or not location.area_cd or not location.signgu_cd:
+        return []
+
+    return await service.get_congestion_rate(
+        area_cd=location.area_cd,
+        signgu_cd=location.signgu_cd,
+        itinerary_date=str(itinerary.itinerary_date),
+        location_name=location.name,
+    )
 
 
 @router.get(

@@ -74,6 +74,12 @@ export interface TourismDetail {
   parkingfood: string | null;
 }
 
+export interface CongestionItem {
+  tatsNm: string | null;
+  cnctrRate: number | null;
+  baseYmd: string | null;
+}
+
 export interface FestivalItem {
   contentId: string;
   contentTypeId: string | null;
@@ -97,6 +103,11 @@ export const tourismApi = {
 
   getFestivalsForPlan: async (planId: number): Promise<FestivalItem[]> => {
     const response = await api.get(`/private/tourism/festivals/${planId}`);
+    return response.data;
+  },
+
+  getCongestion: async (itineraryId: number): Promise<CongestionItem[]> => {
+    const response = await api.get(`/private/tourism/congestion/${itineraryId}`);
     return response.data;
   },
 

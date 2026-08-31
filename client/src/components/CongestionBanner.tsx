@@ -3,11 +3,17 @@ import { useEffect, useRef } from "react";
 import { Animated, Pressable, StyleSheet, Text, View } from "react-native";
 import CloseIcon from "../../assets/close_sm.svg";
 
+export interface CongestedItem {
+  date: string;
+  locationName: string;
+}
+
 interface Props {
   festivals: {
     matchedLocationName: string | null;
     matchedDate: string | null;
   }[];
+  congestedItems?: CongestedItem[];
   onDismiss: () => void;
 }
 
@@ -21,17 +27,43 @@ type Segment = { text: string; bold?: boolean };
 
 function buildBannerSegments(
   festivals: { matchedLocationName: string | null; matchedDate: string | null }[],
+  congestedItems: CongestedItem[],
 ): Segment[] {
-  const dates = [
-    ...new Set(festivals.map((f) => f.matchedDate).filter(Boolean) as string[]),
-  ].sort();
+  const hasFestivals = festivals.length > 0;
+  const hasCongestion = congestedItems.length > 0;
 
-  const allLocations = [
-    ...new Set(festivals.map((f) => f.matchedLocationName).filter(Boolean)),
-  ].join(", ");
+  const suffix =
+    hasFestivals && hasCongestion
+      ? "일대가 붐빌 수 있어요."
+      : hasCongestion
+        ? "방문자가 평소보다 많을 것으로 예상돼요."
+        : "일대가 축제·공연으로 붐빌 수 있어요.";
+
+  // festivals + congestedItems 병합 (날짜+장소 기준 중복 제거)
+  const seen = new Set<string>();
+  const items: { date: string; locationName: string }[] = [];
+  for (const f of festivals) {
+    if (f.matchedDate && f.matchedLocationName) {
+      const key = `${f.matchedDate}|${f.matchedLocationName}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        items.push({ date: f.matchedDate, locationName: f.matchedLocationName });
+      }
+    }
+  }
+  for (const c of congestedItems) {
+    const key = `${c.date}|${c.locationName}`;
+    if (!seen.has(key)) {
+      seen.add(key);
+      items.push({ date: c.date, locationName: c.locationName });
+    }
+  }
+
+  const dates = [...new Set(items.map((i) => i.date))].sort();
+  const allLocations = [...new Set(items.map((i) => i.locationName))].join(", ");
 
   if (dates.length === 0) {
-    return [{ text: `${allLocations} 일대가 축제·공연으로 붐빌 수 있어요.` }];
+    return [{ text: `${allLocations} ${suffix}` }];
   }
 
   const isConsecutive = dates.every((d, i) => {
@@ -46,16 +78,15 @@ function buildBannerSegments(
         : `${fmtDate(dates[0])}–${fmtDate(dates[dates.length - 1])}`;
     return [
       { text: `${dateStr} `, bold: true },
-      { text: `${allLocations} 일대가 축제·공연으로 붐빌 수 있어요.` },
+      { text: `${allLocations} ${suffix}` },
     ];
   }
 
-  // 비연속: 날짜별로 장소명 그룹핑, 날짜는 bold
+  // 비연속: 날짜별 장소 그룹핑, 날짜 bold
   const byDate = new Map<string, Set<string>>();
-  for (const f of festivals) {
-    if (!f.matchedDate) continue;
-    if (!byDate.has(f.matchedDate)) byDate.set(f.matchedDate, new Set());
-    if (f.matchedLocationName) byDate.get(f.matchedDate)!.add(f.matchedLocationName);
+  for (const item of items) {
+    if (!byDate.has(item.date)) byDate.set(item.date, new Set());
+    byDate.get(item.date)!.add(item.locationName);
   }
   const entries = [...byDate.entries()].sort(([a], [b]) => a.localeCompare(b));
   const segments: Segment[] = [];
@@ -64,12 +95,12 @@ function buildBannerSegments(
     segments.push({ text: fmtDate(d), bold: true });
     segments.push({ text: ` ${[...locs].join("·")}` });
   });
-  segments.push({ text: " 일대가 축제·공연으로 붐빌 수 있어요." });
+  segments.push({ text: ` ${suffix}` });
   return segments;
 }
 
-export default function CongestionBanner({ festivals, onDismiss }: Props) {
-  const segments = buildBannerSegments(festivals);
+export default function CongestionBanner({ festivals, congestedItems = [], onDismiss }: Props) {
+  const segments = buildBannerSegments(festivals, congestedItems);
   const opacity = useRef(new Animated.Value(0)).current;
   const isMounted = useRef(false);
 
@@ -83,7 +114,11 @@ export default function CongestionBanner({ festivals, onDismiss }: Props) {
     isMounted.current = true;
   }, [opacity]);
 
-  const festivalsKey = festivals.map((f) => `${f.matchedDate ?? ""}${f.matchedLocationName ?? ""}`).join(",");
+  const bannerKey = [
+    ...festivals.map((f) => `f:${f.matchedDate ?? ""}${f.matchedLocationName ?? ""}`),
+    ...congestedItems.map((c) => `c:${c.date}${c.locationName}`),
+  ].join(",");
+
   useEffect(() => {
     if (!isMounted.current) return;
     opacity.setValue(0);
@@ -92,7 +127,7 @@ export default function CongestionBanner({ festivals, onDismiss }: Props) {
       duration: 300,
       useNativeDriver: true,
     }).start();
-  }, [festivalsKey, opacity]);
+  }, [bannerKey, opacity]);
 
   const handleDismiss = () => {
     Animated.timing(opacity, {

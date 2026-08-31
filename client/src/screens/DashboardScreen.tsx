@@ -1,4 +1,4 @@
-import CongestionBanner from "@/components/CongestionBanner";
+import CongestionBanner, { type CongestedItem } from "@/components/CongestionBanner";
 import type { FestivalItem } from "@/services/tourism";
 import { tourismApi } from "@/services/tourism";
 import { useToast } from "@/contexts/ToastContext";
@@ -60,6 +60,7 @@ export default function DashboardScreen() {
   >(null);
   const [previewAccommodation, setPreviewAccommodation] = useState<any>(null);
   const [festivals, setFestivals] = useState<FestivalItem[]>([]);
+  const [congestedItems, setCongestedItems] = useState<CongestedItem[]>([]);
   const [bannerDismissed, setBannerDismissed] = useState(false);
   const documentAnalyzeSeqRef = useRef(0);
   const [stagedDocumentAnalyze, setStagedDocumentAnalyze] =
@@ -264,6 +265,7 @@ export default function DashboardScreen() {
 
   useEffect(() => {
     setFestivals([]);
+    setCongestedItems([]);
     setBannerDismissed(false);
   }, [selectedPlanId]);
 
@@ -271,6 +273,44 @@ export default function DashboardScreen() {
     if (!selectedPlanId) return;
     tourismApi.getFestivalsForPlan(selectedPlanId).then(setFestivals).catch(() => {});
   }, [selectedPlanId, itineraryKey]);
+
+  useEffect(() => {
+    if (!selectedPlanId || planData.itineraries.length === 0) return;
+    const today = dayjs().startOf("day");
+    const maxDate = today.add(30, "day");
+    const eligible = planData.itineraries.filter((it: any) => {
+      if (!it.location) return false;
+      const d = dayjs(it.itineraryDate);
+      return !d.isBefore(today) && !d.isAfter(maxDate);
+    });
+    if (eligible.length === 0) {
+      setCongestedItems([]);
+      return;
+    }
+    Promise.all(
+      eligible.map((it: any) =>
+        tourismApi
+          .getCongestion(it.id)
+          .then((items) =>
+            items.length > 0
+              ? { date: it.itineraryDate as string, locationName: it.location.name as string }
+              : null,
+          )
+          .catch(() => null),
+      ),
+    ).then((results) => {
+      setCongestedItems(results.filter((r): r is CongestedItem => r !== null));
+    });
+  }, [selectedPlanId, itineraryKey]);
+
+  const prevCongestedKeyRef = useRef("");
+  useEffect(() => {
+    const key = congestedItems.map((c) => `${c.date}${c.locationName}`).sort().join(",");
+    if (key && key !== prevCongestedKeyRef.current) {
+      setBannerDismissed(false);
+    }
+    prevCongestedKeyRef.current = key;
+  }, [congestedItems]);
 
   useEffect(() => {
     const key = festivals.map((f) => f.contentId).sort().join(",");
@@ -582,10 +622,11 @@ export default function DashboardScreen() {
             ) : (
               <>
                 {/* 혼잡 배너 */}
-                {!bannerDismissed && festivals.length > 0 && (
+                {!bannerDismissed && (festivals.length > 0 || congestedItems.length > 0) && (
                   <View style={styles.bannerWrapper}>
                     <CongestionBanner
                       festivals={festivals}
+                      congestedItems={congestedItems}
                       onDismiss={() => setBannerDismissed(true)}
                     />
                   </View>

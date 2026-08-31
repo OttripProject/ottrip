@@ -10,6 +10,8 @@ class LocationCreate(APISchema):
     longitude: float
     address: str | None = None
     from_google: bool = True
+    area_cd: str | None = None
+    signgu_cd: str | None = None
 
 
 class LocationUpdate(APISchema):
@@ -27,4 +29,6 @@ class LocationRead(APISchema):
     longitude: float
     address: str | None = None
     from_google: bool
+    area_cd: str | None = None
+    signgu_cd: str | None = None
     updated_at: datetime

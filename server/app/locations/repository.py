@@ -33,6 +33,8 @@ async def create_location(session: SessionDep, data: LocationCreate) -> Location
         longitude=data.longitude,
         address=data.address,
         from_google=data.from_google,
+        area_cd=data.area_cd,
+        signgu_cd=data.signgu_cd,
     )
     session.add(location)
     await session.flush()
