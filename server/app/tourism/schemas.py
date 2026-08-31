@@ -1,6 +1,19 @@
 from app.schemas import APISchema
 
 
+class FestivalItem(APISchema):
+    content_id: str
+    content_type_id: str | None = None
+    title: str
+    address: str | None = None
+    event_start_date: str | None = None
+    event_end_date: str | None = None
+    image_url: str | None = None
+    mapx: float | None = None
+    mapy: float | None = None
+    dist: float | None = None
+
+
 class NearbyAttraction(APISchema):
     content_id: str
     content_type_id: str

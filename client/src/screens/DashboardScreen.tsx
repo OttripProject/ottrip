@@ -1,3 +1,6 @@
+import CongestionBanner from "@/components/CongestionBanner";
+import type { FestivalItem } from "@/services/tourism";
+import { tourismApi } from "@/services/tourism";
 import { useToast } from "@/contexts/ToastContext";
 import { usePlanDataQuery } from "@/hooks/usePlanDataQuery";
 import { usePlansQuery } from "@/hooks/usePlansQuery";
@@ -56,6 +59,8 @@ export default function DashboardScreen() {
     any | null
   >(null);
   const [previewAccommodation, setPreviewAccommodation] = useState<any>(null);
+  const [festivals, setFestivals] = useState<FestivalItem[]>([]);
+  const [bannerDismissed, setBannerDismissed] = useState(false);
   const documentAnalyzeSeqRef = useRef(0);
   const [stagedDocumentAnalyze, setStagedDocumentAnalyze] =
     useState<StagedDocumentAnalyzePayload | null>(null);
@@ -249,6 +254,12 @@ export default function DashboardScreen() {
     setOpenNewFlightForm(false);
     setStagedDocumentAnalyze(null);
     setCarryoverPendingFiles(null);
+  }, [selectedPlanId]);
+
+  useEffect(() => {
+    if (!selectedPlanId) return;
+    setBannerDismissed(false);
+    tourismApi.getFestivalsForPlan(selectedPlanId).then(setFestivals).catch(() => {});
   }, [selectedPlanId]);
 
   useEffect(() => {
@@ -552,6 +563,15 @@ export default function DashboardScreen() {
               />
             ) : (
               <>
+                {/* 혼잡 배너 */}
+                {!bannerDismissed && festivals.length > 0 && (
+                  <View style={styles.bannerWrapper}>
+                    <CongestionBanner
+                      festivals={festivals}
+                      onDismiss={() => setBannerDismissed(true)}
+                    />
+                  </View>
+                )}
                 {/* 2. 주간 스케줄 모달 (70% 높이) */}
                 <View style={[styles.scheduleModal, { height: leftTopHeight }]}>
                   <WeeklySchedulePanel
@@ -739,6 +759,10 @@ const styles = StyleSheet.create({
     minHeight: 0,
     flexShrink: 1,
     overflow: "hidden",
+  },
+  bannerWrapper: {
+    paddingTop: 0,
+    paddingBottom: 0,
   },
   scheduleModal: {
     flex: 0.85,

@@ -4,9 +4,10 @@ from fastapi import HTTPException, Query, status
 
 from app.core.router import create_router
 from app.itinerary.repository import ItineraryRepository
+from app.plans.repository import PlanRepository
 
 from . import service
-from .schemas import NearbyAttraction, TourismDetail
+from .schemas import FestivalItem, NearbyAttraction, TourismDetail
 
 router = create_router()
 
@@ -62,6 +63,34 @@ async def get_nearby_attractions(
 
     seen_titles = {a.title for a in related}
     return list(related) + [a for a in location_based if a.title not in seen_titles]
+
+
+@router.get(
+    "/festivals/{plan_id}",
+    status_code=status.HTTP_200_OK,
+    tags=["Tourism"],
+)
+async def get_festivals_for_plan(
+    plan_id: int,
+    plan_repository: PlanRepository,
+    itinerary_repository: ItineraryRepository,
+) -> list[FestivalItem]:
+    plan = await plan_repository.find_by_id_only_plan(plan_id=plan_id)
+    if not plan:
+        raise HTTPException(status_code=404, detail="플랜을 찾을 수 없습니다.")
+
+    itineraries = await itinerary_repository.find_all_by_plan(plan_id=plan_id)
+    locations = [
+        (it.location.latitude, it.location.longitude, str(it.itinerary_date))
+        for it in itineraries
+        if it.location and it.location.latitude and it.location.longitude
+    ]
+
+    return await service.get_festivals_near_itineraries(
+        plan_start=str(plan.start_date),
+        plan_end=str(plan.end_date),
+        locations=locations,
+    )
 
 
 @router.get(

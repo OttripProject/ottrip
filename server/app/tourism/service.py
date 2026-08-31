@@ -6,7 +6,7 @@ from typing import Any
 import httpx
 
 from .config import tourism_settings
-from .schemas import NearbyAttraction, TourismDetail
+from .schemas import FestivalItem, NearbyAttraction, TourismDetail
 
 _KOR_SERVICE_URL = "http://apis.data.go.kr/B551011/KorService2"
 _KOR_RELATION_URL = "http://apis.data.go.kr/B551011/TarRlteTarService1"
@@ -349,3 +349,86 @@ async def get_tourism_detail(
         reservationfood=_s(i.get("reservationfood")),
         parkingfood=_s(i.get("parkingfood")),
     )
+
+
+def _haversine_m(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
+    """두 좌표 간 거리 (미터)"""
+    import math
+
+    R = 6_371_000
+    p = math.pi / 180
+    a = (
+        math.sin((lat2 - lat1) * p / 2) ** 2
+        + math.cos(lat1 * p) * math.cos(lat2 * p) * math.sin((lng2 - lng1) * p / 2) ** 2
+    )
+    return 2 * R * math.asin(math.sqrt(a))
+
+
+async def get_festivals_near_itineraries(
+    plan_start: str,
+    plan_end: str,
+    locations: list[tuple[float, float, str]],  # (lat, lng, date)
+    radius_m: float = 1000.0,
+) -> list[FestivalItem]:
+    """플랜 기간 축제 조회 후 일정 좌표와 1km 이내 + 날짜 겹침 필터링"""
+    params = {
+        "MobileOS": _MOBILE_OS,
+        "MobileApp": _MOBILE_APP,
+        "serviceKey": tourism_settings.TOUR_SERVICE_KEY,
+        "eventStartDate": plan_start.replace("-", ""),
+        "eventEndDate": plan_end.replace("-", ""),
+        "_type": "json",
+        "numOfRows": "100",
+        "arrange": "A",
+    }
+    async with httpx.AsyncClient(timeout=10.0) as client:
+        resp = await client.get(f"{_KOR_SERVICE_URL}/searchFestival2", params=params)
+        items = _extract_items(resp.json())
+
+    result: list[FestivalItem] = []
+    seen: set[str] = set()
+    for item in items:
+        cid = str(item.get("contentid") or "")
+        if cid in seen:
+            continue
+        ctid = str(item.get("contenttypeid") or "")
+        if ctid and ctid != "15":
+            continue
+        fx = _f(item.get("mapx"))
+        fy = _f(item.get("mapy"))
+        start = str(item.get("eventstartdate") or "")
+        end = str(item.get("eventenddate") or start)
+        matched_dist: float | None = None
+        for lat, lng, idate in locations:
+            # 날짜 겹침 확인 (YYYYMMDD 형식)
+            idate_fmt = idate.replace("-", "")
+            if not (start <= idate_fmt <= end):
+                continue
+            # 거리 확인
+            if fx and fy:
+                dist = _haversine_m(lat, lng, fy, fx)
+                if dist <= radius_m:
+                    matched_dist = dist
+                    break
+            else:
+                # 좌표 없으면 날짜만 맞아도 포함 (테스트용)
+                matched_dist = None
+                break
+        else:
+            continue
+        seen.add(cid)
+        result.append(
+            FestivalItem(
+                content_id=cid,
+                content_type_id=ctid or None,
+                title=" ".join(str(item.get("title") or "").split()),
+                address=_s(item.get("addr1")),
+                event_start_date=start,
+                event_end_date=end,
+                image_url=_s(item.get("firstimage")),
+                mapx=fx,
+                mapy=fy,
+                dist=matched_dist,
+            )
+        )
+    return result
