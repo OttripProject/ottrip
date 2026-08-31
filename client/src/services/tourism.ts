@@ -74,9 +74,40 @@ export interface TourismDetail {
   parkingfood: string | null;
 }
 
+export interface CongestionItem {
+  tatsNm: string | null;
+  cnctrRate: number | null;
+  baseYmd: string | null;
+}
+
+export interface FestivalItem {
+  contentId: string;
+  contentTypeId: string | null;
+  title: string;
+  address: string | null;
+  eventStartDate: string | null;
+  eventEndDate: string | null;
+  imageUrl: string | null;
+  mapx: number | null;
+  mapy: number | null;
+  dist: number | null;
+  matchedLocationName: string | null;
+  matchedDate: string | null;
+}
+
 export const tourismApi = {
   getNearbyAttractions: async (itineraryId: number): Promise<NearbyAttraction[]> => {
     const response = await api.get(`/private/tourism/nearby/${itineraryId}`);
+    return response.data;
+  },
+
+  getFestivalsForPlan: async (planId: number): Promise<FestivalItem[]> => {
+    const response = await api.get(`/private/tourism/festivals/${planId}`);
+    return response.data;
+  },
+
+  getCongestion: async (itineraryId: number): Promise<CongestionItem[]> => {
+    const response = await api.get(`/private/tourism/congestion/${itineraryId}`);
     return response.data;
   },
 

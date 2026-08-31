@@ -7,6 +7,12 @@ import api from "./api";
 
 const STALE_DAYS = 30;
 
+export const manualPlaceId = (name: string): string => {
+  const nameHash = [...name].reduce((a, c) => (Math.imul(31, a) + c.charCodeAt(0)) >>> 0, 0).toString(16);
+  const rand = Math.random().toString(16).slice(2, 10);
+  return `m_${nameHash}_${rand}`;
+};
+
 export function isLocationStale(location: Location): boolean {
   if (!location.fromGoogle) return false;
   const updatedAt = new Date(location.updatedAt);

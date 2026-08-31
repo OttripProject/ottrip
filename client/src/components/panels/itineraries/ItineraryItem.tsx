@@ -8,7 +8,7 @@ import { analyzeDocumentUpload } from "@/services/aiDocument";
 import { attachmentsApi } from "@/services/attachments";
 import { expensesApi } from "@/services/expenses";
 import { itinerariesApi } from "@/services/itineraries";
-import { isLocationStale, locationsApi } from "@/services/locations";
+import { isLocationStale, locationsApi, manualPlaceId } from "@/services/locations";
 import type {
   AiDocumentItemDraft,
   Attachment,
@@ -163,13 +163,15 @@ export default function ItineraryItem({
 }: ItineraryItemProps) {
   const [showWarning, setShowWarning] = useState(false);
   const [warningMessage, setWarningMessage] = useState("");
+  const locationDraftRef = useRef<PlaceResult | null>(null);
+  const rawLocationTextRef = useRef<string>("");
   const [formData, setFormData] = useState({
     title: itinerary?.title || "",
     description: itinerary?.description || "",
     country: itinerary?.country || "",
     city: itinerary?.city || "",
     location: itinerary?.location?.name || "",
-    locationId: itinerary?.location?.id as number | undefined,
+    locationId: itinerary?.location?.id as number | null | undefined,
     itineraryDate:
       itinerary?.itinerary_date ||
       (selectedDate
@@ -602,6 +604,45 @@ export default function ItineraryItem({
       const finalEndTime =
         formData.endTime === "24:00" ? "23:59:59" : formData.endTime;
 
+      // 장소 draft → 저장 시점에 create/update
+      let finalLocationId = formData.locationId;
+      const draft = locationDraftRef.current;
+      if (draft) {
+        try {
+          if (typeof finalLocationId === "number") {
+            await locationsApi.updateLocation(finalLocationId, {
+              name: draft.name, placeId: draft.placeId, latitude: draft.latitude, longitude: draft.longitude, address: draft.address, fromGoogle: draft.fromGoogle,
+            });
+          } else {
+            const loc = await locationsApi.createLocation({
+              name: draft.name, placeId: draft.placeId, latitude: draft.latitude,
+              longitude: draft.longitude, address: draft.address, fromGoogle: draft.fromGoogle,
+            });
+            finalLocationId = loc.id;
+          }
+        } catch {
+          finalLocationId = formData.locationId;
+        }
+        locationDraftRef.current = null;
+      } else {
+        const rawText = rawLocationTextRef.current.trim() || formData.location.trim();
+        const originalName = itinerary?.location?.name ?? "";
+        if (rawText && rawText !== originalName) {
+          try {
+            if (typeof finalLocationId === "number") {
+              await locationsApi.updateLocation(finalLocationId, {
+                name: rawText, placeId: manualPlaceId(rawText), latitude: 0, longitude: 0, address: undefined, fromGoogle: false,
+              });
+            } else {
+              const loc = await locationsApi.createLocation({
+                name: rawText, placeId: manualPlaceId(rawText), latitude: 0, longitude: 0, fromGoogle: false,
+              });
+              finalLocationId = loc.id;
+            }
+          } catch { /* ignore */ }
+        }
+      }
+
       let savedItinerary;
       if (itinerary?.id) {
         savedItinerary = await itinerariesApi.updateItinerary(itinerary.id, {
@@ -609,7 +650,7 @@ export default function ItineraryItem({
           description: formData.description,
           country: formData.country?.trim() || undefined,
           city: formData.city?.trim() || undefined,
-          locationId: formData.locationId,
+          locationId: finalLocationId,
           itineraryDate: formData.itineraryDate,
           startTime: formData.startTime,
           endTime: finalEndTime,
@@ -683,7 +724,7 @@ export default function ItineraryItem({
           description: formData.description,
           country: formData.country?.trim() || undefined,
           city: formData.city?.trim() || undefined,
-          locationId: formData.locationId,
+          locationId: finalLocationId ?? undefined,
           itineraryDate: formData.itineraryDate,
           startTime: formData.startTime,
           endTime: finalEndTime,
@@ -1044,20 +1085,9 @@ export default function ItineraryItem({
     setTourismDetailVisible(true);
   };
 
-  const handlePlaceSelect = useCallback(async (place: PlaceResult) => {
-    try {
-      const location = await locationsApi.createLocation({
-        name: place.name,
-        placeId: place.placeId,
-        latitude: place.latitude,
-        longitude: place.longitude,
-        address: place.address,
-        fromGoogle: place.fromGoogle,
-      });
-      setFormData(prev => ({ ...prev, location: location.name, locationId: location.id }));
-    } catch {
-      setFormData(prev => ({ ...prev, location: place.name, locationId: undefined }));
-    }
+  const handlePlaceSelect = useCallback((place: PlaceResult) => {
+    locationDraftRef.current = place;
+    setFormData(prev => ({ ...prev, location: place.name }));
   }, []);
 
   return (
@@ -1211,7 +1241,8 @@ export default function ItineraryItem({
                 <PlacesSearchInput
                   value={formData.location}
                   onSelect={handlePlaceSelect}
-                  onClear={() => setFormData(prev => ({ ...prev, location: "", locationId: undefined }))}
+                  onClear={() => { locationDraftRef.current = null; rawLocationTextRef.current = ""; setFormData(prev => ({ ...prev, location: "", locationId: null })); }}
+                  onRawInputChange={(t) => { locationDraftRef.current = null; rawLocationTextRef.current = t; }}
                   placeholder="장소를 검색하세요."
                   disabled={readOnly}
                   readOnly={readOnly}

@@ -1,4 +1,5 @@
 import { colors, radii, spacing, textStyles } from "@/ui/tokens";
+import { manualPlaceId } from "@/services/locations";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ActivityIndicator, Keyboard, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import MiniMapView from "@/ui/components/MiniMapView";
@@ -21,6 +22,7 @@ interface PlacesSearchInputProps {
   onSelect: (place: PlaceResult) => void;
   onClear?: () => void;
   onFocus?: () => void;
+  onRawInputChange?: (text: string) => void;
   placeholder?: string;
   disabled?: boolean;
   readOnly?: boolean;
@@ -29,11 +31,6 @@ interface PlacesSearchInputProps {
   cityContext?: string;
 }
 
-const manualPlaceId = (name: string) => {
-  const nameHash = [...name].reduce((a, c) => (Math.imul(31, a) + c.charCodeAt(0)) >>> 0, 0).toString(16);
-  const rand = Math.random().toString(16).slice(2, 10);
-  return `m_${nameHash}_${rand}`;
-};
 
 const apiKey = process.env.EXPO_PUBLIC_GOOGLE_PLCAES_API_KEY ?? "";
 
@@ -82,6 +79,7 @@ export default function PlacesSearchInput({
   onSelect,
   onClear,
   onFocus,
+  onRawInputChange,
   placeholder = "장소를 검색하세요.",
   disabled,
   readOnly,
@@ -118,6 +116,7 @@ export default function PlacesSearchInput({
 
   const handleChangeText = useCallback((t: string) => {
     setText(t);
+    onRawInputChange?.(t);
     setSearchError(false);
     if (debounceRef.current) clearTimeout(debounceRef.current);
     if (t.trim().length === 0) {
@@ -202,7 +201,7 @@ export default function PlacesSearchInput({
         <TextInput
           value={text}
           onChangeText={handleChangeText}
-          onSubmitEditing={Keyboard.dismiss}
+          onSubmitEditing={handleManualSelect}
           onFocus={onFocus}
           placeholder={placeholder}
           placeholderTextColor={colors.gray600}

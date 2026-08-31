@@ -6,10 +6,13 @@ from typing import Any
 import httpx
 
 from .config import tourism_settings
-from .schemas import NearbyAttraction, TourismDetail
+from .schemas import CongestionItem, FestivalItem, NearbyAttraction, TourismDetail
+
+_CONGESTION_THRESHOLD = 70.0  # CDF 지수 임계값 (상위 30% 혼잡 판정)
 
 _KOR_SERVICE_URL = "http://apis.data.go.kr/B551011/KorService2"
 _KOR_RELATION_URL = "http://apis.data.go.kr/B551011/TarRlteTarService1"
+_TATS_CNCTR_URL = "http://apis.data.go.kr/B551011/TatsCnctrRateService"
 _MOBILE_OS = "ETC"
 _MOBILE_APP = "Ottrip"
 
@@ -44,6 +47,43 @@ async def search_kor_keyword(keyword: str) -> dict[str, Any] | None:
         data: dict[str, Any] = response.json()
     items = _extract_items(data)
     return items[0] if items else None
+
+
+async def find_area_codes(
+    keyword: str, lat: float | None = None, lng: float | None = None
+) -> tuple[str | None, str | None]:
+    """키워드 검색 후 좌표가 있으면 가장 가까운 결과로 area/signgu 코드 반환"""
+    params = {
+        "MobileOS": _MOBILE_OS,
+        "MobileApp": _MOBILE_APP,
+        "serviceKey": tourism_settings.TOUR_SERVICE_KEY,
+        "keyword": keyword,
+        "_type": "json",
+        "numOfRows": "10",
+    }
+    async with httpx.AsyncClient(timeout=10.0) as client:
+        response = await client.get(f"{_KOR_SERVICE_URL}/searchKeyword2", params=params)
+        data: dict[str, Any] = response.json()
+    items = _extract_items(data)
+    if not items:
+        return None, None
+
+    if lat and lng:
+
+        def _dist(item: dict[str, Any]) -> float:
+            try:
+                return _haversine_m(lat, lng, float(item["mapy"]), float(item["mapx"]))
+            except (KeyError, TypeError, ValueError):
+                return float("inf")
+
+        best = min(items, key=_dist)
+    else:
+        best = items[0]
+
+    area_cd = str(best.get("lDongRegnCd") or "") or None
+    signgu_raw = str(best.get("lDongSignguCd") or "") or None
+    signgu_cd = (area_cd + signgu_raw) if area_cd and signgu_raw else None
+    return area_cd, signgu_cd
 
 
 async def _search_best_match(keyword: str) -> dict[str, Any] | None:
@@ -349,3 +389,140 @@ async def get_tourism_detail(
         reservationfood=_s(i.get("reservationfood")),
         parkingfood=_s(i.get("parkingfood")),
     )
+
+
+def _haversine_m(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
+    """두 좌표 간 거리 (미터)"""
+    import math
+
+    R = 6_371_000
+    p = math.pi / 180
+    a = (
+        math.sin((lat2 - lat1) * p / 2) ** 2
+        + math.cos(lat1 * p) * math.cos(lat2 * p) * math.sin((lng2 - lng1) * p / 2) ** 2
+    )
+    return 2 * R * math.asin(math.sqrt(a))
+
+
+async def get_festivals_near_itineraries(
+    plan_start: str,
+    plan_end: str,
+    locations: list[tuple[float, float, str, str]],  # (lat, lng, date, location_name)
+    radius_m: float = 1000.0,
+) -> list[FestivalItem]:
+    """플랜 기간 축제 조회 후 일정 좌표와 1km 이내 + 날짜 겹침 필터링"""
+    params = {
+        "MobileOS": _MOBILE_OS,
+        "MobileApp": _MOBILE_APP,
+        "serviceKey": tourism_settings.TOUR_SERVICE_KEY,
+        "eventStartDate": plan_start.replace("-", ""),
+        "eventEndDate": plan_end.replace("-", ""),
+        "_type": "json",
+        "numOfRows": "100",
+        "arrange": "A",
+    }
+    async with httpx.AsyncClient(timeout=10.0) as client:
+        resp = await client.get(f"{_KOR_SERVICE_URL}/searchFestival2", params=params)
+        items = _extract_items(resp.json())
+
+    result: list[FestivalItem] = []
+    seen: set[str] = set()
+    for item in items:
+        cid = str(item.get("contentid") or "")
+        if cid in seen:
+            continue
+        ctid = str(item.get("contenttypeid") or "")
+        if ctid and ctid != "15":
+            continue
+        fx = _f(item.get("mapx"))
+        fy = _f(item.get("mapy"))
+        start = str(item.get("eventstartdate") or "")
+        end = str(item.get("eventenddate") or start)
+        matched_dist: float | None = None
+        matched_location_name: str | None = None
+        matched_date: str | None = None
+        for lat, lng, idate, loc_name in locations:
+            # 날짜 겹침 확인 (YYYYMMDD 형식)
+            idate_fmt = idate.replace("-", "")
+            if not (start <= idate_fmt <= end):
+                continue
+            # 거리 확인
+            if not (fx and fy):
+                continue
+            dist = _haversine_m(lat, lng, fy, fx)
+            if dist <= radius_m:
+                matched_dist = dist
+                matched_location_name = loc_name
+                matched_date = idate
+                break
+        else:
+            continue
+        seen.add(cid)
+        result.append(
+            FestivalItem(
+                content_id=cid,
+                content_type_id=ctid or None,
+                title=" ".join(str(item.get("title") or "").split()),
+                address=_s(item.get("addr1")),
+                event_start_date=start,
+                event_end_date=end,
+                image_url=_s(item.get("firstimage")),
+                mapx=fx,
+                mapy=fy,
+                dist=matched_dist,
+                matched_location_name=matched_location_name,
+                matched_date=matched_date,
+            )
+        )
+    return result
+
+
+async def get_congestion_rate(
+    area_cd: str,
+    signgu_cd: str,
+    itinerary_date: str,
+    location_name: str | None = None,
+) -> list[CongestionItem]:
+    """예정일 집중률이 예측기간 평균의 RATIO배 이상 + 절대 하한 이상이면 혼잡 항목 반환"""
+    params: dict[str, str] = {
+        "MobileOS": _MOBILE_OS,
+        "MobileApp": _MOBILE_APP,
+        "serviceKey": tourism_settings.TOUR_SERVICE_KEY,
+        "areaCd": area_cd,
+        "signguCd": signgu_cd,
+        "_type": "json",
+        "numOfRows": "31",
+    }
+    if location_name:
+        params["tAtsNm"] = location_name
+
+    async with httpx.AsyncClient(timeout=10.0) as client:
+        resp = await client.get(f"{_TATS_CNCTR_URL}/tatsCnctrRatedList", params=params)
+        items = _extract_items(resp.json())
+
+    if not items:
+        return []
+
+    idate_fmt = itinerary_date.replace("-", "")
+    target = next(
+        (item for item in items if _s(item.get("baseYmd")) == idate_fmt), None
+    )
+    if not target:
+        return []
+
+    try:
+        rate = (
+            float(target["cnctrRate"]) if target.get("cnctrRate") is not None else None
+        )
+    except (ValueError, TypeError):
+        rate = None
+
+    if rate is not None and rate >= _CONGESTION_THRESHOLD:
+        return [
+            CongestionItem(
+                tats_nm=_s(target.get("tAtsNm")),
+                cnctr_rate=rate,
+                base_ymd=_s(target.get("baseYmd")),
+            )
+        ]
+    return []

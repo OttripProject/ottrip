@@ -1,4 +1,5 @@
 import { colors, radii, spacing, textStyles } from "@/ui/tokens";
+import { manualPlaceId } from "@/services/locations";
 import MiniMapView from "@/ui/components/MiniMapView";
 import { useLoadScript } from "@react-google-maps/api";
 import { useEffect, useRef, useState } from "react";
@@ -22,6 +23,7 @@ interface PlacesSearchInputProps {
   onSelect: (place: PlaceResult) => void;
   onClear?: () => void;
   onFocus?: () => void;
+  onRawInputChange?: (text: string) => void;
   placeholder?: string;
   disabled?: boolean;
   readOnly?: boolean;
@@ -30,17 +32,13 @@ interface PlacesSearchInputProps {
   cityContext?: string;
 }
 
-const manualPlaceId = (name: string) => {
-  const nameHash = [...name].reduce((a, c) => (Math.imul(31, a) + c.charCodeAt(0)) >>> 0, 0).toString(16);
-  const rand = Math.random().toString(16).slice(2, 10);
-  return `m_${nameHash}_${rand}`;
-};
 
 export default function PlacesSearchInput({
   value,
   onSelect,
   onClear,
   onFocus,
+  onRawInputChange,
   placeholder = "장소를 검색하세요.",
   disabled,
   readOnly,
@@ -201,6 +199,7 @@ export default function PlacesSearchInput({
     setSearchError(false);
     measureContainer();
     setOpen(true);
+    onRawInputChange?.(val);
     if (val === "") {
       setSuggestions([]);
       onClear?.();
@@ -288,7 +287,7 @@ export default function PlacesSearchInput({
               key={i}
               data-idx={i}
               style={{ ...css.item, background: selectedIndex === i ? colors.gray200 : "transparent" }}
-              onMouseDown={() => handleSelectSuggestion(prediction)}
+              onMouseDown={(e) => { e.preventDefault(); handleSelectSuggestion(prediction); }}
               onMouseEnter={() => setSelectedIndex(i)}
               onMouseLeave={() => setSelectedIndex(-1)}
             >
@@ -307,7 +306,7 @@ export default function PlacesSearchInput({
             <div
               data-idx={suggestions.length}
               style={{ ...css.item, alignItems: "center", padding: "12px 12px 8px", background: selectedIndex === suggestions.length ? colors.gray200 : "transparent" }}
-              onMouseDown={handleManualSelect}
+              onMouseDown={(e) => { e.preventDefault(); handleManualSelect(); }}
               onMouseEnter={() => setSelectedIndex(suggestions.length)}
               onMouseLeave={() => setSelectedIndex(-1)}
             >
@@ -344,7 +343,16 @@ export default function PlacesSearchInput({
               setOpen(true);
             }
           }}
-          onBlur={() => setTimeout(() => { setOpen(false); setSelectedIndex(-1); }, 150)}
+          onBlur={() => setTimeout(() => {
+            setOpen(false);
+            setSelectedIndex(-1);
+            const current = (inputRef.current as HTMLInputElement | null)?.value.trim() ?? inputValue.trim();
+            if (current && current !== (value ?? "")) {
+              setSuggestions([]);
+              setMapCoords(null);
+              onSelectRef.current({ name: current, placeId: manualPlaceId(current), latitude: 0, longitude: 0, fromGoogle: false });
+            }
+          }, 150)}
           editable={!disabled}
           autoComplete="off"
         />

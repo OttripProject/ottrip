@@ -83,9 +83,11 @@ export interface CreateLocationRequest {
 
 export interface UpdateLocationRequest {
   name: string;
+  placeId?: string;
   latitude: number;
   longitude: number;
   address?: string;
+  fromGoogle?: boolean;
 }
 
 // 일정 (Itinerary) 관련 타입
@@ -122,7 +124,7 @@ export interface UpdateItineraryRequest {
   description?: string;
   country?: string;
   city?: string;
-  locationId?: number;
+  locationId?: number | null;
   itineraryDate?: string;
   startTime?: string;
   endTime?: string;

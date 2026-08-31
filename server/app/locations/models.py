@@ -18,7 +18,7 @@ class Location(Base):
 
     name: Mapped[str] = mapped_column(String, nullable=False)
 
-    place_id: Mapped[str] = mapped_column(String, nullable=False, unique=True)
+    place_id: Mapped[str] = mapped_column(String, nullable=False)
 
     latitude: Mapped[float] = mapped_column(Float, nullable=False)
 
@@ -27,6 +27,10 @@ class Location(Base):
     address: Mapped[str | None] = mapped_column(String, nullable=True, default=None)
 
     from_google: Mapped[bool] = mapped_column(default=True, nullable=False)
+
+    area_cd: Mapped[str | None] = mapped_column(String, nullable=True, default=None)
+
+    signgu_cd: Mapped[str | None] = mapped_column(String, nullable=True, default=None)
 
     updated_at: Mapped[datetime] = mapped_column(
         DateTime, server_default=func.now(), onupdate=func.now(), init=False

@@ -7,7 +7,7 @@ import { useFilePicker } from "@/hooks/useFilePicker";
 import { accommodationsApi } from "@/services/accommodations";
 import { analyzeDocumentUpload } from "@/services/aiDocument";
 import { attachmentsApi } from "@/services/attachments";
-import { isLocationStale, locationsApi } from "@/services/locations";
+import { isLocationStale, locationsApi, manualPlaceId } from "@/services/locations";
 import type {
   AiDocumentItemDraft,
   Attachment,
@@ -165,6 +165,8 @@ export default function AccommodationItem({
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isSubmittingRef = useRef(false);
+  const locationDraftRef = useRef<PlaceResult | null>(null);
+  const rawLocationTextRef = useRef<string>("");
 
   const [showCheckinDatePicker, setShowCheckinDatePicker] = useState(false);
   const [showCheckoutDatePicker, setShowCheckoutDatePicker] = useState(false);
@@ -481,13 +483,52 @@ export default function AccommodationItem({
     isSubmittingRef.current = true;
     setIsSubmitting(true);
     try {
+      // 장소 draft → 저장 시점에 create/update
+      let finalLocationId = formData.locationId;
+      const draft = locationDraftRef.current;
+      if (draft) {
+        try {
+          if (typeof finalLocationId === "number") {
+            await locationsApi.updateLocation(finalLocationId, {
+              name: draft.name, placeId: draft.placeId, latitude: draft.latitude, longitude: draft.longitude, address: draft.address, fromGoogle: draft.fromGoogle,
+            });
+          } else {
+            const loc = await locationsApi.createLocation({
+              name: draft.name, placeId: draft.placeId, latitude: draft.latitude,
+              longitude: draft.longitude, address: draft.address, fromGoogle: draft.fromGoogle,
+            });
+            finalLocationId = loc.id;
+          }
+        } catch {
+          finalLocationId = formData.locationId;
+        }
+        locationDraftRef.current = null;
+      } else {
+        const rawText = rawLocationTextRef.current.trim() || formData.place.trim();
+        const originalName = accommodation?.location?.name ?? "";
+        if (rawText && rawText !== originalName) {
+          try {
+            if (typeof finalLocationId === "number") {
+              await locationsApi.updateLocation(finalLocationId, {
+                name: rawText, placeId: manualPlaceId(rawText), latitude: 0, longitude: 0, address: undefined, fromGoogle: false,
+              });
+            } else {
+              const loc = await locationsApi.createLocation({
+                name: rawText, placeId: manualPlaceId(rawText), latitude: 0, longitude: 0, fromGoogle: false,
+              });
+              finalLocationId = loc.id;
+            }
+          } catch { /* ignore */ }
+        }
+      }
+
       let savedAccommodation;
       if (accommodation && accommodation.id) {
         savedAccommodation = await accommodationsApi.updateAccommodation(
           accommodation.id,
           {
             name: formData.name,
-            locationId: formData.locationId,
+            locationId: finalLocationId,
             country: formData.country?.trim() || undefined,
             city: formData.city?.trim() || undefined,
             checkinDate: formData.checkin_date,
@@ -509,7 +550,7 @@ export default function AccommodationItem({
         savedAccommodation = await accommodationsApi.createAccommodation({
           planId: planId,
           name: formData.name,
-          locationId: formData.locationId,
+          locationId: finalLocationId,
           country: formData.country?.trim() || undefined,
           city: formData.city?.trim() || undefined,
           checkinDate: formData.checkin_date,
@@ -685,20 +726,9 @@ export default function AccommodationItem({
     })();
   }, [accommodation?.location?.id]);
 
-  const handlePlaceSelect = useCallback(async (place: PlaceResult) => {
-    try {
-      const location = await locationsApi.createLocation({
-        name: place.name,
-        placeId: place.placeId,
-        latitude: place.latitude,
-        longitude: place.longitude,
-        address: place.address,
-        fromGoogle: place.fromGoogle,
-      });
-      setFormData(prev => ({ ...prev, place: location.name, locationId: location.id }));
-    } catch {
-      setFormData(prev => ({ ...prev, place: place.name, locationId: undefined }));
-    }
+  const handlePlaceSelect = useCallback((place: PlaceResult) => {
+    locationDraftRef.current = place;
+    setFormData(prev => ({ ...prev, place: place.name }));
   }, []);
 
   return (
@@ -811,7 +841,8 @@ export default function AccommodationItem({
                 <PlacesSearchInput
                   value={formData.place}
                   onSelect={handlePlaceSelect}
-                  onClear={() => setFormData(prev => ({ ...prev, place: "", locationId: undefined }))}
+                  onClear={() => { locationDraftRef.current = null; rawLocationTextRef.current = ""; setFormData(prev => ({ ...prev, place: "", locationId: undefined })); }}
+                  onRawInputChange={(t) => { locationDraftRef.current = null; rawLocationTextRef.current = t; }}
                   placeholder={PLACEHOLDERS.accommodation.place}
                   disabled={readOnly}
                   readOnly={readOnly}

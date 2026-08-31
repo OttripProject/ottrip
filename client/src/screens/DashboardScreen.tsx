@@ -1,3 +1,6 @@
+import CongestionBanner, { type CongestedItem } from "@/components/CongestionBanner";
+import type { FestivalItem } from "@/services/tourism";
+import { tourismApi } from "@/services/tourism";
 import { useToast } from "@/contexts/ToastContext";
 import { usePlanDataQuery } from "@/hooks/usePlanDataQuery";
 import { usePlansQuery } from "@/hooks/usePlansQuery";
@@ -56,6 +59,9 @@ export default function DashboardScreen() {
     any | null
   >(null);
   const [previewAccommodation, setPreviewAccommodation] = useState<any>(null);
+  const [festivals, setFestivals] = useState<FestivalItem[]>([]);
+  const [congestedItems, setCongestedItems] = useState<CongestedItem[]>([]);
+  const [bannerDismissed, setBannerDismissed] = useState(false);
   const documentAnalyzeSeqRef = useRef(0);
   const [stagedDocumentAnalyze, setStagedDocumentAnalyze] =
     useState<StagedDocumentAnalyzePayload | null>(null);
@@ -250,6 +256,69 @@ export default function DashboardScreen() {
     setStagedDocumentAnalyze(null);
     setCarryoverPendingFiles(null);
   }, [selectedPlanId]);
+
+  const itineraryKey = planData.itineraries
+    .map((it: any) => `${it.id}-${it.location?.id ?? ""}`)
+    .join(",");
+
+  const prevFestivalsKeyRef = useRef("");
+
+  useEffect(() => {
+    setFestivals([]);
+    setCongestedItems([]);
+    setBannerDismissed(false);
+  }, [selectedPlanId]);
+
+  useEffect(() => {
+    if (!selectedPlanId) return;
+    tourismApi.getFestivalsForPlan(selectedPlanId).then(setFestivals).catch(() => {});
+  }, [selectedPlanId, itineraryKey]);
+
+  useEffect(() => {
+    if (!selectedPlanId || planData.itineraries.length === 0) return;
+    const today = dayjs().startOf("day");
+    const maxDate = today.add(30, "day");
+    const eligible = planData.itineraries.filter((it: any) => {
+      if (!it.location) return false;
+      const d = dayjs(it.itineraryDate);
+      return !d.isBefore(today) && !d.isAfter(maxDate);
+    });
+    if (eligible.length === 0) {
+      setCongestedItems([]);
+      return;
+    }
+    Promise.all(
+      eligible.map((it: any) =>
+        tourismApi
+          .getCongestion(it.id)
+          .then((items) =>
+            items.length > 0
+              ? { date: it.itineraryDate as string, locationName: it.location.name as string }
+              : null,
+          )
+          .catch(() => null),
+      ),
+    ).then((results) => {
+      setCongestedItems(results.filter((r): r is CongestedItem => r !== null));
+    });
+  }, [selectedPlanId, itineraryKey]);
+
+  const prevCongestedKeyRef = useRef("");
+  useEffect(() => {
+    const key = congestedItems.map((c) => `${c.date}${c.locationName}`).sort().join(",");
+    if (key && key !== prevCongestedKeyRef.current) {
+      setBannerDismissed(false);
+    }
+    prevCongestedKeyRef.current = key;
+  }, [congestedItems]);
+
+  useEffect(() => {
+    const key = festivals.map((f) => f.contentId).sort().join(",");
+    if (key && key !== prevFestivalsKeyRef.current) {
+      setBannerDismissed(false);
+    }
+    prevFestivalsKeyRef.current = key;
+  }, [festivals]);
 
   useEffect(() => {
     if (selectedItinerary?.id && planData.itineraries.length > 0) {
@@ -552,6 +621,16 @@ export default function DashboardScreen() {
               />
             ) : (
               <>
+                {/* 혼잡 배너 */}
+                {!bannerDismissed && (festivals.length > 0 || congestedItems.length > 0) && (
+                  <View style={styles.bannerWrapper}>
+                    <CongestionBanner
+                      festivals={festivals}
+                      congestedItems={congestedItems}
+                      onDismiss={() => setBannerDismissed(true)}
+                    />
+                  </View>
+                )}
                 {/* 2. 주간 스케줄 모달 (70% 높이) */}
                 <View style={[styles.scheduleModal, { height: leftTopHeight }]}>
                   <WeeklySchedulePanel
@@ -739,6 +818,10 @@ const styles = StyleSheet.create({
     minHeight: 0,
     flexShrink: 1,
     overflow: "hidden",
+  },
+  bannerWrapper: {
+    paddingTop: 0,
+    paddingBottom: 0,
   },
   scheduleModal: {
     flex: 0.85,

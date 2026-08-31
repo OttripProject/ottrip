@@ -11,21 +11,13 @@ async def get_location(session: SessionDep, location_id: int) -> Location | None
     return result.scalar_one_or_none()
 
 
-async def get_location_by_place_id(
-    session: SessionDep, place_id: str
-) -> Location | None:
-    result = await session.execute(
-        select(Location).where(Location.place_id == place_id)
-    )
-    return result.scalar_one_or_none()
+async def delete_location(session: SessionDep, location_id: int) -> None:
+    location = await get_location(session, location_id)
+    if location:
+        await session.delete(location)
 
 
 async def create_location(session: SessionDep, data: LocationCreate) -> Location:
-    if data.place_id:
-        existing = await get_location_by_place_id(session, data.place_id)
-        if existing:
-            return existing
-
     location = Location(
         name=data.name,
         place_id=data.place_id,
@@ -33,6 +25,8 @@ async def create_location(session: SessionDep, data: LocationCreate) -> Location
         longitude=data.longitude,
         address=data.address,
         from_google=data.from_google,
+        area_cd=data.area_cd,
+        signgu_cd=data.signgu_cd,
     )
     session.add(location)
     await session.flush()
@@ -50,6 +44,14 @@ async def update_location(
     location.latitude = data.latitude
     location.longitude = data.longitude
     location.address = data.address
+    if data.place_id is not None:
+        location.place_id = data.place_id
+    if data.from_google is not None:
+        location.from_google = data.from_google
+    if data.area_cd is not None:
+        location.area_cd = data.area_cd
+    if data.signgu_cd is not None:
+        location.signgu_cd = data.signgu_cd
 
     await session.flush()
     return location

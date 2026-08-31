@@ -1,6 +1,27 @@
 from app.schemas import APISchema
 
 
+class CongestionItem(APISchema):
+    tats_nm: str | None = None
+    cnctr_rate: float | None = None
+    base_ymd: str | None = None
+
+
+class FestivalItem(APISchema):
+    content_id: str
+    content_type_id: str | None = None
+    title: str
+    address: str | None = None
+    event_start_date: str | None = None
+    event_end_date: str | None = None
+    image_url: str | None = None
+    mapx: float | None = None
+    mapy: float | None = None
+    dist: float | None = None
+    matched_location_name: str | None = None
+    matched_date: str | None = None
+
+
 class NearbyAttraction(APISchema):
     content_id: str
     content_type_id: str

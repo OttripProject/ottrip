@@ -289,6 +289,7 @@ export default function WeeklySchedulePanel({
   const planForm = useTripForm();
   const { data: me } = useMe();
   const isGuest = !!me?.isGuest;
+
   const [previewEvent, setPreviewEvent] = useState<{
     start: Date;
     end: Date;

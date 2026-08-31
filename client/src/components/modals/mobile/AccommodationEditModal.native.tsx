@@ -24,7 +24,7 @@ import { TimeModal } from "@/ui/components/TimeModal.native";
 import AttachmentSection from "@/ui/components/attachmentSection.native";
 import Input from "@/ui/components/input/Input";
 import PlacesSearchInput, { type PlaceResult } from "@/ui/components/PlacesSearchInput";
-import { locationsApi } from "@/services/locations";
+import { locationsApi, manualPlaceId } from "@/services/locations";
 import { colors } from "@/ui/tokens/colors";
 import { textStyles, typography } from "@/ui/tokens/typography";
 import { handleGuestPromptError } from "@/utils/guestPrompt";
@@ -100,6 +100,8 @@ export default function AccommodationEditModal({
   onRouteMismatchResult,
 }: AccommodationEditModalProps) {
   const scrollRef = useRef<KeyboardAwareScrollViewRef>(null);
+  const locationDraftRef = useRef<PlaceResult | null>(null);
+  const rawLocationTextRef = useRef<string>("");
 
   const [formData, setFormData] = useState({
     name: "",
@@ -300,20 +302,9 @@ export default function AccommodationEditModal({
     }
   }, [visible, pendingAiResult]);
 
-  const handlePlaceSelect = async (place: PlaceResult) => {
-    try {
-      const loc = await locationsApi.createLocation({
-        name: place.name,
-        placeId: place.placeId,
-        latitude: place.latitude,
-        longitude: place.longitude,
-        address: place.address,
-        fromGoogle: place.fromGoogle,
-      });
-      setFormData(prev => ({ ...prev, place: loc.name, locationId: loc.id }));
-    } catch {
-      setFormData(prev => ({ ...prev, place: place.name, locationId: undefined }));
-    }
+  const handlePlaceSelect = (place: PlaceResult) => {
+    locationDraftRef.current = place;
+    setFormData(prev => ({ ...prev, place: place.name }));
   };
 
   const handleSave = async () => {
@@ -324,6 +315,45 @@ export default function AccommodationEditModal({
 
     setIsSubmitting(true);
     try {
+      // 장소 draft → 저장 시점에 create/update
+      let finalLocationId = formData.locationId;
+      const draft = locationDraftRef.current;
+      if (draft) {
+        try {
+          if (typeof finalLocationId === "number") {
+            await locationsApi.updateLocation(finalLocationId, {
+              name: draft.name, placeId: draft.placeId, latitude: draft.latitude, longitude: draft.longitude, address: draft.address, fromGoogle: draft.fromGoogle,
+            });
+          } else {
+            const loc = await locationsApi.createLocation({
+              name: draft.name, placeId: draft.placeId, latitude: draft.latitude,
+              longitude: draft.longitude, address: draft.address, fromGoogle: draft.fromGoogle,
+            });
+            finalLocationId = loc.id;
+          }
+        } catch {
+          finalLocationId = formData.locationId;
+        }
+        locationDraftRef.current = null;
+      } else {
+        const rawText = rawLocationTextRef.current.trim() || formData.place.trim();
+        const originalName = accommodation?.location?.name ?? "";
+        if (rawText && rawText !== originalName) {
+          try {
+            if (typeof finalLocationId === "number") {
+              await locationsApi.updateLocation(finalLocationId, {
+                name: rawText, placeId: manualPlaceId(rawText), latitude: 0, longitude: 0, address: undefined, fromGoogle: false,
+              });
+            } else {
+              const loc = await locationsApi.createLocation({
+                name: rawText, placeId: manualPlaceId(rawText), latitude: 0, longitude: 0, fromGoogle: false,
+              });
+              finalLocationId = loc.id;
+            }
+          } catch { /* ignore */ }
+        }
+      }
+
       const amount = Number.parseInt(normalizeAmount(expenseAmount), 10) || 0;
       let savedAccommodation: Accommodation;
       if (accommodation) {
@@ -331,7 +361,7 @@ export default function AccommodationEditModal({
           accommodation.id,
           {
             name: formData.name.trim(),
-            locationId: formData.locationId,
+            locationId: finalLocationId,
             description: formData.description?.trim() || undefined,
             country: formData.country?.trim() || undefined,
             city: formData.city?.trim() || undefined,
@@ -352,7 +382,7 @@ export default function AccommodationEditModal({
         savedAccommodation = await accommodationsApi.createAccommodation({
           planId,
           name: formData.name.trim(),
-          locationId: formData.locationId,
+          locationId: finalLocationId,
           description: formData.description?.trim() || undefined,
           country: formData.country?.trim() || undefined,
           city: formData.city?.trim() || undefined,
@@ -528,7 +558,8 @@ export default function AccommodationEditModal({
             <PlacesSearchInput
               value={formData.place}
               onSelect={handlePlaceSelect}
-              onClear={() => setFormData(prev => ({ ...prev, place: "", locationId: undefined }))}
+              onClear={() => { locationDraftRef.current = null; rawLocationTextRef.current = ""; setFormData(prev => ({ ...prev, place: "", locationId: undefined })); }}
+              onRawInputChange={(t) => { locationDraftRef.current = null; rawLocationTextRef.current = t; }}
               bordered={!!accommodation}
               placeholder="장소를 검색하세요."
               cityContext={formData.city || formData.country || undefined}
