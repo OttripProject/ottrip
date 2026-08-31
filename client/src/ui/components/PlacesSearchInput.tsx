@@ -22,6 +22,7 @@ interface PlacesSearchInputProps {
   onSelect: (place: PlaceResult) => void;
   onClear?: () => void;
   onFocus?: () => void;
+  onRawInputChange?: (text: string) => void;
   placeholder?: string;
   disabled?: boolean;
   readOnly?: boolean;
@@ -41,6 +42,7 @@ export default function PlacesSearchInput({
   onSelect,
   onClear,
   onFocus,
+  onRawInputChange,
   placeholder = "장소를 검색하세요.",
   disabled,
   readOnly,
@@ -201,6 +203,7 @@ export default function PlacesSearchInput({
     setSearchError(false);
     measureContainer();
     setOpen(true);
+    onRawInputChange?.(val);
     if (val === "") {
       setSuggestions([]);
       onClear?.();
@@ -344,7 +347,16 @@ export default function PlacesSearchInput({
               setOpen(true);
             }
           }}
-          onBlur={() => setTimeout(() => { setOpen(false); setSelectedIndex(-1); }, 150)}
+          onBlur={() => setTimeout(() => {
+            setOpen(false);
+            setSelectedIndex(-1);
+            const current = (inputRef.current as HTMLInputElement | null)?.value.trim() ?? inputValue.trim();
+            if (current && current !== (value ?? "")) {
+              setSuggestions([]);
+              setMapCoords(null);
+              onSelectRef.current({ name: current, placeId: manualPlaceId(current), latitude: 0, longitude: 0, fromGoogle: false });
+            }
+          }, 150)}
           editable={!disabled}
           autoComplete="off"
         />

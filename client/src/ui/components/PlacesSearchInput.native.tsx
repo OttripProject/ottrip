@@ -21,6 +21,7 @@ interface PlacesSearchInputProps {
   onSelect: (place: PlaceResult) => void;
   onClear?: () => void;
   onFocus?: () => void;
+  onRawInputChange?: (text: string) => void;
   placeholder?: string;
   disabled?: boolean;
   readOnly?: boolean;
@@ -82,6 +83,7 @@ export default function PlacesSearchInput({
   onSelect,
   onClear,
   onFocus,
+  onRawInputChange,
   placeholder = "장소를 검색하세요.",
   disabled,
   readOnly,
@@ -118,6 +120,7 @@ export default function PlacesSearchInput({
 
   const handleChangeText = useCallback((t: string) => {
     setText(t);
+    onRawInputChange?.(t);
     setSearchError(false);
     if (debounceRef.current) clearTimeout(debounceRef.current);
     if (t.trim().length === 0) {
@@ -202,7 +205,7 @@ export default function PlacesSearchInput({
         <TextInput
           value={text}
           onChangeText={handleChangeText}
-          onSubmitEditing={Keyboard.dismiss}
+          onSubmitEditing={handleManualSelect}
           onFocus={onFocus}
           placeholder={placeholder}
           placeholderTextColor={colors.gray600}

@@ -109,6 +109,7 @@ export default function ItineraryEditModal({
   onRouteMismatchResult,
 }: ItineraryEditModalProps) {
   const scrollRef = useRef<KeyboardAwareScrollViewRef>(null);
+  const pendingRawLocationRef = useRef<string | null>(null);
 
   const [formData, setFormData] = useState({
     title: "",
@@ -116,7 +117,7 @@ export default function ItineraryEditModal({
     country: "",
     city: "",
     location: "",
-    locationId: undefined as number | undefined,
+    locationId: undefined as number | null | undefined,
     itineraryDate: dayjs().format("YYYY-MM-DD"),
     startTime: "09:00",
     endTime: "10:00",
@@ -382,6 +383,7 @@ export default function ItineraryEditModal({
   }, [visible, pendingAiResult]);
 
   const handlePlaceSelect = async (place: PlaceResult) => {
+    pendingRawLocationRef.current = null;
     try {
       const loc = await locationsApi.createLocation({
         name: place.name,
@@ -410,15 +412,36 @@ export default function ItineraryEditModal({
 
     setIsSubmitting(true);
     try {
+      // 미확정 입력값 처리 (직접 타이핑 후 저장 버튼 바로 클릭한 경우)
+      let finalLocationId = formData.locationId;
+      const rawText = pendingRawLocationRef.current?.trim();
+      if (rawText && rawText !== formData.location) {
+        try {
+          const loc = await locationsApi.createLocation({
+            name: rawText,
+            placeId: `manual:${rawText}`,
+            latitude: 0,
+            longitude: 0,
+            fromGoogle: false,
+          });
+          finalLocationId = loc.id;
+        } catch {
+          finalLocationId = undefined;
+        }
+        pendingRawLocationRef.current = null;
+      }
+
       let savedItinerary: Itinerary;
       if (itinerary) {
         savedItinerary = await itinerariesApi.updateItinerary(itinerary.id, {
           ...formData,
+          locationId: finalLocationId,
           category: selectedCategory,
         });
       } else {
         savedItinerary = await itinerariesApi.createItinerary({
           ...formData,
+          locationId: finalLocationId ?? undefined,
           planId,
           category: selectedCategory !== null ? selectedCategory : undefined,
         });
@@ -677,7 +700,8 @@ export default function ItineraryEditModal({
             <PlacesSearchInput
               value={formData.location}
               onSelect={handlePlaceSelect}
-              onClear={() => setFormData(prev => ({ ...prev, location: "", locationId: undefined }))}
+              onClear={() => { pendingRawLocationRef.current = null; setFormData(prev => ({ ...prev, location: "", locationId: null })); }}
+              onRawInputChange={(t) => { pendingRawLocationRef.current = t; }}
               bordered={!!itinerary}
               placeholder="장소를 검색하세요."
               cityContext={formData.city || formData.country || undefined}

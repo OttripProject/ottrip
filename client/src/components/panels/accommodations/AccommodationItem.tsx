@@ -165,6 +165,7 @@ export default function AccommodationItem({
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isSubmittingRef = useRef(false);
+  const pendingRawLocationRef = useRef<string | null>(null);
 
   const [showCheckinDatePicker, setShowCheckinDatePicker] = useState(false);
   const [showCheckoutDatePicker, setShowCheckoutDatePicker] = useState(false);
@@ -481,13 +482,32 @@ export default function AccommodationItem({
     isSubmittingRef.current = true;
     setIsSubmitting(true);
     try {
+      // 미확정 입력값 처리
+      let finalLocationId = formData.locationId;
+      const rawText = pendingRawLocationRef.current?.trim();
+      if (rawText && rawText !== formData.place) {
+        try {
+          const loc = await locationsApi.createLocation({
+            name: rawText,
+            placeId: `manual:${rawText}`,
+            latitude: 0,
+            longitude: 0,
+            fromGoogle: false,
+          });
+          finalLocationId = loc.id;
+        } catch {
+          finalLocationId = undefined;
+        }
+        pendingRawLocationRef.current = null;
+      }
+
       let savedAccommodation;
       if (accommodation && accommodation.id) {
         savedAccommodation = await accommodationsApi.updateAccommodation(
           accommodation.id,
           {
             name: formData.name,
-            locationId: formData.locationId,
+            locationId: finalLocationId,
             country: formData.country?.trim() || undefined,
             city: formData.city?.trim() || undefined,
             checkinDate: formData.checkin_date,
@@ -509,7 +529,7 @@ export default function AccommodationItem({
         savedAccommodation = await accommodationsApi.createAccommodation({
           planId: planId,
           name: formData.name,
-          locationId: formData.locationId,
+          locationId: finalLocationId,
           country: formData.country?.trim() || undefined,
           city: formData.city?.trim() || undefined,
           checkinDate: formData.checkin_date,
@@ -686,6 +706,7 @@ export default function AccommodationItem({
   }, [accommodation?.location?.id]);
 
   const handlePlaceSelect = useCallback(async (place: PlaceResult) => {
+    pendingRawLocationRef.current = null;
     try {
       const location = await locationsApi.createLocation({
         name: place.name,
@@ -811,7 +832,8 @@ export default function AccommodationItem({
                 <PlacesSearchInput
                   value={formData.place}
                   onSelect={handlePlaceSelect}
-                  onClear={() => setFormData(prev => ({ ...prev, place: "", locationId: undefined }))}
+                  onClear={() => { pendingRawLocationRef.current = null; setFormData(prev => ({ ...prev, place: "", locationId: undefined })); }}
+                  onRawInputChange={(t) => { pendingRawLocationRef.current = t; }}
                   placeholder={PLACEHOLDERS.accommodation.place}
                   disabled={readOnly}
                   readOnly={readOnly}

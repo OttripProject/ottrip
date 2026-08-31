@@ -122,7 +122,7 @@ export interface UpdateItineraryRequest {
   description?: string;
   country?: string;
   city?: string;
-  locationId?: number;
+  locationId?: number | null;
   itineraryDate?: string;
   startTime?: string;
   endTime?: string;

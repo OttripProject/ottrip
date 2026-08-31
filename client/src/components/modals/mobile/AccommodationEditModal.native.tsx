@@ -100,6 +100,7 @@ export default function AccommodationEditModal({
   onRouteMismatchResult,
 }: AccommodationEditModalProps) {
   const scrollRef = useRef<KeyboardAwareScrollViewRef>(null);
+  const pendingRawLocationRef = useRef<string | null>(null);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -301,6 +302,7 @@ export default function AccommodationEditModal({
   }, [visible, pendingAiResult]);
 
   const handlePlaceSelect = async (place: PlaceResult) => {
+    pendingRawLocationRef.current = null;
     try {
       const loc = await locationsApi.createLocation({
         name: place.name,
@@ -324,6 +326,25 @@ export default function AccommodationEditModal({
 
     setIsSubmitting(true);
     try {
+      // 미확정 입력값 처리
+      let finalLocationId = formData.locationId;
+      const rawText = pendingRawLocationRef.current?.trim();
+      if (rawText && rawText !== formData.place) {
+        try {
+          const loc = await locationsApi.createLocation({
+            name: rawText,
+            placeId: `manual:${rawText}`,
+            latitude: 0,
+            longitude: 0,
+            fromGoogle: false,
+          });
+          finalLocationId = loc.id;
+        } catch {
+          finalLocationId = undefined;
+        }
+        pendingRawLocationRef.current = null;
+      }
+
       const amount = Number.parseInt(normalizeAmount(expenseAmount), 10) || 0;
       let savedAccommodation: Accommodation;
       if (accommodation) {
@@ -331,7 +352,7 @@ export default function AccommodationEditModal({
           accommodation.id,
           {
             name: formData.name.trim(),
-            locationId: formData.locationId,
+            locationId: finalLocationId,
             description: formData.description?.trim() || undefined,
             country: formData.country?.trim() || undefined,
             city: formData.city?.trim() || undefined,
@@ -352,7 +373,7 @@ export default function AccommodationEditModal({
         savedAccommodation = await accommodationsApi.createAccommodation({
           planId,
           name: formData.name.trim(),
-          locationId: formData.locationId,
+          locationId: finalLocationId,
           description: formData.description?.trim() || undefined,
           country: formData.country?.trim() || undefined,
           city: formData.city?.trim() || undefined,
@@ -528,7 +549,8 @@ export default function AccommodationEditModal({
             <PlacesSearchInput
               value={formData.place}
               onSelect={handlePlaceSelect}
-              onClear={() => setFormData(prev => ({ ...prev, place: "", locationId: undefined }))}
+              onClear={() => { pendingRawLocationRef.current = null; setFormData(prev => ({ ...prev, place: "", locationId: undefined })); }}
+              onRawInputChange={(t) => { pendingRawLocationRef.current = t; }}
               bordered={!!accommodation}
               placeholder="장소를 검색하세요."
               cityContext={formData.city || formData.country || undefined}

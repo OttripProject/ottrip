@@ -163,13 +163,14 @@ export default function ItineraryItem({
 }: ItineraryItemProps) {
   const [showWarning, setShowWarning] = useState(false);
   const [warningMessage, setWarningMessage] = useState("");
+  const pendingRawLocationRef = useRef<string | null>(null);
   const [formData, setFormData] = useState({
     title: itinerary?.title || "",
     description: itinerary?.description || "",
     country: itinerary?.country || "",
     city: itinerary?.city || "",
     location: itinerary?.location?.name || "",
-    locationId: itinerary?.location?.id as number | undefined,
+    locationId: itinerary?.location?.id as number | null | undefined,
     itineraryDate:
       itinerary?.itinerary_date ||
       (selectedDate
@@ -602,6 +603,25 @@ export default function ItineraryItem({
       const finalEndTime =
         formData.endTime === "24:00" ? "23:59:59" : formData.endTime;
 
+      // 미확정 입력값 처리 (직접 타이핑 후 저장 버튼 바로 클릭한 경우)
+      let finalLocationId = formData.locationId;
+      const rawText = pendingRawLocationRef.current?.trim();
+      if (rawText && rawText !== formData.location) {
+        try {
+          const loc = await locationsApi.createLocation({
+            name: rawText,
+            placeId: `manual:${rawText}`,
+            latitude: 0,
+            longitude: 0,
+            fromGoogle: false,
+          });
+          finalLocationId = loc.id;
+        } catch {
+          finalLocationId = undefined;
+        }
+        pendingRawLocationRef.current = null;
+      }
+
       let savedItinerary;
       if (itinerary?.id) {
         savedItinerary = await itinerariesApi.updateItinerary(itinerary.id, {
@@ -609,7 +629,7 @@ export default function ItineraryItem({
           description: formData.description,
           country: formData.country?.trim() || undefined,
           city: formData.city?.trim() || undefined,
-          locationId: formData.locationId,
+          locationId: finalLocationId,
           itineraryDate: formData.itineraryDate,
           startTime: formData.startTime,
           endTime: finalEndTime,
@@ -683,7 +703,7 @@ export default function ItineraryItem({
           description: formData.description,
           country: formData.country?.trim() || undefined,
           city: formData.city?.trim() || undefined,
-          locationId: formData.locationId,
+          locationId: finalLocationId ?? undefined,
           itineraryDate: formData.itineraryDate,
           startTime: formData.startTime,
           endTime: finalEndTime,
@@ -1045,6 +1065,7 @@ export default function ItineraryItem({
   };
 
   const handlePlaceSelect = useCallback(async (place: PlaceResult) => {
+    pendingRawLocationRef.current = null;
     try {
       const location = await locationsApi.createLocation({
         name: place.name,
@@ -1211,7 +1232,8 @@ export default function ItineraryItem({
                 <PlacesSearchInput
                   value={formData.location}
                   onSelect={handlePlaceSelect}
-                  onClear={() => setFormData(prev => ({ ...prev, location: "", locationId: undefined }))}
+                  onClear={() => { pendingRawLocationRef.current = null; setFormData(prev => ({ ...prev, location: "", locationId: null })); }}
+                  onRawInputChange={(t) => { pendingRawLocationRef.current = t; }}
                   placeholder="장소를 검색하세요."
                   disabled={readOnly}
                   readOnly={readOnly}

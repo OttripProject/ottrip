@@ -127,7 +127,7 @@ class ItineraryService:
             itinerary.country = update_data.country
         if update_data.city is not None:
             itinerary.city = update_data.city
-        if update_data.location_id is not None:
+        if "location_id" in update_data.model_fields_set:
             itinerary.location_id = update_data.location_id
         if "category" in update_data.model_fields_set:
             itinerary.category = (
