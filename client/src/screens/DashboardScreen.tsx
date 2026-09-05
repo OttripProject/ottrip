@@ -31,6 +31,7 @@ import {
 
 import DetailsPanel from "@/components/panels/DetailsPanel";
 import EmptyPlanPanel from "@/components/panels/EmptyPlanPanel";
+import FestivalsPanel from "@/components/panels/FestivalsPanel";
 import HeaderPanel from "@/components/panels/HeaderPanel";
 import WeeklySchedulePanel from "@/components/panels/WeeklySchedulePanel";
 import AIAssistantPanel from "@/components/panels/aiassistant/AIAssistantPanel";
@@ -60,6 +61,8 @@ export default function DashboardScreen() {
   >(null);
   const [previewAccommodation, setPreviewAccommodation] = useState<any>(null);
   const [festivals, setFestivals] = useState<FestivalItem[]>([]);
+  const [suggestFestivals, setSuggestFestivals] = useState<FestivalItem[]>([]);
+  const [suggestFestivalsLoading, setSuggestFestivalsLoading] = useState(false);
   const [congestedItems, setCongestedItems] = useState<CongestedItem[]>([]);
   const [bannerDismissed, setBannerDismissed] = useState(false);
   const documentAnalyzeSeqRef = useRef(0);
@@ -265,6 +268,7 @@ export default function DashboardScreen() {
 
   useEffect(() => {
     setFestivals([]);
+    setSuggestFestivals([]);
     setCongestedItems([]);
     setBannerDismissed(false);
   }, [selectedPlanId]);
@@ -272,6 +276,12 @@ export default function DashboardScreen() {
   useEffect(() => {
     if (!selectedPlanId) return;
     tourismApi.getFestivalsForPlan(selectedPlanId).then(setFestivals).catch(() => {});
+    setSuggestFestivalsLoading(true);
+    tourismApi
+      .getSuggestFestivals(selectedPlanId)
+      .then(setSuggestFestivals)
+      .catch(() => {})
+      .finally(() => setSuggestFestivalsLoading(false));
   }, [selectedPlanId, itineraryKey]);
 
   useEffect(() => {
@@ -712,6 +722,14 @@ export default function DashboardScreen() {
                       compact={leftBottomHeight < 300}
                     />
                   </View>
+
+                  {/* 6. 축제·공연 패널 */}
+                  <View style={styles.festivalsModal}>
+                    <FestivalsPanel
+                      festivals={suggestFestivals}
+                      isLoading={suggestFestivalsLoading}
+                    />
+                  </View>
                 </View>
               </>
             )}
@@ -845,6 +863,9 @@ const styles = StyleSheet.create({
   },
   aiModal: {
     flex: 1,
+  },
+  festivalsModal: {
+    flex: 0.5,
   },
   loadingContainer: {
     flex: 1,

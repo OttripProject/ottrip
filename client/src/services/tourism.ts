@@ -114,6 +114,13 @@ export const tourismApi = {
     return response.data;
   },
 
+  getSuggestFestivals: async (planId: number): Promise<FestivalItem[]> => {
+    const response = await api.get(`/private/tourism/festivals/${planId}`, {
+      params: { suggest: true },
+    });
+    return response.data;
+  },
+
   getCongestion: async (itineraryId: number): Promise<CongestionItem[]> => {
     const response = await api.get(`/private/tourism/congestion/${itineraryId}`);
     return response.data;
