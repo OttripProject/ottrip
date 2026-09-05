@@ -109,12 +109,26 @@ async def get_festivals_for_plan(
     plan_id: int,
     plan_repository: PlanRepository,
     itinerary_repository: ItineraryRepository,
+    suggest: bool = Query(False),
 ) -> list[FestivalItem]:
     plan = await plan_repository.find_by_id_only_plan(plan_id=plan_id)
     if not plan:
         raise HTTPException(status_code=404, detail="플랜을 찾을 수 없습니다.")
 
     itineraries = await itinerary_repository.find_all_by_plan(plan_id=plan_id)
+
+    area_dates: dict[str, tuple[str, str]] = {}
+    for it in itineraries:
+        if not it.location or not it.location.area_cd:
+            continue
+        area_cd = it.location.area_cd
+        date_str = it.itinerary_date.strftime("%Y-%m-%d")
+        if area_cd not in area_dates:
+            area_dates[area_cd] = (date_str, date_str)
+        else:
+            s, e = area_dates[area_cd]
+            area_dates[area_cd] = (min(s, date_str), max(e, date_str))
+
     locations = [
         (
             it.location.latitude,
@@ -127,9 +141,9 @@ async def get_festivals_for_plan(
     ]
 
     return await service.get_festivals_near_itineraries(
-        plan_start=str(plan.start_date),
-        plan_end=str(plan.end_date),
+        area_dates=area_dates,
         locations=locations,
+        radius_m=None if suggest else 1000.0,
     )
 
 

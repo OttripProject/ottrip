@@ -334,6 +334,7 @@ async def get_tourism_detail(
         address=_s(c.get("addr1")),
         homepage=_url(c.get("homepage")),
         tel=_s(c.get("tel")),
+        telname=_s(c.get("telname")),
         overview=_s(c.get("overview")),
         image_url=_s(c.get("firstimage")),
         mapx=_f(c.get("mapx")),
@@ -356,6 +357,10 @@ async def get_tourism_detail(
         usetimefestival=_s(i.get("usetimefestival")),
         bookingplace=_s(i.get("bookingplace")),
         agelimit=_s(i.get("agelimit")),
+        program=_s(i.get("program")),
+        sponsor1=_s(i.get("sponsor1")),
+        sponsor1tel=_s(i.get("sponsor1tel")),
+        sponsor2=_s(i.get("sponsor2")),
         # 여행코스
         distance=_s(i.get("distance")),
         taketime=_s(i.get("taketime")),
@@ -405,50 +410,71 @@ def _haversine_m(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
 
 
 async def get_festivals_near_itineraries(
-    plan_start: str,
-    plan_end: str,
+    area_dates: dict[str, tuple[str, str]],  # {area_cd: (start, end)}
     locations: list[tuple[float, float, str, str]],  # (lat, lng, date, location_name)
-    radius_m: float = 1000.0,
+    radius_m: float | None = 1000.0,
 ) -> list[FestivalItem]:
-    """플랜 기간 축제 조회 후 일정 좌표와 1km 이내 + 날짜 겹침 필터링"""
-    params = {
-        "MobileOS": _MOBILE_OS,
-        "MobileApp": _MOBILE_APP,
-        "serviceKey": tourism_settings.TOUR_SERVICE_KEY,
-        "eventStartDate": plan_start.replace("-", ""),
-        "eventEndDate": plan_end.replace("-", ""),
-        "_type": "json",
-        "numOfRows": "100",
-        "arrange": "A",
-    }
-    async with httpx.AsyncClient(timeout=10.0) as client:
-        resp = await client.get(f"{_KOR_SERVICE_URL}/searchFestival2", params=params)
-        items = _extract_items(resp.json())
+    """지역코드별 축제 병렬 조회 후 날짜 겹침 필터링. radius_m 지정 시 좌표 거리 필터 추가 적용."""
+    if not area_dates:
+        return []
+
+    async def _fetch(area_cd: str, start: str, end: str) -> list[dict[str, Any]]:
+        params = {
+            "MobileOS": _MOBILE_OS,
+            "MobileApp": _MOBILE_APP,
+            "serviceKey": tourism_settings.TOUR_SERVICE_KEY,
+            "lDongRegnCd": area_cd,
+            "eventStartDate": start.replace("-", ""),
+            "eventEndDate": end.replace("-", ""),
+            "_type": "json",
+            "numOfRows": "100",
+            "arrange": "A",
+        }
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            resp = await client.get(
+                f"{_KOR_SERVICE_URL}/searchFestival2", params=params
+            )
+            return _extract_items(resp.json())
+
+    fetched = await asyncio.gather(
+        *[_fetch(area_cd, start, end) for area_cd, (start, end) in area_dates.items()],
+        return_exceptions=True,
+    )
+
+    seen_raw: set[str] = set()
+    all_items: list[dict[str, Any]] = []
+    for r in fetched:
+        if not isinstance(r, list):
+            continue
+        for item in r:
+            cid = str(item.get("contentid") or "")
+            if cid and cid not in seen_raw:
+                seen_raw.add(cid)
+                all_items.append(item)
 
     result: list[FestivalItem] = []
-    seen: set[str] = set()
-    for item in items:
+    for item in all_items:
         cid = str(item.get("contentid") or "")
-        if cid in seen:
-            continue
         ctid = str(item.get("contenttypeid") or "")
         if ctid and ctid != "15":
             continue
         fx = _f(item.get("mapx"))
         fy = _f(item.get("mapy"))
-        start = str(item.get("eventstartdate") or "")
-        end = str(item.get("eventenddate") or start)
+        start_dt = str(item.get("eventstartdate") or "")
+        end_dt = str(item.get("eventenddate") or start_dt)
         matched_dist: float | None = None
         matched_location_name: str | None = None
         matched_date: str | None = None
         for lat, lng, idate, loc_name in locations:
-            # 날짜 겹침 확인 (YYYYMMDD 형식)
             idate_fmt = idate.replace("-", "")
-            if not (start <= idate_fmt <= end):
+            if not (start_dt <= idate_fmt <= end_dt):
                 continue
-            # 거리 확인
             if not (fx and fy):
                 continue
+            if radius_m is None:
+                matched_location_name = loc_name
+                matched_date = idate
+                break
             dist = _haversine_m(lat, lng, fy, fx)
             if dist <= radius_m:
                 matched_dist = dist
@@ -457,16 +483,18 @@ async def get_festivals_near_itineraries(
                 break
         else:
             continue
-        seen.add(cid)
         result.append(
             FestivalItem(
                 content_id=cid,
                 content_type_id=ctid or None,
                 title=" ".join(str(item.get("title") or "").split()),
                 address=_s(item.get("addr1")),
-                event_start_date=start,
-                event_end_date=end,
+                event_start_date=start_dt,
+                event_end_date=end_dt,
                 image_url=_s(item.get("firstimage")),
+                image_url2=_s(item.get("firstimage2")),
+                lclsSystm2=_s(item.get("lclsSystm2")),
+                tel=_s(item.get("tel")),
                 mapx=fx,
                 mapy=fy,
                 dist=matched_dist,

@@ -15,6 +15,9 @@ class FestivalItem(APISchema):
     event_start_date: str | None = None
     event_end_date: str | None = None
     image_url: str | None = None
+    image_url2: str | None = None
+    lclsSystm2: str | None = None
+    tel: str | None = None
     mapx: float | None = None
     mapy: float | None = None
     dist: float | None = None
@@ -40,6 +43,7 @@ class TourismDetail(APISchema):
     address: str | None = None
     homepage: str | None = None
     tel: str | None = None
+    telname: str | None = None
     overview: str | None = None
     image_url: str | None = None
     mapx: float | None = None
@@ -62,6 +66,10 @@ class TourismDetail(APISchema):
     usetimefestival: str | None = None
     bookingplace: str | None = None
     agelimit: str | None = None
+    program: str | None = None
+    sponsor1: str | None = None
+    sponsor1tel: str | None = None
+    sponsor2: str | None = None
     # 여행코스
     distance: str | None = None
     taketime: str | None = None
