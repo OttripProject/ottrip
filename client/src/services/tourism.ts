@@ -18,8 +18,10 @@ export interface TourismDetail {
   address: string | null;
   homepage: string | null;
   tel: string | null;
+  telname: string | null;
   overview: string | null;
   imageUrl: string | null;
+  images: string[];
   mapx: number | null;
   mapy: number | null;
   // 관광지
@@ -40,6 +42,10 @@ export interface TourismDetail {
   usetimefestival: string | null;
   bookingplace: string | null;
   agelimit: string | null;
+  program: string | null;
+  sponsor1: string | null;
+  sponsor1tel: string | null;
+  sponsor2: string | null;
   // 여행코스
   distance: string | null;
   taketime: string | null;
@@ -88,6 +94,9 @@ export interface FestivalItem {
   eventStartDate: string | null;
   eventEndDate: string | null;
   imageUrl: string | null;
+  imageUrl2: string | null;
+  lclsSystm2: string | null;
+  tel: string | null;
   mapx: number | null;
   mapy: number | null;
   dist: number | null;
@@ -103,6 +112,13 @@ export const tourismApi = {
 
   getFestivalsForPlan: async (planId: number): Promise<FestivalItem[]> => {
     const response = await api.get(`/private/tourism/festivals/${planId}`);
+    return response.data;
+  },
+
+  getSuggestFestivals: async (planId: number): Promise<FestivalItem[]> => {
+    const response = await api.get(`/private/tourism/festivals/${planId}`, {
+      params: { suggest: true },
+    });
     return response.data;
   },
 

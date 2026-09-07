@@ -40,14 +40,12 @@ interface AIAssistantPanelProps {
   publicId: string | null;
   readOnly?: boolean;
   initialChecklist?: ChecklistData;
-  compact?: boolean;
 }
 
 export default function AIAssistantPanel({
   publicId,
   readOnly = false,
   initialChecklist,
-  compact = false,
 }: AIAssistantPanelProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [checklist, setChecklist] = useState<ChecklistData | null>(null);
@@ -366,7 +364,7 @@ export default function AIAssistantPanel({
           </View>
         ) : (
           <View style={styles.previewContainer}>
-            <View style={[styles.headerSection, compact && styles.headerSectionCompact]}>
+            <View style={styles.headerSection}>
               <Text style={styles.headerTitle}>체크리스트</Text>
               <TouchableOpacity
                 onPress={handleViewAll}
@@ -377,30 +375,30 @@ export default function AIAssistantPanel({
             </View>
 
             {readOnly ? (
-              <View style={[styles.readOnlyStatWrapper, compact && styles.simpleStatsContainerCompact]}>
-                <View style={[styles.simpleStatButton, compact && styles.simpleStatButtonCompact]}>
+              <View style={styles.readOnlyStatWrapper}>
+                <View style={styles.simpleStatButton}>
                   <Text style={styles.simpleStatLabel}>준비물</Text>
                   <View style={styles.statNumberRow}>
-                    <Text style={[styles.simpleStatNumber, compact && styles.simpleStatNumberCompact]}>{stats.total}</Text>
+                    <Text style={styles.simpleStatNumber}>{stats.total}</Text>
                     <Text style={styles.statUnit}>개</Text>
                   </View>
                 </View>
               </View>
             ) : (
-              <View style={[styles.simpleStatsContainer, compact && styles.simpleStatsContainerCompact]}>
-                <View style={[styles.simpleStatButton, compact && styles.simpleStatButtonCompact]}>
+              <View style={styles.simpleStatsContainer}>
+                <View style={styles.simpleStatButton}>
                   <Text style={styles.simpleStatLabel}>준비 필요</Text>
                   <View style={styles.statNumberRow}>
-                    <Text style={[styles.simpleStatNumber, compact && styles.simpleStatNumberCompact]}>
+                    <Text style={styles.simpleStatNumber}>
                       {stats.total - stats.checked}
                     </Text>
                     <Text style={styles.statUnit}>개</Text>
                   </View>
                 </View>
-                <View style={[styles.simpleStatButton, compact && styles.simpleStatButtonCompact]}>
+                <View style={styles.simpleStatButton}>
                   <Text style={styles.simpleStatLabel}>준비 됨</Text>
                   <View style={styles.statNumberRow}>
-                    <Text style={[styles.simpleStatNumber, compact && styles.simpleStatNumberCompact]}>{stats.checked}</Text>
+                    <Text style={styles.simpleStatNumber}>{stats.checked}</Text>
                     <Text style={styles.statUnit}>개</Text>
                   </View>
                 </View>
@@ -488,10 +486,7 @@ const styles = StyleSheet.create({
     paddingTop: spacing.lg,
     paddingBottom: spacing.sm,
   },
-  headerSectionCompact: {
-    paddingTop: spacing.sm,
-    paddingBottom: spacing.xs,
-  },
+
   headerTitle: {
     ...textStyles.h5,
   },
@@ -528,9 +523,7 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "stretch",
   },
-  simpleStatsContainerCompact: {
-    marginBottom: spacing.sm,
-  },
+
   readOnlyStatWrapper: {
     marginTop: 2,
     marginHorizontal: spacing.lg,
@@ -547,9 +540,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 18,
     paddingVertical: 16,
   },
-  simpleStatButtonCompact: {
-    paddingVertical: 8,
-  },
+
   simpleStatLabel: {
     fontFamily: typography.fontFamily.pretendardRegular,
     fontSize: 13,
@@ -567,10 +558,7 @@ const styles = StyleSheet.create({
     lineHeight: 24,
     color: colors.gray900,
   },
-  simpleStatNumberCompact: {
-    fontSize: 15,
-    lineHeight: 18,
-  },
+
   statUnit: {
     fontFamily: typography.fontFamily.pretendardSemiBold,
     fontSize: 13,

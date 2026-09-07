@@ -1250,7 +1250,9 @@ export default function ItineraryItem({
                   initialCoords={
                     itinerary?.location?.fromGoogle
                       ? { lat: itinerary.location.latitude, lng: itinerary.location.longitude }
-                      : undefined
+                      : itinerary?.locationLat && itinerary?.locationLng
+                        ? { lat: itinerary.locationLat, lng: itinerary.locationLng }
+                        : undefined
                   }
                 />
               </>
