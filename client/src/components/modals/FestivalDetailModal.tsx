@@ -135,6 +135,7 @@ export default function FestivalDetailModal({ visible, onClose, item, onAddToIti
   const handleAddToItinerary = async () => {
     if (!onAddToItinerary || !item) return;
     const title = detail?.title ?? item.title;
+    const address = detail?.address ?? item.address;
     const coords =
       detail?.mapy && detail?.mapx
         ? { lat: detail.mapy, lng: detail.mapx }
@@ -148,7 +149,7 @@ export default function FestivalDetailModal({ visible, onClose, item, onAddToIti
         placeId: manualPlaceId(title),
         latitude: coords?.lat ?? 0,
         longitude: coords?.lng ?? 0,
-        address: detail?.address ?? undefined,
+        address: address ?? undefined,
         fromGoogle: false,
       });
       locationId = loc.id;
@@ -156,9 +157,10 @@ export default function FestivalDetailModal({ visible, onClose, item, onAddToIti
     onAddToItinerary({
       title,
       description: detail?.overview ?? undefined,
-      location: title,
+      location: address ?? title,
       locationId,
-      category: ItineraryCategory.ACTIVITY,
+      category: ItineraryCategory.SIGHTSEEING,
+      matchedDate: item.matchedDate ?? undefined,
     });
     onClose();
   };

@@ -522,13 +522,25 @@ export default function DashboardScreen() {
   }, []);
 
   const handleFestivalAddToItinerary = useCallback((draft: any) => {
-    setNewItineraryDraft(draft);
+    const { matchedDate, ...restDraft } = draft;
+    let country: string | undefined;
+    let city: string | undefined;
+    const segments = planData?.plan?.segments;
+    if (segments?.length) {
+      const seg = matchedDate
+        ? segments.find((s: any) => s.startDate <= matchedDate && matchedDate <= s.endDate)
+        : null;
+      const target = seg ?? segments[0];
+      country = target?.country;
+      city = target?.city;
+    }
+    setNewItineraryDraft({ ...restDraft, country, city });
     setActiveTab("itinerary");
     setSelectedFlight(null);
     setSelectedAccommodation(null);
     setSelectedItinerary(null);
     setOpenNewItineraryForm(true);
-  }, []);
+  }, [planData?.plan?.segments]);
 
   const handleShowAccommodationModal = useCallback(
     (accommodation: any, date?: string, checkoutDate?: string) => {
