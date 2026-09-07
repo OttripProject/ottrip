@@ -919,15 +919,17 @@ export default function DashboardScreen() {
                   </View>
 
                   {/* 6. 축제·공연 패널 */}
-                  <Animated.View style={[styles.festivalsModal, { flex: animFestivalsFlex }]}>
-                    <FestivalsPanel
-                      festivals={suggestFestivals}
-                      isLoading={suggestFestivalsLoading}
-                      expanded={festivalsExpanded}
-                      onToggle={() => setFestivalsExpanded(v => !v)}
-                      onAddToItinerary={handleFestivalAddToItinerary}
-                    />
-                  </Animated.View>
+                  {suggestFestivals.length > 0 && (
+                    <Animated.View style={[styles.festivalsModal, { flex: animFestivalsFlex }]}>
+                      <FestivalsPanel
+                        festivals={suggestFestivals}
+                        isLoading={suggestFestivalsLoading}
+                        expanded={festivalsExpanded}
+                        onToggle={() => setFestivalsExpanded(v => !v)}
+                        onAddToItinerary={handleFestivalAddToItinerary}
+                      />
+                    </Animated.View>
+                  )}
                 </Animated.View>
               </>
             )}
