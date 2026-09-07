@@ -163,6 +163,9 @@ export default function FestivalDetailModal({ visible, onClose, item, onAddToIti
       matchedDate: item.matchedDate ?? undefined,
       locationLat: coords?.lat,
       locationLng: coords?.lng,
+      eventStartDate: item.eventStartDate ?? undefined,
+      eventEndDate: item.eventEndDate ?? undefined,
+      playtime: detail?.playtime ?? undefined,
     });
     onClose();
   };
@@ -195,7 +198,7 @@ export default function FestivalDetailModal({ visible, onClose, item, onAddToIti
 
   const iconRows: { label: string; value: string; icon: "calendar" | "clock" | "won" }[] = [];
   if (period) iconRows.push({ label: "행사기간", value: period, icon: "calendar" });
-  if (detail?.playtime) iconRows.push({ label: "공연시간", value: detail.playtime, icon: "clock" });
+  if (detail?.playtime) iconRows.push({ label: "행사시간", value: detail.playtime, icon: "clock" });
   if (detail?.usetimefestival) iconRows.push({ label: "이용요금", value: detail.usetimefestival, icon: "won" });
 
   return (
