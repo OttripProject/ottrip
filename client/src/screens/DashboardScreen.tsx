@@ -275,6 +275,9 @@ export default function DashboardScreen() {
     setOpenNewFlightForm(false);
     setStagedDocumentAnalyze(null);
     setCarryoverPendingFiles(null);
+    setFestivalsExpanded(false);
+    animBottomFlex.setValue(0.2);
+    animFestivalsFlex.setValue(0.5);
   }, [selectedPlanId]);
 
   const itineraryKey = planData.itineraries
