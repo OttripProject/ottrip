@@ -3,8 +3,8 @@ import type { FestivalItem } from "@/services/tourism";
 import { colors } from "@/ui/tokens/colors";
 import { spacing } from "@/ui/tokens/spacing";
 import { textStyles } from "@/ui/tokens/typography";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
-import { useState } from "react";
+import { Animated, Easing, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useEffect, useRef, useState } from "react";
 import PanelLayout from "./PanelLayout";
 
 interface FestivalsPanelProps {
@@ -32,6 +32,19 @@ export default function FestivalsPanel({
   onToggle,
 }: FestivalsPanelProps) {
   const [hovered, setHovered] = useState(false);
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    if (!isLoading) return;
+    const anim = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, { toValue: 0.3, duration: 600, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+        Animated.timing(pulseAnim, { toValue: 1, duration: 600, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+      ])
+    );
+    anim.start();
+    return () => anim.stop();
+  }, [isLoading]);
 
   return (
     <PanelLayout style={!expanded && hovered ? styles.panelHover : undefined}>
@@ -107,7 +120,9 @@ export default function FestivalsPanel({
           onHoverOut={() => setHovered(false)}
         >
           <Text style={styles.collapsedTitle}>축제·공연</Text>
-          {!isLoading && (
+          {isLoading ? (
+            <Animated.View style={[styles.skeletonBadge, { opacity: pulseAnim }]} />
+          ) : (
             <View style={styles.badge}>
               <Text style={styles.badgeText}>{festivals.length}건</Text>
             </View>
@@ -219,6 +234,12 @@ const styles = StyleSheet.create({
   collapsedTitle: {
     ...textStyles.h8,
     color: colors.gray900,
+  },
+  skeletonBadge: {
+    width: 48,
+    height: 22,
+    borderRadius: 999,
+    backgroundColor: colors.white,
   },
   badge: {
     backgroundColor: colors.festivalBg,
