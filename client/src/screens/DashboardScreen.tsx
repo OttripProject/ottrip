@@ -1,6 +1,7 @@
 import CongestionBanner, { type CongestedItem } from "@/components/CongestionBanner";
-import type { FestivalItem } from "@/services/tourism";
+import type { DaySuggestion, FestivalItem } from "@/services/tourism";
 import { tourismApi } from "@/services/tourism";
+import SuggestionBar from "@/components/panels/SuggestionBar";
 import { useToast } from "@/contexts/ToastContext";
 import { usePlanDataQuery } from "@/hooks/usePlanDataQuery";
 import { usePlansQuery } from "@/hooks/usePlansQuery";
@@ -186,6 +187,8 @@ export default function DashboardScreen() {
   const [festivalsExpanded, setFestivalsExpanded] = useState(false);
   const [congestedItems, setCongestedItems] = useState<CongestedItem[]>([]);
   const [bannerDismissed, setBannerDismissed] = useState(false);
+  const [suggestions, setSuggestions] = useState<DaySuggestion[]>([]);
+  const [suggestionDismissed, setSuggestionDismissed] = useState(false);
   const documentAnalyzeSeqRef = useRef(0);
   const [stagedDocumentAnalyze, setStagedDocumentAnalyze] =
     useState<StagedDocumentAnalyzePayload | null>(null);
@@ -411,6 +414,8 @@ export default function DashboardScreen() {
     setSuggestFestivals([]);
     setCongestedItems([]);
     setBannerDismissed(false);
+    setSuggestions([]);
+    setSuggestionDismissed(false);
   }, [selectedPlanId]);
 
   useEffect(() => {
@@ -422,6 +427,11 @@ export default function DashboardScreen() {
       .then(setSuggestFestivals)
       .catch(() => {})
       .finally(() => setSuggestFestivalsLoading(false));
+  }, [selectedPlanId, itineraryKey]);
+
+  useEffect(() => {
+    if (!selectedPlanId) return;
+    tourismApi.getPlanSuggestions(selectedPlanId).then(setSuggestions).catch(() => {});
   }, [selectedPlanId, itineraryKey]);
 
   useEffect(() => {
@@ -880,6 +890,14 @@ export default function DashboardScreen() {
                     selectedItinerary={selectedItinerary}
                   />
                 </Animated.View>
+
+                {/* AI 빈 시간 추천 바 */}
+                {suggestions.length > 0 && !suggestionDismissed && (
+                  <SuggestionBar
+                    suggestions={suggestions}
+                    onDismiss={() => setSuggestionDismissed(true)}
+                  />
+                )}
 
                 {/* 하단 모달들 (30% 높이) */}
                 <Animated.View style={[styles.bottomRow, { flex: animBottomFlex }]}>

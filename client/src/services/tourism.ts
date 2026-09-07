@@ -104,6 +104,24 @@ export interface FestivalItem {
   matchedDate: string | null;
 }
 
+export interface SuggestionPlace {
+  contentId: string;
+  title: string;
+  category: string | null;
+  dist: number | null;
+  imageUrl: string | null;
+  mapx: number | null;
+  mapy: number | null;
+  sentence: string | null;
+}
+
+export interface DaySuggestion {
+  date: string;
+  slotStart: string;
+  slotEnd: string;
+  places: SuggestionPlace[];
+}
+
 export const tourismApi = {
   getNearbyAttractions: async (itineraryId: number): Promise<NearbyAttraction[]> => {
     const response = await api.get(`/private/tourism/nearby/${itineraryId}`);
@@ -120,6 +138,11 @@ export const tourismApi = {
       params: { suggest: true },
     });
     return response.data;
+  },
+
+  getPlanSuggestions: async (planId: number): Promise<DaySuggestion[]> => {
+    const response = await api.get(`/private/tourism/plans/${planId}/suggestions`);
+    return response.data.suggestions;
   },
 
   getCongestion: async (itineraryId: number): Promise<CongestionItem[]> => {
