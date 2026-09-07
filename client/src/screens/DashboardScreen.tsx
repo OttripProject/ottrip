@@ -63,6 +63,7 @@ export default function DashboardScreen() {
   const [festivals, setFestivals] = useState<FestivalItem[]>([]);
   const [suggestFestivals, setSuggestFestivals] = useState<FestivalItem[]>([]);
   const [suggestFestivalsLoading, setSuggestFestivalsLoading] = useState(false);
+  const [festivalsExpanded, setFestivalsExpanded] = useState(false);
   const [congestedItems, setCongestedItems] = useState<CongestedItem[]>([]);
   const [bannerDismissed, setBannerDismissed] = useState(false);
   const documentAnalyzeSeqRef = useRef(0);
@@ -199,15 +200,11 @@ export default function DashboardScreen() {
           headerHeight
       : 600,
   );
-  const innerGap = 16;
-  const leftTopHeight = Math.max(
-    240,
-    Math.floor((availableHeight - innerGap) * 0.7),
-  );
-  const leftBottomHeight = Math.max(
-    160,
-    availableHeight - innerGap - leftTopHeight,
-  );
+  const bottomFlexRatio = festivalsExpanded ? 0.3 : 0.2;
+  const topFlexRatio = 1 - bottomFlexRatio;
+  // compact 조건 및 WeeklySchedulePanel height prop용 근사값
+  const leftTopHeight = Math.round(availableHeight * topFlexRatio);
+  const leftBottomHeight = Math.round(availableHeight * bottomFlexRatio);
 
   const plansQuery = usePlansQuery();
 
@@ -616,7 +613,7 @@ export default function DashboardScreen() {
           <View
             style={[
               styles.leftArea,
-              { flex: ratio.left, height: availableHeight },
+              { flex: ratio.left },
             ]}
           >
             {plansQuery.isLoading ? (
@@ -642,7 +639,7 @@ export default function DashboardScreen() {
                   </View>
                 )}
                 {/* 2. 주간 스케줄 모달 (70% 높이) */}
-                <View style={[styles.scheduleModal, { height: leftTopHeight }]}>
+                <View style={[styles.scheduleModal, { flex: topFlexRatio }]}>
                   <WeeklySchedulePanel
                     itineraries={planData.itineraries}
                     flights={planData.flights}
@@ -700,7 +697,7 @@ export default function DashboardScreen() {
                 </View>
 
                 {/* 하단 모달들 (30% 높이) */}
-                <View style={[styles.bottomRow, { height: leftBottomHeight }]}>
+                <View style={[styles.bottomRow, { flex: bottomFlexRatio }]}>
                   {/* 4. 비용 모달 (좌측 하단) */}
                   <View style={styles.expensesModal}>
                     <ExpensesPanel
@@ -724,10 +721,12 @@ export default function DashboardScreen() {
                   </View>
 
                   {/* 6. 축제·공연 패널 */}
-                  <View style={styles.festivalsModal}>
+                  <View style={[styles.festivalsModal, festivalsExpanded && styles.festivalsModalExpanded]}>
                     <FestivalsPanel
                       festivals={suggestFestivals}
                       isLoading={suggestFestivalsLoading}
+                      expanded={festivalsExpanded}
+                      onToggle={() => setFestivalsExpanded(v => !v)}
                     />
                   </View>
                 </View>
@@ -842,12 +841,10 @@ const styles = StyleSheet.create({
     paddingBottom: 0,
   },
   scheduleModal: {
-    flex: 0.85,
     minHeight: 0,
     overflow: "hidden",
   },
   bottomRow: {
-    flex: 0.15,
     flexDirection: "row",
     gap: 16,
     minHeight: 0,
@@ -866,6 +863,9 @@ const styles = StyleSheet.create({
   },
   festivalsModal: {
     flex: 0.5,
+  },
+  festivalsModalExpanded: {
+    flex: 1,
   },
   loadingContainer: {
     flex: 1,
