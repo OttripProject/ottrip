@@ -835,6 +835,7 @@ async def get_plan_suggestions(itineraries: list[Itinerary]) -> list[DaySuggesti
         suggestion = await _suggest_process_day(day, by_date[day], existing_titles)
         if suggestion:
             results.append(suggestion)
+
     return results
 
 
@@ -872,58 +873,58 @@ async def _suggest_process_day(
     if not candidates:
         return None
 
-    top = candidates[:15]
-    intros = await asyncio.gather(
-        *[
-            _suggest_fetch_intro(
-                str(c.get("contentid") or ""), str(c.get("contenttypeid") or "")
-            )
-            for c in top
-        ]
-    )
-    pairs = list(zip(top, intros))
-    open_pairs = [
-        (c, intro)
-        for c, intro in pairs
-        if _suggest_is_open(
-            intro, str(c.get("contenttypeid") or ""), slot["start"], slot["end"]
-        )
-    ] or pairs
-
+    _BATCH = _SUGGEST_MAX_RESULTS + 2  # 5개씩 병렬
     category_count: dict[str, int] = {}
     selected: list[SuggestionPlace] = []
     front = _suggest_front(slot)
 
-    for item, intro in open_pairs:
+    for batch_start in range(0, len(candidates), _BATCH):
         if len(selected) >= _SUGGEST_MAX_RESULTS:
             break
-        type_id = str(item.get("contenttypeid") or "")
-        category = _SUGGEST_CAT_LABELS.get(type_id)
-        if category and category_count.get(category, 0) >= _SUGGEST_MAX_SAME_CAT:
-            continue
-
-        try:
-            mapx = float(item["mapX"]) if item.get("mapX") else None
-            mapy = float(item["mapY"]) if item.get("mapY") else None
-        except (ValueError, TypeError):
-            mapx = mapy = None
-
-        d = _dist(item)
-        back = _suggest_back(slot, d, intro, type_id, mapx, mapy)
-        selected.append(
-            SuggestionPlace(
-                content_id=str(item.get("contentid") or ""),
-                title=" ".join(str(item.get("title") or "").split()),
-                category=category,
-                dist=d if d < 99999 else None,
-                image_url=str(item["firstimage"]) if item.get("firstimage") else None,
-                mapx=mapx,
-                mapy=mapy,
-                sentence=f"{front} {back}",
-            )
+        batch = candidates[batch_start : batch_start + _BATCH]
+        intros = await asyncio.gather(
+            *[
+                _suggest_fetch_intro(
+                    str(c.get("contentid") or ""), str(c.get("contenttypeid") or "")
+                )
+                for c in batch
+            ]
         )
-        if category:
-            category_count[category] = category_count.get(category, 0) + 1
+
+        for item, intro in zip(batch, intros):
+            if len(selected) >= _SUGGEST_MAX_RESULTS:
+                break
+            type_id = str(item.get("contenttypeid") or "")
+            category = _SUGGEST_CAT_LABELS.get(type_id)
+            if category and category_count.get(category, 0) >= _SUGGEST_MAX_SAME_CAT:
+                continue
+            if not _suggest_is_open(intro, type_id, slot["start"], slot["end"]):
+                continue
+
+            try:
+                mapx = float(item["mapX"]) if item.get("mapX") else None
+                mapy = float(item["mapY"]) if item.get("mapY") else None
+            except (ValueError, TypeError):
+                mapx = mapy = None
+
+            d = _dist(item)
+            back = _suggest_back(slot, d, intro, type_id, mapx, mapy)
+            selected.append(
+                SuggestionPlace(
+                    content_id=str(item.get("contentid") or ""),
+                    title=" ".join(str(item.get("title") or "").split()),
+                    category=category,
+                    dist=d if d < 99999 else None,
+                    image_url=str(item["firstimage"])
+                    if item.get("firstimage")
+                    else None,
+                    mapx=mapx,
+                    mapy=mapy,
+                    sentence=f"{front} {back}",
+                )
+            )
+            if category:
+                category_count[category] = category_count.get(category, 0) + 1
 
     if not selected:
         return None
