@@ -60,6 +60,7 @@ export default function FestivalDetailModal({ visible, onClose, item, onAddToIti
   const [photoContainerWidth, setPhotoContainerWidth] = useState(0);
   const [photoIndex, setPhotoIndex] = useState(0);
   const [singleAspectRatio, setSingleAspectRatio] = useState<number | null>(null);
+  const [zoomIndex, setZoomIndex] = useState<number | null>(null);
   const scrollAnim = useRef(new Animated.Value(0)).current;
 
   // detail 로드 후에만 allImages 확정 → loading 중엔 빈 배열 → single/multi 판별 정확
@@ -161,6 +162,7 @@ export default function FestivalDetailModal({ visible, onClose, item, onAddToIti
   if (detail?.usetimefestival) iconRows.push({ label: "이용요금", value: detail.usetimefestival, icon: "won" });
 
   return (
+    <>
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <Pressable style={styles.overlay} onPress={onClose}>
         <Pressable style={styles.modal} onPress={() => {}}>
@@ -207,11 +209,13 @@ export default function FestivalDetailModal({ visible, onClose, item, onAddToIti
                   >
                     {isSingle ? (
                       photoContainerWidth > 0 && (
-                        <Image
-                          source={{ uri: allImages[0] }}
-                          style={[styles.photoSingle, { height: singleHeight }]}
-                          resizeMode="cover"
-                        />
+                        <Pressable onPress={() => setZoomIndex(0)}>
+                          <Image
+                            source={{ uri: allImages[0] }}
+                            style={[styles.photoSingle, { height: singleHeight }]}
+                            resizeMode="cover"
+                          />
+                        </Pressable>
                       )
                     ) : (
                       <View style={[styles.photoStrip, { height: itemH }]}>
@@ -219,12 +223,13 @@ export default function FestivalDetailModal({ visible, onClose, item, onAddToIti
                           style={[styles.photoRow, { transform: [{ translateX: scrollAnim }] }]}
                         >
                           {allImages.map((uri, idx) => (
-                            <Image
-                              key={idx}
-                              source={{ uri }}
-                              style={[styles.photo, { width: itemW, height: itemH, marginRight: idx < allImages.length - 1 ? ITEM_GAP : 0 }]}
-                              resizeMode="cover"
-                            />
+                            <Pressable key={idx} onPress={() => setZoomIndex(idx)}>
+                              <Image
+                                source={{ uri }}
+                                style={[styles.photo, { width: itemW, height: itemH, marginRight: idx < allImages.length - 1 ? ITEM_GAP : 0 }]}
+                                resizeMode="cover"
+                              />
+                            </Pressable>
                           ))}
                         </Animated.View>
                         {canPrev && (
@@ -425,6 +430,62 @@ export default function FestivalDetailModal({ visible, onClose, item, onAddToIti
         </Pressable>
       </Pressable>
     </Modal>
+
+    {/* 이미지 줌 오버레이 */}
+
+    <Modal
+      visible={zoomIndex !== null}
+      transparent
+      animationType="fade"
+      onRequestClose={() => setZoomIndex(null)}
+    >
+      <Pressable style={styles.zoomOverlay} onPress={() => setZoomIndex(null)}>
+        <Pressable style={styles.zoomImageWrapper} onPress={() => {}}>
+          {zoomIndex !== null && (
+            <Image
+              source={{ uri: allImages[zoomIndex] }}
+              style={styles.zoomImage}
+              resizeMode="center"
+            />
+          )}
+        </Pressable>
+
+        {/* 닫기 */}
+        <Pressable style={styles.zoomCloseBtn} onPress={() => setZoomIndex(null)}>
+          <CloseIcon width={16} height={16} color={colors.white} />
+        </Pressable>
+
+        {/* 이전 */}
+        {zoomIndex !== null && zoomIndex > 0 && (
+          <Pressable
+            style={[styles.zoomArrow, styles.zoomArrowLeft]}
+            onPress={() => setZoomIndex((i) => (i ?? 0) - 1)}
+          >
+            <LeftArrowIcon width={16} height={16} color={colors.white} />
+          </Pressable>
+        )}
+
+        {/* 다음 */}
+        {zoomIndex !== null && zoomIndex < allImages.length - 1 && (
+          <Pressable
+            style={[styles.zoomArrow, styles.zoomArrowRight]}
+            onPress={() => setZoomIndex((i) => (i ?? 0) + 1)}
+          >
+            <RightArrowIcon width={16} height={16} color={colors.white} />
+          </Pressable>
+        )}
+
+        {/* 카운터 */}
+        {zoomIndex !== null && (
+          <View style={styles.zoomCounter}>
+            <Text style={styles.zoomCounterText}>
+              {zoomIndex + 1} / {allImages.length}
+            </Text>
+          </View>
+        )}
+      </Pressable>
+    </Modal>
+    </>
   );
 }
 
@@ -711,5 +772,66 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
     color: colors.white,
+  } as any,
+  zoomOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.82)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 40,
+  },
+  zoomImageWrapper: {
+    width: "100%",
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  zoomImage: {
+    width: "100%",
+    height: "100%",
+    borderRadius: 16,
+  },
+  zoomCloseBtn: {
+    position: "absolute",
+    top: 24,
+    right: 24,
+    width: 40,
+    height: 40,
+    borderRadius: radii.pill,
+    backgroundColor: "rgba(255,255,255,0.16)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  zoomArrow: {
+    position: "absolute",
+    top: "50%" as any,
+    transform: [{ translateY: -20 }],
+    width: 40,
+    height: 40,
+    borderRadius: radii.pill,
+    backgroundColor: "rgba(255,255,255,0.16)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  zoomArrowLeft: {
+    left: 24,
+  },
+  zoomArrowRight: {
+    right: 24,
+  },
+  zoomCounter: {
+    position: "absolute",
+    bottom: 24,
+    alignSelf: "center",
+    backgroundColor: "rgba(0,0,0,0.4)",
+    borderRadius: radii.pill,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+  },
+  zoomCounterText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: colors.white,
+    lineHeight: 18,
   } as any,
 });
