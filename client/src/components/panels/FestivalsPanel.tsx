@@ -20,9 +20,9 @@ function fmtDate(s: string | null): string {
 }
 
 function getDotColor(lclsSystm2: string | null): string {
-  // 실제 API 코드값 확인 후 업데이트 필요
-  // 축제: 청록, 공연: 자홍, 행사: 주황
-  return colors.festivalText;
+  if (lclsSystm2 === "EV02") return colors.categoryActivity; // 공연: 자홍
+  if (lclsSystm2 === "EV03") return colors.categoryMeal;     // 행사: 주황
+  return colors.festivalText;                                 // 축제(EV01) 및 기본: 청록
 }
 
 export default function FestivalsPanel({
