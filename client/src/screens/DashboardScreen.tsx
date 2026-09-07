@@ -316,8 +316,8 @@ export default function DashboardScreen() {
 
   useEffect(() => {
     Animated.parallel([
-      Animated.timing(animBottomFlex, {
-        toValue: festivalsExpanded ? 0.3 : 0.2,
+      Animated.timing(animBottomH, {
+        toValue: Math.round((availableHeight - 16) * (festivalsExpanded ? 0.3 : 0.2)),
         duration: 300,
         easing: Easing.out(Easing.cubic),
         useNativeDriver: false,
@@ -341,13 +341,10 @@ export default function DashboardScreen() {
           headerHeight
       : 600,
   );
-  const animBottomFlex = useRef(new Animated.Value(0.2)).current;
-  const animTopFlex = useRef(Animated.subtract(1, animBottomFlex)).current;
+  const animBottomH = useRef(new Animated.Value(Math.round((availableHeight - 16) * 0.2))).current;
   const animFestivalsFlex = useRef(new Animated.Value(0.5)).current;
-  // WeeklySchedulePanel height prop용 근사값
-  const bottomFlexRatio = festivalsExpanded ? 0.3 : 0.2;
-  const leftTopHeight = Math.round(availableHeight * (1 - bottomFlexRatio));
-  const leftBottomHeight = Math.round(availableHeight * bottomFlexRatio);
+  const leftTopHeight = Math.round((availableHeight - 16) * 0.8);
+  const leftBottomHeight = Math.round((availableHeight - 16) * 0.2);
 
   const plansQuery = usePlansQuery();
 
@@ -399,7 +396,7 @@ export default function DashboardScreen() {
     setStagedDocumentAnalyze(null);
     setCarryoverPendingFiles(null);
     setFestivalsExpanded(false);
-    animBottomFlex.setValue(0.2);
+    animBottomH.setValue(Math.round((availableHeight - 16) * 0.2));
     animFestivalsFlex.setValue(0.5);
   }, [selectedPlanId]);
 
@@ -808,7 +805,7 @@ export default function DashboardScreen() {
           <View
             style={[
               styles.leftArea,
-              { flex: ratio.left },
+              { flex: ratio.left, height: availableHeight },
             ]}
           >
             {plansQuery.isLoading ? (
@@ -833,8 +830,9 @@ export default function DashboardScreen() {
                     />
                   </View>
                 )}
-                {/* 2. 주간 스케줄 모달 (70% 높이) */}
-                <Animated.View style={[styles.scheduleModal, { flex: animTopFlex }]}>
+                {/* 2. 주간 스케줄 + AI 추천 바 (같은 flex 영역) */}
+                <View style={styles.scheduleWrapper}>
+                  <View style={styles.scheduleModal}>
                   <WeeklySchedulePanel
                     itineraries={planData.itineraries}
                     flights={planData.flights}
@@ -889,18 +887,17 @@ export default function DashboardScreen() {
                     activeTab={activeTab}
                     selectedItinerary={selectedItinerary}
                   />
-                </Animated.View>
-
-                {/* AI 빈 시간 추천 바 */}
-                {suggestions.length > 0 && !suggestionDismissed && (
-                  <SuggestionBar
-                    suggestions={suggestions}
-                    onDismiss={() => setSuggestionDismissed(true)}
-                  />
-                )}
+                  </View>
+                  {suggestions.length > 0 && !suggestionDismissed && (
+                    <SuggestionBar
+                      suggestions={suggestions}
+                      onDismiss={() => setSuggestionDismissed(true)}
+                    />
+                  )}
+                </View>
 
                 {/* 하단 모달들 (30% 높이) */}
-                <Animated.View style={[styles.bottomRow, { flex: animBottomFlex }]}>
+                <Animated.View style={[styles.bottomRow, { height: animBottomH }]}>
                   {/* 4. 비용 모달 (좌측 하단) */}
                   <View style={styles.expensesModal}>
                     <ExpensesPanel
@@ -1044,7 +1041,14 @@ const styles = StyleSheet.create({
     paddingTop: 0,
     paddingBottom: 0,
   },
+  scheduleWrapper: {
+    flex: 1,
+    gap: 16,
+    minHeight: 0,
+    overflow: "hidden",
+  },
   scheduleModal: {
+    flex: 1,
     minHeight: 0,
     overflow: "hidden",
   },
