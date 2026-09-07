@@ -65,14 +65,6 @@ export default function ItinerarySection({
   const { showToast } = useToast();
 
   useEffect(() => {
-    if (activeTab === "itinerary" && openNewItineraryForm) {
-      setEditingItinerary(newItineraryDraft ?? null);
-      setShowItineraryForm(true);
-      onConsumeOpenNewItineraryForm?.();
-    }
-  }, [activeTab, openNewItineraryForm, newItineraryDraft, onConsumeOpenNewItineraryForm]);
-
-  useEffect(() => {
     const isInitial = isInitialMountRef.current;
     isInitialMountRef.current = false;
 
@@ -82,13 +74,20 @@ export default function ItinerarySection({
         setShowItineraryForm(false);
       }
     } else if (activeTab === "itinerary" && !selectedItinerary) {
-      // 마운트 시엔 null 리셋 생략 — draft가 이미 Effect #1에서 설정됨
       if (!isInitial) {
         setEditingItinerary(null);
       }
       setShowItineraryForm(true);
     }
   }, [activeTab, selectedItinerary]);
+
+  useEffect(() => {
+    if (activeTab === "itinerary" && openNewItineraryForm) {
+      setEditingItinerary(newItineraryDraft ?? null);
+      setShowItineraryForm(true);
+      onConsumeOpenNewItineraryForm?.();
+    }
+  }, [activeTab, openNewItineraryForm, newItineraryDraft, onConsumeOpenNewItineraryForm]);
 
   useLayoutEffect(() => {
     if (!stagedDocumentAnalyze) return;

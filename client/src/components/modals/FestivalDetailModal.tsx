@@ -461,7 +461,11 @@ export default function FestivalDetailModal({ visible, onClose, item, onAddToIti
             <Pressable style={styles.closeButton} onPress={onClose}>
               <Text style={styles.closeButtonText}>닫기</Text>
             </Pressable>
-            <Pressable style={styles.addButton} onPress={handleAddToItinerary}>
+            <Pressable
+              style={[styles.addButton, (loading || !detail) && styles.addButtonDisabled]}
+              onPress={handleAddToItinerary}
+              disabled={loading || !detail}
+            >
               <Text style={styles.addButtonText}>일정에 추가</Text>
             </Pressable>
           </View>
@@ -803,6 +807,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.gray900,
     justifyContent: "center",
     alignItems: "center",
+  } as any,
+  addButtonDisabled: {
+    opacity: 0.4,
   } as any,
   addButtonText: {
     fontSize: 16,
