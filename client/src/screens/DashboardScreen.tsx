@@ -708,7 +708,6 @@ export default function DashboardScreen() {
                         refreshAccommodations: planData.refreshAccommodations,
                       }}
                       onExpenseAdd={handleExpenseAdd}
-                      compact={leftBottomHeight < 300}
                     />
                   </View>
 
@@ -716,7 +715,6 @@ export default function DashboardScreen() {
                   <View style={styles.aiModal}>
                     <AIAssistantPanel
                       publicId={planData.plan?.publicId || null}
-                      compact={leftBottomHeight < 300}
                     />
                   </View>
 
