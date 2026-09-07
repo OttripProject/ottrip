@@ -16,6 +16,8 @@ import {
 import { GoogleMap, Marker, useLoadScript } from "@react-google-maps/api";
 import type { FestivalItem, TourismDetail } from "@/services/tourism";
 import { tourismApi } from "@/services/tourism";
+import { locationsApi, manualPlaceId } from "@/services/locations";
+import { ItineraryCategory } from "@/types/itinerary";
 import { colors } from "@/ui/tokens/colors";
 import { radii } from "@/ui/tokens/radii";
 import { spacing } from "@/ui/tokens/spacing";
@@ -45,7 +47,7 @@ interface Props {
   visible: boolean;
   onClose: () => void;
   item: FestivalItem | null;
-  onAddToItinerary?: (item: FestivalItem, detail: TourismDetail | null) => void;
+  onAddToItinerary?: (draft: any) => void;
 }
 
 export default function FestivalDetailModal({ visible, onClose, item, onAddToItinerary }: Props) {
@@ -129,6 +131,37 @@ export default function FestivalDetailModal({ visible, onClose, item, onAddToIti
       }
     });
   }, [isLoaded, detail, item, loading]);
+
+  const handleAddToItinerary = async () => {
+    if (!onAddToItinerary || !item) return;
+    const title = detail?.title ?? item.title;
+    const coords =
+      detail?.mapy && detail?.mapx
+        ? { lat: detail.mapy, lng: detail.mapx }
+        : item.mapy && item.mapx
+          ? { lat: item.mapy, lng: item.mapx }
+          : null;
+    let locationId: number | undefined;
+    try {
+      const loc = await locationsApi.createLocation({
+        name: title,
+        placeId: manualPlaceId(title),
+        latitude: coords?.lat ?? 0,
+        longitude: coords?.lng ?? 0,
+        address: detail?.address ?? undefined,
+        fromGoogle: false,
+      });
+      locationId = loc.id;
+    } catch {}
+    onAddToItinerary({
+      title,
+      description: detail?.overview ?? undefined,
+      location: title,
+      locationId,
+      category: ItineraryCategory.ACTIVITY,
+    });
+    onClose();
+  };
 
   if (!visible || !item) return null;
 
@@ -421,11 +454,9 @@ export default function FestivalDetailModal({ visible, onClose, item, onAddToIti
             <Pressable style={styles.closeButton} onPress={onClose}>
               <Text style={styles.closeButtonText}>닫기</Text>
             </Pressable>
-            {onAddToItinerary && (
-              <Pressable style={styles.addButton} onPress={() => onAddToItinerary(item, detail)}>
-                <Text style={styles.addButtonText}>일정에 추가</Text>
-              </Pressable>
-            )}
+            <Pressable style={styles.addButton} onPress={handleAddToItinerary}>
+              <Text style={styles.addButtonText}>일정에 추가</Text>
+            </Pressable>
           </View>
         </Pressable>
       </Pressable>
@@ -744,8 +775,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 32,
     paddingTop: 16,
     paddingBottom: 24,
-    borderTopWidth: 1,
-    borderTopColor: colors.gray100,
   },
   closeButton: {
     flex: 1,

@@ -45,6 +45,7 @@ interface DetailsPanelProps {
   openNewAccommodationForm?: boolean;
   onConsumeOpenNewAccommodationForm?: () => void;
   newAccommodationDraft?: any | null;
+  newItineraryDraft?: any | null;
   onPreviewAccommodationChange?: (preview: any) => void;
   onTabChange?: (tab: "itinerary" | "flight" | "accommodation", draft?: any) => void;
   stagedDocumentAnalyze?: StagedDocumentAnalyzePayload | null;
@@ -79,6 +80,7 @@ export default function DetailsPanel({
   openNewAccommodationForm,
   onConsumeOpenNewAccommodationForm,
   newAccommodationDraft,
+  newItineraryDraft,
   onPreviewAccommodationChange,
   onTabChange,
   stagedDocumentAnalyze,
@@ -127,6 +129,7 @@ export default function DetailsPanel({
           openNewItineraryForm={openNewItineraryForm}
           onConsumeOpenNewItineraryForm={onConsumeOpenNewItineraryForm}
           selectedItineraryDate={selectedItineraryDate}
+          newItineraryDraft={newItineraryDraft}
           onTabChange={onTabChange}
           stagedDocumentAnalyze={stagedDocumentAnalyze}
           onConsumeStagedDocumentAnalyze={onConsumeStagedDocumentAnalyze}
@@ -196,6 +199,7 @@ export default function DetailsPanel({
             openNewItineraryForm={openNewItineraryForm}
             onConsumeOpenNewItineraryForm={onConsumeOpenNewItineraryForm}
             selectedItineraryDate={selectedItineraryDate}
+            newItineraryDraft={newItineraryDraft}
             onTabChange={onTabChange}
             stagedDocumentAnalyze={stagedDocumentAnalyze}
             onConsumeStagedDocumentAnalyze={onConsumeStagedDocumentAnalyze}

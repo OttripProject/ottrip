@@ -4,7 +4,7 @@ import type {
   LocalFile,
   StagedDocumentAnalyzePayload,
 } from "@/types/api";
-import { useEffect, useLayoutEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import ItineraryItem from "./ItineraryItem";
 
 interface ItinerarySectionProps {
@@ -25,6 +25,7 @@ interface ItinerarySectionProps {
   openNewItineraryForm?: boolean;
   onConsumeOpenNewItineraryForm?: () => void;
   selectedItineraryDate?: Date | null;
+  newItineraryDraft?: any | null;
   onEdit?: (itinerary: any) => void;
   onTabChange?: (tab: "itinerary" | "flight" | "accommodation", draft?: any) => void;
   stagedDocumentAnalyze?: StagedDocumentAnalyzePayload | null;
@@ -46,6 +47,7 @@ export default function ItinerarySection({
   openNewItineraryForm,
   onConsumeOpenNewItineraryForm,
   selectedItineraryDate,
+  newItineraryDraft,
   onEdit,
   onTabChange,
   stagedDocumentAnalyze,
@@ -58,25 +60,32 @@ export default function ItinerarySection({
     openNewItineraryForm || false,
   );
   const [editingItinerary, setEditingItinerary] = useState<any | null>(null);
+  const isInitialMountRef = useRef(true);
 
   const { showToast } = useToast();
 
   useEffect(() => {
     if (activeTab === "itinerary" && openNewItineraryForm) {
-      setEditingItinerary(null);
+      setEditingItinerary(newItineraryDraft ?? null);
       setShowItineraryForm(true);
       onConsumeOpenNewItineraryForm?.();
     }
   }, [activeTab, openNewItineraryForm, onConsumeOpenNewItineraryForm]);
 
   useEffect(() => {
+    const isInitial = isInitialMountRef.current;
+    isInitialMountRef.current = false;
+
     if (activeTab === "itinerary" && selectedItinerary) {
       if (selectedItinerary.id) {
         setEditingItinerary(selectedItinerary);
         setShowItineraryForm(false);
       }
     } else if (activeTab === "itinerary" && !selectedItinerary) {
-      setEditingItinerary(null);
+      // 마운트 시엔 null 리셋 생략 — draft가 이미 Effect #1에서 설정됨
+      if (!isInitial) {
+        setEditingItinerary(null);
+      }
       setShowItineraryForm(true);
     }
   }, [activeTab, selectedItinerary]);

@@ -13,6 +13,7 @@ interface FestivalsPanelProps {
   isLoading?: boolean;
   expanded: boolean;
   onToggle: () => void;
+  onAddToItinerary?: (draft: any) => void;
 }
 
 function fmtDate(s: string | null): string {
@@ -31,6 +32,7 @@ export default function FestivalsPanel({
   isLoading,
   expanded,
   onToggle,
+  onAddToItinerary,
 }: FestivalsPanelProps) {
   const [hovered, setHovered] = useState(false);
   const [hoveredItemId, setHoveredItemId] = useState<string | null>(null);
@@ -138,6 +140,7 @@ export default function FestivalsPanel({
         visible={selectedFestival !== null}
         onClose={() => setSelectedFestival(null)}
         item={selectedFestival}
+        onAddToItinerary={onAddToItinerary}
       />
     </PanelLayout>
   );

@@ -59,6 +59,7 @@ export default function DashboardScreen() {
   const [newAccommodationDraft, setNewAccommodationDraft] = useState<
     any | null
   >(null);
+  const [newItineraryDraft, setNewItineraryDraft] = useState<any | null>(null);
   const [previewAccommodation, setPreviewAccommodation] = useState<any>(null);
   const [festivals, setFestivals] = useState<FestivalItem[]>([]);
   const [suggestFestivals, setSuggestFestivals] = useState<FestivalItem[]>([]);
@@ -520,6 +521,15 @@ export default function DashboardScreen() {
     }
   }, []);
 
+  const handleFestivalAddToItinerary = useCallback((draft: any) => {
+    setNewItineraryDraft(draft);
+    setActiveTab("itinerary");
+    setSelectedFlight(null);
+    setSelectedAccommodation(null);
+    setSelectedItinerary(null);
+    setOpenNewItineraryForm(true);
+  }, []);
+
   const handleShowAccommodationModal = useCallback(
     (accommodation: any, date?: string, checkoutDate?: string) => {
       setActiveTab("accommodation");
@@ -748,6 +758,7 @@ export default function DashboardScreen() {
                       isLoading={suggestFestivalsLoading}
                       expanded={festivalsExpanded}
                       onToggle={() => setFestivalsExpanded(v => !v)}
+                      onAddToItinerary={handleFestivalAddToItinerary}
                     />
                   </Animated.View>
                 </Animated.View>
@@ -815,6 +826,7 @@ export default function DashboardScreen() {
                     setOpenNewAccommodationForm(false)
                   }
                   newAccommodationDraft={newAccommodationDraft}
+                  newItineraryDraft={newItineraryDraft}
                   onPreviewAccommodationChange={setPreviewAccommodation}
                 />
               </View>
