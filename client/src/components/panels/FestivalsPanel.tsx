@@ -121,7 +121,9 @@ export default function FestivalsPanel({
         >
           <Text style={styles.collapsedTitle}>축제·공연</Text>
           {isLoading ? (
-            <Animated.View style={[styles.skeletonBadge, { opacity: pulseAnim }]} />
+            <Animated.View style={[styles.badge, styles.skeletonBadge, { opacity: pulseAnim }]}>
+              <Text style={[styles.badgeText, { opacity: 0 }]}>00건</Text>
+            </Animated.View>
           ) : (
             <View style={styles.badge}>
               <Text style={styles.badgeText}>{festivals.length}건</Text>
@@ -236,9 +238,6 @@ const styles = StyleSheet.create({
     color: colors.gray900,
   },
   skeletonBadge: {
-    width: 48,
-    height: 22,
-    borderRadius: 999,
     backgroundColor: colors.white,
   },
   badge: {
