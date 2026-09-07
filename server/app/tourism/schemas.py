@@ -103,3 +103,25 @@ class TourismDetail(APISchema):
     packing: str | None = None
     reservationfood: str | None = None
     parkingfood: str | None = None
+
+
+class SuggestionPlace(APISchema):
+    content_id: str
+    title: str
+    category: str | None = None
+    dist: float | None = None
+    image_url: str | None = None
+    mapx: float | None = None
+    mapy: float | None = None
+    sentence: str | None = None
+
+
+class DaySuggestion(APISchema):
+    date: str
+    slot_start: str
+    slot_end: str
+    places: list[SuggestionPlace]
+
+
+class SuggestionResponse(APISchema):
+    suggestions: list[DaySuggestion]

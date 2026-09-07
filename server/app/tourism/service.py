@@ -1,12 +1,22 @@
 import asyncio
+import math
 import re
-from datetime import datetime
+from datetime import date, datetime, time
 from typing import Any
 
 import httpx
 
+from app.itinerary.models import Itinerary
+
 from .config import tourism_settings
-from .schemas import CongestionItem, FestivalItem, NearbyAttraction, TourismDetail
+from .schemas import (
+    CongestionItem,
+    DaySuggestion,
+    FestivalItem,
+    NearbyAttraction,
+    SuggestionPlace,
+    TourismDetail,
+)
 
 _CONGESTION_THRESHOLD = 70.0  # CDF 지수 임계값 (상위 30% 혼잡 판정)
 
@@ -561,3 +571,366 @@ async def get_congestion_rate(
             )
         ]
     return []
+
+
+# ── 빈 슬롯 추천 ──────────────────────────────────────────────────────────────
+
+_SUGGEST_ACTIVE_START = 9 * 60  # 09:00
+_SUGGEST_ACTIVE_END = 22 * 60  # 22:00
+_SUGGEST_MIN_SLOT = 90
+_SUGGEST_MIN_VISIT = 30
+_SUGGEST_MAX_RESULTS = 3
+_SUGGEST_MAX_SAME_CAT = 2
+
+# 빈 시간(분) → 검색 반경(m) 단계표 (오름차순)
+_SUGGEST_RADIUS_TABLE = [
+    (90, 500),
+    (120, 1000),
+    (180, 2000),
+    (240, 3000),
+]
+
+_SUGGEST_EXCLUDE_TYPES = {"32", "15"}  # 숙박, 축제
+
+_SUGGEST_CAT_LABELS: dict[str, str] = {
+    "12": "관광지",
+    "14": "문화시설",
+    "25": "여행코스",
+    "28": "레포츠",
+    "38": "쇼핑",
+    "39": "음식점",
+}
+
+_SUGGEST_OPEN_FIELDS: dict[str, str] = {
+    "12": "usetime",
+    "14": "usetimeculture",
+    "28": "usetimeleports",
+    "38": "opentime",
+    "39": "opentimefood",
+}
+
+_SUGGEST_TIME_RANGE_RE = re.compile(r"(\d{1,2}:\d{2})\s*[~\-]\s*(\d{1,2}:\d{2})")
+
+
+def _t2m(t: time) -> int:
+    return t.hour * 60 + t.minute
+
+
+def _m2s(m: int) -> str:
+    return f"{m // 60:02d}:{m % 60:02d}"
+
+
+def _has_valid_coords(it: Itinerary) -> bool:
+    loc = it.location
+    if not loc:
+        return False
+    return not (loc.latitude == 0 and loc.longitude == 0)
+
+
+def _suggest_find_slot(day_its: list[Itinerary]) -> dict[str, Any] | None:
+    sorted_its = sorted(day_its, key=lambda x: x.start_time)
+    slots: list[dict[str, Any]] = []
+
+    for i, it in enumerate(sorted_its):
+        end_mins = _t2m(it.end_time)
+        is_last = i == len(sorted_its) - 1
+        next_it = None if is_last else sorted_its[i + 1]
+        next_start = _SUGGEST_ACTIVE_END if is_last else _t2m(next_it.start_time)  # type: ignore[union-attr]
+
+        slot_start = max(end_mins, _SUGGEST_ACTIVE_START)
+        slot_end = min(next_start, _SUGGEST_ACTIVE_END)
+        duration = slot_end - slot_start
+
+        if duration < _SUGGEST_MIN_SLOT or not _has_valid_coords(it):
+            continue
+
+        next_name: str | None = None
+        next_start_str: str | None = None
+        next_lat: float | None = None
+        next_lng: float | None = None
+        if next_it and next_it.location:
+            next_name = next_it.location.name
+            next_start_str = _m2s(_t2m(next_it.start_time))
+            next_lat = next_it.location.latitude
+            next_lng = next_it.location.longitude
+
+        slots.append(
+            {
+                "start": slot_start,
+                "end": slot_end,
+                "duration": duration,
+                "center_lat": it.location.latitude,  # type: ignore[union-attr]
+                "center_lng": it.location.longitude,  # type: ignore[union-attr]
+                "prev_name": it.location.name or "",  # type: ignore[union-attr]
+                "prev_end": _m2s(_t2m(it.end_time)),
+                "next_name": next_name,
+                "next_start": next_start_str,
+                "next_lat": next_lat,
+                "next_lng": next_lng,
+            }
+        )
+
+    if not slots:
+        return None
+    return max(slots, key=lambda s: (s["duration"], -s["start"]))
+
+
+def _suggest_is_open(
+    intro: dict[str, Any], type_id: str, slot_start: int, slot_end: int
+) -> bool:
+    field = _SUGGEST_OPEN_FIELDS.get(type_id)
+    if not field:
+        return True
+    text: str = intro.get(field) or ""
+    if not text:
+        return True
+    ranges = [
+        (
+            int(m.group(1).split(":")[0]) * 60 + int(m.group(1).split(":")[1]),
+            int(m.group(2).split(":")[0]) * 60 + int(m.group(2).split(":")[1]),
+        )
+        for m in _SUGGEST_TIME_RANGE_RE.finditer(text)
+    ]
+    if not ranges:
+        return True
+    return any(s <= slot_start < e for s, e in ranges)
+
+
+_LUNCH = (11 * 60 + 30, 14 * 60)  # 11:30 ~ 14:00
+_DINNER = (17 * 60 + 30, 20 * 60)  # 17:30 ~ 20:00
+
+
+def _haversine(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
+    R = 6_371_000
+    p1, p2 = math.radians(lat1), math.radians(lat2)
+    dp = math.radians(lat2 - lat1)
+    dl = math.radians(lng2 - lng1)
+    a = math.sin(dp / 2) ** 2 + math.cos(p1) * math.cos(p2) * math.sin(dl / 2) ** 2
+    return R * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+
+
+def _format_dist(dist_m: float) -> str:
+    if dist_m < 2000:
+        return f"도보 {max(1, round(dist_m / 50))}분"
+    return f"약 {dist_m / 1000:.1f}km"
+
+
+def _parse_closing_time(intro: dict[str, Any], type_id: str) -> int | None:
+    field = _SUGGEST_OPEN_FIELDS.get(type_id)
+    if not field:
+        return None
+    text: str = intro.get(field) or ""
+    matches = list(_SUGGEST_TIME_RANGE_RE.finditer(text))
+    if not matches:
+        return None
+    h, m = matches[-1].group(2).split(":")
+    return int(h) * 60 + int(m)
+
+
+def _suggest_front(slot: dict[str, Any]) -> str:
+    s: int = slot["start"]
+    e: int = slot["end"]
+    pn: str = slot["prev_name"]
+    pe: str = slot["prev_end"]
+    nn: str | None = slot["next_name"]
+    ns: str | None = slot["next_start"]
+
+    if nn and ns:
+        if s < _LUNCH[1] and e > _LUNCH[0]:
+            return f"{pn}({pe} 종료)와 {nn}({ns} 시작) 사이 점심 시간이 비어 있어요."
+        if s < _DINNER[1] and e > _DINNER[0]:
+            return f"{pn}({pe} 종료)와 {nn}({ns} 시작) 사이 저녁 시간이 비어 있어요."
+        return f"{pn} 일정이 {pe}에 끝난 뒤 {nn} 전까지 비어 있어요."
+    return f"{pn} 일정이 {pe}에 끝난 뒤 일정이 없어요."
+
+
+def _suggest_back(
+    slot: dict[str, Any],
+    dist_m: float,
+    intro: dict[str, Any],
+    type_id: str,
+    place_lat: float | None,
+    place_lng: float | None,
+) -> str:
+    # 1순위: 18시 이후 빈 시간
+    if slot["start"] >= 18 * 60:
+        closing = _parse_closing_time(intro, type_id)
+        if closing is not None:
+            return f"{_m2s(closing)}까지 영업해요."
+
+    # 2순위: 돌아가는 시간 ≤ 5분
+    next_lat: float | None = slot.get("next_lat")
+    next_lng: float | None = slot.get("next_lng")
+    if next_lat and next_lng and place_lat and place_lng:
+        clat: float = slot["center_lat"]
+        clng: float = slot["center_lng"]
+        direct = _haversine(clat, clng, next_lat, next_lng)
+        via = _haversine(clat, clng, place_lat, place_lng) + _haversine(
+            place_lat, place_lng, next_lat, next_lng
+        )
+        if (via - direct) / 50 <= 5:
+            return "두 장소를 잇는 경로 중간에 있어요."
+
+    # 3순위: 그 외
+    return f"조금 돌아가지만 {_format_dist(dist_m)}이면 닿아요."
+
+
+def _suggest_radius(duration_mins: int) -> int:
+    for threshold, radius in _SUGGEST_RADIUS_TABLE:
+        if duration_mins <= threshold:
+            return radius
+    return _SUGGEST_RADIUS_TABLE[-1][1]
+
+
+async def _suggest_search_nearby(
+    lat: float, lng: float, radius_m: int
+) -> list[dict[str, Any]]:
+    params = {
+        "MobileOS": _MOBILE_OS,
+        "MobileApp": _MOBILE_APP,
+        "serviceKey": tourism_settings.TOUR_SERVICE_KEY,
+        "mapX": str(lng),
+        "mapY": str(lat),
+        "radius": str(radius_m),
+        "_type": "json",
+        "numOfRows": "50",
+        "arrange": "E",
+    }
+    async with httpx.AsyncClient(timeout=10.0) as client:
+        resp = await client.get(f"{_KOR_SERVICE_URL}/locationBasedList2", params=params)
+    return _extract_items(resp.json())
+
+
+async def _suggest_fetch_intro(content_id: str, type_id: str) -> dict[str, Any]:
+    params = {
+        "MobileOS": _MOBILE_OS,
+        "MobileApp": _MOBILE_APP,
+        "serviceKey": tourism_settings.TOUR_SERVICE_KEY,
+        "contentId": content_id,
+        "contentTypeId": type_id,
+        "_type": "json",
+    }
+    try:
+        async with httpx.AsyncClient(timeout=8.0) as client:
+            resp = await client.get(f"{_KOR_SERVICE_URL}/detailIntro2", params=params)
+        items = _extract_items(resp.json())
+        return items[0] if items else {}
+    except Exception:
+        return {}
+
+
+async def get_plan_suggestions(itineraries: list[Itinerary]) -> list[DaySuggestion]:
+    by_date: dict[date, list[Itinerary]] = {}
+    for it in itineraries:
+        by_date.setdefault(it.itinerary_date, []).append(it)
+
+    existing_titles = {
+        it.location.name.strip().lower()
+        for it in itineraries
+        if it.location and it.location.name
+    }
+
+    results: list[DaySuggestion] = []
+    for day in sorted(by_date):
+        suggestion = await _suggest_process_day(day, by_date[day], existing_titles)
+        if suggestion:
+            results.append(suggestion)
+    return results
+
+
+async def _suggest_process_day(
+    day: date,
+    day_its: list[Itinerary],
+    existing_titles: set[str],
+) -> DaySuggestion | None:
+    slot = _suggest_find_slot(day_its)
+    if not slot:
+        return None
+
+    radius_m = _suggest_radius(slot["duration"])
+
+    raw_items = await _suggest_search_nearby(
+        slot["center_lat"], slot["center_lng"], radius_m
+    )
+    if not raw_items:
+        return None
+
+    def _dist(item: dict[str, Any]) -> float:
+        try:
+            return float(item.get("dist") or 99999)
+        except (ValueError, TypeError):
+            return 99999
+
+    candidates = [
+        item
+        for item in raw_items
+        if str(item.get("contenttypeid") or "") not in _SUGGEST_EXCLUDE_TYPES
+        and " ".join(str(item.get("title") or "").split()).strip().lower()
+        not in existing_titles
+    ]
+
+    if not candidates:
+        return None
+
+    top = candidates[:15]
+    intros = await asyncio.gather(
+        *[
+            _suggest_fetch_intro(
+                str(c.get("contentid") or ""), str(c.get("contenttypeid") or "")
+            )
+            for c in top
+        ]
+    )
+    pairs = list(zip(top, intros))
+    open_pairs = [
+        (c, intro)
+        for c, intro in pairs
+        if _suggest_is_open(
+            intro, str(c.get("contenttypeid") or ""), slot["start"], slot["end"]
+        )
+    ] or pairs
+
+    category_count: dict[str, int] = {}
+    selected: list[SuggestionPlace] = []
+    front = _suggest_front(slot)
+
+    for item, intro in open_pairs:
+        if len(selected) >= _SUGGEST_MAX_RESULTS:
+            break
+        type_id = str(item.get("contenttypeid") or "")
+        category = _SUGGEST_CAT_LABELS.get(type_id)
+        if category and category_count.get(category, 0) >= _SUGGEST_MAX_SAME_CAT:
+            continue
+
+        try:
+            mapx = float(item["mapX"]) if item.get("mapX") else None
+            mapy = float(item["mapY"]) if item.get("mapY") else None
+        except (ValueError, TypeError):
+            mapx = mapy = None
+
+        d = _dist(item)
+        back = _suggest_back(slot, d, intro, type_id, mapx, mapy)
+        selected.append(
+            SuggestionPlace(
+                content_id=str(item.get("contentid") or ""),
+                title=" ".join(str(item.get("title") or "").split()),
+                category=category,
+                dist=d if d < 99999 else None,
+                image_url=str(item["firstimage"]) if item.get("firstimage") else None,
+                mapx=mapx,
+                mapy=mapy,
+                sentence=f"{front} {back}",
+            )
+        )
+        if category:
+            category_count[category] = category_count.get(category, 0) + 1
+
+    if not selected:
+        return None
+
+    return DaySuggestion(
+        date=str(day),
+        slot_start=_m2s(slot["start"]),
+        slot_end=_m2s(slot["end"]),
+        places=selected,
+    )
