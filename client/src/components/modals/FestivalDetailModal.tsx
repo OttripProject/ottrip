@@ -161,6 +161,8 @@ export default function FestivalDetailModal({ visible, onClose, item, onAddToIti
       locationId,
       category: ItineraryCategory.SIGHTSEEING,
       matchedDate: item.matchedDate ?? undefined,
+      locationLat: coords?.lat,
+      locationLng: coords?.lng,
     });
     onClose();
   };
