@@ -32,6 +32,7 @@ export default function FestivalsPanel({
   onToggle,
 }: FestivalsPanelProps) {
   const [hovered, setHovered] = useState(false);
+  const [hoveredItemId, setHoveredItemId] = useState<string | null>(null);
   const pulseAnim = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
@@ -83,12 +84,11 @@ export default function FestivalsPanel({
                 <View key={f.contentId}>
                   {i > 0 && <View style={styles.separator} />}
                   <Pressable
-                  style={({ hovered }) => [
-                    styles.item,
-                    hovered && styles.itemHovered,
-                  ]}
-                  accessibilityRole="button"
-                >
+                    style={[styles.item, hoveredItemId === f.contentId && styles.itemHovered]}
+                    onHoverIn={() => setHoveredItemId(f.contentId)}
+                    onHoverOut={() => setHoveredItemId(null)}
+                    accessibilityRole="button"
+                  >
                   <View style={styles.itemRow}>
                     <View
                       style={[
@@ -101,7 +101,7 @@ export default function FestivalsPanel({
                     </Text>
                   </View>
                   <Text style={styles.itemDate} numberOfLines={1}>
-                    {`${fmtDate(f.eventStartDate)}–${fmtDate(f.eventEndDate)}`}
+                    {`${fmtDate(f.eventStartDate)} – ${fmtDate(f.eventEndDate)}`}
                   </Text>
                 </Pressable>
                 </View>
