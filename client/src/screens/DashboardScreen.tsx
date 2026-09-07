@@ -509,6 +509,7 @@ export default function DashboardScreen() {
   }, []);
 
   const handleRequestNewItinerary = useCallback((date?: Date) => {
+    setNewItineraryDraft(null);
     setActiveTab("itinerary");
     setSelectedFlight(null);
     setSelectedAccommodation(null);
@@ -829,9 +830,10 @@ export default function DashboardScreen() {
                   openNewFlightForm={openNewFlightForm}
                   onConsumeOpenNewFlightForm={() => setOpenNewFlightForm(false)}
                   openNewItineraryForm={openNewItineraryForm}
-                  onConsumeOpenNewItineraryForm={() =>
-                    setOpenNewItineraryForm(false)
-                  }
+                  onConsumeOpenNewItineraryForm={() => {
+                    setOpenNewItineraryForm(false);
+                    setNewItineraryDraft(null);
+                  }}
                   selectedItineraryDate={selectedItineraryDate}
                   openNewAccommodationForm={openNewAccommodationForm}
                   onConsumeOpenNewAccommodationForm={() =>

@@ -70,7 +70,7 @@ export default function ItinerarySection({
       setShowItineraryForm(true);
       onConsumeOpenNewItineraryForm?.();
     }
-  }, [activeTab, openNewItineraryForm, onConsumeOpenNewItineraryForm]);
+  }, [activeTab, openNewItineraryForm, newItineraryDraft, onConsumeOpenNewItineraryForm]);
 
   useEffect(() => {
     const isInitial = isInitialMountRef.current;
