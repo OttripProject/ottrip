@@ -6,6 +6,7 @@ import { textStyles } from "@/ui/tokens/typography";
 import { Animated, Easing, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useEffect, useRef, useState } from "react";
 import PanelLayout from "./PanelLayout";
+import FestivalDetailModal from "../modals/FestivalDetailModal";
 
 interface FestivalsPanelProps {
   festivals: FestivalItem[];
@@ -33,6 +34,7 @@ export default function FestivalsPanel({
 }: FestivalsPanelProps) {
   const [hovered, setHovered] = useState(false);
   const [hoveredItemId, setHoveredItemId] = useState<string | null>(null);
+  const [selectedFestival, setSelectedFestival] = useState<FestivalItem | null>(null);
   const pulseAnim = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
@@ -87,6 +89,7 @@ export default function FestivalsPanel({
                     style={[styles.item, hoveredItemId === f.contentId && styles.itemHovered]}
                     onHoverIn={() => setHoveredItemId(f.contentId)}
                     onHoverOut={() => setHoveredItemId(null)}
+                    onPress={() => setSelectedFestival(f)}
                     accessibilityRole="button"
                   >
                   <View style={styles.itemRow}>
@@ -131,6 +134,11 @@ export default function FestivalsPanel({
           )}
         </Pressable>
       </View>
+      <FestivalDetailModal
+        visible={selectedFestival !== null}
+        onClose={() => setSelectedFestival(null)}
+        item={selectedFestival}
+      />
     </PanelLayout>
   );
 }

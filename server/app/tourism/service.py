@@ -313,11 +313,15 @@ async def get_tourism_detail(
         "_type": "json",
     }
     async with httpx.AsyncClient(timeout=10.0) as client:
-        common_resp, intro_resp = await asyncio.gather(
+        common_resp, intro_resp, image_resp = await asyncio.gather(
             client.get(f"{_KOR_SERVICE_URL}/detailCommon2", params=base_params),
             client.get(
                 f"{_KOR_SERVICE_URL}/detailIntro2",
                 params={**base_params, "contentTypeId": ctid},
+            ),
+            client.get(
+                f"{_KOR_SERVICE_URL}/detailImage2",
+                params={**base_params, "imageYN": "Y", "numOfRows": "10"},
             ),
         )
 
@@ -326,6 +330,8 @@ async def get_tourism_detail(
         return None
     c = common_items[0]
     i: dict[str, Any] = (_extract_items(intro_resp.json()) or [{}])[0]
+    image_items = _extract_items(image_resp.json()) or []
+    images = [url for item in image_items if (url := _s(item.get("originimgurl")))]
 
     return TourismDetail(
         content_id=str(c.get("contentid") or ""),
@@ -337,6 +343,7 @@ async def get_tourism_detail(
         telname=_s(c.get("telname")),
         overview=_s(c.get("overview")),
         image_url=_s(c.get("firstimage")),
+        images=images,
         mapx=_f(c.get("mapx")),
         mapy=_f(c.get("mapy")),
         # 관광지

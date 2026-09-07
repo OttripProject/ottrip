@@ -21,6 +21,7 @@ export interface TourismDetail {
   telname: string | null;
   overview: string | null;
   imageUrl: string | null;
+  images: string[];
   mapx: number | null;
   mapy: number | null;
   // 관광지

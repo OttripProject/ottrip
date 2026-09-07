@@ -46,6 +46,7 @@ class TourismDetail(APISchema):
     telname: str | None = None
     overview: str | None = None
     image_url: str | None = None
+    images: list[str] = []
     mapx: float | None = None
     mapy: float | None = None
     # 관광지
