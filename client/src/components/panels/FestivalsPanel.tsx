@@ -62,16 +62,17 @@ export default function FestivalsPanel({
 
             <ScrollView
               style={styles.list}
+              contentContainerStyle={styles.listContent}
               showsVerticalScrollIndicator={false}
               overScrollMode="never"
             >
               {festivals.map((f, i) => (
-                <Pressable
-                  key={f.contentId}
-                  style={({ pressed }) => [
+                <View key={f.contentId}>
+                  {i > 0 && <View style={styles.separator} />}
+                  <Pressable
+                  style={({ hovered }) => [
                     styles.item,
-                    i < festivals.length - 1 && styles.itemDivider,
-                    pressed && styles.itemPressed,
+                    hovered && styles.itemHovered,
                   ]}
                   accessibilityRole="button"
                 >
@@ -90,6 +91,7 @@ export default function FestivalsPanel({
                     {`${fmtDate(f.eventStartDate)}–${fmtDate(f.eventEndDate)}`}
                   </Text>
                 </Pressable>
+                </View>
               ))}
             </ScrollView>
           </View>
@@ -165,18 +167,19 @@ const styles = StyleSheet.create({
     flex: 1,
     maxHeight: 232,
   },
+  listContent: {},
+  separator: {
+    height: 1,
+    backgroundColor: colors.gray200,
+    marginHorizontal: spacing.md,
+  },
   item: {
     paddingVertical: 10,
-    paddingHorizontal: spacing.sm,
-    marginHorizontal: -spacing.sm,
+    paddingHorizontal: spacing.md,
     borderRadius: 12,
     gap: 2,
   },
-  itemDivider: {
-    borderBottomWidth: 1,
-    borderBottomColor: colors.gray300,
-  },
-  itemPressed: {
+  itemHovered: {
     backgroundColor: colors.gray200,
   },
   itemRow: {
