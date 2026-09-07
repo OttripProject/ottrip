@@ -403,7 +403,7 @@ export default function FestivalDetailModal({ visible, onClose, item, onAddToIti
                     {detail?.homepage && (
                       <View style={styles.tableRow}>
                         <Text style={styles.tableLabel}>홈페이지</Text>
-                        <Pressable style={{ flex: 1 }} onPress={() => Linking.openURL(detail.homepage!)}>
+                        <Pressable style={{ flex: 1 }} onPress={() => window.open(detail.homepage!, "_blank")}>
                           <Text style={[styles.tableValue, styles.link]} numberOfLines={1}>
                             {detail.homepage}
                           </Text>
