@@ -1349,6 +1349,16 @@ export default function WeeklySchedulePanel({
               }
             : null,
         );
+      } else if (itineraryDate && startTime && endTime) {
+        setPreviewEvent({
+          title: title || "제목없음",
+          startTime,
+          endTime,
+          location: location || "",
+          category,
+          start: dayjs(`${itineraryDate}T${startTime}:00`).toDate(),
+          end: dayjs(`${itineraryDate}T${endTime}:00`).toDate(),
+        });
       }
     };
 

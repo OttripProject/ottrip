@@ -209,7 +209,7 @@ export default function ItineraryItem({
   );
 
   React.useEffect(() => {
-    if (!itinerary && !readOnly && typeof window !== "undefined") {
+    if (!itinerary?.id && !readOnly && typeof window !== "undefined") {
       window.dispatchEvent(
         new CustomEvent("itinerary-preview-update", {
           detail: {
