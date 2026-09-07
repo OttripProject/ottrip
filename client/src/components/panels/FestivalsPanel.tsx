@@ -4,6 +4,7 @@ import { colors } from "@/ui/tokens/colors";
 import { spacing } from "@/ui/tokens/spacing";
 import { textStyles } from "@/ui/tokens/typography";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useState } from "react";
 import PanelLayout from "./PanelLayout";
 
 interface FestivalsPanelProps {
@@ -30,8 +31,10 @@ export default function FestivalsPanel({
   expanded,
   onToggle,
 }: FestivalsPanelProps) {
+  const [hovered, setHovered] = useState(false);
+
   return (
-    <PanelLayout>
+    <PanelLayout style={!expanded && hovered ? styles.panelHover : undefined}>
       <View style={styles.inner}>
         {/* 펼쳐진 상태 */}
         <View
@@ -98,6 +101,8 @@ export default function FestivalsPanel({
           onPress={onToggle}
           pointerEvents={expanded ? "none" : "auto"}
           accessibilityLabel="축제·공연 펼치기"
+          onHoverIn={() => setHovered(true)}
+          onHoverOut={() => setHovered(false)}
         >
           <Text style={styles.collapsedTitle}>축제·공연</Text>
           {!isLoading && (
@@ -112,6 +117,9 @@ export default function FestivalsPanel({
 }
 
 const styles = StyleSheet.create({
+  panelHover: {
+    backgroundColor: colors.festivalBgLight,
+  },
   inner: {
     flex: 1,
     position: "relative",
