@@ -31,7 +31,7 @@ function parseDateLabel(dateStr: string): { md: string; dow: string } {
 interface Props {
   suggestions: DaySuggestion[];
   onDismiss: () => void;
-  onPlacePress?: (place: SuggestionPlace) => void;
+  onPlacePress?: (place: SuggestionPlace, date: string, slotStart: string) => void;
 }
 
 export default function SuggestionBar({ suggestions, onDismiss, onPlacePress }: Props) {
@@ -82,7 +82,7 @@ export default function SuggestionBar({ suggestions, onDismiss, onPlacePress }: 
     return (
       <Pressable
         style={({ hovered }: any) => [styles.placeBtn, hovered && styles.placeBtnHover]}
-        onPress={() => onPlacePress?.(targetPlace)}
+        onPress={() => onPlacePress?.(targetPlace, targetDay.date, targetDay.slotStart)}
         accessibilityLabel={`${targetPlace.title} 자세히 보기`}
         accessibilityRole="button"
       >

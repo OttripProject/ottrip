@@ -191,6 +191,7 @@ export default function DashboardScreen() {
   const [suggestions, setSuggestions] = useState<DaySuggestion[]>([]);
   const [suggestionDismissed, setSuggestionDismissed] = useState(false);
   const [selectedSuggestion, setSelectedSuggestion] = useState<NearbyAttraction | null>(null);
+  const [selectedSuggestionSlot, setSelectedSuggestionSlot] = useState<{ date: string; slotStart: string } | null>(null);
   const documentAnalyzeSeqRef = useRef(0);
   const [stagedDocumentAnalyze, setStagedDocumentAnalyze] =
     useState<StagedDocumentAnalyzePayload | null>(null);
@@ -894,7 +895,7 @@ export default function DashboardScreen() {
                     <SuggestionBar
                       suggestions={suggestions}
                       onDismiss={() => setSuggestionDismissed(true)}
-                      onPlacePress={(place: SuggestionPlace) =>
+                      onPlacePress={(place: SuggestionPlace, date: string, slotStart: string) => {
                         setSelectedSuggestion({
                           contentId: place.contentId,
                           contentTypeId: place.category ?? "",
@@ -904,8 +905,9 @@ export default function DashboardScreen() {
                           address: null,
                           rank: null,
                           dist: place.dist,
-                        })
-                      }
+                        });
+                        setSelectedSuggestionSlot({ date, slotStart });
+                      }}
                     />
                   )}
                 </View>
@@ -1020,13 +1022,40 @@ export default function DashboardScreen() {
       </View>
     <TourismDetailModal
       visible={selectedSuggestion !== null}
-      onClose={() => setSelectedSuggestion(null)}
+      onClose={() => { setSelectedSuggestion(null); setSelectedSuggestionSlot(null); }}
       item={selectedSuggestion}
       itineraryLocation={null}
       itinerary={selectedItinerary}
       onOpenNewItinerary={(draft) => {
-        setNewItineraryDraft(draft);
+        const slot = selectedSuggestionSlot;
+        const segments = planData?.plan?.segments;
+        let country: string | undefined;
+        let city: string | undefined;
+        if (slot && segments?.length) {
+          const seg = segments.find((s: any) => s.startDate <= slot.date && slot.date <= s.endDate);
+          const target = seg ?? segments[0];
+          country = target?.country;
+          city = target?.city;
+        }
+        const fmt = (mins: number) =>
+          `${String(Math.floor(mins / 60)).padStart(2, "0")}:${String(mins % 60).padStart(2, "0")}`;
+        const startMins = slot
+          ? parseInt(slot.slotStart.split(":")[0]) * 60 + parseInt(slot.slotStart.split(":")[1])
+          : null;
+        setNewItineraryDraft({
+          ...draft,
+          ...(slot ? { itineraryDate: slot.date } : {}),
+          ...(startMins !== null ? { startTime: fmt(startMins), endTime: fmt(Math.min(startMins + 60, 24 * 60)) } : {}),
+          ...(country ? { country } : {}),
+          ...(city ? { city } : {}),
+        });
         setSelectedSuggestion(null);
+        setSelectedSuggestionSlot(null);
+        setActiveTab("itinerary");
+        setSelectedFlight(null);
+        setSelectedAccommodation(null);
+        setSelectedItinerary(null);
+        setOpenNewItineraryForm(true);
       }}
     />
     </GradientBackground>
