@@ -45,7 +45,7 @@ const BADGE_COLORS: Record<string, { color: string; bg: string }> = {
   쇼핑: { color: "rgb(31, 157, 87)", bg: "rgb(231, 247, 236)" },
   레포츠: { color: "rgb(55, 55, 55)", bg: "rgb(244, 244, 244)" },
   "축제·공연": { color: "rgb(14, 138, 138)", bg: "rgb(227, 246, 246)" },
-  문화시설: { color: "rgb(10, 132, 255)", bg: "rgb(239, 244, 255)" },
+  문화시설: { color: "rgb(217, 28, 181)", bg: "rgb(255, 235, 251)" },
   음식점: { color: "rgb(183, 104, 0)", bg: "rgb(255, 244, 224)" },
   숙박: { color: "rgb(109, 59, 224)", bg: "rgb(245, 239, 255)" },
   관광지: { color: "rgb(217, 28, 181)", bg: "rgb(255, 235, 251)" },

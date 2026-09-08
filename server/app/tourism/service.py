@@ -929,6 +929,7 @@ async def _suggest_process_day(
                     content_id=str(item.get("contentid") or ""),
                     title=" ".join(str(item.get("title") or "").split()),
                     category=category,
+                    content_type_id=type_id or None,
                     dist=d if d < 99999 else None,
                     image_url=str(item["firstimage"])
                     if item.get("firstimage")

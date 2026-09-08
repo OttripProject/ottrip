@@ -1,6 +1,7 @@
 import CongestionBanner, { type CongestedItem } from "@/components/CongestionBanner";
-import type { DaySuggestion, FestivalItem } from "@/services/tourism";
+import type { DaySuggestion, FestivalItem, NearbyAttraction, SuggestionPlace } from "@/services/tourism";
 import { tourismApi } from "@/services/tourism";
+import TourismDetailModal from "@/components/modals/TourismDetailModal";
 import SuggestionBar from "@/components/panels/SuggestionBar";
 import { useToast } from "@/contexts/ToastContext";
 import { usePlanDataQuery } from "@/hooks/usePlanDataQuery";
@@ -189,6 +190,7 @@ export default function DashboardScreen() {
   const [bannerDismissed, setBannerDismissed] = useState(false);
   const [suggestions, setSuggestions] = useState<DaySuggestion[]>([]);
   const [suggestionDismissed, setSuggestionDismissed] = useState(false);
+  const [selectedSuggestion, setSelectedSuggestion] = useState<NearbyAttraction | null>(null);
   const documentAnalyzeSeqRef = useRef(0);
   const [stagedDocumentAnalyze, setStagedDocumentAnalyze] =
     useState<StagedDocumentAnalyzePayload | null>(null);
@@ -892,6 +894,18 @@ export default function DashboardScreen() {
                     <SuggestionBar
                       suggestions={suggestions}
                       onDismiss={() => setSuggestionDismissed(true)}
+                      onPlacePress={(place: SuggestionPlace) =>
+                        setSelectedSuggestion({
+                          contentId: place.contentId,
+                          contentTypeId: place.category ?? "",
+                          categorySub: null,
+                          title: place.title,
+                          imageUrl: place.imageUrl,
+                          address: null,
+                          rank: null,
+                          dist: place.dist,
+                        })
+                      }
                     />
                   )}
                 </View>
@@ -1004,6 +1018,17 @@ export default function DashboardScreen() {
           )}
         </View>
       </View>
+    <TourismDetailModal
+      visible={selectedSuggestion !== null}
+      onClose={() => setSelectedSuggestion(null)}
+      item={selectedSuggestion}
+      itineraryLocation={null}
+      itinerary={selectedItinerary}
+      onOpenNewItinerary={(draft) => {
+        setNewItineraryDraft(draft);
+        setSelectedSuggestion(null);
+      }}
+    />
     </GradientBackground>
   );
 }

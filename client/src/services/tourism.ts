@@ -108,6 +108,7 @@ export interface SuggestionPlace {
   contentId: string;
   title: string;
   category: string | null;
+  contentTypeId: string | null;
   dist: number | null;
   imageUrl: string | null;
   mapx: number | null;

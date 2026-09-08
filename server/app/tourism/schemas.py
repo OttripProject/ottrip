@@ -109,6 +109,7 @@ class SuggestionPlace(APISchema):
     content_id: str
     title: str
     category: str | None = None
+    content_type_id: str | None = None
     dist: float | None = None
     image_url: str | None = None
     mapx: float | None = None
