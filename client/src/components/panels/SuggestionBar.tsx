@@ -3,8 +3,8 @@ import { colors } from "@/ui/tokens/colors";
 import { radii } from "@/ui/tokens/radii";
 import { spacing } from "@/ui/tokens/spacing";
 import { textStyles } from "@/ui/tokens/typography";
-import { useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { useRef, useState } from "react";
+import { Animated, Easing, Pressable, StyleSheet, Text, View } from "react-native";
 import AiCloseIcon from "../../../assets/ai_close.svg";
 import LeftArrowIcon from "../../../assets/left_arrow.svg";
 import RightArrowIcon from "../../../assets/right_arrow.svg";
@@ -41,22 +41,75 @@ interface Props {
 export default function SuggestionBar({ suggestions, onDismiss, onPlacePress }: Props) {
   const [dayIdx, setDayIdx] = useState(0);
   const [placeIdx, setPlaceIdx] = useState(0);
+  const [outgoing, setOutgoing] = useState<{ dayIdx: number; placeIdx: number } | null>(null);
+  const [wrapW, setWrapW] = useState(400);
+  const outX = useRef(new Animated.Value(0)).current;
+  const inX = useRef(new Animated.Value(0)).current;
 
   if (!suggestions.length) return null;
 
   const day = suggestions[dayIdx];
   const place = day.places[placeIdx];
   const { md, dow } = parseDateLabel(day.date);
-  const distLabel = formatDist(place.dist);
-  const catBadge = place.category ? CATEGORY_BADGE[place.category] : null;
   const canPrev = dayIdx > 0;
   const canNext = dayIdx < suggestions.length - 1;
 
   function goDay(dir: -1 | 1) {
     const next = dayIdx + dir;
     if (next < 0 || next >= suggestions.length) return;
+
+    outX.setValue(0);
+    inX.setValue(dir * wrapW);
+    setOutgoing({ dayIdx, placeIdx });
     setDayIdx(next);
     setPlaceIdx(0);
+
+    Animated.parallel([
+      Animated.timing(outX, {
+        toValue: -dir * wrapW,
+        duration: 240,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+      Animated.timing(inX, {
+        toValue: 0,
+        duration: 240,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+    ]).start(() => setOutgoing(null));
+  }
+
+  function renderPlace(targetDay: DaySuggestion, targetPlace: SuggestionPlace) {
+    const distLabel = formatDist(targetPlace.dist);
+    const catBadge = targetPlace.category ? CATEGORY_BADGE[targetPlace.category] : null;
+    return (
+      <Pressable
+        style={({ hovered }: any) => [styles.placeBtn, hovered && styles.placeBtnHover]}
+        onPress={() => onPlacePress?.(targetPlace)}
+        accessibilityLabel={`${targetPlace.title} 자세히 보기`}
+        accessibilityRole="button"
+      >
+        <View style={styles.placeRow1}>
+          <Text style={styles.timeRange}>{targetDay.slotStart}–{targetDay.slotEnd}</Text>
+          {catBadge && (
+            <View style={[styles.catBadge, { backgroundColor: catBadge.bg }]}>
+              <Text style={[styles.catText, { color: catBadge.color }]}>{targetPlace.category}</Text>
+            </View>
+          )}
+          <Text style={styles.placeName} numberOfLines={1}>{targetPlace.title}</Text>
+          {distLabel && (
+            <>
+              <Text style={styles.separator}>·</Text>
+              <Text style={styles.distText}>{distLabel}</Text>
+            </>
+          )}
+        </View>
+        {targetPlace.sentence ? (
+          <Text style={styles.sentence} numberOfLines={1}>{targetPlace.sentence}</Text>
+        ) : null}
+      </Pressable>
+    );
   }
 
   return (
@@ -94,36 +147,16 @@ export default function SuggestionBar({ suggestions, onDismiss, onPlacePress }: 
         </View>
 
         {/* ── 장소 정보 (클릭) ── */}
-        <Pressable
-          style={({ hovered }: any) => [styles.placeBtn, hovered && styles.placeBtnHover]}
-          onPress={() => onPlacePress?.(place)}
-          accessibilityLabel={`${place.title} 자세히 보기`}
-          accessibilityRole="button"
-        >
-          {/* 첫째 줄: 시간 범위 · 카테고리 · 이름 · 거리 */}
-          <View style={styles.placeRow1}>
-            <Text style={styles.timeRange}>
-              {day.slotStart}–{day.slotEnd}
-            </Text>
-            {catBadge && (
-              <View style={[styles.catBadge, { backgroundColor: catBadge.bg }]}>
-                <Text style={[styles.catText, { color: catBadge.color }]}>{place.category}</Text>
-              </View>
-            )}
-            <Text style={styles.placeName} numberOfLines={1}>{place.title}</Text>
-            {distLabel && (
-              <>
-                <Text style={styles.separator}>·</Text>
-                <Text style={styles.distText}>{distLabel}</Text>
-              </>
-            )}
-          </View>
-
-          {/* 둘째 줄: 제안 문장 */}
-          {place.sentence ? (
-            <Text style={styles.sentence} numberOfLines={1}>{place.sentence}</Text>
-          ) : null}
-        </Pressable>
+        <View style={styles.placeWrapper} onLayout={(e) => setWrapW(e.nativeEvent.layout.width)}>
+          {outgoing !== null && (
+            <Animated.View style={[StyleSheet.absoluteFill, { transform: [{ translateX: outX }] }]}>
+              {renderPlace(suggestions[outgoing.dayIdx], suggestions[outgoing.dayIdx].places[outgoing.placeIdx])}
+            </Animated.View>
+          )}
+          <Animated.View style={{ transform: [{ translateX: inX }] }}>
+            {renderPlace(day, place)}
+          </Animated.View>
+        </View>
 
         {/* ── 도트 + 닫기 ── */}
         <View style={styles.rightGroup}>
@@ -220,10 +253,13 @@ const styles = StyleSheet.create({
     color: colors.gray700,
   },
 
-  // 장소 버튼
-  placeBtn: {
+  // 장소 래퍼 + 버튼
+  placeWrapper: {
     flex: 1,
     minWidth: 0,
+    overflow: "hidden",
+  },
+  placeBtn: {
     flexDirection: "column",
     gap: 2,
     paddingVertical: spacing.xs,
