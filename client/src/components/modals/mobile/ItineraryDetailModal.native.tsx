@@ -1,15 +1,20 @@
 import ImagePreviewModal, {
   type ImagePreviewItem,
 } from "@/components/modals/ImagePreviewModal";
+import TourismDetailModal from "@/components/modals/TourismDetailModal";
 import type { Attachment, Expense, Itinerary } from "@/types/api";
 import { ExpenseCurrency, currencyLabels } from "@/types/expense";
 import BottomSheetModal from "@/ui/components/BottomSheetModal.native";
 import MiniMapView from "@/ui/components/MiniMapView";
 import { colors } from "@/ui/tokens/colors";
 import { radii } from "@/ui/tokens/radii";
+import { spacing } from "@/ui/tokens/spacing";
 import { textStyles } from "@/ui/tokens/typography";
 import { formatTime } from "@/utils/dateUtils";
+import { formatWalkTime } from "@/utils/distanceUtils";
 import { useEffect, useMemo, useState } from "react";
+import type { NearbyAttraction } from "@/services/tourism";
+import { tourismApi } from "@/services/tourism";
 import {
   Alert,
   Linking,
@@ -30,6 +35,17 @@ import LocationIcon from "../../../../assets/mobile_location.svg";
 import MapIcon from "../../../../assets/mobile_map.svg";
 import UpdateIcon from "../../../../assets/update.svg";
 import TimeIcon from "../../../../assets/week_bar_time.svg";
+
+const NEARBY_BADGE_COLORS: Record<string, { color: string; bg: string }> = {
+  여행코스: { color: "rgb(62, 91, 217)", bg: "rgb(236, 239, 254)" },
+  쇼핑: { color: "rgb(31, 157, 87)", bg: "rgb(231, 247, 236)" },
+  레포츠: { color: "rgb(55, 55, 55)", bg: "rgb(244, 244, 244)" },
+  "축제·공연": { color: "rgb(14, 138, 138)", bg: "rgb(227, 246, 246)" },
+  문화시설: { color: "rgb(10, 132, 255)", bg: "rgb(239, 244, 255)" },
+  음식점: { color: "rgb(183, 104, 0)", bg: "rgb(255, 244, 224)" },
+  관광지: { color: "rgb(217, 28, 181)", bg: "rgb(255, 235, 251)" },
+};
+const DEFAULT_NEARBY_BADGE = { color: "#6C6C6C", bg: "#F5F5F5" };
 
 interface ItineraryDetailModalProps {
   visible: boolean;
@@ -53,6 +69,9 @@ export default function ItineraryDetailModal({
   const [previewVisible, setPreviewVisible] = useState(false);
   const [previewImages, setPreviewImages] = useState<ImagePreviewItem[]>([]);
   const [previewInitialIndex, setPreviewInitialIndex] = useState(0);
+  const [nearbyAttractions, setNearbyAttractions] = useState<NearbyAttraction[]>([]);
+  const [selectedAttraction, setSelectedAttraction] = useState<NearbyAttraction | null>(null);
+  const [tourismDetailVisible, setTourismDetailVisible] = useState(false);
 
   const expenseByCurrency = useMemo(() => {
     if (!itinerary) return {} as Record<ExpenseCurrency, number>;
@@ -79,8 +98,22 @@ export default function ItineraryDetailModal({
   );
 
   useEffect(() => {
-    if (!visible) setPreviewVisible(false);
-  }, [visible]);
+    if (!visible) {
+      setPreviewVisible(false);
+      setNearbyAttractions([]);
+      setTourismDetailVisible(false);
+      return;
+    }
+    if (!itinerary?.id || !itinerary?.location || itinerary?.country !== "대한민국") return;
+    tourismApi.getNearbyAttractions(itinerary.id)
+      .then(data => {
+        const filtered = data.filter(
+          item => item.contentTypeId !== "숙박" && item.contentTypeId !== "숙소",
+        );
+        setNearbyAttractions(filtered);
+      })
+      .catch(() => {});
+  }, [visible, itinerary?.id, itinerary?.location?.id]);
 
   if (!itinerary) return null;
 
@@ -230,6 +263,47 @@ export default function ItineraryDetailModal({
               />
             )}
 
+          {/* 주변 추천 */}
+          {nearbyAttractions.length > 0 && (
+            <View style={styles.nearbySection}>
+              <View style={styles.nearbyHeader}>
+                <Text style={styles.nearbyTitle}>주변 추천</Text>
+                <Text style={styles.nearbyCount}>{nearbyAttractions.length}곳</Text>
+              </View>
+              {nearbyAttractions.map((item, index) => {
+                const badge = NEARBY_BADGE_COLORS[item.contentTypeId] ?? DEFAULT_NEARBY_BADGE;
+                const walkTime = item.dist ? formatWalkTime(item.dist) : null;
+                const sub = item.dist != null
+                  ? [item.address, walkTime].filter(Boolean).join(" · ")
+                  : [item.address, item.categorySub].filter(Boolean).join(" · ");
+                return (
+                  <Pressable
+                    key={index}
+                    style={styles.nearbyCard}
+                    onPress={() => {
+                      setSelectedAttraction(item);
+                      setTourismDetailVisible(true);
+                    }}
+                  >
+                    <View style={[styles.nearbyBadge, { backgroundColor: badge.bg }]}>
+                      <Text style={[styles.nearbyBadgeText, { color: badge.color }]}>
+                        {item.contentTypeId}
+                      </Text>
+                    </View>
+                    <View style={styles.nearbyCardContent}>
+                      <Text style={styles.nearbyCardTitle} numberOfLines={1}>
+                        {item.title}
+                      </Text>
+                      {!!sub && (
+                        <Text style={styles.nearbyCardSub} numberOfLines={1}>{sub}</Text>
+                      )}
+                    </View>
+                  </Pressable>
+                );
+              })}
+            </View>
+          )}
+
           {/* 비용 */}
           {Object.values(expenseByCurrency).some(v => v > 0) && (
             <View style={styles.detailItem}>
@@ -326,6 +400,19 @@ export default function ItineraryDetailModal({
         images={previewImages}
         initialIndex={previewInitialIndex}
       />
+      <TourismDetailModal
+        visible={tourismDetailVisible}
+        onClose={() => setTourismDetailVisible(false)}
+        item={selectedAttraction}
+        itineraryLocation={
+          itinerary.location?.latitude != null
+            ? { latitude: itinerary.location.latitude, longitude: itinerary.location.longitude }
+            : null
+        }
+        itinerary={itinerary}
+        onOpenNewItinerary={() => {}}
+        onSwitchToAccommodation={() => {}}
+      />
     </BottomSheetModal>
   );
 }
@@ -390,6 +477,54 @@ const styles = StyleSheet.create({
   },
   detailValue: {
     ...textStyles.h6,
+  },
+  nearbySection: {
+    marginTop: spacing.sm,
+  },
+  nearbyHeader: {
+    flexDirection: "row",
+    alignItems: "baseline",
+    justifyContent: "space-between",
+    marginBottom: 8,
+  },
+  nearbyTitle: {
+    ...textStyles.h8,
+    color: colors.gray600,
+  },
+  nearbyCount: {
+    ...textStyles.body6,
+    color: colors.gray400,
+  },
+  nearbyCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: radii.md,
+    backgroundColor: colors.gray100,
+    marginBottom: 4,
+  },
+  nearbyBadge: {
+    borderRadius: 16,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    flexShrink: 0,
+  },
+  nearbyBadgeText: {
+    ...textStyles.h9
+  },
+  nearbyCardContent: {
+    flex: 1,
+    gap: 2,
+  },
+  nearbyCardTitle: {
+    ...textStyles.h7,
+    color: colors.gray900,
+  },
+  nearbyCardSub: {
+    ...textStyles.body6,
+    color: colors.gray600,
   },
   attachmentSection: {
     marginTop: 24,
