@@ -281,7 +281,7 @@ const styles = StyleSheet.create({
     flexShrink: 0,
     height: 20,
     paddingHorizontal: spacing.sm,
-    borderRadius: radii.xs,
+    borderRadius: radii.pill,
     justifyContent: "center",
     alignItems: "center",
   },

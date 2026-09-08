@@ -290,6 +290,8 @@ export default function TourismDetailModal({
       startTime: fmt(startMins),
       endTime: fmt(endMins),
       category: mapContentTypeToCategory(detail?.contentTypeId ?? item.contentTypeId),
+      locationLat: coords?.lat,
+      locationLng: coords?.lng,
     });
     onClose();
   };
