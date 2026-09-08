@@ -3,6 +3,7 @@ import { colors } from "@/ui/tokens/colors";
 import { radii } from "@/ui/tokens/radii";
 import { spacing } from "@/ui/tokens/spacing";
 import { textStyles } from "@/ui/tokens/typography";
+import { formatWalkTime } from "@/utils/distanceUtils";
 import { useRef, useState } from "react";
 import { Animated, Easing, Pressable, StyleSheet, Text, View } from "react-native";
 import AiCloseIcon from "../../../assets/ai_close.svg";
@@ -20,11 +21,6 @@ const CATEGORY_BADGE: Record<string, { color: string; bg: string }> = {
   여행코스: { color: colors.gray700,        bg: colors.gray200 },
 };
 
-function formatDist(distM: number | null): string | null {
-  if (distM == null) return null;
-  if (distM < 2000) return `도보 ${Math.max(1, Math.round(distM / 50))}분`;
-  return `약 ${(distM / 1000).toFixed(1)}km`;
-}
 
 function parseDateLabel(dateStr: string): { md: string; dow: string } {
   const parts = dateStr.split("-").map(Number);
@@ -81,7 +77,7 @@ export default function SuggestionBar({ suggestions, onDismiss, onPlacePress }: 
   }
 
   function renderPlace(targetDay: DaySuggestion, targetPlace: SuggestionPlace) {
-    const distLabel = formatDist(targetPlace.dist);
+    const distLabel = formatWalkTime(targetPlace.dist ?? 0);
     const catBadge = targetPlace.category ? CATEGORY_BADGE[targetPlace.category] : null;
     return (
       <Pressable
