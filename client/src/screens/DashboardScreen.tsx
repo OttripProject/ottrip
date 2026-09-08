@@ -895,6 +895,7 @@ export default function DashboardScreen() {
                     <SuggestionBar
                       suggestions={suggestions}
                       onDismiss={() => setSuggestionDismissed(true)}
+                      onReopen={() => setSuggestionDismissed(false)}
                       onPlacePress={(place: SuggestionPlace, date: string, slotStart: string) => {
                         setSelectedSuggestion({
                           contentId: place.contentId,

@@ -1,4 +1,5 @@
 import type { DaySuggestion, SuggestionPlace } from "@/services/tourism";
+import { useToast } from "@/contexts/ToastContext";
 import { colors } from "@/ui/tokens/colors";
 import { radii } from "@/ui/tokens/radii";
 import { spacing } from "@/ui/tokens/spacing";
@@ -30,10 +31,12 @@ function parseDateLabel(dateStr: string): { md: string; dow: string } {
 interface Props {
   suggestions: DaySuggestion[];
   onDismiss: () => void;
+  onReopen?: () => void;
   onPlacePress?: (place: SuggestionPlace, date: string, slotStart: string) => void;
 }
 
-export default function SuggestionBar({ suggestions, onDismiss, onPlacePress }: Props) {
+export default function SuggestionBar({ suggestions, onDismiss, onReopen, onPlacePress }: Props) {
+  const { showToast } = useToast();
   const [dayIdx, setDayIdx] = useState(0);
   const [placeIdx, setPlaceIdx] = useState(0);
   const [outgoing, setOutgoing] = useState<{ dayIdx: number; placeIdx: number } | null>(null);
@@ -177,7 +180,13 @@ export default function SuggestionBar({ suggestions, onDismiss, onPlacePress }: 
             </View>
           )}
           <Pressable
-            onPress={onDismiss}
+            onPress={() => {
+              onDismiss();
+              showToast("AI 제안을 숨겼어요.\n상단 AI 제안 버튼으로 다시 볼 수 있어요.", {
+                icon: "info",
+                action: onReopen ? { label: "다시 보기", onPress: onReopen } : undefined,
+              });
+            }}
             style={({ hovered }: any) => [styles.closeBtn, hovered && styles.closeBtnHover]}
             accessibilityLabel="AI 제안 닫기"
           >
