@@ -30,6 +30,7 @@ interface DetailsPanelProps {
   activeTab?: "itinerary" | "flight" | "accommodation" | undefined;
   onItineraryAdd?: (itinerary: any) => void;
   onItineraryClear?: () => void;
+  onOpenNewItineraryFromExisting?: (draft: any) => void;
   onFlightAdd?: (flight: any) => void;
   onFlightClear?: () => void;
   onAccommodationAdd?: (accommodation: any) => void;
@@ -66,6 +67,7 @@ export default function DetailsPanel({
   activeTab,
   onItineraryAdd,
   onItineraryClear,
+  onOpenNewItineraryFromExisting,
   onFlightAdd,
   onFlightClear,
   onAccommodationAdd,
@@ -126,6 +128,7 @@ export default function DetailsPanel({
           activeTab={activeTab}
           onItineraryAdd={onItineraryAdd}
           onItineraryClear={onItineraryClear}
+          onOpenNewItineraryFromExisting={onOpenNewItineraryFromExisting}
           openNewItineraryForm={openNewItineraryForm}
           onConsumeOpenNewItineraryForm={onConsumeOpenNewItineraryForm}
           selectedItineraryDate={selectedItineraryDate}

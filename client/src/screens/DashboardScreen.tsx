@@ -987,6 +987,14 @@ export default function DashboardScreen() {
                     setSelectedItinerary(null);
                     setActiveTab(undefined);
                   }}
+                  onOpenNewItineraryFromExisting={(draft) => {
+                    setNewItineraryDraft(draft);
+                    setSelectedItinerary(null);
+                    setActiveTab("itinerary");
+                    setSelectedFlight(null);
+                    setSelectedAccommodation(null);
+                    setOpenNewItineraryForm(true);
+                  }}
                   onFlightAdd={handleFlightAdd}
                   onFlightClear={() => {
                     setSelectedFlight(null);
