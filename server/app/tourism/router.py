@@ -162,6 +162,7 @@ async def get_tourism_detail(
     name: str | None = Query(None),
     content_id: str | None = Query(None),
     content_type_id: str | None = Query(None),
+    include_images: bool = Query(True),
 ) -> TourismDetail:
     if not name and not content_id:
         raise HTTPException(
@@ -171,6 +172,7 @@ async def get_tourism_detail(
         name=name,
         content_id=content_id,
         content_type_id=content_type_id,
+        include_images=include_images,
     )
     if not detail:
         raise HTTPException(status_code=404, detail="관광지 정보를 찾을 수 없습니다.")

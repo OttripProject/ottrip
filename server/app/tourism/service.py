@@ -299,8 +299,9 @@ async def get_tourism_detail(
     name: str | None = None,
     content_id: str | None = None,
     content_type_id: str | None = None,
+    include_images: bool = True,
 ) -> TourismDetail | None:
-    """관광지 상세 조회 (detailCommon2 + detailIntro2 병렬)"""
+    """관광지 상세 조회 (detailCommon2 + detailIntro2 병렬, include_images=True 시 detailImage2 추가)"""
     if content_id and content_type_id:
         cid = content_id
         ctid = _CONTENT_TYPE_NUMERIC.get(content_type_id, content_type_id)
@@ -323,25 +324,39 @@ async def get_tourism_detail(
         "_type": "json",
     }
     async with httpx.AsyncClient(timeout=10.0) as client:
-        common_resp, intro_resp, image_resp = await asyncio.gather(
+        tasks = [
             client.get(f"{_KOR_SERVICE_URL}/detailCommon2", params=base_params),
             client.get(
                 f"{_KOR_SERVICE_URL}/detailIntro2",
                 params={**base_params, "contentTypeId": ctid},
             ),
-            client.get(
-                f"{_KOR_SERVICE_URL}/detailImage2",
-                params={**base_params, "imageYN": "Y", "numOfRows": "10"},
-            ),
-        )
+        ]
+        if include_images:
+            tasks.append(
+                client.get(
+                    f"{_KOR_SERVICE_URL}/detailImage2",
+                    params={**base_params, "imageYN": "Y", "numOfRows": "10"},
+                )
+            )
+        results = await asyncio.gather(*tasks)
+
+    common_resp, intro_resp = results[0], results[1]
+    image_resp = results[2] if include_images else None
 
     common_items = _extract_items(common_resp.json())
     if not common_items:
         return None
     c = common_items[0]
     i: dict[str, Any] = (_extract_items(intro_resp.json()) or [{}])[0]
-    image_items = _extract_items(image_resp.json()) or []
-    images = [url for item in image_items if (url := _s(item.get("originimgurl")))]
+    images = (
+        [
+            url
+            for item in _extract_items(image_resp.json())
+            if (url := _s(item.get("originimgurl")))
+        ]
+        if image_resp is not None
+        else []
+    )
 
     return TourismDetail(
         content_id=str(c.get("contentid") or ""),

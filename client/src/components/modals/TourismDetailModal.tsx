@@ -303,8 +303,8 @@ export default function TourismDetailModal({
 
     const isRealContentId = /^\d+$/.test(item.contentId);
     const fetchDetail = isRealContentId
-      ? tourismApi.getTourismDetail({ contentId: item.contentId, contentTypeId: item.contentTypeId })
-      : tourismApi.getTourismDetail({ name: item.title });
+      ? tourismApi.getTourismDetail({ contentId: item.contentId, contentTypeId: item.contentTypeId, includeImages: false })
+      : tourismApi.getTourismDetail({ name: item.title, includeImages: false });
 
     fetchDetail
       .then(async (d) => {
@@ -315,7 +315,7 @@ export default function TourismDetailModal({
           !d.title.includes(item.title) &&
           !item.title.includes(d.title)
         ) {
-          return tourismApi.getTourismDetail({ name: item.title });
+          return tourismApi.getTourismDetail({ name: item.title, includeImages: false });
         }
         return d;
       })

@@ -154,12 +154,14 @@ export const tourismApi = {
     name?: string;
     contentId?: string;
     contentTypeId?: string;
+    includeImages?: boolean;
   }): Promise<TourismDetail> => {
     const response = await api.get("/private/tourism/detail", {
       params: {
         name: params.name,
         content_id: params.contentId,
         content_type_id: params.contentTypeId,
+        include_images: params.includeImages ?? true,
       },
     });
     return response.data;
