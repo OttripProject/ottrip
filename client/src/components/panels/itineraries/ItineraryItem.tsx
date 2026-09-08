@@ -1067,9 +1067,10 @@ export default function ItineraryItem({
     setNearbyAttractions([]);
     tourismApi.getNearbyAttractions(itinerary.id)
       .then(data => {
-        nearbyCardAnims.current = data.slice(0, 10).map(() => new Animated.Value(0));
-        setNearbyAttractions(data);
-        if (data.length > 0) {
+        const filtered = data.filter(item => item.contentTypeId !== "숙박" && item.contentTypeId !== "숙소");
+        nearbyCardAnims.current = filtered.slice(0, 10).map(() => new Animated.Value(0));
+        setNearbyAttractions(filtered);
+        if (filtered.length > 0) {
           Animated.stagger(
             40,
             nearbyCardAnims.current.map(anim =>
