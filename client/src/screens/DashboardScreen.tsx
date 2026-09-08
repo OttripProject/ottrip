@@ -407,6 +407,8 @@ export default function DashboardScreen() {
     .map((it: any) => `${it.id}-${it.location?.id ?? ""}`)
     .join(",");
 
+  const isKoreanPlan = planData.plan?.segments?.some((s: any) => s.country === "대한민국") ?? false;
+
   const prevFestivalsKeyRef = useRef("");
 
   useEffect(() => {
@@ -419,7 +421,7 @@ export default function DashboardScreen() {
   }, [selectedPlanId]);
 
   useEffect(() => {
-    if (!selectedPlanId) return;
+    if (!selectedPlanId || !isKoreanPlan) return;
     tourismApi.getFestivalsForPlan(selectedPlanId).then(setFestivals).catch(() => {});
     setSuggestFestivalsLoading(true);
     tourismApi
@@ -427,15 +429,15 @@ export default function DashboardScreen() {
       .then(setSuggestFestivals)
       .catch(() => {})
       .finally(() => setSuggestFestivalsLoading(false));
-  }, [selectedPlanId, itineraryKey]);
+  }, [selectedPlanId, itineraryKey, isKoreanPlan]);
 
   useEffect(() => {
-    if (!selectedPlanId) return;
+    if (!selectedPlanId || !isKoreanPlan) return;
     tourismApi.getPlanSuggestions(selectedPlanId).then(setSuggestions).catch(() => {});
-  }, [selectedPlanId, itineraryKey]);
+  }, [selectedPlanId, itineraryKey, isKoreanPlan]);
 
   useEffect(() => {
-    if (!selectedPlanId || planData.itineraries.length === 0) return;
+    if (!selectedPlanId || !isKoreanPlan || planData.itineraries.length === 0) return;
     const today = dayjs().startOf("day");
     const maxDate = today.add(30, "day");
     const eligible = planData.itineraries.filter((it: any) => {
@@ -461,7 +463,7 @@ export default function DashboardScreen() {
     ).then((results) => {
       setCongestedItems(results.filter((r): r is CongestedItem => r !== null));
     });
-  }, [selectedPlanId, itineraryKey]);
+  }, [selectedPlanId, itineraryKey, isKoreanPlan]);
 
   const prevCongestedKeyRef = useRef("");
   useEffect(() => {

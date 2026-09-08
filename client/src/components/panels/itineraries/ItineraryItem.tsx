@@ -1059,7 +1059,7 @@ export default function ItineraryItem({
 
   useEffect(() => {
     nearbyCardAnims.current = [];
-    if (!readOnly || !itinerary?.id || !itinerary?.location) {
+    if (!readOnly || !itinerary?.id || !itinerary?.location || itinerary?.country !== "대한민국") {
       setNearbyAttractions([]);
       return;
     }
