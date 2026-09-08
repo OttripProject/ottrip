@@ -3,7 +3,6 @@ import { colors } from "@/ui/tokens/colors";
 import { radii } from "@/ui/tokens/radii";
 import { spacing } from "@/ui/tokens/spacing";
 import { textStyles } from "@/ui/tokens/typography";
-import { formatWalkTime } from "@/utils/distanceUtils";
 import { useRef, useState } from "react";
 import { Animated, Easing, Pressable, StyleSheet, Text, View } from "react-native";
 import AiCloseIcon from "../../../assets/ai_close.svg";
@@ -77,7 +76,8 @@ export default function SuggestionBar({ suggestions, onDismiss, onPlacePress }: 
   }
 
   function renderPlace(targetDay: DaySuggestion, targetPlace: SuggestionPlace) {
-    const distLabel = formatWalkTime(targetPlace.dist ?? 0);
+    const d = targetPlace.dist;
+    const distLabel = d == null ? null : d < 1000 ? `${Math.round(d / 10) * 10}m` : d < 2000 ? `${(d / 1000).toFixed(1)}km` : `${Math.round(d / 1000)}km`;
     const catBadge = targetPlace.category ? CATEGORY_BADGE[targetPlace.category] : null;
     return (
       <Pressable
