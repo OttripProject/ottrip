@@ -217,6 +217,8 @@ interface Props {
   onPlanDelete: (planId: number) => Promise<boolean>;
   activeTab?: "itinerary" | "flight" | "accommodation" | undefined;
   selectedItinerary?: any;
+  showAiSuggestButton?: boolean;
+  onAiSuggestPress?: () => void;
 }
 
 export default function WeeklySchedulePanel({
@@ -248,6 +250,8 @@ export default function WeeklySchedulePanel({
   selectedItinerary,
   previewAccommodation: externalPreviewAccommodation,
   onPreviewAccommodationChange,
+  showAiSuggestButton,
+  onAiSuggestPress,
 }: Props) {
   const queryClient = useQueryClient();
   const [currentWeekStart, setCurrentWeekStart] = useState(
@@ -2038,6 +2042,20 @@ export default function WeeklySchedulePanel({
                 <LightningIcon width={13} height={13} color={colors.black} />
                 <Text style={styles.aiChatButtonText}>대화로 일정 추가</Text>
               </GradientBackground>
+            </Pressable>
+          ) : null}
+
+          {internalSelectedTrip && showAiSuggestButton ? (
+            <Pressable
+              onPress={onAiSuggestPress}
+              style={({ hovered }: any) => [
+                styles.aiSuggestButton,
+                hovered && styles.aiSuggestButtonHover,
+              ]}
+              accessibilityLabel="숨긴 AI 제안 다시 보기"
+            >
+              <LightningIcon width={11} height={13} color={colors.aiInk} />
+              <Text style={styles.aiSuggestButtonText}>AI 제안</Text>
             </Pressable>
           ) : null}
 
@@ -4070,7 +4088,23 @@ const styles = StyleSheet.create({
   aiChatButtonText: {
     ...textStyles.h8,
     color: colors.black,
-    fontSize: 13,
+  },
+  aiSuggestButton: {
+    height: 32,
+    paddingHorizontal: spacing.lg,
+    borderRadius: 999,
+    backgroundColor: colors.aiTint,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    marginLeft: spacing.sm,
+  },
+  aiSuggestButtonHover: {
+    backgroundColor: colors.aiTintHover,
+  },
+  aiSuggestButtonText: {
+    ...textStyles.h8,
+    color: colors.aiInk,
   },
   todayBtn: {
     borderWidth: 1,

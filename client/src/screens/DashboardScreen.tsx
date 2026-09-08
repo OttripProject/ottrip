@@ -889,6 +889,8 @@ export default function DashboardScreen() {
                     onShowAccommodationDetail={handleShowAccommodationDetail}
                     activeTab={activeTab}
                     selectedItinerary={selectedItinerary}
+                    showAiSuggestButton={suggestions.length > 0 && suggestionDismissed}
+                    onAiSuggestPress={() => setSuggestionDismissed(false)}
                   />
                   </View>
                   {suggestions.length > 0 && !suggestionDismissed && (
