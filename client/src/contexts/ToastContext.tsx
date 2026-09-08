@@ -1,14 +1,26 @@
 import React, { createContext, useCallback, useContext, useRef, useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import { colors } from "@/ui/tokens/colors";
 import { textStyles } from "@/ui/tokens/typography";
-import CheckedIcon from "../../assets/mobile_plan_checked.svg"
-import XIcon from "../../assets/mobile_close.svg"
+import CheckedIcon from "../../assets/mobile_plan_checked.svg";
+import InfoCircleIcon from "../../assets/info_circle.svg";
+import XIcon from "../../assets/mobile_close.svg";
+
+interface ToastAction {
+  label: string;
+  onPress: () => void;
+}
+
+interface ToastState {
+  message: string;
+  action?: ToastAction;
+  icon?: "check" | "info";
+}
 
 interface ToastContextType {
-  showToast: (message: string) => void;
-  hideToast: () => void; // 💡 추가: 닫기 함수
-  toastMessage: string | null; // 💡 추가: 메시지 상태
+  showToast: (message: string, options?: { action?: ToastAction; icon?: "check" | "info" }) => void;
+  hideToast: () => void;
+  toastMessage: string | null;
 }
 
 const ToastContext = createContext<ToastContextType | null>(null);
@@ -21,60 +33,74 @@ export const useToast = () => {
   return context;
 };
 
-// 💡 1. Provider 안에 있던 UI 부분을 'ToastUI'라는 컴포넌트로 분리합니다.
-export const ToastUI = () => {
-  const { toastMessage, hideToast } = useToast();
+const ToastStateContext = createContext<ToastState | null>(null);
 
-  if (!toastMessage) return null;
+export const ToastUI = () => {
+  const base = useToast();
+  const toast = useContext(ToastStateContext);
+
+  if (!toast) return null;
 
   return (
-    <View style={styles.toastContainer}>
+    <Pressable style={styles.toastContainer} onPress={() => {}}>
       <View style={styles.toastIconBg}>
-        <CheckedIcon width="20" height="20" />
+        {toast.icon === "info" ? (
+          <InfoCircleIcon width="20" height="20" color={colors.white} />
+        ) : (
+          <CheckedIcon width="20" height="20" />
+        )}
       </View>
-      <Text style={styles.toastText}>{toastMessage}</Text>
-      <Pressable
-        style={styles.toastCloseBtn}
-        hitSlop={12}
-        onPress={hideToast} // 💡 수정: context에서 가져온 hideToast 사용
-      >
-        <XIcon width="14" height="14" color={colors.white}/>
+      <Text style={styles.toastText}>{toast.message}</Text>
+      {toast.action && (
+        <Pressable
+          style={styles.actionBtn}
+          onPress={() => {
+            base.hideToast();
+            toast.action!.onPress();
+          }}
+        >
+          <Text style={styles.actionBtnText}>{toast.action.label}</Text>
+        </Pressable>
+      )}
+      <Pressable style={styles.toastCloseBtn} hitSlop={12} onPress={base.hideToast}>
+        <XIcon width="14" height="14" color={colors.white} />
       </Pressable>
-    </View>
+    </Pressable>
   );
 };
 
 export const ToastProvider = ({ children }: { children: React.ReactNode }) => {
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [toast, setToast] = useState<ToastState | null>(null);
   const toastTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const hideToast = useCallback(() => {
-    setToastMessage(null);
+    setToast(null);
   }, []);
 
-  const showToast = useCallback((message: string) => {
-    setToastMessage(message);
-    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
-    toastTimerRef.current = setTimeout(() => {
-      setToastMessage(null);
-    }, 3000);
-  }, []);
+  const showToast = useCallback(
+    (message: string, options?: { action?: ToastAction; icon?: "check" | "info" }) => {
+      setToast({ message, action: options?.action, icon: options?.icon });
+      if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+      toastTimerRef.current = setTimeout(() => {
+        setToast(null);
+      }, 3000);
+    },
+    [],
+  );
 
   return (
-    // 💡 2. Provider에 상태와 닫기 함수도 같이 넘겨줍니다.
-    <ToastContext.Provider value={{ showToast, hideToast, toastMessage }}>
-      {children}
-      
-      {/* 💡 3. 기본 화면용 토스트 렌더링 (분리한 ToastUI 사용) */}
-      <ToastUI />
+    <ToastContext.Provider value={{ showToast, hideToast, toastMessage: toast?.message ?? null }}>
+      <ToastStateContext.Provider value={toast}>
+        {children}
+        <ToastUI />
+      </ToastStateContext.Provider>
     </ToastContext.Provider>
   );
 };
 
-// styles 부분은 작성하신 것과 100% 동일하게 유지
 const styles = StyleSheet.create({
   toastContainer: {
-    position: "absolute",
+    position: Platform.OS === "web" ? ("fixed" as any) : "absolute",
     bottom: 40,
     right: 20,
     backgroundColor: "rgba(0, 0, 0, 0.9)",
@@ -105,6 +131,16 @@ const styles = StyleSheet.create({
     ...textStyles.h7,
     flex: 1,
     color: colors.white,
+  },
+  actionBtn: {
+    paddingVertical: 2,
+    paddingHorizontal: 4,
+    marginLeft: 8,
+    flexShrink: 0,
+  },
+  actionBtnText: {
+    ...textStyles.h7,
+    color: colors.primary,
   },
   toastCloseBtn: {
     marginLeft: 2,

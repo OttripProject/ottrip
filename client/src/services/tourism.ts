@@ -104,6 +104,25 @@ export interface FestivalItem {
   matchedDate: string | null;
 }
 
+export interface SuggestionPlace {
+  contentId: string;
+  title: string;
+  category: string | null;
+  contentTypeId: string | null;
+  dist: number | null;
+  imageUrl: string | null;
+  mapx: number | null;
+  mapy: number | null;
+  sentence: string | null;
+}
+
+export interface DaySuggestion {
+  date: string;
+  slotStart: string;
+  slotEnd: string;
+  places: SuggestionPlace[];
+}
+
 export const tourismApi = {
   getNearbyAttractions: async (itineraryId: number): Promise<NearbyAttraction[]> => {
     const response = await api.get(`/private/tourism/nearby/${itineraryId}`);
@@ -122,6 +141,11 @@ export const tourismApi = {
     return response.data;
   },
 
+  getPlanSuggestions: async (planId: number): Promise<DaySuggestion[]> => {
+    const response = await api.get(`/private/tourism/plans/${planId}/suggestions`);
+    return response.data.suggestions;
+  },
+
   getCongestion: async (itineraryId: number): Promise<CongestionItem[]> => {
     const response = await api.get(`/private/tourism/congestion/${itineraryId}`);
     return response.data;
@@ -131,12 +155,14 @@ export const tourismApi = {
     name?: string;
     contentId?: string;
     contentTypeId?: string;
+    includeImages?: boolean;
   }): Promise<TourismDetail> => {
     const response = await api.get("/private/tourism/detail", {
       params: {
         name: params.name,
         content_id: params.contentId,
         content_type_id: params.contentTypeId,
+        include_images: params.includeImages ?? true,
       },
     });
     return response.data;

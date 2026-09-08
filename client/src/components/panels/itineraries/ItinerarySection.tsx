@@ -27,6 +27,7 @@ interface ItinerarySectionProps {
   selectedItineraryDate?: Date | null;
   newItineraryDraft?: any | null;
   onEdit?: (itinerary: any) => void;
+  onOpenNewItineraryFromExisting?: (draft: any) => void;
   onTabChange?: (tab: "itinerary" | "flight" | "accommodation", draft?: any) => void;
   stagedDocumentAnalyze?: StagedDocumentAnalyzePayload | null;
   onConsumeStagedDocumentAnalyze?: () => void;
@@ -49,6 +50,7 @@ export default function ItinerarySection({
   selectedItineraryDate,
   newItineraryDraft,
   onEdit,
+  onOpenNewItineraryFromExisting,
   onTabChange,
   stagedDocumentAnalyze,
   onConsumeStagedDocumentAnalyze,
@@ -61,12 +63,18 @@ export default function ItinerarySection({
   );
   const [editingItinerary, setEditingItinerary] = useState<any | null>(null);
   const isInitialMountRef = useRef(true);
+  const openingNewFormRef = useRef(false);
 
   const { showToast } = useToast();
 
   useEffect(() => {
     const isInitial = isInitialMountRef.current;
     isInitialMountRef.current = false;
+
+    if (openingNewFormRef.current) {
+      openingNewFormRef.current = false;
+      return;
+    }
 
     if (activeTab === "itinerary" && selectedItinerary) {
       if (selectedItinerary.id) {
@@ -102,8 +110,13 @@ export default function ItinerarySection({
   }, [stagedDocumentAnalyze, selectedItinerary, showItineraryForm]);
 
   const handleOpenNewItinerary = (draft: any) => {
-    setEditingItinerary(draft);
-    setShowItineraryForm(true);
+    if (onOpenNewItineraryFromExisting) {
+      onOpenNewItineraryFromExisting(draft);
+    } else {
+      openingNewFormRef.current = true;
+      setEditingItinerary(draft);
+      setShowItineraryForm(true);
+    }
   };
 
   const handleItinerarySave = async (itinerary: any) => {

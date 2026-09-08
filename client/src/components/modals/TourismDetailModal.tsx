@@ -45,7 +45,7 @@ const BADGE_COLORS: Record<string, { color: string; bg: string }> = {
   쇼핑: { color: "rgb(31, 157, 87)", bg: "rgb(231, 247, 236)" },
   레포츠: { color: "rgb(55, 55, 55)", bg: "rgb(244, 244, 244)" },
   "축제·공연": { color: "rgb(14, 138, 138)", bg: "rgb(227, 246, 246)" },
-  문화시설: { color: "rgb(10, 132, 255)", bg: "rgb(239, 244, 255)" },
+  문화시설: { color: "rgb(217, 28, 181)", bg: "rgb(255, 235, 251)" },
   음식점: { color: "rgb(183, 104, 0)", bg: "rgb(255, 244, 224)" },
   숙박: { color: "rgb(109, 59, 224)", bg: "rgb(245, 239, 255)" },
   관광지: { color: "rgb(217, 28, 181)", bg: "rgb(255, 235, 251)" },
@@ -290,6 +290,8 @@ export default function TourismDetailModal({
       startTime: fmt(startMins),
       endTime: fmt(endMins),
       category: mapContentTypeToCategory(detail?.contentTypeId ?? item.contentTypeId),
+      locationLat: coords?.lat,
+      locationLng: coords?.lng,
     });
     onClose();
   };
@@ -303,8 +305,8 @@ export default function TourismDetailModal({
 
     const isRealContentId = /^\d+$/.test(item.contentId);
     const fetchDetail = isRealContentId
-      ? tourismApi.getTourismDetail({ contentId: item.contentId, contentTypeId: item.contentTypeId })
-      : tourismApi.getTourismDetail({ name: item.title });
+      ? tourismApi.getTourismDetail({ contentId: item.contentId, contentTypeId: item.contentTypeId, includeImages: false })
+      : tourismApi.getTourismDetail({ name: item.title, includeImages: false });
 
     fetchDetail
       .then(async (d) => {
@@ -315,7 +317,7 @@ export default function TourismDetailModal({
           !d.title.includes(item.title) &&
           !item.title.includes(d.title)
         ) {
-          return tourismApi.getTourismDetail({ name: item.title });
+          return tourismApi.getTourismDetail({ name: item.title, includeImages: false });
         }
         return d;
       })

@@ -1,6 +1,8 @@
 import CongestionBanner, { type CongestedItem } from "@/components/CongestionBanner";
-import type { FestivalItem } from "@/services/tourism";
+import type { DaySuggestion, FestivalItem, NearbyAttraction, SuggestionPlace } from "@/services/tourism";
 import { tourismApi } from "@/services/tourism";
+import TourismDetailModal from "@/components/modals/TourismDetailModal";
+import SuggestionBar from "@/components/panels/SuggestionBar";
 import { useToast } from "@/contexts/ToastContext";
 import { usePlanDataQuery } from "@/hooks/usePlanDataQuery";
 import { usePlansQuery } from "@/hooks/usePlansQuery";
@@ -186,6 +188,10 @@ export default function DashboardScreen() {
   const [festivalsExpanded, setFestivalsExpanded] = useState(false);
   const [congestedItems, setCongestedItems] = useState<CongestedItem[]>([]);
   const [bannerDismissed, setBannerDismissed] = useState(false);
+  const [suggestions, setSuggestions] = useState<DaySuggestion[]>([]);
+  const [suggestionDismissed, setSuggestionDismissed] = useState(false);
+  const [selectedSuggestion, setSelectedSuggestion] = useState<NearbyAttraction | null>(null);
+  const [selectedSuggestionSlot, setSelectedSuggestionSlot] = useState<{ date: string; slotStart: string } | null>(null);
   const documentAnalyzeSeqRef = useRef(0);
   const [stagedDocumentAnalyze, setStagedDocumentAnalyze] =
     useState<StagedDocumentAnalyzePayload | null>(null);
@@ -313,8 +319,8 @@ export default function DashboardScreen() {
 
   useEffect(() => {
     Animated.parallel([
-      Animated.timing(animBottomFlex, {
-        toValue: festivalsExpanded ? 0.3 : 0.2,
+      Animated.timing(animBottomH, {
+        toValue: Math.round((availableHeight - 16) * (festivalsExpanded ? 0.3 : 0.2)),
         duration: 300,
         easing: Easing.out(Easing.cubic),
         useNativeDriver: false,
@@ -338,13 +344,10 @@ export default function DashboardScreen() {
           headerHeight
       : 600,
   );
-  const animBottomFlex = useRef(new Animated.Value(0.2)).current;
-  const animTopFlex = useRef(Animated.subtract(1, animBottomFlex)).current;
+  const animBottomH = useRef(new Animated.Value(Math.round((availableHeight - 16) * 0.2))).current;
   const animFestivalsFlex = useRef(new Animated.Value(0.5)).current;
-  // WeeklySchedulePanel height prop용 근사값
-  const bottomFlexRatio = festivalsExpanded ? 0.3 : 0.2;
-  const leftTopHeight = Math.round(availableHeight * (1 - bottomFlexRatio));
-  const leftBottomHeight = Math.round(availableHeight * bottomFlexRatio);
+  const leftTopHeight = Math.round((availableHeight - 16) * 0.8);
+  const leftBottomHeight = Math.round((availableHeight - 16) * 0.2);
 
   const plansQuery = usePlansQuery();
 
@@ -396,13 +399,15 @@ export default function DashboardScreen() {
     setStagedDocumentAnalyze(null);
     setCarryoverPendingFiles(null);
     setFestivalsExpanded(false);
-    animBottomFlex.setValue(0.2);
+    animBottomH.setValue(Math.round((availableHeight - 16) * 0.2));
     animFestivalsFlex.setValue(0.5);
   }, [selectedPlanId]);
 
   const itineraryKey = planData.itineraries
     .map((it: any) => `${it.id}-${it.location?.id ?? ""}`)
     .join(",");
+
+  const isKoreanPlan = planData.plan?.segments?.some((s: any) => s.country === "대한민국") ?? false;
 
   const prevFestivalsKeyRef = useRef("");
 
@@ -411,10 +416,12 @@ export default function DashboardScreen() {
     setSuggestFestivals([]);
     setCongestedItems([]);
     setBannerDismissed(false);
+    setSuggestions([]);
+    setSuggestionDismissed(false);
   }, [selectedPlanId]);
 
   useEffect(() => {
-    if (!selectedPlanId) return;
+    if (!selectedPlanId || !isKoreanPlan) return;
     tourismApi.getFestivalsForPlan(selectedPlanId).then(setFestivals).catch(() => {});
     setSuggestFestivalsLoading(true);
     tourismApi
@@ -422,10 +429,15 @@ export default function DashboardScreen() {
       .then(setSuggestFestivals)
       .catch(() => {})
       .finally(() => setSuggestFestivalsLoading(false));
-  }, [selectedPlanId, itineraryKey]);
+  }, [selectedPlanId, itineraryKey, isKoreanPlan]);
 
   useEffect(() => {
-    if (!selectedPlanId || planData.itineraries.length === 0) return;
+    if (!selectedPlanId || !isKoreanPlan) return;
+    tourismApi.getPlanSuggestions(selectedPlanId).then(setSuggestions).catch(() => {});
+  }, [selectedPlanId, itineraryKey, isKoreanPlan]);
+
+  useEffect(() => {
+    if (!selectedPlanId || !isKoreanPlan || planData.itineraries.length === 0) return;
     const today = dayjs().startOf("day");
     const maxDate = today.add(30, "day");
     const eligible = planData.itineraries.filter((it: any) => {
@@ -451,7 +463,7 @@ export default function DashboardScreen() {
     ).then((results) => {
       setCongestedItems(results.filter((r): r is CongestedItem => r !== null));
     });
-  }, [selectedPlanId, itineraryKey]);
+  }, [selectedPlanId, itineraryKey, isKoreanPlan]);
 
   const prevCongestedKeyRef = useRef("");
   useEffect(() => {
@@ -798,7 +810,7 @@ export default function DashboardScreen() {
           <View
             style={[
               styles.leftArea,
-              { flex: ratio.left },
+              { flex: ratio.left, height: availableHeight },
             ]}
           >
             {plansQuery.isLoading ? (
@@ -823,8 +835,9 @@ export default function DashboardScreen() {
                     />
                   </View>
                 )}
-                {/* 2. 주간 스케줄 모달 (70% 높이) */}
-                <Animated.View style={[styles.scheduleModal, { flex: animTopFlex }]}>
+                {/* 2. 주간 스케줄 + AI 추천 바 (같은 flex 영역) */}
+                <View style={styles.scheduleWrapper}>
+                  <View style={styles.scheduleModal}>
                   <WeeklySchedulePanel
                     itineraries={planData.itineraries}
                     flights={planData.flights}
@@ -878,11 +891,34 @@ export default function DashboardScreen() {
                     onShowAccommodationDetail={handleShowAccommodationDetail}
                     activeTab={activeTab}
                     selectedItinerary={selectedItinerary}
+                    showAiSuggestButton={suggestions.length > 0 && suggestionDismissed}
+                    onAiSuggestPress={() => setSuggestionDismissed(false)}
                   />
-                </Animated.View>
+                  </View>
+                  {suggestions.length > 0 && !suggestionDismissed && (
+                    <SuggestionBar
+                      suggestions={suggestions}
+                      onDismiss={() => setSuggestionDismissed(true)}
+                      onReopen={() => setSuggestionDismissed(false)}
+                      onPlacePress={(place: SuggestionPlace, date: string, slotStart: string) => {
+                        setSelectedSuggestion({
+                          contentId: place.contentId,
+                          contentTypeId: place.category ?? "",
+                          categorySub: null,
+                          title: place.title,
+                          imageUrl: place.imageUrl,
+                          address: null,
+                          rank: null,
+                          dist: place.dist,
+                        });
+                        setSelectedSuggestionSlot({ date, slotStart });
+                      }}
+                    />
+                  )}
+                </View>
 
                 {/* 하단 모달들 (30% 높이) */}
-                <Animated.View style={[styles.bottomRow, { flex: animBottomFlex }]}>
+                <Animated.View style={[styles.bottomRow, { height: animBottomH }]}>
                   {/* 4. 비용 모달 (좌측 하단) */}
                   <View style={styles.expensesModal}>
                     <ExpensesPanel
@@ -956,6 +992,14 @@ export default function DashboardScreen() {
                     setSelectedItinerary(null);
                     setActiveTab(undefined);
                   }}
+                  onOpenNewItineraryFromExisting={(draft) => {
+                    setNewItineraryDraft(draft);
+                    setSelectedItinerary(null);
+                    setActiveTab("itinerary");
+                    setSelectedFlight(null);
+                    setSelectedAccommodation(null);
+                    setOpenNewItineraryForm(true);
+                  }}
                   onFlightAdd={handleFlightAdd}
                   onFlightClear={() => {
                     setSelectedFlight(null);
@@ -989,6 +1033,44 @@ export default function DashboardScreen() {
           )}
         </View>
       </View>
+    <TourismDetailModal
+      visible={selectedSuggestion !== null}
+      onClose={() => { setSelectedSuggestion(null); setSelectedSuggestionSlot(null); }}
+      item={selectedSuggestion}
+      itineraryLocation={null}
+      itinerary={selectedItinerary}
+      onOpenNewItinerary={(draft) => {
+        const slot = selectedSuggestionSlot;
+        const segments = planData?.plan?.segments;
+        let country: string | undefined;
+        let city: string | undefined;
+        if (slot && segments?.length) {
+          const seg = segments.find((s: any) => s.startDate <= slot.date && slot.date <= s.endDate);
+          const target = seg ?? segments[0];
+          country = target?.country;
+          city = target?.city;
+        }
+        const fmt = (mins: number) =>
+          `${String(Math.floor(mins / 60)).padStart(2, "0")}:${String(mins % 60).padStart(2, "0")}`;
+        const startMins = slot
+          ? parseInt(slot.slotStart.split(":")[0]) * 60 + parseInt(slot.slotStart.split(":")[1])
+          : null;
+        setNewItineraryDraft({
+          ...draft,
+          ...(slot ? { itineraryDate: slot.date } : {}),
+          ...(startMins !== null ? { startTime: fmt(startMins), endTime: fmt(Math.min(startMins + 60, 24 * 60)) } : {}),
+          ...(country ? { country } : {}),
+          ...(city ? { city } : {}),
+        });
+        setSelectedSuggestion(null);
+        setSelectedSuggestionSlot(null);
+        setActiveTab("itinerary");
+        setSelectedFlight(null);
+        setSelectedAccommodation(null);
+        setSelectedItinerary(null);
+        setOpenNewItineraryForm(true);
+      }}
+    />
     </GradientBackground>
   );
 }
@@ -1028,7 +1110,14 @@ const styles = StyleSheet.create({
     paddingTop: 0,
     paddingBottom: 0,
   },
+  scheduleWrapper: {
+    flex: 1,
+    gap: 16,
+    minHeight: 0,
+    overflow: "hidden",
+  },
   scheduleModal: {
+    flex: 1,
     minHeight: 0,
     overflow: "hidden",
   },

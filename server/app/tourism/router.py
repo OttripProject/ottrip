@@ -8,7 +8,13 @@ from app.itinerary.repository import ItineraryRepository
 from app.plans.repository import PlanRepository
 
 from . import service
-from .schemas import CongestionItem, FestivalItem, NearbyAttraction, TourismDetail
+from .schemas import (
+    CongestionItem,
+    FestivalItem,
+    NearbyAttraction,
+    SuggestionResponse,
+    TourismDetail,
+)
 
 router = create_router()
 
@@ -156,6 +162,7 @@ async def get_tourism_detail(
     name: str | None = Query(None),
     content_id: str | None = Query(None),
     content_type_id: str | None = Query(None),
+    include_images: bool = Query(True),
 ) -> TourismDetail:
     if not name and not content_id:
         raise HTTPException(
@@ -165,7 +172,27 @@ async def get_tourism_detail(
         name=name,
         content_id=content_id,
         content_type_id=content_type_id,
+        include_images=include_images,
     )
     if not detail:
         raise HTTPException(status_code=404, detail="관광지 정보를 찾을 수 없습니다.")
     return detail
+
+
+@router.get(
+    "/plans/{plan_id}/suggestions",
+    status_code=status.HTTP_200_OK,
+    tags=["Tourism"],
+)
+async def get_plan_suggestions(
+    plan_id: int,
+    plan_repository: PlanRepository,
+    itinerary_repository: ItineraryRepository,
+) -> SuggestionResponse:
+    plan = await plan_repository.find_by_id_only_plan(plan_id=plan_id)
+    if not plan:
+        raise HTTPException(status_code=404, detail="플랜을 찾을 수 없습니다.")
+
+    itineraries = await itinerary_repository.find_all_by_plan(plan_id=plan_id)
+    suggestions = await service.get_plan_suggestions(itineraries)
+    return SuggestionResponse(suggestions=suggestions)
