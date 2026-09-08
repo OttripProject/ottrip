@@ -88,6 +88,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from "react-native";
 import type { NearbyAttraction } from "@/services/tourism";
@@ -1178,20 +1179,39 @@ export default function ItineraryItem({
 
           <View style={styles.inputGroup}>
             <Text style={styles.label}>내용</Text>
-            <Input
-              variant={readOnly ? "outlined" : "filled"}
-              placeholder={PLACEHOLDERS.itinerary.descriptionForm}
-              value={formData.description}
-              onChangeText={text =>
-                !readOnly && setFormData({ ...formData, description: text })
-              }
-              multiline
-              numberOfLines={3}
-              textAlignVertical="top"
-              style={readOnly ? styles.readOnlyTextArea : styles.textArea}
-              placeholderTextColor={colors.gray600}
-              editable={!readOnly}
-            />
+            {Platform.OS === "web" ? (
+              <TextInput
+                multiline
+                numberOfLines={3}
+                textAlignVertical="top"
+                value={formData.description}
+                onChangeText={text =>
+                  !readOnly && setFormData({ ...formData, description: text })
+                }
+                placeholder={PLACEHOLDERS.itinerary.descriptionForm}
+                placeholderTextColor={colors.gray600}
+                editable={!readOnly}
+                style={[
+                  readOnly ? styles.readOnlyTextArea : styles.textArea,
+                  { resize: "vertical", overflow: "auto" } as any,
+                ]}
+              />
+            ) : (
+              <Input
+                variant={readOnly ? "outlined" : "filled"}
+                placeholder={PLACEHOLDERS.itinerary.descriptionForm}
+                value={formData.description}
+                onChangeText={text =>
+                  !readOnly && setFormData({ ...formData, description: text })
+                }
+                multiline
+                numberOfLines={3}
+                textAlignVertical="top"
+                style={readOnly ? styles.readOnlyTextArea : styles.textArea}
+                placeholderTextColor={colors.gray600}
+                editable={!readOnly}
+              />
+            )}
           </View>
 
           <View
@@ -1767,6 +1787,7 @@ export default function ItineraryItem({
 const styles = StyleSheet.create({
   wrapper: {
     flex: 1,
+    minHeight: 0,
   },
   container: {
     flex: 1,
@@ -1828,7 +1849,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.gray200,
     borderWidth: 1,
     borderColor: colors.gray400,
-    height: 80,
+    minHeight: 80,
     borderRadius: radii.md,
     paddingHorizontal: spacing.md,
     paddingVertical: 10,
