@@ -262,14 +262,12 @@ const styles = StyleSheet.create({
   placeBtn: {
     flexDirection: "column",
     gap: 2,
-    paddingVertical: spacing.xs,
-    paddingHorizontal: spacing.sm,
-    marginVertical: -spacing.xs,
-    marginHorizontal: -spacing.sm,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
     borderRadius: radii.md,
   },
   placeBtnHover: {
-    backgroundColor: colors.gray200,
+    backgroundColor: colors.gray100,
   },
   placeRow1: {
     flexDirection: "row",
