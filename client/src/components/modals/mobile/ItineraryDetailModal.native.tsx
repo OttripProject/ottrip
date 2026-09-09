@@ -261,44 +261,6 @@ export default function ItineraryDetailModal({
               />
             )}
 
-          {/* 주변 추천 */}
-          {nearbyAttractions.length > 0 && (
-            <View style={styles.nearbySection}>
-              <View style={styles.nearbyHeader}>
-                <Text style={styles.nearbyTitle}>주변 추천</Text>
-                <Text style={styles.nearbyCount}>{nearbyAttractions.length}곳</Text>
-              </View>
-              {nearbyAttractions.map((item, index) => {
-                const badge = NEARBY_BADGE_COLORS[item.contentTypeId] ?? DEFAULT_NEARBY_BADGE;
-                const walkTime = item.dist ? formatWalkTime(item.dist) : null;
-                const sub = item.dist != null
-                  ? [item.address, walkTime].filter(Boolean).join(" · ")
-                  : [item.address, item.categorySub].filter(Boolean).join(" · ");
-                return (
-                  <Pressable
-                    key={index}
-                    style={styles.nearbyCard}
-                    onPress={() => onAttractionSelect?.(item)}
-                  >
-                    <View style={[styles.nearbyBadge, { backgroundColor: badge.bg }]}>
-                      <Text style={[styles.nearbyBadgeText, { color: badge.color }]}>
-                        {item.contentTypeId}
-                      </Text>
-                    </View>
-                    <View style={styles.nearbyCardContent}>
-                      <Text style={styles.nearbyCardTitle} numberOfLines={1}>
-                        {item.title}
-                      </Text>
-                      {!!sub && (
-                        <Text style={styles.nearbyCardSub} numberOfLines={1}>{sub}</Text>
-                      )}
-                    </View>
-                  </Pressable>
-                );
-              })}
-            </View>
-          )}
-
           {/* 비용 */}
           {Object.values(expenseByCurrency).some(v => v > 0) && (
             <View style={styles.detailItem}>
@@ -372,6 +334,44 @@ export default function ItineraryDetailModal({
                   <Text style={styles.attachmentName} numberOfLines={1}>
                     {attachment.fileName}
                   </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        )}
+
+        {/* 주변 추천 */}
+        {nearbyAttractions.length > 0 && (
+          <View style={styles.nearbySection}>
+            <View style={styles.nearbyHeader}>
+              <Text style={styles.nearbyTitle}>주변 추천</Text>
+              <Text style={styles.nearbyCount}>{nearbyAttractions.length}곳</Text>
+            </View>
+            {nearbyAttractions.map((item, index) => {
+              const badge = NEARBY_BADGE_COLORS[item.contentTypeId] ?? DEFAULT_NEARBY_BADGE;
+              const walkTime = item.dist ? formatWalkTime(item.dist) : null;
+              const sub = item.dist != null
+                ? [item.address, walkTime].filter(Boolean).join(" · ")
+                : [item.address, item.categorySub].filter(Boolean).join(" · ");
+              return (
+                <Pressable
+                  key={index}
+                  style={styles.nearbyCard}
+                  onPress={() => onAttractionSelect?.(item)}
+                >
+                  <View style={[styles.nearbyBadge, { backgroundColor: badge.bg }]}>
+                    <Text style={[styles.nearbyBadgeText, { color: badge.color }]}>
+                      {item.contentTypeId}
+                    </Text>
+                  </View>
+                  <View style={styles.nearbyCardContent}>
+                    <Text style={styles.nearbyCardTitle} numberOfLines={1}>
+                      {item.title}
+                    </Text>
+                    {!!sub && (
+                      <Text style={styles.nearbyCardSub} numberOfLines={1}>{sub}</Text>
+                    )}
+                  </View>
                 </Pressable>
               );
             })}
