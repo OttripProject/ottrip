@@ -15,6 +15,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { NearbyAttraction } from "@/services/tourism";
 import { tourismApi } from "@/services/tourism";
 import {
+  ActivityIndicator,
   Alert,
   Linking,
   Platform,
@@ -71,6 +72,7 @@ export default function ItineraryDetailModal({
   const [previewImages, setPreviewImages] = useState<ImagePreviewItem[]>([]);
   const [previewInitialIndex, setPreviewInitialIndex] = useState(0);
   const [nearbyAttractions, setNearbyAttractions] = useState<NearbyAttraction[]>([]);
+  const [nearbyLoading, setNearbyLoading] = useState(false);
   const [descExpanded, setDescExpanded] = useState(false);
 
   const expenseByCurrency = useMemo(() => {
@@ -101,10 +103,12 @@ export default function ItineraryDetailModal({
     if (!visible) {
       setPreviewVisible(false);
       setNearbyAttractions([]);
+      setNearbyLoading(false);
       setDescExpanded(false);
       return;
     }
     if (!itinerary?.id || !itinerary?.location || itinerary?.country !== "대한민국") return;
+    setNearbyLoading(true);
     tourismApi.getNearbyAttractions(itinerary.id)
       .then(data => {
         const filtered = data.filter(
@@ -112,7 +116,8 @@ export default function ItineraryDetailModal({
         );
         setNearbyAttractions(filtered);
       })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => setNearbyLoading(false));
   }, [visible, itinerary?.id, itinerary?.location?.id]);
 
   if (!itinerary) return null;
@@ -353,7 +358,13 @@ export default function ItineraryDetailModal({
         )}
 
         {/* 주변 추천 */}
-        {nearbyAttractions.length > 0 && (
+        {nearbyLoading && (
+          <View style={styles.nearbyLoadingRow}>
+            <ActivityIndicator size="small" color={colors.primary} />
+            <Text style={styles.nearbyLoadingText}>주변 추천 불러오는 중...</Text>
+          </View>
+        )}
+        {!nearbyLoading && nearbyAttractions.length > 0 && (
           <View style={styles.nearbySection}>
             <View style={styles.nearbyHeader}>
               <Text style={styles.nearbyTitle}>주변 추천</Text>
@@ -477,8 +488,20 @@ const styles = StyleSheet.create({
     color: colors.primary,
     marginTop: 4,
   },
+  nearbyLoadingRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md,
+    marginTop: spacing.lg
+  },
+  nearbyLoadingText: {
+    ...textStyles.body5,
+    color: colors.gray500,
+  },
   nearbySection: {
-    marginTop: spacing.sm,
+    marginTop: spacing.xl,
   },
   nearbyHeader: {
     flexDirection: "row",
