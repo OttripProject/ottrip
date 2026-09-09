@@ -75,8 +75,23 @@ export default function TourismDetailModal({ visible, onClose, item }: Props) {
       return;
     }
     setLoading(true);
-    tourismApi
-      .getTourismDetail({ contentId: item.contentId, contentTypeId: item.contentTypeId })
+    const isRealContentId = /^\d+$/.test(item.contentId);
+    const fetchDetail = isRealContentId
+      ? tourismApi.getTourismDetail({ contentId: item.contentId, contentTypeId: item.contentTypeId, includeImages: false })
+      : tourismApi.getTourismDetail({ name: item.title, includeImages: false });
+
+    fetchDetail
+      .then(async d => {
+        if (
+          isRealContentId &&
+          d.title &&
+          !d.title.includes(item.title) &&
+          !item.title.includes(d.title)
+        ) {
+          return tourismApi.getTourismDetail({ name: item.title, includeImages: false });
+        }
+        return d;
+      })
       .then(setDetail)
       .catch(() => {})
       .finally(() => setLoading(false));
