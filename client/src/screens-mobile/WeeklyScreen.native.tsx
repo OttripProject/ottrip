@@ -27,7 +27,7 @@ import {
 } from "@/utils/dateUtils";
 import { useQueryClient } from "@tanstack/react-query";
 import dayjs from "dayjs";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   ActivityIndicator,
@@ -94,6 +94,7 @@ export default function WeeklyScreen() {
   const [itineraryPrefill, setItineraryPrefill] = useState<ItineraryEditPrefill | null>(null);
   const [selectedAttraction, setSelectedAttraction] = useState<import("@/services/tourism").NearbyAttraction | null>(null);
   const [tourismDetailVisible, setTourismDetailVisible] = useState(false);
+  const reopenDetailAfterTourismRef = useRef(true);
   const [showFlightDetail, setShowFlightDetail] = useState(false);
   const [selectedFlight, setSelectedFlight] = useState<FlightRead | null>(null);
   const [selectedFlightSegment, setSelectedFlightSegment] =
@@ -954,6 +955,7 @@ export default function WeeklyScreen() {
           setShowItineraryEdit(true);
         }}
         onAttractionSelect={attraction => {
+          reopenDetailAfterTourismRef.current = true;
           setShowItineraryDetail(false);
           setSelectedAttraction(attraction);
           setTimeout(() => setTourismDetailVisible(true), 300);
@@ -1045,6 +1047,10 @@ export default function WeeklyScreen() {
         onClose={() => {
           setTourismDetailVisible(false);
           setSelectedAttraction(null);
+          if (reopenDetailAfterTourismRef.current) {
+            setTimeout(() => setShowItineraryDetail(true), 300);
+          }
+          reopenDetailAfterTourismRef.current = true;
         }}
         item={selectedAttraction}
         itineraryLocation={
@@ -1054,6 +1060,7 @@ export default function WeeklyScreen() {
         }
         itinerary={selectedItinerary}
         onOpenNewItinerary={draft => {
+          reopenDetailAfterTourismRef.current = false;
           setEditingItinerary(null);
           setItineraryPrefill(draft);
           setShowItineraryEdit(true);

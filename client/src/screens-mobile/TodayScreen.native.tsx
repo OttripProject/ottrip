@@ -183,6 +183,7 @@ export default function TodayScreen() {
   const [itineraryPrefill, setItineraryPrefill] = useState<ItineraryEditPrefill | null>(null);
   const [selectedAttraction, setSelectedAttraction] = useState<import("@/services/tourism").NearbyAttraction | null>(null);
   const [tourismDetailVisible, setTourismDetailVisible] = useState(false);
+  const reopenDetailAfterTourismRef = useRef(true);
   const [selectedAccommodation, setSelectedAccommodation] =
     useState<Accommodation | null>(null);
   const [showAccommodationDetail, setShowAccommodationDetail] = useState(false);
@@ -1537,6 +1538,7 @@ export default function TodayScreen() {
           setShowItineraryEdit(true);
         }}
         onAttractionSelect={attraction => {
+          reopenDetailAfterTourismRef.current = true;
           setShowItineraryDetail(false);
           setSelectedAttraction(attraction);
           setTimeout(() => setTourismDetailVisible(true), 300);
@@ -1583,6 +1585,10 @@ export default function TodayScreen() {
         onClose={() => {
           setTourismDetailVisible(false);
           setSelectedAttraction(null);
+          if (reopenDetailAfterTourismRef.current) {
+            setTimeout(() => setShowItineraryDetail(true), 300);
+          }
+          reopenDetailAfterTourismRef.current = true;
         }}
         item={selectedAttraction}
         itineraryLocation={
@@ -1592,6 +1598,7 @@ export default function TodayScreen() {
         }
         itinerary={selectedItinerary}
         onOpenNewItinerary={draft => {
+          reopenDetailAfterTourismRef.current = false;
           setEditingItinerary(null);
           setItineraryPrefill(draft);
           setShowItineraryEdit(true);
