@@ -71,6 +71,7 @@ export default function ItineraryDetailModal({
   const [previewImages, setPreviewImages] = useState<ImagePreviewItem[]>([]);
   const [previewInitialIndex, setPreviewInitialIndex] = useState(0);
   const [nearbyAttractions, setNearbyAttractions] = useState<NearbyAttraction[]>([]);
+  const [descExpanded, setDescExpanded] = useState(false);
 
   const expenseByCurrency = useMemo(() => {
     if (!itinerary) return {} as Record<ExpenseCurrency, number>;
@@ -100,6 +101,7 @@ export default function ItineraryDetailModal({
     if (!visible) {
       setPreviewVisible(false);
       setNearbyAttractions([]);
+      setDescExpanded(false);
       return;
     }
     if (!itinerary?.id || !itinerary?.location || itinerary?.country !== "대한민국") return;
@@ -295,7 +297,17 @@ export default function ItineraryDetailModal({
               </View>
               <View style={styles.detailContent}>
                 <Text style={styles.detailLabel}>설명</Text>
-                <Text style={styles.detailValue}>{itinerary.description}</Text>
+                <Text
+                  style={styles.detailValue}
+                  numberOfLines={descExpanded ? undefined : 3}
+                >
+                  {itinerary.description}
+                </Text>
+                <Pressable onPress={() => setDescExpanded(p => !p)}>
+                  <Text style={styles.expandBtn}>
+                    {descExpanded ? "접기" : "더보기"}
+                  </Text>
+                </Pressable>
               </View>
             </View>
           )}
@@ -459,6 +471,11 @@ const styles = StyleSheet.create({
   },
   detailValue: {
     ...textStyles.h6,
+  },
+  expandBtn: {
+    ...textStyles.body5,
+    color: colors.primary,
+    marginTop: 4,
   },
   nearbySection: {
     marginTop: spacing.sm,
