@@ -132,11 +132,13 @@ export default function TourismDetailModal({
   const [detail, setDetail] = useState<TourismDetail | null>(null);
   const [loading, setLoading] = useState(false);
   const [overviewExpanded, setOverviewExpanded] = useState(false);
+  const [geocodedCoords, setGeocodedCoords] = useState<{ lat: number; lng: number } | null>(null);
 
   useEffect(() => {
     if (!visible || !item) {
       setDetail(null);
       setOverviewExpanded(false);
+      setGeocodedCoords(null);
       return;
     }
     setLoading(true);
@@ -152,7 +154,21 @@ export default function TourismDetailModal({
         }
         return d;
       })
-      .then(setDetail)
+      .then(d => {
+        setDetail(d);
+        if (!d.mapx || !d.mapy) {
+          const apiKey = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY_IOS ?? "";
+          if (apiKey) {
+            fetch(`https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(item.title)}&key=${apiKey}`)
+              .then(r => r.json())
+              .then(res => {
+                const loc = res.results?.[0]?.geometry?.location;
+                if (loc) setGeocodedCoords({ lat: loc.lat, lng: loc.lng });
+              })
+              .catch(() => {});
+          }
+        }
+      })
       .catch(() => {})
       .finally(() => setLoading(false));
   }, [visible, item?.contentId]);
@@ -166,17 +182,20 @@ export default function TourismDetailModal({
     const fmt = (n: number) =>
       `${String(Math.floor(n / 60)).padStart(2, "0")}:${String(n % 60).padStart(2, "0")}`;
 
+    const coordsLat = detail?.mapy ?? geocodedCoords?.lat;
+    const coordsLng = detail?.mapx ?? geocodedCoords?.lng;
+
     let locationId: number | undefined;
     try {
-      if (detail?.mapy && detail?.mapx) {
+      if (coordsLat && coordsLng) {
         const nameHash = [...item.title].reduce((a, c) => (Math.imul(31, a) + c.charCodeAt(0)) >>> 0, 0).toString(16);
         const loc = await locationsApi.createLocation({
           name: item.title,
           placeId: `m_${nameHash}_${Math.random().toString(16).slice(2, 10)}`,
-          latitude: detail.mapy,
-          longitude: detail.mapx,
-          address: detail.address ?? undefined,
-          fromGoogle: false,
+          latitude: coordsLat,
+          longitude: coordsLng,
+          address: detail?.address ?? undefined,
+          fromGoogle: !!geocodedCoords && !detail?.mapy,
         });
         locationId = loc.id;
       }
@@ -193,8 +212,8 @@ export default function TourismDetailModal({
       startTime: fmt(startMins),
       endTime: fmt(endMins),
       category: mapContentTypeToCategory(detail?.contentTypeId ?? item.contentTypeId),
-      locationLat: detail?.mapy,
-      locationLng: detail?.mapx,
+      locationLat: coordsLat,
+      locationLng: coordsLng,
     });
     onClose();
   };
@@ -202,12 +221,15 @@ export default function TourismDetailModal({
   if (!item) return null;
 
   const badge = BADGE_COLORS[item.contentTypeId] ?? DEFAULT_BADGE;
-  const hasMap = !!detail?.mapx && !!detail?.mapy;
+  const mapCoords = (detail?.mapx && detail?.mapy)
+    ? { lat: detail.mapy, lng: detail.mapx }
+    : geocodedCoords;
+  const hasMap = !!mapCoords;
 
   const walkTime = (() => {
     if (item.dist) return formatWalkTime(item.dist);
-    if (itineraryLocation && detail?.mapy && detail?.mapx) {
-      const dist = haversineDistance(itineraryLocation.latitude, itineraryLocation.longitude, detail.mapy, detail.mapx);
+    if (itineraryLocation && mapCoords) {
+      const dist = haversineDistance(itineraryLocation.latitude, itineraryLocation.longitude, mapCoords.lat, mapCoords.lng);
       return formatWalkTime(dist);
     }
     return null;
@@ -286,7 +308,7 @@ export default function TourismDetailModal({
           <View style={styles.placeSection}>
             <Text style={styles.sectionTitle}>장소</Text>
             {hasMap && (
-              <MiniMapView latitude={detail!.mapy!} longitude={detail!.mapx!} name={item.title} />
+              <MiniMapView latitude={mapCoords!.lat} longitude={mapCoords!.lng} name={item.title} />
             )}
             {tableRows.length > 0 && (
               <View style={styles.table}>
@@ -472,7 +494,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   addButtonText: {
-    ...textStyles.h7,
+    ...textStyles.h5,
     color: colors.white,
   },
 });
