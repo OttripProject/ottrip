@@ -18,6 +18,7 @@ import {
   View,
 } from "react-native";
 import type { NearbyAttraction, TourismDetail } from "@/services/tourism";
+import CloseIcon from "../../../assets/mobile_close.svg";
 import TimeIcon from "../../../assets/week_bar_time.svg";
 import CalendarIcon from "../../../assets/calendar_outline.svg";
 import HourglassIcon from "../../../assets/hourglass.svg";
@@ -226,11 +227,14 @@ export default function TourismDetailModal({
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* 배지 + 제목 */}
+        {/* 배지 + 닫기 */}
         <View style={styles.badgeRow}>
           <View style={[styles.badge, { backgroundColor: badge.bg }]}>
             <Text style={[styles.badgeText, { color: badge.color }]}>{item.contentTypeId}</Text>
           </View>
+          <Pressable style={styles.actionButton} onPress={onClose} hitSlop={8}>
+            <CloseIcon width={20} height={20} color={colors.gray600} />
+          </Pressable>
         </View>
         <View style={styles.titleGroup}>
           <Text style={styles.title}>{detail?.title ?? item.title}</Text>
@@ -333,9 +337,6 @@ export default function TourismDetailModal({
 
       {/* 푸터 */}
       <View style={styles.footer}>
-        <Pressable style={styles.closeButton} onPress={onClose}>
-          <Text style={styles.closeButtonText}>닫기</Text>
-        </Pressable>
         <Pressable style={styles.addButton} onPress={handleAddToItinerary}>
           <Text style={styles.addButtonText}>일정에 추가</Text>
         </Pressable>
@@ -352,7 +353,16 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
     gap: spacing.md,
   },
-  badgeRow: { flexDirection: "row" },
+  badgeRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  actionButton: {
+    padding: 4,
+    width: 32,
+    height: 32,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: colors.gray200,
+    borderRadius: 16,
+  },
   badge: {
     borderRadius: radii.pill,
     paddingHorizontal: 12,
@@ -448,28 +458,13 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   footer: {
-    flexDirection: "row",
-    gap: 12,
     paddingHorizontal: 20,
     paddingTop: 12,
     paddingBottom: 20,
     borderTopWidth: 1,
     borderTopColor: colors.gray100,
   },
-  closeButton: {
-    flex: 1,
-    height: 48,
-    borderRadius: radii.md,
-    backgroundColor: colors.gray100,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  closeButtonText: {
-    ...textStyles.h7,
-    color: colors.gray900,
-  },
   addButton: {
-    flex: 1.7,
     height: 48,
     borderRadius: radii.md,
     backgroundColor: colors.gray900,
