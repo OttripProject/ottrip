@@ -1,7 +1,6 @@
 import ImagePreviewModal, {
   type ImagePreviewItem,
 } from "@/components/modals/ImagePreviewModal";
-import TourismDetailModal from "@/components/modals/TourismDetailModal";
 import type { Attachment, Expense, Itinerary } from "@/types/api";
 import { ExpenseCurrency, currencyLabels } from "@/types/expense";
 import BottomSheetModal from "@/ui/components/BottomSheetModal.native";
@@ -55,6 +54,7 @@ interface ItineraryDetailModalProps {
   attachments?: Attachment[];
   onEdit?: (itinerary: Itinerary) => void;
   onDelete?: (itinerary: Itinerary) => void;
+  onAttractionSelect?: (attraction: NearbyAttraction) => void;
 }
 
 export default function ItineraryDetailModal({
@@ -65,13 +65,12 @@ export default function ItineraryDetailModal({
   attachments = [],
   onEdit,
   onDelete,
+  onAttractionSelect,
 }: ItineraryDetailModalProps) {
   const [previewVisible, setPreviewVisible] = useState(false);
   const [previewImages, setPreviewImages] = useState<ImagePreviewItem[]>([]);
   const [previewInitialIndex, setPreviewInitialIndex] = useState(0);
   const [nearbyAttractions, setNearbyAttractions] = useState<NearbyAttraction[]>([]);
-  const [selectedAttraction, setSelectedAttraction] = useState<NearbyAttraction | null>(null);
-  const [tourismDetailVisible, setTourismDetailVisible] = useState(false);
 
   const expenseByCurrency = useMemo(() => {
     if (!itinerary) return {} as Record<ExpenseCurrency, number>;
@@ -101,7 +100,6 @@ export default function ItineraryDetailModal({
     if (!visible) {
       setPreviewVisible(false);
       setNearbyAttractions([]);
-      setTourismDetailVisible(false);
       return;
     }
     if (!itinerary?.id || !itinerary?.location || itinerary?.country !== "대한민국") return;
@@ -280,10 +278,7 @@ export default function ItineraryDetailModal({
                   <Pressable
                     key={index}
                     style={styles.nearbyCard}
-                    onPress={() => {
-                      setSelectedAttraction(item);
-                      setTourismDetailVisible(true);
-                    }}
+                    onPress={() => onAttractionSelect?.(item)}
                   >
                     <View style={[styles.nearbyBadge, { backgroundColor: badge.bg }]}>
                       <Text style={[styles.nearbyBadgeText, { color: badge.color }]}>
@@ -399,19 +394,6 @@ export default function ItineraryDetailModal({
         onClose={() => setPreviewVisible(false)}
         images={previewImages}
         initialIndex={previewInitialIndex}
-      />
-      <TourismDetailModal
-        visible={tourismDetailVisible}
-        onClose={() => setTourismDetailVisible(false)}
-        item={selectedAttraction}
-        itineraryLocation={
-          itinerary.location?.latitude != null
-            ? { latitude: itinerary.location.latitude, longitude: itinerary.location.longitude }
-            : null
-        }
-        itinerary={itinerary}
-        onOpenNewItinerary={() => {}}
-        onSwitchToAccommodation={() => {}}
       />
     </BottomSheetModal>
   );

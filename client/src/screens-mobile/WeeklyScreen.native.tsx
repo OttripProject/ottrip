@@ -48,7 +48,8 @@ import AccommodationEditModal from "@/components/modals/mobile/AccommodationEdit
 import FlightDetailModal from "@/components/modals/mobile/FlightDetailModal.native";
 import FlightEditModal from "@/components/modals/mobile/FlightEditModal.native";
 import ItineraryDetailModal from "@/components/modals/mobile/ItineraryDetailModal.native";
-import ItineraryEditModal from "@/components/modals/mobile/ItineraryEditModal.native";
+import ItineraryEditModal, { type ItineraryEditPrefill } from "@/components/modals/mobile/ItineraryEditModal.native";
+import TourismDetailModal from "@/components/modals/TourismDetailModal";
 import TravelInfoModal from "@/components/modals/mobile/TravelInfoModal.native";
 import { useMe } from "@/hooks/useMe";
 import { accommodationsApi } from "@/services/accommodations";
@@ -89,9 +90,10 @@ export default function WeeklyScreen() {
     null,
   );
   const [showItineraryEdit, setShowItineraryEdit] = useState(false);
-  const [editingItinerary, setEditingItinerary] = useState<Itinerary | null>(
-    null,
-  );
+  const [editingItinerary, setEditingItinerary] = useState<Itinerary | null>(null);
+  const [itineraryPrefill, setItineraryPrefill] = useState<ItineraryEditPrefill | null>(null);
+  const [selectedAttraction, setSelectedAttraction] = useState<import("@/services/tourism").NearbyAttraction | null>(null);
+  const [tourismDetailVisible, setTourismDetailVisible] = useState(false);
   const [showFlightDetail, setShowFlightDetail] = useState(false);
   const [selectedFlight, setSelectedFlight] = useState<FlightRead | null>(null);
   const [selectedFlightSegment, setSelectedFlightSegment] =
@@ -948,7 +950,13 @@ export default function WeeklyScreen() {
         onEdit={itinerary => {
           setShowItineraryDetail(false);
           setEditingItinerary(itinerary);
+          setItineraryPrefill(null);
           setShowItineraryEdit(true);
+        }}
+        onAttractionSelect={attraction => {
+          setShowItineraryDetail(false);
+          setSelectedAttraction(attraction);
+          setTimeout(() => setTourismDetailVisible(true), 300);
         }}
         onDelete={async itinerary => {
           try {
@@ -985,6 +993,7 @@ export default function WeeklyScreen() {
           const itineraryToShow = editingItinerary;
           setShowItineraryEdit(false);
           setEditingItinerary(null);
+          setItineraryPrefill(null);
           if (!opts?.fromSave && itineraryToShow) {
             setSelectedItinerary(itineraryToShow);
             setShowItineraryDetail(true);
@@ -994,6 +1003,7 @@ export default function WeeklyScreen() {
         planId={selectedPlan?.id ?? 0}
         defaultCountry={selectedDateSegment?.country}
         defaultCity={selectedDateSegment?.city}
+        prefill={itineraryPrefill ?? undefined}
         onSave={async itinerary => {
           planData.addItinerary(itinerary);
           if (selectedPlan?.publicId) {
@@ -1027,6 +1037,26 @@ export default function WeeklyScreen() {
           }
           queryClient.invalidateQueries({ queryKey: ["plans"] });
           planData.refreshAttachments();
+        }}
+      />
+
+      <TourismDetailModal
+        visible={tourismDetailVisible}
+        onClose={() => {
+          setTourismDetailVisible(false);
+          setSelectedAttraction(null);
+        }}
+        item={selectedAttraction}
+        itineraryLocation={
+          selectedItinerary?.location?.latitude != null
+            ? { latitude: selectedItinerary.location.latitude, longitude: selectedItinerary.location.longitude }
+            : null
+        }
+        itinerary={selectedItinerary}
+        onOpenNewItinerary={draft => {
+          setEditingItinerary(null);
+          setItineraryPrefill(draft);
+          setShowItineraryEdit(true);
         }}
       />
 

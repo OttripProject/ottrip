@@ -72,6 +72,19 @@ import UpperArrowIcon from "../../../../assets/upper_arrow.svg";
 import CityPicker from "@/ui/components/pickers/CityPicker";
 import CountryPicker from "@/ui/components/pickers/CountryPicker";
 
+export interface ItineraryEditPrefill {
+  title?: string;
+  description?: string;
+  location?: string;
+  locationId?: number;
+  country?: string;
+  city?: string;
+  itineraryDate?: string;
+  startTime?: string;
+  endTime?: string;
+  category?: ItineraryCategory;
+}
+
 interface ItineraryEditModalProps {
   visible: boolean;
   onClose?: (opts?: { fromSave?: boolean }) => void;
@@ -80,6 +93,7 @@ interface ItineraryEditModalProps {
   defaultDate?: string;
   defaultCountry?: string;
   defaultCity?: string;
+  prefill?: ItineraryEditPrefill;
   embedded?: boolean;
   onSave?: (itinerary: Itinerary) => void;
   onDelete?: (itineraryId: number) => void;
@@ -102,6 +116,7 @@ export default function ItineraryEditModal({
   defaultDate,
   defaultCountry,
   defaultCity,
+  prefill,
   embedded,
   onSave,
   onDelete,
@@ -267,24 +282,24 @@ export default function ItineraryEditModal({
       };
       loadLatest();
     } else {
-      const initDate = defaultDate || dayjs().format("YYYY-MM-DD");
+      const initDate = prefill?.itineraryDate || defaultDate || dayjs().format("YYYY-MM-DD");
       setFormData({
-        title: "",
-        description: "",
-        country: defaultCountry || "",
-        city: defaultCity || "",
-        location: "",
-        locationId: undefined,
+        title: prefill?.title || "",
+        description: prefill?.description || "",
+        country: prefill?.country || defaultCountry || "",
+        city: prefill?.city || defaultCity || "",
+        location: prefill?.location || "",
+        locationId: prefill?.locationId,
         itineraryDate: initDate,
-        startTime: "09:00",
-        endTime: "10:00",
+        startTime: prefill?.startTime || "09:00",
+        endTime: prefill?.endTime || "10:00",
       });
-      setSelectedCategory(null);
+      setSelectedCategory(prefill?.category ?? null);
       setExpenseData({ amount: "", category: ExpenseCategory.FOOD, currency: ExpenseCurrency.KRW });
       setExistingExpenseId(null);
     }
     setPendingFiles([]);
-  }, [visible, itinerary, defaultDate, defaultCountry, defaultCity]);
+  }, [visible, itinerary, defaultDate, defaultCountry, defaultCity, prefill]);
 
   useEffect(() => {
     if (!visible) return;
