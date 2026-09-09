@@ -4,6 +4,9 @@ import { colors } from "@/ui/tokens/colors";
 import { radii } from "@/ui/tokens/radii";
 import { spacing } from "@/ui/tokens/spacing";
 import { textStyles } from "@/ui/tokens/typography";
+import { locationsApi } from "@/services/locations";
+import { ItineraryCategory } from "@/types/itinerary";
+import { formatWalkTime, haversineDistance } from "@/utils/distanceUtils";
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -15,6 +18,13 @@ import {
   View,
 } from "react-native";
 import type { NearbyAttraction, TourismDetail } from "@/services/tourism";
+import TimeIcon from "../../../assets/week_bar_time.svg";
+import CalendarIcon from "../../../assets/calendar_outline.svg";
+import HourglassIcon from "../../../assets/hourglass.svg";
+import WonIcon from "../../../assets/won.svg";
+import RouteIcon from "../../../assets/route.svg";
+import RoomIcon from "../../../assets/room.svg";
+import CutleryIcon from "../../../assets/cutlery.svg";
 import { tourismApi } from "@/services/tourism";
 
 const BADGE_COLORS: Record<string, { color: string; bg: string }> = {
@@ -28,29 +38,76 @@ const BADGE_COLORS: Record<string, { color: string; bg: string }> = {
 };
 const DEFAULT_BADGE = { color: "#6C6C6C", bg: "#F5F5F5" };
 
-function getKeyFields(detail: TourismDetail): { label: string; value: string }[] {
-  const r = (label: string, v: string | null | undefined) =>
-    v ? { label, value: v } : null;
+type Row = { label: string; value: string };
+type IconType = "clock" | "calendar" | "hourglass" | "won" | "route" | "checkinout" | "room" | "cutlery";
+type IconRow = { label: string; value: string; icon: IconType };
+
+function getCategoryRows(detail: TourismDetail): { iconRows: IconRow[]; tableRows: Row[]; usageRows: Row[] } {
   const t = detail.contentTypeId;
-  const rows: ({ label: string; value: string } | null)[] = [];
+  const is = (...ids: string[]) => ids.some(id => t === id);
+  const r = (label: string, v: string | null | undefined): Row | null => v ? { label, value: v } : null;
+  const ir = (label: string, v: string | null | undefined, icon: IconType): IconRow | null => v ? { label, value: v, icon } : null;
+  const rows = (...items: (Row | null)[]) => items.filter(Boolean) as Row[];
+  const irows = (...items: (IconRow | null)[]) => items.filter(Boolean) as IconRow[];
 
-  if (t === "12" || t === "관광지") {
-    rows.push(r("이용시간", detail.usetime), r("휴관일", detail.restdate), r("주차", detail.parking));
-  } else if (t === "14" || t === "문화시설") {
-    rows.push(r("이용시간", detail.usetimeculture), r("휴관일", detail.restdateculture), r("이용요금", detail.usefee), r("주차", detail.parkingculture));
-  } else if (t === "15" || t === "축제·공연") {
-    rows.push(r("행사기간", detail.eventdate), r("행사장소", detail.eventplace), r("공연시간", detail.playtime), r("이용요금", detail.usetimefestival));
-  } else if (t === "25" || t === "여행코스") {
-    rows.push(r("총거리", detail.distance), r("소요시간", detail.taketime), r("코스", detail.schedule));
-  } else if (t === "28" || t === "레포츠") {
-    rows.push(r("이용시간", detail.usetimeleports), r("휴관일", detail.restdateleports), r("이용요금", detail.usefeeleports));
-  } else if (t === "38" || t === "쇼핑") {
-    rows.push(r("영업시간", detail.opentime), r("휴무일", detail.restdateshopping), r("판매품목", detail.saleitem));
-  } else if (t === "39" || t === "음식점") {
-    rows.push(r("영업시간", detail.opentimefood), r("휴무일", detail.restdatefood), r("대표메뉴", detail.firstmenu));
+  if (is("12", "관광지")) return {
+    iconRows: irows(ir("이용시간", detail.usetime, "clock"), ir("휴관일", detail.restdate, "calendar")),
+    tableRows: rows(r("주차", detail.parking)),
+    usageRows: [],
+  };
+  if (is("14", "문화시설")) return {
+    iconRows: irows(ir("이용시간", detail.usetimeculture, "clock"), ir("휴관일", detail.restdateculture, "calendar"), ir("관람소요시간", detail.spendtime, "hourglass"), ir("이용요금", detail.usefee, "won")),
+    tableRows: rows(r("주차", detail.parkingculture)),
+    usageRows: [],
+  };
+  if (is("15", "축제·공연")) return {
+    iconRows: irows(ir("행사기간", detail.eventdate, "calendar"), ir("공연시간", detail.playtime, "clock"), ir("이용요금", detail.usetimefestival, "won")),
+    tableRows: rows(r("행사장소", detail.eventplace), r("관람연령", detail.agelimit)),
+    usageRows: rows(r("예매처", detail.bookingplace)),
+  };
+  if (is("25", "여행코스")) return {
+    iconRows: irows(ir("총거리", detail.distance, "route"), ir("소요시간", detail.taketime, "hourglass")),
+    tableRows: rows(r("코스", detail.schedule)),
+    usageRows: rows(r("문의", detail.infocentertourcourse || detail.tel)),
+  };
+  if (is("28", "레포츠")) return {
+    iconRows: irows(ir("이용시간", detail.usetimeleports, "clock"), ir("휴관일", detail.restdateleports, "calendar"), ir("입장료", detail.usefeeleports, "won")),
+    tableRows: rows(r("주차", detail.parkingleports)),
+    usageRows: rows(r("예약안내", detail.reservation)),
+  };
+  if (is("38", "쇼핑")) return {
+    iconRows: irows(ir("영업시간", detail.opentime, "clock"), ir("휴무일", detail.restdateshopping, "calendar")),
+    tableRows: rows(r("주차", detail.parkingshopping)),
+    usageRows: [],
+  };
+  if (is("39", "음식점")) return {
+    iconRows: irows(ir("영업시간", detail.opentimefood, "clock"), ir("휴무일", detail.restdatefood, "calendar"), ir("대표메뉴", detail.firstmenu, "cutlery")),
+    tableRows: rows(r("주차", detail.parkingfood)),
+    usageRows: rows(r("포장", detail.packing), r("예약안내", detail.reservationfood)),
+  };
+  return { iconRows: [], tableRows: [], usageRows: [] };
+}
+
+function IconRowIcon({ icon }: { icon: IconType }) {
+  const props = { width: 20, height: 20, color: colors.primary };
+  switch (icon) {
+    case "clock": return <TimeIcon {...props} />;
+    case "calendar": return <CalendarIcon {...props} />;
+    case "hourglass": return <HourglassIcon {...props} />;
+    case "won": return <WonIcon {...props} />;
+    case "route": return <RouteIcon {...props} />;
+    case "room": return <RoomIcon {...props} />;
+    case "cutlery": return <CutleryIcon {...props} />;
+    default: return <TimeIcon {...props} />;
   }
+}
 
-  return rows.filter(Boolean) as { label: string; value: string }[];
+function mapContentTypeToCategory(contentTypeId: string | null): ItineraryCategory {
+  switch (contentTypeId) {
+    case "39": case "음식점": return ItineraryCategory.MEAL;
+    case "38": case "쇼핑": return ItineraryCategory.SHOPPING;
+    default: return ItineraryCategory.ACTIVITY;
+  }
 }
 
 interface Props {
@@ -63,7 +120,14 @@ interface Props {
   onSwitchToAccommodation?: (draft: any) => void;
 }
 
-export default function TourismDetailModal({ visible, onClose, item }: Props) {
+export default function TourismDetailModal({
+  visible,
+  onClose,
+  item,
+  itineraryLocation,
+  itinerary,
+  onOpenNewItinerary,
+}: Props) {
   const [detail, setDetail] = useState<TourismDetail | null>(null);
   const [loading, setLoading] = useState(false);
   const [overviewExpanded, setOverviewExpanded] = useState(false);
@@ -82,12 +146,7 @@ export default function TourismDetailModal({ visible, onClose, item }: Props) {
 
     fetchDetail
       .then(async d => {
-        if (
-          isRealContentId &&
-          d.title &&
-          !d.title.includes(item.title) &&
-          !item.title.includes(d.title)
-        ) {
+        if (isRealContentId && d.title && !d.title.includes(item.title) && !item.title.includes(d.title)) {
           return tourismApi.getTourismDetail({ name: item.title, includeImages: false });
         }
         return d;
@@ -97,185 +156,328 @@ export default function TourismDetailModal({ visible, onClose, item }: Props) {
       .finally(() => setLoading(false));
   }, [visible, item?.contentId]);
 
+  const handleAddToItinerary = async () => {
+    if (!item) return;
+    const raw = itinerary?.end_time ?? itinerary?.endTime ?? "09:00:00";
+    const [h, m] = raw.split(":").map(Number);
+    const startMins = h * 60 + (m || 0);
+    const endMins = Math.min(startMins + 60, 24 * 60);
+    const fmt = (n: number) =>
+      `${String(Math.floor(n / 60)).padStart(2, "0")}:${String(n % 60).padStart(2, "0")}`;
+
+    let locationId: number | undefined;
+    try {
+      if (detail?.mapy && detail?.mapx) {
+        const nameHash = [...item.title].reduce((a, c) => (Math.imul(31, a) + c.charCodeAt(0)) >>> 0, 0).toString(16);
+        const loc = await locationsApi.createLocation({
+          name: item.title,
+          placeId: `m_${nameHash}_${Math.random().toString(16).slice(2, 10)}`,
+          latitude: detail.mapy,
+          longitude: detail.mapx,
+          address: detail.address ?? undefined,
+          fromGoogle: false,
+        });
+        locationId = loc.id;
+      }
+    } catch {}
+
+    onOpenNewItinerary({
+      title: detail?.title ?? item.title,
+      description: detail?.overview ?? undefined,
+      location: item.title,
+      locationId,
+      country: itinerary?.country || undefined,
+      city: itinerary?.city || undefined,
+      itineraryDate: itinerary?.itinerary_date ?? itinerary?.itineraryDate ?? "",
+      startTime: fmt(startMins),
+      endTime: fmt(endMins),
+      category: mapContentTypeToCategory(detail?.contentTypeId ?? item.contentTypeId),
+      locationLat: detail?.mapy,
+      locationLng: detail?.mapx,
+    });
+    onClose();
+  };
+
   if (!item) return null;
 
   const badge = BADGE_COLORS[item.contentTypeId] ?? DEFAULT_BADGE;
   const hasMap = !!detail?.mapx && !!detail?.mapy;
-  const keyFields = detail ? getKeyFields(detail) : [];
+
+  const walkTime = (() => {
+    if (item.dist) return formatWalkTime(item.dist);
+    if (itineraryLocation && detail?.mapy && detail?.mapx) {
+      const dist = haversineDistance(itineraryLocation.latitude, itineraryLocation.longitude, detail.mapy, detail.mapx);
+      return formatWalkTime(dist);
+    }
+    return null;
+  })();
+
+  const { iconRows, tableRows: categoryRows, usageRows } = detail ? getCategoryRows(detail) : { iconRows: [], tableRows: [], usageRows: [] };
+  const tableRows = [
+    ...(detail?.address ? [{ label: "주소", value: detail.address }] : []),
+    ...categoryRows,
+  ];
+  const hasUsageInfo = !!(detail?.tel || detail?.infocenter || detail?.infocenterlodging || detail?.homepage || usageRows.length > 0);
 
   return (
-    <BottomSheetModal visible={visible} onClose={onClose} height={0.75}>
+    <BottomSheetModal visible={visible} onClose={onClose} height={0.85}>
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
         {/* 배지 + 제목 */}
-        <View style={styles.titleRow}>
+        <View style={styles.badgeRow}>
           <View style={[styles.badge, { backgroundColor: badge.bg }]}>
-            <Text style={[styles.badgeText, { color: badge.color }]}>
-              {item.contentTypeId}
-            </Text>
+            <Text style={[styles.badgeText, { color: badge.color }]}>{item.contentTypeId}</Text>
           </View>
         </View>
-        <Text style={styles.title}>{item.title}</Text>
+        <View style={styles.titleGroup}>
+          <Text style={styles.title}>{detail?.title ?? item.title}</Text>
+          {(detail?.address || item.address || walkTime) && (
+            <Text style={styles.metaText}>
+              {[(detail?.address ?? item.address), walkTime].filter(Boolean).join(" · ")}
+            </Text>
+          )}
+        </View>
 
-        {/* 주소 */}
-        {(detail?.address ?? item.address) && (
-          <Text style={styles.address}>{detail?.address ?? item.address}</Text>
-        )}
-
-        {/* 로딩 */}
         {loading && (
           <View style={styles.loadingRow}>
             <ActivityIndicator size="small" color={colors.primary} />
           </View>
         )}
 
-        {/* 지도 */}
-        {hasMap && (
-          <MiniMapView
-            latitude={detail!.mapy!}
-            longitude={detail!.mapx!}
-            name={item.title}
-          />
-        )}
-
-        {/* 카테고리별 주요 정보 */}
-        {keyFields.length > 0 && (
-          <View style={styles.fieldsSection}>
-            {keyFields.map((field, i) => (
-              <View key={i} style={styles.fieldRow}>
-                <Text style={styles.fieldLabel}>{field.label}</Text>
-                <Text style={styles.fieldValue}>{field.value}</Text>
+        {/* 아이콘 행 */}
+        {!loading && iconRows.length > 0 && (
+          <View style={styles.iconRowContainer}>
+            {iconRows.map((row, i) => (
+              <View key={i} style={styles.iconRow}>
+                <View style={styles.iconBox}>
+                  <IconRowIcon icon={row.icon} />
+                </View>
+                <View style={styles.iconRowTextCol}>
+                  <Text style={styles.iconRowLabel}>{row.label}</Text>
+                  <Text style={styles.iconRowValue}>{row.value}</Text>
+                </View>
               </View>
             ))}
           </View>
         )}
 
-        {/* 전화번호 */}
-        {detail?.tel && (
-          <Pressable
-            style={styles.telRow}
-            onPress={() => Linking.openURL(`tel:${detail.tel}`)}
-          >
-            <Text style={styles.telLabel}>전화</Text>
-            <Text style={styles.telValue}>{detail.tel}</Text>
-          </Pressable>
-        )}
-
         {/* 소개 */}
-        {detail?.overview && (
+        {!loading && detail?.overview && (
           <View style={styles.overviewSection}>
-            <Text style={styles.overviewLabel}>소개</Text>
-            <Text
-              style={styles.overviewText}
-              numberOfLines={overviewExpanded ? undefined : 4}
-            >
+            <Text style={styles.sectionTitle}>소개</Text>
+            <Text style={styles.overviewText} numberOfLines={overviewExpanded ? undefined : 3}>
               {detail.overview}
             </Text>
-            {detail.overview.length > 150 && (
-              <Pressable onPress={() => setOverviewExpanded(p => !p)}>
-                <Text style={styles.overviewToggle}>
-                  {overviewExpanded ? "접기" : "더보기"}
-                </Text>
-              </Pressable>
+            <Pressable onPress={() => setOverviewExpanded(p => !p)}>
+              <Text style={styles.expandBtn}>{overviewExpanded ? "접기" : "더보기"}</Text>
+            </Pressable>
+          </View>
+        )}
+
+        {/* 장소: 지도 + 주소/카테고리 정보 */}
+        {!loading && (hasMap || tableRows.length > 0) && (
+          <View style={styles.placeSection}>
+            <Text style={styles.sectionTitle}>장소</Text>
+            {hasMap && (
+              <MiniMapView latitude={detail!.mapy!} longitude={detail!.mapx!} name={item.title} />
+            )}
+            {tableRows.length > 0 && (
+              <View style={styles.table}>
+                {tableRows.map((row, i) => (
+                  <View key={i} style={styles.tableRow}>
+                    <Text style={styles.tableLabel}>{row.label}</Text>
+                    <Text style={styles.tableValue}>{row.value}</Text>
+                  </View>
+                ))}
+              </View>
             )}
           </View>
         )}
+
+        {/* 이용 정보 */}
+        {!loading && hasUsageInfo && (
+          <View style={styles.usageSection}>
+            <Text style={styles.sectionTitle}>이용 정보</Text>
+            <View style={styles.table}>
+              {usageRows.map((row, i) => (
+                <View key={i} style={styles.tableRow}>
+                  <Text style={styles.tableLabel}>{row.label}</Text>
+                  <Text style={styles.tableValue}>{row.value}</Text>
+                </View>
+              ))}
+              {(detail?.tel || detail?.infocenter || detail?.infocenterlodging) && (
+                <View style={styles.tableRow}>
+                  <Text style={styles.tableLabel}>문의</Text>
+                  <Pressable onPress={() => Linking.openURL(`tel:${detail?.tel ?? detail?.infocenter ?? detail?.infocenterlodging}`)}>
+                    <Text style={[styles.tableValue, styles.link]}>
+                      {detail?.tel ?? detail?.infocenter ?? detail?.infocenterlodging}
+                    </Text>
+                  </Pressable>
+                </View>
+              )}
+              {detail?.homepage && (
+                <View style={styles.tableRow}>
+                  <Text style={styles.tableLabel}>홈페이지</Text>
+                  <Pressable style={{ flex: 1 }} onPress={() => Linking.openURL(detail.homepage!)}>
+                    <Text style={[styles.tableValue, styles.link]} numberOfLines={1}>{detail.homepage}</Text>
+                  </Pressable>
+                </View>
+              )}
+            </View>
+          </View>
+        )}
       </ScrollView>
+
+      {/* 푸터 */}
+      <View style={styles.footer}>
+        <Pressable style={styles.closeButton} onPress={onClose}>
+          <Text style={styles.closeButtonText}>닫기</Text>
+        </Pressable>
+        <Pressable style={styles.addButton} onPress={handleAddToItinerary}>
+          <Text style={styles.addButtonText}>일정에 추가</Text>
+        </Pressable>
+      </View>
     </BottomSheetModal>
   );
 }
 
 const styles = StyleSheet.create({
-  scrollView: {
-    flex: 1,
-  },
+  scrollView: { flex: 1 },
   scrollContent: {
     paddingHorizontal: 20,
     paddingTop: 8,
-    paddingBottom: 32,
+    paddingBottom: 16,
     gap: spacing.md,
   },
-  titleRow: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
+  badgeRow: { flexDirection: "row" },
   badge: {
-    borderRadius: 10,
-    paddingHorizontal: 10,
+    borderRadius: radii.pill,
+    paddingHorizontal: 12,
     paddingVertical: 4,
-  },
-  badgeText: {
-    fontSize: 12,
-    fontWeight: "600",
-  },
-  title: {
-    ...textStyles.h4,
-    color: colors.gray900,
-    marginTop: 6,
-  },
-  address: {
-    ...textStyles.body5,
-    color: colors.gray600,
-  },
-  loadingRow: {
+    justifyContent: "center",
     alignItems: "center",
-    paddingVertical: spacing.lg,
   },
-  fieldsSection: {
-    backgroundColor: colors.gray100,
+  badgeText: { fontSize: 12, fontWeight: "600" },
+  title: {
+    ...textStyles.h3,
+    color: colors.gray900,
+  },
+  titleGroup: { gap: spacing.xs, marginBottom: spacing.sm },
+  metaText: {
+    ...textStyles.body5,
+    color: colors.gray500,
+  },
+  loadingRow: { alignItems: "center", paddingVertical: spacing.lg },
+  table: {
+    // backgroundColor: colors.gray100,
     borderRadius: radii.md,
     paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    gap: spacing.sm,
+    paddingVertical: spacing.xs,
+    gap: 0,
   },
-  fieldRow: {
+  sectionTitle: {
+    ...textStyles.h8,
+    color: colors.gray900,
+    paddingTop: spacing.sm,
+  },
+  tableRow: {
     flexDirection: "row",
-    gap: spacing.md,
+    gap: spacing.sm,
+    paddingVertical: 4,
+    alignItems: "flex-start",
   },
-  fieldLabel: {
+  tableLabel: {
     ...textStyles.body5,
     color: colors.gray600,
-    width: 72,
+    width: 80,
     flexShrink: 0,
   },
-  fieldValue: {
+  tableValue: {
     ...textStyles.body5,
-    color: colors.gray900,
+    color: colors.gray700,
     flex: 1,
   },
-  telRow: {
-    flexDirection: "row",
-    gap: spacing.md,
-    alignItems: "center",
-  },
-  telLabel: {
-    ...textStyles.body5,
-    color: colors.gray600,
-    width: 72,
-  },
-  telValue: {
-    ...textStyles.body5,
+  link: {
     color: colors.primary,
+    textDecorationLine: "underline",
+  },
+  iconRowContainer: {
+    gap: spacing.sm,
+  },
+  iconRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+  },
+  iconBox: {
+    width: 36,
+    height: 36,
+    borderRadius: radii.sm,
+    backgroundColor:  "rgb(234, 241, 254)",
+    justifyContent: "center",
+    alignItems: "center",
+    flexShrink: 0,
+  },
+  iconRowTextCol: {
     flex: 1,
+    justifyContent: "center",
+    gap: 2,
   },
-  overviewSection: {
-    gap: spacing.xs,
-  },
-  overviewLabel: {
-    ...textStyles.h8,
+  iconRowLabel: {
+    ...textStyles.body5,
     color: colors.gray600,
   },
+  iconRowValue: {
+    ...textStyles.body4,
+    color: colors.gray900,
+  },
+  placeSection: { gap: spacing.sm },
+  usageSection: { gap: spacing.sm },
+  overviewSection: { gap: spacing.xs },
   overviewText: {
     ...textStyles.body5,
-    color: colors.gray800,
+    color: colors.gray700,
     lineHeight: 20,
   },
-  overviewToggle: {
+  expandBtn: {
     ...textStyles.body5,
     color: colors.primary,
     marginTop: 2,
+  },
+  footer: {
+    flexDirection: "row",
+    gap: 12,
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: 20,
+    borderTopWidth: 1,
+    borderTopColor: colors.gray100,
+  },
+  closeButton: {
+    flex: 1,
+    height: 48,
+    borderRadius: radii.md,
+    backgroundColor: colors.gray100,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  closeButtonText: {
+    ...textStyles.h7,
+    color: colors.gray900,
+  },
+  addButton: {
+    flex: 1.7,
+    height: 48,
+    borderRadius: radii.md,
+    backgroundColor: colors.gray900,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  addButtonText: {
+    ...textStyles.h7,
+    color: colors.white,
   },
 });
