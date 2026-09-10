@@ -1,5 +1,5 @@
 import { colors } from "@/ui/tokens/colors";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Animated, Pressable, StyleSheet, Text, View } from "react-native";
 import CloseIcon from "../../assets/close_sm.svg";
 
@@ -15,6 +15,7 @@ interface Props {
   }[];
   congestedItems?: CongestedItem[];
   onDismiss: () => void;
+  compact?: boolean;
 }
 
 const fmtDate = (d: string) => {
@@ -28,6 +29,7 @@ type Segment = { text: string; bold?: boolean };
 function buildBannerSegments(
   festivals: { matchedLocationName: string | null; matchedDate: string | null }[],
   congestedItems: CongestedItem[],
+  breakSuffix?: boolean,
 ): Segment[] {
   const hasFestivals = festivals.length > 0;
   const hasCongestion = congestedItems.length > 0;
@@ -60,10 +62,13 @@ function buildBannerSegments(
   }
 
   const dates = [...new Set(items.map((i) => i.date))].sort();
-  const allLocations = [...new Set(items.map((i) => i.locationName))].join(", ");
+  const allLocations = [...new Set(items.map((i) => i.locationName))].join(" · ");
+
+  const joinLocSuffix = (loc: string) =>
+    breakSuffix ? [{ text: loc }, { text: `\n${suffix}` }] : [{ text: `${loc} ${suffix}` }];
 
   if (dates.length === 0) {
-    return [{ text: `${allLocations} ${suffix}` }];
+    return joinLocSuffix(allLocations);
   }
 
   const isConsecutive = dates.every((d, i) => {
@@ -78,7 +83,7 @@ function buildBannerSegments(
         : `${fmtDate(dates[0])}–${fmtDate(dates[dates.length - 1])}`;
     return [
       { text: `${dateStr} `, bold: true },
-      { text: `${allLocations} ${suffix}` },
+      ...joinLocSuffix(allLocations),
     ];
   }
 
@@ -95,14 +100,20 @@ function buildBannerSegments(
     segments.push({ text: fmtDate(d), bold: true });
     segments.push({ text: ` ${[...locs].join("·")}` });
   });
-  segments.push({ text: ` ${suffix}` });
+  if (breakSuffix) {
+    segments.push({ text: `\n${suffix}` });
+  } else {
+    segments.push({ text: ` ${suffix}` });
+  }
   return segments;
 }
 
-export default function CongestionBanner({ festivals, congestedItems = [], onDismiss }: Props) {
-  const segments = buildBannerSegments(festivals, congestedItems);
+export default function CongestionBanner({ festivals, congestedItems = [], onDismiss, compact }: Props) {
+  const rawSegments = buildBannerSegments(festivals, congestedItems, compact);
+  const segments = compact ? rawSegments.filter(s => !s.bold) : rawSegments;
   const opacity = useRef(new Animated.Value(0)).current;
   const isMounted = useRef(false);
+  const [expanded, setExpanded] = useState(false);
 
   useEffect(() => {
     opacity.setValue(0);
@@ -139,18 +150,23 @@ export default function CongestionBanner({ festivals, congestedItems = [], onDis
 
   return (
     <Animated.View style={[styles.container, { opacity }]}>
-      <View style={styles.badge}>
-        <Text style={styles.badgeText}>혼잡 주의</Text>
-      </View>
-      <Text style={styles.message} numberOfLines={1}>
-        {segments.map((seg, i) => (
-          <Text key={i} style={seg.bold ? styles.bold : undefined}>
-            {seg.text}
-          </Text>
-        ))}
-      </Text>
-      <Pressable onPress={handleDismiss} style={styles.closeBtn} aria-label="닫기">
-        <CloseIcon width={16} height={16} color={colors.gray600} />
+      <Pressable
+        style={styles.contentRow}
+        onPress={() => setExpanded(prev => !prev)}
+      >
+        <View style={styles.badge}>
+          <Text style={styles.badgeText}>혼잡 주의</Text>
+        </View>
+        <Text style={styles.message} numberOfLines={expanded ? undefined : 2}>
+          {segments.map((seg, i) => (
+            <Text key={i} style={seg.bold ? styles.bold : undefined}>
+              {seg.text}
+            </Text>
+          ))}
+        </Text>
+        <Pressable onPress={handleDismiss} style={styles.closeBtn} aria-label="닫기">
+          <CloseIcon width={16} height={16} color={colors.gray600} />
+        </Pressable>
       </Pressable>
     </Animated.View>
   );
@@ -160,7 +176,6 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 10,
@@ -169,6 +184,12 @@ const styles = StyleSheet.create({
     borderColor: "rgb(207, 237, 237)",
     alignSelf: "stretch",
   } as any,
+  contentRow: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
   badge: {
     flexShrink: 0,
     height: 20,
@@ -198,7 +219,6 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   } as any,
   closeBtn: {
-    marginLeft: "auto",
     flexShrink: 0,
     width: 32,
     height: 32,

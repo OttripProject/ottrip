@@ -14,6 +14,8 @@ import FlightEditModal from "@/components/modals/mobile/FlightEditModal.native";
 import ItineraryDetailModal from "@/components/modals/mobile/ItineraryDetailModal.native";
 import ItineraryEditModal, { type ItineraryEditPrefill } from "@/components/modals/mobile/ItineraryEditModal.native";
 import TourismDetailModal from "@/components/modals/TourismDetailModal";
+import CongestionBanner, { type CongestedItem } from "@/components/CongestionBanner";
+import { tourismApi } from "@/services/tourism";
 import PlanSelectModal from "@/components/modals/mobile/PlanSelectModal.native";
 import ProfileModal from "@/components/modals/mobile/ProfileModal.native";
 import { useSelectedPlan } from "@/contexts/SelectedPlanContext";
@@ -45,6 +47,7 @@ import {
   useWindowDimensions,
   Alert,
   Animated,
+
   Modal,
   Platform,
   Pressable,
@@ -204,6 +207,8 @@ export default function TodayScreen() {
   const [timelineViewDate, setTimelineViewDate] = useState<dayjs.Dayjs | null>(
     null,
   );
+  const [congestedItems, setCongestedItems] = useState<CongestedItem[]>([]);
+  const [bannerDismissed, setBannerDismissed] = useState(false);
 
   useEffect(() => {
     setTimelineViewDate(null);
@@ -317,6 +322,47 @@ export default function TodayScreen() {
       planData.accommodations,
     ],
   );
+
+  const isKoreanPlan = planData.plan?.segments?.some((s: any) => s.country === "대한민국") ?? false;
+
+  useEffect(() => {
+    if (!selectedPlan?.id || !isKoreanPlan || !planData.itineraries.length) {
+      setCongestedItems([]);
+      return;
+    }
+    const today = dayjs().startOf("day");
+    const maxDate = today.add(30, "day");
+    const eligible = planData.itineraries.filter((it: any) => {
+      if (!it.location) return false;
+      const d = dayjs(it.itineraryDate);
+      return !d.isBefore(today) && !d.isAfter(maxDate);
+    });
+    if (!eligible.length) {
+      setCongestedItems([]);
+      return;
+    }
+    Promise.all(
+      eligible.map((it: any) =>
+        tourismApi
+          .getCongestion(it.id)
+          .then((items) =>
+            items.length > 0
+              ? { date: it.itineraryDate as string, locationName: it.location.name as string }
+              : null,
+          )
+          .catch(() => null),
+      ),
+    ).then((results) => {
+      setCongestedItems(results.filter((r): r is CongestedItem => r !== null));
+    });
+  }, [selectedPlan?.id, isKoreanPlan, planData.itineraries?.map((it: any) => it.id).join(",")]);
+
+  const prevCongestedKeyRef = useRef("");
+  useEffect(() => {
+    const key = congestedItems.map((c) => `${c.date}${c.locationName}`).sort().join(",");
+    if (key && key !== prevCongestedKeyRef.current) setBannerDismissed(false);
+    prevCongestedKeyRef.current = key;
+  }, [congestedItems]);
 
   const hasAnyFlightSegment = useMemo(() => {
     return (planData.flights || []).some(
@@ -785,6 +831,18 @@ export default function TodayScreen() {
               </Pressable>
             </View>
           </View>
+
+          {/* 혼잡 배너 */}
+          {!bannerDismissed && congestedItems.length > 0 && (
+            <View style={styles.bannerWrapper}>
+              <CongestionBanner
+                festivals={[]}
+                congestedItems={congestedItems}
+                onDismiss={() => setBannerDismissed(true)}
+                compact
+              />
+            </View>
+          )}
 
           {/* 현재 진행 중 활동 카드 */}
           {currentActivities.length > 0 && (() => {
@@ -1936,6 +1994,10 @@ const styles = StyleSheet.create({
   },
   scrollContentPressable: {
     flexGrow: 1,
+  },
+  bannerWrapper: {
+    marginHorizontal: 16,
+    marginBottom: 12,
   },
   header: {
     paddingHorizontal: 16,
