@@ -258,7 +258,7 @@ export default function ItineraryDetailModal({
               </View>
             </View>
           )}
-          {itinerary.location?.fromGoogle &&
+          {itinerary.location?.hasCoords &&
             !!itinerary.location.latitude &&
             !!itinerary.location.longitude && (
               <MiniMapView

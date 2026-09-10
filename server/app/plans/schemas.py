@@ -117,7 +117,7 @@ class ExportItinerary(APISchema):
     location: str | None = None
     location_latitude: float | None = None
     location_longitude: float | None = None
-    location_from_google: bool | None = None
+    location_has_coords: bool | None = None
     itinerary_date: date
     start_time: time
     end_time: time
@@ -146,7 +146,7 @@ class ExportAccommodation(APISchema):
     location_name: str | None = None
     location_latitude: float | None = None
     location_longitude: float | None = None
-    location_from_google: bool | None = None
+    location_has_coords: bool | None = None
 
 
 class ExportExpense(APISchema):

@@ -26,7 +26,7 @@ class Location(Base):
 
     address: Mapped[str | None] = mapped_column(String, nullable=True, default=None)
 
-    from_google: Mapped[bool] = mapped_column(default=True, nullable=False)
+    has_coords: Mapped[bool] = mapped_column(default=True, nullable=False)
 
     area_cd: Mapped[str | None] = mapped_column(String, nullable=True, default=None)
 

@@ -236,7 +236,7 @@ export default function TourismDetailModal({
           latitude: coords?.lat ?? 0,
           longitude: coords?.lng ?? 0,
           address: detail?.address ?? undefined,
-          fromGoogle: !!coords,
+          hasCoords: !!coords,
         });
         locationId = loc.id;
       } catch {}
@@ -274,7 +274,7 @@ export default function TourismDetailModal({
         latitude: coords?.lat ?? 0,
         longitude: coords?.lng ?? 0,
         address: detail?.address ?? undefined,
-        fromGoogle: !!coords,
+        hasCoords: !!coords,
       });
       locationId = loc.id;
     } catch {}

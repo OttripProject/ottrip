@@ -24,7 +24,7 @@ async def create_location(session: SessionDep, data: LocationCreate) -> Location
         latitude=data.latitude,
         longitude=data.longitude,
         address=data.address,
-        from_google=data.from_google,
+        has_coords=data.has_coords,
         area_cd=data.area_cd,
         signgu_cd=data.signgu_cd,
     )
@@ -46,8 +46,8 @@ async def update_location(
     location.address = data.address
     if data.place_id is not None:
         location.place_id = data.place_id
-    if data.from_google is not None:
-        location.from_google = data.from_google
+    if data.has_coords is not None:
+        location.has_coords = data.has_coords
     if data.area_cd is not None:
         location.area_cd = data.area_cd
     if data.signgu_cd is not None:

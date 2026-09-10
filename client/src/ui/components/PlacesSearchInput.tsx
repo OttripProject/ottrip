@@ -15,7 +15,7 @@ export type PlaceResult = {
   latitude: number;
   longitude: number;
   address?: string;
-  fromGoogle: boolean;
+  hasCoords: boolean;
 };
 
 interface PlacesSearchInputProps {
@@ -130,7 +130,7 @@ export default function PlacesSearchInput({
             setSuggestions([]);
             setOpen(false);
             setMapCoords(null);
-            onSelectRef.current({ name: currentInput, placeId: manualPlaceId(currentInput), latitude: 0, longitude: 0, fromGoogle: false });
+            onSelectRef.current({ name: currentInput, placeId: manualPlaceId(currentInput), latitude: 0, longitude: 0, hasCoords: false });
           }
           setSelectedIndex(-1);
           break;
@@ -226,7 +226,7 @@ export default function PlacesSearchInput({
       latitude: lat,
       longitude: lng,
       address: place.formattedAddress ?? undefined,
-      fromGoogle: true,
+      hasCoords: true,
     });
   };
   handleSelectSuggestionRef.current = handleSelectSuggestion;
@@ -238,7 +238,7 @@ export default function PlacesSearchInput({
     setSuggestions([]);
     setOpen(false);
     setMapCoords(null);
-    onSelectRef.current({ name, placeId: manualPlaceId(name), latitude: 0, longitude: 0, fromGoogle: false });
+    onSelectRef.current({ name, placeId: manualPlaceId(name), latitude: 0, longitude: 0, hasCoords: false });
   };
 
   if (readOnly) {
@@ -350,7 +350,7 @@ export default function PlacesSearchInput({
             if (current && current !== (value ?? "")) {
               setSuggestions([]);
               setMapCoords(null);
-              onSelectRef.current({ name: current, placeId: manualPlaceId(current), latitude: 0, longitude: 0, fromGoogle: false });
+              onSelectRef.current({ name: current, placeId: manualPlaceId(current), latitude: 0, longitude: 0, hasCoords: false });
             }
           }, 150)}
           editable={!disabled}

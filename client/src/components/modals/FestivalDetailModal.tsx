@@ -150,7 +150,7 @@ export default function FestivalDetailModal({ visible, onClose, item, onAddToIti
         latitude: coords?.lat ?? 0,
         longitude: coords?.lng ?? 0,
         address: address ?? undefined,
-        fromGoogle: false,
+        hasCoords: false,
       });
       locationId = loc.id;
     } catch {}

@@ -14,7 +14,7 @@ export const manualPlaceId = (name: string): string => {
 };
 
 export function isLocationStale(location: Location): boolean {
-  if (!location.fromGoogle) return false;
+  if (!location.hasCoords) return false;
   const updatedAt = new Date(location.updatedAt);
   const diffMs = Date.now() - updatedAt.getTime();
   return diffMs > STALE_DAYS * 24 * 60 * 60 * 1000;

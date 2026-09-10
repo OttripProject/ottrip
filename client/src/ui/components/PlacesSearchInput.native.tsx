@@ -14,7 +14,7 @@ export type PlaceResult = {
   latitude: number;
   longitude: number;
   address?: string;
-  fromGoogle: boolean;
+  hasCoords: boolean;
 };
 
 interface PlacesSearchInputProps {
@@ -155,7 +155,7 @@ export default function PlacesSearchInput({
       latitude: lat,
       longitude: lng,
       address: details?.address,
-      fromGoogle: true,
+      hasCoords: true,
     });
   };
 
@@ -170,7 +170,7 @@ export default function PlacesSearchInput({
       placeId: manualPlaceId(trimmed),
       latitude: 0,
       longitude: 0,
-      fromGoogle: false,
+      hasCoords: false,
     });
   };
 

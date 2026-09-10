@@ -195,7 +195,7 @@ export default function TourismDetailModal({
           latitude: coordsLat,
           longitude: coordsLng,
           address: detail?.address ?? undefined,
-          fromGoogle: true,
+          hasCoords: true,
         });
         locationId = loc.id;
       }

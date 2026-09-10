@@ -423,12 +423,12 @@ export default function ItineraryEditModal({
         try {
           if (typeof finalLocationId === "number") {
             await locationsApi.updateLocation(finalLocationId, {
-              name: draft.name, placeId: draft.placeId, latitude: draft.latitude, longitude: draft.longitude, address: draft.address, fromGoogle: draft.fromGoogle,
+              name: draft.name, placeId: draft.placeId, latitude: draft.latitude, longitude: draft.longitude, address: draft.address, hasCoords: draft.hasCoords,
             });
           } else {
             const loc = await locationsApi.createLocation({
               name: draft.name, placeId: draft.placeId, latitude: draft.latitude,
-              longitude: draft.longitude, address: draft.address, fromGoogle: draft.fromGoogle,
+              longitude: draft.longitude, address: draft.address, hasCoords: draft.hasCoords,
             });
             finalLocationId = loc.id;
           }
@@ -444,11 +444,11 @@ export default function ItineraryEditModal({
           try {
             if (typeof finalLocationId === "number") {
               await locationsApi.updateLocation(finalLocationId, {
-                name: rawText, placeId: manualPlaceId(rawText), latitude: 0, longitude: 0, address: undefined, fromGoogle: false,
+                name: rawText, placeId: manualPlaceId(rawText), latitude: 0, longitude: 0, address: undefined, hasCoords: false,
               });
             } else {
               const loc = await locationsApi.createLocation({
-                name: rawText, placeId: manualPlaceId(rawText), latitude: 0, longitude: 0, fromGoogle: false,
+                name: rawText, placeId: manualPlaceId(rawText), latitude: 0, longitude: 0, hasCoords: false,
               });
               finalLocationId = loc.id;
             }
@@ -731,7 +731,7 @@ export default function ItineraryEditModal({
               placeholder="장소를 검색하세요."
               cityContext={formData.city || formData.country || undefined}
               initialCoords={
-                itinerary?.location?.fromGoogle
+                itinerary?.location?.hasCoords
                   ? { lat: itinerary.location.latitude, lng: itinerary.location.longitude }
                   : undefined
               }

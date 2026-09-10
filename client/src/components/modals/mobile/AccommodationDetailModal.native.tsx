@@ -229,7 +229,7 @@ export default function AccommodationDetailModal({
               </View>
             </View>
           )}
-          {accommodation.location?.fromGoogle &&
+          {accommodation.location?.hasCoords &&
             !!accommodation.location.latitude &&
             !!accommodation.location.longitude && (
               <MiniMapView

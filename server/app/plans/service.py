@@ -442,9 +442,7 @@ class PlanService:
                     location=it.location.name if it.location else None,
                     location_latitude=it.location.latitude if it.location else None,
                     location_longitude=it.location.longitude if it.location else None,
-                    location_from_google=it.location.from_google
-                    if it.location
-                    else None,
+                    location_has_coords=it.location.has_coords if it.location else None,
                     itinerary_date=it.itinerary_date,
                     start_time=it.start_time,
                     end_time=it.end_time,
@@ -481,7 +479,7 @@ class PlanService:
                     location_name=acc.location.name if acc.location else None,
                     location_latitude=acc.location.latitude if acc.location else None,
                     location_longitude=acc.location.longitude if acc.location else None,
-                    location_from_google=acc.location.from_google
+                    location_has_coords=acc.location.has_coords
                     if acc.location
                     else None,
                 )

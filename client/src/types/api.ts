@@ -68,7 +68,7 @@ export interface Location {
   latitude: number;
   longitude: number;
   address?: string;
-  fromGoogle: boolean;
+  hasCoords: boolean;
   updatedAt: string;
 }
 
@@ -78,7 +78,7 @@ export interface CreateLocationRequest {
   latitude: number;
   longitude: number;
   address?: string;
-  fromGoogle?: boolean;
+  hasCoords?: boolean;
 }
 
 export interface UpdateLocationRequest {
@@ -87,7 +87,7 @@ export interface UpdateLocationRequest {
   latitude: number;
   longitude: number;
   address?: string;
-  fromGoogle?: boolean;
+  hasCoords?: boolean;
 }
 
 // 일정 (Itinerary) 관련 타입

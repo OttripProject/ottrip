@@ -134,7 +134,7 @@ export default function ViewerDetailPanel({
             <InfoRow label="시간" value={`${startT} - ${endT}`} />
             <LinkedExpenses expenses={linked} />
           </View>
-          {it.locationFromGoogle && it.locationLatitude != null && it.locationLongitude != null && (
+          {it.locationHasCoords && it.locationLatitude != null && it.locationLongitude != null && (
             <MiniMapView
               latitude={it.locationLatitude}
               longitude={it.locationLongitude}
@@ -216,7 +216,7 @@ export default function ViewerDetailPanel({
             />
             <LinkedExpenses expenses={linked} />
           </View>
-          {acc.locationFromGoogle && acc.locationLatitude != null && acc.locationLongitude != null && (
+          {acc.locationHasCoords && acc.locationLatitude != null && acc.locationLongitude != null && (
             <MiniMapView
               latitude={acc.locationLatitude}
               longitude={acc.locationLongitude}
