@@ -1060,6 +1060,8 @@ export default function TodayScreen() {
                     const place = suggestion.places[placeIdx] as SuggestionPlace | undefined;
                     if (!place) return null;
                     const catBadge = place.category ? SUGGESTION_CATEGORY_BADGE[place.category] : null;
+                    const d = place.dist;
+                    const distLabel = d == null ? null : d < 1000 ? `${Math.round(d / 10) * 10}m` : d < 2000 ? `${(d / 1000).toFixed(1)}km` : `${Math.round(d / 1000)}km`;
                     return (
                       <View key="ai-suggestion" style={styles.timelineItem}>
                         <View style={styles.swipeItineraryShadow}>
@@ -1112,6 +1114,12 @@ export default function TodayScreen() {
                                 <Text style={styles.suggestionPlaceName} numberOfLines={1}>
                                   {place.title}
                                 </Text>
+                                {distLabel && (
+                                  <>
+                                    <Text style={styles.suggestionDistSep}>·</Text>
+                                    <Text style={styles.suggestionDist}>{distLabel}</Text>
+                                  </>
+                                )}
                               </View>
                               {place.sentence ? (
                                 <Text style={styles.suggestionSentence} numberOfLines={2}>
@@ -2632,7 +2640,7 @@ const styles = StyleSheet.create({
   suggestionPlaceName: {
     ...textStyles.h6,
     color: colors.black,
-    flex: 1,
+    flexShrink: 1,
   },
   suggestionSentence: {
     ...textStyles.body5,
@@ -2655,6 +2663,17 @@ const styles = StyleSheet.create({
   suggestionDotOff: {
     width: 6,
     backgroundColor: colors.gray400,
+  },
+  suggestionDistSep: {
+    ...textStyles.body5,
+    color: colors.gray700,
+    flexShrink: 0,
+    marginHorizontal: -6,
+  },
+  suggestionDist: {
+    ...textStyles.body5,
+    color: colors.gray700,
+    flexShrink: 0,
   },
 
   accommodationCard: {
