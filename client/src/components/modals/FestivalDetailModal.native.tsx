@@ -327,6 +327,7 @@ export default function FestivalDetailModal({ visible, onClose, item, onAddToIti
             </View>
           </View>
         )}
+        <Text style={styles.attribution}>출처: ⓒ한국관광공사</Text>
       </ScrollView>
 
       {/* 푸터 */}
@@ -446,12 +447,15 @@ const styles = StyleSheet.create({
   },
   tableValue: { ...textStyles.body5, color: colors.gray700, flex: 1 },
   link: { color: colors.primary, textDecorationLine: "underline" },
+  attribution: {
+    ...textStyles.body6,
+    color: colors.gray500,
+    textAlign: "right",
+  } as any,
   footer: {
     paddingHorizontal: 20,
     paddingTop: 12,
     paddingBottom: 20,
-    borderTopWidth: 1,
-    borderTopColor: colors.gray100,
   },
   addButton: {
     height: 48,

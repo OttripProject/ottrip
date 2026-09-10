@@ -654,6 +654,7 @@ export default function TourismDetailModal({
                 )}
               </>
             )}
+            <Text style={styles.attribution}>출처: ⓒ한국관광공사</Text>
           </ScrollView>
 
           {/* 푸터 */}
@@ -977,14 +978,18 @@ const styles = StyleSheet.create({
     ...textStyles.body5,
     color: colors.gray400,
   },
+  attribution: {
+    ...textStyles.body6,
+    color: colors.gray500,
+    textAlign: "right",
+    marginRight: spacing.xl
+  } as any,
   footer: {
     flexDirection: "row",
     gap: 12,
     paddingHorizontal: 32,
     paddingTop: 16,
     paddingBottom: 24,
-    borderTopWidth: 1,
-    borderTopColor: colors.gray100,
   },
   closeButton: {
     flex: 1,
