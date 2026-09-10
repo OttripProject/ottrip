@@ -97,6 +97,16 @@ type ScheduleItem =
       segmentIndex: number;
     };
 
+function parsePlaytime(text: string | null | undefined): { start: string; end: string } | null {
+  if (!text) return null;
+  const match = text.match(/(\d{1,2}):(\d{2})\s*[~\-]\s*(\d{1,2}):(\d{2})/);
+  if (!match) return null;
+  return {
+    start: `${match[1].padStart(2, "0")}:${match[2]}`,
+    end: `${match[3].padStart(2, "0")}:${match[4]}`,
+  };
+}
+
 function buildSchedulesForDate(
   dateStr: string,
   itineraries: Itinerary[] | undefined,
@@ -499,6 +509,28 @@ export default function TodayScreen() {
       ) ?? null
     );
   }, [planData.plan?.segments, timelineDateStr]);
+
+  const nextAvailableTime = useMemo<{ startTime: string; endTime: string }>(() => {
+    const pad = (n: number) => n.toString().padStart(2, "0");
+    const toTime = (h: number) => `${pad(Math.min(h, 23))}:00`;
+
+    const endTimes = todaySchedules.map(s => s.endTime).filter(Boolean);
+    let startHour: number;
+
+    if (endTimes.length > 0) {
+      const latest = [...endTimes].sort().at(-1)!;
+      const [h, m] = latest.split(":").map(Number);
+      startHour = m > 0 ? h + 1 : h;
+    } else if (timelineDateStr === calendarTodayStr) {
+      const now = dayjs();
+      startHour = now.minute() > 0 ? now.hour() + 1 : now.hour();
+    } else {
+      return { startTime: "09:00", endTime: "10:00" };
+    }
+
+    startHour = Math.min(startHour, 23);
+    return { startTime: toTime(startHour), endTime: toTime(startHour + 1) };
+  }, [todaySchedules, timelineDateStr, calendarTodayStr]);
 
   const todayExpenses = useMemo(() => {
     let total = 0;
@@ -1649,6 +1681,8 @@ export default function TodayScreen() {
         planId={selectedPlan?.id ?? 0}
         defaultCountry={timelineDateSegment?.country}
         defaultCity={timelineDateSegment?.city}
+        defaultStartTime={nextAvailableTime.startTime}
+        defaultEndTime={nextAvailableTime.endTime}
         prefill={itineraryPrefill ?? undefined}
         onSave={async itinerary => {
           planData.addItinerary(itinerary);
@@ -1700,10 +1734,20 @@ export default function TodayScreen() {
         }}
         item={selectedFestival}
         onAddToItinerary={draft => {
+          const operating = parsePlaytime(draft.playtime);
+          let { startTime, endTime } = nextAvailableTime;
+          if (operating) {
+            if (startTime < operating.start) {
+              startTime = operating.start;
+            } else if (startTime >= operating.end) {
+              startTime = operating.start;
+            }
+            endTime = dayjs(`2000-01-01 ${startTime}`).add(1, "hour").format("HH:mm");
+          }
           setFestivalDetailVisible(false);
           setSelectedFestival(null);
           setEditingItinerary(null);
-          setItineraryPrefill(draft);
+          setItineraryPrefill({ ...draft, startTime, endTime });
           setShowItineraryEdit(true);
         }}
       />

@@ -93,6 +93,8 @@ interface ItineraryEditModalProps {
   defaultDate?: string;
   defaultCountry?: string;
   defaultCity?: string;
+  defaultStartTime?: string;
+  defaultEndTime?: string;
   prefill?: ItineraryEditPrefill;
   embedded?: boolean;
   onSave?: (itinerary: Itinerary) => void;
@@ -116,6 +118,8 @@ export default function ItineraryEditModal({
   defaultDate,
   defaultCountry,
   defaultCity,
+  defaultStartTime,
+  defaultEndTime,
   prefill,
   embedded,
   onSave,
@@ -291,8 +295,8 @@ export default function ItineraryEditModal({
         location: prefill?.location || "",
         locationId: prefill?.locationId,
         itineraryDate: initDate,
-        startTime: prefill?.startTime || "09:00",
-        endTime: prefill?.endTime || "10:00",
+        startTime: prefill?.startTime || defaultStartTime || "09:00",
+        endTime: prefill?.endTime || defaultEndTime || "10:00",
       });
       setSelectedCategory(prefill?.category ?? null);
       setExpenseData({ amount: "", category: ExpenseCategory.FOOD, currency: ExpenseCurrency.KRW });
