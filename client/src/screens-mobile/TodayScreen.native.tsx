@@ -2203,7 +2203,7 @@ export default function TodayScreen() {
         pointerEvents="box-none"
         style={[styles.snackbar, { opacity: snackbarAnim, bottom: insets.bottom + 28 }]}
       >
-        <Text style={styles.snackbarText}>AI 제안을 숨겼어요.</Text>
+        <Text style={styles.snackbarText}>{"AI 제안을 숨겼어요.\n상단 AI 제안 버튼으로 다시 볼 수 있어요."}</Text>
         <Pressable
           onPress={() => {
             snackbarUndoRef.current?.();
@@ -2239,7 +2239,7 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   snackbarText: {
-    ...textStyles.body4,
+    ...textStyles.h7,
     color: colors.white,
     flex: 1,
   },
