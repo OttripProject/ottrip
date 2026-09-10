@@ -77,6 +77,8 @@ export interface ItineraryEditPrefill {
   description?: string;
   location?: string;
   locationId?: number;
+  locationLat?: number;
+  locationLng?: number;
   country?: string;
   city?: string;
   itineraryDate?: string;
@@ -737,7 +739,9 @@ export default function ItineraryEditModal({
               initialCoords={
                 itinerary?.location?.hasCoords
                   ? { lat: itinerary.location.latitude, lng: itinerary.location.longitude }
-                  : undefined
+                  : prefill?.locationLat != null && prefill?.locationLng != null
+                    ? { lat: prefill.locationLat, lng: prefill.locationLng }
+                    : undefined
               }
             />
           </View>
