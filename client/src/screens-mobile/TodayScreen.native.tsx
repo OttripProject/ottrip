@@ -14,8 +14,9 @@ import FlightEditModal from "@/components/modals/mobile/FlightEditModal.native";
 import ItineraryDetailModal from "@/components/modals/mobile/ItineraryDetailModal.native";
 import ItineraryEditModal, { type ItineraryEditPrefill } from "@/components/modals/mobile/ItineraryEditModal.native";
 import TourismDetailModal from "@/components/modals/TourismDetailModal";
+import FestivalDetailModal from "@/components/modals/FestivalDetailModal.native";
 import CongestionBanner, { type CongestedItem } from "@/components/CongestionBanner";
-import { tourismApi } from "@/services/tourism";
+import { tourismApi, type FestivalItem } from "@/services/tourism";
 import PlanSelectModal from "@/components/modals/mobile/PlanSelectModal.native";
 import ProfileModal from "@/components/modals/mobile/ProfileModal.native";
 import { useSelectedPlan } from "@/contexts/SelectedPlanContext";
@@ -61,6 +62,7 @@ import { Swipeable } from "react-native-gesture-handler";
 
 type AddScheduleFlow = "closed" | "method" | "direct" | "ai";
 import WeeklyChecklistCard from "@/components/cards/WeeklyChecklistCard.native";
+import FestivalsCard from "@/components/cards/FestivalsCard.native";
 import { useMe } from "@/hooks/useMe";
 import { accommodationsApi } from "@/services/accommodations";
 import { flightsApi } from "@/services/flights";
@@ -209,6 +211,10 @@ export default function TodayScreen() {
   );
   const [congestedItems, setCongestedItems] = useState<CongestedItem[]>([]);
   const [bannerDismissed, setBannerDismissed] = useState(false);
+  const [matchedFestivals, setMatchedFestivals] = useState<FestivalItem[]>([]);
+  const [suggestFestivals, setSuggestFestivals] = useState<FestivalItem[]>([]);
+  const [selectedFestival, setSelectedFestival] = useState<FestivalItem | null>(null);
+  const [festivalDetailVisible, setFestivalDetailVisible] = useState(false);
 
   useEffect(() => {
     setTimelineViewDate(null);
@@ -363,6 +369,16 @@ export default function TodayScreen() {
     if (key && key !== prevCongestedKeyRef.current) setBannerDismissed(false);
     prevCongestedKeyRef.current = key;
   }, [congestedItems]);
+
+  useEffect(() => {
+    if (!selectedPlan?.id || !isKoreanPlan) {
+      setMatchedFestivals([]);
+      setSuggestFestivals([]);
+      return;
+    }
+    tourismApi.getFestivalsForPlan(selectedPlan.id).then(setMatchedFestivals).catch(() => {});
+    tourismApi.getSuggestFestivals(selectedPlan.id).then(setSuggestFestivals).catch(() => {});
+  }, [selectedPlan?.id, isKoreanPlan]);
 
   const hasAnyFlightSegment = useMemo(() => {
     return (planData.flights || []).some(
@@ -833,10 +849,10 @@ export default function TodayScreen() {
           </View>
 
           {/* 혼잡 배너 */}
-          {!bannerDismissed && congestedItems.length > 0 && (
+          {!bannerDismissed && (congestedItems.length > 0 || matchedFestivals.length > 0) && (
             <View style={styles.bannerWrapper}>
               <CongestionBanner
-                festivals={[]}
+                festivals={matchedFestivals}
                 congestedItems={congestedItems}
                 onDismiss={() => setBannerDismissed(true)}
                 compact
@@ -1306,6 +1322,19 @@ export default function TodayScreen() {
             </View>
           )}
 
+          {/* 이 기간 축제·공연 */}
+          {isKoreanPlan && suggestFestivals.length > 0 && (
+            <View style={styles.festivalsCardWrapper}>
+              <FestivalsCard
+                festivals={suggestFestivals}
+                onPress={f => {
+                  setSelectedFestival(f);
+                  setFestivalDetailVisible(true);
+                }}
+              />
+            </View>
+          )}
+
           {showTodayTimelineExtras && (
             <View style={styles.checklistWrapper}>
               <WeeklyChecklistCard
@@ -1657,6 +1686,22 @@ export default function TodayScreen() {
         itinerary={selectedItinerary}
         onOpenNewItinerary={draft => {
           reopenDetailAfterTourismRef.current = false;
+          setEditingItinerary(null);
+          setItineraryPrefill(draft);
+          setShowItineraryEdit(true);
+        }}
+      />
+
+      <FestivalDetailModal
+        visible={festivalDetailVisible}
+        onClose={() => {
+          setFestivalDetailVisible(false);
+          setSelectedFestival(null);
+        }}
+        item={selectedFestival}
+        onAddToItinerary={draft => {
+          setFestivalDetailVisible(false);
+          setSelectedFestival(null);
           setEditingItinerary(null);
           setItineraryPrefill(draft);
           setShowItineraryEdit(true);
@@ -2415,5 +2460,9 @@ const styles = StyleSheet.create({
     color: colors.gray500,
     textAlign: "center",
     paddingVertical: 8,
+  },
+  festivalsCardWrapper: {
+    marginHorizontal: 16,
+    marginBottom: 32,
   },
 });
