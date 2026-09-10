@@ -70,6 +70,7 @@ import { itinerariesApi } from "@/services/itineraries";
 import { extendPlanIfNeeded } from "@/utils/extendPlanIfNeeded";
 import { collectPlanItemDates, shrinkPlanIfNeeded } from "@/utils/shrinkPlanIfNeeded";
 import { guestPrompt } from "@/utils/guestPrompt";
+import { findFestivalSlot } from "@/utils/festivalSlot";
 import FlightIcon from "../../assets/airplane.svg";
 import AccommodationIcon from "../../assets/mobile_accomodation.svg";
 import DropdownIcon from "../../assets/mobile_dropdown.svg";
@@ -96,16 +97,6 @@ type ScheduleItem =
       segment: any;
       segmentIndex: number;
     };
-
-function parsePlaytime(text: string | null | undefined): { start: string; end: string } | null {
-  if (!text) return null;
-  const match = text.match(/(\d{1,2}):(\d{2})\s*[~\-]\s*(\d{1,2}):(\d{2})/);
-  if (!match) return null;
-  return {
-    start: `${match[1].padStart(2, "0")}:${match[2]}`,
-    end: `${match[3].padStart(2, "0")}:${match[4]}`,
-  };
-}
 
 function buildSchedulesForDate(
   dateStr: string,
@@ -654,7 +645,7 @@ export default function TodayScreen() {
         </View>
         <View style={[styles.noPlanCardWrap, { justifyContent: "center", flex: 1 }]}>
           <View style={styles.noPlanCard}>
-            <Text style={styles.noPlanHeadline}>서버에 연결할 수 없어요</Text>
+            <Text style={styles.noPlanHeadline}>오티트립이 잠시 쉬고있습니다 🛠️</Text>
             <Text style={styles.noPlanSubcopy}>
               잠시 후 다시 시도해주세요
             </Text>
@@ -1735,20 +1726,35 @@ export default function TodayScreen() {
         }}
         item={selectedFestival}
         onAddToItinerary={draft => {
-          const operating = parsePlaytime(draft.playtime);
-          let { startTime, endTime } = nextAvailableTime;
-          if (operating) {
-            if (startTime < operating.start) {
-              startTime = operating.start;
-            } else if (startTime >= operating.end) {
-              startTime = operating.start;
-            }
-            endTime = dayjs(`2000-01-01 ${startTime}`).add(1, "hour").format("HH:mm");
+          const { matchedDate, eventStartDate, eventEndDate, playtime, ...restDraft } = draft;
+          const segments = planData.plan?.segments;
+
+          let country: string | undefined;
+          let city: string | undefined;
+          if (segments?.length) {
+            const seg = matchedDate
+              ? segments.find((s: any) => s.startDate <= matchedDate && matchedDate <= s.endDate)
+              : null;
+            const target = seg ?? segments[0];
+            country = target?.country;
+            city = target?.city;
           }
+
+          const slot = planData.plan?.startDate
+            ? findFestivalSlot(
+                eventStartDate,
+                eventEndDate,
+                planData.plan.startDate,
+                planData.plan.endDate,
+                planData.itineraries ?? [],
+                playtime,
+              )
+            : null;
+
           setFestivalDetailVisible(false);
           setSelectedFestival(null);
           setEditingItinerary(null);
-          setItineraryPrefill({ ...draft, startTime, endTime });
+          setItineraryPrefill({ ...restDraft, country, city, ...(slot ?? {}) });
           setShowItineraryEdit(true);
         }}
       />
