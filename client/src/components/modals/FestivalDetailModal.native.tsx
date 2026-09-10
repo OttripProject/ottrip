@@ -6,7 +6,7 @@ import { colors } from "@/ui/tokens/colors";
 import { radii } from "@/ui/tokens/radii";
 import { spacing } from "@/ui/tokens/spacing";
 import { textStyles } from "@/ui/tokens/typography";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Image,
@@ -48,12 +48,34 @@ export default function FestivalDetailModal({ visible, onClose, item, onAddToIti
   const [loading, setLoading] = useState(false);
   const [overviewExpanded, setOverviewExpanded] = useState(false);
   const [programExpanded, setProgramExpanded] = useState(false);
+  const [photoIndex, setPhotoIndex] = useState(0);
+  const [photoWidth, setPhotoWidth] = useState(0);
+  const [singleAspectRatio, setSingleAspectRatio] = useState<number | null>(null);
+
+  const allImages = useMemo(() => {
+    const main = detail?.imageUrl ?? item?.imageUrl ?? null;
+    const extras = (detail?.images ?? []).filter(u => u !== main);
+    return main ? [main, ...extras] : extras;
+  }, [detail, item?.imageUrl]);
+
+  const isSingle = allImages.length === 1;
+
+  useEffect(() => {
+    if (!isSingle) { setSingleAspectRatio(null); return; }
+    Image.getSize(
+      allImages[0],
+      (w, h) => { if (w > 0 && h > 0) setSingleAspectRatio(w / h); },
+      () => setSingleAspectRatio(4 / 3),
+    );
+  }, [isSingle, allImages[0]]);
 
   useEffect(() => {
     if (!item || !visible) {
       setDetail(null);
       setOverviewExpanded(false);
       setProgramExpanded(false);
+      setPhotoIndex(0);
+      setSingleAspectRatio(null);
       return;
     }
     setLoading(true);
@@ -137,8 +159,6 @@ export default function FestivalDetailModal({ visible, onClose, item, onAddToIti
   const contact = detail?.tel || detail?.infocenter;
   if (contact) infoRows.push({ label: "문의", value: contact });
 
-  const imageUri = detail?.imageUrl ?? item.imageUrl ?? null;
-
   return (
     <BottomSheetModal visible={visible} onClose={onClose} height={0.85}>
       <ScrollView
@@ -168,10 +188,47 @@ export default function FestivalDetailModal({ visible, onClose, item, onAddToIti
           </View>
         )}
 
-        {/* 썸네일 이미지 */}
-        {imageUri && (
-          <Image source={{ uri: imageUri }} style={styles.image} resizeMode="cover" />
-        )}
+        {/* 이미지 갤러리 */}
+        {allImages.length > 0 && (() => {
+          const galleryHeight = isSingle && singleAspectRatio && photoWidth > 0
+            ? photoWidth / singleAspectRatio
+            : 180;
+          return (
+          <View
+            style={[styles.gallery, { height: galleryHeight }]}
+            onLayout={e => setPhotoWidth(e.nativeEvent.layout.width)}
+          >
+            {photoWidth > 0 && (
+              <ScrollView
+                horizontal
+                pagingEnabled
+                showsHorizontalScrollIndicator={false}
+                scrollEventThrottle={16}
+                onMomentumScrollEnd={e => {
+                  const idx = Math.round(e.nativeEvent.contentOffset.x / photoWidth);
+                  setPhotoIndex(idx);
+                }}
+              >
+                {allImages.map((uri, i) => (
+                  <Image
+                    key={i}
+                    source={{ uri }}
+                    style={[styles.galleryImage, { width: photoWidth, height: galleryHeight }]}
+                    resizeMode="cover"
+                  />
+                ))}
+              </ScrollView>
+            )}
+            {allImages.length > 1 && (
+              <View style={styles.dotRow}>
+                {allImages.map((_, i) => (
+                  <View key={i} style={[styles.dot, i === photoIndex && styles.dotActive]} />
+                ))}
+              </View>
+            )}
+          </View>
+          );
+        })()}
 
         {/* 아이콘 행 */}
         {iconRows.length > 0 && (
@@ -322,11 +379,34 @@ const styles = StyleSheet.create({
     color: colors.gray500,
   },
   loadingRow: { alignItems: "center", paddingVertical: spacing.lg },
-  image: {
-    width: "100%",
+  gallery: {
     height: 180,
     borderRadius: radii.lg,
+    overflow: "hidden",
     backgroundColor: colors.gray200,
+  },
+  galleryImage: {
+    height: 180,
+  },
+  dotRow: {
+    position: "absolute",
+    bottom: 8,
+    left: 0,
+    right: 0,
+    flexDirection: "row",
+    justifyContent: "center",
+    gap: 6,
+  },
+  dot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: "rgba(255,255,255,0.5)",
+  },
+  dotActive: {
+    backgroundColor: colors.white,
+    width: 14,
+    borderRadius: 3,
   },
   iconRowContainer: { gap: spacing.sm },
   iconRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
