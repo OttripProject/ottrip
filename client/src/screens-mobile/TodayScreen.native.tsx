@@ -271,6 +271,9 @@ export default function TodayScreen() {
     useExpensesQuery(selectedPlan?.id, timelineDateStr);
 
   const pulseAnim = useRef(new Animated.Value(1)).current;
+  const bannerFadeAnim = useRef(new Animated.Value(0)).current;
+  const festivalsFadeAnim = useRef(new Animated.Value(0)).current;
+  const suggestionFadeAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     const pulseAnimation = Animated.loop(
@@ -411,6 +414,21 @@ export default function TodayScreen() {
     tourismApi.getPlanSuggestions(selectedPlan.id).then(setSuggestions).catch(() => {});
   }, [selectedPlan?.id, isKoreanPlan]);
 
+  useEffect(() => {
+    const show = !bannerDismissed && (congestedItems.length > 0 || matchedFestivals.length > 0);
+    bannerFadeAnim.setValue(0);
+    if (show) {
+      Animated.timing(bannerFadeAnim, { toValue: 1, duration: 400, useNativeDriver: true }).start();
+    }
+  }, [bannerDismissed, congestedItems.length, matchedFestivals.length]);
+
+  useEffect(() => {
+    festivalsFadeAnim.setValue(0);
+    if (isKoreanPlan && suggestFestivals.length > 0) {
+      Animated.timing(festivalsFadeAnim, { toValue: 1, duration: 400, useNativeDriver: true }).start();
+    }
+  }, [isKoreanPlan, suggestFestivals.length]);
+
   const hasAnyFlightSegment = useMemo(() => {
     return (planData.flights || []).some(
       (f: FlightRead) =>
@@ -506,6 +524,13 @@ export default function TodayScreen() {
     () => suggestions.find(s => s.date === timelineDateStr) ?? null,
     [suggestions, timelineDateStr],
   );
+
+  useEffect(() => {
+    suggestionFadeAnim.setValue(0);
+    if (todaySuggestion && !dismissedSuggestionDates.has(timelineDateStr)) {
+      Animated.timing(suggestionFadeAnim, { toValue: 1, duration: 400, useNativeDriver: true }).start();
+    }
+  }, [todaySuggestion, dismissedSuggestionDates, timelineDateStr]);
 
   /** 실제 오늘: 타임라인·당일 숙박 모두 없고, 플랜에는 다른 데이터가 있을 때 */
   const showNoTodayScheduleOtherDaysCard =
@@ -925,7 +950,7 @@ export default function TodayScreen() {
 
           {/* 혼잡 배너 */}
           {!bannerDismissed && (congestedItems.length > 0 || matchedFestivals.length > 0) && (
-            <View style={styles.bannerWrapper}>
+            <Animated.View style={[styles.bannerWrapper, { opacity: bannerFadeAnim }]}>
               <CongestionBanner
                 festivals={matchedFestivals}
                 congestedItems={congestedItems}
@@ -933,7 +958,7 @@ export default function TodayScreen() {
                 showDate={false}
                 boldLocations
               />
-            </View>
+            </Animated.View>
           )}
 
           {/* 현재 진행 중 활동 카드 */}
@@ -1060,7 +1085,7 @@ export default function TodayScreen() {
                     const placeIdx = suggestionPlaceIdxs[suggestion.date] ?? 0;
                     const cardWidth = windowWidth - 32;
                     return (
-                      <View key="ai-suggestion" style={styles.timelineItem}>
+                      <Animated.View key="ai-suggestion" style={[styles.timelineItem, { opacity: suggestionFadeAnim }]}>
                         <View style={styles.swipeItineraryShadow}>
                           <View style={styles.swipeItineraryClip}>
                             <View style={styles.suggestionCard}>
@@ -1161,7 +1186,7 @@ export default function TodayScreen() {
                             </View>
                           </View>
                         </View>
-                      </View>
+                      </Animated.View>
                     );
                   }
 
@@ -1514,7 +1539,7 @@ export default function TodayScreen() {
 
           {/* 이 기간 축제·공연 */}
           {isKoreanPlan && suggestFestivals.length > 0 && (
-            <View style={styles.festivalsCardWrapper}>
+            <Animated.View style={[styles.festivalsCardWrapper, { opacity: festivalsFadeAnim }]}>
               <FestivalsCard
                 festivals={suggestFestivals}
                 onPress={f => {
@@ -1522,7 +1547,7 @@ export default function TodayScreen() {
                   setFestivalDetailVisible(true);
                 }}
               />
-            </View>
+            </Animated.View>
           )}
 
           {showTodayTimelineExtras && (
