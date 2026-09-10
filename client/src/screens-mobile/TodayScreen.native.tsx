@@ -1057,32 +1057,12 @@ export default function TodayScreen() {
                   if (entry.kind === "suggestion") {
                     const { suggestion } = entry;
                     const placeIdx = suggestionPlaceIdxs[suggestion.date] ?? 0;
-                    const place = suggestion.places[placeIdx] as SuggestionPlace | undefined;
-                    if (!place) return null;
-                    const catBadge = place.category ? SUGGESTION_CATEGORY_BADGE[place.category] : null;
-                    const d = place.dist;
-                    const distLabel = d == null ? null : d < 1000 ? `${Math.round(d / 10) * 10}m` : d < 2000 ? `${(d / 1000).toFixed(1)}km` : `${Math.round(d / 1000)}km`;
+                    const cardWidth = windowWidth - 32;
                     return (
                       <View key="ai-suggestion" style={styles.timelineItem}>
                         <View style={styles.swipeItineraryShadow}>
                           <View style={styles.swipeItineraryClip}>
-                            <Pressable
-                              style={styles.suggestionCard}
-                              onPress={() => {
-                                setSelectedAttraction({
-                                  contentId: place.contentId,
-                                  contentTypeId: place.contentTypeId ?? "12",
-                                  categorySub: place.category,
-                                  title: place.title,
-                                  imageUrl: place.imageUrl,
-                                  address: null,
-                                  rank: null,
-                                  dist: place.dist,
-                                });
-                                reopenDetailAfterTourismRef.current = false;
-                                setTourismDetailVisible(true);
-                              }}
-                            >
+                            <View style={styles.suggestionCard}>
                               <View style={styles.suggestionHeader}>
                                 <View style={styles.aiBadge}>
                                   <Text style={styles.aiBadgeText}>AI 제안</Text>
@@ -1100,56 +1080,83 @@ export default function TodayScreen() {
                                   hitSlop={8}
                                   style={styles.suggestionCloseBtn}
                                 >
-                                  <AiCloseIcon width={15} height={15} color={colors.gray600}/>
+                                  <AiCloseIcon width={15} height={15} color={colors.gray600} />
                                 </Pressable>
                               </View>
-                              <View style={styles.suggestionPlaceRow}>
-                                {catBadge && (
-                                  <View style={[styles.suggestionCatBadge, { backgroundColor: catBadge.bg }]}>
-                                    <Text style={[styles.suggestionCatText, { color: catBadge.color }]}>
-                                      {place.category}
-                                    </Text>
-                                  </View>
-                                )}
-                                <Text style={styles.suggestionPlaceName} numberOfLines={1}>
-                                  {place.title}
-                                </Text>
-                                {distLabel && (
-                                  <>
-                                    <Text style={styles.suggestionDistSep}>·</Text>
-                                    <Text style={styles.suggestionDist}>{distLabel}</Text>
-                                  </>
-                                )}
-                              </View>
-                              {place.sentence ? (
-                                <Text style={styles.suggestionSentence} numberOfLines={2}>
-                                  {place.sentence}
-                                </Text>
-                              ) : null}
+                              <ScrollView
+                                horizontal
+                                pagingEnabled
+                                showsHorizontalScrollIndicator={false}
+                                scrollEnabled={suggestion.places.length > 1}
+                                onMomentumScrollEnd={e => {
+                                  const idx = Math.round(e.nativeEvent.contentOffset.x / cardWidth);
+                                  setSuggestionPlaceIdxs(prev => ({ ...prev, [suggestion.date]: idx }));
+                                }}
+                              >
+                                {suggestion.places.map(p => {
+                                  const catBadge = p.category ? SUGGESTION_CATEGORY_BADGE[p.category] : null;
+                                  const pd = p.dist;
+                                  const distLabel = pd == null ? null : pd < 1000 ? `${Math.round(pd / 10) * 10}m` : pd < 2000 ? `${(pd / 1000).toFixed(1)}km` : `${Math.round(pd / 1000)}km`;
+                                  return (
+                                    <Pressable
+                                      key={p.contentId}
+                                      style={[styles.suggestionPage, { width: cardWidth }]}
+                                      onPress={() => {
+                                        setSelectedAttraction({
+                                          contentId: p.contentId,
+                                          contentTypeId: p.contentTypeId ?? "12",
+                                          categorySub: p.category,
+                                          title: p.title,
+                                          imageUrl: p.imageUrl,
+                                          address: null,
+                                          rank: null,
+                                          dist: p.dist,
+                                        });
+                                        reopenDetailAfterTourismRef.current = false;
+                                        setTourismDetailVisible(true);
+                                      }}
+                                    >
+                                      <View style={styles.suggestionPlaceRow}>
+                                        {catBadge && (
+                                          <View style={[styles.suggestionCatBadge, { backgroundColor: catBadge.bg }]}>
+                                            <Text style={[styles.suggestionCatText, { color: catBadge.color }]}>
+                                              {p.category}
+                                            </Text>
+                                          </View>
+                                        )}
+                                        <Text style={styles.suggestionPlaceName} numberOfLines={1}>
+                                          {p.title}
+                                        </Text>
+                                        {distLabel && (
+                                          <>
+                                            <Text style={styles.suggestionDistSep}>·</Text>
+                                            <Text style={styles.suggestionDist}>{distLabel}</Text>
+                                          </>
+                                        )}
+                                      </View>
+                                      {p.sentence ? (
+                                        <Text style={styles.suggestionSentence} numberOfLines={2}>
+                                          {p.sentence}
+                                        </Text>
+                                      ) : null}
+                                    </Pressable>
+                                  );
+                                })}
+                              </ScrollView>
                               {suggestion.places.length > 1 && (
                                 <View style={styles.suggestionDots}>
                                   {suggestion.places.map((p, i) => (
-                                    <Pressable
+                                    <View
                                       key={p.contentId}
-                                      onPress={() =>
-                                        setSuggestionPlaceIdxs(prev => ({
-                                          ...prev,
-                                          [suggestion.date]: i,
-                                        }))
-                                      }
-                                      hitSlop={4}
-                                    >
-                                      <View
-                                        style={[
-                                          styles.suggestionDot,
-                                          i === placeIdx ? styles.suggestionDotOn : styles.suggestionDotOff,
-                                        ]}
-                                      />
-                                    </Pressable>
+                                      style={[
+                                        styles.suggestionDot,
+                                        i === placeIdx ? styles.suggestionDotOn : styles.suggestionDotOff,
+                                      ]}
+                                    />
                                   ))}
                                 </View>
                               )}
-                            </Pressable>
+                            </View>
                           </View>
                         </View>
                       </View>
@@ -2586,7 +2593,7 @@ const styles = StyleSheet.create({
 
   // AI 제안 카드
   suggestionCard: {
-    padding: spacing.lg,
+    paddingTop: spacing.lg,
     paddingBottom: spacing.md,
     backgroundColor: colors.aiTint,
   },
@@ -2595,6 +2602,11 @@ const styles = StyleSheet.create({
     alignItems: "center" as const,
     gap: spacing.sm,
     marginBottom: spacing.sm,
+    paddingHorizontal: spacing.lg,
+  },
+  suggestionPage: {
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.xs,
   },
   aiBadge: {
     height: 22,
@@ -2649,6 +2661,7 @@ const styles = StyleSheet.create({
   },
   suggestionDots: {
     flexDirection: "row" as const,
+    justifyContent: "center" as const,
     gap: 4,
     marginTop: spacing.xs,
   },
