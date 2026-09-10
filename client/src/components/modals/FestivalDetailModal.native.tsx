@@ -327,7 +327,7 @@ export default function FestivalDetailModal({ visible, onClose, item, onAddToIti
             </View>
           </View>
         )}
-        <Text style={styles.attribution}>출처: ⓒ한국관광공사</Text>
+        {!loading && detail && <Text style={styles.attribution}>출처: ⓒ한국관광공사</Text>}
       </ScrollView>
 
       {/* 푸터 */}
