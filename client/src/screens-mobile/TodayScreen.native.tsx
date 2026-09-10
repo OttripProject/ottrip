@@ -236,6 +236,9 @@ export default function TodayScreen() {
   const suggestionSlotRef = useRef<{ start: string; end: string } | null>(null);
   const [dismissedSuggestionDates, setDismissedSuggestionDates] = useState<Set<string>>(new Set());
   const [suggestionPlaceIdxs, setSuggestionPlaceIdxs] = useState<Record<string, number>>({});
+  const snackbarAnim = useRef(new Animated.Value(0)).current;
+  const snackbarTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const snackbarUndoRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     setTimelineViewDate(null);
@@ -702,6 +705,17 @@ export default function TodayScreen() {
     activeTimelineSwipeKey.current = null;
   }, []);
 
+  const showSuggestionDismissSnackbar = useCallback((onUndo: () => void) => {
+    snackbarUndoRef.current = onUndo;
+    if (snackbarTimerRef.current) clearTimeout(snackbarTimerRef.current);
+    snackbarAnim.setValue(0);
+    Animated.timing(snackbarAnim, { toValue: 1, duration: 200, useNativeDriver: true }).start();
+    snackbarTimerRef.current = setTimeout(() => {
+      Animated.timing(snackbarAnim, { toValue: 0, duration: 200, useNativeDriver: true }).start();
+      snackbarUndoRef.current = null;
+    }, 3000);
+  }, [snackbarAnim]);
+
   const openAddScheduleFlow = useCallback(() => {
     closeOpenTimelineSwipe();
     setAddScheduleFlow("method");
@@ -1074,9 +1088,26 @@ export default function TodayScreen() {
           })()}
 
           {/* 타임라인 섹션 (이터너리·항공 또는 당일 숙박이 있으면 헤더 노출) */}
-          {(todaySchedules.length > 0 || todayAccommodations.length > 0 || (todaySuggestion && !dismissedSuggestionDates.has(timelineDateStr))) && (
+          {(todaySchedules.length > 0 || todayAccommodations.length > 0 || !!todaySuggestion) && (
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>타임라인</Text>
+              <View style={styles.timelineHeader}>
+                <Text style={styles.sectionTitle}>타임라인</Text>
+                {todaySuggestion && dismissedSuggestionDates.has(timelineDateStr) && (
+                  <Pressable
+                    style={styles.aiSuggestBtn}
+                    onPress={() =>
+                      setDismissedSuggestionDates(prev => {
+                        const next = new Set(prev);
+                        next.delete(timelineDateStr);
+                        return next;
+                      })
+                    }
+                    hitSlop={8}
+                  >
+                    <Text style={styles.aiSuggestBtnText}>AI 제안</Text>
+                  </Pressable>
+                )}
+              </View>
 
               {timelineEntries.length > 0 &&
                 timelineEntries.map((entry) => {
@@ -1098,11 +1129,17 @@ export default function TodayScreen() {
                                 </Text>
                                 <View style={{ flex: 1 }} />
                                 <Pressable
-                                  onPress={() =>
-                                    setDismissedSuggestionDates(
-                                      prev => new Set([...prev, timelineDateStr]),
-                                    )
-                                  }
+                                  onPress={() => {
+                                    const date = timelineDateStr;
+                                    setDismissedSuggestionDates(prev => new Set([...prev, date]));
+                                    showSuggestionDismissSnackbar(() => {
+                                      setDismissedSuggestionDates(prev => {
+                                        const next = new Set(prev);
+                                        next.delete(date);
+                                        return next;
+                                      });
+                                    });
+                                  }}
                                   hitSlop={8}
                                   style={styles.suggestionCloseBtn}
                                 >
@@ -1616,7 +1653,7 @@ export default function TodayScreen() {
           {/* 여행 정보(숙박/항공) 섹션 - 데이터 있을 때만 노출 */}
           {(todayAccommodations.length > 0 || todayFlights.length > 0) && (
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>여행 정보 (Reference)</Text>
+              <Text style={[styles.sectionTitle, { marginBottom: 16, marginHorizontal: 16 }]}>여행 정보 (Reference)</Text>
               {todayAccommodations.map((accommodation: Accommodation) => {
                 const isCheckout =
                   dayjs(accommodation.checkoutDate).format("YYYY-MM-DD") ===
@@ -2160,6 +2197,25 @@ export default function TodayScreen() {
       />
 
       <PlanLoadingOverlay visible={plansQuery.isLoading || planData.isLoading} />
+
+      {/* AI 제안 dismiss 스낵바 */}
+      <Animated.View
+        pointerEvents="box-none"
+        style={[styles.snackbar, { opacity: snackbarAnim, bottom: insets.bottom + 28 }]}
+      >
+        <Text style={styles.snackbarText}>AI 제안을 숨겼어요.</Text>
+        <Pressable
+          onPress={() => {
+            snackbarUndoRef.current?.();
+            snackbarUndoRef.current = null;
+            if (snackbarTimerRef.current) clearTimeout(snackbarTimerRef.current);
+            Animated.timing(snackbarAnim, { toValue: 0, duration: 200, useNativeDriver: true }).start();
+          }}
+          hitSlop={8}
+        >
+          <Text style={styles.snackbarAction}>다시 보기</Text>
+        </Pressable>
+      </Animated.View>
     </View>
   );
 }
@@ -2168,6 +2224,29 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.gray300,
+  },
+  snackbar: {
+    position: "absolute" as const,
+    left: 16,
+    right: 16,
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "space-between" as const,
+    backgroundColor: colors.gray800,
+    borderRadius: radii.lg,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    gap: spacing.md,
+  },
+  snackbarText: {
+    ...textStyles.body4,
+    color: colors.white,
+    flex: 1,
+  },
+  snackbarAction: {
+    ...textStyles.h7,
+    color: colors.aiInk,
+    flexShrink: 0,
   },
   loadingContainer: {
     flex: 1,
@@ -2518,11 +2597,34 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 8,
   },
+  timelineHeader: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "space-between" as const,
+    marginBottom: 16,
+    marginHorizontal: 16,
+  },
   sectionTitle: {
     ...textStyles.h5,
     color: colors.black,
-    marginBottom: 16,
-    marginHorizontal: 16,
+  },
+  aiSuggestBtn: {
+    height: 30,
+    paddingHorizontal: spacing.md,
+    borderRadius: radii.pill,
+    backgroundColor: colors.aiTint,
+    justifyContent: "center" as const,
+    alignItems: "center" as const,
+    shadowColor: colors.gray700,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.12,
+    shadowRadius: 6,
+    elevation: Platform.OS === "android" ? 3 : 0,
+  },
+  aiSuggestBtnText: {
+    ...textStyles.h8,
+    color: colors.aiInk,
+    fontWeight: "600" as const,
   },
 
   swipeItineraryShadow: {
