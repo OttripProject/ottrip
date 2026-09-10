@@ -233,6 +233,7 @@ export default function TodayScreen() {
   const [selectedFestival, setSelectedFestival] = useState<FestivalItem | null>(null);
   const [festivalDetailVisible, setFestivalDetailVisible] = useState(false);
   const [suggestions, setSuggestions] = useState<DaySuggestion[]>([]);
+  const suggestionSlotRef = useRef<{ start: string; end: string } | null>(null);
   const [dismissedSuggestionDates, setDismissedSuggestionDates] = useState<Set<string>>(new Set());
   const [suggestionPlaceIdxs, setSuggestionPlaceIdxs] = useState<Record<string, number>>({});
 
@@ -1112,6 +1113,7 @@ export default function TodayScreen() {
                                           rank: null,
                                           dist: p.dist,
                                         });
+                                        suggestionSlotRef.current = { start: suggestion.slotStart, end: suggestion.slotEnd };
                                         reopenDetailAfterTourismRef.current = false;
                                         setTourismDetailVisible(true);
                                       }}
@@ -1877,7 +1879,9 @@ export default function TodayScreen() {
         onOpenNewItinerary={draft => {
           reopenDetailAfterTourismRef.current = false;
           setEditingItinerary(null);
-          setItineraryPrefill(draft);
+          const slot = suggestionSlotRef.current;
+          suggestionSlotRef.current = null;
+          setItineraryPrefill(slot ? { ...draft, startTime: slot.start, endTime: slot.end } : draft);
           setShowItineraryEdit(true);
         }}
       />
