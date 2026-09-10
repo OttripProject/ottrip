@@ -1104,7 +1104,7 @@ export default function TodayScreen() {
                                       onPress={() => {
                                         setSelectedAttraction({
                                           contentId: p.contentId,
-                                          contentTypeId: p.contentTypeId ?? "12",
+                                          contentTypeId: p.category ?? p.contentTypeId ?? "12",
                                           categorySub: p.category,
                                           title: p.title,
                                           imageUrl: p.imageUrl,
