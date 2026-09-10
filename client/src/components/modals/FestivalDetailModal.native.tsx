@@ -20,6 +20,7 @@ import {
 import type { FestivalItem, TourismDetail } from "@/services/tourism";
 import { tourismApi } from "@/services/tourism";
 import CloseIcon from "../../../assets/mobile_close.svg";
+import LocationIcon from "../../../assets/mobile_location.svg";
 import TimeIcon from "../../../assets/week_bar_time.svg";
 import CalendarIcon from "../../../assets/calendar_outline.svg";
 import WonIcon from "../../../assets/won.svg";
@@ -179,7 +180,12 @@ export default function FestivalDetailModal({ visible, onClose, item, onAddToIti
         {/* 제목 + 주소 */}
         <View style={styles.titleGroup}>
           <Text style={styles.title}>{detail?.title ?? item.title}</Text>
-          {addr && <Text style={styles.metaText}>{addr}</Text>}
+          {addr && (
+            <View style={styles.addressRow}>
+              <LocationIcon width={12} height={12} color={colors.gray500} />
+              <Text style={styles.metaText}>{addr}</Text>
+            </View>
+          )}
         </View>
 
         {loading && (
@@ -375,9 +381,11 @@ const styles = StyleSheet.create({
     color: colors.gray900,
   },
   titleGroup: { gap: spacing.xs },
+  addressRow: { flexDirection: "row", alignItems: "center", gap: 4 },
   metaText: {
     ...textStyles.body5,
     color: colors.gray500,
+    flex: 1,
   },
   loadingRow: { alignItems: "center", paddingVertical: spacing.lg },
   gallery: {

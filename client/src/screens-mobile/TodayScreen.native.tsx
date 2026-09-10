@@ -1230,13 +1230,16 @@ export default function TodayScreen() {
                                 {itinerary.title || "활동"}
                               </Text>
                               {itinerary.location?.name && (
-                                <Text
-                                  style={styles.itemLocation}
-                                  numberOfLines={1}
-                                  ellipsizeMode="tail"
-                                >
-                                  {itinerary.location.name}
-                                </Text>
+                                <View style={styles.itemLocationRow}>
+                                  <LocationIcon width={12} height={12} color={colors.gray600} />
+                                  <Text
+                                    style={styles.itemLocation}
+                                    numberOfLines={1}
+                                    ellipsizeMode="tail"
+                                  >
+                                    {itinerary.location.name}
+                                  </Text>
+                                </View>
                               )}
                               {itinerary.description && (
                                 <Text
@@ -2386,10 +2389,16 @@ const styles = StyleSheet.create({
     color: colors.black,
     marginBottom: 4,
   },
+  itemLocationRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    marginBottom: 4,
+  },
   itemLocation: {
     ...textStyles.body4,
     color: colors.gray600,
-    marginBottom: 4,
+    flex: 1,
   },
   itemDescription: {
     ...textStyles.body4,

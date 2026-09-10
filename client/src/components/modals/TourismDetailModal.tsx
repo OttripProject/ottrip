@@ -21,6 +21,7 @@ import { spacing } from "@/ui/tokens/spacing";
 import { textStyles } from "@/ui/tokens/typography";
 import { formatWalkTime, haversineDistance } from "@/utils/distanceUtils";
 import CloseIcon from "../../../assets/close_sm.svg";
+import LocationIcon from "../../../assets/mobile_location.svg";
 import TimeIcon from "../../../assets/week_bar_time.svg";
 import CalendarIcon from "../../../assets/calendar_outline.svg";
 import HourglassIcon from "../../../assets/hourglass.svg";
@@ -422,12 +423,18 @@ export default function TourismDetailModal({
                 <>
                   <Text style={styles.title}>{item?.title}</Text>
                   {(detail?.address || walkTime) && (
-                    <Text style={styles.metaText}>
-                      {[detail?.address, walkTime].filter(Boolean).join(" · ")}
-                    </Text>
+                    <View style={styles.addressRow}>
+                      <LocationIcon width={12} height={12} color={colors.gray500} />
+                      <Text style={styles.metaText}>
+                        {[detail?.address, walkTime].filter(Boolean).join(" · ")}
+                      </Text>
+                    </View>
                   )}
                   {item?.address && loadFailed && (
-                    <Text style={styles.metaText}>{item.address}</Text>
+                    <View style={styles.addressRow}>
+                      <LocationIcon width={12} height={12} color={colors.gray500} />
+                      <Text style={styles.metaText}>{item.address}</Text>
+                    </View>
                   )}
                 </>
               )}
@@ -654,7 +661,7 @@ export default function TourismDetailModal({
                 )}
               </>
             )}
-            <Text style={styles.attribution}>출처: ⓒ한국관광공사</Text>
+            {!loading && detail && <Text style={styles.attribution}>출처: ⓒ한국관광공사</Text>}
           </ScrollView>
 
           {/* 푸터 */}
@@ -754,10 +761,11 @@ const styles = StyleSheet.create({
     letterSpacing: -0.48,
     color: colors.gray900,
   } as any,
+  addressRow: { flexDirection: "row", alignItems: "center", gap: 4, marginTop: 8 },
   metaText: {
-    marginTop: 8,
     ...textStyles.body5,
     color: colors.gray500,
+    flex: 1,
   },
   iconRowContainer: {
     flexDirection: "column",

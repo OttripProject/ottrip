@@ -60,6 +60,7 @@ import { extendPlanIfNeeded } from "@/utils/extendPlanIfNeeded";
 import { collectPlanItemDates, shrinkPlanIfNeeded } from "@/utils/shrinkPlanIfNeeded";
 import { guestPrompt } from "@/utils/guestPrompt";
 import FlightIcon from "../../assets/airplane.svg";
+import LocationIcon from "../../assets/mobile_location.svg";
 import LeftArrowIcon from "../../assets/left_arrow.svg";
 import AccommodationIcon from "../../assets/mobile_accomodation.svg";
 import CalendarIcon from "../../assets/mobile_calendar_black.svg";
@@ -668,13 +669,16 @@ export default function WeeklyScreen() {
                         {itinerary.title}
                       </Text>
                       {itinerary.location?.name && (
-                        <Text
-                          style={styles.scheduleLocation}
-                          numberOfLines={1}
-                          ellipsizeMode="tail"
-                        >
-                          {itinerary.location.name}
-                        </Text>
+                        <View style={styles.scheduleLocationRow}>
+                          <LocationIcon width={12} height={12} color={colors.gray600} />
+                          <Text
+                            style={styles.scheduleLocation}
+                            numberOfLines={1}
+                            ellipsizeMode="tail"
+                          >
+                            {itinerary.location.name}
+                          </Text>
+                        </View>
                       )}
                     </Pressable>
                   </View>
@@ -1571,10 +1575,16 @@ const styles = StyleSheet.create({
   scheduleTitleNow: {
     color: colors.black,
   },
+  scheduleLocationRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    marginBottom: 4,
+  },
   scheduleLocation: {
     ...textStyles.body4,
     color: colors.gray600,
-    marginBottom: 4,
+    flex: 1,
   },
   scheduleNote: {
     ...textStyles.body4,

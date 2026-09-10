@@ -23,6 +23,7 @@ import { radii } from "@/ui/tokens/radii";
 import { spacing } from "@/ui/tokens/spacing";
 import { textStyles } from "@/ui/tokens/typography";
 import CloseIcon from "../../../assets/close_sm.svg";
+import LocationIcon from "../../../assets/mobile_location.svg";
 import TimeIcon from "../../../assets/week_bar_time.svg";
 import CalendarIcon from "../../../assets/calendar_outline.svg";
 import WonIcon from "../../../assets/won.svg";
@@ -222,9 +223,12 @@ export default function FestivalDetailModal({ visible, onClose, item, onAddToIti
               <>
                 <Text style={styles.title} numberOfLines={2}>{detail?.title ?? item.title}</Text>
                 {(detail?.address || item.address) && (
-                  <Text style={styles.metaText} numberOfLines={2}>
-                    {detail?.address ?? item.address}
-                  </Text>
+                  <View style={styles.addressRow}>
+                    <LocationIcon width={12} height={12} color={colors.gray500} />
+                    <Text style={styles.metaText} numberOfLines={2}>
+                      {detail?.address ?? item.address}
+                    </Text>
+                  </View>
                 )}
               </>
             )}
@@ -454,7 +458,7 @@ export default function FestivalDetailModal({ visible, onClose, item, onAddToIti
                 </View>
               </>
             )}
-            <Text style={styles.attribution}>출처: ⓒ한국관광공사</Text>
+            {!loading && detail && <Text style={styles.attribution}>출처: ⓒ한국관광공사</Text>}
           </ScrollView>
 
           {/* 푸터 */}
@@ -597,10 +601,11 @@ const styles = StyleSheet.create({
     letterSpacing: -0.48,
     color: colors.gray900,
   } as any,
+  addressRow: { flexDirection: "row", alignItems: "center", gap: 4, marginTop: 8 },
   metaText: {
-    marginTop: 8,
     ...textStyles.body5,
     color: colors.gray500,
+    flex: 1,
   },
   photoWrapper: {
     paddingHorizontal: 32,

@@ -19,6 +19,7 @@ import {
 } from "react-native";
 import type { NearbyAttraction, TourismDetail } from "@/services/tourism";
 import CloseIcon from "../../../assets/mobile_close.svg";
+import LocationIcon from "../../../assets/mobile_location.svg";
 import TimeIcon from "../../../assets/week_bar_time.svg";
 import CalendarIcon from "../../../assets/calendar_outline.svg";
 import HourglassIcon from "../../../assets/hourglass.svg";
@@ -261,9 +262,12 @@ export default function TourismDetailModal({
         <View style={styles.titleGroup}>
           <Text style={styles.title}>{detail?.title ?? item.title}</Text>
           {(detail?.address || item.address || walkTime) && (
-            <Text style={styles.metaText}>
-              {[(detail?.address ?? item.address), walkTime].filter(Boolean).join(" · ")}
-            </Text>
+            <View style={styles.addressRow}>
+              <LocationIcon width={12} height={12} color={colors.gray500} />
+              <Text style={styles.metaText}>
+                {[(detail?.address ?? item.address), walkTime].filter(Boolean).join(" · ")}
+              </Text>
+            </View>
           )}
         </View>
 
@@ -399,9 +403,11 @@ const styles = StyleSheet.create({
     color: colors.gray900,
   },
   titleGroup: { gap: spacing.xs, marginBottom: spacing.sm },
+  addressRow: { flexDirection: "row", alignItems: "center", gap: 4 },
   metaText: {
     ...textStyles.body5,
     color: colors.gray500,
+    flex: 1,
   },
   loadingRow: { alignItems: "center", paddingVertical: spacing.lg },
   table: {
