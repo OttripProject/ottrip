@@ -887,7 +887,8 @@ export default function TodayScreen() {
                 festivals={matchedFestivals}
                 congestedItems={congestedItems}
                 onDismiss={() => setBannerDismissed(true)}
-                compact
+                showDate={false}
+                boldLocations
               />
             </View>
           )}

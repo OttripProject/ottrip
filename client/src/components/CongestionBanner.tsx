@@ -15,7 +15,8 @@ interface Props {
   }[];
   congestedItems?: CongestedItem[];
   onDismiss: () => void;
-  compact?: boolean;
+  showDate?: boolean;
+  boldLocations?: boolean;
 }
 
 const fmtDate = (d: string) => {
@@ -29,7 +30,8 @@ type Segment = { text: string; bold?: boolean };
 function buildBannerSegments(
   festivals: { matchedLocationName: string | null; matchedDate: string | null }[],
   congestedItems: CongestedItem[],
-  breakSuffix?: boolean,
+  showDate: boolean,
+  boldLocations: boolean,
 ): Segment[] {
   const hasFestivals = festivals.length > 0;
   const hasCongestion = congestedItems.length > 0;
@@ -41,7 +43,6 @@ function buildBannerSegments(
         ? "방문자가 평소보다 많을 것으로 예상돼요."
         : "일대가 축제·공연으로 붐빌 수 있어요.";
 
-  // festivals + congestedItems 병합 (날짜+장소 기준 중복 제거)
   const seen = new Set<string>();
   const items: { date: string; locationName: string }[] = [];
   for (const f of festivals) {
@@ -64,11 +65,13 @@ function buildBannerSegments(
   const dates = [...new Set(items.map((i) => i.date))].sort();
   const allLocations = [...new Set(items.map((i) => i.locationName))].join(" · ");
 
-  const joinLocSuffix = (loc: string) =>
-    breakSuffix ? [{ text: loc }, { text: `\n${suffix}` }] : [{ text: `${loc} ${suffix}` }];
+  const locSuffix = (loc: string): Segment[] => [
+    { text: loc, bold: boldLocations || undefined },
+    { text: ` ${suffix}` },
+  ];
 
-  if (dates.length === 0) {
-    return joinLocSuffix(allLocations);
+  if (dates.length === 0 || !showDate) {
+    return locSuffix(allLocations);
   }
 
   const isConsecutive = dates.every((d, i) => {
@@ -81,13 +84,10 @@ function buildBannerSegments(
       dates.length === 1
         ? fmtDate(dates[0])
         : `${fmtDate(dates[0])}–${fmtDate(dates[dates.length - 1])}`;
-    return [
-      { text: `${dateStr} `, bold: true },
-      ...joinLocSuffix(allLocations),
-    ];
+    return [{ text: `${dateStr} `, bold: true }, ...locSuffix(allLocations)];
   }
 
-  // 비연속: 날짜별 장소 그룹핑, 날짜 bold
+  // 비연속: 날짜별 장소 그룹핑
   const byDate = new Map<string, Set<string>>();
   for (const item of items) {
     if (!byDate.has(item.date)) byDate.set(item.date, new Set());
@@ -100,17 +100,12 @@ function buildBannerSegments(
     segments.push({ text: fmtDate(d), bold: true });
     segments.push({ text: ` ${[...locs].join("·")}` });
   });
-  if (breakSuffix) {
-    segments.push({ text: `\n${suffix}` });
-  } else {
-    segments.push({ text: ` ${suffix}` });
-  }
+  segments.push({ text: ` ${suffix}` });
   return segments;
 }
 
-export default function CongestionBanner({ festivals, congestedItems = [], onDismiss, compact }: Props) {
-  const rawSegments = buildBannerSegments(festivals, congestedItems, compact);
-  const segments = compact ? rawSegments.filter(s => !s.bold) : rawSegments;
+export default function CongestionBanner({ festivals, congestedItems = [], onDismiss, showDate = true, boldLocations = false }: Props) {
+  const segments = buildBannerSegments(festivals, congestedItems, showDate, boldLocations);
   const opacity = useRef(new Animated.Value(0)).current;
   const isMounted = useRef(false);
   const [expanded, setExpanded] = useState(false);
