@@ -219,6 +219,8 @@ export default function ItineraryEditModal({
   useEffect(() => {
     if (!visible) {
       formInitializedRef.current = false;
+      locationDraftRef.current = null;
+      rawLocationTextRef.current = "";
       setAiModalResult(null);
       setAiApplyLabel(undefined);
       setCategoryOpen(false);
