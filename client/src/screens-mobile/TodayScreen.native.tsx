@@ -16,7 +16,7 @@ import ItineraryEditModal, { type ItineraryEditPrefill } from "@/components/moda
 import TourismDetailModal from "@/components/modals/TourismDetailModal";
 import FestivalDetailModal from "@/components/modals/FestivalDetailModal.native";
 import CongestionBanner, { type CongestedItem } from "@/components/CongestionBanner";
-import { tourismApi, type FestivalItem } from "@/services/tourism";
+import { tourismApi, type FestivalItem, type DaySuggestion, type SuggestionPlace } from "@/services/tourism";
 import PlanSelectModal from "@/components/modals/mobile/PlanSelectModal.native";
 import ProfileModal from "@/components/modals/mobile/ProfileModal.native";
 import { useSelectedPlan } from "@/contexts/SelectedPlanContext";
@@ -32,6 +32,8 @@ import type {
 } from "@/types/api";
 import { categoryLabels } from "@/types/expense";
 import { colors } from "@/ui/tokens/colors";
+import { radii } from "@/ui/tokens/radii";
+import { spacing } from "@/ui/tokens/spacing";
 import { textStyles } from "@/ui/tokens/typography";
 import {
   convertUTCToLocalTime,
@@ -61,6 +63,19 @@ import {
 import { Swipeable } from "react-native-gesture-handler";
 
 type AddScheduleFlow = "closed" | "method" | "direct" | "ai";
+
+type TimelineEntry =
+  | { kind: "schedule"; item: ScheduleItem; scheduleIndex: number }
+  | { kind: "suggestion"; suggestion: DaySuggestion };
+
+const SUGGESTION_CATEGORY_BADGE: Record<string, { color: string; bg: string }> = {
+  음식점:   { color: colors.categoryMeal,        bg: "#FFF4E0" },
+  관광지:   { color: colors.categorySightseeing, bg: "#FCEAFF" },
+  문화시설: { color: colors.categorySightseeing, bg: "#FCEAFF" },
+  쇼핑:     { color: colors.categoryShopping,    bg: "#E6F7EE" },
+  레포츠:   { color: "#0E6EBF",                 bg: "#E0F0FF" },
+  여행코스: { color: colors.gray700,             bg: colors.gray200 },
+};
 import WeeklyChecklistCard from "@/components/cards/WeeklyChecklistCard.native";
 import FestivalsCard from "@/components/cards/FestivalsCard.native";
 import { useMe } from "@/hooks/useMe";
@@ -71,6 +86,7 @@ import { extendPlanIfNeeded } from "@/utils/extendPlanIfNeeded";
 import { collectPlanItemDates, shrinkPlanIfNeeded } from "@/utils/shrinkPlanIfNeeded";
 import { guestPrompt } from "@/utils/guestPrompt";
 import { findFestivalSlot } from "@/utils/festivalSlot";
+import AiCloseIcon from "../../assets/close_sm.svg";
 import FlightIcon from "../../assets/airplane.svg";
 import AccommodationIcon from "../../assets/mobile_accomodation.svg";
 import DropdownIcon from "../../assets/mobile_dropdown.svg";
@@ -216,9 +232,14 @@ export default function TodayScreen() {
   const [suggestFestivals, setSuggestFestivals] = useState<FestivalItem[]>([]);
   const [selectedFestival, setSelectedFestival] = useState<FestivalItem | null>(null);
   const [festivalDetailVisible, setFestivalDetailVisible] = useState(false);
+  const [suggestions, setSuggestions] = useState<DaySuggestion[]>([]);
+  const [dismissedSuggestionDates, setDismissedSuggestionDates] = useState<Set<string>>(new Set());
+  const [suggestionPlaceIdxs, setSuggestionPlaceIdxs] = useState<Record<string, number>>({});
 
   useEffect(() => {
     setTimelineViewDate(null);
+    setDismissedSuggestionDates(new Set());
+    setSuggestionPlaceIdxs({});
   }, [selectedPlan?.id]);
 
   useEffect(() => {
@@ -381,6 +402,14 @@ export default function TodayScreen() {
     tourismApi.getSuggestFestivals(selectedPlan.id).then(setSuggestFestivals).catch(() => {});
   }, [selectedPlan?.id, isKoreanPlan]);
 
+  useEffect(() => {
+    if (!selectedPlan?.id || !isKoreanPlan) {
+      setSuggestions([]);
+      return;
+    }
+    tourismApi.getPlanSuggestions(selectedPlan.id).then(setSuggestions).catch(() => {});
+  }, [selectedPlan?.id, isKoreanPlan]);
+
   const hasAnyFlightSegment = useMemo(() => {
     return (planData.flights || []).some(
       (f: FlightRead) =>
@@ -472,6 +501,11 @@ export default function TodayScreen() {
     !planData.isLoading &&
     (todaySchedules.length > 0 || todayAccommodations.length > 0);
 
+  const todaySuggestion = useMemo(
+    () => suggestions.find(s => s.date === timelineDateStr) ?? null,
+    [suggestions, timelineDateStr],
+  );
+
   /** 실제 오늘: 타임라인·당일 숙박 모두 없고, 플랜에는 다른 데이터가 있을 때 */
   const showNoTodayScheduleOtherDaysCard =
     !!selectedPlan &&
@@ -479,7 +513,8 @@ export default function TodayScreen() {
     !timelineViewDate &&
     realTodaySchedules.length === 0 &&
     realTodayAccommodations.length === 0 &&
-    !planHasNoSchedulesYet;
+    !planHasNoSchedulesYet &&
+    !todaySuggestion;
 
   const todayFlights = useMemo(
     () =>
@@ -522,6 +557,22 @@ export default function TodayScreen() {
     startHour = Math.min(startHour, 23);
     return { startTime: toTime(startHour), endTime: toTime(startHour + 1) };
   }, [todaySchedules, timelineDateStr, calendarTodayStr]);
+
+  const timelineEntries = useMemo<TimelineEntry[]>(() => {
+    const schedEntries: TimelineEntry[] = todaySchedules.map((item, i) => ({
+      kind: "schedule",
+      item,
+      scheduleIndex: i,
+    }));
+    if (todaySuggestion && !dismissedSuggestionDates.has(timelineDateStr)) {
+      schedEntries.push({ kind: "suggestion", suggestion: todaySuggestion });
+    }
+    return schedEntries.sort((a, b) => {
+      const ta = a.kind === "schedule" ? a.item.time : a.suggestion.slotStart;
+      const tb = b.kind === "schedule" ? b.item.time : b.suggestion.slotStart;
+      return ta.localeCompare(tb);
+    });
+  }, [todaySchedules, todaySuggestion, dismissedSuggestionDates, timelineDateStr]);
 
   const todayExpenses = useMemo(() => {
     let total = 0;
@@ -997,12 +1048,107 @@ export default function TodayScreen() {
           })()}
 
           {/* 타임라인 섹션 (이터너리·항공 또는 당일 숙박이 있으면 헤더 노출) */}
-          {(todaySchedules.length > 0 || todayAccommodations.length > 0) && (
+          {(todaySchedules.length > 0 || todayAccommodations.length > 0 || (todaySuggestion && !dismissedSuggestionDates.has(timelineDateStr))) && (
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>타임라인</Text>
 
-              {todaySchedules.length > 0 &&
-                todaySchedules.map((item: ScheduleItem, index: number) => {
+              {timelineEntries.length > 0 &&
+                timelineEntries.map((entry) => {
+                  if (entry.kind === "suggestion") {
+                    const { suggestion } = entry;
+                    const placeIdx = suggestionPlaceIdxs[suggestion.date] ?? 0;
+                    const place = suggestion.places[placeIdx] as SuggestionPlace | undefined;
+                    if (!place) return null;
+                    const catBadge = place.category ? SUGGESTION_CATEGORY_BADGE[place.category] : null;
+                    return (
+                      <View key="ai-suggestion" style={styles.timelineItem}>
+                        <View style={styles.swipeItineraryShadow}>
+                          <View style={styles.swipeItineraryClip}>
+                            <Pressable
+                              style={styles.suggestionCard}
+                              onPress={() => {
+                                setSelectedAttraction({
+                                  contentId: place.contentId,
+                                  contentTypeId: place.contentTypeId ?? "12",
+                                  categorySub: place.category,
+                                  title: place.title,
+                                  imageUrl: place.imageUrl,
+                                  address: null,
+                                  rank: null,
+                                  dist: place.dist,
+                                });
+                                reopenDetailAfterTourismRef.current = false;
+                                setTourismDetailVisible(true);
+                              }}
+                            >
+                              <View style={styles.suggestionHeader}>
+                                <View style={styles.aiBadge}>
+                                  <Text style={styles.aiBadgeText}>AI 제안</Text>
+                                </View>
+                                <Text style={styles.suggestionTimeRange}>
+                                  {suggestion.slotStart}–{suggestion.slotEnd}
+                                </Text>
+                                <View style={{ flex: 1 }} />
+                                <Pressable
+                                  onPress={() =>
+                                    setDismissedSuggestionDates(
+                                      prev => new Set([...prev, timelineDateStr]),
+                                    )
+                                  }
+                                  hitSlop={8}
+                                  style={styles.suggestionCloseBtn}
+                                >
+                                  <AiCloseIcon width={15} height={15} color={colors.gray600}/>
+                                </Pressable>
+                              </View>
+                              <View style={styles.suggestionPlaceRow}>
+                                {catBadge && (
+                                  <View style={[styles.suggestionCatBadge, { backgroundColor: catBadge.bg }]}>
+                                    <Text style={[styles.suggestionCatText, { color: catBadge.color }]}>
+                                      {place.category}
+                                    </Text>
+                                  </View>
+                                )}
+                                <Text style={styles.suggestionPlaceName} numberOfLines={1}>
+                                  {place.title}
+                                </Text>
+                              </View>
+                              {place.sentence ? (
+                                <Text style={styles.suggestionSentence} numberOfLines={2}>
+                                  {place.sentence}
+                                </Text>
+                              ) : null}
+                              {suggestion.places.length > 1 && (
+                                <View style={styles.suggestionDots}>
+                                  {suggestion.places.map((p, i) => (
+                                    <Pressable
+                                      key={p.contentId}
+                                      onPress={() =>
+                                        setSuggestionPlaceIdxs(prev => ({
+                                          ...prev,
+                                          [suggestion.date]: i,
+                                        }))
+                                      }
+                                      hitSlop={4}
+                                    >
+                                      <View
+                                        style={[
+                                          styles.suggestionDot,
+                                          i === placeIdx ? styles.suggestionDotOn : styles.suggestionDotOff,
+                                        ]}
+                                      />
+                                    </Pressable>
+                                  ))}
+                                </View>
+                              )}
+                            </Pressable>
+                          </View>
+                        </View>
+                      </View>
+                    );
+                  }
+
+                  const { item, scheduleIndex: index } = entry;
                   const isCurrentlyActive = currentActivities.some(
                     ca => ca.id === item.id,
                   );
@@ -2428,6 +2574,87 @@ const styles = StyleSheet.create({
   nextButtonText: {
     ...textStyles.h9,
     color: colors.primary,
+  },
+
+  // AI 제안 카드
+  suggestionCard: {
+    padding: spacing.lg,
+    paddingBottom: spacing.md,
+    backgroundColor: colors.aiTint,
+  },
+  suggestionHeader: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  aiBadge: {
+    height: 22,
+    paddingHorizontal: spacing.sm,
+    borderRadius: radii.pill,
+    backgroundColor: colors.aiInk,
+    justifyContent: "center" as const,
+    alignItems: "center" as const,
+  },
+  aiBadgeText: {
+    ...textStyles.h9,
+    color: colors.white,
+    fontWeight: "600" as const,
+  },
+  suggestionTimeRange: {
+    ...textStyles.h8,
+    color: colors.aiInk,
+    fontWeight: "600" as const,
+  },
+  suggestionCloseBtn: {
+    width: 28,
+    height: 28,
+    justifyContent: "center" as const,
+    alignItems: "center" as const,
+  },
+  suggestionPlaceRow: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: spacing.sm,
+    marginBottom: spacing.xs,
+  },
+  suggestionCatBadge: {
+    height: 20,
+    paddingHorizontal: spacing.sm,
+    borderRadius: radii.pill,
+    justifyContent: "center" as const,
+    alignItems: "center" as const,
+  },
+  suggestionCatText: {
+    ...textStyles.h9,
+    fontWeight: "600" as const,
+  },
+  suggestionPlaceName: {
+    ...textStyles.h6,
+    color: colors.black,
+    flex: 1,
+  },
+  suggestionSentence: {
+    ...textStyles.body5,
+    color: colors.gray700,
+    marginBottom: spacing.xs,
+  },
+  suggestionDots: {
+    flexDirection: "row" as const,
+    gap: 4,
+    marginTop: spacing.xs,
+  },
+  suggestionDot: {
+    height: 6,
+    borderRadius: radii.pill,
+  },
+  suggestionDotOn: {
+    width: 16,
+    backgroundColor: colors.aiInk,
+  },
+  suggestionDotOff: {
+    width: 6,
+    backgroundColor: colors.gray400,
   },
 
   accommodationCard: {
