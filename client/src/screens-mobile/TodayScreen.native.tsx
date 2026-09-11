@@ -203,6 +203,7 @@ export default function TodayScreen() {
   const [showItineraryEdit, setShowItineraryEdit] = useState(false);
   const [editingItinerary, setEditingItinerary] = useState<Itinerary | null>(null);
   const [itineraryPrefill, setItineraryPrefill] = useState<ItineraryEditPrefill | null>(null);
+  const [itineraryEditFromRecommend, setItineraryEditFromRecommend] = useState(false);
   const [selectedAttraction, setSelectedAttraction] = useState<import("@/services/tourism").NearbyAttraction | null>(null);
   const [tourismDetailVisible, setTourismDetailVisible] = useState(false);
   const reopenDetailAfterTourismRef = useRef(true);
@@ -1892,6 +1893,7 @@ export default function TodayScreen() {
           setShowItineraryEdit(false);
           setEditingItinerary(null);
           setItineraryPrefill(null);
+          setItineraryEditFromRecommend(false);
           if (!opts?.fromSave && itineraryToShow) {
             setSelectedItinerary(itineraryToShow);
             setShowItineraryDetail(true);
@@ -1904,6 +1906,7 @@ export default function TodayScreen() {
         defaultStartTime={nextAvailableTime.startTime}
         defaultEndTime={nextAvailableTime.endTime}
         prefill={itineraryPrefill ?? undefined}
+        showRecommendToast={itineraryEditFromRecommend}
         onSave={async itinerary => {
           planData.addItinerary(itinerary);
           await refetchTodayExpenses();
@@ -1944,6 +1947,7 @@ export default function TodayScreen() {
           const slot = suggestionSlotRef.current;
           suggestionSlotRef.current = null;
           setItineraryPrefill(slot ? { ...draft, startTime: slot.start, endTime: slot.end } : draft);
+          setItineraryEditFromRecommend(true);
           setShowItineraryEdit(true);
         }}
       />
@@ -1985,6 +1989,7 @@ export default function TodayScreen() {
           setSelectedFestival(null);
           setEditingItinerary(null);
           setItineraryPrefill({ ...restDraft, country, city, ...(slot ?? {}) });
+          setItineraryEditFromRecommend(true);
           setShowItineraryEdit(true);
         }}
       />

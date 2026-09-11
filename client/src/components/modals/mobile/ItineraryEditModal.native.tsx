@@ -49,6 +49,7 @@ import dayjs from "dayjs";
 import { useEffect, useRef, useState } from "react";
 import {
   Alert,
+  Animated,
   Modal,
   Pressable,
   ScrollView,
@@ -69,6 +70,7 @@ import CloseIcon from "../../../../assets/x.svg";
 import ModalCloseIcon from "../../../../assets/mobile_close.svg";
 import DownArrowIcon from "../../../../assets/down_arrow.svg";
 import UpperArrowIcon from "../../../../assets/upper_arrow.svg";
+import InfoCircleIcon from "../../../../assets/info_circle.svg";
 import CityPicker from "@/ui/components/pickers/CityPicker";
 import CountryPicker from "@/ui/components/pickers/CountryPicker";
 
@@ -103,6 +105,7 @@ interface ItineraryEditModalProps {
   onDelete?: (itineraryId: number) => void;
   pendingAiResult?: { result: DocumentUploadAnalyzeResponse; filename?: string; pendingFiles?: LocalFile[] } | null;
   onRouteMismatchResult?: (result: DocumentUploadAnalyzeResponse, filename?: string, pendingFiles?: LocalFile[]) => void;
+  showRecommendToast?: boolean;
 }
 
 const addOneHour = (time24: string): string => {
@@ -128,10 +131,13 @@ export default function ItineraryEditModal({
   onDelete,
   pendingAiResult,
   onRouteMismatchResult,
+  showRecommendToast,
 }: ItineraryEditModalProps) {
   const scrollRef = useRef<KeyboardAwareScrollViewRef>(null);
   const locationDraftRef = useRef<PlaceResult | null>(null);
   const rawLocationTextRef = useRef<string>("");
+  const recommendToastAnim = useRef(new Animated.Value(0)).current;
+  const recommendToastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [formData, setFormData] = useState({
     title: "",
@@ -215,6 +221,20 @@ export default function ItineraryEditModal({
         return <TicketIcon width={size} height={size} color={iconColor} />;
     }
   };
+
+  useEffect(() => {
+    if (visible && showRecommendToast) {
+      recommendToastAnim.setValue(0);
+      Animated.timing(recommendToastAnim, { toValue: 1, duration: 300, useNativeDriver: true }).start();
+      if (recommendToastTimer.current) clearTimeout(recommendToastTimer.current);
+      recommendToastTimer.current = setTimeout(() => {
+        Animated.timing(recommendToastAnim, { toValue: 0, duration: 300, useNativeDriver: true }).start();
+      }, 4000);
+    }
+    return () => {
+      if (recommendToastTimer.current) clearTimeout(recommendToastTimer.current);
+    };
+  }, [visible, showRecommendToast]);
 
   useEffect(() => {
     if (!visible) {
@@ -1030,6 +1050,14 @@ export default function ItineraryEditModal({
     <FullScreenModal visible={visible} onClose={() => onClose?.()}>
       {content}
       {aiModal}
+      {showRecommendToast && (
+        <Animated.View style={[styles.recommendToast, { opacity: recommendToastAnim }]} pointerEvents="none">
+          <InfoCircleIcon width={16} height={16} color={colors.white} style={{ flexShrink: 0 }} />
+          <Text style={styles.recommendToastText}>
+            {"일정이 입력 되었어요. 추천 시간을 확인하고 내 일정에 맞게 조정해 보세요."}
+          </Text>
+        </Animated.View>
+      )}
     </FullScreenModal>
   );
 }
@@ -1315,5 +1343,23 @@ const styles = StyleSheet.create({
   categoryOptionTextNone: {
     ...textStyles.h7,
     color: colors.gray600,
+  },
+  recommendToast: {
+    position: "absolute",
+    bottom: 110,
+    left: 16,
+    right: 16,
+    backgroundColor: "rgba(0,0,0,0.85)",
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 8,
+  },
+  recommendToastText: {
+    ...textStyles.h7,
+    color: colors.white,
+    flex: 1,
   },
 });
