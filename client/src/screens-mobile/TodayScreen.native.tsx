@@ -1199,7 +1199,7 @@ export default function TodayScreen() {
                                         )}
                                       </View>
                                       {p.sentence ? (
-                                        <Text style={styles.suggestionSentence} numberOfLines={2}>
+                                        <Text style={styles.suggestionSentence}>
                                           {p.sentence}
                                         </Text>
                                       ) : null}
