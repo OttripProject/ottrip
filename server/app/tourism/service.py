@@ -664,7 +664,7 @@ def _suggest_find_slot(day_its: list[Itinerary]) -> dict[str, Any] | None:
         next_lat: float | None = None
         next_lng: float | None = None
         if next_it and next_it.location:
-            next_name = next_it.location.name
+            next_name = next_it.title
             next_start_str = _m2s(_t2m(next_it.start_time))
             next_lat = next_it.location.latitude
             next_lng = next_it.location.longitude
@@ -676,7 +676,7 @@ def _suggest_find_slot(day_its: list[Itinerary]) -> dict[str, Any] | None:
                 "duration": duration,
                 "center_lat": it.location.latitude,  # type: ignore[union-attr]
                 "center_lng": it.location.longitude,  # type: ignore[union-attr]
-                "prev_name": it.location.name or "",  # type: ignore[union-attr]
+                "prev_name": it.title,
                 "prev_end": _m2s(_t2m(it.end_time)),
                 "next_name": next_name,
                 "next_start": next_start_str,
