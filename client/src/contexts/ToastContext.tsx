@@ -18,7 +18,7 @@ interface ToastState {
 }
 
 interface ToastContextType {
-  showToast: (message: string, options?: { action?: ToastAction; icon?: "check" | "info" }) => void;
+  showToast: (message: string, options?: { action?: ToastAction; icon?: "check" | "info"; duration?: number }) => void;
   hideToast: () => void;
   toastMessage: string | null;
 }
@@ -78,12 +78,12 @@ export const ToastProvider = ({ children }: { children: React.ReactNode }) => {
   }, []);
 
   const showToast = useCallback(
-    (message: string, options?: { action?: ToastAction; icon?: "check" | "info" }) => {
+    (message: string, options?: { action?: ToastAction; icon?: "check" | "info"; duration?: number }) => {
       setToast({ message, action: options?.action, icon: options?.icon });
       if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
       toastTimerRef.current = setTimeout(() => {
         setToast(null);
-      }, 3000);
+      }, options?.duration ?? 3000);
     },
     [],
   );
@@ -108,7 +108,6 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     paddingHorizontal: 16,
     minWidth: 360,
-    maxWidth: 420,
     flexDirection: "row",
     alignItems: "center",
     gap: 12,

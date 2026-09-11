@@ -577,7 +577,8 @@ export default function DashboardScreen() {
     setSelectedAccommodation(null);
     setSelectedItinerary(null);
     setOpenNewItineraryForm(true);
-  }, [planData?.plan?.segments, planData?.plan?.startDate, planData?.plan?.endDate, planData?.itineraries]);
+    showToast("일정이 입력 되었어요. 추천 시간을 확인하고 내 일정에 맞게 조정해 보세요.", { icon: "info", duration: 5000 });
+  }, [planData?.plan?.segments, planData?.plan?.startDate, planData?.plan?.endDate, planData?.itineraries, showToast]);
 
   const handleShowAccommodationModal = useCallback(
     (accommodation: any, date?: string, checkoutDate?: string) => {
@@ -884,6 +885,7 @@ export default function DashboardScreen() {
                     setSelectedFlight(null);
                     setSelectedAccommodation(null);
                     setOpenNewItineraryForm(true);
+                    showToast("일정이 입력 되었어요. 추천 시간을 확인하고 내 일정에 맞게 조정해 보세요.", { icon: "info", duration: 5000 });
                   }}
                   onFlightAdd={handleFlightAdd}
                   onFlightClear={() => {
@@ -954,6 +956,7 @@ export default function DashboardScreen() {
         setSelectedAccommodation(null);
         setSelectedItinerary(null);
         setOpenNewItineraryForm(true);
+        showToast("일정이 입력 되었어요. 추천 시간을 확인하고 내 일정에 맞게 조정해 보세요.", { icon: "info", duration: 5000 });
       }}
     />
     </GradientBackground>
