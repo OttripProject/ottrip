@@ -16,7 +16,6 @@ import {
 import { GoogleMap, Marker, useLoadScript } from "@react-google-maps/api";
 import type { FestivalItem, TourismDetail } from "@/services/tourism";
 import { tourismApi } from "@/services/tourism";
-import { locationsApi, manualPlaceId } from "@/services/locations";
 import { ItineraryCategory } from "@/types/itinerary";
 import { colors } from "@/ui/tokens/colors";
 import { radii } from "@/ui/tokens/radii";
@@ -133,7 +132,7 @@ export default function FestivalDetailModal({ visible, onClose, item, onAddToIti
     });
   }, [isLoaded, detail, item, loading]);
 
-  const handleAddToItinerary = async () => {
+  const handleAddToItinerary = () => {
     if (!onAddToItinerary || !item) return;
     const title = detail?.title ?? item.title;
     const address = detail?.address ?? item.address;
@@ -143,27 +142,15 @@ export default function FestivalDetailModal({ visible, onClose, item, onAddToIti
         : item.mapy && item.mapx
           ? { lat: item.mapy, lng: item.mapx }
           : null;
-    let locationId: number | undefined;
-    try {
-      const loc = await locationsApi.createLocation({
-        name: title,
-        placeId: manualPlaceId(title),
-        latitude: coords?.lat ?? 0,
-        longitude: coords?.lng ?? 0,
-        address: address ?? undefined,
-        hasCoords: false,
-      });
-      locationId = loc.id;
-    } catch {}
     onAddToItinerary({
       title,
       description: detail?.overview ?? undefined,
       location: address ?? title,
-      locationId,
       category: ItineraryCategory.SIGHTSEEING,
       matchedDate: item.matchedDate ?? undefined,
       locationLat: coords?.lat,
       locationLng: coords?.lng,
+      locationAddress: address ?? undefined,
       eventStartDate: item.eventStartDate ?? undefined,
       eventEndDate: item.eventEndDate ?? undefined,
       playtime: detail?.playtime ?? undefined,

@@ -166,6 +166,7 @@ export default function ItineraryItem({
   const [warningMessage, setWarningMessage] = useState("");
   const locationDraftRef = useRef<PlaceResult | null>(null);
   const rawLocationTextRef = useRef<string>("");
+  const prefillCoordsRef = useRef<{ lat: number; lng: number; address?: string; name: string; hasCoords: boolean } | null>(null);
   const [formData, setFormData] = useState({
     title: itinerary?.title || "",
     description: itinerary?.description || "",
@@ -336,6 +337,7 @@ export default function ItineraryItem({
         ).substring(0, 5),
         endTime: endTime,
       });
+      prefillCoordsRef.current = null;
     } else if (itinerary && !itinerary.id) {
       // draft (id 없음) - pre-fill
       const endTimeRaw = itinerary.end_time || itinerary.endTime || "10:00";
@@ -364,6 +366,19 @@ export default function ItineraryItem({
         ).substring(0, 5),
         endTime,
       });
+      const locName = typeof itinerary.location === "string" ? itinerary.location : itinerary.location?.name || "";
+      if (locName) {
+        const hasCoords = !!(itinerary.locationLat && itinerary.locationLng);
+        prefillCoordsRef.current = {
+          lat: itinerary.locationLat ?? 0,
+          lng: itinerary.locationLng ?? 0,
+          address: itinerary.locationAddress,
+          name: locName,
+          hasCoords,
+        };
+      } else {
+        prefillCoordsRef.current = null;
+      }
       setExpenses([]);
       setDraftExpenses([]);
       setShowExpenseForm(false);
@@ -412,6 +427,7 @@ export default function ItineraryItem({
         currency: ExpenseCurrency.KRW,
       });
       setPendingFiles([]);
+      prefillCoordsRef.current = null;
     }
   }, [itinerary, selectedDate]);
 
@@ -642,6 +658,20 @@ export default function ItineraryItem({
               finalLocationId = loc.id;
             }
           } catch { /* ignore */ }
+        } else if (!itinerary?.id && !finalLocationId && prefillCoordsRef.current) {
+          const pc = prefillCoordsRef.current;
+          try {
+            const loc = await locationsApi.createLocation({
+              name: pc.name || formData.location,
+              placeId: manualPlaceId(pc.name || formData.location),
+              latitude: pc.lat,
+              longitude: pc.lng,
+              address: pc.address,
+              hasCoords: pc.hasCoords,
+            });
+            finalLocationId = loc.id;
+          } catch {}
+          prefillCoordsRef.current = null;
         }
       }
 
@@ -1090,6 +1120,7 @@ export default function ItineraryItem({
 
   const handlePlaceSelect = useCallback((place: PlaceResult) => {
     locationDraftRef.current = place;
+    prefillCoordsRef.current = null;
     setFormData(prev => ({ ...prev, location: place.name }));
   }, []);
 
@@ -1263,8 +1294,8 @@ export default function ItineraryItem({
                 <PlacesSearchInput
                   value={formData.location}
                   onSelect={handlePlaceSelect}
-                  onClear={() => { locationDraftRef.current = null; rawLocationTextRef.current = ""; setFormData(prev => ({ ...prev, location: "", locationId: null })); }}
-                  onRawInputChange={(t) => { locationDraftRef.current = null; rawLocationTextRef.current = t; }}
+                  onClear={() => { locationDraftRef.current = null; rawLocationTextRef.current = ""; prefillCoordsRef.current = null; setFormData(prev => ({ ...prev, location: "", locationId: null })); }}
+                  onRawInputChange={(t) => { locationDraftRef.current = null; rawLocationTextRef.current = t; prefillCoordsRef.current = null; }}
                   placeholder="장소를 검색하세요."
                   disabled={readOnly}
                   readOnly={readOnly}

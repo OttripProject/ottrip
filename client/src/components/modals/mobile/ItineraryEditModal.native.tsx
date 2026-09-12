@@ -81,6 +81,7 @@ export interface ItineraryEditPrefill {
   locationId?: number;
   locationLat?: number;
   locationLng?: number;
+  locationAddress?: string;
   country?: string;
   city?: string;
   itineraryDate?: string;
@@ -136,6 +137,7 @@ export default function ItineraryEditModal({
   const scrollRef = useRef<KeyboardAwareScrollViewRef>(null);
   const locationDraftRef = useRef<PlaceResult | null>(null);
   const rawLocationTextRef = useRef<string>("");
+  const prefillCoordsRef = useRef<{ lat: number; lng: number; address?: string; name: string; hasCoords: boolean } | null>(null);
   const recommendToastAnim = useRef(new Animated.Value(0)).current;
   const recommendToastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -241,6 +243,7 @@ export default function ItineraryEditModal({
       formInitializedRef.current = false;
       locationDraftRef.current = null;
       rawLocationTextRef.current = "";
+      prefillCoordsRef.current = null;
       setAiModalResult(null);
       setAiApplyLabel(undefined);
       setCategoryOpen(false);
@@ -325,6 +328,18 @@ export default function ItineraryEditModal({
       setSelectedCategory(prefill?.category ?? null);
       setExpenseData({ amount: "", category: ExpenseCategory.FOOD, currency: ExpenseCurrency.KRW });
       setExistingExpenseId(null);
+      if (prefill?.location) {
+        const hasCoords = !!(prefill.locationLat && prefill.locationLng);
+        prefillCoordsRef.current = {
+          lat: prefill.locationLat ?? 0,
+          lng: prefill.locationLng ?? 0,
+          address: prefill.locationAddress,
+          name: prefill.location,
+          hasCoords,
+        };
+      } else {
+        prefillCoordsRef.current = null;
+      }
     }
     setPendingFiles([]);
   }, [visible, itinerary, defaultDate, defaultCountry, defaultCity, prefill]);
@@ -428,6 +443,7 @@ export default function ItineraryEditModal({
 
   const handlePlaceSelect = (place: PlaceResult) => {
     locationDraftRef.current = place;
+    prefillCoordsRef.current = null;
     setFormData(prev => ({ ...prev, location: place.name }));
   };
 
@@ -481,6 +497,21 @@ export default function ItineraryEditModal({
               finalLocationId = loc.id;
             }
           } catch { /* ignore */ }
+        } else if (!itinerary && !finalLocationId && prefillCoordsRef.current) {
+          const pc = prefillCoordsRef.current;
+          try {
+            const nameHash = [...(pc.name || formData.location)].reduce((a, c) => (Math.imul(31, a) + c.charCodeAt(0)) >>> 0, 0).toString(16);
+            const loc = await locationsApi.createLocation({
+              name: pc.name || formData.location,
+              placeId: `m_${nameHash}_${Math.random().toString(16).slice(2, 10)}`,
+              latitude: pc.lat,
+              longitude: pc.lng,
+              address: pc.address,
+              hasCoords: pc.hasCoords,
+            });
+            finalLocationId = loc.id;
+          } catch {}
+          prefillCoordsRef.current = null;
         }
       }
 
@@ -753,8 +784,8 @@ export default function ItineraryEditModal({
             <PlacesSearchInput
               value={formData.location}
               onSelect={handlePlaceSelect}
-              onClear={() => { locationDraftRef.current = null; rawLocationTextRef.current = ""; setFormData(prev => ({ ...prev, location: "", locationId: null })); }}
-              onRawInputChange={(t) => { locationDraftRef.current = null; rawLocationTextRef.current = t; }}
+              onClear={() => { locationDraftRef.current = null; rawLocationTextRef.current = ""; prefillCoordsRef.current = null; setFormData(prev => ({ ...prev, location: "", locationId: null })); }}
+              onRawInputChange={(t) => { locationDraftRef.current = null; rawLocationTextRef.current = t; prefillCoordsRef.current = null; }}
               bordered={!!itinerary}
               placeholder="장소를 검색하세요."
               cityContext={formData.city || formData.country || undefined}

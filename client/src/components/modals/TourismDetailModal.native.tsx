@@ -4,7 +4,6 @@ import { colors } from "@/ui/tokens/colors";
 import { radii } from "@/ui/tokens/radii";
 import { spacing } from "@/ui/tokens/spacing";
 import { textStyles } from "@/ui/tokens/typography";
-import { locationsApi } from "@/services/locations";
 import { ItineraryCategory } from "@/types/itinerary";
 import { formatWalkTime, haversineDistance } from "@/utils/distanceUtils";
 import { useEffect, useState } from "react";
@@ -174,7 +173,7 @@ export default function TourismDetailModal({
       .finally(() => setLoading(false));
   }, [visible, item?.contentId]);
 
-  const handleAddToItinerary = async () => {
+  const handleAddToItinerary = () => {
     if (!item) return;
     const raw = itinerary?.end_time ?? itinerary?.endTime ?? "09:00:00";
     const [h, m] = raw.split(":").map(Number);
@@ -186,27 +185,10 @@ export default function TourismDetailModal({
     const coordsLat = detail?.mapy ?? geocodedCoords?.lat;
     const coordsLng = detail?.mapx ?? geocodedCoords?.lng;
 
-    let locationId: number | undefined;
-    try {
-      if (coordsLat && coordsLng) {
-        const nameHash = [...item.title].reduce((a, c) => (Math.imul(31, a) + c.charCodeAt(0)) >>> 0, 0).toString(16);
-        const loc = await locationsApi.createLocation({
-          name: item.title,
-          placeId: `m_${nameHash}_${Math.random().toString(16).slice(2, 10)}`,
-          latitude: coordsLat,
-          longitude: coordsLng,
-          address: detail?.address ?? undefined,
-          hasCoords: true,
-        });
-        locationId = loc.id;
-      }
-    } catch {}
-
     onOpenNewItinerary({
       title: detail?.title ?? item.title,
       description: detail?.overview ?? undefined,
       location: item.title,
-      locationId,
       country: itinerary?.country || undefined,
       city: itinerary?.city || undefined,
       itineraryDate: itinerary?.itinerary_date ?? itinerary?.itineraryDate ?? "",
@@ -215,6 +197,7 @@ export default function TourismDetailModal({
       category: mapContentTypeToCategory(detail?.contentTypeId ?? item.contentTypeId),
       locationLat: coordsLat,
       locationLng: coordsLng,
+      locationAddress: detail?.address ?? undefined,
     });
     onClose();
   };

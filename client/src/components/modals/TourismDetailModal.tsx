@@ -266,27 +266,11 @@ export default function TourismDetailModal({
       `${String(Math.floor(n / 60)).padStart(2, "0")}:${String(n % 60).padStart(2, "0")}`;
 
     const coords = mapCoords;
-    let locationId: number | undefined;
-    if (coords) {
-      try {
-        const nameHash = [...item.title].reduce((a, c) => (Math.imul(31, a) + c.charCodeAt(0)) >>> 0, 0).toString(16);
-        const loc = await locationsApi.createLocation({
-          name: item.title,
-          placeId: `m_${nameHash}_${Math.random().toString(16).slice(2, 10)}`,
-          latitude: coords.lat,
-          longitude: coords.lng,
-          address: detail?.address ?? undefined,
-          hasCoords: true,
-        });
-        locationId = loc.id;
-      } catch {}
-    }
 
     onOpenNewItinerary({
       title: detail?.title ?? item.title,
       description: detail?.overview ?? undefined,
       location: item.title,
-      locationId,
       country: itinerary?.country || undefined,
       city: itinerary?.city || undefined,
       itineraryDate: itinerary?.itinerary_date ?? itinerary?.itineraryDate ?? "",
@@ -295,6 +279,7 @@ export default function TourismDetailModal({
       category: mapContentTypeToCategory(detail?.contentTypeId ?? item.contentTypeId),
       locationLat: coords?.lat,
       locationLng: coords?.lng,
+      locationAddress: detail?.address ?? undefined,
     });
     onClose();
   };
