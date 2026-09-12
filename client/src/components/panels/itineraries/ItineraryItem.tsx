@@ -626,9 +626,10 @@ export default function ItineraryItem({
         }
         locationDraftRef.current = null;
       } else {
-        const rawText = rawLocationTextRef.current.trim() || formData.location.trim();
+        const rawTyped = rawLocationTextRef.current.trim();
+        const rawText = rawTyped || formData.location.trim();
         const originalName = itinerary?.location?.name ?? "";
-        if (rawText && rawText !== originalName) {
+        if (rawText && rawText !== originalName && rawTyped) {
           try {
             if (typeof finalLocationId === "number") {
               await locationsApi.updateLocation(finalLocationId, {

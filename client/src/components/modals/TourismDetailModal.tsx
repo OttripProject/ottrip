@@ -267,18 +267,20 @@ export default function TourismDetailModal({
 
     const coords = mapCoords;
     let locationId: number | undefined;
-    try {
-      const nameHash = [...item.title].reduce((a, c) => (Math.imul(31, a) + c.charCodeAt(0)) >>> 0, 0).toString(16);
-      const loc = await locationsApi.createLocation({
-        name: item.title,
-        placeId: `m_${nameHash}_${Math.random().toString(16).slice(2, 10)}`,
-        latitude: coords?.lat ?? 0,
-        longitude: coords?.lng ?? 0,
-        address: detail?.address ?? undefined,
-        hasCoords: !!coords,
-      });
-      locationId = loc.id;
-    } catch {}
+    if (coords) {
+      try {
+        const nameHash = [...item.title].reduce((a, c) => (Math.imul(31, a) + c.charCodeAt(0)) >>> 0, 0).toString(16);
+        const loc = await locationsApi.createLocation({
+          name: item.title,
+          placeId: `m_${nameHash}_${Math.random().toString(16).slice(2, 10)}`,
+          latitude: coords.lat,
+          longitude: coords.lng,
+          address: detail?.address ?? undefined,
+          hasCoords: true,
+        });
+        locationId = loc.id;
+      } catch {}
+    }
 
     onOpenNewItinerary({
       title: detail?.title ?? item.title,
