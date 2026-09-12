@@ -417,12 +417,13 @@ export default function TodayScreen() {
   }, [selectedPlan?.id, isKoreanPlan]);
 
   useEffect(() => {
-    const show = !bannerDismissed && (congestedItems.length > 0 || matchedFestivals.length > 0);
+    const todayStr = dayjs().format("YYYY-MM-DD");
+    const show = !bannerDismissed && (congestedItems.length > 0 || matchedFestivals.some(f => f.matchedDate === todayStr));
     bannerFadeAnim.setValue(0);
     if (show) {
       Animated.timing(bannerFadeAnim, { toValue: 1, duration: 400, useNativeDriver: true }).start();
     }
-  }, [bannerDismissed, congestedItems.length, matchedFestivals.length]);
+  }, [bannerDismissed, congestedItems.length, matchedFestivals]);
 
   useEffect(() => {
     festivalsFadeAnim.setValue(0);
@@ -962,7 +963,7 @@ export default function TodayScreen() {
           </View>
 
           {/* 혼잡 배너 */}
-          {!bannerDismissed && (congestedItems.length > 0 || matchedFestivals.length > 0) && (
+          {!bannerDismissed && (congestedItems.length > 0 || matchedFestivals.some(f => f.matchedDate === dayjs().format("YYYY-MM-DD"))) && (
             <Animated.View style={[styles.bannerWrapper, { opacity: bannerFadeAnim }]}>
               <CongestionBanner
                 festivals={matchedFestivals.filter(f => f.matchedDate === dayjs().format("YYYY-MM-DD"))}
