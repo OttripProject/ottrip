@@ -96,6 +96,7 @@ export default function PlacesSearchInput({
     initialCoords && value ? { ...initialCoords, name: value } : null,
   );
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const userTypedRef = useRef(false);
 
   useEffect(() => {
     setText(value ?? "");
@@ -103,19 +104,22 @@ export default function PlacesSearchInput({
       setSuggestions([]);
       setShowList(false);
       setMapCoords(null);
-    } else if (initialCoords) {
+    } else if (initialCoords && !userTypedRef.current) {
       setMapCoords({ ...initialCoords, name: value });
     }
   }, [value]);
 
   useEffect(() => {
+    userTypedRef.current = false;
     if (initialCoords && value) {
       setMapCoords({ ...initialCoords, name: value });
     }
   }, [initialCoords?.lat, initialCoords?.lng]);
 
   const handleChangeText = useCallback((t: string) => {
+    userTypedRef.current = true;
     setText(t);
+    setMapCoords(null);
     onRawInputChange?.(t);
     setSearchError(false);
     if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -142,6 +146,7 @@ export default function PlacesSearchInput({
   }, [cityContext]);
 
   const handleSelect = async (suggestion: Suggestion) => {
+    userTypedRef.current = false;
     setText(suggestion.mainText);
     setSuggestions([]);
     setShowList(false);
@@ -175,6 +180,7 @@ export default function PlacesSearchInput({
   };
 
   const handleClear = () => {
+    userTypedRef.current = false;
     setText("");
     setSuggestions([]);
     setShowList(false);
