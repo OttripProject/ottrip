@@ -8,6 +8,7 @@ import UpperArrowIcon from "../../../assets/upper_arrow.svg";
 interface Props {
   festivals: FestivalItem[];
   onPress: (festival: FestivalItem) => void;
+  title?: string;
 }
 
 const PREVIEW_COUNT = 3;
@@ -25,7 +26,7 @@ function fmtEventDate(startDate: string | null, endDate: string | null): string 
   return "";
 }
 
-export default function FestivalsCard({ festivals, onPress }: Props) {
+export default function FestivalsCard({ festivals, onPress, title = "이 기간 축제·공연" }: Props) {
   const [expanded, setExpanded] = useState(false);
   const [previewHeight, setPreviewHeight] = useState<number | undefined>(undefined);
   const hasMore = !expanded && festivals.length > PREVIEW_COUNT;
@@ -34,7 +35,7 @@ export default function FestivalsCard({ festivals, onPress }: Props) {
     <View style={styles.card}>
       {/* 헤더 */}
       <View style={styles.header}>
-        <Text style={styles.title}>이 기간 축제·공연</Text>
+        <Text style={styles.title}>{title}</Text>
         <Text style={styles.count}>{festivals.length}곳</Text>
       </View>
 

@@ -367,11 +367,9 @@ export default function TodayScreen() {
       return;
     }
     const today = dayjs().startOf("day");
-    const maxDate = today.add(30, "day");
     const eligible = planData.itineraries.filter((it: any) => {
       if (!it.location) return false;
-      const d = dayjs(it.itineraryDate);
-      return !d.isBefore(today) && !d.isAfter(maxDate);
+      return dayjs(it.itineraryDate).isSame(today, "day");
     });
     if (!eligible.length) {
       setCongestedItems([]);
@@ -967,7 +965,7 @@ export default function TodayScreen() {
           {!bannerDismissed && (congestedItems.length > 0 || matchedFestivals.length > 0) && (
             <Animated.View style={[styles.bannerWrapper, { opacity: bannerFadeAnim }]}>
               <CongestionBanner
-                festivals={matchedFestivals}
+                festivals={matchedFestivals.filter(f => f.matchedDate === dayjs().format("YYYY-MM-DD"))}
                 congestedItems={congestedItems}
                 onDismiss={() => setBannerDismissed(true)}
                 showDate={false}
@@ -1575,18 +1573,28 @@ export default function TodayScreen() {
             </View>
           )}
 
-          {/* 이 기간 축제·공연 */}
-          {isKoreanPlan && suggestFestivals.length > 0 && (
-            <Animated.View style={[styles.festivalsCardWrapper, { opacity: festivalsFadeAnim }]}>
-              <FestivalsCard
-                festivals={suggestFestivals}
-                onPress={f => {
-                  setSelectedFestival(f);
-                  setFestivalDetailVisible(true);
-                }}
-              />
-            </Animated.View>
-          )}
+          {/* 오늘 축제 추천 */}
+          {isKoreanPlan && (() => {
+            const todayYMD = dayjs().format("YYYYMMDD");
+            const todayFestivals = suggestFestivals.filter(f => {
+              const start = f.eventStartDate ?? "00000000";
+              const end = f.eventEndDate ?? "99991231";
+              return start <= todayYMD && todayYMD <= end;
+            });
+            if (!todayFestivals.length) return null;
+            return (
+              <Animated.View style={[styles.festivalsCardWrapper, { opacity: festivalsFadeAnim }]}>
+                <FestivalsCard
+                  title="오늘의 축제 추천"
+                  festivals={todayFestivals}
+                  onPress={f => {
+                    setSelectedFestival(f);
+                    setFestivalDetailVisible(true);
+                  }}
+                />
+              </Animated.View>
+            );
+          })()}
 
           {showTodayTimelineExtras && (
             <View style={styles.checklistWrapper}>
@@ -1974,16 +1982,15 @@ export default function TodayScreen() {
             city = target?.city;
           }
 
-          const slot = planData.plan?.startDate
-            ? findFestivalSlot(
-                eventStartDate,
-                eventEndDate,
-                planData.plan.startDate,
-                planData.plan.endDate,
-                planData.itineraries ?? [],
-                playtime,
-              )
-            : null;
+          const todayStr = dayjs().format("YYYY-MM-DD");
+          const slot = findFestivalSlot(
+            eventStartDate,
+            eventEndDate,
+            todayStr,
+            todayStr,
+            planData.itineraries ?? [],
+            playtime,
+          );
 
           setFestivalDetailVisible(false);
           setSelectedFestival(null);
