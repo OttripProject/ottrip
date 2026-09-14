@@ -71,15 +71,9 @@ async def find_area_codes(
         "_type": "json",
         "numOfRows": "10",
     }
-    import logging as _logging
-
-    _log = _logging.getLogger(__name__)
     async with httpx.AsyncClient(timeout=10.0) as client:
         response = await client.get(f"{_KOR_SERVICE_URL}/searchKeyword2", params=params)
         data: dict[str, Any] = response.json()
-    _log.warning(
-        "[find_area_codes] status=%s body=%s", response.status_code, response.text[:500]
-    )
     items = _extract_items(data)
     if not items:
         return None, None
@@ -96,10 +90,6 @@ async def find_area_codes(
     else:
         best = items[0]
 
-    _log.warning(
-        "[find_area_codes] best=%s",
-        {k: best.get(k) for k in ["title", "lDongRegnCd", "lDongSignguCd"]},
-    )
     area_cd = str(best.get("lDongRegnCd") or "") or None
     signgu_raw = str(best.get("lDongSignguCd") or "") or None
     signgu_cd = (area_cd + signgu_raw) if area_cd and signgu_raw else None
