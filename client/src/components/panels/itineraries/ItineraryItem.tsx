@@ -8,7 +8,7 @@ import { analyzeDocumentUpload } from "@/services/aiDocument";
 import { attachmentsApi } from "@/services/attachments";
 import { expensesApi } from "@/services/expenses";
 import { itinerariesApi } from "@/services/itineraries";
-import { isLocationStale, locationsApi } from "@/services/locations";
+import { isLocationStale, locationsApi, manualPlaceId } from "@/services/locations";
 import type {
   AiDocumentItemDraft,
   Attachment,
@@ -22,6 +22,28 @@ import {
   categoryColors,
   categoryLabels,
 } from "@/types/expense";
+import { ItineraryCategory, itineraryCategoryColors, itineraryCategoryLabels } from "@/types/itinerary";
+
+const NEARBY_BADGE_COLORS: Record<string, { color: string; bg: string }> = {
+  여행코스: { color: "rgb(62, 91, 217)", bg: "rgb(236, 239, 254)" },
+  쇼핑: { color: "rgb(31, 157, 87)", bg: "rgb(231, 247, 236)" },
+  레포츠: { color: "rgb(55, 55, 55)", bg: "rgb(244, 244, 244)" },
+  "축제·공연": { color: "rgb(14, 138, 138)", bg: "rgb(227, 246, 246)" },
+  문화시설: { color: "rgb(10, 132, 255)", bg: "rgb(239, 244, 255)" },
+  음식점: { color: "rgb(183, 104, 0)", bg: "rgb(255, 244, 224)" },
+  숙박: { color: "rgb(109, 59, 224)", bg: "rgb(245, 239, 255)" },
+  관광지: { color: "rgb(217, 28, 181)", bg: "rgb(255, 235, 251)" },
+};
+const DEFAULT_NEARBY_BADGE = { color: "#6C6C6C", bg: "#F5F5F5" };
+
+const itineraryCategoryToExpenseCategory: Partial<Record<ItineraryCategory, ExpenseCategory>> = {
+  [ItineraryCategory.MEAL]: ExpenseCategory.FOOD,
+  [ItineraryCategory.TRANSPORT]: ExpenseCategory.TRANSPORT,
+  [ItineraryCategory.ACTIVITY]: ExpenseCategory.ACTIVITY,
+  [ItineraryCategory.SIGHTSEEING]: ExpenseCategory.ACTIVITY,
+  [ItineraryCategory.SHOPPING]: ExpenseCategory.SHOPPING,
+  [ItineraryCategory.ETC]: ExpenseCategory.ETC,
+};
 import CurrencyToggle from "@/ui/components/CurrencyToggle";
 import PlacesSearchInput from "@/ui/components/PlacesSearchInput";
 import type { PlaceResult } from "@/ui/components/PlacesSearchInput";
@@ -41,12 +63,14 @@ import { radii } from "@/ui/tokens/radii";
 import { spacing } from "@/ui/tokens/spacing";
 import { textStyles } from "@/ui/tokens/typography";
 import { applyItineraryDraftFromAi } from "@/utils/applyAiDocumentDraft";
+import { formatWalkTime } from "@/utils/distanceUtils";
 import { buildAnalyzeUploadPayload } from "@/utils/attachmentAiAnalyze";
 import {
   formatAttachmentUploadFailureMessage,
   showMessage,
 } from "@/utils/crossPlatformAlert";
 import { handleGuestPromptError } from "@/utils/guestPrompt";
+import useDetectClose from "@/hooks/useDetectClose";
 import dayjs from "dayjs";
 import React, {
   useState,
@@ -58,15 +82,22 @@ import React, {
 import {
   ActivityIndicator,
   Alert,
+  Animated,
   Platform,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from "react-native";
+import type { NearbyAttraction } from "@/services/tourism";
+import { tourismApi } from "@/services/tourism";
+import TourismDetailModal from "@/components/modals/TourismDetailModal";
 import CalendarIcon from "../../../../assets/calender.svg";
 import CloseIcon from "../../../../assets/close_sm.svg";
+import DownArrowIcon from "../../../../assets/dropdown_time.svg";
+import UpperArrowIcon from "../../../../assets/upper_arrow.svg";
 import PanelTabSwitcher from "../PanelTabSwitcher";
 import { extendPlanIfNeeded } from "@/utils/extendPlanIfNeeded";
 
@@ -98,7 +129,7 @@ interface ItineraryItemProps {
   readOnly?: boolean;
   onEdit?: () => void;
   activeTab?: "itinerary" | "flight" | "accommodation";
-  onTabChange?: (tab: "itinerary" | "flight" | "accommodation") => void;
+  onTabChange?: (tab: "itinerary" | "flight" | "accommodation", draft?: any) => void;
   stagedDocumentAnalyze?: StagedDocumentAnalyzePayload | null;
   onConsumeStagedDocumentAnalyze?: () => void;
   routeDocumentAnalyzeSuccess?: (
@@ -108,6 +139,7 @@ interface ItineraryItemProps {
   ) => boolean;
   carryoverPendingFiles?: LocalFile[] | null;
   onConsumeCarryoverPendingFiles?: () => void;
+  onOpenNewItinerary?: (draft: any) => void;
 }
 
 export default function ItineraryItem({
@@ -128,16 +160,20 @@ export default function ItineraryItem({
   routeDocumentAnalyzeSuccess,
   carryoverPendingFiles,
   onConsumeCarryoverPendingFiles,
+  onOpenNewItinerary,
 }: ItineraryItemProps) {
   const [showWarning, setShowWarning] = useState(false);
   const [warningMessage, setWarningMessage] = useState("");
+  const locationDraftRef = useRef<PlaceResult | null>(null);
+  const rawLocationTextRef = useRef<string>("");
+  const prefillCoordsRef = useRef<{ lat: number; lng: number; address?: string; name: string; hasCoords: boolean } | null>(null);
   const [formData, setFormData] = useState({
     title: itinerary?.title || "",
     description: itinerary?.description || "",
     country: itinerary?.country || "",
     city: itinerary?.city || "",
     location: itinerary?.location?.name || "",
-    locationId: itinerary?.location?.id as number | undefined,
+    locationId: itinerary?.location?.id as number | null | undefined,
     itineraryDate:
       itinerary?.itinerary_date ||
       (selectedDate
@@ -170,8 +206,12 @@ export default function ItineraryItem({
     }
   }, [selectedDate, itinerary]);
 
+  const [selectedCategory, setSelectedCategory] = useState<ItineraryCategory | null>(
+    (itinerary?.category as ItineraryCategory) ?? null,
+  );
+
   React.useEffect(() => {
-    if (!itinerary && !readOnly && typeof window !== "undefined") {
+    if (!itinerary?.id && !readOnly && typeof window !== "undefined") {
       window.dispatchEvent(
         new CustomEvent("itinerary-preview-update", {
           detail: {
@@ -180,12 +220,15 @@ export default function ItineraryItem({
             endTime: formData.endTime,
             location: formData.location,
             itineraryDate: formData.itineraryDate,
+            category: selectedCategory,
           },
         }),
       );
     }
-  }, [formData, itinerary, readOnly]);
-
+  }, [formData, selectedCategory, itinerary, readOnly]);
+  const categoryRef = useRef<View>(null);
+  const [categoryOpen, setCategoryOpen] = useDetectClose(categoryRef, false);
+  const [hoveredCategoryKey, setHoveredCategoryKey] = useState<string | null>(null);
   const [countryOpen, setCountryOpen] = useState(false);
   const [timeOpen, setTimeOpen] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -258,17 +301,24 @@ export default function ItineraryItem({
     return Number.isFinite(n) ? n : undefined;
   }, [itinerary?.id]);
 
+  const [nearbyAttractions, setNearbyAttractions] = useState<NearbyAttraction[]>([]);
+  const nearbyCardAnims = useRef<Animated.Value[]>([]);
+  const [hoveredNearbyIndex, setHoveredNearbyIndex] = useState<number | null>(null);
+  const [selectedAttraction, setSelectedAttraction] = useState<NearbyAttraction | null>(null);
+  const [tourismDetailVisible, setTourismDetailVisible] = useState(false);
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isSubmittingRef = useRef(false);
 
   useEffect(() => {
-    if (itinerary) {
+    if (itinerary?.id) {
       const endTimeRaw = itinerary.end_time || itinerary.endTime || "10:00";
       let endTime = endTimeRaw.substring(0, 5);
       if (endTime === "23:59" || endTimeRaw.startsWith("23:59:")) {
         endTime = "24:00";
       }
 
+      setSelectedCategory((itinerary.category as ItineraryCategory) ?? null);
       setFormData({
         title: itinerary.title || "",
         description: itinerary.description || "",
@@ -287,6 +337,58 @@ export default function ItineraryItem({
         ).substring(0, 5),
         endTime: endTime,
       });
+      prefillCoordsRef.current = null;
+    } else if (itinerary && !itinerary.id) {
+      // draft (id 없음) - pre-fill
+      const endTimeRaw = itinerary.end_time || itinerary.endTime || "10:00";
+      let endTime = endTimeRaw.substring(0, 5);
+      if (endTime === "23:59" || endTimeRaw.startsWith("23:59:")) {
+        endTime = "24:00";
+      }
+      setSelectedCategory((itinerary.category as ItineraryCategory) ?? null);
+      setFormData({
+        title: itinerary.title || "",
+        description: itinerary.description || "",
+        country: itinerary.country || "",
+        city: itinerary.city || "",
+        location: typeof itinerary.location === "string"
+          ? itinerary.location
+          : itinerary.location?.name || "",
+        locationId: itinerary.locationId ?? (typeof itinerary.location === "string" ? undefined : itinerary.location?.id),
+        itineraryDate:
+          itinerary.itinerary_date ||
+          itinerary.itineraryDate ||
+          dayjs().format("YYYY-MM-DD"),
+        startTime: (
+          itinerary.start_time ||
+          itinerary.startTime ||
+          "09:00"
+        ).substring(0, 5),
+        endTime,
+      });
+      const locName = typeof itinerary.location === "string" ? itinerary.location : itinerary.location?.name || "";
+      if (locName) {
+        const hasCoords = !!(itinerary.locationLat && itinerary.locationLng);
+        prefillCoordsRef.current = {
+          lat: itinerary.locationLat ?? 0,
+          lng: itinerary.locationLng ?? 0,
+          address: itinerary.locationAddress,
+          name: locName,
+          hasCoords,
+        };
+      } else {
+        prefillCoordsRef.current = null;
+      }
+      setExpenses([]);
+      setDraftExpenses([]);
+      setShowExpenseForm(false);
+      setExpenseForm({
+        category: ExpenseCategory.ETC,
+        amount: 0,
+        description: "",
+        currency: ExpenseCurrency.KRW,
+      });
+      setPendingFiles([]);
     } else {
       const defaultDate = selectedDate
         ? dayjs(selectedDate).format("YYYY-MM-DD")
@@ -314,6 +416,7 @@ export default function ItineraryItem({
         endTime: defaultEndTime,
       });
 
+      setSelectedCategory(null);
       setExpenses([]);
       setDraftExpenses([]);
       setShowExpenseForm(false);
@@ -324,6 +427,7 @@ export default function ItineraryItem({
         currency: ExpenseCurrency.KRW,
       });
       setPendingFiles([]);
+      prefillCoordsRef.current = null;
     }
   }, [itinerary, selectedDate]);
 
@@ -517,17 +621,72 @@ export default function ItineraryItem({
       const finalEndTime =
         formData.endTime === "24:00" ? "23:59:59" : formData.endTime;
 
+      // 장소 draft → 저장 시점에 create/update
+      let finalLocationId = formData.locationId;
+      const draft = locationDraftRef.current;
+      if (draft) {
+        try {
+          if (typeof finalLocationId === "number") {
+            await locationsApi.updateLocation(finalLocationId, {
+              name: draft.name, placeId: draft.placeId, latitude: draft.latitude, longitude: draft.longitude, address: draft.address, hasCoords: draft.hasCoords,
+            });
+          } else {
+            const loc = await locationsApi.createLocation({
+              name: draft.name, placeId: draft.placeId, latitude: draft.latitude,
+              longitude: draft.longitude, address: draft.address, hasCoords: draft.hasCoords,
+            });
+            finalLocationId = loc.id;
+          }
+        } catch {
+          finalLocationId = formData.locationId;
+        }
+        locationDraftRef.current = null;
+      } else {
+        const rawTyped = rawLocationTextRef.current.trim();
+        const rawText = rawTyped || formData.location.trim();
+        const originalName = itinerary?.location?.name ?? "";
+        if (rawText && rawText !== originalName && rawTyped) {
+          try {
+            if (typeof finalLocationId === "number") {
+              await locationsApi.updateLocation(finalLocationId, {
+                name: rawText, placeId: manualPlaceId(rawText), latitude: 0, longitude: 0, address: undefined, hasCoords: false,
+              });
+            } else {
+              const loc = await locationsApi.createLocation({
+                name: rawText, placeId: manualPlaceId(rawText), latitude: 0, longitude: 0, hasCoords: false,
+              });
+              finalLocationId = loc.id;
+            }
+          } catch { /* ignore */ }
+        } else if (!itinerary?.id && !finalLocationId && prefillCoordsRef.current) {
+          const pc = prefillCoordsRef.current;
+          try {
+            const loc = await locationsApi.createLocation({
+              name: pc.name || formData.location,
+              placeId: manualPlaceId(pc.name || formData.location),
+              latitude: pc.lat,
+              longitude: pc.lng,
+              address: pc.address,
+              hasCoords: pc.hasCoords,
+            });
+            finalLocationId = loc.id;
+          } catch {}
+          prefillCoordsRef.current = null;
+        }
+      }
+
       let savedItinerary;
-      if (itinerary) {
+      if (itinerary?.id) {
         savedItinerary = await itinerariesApi.updateItinerary(itinerary.id, {
           title: formData.title,
           description: formData.description,
           country: formData.country?.trim() || undefined,
           city: formData.city?.trim() || undefined,
-          locationId: formData.locationId,
+          locationId: finalLocationId,
           itineraryDate: formData.itineraryDate,
           startTime: formData.startTime,
           endTime: finalEndTime,
+          category: selectedCategory,
         });
 
         const originalDate =
@@ -597,10 +756,11 @@ export default function ItineraryItem({
           description: formData.description,
           country: formData.country?.trim() || undefined,
           city: formData.city?.trim() || undefined,
-          locationId: formData.locationId,
+          locationId: finalLocationId ?? undefined,
           itineraryDate: formData.itineraryDate,
           startTime: formData.startTime,
           endTime: finalEndTime,
+          category: selectedCategory !== null ? selectedCategory : undefined,
         });
         await extendPlanIfNeeded(planId, planData?.plan, [formData.itineraryDate]);
 
@@ -929,27 +1089,46 @@ export default function ItineraryItem({
     })();
   }, [itinerary?.location?.id]);
 
-  const handlePlaceSelect = useCallback(async (place: PlaceResult) => {
-    try {
-      const location = await locationsApi.createLocation({
-        name: place.name,
-        placeId: place.placeId,
-        latitude: place.latitude,
-        longitude: place.longitude,
-        address: place.address,
-        fromGoogle: place.fromGoogle,
-      });
-      setFormData(prev => ({ ...prev, location: location.name, locationId: location.id }));
-    } catch {
-      setFormData(prev => ({ ...prev, location: place.name, locationId: undefined }));
+  useEffect(() => {
+    nearbyCardAnims.current = [];
+    if (!readOnly || !itinerary?.id || !itinerary?.location || itinerary?.country !== "대한민국") {
+      setNearbyAttractions([]);
+      return;
     }
+    setNearbyAttractions([]);
+    tourismApi.getNearbyAttractions(itinerary.id)
+      .then(data => {
+        const filtered = data.filter(item => item.contentTypeId !== "숙박" && item.contentTypeId !== "숙소");
+        nearbyCardAnims.current = filtered.slice(0, 10).map(() => new Animated.Value(0));
+        setNearbyAttractions(filtered);
+        if (filtered.length > 0) {
+          Animated.stagger(
+            40,
+            nearbyCardAnims.current.map(anim =>
+              Animated.timing(anim, { toValue: 1, duration: 250, useNativeDriver: true }),
+            ),
+          ).start();
+        }
+      })
+      .catch(() => {});
+  }, [readOnly, itinerary?.id, itinerary?.location?.id]);
+
+  const handleAttractionPress = (item: NearbyAttraction) => {
+    setSelectedAttraction(item);
+    setTourismDetailVisible(true);
+  };
+
+  const handlePlaceSelect = useCallback((place: PlaceResult) => {
+    locationDraftRef.current = place;
+    prefillCoordsRef.current = null;
+    setFormData(prev => ({ ...prev, location: place.name }));
   }, []);
 
   return (
     <View style={styles.wrapper}>
       <View style={styles.titleRow}>
         <Text style={styles.title}>
-          {readOnly ? "일정 정보" : itinerary ? "일정 수정" : "일정 추가"}
+          {readOnly ? "일정 정보" : itinerary?.id ? "일정 수정" : "일정 추가"}
         </Text>
 
         <Pressable
@@ -990,22 +1169,82 @@ export default function ItineraryItem({
             />
           </View>
 
+          <View ref={categoryRef} style={[styles.inputGroup, { overflow: "visible", position: "relative", zIndex: categoryOpen ? 1000 : 1 }]}>
+            <Text style={styles.label}>카테고리</Text>
+            <Pressable
+              onPress={() => !readOnly && setCategoryOpen(prev => !prev)}
+              style={[styles.categoryTrigger, readOnly && styles.categoryTriggerReadOnly]}
+            >
+              {selectedCategory && (
+                <View style={[styles.dot, { backgroundColor: itineraryCategoryColors[selectedCategory] }]} />
+              )}
+              <Text style={[styles.categoryTriggerText, !selectedCategory && styles.categoryTriggerTextNone]}>
+                {selectedCategory ? itineraryCategoryLabels[selectedCategory] : "카테고리 선택"}
+              </Text>
+              {!readOnly && (categoryOpen
+                ? <UpperArrowIcon width={10} height={10} style={{ opacity: 0.6 }}/>
+                : <DownArrowIcon width={10} height={10} style={{ opacity: 0.6 }}/>)}
+            </Pressable>
+            {categoryOpen && (
+              <View style={styles.categoryDropdown}>
+                <Pressable
+                  onPress={() => { setSelectedCategory(null); setCategoryOpen(false); }}
+                  {...{ onMouseEnter: () => setHoveredCategoryKey("none"), onMouseLeave: () => setHoveredCategoryKey(null) }}
+                  style={[styles.categoryOption, hoveredCategoryKey === "none" && styles.categoryOptionPressed]}
+                >
+                  <View style={styles.dotOutline} />
+                  <Text style={styles.categoryOptionTextNone}>선택 안 함</Text>
+                </Pressable>
+                {Object.values(ItineraryCategory).map(cat => (
+                  <Pressable
+                    key={cat}
+                    onPress={() => { setSelectedCategory(cat); setCategoryOpen(false); }}
+                    {...{ onMouseEnter: () => setHoveredCategoryKey(cat), onMouseLeave: () => setHoveredCategoryKey(null) }}
+                    style={[styles.categoryOption, hoveredCategoryKey === cat && styles.categoryOptionPressed]}
+                  >
+                    <View style={[styles.dot, { backgroundColor: itineraryCategoryColors[cat] }]} />
+                    <Text style={styles.categoryOptionText}>{itineraryCategoryLabels[cat]}</Text>
+                  </Pressable>
+                ))}
+              </View>
+            )}
+          </View>
+
           <View style={styles.inputGroup}>
             <Text style={styles.label}>내용</Text>
-            <Input
-              variant={readOnly ? "outlined" : "filled"}
-              placeholder={PLACEHOLDERS.itinerary.descriptionForm}
-              value={formData.description}
-              onChangeText={text =>
-                !readOnly && setFormData({ ...formData, description: text })
-              }
-              multiline
-              numberOfLines={3}
-              textAlignVertical="top"
-              style={readOnly ? styles.readOnlyTextArea : styles.textArea}
-              placeholderTextColor={colors.gray600}
-              editable={!readOnly}
-            />
+            {Platform.OS === "web" ? (
+              <TextInput
+                multiline
+                numberOfLines={3}
+                textAlignVertical="top"
+                value={formData.description}
+                onChangeText={text =>
+                  !readOnly && setFormData({ ...formData, description: text })
+                }
+                placeholder={PLACEHOLDERS.itinerary.descriptionForm}
+                placeholderTextColor={colors.gray600}
+                editable={!readOnly}
+                style={[
+                  readOnly ? styles.readOnlyTextArea : styles.textArea,
+                  { resize: "vertical", overflow: "auto" } as any,
+                ]}
+              />
+            ) : (
+              <Input
+                variant={readOnly ? "outlined" : "filled"}
+                placeholder={PLACEHOLDERS.itinerary.descriptionForm}
+                value={formData.description}
+                onChangeText={text =>
+                  !readOnly && setFormData({ ...formData, description: text })
+                }
+                multiline
+                numberOfLines={3}
+                textAlignVertical="top"
+                style={readOnly ? styles.readOnlyTextArea : styles.textArea}
+                placeholderTextColor={colors.gray600}
+                editable={!readOnly}
+              />
+            )}
           </View>
 
           <View
@@ -1055,14 +1294,18 @@ export default function ItineraryItem({
                 <PlacesSearchInput
                   value={formData.location}
                   onSelect={handlePlaceSelect}
-                  onClear={() => setFormData(prev => ({ ...prev, location: "", locationId: undefined }))}
+                  onClear={() => { locationDraftRef.current = null; rawLocationTextRef.current = ""; prefillCoordsRef.current = null; setFormData(prev => ({ ...prev, location: "", locationId: null })); }}
+                  onRawInputChange={(t) => { locationDraftRef.current = null; rawLocationTextRef.current = t; prefillCoordsRef.current = null; }}
                   placeholder="장소를 검색하세요."
                   disabled={readOnly}
                   readOnly={readOnly}
+                  cityContext={formData.city || formData.country || undefined}
                   initialCoords={
-                    itinerary?.location?.fromGoogle
+                    itinerary?.location?.hasCoords
                       ? { lat: itinerary.location.latitude, lng: itinerary.location.longitude }
-                      : undefined
+                      : itinerary?.locationLat && itinerary?.locationLng
+                        ? { lat: itinerary.locationLat, lng: itinerary.locationLng }
+                        : undefined
                   }
                 />
               </>
@@ -1080,6 +1323,60 @@ export default function ItineraryItem({
               />
             )}
           </View>
+
+          {readOnly && nearbyAttractions.length > 0 && (
+            <View style={styles.nearbySection}>
+              <View style={styles.nearbyHeader}>
+                <Text style={styles.nearbyTitle}>주변 추천</Text>
+                <Text style={styles.nearbyCount}>{nearbyAttractions.length}곳</Text>
+              </View>
+              <ScrollView
+                style={styles.nearbyList}
+                nestedScrollEnabled
+                showsVerticalScrollIndicator={false}
+              >
+                {nearbyAttractions.map((item, index) => {
+                  const badge = NEARBY_BADGE_COLORS[item.contentTypeId] ?? DEFAULT_NEARBY_BADGE;
+                  const anim = index < 10 ? nearbyCardAnims.current[index] : null;
+                  return (
+                    <Animated.View
+                      key={index}
+                      style={{
+                        opacity: anim ?? 1,
+                        transform: [{ translateY: anim ? anim.interpolate({ inputRange: [0, 1], outputRange: [-8, 0] }) : 0 }],
+                      }}
+                    >
+                    <Pressable
+                      style={[styles.nearbyCard, hoveredNearbyIndex === index && styles.nearbyCardHovered]}
+                      onPress={() => handleAttractionPress(item)}
+                      {...{ onMouseEnter: () => setHoveredNearbyIndex(index), onMouseLeave: () => setHoveredNearbyIndex(null) }}
+                    >
+                      <View style={styles.nearbyCardRow}>
+                        <View style={[styles.nearbyBadge, { backgroundColor: badge.bg }]}>
+                          <Text style={[styles.nearbyBadgeText, { color: badge.color }]}>
+                            {item.contentTypeId}
+                          </Text>
+                        </View>
+                        <Text style={styles.nearbyCardTitle} numberOfLines={1}>
+                          {item.title}
+                        </Text>
+                      </View>
+                      {(() => {
+                        const walkTime = item.dist ? formatWalkTime(item.dist) : null;
+                        const sub = item.dist != null
+                          ? [item.address, walkTime].filter(Boolean).join(" · ")
+                          : [item.address, item.categorySub].filter(Boolean).join(" · ");
+                        return sub ? (
+                          <Text style={styles.nearbyCardSub} numberOfLines={1}>{sub}</Text>
+                        ) : null;
+                      })()}
+                    </Pressable>
+                    </Animated.View>
+                  );
+                })}
+              </ScrollView>
+            </View>
+          )}
 
           <View
             style={[
@@ -1272,8 +1569,11 @@ export default function ItineraryItem({
                   style={styles.addExpenseButton}
                   onPress={() => {
                     setEditingExpense(null);
+                    const mappedCategory = selectedCategory
+                      ? (itineraryCategoryToExpenseCategory[selectedCategory] ?? ExpenseCategory.ETC)
+                      : ExpenseCategory.ETC;
                     setExpenseForm({
-                      category: ExpenseCategory.ETC,
+                      category: mappedCategory,
                       amount: 0,
                       description: "",
                       currency: ExpenseCurrency.KRW,
@@ -1500,6 +1800,19 @@ export default function ItineraryItem({
         entityTypeLabel="일정"
         originEntityType={analyzeOriginEntityType}
       />
+      <TourismDetailModal
+        visible={tourismDetailVisible}
+        onClose={() => setTourismDetailVisible(false)}
+        item={selectedAttraction}
+        itineraryLocation={
+          itinerary?.location?.latitude != null
+            ? { latitude: itinerary.location.latitude, longitude: itinerary.location.longitude }
+            : null
+        }
+        itinerary={itinerary}
+        onOpenNewItinerary={onOpenNewItinerary ?? (() => {})}
+        onSwitchToAccommodation={(draft) => onTabChange?.("accommodation", draft)}
+      />
     </View>
   );
 }
@@ -1507,6 +1820,7 @@ export default function ItineraryItem({
 const styles = StyleSheet.create({
   wrapper: {
     flex: 1,
+    minHeight: 0,
   },
   container: {
     flex: 1,
@@ -1568,7 +1882,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.gray200,
     borderWidth: 1,
     borderColor: colors.gray400,
-    height: 80,
+    minHeight: 80,
     borderRadius: radii.md,
     paddingHorizontal: spacing.md,
     paddingVertical: 10,
@@ -1799,6 +2113,82 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
+  categoryTrigger: {
+    height: 40,
+    backgroundColor: colors.gray200,
+    borderRadius: radii.md,
+    paddingHorizontal: spacing.md,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    cursor: "pointer",
+  } as any,
+  categoryTriggerReadOnly: {
+    borderWidth: 1,
+    borderColor: colors.gray400,
+    cursor: "default",
+  } as any,
+  categoryTriggerText: {
+    ...textStyles.body4,
+    flex: 1,
+    color: colors.gray900,
+  },
+  categoryTriggerTextNone: {
+    color: colors.gray600,
+  },
+  categoryChevron: {
+    ...textStyles.body6,
+    color: colors.gray600,
+  },
+  categoryDropdown: {
+    position: "absolute",
+    top: "calc(100% + 6px)",
+    left: 0,
+    right: 0,
+    zIndex: 1000,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.gray300,
+    backgroundColor: colors.white,
+    shadowColor: colors.gray900,
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.08,
+    shadowRadius: 24,
+    elevation: 8,
+    padding: 4,
+  } as any,
+  categoryOption: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
+    cursor: "pointer",
+  } as any,
+  categoryOptionPressed: {
+    backgroundColor: colors.gray200,
+  },
+  dot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  dotOutline: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    borderWidth: 1.5,
+    borderColor: colors.gray400,
+  },
+  categoryOptionText: {
+    ...textStyles.h8,
+    color: colors.gray900,
+  },
+  categoryOptionTextNone: {
+    ...textStyles.h8,
+    color: colors.gray600,
+  },
   dateInput: {
     flexDirection: "row",
     alignItems: "center",
@@ -1832,5 +2222,64 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: 70,
     left: 0,
+  },
+  nearbySection: {
+    marginTop: spacing.sm,
+  },
+  nearbyHeader: {
+    flexDirection: "row",
+    alignItems: "baseline",
+    justifyContent: "space-between",
+    marginBottom: 8,
+  },
+  nearbyTitle: {
+    ...textStyles.h8,
+    color: colors.gray600,
+  },
+  nearbyCount: {
+    ...textStyles.body6,
+    fontWeight: "500",
+    color: colors.gray400,
+  },
+  nearbyList: {
+    maxHeight: 340,
+  },
+  nearbyCard: {
+    gap: 4,
+    padding: 12,
+    borderRadius: 10,
+    backgroundColor: colors.white,
+    cursor: "pointer",
+    marginBottom: 4,
+  } as any,
+  nearbyCardHovered: {
+    backgroundColor: colors.gray100,
+  },
+  nearbyCardRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    minWidth: 0,
+  },
+  nearbyBadge: {
+    borderRadius: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    flexShrink: 0,
+  },
+  nearbyBadgeText: {
+    fontSize: 11,
+    fontWeight: "600",
+    lineHeight: 11,
+  } as any,
+  nearbyCardTitle: {
+    ...textStyles.h7,
+    color: colors.gray900,
+    flex: 1,
+    minWidth: 0,
+  },
+  nearbyCardSub: {
+    ...textStyles.body6,
+    color: colors.gray600,
   },
 });

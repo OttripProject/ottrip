@@ -2,7 +2,6 @@ import BottomSheetModal from "@/ui/components/BottomSheetModal.native";
 import { colors } from "@/ui/tokens/colors";
 import { textStyles } from "@/ui/tokens/typography";
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import CloseIcon from "../../../../assets/mobile_close.svg";
 import LightningIcon from "../../../../assets/mobile_lightning.svg";
 import RightArrowIcon from "../../../../assets/right_arrow.svg";
@@ -23,8 +22,6 @@ export default function AddScheduleMethodModal({
   onSelectDirectAdd,
   onSelectAiAdd,
 }: AddScheduleMethodModalProps) {
-  const insets = useSafeAreaInsets();
-
   const handleDirect = () => {
     onSelectDirectAdd();
   };
@@ -42,7 +39,7 @@ export default function AddScheduleMethodModal({
       showDragHandle
     >
       <View
-        style={[styles.root, { paddingBottom: Math.max(insets.bottom, 16) }]}
+        style={styles.root}
       >
         <View style={styles.header}>
           <Text style={styles.headerTitle}>일정 추가 방법 선택</Text>

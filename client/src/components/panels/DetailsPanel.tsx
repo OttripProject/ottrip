@@ -30,6 +30,7 @@ interface DetailsPanelProps {
   activeTab?: "itinerary" | "flight" | "accommodation" | undefined;
   onItineraryAdd?: (itinerary: any) => void;
   onItineraryClear?: () => void;
+  onOpenNewItineraryFromExisting?: (draft: any) => void;
   onFlightAdd?: (flight: any) => void;
   onFlightClear?: () => void;
   onAccommodationAdd?: (accommodation: any) => void;
@@ -45,8 +46,9 @@ interface DetailsPanelProps {
   openNewAccommodationForm?: boolean;
   onConsumeOpenNewAccommodationForm?: () => void;
   newAccommodationDraft?: any | null;
+  newItineraryDraft?: any | null;
   onPreviewAccommodationChange?: (preview: any) => void;
-  onTabChange?: (tab: "itinerary" | "flight" | "accommodation") => void;
+  onTabChange?: (tab: "itinerary" | "flight" | "accommodation", draft?: any) => void;
   stagedDocumentAnalyze?: StagedDocumentAnalyzePayload | null;
   onConsumeStagedDocumentAnalyze?: () => void;
   routeDocumentAnalyzeSuccess?: (
@@ -65,6 +67,7 @@ export default function DetailsPanel({
   activeTab,
   onItineraryAdd,
   onItineraryClear,
+  onOpenNewItineraryFromExisting,
   onFlightAdd,
   onFlightClear,
   onAccommodationAdd,
@@ -79,6 +82,7 @@ export default function DetailsPanel({
   openNewAccommodationForm,
   onConsumeOpenNewAccommodationForm,
   newAccommodationDraft,
+  newItineraryDraft,
   onPreviewAccommodationChange,
   onTabChange,
   stagedDocumentAnalyze,
@@ -124,9 +128,11 @@ export default function DetailsPanel({
           activeTab={activeTab}
           onItineraryAdd={onItineraryAdd}
           onItineraryClear={onItineraryClear}
+          onOpenNewItineraryFromExisting={onOpenNewItineraryFromExisting}
           openNewItineraryForm={openNewItineraryForm}
           onConsumeOpenNewItineraryForm={onConsumeOpenNewItineraryForm}
           selectedItineraryDate={selectedItineraryDate}
+          newItineraryDraft={newItineraryDraft}
           onTabChange={onTabChange}
           stagedDocumentAnalyze={stagedDocumentAnalyze}
           onConsumeStagedDocumentAnalyze={onConsumeStagedDocumentAnalyze}
@@ -196,6 +202,7 @@ export default function DetailsPanel({
             openNewItineraryForm={openNewItineraryForm}
             onConsumeOpenNewItineraryForm={onConsumeOpenNewItineraryForm}
             selectedItineraryDate={selectedItineraryDate}
+            newItineraryDraft={newItineraryDraft}
             onTabChange={onTabChange}
             stagedDocumentAnalyze={stagedDocumentAnalyze}
             onConsumeStagedDocumentAnalyze={onConsumeStagedDocumentAnalyze}

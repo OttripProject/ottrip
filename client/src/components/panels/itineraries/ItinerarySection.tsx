@@ -4,7 +4,7 @@ import type {
   LocalFile,
   StagedDocumentAnalyzePayload,
 } from "@/types/api";
-import { useEffect, useLayoutEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import ItineraryItem from "./ItineraryItem";
 
 interface ItinerarySectionProps {
@@ -25,8 +25,10 @@ interface ItinerarySectionProps {
   openNewItineraryForm?: boolean;
   onConsumeOpenNewItineraryForm?: () => void;
   selectedItineraryDate?: Date | null;
+  newItineraryDraft?: any | null;
   onEdit?: (itinerary: any) => void;
-  onTabChange?: (tab: "itinerary" | "flight" | "accommodation") => void;
+  onOpenNewItineraryFromExisting?: (draft: any) => void;
+  onTabChange?: (tab: "itinerary" | "flight" | "accommodation", draft?: any) => void;
   stagedDocumentAnalyze?: StagedDocumentAnalyzePayload | null;
   onConsumeStagedDocumentAnalyze?: () => void;
   routeDocumentAnalyzeSuccess?: (
@@ -46,7 +48,9 @@ export default function ItinerarySection({
   openNewItineraryForm,
   onConsumeOpenNewItineraryForm,
   selectedItineraryDate,
+  newItineraryDraft,
   onEdit,
+  onOpenNewItineraryFromExisting,
   onTabChange,
   stagedDocumentAnalyze,
   onConsumeStagedDocumentAnalyze,
@@ -58,28 +62,40 @@ export default function ItinerarySection({
     openNewItineraryForm || false,
   );
   const [editingItinerary, setEditingItinerary] = useState<any | null>(null);
+  const isInitialMountRef = useRef(true);
+  const openingNewFormRef = useRef(false);
 
   const { showToast } = useToast();
 
   useEffect(() => {
-    if (activeTab === "itinerary" && openNewItineraryForm) {
-      setEditingItinerary(null);
-      setShowItineraryForm(true);
-      onConsumeOpenNewItineraryForm?.();
-    }
-  }, [activeTab, openNewItineraryForm, onConsumeOpenNewItineraryForm]);
+    const isInitial = isInitialMountRef.current;
+    isInitialMountRef.current = false;
 
-  useEffect(() => {
+    if (openingNewFormRef.current) {
+      openingNewFormRef.current = false;
+      return;
+    }
+
     if (activeTab === "itinerary" && selectedItinerary) {
       if (selectedItinerary.id) {
         setEditingItinerary(selectedItinerary);
         setShowItineraryForm(false);
       }
     } else if (activeTab === "itinerary" && !selectedItinerary) {
-      setEditingItinerary(null);
+      if (!isInitial) {
+        setEditingItinerary(null);
+      }
       setShowItineraryForm(true);
     }
   }, [activeTab, selectedItinerary]);
+
+  useEffect(() => {
+    if (activeTab === "itinerary" && openNewItineraryForm) {
+      setEditingItinerary(newItineraryDraft ?? null);
+      setShowItineraryForm(true);
+      onConsumeOpenNewItineraryForm?.();
+    }
+  }, [activeTab, openNewItineraryForm, newItineraryDraft, onConsumeOpenNewItineraryForm]);
 
   useLayoutEffect(() => {
     if (!stagedDocumentAnalyze) return;
@@ -92,6 +108,16 @@ export default function ItinerarySection({
       setShowItineraryForm(true);
     }
   }, [stagedDocumentAnalyze, selectedItinerary, showItineraryForm]);
+
+  const handleOpenNewItinerary = (draft: any) => {
+    if (onOpenNewItineraryFromExisting) {
+      onOpenNewItineraryFromExisting(draft);
+    } else {
+      openingNewFormRef.current = true;
+      setEditingItinerary(draft);
+      setShowItineraryForm(true);
+    }
+  };
 
   const handleItinerarySave = async (itinerary: any) => {
     onItineraryAdd?.(itinerary);
@@ -119,6 +145,7 @@ export default function ItinerarySection({
   if (selectedItinerary && !showItineraryForm) {
     return (
       <ItineraryItem
+        key={`view-${selectedItinerary.id}`}
         itinerary={selectedItinerary}
         planId={planData.plan.id}
         planData={planData}
@@ -143,6 +170,7 @@ export default function ItinerarySection({
           setShowItineraryForm(true);
           onEdit?.(selectedItinerary);
         }}
+        onOpenNewItinerary={handleOpenNewItinerary}
       />
     );
   }
@@ -150,6 +178,7 @@ export default function ItinerarySection({
   if (showItineraryForm) {
     return (
       <ItineraryItem
+        key={`form-${editingItinerary?.id ?? "new"}`}
         itinerary={editingItinerary}
         planId={planData.plan.id}
         planData={planData}

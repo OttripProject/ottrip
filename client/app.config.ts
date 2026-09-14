@@ -61,6 +61,13 @@ export default ({ config }: ConfigContext): ExpoConfig => {
           photosPermission: PHOTO_LIBRARY_USAGE_DESCRIPTION,
         },
       ],
+      [
+        "react-native-maps",
+        {
+          androidGoogleMapsApiKey: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY_ANDROID ?? "",
+          iosGoogleMapsApiKey: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY_IOS ?? "",
+        },
+      ],
     ];
 
     if (iosUrlScheme) {

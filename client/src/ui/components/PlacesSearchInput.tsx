@@ -1,9 +1,13 @@
 import { colors, radii, spacing, textStyles } from "@/ui/tokens";
+import { manualPlaceId } from "@/services/locations";
 import MiniMapView from "@/ui/components/MiniMapView";
 import { useLoadScript } from "@react-google-maps/api";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { ActivityIndicator, StyleSheet, Text, TextInput, View } from "react-native";
+import LocationIcon from "../../../assets/week_bar_location.svg";
+import PlusIcon from "../../../assets/trip_add.svg";
+import SearchIcon from "../../../assets/search.svg";
 
 export type PlaceResult = {
   name: string;
@@ -11,52 +15,35 @@ export type PlaceResult = {
   latitude: number;
   longitude: number;
   address?: string;
-  fromGoogle: boolean;
+  hasCoords: boolean;
 };
 
 interface PlacesSearchInputProps {
   value?: string;
   onSelect: (place: PlaceResult) => void;
   onClear?: () => void;
+  onFocus?: () => void;
+  onRawInputChange?: (text: string) => void;
   placeholder?: string;
   disabled?: boolean;
   readOnly?: boolean;
+  bordered?: boolean;
   initialCoords?: { lat: number; lng: number };
+  cityContext?: string;
 }
 
-const PIN_ICON = (
-  <svg width="16" height="16" viewBox="0 0 14 14" fill="none" aria-hidden="true" style={{ display: "block", flex: "0 0 auto" }}>
-    <path d="M5.10368 5.83333C5.10368 4.78629 5.95247 3.9375 6.99951 3.9375C8.04655 3.9375 8.89534 4.78629 8.89534 5.83333C8.89534 6.88037 8.04655 7.72917 6.99951 7.72917C5.95247 7.72917 5.10368 6.88037 5.10368 5.83333Z" fill={colors.success} />
-    <path fillRule="evenodd" clipRule="evenodd" d="M2.20075 5.17848C2.4012 2.74659 4.43341 0.875 6.87354 0.875H7.12551C9.56564 0.875 11.5979 2.74659 11.7983 5.17848C11.9062 6.48782 11.5018 7.78796 10.6702 8.80502L7.8742 12.2244C7.42213 12.7773 6.57692 12.7773 6.12485 12.2244L3.3289 8.80502C2.49727 7.78796 2.09282 6.48782 2.20075 5.17848ZM6.99951 3.0625C5.46922 3.0625 4.22868 4.30304 4.22868 5.83333C4.22868 7.36362 5.46922 8.60417 6.99951 8.60417C8.5298 8.60417 9.77034 7.36362 9.77034 5.83333C9.77034 4.30304 8.5298 3.0625 6.99951 3.0625Z" fill={colors.success} />
-  </svg>
-);
-
-const PLUS_ICON = (
-  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true" style={{ display: "block", flex: "0 0 auto" }}>
-    <path d="M7.99972 2.06836C8.33109 2.06836 8.59971 2.33699 8.59971 2.66836V7.40169H13.333C13.6644 7.40169 13.933 7.67032 13.933 8.00169C13.933 8.33306 13.6644 8.60169 13.333 8.60169H8.59971V13.335C8.59971 13.6664 8.33109 13.935 7.99972 13.935C7.66835 13.935 7.39972 13.6664 7.39972 13.335V8.60169H2.6664C2.33503 8.60169 2.06641 8.33306 2.06641 8.00169C2.06641 7.67032 2.33503 7.40169 2.6664 7.40169H7.39972V2.66836C7.39972 2.33699 7.66835 2.06836 7.99972 2.06836Z" fill="currentColor" />
-  </svg>
-);
-
-const manualPlaceId = (name: string) => {
-  const nameHash = [...name].reduce((a, c) => (Math.imul(31, a) + c.charCodeAt(0)) >>> 0, 0).toString(16);
-  const rand = Math.random().toString(16).slice(2, 10);
-  return `m_${nameHash}_${rand}`;
-};
-
-const SEARCH_ICON = (
-  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true" style={{ display: "block" }}>
-    <path fillRule="evenodd" clipRule="evenodd" d="M6.66704 1.3999C3.75835 1.3999 1.40039 3.75787 1.40039 6.66657C1.40039 9.57527 3.75835 11.9332 6.66704 11.9332C7.90523 11.9332 9.04363 11.5059 9.94282 10.7908L13.2428 14.0908C13.4772 14.3251 13.8571 14.3251 14.0914 14.0908C14.3257 13.8565 14.3257 13.4766 14.0914 13.2423L10.7913 9.94223C11.5064 9.04306 11.9337 7.90471 11.9337 6.66657C11.9337 3.75787 9.57573 1.3999 6.66704 1.3999ZM2.60039 6.66657C2.60039 4.42061 4.42109 2.5999 6.66704 2.5999C8.91299 2.5999 10.7337 4.42061 10.7337 6.66657C10.7337 8.91253 8.91299 10.7332 6.66704 10.7332C4.42109 10.7332 2.60039 8.91253 2.60039 6.66657Z" fill="#9B9B9B" />
-  </svg>
-);
 
 export default function PlacesSearchInput({
   value,
   onSelect,
   onClear,
+  onFocus,
+  onRawInputChange,
   placeholder = "장소를 검색하세요.",
   disabled,
   readOnly,
   initialCoords,
+  cityContext,
 }: PlacesSearchInputProps) {
   const apiKey = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY_WEB ?? "";
   const { isLoaded } = useLoadScript({ googleMapsApiKey: apiKey });
@@ -138,12 +125,12 @@ export default function PlacesSearchInput({
           e.preventDefault();
           e.stopPropagation();
           if (currentSelectedIndex >= 0 && currentSelectedIndex < currentSuggestions.length) {
-            handleSelectSuggestionRef.current(currentSuggestions[currentSelectedIndex]);
+            handleSelectSuggestionRef.current?.(currentSuggestions[currentSelectedIndex]);
           } else if (currentInput) {
             setSuggestions([]);
             setOpen(false);
             setMapCoords(null);
-            onSelectRef.current({ name: currentInput, placeId: manualPlaceId(currentInput), latitude: 0, longitude: 0, fromGoogle: false });
+            onSelectRef.current({ name: currentInput, placeId: manualPlaceId(currentInput), latitude: 0, longitude: 0, hasCoords: false });
           }
           setSelectedIndex(-1);
           break;
@@ -212,12 +199,13 @@ export default function PlacesSearchInput({
     setSearchError(false);
     measureContainer();
     setOpen(true);
+    onRawInputChange?.(val);
     if (val === "") {
       setSuggestions([]);
       onClear?.();
     }
     if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => fetchSuggestions(val), 350);
+    debounceRef.current = setTimeout(() => fetchSuggestions(cityContext ? `${cityContext} ${val}` : val), 350);
   };
 
   const handleSelectSuggestion = async (prediction: any) => {
@@ -238,7 +226,7 @@ export default function PlacesSearchInput({
       latitude: lat,
       longitude: lng,
       address: place.formattedAddress ?? undefined,
-      fromGoogle: true,
+      hasCoords: true,
     });
   };
   handleSelectSuggestionRef.current = handleSelectSuggestion;
@@ -250,7 +238,7 @@ export default function PlacesSearchInput({
     setSuggestions([]);
     setOpen(false);
     setMapCoords(null);
-    onSelectRef.current({ name, placeId: manualPlaceId(name), latitude: 0, longitude: 0, fromGoogle: false });
+    onSelectRef.current({ name, placeId: manualPlaceId(name), latitude: 0, longitude: 0, hasCoords: false });
   };
 
   if (readOnly) {
@@ -282,7 +270,7 @@ export default function PlacesSearchInput({
           }}
         >
           {suggestions.length > 0 && (
-            <div style={css.header}>검색 결과 · {suggestions.length}</div>
+            <div style={css.header}>검색 결과</div>
           )}
           {!loading && searchError && inputValue.trim().length > 0 && (
             <div style={css.noResult}>
@@ -299,11 +287,11 @@ export default function PlacesSearchInput({
               key={i}
               data-idx={i}
               style={{ ...css.item, background: selectedIndex === i ? colors.gray200 : "transparent" }}
-              onMouseDown={() => handleSelectSuggestion(prediction)}
+              onMouseDown={(e) => { e.preventDefault(); handleSelectSuggestion(prediction); }}
               onMouseEnter={() => setSelectedIndex(i)}
               onMouseLeave={() => setSelectedIndex(-1)}
             >
-              <span style={css.iconWrap}>{PIN_ICON}</span>
+              <span style={css.iconWrap}><LocationIcon width={16} height={16} /></span>
               <div style={css.textWrap}>
                 <div style={css.mainText}>
                   {prediction.mainText?.text ?? prediction.text?.text ?? ""}
@@ -318,12 +306,12 @@ export default function PlacesSearchInput({
             <div
               data-idx={suggestions.length}
               style={{ ...css.item, alignItems: "center", padding: "12px 12px 8px", background: selectedIndex === suggestions.length ? colors.gray200 : "transparent" }}
-              onMouseDown={handleManualSelect}
+              onMouseDown={(e) => { e.preventDefault(); handleManualSelect(); }}
               onMouseEnter={() => setSelectedIndex(suggestions.length)}
               onMouseLeave={() => setSelectedIndex(-1)}
             >
               <span style={{ ...css.iconWrap, color: colors.primary, paddingTop: 0 }}>
-                {PLUS_ICON}
+                <PlusIcon width={16} height={16} />
               </span>
               <div style={css.textWrap}>
                 <div style={{ ...css.mainText, color: colors.primary }}>
@@ -349,12 +337,22 @@ export default function PlacesSearchInput({
           value={inputValue}
           onChangeText={handleChangeText}
           onFocus={() => {
+            onFocus?.();
             if (!mapCoords && (suggestions.length > 0 || inputValue.trim().length > 0)) {
               measureContainer();
               setOpen(true);
             }
           }}
-          onBlur={() => setTimeout(() => { setOpen(false); setSelectedIndex(-1); }, 150)}
+          onBlur={() => setTimeout(() => {
+            setOpen(false);
+            setSelectedIndex(-1);
+            const current = (inputRef.current as HTMLInputElement | null)?.value.trim() ?? inputValue.trim();
+            if (current && current !== (value ?? "")) {
+              setSuggestions([]);
+              setMapCoords(null);
+              onSelectRef.current({ name: current, placeId: manualPlaceId(current), latitude: 0, longitude: 0, hasCoords: false });
+            }
+          }, 150)}
           editable={!disabled}
           autoComplete="off"
         />
@@ -362,7 +360,7 @@ export default function PlacesSearchInput({
           {loading ? (
             <ActivityIndicator size={14} color={colors.gray600} />
           ) : (
-            SEARCH_ICON
+            <SearchIcon width={16} height={16} />
           )}
         </View>
       </View>

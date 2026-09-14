@@ -38,6 +38,7 @@ import {
   Text,
   View,
 } from "react-native";
+import { KeyboardAwareScrollView, type KeyboardAwareScrollViewRef } from "react-native-keyboard-controller";
 import BedIcon from "../../../../assets/mobile_bed.svg";
 import CalendarIcon from "../../../../assets/mobile_calendar_black.svg";
 import CarIcon from "../../../../assets/mobile_car.svg";
@@ -112,7 +113,7 @@ export default function AddExpenseModal({
   };
   const [pendingFiles, setPendingFiles] = useState<LocalFile[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const scrollRef = useRef<ScrollView>(null);
+  const scrollRef = useRef<KeyboardAwareScrollViewRef>(null);
   const isSubmittingRef = useRef(false);
   const [isAiAnalyzing, setIsAiAnalyzing] = useState(false);
   const [aiAnalyzeError, setAiAnalyzeError] = useState<string | null>(null);
@@ -286,12 +287,13 @@ export default function AddExpenseModal({
         </Pressable>
       </View>
 
-      <ScrollView
+      <KeyboardAwareScrollView
         ref={scrollRef}
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
+        bottomOffset={40}
       >
         <View style={styles.inputGroup}>
           <Text style={styles.label}>카테고리 설정</Text>
@@ -445,7 +447,7 @@ export default function AddExpenseModal({
           onRetryAnalyze={() => lastAiSelection && handleAiAnalyzePress(lastAiSelection)}
           isAiAnalyzeSuccess={!!aiModalResult?.success && !aiAnalyzeError}
         />
-      </ScrollView>
+      </KeyboardAwareScrollView>
 
       <FloatingFooter
         primaryLabel={isSubmitting ? "저장 중..." : "저장"}

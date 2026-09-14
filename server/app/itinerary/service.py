@@ -4,7 +4,9 @@ from app.attachments.models import AttachmentEntityType
 from app.attachments.repository import AttachmentRepository
 from app.attachments.service import cascade_delete_attachments
 from app.auth.deps import CurrentUser
+from app.database.deps import SessionDep
 from app.expenses.repository import ExpenseRepository
+from app.locations.repository import delete_location
 from app.plans.repository import PlanRepository
 from app.storage.deps import S3ClientDep
 from app.utils.dependency import dependency
@@ -17,6 +19,7 @@ from .schemas import ItineraryCreate, ItineraryRead, ItineraryUpdate
 @dependency
 class ItineraryService:
     current_user: CurrentUser
+    session: SessionDep
     itinerary_repository: ItineraryRepository
     plan_repository: PlanRepository
     expense_repository: ExpenseRepository
@@ -42,6 +45,7 @@ class ItineraryService:
             city=itinerary_data.city,
             location_id=itinerary_data.location_id,
             plan_id=itinerary_data.plan_id,
+            category=itinerary_data.category.value if itinerary_data.category else None,
         )
 
         created_itinerary = await self.itinerary_repository.save(
@@ -126,8 +130,15 @@ class ItineraryService:
             itinerary.country = update_data.country
         if update_data.city is not None:
             itinerary.city = update_data.city
-        if update_data.location_id is not None:
+        if "location_id" in update_data.model_fields_set:
+            old_location_id = itinerary.location_id
             itinerary.location_id = update_data.location_id
+            if old_location_id and update_data.location_id is None:
+                await delete_location(self.session, old_location_id)
+        if "category" in update_data.model_fields_set:
+            itinerary.category = (
+                update_data.category.value if update_data.category else None
+            )
 
         updated_itinerary = await self.itinerary_repository.save(itinerary=itinerary)
 
@@ -157,6 +168,12 @@ class ItineraryService:
                     status_code=403, detail="일정 수정 권한이 없습니다."
                 )
 
+        location_id_to_delete = itinerary.location_id
+
+        if location_id_to_delete:
+            itinerary.location_id = None
+            await self.itinerary_repository.save(itinerary=itinerary)
+
         await self.expense_repository.soft_delete_by_itinerary_id(
             itinerary_id=itinerary_id
         )
@@ -167,3 +184,6 @@ class ItineraryService:
             s3_client=self.s3_client,
         )
         await self.itinerary_repository.remove(itinerary_id=itinerary_id)
+
+        if location_id_to_delete:
+            await delete_location(self.session, location_id_to_delete)

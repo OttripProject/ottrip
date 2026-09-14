@@ -7,7 +7,7 @@ import { useFilePicker } from "@/hooks/useFilePicker";
 import { accommodationsApi } from "@/services/accommodations";
 import { analyzeDocumentUpload } from "@/services/aiDocument";
 import { attachmentsApi } from "@/services/attachments";
-import { isLocationStale, locationsApi } from "@/services/locations";
+import { isLocationStale, locationsApi, manualPlaceId } from "@/services/locations";
 import type {
   AiDocumentItemDraft,
   Attachment,
@@ -44,6 +44,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from "react-native";
 import CalendarIcon from "../../../../assets/calender.svg";
@@ -139,11 +140,11 @@ export default function AccommodationItem({
   const [showWarning, setShowWarning] = useState(false);
   const [warningMessage, setWarningMessage] = useState("");
   const [formData, setFormData] = useState({
-    name: accommodation?.name || "",
-    place: accommodation?.location?.name || "",
-    locationId: accommodation?.location?.id as number | undefined,
-    country: accommodation?.country || initialAutoFill?.country || "",
-    city: accommodation?.city || initialAutoFill?.city || "",
+    name: accommodation?.name || draft?.name || "",
+    place: accommodation?.location?.name || draft?.place || "",
+    locationId: (accommodation?.location?.id ?? draft?.locationId) as number | undefined,
+    country: accommodation?.country || draft?.country || initialAutoFill?.country || "",
+    city: accommodation?.city || draft?.city || initialAutoFill?.city || "",
     checkin_date:
       accommodation?.checkinDate ||
       draft?.checkinDate ||
@@ -165,6 +166,8 @@ export default function AccommodationItem({
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isSubmittingRef = useRef(false);
+  const locationDraftRef = useRef<PlaceResult | null>(null);
+  const rawLocationTextRef = useRef<string>("");
 
   const [showCheckinDatePicker, setShowCheckinDatePicker] = useState(false);
   const [showCheckoutDatePicker, setShowCheckoutDatePicker] = useState(false);
@@ -481,13 +484,52 @@ export default function AccommodationItem({
     isSubmittingRef.current = true;
     setIsSubmitting(true);
     try {
+      // 장소 draft → 저장 시점에 create/update
+      let finalLocationId = formData.locationId;
+      const draft = locationDraftRef.current;
+      if (draft) {
+        try {
+          if (typeof finalLocationId === "number") {
+            await locationsApi.updateLocation(finalLocationId, {
+              name: draft.name, placeId: draft.placeId, latitude: draft.latitude, longitude: draft.longitude, address: draft.address, hasCoords: draft.hasCoords,
+            });
+          } else {
+            const loc = await locationsApi.createLocation({
+              name: draft.name, placeId: draft.placeId, latitude: draft.latitude,
+              longitude: draft.longitude, address: draft.address, hasCoords: draft.hasCoords,
+            });
+            finalLocationId = loc.id;
+          }
+        } catch {
+          finalLocationId = formData.locationId;
+        }
+        locationDraftRef.current = null;
+      } else {
+        const rawText = rawLocationTextRef.current.trim() || formData.place.trim();
+        const originalName = accommodation?.location?.name ?? "";
+        if (rawText && rawText !== originalName) {
+          try {
+            if (typeof finalLocationId === "number") {
+              await locationsApi.updateLocation(finalLocationId, {
+                name: rawText, placeId: manualPlaceId(rawText), latitude: 0, longitude: 0, address: undefined, hasCoords: false,
+              });
+            } else {
+              const loc = await locationsApi.createLocation({
+                name: rawText, placeId: manualPlaceId(rawText), latitude: 0, longitude: 0, hasCoords: false,
+              });
+              finalLocationId = loc.id;
+            }
+          } catch { /* ignore */ }
+        }
+      }
+
       let savedAccommodation;
       if (accommodation && accommodation.id) {
         savedAccommodation = await accommodationsApi.updateAccommodation(
           accommodation.id,
           {
             name: formData.name,
-            locationId: formData.locationId,
+            locationId: finalLocationId,
             country: formData.country?.trim() || undefined,
             city: formData.city?.trim() || undefined,
             checkinDate: formData.checkin_date,
@@ -509,7 +551,7 @@ export default function AccommodationItem({
         savedAccommodation = await accommodationsApi.createAccommodation({
           planId: planId,
           name: formData.name,
-          locationId: formData.locationId,
+          locationId: finalLocationId,
           country: formData.country?.trim() || undefined,
           city: formData.city?.trim() || undefined,
           checkinDate: formData.checkin_date,
@@ -685,20 +727,9 @@ export default function AccommodationItem({
     })();
   }, [accommodation?.location?.id]);
 
-  const handlePlaceSelect = useCallback(async (place: PlaceResult) => {
-    try {
-      const location = await locationsApi.createLocation({
-        name: place.name,
-        placeId: place.placeId,
-        latitude: place.latitude,
-        longitude: place.longitude,
-        address: place.address,
-        fromGoogle: place.fromGoogle,
-      });
-      setFormData(prev => ({ ...prev, place: location.name, locationId: location.id }));
-    } catch {
-      setFormData(prev => ({ ...prev, place: place.name, locationId: undefined }));
-    }
+  const handlePlaceSelect = useCallback((place: PlaceResult) => {
+    locationDraftRef.current = place;
+    setFormData(prev => ({ ...prev, place: place.name }));
   }, []);
 
   return (
@@ -749,20 +780,39 @@ export default function AccommodationItem({
 
           <View style={styles.inputGroup}>
             <Text style={styles.label}>내용</Text>
-            <Input
-              variant="filled"
-              placeholder={PLACEHOLDERS.itinerary.descriptionForm}
-              value={formData.description}
-              onChangeText={text =>
-                !readOnly && setFormData({ ...formData, description: text })
-              }
-              multiline
-              numberOfLines={3}
-              textAlignVertical="top"
-              style={readOnly ? styles.readOnlyTextArea : styles.textArea}
-              placeholderTextColor={colors.gray600}
-              editable={!readOnly}
-            />
+            {Platform.OS === "web" ? (
+              <TextInput
+                multiline
+                numberOfLines={3}
+                textAlignVertical="top"
+                value={formData.description}
+                onChangeText={text =>
+                  !readOnly && setFormData({ ...formData, description: text })
+                }
+                placeholder={PLACEHOLDERS.itinerary.descriptionForm}
+                placeholderTextColor={colors.gray600}
+                editable={!readOnly}
+                style={[
+                  readOnly ? styles.readOnlyTextArea : styles.textArea,
+                  { resize: "vertical", overflow: "auto" } as any,
+                ]}
+              />
+            ) : (
+              <Input
+                variant={readOnly ? "outlined" : "filled"}
+                multiline
+                numberOfLines={3}
+                textAlignVertical="top"
+                placeholder={PLACEHOLDERS.itinerary.descriptionForm}
+                value={formData.description}
+                onChangeText={text =>
+                  !readOnly && setFormData({ ...formData, description: text })
+                }
+                style={readOnly ? styles.readOnlyTextArea : styles.textArea}
+                placeholderTextColor={colors.gray600}
+                editable={!readOnly}
+              />
+            )}
           </View>
 
           <View
@@ -811,12 +861,14 @@ export default function AccommodationItem({
                 <PlacesSearchInput
                   value={formData.place}
                   onSelect={handlePlaceSelect}
-                  onClear={() => setFormData(prev => ({ ...prev, place: "", locationId: undefined }))}
+                  onClear={() => { locationDraftRef.current = null; rawLocationTextRef.current = ""; setFormData(prev => ({ ...prev, place: "", locationId: undefined })); }}
+                  onRawInputChange={(t) => { locationDraftRef.current = null; rawLocationTextRef.current = t; }}
                   placeholder={PLACEHOLDERS.accommodation.place}
                   disabled={readOnly}
                   readOnly={readOnly}
+                  cityContext={formData.city || formData.country || undefined}
                   initialCoords={
-                    accommodation?.location?.fromGoogle
+                    accommodation?.location?.hasCoords
                       ? { lat: accommodation.location.latitude, lng: accommodation.location.longitude }
                       : undefined
                   }
@@ -1224,6 +1276,7 @@ export default function AccommodationItem({
 const styles = StyleSheet.create({
   wrapper: {
     flex: 1,
+    minHeight: 0,
   },
   container: {
     flex: 1,
@@ -1408,7 +1461,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.gray200,
     borderWidth: 1,
     borderColor: colors.gray400,
-    height: 80,
+    minHeight: 80,
     borderRadius: radii.md,
     paddingHorizontal: spacing.md,
     paddingVertical: 10,

@@ -22,12 +22,25 @@ import {
   ExpenseCurrency,
   categoryLabels,
 } from "@/types/expense";
+import { ItineraryCategory, itineraryCategoryColors, itineraryCategoryLabels } from "@/types/itinerary";
+
+const itineraryCategoryToExpenseCategory: Partial<Record<ItineraryCategory, ExpenseCategory>> = {
+  [ItineraryCategory.MEAL]: ExpenseCategory.FOOD,
+  [ItineraryCategory.TRANSPORT]: ExpenseCategory.TRANSPORT,
+  [ItineraryCategory.ACTIVITY]: ExpenseCategory.ACTIVITY,
+  [ItineraryCategory.SIGHTSEEING]: ExpenseCategory.ACTIVITY,
+  [ItineraryCategory.SHOPPING]: ExpenseCategory.SHOPPING,
+  [ItineraryCategory.ETC]: ExpenseCategory.ETC,
+};
 import CalendarModal from "@/ui/components/CalendarModal.native";
+import CurrencyToggle from "@/ui/components/CurrencyToggle";
 import FloatingFooter from "@/ui/components/FloatingFooter.native";
 import FullScreenModal from "@/ui/components/FullScreenModal.native";
 import { TimeModal } from "@/ui/components/TimeModal.native";
 import AttachmentSection from "@/ui/components/attachmentSection.native";
 import Input from "@/ui/components/input/Input";
+import PlacesSearchInput, { type PlaceResult } from "@/ui/components/PlacesSearchInput";
+import { locationsApi, manualPlaceId } from "@/services/locations";
 import { colors } from "@/ui/tokens/colors";
 import { textStyles, typography } from "@/ui/tokens/typography";
 import { formatAmountWithCommas, normalizeAmount } from "@/utils/amountUtils";
@@ -37,13 +50,14 @@ import { useEffect, useRef, useState } from "react";
 import {
   Alert,
   Animated,
-  Keyboard,
+  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
   View,
 } from "react-native";
+import { KeyboardAwareScrollView, type KeyboardAwareScrollViewRef } from "react-native-keyboard-controller";
 import BedIcon from "../../../../assets/mobile_bed.svg";
 import CalendarIcon from "../../../../assets/mobile_calendar_black.svg";
 import CarIcon from "../../../../assets/mobile_car.svg";
@@ -53,8 +67,28 @@ import ShoppingIcon from "../../../../assets/mobile_shopping.svg";
 import TicketIcon from "../../../../assets/mobile_ticket.svg";
 import TimeIcon from "../../../../assets/mobile_time.svg";
 import CloseIcon from "../../../../assets/x.svg";
+import ModalCloseIcon from "../../../../assets/mobile_close.svg";
+import DownArrowIcon from "../../../../assets/down_arrow.svg";
+import UpperArrowIcon from "../../../../assets/upper_arrow.svg";
+import InfoCircleIcon from "../../../../assets/info_circle.svg";
 import CityPicker from "@/ui/components/pickers/CityPicker";
 import CountryPicker from "@/ui/components/pickers/CountryPicker";
+
+export interface ItineraryEditPrefill {
+  title?: string;
+  description?: string;
+  location?: string;
+  locationId?: number;
+  locationLat?: number;
+  locationLng?: number;
+  locationAddress?: string;
+  country?: string;
+  city?: string;
+  itineraryDate?: string;
+  startTime?: string;
+  endTime?: string;
+  category?: ItineraryCategory;
+}
 
 interface ItineraryEditModalProps {
   visible: boolean;
@@ -64,11 +98,15 @@ interface ItineraryEditModalProps {
   defaultDate?: string;
   defaultCountry?: string;
   defaultCity?: string;
+  defaultStartTime?: string;
+  defaultEndTime?: string;
+  prefill?: ItineraryEditPrefill;
   embedded?: boolean;
   onSave?: (itinerary: Itinerary) => void;
   onDelete?: (itineraryId: number) => void;
   pendingAiResult?: { result: DocumentUploadAnalyzeResponse; filename?: string; pendingFiles?: LocalFile[] } | null;
   onRouteMismatchResult?: (result: DocumentUploadAnalyzeResponse, filename?: string, pendingFiles?: LocalFile[]) => void;
+  showRecommendToast?: boolean;
 }
 
 const addOneHour = (time24: string): string => {
@@ -86,28 +124,22 @@ export default function ItineraryEditModal({
   defaultDate,
   defaultCountry,
   defaultCity,
+  defaultStartTime,
+  defaultEndTime,
+  prefill,
   embedded,
   onSave,
   onDelete,
   pendingAiResult,
   onRouteMismatchResult,
+  showRecommendToast,
 }: ItineraryEditModalProps) {
-  const scrollRef = useRef<ScrollView>(null);
-  const currencyOpacity = useRef(new Animated.Value(1)).current;
-  const [keyboardHeight, setKeyboardHeight] = useState(0);
-
-  useEffect(() => {
-    const show = Keyboard.addListener("keyboardDidShow", e => {
-      setKeyboardHeight(e.endCoordinates.height);
-    });
-    const hide = Keyboard.addListener("keyboardDidHide", () => {
-      setKeyboardHeight(0);
-    });
-    return () => {
-      show.remove();
-      hide.remove();
-    };
-  }, []);
+  const scrollRef = useRef<KeyboardAwareScrollViewRef>(null);
+  const locationDraftRef = useRef<PlaceResult | null>(null);
+  const rawLocationTextRef = useRef<string>("");
+  const prefillCoordsRef = useRef<{ lat: number; lng: number; address?: string; name: string; hasCoords: boolean } | null>(null);
+  const recommendToastAnim = useRef(new Animated.Value(0)).current;
+  const recommendToastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [formData, setFormData] = useState({
     title: "",
@@ -115,6 +147,7 @@ export default function ItineraryEditModal({
     country: "",
     city: "",
     location: "",
+    locationId: undefined as number | null | undefined,
     itineraryDate: dayjs().format("YYYY-MM-DD"),
     startTime: "09:00",
     endTime: "10:00",
@@ -127,6 +160,8 @@ export default function ItineraryEditModal({
   const [existingExpenseId, setExistingExpenseId] = useState<number | null>(
     null,
   );
+  const [selectedCategory, setSelectedCategory] = useState<ItineraryCategory | null>(null);
+  const [categoryOpen, setCategoryOpen] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showStartTimeModal, setShowStartTimeModal] = useState(false);
   const [showEndTimeModal, setShowEndTimeModal] = useState(false);
@@ -190,10 +225,28 @@ export default function ItineraryEditModal({
   };
 
   useEffect(() => {
+    if (visible && showRecommendToast) {
+      recommendToastAnim.setValue(0);
+      Animated.timing(recommendToastAnim, { toValue: 1, duration: 300, useNativeDriver: true }).start();
+      if (recommendToastTimer.current) clearTimeout(recommendToastTimer.current);
+      recommendToastTimer.current = setTimeout(() => {
+        Animated.timing(recommendToastAnim, { toValue: 0, duration: 300, useNativeDriver: true }).start();
+      }, 4000);
+    }
+    return () => {
+      if (recommendToastTimer.current) clearTimeout(recommendToastTimer.current);
+    };
+  }, [visible, showRecommendToast]);
+
+  useEffect(() => {
     if (!visible) {
       formInitializedRef.current = false;
+      locationDraftRef.current = null;
+      rawLocationTextRef.current = "";
+      prefillCoordsRef.current = null;
       setAiModalResult(null);
       setAiApplyLabel(undefined);
+      setCategoryOpen(false);
       return;
     }
     if (formInitializedRef.current) return;
@@ -212,6 +265,7 @@ export default function ItineraryEditModal({
             country: latestItinerary.country || "",
             city: latestItinerary.city || "",
             location: latestItinerary.location?.name || "",
+            locationId: latestItinerary.location?.id,
             itineraryDate:
               latestItinerary.itineraryDate || dayjs().format("YYYY-MM-DD"),
             startTime: latestItinerary.startTime
@@ -221,6 +275,7 @@ export default function ItineraryEditModal({
               ? latestItinerary.endTime.substring(0, 5)
               : "10:00",
           });
+          setSelectedCategory((latestItinerary.category as ItineraryCategory) ?? null);
           const firstExpense = expenses[0];
           if (firstExpense) {
             const amountInt = Math.floor(Number(firstExpense.amount));
@@ -235,12 +290,14 @@ export default function ItineraryEditModal({
             setExistingExpenseId(null);
           }
         } catch {
+          setSelectedCategory((itinerary.category as ItineraryCategory) ?? null);
           setFormData({
             title: itinerary.title || "",
             description: itinerary.description || "",
             country: itinerary.country || "",
             city: itinerary.city || "",
             location: itinerary.location?.name || "",
+            locationId: itinerary.location?.id,
             itineraryDate:
               itinerary.itineraryDate || dayjs().format("YYYY-MM-DD"),
             startTime: itinerary.startTime
@@ -256,22 +313,36 @@ export default function ItineraryEditModal({
       };
       loadLatest();
     } else {
-      const initDate = defaultDate || dayjs().format("YYYY-MM-DD");
+      const initDate = prefill?.itineraryDate || defaultDate || dayjs().format("YYYY-MM-DD");
       setFormData({
-        title: "",
-        description: "",
-        country: defaultCountry || "",
-        city: defaultCity || "",
-        location: "",
+        title: prefill?.title || "",
+        description: prefill?.description || "",
+        country: prefill?.country || defaultCountry || "",
+        city: prefill?.city || defaultCity || "",
+        location: prefill?.location || "",
+        locationId: prefill?.locationId,
         itineraryDate: initDate,
-        startTime: "09:00",
-        endTime: "10:00",
+        startTime: prefill?.startTime || defaultStartTime || "09:00",
+        endTime: prefill?.endTime || defaultEndTime || "10:00",
       });
+      setSelectedCategory(prefill?.category ?? null);
       setExpenseData({ amount: "", category: ExpenseCategory.FOOD, currency: ExpenseCurrency.KRW });
       setExistingExpenseId(null);
+      if (prefill?.location) {
+        const hasCoords = !!(prefill.locationLat && prefill.locationLng);
+        prefillCoordsRef.current = {
+          lat: prefill.locationLat ?? 0,
+          lng: prefill.locationLng ?? 0,
+          address: prefill.locationAddress,
+          name: prefill.location,
+          hasCoords,
+        };
+      } else {
+        prefillCoordsRef.current = null;
+      }
     }
     setPendingFiles([]);
-  }, [visible, itinerary, defaultDate, defaultCountry, defaultCity]);
+  }, [visible, itinerary, defaultDate, defaultCountry, defaultCity, prefill]);
 
   useEffect(() => {
     if (!visible) return;
@@ -349,16 +420,32 @@ export default function ItineraryEditModal({
   };
 
   useEffect(() => {
+    if (existingExpenseId !== null) return;
+    const mapped = selectedCategory
+      ? itineraryCategoryToExpenseCategory[selectedCategory]
+      : undefined;
+    if (mapped) {
+      setExpenseData(prev => ({ ...prev, category: mapped }));
+    }
+  }, [selectedCategory]);
+
+  useEffect(() => {
     if (visible && pendingAiResult) {
       const draft = pendingAiResult.result.draft;
       if (draft?.itemType === "itinerary") {
-        applyItineraryDraftFromAi(draft, setFormData, () => {});
+        applyItineraryDraftFromAi(draft, setFormData as any, () => {});
       }
       if (pendingAiResult.pendingFiles?.length) {
         setPendingFiles(pendingAiResult.pendingFiles);
       }
     }
   }, [visible, pendingAiResult]);
+
+  const handlePlaceSelect = (place: PlaceResult) => {
+    locationDraftRef.current = place;
+    prefillCoordsRef.current = null;
+    setFormData(prev => ({ ...prev, location: place.name }));
+  };
 
   const handleExpenseAmountChange = (text: string) => {
     const formatted = formatAmountWithCommas(text);
@@ -373,16 +460,74 @@ export default function ItineraryEditModal({
 
     setIsSubmitting(true);
     try {
+      // 장소 draft → 저장 시점에 create/update
+      let finalLocationId = formData.locationId;
+      const draft = locationDraftRef.current;
+      if (draft) {
+        try {
+          if (typeof finalLocationId === "number") {
+            await locationsApi.updateLocation(finalLocationId, {
+              name: draft.name, placeId: draft.placeId, latitude: draft.latitude, longitude: draft.longitude, address: draft.address, hasCoords: draft.hasCoords,
+            });
+          } else {
+            const loc = await locationsApi.createLocation({
+              name: draft.name, placeId: draft.placeId, latitude: draft.latitude,
+              longitude: draft.longitude, address: draft.address, hasCoords: draft.hasCoords,
+            });
+            finalLocationId = loc.id;
+          }
+        } catch {
+          finalLocationId = formData.locationId;
+        }
+        locationDraftRef.current = null;
+      } else {
+        const rawTyped = rawLocationTextRef.current.trim();
+        const rawText = rawTyped || formData.location.trim();
+        const originalName = itinerary?.location?.name ?? "";
+        if (rawText && rawText !== originalName && rawTyped) {
+          try {
+            if (typeof finalLocationId === "number") {
+              await locationsApi.updateLocation(finalLocationId, {
+                name: rawText, placeId: manualPlaceId(rawText), latitude: 0, longitude: 0, address: undefined, hasCoords: false,
+              });
+            } else {
+              const loc = await locationsApi.createLocation({
+                name: rawText, placeId: manualPlaceId(rawText), latitude: 0, longitude: 0, hasCoords: false,
+              });
+              finalLocationId = loc.id;
+            }
+          } catch { /* ignore */ }
+        } else if (!itinerary && !finalLocationId && prefillCoordsRef.current) {
+          const pc = prefillCoordsRef.current;
+          try {
+            const nameHash = [...(pc.name || formData.location)].reduce((a, c) => (Math.imul(31, a) + c.charCodeAt(0)) >>> 0, 0).toString(16);
+            const loc = await locationsApi.createLocation({
+              name: pc.name || formData.location,
+              placeId: `m_${nameHash}_${Math.random().toString(16).slice(2, 10)}`,
+              latitude: pc.lat,
+              longitude: pc.lng,
+              address: pc.address,
+              hasCoords: pc.hasCoords,
+            });
+            finalLocationId = loc.id;
+          } catch {}
+          prefillCoordsRef.current = null;
+        }
+      }
+
       let savedItinerary: Itinerary;
       if (itinerary) {
         savedItinerary = await itinerariesApi.updateItinerary(itinerary.id, {
           ...formData,
-          planId,
+          locationId: finalLocationId,
+          category: selectedCategory,
         });
       } else {
         savedItinerary = await itinerariesApi.createItinerary({
           ...formData,
+          locationId: finalLocationId ?? undefined,
           planId,
+          category: selectedCategory !== null ? selectedCategory : undefined,
         });
       }
 
@@ -500,14 +645,13 @@ export default function ItineraryEditModal({
           </Pressable>
         </View>
       )}
-      <ScrollView
+      <KeyboardAwareScrollView
         ref={scrollRef}
         style={styles.scrollView}
-        contentContainerStyle={[
-          styles.scrollContent,
-          { paddingBottom: keyboardHeight || 24 },
-        ]}
+        contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        bottomOffset={40}
       >
         {/* 입력 필드들 */}
         <View style={styles.form}>
@@ -521,6 +665,66 @@ export default function ItineraryEditModal({
               onChangeText={text => setFormData({ ...formData, title: text })}
               style={[styles.input, !itinerary && styles.inputBorderless]}
             />
+          </View>
+
+          {/* 카테고리 */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>카테고리</Text>
+            <Pressable
+              onPress={() => setCategoryOpen(true)}
+              style={[styles.categoryTrigger, !!itinerary && styles.categoryTriggerBordered]}
+            >
+              {selectedCategory && (
+                <View style={[styles.dot, { backgroundColor: itineraryCategoryColors[selectedCategory] }]} />
+              )}
+              <Text style={[styles.categoryTriggerText, !selectedCategory && styles.categoryTriggerTextNone]}>
+                {selectedCategory ? itineraryCategoryLabels[selectedCategory] : "카테고리 선택"}
+              </Text>
+              <DownArrowIcon width={10} height={10} color={colors.gray600} />
+            </Pressable>
+            <Modal
+              visible={categoryOpen}
+              transparent
+              animationType="fade"
+              onRequestClose={() => setCategoryOpen(false)}
+            >
+              <Pressable style={styles.categoryModalOverlay} onPress={() => setCategoryOpen(false)}>
+                <Pressable style={styles.categoryModalSheet} onPress={e => e.stopPropagation()}>
+                  <View style={styles.categoryModalHeader}>
+                    <Text style={styles.categoryModalTitle}>카테고리</Text>
+                    <Pressable onPress={() => setCategoryOpen(false)} hitSlop={12}>
+                      <ModalCloseIcon width={24} height={24} color={colors.gray500} />
+                    </Pressable>
+                  </View>
+                  <View style={styles.categoryModalList}>
+                    {[null, ...Object.values(ItineraryCategory)].map(cat => (
+                      <Pressable
+                        key={cat ?? "none"}
+                        onPress={() => { setSelectedCategory(cat); setCategoryOpen(false); }}
+                        style={({ pressed }) => [
+                          styles.categoryModalOption,
+                          selectedCategory === cat && styles.categoryModalOptionSelected,
+                          pressed && styles.categoryModalOptionPressed,
+                        ]}
+                      >
+                        {cat ? (
+                          <View style={[styles.dot, { backgroundColor: itineraryCategoryColors[cat] }]} />
+                        ) : (
+                          <View style={styles.dotOutline} />
+                        )}
+                        <Text style={[
+                          styles.categoryModalOptionText,
+                          !cat && styles.categoryOptionTextNone,
+                          selectedCategory === cat && styles.categoryModalOptionTextSelected,
+                        ]}>
+                          {cat ? itineraryCategoryLabels[cat] : "선택 안 함"}
+                        </Text>
+                      </Pressable>
+                    ))}
+                  </View>
+                </Pressable>
+              </Pressable>
+            </Modal>
           </View>
 
           {/* 내용 (메모) */}
@@ -577,12 +781,21 @@ export default function ItineraryEditModal({
           {/* 장소 */}
           <View style={styles.inputGroup}>
             <Text style={styles.label}>장소 (주소)</Text>
-            <Input
+            <PlacesSearchInput
               value={formData.location}
-              onChangeText={text =>
-                setFormData({ ...formData, location: text })
+              onSelect={handlePlaceSelect}
+              onClear={() => { locationDraftRef.current = null; rawLocationTextRef.current = ""; prefillCoordsRef.current = null; setFormData(prev => ({ ...prev, location: "", locationId: null })); }}
+              onRawInputChange={(t) => { locationDraftRef.current = null; rawLocationTextRef.current = t; prefillCoordsRef.current = null; }}
+              bordered={!!itinerary}
+              placeholder="장소를 검색하세요."
+              cityContext={formData.city || formData.country || undefined}
+              initialCoords={
+                itinerary?.location?.hasCoords
+                  ? { lat: itinerary.location.latitude, lng: itinerary.location.longitude }
+                  : prefill?.locationLat != null && prefill?.locationLng != null
+                    ? { lat: prefill.locationLat, lng: prefill.locationLng }
+                    : undefined
               }
-              style={[styles.input, !itinerary && styles.inputBorderless]}
             />
           </View>
 
@@ -701,41 +914,12 @@ export default function ItineraryEditModal({
                   variant="filled"
                   containerStyle={styles.amountInputContainer}
                   style={styles.amountInputStyle}
-                  onFocus={() => {
-                    setTimeout(
-                      () => scrollRef.current?.scrollToEnd({ animated: true }),
-                      100,
-                    );
-                  }}
                 />
-                <Pressable
-                  style={styles.currencyBadge}
-                  onPress={() => {
-                    Animated.timing(currencyOpacity, {
-                      toValue: 0,
-                      duration: 100,
-                      useNativeDriver: true,
-                    }).start(() => {
-                      setExpenseData(prev => ({
-                        ...prev,
-                        currency:
-                          prev.currency === ExpenseCurrency.KRW
-                            ? ExpenseCurrency.USD
-                            : ExpenseCurrency.KRW,
-                      }));
-                      Animated.timing(currencyOpacity, {
-                        toValue: 1,
-                        duration: 150,
-                        useNativeDriver: true,
-                      }).start();
-                    });
-                  }}
-                  hitSlop={8}
-                >
-                  <Animated.Text style={[styles.amountSuffix, { opacity: currencyOpacity }]}>
-                    {expenseData.currency === ExpenseCurrency.KRW ? "원" : "달러"}
-                  </Animated.Text>
-                </Pressable>
+                <CurrencyToggle
+                  value={expenseData.currency}
+                  onChange={c => setExpenseData(prev => ({ ...prev, currency: c }))}
+                  variant="primary"
+                />
               </View>
             </View>
             <View style={styles.inputGroup}>
@@ -848,7 +1032,7 @@ export default function ItineraryEditModal({
             />
           </View>
         </View>
-      </ScrollView>
+      </KeyboardAwareScrollView>
 
       <FloatingFooter
         primaryLabel={
@@ -876,7 +1060,7 @@ export default function ItineraryEditModal({
         if (inferredType !== "itinerary" && onRouteMismatchResult && aiModalResult) {
           onRouteMismatchResult({ ...aiModalResult, draft }, aiAnalyzeFileName, pendingFiles);
         } else if (draft) {
-          applyItineraryDraftFromAi(draft, setFormData, () => {});
+          applyItineraryDraftFromAi(draft, setFormData as any, () => {});
         }
         setAiModalResult(null);
         setAiApplyLabel(undefined);
@@ -897,6 +1081,14 @@ export default function ItineraryEditModal({
     <FullScreenModal visible={visible} onClose={() => onClose?.()}>
       {content}
       {aiModal}
+      {showRecommendToast && (
+        <Animated.View style={[styles.recommendToast, { opacity: recommendToastAnim }]} pointerEvents="none">
+          <InfoCircleIcon width={16} height={16} color={colors.white} style={{ flexShrink: 0 }} />
+          <Text style={styles.recommendToastText}>
+            {"일정이 입력 되었어요. 추천 시간을 확인하고 내 일정에 맞게 조정해 보세요."}
+          </Text>
+        </Animated.View>
+      )}
     </FullScreenModal>
   );
 }
@@ -1023,8 +1215,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     borderRadius: 12,
-    paddingHorizontal: 14,
-    height: 48,
+    paddingHorizontal: 16,
+    paddingVertical: 2,
+    gap: 8,
     backgroundColor: `${colors.primary}1A`,
   },
   amountInputContainer: {
@@ -1032,25 +1225,12 @@ const styles = StyleSheet.create({
   },
   amountInputStyle: {
     flex: 1,
-    height: 48,
     textAlign: "left",
     backgroundColor: "transparent",
     fontFamily: typography.fontFamily.pretendardSemiBold,
     fontSize: 14,
     paddingHorizontal: 0,
     paddingVertical: 0,
-    color: colors.primary,
-  },
-  currencyBadge: {
-    marginLeft: 4,
-    width: 44,
-    paddingVertical: 4,
-    borderRadius: 6,
-    backgroundColor: `${colors.primary}10`,
-    alignItems: "center",
-  },
-  amountSuffix: {
-    ...textStyles.h6,
     color: colors.primary,
   },
   categoryRow: {
@@ -1082,5 +1262,135 @@ const styles = StyleSheet.create({
   },
   attachmentSection: {
     marginTop: 32,
+  },
+  categoryTrigger: {
+    height: 44,
+    backgroundColor: colors.gray200,
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  categoryTriggerBordered: {
+    borderWidth: 1,
+    borderColor: colors.gray400,
+  },
+  categoryTriggerText: {
+    ...textStyles.body4,
+    flex: 1,
+    color: colors.gray900,
+  },
+  categoryTriggerTextNone: {
+    color: colors.gray600,
+  },
+  categoryChevron: {
+    ...textStyles.body6,
+    color: colors.gray600,
+  },
+  categoryModalOverlay: {
+    flex: 1,
+    backgroundColor: colors.overlayBackground,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 32,
+  },
+  categoryModalSheet: {
+    width: "100%",
+    backgroundColor: colors.white,
+    borderRadius: 16,
+    overflow: "hidden",
+  },
+  categoryModalHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 20,
+    paddingTop: 16,
+  },
+  categoryModalTitle: {
+    ...textStyles.h5,
+  },
+  categoryModalList: {
+    padding: 16,
+    gap: 8,
+  },
+  categoryModalOption: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderRadius: 12,
+    backgroundColor: colors.gray100,
+  },
+  categoryModalOptionSelected: {
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: colors.gray300,
+    shadowColor: colors.gray900,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  categoryModalOptionPressed: {
+    backgroundColor: colors.gray200,
+  },
+  categoryModalOptionText: {
+    ...textStyles.h7,
+    color: colors.gray900,
+  },
+  categoryModalOptionTextSelected: {
+    color: colors.gray900,
+  },
+  categoryOption: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
+  },
+  categoryOptionPressed: {
+    backgroundColor: colors.gray200,
+  },
+  dot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  dotOutline: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    borderWidth: 1.5,
+    borderColor: colors.gray400,
+  },
+  categoryOptionText: {
+    ...textStyles.h7,
+    color: colors.gray900,
+  },
+  categoryOptionTextNone: {
+    ...textStyles.h7,
+    color: colors.gray600,
+  },
+  recommendToast: {
+    position: "absolute",
+    bottom: 110,
+    left: 16,
+    right: 16,
+    backgroundColor: "rgba(0,0,0,0.85)",
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 8,
+  },
+  recommendToastText: {
+    ...textStyles.h7,
+    color: colors.white,
+    flex: 1,
   },
 });

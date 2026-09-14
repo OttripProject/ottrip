@@ -1,3 +1,5 @@
+import { ItineraryCategory } from "@/types/itinerary";
+
 // 공통 응답 타입
 export interface ApiResponse<T = any> {
   data: T;
@@ -66,7 +68,7 @@ export interface Location {
   latitude: number;
   longitude: number;
   address?: string;
-  fromGoogle: boolean;
+  hasCoords: boolean;
   updatedAt: string;
 }
 
@@ -76,14 +78,16 @@ export interface CreateLocationRequest {
   latitude: number;
   longitude: number;
   address?: string;
-  fromGoogle?: boolean;
+  hasCoords?: boolean;
 }
 
 export interface UpdateLocationRequest {
   name: string;
+  placeId?: string;
   latitude: number;
   longitude: number;
   address?: string;
+  hasCoords?: boolean;
 }
 
 // 일정 (Itinerary) 관련 타입
@@ -99,6 +103,7 @@ export interface Itinerary {
   endTime: string;
   planId: number;
   expenses?: Expense[] | null;
+  category?: ItineraryCategory;
 }
 
 export interface CreateItineraryRequest {
@@ -111,6 +116,7 @@ export interface CreateItineraryRequest {
   startTime: string;
   endTime: string;
   planId: number;
+  category?: ItineraryCategory;
 }
 
 export interface UpdateItineraryRequest {
@@ -118,10 +124,11 @@ export interface UpdateItineraryRequest {
   description?: string;
   country?: string;
   city?: string;
-  locationId?: number;
+  locationId?: number | null;
   itineraryDate?: string;
   startTime?: string;
   endTime?: string;
+  category?: ItineraryCategory | null;
 }
 
 // 항공 (Flight) 관련 타입

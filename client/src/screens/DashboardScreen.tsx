@@ -1,3 +1,8 @@
+import CongestionBanner, { type CongestedItem } from "@/components/CongestionBanner";
+import type { DaySuggestion, FestivalItem, NearbyAttraction, SuggestionPlace } from "@/services/tourism";
+import { tourismApi } from "@/services/tourism";
+import TourismDetailModal from "@/components/modals/TourismDetailModal";
+import SuggestionBar from "@/components/panels/SuggestionBar";
 import { useToast } from "@/contexts/ToastContext";
 import { usePlanDataQuery } from "@/hooks/usePlanDataQuery";
 import { usePlansQuery } from "@/hooks/usePlansQuery";
@@ -28,10 +33,15 @@ import {
 
 import DetailsPanel from "@/components/panels/DetailsPanel";
 import EmptyPlanPanel from "@/components/panels/EmptyPlanPanel";
+import FestivalsPanel from "@/components/panels/FestivalsPanel";
 import HeaderPanel from "@/components/panels/HeaderPanel";
 import WeeklySchedulePanel from "@/components/panels/WeeklySchedulePanel";
 import AIAssistantPanel from "@/components/panels/aiassistant/AIAssistantPanel";
 import ExpensesPanel from "@/components/panels/expenses/ExpensesPanel";
+
+import { findFestivalSlot } from "@/utils/festivalSlot";
+
+// ──────────────────────────────────────────────────────────────────────────────
 
 export default function DashboardScreen() {
   const { width } = useWindowDimensions();
@@ -55,7 +65,18 @@ export default function DashboardScreen() {
   const [newAccommodationDraft, setNewAccommodationDraft] = useState<
     any | null
   >(null);
+  const [newItineraryDraft, setNewItineraryDraft] = useState<any | null>(null);
   const [previewAccommodation, setPreviewAccommodation] = useState<any>(null);
+  const [festivals, setFestivals] = useState<FestivalItem[]>([]);
+  const [suggestFestivals, setSuggestFestivals] = useState<FestivalItem[]>([]);
+  const [suggestFestivalsLoading, setSuggestFestivalsLoading] = useState(false);
+  const [festivalsExpanded, setFestivalsExpanded] = useState(false);
+  const [congestedItems, setCongestedItems] = useState<CongestedItem[]>([]);
+  const [bannerDismissed, setBannerDismissed] = useState(false);
+  const [suggestions, setSuggestions] = useState<DaySuggestion[]>([]);
+  const [suggestionDismissed, setSuggestionDismissed] = useState(false);
+  const [selectedSuggestion, setSelectedSuggestion] = useState<NearbyAttraction | null>(null);
+  const [selectedSuggestionSlot, setSelectedSuggestionSlot] = useState<{ date: string; slotStart: string } | null>(null);
   const documentAnalyzeSeqRef = useRef(0);
   const [stagedDocumentAnalyze, setStagedDocumentAnalyze] =
     useState<StagedDocumentAnalyzePayload | null>(null);
@@ -180,6 +201,24 @@ export default function DashboardScreen() {
       }).start(() => setShowRightPanel(false));
     }
   }, [targetRight]);
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(animBottomH, {
+        toValue: Math.round((availableHeight - 16) * (festivalsExpanded ? 0.3 : 0.2)),
+        duration: 300,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: false,
+      }),
+      Animated.timing(animFestivalsFlex, {
+        toValue: festivalsExpanded ? 1 : 0.5,
+        duration: 300,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: false,
+      }),
+    ]).start();
+  }, [festivalsExpanded]);
+
   const headerHeight = 56;
   const verticalPadding = 16 + 20;
   const availableHeight = Math.max(
@@ -190,15 +229,10 @@ export default function DashboardScreen() {
           headerHeight
       : 600,
   );
-  const innerGap = 16;
-  const leftTopHeight = Math.max(
-    240,
-    Math.floor((availableHeight - innerGap) * 0.7),
-  );
-  const leftBottomHeight = Math.max(
-    160,
-    availableHeight - innerGap - leftTopHeight,
-  );
+  const animBottomH = useRef(new Animated.Value(Math.round((availableHeight - 16) * 0.2))).current;
+  const animFestivalsFlex = useRef(new Animated.Value(0.5)).current;
+  const leftTopHeight = Math.round((availableHeight - 16) * 0.8);
+  const leftBottomHeight = Math.round((availableHeight - 16) * 0.2);
 
   const plansQuery = usePlansQuery();
 
@@ -249,7 +283,89 @@ export default function DashboardScreen() {
     setOpenNewFlightForm(false);
     setStagedDocumentAnalyze(null);
     setCarryoverPendingFiles(null);
+    setFestivalsExpanded(false);
+    animBottomH.setValue(Math.round((availableHeight - 16) * 0.2));
+    animFestivalsFlex.setValue(0.5);
   }, [selectedPlanId]);
+
+  const itineraryKey = planData.itineraries
+    .map((it: any) => `${it.id}-${it.location?.id ?? ""}`)
+    .join(",");
+
+  const isKoreanPlan = planData.plan?.segments?.some((s: any) => s.country === "대한민국") ?? false;
+
+  const prevFestivalsKeyRef = useRef("");
+
+  useEffect(() => {
+    setFestivals([]);
+    setSuggestFestivals([]);
+    setCongestedItems([]);
+    setBannerDismissed(false);
+    setSuggestions([]);
+    setSuggestionDismissed(false);
+  }, [selectedPlanId]);
+
+  useEffect(() => {
+    if (!selectedPlanId || !isKoreanPlan) return;
+    tourismApi.getFestivalsForPlan(selectedPlanId).then(setFestivals).catch(() => {});
+    setSuggestFestivalsLoading(true);
+    tourismApi
+      .getSuggestFestivals(selectedPlanId)
+      .then(setSuggestFestivals)
+      .catch(() => {})
+      .finally(() => setSuggestFestivalsLoading(false));
+  }, [selectedPlanId, itineraryKey, isKoreanPlan]);
+
+  useEffect(() => {
+    if (!selectedPlanId || !isKoreanPlan) return;
+    tourismApi.getPlanSuggestions(selectedPlanId).then(setSuggestions).catch(() => {});
+  }, [selectedPlanId, itineraryKey, isKoreanPlan]);
+
+  useEffect(() => {
+    if (!selectedPlanId || !isKoreanPlan || planData.itineraries.length === 0) return;
+    const today = dayjs().startOf("day");
+    const maxDate = today.add(30, "day");
+    const eligible = planData.itineraries.filter((it: any) => {
+      if (!it.location) return false;
+      const d = dayjs(it.itineraryDate);
+      return !d.isBefore(today) && !d.isAfter(maxDate);
+    });
+    if (eligible.length === 0) {
+      setCongestedItems([]);
+      return;
+    }
+    Promise.all(
+      eligible.map((it: any) =>
+        tourismApi
+          .getCongestion(it.id)
+          .then((items) =>
+            items.length > 0
+              ? { date: it.itineraryDate as string, locationName: it.location.name as string }
+              : null,
+          )
+          .catch(() => null),
+      ),
+    ).then((results) => {
+      setCongestedItems(results.filter((r): r is CongestedItem => r !== null));
+    });
+  }, [selectedPlanId, itineraryKey, isKoreanPlan]);
+
+  const prevCongestedKeyRef = useRef("");
+  useEffect(() => {
+    const key = congestedItems.map((c) => `${c.date}${c.locationName}`).sort().join(",");
+    if (key && key !== prevCongestedKeyRef.current) {
+      setBannerDismissed(false);
+    }
+    prevCongestedKeyRef.current = key;
+  }, [congestedItems]);
+
+  useEffect(() => {
+    const key = festivals.map((f) => f.contentId).sort().join(",");
+    if (key && key !== prevFestivalsKeyRef.current) {
+      setBannerDismissed(false);
+    }
+    prevFestivalsKeyRef.current = key;
+  }, [festivals]);
 
   useEffect(() => {
     if (selectedItinerary?.id && planData.itineraries.length > 0) {
@@ -373,11 +489,15 @@ export default function DashboardScreen() {
   };
 
   const handleDetailsPanelTabChange = useCallback(
-    (tab: "itinerary" | "flight" | "accommodation") => {
+    (tab: "itinerary" | "flight" | "accommodation", draft?: any) => {
       setActiveTab(tab);
       setSelectedItinerary(null);
       setSelectedFlight(null);
       setSelectedAccommodation(null);
+      if (tab === "accommodation" && draft) {
+        setNewAccommodationDraft(draft);
+        setOpenNewAccommodationForm(true);
+      }
     },
     [],
   );
@@ -405,6 +525,7 @@ export default function DashboardScreen() {
   }, []);
 
   const handleRequestNewItinerary = useCallback((date?: Date) => {
+    setNewItineraryDraft(null);
     setActiveTab("itinerary");
     setSelectedFlight(null);
     setSelectedAccommodation(null);
@@ -416,6 +537,48 @@ export default function DashboardScreen() {
       setSelectedItineraryDate(null);
     }
   }, []);
+
+  const handleFestivalAddToItinerary = useCallback((draft: any) => {
+    const { matchedDate, eventStartDate, eventEndDate, playtime, ...restDraft } = draft;
+    const segments = planData?.plan?.segments;
+
+    // country/city: matchedDate 기준 segment, 없으면 첫 번째
+    let country: string | undefined;
+    let city: string | undefined;
+    if (segments?.length) {
+      const seg = matchedDate
+        ? segments.find((s: any) => s.startDate <= matchedDate && matchedDate <= s.endDate)
+        : null;
+      const target = seg ?? segments[0];
+      country = target?.country;
+      city = target?.city;
+    }
+
+    // 날짜·시간 슬롯 탐색
+    const slot = planData?.plan?.startDate
+      ? findFestivalSlot(
+          eventStartDate,
+          eventEndDate,
+          planData.plan.startDate,
+          planData.plan.endDate,
+          planData?.itineraries ?? [],
+          playtime,
+        )
+      : null;
+
+    setNewItineraryDraft({
+      ...restDraft,
+      country,
+      city,
+      ...(slot ?? {}),
+    });
+    setActiveTab("itinerary");
+    setSelectedFlight(null);
+    setSelectedAccommodation(null);
+    setSelectedItinerary(null);
+    setOpenNewItineraryForm(true);
+    showToast("일정이 입력 되었어요. 추천 시간을 확인하고 내 일정에 맞게 조정해 보세요.", { icon: "info", duration: 5000 });
+  }, [planData?.plan?.segments, planData?.plan?.startDate, planData?.plan?.endDate, planData?.itineraries, showToast]);
 
   const handleShowAccommodationModal = useCallback(
     (accommodation: any, date?: string, checkoutDate?: string) => {
@@ -548,8 +711,19 @@ export default function DashboardScreen() {
               />
             ) : (
               <>
-                {/* 2. 주간 스케줄 모달 (70% 높이) */}
-                <View style={[styles.scheduleModal, { height: leftTopHeight }]}>
+                {/* 혼잡 배너 */}
+                {!bannerDismissed && (festivals.length > 0 || congestedItems.length > 0) && (
+                  <View style={styles.bannerWrapper}>
+                    <CongestionBanner
+                      festivals={festivals}
+                      congestedItems={congestedItems}
+                      onDismiss={() => setBannerDismissed(true)}
+                    />
+                  </View>
+                )}
+                {/* 2. 주간 스케줄 + AI 추천 바 (같은 flex 영역) */}
+                <View style={styles.scheduleWrapper}>
+                  <View style={styles.scheduleModal}>
                   <WeeklySchedulePanel
                     itineraries={planData.itineraries}
                     flights={planData.flights}
@@ -603,11 +777,34 @@ export default function DashboardScreen() {
                     onShowAccommodationDetail={handleShowAccommodationDetail}
                     activeTab={activeTab}
                     selectedItinerary={selectedItinerary}
+                    showAiSuggestButton={suggestions.length > 0 && suggestionDismissed}
+                    onAiSuggestPress={() => setSuggestionDismissed(false)}
                   />
+                  </View>
+                  {suggestions.length > 0 && !suggestionDismissed && (
+                    <SuggestionBar
+                      suggestions={suggestions}
+                      onDismiss={() => setSuggestionDismissed(true)}
+                      onReopen={() => setSuggestionDismissed(false)}
+                      onPlacePress={(place: SuggestionPlace, date: string, slotStart: string) => {
+                        setSelectedSuggestion({
+                          contentId: place.contentId,
+                          contentTypeId: place.category ?? "",
+                          categorySub: null,
+                          title: place.title,
+                          imageUrl: place.imageUrl,
+                          address: null,
+                          rank: null,
+                          dist: place.dist,
+                        });
+                        setSelectedSuggestionSlot({ date, slotStart });
+                      }}
+                    />
+                  )}
                 </View>
 
                 {/* 하단 모달들 (30% 높이) */}
-                <View style={[styles.bottomRow, { height: leftBottomHeight }]}>
+                <Animated.View style={[styles.bottomRow, { height: animBottomH }]}>
                   {/* 4. 비용 모달 (좌측 하단) */}
                   <View style={styles.expensesModal}>
                     <ExpensesPanel
@@ -618,7 +815,6 @@ export default function DashboardScreen() {
                         refreshAccommodations: planData.refreshAccommodations,
                       }}
                       onExpenseAdd={handleExpenseAdd}
-                      compact={leftBottomHeight < 300}
                     />
                   </View>
 
@@ -626,10 +822,22 @@ export default function DashboardScreen() {
                   <View style={styles.aiModal}>
                     <AIAssistantPanel
                       publicId={planData.plan?.publicId || null}
-                      compact={leftBottomHeight < 300}
                     />
                   </View>
-                </View>
+
+                  {/* 6. 축제·공연 패널 */}
+                  {suggestFestivals.length > 0 && (
+                    <Animated.View style={[styles.festivalsModal, { flex: animFestivalsFlex }]}>
+                      <FestivalsPanel
+                        festivals={suggestFestivals}
+                        isLoading={suggestFestivalsLoading}
+                        expanded={festivalsExpanded}
+                        onToggle={() => setFestivalsExpanded(v => !v)}
+                        onAddToItinerary={handleFestivalAddToItinerary}
+                      />
+                    </Animated.View>
+                  )}
+                </Animated.View>
               </>
             )}
           </View>
@@ -670,6 +878,15 @@ export default function DashboardScreen() {
                     setSelectedItinerary(null);
                     setActiveTab(undefined);
                   }}
+                  onOpenNewItineraryFromExisting={(draft) => {
+                    setNewItineraryDraft(draft);
+                    setSelectedItinerary(null);
+                    setActiveTab("itinerary");
+                    setSelectedFlight(null);
+                    setSelectedAccommodation(null);
+                    setOpenNewItineraryForm(true);
+                    showToast("일정이 입력 되었어요. 추천 시간을 확인하고 내 일정에 맞게 조정해 보세요.", { icon: "info", duration: 5000 });
+                  }}
                   onFlightAdd={handleFlightAdd}
                   onFlightClear={() => {
                     setSelectedFlight(null);
@@ -685,15 +902,17 @@ export default function DashboardScreen() {
                   openNewFlightForm={openNewFlightForm}
                   onConsumeOpenNewFlightForm={() => setOpenNewFlightForm(false)}
                   openNewItineraryForm={openNewItineraryForm}
-                  onConsumeOpenNewItineraryForm={() =>
-                    setOpenNewItineraryForm(false)
-                  }
+                  onConsumeOpenNewItineraryForm={() => {
+                    setOpenNewItineraryForm(false);
+                    setNewItineraryDraft(null);
+                  }}
                   selectedItineraryDate={selectedItineraryDate}
                   openNewAccommodationForm={openNewAccommodationForm}
                   onConsumeOpenNewAccommodationForm={() =>
                     setOpenNewAccommodationForm(false)
                   }
                   newAccommodationDraft={newAccommodationDraft}
+                  newItineraryDraft={newItineraryDraft}
                   onPreviewAccommodationChange={setPreviewAccommodation}
                 />
               </View>
@@ -701,6 +920,45 @@ export default function DashboardScreen() {
           )}
         </View>
       </View>
+    <TourismDetailModal
+      visible={selectedSuggestion !== null}
+      onClose={() => { setSelectedSuggestion(null); setSelectedSuggestionSlot(null); }}
+      item={selectedSuggestion}
+      itineraryLocation={null}
+      itinerary={selectedItinerary}
+      onOpenNewItinerary={(draft) => {
+        const slot = selectedSuggestionSlot;
+        const segments = planData?.plan?.segments;
+        let country: string | undefined;
+        let city: string | undefined;
+        if (slot && segments?.length) {
+          const seg = segments.find((s: any) => s.startDate <= slot.date && slot.date <= s.endDate);
+          const target = seg ?? segments[0];
+          country = target?.country;
+          city = target?.city;
+        }
+        const fmt = (mins: number) =>
+          `${String(Math.floor(mins / 60)).padStart(2, "0")}:${String(mins % 60).padStart(2, "0")}`;
+        const startMins = slot
+          ? parseInt(slot.slotStart.split(":")[0]) * 60 + parseInt(slot.slotStart.split(":")[1])
+          : null;
+        setNewItineraryDraft({
+          ...draft,
+          ...(slot ? { itineraryDate: slot.date } : {}),
+          ...(startMins !== null ? { startTime: fmt(startMins), endTime: fmt(Math.min(startMins + 60, 24 * 60)) } : {}),
+          ...(country ? { country } : {}),
+          ...(city ? { city } : {}),
+        });
+        setSelectedSuggestion(null);
+        setSelectedSuggestionSlot(null);
+        setActiveTab("itinerary");
+        setSelectedFlight(null);
+        setSelectedAccommodation(null);
+        setSelectedItinerary(null);
+        setOpenNewItineraryForm(true);
+        showToast("일정이 입력 되었어요. 추천 시간을 확인하고 내 일정에 맞게 조정해 보세요.", { icon: "info", duration: 5000 });
+      }}
+    />
     </GradientBackground>
   );
 }
@@ -736,13 +994,22 @@ const styles = StyleSheet.create({
     flexShrink: 1,
     overflow: "hidden",
   },
+  bannerWrapper: {
+    paddingTop: 0,
+    paddingBottom: 0,
+  },
+  scheduleWrapper: {
+    flex: 1,
+    gap: 16,
+    minHeight: 0,
+    overflow: "hidden",
+  },
   scheduleModal: {
-    flex: 0.85,
+    flex: 1,
     minHeight: 0,
     overflow: "hidden",
   },
   bottomRow: {
-    flex: 0.15,
     flexDirection: "row",
     gap: 16,
     minHeight: 0,
@@ -758,6 +1025,9 @@ const styles = StyleSheet.create({
   },
   aiModal: {
     flex: 1,
+  },
+  festivalsModal: {
+    overflow: "hidden",
   },
   loadingContainer: {
     flex: 1,

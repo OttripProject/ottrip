@@ -19,7 +19,7 @@ import {
   View,
   type ViewStyle,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Svg, { Circle, Path } from "react-native-svg";
 import DownArrowIcon from "../../../../assets/down_arrow.svg";
 import LeftArrowIcon from "../../../../assets/left_arrow.svg";
@@ -88,6 +88,7 @@ export default function CityPicker({
 
   const isNativeEnv = Platform.OS !== "web";
   const effectiveOpen = open || fsOpen;
+  const insets = useSafeAreaInsets();
 
   const [cities, setCities] = useState<CityResult[]>([]);
   const [offset, setOffset] = useState(0);
@@ -566,7 +567,7 @@ export default function CityPicker({
           animationType="slide"
           onRequestClose={handleClose}
         >
-          <SafeAreaView style={styles.fsContainer}>
+          <View style={[styles.fsContainer, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
             <View style={styles.fsHeader}>
               {onBack ? (
                 <Pressable
@@ -594,7 +595,7 @@ export default function CityPicker({
               </Pressable>
             </View>
             {popupContent}
-          </SafeAreaView>
+          </View>
         </Modal>
       )}
     </View>

@@ -19,6 +19,7 @@ import { buildAnalyzeUploadPayload } from "@/utils/attachmentAiAnalyze";
 import { applyFlightDraftFromAi } from "@/utils/applyAiDocumentDraft";
 import { ExpenseCategory, ExpenseCurrency } from "@/types/expense";
 import CalendarModal from "@/ui/components/CalendarModal.native";
+import CurrencyToggle from "@/ui/components/CurrencyToggle";
 import FloatingFooter from "@/ui/components/FloatingFooter.native";
 import FullScreenModal from "@/ui/components/FullScreenModal.native";
 import { TimeModal } from "@/ui/components/TimeModal.native";
@@ -32,14 +33,13 @@ import dayjs from "dayjs";
 import { useEffect, useRef, useState } from "react";
 import {
   Alert,
-  Animated,
   Pressable,
-  Keyboard,
   ScrollView,
   StyleSheet,
   Text,
   View,
 } from "react-native";
+import { KeyboardAwareScrollView, type KeyboardAwareScrollViewRef } from "react-native-keyboard-controller";
 import DeleteIcon from "../../../../assets/delete.svg";
 import DownArrowIcon from "../../../../assets/down_arrow.svg";
 import CalendarIcon from "../../../../assets/mobile_calendar_black.svg";
@@ -130,19 +130,7 @@ export default function FlightEditModal({
   } | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isSubmittingRef = useRef(false);
-  const scrollRef = useRef<ScrollView>(null);
-  const currencyOpacity = useRef(new Animated.Value(1)).current;
-  const [keyboardHeight, setKeyboardHeight] = useState(0);
-
-  useEffect(() => {
-    const show = Keyboard.addListener("keyboardDidShow", e => {
-      setKeyboardHeight(e.endCoordinates.height);
-    });
-    const hide = Keyboard.addListener("keyboardDidHide", () => {
-      setKeyboardHeight(0);
-    });
-    return () => { show.remove(); hide.remove(); };
-  }, []);
+  const scrollRef = useRef<KeyboardAwareScrollViewRef>(null);
   const [pendingFiles, setPendingFiles] = useState<LocalFile[]>([]);
   const [existingAttachments, setExistingAttachments] = useState<Attachment[]>(
     [],
@@ -566,11 +554,12 @@ export default function FlightEditModal({
           </Pressable>
         </View>
       )}
-      <ScrollView
+      <KeyboardAwareScrollView
         ref={scrollRef}
         style={styles.scrollView}
-        contentContainerStyle={[styles.scrollContent, { paddingBottom: keyboardHeight+40 || 24 }]}
+        contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        bottomOffset={40}
       >
         <View style={styles.form}>
           <View style={styles.inputGroup}>
@@ -926,36 +915,12 @@ export default function FlightEditModal({
                 variant="filled"
                 containerStyle={styles.amountInputContainer}
                 style={styles.amountInputStyle}
-                onFocus={() => {
-                  setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
-                }}
               />
-              <Pressable
-                style={styles.currencyBadge}
-                onPress={() => {
-                  Animated.timing(currencyOpacity, {
-                    toValue: 0,
-                    duration: 100,
-                    useNativeDriver: true,
-                  }).start(() => {
-                    setExpenseCurrency(prev =>
-                      prev === ExpenseCurrency.KRW
-                        ? ExpenseCurrency.USD
-                        : ExpenseCurrency.KRW,
-                    );
-                    Animated.timing(currencyOpacity, {
-                      toValue: 1,
-                      duration: 150,
-                      useNativeDriver: true,
-                    }).start();
-                  });
-                }}
-                hitSlop={8}
-              >
-                <Animated.Text style={[styles.amountSuffix, { opacity: currencyOpacity }]}>
-                  {expenseCurrency === ExpenseCurrency.KRW ? "원" : "달러"}
-                </Animated.Text>
-              </Pressable>
+              <CurrencyToggle
+                value={expenseCurrency}
+                onChange={setExpenseCurrency}
+                variant="primary"
+              />
             </View>
           </View>
         </View>
@@ -1008,7 +973,7 @@ export default function FlightEditModal({
           onRetryAnalyze={() => lastAiSelection && handleAiAnalyzePress(lastAiSelection)}
           isAiAnalyzeSuccess={!!aiModalResult?.success && !aiAnalyzeError}
         />
-      </ScrollView>
+      </KeyboardAwareScrollView>
 
       <TimeModal
         visible={segmentTimeModal !== null}
@@ -1259,8 +1224,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     borderRadius: 12,
-    paddingHorizontal: 14,
-    height: 48,
+    paddingHorizontal: 16,
+    paddingVertical: 2,
+    gap: 8,
     backgroundColor: `${colors.primary}1A`,
   },
   amountInputContainer: {
@@ -1268,25 +1234,12 @@ const styles = StyleSheet.create({
   },
   amountInputStyle: {
     flex: 1,
-    height: 48,
     textAlign: "left",
     backgroundColor: "transparent",
     fontFamily: typography.fontFamily.pretendardSemiBold,
     fontSize: 14,
     paddingHorizontal: 0,
     paddingVertical: 0,
-    color: colors.primary,
-  },
-  currencyBadge: {
-    marginLeft: 4,
-    width: 44,
-    paddingVertical: 4,
-    borderRadius: 6,
-    backgroundColor: `${colors.primary}10`,
-    alignItems: "center",
-  },
-  amountSuffix: {
-    ...textStyles.h6,
     color: colors.primary,
   },
   attachmentSection: {

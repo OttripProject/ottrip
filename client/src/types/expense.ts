@@ -1,3 +1,5 @@
+import { colors } from "@/ui/tokens/colors";
+
 // 공통 비용 관련 타입과 enum
 
 export enum ExpenseCategory {
@@ -31,13 +33,13 @@ export const categoryLabels = {
 };
 
 export const categoryColors: Record<ExpenseCategory, string> = {
-  [ExpenseCategory.FOOD]: "#F5A623",
-  [ExpenseCategory.TRANSPORT]: "#3B82F6",
-  [ExpenseCategory.ACTIVITY]: "#10B981",
-  [ExpenseCategory.ACCOMMODATION]: "#8B5CF6",
-  [ExpenseCategory.FLIGHT]: "#06B6D4",
-  [ExpenseCategory.SHOPPING]: "#EC4899",
-  [ExpenseCategory.ETC]: "#9B9B9B",
+  [ExpenseCategory.FOOD]: colors.categoryMeal,
+  [ExpenseCategory.TRANSPORT]: colors.categoryTransport,
+  [ExpenseCategory.ACTIVITY]: colors.categoryActivity,
+  [ExpenseCategory.ACCOMMODATION]: colors.expenseAccommodation,
+  [ExpenseCategory.FLIGHT]: colors.expenseFlight,
+  [ExpenseCategory.SHOPPING]: colors.categoryShopping,
+  [ExpenseCategory.ETC]: colors.categoryEtc,
 };
 
 export const currencyLabels = {

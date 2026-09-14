@@ -12,7 +12,11 @@ import ExpenseDetailModal from "@/components/modals/mobile/ExpenseDetailModal.na
 import FlightDetailModal from "@/components/modals/mobile/FlightDetailModal.native";
 import FlightEditModal from "@/components/modals/mobile/FlightEditModal.native";
 import ItineraryDetailModal from "@/components/modals/mobile/ItineraryDetailModal.native";
-import ItineraryEditModal from "@/components/modals/mobile/ItineraryEditModal.native";
+import ItineraryEditModal, { type ItineraryEditPrefill } from "@/components/modals/mobile/ItineraryEditModal.native";
+import TourismDetailModal from "@/components/modals/TourismDetailModal";
+import FestivalDetailModal from "@/components/modals/FestivalDetailModal.native";
+import CongestionBanner, { type CongestedItem } from "@/components/CongestionBanner";
+import { tourismApi, type FestivalItem, type DaySuggestion, type SuggestionPlace } from "@/services/tourism";
 import PlanSelectModal from "@/components/modals/mobile/PlanSelectModal.native";
 import ProfileModal from "@/components/modals/mobile/ProfileModal.native";
 import { useSelectedPlan } from "@/contexts/SelectedPlanContext";
@@ -28,6 +32,8 @@ import type {
 } from "@/types/api";
 import { categoryLabels } from "@/types/expense";
 import { colors } from "@/ui/tokens/colors";
+import { radii } from "@/ui/tokens/radii";
+import { spacing } from "@/ui/tokens/spacing";
 import { textStyles } from "@/ui/tokens/typography";
 import {
   convertUTCToLocalTime,
@@ -38,11 +44,13 @@ import {
 import { useQueryClient } from "@tanstack/react-query";
 import dayjs from "dayjs";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   ActivityIndicator,
   useWindowDimensions,
   Alert,
   Animated,
+
   Modal,
   Platform,
   Pressable,
@@ -55,7 +63,21 @@ import {
 import { Swipeable } from "react-native-gesture-handler";
 
 type AddScheduleFlow = "closed" | "method" | "direct" | "ai";
+
+type TimelineEntry =
+  | { kind: "schedule"; item: ScheduleItem; scheduleIndex: number }
+  | { kind: "suggestion"; suggestion: DaySuggestion };
+
+const SUGGESTION_CATEGORY_BADGE: Record<string, { color: string; bg: string }> = {
+  음식점:   { color: colors.categoryMeal,        bg: "#FFF4E0" },
+  관광지:   { color: colors.categorySightseeing, bg: "#FCEAFF" },
+  문화시설: { color: colors.categorySightseeing, bg: "#FCEAFF" },
+  쇼핑:     { color: colors.categoryShopping,    bg: "#E6F7EE" },
+  레포츠:   { color: "#0E6EBF",                 bg: "#E0F0FF" },
+  여행코스: { color: colors.gray700,             bg: colors.gray200 },
+};
 import WeeklyChecklistCard from "@/components/cards/WeeklyChecklistCard.native";
+import FestivalsCard from "@/components/cards/FestivalsCard.native";
 import { useMe } from "@/hooks/useMe";
 import { accommodationsApi } from "@/services/accommodations";
 import { flightsApi } from "@/services/flights";
@@ -63,6 +85,8 @@ import { itinerariesApi } from "@/services/itineraries";
 import { extendPlanIfNeeded } from "@/utils/extendPlanIfNeeded";
 import { collectPlanItemDates, shrinkPlanIfNeeded } from "@/utils/shrinkPlanIfNeeded";
 import { guestPrompt } from "@/utils/guestPrompt";
+import { findFestivalSlot } from "@/utils/festivalSlot";
+import AiCloseIcon from "../../assets/close_sm.svg";
 import FlightIcon from "../../assets/airplane.svg";
 import AccommodationIcon from "../../assets/mobile_accomodation.svg";
 import DropdownIcon from "../../assets/mobile_dropdown.svg";
@@ -161,6 +185,7 @@ function collectNearestFutureScheduleDateStr(
 }
 
 export default function TodayScreen() {
+  const insets = useSafeAreaInsets();
   const { width: windowWidth } = useWindowDimensions();
   const { data: me } = useMe();
   const { selectedPlan, setSelectedPlan } = useSelectedPlan();
@@ -176,9 +201,12 @@ export default function TodayScreen() {
   );
   const [showItineraryDetail, setShowItineraryDetail] = useState(false);
   const [showItineraryEdit, setShowItineraryEdit] = useState(false);
-  const [editingItinerary, setEditingItinerary] = useState<Itinerary | null>(
-    null,
-  );
+  const [editingItinerary, setEditingItinerary] = useState<Itinerary | null>(null);
+  const [itineraryPrefill, setItineraryPrefill] = useState<ItineraryEditPrefill | null>(null);
+  const [itineraryEditFromRecommend, setItineraryEditFromRecommend] = useState(false);
+  const [selectedAttraction, setSelectedAttraction] = useState<import("@/services/tourism").NearbyAttraction | null>(null);
+  const [tourismDetailVisible, setTourismDetailVisible] = useState(false);
+  const reopenDetailAfterTourismRef = useRef(true);
   const [selectedAccommodation, setSelectedAccommodation] =
     useState<Accommodation | null>(null);
   const [showAccommodationDetail, setShowAccommodationDetail] = useState(false);
@@ -199,9 +227,24 @@ export default function TodayScreen() {
   const [timelineViewDate, setTimelineViewDate] = useState<dayjs.Dayjs | null>(
     null,
   );
+  const [congestedItems, setCongestedItems] = useState<CongestedItem[]>([]);
+  const [bannerDismissed, setBannerDismissed] = useState(false);
+  const [matchedFestivals, setMatchedFestivals] = useState<FestivalItem[]>([]);
+  const [suggestFestivals, setSuggestFestivals] = useState<FestivalItem[]>([]);
+  const [selectedFestival, setSelectedFestival] = useState<FestivalItem | null>(null);
+  const [festivalDetailVisible, setFestivalDetailVisible] = useState(false);
+  const [suggestions, setSuggestions] = useState<DaySuggestion[]>([]);
+  const suggestionSlotRef = useRef<{ start: string; end: string } | null>(null);
+  const [dismissedSuggestionDates, setDismissedSuggestionDates] = useState<Set<string>>(new Set());
+  const [suggestionPlaceIdxs, setSuggestionPlaceIdxs] = useState<Record<string, number>>({});
+  const snackbarAnim = useRef(new Animated.Value(0)).current;
+  const snackbarTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const snackbarUndoRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     setTimelineViewDate(null);
+    setDismissedSuggestionDates(new Set());
+    setSuggestionPlaceIdxs({});
   }, [selectedPlan?.id]);
 
   useEffect(() => {
@@ -232,6 +275,9 @@ export default function TodayScreen() {
     useExpensesQuery(selectedPlan?.id, timelineDateStr);
 
   const pulseAnim = useRef(new Animated.Value(1)).current;
+  const bannerFadeAnim = useRef(new Animated.Value(0)).current;
+  const festivalsFadeAnim = useRef(new Animated.Value(0)).current;
+  const suggestionFadeAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     const pulseAnimation = Animated.loop(
@@ -312,6 +358,79 @@ export default function TodayScreen() {
       planData.accommodations,
     ],
   );
+
+  const isKoreanPlan = planData.plan?.segments?.some((s: any) => s.country === "대한민국") ?? false;
+
+  useEffect(() => {
+    if (!selectedPlan?.id || !isKoreanPlan || !planData.itineraries.length) {
+      setCongestedItems([]);
+      return;
+    }
+    const today = dayjs().startOf("day");
+    const eligible = planData.itineraries.filter((it: any) => {
+      if (!it.location) return false;
+      return dayjs(it.itineraryDate).isSame(today, "day");
+    });
+    if (!eligible.length) {
+      setCongestedItems([]);
+      return;
+    }
+    Promise.all(
+      eligible.map((it: any) =>
+        tourismApi
+          .getCongestion(it.id)
+          .then((items) =>
+            items.length > 0
+              ? { date: it.itineraryDate as string, locationName: it.location.name as string }
+              : null,
+          )
+          .catch(() => null),
+      ),
+    ).then((results) => {
+      setCongestedItems(results.filter((r): r is CongestedItem => r !== null));
+    });
+  }, [selectedPlan?.id, isKoreanPlan, planData.itineraries?.map((it: any) => it.id).join(",")]);
+
+  const prevCongestedKeyRef = useRef("");
+  useEffect(() => {
+    const key = congestedItems.map((c) => `${c.date}${c.locationName}`).sort().join(",");
+    if (key && key !== prevCongestedKeyRef.current) setBannerDismissed(false);
+    prevCongestedKeyRef.current = key;
+  }, [congestedItems]);
+
+  useEffect(() => {
+    if (!selectedPlan?.id || !isKoreanPlan) {
+      setMatchedFestivals([]);
+      setSuggestFestivals([]);
+      return;
+    }
+    tourismApi.getFestivalsForPlan(selectedPlan.id).then(setMatchedFestivals).catch(() => {});
+    tourismApi.getSuggestFestivals(selectedPlan.id).then(setSuggestFestivals).catch(() => {});
+  }, [selectedPlan?.id, isKoreanPlan]);
+
+  useEffect(() => {
+    if (!selectedPlan?.id || !isKoreanPlan) {
+      setSuggestions([]);
+      return;
+    }
+    tourismApi.getPlanSuggestions(selectedPlan.id).then(setSuggestions).catch(() => {});
+  }, [selectedPlan?.id, isKoreanPlan]);
+
+  useEffect(() => {
+    const todayStr = dayjs().format("YYYY-MM-DD");
+    const show = !bannerDismissed && (congestedItems.length > 0 || matchedFestivals.some(f => f.matchedDate === todayStr));
+    bannerFadeAnim.setValue(0);
+    if (show) {
+      Animated.timing(bannerFadeAnim, { toValue: 1, duration: 400, useNativeDriver: true }).start();
+    }
+  }, [bannerDismissed, congestedItems.length, matchedFestivals]);
+
+  useEffect(() => {
+    festivalsFadeAnim.setValue(0);
+    if (isKoreanPlan && suggestFestivals.length > 0) {
+      Animated.timing(festivalsFadeAnim, { toValue: 1, duration: 400, useNativeDriver: true }).start();
+    }
+  }, [isKoreanPlan, suggestFestivals.length]);
 
   const hasAnyFlightSegment = useMemo(() => {
     return (planData.flights || []).some(
@@ -404,6 +523,18 @@ export default function TodayScreen() {
     !planData.isLoading &&
     (todaySchedules.length > 0 || todayAccommodations.length > 0);
 
+  const todaySuggestion = useMemo(
+    () => suggestions.find(s => s.date === timelineDateStr) ?? null,
+    [suggestions, timelineDateStr],
+  );
+
+  useEffect(() => {
+    suggestionFadeAnim.setValue(0);
+    if (todaySuggestion && !dismissedSuggestionDates.has(timelineDateStr)) {
+      Animated.timing(suggestionFadeAnim, { toValue: 1, duration: 400, useNativeDriver: true }).start();
+    }
+  }, [todaySuggestion, dismissedSuggestionDates, timelineDateStr]);
+
   /** 실제 오늘: 타임라인·당일 숙박 모두 없고, 플랜에는 다른 데이터가 있을 때 */
   const showNoTodayScheduleOtherDaysCard =
     !!selectedPlan &&
@@ -411,7 +542,8 @@ export default function TodayScreen() {
     !timelineViewDate &&
     realTodaySchedules.length === 0 &&
     realTodayAccommodations.length === 0 &&
-    !planHasNoSchedulesYet;
+    !planHasNoSchedulesYet &&
+    !todaySuggestion;
 
   const todayFlights = useMemo(
     () =>
@@ -432,6 +564,44 @@ export default function TodayScreen() {
       ) ?? null
     );
   }, [planData.plan?.segments, timelineDateStr]);
+
+  const nextAvailableTime = useMemo<{ startTime: string; endTime: string }>(() => {
+    const pad = (n: number) => n.toString().padStart(2, "0");
+    const toTime = (h: number) => `${pad(Math.min(h, 23))}:00`;
+
+    const endTimes = todaySchedules.map(s => s.endTime).filter(Boolean);
+    let startHour: number;
+
+    if (endTimes.length > 0) {
+      const latest = [...endTimes].sort().at(-1)!;
+      const [h, m] = latest.split(":").map(Number);
+      startHour = m > 0 ? h + 1 : h;
+    } else if (timelineDateStr === calendarTodayStr) {
+      const now = dayjs();
+      startHour = now.minute() > 0 ? now.hour() + 1 : now.hour();
+    } else {
+      return { startTime: "09:00", endTime: "10:00" };
+    }
+
+    startHour = Math.min(startHour, 23);
+    return { startTime: toTime(startHour), endTime: toTime(startHour + 1) };
+  }, [todaySchedules, timelineDateStr, calendarTodayStr]);
+
+  const timelineEntries = useMemo<TimelineEntry[]>(() => {
+    const schedEntries: TimelineEntry[] = todaySchedules.map((item, i) => ({
+      kind: "schedule",
+      item,
+      scheduleIndex: i,
+    }));
+    if (todaySuggestion && !dismissedSuggestionDates.has(timelineDateStr)) {
+      schedEntries.push({ kind: "suggestion", suggestion: todaySuggestion });
+    }
+    return schedEntries.sort((a, b) => {
+      const ta = a.kind === "schedule" ? a.item.time : a.suggestion.slotStart;
+      const tb = b.kind === "schedule" ? b.item.time : b.suggestion.slotStart;
+      return ta.localeCompare(tb);
+    });
+  }, [todaySchedules, todaySuggestion, dismissedSuggestionDates, timelineDateStr]);
 
   const todayExpenses = useMemo(() => {
     let total = 0;
@@ -535,6 +705,17 @@ export default function TodayScreen() {
     activeTimelineSwipeKey.current = null;
   }, []);
 
+  const showSuggestionDismissSnackbar = useCallback((onUndo: () => void) => {
+    snackbarUndoRef.current = onUndo;
+    if (snackbarTimerRef.current) clearTimeout(snackbarTimerRef.current);
+    snackbarAnim.setValue(0);
+    Animated.timing(snackbarAnim, { toValue: 1, duration: 200, useNativeDriver: true }).start();
+    snackbarTimerRef.current = setTimeout(() => {
+      Animated.timing(snackbarAnim, { toValue: 0, duration: 200, useNativeDriver: true }).start();
+      snackbarUndoRef.current = null;
+    }, 3000);
+  }, [snackbarAnim]);
+
   const openAddScheduleFlow = useCallback(() => {
     closeOpenTimelineSwipe();
     setAddScheduleFlow("method");
@@ -555,7 +736,7 @@ export default function TodayScreen() {
         </View>
         <View style={[styles.noPlanCardWrap, { justifyContent: "center", flex: 1 }]}>
           <View style={styles.noPlanCard}>
-            <Text style={styles.noPlanHeadline}>서버에 연결할 수 없어요</Text>
+            <Text style={styles.noPlanHeadline}>오티트립이 잠시 쉬고있습니다 🛠️</Text>
             <Text style={styles.noPlanSubcopy}>
               잠시 후 다시 시도해주세요
             </Text>
@@ -725,7 +906,7 @@ export default function TodayScreen() {
           onPress={closeOpenTimelineSwipe}
         >
           {/* 헤더 */}
-          <View style={styles.header}>
+          <View style={[styles.header, { paddingTop: insets.top + 4 }]}>
             <View style={styles.headerContent}>
               <View style={styles.headerTextContainer}>
                 <Text style={styles.date}>{headerDateLabel}</Text>
@@ -780,6 +961,19 @@ export default function TodayScreen() {
               </Pressable>
             </View>
           </View>
+
+          {/* 혼잡 배너 */}
+          {!bannerDismissed && (congestedItems.length > 0 || matchedFestivals.some(f => f.matchedDate === dayjs().format("YYYY-MM-DD"))) && (
+            <Animated.View style={[styles.bannerWrapper, { opacity: bannerFadeAnim }]}>
+              <CongestionBanner
+                festivals={matchedFestivals.filter(f => f.matchedDate === dayjs().format("YYYY-MM-DD"))}
+                congestedItems={congestedItems}
+                onDismiss={() => setBannerDismissed(true)}
+                showDate={false}
+                boldLocations
+              />
+            </Animated.View>
+          )}
 
           {/* 현재 진행 중 활동 카드 */}
           {currentActivities.length > 0 && (() => {
@@ -894,12 +1088,146 @@ export default function TodayScreen() {
           })()}
 
           {/* 타임라인 섹션 (이터너리·항공 또는 당일 숙박이 있으면 헤더 노출) */}
-          {(todaySchedules.length > 0 || todayAccommodations.length > 0) && (
+          {(todaySchedules.length > 0 || todayAccommodations.length > 0 || !!todaySuggestion) && (
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>타임라인</Text>
+              <View style={styles.timelineHeader}>
+                <Text style={styles.sectionTitle}>타임라인</Text>
+                {todaySuggestion && dismissedSuggestionDates.has(timelineDateStr) && (
+                  <Pressable
+                    style={styles.aiSuggestBtn}
+                    onPress={() =>
+                      setDismissedSuggestionDates(prev => {
+                        const next = new Set(prev);
+                        next.delete(timelineDateStr);
+                        return next;
+                      })
+                    }
+                    hitSlop={8}
+                  >
+                    <Text style={styles.aiSuggestBtnText}>AI 제안</Text>
+                  </Pressable>
+                )}
+              </View>
 
-              {todaySchedules.length > 0 &&
-                todaySchedules.map((item: ScheduleItem, index: number) => {
+              {timelineEntries.length > 0 &&
+                timelineEntries.map((entry) => {
+                  if (entry.kind === "suggestion") {
+                    const { suggestion } = entry;
+                    const placeIdx = suggestionPlaceIdxs[suggestion.date] ?? 0;
+                    const cardWidth = windowWidth - 32;
+                    return (
+                      <Animated.View key="ai-suggestion" style={[styles.timelineItem, { opacity: suggestionFadeAnim }]}>
+                        <View style={styles.swipeItineraryShadow}>
+                          <View style={styles.swipeItineraryClip}>
+                            <View style={styles.suggestionCard}>
+                              <View style={styles.suggestionHeader}>
+                                <View style={styles.aiBadge}>
+                                  <Text style={styles.aiBadgeText}>AI 제안</Text>
+                                </View>
+                                <Text style={styles.suggestionTimeRange}>
+                                  {suggestion.slotStart}–{suggestion.slotEnd}
+                                </Text>
+                                <View style={{ flex: 1 }} />
+                                <Pressable
+                                  onPress={() => {
+                                    const date = timelineDateStr;
+                                    setDismissedSuggestionDates(prev => new Set([...prev, date]));
+                                    showSuggestionDismissSnackbar(() => {
+                                      setDismissedSuggestionDates(prev => {
+                                        const next = new Set(prev);
+                                        next.delete(date);
+                                        return next;
+                                      });
+                                    });
+                                  }}
+                                  hitSlop={8}
+                                  style={styles.suggestionCloseBtn}
+                                >
+                                  <AiCloseIcon width={15} height={15} color={colors.gray600} />
+                                </Pressable>
+                              </View>
+                              <ScrollView
+                                horizontal
+                                pagingEnabled
+                                showsHorizontalScrollIndicator={false}
+                                scrollEnabled={suggestion.places.length > 1}
+                                onMomentumScrollEnd={e => {
+                                  const idx = Math.round(e.nativeEvent.contentOffset.x / cardWidth);
+                                  setSuggestionPlaceIdxs(prev => ({ ...prev, [suggestion.date]: idx }));
+                                }}
+                              >
+                                {suggestion.places.map(p => {
+                                  const catBadge = p.category ? SUGGESTION_CATEGORY_BADGE[p.category] : null;
+                                  const pd = p.dist;
+                                  const distLabel = pd == null ? null : pd < 1000 ? `${Math.round(pd / 10) * 10}m` : pd < 2000 ? `${(pd / 1000).toFixed(1)}km` : `${Math.round(pd / 1000)}km`;
+                                  return (
+                                    <Pressable
+                                      key={p.contentId}
+                                      style={[styles.suggestionPage, { width: cardWidth }]}
+                                      onPress={() => {
+                                        setSelectedAttraction({
+                                          contentId: p.contentId,
+                                          contentTypeId: p.category ?? p.contentTypeId ?? "12",
+                                          categorySub: p.category,
+                                          title: p.title,
+                                          imageUrl: p.imageUrl,
+                                          address: null,
+                                          rank: null,
+                                          dist: p.dist,
+                                        });
+                                        suggestionSlotRef.current = { start: suggestion.slotStart, end: suggestion.slotEnd };
+                                        reopenDetailAfterTourismRef.current = false;
+                                        setTourismDetailVisible(true);
+                                      }}
+                                    >
+                                      <View style={styles.suggestionPlaceRow}>
+                                        {catBadge && (
+                                          <View style={[styles.suggestionCatBadge, { backgroundColor: catBadge.bg }]}>
+                                            <Text style={[styles.suggestionCatText, { color: catBadge.color }]}>
+                                              {p.category}
+                                            </Text>
+                                          </View>
+                                        )}
+                                        <Text style={styles.suggestionPlaceName} numberOfLines={1}>
+                                          {p.title}
+                                        </Text>
+                                        {distLabel && (
+                                          <>
+                                            <Text style={styles.suggestionDistSep}>·</Text>
+                                            <Text style={styles.suggestionDist}>{distLabel}</Text>
+                                          </>
+                                        )}
+                                      </View>
+                                      {p.sentence ? (
+                                        <Text style={styles.suggestionSentence}>
+                                          {p.sentence}
+                                        </Text>
+                                      ) : null}
+                                    </Pressable>
+                                  );
+                                })}
+                              </ScrollView>
+                              {suggestion.places.length > 1 && (
+                                <View style={styles.suggestionDots}>
+                                  {suggestion.places.map((p, i) => (
+                                    <View
+                                      key={p.contentId}
+                                      style={[
+                                        styles.suggestionDot,
+                                        i === placeIdx ? styles.suggestionDotOn : styles.suggestionDotOff,
+                                      ]}
+                                    />
+                                  ))}
+                                </View>
+                              )}
+                            </View>
+                          </View>
+                        </View>
+                      </Animated.View>
+                    );
+                  }
+
+                  const { item, scheduleIndex: index } = entry;
                   const isCurrentlyActive = currentActivities.some(
                     ca => ca.id === item.id,
                   );
@@ -1127,13 +1455,16 @@ export default function TodayScreen() {
                                 {itinerary.title || "활동"}
                               </Text>
                               {itinerary.location?.name && (
-                                <Text
-                                  style={styles.itemLocation}
-                                  numberOfLines={1}
-                                  ellipsizeMode="tail"
-                                >
-                                  {itinerary.location.name}
-                                </Text>
+                                <View style={styles.itemLocationRow}>
+                                  <LocationIcon width={12} height={12} color={colors.gray600} />
+                                  <Text
+                                    style={styles.itemLocation}
+                                    numberOfLines={1}
+                                    ellipsizeMode="tail"
+                                  >
+                                    {itinerary.location.name}
+                                  </Text>
+                                </View>
                               )}
                               {itinerary.description && (
                                 <Text
@@ -1243,6 +1574,29 @@ export default function TodayScreen() {
             </View>
           )}
 
+          {/* 오늘 축제 추천 */}
+          {isKoreanPlan && (() => {
+            const todayYMD = dayjs().format("YYYYMMDD");
+            const todayFestivals = suggestFestivals.filter(f => {
+              const start = f.eventStartDate ?? "00000000";
+              const end = f.eventEndDate ?? "99991231";
+              return start <= todayYMD && todayYMD <= end;
+            });
+            if (!todayFestivals.length) return null;
+            return (
+              <Animated.View style={[styles.festivalsCardWrapper, { opacity: festivalsFadeAnim }]}>
+                <FestivalsCard
+                  title="오늘의 축제 추천"
+                  festivals={todayFestivals}
+                  onPress={f => {
+                    setSelectedFestival(f);
+                    setFestivalDetailVisible(true);
+                  }}
+                />
+              </Animated.View>
+            );
+          })()}
+
           {showTodayTimelineExtras && (
             <View style={styles.checklistWrapper}>
               <WeeklyChecklistCard
@@ -1309,7 +1663,7 @@ export default function TodayScreen() {
           {/* 여행 정보(숙박/항공) 섹션 - 데이터 있을 때만 노출 */}
           {(todayAccommodations.length > 0 || todayFlights.length > 0) && (
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>여행 정보 (Reference)</Text>
+              <Text style={[styles.sectionTitle, { marginBottom: 16, marginHorizontal: 16 }]}>여행 정보 (Reference)</Text>
               {todayAccommodations.map((accommodation: Accommodation) => {
                 const isCheckout =
                   dayjs(accommodation.checkoutDate).format("YYYY-MM-DD") ===
@@ -1529,7 +1883,14 @@ export default function TodayScreen() {
         onEdit={itinerary => {
           setShowItineraryDetail(false);
           setEditingItinerary(itinerary);
+          setItineraryPrefill(null);
           setShowItineraryEdit(true);
+        }}
+        onAttractionSelect={attraction => {
+          reopenDetailAfterTourismRef.current = true;
+          setShowItineraryDetail(false);
+          setSelectedAttraction(attraction);
+          setTimeout(() => setTourismDetailVisible(true), 300);
         }}
         onDelete={handleDeleteItinerary}
       />
@@ -1540,6 +1901,8 @@ export default function TodayScreen() {
           const itineraryToShow = editingItinerary;
           setShowItineraryEdit(false);
           setEditingItinerary(null);
+          setItineraryPrefill(null);
+          setItineraryEditFromRecommend(false);
           if (!opts?.fromSave && itineraryToShow) {
             setSelectedItinerary(itineraryToShow);
             setShowItineraryDetail(true);
@@ -1549,8 +1912,13 @@ export default function TodayScreen() {
         planId={selectedPlan?.id ?? 0}
         defaultCountry={timelineDateSegment?.country}
         defaultCity={timelineDateSegment?.city}
+        defaultStartTime={nextAvailableTime.startTime}
+        defaultEndTime={nextAvailableTime.endTime}
+        prefill={itineraryPrefill ?? undefined}
+        showRecommendToast={itineraryEditFromRecommend}
         onSave={async itinerary => {
           planData.addItinerary(itinerary);
+          await refetchTodayExpenses();
           queryClient.invalidateQueries({
             queryKey: ["expenses", selectedPlan?.id],
           });
@@ -1562,6 +1930,75 @@ export default function TodayScreen() {
             queryKey: ["expenses", selectedPlan?.id],
           });
           planData.refreshAttachments();
+        }}
+      />
+
+      <TourismDetailModal
+        visible={tourismDetailVisible}
+        onClose={() => {
+          setTourismDetailVisible(false);
+          setSelectedAttraction(null);
+          if (reopenDetailAfterTourismRef.current) {
+            setTimeout(() => setShowItineraryDetail(true), 300);
+          }
+          reopenDetailAfterTourismRef.current = true;
+        }}
+        item={selectedAttraction}
+        itineraryLocation={
+          selectedItinerary?.location?.latitude != null
+            ? { latitude: selectedItinerary.location.latitude, longitude: selectedItinerary.location.longitude }
+            : null
+        }
+        itinerary={selectedItinerary}
+        onOpenNewItinerary={draft => {
+          reopenDetailAfterTourismRef.current = false;
+          setEditingItinerary(null);
+          const slot = suggestionSlotRef.current;
+          suggestionSlotRef.current = null;
+          setItineraryPrefill(slot ? { ...draft, startTime: slot.start, endTime: slot.end } : draft);
+          setItineraryEditFromRecommend(true);
+          setShowItineraryEdit(true);
+        }}
+      />
+
+      <FestivalDetailModal
+        visible={festivalDetailVisible}
+        onClose={() => {
+          setFestivalDetailVisible(false);
+          setSelectedFestival(null);
+        }}
+        item={selectedFestival}
+        onAddToItinerary={draft => {
+          const { matchedDate, eventStartDate, eventEndDate, playtime, ...restDraft } = draft;
+          const segments = planData.plan?.segments;
+
+          let country: string | undefined;
+          let city: string | undefined;
+          if (segments?.length) {
+            const seg = matchedDate
+              ? segments.find((s: any) => s.startDate <= matchedDate && matchedDate <= s.endDate)
+              : null;
+            const target = seg ?? segments[0];
+            country = target?.country;
+            city = target?.city;
+          }
+
+          const todayStr = dayjs().format("YYYY-MM-DD");
+          const slot = findFestivalSlot(
+            eventStartDate,
+            eventEndDate,
+            todayStr,
+            todayStr,
+            planData.itineraries ?? [],
+            playtime,
+          );
+
+          setFestivalDetailVisible(false);
+          setSelectedFestival(null);
+          setEditingItinerary(null);
+          setItineraryPrefill({ ...restDraft, country, city, ...(slot ?? {}) });
+          setItineraryEditFromRecommend(true);
+          setShowItineraryEdit(true);
         }}
       />
 
@@ -1619,6 +2056,7 @@ export default function TodayScreen() {
         defaultCity={timelineDateSegment?.city}
         onSave={async updated => {
           planData.addAccommodation(updated);
+          await refetchTodayExpenses();
           queryClient.invalidateQueries({
             queryKey: ["expenses", selectedPlan?.id],
           });
@@ -1678,6 +2116,7 @@ export default function TodayScreen() {
         planStartDate={selectedPlan?.startDate}
         onSave={async updated => {
           planData.addFlight(updated);
+          await refetchTodayExpenses();
           queryClient.invalidateQueries({
             queryKey: ["expenses", selectedPlan?.id],
           });
@@ -1771,6 +2210,25 @@ export default function TodayScreen() {
       />
 
       <PlanLoadingOverlay visible={plansQuery.isLoading || planData.isLoading} />
+
+      {/* AI 제안 dismiss 스낵바 */}
+      <Animated.View
+        pointerEvents="box-none"
+        style={[styles.snackbar, { opacity: snackbarAnim, bottom: insets.bottom + 28 }]}
+      >
+        <Text style={styles.snackbarText}>{"AI 제안을 숨겼어요.\n상단 AI 제안 버튼으로 다시 볼 수 있어요."}</Text>
+        <Pressable
+          onPress={() => {
+            snackbarUndoRef.current?.();
+            snackbarUndoRef.current = null;
+            if (snackbarTimerRef.current) clearTimeout(snackbarTimerRef.current);
+            Animated.timing(snackbarAnim, { toValue: 0, duration: 200, useNativeDriver: true }).start();
+          }}
+          hitSlop={8}
+        >
+          <Text style={styles.snackbarAction}>다시 보기</Text>
+        </Pressable>
+      </Animated.View>
     </View>
   );
 }
@@ -1779,6 +2237,29 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.gray300,
+  },
+  snackbar: {
+    position: "absolute" as const,
+    left: 16,
+    right: 16,
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "space-between" as const,
+    backgroundColor: colors.gray800,
+    borderRadius: radii.lg,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    gap: spacing.md,
+  },
+  snackbarText: {
+    ...textStyles.h7,
+    color: colors.white,
+    flex: 1,
+  },
+  snackbarAction: {
+    ...textStyles.h7,
+    color: colors.aiInk,
+    flexShrink: 0,
   },
   loadingContainer: {
     flex: 1,
@@ -1895,8 +2376,11 @@ const styles = StyleSheet.create({
   scrollContentPressable: {
     flexGrow: 1,
   },
+  bannerWrapper: {
+    marginHorizontal: 16,
+    marginBottom: 12,
+  },
   header: {
-    paddingTop: 60,
     paddingHorizontal: 16,
     paddingBottom: 24,
     backgroundColor: colors.gray300,
@@ -2126,11 +2610,34 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 8,
   },
+  timelineHeader: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "space-between" as const,
+    marginBottom: 16,
+    marginHorizontal: 16,
+  },
   sectionTitle: {
     ...textStyles.h5,
     color: colors.black,
-    marginBottom: 16,
-    marginHorizontal: 16,
+  },
+  aiSuggestBtn: {
+    height: 30,
+    paddingHorizontal: spacing.md,
+    borderRadius: radii.pill,
+    backgroundColor: colors.aiTint,
+    justifyContent: "center" as const,
+    alignItems: "center" as const,
+    shadowColor: colors.gray700,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.12,
+    shadowRadius: 6,
+    elevation: Platform.OS === "android" ? 3 : 0,
+  },
+  aiSuggestBtnText: {
+    ...textStyles.h8,
+    color: colors.aiInk,
+    fontWeight: "600" as const,
   },
 
   swipeItineraryShadow: {
@@ -2187,10 +2694,16 @@ const styles = StyleSheet.create({
     color: colors.black,
     marginBottom: 4,
   },
+  itemLocationRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    marginBottom: 4,
+  },
   itemLocation: {
     ...textStyles.body4,
     color: colors.gray600,
-    marginBottom: 4,
+    flex: 1,
   },
   itemDescription: {
     ...textStyles.body4,
@@ -2220,6 +2733,104 @@ const styles = StyleSheet.create({
   nextButtonText: {
     ...textStyles.h9,
     color: colors.primary,
+  },
+
+  // AI 제안 카드
+  suggestionCard: {
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.md,
+    backgroundColor: colors.aiTint,
+  },
+  suggestionHeader: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: spacing.sm,
+    marginBottom: spacing.sm,
+    paddingHorizontal: spacing.lg,
+  },
+  suggestionPage: {
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.xs,
+  },
+  aiBadge: {
+    height: 22,
+    paddingHorizontal: spacing.sm,
+    borderRadius: radii.pill,
+    backgroundColor: colors.aiInk,
+    justifyContent: "center" as const,
+    alignItems: "center" as const,
+  },
+  aiBadgeText: {
+    ...textStyles.h9,
+    color: colors.white,
+    fontWeight: "600" as const,
+  },
+  suggestionTimeRange: {
+    ...textStyles.h8,
+    color: colors.aiInk,
+    fontWeight: "600" as const,
+  },
+  suggestionCloseBtn: {
+    width: 28,
+    height: 28,
+    justifyContent: "center" as const,
+    alignItems: "center" as const,
+  },
+  suggestionPlaceRow: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: spacing.sm,
+    marginBottom: spacing.xs,
+  },
+  suggestionCatBadge: {
+    height: 20,
+    paddingHorizontal: spacing.sm,
+    borderRadius: radii.pill,
+    justifyContent: "center" as const,
+    alignItems: "center" as const,
+  },
+  suggestionCatText: {
+    ...textStyles.h9,
+    fontWeight: "600" as const,
+  },
+  suggestionPlaceName: {
+    ...textStyles.h6,
+    color: colors.black,
+    flexShrink: 1,
+  },
+  suggestionSentence: {
+    ...textStyles.body5,
+    color: colors.gray700,
+    marginBottom: spacing.xs,
+  },
+  suggestionDots: {
+    flexDirection: "row" as const,
+    justifyContent: "center" as const,
+    gap: 4,
+    marginTop: spacing.xs,
+  },
+  suggestionDot: {
+    height: 6,
+    borderRadius: radii.pill,
+  },
+  suggestionDotOn: {
+    width: 16,
+    backgroundColor: colors.aiInk,
+  },
+  suggestionDotOff: {
+    width: 6,
+    backgroundColor: colors.gray400,
+  },
+  suggestionDistSep: {
+    ...textStyles.body5,
+    color: colors.gray700,
+    flexShrink: 0,
+    marginHorizontal: -6,
+  },
+  suggestionDist: {
+    ...textStyles.body5,
+    color: colors.gray700,
+    flexShrink: 0,
   },
 
   accommodationCard: {
@@ -2312,5 +2923,9 @@ const styles = StyleSheet.create({
     color: colors.gray500,
     textAlign: "center",
     paddingVertical: 8,
+  },
+  festivalsCardWrapper: {
+    marginHorizontal: 16,
+    marginBottom: 32,
   },
 });

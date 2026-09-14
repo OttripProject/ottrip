@@ -4,6 +4,7 @@ import ImagePreviewModal, {
 import type { Accommodation, Attachment } from "@/types/api";
 import { ExpenseCurrency, currencyLabels } from "@/types/expense";
 import BottomSheetModal from "@/ui/components/BottomSheetModal.native";
+import MiniMapView from "@/ui/components/MiniMapView";
 import { colors } from "@/ui/tokens/colors";
 import { radii } from "@/ui/tokens/radii";
 import { textStyles } from "@/ui/tokens/typography";
@@ -228,6 +229,15 @@ export default function AccommodationDetailModal({
               </View>
             </View>
           )}
+          {accommodation.location?.hasCoords &&
+            !!accommodation.location.latitude &&
+            !!accommodation.location.longitude && (
+              <MiniMapView
+                latitude={accommodation.location.latitude}
+                longitude={accommodation.location.longitude}
+                name={accommodation.location.name}
+              />
+            )}
 
           {/* 비용 */}
           {expenseAmount > 0 && (
@@ -464,7 +474,7 @@ const styles = StyleSheet.create({
   footer: {
     paddingHorizontal: 16,
     paddingTop: 8,
-    paddingBottom: 32,
+    paddingBottom: 16,
   },
   mapButton: {
     backgroundColor: colors.black,

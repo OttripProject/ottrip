@@ -25,7 +25,7 @@ import {
   type ViewStyle,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import DownArrowIcon from "../../../../assets/down_arrow.svg";
 import XIcon from "../../../../assets/mobile_close.svg";
 import SearchIcon from "../../../../assets/search.svg";
@@ -88,6 +88,7 @@ export default function CountryPicker({
 
   const isNativeEnv = Platform.OS !== "web";
   const effectiveOpen = open || fsOpen;
+  const insets = useSafeAreaInsets();
 
   const { data: me } = useMe();
   const storageKey = `recentCountrySearches_${me?.handle ?? "guest"}`;
@@ -502,7 +503,7 @@ export default function CountryPicker({
           animationType="slide"
           onRequestClose={handleClose}
         >
-          <SafeAreaView style={styles.fsContainer}>
+          <View style={[styles.fsContainer, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
             <View style={styles.fsHeader}>
               <View style={styles.fsNavBtn} />
               <Text style={styles.fsTitle}>나라 선택</Text>
@@ -511,7 +512,7 @@ export default function CountryPicker({
               </Pressable>
             </View>
             {popupContent}
-          </SafeAreaView>
+          </View>
         </Modal>
       )}
     </View>

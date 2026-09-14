@@ -38,7 +38,7 @@ export default function FullScreenModal({
       <View
         style={[
           styles.container,
-          { paddingTop: insets.top, backgroundColor: containerBackgroundColor },
+          { paddingTop: insets.top, paddingBottom: insets.bottom, backgroundColor: containerBackgroundColor },
         ]}
       >
         {children}

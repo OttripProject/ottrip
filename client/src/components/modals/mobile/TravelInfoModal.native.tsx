@@ -19,12 +19,12 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Keyboard,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from "react-native";
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import ItineraryIcon from "../../../../assets/mobile_check_backup.svg";
 import MemberIcon from "../../../../assets/mobile_member.svg";
 import CloseIcon from "../../../../assets/x.svg";
@@ -165,10 +165,11 @@ export default function TravelInfoModal({
         </Pressable>
       </View>
 
-      <ScrollView
+      <KeyboardAwareScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        bottomOffset={40}
       >
         {/* Card 1: 여행제목 + 기간 - 흰색 카드 */}
         <View style={styles.card}>
@@ -258,7 +259,7 @@ export default function TravelInfoModal({
             />
           </View>
         )}
-      </ScrollView>
+      </KeyboardAwareScrollView>
 
       <ExpenseDetailModal
         visible={showExpenseDetail && !showAddExpenseFromDetail}
@@ -336,7 +337,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 16,
     paddingTop: 8,
-    paddingBottom: 120,
+    paddingBottom: 24,
   },
   card: {
     backgroundColor: colors.white,

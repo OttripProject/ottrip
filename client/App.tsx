@@ -7,6 +7,7 @@ import RootNavigator from "@/navigation/RootNavigator";
 import { useFonts } from "expo-font";
 import { StatusBar } from "expo-status-bar";
 import { ActivityIndicator, View } from "react-native";
+import { KeyboardProvider } from "react-native-keyboard-controller";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 export default function App() {
@@ -33,16 +34,18 @@ export default function App() {
 
   return (
     <SafeAreaProvider>
-      <AuthProvider>
-        <DateProvider>
-          <QueryProvider>
-            <ToastProvider>
-              <RootNavigator />
-              <StatusBar style="auto" />
-            </ToastProvider>
-          </QueryProvider>
-        </DateProvider>
-      </AuthProvider>
+      <KeyboardProvider>
+        <AuthProvider>
+          <DateProvider>
+            <QueryProvider>
+              <ToastProvider>
+                <RootNavigator />
+                <StatusBar style="auto" />
+              </ToastProvider>
+            </QueryProvider>
+          </DateProvider>
+        </AuthProvider>
+      </KeyboardProvider>
     </SafeAreaProvider>
   );
 }

@@ -1,4 +1,4 @@
-import type { CreateItineraryRequest, Itinerary } from "../types/api";
+import type { CreateItineraryRequest, Itinerary, UpdateItineraryRequest } from "../types/api";
 import api from "./api";
 
 export const itinerariesApi = {
@@ -21,7 +21,7 @@ export const itinerariesApi = {
 
   updateItinerary: async (
     itineraryId: number,
-    itineraryData: Partial<CreateItineraryRequest>,
+    itineraryData: UpdateItineraryRequest,
   ): Promise<Itinerary> => {
     const response = await api.patch(
       `/private/itinerary/${itineraryId}`,

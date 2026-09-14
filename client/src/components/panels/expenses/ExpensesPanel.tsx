@@ -30,7 +30,6 @@ interface ExpensesPanelProps {
   };
   onExpenseAdd?: (expense: any) => void;
   readOnly?: boolean;
-  compact?: boolean;
 }
 
 interface Expense {
@@ -46,7 +45,6 @@ export default function ExpensesPanel({
   planData,
   onExpenseAdd,
   readOnly = false,
-  compact = false,
 }: ExpensesPanelProps) {
   const [showExpenseForm, setShowExpenseForm] = useState(false);
   const [showExpenseDetail, setShowExpenseDetail] = useState(false);
@@ -94,7 +92,7 @@ export default function ExpensesPanel({
   return (
     <PanelLayout style={{ flex: 1 }}>
       <View style={styles.content}>
-        <View style={[styles.headerSection, compact && styles.headerSectionCompact]}>
+        <View style={styles.headerSection}>
           <Text style={styles.headerTitle}>여행 비용</Text>
           <View style={styles.headerActions}>
             <TouchableOpacity
@@ -115,23 +113,23 @@ export default function ExpensesPanel({
           </View>
         </View>
 
-        <Pressable style={[styles.totalButton, compact && styles.totalButtonCompact]}>
+        <Pressable style={styles.totalButton} onPress={() => setShowExpenseDetail(true)}>
           <Text style={styles.totalButtonLabel}>총 비용</Text>
           <View style={styles.totalAmountColumn}>
             {(!hasUSD || hasKRW) && (
               <View style={styles.totalAmountRow}>
-                <Text style={[styles.totalButtonAmount, compact && styles.totalButtonAmountCompact]}>
+                <Text style={styles.totalButtonAmount}>
                   {totals.KRW.toLocaleString()}
                 </Text>
-                <Text style={[styles.totalAmountUnit, compact && styles.totalAmountUnitCompact]}>원</Text>
+                <Text style={styles.totalAmountUnit}>원</Text>
               </View>
             )}
             {hasUSD && (
               <View style={styles.totalAmountRow}>
-                <Text style={[styles.totalButtonAmount, compact && styles.totalButtonAmountCompact]}>
+                <Text style={styles.totalButtonAmount}>
                   {totals.USD.toLocaleString()}
                 </Text>
-                <Text style={[styles.totalAmountUnit, compact && styles.totalAmountUnitCompact]}>달러</Text>
+                <Text style={styles.totalAmountUnit}>달러</Text>
               </View>
             )}
           </View>
@@ -199,10 +197,7 @@ const styles = StyleSheet.create({
     paddingTop: spacing.lg,
     paddingBottom: spacing.md,
   },
-  headerSectionCompact: {
-    paddingTop: spacing.sm,
-    paddingBottom: spacing.xs,
-  },
+
   headerTitle: {
     ...textStyles.h5,
   },
@@ -246,10 +241,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
     flex: 1,
   },
-  totalButtonCompact: {
-    paddingVertical: spacing.sm,
-    marginBottom: spacing.sm,
-  },
+
   totalButtonLabel: {
     fontFamily: typography.fontFamily.pretendardRegular,
     fontSize: 13,
@@ -272,18 +264,12 @@ const styles = StyleSheet.create({
     lineHeight: 28,
     color: colors.gray900,
   },
-  totalButtonAmountCompact: {
-    fontSize: 16,
-    lineHeight: 20,
-  },
+
   totalAmountUnit: {
     fontFamily: typography.fontFamily.pretendardSemiBold,
     fontSize: 15,
     lineHeight: 22,
     color: colors.gray900,
   },
-  totalAmountUnitCompact: {
-    fontSize: 12,
-    lineHeight: 16,
-  },
+
 });

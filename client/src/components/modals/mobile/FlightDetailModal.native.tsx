@@ -468,7 +468,7 @@ const styles = StyleSheet.create({
   footer: {
     paddingHorizontal: 16,
     paddingTop: 8,
-    paddingBottom: 32,
+    paddingBottom: 16,
   },
   ticketButton: {
     backgroundColor: colors.black,

@@ -17,11 +17,14 @@ import type { AiAttachmentAnalyzeSelection } from "@/ui/components/attachmentSec
 import { buildAnalyzeUploadPayload } from "@/utils/attachmentAiAnalyze";
 import { ExpenseCurrency } from "@/types/expense";
 import CalendarModal from "@/ui/components/CalendarModal.native";
+import CurrencyToggle from "@/ui/components/CurrencyToggle";
 import FloatingFooter from "@/ui/components/FloatingFooter.native";
 import FullScreenModal from "@/ui/components/FullScreenModal.native";
 import { TimeModal } from "@/ui/components/TimeModal.native";
 import AttachmentSection from "@/ui/components/attachmentSection.native";
 import Input from "@/ui/components/input/Input";
+import PlacesSearchInput, { type PlaceResult } from "@/ui/components/PlacesSearchInput";
+import { locationsApi, manualPlaceId } from "@/services/locations";
 import { colors } from "@/ui/tokens/colors";
 import { textStyles, typography } from "@/ui/tokens/typography";
 import { handleGuestPromptError } from "@/utils/guestPrompt";
@@ -29,8 +32,6 @@ import dayjs from "dayjs";
 import { useEffect, useRef, useState } from "react";
 import {
   Alert,
-  Animated,
-  Keyboard,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -38,6 +39,7 @@ import {
   TextInput,
   View,
 } from "react-native";
+import { KeyboardAwareScrollView, type KeyboardAwareScrollViewRef } from "react-native-keyboard-controller";
 import CalendarIcon from "../../../../assets/mobile_calendar_black.svg";
 import TimeIcon from "../../../../assets/mobile_time.svg";
 import CloseIcon from "../../../../assets/x.svg";
@@ -97,22 +99,9 @@ export default function AccommodationEditModal({
   pendingAiResult,
   onRouteMismatchResult,
 }: AccommodationEditModalProps) {
-  const scrollRef = useRef<ScrollView>(null);
-  const currencyOpacity = useRef(new Animated.Value(1)).current;
-  const [keyboardHeight, setKeyboardHeight] = useState(0);
-
-  useEffect(() => {
-    const show = Keyboard.addListener("keyboardDidShow", e => {
-      setKeyboardHeight(e.endCoordinates.height);
-    });
-    const hide = Keyboard.addListener("keyboardDidHide", () => {
-      setKeyboardHeight(0);
-    });
-    return () => {
-      show.remove();
-      hide.remove();
-    };
-  }, []);
+  const scrollRef = useRef<KeyboardAwareScrollViewRef>(null);
+  const locationDraftRef = useRef<PlaceResult | null>(null);
+  const rawLocationTextRef = useRef<string>("");
 
   const [formData, setFormData] = useState({
     name: "",
@@ -120,6 +109,7 @@ export default function AccommodationEditModal({
     country: "",
     city: "",
     place: "",
+    locationId: undefined as number | undefined,
     checkinDate: dayjs().format("YYYY-MM-DD"),
     checkoutDate: dayjs().add(1, "day").format("YYYY-MM-DD"),
     checkinTime: "15:00",
@@ -171,6 +161,7 @@ export default function AccommodationEditModal({
         country: accommodation.country || "",
         city: accommodation.city || "",
         place: accommodation.location?.name || "",
+        locationId: accommodation.location?.id,
         checkinDate: accommodation.checkinDate || dayjs().format("YYYY-MM-DD"),
         checkoutDate:
           accommodation.checkoutDate ||
@@ -291,6 +282,7 @@ export default function AccommodationEditModal({
         setFormData({
           name: String(v.name ?? ""),
           place: "",
+          locationId: undefined,
           country: String(v.country ?? ""),
           city: String(v.city ?? ""),
           description: String(v.description ?? ""),
@@ -310,6 +302,11 @@ export default function AccommodationEditModal({
     }
   }, [visible, pendingAiResult]);
 
+  const handlePlaceSelect = (place: PlaceResult) => {
+    locationDraftRef.current = place;
+    setFormData(prev => ({ ...prev, place: place.name }));
+  };
+
   const handleSave = async () => {
     if (!formData.name.trim()) {
       Alert.alert("알림", "숙소명을 입력해주세요");
@@ -318,6 +315,45 @@ export default function AccommodationEditModal({
 
     setIsSubmitting(true);
     try {
+      // 장소 draft → 저장 시점에 create/update
+      let finalLocationId = formData.locationId;
+      const draft = locationDraftRef.current;
+      if (draft) {
+        try {
+          if (typeof finalLocationId === "number") {
+            await locationsApi.updateLocation(finalLocationId, {
+              name: draft.name, placeId: draft.placeId, latitude: draft.latitude, longitude: draft.longitude, address: draft.address, hasCoords: draft.hasCoords,
+            });
+          } else {
+            const loc = await locationsApi.createLocation({
+              name: draft.name, placeId: draft.placeId, latitude: draft.latitude,
+              longitude: draft.longitude, address: draft.address, hasCoords: draft.hasCoords,
+            });
+            finalLocationId = loc.id;
+          }
+        } catch {
+          finalLocationId = formData.locationId;
+        }
+        locationDraftRef.current = null;
+      } else {
+        const rawText = rawLocationTextRef.current.trim() || formData.place.trim();
+        const originalName = accommodation?.location?.name ?? "";
+        if (rawText && rawText !== originalName) {
+          try {
+            if (typeof finalLocationId === "number") {
+              await locationsApi.updateLocation(finalLocationId, {
+                name: rawText, placeId: manualPlaceId(rawText), latitude: 0, longitude: 0, address: undefined, hasCoords: false,
+              });
+            } else {
+              const loc = await locationsApi.createLocation({
+                name: rawText, placeId: manualPlaceId(rawText), latitude: 0, longitude: 0, hasCoords: false,
+              });
+              finalLocationId = loc.id;
+            }
+          } catch { /* ignore */ }
+        }
+      }
+
       const amount = Number.parseInt(normalizeAmount(expenseAmount), 10) || 0;
       let savedAccommodation: Accommodation;
       if (accommodation) {
@@ -325,6 +361,7 @@ export default function AccommodationEditModal({
           accommodation.id,
           {
             name: formData.name.trim(),
+            locationId: finalLocationId,
             description: formData.description?.trim() || undefined,
             country: formData.country?.trim() || undefined,
             city: formData.city?.trim() || undefined,
@@ -345,6 +382,7 @@ export default function AccommodationEditModal({
         savedAccommodation = await accommodationsApi.createAccommodation({
           planId,
           name: formData.name.trim(),
+          locationId: finalLocationId,
           description: formData.description?.trim() || undefined,
           country: formData.country?.trim() || undefined,
           city: formData.city?.trim() || undefined,
@@ -442,14 +480,13 @@ export default function AccommodationEditModal({
           </Pressable>
         </View>
       )}
-      <ScrollView
+      <KeyboardAwareScrollView
         ref={scrollRef}
         style={styles.scrollView}
-        contentContainerStyle={[
-          styles.scrollContent,
-          { paddingBottom: keyboardHeight + 40 || 24 },
-        ]}
+        contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        bottomOffset={40}
+        keyboardShouldPersistTaps="handled"
       >
         {/* 입력 필드들 */}
         <View style={styles.form}>
@@ -518,10 +555,19 @@ export default function AccommodationEditModal({
 
           <View style={styles.inputGroup}>
             <Text style={styles.label}>장소 (주소)</Text>
-            <Input
+            <PlacesSearchInput
               value={formData.place}
-              onChangeText={text => setFormData({ ...formData, place: text })}
-              style={[styles.input, !accommodation && styles.inputBorderless]}
+              onSelect={handlePlaceSelect}
+              onClear={() => { locationDraftRef.current = null; rawLocationTextRef.current = ""; setFormData(prev => ({ ...prev, place: "", locationId: undefined })); }}
+              onRawInputChange={(t) => { locationDraftRef.current = null; rawLocationTextRef.current = t; }}
+              bordered={!!accommodation}
+              placeholder="장소를 검색하세요."
+              cityContext={formData.city || formData.country || undefined}
+              initialCoords={
+                accommodation?.location?.hasCoords
+                  ? { lat: accommodation.location.latitude, lng: accommodation.location.longitude }
+                  : undefined
+              }
             />
           </View>
 
@@ -629,39 +675,12 @@ export default function AccommodationEditModal({
                   variant="filled"
                   containerStyle={styles.amountInputContainer}
                   style={styles.amountInputStyle}
-                  onFocus={() => {
-                    setTimeout(
-                      () => scrollRef.current?.scrollToEnd({ animated: true }),
-                      100,
-                    );
-                  }}
                 />
-                <Pressable
-                  style={styles.currencyBadge}
-                  onPress={() => {
-                    Animated.timing(currencyOpacity, {
-                      toValue: 0,
-                      duration: 100,
-                      useNativeDriver: true,
-                    }).start(() => {
-                      setExpenseCurrency(prev =>
-                        prev === ExpenseCurrency.KRW
-                          ? ExpenseCurrency.USD
-                          : ExpenseCurrency.KRW,
-                      );
-                      Animated.timing(currencyOpacity, {
-                        toValue: 1,
-                        duration: 150,
-                        useNativeDriver: true,
-                      }).start();
-                    });
-                  }}
-                  hitSlop={8}
-                >
-                  <Animated.Text style={[styles.amountSuffix, { opacity: currencyOpacity }]}>
-                    {expenseCurrency === ExpenseCurrency.KRW ? "원" : "달러"}
-                  </Animated.Text>
-                </Pressable>
+                <CurrencyToggle
+                  value={expenseCurrency}
+                  onChange={setExpenseCurrency}
+                  variant="primary"
+                />
               </View>
             </View>
           </View>
@@ -717,7 +736,7 @@ export default function AccommodationEditModal({
             isAiAnalyzeSuccess={!!aiModalResult?.success && !aiAnalyzeError}
           />
         </View>
-      </ScrollView>
+      </KeyboardAwareScrollView>
 
       <TimeModal
         visible={timeModalField === "checkin"}
@@ -792,6 +811,7 @@ export default function AccommodationEditModal({
           setFormData({
             name: String(v.name ?? ""),
             place: "",
+            locationId: undefined,
             country: String(v.country ?? ""),
             city: String(v.city ?? ""),
             description: String(v.description ?? ""),
@@ -967,8 +987,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     borderRadius: 12,
-    paddingHorizontal: 14,
-    height: 48,
+    paddingHorizontal: 16,
+    paddingVertical: 2,
+    gap: 8,
     backgroundColor: `${colors.primary}1A`,
   },
   amountInputContainer: {
@@ -976,25 +997,12 @@ const styles = StyleSheet.create({
   },
   amountInputStyle: {
     flex: 1,
-    height: 48,
     textAlign: "left",
     backgroundColor: "transparent",
     fontFamily: typography.fontFamily.pretendardSemiBold,
     fontSize: 14,
     paddingHorizontal: 0,
     paddingVertical: 0,
-    color: colors.primary,
-  },
-  currencyBadge: {
-    marginLeft: 4,
-    width: 44,
-    paddingVertical: 4,
-    borderRadius: 6,
-    backgroundColor: `${colors.primary}10`,
-    alignItems: "center",
-  },
-  amountSuffix: {
-    ...textStyles.h6,
     color: colors.primary,
   },
   attachmentSection: {
