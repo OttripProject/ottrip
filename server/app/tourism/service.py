@@ -76,7 +76,7 @@ async def find_area_codes(
     }
     async with httpx.AsyncClient(timeout=10.0) as client:
         response = await client.get(f"{_KOR_SERVICE_URL}/searchKeyword2", params=params)
-        logger.info(
+        logger.warning(
             "[tourism] find_area_codes status=%s keyword=%r url=%s",
             response.status_code,
             keyword,
