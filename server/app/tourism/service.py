@@ -212,16 +212,29 @@ async def get_location_based_attractions(
     if signgu_cd:
         params["lDongSignguCd"] = signgu_cd
 
+    import logging
+
+    _log = logging.getLogger(__name__)
     async with httpx.AsyncClient(timeout=10.0) as client:
         resp = await client.get(
             f"{_KOR_SERVICE_URL}/locationBasedList2",
             params={**params, "radius": "1000"},
+        )
+        _log.warning(
+            "[nearby] locationBasedList2 1km status=%s body=%s",
+            resp.status_code,
+            resp.text[:300],
         )
         items = _extract_items(resp.json())
         if len(items) < 3:
             resp = await client.get(
                 f"{_KOR_SERVICE_URL}/locationBasedList2",
                 params={**params, "radius": "2000"},
+            )
+            _log.warning(
+                "[nearby] locationBasedList2 2km status=%s body=%s",
+                resp.status_code,
+                resp.text[:300],
             )
             items = _extract_items(resp.json())
 
