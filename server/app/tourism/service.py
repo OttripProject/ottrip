@@ -217,6 +217,11 @@ async def get_location_based_attractions(
         "mapY": str(mapy),
         "_type": "json",
     }
+    if area_cd:
+        params["lDongRegnCd"] = area_cd
+    if signgu_cd:
+        params["lDongSignguCd"] = signgu_cd
+
     async with httpx.AsyncClient(timeout=10.0) as client:
         resp = await client.get(
             f"{_KOR_SERVICE_URL}/locationBasedList2",
