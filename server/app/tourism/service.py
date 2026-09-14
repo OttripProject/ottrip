@@ -1,4 +1,5 @@
 import asyncio
+import logging
 import math
 import re
 from datetime import date, datetime, time
@@ -17,6 +18,8 @@ from .schemas import (
     SuggestionPlace,
     TourismDetail,
 )
+
+logger = logging.getLogger(__name__)
 
 _CONGESTION_THRESHOLD = 70.0  # CDF 지수 임계값 (상위 30% 혼잡 판정)
 
@@ -73,9 +76,22 @@ async def find_area_codes(
     }
     async with httpx.AsyncClient(timeout=10.0) as client:
         response = await client.get(f"{_KOR_SERVICE_URL}/searchKeyword2", params=params)
+        logger.info(
+            "[tourism] find_area_codes status=%s keyword=%r",
+            response.status_code,
+            keyword,
+        )
+        if response.status_code != 200:
+            logger.error("[tourism] find_area_codes non-200: %s", response.text[:500])
         data: dict[str, Any] = response.json()
     items = _extract_items(data)
+    logger.info("[tourism] find_area_codes items_count=%d", len(items))
     if not items:
+        logger.warning(
+            "[tourism] find_area_codes no items for keyword=%r, data=%s",
+            keyword,
+            str(data)[:500],
+        )
         return None, None
 
     if lat and lng:
