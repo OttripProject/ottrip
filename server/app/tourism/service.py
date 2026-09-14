@@ -78,12 +78,15 @@ async def find_area_codes(
     async with httpx.AsyncClient(timeout=10.0) as client:
         response = await client.get(f"{_KOR_SERVICE_URL}/searchKeyword2", params=params)
         logger.info(
-            "[tourism] find_area_codes status=%s keyword=%r",
+            "[tourism] find_area_codes status=%s keyword=%r url=%s",
             response.status_code,
             keyword,
+            str(response.url).replace(tourism_settings.TOUR_SERVICE_KEY, "REDACTED"),
         )
         if response.status_code != 200:
-            logger.error("[tourism] find_area_codes non-200: %s", response.text[:500])
+            logger.error(
+                "[tourism] find_area_codes non-200 body: %s", response.text[:500]
+            )
         data: dict[str, Any] = response.json()
     items = _extract_items(data)
     logger.info("[tourism] find_area_codes items_count=%d", len(items))
