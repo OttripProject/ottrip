@@ -19,6 +19,7 @@ if core_settings.ENVIRONMENT == "prod":
     sentry_sdk.init(
         dsn=core_settings.SENTRY_DSN,
         send_default_pii=True,
+        trace_propagation_targets=[],
     )
 
 
