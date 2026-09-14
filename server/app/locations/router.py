@@ -1,5 +1,3 @@
-import logging
-
 from fastapi import HTTPException
 
 from app.core.router import create_router
@@ -10,7 +8,6 @@ from .repository import create_location, update_location
 from .schemas import LocationCreate, LocationRead, LocationUpdate
 
 router = create_router()
-logger = logging.getLogger(__name__)
 
 
 async def _fetch_area_codes(
@@ -18,17 +15,8 @@ async def _fetch_area_codes(
 ) -> tuple[str | None, str | None]:
     """장소명+좌표로 KOR_SERVICE2 검색 → (area_cd, signgu_cd) 반환. 실패 시 (None, None)."""
     try:
-        result = await tourism_service.find_area_codes(name, lat, lng)
-        logger.info("[location] find_area_codes '%s' → %s", name, result)
-        return result
-    except Exception as e:
-        logger.error(
-            "[location] find_area_codes '%s' failed: %s: %s",
-            name,
-            type(e).__name__,
-            e,
-            exc_info=True,
-        )
+        return await tourism_service.find_area_codes(name, lat, lng)
+    except Exception:
         return None, None
 
 
