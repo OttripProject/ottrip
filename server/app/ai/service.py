@@ -1,5 +1,6 @@
 import json
 import logging
+import re
 from typing import Any, Dict, Iterable, cast
 
 logger = logging.getLogger(__name__)
@@ -514,6 +515,7 @@ class AIService:
 
         raw_ai_data = ai_result.data or {}
         ai_data: Dict[str, list[Dict[str, Any]]] = {}
+        ai_seen_keys: set[str] = set()
 
         for raw_category_key, raw_items in raw_ai_data.items():
             if not isinstance(raw_items, list):
@@ -525,6 +527,10 @@ class AIService:
                 if not isinstance(item, dict):
                     continue
                 item_dict = cast(Dict[str, Any], item)
+                key = self._normalize_checklist_item_key(item_dict)
+                if self._is_duplicate_key(key, ai_seen_keys):
+                    continue
+                ai_seen_keys.add(key)
                 # AI 생성 항목: 기본값
                 item_dict["is_custom"] = False
                 if "is_checked" not in item_dict:
@@ -585,7 +591,12 @@ class AIService:
                         )
                         if ai_category_key not in ai_data:
                             ai_data[ai_category_key] = []
-                        ai_data[ai_category_key].extend(user_added_items)
+                        next_id = self._max_item_id(ai_data) + 1
+                        for custom_item in user_added_items:
+                            new_item = dict(custom_item)
+                            new_item["id"] = next_id
+                            next_id += 1
+                            ai_data[ai_category_key].append(new_item)
 
         checklist = ChecklistRead(
             categories=ChecklistItemsByCategory.model_validate(ai_data)
@@ -615,7 +626,19 @@ class AIService:
 
     def _normalize_checklist_item_key(self, item: Dict[str, Any]) -> str:
         name = str(item.get("name") or "").strip().lower()
-        return name
+        return re.sub(r"\s+", "", name)
+
+    def _is_duplicate_key(self, key: str, existing_keys: set[str]) -> bool:
+        if key in existing_keys:
+            return True
+        # 포함 관계 체크 (2자 미만은 오탐 방지를 위해 제외)
+        if len(key) >= 2:
+            for existing_key in existing_keys:
+                if len(existing_key) >= 2 and (
+                    key in existing_key or existing_key in key
+                ):
+                    return True
+        return False
 
     def _iter_all_items(
         self, categories: Dict[str, list[Dict[str, Any]]]
@@ -655,7 +678,7 @@ class AIService:
 
             for item in ai_items:
                 key = self._normalize_checklist_item_key(item)
-                if key in existing_keys:
+                if self._is_duplicate_key(key, existing_keys):
                     continue
 
                 # id 충돌 방지: 항상 새 id 부여
@@ -670,7 +693,7 @@ class AIService:
                     new_item["date"] = date
 
                 merged[category_key_norm].append(new_item)
-                existing_keys.add(key)
+                existing_keys.add(key)  # 이후 항목 중복 체크에 반영
 
         return merged
 
