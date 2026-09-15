@@ -106,7 +106,9 @@ export default function FestivalsPanel({
                     </Text>
                   </View>
                   <Text style={styles.itemDate} numberOfLines={1}>
-                    {`${fmtDate(f.eventStartDate)} – ${fmtDate(f.eventEndDate)}`}
+                    {f.eventStartDate && f.eventEndDate && f.eventStartDate !== f.eventEndDate
+                      ? `${fmtDate(f.eventStartDate)} – ${fmtDate(f.eventEndDate)}`
+                      : fmtDate(f.eventStartDate)}
                   </Text>
                 </Pressable>
                 </View>
