@@ -15,10 +15,12 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "ottripofficial.ottrip"
+      "bundleIdentifier": "ottripofficial.ottrip",
+      "buildNumber": "2"
     },
     "android": {
-      "package": "ottripofficial.ottrip"
+      "package": "ottripofficial.ottrip",
+      "versionCode": 2
     },
     "web": {
       "favicon": "./assets/favicon.png",

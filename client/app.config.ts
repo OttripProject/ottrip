@@ -59,6 +59,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
         "expo-image-picker",
         {
           photosPermission: PHOTO_LIBRARY_USAGE_DESCRIPTION,
+          microphonePermission: false,
         },
       ],
       [
@@ -156,7 +157,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       prod: "ottrip",
       local: "ottrip-local",
     }),
-    version: "1.1.0",
+    version: "1.1.1",
     orientation: "portrait",
     icon: `./assets/${switchProfile({
       dev: "icon-dev.png",
