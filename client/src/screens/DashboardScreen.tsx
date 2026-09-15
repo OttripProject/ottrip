@@ -327,6 +327,7 @@ export default function DashboardScreen() {
     const maxDate = today.add(30, "day");
     const eligible = planData.itineraries.filter((it: any) => {
       if (!it.location) return false;
+      if (it.category === "MEAL") return false;
       const d = dayjs(it.itineraryDate);
       return !d.isBefore(today) && !d.isAfter(maxDate);
     });
@@ -712,15 +713,26 @@ export default function DashboardScreen() {
             ) : (
               <>
                 {/* 혼잡 배너 */}
-                {!bannerDismissed && (festivals.length > 0 || congestedItems.length > 0) && (
-                  <View style={styles.bannerWrapper}>
-                    <CongestionBanner
-                      festivals={festivals}
-                      congestedItems={congestedItems}
-                      onDismiss={() => setBannerDismissed(true)}
-                    />
-                  </View>
-                )}
+                {(() => {
+                  const mealLocationNames = new Set(
+                    planData.itineraries
+                      .filter((it: any) => it.category === "MEAL" && it.location)
+                      .map((it: any) => it.location.name as string),
+                  );
+                  const bannerFestivals = festivals.filter(
+                    f => !mealLocationNames.has(f.matchedLocationName ?? ""),
+                  );
+                  if (bannerDismissed || (bannerFestivals.length === 0 && congestedItems.length === 0)) return null;
+                  return (
+                    <View style={styles.bannerWrapper}>
+                      <CongestionBanner
+                        festivals={bannerFestivals}
+                        congestedItems={congestedItems}
+                        onDismiss={() => setBannerDismissed(true)}
+                      />
+                    </View>
+                  );
+                })()}
                 {/* 2. 주간 스케줄 + AI 추천 바 (같은 flex 영역) */}
                 <View style={styles.scheduleWrapper}>
                   <View style={styles.scheduleModal}>

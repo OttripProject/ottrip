@@ -966,17 +966,29 @@ export default function TodayScreen() {
           </View>
 
           {/* 혼잡 배너 */}
-          {!bannerDismissed && (congestedItems.length > 0 || matchedFestivals.some(f => f.matchedDate === dayjs().format("YYYY-MM-DD"))) && (
+          {(() => {
+            const todayStr = dayjs().format("YYYY-MM-DD");
+            const mealLocationNames = new Set(
+              planData.itineraries
+                .filter((it: any) => it.category === "MEAL" && it.location)
+                .map((it: any) => it.location.name as string),
+            );
+            const bannerFestivals = matchedFestivals.filter(
+              f => f.matchedDate === todayStr && !mealLocationNames.has(f.matchedLocationName ?? ""),
+            );
+            if (bannerDismissed || (congestedItems.length === 0 && bannerFestivals.length === 0)) return null;
+            return (
             <Animated.View style={[styles.bannerWrapper, { opacity: bannerFadeAnim }]}>
               <CongestionBanner
-                festivals={matchedFestivals.filter(f => f.matchedDate === dayjs().format("YYYY-MM-DD"))}
+                festivals={bannerFestivals}
                 congestedItems={congestedItems}
                 onDismiss={() => setBannerDismissed(true)}
                 showDate={false}
                 boldLocations
               />
             </Animated.View>
-          )}
+            );
+          })()}
 
           {/* 현재 진행 중 활동 카드 */}
           {currentActivities.length > 0 && (() => {
