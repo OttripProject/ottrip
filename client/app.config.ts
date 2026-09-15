@@ -178,6 +178,8 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       infoPlist: {
         ITSAppUsesNonExemptEncryption: false,
         NSPhotoLibraryUsageDescription: PHOTO_LIBRARY_USAGE_DESCRIPTION,
+        NSLocationWhenInUseUsageDescription:
+          "지도에서 현재 위치를 표시하기 위해 위치 정보에 접근합니다.",
       },
     },
     android: {
