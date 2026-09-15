@@ -18,7 +18,7 @@ interface FestivalsPanelProps {
 
 function fmtDate(s: string | null): string {
   if (!s || s.length < 8) return "";
-  return `${parseInt(s.slice(4, 6))}.${parseInt(s.slice(6, 8))}`;
+  return `${s.slice(0, 4)}.${parseInt(s.slice(4, 6))}.${parseInt(s.slice(6, 8))}`;
 }
 
 function getDotColor(lclsSystm2: string | null): string {

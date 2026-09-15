@@ -20,7 +20,7 @@ function getDotColor(lclsSystm2: string | null): string {
 }
 
 function fmtEventDate(startDate: string | null, endDate: string | null): string {
-  const fmt = (s: string) => `${parseInt(s.slice(4, 6))}.${parseInt(s.slice(6, 8))}`;
+  const fmt = (s: string) => `${s.slice(0, 4)}.${parseInt(s.slice(4, 6))}.${parseInt(s.slice(6, 8))}`;
   if (startDate && endDate) return `${fmt(startDate)} – ${fmt(endDate)}`;
   if (startDate) return fmt(startDate);
   return "";
