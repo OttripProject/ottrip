@@ -3,7 +3,6 @@ import math
 import re
 from datetime import date, datetime, time
 from typing import Any
-from urllib.parse import unquote
 
 import httpx
 
@@ -48,7 +47,7 @@ async def search_kor_keyword(keyword: str) -> dict[str, Any] | None:
     params = {
         "MobileOS": _MOBILE_OS,
         "MobileApp": _MOBILE_APP,
-        "serviceKey": unquote(tourism_settings.TOUR_SERVICE_KEY),
+        "serviceKey": tourism_settings.TOUR_SERVICE_KEY,
         "keyword": keyword,
         "_type": "json",
         "numOfRows": "1",
@@ -67,7 +66,7 @@ async def find_area_codes(
     params = {
         "MobileOS": _MOBILE_OS,
         "MobileApp": _MOBILE_APP,
-        "serviceKey": unquote(tourism_settings.TOUR_SERVICE_KEY),
+        "serviceKey": tourism_settings.TOUR_SERVICE_KEY,
         "keyword": keyword,
         "_type": "json",
         "numOfRows": "10",
@@ -102,7 +101,7 @@ async def _search_best_match(keyword: str) -> dict[str, Any] | None:
     params = {
         "MobileOS": _MOBILE_OS,
         "MobileApp": _MOBILE_APP,
-        "serviceKey": unquote(tourism_settings.TOUR_SERVICE_KEY),
+        "serviceKey": tourism_settings.TOUR_SERVICE_KEY,
         "keyword": keyword,
         "_type": "json",
         "numOfRows": "10",
@@ -137,7 +136,7 @@ async def get_related_attractions(
     base_params = {
         "MobileOS": _MOBILE_OS,
         "MobileApp": _MOBILE_APP,
-        "serviceKey": unquote(tourism_settings.TOUR_SERVICE_KEY),
+        "serviceKey": tourism_settings.TOUR_SERVICE_KEY,
         "baseYm": _base_ym_3months_ago(),
         "areaCd": area_cd,
         "signguCd": signgu_cd,
@@ -203,7 +202,7 @@ async def get_location_based_attractions(
     params: dict[str, str] = {
         "MobileOS": _MOBILE_OS,
         "MobileApp": _MOBILE_APP,
-        "serviceKey": unquote(tourism_settings.TOUR_SERVICE_KEY),
+        "serviceKey": tourism_settings.TOUR_SERVICE_KEY,
         "mapX": str(mapx),
         "mapY": str(mapy),
         "_type": "json",
@@ -320,7 +319,7 @@ async def get_tourism_detail(
     base_params = {
         "MobileOS": _MOBILE_OS,
         "MobileApp": _MOBILE_APP,
-        "serviceKey": unquote(tourism_settings.TOUR_SERVICE_KEY),
+        "serviceKey": tourism_settings.TOUR_SERVICE_KEY,
         "contentId": cid,
         "_type": "json",
     }
@@ -455,7 +454,7 @@ async def get_festivals_near_itineraries(
         params = {
             "MobileOS": _MOBILE_OS,
             "MobileApp": _MOBILE_APP,
-            "serviceKey": unquote(tourism_settings.TOUR_SERVICE_KEY),
+            "serviceKey": tourism_settings.TOUR_SERVICE_KEY,
             "lDongRegnCd": area_cd,
             "eventStartDate": start.replace("-", ""),
             "eventEndDate": end.replace("-", ""),
@@ -548,7 +547,7 @@ async def get_congestion_rate(
     params: dict[str, str] = {
         "MobileOS": _MOBILE_OS,
         "MobileApp": _MOBILE_APP,
-        "serviceKey": unquote(tourism_settings.TOUR_SERVICE_KEY),
+        "serviceKey": tourism_settings.TOUR_SERVICE_KEY,
         "areaCd": area_cd,
         "signguCd": signgu_cd,
         "_type": "json",
@@ -804,7 +803,7 @@ async def _suggest_search_nearby(
     params = {
         "MobileOS": _MOBILE_OS,
         "MobileApp": _MOBILE_APP,
-        "serviceKey": unquote(tourism_settings.TOUR_SERVICE_KEY),
+        "serviceKey": tourism_settings.TOUR_SERVICE_KEY,
         "mapX": str(lng),
         "mapY": str(lat),
         "radius": str(radius_m),
@@ -821,7 +820,7 @@ async def _suggest_fetch_intro(content_id: str, type_id: str) -> dict[str, Any]:
     params = {
         "MobileOS": _MOBILE_OS,
         "MobileApp": _MOBILE_APP,
-        "serviceKey": unquote(tourism_settings.TOUR_SERVICE_KEY),
+        "serviceKey": tourism_settings.TOUR_SERVICE_KEY,
         "contentId": content_id,
         "contentTypeId": type_id,
         "_type": "json",
