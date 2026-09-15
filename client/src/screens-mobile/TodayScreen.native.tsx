@@ -1940,7 +1940,19 @@ export default function TodayScreen() {
           planData.refreshAttachments();
         }}
         onDelete={async itineraryId => {
+          const remainingDates = collectPlanItemDates(
+            planData.itineraries.filter(it => it.id !== itineraryId),
+            planData.flights,
+            planData.accommodations,
+          );
+          await shrinkPlanIfNeeded(selectedPlan!.id, planData.plan, remainingDates);
           planData.removeItinerary(itineraryId);
+          if (selectedPlan?.publicId) {
+            queryClient.invalidateQueries({
+              queryKey: ["plan", selectedPlan.publicId],
+            });
+          }
+          queryClient.invalidateQueries({ queryKey: ["plans"] });
           queryClient.invalidateQueries({
             queryKey: ["expenses", selectedPlan?.id],
           });
