@@ -245,6 +245,9 @@ export default function TodayScreen() {
     setTimelineViewDate(null);
     setDismissedSuggestionDates(new Set());
     setSuggestionPlaceIdxs({});
+    setBannerDismissed(false);
+    setCongestedItems([]);
+    setMatchedFestivals([]);
   }, [selectedPlan?.id]);
 
   useEffect(() => {
