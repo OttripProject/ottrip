@@ -525,6 +525,8 @@ export default function FestivalDetailModal({ visible, onClose, item, onAddToIti
 
 const styles = StyleSheet.create({
   overlay: {
+    // RNW Pressable이 기본으로 붙이는 cursor:pointer를 상쇄 (래퍼일 뿐 버튼이 아님)
+    cursor: "auto",
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.4)",
     justifyContent: "center",
@@ -532,6 +534,8 @@ const styles = StyleSheet.create({
     padding: spacing.xl,
   },
   modal: {
+    // RNW Pressable이 기본으로 붙이는 cursor:pointer를 상쇄 (래퍼일 뿐 버튼이 아님)
+    cursor: "auto",
     backgroundColor: colors.white,
     borderRadius: 24,
     width: "100%",
@@ -816,6 +820,8 @@ const styles = StyleSheet.create({
     color: colors.white,
   } as any,
   zoomOverlay: {
+    // RNW Pressable이 기본으로 붙이는 cursor:pointer를 상쇄 (래퍼일 뿐 버튼이 아님)
+    cursor: "auto",
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.82)",
     justifyContent: "center",
@@ -823,6 +829,8 @@ const styles = StyleSheet.create({
     padding: 40,
   },
   zoomImageWrapper: {
+    // RNW Pressable이 기본으로 붙이는 cursor:pointer를 상쇄 (래퍼일 뿐 버튼이 아님)
+    cursor: "auto",
     width: "100%",
     flex: 1,
     justifyContent: "center",
