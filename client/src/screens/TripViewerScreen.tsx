@@ -16,6 +16,7 @@ import {
   plansApi,
 } from "@/services/plans";
 import GradientBackground from "@/ui/components/GradientBackground";
+import { breakpoints } from "@/ui/tokens/breakpoints";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { useEffect, useState } from "react";
 import {
@@ -57,14 +58,14 @@ export default function TripViewerScreen() {
   const [mainLayoutHeight, setMainLayoutHeight] = useState(600);
   const [hintHeight, setHintHeight] = useState(48);
 
-  const isMobile = width < 768;
+  const isMobile = width < breakpoints.compact;
 
   const innerGap = 16;
 
   const getResponsiveRatio = () => {
     if (isMobile) return { left: 1, right: 0 };
-    if (width < 1024) return { left: 0.6, right: 0.4 };
-    if (width < 1440) return { left: 0.7, right: 0.3 };
+    if (width < breakpoints.stacked) return { left: 0.6, right: 0.4 };
+    if (width < breakpoints.wide) return { left: 0.7, right: 0.3 };
     return { left: 0.8, right: 0.2 };
   };
   const ratio = getResponsiveRatio();

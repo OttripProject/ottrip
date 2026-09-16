@@ -4,6 +4,7 @@ import { tourismApi } from "@/services/tourism";
 import TourismDetailModal from "@/components/modals/TourismDetailModal";
 import SuggestionBar from "@/components/panels/SuggestionBar";
 import { useToast } from "@/contexts/ToastContext";
+import { useBreakpoint } from "@/hooks/useBreakpoint";
 import { usePlanDataQuery } from "@/hooks/usePlanDataQuery";
 import { usePlansQuery } from "@/hooks/usePlansQuery";
 import api from "@/services/api";
@@ -13,6 +14,7 @@ import type {
   StagedDocumentAnalyzePayload,
 } from "@/types/api";
 import GradientBackground from "@/ui/components/GradientBackground";
+import { breakpoints } from "@/ui/tokens/breakpoints";
 import { colors } from "@/ui/tokens/colors";
 import { textStyles } from "@/ui/tokens/typography";
 import { useNavigation, useRoute } from "@react-navigation/native";
@@ -26,7 +28,6 @@ import {
   ScrollView,
   StyleSheet,
   View,
-  useWindowDimensions,
   ActivityIndicator,
   Text
 } from "react-native";
@@ -45,7 +46,7 @@ import { findFestivalSlot } from "@/utils/festivalSlot";
 // ──────────────────────────────────────────────────────────────────────────────
 
 export default function DashboardScreen() {
-  const { width } = useWindowDimensions();
+  const { width, isCompact, isStacked } = useBreakpoint();
   const navigation = useNavigation();
   const route = useRoute<any>();
   const [selectedPlanId, setSelectedPlanId] = useState<number | null>(null);
@@ -160,14 +161,13 @@ export default function DashboardScreen() {
     selectedAccommodation
   );
 
-  const isMobile = width < 768;
-  const isStacked = width < 1024;
-  const isScrollMode = isStacked && isPanelActive;
+  // compact는 하단 패널이 세로로 쌓여 뷰포트를 넘으므로 패널과 무관하게 항상 스크롤
+  const isScrollMode = isCompact || (isStacked && isPanelActive);
 
   const getResponsiveRatio = () => {
-    if (!isPanelActive || isMobile || isStacked) {
+    if (!isPanelActive || isStacked) {
       return { left: 1, right: 0 };
-    } else if (width < 1440) {
+    } else if (width < breakpoints.wide) {
       return { left: 0.7, right: 0.3 };
     } else {
       return { left: 0.75, right: 0.25 };
@@ -175,7 +175,7 @@ export default function DashboardScreen() {
   };
 
   const ratio = getResponsiveRatio();
-  const targetRight = !isMobile && !isStacked && isPanelActive ? ratio.right : 0;
+  const targetRight = !isStacked && isPanelActive ? ratio.right : 0;
 
   const animRightFlex = useRef(new Animated.Value(targetRight)).current;
   const prevTargetRef = useRef(targetRight);
@@ -218,6 +218,12 @@ export default function DashboardScreen() {
   const bottomRatio = festivalsExpanded ? 0.3 : 0.2;
   const leftTopHeight = Math.round((availableHeight - 16) * leftTopRatio);
   const targetBottomH = Math.round((availableHeight - 16) * bottomRatio);
+
+  // compact: 하단 패널이 세로로 쌓이므로 각 패널에 고정 높이를 주고 합산한다
+  const compactPanelH = festivalsExpanded ? 340 : 260;
+  const compactBottomCount = suggestFestivals.length > 0 ? 3 : 2;
+  const compactBottomH =
+    compactBottomCount * compactPanelH + (compactBottomCount - 1) * 16;
 
   const animBottomH = useRef(new Animated.Value(targetBottomH)).current;
   const animFestivalsFlex = useRef(new Animated.Value(0.5)).current;
@@ -791,39 +797,74 @@ export default function DashboardScreen() {
             )}
           </View>
 
-          {/* 하단 모달들 */}
-          <Animated.View style={[styles.bottomRow, { height: animBottomH }]}>
-            {/* 4. 비용 모달 */}
-            <View style={styles.expensesModal}>
-              <ExpensesPanel
-                planData={{
-                  ...planData,
-                  refreshItineraries: planData.refreshItineraries,
-                  refreshFlights: planData.refreshFlights,
-                  refreshAccommodations: planData.refreshAccommodations,
-                }}
-                onExpenseAdd={handleExpenseAdd}
-              />
-            </View>
-
-            {/* 5. AI 어시스턴트 모달 */}
-            <View style={styles.aiModal}>
-              <AIAssistantPanel publicId={planData.plan?.publicId || null} />
-            </View>
-
-            {/* 6. 축제·공연 패널 */}
-            {suggestFestivals.length > 0 && (
-              <Animated.View style={[styles.festivalsModal, { flex: animFestivalsFlex }]}>
-                <FestivalsPanel
-                  festivals={suggestFestivals}
-                  isLoading={suggestFestivalsLoading}
-                  expanded={festivalsExpanded}
-                  onToggle={() => setFestivalsExpanded(v => !v)}
-                  onAddToItinerary={handleFestivalAddToItinerary}
+          {/* 하단 모달들 — compact는 세로 스택, 그 외는 가로 3등분 */}
+          {isCompact ? (
+            <View style={[styles.bottomColumn, { height: compactBottomH }]}>
+              {/* 4. 비용 모달 */}
+              <View style={{ height: compactPanelH }}>
+                <ExpensesPanel
+                  planData={{
+                    ...planData,
+                    refreshItineraries: planData.refreshItineraries,
+                    refreshFlights: planData.refreshFlights,
+                    refreshAccommodations: planData.refreshAccommodations,
+                  }}
+                  onExpenseAdd={handleExpenseAdd}
                 />
-              </Animated.View>
-            )}
-          </Animated.View>
+              </View>
+
+              {/* 5. AI 어시스턴트 모달 */}
+              <View style={{ height: compactPanelH }}>
+                <AIAssistantPanel publicId={planData.plan?.publicId || null} />
+              </View>
+
+              {/* 6. 축제·공연 패널 */}
+              {suggestFestivals.length > 0 && (
+                <View style={[styles.festivalsModal, { height: compactPanelH }]}>
+                  <FestivalsPanel
+                    festivals={suggestFestivals}
+                    isLoading={suggestFestivalsLoading}
+                    expanded={festivalsExpanded}
+                    onToggle={() => setFestivalsExpanded(v => !v)}
+                    onAddToItinerary={handleFestivalAddToItinerary}
+                  />
+                </View>
+              )}
+            </View>
+          ) : (
+            <Animated.View style={[styles.bottomRow, { height: animBottomH }]}>
+              {/* 4. 비용 모달 */}
+              <View style={styles.expensesModal}>
+                <ExpensesPanel
+                  planData={{
+                    ...planData,
+                    refreshItineraries: planData.refreshItineraries,
+                    refreshFlights: planData.refreshFlights,
+                    refreshAccommodations: planData.refreshAccommodations,
+                  }}
+                  onExpenseAdd={handleExpenseAdd}
+                />
+              </View>
+
+              {/* 5. AI 어시스턴트 모달 */}
+              <View style={styles.aiModal}>
+                <AIAssistantPanel publicId={planData.plan?.publicId || null} />
+              </View>
+
+              {/* 6. 축제·공연 패널 */}
+              {suggestFestivals.length > 0 && (
+                <Animated.View style={[styles.festivalsModal, { flex: animFestivalsFlex }]}>
+                  <FestivalsPanel
+                    festivals={suggestFestivals}
+                    isLoading={suggestFestivalsLoading}
+                    expanded={festivalsExpanded}
+                    onToggle={() => setFestivalsExpanded(v => !v)}
+                    onAddToItinerary={handleFestivalAddToItinerary}
+                  />
+                </Animated.View>
+              )}
+            </Animated.View>
+          )}
 
           {/* 3. 상세 정보 모달 (하단 배치) */}
           <View style={{ height: availableHeight }}>
@@ -1016,7 +1057,7 @@ export default function DashboardScreen() {
             </View>
 
             {/* 우측 영역 (동적 비율, 1024px 이상에서만) */}
-            {!isMobile && !isStacked && showRightPanel && (
+            {!isStacked && showRightPanel && (
               <Animated.View
                 style={[
                   styles.rightArea,
@@ -1182,6 +1223,10 @@ const styles = StyleSheet.create({
     gap: 16,
     minHeight: 0,
     overflow: "hidden",
+  },
+  bottomColumn: {
+    flexDirection: "column",
+    gap: 16,
   },
   detailsModal: {
     flex: 1,
