@@ -23,6 +23,7 @@ import {
   Animated,
   Easing,
   Platform,
+  ScrollView,
   StyleSheet,
   View,
   useWindowDimensions,
@@ -160,12 +161,12 @@ export default function DashboardScreen() {
   );
 
   const isMobile = width < 768;
+  const isStacked = width < 1024;
+  const isScrollMode = isStacked && isPanelActive;
 
   const getResponsiveRatio = () => {
-    if (!isPanelActive || isMobile) {
+    if (!isPanelActive || isMobile || isStacked) {
       return { left: 1, right: 0 };
-    } else if (width < 1024) {
-      return { left: 0.6, right: 0.4 };
     } else if (width < 1440) {
       return { left: 0.7, right: 0.3 };
     } else {
@@ -174,7 +175,7 @@ export default function DashboardScreen() {
   };
 
   const ratio = getResponsiveRatio();
-  const targetRight = !isMobile && isPanelActive ? ratio.right : 0;
+  const targetRight = !isMobile && !isStacked && isPanelActive ? ratio.right : 0;
 
   const animRightFlex = useRef(new Animated.Value(targetRight)).current;
   const prevTargetRef = useRef(targetRight);
@@ -202,10 +203,29 @@ export default function DashboardScreen() {
     }
   }, [targetRight]);
 
+  const headerHeight = 56;
+  const verticalPadding = 16 + 20;
+  const availableHeight = Math.max(
+    360,
+    width
+      ? (typeof window !== "undefined" ? window.innerHeight : 0) -
+          verticalPadding -
+          headerHeight
+      : 600,
+  );
+
+  const leftTopRatio = 0.8;
+  const bottomRatio = festivalsExpanded ? 0.3 : 0.2;
+  const leftTopHeight = Math.round((availableHeight - 16) * leftTopRatio);
+  const targetBottomH = Math.round((availableHeight - 16) * bottomRatio);
+
+  const animBottomH = useRef(new Animated.Value(targetBottomH)).current;
+  const animFestivalsFlex = useRef(new Animated.Value(0.5)).current;
+
   useEffect(() => {
     Animated.parallel([
       Animated.timing(animBottomH, {
-        toValue: Math.round((availableHeight - 16) * (festivalsExpanded ? 0.3 : 0.2)),
+        toValue: targetBottomH,
         duration: 300,
         easing: Easing.out(Easing.cubic),
         useNativeDriver: false,
@@ -217,22 +237,7 @@ export default function DashboardScreen() {
         useNativeDriver: false,
       }),
     ]).start();
-  }, [festivalsExpanded]);
-
-  const headerHeight = 56;
-  const verticalPadding = 16 + 20;
-  const availableHeight = Math.max(
-    360,
-    width
-      ? (typeof window !== "undefined" ? window.innerHeight : 0) -
-          verticalPadding -
-          headerHeight
-      : 600,
-  );
-  const animBottomH = useRef(new Animated.Value(Math.round((availableHeight - 16) * 0.2))).current;
-  const animFestivalsFlex = useRef(new Animated.Value(0.5)).current;
-  const leftTopHeight = Math.round((availableHeight - 16) * 0.8);
-  const leftBottomHeight = Math.round((availableHeight - 16) * 0.2);
+  }, [targetBottomH]);
 
   const plansQuery = usePlansQuery();
 
@@ -691,247 +696,381 @@ export default function DashboardScreen() {
       </View>
 
       {/* 메인 레이아웃 */}
-      <View style={styles.container}>
-        <View style={styles.mainLayout}>
-          {/* 좌측 영역 (동적 비율) */}
-          <View
-            style={[
-              styles.leftArea,
-              { flex: ratio.left, height: availableHeight },
-            ]}
-          >
-            {plansQuery.isLoading ? (
-            <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color={colors.primary} />
-                <Text style={styles.loadingText}>여행을 불러오는 중입니다..</Text>
+      {isScrollMode ? (
+        <ScrollView
+          style={styles.scrollArea}
+          contentContainerStyle={styles.scrollContent}
+        >
+          {/* 혼잡 배너 */}
+          {(() => {
+            const mealLocationNames = new Set(
+              planData.itineraries
+                .filter((it: any) => it.category === "MEAL" && it.location)
+                .map((it: any) => it.location.name as string),
+            );
+            const bannerFestivals = festivals.filter(
+              f => !mealLocationNames.has(f.matchedLocationName ?? ""),
+            );
+            if (bannerDismissed || (bannerFestivals.length === 0 && congestedItems.length === 0)) return null;
+            return (
+              <View style={styles.bannerWrapper}>
+                <CongestionBanner
+                  festivals={bannerFestivals}
+                  congestedItems={congestedItems}
+                  onDismiss={() => setBannerDismissed(true)}
+                />
               </View>
-            ) : trips.length === 0 && !plansQuery.isLoading ? (
-              <EmptyPlanPanel
+            );
+          })()}
+
+          {/* 2. 주간 스케줄 + AI 추천 바 */}
+          <View style={[styles.scrollScheduleBox, { height: leftTopHeight }]}>
+            <View style={styles.scheduleModal}>
+              <WeeklySchedulePanel
+                itineraries={planData.itineraries}
+                flights={planData.flights}
+                height={leftTopHeight}
+                selectedTrip={selectedTrip}
+                planData={planData}
+                plans={plansQuery.plans}
+                trips={trips}
+                onPlansRefresh={plansQuery.fetchPlans}
                 onPlanAdd={plansQuery.addPlan}
-                onTripCreated={handleTripCreated}
+                onPlanUpdate={plansQuery.updatePlan}
+                onPlanDelete={plansQuery.deletePlan}
+                onItineraryAdd={handleItineraryAdd}
+                previewAccommodation={previewAccommodation}
+                onPreviewAccommodationChange={setPreviewAccommodation}
+                onPlanSelect={trip => {
+                  setSelectedTrip(trip);
+                  setSelectedPlanId(trip ? Number.parseInt(trip.id) : null);
+                  if (trip?.publicId) {
+                    // @ts-ignore
+                    navigation.navigate("PLAN", { publicId: trip.publicId });
+                  } else {
+                    // @ts-ignore
+                    navigation.navigate("OTTRIP");
+                  }
+                }}
+                onItinerarySelect={setSelectedItinerary}
+                onFlightAdd={handleFlightAdd}
+                onAccommodationAdd={handleAccommodationAdd}
+                onShowItineraryModal={handleShowItineraryModal}
+                onShowFlightModal={handleShowFlightModal}
+                onRequestNewFlight={handleRequestNewFlight}
+                onRequestNewItinerary={handleRequestNewItinerary}
+                onShowAccommodationModal={handleShowAccommodationModal}
+                onShowItineraryDetail={handleShowItineraryDetail}
+                onShowFlightDetail={handleShowFlightDetail}
+                onShowAccommodationDetail={handleShowAccommodationDetail}
+                activeTab={activeTab}
+                selectedItinerary={selectedItinerary}
+                showAiSuggestButton={suggestions.length > 0 && suggestionDismissed}
+                onAiSuggestPress={() => setSuggestionDismissed(false)}
               />
-            ) : (
-              <>
-                {/* 혼잡 배너 */}
-                {(() => {
-                  const mealLocationNames = new Set(
-                    planData.itineraries
-                      .filter((it: any) => it.category === "MEAL" && it.location)
-                      .map((it: any) => it.location.name as string),
-                  );
-                  const bannerFestivals = festivals.filter(
-                    f => !mealLocationNames.has(f.matchedLocationName ?? ""),
-                  );
-                  if (bannerDismissed || (bannerFestivals.length === 0 && congestedItems.length === 0)) return null;
-                  return (
-                    <View style={styles.bannerWrapper}>
-                      <CongestionBanner
-                        festivals={bannerFestivals}
-                        congestedItems={congestedItems}
-                        onDismiss={() => setBannerDismissed(true)}
-                      />
-                    </View>
-                  );
-                })()}
-                {/* 2. 주간 스케줄 + AI 추천 바 (같은 flex 영역) */}
-                <View style={styles.scheduleWrapper}>
-                  <View style={styles.scheduleModal}>
-                  <WeeklySchedulePanel
-                    itineraries={planData.itineraries}
-                    flights={planData.flights}
-                    height={leftTopHeight}
-                    selectedTrip={selectedTrip}
-                    planData={planData}
-                    plans={plansQuery.plans}
-                    trips={trips}
-                    onPlansRefresh={plansQuery.fetchPlans}
-                    onPlanAdd={plansQuery.addPlan}
-                    onPlanUpdate={plansQuery.updatePlan}
-                    onPlanDelete={plansQuery.deletePlan}
-                    onItineraryAdd={handleItineraryAdd}
-                    previewAccommodation={previewAccommodation}
-                    onPreviewAccommodationChange={setPreviewAccommodation}
-                    onPlanSelect={trip => {
-                      setSelectedTrip(trip);
-                      setSelectedPlanId(trip ? Number.parseInt(trip.id) : null);
-                      if (Platform.OS === "web") {
-                        if (trip?.publicId) {
-                          // @ts-ignore
-                          navigation.navigate("PLAN", {
-                            publicId: trip.publicId,
-                          });
-                        } else {
-                          // @ts-ignore
-                          navigation.navigate("OTTRIP");
-                        }
-                      } else {
-                        if (trip?.publicId) {
-                          // @ts-ignore
-                          navigation.navigate("PLAN", {
-                            publicId: trip.publicId,
-                          });
-                        } else {
-                          // @ts-ignore
-                          navigation.navigate("OTTRIP");
-                        }
-                      }
-                    }}
-                    onItinerarySelect={setSelectedItinerary}
-                    onFlightAdd={handleFlightAdd}
-                    onAccommodationAdd={handleAccommodationAdd}
-                    onShowItineraryModal={handleShowItineraryModal}
-                    onShowFlightModal={handleShowFlightModal}
-                    onRequestNewFlight={handleRequestNewFlight}
-                    onRequestNewItinerary={handleRequestNewItinerary}
-                    onShowAccommodationModal={handleShowAccommodationModal}
-                    onShowItineraryDetail={handleShowItineraryDetail}
-                    onShowFlightDetail={handleShowFlightDetail}
-                    onShowAccommodationDetail={handleShowAccommodationDetail}
-                    activeTab={activeTab}
-                    selectedItinerary={selectedItinerary}
-                    showAiSuggestButton={suggestions.length > 0 && suggestionDismissed}
-                    onAiSuggestPress={() => setSuggestionDismissed(false)}
-                  />
-                  </View>
-                  {suggestions.length > 0 && !suggestionDismissed && (
-                    <SuggestionBar
-                      suggestions={suggestions}
-                      onDismiss={() => setSuggestionDismissed(true)}
-                      onReopen={() => setSuggestionDismissed(false)}
-                      onPlacePress={(place: SuggestionPlace, date: string, slotStart: string) => {
-                        setSelectedSuggestion({
-                          contentId: place.contentId,
-                          contentTypeId: place.category ?? "",
-                          categorySub: null,
-                          title: place.title,
-                          imageUrl: place.imageUrl,
-                          address: null,
-                          rank: null,
-                          dist: place.dist,
-                        });
-                        setSelectedSuggestionSlot({ date, slotStart });
-                      }}
-                    />
-                  )}
-                </View>
-
-                {/* 하단 모달들 (30% 높이) */}
-                <Animated.View style={[styles.bottomRow, { height: animBottomH }]}>
-                  {/* 4. 비용 모달 (좌측 하단) */}
-                  <View style={styles.expensesModal}>
-                    <ExpensesPanel
-                      planData={{
-                        ...planData,
-                        refreshItineraries: planData.refreshItineraries,
-                        refreshFlights: planData.refreshFlights,
-                        refreshAccommodations: planData.refreshAccommodations,
-                      }}
-                      onExpenseAdd={handleExpenseAdd}
-                    />
-                  </View>
-
-                  {/* 5. AI 어시스턴트 모달 (우측 하단) */}
-                  <View style={styles.aiModal}>
-                    <AIAssistantPanel
-                      publicId={planData.plan?.publicId || null}
-                    />
-                  </View>
-
-                  {/* 6. 축제·공연 패널 */}
-                  {suggestFestivals.length > 0 && (
-                    <Animated.View style={[styles.festivalsModal, { flex: animFestivalsFlex }]}>
-                      <FestivalsPanel
-                        festivals={suggestFestivals}
-                        isLoading={suggestFestivalsLoading}
-                        expanded={festivalsExpanded}
-                        onToggle={() => setFestivalsExpanded(v => !v)}
-                        onAddToItinerary={handleFestivalAddToItinerary}
-                      />
-                    </Animated.View>
-                  )}
-                </Animated.View>
-              </>
+            </View>
+            {suggestions.length > 0 && !suggestionDismissed && (
+              <SuggestionBar
+                suggestions={suggestions}
+                onDismiss={() => setSuggestionDismissed(true)}
+                onReopen={() => setSuggestionDismissed(false)}
+                onPlacePress={(place: SuggestionPlace, date: string, slotStart: string) => {
+                  setSelectedSuggestion({
+                    contentId: place.contentId,
+                    contentTypeId: place.category ?? "",
+                    categorySub: null,
+                    title: place.title,
+                    imageUrl: place.imageUrl,
+                    address: null,
+                    rank: null,
+                    dist: place.dist,
+                  });
+                  setSelectedSuggestionSlot({ date, slotStart });
+                }}
+              />
             )}
           </View>
 
-          {/* 우측 영역 (동적 비율) */}
-          {!isMobile && showRightPanel && (
-            <Animated.View
-              style={[
-                styles.rightArea,
-                {
-                  flex: animRightFlex,
-                  height: availableHeight,
-                  overflow: "hidden",
-                },
-              ]}
-              pointerEvents={isPanelActive ? "auto" : "none"}
-            >
-              {/* 3. 상세 정보 모달 (전체 높이) */}
-              <View style={styles.detailsModal}>
-                <DetailsPanel
-                  planData={planData}
-                  selectedItinerary={selectedItinerary}
-                  selectedFlight={selectedFlight}
-                  selectedAccommodation={selectedAccommodation}
-                  activeTab={activeTab}
-                  onTabChange={handleDetailsPanelTabChange}
-                  stagedDocumentAnalyze={stagedDocumentAnalyze}
-                  onConsumeStagedDocumentAnalyze={
-                    onConsumeStagedDocumentAnalyze
-                  }
-                  routeDocumentAnalyzeSuccess={routeDocumentAnalyzeSuccess}
-                  carryoverPendingFiles={carryoverPendingFiles}
-                  onConsumeCarryoverPendingFiles={
-                    onConsumeCarryoverPendingFiles
-                  }
-                  onItineraryAdd={handleItineraryAdd}
-                  onItineraryClear={() => {
-                    setSelectedItinerary(null);
-                    setActiveTab(undefined);
-                  }}
-                  onOpenNewItineraryFromExisting={(draft) => {
-                    setNewItineraryDraft(draft);
-                    setSelectedItinerary(null);
-                    setActiveTab("itinerary");
-                    setSelectedFlight(null);
-                    setSelectedAccommodation(null);
-                    setOpenNewItineraryForm(true);
-                    showToast("일정이 입력 되었어요. 추천 시간을 확인하고 내 일정에 맞게 조정해 보세요.", { icon: "info", duration: 5000 });
-                  }}
-                  onFlightAdd={handleFlightAdd}
-                  onFlightClear={() => {
-                    setSelectedFlight(null);
-                    setActiveTab(undefined);
-                  }}
-                  onAccommodationAdd={handleAccommodationAdd}
-                  onAccommodationSelect={setSelectedAccommodation}
-                  onAccommodationClear={() => {
-                    setSelectedAccommodation(null);
-                    setActiveTab(undefined);
-                  }}
-                  onExpenseAdd={handleExpenseAdd}
-                  openNewFlightForm={openNewFlightForm}
-                  onConsumeOpenNewFlightForm={() => setOpenNewFlightForm(false)}
-                  openNewItineraryForm={openNewItineraryForm}
-                  onConsumeOpenNewItineraryForm={() => {
-                    setOpenNewItineraryForm(false);
-                    setNewItineraryDraft(null);
-                  }}
-                  selectedItineraryDate={selectedItineraryDate}
-                  openNewAccommodationForm={openNewAccommodationForm}
-                  onConsumeOpenNewAccommodationForm={() =>
-                    setOpenNewAccommodationForm(false)
-                  }
-                  newAccommodationDraft={newAccommodationDraft}
-                  newItineraryDraft={newItineraryDraft}
-                  onPreviewAccommodationChange={setPreviewAccommodation}
+          {/* 하단 모달들 */}
+          <Animated.View style={[styles.bottomRow, { height: animBottomH }]}>
+            {/* 4. 비용 모달 */}
+            <View style={styles.expensesModal}>
+              <ExpensesPanel
+                planData={{
+                  ...planData,
+                  refreshItineraries: planData.refreshItineraries,
+                  refreshFlights: planData.refreshFlights,
+                  refreshAccommodations: planData.refreshAccommodations,
+                }}
+                onExpenseAdd={handleExpenseAdd}
+              />
+            </View>
+
+            {/* 5. AI 어시스턴트 모달 */}
+            <View style={styles.aiModal}>
+              <AIAssistantPanel publicId={planData.plan?.publicId || null} />
+            </View>
+
+            {/* 6. 축제·공연 패널 */}
+            {suggestFestivals.length > 0 && (
+              <Animated.View style={[styles.festivalsModal, { flex: animFestivalsFlex }]}>
+                <FestivalsPanel
+                  festivals={suggestFestivals}
+                  isLoading={suggestFestivalsLoading}
+                  expanded={festivalsExpanded}
+                  onToggle={() => setFestivalsExpanded(v => !v)}
+                  onAddToItinerary={handleFestivalAddToItinerary}
                 />
-              </View>
-            </Animated.View>
-          )}
+              </Animated.View>
+            )}
+          </Animated.View>
+
+          {/* 3. 상세 정보 모달 (하단 배치) */}
+          <View style={{ height: availableHeight }}>
+            <DetailsPanel
+              planData={planData}
+              selectedItinerary={selectedItinerary}
+              selectedFlight={selectedFlight}
+              selectedAccommodation={selectedAccommodation}
+              activeTab={activeTab}
+              onTabChange={handleDetailsPanelTabChange}
+              stagedDocumentAnalyze={stagedDocumentAnalyze}
+              onConsumeStagedDocumentAnalyze={onConsumeStagedDocumentAnalyze}
+              routeDocumentAnalyzeSuccess={routeDocumentAnalyzeSuccess}
+              carryoverPendingFiles={carryoverPendingFiles}
+              onConsumeCarryoverPendingFiles={onConsumeCarryoverPendingFiles}
+              onItineraryAdd={handleItineraryAdd}
+              onItineraryClear={() => { setSelectedItinerary(null); setActiveTab(undefined); }}
+              onOpenNewItineraryFromExisting={(draft) => {
+                setNewItineraryDraft(draft);
+                setSelectedItinerary(null);
+                setActiveTab("itinerary");
+                setSelectedFlight(null);
+                setSelectedAccommodation(null);
+                setOpenNewItineraryForm(true);
+                showToast("일정이 입력 되었어요. 추천 시간을 확인하고 내 일정에 맞게 조정해 보세요.", { icon: "info", duration: 5000 });
+              }}
+              onFlightAdd={handleFlightAdd}
+              onFlightClear={() => { setSelectedFlight(null); setActiveTab(undefined); }}
+              onAccommodationAdd={handleAccommodationAdd}
+              onAccommodationSelect={setSelectedAccommodation}
+              onAccommodationClear={() => { setSelectedAccommodation(null); setActiveTab(undefined); }}
+              onExpenseAdd={handleExpenseAdd}
+              openNewFlightForm={openNewFlightForm}
+              onConsumeOpenNewFlightForm={() => setOpenNewFlightForm(false)}
+              openNewItineraryForm={openNewItineraryForm}
+              onConsumeOpenNewItineraryForm={() => { setOpenNewItineraryForm(false); setNewItineraryDraft(null); }}
+              selectedItineraryDate={selectedItineraryDate}
+              openNewAccommodationForm={openNewAccommodationForm}
+              onConsumeOpenNewAccommodationForm={() => setOpenNewAccommodationForm(false)}
+              newAccommodationDraft={newAccommodationDraft}
+              newItineraryDraft={newItineraryDraft}
+              onPreviewAccommodationChange={setPreviewAccommodation}
+            />
+          </View>
+        </ScrollView>
+      ) : (
+        <View style={styles.container}>
+          <View style={styles.mainLayout}>
+            {/* 좌측 영역 (동적 비율) */}
+            <View style={[styles.leftArea, { flex: ratio.left, height: availableHeight }]}>
+              {plansQuery.isLoading ? (
+                <View style={styles.loadingContainer}>
+                  <ActivityIndicator size="large" color={colors.primary} />
+                  <Text style={styles.loadingText}>여행을 불러오는 중입니다..</Text>
+                </View>
+              ) : trips.length === 0 && !plansQuery.isLoading ? (
+                <EmptyPlanPanel
+                  onPlanAdd={plansQuery.addPlan}
+                  onTripCreated={handleTripCreated}
+                />
+              ) : (
+                <>
+                  {(() => {
+                    const mealLocationNames = new Set(
+                      planData.itineraries
+                        .filter((it: any) => it.category === "MEAL" && it.location)
+                        .map((it: any) => it.location.name as string),
+                    );
+                    const bannerFestivals = festivals.filter(
+                      f => !mealLocationNames.has(f.matchedLocationName ?? ""),
+                    );
+                    if (bannerDismissed || (bannerFestivals.length === 0 && congestedItems.length === 0)) return null;
+                    return (
+                      <View style={styles.bannerWrapper}>
+                        <CongestionBanner
+                          festivals={bannerFestivals}
+                          congestedItems={congestedItems}
+                          onDismiss={() => setBannerDismissed(true)}
+                        />
+                      </View>
+                    );
+                  })()}
+                  <View style={styles.scheduleWrapper}>
+                    <View style={styles.scheduleModal}>
+                      <WeeklySchedulePanel
+                        itineraries={planData.itineraries}
+                        flights={planData.flights}
+                        height={leftTopHeight}
+                        selectedTrip={selectedTrip}
+                        planData={planData}
+                        plans={plansQuery.plans}
+                        trips={trips}
+                        onPlansRefresh={plansQuery.fetchPlans}
+                        onPlanAdd={plansQuery.addPlan}
+                        onPlanUpdate={plansQuery.updatePlan}
+                        onPlanDelete={plansQuery.deletePlan}
+                        onItineraryAdd={handleItineraryAdd}
+                        previewAccommodation={previewAccommodation}
+                        onPreviewAccommodationChange={setPreviewAccommodation}
+                        onPlanSelect={trip => {
+                          setSelectedTrip(trip);
+                          setSelectedPlanId(trip ? Number.parseInt(trip.id) : null);
+                          if (Platform.OS === "web") {
+                            if (trip?.publicId) {
+                              // @ts-ignore
+                              navigation.navigate("PLAN", { publicId: trip.publicId });
+                            } else {
+                              // @ts-ignore
+                              navigation.navigate("OTTRIP");
+                            }
+                          } else {
+                            if (trip?.publicId) {
+                              // @ts-ignore
+                              navigation.navigate("PLAN", { publicId: trip.publicId });
+                            } else {
+                              // @ts-ignore
+                              navigation.navigate("OTTRIP");
+                            }
+                          }
+                        }}
+                        onItinerarySelect={setSelectedItinerary}
+                        onFlightAdd={handleFlightAdd}
+                        onAccommodationAdd={handleAccommodationAdd}
+                        onShowItineraryModal={handleShowItineraryModal}
+                        onShowFlightModal={handleShowFlightModal}
+                        onRequestNewFlight={handleRequestNewFlight}
+                        onRequestNewItinerary={handleRequestNewItinerary}
+                        onShowAccommodationModal={handleShowAccommodationModal}
+                        onShowItineraryDetail={handleShowItineraryDetail}
+                        onShowFlightDetail={handleShowFlightDetail}
+                        onShowAccommodationDetail={handleShowAccommodationDetail}
+                        activeTab={activeTab}
+                        selectedItinerary={selectedItinerary}
+                        showAiSuggestButton={suggestions.length > 0 && suggestionDismissed}
+                        onAiSuggestPress={() => setSuggestionDismissed(false)}
+                      />
+                    </View>
+                    {suggestions.length > 0 && !suggestionDismissed && (
+                      <SuggestionBar
+                        suggestions={suggestions}
+                        onDismiss={() => setSuggestionDismissed(true)}
+                        onReopen={() => setSuggestionDismissed(false)}
+                        onPlacePress={(place: SuggestionPlace, date: string, slotStart: string) => {
+                          setSelectedSuggestion({
+                            contentId: place.contentId,
+                            contentTypeId: place.category ?? "",
+                            categorySub: null,
+                            title: place.title,
+                            imageUrl: place.imageUrl,
+                            address: null,
+                            rank: null,
+                            dist: place.dist,
+                          });
+                          setSelectedSuggestionSlot({ date, slotStart });
+                        }}
+                      />
+                    )}
+                  </View>
+                  <Animated.View style={[styles.bottomRow, { height: animBottomH }]}>
+                    <View style={styles.expensesModal}>
+                      <ExpensesPanel
+                        planData={{
+                          ...planData,
+                          refreshItineraries: planData.refreshItineraries,
+                          refreshFlights: planData.refreshFlights,
+                          refreshAccommodations: planData.refreshAccommodations,
+                        }}
+                        onExpenseAdd={handleExpenseAdd}
+                      />
+                    </View>
+                    <View style={styles.aiModal}>
+                      <AIAssistantPanel
+                        publicId={planData.plan?.publicId || null}
+                      />
+                    </View>
+                    {suggestFestivals.length > 0 && (
+                      <Animated.View style={[styles.festivalsModal, { flex: animFestivalsFlex }]}>
+                        <FestivalsPanel
+                          festivals={suggestFestivals}
+                          isLoading={suggestFestivalsLoading}
+                          expanded={festivalsExpanded}
+                          onToggle={() => setFestivalsExpanded(v => !v)}
+                          onAddToItinerary={handleFestivalAddToItinerary}
+                        />
+                      </Animated.View>
+                    )}
+                  </Animated.View>
+                </>
+              )}
+            </View>
+
+            {/* 우측 영역 (동적 비율, 1024px 이상에서만) */}
+            {!isMobile && !isStacked && showRightPanel && (
+              <Animated.View
+                style={[
+                  styles.rightArea,
+                  { flex: animRightFlex, height: availableHeight, overflow: "hidden" },
+                ]}
+                pointerEvents={isPanelActive ? "auto" : "none"}
+              >
+                <View style={styles.detailsModal}>
+                  <DetailsPanel
+                    planData={planData}
+                    selectedItinerary={selectedItinerary}
+                    selectedFlight={selectedFlight}
+                    selectedAccommodation={selectedAccommodation}
+                    activeTab={activeTab}
+                    onTabChange={handleDetailsPanelTabChange}
+                    stagedDocumentAnalyze={stagedDocumentAnalyze}
+                    onConsumeStagedDocumentAnalyze={onConsumeStagedDocumentAnalyze}
+                    routeDocumentAnalyzeSuccess={routeDocumentAnalyzeSuccess}
+                    carryoverPendingFiles={carryoverPendingFiles}
+                    onConsumeCarryoverPendingFiles={onConsumeCarryoverPendingFiles}
+                    onItineraryAdd={handleItineraryAdd}
+                    onItineraryClear={() => { setSelectedItinerary(null); setActiveTab(undefined); }}
+                    onOpenNewItineraryFromExisting={(draft) => {
+                      setNewItineraryDraft(draft);
+                      setSelectedItinerary(null);
+                      setActiveTab("itinerary");
+                      setSelectedFlight(null);
+                      setSelectedAccommodation(null);
+                      setOpenNewItineraryForm(true);
+                      showToast("일정이 입력 되었어요. 추천 시간을 확인하고 내 일정에 맞게 조정해 보세요.", { icon: "info", duration: 5000 });
+                    }}
+                    onFlightAdd={handleFlightAdd}
+                    onFlightClear={() => { setSelectedFlight(null); setActiveTab(undefined); }}
+                    onAccommodationAdd={handleAccommodationAdd}
+                    onAccommodationSelect={setSelectedAccommodation}
+                    onAccommodationClear={() => { setSelectedAccommodation(null); setActiveTab(undefined); }}
+                    onExpenseAdd={handleExpenseAdd}
+                    openNewFlightForm={openNewFlightForm}
+                    onConsumeOpenNewFlightForm={() => setOpenNewFlightForm(false)}
+                    openNewItineraryForm={openNewItineraryForm}
+                    onConsumeOpenNewItineraryForm={() => { setOpenNewItineraryForm(false); setNewItineraryDraft(null); }}
+                    selectedItineraryDate={selectedItineraryDate}
+                    openNewAccommodationForm={openNewAccommodationForm}
+                    onConsumeOpenNewAccommodationForm={() => setOpenNewAccommodationForm(false)}
+                    newAccommodationDraft={newAccommodationDraft}
+                    newItineraryDraft={newItineraryDraft}
+                    onPreviewAccommodationChange={setPreviewAccommodation}
+                  />
+                </View>
+              </Animated.View>
+            )}
+          </View>
         </View>
-      </View>
+      )}
     <TourismDetailModal
       visible={selectedSuggestion !== null}
       onClose={() => { setSelectedSuggestion(null); setSelectedSuggestionSlot(null); }}
@@ -985,6 +1124,23 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
     paddingLeft: 20,
     paddingRight: 20,
+  },
+  // 스크롤 모드 전용: flex 숏핸드를 쓰지 않아야 RNW에서 override가 확실히 먹는다
+  scrollArea: {
+    flexGrow: 1,
+    flexShrink: 1,
+    flexBasis: 0,
+    minHeight: 0,
+  },
+  scrollContent: {
+    paddingTop: 16,
+    paddingBottom: 20,
+    paddingLeft: 20,
+    paddingRight: 20,
+    gap: 16,
+  },
+  scrollScheduleBox: {
+    gap: 16,
   },
   headerModal: {
     width: "100%",
