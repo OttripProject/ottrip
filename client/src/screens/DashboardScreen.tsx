@@ -866,49 +866,51 @@ export default function DashboardScreen() {
             </Animated.View>
           )}
 
-          {/* 3. 상세 정보 모달 (하단 배치) */}
-          <View style={{ height: availableHeight }}>
-            <DetailsPanel
-              planData={planData}
-              selectedItinerary={selectedItinerary}
-              selectedFlight={selectedFlight}
-              selectedAccommodation={selectedAccommodation}
-              activeTab={activeTab}
-              onTabChange={handleDetailsPanelTabChange}
-              stagedDocumentAnalyze={stagedDocumentAnalyze}
-              onConsumeStagedDocumentAnalyze={onConsumeStagedDocumentAnalyze}
-              routeDocumentAnalyzeSuccess={routeDocumentAnalyzeSuccess}
-              carryoverPendingFiles={carryoverPendingFiles}
-              onConsumeCarryoverPendingFiles={onConsumeCarryoverPendingFiles}
-              onItineraryAdd={handleItineraryAdd}
-              onItineraryClear={() => { setSelectedItinerary(null); setActiveTab(undefined); }}
-              onOpenNewItineraryFromExisting={(draft) => {
-                setNewItineraryDraft(draft);
-                setSelectedItinerary(null);
-                setActiveTab("itinerary");
-                setSelectedFlight(null);
-                setSelectedAccommodation(null);
-                setOpenNewItineraryForm(true);
-                showToast("일정이 입력 되었어요. 추천 시간을 확인하고 내 일정에 맞게 조정해 보세요.", { icon: "info", duration: 5000 });
-              }}
-              onFlightAdd={handleFlightAdd}
-              onFlightClear={() => { setSelectedFlight(null); setActiveTab(undefined); }}
-              onAccommodationAdd={handleAccommodationAdd}
-              onAccommodationSelect={setSelectedAccommodation}
-              onAccommodationClear={() => { setSelectedAccommodation(null); setActiveTab(undefined); }}
-              onExpenseAdd={handleExpenseAdd}
-              openNewFlightForm={openNewFlightForm}
-              onConsumeOpenNewFlightForm={() => setOpenNewFlightForm(false)}
-              openNewItineraryForm={openNewItineraryForm}
-              onConsumeOpenNewItineraryForm={() => { setOpenNewItineraryForm(false); setNewItineraryDraft(null); }}
-              selectedItineraryDate={selectedItineraryDate}
-              openNewAccommodationForm={openNewAccommodationForm}
-              onConsumeOpenNewAccommodationForm={() => setOpenNewAccommodationForm(false)}
-              newAccommodationDraft={newAccommodationDraft}
-              newItineraryDraft={newItineraryDraft}
-              onPreviewAccommodationChange={setPreviewAccommodation}
-            />
-          </View>
+          {/* 3. 상세 정보 모달 (하단 배치) — 선택된 항목이 있을 때만 */}
+          {isPanelActive && (
+            <View style={{ height: availableHeight }}>
+              <DetailsPanel
+                planData={planData}
+                selectedItinerary={selectedItinerary}
+                selectedFlight={selectedFlight}
+                selectedAccommodation={selectedAccommodation}
+                activeTab={activeTab}
+                onTabChange={handleDetailsPanelTabChange}
+                stagedDocumentAnalyze={stagedDocumentAnalyze}
+                onConsumeStagedDocumentAnalyze={onConsumeStagedDocumentAnalyze}
+                routeDocumentAnalyzeSuccess={routeDocumentAnalyzeSuccess}
+                carryoverPendingFiles={carryoverPendingFiles}
+                onConsumeCarryoverPendingFiles={onConsumeCarryoverPendingFiles}
+                onItineraryAdd={handleItineraryAdd}
+                onItineraryClear={() => { setSelectedItinerary(null); setActiveTab(undefined); }}
+                onOpenNewItineraryFromExisting={(draft) => {
+                  setNewItineraryDraft(draft);
+                  setSelectedItinerary(null);
+                  setActiveTab("itinerary");
+                  setSelectedFlight(null);
+                  setSelectedAccommodation(null);
+                  setOpenNewItineraryForm(true);
+                  showToast("일정이 입력 되었어요. 추천 시간을 확인하고 내 일정에 맞게 조정해 보세요.", { icon: "info", duration: 5000 });
+                }}
+                onFlightAdd={handleFlightAdd}
+                onFlightClear={() => { setSelectedFlight(null); setActiveTab(undefined); }}
+                onAccommodationAdd={handleAccommodationAdd}
+                onAccommodationSelect={setSelectedAccommodation}
+                onAccommodationClear={() => { setSelectedAccommodation(null); setActiveTab(undefined); }}
+                onExpenseAdd={handleExpenseAdd}
+                openNewFlightForm={openNewFlightForm}
+                onConsumeOpenNewFlightForm={() => setOpenNewFlightForm(false)}
+                openNewItineraryForm={openNewItineraryForm}
+                onConsumeOpenNewItineraryForm={() => { setOpenNewItineraryForm(false); setNewItineraryDraft(null); }}
+                selectedItineraryDate={selectedItineraryDate}
+                openNewAccommodationForm={openNewAccommodationForm}
+                onConsumeOpenNewAccommodationForm={() => setOpenNewAccommodationForm(false)}
+                newAccommodationDraft={newAccommodationDraft}
+                newItineraryDraft={newItineraryDraft}
+                onPreviewAccommodationChange={setPreviewAccommodation}
+              />
+            </View>
+          )}
         </ScrollView>
       ) : (
         <View style={styles.container}>
