@@ -52,12 +52,14 @@ export default function LoginPromptModal({
 
 const styles = StyleSheet.create({
   overlay: {
+    cursor: "auto",
     flex: 1,
     backgroundColor: colors.overlayBackground,
     justifyContent: "center",
     alignItems: "center",
   },
   card: {
+    cursor: "auto",
     width: 360,
     backgroundColor: colors.white,
     borderRadius: 20,

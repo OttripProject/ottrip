@@ -115,7 +115,7 @@ export default function SharePlanModal({
       onRequestClose={onClose}
     >
       <Pressable style={styles.overlay} onPress={onClose}>
-        <Pressable onPress={() => {}}>
+        <Pressable onPress={() => {}} style={styles.cardWrapper}>
           <Card
             width="100%"
             maxWidth={420}
@@ -312,11 +312,15 @@ export default function SharePlanModal({
 
 const styles = StyleSheet.create({
   overlay: {
+    cursor: "auto",
     flex: 1,
     backgroundColor: colors.overlayBackground,
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 16,
+  },
+  cardWrapper: {
+    cursor: "auto",
   },
   header: {
     flexDirection: "row",

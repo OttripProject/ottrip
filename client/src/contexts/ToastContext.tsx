@@ -100,6 +100,7 @@ export const ToastProvider = ({ children }: { children: React.ReactNode }) => {
 
 const styles = StyleSheet.create({
   toastContainer: {
+    cursor: "auto",
     position: Platform.OS === "web" ? ("fixed" as any) : "absolute",
     bottom: 40,
     right: 20,

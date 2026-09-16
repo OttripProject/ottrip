@@ -1570,12 +1570,14 @@ export default function AddScheduleWithFileModal({
 
 const styles = StyleSheet.create({
   overlay: {
+    cursor: "auto",
     flex: 1,
     backgroundColor: colors.overlayBackground,
     justifyContent: "center",
     alignItems: "center",
   },
   container: {
+    cursor: "auto",
     width: "100%",
     maxWidth: 530,
     maxHeight: "80%",
