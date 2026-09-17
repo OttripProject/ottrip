@@ -1,5 +1,7 @@
+import { useAuth } from "@/contexts/AuthContext";
 import { colors } from "@/ui/tokens/colors";
 import { textStyles } from "@/ui/tokens/typography";
+import { tokenStores } from "@/utils/tokenStores";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { useEffect, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
@@ -20,6 +22,7 @@ type RouteParams = {
 export default function TermsConsentScreenNative() {
   const route = useRoute<any>();
   const navigation = useNavigation<any>();
+  const { cancelRegistration } = useAuth();
   const { registerToken, prefill, email } = route.params as RouteParams;
 
   const [agree1, setAgree1] = useState(false);
@@ -30,6 +33,15 @@ export default function TermsConsentScreenNative() {
   useEffect(() => {
     setAgreeAll(agree1 && agree2 && agree3);
   }, [agree1, agree2, agree3]);
+
+  useEffect(() => {
+    const unsubscribe = navigation.addListener("beforeRemove", () => {
+      tokenStores.registerToken.get().then(token => {
+        if (token) cancelRegistration();
+      });
+    });
+    return unsubscribe;
+  }, [navigation, cancelRegistration]);
 
   const handleAgreeAll = () => {
     const newValue = !agreeAll;

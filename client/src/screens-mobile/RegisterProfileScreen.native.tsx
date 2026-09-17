@@ -1,3 +1,4 @@
+import { useAuth } from "@/contexts/AuthContext";
 import { useNicknameValidation } from "@/hooks/useNicknameValidation";
 import api from "@/services/api";
 import { authApi } from "@/services/auth";
@@ -5,6 +6,7 @@ import { Gender } from "@/types/api";
 import { Input } from "@/ui/components/input/Input";
 import { colors } from "@/ui/tokens/colors";
 import { textStyles } from "@/ui/tokens/typography";
+import { tokenStores } from "@/utils/tokenStores";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import * as SecureStore from "expo-secure-store";
 import { useEffect, useState } from "react";
@@ -39,6 +41,7 @@ function toHandleFromEmail(email: string): string {
 export default function RegisterProfileScreenNative() {
   const route = useRoute<any>();
   const navigation = useNavigation<any>();
+  const { cancelRegistration } = useAuth();
   const { registerToken, prefill, email, terms } = route.params as RouteParams;
 
   const [nickname, setNickname] = useState(prefill?.name || "");
@@ -53,6 +56,19 @@ export default function RegisterProfileScreenNative() {
       onNicknameChange(nickname);
     }
   }, []);
+
+  useEffect(() => {
+    const unsubscribe = navigation.addListener("beforeRemove", () => {
+      const stayingInFlow = navigation
+        .getState()
+        ?.routes?.some((r: { name: string }) => r.name === "약관동의");
+      if (stayingInFlow) return;
+      tokenStores.registerToken.get().then(token => {
+        if (token) cancelRegistration();
+      });
+    });
+    return unsubscribe;
+  }, [navigation, cancelRegistration]);
 
   const handleNicknameChange = (text: string) => {
     setNickname(text);

@@ -27,6 +27,7 @@ interface AuthContextType {
   login: (authResponse: AuthResponse) => Promise<void>;
   loginAsGuest: () => Promise<void>;
   logout: () => Promise<void>;
+  cancelRegistration: () => Promise<void>;
   refreshAuth: () => Promise<void>;
   getStorageInfo: () => any;
   debugTokens: () => Promise<{
@@ -146,6 +147,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     });
   };
 
+  const cancelRegistration = async () => {
+    try {
+      await tokenStores.registerToken.clear();
+    } catch {}
+    if (Platform.OS !== "web") {
+      await clearGoogleSession();
+    }
+  };
+
   const logout = async () => {
     try {
       if (Platform.OS === "web") {
@@ -250,6 +260,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     login,
     loginAsGuest,
     logout,
+    cancelRegistration,
     refreshAuth,
     getStorageInfo: () => ({
       hasTokens: tokenStores.hasTokens(),
