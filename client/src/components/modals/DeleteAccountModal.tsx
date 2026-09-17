@@ -17,18 +17,24 @@ export default function DeleteAccountModal({
   onCompleted,
 }: DeleteAccountModalProps) {
   const [isCompleted, setIsCompleted] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     if (!visible) {
       setIsCompleted(false);
+      setIsDeleting(false);
     }
   }, [visible]);
 
   const handleConfirm = async () => {
+    if (isDeleting) return;
+    setIsDeleting(true);
     try {
       await onConfirm();
       setIsCompleted(true);
-    } catch (_error) {}
+    } catch (_error) {
+      setIsDeleting(false);
+    }
   };
 
   return (
@@ -64,12 +70,17 @@ export default function DeleteAccountModal({
               <Pressable
                 style={styles.deleteModalCancelButton}
                 onPress={onClose}
+                disabled={isDeleting}
               >
                 <Text style={styles.deleteModalCancelButtonText}>취소</Text>
               </Pressable>
               <Pressable
-                style={styles.deleteModalDeleteButton}
+                style={[
+                  styles.deleteModalDeleteButton,
+                  isDeleting && styles.deleteModalDeleteButtonDisabled,
+                ]}
                 onPress={handleConfirm}
+                disabled={isDeleting}
               >
                 <Text style={styles.deleteModalDeleteButtonText}>삭제</Text>
               </Pressable>
@@ -143,6 +154,9 @@ const styles = StyleSheet.create({
   deleteModalDeleteButtonText: {
     ...textStyles.h7,
     color: colors.white,
+  },
+  deleteModalDeleteButtonDisabled: {
+    opacity: 0.6,
   },
   deleteModalCompletedTitle: {
     position: "absolute",
