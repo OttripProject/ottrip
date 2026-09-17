@@ -2,7 +2,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "../contexts/AuthContext";
 import { plansApi } from "../services/plans";
 import type { CreatePlanRequest, Plan, UpdatePlanRequest } from "../types/api";
-import { sortPlansByDate } from "../utils/planSort"; 
+import { toUserMessage } from "../utils/crossPlatformAlert";
+import { sortPlansByDate } from "../utils/planSort";
 
 export const usePlansQuery = () => {
   const queryClient = useQueryClient();
@@ -60,9 +61,7 @@ export const usePlansQuery = () => {
   return {
     plans,
     isLoading,
-    error: error
-      ? (error as any).response?.data?.detail || (error as any).message
-      : null,
+    error: error ? toUserMessage(error) : null,
     fetchPlans: refetch,
     addPlan: async (planData: CreatePlanRequest) => {
       const result = await addPlanMutation.mutateAsync(planData);

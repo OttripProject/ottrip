@@ -9,6 +9,7 @@ import type {
   Itinerary,
   Plan,
 } from "../types/api";
+import { toUserMessage } from "../utils/crossPlatformAlert";
 
 interface PlanData {
   plan: Plan | null;
@@ -337,9 +338,7 @@ export const usePlanDataQuery = (publicId: string | null) => {
   return {
     ...planData,
     isLoading,
-    error: error
-      ? (error as any).response?.data?.detail || (error as any).message
-      : null,
+    error: error ? toUserMessage(error) : null,
     errorStatus,
     fetchPlanData,
     refreshAttachments,

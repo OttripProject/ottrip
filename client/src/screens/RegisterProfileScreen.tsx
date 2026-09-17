@@ -10,6 +10,7 @@ import GradientBackground from "@/ui/components/GradientBackground";
 import Input from "@/ui/components/input/Input";
 import { colors } from "@/ui/tokens/colors";
 import { textStyles } from "@/ui/tokens/typography";
+import { toUserMessage } from "@/utils/crossPlatformAlert";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import * as SecureStore from "expo-secure-store";
 import { useEffect, useState } from "react";
@@ -123,10 +124,7 @@ export default function RegisterProfileScreen() {
       }
       navigation.reset({ index: 0, routes: [{ name: "WELCOME" }] });
     } catch (e: any) {
-      Alert.alert(
-        "가입 실패",
-        e?.response?.data?.detail || e.message || "알 수 없는 오류",
-      );
+      Alert.alert("가입 실패", toUserMessage(e));
     }
   };
 

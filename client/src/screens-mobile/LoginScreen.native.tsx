@@ -6,6 +6,7 @@ import AppleButton from "@/ui/components/AppleButton";
 import GoogleButton from "@/ui/components/GoogleButton";
 import { colors } from "@/ui/tokens/colors";
 import { textStyles } from "@/ui/tokens/typography";
+import { toUserMessage } from "@/utils/crossPlatformAlert";
 import { GoogleSignin } from "@react-native-google-signin/google-signin";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import * as AppleAuthentication from "expo-apple-authentication";
@@ -49,16 +50,9 @@ const SOCIAL_LOGIN_CONFLICT_DEFAULT =
   "이 계정은 다른 사용자와 연결되어 있습니다.";
 
 function showSocialLoginError(err: unknown) {
-  const e = err as {
-    response?: { status?: number; data?: { detail?: string } };
-  };
+  const e = err as { response?: { status?: number } };
   if (e?.response?.status !== 409) return;
-  const detail = e?.response?.data?.detail;
-  const message =
-    typeof detail === "string" && detail
-      ? detail
-      : SOCIAL_LOGIN_CONFLICT_DEFAULT;
-  Alert.alert("안내", message);
+  Alert.alert("안내", toUserMessage(err, SOCIAL_LOGIN_CONFLICT_DEFAULT));
 }
 
 export default function LoginScreenNative() {

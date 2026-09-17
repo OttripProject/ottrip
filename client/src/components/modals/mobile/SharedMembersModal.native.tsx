@@ -4,6 +4,7 @@ import { Input } from "@/ui/components/input";
 import { colors } from "@/ui/tokens/colors";
 import { radii } from "@/ui/tokens/radii";
 import { textStyles, typography } from "@/ui/tokens/typography";
+import { toUserMessage } from "@/utils/crossPlatformAlert";
 import { validateEmail } from "@/utils/validationUtils";
 import { useEffect, useState } from "react";
 import {
@@ -134,7 +135,7 @@ export default function SharedMembersModal({
       const msg =
         e?.response?.status === 403
           ? "권한이 없습니다."
-          : e?.response?.data?.detail || "초대 전송에 실패했습니다";
+          : toUserMessage(e, "초대 전송에 실패했습니다");
       Alert.alert("알림", msg);
     } finally {
       setInviteLoading(false);
@@ -155,7 +156,7 @@ export default function SharedMembersModal({
       const msg =
         e?.response?.status === 403
           ? "권한이 없습니다"
-          : e?.response?.data?.detail || "역할 변경에 실패했습니다.";
+          : toUserMessage(e, "역할 변경에 실패했습니다.");
       Alert.alert("알림", msg);
     } finally {
       setRoleUpdateLoading(null);
@@ -179,7 +180,7 @@ export default function SharedMembersModal({
             const msg =
               e?.response?.status === 403
                 ? "권한이 없습니다"
-                : e?.response?.data?.detail || "공유 취소에 실패했습니다";
+                : toUserMessage(e, "공유 취소에 실패했습니다");
             Alert.alert("알림", msg);
           } finally {
             setRoleUpdateLoading(null);

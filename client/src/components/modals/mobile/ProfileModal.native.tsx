@@ -30,6 +30,7 @@ import LogoutModal from "@/components/modals/LogoutModal";
 import TermsDetailModal from "@/components/modals/TermsDetailModal";
 import TermsPolicyPickerModal from "@/components/modals/TermsPolicyPickerModal";
 import type { TermsKey } from "@/constants/terms";
+import { toUserMessage } from "@/utils/crossPlatformAlert";
 import { guestPrompt } from "@/utils/guestPrompt";
 import CopyIcon from "../../../../assets/copy.svg";
 import GenderCheckIcon from "../../../../assets/gender_check.svg";
@@ -106,10 +107,8 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
     try {
       await usersApi.deleteAccount();
     } catch (error: any) {
-      const errorMessage =
-        error?.response?.data?.detail || "탈퇴 중 알림가 발생했습니다";
       setDeleteModalOpen(false);
-      Alert.alert("알림", errorMessage);
+      Alert.alert("알림", toUserMessage(error));
       throw error;
     }
   };
@@ -154,14 +153,7 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
               onClose();
               await logout();
             } catch (error: unknown) {
-              const err = error as {
-                response?: { data?: { detail?: string } };
-              };
-              const message =
-                typeof err?.response?.data?.detail === "string"
-                  ? err.response.data.detail
-                  : "삭제 중 알림가 발생했습니다";
-              Alert.alert("알림", message);
+              Alert.alert("알림", toUserMessage(error));
             } finally {
               setDeletingGuestData(false);
             }

@@ -24,6 +24,7 @@ import { radii } from "@/ui/tokens";
 import { colors } from "@/ui/tokens/colors";
 import { spacing } from "@/ui/tokens/spacing";
 import { textStyles, typography } from "@/ui/tokens/typography";
+import { toUserMessage } from "@/utils/crossPlatformAlert";
 import { guestPrompt } from "@/utils/guestPrompt";
 import dayjs from "dayjs";
 import ko from "dayjs/locale/ko";
@@ -3870,8 +3871,7 @@ export default function WeeklySchedulePanel({
                     } catch (e: any) {
                       Alert.alert(
                         "알림",
-                        e?.response?.data?.detail ||
-                          "메모 저장에 실패했습니다.",
+                        toUserMessage(e, "메모 저장에 실패했습니다."),
                       );
                     }
                   }}

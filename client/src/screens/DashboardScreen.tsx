@@ -41,6 +41,7 @@ import WeeklySchedulePanel from "@/components/panels/WeeklySchedulePanel";
 import AIAssistantPanel from "@/components/panels/aiassistant/AIAssistantPanel";
 import ExpensesPanel from "@/components/panels/expenses/ExpensesPanel";
 
+import { toUserMessage } from "@/utils/crossPlatformAlert";
 import { findFestivalSlot } from "@/utils/festivalSlot";
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -434,8 +435,7 @@ export default function DashboardScreen() {
             window.dispatchEvent(new Event("plans-refresh"));
           }
         } catch (e: any) {
-          const msg = e?.response?.data?.detail || "초대 수락에 실패했습니다.";
-          Alert.alert("알림", msg);
+          Alert.alert("알림", toUserMessage(e, "초대 수락에 실패했습니다."));
         } finally {
           window.history.replaceState(
             {},
