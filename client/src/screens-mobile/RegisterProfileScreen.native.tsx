@@ -9,7 +9,7 @@ import { textStyles } from "@/ui/tokens/typography";
 import { tokenStores } from "@/utils/tokenStores";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import * as SecureStore from "expo-secure-store";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Alert,
   Pressable,
@@ -47,6 +47,8 @@ export default function RegisterProfileScreenNative() {
   const [nickname, setNickname] = useState(prefill?.name || "");
   const [gender, setGender] = useState<Gender | null>(null);
   const [handle] = useState(() => toHandleFromEmail(email));
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const submittingRef = useRef(false);
 
   const { nicknameError, checkingNickname, onNicknameChange, isValid } =
     useNicknameValidation();
@@ -78,7 +80,9 @@ export default function RegisterProfileScreenNative() {
   const canSubmit = isValid && nickname.trim().length > 0;
 
   const onSubmit = async () => {
-    if (!canSubmit) return;
+    if (!canSubmit || submittingRef.current) return;
+    submittingRef.current = true;
+    setIsSubmitting(true);
     try {
       const registerResponse = await authApi.registerUser(
         {
@@ -110,6 +114,8 @@ export default function RegisterProfileScreenNative() {
         refreshToken: registerResponse.refreshToken,
       });
     } catch (e: any) {
+      submittingRef.current = false;
+      setIsSubmitting(false);
       Alert.alert(
         "가입 실패",
         e?.response?.data?.detail || e.message || "알 수 없는 오류",
@@ -216,8 +222,11 @@ export default function RegisterProfileScreenNative() {
       {/* 하단 버튼 */}
       <View style={styles.bottomArea}>
         <Pressable
-          style={[styles.nextButton, !canSubmit && styles.nextButtonDisabled]}
-          disabled={!canSubmit}
+          style={[
+            styles.nextButton,
+            (!canSubmit || isSubmitting) && styles.nextButtonDisabled,
+          ]}
+          disabled={!canSubmit || isSubmitting}
           onPress={onSubmit}
         >
           <Text style={styles.nextButtonText}>다음</Text>
