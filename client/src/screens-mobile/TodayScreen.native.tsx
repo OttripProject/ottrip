@@ -767,6 +767,14 @@ export default function TodayScreen() {
     setAddScheduleFlow("method");
   }, [closeOpenTimelineSwipe]);
 
+  const getGreetingText = () => {
+    const startFormat = dayjs(selectedPlan?.startDate).format("YYYY. MM. DD.");
+    const endFormat = dayjs(selectedPlan?.endDate).format("MM. DD.");
+    if (tripPhase === "after") return `${startFormat} – ${endFormat} 일정이 마무리 됐어요`;
+    if (timelineViewDate && dayNumber !== null) return `여행 ${dayNumber}일차의 일정을 미리보고 있어요`;
+    return "오늘의 일정 준비되셨나요?"; 
+  };
+
   if (plansQuery.error) {
     return (
       <View style={styles.container}>
@@ -975,7 +983,8 @@ export default function TodayScreen() {
                 </View>
                 <View style={styles.dateRow}>
                   <Text style={styles.date}>
-                    {dayNumber !== null ? `DAY${dayNumber} · ` : ""}
+                    {dayNumber !== null && tripPhase != 'after'
+                      ? `DAY${dayNumber} · ` : ""}
                     {formatShortKoreanDate(timelineDayForCards)}
                   </Text>
                   {dDayLabel !== null && (
@@ -985,9 +994,7 @@ export default function TodayScreen() {
                   )}
                 </View>
                 <Text style={styles.greeting}>
-                  {timelineViewDate
-                    ? "여행의 다음 첫 일정을 미리보고 있어요"
-                    : "오늘의 일정 준비되셨나요?"}
+                  {getGreetingText()}
                 </Text>
               </View>
               <Pressable
@@ -1542,12 +1549,12 @@ export default function TodayScreen() {
               <View style={[styles.cardBase, styles.scheduleEmptyStateCard]}>
                 <Text style={styles.scheduleEmptyStateTitle}>
                   {tripPhase === "after"
-                    ? "해당 여행이 종료되었어요"
+                    ? "여행이 끝났어요"
                     : "해당 여행의 오늘 일정은 없어요!"}
                 </Text>
                 <Text style={styles.scheduleEmptyStateSubtitle}>
                   {tripPhase === "after"
-                    ? "오늘 일정을 추가할 수 있어요"
+                    ? "지난 일정을 정리하거나 새 일정을 추가할 수 있어요"
                     : "다른 날짜의 일정을 보거나 오늘 일정을 추가할 수 있어요"}
                 </Text>
                 {tripPhase !== "after" && nearestFutureScheduleDateStr ? (
