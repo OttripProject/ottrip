@@ -153,12 +153,10 @@ function buildSchedulesForDate(
 
 const SHORT_WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"];
 
-/** "9월 17일(목)" 형식 — 헤더 날짜 배지 전용 (요일 약어) */
 function formatShortKoreanDate(date: dayjs.Dayjs): string {
   return `${date.month() + 1}월 ${date.date()}일(${SHORT_WEEKDAYS[date.day()]})`;
 }
 
-/** 캘린더 `calendarTodayStr`보다 이후 중, 일정이 있는 가장 빠른 날 (이터너리·항공 출발일·숙박 숙박일) */
 function collectNearestFutureScheduleDateStr(
   calendarTodayStr: string,
   itineraries: Itinerary[] | undefined,
@@ -443,7 +441,6 @@ export default function TodayScreen() {
     );
   }, [planData.flights]);
 
-  /** 플랜은 있으나 이터너리·항공 구간·숙소가 하나도 없을 때 */
   const planHasNoSchedulesYet = useMemo(() => {
     if (!selectedPlan) return false;
     const noItineraries = !planData.itineraries?.length;
@@ -456,7 +453,6 @@ export default function TodayScreen() {
     planData.accommodations,
   ]);
 
-  /** 오늘이 여행 기간의 어디에 위치하는지 (plan.startDate/endDate 기준) */
   const tripPhase = useMemo((): "before" | "during" | "after" | null => {
     const plan = planData.plan;
     if (!plan?.startDate || !plan?.endDate) return null;
@@ -467,7 +463,6 @@ export default function TodayScreen() {
     return "during";
   }, [planData.plan?.startDate, planData.plan?.endDate, calendarTodayStr]);
 
-  /** 헤더에 표시 중인 날짜가 여행의 며칠째인지 (plan.startDate 기준 1부터 시작) */
   const dayNumber = useMemo(() => {
     const start = planData.plan?.startDate;
     if (!start) return null;
@@ -476,7 +471,6 @@ export default function TodayScreen() {
     );
   }, [planData.plan?.startDate, timelineDayForCards]);
 
-  /** 표시 중인 날짜와 실제 오늘의 차이 (D-DAY / D-n / D+n) */
   const dDayLabel = useMemo(() => {
     const diff = timelineDayForCards
       .startOf("day")
@@ -536,7 +530,6 @@ export default function TodayScreen() {
     });
   }, [planData.accommodations, timelineDateStr]);
 
-  /** 실제 오늘(calendarTodayStr)에 해당하는 숙박 — 빈 상태 카드 판별용 */
   const realTodayAccommodations = useMemo(() => {
     if (!planData.accommodations?.length) return [];
     return planData.accommodations.filter((accommodation: any) => {
@@ -550,7 +543,6 @@ export default function TodayScreen() {
     });
   }, [planData.accommodations, calendarTodayStr]);
 
-  /** 조회일에 타임라인 항목 또는 당일 숙박이 있으면 체크리스트·비용 노출 */
   const showTodayTimelineExtras =
     !!selectedPlan &&
     !planData.isLoading &&
@@ -568,7 +560,6 @@ export default function TodayScreen() {
     }
   }, [todaySuggestion, dismissedSuggestionDates, timelineDateStr]);
 
-  /** 실제 오늘: 타임라인·당일 숙박 모두 없고, 플랜에는 다른 데이터가 있을 때 */
   const showNoTodayScheduleOtherDaysCard =
     !!selectedPlan &&
     !planData.isLoading &&
@@ -578,8 +569,6 @@ export default function TodayScreen() {
     !planHasNoSchedulesYet &&
     !todaySuggestion;
 
-  // 오늘 일정이 없으면 다음 일정일을 대신 띄운다.
-  // 플랜당 1회만 수행해야 사용자가 날짜를 되돌렸을 때 다시 튕겨나가지 않는다.
   useEffect(() => {
     if (!selectedPlan || planData.isLoading) return;
     if (autoPreviewedPlanIdRef.current === selectedPlan.id) return;
@@ -2480,7 +2469,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.xs,
-    marginBottom: 8,
+    marginBottom: 4,
   },
   date: {
     ...textStyles.h7,
@@ -2511,7 +2500,7 @@ const styles = StyleSheet.create({
   },
   greeting: {
     ...textStyles.body3,
-    color: colors.black,
+    color: colors.gray700,
   },
 
   cardBase: {
@@ -2525,7 +2514,6 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: Platform.OS === "android" ? 0 : 3,
   },
-  /** 플랜 일정 비어 있음 / 오늘만 비어 있음 등 공통 안내 카드 */
   scheduleEmptyStateCard: {
     alignItems: "center",
     paddingVertical: 20,
@@ -2812,7 +2800,6 @@ const styles = StyleSheet.create({
     color: colors.primary,
   },
 
-  // AI 제안 카드
   suggestionCard: {
     paddingTop: spacing.lg,
     paddingBottom: spacing.md,
