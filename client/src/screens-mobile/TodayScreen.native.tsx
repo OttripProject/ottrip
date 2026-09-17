@@ -35,12 +35,7 @@ import { colors } from "@/ui/tokens/colors";
 import { radii } from "@/ui/tokens/radii";
 import { spacing } from "@/ui/tokens/spacing";
 import { textStyles } from "@/ui/tokens/typography";
-import {
-  convertUTCToLocalTime,
-  formatKoreanDate,
-  formatTime,
-  getTodayKoreanDate,
-} from "@/utils/dateUtils";
+import { convertUTCToLocalTime, formatTime } from "@/utils/dateUtils";
 import { useQueryClient } from "@tanstack/react-query";
 import dayjs from "dayjs";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -156,6 +151,13 @@ function buildSchedulesForDate(
   return items.sort((a, b) => a.time.localeCompare(b.time));
 }
 
+const SHORT_WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"];
+
+/** "9월 17일(목)" 형식 — 헤더 날짜 배지 전용 (요일 약어) */
+function formatShortKoreanDate(date: dayjs.Dayjs): string {
+  return `${date.month() + 1}월 ${date.date()}일(${SHORT_WEEKDAYS[date.day()]})`;
+}
+
 /** 캘린더 `calendarTodayStr`보다 이후 중, 일정이 있는 가장 빠른 날 (이터너리·항공 출발일·숙박 숙박일) */
 function collectNearestFutureScheduleDateStr(
   calendarTodayStr: string,
@@ -240,8 +242,10 @@ export default function TodayScreen() {
   const snackbarAnim = useRef(new Animated.Value(0)).current;
   const snackbarTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const snackbarUndoRef = useRef<(() => void) | null>(null);
+  const autoPreviewedPlanIdRef = useRef<number | null>(null);
 
   useEffect(() => {
+    autoPreviewedPlanIdRef.current = null;
     setTimelineViewDate(null);
     setDismissedSuggestionDates(new Set());
     setSuggestionPlaceIdxs({});
@@ -269,9 +273,6 @@ export default function TodayScreen() {
   const timelineDateStr =
     timelineViewDate?.format("YYYY-MM-DD") ?? calendarTodayStr;
   const viewingCalendarToday = calendarTodayStr === timelineDateStr;
-  const headerDateLabel = timelineViewDate
-    ? formatKoreanDate(timelineViewDate)
-    : getTodayKoreanDate();
   const timelineDayForCards = timelineViewDate ?? currentTime;
 
   const { data: todayExpensesFromApi = [], refetch: refetchTodayExpenses } =
@@ -455,6 +456,35 @@ export default function TodayScreen() {
     planData.accommodations,
   ]);
 
+  /** 오늘이 여행 기간의 어디에 위치하는지 (plan.startDate/endDate 기준) */
+  const tripPhase = useMemo((): "before" | "during" | "after" | null => {
+    const plan = planData.plan;
+    if (!plan?.startDate || !plan?.endDate) return null;
+    const start = dayjs(plan.startDate).format("YYYY-MM-DD");
+    const end = dayjs(plan.endDate).format("YYYY-MM-DD");
+    if (calendarTodayStr < start) return "before";
+    if (calendarTodayStr > end) return "after";
+    return "during";
+  }, [planData.plan?.startDate, planData.plan?.endDate, calendarTodayStr]);
+
+  /** 헤더에 표시 중인 날짜가 여행의 며칠째인지 (plan.startDate 기준 1부터 시작) */
+  const dayNumber = useMemo(() => {
+    const start = planData.plan?.startDate;
+    if (!start) return null;
+    return (
+      timelineDayForCards.startOf("day").diff(dayjs(start).startOf("day"), "day") + 1
+    );
+  }, [planData.plan?.startDate, timelineDayForCards]);
+
+  /** 표시 중인 날짜와 실제 오늘의 차이 (D-DAY / D-n / D+n) */
+  const dDayLabel = useMemo(() => {
+    const diff = timelineDayForCards
+      .startOf("day")
+      .diff(currentTime.startOf("day"), "day");
+    if (diff === 0) return null;
+    return diff > 0 ? `D-${diff}` : `D+${Math.abs(diff)}`;
+  }, [timelineDayForCards, currentTime]);
+
   const currentActivities = useMemo((): ScheduleItem[] => {
     if (!viewingCalendarToday) return [];
     const active = todaySchedules.filter((item: ScheduleItem) => {
@@ -547,6 +577,30 @@ export default function TodayScreen() {
     realTodayAccommodations.length === 0 &&
     !planHasNoSchedulesYet &&
     !todaySuggestion;
+
+  // 오늘 일정이 없으면 다음 일정일을 대신 띄운다.
+  // 플랜당 1회만 수행해야 사용자가 날짜를 되돌렸을 때 다시 튕겨나가지 않는다.
+  useEffect(() => {
+    if (!selectedPlan || planData.isLoading) return;
+    if (autoPreviewedPlanIdRef.current === selectedPlan.id) return;
+    if (tripPhase !== "before" && tripPhase !== "during") return;
+    if (planHasNoSchedulesYet) return;
+    if (realTodaySchedules.length > 0 || realTodayAccommodations.length > 0)
+      return;
+    if (todaySuggestion) return;
+    if (!nearestFutureScheduleDateStr) return;
+    autoPreviewedPlanIdRef.current = selectedPlan.id;
+    setTimelineViewDate(dayjs(nearestFutureScheduleDateStr));
+  }, [
+    selectedPlan?.id,
+    planData.isLoading,
+    tripPhase,
+    planHasNoSchedulesYet,
+    realTodaySchedules.length,
+    realTodayAccommodations.length,
+    todaySuggestion,
+    nearestFutureScheduleDateStr,
+  ]);
 
   const todayFlights = useMemo(
     () =>
@@ -912,27 +966,6 @@ export default function TodayScreen() {
           <View style={[styles.header, { paddingTop: insets.top + 4 }]}>
             <View style={styles.headerContent}>
               <View style={styles.headerTextContainer}>
-                <Text style={styles.date}>{headerDateLabel}</Text>
-                {timelineViewDate && (
-                  <View style={styles.timelinePreviewBanner}>
-                    <Text style={styles.timelinePreviewHint}>
-                      오늘이 아닌 {formatKoreanDate(timelineViewDate)} 일정을
-                      보고 있어요
-                    </Text>
-                    <Pressable
-                      onPress={() => {
-                        closeOpenTimelineSwipe();
-                        setTimelineViewDate(null);
-                      }}
-                      hitSlop={8}
-                      style={styles.backToTodayLink}
-                    >
-                      <Text style={styles.backToTodayLinkText}>
-                        오늘로 이동
-                      </Text>
-                    </Pressable>
-                  </View>
-                )}
                 <View style={styles.tripTitleWrapper}>
                   <Pressable
                     style={styles.tripTitleContainer}
@@ -951,7 +984,22 @@ export default function TodayScreen() {
                     />
                   </Pressable>
                 </View>
-                <Text style={styles.greeting}>오늘의 일정 준비되셨나요?</Text>
+                <View style={styles.dateRow}>
+                  <Text style={styles.date}>
+                    {dayNumber !== null ? `DAY${dayNumber} · ` : ""}
+                    {formatShortKoreanDate(timelineDayForCards)}
+                  </Text>
+                  {dDayLabel !== null && (
+                    <View style={styles.dDayBadge}>
+                      <Text style={styles.dDayBadgeText}>{dDayLabel}</Text>
+                    </View>
+                  )}
+                </View>
+                <Text style={styles.greeting}>
+                  {timelineViewDate
+                    ? "여행의 다음 첫 일정을 미리보고 있어요"
+                    : "오늘의 일정 준비되셨나요?"}
+                </Text>
               </View>
               <Pressable
                 style={styles.settingsButton}
@@ -1504,12 +1552,16 @@ export default function TodayScreen() {
             <View style={styles.section}>
               <View style={[styles.cardBase, styles.scheduleEmptyStateCard]}>
                 <Text style={styles.scheduleEmptyStateTitle}>
-                  해당 여행의 오늘 일정은 없어요!
+                  {tripPhase === "after"
+                    ? "해당 여행이 종료되었어요"
+                    : "해당 여행의 오늘 일정은 없어요!"}
                 </Text>
                 <Text style={styles.scheduleEmptyStateSubtitle}>
-                  다른 날짜의 일정을 보거나 오늘 일정을 추가할 수 있어요
+                  {tripPhase === "after"
+                    ? "오늘 일정을 추가할 수 있어요"
+                    : "다른 날짜의 일정을 보거나 오늘 일정을 추가할 수 있어요"}
                 </Text>
-                {nearestFutureScheduleDateStr ? (
+                {tripPhase !== "after" && nearestFutureScheduleDateStr ? (
                   <>
                     <Pressable
                       style={[
@@ -2424,31 +2476,29 @@ const styles = StyleSheet.create({
     padding: 4,
     marginTop: -4,
   },
+  dateRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.xs,
+    marginBottom: 8,
+  },
   date: {
     ...textStyles.h7,
     color: colors.gray700,
-    marginBottom: 8,
   },
-  timelinePreviewBanner: {
-    alignSelf: "stretch",
-    marginTop: -4,
-    marginBottom: 8,
+  dDayBadge: {
+    borderRadius: radii.pill,
+    backgroundColor: colors.primary,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
   },
-  timelinePreviewHint: {
-    ...textStyles.body4,
-    color: colors.primary,
-    marginBottom: 6,
-  },
-  backToTodayLink: {
-    alignSelf: "flex-start",
-  },
-  backToTodayLinkText: {
-    ...textStyles.h7,
-    color: colors.primary,
+  dDayBadgeText: {
+    ...textStyles.h8,
+    color: colors.white,
   },
   tripTitleWrapper: {
     position: "relative",
-    marginBottom: 8,
+    marginBottom: 4,
   },
   tripTitleContainer: {
     flexDirection: "row",
