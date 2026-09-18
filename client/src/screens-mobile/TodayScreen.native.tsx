@@ -25,6 +25,7 @@ import { usePlanDataQuery } from "@/hooks/usePlanDataQuery";
 import { usePlansQuery } from "@/hooks/usePlansQuery";
 import type {
   Accommodation,
+  Expense,
   FlightRead,
   FlightSegmentReadDto,
   Itinerary,
@@ -157,6 +158,82 @@ function formatShortKoreanDate(date: dayjs.Dayjs): string {
   return `${date.month() + 1}월 ${date.date()}일(${SHORT_WEEKDAYS[date.day()]})`;
 }
 
+type ExpenseSummary = {
+  total: number;
+  totalKrw: number;
+  totalUsd: number;
+  byCategory: Record<string, number>;
+};
+
+function summarizeExpenses(expenses: Expense[] | undefined): ExpenseSummary {
+  let total = 0;
+  let totalKrw = 0;
+  let totalUsd = 0;
+  const byCategory: Record<string, number> = {};
+
+  if (Array.isArray(expenses)) {
+    expenses.forEach(expense => {
+      const amount = expense.amount || 0;
+      total += amount;
+      if (expense.currency === "USD") {
+        totalUsd += amount;
+      } else {
+        totalKrw += amount;
+      }
+      const category = expense.category || "기타";
+      byCategory[category] = (byCategory[category] || 0) + amount;
+    });
+  }
+
+  return { total, totalKrw, totalUsd, byCategory };
+}
+
+function CostSummaryCard({
+  title,
+  summary,
+  onPress,
+}: {
+  title: string;
+  summary: ExpenseSummary;
+  onPress: () => void;
+}) {
+  return (
+    <View style={styles.section}>
+      <Pressable
+        style={[styles.cardBase, styles.costCardPrimary]}
+        onPress={onPress}
+      >
+        <View style={styles.costCardHeader}>
+          <View style={styles.costCardHeaderLeft}>
+            <ExpenseIcon width={20} height={20} color={colors.white} />
+            <Text style={styles.costCardHeaderTitle}>{title}</Text>
+          </View>
+          <RightArrowIcon width={20} height={20} color={colors.white} />
+        </View>
+        {summary.total > 0 ? (
+          <View style={styles.costAmountGroup}>
+            {summary.totalKrw > 0 && (
+              <Text style={styles.costAmountPrimary}>
+                {summary.totalKrw.toLocaleString("ko-KR")}원
+              </Text>
+            )}
+            {summary.totalUsd > 0 && (
+              <Text style={styles.costAmountPrimary}>
+                {summary.totalUsd.toLocaleString("en-US")}달러
+              </Text>
+            )}
+          </View>
+        ) : (
+          <Text style={[styles.costAmountPrimary, { marginBottom: 8 }]}>
+            0원
+          </Text>
+        )}
+        <Text style={styles.costDetailPrimary}>터치하여 상세 내역 확인</Text>
+      </Pressable>
+    </View>
+  );
+}
+
 function collectNearestFutureScheduleDateStr(
   calendarTodayStr: string,
   itineraries: Itinerary[] | undefined,
@@ -220,6 +297,7 @@ export default function TodayScreen() {
   const [showFlightEdit, setShowFlightEdit] = useState(false);
   const [editingFlight, setEditingFlight] = useState<FlightRead | null>(null);
   const [showExpenseDetail, setShowExpenseDetail] = useState(false);
+  const [showTripExpenseDetail, setShowTripExpenseDetail] = useState(false);
   const [showAddExpenseFromDetail, setShowAddExpenseFromDetail] =
     useState(false);
   const [addScheduleFlow, setAddScheduleFlow] =
@@ -649,28 +727,15 @@ export default function TodayScreen() {
     });
   }, [todaySchedules, todaySuggestion, dismissedSuggestionDates, timelineDateStr]);
 
-  const todayExpenses = useMemo(() => {
-    let total = 0;
-    let totalKrw = 0;
-    let totalUsd = 0;
-    const byCategory: Record<string, number> = {};
+  const todayExpenses = useMemo(
+    () => summarizeExpenses(todayExpensesFromApi),
+    [todayExpensesFromApi],
+  );
 
-    if (todayExpensesFromApi && Array.isArray(todayExpensesFromApi)) {
-      todayExpensesFromApi.forEach((expense: any) => {
-        const amount = expense.amount || 0;
-        total += amount;
-        if (expense.currency === "USD") {
-          totalUsd += amount;
-        } else {
-          totalKrw += amount;
-        }
-        const category = expense.category || "기타";
-        byCategory[category] = (byCategory[category] || 0) + amount;
-      });
-    }
-
-    return { total, totalKrw, totalUsd, byCategory };
-  }, [todayExpensesFromApi]);
+  const tripExpenses = useMemo(
+    () => summarizeExpenses(planData.expenses),
+    [planData.expenses],
+  );
 
   const formatCurrency = (amount: number) => {
     return `₩${amount.toLocaleString("ko-KR")}`;
@@ -1637,6 +1702,17 @@ export default function TodayScreen() {
             </View>
           )}
 
+          {tripPhase === "after" && !!selectedPlan && !planData.isLoading && (
+            <CostSummaryCard
+              title="여행 전체 비용"
+              summary={tripExpenses}
+              onPress={() => {
+                closeOpenTimelineSwipe();
+                setShowTripExpenseDetail(true);
+              }}
+            />
+          )}
+
           {/* 오늘 축제 추천 */}
           {isKoreanPlan && tripPhase !== "after" && (() => {
             const todayYMD = dayjs().format("YYYYMMDD");
@@ -1672,55 +1748,14 @@ export default function TodayScreen() {
 
           {/* 오늘의 비용 섹션 */}
           {showTodayTimelineExtras && (
-            <View style={styles.section}>
-              <Pressable
-                style={[styles.cardBase, styles.costCardPrimary]}
-                onPress={() => {
-                  closeOpenTimelineSwipe();
-                  setShowExpenseDetail(true);
-                }}
-              >
-                <View style={styles.costCardHeader}>
-                  <View style={styles.costCardHeaderLeft}>
-                    <ExpenseIcon width={20} height={20} color={colors.white} />
-                    <Text style={styles.costCardHeaderTitle}>
-                      오늘의 여행 비용
-                    </Text>
-                  </View>
-                  <RightArrowIcon width={20} height={20} color={colors.white} />
-                </View>
-                {todayExpenses.total > 0 ? (
-                  <>
-                    <View style={styles.costAmountGroup}>
-                      {todayExpenses.totalKrw > 0 && (
-                        <Text style={styles.costAmountPrimary}>
-                          {todayExpenses.totalKrw.toLocaleString("ko-KR")}원
-                        </Text>
-                      )}
-                      {todayExpenses.totalUsd > 0 && (
-                        <Text style={styles.costAmountPrimary}>
-                          {todayExpenses.totalUsd.toLocaleString("en-US")}달러
-                        </Text>
-                      )}
-                    </View>
-                    <Text style={styles.costDetailPrimary}>
-                      터치하여 상세 내역 확인
-                    </Text>
-                  </>
-                ) : (
-                  <>
-                    <Text
-                      style={[styles.costAmountPrimary, { marginBottom: 8 }]}
-                    >
-                      0원
-                    </Text>
-                    <Text style={styles.costDetailPrimary}>
-                      터치하여 상세 내역 확인
-                    </Text>
-                  </>
-                )}
-              </Pressable>
-            </View>
+            <CostSummaryCard
+              title="오늘의 여행 비용"
+              summary={todayExpenses}
+              onPress={() => {
+                closeOpenTimelineSwipe();
+                setShowExpenseDetail(true);
+              }}
+            />
           )}
 
           {/* 여행 정보(숙박/항공) 섹션 - 데이터 있을 때만 노출 */}
@@ -1908,6 +1943,25 @@ export default function TodayScreen() {
         onAddExpensePress={() => {
           setShowExpenseDetail(false);
           setShowAddExpenseFromDetail(true);
+        }}
+      />
+
+      <ExpenseDetailModal
+        visible={showTripExpenseDetail}
+        onClose={() => setShowTripExpenseDetail(false)}
+        title="여행 전체 비용"
+        expenses={planData.expenses ?? []}
+        attachments={planData.attachments ?? []}
+        total={tripExpenses.total}
+        byCategory={tripExpenses.byCategory}
+        planId={selectedPlan?.id ?? 0}
+        planStartDate={selectedPlan?.startDate}
+        planEndDate={selectedPlan?.endDate}
+        onExpenseDelete={async () => {
+          await planData.refreshExpenses();
+          queryClient.invalidateQueries({
+            queryKey: ["expenses", selectedPlan?.id],
+          });
         }}
       />
 
