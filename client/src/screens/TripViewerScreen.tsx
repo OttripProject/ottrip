@@ -236,7 +236,6 @@ export default function TripViewerScreen() {
         <ScrollView
           style={styles.scrollArea}
           contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
         >
           <View
             onLayout={e => setHintHeight(e.nativeEvent.layout.height)}
