@@ -45,7 +45,7 @@ class ItineraryService:
             city=itinerary_data.city,
             location_id=itinerary_data.location_id,
             plan_id=itinerary_data.plan_id,
-            category=itinerary_data.category.value if itinerary_data.category else None,
+            category=itinerary_data.category,
         )
 
         created_itinerary = await self.itinerary_repository.save(
@@ -136,9 +136,7 @@ class ItineraryService:
             if old_location_id and update_data.location_id is None:
                 await delete_location(self.session, old_location_id)
         if "category" in update_data.model_fields_set:
-            itinerary.category = (
-                update_data.category.value if update_data.category else None
-            )
+            itinerary.category = update_data.category
 
         updated_itinerary = await self.itinerary_repository.save(itinerary=itinerary)
 

@@ -1,4 +1,5 @@
 import type { CreatePlanRequest, Plan, UpdatePlanRequest } from "../types/api";
+import type { ItineraryCategory } from "../types/itinerary";
 import api from "./api";
 
 export type ExportSegment = {
@@ -12,6 +13,7 @@ export type ExportSegment = {
 export type ExportItinerary = {
   id: number;
   title: string;
+  category?: ItineraryCategory | null;
   itineraryDate: string;
   startTime: string;
   endTime: string;

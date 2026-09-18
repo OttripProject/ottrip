@@ -8,6 +8,7 @@ from app.accomodation.schemas import AccommodationRead
 from app.expenses.models import ExpenseCategory, ExpenseCurrency
 from app.expenses.schemas import ExpenseRead
 from app.flights.schemas import FlightRead
+from app.itinerary.models import ItineraryCategoryEnum
 from app.itinerary.schemas import ItineraryRead
 from app.schemas import APISchema
 
@@ -112,6 +113,7 @@ class ExportSegment(APISchema):
 class ExportItinerary(APISchema):
     id: int
     title: str
+    category: ItineraryCategoryEnum | None = None
     country: str | None = None
     city: str | None = None
     location: str | None = None

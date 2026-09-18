@@ -437,6 +437,7 @@ class PlanService:
                 ExportItinerary(
                     id=it.id,
                     title=it.title,
+                    category=it.category,
                     country=it.country,
                     city=it.city,
                     location=it.location.name if it.location else None,

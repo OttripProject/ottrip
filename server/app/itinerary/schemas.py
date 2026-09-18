@@ -1,18 +1,10 @@
 from datetime import date, time
-from enum import Enum
 
 from app.expenses.schemas import ExpenseRead
 from app.locations.schemas import LocationRead
 from app.schemas import APISchema
 
-
-class ItineraryCategoryEnum(str, Enum):
-    MEAL = "MEAL"
-    TRANSPORT = "TRANSPORT"
-    ACTIVITY = "ACTIVITY"
-    SIGHTSEEING = "SIGHTSEEING"
-    SHOPPING = "SHOPPING"
-    ETC = "ETC"
+from .models import ItineraryCategoryEnum
 
 
 class ItineraryBase(APISchema):
