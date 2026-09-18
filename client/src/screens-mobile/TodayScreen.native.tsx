@@ -1638,7 +1638,7 @@ export default function TodayScreen() {
           )}
 
           {/* 오늘 축제 추천 */}
-          {isKoreanPlan && (() => {
+          {isKoreanPlan && tripPhase !== "after" && (() => {
             const todayYMD = dayjs().format("YYYYMMDD");
             const todayFestivals = suggestFestivals.filter(f => {
               const start = f.eventStartDate ?? "00000000";
