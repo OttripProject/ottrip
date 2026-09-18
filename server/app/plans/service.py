@@ -12,6 +12,7 @@ from app.auth.repository import AuthRepository
 from app.expenses.models import Expense
 from app.flights.models import Flight, FlightSegment
 from app.itinerary.models import Itinerary
+from app.locations.models import Location
 from app.storage.deps import S3ClientDep
 from app.users.repository import UserRepository
 from app.utils.dependency import dependency
@@ -530,6 +531,25 @@ class PlanService:
         snap_plan = snapshot.plan
         session = self.plan_repository.session
 
+        async def create_location(
+            name: str | None,
+            latitude: float | None,
+            longitude: float | None,
+            has_coords: bool | None,
+        ) -> int | None:
+            if not name:
+                return None
+            location = Location(
+                name=name,
+                place_id=f"m_{uuid.uuid4().hex[:12]}",
+                latitude=latitude or 0.0,
+                longitude=longitude or 0.0,
+                has_coords=bool(has_coords),
+            )
+            session.add(location)
+            await session.flush()
+            return location.id
+
         new_plan = Plan(
             title=snap_plan.title,
             start_date=snap_plan.start_date,
@@ -556,6 +576,12 @@ class PlanService:
         accommodation_id_map: dict[int, int] = {}
 
         for it in snapshot.itineraries:
+            it_location_id = await create_location(
+                it.location,
+                it.location_latitude,
+                it.location_longitude,
+                it.location_has_coords,
+            )
             new_it = Itinerary(
                 title=it.title,
                 description=None,
@@ -565,6 +591,8 @@ class PlanService:
                 start_time=it.start_time,
                 end_time=it.end_time,
                 plan_id=new_plan.id,
+                location_id=it_location_id,
+                category=it.category,
             )
             session.add(new_it)
             await session.flush()
@@ -600,6 +628,12 @@ class PlanService:
                 )
 
         for acc in snapshot.accommodations:
+            acc_location_id = await create_location(
+                acc.location_name,
+                acc.location_latitude,
+                acc.location_longitude,
+                acc.location_has_coords,
+            )
             new_acc = Accommodation(
                 name=acc.name,
                 country=None,
@@ -610,6 +644,7 @@ class PlanService:
                 checkout_time=acc.checkout_time,
                 description=None,
                 plan_id=new_plan.id,
+                location_id=acc_location_id,
             )
             session.add(new_acc)
             await session.flush()
