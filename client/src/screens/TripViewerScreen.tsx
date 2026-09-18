@@ -232,18 +232,17 @@ export default function TripViewerScreen() {
         />
       </View>
 
-      <View style={styles.container}>
-        {isScrollMode ? (
-          <ScrollView
-            style={styles.scrollArea}
-            contentContainerStyle={styles.scrollContent}
-            showsVerticalScrollIndicator={false}
+      {isScrollMode ? (
+        <ScrollView
+          style={styles.scrollArea}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          <View
+            onLayout={e => setHintHeight(e.nativeEvent.layout.height)}
           >
-            <View
-              onLayout={e => setHintHeight(e.nativeEvent.layout.height)}
-            >
-              <ViewerHintPanel />
-            </View>
+            <ViewerHintPanel />
+          </View>
 
             <View style={[styles.scheduleWrapper, { height: leftTopHeight }]}>
               <ViewerSchedulePanel
@@ -293,86 +292,87 @@ export default function TripViewerScreen() {
             />
           </ScrollView>
         ) : (
-          <View
-            style={styles.mainLayout}
-            onLayout={e => setMainLayoutHeight(e.nativeEvent.layout.height)}
-          >
-            <View style={[styles.leftArea, { flex: ratio.left }]}>
-              <View
-                style={styles.hintRow}
-                onLayout={e => setHintHeight(e.nativeEvent.layout.height)}
-              >
-                <ViewerHintPanel />
-              </View>
-
-              <View style={[styles.scheduleWrapper, { height: leftTopHeight }]}>
-                <ViewerSchedulePanel
-                  itineraries={itineraries}
-                  flights={flights}
-                  accommodations={accommodations}
-                  planStartDate={plan.startDate}
-                  height={leftTopHeight}
-                  onItinerarySelect={handleItinerarySelect}
-                  onFlightSelect={handleFlightSelect}
-                  onAccommodationSelect={handleAccommodationSelect}
-                />
-              </View>
-
-              {hasBottomPanel && (
+          <View style={styles.container}>
+            <View
+              style={styles.mainLayout}
+              onLayout={e => setMainLayoutHeight(e.nativeEvent.layout.height)}
+            >
+              <View style={[styles.leftArea, { flex: ratio.left }]}>
                 <View
-                  style={[
-                    styles.bottomRow,
-                    stackBottomPanels && styles.bottomColumn,
-                    { height: leftBottomHeight },
-                  ]}
+                  style={styles.hintRow}
+                  onLayout={e => setHintHeight(e.nativeEvent.layout.height)}
                 >
-                  {hasExpenses && expensePanelData ? (
-                    <View
-                      style={
-                        stackBottomPanels
-                          ? styles.bottomCellStacked
-                          : styles.bottomCell
-                      }
-                    >
-                      <ExpensesPanel planData={expensePanelData} readOnly />
-                    </View>
-                  ) : null}
-                  {hasChecklist ? (
-                    <View
-                      style={
-                        stackBottomPanels
-                          ? styles.bottomCellStacked
-                          : styles.bottomCell
-                      }
-                    >
-                      <AIAssistantPanel
-                        publicId={null}
-                        readOnly
-                        initialChecklist={checklist as any}
-                      />
-                    </View>
-                  ) : null}
+                  <ViewerHintPanel />
                 </View>
-              )}
-            </View>
 
-            <View style={[styles.rightArea, { flex: ratio.right, height: mainLayoutHeight }]}>
-              <View style={styles.summaryWrapper}>
-                <ViewerPlanSummaryPanel plan={plan} />
+                <View style={[styles.scheduleWrapper, { height: leftTopHeight }]}>
+                  <ViewerSchedulePanel
+                    itineraries={itineraries}
+                    flights={flights}
+                    accommodations={accommodations}
+                    planStartDate={plan.startDate}
+                    height={leftTopHeight}
+                    onItinerarySelect={handleItinerarySelect}
+                    onFlightSelect={handleFlightSelect}
+                    onAccommodationSelect={handleAccommodationSelect}
+                  />
+                </View>
+
+                {hasBottomPanel && (
+                  <View
+                    style={[
+                      styles.bottomRow,
+                      stackBottomPanels && styles.bottomColumn,
+                      { height: leftBottomHeight },
+                    ]}
+                  >
+                    {hasExpenses && expensePanelData ? (
+                      <View
+                        style={
+                          stackBottomPanels
+                            ? styles.bottomCellStacked
+                            : styles.bottomCell
+                        }
+                      >
+                        <ExpensesPanel planData={expensePanelData} readOnly />
+                      </View>
+                    ) : null}
+                    {hasChecklist ? (
+                      <View
+                        style={
+                          stackBottomPanels
+                            ? styles.bottomCellStacked
+                            : styles.bottomCell
+                        }
+                      >
+                        <AIAssistantPanel
+                          publicId={null}
+                          readOnly
+                          initialChecklist={checklist as any}
+                        />
+                      </View>
+                    ) : null}
+                  </View>
+                )}
               </View>
-              <View style={styles.detailWrapper}>
-                <ViewerDetailPanel
-                  selectedType={selectedType}
-                  selectedItinerary={selectedItinerary}
-                  selectedFlight={selectedFlight}
-                  selectedAccommodation={selectedAccommodation}
-                  expenses={expenses}
-                />
+
+              <View style={[styles.rightArea, { flex: ratio.right, height: mainLayoutHeight }]}>
+                <View style={styles.summaryWrapper}>
+                  <ViewerPlanSummaryPanel plan={plan} />
+                </View>
+                <View style={styles.detailWrapper}>
+                  <ViewerDetailPanel
+                    selectedType={selectedType}
+                    selectedItinerary={selectedItinerary}
+                    selectedFlight={selectedFlight}
+                    selectedAccommodation={selectedAccommodation}
+                    expenses={expenses}
+                  />
+                </View>
               </View>
             </View>
           </View>
         )}
-      </View>
 
       <LoginPromptModal
         visible={loginPromptOpen}
@@ -439,6 +439,9 @@ const styles = StyleSheet.create({
     minHeight: 0,
   },
   scrollContent: {
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 20,
     gap: 16,
   },
   leftArea: {
