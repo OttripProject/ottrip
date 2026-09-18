@@ -1,3 +1,4 @@
+import { useAuth } from "@/contexts/AuthContext";
 import { useNicknameValidation } from "@/hooks/useNicknameValidation";
 import api from "@/services/api";
 import { authApi } from "@/services/auth";
@@ -5,9 +6,11 @@ import { Gender } from "@/types/api";
 import { Input } from "@/ui/components/input/Input";
 import { colors } from "@/ui/tokens/colors";
 import { textStyles } from "@/ui/tokens/typography";
+import { toUserMessage } from "@/utils/crossPlatformAlert";
+import { tokenStores } from "@/utils/tokenStores";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import * as SecureStore from "expo-secure-store";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Alert,
   Pressable,
@@ -39,11 +42,14 @@ function toHandleFromEmail(email: string): string {
 export default function RegisterProfileScreenNative() {
   const route = useRoute<any>();
   const navigation = useNavigation<any>();
+  const { cancelRegistration } = useAuth();
   const { registerToken, prefill, email, terms } = route.params as RouteParams;
 
   const [nickname, setNickname] = useState(prefill?.name || "");
   const [gender, setGender] = useState<Gender | null>(null);
   const [handle] = useState(() => toHandleFromEmail(email));
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const submittingRef = useRef(false);
 
   const { nicknameError, checkingNickname, onNicknameChange, isValid } =
     useNicknameValidation();
@@ -54,6 +60,19 @@ export default function RegisterProfileScreenNative() {
     }
   }, []);
 
+  useEffect(() => {
+    const unsubscribe = navigation.addListener("beforeRemove", () => {
+      const stayingInFlow = navigation
+        .getState()
+        ?.routes?.some((r: { name: string }) => r.name === "약관동의");
+      if (stayingInFlow) return;
+      tokenStores.registerToken.get().then(token => {
+        if (token) cancelRegistration();
+      });
+    });
+    return unsubscribe;
+  }, [navigation, cancelRegistration]);
+
   const handleNicknameChange = (text: string) => {
     setNickname(text);
     onNicknameChange(text);
@@ -62,7 +81,9 @@ export default function RegisterProfileScreenNative() {
   const canSubmit = isValid && nickname.trim().length > 0;
 
   const onSubmit = async () => {
-    if (!canSubmit) return;
+    if (!canSubmit || submittingRef.current) return;
+    submittingRef.current = true;
+    setIsSubmitting(true);
     try {
       const registerResponse = await authApi.registerUser(
         {
@@ -94,10 +115,9 @@ export default function RegisterProfileScreenNative() {
         refreshToken: registerResponse.refreshToken,
       });
     } catch (e: any) {
-      Alert.alert(
-        "가입 실패",
-        e?.response?.data?.detail || e.message || "알 수 없는 오류",
-      );
+      submittingRef.current = false;
+      setIsSubmitting(false);
+      Alert.alert("가입 실패", toUserMessage(e));
     }
   };
 
@@ -200,8 +220,11 @@ export default function RegisterProfileScreenNative() {
       {/* 하단 버튼 */}
       <View style={styles.bottomArea}>
         <Pressable
-          style={[styles.nextButton, !canSubmit && styles.nextButtonDisabled]}
-          disabled={!canSubmit}
+          style={[
+            styles.nextButton,
+            (!canSubmit || isSubmitting) && styles.nextButtonDisabled,
+          ]}
+          disabled={!canSubmit || isSubmitting}
           onPress={onSubmit}
         >
           <Text style={styles.nextButtonText}>다음</Text>

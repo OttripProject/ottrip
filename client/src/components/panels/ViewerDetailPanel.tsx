@@ -4,6 +4,11 @@ import type {
   ExportFlight,
   ExportItinerary,
 } from "@/services/plans";
+import {
+  type ItineraryCategory,
+  itineraryCategoryColors,
+  itineraryCategoryLabels,
+} from "@/types/itinerary";
 import MiniMapView from "@/ui/components/MiniMapView";
 import { colors } from "@/ui/tokens/colors";
 import { textStyles } from "@/ui/tokens/typography";
@@ -29,6 +34,21 @@ function InfoRow({ label, value }: { label: string; value: string }) {
     <View style={styles.infoRow}>
       <Text style={styles.infoLabel}>{label}</Text>
       <Text style={styles.infoValue}>{value}</Text>
+    </View>
+  );
+}
+
+function CategoryRow({ category }: { category: ItineraryCategory }) {
+  const color = itineraryCategoryColors[category];
+  return (
+    <View style={styles.infoRow}>
+      <Text style={styles.infoLabel}>카테고리</Text>
+      <View style={styles.categoryValue}>
+        <View style={[styles.categoryDot, { backgroundColor: color }]} />
+        <Text style={[styles.categoryLabelText, { color }]}>
+          {itineraryCategoryLabels[category]}
+        </Text>
+      </View>
     </View>
   );
 }
@@ -127,6 +147,7 @@ export default function ViewerDetailPanel({
         >
           <Text style={styles.detailTitle}>{it.title}</Text>
           <View style={styles.infoTable}>
+            {it.category ? <CategoryRow category={it.category} /> : null}
             {it.country ? <InfoRow label="국가" value={it.country} /> : null}
             {it.city ? <InfoRow label="도시" value={it.city} /> : null}
             {it.location ? <InfoRow label="장소" value={it.location} /> : null}
@@ -293,6 +314,21 @@ const styles = StyleSheet.create({
     flex: 1,
     minWidth: 0,
     textAlign: "right",
+  },
+  categoryValue: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "flex-end",
+    gap: 6,
+  },
+  categoryDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 999,
+  },
+  categoryLabelText: {
+    ...textStyles.h7,
   },
   segmentIndex: {
     ...textStyles.h9,

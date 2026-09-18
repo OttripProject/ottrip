@@ -1,3 +1,5 @@
+import { loadPublicEnv } from "@/core/env/schema";
+import { GoogleSignin } from "@react-native-google-signin/google-signin";
 import type React from "react";
 import {
   type ReactNode,
@@ -25,6 +27,7 @@ interface AuthContextType {
   login: (authResponse: AuthResponse) => Promise<void>;
   loginAsGuest: () => Promise<void>;
   logout: () => Promise<void>;
+  cancelRegistration: () => Promise<void>;
   refreshAuth: () => Promise<void>;
   getStorageInfo: () => any;
   debugTokens: () => Promise<{
@@ -32,6 +35,22 @@ interface AuthContextType {
     refreshToken: string | null;
   }>;
 }
+
+const clearGoogleSession = async () => {
+  try {
+    const env = loadPublicEnv();
+    const webClientId = env.EXPO_PUBLIC_GOOGLE_CLIENT_ID;
+    const iosClientId = env.EXPO_PUBLIC_GOOGLE_CLIENT_ID_IOS;
+    if (!webClientId) return;
+
+    GoogleSignin.configure(
+      Platform.OS === "ios" && iosClientId
+        ? { iosClientId, webClientId, offlineAccess: false }
+        : { webClientId, offlineAccess: false },
+    );
+    await GoogleSignin.signOut();
+  } catch {}
+};
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -128,6 +147,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     });
   };
 
+  const cancelRegistration = async () => {
+    try {
+      await tokenStores.registerToken.clear();
+    } catch {}
+    if (Platform.OS !== "web") {
+      await clearGoogleSession();
+    }
+  };
+
   const logout = async () => {
     try {
       if (Platform.OS === "web") {
@@ -137,6 +165,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           await authApi.logout();
         } catch {}
         await clearTokens();
+        await clearGoogleSession();
       }
     } catch (_error: any) {
       await clearTokens();
@@ -231,6 +260,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     login,
     loginAsGuest,
     logout,
+    cancelRegistration,
     refreshAuth,
     getStorageInfo: () => ({
       hasTokens: tokenStores.hasTokens(),

@@ -16,8 +16,9 @@ import {
   plansApi,
 } from "@/services/plans";
 import GradientBackground from "@/ui/components/GradientBackground";
+import { breakpoints } from "@/ui/tokens/breakpoints";
 import { useNavigation } from "@react-navigation/native";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Modal,
@@ -64,13 +65,15 @@ export default function ViewerPreviewModal({
   );
   const [mainLayoutHeight, setMainLayoutHeight] = useState(600);
   const [hintHeight, setHintHeight] = useState(48);
+  const [isSaving, setIsSaving] = useState(false);
+  const savingRef = useRef(false);
 
-  const isMobile = width < 768;
+  const isMobile = width < breakpoints.compact;
 
   const getResponsiveRatio = () => {
     if (isMobile) return { left: 1, right: 0 };
-    if (width < 1024) return { left: 0.6, right: 0.4 };
-    if (width < 1440) return { left: 0.7, right: 0.3 };
+    if (width < breakpoints.stacked) return { left: 0.6, right: 0.4 };
+    if (width < breakpoints.wide) return { left: 0.7, right: 0.3 };
     return { left: 0.8, right: 0.2 };
   };
   const ratio = getResponsiveRatio();
@@ -93,12 +96,18 @@ export default function ViewerPreviewModal({
       setLoginPromptOpen(true);
       return;
     }
+    if (savingRef.current) return;
+    savingRef.current = true;
+    setIsSaving(true);
     try {
       const result = await plansApi.saveExport(publicId);
       setSavedPlanPublicId(result.planPublicId);
       setSaveSuccessVisible(true);
     } catch {
       setSaveSuccessVisible(false);
+    } finally {
+      savingRef.current = false;
+      setIsSaving(false);
     }
   };
 
@@ -212,6 +221,7 @@ export default function ViewerPreviewModal({
             planTitle={plan.title}
             onSave={handleSave}
             onClose={onClose}
+            saving={isSaving}
           />
         </View>
 

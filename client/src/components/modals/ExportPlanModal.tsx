@@ -125,10 +125,7 @@ export default function ExportPlanModal({
           >
             <Pressable
               onPress={() => {}}
-              style={[
-                styles.cardInner,
-                Platform.OS === "web" ? ({ cursor: "default" } as any) : undefined,
-              ]}
+              style={styles.cardInner}
             >
               {/* 고정 헤더 */}
               <View style={styles.header}>
@@ -398,6 +395,7 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   cardInner: {
+    cursor: "auto",
     flex: 1,
     minHeight: 0,
   },

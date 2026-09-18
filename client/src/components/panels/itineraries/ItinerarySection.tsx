@@ -1,4 +1,6 @@
 import { useToast } from "@/contexts/ToastContext";
+import { collectPlanItemDates, shrinkPlanIfNeeded } from "@/utils/shrinkPlanIfNeeded";
+import { useQueryClient } from "@tanstack/react-query";
 import type {
   DocumentUploadAnalyzeResponse,
   LocalFile,
@@ -17,6 +19,8 @@ interface ItinerarySectionProps {
     addExpense?: (expense: any) => void;
     removeExpense?: (expenseId: number) => void;
     removeItinerary?: (itineraryId: number) => void;
+    flights?: any[];
+    accommodations?: any[];
   };
   selectedItinerary?: any;
   activeTab?: "itinerary" | "flight" | "accommodation" | undefined;
@@ -66,6 +70,7 @@ export default function ItinerarySection({
   const openingNewFormRef = useRef(false);
 
   const { showToast } = useToast();
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     const isInitial = isInitialMountRef.current;
@@ -126,20 +131,40 @@ export default function ItinerarySection({
     showToast("일정을 저장했습니다")
   };
 
-  const handleItineraryDelete = (itineraryId?: string | number) => {
+  const handleItineraryDelete = async (itineraryId?: string | number) => {
     if (itineraryId) {
       const id =
         typeof itineraryId === "string"
           ? Number.parseInt(itineraryId)
           : itineraryId;
+
+      const remainingItineraries = (planData?.itineraries ?? []).filter(
+        (it: any) => it.id !== id,
+      );
+
       if (planData?.removeItinerary) {
         planData.removeItinerary(id);
+      }
+
+      const plan = planData?.plan;
+      if (plan?.id) {
+        await shrinkPlanIfNeeded(
+          plan.id,
+          plan,
+          collectPlanItemDates(
+            remainingItineraries,
+            planData?.flights ?? [],
+            planData?.accommodations ?? [],
+          ),
+        ).catch(() => null);
+        queryClient.invalidateQueries({ queryKey: ["plan", plan.publicId] });
+        queryClient.invalidateQueries({ queryKey: ["plans"] });
       }
     }
     setShowItineraryForm(false);
     setEditingItinerary(null);
     onItineraryClear?.();
-    showToast("일정을 삭제했습니다")
+    showToast("일정을 삭제했습니다");
   };
 
   if (selectedItinerary && !showItineraryForm) {

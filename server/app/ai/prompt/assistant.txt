@@ -43,6 +43,8 @@ Do NOT generate the following unless there is a 'special travel context':
    - schedule_required: Preparations triggered by specific plans.
     - Definition: Items directly tied to a specific activity/event in the user's provided itinerary.
     - Rule: You MUST be able to explicitly quote the exact schedule title in the reason field. If you cannot directly link it to a specific schedule, DO NOT include it here.
+    - CRITICAL — name field: The name MUST be a concrete preparation item or action (e.g., "티켓 예매 확인", "방수팩", "한복 대여"). STRICTLY FORBIDDEN to use a schedule/event name as the name (e.g., NEVER write "경복궁 별빛야행" or "국악공연 진연" as the name).
+    - CRITICAL — reason field: The reason MUST state the schedule title as context for WHY the item is needed (e.g., "경복궁 별빛야행 - 야간 입장권 필요"). STRICTLY FORBIDDEN to simply repeat the name or write only the event title with no explanation.
     - Constraints: MAXIMUM of 12 items. STRICTLY FORBIDDEN to include general travel items here (e.g., toiletries, basic medicine, masks, neck pillows, snacks, shopping bags, luggage locks, etc.).
    - recommended: Reducing fatigue, discomfort, or minor risks.
     - Definition: Items that are generally helpful for most travelers based on the destination's country, season, and trip duration.
@@ -55,8 +57,9 @@ Do NOT generate the following unless there is a 'special travel context':
 
 2. Category Self-Verification (Self-Correction Step)
    - Rule: Before finalizing the output, you MUST verify every single item placed in the schedule_required category.
-   - Verification: Ask yourself, "Can I explicitly point to a specific 'schedule title' from the user's itinerary as the reason for this item?"
-   - Action: If the answer is NO, you MUST demote and move the item to the recommended category.
+   - Verification 1: Ask yourself, "Can I explicitly point to a specific 'schedule title' from the user's itinerary as the reason for this item?"
+   - Verification 2: Ask yourself, "Is the name a concrete preparation item or action — NOT a schedule or event name?" If the name IS a schedule/event name (e.g., "경복궁 별빛야행", "국악공연 진연"), it is INVALID. Rewrite it as a preparation item (e.g., "야간 입장권 확인", "공연 티켓 예매").
+   - Action: If Verification 1 fails, you MUST demote and move the item to the recommended category.
    - Strict Constraint: NEVER move these unverified items to the optional category. Remember that optional is strictly reserved for non-physical decisions, not physical objects.
 
 3. Item Format:
@@ -73,8 +76,8 @@ Do NOT generate the following unless there is a 'special travel context':
    - Do not include same and similar checklist items with the existing checklist above
 
 6. Deduplication (Strictly Exclude Existing Items)
-- Context: The user already has the following items in their checklist: {existing_checklist}
-- Rule: You MUST cross-check your generated items against this existing list.
+- Context: The user already has the items listed in Section 4 "Existing Checklist" above.
+- Rule: You MUST cross-check your generated items against that existing list.
 - Constraint: STRICTLY FORBIDDEN to recommend any item that is already on the existing list, or is functionally identical (e.g., if the user has "Sunscreen", do not recommend "Sunblock").
 
 7. Output Format:

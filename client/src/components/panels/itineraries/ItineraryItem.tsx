@@ -100,6 +100,7 @@ import DownArrowIcon from "../../../../assets/dropdown_time.svg";
 import UpperArrowIcon from "../../../../assets/upper_arrow.svg";
 import PanelTabSwitcher from "../PanelTabSwitcher";
 import { extendPlanIfNeeded } from "@/utils/extendPlanIfNeeded";
+import { useQueryClient } from "@tanstack/react-query";
 
 function getCountryCityFromSegments(
   segments:
@@ -162,6 +163,7 @@ export default function ItineraryItem({
   onConsumeCarryoverPendingFiles,
   onOpenNewItinerary,
 }: ItineraryItemProps) {
+  const queryClient = useQueryClient();
   const [showWarning, setShowWarning] = useState(false);
   const [warningMessage, setWarningMessage] = useState("");
   const locationDraftRef = useRef<PlaceResult | null>(null);
@@ -763,6 +765,8 @@ export default function ItineraryItem({
           category: selectedCategory !== null ? selectedCategory : undefined,
         });
         await extendPlanIfNeeded(planId, planData?.plan, [formData.itineraryDate]);
+        queryClient.invalidateQueries({ queryKey: ["plan", planData?.plan?.publicId] });
+        queryClient.invalidateQueries({ queryKey: ["plans"] });
 
         if (draftExpenses.length > 0) {
           try {

@@ -1,7 +1,8 @@
+import enum
 from datetime import date, time
 from typing import TYPE_CHECKING, Optional
 
-from sqlalchemy import ForeignKey, Integer, String
+from sqlalchemy import ForeignKey, Integer
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models import Base
@@ -10,6 +11,15 @@ if TYPE_CHECKING:
     from app.expenses.models import Expense
     from app.locations.models import Location
     from app.plans.models import Plan
+
+
+class ItineraryCategoryEnum(str, enum.Enum):
+    MEAL = "MEAL"
+    TRANSPORT = "TRANSPORT"
+    ACTIVITY = "ACTIVITY"
+    SIGHTSEEING = "SIGHTSEEING"
+    SHOPPING = "SHOPPING"
+    ETC = "ETC"
 
 
 class Itinerary(Base):
@@ -62,8 +72,8 @@ class Itinerary(Base):
     )
     location: Mapped[Optional["Location"]] = relationship(init=False, lazy="joined")
 
-    category: Mapped[str | None] = mapped_column(
-        String(50), nullable=True, default=None
+    category: Mapped[ItineraryCategoryEnum | None] = mapped_column(
+        nullable=True, default=None
     )
 
     is_deleted: Mapped[bool] = mapped_column(default=False, nullable=False)

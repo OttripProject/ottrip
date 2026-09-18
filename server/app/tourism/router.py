@@ -94,6 +94,9 @@ async def get_congestion(
     if not (today <= itinerary.itinerary_date <= today + timedelta(days=30)):
         return []
 
+    if itinerary.category == "MEAL":
+        return []
+
     location = itinerary.location
     if not location or not location.area_cd or not location.signgu_cd:
         return []

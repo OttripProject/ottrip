@@ -182,6 +182,7 @@ export default function AddScheduleWithAiModal({
   const scrollRef = useRef<ScrollView>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const pendingFileRef = useRef<File | null>(null);
+  const applyingRef = useRef(false);
   const dragZoneRef = useRef<View>(null);
   const handleFileAttachRef = useRef<(file: File) => Promise<void>>(
     null as any,
@@ -387,6 +388,8 @@ export default function AddScheduleWithAiModal({
   };
 
   const handleAnalyzeApply = async (draft: AiDocumentItemDraft) => {
+    if (applyingRef.current) return;
+    applyingRef.current = true;
     setLoadingLabel("저장 중이에요...");
     setLoading(true);
     const v = draft.payload.values as Record<string, unknown>;
@@ -560,6 +563,7 @@ export default function AddScheduleWithAiModal({
         { role: "ai", text: "❌ 저장에 실패했습니다. 다시 시도해주세요." },
       ]);
     } finally {
+      applyingRef.current = false;
       setLoading(false);
       setLoadingLabel("일정을 분석하고 있어요...");
       setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
@@ -756,7 +760,9 @@ export default function AddScheduleWithAiModal({
                     styles.resultFooterBtn,
                     styles.resultFooterBtnApply,
                     pressed && { opacity: 0.85 },
+                    loading && styles.resultFooterBtnDisabled,
                   ]}
+                  disabled={loading}
                   onPress={() => {
                     const draft = isResultEditMode
                       ? (resultDraftEditorRef.current?.buildDraft() ??
@@ -1169,6 +1175,9 @@ const styles = StyleSheet.create({
   resultFooterBtnCancel: {
     flex: 1,
     backgroundColor: colors.gray200,
+  },
+  resultFooterBtnDisabled: {
+    opacity: 0.6,
   },
   resultFooterBtnApply: {
     flex: 1.4,

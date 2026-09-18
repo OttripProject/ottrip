@@ -1,5 +1,5 @@
 import api from "@/services/api";
-import { showMessage } from "@/utils/crossPlatformAlert";
+import { showMessage, toUserMessage } from "@/utils/crossPlatformAlert";
 import { GoogleSignin } from "@react-native-google-signin/google-signin";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import * as Crypto from "expo-crypto";
@@ -86,16 +86,12 @@ const SOCIAL_LOGIN_CONFLICT_DEFAULT =
 const SOCIAL_LOGIN_FAILURE_DEFAULT = "로그인에 실패했습니다.";
 
 function showSocialLoginError(err: unknown) {
-  const e = err as {
-    response?: { status?: number; data?: { detail?: string } };
-  };
+  const e = err as { response?: { status?: number } };
   const is409 = e?.response?.status === 409;
-  const detail = e?.response?.data?.detail;
-  const message = is409
-    ? typeof detail === "string" && detail
-      ? detail
-      : SOCIAL_LOGIN_CONFLICT_DEFAULT
-    : SOCIAL_LOGIN_FAILURE_DEFAULT;
+  const message = toUserMessage(
+    err,
+    is409 ? SOCIAL_LOGIN_CONFLICT_DEFAULT : SOCIAL_LOGIN_FAILURE_DEFAULT,
+  );
   showMessage(is409 ? "안내" : "알림", message);
 }
 

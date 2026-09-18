@@ -4,6 +4,7 @@ import Card from "@/ui/components/Card";
 import Input from "@/ui/components/input/Input";
 import { colors } from "@/ui/tokens/colors";
 import { textStyles } from "@/ui/tokens/typography";
+import { toUserMessage } from "@/utils/crossPlatformAlert";
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -98,10 +99,7 @@ export default function SharePlanModal({
       setEmail("");
       await loadShares();
     } catch (e: any) {
-      Alert.alert(
-        "알림",
-        e?.response?.data?.detail || e?.message || "초대 전송에 실패했습니다",
-      );
+      Alert.alert("알림", toUserMessage(e, "초대 전송에 실패했습니다"));
     } finally {
       setLoading(false);
     }
@@ -115,7 +113,7 @@ export default function SharePlanModal({
       onRequestClose={onClose}
     >
       <Pressable style={styles.overlay} onPress={onClose}>
-        <Pressable onPress={() => {}}>
+        <Pressable onPress={() => {}} style={styles.cardWrapper}>
           <Card
             width="100%"
             maxWidth={420}
@@ -283,8 +281,7 @@ export default function SharePlanModal({
                                   const msg =
                                     e?.response?.status === 403
                                       ? "권한이 없습니다"
-                                      : e?.response?.data?.detail ||
-                                        "삭제에 실패했습니다";
+                                      : toUserMessage(e, "삭제에 실패했습니다");
                                   Alert.alert("알림", msg);
                                 }
                               }}
@@ -312,11 +309,15 @@ export default function SharePlanModal({
 
 const styles = StyleSheet.create({
   overlay: {
+    cursor: "auto",
     flex: 1,
     backgroundColor: colors.overlayBackground,
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 16,
+  },
+  cardWrapper: {
+    cursor: "auto",
   },
   header: {
     flexDirection: "row",

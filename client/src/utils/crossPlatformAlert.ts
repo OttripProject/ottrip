@@ -1,5 +1,26 @@
 import { Alert, Platform } from "react-native";
 
+const GENERIC_ERROR_MESSAGE =
+  "일시적인 오류가 발생했어요. 잠시 후 다시 시도해주세요.";
+const KOREAN_RE = /[가-힣]/;
+
+/**
+ * 서버 에러 응답에서 사용자에게 보여줄 메시지를 뽑는다.
+ * detail이 한글 문자열이면(서버가 사용자용으로 작성한 메시지) 그대로 쓰고,
+ * 그 외(영문 프레임워크 기본값·객체·네트워크 에러 등)는 소프트한 공용 문구로 대체한다.
+ */
+export function toUserMessage(
+  error: unknown,
+  fallback: string = GENERIC_ERROR_MESSAGE,
+): string {
+  const detail = (error as { response?: { data?: { detail?: unknown } } })
+    ?.response?.data?.detail;
+  if (typeof detail === "string" && KOREAN_RE.test(detail)) {
+    return detail;
+  }
+  return fallback;
+}
+
 /** RN Web에서 `Alert.alert`가 동작하지 않는 경우가 있어 웹은 `window` 사용 */
 export function showMessage(title: string, message: string): void {
   if (Platform.OS === "web" && typeof window !== "undefined") {

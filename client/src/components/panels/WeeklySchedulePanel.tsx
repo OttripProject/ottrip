@@ -24,6 +24,7 @@ import { radii } from "@/ui/tokens";
 import { colors } from "@/ui/tokens/colors";
 import { spacing } from "@/ui/tokens/spacing";
 import { textStyles, typography } from "@/ui/tokens/typography";
+import { toUserMessage } from "@/utils/crossPlatformAlert";
 import { guestPrompt } from "@/utils/guestPrompt";
 import dayjs from "dayjs";
 import ko from "dayjs/locale/ko";
@@ -77,6 +78,10 @@ export interface Itinerary {
   color?: string;
   category?: ItineraryCategory;
 }
+
+// react-native-big-calendar의 HourGuideColumn(w-50)과 일치시켜야 한다.
+// 헤더 렌더와 드래그 좌표 계산이 같은 값을 써야 드롭 날짜가 어긋나지 않는다.
+const TIME_COLUMN_WIDTH = 50;
 
 function toEvent(it: Itinerary): any {
   const normalizeTime = (time: string) => {
@@ -539,7 +544,7 @@ export default function WeeklySchedulePanel({
         scrollTop = scrollContainer.scrollTop;
       }
 
-      const timeColumnWidth = 60;
+      const timeColumnWidth = TIME_COLUMN_WIDTH;
       const headerHeight = 110;
       const hourRowHeight = 40;
       const timeslots = 3;
@@ -1188,7 +1193,7 @@ export default function WeeklySchedulePanel({
         }
       }
       if (!calendarRect) return null;
-      const timeColumnWidth = 60;
+      const timeColumnWidth = TIME_COLUMN_WIDTH;
       const calendarWidth = calendarRect.width - timeColumnWidth;
       const dayWidth = calendarWidth / 7;
       const relativeX = clientX - calendarRect.left;
@@ -3866,8 +3871,7 @@ export default function WeeklySchedulePanel({
                     } catch (e: any) {
                       Alert.alert(
                         "알림",
-                        e?.response?.data?.detail ||
-                          "메모 저장에 실패했습니다.",
+                        toUserMessage(e, "메모 저장에 실패했습니다."),
                       );
                     }
                   }}
@@ -4033,7 +4037,7 @@ const styles = StyleSheet.create({
     color: colors.white,
   },
   timeColumn: {
-    width: 51,
+    width: TIME_COLUMN_WIDTH,
   },
   rightSection: {
     flexDirection: "row",

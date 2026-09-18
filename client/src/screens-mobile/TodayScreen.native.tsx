@@ -25,6 +25,7 @@ import { usePlanDataQuery } from "@/hooks/usePlanDataQuery";
 import { usePlansQuery } from "@/hooks/usePlansQuery";
 import type {
   Accommodation,
+  Expense,
   FlightRead,
   FlightSegmentReadDto,
   Itinerary,
@@ -35,12 +36,7 @@ import { colors } from "@/ui/tokens/colors";
 import { radii } from "@/ui/tokens/radii";
 import { spacing } from "@/ui/tokens/spacing";
 import { textStyles } from "@/ui/tokens/typography";
-import {
-  convertUTCToLocalTime,
-  formatKoreanDate,
-  formatTime,
-  getTodayKoreanDate,
-} from "@/utils/dateUtils";
+import { convertUTCToLocalTime, formatTime } from "@/utils/dateUtils";
 import { useQueryClient } from "@tanstack/react-query";
 import dayjs from "dayjs";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -156,7 +152,88 @@ function buildSchedulesForDate(
   return items.sort((a, b) => a.time.localeCompare(b.time));
 }
 
-/** 캘린더 `calendarTodayStr`보다 이후 중, 일정이 있는 가장 빠른 날 (이터너리·항공 출발일·숙박 숙박일) */
+const SHORT_WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"];
+
+function formatShortKoreanDate(date: dayjs.Dayjs): string {
+  return `${date.month() + 1}월 ${date.date()}일(${SHORT_WEEKDAYS[date.day()]})`;
+}
+
+type ExpenseSummary = {
+  total: number;
+  totalKrw: number;
+  totalUsd: number;
+  byCategory: Record<string, number>;
+};
+
+function summarizeExpenses(expenses: Expense[] | undefined): ExpenseSummary {
+  let total = 0;
+  let totalKrw = 0;
+  let totalUsd = 0;
+  const byCategory: Record<string, number> = {};
+
+  if (Array.isArray(expenses)) {
+    expenses.forEach(expense => {
+      const amount = expense.amount || 0;
+      total += amount;
+      if (expense.currency === "USD") {
+        totalUsd += amount;
+      } else {
+        totalKrw += amount;
+      }
+      const category = expense.category || "기타";
+      byCategory[category] = (byCategory[category] || 0) + amount;
+    });
+  }
+
+  return { total, totalKrw, totalUsd, byCategory };
+}
+
+function CostSummaryCard({
+  title,
+  summary,
+  onPress,
+}: {
+  title: string;
+  summary: ExpenseSummary;
+  onPress: () => void;
+}) {
+  return (
+    <View style={styles.section}>
+      <Pressable
+        style={[styles.cardBase, styles.costCardPrimary]}
+        onPress={onPress}
+      >
+        <View style={styles.costCardHeader}>
+          <View style={styles.costCardHeaderLeft}>
+            <ExpenseIcon width={20} height={20} color={colors.white} />
+            <Text style={styles.costCardHeaderTitle}>{title}</Text>
+          </View>
+          <RightArrowIcon width={20} height={20} color={colors.white} />
+        </View>
+        {summary.total > 0 ? (
+          <View style={styles.costAmountGroup}>
+            {summary.totalKrw > 0 && (
+              <Text style={styles.costAmountPrimary}>
+                {summary.totalKrw.toLocaleString("ko-KR")}원
+              </Text>
+            )}
+            {summary.totalUsd > 0 && (
+              <Text style={styles.costAmountPrimary}>
+                {summary.totalUsd.toLocaleString("en-US")}달러
+              </Text>
+            )}
+          </View>
+        ) : (
+          <Text style={[styles.costAmountPrimary, { marginBottom: 8 }]}>
+            0원
+          </Text>
+        )}
+        <Text style={styles.costDetailPrimary}>터치하여 상세 내역 확인</Text>
+      </Pressable>
+    </View>
+  );
+}
+
 function collectNearestFutureScheduleDateStr(
   calendarTodayStr: string,
   itineraries: Itinerary[] | undefined,
@@ -220,6 +297,7 @@ export default function TodayScreen() {
   const [showFlightEdit, setShowFlightEdit] = useState(false);
   const [editingFlight, setEditingFlight] = useState<FlightRead | null>(null);
   const [showExpenseDetail, setShowExpenseDetail] = useState(false);
+  const [showTripExpenseDetail, setShowTripExpenseDetail] = useState(false);
   const [showAddExpenseFromDetail, setShowAddExpenseFromDetail] =
     useState(false);
   const [addScheduleFlow, setAddScheduleFlow] =
@@ -240,11 +318,16 @@ export default function TodayScreen() {
   const snackbarAnim = useRef(new Animated.Value(0)).current;
   const snackbarTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const snackbarUndoRef = useRef<(() => void) | null>(null);
+  const autoPreviewedPlanIdRef = useRef<number | null>(null);
 
   useEffect(() => {
+    autoPreviewedPlanIdRef.current = null;
     setTimelineViewDate(null);
     setDismissedSuggestionDates(new Set());
     setSuggestionPlaceIdxs({});
+    setBannerDismissed(false);
+    setCongestedItems([]);
+    setMatchedFestivals([]);
   }, [selectedPlan?.id]);
 
   useEffect(() => {
@@ -266,9 +349,6 @@ export default function TodayScreen() {
   const timelineDateStr =
     timelineViewDate?.format("YYYY-MM-DD") ?? calendarTodayStr;
   const viewingCalendarToday = calendarTodayStr === timelineDateStr;
-  const headerDateLabel = timelineViewDate
-    ? formatKoreanDate(timelineViewDate)
-    : getTodayKoreanDate();
   const timelineDayForCards = timelineViewDate ?? currentTime;
 
   const { data: todayExpensesFromApi = [], refetch: refetchTodayExpenses } =
@@ -439,7 +519,6 @@ export default function TodayScreen() {
     );
   }, [planData.flights]);
 
-  /** 플랜은 있으나 이터너리·항공 구간·숙소가 하나도 없을 때 */
   const planHasNoSchedulesYet = useMemo(() => {
     if (!selectedPlan) return false;
     const noItineraries = !planData.itineraries?.length;
@@ -451,6 +530,32 @@ export default function TodayScreen() {
     hasAnyFlightSegment,
     planData.accommodations,
   ]);
+
+  const tripPhase = useMemo((): "before" | "during" | "after" | null => {
+    const plan = planData.plan;
+    if (!plan?.startDate || !plan?.endDate) return null;
+    const start = dayjs(plan.startDate).format("YYYY-MM-DD");
+    const end = dayjs(plan.endDate).format("YYYY-MM-DD");
+    if (calendarTodayStr < start) return "before";
+    if (calendarTodayStr > end) return "after";
+    return "during";
+  }, [planData.plan?.startDate, planData.plan?.endDate, calendarTodayStr]);
+
+  const dayNumber = useMemo(() => {
+    const start = planData.plan?.startDate;
+    if (!start) return null;
+    return (
+      timelineDayForCards.startOf("day").diff(dayjs(start).startOf("day"), "day") + 1
+    );
+  }, [planData.plan?.startDate, timelineDayForCards]);
+
+  const dDayLabel = useMemo(() => {
+    const diff = timelineDayForCards
+      .startOf("day")
+      .diff(currentTime.startOf("day"), "day");
+    if (diff === 0) return null;
+    return diff > 0 ? `D-${diff}` : `D+${Math.abs(diff)}`;
+  }, [timelineDayForCards, currentTime]);
 
   const currentActivities = useMemo((): ScheduleItem[] => {
     if (!viewingCalendarToday) return [];
@@ -503,7 +608,6 @@ export default function TodayScreen() {
     });
   }, [planData.accommodations, timelineDateStr]);
 
-  /** 실제 오늘(calendarTodayStr)에 해당하는 숙박 — 빈 상태 카드 판별용 */
   const realTodayAccommodations = useMemo(() => {
     if (!planData.accommodations?.length) return [];
     return planData.accommodations.filter((accommodation: any) => {
@@ -517,7 +621,6 @@ export default function TodayScreen() {
     });
   }, [planData.accommodations, calendarTodayStr]);
 
-  /** 조회일에 타임라인 항목 또는 당일 숙박이 있으면 체크리스트·비용 노출 */
   const showTodayTimelineExtras =
     !!selectedPlan &&
     !planData.isLoading &&
@@ -535,7 +638,6 @@ export default function TodayScreen() {
     }
   }, [todaySuggestion, dismissedSuggestionDates, timelineDateStr]);
 
-  /** 실제 오늘: 타임라인·당일 숙박 모두 없고, 플랜에는 다른 데이터가 있을 때 */
   const showNoTodayScheduleOtherDaysCard =
     !!selectedPlan &&
     !planData.isLoading &&
@@ -544,6 +646,28 @@ export default function TodayScreen() {
     realTodayAccommodations.length === 0 &&
     !planHasNoSchedulesYet &&
     !todaySuggestion;
+
+  useEffect(() => {
+    if (!selectedPlan || planData.isLoading) return;
+    if (autoPreviewedPlanIdRef.current === selectedPlan.id) return;
+    if (tripPhase !== "before" && tripPhase !== "during") return;
+    if (planHasNoSchedulesYet) return;
+    if (realTodaySchedules.length > 0 || realTodayAccommodations.length > 0)
+      return;
+    if (todaySuggestion) return;
+    if (!nearestFutureScheduleDateStr) return;
+    autoPreviewedPlanIdRef.current = selectedPlan.id;
+    setTimelineViewDate(dayjs(nearestFutureScheduleDateStr));
+  }, [
+    selectedPlan?.id,
+    planData.isLoading,
+    tripPhase,
+    planHasNoSchedulesYet,
+    realTodaySchedules.length,
+    realTodayAccommodations.length,
+    todaySuggestion,
+    nearestFutureScheduleDateStr,
+  ]);
 
   const todayFlights = useMemo(
     () =>
@@ -603,28 +727,15 @@ export default function TodayScreen() {
     });
   }, [todaySchedules, todaySuggestion, dismissedSuggestionDates, timelineDateStr]);
 
-  const todayExpenses = useMemo(() => {
-    let total = 0;
-    let totalKrw = 0;
-    let totalUsd = 0;
-    const byCategory: Record<string, number> = {};
+  const todayExpenses = useMemo(
+    () => summarizeExpenses(todayExpensesFromApi),
+    [todayExpensesFromApi],
+  );
 
-    if (todayExpensesFromApi && Array.isArray(todayExpensesFromApi)) {
-      todayExpensesFromApi.forEach((expense: any) => {
-        const amount = expense.amount || 0;
-        total += amount;
-        if (expense.currency === "USD") {
-          totalUsd += amount;
-        } else {
-          totalKrw += amount;
-        }
-        const category = expense.category || "기타";
-        byCategory[category] = (byCategory[category] || 0) + amount;
-      });
-    }
-
-    return { total, totalKrw, totalUsd, byCategory };
-  }, [todayExpensesFromApi]);
+  const tripExpenses = useMemo(
+    () => summarizeExpenses(planData.expenses),
+    [planData.expenses],
+  );
 
   const formatCurrency = (amount: number) => {
     return `₩${amount.toLocaleString("ko-KR")}`;
@@ -720,6 +831,14 @@ export default function TodayScreen() {
     closeOpenTimelineSwipe();
     setAddScheduleFlow("method");
   }, [closeOpenTimelineSwipe]);
+
+  const getGreetingText = () => {
+    const startFormat = dayjs(selectedPlan?.startDate).format("YYYY. MM. DD.");
+    const endFormat = dayjs(selectedPlan?.endDate).format("MM. DD.");
+    if (tripPhase === "after") return `${startFormat} – ${endFormat} 일정이 마무리 됐어요`;
+    if (timelineViewDate && dayNumber !== null) return `여행 ${dayNumber}일차의 일정을 미리보고 있어요`;
+    return "오늘의 일정 준비되셨나요?"; 
+  };
 
   if (plansQuery.error) {
     return (
@@ -909,27 +1028,6 @@ export default function TodayScreen() {
           <View style={[styles.header, { paddingTop: insets.top + 4 }]}>
             <View style={styles.headerContent}>
               <View style={styles.headerTextContainer}>
-                <Text style={styles.date}>{headerDateLabel}</Text>
-                {timelineViewDate && (
-                  <View style={styles.timelinePreviewBanner}>
-                    <Text style={styles.timelinePreviewHint}>
-                      오늘이 아닌 {formatKoreanDate(timelineViewDate)} 일정을
-                      보고 있어요
-                    </Text>
-                    <Pressable
-                      onPress={() => {
-                        closeOpenTimelineSwipe();
-                        setTimelineViewDate(null);
-                      }}
-                      hitSlop={8}
-                      style={styles.backToTodayLink}
-                    >
-                      <Text style={styles.backToTodayLinkText}>
-                        오늘로 이동
-                      </Text>
-                    </Pressable>
-                  </View>
-                )}
                 <View style={styles.tripTitleWrapper}>
                   <Pressable
                     style={styles.tripTitleContainer}
@@ -948,7 +1046,21 @@ export default function TodayScreen() {
                     />
                   </Pressable>
                 </View>
-                <Text style={styles.greeting}>오늘의 일정 준비되셨나요?</Text>
+                <View style={styles.dateRow}>
+                  <Text style={styles.date}>
+                    {dayNumber !== null && tripPhase != 'after'
+                      ? `DAY ${dayNumber} · ` : ""}
+                    {formatShortKoreanDate(timelineDayForCards)}
+                  </Text>
+                  {dDayLabel !== null && (
+                    <View style={styles.dDayBadge}>
+                      <Text style={styles.dDayBadgeText}>{dDayLabel}</Text>
+                    </View>
+                  )}
+                </View>
+                <Text style={styles.greeting}>
+                  {getGreetingText()}
+                </Text>
               </View>
               <Pressable
                 style={styles.settingsButton}
@@ -963,17 +1075,29 @@ export default function TodayScreen() {
           </View>
 
           {/* 혼잡 배너 */}
-          {!bannerDismissed && (congestedItems.length > 0 || matchedFestivals.some(f => f.matchedDate === dayjs().format("YYYY-MM-DD"))) && (
+          {(() => {
+            const todayStr = dayjs().format("YYYY-MM-DD");
+            const mealLocationNames = new Set(
+              planData.itineraries
+                .filter((it: any) => it.category === "MEAL" && it.location)
+                .map((it: any) => it.location.name as string),
+            );
+            const bannerFestivals = matchedFestivals.filter(
+              f => f.matchedDate === todayStr && !mealLocationNames.has(f.matchedLocationName ?? ""),
+            );
+            if (bannerDismissed || (congestedItems.length === 0 && bannerFestivals.length === 0)) return null;
+            return (
             <Animated.View style={[styles.bannerWrapper, { opacity: bannerFadeAnim }]}>
               <CongestionBanner
-                festivals={matchedFestivals.filter(f => f.matchedDate === dayjs().format("YYYY-MM-DD"))}
+                festivals={bannerFestivals}
                 congestedItems={congestedItems}
                 onDismiss={() => setBannerDismissed(true)}
                 showDate={false}
                 boldLocations
               />
             </Animated.View>
-          )}
+            );
+          })()}
 
           {/* 현재 진행 중 활동 카드 */}
           {currentActivities.length > 0 && (() => {
@@ -1489,12 +1613,16 @@ export default function TodayScreen() {
             <View style={styles.section}>
               <View style={[styles.cardBase, styles.scheduleEmptyStateCard]}>
                 <Text style={styles.scheduleEmptyStateTitle}>
-                  해당 여행의 오늘 일정은 없어요!
+                  {tripPhase === "after"
+                    ? "여행이 끝났어요"
+                    : "해당 여행의 오늘 일정은 없어요!"}
                 </Text>
                 <Text style={styles.scheduleEmptyStateSubtitle}>
-                  다른 날짜의 일정을 보거나 오늘 일정을 추가할 수 있어요
+                  {tripPhase === "after"
+                    ? "지난 일정을 정리하거나 새 일정을 추가할 수 있어요"
+                    : "다른 날짜의 일정을 보거나 오늘 일정을 추가할 수 있어요"}
                 </Text>
-                {nearestFutureScheduleDateStr ? (
+                {tripPhase !== "after" && nearestFutureScheduleDateStr ? (
                   <>
                     <Pressable
                       style={[
@@ -1574,8 +1702,19 @@ export default function TodayScreen() {
             </View>
           )}
 
+          {tripPhase === "after" && !!selectedPlan && !planData.isLoading && (
+            <CostSummaryCard
+              title="여행 전체 비용"
+              summary={tripExpenses}
+              onPress={() => {
+                closeOpenTimelineSwipe();
+                setShowTripExpenseDetail(true);
+              }}
+            />
+          )}
+
           {/* 오늘 축제 추천 */}
-          {isKoreanPlan && (() => {
+          {isKoreanPlan && tripPhase !== "after" && (() => {
             const todayYMD = dayjs().format("YYYYMMDD");
             const todayFestivals = suggestFestivals.filter(f => {
               const start = f.eventStartDate ?? "00000000";
@@ -1609,55 +1748,14 @@ export default function TodayScreen() {
 
           {/* 오늘의 비용 섹션 */}
           {showTodayTimelineExtras && (
-            <View style={styles.section}>
-              <Pressable
-                style={[styles.cardBase, styles.costCardPrimary]}
-                onPress={() => {
-                  closeOpenTimelineSwipe();
-                  setShowExpenseDetail(true);
-                }}
-              >
-                <View style={styles.costCardHeader}>
-                  <View style={styles.costCardHeaderLeft}>
-                    <ExpenseIcon width={20} height={20} color={colors.white} />
-                    <Text style={styles.costCardHeaderTitle}>
-                      오늘의 여행 비용
-                    </Text>
-                  </View>
-                  <RightArrowIcon width={20} height={20} color={colors.white} />
-                </View>
-                {todayExpenses.total > 0 ? (
-                  <>
-                    <View style={styles.costAmountGroup}>
-                      {todayExpenses.totalKrw > 0 && (
-                        <Text style={styles.costAmountPrimary}>
-                          {todayExpenses.totalKrw.toLocaleString("ko-KR")}원
-                        </Text>
-                      )}
-                      {todayExpenses.totalUsd > 0 && (
-                        <Text style={styles.costAmountPrimary}>
-                          {todayExpenses.totalUsd.toLocaleString("en-US")}달러
-                        </Text>
-                      )}
-                    </View>
-                    <Text style={styles.costDetailPrimary}>
-                      터치하여 상세 내역 확인
-                    </Text>
-                  </>
-                ) : (
-                  <>
-                    <Text
-                      style={[styles.costAmountPrimary, { marginBottom: 8 }]}
-                    >
-                      0원
-                    </Text>
-                    <Text style={styles.costDetailPrimary}>
-                      터치하여 상세 내역 확인
-                    </Text>
-                  </>
-                )}
-              </Pressable>
-            </View>
+            <CostSummaryCard
+              title="오늘의 여행 비용"
+              summary={todayExpenses}
+              onPress={() => {
+                closeOpenTimelineSwipe();
+                setShowExpenseDetail(true);
+              }}
+            />
           )}
 
           {/* 여행 정보(숙박/항공) 섹션 - 데이터 있을 때만 노출 */}
@@ -1848,6 +1946,25 @@ export default function TodayScreen() {
         }}
       />
 
+      <ExpenseDetailModal
+        visible={showTripExpenseDetail}
+        onClose={() => setShowTripExpenseDetail(false)}
+        title="여행 전체 비용"
+        expenses={planData.expenses ?? []}
+        attachments={planData.attachments ?? []}
+        total={tripExpenses.total}
+        byCategory={tripExpenses.byCategory}
+        planId={selectedPlan?.id ?? 0}
+        planStartDate={selectedPlan?.startDate}
+        planEndDate={selectedPlan?.endDate}
+        onExpenseDelete={async () => {
+          await planData.refreshExpenses();
+          queryClient.invalidateQueries({
+            queryKey: ["expenses", selectedPlan?.id],
+          });
+        }}
+      />
+
       <AddExpenseModal
         visible={showAddExpenseFromDetail}
         onClose={opts => {
@@ -1925,7 +2042,19 @@ export default function TodayScreen() {
           planData.refreshAttachments();
         }}
         onDelete={async itineraryId => {
+          const remainingDates = collectPlanItemDates(
+            planData.itineraries.filter(it => it.id !== itineraryId),
+            planData.flights,
+            planData.accommodations,
+          );
+          await shrinkPlanIfNeeded(selectedPlan!.id, planData.plan, remainingDates);
           planData.removeItinerary(itineraryId);
+          if (selectedPlan?.publicId) {
+            queryClient.invalidateQueries({
+              queryKey: ["plan", selectedPlan.publicId],
+            });
+          }
+          queryClient.invalidateQueries({ queryKey: ["plans"] });
           queryClient.invalidateQueries({
             queryKey: ["expenses", selectedPlan?.id],
           });
@@ -2397,31 +2526,29 @@ const styles = StyleSheet.create({
     padding: 4,
     marginTop: -4,
   },
+  dateRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.xs,
+    marginBottom: 4,
+  },
   date: {
     ...textStyles.h7,
     color: colors.gray700,
-    marginBottom: 8,
   },
-  timelinePreviewBanner: {
-    alignSelf: "stretch",
-    marginTop: -4,
-    marginBottom: 8,
+  dDayBadge: {
+    borderRadius: radii.pill,
+    backgroundColor: colors.primary,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
   },
-  timelinePreviewHint: {
-    ...textStyles.body4,
-    color: colors.primary,
-    marginBottom: 6,
-  },
-  backToTodayLink: {
-    alignSelf: "flex-start",
-  },
-  backToTodayLinkText: {
-    ...textStyles.h7,
-    color: colors.primary,
+  dDayBadgeText: {
+    ...textStyles.h8,
+    color: colors.white,
   },
   tripTitleWrapper: {
     position: "relative",
-    marginBottom: 8,
+    marginBottom: 4,
   },
   tripTitleContainer: {
     flexDirection: "row",
@@ -2434,7 +2561,7 @@ const styles = StyleSheet.create({
   },
   greeting: {
     ...textStyles.body3,
-    color: colors.black,
+    color: colors.gray700,
   },
 
   cardBase: {
@@ -2448,7 +2575,6 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: Platform.OS === "android" ? 0 : 3,
   },
-  /** 플랜 일정 비어 있음 / 오늘만 비어 있음 등 공통 안내 카드 */
   scheduleEmptyStateCard: {
     alignItems: "center",
     paddingVertical: 20,
@@ -2735,7 +2861,6 @@ const styles = StyleSheet.create({
     color: colors.primary,
   },
 
-  // AI 제안 카드
   suggestionCard: {
     paddingTop: spacing.lg,
     paddingBottom: spacing.md,
