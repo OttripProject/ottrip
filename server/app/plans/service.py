@@ -445,6 +445,8 @@ class PlanService:
                     location_latitude=it.location.latitude if it.location else None,
                     location_longitude=it.location.longitude if it.location else None,
                     location_has_coords=it.location.has_coords if it.location else None,
+                    location_area_cd=it.location.area_cd if it.location else None,
+                    location_signgu_cd=it.location.signgu_cd if it.location else None,
                     itinerary_date=it.itinerary_date,
                     start_time=it.start_time,
                     end_time=it.end_time,
@@ -484,6 +486,8 @@ class PlanService:
                     location_has_coords=acc.location.has_coords
                     if acc.location
                     else None,
+                    location_area_cd=acc.location.area_cd if acc.location else None,
+                    location_signgu_cd=acc.location.signgu_cd if acc.location else None,
                 )
                 for acc in plan.accommodations
                 if not acc.is_deleted
@@ -536,6 +540,8 @@ class PlanService:
             latitude: float | None,
             longitude: float | None,
             has_coords: bool | None,
+            area_cd: str | None,
+            signgu_cd: str | None,
         ) -> int | None:
             if not name:
                 return None
@@ -545,6 +551,8 @@ class PlanService:
                 latitude=latitude or 0.0,
                 longitude=longitude or 0.0,
                 has_coords=bool(has_coords),
+                area_cd=area_cd,
+                signgu_cd=signgu_cd,
             )
             session.add(location)
             await session.flush()
@@ -581,6 +589,8 @@ class PlanService:
                 it.location_latitude,
                 it.location_longitude,
                 it.location_has_coords,
+                it.location_area_cd,
+                it.location_signgu_cd,
             )
             new_it = Itinerary(
                 title=it.title,
@@ -633,6 +643,8 @@ class PlanService:
                 acc.location_latitude,
                 acc.location_longitude,
                 acc.location_has_coords,
+                acc.location_area_cd,
+                acc.location_signgu_cd,
             )
             new_acc = Accommodation(
                 name=acc.name,

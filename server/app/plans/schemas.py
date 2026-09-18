@@ -120,6 +120,8 @@ class ExportItinerary(APISchema):
     location_latitude: float | None = None
     location_longitude: float | None = None
     location_has_coords: bool | None = None
+    location_area_cd: str | None = None
+    location_signgu_cd: str | None = None
     itinerary_date: date
     start_time: time
     end_time: time
@@ -149,6 +151,8 @@ class ExportAccommodation(APISchema):
     location_latitude: float | None = None
     location_longitude: float | None = None
     location_has_coords: bool | None = None
+    location_area_cd: str | None = None
+    location_signgu_cd: str | None = None
 
 
 class ExportExpense(APISchema):
