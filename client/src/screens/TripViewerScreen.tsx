@@ -18,7 +18,7 @@ import {
 import GradientBackground from "@/ui/components/GradientBackground";
 import { breakpoints } from "@/ui/tokens/breakpoints";
 import { useNavigation, useRoute } from "@react-navigation/native";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Platform,
@@ -57,6 +57,8 @@ export default function TripViewerScreen() {
   );
   const [mainLayoutHeight, setMainLayoutHeight] = useState(600);
   const [hintHeight, setHintHeight] = useState(48);
+  const [isSaving, setIsSaving] = useState(false);
+  const savingRef = useRef(false);
 
   const isMobile = width < breakpoints.compact;
 
@@ -85,12 +87,18 @@ export default function TripViewerScreen() {
       setLoginPromptOpen(true);
       return;
     }
+    if (savingRef.current) return;
+    savingRef.current = true;
+    setIsSaving(true);
     try {
       const result = await plansApi.saveExport(publicId);
       setSavedPlanPublicId(result.planPublicId);
       setSaveSuccessVisible(true);
     } catch {
       setSaveSuccessVisible(false);
+    } finally {
+      savingRef.current = false;
+      setIsSaving(false);
     }
   };
 
@@ -197,7 +205,11 @@ export default function TripViewerScreen() {
       style={styles.root}
     >
       <View style={styles.headerWrapper}>
-        <ViewerHeaderPanel planTitle={plan.title} onSave={handleSave} />
+        <ViewerHeaderPanel
+          planTitle={plan.title}
+          onSave={handleSave}
+          saving={isSaving}
+        />
       </View>
 
       <View style={styles.container}>

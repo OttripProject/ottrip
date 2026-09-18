@@ -31,7 +31,7 @@ export interface TripFormModalProps {
   onSegmentFocus: (index: number) => void;
   markedDates: CalendarMarkedDates;
   onDateSelect: (dateString: string) => void;
-  onSubmit: () => void;
+  onSubmit: () => void | Promise<void>;
   isSubmitDisabled: boolean;
 }
 
@@ -58,6 +58,21 @@ export default function TripFormModal({
 
   const [calendarOpenIndex, setCalendarOpenIndex] = useState<number | null>(null);
   const prevSelectionModeRef = useRef(selectionMode);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const submittingRef = useRef(false);
+  const submitDisabled = isSubmitDisabled || isSubmitting;
+
+  const handleSubmit = async () => {
+    if (submittingRef.current) return;
+    submittingRef.current = true;
+    setIsSubmitting(true);
+    try {
+      await onSubmit();
+    } finally {
+      submittingRef.current = false;
+      setIsSubmitting(false);
+    }
+  };
 
   useEffect(() => {
     if (
@@ -148,15 +163,15 @@ export default function TripFormModal({
               <Pressable
                 style={[
                   styles.submitButton,
-                  isSubmitDisabled && styles.submitButtonDisabled,
+                  submitDisabled && styles.submitButtonDisabled,
                 ]}
-                onPress={onSubmit}
-                disabled={isSubmitDisabled}
+                onPress={handleSubmit}
+                disabled={submitDisabled}
               >
                 <Text
                   style={[
                     styles.submitButtonText,
-                    isSubmitDisabled && styles.submitButtonTextDisabled,
+                    submitDisabled && styles.submitButtonTextDisabled,
                   ]}
                 >
                   {submitButtonText}

@@ -984,7 +984,7 @@ export default function TodayScreen() {
                 <View style={styles.dateRow}>
                   <Text style={styles.date}>
                     {dayNumber !== null && tripPhase != 'after'
-                      ? `DAY${dayNumber} · ` : ""}
+                      ? `DAY ${dayNumber} · ` : ""}
                     {formatShortKoreanDate(timelineDayForCards)}
                   </Text>
                   {dDayLabel !== null && (

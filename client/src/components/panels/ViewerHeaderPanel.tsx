@@ -9,12 +9,14 @@ interface ViewerHeaderPanelProps {
   planTitle: string;
   onSave: () => void;
   onClose?: () => void;
+  saving?: boolean;
 }
 
 export default function ViewerHeaderPanel({
   planTitle: _planTitle,
   onSave,
   onClose,
+  saving = false,
 }: ViewerHeaderPanelProps) {
   return (
     <View style={styles.container}>
@@ -28,7 +30,11 @@ export default function ViewerHeaderPanel({
 
         <View style={styles.spacer} />
 
-        <Pressable onPress={onSave} style={styles.saveButton}>
+        <Pressable
+          onPress={onSave}
+          disabled={saving}
+          style={[styles.saveButton, saving && styles.saveButtonDisabled]}
+        >
           <BookmarkSaveIcon
             width={14}
             height={14}
@@ -93,6 +99,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     flexShrink: 0,
+  },
+  saveButtonDisabled: {
+    opacity: 0.6,
   },
   saveButtonIcon: {
     marginRight: 7,
