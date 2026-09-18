@@ -281,14 +281,18 @@ export default function TripViewerScreen() {
               </View>
             )}
 
-            <ViewerPlanSummaryPanel plan={plan} />
-            <ViewerDetailPanel
-              selectedType={selectedType}
-              selectedItinerary={selectedItinerary}
-              selectedFlight={selectedFlight}
-              selectedAccommodation={selectedAccommodation}
-              expenses={expenses}
-            />
+            <View style={{ height: 230 }}>
+              <ViewerPlanSummaryPanel plan={plan} />
+            </View>
+            <View style={{ height: 420 }}>
+              <ViewerDetailPanel
+                selectedType={selectedType}
+                selectedItinerary={selectedItinerary}
+                selectedFlight={selectedFlight}
+                selectedAccommodation={selectedAccommodation}
+                expenses={expenses}
+              />
+            </View>
           </ScrollView>
         ) : (
           <View style={styles.container}>
