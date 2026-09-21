@@ -33,6 +33,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
+  Animated,
   Modal,
   Platform,
   Pressable,
@@ -177,6 +178,7 @@ function toFlightEvents(flight: any): any[] {
 }
 
 const WEEK_STARTS_ON_STORAGE_KEY = "ottrip.weekStartsOn";
+const WEEK_TOGGLE_SEGMENT_WIDTH = 26;
 
 function readStoredWeekStartsOn(): WeekStartsOn {
   try {
@@ -281,6 +283,9 @@ export default function WeeklySchedulePanel({
   const [weekStartsOn, setWeekStartsOn] = useState<WeekStartsOn>(
     readStoredWeekStartsOn,
   );
+  const weekStartsOnAnim = useRef(
+    new Animated.Value(readStoredWeekStartsOn() === 1 ? 0 : 1),
+  ).current;
   const [currentWeekStart, setCurrentWeekStart] = useState(() =>
     getWeekStart(dayjs(), readStoredWeekStartsOn()),
   );
@@ -1960,6 +1965,11 @@ export default function WeeklySchedulePanel({
     const next: WeekStartsOn = weekStartsOn === 1 ? 0 : 1;
     setWeekStartsOn(next);
     storeWeekStartsOn(next);
+    Animated.timing(weekStartsOnAnim, {
+      toValue: next === 1 ? 0 : 1,
+      duration: 180,
+      useNativeDriver: true,
+    }).start();
     setCurrentWeekStart(prev => {
       const today = dayjs().startOf("day");
       const showingToday =
@@ -2038,15 +2048,48 @@ export default function WeeklySchedulePanel({
 
           <Pressable
             onPress={toggleWeekStartsOn}
-            style={[styles.actionButton, { marginLeft: spacing.xs }]}
-            accessibilityRole="button"
+            style={[styles.weekStartToggle, { marginLeft: spacing.xs }]}
+            accessibilityRole="switch"
+            accessibilityState={{ checked: weekStartsOn === 0 }}
             accessibilityLabel={
               weekStartsOn === 1 ? "일요일 시작으로 변경" : "월요일 시작으로 변경"
             }
           >
-            <Text style={styles.actionButtonText}>
-              {weekStartsOn === 1 ? "MON" : "SUN"}
-            </Text>
+            <Animated.View
+              style={[
+                styles.weekStartToggleKnob,
+                {
+                  transform: [
+                    {
+                      translateX: weekStartsOnAnim.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [2, WEEK_TOGGLE_SEGMENT_WIDTH + 2],
+                      }),
+                    },
+                  ],
+                },
+              ]}
+            />
+            <View style={styles.weekStartToggleSegment} pointerEvents="none">
+              <Text
+                style={[
+                  styles.weekStartToggleText,
+                  weekStartsOn === 1 && styles.weekStartToggleTextActive,
+                ]}
+              >
+                M
+              </Text>
+            </View>
+            <View style={styles.weekStartToggleSegment} pointerEvents="none">
+              <Text
+                style={[
+                  styles.weekStartToggleText,
+                  weekStartsOn === 0 && styles.weekStartToggleTextActive,
+                ]}
+              >
+                S
+              </Text>
+            </View>
           </Pressable>
         </View>
 
@@ -4106,8 +4149,45 @@ const styles = StyleSheet.create({
   },
   actionButtonText: {
     ...textStyles.h8,
-    fontSize: 12,
     lineHeight: 18,
+  },
+  weekStartToggle: {
+    flexDirection: "row",
+    width: WEEK_TOGGLE_SEGMENT_WIDTH * 2 + 6,
+    height: 32,
+    borderRadius: radii.pill,
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: colors.gray300,
+    padding: 2,
+  },
+  weekStartToggleKnob: {
+    position: "absolute",
+    top: 2,
+    left: 0,
+    width: WEEK_TOGGLE_SEGMENT_WIDTH,
+    height: 26,
+    borderRadius: radii.pill,
+    backgroundColor: colors.white,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  weekStartToggleSegment: {
+    width: WEEK_TOGGLE_SEGMENT_WIDTH,
+    height: 26,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  weekStartToggleText: {
+    ...textStyles.h9,
+    color: colors.gray400,
+  },
+  weekStartToggleTextActive: {
+    color: colors.gray900,
+    fontFamily: typography.fontFamily.pretendardSemiBold,
   },
   actionGroup: {
     flexDirection: "row",
