@@ -178,7 +178,7 @@ function toFlightEvents(flight: any): any[] {
 }
 
 const WEEK_STARTS_ON_STORAGE_KEY = "ottrip.weekStartsOn";
-const WEEK_TOGGLE_SEGMENT_WIDTH = 26;
+const WEEK_TOGGLE_KNOB_SIZE = (textStyles.h9.lineHeight ?? 0) + spacing.xs * 2;
 
 function readStoredWeekStartsOn(): WeekStartsOn {
   try {
@@ -2063,14 +2063,17 @@ export default function WeeklySchedulePanel({
                     {
                       translateX: weekStartsOnAnim.interpolate({
                         inputRange: [0, 1],
-                        outputRange: [2, WEEK_TOGGLE_SEGMENT_WIDTH + 2],
+                        outputRange: [0, WEEK_TOGGLE_KNOB_SIZE],
                       }),
                     },
                   ],
                 },
               ]}
             />
-            <View style={styles.weekStartToggleSegment} pointerEvents="none">
+            <View
+              style={styles.weekStartToggleSegment}
+              pointerEvents="none"
+            >
               <Text
                 style={[
                   styles.weekStartToggleText,
@@ -2080,7 +2083,10 @@ export default function WeeklySchedulePanel({
                 M
               </Text>
             </View>
-            <View style={styles.weekStartToggleSegment} pointerEvents="none">
+            <View
+              style={styles.weekStartToggleSegment}
+              pointerEvents="none"
+            >
               <Text
                 style={[
                   styles.weekStartToggleText,
@@ -4153,21 +4159,19 @@ const styles = StyleSheet.create({
   },
   weekStartToggle: {
     flexDirection: "row",
-    width: WEEK_TOGGLE_SEGMENT_WIDTH * 2 + 6,
-    height: 32,
-    borderRadius: radii.pill,
+    borderRadius: radii.base,
     backgroundColor: colors.white,
     borderWidth: 1,
     borderColor: colors.gray300,
-    padding: 2,
+    padding: spacing.xs / 2,
   },
   weekStartToggleKnob: {
     position: "absolute",
-    top: 2,
-    left: 0,
-    width: WEEK_TOGGLE_SEGMENT_WIDTH,
-    height: 26,
-    borderRadius: radii.pill,
+    top: spacing.xs / 2,
+    left: spacing.xs / 2,
+    width: WEEK_TOGGLE_KNOB_SIZE,
+    height: WEEK_TOGGLE_KNOB_SIZE,
+    borderRadius: radii.sm,
     backgroundColor: colors.white,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
@@ -4176,8 +4180,8 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   weekStartToggleSegment: {
-    width: WEEK_TOGGLE_SEGMENT_WIDTH,
-    height: 26,
+    width: WEEK_TOGGLE_KNOB_SIZE,
+    height: WEEK_TOGGLE_KNOB_SIZE,
     alignItems: "center",
     justifyContent: "center",
   },
