@@ -178,7 +178,8 @@ function toFlightEvents(flight: any): any[] {
 }
 
 const WEEK_STARTS_ON_STORAGE_KEY = "ottrip.weekStartsOn";
-const WEEK_TOGGLE_KNOB_SIZE = (textStyles.h9.lineHeight ?? 0) + spacing.xs * 2;
+const WEEK_TOGGLE_HEIGHT = 32;
+const WEEK_TOGGLE_KNOB_SIZE = WEEK_TOGGLE_HEIGHT - spacing.xs;
 
 function readStoredWeekStartsOn(): WeekStartsOn {
   try {
