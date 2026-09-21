@@ -25,6 +25,7 @@ import { colors } from "@/ui/tokens/colors";
 import { spacing } from "@/ui/tokens/spacing";
 import { textStyles, typography } from "@/ui/tokens/typography";
 import { toUserMessage } from "@/utils/crossPlatformAlert";
+import { type WeekStartsOn, getWeekStart } from "@/utils/dateUtils";
 import { guestPrompt } from "@/utils/guestPrompt";
 import dayjs from "dayjs";
 import ko from "dayjs/locale/ko";
@@ -175,6 +176,24 @@ function toFlightEvents(flight: any): any[] {
   });
 }
 
+const WEEK_STARTS_ON_STORAGE_KEY = "ottrip.weekStartsOn";
+
+function readStoredWeekStartsOn(): WeekStartsOn {
+  try {
+    return window.localStorage.getItem(WEEK_STARTS_ON_STORAGE_KEY) === "0"
+      ? 0
+      : 1;
+  } catch {
+    return 1;
+  }
+}
+
+function storeWeekStartsOn(value: WeekStartsOn) {
+  try {
+    window.localStorage.setItem(WEEK_STARTS_ON_STORAGE_KEY, String(value));
+  } catch {}
+}
+
 interface Props {
   itineraries: Itinerary[];
   flights?: any[];
@@ -259,8 +278,11 @@ export default function WeeklySchedulePanel({
   onAiSuggestPress,
 }: Props) {
   const queryClient = useQueryClient();
-  const [currentWeekStart, setCurrentWeekStart] = useState(
-    dayjs().startOf("week").add(1, "day"),
+  const [weekStartsOn, setWeekStartsOn] = useState<WeekStartsOn>(
+    readStoredWeekStartsOn,
+  );
+  const [currentWeekStart, setCurrentWeekStart] = useState(() =>
+    getWeekStart(dayjs(), readStoredWeekStartsOn()),
   );
   const [internalSelectedTrip, setInternalSelectedTrip] = useState<any>(null);
   const { width: windowWidth } = useWindowDimensions();
@@ -1495,10 +1517,9 @@ export default function WeeklySchedulePanel({
 
   useEffect(() => {
     if (internalSelectedTrip?.startDate) {
-      const startDateWeekStart = dayjs(internalSelectedTrip.startDate)
-        .startOf("week")
-        .add(1, "day");
-      setCurrentWeekStart(startDateWeekStart);
+      setCurrentWeekStart(
+        getWeekStart(internalSelectedTrip.startDate, weekStartsOn),
+      );
     }
   }, [internalSelectedTrip?.startDate]);
 
@@ -1766,10 +1787,9 @@ export default function WeeklySchedulePanel({
           };
           setInternalSelectedTrip(updatedTripData);
 
-          const startDateWeekStart = dayjs(updatedPlan.startDate)
-            .startOf("week")
-            .add(1, "day");
-          setCurrentWeekStart(startDateWeekStart);
+          setCurrentWeekStart(
+            getWeekStart(updatedPlan.startDate, weekStartsOn),
+          );
         }
       } else {
         setResultModalConfig({
@@ -1935,8 +1955,18 @@ export default function WeeklySchedulePanel({
 
   const goPrev = () => setCurrentWeekStart(prev => prev.subtract(1, "week"));
   const goNext = () => setCurrentWeekStart(prev => prev.add(1, "week"));
-  const goToday = () =>
-    setCurrentWeekStart(dayjs().startOf("week").add(1, "day"));
+  const goToday = () => setCurrentWeekStart(getWeekStart(dayjs(), weekStartsOn));
+  const toggleWeekStartsOn = () => {
+    const next: WeekStartsOn = weekStartsOn === 1 ? 0 : 1;
+    setWeekStartsOn(next);
+    storeWeekStartsOn(next);
+    setCurrentWeekStart(prev => {
+      const today = dayjs().startOf("day");
+      const showingToday =
+        !today.isBefore(prev) && today.isBefore(prev.add(7, "day"));
+      return getWeekStart(showingToday ? today : prev.add(3, "day"), next);
+    });
+  };
 
   return (
     <View ref={panelRef} style={styles.panelWrapper}>
@@ -1991,10 +2021,9 @@ export default function WeeklySchedulePanel({
               selectedDate={selectedDate}
               onDayPress={day => {
                 setSelectedDate(day.dateString);
-                const monday = dayjs(day.dateString)
-                  .startOf("week")
-                  .add(1, "day");
-                setCurrentWeekStart(monday);
+                setCurrentWeekStart(
+                  getWeekStart(day.dateString, weekStartsOn),
+                );
               }}
               onClose={() => setShowMonthPicker(false)}
               style={calendarPopupPos}
@@ -2006,6 +2035,19 @@ export default function WeeklySchedulePanel({
               autoCloseOnSelect={true}
             />
           </View>
+
+          <Pressable
+            onPress={toggleWeekStartsOn}
+            style={[styles.actionButton, { marginLeft: spacing.xs }]}
+            accessibilityRole="button"
+            accessibilityLabel={
+              weekStartsOn === 1 ? "일요일 시작으로 변경" : "월요일 시작으로 변경"
+            }
+          >
+            <Text style={styles.actionButtonText}>
+              {weekStartsOn === 1 ? "MON" : "SUN"}
+            </Text>
+          </Pressable>
         </View>
 
         <View style={styles.rightSection}>
@@ -2166,14 +2208,13 @@ export default function WeeklySchedulePanel({
           date={currentWeekStart.toDate()}
           hourRowHeight={40}
           timeslots={3}
-          weekStartsOn={1}
+          weekStartsOn={weekStartsOn}
           hideNowIndicator
           swipeEnabled
           showTime
           scrollOffsetMinutes={360}
           onSwipeEnd={(newDate: Date) => {
-            const newWeekStart = dayjs(newDate).startOf("week").add(1, "day");
-            setCurrentWeekStart(newWeekStart);
+            setCurrentWeekStart(getWeekStart(newDate, weekStartsOn));
           }}
           renderHeader={_props => {
             return (
@@ -3752,8 +3793,7 @@ export default function WeeklySchedulePanel({
           if (externalPlanData?.refreshExpenses) externalPlanData.refreshExpenses().catch(() => {});
           if (onPlansRefresh) onPlansRefresh();
           if (firstDate) {
-            const monday = dayjs(firstDate).startOf("week").add(1, "day");
-            setCurrentWeekStart(monday);
+            setCurrentWeekStart(getWeekStart(firstDate, weekStartsOn));
           }
         }}
       />
