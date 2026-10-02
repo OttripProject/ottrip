@@ -22,6 +22,17 @@ export function getTodayKoreanDate(): string {
   return formatKoreanDate(dayjs());
 }
 
+export type WeekStartsOn = 0 | 1;
+
+export function getWeekStart(
+  date: dayjs.ConfigType,
+  weekStartsOn: WeekStartsOn,
+): dayjs.Dayjs {
+  const d = dayjs(date).startOf("day");
+  const diff = (d.day() - weekStartsOn + 7) % 7;
+  return d.subtract(diff, "day");
+}
+
 export function getWeekCalendar(baseDate?: dayjs.Dayjs | string) {
   const today = dayjs();
   const base = baseDate
