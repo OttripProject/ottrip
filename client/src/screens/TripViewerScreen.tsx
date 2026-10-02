@@ -100,6 +100,7 @@ export default function TripViewerScreen() {
     setIsSaving(true);
     try {
       const result = await plansApi.saveExport(publicId);
+      queryClient.invalidateQueries({ queryKey: ["plans"] });
       setSavedPlanPublicId(result.planPublicId);
       setSaveSuccessVisible(true);
     } catch {
@@ -406,7 +407,6 @@ export default function TripViewerScreen() {
         onConfirm={() => {
           setSaveSuccessVisible(false);
           if (savedPlanPublicId && Platform.OS !== "web") {
-            queryClient.invalidateQueries({ queryKey: ["plans"] });
             navigation.reset({
               index: 0,
               routes: [
