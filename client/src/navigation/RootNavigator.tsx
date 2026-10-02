@@ -225,7 +225,7 @@ export default function RootNavigator() {
     const prefixes =
       Platform.OS === "web" && typeof window !== "undefined"
         ? [window.location.origin]
-        : ["ottrip://"];
+        : ["ottrip://", "ottrip-alpha://", "ottrip-dev://", "ottrip-local://"];
 
     const planScreen = {
       path: "plans/:publicId" as const,
