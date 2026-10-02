@@ -18,7 +18,9 @@ import {
 } from "@/services/plans";
 import GradientBackground from "@/ui/components/GradientBackground";
 import { breakpoints } from "@/ui/tokens/breakpoints";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useNavigation, useRoute } from "@react-navigation/native";
+import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -28,6 +30,7 @@ import {
   View,
   useWindowDimensions,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 
 export default function TripViewerScreen() {
@@ -35,6 +38,8 @@ export default function TripViewerScreen() {
   const navigation = useNavigation<any>();
   const { isAuthenticated } = useAuth();
   const { width } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
+  const queryClient = useQueryClient();
 
   const publicId: string = route.params?.publicId ?? "";
 
@@ -111,6 +116,8 @@ export default function TripViewerScreen() {
       try {
         window.localStorage.setItem("pendingSavePublicId", publicId);
       } catch {}
+    } else {
+      AsyncStorage.setItem("pendingSavePublicId", publicId).catch(() => {});
     }
     navigation.navigate("로그인");
   };
@@ -223,7 +230,10 @@ export default function TripViewerScreen() {
       locations={[0.2, 0.502]}
       start={{ x: 0.5, y: 0 }}
       end={{ x: 0.5, y: 1 }}
-      style={styles.root}
+      style={{
+        ...styles.root,
+        paddingTop: Platform.OS === "web" ? 0 : insets.top,
+      }}
     >
       <AppOpenBanner path={`trip/${publicId}`} />
       <View style={styles.headerWrapper}>
@@ -395,7 +405,18 @@ export default function TripViewerScreen() {
         onClose={() => setSaveSuccessVisible(false)}
         onConfirm={() => {
           setSaveSuccessVisible(false);
-          if (savedPlanPublicId) {
+          if (savedPlanPublicId && Platform.OS !== "web") {
+            queryClient.invalidateQueries({ queryKey: ["plans"] });
+            navigation.reset({
+              index: 0,
+              routes: [
+                {
+                  name: "MOBILE",
+                  params: { selectPlanPublicId: savedPlanPublicId },
+                },
+              ],
+            });
+          } else if (savedPlanPublicId) {
             navigation.reset({
               index: 0,
               routes: [

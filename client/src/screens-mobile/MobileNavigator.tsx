@@ -1,8 +1,13 @@
+import { useAuth } from "@/contexts/AuthContext";
 import { SelectedPlanProvider } from "@/contexts/SelectedPlanContext";
+import { useToast } from "@/contexts/ToastContext";
+import { plansApi } from "@/services/plans";
 import { colors } from "@/ui/tokens/colors";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
-import { useFocusEffect } from "@react-navigation/native";
-import React, { useRef } from "react";
+import { useFocusEffect, useRoute } from "@react-navigation/native";
+import { useQueryClient } from "@tanstack/react-query";
+import React, { useEffect, useRef, useState } from "react";
 import { Platform, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, {
@@ -108,9 +113,41 @@ function WeeklyScreenWithAnimation() {
 
 export default function MobileNavigator() {
   const insets = useSafeAreaInsets();
+  const route = useRoute();
+  const { isAuthenticated } = useAuth();
+  const queryClient = useQueryClient();
+  const { showToast } = useToast();
+  const [preferredPlanPublicId, setPreferredPlanPublicId] = useState<
+    string | null
+  >(
+    (route.params as { selectPlanPublicId?: string } | undefined)
+      ?.selectPlanPublicId ?? null,
+  );
+
+  const resumingSaveRef = useRef(false);
+
+  useEffect(() => {
+    if (!isAuthenticated || resumingSaveRef.current) return;
+    resumingSaveRef.current = true;
+    (async () => {
+      try {
+        const pendingId = await AsyncStorage.getItem("pendingSavePublicId");
+        if (!pendingId) return;
+        await AsyncStorage.removeItem("pendingSavePublicId");
+        const result = await plansApi.saveExport(pendingId);
+        await queryClient.invalidateQueries({ queryKey: ["plans"] });
+        setPreferredPlanPublicId(result.planPublicId);
+        showToast("내 일정으로 저장됐어요", { icon: "check" });
+      } catch {
+        showToast("일정을 저장하지 못했어요", { icon: "info" });
+      } finally {
+        resumingSaveRef.current = false;
+      }
+    })();
+  }, [isAuthenticated, queryClient, showToast]);
 
   return (
-    <SelectedPlanProvider>
+    <SelectedPlanProvider preferredPlanPublicId={preferredPlanPublicId}>
       <View style={styles.navigatorContainer}>
         <Tab.Navigator
           screenOptions={{

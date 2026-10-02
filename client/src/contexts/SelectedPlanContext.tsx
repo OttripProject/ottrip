@@ -22,6 +22,7 @@ const SelectedPlanContext = createContext<SelectedPlanContextType | undefined>(
 
 interface SelectedPlanProviderProps {
   children: ReactNode;
+  preferredPlanPublicId?: string | null;
 }
 
 const getDefaultPlan = (plans: Plan[]): Plan | null => {
@@ -71,11 +72,28 @@ const getDefaultPlan = (plans: Plan[]): Plan | null => {
 
 export const SelectedPlanProvider: React.FC<SelectedPlanProviderProps> = ({
   children,
+  preferredPlanPublicId,
 }) => {
   const plansQuery = usePlansQuery();
   const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
   const selectedPlanRef = useRef<Plan | null>(null);
   selectedPlanRef.current = selectedPlan;
+  const appliedPreferredRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (
+      !preferredPlanPublicId ||
+      appliedPreferredRef.current === preferredPlanPublicId
+    )
+      return;
+    const preferred = plansQuery.plans.find(
+      (p) => p.publicId === preferredPlanPublicId,
+    );
+    if (!preferred) return;
+    appliedPreferredRef.current = preferredPlanPublicId;
+    selectedPlanRef.current = preferred;
+    setSelectedPlan(preferred);
+  }, [plansQuery.plans, preferredPlanPublicId]);
 
   useEffect(() => {
     if (plansQuery.plans.length === 0) return;
