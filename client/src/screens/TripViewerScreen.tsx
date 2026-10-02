@@ -1,3 +1,4 @@
+import AppOpenBanner from "@/components/AppOpenBanner";
 import LoginPromptModal from "@/components/modals/LoginPromptModal";
 import TripDeleteConfirmModal from "@/components/modals/TripDeleteConfirmModal";
 import ViewerDetailPanel from "@/components/panels/ViewerDetailPanel";
@@ -224,6 +225,7 @@ export default function TripViewerScreen() {
       end={{ x: 0.5, y: 1 }}
       style={styles.root}
     >
+      <AppOpenBanner path={`trip/${publicId}`} />
       <View style={styles.headerWrapper}>
         <ViewerHeaderPanel
           planTitle={plan.title}
