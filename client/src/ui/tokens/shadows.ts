@@ -61,6 +61,11 @@ export const shadows = {
     android: { elevation: 12 },
     default: { boxShadow: "0 24px 48px rgba(0,0,0,0.12)" } as any,
   }),
+  insetBottom: Platform.select({
+    ios: {},
+    android: {},
+    default: { boxShadow: "inset 0 -1px 0 rgba(20,24,40,0.06)" } as any,
+  }),
   dark: Platform.select({
     ios: {
       shadowColor: "#000",

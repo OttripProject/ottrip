@@ -468,43 +468,50 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
 
         <Modal visible={contactOpen} transparent animationType="fade">
           <View style={styles.modalOverlay}>
-            <View style={styles.contactModalCard}>
-              <Pressable
-                style={styles.contactModalCloseButton}
-                onPress={() => setContactOpen(false)}
-              >
-                <XIcon width={24} height={24} fill={colors.black} />
-              </Pressable>
-              <Text style={styles.contactModalTitle}>문의하기</Text>
-              <Text style={styles.contactModalText}>
-                도움이 필요하거나 피드백이 있으시면 연락주세요.
-              </Text>
-              <View style={styles.contactModalEmailContainer}>
-                <Text style={styles.contactModalEmailText}>
-                  {CONTACT_EMAIL}
-                </Text>
-                <View style={styles.contactModalCopyWrapper}>
-                  {copied ? (
-                    <Text style={styles.contactModalCopiedText}>복사됨!</Text>
-                  ) : (
-                    <Pressable
-                      style={styles.contactModalCopyIcon}
-                      onPress={handleCopy}
-                    >
-                      <CopyIcon width={16} height={16} fill={colors.gray700} />
-                    </Pressable>
-                  )}
+            <View style={styles.contactCard}>
+              <View style={styles.header}>
+                <View style={styles.headerText}>
+                  <Text style={styles.contactTitle}>문의하기</Text>
+                  <Text style={styles.contactSubtitle}>
+                    도움이 필요하거나 피드백이 있으시면 연락주세요.
+                  </Text>
                 </View>
+                <MotionPressable
+                  onPress={() => setContactOpen(false)}
+                  hitSlop={8}
+                  style={styles.closeButton}
+                >
+                  <MotionIcon>
+                    <XIcon width={16} height={16} color={colors.gray900} />
+                  </MotionIcon>
+                </MotionPressable>
               </View>
-              <Text style={styles.contactModalReplyText}>
-                최대한 빠르게 답변드리겠습니다.
-              </Text>
-              <Pressable
-                style={styles.contactModalConfirmButton}
+              <View>
+                <MotionPressable
+                  style={styles.contactEmailButton}
+                  onPress={handleCopy}
+                >
+                  <Text style={styles.contactEmailText} numberOfLines={1}>
+                    {CONTACT_EMAIL}
+                  </Text>
+                  {copied ? (
+                    <Text style={styles.contactCopiedText}>복사됨!</Text>
+                  ) : (
+                    <MotionIcon>
+                      <CopyIcon width={16} height={16} fill={colors.gray700} />
+                    </MotionIcon>
+                  )}
+                </MotionPressable>
+                <Text style={styles.contactReplyText}>
+                  최대한 빠르게 답변드리겠습니다.
+                </Text>
+              </View>
+              <MotionPressable
+                style={styles.contactConfirmButton}
                 onPress={() => setContactOpen(false)}
               >
-                <Text style={styles.contactModalConfirmButtonText}>확인</Text>
-              </Pressable>
+                <Text style={styles.contactConfirmButtonText}>확인</Text>
+              </MotionPressable>
             </View>
           </View>
         </Modal>
@@ -883,90 +890,57 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     padding: 20,
   },
-  contactModalCard: {
-    position: "relative",
+  contactCard: {
+    width: 420 + spacing.xl * 2,
+    maxWidth: "100%",
     backgroundColor: colors.white,
-    borderRadius: 24,
-    width: 480,
-    height: 360,
+    borderRadius: radii["2xl"],
+    padding: spacing.xl,
+    gap: spacing.lg,
+    ...shadows.xl,
   },
-  contactModalCloseButton: {
-    position: "absolute",
-    right: 40,
-    top: 48,
-    width: 24,
-    height: 24,
-    zIndex: 1,
-  },
-  contactModalTitle: {
-    position: "absolute",
-    left: 40,
-    top: 48,
+  contactTitle: {
     ...textStyles.h2,
+    color: colors.gray900,
   },
-  contactModalText: {
-    position: "absolute",
-    left: 40,
-    top: 92,
-    width: 400,
-    ...textStyles.body3,
+  contactSubtitle: {
+    ...textStyles.body5,
     color: colors.gray700,
+    marginTop: spacing.sm,
   },
-  contactModalEmailContainer: {
-    position: "absolute",
-    left: 40,
-    top: 146,
-    width: 400,
-    height: 48,
-    backgroundColor: colors.gray200,
-    borderWidth: 1,
-    borderColor: colors.gray400,
-    borderRadius: 10,
+  contactEmailButton: {
+    ...surfaces.subtle,
+    borderRadius: radii.md,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 16,
+    gap: spacing.sm,
   },
-  contactModalEmailText: {
-    ...textStyles.body4,
+  contactEmailText: {
+    ...textStyles.body5,
     color: colors.gray700,
     flex: 1,
   },
-  contactModalCopyWrapper: {
-    minWidth: 40,
-    height: 16,
-    marginLeft: 8,
-    alignItems: "flex-end",
-    justifyContent: "center",
-  },
-  contactModalCopyIcon: {
-    width: 16,
-    height: 16,
-  },
-  contactModalCopiedText: {
-    ...textStyles.body6,
+  contactCopiedText: {
+    ...textStyles.body5,
     color: colors.gray700,
   },
-  contactModalReplyText: {
-    position: "absolute",
-    left: 40,
-    top: 202,
-    ...textStyles.body4,
+  contactReplyText: {
+    ...textStyles.body5,
     color: colors.success,
+    marginTop: spacing.sm,
   },
-  contactModalConfirmButton: {
-    position: "absolute",
-    left: 40,
-    bottom: 48,
-    width: 400,
-    height: 56,
-    backgroundColor: colors.black,
-    borderRadius: 10,
+  contactConfirmButton: {
+    height: 48,
+    borderRadius: radii.md,
+    ...surfaces.primary,
     alignItems: "center",
     justifyContent: "center",
   },
-  contactModalConfirmButtonText: {
-    ...textStyles.h5,
+  contactConfirmButtonText: {
+    ...textStyles.h6,
     color: colors.white,
   },
 });

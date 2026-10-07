@@ -18,6 +18,10 @@ export const surfaces = {
     backgroundColor: colors.white,
     ...shadows.xs,
   } as ViewStyle,
+  subtle: {
+    backgroundColor: colors.gray200,
+    ...shadows.insetBottom,
+  } as ViewStyle,
   dark: {
     backgroundColor: colors.gray900,
     ...linearGradient(colors.gradientDark),
