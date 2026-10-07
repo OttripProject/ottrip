@@ -10,6 +10,10 @@ const linearGradient = ([from, to]: readonly [string, string]) =>
     : {};
 
 export const surfaces = {
+  overlay: {
+    backgroundColor: colors.overlayBackground,
+    ...(Platform.OS === "web" ? { backdropFilter: "blur(4px)" } : {}),
+  } as ViewStyle,
   outline: {
     backgroundColor: colors.white,
     ...shadows.xs,

@@ -550,7 +550,7 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.7)",
+    ...surfaces.overlay,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -878,7 +878,7 @@ const styles = StyleSheet.create({
   // --- 문의 모달 ---
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.7)",
+    ...surfaces.overlay,
     alignItems: "center",
     justifyContent: "center",
     padding: 20,
