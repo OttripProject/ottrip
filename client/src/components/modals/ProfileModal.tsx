@@ -5,7 +5,6 @@ import { useMe } from "@/hooks/useMe";
 import { useNicknameValidation } from "@/hooks/useNicknameValidation";
 import { type UserProfile, usersApi } from "@/services/users";
 import { Gender } from "@/types/api";
-import Card from "@/ui/components/Card";
 import MotionPressable, { MotionIcon } from "@/ui/components/MotionPressable";
 import Input from "@/ui/components/input/Input";
 import { colors } from "@/ui/tokens/colors";
@@ -16,7 +15,7 @@ import { surfaces } from "@/ui/tokens/surfaces";
 import { textStyles } from "@/ui/tokens/typography";
 import { useNavigation } from "@react-navigation/native";
 import { useQueryClient } from "@tanstack/react-query";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Alert,
   Modal,
@@ -66,14 +65,12 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
   const [gender, setGender] = useState<Gender | null>(null);
   const [language, setLanguage] = useState<"ko" | "en">("ko");
   const [contactOpen, setContactOpen] = useState(false);
-  const [copied, setCopied] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [logoutModalOpen, setLogoutModalOpen] = useState(false);
   const [termsPolicyModalOpen, setTermsPolicyModalOpen] = useState(false);
   const [termsDetailModalOpen, setTermsDetailModalOpen] = useState(false);
   const [termsDetailKey, setTermsDetailKey] = useState<TermsKey>("tos");
   const [deletingGuestData, setDeletingGuestData] = useState(false);
-  const copiedTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const CONTACT_EMAIL = "ottrip.official@gmail.com";
 
@@ -86,14 +83,6 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
       setGender(profile.gender);
     }
   }, [profile]);
-
-  useEffect(() => {
-    return () => {
-      if (copiedTimerRef.current) {
-        clearTimeout(copiedTimerRef.current);
-      }
-    };
-  }, []);
 
   const { nicknameError, checkingNickname, onNicknameChange, isValid } =
     useNicknameValidation(me?.nickname);
@@ -197,15 +186,6 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
   const handleCopy = async () => {
     try {
       await navigator.clipboard.writeText(CONTACT_EMAIL);
-      setCopied(true);
-      if (copiedTimerRef.current) clearTimeout(copiedTimerRef.current);
-      copiedTimerRef.current = setTimeout(() => setCopied(false), 1500);
-    } catch {}
-  };
-
-  const handleContactCopy = async () => {
-    try {
-      await navigator.clipboard.writeText(CONTACT_EMAIL);
       showToast("문의 이메일을 복사했어요.", {
         icon: "check",
         closable: false,
@@ -220,83 +200,97 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
           <Pressable style={styles.backdrop} onPress={onClose} />
 
           {isGuest ? (
-            <View style={styles.cardWrapper}>
-              <Card variant="basic" alignItems="flex-start" minHeight={568}>
-                <Pressable style={styles.guestCloseButton} onPress={onClose}>
-                  <XIcon width={24} height={24} fill={colors.black} />
-                </Pressable>
+            <ScrollView
+              style={styles.memberScroll}
+              contentContainerStyle={styles.memberScrollContent}
+              showsVerticalScrollIndicator={false}
+            >
+              <View style={styles.memberCard}>
+                <View style={styles.header}>
+                  <View style={styles.headerText}>
+                    <Text style={styles.title}>프로필 설정</Text>
+                    <Text style={styles.subtitle}>게스트 · 일정 임시 저장</Text>
+                  </View>
+                  <MotionPressable
+                    onPress={onClose}
+                    hitSlop={8}
+                    style={styles.closeButton}
+                  >
+                    <MotionIcon>
+                      <XIcon width={16} height={16} color={colors.gray900} />
+                    </MotionIcon>
+                  </MotionPressable>
+                </View>
 
-                <Text style={styles.guestTitle}>프로필 설정</Text>
-                <Text style={styles.guestStatusLine}>
-                  게스트 · 일정 임시 저장
-                </Text>
                 <Text style={styles.guestDescription}>
                   로그인하면 임시 저장된 일정을 계정과 연동할 수 있어요.
                 </Text>
-                <Pressable
-                  disabled={deletingGuestData}
-                  style={[
-                    styles.guestLoginButton,
-                    deletingGuestData && styles.guestButtonDisabled,
-                  ]}
-                  onPress={handleSignUp}
-                >
-                  <Text style={styles.guestLoginButtonText}>로그인</Text>
-                </Pressable>
-                <Pressable
-                  disabled={deletingGuestData}
-                  style={[
-                    styles.guestDeleteRecordsButton,
-                    deletingGuestData && styles.guestButtonDisabled,
-                  ]}
-                  onPress={handleDeleteTemporaryRecords}
-                >
-                  <Text style={styles.guestDeleteRecordsButtonText}>
-                    임시 기록 삭제
-                  </Text>
-                </Pressable>
-                <Text style={styles.guestInquiryTitle}>문의하기</Text>
-                <View style={styles.guestInquiryEmailBox}>
-                  <Text
-                    style={styles.guestInquiryEmailText}
-                    numberOfLines={1}
-                    selectable
+
+                <View style={styles.guestActions}>
+                  <MotionPressable
+                    disabled={deletingGuestData}
+                    style={[
+                      styles.guestLoginButton,
+                      deletingGuestData && styles.guestButtonDisabled,
+                    ]}
+                    onPress={handleSignUp}
                   >
-                    {CONTACT_EMAIL}
-                  </Text>
-                  <View style={styles.guestInquiryCopyWrap}>
-                    {copied ? (
-                      <Text style={styles.guestInquiryCopiedText}>복사됨!</Text>
-                    ) : (
-                      <Pressable
-                        hitSlop={8}
-                        style={styles.guestInquiryCopyIcon}
-                        onPress={handleCopy}
-                      >
-                        <CopyIcon
-                          width={16}
-                          height={16}
-                          fill={colors.gray700}
-                        />
-                      </Pressable>
-                    )}
-                  </View>
+                    <Text style={styles.guestLoginButtonText}>로그인</Text>
+                  </MotionPressable>
+                  <MotionPressable
+                    disabled={deletingGuestData}
+                    style={[
+                      styles.guestDeleteRecordsButton,
+                      deletingGuestData && styles.guestButtonDisabled,
+                    ]}
+                    hoverStyle={shadows.xsHover}
+                    onPress={handleDeleteTemporaryRecords}
+                  >
+                    <Text style={styles.guestDeleteRecordsButtonText}>
+                      임시 기록 삭제
+                    </Text>
+                  </MotionPressable>
                 </View>
-                <Text style={styles.guestInquiryReplyText}>
-                  최대한 빠르게 답변드리겠습니다.
-                </Text>
-                <Pressable
-                  style={styles.guestTermsPolicyRow}
-                  onPress={() => setTermsPolicyModalOpen(true)}
-                  hitSlop={6}
-                >
-                  <DocumentIcon width={16} height={16} color={colors.gray800} />
-                  <Text style={styles.guestTermsPolicyText}>
-                    약관 및 정책 확인하기
+
+                <View style={styles.divider} />
+
+                <View>
+                  <Text style={styles.fieldLabel}>문의하기</Text>
+                  <MotionPressable
+                    style={styles.contactEmailButton}
+                    pressFeedback="jelly"
+                    onPress={handleCopy}
+                  >
+                    <Text style={styles.contactEmailText} numberOfLines={1}>
+                      {CONTACT_EMAIL}
+                    </Text>
+                    <MotionIcon>
+                      <CopyIcon width={16} height={16} fill={colors.gray700} />
+                    </MotionIcon>
+                  </MotionPressable>
+                  <Text style={styles.contactReplyText}>
+                    최대한 빠르게 답변드리겠습니다.
                   </Text>
-                </Pressable>
-              </Card>
-            </View>
+                </View>
+
+                <View style={styles.links}>
+                  <MotionPressable
+                    style={styles.linkRow}
+                    onPress={() => setTermsPolicyModalOpen(true)}
+                    hitSlop={6}
+                  >
+                    <MotionIcon>
+                      <DocumentIcon
+                        width={13}
+                        height={13}
+                        color={colors.gray900}
+                      />
+                    </MotionIcon>
+                    <Text style={styles.linkText}>약관 및 정책 확인하기</Text>
+                  </MotionPressable>
+                </View>
+              </View>
+            </ScrollView>
           ) : (
             <ScrollView
               style={styles.memberScroll}
@@ -502,7 +496,7 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
                 <MotionPressable
                   style={styles.contactEmailButton}
                   pressFeedback="jelly"
-                  onPress={handleContactCopy}
+                  onPress={handleCopy}
                 >
                   <Text style={styles.contactEmailText} numberOfLines={1}>
                     {CONTACT_EMAIL}
@@ -579,138 +573,39 @@ const styles = StyleSheet.create({
   },
 
   // --- 게스트 ---
-  cardWrapper: {
-    width: "100%",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  guestCloseButton: {
-    position: "absolute",
-    right: 40,
-    top: 48,
-    width: 24,
-    height: 24,
-    zIndex: 1,
-  },
-  guestTitle: {
-    position: "absolute",
-    left: 40,
-    top: 48,
-    ...textStyles.h2,
-  },
-  guestStatusLine: {
-    position: "absolute",
-    left: 40,
-    top: 92,
-    width: 400,
-    ...textStyles.body3,
-    color: colors.gray700,
-  },
   guestDescription: {
-    position: "absolute",
-    left: 40,
-    top: 124,
-    width: 400,
-    ...textStyles.body3,
-    color: colors.black,
+    ...textStyles.body5,
+    color: colors.gray900,
+  },
+  guestActions: {
+    gap: spacing.sm,
   },
   guestLoginButton: {
-    position: "absolute",
-    left: 40,
-    top: 196,
-    width: 400,
-    height: 56,
-    backgroundColor: colors.black,
-    borderRadius: 12,
-    justifyContent: "center",
+    height: 48,
+    borderRadius: radii.md,
+    ...surfaces.primary,
     alignItems: "center",
+    justifyContent: "center",
   },
   guestLoginButtonText: {
-    ...textStyles.h5,
+    ...textStyles.h6,
     color: colors.white,
   },
   guestDeleteRecordsButton: {
-    position: "absolute",
-    left: 40,
-    top: 264,
-    width: 400,
-    height: 56,
-    backgroundColor: colors.white,
-    borderRadius: 12,
+    height: 48,
+    borderRadius: radii.md,
     borderWidth: 1,
+    ...surfaces.outline,
     borderColor: colors.danger,
-    justifyContent: "center",
     alignItems: "center",
+    justifyContent: "center",
   },
   guestDeleteRecordsButtonText: {
-    ...textStyles.h5,
+    ...textStyles.h6,
     color: colors.danger,
   },
   guestButtonDisabled: {
     opacity: 0.5,
-  },
-  guestInquiryTitle: {
-    position: "absolute",
-    left: 40,
-    top: 352,
-    width: 400,
-    ...textStyles.h7,
-    color: colors.black,
-  },
-  guestInquiryEmailBox: {
-    position: "absolute",
-    left: 40,
-    top: 384,
-    width: 400,
-    height: 48,
-    backgroundColor: colors.gray200,
-    borderWidth: 1,
-    borderColor: colors.gray400,
-    borderRadius: 10,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-  },
-  guestInquiryEmailText: {
-    ...textStyles.body4,
-    color: colors.gray700,
-    flex: 1,
-  },
-  guestInquiryCopyWrap: {
-    minWidth: 40,
-    marginLeft: 8,
-    alignItems: "flex-end",
-    justifyContent: "center",
-  },
-  guestInquiryCopyIcon: {
-    width: 16,
-    height: 16,
-  },
-  guestInquiryCopiedText: {
-    ...textStyles.body6,
-    color: colors.gray700,
-  },
-  guestInquiryReplyText: {
-    position: "absolute",
-    left: 40,
-    top: 440,
-    width: 400,
-    ...textStyles.body4,
-    color: colors.success,
-  },
-  guestTermsPolicyRow: {
-    position: "absolute",
-    left: 40,
-    top: 476,
-    width: 400,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  guestTermsPolicyText: {
-    ...textStyles.h7,
-    color: colors.gray800,
   },
 
   // --- 멤버 ---
