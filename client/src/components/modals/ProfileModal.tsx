@@ -1,5 +1,6 @@
 import { PLACEHOLDERS } from "@/constants/placeholders";
 import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/contexts/ToastContext";
 import { useMe } from "@/hooks/useMe";
 import { useNicknameValidation } from "@/hooks/useNicknameValidation";
 import { type UserProfile, usersApi } from "@/services/users";
@@ -57,6 +58,7 @@ interface ProfileModalProps {
 
 export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
   const { logout } = useAuth();
+  const { showToast } = useToast();
   const navigation = useNavigation<any>();
   const queryClient = useQueryClient();
   const [me, setMe] = useState<UserProfile | null>(null);
@@ -198,6 +200,16 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
       setCopied(true);
       if (copiedTimerRef.current) clearTimeout(copiedTimerRef.current);
       copiedTimerRef.current = setTimeout(() => setCopied(false), 1500);
+    } catch {}
+  };
+
+  const handleContactCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(CONTACT_EMAIL);
+      showToast("문의 이메일을 복사했어요.", {
+        icon: "check",
+        closable: false,
+      });
     } catch {}
   };
 
@@ -489,18 +501,15 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
               <View>
                 <MotionPressable
                   style={styles.contactEmailButton}
-                  onPress={handleCopy}
+                  pressFeedback="jelly"
+                  onPress={handleContactCopy}
                 >
                   <Text style={styles.contactEmailText} numberOfLines={1}>
                     {CONTACT_EMAIL}
                   </Text>
-                  {copied ? (
-                    <Text style={styles.contactCopiedText}>복사됨!</Text>
-                  ) : (
-                    <MotionIcon>
-                      <CopyIcon width={16} height={16} fill={colors.gray700} />
-                    </MotionIcon>
-                  )}
+                  <MotionIcon>
+                    <CopyIcon width={16} height={16} fill={colors.gray700} />
+                  </MotionIcon>
                 </MotionPressable>
                 <Text style={styles.contactReplyText}>
                   최대한 빠르게 답변드리겠습니다.
@@ -922,10 +931,6 @@ const styles = StyleSheet.create({
     ...textStyles.body5,
     color: colors.gray700,
     flex: 1,
-  },
-  contactCopiedText: {
-    ...textStyles.body5,
-    color: colors.gray700,
   },
   contactReplyText: {
     ...textStyles.body5,

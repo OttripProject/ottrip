@@ -9,6 +9,9 @@ export const motion = {
     base: 200,
     slow: 260,
     wiggle: 460,
+    jelly: 480,
+    toastIn: 220,
+    toastOut: 160,
   },
 };
 
