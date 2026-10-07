@@ -61,6 +61,32 @@ export const shadows = {
     android: { elevation: 12 },
     default: { boxShadow: "0 24px 48px rgba(0,0,0,0.12)" } as any,
   }),
+  dark: Platform.select({
+    ios: {
+      shadowColor: "#000",
+      shadowOpacity: 0.45,
+      shadowRadius: 9,
+      shadowOffset: { width: 0, height: 8 },
+    },
+    android: { elevation: 4 },
+    default: {
+      boxShadow:
+        "inset 0 1px 0 rgba(255,255,255,0.16), 0 1px 1px rgba(0,0,0,0.2), 0 8px 18px -8px rgba(0,0,0,0.45)",
+    } as any,
+  }),
+  primary: Platform.select({
+    ios: {
+      shadowColor: "#007AFF",
+      shadowOpacity: 0.55,
+      shadowRadius: 9,
+      shadowOffset: { width: 0, height: 8 },
+    },
+    android: { elevation: 4 },
+    default: {
+      boxShadow:
+        "inset 0 1px 0 rgba(255,255,255,0.22), 0 1px 1px rgba(0,60,140,0.25), 0 8px 18px -8px rgba(0,122,255,0.55)",
+    } as any,
+  }),
   darkHover: Platform.select({
     ios: {
       shadowColor: "#000",

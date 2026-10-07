@@ -21,6 +21,8 @@ export const colors = {
   gradientEnd: "#BADFFF",
   gradientAIColors: ["#D7D0FF4D", "#CBDDFF99"] as const,
   gradientAIRefresh: ["#9CBEFF", "#B4A7FF"] as const,
+  gradientDark: ["#3A3A3D", "#1F1F1F"] as const,
+  gradientPrimary: ["#2E90FF", "#007AFF"] as const,
   overlayBackground: "rgba(0, 0, 0, 0.7)",
   aiGrad: ["#7B6CFF", "#A06CFF"] as const,
   aiGradHover: ["#6E5DF5", "#9559FB"] as const,

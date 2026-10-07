@@ -11,6 +11,7 @@ import { colors } from "@/ui/tokens/colors";
 import { radii } from "@/ui/tokens/radii";
 import { shadows } from "@/ui/tokens/shadows";
 import { spacing } from "@/ui/tokens/spacing";
+import { surfaces } from "@/ui/tokens/surfaces";
 import { textStyles } from "@/ui/tokens/typography";
 import { useNavigation } from "@react-navigation/native";
 import { useQueryClient } from "@tanstack/react-query";
@@ -800,13 +801,13 @@ const styles = StyleSheet.create({
     borderRadius: radii.md,
     borderWidth: 1,
     borderColor: colors.gray350,
-    backgroundColor: colors.white,
+    ...surfaces.outline,
     alignItems: "center",
     justifyContent: "center",
   },
   genderChipSelected: {
     borderColor: colors.gray900,
-    backgroundColor: colors.gray900,
+    ...surfaces.dark,
   },
   genderChipText: {
     ...textStyles.body5,
@@ -862,7 +863,7 @@ const styles = StyleSheet.create({
     height: 40,
     paddingHorizontal: spacing["2xl"],
     borderRadius: radii.md,
-    backgroundColor: colors.primary,
+    ...surfaces.primary,
     alignItems: "center",
     justifyContent: "center",
   },
