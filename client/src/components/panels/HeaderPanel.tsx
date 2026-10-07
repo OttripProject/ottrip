@@ -1,5 +1,6 @@
 import ProfileModal from "@/components/modals/ProfileModal";
 import { useMe } from "@/hooks/useMe";
+import MotionPressable, { MotionIcon } from "@/ui/components/MotionPressable";
 import { colors } from "@/ui/tokens/colors";
 import { radii } from "@/ui/tokens/radii";
 import { shadows } from "@/ui/tokens/shadows";
@@ -37,10 +38,11 @@ export default function HeaderPanel() {
         </View>
         <View style={styles.userContainer}>
           {!profileLoading && (
-            <Pressable
+            <MotionPressable
               onPress={() => setProfileModalOpen(true)}
               accessibilityRole="button"
               style={styles.userPill}
+              hoverStyle={shadows.xsHover}
             >
               <Text
                 style={styles.userText}
@@ -49,12 +51,10 @@ export default function HeaderPanel() {
               >
                 {profile?.isGuest ? "게스트" : (profile?.nickname ?? "")}
               </Text>
-              <DownArrowIcon
-                width={10}
-                height={10}
-                style={{ opacity: 0.6, marginLeft: 8 }}
-              />
-            </Pressable>
+              <MotionIcon style={{ opacity: 0.6, marginLeft: 8 }}>
+                <DownArrowIcon width={10} height={10} />
+              </MotionIcon>
+            </MotionPressable>
           )}
         </View>
       </View>
@@ -103,10 +103,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: spacing.lg,
     maxWidth: 220,
+    ...shadows.xs,
   },
   userText: {
-    ...textStyles.body5,
-    fontWeight: typography.weight.semibold,
+    ...textStyles.h8,
     color: colors.gray900,
     flexShrink: 1,
     minWidth: 0,
