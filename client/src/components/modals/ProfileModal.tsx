@@ -5,8 +5,12 @@ import { useNicknameValidation } from "@/hooks/useNicknameValidation";
 import { type UserProfile, usersApi } from "@/services/users";
 import { Gender } from "@/types/api";
 import Card from "@/ui/components/Card";
+import MotionPressable, { MotionIcon } from "@/ui/components/MotionPressable";
 import Input from "@/ui/components/input/Input";
 import { colors } from "@/ui/tokens/colors";
+import { radii } from "@/ui/tokens/radii";
+import { shadows } from "@/ui/tokens/shadows";
+import { spacing } from "@/ui/tokens/spacing";
 import { textStyles } from "@/ui/tokens/typography";
 import { useNavigation } from "@react-navigation/native";
 import { useQueryClient } from "@tanstack/react-query";
@@ -40,6 +44,11 @@ const GENDER_OPTIONS = [
   { label: "선택 안함", value: null },
 ] as const;
 
+const LANGUAGE_OPTIONS = [
+  { label: "한국어", value: "ko" },
+  { label: "English", value: "en" },
+] as const;
+
 interface ProfileModalProps {
   visible: boolean;
   onClose: () => void;
@@ -52,6 +61,7 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
   const [me, setMe] = useState<UserProfile | null>(null);
   const [nickname, setNickname] = useState("");
   const [gender, setGender] = useState<Gender | null>(null);
+  const [language, setLanguage] = useState<"ko" | "en">("ko");
   const [contactOpen, setContactOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
@@ -289,13 +299,15 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
                       개인정보 및 환경설정을 관리하세요.
                     </Text>
                   </View>
-                  <Pressable
+                  <MotionPressable
                     onPress={onClose}
                     hitSlop={8}
                     style={styles.closeButton}
                   >
-                    <XIcon width={14} height={14} color={colors.gray900} />
-                  </Pressable>
+                    <MotionIcon>
+                      <XIcon width={16} height={16} color={colors.gray900} />
+                    </MotionIcon>
+                  </MotionPressable>
                 </View>
 
                 {/* 폼 */}
@@ -338,12 +350,15 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
                       {GENDER_OPTIONS.map(opt => {
                         const selected = gender === opt.value;
                         return (
-                          <Pressable
+                          <MotionPressable
                             key={opt.label}
                             style={[
                               styles.genderChip,
                               selected && styles.genderChipSelected,
                             ]}
+                            hoverStyle={
+                              selected ? shadows.darkHover : shadows.xsHover
+                            }
                             onPress={() => setGender(opt.value)}
                           >
                             <Text
@@ -354,7 +369,39 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
                             >
                               {opt.label}
                             </Text>
-                          </Pressable>
+                          </MotionPressable>
+                        );
+                      })}
+                    </View>
+                  </View>
+
+                  {/* 언어 */}
+                  <View style={styles.fieldGroup}>
+                    <Text style={styles.fieldLabel}>언어</Text>
+                    <View style={styles.genderChips}>
+                      {LANGUAGE_OPTIONS.map(opt => {
+                        const selected = language === opt.value;
+                        return (
+                          <MotionPressable
+                            key={opt.value}
+                            style={[
+                              styles.genderChip,
+                              selected && styles.genderChipSelected,
+                            ]}
+                            hoverStyle={
+                              selected ? shadows.darkHover : shadows.xsHover
+                            }
+                            onPress={() => setLanguage(opt.value)}
+                          >
+                            <Text
+                              style={[
+                                styles.genderChipText,
+                                selected && styles.genderChipTextSelected,
+                              ]}
+                            >
+                              {opt.label}
+                            </Text>
+                          </MotionPressable>
                         );
                       })}
                     </View>
@@ -366,39 +413,43 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
 
                 {/* 링크 */}
                 <View style={styles.links}>
-                  <Pressable
+                  <MotionPressable
                     style={styles.linkRow}
                     onPress={() => setContactOpen(true)}
                   >
-                    <ChatIcon width={13} height={13} color={colors.gray900} />
+                    <MotionIcon>
+                      <ChatIcon width={13} height={13} color={colors.gray900} />
+                    </MotionIcon>
                     <Text style={styles.linkText}>문의하기</Text>
-                  </Pressable>
-                  <Pressable
+                  </MotionPressable>
+                  <MotionPressable
                     style={styles.linkRow}
                     onPress={() => setTermsPolicyModalOpen(true)}
                     hitSlop={6}
                   >
-                    <DocumentIcon
-                      width={13}
-                      height={13}
-                      color={colors.gray900}
-                    />
+                    <MotionIcon>
+                      <DocumentIcon
+                        width={13}
+                        height={13}
+                        color={colors.gray900}
+                      />
+                    </MotionIcon>
                     <Text style={styles.linkText}>약관 및 정책 확인하기</Text>
-                  </Pressable>
+                  </MotionPressable>
                 </View>
 
                 {/* 푸터 */}
                 <View style={styles.footer}>
                   <View style={styles.footerLeft}>
-                    <Pressable onPress={() => setLogoutModalOpen(true)}>
+                    <MotionPressable onPress={() => setLogoutModalOpen(true)}>
                       <Text style={styles.logoutText}>로그아웃</Text>
-                    </Pressable>
+                    </MotionPressable>
                     <Text style={styles.footerSep}>|</Text>
-                    <Pressable onPress={handleDeleteAccount}>
+                    <MotionPressable onPress={handleDeleteAccount}>
                       <Text style={styles.deleteText}>계정 삭제</Text>
-                    </Pressable>
+                    </MotionPressable>
                   </View>
-                  <Pressable
+                  <MotionPressable
                     disabled={!canSave}
                     style={[
                       styles.saveButton,
@@ -407,7 +458,7 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
                     onPress={save}
                   >
                     <Text style={styles.saveButtonText}>저장</Text>
-                  </Pressable>
+                  </MotionPressable>
                 </View>
               </View>
             </ScrollView>
@@ -657,44 +708,38 @@ const styles = StyleSheet.create({
     paddingVertical: 20,
   },
   memberCard: {
-    width: 420,
+    width: 420 + spacing.xl * 2,
     maxWidth: "100%",
     backgroundColor: colors.white,
-    borderRadius: 20,
-    paddingHorizontal: 24,
-    paddingTop: 24,
-    paddingBottom: 20,
-    gap: 14,
-    shadowColor: colors.black,
-    shadowOffset: { width: 0, height: 24 },
-    shadowOpacity: 0.12,
-    shadowRadius: 48,
-    elevation: 12,
+    borderRadius: radii["2xl"],
+    padding: spacing.xl,
+    gap: spacing.lg,
+    ...shadows.xl,
   },
   header: {
     flexDirection: "row",
     alignItems: "flex-start",
     justifyContent: "space-between",
-    gap: 10,
+    gap: spacing.md,
   },
   headerText: {
     flex: 1,
   },
   title: {
-    ...textStyles.h4,
+    ...textStyles.h5,
     color: colors.gray900,
   },
   subtitle: {
     ...textStyles.body5,
-    color: colors.gray600,
-    marginTop: 4,
+    color: colors.gray700,
+    marginTop: spacing.xs,
   },
   closeButton: {
-    width: 24,
-    height: 24,
+    width: 32,
+    height: 32,
     alignItems: "center",
     justifyContent: "center",
-    marginTop: 2,
+    marginTop: spacing.xs,
     flexShrink: 0,
   },
   form: {
@@ -707,21 +752,23 @@ const styles = StyleSheet.create({
   fieldLabel: {
     ...textStyles.h8,
     color: colors.gray900,
-    marginBottom: 6,
+    marginBottom: spacing.sm,
   },
   readonlyInput: {
     backgroundColor: colors.gray200,
-    borderRadius: 9,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+    borderRadius: radii.md,
+    padding: spacing.md,
   },
   readonlyText: {
     ...textStyles.body5,
     color: colors.gray600,
   },
   nicknameInput: {
-    height: 40,
-    borderRadius: 9,
+    ...textStyles.body5,
+    color: colors.gray900,
+    borderColor: colors.gray350,
+    borderRadius: radii.md,
+    padding: spacing.md,
   },
   errorText: {
     ...textStyles.body6,
@@ -736,23 +783,23 @@ const styles = StyleSheet.create({
   genderLabelRow: {
     flexDirection: "row",
     alignItems: "baseline",
-    marginBottom: 6,
+    marginBottom: spacing.sm,
   },
   genderOptional: {
-    ...textStyles.body6,
-    color: colors.gray500,
-    marginLeft: 4,
+    ...textStyles.body5,
+    color: colors.gray600,
+    marginLeft: spacing.xs,
   },
   genderChips: {
     flexDirection: "row",
     gap: 8,
   },
   genderChip: {
-    height: 34,
-    paddingHorizontal: 14,
-    borderRadius: 8,
+    height: 36,
+    paddingHorizontal: spacing.lg,
+    borderRadius: radii.md,
     borderWidth: 1,
-    borderColor: "#E2E2E2",
+    borderColor: colors.gray350,
     backgroundColor: colors.white,
     alignItems: "center",
     justifyContent: "center",
@@ -771,10 +818,12 @@ const styles = StyleSheet.create({
   divider: {
     height: 1,
     backgroundColor: colors.gray300,
+    marginHorizontal: -spacing.xl,
   },
   links: {
     flexDirection: "column",
-    gap: 10,
+    alignItems: "flex-start",
+    gap: spacing.md,
   },
   linkRow: {
     flexDirection: "row",
@@ -790,7 +839,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     gap: 12,
-    paddingTop: 2,
+    paddingTop: spacing.xs,
   },
   footerLeft: {
     flexDirection: "row",
@@ -798,7 +847,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   logoutText: {
-    ...textStyles.h9,
+    ...textStyles.h8,
     color: colors.danger,
   },
   footerSep: {
@@ -806,13 +855,13 @@ const styles = StyleSheet.create({
     color: colors.gray400,
   },
   deleteText: {
-    ...textStyles.body6,
+    ...textStyles.body5,
     color: colors.gray600,
   },
   saveButton: {
     height: 40,
-    paddingHorizontal: 28,
-    borderRadius: 10,
+    paddingHorizontal: spacing["2xl"],
+    borderRadius: radii.md,
     backgroundColor: colors.primary,
     alignItems: "center",
     justifyContent: "center",

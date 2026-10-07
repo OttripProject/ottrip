@@ -51,6 +51,29 @@ export const shadows = {
     android: { elevation: 8 },
     default: { boxShadow: "0 8px 24px rgba(0,0,0,0.10)" } as any,
   }),
+  xl: Platform.select({
+    ios: {
+      shadowColor: "#000",
+      shadowOpacity: 0.12,
+      shadowRadius: 24,
+      shadowOffset: { width: 0, height: 24 },
+    },
+    android: { elevation: 12 },
+    default: { boxShadow: "0 24px 48px rgba(0,0,0,0.12)" } as any,
+  }),
+  darkHover: Platform.select({
+    ios: {
+      shadowColor: "#000",
+      shadowOpacity: 0.5,
+      shadowRadius: 11,
+      shadowOffset: { width: 0, height: 12 },
+    },
+    android: { elevation: 6 },
+    default: {
+      boxShadow:
+        "inset 0 1px 0 rgba(255,255,255,0.18), 0 1px 1px rgba(0,0,0,0.2), 0 12px 22px -8px rgba(0,0,0,0.5)",
+    } as any,
+  }),
 };
 
 export type ShadowName = keyof typeof shadows;

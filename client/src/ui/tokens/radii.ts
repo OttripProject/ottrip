@@ -6,6 +6,7 @@ export const radii = {
   md: 10,
   lg: 14,
   xl: 18,
+  "2xl": 24,
   pill: 999,
 };
 
