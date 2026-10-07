@@ -2,6 +2,7 @@ import ProfileModal from "@/components/modals/ProfileModal";
 import { useMe } from "@/hooks/useMe";
 import { colors } from "@/ui/tokens/colors";
 import { radii } from "@/ui/tokens/radii";
+import { shadows } from "@/ui/tokens/shadows";
 import { spacing } from "@/ui/tokens/spacing";
 import { textStyles, typography } from "@/ui/tokens/typography";
 import { useNavigation } from "@react-navigation/native";
@@ -76,6 +77,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.gray200,
     borderRadius: radii.xl,
+    ...shadows.lg,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",

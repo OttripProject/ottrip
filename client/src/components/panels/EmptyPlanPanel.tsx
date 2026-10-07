@@ -2,6 +2,7 @@ import TripFormModal from "@/components/modals/TripFormModal";
 import { useTripForm } from "@/hooks/useTripForm";
 import type { CreatePlanRequest, Plan } from "@/types/api";
 import { colors } from "@/ui/tokens/colors";
+import { shadows } from "@/ui/tokens/shadows";
 import { textStyles } from "@/ui/tokens/typography";
 import { useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
@@ -106,6 +107,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     overflow: "hidden",
+    ...shadows.lg,
   },
   content: {
     alignItems: "center",
