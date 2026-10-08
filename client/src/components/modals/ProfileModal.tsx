@@ -64,6 +64,7 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
   const [nickname, setNickname] = useState("");
   const [gender, setGender] = useState<Gender | null>(null);
   const [language, setLanguage] = useState<"ko" | "en">("ko");
+  const [saving, setSaving] = useState(false);
   const [contactOpen, setContactOpen] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [logoutModalOpen, setLogoutModalOpen] = useState(false);
@@ -93,14 +94,22 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
   };
 
   const save = async () => {
+    if (saving) return;
     if (!isValid) {
       Alert.alert("알림", "닉네임을 확인해주세요");
       return;
     }
-    const updated = await usersApi.updateMe({ nickname, gender });
-    setMe(updated);
-    queryClient.setQueryData(["me"], updated);
-    onClose();
+    setSaving(true);
+    try {
+      const updated = await usersApi.updateMe({ nickname, gender });
+      setMe(updated);
+      queryClient.setQueryData(["me"], updated);
+      onClose();
+    } catch (error) {
+      showToast(toUserMessage(error), { icon: "info" });
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleDeleteAccount = () => setDeleteModalOpen(true);
@@ -128,7 +137,7 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
   };
 
   const hasChanges = nickname !== me?.nickname || gender !== me?.gender;
-  const canSave = isValid && hasChanges;
+  const canSave = isValid && hasChanges && !saving;
   const isGuest = !!me?.isGuest;
 
   const handleSignUp = () => {
