@@ -88,7 +88,7 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
   },
   brand: {
-    ...textStyles.h8,
+    ...textStyles.h6,
     fontWeight: typography.weight.bold,
     color: colors.black,
   },
