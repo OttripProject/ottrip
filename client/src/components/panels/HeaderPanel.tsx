@@ -1,15 +1,23 @@
 import ProfileModal from "@/components/modals/ProfileModal";
 import { useMe } from "@/hooks/useMe";
 import MotionPressable, { MotionIcon } from "@/ui/components/MotionPressable";
+import { playBurst } from "@/ui/effects/particles";
 import { colors } from "@/ui/tokens/colors";
+import { motion } from "@/ui/tokens/motion";
 import { radii } from "@/ui/tokens/radii";
 import { shadows } from "@/ui/tokens/shadows";
 import { spacing } from "@/ui/tokens/spacing";
 import { textStyles, typography } from "@/ui/tokens/typography";
 import { useNavigation } from "@react-navigation/native";
 import type { NavigationProp } from "@react-navigation/native";
-import { useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { useEffect, useRef, useState } from "react";
+import {
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+  type ViewStyle,
+} from "react-native";
 import DownArrowIcon from "../../../assets/dropdown_time.svg";
 import CalendarIcon from "../../../assets/mobile_calendar_black.svg";
 
@@ -17,6 +25,24 @@ export default function HeaderPanel() {
   const navigation = useNavigation<NavigationProp<any>>();
   const { data: profile, isLoading: profileLoading } = useMe();
   const [profileModalOpen, setProfileModalOpen] = useState(false);
+  const [hopping, setHopping] = useState(false);
+  const hopTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (hopTimerRef.current) clearTimeout(hopTimerRef.current);
+    };
+  }, []);
+
+  const playLogoHop = () => {
+    if (hopTimerRef.current) clearTimeout(hopTimerRef.current);
+    setHopping(false);
+    requestAnimationFrame(() => setHopping(true));
+    hopTimerRef.current = setTimeout(
+      () => setHopping(false),
+      motion.duration.hop,
+    );
+  };
 
   return (
     <View style={styles.container}>
@@ -24,13 +50,15 @@ export default function HeaderPanel() {
         <View style={styles.brandContainer}>
           <Pressable
             onPress={() => {
+              playLogoHop();
+              playBurst("confetti");
               (navigation as any).reset({
                 index: 0,
                 routes: [{ name: "OTTRIP" }],
               });
             }}
             accessibilityRole="button"
-            style={styles.brandButton}
+            style={[styles.brandButton, hopping && hopStyle]}
           >
             <CalendarIcon width={20} height={20} color={colors.black} />
             <Text style={styles.brand}>OTTRIP</Text>
@@ -66,6 +94,12 @@ export default function HeaderPanel() {
     </View>
   );
 }
+
+const hopStyle = {
+  animationName: "fmHop",
+  animationDuration: `${motion.duration.hop}ms`,
+  animationTimingFunction: motion.easing.ease,
+} as ViewStyle;
 
 const styles = StyleSheet.create({
   container: {

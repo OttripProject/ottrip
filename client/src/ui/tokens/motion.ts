@@ -10,6 +10,7 @@ export const motion = {
     slow: 260,
     wiggle: 460,
     jelly: 480,
+    hop: 620,
     toastIn: 220,
     toastOut: 160,
     overlayIn: 120,
