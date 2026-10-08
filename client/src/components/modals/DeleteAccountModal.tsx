@@ -1,7 +1,12 @@
+import MotionPressable from "@/ui/components/MotionPressable";
 import { colors } from "@/ui/tokens/colors";
+import { radii } from "@/ui/tokens/radii";
+import { shadows } from "@/ui/tokens/shadows";
+import { spacing } from "@/ui/tokens/spacing";
+import { surfaces } from "@/ui/tokens/surfaces";
 import { textStyles } from "@/ui/tokens/typography";
 import { useEffect, useState } from "react";
-import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
+import { Modal, StyleSheet, Text, View } from "react-native";
 
 interface DeleteAccountModalProps {
   visible: boolean;
@@ -39,51 +44,57 @@ export default function DeleteAccountModal({
 
   return (
     <Modal visible={visible} transparent animationType="fade">
-      <View style={styles.modalOverlay}>
-        <View style={styles.deleteModalCard}>
+      <View style={styles.overlay}>
+        <View style={styles.card}>
           {isCompleted ? (
             <>
-              <Text style={styles.deleteModalCompletedTitle}>
+              <Text style={[styles.title, styles.completedTitle]}>
                 계정이 삭제되었어요.
               </Text>
-              <Pressable
-                style={styles.deleteModalConfirmButton}
-                onPress={() => {
-                  if (onCompleted) {
-                    onCompleted();
-                  }
-                  onClose();
-                }}
-              >
-                <Text style={styles.deleteModalConfirmButtonText}>확인</Text>
-              </Pressable>
+              <View style={styles.buttonRow}>
+                <MotionPressable
+                  style={[styles.button, styles.buttonDark]}
+                  onPress={() => {
+                    onCompleted?.();
+                    onClose();
+                  }}
+                >
+                  <Text style={styles.buttonTextLight}>확인</Text>
+                </MotionPressable>
+              </View>
             </>
           ) : (
             <>
-              <Text style={styles.deleteModalTitle}>
-                정말 계정을 삭제하시겠어요?
+              <Text style={styles.title}>정말 계정을 삭제하시겠어요?</Text>
+              <Text style={styles.description}>
+                {
+                  "계정을 삭제하면 지금까지 만든 여행 일정이\n모두 사라지며, 다시 복구할 수 없어요."
+                }
               </Text>
-              <Text style={styles.deleteModalText}>
-                계정을 삭제하면 지금까지 만든 여행 일정이 {"\n"}
-                모두 사라지며, 다시 복구할 수 없어요.
-              </Text>
-              <Pressable
-                style={styles.deleteModalCancelButton}
-                onPress={onClose}
-                disabled={isDeleting}
-              >
-                <Text style={styles.deleteModalCancelButtonText}>취소</Text>
-              </Pressable>
-              <Pressable
-                style={[
-                  styles.deleteModalDeleteButton,
-                  isDeleting && styles.deleteModalDeleteButtonDisabled,
-                ]}
-                onPress={handleConfirm}
-                disabled={isDeleting}
-              >
-                <Text style={styles.deleteModalDeleteButtonText}>삭제</Text>
-              </Pressable>
+              <View style={styles.buttonRow}>
+                <MotionPressable
+                  style={[
+                    styles.button,
+                    styles.buttonMuted,
+                    isDeleting && styles.buttonDisabled,
+                  ]}
+                  onPress={onClose}
+                  disabled={isDeleting}
+                >
+                  <Text style={styles.buttonTextDark}>취소</Text>
+                </MotionPressable>
+                <MotionPressable
+                  style={[
+                    styles.button,
+                    styles.buttonDanger,
+                    isDeleting && styles.buttonDisabled,
+                  ]}
+                  onPress={handleConfirm}
+                  disabled={isDeleting}
+                >
+                  <Text style={styles.buttonTextLight}>삭제</Text>
+                </MotionPressable>
+              </View>
             </>
           )}
         </View>
@@ -93,92 +104,65 @@ export default function DeleteAccountModal({
 }
 
 const styles = StyleSheet.create({
-  modalOverlay: {
+  overlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.7)",
+    ...surfaces.overlay,
     alignItems: "center",
     justifyContent: "center",
-    padding: 20,
+    padding: spacing.lgPlus,
   },
-  deleteModalCard: {
-    position: "relative",
+  card: {
+    width: 320 + spacing.xl * 2,
+    maxWidth: "100%",
     backgroundColor: colors.white,
-    borderRadius: 24,
-    width: 320,
-    height: 208,
+    borderRadius: radii["2xl"],
+    padding: spacing.xl,
+    gap: spacing.sm,
+    ...shadows.xl,
   },
-  deleteModalTitle: {
-    position: "absolute",
-    left: 69,
-    top: 32,
-    width: 182,
-    height: 24,
+  title: {
     ...textStyles.h5,
+    color: colors.gray900,
     textAlign: "center",
   },
-  deleteModalText: {
-    position: "absolute",
-    left: 49,
-    top: 72,
-    width: 221,
-    height: 40,
-    ...textStyles.body4,
-    color: colors.gray600,
+  completedTitle: {
+    marginBottom: spacing.lg,
+  },
+  description: {
+    ...textStyles.body5,
+    color: colors.gray700,
     textAlign: "center",
+    marginTop: spacing.xs,
+    marginBottom: spacing.lg,
   },
-  deleteModalCancelButton: {
-    position: "absolute",
-    left: 24,
-    bottom: 24,
-    width: 132,
+  buttonRow: {
+    flexDirection: "row",
+    gap: spacing.sm,
+  },
+  button: {
+    flex: 1,
     height: 40,
-    borderRadius: 10,
+    borderRadius: radii.md,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: colors.gray300,
   },
-  deleteModalCancelButtonText: {
-    ...textStyles.h7,
+  buttonMuted: {
+    ...surfaces.muted,
   },
-  deleteModalDeleteButton: {
-    position: "absolute",
-    right: 24,
-    bottom: 24,
-    width: 132,
-    height: 40,
-    borderRadius: 10,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: colors.warning,
+  buttonDanger: {
+    backgroundColor: colors.danger,
   },
-  deleteModalDeleteButtonText: {
-    ...textStyles.h7,
-    color: colors.white,
+  buttonDark: {
+    ...surfaces.dark,
   },
-  deleteModalDeleteButtonDisabled: {
+  buttonDisabled: {
     opacity: 0.6,
   },
-  deleteModalCompletedTitle: {
-    position: "absolute",
-    left: 40,
-    top: 72,
-    width: 240,
-    height: 24,
-    ...textStyles.h5,
-    textAlign: "center",
+  buttonTextDark: {
+    ...textStyles.h7,
+    color: colors.gray900,
   },
-  deleteModalConfirmButton: {
-    position: "absolute",
-    left: 88,
-    top: 110,
-    width: 144,
-    height: 40,
-    borderRadius: 10,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: colors.black,
-  },
-  deleteModalConfirmButtonText: {
+  buttonTextLight: {
     ...textStyles.h7,
     color: colors.white,
   },
