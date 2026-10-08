@@ -12,6 +12,8 @@ export const motion = {
     jelly: 480,
     toastIn: 220,
     toastOut: 160,
+    overlayIn: 120,
+    pop: 360,
   },
 };
 

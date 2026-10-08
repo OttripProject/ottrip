@@ -1,4 +1,5 @@
 import MotionPressable from "@/ui/components/MotionPressable";
+import { modalMotion } from "@/ui/effects/modalMotion";
 import { colors } from "@/ui/tokens/colors";
 import { radii } from "@/ui/tokens/radii";
 import { shadows } from "@/ui/tokens/shadows";
@@ -26,7 +27,7 @@ export default function LogoutModal({
     <Modal
       visible={visible}
       transparent
-      animationType="fade"
+      animationType="none"
       onRequestClose={onClose}
     >
       <View style={styles.overlay}>
@@ -78,6 +79,7 @@ export default function LogoutModal({
 
 const styles = StyleSheet.create({
   overlay: {
+    ...modalMotion.overlay,
     flex: 1,
     ...surfaces.overlay,
     alignItems: "center",
@@ -85,6 +87,7 @@ const styles = StyleSheet.create({
     padding: spacing.lgPlus,
   },
   card: {
+    ...modalMotion.card,
     width: 320 + spacing.xl * 2,
     maxWidth: "100%",
     backgroundColor: colors.white,

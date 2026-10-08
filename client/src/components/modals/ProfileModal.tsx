@@ -7,6 +7,7 @@ import { type UserProfile, usersApi } from "@/services/users";
 import { Gender } from "@/types/api";
 import MotionPressable, { MotionIcon } from "@/ui/components/MotionPressable";
 import Input from "@/ui/components/input/Input";
+import { modalMotion } from "@/ui/effects/modalMotion";
 import { colors } from "@/ui/tokens/colors";
 import { radii } from "@/ui/tokens/radii";
 import { shadows } from "@/ui/tokens/shadows";
@@ -208,7 +209,7 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
       <Modal
         visible={visible}
         transparent
-        animationType="fade"
+        animationType="none"
         onRequestClose={onClose}
       >
         <View style={styles.overlay}>
@@ -489,7 +490,7 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
         <Modal
           visible={contactOpen}
           transparent
-          animationType="fade"
+          animationType="none"
           onRequestClose={() => setContactOpen(false)}
         >
           <View style={styles.modalOverlay}>
@@ -576,6 +577,7 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
 
 const styles = StyleSheet.create({
   overlay: {
+    ...modalMotion.overlay,
     flex: 1,
     ...surfaces.overlay,
     alignItems: "center",
@@ -637,6 +639,7 @@ const styles = StyleSheet.create({
     paddingVertical: 20,
   },
   memberCard: {
+    ...modalMotion.card,
     width: 420 + spacing.xl * 2,
     maxWidth: "100%",
     backgroundColor: colors.white,
@@ -806,6 +809,7 @@ const styles = StyleSheet.create({
 
   // --- 문의 모달 ---
   modalOverlay: {
+    ...modalMotion.overlay,
     flex: 1,
     ...surfaces.overlay,
     alignItems: "center",
@@ -813,6 +817,7 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   contactCard: {
+    ...modalMotion.card,
     width: 420 + spacing.xl * 2,
     maxWidth: "100%",
     backgroundColor: colors.white,
