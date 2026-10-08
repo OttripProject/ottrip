@@ -687,7 +687,8 @@ const styles = StyleSheet.create({
     color: colors.gray900,
     borderColor: colors.gray350,
     borderRadius: radii.md,
-    padding: spacing.md,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md,
   },
   errorText: {
     ...textStyles.body6,

@@ -1,3 +1,4 @@
+import { shadows } from "@/ui/tokens/shadows";
 import { useMemo, useState } from "react";
 import {
   type StyleProp,
@@ -38,7 +39,13 @@ export function Input(props: InputProps) {
     <View style={containerStyle ?? variantStyles.containerStyle}>
       <TextInput
         {...rest}
-        style={[variantStyles.style, style] as StyleProp<TextStyle>}
+        style={
+          [
+            variantStyles.style,
+            style,
+            focused && shadows.focusRing,
+          ] as StyleProp<TextStyle>
+        }
         placeholderTextColor={
           placeholderTextColor ?? variantStyles.placeholderTextColor
         }

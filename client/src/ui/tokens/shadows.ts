@@ -61,6 +61,14 @@ export const shadows = {
     android: { elevation: 12 },
     default: { boxShadow: "0 24px 48px rgba(0,0,0,0.12)" } as any,
   }),
+  focusRing: Platform.select({
+    ios: {},
+    android: {},
+    default: {
+      boxShadow:
+        "0 0 0 1px rgba(0,122,255,0.5), 0 0 0 4px rgba(0,122,255,0.14)",
+    } as any,
+  }),
   insetBottom: Platform.select({
     ios: {},
     android: {},
