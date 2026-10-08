@@ -69,6 +69,14 @@ export const shadows = {
         "0 0 0 1px rgba(0,122,255,0.5), 0 0 0 4px rgba(0,122,255,0.14)",
     } as any,
   }),
+  errorRing: Platform.select({
+    ios: {},
+    android: {},
+    default: {
+      boxShadow:
+        "0 0 0 1px rgba(239,68,68,0.5), 0 0 0 4px rgba(239,68,68,0.14)",
+    } as any,
+  }),
   insetBottom: Platform.select({
     ios: {},
     android: {},

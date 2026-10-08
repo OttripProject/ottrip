@@ -56,7 +56,9 @@ export const Input = forwardRef<TextInput, InputProps>(
               size && sizeStyles[size],
               size && multiline && sizeStyles.multiline,
               style,
-              focused && variant !== "bare" && shadows.focusRing,
+              focused &&
+                variant !== "bare" &&
+                (error ? shadows.errorRing : shadows.focusRing),
             ] as StyleProp<TextStyle>
           }
           placeholderTextColor={

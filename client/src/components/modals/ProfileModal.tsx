@@ -349,7 +349,11 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
                       placeholder={PLACEHOLDERS.profile.nickname}
                       value={nickname}
                       onChangeText={handleNicknameChange}
-                      style={styles.nicknameInput}
+                      error={!!nicknameError}
+                      style={[
+                        styles.nicknameInput,
+                        !!nicknameError && styles.nicknameInputError,
+                      ]}
                     />
                     {nicknameError ? (
                       <Text style={styles.errorText}>{nicknameError}</Text>
@@ -695,6 +699,9 @@ const styles = StyleSheet.create({
     borderRadius: radii.md,
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.md,
+  },
+  nicknameInputError: {
+    borderColor: colors.danger,
   },
   errorText: {
     ...textStyles.body6,
