@@ -1,6 +1,7 @@
 import { PLACEHOLDERS } from "@/constants/placeholders";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/contexts/ToastContext";
+import { useBackdropClose } from "@/hooks/useBackdropClose";
 import { useMe } from "@/hooks/useMe";
 import { useNicknameValidation } from "@/hooks/useNicknameValidation";
 import { type UserProfile, usersApi } from "@/services/users";
@@ -21,7 +22,6 @@ import {
   Alert,
   Modal,
   Platform,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -59,6 +59,8 @@ interface ProfileModalProps {
 export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
   const { logout } = useAuth();
   const { showToast } = useToast();
+  const profileBackdrop = useBackdropClose(onClose);
+  const contactBackdrop = useBackdropClose(() => setContactOpen(false));
   const navigation = useNavigation<any>();
   const queryClient = useQueryClient();
   const [me, setMe] = useState<UserProfile | null>(null);
@@ -212,16 +214,14 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
         animationType="none"
         onRequestClose={onClose}
       >
-        <View style={styles.overlay}>
-          <Pressable style={styles.backdrop} onPress={onClose} />
-
+        <View style={styles.overlay} {...profileBackdrop.overlayProps}>
           {isGuest ? (
             <ScrollView
               style={styles.memberScroll}
               contentContainerStyle={styles.memberScrollContent}
               showsVerticalScrollIndicator={false}
             >
-              <View style={styles.memberCard}>
+              <View style={styles.memberCard} {...profileBackdrop.cardProps}>
                 <View style={styles.header}>
                   <View style={styles.headerText}>
                     <Text style={styles.title}>프로필 설정</Text>
@@ -312,7 +312,7 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
               contentContainerStyle={styles.memberScrollContent}
               showsVerticalScrollIndicator={false}
             >
-              <View style={styles.memberCard}>
+              <View style={styles.memberCard} {...profileBackdrop.cardProps}>
                 {/* 헤더 */}
                 <View style={styles.header}>
                   <View style={styles.headerText}>
@@ -493,8 +493,8 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
           animationType="none"
           onRequestClose={() => setContactOpen(false)}
         >
-          <View style={styles.modalOverlay}>
-            <View style={styles.contactCard}>
+          <View style={styles.modalOverlay} {...contactBackdrop.overlayProps}>
+            <View style={styles.contactCard} {...contactBackdrop.cardProps}>
               <View style={styles.header}>
                 <View style={styles.headerText}>
                   <Text style={styles.contactTitle}>문의하기</Text>
@@ -582,13 +582,6 @@ const styles = StyleSheet.create({
     ...surfaces.overlay,
     alignItems: "center",
     justifyContent: "center",
-  },
-  backdrop: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
   },
 
   // --- 게스트 ---

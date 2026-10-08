@@ -1,3 +1,4 @@
+import { useBackdropClose } from "@/hooks/useBackdropClose";
 import MotionPressable from "@/ui/components/MotionPressable";
 import { modalMotion } from "@/ui/effects/modalMotion";
 import { colors } from "@/ui/tokens/colors";
@@ -53,6 +54,8 @@ export default function DeleteAccountModal({
     else if (!isDeleting) onClose();
   };
 
+  const backdrop = useBackdropClose(handleRequestClose);
+
   return (
     <Modal
       visible={visible}
@@ -60,8 +63,8 @@ export default function DeleteAccountModal({
       animationType="none"
       onRequestClose={handleRequestClose}
     >
-      <View style={styles.overlay}>
-        <View style={styles.card}>
+      <View style={styles.overlay} {...backdrop.overlayProps}>
+        <View style={styles.card} {...backdrop.cardProps}>
           {isCompleted ? (
             <>
               <Text style={[styles.title, styles.completedTitle]}>

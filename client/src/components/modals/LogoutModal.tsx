@@ -1,3 +1,4 @@
+import { useBackdropClose } from "@/hooks/useBackdropClose";
 import MotionPressable from "@/ui/components/MotionPressable";
 import { modalMotion } from "@/ui/effects/modalMotion";
 import { colors } from "@/ui/tokens/colors";
@@ -23,6 +24,8 @@ export default function LogoutModal({
   isGuest = false,
   onSignUp,
 }: LogoutModalProps) {
+  const backdrop = useBackdropClose(onClose);
+
   return (
     <Modal
       visible={visible}
@@ -30,8 +33,8 @@ export default function LogoutModal({
       animationType="none"
       onRequestClose={onClose}
     >
-      <View style={styles.overlay}>
-        <View style={styles.card}>
+      <View style={styles.overlay} {...backdrop.overlayProps}>
+        <View style={styles.card} {...backdrop.cardProps}>
           <Text style={styles.title}>정말로 로그아웃 하시겠어요?</Text>
           <Text style={styles.description}>
             {isGuest

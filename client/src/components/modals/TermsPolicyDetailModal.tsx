@@ -1,4 +1,5 @@
 import { TERMS, type TermsKey } from "@/constants/terms";
+import { useBackdropClose } from "@/hooks/useBackdropClose";
 import MotionPressable, { MotionIcon } from "@/ui/components/MotionPressable";
 import { modalMotion } from "@/ui/effects/modalMotion";
 import { colors } from "@/ui/tokens/colors";
@@ -59,6 +60,7 @@ export default function TermsPolicyDetailModal({
   onClose,
 }: TermsPolicyDetailModalProps) {
   const { height: windowHeight } = useWindowDimensions();
+  const backdrop = useBackdropClose(onClose);
   const doc = TERMS[termsKey];
   const sections = useMemo(() => parseSections(doc.content), [doc.content]);
 
@@ -69,8 +71,9 @@ export default function TermsPolicyDetailModal({
       animationType="none"
       onRequestClose={onClose}
     >
-      <View style={styles.overlay}>
+      <View style={styles.overlay} {...backdrop.overlayProps}>
         <View
+          {...backdrop.cardProps}
           style={[styles.card, { height: Math.min(680, windowHeight - 80) }]}
         >
           <View style={styles.header}>

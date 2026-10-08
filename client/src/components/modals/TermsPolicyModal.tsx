@@ -1,4 +1,5 @@
 import type { TermsKey } from "@/constants/terms";
+import { useBackdropClose } from "@/hooks/useBackdropClose";
 import MotionPressable, { MotionIcon } from "@/ui/components/MotionPressable";
 import { modalMotion } from "@/ui/effects/modalMotion";
 import { colors } from "@/ui/tokens/colors";
@@ -29,6 +30,8 @@ export default function TermsPolicyModal({
   onClose,
   onPickTerm,
 }: TermsPolicyModalProps) {
+  const backdrop = useBackdropClose(onClose);
+
   return (
     <Modal
       visible={visible}
@@ -36,8 +39,8 @@ export default function TermsPolicyModal({
       animationType="none"
       onRequestClose={onClose}
     >
-      <View style={styles.overlay}>
-        <View style={styles.card}>
+      <View style={styles.overlay} {...backdrop.overlayProps}>
+        <View style={styles.card} {...backdrop.cardProps}>
           <View style={styles.header}>
             <Text style={styles.title}>약관 및 정책</Text>
             <MotionPressable
