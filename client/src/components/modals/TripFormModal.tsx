@@ -2,7 +2,9 @@ import type { CalendarMarkedDates, SegmentDraft } from "@/hooks/useTripForm";
 import TripCalendarModal from "../trip/TripCalendarModal";
 import TripDurationBanner from "../trip/TripDurationBanner";
 import TripSegmentList from "../trip/TripSegmentList";
+import Input from "@/ui/components/input/Input";
 import { colors } from "@/ui/tokens/colors";
+import { spacing } from "@/ui/tokens/spacing";
 import { textStyles, typography } from "@/ui/tokens/typography";
 import { useEffect, useRef, useState } from "react";
 import {
@@ -11,7 +13,6 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from "react-native";
 import XIcon from "../../../assets/mobile_close.svg";
@@ -115,13 +116,14 @@ export default function TripFormModal({
               <ScrollView
                 showsVerticalScrollIndicator={false}
                 keyboardShouldPersistTaps="handled"
+                contentContainerStyle={styles.scrollContent}
               >
                 <View style={styles.section}>
                   <View style={styles.sectionLabelRow}>
                     <Text style={styles.sectionLabel}>여행명</Text>
                     <Text style={styles.counter}>{tripData.name.length}/30</Text>
                   </View>
-                  <TextInput
+                  <Input
                     style={styles.nameInput}
                     placeholder="예: 동유럽 여행"
                     placeholderTextColor={colors.gray500}
@@ -241,6 +243,10 @@ const styles = StyleSheet.create({
   scrollWrapper: {
     flex: 1,
     minHeight: 0,
+    marginHorizontal: -spacing.xs,
+  },
+  scrollContent: {
+    paddingHorizontal: spacing.xs,
   },
   section: {
     marginBottom: 20,

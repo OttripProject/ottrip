@@ -1,10 +1,11 @@
 import { colors, radii, spacing, textStyles } from "@/ui/tokens";
 import { manualPlaceId } from "@/services/locations";
 import MiniMapView from "@/ui/components/MiniMapView";
+import Input from "@/ui/components/input/Input";
 import { useLoadScript } from "@react-google-maps/api";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { ActivityIndicator, StyleSheet, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 import LocationIcon from "../../../assets/week_bar_location.svg";
 import PlusIcon from "../../../assets/trip_add.svg";
 import SearchIcon from "../../../assets/search.svg";
@@ -329,8 +330,9 @@ export default function PlacesSearchInput({
   return (
     <View ref={containerRef} style={styles.container}>
       <View style={styles.inputWrapper}>
-        <TextInput
+        <Input
           ref={inputRef}
+          variant="filled"
           style={[styles.input, disabled && styles.inputDisabled]}
           placeholder={placeholder}
           placeholderTextColor={colors.gray600}
@@ -467,7 +469,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.md,
     paddingLeft: spacing.md,
     paddingRight: 36,
-    paddingVertical: spacing.md,
+    paddingVertical: spacing.none,
     ...textStyles.body4,
     color: colors.black,
   },
