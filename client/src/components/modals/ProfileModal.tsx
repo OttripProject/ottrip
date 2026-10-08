@@ -29,7 +29,7 @@ import {
 
 import DeleteAccountModal from "@/components/modals/DeleteAccountModal";
 import LogoutModal from "@/components/modals/LogoutModal";
-import TermsDetailModal from "@/components/modals/TermsDetailModal";
+import TermsPolicyDetailModal from "@/components/modals/TermsPolicyDetailModal";
 import TermsPolicyModal from "@/components/modals/TermsPolicyModal";
 import type { TermsKey } from "@/constants/terms";
 import { toUserMessage } from "@/utils/crossPlatformAlert";
@@ -535,9 +535,10 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
         onPickTerm={openTermsDetailModal}
       />
 
-      <TermsDetailModal
+      <TermsPolicyDetailModal
         visible={visible && termsDetailModalOpen}
         termsKey={termsDetailKey}
+        dimBackdrop={false}
         onClose={() => setTermsDetailModalOpen(false)}
       />
 
