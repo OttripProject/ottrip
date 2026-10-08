@@ -11,6 +11,7 @@ export const motion = {
     wiggle: 460,
     jelly: 480,
     hop: 620,
+    logoNavDelay: 200,
     toastIn: 220,
     toastOut: 160,
     overlayIn: 120,

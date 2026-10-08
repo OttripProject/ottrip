@@ -27,21 +27,31 @@ export default function HeaderPanel() {
   const [profileModalOpen, setProfileModalOpen] = useState(false);
   const [hopping, setHopping] = useState(false);
   const hopTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const navTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     return () => {
       if (hopTimerRef.current) clearTimeout(hopTimerRef.current);
+      if (navTimerRef.current) clearTimeout(navTimerRef.current);
     };
   }, []);
 
-  const playLogoHop = () => {
+  const handleLogoPress = () => {
     if (hopTimerRef.current) clearTimeout(hopTimerRef.current);
     setHopping(false);
     requestAnimationFrame(() => setHopping(true));
+    playBurst("confetti");
     hopTimerRef.current = setTimeout(
       () => setHopping(false),
       motion.duration.hop,
     );
+    if (navTimerRef.current) clearTimeout(navTimerRef.current);
+    navTimerRef.current = setTimeout(() => {
+      (navigation as any).reset({
+        index: 0,
+        routes: [{ name: "OTTRIP" }],
+      });
+    }, motion.duration.fast);
   };
 
   return (
@@ -49,14 +59,7 @@ export default function HeaderPanel() {
       <View style={styles.headerContent}>
         <View style={styles.brandContainer}>
           <Pressable
-            onPress={() => {
-              playLogoHop();
-              playBurst("confetti");
-              (navigation as any).reset({
-                index: 0,
-                routes: [{ name: "OTTRIP" }],
-              });
-            }}
+            onPress={handleLogoPress}
             accessibilityRole="button"
             style={[styles.brandButton, hopping && hopStyle]}
           >
