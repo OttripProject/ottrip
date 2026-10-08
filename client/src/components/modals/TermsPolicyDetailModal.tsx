@@ -13,7 +13,6 @@ import {
   StyleSheet,
   Text,
   View,
-  type ViewStyle,
   useWindowDimensions,
 } from "react-native";
 
@@ -51,14 +50,12 @@ type TermsPolicyDetailModalProps = {
   visible: boolean;
   termsKey: TermsKey;
   onClose: () => void;
-  dimBackdrop?: boolean;
 };
 
 export default function TermsPolicyDetailModal({
   visible,
   termsKey,
   onClose,
-  dimBackdrop = true,
 }: TermsPolicyDetailModalProps) {
   const { height: windowHeight } = useWindowDimensions();
   const doc = TERMS[termsKey];
@@ -71,7 +68,7 @@ export default function TermsPolicyDetailModal({
       animationType="fade"
       onRequestClose={onClose}
     >
-      <View style={[styles.overlay, !dimBackdrop && styles.overlayNoDim]}>
+      <View style={styles.overlay}>
         <View
           style={[styles.card, { height: Math.min(680, windowHeight - 80) }]}
         >
@@ -134,10 +131,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     padding: spacing.lgPlus,
   },
-  overlayNoDim: {
-    backgroundColor: "transparent",
-    backdropFilter: "none",
-  } as ViewStyle,
   card: {
     width: 520,
     maxWidth: "100%",

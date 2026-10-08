@@ -6,7 +6,7 @@ import { shadows } from "@/ui/tokens/shadows";
 import { spacing } from "@/ui/tokens/spacing";
 import { surfaces } from "@/ui/tokens/surfaces";
 import { textStyles } from "@/ui/tokens/typography";
-import { Modal, StyleSheet, Text, View, type ViewStyle } from "react-native";
+import { Modal, StyleSheet, Text, View } from "react-native";
 
 import RightArrowIcon from "../../../assets/right_arrow.svg";
 import XIcon from "../../../assets/x.svg";
@@ -21,18 +21,16 @@ type TermsPolicyModalProps = {
   visible: boolean;
   onClose: () => void;
   onPickTerm: (key: TermsKey) => void;
-  dimBackdrop?: boolean;
 };
 
 export default function TermsPolicyModal({
   visible,
   onClose,
   onPickTerm,
-  dimBackdrop = true,
 }: TermsPolicyModalProps) {
   return (
     <Modal visible={visible} transparent animationType="fade">
-      <View style={[styles.overlay, !dimBackdrop && styles.overlayNoDim]}>
+      <View style={styles.overlay}>
         <View style={styles.card}>
           <View style={styles.header}>
             <Text style={styles.title}>약관 및 정책</Text>
@@ -84,10 +82,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     padding: spacing.lgPlus,
   },
-  overlayNoDim: {
-    backgroundColor: "transparent",
-    backdropFilter: "none",
-  } as ViewStyle,
   card: {
     width: 420 + spacing.xl * 2,
     maxWidth: "100%",

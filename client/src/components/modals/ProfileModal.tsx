@@ -530,7 +530,6 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
 
       <TermsPolicyModal
         visible={visible && termsPolicyModalOpen && !termsDetailModalOpen}
-        dimBackdrop={!termsDetailModalOpen}
         onClose={() => setTermsPolicyModalOpen(false)}
         onPickTerm={openTermsDetailModal}
       />
@@ -538,7 +537,6 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
       <TermsPolicyDetailModal
         visible={visible && termsDetailModalOpen}
         termsKey={termsDetailKey}
-        dimBackdrop={false}
         onClose={() => setTermsDetailModalOpen(false)}
       />
 
