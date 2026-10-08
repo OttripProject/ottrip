@@ -22,6 +22,10 @@ export const surfaces = {
     backgroundColor: colors.gray200,
     ...shadows.insetBottom,
   } as ViewStyle,
+  muted: {
+    backgroundColor: colors.gray300,
+    ...shadows.insetBottom,
+  } as ViewStyle,
   dark: {
     backgroundColor: colors.gray900,
     ...linearGradient(colors.gradientDark),

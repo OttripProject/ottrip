@@ -1,13 +1,11 @@
+import MotionPressable from "@/ui/components/MotionPressable";
 import { colors } from "@/ui/tokens/colors";
+import { radii } from "@/ui/tokens/radii";
+import { shadows } from "@/ui/tokens/shadows";
+import { spacing } from "@/ui/tokens/spacing";
+import { surfaces } from "@/ui/tokens/surfaces";
 import { textStyles } from "@/ui/tokens/typography";
-import {
-  Modal,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import { Modal, StyleSheet, Text, View } from "react-native";
 
 interface LogoutModalProps {
   visible: boolean;
@@ -26,82 +24,47 @@ export default function LogoutModal({
 }: LogoutModalProps) {
   return (
     <Modal visible={visible} transparent animationType="fade">
-      <View style={styles.modalOverlay}>
-        <View
-          style={[
-            styles.logoutModalCard,
-            isGuest && styles.logoutModalCardGuest,
-          ]}
-        >
-          {isGuest ? (
-            <ScrollView
-              bounces={false}
-              contentContainerStyle={styles.guestScrollContent}
-              showsVerticalScrollIndicator={false}
-            >
-              <Text style={styles.logoutModalTitle}>
-                정말로 로그아웃 하시겠어요?
-              </Text>
-              <Text style={styles.logoutModalText}>
-                현재 게스트로 사용중입니다. {"\n"}
-                로그아웃 시 모든 데이터가 삭제됩니다. {"\n"}
-                그래도 로그아웃 하시겠습니까?
-              </Text>
-              <View style={styles.logoutModalButtonRow}>
-                <Pressable
-                  style={({ pressed }) => [
-                    styles.footerButton,
-                    styles.footerButtonGray,
-                    pressed && styles.pressed,
-                  ]}
+      <View style={styles.overlay}>
+        <View style={styles.card}>
+          <Text style={styles.title}>정말로 로그아웃 하시겠어요?</Text>
+          <Text style={styles.description}>
+            {isGuest
+              ? "현재 게스트로 사용중입니다.\n로그아웃 시 모든 데이터가 삭제됩니다.\n그래도 로그아웃 하시겠습니까?"
+              : "다시 로그인 하려면 계정 인증이 필요합니다."}
+          </Text>
+          <View style={styles.buttonRow}>
+            {isGuest ? (
+              <>
+                <MotionPressable
+                  style={[styles.button, styles.buttonMuted]}
                   onPress={onConfirm}
                 >
-                  <Text style={styles.footerButtonTextDark}>로그아웃</Text>
-                </Pressable>
-                <Pressable
-                  style={({ pressed }) => [
-                    styles.footerButton,
-                    styles.footerButtonPrimary,
-                    pressed && styles.pressed,
-                  ]}
+                  <Text style={styles.buttonTextDark}>로그아웃</Text>
+                </MotionPressable>
+                <MotionPressable
+                  style={[styles.button, styles.buttonPrimary]}
                   onPress={onSignUp}
                 >
-                  <Text style={styles.footerButtonTextLight}>회원가입</Text>
-                </Pressable>
-              </View>
-            </ScrollView>
-          ) : (
-            <>
-              <Text style={styles.logoutModalTitle}>
-                정말로 로그아웃 하시겠어요?
-              </Text>
-              <Text style={styles.logoutModalText}>
-                다시 로그인 하려면 계정 인증이 필요합니다.
-              </Text>
-              <View style={styles.logoutModalButtonRow}>
-                <Pressable
-                  style={({ pressed }) => [
-                    styles.footerButton,
-                    styles.footerButtonGray,
-                    pressed && styles.pressed,
-                  ]}
+                  <Text style={styles.buttonTextLight}>회원가입</Text>
+                </MotionPressable>
+              </>
+            ) : (
+              <>
+                <MotionPressable
+                  style={[styles.button, styles.buttonMuted]}
                   onPress={onClose}
                 >
-                  <Text style={styles.footerButtonTextDark}>취소</Text>
-                </Pressable>
-                <Pressable
-                  style={({ pressed }) => [
-                    styles.footerButton,
-                    styles.footerButtonDanger,
-                    pressed && styles.pressed,
-                  ]}
+                  <Text style={styles.buttonTextDark}>취소</Text>
+                </MotionPressable>
+                <MotionPressable
+                  style={[styles.button, styles.buttonDanger]}
                   onPress={onConfirm}
                 >
-                  <Text style={styles.footerButtonTextLight}>로그아웃</Text>
-                </Pressable>
-              </View>
-            </>
-          )}
+                  <Text style={styles.buttonTextLight}>로그아웃</Text>
+                </MotionPressable>
+              </>
+            )}
+          </View>
         </View>
       </View>
     </Modal>
@@ -109,71 +72,60 @@ export default function LogoutModal({
 }
 
 const styles = StyleSheet.create({
-  modalOverlay: {
+  overlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.7)",
+    ...surfaces.overlay,
     alignItems: "center",
     justifyContent: "center",
-    padding: 20,
+    padding: spacing.lgPlus,
   },
-  logoutModalCard: {
-    position: "relative",
+  card: {
+    width: 320 + spacing.xl * 2,
+    maxWidth: "100%",
     backgroundColor: colors.white,
-    borderRadius: 24,
-    width: 320,
-    paddingHorizontal: 24,
-    paddingTop: 24,
-    paddingBottom: 24,
+    borderRadius: radii["2xl"],
+    padding: spacing.xl,
+    gap: spacing.sm,
+    ...shadows.xl,
   },
-  logoutModalCardGuest: {
-    maxHeight: "80%",
-    minHeight: 208,
-  },
-  guestScrollContent: {
-    paddingBottom: 4,
-  },
-  logoutModalTitle: {
+  title: {
     ...textStyles.h5,
+    color: colors.gray900,
     textAlign: "center",
-    marginBottom: 8,
   },
-  logoutModalText: {
-    ...textStyles.body4,
-    color: colors.gray600,
+  description: {
+    ...textStyles.body5,
+    color: colors.gray700,
     textAlign: "center",
-    lineHeight: 20,
-    marginBottom: 20,
+    marginTop: spacing.xs,
+    marginBottom: spacing.lg,
   },
-  logoutModalButtonRow: {
+  buttonRow: {
     flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    gap: spacing.sm,
   },
-  footerButton: {
-    width: 132,
+  button: {
+    flex: 1,
     height: 40,
-    borderRadius: 10,
+    borderRadius: radii.md,
     alignItems: "center",
     justifyContent: "center",
   },
-  footerButtonGray: {
-    backgroundColor: colors.gray300,
+  buttonMuted: {
+    ...surfaces.muted,
   },
-  footerButtonDanger: {
-    backgroundColor: colors.warning,
+  buttonDanger: {
+    backgroundColor: colors.danger,
   },
-  footerButtonPrimary: {
-    backgroundColor: colors.primary,
+  buttonPrimary: {
+    ...surfaces.primary,
   },
-  footerButtonTextDark: {
+  buttonTextDark: {
     ...textStyles.h7,
-    color: colors.black,
+    color: colors.gray900,
   },
-  footerButtonTextLight: {
+  buttonTextLight: {
     ...textStyles.h7,
     color: colors.white,
-  },
-  pressed: {
-    opacity: 0.85,
   },
 });
