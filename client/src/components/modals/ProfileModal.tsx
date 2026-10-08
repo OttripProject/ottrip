@@ -189,6 +189,7 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
       showToast("문의 이메일을 복사했어요.", {
         icon: "check",
         closable: false,
+        effect: "confetti",
       });
     } catch {}
   };
@@ -258,7 +259,6 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
                   <Text style={styles.fieldLabel}>문의하기</Text>
                   <MotionPressable
                     style={styles.contactEmailButton}
-                    pressFeedback="jelly"
                     onPress={handleCopy}
                   >
                     <Text style={styles.contactEmailText} numberOfLines={1}>
@@ -495,7 +495,6 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
               <View>
                 <MotionPressable
                   style={styles.contactEmailButton}
-                  pressFeedback="jelly"
                   onPress={handleCopy}
                 >
                   <Text style={styles.contactEmailText} numberOfLines={1}>

@@ -37,7 +37,6 @@ type MotionPressableProps = Omit<PressableProps, "style" | "children"> & {
   style?: StyleProp<ViewStyle>;
   hoverStyle?: StyleProp<ViewStyle>;
   pressedStyle?: StyleProp<ViewStyle>;
-  pressFeedback?: "jelly";
   children?: ReactNode;
 };
 
@@ -45,7 +44,6 @@ export default function MotionPressable({
   style,
   hoverStyle,
   pressedStyle,
-  pressFeedback,
   disabled,
   onPress,
   onHoverIn,
@@ -80,7 +78,7 @@ export default function MotionPressable({
         {...rest}
         disabled={disabled}
         onPress={e => {
-          if (isWeb && pressFeedback === "jelly") playJelly();
+          if (isWeb) playJelly();
           onPress?.(e);
         }}
         onHoverIn={e => {

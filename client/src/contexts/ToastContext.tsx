@@ -1,6 +1,7 @@
-import React, { createContext, useCallback, useContext, useRef, useState } from "react";
+import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { Platform, Pressable, StyleSheet, Text, type TextStyle, View, type ViewStyle } from "react-native";
 import BodyPortal from "@/ui/components/BodyPortal";
+import { type BurstEffect, playBurst, TOAST_ELEMENT_ID } from "@/ui/effects/particles";
 import { colors } from "@/ui/tokens/colors";
 import { motion } from "@/ui/tokens/motion";
 import { radii } from "@/ui/tokens/radii";
@@ -34,6 +35,7 @@ interface ToastState {
   action?: ToastAction;
   icon?: "check" | "info";
   closable: boolean;
+  effect?: BurstEffect;
   leaving: boolean;
 }
 
@@ -42,6 +44,7 @@ interface ToastOptions {
   icon?: "check" | "info";
   duration?: number;
   closable?: boolean;
+  effect?: BurstEffect;
 }
 
 interface ToastContextType {
@@ -65,12 +68,19 @@ const ToastStateContext = createContext<ToastState | null>(null);
 export const ToastUI = () => {
   const base = useToast();
   const toast = useContext(ToastStateContext);
+  const toastId = toast?.id;
+  const effect = toast?.effect;
+
+  useEffect(() => {
+    if (toastId && effect) playBurst(effect);
+  }, [toastId, effect]);
 
   if (!toast) return null;
 
   return (
     <Pressable
       key={toast.id}
+      nativeID={TOAST_ELEMENT_ID}
       style={[
         styles.toastContainer,
         isWeb && webStyles.toastContainer,
@@ -132,6 +142,7 @@ export const ToastProvider = ({ children }: { children: React.ReactNode }) => {
         action: options?.action,
         icon: options?.icon,
         closable: options?.closable ?? true,
+        effect: options?.effect,
         leaving: false,
       });
       if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
