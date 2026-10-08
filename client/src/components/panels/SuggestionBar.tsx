@@ -2,6 +2,7 @@ import type { DaySuggestion, SuggestionPlace } from "@/services/tourism";
 import { useToast } from "@/contexts/ToastContext";
 import { colors } from "@/ui/tokens/colors";
 import { radii } from "@/ui/tokens/radii";
+import { shadows } from "@/ui/tokens/shadows";
 import { spacing } from "@/ui/tokens/spacing";
 import { textStyles } from "@/ui/tokens/typography";
 import { useRef, useState } from "react";
@@ -205,6 +206,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.xl,
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.lg,
+    ...shadows.lg,
   },
   row: {
     flexDirection: "row",

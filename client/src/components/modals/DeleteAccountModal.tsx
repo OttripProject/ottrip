@@ -1,7 +1,5 @@
-import { colors } from "@/ui/tokens/colors";
-import { textStyles } from "@/ui/tokens/typography";
+import ConfirmModal from "@/components/modals/ConfirmModal";
 import { useEffect, useState } from "react";
-import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
 
 interface DeleteAccountModalProps {
   visible: boolean;
@@ -37,149 +35,40 @@ export default function DeleteAccountModal({
     }
   };
 
+  const handleDone = () => {
+    onCompleted?.();
+    onClose();
+  };
+
+  const handleRequestClose = () => {
+    if (isCompleted) handleDone();
+    else if (!isDeleting) onClose();
+  };
+
+  if (isCompleted) {
+    return (
+      <ConfirmModal
+        visible={visible}
+        title="계정이 삭제되었어요."
+        actions={[{ label: "확인", tone: "dark", onPress: handleDone }]}
+        onRequestClose={handleRequestClose}
+      />
+    );
+  }
+
   return (
-    <Modal visible={visible} transparent animationType="fade">
-      <View style={styles.modalOverlay}>
-        <View style={styles.deleteModalCard}>
-          {isCompleted ? (
-            <>
-              <Text style={styles.deleteModalCompletedTitle}>
-                계정이 삭제되었어요.
-              </Text>
-              <Pressable
-                style={styles.deleteModalConfirmButton}
-                onPress={() => {
-                  if (onCompleted) {
-                    onCompleted();
-                  }
-                  onClose();
-                }}
-              >
-                <Text style={styles.deleteModalConfirmButtonText}>확인</Text>
-              </Pressable>
-            </>
-          ) : (
-            <>
-              <Text style={styles.deleteModalTitle}>
-                정말 계정을 삭제하시겠어요?
-              </Text>
-              <Text style={styles.deleteModalText}>
-                계정을 삭제하면 지금까지 만든 여행 일정이 {"\n"}
-                모두 사라지며, 다시 복구할 수 없어요.
-              </Text>
-              <Pressable
-                style={styles.deleteModalCancelButton}
-                onPress={onClose}
-                disabled={isDeleting}
-              >
-                <Text style={styles.deleteModalCancelButtonText}>취소</Text>
-              </Pressable>
-              <Pressable
-                style={[
-                  styles.deleteModalDeleteButton,
-                  isDeleting && styles.deleteModalDeleteButtonDisabled,
-                ]}
-                onPress={handleConfirm}
-                disabled={isDeleting}
-              >
-                <Text style={styles.deleteModalDeleteButtonText}>삭제</Text>
-              </Pressable>
-            </>
-          )}
-        </View>
-      </View>
-    </Modal>
+    <ConfirmModal
+      visible={visible}
+      title="정말 계정을 삭제하시겠어요?"
+      description={
+        "계정을 삭제하면 지금까지 만든 여행 일정이\n모두 사라지며, 다시 복구할 수 없어요."
+      }
+      actions={[
+        { label: "취소", tone: "muted", onPress: onClose },
+        { label: "삭제", tone: "danger", onPress: handleConfirm },
+      ]}
+      onRequestClose={handleRequestClose}
+      disabled={isDeleting}
+    />
   );
 }
-
-const styles = StyleSheet.create({
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.7)",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: 20,
-  },
-  deleteModalCard: {
-    position: "relative",
-    backgroundColor: colors.white,
-    borderRadius: 24,
-    width: 320,
-    height: 208,
-  },
-  deleteModalTitle: {
-    position: "absolute",
-    left: 69,
-    top: 32,
-    width: 182,
-    height: 24,
-    ...textStyles.h5,
-    textAlign: "center",
-  },
-  deleteModalText: {
-    position: "absolute",
-    left: 49,
-    top: 72,
-    width: 221,
-    height: 40,
-    ...textStyles.body4,
-    color: colors.gray600,
-    textAlign: "center",
-  },
-  deleteModalCancelButton: {
-    position: "absolute",
-    left: 24,
-    bottom: 24,
-    width: 132,
-    height: 40,
-    borderRadius: 10,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: colors.gray300,
-  },
-  deleteModalCancelButtonText: {
-    ...textStyles.h7,
-  },
-  deleteModalDeleteButton: {
-    position: "absolute",
-    right: 24,
-    bottom: 24,
-    width: 132,
-    height: 40,
-    borderRadius: 10,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: colors.warning,
-  },
-  deleteModalDeleteButtonText: {
-    ...textStyles.h7,
-    color: colors.white,
-  },
-  deleteModalDeleteButtonDisabled: {
-    opacity: 0.6,
-  },
-  deleteModalCompletedTitle: {
-    position: "absolute",
-    left: 40,
-    top: 72,
-    width: 240,
-    height: 24,
-    ...textStyles.h5,
-    textAlign: "center",
-  },
-  deleteModalConfirmButton: {
-    position: "absolute",
-    left: 88,
-    top: 110,
-    width: 144,
-    height: 40,
-    borderRadius: 10,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: colors.black,
-  },
-  deleteModalConfirmButtonText: {
-    ...textStyles.h7,
-    color: colors.white,
-  },
-});

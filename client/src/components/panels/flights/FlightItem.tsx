@@ -1413,7 +1413,7 @@ const styles = StyleSheet.create({
     height: 40,
     borderRadius: radii.md,
     paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
+    paddingVertical: spacing.none,
     ...textStyles.body4,
   },
   readOnlyInput: {
@@ -1423,7 +1423,7 @@ const styles = StyleSheet.create({
     height: 40,
     borderRadius: radii.md,
     paddingHorizontal: spacing.md,
-    paddingVertical: 10,
+    paddingVertical: spacing.none,
     ...textStyles.body4,
   },
   placeholderText: {

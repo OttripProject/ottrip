@@ -1,41 +1,79 @@
 import ProfileModal from "@/components/modals/ProfileModal";
 import { useMe } from "@/hooks/useMe";
+import MotionPressable, { MotionIcon } from "@/ui/components/MotionPressable";
+import { playBurst } from "@/ui/effects/particles";
 import { colors } from "@/ui/tokens/colors";
+import { motion } from "@/ui/tokens/motion";
 import { radii } from "@/ui/tokens/radii";
+import { shadows } from "@/ui/tokens/shadows";
+import { spacing } from "@/ui/tokens/spacing";
 import { textStyles, typography } from "@/ui/tokens/typography";
 import { useNavigation } from "@react-navigation/native";
 import type { NavigationProp } from "@react-navigation/native";
-import { useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { useEffect, useRef, useState } from "react";
+import {
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+  type ViewStyle,
+} from "react-native";
 import DownArrowIcon from "../../../assets/dropdown_time.svg";
+import CalendarIcon from "../../../assets/mobile_calendar_black.svg";
 
 export default function HeaderPanel() {
   const navigation = useNavigation<NavigationProp<any>>();
   const { data: profile, isLoading: profileLoading } = useMe();
   const [profileModalOpen, setProfileModalOpen] = useState(false);
+  const [hopping, setHopping] = useState(false);
+  const hopTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const navTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (hopTimerRef.current) clearTimeout(hopTimerRef.current);
+      if (navTimerRef.current) clearTimeout(navTimerRef.current);
+    };
+  }, []);
+
+  const handleLogoPress = () => {
+    if (hopTimerRef.current) clearTimeout(hopTimerRef.current);
+    setHopping(false);
+    requestAnimationFrame(() => setHopping(true));
+    playBurst("confetti");
+    hopTimerRef.current = setTimeout(
+      () => setHopping(false),
+      motion.duration.hop,
+    );
+    if (navTimerRef.current) clearTimeout(navTimerRef.current);
+    navTimerRef.current = setTimeout(() => {
+      (navigation as any).reset({
+        index: 0,
+        routes: [{ name: "OTTRIP" }],
+      });
+    }, motion.duration.fast);
+  };
 
   return (
     <View style={styles.container}>
       <View style={styles.headerContent}>
         <View style={styles.brandContainer}>
           <Pressable
-            onPress={() => {
-              (navigation as any).reset({
-                index: 0,
-                routes: [{ name: "OTTRIP" }],
-              });
-            }}
+            onPress={handleLogoPress}
             accessibilityRole="button"
+            style={[styles.brandButton, hopping && hopStyle]}
           >
+            <CalendarIcon width={20} height={20} color={colors.black} />
             <Text style={styles.brand}>OTTRIP</Text>
           </Pressable>
         </View>
         <View style={styles.userContainer}>
           {!profileLoading && (
-            <Pressable
+            <MotionPressable
               onPress={() => setProfileModalOpen(true)}
               accessibilityRole="button"
               style={styles.userPill}
+              hoverStyle={shadows.xsHover}
             >
               <Text
                 style={styles.userText}
@@ -44,12 +82,10 @@ export default function HeaderPanel() {
               >
                 {profile?.isGuest ? "게스트" : (profile?.nickname ?? "")}
               </Text>
-              <DownArrowIcon
-                width={10}
-                height={10}
-                style={{ opacity: 0.6, marginLeft: 8 }}
-              />
-            </Pressable>
+              <MotionIcon style={{ opacity: 0.6, marginLeft: 8 }}>
+                <DownArrowIcon width={10} height={10} />
+              </MotionIcon>
+            </MotionPressable>
           )}
         </View>
       </View>
@@ -62,37 +98,52 @@ export default function HeaderPanel() {
   );
 }
 
+const hopStyle = {
+  animationName: "fmHop",
+  animationDuration: `${motion.duration.hop}ms`,
+  animationTimingFunction: motion.easing.ease,
+} as ViewStyle;
+
 const styles = StyleSheet.create({
   container: {
     height: 56,
-    paddingHorizontal: 40,
+    marginTop: spacing.lg,
+    marginHorizontal: spacing.lgPlus,
+    paddingHorizontal: spacing.lg,
     backgroundColor: colors.white,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.gray200,
+    borderWidth: 1,
+    borderColor: colors.gray200,
+    borderRadius: radii.xl,
+    ...shadows.lg,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
   },
+  brandButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.xs,
+  },
   brand: {
-    ...textStyles.h5,
+    ...textStyles.h6,
     fontWeight: typography.weight.bold,
     color: colors.black,
   },
   userPill: {
     height: 32,
     minWidth: 72,
-    borderRadius: radii.base,
+    borderRadius: radii.md,
     backgroundColor: colors.white,
     borderWidth: 1,
     borderColor: colors.gray300,
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 14,
+    paddingHorizontal: spacing.lg,
     maxWidth: 220,
+    ...shadows.xs,
   },
   userText: {
-    ...textStyles.body5,
-    fontWeight: typography.weight.semibold,
+    ...textStyles.h8,
     color: colors.gray900,
     flexShrink: 1,
     minWidth: 0,

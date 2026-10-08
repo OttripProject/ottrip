@@ -44,7 +44,6 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from "react-native";
 import CalendarIcon from "../../../../assets/calender.svg";
@@ -781,7 +780,8 @@ export default function AccommodationItem({
           <View style={styles.inputGroup}>
             <Text style={styles.label}>내용</Text>
             {Platform.OS === "web" ? (
-              <TextInput
+              <Input
+                variant={readOnly ? "outlined" : "filled"}
                 multiline
                 numberOfLines={3}
                 textAlignVertical="top"
@@ -1330,7 +1330,7 @@ const styles = StyleSheet.create({
     height: 40,
     borderRadius: radii.md,
     paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
+    paddingVertical: spacing.none,
     ...textStyles.body4,
   },
   dateInput: {

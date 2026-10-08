@@ -1,4 +1,5 @@
 import { colors } from "@/ui/tokens/colors";
+import { shadows } from "@/ui/tokens/shadows";
 import { useEffect, useRef, useState } from "react";
 import { Animated, Pressable, StyleSheet, Text, View } from "react-native";
 import CloseIcon from "../../assets/close_sm.svg";
@@ -178,6 +179,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "rgb(207, 237, 237)",
     alignSelf: "stretch",
+    ...shadows.lg,
   } as any,
   contentRow: {
     flex: 1,

@@ -3,6 +3,7 @@ export const zIndex = {
   dropdown: 1000,
   modal: 2000,
   toast: 3000,
+  webModal: 9999,
 };
 
 export type ZIndexName = keyof typeof zIndex;

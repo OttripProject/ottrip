@@ -1,5 +1,6 @@
 import { colors } from "@/ui/tokens/colors";
 import { radii } from "@/ui/tokens/radii";
+import { shadows } from "@/ui/tokens/shadows";
 import type React from "react";
 import { StyleSheet, View, type ViewStyle } from "react-native";
 
@@ -18,6 +19,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
     borderRadius: radii.lg,
     overflow: "hidden",
-    elevation: 3,
+    ...shadows.lg,
   },
 });

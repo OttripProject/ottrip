@@ -1,5 +1,6 @@
 import { useMe } from "@/hooks/useMe";
 import Spinner from "@/ui/components/Spinner";
+import Input from "@/ui/components/input/Input";
 import { colors } from "@/ui/tokens/colors";
 import { spacing } from "@/ui/tokens/spacing";
 import { textStyles } from "@/ui/tokens/typography";
@@ -13,7 +14,6 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -386,7 +386,8 @@ export default function AiChecklistListViewModal({
                             />
                             <View style={styles.addingItemInputs}>
                             <View style={styles.inputWrapper}>
-                              <TextInput
+                              <Input
+                                variant="filled"
                                 style={[styles.addingItemNameInput, { paddingRight: 40 }]}
                                 placeholder="항목명"
                                 placeholderTextColor={colors.gray600}
@@ -406,7 +407,8 @@ export default function AiChecklistListViewModal({
 
                             {/* 2. 이유 입력창 (24자 제한) */}
                             <View style={styles.inputWrapper}>
-                              <TextInput
+                              <Input
+                                variant="filled"
                                 style={[styles.addingItemReasonInput, { paddingRight: 40 }]}
                                 placeholder="이유 (선택)"
                                 placeholderTextColor={colors.gray600}
@@ -626,6 +628,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingHorizontal: 10,
     paddingVertical: 7,
+    borderWidth: 0,
     color: colors.gray900,
     outlineWidth: 0,
     outlineStyle: "none",
@@ -636,6 +639,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingHorizontal: 10,
     paddingVertical: 7,
+    borderWidth: 0,
     color: colors.gray900,
     outlineWidth: 0,
     outlineStyle: "none",
