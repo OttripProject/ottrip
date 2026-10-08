@@ -1,3 +1,4 @@
+import { injectKeyframes } from "@/ui/effects/injectKeyframes";
 import { motion } from "@/ui/tokens/motion";
 import {
   type ReactNode,
@@ -18,18 +19,13 @@ import {
 
 const isWeb = Platform.OS === "web";
 
-if (
-  isWeb &&
-  typeof document !== "undefined" &&
-  !document.getElementById("motion-keyframes")
-) {
-  const style = document.createElement("style");
-  style.id = "motion-keyframes";
-  style.textContent =
+if (isWeb) {
+  injectKeyframes(
+    "motion-keyframes",
     "@keyframes fmWiggle { 0%, 100% { rotate: 0deg; } 25% { rotate: -10deg; } 60% { rotate: 8deg; } 85% { rotate: -3deg; } } " +
-    "@keyframes fmJelly { 0% { scale: 1; } 30% { scale: 1.06 0.94; } 55% { scale: 0.97 1.03; } 75% { scale: 1.02 0.98; } 100% { scale: 1; } } " +
-    "@keyframes fmHop { 0% { translate: 0; rotate: 0deg; } 30% { translate: 0 -8px; rotate: -6deg; } 55% { translate: 0; rotate: 3deg; } 75% { translate: 0 -3px; rotate: 0deg; } 100% { translate: 0; } }";
-  document.head.appendChild(style);
+      "@keyframes fmJelly { 0% { scale: 1; } 30% { scale: 1.06 0.94; } 55% { scale: 0.97 1.03; } 75% { scale: 1.02 0.98; } 100% { scale: 1; } } " +
+      "@keyframes fmHop { 0% { translate: 0; rotate: 0deg; } 30% { translate: 0 -8px; rotate: -6deg; } 55% { translate: 0; rotate: 3deg; } 75% { translate: 0 -3px; rotate: 0deg; } 100% { translate: 0; } }",
+  );
 }
 
 const HoverContext = createContext(false);

@@ -1,6 +1,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { Platform, Pressable, StyleSheet, Text, type TextStyle, View, type ViewStyle } from "react-native";
 import BodyPortal from "@/ui/components/BodyPortal";
+import { injectKeyframes } from "@/ui/effects/injectKeyframes";
 import { type BurstEffect, playBurst, TOAST_ELEMENT_ID } from "@/ui/effects/particles";
 import { colors } from "@/ui/tokens/colors";
 import { motion } from "@/ui/tokens/motion";
@@ -15,13 +16,12 @@ import XIcon from "../../assets/mobile_close.svg";
 
 const isWeb = Platform.OS === "web";
 
-if (isWeb && typeof document !== "undefined" && !document.getElementById("toast-keyframes")) {
-  const style = document.createElement("style");
-  style.id = "toast-keyframes";
-  style.textContent =
+if (isWeb) {
+  injectKeyframes(
+    "toast-keyframes",
     "@keyframes ottripToastInR { 0% { opacity: 0; transform: translateX(24px); } 100% { opacity: 1; transform: translateX(0); } } " +
-    "@keyframes ottripToastOutR { 0% { opacity: 1; } 100% { opacity: 0; transform: translateX(8px); } }";
-  document.head.appendChild(style);
+    "@keyframes ottripToastOutR { 0% { opacity: 1; } 100% { opacity: 0; transform: translateX(8px); } }",
+  );
 }
 
 interface ToastAction {
