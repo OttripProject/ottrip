@@ -29,7 +29,12 @@ export default function TermsPolicyModal({
   onPickTerm,
 }: TermsPolicyModalProps) {
   return (
-    <Modal visible={visible} transparent animationType="fade">
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      onRequestClose={onClose}
+    >
       <View style={styles.overlay}>
         <View style={styles.card}>
           <View style={styles.header}>

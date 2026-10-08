@@ -23,7 +23,12 @@ export default function LogoutModal({
   onSignUp,
 }: LogoutModalProps) {
   return (
-    <Modal visible={visible} transparent animationType="fade">
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      onRequestClose={onClose}
+    >
       <View style={styles.overlay}>
         <View style={styles.card}>
           <Text style={styles.title}>정말로 로그아웃 하시겠어요?</Text>

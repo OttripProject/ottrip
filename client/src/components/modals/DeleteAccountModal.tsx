@@ -42,8 +42,23 @@ export default function DeleteAccountModal({
     }
   };
 
+  const handleDone = () => {
+    onCompleted?.();
+    onClose();
+  };
+
+  const handleRequestClose = () => {
+    if (isCompleted) handleDone();
+    else if (!isDeleting) onClose();
+  };
+
   return (
-    <Modal visible={visible} transparent animationType="fade">
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      onRequestClose={handleRequestClose}
+    >
       <View style={styles.overlay}>
         <View style={styles.card}>
           {isCompleted ? (
@@ -54,10 +69,7 @@ export default function DeleteAccountModal({
               <View style={styles.buttonRow}>
                 <MotionPressable
                   style={[styles.button, styles.buttonDark]}
-                  onPress={() => {
-                    onCompleted?.();
-                    onClose();
-                  }}
+                  onPress={handleDone}
                 >
                   <Text style={styles.buttonTextLight}>확인</Text>
                 </MotionPressable>

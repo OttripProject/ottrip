@@ -205,7 +205,12 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
 
   return (
     <>
-      <Modal visible={visible} transparent animationType="fade">
+      <Modal
+        visible={visible}
+        transparent
+        animationType="fade"
+        onRequestClose={onClose}
+      >
         <View style={styles.overlay}>
           <Pressable style={styles.backdrop} onPress={onClose} />
 
@@ -481,7 +486,12 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
           )}
         </View>
 
-        <Modal visible={contactOpen} transparent animationType="fade">
+        <Modal
+          visible={contactOpen}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setContactOpen(false)}
+        >
           <View style={styles.modalOverlay}>
             <View style={styles.contactCard}>
               <View style={styles.header}>
