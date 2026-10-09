@@ -16,6 +16,7 @@ export const colors = {
   primary: "#007AFF",
   primaryDark: "#0059B2",
   toastCheck: "#0A84FF",
+  primaryTint: "#EAF1FE",
   red: "rgb(154, 44, 32)",
   danger: "#EF4444",
   success: "#0066FF",

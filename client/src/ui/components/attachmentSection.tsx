@@ -17,6 +17,7 @@ import ImagePreviewModal, {
 } from "@/components/modals/ImagePreviewModal";
 import { useMe } from "@/hooks/useMe";
 import type { LocalFile } from "@/types/api";
+import MotionPressable from "@/ui/components/MotionPressable";
 import type { AttachmentSectionProps } from "@/ui/components/attachmentSection.types";
 import { pendingAiFileKey } from "@/ui/components/attachmentSection.types";
 import { colors } from "@/ui/tokens/colors";
@@ -1010,16 +1011,16 @@ export default function AttachmentSection({
       >
         <Text style={styles.title}>첨부파일 (이미지,PDF)</Text>
         {!hideAddControls && (
-          <Pressable
+          <MotionPressable
             onPress={triggerHiddenFilePicker}
             disabled={disabled || isUploading}
-            style={({ pressed }) => [
-              styles.addButtonRow,
-              pressed && styles.pressed,
+            style={[
+              styles.addButton,
+              (disabled || isUploading) && styles.addButtonDisabled,
             ]}
           >
             <Text style={styles.addLabel}>+ 추가</Text>
-          </Pressable>
+          </MotionPressable>
         )}
       </View>
 
@@ -1602,16 +1603,22 @@ const styles = StyleSheet.create({
   },
   title: {
     ...textStyles.h8,
-    color: colors.black,
+    color: colors.gray900,
   },
   addLabel: {
     ...textStyles.h8,
     color: colors.primary,
   },
-  addButtonRow: {
+  addButton: {
+    height: 24,
+    paddingHorizontal: 10,
+    borderRadius: radii.pill,
+    backgroundColor: colors.primaryTint,
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
+  },
+  addButtonDisabled: {
+    opacity: 0.5,
   },
   pressed: {
     opacity: 0.6,
