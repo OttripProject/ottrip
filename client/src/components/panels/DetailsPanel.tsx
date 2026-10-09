@@ -3,8 +3,7 @@ import type {
   LocalFile,
   StagedDocumentAnalyzePayload,
 } from "@/types/api";
-import { useEffect, useRef } from "react";
-import { Animated, Easing, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 import PanelLayout from "./PanelLayout";
 import AccommodationSection from "./accommodations/AccommodationSection";
 import FlightSection from "./flights/FlightSection";
@@ -91,22 +90,6 @@ export default function DetailsPanel({
   carryoverPendingFiles,
   onConsumeCarryoverPendingFiles,
 }: DetailsPanelProps) {
-  const fadeAnim = useRef(new Animated.Value(1)).current;
-  const contentKey = `${activeTab ?? ""}-${selectedItinerary?.id ?? ""}-${selectedFlight?.id ?? ""}-${selectedAccommodation?.id ?? ""}`;
-  const prevKeyRef = useRef(contentKey);
-
-  useEffect(() => {
-    if (prevKeyRef.current === contentKey) return;
-    prevKeyRef.current = contentKey;
-    fadeAnim.setValue(0);
-    Animated.timing(fadeAnim, {
-      toValue: 1,
-      duration: 1500,
-      easing: Easing.out(Easing.quad),
-      useNativeDriver: true,
-    }).start();
-  }, [contentKey]);
-
   if (!planData?.plan) {
     return (
       <PanelLayout style={styles.container}>
@@ -260,9 +243,7 @@ export default function DetailsPanel({
 
   return (
     <PanelLayout style={styles.container}>
-      <Animated.View style={[styles.content, { opacity: fadeAnim }]}>
-        {renderContent()}
-      </Animated.View>
+      <View style={styles.content}>{renderContent()}</View>
     </PanelLayout>
   );
 }
