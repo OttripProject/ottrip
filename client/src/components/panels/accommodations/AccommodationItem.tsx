@@ -16,7 +16,8 @@ import type {
   LocalFile,
   StagedDocumentAnalyzePayload,
 } from "@/types/api";
-import { ExpenseCurrency, currencyLabels } from "@/types/expense";
+import { ExpenseCurrency } from "@/types/expense";
+import CurrencyToggle from "@/ui/components/CurrencyToggle";
 import MotionPressable from "@/ui/components/MotionPressable";
 import AttachmentSection from "@/ui/components/attachmentSection";
 import type { AiAttachmentAnalyzeSelection } from "@/ui/components/attachmentSection.types";
@@ -1147,17 +1148,21 @@ export default function AccommodationItem({
                   }}
                   keyboardType="numeric"
                   size="md"
-                  style={[
-                    readOnly && styles.readOnlyInput,
-                    styles.amountInputPadding,
-                  ]}
+                  style={readOnly ? styles.readOnlyInput : undefined}
                   placeholderTextColor={colors.gray600}
                   editable={!readOnly}
                 />
-                <Text style={styles.amountSuffix} pointerEvents="none">
-                  {currencyLabels[ExpenseCurrency.KRW]}
-                </Text>
               </View>
+            </View>
+            <View style={[styles.inputGroup, { flex: 1 }]}>
+              <Text style={styles.label}>통화</Text>
+              <CurrencyToggle
+                value={expenseData.currency as ExpenseCurrency}
+                onChange={c =>
+                  !readOnly && setExpenseData({ ...expenseData, currency: c })
+                }
+                style={styles.pickerTrigger}
+              />
             </View>
           </View>
 
@@ -1384,19 +1389,6 @@ const styles = StyleSheet.create({
   },
   amountInputWrapper: {
     position: "relative",
-  },
-  amountInputPadding: {
-    // suffix(원) 공간만큼만 비우고, 숫자는 오른쪽으로 붙여서 "숫자 + 원"이 바로 붙어 보이게 함
-    paddingRight: 20,
-    textAlign: "right",
-  },
-  amountSuffix: {
-    position: "absolute",
-    right: spacing.sm,
-    top: "50%",
-    transform: [{ translateY: -10 }],
-    ...textStyles.body4,
-    color: colors.black,
   },
   attachmentSection: {
     marginTop: spacing.lg,
