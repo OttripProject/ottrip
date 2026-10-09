@@ -2,6 +2,7 @@ import AiAnalyzeErrorBanner from "@/components/AiAnalyzeErrorBanner";
 import AiDocumentAnalyzeModal from "@/components/modals/AiDocumentAnalyzeModal";
 import BaseCalendar from "@/components/popup/calendar/BaseCalendar";
 import { PLACEHOLDERS } from "@/constants/placeholders";
+import { useHover } from "@/hooks/useHover";
 import { useAttachmentUpload } from "@/hooks/useAttachmentUpload";
 import { useFilePicker } from "@/hooks/useFilePicker";
 import { analyzeDocumentUpload } from "@/services/aiDocument";
@@ -231,6 +232,8 @@ export default function ItineraryItem({
   }, [formData, selectedCategory, itinerary, readOnly]);
   const categoryRef = useRef<View>(null);
   const [categoryOpen, setCategoryOpen] = useDetectClose(categoryRef, false);
+  const categoryHover = useHover();
+  const dateHover = useHover();
   const [hoveredCategoryKey, setHoveredCategoryKey] = useState<string | null>(null);
   const [countryOpen, setCountryOpen] = useState(false);
   const [timeOpen, setTimeOpen] = useState(false);
@@ -1179,7 +1182,15 @@ export default function ItineraryItem({
             <Text style={styles.label}>카테고리</Text>
             <Pressable
               onPress={() => !readOnly && setCategoryOpen(prev => !prev)}
-              style={[styles.categoryTrigger, readOnly && styles.categoryTriggerReadOnly]}
+              style={[
+                styles.categoryTrigger,
+                readOnly && styles.categoryTriggerReadOnly,
+                categoryHover.hovered &&
+                  !readOnly &&
+                  !categoryOpen &&
+                  styles.selectHover,
+              ]}
+              {...categoryHover.pressableHoverProps}
             >
               {selectedCategory && (
                 <View style={[styles.dot, { backgroundColor: itineraryCategoryColors[selectedCategory] }]} />
@@ -1401,7 +1412,14 @@ export default function ItineraryItem({
               날짜 <Text style={{ color: colors.warning }}>*</Text>
             </Text>
             <Pressable
-              style={readOnly ? styles.readOnlyDateInput : styles.dateInput}
+              style={[
+                readOnly ? styles.readOnlyDateInput : styles.dateInput,
+                dateHover.hovered &&
+                  !readOnly &&
+                  !showDatePicker &&
+                  styles.selectHover,
+              ]}
+              {...dateHover.pressableHoverProps}
               onPress={() => !readOnly && setShowDatePicker(!showDatePicker)}
               disabled={readOnly}
             >
@@ -2203,6 +2221,9 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
     backgroundColor: colors.gray200,
     width: "100%",
+  },
+  selectHover: {
+    backgroundColor: colors.inputHover,
   },
   dateTextContainer: {
     flexDirection: "row",

@@ -2,6 +2,7 @@ import AiAnalyzeErrorBanner from "@/components/AiAnalyzeErrorBanner";
 import AiDocumentAnalyzeModal from "@/components/modals/AiDocumentAnalyzeModal";
 import BaseCalendar from "@/components/popup/calendar/BaseCalendar";
 import { PLACEHOLDERS } from "@/constants/placeholders";
+import { useHover } from "@/hooks/useHover";
 import { useAttachmentUpload } from "@/hooks/useAttachmentUpload";
 import { useFilePicker } from "@/hooks/useFilePicker";
 import { accommodationsApi } from "@/services/accommodations";
@@ -733,6 +734,9 @@ export default function AccommodationItem({
     setFormData(prev => ({ ...prev, place: place.name }));
   }, []);
 
+  const checkinDateHover = useHover();
+  const checkoutDateHover = useHover();
+
   return (
     <View style={styles.wrapper}>
       <View style={styles.titleRow}>
@@ -921,14 +925,19 @@ export default function AccommodationItem({
                 체크인 날짜 <Text style={{ color: colors.warning }}>*</Text>
               </Text>
               <Pressable
-                style={
+                style={[
                   readOnly
                     ? [
                         styles.dateInput,
                         { borderColor: colors.gray400, borderWidth: 1 },
                       ]
-                    : styles.dateInput
-                }
+                    : styles.dateInput,
+                  checkinDateHover.hovered &&
+                    !readOnly &&
+                    !showCheckinDatePicker &&
+                    styles.selectHover,
+                ]}
+                {...checkinDateHover.pressableHoverProps}
                 onPress={() => !readOnly && setShowCheckinDatePicker(true)}
                 disabled={readOnly}
               >
@@ -1039,14 +1048,19 @@ export default function AccommodationItem({
                 체크아웃 날짜 <Text style={{ color: colors.warning }}>*</Text>
               </Text>
               <Pressable
-                style={
+                style={[
                   readOnly
                     ? [
                         styles.dateInput,
                         { borderColor: colors.gray400, borderWidth: 1 },
                       ]
-                    : styles.dateInput
-                }
+                    : styles.dateInput,
+                  checkoutDateHover.hovered &&
+                    !readOnly &&
+                    !showCheckoutDatePicker &&
+                    styles.selectHover,
+                ]}
+                {...checkoutDateHover.pressableHoverProps}
                 onPress={() => !readOnly && setShowCheckoutDatePicker(true)}
                 disabled={readOnly}
               >
@@ -1348,6 +1362,9 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
     backgroundColor: colors.gray200,
     width: "100%",
+  },
+  selectHover: {
+    backgroundColor: colors.inputHover,
   },
   dateTextContainer: {
     flexDirection: "row",
