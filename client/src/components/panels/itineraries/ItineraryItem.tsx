@@ -44,6 +44,7 @@ const itineraryCategoryToExpenseCategory: Partial<Record<ItineraryCategory, Expe
   [ItineraryCategory.SHOPPING]: ExpenseCategory.SHOPPING,
   [ItineraryCategory.ETC]: ExpenseCategory.ETC,
 };
+import MotionPressable from "@/ui/components/MotionPressable";
 import CurrencyToggle from "@/ui/components/CurrencyToggle";
 import PlacesSearchInput from "@/ui/components/PlacesSearchInput";
 import type { PlaceResult } from "@/ui/components/PlacesSearchInput";
@@ -58,6 +59,7 @@ import {
   TimePicker,
 } from "@/ui/components/pickers";
 import WarningBanner from "@/ui/components/toast/warning";
+import { surfaces } from "@/ui/tokens/surfaces";
 import { colors } from "@/ui/tokens/colors";
 import { radii } from "@/ui/tokens/radii";
 import { spacing } from "@/ui/tokens/spacing";
@@ -1166,7 +1168,8 @@ export default function ItineraryItem({
               onChangeText={text =>
                 !readOnly && setFormData({ ...formData, title: text })
               }
-              style={readOnly ? styles.readOnlyInput : styles.input}
+              size="md"
+              style={readOnly ? styles.readOnlyInput : undefined}
               placeholderTextColor={colors.gray600}
               editable={!readOnly}
             />
@@ -1228,6 +1231,7 @@ export default function ItineraryItem({
                 placeholder={PLACEHOLDERS.itinerary.descriptionForm}
                 placeholderTextColor={colors.gray600}
                 editable={!readOnly}
+                size="md"
                 style={[
                   readOnly ? styles.readOnlyTextArea : styles.textArea,
                   { resize: "vertical", overflow: "auto" } as any,
@@ -1244,6 +1248,7 @@ export default function ItineraryItem({
                 multiline
                 numberOfLines={3}
                 textAlignVertical="top"
+                size="md"
                 style={readOnly ? styles.readOnlyTextArea : styles.textArea}
                 placeholderTextColor={colors.gray600}
                 editable={!readOnly}
@@ -1276,6 +1281,7 @@ export default function ItineraryItem({
                 placeholder={PLACEHOLDERS.itinerary.countryForm}
                 disabled={readOnly}
                 useModal
+                style={styles.pickerTrigger}
               />
             </View>
             <View style={[styles.inputGroup, styles.halfWidth]}>
@@ -1287,6 +1293,7 @@ export default function ItineraryItem({
                 placeholder={PLACEHOLDERS.itinerary.cityForm}
                 disabled={readOnly}
                 useModal
+                style={styles.pickerTrigger}
               />
             </View>
           </View>
@@ -1321,7 +1328,8 @@ export default function ItineraryItem({
                 onChangeText={text =>
                   !readOnly && setFormData({ ...formData, location: text })
                 }
-                style={readOnly ? styles.readOnlyInput : styles.input}
+                size="md"
+              style={readOnly ? styles.readOnlyInput : undefined}
                 placeholderTextColor={colors.gray600}
                 editable={!readOnly}
               />
@@ -1454,7 +1462,7 @@ export default function ItineraryItem({
                         borderColor: colors.gray400,
                         borderWidth: 1,
                       }
-                    : undefined
+                    : styles.pickerTrigger
                 }
               />
             </View>
@@ -1483,7 +1491,7 @@ export default function ItineraryItem({
                         borderColor: colors.gray400,
                         borderWidth: 1,
                       }
-                    : undefined
+                    : styles.pickerTrigger
                 }
               />
             </View>
@@ -1736,61 +1744,61 @@ export default function ItineraryItem({
             />
           )}
 
-          {!readOnly ? (
-            <View style={[styles.buttonRow, { position: "relative" }]}>
-              <Pressable
-                style={styles.deleteButton}
-                onPress={itinerary ? handleDelete : onCancel}
-                disabled={isSubmitting}
-              >
-                <Text style={styles.deleteButtonText}>
-                  {itinerary ? "삭제" : "취소"}
-                </Text>
-              </Pressable>
-              <Pressable
-                style={styles.saveButton}
-                onPress={handleSave}
-                disabled={isSubmitting || isUploading}
-              >
-                <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                  {(isSubmitting || isUploading) && (
-                    <ActivityIndicator size="small" color="white" />
-                  )}
-                  <Text style={styles.saveButtonText}>
-                    {isSubmitting || isUploading ? "저장 중..." : "저장"}
-                  </Text>
-                </View>
-              </Pressable>
-            </View>
-          ) : (
-            <View style={[styles.buttonRow, { position: "relative" }]}>
-              <Pressable
-                style={styles.deleteButton}
-                onPress={handleDelete}
-                disabled={isSubmitting}
-              >
-                <Text style={styles.deleteButtonText}>삭제</Text>
-              </Pressable>
-              <Pressable
-                style={[styles.saveButton, { backgroundColor: colors.gray900 }]}
-                onPress={onEdit}
-              >
-                <Text style={styles.saveButtonText}>수정</Text>
-              </Pressable>
-            </View>
-          )}
-          <WarningBanner
-            message={warningMessage}
-            visible={showWarning}
-            duration={3000}
-            bottomOffset={74}
-            onHide={() => {
-              setShowWarning(false);
-              setWarningMessage("");
-            }}
-          />
         </View>
       </ScrollView>
+      {!readOnly ? (
+        <View style={styles.buttonRow}>
+          <MotionPressable
+            style={styles.deleteButton}
+            onPress={itinerary ? handleDelete : onCancel}
+            disabled={isSubmitting}
+          >
+            <Text style={styles.deleteButtonText}>
+              {itinerary ? "삭제" : "취소"}
+            </Text>
+          </MotionPressable>
+          <MotionPressable
+            style={styles.saveButton}
+            onPress={handleSave}
+            disabled={isSubmitting || isUploading}
+          >
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+              {(isSubmitting || isUploading) && (
+                <ActivityIndicator size="small" color="white" />
+              )}
+              <Text style={styles.saveButtonText}>
+                {isSubmitting || isUploading ? "저장 중..." : "저장"}
+              </Text>
+            </View>
+          </MotionPressable>
+        </View>
+      ) : (
+        <View style={styles.buttonRow}>
+          <MotionPressable
+            style={styles.deleteButton}
+            onPress={handleDelete}
+            disabled={isSubmitting}
+          >
+            <Text style={styles.deleteButtonText}>삭제</Text>
+          </MotionPressable>
+          <MotionPressable
+            style={[styles.saveButton, styles.footerEditButton]}
+            onPress={onEdit}
+          >
+            <Text style={styles.saveButtonText}>수정</Text>
+          </MotionPressable>
+        </View>
+      )}
+      <WarningBanner
+        message={warningMessage}
+        visible={showWarning}
+        duration={3000}
+        bottomOffset={WARNING_BOTTOM_OFFSET}
+        onHide={() => {
+          setShowWarning(false);
+          setWarningMessage("");
+        }}
+      />
       <AiDocumentAnalyzeModal
         visible={aiAnalyzeModalVisible}
         analyzeResult={aiAnalyzeResult}
@@ -1821,6 +1829,8 @@ export default function ItineraryItem({
   );
 }
 
+const WARNING_BOTTOM_OFFSET = spacing.lg + 42 + spacing.xl + spacing.sm;
+
 const styles = StyleSheet.create({
   wrapper: {
     flex: 1,
@@ -1846,14 +1856,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: spacing.xl,
     paddingTop: spacing.xl,
-    paddingBottom: spacing.md,
+    paddingBottom: spacing.lg,
   },
   title: {
     ...textStyles.h5,
   },
   closeButton: {
-    width: 26,
-    height: 26,
+    width: 32,
+    height: 32,
     borderRadius: radii.pill,
     backgroundColor: colors.gray200,
     justifyContent: "center",
@@ -1906,21 +1916,8 @@ const styles = StyleSheet.create({
   formSection: {
     gap: spacing.lg,
   },
-  input: {
-    backgroundColor: colors.gray200,
-    height: 40,
-    borderRadius: radii.md,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.none,
-    ...textStyles.body4,
-  },
   textArea: {
-    backgroundColor: colors.gray200,
     height: 80,
-    borderRadius: radii.md,
-    paddingHorizontal: spacing.md,
-    paddingVertical: 10,
-    ...textStyles.body4,
   },
   timeRow: {
     flexDirection: "row",
@@ -1929,30 +1926,32 @@ const styles = StyleSheet.create({
   buttonRow: {
     flexDirection: "row",
     gap: spacing.sm,
-    marginTop: spacing.sm,
+    paddingTop: spacing.lg,
+    paddingHorizontal: spacing.xl,
     paddingBottom: spacing.xl,
   },
   deleteButton: {
-    backgroundColor: colors.gray300,
-    height: 40,
+    ...surfaces.muted,
+    flex: 1,
+    paddingVertical: spacing.md,
     borderRadius: radii.md,
-    paddingHorizontal: spacing.lg,
     justifyContent: "center",
     alignItems: "center",
-    minWidth: 90,
   },
   deleteButtonText: {
     ...textStyles.h8,
-    color: colors.black,
+    color: colors.gray900,
   },
   saveButton: {
-    backgroundColor: colors.primary,
-    height: 40,
+    ...surfaces.primary,
+    flex: 1,
+    paddingVertical: spacing.md,
     borderRadius: radii.md,
-    paddingHorizontal: spacing.lg,
     justifyContent: "center",
     alignItems: "center",
-    flex: 1,
+  },
+  footerEditButton: {
+    ...surfaces.dark,
   },
   saveButtonText: {
     ...textStyles.h8,
@@ -1976,7 +1975,10 @@ const styles = StyleSheet.create({
   },
   label: {
     ...textStyles.h8,
-    color: colors.black,
+    color: colors.gray900,
+  },
+  pickerTrigger: {
+    height: 42,
   },
   expenseSection: {
     position: "relative",
@@ -2118,10 +2120,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   categoryTrigger: {
-    height: 40,
     backgroundColor: colors.gray200,
     borderRadius: radii.md,
-    paddingHorizontal: spacing.md,
+    padding: spacing.md,
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
@@ -2133,7 +2134,7 @@ const styles = StyleSheet.create({
     cursor: "default",
   } as any,
   categoryTriggerText: {
-    ...textStyles.body4,
+    ...textStyles.body5,
     flex: 1,
     color: colors.gray900,
   },
@@ -2199,9 +2200,8 @@ const styles = StyleSheet.create({
     borderWidth: 0,
     borderRadius: radii.md,
     paddingHorizontal: spacing.md,
-    paddingVertical: 10,
+    paddingVertical: spacing.md,
     backgroundColor: colors.gray200,
-    minHeight: 40,
     width: "100%",
   },
   dateTextContainer: {
@@ -2213,7 +2213,7 @@ const styles = StyleSheet.create({
     width: "100%",
   },
   dateText: {
-    ...textStyles.body4,
+    ...textStyles.body5,
   },
   iconWrapper: {
     // marginTop: -2,

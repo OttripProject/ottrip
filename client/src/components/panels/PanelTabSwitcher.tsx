@@ -1,4 +1,5 @@
 import { colors } from "@/ui/tokens/colors";
+import { radii } from "@/ui/tokens/radii";
 import { spacing } from "@/ui/tokens/spacing";
 import { textStyles } from "@/ui/tokens/typography";
 import {
@@ -59,10 +60,10 @@ const styles = StyleSheet.create({
   },
   tab: {
     flex: 1,
-    height: 30,
+    height: 32,
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: 8,
+    borderRadius: radii.md,
     backgroundColor: "transparent",
   },
   tabActive: {

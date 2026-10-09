@@ -1,8 +1,10 @@
+import { colors } from "@/ui/tokens/colors";
 import { shadows } from "@/ui/tokens/shadows";
 import { spacing } from "@/ui/tokens/spacing";
 import { textStyles } from "@/ui/tokens/typography";
 import { forwardRef, useMemo, useState } from "react";
 import {
+  Platform,
   type StyleProp,
   StyleSheet,
   TextInput,
@@ -34,10 +36,14 @@ export const Input = forwardRef<TextInput, InputProps>(
       error,
       onFocus,
       onBlur,
+      onPointerEnter,
+      onPointerLeave,
       placeholderTextColor,
       ...rest
     } = props;
     const [focused, setFocused] = useState(false);
+    const [hovered, setHovered] = useState(false);
+    const isWebFilled = Platform.OS === "web" && variant === "filled";
     const state = useMemo(
       () => ({ disabled: editable === false, error, focused }),
       [editable, error, focused],
@@ -56,9 +62,19 @@ export const Input = forwardRef<TextInput, InputProps>(
               size && sizeStyles[size],
               size && multiline && sizeStyles.multiline,
               style,
+              isWebFilled &&
+                hovered &&
+                !focused &&
+                editable !== false &&
+                stateStyles.filledHover,
+              isWebFilled && focused && stateStyles.filledFocus,
               focused &&
                 variant !== "bare" &&
-                (error ? shadows.errorRing : shadows.focusRing),
+                (error
+                  ? shadows.errorRing
+                  : isWebFilled
+                    ? shadows.filledFocusRing
+                    : shadows.focusRing),
             ] as StyleProp<TextStyle>
           }
           placeholderTextColor={
@@ -66,6 +82,14 @@ export const Input = forwardRef<TextInput, InputProps>(
           }
           editable={editable}
           pointerEvents={editable === false ? "none" : "auto"}
+          onPointerEnter={e => {
+            setHovered(true);
+            onPointerEnter?.(e);
+          }}
+          onPointerLeave={e => {
+            setHovered(false);
+            onPointerLeave?.(e);
+          }}
           onFocus={e => {
             setFocused(true);
             onFocus?.(e);
@@ -80,15 +104,28 @@ export const Input = forwardRef<TextInput, InputProps>(
   },
 );
 
+const stateStyles = StyleSheet.create({
+  filledHover: {
+    backgroundColor: colors.inputHover,
+  },
+  filledFocus: {
+    backgroundColor: colors.white,
+  },
+});
+
 const sizeStyles = StyleSheet.create({
   md: {
     ...textStyles.body5,
-    paddingTop: spacing.md,
-    paddingBottom: spacing.md,
+    height: 42,
+    paddingTop: spacing.none,
+    paddingBottom: spacing.none,
     paddingHorizontal: spacing.md,
   },
   multiline: {
+    height: "auto",
     minHeight: 80,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.md,
     textAlignVertical: "top",
   },
 });
