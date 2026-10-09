@@ -19,7 +19,7 @@ import {
   ExpenseCurrency,
   currencyLabels,
 } from "@/types/expense";
-import MotionPressable, { MotionIcon } from "@/ui/components/MotionPressable";
+import MotionPressable from "@/ui/components/MotionPressable";
 import AttachmentSection from "@/ui/components/attachmentSection";
 import type { AiAttachmentAnalyzeSelection } from "@/ui/components/attachmentSection.types";
 import { pendingAiFileKey } from "@/ui/components/attachmentSection.types";
@@ -49,10 +49,9 @@ import {
   Text,
   View,
 } from "react-native";
+import { useDetailsHeader } from "../DetailsHeaderContext";
 import CalendarIcon from "../../../../assets/calender.svg";
-import CloseXIcon from "../../../../assets/close_x.svg";
 import DeleteIcon from "../../../../assets/delete.svg";
-import PanelTabSwitcher from "../PanelTabSwitcher";
 import { extendPlanIfNeeded } from "@/utils/extendPlanIfNeeded";
 
 interface FlightItemProps {
@@ -721,27 +720,14 @@ export default function FlightItem({
     );
   };
 
+  useDetailsHeader({
+    title: readOnly ? "항공편 정보" : flight ? "항공편 수정" : "항공편 추가",
+    showTabs: !readOnly,
+    onClose: onCancel,
+  });
+
   return (
     <View style={styles.wrapper}>
-      <View style={styles.titleRow}>
-        <Text style={styles.title}>
-          {readOnly ? "항공편 정보" : flight ? "항공편 수정" : "항공편 추가"}
-        </Text>
-        <MotionPressable
-          onPress={() => {
-            onCancel();
-          }}
-          style={styles.closeButton}
-          accessibilityLabel="닫기"
-        >
-          <MotionIcon>
-            <CloseXIcon width={12} height={12} color={colors.gray600} />
-          </MotionIcon>
-        </MotionPressable>
-      </View>
-      {!readOnly && (
-        <PanelTabSwitcher activeTab={activeTab} onTabChange={onTabChange} />
-      )}
       <ScrollView
         style={styles.container}
         contentContainerStyle={[
@@ -1389,25 +1375,6 @@ const styles = StyleSheet.create({
     position: "relative",
     overflow: "visible",
     gap: spacing.lg,
-  },
-  titleRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: spacing.xl,
-    paddingTop: spacing.xl,
-    paddingBottom: spacing.lg,
-  },
-  title: {
-    ...textStyles.h5,
-  },
-  closeButton: {
-    width: 32,
-    height: 32,
-    borderRadius: radii.pill,
-    ...surfaces.subtle,
-    justifyContent: "center",
-    alignItems: "center",
   },
   formSection: {
     gap: spacing.lg,

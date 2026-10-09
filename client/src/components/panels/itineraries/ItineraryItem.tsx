@@ -45,7 +45,7 @@ const itineraryCategoryToExpenseCategory: Partial<Record<ItineraryCategory, Expe
   [ItineraryCategory.SHOPPING]: ExpenseCategory.SHOPPING,
   [ItineraryCategory.ETC]: ExpenseCategory.ETC,
 };
-import MotionPressable, { MotionIcon } from "@/ui/components/MotionPressable";
+import MotionPressable from "@/ui/components/MotionPressable";
 import CurrencyToggle from "@/ui/components/CurrencyToggle";
 import PlacesSearchInput from "@/ui/components/PlacesSearchInput";
 import type { PlaceResult } from "@/ui/components/PlacesSearchInput";
@@ -96,12 +96,11 @@ import {
 import type { NearbyAttraction } from "@/services/tourism";
 import { tourismApi } from "@/services/tourism";
 import TourismDetailModal from "@/components/modals/TourismDetailModal";
+import { useDetailsHeader } from "../DetailsHeaderContext";
 import CalendarIcon from "../../../../assets/calender.svg";
 import CloseIcon from "../../../../assets/close_sm.svg";
-import CloseXIcon from "../../../../assets/close_x.svg";
 import DownArrowIcon from "../../../../assets/dropdown_time.svg";
 import UpperArrowIcon from "../../../../assets/upper_arrow.svg";
-import PanelTabSwitcher from "../PanelTabSwitcher";
 import { extendPlanIfNeeded } from "@/utils/extendPlanIfNeeded";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -1133,28 +1132,14 @@ export default function ItineraryItem({
     setFormData(prev => ({ ...prev, location: place.name }));
   }, []);
 
+  useDetailsHeader({
+    title: readOnly ? "일정 정보" : itinerary?.id ? "일정 수정" : "일정 추가",
+    showTabs: !readOnly,
+    onClose: onCancel,
+  });
+
   return (
     <View style={styles.wrapper}>
-      <View style={styles.titleRow}>
-        <Text style={styles.title}>
-          {readOnly ? "일정 정보" : itinerary?.id ? "일정 수정" : "일정 추가"}
-        </Text>
-
-        <MotionPressable
-          onPress={() => {
-            onCancel();
-          }}
-          style={styles.closeButton}
-          accessibilityLabel="닫기"
-        >
-          <MotionIcon>
-            <CloseXIcon width={12} height={12} color={colors.gray600} />
-          </MotionIcon>
-        </MotionPressable>
-      </View>
-      {!readOnly && (
-        <PanelTabSwitcher activeTab={activeTab} onTabChange={onTabChange} />
-      )}
       <ScrollView
         style={styles.container}
         contentContainerStyle={[
@@ -1874,25 +1859,6 @@ const styles = StyleSheet.create({
     position: "relative",
     overflow: "visible",
     gap: spacing.lg,
-  },
-  titleRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: spacing.xl,
-    paddingTop: spacing.xl,
-    paddingBottom: spacing.lg,
-  },
-  title: {
-    ...textStyles.h5,
-  },
-  closeButton: {
-    width: 32,
-    height: 32,
-    borderRadius: radii.pill,
-    ...surfaces.subtle,
-    justifyContent: "center",
-    alignItems: "center",
   },
   editButton: {
     backgroundColor: colors.gray900,
