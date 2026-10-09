@@ -17,7 +17,7 @@ import type {
   StagedDocumentAnalyzePayload,
 } from "@/types/api";
 import { ExpenseCurrency, currencyLabels } from "@/types/expense";
-import MotionPressable from "@/ui/components/MotionPressable";
+import MotionPressable, { MotionIcon } from "@/ui/components/MotionPressable";
 import AttachmentSection from "@/ui/components/attachmentSection";
 import type { AiAttachmentAnalyzeSelection } from "@/ui/components/attachmentSection.types";
 import { pendingAiFileKey } from "@/ui/components/attachmentSection.types";
@@ -50,7 +50,7 @@ import {
   View,
 } from "react-native";
 import CalendarIcon from "../../../../assets/calender.svg";
-import CloseIcon from "../../../../assets/close_sm.svg";
+import CloseXIcon from "../../../../assets/close_x.svg";
 import PanelTabSwitcher from "../PanelTabSwitcher";
 import { extendPlanIfNeeded } from "@/utils/extendPlanIfNeeded";
 
@@ -747,11 +747,15 @@ export default function AccommodationItem({
               ? "숙박 수정"
               : "숙박 추가"}
         </Text>
-        {readOnly || accommodation ? (
-          <Pressable onPress={onCancel} style={styles.closeButton}>
-            <CloseIcon width={12} height={12} color={colors.gray600} />
-          </Pressable>
-        ) : null}
+        <MotionPressable
+          onPress={onCancel}
+          style={styles.closeButton}
+          accessibilityLabel="닫기"
+        >
+          <MotionIcon>
+            <CloseXIcon width={12} height={12} color={colors.gray600} />
+          </MotionIcon>
+        </MotionPressable>
       </View>
       {!readOnly && (
         <PanelTabSwitcher activeTab={activeTab} onTabChange={onTabChange} />
@@ -1327,7 +1331,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: radii.pill,
-    backgroundColor: colors.gray200,
+    ...surfaces.subtle,
     justifyContent: "center",
     alignItems: "center",
   },

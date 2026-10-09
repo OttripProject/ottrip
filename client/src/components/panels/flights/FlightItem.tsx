@@ -19,7 +19,7 @@ import {
   ExpenseCurrency,
   currencyLabels,
 } from "@/types/expense";
-import MotionPressable from "@/ui/components/MotionPressable";
+import MotionPressable, { MotionIcon } from "@/ui/components/MotionPressable";
 import AttachmentSection from "@/ui/components/attachmentSection";
 import type { AiAttachmentAnalyzeSelection } from "@/ui/components/attachmentSection.types";
 import { pendingAiFileKey } from "@/ui/components/attachmentSection.types";
@@ -50,7 +50,7 @@ import {
   View,
 } from "react-native";
 import CalendarIcon from "../../../../assets/calender.svg";
-import CloseIcon from "../../../../assets/close_sm.svg";
+import CloseXIcon from "../../../../assets/close_x.svg";
 import DeleteIcon from "../../../../assets/delete.svg";
 import PanelTabSwitcher from "../PanelTabSwitcher";
 import { extendPlanIfNeeded } from "@/utils/extendPlanIfNeeded";
@@ -727,14 +727,17 @@ export default function FlightItem({
         <Text style={styles.title}>
           {readOnly ? "항공편 정보" : flight ? "항공편 수정" : "항공편 추가"}
         </Text>
-        <Pressable
+        <MotionPressable
           onPress={() => {
             onCancel();
           }}
           style={styles.closeButton}
+          accessibilityLabel="닫기"
         >
-          <CloseIcon width={12} height={12} color={colors.gray600} />
-        </Pressable>
+          <MotionIcon>
+            <CloseXIcon width={12} height={12} color={colors.gray600} />
+          </MotionIcon>
+        </MotionPressable>
       </View>
       {!readOnly && (
         <PanelTabSwitcher activeTab={activeTab} onTabChange={onTabChange} />
@@ -1402,7 +1405,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: radii.pill,
-    backgroundColor: colors.gray200,
+    ...surfaces.subtle,
     justifyContent: "center",
     alignItems: "center",
   },

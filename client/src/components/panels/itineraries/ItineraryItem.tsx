@@ -45,7 +45,7 @@ const itineraryCategoryToExpenseCategory: Partial<Record<ItineraryCategory, Expe
   [ItineraryCategory.SHOPPING]: ExpenseCategory.SHOPPING,
   [ItineraryCategory.ETC]: ExpenseCategory.ETC,
 };
-import MotionPressable from "@/ui/components/MotionPressable";
+import MotionPressable, { MotionIcon } from "@/ui/components/MotionPressable";
 import CurrencyToggle from "@/ui/components/CurrencyToggle";
 import PlacesSearchInput from "@/ui/components/PlacesSearchInput";
 import type { PlaceResult } from "@/ui/components/PlacesSearchInput";
@@ -98,6 +98,7 @@ import { tourismApi } from "@/services/tourism";
 import TourismDetailModal from "@/components/modals/TourismDetailModal";
 import CalendarIcon from "../../../../assets/calender.svg";
 import CloseIcon from "../../../../assets/close_sm.svg";
+import CloseXIcon from "../../../../assets/close_x.svg";
 import DownArrowIcon from "../../../../assets/dropdown_time.svg";
 import UpperArrowIcon from "../../../../assets/upper_arrow.svg";
 import PanelTabSwitcher from "../PanelTabSwitcher";
@@ -1139,14 +1140,17 @@ export default function ItineraryItem({
           {readOnly ? "일정 정보" : itinerary?.id ? "일정 수정" : "일정 추가"}
         </Text>
 
-        <Pressable
+        <MotionPressable
           onPress={() => {
             onCancel();
           }}
           style={styles.closeButton}
+          accessibilityLabel="닫기"
         >
-          <CloseIcon width={12} height={12} color={colors.gray600} />
-        </Pressable>
+          <MotionIcon>
+            <CloseXIcon width={12} height={12} color={colors.gray600} />
+          </MotionIcon>
+        </MotionPressable>
       </View>
       {!readOnly && (
         <PanelTabSwitcher activeTab={activeTab} onTabChange={onTabChange} />
@@ -1886,7 +1890,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: radii.pill,
-    backgroundColor: colors.gray200,
+    ...surfaces.subtle,
     justifyContent: "center",
     alignItems: "center",
   },
