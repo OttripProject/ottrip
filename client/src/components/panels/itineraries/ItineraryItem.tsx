@@ -1595,7 +1595,7 @@ export default function ItineraryItem({
               )}
 
               {!readOnly && (
-                <Pressable
+                <MotionPressable
                   style={styles.addExpenseButton}
                   onPress={() => {
                     setEditingExpense(null);
@@ -1615,7 +1615,7 @@ export default function ItineraryItem({
                   <Text style={styles.addExpenseButtonText}>
                     비용 내역 추가
                   </Text>
-                </Pressable>
+                </MotionPressable>
               )}
 
               {showExpenseForm && (
@@ -1635,6 +1635,8 @@ export default function ItineraryItem({
                         }
                         onOpen={() => setExpenseOpen(true)}
                         onClose={() => setExpenseOpen(false)}
+                        style={styles.pickerTrigger}
+                        triggerTextStyle={styles.expenseCategoryText}
                       />
                     </View>
                     <View style={styles.expenseFormHalf}>
@@ -1644,6 +1646,7 @@ export default function ItineraryItem({
                         onChange={c =>
                           setExpenseForm({ ...expenseForm, currency: c })
                         }
+                        style={styles.pickerTrigger}
                       />
                     </View>
                   </View>
@@ -1653,7 +1656,8 @@ export default function ItineraryItem({
                       금액 <Text style={{ color: colors.warning }}>*</Text>
                     </Text>
                     <Input
-                      variant="outlined"
+                      variant="filled"
+                      size="md"
                       placeholder={PLACEHOLDERS.expense.amount}
                       value={expenseForm.amount.toString()}
                       onChangeText={text =>
@@ -1663,25 +1667,24 @@ export default function ItineraryItem({
                         })
                       }
                       keyboardType="numeric"
-                      style={styles.expenseInput}
                     />
                   </View>
 
                   <View style={styles.inputGroup}>
                     <Text style={styles.label}>내용</Text>
                     <Input
-                      variant="outlined"
+                      variant="filled"
+                      size="md"
                       placeholder={PLACEHOLDERS.expense.descriptionForm}
                       value={expenseForm.description}
                       onChangeText={text =>
                         setExpenseForm({ ...expenseForm, description: text })
                       }
-                      style={styles.expenseInput}
                     />
                   </View>
 
                   <View style={styles.expenseButtonRow}>
-                    <Pressable
+                    <MotionPressable
                       style={styles.expenseCancelButton}
                       onPress={() => {
                         setEditingExpense(null);
@@ -1695,15 +1698,15 @@ export default function ItineraryItem({
                       }}
                     >
                       <Text style={styles.expenseCancelButtonText}>취소</Text>
-                    </Pressable>
-                    <Pressable
+                    </MotionPressable>
+                    <MotionPressable
                       style={styles.expenseSubmitButton}
                       onPress={handleExpenseSubmit}
                     >
                       <Text style={styles.expenseSubmitButtonText}>
                         {editingExpense ? "수정" : "추가"}
                       </Text>
-                    </Pressable>
+                    </MotionPressable>
                   </View>
                 </View>
               )}
@@ -1998,6 +2001,9 @@ const styles = StyleSheet.create({
   pickerTrigger: {
     height: 42,
   },
+  expenseCategoryText: {
+    ...textStyles.body5,
+  },
   expenseSection: {
     position: "relative",
     overflow: "visible",
@@ -2054,7 +2060,7 @@ const styles = StyleSheet.create({
     borderStyle: "dashed",
     borderColor: colors.gray400,
     borderRadius: radii.md,
-    paddingVertical: 10,
+    paddingVertical: spacing.md,
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
@@ -2064,7 +2070,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 18,
     color: colors.gray900,
-    marginRight: 2,
+    marginRight: spacing.xs,
   },
   addExpenseButtonText: {
     ...textStyles.h8,
@@ -2091,12 +2097,6 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: spacing.sm,
   },
-  expenseInput: {
-    backgroundColor: colors.gray200,
-    borderWidth: 0,
-    borderRadius: radii.md,
-    paddingVertical: 10,
-  },
   countryPickerWrapper: {
     overflow: "visible",
     position: "relative",
@@ -2107,23 +2107,23 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   expenseCancelButton: {
-    backgroundColor: colors.gray300,
+    ...surfaces.muted,
     borderRadius: radii.md,
-    paddingVertical: 11,
-    paddingHorizontal: 20,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.xl,
     justifyContent: "center",
     alignItems: "center",
     flex: 1,
   },
   expenseCancelButtonText: {
     ...textStyles.h8,
-    color: colors.black,
+    color: colors.gray900,
   },
   expenseSubmitButton: {
-    backgroundColor: colors.gray900,
+    ...surfaces.dark,
     borderRadius: radii.md,
-    paddingVertical: 11,
-    paddingHorizontal: 20,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.xl,
     justifyContent: "center",
     alignItems: "center",
     flex: 1,

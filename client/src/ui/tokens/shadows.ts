@@ -74,6 +74,16 @@ export const shadows = {
     android: {},
     default: { boxShadow: "0 0 0 4px rgba(0,122,255,0.12)" } as any,
   }),
+  segmentActive: Platform.select({
+    ios: {
+      shadowColor: "#000",
+      shadowOpacity: 0.06,
+      shadowRadius: 2,
+      shadowOffset: { width: 0, height: 1 },
+    },
+    android: { elevation: 1 },
+    default: { boxShadow: "0 1px 3px rgba(0,0,0,0.06)" } as any,
+  }),
   errorRing: Platform.select({
     ios: {},
     android: {},

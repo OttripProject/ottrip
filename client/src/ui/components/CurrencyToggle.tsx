@@ -1,5 +1,8 @@
 import { ExpenseCurrency } from "@/types/expense";
 import { colors } from "@/ui/tokens/colors";
+import { radii } from "@/ui/tokens/radii";
+import { shadows } from "@/ui/tokens/shadows";
+import { spacing } from "@/ui/tokens/spacing";
 import { textStyles } from "@/ui/tokens/typography";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import type { StyleProp, ViewStyle } from "react-native";
@@ -61,8 +64,7 @@ export default function CurrencyToggle({
                 (isOutlined
                   ? styles.optionActiveOutlined
                   : styles.optionActive),
-              isActive &&
-                ({ boxShadow: "rgba(0, 0, 0, 0.3) 0px 1px 3px" } as any),
+              isActive && shadows.segmentActive,
             ]}
             onPress={() => onChange(opt.value)}
           >
@@ -81,11 +83,11 @@ export default function CurrencyToggle({
 const styles = StyleSheet.create({
   container: {
     flexDirection: "row",
-    gap: 3,
+    gap: spacing.xs,
     height: 40,
     backgroundColor: colors.gray200,
-    borderRadius: 10,
-    padding: 3,
+    borderRadius: radii.md,
+    padding: spacing.xs,
   },
   containerOutlined: {
     backgroundColor: colors.white,
@@ -95,7 +97,7 @@ const styles = StyleSheet.create({
   },
   option: {
     flex: 1,
-    borderRadius: 8,
+    borderRadius: radii.md,
     alignItems: "center",
     justifyContent: "center",
   },
