@@ -959,7 +959,11 @@ export default function FlightItem({
                         }}
                         placeholder={PLACEHOLDERS.flight.departureAirport}
                         disabled={readOnly}
-                        style={readOnly ? { backgroundColor: colors.white } : undefined}
+                        style={
+                          readOnly
+                            ? { ...styles.pickerTrigger, backgroundColor: colors.white }
+                            : styles.pickerTrigger
+                        }
                       />
                     </View>
                     <View
@@ -985,7 +989,11 @@ export default function FlightItem({
                         placeholder={PLACEHOLDERS.flight.arrivalAirport}
                         disabled={readOnly}
                         dropdownAlign="right"
-                        style={readOnly ? { backgroundColor: colors.white } : undefined}
+                        style={
+                          readOnly
+                            ? { ...styles.pickerTrigger, backgroundColor: colors.white }
+                            : styles.pickerTrigger
+                        }
                       />
                     </View>
                   </View>
@@ -1417,6 +1425,9 @@ const styles = StyleSheet.create({
     ...textStyles.h8,
     color: colors.gray900,
   },
+  pickerTrigger: {
+    height: 42,
+  },
   readOnlyInput: {
     backgroundColor: colors.gray200,
     borderWidth: 1,
@@ -1498,7 +1509,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.gray400,
     borderRadius: radii.md,
-    height: 40,
+    height: 42,
     color: colors.black,
   },
   segmentDateInput: {
@@ -1506,7 +1517,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.gray400,
     borderRadius: radii.md,
-    height: 40,
+    height: 42,
     paddingHorizontal: spacing.md,
     justifyContent: "center",
   },
@@ -1532,7 +1543,7 @@ const styles = StyleSheet.create({
     borderColor: colors.gray400,
     borderRadius: radii.md,
     backgroundColor: colors.white,
-    height: 40,
+    height: 42,
   },
   airportPickerWrapper: {
     overflow: "visible",

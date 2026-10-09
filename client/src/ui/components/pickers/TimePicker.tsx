@@ -207,6 +207,8 @@ export default function TimePicker({
     styleObj?.borderRadius !== undefined
       ? { borderRadius: styleObj.borderRadius }
       : {};
+  const triggerHeight =
+    styleObj?.height !== undefined ? { height: styleObj.height } : {};
 
   return (
     <View
@@ -219,6 +221,7 @@ export default function TimePicker({
           { backgroundColor: triggerBg },
           triggerBorder,
           triggerBorderRadius,
+          triggerHeight,
           disabled && styles.triggerDisabled,
           triggerHover.hovered &&
             !disabled &&
