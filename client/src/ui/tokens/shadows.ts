@@ -61,6 +61,16 @@ export const shadows = {
     android: { elevation: 12 },
     default: { boxShadow: "0 24px 48px rgba(0,0,0,0.12)" } as any,
   }),
+  modal: Platform.select({
+    ios: {
+      shadowColor: "#000",
+      shadowOpacity: 0.3,
+      shadowRadius: 32,
+      shadowOffset: { width: 0, height: 24 },
+    },
+    android: { elevation: 24 },
+    default: { boxShadow: "0 24px 64px rgba(0,0,0,0.3)" } as any,
+  }),
   focusRing: Platform.select({
     ios: {},
     android: {},
