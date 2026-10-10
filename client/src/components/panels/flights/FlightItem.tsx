@@ -17,6 +17,7 @@ import type {
 import {
   ExpenseCategory,
   ExpenseCurrency,
+  currencyLabels,
 } from "@/types/expense";
 import CurrencyToggle from "@/ui/components/CurrencyToggle";
 import HoverPressable from "@/ui/components/HoverPressable";
@@ -824,11 +825,19 @@ export default function FlightItem({
             </View>
             <View style={[styles.inputGroup, { flex: 1 }]}>
               <Text style={styles.label}>통화</Text>
-              <CurrencyToggle
-                value={expenseCurrency}
-                onChange={c => !readOnly && setExpenseCurrency(c)}
-                style={styles.pickerTrigger}
-              />
+              {readOnly ? (
+                <View style={styles.readOnlyCurrency}>
+                  <Text style={styles.readOnlyCurrencyText}>
+                    {currencyLabels[expenseCurrency]}
+                  </Text>
+                </View>
+              ) : (
+                <CurrencyToggle
+                  value={expenseCurrency}
+                  onChange={setExpenseCurrency}
+                  style={styles.pickerTrigger}
+                />
+              )}
             </View>
           </View>
         </View>
@@ -1417,6 +1426,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.none,
     ...textStyles.body4,
+  },
+  readOnlyCurrency: {
+    backgroundColor: colors.gray200,
+    borderWidth: 1,
+    borderColor: colors.gray400,
+    height: 40,
+    borderRadius: radii.md,
+    paddingHorizontal: spacing.md,
+    justifyContent: "center",
+  },
+  readOnlyCurrencyText: {
+    ...textStyles.body4,
+    color: colors.gray900,
   },
   placeholderText: {
     ...textStyles.body4,

@@ -16,7 +16,7 @@ import type {
   LocalFile,
   StagedDocumentAnalyzePayload,
 } from "@/types/api";
-import { ExpenseCurrency } from "@/types/expense";
+import { ExpenseCurrency, currencyLabels } from "@/types/expense";
 import CurrencyToggle from "@/ui/components/CurrencyToggle";
 import MotionPressable from "@/ui/components/MotionPressable";
 import AttachmentSection from "@/ui/components/attachmentSection";
@@ -1156,13 +1156,19 @@ export default function AccommodationItem({
             </View>
             <View style={[styles.inputGroup, { flex: 1 }]}>
               <Text style={styles.label}>통화</Text>
-              <CurrencyToggle
-                value={expenseData.currency as ExpenseCurrency}
-                onChange={c =>
-                  !readOnly && setExpenseData({ ...expenseData, currency: c })
-                }
-                style={styles.pickerTrigger}
-              />
+              {readOnly ? (
+                <View style={styles.readOnlyCurrency}>
+                  <Text style={styles.readOnlyCurrencyText}>
+                    {currencyLabels[expenseData.currency as ExpenseCurrency]}
+                  </Text>
+                </View>
+              ) : (
+                <CurrencyToggle
+                  value={expenseData.currency as ExpenseCurrency}
+                  onChange={c => setExpenseData({ ...expenseData, currency: c })}
+                  style={styles.pickerTrigger}
+                />
+              )}
             </View>
           </View>
 
@@ -1440,6 +1446,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.md,
     ...textStyles.body4,
+  },
+  readOnlyCurrency: {
+    backgroundColor: colors.gray200,
+    borderWidth: 1,
+    borderColor: colors.gray400,
+    height: 40,
+    borderRadius: radii.md,
+    paddingHorizontal: spacing.md,
+    justifyContent: "center",
+  },
+  readOnlyCurrencyText: {
+    ...textStyles.body4,
+    color: colors.gray900,
   },
   readOnlyTextArea: {
     backgroundColor: colors.gray200,
