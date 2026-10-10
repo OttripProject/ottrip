@@ -1,6 +1,7 @@
 import { useToast } from "@/contexts/ToastContext";
 import AddExpenseModal from "@/components/modals/AddExpenseModal";
 import ExpenseDetailModal from "@/components/modals/ExpenseDetailModal";
+import { useWidthTextScale } from "@/hooks/useWidthTextScale";
 import { expensesApi } from "@/services/expenses";
 import MotionPressable from "@/ui/components/MotionPressable";
 import { colors } from "@/ui/tokens/colors";
@@ -15,7 +16,6 @@ import {
   Pressable,
   StyleSheet,
   Text,
-  type TextStyle,
   View,
 } from "react-native";
 import PanelLayout from "../PanelLayout";
@@ -52,15 +52,8 @@ export default function ExpensesPanel({
 }: ExpensesPanelProps) {
   const [showExpenseForm, setShowExpenseForm] = useState(false);
   const [showExpenseDetail, setShowExpenseDetail] = useState(false);
-  const [totalBoxWidth, setTotalBoxWidth] = useState(TOTAL_FULL_WIDTH);
-  const textScale = Math.min(
-    1,
-    Math.max(TOTAL_MIN_SCALE, totalBoxWidth / TOTAL_FULL_WIDTH),
-  );
-  const scaled = (style: TextStyle) => ({
-    fontSize: (style.fontSize ?? 0) * textScale,
-    lineHeight: (style.lineHeight ?? 0) * textScale,
-  });
+  const { onLayout: onTotalBoxLayout, scaled } =
+    useWidthTextScale(TOTAL_FULL_WIDTH);
 
   const { showToast } = useToast();
 
@@ -131,7 +124,7 @@ export default function ExpensesPanel({
         <Pressable
           style={styles.totalButton}
           onPress={() => setShowExpenseDetail(true)}
-          onLayout={e => setTotalBoxWidth(e.nativeEvent.layout.width)}
+          onLayout={onTotalBoxLayout}
         >
           <Text style={[styles.totalButtonLabel, scaled(textStyles.body4)]}>
             총 비용
@@ -197,7 +190,6 @@ export default function ExpensesPanel({
 }
 
 const TOTAL_FULL_WIDTH = 300;
-const TOTAL_MIN_SCALE = 0.7;
 
 const styles = StyleSheet.create({
   container: {
