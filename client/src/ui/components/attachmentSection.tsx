@@ -9,6 +9,7 @@ import {
   StyleSheet,
   Text,
   View,
+  type ViewStyle,
   useWindowDimensions,
 } from "react-native";
 
@@ -17,18 +18,24 @@ import ImagePreviewModal, {
 } from "@/components/modals/ImagePreviewModal";
 import { useMe } from "@/hooks/useMe";
 import type { LocalFile } from "@/types/api";
+import MotionPressable, { MotionIcon } from "@/ui/components/MotionPressable";
 import type { AttachmentSectionProps } from "@/ui/components/attachmentSection.types";
 import { pendingAiFileKey } from "@/ui/components/attachmentSection.types";
 import { colors } from "@/ui/tokens/colors";
+import { motion } from "@/ui/tokens/motion";
 import { radii } from "@/ui/tokens/radii";
+import { shadows } from "@/ui/tokens/shadows";
 import { spacing } from "@/ui/tokens/spacing";
 import { textStyles } from "@/ui/tokens/typography";
 import { showMessage, showPickFileType } from "@/utils/crossPlatformAlert";
 import { guestPrompt } from "@/utils/guestPrompt";
 
 import DeleteIcon from "../../../assets/attach_del.svg";
+import PdfDocIcon from "../../../assets/attachment_document.svg";
+import CheckMarkIcon from "../../../assets/check_mark.svg";
 import CheckWhiteIcon from "../../../assets/check_white.svg";
 import CloseErrorIcon from "../../../assets/close_error.svg";
+import CloseIcon from "../../../assets/close_sm.svg";
 import ErrorTriangleIcon from "../../../assets/error_triangle.svg";
 import AttachmentDocIcon from "../../../assets/mobile_attachment_document.svg";
 import AttachmentImageIcon from "../../../assets/mobile_attachment_image.svg";
@@ -88,8 +95,8 @@ function fileToLocalFile(file: File): LocalFile | null {
 
 function getAttachmentKindLabel(mimeType: string | undefined): string {
   const m = mimeType ?? "";
-  if (m === "application/pdf") return "문서 선택";
-  if (m.startsWith("image/")) return "이미지 선택";
+  if (m === "application/pdf") return "PDF 파일";
+  if (m.startsWith("image/")) return "이미지 파일";
   return "파일";
 }
 
@@ -103,8 +110,33 @@ function isImageMime(mimeType: string | undefined): boolean {
 
 function formatFileSize(bytes: number): string {
   if (bytes <= 0) return "";
-  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)}KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)}MB`;
+  const mb = Math.max(0.1, bytes / (1024 * 1024));
+  return `${mb.toFixed(1)}MB`;
+}
+
+function FileThumbnail({
+  mimeType,
+  uri,
+}: {
+  mimeType?: string;
+  uri?: string;
+}) {
+  if (uri && isImageMime(mimeType)) {
+    return (
+      <Image source={{ uri }} style={styles.fileThumbnail} resizeMode="cover" />
+    );
+  }
+  if (isPdfMime(mimeType)) {
+    return (
+      <View style={styles.pdfThumbnail}>
+        <PdfDocIcon width={20} height={20} color={colors.pdfText} />
+      </View>
+    );
+  }
+  if (String(mimeType ?? "").startsWith("image/")) {
+    return <AttachmentImageIcon width={20} height={20} />;
+  }
+  return <AttachmentDocIcon width={20} height={20} />;
 }
 
 function stopEventBubble<E extends { stopPropagation?: () => void }>(
@@ -184,14 +216,16 @@ export default function AttachmentSection({
 
   useEffect(() => {
     setAiFileSelection(prev => {
-      if (!prev) return prev;
-      if (prev.kind === "existing") {
-        return existing.some(a => a.id === prev.id) ? prev : null;
-      }
-      const stillThere = pendingFiles.some(
-        f => pendingAiFileKey(f) === prev.key,
-      );
-      return stillThere ? prev : null;
+      const stillThere =
+        prev?.kind === "existing"
+          ? existing.some(a => a.id === prev.id)
+          : prev?.kind === "pending" &&
+            pendingFiles.some(f => pendingAiFileKey(f) === prev.key);
+      if (stillThere) return prev;
+      if (existing.length + pendingFiles.length !== 1) return null;
+      return existing.length === 1
+        ? { kind: "existing", id: existing[0].id }
+        : { kind: "pending", key: pendingAiFileKey(pendingFiles[0]) };
     });
   }, [existing, pendingFiles]);
 
@@ -407,17 +441,12 @@ export default function AttachmentSection({
     onRemove?: () => void,
     onOpen?: () => void,
     aiSelect?: { selected: boolean; onSelect: () => void },
+    thumbnailUri?: string,
   ) => {
     const iconAndInfo = (
       <>
         <View style={styles.fileIconWrap}>
-          {isPdfMime(mimeType) ? (
-            <AttachmentDocIcon width={20} height={20} />
-          ) : String(mimeType ?? "").startsWith("image/") ? (
-            <AttachmentImageIcon width={20} height={20} />
-          ) : (
-            <AttachmentDocIcon width={20} height={20} />
-          )}
+          <FileThumbnail mimeType={mimeType} uri={thumbnailUri} />
         </View>
         <View style={styles.fileInfo}>
           <Text style={styles.fileName} numberOfLines={1}>
@@ -445,26 +474,27 @@ export default function AttachmentSection({
     );
 
     const removeControl = onRemove ? (
-      <Pressable
+      <MotionPressable
         onPress={e => {
           stopEventBubble(e);
           onRemove();
         }}
         disabled={isUploading || disabled}
-        style={({ pressed }) => [
-          styles.removeButton,
-          pressed && styles.pressed,
-        ]}
+        style={styles.removeButton}
         hitSlop={6}
+        accessibilityLabel="삭제"
       >
-        <DeleteIcon width={20} height={20} color={colors.gray600} />
-      </Pressable>
+        <MotionIcon>
+          <CloseIcon width={10} height={10} color={colors.gray600} />
+        </MotionIcon>
+      </MotionPressable>
     ) : (
       <View style={styles.removeButton} />
     );
 
     const rowStyle = [
       styles.fileRow,
+      fileRowTransition,
       aiSelect?.selected && styles.fileRowAiSelected,
     ];
 
@@ -1010,16 +1040,16 @@ export default function AttachmentSection({
       >
         <Text style={styles.title}>첨부파일 (이미지,PDF)</Text>
         {!hideAddControls && (
-          <Pressable
+          <MotionPressable
             onPress={triggerHiddenFilePicker}
             disabled={disabled || isUploading}
-            style={({ pressed }) => [
-              styles.addButtonRow,
-              pressed && styles.pressed,
+            style={[
+              styles.addButton,
+              (disabled || isUploading) && styles.addButtonDisabled,
             ]}
           >
             <Text style={styles.addLabel}>+ 추가</Text>
-          </Pressable>
+          </MotionPressable>
         )}
       </View>
 
@@ -1087,6 +1117,7 @@ export default function AttachmentSection({
               onRemoveExisting ? () => handleRemoveExisting(a.id) : undefined,
               onOpen,
               aiSelect,
+              a.fileUrl,
             );
           })}
           {pendingFiles.map((file, index) => {
@@ -1117,10 +1148,13 @@ export default function AttachmentSection({
               `pending-${file.name}-${index}`,
               file.name,
               file.mimeType,
-              getAttachmentKindLabel(file.mimeType),
+              [getAttachmentKindLabel(file.mimeType), formatFileSize(file.size)]
+                .filter(Boolean)
+                .join(" · "),
               () => handleRemovePending(index),
               onOpen,
               aiSelect,
+              file.uri,
             );
           })}
         </View>
@@ -1194,22 +1228,38 @@ export default function AttachmentSection({
               }: { pressed: boolean; hovered?: boolean }) => {
                 const isDisabled = !aiFileSelection || disabled || isUploading;
                 const gradColors = isDisabled
-                  ? ([colors.gray400, colors.gray400] as const)
+                  ? ([colors.gray200, colors.gray200] as const)
                   : pressed
                     ? colors.aiGradPress
                     : hovered
                       ? colors.aiGradHover
                       : colors.aiGrad;
+                const contentColor = isDisabled ? colors.gray500 : colors.white;
                 return (
                   <LinearGradient
                     colors={gradColors}
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 1 }}
-                    style={styles.aiAnalyzeGradient}
+                    style={[
+                      styles.aiAnalyzeGradient,
+                      !isDisabled && pressed && shadows.aiGlowPress,
+                      !isDisabled && !pressed && hovered && shadows.aiGlow,
+                    ]}
                   >
                     <View style={styles.aiAnalyzeButtonInner}>
-                      <CheckWhiteIcon width={14} height={14} />
-                      <Text style={styles.aiAnalyzeButtonText}>AI로 분석</Text>
+                      <CheckMarkIcon
+                        width={16}
+                        height={16}
+                        color={contentColor}
+                      />
+                      <Text
+                        style={[
+                          styles.aiAnalyzeButtonText,
+                          { color: contentColor },
+                        ]}
+                      >
+                        AI로 분석
+                      </Text>
                     </View>
                   </LinearGradient>
                 );
@@ -1274,6 +1324,11 @@ export default function AttachmentSection({
     </View>
   );
 }
+
+const fileRowTransition = {
+  transitionProperty: "background-color, border-color",
+  transitionDuration: `${motion.duration.fast}ms`,
+} as ViewStyle;
 
 const styles = StyleSheet.create({
   root: {
@@ -1602,16 +1657,22 @@ const styles = StyleSheet.create({
   },
   title: {
     ...textStyles.h8,
-    color: colors.black,
+    color: colors.gray900,
   },
   addLabel: {
     ...textStyles.h8,
     color: colors.primary,
   },
-  addButtonRow: {
+  addButton: {
+    height: 24,
+    paddingHorizontal: 10,
+    borderRadius: radii.pill,
+    backgroundColor: colors.primaryTint,
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
+  },
+  addButtonDisabled: {
+    opacity: 0.5,
   },
   pressed: {
     opacity: 0.6,
@@ -1674,13 +1735,15 @@ const styles = StyleSheet.create({
   fileRow: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: colors.gray200,
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: colors.gray300,
     borderRadius: radii.md,
-    paddingVertical: 16,
-    paddingHorizontal: 16,
+    padding: spacing.md,
   },
   fileRowAiSelected: {
-    backgroundColor: colors.gray400,
+    backgroundColor: colors.primarySoft,
+    borderColor: colors.primary,
   },
   fileRowAiPressablePressed: {
     opacity: 0.92,
@@ -1690,7 +1753,7 @@ const styles = StyleSheet.create({
     marginLeft: 8,
     marginRight: 4,
     paddingVertical: 4,
-    paddingHorizontal: 4,
+    paddingHorizontal: spacing.sm,
     justifyContent: "center",
   },
   openLinkText: {
@@ -1698,29 +1761,48 @@ const styles = StyleSheet.create({
     color: colors.primary,
   },
   fileIconWrap: {
-    paddingHorizontal: 8,
-    paddingVertical: 8,
+    width: 40,
+    height: 40,
     borderRadius: radii.md,
-    backgroundColor: `${colors.primary}1A`,
+    backgroundColor: colors.gray300,
+    overflow: "hidden",
     alignItems: "center",
     justifyContent: "center",
-    marginRight: 12,
+    marginRight: spacing.md,
     flexShrink: 0,
+  },
+  fileThumbnail: {
+    width: 40,
+    height: 40,
+  },
+  pdfThumbnail: {
+    width: 40,
+    height: 40,
+    backgroundColor: colors.pdfBg,
+    alignItems: "center",
+    justifyContent: "center",
   },
   fileInfo: {
     flex: 1,
     minWidth: 0,
   },
   fileName: {
-    ...textStyles.h6,
+    ...textStyles.h7,
+    color: colors.gray900,
   },
   fileKindLabel: {
-    ...textStyles.body4,
+    ...textStyles.body6,
     color: colors.gray600,
     marginTop: 2,
   },
   removeButton: {
-    marginLeft: 4,
+    width: 20,
+    height: 20,
+    borderRadius: radii.pill,
+    backgroundColor: colors.gray300,
+    alignItems: "center",
+    justifyContent: "center",
+    marginLeft: spacing.xs,
     flexShrink: 0,
   },
   formatErrorBanner: {
@@ -1763,23 +1845,23 @@ const styles = StyleSheet.create({
   },
   aiAnalyzeButton: {
     width: "100%",
-    borderRadius: radii.md,
-    overflow: "hidden",
+    borderRadius: radii.mdPlus,
   },
   aiAnalyzeGradient: {
     width: "100%",
+    height: 48,
+    borderRadius: radii.mdPlus,
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 14,
-    paddingHorizontal: spacing.md,
+    paddingHorizontal: spacing.lg,
   },
   aiAnalyzeButtonInner: {
     flexDirection: "row",
     alignItems: "center",
-    gap: spacing.xs,
+    gap: spacing.sm,
   },
   aiAnalyzeButtonText: {
-    ...textStyles.h8,
+    ...textStyles.h6,
     color: colors.white,
     textAlign: "center",
   },

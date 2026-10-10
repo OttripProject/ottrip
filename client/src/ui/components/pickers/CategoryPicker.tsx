@@ -1,4 +1,5 @@
 import useDetectClose from "@/hooks/useDetectClose";
+import { useHover } from "@/hooks/useHover";
 import {
   type ExpenseCategory,
   categoryColors,
@@ -86,13 +87,21 @@ export default function CategoryPicker({
   const dotColor = categoryColors[value];
   const label = categoryLabels[value];
 
+  const triggerHover = useHover();
+
   return (
     <View
       ref={wrapperRef}
       style={[styles.wrapper, containerStyle, { zIndex: open ? 100 : 1 }]}
     >
       <Pressable
-        style={[styles.trigger, disabled && styles.triggerDisabled, style]}
+        style={[
+          styles.trigger,
+          disabled && styles.triggerDisabled,
+          style,
+          triggerHover.hovered && !disabled && !open && styles.triggerHover,
+        ]}
+        {...triggerHover.pressableHoverProps}
         onPress={handleToggle}
         disabled={disabled}
       >
@@ -163,6 +172,9 @@ const styles = StyleSheet.create({
     borderRadius: radii.md,
     minHeight: 40,
     paddingHorizontal: 12,
+  },
+  triggerHover: {
+    backgroundColor: colors.inputHover,
   },
   triggerDisabled: {
     opacity: 0.5,

@@ -1,7 +1,11 @@
 import { ExpenseCurrency } from "@/types/expense";
+import MotionPressable from "@/ui/components/MotionPressable";
 import { colors } from "@/ui/tokens/colors";
+import { radii } from "@/ui/tokens/radii";
+import { shadows } from "@/ui/tokens/shadows";
+import { spacing } from "@/ui/tokens/spacing";
 import { textStyles } from "@/ui/tokens/typography";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 import type { StyleProp, ViewStyle } from "react-native";
 
 const OPTIONS: { value: ExpenseCurrency; label: string }[] = [
@@ -31,7 +35,7 @@ export default function CurrencyToggle({
         {OPTIONS.map(opt => {
           const isActive = value === opt.value;
           return (
-            <Pressable
+            <MotionPressable
               key={opt.value}
               style={[styles.primaryOption, isActive && styles.primaryOptionActive]}
               onPress={() => onChange(opt.value)}
@@ -39,7 +43,7 @@ export default function CurrencyToggle({
               <Text style={[styles.primaryOptionText, isActive && styles.primaryOptionTextActive]}>
                 {opt.label}
               </Text>
-            </Pressable>
+            </MotionPressable>
           );
         })}
       </View>
@@ -53,7 +57,7 @@ export default function CurrencyToggle({
       {OPTIONS.map(opt => {
         const isActive = value === opt.value;
         return (
-          <Pressable
+          <MotionPressable
             key={opt.value}
             style={[
               styles.option,
@@ -61,8 +65,7 @@ export default function CurrencyToggle({
                 (isOutlined
                   ? styles.optionActiveOutlined
                   : styles.optionActive),
-              isActive &&
-                ({ boxShadow: "rgba(0, 0, 0, 0.3) 0px 1px 3px" } as any),
+              isActive && shadows.segmentActive,
             ]}
             onPress={() => onChange(opt.value)}
           >
@@ -71,7 +74,7 @@ export default function CurrencyToggle({
             >
               {opt.label}
             </Text>
-          </Pressable>
+          </MotionPressable>
         );
       })}
     </View>
@@ -81,11 +84,11 @@ export default function CurrencyToggle({
 const styles = StyleSheet.create({
   container: {
     flexDirection: "row",
-    gap: 3,
+    gap: spacing.xs,
     height: 40,
     backgroundColor: colors.gray200,
-    borderRadius: 10,
-    padding: 3,
+    borderRadius: radii.md,
+    padding: spacing.xs,
   },
   containerOutlined: {
     backgroundColor: colors.white,
@@ -95,7 +98,7 @@ const styles = StyleSheet.create({
   },
   option: {
     flex: 1,
-    borderRadius: 8,
+    borderRadius: radii.md,
     alignItems: "center",
     justifyContent: "center",
   },

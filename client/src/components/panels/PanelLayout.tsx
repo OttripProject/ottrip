@@ -17,7 +17,7 @@ const styles = StyleSheet.create({
   panel: {
     flex: 1,
     backgroundColor: colors.white,
-    borderRadius: radii.lg,
+    borderRadius: radii["2xl"],
     overflow: "hidden",
     ...shadows.lg,
   },

@@ -333,6 +333,7 @@ export default function PlacesSearchInput({
         <Input
           ref={inputRef}
           variant="filled"
+          size="md"
           style={[styles.input, disabled && styles.inputDisabled]}
           placeholder={placeholder}
           placeholderTextColor={colors.gray600}
@@ -464,14 +465,8 @@ const styles = StyleSheet.create({
   },
   input: {
     width: "100%",
-    height: 40,
-    backgroundColor: colors.gray200,
-    borderRadius: radii.md,
-    paddingLeft: spacing.md,
-    paddingRight: 36,
-    paddingVertical: spacing.none,
-    ...textStyles.body4,
-    color: colors.black,
+    paddingRight: spacing["2xl"],
+    color: colors.gray900,
   },
   inputDisabled: {
     color: colors.gray400,

@@ -731,7 +731,7 @@ export default function AddScheduleWithFileModal({
 
   function renderEditFormContent(draft: AiDocumentItemDraft, idx: number) {
     const v = (draftEdits[idx] ?? draft.payload.values) as Record<string, unknown>;
-    const timerPickerStyle = { height: 34, borderColor: colors.gray300, borderWidth: 1, borderRadius: 8, backgroundColor: colors.white };
+    const timerPickerStyle = { height: 40, borderColor: colors.gray300, borderWidth: 1, borderRadius: 8, backgroundColor: colors.white };
 
     if (draft.itemType === "itinerary") {
       const expNested = ((v.expense ?? {}) as Record<string, unknown>);

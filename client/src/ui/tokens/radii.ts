@@ -4,6 +4,7 @@ export const radii = {
   sm: 6,
   base: 8,
   md: 10,
+  mdPlus: 12,
   lg: 14,
   lgPlus: 16,
   xl: 18,

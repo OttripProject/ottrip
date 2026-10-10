@@ -30,6 +30,17 @@ const baseStyle = Platform.select({
   },
 });
 
+const isWeb = Platform.OS === "web";
+
+function filledBackground(disabled?: boolean) {
+  if (disabled) return colors.inputDisabled;
+  return isWeb ? colors.gray200 : colors.gray100;
+}
+
+function filledBorderWidth(error?: boolean) {
+  return isWeb && !error ? 0 : 1;
+}
+
 export function useInputStyleVariant(
   variant: InputVariant,
   state?: InputState,
@@ -57,7 +68,7 @@ export function useInputStyleVariant(
   }
 
   if (variant === "filled") {
-    const bg = disabled ? colors.inputDisabled : colors.gray100;
+    const bg = filledBackground(disabled);
     const borderColor = error ? colors.danger : "transparent";
     return {
       containerStyle: styles.container,
@@ -65,7 +76,7 @@ export function useInputStyleVariant(
         baseStyle,
         {
           backgroundColor: bg,
-          borderWidth: 1,
+          borderWidth: filledBorderWidth(error),
           borderColor,
           color: baseTextColor,
         },

@@ -1,3 +1,4 @@
+import { useHover } from "@/hooks/useHover";
 import useDetectClose from "@/hooks/useDetectClose";
 import { useMe } from "@/hooks/useMe";
 import { useRecentSearches } from "@/hooks/useRecentSearches";
@@ -504,6 +505,8 @@ export default function CityPicker({
     </View>
   );
 
+  const triggerHover = useHover();
+
   return (
     <View
       ref={wrapperRef}
@@ -514,7 +517,13 @@ export default function CityPicker({
       ]}
     >
       <Pressable
-        style={[styles.trigger, disabled && styles.triggerDisabled, style]}
+        style={[
+          styles.trigger,
+          disabled && styles.triggerDisabled,
+          style,
+          triggerHover.hovered && !disabled && !open && styles.triggerHover,
+        ]}
+        {...triggerHover.pressableHoverProps}
         onPress={handleToggle}
         disabled={disabled}
       >
@@ -615,6 +624,9 @@ const styles = StyleSheet.create({
     height: 40,
     paddingHorizontal: 12,
     paddingVertical: 10,
+  },
+  triggerHover: {
+    backgroundColor: colors.inputHover,
   },
   triggerDisabled: {
     borderWidth: 1,
