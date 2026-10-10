@@ -1,6 +1,7 @@
 import { useBackdropClose } from "@/hooks/useBackdropClose";
 import { useMe } from "@/hooks/useMe";
 import MotionPressable, {
+  MotionIcon,
   useMotionHovered,
 } from "@/ui/components/MotionPressable";
 import Spinner from "@/ui/components/Spinner";
@@ -27,10 +28,10 @@ import {
   type ViewStyle,
 } from "react-native";
 import AddIcon from "../../../assets/add.svg";
-import AiCheckIcon from "../../../assets/ai_check.svg";
-import RetryIcon from "../../../assets/retry.svg";
+import CheckMarkIcon from "../../../assets/check_mark.svg";
 import CloseXIcon from "../../../assets/close_x.svg";
 import DeleteIcon from "../../../assets/delete.svg";
+import RetryIcon from "../../../assets/retry.svg";
 
 interface ChecklistItem {
   id: number;
@@ -198,7 +199,9 @@ export default function AiChecklistListViewModal({
                   pressedStyle={shadows.aiGlowPress}
                 >
                   <AiRecommendGradient pressed={aiPressed} />
-                  <RetryIcon width={12} height={12} color={colors.white} />
+                  <View>
+                    <RetryIcon width={12} height={12} color={colors.white} />
+                  </View>
                   <Text style={styles.aiRecommendButtonText}>AI 추천</Text>
                 </MotionPressable>
               )}
@@ -274,7 +277,6 @@ export default function AiChecklistListViewModal({
                           <MotionPressable
                             onPress={() => handleStartAdding(categoryKey)}
                             style={styles.addItemButton}
-                            hoverStyle={styles.iconButtonHover}
                           >
                             <AddIcon width={16} height={16} />
                           </MotionPressable>
@@ -306,21 +308,29 @@ export default function AiChecklistListViewModal({
                                   onToggleItem(item.id, !item.isChecked)
                                 }
                               >
-                                <View
+                                <MotionPressable
                                   style={[
                                     styles.checkboxContainer,
                                     item.isChecked &&
                                       styles.checkboxContainerChecked,
                                   ]}
+                                  hoverStyle={
+                                    item.isChecked && shadows.darkHover
+                                  }
+                                  onPress={() =>
+                                    onToggleItem(item.id, !item.isChecked)
+                                  }
                                 >
                                   {item.isChecked ? (
-                                    <AiCheckIcon
-                                      width={10}
-                                      height={10}
-                                      color={colors.white}
-                                    />
+                                    <MotionIcon>
+                                      <CheckMarkIcon
+                                        width={10}
+                                        height={10}
+                                        color={colors.white}
+                                      />
+                                    </MotionIcon>
                                   ) : null}
-                                </View>
+                                </MotionPressable>
                                 <View style={styles.itemTextContainer}>
                                   <View style={styles.itemNameRow}>
                                     {!item.isCustom && (
@@ -363,11 +373,13 @@ export default function AiChecklistListViewModal({
                                 hoverStyle={styles.deleteItemHover}
                                 onPress={() => onDeleteItem(item.id)}
                               >
-                                <DeleteIcon
-                                  width={11}
-                                  height={11}
-                                  color={colors.gray900}
-                                />
+                                <MotionIcon>
+                                  <DeleteIcon
+                                    width={11}
+                                    height={11}
+                                    color={colors.gray900}
+                                  />
+                                </MotionIcon>
                               </MotionPressable>
                             </View>
                           );
@@ -596,9 +608,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  iconButtonHover: {
-    backgroundColor: colors.gray200,
-  },
   itemList: {
     gap: spacing.xs,
   },
@@ -633,7 +642,6 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
   deleteItemHover: {
-    backgroundColor: colors.gray300,
     opacity: 1,
   },
   addingItemRow: {
@@ -701,7 +709,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   checkboxContainerChecked: {
-    backgroundColor: colors.gray900,
+    ...surfaces.dark,
     borderColor: colors.gray900,
   },
   itemTextContainer: {
