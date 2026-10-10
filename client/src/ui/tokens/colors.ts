@@ -41,6 +41,7 @@ export const colors = {
   ] as const,
   sparkle: ["#7B6CFF", "#A06CFF", "#BADFFF", "#FFD7EB"] as const,
   dust: ["#C9C9CE", "#B4B4BA", "#DADADF"] as const,
+  checkBurst: ["#007AFF", "#0A84FF", "#BADFFF"] as const,
   overlayBackground: "rgba(0, 0, 0, 0.7)",
   aiGrad: ["#7B6CFF", "#A06CFF"] as const,
   aiGradHover: ["#6E5DF5", "#9559FB"] as const,

@@ -7,6 +7,7 @@ import MotionPressable, {
 import Spinner from "@/ui/components/Spinner";
 import Input from "@/ui/components/input/Input";
 import { modalMotion } from "@/ui/effects/modalMotion";
+import { playBurst } from "@/ui/effects/particles";
 import { colors } from "@/ui/tokens/colors";
 import { motion } from "@/ui/tokens/motion";
 import { radii } from "@/ui/tokens/radii";
@@ -119,6 +120,17 @@ export default function AiChecklistListViewModal({
   const [aiPressed, setAiPressed] = useState(false);
   const escapeLockRef = useRef(false);
   const backdrop = useBackdropClose(onClose);
+
+  const handleToggleItem = (item: ChecklistItem, items: ChecklistItem[]) => {
+    const next = !item.isChecked;
+    if (next) {
+      playBurst("check");
+      if (items.every(i => i.id === item.id || i.isChecked)) {
+        playBurst("complete");
+      }
+    }
+    onToggleItem(item.id, next);
+  };
 
   const handleStartAdding = (categoryKey: string) => {
     setAddingCategory(categoryKey);
@@ -312,9 +324,7 @@ export default function AiChecklistListViewModal({
                             >
                               <Pressable
                                 style={styles.checklistItem}
-                                onPress={() =>
-                                  onToggleItem(item.id, !item.isChecked)
-                                }
+                                onPress={() => handleToggleItem(item, items)}
                               >
                                 <MotionPressable
                                   style={[
@@ -325,9 +335,7 @@ export default function AiChecklistListViewModal({
                                   hoverStyle={
                                     item.isChecked && shadows.darkHover
                                   }
-                                  onPress={() =>
-                                    onToggleItem(item.id, !item.isChecked)
-                                  }
+                                  onPress={() => handleToggleItem(item, items)}
                                 >
                                   {item.isChecked ? (
                                     <MotionIcon>
