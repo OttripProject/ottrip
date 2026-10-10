@@ -261,6 +261,7 @@ const styles = StyleSheet.create({
   },
   badgeText: {
     ...textStyles.h9,
+    lineHeight: textStyles.h9.fontSize,
     color: colors.festivalText,
   },
 });
