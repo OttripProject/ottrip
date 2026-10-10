@@ -14,13 +14,19 @@ import { GoogleMap, Marker, useLoadScript } from "@react-google-maps/api";
 import type { NearbyAttraction, TourismDetail } from "@/services/tourism";
 import { tourismApi } from "@/services/tourism";
 import { locationsApi } from "@/services/locations";
+import { useBackdropClose } from "@/hooks/useBackdropClose";
 import { ItineraryCategory } from "@/types/itinerary";
+import MotionPressable, { MotionIcon } from "@/ui/components/MotionPressable";
+import { modalMotion } from "@/ui/effects/modalMotion";
 import { colors } from "@/ui/tokens/colors";
 import { radii } from "@/ui/tokens/radii";
 import { spacing } from "@/ui/tokens/spacing";
+import { surfaces } from "@/ui/tokens/surfaces";
 import { textStyles } from "@/ui/tokens/typography";
 import { formatWalkTime, haversineDistance } from "@/utils/distanceUtils";
-import CloseIcon from "../../../assets/close_sm.svg";
+import CloseXIcon from "../../../assets/close_x.svg";
+import TicketIcon from "../../../assets/mobile_ticket.svg";
+import PlusIcon from "../../../assets/mobile_plus.svg";
 import LocationIcon from "../../../assets/mobile_location.svg";
 import TimeIcon from "../../../assets/week_bar_time.svg";
 import CalendarIcon from "../../../assets/calendar_outline.svg";
@@ -52,6 +58,11 @@ const BADGE_COLORS: Record<string, { color: string; bg: string }> = {
   관광지: { color: "rgb(217, 28, 181)", bg: "rgb(255, 235, 251)" },
 };
 const DEFAULT_BADGE = { color: "#6C6C6C", bg: "#F5F5F5" };
+const BADGE_ICONS: Record<string, typeof CutleryIcon> = {
+  음식점: CutleryIcon,
+  숙박: RoomIcon,
+  "축제·공연": TicketIcon,
+};
 
 function mapContentTypeToCategory(contentTypeId: string | null): ItineraryCategory {
   switch (contentTypeId) {
@@ -215,9 +226,9 @@ export default function TourismDetailModal({
   const apiKey = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY_WEB ?? "";
   const { isLoaded } = useLoadScript({ googleMapsApiKey: apiKey });
 
+  const backdrop = useBackdropClose(onClose);
   const [detail, setDetail] = useState<TourismDetail | null>(null);
   const [loading, setLoading] = useState(false);
-  const [loadFailed, setLoadFailed] = useState(false);
   const [overviewExpanded, setOverviewExpanded] = useState(false);
   const [geocodedCoords, setGeocodedCoords] = useState<{ lat: number; lng: number } | null>(null);
   const isAccommodation = isAccommodationType(detail?.contentTypeId ?? item?.contentTypeId ?? null);
@@ -286,7 +297,6 @@ export default function TourismDetailModal({
   useEffect(() => {
     if (!item || !visible) return;
     setDetail(null);
-    setLoadFailed(false);
     setOverviewExpanded(false);
     setGeocodedCoords(null);
     setLoading(true);
@@ -310,7 +320,7 @@ export default function TourismDetailModal({
         return d;
       })
       .then(setDetail)
-      .catch(() => setLoadFailed(true))
+      .catch(() => {})
       .finally(() => setLoading(false));
   }, [item?.contentId, visible]);
 
@@ -333,6 +343,7 @@ export default function TourismDetailModal({
   if (!visible) return null;
 
   const badge = item ? (BADGE_COLORS[item.contentTypeId] ?? DEFAULT_BADGE) : DEFAULT_BADGE;
+  const BadgeIcon = item ? BADGE_ICONS[item.contentTypeId] : undefined;
   const detailCategoryLabel = detail
     ? (CONTENT_TYPE_LABELS[detail.contentTypeId ?? ""] ?? detail.contentTypeId)
     : null;
@@ -379,14 +390,23 @@ export default function TourismDetailModal({
     : null;
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <Pressable style={styles.overlay} onPress={onClose}>
-        <Pressable style={styles.modal} onPress={() => {}}>
+    <Modal visible={visible} transparent animationType="none" onRequestClose={onClose}>
+      <View style={styles.overlay} {...backdrop.overlayProps}>
+        <View style={styles.modal} {...backdrop.cardProps}>
             {/* 헤더 */}
             <View style={styles.header}>
               <View style={styles.headerRow}>
                 <View style={{ flexDirection: "row", gap: 8, alignItems: "center" }}>
-                  <View style={[styles.badge, { backgroundColor: badge.bg }]}>
+                  <View
+                    style={[
+                      styles.badge,
+                      BadgeIcon && styles.badgeWithIcon,
+                      { backgroundColor: badge.bg },
+                    ]}
+                  >
+                    {BadgeIcon && (
+                      <BadgeIcon width={12} height={12} color={badge.color} />
+                    )}
                     <Text style={[styles.badgeText, { color: badge.color }]}>
                       {badgeText}
                     </Text>
@@ -399,9 +419,15 @@ export default function TourismDetailModal({
                     </View>
                   )}
                 </View>
-                <Pressable onPress={onClose} style={styles.closeBtn}>
-                  <CloseIcon width={16} height={16} color={colors.gray600} />
-                </Pressable>
+                <MotionPressable
+                  onPress={onClose}
+                  style={styles.closeBtn}
+                  accessibilityLabel="닫기"
+                >
+                  <MotionIcon>
+                    <CloseXIcon width={16} height={16} color={colors.gray700} />
+                  </MotionIcon>
+                </MotionPressable>
               </View>
 
               {loading ? (
@@ -409,18 +435,12 @@ export default function TourismDetailModal({
               ) : (
                 <>
                   <Text style={styles.title}>{item?.title}</Text>
-                  {(detail?.address || walkTime) && (
+                  {walkTime && (
                     <View style={styles.addressRow}>
                       <LocationIcon width={12} height={12} color={colors.gray500} />
                       <Text style={styles.metaText}>
-                        {[detail?.address, walkTime].filter(Boolean).join(" · ")}
+                        {walkTime === "바로 옆" ? "현재 일정 바로 옆" : `현재 일정에서 ${walkTime}`}
                       </Text>
-                    </View>
-                  )}
-                  {item?.address && loadFailed && (
-                    <View style={styles.addressRow}>
-                      <LocationIcon width={12} height={12} color={colors.gray500} />
-                      <Text style={styles.metaText}>{item.address}</Text>
                     </View>
                   )}
                 </>
@@ -653,35 +673,38 @@ export default function TourismDetailModal({
 
           {/* 푸터 */}
           <View style={styles.footer}>
-            <Pressable style={styles.closeButton} onPress={onClose}>
+            <MotionPressable style={styles.closeButton} onPress={onClose}>
               <Text style={styles.closeButtonText}>닫기</Text>
-            </Pressable>
-            <Pressable
+            </MotionPressable>
+            <MotionPressable
               style={styles.addButton}
               onPress={handleAddToItinerary}
             >
+              <MotionIcon>
+                <PlusIcon width={16} height={16} color={colors.white} />
+              </MotionIcon>
               <Text style={styles.addButtonText}>
                 {isAccommodation ? "숙박에 추가" : "일정에 추가"}
               </Text>
-            </Pressable>
+            </MotionPressable>
           </View>
-        </Pressable>
-      </Pressable>
+        </View>
+      </View>
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
   overlay: {
-    // RNW Pressable이 기본으로 붙이는 cursor:pointer를 상쇄 (래퍼일 뿐 버튼이 아님)
-    cursor: "auto",
+    ...modalMotion.overlay,
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.4)",
+    ...surfaces.overlay,
     justifyContent: "center",
     alignItems: "center",
     padding: spacing.xl,
   },
   modal: {
+    ...modalMotion.card,
     // RNW Pressable이 기본으로 붙이는 cursor:pointer를 상쇄 (래퍼일 뿐 버튼이 아님)
     cursor: "auto",
     backgroundColor: colors.white,
@@ -716,8 +739,13 @@ const styles = StyleSheet.create({
     height: 28,
     paddingHorizontal: 12,
     borderRadius: radii.pill,
+    flexDirection: "row",
+    gap: spacing.xs,
     justifyContent: "center",
     alignItems: "center",
+  },
+  badgeWithIcon: {
+    paddingLeft: spacing.sm,
   },
   badgeText: {
     fontSize: 12,
@@ -740,7 +768,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: radii.pill,
-    backgroundColor: colors.gray100,
+    ...surfaces.subtle,
     justifyContent: "center",
     alignItems: "center",
   },
@@ -755,7 +783,7 @@ const styles = StyleSheet.create({
   addressRow: { flexDirection: "row", alignItems: "center", gap: 4, marginTop: 8 },
   metaText: {
     ...textStyles.body5,
-    color: colors.gray500,
+    color: colors.gray600,
     flex: 1,
   },
   iconRowContainer: {
@@ -791,12 +819,12 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "500",
     lineHeight: 20,
-    color: colors.gray500,
+    color: colors.gray600,
   },
   iconRowValue: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: "600",
-    lineHeight: 28,
+    lineHeight: 32,
     color: colors.gray900,
     whiteSpace: "pre-line",
   } as any,
@@ -870,7 +898,7 @@ const styles = StyleSheet.create({
   } as any,
   divider: {
     height: 1,
-    backgroundColor: colors.gray200,
+    backgroundColor: colors.gray300,
     marginHorizontal: 32,
   },
   section: {
@@ -886,8 +914,8 @@ const styles = StyleSheet.create({
     color: colors.gray900,
   } as any,
   overviewText: {
-    ...textStyles.body3,
-    color: colors.gray700,
+    ...textStyles.body2,
+    color: colors.gray800,
     lineHeight: 24,
     whiteSpace: "pre-line",
   } as any,
@@ -994,7 +1022,7 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 52,
     borderRadius: 16,
-    backgroundColor: colors.gray100,
+    ...surfaces.subtle,
     justifyContent: "center",
     alignItems: "center",
   },
@@ -1007,7 +1035,9 @@ const styles = StyleSheet.create({
     flex: 1.7,
     height: 52,
     borderRadius: 16,
-    backgroundColor: colors.gray900,
+    ...surfaces.dark,
+    flexDirection: "row",
+    gap: spacing.sm,
     justifyContent: "center",
     alignItems: "center",
   } as any,
