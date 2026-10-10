@@ -7,6 +7,7 @@ export const colors = {
   gray350: "#E2E2E2",
   inputDisabled: "#F8FAFC",
   inputHover: "#EDEDF0",
+  inputFocusBorder: "rgba(0, 122, 255, 0.55)",
   gray400: "#D4D4D4",
   gray500: "#B3B3B3",
   gray600: "#9B9B9B",

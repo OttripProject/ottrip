@@ -37,10 +37,6 @@ function filledBackground(disabled?: boolean) {
   return isWeb ? colors.gray200 : colors.gray100;
 }
 
-function filledBorderWidth(error?: boolean) {
-  return isWeb && !error ? 0 : 1;
-}
-
 export function useInputStyleVariant(
   variant: InputVariant,
   state?: InputState,
@@ -76,7 +72,7 @@ export function useInputStyleVariant(
         baseStyle,
         {
           backgroundColor: bg,
-          borderWidth: filledBorderWidth(error),
+          borderWidth: 1,
           borderColor,
           color: baseTextColor,
         },

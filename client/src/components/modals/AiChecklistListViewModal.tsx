@@ -1,8 +1,17 @@
+import { useBackdropClose } from "@/hooks/useBackdropClose";
 import { useMe } from "@/hooks/useMe";
+import MotionPressable, {
+  useMotionHovered,
+} from "@/ui/components/MotionPressable";
 import Spinner from "@/ui/components/Spinner";
 import Input from "@/ui/components/input/Input";
+import { modalMotion } from "@/ui/effects/modalMotion";
 import { colors } from "@/ui/tokens/colors";
+import { motion } from "@/ui/tokens/motion";
+import { radii } from "@/ui/tokens/radii";
+import { shadows } from "@/ui/tokens/shadows";
 import { spacing } from "@/ui/tokens/spacing";
+import { surfaces } from "@/ui/tokens/surfaces";
 import { textStyles } from "@/ui/tokens/typography";
 import { guestPrompt } from "@/utils/guestPrompt";
 import { LinearGradient } from "expo-linear-gradient";
@@ -14,14 +23,14 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TouchableOpacity,
   View,
+  type ViewStyle,
 } from "react-native";
+import AddIcon from "../../../assets/add.svg";
 import AiCheckIcon from "../../../assets/ai_check.svg";
-import AiRefreshIcon from "../../../assets/ai_refresh.svg";
-import XIcon from "../../../assets/close_sm.svg";
+import RetryIcon from "../../../assets/retry.svg";
+import CloseXIcon from "../../../assets/close_x.svg";
 import DeleteIcon from "../../../assets/delete.svg";
-import AddCheckList from "../../../assets/mobile_plus.svg";
 
 interface ChecklistItem {
   id: number;
@@ -50,7 +59,6 @@ interface AiChecklistListViewModalProps {
   onDeleteItem: (itemId: number) => void;
   onAddItem: (name: string, reason: string, category: string) => void;
 }
-
 
 const _CATEGORY_ORDER = [
   "basicRequired",
@@ -107,7 +115,9 @@ export default function AiChecklistListViewModal({
   const [newItemName, setNewItemName] = useState("");
   const [newItemReason, setNewItemReason] = useState("");
   const [hoveredItemId, setHoveredItemId] = useState<number | null>(null);
+  const [aiPressed, setAiPressed] = useState(false);
   const escapeLockRef = useRef(false);
+  const backdrop = useBackdropClose(onClose);
 
   const handleStartAdding = (categoryKey: string) => {
     setAddingCategory(categoryKey);
@@ -135,7 +145,7 @@ export default function AiChecklistListViewModal({
     <Modal
       visible={visible}
       transparent={true}
-      animationType="fade"
+      animationType="none"
       onRequestClose={() => {
         if (escapeLockRef.current) return;
         if (addingCategory) {
@@ -149,11 +159,8 @@ export default function AiChecklistListViewModal({
         }
       }}
     >
-      <Pressable style={styles.modalOverlay} onPress={onClose}>
-        <Pressable
-          style={styles.modalContent}
-          onPress={e => e.stopPropagation()}
-        >
+      <View style={styles.modalOverlay} {...backdrop.overlayProps}>
+        <View style={styles.modalContent} {...backdrop.cardProps}>
           {isLoading && (
             <View style={styles.loadingOverlay}>
               <Spinner />
@@ -176,7 +183,7 @@ export default function AiChecklistListViewModal({
                 </View>
               )}
               {!readOnly && (
-                <TouchableOpacity
+                <MotionPressable
                   onPress={() => {
                     if (isGuest) {
                       guestPrompt.show();
@@ -184,112 +191,107 @@ export default function AiChecklistListViewModal({
                     }
                     onRefresh();
                   }}
+                  onPressIn={() => setAiPressed(true)}
+                  onPressOut={() => setAiPressed(false)}
                   style={styles.aiRecommendButton}
-                  activeOpacity={0.8}
+                  hoverStyle={shadows.aiGlow}
+                  pressedStyle={shadows.aiGlowPress}
                 >
-                  <LinearGradient
-                    colors={colors.aiGrad}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 0 }}
-                    style={styles.aiRecommendButtonGradient}
-                  >
-                    <AiRefreshIcon width={12} height={12} />
-                    <Text style={styles.aiRecommendButtonText}>AI 추천</Text>
-                  </LinearGradient>
-                </TouchableOpacity>
+                  <AiRecommendGradient pressed={aiPressed} />
+                  <RetryIcon width={12} height={12} color={colors.white} />
+                  <Text style={styles.aiRecommendButtonText}>AI 추천</Text>
+                </MotionPressable>
               )}
             </View>
-            <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-              <XIcon width={14} height={14} fill={colors.black} />
-            </TouchableOpacity>
+            <MotionPressable onPress={onClose} style={styles.closeButton}>
+              <CloseXIcon width={16} height={16} color={colors.gray900} />
+            </MotionPressable>
           </View>
-          <View style={styles.scrollWrapper}>
-            <ScrollView
-              style={styles.checklistScrollView}
-              showsVerticalScrollIndicator={false}
-            >
-              {checklist && readOnly
-                ? sortCategories(Object.entries(checklist.categories ?? {}))
-                    .filter(([, items]) => items.length > 0)
-                    .map(([categoryKey, items], sectionIndex) => (
-                      <View
-                        key={categoryKey}
-                        style={[
-                          styles.readOnlyCategorySection,
-                          sectionIndex > 0 &&
-                            styles.readOnlyCategorySectionBorder,
-                        ]}
-                      >
-                        <View style={styles.readOnlyCategoryHeader}>
-                          <Text style={styles.readOnlyCategoryTitle}>
-                            {getCategoryTitle(categoryKey)}
-                          </Text>
-                          <Text style={styles.readOnlyCategoryCount}>
-                            {items.length}개
-                          </Text>
-                        </View>
-                        {items.map((item, i) => (
-                          <View
-                            key={item.id ?? i}
-                            style={styles.readOnlyItemRow}
-                          >
-                            <View style={styles.readOnlyItemDot} />
-                            {!item.isCustom && (
-                              <View style={styles.readOnlyAiBadge}>
-                                <Text style={styles.readOnlyAiBadgeText}>
-                                  AI
-                                </Text>
-                              </View>
-                            )}
-                            <Text style={styles.readOnlyItemText}>
-                              {item.name}
-                              {item.reason ? (
-                                <Text style={styles.readOnlyItemReason}>
-                                  {" · "}
-                                  {item.reason}
-                                </Text>
-                              ) : null}
-                            </Text>
-                          </View>
-                        ))}
+          <ScrollView
+            style={styles.checklistScrollView}
+            showsVerticalScrollIndicator={false}
+          >
+            {checklist && readOnly
+              ? sortCategories(Object.entries(checklist.categories ?? {}))
+                  .filter(([, items]) => items.length > 0)
+                  .map(([categoryKey, items], sectionIndex) => (
+                    <View
+                      key={categoryKey}
+                      style={[
+                        styles.readOnlyCategorySection,
+                        sectionIndex > 0 &&
+                          styles.readOnlyCategorySectionBorder,
+                      ]}
+                    >
+                      <View style={styles.readOnlyCategoryHeader}>
+                        <Text style={styles.readOnlyCategoryTitle}>
+                          {getCategoryTitle(categoryKey)}
+                        </Text>
+                        <Text style={styles.readOnlyCategoryCount}>
+                          {items.length}개
+                        </Text>
                       </View>
-                    ))
-                : checklist &&
-                  sortCategories(Object.entries(checklist.categories ?? {})).map(
-                    ([categoryKey, items], sectionIndex) => (
-                      <View
-                        key={categoryKey}
-                        style={[
-                          styles.categorySection,
-                          sectionIndex > 0 && styles.categorySectionBorder,
-                        ]}
-                      >
-                        <View style={styles.categoryHeaderRow}>
-                          <Text style={styles.categoryTitle}>
-                            {getCategoryTitle(categoryKey)}
-                          </Text>
-                          <Text style={styles.categoryProgress}>
-                            {readOnly
-                              ? items.length
-                              : `${items.filter(i => i.isChecked).length}/${items.length}`}
-                          </Text>
-                          <View style={styles.categoryHeaderSpacer} />
-                          {!readOnly && addingCategory !== categoryKey && (
-                            <TouchableOpacity
-                              onPress={() => handleStartAdding(categoryKey)}
-                              style={styles.addItemButton}
-                            >
-                              <AddCheckList width={12} height={12} />
-                            </TouchableOpacity>
+                      {items.map((item, i) => (
+                        <View key={item.id ?? i} style={styles.readOnlyItemRow}>
+                          <View style={styles.readOnlyItemDot} />
+                          {!item.isCustom && (
+                            <View style={styles.readOnlyAiBadge}>
+                              <Text style={styles.readOnlyAiBadgeText}>AI</Text>
+                            </View>
                           )}
+                          <Text style={styles.readOnlyItemText}>
+                            {item.name}
+                            {item.reason ? (
+                              <Text style={styles.readOnlyItemReason}>
+                                {" · "}
+                                {item.reason}
+                              </Text>
+                            ) : null}
+                          </Text>
                         </View>
+                      ))}
+                    </View>
+                  ))
+              : checklist &&
+                sortCategories(Object.entries(checklist.categories ?? {})).map(
+                  ([categoryKey, items], sectionIndex) => (
+                    <View
+                      key={categoryKey}
+                      style={[
+                        styles.categorySection,
+                        sectionIndex > 0 && styles.categorySectionBorder,
+                      ]}
+                    >
+                      <View style={styles.categoryHeaderRow}>
+                        <Text style={styles.categoryTitle}>
+                          {getCategoryTitle(categoryKey)}
+                        </Text>
+                        <Text style={styles.categoryProgress}>
+                          {`${items.filter(i => i.isChecked).length}/${items.length}`}
+                        </Text>
+                        <View style={styles.categoryHeaderSpacer} />
+                        {addingCategory !== categoryKey && (
+                          <MotionPressable
+                            onPress={() => handleStartAdding(categoryKey)}
+                            style={styles.addItemButton}
+                            hoverStyle={styles.iconButtonHover}
+                          >
+                            <AddIcon width={16} height={16} />
+                          </MotionPressable>
+                        )}
+                      </View>
 
+                      <View style={styles.itemList}>
                         {items.map(item => {
                           const isHovered = hoveredItemId === item.id;
                           return (
                             <View
                               key={item.id}
-                              style={styles.checklistItemWrapper}
+                              style={[
+                                styles.checklistItemWrapper,
+                                Platform.OS === "web" && bgTransition,
+                                isHovered && styles.checklistItemHover,
+                              ]}
                               {...(Platform.OS === "web"
                                 ? {
                                     onMouseEnter: () =>
@@ -298,183 +300,208 @@ export default function AiChecklistListViewModal({
                                   }
                                 : {})}
                             >
-                              <TouchableOpacity
+                              <Pressable
                                 style={styles.checklistItem}
-                                onPress={
-                                  readOnly
-                                    ? undefined
-                                    : () =>
-                                        onToggleItem(item.id, !item.isChecked)
+                                onPress={() =>
+                                  onToggleItem(item.id, !item.isChecked)
                                 }
                               >
-                                <View style={styles.itemContent}>
-                                  <View
-                                    style={[
-                                      styles.checkboxContainer,
-                                      item.isChecked &&
-                                        styles.checkboxContainerChecked,
-                                    ]}
-                                  >
-                                    {item.isChecked ? (
-                                      <AiCheckIcon
-                                        width={10}
-                                        height={10}
-                                        color={colors.white}
-                                      />
-                                    ) : null}
-                                  </View>
-                                  {!item.isCustom && (
-                                    <View style={styles.aiBadge}>
-                                      <Text style={styles.aiBadgeText}>AI</Text>
-                                    </View>
-                                  )}
-                                  <View style={styles.itemTextContainer}>
-                                    <Text
-                                      style={
-                                        item.isChecked
-                                          ? styles.itemTextStrikethrough
-                                          : undefined
-                                      }
-                                    >
-                                      <Text
-                                        style={[
-                                          styles.itemName,
-                                          item.isChecked &&
-                                            styles.itemNameChecked,
-                                        ]}
-                                      >
-                                        {item.name}
-                                      </Text>
-                                      {item.reason ? (
-                                        <Text
-                                          style={[
-                                            styles.itemReason,
-                                            item.isChecked &&
-                                              styles.itemReasonChecked,
-                                          ]}
-                                        >
-                                          {" · "}
-                                          {item.reason}
+                                <View
+                                  style={[
+                                    styles.checkboxContainer,
+                                    item.isChecked &&
+                                      styles.checkboxContainerChecked,
+                                  ]}
+                                >
+                                  {item.isChecked ? (
+                                    <AiCheckIcon
+                                      width={10}
+                                      height={10}
+                                      color={colors.white}
+                                    />
+                                  ) : null}
+                                </View>
+                                <View style={styles.itemTextContainer}>
+                                  <View style={styles.itemNameRow}>
+                                    {!item.isCustom && (
+                                      <View style={styles.aiBadge}>
+                                        <Text style={styles.aiBadgeText}>
+                                          AI
                                         </Text>
-                                      ) : null}
+                                      </View>
+                                    )}
+                                    <Text
+                                      style={[
+                                        styles.itemName,
+                                        item.isChecked &&
+                                          styles.itemNameChecked,
+                                      ]}
+                                      numberOfLines={1}
+                                    >
+                                      {item.name}
                                     </Text>
                                   </View>
+                                  {item.reason ? (
+                                    <Text
+                                      style={[
+                                        styles.itemReason,
+                                        item.isChecked &&
+                                          styles.itemReasonChecked,
+                                      ]}
+                                      numberOfLines={2}
+                                    >
+                                      {item.reason}
+                                    </Text>
+                                  ) : null}
                                 </View>
-                              </TouchableOpacity>
-                              {!readOnly && (
-                                <TouchableOpacity
-                                  style={[
-                                    styles.deleteItemButton,
-                                    { opacity: isHovered ? 1 : 0 },
-                                  ]}
-                                  onPress={() => onDeleteItem(item.id)}
-                                >
-                                  <DeleteIcon
-                                    width={11}
-                                    height={11}
-                                    color={colors.gray900}
-                                  />
-                                </TouchableOpacity>
-                              )}
+                              </Pressable>
+                              <MotionPressable
+                                style={[
+                                  styles.deleteItemButton,
+                                  isHovered && styles.deleteItemVisible,
+                                ]}
+                                hoverStyle={styles.deleteItemHover}
+                                onPress={() => onDeleteItem(item.id)}
+                              >
+                                <DeleteIcon
+                                  width={11}
+                                  height={11}
+                                  color={colors.gray900}
+                                />
+                              </MotionPressable>
                             </View>
                           );
                         })}
-                        {!readOnly && addingCategory === categoryKey && (
+                        {addingCategory === categoryKey && (
                           <View style={styles.addingItemRow}>
                             <View
-                              style={styles.addingItemCheckboxPlaceholder}
+                              style={[
+                                styles.checkboxContainer,
+                                styles.addingItemCheckboxPlaceholder,
+                              ]}
                             />
                             <View style={styles.addingItemInputs}>
-                            <View style={styles.inputWrapper}>
-                              <Input
-                                variant="filled"
-                                style={[styles.addingItemNameInput, { paddingRight: 40 }]}
-                                placeholder="항목명"
-                                placeholderTextColor={colors.gray600}
-                                value={newItemName}
-                                onChangeText={setNewItemName}
-                                maxLength={16}
-                                autoFocus
-                                onSubmitEditing={handleSaveAdding}
-                              />
-                              <Text style={[
-                                styles.counterText,
-                                newItemName.length === 16 && styles.counterTextMax
-                              ]}>
-                                {newItemName.length}/16
-                              </Text>
-                            </View>
-
-                            {/* 2. 이유 입력창 (24자 제한) */}
-                            <View style={styles.inputWrapper}>
-                              <Input
-                                variant="filled"
-                                style={[styles.addingItemReasonInput, { paddingRight: 40 }]}
-                                placeholder="이유 (선택)"
-                                placeholderTextColor={colors.gray600}
-                                value={newItemReason}
-                                onChangeText={setNewItemReason}
-                                maxLength={24}
-                                onSubmitEditing={handleSaveAdding}
-                              />
-                              <Text style={[
-                                styles.counterText,
-                                newItemReason.length === 24 && styles.counterTextMax
-                              ]}>
-                                {newItemReason.length}/24
-                              </Text>
-                            </View>
+                              <View style={styles.inputWrapper}>
+                                <Input
+                                  variant="filled"
+                                  style={styles.addingItemInput}
+                                  placeholder="항목명"
+                                  placeholderTextColor={colors.gray600}
+                                  value={newItemName}
+                                  onChangeText={setNewItemName}
+                                  maxLength={16}
+                                  autoFocus
+                                  onSubmitEditing={handleSaveAdding}
+                                />
+                                <Text
+                                  style={[
+                                    styles.counterText,
+                                    newItemName.length === 16 &&
+                                      styles.counterTextMax,
+                                  ]}
+                                >
+                                  {newItemName.length}/16
+                                </Text>
+                              </View>
+                              <View style={styles.inputWrapper}>
+                                <Input
+                                  variant="filled"
+                                  style={styles.addingItemInput}
+                                  placeholder="이유 (선택)"
+                                  placeholderTextColor={colors.gray600}
+                                  value={newItemReason}
+                                  onChangeText={setNewItemReason}
+                                  maxLength={24}
+                                  onSubmitEditing={handleSaveAdding}
+                                />
+                                <Text
+                                  style={[
+                                    styles.counterText,
+                                    newItemReason.length === 24 &&
+                                      styles.counterTextMax,
+                                  ]}
+                                >
+                                  {newItemReason.length}/24
+                                </Text>
+                              </View>
                             </View>
                             <View style={styles.addingItemButtons}>
-                              <TouchableOpacity
+                              <MotionPressable
                                 style={styles.addingItemCancelButton}
+                                hoverStyle={shadows.xsHover}
                                 onPress={handleCancelAdding}
                               >
                                 <Text style={styles.addingItemCancelText}>
                                   취소
                                 </Text>
-                              </TouchableOpacity>
-                              <TouchableOpacity
+                              </MotionPressable>
+                              <MotionPressable
                                 style={styles.addingItemSaveButton}
                                 onPress={handleSaveAdding}
                               >
                                 <Text style={styles.addingItemSaveText}>
                                   추가
                                 </Text>
-                              </TouchableOpacity>
+                              </MotionPressable>
                             </View>
                           </View>
                         )}
                       </View>
-                    ),
-                  )}
-            </ScrollView>
-          </View>
-        </Pressable>
-      </Pressable>
+                    </View>
+                  ),
+                )}
+          </ScrollView>
+        </View>
+      </View>
     </Modal>
   );
 }
 
+function AiRecommendGradient({ pressed }: { pressed: boolean }) {
+  const hovered = useMotionHovered();
+  return (
+    <LinearGradient
+      colors={
+        pressed
+          ? colors.aiGradPress
+          : hovered
+            ? colors.aiGradHover
+            : colors.aiGrad
+      }
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 0 }}
+      style={StyleSheet.absoluteFill}
+    />
+  );
+}
+
+const bgTransition = {
+  transitionProperty: "background-color",
+  transitionDuration: `${motion.duration.fast}ms`,
+} as ViewStyle;
+
 const styles = StyleSheet.create({
   modalOverlay: {
+    ...modalMotion.overlay,
     flex: 1,
-    backgroundColor: colors.overlayBackground,
+    ...surfaces.overlay,
     justifyContent: "center",
     alignItems: "center",
-    padding: spacing.xl,
+    padding: spacing.lgPlus,
   },
   modalContent: {
-    borderRadius: 20,
-    width: "100%",
-    maxWidth: 560,
-    maxHeight: "90%",
-    minHeight: 0,
+    ...modalMotion.card,
+    width: 520 + spacing.xl * 2,
+    maxWidth: "100%",
+    maxHeight: "min(680px, calc(100dvh - 80px))" as any,
     overflow: "hidden",
     backgroundColor: colors.white,
-    paddingTop: 24,
-    paddingHorizontal: 24,
-    paddingBottom: 18,
+    borderRadius: radii["2xl"],
+    paddingTop: spacing.xl,
+    paddingHorizontal: spacing.xl,
+    paddingBottom: spacing.lg,
+    gap: spacing.lg,
+    ...shadows.xl,
   },
   loadingOverlay: {
     position: "absolute",
@@ -502,53 +529,46 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 14,
   },
   titleContainer: {
     flexDirection: "row",
     alignItems: "center",
-    gap: spacing.sm,
+    gap: spacing.md,
   },
   headerTitle: {
     ...textStyles.h5,
-    color: colors.black,
+    color: colors.gray900,
   },
   aiRecommendButton: {
-    width: 74,
-    height: 28,
-    borderRadius: 40,
-    overflow: "hidden",
-  },
-  aiRecommendButtonGradient: {
-    flex: 1,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 4,
+    height: 32,
+    paddingHorizontal: spacing.md,
+    borderRadius: radii.pill,
+    gap: spacing.xs,
+    overflow: "hidden",
   },
   aiRecommendButtonText: {
     ...textStyles.h9,
     color: colors.white,
   },
   closeButton: {
-    width: 26,
-    height: 26,
+    width: 32,
+    height: 32,
     justifyContent: "center",
     alignItems: "center",
   },
-  scrollWrapper: {
-    flex: 1,
-    minHeight: 0,
-    overflow: "hidden",
-  },
   checklistScrollView: {
-    flex: 1,
-    backgroundColor: "transparent",
+    flexGrow: 0,
+    flexShrink: 1,
   },
   categorySection: {
-    paddingVertical: 14,
+    paddingTop: spacing.xs,
+    paddingBottom: spacing.lg,
   },
   categorySectionBorder: {
+    paddingTop: spacing.lg,
     borderTopWidth: 1,
     borderTopColor: colors.gray300,
   },
@@ -559,11 +579,11 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   categoryTitle: {
-    ...textStyles.h7,
-    color: colors.black,
+    ...textStyles.h8,
+    color: colors.gray900,
   },
   categoryProgress: {
-    ...textStyles.body6,
+    ...textStyles.h9,
     color: colors.gray600,
   },
   categoryHeaderSpacer: {
@@ -572,90 +592,84 @@ const styles = StyleSheet.create({
   addItemButton: {
     width: 24,
     height: 24,
+    borderRadius: radii.xs,
     justifyContent: "center",
     alignItems: "center",
+  },
+  iconButtonHover: {
+    backgroundColor: colors.gray200,
+  },
+  itemList: {
+    gap: spacing.xs,
   },
   checklistItemWrapper: {
     flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 7,
-    paddingHorizontal: 4,
-    borderRadius: 8,
+    alignItems: "flex-start",
+    gap: spacing.md,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.xs,
+    borderRadius: radii.md,
+  },
+  checklistItemHover: {
+    backgroundColor: colors.gray100,
   },
   checklistItem: {
     flex: 1,
+    minWidth: 0,
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: spacing.md,
   },
   deleteItemButton: {
-    width: 22,
-    height: 22,
+    width: 24,
+    height: 24,
+    borderRadius: radii.xs,
     justifyContent: "center",
     alignItems: "center",
+    marginTop: 2,
+    opacity: 0,
   },
-  emptyCategory: {
-    paddingVertical: spacing.md,
-    alignItems: "center",
+  deleteItemVisible: {
+    opacity: 0.7,
   },
-  emptyCategoryText: {
-    ...textStyles.body4,
-    color: colors.gray600,
+  deleteItemHover: {
+    backgroundColor: colors.gray300,
+    opacity: 1,
   },
   addingItemRow: {
     flexDirection: "row",
     alignItems: "flex-start",
-    gap: 10,
-    paddingVertical: 8,
-    paddingHorizontal: 4,
-    borderRadius: 8,
+    gap: spacing.md,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.xs,
+    borderRadius: radii.md,
   },
   addingItemCheckboxPlaceholder: {
-    width: 16,
-    height: 16,
-    borderRadius: 4,
-    borderWidth: 1.5,
-    borderColor: colors.gray400,
-    backgroundColor: colors.white,
     opacity: 0.4,
-    marginTop: 1,
   },
   addingItemInputs: {
     flex: 1,
-    flexDirection: "column",
-    gap: 6,
+    gap: spacing.sm,
   },
-  addingItemNameInput: {
-    ...textStyles.body5,
-    backgroundColor: colors.gray200,
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 7,
-    borderWidth: 0,
+  addingItemInput: {
+    ...textStyles.body3,
     color: colors.gray900,
-    outlineWidth: 0,
-    outlineStyle: "none",
-  } as any,
-  addingItemReasonInput: {
-    ...textStyles.body5,
-    backgroundColor: colors.gray200,
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 7,
-    borderWidth: 0,
-    color: colors.gray900,
-    outlineWidth: 0,
-    outlineStyle: "none",
-  } as any,
+    borderRadius: radii.mdPlus,
+    paddingVertical: spacing.md,
+    paddingLeft: 14,
+    paddingRight: spacing["2xl"] + spacing.lg,
+  },
   addingItemButtons: {
     flexDirection: "row",
-    gap: 6,
-    alignSelf: "flex-start",
+    gap: spacing.sm,
   },
   addingItemCancelButton: {
-    height: 30,
-    paddingHorizontal: 10,
-    borderRadius: 8,
+    height: 32,
+    paddingHorizontal: spacing.md,
+    borderRadius: radii.md,
     backgroundColor: colors.white,
     borderWidth: 1,
-    borderColor: "#E2E2E2",
+    borderColor: colors.gray350,
     justifyContent: "center",
     alignItems: "center",
   },
@@ -664,10 +678,10 @@ const styles = StyleSheet.create({
     color: colors.gray900,
   },
   addingItemSaveButton: {
-    height: 30,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-    backgroundColor: colors.primary,
+    height: 32,
+    paddingHorizontal: spacing.md,
+    borderRadius: radii.md,
+    ...surfaces.primary,
     justifyContent: "center",
     alignItems: "center",
   },
@@ -675,53 +689,52 @@ const styles = StyleSheet.create({
     ...textStyles.h8,
     color: colors.white,
   },
-  itemContent: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-  },
   checkboxContainer: {
     width: 16,
     height: 16,
-    borderRadius: 4,
+    borderRadius: radii.xs,
     borderWidth: 1.5,
     borderColor: colors.gray400,
     backgroundColor: colors.white,
-    marginRight: 10,
     justifyContent: "center",
     alignItems: "center",
-    marginTop: 1,
+    marginTop: 2,
   },
   checkboxContainerChecked: {
     backgroundColor: colors.gray900,
     borderColor: colors.gray900,
   },
+  itemTextContainer: {
+    flex: 1,
+    minWidth: 0,
+    gap: 2,
+  },
+  itemNameRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    minWidth: 0,
+  },
   aiBadge: {
     height: 16,
-    paddingHorizontal: 5,
-    borderRadius: 4,
+    paddingHorizontal: spacing.xs,
+    borderRadius: radii.xs,
     backgroundColor: colors.aiTint,
     justifyContent: "center",
     alignItems: "center",
-    marginRight: 6,
-    marginTop: 1,
   },
   aiBadgeText: {
-    ...textStyles.h10,
+    ...textStyles.h9,
     color: colors.aiInk,
   },
-  itemTextContainer: {
-    flex: 1,
-  },
   itemName: {
-    ...textStyles.body5,
+    ...textStyles.h7,
     color: colors.gray900,
-  },
-  itemTextStrikethrough: {
-    textDecorationLine: "line-through",
-    textDecorationColor: colors.gray500,
+    flexShrink: 1,
   },
   itemNameChecked: {
     color: colors.gray600,
+    textDecorationLine: "line-through",
   },
   itemReason: {
     ...textStyles.body5,
@@ -808,15 +821,16 @@ const styles = StyleSheet.create({
   inputWrapper: {
     position: "relative",
     justifyContent: "center",
-    marginBottom: 4, 
   },
   counterText: {
     position: "absolute",
-    right: 12,
+    right: spacing.md,
     ...textStyles.body6,
-    color: colors.gray500, 
+    fontVariant: ["tabular-nums"],
+    color: colors.gray500,
+    pointerEvents: "none",
   },
-  counterTextMax:{
+  counterTextMax: {
     color: colors.primary,
-  }
+  },
 });
