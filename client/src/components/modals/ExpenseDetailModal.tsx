@@ -1,6 +1,7 @@
 import ExpenseCard from "@/components/cards/ExpenseCard"
 import ImagePreviewModal, { type ImagePreviewItem } from "@/components/modals/ImagePreviewModal";
 import { useToast, ToastUI } from "@/contexts/ToastContext";
+import { useBackdropClose } from "@/hooks/useBackdropClose";
 import { expensesApi } from "@/services/expenses";
 import type { Attachment } from "@/types/api";
 import type { Expense } from "@/types/api";
@@ -10,12 +11,17 @@ import {
   categoryLabels,
   currencyLabels,
 } from "@/types/expense";
+import MotionPressable, { MotionIcon } from "@/ui/components/MotionPressable";
+import { modalMotion } from "@/ui/effects/modalMotion";
 import { colors } from "@/ui/tokens/colors";
 import { radii } from "@/ui/tokens/radii";
+import { shadows } from "@/ui/tokens/shadows";
 import { spacing } from "@/ui/tokens/spacing";
+import { surfaces } from "@/ui/tokens/surfaces";
 import { textStyles, typography } from "@/ui/tokens/typography";
+import { toUserMessage } from "@/utils/crossPlatformAlert";
 import { formatFileSize } from "@/utils/fileUtils";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Modal,
   Pressable,
@@ -30,7 +36,7 @@ import DeleteIcon from "../../../assets/delete.svg";
 import UpdateIcon from "../../../assets/update.svg"
 import AttachmentDocumentIcon from "../../../assets/mobile_attachment_document.svg";
 import AttachmentImageIcon from "../../../assets/mobile_attachment_image.svg";
-import XIcon from "../../../assets/x.svg";
+import CloseXIcon from "../../../assets/close_x.svg";
 
 
 interface ExpenseDetailModalProps {
@@ -56,13 +62,20 @@ const categoryOrder = [
 export default function ExpenseDetailModal({
   visible,
   onClose,
-  expenses,
+  expenses: allExpenses,
   attachments = [],
   onExpenseDelete,
   onExpenseUpdate,
   readOnly = false,
 }: ExpenseDetailModalProps) {
   const { height: windowHeight } = useWindowDimensions();
+  const backdrop = useBackdropClose(onClose);
+  const pendingDeletesRef = useRef(new Map<number, ReturnType<typeof setTimeout>>());
+  const [hiddenIds, setHiddenIds] = useState<Set<number>>(new Set());
+  const expenses = useMemo(
+    () => allExpenses.filter(e => !hiddenIds.has(e.id)),
+    [allExpenses, hiddenIds],
+  );
   const [tab, setTab] = useState<"expenses" | "attachments">("expenses");
   const [selectedCategory, setSelectedCategory] =
     useState<ExpenseCategory | null>(null);
@@ -177,13 +190,76 @@ export default function ExpenseDetailModal({
     return grouped;
   }, [expenses]);
 
-  const handleDelete = async (expenseId: number) => {
+  const setHidden = (expenseId: number, hidden: boolean) =>
+    setHiddenIds(prev => {
+      const next = new Set(prev);
+      if (hidden) next.add(expenseId);
+      else next.delete(expenseId);
+      return next;
+    });
+
+  const commitDelete = async (expenseId: number) => {
+    const timer = pendingDeletesRef.current.get(expenseId);
+    if (timer === undefined) return;
+    clearTimeout(timer);
+    pendingDeletesRef.current.delete(expenseId);
     try {
       await expensesApi.deleteExpense(expenseId);
       onExpenseDelete?.();
-      showToast("지출을 삭제했습니다.")
-    } catch {}
+    } catch (error) {
+      setHidden(expenseId, false);
+      showToast(toUserMessage(error), { icon: "info" });
+    }
   };
+
+  const undoDelete = (expenseId: number) => {
+    const timer = pendingDeletesRef.current.get(expenseId);
+    if (timer === undefined) return;
+    clearTimeout(timer);
+    pendingDeletesRef.current.delete(expenseId);
+    setHidden(expenseId, false);
+  };
+
+  const handleDelete = (expenseId: number) => {
+    if (pendingDeletesRef.current.has(expenseId)) return;
+    setHidden(expenseId, true);
+    pendingDeletesRef.current.set(
+      expenseId,
+      setTimeout(() => commitDelete(expenseId), UNDO_DELETE_DURATION),
+    );
+    showToast("지출을 삭제했습니다.", {
+      duration: UNDO_DELETE_DURATION,
+      effect: "poof",
+      action: { label: "되돌리기", onPress: () => undoDelete(expenseId) },
+    });
+  };
+
+  const flushPendingDeletes = () => {
+    for (const expenseId of [...pendingDeletesRef.current.keys()]) {
+      void commitDelete(expenseId);
+    }
+  };
+
+  const flushRef = useRef(flushPendingDeletes);
+  flushRef.current = flushPendingDeletes;
+
+  useEffect(() => {
+    if (!visible) flushRef.current();
+  }, [visible]);
+
+  useEffect(() => () => flushRef.current(), []);
+
+  useEffect(() => {
+    setHiddenIds(prev => {
+      const ids = new Set(allExpenses.map(e => e.id));
+      const next = new Set(
+        [...prev].filter(
+          id => ids.has(id) || pendingDeletesRef.current.has(id),
+        ),
+      );
+      return next.size === prev.size ? prev : next;
+    });
+  }, [allExpenses]);
 
   const handleAttachmentCardPress = (attachment: Attachment) => {
     if (attachment.contentType.startsWith("image/")) {
@@ -222,16 +298,31 @@ export default function ExpenseDetailModal({
       <Modal
         visible={visible}
         transparent
-        animationType="fade"
+        animationType="none"
         onRequestClose={onClose}
       >
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { maxHeight: windowHeight * 0.80, minHeight: windowHeight * 0.30 }]}>
+        <View style={styles.modalOverlay} {...backdrop.overlayProps}>
+          <View
+            {...backdrop.cardProps}
+            style={[
+              styles.modalContent,
+              {
+                maxHeight: Math.min(680, windowHeight - 80),
+                minHeight: windowHeight * 0.3,
+              },
+            ]}
+          >
             <View style={styles.header}>
               <Text style={styles.headerTitle}>지출 내역</Text>
-              <Pressable onPress={onClose} style={styles.closeButton}>
-                <XIcon width={24} height={24} />
-              </Pressable>
+              <MotionPressable
+                onPress={onClose}
+                style={styles.closeButton}
+                accessibilityLabel="닫기"
+              >
+                <MotionIcon>
+                  <CloseXIcon width={16} height={16} color={colors.gray900} />
+                </MotionIcon>
+              </MotionPressable>
             </View>
 
             <Pressable
@@ -255,7 +346,7 @@ export default function ExpenseDetailModal({
 
             {!readOnly && (
               <View style={styles.tabBar}>
-                <Pressable
+                <MotionPressable
                   style={[
                     styles.tabItem,
                     tab === "expenses" && styles.tabItemActive,
@@ -270,8 +361,8 @@ export default function ExpenseDetailModal({
                   >
                     내역
                   </Text>
-                </Pressable>
-                <Pressable
+                </MotionPressable>
+                <MotionPressable
                   style={[
                     styles.tabItem,
                     tab === "attachments" && styles.tabItemActive,
@@ -287,11 +378,13 @@ export default function ExpenseDetailModal({
                     첨부파일
                   </Text>
                   {expenseAttachments.length > 0 && (
-                    <Text style={styles.tabBadge}>
-                      {expenseAttachments.length}
-                    </Text>
+                    <View style={styles.tabBadge}>
+                      <Text style={styles.tabBadgeText}>
+                        {expenseAttachments.length}
+                      </Text>
+                    </View>
                   )}
-                </Pressable>
+                </MotionPressable>
               </View>
             )}
 
@@ -318,7 +411,7 @@ export default function ExpenseDetailModal({
                         .filter(Boolean)
                         .join(" · ");
                       return (
-                        <Pressable
+                        <MotionPressable
                           key={category}
                           style={[
                             styles.summaryRow,
@@ -344,7 +437,7 @@ export default function ExpenseDetailModal({
                           >
                             {amountText}
                           </Text>
-                        </Pressable>
+                        </MotionPressable>
                       );
                     })}
                   </View>
@@ -471,47 +564,54 @@ export default function ExpenseDetailModal({
   );
 }
 
+const UNDO_DELETE_DURATION = 5000;
+
 const styles = StyleSheet.create({
   modalOverlay: {
+    ...modalMotion.overlay,
     flex: 1,
-    backgroundColor: colors.overlayBackground,
+    ...surfaces.overlay,
     justifyContent: "center",
     alignItems: "center",
+    padding: spacing.lgPlus,
   },
   modalContent: {
+    ...modalMotion.card,
     backgroundColor: colors.white,
-    borderRadius: radii.xl,
+    borderRadius: radii["2xl"],
     width: "100%",
     maxWidth: 520,
     minHeight: 0,
     overflow: "hidden",
+    ...shadows.xl,
   },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingHorizontal: spacing.xl,
-    paddingTop: spacing.xl + 8,
+    paddingHorizontal: spacing["2xl"],
+    paddingTop: spacing.xl,
     paddingBottom: spacing.lg,
   },
   headerTitle: {
-    ...textStyles.h3,
-    color: colors.black,
+    ...textStyles.h2,
+    color: colors.gray900,
   },
   closeButton: {
-    padding: spacing.xs,
-    marginTop: -spacing.xs,
-    marginRight: -spacing.xs,
+    width: 28,
+    height: 28,
+    alignItems: "center",
+    justifyContent: "center",
   },
   totalSection: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginHorizontal: spacing.xl,
-    paddingHorizontal: spacing.lg + 2,
-    paddingVertical: spacing.md + 2,
+    gap: spacing.md,
+    marginHorizontal: spacing["2xl"],
+    padding: spacing.lg,
     backgroundColor: colors.gray900,
-    borderRadius: radii.md,
+    borderRadius: radii.mdPlus,
   },
   totalLabel: {
     ...textStyles.h7,
@@ -519,25 +619,25 @@ const styles = StyleSheet.create({
   },
   totalAmountColumn: {
     alignItems: "flex-end",
-    gap: 2,
+    gap: spacing.xs,
   },
   totalAmount: {
-    ...textStyles.h5,
+    ...textStyles.h2,
+    fontFamily: typography.fontFamily.poppinsSemiBold,
     color: colors.white,
   },
   tabBar: {
     flexDirection: "row",
     gap: spacing.sm,
-    paddingHorizontal: spacing.xl,
-    paddingTop: spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.gray300,
+    paddingHorizontal: spacing["2xl"],
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.xs,
   },
   tabItem: {
     flexDirection: "row",
     alignItems: "center",
-    gap: spacing.xs,
-    paddingVertical: 6,
+    gap: spacing.sm,
+    paddingVertical: spacing.sm,
     paddingHorizontal: spacing.xs,
     borderBottomWidth: 2,
     borderBottomColor: "transparent",
@@ -547,40 +647,37 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.gray900,
   },
   tabText: {
-    ...textStyles.h7,
+    ...textStyles.h5,
     color: colors.gray600,
   },
   tabTextActive: {
     color: colors.gray900,
   },
   tabBadge: {
-    paddingHorizontal: 11,
-    paddingVertical: 2,
-    borderRadius: 999,
+    minWidth: 20,
+    height: 20,
+    paddingHorizontal: spacing.xs,
+    borderRadius: radii.pill,
     backgroundColor: colors.gray300,
-    overflow: "hidden",
-    fontFamily: typography.fontFamily.poppinsSemiBold,
-    fontSize: 10,
-    lineHeight: 14,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  tabBadgeText: {
+    ...textStyles.h9,
     color: colors.gray600,
   },
   divider: {
     height: 1,
     backgroundColor: colors.gray300,
-    marginHorizontal: spacing.xl,
-    marginVertical: spacing.md + 4,
   },
   summarySection: {
     gap: spacing.xs,
-    paddingTop: spacing.md,
   },
   summaryRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginHorizontal: spacing.xl,
-    paddingHorizontal: spacing.lg + 2,
-    paddingVertical: spacing.md + 2,
+    padding: spacing.md,
     borderRadius: radii.md,
   },
   summaryRowSelected: {
@@ -588,25 +685,28 @@ const styles = StyleSheet.create({
   },
   summaryCategory: {
     ...textStyles.body3,
-    color: colors.black,
+    color: colors.gray900,
   },
   summaryCategorySelected: {
-    ...textStyles.h7,
-    color: colors.black,
+    ...textStyles.h6,
+    fontWeight: typography.weight.bold,
+    color: colors.gray900,
   },
   summaryAmount: {
-    ...textStyles.h7,
-    color: colors.black,
+    ...textStyles.h6,
+    color: colors.gray900,
   },
   summaryAmountSelected: {
-    ...textStyles.h7,
-    color: colors.black,
+    ...textStyles.h6,
+    color: colors.gray900,
   },
   detailScrollView: {
     flex: 1,
     minHeight: 0,
   },
   detailScrollContent: {
+    paddingTop: spacing.lg,
+    paddingHorizontal: spacing["2xl"],
     paddingBottom: spacing.xl,
     gap: spacing.lg,
   },
@@ -618,11 +718,11 @@ const styles = StyleSheet.create({
   },
   categorySection: {
     gap: spacing.md,
-    paddingHorizontal: spacing.xl,
   },
   categoryHeader: {
-    ...textStyles.h7,
-    color: colors.black,
+    ...textStyles.h6,
+    color: colors.gray900,
+    marginTop: spacing.xs,
   },
   expenseCard: {
     backgroundColor: colors.gray100,

@@ -7,6 +7,7 @@ export const colors = {
   gray350: "#E2E2E2",
   inputDisabled: "#F8FAFC",
   inputHover: "#EDEDF0",
+  inputFocusBorder: "rgba(0, 122, 255, 0.55)",
   gray400: "#D4D4D4",
   gray500: "#B3B3B3",
   gray600: "#9B9B9B",
@@ -40,6 +41,7 @@ export const colors = {
   ] as const,
   sparkle: ["#7B6CFF", "#A06CFF", "#BADFFF", "#FFD7EB"] as const,
   dust: ["#C9C9CE", "#B4B4BA", "#DADADF"] as const,
+  checkBurst: ["#007AFF", "#0A84FF", "#BADFFF"] as const,
   overlayBackground: "rgba(0, 0, 0, 0.7)",
   aiGrad: ["#7B6CFF", "#A06CFF"] as const,
   aiGradHover: ["#6E5DF5", "#9559FB"] as const,
@@ -75,6 +77,7 @@ export const colors = {
   festivalBg: "#E3F6F6",
   festivalBgLight: "#F1FBFB",
   festivalText: "#0E8A8A",
+  performanceBg: "#FFEBFB",
 };
 
 export type ColorName = keyof typeof colors;

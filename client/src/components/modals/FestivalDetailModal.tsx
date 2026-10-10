@@ -16,12 +16,19 @@ import {
 import { GoogleMap, Marker, useLoadScript } from "@react-google-maps/api";
 import type { FestivalItem, TourismDetail } from "@/services/tourism";
 import { tourismApi } from "@/services/tourism";
+import { useBackdropClose } from "@/hooks/useBackdropClose";
 import { ItineraryCategory } from "@/types/itinerary";
+import MotionPressable, { MotionIcon } from "@/ui/components/MotionPressable";
+import { modalMotion } from "@/ui/effects/modalMotion";
 import { colors } from "@/ui/tokens/colors";
 import { radii } from "@/ui/tokens/radii";
+import { shadows } from "@/ui/tokens/shadows";
 import { spacing } from "@/ui/tokens/spacing";
+import { surfaces } from "@/ui/tokens/surfaces";
 import { textStyles } from "@/ui/tokens/typography";
 import CloseIcon from "../../../assets/close_sm.svg";
+import CloseXIcon from "../../../assets/close_x.svg";
+import PlusIcon from "../../../assets/mobile_plus.svg";
 import LocationIcon from "../../../assets/mobile_location.svg";
 import TimeIcon from "../../../assets/week_bar_time.svg";
 import CalendarIcon from "../../../assets/calendar_outline.svg";
@@ -31,7 +38,7 @@ import RightArrowIcon from "../../../assets/right_arrow.svg";
 
 const LCLSSYSTM2_MAP: Record<string, { label: string; bg: string; color: string }> = {
   EV01: { label: "축제", bg: colors.festivalBg, color: colors.festivalText },
-  EV02: { label: "공연", bg: "#FDEAF9", color: colors.categoryActivity },
+  EV02: { label: "공연", bg: colors.performanceBg, color: colors.categoryActivity },
   EV03: { label: "행사", bg: colors.accommodationBg, color: colors.categoryMeal },
 };
 const DEFAULT_BADGE = { label: "축제", bg: colors.festivalBg, color: colors.festivalText };
@@ -64,6 +71,7 @@ export default function FestivalDetailModal({ visible, onClose, item, onAddToIti
   const [singleAspectRatio, setSingleAspectRatio] = useState<number | null>(null);
   const [zoomIndex, setZoomIndex] = useState<number | null>(null);
   const scrollAnim = useRef(new Animated.Value(0)).current;
+  const backdrop = useBackdropClose(onClose);
 
   // detail 로드 후에만 allImages 확정 → loading 중엔 빈 배열 → single/multi 판별 정확
   const allImages = useMemo(() => {
@@ -185,24 +193,35 @@ export default function FestivalDetailModal({ visible, onClose, item, onAddToIti
   if (detail?.agelimit) tableRows.push({ label: "관람연령", value: detail.agelimit });
 
   const iconRows: { label: string; value: string; icon: "calendar" | "clock" | "won" }[] = [];
-  if (period) iconRows.push({ label: "행사기간", value: period, icon: "calendar" });
+  if (period) iconRows.push({ label: "기간", value: period, icon: "calendar" });
   if (detail?.playtime) iconRows.push({ label: "행사시간", value: detail.playtime, icon: "clock" });
   if (detail?.usetimefestival) iconRows.push({ label: "이용요금", value: detail.usetimefestival, icon: "won" });
 
   return (
     <>
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <Pressable style={styles.overlay} onPress={onClose}>
-        <Pressable style={styles.modal} onPress={() => {}}>
+    <Modal visible={visible} transparent animationType="none" onRequestClose={onClose}>
+      <View style={styles.overlay} {...backdrop.overlayProps}>
+        <View style={styles.modal} {...backdrop.cardProps}>
+          <ScrollView
+            style={styles.scroll}
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+          >
           {/* 헤더 */}
-          <View style={styles.header}>
+          <View>
             <View style={styles.headerRow}>
               <View style={[styles.badge, { backgroundColor: badge.bg }]}>
                 <Text style={[styles.badgeText, { color: badge.color }]}>{badge.label}</Text>
               </View>
-              <Pressable onPress={onClose} style={styles.closeBtn}>
-                <CloseIcon width={16} height={16} color={colors.gray600} />
-              </Pressable>
+              <MotionPressable
+                onPress={onClose}
+                style={styles.closeBtn}
+                accessibilityLabel="닫기"
+              >
+                <MotionIcon>
+                  <CloseXIcon width={16} height={16} color={colors.gray700} />
+                </MotionIcon>
+              </MotionPressable>
             </View>
             {loading ? (
               <ActivityIndicator style={{ marginTop: 32 }} color={colors.gray400} />
@@ -211,7 +230,7 @@ export default function FestivalDetailModal({ visible, onClose, item, onAddToIti
                 <Text style={styles.title} numberOfLines={2}>{detail?.title ?? item.title}</Text>
                 {(detail?.address || item.address) && (
                   <View style={styles.addressRow}>
-                    <LocationIcon width={12} height={12} color={colors.gray500} />
+                    <LocationIcon width={13} height={13} color={colors.gray500} />
                     <Text style={styles.metaText} numberOfLines={2}>
                       {detail?.address ?? item.address}
                     </Text>
@@ -221,7 +240,6 @@ export default function FestivalDetailModal({ visible, onClose, item, onAddToIti
             )}
           </View>
 
-          <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false}>
             {/* 사진 */}
             {allImages.length > 0 && (() => {
               const isSingle = allImages.length === 1;
@@ -363,7 +381,7 @@ export default function FestivalDetailModal({ visible, onClose, item, onAddToIti
             {!loading && (tableRows.length > 0 || (Platform.OS === "web" && mapCoords && isLoaded)) && (
               <>
                 <View style={styles.divider} />
-                <View style={[styles.section, { paddingBottom: 0 }]}>
+                <View style={styles.section}>
                   <Text style={styles.sectionTitle}>장소</Text>
                   {Platform.OS === "web" && mapCoords && isLoaded && (
                     <View style={styles.mapContainer}>
@@ -411,7 +429,6 @@ export default function FestivalDetailModal({ visible, onClose, item, onAddToIti
                     </View>
                   )}
                 </View>
-                <View style={{ height: spacing.md }} />
               </>
             )}
 
@@ -450,19 +467,23 @@ export default function FestivalDetailModal({ visible, onClose, item, onAddToIti
 
           {/* 푸터 */}
           <View style={styles.footer}>
-            <Pressable style={styles.closeButton} onPress={onClose}>
+            <MotionPressable style={styles.closeButton} onPress={onClose}>
               <Text style={styles.closeButtonText}>닫기</Text>
-            </Pressable>
-            <Pressable
+            </MotionPressable>
+            <MotionPressable
               style={[styles.addButton, (loading || !detail) && styles.addButtonDisabled]}
+              hoverStyle={shadows.darkHover}
               onPress={handleAddToItinerary}
               disabled={loading || !detail}
             >
+              <MotionIcon>
+                <PlusIcon width={16} height={16} color={colors.white} />
+              </MotionIcon>
               <Text style={styles.addButtonText}>일정에 추가</Text>
-            </Pressable>
+            </MotionPressable>
           </View>
-        </Pressable>
-      </Pressable>
+        </View>
+      </View>
     </Modal>
 
     {/* 이미지 줌 오버레이 */}
@@ -525,38 +546,33 @@ export default function FestivalDetailModal({ visible, onClose, item, onAddToIti
 
 const styles = StyleSheet.create({
   overlay: {
-    // RNW Pressable이 기본으로 붙이는 cursor:pointer를 상쇄 (래퍼일 뿐 버튼이 아님)
-    cursor: "auto",
+    ...modalMotion.overlay,
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.4)",
+    ...surfaces.overlay,
     justifyContent: "center",
     alignItems: "center",
     padding: spacing.xl,
   },
   modal: {
-    // RNW Pressable이 기본으로 붙이는 cursor:pointer를 상쇄 (래퍼일 뿐 버튼이 아님)
-    cursor: "auto",
+    ...modalMotion.card,
     backgroundColor: colors.white,
-    borderRadius: 24,
+    borderRadius: radii["2xl"],
     width: "100%",
     maxWidth: 640,
     maxHeight: "min(720px, calc(100vh - 80px))" as any,
     overflow: "hidden",
     display: "flex" as any,
     flexDirection: "column",
-    shadowColor: colors.gray900,
-    shadowOffset: { width: 0, height: 24 },
-    shadowOpacity: 0.3,
-    shadowRadius: 64,
-    elevation: 24,
+    ...shadows.modal,
   },
   scroll: {
-    flex: 1,
+    flexGrow: 0,
+    flexShrink: 1,
   },
-  header: {
-    paddingHorizontal: 32,
-    paddingTop: 24,
-    paddingBottom: spacing.md,
+  scrollContent: {
+    paddingHorizontal: spacing["2xl"],
+    paddingTop: spacing.xl,
+    paddingBottom: spacing.xs,
   },
   headerRow: {
     flexDirection: "row",
@@ -566,41 +582,42 @@ const styles = StyleSheet.create({
   },
   badge: {
     height: 28,
-    paddingHorizontal: 12,
+    paddingHorizontal: spacing.md,
     borderRadius: radii.pill,
     justifyContent: "center",
     alignItems: "center",
   },
   badgeText: {
-    fontSize: 12,
-    fontWeight: "600",
-    lineHeight: 12,
-  } as any,
+    ...textStyles.h8,
+    lineHeight: textStyles.h8.fontSize,
+  },
   closeBtn: {
     width: 36,
     height: 36,
     borderRadius: radii.pill,
-    backgroundColor: colors.gray100,
+    ...surfaces.subtle,
     justifyContent: "center",
     alignItems: "center",
   },
   title: {
-    marginTop: 16,
-    fontSize: 24,
-    fontWeight: "600",
-    lineHeight: 36,
+    ...textStyles.h2,
+    marginTop: spacing.lg,
     letterSpacing: -0.48,
     color: colors.gray900,
-  } as any,
-  addressRow: { flexDirection: "row", alignItems: "center", gap: 4, marginTop: 8 },
+  },
+  addressRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.xs,
+    marginTop: spacing.sm,
+  },
   metaText: {
     ...textStyles.body5,
-    color: colors.gray500,
+    color: colors.gray600,
     flex: 1,
   },
   photoWrapper: {
-    paddingHorizontal: 32,
-    marginTop: spacing.md,
+    marginTop: spacing.lg,
     marginBottom: spacing.sm,
     gap: spacing.sm,
   },
@@ -652,64 +669,54 @@ const styles = StyleSheet.create({
   },
   iconRowContainer: {
     flexDirection: "column",
-    paddingHorizontal: 32,
-    marginTop: spacing.sm,
+    marginTop: spacing.lg,
   },
   iconRow: {
     flexDirection: "row",
-    gap: 16,
-    alignItems: "center",
-    paddingVertical: 12,
+    gap: spacing.lg,
+    alignItems: "flex-start",
+    paddingVertical: spacing.md,
   },
   iconBox: {
     width: 48,
     height: 48,
-    borderRadius: 12,
-    backgroundColor: "rgb(234, 241, 254)",
+    borderRadius: radii.mdPlus,
+    backgroundColor: colors.primaryTint,
     flexShrink: 0,
     alignItems: "center",
     justifyContent: "center",
   },
   iconRowText: {
     flex: 1,
+    minWidth: 0,
     flexDirection: "column",
-    gap: 4,
+    gap: spacing.xs,
   },
   iconRowLabel: {
-    fontSize: 13,
-    fontWeight: "500",
-    lineHeight: 20,
-    color: colors.gray500,
-  } as any,
+    ...textStyles.body4,
+    color: colors.gray600,
+  },
   iconRowValue: {
-    fontSize: 18,
-    fontWeight: "600",
-    lineHeight: 28,
+    ...textStyles.h3,
     color: colors.gray900,
     whiteSpace: "pre-line",
   } as any,
   iconRowValueSmall: {
-    fontSize: 14,
-    fontWeight: "500",
-    lineHeight: 22,
-  } as any,
+    ...textStyles.body3,
+  },
   divider: {
     height: 1,
-    backgroundColor: colors.gray200,
-    marginHorizontal: 32,
+    backgroundColor: colors.gray300,
+    marginTop: spacing.lg,
   },
   section: {
-    paddingHorizontal: 32,
-    paddingTop: 16,
-    paddingBottom: 16,
-    gap: 12,
+    paddingTop: spacing.lg,
+    gap: spacing.md,
   },
   sectionTitle: {
-    fontSize: 13,
-    fontWeight: "700",
-    lineHeight: 20,
+    ...textStyles.h7,
     color: colors.gray900,
-  } as any,
+  },
   bodyText: {
     ...textStyles.body3,
     color: colors.gray700,
@@ -725,9 +732,9 @@ const styles = StyleSheet.create({
   mapContainer: {
     width: "100%",
     height: 176,
-    borderRadius: 16,
+    borderRadius: radii.lgPlus,
     overflow: "hidden",
-    backgroundColor: colors.gray100,
+    backgroundColor: colors.gray200,
     position: "relative",
   },
   mapOverlay: {
@@ -752,22 +759,22 @@ const styles = StyleSheet.create({
   },
   tableRow: {
     flexDirection: "row",
-    gap: 16,
-    alignItems: "center",
-    paddingVertical: 8,
+    gap: spacing.lg,
+    alignItems: "baseline",
+    paddingVertical: spacing.sm,
   },
   tableRowBorder: {
     borderBottomWidth: 1,
-    borderBottomColor: colors.gray200,
+    borderBottomColor: colors.gray300,
   },
   tableLabel: {
-    ...textStyles.body5,
-    color: colors.gray500,
-    width: 80,
+    ...textStyles.body4,
+    color: colors.gray600,
+    width: 96,
     flexShrink: 0,
   },
   tableValue: {
-    ...textStyles.body5,
+    ...textStyles.body4,
     color: colors.gray900,
     flex: 1,
     textAlign: "right",
@@ -781,44 +788,44 @@ const styles = StyleSheet.create({
     ...textStyles.body6,
     color: colors.gray500,
     textAlign: "right",
-    marginRight: spacing.xl
+    marginTop: spacing.md,
   } as any,
   footer: {
     flexDirection: "row",
-    gap: 12,
-    paddingHorizontal: 32,
-    paddingTop: 16,
-    paddingBottom: 24,
+    gap: spacing.md,
+    paddingHorizontal: spacing["2xl"],
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.xl,
   },
   closeButton: {
     flex: 1,
     height: 52,
-    borderRadius: 16,
-    backgroundColor: colors.gray100,
+    borderRadius: radii.lgPlus,
+    ...surfaces.subtle,
     justifyContent: "center",
     alignItems: "center",
   },
   closeButtonText: {
-    fontSize: 16,
-    fontWeight: "600",
+    ...textStyles.h5,
     color: colors.gray900,
-  } as any,
+  },
   addButton: {
     flex: 1.7,
     height: 52,
-    borderRadius: 16,
-    backgroundColor: colors.gray900,
+    borderRadius: radii.lgPlus,
+    ...surfaces.dark,
+    flexDirection: "row",
+    gap: spacing.sm,
     justifyContent: "center",
     alignItems: "center",
-  } as any,
+  },
   addButtonDisabled: {
     opacity: 0.4,
   } as any,
   addButtonText: {
-    fontSize: 16,
-    fontWeight: "600",
+    ...textStyles.h5,
     color: colors.white,
-  } as any,
+  },
   zoomOverlay: {
     // RNW Pressable이 기본으로 붙이는 cursor:pointer를 상쇄 (래퍼일 뿐 버튼이 아님)
     cursor: "auto",

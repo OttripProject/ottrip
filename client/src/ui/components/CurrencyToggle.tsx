@@ -18,6 +18,7 @@ interface CurrencyToggleProps {
   onChange: (currency: ExpenseCurrency) => void;
   variant?: "filled" | "outlined" | "primary";
   style?: StyleProp<ViewStyle>;
+  large?: boolean;
 }
 
 export default function CurrencyToggle({
@@ -25,6 +26,7 @@ export default function CurrencyToggle({
   onChange,
   variant = "filled",
   style,
+  large = false,
 }: CurrencyToggleProps) {
   const isOutlined = variant === "outlined";
   const isPrimary = variant === "primary";
@@ -70,7 +72,12 @@ export default function CurrencyToggle({
             onPress={() => onChange(opt.value)}
           >
             <Text
-              style={[styles.optionText, isActive && styles.optionTextActive]}
+              style={[
+                styles.optionText,
+                large && styles.optionTextLarge,
+                isActive && styles.optionTextActive,
+                isActive && large && styles.optionTextActiveLarge,
+              ]}
             >
               {opt.label}
             </Text>
@@ -111,6 +118,12 @@ const styles = StyleSheet.create({
   optionText: {
     ...textStyles.body4,
     color: colors.gray700,
+  },
+  optionTextLarge: {
+    ...textStyles.body3,
+  },
+  optionTextActiveLarge: {
+    ...textStyles.h6,
   },
   optionTextActive: {
     ...textStyles.h7,

@@ -55,6 +55,18 @@ const burstPresets = {
     shapes: ["spark", "spark", "dot"],
     life: 900,
   },
+  check: {
+    count: 8,
+    colors: colors.checkBurst,
+    power: 3.4,
+    spread: Math.PI * 2,
+    gravity: 0,
+    drag: 0.88,
+    size: 3,
+    shapes: ["dot", "spark"],
+    life: 450,
+  },
+  complete: { count: 30, power: 8 },
 } satisfies Record<string, BurstOptions>;
 
 export type BurstEffect = keyof typeof burstPresets;

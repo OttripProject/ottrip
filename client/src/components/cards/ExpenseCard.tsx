@@ -6,10 +6,12 @@ import { useFilePicker } from "@/hooks/useFilePicker";
 import type { LocalFile } from "@/types/api";
 import { type Expense, type Attachment, PLAN_ENTITY_KIND } from "@/types/api";
 import { ExpenseCurrency, currencyLabels } from "@/types/expense";
+import MotionPressable, { MotionIcon } from "@/ui/components/MotionPressable";
 import { colors } from "@/ui/tokens/colors";
 import { radii } from "@/ui/tokens/radii";
+import { shadows } from "@/ui/tokens/shadows";
 import { spacing } from "@/ui/tokens/spacing";
-import { textStyles, typography } from "@/ui/tokens/typography";
+import { textStyles } from "@/ui/tokens/typography";
 import { attachmentsApi } from "@/services/attachments";
 import { expensesApi } from "@/services/expenses";
 import ExpenseForm, { type ExpenseFormData } from "@/components/forms/ExpenseForm";
@@ -241,32 +243,41 @@ export default function ExpenseCard({
         {!readOnly && (
           <View style={styles.expenseCardActions}>
             {attachments.length > 0 && (
-              <Pressable
+              <MotionPressable
                 style={styles.attachmentButton}
+                hoverStyle={shadows.xsHover}
                 onPress={() => onAttachmentPress(expense, attachments)}
+                accessibilityLabel={`첨부파일 ${attachments.length}개 보기`}
               >
-                <AttachmentIcon
-                  width={11}
-                  height={11}
-                  color={colors.gray500}
-                  style={{ transform: [{ rotate: "45deg" }] }}
-                />
-              </Pressable>
+                <MotionIcon>
+                  <AttachmentIcon
+                    width={11}
+                    height={11}
+                    color={colors.gray700}
+                    style={{ transform: [{ rotate: "45deg" }] }}
+                  />
+                </MotionIcon>
+                <Text style={styles.attachmentCount}>{attachments.length}</Text>
+              </MotionPressable>
             )}
-            <Pressable style={styles.updateButton} onPress={handleEditStart}>
-                <UpdateIcon
-                width={14}
-                height={14}
-                color={colors.gray700}
-                />
-            </Pressable>
-            <Pressable style={styles.deleteButton} onPress={() => onDelete(expense.id)}>
-                <DeleteIcon
-                width={14}
-                height={14}
-                color={colors.warning}
-                />
-            </Pressable>
+            <MotionPressable
+              style={styles.updateButton}
+              onPress={handleEditStart}
+              accessibilityLabel="수정"
+            >
+              <MotionIcon>
+                <UpdateIcon width={16} height={16} color={colors.gray700} />
+              </MotionIcon>
+            </MotionPressable>
+            <MotionPressable
+              style={styles.deleteButton}
+              onPress={() => onDelete(expense.id)}
+              accessibilityLabel="삭제"
+            >
+              <MotionIcon>
+                <DeleteIcon width={15} height={15} color={colors.warning} />
+              </MotionIcon>
+            </MotionPressable>
           </View>
         )}
       </View>
@@ -278,7 +289,7 @@ const styles = StyleSheet.create({
     expenseCard: {
         backgroundColor: colors.gray100,
         borderRadius: radii.md,
-        padding: spacing.md + 2,
+        padding: spacing.lg,
         flexDirection: "row",
         alignItems: "flex-start",
         justifyContent: "space-between",
@@ -286,26 +297,24 @@ const styles = StyleSheet.create({
       },
       expenseCardLeft: {
         flex: 1,
-        gap: spacing.xs + 2,
+        gap: spacing.sm,
         minWidth: 0,
       },
       expenseCardRight: {
         flexShrink: 0,
         alignItems: "flex-end",
-        gap: spacing.xs,
+        gap: spacing.sm,
       },
       expenseDescription: {
         ...textStyles.h7,
         color: colors.gray900,
       },
-      expenseDate: {
-        fontFamily: typography.fontFamily.poppinsMedium,
-        fontSize: 11,
-        lineHeight: 16,
+expenseDate: {
+        ...textStyles.body6,
         color: colors.gray600,
       },
       expenseAmount: {
-        ...textStyles.h7,
+        ...textStyles.h6,
         color: colors.gray900,
       },
       expenseCardActions: {
@@ -316,13 +325,13 @@ const styles = StyleSheet.create({
       attachmentButton: {
         flexDirection: "row",
         alignItems: "center",
-        gap: 3,
+        gap: spacing.xs,
         height: 24,
         paddingHorizontal: spacing.sm,
         borderRadius: radii.pill,
         backgroundColor: colors.white,
         borderWidth: 1,
-        borderColor: colors.gray300,
+        borderColor: colors.gray350,
       },
       attachmentCount: {
         ...textStyles.h9,

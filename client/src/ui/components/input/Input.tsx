@@ -68,6 +68,7 @@ export const Input = forwardRef<TextInput, InputProps>(
                 editable !== false &&
                 stateStyles.filledHover,
               isWebFilled && focused && stateStyles.filledFocus,
+              isWebFilled && focused && !error && stateStyles.filledFocusBorder,
               focused &&
                 variant !== "bare" &&
                 (error
@@ -110,6 +111,9 @@ const stateStyles = StyleSheet.create({
   },
   filledFocus: {
     backgroundColor: colors.white,
+  },
+  filledFocusBorder: {
+    borderColor: colors.inputFocusBorder,
   },
 });
 

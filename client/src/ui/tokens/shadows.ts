@@ -61,6 +61,16 @@ export const shadows = {
     android: { elevation: 12 },
     default: { boxShadow: "0 24px 48px rgba(0,0,0,0.12)" } as any,
   }),
+  modal: Platform.select({
+    ios: {
+      shadowColor: "#000",
+      shadowOpacity: 0.3,
+      shadowRadius: 32,
+      shadowOffset: { width: 0, height: 24 },
+    },
+    android: { elevation: 24 },
+    default: { boxShadow: "0 24px 64px rgba(0,0,0,0.3)" } as any,
+  }),
   focusRing: Platform.select({
     ios: {},
     android: {},
@@ -103,6 +113,19 @@ export const shadows = {
     },
     android: { elevation: 3 },
     default: { boxShadow: "0 2px 8px rgba(123,108,255,0.30)" } as any,
+  }),
+  liftHover: Platform.select({
+    ios: {
+      shadowColor: "#141828",
+      shadowOpacity: 0.22,
+      shadowRadius: 20,
+      shadowOffset: { width: 0, height: 18 },
+    },
+    android: { elevation: 10 },
+    default: {
+      boxShadow:
+        "0 2px 4px rgba(20,24,40,0.05), 0 18px 40px -18px rgba(20,24,40,0.22)",
+    } as any,
   }),
   errorRing: Platform.select({
     ios: {},
