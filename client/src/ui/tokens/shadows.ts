@@ -84,6 +84,26 @@ export const shadows = {
     android: { elevation: 1 },
     default: { boxShadow: "0 1px 3px rgba(0,0,0,0.06)" } as any,
   }),
+  aiGlow: Platform.select({
+    ios: {
+      shadowColor: "#7B6CFF",
+      shadowOpacity: 0.34,
+      shadowRadius: 8,
+      shadowOffset: { width: 0, height: 6 },
+    },
+    android: { elevation: 6 },
+    default: { boxShadow: "0 6px 16px rgba(123,108,255,0.34)" } as any,
+  }),
+  aiGlowPress: Platform.select({
+    ios: {
+      shadowColor: "#7B6CFF",
+      shadowOpacity: 0.3,
+      shadowRadius: 4,
+      shadowOffset: { width: 0, height: 2 },
+    },
+    android: { elevation: 3 },
+    default: { boxShadow: "0 2px 8px rgba(123,108,255,0.30)" } as any,
+  }),
   errorRing: Platform.select({
     ios: {},
     android: {},
