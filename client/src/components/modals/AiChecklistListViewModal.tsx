@@ -206,8 +206,14 @@ export default function AiChecklistListViewModal({
                 </MotionPressable>
               )}
             </View>
-            <MotionPressable onPress={onClose} style={styles.closeButton}>
-              <CloseXIcon width={16} height={16} color={colors.gray900} />
+            <MotionPressable
+              onPress={onClose}
+              style={styles.closeButton}
+              accessibilityLabel="닫기"
+            >
+              <MotionIcon>
+                <CloseXIcon width={16} height={16} color={colors.gray900} />
+              </MotionIcon>
             </MotionPressable>
           </View>
           <ScrollView
@@ -278,7 +284,9 @@ export default function AiChecklistListViewModal({
                             onPress={() => handleStartAdding(categoryKey)}
                             style={styles.addItemButton}
                           >
-                            <AddIcon width={16} height={16} />
+                            <MotionIcon>
+                              <AddIcon width={16} height={16} />
+                            </MotionIcon>
                           </MotionPressable>
                         )}
                       </View>
