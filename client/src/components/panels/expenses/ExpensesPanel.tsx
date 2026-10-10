@@ -2,16 +2,20 @@ import { useToast } from "@/contexts/ToastContext";
 import AddExpenseModal from "@/components/modals/AddExpenseModal";
 import ExpenseDetailModal from "@/components/modals/ExpenseDetailModal";
 import { expensesApi } from "@/services/expenses";
+import MotionPressable from "@/ui/components/MotionPressable";
 import { colors } from "@/ui/tokens/colors";
+import { radii } from "@/ui/tokens/radii";
+import { shadows } from "@/ui/tokens/shadows";
 import { spacing } from "@/ui/tokens/spacing";
-import { textStyles, typography } from "@/ui/tokens/typography";
+import { surfaces } from "@/ui/tokens/surfaces";
+import { textStyles } from "@/ui/tokens/typography";
 import { useState } from "react";
 import {
   Alert,
   Pressable,
   StyleSheet,
   Text,
-  TouchableOpacity,
+  type TextStyle,
   View,
 } from "react-native";
 import PanelLayout from "../PanelLayout";
@@ -48,6 +52,15 @@ export default function ExpensesPanel({
 }: ExpensesPanelProps) {
   const [showExpenseForm, setShowExpenseForm] = useState(false);
   const [showExpenseDetail, setShowExpenseDetail] = useState(false);
+  const [totalBoxWidth, setTotalBoxWidth] = useState(TOTAL_FULL_WIDTH);
+  const textScale = Math.min(
+    1,
+    Math.max(TOTAL_MIN_SCALE, totalBoxWidth / TOTAL_FULL_WIDTH),
+  );
+  const scaled = (style: TextStyle) => ({
+    fontSize: (style.fontSize ?? 0) * textScale,
+    lineHeight: (style.lineHeight ?? 0) * textScale,
+  });
 
   const { showToast } = useToast();
 
@@ -90,46 +103,58 @@ export default function ExpensesPanel({
   const hasUSD = totals.USD > 0;
 
   return (
-    <PanelLayout style={{ flex: 1 }}>
+    <PanelLayout style={{ flex: 1 }} hoverStyle={shadows.liftHover}>
       <View style={styles.content}>
         <View style={styles.headerSection}>
           <Text style={styles.headerTitle}>여행 비용</Text>
           <View style={styles.headerActions}>
-            <TouchableOpacity
+            <MotionPressable
               onPress={() => setShowExpenseDetail(true)}
               style={styles.outlineButton}
+              hoverStyle={shadows.xsHover}
             >
               <Text style={styles.outlineButtonText}>상세보기</Text>
-            </TouchableOpacity>
+            </MotionPressable>
             {!readOnly && (
-              <Pressable
+              <MotionPressable
                 style={styles.outlineButton}
+                hoverStyle={shadows.xsHover}
                 onPress={() => setShowExpenseForm(true)}
               >
                 <Text style={styles.addButtonPlus}>+</Text>
                 <Text style={styles.outlineButtonText}>비용 추가</Text>
-              </Pressable>
+              </MotionPressable>
             )}
           </View>
         </View>
 
-        <Pressable style={styles.totalButton} onPress={() => setShowExpenseDetail(true)}>
-          <Text style={styles.totalButtonLabel}>총 비용</Text>
+        <Pressable
+          style={styles.totalButton}
+          onPress={() => setShowExpenseDetail(true)}
+          onLayout={e => setTotalBoxWidth(e.nativeEvent.layout.width)}
+        >
+          <Text style={[styles.totalButtonLabel, scaled(textStyles.body4)]}>
+            총 비용
+          </Text>
           <View style={styles.totalAmountColumn}>
             {(!hasUSD || hasKRW) && (
               <View style={styles.totalAmountRow}>
-                <Text style={styles.totalButtonAmount}>
+                <Text style={[styles.totalButtonAmount, scaled(textStyles.h3)]}>
                   {totals.KRW.toLocaleString()}
                 </Text>
-                <Text style={styles.totalAmountUnit}>원</Text>
+                <Text style={[styles.totalAmountUnit, scaled(textStyles.h7)]}>
+                  원
+                </Text>
               </View>
             )}
             {hasUSD && (
               <View style={styles.totalAmountRow}>
-                <Text style={styles.totalButtonAmount}>
+                <Text style={[styles.totalButtonAmount, scaled(textStyles.h3)]}>
                   {totals.USD.toLocaleString()}
                 </Text>
-                <Text style={styles.totalAmountUnit}>달러</Text>
+                <Text style={[styles.totalAmountUnit, scaled(textStyles.h7)]}>
+                  달러
+                </Text>
               </View>
             )}
           </View>
@@ -171,12 +196,17 @@ export default function ExpensesPanel({
   );
 }
 
+const TOTAL_FULL_WIDTH = 300;
+const TOTAL_MIN_SCALE = 0.7;
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
   content: {
     flex: 1,
+    padding: spacing.lg,
+    gap: spacing.md,
   },
   placeholder: {
     flex: 1,
@@ -192,10 +222,7 @@ const styles = StyleSheet.create({
   headerSection: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.lg,
-    paddingBottom: spacing.md,
+    gap: spacing.sm,
   },
 
   headerTitle: {
@@ -205,22 +232,20 @@ const styles = StyleSheet.create({
     marginLeft: "auto" as any,
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
+    gap: spacing.sm,
   },
   outlineButton: {
-    height: 30,
-    paddingHorizontal: 12,
-    borderRadius: 999,
-    backgroundColor: colors.white,
+    ...surfaces.outline,
+    height: 32,
+    paddingHorizontal: spacing.md,
+    borderRadius: radii.pill,
     borderWidth: 1,
     borderColor: colors.gray300,
     flexDirection: "row",
     alignItems: "center",
   },
   outlineButtonText: {
-    fontFamily: typography.fontFamily.pretendardSemiBold,
-    fontSize: 12,
-    lineHeight: 18,
+    ...textStyles.h8,
     color: colors.gray900,
   },
   addButtonPlus: {
@@ -230,45 +255,41 @@ const styles = StyleSheet.create({
     marginRight: 4,
   },
   totalButton: {
+    flex: 1,
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
+    gap: spacing.md,
     backgroundColor: colors.gray100,
-    borderRadius: 10,
+    borderRadius: radii.md,
     paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.lg,
-    marginHorizontal: spacing.lg,
-    marginBottom: spacing.lg,
-    flex: 1,
+    paddingVertical: spacing.sm,
   },
 
   totalButtonLabel: {
-    fontFamily: typography.fontFamily.pretendardRegular,
-    fontSize: 13,
-    lineHeight: 20,
+    ...textStyles.body4,
     color: colors.gray700,
   },
   totalAmountColumn: {
     flexDirection: "column",
     alignItems: "flex-end",
-    gap: 2,
+    flexShrink: 1,
+    minWidth: 0,
   },
   totalAmountRow: {
     flexDirection: "row",
     alignItems: "baseline",
-    gap: 2,
+    gap: spacing.xs,
   },
   totalButtonAmount: {
-    fontFamily: typography.fontFamily.poppinsSemiBold,
-    fontSize: 22,
-    lineHeight: 28,
+    ...textStyles.h3,
     color: colors.gray900,
+    letterSpacing: -0.2,
+    fontVariant: ["tabular-nums"],
   },
 
   totalAmountUnit: {
-    fontFamily: typography.fontFamily.pretendardSemiBold,
-    fontSize: 15,
-    lineHeight: 22,
+    ...textStyles.h7,
     color: colors.gray900,
   },
 

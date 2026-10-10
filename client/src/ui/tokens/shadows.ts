@@ -104,6 +104,19 @@ export const shadows = {
     android: { elevation: 3 },
     default: { boxShadow: "0 2px 8px rgba(123,108,255,0.30)" } as any,
   }),
+  liftHover: Platform.select({
+    ios: {
+      shadowColor: "#141828",
+      shadowOpacity: 0.22,
+      shadowRadius: 20,
+      shadowOffset: { width: 0, height: 18 },
+    },
+    android: { elevation: 10 },
+    default: {
+      boxShadow:
+        "0 2px 4px rgba(20,24,40,0.05), 0 18px 40px -18px rgba(20,24,40,0.22)",
+    } as any,
+  }),
   errorRing: Platform.select({
     ios: {},
     android: {},
