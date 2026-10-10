@@ -4,6 +4,7 @@ import { PLACEHOLDERS } from "@/constants/placeholders";
 import ExpenseForm from "@/components/forms/ExpenseForm";
 import { useDate } from "@/contexts/DateContext";
 import { useAttachmentUpload } from "@/hooks/useAttachmentUpload";
+import { useBackdropClose } from "@/hooks/useBackdropClose";
 import { useExpenseAi } from "@/hooks/useExpenseAi";
 import { useFilePicker } from "@/hooks/useFilePicker";
 import { analyzeDocumentUpload } from "@/services/aiDocument";
@@ -18,11 +19,15 @@ import { ExpenseCategory, ExpenseCurrency } from "@/types/expense";
 import AttachmentSection from "@/ui/components/attachmentSection";
 import type { AiAttachmentAnalyzeSelection } from "@/ui/components/attachmentSection.types";
 import { pendingAiFileKey } from "@/ui/components/attachmentSection.types";
+import MotionPressable, { MotionIcon } from "@/ui/components/MotionPressable";
 import WarningBanner from "@/ui/components/toast/warning";
+import { modalMotion } from "@/ui/effects/modalMotion";
 import { colors } from "@/ui/tokens/colors";
 import { radii } from "@/ui/tokens/radii";
+import { shadows } from "@/ui/tokens/shadows";
 import { spacing } from "@/ui/tokens/spacing";
-import { typography } from "@/ui/tokens/typography";
+import { surfaces } from "@/ui/tokens/surfaces";
+import { textStyles } from "@/ui/tokens/typography";
 import { buildAnalyzeUploadPayload } from "@/utils/attachmentAiAnalyze";
 import { formatAttachmentUploadFailureMessage } from "@/utils/crossPlatformAlert";
 import dayjs from "dayjs";
@@ -33,14 +38,13 @@ import {
   Alert,
   Modal,
   Platform,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
   View,
 } from "react-native";
 import CalendarIcon from "../../../assets/calender.svg";
-import XIcon from "../../../assets/x.svg";
+import CloseXIcon from "../../../assets/close_x.svg";
 
 function AiFilledBadge() {
   return (
@@ -301,19 +305,18 @@ export default function AddExpenseModal({
     onUpdateForm: setExpenseForm,
   });
 
+  const backdrop = useBackdropClose(handleClose);
+
   return (
     <>
       <Modal
         visible={visible}
         transparent={true}
-        animationType="fade"
+        animationType="none"
         onRequestClose={handleClose}
       >
-        <Pressable style={styles.modalOverlay} onPress={handleClose}>
-          <Pressable
-            style={styles.modalContent}
-            onPress={e => e.stopPropagation()}
-          >
+        <View style={styles.modalOverlay} {...backdrop.overlayProps}>
+          <View style={styles.modalContent} {...backdrop.cardProps}>
             <WarningBanner
               message={warningMessage}
               visible={showWarning}
@@ -331,9 +334,15 @@ export default function AddExpenseModal({
             >
               <View style={styles.modalHeader}>
                 <Text style={styles.modalTitle}>비용 추가</Text>
-                <Pressable style={styles.closeButton} onPress={handleClose}>
-                  <XIcon width={16} height={16} />
-                </Pressable>
+                <MotionPressable
+                  style={styles.closeButton}
+                  onPress={handleClose}
+                  accessibilityLabel="닫기"
+                >
+                  <MotionIcon>
+                    <CloseXIcon width={16} height={16} color={colors.gray900} />
+                  </MotionIcon>
+                </MotionPressable>
               </View>
               <ExpenseForm 
                 data={expenseForm} 
@@ -359,13 +368,13 @@ export default function AddExpenseModal({
               />
 
               <View style={styles.modalButtons}>
-                <Pressable
+                <MotionPressable
                   style={[styles.modalButton, styles.cancelButton]}
                   onPress={handleClose}
                 >
                   <Text style={styles.cancelButtonText}>취소</Text>
-                </Pressable>
-                <Pressable
+                </MotionPressable>
+                <MotionPressable
                   style={[styles.modalButton, styles.submitButton]}
                   onPress={handleExpenseSubmit}
                   disabled={isSubmitting || isUploading || aiState.isAiAnalyzing}
@@ -378,10 +387,10 @@ export default function AddExpenseModal({
                       {isSubmitting || isUploading ? "저장 중..." : "저장"}
                     </Text>
                   </View>
-                </Pressable>
+                </MotionPressable>
               </View>
             </ScrollView>
-          </Pressable>
+          </View>
           {showDatePicker && (
             <View style={styles.calendarOverlay} pointerEvents="box-none">
               <BaseCalendar
@@ -398,7 +407,7 @@ export default function AddExpenseModal({
               />
             </View>
           )}
-        </Pressable>
+        </View>
       </Modal>
       <AiAnalyzeFailureModal
         visible={aiAnalyzeFailureVisible}
@@ -414,26 +423,30 @@ export default function AddExpenseModal({
 
 const styles = StyleSheet.create({
   modalOverlay: {
+    ...modalMotion.overlay,
     flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.7)",
+    ...surfaces.overlay,
     justifyContent: "center",
     alignItems: "center",
+    padding: spacing.lgPlus,
   },
   modalContent: {
+    ...modalMotion.card,
     backgroundColor: colors.white,
-    borderRadius: 20,
-    width: "100%",
-    maxWidth: 460,
-    maxHeight: "90%",
+    borderRadius: radii["2xl"],
+    width: 420 + spacing.xl * 2,
+    maxWidth: "100%",
+    maxHeight: "calc(100vh - 40px)" as any,
     overflow: "hidden",
+    ...shadows.xl,
   },
   scrollView: {
-    flex: 1,
+    flexGrow: 0,
+    flexShrink: 1,
   },
   scrollContent: {
-    padding: 24,
-    paddingBottom: 20,
-    gap: 20,
+    padding: spacing.xl,
+    gap: spacing.xl,
   },
   modalHeader: {
     flexDirection: "row",
@@ -445,14 +458,12 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
   },
   modalTitle: {
-    fontFamily: typography.fontFamily.pretendardSemiBold,
-    fontSize: 20,
-    lineHeight: 28,
+    ...textStyles.h2,
     color: colors.gray900,
   },
   closeButton: {
-    width: 28,
-    height: 28,
+    width: 32,
+    height: 32,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -486,31 +497,28 @@ const styles = StyleSheet.create({
   },
   modalButtons: {
     flexDirection: "row",
-    gap: 12,
+    gap: spacing.md,
+    paddingTop: spacing.xs,
   },
   modalButton: {
     flex: 1,
     borderRadius: radii.md,
     alignItems: "center",
     justifyContent: "center",
-    height: 50,
+    height: 52,
   },
   cancelButton: {
-    backgroundColor: colors.gray300,
+    ...surfaces.muted,
   },
   cancelButtonText: {
-    fontFamily: typography.fontFamily.pretendardSemiBold,
-    fontSize: 15,
-    lineHeight: 22,
+    ...textStyles.h5,
     color: colors.gray900,
   },
   submitButton: {
-    backgroundColor: colors.primary,
+    ...surfaces.primary,
   },
   submitButtonText: {
-    fontFamily: typography.fontFamily.pretendardSemiBold,
-    fontSize: 15,
-    lineHeight: 22,
+    ...textStyles.h5,
     color: colors.white,
   },
 });

@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { View, Text, Pressable, StyleSheet } from "react-native";
+import { View, Text, StyleSheet } from "react-native";
 import dayjs from "dayjs";
 import { CategoryPicker } from "@/ui/components/pickers";
 import Input from "@/ui/components/input/Input";
@@ -7,10 +7,13 @@ import CurrencyToggle from "@/ui/components/CurrencyToggle";
 import CalendarIcon from "../../../assets/calender.svg";
 import BaseCalendar from "@/components/popup/calendar/BaseCalendar";
 import { colors } from "@/ui/tokens/colors";
+import { radii } from "@/ui/tokens/radii";
+import { spacing } from "@/ui/tokens/spacing";
 import { typography, textStyles } from "@/ui/tokens/typography";
 import { PLACEHOLDERS } from "@/constants/placeholders";
 
 import AttachmentSection from "@/ui/components/attachmentSection";
+import HoverPressable from "@/ui/components/HoverPressable";
 import type { LocalFile, Attachment } from "@/types/api";
 
 export interface ExpenseFormData {
@@ -71,6 +74,7 @@ export default function ExpenseForm({
   const [categoryOpen, setCategoryOpen] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
 
+  const size = compact ? compactSize : fullSize;
   const updateField = (field: keyof ExpenseFormData, value: any) => {
     onChange({ ...data, [field]: value });
   };
@@ -94,7 +98,9 @@ export default function ExpenseForm({
           onChange={(cat) => updateField("category", cat)}
           onOpen={() => setCategoryOpen(true)}
           onClose={() => setCategoryOpen(false)}
-          style={styles.pickerTrigger}
+          style={size.picker}
+          triggerTextStyle={size.pickerText}
+          iconSize={size.pickerIcon}
           dropDownContainerStyle={styles.pickerDropdown}
         />
       </View>
@@ -104,12 +110,12 @@ export default function ExpenseForm({
         <View style={[styles.inputGroup, { flex: 1 }]}>
           <Text style={[styles.inputLabel, compact && styles.compactInputLabel]}>금액</Text>
           <Input
-            variant="outlined"
+            variant="filled"
             placeholder={PLACEHOLDERS.expense.amount}
             value={data.amount ? String(data.amount) : ""}
             onChangeText={(text) => updateField("amount", Number(text.replace(/[^0-9]/g, "")) || 0)}
             keyboardType="numeric"
-            style={styles.input}
+            style={size.input}
           />
         </View>
         <View style={[styles.inputGroup, { flex: 1 }]}>
@@ -117,8 +123,8 @@ export default function ExpenseForm({
           <CurrencyToggle
             value={data.currency}
             onChange={(c) => updateField("currency", c)}
-            variant="outlined"
-            style={styles.input}
+            style={size.field}
+            large={!compact}
           />
         </View>
       </View>
@@ -126,21 +132,27 @@ export default function ExpenseForm({
       {/* 3. 날짜 */}
       <View style={[styles.inputGroup, { zIndex: showDatePicker ? 2000 : 1 }]}>
         <Text style={[styles.inputLabel, compact && styles.compactInputLabel]}>날짜</Text>
-        <Pressable style={styles.dateInput} onPress={() => setShowDatePicker(!showDatePicker)}>
-          <Text style={styles.dateText}>{dayjs(data.ex_date).format("YYYY.MM.DD")}</Text>
-          <CalendarIcon width={16} height={16} />
-        </Pressable>
+        <HoverPressable
+          style={[styles.dateInput, size.field]}
+          hoverStyle={styles.fieldHover}
+          onPress={() => setShowDatePicker(!showDatePicker)}
+        >
+          <Text style={size.dateText}>
+            {dayjs(data.ex_date).format("YYYY.MM.DD")}
+          </Text>
+          <CalendarIcon width={size.dateIcon} height={size.dateIcon} />
+        </HoverPressable>
       </View>
 
       {/* 4. 내용 */}
       <View style={styles.inputGroup}>
         <Text style={[styles.inputLabel, compact && styles.compactInputLabel]}>내용</Text>
         <Input
-          variant="outlined"
+          variant="filled"
           placeholder={PLACEHOLDERS.expense.descriptionForm}
           value={data.description}
           onChangeText={(text) => updateField("description", text)}
-          style={styles.input}
+          style={size.input}
         />
       </View>
 
@@ -190,11 +202,11 @@ export default function ExpenseForm({
 }
 
 const styles = StyleSheet.create({
-  formSection: { gap: 18 },
+formSection: { gap: spacing.lg },
   compactFormSection: { gap: 14 },
-  inputGroup: { gap: 9 },
-  inputLabel: {
-    ...textStyles.h6,
+inputGroup: { gap: spacing.sm },
+inputLabel: {
+    ...textStyles.h5,
     color: colors.gray900,
   },
   compactInputLabel: {
@@ -204,34 +216,77 @@ const styles = StyleSheet.create({
     flexDirection: "row", 
     gap: 12 
   },
-  input: { 
-    backgroundColor: colors.gray200, 
-    borderWidth: 0, 
-    height: 50 
+input: {
+    height: 48,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.none,
+    ...textStyles.body2,
+    color: colors.gray900,
   },
-  dateInput: { 
-    flexDirection: "row", 
-    alignItems: "center", 
-    justifyContent: "space-between", 
-    borderRadius: 12, 
-    paddingHorizontal: 16, 
-    height: 50, 
-    backgroundColor: colors.gray200, 
-    width: "100%" 
+  compactInput: {
+    height: 50,
+  },
+  field: {
+    height: 48,
+  },
+  compactField: {
+    height: 50,
+  },
+  fieldText: {
+    ...textStyles.body2,
+    color: colors.gray900,
+  },
+  fieldHover: {
+    backgroundColor: colors.inputHover,
+  },
+dateInput: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    borderRadius: radii.md,
+    paddingHorizontal: spacing.lg,
+    backgroundColor: colors.gray200,
+    width: "100%",
   },
   dateText: { 
     ...textStyles.body3, 
     color: colors.gray900 },
-  pickerTrigger: { backgroundColor: colors.gray200, borderRadius: 12, paddingHorizontal: 16, paddingVertical: 14 },
+pickerTrigger: {
+    backgroundColor: colors.gray200,
+    borderRadius: radii.md,
+    paddingHorizontal: spacing.lg,
+    height: 48,
+  },
+  compactPickerTrigger: { backgroundColor: colors.gray200, borderRadius: 12, paddingHorizontal: 16, paddingVertical: 14 },
   pickerDropdown: { top: 56, backgroundColor: colors.gray200 },
   calendarOverlay: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, zIndex: 20001, elevation: 10 },
-  sectionDivider: {
+sectionDivider: {
     height: 1,
-    backgroundColor: colors.gray400,
-    marginTop: 2,
-    marginHorizontal: -2,
+    backgroundColor: colors.gray300,
+    marginTop: spacing.xs,
+    marginHorizontal: -spacing.xs,
   },
   attachmentSection: {
     width: "100%",
   },
 });
+
+const fullSize = {
+  picker: styles.pickerTrigger,
+  pickerText: styles.fieldText,
+  pickerIcon: 16,
+  input: styles.input,
+  field: styles.field,
+  dateText: styles.fieldText,
+  dateIcon: 14,
+};
+
+const compactSize = {
+  picker: styles.compactPickerTrigger,
+  pickerText: undefined,
+  pickerIcon: undefined,
+  input: styles.compactInput,
+  field: styles.compactField,
+  dateText: styles.dateText,
+  dateIcon: 16,
+};
