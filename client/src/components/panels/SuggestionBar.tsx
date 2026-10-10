@@ -1,13 +1,26 @@
 import type { DaySuggestion, SuggestionPlace } from "@/services/tourism";
 import { useToast } from "@/contexts/ToastContext";
+import MotionPressable, {
+  MotionIcon,
+  useMotionHovered,
+} from "@/ui/components/MotionPressable";
 import { colors } from "@/ui/tokens/colors";
+import { motion } from "@/ui/tokens/motion";
 import { radii } from "@/ui/tokens/radii";
 import { shadows } from "@/ui/tokens/shadows";
 import { spacing } from "@/ui/tokens/spacing";
 import { textStyles } from "@/ui/tokens/typography";
 import { useRef, useState } from "react";
-import { Animated, Easing, Pressable, StyleSheet, Text, View } from "react-native";
-import AiCloseIcon from "../../../assets/ai_close.svg";
+import {
+  Animated,
+  Easing,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+  type ViewStyle,
+} from "react-native";
+import CloseIcon from "../../../assets/close_sm.svg";
 import LeftArrowIcon from "../../../assets/left_arrow.svg";
 import RightArrowIcon from "../../../assets/right_arrow.svg";
 
@@ -106,7 +119,17 @@ export default function SuggestionBar({ suggestions, onDismiss, onReopen, onPlac
           )}
         </View>
         {targetPlace.sentence ? (
-          <Text style={styles.sentence} numberOfLines={1}>{targetPlace.sentence}</Text>
+          <Text style={styles.sentence} numberOfLines={1}>
+            {targetPlace.sentence.split(TIME_PATTERN).map((part, i) =>
+              i % 2 === 1 ? (
+                <Text key={`${part}-${i}`} style={styles.sentenceTime}>
+                  {part}
+                </Text>
+              ) : (
+                part
+              ),
+            )}
+          </Text>
         ) : null}
       </Pressable>
     );
@@ -123,27 +146,29 @@ export default function SuggestionBar({ suggestions, onDismiss, onReopen, onPlac
 
         {/* ── 날짜 네비게이터 ── */}
         <View style={styles.dateNav} accessibilityLabel="제안 날짜">
-          <Pressable
+          <MotionPressable
             onPress={() => goDay(-1)}
             disabled={!canPrev}
             style={styles.navBtn}
+            hoverStyle={styles.navBtnHover}
             accessibilityLabel="이전 날짜"
           >
-            <LeftArrowIcon width={12} height={12} color={canPrev ? colors.gray700 : colors.gray400} />
-          </Pressable>
+            <NavArrowIcon direction="prev" enabled={canPrev} />
+          </MotionPressable>
           <Text style={styles.dateNum}>
             {md}
             {"  "}
             <Text style={styles.dateDow}>{dow}</Text>
           </Text>
-          <Pressable
+          <MotionPressable
             onPress={() => goDay(1)}
             disabled={!canNext}
             style={styles.navBtn}
+            hoverStyle={styles.navBtnHover}
             accessibilityLabel="다음 날짜"
           >
-            <RightArrowIcon width={12} height={12} color={canNext ? colors.gray700 : colors.gray400} />
-          </Pressable>
+            <NavArrowIcon direction="next" enabled={canNext} />
+          </MotionPressable>
         </View>
 
         {/* ── 장소 정보 (클릭) ── */}
@@ -163,7 +188,7 @@ export default function SuggestionBar({ suggestions, onDismiss, onReopen, onPlac
           {day.places.length > 1 && (
             <View style={styles.dots}>
               {day.places.map((p, i) => (
-                <Pressable
+                <MotionPressable
                   key={p.contentId}
                   onPress={() => setPlaceIdx(i)}
                   style={styles.dotBtn}
@@ -173,14 +198,15 @@ export default function SuggestionBar({ suggestions, onDismiss, onReopen, onPlac
                   <View
                     style={[
                       styles.dot,
+                      dotTransition,
                       i === placeIdx ? styles.dotOn : styles.dotOff,
                     ]}
                   />
-                </Pressable>
+                </MotionPressable>
               ))}
             </View>
           )}
-          <Pressable
+          <MotionPressable
             onPress={() => {
               onDismiss();
               showToast("AI 제안을 숨겼어요.\n상단 AI 제안 버튼으로 다시 볼 수 있어요.", {
@@ -188,11 +214,14 @@ export default function SuggestionBar({ suggestions, onDismiss, onReopen, onPlac
                 action: onReopen ? { label: "다시 보기", onPress: onReopen } : undefined,
               });
             }}
-            style={({ hovered }: any) => [styles.closeBtn, hovered && styles.closeBtnHover]}
+            style={styles.closeBtn}
+            hoverStyle={styles.closeBtnHover}
             accessibilityLabel="AI 제안 닫기"
           >
-            <AiCloseIcon width={15} height={15} />
-          </Pressable>
+            <MotionIcon>
+              <DismissIcon />
+            </MotionIcon>
+          </MotionPressable>
         </View>
 
       </View>
@@ -200,11 +229,46 @@ export default function SuggestionBar({ suggestions, onDismiss, onReopen, onPlac
   );
 }
 
+function NavArrowIcon({
+  direction,
+  enabled,
+}: {
+  direction: "prev" | "next";
+  enabled: boolean;
+}) {
+  const hovered = useMotionHovered();
+  const Icon = direction === "prev" ? LeftArrowIcon : RightArrowIcon;
+  const color = !enabled
+    ? colors.gray400
+    : hovered
+      ? colors.gray900
+      : colors.gray700;
+  return <Icon width={12} height={12} color={color} />;
+}
+
+function DismissIcon() {
+  const hovered = useMotionHovered();
+  return (
+    <CloseIcon
+      width={15}
+      height={15}
+      color={hovered ? colors.gray900 : colors.gray600}
+    />
+  );
+}
+
+const TIME_PATTERN = /(\d{1,2}:\d{2})/;
+
+const dotTransition = {
+  transitionProperty: "width, background-color",
+  transitionDuration: `${motion.duration.fast}ms`,
+} as ViewStyle;
+
 const styles = StyleSheet.create({
   container: {
     backgroundColor: colors.white,
-    borderRadius: radii.xl,
-    paddingVertical: spacing.sm,
+    borderRadius: radii.lgPlus,
+    paddingVertical: spacing.md,
     paddingHorizontal: spacing.lg,
     ...shadows.lg,
   },
@@ -247,6 +311,9 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
+  navBtnHover: {
+    backgroundColor: colors.gray350,
+  },
   dateNum: {
     ...textStyles.h7,
     color: colors.gray900,
@@ -265,16 +332,18 @@ const styles = StyleSheet.create({
     flex: 1,
     minWidth: 0,
     overflow: "hidden",
+    marginVertical: -spacing.xs,
+    marginHorizontal: -spacing.sm,
   },
   placeBtn: {
     flexDirection: "column",
     gap: 2,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.sm,
     borderRadius: radii.md,
   },
   placeBtnHover: {
-    backgroundColor: colors.gray100,
+    backgroundColor: colors.gray200,
   },
   placeRow1: {
     flexDirection: "row",
@@ -292,7 +361,7 @@ const styles = StyleSheet.create({
     flexShrink: 0,
     height: 20,
     paddingHorizontal: spacing.sm,
-    borderRadius: radii.pill,
+    borderRadius: radii.xs,
     justifyContent: "center",
     alignItems: "center",
   },
@@ -320,6 +389,10 @@ const styles = StyleSheet.create({
   },
   sentence: {
     ...textStyles.body5,
+    color: colors.gray700,
+  },
+  sentenceTime: {
+    ...textStyles.h8,
     color: colors.gray700,
   },
 
@@ -362,6 +435,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   closeBtnHover: {
-    backgroundColor: colors.gray200,
+    backgroundColor: colors.gray350,
   },
 });

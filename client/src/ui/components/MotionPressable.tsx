@@ -101,6 +101,10 @@ export default function MotionPressable({
   );
 }
 
+export function useMotionHovered() {
+  return useContext(HoverContext);
+}
+
 export function MotionIcon({
   style,
   children,
