@@ -19,8 +19,9 @@ import { shadows } from "@/ui/tokens/shadows";
 import { spacing } from "@/ui/tokens/spacing";
 import { surfaces } from "@/ui/tokens/surfaces";
 import { textStyles, typography } from "@/ui/tokens/typography";
+import { toUserMessage } from "@/utils/crossPlatformAlert";
 import { formatFileSize } from "@/utils/fileUtils";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Modal,
   Pressable,
@@ -61,7 +62,7 @@ const categoryOrder = [
 export default function ExpenseDetailModal({
   visible,
   onClose,
-  expenses,
+  expenses: allExpenses,
   attachments = [],
   onExpenseDelete,
   onExpenseUpdate,
@@ -69,6 +70,12 @@ export default function ExpenseDetailModal({
 }: ExpenseDetailModalProps) {
   const { height: windowHeight } = useWindowDimensions();
   const backdrop = useBackdropClose(onClose);
+  const pendingDeletesRef = useRef(new Map<number, ReturnType<typeof setTimeout>>());
+  const [hiddenIds, setHiddenIds] = useState<Set<number>>(new Set());
+  const expenses = useMemo(
+    () => allExpenses.filter(e => !hiddenIds.has(e.id)),
+    [allExpenses, hiddenIds],
+  );
   const [tab, setTab] = useState<"expenses" | "attachments">("expenses");
   const [selectedCategory, setSelectedCategory] =
     useState<ExpenseCategory | null>(null);
@@ -183,13 +190,76 @@ export default function ExpenseDetailModal({
     return grouped;
   }, [expenses]);
 
-  const handleDelete = async (expenseId: number) => {
+  const setHidden = (expenseId: number, hidden: boolean) =>
+    setHiddenIds(prev => {
+      const next = new Set(prev);
+      if (hidden) next.add(expenseId);
+      else next.delete(expenseId);
+      return next;
+    });
+
+  const commitDelete = async (expenseId: number) => {
+    const timer = pendingDeletesRef.current.get(expenseId);
+    if (timer === undefined) return;
+    clearTimeout(timer);
+    pendingDeletesRef.current.delete(expenseId);
     try {
       await expensesApi.deleteExpense(expenseId);
       onExpenseDelete?.();
-      showToast("지출을 삭제했습니다.")
-    } catch {}
+    } catch (error) {
+      setHidden(expenseId, false);
+      showToast(toUserMessage(error), { icon: "info" });
+    }
   };
+
+  const undoDelete = (expenseId: number) => {
+    const timer = pendingDeletesRef.current.get(expenseId);
+    if (timer === undefined) return;
+    clearTimeout(timer);
+    pendingDeletesRef.current.delete(expenseId);
+    setHidden(expenseId, false);
+  };
+
+  const handleDelete = (expenseId: number) => {
+    if (pendingDeletesRef.current.has(expenseId)) return;
+    setHidden(expenseId, true);
+    pendingDeletesRef.current.set(
+      expenseId,
+      setTimeout(() => commitDelete(expenseId), UNDO_DELETE_DURATION),
+    );
+    showToast("지출을 삭제했습니다.", {
+      duration: UNDO_DELETE_DURATION,
+      effect: "poof",
+      action: { label: "되돌리기", onPress: () => undoDelete(expenseId) },
+    });
+  };
+
+  const flushPendingDeletes = () => {
+    for (const expenseId of [...pendingDeletesRef.current.keys()]) {
+      void commitDelete(expenseId);
+    }
+  };
+
+  const flushRef = useRef(flushPendingDeletes);
+  flushRef.current = flushPendingDeletes;
+
+  useEffect(() => {
+    if (!visible) flushRef.current();
+  }, [visible]);
+
+  useEffect(() => () => flushRef.current(), []);
+
+  useEffect(() => {
+    setHiddenIds(prev => {
+      const ids = new Set(allExpenses.map(e => e.id));
+      const next = new Set(
+        [...prev].filter(
+          id => ids.has(id) || pendingDeletesRef.current.has(id),
+        ),
+      );
+      return next.size === prev.size ? prev : next;
+    });
+  }, [allExpenses]);
 
   const handleAttachmentCardPress = (attachment: Attachment) => {
     if (attachment.contentType.startsWith("image/")) {
@@ -493,6 +563,8 @@ export default function ExpenseDetailModal({
     </>
   );
 }
+
+const UNDO_DELETE_DURATION = 5000;
 
 const styles = StyleSheet.create({
   modalOverlay: {
