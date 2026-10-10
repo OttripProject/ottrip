@@ -9,6 +9,7 @@ import {
   StyleSheet,
   Text,
   View,
+  type ViewStyle,
   useWindowDimensions,
 } from "react-native";
 
@@ -21,6 +22,7 @@ import MotionPressable, { MotionIcon } from "@/ui/components/MotionPressable";
 import type { AttachmentSectionProps } from "@/ui/components/attachmentSection.types";
 import { pendingAiFileKey } from "@/ui/components/attachmentSection.types";
 import { colors } from "@/ui/tokens/colors";
+import { motion } from "@/ui/tokens/motion";
 import { radii } from "@/ui/tokens/radii";
 import { shadows } from "@/ui/tokens/shadows";
 import { spacing } from "@/ui/tokens/spacing";
@@ -29,6 +31,7 @@ import { showMessage, showPickFileType } from "@/utils/crossPlatformAlert";
 import { guestPrompt } from "@/utils/guestPrompt";
 
 import DeleteIcon from "../../../assets/attach_del.svg";
+import PdfDocIcon from "../../../assets/attachment_document.svg";
 import CheckMarkIcon from "../../../assets/check_mark.svg";
 import CheckWhiteIcon from "../../../assets/check_white.svg";
 import CloseErrorIcon from "../../../assets/close_error.svg";
@@ -123,7 +126,14 @@ function FileThumbnail({
       <Image source={{ uri }} style={styles.fileThumbnail} resizeMode="cover" />
     );
   }
-  if (String(mimeType ?? "").startsWith("image/") && !isPdfMime(mimeType)) {
+  if (isPdfMime(mimeType)) {
+    return (
+      <View style={styles.pdfThumbnail}>
+        <PdfDocIcon width={20} height={20} color={colors.pdfText} />
+      </View>
+    );
+  }
+  if (String(mimeType ?? "").startsWith("image/")) {
     return <AttachmentImageIcon width={20} height={20} />;
   }
   return <AttachmentDocIcon width={20} height={20} />;
@@ -484,6 +494,7 @@ export default function AttachmentSection({
 
     const rowStyle = [
       styles.fileRow,
+      fileRowTransition,
       aiSelect?.selected && styles.fileRowAiSelected,
     ];
 
@@ -1314,6 +1325,11 @@ export default function AttachmentSection({
   );
 }
 
+const fileRowTransition = {
+  transitionProperty: "background-color, border-color",
+  transitionDuration: `${motion.duration.fast}ms`,
+} as ViewStyle;
+
 const styles = StyleSheet.create({
   root: {
     width: "100%",
@@ -1726,7 +1742,8 @@ const styles = StyleSheet.create({
     padding: spacing.md,
   },
   fileRowAiSelected: {
-    backgroundColor: colors.gray400,
+    backgroundColor: colors.primarySoft,
+    borderColor: colors.primary,
   },
   fileRowAiPressablePressed: {
     opacity: 0.92,
@@ -1757,6 +1774,13 @@ const styles = StyleSheet.create({
   fileThumbnail: {
     width: 40,
     height: 40,
+  },
+  pdfThumbnail: {
+    width: 40,
+    height: 40,
+    backgroundColor: colors.pdfBg,
+    alignItems: "center",
+    justifyContent: "center",
   },
   fileInfo: {
     flex: 1,
