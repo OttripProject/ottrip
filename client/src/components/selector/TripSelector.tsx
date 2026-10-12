@@ -1,6 +1,10 @@
 import useDetectClose from "@/hooks/useDetectClose";
 import { useTripForm } from "@/hooks/useTripForm";
+import MotionPressable, { MotionIcon } from "@/ui/components/MotionPressable";
 import { colors } from "@/ui/tokens/colors";
+import { radii } from "@/ui/tokens/radii";
+import { shadows } from "@/ui/tokens/shadows";
+import { spacing } from "@/ui/tokens/spacing";
 import { textStyles } from "@/ui/tokens/typography";
 import dayjs from "dayjs";
 import React, { useState, useRef, useEffect, useMemo } from "react";
@@ -371,8 +375,9 @@ export default function TripSelector({
 
   return (
     <View style={styles.container} ref={containerRef}>
-      <Pressable
+      <MotionPressable
         style={styles.selector}
+        hoverStyle={shadows.xsHover}
         onPress={() => setIsDropdownOpen(!showDropdown)}
       >
         <View style={styles.selectorContent}>
@@ -384,10 +389,12 @@ export default function TripSelector({
             {selectedTrip ? selectedTrip.name : "여행 선택"}
           </Text>
         </View>
-        <Animated.View style={{ transform: [{ rotate: arrowRotate }] }}>
-          <DownArrowIcon width={12} height={12} />
-        </Animated.View>
-      </Pressable>
+        <MotionIcon>
+          <Animated.View style={{ transform: [{ rotate: arrowRotate }] }}>
+            <DownArrowIcon width={10} height={10} style={{ opacity: 0.6 }} />
+          </Animated.View>
+        </MotionIcon>
+      </MotionPressable>
 
       {showDropdown && (
         <>
@@ -672,10 +679,10 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
     borderWidth: 1,
     borderColor: colors.gray300,
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    minWidth: 220,
+    borderRadius: radii.md,
+    paddingHorizontal: spacing.md,
+    gap: spacing.sm,
+    minWidth: 200,
     maxWidth: 260,
     height: 32,
     alignSelf: "flex-start",
@@ -685,10 +692,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   selectorText: {
-    ...textStyles.h8,
-    fontSize: 12,
-    lineHeight: 18,
-    color: colors.black,
+    ...textStyles.body5,
+    color: colors.gray900,
   },
   dropdownContainer: {
     position: "absolute",

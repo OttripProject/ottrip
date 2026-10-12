@@ -19,9 +19,11 @@ import { plansApi } from "@/services/plans";
 import type { CreatePlanRequest, Plan, UpdatePlanRequest } from "@/types/api";
 import Card from "@/ui/components/Card";
 import GradientBackground from "@/ui/components/GradientBackground";
+import MotionPressable, { MotionIcon } from "@/ui/components/MotionPressable";
 import Input from "@/ui/components/input/Input";
 import { radii } from "@/ui/tokens";
 import { colors } from "@/ui/tokens/colors";
+import { shadows } from "@/ui/tokens/shadows";
 import { spacing } from "@/ui/tokens/spacing";
 import { textStyles, typography } from "@/ui/tokens/typography";
 import { toUserMessage } from "@/utils/crossPlatformAlert";
@@ -48,7 +50,6 @@ import TripSelector from "../selector/TripSelector";
 import PanelLayout from "./PanelLayout";
 
 import { Tooltip } from "@/ui/components/Tooltip";
-import AirplaneIcon from "../../../assets/airplane.svg";
 import CalenderIcon from "../../../assets/calender.svg";
 import ExportPlanIcon from "../../../assets/export_plan.svg";
 import ImportFileIcon from "../../../assets/import_file.svg";
@@ -179,7 +180,8 @@ function toFlightEvents(flight: any): any[] {
 
 const WEEK_STARTS_ON_STORAGE_KEY = "ottrip.weekStartsOn";
 const WEEK_TOGGLE_HEIGHT = 32;
-const WEEK_TOGGLE_KNOB_SIZE = WEEK_TOGGLE_HEIGHT - spacing.xs;
+const WEEK_TOGGLE_PADDING = 2;
+const WEEK_TOGGLE_KNOB_SIZE = WEEK_TOGGLE_HEIGHT - 2 - WEEK_TOGGLE_PADDING * 2;
 
 function readStoredWeekStartsOn(): WeekStartsOn {
   try {
@@ -1996,37 +1998,56 @@ export default function WeeklySchedulePanel({
           <Text style={styles.title}>여행 일정</Text>
 
           <View style={styles.dateNavigation}>
-            <Pressable onPress={goPrev} style={styles.navArrowButton}>
-              <LeftArrowIcon width={10} height={10} />
-            </Pressable>
+            <MotionPressable
+              onPress={goPrev}
+              style={styles.navArrowButton}
+              accessibilityLabel="이전 주"
+            >
+              <MotionIcon>
+                <LeftArrowIcon width={10} height={10} />
+              </MotionIcon>
+            </MotionPressable>
 
             <Text style={styles.navDateText}>
               {currentWeekStart.format("YYYY년 M월")}
             </Text>
 
-            <Pressable onPress={goNext} style={styles.navArrowButton}>
-              <RightArrowIcon width={10} height={10} />
-            </Pressable>
+            <MotionPressable
+              onPress={goNext}
+              style={styles.navArrowButton}
+              accessibilityLabel="다음 주"
+            >
+              <MotionIcon>
+                <RightArrowIcon width={10} height={10} />
+              </MotionIcon>
+            </MotionPressable>
           </View>
 
-          <Pressable
+          <MotionPressable
             onPress={goToday}
-            style={[styles.actionButton, { marginLeft: spacing.lg }]}
+            style={styles.actionButton}
+            hoverStyle={shadows.xsHover}
+            accessibilityLabel="오늘"
           >
-            <View style={styles.todayIconWrapper}>
-              <TodayIcon width={13} height={13} />
-            </View>
+            <MotionIcon>
+              <TodayIcon width={16} height={16} />
+            </MotionIcon>
             <Text style={styles.actionButtonText}>오늘</Text>
-          </Pressable>
+          </MotionPressable>
 
           <View style={styles.calendarButtonWrapper}>
-            <Pressable
-              ref={calendarBtnRef}
-              onPress={() => setShowMonthPicker(!showMonthPicker)}
-              style={[styles.iconButton, { marginLeft: spacing.xs }]}
-            >
-              <CalenderIcon width={13} height={13} />
-            </Pressable>
+            <View ref={calendarBtnRef} collapsable={false}>
+              <MotionPressable
+                onPress={() => setShowMonthPicker(!showMonthPicker)}
+                style={styles.iconButton}
+                hoverStyle={shadows.xsHover}
+                accessibilityLabel="달력"
+              >
+                <MotionIcon>
+                  <CalenderIcon width={16} height={16} />
+                </MotionIcon>
+              </MotionPressable>
+            </View>
             <BaseCalendar
               visible={showMonthPicker}
               selectedDate={selectedDate}
@@ -2047,9 +2068,9 @@ export default function WeeklySchedulePanel({
             />
           </View>
 
-          <Pressable
+          <MotionPressable
             onPress={toggleWeekStartsOn}
-            style={[styles.weekStartToggle, { marginLeft: spacing.xs }]}
+            style={styles.weekStartToggle}
             accessibilityRole="switch"
             accessibilityState={{ checked: weekStartsOn === 0 }}
             accessibilityLabel={
@@ -2097,7 +2118,7 @@ export default function WeeklySchedulePanel({
                 S
               </Text>
             </View>
-          </Pressable>
+          </MotionPressable>
         </View>
 
         <View style={styles.rightSection}>
@@ -2125,7 +2146,7 @@ export default function WeeklySchedulePanel({
           />
 
           {internalSelectedTrip ? (
-            <Pressable
+            <MotionPressable
               onPress={() => {
                 if (isGuest) {
                   guestPrompt.show();
@@ -2134,12 +2155,15 @@ export default function WeeklySchedulePanel({
                 setAiChatOpen(true);
               }}
               style={styles.aiChatButton}
+              accessibilityLabel="대화로 일정 추가"
             >
               <GradientBackground style={styles.aiChatButtonGradient}>
-                <LightningIcon width={13} height={13} color={colors.black} />
+                <MotionIcon>
+                  <LightningIcon width={11} height={13} color={colors.gray900} />
+                </MotionIcon>
                 <Text style={styles.aiChatButtonText}>대화로 일정 추가</Text>
               </GradientBackground>
-            </Pressable>
+            </MotionPressable>
           ) : null}
 
           {internalSelectedTrip && showAiSuggestButton ? (
@@ -2158,40 +2182,28 @@ export default function WeeklySchedulePanel({
 
           {internalSelectedTrip ? (
             <View style={styles.actionGroup}>
-              {(myRole === "owner" || myRole === "editor") && (
-                <Tooltip text="항공편 추가">
-                  <Pressable
-                    onPress={() => {
-                      setSelectedAccommodationId(null);
-                      if (onRequestNewFlight) onRequestNewFlight();
-                      else onShowFlightModal?.();
-                    }}
-                    style={styles.iconButton}
-                  >
-                    <AirplaneIcon width={13} height={13} />
-                  </Pressable>
-                </Tooltip>
-              )}
-
               {(myRole === "owner" ||
                 myRole === "editor" ||
                 myRole === "viewer") && (
                 <Tooltip text="메모">
-                  <Pressable
+                  <MotionPressable
                     onPress={() => {
                       setMemoDraft((planData.plan as any)?.memo ?? "");
                       setMemoOpen(true);
                     }}
                     style={styles.iconButton}
+                    hoverStyle={shadows.xsHover}
                   >
-                    <MemoIcon width={13} height={13} />
-                  </Pressable>
+                    <MotionIcon>
+                      <MemoIcon width={16} height={16} />
+                    </MotionIcon>
+                  </MotionPressable>
                 </Tooltip>
               )}
 
               {(myRole === "owner" || myRole === "editor") && (
                 <Tooltip text="공유하기">
-                  <Pressable
+                  <MotionPressable
                     onPress={() => {
                       if (isGuest) {
                         guestPrompt.show();
@@ -2200,39 +2212,48 @@ export default function WeeklySchedulePanel({
                       setShareOpen(true);
                     }}
                     style={styles.iconButton}
+                    hoverStyle={shadows.xsHover}
                   >
-                    <ShareIcon width={16} height={16} />
-                  </Pressable>
+                    <MotionIcon>
+                      <ShareIcon width={16} height={16} />
+                    </MotionIcon>
+                  </MotionPressable>
                 </Tooltip>
               )}
 
               {(myRole === "owner" || myRole === "editor") && (
                 <Tooltip text="파일로 일정 추가">
-                  <Pressable
+                  <MotionPressable
                     style={styles.iconButton}
+                    hoverStyle={shadows.xsHover}
                     onPress={() => setImportFileOpen(true)}
                   >
-                    <ImportFileIcon
-                      width={14}
-                      height={14}
-                      color={colors.gray900}
-                    />
-                  </Pressable>
+                    <MotionIcon>
+                      <ImportFileIcon
+                        width={16}
+                        height={16}
+                        color={colors.gray900}
+                      />
+                    </MotionIcon>
+                  </MotionPressable>
                 </Tooltip>
               )}
 
               {(myRole === "owner" || myRole === "editor") && (
                 <Tooltip text="내보내기">
-                  <Pressable
+                  <MotionPressable
                     style={styles.iconButton}
+                    hoverStyle={shadows.xsHover}
                     onPress={() => setExportOpen(true)}
                   >
-                    <ExportPlanIcon
-                      width={14}
-                      height={14}
-                      color={colors.gray900}
-                    />
-                  </Pressable>
+                    <MotionIcon>
+                      <ExportPlanIcon
+                        width={16}
+                        height={16}
+                        color={colors.gray900}
+                      />
+                    </MotionIcon>
+                  </MotionPressable>
                 </Tooltip>
               )}
             </View>
@@ -4079,26 +4100,29 @@ const styles = StyleSheet.create({
   leftSection: {
     flexDirection: "row",
     alignItems: "center",
+    gap: spacing.lg,
   },
   title: {
     ...textStyles.h5,
-    marginRight: spacing.lg,
+    color: colors.gray900,
   },
   dateNavigation: {
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.xs,
-    marginLeft: spacing.lg,
+    paddingHorizontal: spacing.xs,
   },
   navArrowButton: {
-    width: 24,
-    height: 24,
+    width: 32,
+    height: 32,
+    borderRadius: radii.xs,
     justifyContent: "center",
     alignItems: "center",
   },
   navDateText: {
     ...textStyles.h7,
-    minWidth: 72,
+    color: colors.gray900,
+    minWidth: 80,
     textAlign: "center",
   },
   dateText: {
@@ -4132,11 +4156,12 @@ const styles = StyleSheet.create({
   rightSection: {
     flexDirection: "row",
     alignItems: "center",
+    gap: spacing.sm,
   },
   iconButton: {
     width: 32,
     height: 32,
-    borderRadius: 8,
+    borderRadius: radii.md,
     backgroundColor: colors.white,
     borderWidth: 1,
     borderColor: colors.gray300,
@@ -4146,39 +4171,37 @@ const styles = StyleSheet.create({
   actionButton: {
     flexDirection: "row",
     height: 32,
-    borderRadius: 8,
+    gap: spacing.sm,
+    borderRadius: radii.md,
     backgroundColor: colors.white,
     borderWidth: 1,
     borderColor: colors.gray300,
-    paddingHorizontal: 12,
+    paddingHorizontal: spacing.md,
     justifyContent: "center",
     alignItems: "center",
   },
   actionButtonText: {
     ...textStyles.h8,
-    lineHeight: 18,
+    color: colors.gray900,
   },
   weekStartToggle: {
     flexDirection: "row",
-    borderRadius: radii.base,
-    backgroundColor: colors.white,
+    height: WEEK_TOGGLE_HEIGHT,
+    borderRadius: radii.md,
+    backgroundColor: colors.gray200,
     borderWidth: 1,
     borderColor: colors.gray300,
-    padding: spacing.xs / 2,
+    padding: WEEK_TOGGLE_PADDING,
   },
   weekStartToggleKnob: {
     position: "absolute",
-    top: spacing.xs / 2,
-    left: spacing.xs / 2,
+    top: WEEK_TOGGLE_PADDING,
+    left: WEEK_TOGGLE_PADDING,
     width: WEEK_TOGGLE_KNOB_SIZE,
     height: WEEK_TOGGLE_KNOB_SIZE,
-    borderRadius: radii.sm,
+    borderRadius: radii.base,
     backgroundColor: colors.white,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 2,
-    elevation: 2,
+    ...shadows.toggleKnob,
   },
   weekStartToggleSegment: {
     width: WEEK_TOGGLE_KNOB_SIZE,
@@ -4187,36 +4210,32 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   weekStartToggleText: {
-    ...textStyles.h9,
+    ...textStyles.h8,
     color: colors.gray400,
   },
   weekStartToggleTextActive: {
     color: colors.gray900,
-    fontFamily: typography.fontFamily.pretendardSemiBold,
   },
   actionGroup: {
     flexDirection: "row",
     alignItems: "center",
-    gap: spacing.xs,
-    marginLeft: spacing.lg,
+    gap: spacing.sm,
   },
   aiChatButton: {
     height: 32,
-    borderRadius: 20,
+    borderRadius: radii.pill,
     overflow: "hidden",
-    marginLeft: spacing.lg,
   },
   aiChatButtonGradient: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
-    paddingHorizontal: 14,
-    paddingVertical: 0,
+    gap: spacing.sm,
+    paddingHorizontal: spacing.md,
     height: 32,
   },
   aiChatButtonText: {
     ...textStyles.h8,
-    color: colors.black,
+    color: colors.gray900,
   },
   aiSuggestButton: {
     height: 32,
@@ -4393,9 +4412,6 @@ const styles = StyleSheet.create({
     color: colors.white,
     fontSize: 10,
     fontWeight: "600",
-  },
-  todayIconWrapper: {
-    marginRight: spacing.xs,
   },
   weekHeaderRow: {
     flexDirection: "row",

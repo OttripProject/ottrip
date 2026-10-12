@@ -71,6 +71,16 @@ export const shadows = {
     android: { elevation: 24 },
     default: { boxShadow: "0 24px 64px rgba(0,0,0,0.3)" } as any,
   }),
+  toggleKnob: Platform.select({
+    ios: {
+      shadowColor: "#000",
+      shadowOpacity: 0.12,
+      shadowRadius: 3,
+      shadowOffset: { width: 0, height: 1 },
+    },
+    android: { elevation: 2 },
+    default: { boxShadow: "0 1px 3px rgba(0,0,0,0.12)" } as any,
+  }),
   focusRing: Platform.select({
     ios: {},
     android: {},
