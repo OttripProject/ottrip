@@ -543,26 +543,6 @@ export default function AddScheduleWithFileModal({
     },
   });
 
-  const TEST_EXTRA_ITEMS: AiDocumentItemDraft[] = [
-    {
-      itemType: "flight",
-      payload: {
-        values: {
-          segments: [{ departure_airport: "ICN", arrival_airport: "NRT", departure_time: "2025-03-10T10:30:00", arrival_time: "2025-03-10T12:45:00", airline: "대한항공", flight_number: "KE703" }],
-          expense: { amount: 450000, currency: "KRW", category: "flight" },
-        },
-        fieldMeta: {},
-      },
-    },
-    {
-      itemType: "expense",
-      payload: {
-        values: { category: "food", amount: 15000, currency: "KRW", ex_date: "2025-03-10" },
-        fieldMeta: {},
-      },
-    },
-  ] as AiDocumentItemDraft[];
-
   async function handleAnalyze() {
     if (!selectedFile) return;
     setIsAnalyzing(true);
@@ -570,9 +550,8 @@ export default function AddScheduleWithFileModal({
     try {
       const res = await analyzePlanUpload(selectedFile, { filename: selectedFile.name });
       if (res.success && res.items.length > 0) {
-        const merged = [...res.items, ...TEST_EXTRA_ITEMS];
-        setItems(merged);
-        setSelectedIndexes(new Set(merged.map((_, i) => i)));
+        setItems(res.items);
+        setSelectedIndexes(new Set(res.items.map((_, i) => i)));
         setStep("preview");
       } else if (!res.success && res.error) {
         setError(res.error);
