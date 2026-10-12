@@ -402,10 +402,10 @@ export default function ExpenseDetailModal({
                       const isSelected = selectedCategory === category;
                       const amountText = [
                         catTotal.KRW > 0
-                          ? `${formatAmount(catTotal.KRW)}원`
+                          ? `${formatAmount(catTotal.KRW)} 원`
                           : null,
                         catTotal.USD > 0
-                          ? `${formatAmount(catTotal.USD)}달러`
+                          ? `${formatAmount(catTotal.USD)} 달러`
                           : null,
                       ]
                         .filter(Boolean)
@@ -490,9 +490,10 @@ export default function ExpenseDetailModal({
                     const expense = attachmentExpenseMap[attachment.id];
                     const isImage = attachment.contentType.startsWith("image/");
                     return (
-                      <Pressable
+                      <MotionPressable
                         key={attachment.id}
                         style={styles.attachmentCard}
+                        hoverStyle={shadows.xsHover}
                         onPress={() => handleAttachmentCardPress(attachment)}
                       >
                         <View
@@ -543,7 +544,7 @@ export default function ExpenseDetailModal({
                         <Text style={styles.attachmentFileSize}>
                           {formatFileSize(attachment.fileSize)}
                         </Text>
-                      </Pressable>
+                      </MotionPressable>
                     );
                   })
                 )}
@@ -681,7 +682,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.md,
   },
   summaryRowSelected: {
-    backgroundColor: colors.gray200,
+    ...surfaces.subtle,
   },
   summaryCategory: {
     ...textStyles.body3,
