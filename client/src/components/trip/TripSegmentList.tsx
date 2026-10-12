@@ -1,15 +1,35 @@
 import type { SegmentDraft } from "@/hooks/useTripForm";
 import { CityPicker, CountryPicker } from "@/ui/components/pickers";
 import { colors } from "@/ui/tokens/colors";
+import { radii } from "@/ui/tokens/radii";
+import { spacing } from "@/ui/tokens/spacing";
 import { textStyles, typography } from "@/ui/tokens/typography";
 import dayjs from "dayjs";
 import { useState } from "react";
-import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
+import {
+  Platform,
+  Pressable,
+  type PressableStateCallbackType,
+  StyleSheet,
+  Text,
+  View,
+  type ViewStyle,
+} from "react-native";
 import CalendarIcon from "../../../assets/calender.svg";
 import XIcon from "../../../assets/mobile_close.svg";
 import DownArrowIcon from "../../../assets/mobile_dropdown.svg";
+import UpArrowIcon from "../../../assets/upper_arrow.svg";
 
 const isNative = Platform.OS !== "web";
+
+type HoverState = PressableStateCallbackType & { hovered?: boolean };
+
+function actionColor(disabled: boolean, hovered?: boolean, del?: boolean) {
+  if (disabled) return colors.gray400;
+  if (hovered) return del ? colors.danger : colors.gray900;
+  return colors.gray600;
+}
+
 
 function formatDateRange(segment: SegmentDraft) {
   if (!segment.startDate) return null;
@@ -78,41 +98,69 @@ export default function TripSegmentList({
                 )}
                 <View style={[styles.segActions, isNative && styles.segActionsNative]}>
                   <Pressable
-                    style={[styles.actionBtn, idx === 0 && styles.actionBtnDisabled]}
+                    style={({ hovered }: HoverState) => [
+                      styles.actionBtn,
+                      idx === 0 && styles.actionBtnDisabled,
+                      hovered && idx !== 0 && styles.actionBtnHover,
+                    ]}
                     onPress={() => onSegmentMove(idx, idx - 1)}
                     disabled={idx === 0}
+                    accessibilityLabel="위로"
                   >
-                    <DownArrowIcon
-                      width={isNative ? 17 : 10}
-                      height={isNative ? 17 : 10}
-                      color={idx === 0 ? colors.gray400 : colors.gray600}
-                      style={{ transform: [{ scaleY: -1 }] }}
-                    />
+                    {({ hovered }: HoverState) =>
+                      isNative ? (
+                        <DownArrowIcon
+                          width={17}
+                          height={17}
+                          color={idx === 0 ? colors.gray400 : colors.gray600}
+                          style={{ transform: [{ scaleY: -1 }] }}
+                        />
+                      ) : (
+                        <UpArrowIcon
+                          width={10}
+                          height={10}
+                          color={actionColor(idx === 0, hovered)}
+                        />
+                      )
+                    }
                   </Pressable>
                   <Pressable
-                    style={[
+                    style={({ hovered }: HoverState) => [
                       styles.actionBtn,
                       idx >= segments.length - 1 && styles.actionBtnDisabled,
+                      hovered &&
+                        idx < segments.length - 1 &&
+                        styles.actionBtnHover,
                     ]}
                     onPress={() => onSegmentMove(idx, idx + 1)}
                     disabled={idx >= segments.length - 1}
+                    accessibilityLabel="아래로"
                   >
-                    <DownArrowIcon
-                      width={isNative ? 17 : 10}
-                      height={isNative ? 17 : 10}
-                      color={idx >= segments.length - 1 ? colors.gray400 : colors.gray600}
-                    />
+                    {({ hovered }: HoverState) => (
+                      <DownArrowIcon
+                        width={isNative ? 17 : 10}
+                        height={isNative ? 17 : 10}
+                        color={actionColor(idx >= segments.length - 1, hovered)}
+                      />
+                    )}
                   </Pressable>
                   <Pressable
-                    style={[styles.actionBtn, !canRemove && styles.actionBtnDisabled]}
+                    style={({ hovered }: HoverState) => [
+                      styles.actionBtn,
+                      !canRemove && styles.actionBtnDisabled,
+                      hovered && canRemove && styles.actionBtnDeleteHover,
+                    ]}
                     onPress={() => onSegmentRemove(idx)}
                     disabled={!canRemove}
+                    accessibilityLabel="구간 삭제"
                   >
-                    <XIcon
-                      width={isNative ? 14 : 12}
-                      height={isNative ? 14 : 12}
-                      color={canRemove ? colors.gray600 : colors.gray400}
-                    />
+                    {({ hovered }: HoverState) => (
+                      <XIcon
+                        width={isNative ? 14 : 12}
+                        height={isNative ? 14 : 12}
+                        color={actionColor(!canRemove, hovered, true)}
+                      />
+                    )}
                   </Pressable>
                 </View>
               </View>
@@ -145,9 +193,21 @@ export default function TripSegmentList({
                     value={segment.city}
                     onChange={city => onSegmentUpdate(idx, { city })}
                     countryKo={segment.country}
-                    placeholder={segment.country.trim() ? "도시 선택" : "먼저 국가 선택"}
+                    placeholder={
+                      segment.country.trim()
+                        ? "도시 선택"
+                        : isNative
+                          ? "먼저 국가 선택"
+                          : "먼저 나라를 선택하세요"
+                    }
                     disabled={!segment.country.trim()}
-                    style={isNative ? styles.pickerBtnNative : styles.pickerTrigger}
+                    style={
+                      isNative
+                        ? styles.pickerBtnNative
+                        : segment.country.trim()
+                          ? styles.pickerTrigger
+                          : pickerTriggerDisabled
+                    }
                     containerStyle={styles.pickerWrapper}
                     onOpen={() => onSegmentFocus(idx)}
                     useModal={!isNative}
@@ -162,7 +222,10 @@ export default function TripSegmentList({
               <View style={isNative ? styles.fieldNative : styles.segCellDate}>
                 <Text style={[styles.fieldLabel, isNative && styles.fieldLabelTop]}>기간</Text>
                 <Pressable
-                  style={isNative ? styles.dateBtnNative : styles.dateBtnWeb}
+                  style={({ hovered }: HoverState) => [
+                    isNative ? styles.dateBtnNative : styles.dateBtnWeb,
+                    !isNative && hovered && styles.dateBtnWebHover,
+                  ]}
                   onPress={() => {
                     onSegmentFocus(idx);
                     onDateButtonPress(idx);
@@ -180,7 +243,7 @@ export default function TripSegmentList({
                   <CalendarIcon
                     width={isNative ? 16 : 12}
                     height={isNative ? 16 : 12}
-                    color={colors.gray700}
+                    color={isNative ? colors.gray700 : colors.gray900}
                   />
                 </Pressable>
               </View>
@@ -189,52 +252,79 @@ export default function TripSegmentList({
         ))}
       </View>
 
-      <Pressable style={styles.addBtn} onPress={onSegmentAdd}>
-        <Text style={styles.addBtnText}>+ 구간 추가</Text>
+      <Pressable
+        style={({ hovered }: HoverState) => [
+          styles.addBtn,
+          !isNative && hovered && styles.addBtnHover,
+        ]}
+        onPress={onSegmentAdd}
+      >
+        {({ hovered }: HoverState) =>
+          isNative ? (
+            <Text style={styles.addBtnText}>+ 구간 추가</Text>
+          ) : (
+            <>
+              <Text
+                style={[styles.addBtnPlus, hovered && styles.addBtnTextHover]}
+              >
+                +
+              </Text>
+              <Text
+                style={[styles.addBtnText, hovered && styles.addBtnTextHover]}
+              >
+                구간 추가
+              </Text>
+            </>
+          )
+        }
       </Pressable>
     </View>
   );
 }
+
+const dateBtnTransition = {
+  transitionProperty: "border-color, background-color",
+  transitionDuration: "120ms",
+} as ViewStyle;
 
 const styles = StyleSheet.create({
   container: {
     gap: 0,
   },
   segList: {
-    gap: isNative ? 12 : 10,
-    marginBottom: isNative ? 12 : 8,
+    gap: spacing.md,
+    marginBottom: isNative ? spacing.md : spacing.sm,
   },
   seg: {
     flexDirection: "row",
-    gap: isNative ? 0 : 12,
+    gap: isNative ? 0 : spacing.md,
     backgroundColor: colors.gray100,
     borderWidth: 1,
     borderColor: isNative ? colors.gray200 : colors.gray300,
-    borderRadius: isNative ? 16 : 12,
-    padding: 14,
+    borderRadius: isNative ? 16 : radii.mdPlus,
+    padding: isNative ? 14 : spacing.lg,
+    paddingLeft: isNative ? 14 : spacing.md,
   },
   // 웹 전용: 인덱스 컬럼
   segIdxCol: {
-    width: 22,
+    width: 24,
     flexDirection: "column",
     alignItems: "center",
-    paddingTop: 2,
+    paddingTop: spacing.xs,
   },
   segIdxBadge: {
-    width: 22,
-    height: 22,
-    borderRadius: 999,
+    width: 24,
+    height: 24,
+    borderRadius: radii.pill,
     backgroundColor: colors.gray900,
     alignItems: "center",
     justifyContent: "center",
     flexShrink: 0,
   },
   segIdxNum: {
+    ...textStyles.h9,
     color: colors.white,
-    fontFamily: typography.fontFamily.poppinsSemiBold,
-    fontSize: 11,
-    lineHeight: 22,
-    fontWeight: "700" as const,
+    fontVariant: ["tabular-nums"],
     textAlign: "center",
   },
   segIdxLine: {
@@ -252,7 +342,8 @@ const styles = StyleSheet.create({
   segHeader: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 12,
+    marginBottom: isNative ? 12 : 0,
+    zIndex: isNative ? 0 : 2,
   },
   // 앱 전용: 뱃지
   segBadge: {
@@ -277,43 +368,51 @@ const styles = StyleSheet.create({
   },
   segActions: {
     position: "absolute",
-    top: 0,
-    right: 0,
+    top: isNative ? 0 : -spacing.sm,
+    right: isNative ? 0 : -spacing.sm,
     flexDirection: "row",
-    gap: 2,
-    zIndex: 1,
+    gap: isNative ? 2 : 0,
+    zIndex: 2,
   },
   segActionsNative: {
     position: "relative",
     marginLeft: "auto",
   },
   actionBtn: {
-    width: 28,
-    height: 28,
+    width: isNative ? 28 : 24,
+    height: isNative ? 28 : 24,
+    borderRadius: radii.xs,
     alignItems: "center",
     justifyContent: "center",
   },
   actionBtnDisabled: {
-    opacity: 0.28,
+    opacity: isNative ? 0.28 : 1,
+  },
+  actionBtnHover: {
+    backgroundColor: colors.iconHoverBg,
+  },
+  actionBtnDeleteHover: {
+    backgroundColor: colors.dangerTint,
   },
   // 나라/도시 레이아웃
   segRow: {
     flexDirection: "row",
-    gap: 10,
+    gap: spacing.md,
   },
   segCell: {
     flex: 1,
-    gap: 3,
+    minWidth: 0,
+    gap: isNative ? 3 : spacing.xs,
   },
   fieldGroupNative: {
     gap: 0,
   },
   fieldNative: {},
   fieldLabel: {
-    ...textStyles.body6,
-    color: colors.gray600,
+    ...(isNative ? textStyles.body6 : textStyles.h9),
+    color: isNative ? colors.gray600 : colors.gray700,
     fontWeight: "600",
-    marginBottom: isNative ? 6 : 3,
+    marginBottom: isNative ? 6 : 0,
   },
   fieldLabelTop: {
     marginTop: 12,
@@ -325,8 +424,8 @@ const styles = StyleSheet.create({
   pickerTrigger: {
     borderWidth: 1,
     borderColor: colors.gray300,
-    borderRadius: 8,
-    paddingHorizontal: 10,
+    borderRadius: radii.md,
+    paddingHorizontal: spacing.md,
     height: 36,
     backgroundColor: colors.white,
   },
@@ -361,44 +460,69 @@ const styles = StyleSheet.create({
   },
   pickerPlaceholder: {
     color: colors.gray600,
+    fontFamily: typography.fontFamily.pretendardRegular,
   },
   // 웹 날짜 버튼
   segCellDate: {
-    gap: 3,
-    marginTop: 8,
+    gap: spacing.xs,
+    marginTop: spacing.sm,
   },
   dateBtnWeb: {
+    ...dateBtnTransition,
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
+    gap: spacing.sm,
     borderWidth: 1,
     borderColor: colors.gray300,
-    borderRadius: 8,
-    paddingHorizontal: 10,
+    borderRadius: radii.md,
+    paddingHorizontal: spacing.md,
     height: 36,
     backgroundColor: colors.white,
   },
+  dateBtnWebHover: {
+    backgroundColor: colors.inputHover,
+  },
   dateBtnText: {
     flex: 1,
-    fontFamily: typography.fontFamily.poppinsSemiBold,
-    fontSize: 13,
-    lineHeight: 20,
+    ...textStyles.h7,
+    fontVariant: ["tabular-nums"],
     color: colors.gray900,
   },
   // 구간 추가 버튼
   addBtn: {
+    ...(isNative ? {} : dateBtnTransition),
+    flexDirection: "row",
+    gap: spacing.sm,
+    height: isNative ? undefined : 40,
     borderWidth: 1,
     borderStyle: "dashed" as const,
-    borderColor: isNative ? colors.gray400 : colors.gray400,
-    borderRadius: isNative ? 14 : 10,
-    paddingVertical: isNative ? 14 : 10,
+    borderColor: colors.gray400,
+    borderRadius: isNative ? 14 : radii.md,
+    paddingVertical: isNative ? 14 : 0,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: colors.white,
+    backgroundColor: isNative ? colors.white : "transparent",
   },
   addBtnText: {
-    ...textStyles.body4,
+    ...(isNative ? textStyles.body4 : textStyles.h7),
     color: isNative ? colors.black : colors.gray700,
-    fontWeight: isNative ? ("700" as const) : ("400" as const),
+    fontWeight: isNative ? ("700" as const) : undefined,
+  },
+  addBtnPlus: {
+    ...textStyles.body2,
+    lineHeight: textStyles.body2.fontSize,
+    color: colors.gray700,
+  },
+  addBtnHover: {
+    borderColor: colors.gray900,
+    backgroundColor: colors.gray100,
+  },
+  addBtnTextHover: {
+    color: colors.gray900,
   },
 });
+
+const pickerTriggerDisabled = StyleSheet.flatten([
+  styles.pickerTrigger,
+  { backgroundColor: colors.gray100 },
+]);
