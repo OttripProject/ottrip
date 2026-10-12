@@ -81,6 +81,24 @@ export const shadows = {
     android: { elevation: 2 },
     default: { boxShadow: "0 1px 3px rgba(0,0,0,0.12)" } as any,
   }),
+  sheet: Platform.select({
+    ios: {
+      shadowColor: "#141828",
+      shadowOpacity: 0.28,
+      shadowRadius: 28,
+      shadowOffset: { width: 0, height: 24 },
+    },
+    android: { elevation: 16 },
+    default: {
+      boxShadow:
+        "0 2px 6px rgba(20,24,40,0.06), 0 24px 56px -20px rgba(20,24,40,0.28)",
+    } as any,
+  }),
+  errorCardRing: Platform.select({
+    ios: {},
+    android: {},
+    default: { boxShadow: "0 0 0 2px rgba(192,57,43,0.12)" } as any,
+  }),
   focusRing: Platform.select({
     ios: {},
     android: {},
