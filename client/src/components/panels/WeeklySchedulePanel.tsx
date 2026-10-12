@@ -17,10 +17,12 @@ import { flightsApi } from "@/services/flights";
 import { itinerariesApi } from "@/services/itineraries";
 import { plansApi } from "@/services/plans";
 import type { CreatePlanRequest, Plan, UpdatePlanRequest } from "@/types/api";
-import Card from "@/ui/components/Card";
 import GradientBackground from "@/ui/components/GradientBackground";
 import MotionPressable, { MotionIcon } from "@/ui/components/MotionPressable";
 import Input from "@/ui/components/input/Input";
+import { modalMotion } from "@/ui/effects/modalMotion";
+import { surfaces } from "@/ui/tokens/surfaces";
+import { useBackdropClose } from "@/hooks/useBackdropClose";
 import { radii } from "@/ui/tokens";
 import { colors } from "@/ui/tokens/colors";
 import { shadows } from "@/ui/tokens/shadows";
@@ -51,6 +53,7 @@ import PanelLayout from "./PanelLayout";
 
 import { Tooltip } from "@/ui/components/Tooltip";
 import CalenderIcon from "../../../assets/calender.svg";
+import CloseXIcon from "../../../assets/close_x.svg";
 import ExportPlanIcon from "../../../assets/export_plan.svg";
 import ImportFileIcon from "../../../assets/import_file.svg";
 import LeftArrowIcon from "../../../assets/left_arrow.svg";
@@ -62,7 +65,6 @@ import TodayIcon from "../../../assets/today.svg";
 import AccommodationIcon from "../../../assets/week_bar_accommodation.svg";
 import WeekBarLocationIcon from "../../../assets/week_bar_location.svg";
 import WeekBarTimeIcon from "../../../assets/week_bar_time.svg";
-import XIcon from "../../../assets/x.svg";
 import UploadIcon from "../../../assets/upload_tray.svg";
 import { extendPlanIfNeeded } from "@/utils/extendPlanIfNeeded";
 import { collectPlanItemDates, shrinkPlanIfNeeded } from "@/utils/shrinkPlanIfNeeded";
@@ -313,6 +315,7 @@ export default function WeeklySchedulePanel({
   const [aiChatOpen, setAiChatOpen] = useState(false);
   const [aiMessages, setAiMessages] = useState<AiMessage[]>([AI_INTRO_MESSAGE]);
   const [memoOpen, setMemoOpen] = useState(false);
+  const memoBackdrop = useBackdropClose(() => setMemoOpen(false));
   const [memoDraft, setMemoDraft] = useState("");
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const [showPlanSelectRequiredModal, setShowPlanSelectRequiredModal] =
@@ -3899,31 +3902,11 @@ export default function WeeklySchedulePanel({
       <Modal
         visible={memoOpen}
         transparent
-        animationType="fade"
+        animationType="none"
         onRequestClose={() => setMemoOpen(false)}
       >
-        <Pressable
-          style={styles.modalOverlay}
-          onPress={() => setMemoOpen(false)}
-        >
-          <Pressable onPress={e => e.stopPropagation()}>
-            <Card
-              width="100%"
-              maxWidth={420}
-              paddingHorizontal={24}
-              paddingVertical={24}
-              paddingBottom={20}
-              borderRadius={20}
-              alignItems="stretch"
-              shadow={{
-                shadowColor: colors.black,
-                shadowOffset: { width: 0, height: 24 },
-                shadowOpacity: 0.12,
-                shadowRadius: 48,
-                elevation: 24,
-              }}
-              style={styles.memoModalContainer}
-            >
+        <View style={styles.modalOverlay} {...memoBackdrop.overlayProps}>
+          <View style={styles.memoModalContainer} {...memoBackdrop.cardProps}>
               <View style={styles.memoModalHeader}>
                 <View style={styles.memoModalTextGroup}>
                   <Text style={styles.memoModalTitle}>공유 메모</Text>
@@ -3931,12 +3914,15 @@ export default function WeeklySchedulePanel({
                     다른 사람과 여행을 공유하고 함께 계획을 세워보세요.
                   </Text>
                 </View>
-                <Pressable
+                <MotionPressable
                   onPress={() => setMemoOpen(false)}
                   style={styles.memoModalCloseButton}
+                  accessibilityLabel="닫기"
                 >
-                  <XIcon width={24} height={24} />
-                </Pressable>
+                  <MotionIcon>
+                    <CloseXIcon width={16} height={16} color={colors.gray900} />
+                  </MotionIcon>
+                </MotionPressable>
               </View>
 
               <View style={styles.memoModalFieldGroup}>
@@ -3956,13 +3942,13 @@ export default function WeeklySchedulePanel({
               </View>
 
               <View style={styles.memoModalActions}>
-                <Pressable
+                <MotionPressable
                   onPress={() => setMemoOpen(false)}
                   style={styles.memoModalSecondaryButton}
                 >
                   <Text style={styles.memoModalSecondaryButtonText}>닫기</Text>
-                </Pressable>
-                <Pressable
+                </MotionPressable>
+                <MotionPressable
                   onPress={async () => {
                     try {
                       if (!internalSelectedTrip?.id)
@@ -3989,11 +3975,10 @@ export default function WeeklySchedulePanel({
                   style={styles.memoModalPrimaryButton}
                 >
                   <Text style={styles.memoModalPrimaryButtonText}>저장</Text>
-                </Pressable>
+                </MotionPressable>
               </View>
-            </Card>
-          </Pressable>
-        </Pressable>
+          </View>
+        </View>
       </Modal>
 
       <PlanSelectRequiredModal
@@ -4274,10 +4259,12 @@ const styles = StyleSheet.create({
     left: 8,
   },
   modalOverlay: {
+    ...modalMotion.overlay,
     flex: 1,
-    backgroundColor: colors.overlayBackground,
+    ...surfaces.overlay,
     justifyContent: "center",
     alignItems: "center",
+    padding: spacing.lgPlus,
   },
   calendarModalOverlay: {
     position: "absolute",
@@ -4299,42 +4286,40 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-start",
-    marginBottom: 18,
-    gap: 12,
+    gap: spacing.md,
   },
   memoModalTextGroup: {
     flex: 1,
   },
   memoModalTitle: {
-    ...textStyles.h3,
+    ...textStyles.h2,
+    color: colors.gray900,
   },
   memoModalDescription: {
-    ...textStyles.body4,
+    ...textStyles.body5,
     color: colors.gray700,
-    marginTop: 6,
+    marginTop: spacing.sm,
   },
   memoModalCloseButton: {
     width: 28,
     height: 28,
     alignItems: "center",
     justifyContent: "center",
-    marginTop: 2,
+    marginTop: spacing.xs,
   },
   memoModalFieldGroup: {
-    marginBottom: 18,
+    gap: spacing.sm,
   },
   memoModalLabel: {
     ...textStyles.h7,
-    color: colors.black,
-    marginBottom: 8,
+    color: colors.gray900,
   },
   memoModalInput: {
-    minHeight: 180,
+    minHeight: 120,
     borderWidth: 1,
-    borderColor: colors.gray400,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
+    borderColor: colors.gray350,
+    borderRadius: radii.mdPlus,
+    padding: spacing.lg,
     backgroundColor: colors.white,
     ...textStyles.body3,
     color: colors.gray900,
@@ -4342,26 +4327,26 @@ const styles = StyleSheet.create({
   memoModalActions: {
     flexDirection: "row",
     alignItems: "center",
-    columnGap: 10,
-    paddingTop: 4,
+    gap: spacing.md,
+    paddingTop: spacing.xs,
   },
   memoModalSecondaryButton: {
     flex: 1,
     height: 48,
-    borderRadius: 10,
-    backgroundColor: colors.gray200,
+    borderRadius: radii.md,
+    ...surfaces.muted,
     alignItems: "center",
     justifyContent: "center",
   },
   memoModalSecondaryButtonText: {
     ...textStyles.h6,
-    color: colors.black,
+    color: colors.gray900,
   },
   memoModalPrimaryButton: {
     flex: 1,
     height: 48,
-    borderRadius: 10,
-    backgroundColor: colors.primary,
+    borderRadius: radii.md,
+    ...surfaces.primary,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -4481,6 +4466,13 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   memoModalContainer: {
-    marginHorizontal: 16,
+    ...modalMotion.card,
+    width: 480,
+    maxWidth: "100%",
+    backgroundColor: colors.white,
+    borderRadius: radii["2xl"],
+    padding: spacing.xl,
+    gap: spacing.lg,
+    ...shadows.md,
   },
 });
