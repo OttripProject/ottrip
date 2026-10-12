@@ -34,7 +34,7 @@ import {
 import AttachmentIcon from "../../../assets/attachment_clip.svg";
 import DeleteIcon from "../../../assets/delete.svg";
 import UpdateIcon from "../../../assets/update.svg"
-import AttachmentDocumentIcon from "../../../assets/mobile_attachment_document.svg";
+import PdfDocIcon from "../../../assets/attachment_document.svg";
 import AttachmentImageIcon from "../../../assets/mobile_attachment_image.svg";
 import CloseXIcon from "../../../assets/close_x.svg";
 
@@ -507,7 +507,7 @@ export default function ExpenseDetailModal({
                           {isImage ? (
                             <AttachmentImageIcon width={20} height={20} />
                           ) : (
-                            <AttachmentDocumentIcon width={20} height={20} />
+                            <PdfDocIcon width={20} height={20} color={colors.pdfText} />
                           )}
                         </View>
                         <View style={styles.attachmentCardInfo}>
@@ -712,10 +712,10 @@ const styles = StyleSheet.create({
     gap: spacing.lg,
   },
   attachmentScrollContent: {
-    paddingHorizontal: spacing.xl,
-    paddingTop: spacing.md,
+    paddingHorizontal: spacing["2xl"],
+    paddingTop: spacing.lg,
     paddingBottom: spacing.xl,
-    gap: spacing.sm + 2,
+    gap: spacing.sm,
   },
   categorySection: {
     gap: spacing.md,
@@ -796,29 +796,30 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.md,
-    padding: spacing.sm + 2,
-    paddingHorizontal: spacing.md,
+    padding: spacing.md,
     backgroundColor: colors.gray100,
+    borderWidth: 1,
+    borderColor: colors.gray300,
     borderRadius: radii.md,
   },
   fileTypeBadge: {
     width: 36,
     height: 36,
-    borderRadius: radii.base,
+    borderRadius: radii.md,
     flexShrink: 0,
     alignItems: "center",
     justifyContent: "center",
   },
   fileTypeBadgeImage: {
-    backgroundColor: "#E7EEFF",
+    backgroundColor: colors.imageTint,
   },
   fileTypeBadgeDoc: {
-    backgroundColor: "#E7EEFF",
+    backgroundColor: colors.pdfBg,
   },
   attachmentCardInfo: {
     flex: 1,
     minWidth: 0,
-    gap: 2,
+    gap: spacing.xs,
   },
   attachmentFileName: {
     ...textStyles.h7,
@@ -827,12 +828,12 @@ const styles = StyleSheet.create({
   attachmentMeta: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 5,
+    gap: spacing.xs,
     minWidth: 0,
   },
   attachmentCategory: {
     ...textStyles.h9,
-    color: colors.primary,
+    color: colors.imageInk,
     flexShrink: 0,
   },
   attachmentMetaDot: {
@@ -846,7 +847,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   attachmentFileSize: {
-    ...textStyles.h9,
+    ...textStyles.body6,
     color: colors.gray600,
     flexShrink: 0,
   },
