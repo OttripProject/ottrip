@@ -21,6 +21,8 @@ export const colors = {
   primarySoft: "#EFF6FF",
   pdfBg: "#FFE9D6",
   pdfText: "#B8531A",
+  imageTint: "#E7EEFF",
+  imageInk: "#3A6FE0",
   red: "rgb(154, 44, 32)",
   danger: "#EF4444",
   success: "#0066FF",
