@@ -673,76 +673,11 @@ export default function WeeklySchedulePanel({
         EVENT_INSET_Y -
         scrollTop;
 
-      let eventLeft: number;
-
-      if (draggingEvent) {
-        let originalDate: dayjs.Dayjs | null = null;
-
-        if (draggingEvent.type === "itinerary") {
-          const itineraryId = Number.parseInt(draggingEvent.id);
-          const itinerary = itineraries.find(it => it.id === itineraryId);
-          if (itinerary) {
-            originalDate = dayjs(itinerary.itineraryDate);
-          }
-        } else if (draggingEvent.type === "flight") {
-          const eventIdParts = draggingEvent.id.split("-");
-          const flightId =
-            eventIdParts.length > 1 ? Number.parseInt(eventIdParts[1]) : null;
-
-          if (flightId !== null) {
-            const flight = flights.find(f => f.id === flightId);
-            if (
-              flight &&
-              flight.flightSegments &&
-              flight.flightSegments.length > 0
-            ) {
-              const segmentIdOrIndex =
-                eventIdParts.length > 2
-                  ? Number.parseInt(eventIdParts[2])
-                  : null;
-              if (segmentIdOrIndex !== null) {
-                const segment = flight.flightSegments.find(
-                  (seg: any, idx: number) =>
-                    seg.id === segmentIdOrIndex ||
-                    (seg.id == null && idx + 1 === segmentIdOrIndex),
-                );
-                if (segment) {
-                  originalDate = dayjs(segment.departureTime);
-                } else if (segmentIdOrIndex > 0) {
-                  originalDate = dayjs(
-                    flight.flightSegments[segmentIdOrIndex - 1].departureTime,
-                  );
-                }
-              }
-            }
-          }
-        }
-
-        if (originalDate) {
-          const originalDayIndex = originalDate.diff(currentWeekStart, "day");
-
-          const originalEventLeft = draggingEvent.elementX;
-          const originalEventWidth = draggingEvent.elementWidth;
-
-          const originalColumnWidth =
-            originalEventWidth + EVENT_INSET_LEFT + EVENT_INSET_RIGHT;
-          const originalColumnLeft = originalEventLeft - EVENT_INSET_LEFT;
-
-          const dayDiff = dayIndexClamped - originalDayIndex;
-          const dropColumnLeft =
-            originalColumnLeft + originalColumnWidth * dayDiff;
-
-          eventLeft = dropColumnLeft + EVENT_INSET_LEFT;
-        } else {
-          const dayLeft =
-            calendarRect.left + timeColumnWidth + dayWidth * dayIndexClamped;
-          eventLeft = dayLeft + EVENT_INSET_LEFT;
-        }
-      } else {
-        const dayLeft =
-          calendarRect.left + timeColumnWidth + dayWidth * dayIndexClamped;
-        eventLeft = dayLeft + EVENT_INSET_LEFT;
-      }
+      const eventLeft =
+        calendarRect.left +
+        timeColumnWidth +
+        dayWidth * dayIndexClamped +
+        EVENT_INSET_LEFT;
 
       return {
         x: eventLeft,
@@ -1912,6 +1847,10 @@ export default function WeeklySchedulePanel({
 
   const finalItineraries = displayItineraries;
 
+  const dragPreviewStartMs = dropPreviewPosition?.time
+    ? dropPreviewPosition.time.getTime()
+    : null;
+
   const itineraryDays = useMemo(
     () => new Set(finalItineraries.map(it => it.itineraryDate)),
     [finalItineraries],
@@ -1938,6 +1877,31 @@ export default function WeeklySchedulePanel({
       : [];
 
     const allEvents = [...itineraryEvents, ...flightEvents, ...previewEvents];
+
+    if (draggingEvent?.type === "itinerary" && dragPreviewStartMs !== null) {
+      const eventIndex = allEvents.findIndex(
+        e => String(e.id) === String(draggingEvent.id),
+      );
+      if (eventIndex !== -1) {
+        const event = allEvents[eventIndex];
+        const duration =
+          new Date(event.end).getTime() - new Date(event.start).getTime();
+        const newStart = new Date(dragPreviewStartMs);
+        const dayEnd = dayjs(newStart).endOf("day").valueOf();
+        const newEnd = new Date(
+          Math.min(dragPreviewStartMs + duration, dayEnd),
+        );
+        allEvents[eventIndex] = {
+          ...event,
+          start: newStart,
+          end: newEnd,
+          startDateStr: dayjs(newStart).format("YYYY-MM-DD"),
+          normalizedStartTime: dayjs(newStart).format("HH:mm"),
+          normalizedEndTime:
+            newEnd.getTime() === dayEnd ? "24:00" : dayjs(newEnd).format("HH:mm"),
+        };
+      }
+    }
 
     if (droppedEventPosition) {
       const eventIndex = allEvents.findIndex(
@@ -2019,7 +1983,15 @@ export default function WeeklySchedulePanel({
     });
 
     return processedEvents;
-  }, [itineraries, flights, previewEvent, droppedEventPosition]);
+  }, [
+    itineraries,
+    flights,
+    previewEvent,
+    droppedEventPosition,
+    draggingEvent?.id,
+    draggingEvent?.type,
+    dragPreviewStartMs,
+  ]);
 
   const goPrev = () => setCurrentWeekStart(prev => prev.subtract(1, "week"));
   const goNext = () => setCurrentWeekStart(prev => prev.add(1, "week"));
@@ -3448,7 +3420,7 @@ export default function WeeklySchedulePanel({
 
             const dragStyle = isDragging
               ? {
-                  opacity: 0.3,
+                  opacity: isItinerary ? 0.7 : 0.3,
                   cursor: "grabbing",
                 }
               : isDraggable
@@ -3500,7 +3472,7 @@ export default function WeeklySchedulePanel({
                             elementHeight: rect.height,
                           });
                           setDragOffset({ x: 0, y: 0 });
-                          setSelectedEventId(null);
+                          setSelectedEventId(event.id);
                           setSelectedAccommodationId(null);
                         }
                       },
@@ -3654,7 +3626,9 @@ export default function WeeklySchedulePanel({
         />
       </View>
 
-      {draggingEvent && dropPreviewPosition && Platform.OS === "web" && (
+      {draggingEvent?.type === "flight" &&
+        dropPreviewPosition &&
+        Platform.OS === "web" && (
         <View
           style={{
             position: "fixed" as any,
@@ -3663,28 +3637,15 @@ export default function WeeklySchedulePanel({
             width: draggingEvent.elementWidth,
             height: draggingEvent.elementHeight,
             borderWidth: 1,
-            borderColor:
-              draggingEvent.type === "flight" && hasOverlap
-                ? "#FF4242"
-                : draggingEvent.type === "itinerary"
-                  ? "rgba(0, 102, 255, 0.8)"
-                  : "rgba(139, 92, 246, 0.8)",
-            backgroundColor:
-              draggingEvent.type === "flight" && hasOverlap
-                ? "rgba(255, 66, 66, 0.05)"
-                : draggingEvent.type === "itinerary"
-                  ? "rgba(0, 102, 255, 0.05)"
-                  : "rgba(139, 92, 246, 0.05)",
+            borderColor: hasOverlap ? "#FF4242" : "rgba(139, 92, 246, 0.8)",
+            backgroundColor: hasOverlap
+              ? "rgba(255, 66, 66, 0.05)"
+              : "rgba(139, 92, 246, 0.05)",
             borderRadius: radii.xs,
             pointerEvents: "none" as const,
             zIndex: 9999,
             opacity: 1,
-            shadowColor:
-              draggingEvent.type === "flight" && hasOverlap
-                ? "#FF4242"
-                : draggingEvent.type === "itinerary"
-                  ? "#0066FF"
-                  : "#8B5CF6",
+            shadowColor: hasOverlap ? "#FF4242" : "#8B5CF6",
             shadowOffset: { width: 0, height: 2 },
             shadowOpacity: 0.3,
             shadowRadius: 4,
@@ -3693,7 +3654,7 @@ export default function WeeklySchedulePanel({
         />
       )}
 
-      {draggingEvent &&
+      {draggingEvent?.type === "flight" &&
         Platform.OS === "web" &&
         (() => {
           const draggedEvent = events.find(e => e.id === draggingEvent.id);
