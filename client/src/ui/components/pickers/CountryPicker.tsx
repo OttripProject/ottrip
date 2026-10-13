@@ -52,6 +52,7 @@ interface CountryPickerProps {
   listItemLabelStyle?: ViewStyle | TextStyle;
   selectedItemContainerStyle?: ViewStyle;
   disabled?: boolean;
+  hideArrow?: boolean;
   onOpen?: () => void;
   onClose?: () => void;
   useModal?: boolean;
@@ -66,6 +67,7 @@ export default function CountryPicker({
   containerStyle,
   style,
   disabled,
+  hideArrow,
   onOpen,
   onClose,
   useModal = false,
@@ -468,11 +470,12 @@ export default function CountryPicker({
             ? `${selectedCode ? codeToFlag(selectedCode) : ""} ${value}`.trim()
             : placeholder}
         </Text>
-        {(open || fsOpen) ? (
-          <UpperArrowIcon width={10} height={10} color={colors.gray600} />
-        ) : (
-          <DownArrowIcon width={10} height={10} color={colors.gray600} />
-        )}
+        {!hideArrow &&
+          ((open || fsOpen) ? (
+            <UpperArrowIcon width={10} height={10} color={colors.gray600} />
+          ) : (
+            <DownArrowIcon width={10} height={10} color={colors.gray600} />
+          ))}
       </Pressable>
 
       {open && !useModal && (

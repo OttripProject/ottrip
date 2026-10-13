@@ -16,6 +16,7 @@ export const motion = {
     toastOut: 160,
     overlayIn: 120,
     pop: 360,
+    blockIn: 420,
   },
 };
 

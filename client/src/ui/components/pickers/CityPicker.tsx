@@ -47,6 +47,7 @@ interface CityPickerProps {
   containerStyle?: ViewStyle;
   style?: ViewStyle;
   disabled?: boolean;
+  hideArrow?: boolean;
   onOpen?: () => void;
   onClose?: () => void;
   useModal?: boolean;
@@ -63,6 +64,7 @@ export default function CityPicker({
   containerStyle,
   style,
   disabled,
+  hideArrow,
   onOpen,
   onClose,
   useModal = false,
@@ -533,11 +535,12 @@ export default function CityPicker({
         >
           {value || placeholder}
         </Text>
-        {open || fsOpen ? (
-          <UpperArrowIcon width={10} height={10} color={colors.gray600} />
-        ) : (
-          <DownArrowIcon width={10} height={10} color={colors.gray600} />
-        )}
+        {!hideArrow &&
+          ((open || fsOpen) ? (
+            <UpperArrowIcon width={10} height={10} color={colors.gray600} />
+          ) : (
+            <DownArrowIcon width={10} height={10} color={colors.gray600} />
+          ))}
       </Pressable>
 
       {open && !useModal && <View style={styles.popup}>{popupContent}</View>}

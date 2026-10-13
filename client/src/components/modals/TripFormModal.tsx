@@ -2,20 +2,26 @@ import type { CalendarMarkedDates, SegmentDraft } from "@/hooks/useTripForm";
 import TripCalendarModal from "../trip/TripCalendarModal";
 import TripDurationBanner from "../trip/TripDurationBanner";
 import TripSegmentList from "../trip/TripSegmentList";
+import { useBackdropClose } from "@/hooks/useBackdropClose";
+import MotionPressable, { MotionIcon } from "@/ui/components/MotionPressable";
 import Input from "@/ui/components/input/Input";
+import { modalMotion } from "@/ui/effects/modalMotion";
 import { colors } from "@/ui/tokens/colors";
+import { radii } from "@/ui/tokens/radii";
+import { shadows } from "@/ui/tokens/shadows";
 import { spacing } from "@/ui/tokens/spacing";
-import { textStyles, typography } from "@/ui/tokens/typography";
+import { surfaces } from "@/ui/tokens/surfaces";
+import { textStyles } from "@/ui/tokens/typography";
 import { useEffect, useRef, useState } from "react";
 import {
   Modal,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
   View,
+  type ViewStyle,
 } from "react-native";
-import XIcon from "../../../assets/mobile_close.svg";
+import CloseXIcon from "../../../assets/close_x.svg";
 
 export interface TripFormModalProps {
   visible: boolean;
@@ -57,11 +63,14 @@ export default function TripFormModal({
   const title = mode === "add" ? "새 여행 추가" : "여행 수정";
   const submitButtonText = mode === "add" ? "여행 저장" : "여행 수정";
 
-  const [calendarOpenIndex, setCalendarOpenIndex] = useState<number | null>(null);
+  const [calendarOpenIndex, setCalendarOpenIndex] = useState<number | null>(
+    null,
+  );
   const prevSelectionModeRef = useRef(selectionMode);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const submittingRef = useRef(false);
   const submitDisabled = isSubmitDisabled || isSubmitting;
+  const backdrop = useBackdropClose(onClose);
 
   const handleSubmit = async () => {
     if (submittingRef.current) return;
@@ -95,74 +104,83 @@ export default function TripFormModal({
       <Modal
         visible={visible}
         transparent
-        animationType="fade"
+        animationType="none"
         onRequestClose={onClose}
       >
-        <View style={styles.overlay}>
-          <View style={styles.modalContent}>
+        <View style={styles.overlay} {...backdrop.overlayProps}>
+          <View style={styles.modalContent} {...backdrop.cardProps}>
             <View style={styles.header}>
               <View style={styles.headerText}>
                 <Text style={styles.title}>{title}</Text>
                 <Text style={styles.subtitle}>
-                  구간별로 나라·도시·기간을 추가해보세요
+                  구간별로 나라·도시·기간을 추가해보세요.
                 </Text>
               </View>
-              <Pressable onPress={onClose} style={styles.closeButton}>
-                <XIcon width={16} height={16} color={colors.gray600} />
-              </Pressable>
-            </View>
-
-            <View style={styles.scrollWrapper}>
-              <ScrollView
-                showsVerticalScrollIndicator={false}
-                keyboardShouldPersistTaps="handled"
-                contentContainerStyle={styles.scrollContent}
+              <MotionPressable
+                onPress={onClose}
+                style={styles.closeButton}
+                accessibilityLabel="닫기"
               >
-                <View style={styles.section}>
-                  <View style={styles.sectionLabelRow}>
-                    <Text style={styles.sectionLabel}>여행명</Text>
-                    <Text style={styles.counter}>{tripData.name.length}/30</Text>
-                  </View>
-                  <Input
-                    style={styles.nameInput}
-                    placeholder="예: 동유럽 여행"
-                    placeholderTextColor={colors.gray500}
-                    value={tripData.name}
-                    onChangeText={onNameChange}
-                    maxLength={30}
-                  />
-                </View>
-
-                <View style={styles.section}>
-                  <View style={styles.sectionLabelRow}>
-                    <Text style={styles.sectionLabel}>여행 구간</Text>
-                    <Text style={styles.sectionHint}>
-                      나라 · 도시 · 기간을 순서대로 추가하세요
-                    </Text>
-                  </View>
-                  <TripSegmentList
-                    segments={tripData.segments}
-                    onSegmentUpdate={onSegmentUpdate}
-                    onSegmentAdd={onSegmentAdd}
-                    onSegmentRemove={onSegmentRemove}
-                    onSegmentMove={onSegmentMove}
-                    onSegmentFocus={onSegmentFocus}
-                    onDateButtonPress={idx => {
-                      onSegmentFocus(idx);
-                      setCalendarOpenIndex(idx);
-                    }}
-                  />
-                </View>
-
-                <TripDurationBanner segments={tripData.segments} />
-              </ScrollView>
+                <MotionIcon>
+                  <CloseXIcon width={16} height={16} color={colors.gray600} />
+                </MotionIcon>
+              </MotionPressable>
             </View>
+
+            <ScrollView
+              style={styles.scroll}
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+              contentContainerStyle={styles.scrollContent}
+            >
+              <View style={styles.section}>
+                <View style={styles.sectionLabelRow}>
+                  <Text style={styles.sectionLabel}>여행명</Text>
+                  <Text style={styles.counter}>{tripData.name.length}/30</Text>
+                </View>
+                <Input
+                  variant="filled"
+                  style={styles.nameInput}
+                  placeholder="예: 동유럽 여행"
+                  placeholderTextColor={colors.gray600}
+                  value={tripData.name}
+                  onChangeText={onNameChange}
+                  maxLength={30}
+                />
+              </View>
+
+              <View style={styles.section}>
+                <View style={styles.sectionLabelRow}>
+                  <Text style={styles.sectionLabel}>여행 구간</Text>
+                  <Text style={styles.sectionHint}>
+                    나라 · 도시 · 기간을 순서대로 추가하세요
+                  </Text>
+                </View>
+                <TripSegmentList
+                  segments={tripData.segments}
+                  onSegmentUpdate={onSegmentUpdate}
+                  onSegmentAdd={onSegmentAdd}
+                  onSegmentRemove={onSegmentRemove}
+                  onSegmentMove={onSegmentMove}
+                  onSegmentFocus={onSegmentFocus}
+                  onDateButtonPress={idx => {
+                    onSegmentFocus(idx);
+                    setCalendarOpenIndex(idx);
+                  }}
+                />
+              </View>
+
+              <TripDurationBanner segments={tripData.segments} />
+            </ScrollView>
 
             <View style={styles.footer}>
-              <Pressable style={styles.cancelButton} onPress={onClose}>
+              <MotionPressable
+                style={styles.cancelButton}
+                onPress={onClose}
+              >
                 <Text style={styles.cancelButtonText}>취소</Text>
-              </Pressable>
-              <Pressable
+              </MotionPressable>
+              <MotionPressable
                 style={[
                   styles.submitButton,
                   submitDisabled && styles.submitButtonDisabled,
@@ -178,7 +196,7 @@ export default function TripFormModal({
                 >
                   {submitButtonText}
                 </Text>
-              </Pressable>
+              </MotionPressable>
             </View>
           </View>
         </View>
@@ -197,121 +215,123 @@ export default function TripFormModal({
 
 const styles = StyleSheet.create({
   overlay: {
+    ...modalMotion.overlay,
     flex: 1,
-    backgroundColor: colors.overlayBackground,
+    ...surfaces.overlay,
     justifyContent: "center",
     alignItems: "center",
-    paddingHorizontal: 16,
+    paddingVertical: spacing["2xl"] + spacing.sm,
+    paddingHorizontal: spacing.xl,
   },
   modalContent: {
+    ...modalMotion.card,
     backgroundColor: colors.white,
-    borderRadius: 20,
-    paddingTop: 28,
-    paddingBottom: 24,
-    paddingHorizontal: 28,
-    width: "100%",
-    maxWidth: 560,
-    maxHeight: "90%",
+    borderRadius: radii["2xl"],
+    padding: spacing.xl,
+    width: 520 + spacing.xl * 2,
+    maxWidth: "100%",
+    maxHeight: "100%",
+    gap: spacing.xl,
+    ...shadows.xl,
   },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-start",
-    marginBottom: 24,
+    gap: spacing.md,
   },
   headerText: {
     flex: 1,
-    paddingRight: 12,
+    gap: spacing.xs,
   },
   title: {
     ...textStyles.h3,
-    color: colors.black,
-    marginBottom: 4,
+    color: colors.gray900,
   },
   subtitle: {
     ...textStyles.body5,
     color: colors.gray600,
   },
   closeButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: colors.gray200,
+    width: 28,
+    height: 28,
+    borderRadius: radii.pill,
+    ...surfaces.subtle,
     alignItems: "center",
     justifyContent: "center",
   },
-  scrollWrapper: {
-    flex: 1,
-    minHeight: 0,
+  scroll: {
+    flexGrow: 0,
+    flexShrink: 1,
     marginHorizontal: -spacing.xs,
   },
   scrollContent: {
     paddingHorizontal: spacing.xs,
+    gap: spacing.xl,
   },
   section: {
-    marginBottom: 20,
+    gap: spacing.sm,
   },
   sectionLabelRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 8,
+    alignItems: "baseline",
+    gap: spacing.sm,
   },
   sectionLabel: {
     ...textStyles.h7,
-    color: colors.black,
+    color: colors.gray900,
   },
   sectionHint: {
     ...textStyles.body6,
     color: colors.gray600,
   },
   counter: {
-    fontFamily: typography.fontFamily.poppinsMedium,
-    fontSize: 11,
+    ...textStyles.body6,
+    fontVariant: ["tabular-nums"],
     color: colors.gray600,
   },
   nameInput: {
     width: "100%",
-    height: 42,
-    paddingHorizontal: 12,
-    paddingVertical: 0,
+    height: 44,
+    paddingHorizontal: spacing.md,
     backgroundColor: colors.white,
     borderWidth: 1,
     borderColor: colors.gray300,
-    borderRadius: 10,
+    borderRadius: radii.md,
     ...textStyles.body4,
     color: colors.gray900,
-    outlineStyle: "none",
-  } as any,
+  },
   footer: {
     flexDirection: "row",
-    gap: 10,
+    gap: spacing.sm,
+    paddingTop: spacing.xs,
   },
   cancelButton: {
     flex: 1,
     height: 44,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: colors.gray300,
+    borderRadius: radii.md,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: colors.white,
+    ...surfaces.muted,
   },
   cancelButtonText: {
     ...textStyles.h7,
-    color: colors.black,
+    color: colors.gray900,
   },
   submitButton: {
     flex: 1,
     height: 44,
-    borderRadius: 12,
+    borderRadius: radii.md,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: colors.primary,
+    ...surfaces.primary,
   },
   submitButtonDisabled: {
     backgroundColor: colors.gray300,
-  },
+    backgroundImage: "none",
+    boxShadow: "none",
+  } as ViewStyle,
   submitButtonText: {
     ...textStyles.h7,
     color: colors.white,

@@ -71,6 +71,44 @@ export const shadows = {
     android: { elevation: 24 },
     default: { boxShadow: "0 24px 64px rgba(0,0,0,0.3)" } as any,
   }),
+  toggleKnob: Platform.select({
+    ios: {
+      shadowColor: "#000",
+      shadowOpacity: 0.12,
+      shadowRadius: 3,
+      shadowOffset: { width: 0, height: 1 },
+    },
+    android: { elevation: 2 },
+    default: { boxShadow: "0 1px 3px rgba(0,0,0,0.12)" } as any,
+  }),
+  sheet: Platform.select({
+    ios: {
+      shadowColor: "#141828",
+      shadowOpacity: 0.28,
+      shadowRadius: 28,
+      shadowOffset: { width: 0, height: 24 },
+    },
+    android: { elevation: 16 },
+    default: {
+      boxShadow:
+        "0 2px 6px rgba(20,24,40,0.06), 0 24px 56px -20px rgba(20,24,40,0.28)",
+    } as any,
+  }),
+  errorCardRing: Platform.select({
+    ios: {},
+    android: {},
+    default: { boxShadow: "0 0 0 2px rgba(192,57,43,0.12)" } as any,
+  }),
+  eventHover: Platform.select({
+    ios: {
+      shadowColor: "#141828",
+      shadowOpacity: 0.28,
+      shadowRadius: 8,
+      shadowOffset: { width: 0, height: 6 },
+    },
+    android: { elevation: 4 },
+    default: { boxShadow: "0 6px 16px -8px rgba(20,24,40,0.28)" } as any,
+  }),
   focusRing: Platform.select({
     ios: {},
     android: {},

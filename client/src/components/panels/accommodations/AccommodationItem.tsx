@@ -781,7 +781,7 @@ export default function AccommodationItem({
             <Text style={styles.label}>내용</Text>
             {Platform.OS === "web" ? (
               <Input
-                variant={readOnly ? "outlined" : "filled"}
+                variant={readOnly ? "bare" : "filled"}
                 multiline
                 numberOfLines={3}
                 textAlignVertical="top"
@@ -791,11 +791,14 @@ export default function AccommodationItem({
                 }
                 placeholder={PLACEHOLDERS.itinerary.descriptionForm}
                 placeholderTextColor={colors.gray600}
-                editable={!readOnly}
+                readOnly={readOnly}
                 size="md"
                 style={[
                   readOnly ? styles.readOnlyTextArea : styles.textArea,
-                  { resize: "vertical", overflow: "auto" } as any,
+                  {
+                    resize: "vertical",
+                    overflow: readOnly ? "hidden" : "auto",
+                  } as any,
                 ]}
               />
             ) : (
@@ -840,8 +843,9 @@ export default function AccommodationItem({
                 onOpen={() => !readOnly && setCountryOpen(true)}
                 onClose={() => setCountryOpen(false)}
                 disabled={readOnly}
+                hideArrow={readOnly}
                 useModal
-                style={styles.pickerTrigger}
+                style={readOnly ? styles.readOnlyPicker : styles.pickerTrigger}
               />
             </View>
             <View style={[styles.inputGroup, styles.halfWidth]}>
@@ -852,8 +856,9 @@ export default function AccommodationItem({
                 countryKo={formData.country}
                 placeholder={PLACEHOLDERS.accommodation.city}
                 disabled={readOnly}
+                hideArrow={readOnly}
                 useModal
-                style={styles.pickerTrigger}
+                style={readOnly ? styles.readOnlyPicker : styles.pickerTrigger}
               />
             </View>
           </View>
@@ -922,8 +927,8 @@ export default function AccommodationItem({
                   readOnly
                     ? [
                         styles.dateInput,
-                        { borderColor: colors.gray400, borderWidth: 1 },
-                      ]
+                        styles.readOnlyPicker,
+                        ]
                     : styles.dateInput,
                   checkinDateHover.hovered &&
                     !readOnly &&
@@ -1005,14 +1010,11 @@ export default function AccommodationItem({
                 popupAlign="right"
                 style={
                   readOnly
-                    ? {
-                        backgroundColor: colors.gray200,
-                        borderColor: colors.gray400,
-                        borderWidth: 1,
-                      }
+                    ? styles.readOnlyPicker
                     : styles.timePicker
                 }
                 disabled={readOnly}
+                hideArrow={readOnly}
               />
             </View>
           </View>
@@ -1045,8 +1047,8 @@ export default function AccommodationItem({
                   readOnly
                     ? [
                         styles.dateInput,
-                        { borderColor: colors.gray400, borderWidth: 1 },
-                      ]
+                        styles.readOnlyPicker,
+                        ]
                     : styles.dateInput,
                   checkoutDateHover.hovered &&
                     !readOnly &&
@@ -1119,14 +1121,11 @@ export default function AccommodationItem({
                 popupAlign="right"
                 style={
                   readOnly
-                    ? {
-                        backgroundColor: colors.gray200,
-                        borderColor: colors.gray400,
-                        borderWidth: 1,
-                      }
+                    ? styles.readOnlyPicker
                     : styles.timePicker
                 }
                 disabled={readOnly}
+                hideArrow={readOnly}
               />
             </View>
           </View>
@@ -1258,11 +1257,15 @@ export default function AccommodationItem({
       ) : (
         <View style={styles.buttonRow}>
           <MotionPressable
-            style={styles.deleteButton}
+            style={[styles.deleteButton, styles.readOnlyDeleteButton]}
             onPress={handleDelete}
             disabled={isSubmitting}
           >
-            <Text style={styles.deleteButtonText}>삭제</Text>
+            <Text
+              style={[styles.deleteButtonText, styles.readOnlyDeleteButtonText]}
+            >
+              삭제
+            </Text>
           </MotionPressable>
           <MotionPressable
             style={[styles.saveButton, styles.footerEditButton]}
@@ -1407,6 +1410,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xl,
     paddingBottom: spacing.xl,
   },
+  readOnlyDeleteButton: {
+    backgroundColor: colors.dangerTint,
+    backgroundImage: "none",
+    boxShadow: "none",
+  } as any,
+  readOnlyDeleteButtonText: {
+    color: colors.danger,
+  },
   deleteButton: {
     ...surfaces.muted,
     flex: 1,
@@ -1437,37 +1448,43 @@ const styles = StyleSheet.create({
   textArea: {
     height: 80,
   },
+  readOnlyPicker: {
+    backgroundColor: colors.gray200,
+    height: 46,
+    borderWidth: 0,
+    borderRadius: radii.mdPlus,
+    paddingHorizontal: 14,
+  },
   readOnlyInput: {
     backgroundColor: colors.gray200,
-    borderWidth: 1,
-    borderColor: colors.gray400,
-    height: 40,
-    borderRadius: radii.md,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
-    ...textStyles.body4,
+    borderWidth: 0,
+    height: 46,
+    borderRadius: radii.mdPlus,
+    paddingHorizontal: 14,
+    paddingVertical: spacing.none,
+    ...textStyles.body3,
+    color: colors.gray900,
   },
   readOnlyCurrency: {
     backgroundColor: colors.gray200,
-    borderWidth: 1,
-    borderColor: colors.gray400,
-    height: 40,
-    borderRadius: radii.md,
-    paddingHorizontal: spacing.md,
+    borderWidth: 0,
+    height: 46,
+    borderRadius: radii.mdPlus,
+    paddingHorizontal: 14,
     justifyContent: "center",
   },
   readOnlyCurrencyText: {
-    ...textStyles.body4,
+    ...textStyles.body3,
     color: colors.gray900,
   },
   readOnlyTextArea: {
     backgroundColor: colors.gray200,
-    borderWidth: 1,
-    borderColor: colors.gray400,
+    borderWidth: 0,
     minHeight: 80,
-    borderRadius: radii.md,
-    paddingHorizontal: spacing.md,
-    paddingVertical: 10,
-    ...textStyles.body4,
+    borderRadius: radii.mdPlus,
+    paddingHorizontal: 14,
+    paddingVertical: spacing.md,
+    ...textStyles.body3,
+    color: colors.gray900,
   },
 });

@@ -25,6 +25,20 @@ export const colors = {
   imageInk: "#3A6FE0",
   red: "rgb(154, 44, 32)",
   danger: "#EF4444",
+  dangerTint: "#FEE2E2",
+  errorInk: "#C0392B",
+  errorText: "#8B2E23",
+  errorSoft: "#FDECE9",
+  errorBorder: "#F5C7C0",
+  errorTint: "#FFF7F5",
+  errorFill: "#FFE2DE",
+  errorDivider: "#E2B5AE",
+  warningTint: "#FFF1E5",
+  iconHoverBg: "rgba(31, 31, 31, 0.06)",
+  hairline: "rgba(20, 24, 40, 0.06)",
+  onDarkMuted: "rgba(255, 255, 255, 0.66)",
+  onDarkSubtle: "rgba(255, 255, 255, 0.5)",
+  onDarkTint: "rgba(255, 255, 255, 0.12)",
   success: "#0066FF",
   warning: "#FF4242",
   gradientStart: "#FFD7EB",
@@ -80,6 +94,7 @@ export const colors = {
   festivalBgLight: "#F1FBFB",
   festivalText: "#0E8A8A",
   performanceBg: "#FFEBFB",
+  mealBg: "#FFF4E0",
 };
 
 export type ColorName = keyof typeof colors;

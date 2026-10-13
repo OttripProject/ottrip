@@ -1,7 +1,25 @@
 diff --git a/node_modules/react-native-big-calendar/build/index.es.js b/node_modules/react-native-big-calendar/build/index.es.js
-index 4a7c12a..d013d6e 100644
+index 4a7c12a..182bca4 100644
 --- a/node_modules/react-native-big-calendar/build/index.es.js
 +++ b/node_modules/react-native-big-calendar/build/index.es.js
+@@ -96,7 +96,7 @@ function deepMerge(target, source) {
+ var typedMemo = React__default.memo;
+ 
+ var MIN_HEIGHT = 1200;
+-var HOUR_GUIDE_WIDTH = 50;
++var HOUR_GUIDE_WIDTH = 60;
+ var OVERLAP_OFFSET = Platform.OS === 'web' ? 20 : 8;
+ var OVERLAP_PADDING = Platform.OS === 'web' ? 3 : 0;
+ var eventCellCss = StyleSheet.create({
+@@ -242,7 +242,7 @@ var u = StyleSheet.create({
+         width: 36,
+     },
+     'w-50': {
+-        width: 50,
++        width: 60,
+     },
+     /*
+      * Height
 @@ -748,24 +748,25 @@ var _HourGuideCell = function (_a) {
      var cellHeight = _a.cellHeight, onLongPress = _a.onLongPress, onPress = _a.onPress, date = _a.date, hour = _a.hour, index = _a.index, calendarCellStyle = _a.calendarCellStyle, calendarCellAccessibilityProps = _a.calendarCellAccessibilityProps, timeslots = _a.timeslots;
      var theme = useTheme();
@@ -47,9 +65,27 @@ index 4a7c12a..d013d6e 100644
  var HourGuideCell = React.memo(_HourGuideCell);
  
 diff --git a/node_modules/react-native-big-calendar/build/index.js b/node_modules/react-native-big-calendar/build/index.js
-index f88c814..355985d 100644
+index f88c814..270e9da 100644
 --- a/node_modules/react-native-big-calendar/build/index.js
 +++ b/node_modules/react-native-big-calendar/build/index.js
+@@ -127,7 +127,7 @@ function deepMerge(target, source) {
+ var typedMemo = React__default["default"].memo;
+ 
+ var MIN_HEIGHT = 1200;
+-var HOUR_GUIDE_WIDTH = 50;
++var HOUR_GUIDE_WIDTH = 60;
+ var OVERLAP_OFFSET = reactNative.Platform.OS === 'web' ? 20 : 8;
+ var OVERLAP_PADDING = reactNative.Platform.OS === 'web' ? 3 : 0;
+ var eventCellCss = reactNative.StyleSheet.create({
+@@ -273,7 +273,7 @@ var u = reactNative.StyleSheet.create({
+         width: 36,
+     },
+     'w-50': {
+-        width: 50,
++        width: 60,
+     },
+     /*
+      * Height
 @@ -779,24 +779,25 @@ var _HourGuideCell = function (_a) {
      var cellHeight = _a.cellHeight, onLongPress = _a.onLongPress, onPress = _a.onPress, date = _a.date, hour = _a.hour, index = _a.index, calendarCellStyle = _a.calendarCellStyle, calendarCellAccessibilityProps = _a.calendarCellAccessibilityProps, timeslots = _a.timeslots;
      var theme = useTheme();

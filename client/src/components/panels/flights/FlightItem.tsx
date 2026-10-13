@@ -849,6 +849,7 @@ export default function FlightItem({
                 key={idx}
                 style={[
                   styles.segmentContainer,
+                  readOnly && styles.segmentContainerReadOnly,
                   { zIndex: (flightSegments.length - idx) * 1000 },
                 ]}
               >
@@ -893,10 +894,7 @@ export default function FlightItem({
                         size="md"
                         style={
                           readOnly
-                            ? [
-                                styles.segmentInput,
-                                { borderColor: colors.gray400 },
-                              ]
+                            ? styles.readOnlyInput
                             : undefined
                         }
                         placeholderTextColor={colors.gray600}
@@ -919,10 +917,7 @@ export default function FlightItem({
                         size="md"
                         style={
                           readOnly
-                            ? [
-                                styles.segmentInput,
-                                { borderColor: colors.gray400 },
-                              ]
+                            ? styles.readOnlyInput
                             : undefined
                         }
                         placeholderTextColor={colors.gray600}
@@ -954,9 +949,10 @@ export default function FlightItem({
                         }}
                         placeholder={PLACEHOLDERS.flight.departureAirport}
                         disabled={readOnly}
+                        hideArrow={readOnly}
                         style={
                           readOnly
-                            ? { ...styles.pickerTrigger, backgroundColor: colors.white }
+                            ? styles.readOnlyPicker
                             : styles.segmentSelect
                         }
                       />
@@ -983,10 +979,11 @@ export default function FlightItem({
                         }}
                         placeholder={PLACEHOLDERS.flight.arrivalAirport}
                         disabled={readOnly}
+                        hideArrow={readOnly}
                         dropdownAlign="right"
                         style={
                           readOnly
-                            ? { ...styles.pickerTrigger, backgroundColor: colors.white }
+                            ? styles.readOnlyPicker
                             : styles.segmentSelect
                         }
                       />
@@ -1105,6 +1102,7 @@ export default function FlightItem({
                             : styles.segmentTimePicker
                         }
                         disabled={readOnly}
+                        hideArrow={readOnly}
                         popupAlign="right"
                       />
                     </View>
@@ -1205,6 +1203,7 @@ export default function FlightItem({
                             : styles.segmentTimePicker
                         }
                         disabled={readOnly}
+                        hideArrow={readOnly}
                         popupAlign="right"
                       />
                     </View>
@@ -1334,11 +1333,15 @@ export default function FlightItem({
       ) : (
         <View style={styles.buttonRow}>
           <MotionPressable
-            style={styles.deleteButton}
+            style={[styles.deleteButton, styles.readOnlyDeleteButton]}
             onPress={handleDelete}
             disabled={isSubmitting}
           >
-            <Text style={styles.deleteButtonText}>삭제</Text>
+            <Text
+              style={[styles.deleteButtonText, styles.readOnlyDeleteButtonText]}
+            >
+              삭제
+            </Text>
           </MotionPressable>
           <MotionPressable
             style={[styles.saveButton, styles.footerEditButton]}
@@ -1417,27 +1420,33 @@ const styles = StyleSheet.create({
   pickerTrigger: {
     height: 42,
   },
+  readOnlyPicker: {
+    backgroundColor: colors.gray200,
+    height: 46,
+    borderWidth: 0,
+    borderRadius: radii.mdPlus,
+    paddingHorizontal: 14,
+  },
   readOnlyInput: {
     backgroundColor: colors.gray200,
-    borderWidth: 1,
-    borderColor: colors.gray400,
-    height: 40,
-    borderRadius: radii.md,
-    paddingHorizontal: spacing.md,
+    borderWidth: 0,
+    height: 46,
+    borderRadius: radii.mdPlus,
+    paddingHorizontal: 14,
     paddingVertical: spacing.none,
-    ...textStyles.body4,
+    ...textStyles.body3,
+    color: colors.gray900,
   },
   readOnlyCurrency: {
     backgroundColor: colors.gray200,
-    borderWidth: 1,
-    borderColor: colors.gray400,
-    height: 40,
-    borderRadius: radii.md,
-    paddingHorizontal: spacing.md,
+    borderWidth: 0,
+    height: 46,
+    borderRadius: radii.mdPlus,
+    paddingHorizontal: 14,
     justifyContent: "center",
   },
   readOnlyCurrencyText: {
-    ...textStyles.body4,
+    ...textStyles.body3,
     color: colors.gray900,
   },
   placeholderText: {
@@ -1494,6 +1503,10 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
+  segmentContainerReadOnly: {
+    borderWidth: 0,
+    paddingHorizontal: 0,
+  },
   segmentContent: {
     gap: spacing.lg,
   },
@@ -1513,9 +1526,10 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   segmentReadOnly: {
-    backgroundColor: colors.white,
-    borderWidth: 1,
-    borderColor: colors.gray400,
+    backgroundColor: colors.gray200,
+    borderWidth: 0,
+    height: 46,
+    borderRadius: radii.mdPlus,
   },
   segmentSelect: {
     height: 42,
@@ -1548,11 +1562,10 @@ const styles = StyleSheet.create({
     height: 42,
   },
   segmentTimePickerReadOnly: {
-    borderWidth: 1,
-    borderColor: colors.gray400,
-    borderRadius: radii.md,
-    backgroundColor: colors.white,
-    height: 42,
+    borderWidth: 0,
+    borderRadius: radii.mdPlus,
+    backgroundColor: colors.gray200,
+    height: 46,
   },
   airportPickerWrapper: {
     overflow: "visible",
@@ -1623,6 +1636,14 @@ const styles = StyleSheet.create({
     paddingTop: spacing.lg,
     paddingHorizontal: spacing.xl,
     paddingBottom: spacing.xl,
+  },
+  readOnlyDeleteButton: {
+    backgroundColor: colors.dangerTint,
+    backgroundImage: "none",
+    boxShadow: "none",
+  } as any,
+  readOnlyDeleteButtonText: {
+    color: colors.danger,
   },
   deleteButton: {
     ...surfaces.muted,

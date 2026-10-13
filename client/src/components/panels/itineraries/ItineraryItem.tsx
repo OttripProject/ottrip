@@ -75,6 +75,7 @@ import {
 import { handleGuestPromptError } from "@/utils/guestPrompt";
 import useDetectClose from "@/hooks/useDetectClose";
 import dayjs from "dayjs";
+import { getDefaultEndTime } from "@/utils/dateUtils";
 import React, {
   useState,
   useEffect,
@@ -145,6 +146,9 @@ interface ItineraryItemProps {
   onOpenNewItinerary?: (draft: any) => void;
 }
 
+const READ_ONLY_FIELD_HEIGHT = 46;
+const READ_ONLY_FIELD_PADDING_X = 14;
+
 export default function ItineraryItem({
   itinerary,
   planId,
@@ -189,7 +193,7 @@ export default function ItineraryItem({
     endTime:
       itinerary?.end_time ||
       (selectedDate
-        ? dayjs(selectedDate).add(1, "hour").format("HH:mm")
+        ? getDefaultEndTime(selectedDate)
         : "10:00"),
   });
 
@@ -204,7 +208,7 @@ export default function ItineraryItem({
         ...prev,
         itineraryDate: dateStr,
         startTime: dayjs(selectedDate).format("HH:mm"),
-        endTime: dayjs(selectedDate).add(1, "hour").format("HH:mm"),
+        endTime: getDefaultEndTime(selectedDate),
         ...(autoFill ? { country: autoFill.country, city: autoFill.city } : {}),
       }));
     }
@@ -403,7 +407,7 @@ export default function ItineraryItem({
         ? dayjs(selectedDate).format("HH:mm")
         : "09:00";
       const defaultEndTime = selectedDate
-        ? dayjs(selectedDate).add(1, "hour").format("HH:mm")
+        ? getDefaultEndTime(selectedDate)
         : "10:00";
 
       const autoFill = getCountryCityFromSegments(
@@ -1184,7 +1188,13 @@ export default function ItineraryItem({
               {selectedCategory && (
                 <View style={[styles.dot, { backgroundColor: itineraryCategoryColors[selectedCategory] }]} />
               )}
-              <Text style={[styles.categoryTriggerText, !selectedCategory && styles.categoryTriggerTextNone]}>
+              <Text
+                style={[
+                  styles.categoryTriggerText,
+                  readOnly && styles.categoryTriggerTextReadOnly,
+                  !selectedCategory && styles.categoryTriggerTextNone,
+                ]}
+              >
                 {selectedCategory ? itineraryCategoryLabels[selectedCategory] : "카테고리 선택"}
               </Text>
               {!readOnly && (categoryOpen
@@ -1220,7 +1230,7 @@ export default function ItineraryItem({
             <Text style={styles.label}>내용</Text>
             {Platform.OS === "web" ? (
               <Input
-                variant={readOnly ? "outlined" : "filled"}
+                variant={readOnly ? "bare" : "filled"}
                 multiline
                 numberOfLines={3}
                 textAlignVertical="top"
@@ -1230,11 +1240,14 @@ export default function ItineraryItem({
                 }
                 placeholder={PLACEHOLDERS.itinerary.descriptionForm}
                 placeholderTextColor={colors.gray600}
-                editable={!readOnly}
+                readOnly={readOnly}
                 size="md"
                 style={[
                   readOnly ? styles.readOnlyTextArea : styles.textArea,
-                  { resize: "vertical", overflow: "auto" } as any,
+                  {
+                    resize: "vertical",
+                    overflow: readOnly ? "hidden" : "auto",
+                  } as any,
                 ]}
               />
             ) : (
@@ -1280,8 +1293,9 @@ export default function ItineraryItem({
                 onClose={() => setCountryOpen(false)}
                 placeholder={PLACEHOLDERS.itinerary.countryForm}
                 disabled={readOnly}
+                hideArrow={readOnly}
                 useModal
-                style={styles.pickerTrigger}
+                style={readOnly ? styles.readOnlyPicker : styles.pickerTrigger}
               />
             </View>
             <View style={[styles.inputGroup, styles.halfWidth]}>
@@ -1292,8 +1306,9 @@ export default function ItineraryItem({
                 countryKo={formData.country}
                 placeholder={PLACEHOLDERS.itinerary.cityForm}
                 disabled={readOnly}
+                hideArrow={readOnly}
                 useModal
-                style={styles.pickerTrigger}
+                style={readOnly ? styles.readOnlyPicker : styles.pickerTrigger}
               />
             </View>
           </View>
@@ -1413,7 +1428,9 @@ export default function ItineraryItem({
               disabled={readOnly}
             >
               <View style={styles.dateTextContainer}>
-                <Text style={styles.dateText}>
+                <Text
+                  style={[styles.dateText, readOnly && styles.readOnlyDateText]}
+                >
                   {dayjs(formData.itineraryDate).format("YYYY년 M월 D일")}
                 </Text>
                 {!readOnly && (
@@ -1462,15 +1479,16 @@ export default function ItineraryItem({
                 }}
                 onClose={() => setTimeOpen(false)}
                 disabled={readOnly}
+                hideArrow={readOnly}
                 style={
                   readOnly
                     ? {
+                        ...styles.readOnlyPicker,
                         backgroundColor: colors.gray200,
-                        borderColor: colors.gray400,
-                        borderWidth: 1,
                       }
                     : styles.pickerTrigger
                 }
+                textStyle={readOnly ? styles.readOnlyDateText : undefined}
               />
             </View>
             <View style={[styles.inputGroup, styles.halfWidth]}>
@@ -1490,16 +1508,17 @@ export default function ItineraryItem({
                 onClose={() => setTimeOpen(false)}
                 minTime={formData.startTime}
                 disabled={readOnly}
+                hideArrow={readOnly}
                 popupAlign="right"
                 style={
                   readOnly
                     ? {
+                        ...styles.readOnlyPicker,
                         backgroundColor: colors.gray200,
-                        borderColor: colors.gray400,
-                        borderWidth: 1,
                       }
                     : styles.pickerTrigger
                 }
+                textStyle={readOnly ? styles.readOnlyDateText : undefined}
               />
             </View>
           </View>
@@ -1785,11 +1804,15 @@ export default function ItineraryItem({
       ) : (
         <View style={styles.buttonRow}>
           <MotionPressable
-            style={styles.deleteButton}
+            style={[styles.deleteButton, styles.readOnlyDeleteButton]}
             onPress={handleDelete}
             disabled={isSubmitting}
           >
-            <Text style={styles.deleteButtonText}>삭제</Text>
+            <Text
+              style={[styles.deleteButtonText, styles.readOnlyDeleteButtonText]}
+            >
+              삭제
+            </Text>
           </MotionPressable>
           <MotionPressable
             style={[styles.saveButton, styles.footerEditButton]}
@@ -1875,34 +1898,32 @@ const styles = StyleSheet.create({
   },
   readOnlyInput: {
     backgroundColor: colors.gray200,
-    borderWidth: 1,
-    borderColor: colors.gray400,
-    height: 40,
-    borderRadius: radii.md,
-    paddingHorizontal: spacing.md,
+    borderWidth: 0,
+    height: READ_ONLY_FIELD_HEIGHT,
+    borderRadius: radii.mdPlus,
+    paddingHorizontal: READ_ONLY_FIELD_PADDING_X,
     paddingVertical: spacing.none,
-    ...textStyles.body4,
+    ...textStyles.body3,
+    color: colors.gray900,
   },
   readOnlyTextArea: {
     backgroundColor: colors.gray200,
-    borderWidth: 1,
-    borderColor: colors.gray400,
+    borderWidth: 0,
     minHeight: 80,
-    borderRadius: radii.md,
-    paddingHorizontal: spacing.md,
-    paddingVertical: 10,
-    ...textStyles.body4,
+    borderRadius: radii.mdPlus,
+    paddingHorizontal: READ_ONLY_FIELD_PADDING_X,
+    paddingVertical: spacing.md,
+    ...textStyles.body3,
+    color: colors.gray900,
   },
   readOnlyDateInput: {
     flexDirection: "row",
     alignItems: "center",
-    borderWidth: 1,
-    borderColor: colors.gray400,
-    borderRadius: radii.md,
-    paddingHorizontal: spacing.md,
-    paddingVertical: 10,
+    borderWidth: 0,
+    borderRadius: radii.mdPlus,
+    paddingHorizontal: READ_ONLY_FIELD_PADDING_X,
     backgroundColor: colors.gray200,
-    minHeight: 40,
+    height: READ_ONLY_FIELD_HEIGHT,
   },
   formSection: {
     gap: spacing.lg,
@@ -2117,10 +2138,36 @@ const styles = StyleSheet.create({
     cursor: "pointer",
   } as any,
   categoryTriggerReadOnly: {
-    borderWidth: 1,
-    borderColor: colors.gray400,
+    alignSelf: "flex-start",
+    borderRadius: radii.pill,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
     cursor: "default",
   } as any,
+  categoryTriggerTextReadOnly: {
+    ...textStyles.h8,
+    flexGrow: 0,
+    flexShrink: 0,
+    flexBasis: "auto",
+  },
+  readOnlyDateText: {
+    ...textStyles.body3,
+    color: colors.gray900,
+  },
+  readOnlyPicker: {
+    height: READ_ONLY_FIELD_HEIGHT,
+    borderWidth: 0,
+    borderRadius: radii.mdPlus,
+    paddingHorizontal: READ_ONLY_FIELD_PADDING_X,
+  },
+  readOnlyDeleteButton: {
+    backgroundColor: colors.dangerTint,
+    backgroundImage: "none",
+    boxShadow: "none",
+  } as any,
+  readOnlyDeleteButtonText: {
+    color: colors.danger,
+  },
   categoryTriggerText: {
     ...textStyles.body5,
     flex: 1,
