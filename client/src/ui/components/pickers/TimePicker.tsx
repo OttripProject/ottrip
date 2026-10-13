@@ -222,7 +222,7 @@ export default function TimePicker({
           triggerBorder,
           triggerBorderRadius,
           triggerHeight,
-          disabled && styles.triggerDisabled,
+          disabled && styleObj?.borderWidth !== 0 && styles.triggerDisabled,
           triggerHover.hovered &&
             !disabled &&
             !open &&

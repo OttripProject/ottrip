@@ -482,15 +482,14 @@ const styles = StyleSheet.create({
   },
   readOnly: {
     backgroundColor: colors.gray200,
-    borderWidth: 1,
-    borderColor: colors.gray400,
-    height: 40,
-    borderRadius: radii.md,
-    paddingHorizontal: spacing.md,
+    minHeight: 46,
+    borderRadius: radii.mdPlus,
+    paddingHorizontal: 14,
+    paddingVertical: spacing.md,
     justifyContent: "center",
   },
   readOnlyText: {
-    ...textStyles.body4,
-    color: colors.black,
+    ...textStyles.body3,
+    color: colors.gray900,
   },
 });
