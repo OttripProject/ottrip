@@ -41,7 +41,7 @@ import {
 } from "@/utils/crossPlatformAlert";
 import { handleGuestPromptError } from "@/utils/guestPrompt";
 import dayjs from "dayjs";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Platform,
@@ -78,6 +78,26 @@ interface FlightItemProps {
   ) => boolean;
   carryoverPendingFiles?: LocalFile[] | null;
   onConsumeCarryoverPendingFiles?: () => void;
+}
+
+type LayoverPoint = {
+  departure_date: string;
+  departure_time: string;
+  arrival_date: string;
+  arrival_time: string;
+};
+
+function formatLayover(prev: LayoverPoint, next: LayoverPoint) {
+  const arrival = dayjs(`${prev.arrival_date} ${prev.arrival_time}`);
+  const departure = dayjs(`${next.departure_date} ${next.departure_time}`);
+  if (!arrival.isValid() || !departure.isValid()) return null;
+  const minutes = departure.diff(arrival, "minute");
+  if (minutes <= 0) return null;
+  const hours = Math.floor(minutes / 60);
+  const mins = minutes % 60;
+  if (hours > 0 && mins > 0) return `경유시간 :  ${hours}시간 ${mins}분`;
+  if (hours > 0) return `경유시간 :  ${hours}시간`;
+  return `경유 ${mins}분`;
 }
 
 export default function FlightItem({
@@ -844,9 +864,20 @@ export default function FlightItem({
 
         <View style={[styles.inputGroup, { zIndex: 5000 }]}>
           {flightSegments.map((segment, idx) => {
+            const layover =
+              readOnly && idx > 0
+                ? formatLayover(flightSegments[idx - 1], segment)
+                : null;
             return (
+              <Fragment key={idx}>
+              {layover && (
+                <View style={styles.layoverRow}>
+                  <View style={styles.layoverLine} />
+                  <Text style={styles.layoverText}>{layover}</Text>
+                  <View style={styles.layoverLine} />
+                </View>
+              )}
               <View
-                key={idx}
                 style={[
                   styles.segmentContainer,
                   readOnly && styles.segmentContainerReadOnly,
@@ -1210,6 +1241,7 @@ export default function FlightItem({
                   </View>
                 </View>
               </View>
+              </Fragment>
             );
           })}
 
@@ -1502,6 +1534,21 @@ const styles = StyleSheet.create({
     borderRadius: radii.pill,
     justifyContent: "center",
     alignItems: "center",
+  },
+  layoverRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    paddingBottom: spacing.md,
+  },
+  layoverLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: colors.gray300,
+  },
+  layoverText: {
+    ...textStyles.body5,
+    color: colors.gray600,
   },
   segmentContainerReadOnly: {
     borderWidth: 0,
