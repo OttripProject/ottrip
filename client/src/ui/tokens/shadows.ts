@@ -99,6 +99,16 @@ export const shadows = {
     android: {},
     default: { boxShadow: "0 0 0 2px rgba(192,57,43,0.12)" } as any,
   }),
+  eventHover: Platform.select({
+    ios: {
+      shadowColor: "#141828",
+      shadowOpacity: 0.28,
+      shadowRadius: 8,
+      shadowOffset: { width: 0, height: 6 },
+    },
+    android: { elevation: 4 },
+    default: { boxShadow: "0 6px 16px -8px rgba(20,24,40,0.28)" } as any,
+  }),
   focusRing: Platform.select({
     ios: {},
     android: {},

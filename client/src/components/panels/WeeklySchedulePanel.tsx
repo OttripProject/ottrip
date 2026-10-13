@@ -20,6 +20,7 @@ import type { CreatePlanRequest, Plan, UpdatePlanRequest } from "@/types/api";
 import GradientBackground from "@/ui/components/GradientBackground";
 import MotionPressable, { MotionIcon } from "@/ui/components/MotionPressable";
 import Input from "@/ui/components/input/Input";
+import { injectKeyframes } from "@/ui/effects/injectKeyframes";
 import { modalMotion } from "@/ui/effects/modalMotion";
 import { surfaces } from "@/ui/tokens/surfaces";
 import { useBackdropClose } from "@/hooks/useBackdropClose";
@@ -101,6 +102,21 @@ const EVENT_INSET_RIGHT = 16;
 const EVENT_GAP = 4;
 const EVENT_INSET_Y = 2;
 const HOUR_LINE_WIDTH = 1;
+const EVENT_HOVER_SHADOW = (shadows.eventHover as { boxShadow?: string })
+  .boxShadow;
+
+if (Platform.OS === "web") {
+  injectKeyframes(
+    "weekly-event-motion",
+    [
+      "@keyframes fmBlockIn { 0% { opacity: 0; scale: 0.9; } 100% { opacity: 1; scale: 1; } }",
+      "@keyframes fmBlockInAgain { 0% { opacity: 0; scale: 0.9; } 100% { opacity: 1; scale: 1; } }",
+      `[data-week-event="true"] { animation: fmBlockIn ${motion.duration.blockIn}ms ${motion.easing.spring} both; transition: box-shadow ${motion.duration.base}ms ${motion.easing.ease}; }`,
+      '[data-week-event="true"][data-selected="true"] { animation-name: fmBlockInAgain; }',
+      `[data-week-event="true"]:hover { box-shadow: ${EVENT_HOVER_SHADOW} !important; }`,
+    ].join(" "),
+  );
+}
 
 const CATEGORY_TINTS: Partial<Record<ItineraryCategory, string>> = {
   MEAL: colors.mealBg,
@@ -3445,6 +3461,10 @@ export default function WeeklySchedulePanel({
               <View
                 key={eventKey}
                 {...rest}
+                dataSet={{
+                  weekEvent: "true",
+                  selected: isSelected ? "true" : "false",
+                }}
                 style={[adjustedStyle, finalStyle, dragStyle]}
                 onLayout={e => {
                   const { height } = e.nativeEvent.layout;
