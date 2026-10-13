@@ -25,6 +25,7 @@ import { surfaces } from "@/ui/tokens/surfaces";
 import { useBackdropClose } from "@/hooks/useBackdropClose";
 import { radii } from "@/ui/tokens";
 import { colors } from "@/ui/tokens/colors";
+import { motion } from "@/ui/tokens/motion";
 import { shadows } from "@/ui/tokens/shadows";
 import { spacing } from "@/ui/tokens/spacing";
 import { textStyles, typography } from "@/ui/tokens/typography";
@@ -41,10 +42,13 @@ import {
   Modal,
   Platform,
   Pressable,
+  type PressableStateCallbackType,
+  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
+  type ViewStyle,
   useWindowDimensions,
 } from "react-native";
 import { Calendar as BigCalendar } from "react-native-big-calendar";
@@ -86,7 +90,7 @@ export interface Itinerary {
 
 // react-native-big-calendar의 HourGuideColumn(w-50)과 일치시켜야 한다.
 // 헤더 렌더와 드래그 좌표 계산이 같은 값을 써야 드롭 날짜가 어긋나지 않는다.
-const TIME_COLUMN_WIDTH = 50;
+const TIME_COLUMN_WIDTH = 60;
 
 function toEvent(it: Itinerary): any {
   const normalizeTime = (time: string) => {
@@ -1860,6 +1864,11 @@ export default function WeeklySchedulePanel({
 
   const finalItineraries = displayItineraries;
 
+  const itineraryDays = useMemo(
+    () => new Set(finalItineraries.map(it => it.itineraryDate)),
+    [finalItineraries],
+  );
+
   const events = useMemo(() => {
     const itineraryEvents = finalItineraries.map(toEvent);
     const flightEvents = flights.flatMap(toFlightEvents);
@@ -1966,6 +1975,38 @@ export default function WeeklySchedulePanel({
 
   const goPrev = () => setCurrentWeekStart(prev => prev.subtract(1, "week"));
   const goNext = () => setCurrentWeekStart(prev => prev.add(1, "week"));
+  const startNewItinerary = (date: Date) => {
+    setSelectedEventId(null);
+    setSelectedAccommodationId(null);
+
+    const hasPlans = trips.length > 0;
+    const isPlanSelected = internalSelectedTrip !== null;
+
+    if (!hasPlans) {
+      setShowAddPlanModal(true);
+      return;
+    }
+
+    if (!isPlanSelected) {
+      setShowPlanSelectRequiredModal(true);
+      return;
+    }
+
+    const startTime = dayjs(date);
+    const endTime = startTime.add(1, "hour");
+
+    setPreviewEvent({
+      start: startTime.toDate(),
+      end: endTime.toDate(),
+      title: "제목없음",
+      startTime: startTime.format("HH:mm"),
+      endTime: endTime.format("HH:mm"),
+      location: "",
+    });
+
+    onRequestNewItinerary?.(date);
+  };
+
   const goToday = () => setCurrentWeekStart(getWeekStart(dayjs(), weekStartsOn));
   const toggleWeekStartsOn = () => {
     const next: WeekStartsOn = weekStartsOn === 1 ? 0 : 1;
@@ -2125,6 +2166,12 @@ export default function WeeklySchedulePanel({
         </View>
 
         <View style={styles.rightSection}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.rightScroll}
+            contentContainerStyle={styles.rightScrollContent}
+          >
           <TripSelector
             selectedTrip={internalSelectedTrip}
             onTripSelect={trip => {
@@ -2261,6 +2308,7 @@ export default function WeeklySchedulePanel({
               )}
             </View>
           ) : null}
+          </ScrollView>
         </View>
       </View>
 
@@ -2299,21 +2347,55 @@ export default function WeeklySchedulePanel({
                     const isToday =
                       dayjs(date).format("YYYY-MM-DD") ===
                       dayjs().format("YYYY-MM-DD");
+                    const day = dayjs(date).format("YYYY-MM-DD");
+                    const isInTrip =
+                      !!internalSelectedTrip &&
+                      day >= internalSelectedTrip.startDate &&
+                      day <= internalSelectedTrip.endDate;
                     return (
-                      <View key={date} style={styles.dateHeaderCell}>
-                        <Text style={styles.weekdayText}>
-                          {dayjs(date).format("ddd")}
-                        </Text>
-                        <View style={isToday ? styles.todayDateCircle : null}>
-                          <Text
-                            style={
-                              isToday ? styles.todayDateText : styles.dateText
-                            }
-                          >
-                            {dayjs(date).format("D")}
-                          </Text>
-                        </View>
-                      </View>
+                      <Pressable
+                        key={date}
+                        style={styles.dateHeaderCell}
+                        onPress={() =>
+                          startNewItinerary(
+                            dayjs(date).hour(9).minute(0).second(0).toDate(),
+                          )
+                        }
+                        accessibilityLabel={`${dayjs(date).format("M월 D일")} 일정 추가`}
+                      >
+                        {({
+                          hovered,
+                        }: PressableStateCallbackType & { hovered?: boolean }) => (
+                          <>
+                            <Text style={styles.weekdayText}>
+                              {dayjs(date).format("ddd")}
+                            </Text>
+                            <View
+                              style={[
+                                styles.dateCircle,
+                                hovered && styles.dateCircleHover,
+                                hovered && styles.dateCircleJelly,
+                                isToday && styles.todayDateCircle,
+                              ]}
+                            >
+                              <Text
+                                style={[
+                                  isToday ? styles.todayDateText : styles.dateText,
+                                  isInTrip && styles.dateTextInTrip,
+                                ]}
+                              >
+                                {dayjs(date).format("D")}
+                              </Text>
+                            </View>
+                            <View
+                              style={[
+                                styles.dateEventDot,
+                                itineraryDays.has(day) && styles.dateEventDotOn,
+                              ]}
+                            />
+                          </>
+                        )}
+                      </Pressable>
                     );
                   })}
                 </View>
@@ -3174,37 +3256,7 @@ export default function WeeklySchedulePanel({
               </View>
             );
           }}
-          onPressCell={(date: Date) => {
-            setSelectedEventId(null);
-            setSelectedAccommodationId(null);
-
-            const hasPlans = trips.length > 0;
-            const isPlanSelected = internalSelectedTrip !== null;
-
-            if (!hasPlans) {
-              setShowAddPlanModal(true);
-              return;
-            }
-
-            if (!isPlanSelected) {
-              setShowPlanSelectRequiredModal(true);
-              return;
-            }
-
-            const startTime = dayjs(date);
-            const endTime = startTime.add(1, "hour");
-
-            setPreviewEvent({
-              start: startTime.toDate(),
-              end: endTime.toDate(),
-              title: "제목없음",
-              startTime: startTime.format("HH:mm"),
-              endTime: endTime.format("HH:mm"),
-              location: "",
-            });
-
-            onRequestNewItinerary?.(date);
-          }}
+          onPressCell={startNewItinerary}
           renderEvent={(event, touchableOpacityProps) => {
             const {
               key: eventKey,
@@ -4077,6 +4129,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+    gap: spacing.md,
     paddingHorizontal: 20,
     paddingVertical: 14,
     backgroundColor: colors.white,
@@ -4086,6 +4139,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.lg,
+    flexShrink: 0,
   },
   title: {
     ...textStyles.h5,
@@ -4113,14 +4167,43 @@ const styles = StyleSheet.create({
   dateText: {
     ...textStyles.h6,
   },
+  dateTextInTrip: {
+    fontWeight: typography.weight.bold,
+  },
+  dateEventDot: {
+    width: 4,
+    height: 4,
+    borderRadius: radii.pill,
+    marginTop: spacing.xs,
+  },
+  dateEventDotOn: {
+    backgroundColor: colors.primary,
+  },
+  dateCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: radii.pill,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  dateCircleHover: {
+    backgroundColor: colors.gray200,
+  },
+  dateCircleJelly: {
+    animationKeyframes: "fmJelly",
+    animationDuration: `${motion.duration.jelly}ms`,
+    animationTimingFunction: motion.easing.ease,
+  } as ViewStyle,
   dateHeaderCell: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    gap: spacing.sm,
+    gap: spacing.xs,
+    paddingVertical: spacing.xs,
+    borderRadius: radii.md,
   },
   weekdayText: {
-    ...textStyles.h8,
+    ...textStyles.body6,
     color: colors.gray600,
   },
   todayDateCircle: {
@@ -4142,6 +4225,19 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.sm,
+    marginLeft: "auto",
+    flexShrink: 1,
+    minWidth: 0,
+  },
+  rightScroll: {
+    flexGrow: 0,
+    flexShrink: 1,
+    minWidth: 0,
+  },
+  rightScrollContent: {
+    alignItems: "center",
+    gap: spacing.sm,
+    paddingVertical: spacing.xs,
   },
   iconButton: {
     width: 32,
@@ -4401,6 +4497,9 @@ const styles = StyleSheet.create({
   weekHeaderRow: {
     flexDirection: "row",
     height: 70,
+    paddingBottom: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.gray200,
   },
   accommodationHeaderRow: {
     flexDirection: "row",

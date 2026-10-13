@@ -821,7 +821,7 @@ const styles = StyleSheet.create({
     borderBottomColor: "#e0e0e0",
   },
   timeColumn: {
-    width: 51,
+    width: 61,
   },
   dateHeaderCell: {
     flex: 1,
