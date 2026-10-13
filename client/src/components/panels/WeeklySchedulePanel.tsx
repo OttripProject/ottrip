@@ -443,7 +443,6 @@ export default function WeeklySchedulePanel({
     elementWidth: number;
     elementHeight: number;
   } | null>(null);
-  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
 
   const [dropPreviewPosition, setDropPreviewPosition] = useState<{
     x: number;
@@ -776,15 +775,6 @@ export default function WeeklySchedulePanel({
 
         const dropPos = calculateDropPosition(elementCenterX, elementTopY);
 
-        if (dropPos) {
-          const snapOffsetX = dropPos.x - draggingEvent.elementX;
-          const snapOffsetY = dropPos.y - draggingEvent.elementY;
-
-          setDragOffset({ x: snapOffsetX, y: snapOffsetY });
-        } else {
-          setDragOffset({ x: offsetX, y: offsetY });
-        }
-
         setDropPreviewPosition(dropPos);
         dropPreviewPositionRef.current = dropPos;
 
@@ -960,7 +950,6 @@ export default function WeeklySchedulePanel({
                 if (hasOverlap) {
                   Alert.alert("알림", "겹치는 항공 일정이 있어요");
                   setDraggingEvent(null);
-                  setDragOffset({ x: 0, y: 0 });
                   setDropPreviewPosition(null);
                   dropPreviewPositionRef.current = null;
                   setHasOverlap(false);
@@ -1082,7 +1071,6 @@ export default function WeeklySchedulePanel({
       }
 
       setDraggingEvent(null);
-      setDragOffset({ x: 0, y: 0 });
       setDropPreviewPosition(null);
       dropPreviewPositionRef.current = null;
       setHasOverlap(false);
@@ -1878,7 +1866,7 @@ export default function WeeklySchedulePanel({
 
     const allEvents = [...itineraryEvents, ...flightEvents, ...previewEvents];
 
-    if (draggingEvent?.type === "itinerary" && dragPreviewStartMs !== null) {
+    if (draggingEvent && dragPreviewStartMs !== null) {
       const eventIndex = allEvents.findIndex(
         e => String(e.id) === String(draggingEvent.id),
       );
@@ -1889,7 +1877,9 @@ export default function WeeklySchedulePanel({
         const newStart = new Date(dragPreviewStartMs);
         const dayEnd = dayjs(newStart).endOf("day").valueOf();
         const newEnd = new Date(
-          Math.min(dragPreviewStartMs + duration, dayEnd),
+          event.type === "flight"
+            ? dragPreviewStartMs + duration
+            : Math.min(dragPreviewStartMs + duration, dayEnd),
         );
         allEvents[eventIndex] = {
           ...event,
@@ -3375,11 +3365,18 @@ export default function WeeklySchedulePanel({
             const showTime = !isCompact && contentHeight >= 28;
             const showLocation = contentHeight > 52;
 
+            const isInvalidDrop = isFlight && isDragging && hasOverlap;
             const flightStyle = isFlight
               ? {
-                  backgroundColor: colors.flightBg,
-                  borderWidth: borderWidth,
-                  borderColor: isSelected ? colors.flightText : "transparent",
+                  backgroundColor: isInvalidDrop
+                    ? colors.errorTint
+                    : colors.flightBg,
+                  borderWidth: isInvalidDrop ? 2 : borderWidth,
+                  borderColor: isInvalidDrop
+                    ? colors.danger
+                    : isSelected
+                      ? colors.flightText
+                      : "transparent",
                   borderRadius: radii.xs,
                 }
               : null;
@@ -3420,7 +3417,7 @@ export default function WeeklySchedulePanel({
 
             const dragStyle = isDragging
               ? {
-                  opacity: isItinerary ? 0.7 : 0.3,
+                  opacity: 0.7,
                   cursor: "grabbing",
                 }
               : isDraggable
@@ -3471,7 +3468,6 @@ export default function WeeklySchedulePanel({
                             elementWidth: rect.width,
                             elementHeight: rect.height,
                           });
-                          setDragOffset({ x: 0, y: 0 });
                           setSelectedEventId(event.id);
                           setSelectedAccommodationId(null);
                         }
@@ -3626,200 +3622,7 @@ export default function WeeklySchedulePanel({
         />
       </View>
 
-      {draggingEvent?.type === "flight" &&
-        dropPreviewPosition &&
-        Platform.OS === "web" && (
-        <View
-          style={{
-            position: "fixed" as any,
-            left: dropPreviewPosition.x,
-            top: dropPreviewPosition.y,
-            width: draggingEvent.elementWidth,
-            height: draggingEvent.elementHeight,
-            borderWidth: 1,
-            borderColor: hasOverlap ? "#FF4242" : "rgba(139, 92, 246, 0.8)",
-            backgroundColor: hasOverlap
-              ? "rgba(255, 66, 66, 0.05)"
-              : "rgba(139, 92, 246, 0.05)",
-            borderRadius: radii.xs,
-            pointerEvents: "none" as const,
-            zIndex: 9999,
-            opacity: 1,
-            shadowColor: hasOverlap ? "#FF4242" : "#8B5CF6",
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.3,
-            shadowRadius: 4,
-            elevation: 8,
-          }}
-        />
-      )}
 
-      {draggingEvent?.type === "flight" &&
-        Platform.OS === "web" &&
-        (() => {
-          const draggedEvent = events.find(e => e.id === draggingEvent.id);
-          if (!draggedEvent) return null;
-
-          const isItinerary = draggedEvent.type === "itinerary";
-          const isFlight = draggedEvent.type === "flight";
-
-          const dragCategory = isItinerary
-            ? (draggedEvent.originalData?.category as ItineraryCategory | undefined)
-            : undefined;
-          const dragCategoryColor = dragCategory
-            ? itineraryCategoryColors[dragCategory]
-            : "#0066FF";
-
-          let displayStartTime = draggedEvent.normalizedStartTime;
-          let displayEndTime = draggedEvent.normalizedEndTime;
-
-          if (dropPreviewPosition && dropPreviewPosition.time) {
-            const originalStart = new Date(draggedEvent.start).getTime();
-            const originalEnd = new Date(draggedEvent.end).getTime();
-            const durationMinutes = (originalEnd - originalStart) / (1000 * 60);
-
-            const newStartTime = dayjs(dropPreviewPosition.time);
-            const newEndTime = newStartTime.add(durationMinutes, "minute");
-
-            displayStartTime = newStartTime.format("HH:mm");
-            displayEndTime = newEndTime.format("HH:mm");
-
-            if (
-              displayEndTime === "23:59" ||
-              (newEndTime.hour() === 23 && newEndTime.minute() === 59)
-            ) {
-              displayEndTime = "24:00";
-            }
-          }
-
-          const flightStyle = isFlight
-            ? {
-                backgroundColor: "rgba(139, 92, 246, 0.1)",
-                borderWidth: hasOverlap ? 2 : 1,
-                borderColor: hasOverlap ? "#FF4242" : "#8B5CF6",
-                borderStyle: hasOverlap ? ("dashed" as any) : ("solid" as any),
-                borderRadius: radii.xs,
-              }
-            : null;
-          const itineraryStyle = isItinerary
-            ? {
-                backgroundColor: categoryTint(dragCategory),
-                borderWidth: 1,
-                borderColor: dragCategoryColor,
-                borderRadius: radii.xs,
-              }
-            : null;
-          const finalStyle = flightStyle ||
-            itineraryStyle || {
-              backgroundColor: draggedEvent.color || "#3478f6",
-            };
-
-          const dragContentHeight = draggingEvent.elementHeight - 8;
-          const dragShowTitle = true;
-          const dragShowTime = dragContentHeight >= 30;
-          const dragShowLocation = dragContentHeight >= 48;
-
-          return (
-            <View
-              style={[
-                {
-                  position: "absolute" as const,
-                  left: draggingEvent.elementX + dragOffset.x,
-                  top: draggingEvent.elementY + dragOffset.y,
-                  width: draggingEvent.elementWidth,
-                  height: draggingEvent.elementHeight,
-                  zIndex: 10000,
-                  opacity: 0.7,
-                  pointerEvents: "none" as const,
-                  paddingVertical: spacing.xs,
-                  paddingHorizontal: spacing.sm,
-                  shadowColor: "#000",
-                  shadowOffset: { width: 0, height: 4 },
-                  shadowOpacity: 0.3,
-                  shadowRadius: 4,
-                  elevation: 10,
-                },
-                finalStyle,
-                Platform.OS === "web" ? { position: "fixed" as any } : {},
-              ]}
-            >
-              <View style={styles.dragEventContent}>
-                {dragShowTitle && (
-                  <View style={styles.dragEventTitleRow}>
-                    {isFlight && (
-                      <Text style={{ fontSize: 11, color: colors.flightText }}>
-                        ✈
-                      </Text>
-                    )}
-                    <Text
-                      numberOfLines={1}
-                      ellipsizeMode="tail"
-                      style={{
-                        ...textStyles.h9,
-                        color: isFlight ? "#8B5CF6" : dragCategoryColor,
-                        flex: 1,
-                      }}
-                    >
-                      {draggedEvent.title}
-                    </Text>
-                  </View>
-                )}
-                {dragShowTime &&
-                  isItinerary &&
-                  displayStartTime &&
-                  displayEndTime && (
-                    <View style={styles.dragEventTimeRow}>
-                      <Text
-                        numberOfLines={1}
-                        ellipsizeMode="tail"
-                        style={{
-                          ...textStyles.body6,
-                          fontWeight: typography.weight.medium,
-                          color: dragCategoryColor,
-                        }}
-                      >
-                        {displayStartTime} - {displayEndTime}
-                      </Text>
-                    </View>
-                  )}
-                {dragShowLocation &&
-                  isItinerary &&
-                  draggedEvent.locationText && (
-                    <View style={styles.dragEventLocationRow}>
-                      <Text
-                        numberOfLines={1}
-                        ellipsizeMode="tail"
-                        style={{
-                          ...textStyles.body6,
-                          color: dragCategoryColor,
-                          opacity: 0.65,
-                        }}
-                      >
-                        {draggedEvent.locationText}
-                      </Text>
-                    </View>
-                  )}
-                {dragShowTime &&
-                  isFlight &&
-                  displayStartTime &&
-                  displayEndTime && (
-                    <Text
-                      numberOfLines={1}
-                      ellipsizeMode="tail"
-                      style={{
-                        ...textStyles.body6,
-                        fontWeight: typography.weight.medium,
-                        color: "#8B5CF6",
-                        marginTop: spacing.xs,
-                      }}
-                    >
-                      {displayStartTime}-{displayEndTime}
-                    </Text>
-                  )}
-              </View>
-            </View>
-          );
-        })()}
 
       <AddScheduleWithAiModal
         visible={aiChatOpen}
@@ -4505,27 +4308,6 @@ const styles = StyleSheet.create({
     gap: 4,
     minWidth: 0,
     opacity: 0.8,
-  },
-  dragEventContent: {
-    flex: 1,
-    justifyContent: "flex-start",
-  },
-  dragEventTimeRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginTop: spacing.xs,
-    opacity: 0.75,
-  },
-  dragEventTitleRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-  },
-  dragEventLocationRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    marginTop: 4,
   },
   memoModalContainer: {
     ...modalMotion.card,
