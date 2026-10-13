@@ -94,6 +94,7 @@ export const colors = {
   festivalBgLight: "#F1FBFB",
   festivalText: "#0E8A8A",
   performanceBg: "#FFEBFB",
+  mealBg: "#FFF4E0",
 };
 
 export type ColorName = keyof typeof colors;

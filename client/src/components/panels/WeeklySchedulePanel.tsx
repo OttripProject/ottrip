@@ -68,7 +68,6 @@ import ShareIcon from "../../../assets/share_nodes.svg";
 import TodayIcon from "../../../assets/today.svg";
 import AccommodationIcon from "../../../assets/week_bar_accommodation.svg";
 import WeekBarLocationIcon from "../../../assets/week_bar_location.svg";
-import WeekBarTimeIcon from "../../../assets/week_bar_time.svg";
 import UploadIcon from "../../../assets/upload_tray.svg";
 import { extendPlanIfNeeded } from "@/utils/extendPlanIfNeeded";
 import { collectPlanItemDates, shrinkPlanIfNeeded } from "@/utils/shrinkPlanIfNeeded";
@@ -91,6 +90,36 @@ export interface Itinerary {
 // react-native-big-calendar의 HourGuideColumn(w-50)과 일치시켜야 한다.
 // 헤더 렌더와 드래그 좌표 계산이 같은 값을 써야 드롭 날짜가 어긋나지 않는다.
 const TIME_COLUMN_WIDTH = 60;
+const HOUR_ROW_HEIGHT = 48;
+const CALENDAR_HEADER_HEIGHT = 107;
+const EVENT_INSET_LEFT = 4;
+const EVENT_INSET_RIGHT = 16;
+const EVENT_GAP = 4;
+const EVENT_INSET_Y = 2;
+const HOUR_LINE_WIDTH = 1;
+
+const CATEGORY_TINTS: Partial<Record<ItineraryCategory, string>> = {
+  MEAL: colors.mealBg,
+  ACTIVITY: colors.performanceBg,
+  SIGHTSEEING: colors.performanceBg,
+};
+
+function categoryTint(category?: ItineraryCategory): string {
+  if (!category) return colors.itineraryBg;
+  return CATEGORY_TINTS[category] ?? `${itineraryCategoryColors[category]}1A`;
+}
+
+const CALENDAR_THEME = { palette: { gray: { 200: colors.gray200 } } };
+
+function HourLabel({ hour }: { hour: number; ampm: boolean }) {
+  return (
+    <View style={styles.hourLabelCell}>
+      <Text style={styles.hourLabelText}>
+        {`${String(hour).padStart(2, "0")}:00`}
+      </Text>
+    </View>
+  );
+}
 
 function toEvent(it: Itinerary): any {
   const normalizeTime = (time: string) => {
@@ -582,8 +611,8 @@ export default function WeeklySchedulePanel({
       }
 
       const timeColumnWidth = TIME_COLUMN_WIDTH;
-      const headerHeight = 110;
-      const hourRowHeight = 40;
+      const headerHeight = CALENDAR_HEADER_HEIGHT;
+      const hourRowHeight = HOUR_ROW_HEIGHT;
       const timeslots = 3;
       const segmentHeight = hourRowHeight / (timeslots + 1);
 
@@ -620,7 +649,8 @@ export default function WeeklySchedulePanel({
       const timeTop =
         calendarRect.top +
         headerHeight +
-        segmentIndex * segmentHeight -
+        segmentIndex * segmentHeight +
+        EVENT_INSET_Y -
         scrollTop;
 
       let eventLeft: number;
@@ -674,26 +704,24 @@ export default function WeeklySchedulePanel({
           const originalEventLeft = draggingEvent.elementX;
           const originalEventWidth = draggingEvent.elementWidth;
 
-          const originalColumnWidth = originalEventWidth / 0.9;
-          const originalColumnLeft =
-            originalEventLeft - originalColumnWidth * 0.035;
+          const originalColumnWidth =
+            originalEventWidth + EVENT_INSET_LEFT + EVENT_INSET_RIGHT;
+          const originalColumnLeft = originalEventLeft - EVENT_INSET_LEFT;
 
           const dayDiff = dayIndexClamped - originalDayIndex;
           const dropColumnLeft =
             originalColumnLeft + originalColumnWidth * dayDiff;
 
-          eventLeft = dropColumnLeft + originalColumnWidth * 0.035;
+          eventLeft = dropColumnLeft + EVENT_INSET_LEFT;
         } else {
           const dayLeft =
             calendarRect.left + timeColumnWidth + dayWidth * dayIndexClamped;
-          const leftMarginPercent = 3.5;
-          eventLeft = dayLeft + (dayWidth * leftMarginPercent) / 100;
+          eventLeft = dayLeft + EVENT_INSET_LEFT;
         }
       } else {
         const dayLeft =
           calendarRect.left + timeColumnWidth + dayWidth * dayIndexClamped;
-        const leftMarginPercent = 3.5;
-        eventLeft = dayLeft + (dayWidth * leftMarginPercent) / 100;
+        eventLeft = dayLeft + EVENT_INSET_LEFT;
       }
 
       return {
@@ -2326,10 +2354,12 @@ export default function WeeklySchedulePanel({
         <BigCalendar
           mode="week"
           events={events}
-          height={height - 50}
+          height={height - 86}
           date={currentWeekStart.toDate()}
-          hourRowHeight={40}
+          hourRowHeight={HOUR_ROW_HEIGHT}
           timeslots={3}
+          theme={CALENDAR_THEME}
+          hourComponent={HourLabel}
           weekStartsOn={weekStartsOn}
           hideNowIndicator
           swipeEnabled
@@ -2408,16 +2438,18 @@ export default function WeeklySchedulePanel({
                         {
                           justifyContent: "center",
                           alignItems: "center",
-                          borderRightWidth: 0.5,
-                          borderRightColor: "#e0e0e0",
+                          borderRightWidth: 1,
+                          borderRightColor: colors.gray200,
                         },
                       ]}
                     >
-                      <AccommodationIcon
-                        width={16}
-                        height={16}
-                        color={colors.gray700}
-                      />
+                      <View style={styles.accommodationIcon}>
+                        <AccommodationIcon
+                          width={12}
+                          height={12}
+                          color={colors.gray900}
+                        />
+                      </View>
                     </View>
                     <View
                       ref={accCreateRowRef}
@@ -2465,7 +2497,7 @@ export default function WeeklySchedulePanel({
                                 !shouldHideRightBorder
                                   ? 1
                                   : 0,
-                              borderRightColor: "#e0e0e0",
+                              borderRightColor: colors.gray200,
                               zIndex: 0,
                             }}
                             {...(Platform.OS === "web"
@@ -2719,32 +2751,26 @@ export default function WeeklySchedulePanel({
                                           position: "absolute",
                                           left: `${actualLeft}%`,
                                           width: `${actualWidth}%`,
-                                          top: 2,
-                                          bottom: 2,
+                                          top: 8,
+                                          bottom: 4,
                                           backgroundColor:
                                             colors.accommodationBg,
-                                          borderTopWidth: isSelected ? 2 : 1,
-                                          borderBottomWidth: isSelected ? 2 : 1,
-                                          borderLeftWidth: isStart
-                                            ? isSelected
-                                              ? 2
-                                              : 1
-                                            : 0,
-                                          borderRightWidth: isEnd
-                                            ? isSelected
-                                              ? 2
-                                              : 1
-                                            : 0,
+                                          borderTopWidth: isSelected ? 2 : 0,
+                                          borderBottomWidth: isSelected ? 2 : 0,
+                                          borderLeftWidth:
+                                            isStart && isSelected ? 2 : 0,
+                                          borderRightWidth:
+                                            isEnd && isSelected ? 2 : 0,
                                           borderColor: isSelected
                                             ? colors.accommodationBorder
                                             : colors.accommodationBorder,
-                                          borderTopLeftRadius: isStart ? 6 : 0,
+                                          borderTopLeftRadius: isStart ? radii.xs : 0,
                                           borderBottomLeftRadius: isStart
-                                            ? 6
+                                            ? radii.xs
                                             : 0,
-                                          borderTopRightRadius: isEnd ? 6 : 0,
+                                          borderTopRightRadius: isEnd ? radii.xs : 0,
                                           borderBottomRightRadius: isEnd
-                                            ? 6
+                                            ? radii.xs
                                             : 0,
                                           minWidth: 1,
                                           zIndex: isVisualStart
@@ -2910,8 +2936,8 @@ export default function WeeklySchedulePanel({
                                       position: "absolute",
                                       left: `${previewLeft}%` as any,
                                       width: `${previewWidth}%` as any,
-                                      top: 2,
-                                      bottom: 2,
+                                      top: 8,
+                                      bottom: 4,
                                       backgroundColor: previewHasOverlap
                                         ? "rgba(239,68,68,0.15)"
                                         : colors.accommodationBg,
@@ -2924,16 +2950,16 @@ export default function WeeklySchedulePanel({
                                         ? colors.danger
                                         : colors.accommodationBorder,
                                       borderTopLeftRadius: isPreviewStart
-                                        ? 6
+                                        ? radii.xs
                                         : 0,
                                       borderBottomLeftRadius: isPreviewStart
-                                        ? 6
+                                        ? radii.xs
                                         : 0,
                                       borderTopRightRadius: isPreviewEnd
-                                        ? 6
+                                        ? radii.xs
                                         : 0,
                                       borderBottomRightRadius: isPreviewEnd
-                                        ? 6
+                                        ? radii.xs
                                         : 0,
                                       zIndex: 15,
                                       pointerEvents: "none" as const,
@@ -3008,19 +3034,18 @@ export default function WeeklySchedulePanel({
                                   position: "absolute",
                                   left: `${leftPct}%` as any,
                                   width: `${widthPct}%` as any,
-                                  top: 0,
-                                  bottom: 0,
-                                  paddingHorizontal: 10,
+                                  top: 8,
+                                  bottom: 4,
+                                  paddingHorizontal: spacing.md,
                                   flexDirection: "row",
                                   alignItems: "center",
-                                  gap: 6,
+                                  gap: spacing.sm,
                                   overflow: "hidden",
                                   zIndex: 25,
                                   pointerEvents: "none" as any,
                                   opacity: isDraggingThisLabel ? 0.3 : 1,
                                 }}
                               >
-                                <View style={styles.itemDot} />
                                 <Text
                                   style={{
                                     ...textStyles.h9,
@@ -3096,8 +3121,8 @@ export default function WeeklySchedulePanel({
                                 position: "absolute",
                                 left: `${leftPct}%` as any,
                                 width: `${widthPct}%` as any,
-                                top: 2,
-                                bottom: 2,
+                                top: 8,
+                                bottom: 4,
                                 backgroundColor: isOverlap
                                   ? "rgba(239,68,68,0.15)"
                                   : colors.accommodationBg,
@@ -3106,7 +3131,7 @@ export default function WeeklySchedulePanel({
                                 borderColor: isOverlap
                                   ? colors.danger
                                   : colors.accommodationBorder,
-                                borderRadius: 6,
+                                borderRadius: radii.xs,
                                 opacity: 0.7,
                                 zIndex: 20,
                                 pointerEvents: "none" as any,
@@ -3160,13 +3185,13 @@ export default function WeeklySchedulePanel({
                                 position: "absolute",
                                 left: `${leftPct}%` as any,
                                 width: `${widthPct}%` as any,
-                                top: 2,
-                                bottom: 2,
+                                top: 8,
+                                bottom: 4,
                                 backgroundColor: colors.accommodationBg,
                                 borderWidth: 2,
                                 borderStyle: "dashed" as any,
                                 borderColor: colors.accommodationBorder,
-                                borderRadius: 6,
+                                borderRadius: radii.xs,
                                 opacity: 0.7,
                                 zIndex: 20,
                                 pointerEvents: "none" as any,
@@ -3224,18 +3249,17 @@ export default function WeeklySchedulePanel({
                                 position: "absolute",
                                 left: `${leftPct}%` as any,
                                 width: `${widthPct}%` as any,
-                                top: 0,
-                                bottom: 0,
-                                paddingHorizontal: 10,
+                                top: 8,
+                                bottom: 4,
+                                paddingHorizontal: spacing.md,
                                 flexDirection: "row",
                                 alignItems: "center",
-                                gap: 6,
+                                gap: spacing.sm,
                                 overflow: "hidden",
                                 zIndex: 30,
                                 pointerEvents: "none" as any,
                               }}
                             >
-                              <View style={styles.itemDot} />
                               <Text
                                 style={{
                                   ...textStyles.h9,
@@ -3300,8 +3324,6 @@ export default function WeeklySchedulePanel({
               !event.startDateStr ||
               dayjs(event.start).format("YYYY-MM-DD") === event.startDateStr;
 
-            const totalWidthPercent = 90;
-            const leftMarginPercent = 3.5;
 
             if (adjustedStyle.marginTop !== undefined) {
               delete adjustedStyle.marginTop;
@@ -3313,21 +3335,26 @@ export default function WeeklySchedulePanel({
             ) {
               const overlapIndex = event.customOverlapIndex;
               const overlapCount = event.customOverlapCount;
-              const gapPercent = 1.5;
-              const slotWidth =
-                (totalWidthPercent - gapPercent * (overlapCount - 1)) /
-                overlapCount;
-              adjustedStyle.width = `${slotWidth}%`;
-              adjustedStyle.left = `${leftMarginPercent + (slotWidth + gapPercent) * overlapIndex}%`;
+              const slotWidth = `((100% - ${EVENT_INSET_LEFT + EVENT_INSET_RIGHT + EVENT_GAP * (overlapCount - 1)}px) / ${overlapCount})`;
+              adjustedStyle.width = `calc(${slotWidth})`;
+              adjustedStyle.left = `calc(${EVENT_INSET_LEFT}px + (${slotWidth} + ${EVENT_GAP}px) * ${overlapIndex})`;
               delete adjustedStyle.minWidth;
             } else {
-              adjustedStyle.left = `${leftMarginPercent}%`;
-              adjustedStyle.width = `${totalWidthPercent}%`;
+              adjustedStyle.left = EVENT_INSET_LEFT;
+              adjustedStyle.width = `calc(100% - ${EVENT_INSET_LEFT + EVENT_INSET_RIGHT}px)`;
 
               delete adjustedStyle.minWidth;
             }
 
+            if (typeof adjustedStyle.top === "string") {
+              adjustedStyle.top = `calc(${adjustedStyle.top} + ${EVENT_INSET_Y}px)`;
+            }
+            if (typeof adjustedStyle.height === "string") {
+              adjustedStyle.height = `calc(${adjustedStyle.height} - ${EVENT_INSET_Y * 2 + HOUR_LINE_WIDTH}px)`;
+            }
             adjustedStyle.minHeight = 20;
+            adjustedStyle.shadowOpacity = 0;
+            adjustedStyle.elevation = 0;
 
             let blockHeight = eventHeights[event.id] || 0;
 
@@ -3335,8 +3362,11 @@ export default function WeeklySchedulePanel({
               const startTime = new Date(event.start).getTime();
               const endTime = new Date(event.end).getTime();
               const durationMinutes = (endTime - startTime) / (1000 * 60);
-              const segmentHeight = 40 / 4;
-              blockHeight = (durationMinutes / 15) * segmentHeight;
+              const segmentHeight = HOUR_ROW_HEIGHT / 4;
+              blockHeight =
+                (durationMinutes / 15) * segmentHeight -
+                EVENT_INSET_Y * 2 -
+                HOUR_LINE_WIDTH;
               if (blockHeight < 20) blockHeight = 20;
             }
 
@@ -3353,10 +3383,8 @@ export default function WeeklySchedulePanel({
               ? {
                   backgroundColor: colors.flightBg,
                   borderWidth: borderWidth,
-                  borderColor: isSelected
-                    ? colors.flightText
-                    : colors.flightBorder,
-                  borderRadius: radii.md,
+                  borderColor: isSelected ? colors.flightText : "transparent",
+                  borderRadius: radii.xs,
                 }
               : null;
 
@@ -3368,29 +3396,23 @@ export default function WeeklySchedulePanel({
               : null;
             const itineraryStyle = isItinerary
               ? {
-                  backgroundColor: itineraryCategoryColor
-                    ? `${itineraryCategoryColor}1A`
-                    : colors.itineraryBg,
+                  backgroundColor: categoryTint(itineraryCategory),
                   borderWidth: borderWidth,
                   borderColor: isSelected
                     ? (itineraryCategoryColor ?? colors.itineraryText)
-                    : itineraryCategoryColor
-                      ? `${itineraryCategoryColor}59`
-                      : colors.itineraryBorder,
-                  borderRadius: radii.md,
+                    : "transparent",
+                  borderRadius: radii.xs,
                 }
               : null;
 
             const previewStyle = isPreview
               ? {
-                  backgroundColor: itineraryCategoryColor
-                    ? `${itineraryCategoryColor}1A`
-                    : colors.itineraryBg,
+                  backgroundColor: categoryTint(itineraryCategory),
                   borderWidth: 1,
                   borderColor: itineraryCategoryColor
                     ? `${itineraryCategoryColor}59`
                     : colors.itineraryBorder,
-                  borderRadius: radii.md,
+                  borderRadius: radii.xs,
                   borderStyle: "dashed",
                   opacity: 0.7,
                 }
@@ -3480,17 +3502,6 @@ export default function WeeklySchedulePanel({
                   <View style={[styles.eventContentCol, blockHeight <= 70 && { justifyContent: "center" }]}>
                     {isFirstBar && showTitle && (
                       <View style={styles.eventTitleRow}>
-                        <View
-                          style={{
-                            width: 5,
-                            height: 5,
-                            borderRadius: 999,
-                            backgroundColor: isFlight
-                              ? colors.flightDot
-                              : (itineraryCategoryColor ?? colors.itineraryDot),
-                            flexShrink: 0,
-                          }}
-                        />
                         {isFlight && (
                           <Text
                             style={{
@@ -3506,10 +3517,7 @@ export default function WeeklySchedulePanel({
                           numberOfLines={1}
                           ellipsizeMode="tail"
                           style={{
-                            fontFamily:
-                              typography.fontFamily.pretendardSemiBold,
-                            fontSize: 11,
-                            lineHeight: 14,
+                            ...textStyles.h9,
                             color: isFlight
                               ? colors.flightText
                               : (itineraryCategoryColor ?? colors.itineraryText),
@@ -3541,21 +3549,12 @@ export default function WeeklySchedulePanel({
                       event.normalizedStartTime &&
                       event.normalizedEndTime && (
                         <View style={styles.eventTimeRow}>
-                          <View style={styles.iconWrapper}>
-                            <WeekBarTimeIcon
-                              width={9}
-                              height={9}
-                              color={itineraryCategoryColor ?? colors.itineraryText}
-                            />
-                          </View>
                           <Text
                             numberOfLines={1}
                             ellipsizeMode="tail"
                             style={{
-                              fontFamily:
-                                typography.fontFamily.pretendardRegular,
-                              fontSize: 10,
-                              lineHeight: 14,
+                              ...textStyles.body6,
+                              fontWeight: typography.weight.medium,
                               color: itineraryCategoryColor ?? colors.itineraryText,
                             }}
                           >
@@ -3572,9 +3571,7 @@ export default function WeeklySchedulePanel({
                           numberOfLines={1}
                           ellipsizeMode="tail"
                           style={{
-                            fontFamily: typography.fontFamily.pretendardRegular,
-                            fontSize: 10,
-                            lineHeight: 14,
+                            ...textStyles.body6,
                             color: itineraryCategoryColor ?? colors.itineraryText,
                             opacity: 0.65,
                           }}
@@ -3588,21 +3585,12 @@ export default function WeeklySchedulePanel({
                       event.normalizedStartTime &&
                       event.normalizedEndTime && (
                         <View style={styles.eventFlightTimeRow}>
-                          <View style={styles.iconWrapper}>
-                            <WeekBarTimeIcon
-                              width={9}
-                              height={9}
-                              color={colors.flightText}
-                            />
-                          </View>
                           <Text
                             numberOfLines={1}
                             ellipsizeMode="tail"
                             style={{
-                              fontFamily:
-                                typography.fontFamily.pretendardRegular,
-                              fontSize: 10,
-                              lineHeight: 14,
+                              ...textStyles.body6,
+                              fontWeight: typography.weight.medium,
                               color: colors.flightText,
                             }}
                           >
@@ -3622,9 +3610,7 @@ export default function WeeklySchedulePanel({
                           numberOfLines={1}
                           ellipsizeMode="tail"
                           style={{
-                            fontFamily: typography.fontFamily.pretendardRegular,
-                            fontSize: 10,
-                            lineHeight: 14,
+                            ...textStyles.body6,
                             color: colors.flightText,
                             opacity: 0.65,
                           }}
@@ -3648,7 +3634,7 @@ export default function WeeklySchedulePanel({
             top: dropPreviewPosition.y,
             width: draggingEvent.elementWidth,
             height: draggingEvent.elementHeight,
-            borderWidth: 2,
+            borderWidth: 1,
             borderColor:
               draggingEvent.type === "flight" && hasOverlap
                 ? "#FF4242"
@@ -3661,7 +3647,7 @@ export default function WeeklySchedulePanel({
                 : draggingEvent.type === "itinerary"
                   ? "rgba(0, 102, 255, 0.05)"
                   : "rgba(139, 92, 246, 0.05)",
-            borderRadius: radii.md,
+            borderRadius: radii.xs,
             pointerEvents: "none" as const,
             zIndex: 9999,
             opacity: 1,
@@ -3723,15 +3709,15 @@ export default function WeeklySchedulePanel({
                 borderWidth: hasOverlap ? 2 : 1,
                 borderColor: hasOverlap ? "#FF4242" : "#8B5CF6",
                 borderStyle: hasOverlap ? ("dashed" as any) : ("solid" as any),
-                borderRadius: radii.md,
+                borderRadius: radii.xs,
               }
             : null;
           const itineraryStyle = isItinerary
             ? {
-                backgroundColor: `${dragCategoryColor}1A`,
+                backgroundColor: categoryTint(dragCategory),
                 borderWidth: 1,
                 borderColor: dragCategoryColor,
-                borderRadius: radii.md,
+                borderRadius: radii.xs,
               }
             : null;
           const finalStyle = flightStyle ||
@@ -3756,7 +3742,8 @@ export default function WeeklySchedulePanel({
                   zIndex: 10000,
                   opacity: 0.7,
                   pointerEvents: "none" as const,
-                  padding: 4,
+                  paddingVertical: spacing.xs,
+                  paddingHorizontal: spacing.sm,
                   shadowColor: "#000",
                   shadowOffset: { width: 0, height: 4 },
                   shadowOpacity: 0.3,
@@ -3770,15 +3757,6 @@ export default function WeeklySchedulePanel({
               <View style={styles.dragEventContent}>
                 {dragShowTitle && (
                   <View style={styles.dragEventTitleRow}>
-                    <View
-                      style={{
-                        width: 5,
-                        height: 5,
-                        borderRadius: 999,
-                        backgroundColor: isFlight ? colors.flightDot : dragCategoryColor,
-                        flexShrink: 0,
-                      }}
-                    />
                     {isFlight && (
                       <Text style={{ fontSize: 11, color: colors.flightText }}>
                         ✈
@@ -3788,9 +3766,7 @@ export default function WeeklySchedulePanel({
                       numberOfLines={1}
                       ellipsizeMode="tail"
                       style={{
-                        fontFamily: typography.fontFamily.pretendardSemiBold,
-                        fontSize: 11,
-                        lineHeight: 14,
+                        ...textStyles.h9,
                         color: isFlight ? "#8B5CF6" : dragCategoryColor,
                         flex: 1,
                       }}
@@ -3803,22 +3779,13 @@ export default function WeeklySchedulePanel({
                   isItinerary &&
                   displayStartTime &&
                   displayEndTime && (
-                    <View
-                      style={{
-                        flexDirection: "row",
-                        alignItems: "center",
-                        gap: 4,
-                        marginTop: dragShowTitle ? 8 : 0,
-                      }}
-                    >
-                      <WeekBarTimeIcon width={9} height={9} color={dragCategoryColor} />
+                    <View style={styles.dragEventTimeRow}>
                       <Text
                         numberOfLines={1}
                         ellipsizeMode="tail"
                         style={{
-                          fontFamily: typography.fontFamily.pretendardRegular,
-                          fontSize: 10,
-                          lineHeight: 14,
+                          ...textStyles.body6,
+                          fontWeight: typography.weight.medium,
                           color: dragCategoryColor,
                         }}
                       >
@@ -3834,9 +3801,7 @@ export default function WeeklySchedulePanel({
                         numberOfLines={1}
                         ellipsizeMode="tail"
                         style={{
-                          fontFamily: typography.fontFamily.pretendardRegular,
-                          fontSize: 10,
-                          lineHeight: 14,
+                          ...textStyles.body6,
                           color: dragCategoryColor,
                           opacity: 0.65,
                         }}
@@ -3853,10 +3818,10 @@ export default function WeeklySchedulePanel({
                       numberOfLines={1}
                       ellipsizeMode="tail"
                       style={{
-                        ...textStyles.h9,
+                        ...textStyles.body6,
+                        fontWeight: typography.weight.medium,
                         color: "#8B5CF6",
-                        lineHeight: 10,
-                        marginTop: dragShowTitle ? 8 : 0,
+                        marginTop: spacing.xs,
                       }}
                     >
                       {displayStartTime}-{displayEndTime}
@@ -4120,6 +4085,7 @@ const styles = StyleSheet.create({
     flex: 1,
     minHeight: 0,
     backgroundColor: colors.white,
+    padding: spacing.xl,
   },
   calendarWrapper: {
     flex: 1,
@@ -4130,8 +4096,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     gap: spacing.md,
-    paddingHorizontal: 20,
-    paddingVertical: 14,
+    paddingBottom: spacing.lg,
     backgroundColor: colors.white,
     zIndex: 9998,
   },
@@ -4220,6 +4185,19 @@ const styles = StyleSheet.create({
   },
   timeColumn: {
     width: TIME_COLUMN_WIDTH,
+  },
+  hourLabelCell: {
+    flex: 1,
+    alignItems: "flex-end",
+    paddingTop: spacing.xs,
+    paddingRight: spacing.sm,
+    borderRightWidth: 1,
+    borderRightColor: colors.gray200,
+  },
+  hourLabelText: {
+    ...textStyles.body6,
+    fontVariant: ["tabular-nums"],
+    color: colors.gray600,
   },
   rightSection: {
     flexDirection: "row",
@@ -4468,13 +4446,6 @@ const styles = StyleSheet.create({
   accommodationLabelText: {
     fontSize: 16,
   },
-  itemDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 999,
-    backgroundColor: colors.dotAccommodation,
-    flexShrink: 0,
-  },
   accommodationCell: {
     flex: 1,
     justifyContent: "center",
@@ -4503,12 +4474,12 @@ const styles = StyleSheet.create({
   },
   accommodationHeaderRow: {
     flexDirection: "row",
-    height: 40,
-    backgroundColor: "",
-    borderTopWidth: 0.5,
-    borderBottomWidth: 0.5,
-    borderTopColor: "#e0e0e0",
-    borderBottomColor: "#e0e0e0",
+    height: 37,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.gray200,
+  },
+  accommodationIcon: {
+    opacity: 0.55,
   },
   accommodationRowInner: {
     flex: 1,
@@ -4518,13 +4489,13 @@ const styles = StyleSheet.create({
   },
   eventTouchable: {
     flex: 1,
-    padding: 4,
-    paddingHorizontal: 8,
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.sm,
   },
   eventContentCol: {
     flex: 1,
     justifyContent: "flex-start",
-    gap: 2,
+    gap: spacing.xs,
   },
   eventTitleRow: {
     flexDirection: "row",
@@ -4539,9 +4510,6 @@ const styles = StyleSheet.create({
     minWidth: 0,
     opacity: 0.75,
   },
-  iconWrapper: {
-    flexShrink: 0,
-  },
   eventFlightTimeRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -4551,7 +4519,13 @@ const styles = StyleSheet.create({
   },
   dragEventContent: {
     flex: 1,
-    justifyContent: "center",
+    justifyContent: "flex-start",
+  },
+  dragEventTimeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: spacing.xs,
+    opacity: 0.75,
   },
   dragEventTitleRow: {
     flexDirection: "row",
