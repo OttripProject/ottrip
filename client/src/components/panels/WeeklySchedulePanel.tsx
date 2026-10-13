@@ -30,7 +30,11 @@ import { shadows } from "@/ui/tokens/shadows";
 import { spacing } from "@/ui/tokens/spacing";
 import { textStyles, typography } from "@/ui/tokens/typography";
 import { toUserMessage } from "@/utils/crossPlatformAlert";
-import { type WeekStartsOn, getWeekStart } from "@/utils/dateUtils";
+import {
+  type WeekStartsOn,
+  getDefaultEndTime,
+  getWeekStart,
+} from "@/utils/dateUtils";
 import { guestPrompt } from "@/utils/guestPrompt";
 import dayjs from "dayjs";
 import ko from "dayjs/locale/ko";
@@ -2021,14 +2025,18 @@ export default function WeeklySchedulePanel({
     }
 
     const startTime = dayjs(date);
-    const endTime = startTime.add(1, "hour");
+    const endTimeText = getDefaultEndTime(startTime);
+    const endTime =
+      endTimeText === "24:00"
+        ? startTime.endOf("day")
+        : startTime.add(1, "hour");
 
     setPreviewEvent({
       start: startTime.toDate(),
       end: endTime.toDate(),
       title: "제목없음",
       startTime: startTime.format("HH:mm"),
-      endTime: endTime.format("HH:mm"),
+      endTime: endTimeText,
       location: "",
     });
 

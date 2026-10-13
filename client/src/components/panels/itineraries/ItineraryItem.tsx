@@ -75,6 +75,7 @@ import {
 import { handleGuestPromptError } from "@/utils/guestPrompt";
 import useDetectClose from "@/hooks/useDetectClose";
 import dayjs from "dayjs";
+import { getDefaultEndTime } from "@/utils/dateUtils";
 import React, {
   useState,
   useEffect,
@@ -189,7 +190,7 @@ export default function ItineraryItem({
     endTime:
       itinerary?.end_time ||
       (selectedDate
-        ? dayjs(selectedDate).add(1, "hour").format("HH:mm")
+        ? getDefaultEndTime(selectedDate)
         : "10:00"),
   });
 
@@ -204,7 +205,7 @@ export default function ItineraryItem({
         ...prev,
         itineraryDate: dateStr,
         startTime: dayjs(selectedDate).format("HH:mm"),
-        endTime: dayjs(selectedDate).add(1, "hour").format("HH:mm"),
+        endTime: getDefaultEndTime(selectedDate),
         ...(autoFill ? { country: autoFill.country, city: autoFill.city } : {}),
       }));
     }
@@ -403,7 +404,7 @@ export default function ItineraryItem({
         ? dayjs(selectedDate).format("HH:mm")
         : "09:00";
       const defaultEndTime = selectedDate
-        ? dayjs(selectedDate).add(1, "hour").format("HH:mm")
+        ? getDefaultEndTime(selectedDate)
         : "10:00";
 
       const autoFill = getCountryCityFromSegments(
