@@ -37,6 +37,7 @@ interface TimePickerProps {
   onOpen?: () => void;
   onClose?: () => void;
   disabled?: boolean;
+  hideArrow?: boolean;
   popupAlign?: "left" | "right";
 }
 
@@ -51,6 +52,10 @@ function parseTime(t: string | undefined): { h: number; m: number } | null {
   return { h, m };
 }
 
+function disabledBorder(disabled: boolean, borderWidth?: unknown) {
+  return disabled && borderWidth !== 0 ? styles.triggerDisabled : null;
+}
+
 export default function TimePicker({
   value,
   onChange,
@@ -63,6 +68,7 @@ export default function TimePicker({
   onOpen,
   onClose,
   disabled = false,
+  hideArrow = false,
   popupAlign = "left",
 }: TimePickerProps) {
   const wrapperRef = useRef<View>(null);
@@ -222,7 +228,7 @@ export default function TimePicker({
           triggerBorder,
           triggerBorderRadius,
           triggerHeight,
-          disabled && styleObj?.borderWidth !== 0 && styles.triggerDisabled,
+          disabledBorder(disabled, styleObj?.borderWidth),
           triggerHover.hovered &&
             !disabled &&
             !open &&
@@ -244,17 +250,19 @@ export default function TimePicker({
           editable={!disabled}
           selectTextOnFocus
         />
-        <Pressable
-          onPress={handleToggle}
-          disabled={disabled}
-          style={styles.arrowButton}
-        >
-          {open ? (
-            <UpperArrowIcon width={10} height={10} style={{ opacity: 0.6 }} />
-          ) : (
-            <DownArrowIcon width={10} height={10} style={{ opacity: 0.6 }} />
-          )}
-        </Pressable>
+        {!hideArrow && (
+          <Pressable
+            onPress={handleToggle}
+            disabled={disabled}
+            style={styles.arrowButton}
+          >
+            {open ? (
+              <UpperArrowIcon width={10} height={10} style={{ opacity: 0.6 }} />
+            ) : (
+              <DownArrowIcon width={10} height={10} style={{ opacity: 0.6 }} />
+            )}
+          </Pressable>
+        )}
       </View>
 
       {open && (

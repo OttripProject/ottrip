@@ -949,6 +949,7 @@ export default function FlightItem({
                         }}
                         placeholder={PLACEHOLDERS.flight.departureAirport}
                         disabled={readOnly}
+                        hideArrow={readOnly}
                         style={
                           readOnly
                             ? styles.readOnlyPicker
@@ -978,6 +979,7 @@ export default function FlightItem({
                         }}
                         placeholder={PLACEHOLDERS.flight.arrivalAirport}
                         disabled={readOnly}
+                        hideArrow={readOnly}
                         dropdownAlign="right"
                         style={
                           readOnly
@@ -1100,6 +1102,7 @@ export default function FlightItem({
                             : styles.segmentTimePicker
                         }
                         disabled={readOnly}
+                        hideArrow={readOnly}
                         popupAlign="right"
                       />
                     </View>
@@ -1200,6 +1203,7 @@ export default function FlightItem({
                             : styles.segmentTimePicker
                         }
                         disabled={readOnly}
+                        hideArrow={readOnly}
                         popupAlign="right"
                       />
                     </View>

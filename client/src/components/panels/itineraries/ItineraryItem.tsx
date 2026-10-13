@@ -1293,6 +1293,7 @@ export default function ItineraryItem({
                 onClose={() => setCountryOpen(false)}
                 placeholder={PLACEHOLDERS.itinerary.countryForm}
                 disabled={readOnly}
+                hideArrow={readOnly}
                 useModal
                 style={readOnly ? styles.readOnlyPicker : styles.pickerTrigger}
               />
@@ -1305,6 +1306,7 @@ export default function ItineraryItem({
                 countryKo={formData.country}
                 placeholder={PLACEHOLDERS.itinerary.cityForm}
                 disabled={readOnly}
+                hideArrow={readOnly}
                 useModal
                 style={readOnly ? styles.readOnlyPicker : styles.pickerTrigger}
               />
@@ -1477,6 +1479,7 @@ export default function ItineraryItem({
                 }}
                 onClose={() => setTimeOpen(false)}
                 disabled={readOnly}
+                hideArrow={readOnly}
                 style={
                   readOnly
                     ? {
@@ -1505,6 +1508,7 @@ export default function ItineraryItem({
                 onClose={() => setTimeOpen(false)}
                 minTime={formData.startTime}
                 disabled={readOnly}
+                hideArrow={readOnly}
                 popupAlign="right"
                 style={
                   readOnly

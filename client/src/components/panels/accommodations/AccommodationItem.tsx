@@ -843,6 +843,7 @@ export default function AccommodationItem({
                 onOpen={() => !readOnly && setCountryOpen(true)}
                 onClose={() => setCountryOpen(false)}
                 disabled={readOnly}
+                hideArrow={readOnly}
                 useModal
                 style={readOnly ? styles.readOnlyPicker : styles.pickerTrigger}
               />
@@ -855,6 +856,7 @@ export default function AccommodationItem({
                 countryKo={formData.country}
                 placeholder={PLACEHOLDERS.accommodation.city}
                 disabled={readOnly}
+                hideArrow={readOnly}
                 useModal
                 style={readOnly ? styles.readOnlyPicker : styles.pickerTrigger}
               />
@@ -1012,6 +1014,7 @@ export default function AccommodationItem({
                     : styles.timePicker
                 }
                 disabled={readOnly}
+                hideArrow={readOnly}
               />
             </View>
           </View>
@@ -1122,6 +1125,7 @@ export default function AccommodationItem({
                     : styles.timePicker
                 }
                 disabled={readOnly}
+                hideArrow={readOnly}
               />
             </View>
           </View>

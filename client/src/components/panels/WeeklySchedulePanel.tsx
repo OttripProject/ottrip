@@ -2775,7 +2775,7 @@ export default function WeeklySchedulePanel({
                                           position: "absolute",
                                           left: `${actualLeft}%`,
                                           width: `${actualWidth}%`,
-                                          top: 8,
+                                          top: 4,
                                           bottom: 4,
                                           backgroundColor:
                                             colors.accommodationBg,
@@ -2960,7 +2960,7 @@ export default function WeeklySchedulePanel({
                                       position: "absolute",
                                       left: `${previewLeft}%` as any,
                                       width: `${previewWidth}%` as any,
-                                      top: 8,
+                                      top: 4,
                                       bottom: 4,
                                       backgroundColor: previewHasOverlap
                                         ? "rgba(239,68,68,0.15)"
@@ -3058,7 +3058,7 @@ export default function WeeklySchedulePanel({
                                   position: "absolute",
                                   left: `${leftPct}%` as any,
                                   width: `${widthPct}%` as any,
-                                  top: 8,
+                                  top: 4,
                                   bottom: 4,
                                   paddingHorizontal: spacing.md,
                                   flexDirection: "row",
@@ -3145,7 +3145,7 @@ export default function WeeklySchedulePanel({
                                 position: "absolute",
                                 left: `${leftPct}%` as any,
                                 width: `${widthPct}%` as any,
-                                top: 8,
+                                top: 4,
                                 bottom: 4,
                                 backgroundColor: isOverlap
                                   ? "rgba(239,68,68,0.15)"
@@ -3209,7 +3209,7 @@ export default function WeeklySchedulePanel({
                                 position: "absolute",
                                 left: `${leftPct}%` as any,
                                 width: `${widthPct}%` as any,
-                                top: 8,
+                                top: 4,
                                 bottom: 4,
                                 backgroundColor: colors.accommodationBg,
                                 borderWidth: 2,
@@ -3273,7 +3273,7 @@ export default function WeeklySchedulePanel({
                                 position: "absolute",
                                 left: `${leftPct}%` as any,
                                 width: `${widthPct}%` as any,
-                                top: 8,
+                                top: 4,
                                 bottom: 4,
                                 paddingHorizontal: spacing.md,
                                 flexDirection: "row",

@@ -39,6 +39,7 @@ interface AirportPickerProps {
   style?: ViewStyle;
   dropDownContainerStyle?: ViewStyle;
   disabled?: boolean;
+  hideArrow?: boolean;
   onOpen?: () => void;
   onClose?: () => void;
   dropdownAlign?: "left" | "right";
@@ -52,6 +53,7 @@ export default function AirportPicker({
   style,
   dropDownContainerStyle,
   disabled,
+  hideArrow,
   onOpen,
   onClose,
   dropdownAlign = "left",
@@ -174,11 +176,12 @@ export default function AirportPicker({
         >
           {selectedLabel ?? placeholder}
         </Text>
-        {open ? (
-          <UpperArrowIcon width={10} height={10} style={{ opacity: 0.6 }} />
-        ) : (
-          <DownArrowIcon width={10} height={10} style={{ opacity: 0.6 }} />
-        )}
+        {!hideArrow &&
+          (open ? (
+            <UpperArrowIcon width={10} height={10} style={{ opacity: 0.6 }} />
+          ) : (
+            <DownArrowIcon width={10} height={10} style={{ opacity: 0.6 }} />
+          ))}
       </Pressable>
 
       {open && (
