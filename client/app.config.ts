@@ -160,14 +160,14 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     updates: {
       url: `https://u.expo.dev/${projectId}`,
     },
-    runtimeVersion: "1.1.0",
+    runtimeVersion: "1.2.0",
     scheme: switchProfile({
       dev: "ottrip-dev",
       alpha: "ottrip-alpha",
       prod: "ottrip",
       local: "ottrip-local",
     }),
-    version: "1.1.1",
+    version: "1.2.0",
     orientation: "portrait",
     icon: `./assets/${switchProfile({
       dev: "icon-dev.png",
