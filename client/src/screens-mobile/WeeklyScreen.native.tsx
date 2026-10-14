@@ -18,7 +18,10 @@ import type {
   Plan,
 } from "@/types/api";
 import { colors } from "@/ui/tokens/colors";
+import { motion } from "@/ui/tokens/motion";
+import { radii } from "@/ui/tokens/radii";
 import { spacing } from "@/ui/tokens/spacing";
+import { shadows } from "@/ui/tokens/shadows";
 import { textStyles } from "@/ui/tokens/typography";
 import {
   convertUTCToLocalTime,
@@ -32,6 +35,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   ActivityIndicator,
   Alert,
+  Animated,
+  Easing,
   Modal,
   Pressable,
   RefreshControl,
@@ -42,6 +47,13 @@ import {
 } from "react-native";
 
 type AddScheduleFlow = "closed" | "method" | "direct" | "ai";
+
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+const [jellyX1, jellyY1, jellyX2, jellyY2] = (
+  motion.easing.ease.match(/[\d.]+/g) ?? []
+).map(Number);
+const jellyEasing = Easing.bezier(jellyX1, jellyY1, jellyX2, jellyY2);
+const JELLY_STEPS = [0, 0.3, 0.55, 0.75, 1];
 import WeeklyChecklistCard from "@/components/cards/WeeklyChecklistCard.native";
 import AccommodationDetailModal from "@/components/modals/mobile/AccommodationDetailModal.native";
 import AccommodationEditModal from "@/components/modals/mobile/AccommodationEditModal.native";
@@ -128,6 +140,40 @@ export default function WeeklyScreen() {
   }, [resolvedWeekBaseDate]);
 
   const [selectedDate, setSelectedDate] = useState<dayjs.Dayjs>(() => dayjs());
+  const jellyProgress = useRef(new Animated.Value(1)).current;
+  const selectedDateKey = selectedDate.format("YYYY-MM-DD");
+  const isFirstSelectionRef = useRef(true);
+
+  useEffect(() => {
+    if (isFirstSelectionRef.current) {
+      isFirstSelectionRef.current = false;
+      return;
+    }
+    jellyProgress.setValue(0);
+    Animated.timing(jellyProgress, {
+      toValue: 1,
+      duration: motion.duration.jelly,
+      easing: jellyEasing,
+      useNativeDriver: true,
+    }).start();
+  }, [selectedDateKey, jellyProgress]);
+
+  const jellyStyle = {
+    transform: [
+      {
+        scaleX: jellyProgress.interpolate({
+          inputRange: JELLY_STEPS,
+          outputRange: [1, 1.06, 0.97, 1.02, 1],
+        }),
+      },
+      {
+        scaleY: jellyProgress.interpolate({
+          inputRange: JELLY_STEPS,
+          outputRange: [1, 0.94, 1.03, 0.98, 1],
+        }),
+      },
+    ],
+  };
 
   useEffect(() => {
     if (selectedPlan) {
@@ -367,39 +413,29 @@ export default function WeeklyScreen() {
       </View>
 
       <View style={styles.weekSelector}>
-        <Pressable style={{ marginLeft: 16 }} onPress={handlePrevWeek}>
+        <Pressable
+          style={styles.weekArrow}
+          accessibilityLabel="이전 주"
+          onPress={handlePrevWeek}
+        >
           <LeftArrowIcon width={20} height={20} color={colors.gray600} />
         </Pressable>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={styles.weekScroll}
-          contentContainerStyle={styles.weekContent}
-        >
+        <View style={styles.weekDays}>
           {weekCalendar.map(item => {
             const isSelected = selectedDate.isSame(item.fullDate, "day");
             const hasItems = datesWithItems.has(
               item.fullDate.format("YYYY-MM-DD"),
             );
             return (
-              <Pressable
+              <AnimatedPressable
                 key={`${item.year}-${item.month}-${item.date}`}
                 style={[
                   styles.dayColumn,
                   isSelected && styles.dayColumnSelected,
+                  isSelected && jellyStyle,
                 ]}
                 onPress={() => setSelectedDate(item.fullDate)}
               >
-                <View style={styles.dateDotRow}>
-                  {hasItems && (
-                    <View
-                      style={[
-                        styles.dateDot,
-                        isSelected && styles.dateDotSelected,
-                      ]}
-                    />
-                  )}
-                </View>
                 <Text
                   style={[
                     styles.dayLabel,
@@ -409,15 +445,31 @@ export default function WeeklyScreen() {
                   {item.day}
                 </Text>
                 <Text
-                  style={[styles.dayDate, isSelected && styles.dayDateSelected]}
+                  style={[
+                    styles.dayDate,
+                    !hasItems && !isSelected && styles.dayDateEmpty,
+                    isSelected && styles.dayDateSelected,
+                  ]}
                 >
                   {item.date}
                 </Text>
-              </Pressable>
+                {hasItems && (
+                  <View
+                    style={[
+                      styles.dateDot,
+                      isSelected && styles.dateDotSelected,
+                    ]}
+                  />
+                )}
+              </AnimatedPressable>
             );
           })}
-        </ScrollView>
-        <Pressable style={{ marginRight: 16 }} onPress={handleNextWeek}>
+        </View>
+        <Pressable
+          style={styles.weekArrow}
+          accessibilityLabel="다음 주"
+          onPress={handleNextWeek}
+        >
           <RightArrowIcon width={20} height={20} color={colors.gray600} />
         </Pressable>
       </View>
@@ -1312,7 +1364,7 @@ export default function WeeklyScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.gray300,
+    backgroundColor: colors.gray200,
   },
   loadingContainer: {
     flex: 1,
@@ -1337,8 +1389,7 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingHorizontal: spacing.xl,
-    paddingBottom: spacing.md,
-    backgroundColor: colors.white,
+    paddingBottom: spacing.xl,
   },
   headerTopRow: {
     flexDirection: "row",
@@ -1378,57 +1429,64 @@ const styles = StyleSheet.create({
   weekSelector: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: colors.white,
-    paddingVertical: 12,
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
+    gap: spacing.xs,
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.xl,
   },
   weekArrow: {
+    width: 24,
+    height: 48,
     alignItems: "center",
     justifyContent: "center",
   },
-  weekScroll: {
+  weekDays: {
     flex: 1,
-  },
-  weekContent: {
+    minWidth: 0,
     flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
+    gap: 2,
   },
   dayColumn: {
-    width: 45,
-    height: 73,
+    flex: 1,
+    height: 48,
+    paddingTop: spacing.xs,
+    paddingBottom: spacing.sm,
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: 12,
+    borderRadius: radii.md,
   },
   dayColumnSelected: {
     backgroundColor: colors.primary,
+    experimental_backgroundImage: `linear-gradient(180deg, ${colors.gradientPrimary[0]} 0%, ${colors.gradientPrimary[1]} 100%)`,
+    ...shadows.primaryRaised,
   },
   dayLabel: {
-    ...textStyles.body4,
+    ...textStyles.body6,
+    lineHeight: 14,
     color: colors.gray600,
-    marginBottom: 9,
   },
   dayLabelSelected: {
-    color: colors.white,
+    color: colors.onDarkStrong,
   },
   dayDate: {
-    ...textStyles.h5,
+    ...textStyles.h6,
+    lineHeight: 20,
+    color: colors.gray900,
+    fontVariant: ["tabular-nums"],
+  },
+  dayDateEmpty: {
+    ...textStyles.body3,
+    lineHeight: 20,
+    color: colors.gray600,
   },
   dayDateSelected: {
     color: colors.white,
   },
-  dateDotRow: {
-    height: 8,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 2,
-  },
   dateDot: {
-    width: 5,
-    height: 5,
-    borderRadius: 999,
+    position: "absolute",
+    bottom: spacing.xs,
+    width: 4,
+    height: 4,
+    borderRadius: radii.pill,
     backgroundColor: colors.primary,
   },
   dateDotSelected: {
@@ -1441,7 +1499,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingTop: 16,
     paddingBottom: 12,
-    backgroundColor: colors.gray300,
+    backgroundColor: colors.gray200,
   },
   scheduleDate: {
     flexDirection: "row",
@@ -1469,7 +1527,7 @@ const styles = StyleSheet.create({
 
   scheduleList: {
     flex: 1,
-    backgroundColor: colors.gray300,
+    backgroundColor: colors.gray200,
   },
   scheduleContent: {
     paddingHorizontal: 16,

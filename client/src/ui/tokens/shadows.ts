@@ -204,6 +204,10 @@ export const shadows = {
         "inset 0 1px 0 rgba(255,255,255,0.22), 0 1px 1px rgba(0,60,140,0.25), 0 8px 18px -8px rgba(0,122,255,0.55)",
     } as any,
   }),
+  primaryRaised: {
+    boxShadow:
+      "inset 0 1px 0 rgba(255,255,255,0.22), 0 1px 1px rgba(0,60,140,0.25), 0 8px 18px -8px rgba(0,122,255,0.55)",
+  },
   darkHover: Platform.select({
     ios: {
       shadowColor: "#000",

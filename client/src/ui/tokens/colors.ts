@@ -36,6 +36,7 @@ export const colors = {
   warningTint: "#FFF1E5",
   iconHoverBg: "rgba(31, 31, 31, 0.06)",
   hairline: "rgba(20, 24, 40, 0.06)",
+  onDarkStrong: "rgba(255, 255, 255, 0.85)",
   onDarkMuted: "rgba(255, 255, 255, 0.66)",
   onDarkSubtle: "rgba(255, 255, 255, 0.5)",
   onDarkTint: "rgba(255, 255, 255, 0.12)",
