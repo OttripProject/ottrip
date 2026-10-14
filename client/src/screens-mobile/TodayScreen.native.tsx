@@ -25,7 +25,6 @@ import { usePlanDataQuery } from "@/hooks/usePlanDataQuery";
 import { usePlansQuery } from "@/hooks/usePlansQuery";
 import type {
   Accommodation,
-  Expense,
   FlightRead,
   FlightSegmentReadDto,
   Itinerary,
@@ -37,6 +36,10 @@ import { radii } from "@/ui/tokens/radii";
 import { spacing } from "@/ui/tokens/spacing";
 import { textStyles } from "@/ui/tokens/typography";
 import { convertUTCToLocalTime, formatTime } from "@/utils/dateUtils";
+import {
+  type ExpenseSummary,
+  summarizeExpenses,
+} from "@/utils/summarizeExpenses";
 import { useQueryClient } from "@tanstack/react-query";
 import dayjs from "dayjs";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -156,36 +159,6 @@ const SHORT_WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"];
 
 function formatShortKoreanDate(date: dayjs.Dayjs): string {
   return `${date.month() + 1}월 ${date.date()}일(${SHORT_WEEKDAYS[date.day()]})`;
-}
-
-type ExpenseSummary = {
-  total: number;
-  totalKrw: number;
-  totalUsd: number;
-  byCategory: Record<string, number>;
-};
-
-function summarizeExpenses(expenses: Expense[] | undefined): ExpenseSummary {
-  let total = 0;
-  let totalKrw = 0;
-  let totalUsd = 0;
-  const byCategory: Record<string, number> = {};
-
-  if (Array.isArray(expenses)) {
-    expenses.forEach(expense => {
-      const amount = expense.amount || 0;
-      total += amount;
-      if (expense.currency === "USD") {
-        totalUsd += amount;
-      } else {
-        totalKrw += amount;
-      }
-      const category = expense.category || "기타";
-      byCategory[category] = (byCategory[category] || 0) + amount;
-    });
-  }
-
-  return { total, totalKrw, totalUsd, byCategory };
 }
 
 function CostSummaryCard({

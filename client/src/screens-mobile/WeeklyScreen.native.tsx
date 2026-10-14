@@ -1,6 +1,8 @@
 import axios from "axios";
 
+import AddExpenseModal from "@/components/modals/mobile/AddExpenseModal.native";
 import AddPlanModal from "@/components/modals/mobile/AddPlanModal.native";
+import ExpenseDetailModal from "@/components/modals/mobile/ExpenseDetailModal.native";
 import PlanLoadingOverlay from "@/components/PlanLoadingOverlay.native";
 import AddScheduleMethodModal from "@/components/modals/mobile/AddScheduleMethodModal.native";
 import AddScheduleModal from "@/components/modals/mobile/AddScheduleModal.native";
@@ -8,6 +10,7 @@ import AddScheduleWithAiModal from "@/components/modals/mobile/AddScheduleWithAi
 import PlanSelectModal from "@/components/modals/mobile/PlanSelectModal.native";
 import ProfileModal from "@/components/modals/mobile/ProfileModal.native";
 import { useSelectedPlan } from "@/contexts/SelectedPlanContext";
+import { useExpensesQuery } from "@/hooks/useExpensesQuery";
 import { usePlanDataQuery } from "@/hooks/usePlanDataQuery";
 import { usePlansQuery } from "@/hooks/usePlansQuery";
 import type {
@@ -19,12 +22,13 @@ import type {
 } from "@/types/api";
 import { itineraryCategoryColors } from "@/types/itinerary";
 import { getAirportLabel } from "@/utils/airportList";
+import { summarizeExpenses } from "@/utils/summarizeExpenses";
 import { colors } from "@/ui/tokens/colors";
 import { motion } from "@/ui/tokens/motion";
 import { radii } from "@/ui/tokens/radii";
 import { spacing } from "@/ui/tokens/spacing";
 import { shadows } from "@/ui/tokens/shadows";
-import { textStyles } from "@/ui/tokens/typography";
+import { textStyles, typography } from "@/ui/tokens/typography";
 import {
   convertUTCToLocalTime,
   formatTime,
@@ -32,7 +36,7 @@ import {
 } from "@/utils/dateUtils";
 import { useQueryClient } from "@tanstack/react-query";
 import dayjs from "dayjs";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import PagerView from "react-native-pager-view";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
@@ -44,9 +48,11 @@ import {
   Pressable,
   RefreshControl,
   ScrollView,
+  type StyleProp,
   StyleSheet,
   Text,
   View,
+  type ViewStyle,
 } from "react-native";
 
 type AddScheduleFlow = "closed" | "method" | "direct" | "ai";
@@ -58,6 +64,7 @@ const toEasing = (cubicBezier: string) => {
 };
 const jellyEasing = toEasing(motion.easing.ease);
 const JELLY_STEPS = [0, 0.3, 0.55, 0.75, 1];
+const PRIMARY_GRADIENT = `linear-gradient(180deg, ${colors.gradientPrimary[0]} 0%, ${colors.gradientPrimary[1]} 100%)`;
 const DAY_TABS = ["일정", "체크리스트", "숙박·항공"] as const;
 const PRESSED_SCALE = 0.96;
 import WeeklyChecklistCard from "@/components/cards/WeeklyChecklistCard.native";
@@ -84,6 +91,7 @@ import AccommodationIcon from "../../assets/mobile_accomodation.svg";
 import CalendarIcon from "../../assets/mobile_calendar_black.svg";
 import CautionIcon from "../../assets/mobile_caution.svg";
 import DotsIcon from "../../assets/dots.svg";
+import ExpenseCardIcon from "../../assets/expense_card.svg";
 import DropdownIcon from "../../assets/mobile_dropdown.svg";
 import PlusIcon from "../../assets/mobile_plus2.svg";
 import RightArrowIcon from "../../assets/right_arrow.svg";
@@ -116,15 +124,7 @@ function PulseDot() {
   return <Animated.View style={[styles.pulseDot, { opacity }]} />;
 }
 
-function DayTabButton({
-  label,
-  isActive,
-  onPress,
-}: {
-  label: string;
-  isActive: boolean;
-  onPress: () => void;
-}) {
+function usePressScale() {
   const scale = useRef(new Animated.Value(1)).current;
 
   const animateScale = (toValue: number, duration: number, easing: string) => {
@@ -136,16 +136,55 @@ function DayTabButton({
     }).start();
   };
 
+  return {
+    scale,
+    onPressIn: () =>
+      animateScale(PRESSED_SCALE, motion.duration.press, motion.easing.ease),
+    onPressOut: () =>
+      animateScale(1, motion.duration.slow, motion.easing.spring),
+  };
+}
+
+function ScalePressable({
+  style,
+  onPress,
+  children,
+}: {
+  style: StyleProp<ViewStyle>;
+  onPress: () => void;
+  children: ReactNode;
+}) {
+  const { scale, onPressIn, onPressOut } = usePressScale();
+
+  return (
+    <AnimatedPressable
+      style={[style, { transform: [{ scale }] }]}
+      onPress={onPress}
+      onPressIn={onPressIn}
+      onPressOut={onPressOut}
+    >
+      {children}
+    </AnimatedPressable>
+  );
+}
+
+function DayTabButton({
+  label,
+  isActive,
+  onPress,
+}: {
+  label: string;
+  isActive: boolean;
+  onPress: () => void;
+}) {
+  const { scale, onPressIn, onPressOut } = usePressScale();
+
   return (
     <Pressable
       style={[styles.dayTab, isActive && styles.dayTabActive]}
       onPress={onPress}
-      onPressIn={() =>
-        animateScale(PRESSED_SCALE, motion.duration.press, motion.easing.ease)
-      }
-      onPressOut={() =>
-        animateScale(1, motion.duration.slow, motion.easing.spring)
-      }
+      onPressIn={onPressIn}
+      onPressOut={onPressOut}
     >
       <Animated.Text
         style={[
@@ -187,6 +226,9 @@ export default function WeeklyScreen() {
   const [selectedAttraction, setSelectedAttraction] = useState<import("@/services/tourism").NearbyAttraction | null>(null);
   const [tourismDetailVisible, setTourismDetailVisible] = useState(false);
   const reopenDetailAfterTourismRef = useRef(true);
+  const [showExpenseDetail, setShowExpenseDetail] = useState(false);
+  const [showAddExpenseFromDetail, setShowAddExpenseFromDetail] =
+    useState(false);
   const [showFlightDetail, setShowFlightDetail] = useState(false);
   const [selectedFlight, setSelectedFlight] = useState<FlightRead | null>(null);
   const [selectedFlightSegment, setSelectedFlightSegment] =
@@ -383,6 +425,14 @@ export default function WeeklyScreen() {
     planData.accommodations,
     selectedDate,
   ]);
+
+  const selectedDateStr = selectedDate.format("YYYY-MM-DD");
+  const { data: dayExpenses = [], refetch: refetchDayExpenses } =
+    useExpensesQuery(selectedPlan?.id, selectedDateStr);
+  const dayExpenseSummary = useMemo(
+    () => summarizeExpenses(dayExpenses),
+    [dayExpenses],
+  );
 
   const timelineItems = useMemo(
     () => selectedDateSchedules.filter(item => item.type !== "accommodation"),
@@ -711,7 +761,7 @@ export default function WeeklyScreen() {
             </View>
           )}
           {currentRows.map(row => (
-            <Pressable
+            <ScalePressable
               key={row.schedule.id}
               style={styles.currentCard}
               onPress={() => openScheduleDetail(row)}
@@ -742,7 +792,7 @@ export default function WeeklyScreen() {
                   </Text>
                 </View>
               )}
-            </Pressable>
+            </ScalePressable>
           ))}
           {scheduleCount > 0 && (
             <View style={styles.listCard}>
@@ -809,6 +859,35 @@ export default function WeeklyScreen() {
                 );
               })}
             </View>
+          )}
+          {selectedPlan && (
+            <ScalePressable
+              style={styles.costCard}
+              onPress={() => setShowExpenseDetail(true)}
+            >
+              <View style={styles.costHeader}>
+                <ExpenseCardIcon width={19} height={19} color={colors.white} />
+                <Text style={styles.costTitle}>
+                  {selectedDate.isSame(dayjs(), "day")
+                    ? "오늘의"
+                    : selectedDate.format("M월 D일")}{" "}
+                  여행 비용
+                </Text>
+                <RightArrowIcon width={15} height={15} color={colors.white} />
+              </View>
+              {(dayExpenseSummary.totalKrw > 0 ||
+                dayExpenseSummary.totalUsd === 0) && (
+                <Text style={styles.costAmount}>
+                  {dayExpenseSummary.totalKrw.toLocaleString("ko-KR")} 원
+                </Text>
+              )}
+              {dayExpenseSummary.totalUsd > 0 && (
+                <Text style={styles.costAmount}>
+                  {dayExpenseSummary.totalUsd.toLocaleString("en-US")} 달러
+                </Text>
+              )}
+              <Text style={styles.costHint}>터치하여 상세 내역 확인</Text>
+            </ScalePressable>
           )}
         </ScrollView>
         <ScrollView
@@ -927,6 +1006,57 @@ export default function WeeklyScreen() {
           )}
         </ScrollView>
       </PagerView>
+
+      <ExpenseDetailModal
+        visible={showExpenseDetail && !showAddExpenseFromDetail}
+        onClose={() => setShowExpenseDetail(false)}
+        expenses={dayExpenses}
+        attachments={planData.attachments ?? []}
+        total={dayExpenseSummary.total}
+        byCategory={dayExpenseSummary.byCategory}
+        planId={selectedPlan?.id ?? 0}
+        planStartDate={selectedPlan?.startDate}
+        planEndDate={selectedPlan?.endDate}
+        exDate={selectedDateStr}
+        onExpenseDelete={async () => {
+          await refetchDayExpenses();
+          queryClient.invalidateQueries({
+            queryKey: ["expenses", selectedPlan?.id],
+          });
+        }}
+        onExpenseAdd={() => {
+          queryClient.invalidateQueries({
+            queryKey: ["expenses", selectedPlan?.id],
+          });
+        }}
+        onAddExpensePress={() => {
+          setShowExpenseDetail(false);
+          setShowAddExpenseFromDetail(true);
+        }}
+      />
+
+      <AddExpenseModal
+        visible={showAddExpenseFromDetail}
+        onClose={opts => {
+          setShowAddExpenseFromDetail(false);
+          if (opts?.fromSave) {
+            setShowExpenseDetail(false);
+          } else {
+            setShowExpenseDetail(true);
+          }
+        }}
+        planId={selectedPlan?.id ?? 0}
+        planStartDate={selectedPlan?.startDate}
+        planEndDate={selectedPlan?.endDate}
+        defaultExDate={selectedDateStr}
+        onExpenseAdd={expense => {
+          planData.addExpense?.(expense);
+          queryClient.invalidateQueries({
+            queryKey: ["expenses", selectedPlan?.id],
+          });
+          setShowExpenseDetail(false);
+        }}
+      />
 
       <Modal
         visible={profileModalVisible}
@@ -1532,7 +1662,7 @@ const styles = StyleSheet.create({
   },
   dayColumnSelected: {
     backgroundColor: colors.primary,
-    experimental_backgroundImage: `linear-gradient(180deg, ${colors.gradientPrimary[0]} 0%, ${colors.gradientPrimary[1]} 100%)`,
+    experimental_backgroundImage: PRIMARY_GRADIENT,
     ...shadows.primaryRaised,
   },
   dayLabel: {
@@ -1666,6 +1796,38 @@ const styles = StyleSheet.create({
     ...textStyles.h7,
     color: colors.paletteFg2,
     flexShrink: 1,
+  },
+  costCard: {
+    marginHorizontal: spacing.sm,
+    marginTop: spacing.xl,
+    padding: spacing.xl,
+    borderRadius: radii.lgPlus,
+    backgroundColor: colors.primary,
+    experimental_backgroundImage: PRIMARY_GRADIENT,
+    ...shadows.primaryRaised,
+  },
+  costHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: spacing.lg,
+  },
+  costTitle: {
+    ...textStyles.h5,
+    flex: 1,
+    marginLeft: spacing.sm,
+    color: colors.white,
+  },
+  costAmount: {
+    ...textStyles.h2,
+    fontFamily: typography.fontFamily.poppinsSemiBold,
+    letterSpacing: -0.48,
+    color: colors.white,
+    fontVariant: ["tabular-nums"],
+  },
+  costHint: {
+    ...textStyles.h7,
+    marginTop: spacing.md,
+    color: colors.onDarkStrong,
   },
   listCard: {
     marginHorizontal: spacing.sm,
