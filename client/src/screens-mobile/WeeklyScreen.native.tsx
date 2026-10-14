@@ -24,6 +24,7 @@ import { itineraryCategoryColors } from "@/types/itinerary";
 import { getAirportLabel } from "@/utils/airportList";
 import { summarizeExpenses } from "@/utils/summarizeExpenses";
 import { colors } from "@/ui/tokens/colors";
+import { toEasing, usePressScale } from "@/ui/effects/pressScale";
 import { motion } from "@/ui/tokens/motion";
 import { radii } from "@/ui/tokens/radii";
 import { spacing } from "@/ui/tokens/spacing";
@@ -58,15 +59,16 @@ import {
 type AddScheduleFlow = "closed" | "method" | "direct" | "ai";
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
-const toEasing = (cubicBezier: string) => {
-  const [x1, y1, x2, y2] = (cubicBezier.match(/[\d.]+/g) ?? []).map(Number);
-  return Easing.bezier(x1, y1, x2, y2);
-};
 const jellyEasing = toEasing(motion.easing.ease);
 const JELLY_STEPS = [0, 0.3, 0.55, 0.75, 1];
 const PRIMARY_GRADIENT = `linear-gradient(180deg, ${colors.gradientPrimary[0]} 0%, ${colors.gradientPrimary[1]} 100%)`;
 const DAY_TABS = ["일정", "체크리스트", "숙박·항공"] as const;
-const PRESSED_SCALE = 0.96;
+const NO_PLAN_FEATURES = [
+  "여행 일정 관리에 최적화된 솔루션",
+  "AI로 체크리스트 추천",
+  "친구들과 일정 공유",
+] as const;
+import AiSuggestionCard from "@/components/cards/AiSuggestionCard.native";
 import WeeklyChecklistCard from "@/components/cards/WeeklyChecklistCard.native";
 import AccommodationDetailModal from "@/components/modals/mobile/AccommodationDetailModal.native";
 import AccommodationEditModal from "@/components/modals/mobile/AccommodationEditModal.native";
@@ -80,6 +82,7 @@ import { useMe } from "@/hooks/useMe";
 import { accommodationsApi } from "@/services/accommodations";
 import { flightsApi } from "@/services/flights";
 import { itinerariesApi } from "@/services/itineraries";
+import { type DaySuggestion, tourismApi } from "@/services/tourism";
 import CalendarModal from "@/ui/components/CalendarModal.native";
 import { extendPlanIfNeeded } from "@/utils/extendPlanIfNeeded";
 import { collectPlanItemDates, shrinkPlanIfNeeded } from "@/utils/shrinkPlanIfNeeded";
@@ -95,6 +98,7 @@ import ExpenseCardIcon from "../../assets/expense_card.svg";
 import DropdownIcon from "../../assets/mobile_dropdown.svg";
 import PlusIcon from "../../assets/mobile_plus2.svg";
 import RightArrowIcon from "../../assets/right_arrow.svg";
+import SettingIcon from "../../assets/mobile_setting.svg";
 
 function PulseDot() {
   const opacity = useRef(new Animated.Value(1)).current;
@@ -122,27 +126,6 @@ function PulseDot() {
   }, [opacity]);
 
   return <Animated.View style={[styles.pulseDot, { opacity }]} />;
-}
-
-function usePressScale() {
-  const scale = useRef(new Animated.Value(1)).current;
-
-  const animateScale = (toValue: number, duration: number, easing: string) => {
-    Animated.timing(scale, {
-      toValue,
-      duration,
-      easing: toEasing(easing),
-      useNativeDriver: true,
-    }).start();
-  };
-
-  return {
-    scale,
-    onPressIn: () =>
-      animateScale(PRESSED_SCALE, motion.duration.press, motion.easing.ease),
-    onPressOut: () =>
-      animateScale(1, motion.duration.slow, motion.easing.spring),
-  };
 }
 
 function ScalePressable({
@@ -226,6 +209,18 @@ export default function WeeklyScreen() {
   const [selectedAttraction, setSelectedAttraction] = useState<import("@/services/tourism").NearbyAttraction | null>(null);
   const [tourismDetailVisible, setTourismDetailVisible] = useState(false);
   const reopenDetailAfterTourismRef = useRef(true);
+  const [suggestions, setSuggestions] = useState<DaySuggestion[]>([]);
+  const [dismissedSuggestionDates, setDismissedSuggestionDates] = useState<
+    Set<string>
+  >(new Set());
+  const suggestionSlotRef = useRef<{ start: string; end: string } | null>(
+    null,
+  );
+  const [itineraryEditFromRecommend, setItineraryEditFromRecommend] =
+    useState(false);
+  const snackbarAnim = useRef(new Animated.Value(0)).current;
+  const snackbarTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const snackbarUndoRef = useRef<(() => void) | null>(null);
   const [showExpenseDetail, setShowExpenseDetail] = useState(false);
   const [showAddExpenseFromDetail, setShowAddExpenseFromDetail] =
     useState(false);
@@ -309,6 +304,60 @@ export default function WeeklyScreen() {
       setWeekBaseDate(dayjs());
     }
   }, [selectedPlan?.id]);
+
+  const isKoreanPlan =
+    planData.plan?.segments?.some(segment => segment.country === "대한민국") ??
+    false;
+
+  useEffect(() => {
+    setDismissedSuggestionDates(new Set());
+    if (!selectedPlan?.id || !isKoreanPlan) {
+      setSuggestions([]);
+      return;
+    }
+    tourismApi
+      .getPlanSuggestions(selectedPlan.id)
+      .then(setSuggestions)
+      .catch(() => {});
+  }, [selectedPlan?.id, isKoreanPlan]);
+
+  useEffect(() => {
+    return () => {
+      if (snackbarTimerRef.current) clearTimeout(snackbarTimerRef.current);
+    };
+  }, []);
+
+  const hideSnackbar = () => {
+    Animated.timing(snackbarAnim, {
+      toValue: 0,
+      duration: motion.duration.toastOut,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const dismissSuggestion = (date: string) => {
+    setDismissedSuggestionDates(prev => new Set([...prev, date]));
+    snackbarUndoRef.current = () => restoreSuggestion(date);
+    if (snackbarTimerRef.current) clearTimeout(snackbarTimerRef.current);
+    snackbarAnim.setValue(0);
+    Animated.timing(snackbarAnim, {
+      toValue: 1,
+      duration: motion.duration.toastIn,
+      useNativeDriver: true,
+    }).start();
+    snackbarTimerRef.current = setTimeout(() => {
+      hideSnackbar();
+      snackbarUndoRef.current = null;
+    }, 3000);
+  };
+
+  const restoreSuggestion = (date: string) => {
+    setDismissedSuggestionDates(prev => {
+      const next = new Set(prev);
+      next.delete(date);
+      return next;
+    });
+  };
 
   const handlePrevWeek = () => {
     const newBase = resolvedWeekBaseDate.subtract(7, "day");
@@ -433,6 +482,9 @@ export default function WeeklyScreen() {
     () => summarizeExpenses(dayExpenses),
     [dayExpenses],
   );
+  const daySuggestion =
+    suggestions.find(suggestion => suggestion.date === selectedDateStr) ?? null;
+  const isSuggestionDismissed = dismissedSuggestionDates.has(selectedDateStr);
 
   const timelineItems = useMemo(
     () => selectedDateSchedules.filter(item => item.type !== "accommodation"),
@@ -495,6 +547,87 @@ export default function WeeklyScreen() {
     }
   };
 
+  const suggestionVisible = !!daySuggestion && !isSuggestionDismissed;
+  const suggestionIndex = daySuggestion
+    ? timelineRows.findIndex(
+        row => row.schedule.time >= daySuggestion.slotStart,
+      )
+    : -1;
+  const splitIndex = !suggestionVisible
+    ? timelineRows.length
+    : suggestionIndex === -1
+      ? timelineRows.length
+      : suggestionIndex;
+  const beforeRows = timelineRows.slice(0, splitIndex);
+  const afterRows = timelineRows.slice(splitIndex);
+
+  const renderListRow = (
+    row: (typeof timelineRows)[number],
+    index: number,
+    showDivider: boolean,
+  ) => {
+    const { schedule } = row;
+    const now = dayjs();
+    const isEnded =
+      selectedDate.isBefore(now, "day") ||
+      (selectedDate.isSame(now, "day") && !now.isBefore(row.end));
+    const isNext = index === nextTimelineIndex;
+
+    return (
+      <Pressable
+        key={schedule.id}
+        style={[styles.listRow, isEnded && styles.listRowEnded]}
+        onPress={() => openScheduleDetail(row)}
+      >
+        <View style={styles.listTime}>
+          <Text style={styles.listStartTime}>{schedule.time}</Text>
+          {schedule.endTime && (
+            <Text style={styles.listEndTime}>
+              {schedule.endTime}
+              {row.showNextDay && " +1"}
+            </Text>
+          )}
+        </View>
+        <View
+          style={[styles.listBar, { backgroundColor: row.barColor }]}
+        />
+        <View
+          style={[
+            styles.listBody,
+            showDivider && styles.listBodyDivider,
+          ]}
+        >
+          <View style={styles.listText}>
+            <Text style={styles.listTitle} numberOfLines={1}>
+              {row.title}
+            </Text>
+            {!!row.subText && (
+              <View style={styles.listSub}>
+                <LocationIcon
+                  width={12}
+                  height={12}
+                  color={colors.paletteFg3}
+                />
+                <Text style={styles.listSubText} numberOfLines={1}>
+                  {row.subText}
+                </Text>
+              </View>
+            )}
+          </View>
+          {isNext ? (
+            <View style={styles.listBadge}>
+              <Text style={styles.listBadgeText}>다음</Text>
+            </View>
+          ) : (
+            isEnded && (
+              <Text style={styles.listEndedText}>종료</Text>
+            )
+          )}
+        </View>
+      </Pressable>
+    );
+  };
+
   const nextTimelineIndex = useMemo(() => {
     const now = dayjs();
     if (!selectedDate.isSame(now, "day")) return -1;
@@ -554,14 +687,83 @@ export default function WeeklyScreen() {
 
   if (!plansQuery.isLoading && plansQuery.plans.length === 0) {
     return (
-      <View style={styles.container}>
-        <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>아직 만든 여행이 없어요</Text>
-          <Text style={styles.emptySubtext}>
-            여행을 먼저 생성한 후에{"\n"}그 안에 일정·항공·숙소를 추가할 수
-            있어요{"\n"}오늘 탭에서 여행을 만들 수 있어요
-          </Text>
-        </View>
+      <View style={styles.noPlanContainer}>
+        <ScrollView
+          contentContainerStyle={styles.noPlanScrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={[styles.noPlanHeader, { paddingTop: insets.top + 8 }]}>
+            <Pressable
+              onPress={() => setProfileModalVisible(true)}
+              hitSlop={8}
+              accessibilityLabel="설정"
+            >
+              <SettingIcon width={24} height={24} color={colors.gray600} />
+            </Pressable>
+          </View>
+          <View style={styles.noPlanCardWrap}>
+            <View style={styles.noPlanCard}>
+              <Text style={styles.noPlanEyebrow}>
+                여행 일정 관리에 맞춘 서비스
+              </Text>
+              <Text style={styles.noPlanHeadline}>새 여행을 만들어보세요</Text>
+              <Text style={styles.noPlanSubcopy}>
+                일정·항공·숙소를 한 곳에서{"\n"}AI 체크리스트와 친구 공유까지
+              </Text>
+              <View style={styles.noPlanFeatureBox}>
+                {NO_PLAN_FEATURES.map(line => (
+                  <View key={line} style={styles.noPlanFeatureRow}>
+                    <View style={styles.noPlanBullet} />
+                    <Text style={styles.noPlanFeatureText}>{line}</Text>
+                  </View>
+                ))}
+              </View>
+              <Pressable
+                style={[
+                  styles.noPlanCta,
+                  !plansQuery.addPlan && styles.noPlanCtaDisabled,
+                ]}
+                disabled={!plansQuery.addPlan}
+                onPress={() => {
+                  setEditingPlan(null);
+                  setShowAddPlanModal(true);
+                }}
+              >
+                <Text style={styles.noPlanCtaLabel}>여행 일정 생성</Text>
+              </Pressable>
+            </View>
+          </View>
+        </ScrollView>
+
+        <Modal
+          visible={profileModalVisible}
+          animationType="fade"
+          transparent
+          onRequestClose={() => setProfileModalVisible(false)}
+        >
+          <ProfileModal
+            visible={profileModalVisible}
+            onClose={() => setProfileModalVisible(false)}
+          />
+        </Modal>
+
+        {plansQuery.addPlan && (
+          <AddPlanModal
+            visible={showAddPlanModal}
+            onClose={() => {
+              setShowAddPlanModal(false);
+              setEditingPlan(null);
+            }}
+            onPlanCreated={plan => {
+              setSelectedPlan(plan);
+              setShowAddPlanModal(false);
+              setEditingPlan(null);
+            }}
+            addPlan={plansQuery.addPlan}
+            planToEdit={editingPlan}
+            updatePlan={plansQuery.updatePlan}
+          />
+        )}
       </View>
     );
   }
@@ -794,71 +996,57 @@ export default function WeeklyScreen() {
               )}
             </ScalePressable>
           ))}
-          {scheduleCount > 0 && (
+          {(timelineRows.length > 0 || suggestionVisible) && (
             <View style={styles.listCard}>
-              {timelineRows.map((row, index) => {
-                const { schedule } = row;
-                const now = dayjs();
-                const isEnded =
-                  selectedDate.isBefore(now, "day") ||
-                  (selectedDate.isSame(now, "day") && !now.isBefore(row.end));
-                const isNext = index === nextTimelineIndex;
-
-                return (
-                  <Pressable
-                    key={schedule.id}
-                    style={[styles.listRow, isEnded && styles.listRowEnded]}
-                    onPress={() => openScheduleDetail(row)}
-                  >
-                    <View style={styles.listTime}>
-                      <Text style={styles.listStartTime}>{schedule.time}</Text>
-                      {schedule.endTime && (
-                        <Text style={styles.listEndTime}>
-                          {schedule.endTime}
-                          {row.showNextDay && " +1"}
-                        </Text>
-                      )}
-                    </View>
-                    <View
-                      style={[styles.listBar, { backgroundColor: row.barColor }]}
-                    />
-                    <View
-                      style={[
-                        styles.listBody,
-                        index > 0 && styles.listBodyDivider,
-                      ]}
-                    >
-                      <View style={styles.listText}>
-                        <Text style={styles.listTitle} numberOfLines={1}>
-                          {row.title}
-                        </Text>
-                        {!!row.subText && (
-                          <View style={styles.listSub}>
-                            <LocationIcon
-                              width={12}
-                              height={12}
-                              color={colors.paletteFg3}
-                            />
-                            <Text style={styles.listSubText} numberOfLines={1}>
-                              {row.subText}
-                            </Text>
-                          </View>
-                        )}
-                      </View>
-                      {isNext ? (
-                        <View style={styles.listBadge}>
-                          <Text style={styles.listBadgeText}>다음</Text>
-                        </View>
-                      ) : (
-                        isEnded && (
-                          <Text style={styles.listEndedText}>종료</Text>
-                        )
-                      )}
-                    </View>
-                  </Pressable>
-                );
-              })}
+              {beforeRows.map((row, index) =>
+                renderListRow(row, index, index > 0),
+              )}
+              {daySuggestion && suggestionVisible && (
+                <View>
+                  {beforeRows.length > 0 && (
+                    <View style={styles.suggestionDivider} />
+                  )}
+                <AiSuggestionCard
+                  suggestion={daySuggestion}
+                  onDismiss={() => dismissSuggestion(selectedDateStr)}
+                  onPlacePress={place => {
+                    setSelectedAttraction({
+                      contentId: place.contentId,
+                      contentTypeId: place.category ?? place.contentTypeId ?? "12",
+                      categorySub: place.category,
+                      title: place.title,
+                      imageUrl: place.imageUrl,
+                      address: null,
+                      rank: null,
+                      dist: place.dist,
+                    });
+                    suggestionSlotRef.current = {
+                      start: daySuggestion.slotStart,
+                      end: daySuggestion.slotEnd,
+                    };
+                    reopenDetailAfterTourismRef.current = false;
+                    setTourismDetailVisible(true);
+                  }}
+                />
+                </View>
+              )}
+              {afterRows.map((row, index) =>
+                renderListRow(
+                  row,
+                  splitIndex + index,
+                  index > 0 || suggestionVisible,
+                ),
+              )}
             </View>
+          )}
+          {daySuggestion && isSuggestionDismissed && (
+            <Pressable
+              style={styles.suggestionShowButton}
+              onPress={() => restoreSuggestion(selectedDateStr)}
+              hitSlop={8}
+            >
+              <Text style={styles.suggestionShowText}>AI 제안</Text>
+            </Pressable>
           )}
           {selectedPlan && (
             <ScalePressable
@@ -1277,6 +1465,7 @@ export default function WeeklyScreen() {
           setShowItineraryEdit(false);
           setEditingItinerary(null);
           setItineraryPrefill(null);
+          setItineraryEditFromRecommend(false);
           if (!opts?.fromSave && itineraryToShow) {
             setSelectedItinerary(itineraryToShow);
             setShowItineraryDetail(true);
@@ -1287,6 +1476,7 @@ export default function WeeklyScreen() {
         defaultCountry={selectedDateSegment?.country}
         defaultCity={selectedDateSegment?.city}
         prefill={itineraryPrefill ?? undefined}
+        showRecommendToast={itineraryEditFromRecommend}
         onSave={async itinerary => {
           planData.addItinerary(itinerary);
           if (selectedPlan?.publicId) {
@@ -1343,7 +1533,12 @@ export default function WeeklyScreen() {
         onOpenNewItinerary={draft => {
           reopenDetailAfterTourismRef.current = false;
           setEditingItinerary(null);
-          setItineraryPrefill(draft);
+          const slot = suggestionSlotRef.current;
+          suggestionSlotRef.current = null;
+          setItineraryPrefill(
+            slot ? { ...draft, startTime: slot.start, endTime: slot.end } : draft,
+          );
+          setItineraryEditFromRecommend(!!slot);
           setShowItineraryEdit(true);
         }}
       />
@@ -1563,6 +1758,29 @@ export default function WeeklyScreen() {
       )}
 
       <PlanLoadingOverlay visible={plansQuery.isLoading || planData.isLoading} />
+
+      <Animated.View
+        pointerEvents="box-none"
+        style={[
+          styles.snackbar,
+          { opacity: snackbarAnim, bottom: insets.bottom + 28 },
+        ]}
+      >
+        <Text style={styles.snackbarText}>
+          {"AI 제안을 숨겼어요.\n다시 보려면 AI 제안 버튼을 눌러주세요."}
+        </Text>
+        <Pressable
+          onPress={() => {
+            snackbarUndoRef.current?.();
+            snackbarUndoRef.current = null;
+            if (snackbarTimerRef.current) clearTimeout(snackbarTimerRef.current);
+            hideSnackbar();
+          }}
+          hitSlop={8}
+        >
+          <Text style={styles.snackbarAction}>다시 보기</Text>
+        </Pressable>
+      </Animated.View>
     </View>
   );
 }
@@ -1577,21 +1795,134 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  emptyContainer: {
+  noPlanContainer: {
+    flex: 1,
+    backgroundColor: colors.gray300,
+  },
+  noPlanScrollContent: {
+    flexGrow: 1,
+    paddingBottom: 100,
+  },
+  noPlanHeader: {
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.lg,
+    flexDirection: "row",
+    justifyContent: "flex-end",
+  },
+  noPlanCardWrap: {
     flex: 1,
     justifyContent: "center",
-    alignItems: "center",
-    paddingHorizontal: 24,
+    paddingHorizontal: 30,
+    paddingTop: 80,
+    paddingBottom: spacing["2xl"],
   },
-  emptyText: {
+  noPlanCard: {
+    width: "100%",
+    alignSelf: "center",
+    backgroundColor: colors.white,
+    borderRadius: radii["2xl"],
+    paddingHorizontal: spacing.lgPlus,
+    paddingTop: 56,
+    paddingBottom: spacing.lgPlus,
+    overflow: "hidden",
+  },
+  noPlanEyebrow: {
+    ...textStyles.h7,
+    color: colors.primary,
+    textAlign: "center",
+    marginBottom: 6,
+  },
+  noPlanHeadline: {
     ...textStyles.h3,
-    color: colors.black,
-    marginBottom: 8,
+    textAlign: "center",
+    marginBottom: spacing.md,
   },
-  emptySubtext: {
+  noPlanSubcopy: {
     ...textStyles.body3,
     color: colors.gray600,
     textAlign: "center",
+    marginBottom: spacing["2xl"],
+  },
+  noPlanFeatureBox: {
+    backgroundColor: colors.gray200,
+    borderRadius: radii.mdPlus,
+    padding: spacing.lg,
+    marginBottom: spacing["2xl"],
+    gap: spacing.sm,
+  },
+  noPlanFeatureRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 10,
+  },
+  noPlanBullet: {
+    width: 4,
+    height: 4,
+    borderRadius: radii.pill,
+    backgroundColor: colors.gray700,
+    marginTop: spacing.sm,
+  },
+  noPlanFeatureText: {
+    ...textStyles.body4,
+    color: colors.gray700,
+    flex: 1,
+  },
+  noPlanCta: {
+    width: "100%",
+    paddingVertical: spacing.lg,
+    borderRadius: radii.mdPlus,
+    backgroundColor: colors.primary,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  noPlanCtaDisabled: {
+    opacity: 0.5,
+  },
+  noPlanCtaLabel: {
+    ...textStyles.h5,
+    color: colors.white,
+  },
+  suggestionDivider: {
+    height: 1,
+    marginHorizontal: spacing.lg,
+    backgroundColor: colors.paletteLine,
+  },
+  suggestionShowButton: {
+    alignSelf: "flex-end",
+    height: 30,
+    marginTop: spacing.xl,
+    marginRight: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: radii.pill,
+    justifyContent: "center",
+    backgroundColor: colors.aiTint,
+  },
+  suggestionShowText: {
+    ...textStyles.h8,
+    color: colors.aiInk,
+  },
+  snackbar: {
+    position: "absolute",
+    left: spacing.lg,
+    right: spacing.lg,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: spacing.md,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    borderRadius: radii.lg,
+    backgroundColor: colors.gray800,
+  },
+  snackbarText: {
+    ...textStyles.h7,
+    flex: 1,
+    color: colors.white,
+  },
+  snackbarAction: {
+    ...textStyles.h7,
+    flexShrink: 0,
+    color: colors.aiInk,
   },
   header: {
     paddingHorizontal: spacing.xl,
