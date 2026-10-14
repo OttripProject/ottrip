@@ -22,6 +22,7 @@ import type {
 } from "@/types/api";
 import { itineraryCategoryColors } from "@/types/itinerary";
 import { getAirportLabel } from "@/utils/airportList";
+import { findFestivalSlot } from "@/utils/festivalSlot";
 import { summarizeExpenses } from "@/utils/summarizeExpenses";
 import { colors } from "@/ui/tokens/colors";
 import { toEasing, usePressScale } from "@/ui/effects/pressScale";
@@ -69,6 +70,8 @@ const NO_PLAN_FEATURES = [
   "친구들과 일정 공유",
 ] as const;
 import AiSuggestionCard from "@/components/cards/AiSuggestionCard.native";
+import FestivalsCard from "@/components/cards/FestivalsCard.native";
+import FestivalDetailModal from "@/components/modals/FestivalDetailModal.native";
 import WeeklyChecklistCard from "@/components/cards/WeeklyChecklistCard.native";
 import AccommodationDetailModal from "@/components/modals/mobile/AccommodationDetailModal.native";
 import AccommodationEditModal from "@/components/modals/mobile/AccommodationEditModal.native";
@@ -82,7 +85,11 @@ import { useMe } from "@/hooks/useMe";
 import { accommodationsApi } from "@/services/accommodations";
 import { flightsApi } from "@/services/flights";
 import { itinerariesApi } from "@/services/itineraries";
-import { type DaySuggestion, tourismApi } from "@/services/tourism";
+import {
+  type DaySuggestion,
+  type FestivalItem,
+  tourismApi,
+} from "@/services/tourism";
 import CalendarModal from "@/ui/components/CalendarModal.native";
 import { extendPlanIfNeeded } from "@/utils/extendPlanIfNeeded";
 import { collectPlanItemDates, shrinkPlanIfNeeded } from "@/utils/shrinkPlanIfNeeded";
@@ -210,6 +217,10 @@ export default function WeeklyScreen() {
   const [tourismDetailVisible, setTourismDetailVisible] = useState(false);
   const reopenDetailAfterTourismRef = useRef(true);
   const [suggestions, setSuggestions] = useState<DaySuggestion[]>([]);
+  const [festivals, setFestivals] = useState<FestivalItem[]>([]);
+  const [selectedFestival, setSelectedFestival] = useState<FestivalItem | null>(
+    null,
+  );
   const [dismissedSuggestionDates, setDismissedSuggestionDates] = useState<
     Set<string>
   >(new Set());
@@ -318,6 +329,17 @@ export default function WeeklyScreen() {
     tourismApi
       .getPlanSuggestions(selectedPlan.id)
       .then(setSuggestions)
+      .catch(() => {});
+  }, [selectedPlan?.id, isKoreanPlan]);
+
+  useEffect(() => {
+    if (!selectedPlan?.id || !isKoreanPlan) {
+      setFestivals([]);
+      return;
+    }
+    tourismApi
+      .getSuggestFestivals(selectedPlan.id)
+      .then(setFestivals)
       .catch(() => {});
   }, [selectedPlan?.id, isKoreanPlan]);
 
@@ -1048,6 +1070,11 @@ export default function WeeklyScreen() {
               <Text style={styles.suggestionShowText}>AI 제안</Text>
             </Pressable>
           )}
+          {festivals.length > 0 && (
+            <View style={styles.festivalsWrap}>
+              <FestivalsCard festivals={festivals} onPress={setSelectedFestival} />
+            </View>
+          )}
           {selectedPlan && (
             <ScalePressable
               style={styles.costCard}
@@ -1194,6 +1221,50 @@ export default function WeeklyScreen() {
           )}
         </ScrollView>
       </PagerView>
+
+      <FestivalDetailModal
+        visible={!!selectedFestival}
+        onClose={() => setSelectedFestival(null)}
+        item={selectedFestival}
+        onAddToItinerary={draft => {
+          const {
+            matchedDate,
+            eventStartDate,
+            eventEndDate,
+            playtime,
+            ...restDraft
+          } = draft;
+          const segments = planData.plan?.segments;
+          const segment = segments?.length
+            ? ((matchedDate
+                ? segments.find(
+                    s => s.startDate <= matchedDate && matchedDate <= s.endDate,
+                  )
+                : null) ?? segments[0])
+            : null;
+          const slot = selectedPlan
+            ? findFestivalSlot(
+                eventStartDate,
+                eventEndDate,
+                selectedPlan.startDate,
+                selectedPlan.endDate,
+                planData.itineraries ?? [],
+                playtime,
+              )
+            : null;
+
+          setSelectedFestival(null);
+          setEditingItinerary(null);
+          setItineraryPrefill({
+            ...restDraft,
+            country: segment?.country,
+            city: segment?.city,
+            ...(slot ?? {}),
+          });
+          setItineraryEditFromRecommend(true);
+          setShowItineraryEdit(true);
+        }}
+      />
 
       <ExpenseDetailModal
         visible={showExpenseDetail && !showAddExpenseFromDetail}
@@ -2127,6 +2198,10 @@ const styles = StyleSheet.create({
     ...textStyles.h7,
     color: colors.paletteFg2,
     flexShrink: 1,
+  },
+  festivalsWrap: {
+    marginHorizontal: spacing.sm,
+    marginTop: spacing.xl,
   },
   costCard: {
     marginHorizontal: spacing.sm,
