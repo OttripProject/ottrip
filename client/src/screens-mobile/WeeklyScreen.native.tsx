@@ -18,10 +18,10 @@ import type {
   Plan,
 } from "@/types/api";
 import { colors } from "@/ui/tokens/colors";
+import { spacing } from "@/ui/tokens/spacing";
 import { textStyles } from "@/ui/tokens/typography";
 import {
   convertUTCToLocalTime,
-  formatKoreanDate,
   formatTime,
   getWeekCalendar,
 } from "@/utils/dateUtils";
@@ -65,8 +65,8 @@ import LeftArrowIcon from "../../assets/left_arrow.svg";
 import AccommodationIcon from "../../assets/mobile_accomodation.svg";
 import CalendarIcon from "../../assets/mobile_calendar_black.svg";
 import CautionIcon from "../../assets/mobile_caution.svg";
+import DotsIcon from "../../assets/dots.svg";
 import DropdownIcon from "../../assets/mobile_dropdown.svg";
-import InformIcon from "../../assets/mobile_inform.svg";
 import PlusIcon from "../../assets/mobile_plus2.svg";
 import RightArrowIcon from "../../assets/right_arrow.svg";
 
@@ -326,25 +326,44 @@ export default function WeeklyScreen() {
     <View style={styles.container}>
       <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
         <View style={styles.headerTopRow}>
-          <Text style={styles.todayDate}>{formatKoreanDate(selectedDate)}</Text>
+          <Pressable
+            style={styles.planSelector}
+            onPress={() => setShowPlanSelector(true)}
+          >
+            <Text style={styles.headerTitle} numberOfLines={1}>
+              {selectedPlan?.title || "여행 선택"}
+            </Text>
+            {selectedPlan && (
+              <Text style={styles.headerPeriod}>
+                {dayjs(selectedPlan.startDate).format("M.D")} –{" "}
+                {dayjs(selectedPlan.endDate).format("M.D")}
+              </Text>
+            )}
+            <DropdownIcon width={15} height={15} color={colors.gray900} />
+          </Pressable>
           <View style={styles.headerIcons}>
-            <Pressable onPress={() => setCalendarModalVisible(true)}>
-              <CalendarIcon width={24} height={24} color={colors.gray600} />
+            <Pressable
+              style={styles.headerIconButton}
+              accessibilityLabel="지도로 일정 보기"
+            >
+              <LocationIcon width={20} height={20} color={colors.gray900} />
             </Pressable>
-            <Pressable onPress={() => setTravelInfoModalVisible(true)}>
-              <InformIcon width={24} height={24} />
+            <Pressable
+              style={styles.headerIconButton}
+              accessibilityLabel="달력에서 날짜 선택"
+              onPress={() => setCalendarModalVisible(true)}
+            >
+              <CalendarIcon width={20} height={20} color={colors.gray900} />
+            </Pressable>
+            <Pressable
+              style={styles.headerIconButton}
+              accessibilityLabel="더보기"
+              onPress={() => setProfileModalVisible(true)}
+            >
+              <DotsIcon width={20} height={20} />
             </Pressable>
           </View>
         </View>
-        <Pressable
-          style={styles.planSelector}
-          onPress={() => setShowPlanSelector(true)}
-        >
-          <Text style={styles.headerTitle} numberOfLines={1}>
-            {selectedPlan?.title || "여행 선택"}
-          </Text>
-          <DropdownIcon width={20} height={20} color={colors.gray600} />
-        </Pressable>
       </View>
 
       <View style={styles.weekSelector}>
@@ -1317,33 +1336,43 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   header: {
-    paddingHorizontal: 16,
-    paddingBottom: 12,
+    paddingHorizontal: spacing.xl,
+    paddingBottom: spacing.md,
     backgroundColor: colors.white,
-  },
-  todayDate: {
-    ...textStyles.h7,
-    color: colors.gray700,
   },
   headerTopRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 12,
+    gap: spacing.md,
   },
   planSelector: {
+    flex: 1,
+    minWidth: 0,
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: spacing.sm,
   },
   headerTitle: {
     ...textStyles.h3,
-    color: colors.black,
+    color: colors.gray900,
+    flexShrink: 1,
+  },
+  headerPeriod: {
+    ...textStyles.h7,
+    color: colors.gray700,
+    fontVariant: ["tabular-nums"],
   },
   headerIcons: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
+    marginRight: -spacing.md,
+  },
+  headerIconButton: {
+    width: 44,
+    height: 44,
+    alignItems: "center",
+    justifyContent: "center",
   },
 
   weekSelector: {
