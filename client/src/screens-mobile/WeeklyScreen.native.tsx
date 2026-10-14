@@ -31,6 +31,7 @@ import {
 import { useQueryClient } from "@tanstack/react-query";
 import dayjs from "dayjs";
 import { useEffect, useMemo, useRef, useState } from "react";
+import PagerView from "react-native-pager-view";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   ActivityIndicator,
@@ -49,11 +50,14 @@ import {
 type AddScheduleFlow = "closed" | "method" | "direct" | "ai";
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
-const [jellyX1, jellyY1, jellyX2, jellyY2] = (
-  motion.easing.ease.match(/[\d.]+/g) ?? []
-).map(Number);
-const jellyEasing = Easing.bezier(jellyX1, jellyY1, jellyX2, jellyY2);
+const toEasing = (cubicBezier: string) => {
+  const [x1, y1, x2, y2] = (cubicBezier.match(/[\d.]+/g) ?? []).map(Number);
+  return Easing.bezier(x1, y1, x2, y2);
+};
+const jellyEasing = toEasing(motion.easing.ease);
 const JELLY_STEPS = [0, 0.3, 0.55, 0.75, 1];
+const DAY_TABS = ["일정", "체크리스트", "숙박·항공"] as const;
+const PRESSED_SCALE = 0.96;
 import WeeklyChecklistCard from "@/components/cards/WeeklyChecklistCard.native";
 import AccommodationDetailModal from "@/components/modals/mobile/AccommodationDetailModal.native";
 import AccommodationEditModal from "@/components/modals/mobile/AccommodationEditModal.native";
@@ -81,6 +85,51 @@ import DotsIcon from "../../assets/dots.svg";
 import DropdownIcon from "../../assets/mobile_dropdown.svg";
 import PlusIcon from "../../assets/mobile_plus2.svg";
 import RightArrowIcon from "../../assets/right_arrow.svg";
+
+function DayTabButton({
+  label,
+  isActive,
+  onPress,
+}: {
+  label: string;
+  isActive: boolean;
+  onPress: () => void;
+}) {
+  const scale = useRef(new Animated.Value(1)).current;
+
+  const animateScale = (toValue: number, duration: number, easing: string) => {
+    Animated.timing(scale, {
+      toValue,
+      duration,
+      easing: toEasing(easing),
+      useNativeDriver: true,
+    }).start();
+  };
+
+  return (
+    <Pressable
+      style={[styles.dayTab, isActive && styles.dayTabActive]}
+      onPress={onPress}
+      onPressIn={() =>
+        animateScale(PRESSED_SCALE, motion.duration.press, motion.easing.ease)
+      }
+      onPressOut={() =>
+        animateScale(1, motion.duration.slow, motion.easing.spring)
+      }
+    >
+      <Animated.Text
+        style={[
+          styles.dayTabText,
+          isActive && styles.dayTabTextActive,
+          { transform: [{ scale }] },
+        ]}
+        numberOfLines={1}
+      >
+        {label}
+      </Animated.Text>
+    </Pressable>
+  );
+}
 
 export default function WeeklyScreen() {
   const insets = useSafeAreaInsets();
@@ -140,6 +189,13 @@ export default function WeeklyScreen() {
   }, [resolvedWeekBaseDate]);
 
   const [selectedDate, setSelectedDate] = useState<dayjs.Dayjs>(() => dayjs());
+  const [activeTab, setActiveTab] = useState(0);
+  const pagerRef = useRef<PagerView>(null);
+
+  const handleTabPress = (index: number) => {
+    setActiveTab(index);
+    pagerRef.current?.setPage(index);
+  };
   const jellyProgress = useRef(new Animated.Value(1)).current;
   const selectedDateKey = selectedDate.format("YYYY-MM-DD");
   const isFirstSelectionRef = useRef(true);
@@ -361,6 +417,31 @@ export default function WeeklyScreen() {
     );
   }
 
+  const renderRefreshControl = () => (
+    <RefreshControl
+      refreshing={refreshing}
+      onRefresh={async () => {
+        setRefreshing(true);
+        try {
+          await plansQuery.fetchPlans();
+          if (selectedPlan?.publicId) {
+            await planData.fetchPlanData(selectedPlan.publicId);
+            queryClient.invalidateQueries({
+              queryKey: ["expenses", selectedPlan.id],
+            });
+            queryClient.invalidateQueries({
+              queryKey: ["checklist", selectedPlan.publicId],
+            });
+          }
+        } finally {
+          setRefreshing(false);
+        }
+      }}
+      tintColor={colors.white}
+      colors={[colors.white]}
+    />
+  );
+
   const planMinMax = selectedPlan
     ? {
         minDate: selectedPlan.startDate,
@@ -412,13 +493,28 @@ export default function WeeklyScreen() {
         </View>
       </View>
 
+      <View style={styles.dayTabsWrap}>
+        <View style={styles.dayTabs}>
+          {DAY_TABS.map((label, index) => {
+            return (
+              <DayTabButton
+                key={label}
+                label={label}
+                isActive={activeTab === index}
+                onPress={() => handleTabPress(index)}
+              />
+            );
+          })}
+        </View>
+      </View>
+
       <View style={styles.weekSelector}>
         <Pressable
           style={styles.weekArrow}
           accessibilityLabel="이전 주"
           onPress={handlePrevWeek}
         >
-          <LeftArrowIcon width={20} height={20} color={colors.gray600} />
+          <LeftArrowIcon width={20} height={20} color={colors.paletteFg3} />
         </Pressable>
         <View style={styles.weekDays}>
           {weekCalendar.map(item => {
@@ -470,113 +566,189 @@ export default function WeeklyScreen() {
           accessibilityLabel="다음 주"
           onPress={handleNextWeek}
         >
-          <RightArrowIcon width={20} height={20} color={colors.gray600} />
+          <RightArrowIcon width={20} height={20} color={colors.paletteFg3} />
         </Pressable>
       </View>
 
-      <ScrollView
-        style={styles.scheduleList}
-        contentContainerStyle={styles.scheduleContent}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={async () => {
-              setRefreshing(true);
-              try {
-                await plansQuery.fetchPlans();
-                if (selectedPlan?.publicId) {
-                  await planData.fetchPlanData(selectedPlan.publicId);
-                  queryClient.invalidateQueries({
-                    queryKey: ["expenses", selectedPlan.id],
-                  });
-                  queryClient.invalidateQueries({
-                    queryKey: ["checklist", selectedPlan.publicId],
-                  });
-                }
-              } finally {
-                setRefreshing(false);
-              }
-            }}
-            tintColor={colors.white}
-            colors={[colors.white]}
-          />
-        }
+      <PagerView
+        ref={pagerRef}
+        style={styles.dayPager}
+        initialPage={0}
+        onPageSelected={e => setActiveTab(e.nativeEvent.position)}
       >
-        {scheduleCount === 0 && selectedDateAccommodations.length === 0 && (
-          <View style={styles.emptyScheduleContainer}>
-            <CautionIcon width={24} height={24} color={colors.gray600} />
-            <Text style={styles.emptyScheduleText}>
-              등록된 일정이 없습니다.
-            </Text>
-          </View>
-        )}
-        {scheduleCount > 0 && (
-          <>
-            <View style={styles.scheduleHeader}>
-              <View style={styles.scheduleDate}>
-                <Text style={styles.scheduleDateDay}>
-                  {selectedDateDisplay.day}
-                </Text>
-                <Text style={styles.scheduleDateWeekday}>
-                  {selectedDateDisplay.weekday}
-                </Text>
-              </View>
-              <View style={styles.scheduleCountBadge}>
-                <Text style={styles.scheduleCountText}>
-                  {scheduleCount}개의 일정
-                </Text>
-              </View>
+        <ScrollView
+          key="schedule"
+          style={styles.scheduleList}
+          contentContainerStyle={styles.scheduleContent}
+          showsVerticalScrollIndicator={false}
+          refreshControl={renderRefreshControl()}
+        >
+          {scheduleCount === 0 && (
+            <View style={styles.emptyScheduleContainer}>
+              <CautionIcon width={24} height={24} color={colors.gray600} />
+              <Text style={styles.emptyScheduleText}>
+                등록된 일정이 없습니다.
+              </Text>
             </View>
-            <View style={styles.timelineWrapper}>
-              <View style={styles.timelineTrack} />
-              {selectedDateSchedules.map(schedule => {
-                if (schedule.type === "accommodation") return null;
+          )}
+          {scheduleCount > 0 && (
+            <>
+              <View style={styles.scheduleHeader}>
+                <View style={styles.scheduleDate}>
+                  <Text style={styles.scheduleDateDay}>
+                    {selectedDateDisplay.day}
+                  </Text>
+                  <Text style={styles.scheduleDateWeekday}>
+                    {selectedDateDisplay.weekday}
+                  </Text>
+                </View>
+                <View style={styles.scheduleCountBadge}>
+                  <Text style={styles.scheduleCountText}>
+                    {scheduleCount}개의 일정
+                  </Text>
+                </View>
+              </View>
+              <View style={styles.timelineWrapper}>
+                <View style={styles.timelineTrack} />
+                {selectedDateSchedules.map(schedule => {
+                  if (schedule.type === "accommodation") return null;
 
-                const isCurrentTime =
-                  dayjs().isSame(selectedDate, "day") &&
-                  dayjs().isAfter(
-                    dayjs(
-                      `${selectedDate.format("YYYY-MM-DD")} ${schedule.time}`,
-                    ),
-                  ) &&
-                  schedule.endTime &&
-                  dayjs().isBefore(
-                    dayjs(
-                      `${selectedDate.format("YYYY-MM-DD")} ${schedule.endTime}`,
-                    ),
-                  );
+                  const isCurrentTime =
+                    dayjs().isSame(selectedDate, "day") &&
+                    dayjs().isAfter(
+                      dayjs(
+                        `${selectedDate.format("YYYY-MM-DD")} ${schedule.time}`,
+                      ),
+                    ) &&
+                    schedule.endTime &&
+                    dayjs().isBefore(
+                      dayjs(
+                        `${selectedDate.format("YYYY-MM-DD")} ${schedule.endTime}`,
+                      ),
+                    );
 
-                let showNextDay = false;
-                if (schedule.type === "flight" && schedule.segment) {
-                  const departureDate = dayjs(
-                    schedule.segment.departureTime,
-                  ).format("YYYY-MM-DD");
-                  const arrivalDate = dayjs(
-                    schedule.segment.arrivalTime,
-                  ).format("YYYY-MM-DD");
-                  showNextDay = departureDate !== arrivalDate;
-                } else if (
-                  schedule.type === "itinerary" &&
-                  schedule.endTime &&
-                  schedule.time
-                ) {
-                  const startParts = schedule.time.split(":").map(Number);
-                  const endParts = schedule.endTime.split(":").map(Number);
-                  const startMin = startParts[0] * 60 + (startParts[1] || 0);
-                  const endMin = endParts[0] * 60 + (endParts[1] || 0);
-                  showNextDay = endMin < startMin;
-                }
+                  let showNextDay = false;
+                  if (schedule.type === "flight" && schedule.segment) {
+                    const departureDate = dayjs(
+                      schedule.segment.departureTime,
+                    ).format("YYYY-MM-DD");
+                    const arrivalDate = dayjs(
+                      schedule.segment.arrivalTime,
+                    ).format("YYYY-MM-DD");
+                    showNextDay = departureDate !== arrivalDate;
+                  } else if (
+                    schedule.type === "itinerary" &&
+                    schedule.endTime &&
+                    schedule.time
+                  ) {
+                    const startParts = schedule.time.split(":").map(Number);
+                    const endParts = schedule.endTime.split(":").map(Number);
+                    const startMin = startParts[0] * 60 + (startParts[1] || 0);
+                    const endMin = endParts[0] * 60 + (endParts[1] || 0);
+                    showNextDay = endMin < startMin;
+                  }
 
-                if (schedule.type === "flight" && schedule.segment) {
-                  const flight = schedule.data as FlightRead;
-                  const segment = schedule.segment;
-                  const segmentIndex = schedule.segmentIndex ?? 0;
-                  const totalSegments = flight.flightSegments?.length || 1;
+                  if (schedule.type === "flight" && schedule.segment) {
+                    const flight = schedule.data as FlightRead;
+                    const segment = schedule.segment;
+                    const segmentIndex = schedule.segmentIndex ?? 0;
+                    const totalSegments = flight.flightSegments?.length || 1;
 
+                    return (
+                      <View
+                        key={`flight-${flight.id}-segment-${segmentIndex}`}
+                        style={styles.scheduleItem}
+                      >
+                        <View style={styles.scheduleTime}>
+                          <View style={styles.dotTimeRow}>
+                            <View style={styles.timeDotRing}>
+                              <View
+                                style={[
+                                  styles.timeDot,
+                                  isCurrentTime && styles.timeDotNow,
+                                ]}
+                              />
+                            </View>
+                            <Text
+                              style={[
+                                styles.scheduleTimeText,
+                                isCurrentTime && styles.scheduleTimeTextNow,
+                              ]}
+                            >
+                              {schedule.time}
+                            </Text>
+                            {showNextDay && schedule.endTime && (
+                              <View style={styles.endTimeWithBadge}>
+                                <Text
+                                  style={[
+                                    styles.scheduleTimeText,
+                                    isCurrentTime && styles.scheduleTimeTextNow,
+                                  ]}
+                                >
+                                  → {schedule.endTime}
+                                </Text>
+                                <View style={styles.nextDayIndicator}>
+                                  <Text style={styles.nextDayText}>+1 day</Text>
+                                </View>
+                              </View>
+                            )}
+                            {isCurrentTime && (
+                              <View style={styles.nowBadge}>
+                                <Text style={styles.nowBadgeText}>NOW</Text>
+                              </View>
+                            )}
+                          </View>
+                        </View>
+                        <Pressable
+                          style={[
+                            styles.scheduleCard,
+                            isCurrentTime && styles.currentCard,
+                          ]}
+                          onPress={() => {
+                            setSelectedFlight(flight);
+                            setSelectedFlightSegment(segment);
+                            setShowFlightDetail(true);
+                          }}
+                        >
+                          <View style={styles.scheduleCardRow}>
+                            <Text
+                              style={[
+                                styles.scheduleCardTime,
+                                isCurrentTime && styles.scheduleTimeTextNow,
+                              ]}
+                            >
+                              {schedule.time}
+                            </Text>
+                            {totalSegments > 1 && (
+                              <Text
+                                style={[styles.flightSegments, { flexShrink: 0 }]}
+                              >
+                                구간 {segmentIndex + 1}/{totalSegments}
+                              </Text>
+                            )}
+                          </View>
+                          <Text
+                            style={[
+                              styles.scheduleTitle,
+                              isCurrentTime && styles.scheduleTitleNow,
+                            ]}
+                          >
+                            {segment.departureAirport} → {segment.arrivalAirport}
+                          </Text>
+                          {(segment.airline || segment.flightNumber) && (
+                            <Text style={styles.scheduleLocation}>
+                              {segment.flightNumber}
+                            </Text>
+                          )}
+                        </Pressable>
+                      </View>
+                    );
+                  }
+
+                  const itinerary = schedule.data as Itinerary;
                   return (
                     <View
-                      key={`flight-${flight.id}-segment-${segmentIndex}`}
+                      key={`itinerary-${itinerary.id}`}
                       style={styles.scheduleItem}
                     >
                       <View style={styles.scheduleTime}>
@@ -625,232 +797,164 @@ export default function WeeklyScreen() {
                           isCurrentTime && styles.currentCard,
                         ]}
                         onPress={() => {
-                          setSelectedFlight(flight);
-                          setSelectedFlightSegment(segment);
-                          setShowFlightDetail(true);
+                          setSelectedItinerary(itinerary);
+                          setShowItineraryDetail(true);
                         }}
                       >
-                        <View style={styles.scheduleCardRow}>
-                          <Text
-                            style={[
-                              styles.scheduleCardTime,
-                              isCurrentTime && styles.scheduleTimeTextNow,
-                            ]}
-                          >
-                            {schedule.time}
-                          </Text>
-                          {totalSegments > 1 && (
-                            <Text
-                              style={[styles.flightSegments, { flexShrink: 0 }]}
-                            >
-                              구간 {segmentIndex + 1}/{totalSegments}
-                            </Text>
-                          )}
-                        </View>
+                        <Text
+                          style={[
+                            styles.scheduleCardTime,
+                            isCurrentTime && styles.scheduleCardTimeNow,
+                          ]}
+                        >
+                          {schedule.time}
+                        </Text>
                         <Text
                           style={[
                             styles.scheduleTitle,
                             isCurrentTime && styles.scheduleTitleNow,
                           ]}
+                          numberOfLines={1}
+                          ellipsizeMode="tail"
                         >
-                          {segment.departureAirport} → {segment.arrivalAirport}
+                          {itinerary.title}
                         </Text>
-                        {(segment.airline || segment.flightNumber) && (
-                          <Text style={styles.scheduleLocation}>
-                            {segment.flightNumber}
-                          </Text>
+                        {itinerary.location?.name && (
+                          <View style={styles.scheduleLocationRow}>
+                            <LocationIcon width={12} height={12} color={colors.gray600} />
+                            <Text
+                              style={styles.scheduleLocation}
+                              numberOfLines={1}
+                              ellipsizeMode="tail"
+                            >
+                              {itinerary.location.name}
+                            </Text>
+                          </View>
                         )}
                       </Pressable>
                     </View>
                   );
-                }
-
-                const itinerary = schedule.data as Itinerary;
-                return (
-                  <View
-                    key={`itinerary-${itinerary.id}`}
-                    style={styles.scheduleItem}
-                  >
-                    <View style={styles.scheduleTime}>
-                      <View style={styles.dotTimeRow}>
-                        <View style={styles.timeDotRing}>
-                          <View
-                            style={[
-                              styles.timeDot,
-                              isCurrentTime && styles.timeDotNow,
-                            ]}
-                          />
-                        </View>
-                        <Text
-                          style={[
-                            styles.scheduleTimeText,
-                            isCurrentTime && styles.scheduleTimeTextNow,
-                          ]}
-                        >
-                          {schedule.time}
-                        </Text>
-                        {showNextDay && schedule.endTime && (
-                          <View style={styles.endTimeWithBadge}>
-                            <Text
-                              style={[
-                                styles.scheduleTimeText,
-                                isCurrentTime && styles.scheduleTimeTextNow,
-                              ]}
-                            >
-                              → {schedule.endTime}
-                            </Text>
-                            <View style={styles.nextDayIndicator}>
-                              <Text style={styles.nextDayText}>+1 day</Text>
-                            </View>
-                          </View>
-                        )}
-                        {isCurrentTime && (
-                          <View style={styles.nowBadge}>
-                            <Text style={styles.nowBadgeText}>NOW</Text>
-                          </View>
-                        )}
-                      </View>
-                    </View>
-                    <Pressable
-                      style={[
-                        styles.scheduleCard,
-                        isCurrentTime && styles.currentCard,
-                      ]}
-                      onPress={() => {
-                        setSelectedItinerary(itinerary);
-                        setShowItineraryDetail(true);
-                      }}
-                    >
-                      <Text
-                        style={[
-                          styles.scheduleCardTime,
-                          isCurrentTime && styles.scheduleCardTimeNow,
-                        ]}
-                      >
-                        {schedule.time}
-                      </Text>
-                      <Text
-                        style={[
-                          styles.scheduleTitle,
-                          isCurrentTime && styles.scheduleTitleNow,
-                        ]}
-                        numberOfLines={1}
-                        ellipsizeMode="tail"
-                      >
-                        {itinerary.title}
-                      </Text>
-                      {itinerary.location?.name && (
-                        <View style={styles.scheduleLocationRow}>
-                          <LocationIcon width={12} height={12} color={colors.gray600} />
-                          <Text
-                            style={styles.scheduleLocation}
-                            numberOfLines={1}
-                            ellipsizeMode="tail"
-                          >
-                            {itinerary.location.name}
-                          </Text>
-                        </View>
-                      )}
-                    </Pressable>
-                  </View>
-                );
-              })}
-            </View>
+                })}
+              </View>
+            </>
+          )}
+        </ScrollView>
+        <ScrollView
+          key="checklist"
+          style={styles.scheduleList}
+          contentContainerStyle={styles.scheduleContent}
+          showsVerticalScrollIndicator={false}
+          refreshControl={renderRefreshControl()}
+        >
+          {selectedPlan && (
             <View style={styles.checklistWrapper}>
               <WeeklyChecklistCard
-                planPublicId={selectedPlan?.publicId}
+                planPublicId={selectedPlan.publicId}
                 selectedDate={selectedDate}
                 itineraries={planData.itineraries}
               />
             </View>
-          </>
-        )}
-
-        {(selectedDateAccommodations.length > 0 ||
-          selectedDateFlights.length > 0) && (
-          <View
-            style={[
-              styles.travelInfoSection,
-              scheduleCount === 0 && styles.travelInfoSectionAlone,
-            ]}
-          >
-            <Text style={styles.travelInfoTitle}>여행 정보 (Reference)</Text>
-            {selectedDateAccommodations.map((accommodation: Accommodation) => {
-              const isCheckout =
-                dayjs(accommodation.checkoutDate).format("YYYY-MM-DD") ===
-                selectedDate.format("YYYY-MM-DD");
-              return (
+          )}
+        </ScrollView>
+        <ScrollView
+          key="travel"
+          style={styles.scheduleList}
+          contentContainerStyle={styles.scheduleContent}
+          showsVerticalScrollIndicator={false}
+          refreshControl={renderRefreshControl()}
+        >
+          {selectedDateAccommodations.length === 0 &&
+            selectedDateFlights.length === 0 && (
+              <View style={styles.emptyScheduleContainer}>
+                <CautionIcon width={24} height={24} color={colors.gray600} />
+                <Text style={styles.emptyScheduleText}>
+                  등록된 숙박·항공이 없습니다.
+                </Text>
+              </View>
+            )}
+          {(selectedDateAccommodations.length > 0 ||
+            selectedDateFlights.length > 0) && (
+            <View
+              style={[styles.travelInfoSection, styles.travelInfoSectionAlone]}
+            >
+              <Text style={styles.travelInfoTitle}>여행 정보 (Reference)</Text>
+              {selectedDateAccommodations.map((accommodation: Accommodation) => {
+                const isCheckout =
+                  dayjs(accommodation.checkoutDate).format("YYYY-MM-DD") ===
+                  selectedDate.format("YYYY-MM-DD");
+                return (
+                  <Pressable
+                    key={accommodation.id}
+                    style={styles.travelInfoCard}
+                    onPress={() => {
+                      setSelectedAccommodation(accommodation);
+                      setShowAccommodationDetail(true);
+                    }}
+                  >
+                    <View style={styles.travelInfoCardHeader}>
+                      <View style={styles.travelInfoIconBox}>
+                        <AccommodationIcon
+                          width={20}
+                          height={20}
+                          color={colors.primary}
+                        />
+                      </View>
+                      <View style={styles.travelInfoHeaderText}>
+                        <Text style={styles.travelInfoLabel}>
+                          {isCheckout ? "오늘 체크아웃" : "오늘의 숙소"}
+                        </Text>
+                        <Text style={styles.travelInfoName}>
+                          {accommodation.name}
+                        </Text>
+                        <Text style={styles.travelInfoSub}>
+                          {isCheckout
+                            ? `체크아웃 ${formatTime(accommodation.checkoutTime)}`
+                            : `체크인 ${formatTime(accommodation.checkinTime)}`}
+                        </Text>
+                      </View>
+                    </View>
+                    <RightArrowIcon
+                      width={12}
+                      height={12}
+                      color={colors.gray600}
+                    />
+                  </Pressable>
+                );
+              })}
+              {selectedDateFlights.map(item => (
                 <Pressable
-                  key={accommodation.id}
+                  key={item.id}
                   style={styles.travelInfoCard}
                   onPress={() => {
-                    setSelectedAccommodation(accommodation);
-                    setShowAccommodationDetail(true);
+                    setSelectedFlight(item.data as FlightRead);
+                    setSelectedFlightSegment(item.segment);
+                    setShowFlightDetail(true);
                   }}
                 >
                   <View style={styles.travelInfoCardHeader}>
                     <View style={styles.travelInfoIconBox}>
-                      <AccommodationIcon
-                        width={20}
-                        height={20}
-                        color={colors.primary}
-                      />
+                      <FlightIcon width={20} height={20} color={colors.primary} />
                     </View>
                     <View style={styles.travelInfoHeaderText}>
-                      <Text style={styles.travelInfoLabel}>
-                        {isCheckout ? "오늘 체크아웃" : "오늘의 숙소"}
-                      </Text>
+                      <Text style={styles.travelInfoLabel}>오늘의 항공</Text>
                       <Text style={styles.travelInfoName}>
-                        {accommodation.name}
+                        {item.segment.departureAirport} →{" "}
+                        {item.segment.arrivalAirport}
                       </Text>
                       <Text style={styles.travelInfoSub}>
-                        {isCheckout
-                          ? `체크아웃 ${formatTime(accommodation.checkoutTime)}`
-                          : `체크인 ${formatTime(accommodation.checkinTime)}`}
+                        출발 {item.time}
+                        {item.segment.flightNumber &&
+                          ` · ${item.segment.flightNumber}`}
                       </Text>
                     </View>
                   </View>
-                  <RightArrowIcon
-                    width={12}
-                    height={12}
-                    color={colors.gray600}
-                  />
+                  <RightArrowIcon width={12} height={12} color={colors.gray600} />
                 </Pressable>
-              );
-            })}
-            {selectedDateFlights.map(item => (
-              <Pressable
-                key={item.id}
-                style={styles.travelInfoCard}
-                onPress={() => {
-                  setSelectedFlight(item.data as FlightRead);
-                  setSelectedFlightSegment(item.segment);
-                  setShowFlightDetail(true);
-                }}
-              >
-                <View style={styles.travelInfoCardHeader}>
-                  <View style={styles.travelInfoIconBox}>
-                    <FlightIcon width={20} height={20} color={colors.primary} />
-                  </View>
-                  <View style={styles.travelInfoHeaderText}>
-                    <Text style={styles.travelInfoLabel}>오늘의 항공</Text>
-                    <Text style={styles.travelInfoName}>
-                      {item.segment.departureAirport} →{" "}
-                      {item.segment.arrivalAirport}
-                    </Text>
-                    <Text style={styles.travelInfoSub}>
-                      출발 {item.time}
-                      {item.segment.flightNumber &&
-                        ` · ${item.segment.flightNumber}`}
-                    </Text>
-                  </View>
-                </View>
-                <RightArrowIcon width={12} height={12} color={colors.gray600} />
-              </Pressable>
-            ))}
-          </View>
-        )}
-      </ScrollView>
+              ))}
+            </View>
+          )}
+        </ScrollView>
+      </PagerView>
 
       <Modal
         visible={profileModalVisible}
@@ -1364,7 +1468,7 @@ export default function WeeklyScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.gray200,
+    backgroundColor: colors.white,
   },
   loadingContainer: {
     flex: 1,
@@ -1411,7 +1515,7 @@ const styles = StyleSheet.create({
   },
   headerPeriod: {
     ...textStyles.h7,
-    color: colors.gray700,
+    color: colors.paletteFg2,
     fontVariant: ["tabular-nums"],
   },
   headerIcons: {
@@ -1462,7 +1566,7 @@ const styles = StyleSheet.create({
   dayLabel: {
     ...textStyles.body6,
     lineHeight: 14,
-    color: colors.gray600,
+    color: colors.paletteFg3,
   },
   dayLabelSelected: {
     color: colors.onDarkStrong,
@@ -1476,7 +1580,7 @@ const styles = StyleSheet.create({
   dayDateEmpty: {
     ...textStyles.body3,
     lineHeight: 20,
-    color: colors.gray600,
+    color: colors.paletteFg3,
   },
   dayDateSelected: {
     color: colors.white,
@@ -1499,7 +1603,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingTop: 16,
     paddingBottom: 12,
-    backgroundColor: colors.gray200,
+    backgroundColor: colors.white,
   },
   scheduleDate: {
     flexDirection: "row",
@@ -1525,9 +1629,42 @@ const styles = StyleSheet.create({
     color: colors.primary,
   },
 
+  dayTabsWrap: {
+    paddingHorizontal: spacing.xl,
+    paddingBottom: spacing.xl,
+  },
+  dayTabs: {
+    flexDirection: "row",
+    gap: spacing.xs,
+    padding: spacing.xs,
+    borderRadius: radii.mdPlus,
+    backgroundColor: colors.paletteFill2,
+  },
+  dayTab: {
+    flex: 1,
+    minWidth: 0,
+    height: 36,
+    borderRadius: radii.md,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  dayTabActive: {
+    backgroundColor: colors.white,
+  },
+  dayTabText: {
+    ...textStyles.body3,
+    color: colors.paletteFg3,
+  },
+  dayTabTextActive: {
+    ...textStyles.h6,
+    color: colors.paletteInk,
+  },
+  dayPager: {
+    flex: 1,
+  },
   scheduleList: {
     flex: 1,
-    backgroundColor: colors.gray200,
+    backgroundColor: colors.white,
   },
   scheduleContent: {
     paddingHorizontal: 16,
