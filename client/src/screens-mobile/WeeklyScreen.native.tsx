@@ -311,8 +311,13 @@ export default function WeeklyScreen() {
 
   useEffect(() => {
     if (selectedPlan) {
-      setSelectedDate(dayjs());
-      setWeekBaseDate(dayjs());
+      const today = dayjs();
+      const isTodayInPlan =
+        !today.isBefore(selectedPlan.startDate, "day") &&
+        !today.isAfter(selectedPlan.endDate, "day");
+      const initialDate = isTodayInPlan ? today : dayjs(selectedPlan.startDate);
+      setSelectedDate(initialDate);
+      setWeekBaseDate(initialDate);
     }
   }, [selectedPlan?.id]);
 
