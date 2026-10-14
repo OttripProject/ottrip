@@ -89,6 +89,7 @@ export const colors = {
   aiInk: "#7B6CFF",
   aiInkDark: "#4A3DBF",
   aiHeaderGradient: ["#EEF0FF", "#F3ECFF"] as const,
+  categoryFlight: "#0A84FF",
   categoryMeal: "#B76800",
   categoryTransport: "#373737",
   categoryActivity: "#D91CB5",

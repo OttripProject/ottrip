@@ -17,6 +17,8 @@ import type {
   Itinerary,
   Plan,
 } from "@/types/api";
+import { itineraryCategoryColors } from "@/types/itinerary";
+import { getAirportLabel } from "@/utils/airportList";
 import { colors } from "@/ui/tokens/colors";
 import { motion } from "@/ui/tokens/motion";
 import { radii } from "@/ui/tokens/radii";
@@ -85,6 +87,34 @@ import DotsIcon from "../../assets/dots.svg";
 import DropdownIcon from "../../assets/mobile_dropdown.svg";
 import PlusIcon from "../../assets/mobile_plus2.svg";
 import RightArrowIcon from "../../assets/right_arrow.svg";
+
+function PulseDot() {
+  const opacity = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    const half = motion.duration.pulse / 2;
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(opacity, {
+          toValue: 0.3,
+          duration: half,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.timing(opacity, {
+          toValue: 1,
+          duration: half,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [opacity]);
+
+  return <Animated.View style={[styles.pulseDot, { opacity }]} />;
+}
 
 function DayTabButton({
   label,
@@ -354,6 +384,76 @@ export default function WeeklyScreen() {
     selectedDate,
   ]);
 
+  const timelineItems = useMemo(
+    () => selectedDateSchedules.filter(item => item.type !== "accommodation"),
+    [selectedDateSchedules],
+  );
+
+  const timelineRows = useMemo(() => {
+    const dateStr = selectedDate.format("YYYY-MM-DD");
+    return timelineItems.map(schedule => {
+      const isFlight = schedule.type === "flight" && !!schedule.segment;
+      const itinerary = schedule.data as Itinerary;
+      let showNextDay = false;
+      if (isFlight) {
+        showNextDay =
+          dayjs(schedule.segment.departureTime).format("YYYY-MM-DD") !==
+          dayjs(schedule.segment.arrivalTime).format("YYYY-MM-DD");
+      } else if (schedule.endTime && schedule.time) {
+        showNextDay = schedule.endTime < schedule.time;
+      }
+      const start = dayjs(`${dateStr} ${schedule.time}`);
+      const endBase = dayjs(`${dateStr} ${schedule.endTime ?? schedule.time}`);
+      return {
+        schedule,
+        isFlight,
+        showNextDay,
+        start,
+        end: showNextDay ? endBase.add(1, "day") : endBase,
+        title: isFlight
+          ? `${schedule.segment.departureAirport} → ${schedule.segment.arrivalAirport}`
+          : itinerary.title,
+        subText: isFlight
+          ? (getAirportLabel(schedule.segment.arrivalAirport) ??
+            schedule.segment.arrivalAirport)
+          : itinerary.location?.name,
+        barColor: isFlight
+          ? colors.categoryFlight
+          : itinerary.category
+            ? itineraryCategoryColors[itinerary.category]
+            : colors.categoryEtc,
+      };
+    });
+  }, [timelineItems, selectedDate]);
+
+  const currentRows = useMemo(() => {
+    const now = dayjs();
+    if (!selectedDate.isSame(now, "day")) return [];
+    return timelineRows.filter(
+      row => !now.isBefore(row.start) && now.isBefore(row.end),
+    );
+  }, [timelineRows, selectedDate]);
+
+  const openScheduleDetail = (row: (typeof timelineRows)[number]) => {
+    if (row.isFlight) {
+      setSelectedFlight(row.schedule.data as FlightRead);
+      setSelectedFlightSegment(row.schedule.segment);
+      setShowFlightDetail(true);
+    } else {
+      setSelectedItinerary(row.schedule.data as Itinerary);
+      setShowItineraryDetail(true);
+    }
+  };
+
+  const nextTimelineIndex = useMemo(() => {
+    const now = dayjs();
+    if (!selectedDate.isSame(now, "day")) return -1;
+    const dateStr = selectedDate.format("YYYY-MM-DD");
+    return timelineItems.findIndex(item =>
+      now.isBefore(dayjs(`${dateStr} ${item.time}`)),
+    );
+  }, [timelineItems, selectedDate]);
+
   const scheduleCount = selectedDateSchedules.filter(
     s => s.type !== "accommodation",
   ).length;
@@ -610,237 +710,105 @@ export default function WeeklyScreen() {
               </Text>
             </View>
           )}
+          {currentRows.map(row => (
+            <Pressable
+              key={row.schedule.id}
+              style={styles.currentCard}
+              onPress={() => openScheduleDetail(row)}
+            >
+              <View style={styles.currentHeader}>
+                <PulseDot />
+                <Text style={styles.currentLabel}>진행 중</Text>
+                {row.schedule.endTime && (
+                  <View style={styles.currentEndPill}>
+                    <Text style={styles.currentEndText}>
+                      {row.schedule.endTime} 종료
+                    </Text>
+                  </View>
+                )}
+              </View>
+              <Text style={styles.currentTitle} numberOfLines={1}>
+                {row.title}
+              </Text>
+              {!!row.subText && (
+                <View style={styles.currentSub}>
+                  <LocationIcon
+                    width={13}
+                    height={13}
+                    color={colors.paletteFg3}
+                  />
+                  <Text style={styles.currentSubText} numberOfLines={1}>
+                    {row.subText}
+                  </Text>
+                </View>
+              )}
+            </Pressable>
+          ))}
           {scheduleCount > 0 && (
-            <>
-              <View style={styles.timelineWrapper}>
-                <View style={styles.timelineTrack} />
-                {selectedDateSchedules.map(schedule => {
-                  if (schedule.type === "accommodation") return null;
+            <View style={styles.listCard}>
+              {timelineRows.map((row, index) => {
+                const { schedule } = row;
+                const now = dayjs();
+                const isEnded =
+                  selectedDate.isBefore(now, "day") ||
+                  (selectedDate.isSame(now, "day") && !now.isBefore(row.end));
+                const isNext = index === nextTimelineIndex;
 
-                  const isCurrentTime =
-                    dayjs().isSame(selectedDate, "day") &&
-                    dayjs().isAfter(
-                      dayjs(
-                        `${selectedDate.format("YYYY-MM-DD")} ${schedule.time}`,
-                      ),
-                    ) &&
-                    schedule.endTime &&
-                    dayjs().isBefore(
-                      dayjs(
-                        `${selectedDate.format("YYYY-MM-DD")} ${schedule.endTime}`,
-                      ),
-                    );
-
-                  let showNextDay = false;
-                  if (schedule.type === "flight" && schedule.segment) {
-                    const departureDate = dayjs(
-                      schedule.segment.departureTime,
-                    ).format("YYYY-MM-DD");
-                    const arrivalDate = dayjs(
-                      schedule.segment.arrivalTime,
-                    ).format("YYYY-MM-DD");
-                    showNextDay = departureDate !== arrivalDate;
-                  } else if (
-                    schedule.type === "itinerary" &&
-                    schedule.endTime &&
-                    schedule.time
-                  ) {
-                    const startParts = schedule.time.split(":").map(Number);
-                    const endParts = schedule.endTime.split(":").map(Number);
-                    const startMin = startParts[0] * 60 + (startParts[1] || 0);
-                    const endMin = endParts[0] * 60 + (endParts[1] || 0);
-                    showNextDay = endMin < startMin;
-                  }
-
-                  if (schedule.type === "flight" && schedule.segment) {
-                    const flight = schedule.data as FlightRead;
-                    const segment = schedule.segment;
-                    const segmentIndex = schedule.segmentIndex ?? 0;
-                    const totalSegments = flight.flightSegments?.length || 1;
-
-                    return (
-                      <View
-                        key={`flight-${flight.id}-segment-${segmentIndex}`}
-                        style={styles.scheduleItem}
-                      >
-                        <View style={styles.scheduleTime}>
-                          <View style={styles.dotTimeRow}>
-                            <View style={styles.timeDotRing}>
-                              <View
-                                style={[
-                                  styles.timeDot,
-                                  isCurrentTime && styles.timeDotNow,
-                                ]}
-                              />
-                            </View>
-                            <Text
-                              style={[
-                                styles.scheduleTimeText,
-                                isCurrentTime && styles.scheduleTimeTextNow,
-                              ]}
-                            >
-                              {schedule.time}
-                            </Text>
-                            {showNextDay && schedule.endTime && (
-                              <View style={styles.endTimeWithBadge}>
-                                <Text
-                                  style={[
-                                    styles.scheduleTimeText,
-                                    isCurrentTime && styles.scheduleTimeTextNow,
-                                  ]}
-                                >
-                                  → {schedule.endTime}
-                                </Text>
-                                <View style={styles.nextDayIndicator}>
-                                  <Text style={styles.nextDayText}>+1 day</Text>
-                                </View>
-                              </View>
-                            )}
-                            {isCurrentTime && (
-                              <View style={styles.nowBadge}>
-                                <Text style={styles.nowBadgeText}>NOW</Text>
-                              </View>
-                            )}
-                          </View>
-                        </View>
-                        <Pressable
-                          style={[
-                            styles.scheduleCard,
-                            isCurrentTime && styles.currentCard,
-                          ]}
-                          onPress={() => {
-                            setSelectedFlight(flight);
-                            setSelectedFlightSegment(segment);
-                            setShowFlightDetail(true);
-                          }}
-                        >
-                          <View style={styles.scheduleCardRow}>
-                            <Text
-                              style={[
-                                styles.scheduleCardTime,
-                                isCurrentTime && styles.scheduleTimeTextNow,
-                              ]}
-                            >
-                              {schedule.time}
-                            </Text>
-                            {totalSegments > 1 && (
-                              <Text
-                                style={[styles.flightSegments, { flexShrink: 0 }]}
-                              >
-                                구간 {segmentIndex + 1}/{totalSegments}
-                              </Text>
-                            )}
-                          </View>
-                          <Text
-                            style={[
-                              styles.scheduleTitle,
-                              isCurrentTime && styles.scheduleTitleNow,
-                            ]}
-                          >
-                            {segment.departureAirport} → {segment.arrivalAirport}
-                          </Text>
-                          {(segment.airline || segment.flightNumber) && (
-                            <Text style={styles.scheduleLocation}>
-                              {segment.flightNumber}
-                            </Text>
-                          )}
-                        </Pressable>
-                      </View>
-                    );
-                  }
-
-                  const itinerary = schedule.data as Itinerary;
-                  return (
+                return (
+                  <Pressable
+                    key={schedule.id}
+                    style={[styles.listRow, isEnded && styles.listRowEnded]}
+                    onPress={() => openScheduleDetail(row)}
+                  >
+                    <View style={styles.listTime}>
+                      <Text style={styles.listStartTime}>{schedule.time}</Text>
+                      {schedule.endTime && (
+                        <Text style={styles.listEndTime}>
+                          {schedule.endTime}
+                          {row.showNextDay && " +1"}
+                        </Text>
+                      )}
+                    </View>
                     <View
-                      key={`itinerary-${itinerary.id}`}
-                      style={styles.scheduleItem}
+                      style={[styles.listBar, { backgroundColor: row.barColor }]}
+                    />
+                    <View
+                      style={[
+                        styles.listBody,
+                        index > 0 && styles.listBodyDivider,
+                      ]}
                     >
-                      <View style={styles.scheduleTime}>
-                        <View style={styles.dotTimeRow}>
-                          <View style={styles.timeDotRing}>
-                            <View
-                              style={[
-                                styles.timeDot,
-                                isCurrentTime && styles.timeDotNow,
-                              ]}
+                      <View style={styles.listText}>
+                        <Text style={styles.listTitle} numberOfLines={1}>
+                          {row.title}
+                        </Text>
+                        {!!row.subText && (
+                          <View style={styles.listSub}>
+                            <LocationIcon
+                              width={12}
+                              height={12}
+                              color={colors.paletteFg3}
                             />
-                          </View>
-                          <Text
-                            style={[
-                              styles.scheduleTimeText,
-                              isCurrentTime && styles.scheduleTimeTextNow,
-                            ]}
-                          >
-                            {schedule.time}
-                          </Text>
-                          {showNextDay && schedule.endTime && (
-                            <View style={styles.endTimeWithBadge}>
-                              <Text
-                                style={[
-                                  styles.scheduleTimeText,
-                                  isCurrentTime && styles.scheduleTimeTextNow,
-                                ]}
-                              >
-                                → {schedule.endTime}
-                              </Text>
-                              <View style={styles.nextDayIndicator}>
-                                <Text style={styles.nextDayText}>+1 day</Text>
-                              </View>
-                            </View>
-                          )}
-                          {isCurrentTime && (
-                            <View style={styles.nowBadge}>
-                              <Text style={styles.nowBadgeText}>NOW</Text>
-                            </View>
-                          )}
-                        </View>
-                      </View>
-                      <Pressable
-                        style={[
-                          styles.scheduleCard,
-                          isCurrentTime && styles.currentCard,
-                        ]}
-                        onPress={() => {
-                          setSelectedItinerary(itinerary);
-                          setShowItineraryDetail(true);
-                        }}
-                      >
-                        <Text
-                          style={[
-                            styles.scheduleCardTime,
-                            isCurrentTime && styles.scheduleCardTimeNow,
-                          ]}
-                        >
-                          {schedule.time}
-                        </Text>
-                        <Text
-                          style={[
-                            styles.scheduleTitle,
-                            isCurrentTime && styles.scheduleTitleNow,
-                          ]}
-                          numberOfLines={1}
-                          ellipsizeMode="tail"
-                        >
-                          {itinerary.title}
-                        </Text>
-                        {itinerary.location?.name && (
-                          <View style={styles.scheduleLocationRow}>
-                            <LocationIcon width={12} height={12} color={colors.gray600} />
-                            <Text
-                              style={styles.scheduleLocation}
-                              numberOfLines={1}
-                              ellipsizeMode="tail"
-                            >
-                              {itinerary.location.name}
+                            <Text style={styles.listSubText} numberOfLines={1}>
+                              {row.subText}
                             </Text>
                           </View>
                         )}
-                      </Pressable>
+                      </View>
+                      {isNext ? (
+                        <View style={styles.listBadge}>
+                          <Text style={styles.listBadgeText}>다음</Text>
+                        </View>
+                      ) : (
+                        isEnded && (
+                          <Text style={styles.listEndedText}>종료</Text>
+                        )
+                      )}
                     </View>
-                  );
-                })}
-              </View>
-            </>
+                  </Pressable>
+                );
+              })}
+            </View>
           )}
         </ScrollView>
         <ScrollView
@@ -1644,6 +1612,141 @@ const styles = StyleSheet.create({
     fontVariant: ["tabular-nums"],
   },
 
+  currentCard: {
+    marginHorizontal: spacing.sm,
+    marginBottom: spacing.xl,
+    paddingTop: spacing.lg,
+    paddingHorizontal: spacing.xl,
+    paddingBottom: spacing.xl,
+    borderRadius: radii["2xl"],
+    backgroundColor: colors.primarySoft,
+    ...shadows.soft,
+  },
+  currentHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: spacing.lg,
+  },
+  pulseDot: {
+    width: 8,
+    height: 8,
+    borderRadius: radii.pill,
+    backgroundColor: colors.primary,
+    boxShadow: `0 0 0 4px ${colors.primaryTint}`,
+  },
+  currentLabel: {
+    ...textStyles.h7,
+    color: colors.primary,
+    marginLeft: spacing.md,
+  },
+  currentEndPill: {
+    marginLeft: "auto",
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.md,
+    borderRadius: radii.pill,
+    backgroundColor: colors.white,
+  },
+  currentEndText: {
+    ...textStyles.h8,
+    color: colors.paletteFg2,
+    fontVariant: ["tabular-nums"],
+  },
+  currentTitle: {
+    ...textStyles.h3,
+    color: colors.paletteInk,
+    letterSpacing: -0.2,
+  },
+  currentSub: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    marginTop: spacing.sm,
+  },
+  currentSubText: {
+    ...textStyles.h7,
+    color: colors.paletteFg2,
+    flexShrink: 1,
+  },
+  listCard: {
+    marginHorizontal: spacing.sm,
+    borderRadius: radii.lgPlus,
+    backgroundColor: colors.white,
+    ...shadows.card,
+  },
+  listRow: {
+    flexDirection: "row",
+    alignItems: "stretch",
+    gap: spacing.md,
+    paddingHorizontal: spacing.lg,
+  },
+  listRowEnded: {
+    opacity: 0.55,
+  },
+  listTime: {
+    width: 44,
+    paddingVertical: spacing.lg,
+  },
+  listStartTime: {
+    ...textStyles.h6,
+    color: colors.paletteInk,
+    fontVariant: ["tabular-nums"],
+  },
+  listEndTime: {
+    ...textStyles.body5,
+    color: colors.paletteFg3,
+    fontVariant: ["tabular-nums"],
+  },
+  listBar: {
+    width: 3,
+    marginVertical: 18,
+    borderRadius: radii.pill,
+  },
+  listBody: {
+    flex: 1,
+    minWidth: 0,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    paddingVertical: spacing.lg,
+  },
+  listBodyDivider: {
+    borderTopWidth: 1,
+    borderTopColor: colors.paletteLine,
+  },
+  listText: {
+    flex: 1,
+    minWidth: 0,
+  },
+  listTitle: {
+    ...textStyles.h5,
+    color: colors.paletteInk,
+  },
+  listSub: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.xs,
+    minWidth: 0,
+  },
+  listSubText: {
+    ...textStyles.body4,
+    color: colors.paletteFg2,
+    flexShrink: 1,
+  },
+  listEndedText: {
+    ...textStyles.body5,
+    color: colors.paletteFg3,
+  },
+  listBadge: {
+    height: 20,
+    paddingHorizontal: spacing.sm,
+    borderRadius: radii.pill,
+    justifyContent: "center",
+    backgroundColor: colors.primaryTint,
+  },
+  listBadgeText: {
+    ...textStyles.h8,
+    color: colors.primary,
+  },
   dayTabsWrap: {
     paddingHorizontal: spacing.xl,
     paddingBottom: spacing.xl,
@@ -1697,141 +1800,10 @@ const styles = StyleSheet.create({
   checklistWrapper: {
     marginVertical: 16,
   },
-  timelineWrapper: {
-    position: "relative",
-  },
-  timelineTrack: {
-    position: "absolute",
-    left: 10,
-    top: 0,
-    bottom: 16,
-    width: 2,
-    backgroundColor: colors.gray400,
-  },
-  scheduleItem: {
-    flexDirection: "column",
-    marginBottom: 16,
-  },
-  scheduleTime: {
-    width: 90,
-    marginTop: -4,
-  },
-  dotTimeRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    paddingLeft: 3,
-  },
-  timeDotRing: {
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    borderWidth: 4,
-    borderColor: colors.gray300,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  timeDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: colors.gray400,
-  },
-  timeDotNow: {
-    backgroundColor: colors.primary,
-  },
-  scheduleTimeText: {
-    ...textStyles.h7,
-    color: colors.gray700,
-  },
-  scheduleCardTime: {
-    ...textStyles.h7,
-    color: colors.gray600,
-    marginBottom: 4,
-  },
-  scheduleCardTimeNow: {
-    color: colors.primary,
-  },
-  scheduleTimeTextNow: {
-    color: colors.black,
-  },
-  nowBadge: {
-    backgroundColor: colors.primary,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-  },
-  nowBadgeText: {
-    ...textStyles.h9,
-    color: colors.white,
-  },
-  endTimeWithBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 3,
-  },
-  nextDayIndicator: {
-    backgroundColor: colors.gray300,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-    borderWidth: 1,
-    borderColor: colors.gray300,
-  },
-  nextDayText: {
-    ...textStyles.body4,
-    color: colors.gray600,
-    fontSize: 9,
-    fontWeight: "600",
-  },
 
-  scheduleCardRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 8,
-    marginBottom: 4,
-  },
-  scheduleCard: {
-    marginTop: 8,
-    marginLeft: 36,
-    backgroundColor: colors.white,
-    padding: 16,
-    borderRadius: 16,
-  },
-  currentCard: {
-    shadowColor: colors.black,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  scheduleTitle: {
-    ...textStyles.h6,
-    color: colors.gray700,
-    marginBottom: 4,
-  },
-  scheduleTitleNow: {
-    color: colors.black,
-  },
-  scheduleLocationRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    marginBottom: 4,
-  },
-  scheduleLocation: {
-    ...textStyles.body4,
-    color: colors.gray600,
-    flex: 1,
-  },
   scheduleNote: {
     ...textStyles.body4,
     color: colors.gray600,
-  },
-  flightSegments: {
-    ...textStyles.body6,
-    color: colors.gray500,
   },
   fab: {
     position: "absolute",
