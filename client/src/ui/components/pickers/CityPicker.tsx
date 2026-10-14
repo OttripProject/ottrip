@@ -554,7 +554,7 @@ export default function CityPicker({
           statusBarTranslucent
         >
           <Pressable
-            style={StyleSheet.absoluteFillObject}
+            style={StyleSheet.absoluteFill}
             onPress={closeModal}
           />
           <View

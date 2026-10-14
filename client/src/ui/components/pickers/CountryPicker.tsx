@@ -492,7 +492,7 @@ export default function CountryPicker({
           onRequestClose={closeModal}
           statusBarTranslucent
         >
-          <Pressable style={StyleSheet.absoluteFillObject} onPress={closeModal} />
+          <Pressable style={StyleSheet.absoluteFill} onPress={closeModal} />
           <View
             style={[
               styles.popup,

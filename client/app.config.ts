@@ -69,6 +69,17 @@ export default ({ config }: ConfigContext): ExpoConfig => {
           iosGoogleMapsApiKey: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY_IOS ?? "",
         },
       ],
+      [
+        "expo-splash-screen",
+        {
+          image: "./assets/icon.png",
+          resizeMode: "contain",
+          backgroundColor: "#ffffff",
+          enableFullScreenImage_legacy: true,
+        },
+      ],
+      "./plugins/withPodsMinDeploymentTarget",
+      "./plugins/withSceneLifecycle",
     ];
 
     if (iosUrlScheme) {
@@ -137,7 +148,6 @@ export default ({ config }: ConfigContext): ExpoConfig => {
 
   return {
     ...config,
-    newArchEnabled: true,
     name: switchProfile({
       dev: "오티트립 Dev",
       alpha: "오티트립 Alpha",
@@ -166,11 +176,6 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       local: "icon-dev.png",
     })}`,
     userInterfaceStyle: "light",
-    splash: {
-      image: "./assets/icon.png",
-      resizeMode: "contain",
-      backgroundColor: "#ffffff",
-    },
     assetBundlePatterns: ["**/*"],
     ios: {
       usesAppleSignIn: true,

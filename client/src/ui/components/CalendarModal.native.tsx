@@ -241,7 +241,7 @@ export default function CalendarModal({
 
 const styles = StyleSheet.create({
   backdrop: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: colors.overlayBackground,
   },
   centered: {

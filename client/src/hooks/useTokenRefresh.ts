@@ -3,7 +3,7 @@ import { useEffect, useRef } from "react";
 import { AppState, type AppStateStatus, Platform } from "react-native";
 
 export function useTokenRefresh(isAuthenticated = false) {
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const appStateRef = useRef<AppStateStatus>(AppState.currentState);
 
   useEffect(() => {
