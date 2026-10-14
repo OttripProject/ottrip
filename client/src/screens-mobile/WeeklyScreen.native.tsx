@@ -270,7 +270,6 @@ export default function WeeklyScreen() {
       "토요일",
     ];
     return {
-      day: `${selectedDate.date()}일`,
       weekday: weekdays[selectedDate.day()],
     };
   }, [selectedDate]);
@@ -583,6 +582,26 @@ export default function WeeklyScreen() {
           showsVerticalScrollIndicator={false}
           refreshControl={renderRefreshControl()}
         >
+          <View style={styles.scheduleHeader}>
+            <Text style={styles.scheduleDateDay}>
+              {selectedDate.format("M월 D일")}
+            </Text>
+            <Text style={styles.scheduleDateWeekday}>
+              {selectedDateDisplay.weekday}
+            </Text>
+            {selectedDate.isSame(dayjs(), "day") && (
+              <View style={styles.todayBadge}>
+                <Text style={styles.todayBadgeText}>오늘</Text>
+              </View>
+            )}
+            {scheduleCount > 0 && (
+              <View style={styles.scheduleCountBadge}>
+                <Text style={styles.scheduleCountText}>
+                  {scheduleCount}개의 일정
+                </Text>
+              </View>
+            )}
+          </View>
           {scheduleCount === 0 && (
             <View style={styles.emptyScheduleContainer}>
               <CautionIcon width={24} height={24} color={colors.gray600} />
@@ -593,21 +612,6 @@ export default function WeeklyScreen() {
           )}
           {scheduleCount > 0 && (
             <>
-              <View style={styles.scheduleHeader}>
-                <View style={styles.scheduleDate}>
-                  <Text style={styles.scheduleDateDay}>
-                    {selectedDateDisplay.day}
-                  </Text>
-                  <Text style={styles.scheduleDateWeekday}>
-                    {selectedDateDisplay.weekday}
-                  </Text>
-                </View>
-                <View style={styles.scheduleCountBadge}>
-                  <Text style={styles.scheduleCountText}>
-                    {scheduleCount}개의 일정
-                  </Text>
-                </View>
-              </View>
               <View style={styles.timelineWrapper}>
                 <View style={styles.timelineTrack} />
                 {selectedDateSchedules.map(schedule => {
@@ -1599,34 +1603,45 @@ const styles = StyleSheet.create({
 
   scheduleHeader: {
     flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingTop: 16,
-    paddingBottom: 12,
-    backgroundColor: colors.white,
-  },
-  scheduleDate: {
-    flexDirection: "row",
-    alignItems: "flex-end",
-    gap: 8,
+    alignItems: "baseline",
+    paddingHorizontal: spacing.sm,
+    paddingBottom: spacing.xl,
   },
   scheduleDateDay: {
-    ...textStyles.h4,
-    color: colors.black,
+    ...textStyles.h3,
+    color: colors.paletteInk,
+    letterSpacing: -0.2,
+    fontVariant: ["tabular-nums"],
   },
   scheduleDateWeekday: {
-    ...textStyles.h7,
-    color: colors.gray600,
+    ...textStyles.body3,
+    color: colors.paletteFg2,
+    marginLeft: spacing.sm,
+  },
+  todayBadge: {
+    height: 20,
+    marginLeft: spacing.sm,
+    paddingHorizontal: spacing.sm,
+    borderRadius: radii.xs,
+    justifyContent: "center",
+    backgroundColor: colors.primaryTint,
+  },
+  todayBadgeText: {
+    ...textStyles.h8,
+    color: colors.primary,
   },
   scheduleCountBadge: {
-    backgroundColor: `${colors.primary}1A`,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
+    height: 20,
+    marginLeft: "auto",
+    paddingHorizontal: spacing.sm,
+    borderRadius: radii.xs,
+    justifyContent: "center",
+    backgroundColor: colors.paletteFill2,
   },
   scheduleCountText: {
-    ...textStyles.h9,
-    color: colors.primary,
+    ...textStyles.h8,
+    color: colors.paletteFg2,
+    fontVariant: ["tabular-nums"],
   },
 
   dayTabsWrap: {
