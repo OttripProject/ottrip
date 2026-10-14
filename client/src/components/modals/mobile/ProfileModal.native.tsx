@@ -59,7 +59,7 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
   const [copied, setCopied] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [logoutModalOpen, setLogoutModalOpen] = useState(false);
-  const copiedTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const copiedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const { data: profile } = useMe();
 

@@ -528,7 +528,7 @@ export default function WeeklySchedulePanel({
 
   const rafIdRef = useRef<number | null>(null);
 
-  const overlapCheckTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const overlapCheckTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const calculateDropPosition = useCallback(
     (clientX: number, clientY: number) => {
@@ -3840,7 +3840,7 @@ const styles = StyleSheet.create({
     position: "relative",
   },
   dropOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: "rgba(255, 255, 255, 0.88)",
     zIndex: 9999,
     alignItems: "center",
