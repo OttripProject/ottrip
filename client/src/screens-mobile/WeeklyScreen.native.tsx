@@ -103,6 +103,8 @@ import CautionIcon from "../../assets/mobile_caution.svg";
 import DotsIcon from "../../assets/dots.svg";
 import ExpenseCardIcon from "../../assets/expense_card.svg";
 import DropdownIcon from "../../assets/mobile_dropdown.svg";
+import InfoCircleIcon from "../../assets/info_circle.svg";
+import PersonIcon from "../../assets/person_outline.svg";
 import PlusIcon from "../../assets/mobile_plus2.svg";
 import RightArrowIcon from "../../assets/right_arrow.svg";
 import SettingIcon from "../../assets/mobile_setting.svg";
@@ -204,6 +206,8 @@ export default function WeeklyScreen() {
   const [addScheduleFlow, setAddScheduleFlow] =
     useState<AddScheduleFlow>("closed");
   const [travelInfoModalVisible, setTravelInfoModalVisible] = useState(false);
+  const [moreMenuVisible, setMoreMenuVisible] = useState(false);
+  const [moreMenuTop, setMoreMenuTop] = useState(0);
   const [weekBaseDate, setWeekBaseDate] = useState<dayjs.Dayjs | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [showItineraryDetail, setShowItineraryDetail] = useState(false);
@@ -830,7 +834,13 @@ export default function WeeklyScreen() {
   return (
     <View style={styles.container}>
       <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
-        <View style={styles.headerTopRow}>
+        <View
+          style={styles.headerTopRow}
+          onLayout={e => {
+            const { y, height } = e.nativeEvent.layout;
+            setMoreMenuTop(y + height);
+          }}
+        >
           <Pressable
             style={styles.planSelector}
             onPress={() => setShowPlanSelector(true)}
@@ -863,7 +873,7 @@ export default function WeeklyScreen() {
             <Pressable
               style={styles.headerIconButton}
               accessibilityLabel="더보기"
-              onPress={() => setProfileModalVisible(true)}
+              onPress={() => setMoreMenuVisible(true)}
             >
               <DotsIcon width={20} height={20} />
             </Pressable>
@@ -1857,6 +1867,48 @@ export default function WeeklyScreen() {
           <Text style={styles.snackbarAction}>다시 보기</Text>
         </Pressable>
       </Animated.View>
+
+      {moreMenuVisible && (
+        <>
+          <Pressable
+            style={StyleSheet.absoluteFill}
+            onPress={() => setMoreMenuVisible(false)}
+          />
+          <View
+            accessibilityRole="menu"
+            style={[styles.moreMenu, { top: moreMenuTop }]}
+          >
+            {[
+              {
+                label: "여행 정보",
+                Icon: InfoCircleIcon,
+                onPress: () => setTravelInfoModalVisible(true),
+              },
+              {
+                label: "설정",
+                Icon: PersonIcon,
+                onPress: () => setProfileModalVisible(true),
+              },
+            ].map(({ label, Icon, onPress }) => (
+              <Pressable
+                key={label}
+                accessibilityRole="menuitem"
+                style={({ pressed }) => [
+                  styles.moreMenuItem,
+                  pressed && styles.moreMenuItemPressed,
+                ]}
+                onPress={() => {
+                  setMoreMenuVisible(false);
+                  onPress();
+                }}
+              >
+                <Icon width={20} height={20} color={colors.paletteInk} />
+                <Text style={styles.moreMenuText}>{label}</Text>
+              </Pressable>
+            ))}
+          </View>
+        </>
+      )}
     </View>
   );
 }
@@ -2037,6 +2089,32 @@ const styles = StyleSheet.create({
     height: 44,
     alignItems: "center",
     justifyContent: "center",
+  },
+  moreMenu: {
+    position: "absolute",
+    right: spacing.md,
+    minWidth: 176,
+    padding: spacing.xs,
+    borderWidth: 1,
+    borderColor: colors.gray300,
+    borderRadius: radii.mdPlus,
+    backgroundColor: colors.white,
+    ...shadows.md,
+  },
+  moreMenuItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    height: 44,
+    paddingHorizontal: spacing.md,
+    borderRadius: radii.md,
+  },
+  moreMenuItemPressed: {
+    backgroundColor: colors.paletteFill,
+  },
+  moreMenuText: {
+    ...textStyles.body2,
+    color: colors.paletteInk,
   },
 
   weekSelector: {
