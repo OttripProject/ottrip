@@ -54,6 +54,7 @@ export const colors = {
   gradientAIRefresh: ["#9CBEFF", "#B4A7FF"] as const,
   gradientDark: ["#3A3A3D", "#1F1F1F"] as const,
   gradientPrimary: ["#2E90FF", "#007AFF"] as const,
+  gradientInk: ["#3C3C3E", "#111114"] as const,
   confetti: [
     "#0A84FF",
     "#6D3BE0",

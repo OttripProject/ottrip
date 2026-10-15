@@ -10,6 +10,7 @@ import type {
   Plan,
 } from "@/types/api";
 import FullScreenModal from "@/ui/components/FullScreenModal.native";
+import ScalePressable from "@/ui/components/ScalePressable";
 import { colors } from "@/ui/tokens/colors";
 import { radii } from "@/ui/tokens/radii";
 import { shadows } from "@/ui/tokens/shadows";
@@ -87,6 +88,7 @@ export default function TravelInfoModal({
   const [showAddExpenseFromDetail, setShowAddExpenseFromDetail] =
     useState(false);
   const [showSharedMembers, setShowSharedMembers] = useState(false);
+  const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [memo, setMemo] = useState(plan?.memo ?? "");
 
   useEffect(() => {
@@ -210,19 +212,19 @@ export default function TravelInfoModal({
               <Text style={styles.expenseAmount}>0원</Text>
             )}
           </View>
-          <Pressable
+          <ScalePressable
             style={styles.expenseDetailButton}
             onPress={() => setShowExpenseDetail(true)}
           >
             <Text style={styles.expenseDetailButtonText}>
               상세 내역 및 비용 추가
             </Text>
-          </Pressable>
+          </ScalePressable>
         </View>
 
         {/* Card 3: 참여 멤버 / 등록 일정 - 카드 2개, 같은 줄, gap 9 */}
         <View style={styles.twoCardRow}>
-          <Pressable
+          <ScalePressable
             style={styles.smallCard}
             onPress={() => {
               if (me?.isGuest) {
@@ -243,7 +245,7 @@ export default function TravelInfoModal({
             </View>
             <Text style={styles.twoColValue}>{memberCount}명</Text>
             <Text style={styles.twoColLabel}>참여 멤버</Text>
-          </Pressable>
+          </ScalePressable>
           <View style={styles.smallCard}>
             <View style={styles.smallCardIconRow}>
               <ItineraryIcon width={20} height={20} color={colors.black} />
@@ -303,20 +305,26 @@ export default function TravelInfoModal({
         planId={planId}
         planStartDate={planStartDate}
         planEndDate={planEndDate}
-        title="전체 여행 비용"
+        title="총 여행 비용"
         onExpenseDelete={onRefreshExpenses}
         onExpenseAdd={handleExpenseAdded}
         onAddExpensePress={() => {
+          setEditingExpense(null);
           setShowExpenseDetail(false);
+          setShowAddExpenseFromDetail(true);
+        }}
+        onExpensePress={expense => {
+          setEditingExpense(expense);
           setShowAddExpenseFromDetail(true);
         }}
       />
 
       <AddExpenseModal
         visible={showAddExpenseFromDetail}
+        expense={editingExpense}
         onClose={opts => {
           setShowAddExpenseFromDetail(false);
-          if (opts?.fromSave) {
+          if (opts?.fromSave && !editingExpense) {
             setShowExpenseDetail(false);
           } else {
             setShowExpenseDetail(true);
@@ -326,6 +334,14 @@ export default function TravelInfoModal({
         planStartDate={planStartDate}
         planEndDate={planEndDate}
         onExpenseAdd={handleExpenseAdded}
+        onExpenseUpdate={async () => {
+          await onRefreshExpenses?.();
+          await onRefreshPlan?.();
+        }}
+        onExpenseDelete={async () => {
+          await onRefreshExpenses?.();
+          await onRefreshPlan?.();
+        }}
       />
 
       <SharedMembersModal
@@ -413,6 +429,8 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.lg,
     borderRadius: radii.lgPlus,
     backgroundColor: colors.paletteInk,
+    experimental_backgroundImage: `linear-gradient(180deg, ${colors.gradientInk[0]} 0%, ${colors.gradientInk[1]} 100%)`,
+    ...shadows.darkRaised,
     alignItems: "center",
     justifyContent: "center",
   },

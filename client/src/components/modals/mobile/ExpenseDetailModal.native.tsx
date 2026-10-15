@@ -5,14 +5,19 @@ import { expensesApi } from "@/services/expenses";
 import { type Attachment, type Expense, ExpenseCategory } from "@/types/api";
 import { categoryLabels, currencyLabels } from "@/types/expense";
 import BottomSheetModal from "@/ui/components/BottomSheetModal.native";
+import ScalePressable from "@/ui/components/ScalePressable";
 import { colors } from "@/ui/tokens/colors";
 import { radii } from "@/ui/tokens/radii";
+import { shadows } from "@/ui/tokens/shadows";
 import { spacing } from "@/ui/tokens/spacing";
 import { textStyles, typography } from "@/ui/tokens/typography";
 import { formatFileSize } from "@/utils/fileUtils";
 import dayjs from "dayjs";
-import { useMemo, useRef, useState } from "react";
+import { toEasing } from "@/ui/effects/pressScale";
+import { motion } from "@/ui/tokens/motion";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
+  Animated,
   Linking,
   Pressable,
   ScrollView,
@@ -57,6 +62,30 @@ const CATEGORY_ORDER: ExpenseCategory[] = [
   ExpenseCategory.SHOPPING,
   ExpenseCategory.ETC,
 ];
+
+function CategoryChevron({ expanded }: { expanded: boolean }) {
+  const rotation = useRef(new Animated.Value(expanded ? 1 : 0)).current;
+
+  useEffect(() => {
+    Animated.timing(rotation, {
+      toValue: expanded ? 1 : 0,
+      duration: motion.duration.base,
+      easing: toEasing(motion.easing.ease),
+      useNativeDriver: true,
+    }).start();
+  }, [expanded, rotation]);
+
+  const rotate = rotation.interpolate({
+    inputRange: [0, 1],
+    outputRange: ["0deg", "180deg"],
+  });
+
+  return (
+    <Animated.View style={{ transform: [{ rotate }] }}>
+      <DownArrowIcon width={15} height={15} color={colors.paletteFg3} />
+    </Animated.View>
+  );
+}
 
 export default function ExpenseDetailModal({
   visible,
@@ -362,12 +391,7 @@ export default function ExpenseDetailModal({
                         </Text>
                       </View>
                       <Text style={styles.categoryCount}>{items.length}건</Text>
-                      <DownArrowIcon
-                        width={15}
-                        height={15}
-                        color={colors.paletteFg3}
-                        style={isExpanded && styles.chevronExpanded}
-                      />
+                      <CategoryChevron expanded={isExpanded} />
                     </Pressable>
                     {isExpanded && (
                       <View style={styles.categoryBody}>
@@ -546,13 +570,13 @@ export default function ExpenseDetailModal({
 
         {planId > 0 && onAddExpensePress && (
           <View style={styles.footer}>
-            <Pressable
+            <ScalePressable
               style={styles.addExpenseButton}
               onPress={onAddExpensePress}
             >
               <PlusIcon width={14} height={14} color={colors.white} />
               <Text style={styles.addExpenseButtonText}>비용 추가하기</Text>
-            </Pressable>
+            </ScalePressable>
           </View>
         )}
 
@@ -700,9 +724,6 @@ const styles = StyleSheet.create({
     ...textStyles.body5,
     color: colors.paletteFg3,
   },
-  chevronExpanded: {
-    transform: [{ rotate: "180deg" }],
-  },
   categoryBody: {
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.sm,
@@ -847,6 +868,8 @@ const styles = StyleSheet.create({
   },
   addExpenseButton: {
     backgroundColor: colors.paletteInk,
+    experimental_backgroundImage: `linear-gradient(180deg, ${colors.gradientInk[0]} 0%, ${colors.gradientInk[1]} 100%)`,
+    ...shadows.darkRaised,
     borderRadius: radii.lgPlus,
     paddingVertical: spacing.lg,
     flexDirection: "row",

@@ -15,6 +15,7 @@ import { usePlanDataQuery } from "@/hooks/usePlanDataQuery";
 import { usePlansQuery } from "@/hooks/usePlansQuery";
 import type {
   Accommodation,
+  Expense,
   FlightRead,
   FlightSegmentReadDto,
   Itinerary,
@@ -239,6 +240,7 @@ export default function WeeklyScreen() {
   const [showExpenseDetail, setShowExpenseDetail] = useState(false);
   const [showAddExpenseFromDetail, setShowAddExpenseFromDetail] =
     useState(false);
+  const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [showFlightDetail, setShowFlightDetail] = useState(false);
   const [selectedFlight, setSelectedFlight] = useState<FlightRead | null>(null);
   const [selectedFlightSegment, setSelectedFlightSegment] =
@@ -1304,16 +1306,22 @@ export default function WeeklyScreen() {
           });
         }}
         onAddExpensePress={() => {
+          setEditingExpense(null);
           setShowExpenseDetail(false);
+          setShowAddExpenseFromDetail(true);
+        }}
+        onExpensePress={expense => {
+          setEditingExpense(expense);
           setShowAddExpenseFromDetail(true);
         }}
       />
 
       <AddExpenseModal
         visible={showAddExpenseFromDetail}
+        expense={editingExpense}
         onClose={opts => {
           setShowAddExpenseFromDetail(false);
-          if (opts?.fromSave) {
+          if (opts?.fromSave && !editingExpense) {
             setShowExpenseDetail(false);
           } else {
             setShowExpenseDetail(true);
@@ -1329,6 +1337,20 @@ export default function WeeklyScreen() {
             queryKey: ["expenses", selectedPlan?.id],
           });
           setShowExpenseDetail(false);
+        }}
+        onExpenseUpdate={async () => {
+          await refetchDayExpenses();
+          queryClient.invalidateQueries({
+            queryKey: ["expenses", selectedPlan?.id],
+          });
+          planData.refreshAttachments();
+        }}
+        onExpenseDelete={async () => {
+          await refetchDayExpenses();
+          queryClient.invalidateQueries({
+            queryKey: ["expenses", selectedPlan?.id],
+          });
+          planData.refreshAttachments();
         }}
       />
 
