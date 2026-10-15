@@ -1,11 +1,14 @@
 import { plansApi } from "@/services/plans";
 import BottomSheetModal from "@/ui/components/BottomSheetModal.native";
-import { Input } from "@/ui/components/input";
+import ScalePressable from "@/ui/components/ScalePressable";
 import { colors } from "@/ui/tokens/colors";
 import { radii } from "@/ui/tokens/radii";
-import { textStyles, typography } from "@/ui/tokens/typography";
+import { shadows } from "@/ui/tokens/shadows";
+import { spacing } from "@/ui/tokens/spacing";
+import { textStyles } from "@/ui/tokens/typography";
 import { toUserMessage } from "@/utils/crossPlatformAlert";
 import { validateEmail } from "@/utils/validationUtils";
+import { MenuView } from "@react-native-menu/menu";
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -14,12 +17,14 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from "react-native";
 import { KeyboardAvoidingView } from "react-native-keyboard-controller";
 
-import CloseIcon from "../../../../assets/mobile_close.svg";
 import DropdownIcon from "../../../../assets/mobile_dropdown.svg";
+import CloseIcon from "../../../../assets/mobile_x.svg";
+import MoreIcon from "../../../../assets/more_horizontal.svg";
 import ShareAddIcon from "../../../../assets/share_add.svg";
 
 export type SharedMemberRole = "OWNER" | "EDITOR" | "VIEWER";
@@ -51,23 +56,14 @@ function planShareToSharedMember(s: {
     role === "OWNER"
       ? "전체 권한"
       : role === "EDITOR"
-        ? "편집 가능"
-        : "조회 전용";
+        ? "에디터 · 전체 편집 권한"
+        : "뷰어 · 조회 전용";
   return { id: s.handle, email: s.email, role, roleLabel };
 }
 
 const ROLE_OPTIONS: { value: "editor" | "viewer"; label: string }[] = [
   { value: "editor", label: "에디터" },
   { value: "viewer", label: "뷰어" },
-];
-
-const MEMBER_ROLE_OPTIONS: {
-  value: "editor" | "viewer" | "revoke";
-  label: string;
-}[] = [
-  { value: "editor", label: "에디터" },
-  { value: "viewer", label: "뷰어" },
-  { value: "revoke", label: "공유취소" },
 ];
 
 export default function SharedMembersModal({
@@ -82,8 +78,6 @@ export default function SharedMembersModal({
   const [selectedRole, setSelectedRole] = useState<"editor" | "viewer">(
     "editor",
   );
-  const [showRolePicker, setShowRolePicker] = useState(false);
-  const [openMemberId, setOpenMemberId] = useState<string | null>(null);
   const [roleUpdateLoading, setRoleUpdateLoading] = useState<string | null>(
     null,
   );
@@ -112,6 +106,8 @@ export default function SharedMembersModal({
     propSharedMembers != null && propSharedMembers.length > 0
       ? propSharedMembers
       : fetchedMembers;
+
+  const inviteDisabled = !inviteEmail.trim() || inviteLoading;
 
   const handleInvite = async () => {
     const result = validateEmail(inviteEmail);
@@ -148,7 +144,6 @@ export default function SharedMembersModal({
   ) => {
     if (!planId) return;
     setRoleUpdateLoading(memberId);
-    setOpenMemberId(null);
     try {
       await plansApi.updateShare(planId, memberId, role);
       loadShares();
@@ -166,13 +161,12 @@ export default function SharedMembersModal({
   const handleRevokeMember = async (memberId: string) => {
     if (!planId) return;
     Alert.alert("공유 취소", "해당 사용자의 공유를 취소하시겠습니까?", [
-      { text: "취소", style: "cancel", onPress: () => setOpenMemberId(null) },
+      { text: "취소", style: "cancel" },
       {
         text: "확인",
         style: "destructive",
         onPress: async () => {
           setRoleUpdateLoading(memberId);
-          setOpenMemberId(null);
           try {
             await plansApi.revokeShare(planId, memberId);
             loadShares();
@@ -191,251 +185,185 @@ export default function SharedMembersModal({
   };
 
   return (
-    <BottomSheetModal
-      visible={visible}
-      onClose={onClose}
-      height={0.85}
-      showDragHandle
-    >
+    <BottomSheetModal visible={visible} onClose={onClose} height={0.92}>
       <KeyboardAvoidingView
         style={styles.keyboardView}
         behavior="padding"
         keyboardVerticalOffset={0}
       >
-        
-        {(showRolePicker || openMemberId !== null) && (
-          <Pressable
-            style={[StyleSheet.absoluteFill, { zIndex: 99, elevation: 99 }]}
-            onPress={() => {
-              setShowRolePicker(false);
-              setOpenMemberId(null);
-            }}
-          />
-        )}
-
-        {/* Header */}
         <View style={styles.header}>
           <Text style={styles.headerTitle}>참여 멤버</Text>
-          <View style={styles.headerRight}>
-            <Pressable style={styles.closeButton} onPress={onClose} hitSlop={8}>
-              <CloseIcon width={20} height={20} color={colors.gray700} />
-            </Pressable>
-          </View>
+          <Pressable
+            style={styles.closeButton}
+            onPress={onClose}
+            accessibilityLabel="닫기"
+          >
+            <CloseIcon width={24} height={24} color={colors.paletteFg3} />
+          </Pressable>
         </View>
 
-        {/* 멤버 초대 - owner, editor만 표시 */}
-        {canManage && (
-          <View style={styles.inviteSection}>
-            <Text style={styles.sectionLabel}>멤버 초대</Text>
-            <View style={[styles.inviteRow, showRolePicker && { zIndex: 100, elevation: 100 }]}>
-              <Input
-                variant="filled"
-                containerStyle={styles.emailInputContainer}
-                style={styles.emailInput}
-                placeholder="이메일 주소"
-                placeholderTextColor={colors.gray600}
-                value={inviteEmail}
-                onChangeText={setInviteEmail}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoCorrect={false}
-              />
-              <View 
-                style={[styles.rolePickerWrap, showRolePicker && { zIndex: 101, elevation: 101 }]}
-              >
-                <Pressable
-                  style={styles.roleButton}
-                  onPress={() => {
-                    setOpenMemberId(null);
-                    setShowRolePicker(!showRolePicker);
-                  }}
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          {canManage && (
+            <View>
+              <Text style={styles.sectionLabel}>멤버 초대</Text>
+              <View style={styles.inviteRow}>
+                <TextInput
+                  style={styles.emailInput}
+                  placeholder="이메일 주소"
+                  placeholderTextColor={colors.paletteFg3}
+                  value={inviteEmail}
+                  onChangeText={setInviteEmail}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                />
+                <MenuView
+                  actions={ROLE_OPTIONS.map(opt => ({
+                    id: opt.value,
+                    title: opt.label,
+                    state: selectedRole === opt.value ? "on" : "off",
+                  }))}
+                  onPressAction={({ nativeEvent }) =>
+                    setSelectedRole(nativeEvent.event as "editor" | "viewer")
+                  }
                 >
-                  <View style={styles.roleButtonContent}>
-                    <Text style={styles.roleButtonText} numberOfLines={1}>
+                  <View style={styles.roleButton}>
+                    <Text style={styles.roleButtonText}>
                       {ROLE_OPTIONS.find(o => o.value === selectedRole)
                         ?.label ?? "에디터"}
                     </Text>
                     <DropdownIcon
-                      width={16}
-                      height={16}
-                      color={colors.gray600}
+                      width={17}
+                      height={17}
+                      color={colors.gray700}
                     />
                   </View>
-                </Pressable>
-                {showRolePicker && (
-                  <View style={styles.roleDropdown}>
-                    {ROLE_OPTIONS.map(opt => (
-                      <Pressable
-                        key={opt.value}
-                        style={[
-                          styles.roleDropdownItem,
-                          opt.value === selectedRole &&
-                            styles.roleDropdownItemActive,
-                        ]}
-                        onPress={() => {
-                          setSelectedRole(opt.value);
-                          setShowRolePicker(false);
-                        }}
-                      >
-                        <Text style={styles.roleDropdownItemText}>
-                          {opt.label}
-                        </Text>
-                      </Pressable>
-                    ))}
-                  </View>
-                )}
+                </MenuView>
               </View>
-            </View>
-            <Pressable
-              style={[
-                styles.inviteButton,
-                (!inviteEmail.trim() || inviteLoading) &&
-                  styles.inviteButtonDisabled,
-              ]}
-              onPress={handleInvite}
-              disabled={!inviteEmail.trim() || inviteLoading}
-            >
-              {inviteLoading ? (
-                <ActivityIndicator color={colors.gray600} size="small" />
-              ) : (
-                <ShareAddIcon
-                  width={16}
-                  height={16}
-                  color={inviteEmail.trim() ? colors.white : colors.gray600}
-                />
-              )}
-              <Text
+              <ScalePressable
                 style={[
-                  styles.inviteButtonText,
-                  (!inviteEmail.trim() || inviteLoading) &&
-                    styles.inviteButtonTextDisabled,
+                  styles.inviteButton,
+                  inviteDisabled && styles.inviteButtonDisabled,
                 ]}
+                onPress={handleInvite}
+                disabled={inviteDisabled}
               >
-                초대하기
-              </Text>
-            </Pressable>
-          </View>
-        )}
+                {inviteLoading ? (
+                  <ActivityIndicator color={colors.paletteFg3} size="small" />
+                ) : (
+                  <ShareAddIcon
+                    width={20}
+                    height={20}
+                    color={inviteDisabled ? colors.paletteFg3 : colors.white}
+                  />
+                )}
+                <Text
+                  style={[
+                    styles.inviteButtonText,
+                    inviteDisabled && styles.inviteButtonTextDisabled,
+                  ]}
+                >
+                  초대하기
+                </Text>
+              </ScalePressable>
+            </View>
+          )}
 
-        <ScrollView
-          style={[styles.scrollView, openMemberId !== null && { zIndex: 100, elevation: 100 }]}
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-          onScrollBeginDrag={() => {
-            setShowRolePicker(false);
-            setOpenMemberId(null);
-          }}
-          scrollEventThrottle={16}
-        >
-          {/* 참여자 목록 */}
-          <Text style={styles.sectionLabel}>
+          <Text
+            style={[
+              styles.membersTitle,
+              !canManage && styles.membersTitleFirst,
+            ]}
+          >
             참여자 ({loading ? "..." : sharedMembers.length})
           </Text>
-          <View 
-            style={[styles.memberList, openMemberId !== null && { zIndex: 101, elevation: 101 }]}
-          >
-            {loading ? (
-              <ActivityIndicator
-                color={colors.gray600}
-                style={{ paddingVertical: 24 }}
-              />
-            ) : (
-              sharedMembers.map(member => (
-                <View 
-                  key={member.id} 
-                  style={[styles.memberRow, openMemberId === member.id && { zIndex: 102, elevation: 102 }]}
-                >
-                  <View style={styles.avatar} />
-                  <View style={styles.memberInfo}>
-                    <View style={styles.memberEmailRow}>
-                      <Text style={styles.memberEmail} numberOfLines={1}>
-                        {member.email}
-                      </Text>
-                      {member.role === "OWNER" && (
-                        <View style={styles.ownerBadge}>
-                          <Text style={styles.ownerBadgeText}>OWNER</Text>
-                        </View>
-                      )}
-                    </View>
-                    <Text style={styles.memberRoleLabel}>
-                      {member.roleLabel}
-                    </Text>
-                  </View>
-                  {member.role !== "OWNER" && canManage && (
-                    <View 
-                    style={[styles.memberRolePickerWrap, openMemberId === member.id && { zIndex: 103, elevation: 103 }]}
-                    >
-                      <Pressable
-                        style={styles.roleSelectButton}
-                        onPress={() => {
-                          setShowRolePicker(false);
-                          setOpenMemberId(prev =>
-                            prev === member.id ? null : member.id,
-                          );
-                        }}
-                        disabled={roleUpdateLoading === member.id}
-                      >
-                        {roleUpdateLoading === member.id ? (
-                          <ActivityIndicator
-                            color={colors.gray600}
-                            size="small"
-                          />
-                        ) : (
-                          <>
-                            <Text style={styles.roleSelectText}>
-                              {member.role === "EDITOR" ? "에디터" : "뷰어"}
-                            </Text>
-                            <DropdownIcon
-                              width={16}
-                              height={16}
-                              color={colors.gray600}
-                            />
-                          </>
-                        )}
-                      </Pressable>
-                      {openMemberId === member.id && (
-                        <View style={styles.memberRoleDropdown}>
-                          {MEMBER_ROLE_OPTIONS.map(opt => (
-                            <Pressable
-                              key={opt.value}
-                              style={[
-                                styles.roleDropdownItem,
-                                opt.value !== "revoke" &&
-                                  (member.role === "EDITOR"
-                                    ? "editor"
-                                    : "viewer") === opt.value &&
-                                  styles.roleDropdownItemActive,
-                                opt.value === "revoke" &&
-                                  styles.roleDropdownItemRevoke,
-                              ]}
-                              onPress={() => {
-                                if (opt.value === "revoke") {
-                                  handleRevokeMember(member.id);
-                                } else {
-                                  handleUpdateMemberRole(member.id, opt.value);
-                                }
-                              }}
-                            >
-                              <Text
-                                style={[
-                                  styles.roleDropdownItemText,
-                                  opt.value === "revoke" &&
-                                    styles.roleDropdownItemRevokeText,
-                                ]}
-                              >
-                                {opt.label}
-                              </Text>
-                            </Pressable>
-                          ))}
-                        </View>
-                      )}
-                    </View>
-                  )}
+          {loading ? (
+            <ActivityIndicator
+              color={colors.paletteFg3}
+              style={styles.loadingIndicator}
+            />
+          ) : (
+            sharedMembers.map((member, index) => (
+              <View
+                key={member.id}
+                style={[styles.memberRow, index > 0 && styles.memberRowDivider]}
+              >
+                <View style={styles.avatar}>
+                  <Text style={styles.avatarText}>
+                    {member.email.charAt(0).toUpperCase()}
+                  </Text>
                 </View>
-              ))
-            )}
-          </View>
+                <View style={styles.memberInfo}>
+                  <View style={styles.memberEmailRow}>
+                    <Text style={styles.memberEmail} numberOfLines={1}>
+                      {member.email}
+                    </Text>
+                    {member.role === "OWNER" && (
+                      <View style={styles.ownerBadge}>
+                        <Text style={styles.ownerBadgeText}>OWNER</Text>
+                      </View>
+                    )}
+                  </View>
+                  <Text style={styles.memberRoleLabel}>{member.roleLabel}</Text>
+                </View>
+                {member.role !== "OWNER" &&
+                  canManage &&
+                  (roleUpdateLoading === member.id ? (
+                    <View style={styles.moreButton}>
+                      <ActivityIndicator
+                        color={colors.paletteFg3}
+                        size="small"
+                      />
+                    </View>
+                  ) : (
+                    <MenuView
+                      actions={[
+                        ...ROLE_OPTIONS.map(opt => ({
+                          id: opt.value,
+                          title: opt.label,
+                          state:
+                            (member.role === "EDITOR" ? "editor" : "viewer") ===
+                            opt.value
+                              ? ("on" as const)
+                              : ("off" as const),
+                        })),
+                        {
+                          id: "revoke",
+                          title: "공유 취소",
+                          attributes: { destructive: true },
+                        },
+                      ]}
+                      onPressAction={({ nativeEvent }) => {
+                        if (nativeEvent.event === "revoke") {
+                          handleRevokeMember(member.id);
+                        } else {
+                          handleUpdateMemberRole(
+                            member.id,
+                            nativeEvent.event as "editor" | "viewer",
+                          );
+                        }
+                      }}
+                    >
+                      <View
+                        style={styles.moreButton}
+                        accessibilityLabel="권한 변경"
+                      >
+                        <MoreIcon
+                          width={19}
+                          height={19}
+                          color={colors.paletteFg3}
+                        />
+                      </View>
+                    </MenuView>
+                  ))}
+              </View>
+            ))
+          )}
         </ScrollView>
       </KeyboardAvoidingView>
     </BottomSheetModal>
@@ -449,153 +377,124 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    paddingTop: 4,
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.sm,
   },
   headerTitle: {
-    ...textStyles.h4,
-    color: colors.black,
-  },
-  headerRight: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
+    ...textStyles.h2,
+    letterSpacing: -0.48,
+    color: colors.paletteInk,
   },
   closeButton: {
-    padding: 4,
-    backgroundColor: colors.gray200,
-    borderRadius: 16,
-    height: 32,
-    width: 32,
+    width: 44,
+    height: 44,
+    marginLeft: "auto",
+    marginRight: -spacing.sm,
     alignItems: "center",
     justifyContent: "center",
-  },
-  inviteSection: {
-    paddingHorizontal: 20,
-    zIndex: 100,
   },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
-    paddingHorizontal: 20,
-    paddingBottom: 40,
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.lg,
+    paddingBottom: spacing["2xl"],
   },
   sectionLabel: {
-    ...textStyles.h7,
-    color: colors.black,
-    marginBottom: 8,
+    ...textStyles.h6,
+    color: colors.gray700,
+    marginBottom: spacing.md,
   },
   inviteRow: {
     flexDirection: "row",
-    gap: 8,
-    marginBottom: 12,
-  },
-  emailInputContainer: {
-    flex: 7,
-    height: 48,
+    gap: spacing.md,
   },
   emailInput: {
-    height: 48,
-    backgroundColor: colors.gray200,
-    borderRadius: 12,
+    flex: 1,
+    minWidth: 0,
+    height: 56,
+    paddingHorizontal: spacing.lg,
     paddingVertical: 0,
-    fontFamily: typography.fontFamily.pretendardRegular,
-    fontSize: 14,
-    color: colors.black,
-  },
-  rolePickerWrap: {
-    alignItems: "flex-end",
-    position: "relative",
-    zIndex: 10,
+    borderRadius: radii.lgPlus,
+    backgroundColor: colors.gray200,
+    fontFamily: textStyles.body2.fontFamily,
+    fontSize: textStyles.body2.fontSize,
+    color: colors.paletteInk,
   },
   roleButton: {
-    height: 48,
-    width: 93,
-    backgroundColor: colors.gray200,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    justifyContent: "center",
-  },
-  roleButtonContent: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    width: "100%",
+    gap: spacing.sm,
+    height: 56,
+    minWidth: 116,
+    paddingHorizontal: spacing.lg,
+    borderRadius: radii.lgPlus,
+    backgroundColor: colors.gray200,
   },
   roleButtonText: {
-    ...textStyles.h6,
-    color: colors.black,
-    flexShrink: 1,
-  },
-  roleDropdown: {
-    position: "absolute",
-    top: "100%",
-    left: 0,
-    right: 0,
-    marginTop: 2,
-    zIndex: 1000,
-    elevation: 10,
-    backgroundColor: colors.gray200,
-    borderRadius: 12,
-    overflow: "hidden",
-  },
-  roleDropdownItem: {
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-  },
-  roleDropdownItemActive: {
-    backgroundColor: colors.gray200,
-  },
-  roleDropdownItemRevoke: {
-    borderTopWidth: 1,
-    borderTopColor: colors.gray200,
-  },
-  roleDropdownItemRevokeText: {
-    color: colors.gray600,
-  },
-  roleDropdownItemText: {
-    ...textStyles.h6,
-    color: colors.black,
+    ...textStyles.h5,
+    color: colors.paletteInk,
   },
   inviteButton: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 8,
-    height: 48,
-    backgroundColor: colors.black,
-    borderRadius: 12,
-    marginBottom: 24,
+    gap: spacing.sm,
+    height: 56,
+    marginTop: spacing.md,
+    borderRadius: radii.lgPlus,
+    backgroundColor: colors.paletteInk,
+    experimental_backgroundImage: `linear-gradient(180deg, ${colors.gradientInk[0]} 0%, ${colors.gradientInk[1]} 100%)`,
+    ...shadows.darkRaised,
   },
   inviteButtonDisabled: {
-    backgroundColor: colors.gray300,
+    backgroundColor: colors.gray200,
+    experimental_backgroundImage: "none",
+    boxShadow: "none",
   },
   inviteButtonText: {
-    ...textStyles.h6,
+    ...textStyles.h5,
     color: colors.white,
   },
   inviteButtonTextDisabled: {
     color: colors.gray600,
   },
-  memberList: {
-    backgroundColor: colors.white,
+  membersTitle: {
+    ...textStyles.h5,
+    color: colors.paletteInk,
+    marginTop: spacing["2xl"],
+    marginBottom: spacing.sm,
+  },
+  membersTitleFirst: {
+    marginTop: 0,
+  },
+  loadingIndicator: {
+    paddingVertical: spacing.xl,
   },
   memberRow: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.gray200,
+    gap: spacing.lg,
+    paddingVertical: spacing.lg,
+  },
+  memberRowDivider: {
+    borderTopWidth: 1,
+    borderTopColor: colors.gray200,
   },
   avatar: {
-    width: 36,
-    height: 36,
-    borderRadius: 12,
-    backgroundColor: colors.gray300,
-    marginRight: 12,
+    width: 46,
+    height: 46,
+    borderRadius: radii.pill,
+    backgroundColor: colors.paletteFill2,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  avatarText: {
+    ...textStyles.h4,
+    color: colors.gray900,
   },
   memberInfo: {
     flex: 1,
@@ -604,56 +503,32 @@ const styles = StyleSheet.create({
   memberEmailRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-    marginBottom: 2,
+    gap: spacing.sm,
   },
   memberEmail: {
-    ...textStyles.h6,
-    color: colors.black,
+    ...textStyles.h5,
+    color: colors.paletteInk,
+    flexShrink: 1,
   },
   ownerBadge: {
-    backgroundColor: colors.black,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: radii.sm,
+    backgroundColor: colors.gray900,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: radii.md,
   },
   ownerBadgeText: {
-    ...textStyles.h9,
+    ...textStyles.h8,
     color: colors.white,
-    letterSpacing: 0.5,
   },
   memberRoleLabel: {
-    ...textStyles.h7,
+    ...textStyles.body4,
     color: colors.gray600,
+    marginTop: spacing.xs,
   },
-  memberRolePickerWrap: {
-    position: "relative",
-    zIndex: 10,
-  },
-  memberRoleDropdown: {
-    position: "absolute",
-    top: "100%",
-    right: 0,
-    minWidth: 82,
-    zIndex: 1000,
-    elevation: 10,
-    backgroundColor: colors.gray200,
-    borderRadius: radii.md,
-    overflow: "hidden",
-  },
-  roleSelectButton: {
-    flexDirection: "row",
+  moreButton: {
+    width: 36,
+    height: 36,
     alignItems: "center",
-    gap: 4,
-    height: 40,
-    minWidth: 82,
-    backgroundColor: colors.gray200,
-    borderRadius: radii.md,
-    paddingHorizontal: 12,
     justifyContent: "center",
-  },
-  roleSelectText: {
-    ...textStyles.h7,
-    color: colors.gray600,
   },
 });
