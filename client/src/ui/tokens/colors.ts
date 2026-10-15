@@ -100,6 +100,7 @@ export const colors = {
   suggestionShoppingBg: "#E6F7EE",
   suggestionLeisure: "#0E6EBF",
   suggestionLeisureBg: "#E0F0FF",
+  memoPlaceholder: "#9FB2CC",
   expenseAccommodation: "#8B5CF6",
   expenseFlight: "#06B6D4",
   festivalBg: "#E3F6F6",
