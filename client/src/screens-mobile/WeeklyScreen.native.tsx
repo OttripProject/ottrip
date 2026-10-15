@@ -39,7 +39,7 @@ import {
 } from "@/utils/dateUtils";
 import { useQueryClient } from "@tanstack/react-query";
 import dayjs from "dayjs";
-import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import PagerView from "react-native-pager-view";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
@@ -51,11 +51,9 @@ import {
   Pressable,
   RefreshControl,
   ScrollView,
-  type StyleProp,
   StyleSheet,
   Text,
   View,
-  type ViewStyle,
 } from "react-native";
 
 type AddScheduleFlow = "closed" | "method" | "direct" | "ai";
@@ -92,6 +90,7 @@ import {
   tourismApi,
 } from "@/services/tourism";
 import CalendarModal from "@/ui/components/CalendarModal.native";
+import ScalePressable from "@/ui/components/ScalePressable";
 import { extendPlanIfNeeded } from "@/utils/extendPlanIfNeeded";
 import { collectPlanItemDates, shrinkPlanIfNeeded } from "@/utils/shrinkPlanIfNeeded";
 import { guestPrompt } from "@/utils/guestPrompt";
@@ -136,29 +135,6 @@ function PulseDot() {
   }, [opacity]);
 
   return <Animated.View style={[styles.pulseDot, { opacity }]} />;
-}
-
-function ScalePressable({
-  style,
-  onPress,
-  children,
-}: {
-  style: StyleProp<ViewStyle>;
-  onPress: () => void;
-  children: ReactNode;
-}) {
-  const { scale, onPressIn, onPressOut } = usePressScale();
-
-  return (
-    <AnimatedPressable
-      style={[style, { transform: [{ scale }] }]}
-      onPress={onPress}
-      onPressIn={onPressIn}
-      onPressOut={onPressOut}
-    >
-      {children}
-    </AnimatedPressable>
-  );
 }
 
 function DayTabButton({
