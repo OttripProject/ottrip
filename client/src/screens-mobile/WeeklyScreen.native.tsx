@@ -853,7 +853,7 @@ export default function WeeklyScreen() {
               accessibilityLabel="더보기"
               onPress={() => setMoreMenuVisible(true)}
             >
-              <DotsIcon width={20} height={20} />
+              <DotsIcon width={20} height={20} color={colors.black} />
             </Pressable>
           </View>
         </View>

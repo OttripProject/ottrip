@@ -22,9 +22,9 @@ import {
 } from "react-native";
 import { KeyboardAvoidingView } from "react-native-keyboard-controller";
 
+import DotsIcon from "../../../../assets/dots.svg";
 import DropdownIcon from "../../../../assets/mobile_dropdown.svg";
 import CloseIcon from "../../../../assets/mobile_x.svg";
-import MoreIcon from "../../../../assets/more_horizontal.svg";
 import ShareAddIcon from "../../../../assets/share_add.svg";
 
 export type SharedMemberRole = "OWNER" | "EDITOR" | "VIEWER";
@@ -353,7 +353,7 @@ export default function SharedMembersModal({
                         style={styles.moreButton}
                         accessibilityLabel="권한 변경"
                       >
-                        <MoreIcon
+                        <DotsIcon
                           width={19}
                           height={19}
                           color={colors.paletteFg3}
