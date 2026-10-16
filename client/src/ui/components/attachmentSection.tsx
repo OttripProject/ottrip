@@ -1505,7 +1505,7 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
     paddingHorizontal: 8,
     borderRadius: 999,
-    backgroundColor: colors.itineraryBg,
+    backgroundColor: colors.primaryTint,
   },
   expenseSuccessBadgeText: {
     fontFamily: "Pretendard-SemiBold",
@@ -1517,7 +1517,7 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
     paddingHorizontal: 7,
     borderRadius: 999,
-    backgroundColor: colors.itineraryBg,
+    backgroundColor: colors.primaryTint,
     flexShrink: 0,
   },
   expenseAiFileBadgeText: {

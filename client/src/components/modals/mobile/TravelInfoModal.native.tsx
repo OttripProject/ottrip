@@ -486,7 +486,7 @@ const styles = StyleSheet.create({
     color: colors.paletteFg2,
   },
   memoBox: {
-    backgroundColor: colors.itineraryBg,
+    backgroundColor: colors.primaryTint,
     borderRadius: radii.lgPlus,
     padding: spacing.lg,
   },

@@ -4,7 +4,7 @@ import type {
   ExportFlight,
   ExportItinerary,
 } from "@/services/plans";
-import { type ItineraryCategory, itineraryCategoryColors } from "@/types/itinerary";
+import { ItineraryCategory, itineraryCategoryColors } from "@/types/itinerary";
 import { colors } from "@/ui/tokens/colors";
 import { radii } from "@/ui/tokens/radii";
 import { spacing } from "@/ui/tokens/spacing";
@@ -429,11 +429,6 @@ export default function ViewerSchedulePanel({
                                 top: 2,
                                 bottom: 2,
                                 backgroundColor: colors.accommodationBg,
-                                borderTopWidth: 1,
-                                borderBottomWidth: 1,
-                                borderLeftWidth: isStart ? 1 : 0,
-                                borderRightWidth: isEnd ? 1 : 0,
-                                borderColor: colors.accommodationBorder,
                                 borderTopLeftRadius: isStart ? 6 : 0,
                                 borderBottomLeftRadius: isStart ? 6 : 0,
                                 borderTopRightRadius: isEnd ? 6 : 0,
@@ -542,12 +537,10 @@ export default function ViewerSchedulePanel({
           const isItinerary = event.type === "itinerary";
           const isFlight = event.type === "flight";
 
-          const itineraryCategory = isItinerary
-            ? (event.originalData?.category as ItineraryCategory | undefined)
-            : undefined;
-          const itineraryCategoryColor = itineraryCategory
-            ? itineraryCategoryColors[itineraryCategory]
-            : null;
+          const itineraryCategory =
+            (event.originalData?.category as ItineraryCategory | undefined) ??
+            ItineraryCategory.ACTIVITY;
+          const itineraryCategoryColor = itineraryCategoryColors[itineraryCategory];
 
           const flattenStyle = (s: any): any => {
             if (!s) return {};
@@ -581,13 +574,9 @@ export default function ViewerSchedulePanel({
                 borderRadius: radii.md,
               }
             : {
-                backgroundColor: itineraryCategoryColor
-                  ? `${itineraryCategoryColor}1A`
-                  : colors.itineraryBg,
+                backgroundColor: `${itineraryCategoryColor}1A`,
                 borderWidth: 1,
-                borderColor: itineraryCategoryColor
-                  ? `${itineraryCategoryColor}59`
-                  : colors.itineraryBorder,
+                borderColor: `${itineraryCategoryColor}59`,
                 borderRadius: radii.md,
               };
 
@@ -630,7 +619,7 @@ export default function ViewerSchedulePanel({
                         borderRadius: 999,
                         backgroundColor: isFlight
                           ? colors.flightText
-                          : (itineraryCategoryColor ?? colors.itineraryDot),
+                          : itineraryCategoryColor,
                         flexShrink: 0,
                       }}
                     />
@@ -648,7 +637,7 @@ export default function ViewerSchedulePanel({
                         lineHeight: 14,
                         color: isFlight
                           ? colors.flightText
-                          : (itineraryCategoryColor ?? colors.itineraryText),
+                          : itineraryCategoryColor,
                         flex: 1,
                       }}
                     >
@@ -661,7 +650,7 @@ export default function ViewerSchedulePanel({
                           ...textStyles.h9,
                           color: isFlight
                             ? colors.flightText
-                            : (itineraryCategoryColor ?? colors.itineraryText),
+                            : itineraryCategoryColor,
                           opacity: 0.75,
                           flexShrink: 0,
                         }}
@@ -678,7 +667,7 @@ export default function ViewerSchedulePanel({
                         <WeekBarTimeIcon
                           width={9}
                           height={9}
-                          color={itineraryCategoryColor ?? colors.itineraryText}
+                          color={itineraryCategoryColor}
                         />
                       </View>
                       <Text
@@ -688,7 +677,7 @@ export default function ViewerSchedulePanel({
                           fontFamily: typography.fontFamily.pretendardRegular,
                           fontSize: 10,
                           lineHeight: 14,
-                          color: itineraryCategoryColor ?? colors.itineraryText,
+                          color: itineraryCategoryColor,
                         }}
                       >
                         {event.normalizedStartTime} - {event.normalizedEndTime}
@@ -705,7 +694,7 @@ export default function ViewerSchedulePanel({
                         fontFamily: typography.fontFamily.pretendardRegular,
                         fontSize: 10,
                         lineHeight: 14,
-                        color: itineraryCategoryColor ?? colors.itineraryText,
+                        color: itineraryCategoryColor,
                         opacity: 0.65,
                       }}
                     >
@@ -863,7 +852,7 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 999,
-    backgroundColor: colors.dotAccommodation,
+    backgroundColor: colors.accommodationText,
     flexShrink: 0,
   },
   eventTouchable: {

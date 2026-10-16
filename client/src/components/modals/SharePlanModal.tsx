@@ -459,7 +459,7 @@ const styles = StyleSheet.create({
   },
   shareEmail: {
     ...textStyles.body4,
-    color: colors.itineraryDot,
+    color: colors.primary,
   },
   shareChipMeta: {
     flexDirection: "row",

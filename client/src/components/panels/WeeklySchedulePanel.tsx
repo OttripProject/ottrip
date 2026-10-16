@@ -76,7 +76,7 @@ import WeekBarLocationIcon from "../../../assets/week_bar_location.svg";
 import UploadIcon from "../../../assets/upload_tray.svg";
 import { extendPlanIfNeeded } from "@/utils/extendPlanIfNeeded";
 import { collectPlanItemDates, shrinkPlanIfNeeded } from "@/utils/shrinkPlanIfNeeded";
-import { type ItineraryCategory, itineraryCategoryColors } from "@/types/itinerary";
+import { ItineraryCategory, itineraryCategoryColors } from "@/types/itinerary";
 
 dayjs.locale(ko);
 
@@ -124,8 +124,7 @@ const CATEGORY_TINTS: Partial<Record<ItineraryCategory, string>> = {
   SIGHTSEEING: colors.performanceBg,
 };
 
-function categoryTint(category?: ItineraryCategory): string {
-  if (!category) return colors.itineraryBg;
+function categoryTint(category: ItineraryCategory): string {
   return CATEGORY_TINTS[category] ?? `${itineraryCategoryColors[category]}1A`;
 }
 
@@ -2747,9 +2746,7 @@ export default function WeeklySchedulePanel({
                                             isStart && isSelected ? 2 : 0,
                                           borderRightWidth:
                                             isEnd && isSelected ? 2 : 0,
-                                          borderColor: isSelected
-                                            ? colors.accommodationBorder
-                                            : colors.accommodationBorder,
+                                          borderColor: colors.accommodationText,
                                           borderTopLeftRadius: isStart ? radii.xs : 0,
                                           borderBottomLeftRadius: isStart
                                             ? radii.xs
@@ -2934,7 +2931,7 @@ export default function WeeklySchedulePanel({
                                       borderStyle: "dashed" as any,
                                       borderColor: previewHasOverlap
                                         ? colors.danger
-                                        : colors.accommodationBorder,
+                                        : colors.accommodationText,
                                       borderTopLeftRadius: isPreviewStart
                                         ? radii.xs
                                         : 0,
@@ -3116,7 +3113,7 @@ export default function WeeklySchedulePanel({
                                 borderStyle: "dashed" as any,
                                 borderColor: isOverlap
                                   ? colors.danger
-                                  : colors.accommodationBorder,
+                                  : colors.accommodationText,
                                 borderRadius: radii.xs,
                                 opacity: 0.7,
                                 zIndex: 20,
@@ -3176,7 +3173,7 @@ export default function WeeklySchedulePanel({
                                 backgroundColor: colors.accommodationBg,
                                 borderWidth: 2,
                                 borderStyle: "dashed" as any,
-                                borderColor: colors.accommodationBorder,
+                                borderColor: colors.accommodationText,
                                 borderRadius: radii.xs,
                                 opacity: 0.7,
                                 zIndex: 20,
@@ -3381,18 +3378,16 @@ export default function WeeklySchedulePanel({
                 }
               : null;
 
-            const itineraryCategory = (isItinerary || isPreview)
-              ? (event.originalData?.category as ItineraryCategory | undefined)
-              : undefined;
-            const itineraryCategoryColor = itineraryCategory
-              ? itineraryCategoryColors[itineraryCategory]
-              : null;
+            const itineraryCategory =
+              (event.originalData?.category as ItineraryCategory | undefined) ??
+              ItineraryCategory.ACTIVITY;
+            const itineraryCategoryColor = itineraryCategoryColors[itineraryCategory];
             const itineraryStyle = isItinerary
               ? {
                   backgroundColor: categoryTint(itineraryCategory),
                   borderWidth: borderWidth,
                   borderColor: isSelected
-                    ? (itineraryCategoryColor ?? colors.itineraryText)
+                    ? itineraryCategoryColor
                     : "transparent",
                   borderRadius: radii.xs,
                 }
@@ -3402,9 +3397,7 @@ export default function WeeklySchedulePanel({
               ? {
                   backgroundColor: categoryTint(itineraryCategory),
                   borderWidth: 1,
-                  borderColor: itineraryCategoryColor
-                    ? `${itineraryCategoryColor}59`
-                    : colors.itineraryBorder,
+                  borderColor: `${itineraryCategoryColor}59`,
                   borderRadius: radii.xs,
                   borderStyle: "dashed",
                   opacity: 0.7,
@@ -3516,7 +3509,7 @@ export default function WeeklySchedulePanel({
                             ...textStyles.h9,
                             color: isFlight
                               ? colors.flightText
-                              : (itineraryCategoryColor ?? colors.itineraryText),
+                              : itineraryCategoryColor,
                             flex: 1,
                           }}
                         >
@@ -3529,7 +3522,7 @@ export default function WeeklySchedulePanel({
                               ...textStyles.h9,
                               color: isFlight
                                 ? colors.flightText
-                                : (itineraryCategoryColor ?? colors.itineraryText),
+                                : itineraryCategoryColor,
                               opacity: 0.75,
                               flexShrink: 0,
                             }}
@@ -3551,7 +3544,7 @@ export default function WeeklySchedulePanel({
                             style={{
                               ...textStyles.body6,
                               fontWeight: typography.weight.medium,
-                              color: itineraryCategoryColor ?? colors.itineraryText,
+                              color: itineraryCategoryColor,
                             }}
                           >
                             {event.normalizedStartTime} -{" "}
@@ -3568,7 +3561,7 @@ export default function WeeklySchedulePanel({
                           ellipsizeMode="tail"
                           style={{
                             ...textStyles.body6,
-                            color: itineraryCategoryColor ?? colors.itineraryText,
+                            color: itineraryCategoryColor,
                             opacity: 0.65,
                           }}
                         >
