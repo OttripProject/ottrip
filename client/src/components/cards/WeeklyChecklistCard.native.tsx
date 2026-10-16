@@ -12,10 +12,12 @@ import {
   Alert,
   Platform,
   Pressable,
+  type StyleProp,
   StyleSheet,
   Text,
   TextInput,
   View,
+  type ViewStyle,
 } from "react-native";
 import CheckIcon from "../../../assets/gender_check.svg";
 import ChecklistIcon from "../../../assets/mobile_check.svg";
@@ -29,6 +31,7 @@ export type WeeklyChecklistCardProps = {
   planStartDate?: string;
   itineraries?: Itinerary[];
   titleOverride?: string;
+  cardStyle?: StyleProp<ViewStyle>;
 };
 
 export default function WeeklyChecklistCard({
@@ -38,6 +41,7 @@ export default function WeeklyChecklistCard({
   planStartDate,
   itineraries = [],
   titleOverride,
+  cardStyle,
 }: WeeklyChecklistCardProps) {
   const queryClient = useQueryClient();
   const { data: me } = useMe();
@@ -228,7 +232,7 @@ export default function WeeklyChecklistCard({
 
   return (
     <View style={styles.section}>
-      <View style={styles.card}>
+      <View style={[styles.card, cardStyle]}>
         <View style={styles.header}>
           <View style={styles.headerLeft}>
             <ChecklistIcon width={20} height={20} color={colors.black} />

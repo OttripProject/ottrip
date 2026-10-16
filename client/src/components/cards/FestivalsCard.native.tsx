@@ -1,5 +1,8 @@
 import type { FestivalItem } from "@/services/tourism";
 import { colors } from "@/ui/tokens/colors";
+import { radii } from "@/ui/tokens/radii";
+import { shadows } from "@/ui/tokens/shadows";
+import { spacing } from "@/ui/tokens/spacing";
 import { textStyles } from "@/ui/tokens/typography";
 import { useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
@@ -20,8 +23,8 @@ function getDotColor(lclsSystm2: string | null): string {
 }
 
 function fmtEventDate(startDate: string | null, endDate: string | null): string {
-  const fmt = (s: string) => `${s.slice(0, 4)}.${parseInt(s.slice(4, 6))}.${parseInt(s.slice(6, 8))}`;
-  if (startDate && endDate && startDate !== endDate) return `${fmt(startDate)} – ${fmt(endDate)}`;
+  const fmt = (s: string) => `${parseInt(s.slice(4, 6))}.${parseInt(s.slice(6, 8))}`;
+  if (startDate && endDate && startDate !== endDate) return `${fmt(startDate)}–${fmt(endDate)}`;
   if (startDate) return fmt(startDate);
   return "";
 }
@@ -86,83 +89,74 @@ export default function FestivalsCard({ festivals, onPress, title = "이 기간 
 const styles = StyleSheet.create({
   card: {
     backgroundColor: colors.white,
-    borderRadius: 16,
-    padding: 16,
-    gap: 12,
-    shadowColor: colors.gray700,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
+    borderRadius: radii.lgPlus,
+    padding: spacing.lg,
+    gap: spacing.md,
+    ...shadows.card,
   },
   header: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: spacing.sm,
   },
   title: {
-    fontSize: 18,
-    fontWeight: "600",
-    lineHeight: 26,
-    color: colors.gray900,
+    ...textStyles.h4,
+    color: colors.paletteInk,
     flex: 1,
-  } as any,
+  },
   count: {
-    fontSize: 13,
-    fontWeight: "600",
-    lineHeight: 20,
-    color: colors.gray600,
-  } as any,
+    ...textStyles.h7,
+    color: colors.paletteFg2,
+    fontVariant: ["tabular-nums"],
+  },
   item: {
     flexDirection: "column",
-    gap: 4,
-    paddingVertical: 12,
-    paddingHorizontal: 8,
-    marginHorizontal: -8,
+    gap: spacing.xs,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.sm,
+    marginHorizontal: -spacing.sm,
     minHeight: 56,
     justifyContent: "center",
   },
   itemTopBorder: {
     borderTopWidth: 1,
-    borderTopColor: "#EDEDED",
+    borderTopColor: colors.paletteLine,
   },
   itemRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: spacing.sm,
     minWidth: 0,
   },
   dot: {
     width: 8,
     height: 8,
-    borderRadius: 999,
+    borderRadius: radii.pill,
     flexShrink: 0,
   },
   itemTitle: {
-    ...textStyles.h6,
-    color: colors.gray900,
+    ...textStyles.h5,
+    color: colors.paletteInk,
     flex: 1,
     minWidth: 0,
   },
   itemDate: {
-    paddingLeft: 16,
-    fontSize: 13,
-    fontWeight: "500",
-    lineHeight: 20,
-    color: colors.gray500,
-  } as any,
+    ...textStyles.body4,
+    paddingLeft: spacing.lg,
+    color: colors.paletteFg3,
+    fontVariant: ["tabular-nums"],
+  },
   viewAllBtn: {
     height: 48,
-    borderRadius: 12,
-    backgroundColor: colors.gray200,
+    borderRadius: radii.mdPlus,
+    backgroundColor: colors.paletteFill,
     justifyContent: "center",
     alignItems: "center",
   },
   viewAllText: {
-    fontSize: 14,
-    fontWeight: "600",
-    lineHeight: 22,
-    color: colors.gray900,
-  } as any,
+    ...textStyles.h6,
+    color: colors.paletteInk,
+  },
   collapseBtn: {
     height: 36,
     justifyContent: "center",

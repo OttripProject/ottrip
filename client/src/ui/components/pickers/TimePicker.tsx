@@ -1,5 +1,6 @@
 import { PLACEHOLDERS } from "@/constants/placeholders";
 import useDetectClose from "@/hooks/useDetectClose";
+import { useHover } from "@/hooks/useHover";
 import { colors } from "@/ui/tokens/colors";
 import { radii } from "@/ui/tokens/radii";
 import { textStyles } from "@/ui/tokens/typography";
@@ -36,6 +37,7 @@ interface TimePickerProps {
   onOpen?: () => void;
   onClose?: () => void;
   disabled?: boolean;
+  hideArrow?: boolean;
   popupAlign?: "left" | "right";
 }
 
@@ -50,6 +52,10 @@ function parseTime(t: string | undefined): { h: number; m: number } | null {
   return { h, m };
 }
 
+function disabledBorder(disabled: boolean, borderWidth?: unknown) {
+  return disabled && borderWidth !== 0 ? styles.triggerDisabled : null;
+}
+
 export default function TimePicker({
   value,
   onChange,
@@ -62,6 +68,7 @@ export default function TimePicker({
   onOpen,
   onClose,
   disabled = false,
+  hideArrow = false,
   popupAlign = "left",
 }: TimePickerProps) {
   const wrapperRef = useRef<View>(null);
@@ -193,6 +200,7 @@ export default function TimePicker({
     }, 50);
   }, [open]);
 
+  const triggerHover = useHover();
   const styleObj = style as any;
   const triggerBg = styleObj?.backgroundColor ?? colors.gray200;
   const triggerBorder = styleObj?.borderColor
@@ -205,6 +213,8 @@ export default function TimePicker({
     styleObj?.borderRadius !== undefined
       ? { borderRadius: styleObj.borderRadius }
       : {};
+  const triggerHeight =
+    styleObj?.height !== undefined ? { height: styleObj.height } : {};
 
   return (
     <View
@@ -217,8 +227,15 @@ export default function TimePicker({
           { backgroundColor: triggerBg },
           triggerBorder,
           triggerBorderRadius,
-          disabled && styles.triggerDisabled,
+          triggerHeight,
+          disabledBorder(disabled, styleObj?.borderWidth),
+          triggerHover.hovered &&
+            !disabled &&
+            !open &&
+            !isFocused &&
+            styles.triggerHover,
         ]}
+        {...triggerHover.viewHoverProps}
       >
         <TextInput
           style={[styles.triggerInput, textStyle]}
@@ -233,17 +250,19 @@ export default function TimePicker({
           editable={!disabled}
           selectTextOnFocus
         />
-        <Pressable
-          onPress={handleToggle}
-          disabled={disabled}
-          style={styles.arrowButton}
-        >
-          {open ? (
-            <UpperArrowIcon width={10} height={10} style={{ opacity: 0.6 }} />
-          ) : (
-            <DownArrowIcon width={10} height={10} style={{ opacity: 0.6 }} />
-          )}
-        </Pressable>
+        {!hideArrow && (
+          <Pressable
+            onPress={handleToggle}
+            disabled={disabled}
+            style={styles.arrowButton}
+          >
+            {open ? (
+              <UpperArrowIcon width={10} height={10} style={{ opacity: 0.6 }} />
+            ) : (
+              <DownArrowIcon width={10} height={10} style={{ opacity: 0.6 }} />
+            )}
+          </Pressable>
+        )}
       </View>
 
       {open && (
@@ -369,6 +388,9 @@ const styles = StyleSheet.create({
     height: 40,
     paddingLeft: 12,
     paddingRight: 8,
+  },
+  triggerHover: {
+    backgroundColor: colors.inputHover,
   },
   triggerDisabled: {
     borderWidth: 1,

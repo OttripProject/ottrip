@@ -63,7 +63,7 @@ export default function ItinerarySection({
   onConsumeCarryoverPendingFiles,
 }: ItinerarySectionProps) {
   const [showItineraryForm, setShowItineraryForm] = useState(
-    openNewItineraryForm || false,
+    openNewItineraryForm || (activeTab === "itinerary" && !selectedItinerary),
   );
   const [editingItinerary, setEditingItinerary] = useState<any | null>(null);
   const isInitialMountRef = useRef(true);

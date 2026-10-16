@@ -127,3 +127,9 @@ export function isNextDayLocal(
   const endDate = end.format("YYYY-MM-DD");
   return startDate !== endDate;
 }
+
+export function getDefaultEndTime(start: dayjs.ConfigType): string {
+  const begin = dayjs(start);
+  const end = begin.add(1, "hour");
+  return end.isSame(begin, "day") ? end.format("HH:mm") : "24:00";
+}

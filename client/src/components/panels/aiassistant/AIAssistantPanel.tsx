@@ -1,20 +1,17 @@
+import { useWidthTextScale } from "@/hooks/useWidthTextScale";
 import api from "@/services/api";
+import MotionPressable from "@/ui/components/MotionPressable";
 import { colors } from "@/ui/tokens/colors";
 import { radii } from "@/ui/tokens/radii";
+import { shadows } from "@/ui/tokens/shadows";
 import { spacing } from "@/ui/tokens/spacing";
+import { surfaces } from "@/ui/tokens/surfaces";
 import { textStyles, typography } from "@/ui/tokens/typography";
 import { handleGuestPromptError } from "@/utils/guestPrompt";
 import MaskedView from "@react-native-masked-view/masked-view";
 import { LinearGradient } from "expo-linear-gradient";
 import { useCallback, useEffect, useState } from "react";
-import {
-  Alert,
-  Platform,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { Alert, Platform, StyleSheet, Text, View } from "react-native";
 import AiChecklistListViewModal from "../../modals/AiChecklistListViewModal";
 import InsufficientScheduleModal from "../../modals/AiInsufficientModal";
 import RefreshChecklistModal from "../../modals/AiRefreshChecklistModal";
@@ -52,6 +49,8 @@ export default function AIAssistantPanel({
   const [showRefreshModal, setShowRefreshModal] = useState(false);
   const [showInsufficientModal, setShowInsufficientModal] = useState(false);
   const [showListViewModal, setShowListViewModal] = useState(false);
+  const { onLayout: onStatBoxLayout, scaled } =
+    useWidthTextScale(STAT_FULL_WIDTH);
   const [_showAddItemModal, _setShowAddItemModal] = useState(false);
   const [_selectedCategory, _setSelectedCategory] = useState<string | null>(
     null,
@@ -356,7 +355,7 @@ export default function AIAssistantPanel({
   };
 
   return (
-    <PanelLayout style={{ flex: 1 }}>
+    <PanelLayout style={{ flex: 1 }} hoverStyle={shadows.liftHover}>
       <View style={styles.contentContainer}>
         {!publicId && !readOnly ? (
           <View style={styles.placeholder}>
@@ -366,40 +365,75 @@ export default function AIAssistantPanel({
           <View style={styles.previewContainer}>
             <View style={styles.headerSection}>
               <Text style={styles.headerTitle}>체크리스트</Text>
-              <TouchableOpacity
+              <MotionPressable
                 onPress={handleViewAll}
                 style={styles.viewAllButton}
+                hoverStyle={shadows.xsHover}
               >
                 <Text style={styles.viewAllText}>상세보기</Text>
-              </TouchableOpacity>
+              </MotionPressable>
             </View>
 
             {readOnly ? (
               <View style={styles.readOnlyStatWrapper}>
-                <View style={styles.simpleStatButton}>
-                  <Text style={styles.simpleStatLabel}>준비물</Text>
+                <View
+                  style={styles.simpleStatButton}
+                  onLayout={onStatBoxLayout}
+                >
+                  <Text
+                    style={[styles.simpleStatLabel, scaled(textStyles.body4)]}
+                  >
+                    준비물
+                  </Text>
                   <View style={styles.statNumberRow}>
-                    <Text style={styles.simpleStatNumber}>{stats.total}</Text>
-                    <Text style={styles.statUnit}>개</Text>
+                    <Text
+                      style={[styles.simpleStatNumber, scaled(textStyles.h3)]}
+                    >
+                      {stats.total}
+                    </Text>
+                    <Text style={[styles.statUnit, scaled(textStyles.h7)]}>
+                      개
+                    </Text>
                   </View>
                 </View>
               </View>
             ) : (
               <View style={styles.simpleStatsContainer}>
-                <View style={styles.simpleStatButton}>
-                  <Text style={styles.simpleStatLabel}>준비 필요</Text>
+                <View
+                  style={styles.simpleStatButton}
+                  onLayout={onStatBoxLayout}
+                >
+                  <Text
+                    style={[styles.simpleStatLabel, scaled(textStyles.body4)]}
+                  >
+                    준비 필요
+                  </Text>
                   <View style={styles.statNumberRow}>
-                    <Text style={styles.simpleStatNumber}>
+                    <Text
+                      style={[styles.simpleStatNumber, scaled(textStyles.h3)]}
+                    >
                       {stats.total - stats.checked}
                     </Text>
-                    <Text style={styles.statUnit}>개</Text>
+                    <Text style={[styles.statUnit, scaled(textStyles.h7)]}>
+                      개
+                    </Text>
                   </View>
                 </View>
                 <View style={styles.simpleStatButton}>
-                  <Text style={styles.simpleStatLabel}>준비 됨</Text>
+                  <Text
+                    style={[styles.simpleStatLabel, scaled(textStyles.body4)]}
+                  >
+                    준비 됨
+                  </Text>
                   <View style={styles.statNumberRow}>
-                    <Text style={styles.simpleStatNumber}>{stats.checked}</Text>
-                    <Text style={styles.statUnit}>개</Text>
+                    <Text
+                      style={[styles.simpleStatNumber, scaled(textStyles.h3)]}
+                    >
+                      {stats.checked}
+                    </Text>
+                    <Text style={[styles.statUnit, scaled(textStyles.h7)]}>
+                      개
+                    </Text>
                   </View>
                 </View>
               </View>
@@ -440,6 +474,8 @@ export default function AIAssistantPanel({
   );
 }
 
+const STAT_FULL_WIDTH = 160;
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -477,14 +513,13 @@ const styles = StyleSheet.create({
   },
   previewContainer: {
     flex: 1,
+    padding: spacing.lg,
+    gap: spacing.md,
   },
   headerSection: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.lg,
-    paddingBottom: spacing.sm,
+    gap: spacing.sm,
   },
 
   headerTitle: {
@@ -498,71 +533,60 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   viewAllButton: {
+    ...surfaces.outline,
     marginLeft: "auto" as any,
-    height: 30,
-    paddingHorizontal: 12,
-    borderRadius: 999,
-    backgroundColor: colors.white,
+    height: 32,
+    paddingHorizontal: spacing.md,
+    borderRadius: radii.pill,
     borderWidth: 1,
     borderColor: colors.gray300,
     alignItems: "center",
     justifyContent: "center",
   },
   viewAllText: {
-    fontFamily: typography.fontFamily.pretendardSemiBold,
-    fontSize: 12,
-    lineHeight: 18,
+    ...textStyles.h8,
     color: colors.gray900,
   },
   simpleStatsContainer: {
     flexDirection: "row",
     gap: spacing.md,
-    marginTop: 2,
-    marginHorizontal: spacing.lg,
-    marginBottom: spacing.lg,
     flex: 1,
     alignItems: "stretch",
   },
 
   readOnlyStatWrapper: {
-    marginTop: 2,
-    marginHorizontal: spacing.lg,
-    marginBottom: spacing.lg,
     flex: 1,
   },
   simpleStatButton: {
-    backgroundColor: "#FAFAFA",
-    borderRadius: 10,
+    backgroundColor: colors.gray100,
+    borderRadius: radii.md,
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 18,
-    paddingVertical: 16,
+    gap: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
   },
 
   simpleStatLabel: {
-    fontFamily: typography.fontFamily.pretendardRegular,
-    fontSize: 13,
-    lineHeight: 20,
-    color: "#6C6C6C",
+    ...textStyles.body4,
+    color: colors.gray700,
   },
   statNumberRow: {
     flexDirection: "row",
     alignItems: "baseline",
-    gap: 2,
+    gap: spacing.xs,
   },
   simpleStatNumber: {
-    fontFamily: typography.fontFamily.poppinsSemiBold,
-    fontSize: 20,
-    lineHeight: 24,
+    ...textStyles.h3,
     color: colors.gray900,
+    letterSpacing: -0.2,
+    fontVariant: ["tabular-nums"],
   },
 
   statUnit: {
-    fontFamily: typography.fontFamily.pretendardSemiBold,
-    fontSize: 13,
-    lineHeight: 20,
+    ...textStyles.h7,
     color: colors.gray900,
   },
   // 간단히 보기 카테고리 섹션

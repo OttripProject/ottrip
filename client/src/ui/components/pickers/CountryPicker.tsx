@@ -1,10 +1,11 @@
+import { useHover } from "@/hooks/useHover";
 import useDetectClose from "@/hooks/useDetectClose";
 import Svg, { Circle, Path } from "react-native-svg";
 import { useMe } from "@/hooks/useMe";
 import { useRecentSearches } from "@/hooks/useRecentSearches";
 import { colors } from "@/ui/tokens/colors";
 import { radii } from "@/ui/tokens/radii";
-import { textStyles } from "@/ui/tokens/typography";
+import { textStyles, typography } from "@/ui/tokens/typography";
 import {
   type CountryOption,
   codeToFlag,
@@ -51,6 +52,7 @@ interface CountryPickerProps {
   listItemLabelStyle?: ViewStyle | TextStyle;
   selectedItemContainerStyle?: ViewStyle;
   disabled?: boolean;
+  hideArrow?: boolean;
   onOpen?: () => void;
   onClose?: () => void;
   useModal?: boolean;
@@ -65,6 +67,7 @@ export default function CountryPicker({
   containerStyle,
   style,
   disabled,
+  hideArrow,
   onOpen,
   onClose,
   useModal = false,
@@ -441,13 +444,21 @@ export default function CountryPicker({
     </View>
   );
 
+  const triggerHover = useHover();
+
   return (
     <View
       ref={wrapperRef}
       style={[styles.wrapper, containerStyle, { zIndex: open && !useModal ? 100 : 1 }]}
     >
       <Pressable
-        style={[styles.trigger, disabled && styles.triggerDisabled, style]}
+        style={[
+          styles.trigger,
+          disabled && styles.triggerDisabled,
+          style,
+          triggerHover.hovered && !disabled && !open && styles.triggerHover,
+        ]}
+        {...triggerHover.pressableHoverProps}
         onPress={handleToggle}
         disabled={disabled}
       >
@@ -459,11 +470,12 @@ export default function CountryPicker({
             ? `${selectedCode ? codeToFlag(selectedCode) : ""} ${value}`.trim()
             : placeholder}
         </Text>
-        {(open || fsOpen) ? (
-          <UpperArrowIcon width={10} height={10} color={colors.gray600} />
-        ) : (
-          <DownArrowIcon width={10} height={10} color={colors.gray600} />
-        )}
+        {!hideArrow &&
+          ((open || fsOpen) ? (
+            <UpperArrowIcon width={10} height={10} color={colors.gray600} />
+          ) : (
+            <DownArrowIcon width={10} height={10} color={colors.gray600} />
+          ))}
       </Pressable>
 
       {open && !useModal && (
@@ -480,7 +492,7 @@ export default function CountryPicker({
           onRequestClose={closeModal}
           statusBarTranslucent
         >
-          <Pressable style={StyleSheet.absoluteFillObject} onPress={closeModal} />
+          <Pressable style={StyleSheet.absoluteFill} onPress={closeModal} />
           <View
             style={[
               styles.popup,
@@ -532,6 +544,9 @@ const styles = StyleSheet.create({
     height: 40,
     paddingHorizontal: 12,
     paddingVertical: 10,
+  },
+  triggerHover: {
+    backgroundColor: colors.inputHover,
   },
   triggerDisabled: {
     borderWidth: 1,
@@ -681,7 +696,7 @@ const styles = StyleSheet.create({
     color: colors.gray700,
   },
   sectionLabel: {
-    fontFamily: "Pretendard-Bold",
+    fontFamily: typography.fontFamily.pretendardBold,
     fontSize: 10,
     lineHeight: 14,
     color: "rgb(155, 155, 155)",

@@ -19,12 +19,16 @@ import {
   ExpenseCurrency,
   currencyLabels,
 } from "@/types/expense";
+import CurrencyToggle from "@/ui/components/CurrencyToggle";
+import HoverPressable from "@/ui/components/HoverPressable";
+import MotionPressable, { MotionIcon } from "@/ui/components/MotionPressable";
 import AttachmentSection from "@/ui/components/attachmentSection";
 import type { AiAttachmentAnalyzeSelection } from "@/ui/components/attachmentSection.types";
 import { pendingAiFileKey } from "@/ui/components/attachmentSection.types";
 import Input from "@/ui/components/input/Input";
 import { AirportPicker, TimePicker } from "@/ui/components/pickers";
 import WarningBanner from "@/ui/components/toast/warning";
+import { surfaces } from "@/ui/tokens/surfaces";
 import { colors } from "@/ui/tokens/colors";
 import { radii } from "@/ui/tokens/radii";
 import { spacing } from "@/ui/tokens/spacing";
@@ -37,7 +41,7 @@ import {
 } from "@/utils/crossPlatformAlert";
 import { handleGuestPromptError } from "@/utils/guestPrompt";
 import dayjs from "dayjs";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Platform,
@@ -47,10 +51,9 @@ import {
   Text,
   View,
 } from "react-native";
-import CalendarIcon from "../../../../assets/calender.svg";
+import { useDetailsHeader } from "../DetailsHeaderContext";
 import CloseIcon from "../../../../assets/close_sm.svg";
-import DeleteIcon from "../../../../assets/delete.svg";
-import PanelTabSwitcher from "../PanelTabSwitcher";
+import CalendarIcon from "../../../../assets/calender.svg";
 import { extendPlanIfNeeded } from "@/utils/extendPlanIfNeeded";
 
 interface FlightItemProps {
@@ -75,6 +78,26 @@ interface FlightItemProps {
   ) => boolean;
   carryoverPendingFiles?: LocalFile[] | null;
   onConsumeCarryoverPendingFiles?: () => void;
+}
+
+type LayoverPoint = {
+  departure_date: string;
+  departure_time: string;
+  arrival_date: string;
+  arrival_time: string;
+};
+
+function formatLayover(prev: LayoverPoint, next: LayoverPoint) {
+  const arrival = dayjs(`${prev.arrival_date} ${prev.arrival_time}`);
+  const departure = dayjs(`${next.departure_date} ${next.departure_time}`);
+  if (!arrival.isValid() || !departure.isValid()) return null;
+  const minutes = departure.diff(arrival, "minute");
+  if (minutes <= 0) return null;
+  const hours = Math.floor(minutes / 60);
+  const mins = minutes % 60;
+  if (hours > 0 && mins > 0) return `경유시간 :  ${hours}시간 ${mins}분`;
+  if (hours > 0) return `경유시간 :  ${hours}시간`;
+  return `경유 ${mins}분`;
 }
 
 export default function FlightItem({
@@ -127,11 +150,15 @@ export default function FlightItem({
   const [expenseData, setExpenseData] = useState({
     amount: normalizeAmountToIntDigits(flight?.expense?.amount),
   });
+  const [expenseCurrency, setExpenseCurrency] = useState<ExpenseCurrency>(
+    flight?.expense?.currency ?? ExpenseCurrency.KRW,
+  );
 
   useEffect(() => {
     setExpenseData({
       amount: normalizeAmountToIntDigits(flight?.expense?.amount),
     });
+    setExpenseCurrency(flight?.expense?.currency ?? ExpenseCurrency.KRW);
   }, [flight]);
 
   useEffect(() => {
@@ -596,7 +623,7 @@ export default function FlightItem({
                 ? flightSegments[0].departure_date
                 : expenseDate,
             amount: Number.parseInt(expenseData.amount || "0", 10) || 0,
-            currency: ExpenseCurrency.KRW,
+            currency: expenseCurrency,
             category: ExpenseCategory.FLIGHT as any,
             planId: planId,
             description: (() => {
@@ -633,7 +660,7 @@ export default function FlightItem({
                 ? flightSegments[0].departure_date
                 : expenseDate,
             amount: Number.parseInt(expenseData.amount || "0", 10) || 0,
-            currency: ExpenseCurrency.KRW,
+            currency: expenseCurrency,
             category: ExpenseCategory.FLIGHT as any,
             planId: planId,
             description: (() => {
@@ -708,35 +735,14 @@ export default function FlightItem({
     }
   };
 
-  const isSegmentComplete = (segment: SegmentForm): boolean => {
-    return !!(
-      segment.departure_airport &&
-      segment.arrival_airport &&
-      segment.departure_date &&
-      segment.departure_time &&
-      segment.arrival_date &&
-      segment.arrival_time
-    );
-  };
+  useDetailsHeader({
+    title: readOnly ? "항공편 정보" : flight ? "항공편 수정" : "항공편 추가",
+    showTabs: !readOnly,
+    onClose: onCancel,
+  });
 
   return (
     <View style={styles.wrapper}>
-      <View style={styles.titleRow}>
-        <Text style={styles.title}>
-          {readOnly ? "항공편 정보" : flight ? "항공편 수정" : "항공편 추가"}
-        </Text>
-        <Pressable
-          onPress={() => {
-            onCancel();
-          }}
-          style={styles.closeButton}
-        >
-          <CloseIcon width={12} height={12} color={colors.gray600} />
-        </Pressable>
-      </View>
-      {!readOnly && (
-        <PanelTabSwitcher activeTab={activeTab} onTabChange={onTabChange} />
-      )}
       <ScrollView
         style={styles.container}
         contentContainerStyle={[
@@ -757,7 +763,8 @@ export default function FlightItem({
                   !readOnly &&
                   setFormData({ ...formData, reservation_number: text })
                 }
-                style={readOnly ? styles.readOnlyInput : styles.input}
+                size="md"
+              style={readOnly ? styles.readOnlyInput : undefined}
                 placeholderTextColor={colors.gray600}
                 editable={!readOnly}
               />
@@ -772,7 +779,8 @@ export default function FlightItem({
                   !readOnly &&
                   setFormData({ ...formData, passenger_name: text })
                 }
-                style={readOnly ? styles.readOnlyInput : styles.input}
+                size="md"
+              style={readOnly ? styles.readOnlyInput : undefined}
                 placeholderTextColor={colors.gray600}
                 editable={!readOnly}
               />
@@ -780,7 +788,7 @@ export default function FlightItem({
           </View>
 
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>항공권 번호</Text>
+            <Text style={styles.label}>항공편 번호</Text>
             <Input
               variant={readOnly ? "outlined" : "filled"}
               placeholder={PLACEHOLDERS.flight.ticketNumber}
@@ -788,14 +796,15 @@ export default function FlightItem({
               onChangeText={text =>
                 !readOnly && setFormData({ ...formData, ticket_number: text })
               }
-              style={readOnly ? styles.readOnlyInput : styles.input}
+              size="md"
+              style={readOnly ? styles.readOnlyInput : undefined}
               placeholderTextColor={colors.gray600}
               editable={!readOnly}
             />
           </View>
 
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>예약번호 (여행사 예약 번호)</Text>
+            <Text style={styles.label}>예약번호 (여행사)</Text>
             <Input
               variant={readOnly ? "outlined" : "filled"}
               placeholder={PLACEHOLDERS.flight.bookingReference}
@@ -804,7 +813,8 @@ export default function FlightItem({
                 !readOnly &&
                 setFormData({ ...formData, booking_reference: text })
               }
-              style={readOnly ? styles.readOnlyInput : styles.input}
+              size="md"
+              style={readOnly ? styles.readOnlyInput : undefined}
               placeholderTextColor={colors.gray600}
               editable={!readOnly}
             />
@@ -826,52 +836,74 @@ export default function FlightItem({
                     });
                   }}
                   keyboardType="numeric"
-                  style={[
-                    readOnly ? styles.readOnlyInput : styles.input,
-                    styles.amountInputPadding,
-                  ]}
+                  size="md"
+                  style={readOnly ? styles.readOnlyInput : undefined}
                   placeholderTextColor={colors.gray600}
                   editable={!readOnly}
                 />
-                <Text style={styles.amountSuffix} pointerEvents="none">
-                  {currencyLabels[ExpenseCurrency.KRW]}
-                </Text>
               </View>
+            </View>
+            <View style={[styles.inputGroup, { flex: 1 }]}>
+              <Text style={styles.label}>통화</Text>
+              {readOnly ? (
+                <View style={styles.readOnlyCurrency}>
+                  <Text style={styles.readOnlyCurrencyText}>
+                    {currencyLabels[expenseCurrency]}
+                  </Text>
+                </View>
+              ) : (
+                <CurrencyToggle
+                  value={expenseCurrency}
+                  onChange={setExpenseCurrency}
+                  style={styles.pickerTrigger}
+                />
+              )}
             </View>
           </View>
         </View>
 
         <View style={[styles.inputGroup, { zIndex: 5000 }]}>
           {flightSegments.map((segment, idx) => {
-            const isComplete = isSegmentComplete(segment);
+            const layover =
+              readOnly && idx > 0
+                ? formatLayover(flightSegments[idx - 1], segment)
+                : null;
             return (
+              <Fragment key={idx}>
+              {layover && (
+                <View style={styles.layoverRow}>
+                  <View style={styles.layoverLine} />
+                  <Text style={styles.layoverText}>{layover}</Text>
+                  <View style={styles.layoverLine} />
+                </View>
+              )}
               <View
-                key={idx}
                 style={[
                   styles.segmentContainer,
-                  {
-                    zIndex: (flightSegments.length - idx) * 1000,
-                    backgroundColor: isComplete ? colors.gray200 : colors.white,
-                  },
+                  readOnly && styles.segmentContainerReadOnly,
+                  { zIndex: (flightSegments.length - idx) * 1000 },
                 ]}
               >
                 <View style={styles.segmentTitleRow}>
                   <Text style={styles.segmentTitle}>구간{idx + 1}</Text>
                   {!readOnly && flightSegments.length > 1 && (
-                    <Pressable
+                    <MotionPressable
                       onPress={() => {
                         setFlightSegments(prev =>
                           prev.filter((_, i) => i !== idx),
                         );
                       }}
                       style={styles.segmentDeleteButton}
+                      accessibilityLabel="구간 삭제"
                     >
-                      <DeleteIcon
-                        width={16}
-                        height={16}
-                        color={colors.warning}
-                      />
-                    </Pressable>
+                      <MotionIcon>
+                        <CloseIcon
+                          width={12}
+                          height={12}
+                          color={colors.gray600}
+                        />
+                      </MotionIcon>
+                    </MotionPressable>
                   )}
                 </View>
 
@@ -890,13 +922,11 @@ export default function FlightItem({
                             setFlightSegments(newSegments);
                           }
                         }}
+                        size="md"
                         style={
                           readOnly
-                            ? [
-                                styles.segmentInput,
-                                { borderColor: colors.gray400 },
-                              ]
-                            : styles.segmentInput
+                            ? styles.readOnlyInput
+                            : undefined
                         }
                         placeholderTextColor={colors.gray600}
                         editable={!readOnly}
@@ -905,7 +935,7 @@ export default function FlightItem({
                     <View style={[styles.inputGroup, styles.halfWidth]}>
                       <Text style={styles.label}>항공편명</Text>
                       <Input
-                        variant="outlined"
+                        variant={readOnly ? "outlined" : "filled"}
                         placeholder={PLACEHOLDERS.flight.flightNumber}
                         value={segment.flight_number}
                         onChangeText={text => {
@@ -915,13 +945,11 @@ export default function FlightItem({
                             setFlightSegments(newSegments);
                           }
                         }}
+                        size="md"
                         style={
                           readOnly
-                            ? [
-                                styles.segmentInput,
-                                { borderColor: colors.gray400 },
-                              ]
-                            : styles.segmentInput
+                            ? styles.readOnlyInput
+                            : undefined
                         }
                         placeholderTextColor={colors.gray600}
                         editable={!readOnly}
@@ -952,7 +980,12 @@ export default function FlightItem({
                         }}
                         placeholder={PLACEHOLDERS.flight.departureAirport}
                         disabled={readOnly}
-                        style={readOnly ? { backgroundColor: colors.white } : undefined}
+                        hideArrow={readOnly}
+                        style={
+                          readOnly
+                            ? styles.readOnlyPicker
+                            : styles.segmentSelect
+                        }
                       />
                     </View>
                     <View
@@ -977,8 +1010,13 @@ export default function FlightItem({
                         }}
                         placeholder={PLACEHOLDERS.flight.arrivalAirport}
                         disabled={readOnly}
+                        hideArrow={readOnly}
                         dropdownAlign="right"
-                        style={readOnly ? { backgroundColor: colors.white } : undefined}
+                        style={
+                          readOnly
+                            ? styles.readOnlyPicker
+                            : styles.segmentSelect
+                        }
                       />
                     </View>
                   </View>
@@ -989,8 +1027,12 @@ export default function FlightItem({
                         출발 일자{" "}
                         <Text style={{ color: colors.warning }}>*</Text>
                       </Text>
-                      <Pressable
-                        style={styles.segmentDateInput}
+                      <HoverPressable
+                        style={[
+                          styles.segmentDateInput,
+                          readOnly && styles.segmentReadOnly,
+                        ]}
+                        hoverStyle={styles.segmentSelectHover}
                         onPress={() => {
                           if (!readOnly) {
                             const depKey = `dep_${idx}`;
@@ -1024,7 +1066,7 @@ export default function FlightItem({
                             </View>
                           )}
                         </View>
-                      </Pressable>
+                      </HoverPressable>
                       {segmentDatePickerOpen[`dep_${idx}`] && (
                         <BaseCalendar
                           visible={true}
@@ -1085,8 +1127,13 @@ export default function FlightItem({
                             ? flightSegments[idx - 1].arrival_time
                             : undefined
                         }
-                        style={styles.segmentTimePicker}
+                        style={
+                          readOnly
+                            ? styles.segmentTimePickerReadOnly
+                            : styles.segmentTimePicker
+                        }
                         disabled={readOnly}
+                        hideArrow={readOnly}
                         popupAlign="right"
                       />
                     </View>
@@ -1098,8 +1145,12 @@ export default function FlightItem({
                         도착 일자{" "}
                         <Text style={{ color: colors.warning }}>*</Text>
                       </Text>
-                      <Pressable
-                        style={styles.segmentDateInput}
+                      <HoverPressable
+                        style={[
+                          styles.segmentDateInput,
+                          readOnly && styles.segmentReadOnly,
+                        ]}
+                        hoverStyle={styles.segmentSelectHover}
                         onPress={() => {
                           if (!readOnly) {
                             const depKey = `dep_${idx}`;
@@ -1131,7 +1182,7 @@ export default function FlightItem({
                             </View>
                           )}
                         </View>
-                      </Pressable>
+                      </HoverPressable>
                       {segmentDatePickerOpen[`arr_${idx}`] && (
                         <BaseCalendar
                           visible={true}
@@ -1177,23 +1228,26 @@ export default function FlightItem({
                         }}
                         onOpen={() => !readOnly && setTimeOpen(true)}
                         onClose={() => setTimeOpen(false)}
-                        style={styles.segmentTimePicker}
+                        style={
+                          readOnly
+                            ? styles.segmentTimePickerReadOnly
+                            : styles.segmentTimePicker
+                        }
                         disabled={readOnly}
+                        hideArrow={readOnly}
                         popupAlign="right"
                       />
                     </View>
                   </View>
                 </View>
               </View>
+              </Fragment>
             );
           })}
 
           {!readOnly && (
-            <Pressable
-              style={[
-                styles.addSegmentButton,
-                { zIndex: 1, borderStyle: "dashed" },
-              ]}
+            <MotionPressable
+              style={[styles.addSegmentButton, { zIndex: 1 }]}
               onPress={() => {
                 const lastSegment = flightSegments[flightSegments.length - 1];
                 let defaultDepartureDate: string;
@@ -1230,7 +1284,7 @@ export default function FlightItem({
             >
               <Text style={styles.addButtonPlus}>+</Text>
               <Text style={styles.addSegmentButtonText}>항공권 구간 추가</Text>
-            </Pressable>
+            </MotionPressable>
           )}
 
           {showAttachmentSection && (
@@ -1278,63 +1332,67 @@ export default function FlightItem({
             />
           )}
 
-          {!readOnly ? (
-            <View
-              style={[styles.buttonRow, { position: "relative", zIndex: 1 }]}
-            >
-              <Pressable
-                style={styles.deleteButton}
-                onPress={flight ? handleDelete : onCancel}
-                disabled={isSubmitting}
-              >
-                <Text style={styles.deleteButtonText}>
-                  {flight ? "삭제" : "취소"}
-                </Text>
-              </Pressable>
-              <Pressable
-                style={styles.saveButton}
-                onPress={handleSave}
-                disabled={isSubmitting || isUploading}
-              >
-                <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                  {(isSubmitting || isUploading) && (
-                    <ActivityIndicator size="small" color="white" />
-                  )}
-                  <Text style={styles.saveButtonText}>
-                    {isSubmitting || isUploading ? "저장 중..." : "저장"}
-                  </Text>
-                </View>
-              </Pressable>
-            </View>
-          ) : (
-            <View style={[styles.buttonRow, { position: "relative" }]}>
-              <Pressable
-                style={styles.deleteButton}
-                onPress={handleDelete}
-                disabled={isSubmitting}
-              >
-                <Text style={styles.deleteButtonText}>삭제</Text>
-              </Pressable>
-              <Pressable
-                style={[styles.saveButton, { backgroundColor: colors.gray900 }]}
-                onPress={onEdit}
-              >
-                <Text style={styles.saveButtonText}>수정</Text>
-              </Pressable>
-            </View>
-          )}
-          <WarningBanner
-            message={warningMessage}
-            visible={showWarning}
-            duration={3000}
-            bottomOffset={70}
-            onHide={() => {
-              setShowWarning(false);
-              setWarningMessage("");
-            }}
-          />
         </View>
       </ScrollView>
+      {!readOnly ? (
+        <View
+          style={styles.buttonRow}
+        >
+          <MotionPressable
+            style={styles.deleteButton}
+            onPress={flight ? handleDelete : onCancel}
+            disabled={isSubmitting}
+          >
+            <Text style={styles.deleteButtonText}>
+              {flight ? "삭제" : "취소"}
+            </Text>
+          </MotionPressable>
+          <MotionPressable
+            style={styles.saveButton}
+            onPress={handleSave}
+            disabled={isSubmitting || isUploading}
+          >
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+              {(isSubmitting || isUploading) && (
+                <ActivityIndicator size="small" color="white" />
+              )}
+              <Text style={styles.saveButtonText}>
+                {isSubmitting || isUploading ? "저장 중..." : "저장"}
+              </Text>
+            </View>
+          </MotionPressable>
+        </View>
+      ) : (
+        <View style={styles.buttonRow}>
+          <MotionPressable
+            style={[styles.deleteButton, styles.readOnlyDeleteButton]}
+            onPress={handleDelete}
+            disabled={isSubmitting}
+          >
+            <Text
+              style={[styles.deleteButtonText, styles.readOnlyDeleteButtonText]}
+            >
+              삭제
+            </Text>
+          </MotionPressable>
+          <MotionPressable
+            style={[styles.saveButton, styles.footerEditButton]}
+            onPress={onEdit}
+          >
+            <Text style={styles.saveButtonText}>수정</Text>
+          </MotionPressable>
+        </View>
+      )}
+      <WarningBanner
+        message={warningMessage}
+        visible={showWarning}
+        duration={3000}
+        bottomOffset={WARNING_BOTTOM_OFFSET}
+        onHide={() => {
+          setShowWarning(false);
+          setWarningMessage("");
+        }}
+      />
       <AiDocumentAnalyzeModal
         visible={aiAnalyzeModalVisible}
         analyzeResult={aiAnalyzeResult}
@@ -1351,6 +1409,8 @@ export default function FlightItem({
     </View>
   );
 }
+
+const WARNING_BOTTOM_OFFSET = spacing.lg + 42 + spacing.xl + spacing.sm;
 
 const styles = StyleSheet.create({
   wrapper: {
@@ -1370,25 +1430,6 @@ const styles = StyleSheet.create({
     overflow: "visible",
     gap: spacing.lg,
   },
-  titleRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: spacing.xl,
-    paddingTop: spacing.xl,
-    paddingBottom: spacing.md,
-  },
-  title: {
-    ...textStyles.h5,
-  },
-  closeButton: {
-    width: 26,
-    height: 26,
-    borderRadius: radii.pill,
-    backgroundColor: colors.gray200,
-    justifyContent: "center",
-    alignItems: "center",
-  },
   formSection: {
     gap: spacing.lg,
   },
@@ -1406,25 +1447,39 @@ const styles = StyleSheet.create({
   },
   label: {
     ...textStyles.h8,
-    color: colors.black,
+    color: colors.gray900,
   },
-  input: {
+  pickerTrigger: {
+    height: 42,
+  },
+  readOnlyPicker: {
     backgroundColor: colors.gray200,
-    height: 40,
-    borderRadius: radii.md,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
-    ...textStyles.body4,
+    height: 46,
+    borderWidth: 0,
+    borderRadius: radii.mdPlus,
+    paddingHorizontal: 14,
   },
   readOnlyInput: {
     backgroundColor: colors.gray200,
-    borderWidth: 1,
-    borderColor: colors.gray400,
-    height: 40,
-    borderRadius: radii.md,
-    paddingHorizontal: spacing.md,
-    paddingVertical: 10,
-    ...textStyles.body4,
+    borderWidth: 0,
+    height: 46,
+    borderRadius: radii.mdPlus,
+    paddingHorizontal: 14,
+    paddingVertical: spacing.none,
+    ...textStyles.body3,
+    color: colors.gray900,
+  },
+  readOnlyCurrency: {
+    backgroundColor: colors.gray200,
+    borderWidth: 0,
+    height: 46,
+    borderRadius: radii.mdPlus,
+    paddingHorizontal: 14,
+    justifyContent: "center",
+  },
+  readOnlyCurrencyText: {
+    ...textStyles.body3,
+    color: colors.gray900,
   },
   placeholderText: {
     ...textStyles.body4,
@@ -1454,25 +1509,13 @@ const styles = StyleSheet.create({
   amountInputWrapper: {
     position: "relative",
   },
-  amountInputPadding: {
-    paddingRight: 20,
-    textAlign: "right",
-  },
-  amountSuffix: {
-    position: "absolute",
-    right: spacing.sm,
-    top: "50%",
-    transform: [{ translateY: -10 }],
-    ...textStyles.body4,
-    color: colors.black,
-  },
   segmentContainer: {
     borderWidth: 1,
-    borderColor: colors.gray400,
-    borderRadius: radii.md,
+    borderColor: colors.gray300,
+    borderRadius: radii.mdPlus,
     padding: spacing.md,
-    marginBottom: spacing.xl,
-    gap: spacing.lg,
+    marginBottom: spacing.md,
+    gap: spacing.sm,
     backgroundColor: colors.white,
   },
   segmentTitleRow: {
@@ -1481,13 +1524,35 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   segmentTitle: {
-    ...textStyles.h6,
-    color: colors.black,
+    ...textStyles.h8,
+    color: colors.gray900,
   },
   segmentDeleteButton: {
-    padding: spacing.xs,
+    ...surfaces.subtle,
+    width: 24,
+    height: 24,
+    borderRadius: radii.pill,
     justifyContent: "center",
     alignItems: "center",
+  },
+  layoverRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    paddingBottom: spacing.md,
+  },
+  layoverLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: colors.gray300,
+  },
+  layoverText: {
+    ...textStyles.body5,
+    color: colors.gray600,
+  },
+  segmentContainerReadOnly: {
+    borderWidth: 0,
+    paddingHorizontal: 0,
   },
   segmentContent: {
     gap: spacing.lg,
@@ -1497,17 +1562,29 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.gray400,
     borderRadius: radii.md,
-    height: 40,
+    height: 42,
     color: colors.black,
   },
   segmentDateInput: {
-    backgroundColor: colors.white,
-    borderWidth: 1,
-    borderColor: colors.gray400,
+    backgroundColor: colors.gray200,
     borderRadius: radii.md,
-    height: 40,
+    height: 42,
     paddingHorizontal: spacing.md,
     justifyContent: "center",
+  },
+  segmentReadOnly: {
+    backgroundColor: colors.gray200,
+    borderWidth: 0,
+    height: 46,
+    borderRadius: radii.mdPlus,
+  },
+  segmentSelect: {
+    height: 42,
+    backgroundColor: colors.gray200,
+    borderWidth: 0,
+  },
+  segmentSelectHover: {
+    backgroundColor: colors.inputHover,
   },
   segmentDateTextContainer: {
     flexDirection: "row",
@@ -1517,8 +1594,8 @@ const styles = StyleSheet.create({
     width: "100%",
   },
   segmentDateText: {
-    ...textStyles.body4,
-    color: colors.gray800,
+    ...textStyles.body5,
+    color: colors.gray900,
     justifyContent: "space-between",
     width: "100%",
   },
@@ -1527,11 +1604,15 @@ const styles = StyleSheet.create({
     color: colors.gray600,
   },
   segmentTimePicker: {
-    borderWidth: 1,
-    borderColor: colors.gray400,
     borderRadius: radii.md,
-    backgroundColor: colors.white,
-    height: 40,
+    backgroundColor: colors.gray200,
+    height: 42,
+  },
+  segmentTimePickerReadOnly: {
+    borderWidth: 0,
+    borderRadius: radii.mdPlus,
+    backgroundColor: colors.gray200,
+    height: 46,
   },
   airportPickerWrapper: {
     overflow: "visible",
@@ -1573,14 +1654,14 @@ const styles = StyleSheet.create({
   addSegmentButton: {
     backgroundColor: colors.white,
     borderWidth: 1,
+    borderStyle: "dashed",
     borderColor: colors.gray400,
-    borderRadius: 8,
-    height: 40,
+    borderRadius: radii.md,
+    paddingVertical: spacing.md,
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
-    gap: spacing.sm,
-    paddingHorizontal: spacing.xl,
+    gap: spacing.xs,
   },
   addButtonPlus: {
     fontSize: 14,
@@ -1590,7 +1671,7 @@ const styles = StyleSheet.create({
   },
   addSegmentButtonText: {
     ...textStyles.h8,
-    color: colors.black,
+    color: colors.gray900,
   },
   attachmentSection: {
     marginTop: spacing.lg,
@@ -1599,30 +1680,40 @@ const styles = StyleSheet.create({
   buttonRow: {
     flexDirection: "row",
     gap: spacing.sm,
-    marginTop: spacing.sm,
+    paddingTop: spacing.lg,
+    paddingHorizontal: spacing.xl,
     paddingBottom: spacing.xl,
   },
+  readOnlyDeleteButton: {
+    backgroundColor: colors.dangerTint,
+    backgroundImage: "none",
+    boxShadow: "none",
+  } as any,
+  readOnlyDeleteButtonText: {
+    color: colors.danger,
+  },
   deleteButton: {
-    backgroundColor: colors.gray300,
-    height: 40,
+    ...surfaces.muted,
+    flex: 1,
+    paddingVertical: spacing.md,
     borderRadius: radii.md,
-    paddingHorizontal: spacing.lg,
     justifyContent: "center",
     alignItems: "center",
-    minWidth: 90,
   },
   deleteButtonText: {
     ...textStyles.h8,
-    color: colors.black,
+    color: colors.gray900,
   },
   saveButton: {
-    backgroundColor: colors.primary,
-    height: 40,
+    ...surfaces.primary,
+    flex: 1,
+    paddingVertical: spacing.md,
     borderRadius: radii.md,
-    paddingHorizontal: spacing.lg,
     justifyContent: "center",
     alignItems: "center",
-    flex: 1,
+  },
+  footerEditButton: {
+    ...surfaces.dark,
   },
   saveButtonText: {
     ...textStyles.h8,

@@ -56,7 +56,9 @@ export default function AccommodationSection({
   carryoverPendingFiles,
   onConsumeCarryoverPendingFiles,
 }: AccommodationSectionProps) {
-  const [showAccommodationForm, setShowAccommodationForm] = useState(false);
+  const [showAccommodationForm, setShowAccommodationForm] = useState(
+    activeTab === "accommodation" && !selectedAccommodation,
+  );
   const [editingAccommodation, setEditingAccommodation] = useState<any | null>(
     null,
   );

@@ -27,7 +27,7 @@ import WonIcon from "../../../assets/won.svg";
 const LCLSSYSTM2_MAP: Record<string, { label: string; bg: string; color: string }> = {
   EV01: { label: "축제", bg: colors.festivalBg, color: colors.festivalText },
   EV02: { label: "공연", bg: "#FDEAF9", color: colors.categoryActivity },
-  EV03: { label: "행사", bg: colors.accommodationBg, color: colors.categoryMeal },
+  EV03: { label: "행사", bg: colors.festivalEventBg, color: colors.categoryMeal },
 };
 const DEFAULT_BADGE = { label: "축제", bg: colors.festivalBg, color: colors.festivalText };
 

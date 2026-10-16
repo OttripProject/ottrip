@@ -53,7 +53,7 @@ export default function ProfileScreen() {
   const [termsDetailModalOpen, setTermsDetailModalOpen] = useState(false);
   const [termsDetailKey, setTermsDetailKey] = useState<TermsKey>("tos");
   const [deletingGuestData, setDeletingGuestData] = useState(false);
-  const copiedTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const copiedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const CONTACT_EMAIL = "ottrip.official@gmail.com";
 

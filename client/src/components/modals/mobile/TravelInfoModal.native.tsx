@@ -10,8 +10,12 @@ import type {
   Plan,
 } from "@/types/api";
 import FullScreenModal from "@/ui/components/FullScreenModal.native";
+import ScalePressable from "@/ui/components/ScalePressable";
 import { colors } from "@/ui/tokens/colors";
-import { textStyles } from "@/ui/tokens/typography";
+import { radii } from "@/ui/tokens/radii";
+import { shadows } from "@/ui/tokens/shadows";
+import { spacing } from "@/ui/tokens/spacing";
+import { textStyles, typography } from "@/ui/tokens/typography";
 import { guestPrompt } from "@/utils/guestPrompt";
 import { useQueryClient } from "@tanstack/react-query";
 import dayjs from "dayjs";
@@ -27,7 +31,9 @@ import {
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import ItineraryIcon from "../../../../assets/mobile_check_backup.svg";
 import MemberIcon from "../../../../assets/mobile_member.svg";
-import CloseIcon from "../../../../assets/x.svg";
+import RightArrowIcon from "../../../../assets/right_arrow.svg";
+import ShareIcon from "../../../../assets/share_nodes_outline.svg";
+import CloseIcon from "../../../../assets/mobile_x.svg";
 import AddExpenseModal from "./AddExpenseModal.native";
 import ExpenseDetailModal from "./ExpenseDetailModal.native";
 import SharedMembersModal from "./SharedMembersModal.native";
@@ -51,8 +57,12 @@ interface TravelInfoModalProps {
   onRefreshPlan?: () => Promise<void>;
 }
 
-const formatPeriod = (start: string, end: string) =>
-  `${dayjs(start).format("YYYY.MM.DD")} ~ ${dayjs(end).format("YYYY.MM.DD")}`;
+const formatPeriod = (start: string, end: string) => {
+  const endFormat = dayjs(start).isSame(end, "year")
+    ? "MM. DD"
+    : "YYYY. MM. DD";
+  return `${dayjs(start).format("YYYY. MM. DD")} – ${dayjs(end).format(endFormat)}`;
+};
 
 export default function TravelInfoModal({
   visible,
@@ -78,6 +88,7 @@ export default function TravelInfoModal({
   const [showAddExpenseFromDetail, setShowAddExpenseFromDetail] =
     useState(false);
   const [showSharedMembers, setShowSharedMembers] = useState(false);
+  const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [memo, setMemo] = useState(plan?.memo ?? "");
 
   useEffect(() => {
@@ -155,13 +166,17 @@ export default function TravelInfoModal({
     <FullScreenModal
       visible={visible}
       onClose={handleClose}
-      containerBackgroundColor={colors.gray300}
+      containerBackgroundColor={colors.paletteFill}
     >
       {/* Header - Figma: 여행 정보 + 닫기 */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>여행 정보</Text>
-        <Pressable style={styles.closeButton} onPress={handleClose} hitSlop={8}>
-          <CloseIcon width={24} height={24} color={colors.black} />
+        <Pressable
+          style={styles.closeButton}
+          onPress={handleClose}
+          accessibilityLabel="닫기"
+        >
+          <CloseIcon width={24} height={24} color={colors.paletteFg3} />
         </Pressable>
       </View>
 
@@ -197,19 +212,19 @@ export default function TravelInfoModal({
               <Text style={styles.expenseAmount}>0원</Text>
             )}
           </View>
-          <Pressable
+          <ScalePressable
             style={styles.expenseDetailButton}
             onPress={() => setShowExpenseDetail(true)}
           >
             <Text style={styles.expenseDetailButtonText}>
               상세 내역 및 비용 추가
             </Text>
-          </Pressable>
+          </ScalePressable>
         </View>
 
         {/* Card 3: 참여 멤버 / 등록 일정 - 카드 2개, 같은 줄, gap 9 */}
         <View style={styles.twoCardRow}>
-          <Pressable
+          <ScalePressable
             style={styles.smallCard}
             onPress={() => {
               if (me?.isGuest) {
@@ -219,12 +234,22 @@ export default function TravelInfoModal({
               setShowSharedMembers(true);
             }}
           >
-            <MemberIcon width={20} height={20} color={colors.black} />
+            <View style={styles.smallCardIconRow}>
+              <MemberIcon width={20} height={20} color={colors.black} />
+              <RightArrowIcon
+                width={17}
+                height={17}
+                color={colors.paletteFg3}
+                style={styles.smallCardArrow}
+              />
+            </View>
             <Text style={styles.twoColValue}>{memberCount}명</Text>
             <Text style={styles.twoColLabel}>참여 멤버</Text>
-          </Pressable>
+          </ScalePressable>
           <View style={styles.smallCard}>
-            <ItineraryIcon width={20} height={20} color={colors.black} />
+            <View style={styles.smallCardIconRow}>
+              <ItineraryIcon width={20} height={20} color={colors.black} />
+            </View>
             <Text style={styles.twoColValue}>{scheduleCount}개</Text>
             <Text style={styles.twoColLabel}>등록 일정</Text>
           </View>
@@ -232,15 +257,23 @@ export default function TravelInfoModal({
 
         {/* Card 4: 공유 메모 - 흰색 카드, 연한 파란 박스, 편집 가능, blur 시 저장 */}
         <View style={styles.card}>
-          <Text style={styles.cardLabel}>공유 메모</Text>
+          <View style={styles.memoHeader}>
+            <Text style={styles.cardLabel}>공유 메모</Text>
+            <View style={styles.memoHint}>
+              <ShareIcon width={13} height={13} color={colors.paletteFg3} />
+              <Text style={styles.memoHintText}>
+                참여 멤버 모두에게 공유돼요
+              </Text>
+            </View>
+          </View>
           <View style={styles.memoBox}>
             <TextInput
               style={styles.memoInput}
               value={memo}
               onChangeText={setMemo}
               onBlur={handleMemoBlur}
-              placeholder="메모를 입력하세요"
-              placeholderTextColor={colors.gray500}
+              placeholder="함께 보는 메모를 입력하세요."
+              placeholderTextColor={colors.memoPlaceholder}
               multiline
               textAlignVertical="top"
             />
@@ -249,13 +282,14 @@ export default function TravelInfoModal({
 
         {/* Card 5: 여행 준비 체크리스트 - plan 전체용 */}
         {planPublicId && (
-          <View style={styles.checklistCardWrapper}>
+          <View>
             <WeeklyChecklistCard
               planPublicId={planPublicId}
               mode="full"
               planStartDate={planStartDate}
               itineraries={itineraries ?? []}
               titleOverride="여행 준비 체크리스트"
+              cardStyle={styles.checklistCard}
             />
           </View>
         )}
@@ -271,20 +305,26 @@ export default function TravelInfoModal({
         planId={planId}
         planStartDate={planStartDate}
         planEndDate={planEndDate}
-        title="전체 여행 비용"
+        title="총 여행 비용"
         onExpenseDelete={onRefreshExpenses}
         onExpenseAdd={handleExpenseAdded}
         onAddExpensePress={() => {
+          setEditingExpense(null);
           setShowExpenseDetail(false);
+          setShowAddExpenseFromDetail(true);
+        }}
+        onExpensePress={expense => {
+          setEditingExpense(expense);
           setShowAddExpenseFromDetail(true);
         }}
       />
 
       <AddExpenseModal
         visible={showAddExpenseFromDetail}
+        expense={editingExpense}
         onClose={opts => {
           setShowAddExpenseFromDetail(false);
-          if (opts?.fromSave) {
+          if (opts?.fromSave && !editingExpense) {
             setShowExpenseDetail(false);
           } else {
             setShowExpenseDetail(true);
@@ -294,6 +334,14 @@ export default function TravelInfoModal({
         planStartDate={planStartDate}
         planEndDate={planEndDate}
         onExpenseAdd={handleExpenseAdded}
+        onExpenseUpdate={async () => {
+          await onRefreshExpenses?.();
+          await onRefreshPlan?.();
+        }}
+        onExpenseDelete={async () => {
+          await onRefreshExpenses?.();
+          await onRefreshPlan?.();
+        }}
       />
 
       <SharedMembersModal
@@ -321,97 +369,138 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: colors.gray300,
+    backgroundColor: colors.paletteFill,
   },
   headerTitle: {
-    ...textStyles.h5,
+    ...textStyles.h4,
+    color: colors.paletteInk,
   },
   closeButton: {
     position: "absolute",
-    right: 16,
+    right: 14,
+    width: 44,
+    height: 44,
+    alignItems: "center",
+    justifyContent: "center",
   },
   scrollView: {
     flex: 1,
-    backgroundColor: colors.gray300,
+    backgroundColor: colors.paletteFill,
   },
   scrollContent: {
-    paddingHorizontal: 16,
-    paddingTop: 8,
-    paddingBottom: 24,
+    gap: spacing.lg,
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing["2xl"],
   },
   card: {
     backgroundColor: colors.white,
-    borderRadius: 16,
-    paddingVertical: 20,
-    paddingHorizontal: 16,
-    marginBottom: 8,
+    borderRadius: radii["2xl"],
+    padding: spacing.xl,
+    ...shadows.card,
   },
   planTitle: {
-    ...textStyles.h4,
-    marginBottom: 7,
+    ...textStyles.h2,
+    letterSpacing: -0.48,
+    color: colors.paletteInk,
   },
   planPeriod: {
-    ...textStyles.body4,
-    color: colors.gray600,
+    ...textStyles.body3,
+    marginTop: spacing.sm,
+    color: colors.paletteFg3,
+    fontVariant: ["tabular-nums"],
   },
   cardLabel: {
-    ...textStyles.h7,
-    color: colors.gray600,
-    marginBottom: 4,
+    ...textStyles.h6,
+    color: colors.paletteFg2,
   },
   expenseAmountGroup: {
-    gap: 2,
-    marginBottom: 16,
+    marginTop: spacing.sm,
   },
   expenseAmount: {
     ...textStyles.h2,
+    fontFamily: typography.fontFamily.poppinsSemiBold,
+    letterSpacing: -0.48,
+    color: colors.paletteInk,
+    fontVariant: ["tabular-nums"],
   },
   expenseDetailButton: {
-    backgroundColor: colors.black,
-    borderRadius: 12,
-    paddingVertical: 13,
-    marginBottom: 4,
+    marginTop: spacing.lg,
+    paddingVertical: spacing.lg,
+    borderRadius: radii.lgPlus,
+    backgroundColor: colors.paletteInk,
+    experimental_backgroundImage: `linear-gradient(180deg, ${colors.gradientInk[0]} 0%, ${colors.gradientInk[1]} 100%)`,
+    ...shadows.darkRaised,
     alignItems: "center",
     justifyContent: "center",
   },
   expenseDetailButtonText: {
-    ...textStyles.h6,
+    ...textStyles.h5,
     color: colors.white,
   },
   twoCardRow: {
     flexDirection: "row",
-    gap: 9,
-    marginBottom: 8,
+    gap: spacing.lg,
   },
   smallCard: {
     flex: 1,
     backgroundColor: colors.white,
-    borderRadius: 16,
-    paddingVertical: 20,
-    paddingHorizontal: 16,
-    alignItems: "flex-start",
+    borderRadius: radii["2xl"],
+    padding: spacing.xl,
+    ...shadows.card,
+  },
+  smallCardIconRow: {
+    height: 24,
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  smallCardArrow: {
+    marginLeft: "auto",
   },
   twoColValue: {
-    ...textStyles.h3,
-    color: colors.black,
-    marginVertical: 8,
+    ...textStyles.h2,
+    fontFamily: typography.fontFamily.poppinsSemiBold,
+    letterSpacing: -0.48,
+    marginTop: spacing.xl,
+    color: colors.paletteInk,
+    fontVariant: ["tabular-nums"],
   },
   twoColLabel: {
     ...textStyles.h7,
-    color: colors.gray600,
+    marginTop: spacing.sm,
+    color: colors.paletteFg2,
+  },
+  memoHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: spacing.md,
+  },
+  memoHint: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.xs,
+    marginLeft: "auto",
+  },
+  memoHintText: {
+    ...textStyles.body5,
+    color: colors.paletteFg2,
   },
   memoBox: {
-    backgroundColor: `${colors.primary}1A`,
-    borderRadius: 12,
-    padding: 16,
+    backgroundColor: colors.primaryTint,
+    borderRadius: radii.lgPlus,
+    padding: spacing.lg,
   },
   memoInput: {
     ...textStyles.body3,
-    color: colors.primary,
-    minHeight: 60,
+    color: colors.paletteInk,
+    minHeight: 120 - spacing.lg * 2,
     padding: 0,
   },
-  checklistCardWrapper: {
-    marginTop: 12,
+  checklistCard: {
+    borderRadius: radii["2xl"],
+    paddingTop: spacing.xl,
+    paddingHorizontal: spacing.xl,
+    paddingBottom: spacing.lg,
+    ...shadows.card,
   },
 });

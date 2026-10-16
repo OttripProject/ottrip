@@ -3,12 +3,13 @@ import { SelectedPlanProvider } from "@/contexts/SelectedPlanContext";
 import { useToast } from "@/contexts/ToastContext";
 import { plansApi } from "@/services/plans";
 import { colors } from "@/ui/tokens/colors";
+import { textStyles } from "@/ui/tokens/typography";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { useFocusEffect, useRoute } from "@react-navigation/native";
 import { useQueryClient } from "@tanstack/react-query";
 import React, { useEffect, useRef, useState } from "react";
-import { Platform, StyleSheet, View } from "react-native";
+import { Platform, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, {
   useSharedValue,
@@ -16,11 +17,9 @@ import Animated, {
   withSpring,
   withTiming,
 } from "react-native-reanimated";
-import CalendarSelectedIcon from "../../assets/mobile_calendar_black.svg";
-import CalendarUnselectedIcon from "../../assets/mobile_calendar_white.svg";
-import HomeSelectedIcon from "../../assets/mobile_home_black.svg";
-import HomeUnselectedIcon from "../../assets/mobile_home_white.svg";
-import TodayScreen from "./TodayScreen.native";
+import CalendarIcon from "../../assets/mobile_calendar_black.svg";
+import ExpenseCardIcon from "../../assets/expense_card.svg";
+import ExpenseScreen from "./ExpenseScreen.native";
 import WeeklyScreen from "./WeeklyScreen.native";
 
 const Tab = createBottomTabNavigator();
@@ -95,18 +94,26 @@ function SlideScreenWrapper({
   );
 }
 
-function TodayScreenWithAnimation() {
+function WeeklyScreenWithAnimation() {
   return (
-    <SlideScreenWrapper screenIndex={0} screenName="Today">
-      <TodayScreen />
+    <SlideScreenWrapper screenIndex={0} screenName="Weekly">
+      <WeeklyScreen />
     </SlideScreenWrapper>
   );
 }
 
-function WeeklyScreenWithAnimation() {
+function renderTabLabel(label: string, focused: boolean) {
   return (
-    <SlideScreenWrapper screenIndex={1} screenName="Weekly">
-      <WeeklyScreen />
+    <Text style={[styles.tabLabel, focused && styles.tabLabelActive]}>
+      {label}
+    </Text>
+  );
+}
+
+function ExpenseScreenWithAnimation() {
+  return (
+    <SlideScreenWrapper screenIndex={1} screenName="Expense">
+      <ExpenseScreen />
     </SlideScreenWrapper>
   );
 }
@@ -156,18 +163,13 @@ export default function MobileNavigator() {
             tabBarActiveTintColor: colors.primary,
             tabBarInactiveTintColor: colors.gray600,
             tabBarStyle: {
-              backgroundColor: Platform.OS === "ios" ? "rgba(255, 255, 255, 0.8)" : colors.white,
+              backgroundColor: colors.white,
               borderTopWidth: 1,
-              borderTopColor: Platform.OS === "ios" ? "rgba(255, 255, 255, 0.5)" : colors.gray100,
+              borderTopColor: colors.paletteLine,
               paddingBottom: Platform.OS === "ios" ? 24 : insets.bottom + 8,
               paddingTop: 8,
               height: Platform.OS === "ios" ? 88 : 64 + insets.bottom,
               elevation: 0,
-            },
-            tabBarLabelStyle: {
-              fontSize: 10,
-              fontWeight: "500",
-              marginTop: 4,
             },
             tabBarIconStyle: {
               marginTop: 4,
@@ -175,51 +177,25 @@ export default function MobileNavigator() {
           }}
         >
           <Tab.Screen
-            name="Today"
-            component={TodayScreenWithAnimation}
-            options={{
-              tabBarLabel: "오늘",
-              tabBarIcon: ({
-                color,
-                focused,
-              }: { color: string; focused: boolean }) =>
-                focused ? (
-                  <HomeSelectedIcon
-                    width={24}
-                    height={24}
-                    color={colors.primary}
-                  />
-                ) : (
-                  <HomeUnselectedIcon
-                    width={24}
-                    height={24}
-                    color={colors.black}
-                  />
-                ),
-            }}
-          />
-          <Tab.Screen
             name="Weekly"
             component={WeeklyScreenWithAnimation}
             options={{
-              tabBarLabel: "여행 일정",
-              tabBarIcon: ({
-                color,
-                focused,
-              }: { color: string; focused: boolean }) =>
-                focused ? (
-                  <CalendarSelectedIcon
-                    width={24}
-                    height={24}
-                    color={colors.primary}
-                  />
-                ) : (
-                  <CalendarUnselectedIcon
-                    width={24}
-                    height={24}
-                    color={colors.black}
-                  />
-                ),
+              tabBarLabel: ({ focused }: { focused: boolean }) =>
+                renderTabLabel("여행 일정", focused),
+              tabBarIcon: ({ color }: { color: string }) => (
+                <CalendarIcon width={22} height={22} color={color} />
+              ),
+            }}
+          />
+          <Tab.Screen
+            name="Expense"
+            component={ExpenseScreenWithAnimation}
+            options={{
+              tabBarLabel: ({ focused }: { focused: boolean }) =>
+                renderTabLabel("지출", focused),
+              tabBarIcon: ({ color }: { color: string }) => (
+                <ExpenseCardIcon width={22} height={22} color={color} />
+              ),
             }}
           />
         </Tab.Navigator>
@@ -229,6 +205,17 @@ export default function MobileNavigator() {
 }
 
 const styles = StyleSheet.create({
+  tabLabel: {
+    ...textStyles.body5,
+    lineHeight: 14,
+    marginTop: 4,
+    color: colors.paletteFg3,
+  },
+  tabLabelActive: {
+    ...textStyles.h8,
+    lineHeight: 14,
+    color: colors.primary,
+  },
   navigatorContainer: {
     flex: 1,
     backgroundColor: colors.white,

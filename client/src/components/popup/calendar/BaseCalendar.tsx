@@ -667,7 +667,7 @@ const styles = StyleSheet.create({
   headerText: {
     ...textStyles.body1,
     color: colors.black,
-    fontWeight: typography.weight.bold,
+    fontFamily: typography.fontFamily.pretendardBold,
   },
   dropdownButton: {
     width: 14,
@@ -749,7 +749,7 @@ const styles = StyleSheet.create({
   },
   dayTextSelected: {
     color: colors.white,
-    fontWeight: "600",
+    fontFamily: typography.fontFamily.pretendardSemiBold,
   },
   todayCircle: {
     position: "absolute",
@@ -761,7 +761,7 @@ const styles = StyleSheet.create({
   },
   dayTextToday: {
     color: colors.primary,
-    fontWeight: "600",
+    fontFamily: typography.fontFamily.pretendardSemiBold,
   },
   weekBackground: {
     position: "absolute",
