@@ -544,7 +544,7 @@ export default function TripSelector({
                           }
                         }}
                       >
-                        <DotsIcon width={16} height={16} />
+                        <DotsIcon width={16} height={16} color={colors.black} />
                       </Pressable>
                     </View>
                   </Pressable>

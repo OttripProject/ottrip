@@ -204,6 +204,21 @@ export const shadows = {
         "inset 0 1px 0 rgba(255,255,255,0.22), 0 1px 1px rgba(0,60,140,0.25), 0 8px 18px -8px rgba(0,122,255,0.55)",
     } as any,
   }),
+  primaryRaised: {
+    boxShadow:
+      "inset 0 1px 0 rgba(255,255,255,0.22), 0 1px 1px rgba(0,60,140,0.25), 0 8px 18px -8px rgba(0,122,255,0.55)",
+  },
+  darkRaised: {
+    boxShadow:
+      "inset 0 1px 0 rgba(255,255,255,0.16), 0 1px 1px rgba(0,0,0,0.2), 0 8px 18px -8px rgba(0,0,0,0.45)",
+  },
+  card: {
+    boxShadow:
+      "0 0 0 1px rgba(20,24,40,0.08), 0 1px 2px rgba(20,24,40,0.05), 0 14px 36px -18px rgba(20,24,40,0.18)",
+  },
+  soft: {
+    boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
+  },
   darkHover: Platform.select({
     ios: {
       shadowColor: "#000",

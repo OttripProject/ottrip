@@ -5,14 +5,19 @@ import { expensesApi } from "@/services/expenses";
 import { type Attachment, type Expense, ExpenseCategory } from "@/types/api";
 import { categoryLabels, currencyLabels } from "@/types/expense";
 import BottomSheetModal from "@/ui/components/BottomSheetModal.native";
+import ScalePressable from "@/ui/components/ScalePressable";
 import { colors } from "@/ui/tokens/colors";
 import { radii } from "@/ui/tokens/radii";
+import { shadows } from "@/ui/tokens/shadows";
 import { spacing } from "@/ui/tokens/spacing";
 import { textStyles, typography } from "@/ui/tokens/typography";
 import { formatFileSize } from "@/utils/fileUtils";
 import dayjs from "dayjs";
-import { useMemo, useRef, useState } from "react";
+import { toEasing } from "@/ui/effects/pressScale";
+import { motion } from "@/ui/tokens/motion";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
+  Animated,
   Linking,
   Pressable,
   ScrollView,
@@ -21,16 +26,13 @@ import {
   View,
 } from "react-native";
 import { Swipeable } from "react-native-gesture-handler";
-import FlightIcon from "../../../../assets/airplane.svg";
 import AttachmentClipIcon from "../../../../assets/attachment_clip.svg";
-import AccommodationIcon from "../../../../assets/mobile_accomodation.svg";
+import DownArrowIcon from "../../../../assets/down_arrow.svg";
 import AttachmentDocumentIcon from "../../../../assets/mobile_attachment_document.svg";
 import AttachmentImageIcon from "../../../../assets/mobile_attachment_image.svg";
-import MobileCarIcon from "../../../../assets/mobile_car.svg";
-import CloseIcon from "../../../../assets/mobile_close.svg";
-import MobileFoodIcon from "../../../../assets/mobile_food.svg";
 import PlusIcon from "../../../../assets/mobile_plus.svg";
-import MobileTicketIcon from "../../../../assets/mobile_ticket.svg";
+import CloseIcon from "../../../../assets/mobile_x.svg";
+import RightArrowIcon from "../../../../assets/right_arrow.svg";
 
 interface ExpenseDetailModalProps {
   visible: boolean;
@@ -48,6 +50,7 @@ interface ExpenseDetailModalProps {
   title?: string;
   onExpenseAdd?: (expense: Expense) => void;
   onAddExpensePress?: () => void;
+  onExpensePress?: (expense: Expense) => void;
 }
 
 const CATEGORY_ORDER: ExpenseCategory[] = [
@@ -60,21 +63,29 @@ const CATEGORY_ORDER: ExpenseCategory[] = [
   ExpenseCategory.ETC,
 ];
 
-const getCategoryIcon = (category: ExpenseCategory) => {
-  const iconProps = { width: 20, height: 20, color: colors.primary };
-  switch (category) {
-    case ExpenseCategory.FOOD:
-      return <MobileFoodIcon {...iconProps} />;
-    case ExpenseCategory.TRANSPORT:
-      return <MobileCarIcon {...iconProps} />;
-    case ExpenseCategory.ACCOMMODATION:
-      return <AccommodationIcon {...iconProps} />;
-    case ExpenseCategory.FLIGHT:
-      return <FlightIcon {...iconProps} />;
-    default:
-      return <MobileTicketIcon {...iconProps} />;
-  }
-};
+function CategoryChevron({ expanded }: { expanded: boolean }) {
+  const rotation = useRef(new Animated.Value(expanded ? 1 : 0)).current;
+
+  useEffect(() => {
+    Animated.timing(rotation, {
+      toValue: expanded ? 1 : 0,
+      duration: motion.duration.base,
+      easing: toEasing(motion.easing.ease),
+      useNativeDriver: true,
+    }).start();
+  }, [expanded, rotation]);
+
+  const rotate = rotation.interpolate({
+    inputRange: [0, 1],
+    outputRange: ["0deg", "180deg"],
+  });
+
+  return (
+    <Animated.View style={{ transform: [{ rotate }] }}>
+      <DownArrowIcon width={15} height={15} color={colors.paletteFg3} />
+    </Animated.View>
+  );
+}
 
 export default function ExpenseDetailModal({
   visible,
@@ -87,10 +98,12 @@ export default function ExpenseDetailModal({
   exDate,
   title = "오늘의 여행 비용",
   onAddExpensePress,
+  onExpensePress,
 }: ExpenseDetailModalProps) {
   const [tab, setTab] = useState<"expenses" | "attachments">("expenses");
-  const [selectedCategory, setSelectedCategory] =
-    useState<ExpenseCategory | null>(null);
+  const [expandedCategories, setExpandedCategories] = useState<
+    Set<ExpenseCategory>
+  >(new Set());
   const [previewVisible, setPreviewVisible] = useState(false);
   const [previewImages, setPreviewImages] = useState<ImagePreviewItem[]>([]);
   const [previewInitialIndex, setPreviewInitialIndex] = useState(0);
@@ -206,9 +219,39 @@ export default function ExpenseDetailModal({
 
   const showDatePerExpense = !exDate;
 
-  const filteredExpenses = selectedCategory
-    ? expenses.filter(e => e.category === selectedCategory)
-    : expenses;
+  const categoryGroups = useMemo(
+    () =>
+      CATEGORY_ORDER.map(category => ({
+        category,
+        totals: categoryTotals[category],
+        items: expenses.filter(e => e.category === category),
+      }))
+        .filter(group => group.items.length > 0)
+        .sort(
+          (a, b) =>
+            b.totals.KRW - a.totals.KRW || b.totals.USD - a.totals.USD,
+        ),
+    [expenses, categoryTotals],
+  );
+
+  const toggleCategory = (category: ExpenseCategory) => {
+    setExpandedCategories(prev => {
+      const next = new Set(prev);
+      if (next.has(category)) next.delete(category);
+      else next.add(category);
+      return next;
+    });
+  };
+
+  const formatTotals = (totals: { KRW: number; USD: number }) =>
+    [
+      totals.KRW > 0 || totals.USD === 0
+        ? `${totals.KRW.toLocaleString("ko-KR")} 원`
+        : null,
+      totals.USD > 0 ? `${totals.USD.toLocaleString("en-US")} 달러` : null,
+    ]
+      .filter(Boolean)
+      .join(" · ");
 
   const handleDelete = async (expenseId: number) => {
     try {
@@ -253,25 +296,22 @@ export default function ExpenseDetailModal({
   };
 
   return (
-    <BottomSheetModal visible={visible} onClose={onClose} height={0.85}>
+    <BottomSheetModal visible={visible} onClose={onClose} height={0.88}>
         <View style={styles.header}>
           <Text style={styles.headerTitle}>{title}</Text>
-          <Pressable style={styles.closeButton} onPress={onClose} hitSlop={8}>
-            <CloseIcon width={20} height={20} color={colors.gray700} />
+          <Pressable
+            style={styles.closeButton}
+            onPress={onClose}
+            accessibilityLabel="닫기"
+          >
+            <CloseIcon width={24} height={24} color={colors.paletteFg3} />
           </Pressable>
         </View>
 
-        <Pressable
-          style={[
-            styles.totalCard,
-            tab === "expenses" && selectedCategory === null && styles.totalCardSelected,
-          ]}
-          onPress={() => {
-            setSelectedCategory(null);
-            setTab("expenses");
-          }}
-        >
-          <Text style={styles.totalLabel}>총 지출</Text>
+        <View style={styles.totalCard}>
+          <Text style={styles.totalLabel}>
+            총 비용 <Text style={styles.totalLabelSub}>(Total Cost)</Text>
+          </Text>
           <View style={styles.totalAmountColumn}>
             {totalKrw > 0 && (
               <Text style={styles.totalAmount}>
@@ -287,7 +327,7 @@ export default function ExpenseDetailModal({
               <Text style={styles.totalAmount}>0 원</Text>
             )}
           </View>
-        </Pressable>
+        </View>
 
         <View style={styles.tabBar}>
           <Pressable
@@ -319,7 +359,9 @@ export default function ExpenseDetailModal({
               첨부파일
             </Text>
             {allAttachments.length > 0 && (
-              <Text style={styles.tabBadge}>{allAttachments.length}</Text>
+              <View style={styles.tabBadge}>
+                <Text style={styles.tabBadgeText}>{allAttachments.length}</Text>
+              </View>
             )}
           </Pressable>
         </View>
@@ -331,160 +373,127 @@ export default function ExpenseDetailModal({
             showsVerticalScrollIndicator={false}
             onScrollBeginDrag={closeActiveSwipe}
           >
-            <View style={styles.categoryGrid}>
-              {CATEGORY_ORDER.map(category => {
-                const totals = categoryTotals[category];
-                if (totals.KRW === 0 && totals.USD === 0) return null;
-                const isSelected = selectedCategory === category;
-                const amountText = [
-                  totals.KRW > 0
-                    ? `${totals.KRW.toLocaleString("ko-KR")}원`
-                    : null,
-                  totals.USD > 0
-                    ? `${totals.USD.toLocaleString("en-US")}달러`
-                    : null,
-                ]
-                  .filter(Boolean)
-                  .join(" · ");
+            {categoryGroups.length > 0 ? (
+              categoryGroups.map(({ category, totals, items }) => {
+                const isExpanded = expandedCategories.has(category);
                 return (
-                  <Pressable
-                    key={category}
-                    style={[
-                      styles.categoryCard,
-                      isSelected && styles.categoryCardSelected,
-                    ]}
-                    onPress={() =>
-                      setSelectedCategory(isSelected ? null : category)
-                    }
-                  >
-                    <Text
-                      style={[
-                        styles.categoryLabel,
-                        isSelected && styles.categoryLabelSelected,
-                      ]}
+                  <View key={category} style={styles.categoryCard}>
+                    <Pressable
+                      style={styles.categoryHeader}
+                      onPress={() => toggleCategory(category)}
                     >
-                      {categoryLabels[category]}
-                    </Text>
-                    <Text
-                      style={[
-                        styles.categoryAmount,
-                        isSelected && styles.categoryAmountSelected,
-                      ]}
-                    >
-                      {amountText}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </View>
-
-            <Text style={styles.sectionTitle}>
-              {selectedCategory
-                ? `${categoryLabels[selectedCategory]} 상세 내역`
-                : "전체 상세 내역"}
-            </Text>
-
-            {filteredExpenses.length > 0 ? (
-              <View style={styles.detailList}>
-                {filteredExpenses.map((expense, index) => {
-                  const expAttachments = attachmentsMap[expense.id] ?? [];
-                  return (
-                    <View key={expense.id}>
-                      {index > 0 && <View style={styles.divider} />}
-                      <Swipeable
-                        ref={el => {
-                          if (el) swipeRefs.current.set(expense.id, el);
-                          else swipeRefs.current.delete(expense.id);
-                        }}
-                        friction={2}
-                        overshootRight={false}
-                        enabled={!readOnly}
-                        onSwipeableOpen={() => {
-                          const prev = activeSwipeId.current;
-                          if (prev !== null && prev !== expense.id) {
-                            swipeRefs.current.get(prev)?.close();
-                          }
-                          activeSwipeId.current = expense.id;
-                        }}
-                        onSwipeableClose={() => {
-                          if (activeSwipeId.current === expense.id) {
-                            activeSwipeId.current = null;
-                          }
-                        }}
-                        renderRightActions={() => (
-                          <View style={styles.swipeDeleteContainer}>
-                            <Pressable
-                              style={styles.swipeDeleteButton}
-                              onPress={() => handleDelete(expense.id)}
-                            >
-                              <Text style={styles.swipeDeleteLabel}>삭제</Text>
-                            </Pressable>
-                          </View>
-                        )}
-                      >
-                        <View style={styles.detailRow}>
-                          <View style={styles.detailIconBox}>
-                            {getCategoryIcon(expense.category)}
-                          </View>
-                          <View style={styles.detailContent}>
-                            <View style={styles.detailTitleRow}>
-                              <Text style={styles.detailCategory}>
-                                {categoryLabels[expense.category] ||
-                                  expense.category}
-                              </Text>
-                              {showDatePerExpense && expense.exDate && (
-                                <Text style={styles.detailDate}>
-                                  {dayjs(expense.exDate).format("MM.DD")}
-                                </Text>
-                              )}
-                            </View>
-                            {expense.description ? (
-                              <Text
-                                style={styles.detailDescription}
-                                numberOfLines={1}
-                              >
-                                {expense.description}
-                              </Text>
-                            ) : null}
-                          </View>
-                          <View style={styles.detailRight}>
-                            <Text style={styles.detailAmount}>
-                              {expense.amount.toLocaleString()}{" "}
-                              {currencyLabels[expense.currency]}
-                            </Text>
-                            {expAttachments.length > 0 && (
-                              <Pressable
-                                style={styles.attachmentBadge}
-                                onPress={() =>
-                                  handleExpenseAttachmentPress(
-                                    expense,
-                                    expAttachments,
-                                  )
+                      <View style={styles.categoryInfo}>
+                        <Text style={styles.categoryLabel}>
+                          {categoryLabels[category]}
+                        </Text>
+                        <Text style={styles.categoryAmount}>
+                          {formatTotals(totals)}
+                        </Text>
+                      </View>
+                      <Text style={styles.categoryCount}>{items.length}건</Text>
+                      <CategoryChevron expanded={isExpanded} />
+                    </Pressable>
+                    {isExpanded && (
+                      <View style={styles.categoryBody}>
+                        {items.map(expense => {
+                          const expAttachments =
+                            attachmentsMap[expense.id] ?? [];
+                          return (
+                            <Swipeable
+                              key={expense.id}
+                              ref={el => {
+                                if (el) swipeRefs.current.set(expense.id, el);
+                                else swipeRefs.current.delete(expense.id);
+                              }}
+                              friction={2}
+                              overshootRight={false}
+                              enabled={!readOnly}
+                              onSwipeableOpen={() => {
+                                const prev = activeSwipeId.current;
+                                if (prev !== null && prev !== expense.id) {
+                                  swipeRefs.current.get(prev)?.close();
                                 }
+                                activeSwipeId.current = expense.id;
+                              }}
+                              onSwipeableClose={() => {
+                                if (activeSwipeId.current === expense.id) {
+                                  activeSwipeId.current = null;
+                                }
+                              }}
+                              renderRightActions={() => (
+                                <View style={styles.swipeDeleteContainer}>
+                                  <Pressable
+                                    style={styles.swipeDeleteButton}
+                                    onPress={() => handleDelete(expense.id)}
+                                  >
+                                    <Text style={styles.swipeDeleteLabel}>
+                                      삭제
+                                    </Text>
+                                  </Pressable>
+                                </View>
+                              )}
+                            >
+                              <Pressable
+                                style={styles.detailRow}
+                                disabled={readOnly || !onExpensePress}
+                                onPress={() => onExpensePress?.(expense)}
                               >
-                                <AttachmentClipIcon
-                                  width={11}
-                                  height={11}
-                                  color={colors.gray700}
-                                />
-                                <Text style={styles.attachmentBadgeText}>
-                                  {expAttachments.length}
+                                <View style={styles.detailContent}>
+                                  <Text
+                                    style={styles.detailTitle}
+                                    numberOfLines={1}
+                                  >
+                                    {expense.description || "-"}
+                                  </Text>
+                                  {showDatePerExpense && expense.exDate && (
+                                    <Text style={styles.detailSub}>
+                                      {dayjs(expense.exDate).format("M월 D일")}
+                                    </Text>
+                                  )}
+                                </View>
+                                {expAttachments.length > 0 && (
+                                  <Pressable
+                                    style={styles.attachmentBadge}
+                                    onPress={() =>
+                                      handleExpenseAttachmentPress(
+                                        expense,
+                                        expAttachments,
+                                      )
+                                    }
+                                  >
+                                    <AttachmentClipIcon
+                                      width={13}
+                                      height={13}
+                                      color={colors.paletteFg2}
+                                    />
+                                    <Text style={styles.attachmentBadgeText}>
+                                      {expAttachments.length}
+                                    </Text>
+                                  </Pressable>
+                                )}
+                                <Text style={styles.detailAmount}>
+                                  {expense.amount.toLocaleString()}{" "}
+                                  {currencyLabels[expense.currency]}
                                 </Text>
+                                {!readOnly && onExpensePress && (
+                                  <RightArrowIcon
+                                    width={13}
+                                    height={13}
+                                    color={colors.paletteFg3}
+                                    style={styles.detailArrow}
+                                  />
+                                )}
                               </Pressable>
-                            )}
-                          </View>
-                        </View>
-                      </Swipeable>
-                    </View>
-                  );
-                })}
-              </View>
+                            </Swipeable>
+                          );
+                        })}
+                      </View>
+                    )}
+                  </View>
+                );
+              })
             ) : (
-              <Text style={styles.emptyText}>
-                {selectedCategory
-                  ? "해당 카테고리 내역이 없습니다"
-                  : "지출 내역이 없습니다"}
-              </Text>
+              <Text style={styles.emptyText}>지출 내역이 없습니다</Text>
             )}
           </ScrollView>
         ) : (
@@ -561,13 +570,13 @@ export default function ExpenseDetailModal({
 
         {planId > 0 && onAddExpensePress && (
           <View style={styles.footer}>
-            <Pressable
+            <ScalePressable
               style={styles.addExpenseButton}
               onPress={onAddExpensePress}
             >
-              <PlusIcon width={20} height={20} color={colors.white} />
+              <PlusIcon width={14} height={14} color={colors.white} />
               <Text style={styles.addExpenseButtonText}>비용 추가하기</Text>
-            </Pressable>
+            </ScalePressable>
           </View>
         )}
 
@@ -585,98 +594,99 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
     paddingHorizontal: spacing.xl,
     paddingTop: spacing.md,
     paddingBottom: spacing.sm,
   },
   headerTitle: {
-    ...textStyles.h4,
-    color: colors.gray900,
+    ...textStyles.h3,
+    letterSpacing: -0.2,
+    color: colors.paletteInk,
   },
   closeButton: {
-    padding: 4,
-    backgroundColor: colors.gray200,
-    borderRadius: 16,
-    height: 32,
-    width: 32,
+    width: 44,
+    height: 44,
+    marginLeft: "auto",
+    marginRight: -spacing.md,
     alignItems: "center",
     justifyContent: "center",
   },
   totalCard: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
+    marginTop: spacing.sm,
     marginHorizontal: spacing.xl,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md + 2,
-    backgroundColor: colors.gray900,
-    borderRadius: radii.md,
+    padding: spacing.lg,
+    backgroundColor: colors.primarySoft,
+    borderRadius: radii.lgPlus,
   },
   totalLabel: {
     ...textStyles.h7,
-    color: "rgba(255,255,255,0.7)",
+    color: colors.paletteInk,
   },
-  totalCardSelected: {
-    borderWidth: 3,
-    borderColor: colors.black,
+  totalLabelSub: {
+    ...textStyles.body4,
+    color: colors.paletteFg3,
   },
   totalAmountColumn: {
-    alignItems: "flex-end",
-    gap: 2,
+    marginTop: spacing.xs,
+    gap: spacing.xs,
   },
   totalAmount: {
-    ...textStyles.h5,
-    color: colors.white,
+    ...textStyles.h2,
+    fontFamily: typography.fontFamily.poppinsSemiBold,
+    letterSpacing: -0.48,
+    color: colors.primary,
+    fontVariant: ["tabular-nums"],
   },
   tabBar: {
     flexDirection: "row",
-    gap: spacing.sm,
-    paddingHorizontal: spacing.xl,
-    paddingTop: spacing.md,
+    gap: spacing.xl,
+    marginTop: spacing.lg,
+    marginHorizontal: spacing.xl,
     borderBottomWidth: 1,
     borderBottomColor: colors.gray300,
-    marginTop: spacing.sm,
   },
   tabItem: {
     flexDirection: "row",
     alignItems: "center",
-    gap: spacing.xs,
-    paddingVertical: 6,
-    paddingHorizontal: spacing.xs,
+    gap: spacing.sm,
+    paddingBottom: spacing.md,
     borderBottomWidth: 2,
     borderBottomColor: "transparent",
     marginBottom: -1,
   },
   tabItemActive: {
-    borderBottomColor: colors.gray900,
+    borderBottomColor: colors.paletteInk,
   },
   tabText: {
-    ...textStyles.h7,
-    color: colors.gray600,
+    ...textStyles.body3,
+    color: colors.paletteFg3,
   },
   tabTextActive: {
-    color: colors.gray900,
+    ...textStyles.h6,
+    color: colors.paletteInk,
   },
   tabBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 999,
-    backgroundColor: colors.gray300,
-    overflow: "hidden",
-    fontFamily: typography.fontFamily.poppinsSemiBold,
-    fontSize: 10,
+    minWidth: 18,
+    height: 18,
+    paddingHorizontal: spacing.xs,
+    borderRadius: radii.pill,
+    backgroundColor: colors.paletteFill,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  tabBadgeText: {
+    ...textStyles.h8,
     lineHeight: 14,
-    color: colors.gray600,
+    color: colors.paletteFg3,
   },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
     paddingHorizontal: spacing.xl,
-    paddingTop: spacing.lg,
-    paddingBottom: 40,
-    gap: spacing.lg,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.lg,
+    gap: spacing.sm,
   },
   attachmentScrollContent: {
     paddingHorizontal: spacing.xl,
@@ -684,50 +694,39 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
     gap: spacing.sm + 2,
   },
-  categoryGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-  },
   categoryCard: {
-    flex: 1,
-    minWidth: "47%",
-    backgroundColor: colors.gray200,
-    borderRadius: radii.md,
-    padding: spacing.md,
-  },
-  categoryCardSelected: {
-    backgroundColor: `${colors.primary}1A`,
-    borderWidth: 1,
-    borderColor: colors.primary,
-  },
-  categoryLabel: {
-    ...textStyles.h7,
-    color: colors.gray600,
-    marginBottom: 4,
-  },
-  categoryLabelSelected: {
-    color: colors.primary,
-  },
-  categoryAmount: {
-    ...textStyles.h6,
-    color: colors.black,
-  },
-  categoryAmountSelected: {
-    color: colors.primary,
-  },
-  sectionTitle: {
-    ...textStyles.h7,
-    color: colors.gray900,
-  },
-  detailList: {
-    backgroundColor: colors.gray100,
-    borderRadius: radii.md,
+    backgroundColor: colors.paletteFill,
+    borderRadius: radii.lgPlus,
     overflow: "hidden",
   },
-  divider: {
-    height: 1,
-    backgroundColor: colors.gray200,
+  categoryHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.md,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+  },
+  categoryInfo: {
+    flex: 1,
+    minWidth: 0,
+  },
+  categoryLabel: {
+    ...textStyles.body5,
+    color: colors.paletteFg3,
+  },
+  categoryAmount: {
+    ...textStyles.h5,
+    marginTop: spacing.xs,
+    color: colors.paletteInk,
+    fontVariant: ["tabular-nums"],
+  },
+  categoryCount: {
+    ...textStyles.body5,
+    color: colors.paletteFg3,
+  },
+  categoryBody: {
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.sm,
   },
   swipeDeleteContainer: {
     width: 64,
@@ -746,69 +745,46 @@ const styles = StyleSheet.create({
   detailRow: {
     flexDirection: "row",
     alignItems: "center",
+    gap: spacing.md,
     paddingVertical: spacing.md,
-    paddingHorizontal: spacing.md,
-    backgroundColor: colors.gray100,
-    gap: spacing.sm,
-  },
-  detailIconBox: {
-    width: 36,
-    height: 36,
-    borderRadius: radii.base,
-    backgroundColor: `${colors.primary}1A`,
-    alignItems: "center",
-    justifyContent: "center",
-    flexShrink: 0,
+    borderTopWidth: 1,
+    borderTopColor: colors.gray300,
+    backgroundColor: colors.paletteFill,
   },
   detailContent: {
     flex: 1,
     minWidth: 0,
-    gap: 2,
   },
-  detailTitleRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
-  detailCategory: {
-    ...textStyles.h8,
-    color: colors.gray600,
-  },
-  detailDate: {
-    fontFamily: typography.fontFamily.poppinsMedium,
-    fontSize: 11,
-    lineHeight: 16,
-    color: colors.gray500,
-  },
-  detailDescription: {
+  detailTitle: {
     ...textStyles.h7,
-    color: colors.gray900,
+    color: colors.paletteInk,
   },
-  detailRight: {
-    flexShrink: 0,
-    alignItems: "flex-end",
-    gap: 4,
+  detailSub: {
+    ...textStyles.body5,
+    marginTop: spacing.xs,
+    color: colors.paletteFg3,
   },
   detailAmount: {
     ...textStyles.h7,
-    color: colors.gray900,
+    color: colors.paletteInk,
+    fontVariant: ["tabular-nums"],
+  },
+  detailArrow: {
+    marginLeft: -spacing.sm,
   },
   attachmentBadge: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 3,
+    gap: spacing.xs,
     height: 22,
     paddingHorizontal: spacing.sm,
     borderRadius: radii.pill,
-    backgroundColor: colors.white,
-    borderWidth: 1,
-    borderColor: colors.gray300,
+    backgroundColor: colors.paletteFill2,
   },
   attachmentBadgeText: {
-    fontFamily: typography.fontFamily.poppinsSemiBold,
-    fontSize: 11,
+    ...textStyles.h8,
     lineHeight: 16,
-    color: colors.gray700,
+    color: colors.paletteFg2,
   },
   emptyText: {
     ...textStyles.h6,
@@ -884,12 +860,17 @@ const styles = StyleSheet.create({
   },
   footer: {
     paddingHorizontal: spacing.xl,
-    paddingTop: spacing.sm,
-    paddingBottom: 16,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.xl,
+    borderTopWidth: 1,
+    borderTopColor: colors.gray300,
+    backgroundColor: colors.white,
   },
   addExpenseButton: {
-    backgroundColor: colors.black,
-    borderRadius: radii.md,
+    backgroundColor: colors.paletteInk,
+    experimental_backgroundImage: `linear-gradient(180deg, ${colors.gradientInk[0]} 0%, ${colors.gradientInk[1]} 100%)`,
+    ...shadows.darkRaised,
+    borderRadius: radii.lgPlus,
     paddingVertical: spacing.lg,
     flexDirection: "row",
     alignItems: "center",
@@ -897,7 +878,7 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   addExpenseButtonText: {
-    ...textStyles.h4,
+    ...textStyles.h5,
     color: colors.white,
   },
 });
