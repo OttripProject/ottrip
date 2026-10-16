@@ -5,7 +5,7 @@ import { useMe } from "@/hooks/useMe";
 import { useRecentSearches } from "@/hooks/useRecentSearches";
 import { colors } from "@/ui/tokens/colors";
 import { radii } from "@/ui/tokens/radii";
-import { textStyles } from "@/ui/tokens/typography";
+import { textStyles, typography } from "@/ui/tokens/typography";
 import {
   type CountryOption,
   codeToFlag,
@@ -696,7 +696,7 @@ const styles = StyleSheet.create({
     color: colors.gray700,
   },
   sectionLabel: {
-    fontFamily: "Pretendard-Bold",
+    fontFamily: typography.fontFamily.pretendardBold,
     fontSize: 10,
     lineHeight: 14,
     color: "rgb(155, 155, 155)",

@@ -26,7 +26,7 @@ import { motion } from "@/ui/tokens/motion";
 import { radii } from "@/ui/tokens/radii";
 import { shadows } from "@/ui/tokens/shadows";
 import { spacing } from "@/ui/tokens/spacing";
-import { textStyles } from "@/ui/tokens/typography";
+import { textStyles, typography } from "@/ui/tokens/typography";
 import { showMessage, showPickFileType } from "@/utils/crossPlatformAlert";
 import { guestPrompt } from "@/utils/guestPrompt";
 
@@ -1521,7 +1521,7 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   expenseAiFileBadgeText: {
-    fontFamily: "Pretendard-Bold",
+    fontFamily: typography.fontFamily.pretendardBold,
     fontSize: 9,
     lineHeight: 12,
     color: colors.primary,
@@ -1560,7 +1560,7 @@ const styles = StyleSheet.create({
   },
   expenseAnalyzeErrorText: {
     flex: 1,
-    fontFamily: "Pretendard-Medium",
+    fontFamily: typography.fontFamily.pretendardMedium,
     fontSize: 11,
     lineHeight: 16,
     color: colors.red,
@@ -1593,7 +1593,7 @@ const styles = StyleSheet.create({
   },
   expensePartialBannerText: {
     flex: 1,
-    fontFamily: "Pretendard-Medium",
+    fontFamily: typography.fontFamily.pretendardMedium,
     fontSize: 11,
     lineHeight: 16,
     color: "rgb(122, 84, 8)",

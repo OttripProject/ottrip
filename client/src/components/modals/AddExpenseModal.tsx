@@ -27,7 +27,7 @@ import { radii } from "@/ui/tokens/radii";
 import { shadows } from "@/ui/tokens/shadows";
 import { spacing } from "@/ui/tokens/spacing";
 import { surfaces } from "@/ui/tokens/surfaces";
-import { textStyles } from "@/ui/tokens/typography";
+import { textStyles, typography } from "@/ui/tokens/typography";
 import { buildAnalyzeUploadPayload } from "@/utils/attachmentAiAnalyze";
 import { formatAttachmentUploadFailureMessage } from "@/utils/crossPlatformAlert";
 import dayjs from "dayjs";
@@ -76,7 +76,7 @@ const aiBadgeStyles = StyleSheet.create({
     borderRadius: 999,
   },
   text: {
-    fontFamily: "Pretendard-Bold",
+    fontFamily: typography.fontFamily.pretendardBold,
     fontSize: 9,
     lineHeight: 12,
     color: colors.aiInk,
@@ -100,7 +100,7 @@ const needsCheckStyles = StyleSheet.create({
     backgroundColor: "rgb(255, 243, 214)",
   },
   text: {
-    fontFamily: "Pretendard-Bold",
+    fontFamily: typography.fontFamily.pretendardBold,
     fontSize: 9,
     lineHeight: 12,
     color: "rgb(168, 115, 10)",

@@ -49,7 +49,9 @@ export default ({ config }: ConfigContext): ExpoConfig => {
         {
           fonts: [
             "./assets/fonts/Pretendard-Regular.otf",
+            "./assets/fonts/Pretendard-Medium.otf",
             "./assets/fonts/Pretendard-SemiBold.otf",
+            "./assets/fonts/Pretendard-Bold.otf",
             "./assets/fonts/Poppins-Medium.ttf",
             "./assets/fonts/Poppins-SemiBold.ttf",
           ],
