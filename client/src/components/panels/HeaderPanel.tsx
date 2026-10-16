@@ -126,7 +126,7 @@ const styles = StyleSheet.create({
   },
   brand: {
     ...textStyles.h6,
-    fontWeight: typography.weight.bold,
+    fontFamily: typography.fontFamily.pretendardBold,
     color: colors.black,
   },
   userPill: {

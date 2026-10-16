@@ -411,7 +411,7 @@ const styles = StyleSheet.create({
   fieldLabel: {
     ...(isNative ? textStyles.body6 : textStyles.h9),
     color: isNative ? colors.gray600 : colors.gray700,
-    fontWeight: "600",
+    fontFamily: typography.fontFamily.pretendardSemiBold,
     marginBottom: isNative ? 6 : 0,
   },
   fieldLabelTop: {
@@ -506,7 +506,7 @@ const styles = StyleSheet.create({
   addBtnText: {
     ...(isNative ? textStyles.body4 : textStyles.h7),
     color: isNative ? colors.black : colors.gray700,
-    fontWeight: isNative ? ("700" as const) : undefined,
+    ...(isNative ? { fontFamily: typography.fontFamily.pretendardBold } : null),
   },
   addBtnPlus: {
     ...textStyles.body2,

@@ -9,7 +9,7 @@ import { motion } from "@/ui/tokens/motion";
 import { radii } from "@/ui/tokens/radii";
 import { shadows } from "@/ui/tokens/shadows";
 import { spacing } from "@/ui/tokens/spacing";
-import { textStyles } from "@/ui/tokens/typography";
+import { textStyles, typography } from "@/ui/tokens/typography";
 import { useRef, useState } from "react";
 import {
   Animated,
@@ -290,6 +290,7 @@ const styles = StyleSheet.create({
   },
   aiBadgeText: {
     ...textStyles.h8,
+    fontFamily: typography.fontFamily.pretendardBold,
     color: colors.aiInk,
     letterSpacing: -0.12,
   },
@@ -323,7 +324,7 @@ const styles = StyleSheet.create({
   },
   dateDow: {
     ...textStyles.body5,
-    fontWeight: "500",
+    fontFamily: typography.fontFamily.pretendardMedium,
     color: colors.gray700,
   },
 
@@ -353,7 +354,6 @@ const styles = StyleSheet.create({
   },
   timeRange: {
     ...textStyles.h8,
-    fontWeight: "600",
     color: colors.gray700,
     flexShrink: 0,
   },
@@ -367,7 +367,6 @@ const styles = StyleSheet.create({
   },
   catText: {
     ...textStyles.h8,
-    fontWeight: "600",
   },
   placeName: {
     ...textStyles.h6,
@@ -383,7 +382,7 @@ const styles = StyleSheet.create({
   },
   distText: {
     ...textStyles.body5,
-    fontWeight: "500",
+    fontFamily: typography.fontFamily.pretendardMedium,
     color: colors.gray800,
     flexShrink: 0,
   },

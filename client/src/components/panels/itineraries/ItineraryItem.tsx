@@ -64,7 +64,7 @@ import { surfaces } from "@/ui/tokens/surfaces";
 import { colors } from "@/ui/tokens/colors";
 import { radii } from "@/ui/tokens/radii";
 import { spacing } from "@/ui/tokens/spacing";
-import { textStyles } from "@/ui/tokens/typography";
+import { textStyles, typography } from "@/ui/tokens/typography";
 import { applyItineraryDraftFromAi } from "@/utils/applyAiDocumentDraft";
 import { formatWalkTime } from "@/utils/distanceUtils";
 import { buildAnalyzeUploadPayload } from "@/utils/attachmentAiAnalyze";
@@ -2020,8 +2020,7 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   expenseCategoryLabel: {
-    ...textStyles.body5,
-    fontWeight: "600",
+    ...textStyles.h8,
     color: colors.gray900,
     flexShrink: 0,
   },
@@ -2032,7 +2031,7 @@ const styles = StyleSheet.create({
   },
   expenseAmount: {
     ...textStyles.body5,
-    fontWeight: "700",
+    fontFamily: typography.fontFamily.pretendardBold,
     color: colors.gray900,
     flexShrink: 0,
   },
@@ -2280,7 +2279,7 @@ const styles = StyleSheet.create({
   },
   nearbyCount: {
     ...textStyles.body6,
-    fontWeight: "500",
+    fontFamily: typography.fontFamily.pretendardMedium,
     color: colors.gray400,
   },
   nearbyList: {
@@ -2310,10 +2309,10 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   nearbyBadgeText: {
+    fontFamily: typography.fontFamily.pretendardSemiBold,
     fontSize: 11,
-    fontWeight: "600",
     lineHeight: 11,
-  } as any,
+  },
   nearbyCardTitle: {
     ...textStyles.h7,
     color: colors.gray900,

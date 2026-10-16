@@ -22,7 +22,7 @@ import { colors } from "@/ui/tokens/colors";
 import { radii } from "@/ui/tokens/radii";
 import { spacing } from "@/ui/tokens/spacing";
 import { surfaces } from "@/ui/tokens/surfaces";
-import { textStyles } from "@/ui/tokens/typography";
+import { textStyles, typography } from "@/ui/tokens/typography";
 import { formatWalkTime, haversineDistance } from "@/utils/distanceUtils";
 import CloseXIcon from "../../../assets/close_x.svg";
 import TicketIcon from "../../../assets/mobile_ticket.svg";
@@ -748,10 +748,10 @@ const styles = StyleSheet.create({
     paddingLeft: spacing.sm,
   },
   badgeText: {
+    fontFamily: typography.fontFamily.pretendardSemiBold,
     fontSize: 12,
-    fontWeight: "600",
     lineHeight: 12,
-  } as any,
+  },
   feeBadgeFree: {
     backgroundColor: colors.gray200,
   },
@@ -773,13 +773,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   title: {
+    ...textStyles.h2,
     marginTop: 16,
-    fontSize: 24,
-    fontWeight: "600",
-    lineHeight: 36,
     letterSpacing: -0.48,
     color: colors.gray900,
-  } as any,
+  },
   addressRow: { flexDirection: "row", alignItems: "center", gap: 4, marginTop: 8 },
   metaText: {
     ...textStyles.body5,
@@ -816,22 +814,19 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   iconRowLabel: {
-    fontSize: 13,
-    fontWeight: "500",
-    lineHeight: 20,
+    ...textStyles.body4,
+    fontFamily: typography.fontFamily.pretendardMedium,
     color: colors.gray600,
   },
   iconRowValue: {
-    fontSize: 20,
-    fontWeight: "600",
-    lineHeight: 32,
+    ...textStyles.h3,
     color: colors.gray900,
     whiteSpace: "pre-line",
   } as any,
   iconRowValueSmall: {
-    fontSize: 14,
-    fontWeight: "500",
-    lineHeight: 22,
+    ...textStyles.body3,
+    fontFamily: typography.fontFamily.pretendardMedium,
+    color: colors.gray900,
   },
   checkinOutRow: {
     flexDirection: "row",
@@ -843,17 +838,10 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   checkinOutArrow: {
-    fontSize: 18,
-    fontWeight: "500",
+    ...textStyles.body1,
+    fontFamily: typography.fontFamily.pretendardMedium,
     color: colors.gray400,
-    lineHeight: 28,
-  } as any,
-  checkinOutLabel: {
-    fontSize: 12,
-    fontWeight: "500",
-    color: colors.gray700,
-    lineHeight: 18,
-  } as any,
+  },
   facilityBadgeRow: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -868,11 +856,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   facilityBadgeText: {
-    fontSize: 13,
-    fontWeight: "500",
-    color: "rgb(55,55,55)",
-    lineHeight: 18,
-  } as any,
+    ...textStyles.body4,
+    fontFamily: typography.fontFamily.pretendardMedium,
+    color: colors.gray800,
+  },
   heroRow: {
     flexDirection: "row",
     gap: 16,
@@ -891,11 +878,9 @@ const styles = StyleSheet.create({
     color: colors.gray500,
   },
   heroValue: {
-    fontSize: 20,
-    fontWeight: "600",
-    lineHeight: 32,
+    ...textStyles.h3,
     color: colors.gray900,
-  } as any,
+  },
   divider: {
     height: 1,
     backgroundColor: colors.gray300,
@@ -908,11 +893,10 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   sectionTitle: {
-    fontSize: 13,
-    fontWeight: "700",
-    lineHeight: 20,
+    ...textStyles.h7,
+    fontFamily: typography.fontFamily.pretendardBold,
     color: colors.gray900,
-  } as any,
+  },
   overviewText: {
     ...textStyles.body2,
     color: colors.gray800,
@@ -920,8 +904,8 @@ const styles = StyleSheet.create({
     whiteSpace: "pre-line",
   } as any,
   expandBtn: {
+    fontFamily: typography.fontFamily.pretendardSemiBold,
     fontSize: 12,
-    fontWeight: "600",
     color: colors.primary,
     cursor: "pointer",
   } as any,
@@ -949,10 +933,10 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
   },
   mapBadgeText: {
+    fontFamily: typography.fontFamily.pretendardSemiBold,
     fontSize: 12,
-    fontWeight: "600",
     color: colors.gray900,
-  } as any,
+  },
   mapOverlay: {
     position: "absolute",
     bottom: 12,
@@ -1027,10 +1011,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   closeButtonText: {
+    fontFamily: typography.fontFamily.pretendardSemiBold,
     fontSize: 16,
-    fontWeight: "600",
     color: colors.gray900,
-  } as any,
+  },
   addButton: {
     flex: 1.7,
     height: 52,
@@ -1042,8 +1026,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
   } as any,
   addButtonText: {
+    fontFamily: typography.fontFamily.pretendardSemiBold,
     fontSize: 16,
-    fontWeight: "600",
     color: colors.white,
-  } as any,
+  },
 });

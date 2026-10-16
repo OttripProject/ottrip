@@ -3,7 +3,7 @@ import { useTripForm } from "@/hooks/useTripForm";
 import type { CreatePlanRequest, Plan } from "@/types/api";
 import { colors } from "@/ui/tokens/colors";
 import { shadows } from "@/ui/tokens/shadows";
-import { textStyles } from "@/ui/tokens/typography";
+import { textStyles, typography } from "@/ui/tokens/typography";
 import { useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import CalenderIcon from "../../../assets/calender.svg";
@@ -123,10 +123,9 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   title: {
-    fontSize: 16,
-    fontWeight: "700",
+    ...textStyles.h5,
+    fontFamily: typography.fontFamily.pretendardBold,
     color: colors.gray900,
-    lineHeight: 24,
   },
   subtitle: {
     ...textStyles.body4,

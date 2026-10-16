@@ -1,5 +1,6 @@
 import { colors } from "@/ui/tokens/colors";
 import { shadows } from "@/ui/tokens/shadows";
+import { textStyles, typography } from "@/ui/tokens/typography";
 import { useEffect, useRef, useState } from "react";
 import { Animated, Pressable, StyleSheet, Text, View } from "react-native";
 import CloseIcon from "../../assets/close_sm.svg";
@@ -199,22 +200,21 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   badgeText: {
+    fontFamily: typography.fontFamily.pretendardBold,
     fontSize: 11,
-    fontWeight: "700",
     lineHeight: 11,
     color: "rgb(14, 138, 138)",
   } as any,
   message: {
-    fontSize: 12,
-    fontWeight: "500",
-    lineHeight: 18,
+    ...textStyles.body5,
+    fontFamily: typography.fontFamily.pretendardMedium,
     color: "rgb(31, 31, 31)",
     flex: 1,
     overflow: "hidden",
   } as any,
   bold: {
-    fontWeight: "700",
-  } as any,
+    fontFamily: typography.fontFamily.pretendardBold,
+  },
   closeBtn: {
     flexShrink: 0,
     width: 32,

@@ -690,7 +690,7 @@ const styles = StyleSheet.create({
   },
   summaryCategorySelected: {
     ...textStyles.h6,
-    fontWeight: typography.weight.bold,
+    fontFamily: typography.fontFamily.pretendardBold,
     color: colors.gray900,
   },
   summaryAmount: {

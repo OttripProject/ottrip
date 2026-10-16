@@ -3543,7 +3543,7 @@ export default function WeeklySchedulePanel({
                             ellipsizeMode="tail"
                             style={{
                               ...textStyles.body6,
-                              fontWeight: typography.weight.medium,
+                              fontFamily: typography.fontFamily.pretendardMedium,
                               color: itineraryCategoryColor,
                             }}
                           >
@@ -3579,7 +3579,7 @@ export default function WeeklySchedulePanel({
                             ellipsizeMode="tail"
                             style={{
                               ...textStyles.body6,
-                              fontWeight: typography.weight.medium,
+                              fontFamily: typography.fontFamily.pretendardMedium,
                               color: colors.flightText,
                             }}
                           >
@@ -3918,7 +3918,7 @@ const styles = StyleSheet.create({
     ...textStyles.h6,
   },
   dateTextInTrip: {
-    fontWeight: typography.weight.bold,
+    fontFamily: typography.fontFamily.pretendardBold,
   },
   dateEventDot: {
     width: 4,
@@ -4212,43 +4212,6 @@ const styles = StyleSheet.create({
   memoModalPrimaryButtonText: {
     ...textStyles.h6,
     color: colors.white,
-  },
-  accommodationRow: {
-    flexDirection: "row",
-    backgroundColor: colors.gray200,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.gray300,
-    height: 50,
-  },
-  accommodationLabel: {
-    width: 60,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: colors.white,
-    borderRightWidth: 1,
-    borderRightColor: colors.gray300,
-  },
-  accommodationLabelText: {
-    fontSize: 16,
-  },
-  accommodationCell: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    borderRightWidth: 1,
-    borderRightColor: colors.gray300,
-  },
-  accommodationItem: {
-    backgroundColor: "#ff9500",
-    borderRadius: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    width: "90%",
-  },
-  accommodationName: {
-    color: colors.white,
-    fontSize: 10,
-    fontWeight: "600",
   },
   weekHeaderRow: {
     flexDirection: "row",
