@@ -578,8 +578,6 @@ export default function ViewerSchedulePanel({
           const eventStyle = isFlight
             ? {
                 backgroundColor: colors.flightBg,
-                borderWidth: 1,
-                borderColor: colors.flightBorder,
                 borderRadius: radii.md,
               }
             : {
@@ -631,7 +629,7 @@ export default function ViewerSchedulePanel({
                         height: 5,
                         borderRadius: 999,
                         backgroundColor: isFlight
-                          ? colors.flightDot
+                          ? colors.flightText
                           : (itineraryCategoryColor ?? colors.itineraryDot),
                         flexShrink: 0,
                       }}
