@@ -970,11 +970,18 @@ export default function WeeklyScreen() {
             )}
           </View>
           {scheduleCount === 0 && (
-            <View style={styles.emptyScheduleContainer}>
-              <CautionIcon width={24} height={24} color={colors.gray600} />
-              <Text style={styles.emptyScheduleText}>
-                등록된 일정이 없습니다.
+            <View style={styles.emptyScheduleCard}>
+              <Text style={styles.emptyScheduleCardText}>
+                아직 등록된 일정이 없어요
               </Text>
+              {selectedPlan && (
+                <ScalePressable
+                  style={styles.emptyScheduleButton}
+                  onPress={() => setAddScheduleFlow("method")}
+                >
+                  <Text style={styles.emptyScheduleButtonText}>+ 일정 추가</Text>
+                </ScalePressable>
+              )}
             </View>
           )}
           {currentRows.map(row => (
@@ -2445,6 +2452,32 @@ const styles = StyleSheet.create({
   emptyScheduleText: {
     ...textStyles.body3,
     color: colors.gray600,
+  },
+  emptyScheduleCard: {
+    alignItems: "center",
+    marginHorizontal: spacing.sm,
+    paddingVertical: 40,
+    paddingHorizontal: spacing.lg,
+    borderRadius: radii.lgPlus,
+    backgroundColor: colors.white,
+    ...shadows.card,
+  },
+  emptyScheduleCardText: {
+    ...textStyles.h7,
+    color: colors.paletteFg2,
+  },
+  emptyScheduleButton: {
+    marginTop: spacing.md,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.xl,
+    borderRadius: radii.pill,
+    backgroundColor: colors.primary,
+    experimental_backgroundImage: PRIMARY_GRADIENT,
+    ...shadows.primaryRaised,
+  },
+  emptyScheduleButtonText: {
+    ...textStyles.h7,
+    color: colors.white,
   },
   checklistWrapper: {
     marginVertical: 16,
