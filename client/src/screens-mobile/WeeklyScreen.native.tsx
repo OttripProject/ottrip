@@ -69,6 +69,7 @@ const NO_PLAN_FEATURES = [
   "친구들과 일정 공유",
 ] as const;
 import AiSuggestionCard from "@/components/cards/AiSuggestionCard.native";
+import CongestionBanner from "@/components/CongestionBanner.native";
 import FestivalsCard from "@/components/cards/FestivalsCard.native";
 import FestivalDetailModal from "@/components/modals/FestivalDetailModal.native";
 import WeeklyChecklistCard from "@/components/cards/WeeklyChecklistCard.native";
@@ -199,6 +200,12 @@ export default function WeeklyScreen() {
   const reopenDetailAfterTourismRef = useRef(true);
   const [suggestions, setSuggestions] = useState<DaySuggestion[]>([]);
   const [festivals, setFestivals] = useState<FestivalItem[]>([]);
+  const [matchedFestivals, setMatchedFestivals] = useState<FestivalItem[]>([]);
+  const [congestedItems, setCongestedItems] = useState<
+    { date: string; locationName: string }[]
+  >([]);
+  const [congestionDismissed, setCongestionDismissed] = useState(false);
+  const prevCongestedKeyRef = useRef("");
   const [selectedFestival, setSelectedFestival] = useState<FestivalItem | null>(
     null,
   );
@@ -329,6 +336,67 @@ export default function WeeklyScreen() {
       .then(setFestivals)
       .catch(() => {});
   }, [selectedPlan?.id, isKoreanPlan]);
+
+  useEffect(() => {
+    if (!selectedPlan?.id || !isKoreanPlan) {
+      setMatchedFestivals([]);
+      return;
+    }
+    tourismApi
+      .getFestivalsForPlan(selectedPlan.id)
+      .then(setMatchedFestivals)
+      .catch(() => {});
+  }, [selectedPlan?.id, isKoreanPlan, planData.itineraries]);
+
+  useEffect(() => {
+    if (!selectedPlan?.id || !isKoreanPlan || !planData.itineraries?.length) {
+      setCongestedItems([]);
+      return;
+    }
+    const today = dayjs().startOf("day");
+    const maxDate = today.add(30, "day");
+    const eligible = planData.itineraries.filter((it: Itinerary) => {
+      if (!it.location || it.category === "MEAL") return false;
+      const d = dayjs(it.itineraryDate);
+      return !d.isBefore(today) && !d.isAfter(maxDate);
+    });
+    if (eligible.length === 0) {
+      setCongestedItems([]);
+      return;
+    }
+    Promise.all(
+      eligible.map((it: Itinerary) =>
+        tourismApi
+          .getCongestion(it.id)
+          .then(items =>
+            items.length > 0 && it.location
+              ? {
+                  date: dayjs(it.itineraryDate).format("YYYY-MM-DD"),
+                  locationName: it.location.name,
+                }
+              : null,
+          )
+          .catch(() => null),
+      ),
+    ).then(results =>
+      setCongestedItems(
+        results.filter(
+          (r): r is { date: string; locationName: string } => r !== null,
+        ),
+      ),
+    );
+  }, [selectedPlan?.id, isKoreanPlan, planData.itineraries]);
+
+  useEffect(() => {
+    const key = congestedItems
+      .map(c => `${c.date}${c.locationName}`)
+      .sort()
+      .join(",");
+    if (key && key !== prevCongestedKeyRef.current) {
+      setCongestionDismissed(false);
+    }
+    prevCongestedKeyRef.current = key;
+  }, [congestedItems]);
 
   useEffect(() => {
     return () => {
@@ -649,6 +717,36 @@ export default function WeeklyScreen() {
   const scheduleCount = selectedDateSchedules.filter(
     s => s.type !== "accommodation",
   ).length;
+
+  const congestionBanner = useMemo(() => {
+    const dateKey = selectedDate.format("YYYY-MM-DD");
+    const mealLocationNames = new Set(
+      (planData.itineraries ?? [])
+        .filter((it: Itinerary) => it.category === "MEAL" && it.location)
+        .map((it: Itinerary) => it.location?.name),
+    );
+    const festivalLocations = matchedFestivals
+      .filter(
+        f =>
+          f.matchedDate === dateKey &&
+          f.matchedLocationName &&
+          !mealLocationNames.has(f.matchedLocationName),
+      )
+      .map(f => f.matchedLocationName as string);
+    const congestionLocations = congestedItems
+      .filter(c => c.date === dateKey)
+      .map(c => c.locationName);
+    const locationNames = [
+      ...new Set([...festivalLocations, ...congestionLocations]),
+    ];
+    if (locationNames.length === 0) return null;
+    return {
+      date: dateKey,
+      locationNames,
+      hasFestival: festivalLocations.length > 0,
+      hasCongestion: congestionLocations.length > 0,
+    };
+  }, [selectedDate, planData.itineraries, matchedFestivals, congestedItems]);
 
   const selectedDateAccommodations = useMemo(
     () =>
@@ -973,6 +1071,12 @@ export default function WeeklyScreen() {
               </View>
             )}
           </View>
+          {congestionBanner && !congestionDismissed && (
+            <CongestionBanner
+              {...congestionBanner}
+              onDismiss={() => setCongestionDismissed(true)}
+            />
+          )}
           {scheduleCount === 0 && (
             <View style={styles.emptyScheduleCard}>
               <Text style={styles.emptyScheduleCardText}>
