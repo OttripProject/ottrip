@@ -885,9 +885,12 @@ export default function WeeklyScreen() {
         <View style={styles.weekDays}>
           {weekCalendar.map(item => {
             const isSelected = selectedDate.isSame(item.fullDate, "day");
-            const hasItems = datesWithItems.has(
-              item.fullDate.format("YYYY-MM-DD"),
-            );
+            const dateKey = item.fullDate.format("YYYY-MM-DD");
+            const hasItems = datesWithItems.has(dateKey);
+            const isInTrip =
+              !!planMinMax &&
+              dateKey >= planMinMax.minDate &&
+              dateKey <= planMinMax.maxDate;
             return (
               <AnimatedPressable
                 key={`${item.year}-${item.month}-${item.date}`}
@@ -910,6 +913,7 @@ export default function WeeklyScreen() {
                   style={[
                     styles.dayDate,
                     !hasItems && !isSelected && styles.dayDateEmpty,
+                    !hasItems && !isSelected && isInTrip && styles.dayDateEmptyInTrip,
                     isSelected && styles.dayDateSelected,
                   ]}
                 >
@@ -2174,6 +2178,9 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     color: colors.paletteFg3,
   },
+  dayDateEmptyInTrip: {
+    color: colors.gray750,
+  },
   dayDateSelected: {
     color: colors.white,
   },
@@ -2464,7 +2471,7 @@ const styles = StyleSheet.create({
   },
   emptyScheduleCardText: {
     ...textStyles.h7,
-    color: colors.paletteFg2,
+    color: colors.gray750,
   },
   emptyScheduleButton: {
     marginTop: spacing.md,
