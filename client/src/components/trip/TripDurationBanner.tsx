@@ -50,7 +50,7 @@ export default function TripDurationBanner({ segments }: TripDurationBannerProps
 
 const styles = StyleSheet.create({
   banner: {
-    backgroundColor: colors.gray900,
+    backgroundColor: isNative ? colors.paletteInk : colors.gray900,
     borderRadius: isNative ? 16 : radii.mdPlus,
     paddingHorizontal: isNative ? spacing.xl : spacing.lg,
     paddingVertical: spacing.lg,

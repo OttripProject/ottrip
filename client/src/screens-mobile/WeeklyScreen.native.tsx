@@ -2773,7 +2773,7 @@ const styles = StyleSheet.create({
   },
   travelSectionSummary: {
     ...textStyles.body5,
-    color: colors.gray600,
+    color: colors.paletteFg3,
   },
   stayCard: {
     marginHorizontal: spacing.sm,
@@ -2807,7 +2807,7 @@ const styles = StyleSheet.create({
   staySub: {
     ...textStyles.body5,
     marginTop: spacing.xs,
-    color: colors.gray600,
+    color: colors.paletteFg3,
   },
   stayPriceWrap: {
     marginLeft: spacing.sm,
@@ -2823,7 +2823,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.lg,
     borderRadius: radii.mdPlus,
-    backgroundColor: colors.gray200,
+    backgroundColor: colors.paletteFill,
   },
   stayDateCol: {
     flex: 1,
@@ -2835,7 +2835,7 @@ const styles = StyleSheet.create({
   },
   stayDateLabel: {
     ...textStyles.body5,
-    color: colors.gray600,
+    color: colors.paletteFg3,
   },
   stayDate: {
     ...textStyles.h7,
@@ -2847,12 +2847,12 @@ const styles = StyleSheet.create({
     ...textStyles.body5,
     marginTop: spacing.xs,
     fontVariant: ["tabular-nums"],
-    color: colors.gray700,
+    color: colors.paletteFg2,
   },
   stayNote: {
     ...textStyles.body5,
     marginTop: spacing.md,
-    color: colors.gray700,
+    color: colors.paletteFg2,
   },
   flightCard: {
     marginHorizontal: spacing.sm,
@@ -2880,7 +2880,7 @@ const styles = StyleSheet.create({
   flightAirline: {
     ...textStyles.body5,
     flexShrink: 1,
-    color: colors.gray700,
+    color: colors.paletteFg2,
   },
   flightPrice: {
     ...textStyles.h6,
@@ -2903,7 +2903,7 @@ const styles = StyleSheet.create({
     ...textStyles.h7,
     marginTop: spacing.xs,
     fontVariant: ["tabular-nums"],
-    color: colors.gray700,
+    color: colors.paletteFg2,
   },
   flightPath: {
     flex: 1,
@@ -2938,12 +2938,12 @@ const styles = StyleSheet.create({
   },
   flightMetaLabel: {
     ...textStyles.body5,
-    color: colors.gray600,
+    color: colors.paletteFg3,
   },
   flightMetaValue: {
     ...textStyles.h8,
     marginTop: spacing.xs,
     fontVariant: ["tabular-nums"],
-    color: colors.gray700,
+    color: colors.paletteFg2,
   },
 });

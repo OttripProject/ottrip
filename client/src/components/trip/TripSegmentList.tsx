@@ -381,7 +381,7 @@ const styles = StyleSheet.create({
     width: 24,
     height: 24,
     borderRadius: 999,
-    backgroundColor: colors.gray900,
+    backgroundColor: colors.paletteInk,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -393,7 +393,7 @@ const styles = StyleSheet.create({
   segHeaderLabel: {
     marginLeft: spacing.md,
     ...textStyles.h7,
-    color: colors.gray700,
+    color: colors.paletteFg2,
   },
   segActions: {
     position: "absolute",
@@ -439,7 +439,7 @@ const styles = StyleSheet.create({
   fieldNative: {},
   fieldLabel: {
     ...(isNative ? textStyles.h8 : textStyles.h9),
-    color: colors.gray700,
+    color: isNative ? colors.paletteFg2 : colors.gray700,
     marginBottom: isNative ? spacing.sm : 0,
   },
   fieldLabelTop: {
@@ -491,10 +491,10 @@ const styles = StyleSheet.create({
     ...textStyles.body3,
     fontFamily: typography.fontFamily.pretendardMedium,
     fontVariant: ["tabular-nums"],
-    color: colors.gray900,
+    color: colors.paletteInk,
   },
   pickerPlaceholder: {
-    color: colors.gray600,
+    color: isNative ? colors.paletteFg3 : colors.gray600,
     ...(isNative ? null : { fontFamily: typography.fontFamily.pretendardRegular }),
   },
   // 웹 날짜 버튼
@@ -540,7 +540,7 @@ const styles = StyleSheet.create({
   },
   addBtnText: {
     ...(isNative ? textStyles.h6 : textStyles.h7),
-    color: isNative ? colors.gray900 : colors.gray700,
+    color: isNative ? colors.paletteInk : colors.gray700,
   },
   addBtnPlus: {
     ...textStyles.body2,

@@ -214,13 +214,13 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     ...textStyles.h4,
-    color: colors.gray900,
+    color: colors.paletteInk,
   },
   headerCount: {
     ...textStyles.body5,
     marginLeft: "auto",
     fontFamily: typography.fontFamily.pretendardMedium,
-    color: colors.gray600,
+    color: colors.paletteFg3,
   },
   planList: {
     flex: 1,
@@ -241,7 +241,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.lgPlus,
   },
   planRowSelected: {
-    backgroundColor: colors.gray200,
+    backgroundColor: colors.paletteFill,
   },
   pastPlanRow: {
     opacity: 0.4,
@@ -252,14 +252,14 @@ const styles = StyleSheet.create({
   },
   planRowTitle: {
     ...textStyles.h6,
-    color: colors.gray900,
+    color: colors.paletteInk,
   },
   planRowDate: {
     ...textStyles.body5,
     marginTop: spacing.xs,
     fontFamily: typography.fontFamily.pretendardMedium,
     fontVariant: ["tabular-nums"],
-    color: colors.gray600,
+    color: colors.paletteFg3,
   },
   checkSlot: {
     width: 18,
@@ -297,6 +297,6 @@ const styles = StyleSheet.create({
   addTripButtonText: {
     ...textStyles.h7,
     fontFamily: typography.fontFamily.pretendardBold,
-    color: colors.gray900,
+    color: colors.paletteInk,
   },
 });

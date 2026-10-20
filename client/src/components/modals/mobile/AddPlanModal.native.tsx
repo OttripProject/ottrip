@@ -253,13 +253,13 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     ...textStyles.h3,
-    color: colors.gray900,
+    color: colors.paletteInk,
   },
   headerSubtitle: {
     ...textStyles.body4,
     marginTop: spacing.xs,
     fontFamily: typography.fontFamily.pretendardMedium,
-    color: colors.gray600,
+    color: colors.paletteFg3,
   },
   closeButton: {
     width: 44,
@@ -297,24 +297,24 @@ const styles = StyleSheet.create({
   sectionLabel: {
     ...textStyles.h7,
     fontFamily: typography.fontFamily.pretendardBold,
-    color: colors.gray900,
+    color: colors.paletteInk,
   },
   segSectionLabel: {
     ...textStyles.h5,
-    color: colors.gray900,
+    color: colors.paletteInk,
   },
   counter: {
     ...textStyles.body5,
     marginLeft: "auto",
     fontFamily: typography.fontFamily.pretendardMedium,
     fontVariant: ["tabular-nums"],
-    color: colors.gray600,
+    color: colors.paletteFg3,
   },
   hint: {
     ...textStyles.body5,
     marginLeft: "auto",
     fontFamily: typography.fontFamily.pretendardMedium,
-    color: colors.gray600,
+    color: colors.paletteFg3,
   },
   nameInput: {
     width: "100%",
@@ -326,7 +326,7 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.lg,
     fontFamily: typography.fontFamily.pretendardMedium,
     fontSize: textStyles.body2.fontSize,
-    color: colors.gray900,
+    color: colors.paletteInk,
     backgroundColor: colors.white,
   },
   footer: {
@@ -343,13 +343,14 @@ const styles = StyleSheet.create({
     height: 56,
     borderRadius: radii.lgPlus,
     borderWidth: 1,
-    borderColor: colors.gray350,
+    borderColor: colors.paletteLine,
     alignItems: "center",
     justifyContent: "center",
+    ...shadows.xs,
   },
   cancelText: {
     ...textStyles.h5,
-    color: colors.gray900,
+    color: colors.paletteInk,
   },
   submitBtn: {
     flex: 1,
@@ -364,7 +365,7 @@ const styles = StyleSheet.create({
     ...shadows.darkRaised,
   },
   submitBtnDisabled: {
-    backgroundColor: colors.gray300,
+    backgroundColor: colors.paletteFill2,
   },
   submitText: {
     ...textStyles.h5,

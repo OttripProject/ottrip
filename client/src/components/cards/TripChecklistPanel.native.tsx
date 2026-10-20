@@ -342,7 +342,7 @@ export default function TripChecklistPanel({
                   <TextInput
                     style={styles.addInput}
                     placeholder="항목 입력"
-                    placeholderTextColor={colors.gray600}
+                    placeholderTextColor={colors.paletteFg3}
                     value={newItemName}
                     onChangeText={setNewItemName}
                     maxLength={16}
@@ -413,23 +413,23 @@ const styles = StyleSheet.create({
   },
   progressTitle: {
     ...textStyles.h6,
-    color: colors.gray900,
+    color: colors.paletteInk,
   },
   progressRemain: {
     ...textStyles.body5,
     fontVariant: ["tabular-nums"],
-    color: colors.gray700,
+    color: colors.paletteFg2,
   },
   progressTrack: {
     height: 4,
     borderRadius: radii.pill,
-    backgroundColor: colors.gray200,
+    backgroundColor: colors.paletteFill,
     overflow: "hidden",
   },
   progressFill: {
     height: "100%",
     borderRadius: radii.pill,
-    backgroundColor: colors.gray900,
+    backgroundColor: colors.paletteInk,
   },
   emptyCard: {
     alignItems: "center",
@@ -442,12 +442,12 @@ const styles = StyleSheet.create({
   },
   emptyTitle: {
     ...textStyles.h5,
-    color: colors.gray900,
+    color: colors.paletteInk,
   },
   emptyDesc: {
     ...textStyles.body3,
     textAlign: "center",
-    color: colors.gray600,
+    color: colors.paletteFg3,
   },
   groupCard: {
     paddingTop: spacing.lg,
@@ -466,13 +466,13 @@ const styles = StyleSheet.create({
   groupTitle: {
     ...textStyles.h6,
     fontFamily: typography.fontFamily.pretendardBold,
-    color: colors.gray900,
+    color: colors.paletteInk,
   },
   groupCount: {
     ...textStyles.h8,
     marginRight: "auto",
     fontVariant: ["tabular-nums"],
-    color: colors.gray600,
+    color: colors.paletteFg3,
   },
   groupAddButton: {
     width: 32,
@@ -503,7 +503,7 @@ const styles = StyleSheet.create({
   },
   checkboxChecked: {
     borderColor: colors.gray900,
-    backgroundColor: colors.gray900,
+    backgroundColor: colors.paletteInk,
   },
   aiBadge: {
     height: 18,
@@ -523,18 +523,18 @@ const styles = StyleSheet.create({
     flex: 1,
     minWidth: 0,
     fontFamily: typography.fontFamily.pretendardMedium,
-    color: colors.gray900,
+    color: colors.paletteInk,
   },
   itemNameChecked: {
-    color: colors.gray600,
+    color: colors.paletteFg3,
     textDecorationLine: "line-through",
   },
   itemReason: {
     fontFamily: typography.fontFamily.pretendardRegular,
-    color: colors.gray700,
+    color: colors.paletteFg2,
   },
   itemReasonChecked: {
-    color: colors.gray600,
+    color: colors.paletteFg3,
   },
   addRow: {
     flexDirection: "row",
@@ -547,7 +547,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     fontFamily: typography.fontFamily.pretendardMedium,
     fontSize: textStyles.body3.fontSize,
-    color: colors.gray900,
+    color: colors.paletteInk,
   },
   saveButton: {
     height: 32,
@@ -555,7 +555,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.base,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: colors.gray900,
+    backgroundColor: colors.paletteInk,
   },
   saveButtonDisabled: {
     backgroundColor: colors.gray300,
