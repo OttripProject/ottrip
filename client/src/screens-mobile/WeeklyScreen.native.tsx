@@ -339,7 +339,7 @@ export default function WeeklyScreen() {
 
   useEffect(() => {
     if (!selectedPlan?.id || !isKoreanPlan) {
-      setMatchedFestivals([]);
+      setMatchedFestivals(prev => (prev.length ? [] : prev));
       return;
     }
     tourismApi
@@ -350,7 +350,7 @@ export default function WeeklyScreen() {
 
   useEffect(() => {
     if (!selectedPlan?.id || !isKoreanPlan || !planData.itineraries?.length) {
-      setCongestedItems([]);
+      setCongestedItems(prev => (prev.length ? [] : prev));
       return;
     }
     const today = dayjs().startOf("day");
@@ -361,7 +361,7 @@ export default function WeeklyScreen() {
       return !d.isBefore(today) && !d.isAfter(maxDate);
     });
     if (eligible.length === 0) {
-      setCongestedItems([]);
+      setCongestedItems(prev => (prev.length ? [] : prev));
       return;
     }
     Promise.all(
