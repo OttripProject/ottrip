@@ -21,6 +21,7 @@ export const colors = {
   paletteInk: "#111114",
   paletteFg2: "#66666E",
   paletteFg3: "#9A9AA3",
+  paletteFg4: "#C4C4CC",
   primary: "#007AFF",
   primaryDark: "#0059B2",
   toastCheck: "#0A84FF",

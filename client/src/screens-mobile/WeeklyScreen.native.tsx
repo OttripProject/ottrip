@@ -1,4 +1,3 @@
-import axios from "axios";
 
 import AddExpenseModal from "@/components/modals/mobile/AddExpenseModal.native";
 import AddPlanModal from "@/components/modals/mobile/AddPlanModal.native";
@@ -7,7 +6,7 @@ import PlanLoadingOverlay from "@/components/PlanLoadingOverlay.native";
 import AddScheduleMethodModal from "@/components/modals/mobile/AddScheduleMethodModal.native";
 import AddScheduleModal from "@/components/modals/mobile/AddScheduleModal.native";
 import AddScheduleWithAiModal from "@/components/modals/mobile/AddScheduleWithAiModal.native";
-import PlanSelectModal from "@/components/modals/mobile/PlanSelectModal.native";
+import TripHeader from "@/components/TripHeader.native";
 import ProfileModal from "@/components/modals/mobile/ProfileModal.native";
 import { useSelectedPlan } from "@/contexts/SelectedPlanContext";
 import { useExpensesQuery } from "@/hooks/useExpensesQuery";
@@ -82,7 +81,6 @@ import FlightEditModal from "@/components/modals/mobile/FlightEditModal.native";
 import ItineraryDetailModal from "@/components/modals/mobile/ItineraryDetailModal.native";
 import ItineraryEditModal, { type ItineraryEditPrefill } from "@/components/modals/mobile/ItineraryEditModal.native";
 import TourismDetailModal from "@/components/modals/TourismDetailModal";
-import TravelInfoModal from "@/components/modals/mobile/TravelInfoModal.native";
 import { useMe } from "@/hooks/useMe";
 import { accommodationsApi } from "@/services/accommodations";
 import { flightsApi } from "@/services/flights";
@@ -101,12 +99,7 @@ import FlightIcon from "../../assets/airplane.svg";
 import LocationIcon from "../../assets/mobile_location.svg";
 import LeftArrowIcon from "../../assets/left_arrow.svg";
 import AccommodationIcon from "../../assets/mobile_accomodation.svg";
-import CalendarIcon from "../../assets/mobile_calendar_black.svg";
-import DotsIcon from "../../assets/dots.svg";
 import ExpenseCardIcon from "../../assets/expense_card.svg";
-import DropdownIcon from "../../assets/mobile_dropdown.svg";
-import InfoCircleIcon from "../../assets/info_circle.svg";
-import PersonIcon from "../../assets/person_outline.svg";
 import PlusIcon from "../../assets/mobile_plus2.svg";
 import RightArrowIcon from "../../assets/right_arrow.svg";
 import SettingIcon from "../../assets/mobile_setting.svg";
@@ -177,16 +170,12 @@ export default function WeeklyScreen() {
   const plansQuery = usePlansQuery();
   const queryClient = useQueryClient();
   const { selectedPlan, setSelectedPlan } = useSelectedPlan();
-  const [showPlanSelector, setShowPlanSelector] = useState(false);
   const [showAddPlanModal, setShowAddPlanModal] = useState(false);
   const [editingPlan, setEditingPlan] = useState<Plan | null>(null);
   const [profileModalVisible, setProfileModalVisible] = useState(false);
   const [calendarModalVisible, setCalendarModalVisible] = useState(false);
   const [addScheduleFlow, setAddScheduleFlow] =
     useState<AddScheduleFlow>("closed");
-  const [travelInfoModalVisible, setTravelInfoModalVisible] = useState(false);
-  const [moreMenuVisible, setMoreMenuVisible] = useState(false);
-  const [moreMenuTop, setMoreMenuTop] = useState(0);
   const [weekBaseDate, setWeekBaseDate] = useState<dayjs.Dayjs | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [showItineraryDetail, setShowItineraryDetail] = useState(false);
@@ -240,7 +229,6 @@ export default function WeeklyScreen() {
   useEffect(() => {
     return guestPrompt.registerBeforeSignUpNavigation(() => {
       setProfileModalVisible(false);
-      setTravelInfoModalVisible(false);
       setShowItineraryEdit(false);
       setShowAccommodationEdit(false);
       setShowFlightEdit(false);
@@ -956,53 +944,7 @@ export default function WeeklyScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
-        <View
-          style={styles.headerTopRow}
-          onLayout={e => {
-            const { y, height } = e.nativeEvent.layout;
-            setMoreMenuTop(y + height);
-          }}
-        >
-          <Pressable
-            style={styles.planSelector}
-            onPress={() => setShowPlanSelector(true)}
-          >
-            <Text style={styles.headerTitle} numberOfLines={1}>
-              {selectedPlan?.title || "여행 선택"}
-            </Text>
-            {selectedPlan && (
-              <Text style={styles.headerPeriod}>
-                {dayjs(selectedPlan.startDate).format("M.D")} –{" "}
-                {dayjs(selectedPlan.endDate).format("M.D")}
-              </Text>
-            )}
-            <DropdownIcon width={15} height={15} color={colors.gray900} />
-          </Pressable>
-          <View style={styles.headerIcons}>
-            <Pressable
-              style={styles.headerIconButton}
-              accessibilityLabel="지도로 일정 보기"
-            >
-              <LocationIcon width={20} height={20} color={colors.gray900} />
-            </Pressable>
-            <Pressable
-              style={styles.headerIconButton}
-              accessibilityLabel="달력에서 날짜 선택"
-              onPress={() => setCalendarModalVisible(true)}
-            >
-              <CalendarIcon width={20} height={20} color={colors.gray900} />
-            </Pressable>
-            <Pressable
-              style={styles.headerIconButton}
-              accessibilityLabel="더보기"
-              onPress={() => setMoreMenuVisible(true)}
-            >
-              <DotsIcon width={20} height={20} color={colors.black} />
-            </Pressable>
-          </View>
-        </View>
-      </View>
+      <TripHeader onCalendarPress={() => setCalendarModalVisible(true)} />
 
       <View
         style={[
@@ -1586,76 +1528,6 @@ export default function WeeklyScreen() {
         }}
       />
 
-      <Modal
-        visible={profileModalVisible}
-        animationType="fade"
-        transparent
-        onRequestClose={() => setProfileModalVisible(false)}
-      >
-        <ProfileModal
-          visible={profileModalVisible}
-          onClose={() => setProfileModalVisible(false)}
-        />
-      </Modal>
-
-      <PlanSelectModal
-        visible={showPlanSelector}
-        onClose={() => setShowPlanSelector(false)}
-        plans={plansQuery.plans || []}
-        selectedPlan={selectedPlan}
-        onSelectPlan={setSelectedPlan}
-        addPlan={plansQuery.addPlan}
-        onAddTripPress={() => {
-          setEditingPlan(null);
-          setShowPlanSelector(false);
-          setShowAddPlanModal(true);
-        }}
-        onEditPlan={plan => {
-          setEditingPlan(plan);
-          setShowPlanSelector(false);
-          setShowAddPlanModal(true);
-        }}
-        onDeletePlan={async plan => {
-          try {
-            await plansQuery.deletePlan(plan.id);
-            if (selectedPlan?.id === plan.id) {
-              const remaining = (plansQuery.plans || []).filter(
-                p => p.id !== plan.id,
-              );
-              setSelectedPlan(remaining[0] ?? null);
-            }
-            setShowPlanSelector(false);
-            Alert.alert("성공", "여행이 삭제되었습니다");
-          } catch (error: any) {
-            if (axios.isAxiosError(error) && error.response?.status === 403) {
-              Alert.alert("알림", "이 여행을 삭제할 권한이 없습니다");
-            } else {
-              Alert.alert("알림", "여행 삭제에 실패했습니다");
-            }
-          }
-        }}
-      />
-
-      {plansQuery.addPlan && (
-        <AddPlanModal
-          visible={showAddPlanModal}
-          onClose={() => {
-            setShowAddPlanModal(false);
-            setEditingPlan(null);
-            setShowPlanSelector(true);
-          }}
-          onPlanCreated={plan => {
-            setSelectedPlan(plan);
-            setShowAddPlanModal(false);
-            setEditingPlan(null);
-            setTimeout(() => setShowPlanSelector(false), 300);
-          }}
-          addPlan={plansQuery.addPlan}
-          planToEdit={editingPlan}
-          updatePlan={plansQuery.updatePlan}
-        />
-      )}
-
       <CalendarModal
         visible={calendarModalVisible}
         onClose={() => setCalendarModalVisible(false)}
@@ -2061,42 +1933,6 @@ export default function WeeklyScreen() {
         }}
       />
 
-      {selectedPlan && (
-        <TravelInfoModal
-          visible={travelInfoModalVisible}
-          onClose={() => setTravelInfoModalVisible(false)}
-          plan={planData.plan ?? selectedPlan}
-          itineraries={planData.itineraries ?? []}
-          accommodations={planData.accommodations ?? []}
-          flights={planData.flights ?? []}
-          expenses={planData.expenses ?? []}
-          attachments={planData.attachments ?? []}
-          memberCount={planData.shares?.length ?? 0}
-          planPublicId={selectedPlan.publicId}
-          planId={selectedPlan.id}
-          planStartDate={selectedPlan.startDate}
-          planEndDate={selectedPlan.endDate}
-          onExpenseAdd={expense => planData.addExpense?.(expense)}
-          onRefreshExpenses={async () => {
-            if (selectedPlan?.publicId) {
-              queryClient.invalidateQueries({
-                queryKey: ["expenses", selectedPlan.id],
-              });
-            }
-          }}
-          onRefreshPlan={async () => {
-            if (selectedPlan?.publicId) {
-              queryClient.invalidateQueries({
-                queryKey: ["plan", selectedPlan.publicId],
-              });
-              queryClient.invalidateQueries({
-                queryKey: ["expenses", selectedPlan.id],
-              });
-            }
-          }}
-        />
-      )}
-
       <PlanLoadingOverlay visible={plansQuery.isLoading || planData.isLoading} />
 
       <Animated.View
@@ -2122,47 +1958,6 @@ export default function WeeklyScreen() {
         </Pressable>
       </Animated.View>
 
-      {moreMenuVisible && (
-        <>
-          <Pressable
-            style={StyleSheet.absoluteFill}
-            onPress={() => setMoreMenuVisible(false)}
-          />
-          <View
-            accessibilityRole="menu"
-            style={[styles.moreMenu, { top: moreMenuTop }]}
-          >
-            {[
-              {
-                label: "여행 정보",
-                Icon: InfoCircleIcon,
-                onPress: () => setTravelInfoModalVisible(true),
-              },
-              {
-                label: "설정",
-                Icon: PersonIcon,
-                onPress: () => setProfileModalVisible(true),
-              },
-            ].map(({ label, Icon, onPress }) => (
-              <Pressable
-                key={label}
-                accessibilityRole="menuitem"
-                style={({ pressed }) => [
-                  styles.moreMenuItem,
-                  pressed && styles.moreMenuItemPressed,
-                ]}
-                onPress={() => {
-                  setMoreMenuVisible(false);
-                  onPress();
-                }}
-              >
-                <Icon width={20} height={20} color={colors.paletteInk} />
-                <Text style={styles.moreMenuText}>{label}</Text>
-              </Pressable>
-            ))}
-          </View>
-        </>
-      )}
     </View>
   );
 }
@@ -2305,70 +2100,6 @@ const styles = StyleSheet.create({
     ...textStyles.h7,
     flexShrink: 0,
     color: colors.aiInk,
-  },
-  header: {
-    paddingHorizontal: spacing.xl,
-    paddingBottom: spacing.xl,
-  },
-  headerTopRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: spacing.md,
-  },
-  planSelector: {
-    flex: 1,
-    minWidth: 0,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.sm,
-  },
-  headerTitle: {
-    ...textStyles.h3,
-    color: colors.gray900,
-    flexShrink: 1,
-  },
-  headerPeriod: {
-    ...textStyles.h7,
-    color: colors.paletteFg2,
-    fontVariant: ["tabular-nums"],
-  },
-  headerIcons: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginRight: -spacing.md,
-  },
-  headerIconButton: {
-    width: 44,
-    height: 44,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  moreMenu: {
-    position: "absolute",
-    right: spacing.md,
-    minWidth: 176,
-    padding: spacing.xs,
-    borderWidth: 1,
-    borderColor: colors.gray300,
-    borderRadius: radii.mdPlus,
-    backgroundColor: colors.white,
-    ...shadows.md,
-  },
-  moreMenuItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.sm,
-    height: 44,
-    paddingHorizontal: spacing.md,
-    borderRadius: radii.md,
-  },
-  moreMenuItemPressed: {
-    backgroundColor: colors.paletteFill,
-  },
-  moreMenuText: {
-    ...textStyles.body2,
-    color: colors.paletteInk,
   },
 
   weekSelector: {
