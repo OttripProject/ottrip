@@ -1004,7 +1004,12 @@ export default function WeeklyScreen() {
         </View>
       </View>
 
-      <View style={styles.dayTabsWrap}>
+      <View
+        style={[
+          styles.dayTabsWrap,
+          activeTab !== SCHEDULE_TAB_INDEX && styles.dayTabsWrapCompact,
+        ]}
+      >
         <View style={styles.dayTabs}>
           {DAY_TABS.map((label, index) => {
             return (
@@ -1268,7 +1273,7 @@ export default function WeeklyScreen() {
         <ScrollView
           key="checklist"
           style={styles.scheduleList}
-          contentContainerStyle={styles.scheduleContent}
+          contentContainerStyle={[styles.scheduleContent, styles.tabContentTop]}
           showsVerticalScrollIndicator={false}
           refreshControl={renderRefreshControl()}
         >
@@ -1282,7 +1287,7 @@ export default function WeeklyScreen() {
         <ScrollView
           key="travel"
           style={styles.scheduleList}
-          contentContainerStyle={styles.scheduleContent}
+          contentContainerStyle={[styles.scheduleContent, styles.tabContentTop]}
           showsVerticalScrollIndicator={false}
           refreshControl={renderRefreshControl()}
         >
@@ -2656,6 +2661,12 @@ const styles = StyleSheet.create({
   dayTabsWrap: {
     paddingHorizontal: spacing.xl,
     paddingBottom: spacing.xl,
+  },
+  dayTabsWrapCompact: {
+    paddingBottom: 0,
+  },
+  tabContentTop: {
+    paddingTop: spacing.xl,
   },
   dayTabs: {
     flexDirection: "row",
