@@ -16,8 +16,11 @@ import {
   type ViewStyle,
 } from "react-native";
 import CalendarIcon from "../../../assets/calender.svg";
+import ChevronDownIcon from "../../../assets/chevron_down.svg";
+import CloseLineIcon from "../../../assets/close_line.svg";
 import XIcon from "../../../assets/mobile_close.svg";
 import DownArrowIcon from "../../../assets/mobile_dropdown.svg";
+import PlusIcon from "../../../assets/mobile_plus.svg";
 import UpArrowIcon from "../../../assets/upper_arrow.svg";
 
 const isNative = Platform.OS !== "web";
@@ -109,10 +112,10 @@ export default function TripSegmentList({
                   >
                     {({ hovered }: HoverState) =>
                       isNative ? (
-                        <DownArrowIcon
+                        <ChevronDownIcon
                           width={17}
                           height={17}
-                          color={idx === 0 ? colors.gray400 : colors.gray600}
+                          color={colors.gray700}
                           style={{ transform: [{ scaleY: -1 }] }}
                         />
                       ) : (
@@ -136,13 +139,24 @@ export default function TripSegmentList({
                     disabled={idx >= segments.length - 1}
                     accessibilityLabel="아래로"
                   >
-                    {({ hovered }: HoverState) => (
-                      <DownArrowIcon
-                        width={isNative ? 17 : 10}
-                        height={isNative ? 17 : 10}
-                        color={actionColor(idx >= segments.length - 1, hovered)}
-                      />
-                    )}
+                    {({ hovered }: HoverState) =>
+                      isNative ? (
+                        <ChevronDownIcon
+                          width={17}
+                          height={17}
+                          color={colors.gray700}
+                        />
+                      ) : (
+                        <DownArrowIcon
+                          width={10}
+                          height={10}
+                          color={actionColor(
+                            idx >= segments.length - 1,
+                            hovered,
+                          )}
+                        />
+                      )
+                    }
                   </Pressable>
                   <Pressable
                     style={({ hovered }: HoverState) => [
@@ -154,13 +168,21 @@ export default function TripSegmentList({
                     disabled={!canRemove}
                     accessibilityLabel="구간 삭제"
                   >
-                    {({ hovered }: HoverState) => (
-                      <XIcon
-                        width={isNative ? 14 : 12}
-                        height={isNative ? 14 : 12}
-                        color={actionColor(!canRemove, hovered, true)}
-                      />
-                    )}
+                    {({ hovered }: HoverState) =>
+                      isNative ? (
+                        <CloseLineIcon
+                          width={17}
+                          height={17}
+                          color={colors.gray700}
+                        />
+                      ) : (
+                        <XIcon
+                          width={12}
+                          height={12}
+                          color={actionColor(!canRemove, hovered, true)}
+                        />
+                      )
+                    }
                   </Pressable>
                 </View>
               </View>
@@ -181,6 +203,8 @@ export default function TripSegmentList({
                     placeholder="국가 선택"
                     style={isNative ? styles.pickerBtnNative : styles.pickerTrigger}
                     containerStyle={styles.pickerWrapper}
+                    textStyle={isNative ? styles.pickerTextNative : undefined}
+                    arrowSize={isNative ? 11 : undefined}
                     onOpen={() => onSegmentFocus(idx)}
                     useModal={!isNative}
                     fullScreenModal={isNative}
@@ -203,12 +227,16 @@ export default function TripSegmentList({
                     disabled={!segment.country.trim()}
                     style={
                       isNative
-                        ? styles.pickerBtnNative
+                        ? segment.country.trim()
+                          ? styles.pickerBtnNative
+                          : pickerBtnNativeDisabled
                         : segment.country.trim()
                           ? styles.pickerTrigger
                           : pickerTriggerDisabled
                     }
                     containerStyle={styles.pickerWrapper}
+                    textStyle={isNative ? styles.pickerTextNative : undefined}
+                    arrowSize={isNative ? 11 : undefined}
                     onOpen={() => onSegmentFocus(idx)}
                     useModal={!isNative}
                     fullScreenModal={isNative}
@@ -243,7 +271,7 @@ export default function TripSegmentList({
                   <CalendarIcon
                     width={isNative ? 16 : 12}
                     height={isNative ? 16 : 12}
-                    color={isNative ? colors.gray700 : colors.gray900}
+                    color={isNative ? colors.gray600 : colors.gray900}
                   />
                 </Pressable>
               </View>
@@ -261,7 +289,10 @@ export default function TripSegmentList({
       >
         {({ hovered }: HoverState) =>
           isNative ? (
-            <Text style={styles.addBtnText}>+ 구간 추가</Text>
+            <>
+              <PlusIcon width={15} height={15} color={colors.gray900} />
+              <Text style={styles.addBtnText}>구간 추가</Text>
+            </>
           ) : (
             <>
               <Text
@@ -300,10 +331,10 @@ const styles = StyleSheet.create({
     gap: isNative ? 0 : spacing.md,
     backgroundColor: colors.gray100,
     borderWidth: 1,
-    borderColor: isNative ? colors.gray200 : colors.gray300,
-    borderRadius: isNative ? 16 : radii.mdPlus,
-    padding: isNative ? 14 : spacing.lg,
-    paddingLeft: isNative ? 14 : spacing.md,
+    borderColor: colors.gray300,
+    borderRadius: isNative ? radii.lgPlus : radii.mdPlus,
+    padding: spacing.lg,
+    paddingLeft: isNative ? spacing.lg : spacing.md,
   },
   // 웹 전용: 인덱스 컬럼
   segIdxCol: {
@@ -355,23 +386,21 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   segBadgeText: {
-    fontFamily: typography.fontFamily.poppinsSemiBold,
-    fontSize: 12,
-    lineHeight: 16,
+    ...textStyles.h8,
+    fontFamily: typography.fontFamily.pretendardBold,
     color: colors.white,
-    fontWeight: "700" as const,
   },
   segHeaderLabel: {
-    marginLeft: 10,
-    ...textStyles.h9,
-    color: colors.gray600,
+    marginLeft: spacing.md,
+    ...textStyles.h7,
+    color: colors.gray700,
   },
   segActions: {
     position: "absolute",
     top: isNative ? 0 : -spacing.sm,
     right: isNative ? 0 : -spacing.sm,
     flexDirection: "row",
-    gap: isNative ? 2 : 0,
+    gap: isNative ? spacing.xs : 0,
     zIndex: 2,
   },
   segActionsNative: {
@@ -409,10 +438,9 @@ const styles = StyleSheet.create({
   },
   fieldNative: {},
   fieldLabel: {
-    ...(isNative ? textStyles.body6 : textStyles.h9),
-    color: isNative ? colors.gray600 : colors.gray700,
-    fontFamily: typography.fontFamily.pretendardSemiBold,
-    marginBottom: isNative ? 6 : 0,
+    ...(isNative ? textStyles.h8 : textStyles.h9),
+    color: colors.gray700,
+    marginBottom: isNative ? spacing.sm : 0,
   },
   fieldLabelTop: {
     marginTop: 12,
@@ -431,36 +459,43 @@ const styles = StyleSheet.create({
   },
   pickerBtnNative: {
     width: "100%",
-    height: 44,
+    height: 48,
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: colors.white,
     borderWidth: 1,
-    borderColor: colors.gray300,
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    gap: 10,
+    borderColor: colors.paletteLine,
+    borderRadius: radii.md,
+    paddingHorizontal: spacing.lg,
+    gap: spacing.md,
+  },
+  pickerTextNative: {
+    fontFamily: typography.fontFamily.pretendardMedium,
+    fontSize: textStyles.body3.fontSize,
+    lineHeight: textStyles.body3.lineHeight,
   },
   dateBtnNative: {
     width: "100%",
-    height: 44,
+    height: 48,
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: colors.white,
     borderWidth: 1,
-    borderColor: colors.gray300,
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    gap: 10,
+    borderColor: colors.paletteLine,
+    borderRadius: radii.md,
+    paddingHorizontal: spacing.lg,
+    gap: spacing.sm,
   },
   pickerText: {
     flex: 1,
     ...textStyles.body3,
+    fontFamily: typography.fontFamily.pretendardMedium,
+    fontVariant: ["tabular-nums"],
     color: colors.gray900,
   },
   pickerPlaceholder: {
     color: colors.gray600,
-    fontFamily: typography.fontFamily.pretendardRegular,
+    ...(isNative ? null : { fontFamily: typography.fontFamily.pretendardRegular }),
   },
   // 웹 날짜 버튼
   segCellDate: {
@@ -497,16 +532,15 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderStyle: "dashed" as const,
     borderColor: colors.gray400,
-    borderRadius: isNative ? 14 : radii.md,
-    paddingVertical: isNative ? 14 : 0,
+    borderRadius: isNative ? radii.lgPlus : radii.md,
+    paddingVertical: isNative ? spacing.lg : 0,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: isNative ? colors.white : "transparent",
+    backgroundColor: "transparent",
   },
   addBtnText: {
-    ...(isNative ? textStyles.body4 : textStyles.h7),
-    color: isNative ? colors.black : colors.gray700,
-    ...(isNative ? { fontFamily: typography.fontFamily.pretendardBold } : null),
+    ...(isNative ? textStyles.h6 : textStyles.h7),
+    color: isNative ? colors.gray900 : colors.gray700,
   },
   addBtnPlus: {
     ...textStyles.body2,
@@ -525,4 +559,9 @@ const styles = StyleSheet.create({
 const pickerTriggerDisabled = StyleSheet.flatten([
   styles.pickerTrigger,
   { backgroundColor: colors.gray100 },
+]);
+
+const pickerBtnNativeDisabled = StyleSheet.flatten([
+  styles.pickerBtnNative,
+  { opacity: 0.55 },
 ]);

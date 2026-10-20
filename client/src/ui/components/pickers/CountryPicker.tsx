@@ -53,6 +53,8 @@ interface CountryPickerProps {
   selectedItemContainerStyle?: ViewStyle;
   disabled?: boolean;
   hideArrow?: boolean;
+  textStyle?: TextStyle;
+  arrowSize?: number;
   onOpen?: () => void;
   onClose?: () => void;
   useModal?: boolean;
@@ -68,6 +70,8 @@ export default function CountryPicker({
   style,
   disabled,
   hideArrow,
+  textStyle,
+  arrowSize = 10,
   onOpen,
   onClose,
   useModal = false,
@@ -463,7 +467,10 @@ export default function CountryPicker({
         disabled={disabled}
       >
         <Text
-          style={value ? styles.triggerText : styles.triggerPlaceholder}
+          style={[
+            value ? styles.triggerText : styles.triggerPlaceholder,
+            textStyle,
+          ]}
           numberOfLines={1}
         >
           {value
@@ -472,9 +479,17 @@ export default function CountryPicker({
         </Text>
         {!hideArrow &&
           ((open || fsOpen) ? (
-            <UpperArrowIcon width={10} height={10} color={colors.gray600} />
+            <UpperArrowIcon
+              width={arrowSize}
+              height={arrowSize}
+              color={colors.gray600}
+            />
           ) : (
-            <DownArrowIcon width={10} height={10} color={colors.gray600} />
+            <DownArrowIcon
+              width={arrowSize}
+              height={arrowSize}
+              color={colors.gray600}
+            />
           ))}
       </Pressable>
 

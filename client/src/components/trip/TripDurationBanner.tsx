@@ -52,9 +52,8 @@ const styles = StyleSheet.create({
   banner: {
     backgroundColor: colors.gray900,
     borderRadius: isNative ? 16 : radii.mdPlus,
-    paddingHorizontal: isNative ? 20 : spacing.lg,
-    paddingVertical: isNative ? 18 : spacing.lg,
-    marginBottom: isNative ? 8 : 0,
+    paddingHorizontal: isNative ? spacing.xl : spacing.lg,
+    paddingVertical: spacing.lg,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
@@ -65,8 +64,9 @@ const styles = StyleSheet.create({
   },
   label: isNative
     ? {
-        ...textStyles.body6,
-        color: colors.onDarkSubtle,
+        ...textStyles.h7,
+        fontFamily: typography.fontFamily.pretendardBold,
+        color: colors.white,
       }
     : {
         ...textStyles.h9,
@@ -78,7 +78,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.sm,
-    marginTop: isNative ? 2 : spacing.xs,
+    marginTop: isNative ? spacing.sm : spacing.xs,
   },
   dateNum: isNative
     ? {
@@ -105,11 +105,18 @@ const styles = StyleSheet.create({
         ...textStyles.body2,
         color: colors.onDarkSubtle,
       },
-  empty: {
-    ...textStyles.body5,
-    color: colors.onDarkSubtle,
-    marginTop: isNative ? 2 : spacing.xs,
-  },
+  empty: isNative
+    ? {
+        ...textStyles.body4,
+        fontFamily: typography.fontFamily.pretendardMedium,
+        color: colors.onDarkSubtle,
+        marginTop: spacing.sm,
+      }
+    : {
+        ...textStyles.body5,
+        color: colors.onDarkSubtle,
+        marginTop: spacing.xs,
+      },
   badge: {
     backgroundColor: colors.onDarkTint,
     paddingVertical: isNative ? 6 : spacing.sm,
