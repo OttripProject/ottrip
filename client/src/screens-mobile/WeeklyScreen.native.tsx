@@ -64,7 +64,7 @@ const jellyEasing = toEasing(motion.easing.ease);
 const JELLY_STEPS = [0, 0.3, 0.55, 0.75, 1];
 const PRIMARY_GRADIENT = `linear-gradient(180deg, ${colors.gradientPrimary[0]} 0%, ${colors.gradientPrimary[1]} 100%)`;
 const DAY_TABS = ["일정", "체크리스트", "숙박·항공"] as const;
-const TRAVEL_TAB_INDEX = DAY_TABS.indexOf("숙박·항공");
+const SCHEDULE_TAB_INDEX = DAY_TABS.indexOf("일정");
 const NO_PLAN_FEATURES = [
   "여행 일정 관리에 최적화된 솔루션",
   "AI로 체크리스트 추천",
@@ -74,7 +74,7 @@ import AiSuggestionCard from "@/components/cards/AiSuggestionCard.native";
 import CongestionBanner from "@/components/CongestionBanner.native";
 import FestivalsCard from "@/components/cards/FestivalsCard.native";
 import FestivalDetailModal from "@/components/modals/FestivalDetailModal.native";
-import WeeklyChecklistCard from "@/components/cards/WeeklyChecklistCard.native";
+import TripChecklistPanel from "@/components/cards/TripChecklistPanel.native";
 import AccommodationDetailModal from "@/components/modals/mobile/AccommodationDetailModal.native";
 import AccommodationEditModal from "@/components/modals/mobile/AccommodationEditModal.native";
 import FlightDetailModal from "@/components/modals/mobile/FlightDetailModal.native";
@@ -1022,7 +1022,7 @@ export default function WeeklyScreen() {
       <View
         style={[
           styles.weekSelector,
-          activeTab === TRAVEL_TAB_INDEX && styles.weekSelectorHidden,
+          activeTab !== SCHEDULE_TAB_INDEX && styles.weekSelectorHidden,
         ]}
       >
         <Pressable
@@ -1273,13 +1273,10 @@ export default function WeeklyScreen() {
           refreshControl={renderRefreshControl()}
         >
           {selectedPlan && (
-            <View style={styles.checklistWrapper}>
-              <WeeklyChecklistCard
-                planPublicId={selectedPlan.publicId}
-                selectedDate={selectedDate}
-                itineraries={planData.itineraries}
-              />
-            </View>
+            <TripChecklistPanel
+              planPublicId={selectedPlan.publicId}
+              itineraries={planData.itineraries}
+            />
           )}
         </ScrollView>
         <ScrollView
@@ -2730,9 +2727,6 @@ const styles = StyleSheet.create({
   emptyScheduleButtonText: {
     ...textStyles.h7,
     color: colors.white,
-  },
-  checklistWrapper: {
-    marginVertical: 16,
   },
 
   scheduleNote: {
