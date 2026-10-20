@@ -777,11 +777,14 @@ export default function WeeklyScreen() {
     () =>
       (planData.flights ?? [])
         .flatMap((flight: FlightRead) =>
-          (flight.flightSegments ?? []).map(segment => ({
-            id: `${flight.id}-segment-${segment.id}`,
-            flight,
-            segment,
-          })),
+          [...(flight.flightSegments ?? [])]
+            .sort((a, b) => a.order - b.order)
+            .map((segment, index) => ({
+              id: `${flight.id}-segment-${segment.id}`,
+              flight,
+              segment,
+              isFirstSegment: index === 0,
+            })),
         )
         .sort((a, b) =>
           a.segment.departureTime.localeCompare(b.segment.departureTime),
@@ -1379,38 +1382,89 @@ export default function WeeklyScreen() {
                 {tripFlightSegments.length}편 · 총 {flightCostText}
               </Text>
             </View>
-            {tripFlightSegments.map(item => (
-              <Pressable
-                key={item.id}
-                style={styles.travelInfoCard}
-                onPress={() => {
-                  setSelectedFlight(item.flight);
-                  setSelectedFlightSegment(item.segment);
-                  setShowFlightDetail(true);
-                }}
-              >
-                <View style={styles.travelInfoCardHeader}>
-                  <View style={styles.travelInfoIconBox}>
-                    <FlightIcon width={20} height={20} color={colors.primary} />
+            {tripFlightSegments.map(item => {
+              const { flight, segment, isFirstSegment } = item;
+              const expense = isFirstSegment ? flight.expense : undefined;
+              return (
+                <Pressable
+                  key={item.id}
+                  style={styles.flightCard}
+                  onPress={() => {
+                    setSelectedFlight(flight);
+                    setSelectedFlightSegment(segment);
+                    setShowFlightDetail(true);
+                  }}
+                >
+                  <View style={styles.flightTop}>
+                    {!!segment.flightNumber && (
+                      <View style={styles.flightBadge}>
+                        <Text style={styles.flightBadgeText}>
+                          {segment.flightNumber}
+                        </Text>
+                      </View>
+                    )}
+                    {!!segment.airline && (
+                      <Text style={styles.flightAirline} numberOfLines={1}>
+                        {segment.airline}
+                      </Text>
+                    )}
+                    {!!expense && (
+                      <Text style={styles.flightPrice}>
+                        {currencySymbols[
+                          expense.currency as keyof typeof currencySymbols
+                        ] ?? expense.currency}
+                        {Number(expense.amount).toLocaleString("ko-KR")}
+                      </Text>
+                    )}
                   </View>
-                  <View style={styles.travelInfoHeaderText}>
-                    <Text style={styles.travelInfoLabel}>
-                      {dayjs(item.segment.departureTime).format("M.DD")}
-                    </Text>
-                    <Text style={styles.travelInfoName}>
-                      {item.segment.departureAirport} →{" "}
-                      {item.segment.arrivalAirport}
-                    </Text>
-                    <Text style={styles.travelInfoSub}>
-                      출발 {convertUTCToLocalTime(item.segment.departureTime)}
-                      {item.segment.flightNumber &&
-                        ` · ${item.segment.flightNumber}`}
-                    </Text>
+                  <View style={styles.flightRoute}>
+                    <View>
+                      <Text style={styles.flightAirport}>
+                        {segment.departureAirport}
+                      </Text>
+                      <Text style={styles.flightTime}>
+                        {convertUTCToLocalTime(segment.departureTime)}
+                      </Text>
+                    </View>
+                    <View style={styles.flightPath}>
+                      <View style={styles.flightPathDot} />
+                      <View style={styles.flightPathLine} />
+                      <FlightIcon width={14} height={14} color={colors.gray600} />
+                      <View style={styles.flightPathLine} />
+                      <View style={styles.flightPathDot} />
+                    </View>
+                    <View style={styles.flightEnd}>
+                      <Text style={styles.flightAirport}>
+                        {segment.arrivalAirport}
+                      </Text>
+                      <Text style={styles.flightTime}>
+                        {convertUTCToLocalTime(segment.arrivalTime)}
+                      </Text>
+                    </View>
                   </View>
-                </View>
-                <RightArrowIcon width={12} height={12} color={colors.gray600} />
-              </Pressable>
-            ))}
+                  <View style={styles.flightMeta}>
+                    <View style={styles.flightMetaCol}>
+                      <Text style={styles.flightMetaLabel}>날짜</Text>
+                      <Text style={styles.flightMetaValue}>
+                        {dayjs(segment.departureTime).format("MM. DD")}
+                      </Text>
+                    </View>
+                    <View style={styles.flightMetaCol}>
+                      <Text style={styles.flightMetaLabel}>PNR</Text>
+                      <Text style={styles.flightMetaValue}>
+                        {flight.reservationNumber || "-"}
+                      </Text>
+                    </View>
+                    <View style={[styles.flightMetaCol, styles.flightEnd]}>
+                      <Text style={styles.flightMetaLabel}>좌석</Text>
+                      <Text style={styles.flightMetaValue}>
+                        {segment.seatNumber || "-"}
+                      </Text>
+                    </View>
+                  </View>
+                </Pressable>
+              );
+            })}
           </View>
         </ScrollView>
       </PagerView>
@@ -2794,49 +2848,96 @@ const styles = StyleSheet.create({
     marginTop: spacing.md,
     color: colors.gray700,
   },
-  travelInfoCard: {
+  flightCard: {
     marginHorizontal: spacing.sm,
-    padding: 16,
+    padding: spacing.lg,
+    borderRadius: radii.lgPlus,
     backgroundColor: colors.white,
-    borderRadius: 16,
+    ...shadows.card,
+  },
+  flightTop: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    shadowColor: colors.gray700,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
+    marginBottom: spacing.md,
   },
-  travelInfoCardHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    flex: 1,
+  flightBadge: {
+    marginRight: spacing.sm,
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.sm,
+    borderRadius: radii.xs,
+    backgroundColor: colors.flightBg,
   },
-  travelInfoIconBox: {
-    width: 36,
-    height: 36,
-    borderRadius: 12,
-    backgroundColor: `${colors.primary}1F`,
-    alignItems: "center",
-    justifyContent: "center",
+  flightBadgeText: {
+    ...textStyles.h8,
+    color: colors.flightText,
   },
-  travelInfoHeaderText: {
-    flex: 1,
+  flightAirline: {
+    ...textStyles.body5,
+    flexShrink: 1,
+    color: colors.gray700,
   },
-  travelInfoLabel: {
-    ...textStyles.body4,
-    color: colors.gray600,
-    marginBottom: 4,
-  },
-  travelInfoName: {
+  flightPrice: {
     ...textStyles.h6,
+    marginLeft: "auto",
+    paddingLeft: spacing.sm,
+    fontVariant: ["tabular-nums"],
     color: colors.black,
-    marginBottom: 4,
   },
-  travelInfoSub: {
-    ...textStyles.body4,
+  flightRoute: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.md,
+  },
+  flightAirport: {
+    ...textStyles.h3,
+    fontVariant: ["tabular-nums"],
+    color: colors.black,
+  },
+  flightTime: {
+    ...textStyles.h7,
+    marginTop: spacing.xs,
+    fontVariant: ["tabular-nums"],
+    color: colors.gray700,
+  },
+  flightPath: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    paddingHorizontal: spacing.xs,
+  },
+  flightPathDot: {
+    width: 4,
+    height: 4,
+    borderRadius: radii.pill,
+    backgroundColor: colors.gray600,
+  },
+  flightPathLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: colors.gray600,
+  },
+  flightEnd: {
+    alignItems: "flex-end",
+  },
+  flightMeta: {
+    flexDirection: "row",
+    marginTop: spacing.md,
+    paddingTop: spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: colors.gray200,
+  },
+  flightMetaCol: {
+    flex: 1,
+  },
+  flightMetaLabel: {
+    ...textStyles.body5,
     color: colors.gray600,
+  },
+  flightMetaValue: {
+    ...textStyles.h8,
+    marginTop: spacing.xs,
+    fontVariant: ["tabular-nums"],
+    color: colors.gray700,
   },
 });
