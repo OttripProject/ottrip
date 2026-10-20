@@ -25,6 +25,7 @@ import {
 import BottomSheetModal from "@/ui/components/BottomSheetModal.native";
 import ScalePressable from "@/ui/components/ScalePressable";
 import CalendarModal from "@/ui/components/CalendarModal.native";
+import Input, { filledFocusStyle } from "@/ui/components/input/Input";
 import AttachmentSection from "@/ui/components/attachmentSection.native";
 import { colors } from "@/ui/tokens/colors";
 import { radii } from "@/ui/tokens/radii";
@@ -101,6 +102,7 @@ export default function AddExpenseModal({
 }: AddExpenseModalProps) {
   const isEdit = !!expense;
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [descriptionFocused, setDescriptionFocused] = useState(false);
 
   const [pendingFiles, setPendingFiles] = useState<LocalFile[]>([]);
   const [existingAttachments, setExistingAttachments] = useState<Attachment[]>(
@@ -417,7 +419,8 @@ export default function AddExpenseModal({
         <View style={styles.amountRow}>
           <View style={[styles.inputGroup, styles.amountColumn]}>
             <Text style={styles.label}>금액</Text>
-            <TextInput
+            <Input
+              variant="filled"
               value={formData.amount}
               onChangeText={handleAmountChange}
               placeholder="0"
@@ -491,7 +494,14 @@ export default function AddExpenseModal({
             placeholderTextColor={colors.paletteFg3}
             multiline
             textAlignVertical="top"
-            style={[styles.field, styles.fieldText, styles.descriptionField]}
+            onFocus={() => setDescriptionFocused(true)}
+            onBlur={() => setDescriptionFocused(false)}
+            style={[
+              styles.field,
+              styles.fieldText,
+              styles.descriptionField,
+              descriptionFocused && filledFocusStyle,
+            ]}
           />
         </View>
 
@@ -639,6 +649,8 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.lg,
     borderRadius: radii.mdPlus,
+    borderWidth: 1,
+    borderColor: "transparent",
     backgroundColor: colors.paletteFill,
   },
   fieldText: {
@@ -647,7 +659,6 @@ const styles = StyleSheet.create({
   },
   singleLineInput: {
     height: 44,
-    paddingVertical: 0,
     fontFamily: textStyles.body4.fontFamily,
     fontSize: textStyles.body4.fontSize,
     color: colors.paletteInk,

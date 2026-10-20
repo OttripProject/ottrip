@@ -1,6 +1,7 @@
 import { plansApi } from "@/services/plans";
 import BottomSheetModal from "@/ui/components/BottomSheetModal.native";
 import ScalePressable from "@/ui/components/ScalePressable";
+import { filledFocusStyle } from "@/ui/components/input/Input";
 import { colors } from "@/ui/tokens/colors";
 import { radii } from "@/ui/tokens/radii";
 import { shadows } from "@/ui/tokens/shadows";
@@ -75,6 +76,7 @@ export default function SharedMembersModal({
 }: SharedMembersModalProps) {
   const canManage = myRole === "owner" || myRole === "editor";
   const [inviteEmail, setInviteEmail] = useState("");
+  const [emailFocused, setEmailFocused] = useState(false);
   const [selectedRole, setSelectedRole] = useState<"editor" | "viewer">(
     "editor",
   );
@@ -213,7 +215,7 @@ export default function SharedMembersModal({
               <Text style={styles.sectionLabel}>멤버 초대</Text>
               <View style={styles.inviteRow}>
                 <TextInput
-                  style={styles.emailInput}
+                  style={[styles.emailInput, emailFocused && filledFocusStyle]}
                   placeholder="이메일 주소"
                   placeholderTextColor={colors.paletteFg3}
                   value={inviteEmail}
@@ -221,6 +223,8 @@ export default function SharedMembersModal({
                   keyboardType="email-address"
                   autoCapitalize="none"
                   autoCorrect={false}
+                  onFocus={() => setEmailFocused(true)}
+                  onBlur={() => setEmailFocused(false)}
                 />
                 <MenuView
                   actions={ROLE_OPTIONS.map(opt => ({
@@ -418,6 +422,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingVertical: 0,
     borderRadius: radii.lgPlus,
+    borderWidth: 1,
+    borderColor: "transparent",
     backgroundColor: colors.gray200,
     fontFamily: textStyles.body2.fontFamily,
     fontSize: textStyles.body2.fontSize,

@@ -10,6 +10,7 @@ import type {
   Plan,
 } from "@/types/api";
 import FullScreenModal from "@/ui/components/FullScreenModal.native";
+import { filledFocusStyle } from "@/ui/components/input/Input";
 import ScalePressable from "@/ui/components/ScalePressable";
 import { colors } from "@/ui/tokens/colors";
 import { radii } from "@/ui/tokens/radii";
@@ -90,6 +91,7 @@ export default function TravelInfoModal({
   const [showSharedMembers, setShowSharedMembers] = useState(false);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [memo, setMemo] = useState(plan?.memo ?? "");
+  const [memoFocused, setMemoFocused] = useState(false);
 
   useEffect(() => {
     if (visible && plan) {
@@ -266,12 +268,16 @@ export default function TravelInfoModal({
               </Text>
             </View>
           </View>
-          <View style={styles.memoBox}>
+          <View style={[styles.memoBox, memoFocused && filledFocusStyle]}>
             <TextInput
               style={styles.memoInput}
               value={memo}
               onChangeText={setMemo}
-              onBlur={handleMemoBlur}
+              onFocus={() => setMemoFocused(true)}
+              onBlur={() => {
+                setMemoFocused(false);
+                handleMemoBlur();
+              }}
               placeholder="함께 보는 메모를 입력하세요."
               placeholderTextColor={colors.memoPlaceholder}
               multiline
@@ -488,6 +494,8 @@ const styles = StyleSheet.create({
   memoBox: {
     backgroundColor: colors.primaryTint,
     borderRadius: radii.lgPlus,
+    borderWidth: 1,
+    borderColor: "transparent",
     padding: spacing.lg,
   },
   memoInput: {

@@ -109,22 +109,12 @@ export const shadows = {
     android: { elevation: 4 },
     default: { boxShadow: "0 6px 16px -8px rgba(20,24,40,0.28)" } as any,
   }),
-  focusRing: Platform.select({
-    ios: {},
-    android: {},
-    default: {
-      boxShadow:
-        "0 0 0 1px rgba(0,122,255,0.5), 0 0 0 4px rgba(0,122,255,0.14)",
-    } as any,
-  }),
-  inputFocus: {
-    boxShadow: "0 0 0 4px rgba(0,122,255,0.14)",
+  focusRing: {
+    boxShadow: "0 0 0 1px rgba(0,122,255,0.5), 0 0 0 4px rgba(0,122,255,0.14)",
   },
-  filledFocusRing: Platform.select({
-    ios: {},
-    android: {},
-    default: { boxShadow: "0 0 0 4px rgba(0,122,255,0.12)" } as any,
-  }),
+  filledFocusRing: {
+    boxShadow: "0 0 0 4px rgba(0,122,255,0.12)",
+  },
   segmentActive: Platform.select({
     ios: {
       shadowColor: "#000",
@@ -168,14 +158,9 @@ export const shadows = {
         "0 2px 4px rgba(20,24,40,0.05), 0 18px 40px -18px rgba(20,24,40,0.22)",
     } as any,
   }),
-  errorRing: Platform.select({
-    ios: {},
-    android: {},
-    default: {
-      boxShadow:
-        "0 0 0 1px rgba(239,68,68,0.5), 0 0 0 4px rgba(239,68,68,0.14)",
-    } as any,
-  }),
+  errorRing: {
+    boxShadow: "0 0 0 1px rgba(239,68,68,0.5), 0 0 0 4px rgba(239,68,68,0.14)",
+  },
   insetBottom: Platform.select({
     ios: {},
     android: {},

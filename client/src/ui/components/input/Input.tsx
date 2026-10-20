@@ -4,7 +4,6 @@ import { spacing } from "@/ui/tokens/spacing";
 import { textStyles } from "@/ui/tokens/typography";
 import { forwardRef, useMemo, useState } from "react";
 import {
-  Platform,
   type StyleProp,
   StyleSheet,
   TextInput,
@@ -43,7 +42,7 @@ export const Input = forwardRef<TextInput, InputProps>(
     } = props;
     const [focused, setFocused] = useState(false);
     const [hovered, setHovered] = useState(false);
-    const isWebFilled = Platform.OS === "web" && variant === "filled";
+    const isFilled = variant === "filled";
     const state = useMemo(
       () => ({ disabled: editable === false, error, focused }),
       [editable, error, focused],
@@ -62,18 +61,18 @@ export const Input = forwardRef<TextInput, InputProps>(
               size && sizeStyles[size],
               size && multiline && sizeStyles.multiline,
               style,
-              isWebFilled &&
+              isFilled &&
                 hovered &&
                 !focused &&
                 editable !== false &&
                 stateStyles.filledHover,
-              isWebFilled && focused && stateStyles.filledFocus,
-              isWebFilled && focused && !error && stateStyles.filledFocusBorder,
+              isFilled && focused && stateStyles.filledFocus,
+              isFilled && focused && !error && stateStyles.filledFocusBorder,
               focused &&
                 variant !== "bare" &&
                 (error
                   ? shadows.errorRing
-                  : isWebFilled
+                  : isFilled
                     ? shadows.filledFocusRing
                     : shadows.focusRing),
             ] as StyleProp<TextStyle>
@@ -104,6 +103,12 @@ export const Input = forwardRef<TextInput, InputProps>(
     );
   },
 );
+
+export const filledFocusStyle = {
+  backgroundColor: colors.white,
+  borderColor: colors.inputFocusBorder,
+  ...shadows.filledFocusRing,
+};
 
 const stateStyles = StyleSheet.create({
   filledHover: {

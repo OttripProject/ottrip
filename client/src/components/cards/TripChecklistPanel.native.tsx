@@ -557,7 +557,7 @@ const styles = StyleSheet.create({
   },
   addInputFocused: {
     borderColor: colors.inputFocusBorder,
-    ...shadows.inputFocus,
+    ...shadows.focusRing,
   },
   saveButton: {
     height: 40,
