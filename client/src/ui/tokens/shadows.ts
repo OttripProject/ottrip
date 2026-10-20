@@ -117,6 +117,9 @@ export const shadows = {
         "0 0 0 1px rgba(0,122,255,0.5), 0 0 0 4px rgba(0,122,255,0.14)",
     } as any,
   }),
+  inputFocus: {
+    boxShadow: "0 0 0 4px rgba(0,122,255,0.14)",
+  },
   filledFocusRing: Platform.select({
     ios: {},
     android: {},

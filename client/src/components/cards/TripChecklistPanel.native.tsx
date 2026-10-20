@@ -21,6 +21,7 @@ import CheckMarkIcon from "../../../assets/check_mark.svg";
 import PlusIcon from "../../../assets/mobile_plus.svg";
 import RefreshIcon from "../../../assets/refresh_ai.svg";
 
+const INK_GRADIENT = `linear-gradient(180deg, ${colors.gradientInk[0]} 0%, ${colors.gradientInk[1]} 100%)`;
 const AI_GRADIENT = `linear-gradient(135deg, ${colors.aiGrad[0]} 0%, ${colors.aiGrad[1]} 100%)`;
 
 const GROUPS = [
@@ -72,6 +73,7 @@ export default function TripChecklistPanel({
   const [addingGroup, setAddingGroup] = useState<GroupKey | null>(null);
   const [newItemName, setNewItemName] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+  const [inputFocused, setInputFocused] = useState(false);
   const [aiLoading, setAiLoading] = useState(false);
   const togglingItems = useRef<Set<number>>(new Set());
   const deletingItems = useRef<Set<number>>(new Set());
@@ -339,9 +341,13 @@ export default function TripChecklistPanel({
                     group.items.length > 0 && styles.itemRowDivider,
                   ]}
                 >
+                  <View style={styles.checkbox} />
                   <TextInput
-                    style={styles.addInput}
-                    placeholder="항목 입력"
+                    style={[
+                      styles.addInput,
+                      inputFocused && styles.addInputFocused,
+                    ]}
+                    placeholder="항목을 입력하세요."
                     placeholderTextColor={colors.paletteFg3}
                     value={newItemName}
                     onChangeText={setNewItemName}
@@ -350,23 +356,18 @@ export default function TripChecklistPanel({
                     editable={!isSaving}
                     returnKeyType="done"
                     onSubmitEditing={handleSave}
+                    onFocus={() => setInputFocused(true)}
+                    onBlur={() => setInputFocused(false)}
                   />
                   <Pressable
-                    style={[
+                    style={({ pressed }) => [
                       styles.saveButton,
-                      !canSave && styles.saveButtonDisabled,
+                      pressed && styles.saveButtonPressed,
                     ]}
                     onPress={handleSave}
                     disabled={!canSave}
                   >
-                    <Text
-                      style={[
-                        styles.saveButtonText,
-                        !canSave && styles.saveButtonTextDisabled,
-                      ]}
-                    >
-                      저장
-                    </Text>
+                    <Text style={styles.saveButtonText}>추가</Text>
                   </Pressable>
                 </View>
               )}
@@ -539,33 +540,42 @@ const styles = StyleSheet.create({
   addRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: spacing.sm,
+    gap: 10,
     paddingVertical: spacing.sm,
   },
   addInput: {
     flex: 1,
-    paddingVertical: spacing.sm,
+    height: 40,
+    paddingHorizontal: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.paletteLine,
+    borderRadius: radii.md,
     fontFamily: typography.fontFamily.pretendardMedium,
     fontSize: textStyles.body3.fontSize,
     color: colors.paletteInk,
+    backgroundColor: colors.white,
+  },
+  addInputFocused: {
+    borderColor: colors.inputFocusBorder,
+    ...shadows.inputFocus,
   },
   saveButton: {
-    height: 32,
-    paddingHorizontal: spacing.md,
-    borderRadius: radii.base,
+    height: 40,
+    paddingHorizontal: spacing.lg,
+    borderRadius: radii.md,
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: colors.paletteInk,
+    experimental_backgroundImage: INK_GRADIENT,
+    ...shadows.darkRaised,
   },
-  saveButtonDisabled: {
-    backgroundColor: colors.gray300,
+  saveButtonPressed: {
+    opacity: 0.85,
   },
   saveButtonText: {
-    ...textStyles.h8,
+    ...textStyles.h6,
+    fontFamily: typography.fontFamily.pretendardBold,
     color: colors.white,
-  },
-  saveButtonTextDisabled: {
-    color: colors.gray500,
   },
   aiButton: {
     height: 48,
