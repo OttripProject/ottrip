@@ -997,6 +997,7 @@ const styles = StyleSheet.create({
   amountInputStyle: {
     flex: 1,
     height: 44,
+    lineHeight: undefined,
     textAlign: "left",
     backgroundColor: "transparent",
     fontFamily: typography.fontFamily.pretendardSemiBold,

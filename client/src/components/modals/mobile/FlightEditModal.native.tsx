@@ -595,7 +595,11 @@ export default function FlightEditModal({
                 variant="filled"
                 value={expenseAmount}
                 onChangeText={handleAmountChange}
-                style={[styles.input, !flight && styles.inputBorderless]}
+                style={[
+                  styles.input,
+                  styles.amountFieldInput,
+                  !flight && styles.inputBorderless,
+                ]}
                 placeholder="0"
                 placeholderTextColor={colors.gray600}
                 keyboardType="number-pad"
@@ -1124,6 +1128,9 @@ const styles = StyleSheet.create({
     borderColor: colors.gray400,
     borderRadius: 12,
     backgroundColor: colors.gray200,
+  },
+  amountFieldInput: {
+    lineHeight: undefined,
   },
   inputBorderless: {
     borderColor: "transparent",

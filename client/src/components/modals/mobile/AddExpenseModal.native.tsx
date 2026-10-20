@@ -659,6 +659,7 @@ const styles = StyleSheet.create({
   },
   singleLineInput: {
     height: 44,
+    lineHeight: undefined,
     fontFamily: textStyles.body4.fontFamily,
     fontSize: textStyles.body4.fontSize,
     color: colors.paletteInk,
