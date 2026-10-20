@@ -1300,43 +1300,72 @@ export default function WeeklyScreen() {
                   .startOf("day")
                   .diff(dayjs(accommodation.checkinDate).startOf("day"), "day"),
               );
+              const { expense } = accommodation;
               return (
                 <Pressable
                   key={accommodation.id}
-                  style={styles.travelInfoCard}
+                  style={styles.stayCard}
                   onPress={() => {
                     setSelectedAccommodation(accommodation);
                     setShowAccommodationDetail(true);
                   }}
                 >
-                  <View style={styles.travelInfoCardHeader}>
-                    <View style={styles.travelInfoIconBox}>
+                  <View style={styles.stayTop}>
+                    <View style={styles.stayIconBox}>
                       <AccommodationIcon
-                        width={20}
-                        height={20}
-                        color={colors.primary}
+                        width={21}
+                        height={21}
+                        color={colors.accommodationText}
                       />
                     </View>
-                    <View style={styles.travelInfoHeaderText}>
-                      <Text style={styles.travelInfoLabel}>
-                        {dayjs(accommodation.checkinDate).format("M.DD")} –{" "}
-                        {dayjs(accommodation.checkoutDate).format("M.DD")} ·{" "}
-                        {nights}박
-                      </Text>
-                      <Text style={styles.travelInfoName}>
+                    <View style={styles.stayTitleWrap}>
+                      <Text style={styles.stayName} numberOfLines={1}>
                         {accommodation.name}
                       </Text>
-                      <Text style={styles.travelInfoSub}>
-                        체크인 {formatTime(accommodation.checkinTime)} · 체크아웃{" "}
+                      {!!accommodation.city && (
+                        <Text style={styles.staySub} numberOfLines={1}>
+                          {accommodation.city}
+                        </Text>
+                      )}
+                    </View>
+                    <View style={styles.stayPriceWrap}>
+                      {!!expense && (
+                        <Text style={styles.stayPrice}>
+                          {currencySymbols[
+                            expense.currency as keyof typeof currencySymbols
+                          ] ?? expense.currency}
+                          {Number(expense.amount).toLocaleString("ko-KR")}
+                        </Text>
+                      )}
+                      <Text style={styles.staySub}>{nights}박</Text>
+                    </View>
+                  </View>
+                  <View style={styles.stayDates}>
+                    <View style={styles.stayDateCol}>
+                      <Text style={styles.stayDateLabel}>체크인</Text>
+                      <Text style={styles.stayDate}>
+                        {dayjs(accommodation.checkinDate).format("MM. DD")}
+                      </Text>
+                      <Text style={styles.stayTime}>
+                        {formatTime(accommodation.checkinTime)}
+                      </Text>
+                    </View>
+                    <View style={styles.stayDivider} />
+                    <View style={styles.stayDateCol}>
+                      <Text style={styles.stayDateLabel}>체크아웃</Text>
+                      <Text style={styles.stayDate}>
+                        {dayjs(accommodation.checkoutDate).format("MM. DD")}
+                      </Text>
+                      <Text style={styles.stayTime}>
                         {formatTime(accommodation.checkoutTime)}
                       </Text>
                     </View>
                   </View>
-                  <RightArrowIcon
-                    width={12}
-                    height={12}
-                    color={colors.gray600}
-                  />
+                  {!!accommodation.description && (
+                    <Text style={styles.stayNote}>
+                      {accommodation.description}
+                    </Text>
+                  )}
                 </Pressable>
               );
             })}
@@ -2685,6 +2714,85 @@ const styles = StyleSheet.create({
   travelSectionSummary: {
     ...textStyles.body5,
     color: colors.gray600,
+  },
+  stayCard: {
+    marginHorizontal: spacing.sm,
+    padding: spacing.lg,
+    borderRadius: radii.lgPlus,
+    backgroundColor: colors.white,
+    ...shadows.card,
+  },
+  stayTop: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    marginBottom: spacing.md,
+  },
+  stayIconBox: {
+    width: 44,
+    height: 44,
+    borderRadius: radii.mdPlus,
+    backgroundColor: colors.accommodationBg,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  stayTitleWrap: {
+    flex: 1,
+    minWidth: 0,
+    marginLeft: spacing.md,
+  },
+  stayName: {
+    ...textStyles.h5,
+    color: colors.black,
+  },
+  staySub: {
+    ...textStyles.body5,
+    marginTop: spacing.xs,
+    color: colors.gray600,
+  },
+  stayPriceWrap: {
+    marginLeft: spacing.sm,
+    alignItems: "flex-end",
+  },
+  stayPrice: {
+    ...textStyles.h6,
+    fontVariant: ["tabular-nums"],
+    color: colors.black,
+  },
+  stayDates: {
+    flexDirection: "row",
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    borderRadius: radii.mdPlus,
+    backgroundColor: colors.gray200,
+  },
+  stayDateCol: {
+    flex: 1,
+  },
+  stayDivider: {
+    width: 1,
+    marginHorizontal: spacing.md,
+    backgroundColor: colors.gray350,
+  },
+  stayDateLabel: {
+    ...textStyles.body5,
+    color: colors.gray600,
+  },
+  stayDate: {
+    ...textStyles.h7,
+    marginTop: spacing.xs,
+    fontVariant: ["tabular-nums"],
+    color: colors.black,
+  },
+  stayTime: {
+    ...textStyles.body5,
+    marginTop: spacing.xs,
+    fontVariant: ["tabular-nums"],
+    color: colors.gray700,
+  },
+  stayNote: {
+    ...textStyles.body5,
+    marginTop: spacing.md,
+    color: colors.gray700,
   },
   travelInfoCard: {
     marginHorizontal: spacing.sm,
