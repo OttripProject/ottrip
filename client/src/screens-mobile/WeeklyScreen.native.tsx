@@ -2170,7 +2170,7 @@ export default function WeeklyScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.gray200,
+    backgroundColor: colors.white,
   },
   loadingContainer: {
     flex: 1,
@@ -2673,7 +2673,7 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
     padding: spacing.xs,
     borderRadius: radii.mdPlus,
-    backgroundColor: colors.gray300,
+    backgroundColor: colors.paletteFill2,
   },
   dayTab: {
     flex: 1,
@@ -2688,6 +2688,7 @@ const styles = StyleSheet.create({
   },
   dayTabText: {
     ...textStyles.body3,
+    fontFamily: typography.fontFamily.pretendardMedium,
     color: colors.paletteFg3,
   },
   dayTabTextActive: {
