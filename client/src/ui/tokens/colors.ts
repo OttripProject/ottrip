@@ -72,6 +72,7 @@ export const colors = {
   dust: ["#C9C9CE", "#B4B4BA", "#DADADF"] as const,
   checkBurst: ["#007AFF", "#0A84FF", "#BADFFF"] as const,
   overlayBackground: "rgba(0, 0, 0, 0.7)",
+  overlayDim: "rgba(0, 0, 0, 0.45)",
   aiGrad: ["#7B6CFF", "#A06CFF"] as const,
   aiGradHover: ["#6E5DF5", "#9559FB"] as const,
   aiGradPress: ["#5F4FE8", "#8748F2"] as const,

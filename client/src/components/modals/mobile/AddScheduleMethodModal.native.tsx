@@ -35,7 +35,6 @@ export default function AddScheduleMethodModal({
       visible={visible}
       onClose={onClose}
       height={0.38}
-      backdropOpacity={0.7}
       showDragHandle
     >
       <View

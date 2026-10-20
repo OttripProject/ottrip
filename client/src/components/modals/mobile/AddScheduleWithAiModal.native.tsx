@@ -561,7 +561,6 @@ export default function AddScheduleWithAiModal({
       visible={visible}
       onClose={onClose}
       height={0.85}
-      backdropOpacity={0.7}
       showDragHandle
     >
       <View

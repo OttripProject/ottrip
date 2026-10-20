@@ -5,6 +5,7 @@ import { useNicknameValidation } from "@/hooks/useNicknameValidation";
 import { type UserProfile, usersApi } from "@/services/users";
 import { Gender } from "@/types/api";
 import Card from "@/ui/components/Card";
+import ModalBackdrop from "@/ui/components/ModalBackdrop";
 import Input from "@/ui/components/input/Input";
 import { colors } from "@/ui/tokens/colors";
 import { textStyles } from "@/ui/tokens/typography";
@@ -465,6 +466,7 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
           {/* 문의하기 모달 */}
           <Modal visible={contactOpen} transparent animationType="fade">
             <View style={styles.contactModalOverlay}>
+              <ModalBackdrop />
               <View style={styles.contactModalCard}>
                 <Pressable
                   style={styles.contactModalCloseButton}
@@ -842,7 +844,6 @@ const styles = StyleSheet.create({
   },
   contactModalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.7)",
     alignItems: "center",
     justifyContent: "center",
     padding: 20,

@@ -1,5 +1,7 @@
 import type { TermsKey } from "@/constants/terms";
+import ModalBackdrop from "@/ui/components/ModalBackdrop";
 import { colors } from "@/ui/tokens/colors";
+import { surfaces } from "@/ui/tokens/surfaces";
 import { textStyles } from "@/ui/tokens/typography";
 import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
 
@@ -37,10 +39,12 @@ export default function TermsPolicyPickerModal({
       <View
         style={[
           styles.overlay,
+          surfaces.nativeBackdropClear,
           !dimBackdrop && styles.overlayNoDim,
           { paddingHorizontal: overlayHorizontalPadding },
         ]}
       >
+        {dimBackdrop && <ModalBackdrop />}
         <View
           style={[
             styles.card,

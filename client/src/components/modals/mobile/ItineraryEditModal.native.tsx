@@ -41,6 +41,7 @@ import AttachmentSection from "@/ui/components/attachmentSection.native";
 import Input from "@/ui/components/input/Input";
 import PlacesSearchInput, { type PlaceResult } from "@/ui/components/PlacesSearchInput";
 import { locationsApi, manualPlaceId } from "@/services/locations";
+import ModalBackdrop from "@/ui/components/ModalBackdrop";
 import { colors } from "@/ui/tokens/colors";
 import { textStyles, typography } from "@/ui/tokens/typography";
 import { formatAmountWithCommas, normalizeAmount } from "@/utils/amountUtils";
@@ -689,6 +690,7 @@ export default function ItineraryEditModal({
               onRequestClose={() => setCategoryOpen(false)}
             >
               <Pressable style={styles.categoryModalOverlay} onPress={() => setCategoryOpen(false)}>
+                <ModalBackdrop />
                 <Pressable style={styles.categoryModalSheet} onPress={e => e.stopPropagation()}>
                   <View style={styles.categoryModalHeader}>
                     <Text style={styles.categoryModalTitle}>카테고리</Text>
@@ -1290,7 +1292,6 @@ const styles = StyleSheet.create({
   },
   categoryModalOverlay: {
     flex: 1,
-    backgroundColor: colors.overlayBackground,
     justifyContent: "center",
     alignItems: "center",
     paddingHorizontal: 32,

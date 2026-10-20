@@ -14,6 +14,9 @@ export const surfaces = {
     backgroundColor: colors.overlayBackground,
     ...(Platform.OS === "web" ? { backdropFilter: "blur(4px)" } : {}),
   } as ViewStyle,
+  nativeBackdropClear: (Platform.OS === "web"
+    ? {}
+    : { backgroundColor: "transparent" }) as ViewStyle,
   outline: {
     backgroundColor: colors.white,
     ...shadows.xs,
@@ -39,3 +42,7 @@ export const surfaces = {
 };
 
 export type SurfaceName = keyof typeof surfaces;
+
+export const blurs = {
+  modalBackdrop: 12,
+};

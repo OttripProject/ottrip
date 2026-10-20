@@ -1,3 +1,4 @@
+import ModalBackdrop from "@/ui/components/ModalBackdrop";
 import { colors } from "@/ui/tokens/colors";
 import { textStyles } from "@/ui/tokens/typography";
 import { useEffect, useState } from "react";
@@ -40,6 +41,7 @@ export default function DeleteAccountModal({
   return (
     <Modal visible={visible} transparent animationType="fade">
       <View style={styles.modalOverlay}>
+        <ModalBackdrop />
         <View style={styles.deleteModalCard}>
           {isCompleted ? (
             <>
@@ -95,7 +97,6 @@ export default function DeleteAccountModal({
 const styles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.7)",
     alignItems: "center",
     justifyContent: "center",
     padding: 20,

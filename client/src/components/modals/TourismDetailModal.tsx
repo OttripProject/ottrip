@@ -18,6 +18,7 @@ import { useBackdropClose } from "@/hooks/useBackdropClose";
 import { ItineraryCategory } from "@/types/itinerary";
 import MotionPressable, { MotionIcon } from "@/ui/components/MotionPressable";
 import { modalMotion } from "@/ui/effects/modalMotion";
+import ModalBackdrop from "@/ui/components/ModalBackdrop";
 import { colors } from "@/ui/tokens/colors";
 import { radii } from "@/ui/tokens/radii";
 import { spacing } from "@/ui/tokens/spacing";
@@ -391,7 +392,11 @@ export default function TourismDetailModal({
 
   return (
     <Modal visible={visible} transparent animationType="none" onRequestClose={onClose}>
-      <View style={styles.overlay} {...backdrop.overlayProps}>
+      <View
+        style={[styles.overlay, surfaces.nativeBackdropClear]}
+        {...backdrop.overlayProps}
+      >
+        <ModalBackdrop />
         <View style={styles.modal} {...backdrop.cardProps}>
             {/* 헤더 */}
             <View style={styles.header}>

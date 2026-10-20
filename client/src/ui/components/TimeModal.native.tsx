@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
 
+import ModalBackdrop from "@/ui/components/ModalBackdrop";
 import { colors } from "@/ui/tokens/colors";
 import { textStyles } from "@/ui/tokens/typography";
 import CloseIcon from "../../../assets/mobile_close.svg";
@@ -111,6 +112,7 @@ export function TimeModal({
       onRequestClose={onClose}
     >
       <Pressable style={styles.backdrop} onPress={onClose}>
+        <ModalBackdrop />
         <Pressable
           style={styles.sheetTouchBlocker}
           onPress={e => e.stopPropagation()}
@@ -199,7 +201,6 @@ export function TimeModal({
 const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: colors.overlayBackground,
     justifyContent: "center",
     alignItems: "center",
     paddingHorizontal: 24,
