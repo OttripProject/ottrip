@@ -252,6 +252,7 @@ export default function ExpenseScreen() {
     <View style={styles.container}>
       <TripHeader onCalendarPress={() => setCalendarVisible(true)} />
       <ScrollView
+        style={styles.scroll}
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
@@ -515,8 +516,12 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.white,
   },
+  scroll: {
+    marginTop: -spacing.xs,
+  },
   content: {
     gap: spacing.xl,
+    paddingTop: spacing.xs,
     paddingBottom: 100,
   },
   section: {
