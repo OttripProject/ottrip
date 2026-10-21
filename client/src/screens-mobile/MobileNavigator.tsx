@@ -12,9 +12,9 @@ import React, { useEffect, useRef, useState } from "react";
 import { Platform, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, {
+  Easing,
   useSharedValue,
   useAnimatedStyle,
-  withSpring,
   withTiming,
 } from "react-native-reanimated";
 import CalendarIcon from "../../assets/mobile_calendar_black.svg";
@@ -63,14 +63,14 @@ function SlideScreenWrapper({
       translateX.value = direction * 50;
       opacity.value = 0.5;
 
-      translateX.value = withSpring(0, {
-        damping: 18,
-        stiffness: 100,
-        mass: 0.7,
+      translateX.value = withTiming(0, {
+        duration: 250,
+        easing: Easing.out(Easing.cubic),
       });
 
       opacity.value = withTiming(1, {
         duration: 250,
+        easing: Easing.out(Easing.cubic),
       });
 
       previousTabIndex = screenIndex;

@@ -1,3 +1,4 @@
+import PlanLoadingOverlay from "@/components/PlanLoadingOverlay.native";
 import TripHeader from "@/components/TripHeader.native";
 import AddExpenseModal from "@/components/modals/mobile/AddExpenseModal.native";
 import { useSelectedPlan } from "@/contexts/SelectedPlanContext";
@@ -166,7 +167,9 @@ export default function ExpenseScreen() {
     if (flightId) {
       const flight = planData.flights.find(f => f.id === flightId);
       if (flight) {
-        const segments = flight.flightSegments ?? [];
+        const segments = [...(flight.flightSegments ?? [])].sort(
+          (a, b) => a.order - b.order,
+        );
         const first = segments[0];
         const last = segments[segments.length - 1];
         return {
@@ -481,6 +484,7 @@ export default function ExpenseScreen() {
         </View>
       </ScrollView>
 
+      <PlanLoadingOverlay visible={planData.isLoading} />
 
       <CalendarModal
         visible={calendarVisible}
