@@ -1,9 +1,14 @@
 import PlanLoadingOverlay from "@/components/PlanLoadingOverlay.native";
+import ScopeDateStrip from "@/components/ScopeDateStrip.native";
 import TripHeader from "@/components/TripHeader.native";
 import AddExpenseModal from "@/components/modals/mobile/AddExpenseModal.native";
+import AttachmentListModal, {
+  type AttachmentEntry,
+} from "@/components/modals/mobile/AttachmentListModal.native";
+import AttachmentViewerModal from "@/components/modals/mobile/AttachmentViewerModal.native";
 import { useSelectedPlan } from "@/contexts/SelectedPlanContext";
 import { usePlanDataQuery } from "@/hooks/usePlanDataQuery";
-import { type Expense, PLAN_ENTITY_KIND } from "@/types/api";
+import { type Attachment, type Expense, PLAN_ENTITY_KIND } from "@/types/api";
 import {
   ExpenseCategory,
   type ExpenseCurrency,
@@ -31,8 +36,6 @@ import {
 } from "react-native";
 import DropdownIcon from "../../assets/mobile_dropdown.svg";
 import PaperclipIcon from "../../assets/paperclip.svg";
-
-const WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"];
 
 const CATEGORY_BADGES: Record<
   ExpenseCategory,
@@ -127,6 +130,10 @@ export default function ExpenseScreen() {
     useState<ExpenseCategory | null>(null);
   const [calendarVisible, setCalendarVisible] = useState(false);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
+  const [attachmentListVisible, setAttachmentListVisible] = useState(false);
+  const [viewerAttachments, setViewerAttachments] = useState<
+    Attachment[] | null
+  >(null);
 
   useEffect(() => {
     setSelectedDate(null);
@@ -220,19 +227,41 @@ export default function ExpenseScreen() {
     return null;
   };
 
-  const getAttachmentIds = (e: Expense) => {
+  const getAttachments = (e: Expense) => {
     const link = getLink(e);
-    return planData.attachments
-      .filter(
-        a =>
-          (a.entityType === PLAN_ENTITY_KIND.EXPENSE && a.entityId === e.id) ||
-          (link && a.entityType === link.kind && a.entityId === link.id),
-      )
-      .map(a => a.id);
+    return planData.attachments.filter(
+      a =>
+        (a.entityType === PLAN_ENTITY_KIND.EXPENSE && a.entityId === e.id) ||
+        (link && a.entityType === link.kind && a.entityId === link.id),
+    );
   };
 
-  const totalAttachmentCount = new Set(scopedExpenses.flatMap(getAttachmentIds))
-    .size;
+  const attachmentsByExpense = new Map(
+    planData.expenses.map(e => [e.id, getAttachments(e)]),
+  );
+
+  const attachmentEntries: AttachmentEntry[] = [];
+  const seenAttachmentIds = new Set<number>();
+  for (const e of [...planData.expenses].sort((a, b) =>
+    a.exDate.localeCompare(b.exDate),
+  )) {
+    for (const attachment of attachmentsByExpense.get(e.id) ?? []) {
+      if (seenAttachmentIds.has(attachment.id)) continue;
+      seenAttachmentIds.add(attachment.id);
+      attachmentEntries.push({
+        attachment,
+        expense: e,
+        categoryLabel: CATEGORY_BADGES[e.category].label,
+        title: getLink(e)?.name || e.description || "",
+      });
+    }
+  }
+
+  const totalAttachmentCount = new Set(
+    scopedExpenses.flatMap(e =>
+      (attachmentsByExpense.get(e.id) ?? []).map(a => a.id),
+    ),
+  ).size;
 
   const totals = sumByCurrency(scopedExpenses);
   const spentDayCount = new Set(
@@ -296,65 +325,13 @@ export default function ExpenseScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.section}>
-          <View style={styles.scopeCard}>
-            <Pressable
-              style={styles.scopeAll}
-              onPress={() => setSelectedDate(null)}
-            >
-              <Text
-                style={[
-                  styles.scopeAllText,
-                  !selectedDate && styles.scopeTextActive,
-                ]}
-              >
-                전체
-              </Text>
-              <View style={[styles.dot, !selectedDate && styles.dotActive]} />
-            </Pressable>
-            <View style={styles.scopeDivider} />
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              style={styles.scopeStrip}
-              contentContainerStyle={styles.scopeStripContent}
-            >
-              {tripDates.map(date => {
-                const dateStr = date.format("YYYY-MM-DD");
-                const hasExpense = expenseDates.has(dateStr);
-                const isSelected = selectedDate === dateStr;
-                return (
-                  <Pressable
-                    key={dateStr}
-                    style={styles.dayButton}
-                    onPress={() => setSelectedDate(dateStr)}
-                  >
-                    <Text
-                      style={[
-                        styles.dayLabel,
-                        !hasExpense && styles.dayTextEmpty,
-                      ]}
-                    >
-                      {WEEKDAYS[date.day()]}
-                    </Text>
-                    <View style={styles.dayNumberBox}>
-                      <Text
-                        style={[
-                          styles.dayNumber,
-                          !hasExpense && styles.dayNumberEmpty,
-                          isSelected && styles.scopeTextActive,
-                        ]}
-                      >
-                        {date.date()}
-                      </Text>
-                    </View>
-                    <View
-                      style={[styles.dot, isSelected && styles.dotActive]}
-                    />
-                  </Pressable>
-                );
-              })}
-            </ScrollView>
-          </View>
+          <ScopeDateStrip
+            style={styles.scopeCard}
+            dates={tripDates}
+            activeDates={expenseDates}
+            selectedDate={selectedDate}
+            onSelect={setSelectedDate}
+          />
         </View>
 
         <View style={styles.section}>
@@ -362,7 +339,11 @@ export default function ExpenseScreen() {
             <View style={styles.summaryBlock}>
               <View style={styles.totalHeader}>
                 <Text style={styles.totalLabel}>{totalLabel}</Text>
-                <Pressable style={styles.attachmentButton}>
+                <Pressable
+                  style={styles.attachmentButton}
+                  onPress={() => setAttachmentListVisible(true)}
+                  accessibilityLabel="첨부파일"
+                >
                   <PaperclipIcon
                     width={14}
                     height={14}
@@ -457,8 +438,8 @@ export default function ExpenseScreen() {
                               const title =
                                 link?.name || e.description || badge.label;
                               const subtitle = link ? e.description : null;
-                              const attachmentCount =
-                                getAttachmentIds(e).length;
+                              const expenseAttachments =
+                                attachmentsByExpense.get(e.id) ?? [];
                               return (
                                 <Pressable
                                   key={e.id}
@@ -481,17 +462,24 @@ export default function ExpenseScreen() {
                                       </Text>
                                     )}
                                   </View>
-                                  {attachmentCount > 0 && (
-                                    <View style={styles.attachmentChip}>
+                                  {expenseAttachments.length > 0 && (
+                                    <Pressable
+                                      style={styles.attachmentChip}
+                                      hitSlop={spacing.sm}
+                                      onPress={() =>
+                                        setViewerAttachments(expenseAttachments)
+                                      }
+                                      accessibilityLabel="첨부파일 보기"
+                                    >
                                       <PaperclipIcon
                                         width={13}
                                         height={13}
                                         color={colors.paletteFg2}
                                       />
                                       <Text style={styles.attachmentChipText}>
-                                        {attachmentCount}
+                                        {expenseAttachments.length}
                                       </Text>
-                                    </View>
+                                    </Pressable>
                                   )}
                                   <Text style={styles.expenseAmount}>
                                     {formatMoney(Number(e.amount), e.currency)}
@@ -524,6 +512,21 @@ export default function ExpenseScreen() {
         minDate={selectedPlan?.startDate}
         maxDate={selectedPlan?.endDate}
         datesWithItems={expenseDates}
+      />
+
+      <AttachmentListModal
+        visible={attachmentListVisible}
+        onClose={() => setAttachmentListVisible(false)}
+        planTitle={selectedPlan?.title}
+        dates={tripDates}
+        entries={attachmentEntries}
+        initialDate={selectedDate}
+      />
+
+      <AttachmentViewerModal
+        visible={!!viewerAttachments}
+        onClose={() => setViewerAttachments(null)}
+        attachments={viewerAttachments ?? []}
       />
 
       {selectedPlan && (
@@ -559,80 +562,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xl,
   },
   scopeCard: {
-    flexDirection: "row",
-    alignItems: "stretch",
-    borderRadius: radii.lgPlus,
     backgroundColor: colors.white,
     ...shadows.card,
-  },
-  scopeAll: {
-    marginVertical: spacing.sm,
-    marginLeft: spacing.sm,
-    paddingHorizontal: spacing.md,
-    borderRadius: radii.md,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: spacing.xs,
-  },
-  scopeAllText: {
-    ...textStyles.h6,
-    color: colors.paletteInk,
-  },
-  scopeTextActive: {
-    color: colors.primary,
-  },
-  dot: {
-    width: 4,
-    height: 4,
-    borderRadius: radii.pill,
-  },
-  dotActive: {
-    backgroundColor: colors.primary,
-  },
-  scopeDivider: {
-    width: 1,
-    marginVertical: spacing.md,
-    marginHorizontal: spacing.xs,
-    backgroundColor: colors.paletteLine,
-  },
-  scopeStrip: {
-    flex: 1,
-  },
-  scopeStripContent: {
-    gap: spacing.xs,
-    paddingTop: spacing.sm,
-    paddingBottom: spacing.sm,
-    paddingLeft: spacing.xs,
-    paddingRight: spacing.sm,
-  },
-  dayButton: {
-    width: 40,
-    paddingVertical: 2,
-    alignItems: "center",
-    gap: 2,
-  },
-  dayLabel: {
-    ...textStyles.body5,
-    color: colors.paletteFg2,
-  },
-  dayTextEmpty: {
-    color: colors.paletteFg4,
-  },
-  dayNumberBox: {
-    width: 32,
-    height: 32,
-    borderRadius: radii.md,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  dayNumber: {
-    ...textStyles.h5,
-    color: colors.paletteInk,
-    fontVariant: ["tabular-nums"],
-  },
-  dayNumberEmpty: {
-    fontFamily: typography.fontFamily.pretendardRegular,
-    color: colors.paletteFg4,
   },
   summaryCard: {
     borderRadius: radii.lgPlus,
