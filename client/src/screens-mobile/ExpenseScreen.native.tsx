@@ -10,15 +10,25 @@ import {
   currencyLabels,
 } from "@/types/expense";
 import CalendarModal from "@/ui/components/CalendarModal.native";
+import ScalePressable from "@/ui/components/ScalePressable";
+import { toEasing } from "@/ui/effects/pressScale";
 import { colors } from "@/ui/tokens/colors";
+import { motion } from "@/ui/tokens/motion";
 import { radii } from "@/ui/tokens/radii";
 import { shadows } from "@/ui/tokens/shadows";
 import { spacing } from "@/ui/tokens/spacing";
 import { textStyles, typography } from "@/ui/tokens/typography";
 import { useQueryClient } from "@tanstack/react-query";
 import dayjs from "dayjs";
-import { useEffect, useMemo, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  Animated,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import DropdownIcon from "../../assets/mobile_dropdown.svg";
 import PaperclipIcon from "../../assets/paperclip.svg";
 
@@ -80,6 +90,32 @@ const sumByCurrency = (expenses: Expense[]): CurrencyTotal[] => {
 
 const formatMoney = (amount: number, currency: ExpenseCurrency) =>
   `${amount.toLocaleString("ko-KR", { maximumFractionDigits: 2 })} ${currencyLabels[currency]}`;
+
+function CategoryChevron({ open }: { open: boolean }) {
+  const progress = useRef(new Animated.Value(open ? 1 : 0)).current;
+
+  useEffect(() => {
+    Animated.timing(progress, {
+      toValue: open ? 1 : 0,
+      duration: motion.duration.base,
+      easing: toEasing(motion.easing.ease),
+      useNativeDriver: true,
+    }).start();
+  }, [open, progress]);
+
+  const rotate = progress.interpolate({
+    inputRange: [0, 1],
+    outputRange: ["0deg", "180deg"],
+  });
+
+  return (
+    <Animated.View
+      style={[styles.categoryChevron, { transform: [{ rotate }] }]}
+    >
+      <DropdownIcon width={13} height={13} color={colors.gray600} />
+    </Animated.View>
+  );
+}
 
 export default function ExpenseScreen() {
   const queryClient = useQueryClient();
@@ -290,7 +326,6 @@ export default function ExpenseScreen() {
                   <Pressable
                     key={dateStr}
                     style={styles.dayButton}
-                    disabled={!hasExpense}
                     onPress={() => setSelectedDate(dateStr)}
                   >
                     <Text
@@ -327,18 +362,16 @@ export default function ExpenseScreen() {
             <View style={styles.summaryBlock}>
               <View style={styles.totalHeader}>
                 <Text style={styles.totalLabel}>{totalLabel}</Text>
-                {totalAttachmentCount > 0 && (
-                  <Pressable style={styles.attachmentButton}>
-                    <PaperclipIcon
-                      width={14}
-                      height={14}
-                      color={colors.paletteInk}
-                    />
-                    <Text style={styles.attachmentButtonText}>
-                      {totalAttachmentCount}
-                    </Text>
-                  </Pressable>
-                )}
+                <Pressable style={styles.attachmentButton}>
+                  <PaperclipIcon
+                    width={14}
+                    height={14}
+                    color={colors.paletteInk}
+                  />
+                  <Text style={styles.attachmentButtonText}>
+                    {totalAttachmentCount}
+                  </Text>
+                </Pressable>
               </View>
               <View style={styles.totalAmounts}>
                 {totals.length > 0 ? (
@@ -356,16 +389,18 @@ export default function ExpenseScreen() {
               </Text>
             </View>
 
-            {categoryGroups.length > 0 && (
-              <View style={[styles.summaryBlock, styles.summaryBlockDivider]}>
-                <Text style={styles.categoryTitle}>카테고리별</Text>
+            <View style={[styles.summaryBlock, styles.summaryBlockDivider]}>
+              <Text style={styles.categoryTitle}>카테고리별</Text>
+              {categoryGroups.length === 0 ? (
+                <Text style={styles.categoryEmpty}>지출 내역이 없어요.</Text>
+              ) : (
                 <View style={styles.categoryList}>
                   {categoryGroups.map(group => {
                     const badge = CATEGORY_BADGES[group.category];
                     const isExpanded = expandedCategory === group.category;
                     return (
                       <View key={group.category}>
-                        <Pressable
+                        <ScalePressable
                           onPress={() =>
                             setExpandedCategory(
                               isExpanded ? null : group.category,
@@ -401,15 +436,7 @@ export default function ExpenseScreen() {
                                 </Text>
                               ))}
                             </View>
-                            <DropdownIcon
-                              width={13}
-                              height={13}
-                              color={colors.gray600}
-                              style={[
-                                styles.categoryChevron,
-                                isExpanded && styles.categoryChevronOpen,
-                              ]}
-                            />
+                            <CategoryChevron open={isExpanded} />
                           </View>
                           <View style={styles.barTrack}>
                             <View
@@ -422,7 +449,7 @@ export default function ExpenseScreen() {
                               ]}
                             />
                           </View>
-                        </Pressable>
+                        </ScalePressable>
                         {isExpanded && (
                           <View style={styles.expenseList}>
                             {group.items.map(e => {
@@ -478,8 +505,8 @@ export default function ExpenseScreen() {
                     );
                   })}
                 </View>
-              </View>
-            )}
+              )}
+            </View>
           </View>
         </View>
       </ScrollView>
@@ -666,6 +693,11 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
     color: colors.paletteInk,
   },
+  categoryEmpty: {
+    ...textStyles.body5,
+    paddingVertical: spacing.sm,
+    color: colors.paletteFg3,
+  },
   categoryList: {
     gap: spacing.md,
   },
@@ -702,9 +734,6 @@ const styles = StyleSheet.create({
   },
   categoryChevron: {
     marginLeft: spacing.sm,
-  },
-  categoryChevronOpen: {
-    transform: [{ rotate: "180deg" }],
   },
   barTrack: {
     height: 4,
