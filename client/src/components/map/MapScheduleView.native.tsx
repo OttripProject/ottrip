@@ -3,17 +3,10 @@ import MapScheduleSheet, {
   getStopLabel,
 } from "@/components/map/MapScheduleSheet.native";
 import MapStopCard from "@/components/map/MapStopCard.native";
-import AccommodationDetailModal from "@/components/modals/mobile/AccommodationDetailModal.native";
-import ItineraryDetailModal from "@/components/modals/mobile/ItineraryDetailModal.native";
+import MapStopModals from "@/components/map/MapStopModals.native";
 import { useSelectedPlan } from "@/contexts/SelectedPlanContext";
 import { usePlanDataQuery } from "@/hooks/usePlanDataQuery";
-import type {
-  Accommodation,
-  Attachment,
-  Expense,
-  Itinerary,
-  Location,
-} from "@/types/api";
+import type { Accommodation, Itinerary, Location } from "@/types/api";
 import {
   ItineraryCategory,
   itineraryCategoryColors,
@@ -193,36 +186,6 @@ function StopMarker({
         </View>
       </View>
     </Marker>
-  );
-}
-
-function StopDetailModals({
-  stop,
-  expenses,
-  attachments,
-  onClose,
-}: {
-  stop: MapStop | null;
-  expenses: Expense[];
-  attachments: Attachment[];
-  onClose: () => void;
-}) {
-  return (
-    <>
-      <ItineraryDetailModal
-        visible={!!stop?.itinerary}
-        onClose={onClose}
-        itinerary={stop?.itinerary ?? null}
-        planExpenses={expenses}
-        attachments={attachments}
-      />
-      <AccommodationDetailModal
-        visible={!!stop?.accommodation}
-        onClose={onClose}
-        accommodation={stop?.accommodation ?? null}
-        attachments={attachments}
-      />
-    </>
   );
 }
 
@@ -467,10 +430,10 @@ export default function MapScheduleView({
         )}
       </View>
 
-      <StopDetailModals
+      <MapStopModals
+        key={detailStop?.key}
         stop={detailStop}
-        expenses={planData.expenses}
-        attachments={planData.attachments}
+        planData={planData}
         onClose={() => setDetailStop(null)}
       />
     </View>
