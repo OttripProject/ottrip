@@ -1,3 +1,4 @@
+import MapScheduleView from "@/components/map/MapScheduleView.native";
 import AddPlanModal from "@/components/modals/mobile/AddPlanModal.native";
 import PlanSelectModal from "@/components/modals/mobile/PlanSelectModal.native";
 import ProfileModal from "@/components/modals/mobile/ProfileModal.native";
@@ -49,6 +50,7 @@ export default function TripHeader({ onCalendarPress }: TripHeaderProps) {
   const [profileModalVisible, setProfileModalVisible] = useState(false);
   const [travelInfoModalVisible, setTravelInfoModalVisible] = useState(false);
   const [moreMenuVisible, setMoreMenuVisible] = useState(false);
+  const [mapVisible, setMapVisible] = useState(false);
   const [moreMenuTop, setMoreMenuTop] = useState(0);
   const topRowRef = useRef<View>(null);
   const pendingMenuActionRef = useRef<(() => void) | null>(null);
@@ -90,6 +92,7 @@ export default function TripHeader({ onCalendarPress }: TripHeaderProps) {
             <Pressable
               style={styles.headerIconButton}
               accessibilityLabel="지도로 일정 보기"
+              onPress={() => setMapVisible(true)}
             >
               <LocationIcon width={20} height={20} color={colors.gray900} />
             </Pressable>
@@ -110,6 +113,14 @@ export default function TripHeader({ onCalendarPress }: TripHeaderProps) {
           </View>
         </View>
       </View>
+
+      {mapVisible && (
+        <MapScheduleView
+          key={selectedPlan?.id}
+          onClose={() => setMapVisible(false)}
+          onPlanPress={() => setShowPlanSelector(true)}
+        />
+      )}
 
       <Modal
         visible={profileModalVisible}
