@@ -1,8 +1,14 @@
 import { PLACEHOLDERS } from "@/constants/placeholders";
 import { type PlanShare, plansApi } from "@/services/plans";
-import Card from "@/ui/components/Card";
+import { useBackdropClose } from "@/hooks/useBackdropClose";
+import MotionPressable, { MotionIcon } from "@/ui/components/MotionPressable";
 import Input from "@/ui/components/input/Input";
+import { modalMotion } from "@/ui/effects/modalMotion";
 import { colors } from "@/ui/tokens/colors";
+import { radii } from "@/ui/tokens/radii";
+import { shadows } from "@/ui/tokens/shadows";
+import { spacing } from "@/ui/tokens/spacing";
+import { surfaces } from "@/ui/tokens/surfaces";
 import { textStyles } from "@/ui/tokens/typography";
 import { toUserMessage } from "@/utils/crossPlatformAlert";
 import { useEffect, useState } from "react";
@@ -15,12 +21,12 @@ import {
   StyleSheet,
   Text,
   View,
+  type ViewStyle,
 } from "react-native";
 import ShareAddIcon from "../../../assets/share_add.svg";
-import ShareCheckIcon from "../../../assets/share_check.svg";
 import ShareDeleteIcon from "../../../assets/share_del.svg";
 import WarnTriangleIcon from "../../../assets/warn_triangle.svg";
-import XIcon from "../../../assets/x.svg";
+import CloseXIcon from "../../../assets/close_x.svg";
 
 type Props = {
   visible: boolean;
@@ -105,43 +111,35 @@ export default function SharePlanModal({
     }
   };
 
+  const backdrop = useBackdropClose(onClose);
+
   return (
     <Modal
       visible={visible}
       transparent
-      animationType="fade"
+      animationType="none"
       onRequestClose={onClose}
     >
-      <Pressable style={styles.overlay} onPress={onClose}>
-        <Pressable onPress={() => {}} style={styles.cardWrapper}>
-          <Card
-            width="100%"
-            maxWidth={420}
-            paddingHorizontal={32}
-            paddingVertical={32}
-            borderRadius={24}
-            alignItems="stretch"
-            shadow={{
-              shadowColor: colors.black,
-              shadowOffset: { width: 0, height: 24 },
-              shadowOpacity: 0.12,
-              shadowRadius: 48,
-              elevation: 24,
-            }}
-            style={{ marginHorizontal: 16 }}
-          >
+      <View style={styles.overlay} {...backdrop.overlayProps}>
+        <View style={styles.card} {...backdrop.cardProps}>
             <View style={styles.header}>
               <View style={styles.headerTextGroup}>
                 <Text style={styles.title}>
                   {planName ? `여행 공유: ${planName}` : "여행 공유"}
                 </Text>
                 <Text style={styles.description}>
-                  다른 사람과 여행을 공유하고 함께 계획을 세워보세요
+                  다른 사람과 여행을 공유하고 함께 계획을 세워보세요.
                 </Text>
               </View>
-              <Pressable onPress={onClose} style={styles.closeButton}>
-                <XIcon width={24} height={24} />
-              </Pressable>
+              <MotionPressable
+                onPress={onClose}
+                style={styles.closeButton}
+                accessibilityLabel="닫기"
+              >
+                <MotionIcon>
+                  <CloseXIcon width={16} height={16} color={colors.gray900} />
+                </MotionIcon>
+              </MotionPressable>
             </View>
 
             <View style={styles.fieldGroup}>
@@ -155,6 +153,7 @@ export default function SharePlanModal({
                 ]}
               >
                 <Input
+                  variant="filled"
                   placeholder={PLACEHOLDERS.plan.email}
                   autoCapitalize="none"
                   keyboardType="email-address"
@@ -173,24 +172,28 @@ export default function SharePlanModal({
                       styles.emailInputError,
                   ]}
                 />
-                <Pressable
+                <MotionPressable
                   style={[
                     styles.inviteButton,
-                    (!email.trim() || loading) && styles.inviteButtonDisabled,
+                    !email.trim() && styles.inviteButtonDisabled,
                   ]}
+                  hoverStyle={shadows.darkHover}
                   onPress={submit}
                   disabled={!email.trim() || loading}
+                  accessibilityLabel="초대"
                 >
                   {loading ? (
                     <ActivityIndicator color={colors.white} />
                   ) : (
-                    <ShareAddIcon
-                      width={18}
-                      height={18}
-                      color={!email.trim() ? colors.gray400 : colors.white}
-                    />
+                    <MotionIcon>
+                      <ShareAddIcon
+                        width={18}
+                        height={18}
+                        color={email.trim() ? colors.white : colors.gray400}
+                      />
+                    </MotionIcon>
                   )}
-                </Pressable>
+                </MotionPressable>
               </View>
               {(showEmailError || duplicateEmailError) && (
                 <View style={styles.emailError}>
@@ -219,13 +222,10 @@ export default function SharePlanModal({
                       <View
                         style={[
                           styles.roleRadio,
+                          radioTransition,
                           active && styles.roleRadioActive,
                         ]}
-                      >
-                        {active && (
-                          <ShareCheckIcon width={13.33} height={13.33} />
-                        )}
-                      </View>
+                      />
                       <Text style={styles.roleLabel}>{option.label}</Text>
                     </Pressable>
                   );
@@ -248,7 +248,7 @@ export default function SharePlanModal({
                   contentContainerStyle={styles.shareListContent}
                   showsVerticalScrollIndicator={false}
                 >
-                  {shares.map((s, index) => {
+                  {shares.map(s => {
                     const roleLabel =
                       s.role == null
                         ? "OWNER"
@@ -259,11 +259,7 @@ export default function SharePlanModal({
                     return (
                       <View
                         key={`${s.handle}-${s.role ?? "owner"}`}
-                        style={[
-                          styles.shareChip,
-                          index !== shares.length - 1 &&
-                            styles.shareChipSpacing,
-                        ]}
+                        style={styles.shareChip}
                       >
                         <View style={styles.shareChipText}>
                           <Text style={styles.shareEmail}>{s.email}</Text>
@@ -297,79 +293,95 @@ export default function SharePlanModal({
               )}
             </View>
 
-            <Pressable style={styles.primaryButton} onPress={onClose}>
+            <MotionPressable
+              style={styles.primaryButton}
+              hoverStyle={shadows.darkHover}
+              onPress={onClose}
+            >
               <Text style={styles.primaryButtonText}>완료</Text>
-            </Pressable>
-          </Card>
-        </Pressable>
-      </Pressable>
+            </MotionPressable>
+        </View>
+      </View>
     </Modal>
   );
 }
 
+const radioTransition = {
+  transitionProperty: "border-width, border-color",
+  transitionDuration: "120ms",
+} as ViewStyle;
+
 const styles = StyleSheet.create({
   overlay: {
-    cursor: "auto",
+    ...modalMotion.overlay,
     flex: 1,
-    backgroundColor: colors.overlayBackground,
+    ...surfaces.overlay,
     alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: 16,
+    padding: spacing.lgPlus,
   },
-  cardWrapper: {
-    cursor: "auto",
+  card: {
+    ...modalMotion.card,
+    width: 420 + spacing.xl * 2,
+    maxWidth: "100%",
+    maxHeight: "min(680px, calc(100dvh - 80px))" as ViewStyle["maxHeight"],
+    backgroundColor: colors.white,
+    borderRadius: radii["2xl"],
+    padding: spacing.xl,
+    gap: spacing.xl,
+    ...shadows.xl,
   },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-start",
-    marginBottom: 20,
+    gap: spacing.md,
   },
   headerTextGroup: {
     flex: 1,
-    paddingRight: 16,
+    gap: spacing.sm,
   },
   title: {
-    ...textStyles.h3,
-    marginBottom: 8,
+    ...textStyles.h5,
+    color: colors.gray900,
   },
   description: {
-    ...textStyles.body4,
+    ...textStyles.body5,
     color: colors.gray700,
   },
   closeButton: {
-    width: 24,
-    height: 24,
+    width: 28,
+    height: 28,
     alignItems: "center",
     justifyContent: "center",
+    marginTop: spacing.xs,
   },
   fieldGroup: {
     width: "100%",
-    marginBottom: 24,
   },
   label: {
     ...textStyles.h7,
-    color: colors.black,
-    marginBottom: 8,
+    color: colors.gray900,
+    marginBottom: spacing.sm,
   },
   emailRow: {
     flexDirection: "row",
     alignItems: "center",
+    gap: spacing.md,
     width: "100%",
-    marginBottom: 12,
   },
   emailInputContainer: {
     flex: 1,
-    marginRight: 8,
   },
   emailInput: {
     height: 48,
     borderWidth: 1,
-    borderColor: colors.gray400,
-    borderRadius: 10,
-    paddingHorizontal: 16,
+    borderColor: colors.gray350,
+    borderRadius: radii.md,
+    paddingHorizontal: spacing.lg,
     backgroundColor: colors.white,
-    ...textStyles.body4,
+    ...textStyles.body5,
+    color: colors.gray900,
   },
   emailInputError: {
     borderColor: colors.warning,
@@ -378,20 +390,17 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    marginTop: 8,
-    marginBottom: 4,
+    marginTop: spacing.sm,
   },
   emailErrorText: {
-    fontSize: 11.5,
-    fontWeight: "500",
-    lineHeight: 16,
+    ...textStyles.h9,
     color: colors.danger,
   },
   inviteButton: {
     width: 48,
-    height: 46,
-    borderRadius: 10,
-    backgroundColor: colors.black,
+    height: 48,
+    borderRadius: radii.md,
+    ...surfaces.dark,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -399,57 +408,54 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.gray400,
     backgroundColor: colors.white,
-  },
+    backgroundImage: "none",
+    boxShadow: "none",
+  } as ViewStyle,
   roleOptions: {
     flexDirection: "row",
-    columnGap: 16,
+    gap: spacing.xl,
+    marginTop: spacing.lg,
   },
   roleOption: {
     flexDirection: "row",
     alignItems: "center",
+    gap: spacing.sm,
   },
   roleRadio: {
-    width: 17,
-    height: 17,
-    borderRadius: 8.5,
+    width: 20,
+    height: 20,
+    borderRadius: radii.pill,
     borderWidth: 1.5,
     borderColor: colors.gray400,
     backgroundColor: colors.white,
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 6,
   },
   roleRadioActive: {
-    borderColor: colors.black,
-    backgroundColor: colors.black,
+    borderWidth: 5,
+    borderColor: colors.gray900,
   },
   roleLabel: {
-    ...textStyles.body3,
-    color: colors.black,
-    marginTop: 1,
+    ...textStyles.body4,
+    color: colors.gray900,
   },
   shareList: {
-    marginTop: 0,
     maxHeight: 200,
   },
   shareListContent: {
-    paddingBottom: 4,
+    gap: spacing.sm,
+    paddingRight: spacing.xs,
   },
   shareChip: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    backgroundColor: "rgba(0, 102, 255, 0.08)",
-    borderRadius: 10,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-  },
-  shareChipSpacing: {
-    marginBottom: 12,
+    backgroundColor: colors.primaryTint,
+    borderRadius: radii.md,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
   },
   shareChipText: {
     flex: 1,
-    marginRight: 12,
+    marginRight: spacing.md,
   },
   shareEmail: {
     ...textStyles.body4,
@@ -458,16 +464,16 @@ const styles = StyleSheet.create({
   shareChipMeta: {
     flexDirection: "row",
     alignItems: "center",
-    columnGap: 8,
+    gap: spacing.sm,
   },
   shareRoleText: {
     ...textStyles.h9,
-    color: colors.gray600,
+    color: colors.gray700,
   },
   shareRemoveButton: {
     width: 24,
     height: 24,
-    borderRadius: 12,
+    borderRadius: radii.pill,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -476,9 +482,9 @@ const styles = StyleSheet.create({
     color: colors.gray600,
   },
   primaryButton: {
-    height: 50,
-    borderRadius: 10,
-    backgroundColor: colors.black,
+    height: 52,
+    borderRadius: radii.mdPlus,
+    ...surfaces.dark,
     alignItems: "center",
     justifyContent: "center",
   },

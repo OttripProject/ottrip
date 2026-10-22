@@ -1,6 +1,12 @@
 import useDetectClose from "@/hooks/useDetectClose";
 import { useTripForm } from "@/hooks/useTripForm";
+import BodyPortal from "@/ui/components/BodyPortal";
+import MotionPressable, { MotionIcon } from "@/ui/components/MotionPressable";
 import { colors } from "@/ui/tokens/colors";
+import { zIndex } from "@/ui/tokens/zIndex";
+import { radii } from "@/ui/tokens/radii";
+import { shadows } from "@/ui/tokens/shadows";
+import { spacing } from "@/ui/tokens/spacing";
 import { textStyles } from "@/ui/tokens/typography";
 import dayjs from "dayjs";
 import React, { useState, useRef, useEffect, useMemo } from "react";
@@ -9,6 +15,7 @@ import {
   Dimensions,
   Easing,
   Modal,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -341,6 +348,29 @@ export default function TripSelector({
   };
 
   const containerRef = React.useRef<View>(null);
+  const [anchor, setAnchor] = useState<{
+    top: number;
+    left: number;
+    width: number;
+  } | null>(null);
+
+  useEffect(() => {
+    if (!showDropdown || Platform.OS !== "web") return;
+    const update = () => {
+      const el = containerRef.current as unknown as HTMLElement | null;
+      if (!el) return;
+      const rect = el.getBoundingClientRect();
+      setAnchor({ top: rect.bottom + 6, left: rect.left, width: rect.width });
+    };
+    update();
+    window.addEventListener("scroll", update, true);
+    window.addEventListener("resize", update);
+    return () => {
+      window.removeEventListener("scroll", update, true);
+      window.removeEventListener("resize", update);
+      setAnchor(null);
+    };
+  }, [showDropdown]);
   const [containerLayout, setContainerLayout] = React.useState<{
     x: number;
     y: number;
@@ -371,8 +401,9 @@ export default function TripSelector({
 
   return (
     <View style={styles.container} ref={containerRef}>
-      <Pressable
+      <MotionPressable
         style={styles.selector}
+        hoverStyle={shadows.xsHover}
         onPress={() => setIsDropdownOpen(!showDropdown)}
       >
         <View style={styles.selectorContent}>
@@ -384,10 +415,12 @@ export default function TripSelector({
             {selectedTrip ? selectedTrip.name : "여행 선택"}
           </Text>
         </View>
-        <Animated.View style={{ transform: [{ rotate: arrowRotate }] }}>
-          <DownArrowIcon width={12} height={12} />
-        </Animated.View>
-      </Pressable>
+        <MotionIcon>
+          <Animated.View style={{ transform: [{ rotate: arrowRotate }] }}>
+            <DownArrowIcon width={10} height={10} style={{ opacity: 0.6 }} />
+          </Animated.View>
+        </MotionIcon>
+      </MotionPressable>
 
       {showDropdown && (
         <>
@@ -395,8 +428,14 @@ export default function TripSelector({
             style={[StyleSheet.absoluteFill, { zIndex: 9998 }]}
             onPress={handleOutsidePress}
           />
+          <BodyPortal>
           <View
-            style={styles.dropdownContainer}
+            style={[
+              styles.dropdownContainer,
+              anchor
+                ? { top: anchor.top, left: anchor.left, width: anchor.width }
+                : styles.dropdownHidden,
+            ]}
             ref={dropdownRef}
             onStartShouldSetResponder={() => true}
             onResponderGrant={e => e.stopPropagation()}
@@ -505,7 +544,7 @@ export default function TripSelector({
                           }
                         }}
                       >
-                        <DotsIcon width={16} height={16} />
+                        <DotsIcon width={16} height={16} color={colors.black} />
                       </Pressable>
                     </View>
                   </Pressable>
@@ -529,6 +568,7 @@ export default function TripSelector({
               </Pressable>
             </View>
           </View>
+          </BodyPortal>
         </>
       )}
 
@@ -672,10 +712,10 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
     borderWidth: 1,
     borderColor: colors.gray300,
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    minWidth: 220,
+    borderRadius: radii.md,
+    paddingHorizontal: spacing.md,
+    gap: spacing.sm,
+    minWidth: 200,
     maxWidth: 260,
     height: 32,
     alignSelf: "flex-start",
@@ -685,18 +725,15 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   selectorText: {
-    ...textStyles.h8,
-    fontSize: 12,
-    lineHeight: 18,
-    color: colors.black,
+    ...textStyles.body5,
+    color: colors.gray900,
   },
   dropdownContainer: {
-    position: "absolute",
-    top: "100%",
-    left: 0,
-    right: 0,
-    zIndex: 9999,
-    marginTop: 6,
+    position: "fixed" as "absolute",
+    zIndex: zIndex.webModal - 1,
+  },
+  dropdownHidden: {
+    opacity: 0,
   },
   dropdown: {
     backgroundColor: colors.white,

@@ -1,5 +1,7 @@
 import { TERMS, type TermsKey } from "@/constants/terms";
+import ModalBackdrop from "@/ui/components/ModalBackdrop";
 import { colors } from "@/ui/tokens/colors";
+import { surfaces } from "@/ui/tokens/surfaces";
 import { textStyles } from "@/ui/tokens/typography";
 import { useMemo } from "react";
 import {
@@ -59,7 +61,8 @@ export default function TermsDetailModal({
       animationType="fade"
       onRequestClose={onClose}
     >
-      <View style={styles.overlay}>
+      <View style={[styles.overlay, surfaces.nativeBackdropClear]}>
+        <ModalBackdrop />
         <View
           style={[
             styles.card,

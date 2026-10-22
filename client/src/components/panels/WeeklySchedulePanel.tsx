@@ -17,15 +17,25 @@ import { flightsApi } from "@/services/flights";
 import { itinerariesApi } from "@/services/itineraries";
 import { plansApi } from "@/services/plans";
 import type { CreatePlanRequest, Plan, UpdatePlanRequest } from "@/types/api";
-import Card from "@/ui/components/Card";
 import GradientBackground from "@/ui/components/GradientBackground";
+import MotionPressable, { MotionIcon } from "@/ui/components/MotionPressable";
 import Input from "@/ui/components/input/Input";
+import { injectKeyframes } from "@/ui/effects/injectKeyframes";
+import { modalMotion } from "@/ui/effects/modalMotion";
+import { surfaces } from "@/ui/tokens/surfaces";
+import { useBackdropClose } from "@/hooks/useBackdropClose";
 import { radii } from "@/ui/tokens";
 import { colors } from "@/ui/tokens/colors";
+import { motion } from "@/ui/tokens/motion";
+import { shadows } from "@/ui/tokens/shadows";
 import { spacing } from "@/ui/tokens/spacing";
 import { textStyles, typography } from "@/ui/tokens/typography";
 import { toUserMessage } from "@/utils/crossPlatformAlert";
-import { type WeekStartsOn, getWeekStart } from "@/utils/dateUtils";
+import {
+  type WeekStartsOn,
+  getDefaultEndTime,
+  getWeekStart,
+} from "@/utils/dateUtils";
 import { guestPrompt } from "@/utils/guestPrompt";
 import dayjs from "dayjs";
 import ko from "dayjs/locale/ko";
@@ -37,10 +47,13 @@ import {
   Modal,
   Platform,
   Pressable,
+  type PressableStateCallbackType,
+  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
+  type ViewStyle,
   useWindowDimensions,
 } from "react-native";
 import { Calendar as BigCalendar } from "react-native-big-calendar";
@@ -48,8 +61,8 @@ import TripSelector from "../selector/TripSelector";
 import PanelLayout from "./PanelLayout";
 
 import { Tooltip } from "@/ui/components/Tooltip";
-import AirplaneIcon from "../../../assets/airplane.svg";
 import CalenderIcon from "../../../assets/calender.svg";
+import CloseXIcon from "../../../assets/close_x.svg";
 import ExportPlanIcon from "../../../assets/export_plan.svg";
 import ImportFileIcon from "../../../assets/import_file.svg";
 import LeftArrowIcon from "../../../assets/left_arrow.svg";
@@ -60,12 +73,10 @@ import ShareIcon from "../../../assets/share_nodes.svg";
 import TodayIcon from "../../../assets/today.svg";
 import AccommodationIcon from "../../../assets/week_bar_accommodation.svg";
 import WeekBarLocationIcon from "../../../assets/week_bar_location.svg";
-import WeekBarTimeIcon from "../../../assets/week_bar_time.svg";
-import XIcon from "../../../assets/x.svg";
 import UploadIcon from "../../../assets/upload_tray.svg";
 import { extendPlanIfNeeded } from "@/utils/extendPlanIfNeeded";
 import { collectPlanItemDates, shrinkPlanIfNeeded } from "@/utils/shrinkPlanIfNeeded";
-import { type ItineraryCategory, itineraryCategoryColors } from "@/types/itinerary";
+import { ItineraryCategory, itineraryCategoryColors } from "@/types/itinerary";
 
 dayjs.locale(ko);
 
@@ -83,7 +94,51 @@ export interface Itinerary {
 
 // react-native-big-calendar의 HourGuideColumn(w-50)과 일치시켜야 한다.
 // 헤더 렌더와 드래그 좌표 계산이 같은 값을 써야 드롭 날짜가 어긋나지 않는다.
-const TIME_COLUMN_WIDTH = 50;
+const TIME_COLUMN_WIDTH = 60;
+const HOUR_ROW_HEIGHT = 48;
+const CALENDAR_HEADER_HEIGHT = 107;
+const EVENT_INSET_LEFT = 4;
+const EVENT_INSET_RIGHT = 16;
+const EVENT_GAP = 4;
+const EVENT_INSET_Y = 2;
+const HOUR_LINE_WIDTH = 1;
+const EVENT_HOVER_SHADOW = (shadows.eventHover as { boxShadow?: string })
+  .boxShadow;
+
+if (Platform.OS === "web") {
+  injectKeyframes(
+    "weekly-event-motion",
+    [
+      "@keyframes fmBlockIn { 0% { opacity: 0; scale: 0.9; } 100% { opacity: 1; scale: 1; } }",
+      "@keyframes fmBlockInAgain { 0% { opacity: 0; scale: 0.9; } 100% { opacity: 1; scale: 1; } }",
+      `[data-week-event="true"] { animation: fmBlockIn ${motion.duration.blockIn}ms ${motion.easing.spring} both; transition: box-shadow ${motion.duration.base}ms ${motion.easing.ease}; }`,
+      '[data-week-event="true"][data-selected="true"] { animation-name: fmBlockInAgain; }',
+      `[data-week-event="true"]:hover { box-shadow: ${EVENT_HOVER_SHADOW} !important; }`,
+    ].join(" "),
+  );
+}
+
+const CATEGORY_TINTS: Partial<Record<ItineraryCategory, string>> = {
+  MEAL: colors.mealBg,
+  ACTIVITY: colors.performanceBg,
+  SIGHTSEEING: colors.performanceBg,
+};
+
+function categoryTint(category: ItineraryCategory): string {
+  return CATEGORY_TINTS[category] ?? `${itineraryCategoryColors[category]}1A`;
+}
+
+const CALENDAR_THEME = { palette: { gray: { 200: colors.gray200 } } };
+
+function HourLabel({ hour }: { hour: number; ampm: boolean }) {
+  return (
+    <View style={styles.hourLabelCell}>
+      <Text style={styles.hourLabelText}>
+        {`${String(hour).padStart(2, "0")}:00`}
+      </Text>
+    </View>
+  );
+}
 
 function toEvent(it: Itinerary): any {
   const normalizeTime = (time: string) => {
@@ -179,7 +234,8 @@ function toFlightEvents(flight: any): any[] {
 
 const WEEK_STARTS_ON_STORAGE_KEY = "ottrip.weekStartsOn";
 const WEEK_TOGGLE_HEIGHT = 32;
-const WEEK_TOGGLE_KNOB_SIZE = WEEK_TOGGLE_HEIGHT - spacing.xs;
+const WEEK_TOGGLE_PADDING = 2;
+const WEEK_TOGGLE_KNOB_SIZE = WEEK_TOGGLE_HEIGHT - 2 - WEEK_TOGGLE_PADDING * 2;
 
 function readStoredWeekStartsOn(): WeekStartsOn {
   try {
@@ -311,6 +367,7 @@ export default function WeeklySchedulePanel({
   const [aiChatOpen, setAiChatOpen] = useState(false);
   const [aiMessages, setAiMessages] = useState<AiMessage[]>([AI_INTRO_MESSAGE]);
   const [memoOpen, setMemoOpen] = useState(false);
+  const memoBackdrop = useBackdropClose(() => setMemoOpen(false));
   const [memoDraft, setMemoDraft] = useState("");
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const [showPlanSelectRequiredModal, setShowPlanSelectRequiredModal] =
@@ -385,7 +442,6 @@ export default function WeeklySchedulePanel({
     elementWidth: number;
     elementHeight: number;
   } | null>(null);
-  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
 
   const [dropPreviewPosition, setDropPreviewPosition] = useState<{
     x: number;
@@ -471,7 +527,7 @@ export default function WeeklySchedulePanel({
 
   const rafIdRef = useRef<number | null>(null);
 
-  const overlapCheckTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const overlapCheckTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const calculateDropPosition = useCallback(
     (clientX: number, clientY: number) => {
@@ -573,8 +629,8 @@ export default function WeeklySchedulePanel({
       }
 
       const timeColumnWidth = TIME_COLUMN_WIDTH;
-      const headerHeight = 110;
-      const hourRowHeight = 40;
+      const headerHeight = CALENDAR_HEADER_HEIGHT;
+      const hourRowHeight = HOUR_ROW_HEIGHT;
       const timeslots = 3;
       const segmentHeight = hourRowHeight / (timeslots + 1);
 
@@ -611,81 +667,15 @@ export default function WeeklySchedulePanel({
       const timeTop =
         calendarRect.top +
         headerHeight +
-        segmentIndex * segmentHeight -
+        segmentIndex * segmentHeight +
+        EVENT_INSET_Y -
         scrollTop;
 
-      let eventLeft: number;
-
-      if (draggingEvent) {
-        let originalDate: dayjs.Dayjs | null = null;
-
-        if (draggingEvent.type === "itinerary") {
-          const itineraryId = Number.parseInt(draggingEvent.id);
-          const itinerary = itineraries.find(it => it.id === itineraryId);
-          if (itinerary) {
-            originalDate = dayjs(itinerary.itineraryDate);
-          }
-        } else if (draggingEvent.type === "flight") {
-          const eventIdParts = draggingEvent.id.split("-");
-          const flightId =
-            eventIdParts.length > 1 ? Number.parseInt(eventIdParts[1]) : null;
-
-          if (flightId !== null) {
-            const flight = flights.find(f => f.id === flightId);
-            if (
-              flight &&
-              flight.flightSegments &&
-              flight.flightSegments.length > 0
-            ) {
-              const segmentIdOrIndex =
-                eventIdParts.length > 2
-                  ? Number.parseInt(eventIdParts[2])
-                  : null;
-              if (segmentIdOrIndex !== null) {
-                const segment = flight.flightSegments.find(
-                  (seg: any, idx: number) =>
-                    seg.id === segmentIdOrIndex ||
-                    (seg.id == null && idx + 1 === segmentIdOrIndex),
-                );
-                if (segment) {
-                  originalDate = dayjs(segment.departureTime);
-                } else if (segmentIdOrIndex > 0) {
-                  originalDate = dayjs(
-                    flight.flightSegments[segmentIdOrIndex - 1].departureTime,
-                  );
-                }
-              }
-            }
-          }
-        }
-
-        if (originalDate) {
-          const originalDayIndex = originalDate.diff(currentWeekStart, "day");
-
-          const originalEventLeft = draggingEvent.elementX;
-          const originalEventWidth = draggingEvent.elementWidth;
-
-          const originalColumnWidth = originalEventWidth / 0.9;
-          const originalColumnLeft =
-            originalEventLeft - originalColumnWidth * 0.035;
-
-          const dayDiff = dayIndexClamped - originalDayIndex;
-          const dropColumnLeft =
-            originalColumnLeft + originalColumnWidth * dayDiff;
-
-          eventLeft = dropColumnLeft + originalColumnWidth * 0.035;
-        } else {
-          const dayLeft =
-            calendarRect.left + timeColumnWidth + dayWidth * dayIndexClamped;
-          const leftMarginPercent = 3.5;
-          eventLeft = dayLeft + (dayWidth * leftMarginPercent) / 100;
-        }
-      } else {
-        const dayLeft =
-          calendarRect.left + timeColumnWidth + dayWidth * dayIndexClamped;
-        const leftMarginPercent = 3.5;
-        eventLeft = dayLeft + (dayWidth * leftMarginPercent) / 100;
-      }
+      const eventLeft =
+        calendarRect.left +
+        timeColumnWidth +
+        dayWidth * dayIndexClamped +
+        EVENT_INSET_LEFT;
 
       return {
         x: eventLeft,
@@ -783,15 +773,6 @@ export default function WeeklySchedulePanel({
         const elementTopY = draggedElementY;
 
         const dropPos = calculateDropPosition(elementCenterX, elementTopY);
-
-        if (dropPos) {
-          const snapOffsetX = dropPos.x - draggingEvent.elementX;
-          const snapOffsetY = dropPos.y - draggingEvent.elementY;
-
-          setDragOffset({ x: snapOffsetX, y: snapOffsetY });
-        } else {
-          setDragOffset({ x: offsetX, y: offsetY });
-        }
 
         setDropPreviewPosition(dropPos);
         dropPreviewPositionRef.current = dropPos;
@@ -968,7 +949,6 @@ export default function WeeklySchedulePanel({
                 if (hasOverlap) {
                   Alert.alert("알림", "겹치는 항공 일정이 있어요");
                   setDraggingEvent(null);
-                  setDragOffset({ x: 0, y: 0 });
                   setDropPreviewPosition(null);
                   dropPreviewPositionRef.current = null;
                   setHasOverlap(false);
@@ -1090,7 +1070,6 @@ export default function WeeklySchedulePanel({
       }
 
       setDraggingEvent(null);
-      setDragOffset({ x: 0, y: 0 });
       setDropPreviewPosition(null);
       dropPreviewPositionRef.current = null;
       setHasOverlap(false);
@@ -1855,6 +1834,15 @@ export default function WeeklySchedulePanel({
 
   const finalItineraries = displayItineraries;
 
+  const dragPreviewStartMs = dropPreviewPosition?.time
+    ? dropPreviewPosition.time.getTime()
+    : null;
+
+  const itineraryDays = useMemo(
+    () => new Set(finalItineraries.map(it => it.itineraryDate)),
+    [finalItineraries],
+  );
+
   const events = useMemo(() => {
     const itineraryEvents = finalItineraries.map(toEvent);
     const flightEvents = flights.flatMap(toFlightEvents);
@@ -1876,6 +1864,33 @@ export default function WeeklySchedulePanel({
       : [];
 
     const allEvents = [...itineraryEvents, ...flightEvents, ...previewEvents];
+
+    if (draggingEvent && dragPreviewStartMs !== null) {
+      const eventIndex = allEvents.findIndex(
+        e => String(e.id) === String(draggingEvent.id),
+      );
+      if (eventIndex !== -1) {
+        const event = allEvents[eventIndex];
+        const duration =
+          new Date(event.end).getTime() - new Date(event.start).getTime();
+        const newStart = new Date(dragPreviewStartMs);
+        const dayEnd = dayjs(newStart).endOf("day").valueOf();
+        const newEnd = new Date(
+          event.type === "flight"
+            ? dragPreviewStartMs + duration
+            : Math.min(dragPreviewStartMs + duration, dayEnd),
+        );
+        allEvents[eventIndex] = {
+          ...event,
+          start: newStart,
+          end: newEnd,
+          startDateStr: dayjs(newStart).format("YYYY-MM-DD"),
+          normalizedStartTime: dayjs(newStart).format("HH:mm"),
+          normalizedEndTime:
+            newEnd.getTime() === dayEnd ? "24:00" : dayjs(newEnd).format("HH:mm"),
+        };
+      }
+    }
 
     if (droppedEventPosition) {
       const eventIndex = allEvents.findIndex(
@@ -1957,10 +1972,54 @@ export default function WeeklySchedulePanel({
     });
 
     return processedEvents;
-  }, [itineraries, flights, previewEvent, droppedEventPosition]);
+  }, [
+    itineraries,
+    flights,
+    previewEvent,
+    droppedEventPosition,
+    draggingEvent?.id,
+    draggingEvent?.type,
+    dragPreviewStartMs,
+  ]);
 
   const goPrev = () => setCurrentWeekStart(prev => prev.subtract(1, "week"));
   const goNext = () => setCurrentWeekStart(prev => prev.add(1, "week"));
+  const startNewItinerary = (date: Date) => {
+    setSelectedEventId(null);
+    setSelectedAccommodationId(null);
+
+    const hasPlans = trips.length > 0;
+    const isPlanSelected = internalSelectedTrip !== null;
+
+    if (!hasPlans) {
+      setShowAddPlanModal(true);
+      return;
+    }
+
+    if (!isPlanSelected) {
+      setShowPlanSelectRequiredModal(true);
+      return;
+    }
+
+    const startTime = dayjs(date);
+    const endTimeText = getDefaultEndTime(startTime);
+    const endTime =
+      endTimeText === "24:00"
+        ? startTime.endOf("day")
+        : startTime.add(1, "hour");
+
+    setPreviewEvent({
+      start: startTime.toDate(),
+      end: endTime.toDate(),
+      title: "제목없음",
+      startTime: startTime.format("HH:mm"),
+      endTime: endTimeText,
+      location: "",
+    });
+
+    onRequestNewItinerary?.(date);
+  };
+
   const goToday = () => setCurrentWeekStart(getWeekStart(dayjs(), weekStartsOn));
   const toggleWeekStartsOn = () => {
     const next: WeekStartsOn = weekStartsOn === 1 ? 0 : 1;
@@ -1996,37 +2055,56 @@ export default function WeeklySchedulePanel({
           <Text style={styles.title}>여행 일정</Text>
 
           <View style={styles.dateNavigation}>
-            <Pressable onPress={goPrev} style={styles.navArrowButton}>
-              <LeftArrowIcon width={10} height={10} />
-            </Pressable>
+            <MotionPressable
+              onPress={goPrev}
+              style={styles.navArrowButton}
+              accessibilityLabel="이전 주"
+            >
+              <MotionIcon>
+                <LeftArrowIcon width={10} height={10} />
+              </MotionIcon>
+            </MotionPressable>
 
             <Text style={styles.navDateText}>
               {currentWeekStart.format("YYYY년 M월")}
             </Text>
 
-            <Pressable onPress={goNext} style={styles.navArrowButton}>
-              <RightArrowIcon width={10} height={10} />
-            </Pressable>
+            <MotionPressable
+              onPress={goNext}
+              style={styles.navArrowButton}
+              accessibilityLabel="다음 주"
+            >
+              <MotionIcon>
+                <RightArrowIcon width={10} height={10} />
+              </MotionIcon>
+            </MotionPressable>
           </View>
 
-          <Pressable
+          <MotionPressable
             onPress={goToday}
-            style={[styles.actionButton, { marginLeft: spacing.lg }]}
+            style={styles.actionButton}
+            hoverStyle={shadows.xsHover}
+            accessibilityLabel="오늘"
           >
-            <View style={styles.todayIconWrapper}>
-              <TodayIcon width={13} height={13} />
-            </View>
+            <MotionIcon>
+              <TodayIcon width={16} height={16} />
+            </MotionIcon>
             <Text style={styles.actionButtonText}>오늘</Text>
-          </Pressable>
+          </MotionPressable>
 
           <View style={styles.calendarButtonWrapper}>
-            <Pressable
-              ref={calendarBtnRef}
-              onPress={() => setShowMonthPicker(!showMonthPicker)}
-              style={[styles.iconButton, { marginLeft: spacing.xs }]}
-            >
-              <CalenderIcon width={13} height={13} />
-            </Pressable>
+            <View ref={calendarBtnRef} collapsable={false}>
+              <MotionPressable
+                onPress={() => setShowMonthPicker(!showMonthPicker)}
+                style={styles.iconButton}
+                hoverStyle={shadows.xsHover}
+                accessibilityLabel="달력"
+              >
+                <MotionIcon>
+                  <CalenderIcon width={16} height={16} />
+                </MotionIcon>
+              </MotionPressable>
+            </View>
             <BaseCalendar
               visible={showMonthPicker}
               selectedDate={selectedDate}
@@ -2047,9 +2125,9 @@ export default function WeeklySchedulePanel({
             />
           </View>
 
-          <Pressable
+          <MotionPressable
             onPress={toggleWeekStartsOn}
-            style={[styles.weekStartToggle, { marginLeft: spacing.xs }]}
+            style={styles.weekStartToggle}
             accessibilityRole="switch"
             accessibilityState={{ checked: weekStartsOn === 0 }}
             accessibilityLabel={
@@ -2097,10 +2175,16 @@ export default function WeeklySchedulePanel({
                 S
               </Text>
             </View>
-          </Pressable>
+          </MotionPressable>
         </View>
 
         <View style={styles.rightSection}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.rightScroll}
+            contentContainerStyle={styles.rightScrollContent}
+          >
           <TripSelector
             selectedTrip={internalSelectedTrip}
             onTripSelect={trip => {
@@ -2125,7 +2209,7 @@ export default function WeeklySchedulePanel({
           />
 
           {internalSelectedTrip ? (
-            <Pressable
+            <MotionPressable
               onPress={() => {
                 if (isGuest) {
                   guestPrompt.show();
@@ -2134,12 +2218,15 @@ export default function WeeklySchedulePanel({
                 setAiChatOpen(true);
               }}
               style={styles.aiChatButton}
+              accessibilityLabel="대화로 일정 추가"
             >
               <GradientBackground style={styles.aiChatButtonGradient}>
-                <LightningIcon width={13} height={13} color={colors.black} />
+                <MotionIcon>
+                  <LightningIcon width={11} height={13} color={colors.gray900} />
+                </MotionIcon>
                 <Text style={styles.aiChatButtonText}>대화로 일정 추가</Text>
               </GradientBackground>
-            </Pressable>
+            </MotionPressable>
           ) : null}
 
           {internalSelectedTrip && showAiSuggestButton ? (
@@ -2158,40 +2245,28 @@ export default function WeeklySchedulePanel({
 
           {internalSelectedTrip ? (
             <View style={styles.actionGroup}>
-              {(myRole === "owner" || myRole === "editor") && (
-                <Tooltip text="항공편 추가">
-                  <Pressable
-                    onPress={() => {
-                      setSelectedAccommodationId(null);
-                      if (onRequestNewFlight) onRequestNewFlight();
-                      else onShowFlightModal?.();
-                    }}
-                    style={styles.iconButton}
-                  >
-                    <AirplaneIcon width={13} height={13} />
-                  </Pressable>
-                </Tooltip>
-              )}
-
               {(myRole === "owner" ||
                 myRole === "editor" ||
                 myRole === "viewer") && (
                 <Tooltip text="메모">
-                  <Pressable
+                  <MotionPressable
                     onPress={() => {
                       setMemoDraft((planData.plan as any)?.memo ?? "");
                       setMemoOpen(true);
                     }}
                     style={styles.iconButton}
+                    hoverStyle={shadows.xsHover}
                   >
-                    <MemoIcon width={13} height={13} />
-                  </Pressable>
+                    <MotionIcon>
+                      <MemoIcon width={16} height={16} />
+                    </MotionIcon>
+                  </MotionPressable>
                 </Tooltip>
               )}
 
               {(myRole === "owner" || myRole === "editor") && (
                 <Tooltip text="공유하기">
-                  <Pressable
+                  <MotionPressable
                     onPress={() => {
                       if (isGuest) {
                         guestPrompt.show();
@@ -2200,43 +2275,53 @@ export default function WeeklySchedulePanel({
                       setShareOpen(true);
                     }}
                     style={styles.iconButton}
+                    hoverStyle={shadows.xsHover}
                   >
-                    <ShareIcon width={16} height={16} />
-                  </Pressable>
+                    <MotionIcon>
+                      <ShareIcon width={16} height={16} />
+                    </MotionIcon>
+                  </MotionPressable>
                 </Tooltip>
               )}
 
               {(myRole === "owner" || myRole === "editor") && (
                 <Tooltip text="파일로 일정 추가">
-                  <Pressable
+                  <MotionPressable
                     style={styles.iconButton}
+                    hoverStyle={shadows.xsHover}
                     onPress={() => setImportFileOpen(true)}
                   >
-                    <ImportFileIcon
-                      width={14}
-                      height={14}
-                      color={colors.gray900}
-                    />
-                  </Pressable>
+                    <MotionIcon>
+                      <ImportFileIcon
+                        width={16}
+                        height={16}
+                        color={colors.gray900}
+                      />
+                    </MotionIcon>
+                  </MotionPressable>
                 </Tooltip>
               )}
 
               {(myRole === "owner" || myRole === "editor") && (
                 <Tooltip text="내보내기">
-                  <Pressable
+                  <MotionPressable
                     style={styles.iconButton}
+                    hoverStyle={shadows.xsHover}
                     onPress={() => setExportOpen(true)}
                   >
-                    <ExportPlanIcon
-                      width={14}
-                      height={14}
-                      color={colors.gray900}
-                    />
-                  </Pressable>
+                    <MotionIcon>
+                      <ExportPlanIcon
+                        width={16}
+                        height={16}
+                        color={colors.gray900}
+                      />
+                    </MotionIcon>
+                  </MotionPressable>
                 </Tooltip>
               )}
             </View>
           ) : null}
+          </ScrollView>
         </View>
       </View>
 
@@ -2254,10 +2339,12 @@ export default function WeeklySchedulePanel({
         <BigCalendar
           mode="week"
           events={events}
-          height={height - 50}
+          height={height - 86}
           date={currentWeekStart.toDate()}
-          hourRowHeight={40}
+          hourRowHeight={HOUR_ROW_HEIGHT}
           timeslots={3}
+          theme={CALENDAR_THEME}
+          hourComponent={HourLabel}
           weekStartsOn={weekStartsOn}
           hideNowIndicator
           swipeEnabled
@@ -2275,21 +2362,55 @@ export default function WeeklySchedulePanel({
                     const isToday =
                       dayjs(date).format("YYYY-MM-DD") ===
                       dayjs().format("YYYY-MM-DD");
+                    const day = dayjs(date).format("YYYY-MM-DD");
+                    const isInTrip =
+                      !!internalSelectedTrip &&
+                      day >= internalSelectedTrip.startDate &&
+                      day <= internalSelectedTrip.endDate;
                     return (
-                      <View key={date} style={styles.dateHeaderCell}>
-                        <Text style={styles.weekdayText}>
-                          {dayjs(date).format("ddd")}
-                        </Text>
-                        <View style={isToday ? styles.todayDateCircle : null}>
-                          <Text
-                            style={
-                              isToday ? styles.todayDateText : styles.dateText
-                            }
-                          >
-                            {dayjs(date).format("D")}
-                          </Text>
-                        </View>
-                      </View>
+                      <Pressable
+                        key={date}
+                        style={styles.dateHeaderCell}
+                        onPress={() =>
+                          startNewItinerary(
+                            dayjs(date).hour(9).minute(0).second(0).toDate(),
+                          )
+                        }
+                        accessibilityLabel={`${dayjs(date).format("M월 D일")} 일정 추가`}
+                      >
+                        {({
+                          hovered,
+                        }: PressableStateCallbackType & { hovered?: boolean }) => (
+                          <>
+                            <Text style={styles.weekdayText}>
+                              {dayjs(date).format("ddd")}
+                            </Text>
+                            <View
+                              style={[
+                                styles.dateCircle,
+                                hovered && styles.dateCircleHover,
+                                hovered && styles.dateCircleJelly,
+                                isToday && styles.todayDateCircle,
+                              ]}
+                            >
+                              <Text
+                                style={[
+                                  isToday ? styles.todayDateText : styles.dateText,
+                                  isInTrip && styles.dateTextInTrip,
+                                ]}
+                              >
+                                {dayjs(date).format("D")}
+                              </Text>
+                            </View>
+                            <View
+                              style={[
+                                styles.dateEventDot,
+                                itineraryDays.has(day) && styles.dateEventDotOn,
+                              ]}
+                            />
+                          </>
+                        )}
+                      </Pressable>
                     );
                   })}
                 </View>
@@ -2302,16 +2423,18 @@ export default function WeeklySchedulePanel({
                         {
                           justifyContent: "center",
                           alignItems: "center",
-                          borderRightWidth: 0.5,
-                          borderRightColor: "#e0e0e0",
+                          borderRightWidth: 1,
+                          borderRightColor: colors.gray200,
                         },
                       ]}
                     >
-                      <AccommodationIcon
-                        width={16}
-                        height={16}
-                        color={colors.gray700}
-                      />
+                      <View style={styles.accommodationIcon}>
+                        <AccommodationIcon
+                          width={12}
+                          height={12}
+                          color={colors.gray900}
+                        />
+                      </View>
                     </View>
                     <View
                       ref={accCreateRowRef}
@@ -2359,7 +2482,7 @@ export default function WeeklySchedulePanel({
                                 !shouldHideRightBorder
                                   ? 1
                                   : 0,
-                              borderRightColor: "#e0e0e0",
+                              borderRightColor: colors.gray200,
                               zIndex: 0,
                             }}
                             {...(Platform.OS === "web"
@@ -2613,32 +2736,24 @@ export default function WeeklySchedulePanel({
                                           position: "absolute",
                                           left: `${actualLeft}%`,
                                           width: `${actualWidth}%`,
-                                          top: 2,
-                                          bottom: 2,
+                                          top: 4,
+                                          bottom: 4,
                                           backgroundColor:
                                             colors.accommodationBg,
-                                          borderTopWidth: isSelected ? 2 : 1,
-                                          borderBottomWidth: isSelected ? 2 : 1,
-                                          borderLeftWidth: isStart
-                                            ? isSelected
-                                              ? 2
-                                              : 1
-                                            : 0,
-                                          borderRightWidth: isEnd
-                                            ? isSelected
-                                              ? 2
-                                              : 1
-                                            : 0,
-                                          borderColor: isSelected
-                                            ? colors.accommodationBorder
-                                            : colors.accommodationBorder,
-                                          borderTopLeftRadius: isStart ? 6 : 0,
+                                          borderTopWidth: isSelected ? 2 : 0,
+                                          borderBottomWidth: isSelected ? 2 : 0,
+                                          borderLeftWidth:
+                                            isStart && isSelected ? 2 : 0,
+                                          borderRightWidth:
+                                            isEnd && isSelected ? 2 : 0,
+                                          borderColor: colors.accommodationText,
+                                          borderTopLeftRadius: isStart ? radii.xs : 0,
                                           borderBottomLeftRadius: isStart
-                                            ? 6
+                                            ? radii.xs
                                             : 0,
-                                          borderTopRightRadius: isEnd ? 6 : 0,
+                                          borderTopRightRadius: isEnd ? radii.xs : 0,
                                           borderBottomRightRadius: isEnd
-                                            ? 6
+                                            ? radii.xs
                                             : 0,
                                           minWidth: 1,
                                           zIndex: isVisualStart
@@ -2804,8 +2919,8 @@ export default function WeeklySchedulePanel({
                                       position: "absolute",
                                       left: `${previewLeft}%` as any,
                                       width: `${previewWidth}%` as any,
-                                      top: 2,
-                                      bottom: 2,
+                                      top: 4,
+                                      bottom: 4,
                                       backgroundColor: previewHasOverlap
                                         ? "rgba(239,68,68,0.15)"
                                         : colors.accommodationBg,
@@ -2816,18 +2931,18 @@ export default function WeeklySchedulePanel({
                                       borderStyle: "dashed" as any,
                                       borderColor: previewHasOverlap
                                         ? colors.danger
-                                        : colors.accommodationBorder,
+                                        : colors.accommodationText,
                                       borderTopLeftRadius: isPreviewStart
-                                        ? 6
+                                        ? radii.xs
                                         : 0,
                                       borderBottomLeftRadius: isPreviewStart
-                                        ? 6
+                                        ? radii.xs
                                         : 0,
                                       borderTopRightRadius: isPreviewEnd
-                                        ? 6
+                                        ? radii.xs
                                         : 0,
                                       borderBottomRightRadius: isPreviewEnd
-                                        ? 6
+                                        ? radii.xs
                                         : 0,
                                       zIndex: 15,
                                       pointerEvents: "none" as const,
@@ -2902,19 +3017,18 @@ export default function WeeklySchedulePanel({
                                   position: "absolute",
                                   left: `${leftPct}%` as any,
                                   width: `${widthPct}%` as any,
-                                  top: 0,
-                                  bottom: 0,
-                                  paddingHorizontal: 10,
+                                  top: 4,
+                                  bottom: 4,
+                                  paddingHorizontal: spacing.md,
                                   flexDirection: "row",
                                   alignItems: "center",
-                                  gap: 6,
+                                  gap: spacing.sm,
                                   overflow: "hidden",
                                   zIndex: 25,
                                   pointerEvents: "none" as any,
                                   opacity: isDraggingThisLabel ? 0.3 : 1,
                                 }}
                               >
-                                <View style={styles.itemDot} />
                                 <Text
                                   style={{
                                     ...textStyles.h9,
@@ -2990,8 +3104,8 @@ export default function WeeklySchedulePanel({
                                 position: "absolute",
                                 left: `${leftPct}%` as any,
                                 width: `${widthPct}%` as any,
-                                top: 2,
-                                bottom: 2,
+                                top: 4,
+                                bottom: 4,
                                 backgroundColor: isOverlap
                                   ? "rgba(239,68,68,0.15)"
                                   : colors.accommodationBg,
@@ -2999,8 +3113,8 @@ export default function WeeklySchedulePanel({
                                 borderStyle: "dashed" as any,
                                 borderColor: isOverlap
                                   ? colors.danger
-                                  : colors.accommodationBorder,
-                                borderRadius: 6,
+                                  : colors.accommodationText,
+                                borderRadius: radii.xs,
                                 opacity: 0.7,
                                 zIndex: 20,
                                 pointerEvents: "none" as any,
@@ -3054,13 +3168,13 @@ export default function WeeklySchedulePanel({
                                 position: "absolute",
                                 left: `${leftPct}%` as any,
                                 width: `${widthPct}%` as any,
-                                top: 2,
-                                bottom: 2,
+                                top: 4,
+                                bottom: 4,
                                 backgroundColor: colors.accommodationBg,
                                 borderWidth: 2,
                                 borderStyle: "dashed" as any,
-                                borderColor: colors.accommodationBorder,
-                                borderRadius: 6,
+                                borderColor: colors.accommodationText,
+                                borderRadius: radii.xs,
                                 opacity: 0.7,
                                 zIndex: 20,
                                 pointerEvents: "none" as any,
@@ -3118,18 +3232,17 @@ export default function WeeklySchedulePanel({
                                 position: "absolute",
                                 left: `${leftPct}%` as any,
                                 width: `${widthPct}%` as any,
-                                top: 0,
-                                bottom: 0,
-                                paddingHorizontal: 10,
+                                top: 4,
+                                bottom: 4,
+                                paddingHorizontal: spacing.md,
                                 flexDirection: "row",
                                 alignItems: "center",
-                                gap: 6,
+                                gap: spacing.sm,
                                 overflow: "hidden",
                                 zIndex: 30,
                                 pointerEvents: "none" as any,
                               }}
                             >
-                              <View style={styles.itemDot} />
                               <Text
                                 style={{
                                   ...textStyles.h9,
@@ -3150,37 +3263,7 @@ export default function WeeklySchedulePanel({
               </View>
             );
           }}
-          onPressCell={(date: Date) => {
-            setSelectedEventId(null);
-            setSelectedAccommodationId(null);
-
-            const hasPlans = trips.length > 0;
-            const isPlanSelected = internalSelectedTrip !== null;
-
-            if (!hasPlans) {
-              setShowAddPlanModal(true);
-              return;
-            }
-
-            if (!isPlanSelected) {
-              setShowPlanSelectRequiredModal(true);
-              return;
-            }
-
-            const startTime = dayjs(date);
-            const endTime = startTime.add(1, "hour");
-
-            setPreviewEvent({
-              start: startTime.toDate(),
-              end: endTime.toDate(),
-              title: "제목없음",
-              startTime: startTime.format("HH:mm"),
-              endTime: endTime.format("HH:mm"),
-              location: "",
-            });
-
-            onRequestNewItinerary?.(date);
-          }}
+          onPressCell={startNewItinerary}
           renderEvent={(event, touchableOpacityProps) => {
             const {
               key: eventKey,
@@ -3224,8 +3307,6 @@ export default function WeeklySchedulePanel({
               !event.startDateStr ||
               dayjs(event.start).format("YYYY-MM-DD") === event.startDateStr;
 
-            const totalWidthPercent = 90;
-            const leftMarginPercent = 3.5;
 
             if (adjustedStyle.marginTop !== undefined) {
               delete adjustedStyle.marginTop;
@@ -3237,21 +3318,26 @@ export default function WeeklySchedulePanel({
             ) {
               const overlapIndex = event.customOverlapIndex;
               const overlapCount = event.customOverlapCount;
-              const gapPercent = 1.5;
-              const slotWidth =
-                (totalWidthPercent - gapPercent * (overlapCount - 1)) /
-                overlapCount;
-              adjustedStyle.width = `${slotWidth}%`;
-              adjustedStyle.left = `${leftMarginPercent + (slotWidth + gapPercent) * overlapIndex}%`;
+              const slotWidth = `((100% - ${EVENT_INSET_LEFT + EVENT_INSET_RIGHT + EVENT_GAP * (overlapCount - 1)}px) / ${overlapCount})`;
+              adjustedStyle.width = `calc(${slotWidth})`;
+              adjustedStyle.left = `calc(${EVENT_INSET_LEFT}px + (${slotWidth} + ${EVENT_GAP}px) * ${overlapIndex})`;
               delete adjustedStyle.minWidth;
             } else {
-              adjustedStyle.left = `${leftMarginPercent}%`;
-              adjustedStyle.width = `${totalWidthPercent}%`;
+              adjustedStyle.left = EVENT_INSET_LEFT;
+              adjustedStyle.width = `calc(100% - ${EVENT_INSET_LEFT + EVENT_INSET_RIGHT}px)`;
 
               delete adjustedStyle.minWidth;
             }
 
+            if (typeof adjustedStyle.top === "string") {
+              adjustedStyle.top = `calc(${adjustedStyle.top} + ${EVENT_INSET_Y}px)`;
+            }
+            if (typeof adjustedStyle.height === "string") {
+              adjustedStyle.height = `calc(${adjustedStyle.height} - ${EVENT_INSET_Y * 2 + HOUR_LINE_WIDTH}px)`;
+            }
             adjustedStyle.minHeight = 20;
+            adjustedStyle.shadowOpacity = 0;
+            adjustedStyle.elevation = 0;
 
             let blockHeight = eventHeights[event.id] || 0;
 
@@ -3259,8 +3345,11 @@ export default function WeeklySchedulePanel({
               const startTime = new Date(event.start).getTime();
               const endTime = new Date(event.end).getTime();
               const durationMinutes = (endTime - startTime) / (1000 * 60);
-              const segmentHeight = 40 / 4;
-              blockHeight = (durationMinutes / 15) * segmentHeight;
+              const segmentHeight = HOUR_ROW_HEIGHT / 4;
+              blockHeight =
+                (durationMinutes / 15) * segmentHeight -
+                EVENT_INSET_Y * 2 -
+                HOUR_LINE_WIDTH;
               if (blockHeight < 20) blockHeight = 20;
             }
 
@@ -3273,48 +3362,43 @@ export default function WeeklySchedulePanel({
             const showTime = !isCompact && contentHeight >= 28;
             const showLocation = contentHeight > 52;
 
+            const isInvalidDrop = isFlight && isDragging && hasOverlap;
             const flightStyle = isFlight
               ? {
-                  backgroundColor: colors.flightBg,
-                  borderWidth: borderWidth,
-                  borderColor: isSelected
-                    ? colors.flightText
-                    : colors.flightBorder,
-                  borderRadius: radii.md,
+                  backgroundColor: isInvalidDrop
+                    ? colors.errorTint
+                    : colors.flightBg,
+                  borderWidth: isInvalidDrop ? 2 : borderWidth,
+                  borderColor: isInvalidDrop
+                    ? colors.danger
+                    : isSelected
+                      ? colors.flightText
+                      : "transparent",
+                  borderRadius: radii.xs,
                 }
               : null;
 
-            const itineraryCategory = (isItinerary || isPreview)
-              ? (event.originalData?.category as ItineraryCategory | undefined)
-              : undefined;
-            const itineraryCategoryColor = itineraryCategory
-              ? itineraryCategoryColors[itineraryCategory]
-              : null;
+            const itineraryCategory =
+              (event.originalData?.category as ItineraryCategory | undefined) ??
+              ItineraryCategory.ACTIVITY;
+            const itineraryCategoryColor = itineraryCategoryColors[itineraryCategory];
             const itineraryStyle = isItinerary
               ? {
-                  backgroundColor: itineraryCategoryColor
-                    ? `${itineraryCategoryColor}1A`
-                    : colors.itineraryBg,
+                  backgroundColor: categoryTint(itineraryCategory),
                   borderWidth: borderWidth,
                   borderColor: isSelected
-                    ? (itineraryCategoryColor ?? colors.itineraryText)
-                    : itineraryCategoryColor
-                      ? `${itineraryCategoryColor}59`
-                      : colors.itineraryBorder,
-                  borderRadius: radii.md,
+                    ? itineraryCategoryColor
+                    : "transparent",
+                  borderRadius: radii.xs,
                 }
               : null;
 
             const previewStyle = isPreview
               ? {
-                  backgroundColor: itineraryCategoryColor
-                    ? `${itineraryCategoryColor}1A`
-                    : colors.itineraryBg,
+                  backgroundColor: categoryTint(itineraryCategory),
                   borderWidth: 1,
-                  borderColor: itineraryCategoryColor
-                    ? `${itineraryCategoryColor}59`
-                    : colors.itineraryBorder,
-                  borderRadius: radii.md,
+                  borderColor: `${itineraryCategoryColor}59`,
+                  borderRadius: radii.xs,
                   borderStyle: "dashed",
                   opacity: 0.7,
                 }
@@ -3326,7 +3410,7 @@ export default function WeeklySchedulePanel({
 
             const dragStyle = isDragging
               ? {
-                  opacity: 0.3,
+                  opacity: 0.7,
                   cursor: "grabbing",
                 }
               : isDraggable
@@ -3339,6 +3423,10 @@ export default function WeeklySchedulePanel({
               <View
                 key={eventKey}
                 {...rest}
+                dataSet={{
+                  weekEvent: "true",
+                  selected: isSelected ? "true" : "false",
+                }}
                 style={[adjustedStyle, finalStyle, dragStyle]}
                 onLayout={e => {
                   const { height } = e.nativeEvent.layout;
@@ -3373,8 +3461,7 @@ export default function WeeklySchedulePanel({
                             elementWidth: rect.width,
                             elementHeight: rect.height,
                           });
-                          setDragOffset({ x: 0, y: 0 });
-                          setSelectedEventId(null);
+                          setSelectedEventId(event.id);
                           setSelectedAccommodationId(null);
                         }
                       },
@@ -3404,17 +3491,6 @@ export default function WeeklySchedulePanel({
                   <View style={[styles.eventContentCol, blockHeight <= 70 && { justifyContent: "center" }]}>
                     {isFirstBar && showTitle && (
                       <View style={styles.eventTitleRow}>
-                        <View
-                          style={{
-                            width: 5,
-                            height: 5,
-                            borderRadius: 999,
-                            backgroundColor: isFlight
-                              ? colors.flightDot
-                              : (itineraryCategoryColor ?? colors.itineraryDot),
-                            flexShrink: 0,
-                          }}
-                        />
                         {isFlight && (
                           <Text
                             style={{
@@ -3430,13 +3506,10 @@ export default function WeeklySchedulePanel({
                           numberOfLines={1}
                           ellipsizeMode="tail"
                           style={{
-                            fontFamily:
-                              typography.fontFamily.pretendardSemiBold,
-                            fontSize: 11,
-                            lineHeight: 14,
+                            ...textStyles.h9,
                             color: isFlight
                               ? colors.flightText
-                              : (itineraryCategoryColor ?? colors.itineraryText),
+                              : itineraryCategoryColor,
                             flex: 1,
                           }}
                         >
@@ -3449,7 +3522,7 @@ export default function WeeklySchedulePanel({
                               ...textStyles.h9,
                               color: isFlight
                                 ? colors.flightText
-                                : (itineraryCategoryColor ?? colors.itineraryText),
+                                : itineraryCategoryColor,
                               opacity: 0.75,
                               flexShrink: 0,
                             }}
@@ -3465,22 +3538,13 @@ export default function WeeklySchedulePanel({
                       event.normalizedStartTime &&
                       event.normalizedEndTime && (
                         <View style={styles.eventTimeRow}>
-                          <View style={styles.iconWrapper}>
-                            <WeekBarTimeIcon
-                              width={9}
-                              height={9}
-                              color={itineraryCategoryColor ?? colors.itineraryText}
-                            />
-                          </View>
                           <Text
                             numberOfLines={1}
                             ellipsizeMode="tail"
                             style={{
-                              fontFamily:
-                                typography.fontFamily.pretendardRegular,
-                              fontSize: 10,
-                              lineHeight: 14,
-                              color: itineraryCategoryColor ?? colors.itineraryText,
+                              ...textStyles.body6,
+                              fontFamily: typography.fontFamily.pretendardMedium,
+                              color: itineraryCategoryColor,
                             }}
                           >
                             {event.normalizedStartTime} -{" "}
@@ -3496,10 +3560,8 @@ export default function WeeklySchedulePanel({
                           numberOfLines={1}
                           ellipsizeMode="tail"
                           style={{
-                            fontFamily: typography.fontFamily.pretendardRegular,
-                            fontSize: 10,
-                            lineHeight: 14,
-                            color: itineraryCategoryColor ?? colors.itineraryText,
+                            ...textStyles.body6,
+                            color: itineraryCategoryColor,
                             opacity: 0.65,
                           }}
                         >
@@ -3512,21 +3574,12 @@ export default function WeeklySchedulePanel({
                       event.normalizedStartTime &&
                       event.normalizedEndTime && (
                         <View style={styles.eventFlightTimeRow}>
-                          <View style={styles.iconWrapper}>
-                            <WeekBarTimeIcon
-                              width={9}
-                              height={9}
-                              color={colors.flightText}
-                            />
-                          </View>
                           <Text
                             numberOfLines={1}
                             ellipsizeMode="tail"
                             style={{
-                              fontFamily:
-                                typography.fontFamily.pretendardRegular,
-                              fontSize: 10,
-                              lineHeight: 14,
+                              ...textStyles.body6,
+                              fontFamily: typography.fontFamily.pretendardMedium,
                               color: colors.flightText,
                             }}
                           >
@@ -3546,9 +3599,7 @@ export default function WeeklySchedulePanel({
                           numberOfLines={1}
                           ellipsizeMode="tail"
                           style={{
-                            fontFamily: typography.fontFamily.pretendardRegular,
-                            fontSize: 10,
-                            lineHeight: 14,
+                            ...textStyles.body6,
                             color: colors.flightText,
                             opacity: 0.65,
                           }}
@@ -3564,232 +3615,7 @@ export default function WeeklySchedulePanel({
         />
       </View>
 
-      {draggingEvent && dropPreviewPosition && Platform.OS === "web" && (
-        <View
-          style={{
-            position: "fixed" as any,
-            left: dropPreviewPosition.x,
-            top: dropPreviewPosition.y,
-            width: draggingEvent.elementWidth,
-            height: draggingEvent.elementHeight,
-            borderWidth: 2,
-            borderColor:
-              draggingEvent.type === "flight" && hasOverlap
-                ? "#FF4242"
-                : draggingEvent.type === "itinerary"
-                  ? "rgba(0, 102, 255, 0.8)"
-                  : "rgba(139, 92, 246, 0.8)",
-            backgroundColor:
-              draggingEvent.type === "flight" && hasOverlap
-                ? "rgba(255, 66, 66, 0.05)"
-                : draggingEvent.type === "itinerary"
-                  ? "rgba(0, 102, 255, 0.05)"
-                  : "rgba(139, 92, 246, 0.05)",
-            borderRadius: radii.md,
-            pointerEvents: "none" as const,
-            zIndex: 9999,
-            opacity: 1,
-            shadowColor:
-              draggingEvent.type === "flight" && hasOverlap
-                ? "#FF4242"
-                : draggingEvent.type === "itinerary"
-                  ? "#0066FF"
-                  : "#8B5CF6",
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.3,
-            shadowRadius: 4,
-            elevation: 8,
-          }}
-        />
-      )}
 
-      {draggingEvent &&
-        Platform.OS === "web" &&
-        (() => {
-          const draggedEvent = events.find(e => e.id === draggingEvent.id);
-          if (!draggedEvent) return null;
-
-          const isItinerary = draggedEvent.type === "itinerary";
-          const isFlight = draggedEvent.type === "flight";
-
-          const dragCategory = isItinerary
-            ? (draggedEvent.originalData?.category as ItineraryCategory | undefined)
-            : undefined;
-          const dragCategoryColor = dragCategory
-            ? itineraryCategoryColors[dragCategory]
-            : "#0066FF";
-
-          let displayStartTime = draggedEvent.normalizedStartTime;
-          let displayEndTime = draggedEvent.normalizedEndTime;
-
-          if (dropPreviewPosition && dropPreviewPosition.time) {
-            const originalStart = new Date(draggedEvent.start).getTime();
-            const originalEnd = new Date(draggedEvent.end).getTime();
-            const durationMinutes = (originalEnd - originalStart) / (1000 * 60);
-
-            const newStartTime = dayjs(dropPreviewPosition.time);
-            const newEndTime = newStartTime.add(durationMinutes, "minute");
-
-            displayStartTime = newStartTime.format("HH:mm");
-            displayEndTime = newEndTime.format("HH:mm");
-
-            if (
-              displayEndTime === "23:59" ||
-              (newEndTime.hour() === 23 && newEndTime.minute() === 59)
-            ) {
-              displayEndTime = "24:00";
-            }
-          }
-
-          const flightStyle = isFlight
-            ? {
-                backgroundColor: "rgba(139, 92, 246, 0.1)",
-                borderWidth: hasOverlap ? 2 : 1,
-                borderColor: hasOverlap ? "#FF4242" : "#8B5CF6",
-                borderStyle: hasOverlap ? ("dashed" as any) : ("solid" as any),
-                borderRadius: radii.md,
-              }
-            : null;
-          const itineraryStyle = isItinerary
-            ? {
-                backgroundColor: `${dragCategoryColor}1A`,
-                borderWidth: 1,
-                borderColor: dragCategoryColor,
-                borderRadius: radii.md,
-              }
-            : null;
-          const finalStyle = flightStyle ||
-            itineraryStyle || {
-              backgroundColor: draggedEvent.color || "#3478f6",
-            };
-
-          const dragContentHeight = draggingEvent.elementHeight - 8;
-          const dragShowTitle = true;
-          const dragShowTime = dragContentHeight >= 30;
-          const dragShowLocation = dragContentHeight >= 48;
-
-          return (
-            <View
-              style={[
-                {
-                  position: "absolute" as const,
-                  left: draggingEvent.elementX + dragOffset.x,
-                  top: draggingEvent.elementY + dragOffset.y,
-                  width: draggingEvent.elementWidth,
-                  height: draggingEvent.elementHeight,
-                  zIndex: 10000,
-                  opacity: 0.7,
-                  pointerEvents: "none" as const,
-                  padding: 4,
-                  shadowColor: "#000",
-                  shadowOffset: { width: 0, height: 4 },
-                  shadowOpacity: 0.3,
-                  shadowRadius: 4,
-                  elevation: 10,
-                },
-                finalStyle,
-                Platform.OS === "web" ? { position: "fixed" as any } : {},
-              ]}
-            >
-              <View style={styles.dragEventContent}>
-                {dragShowTitle && (
-                  <View style={styles.dragEventTitleRow}>
-                    <View
-                      style={{
-                        width: 5,
-                        height: 5,
-                        borderRadius: 999,
-                        backgroundColor: isFlight ? colors.flightDot : dragCategoryColor,
-                        flexShrink: 0,
-                      }}
-                    />
-                    {isFlight && (
-                      <Text style={{ fontSize: 11, color: colors.flightText }}>
-                        ✈
-                      </Text>
-                    )}
-                    <Text
-                      numberOfLines={1}
-                      ellipsizeMode="tail"
-                      style={{
-                        fontFamily: typography.fontFamily.pretendardSemiBold,
-                        fontSize: 11,
-                        lineHeight: 14,
-                        color: isFlight ? "#8B5CF6" : dragCategoryColor,
-                        flex: 1,
-                      }}
-                    >
-                      {draggedEvent.title}
-                    </Text>
-                  </View>
-                )}
-                {dragShowTime &&
-                  isItinerary &&
-                  displayStartTime &&
-                  displayEndTime && (
-                    <View
-                      style={{
-                        flexDirection: "row",
-                        alignItems: "center",
-                        gap: 4,
-                        marginTop: dragShowTitle ? 8 : 0,
-                      }}
-                    >
-                      <WeekBarTimeIcon width={9} height={9} color={dragCategoryColor} />
-                      <Text
-                        numberOfLines={1}
-                        ellipsizeMode="tail"
-                        style={{
-                          fontFamily: typography.fontFamily.pretendardRegular,
-                          fontSize: 10,
-                          lineHeight: 14,
-                          color: dragCategoryColor,
-                        }}
-                      >
-                        {displayStartTime} - {displayEndTime}
-                      </Text>
-                    </View>
-                  )}
-                {dragShowLocation &&
-                  isItinerary &&
-                  draggedEvent.locationText && (
-                    <View style={styles.dragEventLocationRow}>
-                      <Text
-                        numberOfLines={1}
-                        ellipsizeMode="tail"
-                        style={{
-                          fontFamily: typography.fontFamily.pretendardRegular,
-                          fontSize: 10,
-                          lineHeight: 14,
-                          color: dragCategoryColor,
-                          opacity: 0.65,
-                        }}
-                      >
-                        {draggedEvent.locationText}
-                      </Text>
-                    </View>
-                  )}
-                {dragShowTime &&
-                  isFlight &&
-                  displayStartTime &&
-                  displayEndTime && (
-                    <Text
-                      numberOfLines={1}
-                      ellipsizeMode="tail"
-                      style={{
-                        ...textStyles.h9,
-                        color: "#8B5CF6",
-                        lineHeight: 10,
-                        marginTop: dragShowTitle ? 8 : 0,
-                      }}
-                    >
-                      {displayStartTime}-{displayEndTime}
-                    </Text>
-                  )}
-              </View>
-            </View>
-          );
-        })()}
 
       <AddScheduleWithAiModal
         visible={aiChatOpen}
@@ -3878,31 +3704,11 @@ export default function WeeklySchedulePanel({
       <Modal
         visible={memoOpen}
         transparent
-        animationType="fade"
+        animationType="none"
         onRequestClose={() => setMemoOpen(false)}
       >
-        <Pressable
-          style={styles.modalOverlay}
-          onPress={() => setMemoOpen(false)}
-        >
-          <Pressable onPress={e => e.stopPropagation()}>
-            <Card
-              width="100%"
-              maxWidth={420}
-              paddingHorizontal={24}
-              paddingVertical={24}
-              paddingBottom={20}
-              borderRadius={20}
-              alignItems="stretch"
-              shadow={{
-                shadowColor: colors.black,
-                shadowOffset: { width: 0, height: 24 },
-                shadowOpacity: 0.12,
-                shadowRadius: 48,
-                elevation: 24,
-              }}
-              style={styles.memoModalContainer}
-            >
+        <View style={styles.modalOverlay} {...memoBackdrop.overlayProps}>
+          <View style={styles.memoModalContainer} {...memoBackdrop.cardProps}>
               <View style={styles.memoModalHeader}>
                 <View style={styles.memoModalTextGroup}>
                   <Text style={styles.memoModalTitle}>공유 메모</Text>
@@ -3910,12 +3716,15 @@ export default function WeeklySchedulePanel({
                     다른 사람과 여행을 공유하고 함께 계획을 세워보세요.
                   </Text>
                 </View>
-                <Pressable
+                <MotionPressable
                   onPress={() => setMemoOpen(false)}
                   style={styles.memoModalCloseButton}
+                  accessibilityLabel="닫기"
                 >
-                  <XIcon width={24} height={24} />
-                </Pressable>
+                  <MotionIcon>
+                    <CloseXIcon width={16} height={16} color={colors.gray900} />
+                  </MotionIcon>
+                </MotionPressable>
               </View>
 
               <View style={styles.memoModalFieldGroup}>
@@ -3935,13 +3744,13 @@ export default function WeeklySchedulePanel({
               </View>
 
               <View style={styles.memoModalActions}>
-                <Pressable
+                <MotionPressable
                   onPress={() => setMemoOpen(false)}
                   style={styles.memoModalSecondaryButton}
                 >
                   <Text style={styles.memoModalSecondaryButtonText}>닫기</Text>
-                </Pressable>
-                <Pressable
+                </MotionPressable>
+                <MotionPressable
                   onPress={async () => {
                     try {
                       if (!internalSelectedTrip?.id)
@@ -3968,11 +3777,10 @@ export default function WeeklySchedulePanel({
                   style={styles.memoModalPrimaryButton}
                 >
                   <Text style={styles.memoModalPrimaryButtonText}>저장</Text>
-                </Pressable>
+                </MotionPressable>
               </View>
-            </Card>
-          </Pressable>
-        </Pressable>
+          </View>
+        </View>
       </Modal>
 
       <PlanSelectRequiredModal
@@ -4025,7 +3833,7 @@ const styles = StyleSheet.create({
     position: "relative",
   },
   dropOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: "rgba(255, 255, 255, 0.88)",
     zIndex: 9999,
     alignItems: "center",
@@ -4062,6 +3870,7 @@ const styles = StyleSheet.create({
     flex: 1,
     minHeight: 0,
     backgroundColor: colors.white,
+    padding: spacing.xl,
   },
   calendarWrapper: {
     flex: 1,
@@ -4071,47 +3880,80 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingVertical: 14,
+    gap: spacing.md,
+    paddingBottom: spacing.lg,
     backgroundColor: colors.white,
     zIndex: 9998,
   },
   leftSection: {
     flexDirection: "row",
     alignItems: "center",
+    gap: spacing.lg,
+    flexShrink: 0,
   },
   title: {
     ...textStyles.h5,
-    marginRight: spacing.lg,
+    color: colors.gray900,
   },
   dateNavigation: {
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.xs,
-    marginLeft: spacing.lg,
+    paddingHorizontal: spacing.xs,
   },
   navArrowButton: {
-    width: 24,
-    height: 24,
+    width: 32,
+    height: 32,
+    borderRadius: radii.xs,
     justifyContent: "center",
     alignItems: "center",
   },
   navDateText: {
     ...textStyles.h7,
-    minWidth: 72,
+    color: colors.gray900,
+    minWidth: 80,
     textAlign: "center",
   },
   dateText: {
     ...textStyles.h6,
   },
+  dateTextInTrip: {
+    fontFamily: typography.fontFamily.pretendardBold,
+  },
+  dateEventDot: {
+    width: 4,
+    height: 4,
+    borderRadius: radii.pill,
+    marginTop: spacing.xs,
+  },
+  dateEventDotOn: {
+    backgroundColor: colors.primary,
+  },
+  dateCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: radii.pill,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  dateCircleHover: {
+    backgroundColor: colors.gray200,
+  },
+  dateCircleJelly: {
+    animationKeyframes: "fmJelly",
+    animationDuration: `${motion.duration.jelly}ms`,
+    animationTimingFunction: motion.easing.ease,
+  } as ViewStyle,
   dateHeaderCell: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    gap: spacing.sm,
+    gap: spacing.xs,
+    paddingVertical: spacing.xs,
+    borderRadius: radii.md,
   },
   weekdayText: {
-    ...textStyles.h8,
+    ...textStyles.body6,
     color: colors.gray600,
   },
   todayDateCircle: {
@@ -4129,14 +3971,41 @@ const styles = StyleSheet.create({
   timeColumn: {
     width: TIME_COLUMN_WIDTH,
   },
+  hourLabelCell: {
+    flex: 1,
+    alignItems: "flex-end",
+    paddingTop: spacing.xs,
+    paddingRight: spacing.sm,
+    borderRightWidth: 1,
+    borderRightColor: colors.gray200,
+  },
+  hourLabelText: {
+    ...textStyles.body6,
+    fontVariant: ["tabular-nums"],
+    color: colors.gray600,
+  },
   rightSection: {
     flexDirection: "row",
     alignItems: "center",
+    gap: spacing.sm,
+    marginLeft: "auto",
+    flexShrink: 1,
+    minWidth: 0,
+  },
+  rightScroll: {
+    flexGrow: 0,
+    flexShrink: 1,
+    minWidth: 0,
+  },
+  rightScrollContent: {
+    alignItems: "center",
+    gap: spacing.sm,
+    paddingVertical: spacing.xs,
   },
   iconButton: {
     width: 32,
     height: 32,
-    borderRadius: 8,
+    borderRadius: radii.md,
     backgroundColor: colors.white,
     borderWidth: 1,
     borderColor: colors.gray300,
@@ -4146,39 +4015,37 @@ const styles = StyleSheet.create({
   actionButton: {
     flexDirection: "row",
     height: 32,
-    borderRadius: 8,
+    gap: spacing.sm,
+    borderRadius: radii.md,
     backgroundColor: colors.white,
     borderWidth: 1,
     borderColor: colors.gray300,
-    paddingHorizontal: 12,
+    paddingHorizontal: spacing.md,
     justifyContent: "center",
     alignItems: "center",
   },
   actionButtonText: {
     ...textStyles.h8,
-    lineHeight: 18,
+    color: colors.gray900,
   },
   weekStartToggle: {
     flexDirection: "row",
-    borderRadius: radii.base,
-    backgroundColor: colors.white,
+    height: WEEK_TOGGLE_HEIGHT,
+    borderRadius: radii.md,
+    backgroundColor: colors.gray200,
     borderWidth: 1,
     borderColor: colors.gray300,
-    padding: spacing.xs / 2,
+    padding: WEEK_TOGGLE_PADDING,
   },
   weekStartToggleKnob: {
     position: "absolute",
-    top: spacing.xs / 2,
-    left: spacing.xs / 2,
+    top: WEEK_TOGGLE_PADDING,
+    left: WEEK_TOGGLE_PADDING,
     width: WEEK_TOGGLE_KNOB_SIZE,
     height: WEEK_TOGGLE_KNOB_SIZE,
-    borderRadius: radii.sm,
+    borderRadius: radii.base,
     backgroundColor: colors.white,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 2,
-    elevation: 2,
+    ...shadows.toggleKnob,
   },
   weekStartToggleSegment: {
     width: WEEK_TOGGLE_KNOB_SIZE,
@@ -4187,36 +4054,32 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   weekStartToggleText: {
-    ...textStyles.h9,
+    ...textStyles.h8,
     color: colors.gray400,
   },
   weekStartToggleTextActive: {
     color: colors.gray900,
-    fontFamily: typography.fontFamily.pretendardSemiBold,
   },
   actionGroup: {
     flexDirection: "row",
     alignItems: "center",
-    gap: spacing.xs,
-    marginLeft: spacing.lg,
+    gap: spacing.sm,
   },
   aiChatButton: {
     height: 32,
-    borderRadius: 20,
+    borderRadius: radii.pill,
     overflow: "hidden",
-    marginLeft: spacing.lg,
   },
   aiChatButtonGradient: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
-    paddingHorizontal: 14,
-    paddingVertical: 0,
+    gap: spacing.sm,
+    paddingHorizontal: spacing.md,
     height: 32,
   },
   aiChatButtonText: {
     ...textStyles.h8,
-    color: colors.black,
+    color: colors.gray900,
   },
   aiSuggestButton: {
     height: 32,
@@ -4255,10 +4118,12 @@ const styles = StyleSheet.create({
     left: 8,
   },
   modalOverlay: {
+    ...modalMotion.overlay,
     flex: 1,
-    backgroundColor: colors.overlayBackground,
+    ...surfaces.overlay,
     justifyContent: "center",
     alignItems: "center",
+    padding: spacing.lgPlus,
   },
   calendarModalOverlay: {
     position: "absolute",
@@ -4280,42 +4145,40 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-start",
-    marginBottom: 18,
-    gap: 12,
+    gap: spacing.md,
   },
   memoModalTextGroup: {
     flex: 1,
   },
   memoModalTitle: {
-    ...textStyles.h3,
+    ...textStyles.h2,
+    color: colors.gray900,
   },
   memoModalDescription: {
-    ...textStyles.body4,
+    ...textStyles.body5,
     color: colors.gray700,
-    marginTop: 6,
+    marginTop: spacing.sm,
   },
   memoModalCloseButton: {
     width: 28,
     height: 28,
     alignItems: "center",
     justifyContent: "center",
-    marginTop: 2,
+    marginTop: spacing.xs,
   },
   memoModalFieldGroup: {
-    marginBottom: 18,
+    gap: spacing.sm,
   },
   memoModalLabel: {
     ...textStyles.h7,
-    color: colors.black,
-    marginBottom: 8,
+    color: colors.gray900,
   },
   memoModalInput: {
-    minHeight: 180,
+    minHeight: 120,
     borderWidth: 1,
-    borderColor: colors.gray400,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
+    borderColor: colors.gray350,
+    borderRadius: radii.mdPlus,
+    padding: spacing.lg,
     backgroundColor: colors.white,
     ...textStyles.body3,
     color: colors.gray900,
@@ -4323,26 +4186,26 @@ const styles = StyleSheet.create({
   memoModalActions: {
     flexDirection: "row",
     alignItems: "center",
-    columnGap: 10,
-    paddingTop: 4,
+    gap: spacing.md,
+    paddingTop: spacing.xs,
   },
   memoModalSecondaryButton: {
     flex: 1,
     height: 48,
-    borderRadius: 10,
-    backgroundColor: colors.gray200,
+    borderRadius: radii.md,
+    ...surfaces.muted,
     alignItems: "center",
     justifyContent: "center",
   },
   memoModalSecondaryButtonText: {
     ...textStyles.h6,
-    color: colors.black,
+    color: colors.gray900,
   },
   memoModalPrimaryButton: {
     flex: 1,
     height: 48,
-    borderRadius: 10,
-    backgroundColor: colors.primary,
+    borderRadius: radii.md,
+    ...surfaces.primary,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -4350,65 +4213,21 @@ const styles = StyleSheet.create({
     ...textStyles.h6,
     color: colors.white,
   },
-  accommodationRow: {
-    flexDirection: "row",
-    backgroundColor: colors.gray200,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.gray300,
-    height: 50,
-  },
-  accommodationLabel: {
-    width: 60,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: colors.white,
-    borderRightWidth: 1,
-    borderRightColor: colors.gray300,
-  },
-  accommodationLabelText: {
-    fontSize: 16,
-  },
-  itemDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 999,
-    backgroundColor: colors.dotAccommodation,
-    flexShrink: 0,
-  },
-  accommodationCell: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    borderRightWidth: 1,
-    borderRightColor: colors.gray300,
-  },
-  accommodationItem: {
-    backgroundColor: "#ff9500",
-    borderRadius: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    width: "90%",
-  },
-  accommodationName: {
-    color: colors.white,
-    fontSize: 10,
-    fontWeight: "600",
-  },
-  todayIconWrapper: {
-    marginRight: spacing.xs,
-  },
   weekHeaderRow: {
     flexDirection: "row",
     height: 70,
+    paddingBottom: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.gray200,
   },
   accommodationHeaderRow: {
     flexDirection: "row",
-    height: 40,
-    backgroundColor: "",
-    borderTopWidth: 0.5,
-    borderBottomWidth: 0.5,
-    borderTopColor: "#e0e0e0",
-    borderBottomColor: "#e0e0e0",
+    height: 37,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.gray200,
+  },
+  accommodationIcon: {
+    opacity: 0.55,
   },
   accommodationRowInner: {
     flex: 1,
@@ -4418,13 +4237,13 @@ const styles = StyleSheet.create({
   },
   eventTouchable: {
     flex: 1,
-    padding: 4,
-    paddingHorizontal: 8,
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.sm,
   },
   eventContentCol: {
     flex: 1,
     justifyContent: "flex-start",
-    gap: 2,
+    gap: spacing.xs,
   },
   eventTitleRow: {
     flexDirection: "row",
@@ -4439,9 +4258,6 @@ const styles = StyleSheet.create({
     minWidth: 0,
     opacity: 0.75,
   },
-  iconWrapper: {
-    flexShrink: 0,
-  },
   eventFlightTimeRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -4449,22 +4265,14 @@ const styles = StyleSheet.create({
     minWidth: 0,
     opacity: 0.8,
   },
-  dragEventContent: {
-    flex: 1,
-    justifyContent: "center",
-  },
-  dragEventTitleRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-  },
-  dragEventLocationRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    marginTop: 4,
-  },
   memoModalContainer: {
-    marginHorizontal: 16,
+    ...modalMotion.card,
+    width: 480,
+    maxWidth: "100%",
+    backgroundColor: colors.white,
+    borderRadius: radii["2xl"],
+    padding: spacing.xl,
+    gap: spacing.lg,
+    ...shadows.md,
   },
 });

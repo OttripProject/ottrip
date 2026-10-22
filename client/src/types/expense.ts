@@ -51,3 +51,13 @@ export const currencyLabels = {
   [ExpenseCurrency.GBP]: "£",
   [ExpenseCurrency.AUD]: "A$",
 };
+
+export const currencySymbols = {
+  [ExpenseCurrency.KRW]: "₩",
+  [ExpenseCurrency.USD]: "$",
+  [ExpenseCurrency.EUR]: "€",
+  [ExpenseCurrency.JPY]: "¥",
+  [ExpenseCurrency.CNY]: "CN¥",
+  [ExpenseCurrency.GBP]: "£",
+  [ExpenseCurrency.AUD]: "A$",
+};

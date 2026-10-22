@@ -6,6 +6,9 @@ import TripSegmentList from "@/components/trip/TripSegmentList";
 import BottomSheetModal from "@/ui/components/BottomSheetModal.native";
 import Input from "@/ui/components/input/Input";
 import { colors } from "@/ui/tokens/colors";
+import { radii } from "@/ui/tokens/radii";
+import { shadows } from "@/ui/tokens/shadows";
+import { spacing } from "@/ui/tokens/spacing";
 import { textStyles, typography } from "@/ui/tokens/typography";
 import { useEffect, useRef, useState } from "react";
 import {
@@ -130,14 +133,25 @@ export default function AddPlanModal({
 
   return (
     <>
-      <BottomSheetModal visible={visible} onClose={onClose} height={0.93}>
+      <BottomSheetModal visible={visible} onClose={onClose} height={0.94}>
         <View style={styles.container}>
           <View style={styles.header}>
-            <Text style={styles.headerTitle}>
-              {planToEdit ? "여행 수정" : "새로운 여행 만들기"}
-            </Text>
-            <Pressable onPress={onClose} style={styles.closeButton} hitSlop={8}>
-              <CloseIcon width={20} height={20} color={colors.gray700} />
+            <View style={styles.headerText}>
+              <Text style={styles.headerTitle}>
+                {planToEdit ? "여행 수정" : "새 여행 추가"}
+              </Text>
+              {!planToEdit && (
+                <Text style={styles.headerSubtitle}>
+                  구간별로 나라·도시·기간을 추가해보세요.
+                </Text>
+              )}
+            </View>
+            <Pressable
+              onPress={onClose}
+              style={styles.closeButton}
+              accessibilityLabel="닫기"
+            >
+              <CloseIcon width={24} height={24} color={colors.gray600} />
             </Pressable>
           </View>
 
@@ -155,15 +169,15 @@ export default function AddPlanModal({
               <Input
                 style={styles.nameInput}
                 placeholder="ex.도쿄 가을 여행"
-                placeholderTextColor={colors.gray500}
+                placeholderTextColor={colors.gray600}
                 value={tripData.name}
                 onChangeText={name => updateTripData({ name })}
                 maxLength={30}
               />
             </View>
 
-            <View style={styles.section}>
-              <View style={styles.labelRow}>
+            <View style={styles.segSection}>
+              <View style={styles.segLabelRow}>
                 <Text style={styles.segSectionLabel}>여행 구간</Text>
                 <Text style={styles.hint}>순서대로 추가하세요</Text>
               </View>
@@ -191,7 +205,9 @@ export default function AddPlanModal({
             <Pressable
               style={[
                 styles.submitBtn,
-                (isSubmitDisabled || isSubmitting) && styles.submitBtnDisabled,
+                isSubmitDisabled || isSubmitting
+                  ? styles.submitBtnDisabled
+                  : styles.submitBtnEnabled,
               ]}
               onPress={handleSubmit}
               disabled={isSubmitDisabled || isSubmitting}
@@ -226,21 +242,31 @@ const styles = StyleSheet.create({
   },
   header: {
     flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 16,
+    alignItems: "flex-start",
+    paddingHorizontal: spacing.xl,
+    paddingBottom: spacing.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.gray200,
+  },
+  headerText: {
+    flex: 1,
   },
   headerTitle: {
-    ...textStyles.h4,
-    color: colors.black,
+    ...textStyles.h3,
+    color: colors.paletteInk,
+  },
+  headerSubtitle: {
+    ...textStyles.body4,
+    marginTop: spacing.xs,
+    fontFamily: typography.fontFamily.pretendardMedium,
+    color: colors.paletteFg3,
   },
   closeButton: {
-    width: 32,
-    height: 32,
-    backgroundColor: colors.gray200,
-    borderRadius: 16,
+    width: 44,
+    height: 44,
+    marginTop: -spacing.sm,
+    marginRight: -spacing.sm,
+    borderRadius: radii.pill,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -248,88 +274,104 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingHorizontal: 20,
-    paddingBottom: 32,
+    paddingTop: spacing.xl,
+    paddingHorizontal: spacing.xl,
+    paddingBottom: spacing.lg,
   },
   section: {
-    marginBottom: 24,
+    marginBottom: spacing.xl,
+  },
+  segSection: {
+    marginBottom: spacing.lg,
   },
   labelRow: {
     flexDirection: "row",
     alignItems: "baseline",
-    marginBottom: 8,
+    marginBottom: spacing.sm,
+  },
+  segLabelRow: {
+    flexDirection: "row",
+    alignItems: "baseline",
+    marginBottom: spacing.md,
   },
   sectionLabel: {
-    ...textStyles.h8,
-    color: colors.black,
+    ...textStyles.h7,
+    fontFamily: typography.fontFamily.pretendardBold,
+    color: colors.paletteInk,
   },
   segSectionLabel: {
-    ...textStyles.h6,
-    color: colors.black,
+    ...textStyles.h5,
+    color: colors.paletteInk,
   },
   counter: {
+    ...textStyles.body5,
     marginLeft: "auto",
-    fontFamily: typography.fontFamily.poppinsMedium,
-    fontSize: 12,
-    lineHeight: 16,
-    color: colors.gray500,
+    fontFamily: typography.fontFamily.pretendardMedium,
+    fontVariant: ["tabular-nums"],
+    color: colors.paletteFg3,
   },
   hint: {
+    ...textStyles.body5,
     marginLeft: "auto",
-    ...textStyles.body6,
-    color: colors.gray500,
+    fontFamily: typography.fontFamily.pretendardMedium,
+    color: colors.paletteFg3,
   },
   nameInput: {
     width: "100%",
     borderWidth: 1,
-    borderColor: colors.gray300,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: 12,
-    fontFamily: typography.fontFamily.pretendardRegular,
-    fontSize: 14,
-    color: colors.gray900,
+    borderColor: colors.paletteLine,
+    borderRadius: radii.mdPlus,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.lg,
+    fontFamily: typography.fontFamily.pretendardMedium,
+    fontSize: textStyles.body2.fontSize,
+    color: colors.paletteInk,
     backgroundColor: colors.white,
   },
   footer: {
     flexDirection: "row",
-    gap: 10,
-    paddingHorizontal: 20,
-    paddingVertical: 16,
+    gap: spacing.md,
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.md,
     borderTopWidth: 1,
     borderTopColor: colors.gray200,
   },
   cancelBtn: {
-    flex: 1,
-    height: 52,
-    borderRadius: 14,
+    width: "38%",
+    height: 56,
+    borderRadius: radii.lgPlus,
     borderWidth: 1,
-    borderColor: colors.gray300,
+    borderColor: colors.paletteLine,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: colors.white,
+    ...shadows.xs,
   },
   cancelText: {
-    ...textStyles.h7,
-    color: colors.black,
+    ...textStyles.h5,
+    color: colors.paletteInk,
   },
   submitBtn: {
     flex: 1,
-    height: 52,
-    borderRadius: 14,
+    height: 56,
+    borderRadius: radii.lgPlus,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: colors.gray900,
+  },
+  submitBtnEnabled: {
+    backgroundColor: colors.paletteInk,
+    experimental_backgroundImage: `linear-gradient(180deg, ${colors.gradientInk[0]} 0%, ${colors.gradientInk[1]} 100%)`,
+    ...shadows.darkRaised,
   },
   submitBtnDisabled: {
-    backgroundColor: colors.gray300,
+    backgroundColor: colors.paletteFill2,
   },
   submitText: {
-    ...textStyles.h7,
+    ...textStyles.h5,
     color: colors.white,
   },
   submitTextDisabled: {
-    color: colors.gray600,
+    color: colors.gray500,
   },
 });

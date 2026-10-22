@@ -3,9 +3,18 @@ import type {
   LocalFile,
   StagedDocumentAnalyzePayload,
 } from "@/types/api";
-import { useEffect, useRef } from "react";
-import { Animated, Easing, StyleSheet, Text, View } from "react-native";
+import MotionPressable, { MotionIcon } from "@/ui/components/MotionPressable";
+import { colors } from "@/ui/tokens/colors";
+import { radii } from "@/ui/tokens/radii";
+import { spacing } from "@/ui/tokens/spacing";
+import { surfaces } from "@/ui/tokens/surfaces";
+import { textStyles } from "@/ui/tokens/typography";
+import { useState } from "react";
+import { StyleSheet, Text, View } from "react-native";
+import CloseXIcon from "../../../assets/close_x.svg";
+import { type DetailsHeader, DetailsHeaderContext } from "./DetailsHeaderContext";
 import PanelLayout from "./PanelLayout";
+import PanelTabSwitcher from "./PanelTabSwitcher";
 import AccommodationSection from "./accommodations/AccommodationSection";
 import FlightSection from "./flights/FlightSection";
 import ItinerarySection from "./itineraries/ItinerarySection";
@@ -91,21 +100,7 @@ export default function DetailsPanel({
   carryoverPendingFiles,
   onConsumeCarryoverPendingFiles,
 }: DetailsPanelProps) {
-  const fadeAnim = useRef(new Animated.Value(1)).current;
-  const contentKey = `${activeTab ?? ""}-${selectedItinerary?.id ?? ""}-${selectedFlight?.id ?? ""}-${selectedAccommodation?.id ?? ""}`;
-  const prevKeyRef = useRef(contentKey);
-
-  useEffect(() => {
-    if (prevKeyRef.current === contentKey) return;
-    prevKeyRef.current = contentKey;
-    fadeAnim.setValue(0);
-    Animated.timing(fadeAnim, {
-      toValue: 1,
-      duration: 1500,
-      easing: Easing.out(Easing.quad),
-      useNativeDriver: true,
-    }).start();
-  }, [contentKey]);
+  const [header, setHeader] = useState<DetailsHeader | null>(null);
 
   if (!planData?.plan) {
     return (
@@ -260,9 +255,30 @@ export default function DetailsPanel({
 
   return (
     <PanelLayout style={styles.container}>
-      <Animated.View style={[styles.content, { opacity: fadeAnim }]}>
-        {renderContent()}
-      </Animated.View>
+      <View style={styles.content}>
+        {header && (
+          <>
+            <View style={styles.titleRow}>
+              <Text style={styles.title}>{header.title}</Text>
+              <MotionPressable
+                onPress={header.onClose}
+                style={styles.closeButton}
+                accessibilityLabel="닫기"
+              >
+                <MotionIcon>
+                  <CloseXIcon width={12} height={12} color={colors.gray600} />
+                </MotionIcon>
+              </MotionPressable>
+            </View>
+            {header.showTabs && (
+              <PanelTabSwitcher activeTab={activeTab} onTabChange={onTabChange} />
+            )}
+          </>
+        )}
+        <DetailsHeaderContext.Provider value={setHeader}>
+          {renderContent()}
+        </DetailsHeaderContext.Provider>
+      </View>
     </PanelLayout>
   );
 }
@@ -275,6 +291,25 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     minHeight: 0,
+  },
+  titleRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.xl,
+    paddingBottom: spacing.lg,
+  },
+  title: {
+    ...textStyles.h5,
+  },
+  closeButton: {
+    ...surfaces.subtle,
+    width: 32,
+    height: 32,
+    borderRadius: radii.pill,
+    justifyContent: "center",
+    alignItems: "center",
   },
   placeholder: {
     flex: 1,

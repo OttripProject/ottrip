@@ -36,7 +36,6 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from "react-native";
 import { KeyboardAwareScrollView, type KeyboardAwareScrollViewRef } from "react-native-keyboard-controller";
@@ -495,6 +494,7 @@ export default function AccommodationEditModal({
               숙소명<Text style={styles.required}>*</Text>
             </Text>
             <Input
+              variant="filled"
               value={formData.name}
               onChangeText={text => setFormData({ ...formData, name: text })}
               style={[styles.input, !accommodation && styles.inputBorderless]}
@@ -503,7 +503,8 @@ export default function AccommodationEditModal({
 
           <View style={styles.inputGroup}>
             <Text style={styles.label}>내용 (메모)</Text>
-            <TextInput
+            <Input
+              variant="filled"
               value={formData.description}
               onChangeText={text =>
                 setFormData({ ...formData, description: text })
@@ -672,7 +673,7 @@ export default function AccommodationEditModal({
                   placeholder="0"
                   placeholderTextColor={colors.gray500}
                   keyboardType="number-pad"
-                  variant="filled"
+                  variant="bare"
                   containerStyle={styles.amountInputContainer}
                   style={styles.amountInputStyle}
                 />
@@ -894,7 +895,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.gray200,
   },
   inputBorderless: {
-    borderWidth: 0,
     borderColor: "transparent",
   },
   textArea: {
@@ -908,7 +908,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.gray200,
   },
   textAreaBorderless: {
-    borderWidth: 0,
     borderColor: "transparent",
   },
   row: {
@@ -997,6 +996,8 @@ const styles = StyleSheet.create({
   },
   amountInputStyle: {
     flex: 1,
+    height: 44,
+    lineHeight: undefined,
     textAlign: "left",
     backgroundColor: "transparent",
     fontFamily: typography.fontFamily.pretendardSemiBold,

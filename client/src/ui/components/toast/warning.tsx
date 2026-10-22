@@ -25,7 +25,7 @@ export default function WarningBanner({
   const scale = useRef(new Animated.Value(0.8)).current;
 
   useEffect(() => {
-    let timer: NodeJS.Timeout | null = null;
+    let timer: ReturnType<typeof setTimeout> | null = null;
 
     if (visible) {
       Animated.parallel([

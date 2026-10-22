@@ -9,7 +9,7 @@ interface NicknameValidationResult {
 export const useNicknameValidation = (currentNickname?: string) => {
   const [nicknameError, setNicknameError] = useState<string | null>(null);
   const [checkingNickname, setCheckingNickname] = useState(false);
-  const checkNicknameTimer = useRef<NodeJS.Timeout | null>(null);
+  const checkNicknameTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const validateNickname = useCallback(
     (nickname: string): NicknameValidationResult => {

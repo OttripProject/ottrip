@@ -14,7 +14,14 @@ import {
   ExpenseCurrency,
   PLAN_ENTITY_KIND,
 } from "@/types/api";
+import MotionPressable, { MotionIcon } from "@/ui/components/MotionPressable";
+import Input from "@/ui/components/input/Input";
+import { modalMotion } from "@/ui/effects/modalMotion";
 import { colors } from "@/ui/tokens/colors";
+import { radii } from "@/ui/tokens/radii";
+import { shadows } from "@/ui/tokens/shadows";
+import { spacing } from "@/ui/tokens/spacing";
+import { surfaces } from "@/ui/tokens/surfaces";
 import { textStyles } from "@/ui/tokens/typography";
 import dayjs from "dayjs";
 import { LinearGradient } from "expo-linear-gradient";
@@ -27,10 +34,11 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   View,
+  type ViewStyle,
 } from "react-native";
 import CheckWhiteIcon from "../../../assets/check_white.svg";
+import CloseSmIcon from "../../../assets/close_sm.svg";
 import FileIcon from "../../../assets/files.svg";
 import LeftArrowIcon from "../../../assets/left_arrow.svg";
 import AttachmentDocIcon from "../../../assets/mobile_attachment_document.svg";
@@ -72,8 +80,8 @@ export type Message =
 
 export const AI_INTRO_MESSAGE: Message = {
   role: "ai-intro",
-  text: "안녕하세요! 어떤 일정을 추가해 드릴까요?\n텍스트로 알려주시거나, 예약 메일·티켓 이미지를 첨부하면 자동으로 정리해 드려요.\n예를 들어, 이렇게 입력해 보세요.",
-  suggestions: ["4월 15일 오후 2시에 루브르 박물관 가고 싶어"],
+  text: "안녕하세요! 어떤 일정을 추가해 드릴까요?\n텍스트로 알려주시거나, 예약 메일·티켓 이미지를 첨부하면 자동으로 정리해 드려요.\n\n예를 들어, 이렇게 입력해 보세요.",
+  suggestions: ["4월 15일 오후 1시부터 1시간, 점심 약속 추가해줘"],
 };
 
 const WEB_FILE_ACCEPT =
@@ -189,6 +197,8 @@ export default function AddScheduleWithAiModal({
   );
   const resultDraftEditorRef = useRef<AiAnalyzeDraftEditorRef>(null);
 
+  const sendDisabled = loading || !message.trim();
+
   const handleSend = async () => {
     const text = message.trim();
     if (!text || loading) return;
@@ -212,7 +222,7 @@ export default function AddScheduleWithAiModal({
             role: "ai-unclear",
             title: "일정 정보를 찾지 못했어요",
             body: "날짜와 시간을 포함해서 다시 알려주세요.",
-            suggestions: ["4월 15일 오후 2시에 루브르 박물관 가고 싶어"],
+            suggestions: ["4월 15일 오후 1시부터 1시간, 점심 약속 추가해줘"],
           },
         ]);
       }
@@ -658,7 +668,7 @@ export default function AddScheduleWithAiModal({
     <Modal
       visible={visible}
       transparent
-      animationType="fade"
+      animationType="none"
       onRequestClose={handleClose}
     >
       <View style={styles.overlay}>
@@ -788,14 +798,20 @@ export default function AddScheduleWithAiModal({
                     대화 또는 첨부파일을 AI가 분석해 일정을 등록해요.
                   </Text>
                 </View>
-                <Pressable
+                <MotionPressable
                   style={styles.closeButton}
                   onPress={handleClose}
                   accessibilityRole="button"
                   accessibilityLabel="닫기"
                 >
-                  <CloseIcon width={16} height={16} color={colors.black} />
-                </Pressable>
+                  <MotionIcon>
+                    <CloseSmIcon
+                      width={16}
+                      height={16}
+                      color={colors.gray900}
+                    />
+                  </MotionIcon>
+                </MotionPressable>
               </View>
 
               <View ref={dragZoneRef} style={styles.chatScrollWrapper}>
@@ -907,18 +923,23 @@ export default function AddScheduleWithAiModal({
                         <View key={idx} style={styles.aiBubbleWrap}>
                           <View style={styles.aiBubble}>
                             <Text style={styles.aiBubbleText}>{msg.text}</Text>
-                            <View style={styles.unclearSuggestions}>
+                            <View style={styles.introSuggestions}>
                               {msg.suggestions.map((s, i) => (
-                                <Pressable
+                                <MotionPressable
                                   key={i}
                                   style={styles.introSuggestionButton}
                                   onPress={() => setMessage(s)}
                                 >
+                                  <Text style={styles.introSuggestionQuote}>
+                                    “
+                                  </Text>
                                   <Text
                                     style={styles.introSuggestionText}
                                     numberOfLines={1}
-                                  >{`"${s}"`}</Text>
-                                </Pressable>
+                                  >
+                                    {s}
+                                  </Text>
+                                </MotionPressable>
                               ))}
                             </View>
                           </View>
@@ -1028,11 +1049,10 @@ export default function AddScheduleWithAiModal({
 
               <View style={styles.footer}>
                 {hiddenFileInput}
-                <Pressable
-                  style={({ pressed }) => [
+                <MotionPressable
+                  style={[
                     styles.attachButton,
                     loading && styles.attachButtonDisabled,
-                    pressed && !loading && styles.attachButtonPressed,
                   ]}
                   onPress={() => {
                     if (!loading) fileInputRef.current?.click();
@@ -1041,11 +1061,15 @@ export default function AddScheduleWithAiModal({
                   accessibilityRole="button"
                   accessibilityLabel="파일 첨부"
                 >
-                  <FileIcon width={20} height={20} color={colors.gray600} />
-                </Pressable>
-                <TextInput
+                  <MotionIcon>
+                    <FileIcon width={20} height={20} color={colors.gray600} />
+                  </MotionIcon>
+                </MotionPressable>
+                <Input
+                  variant="filled"
+                  containerStyle={styles.inputContainer}
                   style={styles.input}
-                  placeholder="일정을 입력하거나 첨부파일을 추가해주세요..."
+                  placeholder="일정을 입력하거나 파일을 첨부하세요..."
                   placeholderTextColor={colors.gray600}
                   value={message}
                   onChangeText={setMessage}
@@ -1053,23 +1077,24 @@ export default function AddScheduleWithAiModal({
                   onSubmitEditing={handleSend}
                   editable={!loading}
                 />
-                <Pressable
-                  style={({ pressed }) => [
+                <MotionPressable
+                  style={[
                     styles.sendButton,
-                    loading && styles.sendButtonDisabled,
-                    pressed && !loading && styles.sendButtonPressed,
+                    sendDisabled && styles.sendButtonDisabled,
                   ]}
                   onPress={handleSend}
-                  disabled={loading}
+                  disabled={sendDisabled}
                   accessibilityRole="button"
                   accessibilityLabel="전송"
                 >
                   {loading ? (
                     <ActivityIndicator size="small" color={colors.white} />
                   ) : (
-                    <SendIcon width={20} height={20} color={colors.white} />
+                    <MotionIcon>
+                      <SendIcon width={20} height={20} color={colors.white} />
+                    </MotionIcon>
                   )}
-                </Pressable>
+                </MotionPressable>
               </View>
             </>
           )}
@@ -1081,26 +1106,24 @@ export default function AddScheduleWithAiModal({
 
 const styles = StyleSheet.create({
   overlay: {
+    ...modalMotion.overlay,
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.45)",
+    ...surfaces.overlay,
     alignItems: "center",
     justifyContent: "center",
-    padding: 20,
+    padding: spacing.lgPlus,
   },
   card: {
-    width: "100%",
-    maxWidth: 420,
-    height: 640,
-    maxHeight: "90%" as any,
+    ...modalMotion.card,
+    width: 420,
+    maxWidth: "100%",
+    height: 600,
+    maxHeight: "min(680px, calc(100dvh - 80px))" as ViewStyle["maxHeight"],
     backgroundColor: colors.white,
-    borderRadius: 20,
+    borderRadius: radii["2xl"],
     overflow: "hidden",
     flexDirection: "column",
-    shadowColor: colors.black,
-    shadowOffset: { width: 0, height: 24 },
-    shadowOpacity: 0.22,
-    shadowRadius: 60,
-    elevation: 24,
+    ...shadows.xl,
   },
   resultHeader: {
     paddingTop: 20,
@@ -1195,25 +1218,26 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "flex-start",
     justifyContent: "space-between",
-    gap: 10,
-    paddingHorizontal: 22,
-    paddingTop: 20,
-    paddingBottom: 12,
+    gap: spacing.md,
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.xl,
+    paddingBottom: spacing.lg,
   },
   titleBlock: {
     flex: 1,
   },
   headerTitle: {
-    ...textStyles.h4,
+    ...textStyles.h2,
+    color: colors.gray900,
   },
   subtitle: {
     ...textStyles.body5,
-    marginTop: 4,
-    color: colors.gray600,
+    marginTop: spacing.xs,
+    color: colors.gray700,
   },
   closeButton: {
-    width: 26,
-    height: 26,
+    width: 32,
+    height: 32,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -1226,10 +1250,10 @@ const styles = StyleSheet.create({
   },
   chatScrollContent: {
     flexGrow: 1,
-    paddingHorizontal: 16,
-    paddingTop: 10,
-    paddingBottom: 10,
-    gap: 10,
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.lg,
+    gap: spacing.md,
   },
   dragOverlay: {
     position: "absolute",
@@ -1259,13 +1283,11 @@ const styles = StyleSheet.create({
   },
   aiBubble: {
     maxWidth: "85%",
-    backgroundColor: colors.primary,
-    borderTopLeftRadius: 0,
-    borderTopRightRadius: 14,
-    borderBottomLeftRadius: 14,
-    borderBottomRightRadius: 14,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
+    backgroundColor: colors.toastCheck,
+    borderRadius: radii.lgPlus,
+    borderBottomLeftRadius: radii.xs,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
   },
   aiBubbleRow: {
     flexDirection: "row",
@@ -1273,7 +1295,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   aiBubbleText: {
-    ...textStyles.body4,
+    ...textStyles.body5,
     color: colors.white,
   },
   unclearBubble: {
@@ -1326,13 +1348,23 @@ const styles = StyleSheet.create({
   introSuggestionButton: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    gap: spacing.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
     borderWidth: 1,
     borderColor: "rgba(255, 255, 255, 0.35)",
     backgroundColor: "rgba(255, 255, 255, 0.14)",
-    borderRadius: 10,
+    borderRadius: radii.md,
+  },
+  introSuggestions: {
+    gap: spacing.sm,
+    marginTop: spacing.md,
+  },
+  introSuggestionQuote: {
+    ...textStyles.h6,
+    color: colors.white,
+    opacity: 0.7,
+    marginTop: -2,
   },
   introSuggestionText: {
     ...textStyles.body5,
@@ -1384,8 +1416,8 @@ const styles = StyleSheet.create({
   attachButton: {
     width: 40,
     height: 40,
-    borderRadius: 10,
-    backgroundColor: colors.gray200,
+    borderRadius: radii.md,
+    ...surfaces.subtle,
     alignItems: "center",
     justifyContent: "center",
     flexShrink: 0,
@@ -1393,32 +1425,28 @@ const styles = StyleSheet.create({
   attachButtonDisabled: {
     opacity: 0.5,
   },
-  attachButtonPressed: {
-    opacity: 0.7,
-  },
   input: {
-    flex: 1,
     height: 40,
-    backgroundColor: colors.gray200,
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    ...textStyles.body4,
-    outlineStyle: "none",
-  } as any,
+    borderRadius: radii.md,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: 0,
+    ...textStyles.body5,
+    color: colors.gray900,
+  },
+  inputContainer: {
+    flex: 1,
+  },
   sendButton: {
     width: 40,
     height: 40,
-    borderRadius: 10,
-    backgroundColor: colors.black,
+    borderRadius: radii.md,
+    ...surfaces.primary,
     alignItems: "center",
     justifyContent: "center",
     flexShrink: 0,
   },
   sendButtonDisabled: {
-    backgroundColor: colors.gray400,
-  },
-  sendButtonPressed: {
-    opacity: 0.8,
+    opacity: 0.4,
   },
   resultCard: {
     maxWidth: "85%",

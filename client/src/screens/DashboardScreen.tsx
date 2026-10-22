@@ -13,9 +13,9 @@ import type {
   LocalFile,
   StagedDocumentAnalyzePayload,
 } from "@/types/api";
-import GradientBackground from "@/ui/components/GradientBackground";
 import { breakpoints } from "@/ui/tokens/breakpoints";
 import { colors } from "@/ui/tokens/colors";
+import { spacing } from "@/ui/tokens/spacing";
 import { textStyles } from "@/ui/tokens/typography";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import dayjs from "dayjs";
@@ -204,7 +204,7 @@ export default function DashboardScreen() {
     }
   }, [targetRight]);
 
-  const headerHeight = 56;
+  const headerHeight = 56 + spacing.lg;
   const verticalPadding = 16 + 20;
   const availableHeight = Math.max(
     360,
@@ -689,13 +689,7 @@ export default function DashboardScreen() {
   };
 
   return (
-    <GradientBackground
-      colors={["#D7D0FF33", "#CBDDFF80"]}
-      locations={[0.2, 0.502]}
-      start={{ x: 0.5, y: 0 }}
-      end={{ x: 0.5, y: 1 }}
-      style={styles.root}
-    >
+    <View style={styles.root}>
       {/* 1. 헤더 모달 */}
       <View style={styles.headerModal}>
         <HeaderPanel />
@@ -1063,7 +1057,7 @@ export default function DashboardScreen() {
               <Animated.View
                 style={[
                   styles.rightArea,
-                  { flex: animRightFlex, height: availableHeight, overflow: "hidden" },
+                  { flex: animRightFlex, height: availableHeight },
                 ]}
                 pointerEvents={isPanelActive ? "auto" : "none"}
               >
@@ -1153,13 +1147,14 @@ export default function DashboardScreen() {
         showToast("일정이 입력 되었어요. 추천 시간을 확인하고 내 일정에 맞게 조정해 보세요.", { icon: "info", duration: 5000 });
       }}
     />
-    </GradientBackground>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   root: {
     flex: 1,
+    backgroundColor: colors.gray200,
   },
   container: {
     flex: 1,
@@ -1198,12 +1193,10 @@ const styles = StyleSheet.create({
     gap: 16,
     minHeight: 0,
     flexShrink: 1,
-    overflow: "hidden",
   },
   rightArea: {
     minHeight: 0,
     flexShrink: 1,
-    overflow: "hidden",
   },
   bannerWrapper: {
     paddingTop: 0,
@@ -1213,18 +1206,15 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: 16,
     minHeight: 0,
-    overflow: "hidden",
   },
   scheduleModal: {
     flex: 1,
     minHeight: 0,
-    overflow: "hidden",
   },
   bottomRow: {
     flexDirection: "row",
     gap: 16,
     minHeight: 0,
-    overflow: "hidden",
   },
   bottomColumn: {
     flexDirection: "column",
@@ -1233,7 +1223,6 @@ const styles = StyleSheet.create({
   detailsModal: {
     flex: 1,
     minHeight: 0,
-    overflow: "hidden",
   },
   expensesModal: {
     flex: 1,
@@ -1241,9 +1230,7 @@ const styles = StyleSheet.create({
   aiModal: {
     flex: 1,
   },
-  festivalsModal: {
-    overflow: "hidden",
-  },
+  festivalsModal: {},
   loadingContainer: {
     flex: 1,
     justifyContent: "center",
