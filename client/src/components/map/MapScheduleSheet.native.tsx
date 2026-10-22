@@ -39,6 +39,7 @@ interface MapScheduleSheetProps {
   expandedHeight: number;
   expanded: boolean;
   onExpandedChange: (expanded: boolean) => void;
+  onCollapsedHeightChange: (height: number) => void;
 }
 
 export const getStopLabel = (stop: MapStop, dayIndex: number | null) =>
@@ -54,6 +55,7 @@ export default function MapScheduleSheet({
   expandedHeight,
   expanded,
   onExpandedChange,
+  onCollapsedHeightChange,
 }: MapScheduleSheetProps) {
   const insets = useSafeAreaInsets();
   const [collapsedHeight, setCollapsedHeight] = useState(0);
@@ -116,7 +118,10 @@ export default function MapScheduleSheet({
     >
       <View
         {...panResponder.panHandlers}
-        onLayout={e => setCollapsedHeight(e.nativeEvent.layout.height)}
+        onLayout={e => {
+          setCollapsedHeight(e.nativeEvent.layout.height);
+          onCollapsedHeightChange(e.nativeEvent.layout.height);
+        }}
       >
         <View style={styles.handleArea}>
           <View style={styles.handle} />

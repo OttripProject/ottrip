@@ -198,9 +198,11 @@ export default function MapScheduleView({
   const [metersPerPixel, setMetersPerPixel] = useState<number | null>(null);
   const [expanded, setExpanded] = useState(true);
   const [containerHeight, setContainerHeight] = useState(0);
+  const [collapsedHeight, setCollapsedHeight] = useState(0);
 
   const plan = planData.plan ?? selectedPlan;
   const expandedHeight = containerHeight * EXPANDED_RATIO;
+  const sheetHeight = expanded ? expandedHeight : collapsedHeight;
 
   const dates = useMemo(() => {
     if (!plan) return [];
@@ -267,7 +269,7 @@ export default function MapScheduleView({
       edgePadding: {
         top: toPadding(CONTROL_SIZE * 2 + spacing.xl),
         right: toPadding(CONTROL_SIZE + spacing.xl),
-        bottom: toPadding(expandedHeight + spacing.xl),
+        bottom: toPadding(spacing.xl),
         left: toPadding(spacing.xl),
       },
       animated: true,
@@ -301,6 +303,7 @@ export default function MapScheduleView({
           provider={PROVIDER_GOOGLE}
           style={StyleSheet.absoluteFill}
           toolbarEnabled={false}
+          mapPadding={{ top: 0, right: 0, bottom: sheetHeight, left: 0 }}
           onPress={() => setSelectedKey(null)}
           onRegionChangeComplete={region => {
             if (mapWidth === 0) return;
@@ -396,6 +399,7 @@ export default function MapScheduleView({
             expandedHeight={expandedHeight}
             expanded={expanded}
             onExpandedChange={setExpanded}
+            onCollapsedHeightChange={setCollapsedHeight}
           />
         )}
       </View>
