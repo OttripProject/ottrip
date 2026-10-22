@@ -1,3 +1,4 @@
+import type { Accommodation, Itinerary } from "@/types/api";
 import { colors } from "@/ui/tokens/colors";
 import { radii } from "@/ui/tokens/radii";
 import { shadows } from "@/ui/tokens/shadows";
@@ -26,7 +27,10 @@ export interface MapStop {
   color: string;
   tint: string;
   placeName?: string;
+  address?: string;
   coordinate?: { latitude: number; longitude: number };
+  itinerary?: Itinerary;
+  accommodation?: Accommodation;
 }
 
 interface MapScheduleSheetProps {

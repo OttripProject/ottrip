@@ -2,9 +2,18 @@ import MapScheduleSheet, {
   type MapStop,
   getStopLabel,
 } from "@/components/map/MapScheduleSheet.native";
+import MapStopCard from "@/components/map/MapStopCard.native";
+import AccommodationDetailModal from "@/components/modals/mobile/AccommodationDetailModal.native";
+import ItineraryDetailModal from "@/components/modals/mobile/ItineraryDetailModal.native";
 import { useSelectedPlan } from "@/contexts/SelectedPlanContext";
 import { usePlanDataQuery } from "@/hooks/usePlanDataQuery";
-import type { Accommodation, Itinerary, Location } from "@/types/api";
+import type {
+  Accommodation,
+  Attachment,
+  Expense,
+  Itinerary,
+  Location,
+} from "@/types/api";
 import {
   ItineraryCategory,
   itineraryCategoryColors,
@@ -95,7 +104,9 @@ const toItineraryStop = (
     color: itineraryCategoryColors[category],
     tint: itineraryCategoryTints[category],
     placeName: itinerary.location?.name,
+    address: itinerary.location?.address,
     coordinate: toCoordinate(itinerary.location),
+    itinerary,
   };
 };
 
@@ -112,7 +123,9 @@ const toAccommodationStop = (
   color: colors.accommodationText,
   tint: colors.accommodationBg,
   placeName: accommodation.location?.name,
+  address: accommodation.location?.address,
   coordinate: toCoordinate(accommodation.location),
+  accommodation,
 });
 
 const buildDayStops = (
@@ -183,6 +196,36 @@ function StopMarker({
   );
 }
 
+function StopDetailModals({
+  stop,
+  expenses,
+  attachments,
+  onClose,
+}: {
+  stop: MapStop | null;
+  expenses: Expense[];
+  attachments: Attachment[];
+  onClose: () => void;
+}) {
+  return (
+    <>
+      <ItineraryDetailModal
+        visible={!!stop?.itinerary}
+        onClose={onClose}
+        itinerary={stop?.itinerary ?? null}
+        planExpenses={expenses}
+        attachments={attachments}
+      />
+      <AccommodationDetailModal
+        visible={!!stop?.accommodation}
+        onClose={onClose}
+        accommodation={stop?.accommodation ?? null}
+        attachments={attachments}
+      />
+    </>
+  );
+}
+
 export default function MapScheduleView({
   onClose,
   onPlanPress,
@@ -193,6 +236,8 @@ export default function MapScheduleView({
   const mapRef = useRef<MapView>(null);
   const [dayIndex, setDayIndex] = useState<number | null>(null);
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
+  const [cardHeight, setCardHeight] = useState(0);
+  const [detailStop, setDetailStop] = useState<MapStop | null>(null);
   const [routeVisible, setRouteVisible] = useState(true);
   const [mapWidth, setMapWidth] = useState(0);
   const [metersPerPixel, setMetersPerPixel] = useState<number | null>(null);
@@ -280,8 +325,14 @@ export default function MapScheduleView({
     fitAll();
   }, [fitAll]);
 
+  const selectedStop = stops.find(stop => stop.key === selectedKey) ?? null;
+  const cardVisible = !!selectedStop && !expanded;
+  const mapBottomPadding =
+    sheetHeight + (cardVisible ? cardHeight + spacing.lg : 0);
+
   const focusStop = (stop: MapStop) => {
     setSelectedKey(stop.key);
+    setExpanded(false);
     if (!stop.coordinate) return;
     mapRef.current?.animateCamera(
       { center: stop.coordinate, zoom: 15 },
@@ -303,7 +354,12 @@ export default function MapScheduleView({
           provider={PROVIDER_GOOGLE}
           style={StyleSheet.absoluteFill}
           toolbarEnabled={false}
-          mapPadding={{ top: 0, right: 0, bottom: sheetHeight, left: 0 }}
+          mapPadding={{
+            top: 0,
+            right: 0,
+            bottom: mapBottomPadding,
+            left: 0,
+          }}
           onPress={() => setSelectedKey(null)}
           onRegionChangeComplete={region => {
             if (mapWidth === 0) return;
@@ -338,10 +394,7 @@ export default function MapScheduleView({
                 stop={{ ...stop, coordinate: stop.coordinate }}
                 label={label}
                 selected={selected}
-                onPress={() => {
-                  setSelectedKey(stop.key);
-                  setExpanded(true);
-                }}
+                onPress={() => focusStop(stop)}
               />
             );
           })}
@@ -385,6 +438,15 @@ export default function MapScheduleView({
           </Pressable>
         </View>
 
+        {cardVisible && (
+          <MapStopCard
+            stop={selectedStop}
+            style={[styles.card, { bottom: collapsedHeight + spacing.lg }]}
+            onHeightChange={setCardHeight}
+            onDetailPress={() => setDetailStop(selectedStop)}
+          />
+        )}
+
         {expandedHeight > 0 && (
           <MapScheduleSheet
             dayCount={dates.length}
@@ -403,6 +465,13 @@ export default function MapScheduleView({
           />
         )}
       </View>
+
+      <StopDetailModals
+        stop={detailStop}
+        expenses={planData.expenses}
+        attachments={planData.attachments}
+        onClose={() => setDetailStop(null)}
+      />
     </View>
   );
 }
@@ -452,6 +521,11 @@ const styles = StyleSheet.create({
     ...textStyles.h6,
     flexShrink: 1,
     color: colors.paletteInk,
+  },
+  card: {
+    position: "absolute",
+    left: spacing.lg,
+    right: spacing.lg,
   },
   sideControls: {
     position: "absolute",
