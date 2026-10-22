@@ -29,6 +29,7 @@ import {
   Text,
   View,
 } from "react-native";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 import MapView, { Marker, PROVIDER_GOOGLE, Polyline } from "react-native-maps";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import BackIcon from "../../../assets/left_arrow.svg";
@@ -304,7 +305,7 @@ export default function MapScheduleView({
   };
 
   return (
-    <View
+    <GestureHandlerRootView
       style={[styles.container, { paddingTop: insets.top }]}
       onLayout={e => setContainerHeight(e.nativeEvent.layout.height)}
     >
@@ -436,7 +437,7 @@ export default function MapScheduleView({
         planData={planData}
         onClose={() => setDetailStop(null)}
       />
-    </View>
+    </GestureHandlerRootView>
   );
 }
 

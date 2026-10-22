@@ -4,16 +4,15 @@ import { radii } from "@/ui/tokens/radii";
 import { shadows } from "@/ui/tokens/shadows";
 import { spacing } from "@/ui/tokens/spacing";
 import { textStyles, typography } from "@/ui/tokens/typography";
-import { useEffect, useMemo, useRef, useState } from "react";
-import {
-  Animated,
-  PanResponder,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import { useEffect, useRef, useState } from "react";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Gesture, GestureDetector } from "react-native-gesture-handler";
+import Animated, {
+  runOnJS,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export interface MapStop {
@@ -64,17 +63,15 @@ export default function MapScheduleSheet({
   const insets = useSafeAreaInsets();
   const [collapsedHeight, setCollapsedHeight] = useState(0);
   const offset = expandedHeight - collapsedHeight;
-  const translateY = useRef(new Animated.Value(0)).current;
-  const dragStart = useRef(0);
+  const translateY = useSharedValue(0);
+  const dragStart = useSharedValue(0);
+  const dragging = useSharedValue(false);
+  const scrollY = useSharedValue(0);
   const listRef = useRef<ScrollView>(null);
   const rowOffsets = useRef(new Map<string, number>());
 
   useEffect(() => {
-    Animated.timing(translateY, {
-      toValue: expanded ? 0 : offset,
-      duration: 200,
-      useNativeDriver: true,
-    }).start();
+    translateY.value = withTiming(expanded ? 0 : offset, { duration: 200 });
   }, [expanded, offset, translateY]);
 
   useEffect(() => {
@@ -83,153 +80,166 @@ export default function MapScheduleSheet({
     if (y !== undefined) listRef.current?.scrollTo({ y, animated: true });
   }, [selectedKey]);
 
-  const panResponder = useMemo(
-    () =>
-      PanResponder.create({
-        onMoveShouldSetPanResponderCapture: (_, g) =>
-          Math.abs(g.dy) > 4 && Math.abs(g.dy) > Math.abs(g.dx),
-        onPanResponderGrant: () => {
-          dragStart.current = expanded ? 0 : offset;
-        },
-        onPanResponderMove: (_, g) => {
-          translateY.setValue(
-            Math.min(Math.max(dragStart.current + g.dy, 0), offset),
-          );
-        },
-        onPanResponderRelease: (_, g) => {
-          const position = dragStart.current + g.dy;
-          const next = Math.abs(g.vy) > 0.5 ? g.vy < 0 : position < offset / 2;
-          if (next === expanded) {
-            Animated.timing(translateY, {
-              toValue: next ? 0 : offset,
-              duration: 200,
-              useNativeDriver: true,
-            }).start();
-          }
-          onExpandedChange(next);
-        },
-      }),
-    [expanded, offset, translateY, onExpandedChange],
-  );
+  const createPan = (fromList: boolean) =>
+    Gesture.Pan()
+      .activeOffsetY([-8, 8])
+      .failOffsetX([-12, 12])
+      .onStart(() => {
+        dragStart.value = translateY.value;
+        dragging.value = !fromList || scrollY.value <= 0;
+      })
+      .onUpdate(e => {
+        if (!dragging.value) return;
+        translateY.value = Math.min(
+          Math.max(dragStart.value + e.translationY, 0),
+          offset,
+        );
+      })
+      .onEnd(e => {
+        if (!dragging.value) return;
+        const position = dragStart.value + e.translationY;
+        const next =
+          Math.abs(e.velocityY) > 500 ? e.velocityY < 0 : position < offset / 2;
+        translateY.value = withTiming(next ? 0 : offset, { duration: 200 });
+        runOnJS(onExpandedChange)(next);
+      });
+
+  const chipsGesture = Gesture.Native();
+  const headerPan =
+    createPan(false).simultaneousWithExternalGesture(chipsGesture);
+  const listGesture = Gesture.Simultaneous(createPan(true), Gesture.Native());
+
+  const sheetStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: translateY.value }],
+  }));
 
   const mappedCount = stops.filter(stop => stop.coordinate).length;
 
   return (
     <Animated.View
-      style={[
-        styles.sheet,
-        { height: expandedHeight, transform: [{ translateY }] },
-      ]}
+      style={[styles.sheet, { height: expandedHeight }, sheetStyle]}
     >
-      <View
-        {...panResponder.panHandlers}
-        onLayout={e => {
-          setCollapsedHeight(e.nativeEvent.layout.height);
-          onCollapsedHeightChange(e.nativeEvent.layout.height);
-        }}
-      >
-        <View style={styles.handleArea}>
-          <View style={styles.handle} />
-        </View>
-        <View style={styles.header}>
-          <View style={styles.titleRow}>
-            <Text style={styles.title}>일정 순서</Text>
-            <Text style={styles.count}>{mappedCount}곳</Text>
+      <GestureDetector gesture={headerPan}>
+        <View
+          onLayout={e => {
+            setCollapsedHeight(e.nativeEvent.layout.height);
+            onCollapsedHeightChange(e.nativeEvent.layout.height);
+          }}
+        >
+          <View style={styles.handleArea}>
+            <View style={styles.handle} />
           </View>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.chips}
-          >
-            {[null, ...Array.from({ length: dayCount }, (_, i) => i)].map(
-              day => {
-                const isSelected = day === dayIndex;
-                return (
-                  <Pressable
-                    key={day ?? "all"}
-                    style={[styles.chip, isSelected && styles.chipSelected]}
-                    onPress={() => onDayChange(day)}
-                  >
-                    <Text
-                      style={[
-                        styles.chipText,
-                        isSelected && styles.chipTextSelected,
-                      ]}
-                    >
-                      {day === null ? "전체" : `DAY ${day + 1}`}
-                    </Text>
-                  </Pressable>
-                );
-              },
-            )}
-          </ScrollView>
-        </View>
-      </View>
-
-      <ScrollView
-        ref={listRef}
-        style={styles.list}
-        contentContainerStyle={[
-          styles.listContent,
-          { paddingBottom: spacing.xl + insets.bottom },
-        ]}
-        showsVerticalScrollIndicator={false}
-      >
-        {stops.length === 0 ? (
-          <Text style={styles.empty}>표시할 일정이 없어요.</Text>
-        ) : (
-          stops.map(stop => (
-            <Pressable
-              key={stop.key}
-              style={[
-                styles.row,
-                stop.key === selectedKey && styles.rowSelected,
-              ]}
-              onPress={() => onStopPress(stop)}
-              onLayout={e =>
-                rowOffsets.current.set(stop.key, e.nativeEvent.layout.y)
-              }
-            >
-              <View
-                style={[
-                  styles.number,
-                  {
-                    backgroundColor: stop.coordinate
-                      ? stop.color
-                      : colors.paletteFg4,
-                  },
-                ]}
+          <View style={styles.header}>
+            <View style={styles.titleRow}>
+              <Text style={styles.title}>일정 순서</Text>
+              <Text style={styles.count}>{mappedCount}곳</Text>
+            </View>
+            <GestureDetector gesture={chipsGesture}>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.chips}
               >
-                <Text style={styles.numberText}>
-                  {getStopLabel(stop, dayIndex)}
-                </Text>
-              </View>
-              <View style={styles.rowText}>
-                <Text style={styles.time}>
-                  {stop.endTime
-                    ? `${stop.startTime} – ${stop.endTime}`
-                    : stop.startTime}
-                </Text>
-                <Text style={styles.rowTitle} numberOfLines={1}>
-                  {stop.title}
-                </Text>
-                <View style={styles.meta}>
-                  <View style={[styles.badge, { backgroundColor: stop.tint }]}>
-                    <Text style={[styles.badgeText, { color: stop.color }]}>
-                      {stop.categoryLabel}
-                    </Text>
-                  </View>
-                  {!!stop.placeName && (
-                    <Text style={styles.place} numberOfLines={1}>
-                      {stop.placeName}
-                    </Text>
-                  )}
+                {[null, ...Array.from({ length: dayCount }, (_, i) => i)].map(
+                  day => {
+                    const isSelected = day === dayIndex;
+                    return (
+                      <Pressable
+                        key={day ?? "all"}
+                        style={[styles.chip, isSelected && styles.chipSelected]}
+                        onPress={() => onDayChange(day)}
+                      >
+                        <Text
+                          style={[
+                            styles.chipText,
+                            isSelected && styles.chipTextSelected,
+                          ]}
+                        >
+                          {day === null ? "전체" : `DAY ${day + 1}`}
+                        </Text>
+                      </Pressable>
+                    );
+                  },
+                )}
+              </ScrollView>
+            </GestureDetector>
+          </View>
+        </View>
+      </GestureDetector>
+
+      <GestureDetector gesture={listGesture}>
+        <ScrollView
+          ref={listRef}
+          style={styles.list}
+          bounces={false}
+          scrollEventThrottle={16}
+          onScroll={e => {
+            scrollY.value = e.nativeEvent.contentOffset.y;
+          }}
+          contentContainerStyle={[
+            styles.listContent,
+            { paddingBottom: spacing.xl + insets.bottom },
+          ]}
+          showsVerticalScrollIndicator={false}
+        >
+          {stops.length === 0 ? (
+            <Text style={styles.empty}>표시할 일정이 없어요.</Text>
+          ) : (
+            stops.map(stop => (
+              <Pressable
+                key={stop.key}
+                style={[
+                  styles.row,
+                  stop.key === selectedKey && styles.rowSelected,
+                ]}
+                onPress={() => onStopPress(stop)}
+                onLayout={e =>
+                  rowOffsets.current.set(stop.key, e.nativeEvent.layout.y)
+                }
+              >
+                <View
+                  style={[
+                    styles.number,
+                    {
+                      backgroundColor: stop.coordinate
+                        ? stop.color
+                        : colors.paletteFg4,
+                    },
+                  ]}
+                >
+                  <Text style={styles.numberText}>
+                    {getStopLabel(stop, dayIndex)}
+                  </Text>
                 </View>
-              </View>
-            </Pressable>
-          ))
-        )}
-      </ScrollView>
+                <View style={styles.rowText}>
+                  <Text style={styles.time}>
+                    {stop.endTime
+                      ? `${stop.startTime} – ${stop.endTime}`
+                      : stop.startTime}
+                  </Text>
+                  <Text style={styles.rowTitle} numberOfLines={1}>
+                    {stop.title}
+                  </Text>
+                  <View style={styles.meta}>
+                    <View
+                      style={[styles.badge, { backgroundColor: stop.tint }]}
+                    >
+                      <Text style={[styles.badgeText, { color: stop.color }]}>
+                        {stop.categoryLabel}
+                      </Text>
+                    </View>
+                    {!!stop.placeName && (
+                      <Text style={styles.place} numberOfLines={1}>
+                        {stop.placeName}
+                      </Text>
+                    )}
+                  </View>
+                </View>
+              </Pressable>
+            ))
+          )}
+        </ScrollView>
+      </GestureDetector>
     </Animated.View>
   );
 }
