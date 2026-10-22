@@ -86,7 +86,8 @@ export default function MapScheduleSheet({
   const panResponder = useMemo(
     () =>
       PanResponder.create({
-        onMoveShouldSetPanResponder: (_, g) => Math.abs(g.dy) > 4,
+        onMoveShouldSetPanResponderCapture: (_, g) =>
+          Math.abs(g.dy) > 4 && Math.abs(g.dy) > Math.abs(g.dx),
         onPanResponderGrant: () => {
           dragStart.current = expanded ? 0 : offset;
         },

@@ -28,13 +28,13 @@ export default function MapStopCard({
   style,
 }: MapStopCardProps) {
   const rows = [
-    { label: "장소", value: stop.placeName },
     {
       label: "시간",
       value: stop.endTime
         ? `${stop.startTime} – ${stop.endTime}`
         : stop.startTime,
     },
+    { label: "장소", value: stop.placeName },
     { label: "주소", value: stop.address },
   ].filter(row => row.value);
 

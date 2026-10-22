@@ -454,6 +454,7 @@ export default function MapScheduleView({
             onDayChange={day => {
               setDayIndex(day);
               setSelectedKey(null);
+              setExpanded(true);
             }}
             stops={stops}
             selectedKey={selectedKey}
