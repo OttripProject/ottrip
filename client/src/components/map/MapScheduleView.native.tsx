@@ -20,7 +20,6 @@ import { formatTime } from "@/utils/dateUtils";
 import dayjs, { type Dayjs } from "dayjs";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  BackHandler,
   PixelRatio,
   Platform,
   Pressable,
@@ -202,17 +201,6 @@ export default function MapScheduleView({
 
   const plan = planData.plan ?? selectedPlan;
   const expandedHeight = containerHeight * EXPANDED_RATIO;
-
-  useEffect(() => {
-    const subscription = BackHandler.addEventListener(
-      "hardwareBackPress",
-      () => {
-        onClose();
-        return true;
-      },
-    );
-    return () => subscription.remove();
-  }, [onClose]);
 
   const dates = useMemo(() => {
     if (!plan) return [];
@@ -417,13 +405,7 @@ export default function MapScheduleView({
 
 const styles = StyleSheet.create({
   container: {
-    position: "absolute",
-    top: 0,
-    right: 0,
-    bottom: 0,
-    left: 0,
-    zIndex: 100,
-    elevation: 100,
+    flex: 1,
     backgroundColor: colors.white,
   },
   mapArea: {

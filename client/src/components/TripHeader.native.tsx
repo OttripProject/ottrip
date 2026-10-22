@@ -69,71 +69,8 @@ export default function TripHeader({ onCalendarPress }: TripHeaderProps) {
     });
   };
 
-  return (
+  const planModals = (
     <>
-      <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
-        <View ref={topRowRef} style={styles.headerTopRow}>
-          <Pressable
-            style={styles.planSelector}
-            onPress={() => setShowPlanSelector(true)}
-          >
-            <Text style={styles.headerTitle} numberOfLines={1}>
-              {selectedPlan?.title || "여행 선택"}
-            </Text>
-            {selectedPlan && (
-              <Text style={styles.headerPeriod}>
-                {dayjs(selectedPlan.startDate).format("M.D")} –{" "}
-                {dayjs(selectedPlan.endDate).format("M.D")}
-              </Text>
-            )}
-            <DropdownIcon width={15} height={15} color={colors.gray900} />
-          </Pressable>
-          <View style={styles.headerIcons}>
-            <Pressable
-              style={styles.headerIconButton}
-              accessibilityLabel="지도로 일정 보기"
-              onPress={() => setMapVisible(true)}
-            >
-              <LocationIcon width={20} height={20} color={colors.gray900} />
-            </Pressable>
-            <Pressable
-              style={styles.headerIconButton}
-              accessibilityLabel="달력에서 날짜 선택"
-              onPress={onCalendarPress}
-            >
-              <CalendarIcon width={20} height={20} color={colors.gray900} />
-            </Pressable>
-            <Pressable
-              style={styles.headerIconButton}
-              accessibilityLabel="더보기"
-              onPress={openMoreMenu}
-            >
-              <DotsIcon width={20} height={20} color={colors.black} />
-            </Pressable>
-          </View>
-        </View>
-      </View>
-
-      {mapVisible && (
-        <MapScheduleView
-          key={selectedPlan?.id}
-          onClose={() => setMapVisible(false)}
-          onPlanPress={() => setShowPlanSelector(true)}
-        />
-      )}
-
-      <Modal
-        visible={profileModalVisible}
-        animationType="fade"
-        transparent
-        onRequestClose={() => setProfileModalVisible(false)}
-      >
-        <ProfileModal
-          visible={profileModalVisible}
-          onClose={() => setProfileModalVisible(false)}
-        />
-      </Modal>
-
       <PlanSelectModal
         visible={showPlanSelector}
         onClose={() => setShowPlanSelector(false)}
@@ -191,6 +128,85 @@ export default function TripHeader({ onCalendarPress }: TripHeaderProps) {
           updatePlan={plansQuery.updatePlan}
         />
       )}
+    </>
+  );
+
+  return (
+    <>
+      <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
+        <View ref={topRowRef} style={styles.headerTopRow}>
+          <Pressable
+            style={styles.planSelector}
+            onPress={() => setShowPlanSelector(true)}
+          >
+            <Text style={styles.headerTitle} numberOfLines={1}>
+              {selectedPlan?.title || "여행 선택"}
+            </Text>
+            {selectedPlan && (
+              <Text style={styles.headerPeriod}>
+                {dayjs(selectedPlan.startDate).format("M.D")} –{" "}
+                {dayjs(selectedPlan.endDate).format("M.D")}
+              </Text>
+            )}
+            <DropdownIcon width={15} height={15} color={colors.gray900} />
+          </Pressable>
+          <View style={styles.headerIcons}>
+            <Pressable
+              style={styles.headerIconButton}
+              accessibilityLabel="지도로 일정 보기"
+              onPress={() => setMapVisible(true)}
+            >
+              <LocationIcon width={20} height={20} color={colors.gray900} />
+            </Pressable>
+            <Pressable
+              style={styles.headerIconButton}
+              accessibilityLabel="달력에서 날짜 선택"
+              onPress={onCalendarPress}
+            >
+              <CalendarIcon width={20} height={20} color={colors.gray900} />
+            </Pressable>
+            <Pressable
+              style={styles.headerIconButton}
+              accessibilityLabel="더보기"
+              onPress={openMoreMenu}
+            >
+              <DotsIcon width={20} height={20} color={colors.black} />
+            </Pressable>
+          </View>
+        </View>
+      </View>
+
+      <Modal
+        visible={mapVisible}
+        animationType="slide"
+        statusBarTranslucent
+        onRequestClose={() => setMapVisible(false)}
+      >
+        {mapVisible && (
+          <>
+            <MapScheduleView
+              key={selectedPlan?.id}
+              onClose={() => setMapVisible(false)}
+              onPlanPress={() => setShowPlanSelector(true)}
+            />
+            {planModals}
+          </>
+        )}
+      </Modal>
+
+      {!mapVisible && planModals}
+
+      <Modal
+        visible={profileModalVisible}
+        animationType="fade"
+        transparent
+        onRequestClose={() => setProfileModalVisible(false)}
+      >
+        <ProfileModal
+          visible={profileModalVisible}
+          onClose={() => setProfileModalVisible(false)}
+        />
+      </Modal>
 
       {selectedPlan && (
         <TravelInfoModal

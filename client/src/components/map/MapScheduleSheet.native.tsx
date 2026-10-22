@@ -13,6 +13,7 @@ import {
   Text,
   View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export interface MapStop {
   key: string;
@@ -54,6 +55,7 @@ export default function MapScheduleSheet({
   expanded,
   onExpandedChange,
 }: MapScheduleSheetProps) {
+  const insets = useSafeAreaInsets();
   const [collapsedHeight, setCollapsedHeight] = useState(0);
   const offset = expandedHeight - collapsedHeight;
   const translateY = useRef(new Animated.Value(0)).current;
@@ -157,7 +159,10 @@ export default function MapScheduleSheet({
       <ScrollView
         ref={listRef}
         style={styles.list}
-        contentContainerStyle={styles.listContent}
+        contentContainerStyle={[
+          styles.listContent,
+          { paddingBottom: spacing.xl + insets.bottom },
+        ]}
         showsVerticalScrollIndicator={false}
       >
         {stops.length === 0 ? (
@@ -293,7 +298,6 @@ const styles = StyleSheet.create({
   listContent: {
     paddingTop: spacing.sm,
     paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.xl,
   },
   empty: {
     ...textStyles.body4,
