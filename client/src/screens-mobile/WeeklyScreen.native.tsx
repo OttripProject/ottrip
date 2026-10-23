@@ -26,7 +26,7 @@ import { getAirportLabel } from "@/utils/airportList";
 import { findFestivalSlot } from "@/utils/festivalSlot";
 import { summarizeExpenses } from "@/utils/summarizeExpenses";
 import { colors } from "@/ui/tokens/colors";
-import { toEasing, usePressScale } from "@/ui/effects/pressScale";
+import { toEasing } from "@/ui/effects/pressScale";
 import { motion } from "@/ui/tokens/motion";
 import { radii } from "@/ui/tokens/radii";
 import { spacing } from "@/ui/tokens/spacing";
@@ -141,26 +141,18 @@ function DayTabButton({
   isActive: boolean;
   onPress: () => void;
 }) {
-  const { scale, onPressIn, onPressOut } = usePressScale();
-
   return (
-    <Pressable
+    <ScalePressable
       style={[styles.dayTab, isActive && styles.dayTabActive]}
       onPress={onPress}
-      onPressIn={onPressIn}
-      onPressOut={onPressOut}
     >
-      <Animated.Text
-        style={[
-          styles.dayTabText,
-          isActive && styles.dayTabTextActive,
-          { transform: [{ scale }] },
-        ]}
+      <Text
+        style={[styles.dayTabText, isActive && styles.dayTabTextActive]}
         numberOfLines={1}
       >
         {label}
-      </Animated.Text>
-    </Pressable>
+      </Text>
+    </ScalePressable>
   );
 }
 
@@ -640,7 +632,7 @@ export default function WeeklyScreen() {
     const isNext = index === nextTimelineIndex;
 
     return (
-      <Pressable
+      <ScalePressable
         key={schedule.id}
         style={[styles.listRow, isEnded && styles.listRowEnded]}
         onPress={() => openScheduleDetail(row)}
@@ -690,7 +682,7 @@ export default function WeeklyScreen() {
             )
           )}
         </View>
-      </Pressable>
+      </ScalePressable>
     );
   };
 
@@ -835,13 +827,13 @@ export default function WeeklyScreen() {
           showsVerticalScrollIndicator={false}
         >
           <View style={[styles.noPlanHeader, { paddingTop: insets.top + 8 }]}>
-            <Pressable
+            <ScalePressable
               onPress={() => setProfileModalVisible(true)}
               hitSlop={8}
               accessibilityLabel="설정"
             >
               <SettingIcon width={24} height={24} color={colors.gray600} />
-            </Pressable>
+            </ScalePressable>
           </View>
           <View style={styles.noPlanCardWrap}>
             <View style={styles.noPlanCard}>
@@ -860,7 +852,7 @@ export default function WeeklyScreen() {
                   </View>
                 ))}
               </View>
-              <Pressable
+              <ScalePressable
                 style={[
                   styles.noPlanCta,
                   !plansQuery.addPlan && styles.noPlanCtaDisabled,
@@ -872,7 +864,7 @@ export default function WeeklyScreen() {
                 }}
               >
                 <Text style={styles.noPlanCtaLabel}>여행 일정 생성</Text>
-              </Pressable>
+              </ScalePressable>
             </View>
           </View>
         </ScrollView>
@@ -972,13 +964,13 @@ export default function WeeklyScreen() {
           activeTab !== SCHEDULE_TAB_INDEX && styles.weekSelectorHidden,
         ]}
       >
-        <Pressable
+        <ScalePressable
           style={styles.weekArrow}
           accessibilityLabel="이전 주"
           onPress={handlePrevWeek}
         >
           <LeftArrowIcon width={20} height={20} color={colors.paletteFg3} />
-        </Pressable>
+        </ScalePressable>
         <View style={styles.weekDays}>
           {weekCalendar.map(item => {
             const isSelected = selectedDate.isSame(item.fullDate, "day");
@@ -1028,13 +1020,13 @@ export default function WeeklyScreen() {
             );
           })}
         </View>
-        <Pressable
+        <ScalePressable
           style={styles.weekArrow}
           accessibilityLabel="다음 주"
           onPress={handleNextWeek}
         >
           <RightArrowIcon width={20} height={20} color={colors.paletteFg3} />
-        </Pressable>
+        </ScalePressable>
       </View>
 
       <PagerView
@@ -1169,13 +1161,13 @@ export default function WeeklyScreen() {
             </View>
           )}
           {daySuggestion && isSuggestionDismissed && (
-            <Pressable
+            <ScalePressable
               style={styles.suggestionShowButton}
               onPress={() => restoreSuggestion(selectedDateStr)}
               hitSlop={8}
             >
               <Text style={styles.suggestionShowText}>AI 제안</Text>
-            </Pressable>
+            </ScalePressable>
           )}
           {festivals.length > 0 && (
             <View style={styles.festivalsWrap}>
@@ -1249,7 +1241,7 @@ export default function WeeklyScreen() {
               );
               const { expense } = accommodation;
               return (
-                <Pressable
+                <ScalePressable
                   key={accommodation.id}
                   style={styles.stayCard}
                   onPress={() => {
@@ -1313,7 +1305,7 @@ export default function WeeklyScreen() {
                       {accommodation.description}
                     </Text>
                   )}
-                </Pressable>
+                </ScalePressable>
               );
             })}
           </View>
@@ -1330,7 +1322,7 @@ export default function WeeklyScreen() {
               const { flight, segment, isFirstSegment } = item;
               const expense = isFirstSegment ? flight.expense : undefined;
               return (
-                <Pressable
+                <ScalePressable
                   key={item.id}
                   style={styles.flightCard}
                   onPress={() => {
@@ -1406,7 +1398,7 @@ export default function WeeklyScreen() {
                       </Text>
                     </View>
                   </View>
-                </Pressable>
+                </ScalePressable>
               );
             })}
           </View>
@@ -1539,13 +1531,13 @@ export default function WeeklyScreen() {
       />
 
       {selectedPlan && (
-        <Pressable
+        <ScalePressable
           style={styles.fab}
           onPress={() => setAddScheduleFlow("method")}
           hitSlop={8}
         >
           <PlusIcon width={24} height={24} color={colors.white} />
-        </Pressable>
+        </ScalePressable>
       )}
 
       <AddScheduleMethodModal
@@ -1949,7 +1941,7 @@ export default function WeeklyScreen() {
         <Text style={styles.snackbarText}>
           {"AI 제안을 숨겼어요.\n다시 보려면 AI 제안 버튼을 눌러주세요."}
         </Text>
-        <Pressable
+        <ScalePressable
           onPress={() => {
             snackbarUndoRef.current?.();
             snackbarUndoRef.current = null;
@@ -1959,7 +1951,7 @@ export default function WeeklyScreen() {
           hitSlop={8}
         >
           <Text style={styles.snackbarAction}>다시 보기</Text>
-        </Pressable>
+        </ScalePressable>
       </Animated.View>
 
     </View>
