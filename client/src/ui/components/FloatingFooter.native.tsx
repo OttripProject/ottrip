@@ -1,6 +1,7 @@
+import ScalePressable from "@/ui/components/ScalePressable";
 import { colors } from "@/ui/tokens/colors";
 import { textStyles } from "@/ui/tokens/typography";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 
 interface FloatingFooterProps {
   primaryLabel: string;
@@ -23,14 +24,14 @@ export default function FloatingFooter({
     <View style={styles.footer}>
       <View style={styles.footerButtons}>
         {hasSecondary && (
-          <Pressable
+          <ScalePressable
             style={[styles.footerButton, styles.secondaryButton]}
             onPress={onSecondaryPress}
           >
             <Text style={styles.secondaryButtonText}>{secondaryLabel}</Text>
-          </Pressable>
+          </ScalePressable>
         )}
-        <Pressable
+        <ScalePressable
           style={[
             styles.footerButton,
             styles.primaryButton,
@@ -41,7 +42,7 @@ export default function FloatingFooter({
           disabled={primaryDisabled}
         >
           <Text style={styles.primaryButtonText}>{primaryLabel}</Text>
-        </Pressable>
+        </ScalePressable>
       </View>
     </View>
   );
