@@ -204,7 +204,7 @@ export default function ItineraryDetailModal({
           </Text>
           {itinerary.location?.name && (
             <View style={styles.place}>
-              <LocationIcon width={13} height={13} color={colors.paletteFg3} />
+              <LocationIcon width={13} height={13} color={colors.gray600} />
               <Text style={styles.placeText} numberOfLines={1}>
                 {itinerary.location.name}
               </Text>
@@ -220,7 +220,7 @@ export default function ItineraryDetailModal({
         </View>
         <Pressable style={styles.closeButton} onPress={onClose}>
           <View style={styles.closeCircle}>
-            <CloseIcon width={17} height={17} color={colors.paletteFg2} />
+            <CloseIcon width={17} height={17} color={colors.gray700} />
           </View>
         </Pressable>
       </View>
