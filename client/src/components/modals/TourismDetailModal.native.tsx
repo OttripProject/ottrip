@@ -1,5 +1,6 @@
 import BottomSheetModal from "@/ui/components/BottomSheetModal.native";
 import MiniMapView from "@/ui/components/MiniMapView";
+import ScalePressable from "@/ui/components/ScalePressable";
 import { colors } from "@/ui/tokens/colors";
 import { radii } from "@/ui/tokens/radii";
 import { spacing } from "@/ui/tokens/spacing";
@@ -228,9 +229,9 @@ export default function TourismDetailModal({
           <View style={[styles.badge, { backgroundColor: badge.bg }]}>
             <Text style={[styles.badgeText, { color: badge.color }]}>{item.contentTypeId}</Text>
           </View>
-          <Pressable style={styles.actionButton} onPress={onClose} hitSlop={8}>
+          <ScalePressable style={styles.actionButton} onPress={onClose} hitSlop={8}>
             <CloseIcon width={20} height={20} color={colors.gray600} />
-          </Pressable>
+          </ScalePressable>
         </View>
         <View style={styles.titleGroup}>
           <Text style={styles.title}>{detail?.title ?? item.title}</Text>
@@ -337,9 +338,9 @@ export default function TourismDetailModal({
 
       {/* 푸터 */}
       <View style={styles.footer}>
-        <Pressable style={styles.addButton} onPress={handleAddToItinerary}>
+        <ScalePressable style={styles.addButton} onPress={handleAddToItinerary}>
           <Text style={styles.addButtonText}>일정에 추가</Text>
-        </Pressable>
+        </ScalePressable>
       </View>
     </BottomSheetModal>
   );

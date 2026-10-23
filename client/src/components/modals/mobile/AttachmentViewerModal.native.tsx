@@ -1,5 +1,6 @@
 import type { Attachment } from "@/types/api";
 import BottomSheetModal from "@/ui/components/BottomSheetModal.native";
+import ScalePressable from "@/ui/components/ScalePressable";
 import { colors } from "@/ui/tokens/colors";
 import { radii } from "@/ui/tokens/radii";
 import { spacing } from "@/ui/tokens/spacing";
@@ -9,7 +10,6 @@ import { useEffect, useRef, useState } from "react";
 import {
   Image,
   Linking,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -93,13 +93,13 @@ export default function AttachmentViewerModal({
                 {formatFileSize(current.fileSize)}
               </Text>
             </View>
-            <Pressable
+            <ScalePressable
               style={styles.closeButton}
               onPress={onClose}
               accessibilityLabel="닫기"
             >
               <CloseIcon width={17} height={17} color={colors.paletteFg2} />
-            </Pressable>
+            </ScalePressable>
           </View>
 
           <View
@@ -130,7 +130,7 @@ export default function AttachmentViewerModal({
                         resizeMode="contain"
                       />
                     ) : (
-                      <Pressable
+                      <ScalePressable
                         style={styles.documentPreview}
                         onPress={() => Linking.openURL(attachment.fileUrl)}
                       >
@@ -145,7 +145,7 @@ export default function AttachmentViewerModal({
                         <Text style={styles.documentHint}>
                           외부 앱에서 열립니다.
                         </Text>
-                      </Pressable>
+                      </ScalePressable>
                     )}
                   </View>
                 ))}
@@ -164,7 +164,7 @@ export default function AttachmentViewerModal({
                 const isSelected = i === index;
                 const tint = isSelected ? colors.primary : colors.paletteFg3;
                 return (
-                  <Pressable
+                  <ScalePressable
                     key={attachment.id}
                     style={[styles.thumb, isSelected && styles.thumbSelected]}
                     onPress={() => goTo(i)}
@@ -178,7 +178,7 @@ export default function AttachmentViewerModal({
                     <Text style={[styles.thumbLabel, { color: tint }]}>
                       {getFileTypeLabel(attachment)}
                     </Text>
-                  </Pressable>
+                  </ScalePressable>
                 );
               })}
             </ScrollView>

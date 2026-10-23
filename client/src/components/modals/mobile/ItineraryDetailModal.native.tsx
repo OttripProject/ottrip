@@ -6,6 +6,7 @@ import { getTourismCategoryColor } from "@/types/tourism";
 import { ExpenseCurrency, currencyLabels } from "@/types/expense";
 import BottomSheetModal from "@/ui/components/BottomSheetModal.native";
 import MiniMapView from "@/ui/components/MiniMapView";
+import ScalePressable from "@/ui/components/ScalePressable";
 import { colors } from "@/ui/tokens/colors";
 import { radii } from "@/ui/tokens/radii";
 import { spacing } from "@/ui/tokens/spacing";
@@ -208,21 +209,21 @@ export default function ItineraryDetailModal({
               <Text style={styles.placeText} numberOfLines={1}>
                 {itinerary.location.name}
               </Text>
-              <Pressable onPress={handleOpenMap} hitSlop={8}>
+              <ScalePressable onPress={handleOpenMap} hitSlop={8}>
                 <ExternalLinkIcon
                   width={14}
                   height={14}
                   color={colors.paletteFg3}
                 />
-              </Pressable>
+              </ScalePressable>
             </View>
           )}
         </View>
-        <Pressable style={styles.closeButton} onPress={onClose}>
+        <ScalePressable style={styles.closeButton} onPress={onClose}>
           <View style={styles.closeCircle}>
             <CloseIcon width={17} height={17} color={colors.gray700} />
           </View>
-        </Pressable>
+        </ScalePressable>
       </View>
 
       <ScrollView
@@ -317,7 +318,7 @@ export default function ItineraryDetailModal({
             {itineraryAttachments.map((attachment, index) => {
               const isImage = attachment.contentType.startsWith("image/");
               return (
-                <Pressable
+                <ScalePressable
                   key={attachment.id}
                   style={styles.attachmentItem}
                   onPress={() => handleAttachmentPress(index)}
@@ -340,7 +341,7 @@ export default function ItineraryDetailModal({
                   <Text style={styles.attachmentName} numberOfLines={1}>
                     {attachment.fileName}
                   </Text>
-                </Pressable>
+                </ScalePressable>
               );
             })}
           </View>
@@ -366,7 +367,7 @@ export default function ItineraryDetailModal({
                 ? [item.address, walkTime].filter(Boolean).join(" · ")
                 : [item.address, item.categorySub].filter(Boolean).join(" · ");
               return (
-                <Pressable
+                <ScalePressable
                   key={index}
                   style={styles.nearbyCard}
                   onPress={() => onAttractionSelect?.(item)}
@@ -384,7 +385,7 @@ export default function ItineraryDetailModal({
                       <Text style={styles.nearbyCardSub} numberOfLines={1}>{sub}</Text>
                     )}
                   </View>
-                </Pressable>
+                </ScalePressable>
               );
             })}
           </View>
@@ -394,22 +395,22 @@ export default function ItineraryDetailModal({
       {(onEdit || onDelete) && (
         <View style={styles.footer}>
           {onEdit && (
-            <Pressable
+            <ScalePressable
               style={[styles.footerButton, styles.editButton]}
               onPress={handleEdit}
             >
               <UpdateIcon width={17} height={17} color={colors.gray800} />
               <Text style={styles.editButtonText}>수정</Text>
-            </Pressable>
+            </ScalePressable>
           )}
           {onDelete && (
-            <Pressable
+            <ScalePressable
               style={[styles.footerButton, styles.deleteButton]}
               onPress={handleDelete}
             >
               <DeleteIcon width={17} height={17} color={colors.danger} />
               <Text style={styles.deleteButtonText}>삭제</Text>
-            </Pressable>
+            </ScalePressable>
           )}
         </View>
       )}

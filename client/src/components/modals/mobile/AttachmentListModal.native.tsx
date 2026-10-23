@@ -12,7 +12,7 @@ import { textStyles, typography } from "@/ui/tokens/typography";
 import { formatFileSize } from "@/utils/fileUtils";
 import dayjs, { type Dayjs } from "dayjs";
 import { useEffect, useMemo, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ScrollView, StyleSheet, Text, View } from "react-native";
 import FileDocIcon from "../../../../assets/file_doc.svg";
 import FileImageIcon from "../../../../assets/file_image.svg";
 import CloseIcon from "../../../../assets/mobile_x.svg";
@@ -70,13 +70,13 @@ export default function AttachmentListModal({
             </Text>
           )}
         </View>
-        <Pressable
+        <ScalePressable
           style={styles.closeButton}
           onPress={onClose}
           accessibilityLabel="닫기"
         >
           <CloseIcon width={16} height={16} color={colors.paletteFg2} />
-        </Pressable>
+        </ScalePressable>
       </View>
 
       <View style={styles.stripWrap}>

@@ -1,6 +1,7 @@
 import BottomSheetModal from "@/ui/components/BottomSheetModal.native";
 import MiniMapView from "@/ui/components/MiniMapView";
 import { ItineraryCategory } from "@/types/itinerary";
+import ScalePressable from "@/ui/components/ScalePressable";
 import { colors } from "@/ui/tokens/colors";
 import { radii } from "@/ui/tokens/radii";
 import { spacing } from "@/ui/tokens/spacing";
@@ -159,9 +160,9 @@ export default function FestivalDetailModal({ visible, onClose, item, onAddToIti
           <View style={[styles.badge, { backgroundColor: badge.bg }]}>
             <Text style={[styles.badgeText, { color: badge.color }]}>{badge.label}</Text>
           </View>
-          <Pressable style={styles.actionButton} onPress={onClose} hitSlop={8}>
+          <ScalePressable style={styles.actionButton} onPress={onClose} hitSlop={8}>
             <CloseIcon width={20} height={20} color={colors.gray600} />
-          </Pressable>
+          </ScalePressable>
         </View>
 
         {/* 제목 + 주소 */}
@@ -325,13 +326,13 @@ export default function FestivalDetailModal({ visible, onClose, item, onAddToIti
 
       {/* 푸터 */}
       <View style={styles.footer}>
-        <Pressable
+        <ScalePressable
           style={[styles.addButton, (loading || !detail) && styles.addButtonDisabled]}
           onPress={handleAddToItinerary}
           disabled={loading || !detail}
         >
           <Text style={styles.addButtonText}>일정에 추가</Text>
-        </Pressable>
+        </ScalePressable>
       </View>
     </BottomSheetModal>
   );

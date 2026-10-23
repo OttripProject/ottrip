@@ -4,6 +4,7 @@ import ImagePreviewModal, {
 import type { Attachment, FlightRead, FlightSegmentReadDto } from "@/types/api";
 import { ExpenseCurrency, currencyLabels } from "@/types/expense";
 import BottomSheetModal from "@/ui/components/BottomSheetModal.native";
+import ScalePressable from "@/ui/components/ScalePressable";
 import { colors } from "@/ui/tokens/colors";
 import { textStyles } from "@/ui/tokens/typography";
 import { convertUTCToLocalTime } from "@/utils/dateUtils";
@@ -12,7 +13,6 @@ import React, { useState, useEffect, useMemo } from "react";
 import {
   Alert,
   Linking,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -140,30 +140,30 @@ export default function FlightDetailModal({
           </Text>
           <View style={styles.headerActions}>
             {onEdit && (
-              <Pressable
+              <ScalePressable
                 style={styles.actionButton}
                 onPress={handleEdit}
                 hitSlop={8}
               >
                 <UpdateIcon width={20} height={20} color={colors.gray600} />
-              </Pressable>
+              </ScalePressable>
             )}
             {onDelete && (
-              <Pressable
+              <ScalePressable
                 style={styles.actionButton}
                 onPress={handleDelete}
                 hitSlop={8}
               >
                 <DeleteIcon width={20} height={20} color={colors.gray600} />
-              </Pressable>
+              </ScalePressable>
             )}
-            <Pressable
+            <ScalePressable
               style={styles.actionButton}
               onPress={onClose}
               hitSlop={8}
             >
               <CloseIcon width={20} height={20} color={colors.gray600} />
-            </Pressable>
+            </ScalePressable>
           </View>
         </View>
 
@@ -265,7 +265,7 @@ export default function FlightDetailModal({
         {/* 추가 정보 - 구간 아래 */}
         {hasAdditionalInfo && (
           <>
-            <Pressable
+            <ScalePressable
               style={[
                 styles.additionalInfoToggle,
                 showAdditionalInfo && styles.additionalInfoToggleOpen,
@@ -275,7 +275,7 @@ export default function FlightDetailModal({
               <Text style={styles.additionalInfoToggleText}>
                 {showAdditionalInfo ? "추가정보 닫기" : "추가정보 보기"}
               </Text>
-            </Pressable>
+            </ScalePressable>
             {showAdditionalInfo && (
               <View style={styles.additionalInfo}>
                 {flight.ticketNumber && (
@@ -304,10 +304,10 @@ export default function FlightDetailModal({
 
       {flightAttachments.length > 0 && (
         <View style={styles.footer}>
-          <Pressable style={styles.ticketButton} onPress={handleViewTicket}>
+          <ScalePressable style={styles.ticketButton} onPress={handleViewTicket}>
             <FlightIcon width={20} height={20} color={colors.white} />
             <Text style={styles.ticketButtonText}>항공권 보기</Text>
-          </Pressable>
+          </ScalePressable>
         </View>
       )}
 

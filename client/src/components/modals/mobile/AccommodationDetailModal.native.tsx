@@ -5,6 +5,7 @@ import type { Accommodation, Attachment } from "@/types/api";
 import { ExpenseCurrency, currencyLabels } from "@/types/expense";
 import BottomSheetModal from "@/ui/components/BottomSheetModal.native";
 import MiniMapView from "@/ui/components/MiniMapView";
+import ScalePressable from "@/ui/components/ScalePressable";
 import { colors } from "@/ui/tokens/colors";
 import { radii } from "@/ui/tokens/radii";
 import { textStyles } from "@/ui/tokens/typography";
@@ -15,7 +16,6 @@ import {
   Alert,
   Linking,
   Platform,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -168,30 +168,30 @@ export default function AccommodationDetailModal({
           </Text>
           <View style={styles.headerActions}>
             {onEdit && (
-              <Pressable
+              <ScalePressable
                 style={styles.actionButton}
                 onPress={handleEdit}
                 hitSlop={8}
               >
                 <UpdateIcon width={20} height={20} color={colors.gray600} />
-              </Pressable>
+              </ScalePressable>
             )}
             {onDelete && (
-              <Pressable
+              <ScalePressable
                 style={styles.actionButton}
                 onPress={handleDelete}
                 hitSlop={8}
               >
                 <DeleteIcon width={20} height={20} color={colors.gray600} />
-              </Pressable>
+              </ScalePressable>
             )}
-            <Pressable
+            <ScalePressable
               style={styles.actionButton}
               onPress={onClose}
               hitSlop={8}
             >
               <CloseIcon width={20} height={20} color={colors.gray600} />
-            </Pressable>
+            </ScalePressable>
           </View>
         </View>
 
@@ -283,7 +283,7 @@ export default function AccommodationDetailModal({
             {accommodationAttachments.map((attachment, index) => {
               const isImage = attachment.contentType.startsWith("image/");
               return (
-                <Pressable
+                <ScalePressable
                   key={attachment.id}
                   style={styles.attachmentItem}
                   onPress={() => handleAttachmentPress(index)}
@@ -306,7 +306,7 @@ export default function AccommodationDetailModal({
                   <Text style={styles.attachmentName} numberOfLines={1}>
                     {attachment.fileName}
                   </Text>
-                </Pressable>
+                </ScalePressable>
               );
             })}
           </View>
@@ -316,10 +316,10 @@ export default function AccommodationDetailModal({
       {/* 지도 앱에서 길찾기 버튼 */}
       {(location || accommodation.name) && (
         <View style={styles.footer}>
-          <Pressable style={styles.mapButton} onPress={handleOpenMap}>
+          <ScalePressable style={styles.mapButton} onPress={handleOpenMap}>
             <MapIcon width={20} height={20} color={colors.white} />
             <Text style={styles.mapButtonText}>지도 앱에서 길찾기</Text>
-          </Pressable>
+          </ScalePressable>
         </View>
       )}
 

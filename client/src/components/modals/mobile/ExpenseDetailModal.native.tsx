@@ -19,7 +19,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Animated,
   Linking,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -299,13 +298,13 @@ export default function ExpenseDetailModal({
     <BottomSheetModal visible={visible} onClose={onClose} height={0.88}>
         <View style={styles.header}>
           <Text style={styles.headerTitle}>{title}</Text>
-          <Pressable
+          <ScalePressable
             style={styles.closeButton}
             onPress={onClose}
             accessibilityLabel="닫기"
           >
             <CloseIcon width={24} height={24} color={colors.paletteFg3} />
-          </Pressable>
+          </ScalePressable>
         </View>
 
         <View style={styles.totalCard}>
@@ -330,7 +329,7 @@ export default function ExpenseDetailModal({
         </View>
 
         <View style={styles.tabBar}>
-          <Pressable
+          <ScalePressable
             style={[styles.tabItem, tab === "expenses" && styles.tabItemActive]}
             onPress={() => setTab("expenses")}
           >
@@ -342,8 +341,8 @@ export default function ExpenseDetailModal({
             >
               내역
             </Text>
-          </Pressable>
-          <Pressable
+          </ScalePressable>
+          <ScalePressable
             style={[
               styles.tabItem,
               tab === "attachments" && styles.tabItemActive,
@@ -363,7 +362,7 @@ export default function ExpenseDetailModal({
                 <Text style={styles.tabBadgeText}>{allAttachments.length}</Text>
               </View>
             )}
-          </Pressable>
+          </ScalePressable>
         </View>
 
         {tab === "expenses" ? (
@@ -378,7 +377,7 @@ export default function ExpenseDetailModal({
                 const isExpanded = expandedCategories.has(category);
                 return (
                   <View key={category} style={styles.categoryCard}>
-                    <Pressable
+                    <ScalePressable
                       style={styles.categoryHeader}
                       onPress={() => toggleCategory(category)}
                     >
@@ -392,7 +391,7 @@ export default function ExpenseDetailModal({
                       </View>
                       <Text style={styles.categoryCount}>{items.length}건</Text>
                       <CategoryChevron expanded={isExpanded} />
-                    </Pressable>
+                    </ScalePressable>
                     {isExpanded && (
                       <View style={styles.categoryBody}>
                         {items.map(expense => {
@@ -422,18 +421,18 @@ export default function ExpenseDetailModal({
                               }}
                               renderRightActions={() => (
                                 <View style={styles.swipeDeleteContainer}>
-                                  <Pressable
+                                  <ScalePressable
                                     style={styles.swipeDeleteButton}
                                     onPress={() => handleDelete(expense.id)}
                                   >
                                     <Text style={styles.swipeDeleteLabel}>
                                       삭제
                                     </Text>
-                                  </Pressable>
+                                  </ScalePressable>
                                 </View>
                               )}
                             >
-                              <Pressable
+                              <ScalePressable
                                 style={styles.detailRow}
                                 disabled={readOnly || !onExpensePress}
                                 onPress={() => onExpensePress?.(expense)}
@@ -452,7 +451,7 @@ export default function ExpenseDetailModal({
                                   )}
                                 </View>
                                 {expAttachments.length > 0 && (
-                                  <Pressable
+                                  <ScalePressable
                                     style={styles.attachmentBadge}
                                     onPress={() =>
                                       handleExpenseAttachmentPress(
@@ -469,7 +468,7 @@ export default function ExpenseDetailModal({
                                     <Text style={styles.attachmentBadgeText}>
                                       {expAttachments.length}
                                     </Text>
-                                  </Pressable>
+                                  </ScalePressable>
                                 )}
                                 <Text style={styles.detailAmount}>
                                   {expense.amount.toLocaleString()}{" "}
@@ -483,7 +482,7 @@ export default function ExpenseDetailModal({
                                     style={styles.detailArrow}
                                   />
                                 )}
-                              </Pressable>
+                              </ScalePressable>
                             </Swipeable>
                           );
                         })}
@@ -513,7 +512,7 @@ export default function ExpenseDetailModal({
                 const expense = attachmentExpenseMap[attachment.id];
                 const isImage = attachment.contentType.startsWith("image/");
                 return (
-                  <Pressable
+                  <ScalePressable
                     key={attachment.id}
                     style={styles.attachmentCard}
                     onPress={() => handleAttachmentPress(attachment)}
@@ -561,7 +560,7 @@ export default function ExpenseDetailModal({
                     <Text style={styles.attachmentFileSize}>
                       {formatFileSize(attachment.fileSize)}
                     </Text>
-                  </Pressable>
+                  </ScalePressable>
                 );
               })
             )}
