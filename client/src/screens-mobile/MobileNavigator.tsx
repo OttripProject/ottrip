@@ -3,6 +3,7 @@ import { SelectedPlanProvider } from "@/contexts/SelectedPlanContext";
 import { useToast } from "@/contexts/ToastContext";
 import { plansApi } from "@/services/plans";
 import { colors } from "@/ui/tokens/colors";
+import { motion } from "@/ui/tokens/motion";
 import { textStyles } from "@/ui/tokens/typography";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
@@ -15,6 +16,7 @@ import Animated, {
   Easing,
   useSharedValue,
   useAnimatedStyle,
+  withSequence,
   withTiming,
 } from "react-native-reanimated";
 import CalendarIcon from "../../assets/mobile_calendar_black.svg";
@@ -102,6 +104,55 @@ function WeeklyScreenWithAnimation() {
   );
 }
 
+const HOP_FRAMES = [
+  { at: 0.3, translateY: -6, rotate: -6 },
+  { at: 0.55, translateY: 0, rotate: 3 },
+  { at: 0.75, translateY: -2, rotate: 0 },
+  { at: 1, translateY: 0, rotate: 0 },
+];
+
+const [hopX1, hopY1, hopX2, hopY2] = (
+  motion.easing.ease.match(/[\d.]+/g) ?? []
+).map(Number);
+const hopEasing = Easing.bezier(hopX1, hopY1, hopX2, hopY2);
+
+const hopSequence = (key: "translateY" | "rotate") =>
+  withSequence(
+    ...HOP_FRAMES.map((frame, i) =>
+      withTiming(frame[key], {
+        duration:
+          (frame.at - (HOP_FRAMES[i - 1]?.at ?? 0)) * motion.duration.hop,
+        easing: hopEasing,
+      }),
+    ),
+  );
+
+function TabHopIcon({
+  hopCount,
+  children,
+}: {
+  hopCount: number;
+  children: React.ReactNode;
+}) {
+  const translateY = useSharedValue(0);
+  const rotate = useSharedValue(0);
+
+  useEffect(() => {
+    if (!hopCount) return;
+    translateY.value = hopSequence("translateY");
+    rotate.value = hopSequence("rotate");
+  }, [hopCount, translateY, rotate]);
+
+  const hopStyle = useAnimatedStyle(() => ({
+    transform: [
+      { translateY: translateY.value },
+      { rotate: `${rotate.value}deg` },
+    ],
+  }));
+
+  return <Animated.View style={hopStyle}>{children}</Animated.View>;
+}
+
 function renderTabLabel(label: string, focused: boolean) {
   return (
     <Text style={[styles.tabLabel, focused && styles.tabLabelActive]}>
@@ -132,6 +183,7 @@ export default function MobileNavigator() {
   );
 
   const resumingSaveRef = useRef(false);
+  const [hopCounts, setHopCounts] = useState<Record<string, number>>({});
 
   useEffect(() => {
     if (!isAuthenticated || resumingSaveRef.current) return;
@@ -157,6 +209,15 @@ export default function MobileNavigator() {
     <SelectedPlanProvider preferredPlanPublicId={preferredPlanPublicId}>
       <View style={styles.navigatorContainer}>
         <Tab.Navigator
+          screenListeners={({ navigation, route }) => ({
+            tabPress: () => {
+              if (navigation.isFocused()) return;
+              setHopCounts(prev => ({
+                ...prev,
+                [route.name]: (prev[route.name] ?? 0) + 1,
+              }));
+            },
+          })}
           screenOptions={{
             headerShown: false,
             lazy: false,
@@ -183,7 +244,9 @@ export default function MobileNavigator() {
               tabBarLabel: ({ focused }: { focused: boolean }) =>
                 renderTabLabel("여행 일정", focused),
               tabBarIcon: ({ color }: { color: string }) => (
-                <CalendarIcon width={22} height={22} color={color} />
+                <TabHopIcon hopCount={hopCounts.Weekly ?? 0}>
+                  <CalendarIcon width={22} height={22} color={color} />
+                </TabHopIcon>
               ),
             }}
           />
@@ -194,7 +257,9 @@ export default function MobileNavigator() {
               tabBarLabel: ({ focused }: { focused: boolean }) =>
                 renderTabLabel("지출", focused),
               tabBarIcon: ({ color }: { color: string }) => (
-                <ExpenseCardIcon width={22} height={22} color={color} />
+                <TabHopIcon hopCount={hopCounts.Expense ?? 0}>
+                  <ExpenseCardIcon width={22} height={22} color={color} />
+                </TabHopIcon>
               ),
             }}
           />
