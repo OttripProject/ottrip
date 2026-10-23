@@ -1,6 +1,7 @@
 import { useMe } from "@/hooks/useMe";
 import api from "@/services/api";
 import type { Itinerary } from "@/types/api";
+import ScalePressable from "@/ui/components/ScalePressable";
 import { colors } from "@/ui/tokens/colors";
 import { radii } from "@/ui/tokens/radii";
 import { shadows } from "@/ui/tokens/shadows";
@@ -9,14 +10,7 @@ import { textStyles, typography } from "@/ui/tokens/typography";
 import { guestPrompt, handleGuestPromptError } from "@/utils/guestPrompt";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useRef, useState } from "react";
-import {
-  Alert,
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from "react-native";
+import { Alert, StyleSheet, Text, TextInput, View } from "react-native";
 import CheckMarkIcon from "../../../assets/check_mark.svg";
 import PlusIcon from "../../../assets/mobile_plus.svg";
 import RefreshIcon from "../../../assets/refresh_ai.svg";
@@ -279,16 +273,16 @@ export default function TripChecklistPanel({
                 <Text style={styles.groupCount}>
                   {groupDone}/{group.items.length}
                 </Text>
-                <Pressable
+                <ScalePressable
                   style={styles.groupAddButton}
                   onPress={() => handleAddPress(group.key)}
                   accessibilityLabel="항목 추가"
                 >
                   <PlusIcon width={16} height={16} color={colors.gray900} />
-                </Pressable>
+                </ScalePressable>
               </View>
               {group.items.map((item, index) => (
-                <Pressable
+                <ScalePressable
                   key={item.id}
                   style={[styles.itemRow, index > 0 && styles.itemRowDivider]}
                   onPress={() => handleToggle(item.id, !item.isChecked)}
@@ -332,7 +326,7 @@ export default function TripChecklistPanel({
                       </Text>
                     )}
                   </Text>
-                </Pressable>
+                </ScalePressable>
               ))}
               {addingGroup === group.key && (
                 <View
@@ -359,16 +353,13 @@ export default function TripChecklistPanel({
                     onFocus={() => setInputFocused(true)}
                     onBlur={() => setInputFocused(false)}
                   />
-                  <Pressable
-                    style={({ pressed }) => [
-                      styles.saveButton,
-                      pressed && styles.saveButtonPressed,
-                    ]}
+                  <ScalePressable
+                    style={styles.saveButton}
                     onPress={handleSave}
                     disabled={!canSave}
                   >
                     <Text style={styles.saveButtonText}>추가</Text>
-                  </Pressable>
+                  </ScalePressable>
                 </View>
               )}
             </View>
@@ -376,11 +367,8 @@ export default function TripChecklistPanel({
         })
       )}
 
-      <Pressable
-        style={({ pressed }) => [
-          styles.aiButton,
-          (pressed || aiLoading) && styles.aiButtonDimmed,
-        ]}
+      <ScalePressable
+        style={[styles.aiButton, aiLoading && styles.aiButtonDimmed]}
         onPress={handleAiRecommend}
         disabled={aiLoading}
       >
@@ -388,7 +376,7 @@ export default function TripChecklistPanel({
         <Text style={styles.aiButtonText}>
           {aiLoading ? "추천받는 중..." : "AI로 추천받기"}
         </Text>
-      </Pressable>
+      </ScalePressable>
     </View>
   );
 }
@@ -568,9 +556,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.paletteInk,
     experimental_backgroundImage: INK_GRADIENT,
     ...shadows.darkRaised,
-  },
-  saveButtonPressed: {
-    opacity: 0.85,
   },
   saveButtonText: {
     ...textStyles.h6,

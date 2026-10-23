@@ -1,11 +1,12 @@
 import type { FestivalItem } from "@/services/tourism";
+import ScalePressable from "@/ui/components/ScalePressable";
 import { colors } from "@/ui/tokens/colors";
 import { radii } from "@/ui/tokens/radii";
 import { shadows } from "@/ui/tokens/shadows";
 import { spacing } from "@/ui/tokens/spacing";
 import { textStyles } from "@/ui/tokens/typography";
 import { useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ScrollView, StyleSheet, Text, View } from "react-native";
 import UpperArrowIcon from "../../../assets/upper_arrow.svg";
 
 interface Props {
@@ -50,7 +51,7 @@ export default function FestivalsCard({ festivals, onPress, title = "이 기간 
         nestedScrollEnabled
       >
         {festivals.map((f, i) => (
-          <Pressable
+          <ScalePressable
             key={f.contentId}
             style={[styles.item, i > 0 && styles.itemTopBorder]}
             onPress={() => onPress(f)}
@@ -67,20 +68,20 @@ export default function FestivalsCard({ festivals, onPress, title = "이 기간 
                 {fmtEventDate(f.eventStartDate, f.eventEndDate)}
               </Text>
             )}
-          </Pressable>
+          </ScalePressable>
         ))}
       </ScrollView>
 
       {/* 전체 보기 / 접기 */}
       {hasMore && (
-        <Pressable style={styles.viewAllBtn} onPress={() => setExpanded(true)}>
+        <ScalePressable style={styles.viewAllBtn} onPress={() => setExpanded(true)}>
           <Text style={styles.viewAllText}>전체 보기</Text>
-        </Pressable>
+        </ScalePressable>
       )}
       {expanded && (
-        <Pressable style={styles.collapseBtn} onPress={() => setExpanded(false)}>
+        <ScalePressable style={styles.collapseBtn} onPress={() => setExpanded(false)}>
           <UpperArrowIcon width={18} height={18} color={colors.gray600} />
-        </Pressable>
+        </ScalePressable>
       )}
     </View>
   );

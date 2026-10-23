@@ -1,6 +1,7 @@
 import type { DaySuggestion, SuggestionPlace } from "@/services/tourism";
 import { tourismCategoryColors } from "@/types/tourism";
 import { usePressScale } from "@/ui/effects/pressScale";
+import ScalePressable from "@/ui/components/ScalePressable";
 import { colors } from "@/ui/tokens/colors";
 import { radii } from "@/ui/tokens/radii";
 import { spacing } from "@/ui/tokens/spacing";
@@ -43,13 +44,13 @@ export default function AiSuggestionCard({
         <View style={styles.aiBadge}>
           <Text style={styles.aiBadgeText}>AI 제안</Text>
         </View>
-        <Pressable
+        <ScalePressable
           onPress={onDismiss}
           style={styles.closeButton}
           accessibilityLabel="AI 제안 닫기"
         >
           <AiCloseIcon width={20} height={20} color={colors.paletteFg3} />
-        </Pressable>
+        </ScalePressable>
       </View>
       <ScrollView
         horizontal

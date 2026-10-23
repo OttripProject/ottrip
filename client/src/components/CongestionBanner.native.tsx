@@ -1,3 +1,4 @@
+import ScalePressable from "@/ui/components/ScalePressable";
 import { colors } from "@/ui/tokens/colors";
 import { motion } from "@/ui/tokens/motion";
 import { radii } from "@/ui/tokens/radii";
@@ -5,7 +6,7 @@ import { spacing } from "@/ui/tokens/spacing";
 import { textStyles, typography } from "@/ui/tokens/typography";
 import dayjs from "dayjs";
 import { useEffect, useRef } from "react";
-import { Animated, Pressable, StyleSheet, Text, View } from "react-native";
+import { Animated, StyleSheet, Text, View } from "react-native";
 import CloseIcon from "../../assets/close_sm.svg";
 
 interface Props {
@@ -57,13 +58,13 @@ export default function CongestionBanner({
         <Text style={styles.date}>{dayjs(date).format("M.D")}</Text>{" "}
         {locationNames.join("·")} {suffix}
       </Text>
-      <Pressable
+      <ScalePressable
         style={styles.closeButton}
         onPress={handleDismiss}
         accessibilityLabel="닫기"
       >
         <CloseIcon width={20} height={20} color={colors.gray700} />
-      </Pressable>
+      </ScalePressable>
     </Animated.View>
   );
 }
