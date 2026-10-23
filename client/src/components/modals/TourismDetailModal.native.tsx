@@ -5,6 +5,7 @@ import { radii } from "@/ui/tokens/radii";
 import { spacing } from "@/ui/tokens/spacing";
 import { textStyles } from "@/ui/tokens/typography";
 import { ItineraryCategory } from "@/types/itinerary";
+import { getTourismCategoryColor } from "@/types/tourism";
 import { formatWalkTime, haversineDistance } from "@/utils/distanceUtils";
 import { useEffect, useState } from "react";
 import {
@@ -27,17 +28,6 @@ import RouteIcon from "../../../assets/route.svg";
 import RoomIcon from "../../../assets/room.svg";
 import CutleryIcon from "../../../assets/cutlery.svg";
 import { tourismApi } from "@/services/tourism";
-
-const BADGE_COLORS: Record<string, { color: string; bg: string }> = {
-  여행코스: { color: "rgb(62, 91, 217)", bg: "rgb(236, 239, 254)" },
-  쇼핑: { color: "rgb(31, 157, 87)", bg: "rgb(231, 247, 236)" },
-  레포츠: { color: "rgb(55, 55, 55)", bg: "rgb(244, 244, 244)" },
-  "축제·공연": { color: "rgb(14, 138, 138)", bg: "rgb(227, 246, 246)" },
-  문화시설: { color: "rgb(217, 28, 181)", bg: "rgb(255, 235, 251)" },
-  음식점: { color: "rgb(183, 104, 0)", bg: "rgb(255, 244, 224)" },
-  관광지: { color: "rgb(217, 28, 181)", bg: "rgb(255, 235, 251)" },
-};
-const DEFAULT_BADGE = { color: "#6C6C6C", bg: "#F5F5F5" };
 
 type Row = { label: string; value: string };
 type IconType = "clock" | "calendar" | "hourglass" | "won" | "route" | "checkinout" | "room" | "cutlery";
@@ -204,7 +194,7 @@ export default function TourismDetailModal({
 
   if (!item) return null;
 
-  const badge = BADGE_COLORS[item.contentTypeId] ?? DEFAULT_BADGE;
+  const badge = getTourismCategoryColor(item.contentTypeId);
   const mapCoords = (detail?.mapx && detail?.mapy)
     ? { lat: detail.mapy, lng: detail.mapx }
     : geocodedCoords;

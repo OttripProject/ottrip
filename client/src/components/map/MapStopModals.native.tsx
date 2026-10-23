@@ -101,6 +101,7 @@ export default function MapStopModals({
         itinerary={itinerary}
         planExpenses={planData.expenses}
         attachments={planData.attachments}
+        planStartDate={plan?.startDate}
         onEdit={handleEdit}
         onDelete={async target => {
           try {

@@ -1,4 +1,5 @@
 import type { DaySuggestion, SuggestionPlace } from "@/services/tourism";
+import { tourismCategoryColors } from "@/types/tourism";
 import { usePressScale } from "@/ui/effects/pressScale";
 import { colors } from "@/ui/tokens/colors";
 import { radii } from "@/ui/tokens/radii";
@@ -14,21 +15,6 @@ import {
   View,
 } from "react-native";
 import AiCloseIcon from "../../../assets/close_sm.svg";
-
-const CATEGORY_BADGE: Record<string, { color: string; bg: string }> = {
-  음식점: { color: colors.categoryMeal, bg: colors.mealBg },
-  관광지: {
-    color: colors.categorySightseeing,
-    bg: colors.suggestionSightseeingBg,
-  },
-  문화시설: {
-    color: colors.categorySightseeing,
-    bg: colors.suggestionSightseeingBg,
-  },
-  쇼핑: { color: colors.categoryShopping, bg: colors.suggestionShoppingBg },
-  레포츠: { color: colors.suggestionLeisure, bg: colors.suggestionLeisureBg },
-  여행코스: { color: colors.gray700, bg: colors.gray200 },
-};
 
 function formatDistance(dist: number | null) {
   if (dist == null) return null;
@@ -78,7 +64,9 @@ export default function AiSuggestionCard({
         }}
       >
         {suggestion.places.map(place => {
-          const badge = place.category ? CATEGORY_BADGE[place.category] : null;
+          const badge = place.category
+            ? tourismCategoryColors[place.category]
+            : null;
           const distance = formatDistance(place.dist);
           return (
             <Pressable

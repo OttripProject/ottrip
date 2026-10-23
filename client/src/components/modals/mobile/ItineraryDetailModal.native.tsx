@@ -2,6 +2,7 @@ import ImagePreviewModal, {
   type ImagePreviewItem,
 } from "@/components/modals/ImagePreviewModal";
 import type { Attachment, Expense, Itinerary } from "@/types/api";
+import { getTourismCategoryColor } from "@/types/tourism";
 import { ExpenseCurrency, currencyLabels } from "@/types/expense";
 import BottomSheetModal from "@/ui/components/BottomSheetModal.native";
 import MiniMapView from "@/ui/components/MiniMapView";
@@ -9,11 +10,12 @@ import { colors } from "@/ui/tokens/colors";
 import { radii } from "@/ui/tokens/radii";
 import { spacing } from "@/ui/tokens/spacing";
 import { textStyles } from "@/ui/tokens/typography";
-import { formatTime } from "@/utils/dateUtils";
+import { formatDuration, formatTime } from "@/utils/dateUtils";
 import { formatWalkTime } from "@/utils/distanceUtils";
-import { useEffect, useMemo, useState } from "react";
+import dayjs from "dayjs";
 import type { NearbyAttraction } from "@/services/tourism";
 import { tourismApi } from "@/services/tourism";
+import { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -26,26 +28,17 @@ import {
   View,
 } from "react-native";
 import DeleteIcon from "../../../../assets/delete_gray.svg";
+import ExternalLinkIcon from "../../../../assets/external_link.svg";
 import MemoIcon from "../../../../assets/memo.svg";
 import AttachmentDocumentIcon from "../../../../assets/mobile_attachment_document.svg";
 import AttachmentImageIcon from "../../../../assets/mobile_attachment_image.svg";
 import CloseIcon from "../../../../assets/mobile_close.svg";
 import ExpenseIcon from "../../../../assets/mobile_expense.svg";
 import LocationIcon from "../../../../assets/mobile_location.svg";
-import MapIcon from "../../../../assets/mobile_map.svg";
 import UpdateIcon from "../../../../assets/update.svg";
-import TimeIcon from "../../../../assets/week_bar_time.svg";
+import TimeIcon from "../../../../assets/mobile_time.svg";
 
-const NEARBY_BADGE_COLORS: Record<string, { color: string; bg: string }> = {
-  여행코스: { color: "rgb(62, 91, 217)", bg: "rgb(236, 239, 254)" },
-  쇼핑: { color: "rgb(31, 157, 87)", bg: "rgb(231, 247, 236)" },
-  레포츠: { color: "rgb(55, 55, 55)", bg: "rgb(244, 244, 244)" },
-  "축제·공연": { color: "rgb(14, 138, 138)", bg: "rgb(227, 246, 246)" },
-  문화시설: { color: "rgb(10, 132, 255)", bg: "rgb(239, 244, 255)" },
-  음식점: { color: "rgb(183, 104, 0)", bg: "rgb(255, 244, 224)" },
-  관광지: { color: "rgb(217, 28, 181)", bg: "rgb(255, 235, 251)" },
-};
-const DEFAULT_NEARBY_BADGE = { color: "#6C6C6C", bg: "#F5F5F5" };
+const MEMO_MAX_LINES = 3;
 
 interface ItineraryDetailModalProps {
   visible: boolean;
@@ -56,6 +49,7 @@ interface ItineraryDetailModalProps {
   onEdit?: (itinerary: Itinerary) => void;
   onDelete?: (itinerary: Itinerary) => void;
   onAttractionSelect?: (attraction: NearbyAttraction) => void;
+  planStartDate?: string;
 }
 
 export default function ItineraryDetailModal({
@@ -67,13 +61,17 @@ export default function ItineraryDetailModal({
   onEdit,
   onDelete,
   onAttractionSelect,
+  planStartDate,
 }: ItineraryDetailModalProps) {
   const [previewVisible, setPreviewVisible] = useState(false);
   const [previewImages, setPreviewImages] = useState<ImagePreviewItem[]>([]);
   const [previewInitialIndex, setPreviewInitialIndex] = useState(0);
-  const [nearbyAttractions, setNearbyAttractions] = useState<NearbyAttraction[]>([]);
+  const [nearbyAttractions, setNearbyAttractions] = useState<
+    NearbyAttraction[]
+  >([]);
   const [nearbyLoading, setNearbyLoading] = useState(false);
   const [descExpanded, setDescExpanded] = useState(false);
+  const [descLineCount, setDescLineCount] = useState(0);
 
   const expenseByCurrency = useMemo(() => {
     if (!itinerary) return {} as Record<ExpenseCurrency, number>;
@@ -191,91 +189,64 @@ export default function ItineraryDetailModal({
     : "00:00";
   const endTime = itinerary.endTime ? formatTime(itinerary.endTime) : "00:00";
   const timeRange = `${startTime} ~ ${endTime}`;
+  const duration = formatDuration(startTime, endTime);
+  const dayNumber = planStartDate
+    ? dayjs(itinerary.itineraryDate).diff(dayjs(planStartDate), "day") + 1
+    : null;
 
   return (
-    <BottomSheetModal visible={visible} onClose={onClose} height={0.6}>
+    <BottomSheetModal visible={visible} onClose={onClose} height={0.68}>
+      <View style={styles.header}>
+        <View style={styles.headerText}>
+          {!!dayNumber && <Text style={styles.day}>DAY {dayNumber}</Text>}
+          <Text style={styles.title} numberOfLines={1}>
+            {itinerary.title || "활동"}
+          </Text>
+          {itinerary.location?.name && (
+            <View style={styles.place}>
+              <LocationIcon width={13} height={13} color={colors.paletteFg3} />
+              <Text style={styles.placeText} numberOfLines={1}>
+                {itinerary.location.name}
+              </Text>
+              <Pressable onPress={handleOpenMap} hitSlop={8}>
+                <ExternalLinkIcon
+                  width={14}
+                  height={14}
+                  color={colors.paletteFg3}
+                />
+              </Pressable>
+            </View>
+          )}
+        </View>
+        <Pressable style={styles.closeButton} onPress={onClose}>
+          <View style={styles.closeCircle}>
+            <CloseIcon width={17} height={17} color={colors.paletteFg2} />
+          </View>
+        </Pressable>
+      </View>
+
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* 헤더 */}
-        <View style={styles.header}>
-          <Text style={styles.title} numberOfLines={2}>
-            {itinerary.title || "활동"}
-          </Text>
-          <View style={styles.headerActions}>
-            {onEdit && (
-              <Pressable
-                style={styles.actionButton}
-                onPress={handleEdit}
-                hitSlop={8}
-              >
-                <UpdateIcon width={20} height={20} color={colors.gray600} />
-              </Pressable>
-            )}
-            {onDelete && (
-              <Pressable
-                style={styles.actionButton}
-                onPress={handleDelete}
-                hitSlop={8}
-              >
-                <DeleteIcon width={20} height={20} color={colors.gray600} />
-              </Pressable>
-            )}
-            <Pressable
-              style={styles.actionButton}
-              onPress={onClose}
-              hitSlop={8}
-            >
-              <CloseIcon width={20} height={20} color={colors.gray600} />
-            </Pressable>
-          </View>
-        </View>
-
-        {/* 상세 정보 */}
-        <View style={styles.details}>
-          {/* 시간 */}
+        <View>
           <View style={styles.detailItem}>
             <View style={styles.detailIcon}>
               <TimeIcon width={20} height={20} color={colors.primary} />
             </View>
             <View style={styles.detailContent}>
-              <Text style={styles.detailLabel}>시간</Text>
               <Text style={styles.detailValue}>{timeRange}</Text>
+              {duration && <Text style={styles.detailSub}>{duration}</Text>}
             </View>
           </View>
 
-          {/* 장소 */}
-          {itinerary.location?.name && (
-            <View style={styles.detailItem}>
-              <View style={styles.detailIcon}>
-                <LocationIcon width={20} height={20} color={colors.primary} />
-              </View>
-              <View style={styles.detailContent}>
-                <Text style={styles.detailLabel}>장소</Text>
-                <Text style={styles.detailValue}>{itinerary.location.name}</Text>
-              </View>
-            </View>
-          )}
-          {itinerary.location?.hasCoords &&
-            !!itinerary.location.latitude &&
-            !!itinerary.location.longitude && (
-              <MiniMapView
-                latitude={itinerary.location.latitude}
-                longitude={itinerary.location.longitude}
-                name={itinerary.location.name}
-              />
-            )}
-
-          {/* 비용 */}
           {Object.values(expenseByCurrency).some(v => v > 0) && (
             <View style={styles.detailItem}>
               <View style={styles.detailIcon}>
                 <ExpenseIcon width={20} height={20} color={colors.primary} />
               </View>
               <View style={styles.detailContent}>
-                <Text style={styles.detailLabel}>비용</Text>
                 <Text style={styles.detailValue}>
                   {(
                     Object.entries(expenseByCurrency) as [
@@ -294,28 +265,46 @@ export default function ItineraryDetailModal({
             </View>
           )}
 
-          {/* 설명 */}
           {itinerary.description && (
             <View style={styles.detailItem}>
               <View style={styles.detailIcon}>
                 <MemoIcon width={20} height={20} color={colors.primary} />
               </View>
               <View style={styles.detailContent}>
-                <Text style={styles.detailLabel}>설명</Text>
                 <Text
-                  style={styles.detailValue}
-                  numberOfLines={descExpanded ? undefined : 3}
+                  style={[styles.memo, styles.memoMeasure]}
+                  onTextLayout={e =>
+                    setDescLineCount(e.nativeEvent.lines.length)
+                  }
                 >
                   {itinerary.description}
                 </Text>
-                <Pressable onPress={() => setDescExpanded(p => !p)}>
-                  <Text style={styles.expandBtn}>
-                    {descExpanded ? "접기" : "더보기"}
-                  </Text>
-                </Pressable>
+                <Text
+                  style={styles.memo}
+                  numberOfLines={descExpanded ? undefined : MEMO_MAX_LINES}
+                >
+                  {itinerary.description}
+                </Text>
+                {descLineCount > MEMO_MAX_LINES && (
+                  <Pressable onPress={() => setDescExpanded(p => !p)}>
+                    <Text style={styles.expandBtn}>
+                      {descExpanded ? "접기" : "더보기"}
+                    </Text>
+                  </Pressable>
+                )}
               </View>
             </View>
           )}
+
+          {itinerary.location?.hasCoords &&
+            !!itinerary.location.latitude &&
+            !!itinerary.location.longitude && (
+              <MiniMapView
+                latitude={itinerary.location.latitude}
+                longitude={itinerary.location.longitude}
+                name={itinerary.location.name}
+              />
+            )}
         </View>
 
         {/* 첨부파일 섹션 */}
@@ -371,7 +360,7 @@ export default function ItineraryDetailModal({
               <Text style={styles.nearbyCount}>{nearbyAttractions.length}곳</Text>
             </View>
             {nearbyAttractions.map((item, index) => {
-              const badge = NEARBY_BADGE_COLORS[item.contentTypeId] ?? DEFAULT_NEARBY_BADGE;
+              const badge = getTourismCategoryColor(item.contentTypeId);
               const walkTime = item.dist ? formatWalkTime(item.dist) : null;
               const sub = item.dist != null
                 ? [item.address, walkTime].filter(Boolean).join(" · ")
@@ -402,13 +391,26 @@ export default function ItineraryDetailModal({
         )}
       </ScrollView>
 
-      {/* 지도 앱에서 길찾기 버튼 */}
-      {itinerary.location?.name && (
+      {(onEdit || onDelete) && (
         <View style={styles.footer}>
-          <Pressable style={styles.mapButton} onPress={handleOpenMap}>
-            <MapIcon width={20} height={20} />
-            <Text style={styles.mapButtonText}>지도 앱에서 길찾기</Text>
-          </Pressable>
+          {onEdit && (
+            <Pressable
+              style={[styles.footerButton, styles.editButton]}
+              onPress={handleEdit}
+            >
+              <UpdateIcon width={17} height={17} color={colors.gray800} />
+              <Text style={styles.editButtonText}>수정</Text>
+            </Pressable>
+          )}
+          {onDelete && (
+            <Pressable
+              style={[styles.footerButton, styles.deleteButton]}
+              onPress={handleDelete}
+            >
+              <DeleteIcon width={17} height={17} color={colors.danger} />
+              <Text style={styles.deleteButtonText}>삭제</Text>
+            </Pressable>
+          )}
         </View>
       )}
 
@@ -423,65 +425,99 @@ export default function ItineraryDetailModal({
 }
 
 const styles = StyleSheet.create({
+  header: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: spacing.md,
+    paddingTop: spacing.sm,
+    paddingRight: 18,
+    paddingLeft: spacing.xl,
+  },
+  headerText: {
+    flex: 1,
+    minWidth: 0,
+  },
+  day: {
+    ...textStyles.h8,
+    letterSpacing: 1.68,
+    color: colors.paletteFg3,
+  },
+  title: {
+    ...textStyles.h3,
+    marginTop: spacing.xs,
+    color: colors.paletteInk,
+  },
+  place: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.xs,
+    marginTop: spacing.sm,
+  },
+  placeText: {
+    ...textStyles.h7,
+    flexShrink: 1,
+    color: colors.paletteFg3,
+  },
+  closeButton: {
+    width: 44,
+    height: 44,
+    marginTop: -2,
+    marginBottom: -6,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  closeCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: radii.pill,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: colors.paletteFill,
+  },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
-    paddingHorizontal: 20,
-    paddingTop: 8,
-    paddingBottom: 24,
-  },
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    marginBottom: 24,
-  },
-  title: {
-    ...textStyles.h4,
-    flex: 1,
-  },
-  headerActions: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
-  actionButton: {
-    padding: 4,
-    width: 32,
-    height: 32,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: colors.gray200,
-    borderRadius: 16,
-  },
-  details: {
-    gap: 20,
+    paddingTop: spacing.md,
+    paddingHorizontal: spacing.xl,
+    paddingBottom: spacing.xs,
   },
   detailItem: {
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-start",
+    gap: spacing.md,
+    paddingVertical: 10,
   },
   detailIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 12,
-    backgroundColor: `${colors.primary}1A`,
+    width: 20,
+    height: 22,
     alignItems: "center",
     justifyContent: "center",
-    marginRight: 12,
   },
   detailContent: {
     flex: 1,
-    justifyContent: "center",
-  },
-  detailLabel: {
-    ...textStyles.h7,
-    color: colors.gray600,
-    marginBottom: 2,
+    minWidth: 0,
+    gap: 2,
   },
   detailValue: {
     ...textStyles.h6,
+    color: colors.paletteInk,
+    fontVariant: ["tabular-nums"],
+  },
+  detailSub: {
+    ...textStyles.body5,
+    color: colors.paletteFg3,
+    fontVariant: ["tabular-nums"],
+  },
+  memo: {
+    ...textStyles.body3,
+    color: colors.paletteInk,
+  },
+  memoMeasure: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    opacity: 0,
   },
   expandBtn: {
     ...textStyles.body5,
@@ -586,21 +622,33 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   footer: {
-    paddingHorizontal: 16,
-    paddingTop: 8,
-    paddingBottom: 16,
+    flexDirection: "row",
+    gap: spacing.md,
+    paddingTop: spacing.lg,
+    paddingHorizontal: spacing.xl,
+    paddingBottom: spacing.sm,
   },
-  mapButton: {
-    backgroundColor: colors.black,
-    borderRadius: 12,
-    paddingVertical: 16,
+  footerButton: {
+    flex: 1,
+    height: 48,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 8,
+    gap: spacing.sm,
+    borderRadius: radii.mdPlus,
   },
-  mapButtonText: {
-    ...textStyles.h4,
-    color: colors.white,
+  editButton: {
+    backgroundColor: colors.paletteFill,
+  },
+  deleteButton: {
+    backgroundColor: colors.dangerSoft,
+  },
+  editButtonText: {
+    ...textStyles.h6,
+    color: colors.gray800,
+  },
+  deleteButtonText: {
+    ...textStyles.h6,
+    color: colors.danger,
   },
 });

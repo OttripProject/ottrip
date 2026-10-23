@@ -1629,6 +1629,7 @@ export default function WeeklyScreen() {
         itinerary={selectedItinerary}
         planExpenses={planData.expenses ?? []}
         attachments={planData.attachments ?? []}
+        planStartDate={selectedPlan?.startDate}
         onEdit={itinerary => {
           setShowItineraryDetail(false);
           setEditingItinerary(itinerary);
@@ -1697,6 +1698,9 @@ export default function WeeklyScreen() {
             });
             queryClient.invalidateQueries({
               queryKey: ["checklist", selectedPlan.publicId],
+            });
+            queryClient.invalidateQueries({
+              queryKey: ["plan", selectedPlan.publicId],
             });
           }
           planData.refreshAttachments();

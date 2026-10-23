@@ -1,5 +1,6 @@
 import type { DaySuggestion, SuggestionPlace } from "@/services/tourism";
 import { useToast } from "@/contexts/ToastContext";
+import { tourismCategoryColors } from "@/types/tourism";
 import MotionPressable, {
   MotionIcon,
   useMotionHovered,
@@ -25,15 +26,6 @@ import LeftArrowIcon from "../../../assets/left_arrow.svg";
 import RightArrowIcon from "../../../assets/right_arrow.svg";
 
 const DAY_KO = ["일", "월", "화", "수", "목", "금", "토"];
-
-const CATEGORY_BADGE: Record<string, { color: string; bg: string }> = {
-  음식점:   { color: colors.categoryMeal,   bg: "#FFF4E0" },
-  관광지:   { color: colors.categorySightseeing, bg: "#FCEAFF" },
-  문화시설: { color: colors.categorySightseeing, bg: "#FCEAFF" },
-  쇼핑:     { color: colors.categoryShopping, bg: "#E6F7EE" },
-  레포츠:   { color: "#0E6EBF",             bg: "#E0F0FF" },
-  여행코스: { color: colors.gray700,        bg: colors.gray200 },
-};
 
 
 function parseDateLabel(dateStr: string): { md: string; dow: string } {
@@ -95,7 +87,7 @@ export default function SuggestionBar({ suggestions, onDismiss, onReopen, onPlac
   function renderPlace(targetDay: DaySuggestion, targetPlace: SuggestionPlace) {
     const d = targetPlace.dist;
     const distLabel = d == null ? null : d < 1000 ? `${Math.round(d / 10) * 10}m` : d < 2000 ? `${(d / 1000).toFixed(1)}km` : `${Math.round(d / 1000)}km`;
-    const catBadge = targetPlace.category ? CATEGORY_BADGE[targetPlace.category] : null;
+    const catBadge = targetPlace.category ? tourismCategoryColors[targetPlace.category] : null;
     return (
       <Pressable
         style={({ hovered }: any) => [styles.placeBtn, hovered && styles.placeBtnHover]}
