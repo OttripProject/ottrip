@@ -100,6 +100,12 @@ export const textStyles: Record<string, TextStyle> = {
     lineHeight: 24,
     color: colors.black,
   },
+  menuItem: {
+    fontFamily: typography.fontFamily.pretendardMedium,
+    fontSize: 15,
+    lineHeight: 22,
+    color: colors.black,
+  },
   body3: {
     fontFamily: typography.fontFamily.pretendardRegular,
     fontSize: 14,

@@ -7,6 +7,7 @@ import { useSelectedPlan } from "@/contexts/SelectedPlanContext";
 import { usePlanDataQuery } from "@/hooks/usePlanDataQuery";
 import { usePlansQuery } from "@/hooks/usePlansQuery";
 import type { Plan } from "@/types/api";
+import ScalePressable from "@/ui/components/ScalePressable";
 import { colors } from "@/ui/tokens/colors";
 import { radii } from "@/ui/tokens/radii";
 import { shadows } from "@/ui/tokens/shadows";
@@ -135,7 +136,7 @@ export default function TripHeader({ onCalendarPress }: TripHeaderProps) {
     <>
       <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
         <View ref={topRowRef} style={styles.headerTopRow}>
-          <Pressable
+          <ScalePressable
             style={styles.planSelector}
             onPress={() => setShowPlanSelector(true)}
           >
@@ -149,29 +150,29 @@ export default function TripHeader({ onCalendarPress }: TripHeaderProps) {
               </Text>
             )}
             <DropdownIcon width={15} height={15} color={colors.gray900} />
-          </Pressable>
+          </ScalePressable>
           <View style={styles.headerIcons}>
-            <Pressable
+            <ScalePressable
               style={styles.headerIconButton}
               accessibilityLabel="지도로 일정 보기"
               onPress={() => setMapVisible(true)}
             >
               <LocationIcon width={20} height={20} color={colors.gray900} />
-            </Pressable>
-            <Pressable
+            </ScalePressable>
+            <ScalePressable
               style={styles.headerIconButton}
               accessibilityLabel="달력에서 날짜 선택"
               onPress={onCalendarPress}
             >
               <CalendarIcon width={20} height={20} color={colors.gray900} />
-            </Pressable>
-            <Pressable
+            </ScalePressable>
+            <ScalePressable
               style={styles.headerIconButton}
               accessibilityLabel="더보기"
               onPress={openMoreMenu}
             >
               <DotsIcon width={20} height={20} color={colors.black} />
-            </Pressable>
+            </ScalePressable>
           </View>
         </View>
       </View>
@@ -274,13 +275,10 @@ export default function TripHeader({ onCalendarPress }: TripHeaderProps) {
               onPress: () => setProfileModalVisible(true),
             },
           ].map(({ label, Icon, onPress }) => (
-            <Pressable
+            <ScalePressable
               key={label}
               accessibilityRole="menuitem"
-              style={({ pressed }) => [
-                styles.moreMenuItem,
-                pressed && styles.moreMenuItemPressed,
-              ]}
+              style={styles.moreMenuItem}
               onPress={() => {
                 setMoreMenuVisible(false);
                 if (Platform.OS === "ios") {
@@ -292,7 +290,7 @@ export default function TripHeader({ onCalendarPress }: TripHeaderProps) {
             >
               <Icon width={20} height={20} color={colors.paletteInk} />
               <Text style={styles.moreMenuText}>{label}</Text>
-            </Pressable>
+            </ScalePressable>
           ))}
         </View>
       </Modal>
@@ -358,11 +356,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     borderRadius: radii.md,
   },
-  moreMenuItemPressed: {
-    backgroundColor: colors.paletteFill,
-  },
   moreMenuText: {
-    ...textStyles.body2,
+    ...textStyles.menuItem,
     color: colors.paletteInk,
   },
 });
