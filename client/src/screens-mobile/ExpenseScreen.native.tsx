@@ -26,14 +26,7 @@ import { textStyles, typography } from "@/ui/tokens/typography";
 import { useQueryClient } from "@tanstack/react-query";
 import dayjs from "dayjs";
 import { useEffect, useMemo, useRef, useState } from "react";
-import {
-  Animated,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import { Animated, ScrollView, StyleSheet, Text, View } from "react-native";
 import DropdownIcon from "../../assets/mobile_dropdown.svg";
 import PaperclipIcon from "../../assets/paperclip.svg";
 
@@ -339,7 +332,7 @@ export default function ExpenseScreen() {
             <View style={styles.summaryBlock}>
               <View style={styles.totalHeader}>
                 <Text style={styles.totalLabel}>{totalLabel}</Text>
-                <Pressable
+                <ScalePressable
                   style={styles.attachmentButton}
                   onPress={() => setAttachmentListVisible(true)}
                   accessibilityLabel="첨부파일"
@@ -352,7 +345,7 @@ export default function ExpenseScreen() {
                   <Text style={styles.attachmentButtonText}>
                     {totalAttachmentCount}
                   </Text>
-                </Pressable>
+                </ScalePressable>
               </View>
               <View style={styles.totalAmounts}>
                 {totals.length > 0 ? (
@@ -441,7 +434,7 @@ export default function ExpenseScreen() {
                               const expenseAttachments =
                                 attachmentsByExpense.get(e.id) ?? [];
                               return (
-                                <Pressable
+                                <ScalePressable
                                   key={e.id}
                                   style={styles.expenseRow}
                                   onPress={() => setEditingExpense(e)}
@@ -463,7 +456,7 @@ export default function ExpenseScreen() {
                                     )}
                                   </View>
                                   {expenseAttachments.length > 0 && (
-                                    <Pressable
+                                    <ScalePressable
                                       style={styles.attachmentChip}
                                       hitSlop={spacing.sm}
                                       onPress={() =>
@@ -479,12 +472,12 @@ export default function ExpenseScreen() {
                                       <Text style={styles.attachmentChipText}>
                                         {expenseAttachments.length}
                                       </Text>
-                                    </Pressable>
+                                    </ScalePressable>
                                   )}
                                   <Text style={styles.expenseAmount}>
                                     {formatMoney(Number(e.amount), e.currency)}
                                   </Text>
-                                </Pressable>
+                                </ScalePressable>
                               );
                             })}
                           </View>
