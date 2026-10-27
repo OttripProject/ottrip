@@ -33,7 +33,10 @@ import {
   useWindowDimensions,
 } from "react-native";
 import { AirportPicker, CategoryPicker, TimePicker } from "@/ui/components/pickers";
-import type { ExpenseCategory as ExpenseCategoryType } from "@/types/expense";
+import {
+  type ExpenseCategory as ExpenseCategoryType,
+  categoryLabels,
+} from "@/types/expense";
 import {
   ItineraryCategory,
   itineraryCategoryColors,
@@ -80,19 +83,9 @@ interface AddScheduleWithFileModalProps {
 
 const ITEM_BADGE: Record<string, { label: string; bg: string; text: string; dot: string }> = {
   itinerary: { label: "일정", bg: "#EAF1FF", text: "#1A66E0", dot: "#3D7FE6" },
-  flight: { label: "항공", bg: "#F3EEFF", text: "#7B2FBE", dot: "#9B5DE5" },
-  accommodation: { label: "숙박", bg: "rgb(255, 233, 199)", text: "rgb(162, 99, 9)", dot: "rgb(224, 138, 46)" },
+  flight: { label: "항공", bg: colors.flightBg, text: colors.flightText, dot: colors.flightText },
+  accommodation: { label: "숙박", bg: colors.accommodationBg, text: colors.accommodationText, dot: colors.accommodationText },
   expense: { label: "비용", bg: "#FFF4E5", text: "#C85B0B", dot: "#E8841A" },
-};
-
-const EXPENSE_CATEGORY_LABEL: Record<string, string> = {
-  food: "식비",
-  transport: "교통",
-  flight: "항공",
-  activity: "관광",
-  accommodation: "숙박",
-  shopping: "쇼핑",
-  etc: "기타",
 };
 
 function validateFile(file: File): string | null {
@@ -197,7 +190,7 @@ function getItemTitle(draft: AiDocumentItemDraft): string {
     const amount = Number(v.amount ?? 0);
     const cur = String(v.currency ?? "KRW");
     return [
-      EXPENSE_CATEGORY_LABEL[cat] ?? cat,
+      categoryLabels[cat as ExpenseCategoryType] ?? cat,
       amount ? `${amount.toLocaleString()}${cur === "KRW" ? "원" : ` ${cur}`}` : "",
     ].filter(Boolean).join(" · ");
   }
@@ -1628,7 +1621,7 @@ export default function AddScheduleWithFileModal({
                               <View style={styles.inlineExpenseBadge}>
                                 <ExpenseCardIcon width={12} height={12} color="#1F9D57" />
                                 <Text style={styles.inlineExpenseCategory}>
-                                  {EXPENSE_CATEGORY_LABEL[expense.category] ?? expense.category}
+                                  {categoryLabels[expense.category as ExpenseCategoryType] ?? expense.category}
                                 </Text>
                                 <Text style={styles.inlineExpenseAmount}>
                                   {expense.currency === "KRW"

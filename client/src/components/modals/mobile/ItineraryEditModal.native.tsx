@@ -28,10 +28,14 @@ const itineraryCategoryToExpenseCategory: Partial<Record<ItineraryCategory, Expe
   [ItineraryCategory.MEAL]: ExpenseCategory.FOOD,
   [ItineraryCategory.TRANSPORT]: ExpenseCategory.TRANSPORT,
   [ItineraryCategory.ACTIVITY]: ExpenseCategory.ACTIVITY,
-  [ItineraryCategory.SIGHTSEEING]: ExpenseCategory.ACTIVITY,
+  [ItineraryCategory.SIGHTSEEING]: ExpenseCategory.SIGHTSEEING,
   [ItineraryCategory.SHOPPING]: ExpenseCategory.SHOPPING,
   [ItineraryCategory.ETC]: ExpenseCategory.ETC,
 };
+
+const toExpenseCategory = (category: ItineraryCategory | null) =>
+  (category && itineraryCategoryToExpenseCategory[category]) ||
+  ExpenseCategory.ETC;
 import CalendarModal from "@/ui/components/CalendarModal.native";
 import CurrencyToggle from "@/ui/components/CurrencyToggle";
 import FloatingFooter from "@/ui/components/FloatingFooter.native";
@@ -155,7 +159,7 @@ export default function ItineraryEditModal({
   });
   const [expenseData, setExpenseData] = useState({
     amount: "",
-    category: ExpenseCategory.FOOD,
+    category: ExpenseCategory.ETC,
     currency: ExpenseCurrency.KRW,
   });
   const [existingExpenseId, setExistingExpenseId] = useState<number | null>(
@@ -192,6 +196,7 @@ export default function ItineraryEditModal({
     ExpenseCategory.FOOD,
     ExpenseCategory.TRANSPORT,
     ExpenseCategory.ACTIVITY,
+    ExpenseCategory.SIGHTSEEING,
   ];
   const CATEGORY_ROW2: ExpenseCategory[] = [
     ExpenseCategory.ACCOMMODATION,
@@ -287,7 +292,7 @@ export default function ItineraryEditModal({
             });
             setExistingExpenseId(firstExpense.id);
           } else {
-            setExpenseData({ amount: "", category: ExpenseCategory.FOOD, currency: ExpenseCurrency.KRW });
+            setExpenseData({ amount: "", category: toExpenseCategory((latestItinerary.category as ItineraryCategory) ?? null), currency: ExpenseCurrency.KRW });
             setExistingExpenseId(null);
           }
         } catch {
@@ -308,7 +313,7 @@ export default function ItineraryEditModal({
               ? itinerary.endTime.substring(0, 5)
               : "10:00",
           });
-          setExpenseData({ amount: "", category: ExpenseCategory.FOOD, currency: ExpenseCurrency.KRW });
+          setExpenseData({ amount: "", category: toExpenseCategory((itinerary.category as ItineraryCategory) ?? null), currency: ExpenseCurrency.KRW });
           setExistingExpenseId(null);
         }
       };
@@ -327,7 +332,7 @@ export default function ItineraryEditModal({
         endTime: prefill?.endTime || defaultEndTime || "10:00",
       });
       setSelectedCategory(prefill?.category ?? null);
-      setExpenseData({ amount: "", category: ExpenseCategory.FOOD, currency: ExpenseCurrency.KRW });
+      setExpenseData({ amount: "", category: toExpenseCategory(prefill?.category ?? null), currency: ExpenseCurrency.KRW });
       setExistingExpenseId(null);
       if (prefill?.location) {
         const hasCoords = !!(prefill.locationLat && prefill.locationLng);
@@ -422,12 +427,10 @@ export default function ItineraryEditModal({
 
   useEffect(() => {
     if (existingExpenseId !== null) return;
-    const mapped = selectedCategory
-      ? itineraryCategoryToExpenseCategory[selectedCategory]
-      : undefined;
-    if (mapped) {
-      setExpenseData(prev => ({ ...prev, category: mapped }));
-    }
+    setExpenseData(prev => ({
+      ...prev,
+      category: toExpenseCategory(selectedCategory),
+    }));
   }, [selectedCategory]);
 
   useEffect(() => {

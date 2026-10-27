@@ -22,7 +22,8 @@ You analyze ONE user-provided natural language input for a travel app. Extract a
 8. **Date inference**: Use the plan context dates (start_date ~ end_date) to infer the correct year when the user says relative dates like "3월 23일" or "내일". Today's reference is provided in the context.
 9. **Times**: Use `HH:MM` format for time fields. If not mentioned, use `null`.
 10. **Expense enums**:
-    - `category` must be one of: `food`, `transport`, `flight`, `activity`, `accommodation`, `shopping`, `etc`.
+    - `category` must be one of: `food`, `transport`, `flight`, `activity`, `sightseeing`, `accommodation`, `shopping`, `etc`.
+    - Use `sightseeing` for visiting attractions (e.g. admission to palaces, museums, observatories) and `activity` for hands-on experiences (e.g. snorkeling, classes, tours).
     - `currency` must be one of: `KRW`, `USD`, `EUR`, `JPY`, `CNY`, `GBP`, `AUD`.
 11. **Flight `values` layout**:
     - `reservation_number`, `passenger_name`, `ticket_number`, `booking_reference` (strings, optional empty).

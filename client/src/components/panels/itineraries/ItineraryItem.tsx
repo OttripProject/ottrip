@@ -30,7 +30,7 @@ const itineraryCategoryToExpenseCategory: Partial<Record<ItineraryCategory, Expe
   [ItineraryCategory.MEAL]: ExpenseCategory.FOOD,
   [ItineraryCategory.TRANSPORT]: ExpenseCategory.TRANSPORT,
   [ItineraryCategory.ACTIVITY]: ExpenseCategory.ACTIVITY,
-  [ItineraryCategory.SIGHTSEEING]: ExpenseCategory.ACTIVITY,
+  [ItineraryCategory.SIGHTSEEING]: ExpenseCategory.SIGHTSEEING,
   [ItineraryCategory.SHOPPING]: ExpenseCategory.SHOPPING,
   [ItineraryCategory.ETC]: ExpenseCategory.ETC,
 };

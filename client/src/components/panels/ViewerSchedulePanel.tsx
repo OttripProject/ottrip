@@ -4,7 +4,11 @@ import type {
   ExportFlight,
   ExportItinerary,
 } from "@/services/plans";
-import { ItineraryCategory, itineraryCategoryColors } from "@/types/itinerary";
+import {
+  type ItineraryCategory,
+  itineraryCategoryColors,
+  itineraryCategoryTints,
+} from "@/types/itinerary";
 import { colors } from "@/ui/tokens/colors";
 import { radii } from "@/ui/tokens/radii";
 import { spacing } from "@/ui/tokens/spacing";
@@ -537,10 +541,12 @@ export default function ViewerSchedulePanel({
           const isItinerary = event.type === "itinerary";
           const isFlight = event.type === "flight";
 
-          const itineraryCategory =
-            (event.originalData?.category as ItineraryCategory | undefined) ??
-            ItineraryCategory.ACTIVITY;
-          const itineraryCategoryColor = itineraryCategoryColors[itineraryCategory];
+          const itineraryCategory = event.originalData?.category as
+            | ItineraryCategory
+            | undefined;
+          const itineraryCategoryColor = itineraryCategory
+            ? itineraryCategoryColors[itineraryCategory]
+            : colors.categoryEtc;
 
           const flattenStyle = (s: any): any => {
             if (!s) return {};
@@ -574,7 +580,9 @@ export default function ViewerSchedulePanel({
                 borderRadius: radii.md,
               }
             : {
-                backgroundColor: `${itineraryCategoryColor}1A`,
+                backgroundColor: itineraryCategory
+                  ? itineraryCategoryTints[itineraryCategory]
+                  : colors.categoryEtcBg,
                 borderWidth: 1,
                 borderColor: `${itineraryCategoryColor}59`,
                 borderRadius: radii.md,

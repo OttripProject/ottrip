@@ -12,6 +12,9 @@ import { type Attachment, type Expense, PLAN_ENTITY_KIND } from "@/types/api";
 import {
   ExpenseCategory,
   type ExpenseCurrency,
+  categoryColors,
+  categoryLabels,
+  categoryTints,
   currencyLabels,
 } from "@/types/expense";
 import CalendarModal from "@/ui/components/CalendarModal.native";
@@ -29,47 +32,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Animated, ScrollView, StyleSheet, Text, View } from "react-native";
 import DropdownIcon from "../../assets/mobile_dropdown.svg";
 import PaperclipIcon from "../../assets/paperclip.svg";
-
-const CATEGORY_BADGES: Record<
-  ExpenseCategory,
-  { label: string; bg: string; fg: string }
-> = {
-  [ExpenseCategory.ACCOMMODATION]: {
-    label: "숙박",
-    bg: colors.accommodationBg,
-    fg: colors.accommodationText,
-  },
-  [ExpenseCategory.FOOD]: {
-    label: "식사",
-    bg: colors.mealBg,
-    fg: colors.categoryMeal,
-  },
-  [ExpenseCategory.ACTIVITY]: {
-    label: "관광",
-    bg: colors.performanceBg,
-    fg: colors.categoryActivity,
-  },
-  [ExpenseCategory.TRANSPORT]: {
-    label: "이동",
-    bg: colors.paletteFill,
-    fg: colors.categoryTransport,
-  },
-  [ExpenseCategory.SHOPPING]: {
-    label: "쇼핑",
-    bg: colors.suggestionShoppingBg,
-    fg: colors.categoryShopping,
-  },
-  [ExpenseCategory.FLIGHT]: {
-    label: "항공",
-    bg: colors.flightBg,
-    fg: colors.flightText,
-  },
-  [ExpenseCategory.ETC]: {
-    label: "기타",
-    bg: colors.paletteFill,
-    fg: colors.categoryEtc,
-  },
-};
 
 type CurrencyTotal = { currency: ExpenseCurrency; amount: number };
 
@@ -244,7 +206,7 @@ export default function ExpenseScreen() {
       attachmentEntries.push({
         attachment,
         expense: e,
-        categoryLabel: CATEGORY_BADGES[e.category].label,
+        categoryLabel: categoryLabels[e.category],
         title: getLink(e)?.name || e.description || "",
       });
     }
@@ -370,7 +332,6 @@ export default function ExpenseScreen() {
               ) : (
                 <View style={styles.categoryList}>
                   {categoryGroups.map(group => {
-                    const badge = CATEGORY_BADGES[group.category];
                     const isExpanded = expandedCategory === group.category;
                     return (
                       <View key={group.category}>
@@ -385,16 +346,19 @@ export default function ExpenseScreen() {
                             <View
                               style={[
                                 styles.categoryBadge,
-                                { backgroundColor: badge.bg },
+                                {
+                                  backgroundColor:
+                                    categoryTints[group.category],
+                                },
                               ]}
                             >
                               <Text
                                 style={[
                                   styles.categoryBadgeText,
-                                  { color: badge.fg },
+                                  { color: categoryColors[group.category] },
                                 ]}
                               >
-                                {badge.label}
+                                {categoryLabels[group.category]}
                               </Text>
                             </View>
                             <Text style={styles.categoryCount}>
@@ -418,7 +382,8 @@ export default function ExpenseScreen() {
                                 styles.barFill,
                                 {
                                   width: `${Math.round(group.ratio * 100)}%`,
-                                  backgroundColor: badge.fg,
+                                  backgroundColor:
+                                    categoryColors[group.category],
                                 },
                               ]}
                             />
@@ -429,7 +394,9 @@ export default function ExpenseScreen() {
                             {group.items.map(e => {
                               const link = getLink(e);
                               const title =
-                                link?.name || e.description || badge.label;
+                                link?.name ||
+                                e.description ||
+                                categoryLabels[group.category];
                               const subtitle = link ? e.description : null;
                               const expenseAttachments =
                                 attachmentsByExpense.get(e.id) ?? [];
