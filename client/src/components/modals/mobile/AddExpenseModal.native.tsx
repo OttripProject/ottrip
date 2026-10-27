@@ -53,6 +53,7 @@ const CATEGORY_OPTIONS: ExpenseCategory[] = [
   ExpenseCategory.FOOD,
   ExpenseCategory.TRANSPORT,
   ExpenseCategory.ACTIVITY,
+  ExpenseCategory.SIGHTSEEING,
   ExpenseCategory.ACCOMMODATION,
   ExpenseCategory.FLIGHT,
   ExpenseCategory.SHOPPING,

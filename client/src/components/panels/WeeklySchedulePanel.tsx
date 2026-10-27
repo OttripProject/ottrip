@@ -76,7 +76,11 @@ import WeekBarLocationIcon from "../../../assets/week_bar_location.svg";
 import UploadIcon from "../../../assets/upload_tray.svg";
 import { extendPlanIfNeeded } from "@/utils/extendPlanIfNeeded";
 import { collectPlanItemDates, shrinkPlanIfNeeded } from "@/utils/shrinkPlanIfNeeded";
-import { ItineraryCategory, itineraryCategoryColors } from "@/types/itinerary";
+import {
+  ItineraryCategory,
+  itineraryCategoryColors,
+  itineraryCategoryTints,
+} from "@/types/itinerary";
 
 dayjs.locale(ko);
 
@@ -118,15 +122,6 @@ if (Platform.OS === "web") {
   );
 }
 
-const CATEGORY_TINTS: Partial<Record<ItineraryCategory, string>> = {
-  MEAL: colors.mealBg,
-  ACTIVITY: colors.performanceBg,
-  SIGHTSEEING: colors.performanceBg,
-};
-
-function categoryTint(category: ItineraryCategory): string {
-  return CATEGORY_TINTS[category] ?? `${itineraryCategoryColors[category]}1A`;
-}
 
 const CALENDAR_THEME = { palette: { gray: { 200: colors.gray200 } } };
 
@@ -3378,13 +3373,18 @@ export default function WeeklySchedulePanel({
                 }
               : null;
 
-            const itineraryCategory =
-              (event.originalData?.category as ItineraryCategory | undefined) ??
-              ItineraryCategory.ACTIVITY;
-            const itineraryCategoryColor = itineraryCategoryColors[itineraryCategory];
+            const itineraryCategory = event.originalData?.category as
+              | ItineraryCategory
+              | undefined;
+            const itineraryCategoryColor = itineraryCategory
+              ? itineraryCategoryColors[itineraryCategory]
+              : colors.categoryEtc;
+            const itineraryCategoryTint = itineraryCategory
+              ? itineraryCategoryTints[itineraryCategory]
+              : colors.categoryEtcBg;
             const itineraryStyle = isItinerary
               ? {
-                  backgroundColor: categoryTint(itineraryCategory),
+                  backgroundColor: itineraryCategoryTint,
                   borderWidth: borderWidth,
                   borderColor: isSelected
                     ? itineraryCategoryColor
@@ -3395,7 +3395,7 @@ export default function WeeklySchedulePanel({
 
             const previewStyle = isPreview
               ? {
-                  backgroundColor: categoryTint(itineraryCategory),
+                  backgroundColor: itineraryCategoryTint,
                   borderWidth: 1,
                   borderColor: `${itineraryCategoryColor}59`,
                   borderRadius: radii.xs,

@@ -41,6 +41,7 @@ const CATEGORY_ORDER: ExpenseCategory[] = [
   "food" as ExpenseCategory,
   "transport" as ExpenseCategory,
   "activity" as ExpenseCategory,
+  "sightseeing" as ExpenseCategory,
   "accommodation" as ExpenseCategory,
   "flight" as ExpenseCategory,
   "shopping" as ExpenseCategory,
