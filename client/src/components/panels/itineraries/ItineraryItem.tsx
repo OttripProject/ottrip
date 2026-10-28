@@ -1807,7 +1807,9 @@ export default function ItineraryItem({
             style={[styles.saveButton, styles.footerEditButton]}
             onPress={onEdit}
           >
-            <Text style={styles.saveButtonText}>수정</Text>
+            <Text style={[styles.saveButtonText, styles.footerEditButtonText]}>
+              수정
+            </Text>
           </MotionPressable>
         </View>
       )}
@@ -1952,7 +1954,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   footerEditButton: {
-    ...surfaces.dark,
+    ...surfaces.muted,
+    backgroundImage: "none",
+  } as any,
+  footerEditButtonText: {
+    color: colors.gray900,
   },
   saveButtonText: {
     ...textStyles.h8,
