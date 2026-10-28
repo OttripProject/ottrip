@@ -434,15 +434,13 @@ const styles = StyleSheet.create({
     marginTop: spacing.lg,
     paddingVertical: spacing.lg,
     borderRadius: radii.lgPlus,
-    backgroundColor: colors.paletteInk,
-    experimental_backgroundImage: `linear-gradient(180deg, ${colors.gradientInk[0]} 0%, ${colors.gradientInk[1]} 100%)`,
-    ...shadows.darkRaised,
+    backgroundColor: colors.gray300,
     alignItems: "center",
     justifyContent: "center",
   },
   expenseDetailButtonText: {
     ...textStyles.h5,
-    color: colors.white,
+    color: colors.gray900,
   },
   twoCardRow: {
     flexDirection: "row",

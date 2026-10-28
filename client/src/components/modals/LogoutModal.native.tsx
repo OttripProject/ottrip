@@ -161,14 +161,14 @@ const styles = StyleSheet.create({
     backgroundColor: colors.gray300,
   },
   footerButtonDanger: {
-    backgroundColor: colors.warning,
+    backgroundColor: colors.danger,
   },
   footerButtonPrimary: {
     backgroundColor: colors.primary,
   },
   footerButtonTextDark: {
     ...textStyles.h7,
-    color: colors.black,
+    color: colors.gray900,
   },
   footerButtonTextLight: {
     ...textStyles.h7,

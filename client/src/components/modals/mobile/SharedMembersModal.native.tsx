@@ -452,9 +452,9 @@ const styles = StyleSheet.create({
     height: 56,
     marginTop: spacing.md,
     borderRadius: radii.lgPlus,
-    backgroundColor: colors.paletteInk,
-    experimental_backgroundImage: `linear-gradient(180deg, ${colors.gradientInk[0]} 0%, ${colors.gradientInk[1]} 100%)`,
-    ...shadows.darkRaised,
+    backgroundColor: colors.primary,
+    experimental_backgroundImage: `linear-gradient(180deg, ${colors.gradientPrimary[0]} 0%, ${colors.gradientPrimary[1]} 100%)`,
+    ...shadows.primaryRaised,
   },
   inviteButtonDisabled: {
     backgroundColor: colors.gray200,

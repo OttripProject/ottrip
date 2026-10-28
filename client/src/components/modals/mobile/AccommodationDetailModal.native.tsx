@@ -317,7 +317,7 @@ export default function AccommodationDetailModal({
       {(location || accommodation.name) && (
         <View style={styles.footer}>
           <ScalePressable style={styles.mapButton} onPress={handleOpenMap}>
-            <MapIcon width={20} height={20} color={colors.white} />
+            <MapIcon width={20} height={20} color={colors.gray900} />
             <Text style={styles.mapButtonText}>지도 앱에서 길찾기</Text>
           </ScalePressable>
         </View>
@@ -477,7 +477,7 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
   },
   mapButton: {
-    backgroundColor: colors.black,
+    backgroundColor: colors.gray300,
     borderRadius: 12,
     paddingVertical: 16,
     flexDirection: "row",
@@ -487,6 +487,6 @@ const styles = StyleSheet.create({
   },
   mapButtonText: {
     ...textStyles.h4,
-    color: colors.white,
+    color: colors.gray900,
   },
 });

@@ -4,6 +4,7 @@ import { ItineraryCategory } from "@/types/itinerary";
 import ScalePressable from "@/ui/components/ScalePressable";
 import { colors } from "@/ui/tokens/colors";
 import { radii } from "@/ui/tokens/radii";
+import { shadows } from "@/ui/tokens/shadows";
 import { spacing } from "@/ui/tokens/spacing";
 import { textStyles } from "@/ui/tokens/typography";
 import { useEffect, useMemo, useState } from "react";
@@ -456,7 +457,9 @@ const styles = StyleSheet.create({
   addButton: {
     height: 48,
     borderRadius: radii.md,
-    backgroundColor: colors.gray900,
+    backgroundColor: colors.primary,
+    experimental_backgroundImage: `linear-gradient(180deg, ${colors.gradientPrimary[0]} 0%, ${colors.gradientPrimary[1]} 100%)`,
+    ...shadows.primaryRaised,
     justifyContent: "center",
     alignItems: "center",
   },

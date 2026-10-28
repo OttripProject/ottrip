@@ -1,5 +1,6 @@
 import ModalBackdrop from "@/ui/components/ModalBackdrop";
 import { colors } from "@/ui/tokens/colors";
+import { shadows } from "@/ui/tokens/shadows";
 import { textStyles } from "@/ui/tokens/typography";
 import { useEffect, useState } from "react";
 import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
@@ -150,7 +151,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: colors.warning,
+    backgroundColor: colors.danger,
   },
   deleteModalDeleteButtonText: {
     ...textStyles.h7,
@@ -177,7 +178,9 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: colors.black,
+    backgroundColor: colors.primary,
+    experimental_backgroundImage: `linear-gradient(180deg, ${colors.gradientPrimary[0]} 0%, ${colors.gradientPrimary[1]} 100%)`,
+    ...shadows.primaryRaised,
   },
   deleteModalConfirmButtonText: {
     ...textStyles.h7,

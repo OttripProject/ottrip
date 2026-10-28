@@ -394,15 +394,6 @@ export default function ItineraryDetailModal({
 
       {(onEdit || onDelete) && (
         <View style={styles.footer}>
-          {onEdit && (
-            <ScalePressable
-              style={[styles.footerButton, styles.editButton]}
-              onPress={handleEdit}
-            >
-              <UpdateIcon width={17} height={17} color={colors.gray800} />
-              <Text style={styles.editButtonText}>수정</Text>
-            </ScalePressable>
-          )}
           {onDelete && (
             <ScalePressable
               style={[styles.footerButton, styles.deleteButton]}
@@ -410,6 +401,15 @@ export default function ItineraryDetailModal({
             >
               <DeleteIcon width={17} height={17} color={colors.danger} />
               <Text style={styles.deleteButtonText}>삭제</Text>
+            </ScalePressable>
+          )}
+          {onEdit && (
+            <ScalePressable
+              style={[styles.footerButton, styles.editButton]}
+              onPress={handleEdit}
+            >
+              <UpdateIcon width={17} height={17} color={colors.gray900} />
+              <Text style={styles.editButtonText}>수정</Text>
             </ScalePressable>
           )}
         </View>
@@ -639,14 +639,14 @@ const styles = StyleSheet.create({
     borderRadius: radii.mdPlus,
   },
   editButton: {
-    backgroundColor: colors.paletteFill,
+    backgroundColor: colors.gray300,
   },
   deleteButton: {
-    backgroundColor: colors.dangerSoft,
+    backgroundColor: colors.dangerTint,
   },
   editButtonText: {
     ...textStyles.h6,
-    color: colors.gray800,
+    color: colors.gray900,
   },
   deleteButtonText: {
     ...textStyles.h6,

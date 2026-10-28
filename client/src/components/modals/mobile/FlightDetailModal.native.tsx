@@ -305,7 +305,7 @@ export default function FlightDetailModal({
       {flightAttachments.length > 0 && (
         <View style={styles.footer}>
           <ScalePressable style={styles.ticketButton} onPress={handleViewTicket}>
-            <FlightIcon width={20} height={20} color={colors.white} />
+            <FlightIcon width={20} height={20} color={colors.gray900} />
             <Text style={styles.ticketButtonText}>항공권 보기</Text>
           </ScalePressable>
         </View>
@@ -471,7 +471,7 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
   },
   ticketButton: {
-    backgroundColor: colors.black,
+    backgroundColor: colors.gray300,
     borderRadius: 12,
     paddingVertical: 16,
     flexDirection: "row",
@@ -481,6 +481,6 @@ const styles = StyleSheet.create({
   },
   ticketButtonText: {
     ...textStyles.h4,
-    color: colors.white,
+    color: colors.gray900,
   },
 });

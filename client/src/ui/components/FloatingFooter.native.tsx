@@ -1,7 +1,10 @@
 import ScalePressable from "@/ui/components/ScalePressable";
 import { colors } from "@/ui/tokens/colors";
+import { shadows } from "@/ui/tokens/shadows";
 import { textStyles } from "@/ui/tokens/typography";
 import { StyleSheet, Text, View } from "react-native";
+
+const PRIMARY_GRADIENT = `linear-gradient(180deg, ${colors.gradientPrimary[0]} 0%, ${colors.gradientPrimary[1]} 100%)`;
 
 interface FloatingFooterProps {
   primaryLabel: string;
@@ -67,18 +70,22 @@ const styles = StyleSheet.create({
   },
   secondaryButton: {
     flex: 1,
-    backgroundColor: colors.warning,
+    backgroundColor: colors.dangerTint,
   },
   secondaryButtonText: {
     ...textStyles.h4,
-    color: colors.white,
+    color: colors.danger,
   },
   primaryButton: {
     flex: 1,
-    backgroundColor: colors.black,
+    backgroundColor: colors.primary,
+    experimental_backgroundImage: PRIMARY_GRADIENT,
+    ...shadows.primaryRaised,
   },
   primaryButtonDisabled: {
     backgroundColor: colors.gray400,
+    experimental_backgroundImage: "none",
+    boxShadow: "none",
   },
   primaryButtonWithSecondary: {
     flex: 2,

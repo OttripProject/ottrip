@@ -735,13 +735,13 @@ const styles = StyleSheet.create({
   },
   swipeDeleteButton: {
     flex: 1,
-    backgroundColor: colors.danger,
+    backgroundColor: colors.dangerTint,
     justifyContent: "center",
     alignItems: "center",
   },
   swipeDeleteLabel: {
     ...textStyles.h8,
-    color: colors.white,
+    color: colors.danger,
   },
   detailRow: {
     flexDirection: "row",
@@ -868,9 +868,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
   },
   addExpenseButton: {
-    backgroundColor: colors.paletteInk,
-    experimental_backgroundImage: `linear-gradient(180deg, ${colors.gradientInk[0]} 0%, ${colors.gradientInk[1]} 100%)`,
-    ...shadows.darkRaised,
+    backgroundColor: colors.primary,
+    experimental_backgroundImage: `linear-gradient(180deg, ${colors.gradientPrimary[0]} 0%, ${colors.gradientPrimary[1]} 100%)`,
+    ...shadows.primaryRaised,
     borderRadius: radii.lgPlus,
     paddingVertical: spacing.lg,
     flexDirection: "row",
