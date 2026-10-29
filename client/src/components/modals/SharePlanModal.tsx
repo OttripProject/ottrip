@@ -177,7 +177,6 @@ export default function SharePlanModal({
                     styles.inviteButton,
                     !email.trim() && styles.inviteButtonDisabled,
                   ]}
-                  hoverStyle={shadows.darkHover}
                   onPress={submit}
                   disabled={!email.trim() || loading}
                   accessibilityLabel="초대"
@@ -295,7 +294,6 @@ export default function SharePlanModal({
 
             <MotionPressable
               style={styles.primaryButton}
-              hoverStyle={shadows.darkHover}
               onPress={onClose}
             >
               <Text style={styles.primaryButtonText}>완료</Text>
@@ -400,7 +398,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: radii.md,
-    ...surfaces.dark,
+    ...surfaces.primary,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -482,9 +480,9 @@ const styles = StyleSheet.create({
     color: colors.gray600,
   },
   primaryButton: {
-    height: 52,
-    borderRadius: radii.mdPlus,
-    ...surfaces.dark,
+    height: 48,
+    borderRadius: radii.md,
+    ...surfaces.primary,
     alignItems: "center",
     justifyContent: "center",
   },
