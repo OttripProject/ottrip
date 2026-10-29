@@ -1,4 +1,4 @@
-import type { SegmentDraft } from "@/hooks/useTripForm";
+import type { SegmentDraft, SegmentFieldErrors } from "@/hooks/useTripForm";
 import { CityPicker, CountryPicker } from "@/ui/components/pickers";
 import { colors } from "@/ui/tokens/colors";
 import { radii } from "@/ui/tokens/radii";
@@ -49,6 +49,8 @@ interface TripSegmentListProps {
   onSegmentMove: (fromIndex: number, toIndex: number) => void;
   onSegmentFocus: (index: number) => void;
   onDateButtonPress: (index: number) => void;
+  errors?: SegmentFieldErrors[];
+  onSegmentLayout?: (index: number, y: number) => void;
 }
 
 export default function TripSegmentList({
@@ -59,6 +61,8 @@ export default function TripSegmentList({
   onSegmentMove,
   onSegmentFocus,
   onDateButtonPress,
+  errors,
+  onSegmentLayout,
 }: TripSegmentListProps) {
   const canRemove = segments.length > 1;
   const [cityTriggers, setCityTriggers] = useState<Record<number, number>>({});
@@ -70,6 +74,7 @@ export default function TripSegmentList({
         {segments.map((segment, idx) => (
           <View
             key={idx}
+            onLayout={e => onSegmentLayout?.(idx, e.nativeEvent.layout.y)}
             style={[
               styles.seg,
               !isNative && { zIndex: (segments.length - idx) * 100 },
@@ -201,7 +206,13 @@ export default function TripSegmentList({
                       }
                     }}
                     placeholder="국가 선택"
-                    style={isNative ? styles.pickerBtnNative : styles.pickerTrigger}
+                    style={
+                      isNative
+                        ? styles.pickerBtnNative
+                        : errors?.[idx]?.country
+                          ? pickerTriggerError
+                          : styles.pickerTrigger
+                    }
                     containerStyle={styles.pickerWrapper}
                     textStyle={isNative ? styles.pickerTextNative : undefined}
                     arrowSize={isNative ? 11 : undefined}
@@ -210,6 +221,9 @@ export default function TripSegmentList({
                     fullScreenModal={isNative}
                     openTrigger={countryTriggers[idx] ?? 0}
                   />
+                  {errors?.[idx]?.country && (
+                    <Text style={styles.errorText}>{errors[idx].country}</Text>
+                  )}
                 </View>
                 <View style={isNative ? styles.fieldNative : styles.segCell}>
                   <Text style={[styles.fieldLabel, isNative && styles.fieldLabelTop]}>도시</Text>
@@ -231,8 +245,12 @@ export default function TripSegmentList({
                           ? styles.pickerBtnNative
                           : pickerBtnNativeDisabled
                         : segment.country.trim()
-                          ? styles.pickerTrigger
-                          : pickerTriggerDisabled
+                          ? errors?.[idx]?.city
+                            ? pickerTriggerError
+                            : styles.pickerTrigger
+                          : errors?.[idx]?.city
+                            ? pickerTriggerDisabledError
+                            : pickerTriggerDisabled
                     }
                     containerStyle={styles.pickerWrapper}
                     textStyle={isNative ? styles.pickerTextNative : undefined}
@@ -243,6 +261,9 @@ export default function TripSegmentList({
                     openTrigger={cityTriggers[idx] ?? 0}
                     onBack={() => setCountryTriggers(prev => ({ ...prev, [idx]: (prev[idx] ?? 0) + 1 }))}
                   />
+                  {errors?.[idx]?.city && (
+                    <Text style={styles.errorText}>{errors[idx].city}</Text>
+                  )}
                 </View>
               </View>
 
@@ -253,6 +274,7 @@ export default function TripSegmentList({
                   style={({ hovered }: HoverState) => [
                     isNative ? styles.dateBtnNative : styles.dateBtnWeb,
                     !isNative && hovered && styles.dateBtnWebHover,
+                    !isNative && errors?.[idx]?.date && styles.fieldError,
                   ]}
                   onPress={() => {
                     onSegmentFocus(idx);
@@ -274,6 +296,9 @@ export default function TripSegmentList({
                     color={isNative ? colors.gray600 : colors.gray900}
                   />
                 </Pressable>
+                {errors?.[idx]?.date && (
+                  <Text style={styles.errorText}>{errors[idx].date}</Text>
+                )}
               </View>
             </View>
           </View>
@@ -517,6 +542,14 @@ const styles = StyleSheet.create({
   dateBtnWebHover: {
     backgroundColor: colors.inputHover,
   },
+  fieldError: {
+    borderColor: colors.danger,
+  },
+  errorText: {
+    ...textStyles.body6,
+    color: colors.danger,
+    marginTop: spacing.xs,
+  },
   dateBtnText: {
     flex: 1,
     ...textStyles.h7,
@@ -559,6 +592,16 @@ const styles = StyleSheet.create({
 const pickerTriggerDisabled = StyleSheet.flatten([
   styles.pickerTrigger,
   { backgroundColor: colors.gray100 },
+]);
+
+const pickerTriggerError = StyleSheet.flatten([
+  styles.pickerTrigger,
+  styles.fieldError,
+]);
+
+const pickerTriggerDisabledError = StyleSheet.flatten([
+  pickerTriggerDisabled,
+  styles.fieldError,
 ]);
 
 const pickerBtnNativeDisabled = StyleSheet.flatten([

@@ -93,7 +93,6 @@ export default function EmptyPlanPanel({
         markedDates={planForm.getMarkedDates()}
         onDateSelect={planForm.handleDateSelect}
         onSubmit={handleSubmit}
-        isSubmitDisabled={planForm.isSubmitDisabled}
       />
     </View>
   );

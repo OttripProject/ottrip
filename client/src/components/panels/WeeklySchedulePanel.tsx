@@ -3810,7 +3810,6 @@ export default function WeeklySchedulePanel({
         markedDates={planForm.getMarkedDates()}
         onDateSelect={planForm.handleDateSelect}
         onSubmit={handlePlanAddSubmit}
-        isSubmitDisabled={planForm.isSubmitDisabled}
       />
 
       <ResultModal

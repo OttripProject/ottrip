@@ -197,26 +197,34 @@ export default function TripSelector({
     setIsDropdownOpen(false);
   };
 
+  const editInitialData = useMemo(
+    () =>
+      editingTrip
+        ? {
+            name: editingTrip.name,
+            segments: editingTrip.segments?.map(s => ({
+              country: s.country,
+              city: s.city,
+              startDate: s.startDate,
+              endDate: s.endDate,
+            })) ?? [
+              {
+                country: "",
+                city: "",
+                startDate: editingTrip.startDate,
+                endDate: editingTrip.endDate,
+              },
+            ],
+          }
+        : undefined,
+    [editingTrip],
+  );
+
   React.useEffect(() => {
-    if (editingTrip && showEditModal) {
-      editTripForm.setFormData({
-        name: editingTrip.name,
-        segments: editingTrip.segments?.map(s => ({
-          country: s.country,
-          city: s.city,
-          startDate: s.startDate,
-          endDate: s.endDate,
-        })) ?? [
-          {
-            country: "",
-            city: "",
-            startDate: editingTrip.startDate,
-            endDate: editingTrip.endDate,
-          },
-        ],
-      });
+    if (editInitialData && showEditModal) {
+      editTripForm.setFormData(editInitialData);
     }
-  }, [editingTrip, showEditModal]);
+  }, [editInitialData, showEditModal]);
 
   const handleAddTrip = async () => {
     if (isSubmittingAddRef.current || isSubmittingAdd) {
@@ -639,7 +647,6 @@ export default function TripSelector({
         markedDates={addTripForm.getMarkedDates()}
         onDateSelect={addTripForm.handleDateSelect}
         onSubmit={handleAddTrip}
-        isSubmitDisabled={addTripForm.isSubmitDisabled || isSubmittingAdd}
       />
 
       <TripFormModal
@@ -650,6 +657,7 @@ export default function TripSelector({
         }}
         mode="edit"
         tripData={editTripForm.tripData}
+        initialTripData={editInitialData}
         activeSegmentIndex={editTripForm.activeSegmentIndex}
         onNameChange={name => editTripForm.updateTripData({ name })}
         selectionMode={editTripForm.selectionMode}
@@ -661,7 +669,6 @@ export default function TripSelector({
         markedDates={editTripForm.getMarkedDates()}
         onDateSelect={editTripForm.handleDateSelect}
         onSubmit={handleEditTrip}
-        isSubmitDisabled={editTripForm.isSubmitDisabled || isSubmittingEdit}
       />
 
       <TripDeleteConfirmModal

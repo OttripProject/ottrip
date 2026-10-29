@@ -1,10 +1,15 @@
-import type { CalendarMarkedDates, SegmentDraft } from "@/hooks/useTripForm";
+import {
+  type CalendarMarkedDates,
+  type SegmentDraft,
+  getTripFormErrors,
+} from "@/hooks/useTripForm";
 import TripCalendarModal from "../trip/TripCalendarModal";
 import TripDurationBanner from "../trip/TripDurationBanner";
 import TripSegmentList from "../trip/TripSegmentList";
 import { useBackdropClose } from "@/hooks/useBackdropClose";
 import MotionPressable, { MotionIcon } from "@/ui/components/MotionPressable";
 import Input from "@/ui/components/input/Input";
+import Spinner from "@/ui/components/Spinner";
 import { modalMotion } from "@/ui/effects/modalMotion";
 import { colors } from "@/ui/tokens/colors";
 import { radii } from "@/ui/tokens/radii";
@@ -19,7 +24,6 @@ import {
   StyleSheet,
   Text,
   View,
-  type ViewStyle,
 } from "react-native";
 import CloseXIcon from "../../../assets/close_x.svg";
 
@@ -28,6 +32,7 @@ export interface TripFormModalProps {
   onClose: () => void;
   mode: "add" | "edit";
   tripData: { name: string; segments: SegmentDraft[] };
+  initialTripData?: { name: string; segments: SegmentDraft[] };
   activeSegmentIndex: number;
   selectionMode: "start" | "end";
   onNameChange: (name: string) => void;
@@ -39,7 +44,6 @@ export interface TripFormModalProps {
   markedDates: CalendarMarkedDates;
   onDateSelect: (dateString: string) => void;
   onSubmit: () => void | Promise<void>;
-  isSubmitDisabled: boolean;
 }
 
 export default function TripFormModal({
@@ -47,6 +51,7 @@ export default function TripFormModal({
   onClose,
   mode,
   tripData,
+  initialTripData,
   activeSegmentIndex,
   selectionMode,
   onNameChange,
@@ -58,22 +63,54 @@ export default function TripFormModal({
   markedDates,
   onDateSelect,
   onSubmit,
-  isSubmitDisabled,
 }: TripFormModalProps) {
   const title = mode === "add" ? "새 여행 추가" : "여행 수정";
-  const submitButtonText = mode === "add" ? "여행 저장" : "여행 수정";
 
   const [calendarOpenIndex, setCalendarOpenIndex] = useState<number | null>(
     null,
   );
   const prevSelectionModeRef = useRef(selectionMode);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showSubmitSpinner, setShowSubmitSpinner] = useState(false);
+  const [showErrors, setShowErrors] = useState(false);
   const submittingRef = useRef(false);
-  const submitDisabled = isSubmitDisabled || isSubmitting;
-  const backdrop = useBackdropClose(onClose);
+  const scrollRef = useRef<ScrollView>(null);
+  const segmentListY = useRef(0);
+  const segmentYs = useRef<Record<number, number>>({});
+  const errors = showErrors ? getTripFormErrors(tripData) : null;
+  const isUnchanged =
+    !!initialTripData &&
+    JSON.stringify(initialTripData) === JSON.stringify(tripData);
+  const handleClose = () => {
+    if (!submittingRef.current) onClose();
+  };
+  const backdrop = useBackdropClose(handleClose);
+
+  const scrollToFirstError = (
+    formErrors: NonNullable<ReturnType<typeof getTripFormErrors>>,
+  ) => {
+    if (formErrors.name) {
+      scrollRef.current?.scrollTo({ y: 0, animated: true });
+      return;
+    }
+    const idx = formErrors.segments.findIndex(
+      seg => seg.country || seg.city || seg.date,
+    );
+    if (idx < 0) return;
+    scrollRef.current?.scrollTo({
+      y: segmentListY.current + (segmentYs.current[idx] ?? 0),
+      animated: true,
+    });
+  };
 
   const handleSubmit = async () => {
     if (submittingRef.current) return;
+    const formErrors = getTripFormErrors(tripData);
+    if (formErrors) {
+      setShowErrors(true);
+      scrollToFirstError(formErrors);
+      return;
+    }
     submittingRef.current = true;
     setIsSubmitting(true);
     try {
@@ -96,8 +133,20 @@ export default function TripFormModal({
   }, [selectionMode, calendarOpenIndex]);
 
   useEffect(() => {
-    if (!visible) setCalendarOpenIndex(null);
+    if (!visible) {
+      setCalendarOpenIndex(null);
+      setShowErrors(false);
+    }
   }, [visible]);
+
+  useEffect(() => {
+    if (!isSubmitting) {
+      setShowSubmitSpinner(false);
+      return;
+    }
+    const timer = setTimeout(() => setShowSubmitSpinner(true), 300);
+    return () => clearTimeout(timer);
+  }, [isSubmitting]);
 
   return (
     <>
@@ -105,7 +154,7 @@ export default function TripFormModal({
         visible={visible}
         transparent
         animationType="none"
-        onRequestClose={onClose}
+        onRequestClose={handleClose}
       >
         <View style={styles.overlay} {...backdrop.overlayProps}>
           <View style={styles.modalContent} {...backdrop.cardProps}>
@@ -117,7 +166,8 @@ export default function TripFormModal({
                 </Text>
               </View>
               <MotionPressable
-                onPress={onClose}
+                onPress={handleClose}
+                disabled={isSubmitting}
                 style={styles.closeButton}
                 accessibilityLabel="닫기"
               >
@@ -128,6 +178,7 @@ export default function TripFormModal({
             </View>
 
             <ScrollView
+              ref={scrollRef}
               style={styles.scroll}
               showsVerticalScrollIndicator={false}
               keyboardShouldPersistTaps="handled"
@@ -140,16 +191,24 @@ export default function TripFormModal({
                 </View>
                 <Input
                   variant="filled"
-                  style={styles.nameInput}
+                  style={[styles.nameInput, errors?.name && styles.nameInputError]}
                   placeholder="예: 동유럽 여행"
                   placeholderTextColor={colors.gray600}
                   value={tripData.name}
                   onChangeText={onNameChange}
                   maxLength={30}
                 />
+                {errors?.name && (
+                  <Text style={styles.errorText}>{errors.name}</Text>
+                )}
               </View>
 
-              <View style={styles.section}>
+              <View
+                style={styles.section}
+                onLayout={e => {
+                  segmentListY.current = e.nativeEvent.layout.y;
+                }}
+              >
                 <View style={styles.sectionLabelRow}>
                   <Text style={styles.sectionLabel}>여행 구간</Text>
                   <Text style={styles.sectionHint}>
@@ -167,6 +226,10 @@ export default function TripFormModal({
                     onSegmentFocus(idx);
                     setCalendarOpenIndex(idx);
                   }}
+                  errors={errors?.segments}
+                  onSegmentLayout={(idx, y) => {
+                    segmentYs.current[idx] = y;
+                  }}
                 />
               </View>
 
@@ -176,26 +239,31 @@ export default function TripFormModal({
             <View style={styles.footer}>
               <MotionPressable
                 style={styles.cancelButton}
-                onPress={onClose}
+                onPress={handleClose}
+                disabled={isSubmitting}
               >
                 <Text style={styles.cancelButtonText}>취소</Text>
               </MotionPressable>
               <MotionPressable
                 style={[
                   styles.submitButton,
-                  submitDisabled && styles.submitButtonDisabled,
+                  isUnchanged && styles.submitButtonDisabled,
                 ]}
                 onPress={handleSubmit}
-                disabled={submitDisabled}
+                disabled={isSubmitting || isUnchanged}
               >
-                <Text
-                  style={[
-                    styles.submitButtonText,
-                    submitDisabled && styles.submitButtonTextDisabled,
-                  ]}
-                >
-                  {submitButtonText}
-                </Text>
+                {showSubmitSpinner ? (
+                  <Spinner size={16} strokeWidth={2} color={colors.white} />
+                ) : (
+                  <Text
+                    style={[
+                      styles.submitButtonText,
+                      isUnchanged && styles.submitButtonTextDisabled,
+                    ]}
+                  >
+                    저장
+                  </Text>
+                )}
               </MotionPressable>
             </View>
           </View>
@@ -302,6 +370,13 @@ const styles = StyleSheet.create({
     ...textStyles.body4,
     color: colors.gray900,
   },
+  nameInputError: {
+    borderColor: colors.danger,
+  },
+  errorText: {
+    ...textStyles.body6,
+    color: colors.danger,
+  },
   footer: {
     flexDirection: "row",
     gap: spacing.sm,
@@ -309,34 +384,33 @@ const styles = StyleSheet.create({
   },
   cancelButton: {
     flex: 1,
-    height: 44,
+    height: 48,
     borderRadius: radii.md,
     alignItems: "center",
     justifyContent: "center",
     ...surfaces.muted,
   },
   cancelButtonText: {
-    ...textStyles.h7,
+    ...textStyles.h6,
     color: colors.gray900,
   },
   submitButton: {
     flex: 1,
-    height: 44,
+    height: 48,
     borderRadius: radii.md,
     alignItems: "center",
     justifyContent: "center",
     ...surfaces.primary,
   },
   submitButtonDisabled: {
-    backgroundColor: colors.gray300,
+    ...surfaces.muted,
     backgroundImage: "none",
-    boxShadow: "none",
-  } as ViewStyle,
+  } as any,
   submitButtonText: {
-    ...textStyles.h7,
+    ...textStyles.h6,
     color: colors.white,
   },
   submitButtonTextDisabled: {
-    color: colors.gray600,
+    color: colors.gray500,
   },
 });
