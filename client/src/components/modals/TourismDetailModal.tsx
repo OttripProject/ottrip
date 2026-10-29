@@ -28,7 +28,6 @@ import { textStyles, typography } from "@/ui/tokens/typography";
 import { formatWalkTime, haversineDistance } from "@/utils/distanceUtils";
 import CloseXIcon from "../../../assets/close_x.svg";
 import TicketIcon from "../../../assets/mobile_ticket.svg";
-import PlusIcon from "../../../assets/mobile_plus.svg";
 import LocationIcon from "../../../assets/mobile_location.svg";
 import TimeIcon from "../../../assets/week_bar_time.svg";
 import CalendarIcon from "../../../assets/calendar_outline.svg";
@@ -675,9 +674,6 @@ export default function TourismDetailModal({
               style={styles.addButton}
               onPress={handleAddToItinerary}
             >
-              <MotionIcon>
-                <PlusIcon width={16} height={16} color={colors.white} />
-              </MotionIcon>
               <Text style={styles.addButtonText}>
                 {isAccommodation ? "숙박에 추가" : "일정에 추가"}
               </Text>
@@ -999,30 +995,26 @@ const styles = StyleSheet.create({
   },
   closeButton: {
     flex: 1,
-    height: 52,
-    borderRadius: 16,
-    ...surfaces.subtle,
+    height: 48,
+    borderRadius: radii.md,
+    ...surfaces.muted,
     justifyContent: "center",
     alignItems: "center",
   },
   closeButtonText: {
-    fontFamily: typography.fontFamily.pretendardSemiBold,
-    fontSize: 16,
+    ...textStyles.h6,
     color: colors.gray900,
   },
   addButton: {
-    flex: 1.7,
-    height: 52,
-    borderRadius: 16,
-    ...surfaces.dark,
-    flexDirection: "row",
-    gap: spacing.sm,
+    flex: 1,
+    height: 48,
+    borderRadius: radii.md,
+    ...surfaces.primary,
     justifyContent: "center",
     alignItems: "center",
   } as any,
   addButtonText: {
-    fontFamily: typography.fontFamily.pretendardSemiBold,
-    fontSize: 16,
+    ...textStyles.h6,
     color: colors.white,
   },
 });

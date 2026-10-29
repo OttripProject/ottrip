@@ -28,7 +28,6 @@ import { surfaces } from "@/ui/tokens/surfaces";
 import { textStyles } from "@/ui/tokens/typography";
 import CloseIcon from "../../../assets/close_sm.svg";
 import CloseXIcon from "../../../assets/close_x.svg";
-import PlusIcon from "../../../assets/mobile_plus.svg";
 import LocationIcon from "../../../assets/mobile_location.svg";
 import TimeIcon from "../../../assets/week_bar_time.svg";
 import CalendarIcon from "../../../assets/calendar_outline.svg";
@@ -472,14 +471,17 @@ export default function FestivalDetailModal({ visible, onClose, item, onAddToIti
             </MotionPressable>
             <MotionPressable
               style={[styles.addButton, (loading || !detail) && styles.addButtonDisabled]}
-              hoverStyle={shadows.darkHover}
               onPress={handleAddToItinerary}
               disabled={loading || !detail}
             >
-              <MotionIcon>
-                <PlusIcon width={16} height={16} color={colors.white} />
-              </MotionIcon>
-              <Text style={styles.addButtonText}>일정에 추가</Text>
+              <Text
+                style={[
+                  styles.addButtonText,
+                  (loading || !detail) && styles.addButtonTextDisabled,
+                ]}
+              >
+                일정에 추가
+              </Text>
             </MotionPressable>
           </View>
         </View>
@@ -799,31 +801,33 @@ const styles = StyleSheet.create({
   },
   closeButton: {
     flex: 1,
-    height: 52,
-    borderRadius: radii.lgPlus,
-    ...surfaces.subtle,
+    height: 48,
+    borderRadius: radii.md,
+    ...surfaces.muted,
     justifyContent: "center",
     alignItems: "center",
   },
   closeButtonText: {
-    ...textStyles.h5,
+    ...textStyles.h6,
     color: colors.gray900,
   },
   addButton: {
-    flex: 1.7,
-    height: 52,
-    borderRadius: radii.lgPlus,
-    ...surfaces.dark,
-    flexDirection: "row",
-    gap: spacing.sm,
+    flex: 1,
+    height: 48,
+    borderRadius: radii.md,
+    ...surfaces.primary,
     justifyContent: "center",
     alignItems: "center",
   },
   addButtonDisabled: {
-    opacity: 0.4,
+    ...surfaces.muted,
+    backgroundImage: "none",
   } as any,
+  addButtonTextDisabled: {
+    color: colors.gray500,
+  },
   addButtonText: {
-    ...textStyles.h5,
+    ...textStyles.h6,
     color: colors.white,
   },
   zoomOverlay: {
