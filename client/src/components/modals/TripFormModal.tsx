@@ -6,6 +6,7 @@ import {
 import TripCalendarModal from "../trip/TripCalendarModal";
 import TripDurationBanner from "../trip/TripDurationBanner";
 import TripSegmentList from "../trip/TripSegmentList";
+import { ToastUI, useToast } from "@/contexts/ToastContext";
 import { useBackdropClose } from "@/hooks/useBackdropClose";
 import MotionPressable, { MotionIcon } from "@/ui/components/MotionPressable";
 import Input from "@/ui/components/input/Input";
@@ -70,6 +71,7 @@ export default function TripFormModal({
     null,
   );
   const prevSelectionModeRef = useRef(selectionMode);
+  const { showToast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSubmitSpinner, setShowSubmitSpinner] = useState(false);
   const [showErrors, setShowErrors] = useState(false);
@@ -109,6 +111,7 @@ export default function TripFormModal({
     if (formErrors) {
       setShowErrors(true);
       scrollToFirstError(formErrors);
+      showToast("입력되지 않은 값이 있어요.", { icon: "info" });
       return;
     }
     submittingRef.current = true;
@@ -268,6 +271,7 @@ export default function TripFormModal({
             </View>
           </View>
         </View>
+        <ToastUI />
       </Modal>
 
       <TripCalendarModal
