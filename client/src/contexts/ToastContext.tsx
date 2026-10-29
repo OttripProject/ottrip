@@ -12,6 +12,7 @@ import { zIndex } from "@/ui/tokens/zIndex";
 import CheckWhiteIcon from "../../assets/check_white.svg";
 import CheckedIcon from "../../assets/mobile_plan_checked.svg";
 import InfoCircleIcon from "../../assets/info_circle.svg";
+import WarnIcon from "../../assets/warn.svg";
 import XIcon from "../../assets/mobile_close.svg";
 
 const isWeb = Platform.OS === "web";
@@ -33,7 +34,7 @@ interface ToastState {
   id: number;
   message: string;
   action?: ToastAction;
-  icon?: "check" | "info";
+  icon?: "check" | "info" | "warning";
   closable: boolean;
   effect?: BurstEffect;
   leaving: boolean;
@@ -41,7 +42,7 @@ interface ToastState {
 
 interface ToastOptions {
   action?: ToastAction;
-  icon?: "check" | "info";
+  icon?: "check" | "info" | "warning";
   duration?: number;
   closable?: boolean;
   effect?: BurstEffect;
@@ -88,9 +89,11 @@ export const ToastUI = () => {
       ]}
       onPress={() => {}}
     >
-      <View style={[styles.toastIconBg, isWeb && toast.icon !== "info" && webStyles.toastCheckBg]}>
+      <View style={[styles.toastIconBg, isWeb && toast.icon !== "info" && toast.icon !== "warning" && webStyles.toastCheckBg]}>
         {toast.icon === "info" ? (
           <InfoCircleIcon width="20" height="20" color={colors.white} />
+        ) : toast.icon === "warning" ? (
+          <WarnIcon width="20" height="20" />
         ) : isWeb ? (
           <CheckWhiteIcon width="11" height="11" />
         ) : (

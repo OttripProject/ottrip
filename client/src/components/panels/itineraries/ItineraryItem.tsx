@@ -2,6 +2,7 @@ import AiAnalyzeErrorBanner from "@/components/AiAnalyzeErrorBanner";
 import AiDocumentAnalyzeModal from "@/components/modals/AiDocumentAnalyzeModal";
 import BaseCalendar from "@/components/popup/calendar/BaseCalendar";
 import { PLACEHOLDERS } from "@/constants/placeholders";
+import { useToast } from "@/contexts/ToastContext";
 import { useHover } from "@/hooks/useHover";
 import { useAttachmentUpload } from "@/hooks/useAttachmentUpload";
 import { useFilePicker } from "@/hooks/useFilePicker";
@@ -48,7 +49,6 @@ import {
   CountryPicker,
   TimePicker,
 } from "@/ui/components/pickers";
-import WarningBanner from "@/ui/components/toast/warning";
 import { surfaces } from "@/ui/tokens/surfaces";
 import { colors } from "@/ui/tokens/colors";
 import { radii } from "@/ui/tokens/radii";
@@ -159,8 +159,9 @@ export default function ItineraryItem({
   onOpenNewItinerary,
 }: ItineraryItemProps) {
   const queryClient = useQueryClient();
-  const [showWarning, setShowWarning] = useState(false);
-  const [warningMessage, setWarningMessage] = useState("");
+  const { showToast } = useToast();
+  const [showErrors, setShowErrors] = useState(false);
+  const scrollRef = useRef<ScrollView>(null);
   const locationDraftRef = useRef<PlaceResult | null>(null);
   const rawLocationTextRef = useRef<string>("");
   const prefillCoordsRef = useRef<{ lat: number; lng: number; address?: string; name: string; hasCoords: boolean } | null>(null);
@@ -601,15 +602,15 @@ export default function ItineraryItem({
       !formData.startTime ||
       !formData.endTime
     ) {
-      setWarningMessage("입력되지 않은 값이 있어요.");
-      setShowWarning(true);
+      setShowErrors(true);
+      scrollRef.current?.scrollTo({ y: 0, animated: true });
+      showToast("입력되지 않은 값이 있어요.", { icon: "warning" });
       onShowWarning?.();
       return;
     }
 
     if (formData.startTime && formData.endTime && formData.startTime > formData.endTime) {
-      setWarningMessage("종료시간이 시작시간보다 빠를 수 없습니다.");
-      setShowWarning(true);
+      showToast("종료시간이 시작시간보다 빠를 수 없습니다.", { icon: "warning" });
       onShowWarning?.();
       return; 
     }
@@ -1131,9 +1132,12 @@ export default function ItineraryItem({
     onClose: onCancel,
   });
 
+  const titleError = showErrors && !readOnly && !formData.title.trim();
+
   return (
     <View style={styles.wrapper}>
       <ScrollView
+        ref={scrollRef}
         style={styles.container}
         contentContainerStyle={[
           styles.contentContainer,
@@ -1157,7 +1161,11 @@ export default function ItineraryItem({
               style={readOnly ? styles.readOnlyInput : undefined}
               placeholderTextColor={colors.gray600}
               editable={!readOnly}
+              error={titleError}
             />
+            {titleError && (
+              <Text style={styles.errorText}>제목을 입력해 주세요.</Text>
+            )}
           </View>
 
           <View ref={categoryRef} style={[styles.inputGroup, { overflow: "visible", position: "relative", zIndex: categoryOpen ? 1000 : 1 }]}>
@@ -1813,16 +1821,6 @@ export default function ItineraryItem({
           </MotionPressable>
         </View>
       )}
-      <WarningBanner
-        message={warningMessage}
-        visible={showWarning}
-        duration={3000}
-        bottomOffset={WARNING_BOTTOM_OFFSET}
-        onHide={() => {
-          setShowWarning(false);
-          setWarningMessage("");
-        }}
-      />
       <AiDocumentAnalyzeModal
         visible={aiAnalyzeModalVisible}
         analyzeResult={aiAnalyzeResult}
@@ -1852,8 +1850,6 @@ export default function ItineraryItem({
     </View>
   );
 }
-
-const WARNING_BOTTOM_OFFSET = spacing.lg + 42 + spacing.xl + spacing.sm;
 
 const styles = StyleSheet.create({
   wrapper: {
@@ -1983,6 +1979,10 @@ const styles = StyleSheet.create({
   label: {
     ...textStyles.h8,
     color: colors.gray900,
+  },
+  errorText: {
+    ...textStyles.body6,
+    color: colors.danger,
   },
   pickerTrigger: {
     height: 42,

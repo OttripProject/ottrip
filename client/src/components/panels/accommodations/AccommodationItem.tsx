@@ -2,6 +2,7 @@ import AiAnalyzeErrorBanner from "@/components/AiAnalyzeErrorBanner";
 import AiDocumentAnalyzeModal from "@/components/modals/AiDocumentAnalyzeModal";
 import BaseCalendar from "@/components/popup/calendar/BaseCalendar";
 import { PLACEHOLDERS } from "@/constants/placeholders";
+import { useToast } from "@/contexts/ToastContext";
 import { useHover } from "@/hooks/useHover";
 import { useAttachmentUpload } from "@/hooks/useAttachmentUpload";
 import { useFilePicker } from "@/hooks/useFilePicker";
@@ -26,7 +27,6 @@ import PlacesSearchInput from "@/ui/components/PlacesSearchInput";
 import type { PlaceResult } from "@/ui/components/PlacesSearchInput";
 import Input from "@/ui/components/input/Input";
 import { CityPicker, CountryPicker, TimePicker } from "@/ui/components/pickers";
-import WarningBanner from "@/ui/components/toast/warning";
 import { surfaces } from "@/ui/tokens/surfaces";
 import { colors } from "@/ui/tokens/colors";
 import { radii } from "@/ui/tokens/radii";
@@ -139,8 +139,9 @@ export default function AccommodationItem({
     const integerPart = raw.split(".")[0];
     return integerPart.replace(/[^0-9]/g, "");
   };
-  const [showWarning, setShowWarning] = useState(false);
-  const [warningMessage, setWarningMessage] = useState("");
+  const { showToast } = useToast();
+  const [showErrors, setShowErrors] = useState(false);
+  const scrollRef = useRef<ScrollView>(null);
   const [formData, setFormData] = useState({
     name: accommodation?.name || draft?.name || "",
     place: accommodation?.location?.name || draft?.place || "",
@@ -436,8 +437,9 @@ export default function AccommodationItem({
       !formData.checkin_time ||
       !formData.checkout_time
     ) {
-      setWarningMessage("입력되지 않은 값이 있어요.");
-      setShowWarning(true);
+      setShowErrors(true);
+      scrollRef.current?.scrollTo({ y: 0, animated: true });
+      showToast("입력되지 않은 값이 있어요.", { icon: "warning" });
       return;
     }
 
@@ -449,8 +451,7 @@ export default function AccommodationItem({
     );
 
     if (newCheckout.isSame(newCheckin) || newCheckout.isBefore(newCheckin)) {
-      setWarningMessage("체크아웃은 체크인보다 늦어야 해요.");
-      setShowWarning(true);
+      showToast("체크아웃은 체크인보다 늦어야 해요.", { icon: "warning" });
       return;
     }
 
@@ -477,8 +478,7 @@ export default function AccommodationItem({
           newCheckout.isAfter(existingCheckout));
 
       if (hasOverlap) {
-        setWarningMessage("겹치는 숙박 일정이 있어요");
-        setShowWarning(true);
+        showToast("겹치는 숙박 일정이 있어요", { icon: "warning" });
         return;
       }
     }
@@ -747,9 +747,12 @@ export default function AccommodationItem({
     onClose: onCancel,
   });
 
+  const nameError = showErrors && !readOnly && !formData.name.trim();
+
   return (
     <View style={styles.wrapper}>
       <ScrollView
+        ref={scrollRef}
         style={styles.container}
         contentContainerStyle={[
           styles.contentContainer,
@@ -774,7 +777,11 @@ export default function AccommodationItem({
               style={readOnly ? styles.readOnlyInput : undefined}
               placeholderTextColor={colors.gray600}
               editable={!readOnly}
+              error={nameError}
             />
+            {nameError && (
+              <Text style={styles.errorText}>숙소명을 입력해 주세요.</Text>
+            )}
           </View>
 
           <View style={styles.inputGroup}>
@@ -1277,16 +1284,6 @@ export default function AccommodationItem({
           </MotionPressable>
         </View>
       )}
-      <WarningBanner
-        message={warningMessage}
-        visible={showWarning}
-        duration={3000}
-        bottomOffset={WARNING_BOTTOM_OFFSET}
-        onHide={() => {
-          setShowWarning(false);
-          setWarningMessage("");
-        }}
-      />
       <AiDocumentAnalyzeModal
         visible={aiAnalyzeModalVisible}
         analyzeResult={aiAnalyzeResult}
@@ -1303,8 +1300,6 @@ export default function AccommodationItem({
     </View>
   );
 }
-
-const WARNING_BOTTOM_OFFSET = spacing.lg + 42 + spacing.xl + spacing.sm;
 
 const styles = StyleSheet.create({
   wrapper: {
@@ -1338,6 +1333,10 @@ const styles = StyleSheet.create({
   label: {
     ...textStyles.h8,
     color: colors.gray900,
+  },
+  errorText: {
+    ...textStyles.body6,
+    color: colors.danger,
   },
   pickerTrigger: {
     height: 42,

@@ -111,7 +111,7 @@ export default function TripFormModal({
     if (formErrors) {
       setShowErrors(true);
       scrollToFirstError(formErrors);
-      showToast("입력되지 않은 값이 있어요.", { icon: "info" });
+      showToast("입력되지 않은 값이 있어요.", { icon: "warning" });
       return;
     }
     submittingRef.current = true;

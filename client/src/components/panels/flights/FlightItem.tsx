@@ -2,6 +2,7 @@ import AiAnalyzeErrorBanner from "@/components/AiAnalyzeErrorBanner";
 import AiDocumentAnalyzeModal from "@/components/modals/AiDocumentAnalyzeModal";
 import BaseCalendar from "@/components/popup/calendar/BaseCalendar";
 import { PLACEHOLDERS } from "@/constants/placeholders";
+import { useToast } from "@/contexts/ToastContext";
 import { useAttachmentUpload } from "@/hooks/useAttachmentUpload";
 import { useFilePicker } from "@/hooks/useFilePicker";
 import { analyzeDocumentUpload } from "@/services/aiDocument";
@@ -27,7 +28,6 @@ import type { AiAttachmentAnalyzeSelection } from "@/ui/components/attachmentSec
 import { pendingAiFileKey } from "@/ui/components/attachmentSection.types";
 import Input from "@/ui/components/input/Input";
 import { AirportPicker, TimePicker } from "@/ui/components/pickers";
-import WarningBanner from "@/ui/components/toast/warning";
 import { surfaces } from "@/ui/tokens/surfaces";
 import { colors } from "@/ui/tokens/colors";
 import { radii } from "@/ui/tokens/radii";
@@ -193,8 +193,10 @@ export default function FlightItem({
     );
   }, [flight]);
 
-  const [showWarning, setShowWarning] = useState(false);
-  const [warningMessage, setWarningMessage] = useState("");
+  const { showToast } = useToast();
+  const [showErrors, setShowErrors] = useState(false);
+  const scrollRef = useRef<ScrollView>(null);
+  const segmentListY = useRef(0);
 
   type SegmentForm = {
     id?: number;
@@ -538,8 +540,9 @@ export default function FlightItem({
     }
 
     if (!isFirstSegmentValid) {
-      setWarningMessage("입력되지 않은 값이 있어요.");
-      setShowWarning(true);
+      setShowErrors(true);
+      scrollRef.current?.scrollTo({ y: segmentListY.current, animated: true });
+      showToast("입력되지 않은 값이 있어요.", { icon: "warning" });
       return;
     }
 
@@ -578,8 +581,7 @@ export default function FlightItem({
               newArrTime.isAfter(existingArrTime));
 
           if (hasOverlap) {
-            setWarningMessage("겹치는 항공 일정이 있어요");
-            setShowWarning(true);
+            showToast("겹치는 항공 일정이 있어요", { icon: "warning" });
             return;
           }
         }
@@ -741,9 +743,20 @@ export default function FlightItem({
     onClose: onCancel,
   });
 
+  const firstSegmentErrors =
+    showErrors && !readOnly && firstSegment
+      ? {
+          departureAirport: !firstSegment.departure_airport.trim(),
+          arrivalAirport: !firstSegment.arrival_airport.trim(),
+          departureTime: !String(firstSegment.departure_time || "").trim(),
+          arrivalTime: !String(firstSegment.arrival_time || "").trim(),
+        }
+      : null;
+
   return (
     <View style={styles.wrapper}>
       <ScrollView
+        ref={scrollRef}
         style={styles.container}
         contentContainerStyle={[
           styles.contentContainer,
@@ -862,8 +875,14 @@ export default function FlightItem({
           </View>
         </View>
 
-        <View style={[styles.inputGroup, { zIndex: 5000 }]}>
+        <View
+          style={[styles.inputGroup, { zIndex: 5000 }]}
+          onLayout={e => {
+            segmentListY.current = e.nativeEvent.layout.y;
+          }}
+        >
           {flightSegments.map((segment, idx) => {
+            const segmentErrors = idx === 0 ? firstSegmentErrors : null;
             const layover =
               readOnly && idx > 0
                 ? formatLayover(flightSegments[idx - 1], segment)
@@ -984,9 +1003,14 @@ export default function FlightItem({
                         style={
                           readOnly
                             ? styles.readOnlyPicker
-                            : styles.segmentSelect
+                            : segmentErrors?.departureAirport
+                              ? { ...styles.segmentSelect, ...styles.fieldError }
+                              : styles.segmentSelect
                         }
                       />
+                      {segmentErrors?.departureAirport && (
+                        <Text style={styles.errorText}>출발 공항을 선택해 주세요.</Text>
+                      )}
                     </View>
                     <View
                       style={[
@@ -1015,9 +1039,14 @@ export default function FlightItem({
                         style={
                           readOnly
                             ? styles.readOnlyPicker
-                            : styles.segmentSelect
+                            : segmentErrors?.arrivalAirport
+                              ? { ...styles.segmentSelect, ...styles.fieldError }
+                              : styles.segmentSelect
                         }
                       />
+                      {segmentErrors?.arrivalAirport && (
+                        <Text style={styles.errorText}>도착 공항을 선택해 주세요.</Text>
+                      )}
                     </View>
                   </View>
 
@@ -1130,12 +1159,17 @@ export default function FlightItem({
                         style={
                           readOnly
                             ? styles.segmentTimePickerReadOnly
-                            : styles.segmentTimePicker
+                            : segmentErrors?.departureTime
+                              ? { ...styles.segmentTimePicker, ...styles.fieldError }
+                              : styles.segmentTimePicker
                         }
                         disabled={readOnly}
                         hideArrow={readOnly}
                         popupAlign="right"
                       />
+                      {segmentErrors?.departureTime && (
+                        <Text style={styles.errorText}>출발 시간을 선택해 주세요.</Text>
+                      )}
                     </View>
                   </View>
 
@@ -1231,12 +1265,17 @@ export default function FlightItem({
                         style={
                           readOnly
                             ? styles.segmentTimePickerReadOnly
-                            : styles.segmentTimePicker
+                            : segmentErrors?.arrivalTime
+                              ? { ...styles.segmentTimePicker, ...styles.fieldError }
+                              : styles.segmentTimePicker
                         }
                         disabled={readOnly}
                         hideArrow={readOnly}
                         popupAlign="right"
                       />
+                      {segmentErrors?.arrivalTime && (
+                        <Text style={styles.errorText}>도착 시간을 선택해 주세요.</Text>
+                      )}
                     </View>
                   </View>
                 </View>
@@ -1385,16 +1424,6 @@ export default function FlightItem({
           </MotionPressable>
         </View>
       )}
-      <WarningBanner
-        message={warningMessage}
-        visible={showWarning}
-        duration={3000}
-        bottomOffset={WARNING_BOTTOM_OFFSET}
-        onHide={() => {
-          setShowWarning(false);
-          setWarningMessage("");
-        }}
-      />
       <AiDocumentAnalyzeModal
         visible={aiAnalyzeModalVisible}
         analyzeResult={aiAnalyzeResult}
@@ -1411,8 +1440,6 @@ export default function FlightItem({
     </View>
   );
 }
-
-const WARNING_BOTTOM_OFFSET = spacing.lg + 42 + spacing.xl + spacing.sm;
 
 const styles = StyleSheet.create({
   wrapper: {
@@ -1450,6 +1477,14 @@ const styles = StyleSheet.create({
   label: {
     ...textStyles.h8,
     color: colors.gray900,
+  },
+  fieldError: {
+    borderWidth: 1,
+    borderColor: colors.danger,
+  },
+  errorText: {
+    ...textStyles.body6,
+    color: colors.danger,
   },
   pickerTrigger: {
     height: 42,
