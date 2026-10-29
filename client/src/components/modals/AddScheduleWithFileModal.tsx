@@ -1672,7 +1672,6 @@ export default function AddScheduleWithFileModal({
                 </MotionPressable>
                 <MotionPressable
                   style={[styles.saveButton, saveDisabled && styles.saveButtonDisabled]}
-                  hoverStyle={shadows.darkHover}
                   onPress={handleSave}
                   disabled={saveDisabled}
                 >
@@ -1700,7 +1699,7 @@ export default function AddScheduleWithFileModal({
                 <MotionPressable style={styles.cancelButton} onPress={() => { setStep("upload"); setError(null); }}>
                   <Text style={styles.cancelButtonText}>다시 올리기</Text>
                 </MotionPressable>
-                <MotionPressable style={styles.retryButton} hoverStyle={shadows.darkHover} onPress={handleAnalyze}>
+                <MotionPressable style={styles.retryButton} onPress={handleAnalyze}>
                   <Text style={styles.saveButtonText}>다시 시도</Text>
                 </MotionPressable>
               </View>
@@ -1724,7 +1723,6 @@ export default function AddScheduleWithFileModal({
               <View style={styles.buttonRow}>
                 <MotionPressable
                   style={styles.retryButton}
-                  hoverStyle={shadows.darkHover}
                   onPress={() => { setStep("upload"); setError(null); }}
                 >
                   <Text style={styles.saveButtonText}>다시 올리기</Text>
@@ -2233,12 +2231,11 @@ const styles = StyleSheet.create({
   buttonRow: { flexDirection: "row", gap: spacing.md, paddingTop: spacing.xs },
   cancelButton: {
     height: 48,
-    paddingHorizontal: spacing.lg,
     borderRadius: radii.mdPlus,
     ...surfaces.muted,
     alignItems: "center",
     justifyContent: "center",
-    flexShrink: 0,
+    flex: 1,
   },
   cancelButtonText: { ...textStyles.h7, color: colors.gray900 },
   aiButton: { flex: 1, height: 48, borderRadius: radii.mdPlus, overflow: "hidden" },
@@ -2249,7 +2246,7 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 48,
     borderRadius: radii.mdPlus,
-    ...surfaces.dark,
+    ...surfaces.primary,
     alignItems: "center",
     justifyContent: "center",
     flexDirection: "row",
@@ -2261,7 +2258,7 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 48,
     borderRadius: radii.mdPlus,
-    ...surfaces.dark,
+    ...surfaces.primary,
     alignItems: "center",
     justifyContent: "center",
   },
