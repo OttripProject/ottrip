@@ -1671,14 +1671,14 @@ export default function AddScheduleWithFileModal({
                   <Text style={styles.cancelButtonText}>다시 올리기</Text>
                 </MotionPressable>
                 <MotionPressable
-                  style={[styles.saveButton, saveDisabled && styles.saveButtonDisabled]}
+                  style={[styles.saveButton, saveDisabled && !isSaving && styles.saveButtonDisabled]}
                   onPress={handleSave}
                   disabled={saveDisabled}
                 >
                   {isSaving ? (
                     <ActivityIndicator size="small" color={colors.white} />
                   ) : null}
-                  <Text style={styles.saveButtonText}>
+                  <Text style={[styles.saveButtonText, saveDisabled && !isSaving && styles.saveButtonTextDisabled]}>
                     {isSaving ? "저장 중..." : `선택한 ${selectedIndexes.size}개 일정 추가`}
                   </Text>
                 </MotionPressable>
@@ -2252,7 +2252,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 6,
   },
-  saveButtonDisabled: { opacity: 0.45 },
+  saveButtonDisabled: { ...surfaces.muted, backgroundImage: "none" } as any,
+  saveButtonTextDisabled: { color: colors.gray500 },
   saveButtonText: { ...textStyles.h7, color: colors.white },
   retryButton: {
     flex: 1,
