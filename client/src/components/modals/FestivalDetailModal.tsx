@@ -19,6 +19,7 @@ import { tourismApi } from "@/services/tourism";
 import { useBackdropClose } from "@/hooks/useBackdropClose";
 import { ItineraryCategory } from "@/types/itinerary";
 import MotionPressable, { MotionIcon } from "@/ui/components/MotionPressable";
+import Spinner from "@/ui/components/Spinner";
 import { modalMotion } from "@/ui/effects/modalMotion";
 import { colors } from "@/ui/tokens/colors";
 import { radii } from "@/ui/tokens/radii";
@@ -69,8 +70,18 @@ export default function FestivalDetailModal({ visible, onClose, item, onAddToIti
   const [photoIndex, setPhotoIndex] = useState(0);
   const [singleAspectRatio, setSingleAspectRatio] = useState<number | null>(null);
   const [zoomIndex, setZoomIndex] = useState<number | null>(null);
+  const [showAddSpinner, setShowAddSpinner] = useState(false);
   const scrollAnim = useRef(new Animated.Value(0)).current;
   const backdrop = useBackdropClose(onClose);
+
+  useEffect(() => {
+    if (!loading) {
+      setShowAddSpinner(false);
+      return;
+    }
+    const timer = setTimeout(() => setShowAddSpinner(true), 300);
+    return () => clearTimeout(timer);
+  }, [loading]);
 
   // detail 로드 후에만 allImages 확정 → loading 중엔 빈 배열 → single/multi 판별 정확
   const allImages = useMemo(() => {
@@ -470,18 +481,15 @@ export default function FestivalDetailModal({ visible, onClose, item, onAddToIti
               <Text style={styles.closeButtonText}>닫기</Text>
             </MotionPressable>
             <MotionPressable
-              style={[styles.addButton, (loading || !detail) && styles.addButtonDisabled]}
+              style={styles.addButton}
               onPress={handleAddToItinerary}
               disabled={loading || !detail}
             >
-              <Text
-                style={[
-                  styles.addButtonText,
-                  (loading || !detail) && styles.addButtonTextDisabled,
-                ]}
-              >
-                일정에 추가
-              </Text>
+              {showAddSpinner ? (
+                <Spinner size={16} strokeWidth={2} color={colors.white} />
+              ) : (
+                <Text style={styles.addButtonText}>일정에 추가</Text>
+              )}
             </MotionPressable>
           </View>
         </View>
@@ -818,13 +826,6 @@ const styles = StyleSheet.create({
     ...surfaces.primary,
     justifyContent: "center",
     alignItems: "center",
-  },
-  addButtonDisabled: {
-    ...surfaces.muted,
-    backgroundImage: "none",
-  } as any,
-  addButtonTextDisabled: {
-    color: colors.gray500,
   },
   addButtonText: {
     ...textStyles.h6,
