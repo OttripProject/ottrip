@@ -47,6 +47,7 @@ interface ExpenseFormProps {
    isAiAnalyzePartial?: boolean;
    analyzePartialMessage?: string;
    aiFilledFields?: ReadonlySet<string>;
+   amountError?: boolean;
 }
 
 export default function ExpenseForm({
@@ -70,6 +71,7 @@ export default function ExpenseForm({
     isAiAnalyzePartial,
     analyzePartialMessage,
     aiFilledFields = new Set(),
+    amountError,
   }: ExpenseFormProps) {
   const [categoryOpen, setCategoryOpen] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -116,7 +118,11 @@ export default function ExpenseForm({
             onChangeText={(text) => updateField("amount", Number(text.replace(/[^0-9]/g, "")) || 0)}
             keyboardType="numeric"
             style={size.input}
+            error={amountError}
           />
+          {amountError && (
+            <Text style={styles.errorText}>금액을 입력해 주세요.</Text>
+          )}
         </View>
         <View style={[styles.inputGroup, { flex: 1 }]}>
           <Text style={[styles.inputLabel, compact && styles.compactInputLabel]}>통화</Text>
@@ -211,6 +217,10 @@ inputLabel: {
   },
   compactInputLabel: {
     ...textStyles.h8
+  },
+  errorText: {
+    ...textStyles.body6,
+    color: colors.danger,
   },
   amountCurrencyRow: { 
     flexDirection: "row", 

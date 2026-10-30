@@ -3,6 +3,7 @@ import BaseCalendar from "@/components/popup/calendar/BaseCalendar";
 import { PLACEHOLDERS } from "@/constants/placeholders";
 import ExpenseForm from "@/components/forms/ExpenseForm";
 import { useDate } from "@/contexts/DateContext";
+import { ToastUI, useToast } from "@/contexts/ToastContext";
 import { useAttachmentUpload } from "@/hooks/useAttachmentUpload";
 import { useBackdropClose } from "@/hooks/useBackdropClose";
 import { useExpenseAi } from "@/hooks/useExpenseAi";
@@ -20,7 +21,7 @@ import AttachmentSection from "@/ui/components/attachmentSection";
 import type { AiAttachmentAnalyzeSelection } from "@/ui/components/attachmentSection.types";
 import { pendingAiFileKey } from "@/ui/components/attachmentSection.types";
 import MotionPressable, { MotionIcon } from "@/ui/components/MotionPressable";
-import WarningBanner from "@/ui/components/toast/warning";
+import Spinner from "@/ui/components/Spinner";
 import { modalMotion } from "@/ui/effects/modalMotion";
 import { colors } from "@/ui/tokens/colors";
 import { radii } from "@/ui/tokens/radii";
@@ -34,7 +35,6 @@ import dayjs from "dayjs";
 import { LinearGradient } from "expo-linear-gradient";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
-  ActivityIndicator,
   Alert,
   Modal,
   Platform,
@@ -126,10 +126,12 @@ export default function AddExpenseModal({
   const { selectedDate } = useDate();
   const [categoryOpen, setCategoryOpen] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
-  const [showWarning, setShowWarning] = useState(false);
-  const [warningMessage, setWarningMessage] = useState("");
+  const { showToast } = useToast();
+  const [showErrors, setShowErrors] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showSubmitSpinner, setShowSubmitSpinner] = useState(false);
   const isSubmittingRef = useRef(false);
+  const scrollRef = useRef<ScrollView>(null);
   const [pendingFiles, setPendingFiles] = useState<LocalFile[]>([]);
   const [aiAnalyzeFailureVisible, setAiAnalyzeFailureVisible] = useState(false);
   const [aiAnalyzeFailureMessage, setAiAnalyzeFailureMessage] = useState("");
@@ -217,20 +219,31 @@ export default function AddExpenseModal({
     }
   }, [visible, planStartDate, selectedDate]);
 
+  const isSaving = isSubmitting || isUploading;
+
+  useEffect(() => {
+    if (!isSaving) {
+      setShowSubmitSpinner(false);
+      return;
+    }
+    const timer = setTimeout(() => setShowSubmitSpinner(true), 300);
+    return () => clearTimeout(timer);
+  }, [isSaving]);
+
   const handleExpenseSubmit = async () => {
     if (isSubmittingRef.current) {
       return;
     }
 
     if (!planId) {
-      setWarningMessage("여행을 먼저 선택해주세요");
-      setShowWarning(true);
+      showToast("여행을 먼저 선택해주세요", { icon: "warning" });
       return;
     }
 
     if (expenseForm.amount <= 0) {
-      setWarningMessage("금액을 입력해주세요");
-      setShowWarning(true);
+      setShowErrors(true);
+      scrollRef.current?.scrollTo({ y: 0, animated: true });
+      showToast("입력되지 않은 값이 있어요.", { icon: "warning" });
       return;
     }
 
@@ -265,8 +278,6 @@ export default function AddExpenseModal({
             "비용은 추가되었으나 첨부 파일 업로드에 실패했습니다",
           ),
         );
-      } else {
-        Alert.alert("성공", "비용이 추가되었습니다");
       }
 
       setExpenseForm({
@@ -276,8 +287,10 @@ export default function AddExpenseModal({
         ex_date: getDefaultDate(),
         currency: ExpenseCurrency.KRW,
       });
+      setShowErrors(false);
       onClose();
       onExpenseAdd?.(newExpense);
+      if (!uploadError) showToast("비용을 추가했어요.");
     } catch (_error) {
         Alert.alert("알림", "비용 추가에 실패했습니다");
     } finally {
@@ -287,6 +300,8 @@ export default function AddExpenseModal({
   };
 
   const handleClose = () => {
+    if (isSubmittingRef.current) return;
+    setShowErrors(false);
     aiState.resetAiState();
     clearPendingFilesWithRevoke();
     setExpenseForm({
@@ -317,16 +332,8 @@ export default function AddExpenseModal({
       >
         <View style={styles.modalOverlay} {...backdrop.overlayProps}>
           <View style={styles.modalContent} {...backdrop.cardProps}>
-            <WarningBanner
-              message={warningMessage}
-              visible={showWarning}
-              duration={3000}
-              onHide={() => {
-                setShowWarning(false);
-                setWarningMessage("");
-              }}
-            />
             <ScrollView
+              ref={scrollRef}
               style={styles.scrollView}
               contentContainerStyle={styles.scrollContent}
               showsVerticalScrollIndicator={false}
@@ -337,10 +344,11 @@ export default function AddExpenseModal({
                 <MotionPressable
                   style={styles.closeButton}
                   onPress={handleClose}
+                  disabled={isSubmitting}
                   accessibilityLabel="닫기"
                 >
                   <MotionIcon>
-                    <CloseXIcon width={16} height={16} color={colors.gray900} />
+                    <CloseXIcon width={16} height={16} color={colors.gray700} />
                   </MotionIcon>
                 </MotionPressable>
               </View>
@@ -365,12 +373,14 @@ export default function AddExpenseModal({
                 isAiAnalyzePartial={aiState.isAiAnalyzePartial}
                 analyzePartialMessage={aiState.analyzePartialMessage}
                 aiFilledFields={aiState.aiFilledFields}
+                amountError={showErrors && expenseForm.amount <= 0}
               />
 
               <View style={styles.modalButtons}>
                 <MotionPressable
                   style={[styles.modalButton, styles.cancelButton]}
                   onPress={handleClose}
+                  disabled={isSubmitting}
                 >
                   <Text style={styles.cancelButtonText}>취소</Text>
                 </MotionPressable>
@@ -379,14 +389,11 @@ export default function AddExpenseModal({
                   onPress={handleExpenseSubmit}
                   disabled={isSubmitting || isUploading || aiState.isAiAnalyzing}
                 >
-                  <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                    {(isSubmitting || isUploading) && (
-                      <ActivityIndicator size="small" color="white" />
-                    )}
-                    <Text style={styles.submitButtonText}>
-                      {isSubmitting || isUploading ? "저장 중..." : "저장"}
-                    </Text>
-                  </View>
+                  {showSubmitSpinner ? (
+                    <Spinner size={16} strokeWidth={2} color={colors.white} />
+                  ) : (
+                    <Text style={styles.submitButtonText}>저장</Text>
+                  )}
                 </MotionPressable>
               </View>
             </ScrollView>
@@ -408,6 +415,7 @@ export default function AddExpenseModal({
             </View>
           )}
         </View>
+        <ToastUI />
       </Modal>
       <AiAnalyzeFailureModal
         visible={aiAnalyzeFailureVisible}
@@ -505,20 +513,20 @@ const styles = StyleSheet.create({
     borderRadius: radii.md,
     alignItems: "center",
     justifyContent: "center",
-    height: 52,
+    height: 48,
   },
   cancelButton: {
     ...surfaces.muted,
   },
   cancelButtonText: {
-    ...textStyles.h5,
+    ...textStyles.h6,
     color: colors.gray900,
   },
   submitButton: {
     ...surfaces.primary,
   },
   submitButtonText: {
-    ...textStyles.h5,
+    ...textStyles.h6,
     color: colors.white,
   },
 });
