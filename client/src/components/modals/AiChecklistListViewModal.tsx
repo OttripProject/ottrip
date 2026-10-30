@@ -119,6 +119,7 @@ export default function AiChecklistListViewModal({
   const [hoveredItemId, setHoveredItemId] = useState<number | null>(null);
   const [aiPressed, setAiPressed] = useState(false);
   const escapeLockRef = useRef(false);
+  const [showNameError, setShowNameError] = useState(false);
   const backdrop = useBackdropClose(onClose);
 
   const handleToggleItem = (item: ChecklistItem, items: ChecklistItem[]) => {
@@ -133,19 +134,25 @@ export default function AiChecklistListViewModal({
   };
 
   const handleStartAdding = (categoryKey: string) => {
+    setShowNameError(false);
     setAddingCategory(categoryKey);
     setNewItemName("");
     setNewItemReason("");
   };
 
   const handleCancelAdding = () => {
+    setShowNameError(false);
     setAddingCategory(null);
     setNewItemName("");
     setNewItemReason("");
   };
 
+  const nameError = showNameError && !newItemName.trim();
+
   const handleSaveAdding = () => {
-    if (!addingCategory || !newItemName.trim()) {
+    if (!addingCategory) return;
+    if (!newItemName.trim()) {
+      setShowNameError(true);
       return;
     }
     onAddItem(newItemName.trim(), newItemReason.trim(), addingCategory);
@@ -420,6 +427,7 @@ export default function AiChecklistListViewModal({
                                   maxLength={16}
                                   autoFocus
                                   onSubmitEditing={handleSaveAdding}
+                                  error={nameError}
                                 />
                                 <Text
                                   style={[
@@ -431,6 +439,11 @@ export default function AiChecklistListViewModal({
                                   {newItemName.length}/16
                                 </Text>
                               </View>
+                              {nameError && (
+                                <Text style={styles.errorText}>
+                                  항목명을 입력해 주세요.
+                                </Text>
+                              )}
                               <View style={styles.inputWrapper}>
                                 <Input
                                   variant="filled"
@@ -456,7 +469,6 @@ export default function AiChecklistListViewModal({
                             <View style={styles.addingItemButtons}>
                               <MotionPressable
                                 style={styles.addingItemCancelButton}
-                                hoverStyle={shadows.xsHover}
                                 onPress={handleCancelAdding}
                               >
                                 <Text style={styles.addingItemCancelText}>
@@ -691,9 +703,7 @@ const styles = StyleSheet.create({
     height: 32,
     paddingHorizontal: spacing.md,
     borderRadius: radii.md,
-    backgroundColor: colors.white,
-    borderWidth: 1,
-    borderColor: colors.gray350,
+    ...surfaces.muted,
     justifyContent: "center",
     alignItems: "center",
   },
@@ -845,6 +855,10 @@ const styles = StyleSheet.create({
   inputWrapper: {
     position: "relative",
     justifyContent: "center",
+  },
+  errorText: {
+    ...textStyles.body6,
+    color: colors.danger,
   },
   counterText: {
     position: "absolute",
