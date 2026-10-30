@@ -231,7 +231,7 @@ export default function AiChecklistListViewModal({
               accessibilityLabel="닫기"
             >
               <MotionIcon>
-                <CloseXIcon width={16} height={16} color={colors.gray900} />
+                <CloseXIcon width={16} height={16} color={colors.gray700} />
               </MotionIcon>
             </MotionPressable>
           </View>

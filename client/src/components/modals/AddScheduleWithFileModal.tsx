@@ -1248,7 +1248,7 @@ export default function AddScheduleWithFileModal({
             </View>
             <MotionPressable style={styles.closeButton} onPress={onClose} accessibilityLabel="닫기">
               <MotionIcon>
-                <XIcon width={16} height={16} color={colors.gray900} />
+                <XIcon width={16} height={16} color={colors.gray700} />
               </MotionIcon>
             </MotionPressable>
           </View>

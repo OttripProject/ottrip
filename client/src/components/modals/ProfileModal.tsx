@@ -233,7 +233,7 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
                     style={styles.closeButton}
                   >
                     <MotionIcon>
-                      <XIcon width={16} height={16} color={colors.gray900} />
+                      <XIcon width={16} height={16} color={colors.gray700} />
                     </MotionIcon>
                   </MotionPressable>
                 </View>
@@ -327,7 +327,7 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
                     style={styles.closeButton}
                   >
                     <MotionIcon>
-                      <XIcon width={16} height={16} color={colors.gray900} />
+                      <XIcon width={16} height={16} color={colors.gray700} />
                     </MotionIcon>
                   </MotionPressable>
                 </View>
@@ -512,7 +512,7 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
                   style={styles.closeButton}
                 >
                   <MotionIcon>
-                    <XIcon width={16} height={16} color={colors.gray900} />
+                    <XIcon width={16} height={16} color={colors.gray700} />
                   </MotionIcon>
                 </MotionPressable>
               </View>

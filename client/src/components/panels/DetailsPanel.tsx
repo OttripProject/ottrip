@@ -266,7 +266,7 @@ export default function DetailsPanel({
                 accessibilityLabel="닫기"
               >
                 <MotionIcon>
-                  <CloseXIcon width={12} height={12} color={colors.gray600} />
+                  <CloseXIcon width={12} height={12} color={colors.gray700} />
                 </MotionIcon>
               </MotionPressable>
             </View>

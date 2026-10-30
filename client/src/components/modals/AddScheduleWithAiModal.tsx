@@ -714,7 +714,7 @@ export default function AddScheduleWithAiModal({
                   accessibilityRole="button"
                   accessibilityLabel="닫기"
                 >
-                  <CloseIcon width={16} height={16} color={colors.black} />
+                  <CloseIcon width={16} height={16} color={colors.gray700} />
                 </Pressable>
               </LinearGradient>
 
@@ -808,7 +808,7 @@ export default function AddScheduleWithAiModal({
                     <CloseSmIcon
                       width={16}
                       height={16}
-                      color={colors.gray900}
+                      color={colors.gray700}
                     />
                   </MotionIcon>
                 </MotionPressable>

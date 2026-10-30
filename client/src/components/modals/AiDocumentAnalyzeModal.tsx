@@ -33,7 +33,6 @@ import AttachmentImageIcon from "../../../assets/mobile_attachment_image.svg";
 import WarningCircleIcon from "../../../assets/warning_circle.svg";
 
 const HEADER_GRADIENT = colors.aiHeaderGradient;
-const CLOSE_PURPLE = colors.aiInkDark;
 const BTN_CANCEL_BG = "#EDEDED";
 
 const ENTITY_LABEL_TO_KIND: Record<string, string> = {
@@ -588,7 +587,7 @@ export default function AiDocumentAnalyzeModal({
               ]}
               accessibilityLabel="닫기"
             >
-              <CloseErrorIcon width={13} height={13} color={CLOSE_PURPLE} />
+              <CloseErrorIcon width={13} height={13} color={colors.gray700} />
             </Pressable>
           </LinearGradient>
 

@@ -162,7 +162,7 @@ export default function CongestionBanner({ festivals, congestedItems = [], onDis
           ))}
         </Text>
         <Pressable onPress={handleDismiss} style={styles.closeBtn} aria-label="닫기">
-          <CloseIcon width={16} height={16} color={colors.gray600} />
+          <CloseIcon width={16} height={16} color={colors.gray700} />
         </Pressable>
       </Pressable>
     </Animated.View>

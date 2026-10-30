@@ -175,7 +175,7 @@ export default function TripFormModal({
                 accessibilityLabel="닫기"
               >
                 <MotionIcon>
-                  <CloseXIcon width={16} height={16} color={colors.gray600} />
+                  <CloseXIcon width={16} height={16} color={colors.gray700} />
                 </MotionIcon>
               </MotionPressable>
             </View>

@@ -83,7 +83,7 @@ export default function TermsDetailModal({
               hitSlop={12}
               accessibilityLabel="닫기"
             >
-              <XIcon width={24} height={24} fill={colors.black} />
+              <XIcon width={24} height={24} color={colors.gray700} />
             </Pressable>
           </View>
 
