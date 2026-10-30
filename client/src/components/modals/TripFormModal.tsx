@@ -7,6 +7,7 @@ import TripCalendarModal from "../trip/TripCalendarModal";
 import TripDurationBanner from "../trip/TripDurationBanner";
 import TripSegmentList from "../trip/TripSegmentList";
 import { ToastUI, useToast } from "@/contexts/ToastContext";
+import { useDiscardConfirm } from "@/hooks/useDiscardConfirm";
 import { useBackdropClose } from "@/hooks/useBackdropClose";
 import MotionPressable, { MotionIcon } from "@/ui/components/MotionPressable";
 import Input from "@/ui/components/input/Input";
@@ -83,8 +84,18 @@ export default function TripFormModal({
   const isUnchanged =
     !!initialTripData &&
     JSON.stringify(initialTripData) === JSON.stringify(tripData);
+  const isDirty = initialTripData
+    ? !isUnchanged
+    : !!tripData.name.trim() ||
+      tripData.segments.some(
+        seg => seg.country || seg.city || seg.startDate || seg.endDate,
+      );
+  const { requestClose, discardConfirmModal } = useDiscardConfirm(
+    isDirty,
+    onClose,
+  );
   const handleClose = () => {
-    if (!submittingRef.current) onClose();
+    if (!submittingRef.current) requestClose();
   };
   const backdrop = useBackdropClose(handleClose);
 
@@ -281,6 +292,7 @@ export default function TripFormModal({
         markedDates={markedDates}
         onDateSelect={onDateSelect}
       />
+      {discardConfirmModal}
     </>
   );
 }

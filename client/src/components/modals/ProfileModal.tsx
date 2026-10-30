@@ -2,6 +2,7 @@ import { PLACEHOLDERS } from "@/constants/placeholders";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/contexts/ToastContext";
 import { useBackdropClose } from "@/hooks/useBackdropClose";
+import { useDiscardConfirm } from "@/hooks/useDiscardConfirm";
 import { useMe } from "@/hooks/useMe";
 import { useNicknameValidation } from "@/hooks/useNicknameValidation";
 import { type UserProfile, usersApi } from "@/services/users";
@@ -59,7 +60,7 @@ interface ProfileModalProps {
 export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
   const { logout } = useAuth();
   const { showToast } = useToast();
-  const profileBackdrop = useBackdropClose(onClose);
+  const profileBackdrop = useBackdropClose(() => closeProfile());
   const contactBackdrop = useBackdropClose(() => setContactOpen(false));
   const navigation = useNavigation<any>();
   const queryClient = useQueryClient();
@@ -140,6 +141,17 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
   };
 
   const hasChanges = nickname !== me?.nickname || gender !== me?.gender;
+  const { requestClose: closeProfile, discardConfirmModal } = useDiscardConfirm(
+    hasChanges && !me?.isGuest,
+    () => {
+      if (me) {
+        setNickname(me.nickname);
+        setGender(me.gender);
+        onNicknameChange(me.nickname);
+      }
+      onClose();
+    },
+  );
   const canSave = isValid && hasChanges && !saving;
   const isGuest = !!me?.isGuest;
 
@@ -212,7 +224,7 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
         visible={visible}
         transparent
         animationType="none"
-        onRequestClose={onClose}
+        onRequestClose={closeProfile}
       >
         <View style={styles.overlay} {...profileBackdrop.overlayProps}>
           {isGuest ? (
@@ -228,7 +240,7 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
                     <Text style={styles.subtitle}>게스트 · 일정 임시 저장</Text>
                   </View>
                   <MotionPressable
-                    onPress={onClose}
+                    onPress={closeProfile}
                     hitSlop={8}
                     style={styles.closeButton}
                   >
@@ -322,7 +334,7 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
                     </Text>
                   </View>
                   <MotionPressable
-                    onPress={onClose}
+                    onPress={closeProfile}
                     hitSlop={8}
                     style={styles.closeButton}
                   >
@@ -575,6 +587,7 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
           logout();
         }}
       />
+      {discardConfirmModal}
     </>
   );
 }

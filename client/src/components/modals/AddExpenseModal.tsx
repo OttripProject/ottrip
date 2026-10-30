@@ -6,6 +6,7 @@ import { useDate } from "@/contexts/DateContext";
 import { ToastUI, useToast } from "@/contexts/ToastContext";
 import { useAttachmentUpload } from "@/hooks/useAttachmentUpload";
 import { useBackdropClose } from "@/hooks/useBackdropClose";
+import { useDiscardConfirm } from "@/hooks/useDiscardConfirm";
 import { useExpenseAi } from "@/hooks/useExpenseAi";
 import { useFilePicker } from "@/hooks/useFilePicker";
 import { analyzeDocumentUpload } from "@/services/aiDocument";
@@ -299,8 +300,7 @@ export default function AddExpenseModal({
     }
   };
 
-  const handleClose = () => {
-    if (isSubmittingRef.current) return;
+  const discardAndClose = () => {
     setShowErrors(false);
     aiState.resetAiState();
     clearPendingFilesWithRevoke();
@@ -319,6 +319,18 @@ export default function AddExpenseModal({
     existingAttachments: [], 
     onUpdateForm: setExpenseForm,
   });
+
+  const isDirty =
+    expenseForm.amount > 0 ||
+    !!expenseForm.description.trim() ||
+    pendingFiles.length > 0;
+  const { requestClose, discardConfirmModal } = useDiscardConfirm(
+    isDirty,
+    discardAndClose,
+  );
+  const handleClose = () => {
+    if (!isSubmittingRef.current) requestClose();
+  };
 
   const backdrop = useBackdropClose(handleClose);
 
@@ -425,6 +437,7 @@ export default function AddExpenseModal({
           setAiAnalyzeFailureMessage("");
         }}
       />
+      {discardConfirmModal}
     </>
   );
 }

@@ -26,6 +26,7 @@ import { injectKeyframes } from "@/ui/effects/injectKeyframes";
 import { modalMotion } from "@/ui/effects/modalMotion";
 import { surfaces } from "@/ui/tokens/surfaces";
 import { useBackdropClose } from "@/hooks/useBackdropClose";
+import { useDiscardConfirm } from "@/hooks/useDiscardConfirm";
 import { radii } from "@/ui/tokens";
 import { colors } from "@/ui/tokens/colors";
 import { motion } from "@/ui/tokens/motion";
@@ -367,11 +368,16 @@ export default function WeeklySchedulePanel({
   const [memoSaving, setMemoSaving] = useState(false);
   const [showMemoSpinner, setShowMemoSpinner] = useState(false);
   const memoSavingRef = useRef(false);
+  const [memoDraft, setMemoDraft] = useState("");
+  const [memoInitial, setMemoInitial] = useState("");
+  const {
+    requestClose: requestCloseMemo,
+    discardConfirmModal: memoDiscardConfirmModal,
+  } = useDiscardConfirm(memoDraft !== memoInitial, () => setMemoOpen(false));
   const closeMemo = () => {
-    if (!memoSavingRef.current) setMemoOpen(false);
+    if (!memoSavingRef.current) requestCloseMemo();
   };
   const memoBackdrop = useBackdropClose(closeMemo);
-  const [memoDraft, setMemoDraft] = useState("");
   const { showToast } = useToast();
 
   useEffect(() => {
@@ -2265,6 +2271,7 @@ export default function WeeklySchedulePanel({
                   <MotionPressable
                     onPress={() => {
                       setMemoDraft((planData.plan as any)?.memo ?? "");
+                      setMemoInitial((planData.plan as any)?.memo ?? "");
                       setMemoOpen(true);
                     }}
                     style={styles.iconButton}
@@ -3814,6 +3821,7 @@ export default function WeeklySchedulePanel({
           </View>
         </View>
       </Modal>
+      {memoDiscardConfirmModal}
 
       <PlanSelectRequiredModal
         visible={showPlanSelectRequiredModal}

@@ -1,6 +1,7 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { View, Text, Platform, Pressable, StyleSheet } from "react-native";
 import { useAttachmentUpload } from "@/hooks/useAttachmentUpload";
+import { useDiscardConfirm } from "@/hooks/useDiscardConfirm";
 import { useExpenseAi } from "@/hooks/useExpenseAi";
 import { useFilePicker } from "@/hooks/useFilePicker";
 import type { LocalFile } from "@/types/api";
@@ -28,6 +29,7 @@ interface ExpenseCardProps {
   onDelete: (id: number) => void;
   onUpdate?: () => void;
   onAttachmentPress: (expense: Expense, attachments: Attachment[]) => void;
+  onDirtyChange?: (id: number, dirty: boolean) => void;
 }
 
 export default function ExpenseCard({ 
@@ -37,6 +39,7 @@ export default function ExpenseCard({
     onDelete,
     onAttachmentPress,
     onUpdate,
+    onDirtyChange,
  }: ExpenseCardProps) {
     const [isEditing, setIsEditing] = useState(false);
     
@@ -123,6 +126,29 @@ export default function ExpenseCard({
       setIsEditing(false);
       setEditFormData(null);
     };
+
+    const isDirty =
+      isEditing &&
+      !!editFormData &&
+      (editFormData.category !== expense.category ||
+        editFormData.amount !== expense.amount ||
+        editFormData.currency !== expense.currency ||
+        editFormData.ex_date !== expense.exDate ||
+        editFormData.description !== (expense.description || "") ||
+        pendingFiles.length > 0 ||
+        deletedAttachmentIds.length > 0);
+
+    const { requestClose: requestEditCancel, discardConfirmModal } =
+      useDiscardConfirm(isDirty, handleEditCancel);
+
+    useEffect(() => {
+      onDirtyChange?.(expense.id, isDirty);
+    }, [onDirtyChange, expense.id, isDirty]);
+
+    useEffect(
+      () => () => onDirtyChange?.(expense.id, false),
+      [onDirtyChange, expense.id],
+    );
   
     const handleEditSave = async () => {
       if (!editFormData) return;
@@ -216,13 +242,14 @@ export default function ExpenseCard({
         />
 
         <View style={styles.editActions}>
-          <Pressable style={styles.editCancelBtn} onPress={handleEditCancel}>
+          <Pressable style={styles.editCancelBtn} onPress={requestEditCancel}>
             <Text style={styles.editCancelText}>취소</Text>
           </Pressable>
           <Pressable style={styles.editSaveBtn} onPress={handleEditSave}>
             <Text style={styles.editSaveText}>저장</Text>
           </Pressable>
         </View>
+        {discardConfirmModal}
       </View>
     );
   }

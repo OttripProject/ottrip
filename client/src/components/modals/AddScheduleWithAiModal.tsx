@@ -1,3 +1,4 @@
+import { useDiscardConfirm } from "@/hooks/useDiscardConfirm";
 import { accommodationsApi } from "@/services/accommodations";
 import { analyzeDocumentUpload, parseTextToItem } from "@/services/aiDocument";
 import { attachmentsApi } from "@/services/attachments";
@@ -580,13 +581,17 @@ export default function AddScheduleWithAiModal({
     }
   };
 
-  const handleClose = () => {
+  const discardAndClose = () => {
     setMessage("");
     setResultView(null);
     setIsDragging(false);
     pendingFileRef.current = null;
     onClose();
   };
+  const { requestClose: handleClose, discardConfirmModal } = useDiscardConfirm(
+    !!message.trim() || isResultEditMode,
+    discardAndClose,
+  );
 
   const handleFileInputChange = (
     event: React.ChangeEvent<HTMLInputElement>,
@@ -1100,6 +1105,7 @@ export default function AddScheduleWithAiModal({
           )}
         </View>
       </View>
+      {discardConfirmModal}
     </Modal>
   );
 }

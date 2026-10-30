@@ -8,6 +8,7 @@ import type { AiDocumentItemDraft, Plan } from "@/types/api";
 import { ExpenseCategory, ExpenseCurrency } from "@/types/api";
 import { plansApi } from "@/services/plans";
 import { useBackdropClose } from "@/hooks/useBackdropClose";
+import { useDiscardConfirm } from "@/hooks/useDiscardConfirm";
 import HoverPressable from "@/ui/components/HoverPressable";
 import MotionPressable, { MotionIcon } from "@/ui/components/MotionPressable";
 import Input from "@/ui/components/input/Input";
@@ -506,7 +507,14 @@ export default function AddScheduleWithFileModal({
 
   const dropZoneRef = useRef<View>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const backdrop = useBackdropClose(onClose);
+  const { requestClose, discardConfirmModal } = useDiscardConfirm(
+    step === "preview" || !!selectedFile,
+    onClose,
+  );
+  const handleClose = () => {
+    if (!isSaving) requestClose();
+  };
+  const backdrop = useBackdropClose(handleClose);
   const handleFileRef = useRef<(file: File) => void>(() => {});
 
   const handleFile = useCallback((file: File) => {
@@ -1227,7 +1235,7 @@ export default function AddScheduleWithFileModal({
   const { krwTotal, usdTotal, count: expenseCount } = getExpenseSummary(items, selectedIndexes);
 
   return (
-    <Modal visible={visible} transparent animationType="none" onRequestClose={onClose}>
+    <Modal visible={visible} transparent animationType="none" onRequestClose={handleClose}>
       {hiddenFileInput}
       <View style={styles.overlay} {...backdrop.overlayProps}>
         <View style={[styles.container, step === "preview" && { minHeight: windowHeight * 0.80 }]} {...backdrop.cardProps}>
@@ -1246,7 +1254,7 @@ export default function AddScheduleWithFileModal({
                   : `'${planName}'에 추가할 일정을 선택하세요.`}
               </Text>
             </View>
-            <MotionPressable style={styles.closeButton} onPress={onClose} accessibilityLabel="닫기">
+            <MotionPressable style={styles.closeButton} onPress={handleClose} accessibilityLabel="닫기">
               <MotionIcon>
                 <XIcon width={16} height={16} color={colors.gray700} />
               </MotionIcon>
@@ -1330,7 +1338,7 @@ export default function AddScheduleWithFileModal({
               )}
 
               <View style={styles.buttonRow}>
-                <MotionPressable style={styles.cancelButton} onPress={onClose}>
+                <MotionPressable style={styles.cancelButton} onPress={handleClose}>
                   <Text style={styles.cancelButtonText}>취소</Text>
                 </MotionPressable>
                 <MotionPressable
@@ -1732,6 +1740,7 @@ export default function AddScheduleWithFileModal({
           )}
         </View>
       </View>
+      {discardConfirmModal}
     </Modal>
   );
 }

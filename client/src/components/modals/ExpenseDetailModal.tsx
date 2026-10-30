@@ -2,6 +2,7 @@ import ExpenseCard from "@/components/cards/ExpenseCard"
 import ImagePreviewModal, { type ImagePreviewItem } from "@/components/modals/ImagePreviewModal";
 import { useToast, ToastUI } from "@/contexts/ToastContext";
 import { useBackdropClose } from "@/hooks/useBackdropClose";
+import { useDiscardConfirm } from "@/hooks/useDiscardConfirm";
 import { expensesApi } from "@/services/expenses";
 import type { Attachment } from "@/types/api";
 import type { Expense } from "@/types/api";
@@ -21,7 +22,7 @@ import { surfaces } from "@/ui/tokens/surfaces";
 import { textStyles, typography } from "@/ui/tokens/typography";
 import { toUserMessage } from "@/utils/crossPlatformAlert";
 import { formatFileSize } from "@/utils/fileUtils";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Modal,
   Pressable,
@@ -70,7 +71,21 @@ export default function ExpenseDetailModal({
   readOnly = false,
 }: ExpenseDetailModalProps) {
   const { height: windowHeight } = useWindowDimensions();
-  const backdrop = useBackdropClose(onClose);
+  const [dirtyIds, setDirtyIds] = useState<Set<number>>(new Set());
+  const handleDirtyChange = useCallback((id: number, dirty: boolean) => {
+    setDirtyIds(prev => {
+      if (prev.has(id) === dirty) return prev;
+      const next = new Set(prev);
+      if (dirty) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+  }, []);
+  const { requestClose, discardConfirmModal } = useDiscardConfirm(
+    dirtyIds.size > 0,
+    onClose,
+  );
+  const backdrop = useBackdropClose(requestClose);
   const pendingDeletesRef = useRef(new Map<number, ReturnType<typeof setTimeout>>());
   const [hiddenIds, setHiddenIds] = useState<Set<number>>(new Set());
   const expenses = useMemo(
@@ -302,7 +317,7 @@ export default function ExpenseDetailModal({
         visible={visible}
         transparent
         animationType="none"
-        onRequestClose={onClose}
+        onRequestClose={requestClose}
       >
         <View style={styles.modalOverlay} {...backdrop.overlayProps}>
           <View
@@ -318,7 +333,7 @@ export default function ExpenseDetailModal({
             <View style={styles.header}>
               <Text style={styles.headerTitle}>지출 내역</Text>
               <MotionPressable
-                onPress={onClose}
+                onPress={requestClose}
                 style={styles.closeButton}
                 accessibilityLabel="닫기"
               >
@@ -469,6 +484,7 @@ export default function ExpenseDetailModal({
                             onDelete={handleDelete}
                             onUpdate={onExpenseUpdate}
                             onAttachmentPress={handleExpenseAttachmentPress}
+                            onDirtyChange={handleDirtyChange}
                           />
                         ))}
                       </View>
@@ -556,6 +572,7 @@ export default function ExpenseDetailModal({
           </View>
         </View>
         <ToastUI />
+        {discardConfirmModal}
       </Modal>
 
       <ImagePreviewModal
