@@ -22,8 +22,10 @@ import type {
   DocumentUploadAnalyzeResponse,
 } from "@/types/api";
 import { categoryLabels } from "@/types/expense";
+import MotionPressable from "@/ui/components/MotionPressable";
 import { colors } from "@/ui/tokens/colors";
 import { radii } from "@/ui/tokens/radii";
+import { surfaces } from "@/ui/tokens/surfaces";
 import { spacing } from "@/ui/tokens/spacing";
 import { textStyles } from "@/ui/tokens/typography";
 import CheckWhiteIcon from "../../../assets/check_white.svg";
@@ -33,7 +35,6 @@ import AttachmentImageIcon from "../../../assets/mobile_attachment_image.svg";
 import WarningCircleIcon from "../../../assets/warning_circle.svg";
 
 const HEADER_GRADIENT = colors.aiHeaderGradient;
-const BTN_CANCEL_BG = "#EDEDED";
 
 const ENTITY_LABEL_TO_KIND: Record<string, string> = {
   일정: "itinerary",
@@ -620,34 +621,26 @@ export default function AiDocumentAnalyzeModal({
           </ScrollView>
 
           <View style={styles.footer}>
-            <Pressable
+            <MotionPressable
               onPress={
                 isEditMode
                   ? () => setIsEditMode(false)
                   : () => setIsEditMode(true)
               }
-              style={({ pressed }) => [
-                styles.footerBtn,
-                styles.footerBtnLeft,
-                pressed && styles.pressed,
-              ]}
+              style={[styles.footerBtn, styles.footerBtnLeft]}
             >
               <Text style={styles.footerBtnLeftText}>
                 {isEditMode ? "취소" : "직접 수정"}
               </Text>
-            </Pressable>
-            <Pressable
+            </MotionPressable>
+            <MotionPressable
               onPress={handleApply}
-              style={({ pressed }) => [
-                styles.footerBtn,
-                styles.footerBtnRight,
-                pressed && styles.pressed,
-              ]}
+              style={[styles.footerBtn, styles.footerBtnRight]}
             >
               <Text style={styles.footerBtnRightText}>
                 {isEditMode ? "저장" : (applyLabel ?? "이대로 추가")}
               </Text>
-            </Pressable>
+            </MotionPressable>
           </View>
         </Pressable>
       </Pressable>
@@ -919,36 +912,30 @@ const styles = StyleSheet.create({
   footer: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-    paddingTop: 12,
-    paddingHorizontal: 22,
-    paddingBottom: 18,
+    gap: spacing.md,
+    paddingTop: spacing.md,
+    paddingHorizontal: spacing.xl,
+    paddingBottom: spacing.lg,
   },
   footerBtn: {
-    height: 36,
-    borderRadius: 9,
+    flex: 1,
+    height: 40,
+    borderRadius: radii.md,
     alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: 16,
   },
   footerBtnLeft: {
-    flex: 1,
-    backgroundColor: BTN_CANCEL_BG,
+    ...surfaces.muted,
   },
   footerBtnRight: {
-    flex: 1.4,
-    backgroundColor: colors.primary,
+    ...surfaces.primary,
   },
   footerBtnLeftText: {
-    fontFamily: "Pretendard-SemiBold",
-    fontSize: 12,
-    lineHeight: 18,
+    ...textStyles.h7,
     color: colors.gray900,
   },
   footerBtnRightText: {
-    fontFamily: "Pretendard-SemiBold",
-    fontSize: 12,
-    lineHeight: 18,
+    ...textStyles.h7,
     color: colors.white,
   },
 });
