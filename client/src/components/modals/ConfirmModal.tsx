@@ -1,5 +1,6 @@
 import { useBackdropClose } from "@/hooks/useBackdropClose";
 import MotionPressable from "@/ui/components/MotionPressable";
+import Spinner from "@/ui/components/Spinner";
 import { modalMotion } from "@/ui/effects/modalMotion";
 import { colors } from "@/ui/tokens/colors";
 import { radii } from "@/ui/tokens/radii";
@@ -7,12 +8,13 @@ import { shadows } from "@/ui/tokens/shadows";
 import { spacing } from "@/ui/tokens/spacing";
 import { surfaces } from "@/ui/tokens/surfaces";
 import { textStyles } from "@/ui/tokens/typography";
-import { Modal, StyleSheet, Text, View } from "react-native";
+import { useEffect, useRef, useState } from "react";
+import { Modal, Platform, StyleSheet, Text, View } from "react-native";
 
 export type ConfirmAction = {
   label: string;
   onPress?: () => void;
-  tone: "muted" | "danger" | "primary" | "dark";
+  tone: "muted" | "danger" | "primary";
 };
 
 type ConfirmModalProps = {
@@ -21,7 +23,7 @@ type ConfirmModalProps = {
   description?: string;
   actions: ConfirmAction[];
   onRequestClose: () => void;
-  disabled?: boolean;
+  loading?: boolean;
 };
 
 export default function ConfirmModal({
@@ -30,9 +32,33 @@ export default function ConfirmModal({
   description,
   actions,
   onRequestClose,
-  disabled = false,
+  loading = false,
 }: ConfirmModalProps) {
   const backdrop = useBackdropClose(onRequestClose);
+  const [showSpinner, setShowSpinner] = useState(false);
+  const buttonRowRef = useRef<View>(null);
+
+  useEffect(() => {
+    if (Platform.OS !== "web" || !visible) return;
+    const previous = document.activeElement as HTMLElement | null;
+    const frame = requestAnimationFrame(() => {
+      const row = buttonRowRef.current as unknown as HTMLElement | null;
+      row?.querySelector<HTMLElement>("[tabindex]")?.focus();
+    });
+    return () => {
+      cancelAnimationFrame(frame);
+      previous?.focus?.();
+    };
+  }, [visible]);
+
+  useEffect(() => {
+    if (!loading) {
+      setShowSpinner(false);
+      return;
+    }
+    const timer = setTimeout(() => setShowSpinner(true), 300);
+    return () => clearTimeout(timer);
+  }, [loading]);
 
   return (
     <Modal
@@ -49,27 +75,27 @@ export default function ConfirmModal({
           {description ? (
             <Text style={styles.description}>{description}</Text>
           ) : null}
-          <View style={styles.buttonRow}>
-            {actions.map(action => (
+          <View ref={buttonRowRef} style={styles.buttonRow}>
+            {actions.map((action, index) => (
               <MotionPressable
                 key={action.label}
-                style={[
-                  styles.button,
-                  toneStyles[action.tone],
-                  disabled && styles.buttonDisabled,
-                ]}
+                style={[styles.button, toneStyles[action.tone]]}
                 onPress={action.onPress}
-                disabled={disabled}
+                disabled={loading}
               >
-                <Text
-                  style={
-                    action.tone === "muted"
-                      ? styles.buttonTextDark
-                      : styles.buttonTextLight
-                  }
-                >
-                  {action.label}
-                </Text>
+                {showSpinner && index === actions.length - 1 ? (
+                  <Spinner size={16} strokeWidth={2} color={colors.white} />
+                ) : (
+                  <Text
+                    style={
+                      action.tone === "muted"
+                        ? styles.buttonTextDark
+                        : styles.buttonTextLight
+                    }
+                  >
+                    {action.label}
+                  </Text>
+                )}
               </MotionPressable>
             ))}
           </View>
@@ -88,9 +114,6 @@ const toneStyles = StyleSheet.create({
   },
   primary: {
     ...surfaces.primary,
-  },
-  dark: {
-    ...surfaces.dark,
   },
 });
 
@@ -138,9 +161,6 @@ const styles = StyleSheet.create({
     borderRadius: radii.md,
     alignItems: "center",
     justifyContent: "center",
-  },
-  buttonDisabled: {
-    opacity: 0.6,
   },
   buttonTextDark: {
     ...textStyles.h7,

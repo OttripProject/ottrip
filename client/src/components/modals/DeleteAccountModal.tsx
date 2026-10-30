@@ -50,7 +50,7 @@ export default function DeleteAccountModal({
       <ConfirmModal
         visible={visible}
         title="계정이 삭제되었어요."
-        actions={[{ label: "확인", tone: "dark", onPress: handleDone }]}
+        actions={[{ label: "확인", tone: "primary", onPress: handleDone }]}
         onRequestClose={handleRequestClose}
       />
     );
@@ -68,7 +68,7 @@ export default function DeleteAccountModal({
         { label: "삭제", tone: "danger", onPress: handleConfirm },
       ]}
       onRequestClose={handleRequestClose}
-      disabled={isDeleting}
+      loading={isDeleting}
     />
   );
 }

@@ -18,7 +18,7 @@ export default function RefreshChecklistModal({
       description="추천 체크리스트가 추가됩니다."
       actions={[
         { label: "취소", tone: "muted", onPress: onClose },
-        { label: "확인", tone: "dark", onPress: onConfirm },
+        { label: "확인", tone: "primary", onPress: onConfirm },
       ]}
       onRequestClose={onClose}
     />

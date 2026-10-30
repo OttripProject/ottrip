@@ -688,7 +688,7 @@ export default function TripSelector({
         title="여행 기간이 줄어들어요"
         description={`변경된 기간 밖에 등록된 일정은\n캘린더에 그대로 남아요. 저장할까요?`}
         confirmLabel="저장"
-        confirmButtonColor={colors.primary}
+        confirmTone="primary"
         onConfirm={async () => {
           setPeriodShrinkConfirmVisible(false);
           await doEditTrip();

@@ -162,7 +162,7 @@ export default function ViewerPreviewModal({
           title="일정을 불러오지 못했습니다"
           description="잠시 후 다시 시도해주세요."
           confirmLabel="닫기"
-          confirmButtonColor="#1F1F1F"
+          confirmTone="primary"
           onClose={onClose}
           onConfirm={onClose}
         />
@@ -302,7 +302,7 @@ export default function ViewerPreviewModal({
           title="내 일정으로 저장됐어요"
           description="저장된 일정으로 이동하시겠어요?"
           confirmLabel="이동하기"
-          confirmButtonColor="#1F1F1F"
+          confirmTone="primary"
           onClose={() => setSaveSuccessVisible(false)}
           onConfirm={() => {
             setSaveSuccessVisible(false);
