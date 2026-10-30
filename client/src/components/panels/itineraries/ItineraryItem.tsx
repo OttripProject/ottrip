@@ -37,6 +37,7 @@ const itineraryCategoryToExpenseCategory: Partial<Record<ItineraryCategory, Expe
 };
 import MotionPressable, { MotionIcon } from "@/ui/components/MotionPressable";
 import Spinner from "@/ui/components/Spinner";
+import { Tooltip } from "@/ui/components/Tooltip";
 import CurrencyToggle from "@/ui/components/CurrencyToggle";
 import PlacesSearchInput from "@/ui/components/PlacesSearchInput";
 import type { PlaceResult } from "@/ui/components/PlacesSearchInput";
@@ -1603,31 +1604,33 @@ export default function ItineraryItem({
                             : `${expense.amount.toLocaleString()}원`}
                         </Text>
                         {!readOnly && (
-                          <MotionPressable
-                            style={styles.expenseDeleteButton}
-                            accessibilityLabel="삭제"
-                            onPress={e => {
-                              e.stopPropagation();
-                              if (expense.isDraft) {
-                                setDraftExpenses(prev =>
-                                  prev.filter(
-                                    (_, i) =>
-                                      i !== Number(expense.id.split("-")[1]),
-                                  ),
-                                );
-                              } else {
-                                handleExpenseDelete(expense.id);
-                              }
-                            }}
-                          >
-                            <MotionIcon>
-                              <DeleteIcon
-                                width={16}
-                                height={16}
-                                color={colors.gray700}
-                              />
-                            </MotionIcon>
-                          </MotionPressable>
+                          <Tooltip text="삭제">
+                            <MotionPressable
+                              style={styles.expenseDeleteButton}
+                              accessibilityLabel="삭제"
+                              onPress={e => {
+                                e.stopPropagation();
+                                if (expense.isDraft) {
+                                  setDraftExpenses(prev =>
+                                    prev.filter(
+                                      (_, i) =>
+                                        i !== Number(expense.id.split("-")[1]),
+                                    ),
+                                  );
+                                } else {
+                                  handleExpenseDelete(expense.id);
+                                }
+                              }}
+                            >
+                              <MotionIcon>
+                                <DeleteIcon
+                                  width={16}
+                                  height={16}
+                                  color={colors.gray700}
+                                />
+                              </MotionIcon>
+                            </MotionPressable>
+                          </Tooltip>
                         )}
                       </Pressable>
                     );

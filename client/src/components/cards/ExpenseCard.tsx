@@ -9,6 +9,7 @@ import { type Expense, type Attachment, PLAN_ENTITY_KIND } from "@/types/api";
 import { ExpenseCurrency, currencyLabels } from "@/types/expense";
 import MotionPressable, { MotionIcon } from "@/ui/components/MotionPressable";
 import Spinner from "@/ui/components/Spinner";
+import { Tooltip } from "@/ui/components/Tooltip";
 import { colors } from "@/ui/tokens/colors";
 import { radii } from "@/ui/tokens/radii";
 import { shadows } from "@/ui/tokens/shadows";
@@ -330,24 +331,28 @@ export default function ExpenseCard({
                 <Text style={styles.attachmentCount}>{attachments.length}</Text>
               </MotionPressable>
             )}
-            <MotionPressable
-              style={styles.updateButton}
-              onPress={handleEditStart}
-              accessibilityLabel="수정"
-            >
-              <MotionIcon>
-                <UpdateIcon width={16} height={16} color={colors.gray700} />
-              </MotionIcon>
-            </MotionPressable>
-            <MotionPressable
-              style={styles.deleteButton}
-              onPress={() => onDelete(expense.id)}
-              accessibilityLabel="삭제"
-            >
-              <MotionIcon>
-                <DeleteIcon width={15} height={15} color={colors.warning} />
-              </MotionIcon>
-            </MotionPressable>
+            <Tooltip text="수정">
+              <MotionPressable
+                style={styles.updateButton}
+                onPress={handleEditStart}
+                accessibilityLabel="수정"
+              >
+                <MotionIcon>
+                  <UpdateIcon width={16} height={16} color={colors.gray700} />
+                </MotionIcon>
+              </MotionPressable>
+            </Tooltip>
+            <Tooltip text="삭제">
+              <MotionPressable
+                style={styles.deleteButton}
+                onPress={() => onDelete(expense.id)}
+                accessibilityLabel="삭제"
+              >
+                <MotionIcon>
+                  <DeleteIcon width={16} height={16} color={colors.gray700} />
+                </MotionIcon>
+              </MotionPressable>
+            </Tooltip>
           </View>
         )}
       </View>
@@ -390,7 +395,6 @@ expenseDate: {
       expenseCardActions: {
         flexDirection: "row",
         alignItems: "center",
-        gap: spacing.xs,
       },
       attachmentButton: {
         flexDirection: "row",
@@ -408,14 +412,16 @@ expenseDate: {
         color: colors.gray700,
       },
       updateButton: {
-        width: 24,
-        height: 24,
+        width: 32,
+        height: 32,
+        marginVertical: -spacing.sm,
         alignItems: "center",
         justifyContent: "center",
       },
       deleteButton: {
-        width: 24,
-        height: 24,
+        width: 32,
+        height: 32,
+        marginVertical: -spacing.sm,
         alignItems: "center",
         justifyContent: "center",
       },

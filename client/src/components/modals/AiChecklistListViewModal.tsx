@@ -5,6 +5,7 @@ import MotionPressable, {
   useMotionHovered,
 } from "@/ui/components/MotionPressable";
 import Spinner from "@/ui/components/Spinner";
+import { Tooltip } from "@/ui/components/Tooltip";
 import Input from "@/ui/components/input/Input";
 import { modalMotion } from "@/ui/effects/modalMotion";
 import { playBurst } from "@/ui/effects/particles";
@@ -388,22 +389,24 @@ export default function AiChecklistListViewModal({
                                   ) : null}
                                 </View>
                               </Pressable>
-                              <MotionPressable
-                                style={[
-                                  styles.deleteItemButton,
-                                  isHovered && styles.deleteItemVisible,
-                                ]}
-                                hoverStyle={styles.deleteItemHover}
-                                onPress={() => onDeleteItem(item.id)}
-                              >
-                                <MotionIcon>
-                                  <DeleteIcon
-                                    width={11}
-                                    height={11}
-                                    color={colors.gray900}
-                                  />
-                                </MotionIcon>
-                              </MotionPressable>
+                              <Tooltip text="삭제">
+                                <MotionPressable
+                                  style={[
+                                    styles.deleteItemButton,
+                                    isHovered && styles.deleteItemVisible,
+                                  ]}
+                                  hoverStyle={styles.deleteItemHover}
+                                  onPress={() => onDeleteItem(item.id)}
+                                >
+                                  <MotionIcon>
+                                    <DeleteIcon
+                                      width={16}
+                                      height={16}
+                                      color={colors.gray700}
+                                    />
+                                  </MotionIcon>
+                                </MotionPressable>
+                              </Tooltip>
                             </View>
                           );
                         })}
@@ -658,12 +661,13 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   deleteItemButton: {
-    width: 24,
-    height: 24,
+    width: 32,
+    height: 32,
     borderRadius: radii.xs,
     justifyContent: "center",
     alignItems: "center",
-    marginTop: 2,
+    marginVertical: -spacing.sm,
+    marginTop: -spacing.xs,
     opacity: 0,
   },
   deleteItemVisible: {

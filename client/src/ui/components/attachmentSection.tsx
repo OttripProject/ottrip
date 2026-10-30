@@ -19,6 +19,7 @@ import ImagePreviewModal, {
 import { useMe } from "@/hooks/useMe";
 import type { LocalFile } from "@/types/api";
 import MotionPressable, { MotionIcon } from "@/ui/components/MotionPressable";
+import { Tooltip } from "@/ui/components/Tooltip";
 import type { AttachmentSectionProps } from "@/ui/components/attachmentSection.types";
 import { pendingAiFileKey } from "@/ui/components/attachmentSection.types";
 import { colors } from "@/ui/tokens/colors";
@@ -474,20 +475,22 @@ export default function AttachmentSection({
     );
 
     const removeControl = onRemove ? (
-      <MotionPressable
-        onPress={e => {
-          stopEventBubble(e);
-          onRemove();
-        }}
-        disabled={isUploading || disabled}
-        style={styles.removeButton}
-        hitSlop={6}
-        accessibilityLabel="삭제"
-      >
-        <MotionIcon>
-          <CloseIcon width={10} height={10} color={colors.gray600} />
-        </MotionIcon>
-      </MotionPressable>
+      <Tooltip text="삭제">
+        <MotionPressable
+          onPress={e => {
+            stopEventBubble(e);
+            onRemove();
+          }}
+          disabled={isUploading || disabled}
+          style={styles.removeButton}
+          hitSlop={6}
+          accessibilityLabel="삭제"
+        >
+          <MotionIcon>
+            <CloseIcon width={16} height={16} color={colors.gray700} />
+          </MotionIcon>
+        </MotionPressable>
+      </Tooltip>
     ) : (
       <View style={styles.removeButton} />
     );
@@ -1796,10 +1799,10 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   removeButton: {
-    width: 20,
-    height: 20,
-    borderRadius: radii.pill,
-    backgroundColor: colors.gray300,
+    width: 32,
+    height: 32,
+    marginVertical: -spacing.sm,
+    borderRadius: radii.md,
     alignItems: "center",
     justifyContent: "center",
     marginLeft: spacing.xs,

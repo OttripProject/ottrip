@@ -44,6 +44,7 @@ import {
   itineraryCategoryLabels,
 } from "@/types/itinerary";
 import Spinner from "@/ui/components/Spinner";
+import { Tooltip } from "@/ui/components/Tooltip";
 import AiRefreshIcon from "../../../assets/ai_refresh.svg";
 import InfoCircleIcon from "../../../assets/info_circle.svg";
 import PdfDocIcon from "../../../assets/attachment_document.svg";
@@ -1316,15 +1317,17 @@ export default function AddScheduleWithFileModal({
                     <Text style={styles.fileName} numberOfLines={1}>{selectedFile.name}</Text>
                     <Text style={styles.fileSize}>{formatFileSize(selectedFile.size)}</Text>
                   </View>
-                  <MotionPressable
-                    style={styles.fileRemoveButton}
-                    accessibilityLabel="제거"
-                    onPress={() => { setSelectedFile(null); setError(null); }}
-                  >
-                    <MotionIcon>
-                      <XIcon width={16} height={16} color={colors.gray600} />
-                    </MotionIcon>
-                  </MotionPressable>
+                  <Tooltip text="제거">
+                    <MotionPressable
+                      style={styles.fileRemoveButton}
+                      accessibilityLabel="제거"
+                      onPress={() => { setSelectedFile(null); setError(null); }}
+                    >
+                      <MotionIcon>
+                        <XIcon width={16} height={16} color={colors.gray700} />
+                      </MotionIcon>
+                    </MotionPressable>
+                  </Tooltip>
                 </View>
               )}
 
@@ -1643,15 +1646,17 @@ export default function AddScheduleWithFileModal({
                           </View>
                           )}
 
-                          <MotionPressable
-                            style={styles.editButton}
-                            onPress={e => { e.stopPropagation(); startEdit(i); }}
-                            accessibilityLabel="수정"
-                          >
-                            <MotionIcon>
-                              <UpdateIcon width={16} height={16} color={colors.gray700} />
-                            </MotionIcon>
-                          </MotionPressable>
+                          <Tooltip text="수정">
+                            <MotionPressable
+                              style={styles.editButton}
+                              onPress={e => { e.stopPropagation(); startEdit(i); }}
+                              accessibilityLabel="수정"
+                            >
+                              <MotionIcon>
+                                <UpdateIcon width={16} height={16} color={colors.gray700} />
+                              </MotionIcon>
+                            </MotionPressable>
+                          </Tooltip>
                         </>
                       )}
                     </Pressable>
@@ -1814,7 +1819,7 @@ const styles = StyleSheet.create({
   fileInfoText: { flex: 1, minWidth: 0 },
   fileName: { ...textStyles.h7, color: colors.gray900 },
   fileSize: { ...textStyles.body6, fontVariant: ["tabular-nums"], color: colors.gray600, marginTop: spacing.xs },
-  fileRemoveButton: { width: 24, height: 24, alignItems: "center", justifyContent: "center", flexShrink: 0 },
+  fileRemoveButton: { width: 32, height: 32, marginVertical: -spacing.sm, alignItems: "center", justifyContent: "center", flexShrink: 0 },
 
   errorText: { ...textStyles.body5, color: "#E53E3E" },
   // Empty state
@@ -2130,7 +2135,7 @@ const styles = StyleSheet.create({
   inlineExpenseCategory: { ...textStyles.h9, color: "#1F9D57" },
   inlineExpenseAmount: { fontFamily: typography.fontFamily.poppinsSemiBold, fontSize: 11, lineHeight: 16, color: "#137A41" },
 
-  editButton: { width: 28, height: 28, borderRadius: radii.md, alignItems: "center", justifyContent: "center", flexShrink: 0 },
+  editButton: { width: 32, height: 32, marginVertical: -spacing.sm, borderRadius: radii.md, alignItems: "center", justifyContent: "center", flexShrink: 0 },
   editForm: { flex: 1, gap: 8 },
   editTitleInput: {
     height: 40, borderWidth: 1, borderColor: colors.gray300, borderRadius: radii.base,
