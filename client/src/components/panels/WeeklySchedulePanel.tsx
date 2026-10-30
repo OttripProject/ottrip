@@ -17,9 +17,11 @@ import { flightsApi } from "@/services/flights";
 import { itinerariesApi } from "@/services/itineraries";
 import { plansApi } from "@/services/plans";
 import type { CreatePlanRequest, Plan, UpdatePlanRequest } from "@/types/api";
+import { useToast } from "@/contexts/ToastContext";
 import GradientBackground from "@/ui/components/GradientBackground";
 import MotionPressable, { MotionIcon } from "@/ui/components/MotionPressable";
 import Input from "@/ui/components/input/Input";
+import Spinner from "@/ui/components/Spinner";
 import { injectKeyframes } from "@/ui/effects/injectKeyframes";
 import { modalMotion } from "@/ui/effects/modalMotion";
 import { surfaces } from "@/ui/tokens/surfaces";
@@ -362,8 +364,24 @@ export default function WeeklySchedulePanel({
   const [aiChatOpen, setAiChatOpen] = useState(false);
   const [aiMessages, setAiMessages] = useState<AiMessage[]>([AI_INTRO_MESSAGE]);
   const [memoOpen, setMemoOpen] = useState(false);
-  const memoBackdrop = useBackdropClose(() => setMemoOpen(false));
+  const [memoSaving, setMemoSaving] = useState(false);
+  const [showMemoSpinner, setShowMemoSpinner] = useState(false);
+  const memoSavingRef = useRef(false);
+  const closeMemo = () => {
+    if (!memoSavingRef.current) setMemoOpen(false);
+  };
+  const memoBackdrop = useBackdropClose(closeMemo);
   const [memoDraft, setMemoDraft] = useState("");
+  const { showToast } = useToast();
+
+  useEffect(() => {
+    if (!memoSaving) {
+      setShowMemoSpinner(false);
+      return;
+    }
+    const timer = setTimeout(() => setShowMemoSpinner(true), 300);
+    return () => clearTimeout(timer);
+  }, [memoSaving]);
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const [showPlanSelectRequiredModal, setShowPlanSelectRequiredModal] =
     useState(false);
@@ -3705,7 +3723,7 @@ export default function WeeklySchedulePanel({
         visible={memoOpen}
         transparent
         animationType="none"
-        onRequestClose={() => setMemoOpen(false)}
+        onRequestClose={closeMemo}
       >
         <View style={styles.modalOverlay} {...memoBackdrop.overlayProps}>
           <View style={styles.memoModalContainer} {...memoBackdrop.cardProps}>
@@ -3717,7 +3735,8 @@ export default function WeeklySchedulePanel({
                   </Text>
                 </View>
                 <MotionPressable
-                  onPress={() => setMemoOpen(false)}
+                  onPress={closeMemo}
+                  disabled={memoSaving}
                   style={styles.memoModalCloseButton}
                   accessibilityLabel="닫기"
                 >
@@ -3745,13 +3764,17 @@ export default function WeeklySchedulePanel({
 
               <View style={styles.memoModalActions}>
                 <MotionPressable
-                  onPress={() => setMemoOpen(false)}
+                  onPress={closeMemo}
+                  disabled={memoSaving}
                   style={styles.memoModalSecondaryButton}
                 >
-                  <Text style={styles.memoModalSecondaryButtonText}>닫기</Text>
+                  <Text style={styles.memoModalSecondaryButtonText}>취소</Text>
                 </MotionPressable>
                 <MotionPressable
                   onPress={async () => {
+                    if (memoSavingRef.current) return;
+                    memoSavingRef.current = true;
+                    setMemoSaving(true);
                     try {
                       if (!internalSelectedTrip?.id)
                         throw new Error("No plan selected");
@@ -3759,8 +3782,10 @@ export default function WeeklySchedulePanel({
                         Number.parseInt(internalSelectedTrip.id),
                         memoDraft ?? "",
                       );
-                      Alert.alert("성공", "메모가 저장되었습니다.");
+                      memoSavingRef.current = false;
+                      setMemoSaving(false);
                       setMemoOpen(false);
+                      showToast("메모를 저장했어요.");
                       if (internalSelectedTrip?.publicId) {
                         planData.fetchPlanData &&
                           (await planData.fetchPlanData(
@@ -3772,11 +3797,18 @@ export default function WeeklySchedulePanel({
                         "알림",
                         toUserMessage(e, "메모 저장에 실패했습니다."),
                       );
+                    } finally {
+                      memoSavingRef.current = false;
+                      setMemoSaving(false);
                     }
                   }}
                   style={styles.memoModalPrimaryButton}
                 >
-                  <Text style={styles.memoModalPrimaryButtonText}>저장</Text>
+                  {showMemoSpinner ? (
+                    <Spinner size={16} strokeWidth={2} color={colors.white} />
+                  ) : (
+                    <Text style={styles.memoModalPrimaryButtonText}>저장</Text>
+                  )}
                 </MotionPressable>
               </View>
           </View>
