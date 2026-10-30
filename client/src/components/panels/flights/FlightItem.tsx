@@ -23,6 +23,7 @@ import {
 import CurrencyToggle from "@/ui/components/CurrencyToggle";
 import HoverPressable from "@/ui/components/HoverPressable";
 import MotionPressable, { MotionIcon } from "@/ui/components/MotionPressable";
+import Spinner from "@/ui/components/Spinner";
 import AttachmentSection from "@/ui/components/attachmentSection";
 import type { AiAttachmentAnalyzeSelection } from "@/ui/components/attachmentSection.types";
 import { pendingAiFileKey } from "@/ui/components/attachmentSection.types";
@@ -43,7 +44,6 @@ import { handleGuestPromptError } from "@/utils/guestPrompt";
 import dayjs from "dayjs";
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  ActivityIndicator,
   Platform,
   Pressable,
   ScrollView,
@@ -282,6 +282,7 @@ export default function FlightItem({
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isSubmittingRef = useRef(false);
+  const [showSaveSpinner, setShowSaveSpinner] = useState(false);
 
   const [pendingFiles, setPendingFiles] = useState<LocalFile[]>([]);
   const [existingAttachments, setExistingAttachments] = useState<Attachment[]>(
@@ -752,6 +753,17 @@ export default function FlightItem({
           arrivalTime: !String(firstSegment.arrival_time || "").trim(),
         }
       : null;
+
+  const isSaving = isSubmitting || isUploading;
+
+  useEffect(() => {
+    if (!isSaving) {
+      setShowSaveSpinner(false);
+      return;
+    }
+    const timer = setTimeout(() => setShowSaveSpinner(true), 300);
+    return () => clearTimeout(timer);
+  }, [isSaving]);
 
   return (
     <View style={styles.wrapper}>
@@ -1391,14 +1403,11 @@ export default function FlightItem({
             onPress={handleSave}
             disabled={isSubmitting || isUploading}
           >
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-              {(isSubmitting || isUploading) && (
-                <ActivityIndicator size="small" color="white" />
-              )}
-              <Text style={styles.saveButtonText}>
-                {isSubmitting || isUploading ? "저장 중..." : "저장"}
-              </Text>
-            </View>
+            {showSaveSpinner ? (
+              <Spinner size={16} strokeWidth={2} color={colors.white} />
+            ) : (
+              <Text style={styles.saveButtonText}>저장</Text>
+            )}
           </MotionPressable>
         </View>
       ) : (
@@ -1716,7 +1725,7 @@ const styles = StyleSheet.create({
   },
   buttonRow: {
     flexDirection: "row",
-    gap: spacing.sm,
+    gap: spacing.md,
     paddingTop: spacing.lg,
     paddingHorizontal: spacing.xl,
     paddingBottom: spacing.xl,
@@ -1732,19 +1741,19 @@ const styles = StyleSheet.create({
   deleteButton: {
     ...surfaces.muted,
     flex: 1,
-    paddingVertical: spacing.md,
+    height: 40,
     borderRadius: radii.md,
     justifyContent: "center",
     alignItems: "center",
   },
   deleteButtonText: {
-    ...textStyles.h8,
+    ...textStyles.h7,
     color: colors.gray900,
   },
   saveButton: {
     ...surfaces.primary,
     flex: 1,
-    paddingVertical: spacing.md,
+    height: 40,
     borderRadius: radii.md,
     justifyContent: "center",
     alignItems: "center",
@@ -1757,7 +1766,7 @@ const styles = StyleSheet.create({
     color: colors.gray900,
   },
   saveButtonText: {
-    ...textStyles.h8,
+    ...textStyles.h7,
     color: colors.white,
   },
 });
