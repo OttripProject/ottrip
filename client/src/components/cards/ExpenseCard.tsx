@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { View, Text, Platform, Pressable, StyleSheet } from "react-native";
+import { View, Text, Platform, StyleSheet } from "react-native";
 import { useAttachmentUpload } from "@/hooks/useAttachmentUpload";
 import { useDiscardConfirm } from "@/hooks/useDiscardConfirm";
 import { useExpenseAi } from "@/hooks/useExpenseAi";
@@ -8,10 +8,12 @@ import type { LocalFile } from "@/types/api";
 import { type Expense, type Attachment, PLAN_ENTITY_KIND } from "@/types/api";
 import { ExpenseCurrency, currencyLabels } from "@/types/expense";
 import MotionPressable, { MotionIcon } from "@/ui/components/MotionPressable";
+import Spinner from "@/ui/components/Spinner";
 import { colors } from "@/ui/tokens/colors";
 import { radii } from "@/ui/tokens/radii";
 import { shadows } from "@/ui/tokens/shadows";
 import { spacing } from "@/ui/tokens/spacing";
+import { surfaces } from "@/ui/tokens/surfaces";
 import { textStyles } from "@/ui/tokens/typography";
 import { attachmentsApi } from "@/services/attachments";
 import { expensesApi } from "@/services/expenses";
@@ -44,6 +46,18 @@ export default function ExpenseCard({
     const [isEditing, setIsEditing] = useState(false);
     
     const [editFormData, setEditFormData] = useState<ExpenseFormData | null>(null);
+    const [isSaving, setIsSaving] = useState(false);
+    const [showSaveSpinner, setShowSaveSpinner] = useState(false);
+    const [showErrors, setShowErrors] = useState(false);
+
+    useEffect(() => {
+      if (!isSaving) {
+        setShowSaveSpinner(false);
+        return;
+      }
+      const timer = setTimeout(() => setShowSaveSpinner(true), 300);
+      return () => clearTimeout(timer);
+    }, [isSaving]);
   
     const { isUploading, uploadFiles } = useAttachmentUpload({
       planId: expense.planId,
@@ -120,6 +134,7 @@ export default function ExpenseCard({
       });
       setPendingFiles([]);
       setDeletedAttachmentIds([]);
+      setShowErrors(false);
     };
   
     const handleEditCancel = () => {
@@ -151,8 +166,14 @@ export default function ExpenseCard({
     );
   
     const handleEditSave = async () => {
-      if (!editFormData) return;
-      
+      if (!editFormData || isSaving) return;
+      if (editFormData.amount <= 0) {
+        setShowErrors(true);
+        showToast("입력되지 않은 값이 있어요.", { icon: "warning" });
+        return;
+      }
+
+      setIsSaving(true);
       try {
         await expensesApi.updateExpense(expense.id, {
           category: editFormData.category,
@@ -195,6 +216,8 @@ export default function ExpenseCard({
       } catch (error) {
         showToast("지출 수정에 실패했습니다.");
         console.error("지출 수정 중 전체 에러:", error);
+      } finally {
+        setIsSaving(false);
       }
     };
 
@@ -239,15 +262,35 @@ export default function ExpenseCard({
           isAiAnalyzePartial={aiState.isAiAnalyzePartial}
           analyzePartialMessage={aiState.analyzePartialMessage}
           aiFilledFields={aiState.aiFilledFields}
+          amountError={showErrors && !!editFormData && editFormData.amount <= 0}
         />
 
         <View style={styles.editActions}>
-          <Pressable style={styles.editCancelBtn} onPress={requestEditCancel}>
+          <MotionPressable
+            style={styles.editCancelBtn}
+            onPress={requestEditCancel}
+            disabled={isSaving}
+          >
             <Text style={styles.editCancelText}>취소</Text>
-          </Pressable>
-          <Pressable style={styles.editSaveBtn} onPress={handleEditSave}>
-            <Text style={styles.editSaveText}>저장</Text>
-          </Pressable>
+          </MotionPressable>
+          <MotionPressable
+            style={[styles.editSaveBtn, !isDirty && styles.editSaveBtnDisabled]}
+            onPress={handleEditSave}
+            disabled={!isDirty || isSaving}
+          >
+            {showSaveSpinner ? (
+              <Spinner size={16} strokeWidth={2} color={colors.white} />
+            ) : (
+              <Text
+                style={[
+                  styles.editSaveText,
+                  !isDirty && styles.editSaveTextDisabled,
+                ]}
+              >
+                저장
+              </Text>
+            )}
+          </MotionPressable>
         </View>
         {discardConfirmModal}
       </View>
@@ -400,18 +443,25 @@ expenseDate: {
       editCancelBtn: {
         flex: 1, 
         height: 40,
-        borderRadius: 10,
-        backgroundColor: colors.gray400,
+        borderRadius: radii.md,
+        ...surfaces.muted,
         alignItems: "center",
         justifyContent: "center",
       },
       editSaveBtn: {
         flex: 1,
         height: 40,
-        borderRadius: 10,
-        backgroundColor: colors.primary,
+        borderRadius: radii.md,
+        ...surfaces.primary,
         alignItems: "center",
         justifyContent: "center",
+      },
+      editSaveBtnDisabled: {
+        ...surfaces.muted,
+        backgroundImage: "none",
+      } as any,
+      editSaveTextDisabled: {
+        color: colors.gray500,
       },
       editCancelText: {
         ...textStyles.h7,
