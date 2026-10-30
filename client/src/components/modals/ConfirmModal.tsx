@@ -153,7 +153,7 @@ const styles = StyleSheet.create({
   },
   buttonRow: {
     flexDirection: "row",
-    gap: spacing.sm,
+    gap: spacing.md,
   },
   button: {
     flex: 1,

@@ -988,10 +988,10 @@ const styles = StyleSheet.create({
   } as any,
   footer: {
     flexDirection: "row",
-    gap: 12,
-    paddingHorizontal: 32,
-    paddingTop: 16,
-    paddingBottom: 24,
+    gap: spacing.md,
+    paddingHorizontal: spacing["2xl"],
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.xl,
   },
   closeButton: {
     flex: 1,
