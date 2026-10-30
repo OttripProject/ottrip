@@ -35,7 +35,8 @@ const itineraryCategoryToExpenseCategory: Partial<Record<ItineraryCategory, Expe
   [ItineraryCategory.SHOPPING]: ExpenseCategory.SHOPPING,
   [ItineraryCategory.ETC]: ExpenseCategory.ETC,
 };
-import MotionPressable from "@/ui/components/MotionPressable";
+import MotionPressable, { MotionIcon } from "@/ui/components/MotionPressable";
+import Spinner from "@/ui/components/Spinner";
 import CurrencyToggle from "@/ui/components/CurrencyToggle";
 import PlacesSearchInput from "@/ui/components/PlacesSearchInput";
 import type { PlaceResult } from "@/ui/components/PlacesSearchInput";
@@ -88,7 +89,7 @@ import { tourismApi } from "@/services/tourism";
 import TourismDetailModal from "@/components/modals/TourismDetailModal";
 import { useDetailsHeader } from "../DetailsHeaderContext";
 import CalendarIcon from "../../../../assets/calender.svg";
-import CloseIcon from "../../../../assets/close_sm.svg";
+import DeleteIcon from "../../../../assets/delete.svg";
 import DownArrowIcon from "../../../../assets/dropdown_time.svg";
 import UpperArrowIcon from "../../../../assets/upper_arrow.svg";
 import { extendPlanIfNeeded } from "@/utils/extendPlanIfNeeded";
@@ -234,6 +235,19 @@ export default function ItineraryItem({
   const [showDatePicker, setShowDatePicker] = useState(false);
 
   const [showExpenseForm, setShowExpenseForm] = useState(false);
+  const [showExpenseErrors, setShowExpenseErrors] = useState(false);
+  const [isExpenseSubmitting, setIsExpenseSubmitting] = useState(false);
+  const [showExpenseSpinner, setShowExpenseSpinner] = useState(false);
+  const isExpenseSubmittingRef = useRef(false);
+
+  useEffect(() => {
+    if (!isExpenseSubmitting) {
+      setShowExpenseSpinner(false);
+      return;
+    }
+    const timer = setTimeout(() => setShowExpenseSpinner(true), 300);
+    return () => clearTimeout(timer);
+  }, [isExpenseSubmitting]);
   const [expenseOpen, setExpenseOpen] = useState(false);
   const [editingExpense, setEditingExpense] = useState<any | null>(null);
   const [expenseForm, setExpenseForm] = useState({
@@ -853,12 +867,15 @@ export default function ItineraryItem({
   };
 
   const handleExpenseSubmit = async () => {
+    if (isExpenseSubmittingRef.current) return;
     if (expenseForm.amount <= 0) {
-      Alert.alert("알림", "금액을 입력해주세요.");
+      setShowExpenseErrors(true);
       return;
     }
 
     if (editingExpense && !editingExpense.isDraft) {
+      isExpenseSubmittingRef.current = true;
+      setIsExpenseSubmitting(true);
       try {
         const updatedExpense = await expensesApi.updateExpense(
           Number(editingExpense.id),
@@ -893,6 +910,9 @@ export default function ItineraryItem({
       } catch (_error) {
         Alert.alert("알림", "비용 수정에 실패했습니다.");
         return;
+      } finally {
+        isExpenseSubmittingRef.current = false;
+        setIsExpenseSubmitting(false);
       }
     }
 
@@ -1133,6 +1153,7 @@ export default function ItineraryItem({
   });
 
   const titleError = showErrors && !readOnly && !formData.title.trim();
+  const expenseAmountError = showExpenseErrors && expenseForm.amount <= 0;
 
   return (
     <View style={styles.wrapper}>
@@ -1541,6 +1562,7 @@ export default function ItineraryItem({
                               description: expense.description || "",
                               currency: expense.currency || ExpenseCurrency.KRW,
                             });
+                            setShowExpenseErrors(false);
                             setShowExpenseForm(true);
                           }
                         }}
@@ -1570,8 +1592,9 @@ export default function ItineraryItem({
                             : `${expense.amount.toLocaleString()}원`}
                         </Text>
                         {!readOnly && (
-                          <Pressable
+                          <MotionPressable
                             style={styles.expenseDeleteButton}
+                            accessibilityLabel="삭제"
                             onPress={e => {
                               e.stopPropagation();
                               if (expense.isDraft) {
@@ -1586,12 +1609,14 @@ export default function ItineraryItem({
                               }
                             }}
                           >
-                            <CloseIcon
-                              width={8}
-                              height={8}
-                              color={colors.gray500}
-                            />
-                          </Pressable>
+                            <MotionIcon>
+                              <DeleteIcon
+                                width={16}
+                                height={16}
+                                color={colors.gray700}
+                              />
+                            </MotionIcon>
+                          </MotionPressable>
                         )}
                       </Pressable>
                     );
@@ -1613,6 +1638,7 @@ export default function ItineraryItem({
                       description: "",
                       currency: ExpenseCurrency.KRW,
                     });
+                    setShowExpenseErrors(false);
                     setShowExpenseForm(!showExpenseForm);
                   }}
                 >
@@ -1672,7 +1698,11 @@ export default function ItineraryItem({
                         })
                       }
                       keyboardType="numeric"
+                      error={expenseAmountError}
                     />
+                    {expenseAmountError && (
+                      <Text style={styles.errorText}>금액을 입력해 주세요.</Text>
+                    )}
                   </View>
 
                   <View style={styles.inputGroup}>
@@ -1691,6 +1721,7 @@ export default function ItineraryItem({
                   <View style={styles.expenseButtonRow}>
                     <MotionPressable
                       style={styles.expenseCancelButton}
+                      disabled={isExpenseSubmitting}
                       onPress={() => {
                         setEditingExpense(null);
                         setExpenseForm({
@@ -1708,9 +1739,13 @@ export default function ItineraryItem({
                       style={styles.expenseSubmitButton}
                       onPress={handleExpenseSubmit}
                     >
-                      <Text style={styles.expenseSubmitButtonText}>
-                        {editingExpense ? "수정" : "추가"}
-                      </Text>
+                      {showExpenseSpinner ? (
+                        <Spinner size={16} strokeWidth={2} color={colors.white} />
+                      ) : (
+                        <Text style={styles.expenseSubmitButtonText}>
+                          {editingExpense ? "수정" : "추가"}
+                        </Text>
+                      )}
                     </MotionPressable>
                   </View>
                 </View>
@@ -2031,10 +2066,11 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   expenseDeleteButton: {
-    width: 18,
-    height: 18,
-    borderRadius: radii.pill,
-    backgroundColor: colors.gray300,
+    width: 32,
+    height: 32,
+    marginVertical: -spacing.sm,
+    marginRight: -spacing.sm,
+    borderRadius: radii.md,
     alignItems: "center",
     justifyContent: "center",
     flexShrink: 0,
@@ -2094,27 +2130,25 @@ const styles = StyleSheet.create({
   expenseCancelButton: {
     ...surfaces.muted,
     borderRadius: radii.md,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.xl,
+    height: 40,
     justifyContent: "center",
     alignItems: "center",
     flex: 1,
   },
   expenseCancelButtonText: {
-    ...textStyles.h8,
+    ...textStyles.h7,
     color: colors.gray900,
   },
   expenseSubmitButton: {
-    ...surfaces.dark,
+    ...surfaces.primary,
     borderRadius: radii.md,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.xl,
+    height: 40,
     justifyContent: "center",
     alignItems: "center",
     flex: 1,
   },
   expenseSubmitButtonText: {
-    ...textStyles.h8,
+    ...textStyles.h7,
     color: colors.white,
   },
   deleteExpenseButton: {
