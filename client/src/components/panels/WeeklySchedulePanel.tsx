@@ -19,9 +19,9 @@ import { plansApi } from "@/services/plans";
 import type { CreatePlanRequest, Plan, UpdatePlanRequest } from "@/types/api";
 import { useToast } from "@/contexts/ToastContext";
 import GradientBackground from "@/ui/components/GradientBackground";
+import ActionButton from "@/ui/components/ActionButton";
 import MotionPressable, { MotionIcon } from "@/ui/components/MotionPressable";
 import Input from "@/ui/components/input/Input";
-import Spinner from "@/ui/components/Spinner";
 import { injectKeyframes } from "@/ui/effects/injectKeyframes";
 import { modalMotion } from "@/ui/effects/modalMotion";
 import { surfaces } from "@/ui/tokens/surfaces";
@@ -366,7 +366,6 @@ export default function WeeklySchedulePanel({
   const [aiMessages, setAiMessages] = useState<AiMessage[]>([AI_INTRO_MESSAGE]);
   const [memoOpen, setMemoOpen] = useState(false);
   const [memoSaving, setMemoSaving] = useState(false);
-  const [showMemoSpinner, setShowMemoSpinner] = useState(false);
   const memoSavingRef = useRef(false);
   const [memoDraft, setMemoDraft] = useState("");
   const [memoInitial, setMemoInitial] = useState("");
@@ -379,15 +378,6 @@ export default function WeeklySchedulePanel({
   };
   const memoBackdrop = useBackdropClose(closeMemo);
   const { showToast } = useToast();
-
-  useEffect(() => {
-    if (!memoSaving) {
-      setShowMemoSpinner(false);
-      return;
-    }
-    const timer = setTimeout(() => setShowMemoSpinner(true), 300);
-    return () => clearTimeout(timer);
-  }, [memoSaving]);
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const [showPlanSelectRequiredModal, setShowPlanSelectRequiredModal] =
     useState(false);
@@ -3770,14 +3760,17 @@ export default function WeeklySchedulePanel({
               </View>
 
               <View style={styles.memoModalActions}>
-                <MotionPressable
+                <ActionButton
+                  label="취소"
+                  tone="secondary"
+                  fill
                   onPress={closeMemo}
-                  disabled={memoSaving}
-                  style={styles.memoModalSecondaryButton}
-                >
-                  <Text style={styles.memoModalSecondaryButtonText}>취소</Text>
-                </MotionPressable>
-                <MotionPressable
+                  blocked={memoSaving}
+                />
+                <ActionButton
+                  label="저장"
+                  fill
+                  loading={memoSaving}
                   onPress={async () => {
                     if (memoSavingRef.current) return;
                     memoSavingRef.current = true;
@@ -3809,14 +3802,7 @@ export default function WeeklySchedulePanel({
                       setMemoSaving(false);
                     }
                   }}
-                  style={styles.memoModalPrimaryButton}
-                >
-                  {showMemoSpinner ? (
-                    <Spinner size={16} strokeWidth={2} color={colors.white} />
-                  ) : (
-                    <Text style={styles.memoModalPrimaryButtonText}>저장</Text>
-                  )}
-                </MotionPressable>
+                />
               </View>
           </View>
         </View>
@@ -4227,30 +4213,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: spacing.md,
     paddingTop: spacing.xs,
-  },
-  memoModalSecondaryButton: {
-    flex: 1,
-    height: 48,
-    borderRadius: radii.md,
-    ...surfaces.muted,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  memoModalSecondaryButtonText: {
-    ...textStyles.h6,
-    color: colors.gray900,
-  },
-  memoModalPrimaryButton: {
-    flex: 1,
-    height: 48,
-    borderRadius: radii.md,
-    ...surfaces.primary,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  memoModalPrimaryButtonText: {
-    ...textStyles.h6,
-    color: colors.white,
   },
   weekHeaderRow: {
     flexDirection: "row",

@@ -18,8 +18,8 @@ import type { FestivalItem, TourismDetail } from "@/services/tourism";
 import { tourismApi } from "@/services/tourism";
 import { useBackdropClose } from "@/hooks/useBackdropClose";
 import { ItineraryCategory } from "@/types/itinerary";
+import ActionButton from "@/ui/components/ActionButton";
 import MotionPressable, { MotionIcon } from "@/ui/components/MotionPressable";
-import Spinner from "@/ui/components/Spinner";
 import { modalMotion } from "@/ui/effects/modalMotion";
 import { colors } from "@/ui/tokens/colors";
 import { radii } from "@/ui/tokens/radii";
@@ -70,18 +70,8 @@ export default function FestivalDetailModal({ visible, onClose, item, onAddToIti
   const [photoIndex, setPhotoIndex] = useState(0);
   const [singleAspectRatio, setSingleAspectRatio] = useState<number | null>(null);
   const [zoomIndex, setZoomIndex] = useState<number | null>(null);
-  const [showAddSpinner, setShowAddSpinner] = useState(false);
   const scrollAnim = useRef(new Animated.Value(0)).current;
   const backdrop = useBackdropClose(onClose);
-
-  useEffect(() => {
-    if (!loading) {
-      setShowAddSpinner(false);
-      return;
-    }
-    const timer = setTimeout(() => setShowAddSpinner(true), 300);
-    return () => clearTimeout(timer);
-  }, [loading]);
 
   // detail 로드 후에만 allImages 확정 → loading 중엔 빈 배열 → single/multi 판별 정확
   const allImages = useMemo(() => {
@@ -477,20 +467,19 @@ export default function FestivalDetailModal({ visible, onClose, item, onAddToIti
 
           {/* 푸터 */}
           <View style={styles.footer}>
-            <MotionPressable style={styles.closeButton} onPress={onClose}>
-              <Text style={styles.closeButtonText}>닫기</Text>
-            </MotionPressable>
-            <MotionPressable
-              style={styles.addButton}
+            <ActionButton
+              label="닫기"
+              tone="secondary"
+              fill
+              onPress={onClose}
+            />
+            <ActionButton
+              label="일정에 추가"
+              fill
               onPress={handleAddToItinerary}
-              disabled={loading || !detail}
-            >
-              {showAddSpinner ? (
-                <Spinner size={16} strokeWidth={2} color={colors.white} />
-              ) : (
-                <Text style={styles.addButtonText}>일정에 추가</Text>
-              )}
-            </MotionPressable>
+              loading={loading}
+              blocked={!detail}
+            />
           </View>
         </View>
       </View>
@@ -806,30 +795,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing["2xl"],
     paddingTop: spacing.lg,
     paddingBottom: spacing.xl,
-  },
-  closeButton: {
-    flex: 1,
-    height: 48,
-    borderRadius: radii.md,
-    ...surfaces.muted,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  closeButtonText: {
-    ...textStyles.h6,
-    color: colors.gray900,
-  },
-  addButton: {
-    flex: 1,
-    height: 48,
-    borderRadius: radii.md,
-    ...surfaces.primary,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  addButtonText: {
-    ...textStyles.h6,
-    color: colors.white,
   },
   zoomOverlay: {
     // RNW Pressable이 기본으로 붙이는 cursor:pointer를 상쇄 (래퍼일 뿐 버튼이 아님)

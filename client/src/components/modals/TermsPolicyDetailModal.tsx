@@ -1,5 +1,6 @@
 import { TERMS, type TermsKey } from "@/constants/terms";
 import { useBackdropClose } from "@/hooks/useBackdropClose";
+import ActionButton from "@/ui/components/ActionButton";
 import MotionPressable, { MotionIcon } from "@/ui/components/MotionPressable";
 import { modalMotion } from "@/ui/effects/modalMotion";
 import { colors } from "@/ui/tokens/colors";
@@ -112,14 +113,12 @@ export default function TermsPolicyDetailModal({
           </ScrollView>
 
           <View style={styles.footer}>
-            <MotionPressable
+            <ActionButton
+              label="확인"
+              size="M"
               style={styles.confirmButton}
               onPress={onClose}
-              accessibilityRole="button"
-              accessibilityLabel="확인"
-            >
-              <Text style={styles.confirmButtonText}>확인</Text>
-            </MotionPressable>
+            />
           </View>
         </View>
       </View>
@@ -205,15 +204,6 @@ const styles = StyleSheet.create({
     borderTopColor: colors.gray300,
   },
   confirmButton: {
-    height: 44,
     paddingHorizontal: spacing["2xl"],
-    borderRadius: radii.md,
-    ...surfaces.primary,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  confirmButtonText: {
-    ...textStyles.h7,
-    color: colors.white,
   },
 });

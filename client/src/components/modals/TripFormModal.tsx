@@ -9,9 +9,9 @@ import TripSegmentList from "../trip/TripSegmentList";
 import { ToastUI, useToast } from "@/contexts/ToastContext";
 import { useDiscardConfirm } from "@/hooks/useDiscardConfirm";
 import { useBackdropClose } from "@/hooks/useBackdropClose";
+import ActionButton from "@/ui/components/ActionButton";
 import MotionPressable, { MotionIcon } from "@/ui/components/MotionPressable";
 import Input from "@/ui/components/input/Input";
-import Spinner from "@/ui/components/Spinner";
 import { modalMotion } from "@/ui/effects/modalMotion";
 import { colors } from "@/ui/tokens/colors";
 import { radii } from "@/ui/tokens/radii";
@@ -74,7 +74,6 @@ export default function TripFormModal({
   const prevSelectionModeRef = useRef(selectionMode);
   const { showToast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showSubmitSpinner, setShowSubmitSpinner] = useState(false);
   const [showErrors, setShowErrors] = useState(false);
   const submittingRef = useRef(false);
   const scrollRef = useRef<ScrollView>(null);
@@ -152,15 +151,6 @@ export default function TripFormModal({
       setShowErrors(false);
     }
   }, [visible]);
-
-  useEffect(() => {
-    if (!isSubmitting) {
-      setShowSubmitSpinner(false);
-      return;
-    }
-    const timer = setTimeout(() => setShowSubmitSpinner(true), 300);
-    return () => clearTimeout(timer);
-  }, [isSubmitting]);
 
   return (
     <>
@@ -251,34 +241,20 @@ export default function TripFormModal({
             </ScrollView>
 
             <View style={styles.footer}>
-              <MotionPressable
-                style={styles.cancelButton}
+              <ActionButton
+                label="취소"
+                tone="secondary"
+                fill
                 onPress={handleClose}
-                disabled={isSubmitting}
-              >
-                <Text style={styles.cancelButtonText}>취소</Text>
-              </MotionPressable>
-              <MotionPressable
-                style={[
-                  styles.submitButton,
-                  isUnchanged && styles.submitButtonDisabled,
-                ]}
+                blocked={isSubmitting}
+              />
+              <ActionButton
+                label="저장"
+                fill
                 onPress={handleSubmit}
-                disabled={isSubmitting || isUnchanged}
-              >
-                {showSubmitSpinner ? (
-                  <Spinner size={16} strokeWidth={2} color={colors.white} />
-                ) : (
-                  <Text
-                    style={[
-                      styles.submitButtonText,
-                      isUnchanged && styles.submitButtonTextDisabled,
-                    ]}
-                  >
-                    저장
-                  </Text>
-                )}
-              </MotionPressable>
+                loading={isSubmitting}
+                disabled={isUnchanged}
+              />
             </View>
           </View>
         </View>
@@ -395,38 +371,7 @@ const styles = StyleSheet.create({
   },
   footer: {
     flexDirection: "row",
-    gap: spacing.sm,
+    gap: spacing.md,
     paddingTop: spacing.xs,
-  },
-  cancelButton: {
-    flex: 1,
-    height: 48,
-    borderRadius: radii.md,
-    alignItems: "center",
-    justifyContent: "center",
-    ...surfaces.muted,
-  },
-  cancelButtonText: {
-    ...textStyles.h6,
-    color: colors.gray900,
-  },
-  submitButton: {
-    flex: 1,
-    height: 48,
-    borderRadius: radii.md,
-    alignItems: "center",
-    justifyContent: "center",
-    ...surfaces.primary,
-  },
-  submitButtonDisabled: {
-    ...surfaces.muted,
-    backgroundImage: "none",
-  } as any,
-  submitButtonText: {
-    ...textStyles.h6,
-    color: colors.white,
-  },
-  submitButtonTextDisabled: {
-    color: colors.gray500,
   },
 });

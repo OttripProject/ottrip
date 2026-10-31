@@ -22,10 +22,9 @@ import type {
   DocumentUploadAnalyzeResponse,
 } from "@/types/api";
 import { categoryLabels } from "@/types/expense";
-import MotionPressable from "@/ui/components/MotionPressable";
+import ActionButton from "@/ui/components/ActionButton";
 import { colors } from "@/ui/tokens/colors";
 import { radii } from "@/ui/tokens/radii";
-import { surfaces } from "@/ui/tokens/surfaces";
 import { spacing } from "@/ui/tokens/spacing";
 import { textStyles } from "@/ui/tokens/typography";
 import CheckWhiteIcon from "../../../assets/check_white.svg";
@@ -621,26 +620,23 @@ export default function AiDocumentAnalyzeModal({
           </ScrollView>
 
           <View style={styles.footer}>
-            <MotionPressable
+            <ActionButton
+              label={isEditMode ? "취소" : "직접 수정"}
+              tone="secondary"
+              size="M"
+              fill
               onPress={
                 isEditMode
                   ? () => setIsEditMode(false)
                   : () => setIsEditMode(true)
               }
-              style={[styles.footerBtn, styles.footerBtnLeft]}
-            >
-              <Text style={styles.footerBtnLeftText}>
-                {isEditMode ? "취소" : "직접 수정"}
-              </Text>
-            </MotionPressable>
-            <MotionPressable
+            />
+            <ActionButton
+              label={isEditMode ? "저장" : (applyLabel ?? "이대로 추가")}
+              size="M"
+              fill
               onPress={handleApply}
-              style={[styles.footerBtn, styles.footerBtnRight]}
-            >
-              <Text style={styles.footerBtnRightText}>
-                {isEditMode ? "저장" : (applyLabel ?? "이대로 추가")}
-              </Text>
-            </MotionPressable>
+            />
           </View>
         </Pressable>
       </Pressable>
@@ -916,26 +912,5 @@ const styles = StyleSheet.create({
     paddingTop: spacing.md,
     paddingHorizontal: spacing.xl,
     paddingBottom: spacing.lg,
-  },
-  footerBtn: {
-    flex: 1,
-    height: 40,
-    borderRadius: radii.md,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  footerBtnLeft: {
-    ...surfaces.muted,
-  },
-  footerBtnRight: {
-    ...surfaces.primary,
-  },
-  footerBtnLeftText: {
-    ...textStyles.h7,
-    color: colors.gray900,
-  },
-  footerBtnRightText: {
-    ...textStyles.h7,
-    color: colors.white,
   },
 });
