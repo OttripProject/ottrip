@@ -28,7 +28,6 @@ import {
   Text,
   View,
 } from "react-native";
-import DeleteIcon from "../../../../assets/delete_gray.svg";
 import ExternalLinkIcon from "../../../../assets/external_link.svg";
 import MemoIcon from "../../../../assets/memo.svg";
 import AttachmentDocumentIcon from "../../../../assets/mobile_attachment_document.svg";
@@ -36,8 +35,9 @@ import AttachmentImageIcon from "../../../../assets/mobile_attachment_image.svg"
 import CloseIcon from "../../../../assets/mobile_close.svg";
 import ExpenseIcon from "../../../../assets/mobile_expense.svg";
 import LocationIcon from "../../../../assets/mobile_location.svg";
-import UpdateIcon from "../../../../assets/update.svg";
 import TimeIcon from "../../../../assets/mobile_time.svg";
+import ActionButton from "@/ui/components/ActionButton";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const MEMO_MAX_LINES = 3;
 
@@ -64,6 +64,7 @@ export default function ItineraryDetailModal({
   onAttractionSelect,
   planStartDate,
 }: ItineraryDetailModalProps) {
+  const insets = useSafeAreaInsets();
   const [previewVisible, setPreviewVisible] = useState(false);
   const [previewImages, setPreviewImages] = useState<ImagePreviewItem[]>([]);
   const [previewInitialIndex, setPreviewInitialIndex] = useState(0);
@@ -393,24 +394,32 @@ export default function ItineraryDetailModal({
       </ScrollView>
 
       {(onEdit || onDelete) && (
-        <View style={styles.footer}>
+        <View
+          style={[
+            styles.actionFooter,
+            {
+              paddingBottom: Math.max(
+                0,
+                spacing.xl - Math.max(insets.bottom, spacing.sm),
+              ),
+            },
+          ]}
+        >
           {onDelete && (
-            <ScalePressable
-              style={[styles.footerButton, styles.deleteButton]}
+            <ActionButton
+              label="삭제"
+              tone="danger"
+              fill
               onPress={handleDelete}
-            >
-              <DeleteIcon width={17} height={17} color={colors.danger} />
-              <Text style={styles.deleteButtonText}>삭제</Text>
-            </ScalePressable>
+            />
           )}
           {onEdit && (
-            <ScalePressable
-              style={[styles.footerButton, styles.editButton]}
+            <ActionButton
+              label="수정"
+              tone="secondary"
+              fill
               onPress={handleEdit}
-            >
-              <UpdateIcon width={17} height={17} color={colors.gray900} />
-              <Text style={styles.editButtonText}>수정</Text>
-            </ScalePressable>
+            />
           )}
         </View>
       )}
@@ -426,6 +435,12 @@ export default function ItineraryDetailModal({
 }
 
 const styles = StyleSheet.create({
+  actionFooter: {
+    flexDirection: "row",
+    gap: spacing.md,
+    paddingTop: spacing.lg,
+    paddingHorizontal: spacing.xl,
+  },
   header: {
     flexDirection: "row",
     alignItems: "flex-start",
@@ -621,35 +636,5 @@ const styles = StyleSheet.create({
     ...textStyles.h7,
     color: colors.gray800,
     flex: 1,
-  },
-  footer: {
-    flexDirection: "row",
-    gap: spacing.md,
-    paddingTop: spacing.lg,
-    paddingHorizontal: spacing.xl,
-    paddingBottom: spacing.sm,
-  },
-  footerButton: {
-    flex: 1,
-    height: 48,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: spacing.sm,
-    borderRadius: radii.mdPlus,
-  },
-  editButton: {
-    backgroundColor: colors.gray300,
-  },
-  deleteButton: {
-    backgroundColor: colors.dangerTint,
-  },
-  editButtonText: {
-    ...textStyles.h6,
-    color: colors.gray900,
-  },
-  deleteButtonText: {
-    ...textStyles.h6,
-    color: colors.danger,
   },
 });

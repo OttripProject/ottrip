@@ -15,14 +15,12 @@ import { useEffect, useMemo, useState } from "react";
 import {
   Alert,
   Linking,
-  Platform,
   ScrollView,
   StyleSheet,
   Text,
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import DeleteIcon from "../../../../assets/delete_gray.svg";
 import MemoIcon from "../../../../assets/memo.svg";
 import AccommodationIcon from "../../../../assets/mobile_accomodation.svg";
 import AttachmentDocumentIcon from "../../../../assets/mobile_attachment_document.svg";
@@ -30,8 +28,8 @@ import AttachmentImageIcon from "../../../../assets/mobile_attachment_image.svg"
 import CloseIcon from "../../../../assets/mobile_close.svg";
 import ExpenseIcon from "../../../../assets/mobile_expense.svg";
 import LocationIcon from "../../../../assets/mobile_location.svg";
-import MapIcon from "../../../../assets/mobile_map.svg";
-import UpdateIcon from "../../../../assets/update.svg";
+import ActionButton from "@/ui/components/ActionButton";
+import { spacing } from "@/ui/tokens/spacing";
 
 interface AccommodationDetailModalProps {
   visible: boolean;
@@ -50,7 +48,7 @@ export default function AccommodationDetailModal({
   onEdit,
   onDelete,
 }: AccommodationDetailModalProps) {
-  const _insets = useSafeAreaInsets();
+  const insets = useSafeAreaInsets();
   const [previewVisible, setPreviewVisible] = useState(false);
   const [previewImages, setPreviewImages] = useState<ImagePreviewItem[]>([]);
   const [previewInitialIndex, setPreviewInitialIndex] = useState(0);
@@ -89,30 +87,6 @@ export default function AccommodationDetailModal({
     ? dayjs(accommodation.checkoutDate).format("YYYY-MM-DD")
     : "";
 
-  const handleOpenMap = () => {
-    const address = location || accommodation.name;
-    if (!address) {
-      Alert.alert("알림", "장소 정보가 없습니다");
-      return;
-    }
-
-    const encodedLocation = encodeURIComponent(address);
-    const url = Platform.select({
-      ios: `maps://maps.apple.com/?q=${encodedLocation}`,
-      android: `geo:0,0?q=${encodedLocation}`,
-    });
-
-    if (url) {
-      Linking.openURL(url).catch(() => {
-        Alert.alert("알림", "지도 앱을 열 수 없습니다");
-      });
-    } else {
-      const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodedLocation}`;
-      Linking.openURL(googleMapsUrl).catch(() => {
-        Alert.alert("알림", "지도 앱을 열 수 없습니다");
-      });
-    }
-  };
 
   const handleAttachmentPress = (index: number) => {
     const attachment = accommodationAttachments[index];
@@ -167,24 +141,6 @@ export default function AccommodationDetailModal({
             {accommodation.name || "숙소"}
           </Text>
           <View style={styles.headerActions}>
-            {onEdit && (
-              <ScalePressable
-                style={styles.actionButton}
-                onPress={handleEdit}
-                hitSlop={8}
-              >
-                <UpdateIcon width={20} height={20} color={colors.gray600} />
-              </ScalePressable>
-            )}
-            {onDelete && (
-              <ScalePressable
-                style={styles.actionButton}
-                onPress={handleDelete}
-                hitSlop={8}
-              >
-                <DeleteIcon width={20} height={20} color={colors.gray600} />
-              </ScalePressable>
-            )}
             <ScalePressable
               style={styles.actionButton}
               onPress={onClose}
@@ -313,13 +269,34 @@ export default function AccommodationDetailModal({
         )}
       </ScrollView>
 
-      {/* 지도 앱에서 길찾기 버튼 */}
-      {(location || accommodation.name) && (
-        <View style={styles.footer}>
-          <ScalePressable style={styles.mapButton} onPress={handleOpenMap}>
-            <MapIcon width={20} height={20} color={colors.gray900} />
-            <Text style={styles.mapButtonText}>지도 앱에서 길찾기</Text>
-          </ScalePressable>
+      {(onEdit || onDelete) && (
+        <View
+          style={[
+            styles.actionFooter,
+            {
+              paddingBottom: Math.max(
+                0,
+                spacing.xl - Math.max(insets.bottom, spacing.sm),
+              ),
+            },
+          ]}
+        >
+          {onDelete && (
+            <ActionButton
+              label="삭제"
+              tone="danger"
+              fill
+              onPress={handleDelete}
+            />
+          )}
+          {onEdit && (
+            <ActionButton
+              label="수정"
+              tone="secondary"
+              fill
+              onPress={handleEdit}
+            />
+          )}
         </View>
       )}
 
@@ -334,6 +311,12 @@ export default function AccommodationDetailModal({
 }
 
 const styles = StyleSheet.create({
+  actionFooter: {
+    flexDirection: "row",
+    gap: spacing.md,
+    paddingTop: spacing.lg,
+    paddingHorizontal: spacing.xl,
+  },
   scrollView: {
     flex: 1,
   },
@@ -470,23 +453,5 @@ const styles = StyleSheet.create({
     ...textStyles.h7,
     color: colors.gray800,
     flex: 1,
-  },
-  footer: {
-    paddingHorizontal: 16,
-    paddingTop: 8,
-    paddingBottom: 16,
-  },
-  mapButton: {
-    backgroundColor: colors.gray300,
-    borderRadius: 12,
-    paddingVertical: 16,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-  },
-  mapButtonText: {
-    ...textStyles.h4,
-    color: colors.gray900,
   },
 });
