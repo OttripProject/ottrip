@@ -10,6 +10,7 @@ import { plansApi } from "@/services/plans";
 import { useBackdropClose } from "@/hooks/useBackdropClose";
 import { useDiscardConfirm } from "@/hooks/useDiscardConfirm";
 import HoverPressable from "@/ui/components/HoverPressable";
+import ActionButton from "@/ui/components/ActionButton";
 import MotionPressable, { MotionIcon } from "@/ui/components/MotionPressable";
 import Input from "@/ui/components/input/Input";
 import { modalMotion } from "@/ui/effects/modalMotion";
@@ -21,10 +22,8 @@ import { surfaces } from "@/ui/tokens/surfaces";
 import { textStyles, typography } from "@/ui/tokens/typography";
 import dayjs from "dayjs";
 import "dayjs/locale/ko";
-import { LinearGradient } from "expo-linear-gradient";
 import { createElement, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  ActivityIndicator,
   Modal,
   Pressable,
   ScrollView,
@@ -1341,23 +1340,24 @@ export default function AddScheduleWithFileModal({
               )}
 
               <View style={styles.buttonRow}>
-                <MotionPressable style={styles.cancelButton} onPress={handleClose}>
-                  <Text style={styles.cancelButtonText}>취소</Text>
-                </MotionPressable>
-                <MotionPressable
-                  style={[styles.aiButton, !selectedFile && styles.aiButtonDisabled]}
-                  hoverStyle={shadows.aiGlow}
-                  pressedStyle={shadows.aiGlowPress}
-                  onPress={handleAnalyze}
-                  disabled={!selectedFile || isAnalyzing}
-                >
-                  <LinearGradient colors={colors.aiGrad} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.aiButtonGradient}>
+                <ActionButton label="취소" tone="secondary" fill onPress={handleClose} />
+                <ActionButton
+                  label="AI로 분석"
+                  tone="ai"
+                  fill
+                  icon={
                     <MotionIcon>
-                      <AiRefreshIcon width={16} height={16} color={colors.white} />
+                      <AiRefreshIcon
+                        width={16}
+                        height={16}
+                        color={selectedFile ? colors.white : colors.gray500}
+                      />
                     </MotionIcon>
-                    <Text style={styles.aiButtonText}>AI로 분석</Text>
-                  </LinearGradient>
-                </MotionPressable>
+                  }
+                  onPress={handleAnalyze}
+                  disabled={!selectedFile}
+                  blocked={isAnalyzing}
+                />
               </View>
             </>
             )
@@ -1680,21 +1680,20 @@ export default function AddScheduleWithFileModal({
               )}
 
               <View style={styles.buttonRow}>
-                <MotionPressable style={styles.cancelButton} onPress={() => { setStep("upload"); setError(null); }}>
-                  <Text style={styles.cancelButtonText}>다시 올리기</Text>
-                </MotionPressable>
-                <MotionPressable
-                  style={[styles.saveButton, saveDisabled && !isSaving && styles.saveButtonDisabled]}
+                <ActionButton
+                  label="다시 올리기"
+                  tone="secondary"
+                  fill
+                  onPress={() => { setStep("upload"); setError(null); }}
+                  blocked={isSaving}
+                />
+                <ActionButton
+                  label={`선택한 ${selectedIndexes.size}개 일정 추가`}
+                  fill
                   onPress={handleSave}
-                  disabled={saveDisabled}
-                >
-                  {isSaving ? (
-                    <ActivityIndicator size="small" color={colors.white} />
-                  ) : null}
-                  <Text style={[styles.saveButtonText, saveDisabled && !isSaving && styles.saveButtonTextDisabled]}>
-                    {isSaving ? "저장 중..." : `선택한 ${selectedIndexes.size}개 일정 추가`}
-                  </Text>
-                </MotionPressable>
+                  loading={isSaving}
+                  disabled={saveDisabled && !isSaving}
+                />
               </View>
             </>
           )}
@@ -1709,12 +1708,13 @@ export default function AddScheduleWithFileModal({
                 <Text style={styles.emptySubtitle}>{"일시적인 문제로 AI 분석을 마치지 못했어요.\n잠시 후 다시 시도하거나, 파일을 교체해 올려주세요."}</Text>
               </View>
               <View style={styles.buttonRow}>
-                <MotionPressable style={styles.cancelButton} onPress={() => { setStep("upload"); setError(null); }}>
-                  <Text style={styles.cancelButtonText}>다시 올리기</Text>
-                </MotionPressable>
-                <MotionPressable style={styles.retryButton} onPress={handleAnalyze}>
-                  <Text style={styles.saveButtonText}>다시 시도</Text>
-                </MotionPressable>
+                <ActionButton
+                  label="다시 올리기"
+                  tone="secondary"
+                  fill
+                  onPress={() => { setStep("upload"); setError(null); }}
+                />
+                <ActionButton label="다시 시도" fill onPress={handleAnalyze} />
               </View>
             </>
           )}
@@ -1734,12 +1734,11 @@ export default function AddScheduleWithFileModal({
                 <Text style={styles.emptySubtitle}>{"파일에서 날짜·시간·장소를 읽어내지 못했어요.\n일정표나 예약 내역처럼 정보가 또렷한 파일로 다시 올려보세요."}</Text>
               </View>
               <View style={styles.buttonRow}>
-                <MotionPressable
-                  style={styles.retryButton}
+                <ActionButton
+                  label="다시 올리기"
+                  fill
                   onPress={() => { setStep("upload"); setError(null); }}
-                >
-                  <Text style={styles.saveButtonText}>다시 올리기</Text>
-                </MotionPressable>
+                />
               </View>
             </>
           )}
@@ -2243,38 +2242,4 @@ const styles = StyleSheet.create({
 
   // Buttons
   buttonRow: { flexDirection: "row", gap: spacing.md, paddingTop: spacing.xs },
-  cancelButton: {
-    height: 48,
-    borderRadius: radii.md,
-    ...surfaces.muted,
-    alignItems: "center",
-    justifyContent: "center",
-    flex: 1,
-  },
-  cancelButtonText: { ...textStyles.h6, color: colors.gray900 },
-  aiButton: { flex: 1, height: 48, borderRadius: radii.md, overflow: "hidden" },
-  aiButtonDisabled: { opacity: 0.45 },
-  aiButtonGradient: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: spacing.sm, paddingHorizontal: 22 },
-  aiButtonText: { ...textStyles.h6, color: colors.white },
-  saveButton: {
-    flex: 1,
-    height: 48,
-    borderRadius: radii.md,
-    ...surfaces.primary,
-    alignItems: "center",
-    justifyContent: "center",
-    flexDirection: "row",
-    gap: 6,
-  },
-  saveButtonDisabled: { ...surfaces.muted, backgroundImage: "none" } as any,
-  saveButtonTextDisabled: { color: colors.gray500 },
-  saveButtonText: { ...textStyles.h6, color: colors.white },
-  retryButton: {
-    flex: 1,
-    height: 48,
-    borderRadius: radii.md,
-    ...surfaces.primary,
-    alignItems: "center",
-    justifyContent: "center",
-  },
 });
