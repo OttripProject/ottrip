@@ -1,26 +1,40 @@
-import type { CalendarMarkedDates, SegmentDraft } from "@/hooks/useTripForm";
+import {
+  type CalendarMarkedDates,
+  type SegmentDraft,
+  getTripFormErrors,
+} from "@/hooks/useTripForm";
 import TripCalendarModal from "../trip/TripCalendarModal";
 import TripDurationBanner from "../trip/TripDurationBanner";
 import TripSegmentList from "../trip/TripSegmentList";
+import { ToastUI, useToast } from "@/contexts/ToastContext";
+import { useDiscardConfirm } from "@/hooks/useDiscardConfirm";
+import { useBackdropClose } from "@/hooks/useBackdropClose";
+import ActionButton from "@/ui/components/ActionButton";
+import MotionPressable, { MotionIcon } from "@/ui/components/MotionPressable";
+import Input from "@/ui/components/input/Input";
+import { modalMotion } from "@/ui/effects/modalMotion";
 import { colors } from "@/ui/tokens/colors";
-import { textStyles, typography } from "@/ui/tokens/typography";
+import { radii } from "@/ui/tokens/radii";
+import { shadows } from "@/ui/tokens/shadows";
+import { spacing } from "@/ui/tokens/spacing";
+import { surfaces } from "@/ui/tokens/surfaces";
+import { textStyles } from "@/ui/tokens/typography";
 import { useEffect, useRef, useState } from "react";
 import {
   Modal,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from "react-native";
-import XIcon from "../../../assets/mobile_close.svg";
+import CloseXIcon from "../../../assets/close_x.svg";
 
 export interface TripFormModalProps {
   visible: boolean;
   onClose: () => void;
   mode: "add" | "edit";
   tripData: { name: string; segments: SegmentDraft[] };
+  initialTripData?: { name: string; segments: SegmentDraft[] };
   activeSegmentIndex: number;
   selectionMode: "start" | "end";
   onNameChange: (name: string) => void;
@@ -32,7 +46,6 @@ export interface TripFormModalProps {
   markedDates: CalendarMarkedDates;
   onDateSelect: (dateString: string) => void;
   onSubmit: () => void | Promise<void>;
-  isSubmitDisabled: boolean;
 }
 
 export default function TripFormModal({
@@ -40,6 +53,7 @@ export default function TripFormModal({
   onClose,
   mode,
   tripData,
+  initialTripData,
   activeSegmentIndex,
   selectionMode,
   onNameChange,
@@ -51,19 +65,65 @@ export default function TripFormModal({
   markedDates,
   onDateSelect,
   onSubmit,
-  isSubmitDisabled,
 }: TripFormModalProps) {
   const title = mode === "add" ? "새 여행 추가" : "여행 수정";
-  const submitButtonText = mode === "add" ? "여행 저장" : "여행 수정";
 
-  const [calendarOpenIndex, setCalendarOpenIndex] = useState<number | null>(null);
+  const [calendarOpenIndex, setCalendarOpenIndex] = useState<number | null>(
+    null,
+  );
   const prevSelectionModeRef = useRef(selectionMode);
+  const { showToast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showErrors, setShowErrors] = useState(false);
   const submittingRef = useRef(false);
-  const submitDisabled = isSubmitDisabled || isSubmitting;
+  const scrollRef = useRef<ScrollView>(null);
+  const segmentListY = useRef(0);
+  const segmentYs = useRef<Record<number, number>>({});
+  const errors = showErrors ? getTripFormErrors(tripData) : null;
+  const isUnchanged =
+    !!initialTripData &&
+    JSON.stringify(initialTripData) === JSON.stringify(tripData);
+  const isDirty = initialTripData
+    ? !isUnchanged
+    : !!tripData.name.trim() ||
+      tripData.segments.some(
+        seg => seg.country || seg.city || seg.startDate || seg.endDate,
+      );
+  const { requestClose, discardConfirmModal } = useDiscardConfirm(
+    isDirty,
+    onClose,
+  );
+  const handleClose = () => {
+    if (!submittingRef.current) requestClose();
+  };
+  const backdrop = useBackdropClose(handleClose);
+
+  const scrollToFirstError = (
+    formErrors: NonNullable<ReturnType<typeof getTripFormErrors>>,
+  ) => {
+    if (formErrors.name) {
+      scrollRef.current?.scrollTo({ y: 0, animated: true });
+      return;
+    }
+    const idx = formErrors.segments.findIndex(
+      seg => seg.country || seg.city || seg.date,
+    );
+    if (idx < 0) return;
+    scrollRef.current?.scrollTo({
+      y: segmentListY.current + (segmentYs.current[idx] ?? 0),
+      animated: true,
+    });
+  };
 
   const handleSubmit = async () => {
     if (submittingRef.current) return;
+    const formErrors = getTripFormErrors(tripData);
+    if (formErrors) {
+      setShowErrors(true);
+      scrollToFirstError(formErrors);
+      showToast("입력되지 않은 값이 있어요.", { icon: "warning" });
+      return;
+    }
     submittingRef.current = true;
     setIsSubmitting(true);
     try {
@@ -86,7 +146,10 @@ export default function TripFormModal({
   }, [selectionMode, calendarOpenIndex]);
 
   useEffect(() => {
-    if (!visible) setCalendarOpenIndex(null);
+    if (!visible) {
+      setCalendarOpenIndex(null);
+      setShowErrors(false);
+    }
   }, [visible]);
 
   return (
@@ -94,92 +157,108 @@ export default function TripFormModal({
       <Modal
         visible={visible}
         transparent
-        animationType="fade"
-        onRequestClose={onClose}
+        animationType="none"
+        onRequestClose={handleClose}
       >
-        <View style={styles.overlay}>
-          <View style={styles.modalContent}>
+        <View style={styles.overlay} {...backdrop.overlayProps}>
+          <View style={styles.modalContent} {...backdrop.cardProps}>
             <View style={styles.header}>
               <View style={styles.headerText}>
                 <Text style={styles.title}>{title}</Text>
                 <Text style={styles.subtitle}>
-                  구간별로 나라·도시·기간을 추가해보세요
+                  구간별로 나라·도시·기간을 추가해보세요.
                 </Text>
               </View>
-              <Pressable onPress={onClose} style={styles.closeButton}>
-                <XIcon width={16} height={16} color={colors.gray600} />
-              </Pressable>
-            </View>
-
-            <View style={styles.scrollWrapper}>
-              <ScrollView
-                showsVerticalScrollIndicator={false}
-                keyboardShouldPersistTaps="handled"
+              <MotionPressable
+                onPress={handleClose}
+                disabled={isSubmitting}
+                style={styles.closeButton}
+                accessibilityLabel="닫기"
               >
-                <View style={styles.section}>
-                  <View style={styles.sectionLabelRow}>
-                    <Text style={styles.sectionLabel}>여행명</Text>
-                    <Text style={styles.counter}>{tripData.name.length}/30</Text>
-                  </View>
-                  <TextInput
-                    style={styles.nameInput}
-                    placeholder="예: 동유럽 여행"
-                    placeholderTextColor={colors.gray500}
-                    value={tripData.name}
-                    onChangeText={onNameChange}
-                    maxLength={30}
-                  />
-                </View>
-
-                <View style={styles.section}>
-                  <View style={styles.sectionLabelRow}>
-                    <Text style={styles.sectionLabel}>여행 구간</Text>
-                    <Text style={styles.sectionHint}>
-                      나라 · 도시 · 기간을 순서대로 추가하세요
-                    </Text>
-                  </View>
-                  <TripSegmentList
-                    segments={tripData.segments}
-                    onSegmentUpdate={onSegmentUpdate}
-                    onSegmentAdd={onSegmentAdd}
-                    onSegmentRemove={onSegmentRemove}
-                    onSegmentMove={onSegmentMove}
-                    onSegmentFocus={onSegmentFocus}
-                    onDateButtonPress={idx => {
-                      onSegmentFocus(idx);
-                      setCalendarOpenIndex(idx);
-                    }}
-                  />
-                </View>
-
-                <TripDurationBanner segments={tripData.segments} />
-              </ScrollView>
+                <MotionIcon>
+                  <CloseXIcon width={16} height={16} color={colors.gray700} />
+                </MotionIcon>
+              </MotionPressable>
             </View>
+
+            <ScrollView
+              ref={scrollRef}
+              style={styles.scroll}
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+              contentContainerStyle={styles.scrollContent}
+            >
+              <View style={styles.section}>
+                <View style={styles.sectionLabelRow}>
+                  <Text style={styles.sectionLabel}>여행명</Text>
+                  <Text style={styles.counter}>{tripData.name.length}/30</Text>
+                </View>
+                <Input
+                  variant="filled"
+                  style={[styles.nameInput, errors?.name && styles.nameInputError]}
+                  placeholder="예: 동유럽 여행"
+                  placeholderTextColor={colors.gray600}
+                  value={tripData.name}
+                  onChangeText={onNameChange}
+                  maxLength={30}
+                />
+                {errors?.name && (
+                  <Text style={styles.errorText}>{errors.name}</Text>
+                )}
+              </View>
+
+              <View
+                style={styles.section}
+                onLayout={e => {
+                  segmentListY.current = e.nativeEvent.layout.y;
+                }}
+              >
+                <View style={styles.sectionLabelRow}>
+                  <Text style={styles.sectionLabel}>여행 구간</Text>
+                  <Text style={styles.sectionHint}>
+                    나라 · 도시 · 기간을 순서대로 추가하세요
+                  </Text>
+                </View>
+                <TripSegmentList
+                  segments={tripData.segments}
+                  onSegmentUpdate={onSegmentUpdate}
+                  onSegmentAdd={onSegmentAdd}
+                  onSegmentRemove={onSegmentRemove}
+                  onSegmentMove={onSegmentMove}
+                  onSegmentFocus={onSegmentFocus}
+                  onDateButtonPress={idx => {
+                    onSegmentFocus(idx);
+                    setCalendarOpenIndex(idx);
+                  }}
+                  errors={errors?.segments}
+                  onSegmentLayout={(idx, y) => {
+                    segmentYs.current[idx] = y;
+                  }}
+                />
+              </View>
+
+              <TripDurationBanner segments={tripData.segments} />
+            </ScrollView>
 
             <View style={styles.footer}>
-              <Pressable style={styles.cancelButton} onPress={onClose}>
-                <Text style={styles.cancelButtonText}>취소</Text>
-              </Pressable>
-              <Pressable
-                style={[
-                  styles.submitButton,
-                  submitDisabled && styles.submitButtonDisabled,
-                ]}
+              <ActionButton
+                label="취소"
+                tone="secondary"
+                fill
+                onPress={handleClose}
+                blocked={isSubmitting}
+              />
+              <ActionButton
+                label="저장"
+                fill
                 onPress={handleSubmit}
-                disabled={submitDisabled}
-              >
-                <Text
-                  style={[
-                    styles.submitButtonText,
-                    submitDisabled && styles.submitButtonTextDisabled,
-                  ]}
-                >
-                  {submitButtonText}
-                </Text>
-              </Pressable>
+                loading={isSubmitting}
+                disabled={isUnchanged}
+              />
             </View>
           </View>
         </View>
+        <ToastUI />
       </Modal>
 
       <TripCalendarModal
@@ -189,128 +268,110 @@ export default function TripFormModal({
         markedDates={markedDates}
         onDateSelect={onDateSelect}
       />
+      {discardConfirmModal}
     </>
   );
 }
 
 const styles = StyleSheet.create({
   overlay: {
+    ...modalMotion.overlay,
     flex: 1,
-    backgroundColor: colors.overlayBackground,
+    ...surfaces.overlay,
     justifyContent: "center",
     alignItems: "center",
-    paddingHorizontal: 16,
+    paddingVertical: spacing["2xl"] + spacing.sm,
+    paddingHorizontal: spacing.xl,
   },
   modalContent: {
+    ...modalMotion.card,
     backgroundColor: colors.white,
-    borderRadius: 20,
-    paddingTop: 28,
-    paddingBottom: 24,
-    paddingHorizontal: 28,
-    width: "100%",
-    maxWidth: 560,
-    maxHeight: "90%",
+    borderRadius: radii["2xl"],
+    padding: spacing.xl,
+    width: 520 + spacing.xl * 2,
+    maxWidth: "100%",
+    maxHeight: "100%",
+    gap: spacing.xl,
+    ...shadows.xl,
   },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-start",
-    marginBottom: 24,
+    gap: spacing.md,
   },
   headerText: {
     flex: 1,
-    paddingRight: 12,
+    gap: spacing.xs,
   },
   title: {
     ...textStyles.h3,
-    color: colors.black,
-    marginBottom: 4,
+    color: colors.gray900,
   },
   subtitle: {
     ...textStyles.body5,
     color: colors.gray600,
   },
   closeButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: colors.gray200,
+    width: 28,
+    height: 28,
+    borderRadius: radii.pill,
+    ...surfaces.subtle,
     alignItems: "center",
     justifyContent: "center",
   },
-  scrollWrapper: {
-    flex: 1,
-    minHeight: 0,
+  scroll: {
+    flexGrow: 0,
+    flexShrink: 1,
+    marginHorizontal: -spacing.xs,
+  },
+  scrollContent: {
+    paddingHorizontal: spacing.xs,
+    gap: spacing.xl,
   },
   section: {
-    marginBottom: 20,
+    gap: spacing.sm,
   },
   sectionLabelRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 8,
+    alignItems: "baseline",
+    gap: spacing.sm,
   },
   sectionLabel: {
     ...textStyles.h7,
-    color: colors.black,
+    color: colors.gray900,
   },
   sectionHint: {
     ...textStyles.body6,
     color: colors.gray600,
   },
   counter: {
-    fontFamily: typography.fontFamily.poppinsMedium,
-    fontSize: 11,
+    ...textStyles.body6,
+    fontVariant: ["tabular-nums"],
     color: colors.gray600,
   },
   nameInput: {
     width: "100%",
-    height: 42,
-    paddingHorizontal: 12,
-    paddingVertical: 0,
+    height: 44,
+    paddingHorizontal: spacing.md,
     backgroundColor: colors.white,
     borderWidth: 1,
     borderColor: colors.gray300,
-    borderRadius: 10,
+    borderRadius: radii.md,
     ...textStyles.body4,
     color: colors.gray900,
-    outlineStyle: "none",
-  } as any,
+  },
+  nameInputError: {
+    borderColor: colors.danger,
+  },
+  errorText: {
+    ...textStyles.body6,
+    color: colors.danger,
+  },
   footer: {
     flexDirection: "row",
-    gap: 10,
-  },
-  cancelButton: {
-    flex: 1,
-    height: 44,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: colors.gray300,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: colors.white,
-  },
-  cancelButtonText: {
-    ...textStyles.h7,
-    color: colors.black,
-  },
-  submitButton: {
-    flex: 1,
-    height: 44,
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: colors.primary,
-  },
-  submitButtonDisabled: {
-    backgroundColor: colors.gray300,
-  },
-  submitButtonText: {
-    ...textStyles.h7,
-    color: colors.white,
-  },
-  submitButtonTextDisabled: {
-    color: colors.gray600,
+    gap: spacing.md,
+    paddingTop: spacing.xs,
   },
 });

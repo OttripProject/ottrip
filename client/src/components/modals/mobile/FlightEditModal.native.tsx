@@ -565,6 +565,7 @@ export default function FlightEditModal({
           <View style={styles.inputGroup}>
             <Text style={styles.label}>예약번호 (PNR)</Text>
             <Input
+              variant="filled"
               value={formData.reservation_number}
               onChangeText={t =>
                 setFormData({ ...formData, reservation_number: t })
@@ -578,6 +579,7 @@ export default function FlightEditModal({
             <View style={[styles.inputGroup, styles.halfWidth]}>
               <Text style={styles.label}>승객명</Text>
               <Input
+                variant="filled"
                 value={formData.passenger_name}
                 onChangeText={t =>
                   setFormData({ ...formData, passenger_name: t })
@@ -590,9 +592,14 @@ export default function FlightEditModal({
             <View style={[styles.inputGroup, styles.halfWidth]}>
               <Text style={styles.label}>항공료(원)</Text>
               <Input
+                variant="filled"
                 value={expenseAmount}
                 onChangeText={handleAmountChange}
-                style={[styles.input, !flight && styles.inputBorderless]}
+                style={[
+                  styles.input,
+                  styles.amountFieldInput,
+                  !flight && styles.inputBorderless,
+                ]}
                 placeholder="0"
                 placeholderTextColor={colors.gray600}
                 keyboardType="number-pad"
@@ -603,6 +610,7 @@ export default function FlightEditModal({
             <View style={[styles.inputGroup, styles.halfWidth]}>
               <Text style={styles.label}>여행사 예약번호</Text>
               <Input
+                variant="filled"
                 value={formData.booking_reference}
                 onChangeText={t =>
                   setFormData({ ...formData, booking_reference: t })
@@ -615,6 +623,7 @@ export default function FlightEditModal({
             <View style={[styles.inputGroup, styles.halfWidth]}>
               <Text style={styles.label}>항공권 번호</Text>
               <Input
+                variant="filled"
                 value={formData.ticket_number}
                 onChangeText={t =>
                   setFormData({ ...formData, ticket_number: t })
@@ -652,6 +661,7 @@ export default function FlightEditModal({
                 <View style={styles.row}>
                   <View style={[styles.inputGroup, styles.halfWidth]}>
                     <Input
+                      variant="filled"
                       value={seg.airline}
                       onChangeText={t => updateSegment(idx, "airline", t)}
                       style={[
@@ -665,6 +675,7 @@ export default function FlightEditModal({
                   </View>
                   <View style={[styles.inputGroup, styles.halfWidth]}>
                     <Input
+                      variant="filled"
                       value={seg.flight_number}
                       onChangeText={t => updateSegment(idx, "flight_number", t)}
                       style={[
@@ -912,7 +923,7 @@ export default function FlightEditModal({
                 placeholder="0"
                 placeholderTextColor={colors.gray500}
                 keyboardType="number-pad"
-                variant="filled"
+                variant="bare"
                 containerStyle={styles.amountInputContainer}
                 style={styles.amountInputStyle}
               />
@@ -1118,8 +1129,10 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     backgroundColor: colors.gray200,
   },
+  amountFieldInput: {
+    lineHeight: undefined,
+  },
   inputBorderless: {
-    borderWidth: 0,
     borderColor: "transparent",
   },
   row: { flexDirection: "row", gap: 9 },
@@ -1234,6 +1247,7 @@ const styles = StyleSheet.create({
   },
   amountInputStyle: {
     flex: 1,
+    height: 44,
     textAlign: "left",
     backgroundColor: "transparent",
     fontFamily: typography.fontFamily.pretendardSemiBold,

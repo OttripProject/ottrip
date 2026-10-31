@@ -53,7 +53,9 @@ export default function FlightSection({
   carryoverPendingFiles,
   onConsumeCarryoverPendingFiles,
 }: FlightSectionProps) {
-  const [showFlightForm, setShowFlightForm] = useState(false);
+  const [showFlightForm, setShowFlightForm] = useState(
+    activeTab === "flight" && !selectedFlight,
+  );
   const [editingFlight, setEditingFlight] = useState<any | null>(null);
   const newFlightRevision = useRef(0);
 

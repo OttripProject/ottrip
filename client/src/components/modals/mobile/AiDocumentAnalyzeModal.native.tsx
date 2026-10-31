@@ -20,6 +20,7 @@ import type {
 } from "@/types/api";
 import { textStyles } from "@/ui/tokens/typography"
 import { colors } from "@/ui/tokens/colors";
+import { shadows } from "@/ui/tokens/shadows";
 import CheckWhiteIcon from "../../../../assets/check_white.svg";
 import CloseErrorIcon from "../../../../assets/close_error.svg";
 import { AiAnalyzeResultContent, getHeaderSubtitle } from "../AiDocumentAnalyzeModal";
@@ -263,7 +264,9 @@ const styles = StyleSheet.create({
   },
   footerBtnRight: {
     flex: 1,
-    backgroundColor: colors.gray900,
+    backgroundColor: colors.primary,
+    experimental_backgroundImage: `linear-gradient(180deg, ${colors.gradientPrimary[0]} 0%, ${colors.gradientPrimary[1]} 100%)`,
+    ...shadows.primaryRaised,
   },
   footerBtnRightEdit: {
     backgroundColor: colors.primary,

@@ -1,8 +1,10 @@
 import BottomSheetModal from "@/ui/components/BottomSheetModal.native";
 import MiniMapView from "@/ui/components/MiniMapView";
 import { ItineraryCategory } from "@/types/itinerary";
+import ScalePressable from "@/ui/components/ScalePressable";
 import { colors } from "@/ui/tokens/colors";
 import { radii } from "@/ui/tokens/radii";
+import { shadows } from "@/ui/tokens/shadows";
 import { spacing } from "@/ui/tokens/spacing";
 import { textStyles } from "@/ui/tokens/typography";
 import { useEffect, useMemo, useState } from "react";
@@ -27,7 +29,7 @@ import WonIcon from "../../../assets/won.svg";
 const LCLSSYSTM2_MAP: Record<string, { label: string; bg: string; color: string }> = {
   EV01: { label: "축제", bg: colors.festivalBg, color: colors.festivalText },
   EV02: { label: "공연", bg: "#FDEAF9", color: colors.categoryActivity },
-  EV03: { label: "행사", bg: colors.accommodationBg, color: colors.categoryMeal },
+  EV03: { label: "행사", bg: colors.festivalEventBg, color: colors.categoryMeal },
 };
 const DEFAULT_BADGE = { label: "축제", bg: colors.festivalBg, color: colors.festivalText };
 
@@ -159,9 +161,9 @@ export default function FestivalDetailModal({ visible, onClose, item, onAddToIti
           <View style={[styles.badge, { backgroundColor: badge.bg }]}>
             <Text style={[styles.badgeText, { color: badge.color }]}>{badge.label}</Text>
           </View>
-          <Pressable style={styles.actionButton} onPress={onClose} hitSlop={8}>
+          <ScalePressable style={styles.actionButton} onPress={onClose} hitSlop={8}>
             <CloseIcon width={20} height={20} color={colors.gray600} />
-          </Pressable>
+          </ScalePressable>
         </View>
 
         {/* 제목 + 주소 */}
@@ -325,13 +327,13 @@ export default function FestivalDetailModal({ visible, onClose, item, onAddToIti
 
       {/* 푸터 */}
       <View style={styles.footer}>
-        <Pressable
+        <ScalePressable
           style={[styles.addButton, (loading || !detail) && styles.addButtonDisabled]}
           onPress={handleAddToItinerary}
           disabled={loading || !detail}
         >
           <Text style={styles.addButtonText}>일정에 추가</Text>
-        </Pressable>
+        </ScalePressable>
       </View>
     </BottomSheetModal>
   );
@@ -455,7 +457,9 @@ const styles = StyleSheet.create({
   addButton: {
     height: 48,
     borderRadius: radii.md,
-    backgroundColor: colors.gray900,
+    backgroundColor: colors.primary,
+    experimental_backgroundImage: `linear-gradient(180deg, ${colors.gradientPrimary[0]} 0%, ${colors.gradientPrimary[1]} 100%)`,
+    ...shadows.primaryRaised,
     justifyContent: "center",
     alignItems: "center",
   },

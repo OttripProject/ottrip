@@ -3,24 +3,25 @@ import { SelectedPlanProvider } from "@/contexts/SelectedPlanContext";
 import { useToast } from "@/contexts/ToastContext";
 import { plansApi } from "@/services/plans";
 import { colors } from "@/ui/tokens/colors";
+import { motion } from "@/ui/tokens/motion";
+import { textStyles } from "@/ui/tokens/typography";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { useFocusEffect, useRoute } from "@react-navigation/native";
 import { useQueryClient } from "@tanstack/react-query";
 import React, { useEffect, useRef, useState } from "react";
-import { Platform, StyleSheet, View } from "react-native";
+import { Platform, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, {
+  Easing,
   useSharedValue,
   useAnimatedStyle,
-  withSpring,
+  withSequence,
   withTiming,
 } from "react-native-reanimated";
-import CalendarSelectedIcon from "../../assets/mobile_calendar_black.svg";
-import CalendarUnselectedIcon from "../../assets/mobile_calendar_white.svg";
-import HomeSelectedIcon from "../../assets/mobile_home_black.svg";
-import HomeUnselectedIcon from "../../assets/mobile_home_white.svg";
-import TodayScreen from "./TodayScreen.native";
+import CalendarIcon from "../../assets/mobile_calendar_black.svg";
+import ExpenseCardIcon from "../../assets/expense_card.svg";
+import ExpenseScreen from "./ExpenseScreen.native";
 import WeeklyScreen from "./WeeklyScreen.native";
 
 const Tab = createBottomTabNavigator();
@@ -64,14 +65,14 @@ function SlideScreenWrapper({
       translateX.value = direction * 50;
       opacity.value = 0.5;
 
-      translateX.value = withSpring(0, {
-        damping: 18,
-        stiffness: 100,
-        mass: 0.7,
+      translateX.value = withTiming(0, {
+        duration: 250,
+        easing: Easing.out(Easing.cubic),
       });
 
       opacity.value = withTiming(1, {
         duration: 250,
+        easing: Easing.out(Easing.cubic),
       });
 
       previousTabIndex = screenIndex;
@@ -95,18 +96,75 @@ function SlideScreenWrapper({
   );
 }
 
-function TodayScreenWithAnimation() {
+function WeeklyScreenWithAnimation() {
   return (
-    <SlideScreenWrapper screenIndex={0} screenName="Today">
-      <TodayScreen />
+    <SlideScreenWrapper screenIndex={0} screenName="Weekly">
+      <WeeklyScreen />
     </SlideScreenWrapper>
   );
 }
 
-function WeeklyScreenWithAnimation() {
+const HOP_FRAMES = [
+  { at: 0.3, translateY: -6, rotate: -6 },
+  { at: 0.55, translateY: 0, rotate: 3 },
+  { at: 0.75, translateY: -2, rotate: 0 },
+  { at: 1, translateY: 0, rotate: 0 },
+];
+
+const [hopX1, hopY1, hopX2, hopY2] = (
+  motion.easing.ease.match(/[\d.]+/g) ?? []
+).map(Number);
+const hopEasing = Easing.bezier(hopX1, hopY1, hopX2, hopY2);
+
+const hopSequence = (key: "translateY" | "rotate") =>
+  withSequence(
+    ...HOP_FRAMES.map((frame, i) =>
+      withTiming(frame[key], {
+        duration:
+          (frame.at - (HOP_FRAMES[i - 1]?.at ?? 0)) * motion.duration.hop,
+        easing: hopEasing,
+      }),
+    ),
+  );
+
+function TabHopIcon({
+  hopCount,
+  children,
+}: {
+  hopCount: number;
+  children: React.ReactNode;
+}) {
+  const translateY = useSharedValue(0);
+  const rotate = useSharedValue(0);
+
+  useEffect(() => {
+    if (!hopCount) return;
+    translateY.value = hopSequence("translateY");
+    rotate.value = hopSequence("rotate");
+  }, [hopCount, translateY, rotate]);
+
+  const hopStyle = useAnimatedStyle(() => ({
+    transform: [
+      { translateY: translateY.value },
+      { rotate: `${rotate.value}deg` },
+    ],
+  }));
+
+  return <Animated.View style={hopStyle}>{children}</Animated.View>;
+}
+
+function renderTabLabel(label: string, focused: boolean) {
   return (
-    <SlideScreenWrapper screenIndex={1} screenName="Weekly">
-      <WeeklyScreen />
+    <Text style={[styles.tabLabel, focused && styles.tabLabelActive]}>
+      {label}
+    </Text>
+  );
+}
+
+function ExpenseScreenWithAnimation() {
+  return (
+    <SlideScreenWrapper screenIndex={1} screenName="Expense">
+      <ExpenseScreen />
     </SlideScreenWrapper>
   );
 }
@@ -125,6 +183,7 @@ export default function MobileNavigator() {
   );
 
   const resumingSaveRef = useRef(false);
+  const [hopCounts, setHopCounts] = useState<Record<string, number>>({});
 
   useEffect(() => {
     if (!isAuthenticated || resumingSaveRef.current) return;
@@ -150,24 +209,28 @@ export default function MobileNavigator() {
     <SelectedPlanProvider preferredPlanPublicId={preferredPlanPublicId}>
       <View style={styles.navigatorContainer}>
         <Tab.Navigator
+          screenListeners={({ navigation, route }) => ({
+            tabPress: () => {
+              if (navigation.isFocused()) return;
+              setHopCounts(prev => ({
+                ...prev,
+                [route.name]: (prev[route.name] ?? 0) + 1,
+              }));
+            },
+          })}
           screenOptions={{
             headerShown: false,
             lazy: false,
             tabBarActiveTintColor: colors.primary,
             tabBarInactiveTintColor: colors.gray600,
             tabBarStyle: {
-              backgroundColor: Platform.OS === "ios" ? "rgba(255, 255, 255, 0.8)" : colors.white,
+              backgroundColor: colors.white,
               borderTopWidth: 1,
-              borderTopColor: Platform.OS === "ios" ? "rgba(255, 255, 255, 0.5)" : colors.gray100,
+              borderTopColor: colors.paletteLine,
               paddingBottom: Platform.OS === "ios" ? 24 : insets.bottom + 8,
               paddingTop: 8,
               height: Platform.OS === "ios" ? 88 : 64 + insets.bottom,
               elevation: 0,
-            },
-            tabBarLabelStyle: {
-              fontSize: 10,
-              fontWeight: "500",
-              marginTop: 4,
             },
             tabBarIconStyle: {
               marginTop: 4,
@@ -175,51 +238,29 @@ export default function MobileNavigator() {
           }}
         >
           <Tab.Screen
-            name="Today"
-            component={TodayScreenWithAnimation}
-            options={{
-              tabBarLabel: "오늘",
-              tabBarIcon: ({
-                color,
-                focused,
-              }: { color: string; focused: boolean }) =>
-                focused ? (
-                  <HomeSelectedIcon
-                    width={24}
-                    height={24}
-                    color={colors.primary}
-                  />
-                ) : (
-                  <HomeUnselectedIcon
-                    width={24}
-                    height={24}
-                    color={colors.black}
-                  />
-                ),
-            }}
-          />
-          <Tab.Screen
             name="Weekly"
             component={WeeklyScreenWithAnimation}
             options={{
-              tabBarLabel: "여행 일정",
-              tabBarIcon: ({
-                color,
-                focused,
-              }: { color: string; focused: boolean }) =>
-                focused ? (
-                  <CalendarSelectedIcon
-                    width={24}
-                    height={24}
-                    color={colors.primary}
-                  />
-                ) : (
-                  <CalendarUnselectedIcon
-                    width={24}
-                    height={24}
-                    color={colors.black}
-                  />
-                ),
+              tabBarLabel: ({ focused }: { focused: boolean }) =>
+                renderTabLabel("여행 일정", focused),
+              tabBarIcon: ({ color }: { color: string }) => (
+                <TabHopIcon hopCount={hopCounts.Weekly ?? 0}>
+                  <CalendarIcon width={22} height={22} color={color} />
+                </TabHopIcon>
+              ),
+            }}
+          />
+          <Tab.Screen
+            name="Expense"
+            component={ExpenseScreenWithAnimation}
+            options={{
+              tabBarLabel: ({ focused }: { focused: boolean }) =>
+                renderTabLabel("지출", focused),
+              tabBarIcon: ({ color }: { color: string }) => (
+                <TabHopIcon hopCount={hopCounts.Expense ?? 0}>
+                  <ExpenseCardIcon width={22} height={22} color={color} />
+                </TabHopIcon>
+              ),
             }}
           />
         </Tab.Navigator>
@@ -229,6 +270,17 @@ export default function MobileNavigator() {
 }
 
 const styles = StyleSheet.create({
+  tabLabel: {
+    ...textStyles.body5,
+    lineHeight: 14,
+    marginTop: 4,
+    color: colors.paletteFg3,
+  },
+  tabLabelActive: {
+    ...textStyles.h8,
+    lineHeight: 14,
+    color: colors.primary,
+  },
   navigatorContainer: {
     flex: 1,
     backgroundColor: colors.white,

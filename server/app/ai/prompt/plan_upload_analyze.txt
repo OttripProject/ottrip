@@ -23,7 +23,7 @@ You analyze a travel plan document (image, PDF, or CSV/spreadsheet) and extract 
 
 **accommodation** `values`: `name`, `place`, `country`, `city`, `checkin_date` (YYYY-MM-DD), `checkout_date` (YYYY-MM-DD), `checkin_time` (HH:MM), `checkout_time` (HH:MM), optional `description`, required nested `expense` (`ex_date`, `amount`, `category`, `currency`, optional `description`) — if no price, set `amount` to 0
 
-**expense** `values`: `ex_date` (YYYY-MM-DD), `amount` (number), `category` (food|transport|flight|activity|accommodation|shopping|etc), `currency` (KRW|USD|EUR|JPY|CNY|GBP|AUD), optional `description`
+**expense** `values`: `ex_date` (YYYY-MM-DD), `amount` (number), `category` (food|transport|flight|activity|sightseeing|accommodation|shopping|etc; `sightseeing` for visiting attractions, `activity` for hands-on experiences), `currency` (KRW|USD|EUR|JPY|CNY|GBP|AUD), optional `description`
 
 ### Times
 - Use exact times from the document. Do not round.

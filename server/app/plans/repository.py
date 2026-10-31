@@ -3,7 +3,7 @@
 from datetime import datetime
 
 from sqlalchemy import delete, exists, func, insert, select, update
-from sqlalchemy.orm import joinedload, with_loader_criteria
+from sqlalchemy.orm import joinedload, selectinload, with_loader_criteria
 
 from app.accomodation.models import Accommodation
 from app.ai.schemas import ChecklistItemsByCategory
@@ -72,12 +72,12 @@ class PlanRepository:
             select(Plan)
             .options(
                 joinedload(Plan.owner),
-                joinedload(Plan.segments),
-                joinedload(Plan.flights).joinedload(Flight.expense),
-                joinedload(Plan.flights).joinedload(Flight.flight_segments),
-                joinedload(Plan.itineraries).joinedload(Itinerary.expenses),
-                joinedload(Plan.accommodations).joinedload(Accommodation.expense),
-                joinedload(Plan.expenses),
+                selectinload(Plan.segments),
+                selectinload(Plan.flights).joinedload(Flight.expense),
+                selectinload(Plan.flights).selectinload(Flight.flight_segments),
+                selectinload(Plan.itineraries).selectinload(Itinerary.expenses),
+                selectinload(Plan.accommodations).joinedload(Accommodation.expense),
+                selectinload(Plan.expenses),
                 with_loader_criteria(
                     FlightSegment,
                     FlightSegment.is_deleted.is_(False),

@@ -1,15 +1,38 @@
-import type { SegmentDraft } from "@/hooks/useTripForm";
+import type { SegmentDraft, SegmentFieldErrors } from "@/hooks/useTripForm";
 import { CityPicker, CountryPicker } from "@/ui/components/pickers";
 import { colors } from "@/ui/tokens/colors";
+import { radii } from "@/ui/tokens/radii";
+import { spacing } from "@/ui/tokens/spacing";
 import { textStyles, typography } from "@/ui/tokens/typography";
 import dayjs from "dayjs";
 import { useState } from "react";
-import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
+import {
+  Platform,
+  Pressable,
+  type PressableStateCallbackType,
+  StyleSheet,
+  Text,
+  View,
+  type ViewStyle,
+} from "react-native";
 import CalendarIcon from "../../../assets/calender.svg";
+import ChevronDownIcon from "../../../assets/chevron_down.svg";
+import CloseLineIcon from "../../../assets/close_line.svg";
 import XIcon from "../../../assets/mobile_close.svg";
 import DownArrowIcon from "../../../assets/mobile_dropdown.svg";
+import PlusIcon from "../../../assets/mobile_plus.svg";
+import UpArrowIcon from "../../../assets/upper_arrow.svg";
 
 const isNative = Platform.OS !== "web";
+
+type HoverState = PressableStateCallbackType & { hovered?: boolean };
+
+function actionColor(disabled: boolean, hovered?: boolean, del?: boolean) {
+  if (disabled) return colors.gray400;
+  if (hovered) return del ? colors.danger : colors.gray900;
+  return colors.gray600;
+}
+
 
 function formatDateRange(segment: SegmentDraft) {
   if (!segment.startDate) return null;
@@ -26,6 +49,8 @@ interface TripSegmentListProps {
   onSegmentMove: (fromIndex: number, toIndex: number) => void;
   onSegmentFocus: (index: number) => void;
   onDateButtonPress: (index: number) => void;
+  errors?: SegmentFieldErrors[];
+  onSegmentLayout?: (index: number, y: number) => void;
 }
 
 export default function TripSegmentList({
@@ -36,6 +61,8 @@ export default function TripSegmentList({
   onSegmentMove,
   onSegmentFocus,
   onDateButtonPress,
+  errors,
+  onSegmentLayout,
 }: TripSegmentListProps) {
   const canRemove = segments.length > 1;
   const [cityTriggers, setCityTriggers] = useState<Record<number, number>>({});
@@ -47,6 +74,7 @@ export default function TripSegmentList({
         {segments.map((segment, idx) => (
           <View
             key={idx}
+            onLayout={e => onSegmentLayout?.(idx, e.nativeEvent.layout.y)}
             style={[
               styles.seg,
               !isNative && { zIndex: (segments.length - idx) * 100 },
@@ -78,41 +106,88 @@ export default function TripSegmentList({
                 )}
                 <View style={[styles.segActions, isNative && styles.segActionsNative]}>
                   <Pressable
-                    style={[styles.actionBtn, idx === 0 && styles.actionBtnDisabled]}
+                    style={({ hovered }: HoverState) => [
+                      styles.actionBtn,
+                      idx === 0 && styles.actionBtnDisabled,
+                      hovered && idx !== 0 && styles.actionBtnHover,
+                    ]}
                     onPress={() => onSegmentMove(idx, idx - 1)}
                     disabled={idx === 0}
+                    accessibilityLabel="위로"
                   >
-                    <DownArrowIcon
-                      width={isNative ? 17 : 10}
-                      height={isNative ? 17 : 10}
-                      color={idx === 0 ? colors.gray400 : colors.gray600}
-                      style={{ transform: [{ scaleY: -1 }] }}
-                    />
+                    {({ hovered }: HoverState) =>
+                      isNative ? (
+                        <ChevronDownIcon
+                          width={17}
+                          height={17}
+                          color={colors.gray700}
+                          style={{ transform: [{ scaleY: -1 }] }}
+                        />
+                      ) : (
+                        <UpArrowIcon
+                          width={10}
+                          height={10}
+                          color={actionColor(idx === 0, hovered)}
+                        />
+                      )
+                    }
                   </Pressable>
                   <Pressable
-                    style={[
+                    style={({ hovered }: HoverState) => [
                       styles.actionBtn,
                       idx >= segments.length - 1 && styles.actionBtnDisabled,
+                      hovered &&
+                        idx < segments.length - 1 &&
+                        styles.actionBtnHover,
                     ]}
                     onPress={() => onSegmentMove(idx, idx + 1)}
                     disabled={idx >= segments.length - 1}
+                    accessibilityLabel="아래로"
                   >
-                    <DownArrowIcon
-                      width={isNative ? 17 : 10}
-                      height={isNative ? 17 : 10}
-                      color={idx >= segments.length - 1 ? colors.gray400 : colors.gray600}
-                    />
+                    {({ hovered }: HoverState) =>
+                      isNative ? (
+                        <ChevronDownIcon
+                          width={17}
+                          height={17}
+                          color={colors.gray700}
+                        />
+                      ) : (
+                        <DownArrowIcon
+                          width={10}
+                          height={10}
+                          color={actionColor(
+                            idx >= segments.length - 1,
+                            hovered,
+                          )}
+                        />
+                      )
+                    }
                   </Pressable>
                   <Pressable
-                    style={[styles.actionBtn, !canRemove && styles.actionBtnDisabled]}
+                    style={({ hovered }: HoverState) => [
+                      styles.actionBtn,
+                      !canRemove && styles.actionBtnDisabled,
+                      hovered && canRemove && styles.actionBtnDeleteHover,
+                    ]}
                     onPress={() => onSegmentRemove(idx)}
                     disabled={!canRemove}
+                    accessibilityLabel="구간 삭제"
                   >
-                    <XIcon
-                      width={isNative ? 14 : 12}
-                      height={isNative ? 14 : 12}
-                      color={canRemove ? colors.gray600 : colors.gray400}
-                    />
+                    {({ hovered }: HoverState) =>
+                      isNative ? (
+                        <CloseLineIcon
+                          width={17}
+                          height={17}
+                          color={colors.gray700}
+                        />
+                      ) : (
+                        <XIcon
+                          width={12}
+                          height={12}
+                          color={actionColor(!canRemove, hovered, true)}
+                        />
+                      )
+                    }
                   </Pressable>
                 </View>
               </View>
@@ -131,13 +206,24 @@ export default function TripSegmentList({
                       }
                     }}
                     placeholder="국가 선택"
-                    style={isNative ? styles.pickerBtnNative : styles.pickerTrigger}
+                    style={
+                      isNative
+                        ? styles.pickerBtnNative
+                        : errors?.[idx]?.country
+                          ? pickerTriggerError
+                          : styles.pickerTrigger
+                    }
                     containerStyle={styles.pickerWrapper}
+                    textStyle={isNative ? styles.pickerTextNative : undefined}
+                    arrowSize={isNative ? 11 : undefined}
                     onOpen={() => onSegmentFocus(idx)}
                     useModal={!isNative}
                     fullScreenModal={isNative}
                     openTrigger={countryTriggers[idx] ?? 0}
                   />
+                  {errors?.[idx]?.country && (
+                    <Text style={styles.errorText}>{errors[idx].country}</Text>
+                  )}
                 </View>
                 <View style={isNative ? styles.fieldNative : styles.segCell}>
                   <Text style={[styles.fieldLabel, isNative && styles.fieldLabelTop]}>도시</Text>
@@ -145,16 +231,39 @@ export default function TripSegmentList({
                     value={segment.city}
                     onChange={city => onSegmentUpdate(idx, { city })}
                     countryKo={segment.country}
-                    placeholder={segment.country.trim() ? "도시 선택" : "먼저 국가 선택"}
+                    placeholder={
+                      segment.country.trim()
+                        ? "도시 선택"
+                        : isNative
+                          ? "먼저 국가 선택"
+                          : "먼저 나라를 선택하세요"
+                    }
                     disabled={!segment.country.trim()}
-                    style={isNative ? styles.pickerBtnNative : styles.pickerTrigger}
+                    style={
+                      isNative
+                        ? segment.country.trim()
+                          ? styles.pickerBtnNative
+                          : pickerBtnNativeDisabled
+                        : segment.country.trim()
+                          ? errors?.[idx]?.city
+                            ? pickerTriggerError
+                            : styles.pickerTrigger
+                          : errors?.[idx]?.city
+                            ? pickerTriggerDisabledError
+                            : pickerTriggerDisabled
+                    }
                     containerStyle={styles.pickerWrapper}
+                    textStyle={isNative ? styles.pickerTextNative : undefined}
+                    arrowSize={isNative ? 11 : undefined}
                     onOpen={() => onSegmentFocus(idx)}
                     useModal={!isNative}
                     fullScreenModal={isNative}
                     openTrigger={cityTriggers[idx] ?? 0}
                     onBack={() => setCountryTriggers(prev => ({ ...prev, [idx]: (prev[idx] ?? 0) + 1 }))}
                   />
+                  {errors?.[idx]?.city && (
+                    <Text style={styles.errorText}>{errors[idx].city}</Text>
+                  )}
                 </View>
               </View>
 
@@ -162,7 +271,11 @@ export default function TripSegmentList({
               <View style={isNative ? styles.fieldNative : styles.segCellDate}>
                 <Text style={[styles.fieldLabel, isNative && styles.fieldLabelTop]}>기간</Text>
                 <Pressable
-                  style={isNative ? styles.dateBtnNative : styles.dateBtnWeb}
+                  style={({ hovered }: HoverState) => [
+                    isNative ? styles.dateBtnNative : styles.dateBtnWeb,
+                    !isNative && hovered && styles.dateBtnWebHover,
+                    !isNative && errors?.[idx]?.date && styles.fieldError,
+                  ]}
                   onPress={() => {
                     onSegmentFocus(idx);
                     onDateButtonPress(idx);
@@ -180,61 +293,94 @@ export default function TripSegmentList({
                   <CalendarIcon
                     width={isNative ? 16 : 12}
                     height={isNative ? 16 : 12}
-                    color={colors.gray700}
+                    color={isNative ? colors.gray600 : colors.gray900}
                   />
                 </Pressable>
+                {errors?.[idx]?.date && (
+                  <Text style={styles.errorText}>{errors[idx].date}</Text>
+                )}
               </View>
             </View>
           </View>
         ))}
       </View>
 
-      <Pressable style={styles.addBtn} onPress={onSegmentAdd}>
-        <Text style={styles.addBtnText}>+ 구간 추가</Text>
+      <Pressable
+        style={({ hovered }: HoverState) => [
+          styles.addBtn,
+          !isNative && hovered && styles.addBtnHover,
+        ]}
+        onPress={onSegmentAdd}
+      >
+        {({ hovered }: HoverState) =>
+          isNative ? (
+            <>
+              <PlusIcon width={15} height={15} color={colors.gray900} />
+              <Text style={styles.addBtnText}>구간 추가</Text>
+            </>
+          ) : (
+            <>
+              <Text
+                style={[styles.addBtnPlus, hovered && styles.addBtnTextHover]}
+              >
+                +
+              </Text>
+              <Text
+                style={[styles.addBtnText, hovered && styles.addBtnTextHover]}
+              >
+                구간 추가
+              </Text>
+            </>
+          )
+        }
       </Pressable>
     </View>
   );
 }
+
+const dateBtnTransition = {
+  transitionProperty: "border-color, background-color",
+  transitionDuration: "120ms",
+} as ViewStyle;
 
 const styles = StyleSheet.create({
   container: {
     gap: 0,
   },
   segList: {
-    gap: isNative ? 12 : 10,
-    marginBottom: isNative ? 12 : 8,
+    gap: spacing.md,
+    marginBottom: isNative ? spacing.md : spacing.sm,
   },
   seg: {
     flexDirection: "row",
-    gap: isNative ? 0 : 12,
+    gap: isNative ? 0 : spacing.md,
     backgroundColor: colors.gray100,
     borderWidth: 1,
-    borderColor: isNative ? colors.gray200 : colors.gray300,
-    borderRadius: isNative ? 16 : 12,
-    padding: 14,
+    borderColor: colors.gray300,
+    borderRadius: isNative ? radii.lgPlus : radii.mdPlus,
+    padding: spacing.lg,
+    paddingLeft: isNative ? spacing.lg : spacing.md,
   },
   // 웹 전용: 인덱스 컬럼
   segIdxCol: {
-    width: 22,
+    width: 24,
     flexDirection: "column",
     alignItems: "center",
-    paddingTop: 2,
+    paddingTop: spacing.xs,
   },
   segIdxBadge: {
-    width: 22,
-    height: 22,
-    borderRadius: 999,
+    width: 24,
+    height: 24,
+    borderRadius: radii.pill,
     backgroundColor: colors.gray900,
     alignItems: "center",
     justifyContent: "center",
     flexShrink: 0,
   },
   segIdxNum: {
+    ...textStyles.h9,
     color: colors.white,
-    fontFamily: typography.fontFamily.poppinsSemiBold,
-    fontSize: 11,
-    lineHeight: 22,
-    fontWeight: "700" as const,
+    fontVariant: ["tabular-nums"],
     textAlign: "center",
   },
   segIdxLine: {
@@ -252,68 +398,74 @@ const styles = StyleSheet.create({
   segHeader: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 12,
+    marginBottom: isNative ? 12 : 0,
+    zIndex: isNative ? 0 : 2,
   },
   // 앱 전용: 뱃지
   segBadge: {
     width: 24,
     height: 24,
     borderRadius: 999,
-    backgroundColor: colors.gray900,
+    backgroundColor: colors.paletteInk,
     alignItems: "center",
     justifyContent: "center",
   },
   segBadgeText: {
-    fontFamily: typography.fontFamily.poppinsSemiBold,
-    fontSize: 12,
-    lineHeight: 16,
+    ...textStyles.h8,
+    fontFamily: typography.fontFamily.pretendardBold,
     color: colors.white,
-    fontWeight: "700" as const,
   },
   segHeaderLabel: {
-    marginLeft: 10,
-    ...textStyles.h9,
-    color: colors.gray600,
+    marginLeft: spacing.md,
+    ...textStyles.h7,
+    color: colors.paletteFg2,
   },
   segActions: {
     position: "absolute",
-    top: 0,
-    right: 0,
+    top: isNative ? 0 : -spacing.sm,
+    right: isNative ? 0 : -spacing.sm,
     flexDirection: "row",
-    gap: 2,
-    zIndex: 1,
+    gap: isNative ? spacing.xs : 0,
+    zIndex: 2,
   },
   segActionsNative: {
     position: "relative",
     marginLeft: "auto",
   },
   actionBtn: {
-    width: 28,
-    height: 28,
+    width: isNative ? 28 : 24,
+    height: isNative ? 28 : 24,
+    borderRadius: radii.xs,
     alignItems: "center",
     justifyContent: "center",
   },
   actionBtnDisabled: {
-    opacity: 0.28,
+    opacity: isNative ? 0.28 : 1,
+  },
+  actionBtnHover: {
+    backgroundColor: colors.iconHoverBg,
+  },
+  actionBtnDeleteHover: {
+    backgroundColor: colors.dangerTint,
   },
   // 나라/도시 레이아웃
   segRow: {
     flexDirection: "row",
-    gap: 10,
+    gap: spacing.md,
   },
   segCell: {
     flex: 1,
-    gap: 3,
+    minWidth: 0,
+    gap: isNative ? 3 : spacing.xs,
   },
   fieldGroupNative: {
     gap: 0,
   },
   fieldNative: {},
   fieldLabel: {
-    ...textStyles.body6,
-    color: colors.gray600,
-    fontWeight: "600",
-    marginBottom: isNative ? 6 : 3,
+    ...(isNative ? textStyles.h8 : textStyles.h9),
+    color: isNative ? colors.paletteFg2 : colors.gray700,
+    marginBottom: isNative ? spacing.sm : 0,
   },
   fieldLabelTop: {
     marginTop: 12,
@@ -325,80 +477,134 @@ const styles = StyleSheet.create({
   pickerTrigger: {
     borderWidth: 1,
     borderColor: colors.gray300,
-    borderRadius: 8,
-    paddingHorizontal: 10,
+    borderRadius: radii.md,
+    paddingHorizontal: spacing.md,
     height: 36,
     backgroundColor: colors.white,
   },
   pickerBtnNative: {
     width: "100%",
-    height: 44,
+    height: 48,
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: colors.white,
     borderWidth: 1,
-    borderColor: colors.gray300,
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    gap: 10,
+    borderColor: colors.paletteLine,
+    borderRadius: radii.md,
+    paddingHorizontal: spacing.lg,
+    gap: spacing.md,
+  },
+  pickerTextNative: {
+    fontFamily: typography.fontFamily.pretendardMedium,
+    fontSize: textStyles.body3.fontSize,
+    lineHeight: textStyles.body3.lineHeight,
   },
   dateBtnNative: {
     width: "100%",
-    height: 44,
+    height: 48,
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: colors.white,
     borderWidth: 1,
-    borderColor: colors.gray300,
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    gap: 10,
+    borderColor: colors.paletteLine,
+    borderRadius: radii.md,
+    paddingHorizontal: spacing.lg,
+    gap: spacing.sm,
   },
   pickerText: {
     flex: 1,
     ...textStyles.body3,
-    color: colors.gray900,
+    fontFamily: typography.fontFamily.pretendardMedium,
+    fontVariant: ["tabular-nums"],
+    color: colors.paletteInk,
   },
   pickerPlaceholder: {
-    color: colors.gray600,
+    color: isNative ? colors.paletteFg3 : colors.gray600,
+    ...(isNative ? null : { fontFamily: typography.fontFamily.pretendardRegular }),
   },
   // 웹 날짜 버튼
   segCellDate: {
-    gap: 3,
-    marginTop: 8,
+    gap: spacing.xs,
+    marginTop: spacing.sm,
   },
   dateBtnWeb: {
+    ...dateBtnTransition,
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
+    gap: spacing.sm,
     borderWidth: 1,
     borderColor: colors.gray300,
-    borderRadius: 8,
-    paddingHorizontal: 10,
+    borderRadius: radii.md,
+    paddingHorizontal: spacing.md,
     height: 36,
     backgroundColor: colors.white,
   },
+  dateBtnWebHover: {
+    backgroundColor: colors.inputHover,
+  },
+  fieldError: {
+    borderColor: colors.danger,
+  },
+  errorText: {
+    ...textStyles.body6,
+    color: colors.danger,
+    marginTop: spacing.xs,
+  },
   dateBtnText: {
     flex: 1,
-    fontFamily: typography.fontFamily.poppinsSemiBold,
-    fontSize: 13,
-    lineHeight: 20,
+    ...textStyles.h7,
+    fontVariant: ["tabular-nums"],
     color: colors.gray900,
   },
   // 구간 추가 버튼
   addBtn: {
+    ...(isNative ? {} : dateBtnTransition),
+    flexDirection: "row",
+    gap: spacing.sm,
+    height: isNative ? undefined : 40,
     borderWidth: 1,
     borderStyle: "dashed" as const,
-    borderColor: isNative ? colors.gray400 : colors.gray400,
-    borderRadius: isNative ? 14 : 10,
-    paddingVertical: isNative ? 14 : 10,
+    borderColor: colors.gray400,
+    borderRadius: isNative ? radii.lgPlus : radii.md,
+    paddingVertical: isNative ? spacing.lg : 0,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: colors.white,
+    backgroundColor: "transparent",
   },
   addBtnText: {
-    ...textStyles.body4,
-    color: isNative ? colors.black : colors.gray700,
-    fontWeight: isNative ? ("700" as const) : ("400" as const),
+    ...(isNative ? textStyles.h6 : textStyles.h7),
+    color: isNative ? colors.paletteInk : colors.gray700,
+  },
+  addBtnPlus: {
+    ...textStyles.body2,
+    lineHeight: textStyles.body2.fontSize,
+    color: colors.gray700,
+  },
+  addBtnHover: {
+    borderColor: colors.gray900,
+    backgroundColor: colors.gray100,
+  },
+  addBtnTextHover: {
+    color: colors.gray900,
   },
 });
+
+const pickerTriggerDisabled = StyleSheet.flatten([
+  styles.pickerTrigger,
+  { backgroundColor: colors.gray100 },
+]);
+
+const pickerTriggerError = StyleSheet.flatten([
+  styles.pickerTrigger,
+  styles.fieldError,
+]);
+
+const pickerTriggerDisabledError = StyleSheet.flatten([
+  pickerTriggerDisabled,
+  styles.fieldError,
+]);
+
+const pickerBtnNativeDisabled = StyleSheet.flatten([
+  styles.pickerBtnNative,
+  { opacity: 0.55 },
+]);

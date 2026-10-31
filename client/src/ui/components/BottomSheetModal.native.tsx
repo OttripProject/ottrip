@@ -1,6 +1,7 @@
+import ModalBackdrop from "@/ui/components/ModalBackdrop";
 import { colors } from "@/ui/tokens/colors";
 import { type ReactNode, useEffect } from "react";
-import { Dimensions, Modal, Pressable, StyleSheet, View } from "react-native";
+import { Dimensions, Modal, StyleSheet, View } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, {
   useSharedValue,
@@ -19,7 +20,6 @@ interface BottomSheetModalProps {
   dragThreshold?: number;
   maxUpwardDrag?: number;
   showDragHandle?: boolean;
-  backdropOpacity?: number;
 }
 
 const DEFAULT_DRAG_THRESHOLD = 80;
@@ -34,7 +34,6 @@ export default function BottomSheetModal({
   dragThreshold = DEFAULT_DRAG_THRESHOLD,
   maxUpwardDrag = DEFAULT_MAX_UPWARD_DRAG,
   showDragHandle = true,
-  backdropOpacity = 0.5,
 }: BottomSheetModalProps) {
   const insets = useSafeAreaInsets();
   const modalHeight =
@@ -102,13 +101,7 @@ export default function BottomSheetModal({
     >
       <View style={styles.container}>
         {/* 배경 오버레이 */}
-        <Pressable
-          style={[
-            styles.backdrop,
-            { backgroundColor: `rgba(0, 0, 0, ${backdropOpacity})` },
-          ]}
-          onPress={handleBackdropPress}
-        />
+        <ModalBackdrop onPress={handleBackdropPress} />
 
         {/* 모달 컨텐츠 */}
         <GestureDetector gesture={panGesture}>
@@ -140,9 +133,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     justifyContent: "flex-end",
-  },
-  backdrop: {
-    ...StyleSheet.absoluteFillObject,
   },
   modalContent: {
     backgroundColor: colors.white,

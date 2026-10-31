@@ -1,3 +1,4 @@
+import ModalBackdrop from "@/ui/components/ModalBackdrop";
 import { colors } from "@/ui/tokens/colors";
 import { textStyles, typography } from "@/ui/tokens/typography";
 import dayjs from "dayjs";
@@ -180,7 +181,7 @@ export default function CalendarModal({
 
   return (
     <Modal visible={visible} transparent animationType="fade">
-      <Pressable style={styles.backdrop} onPress={onClose} />
+      <ModalBackdrop onPress={onClose} />
       <View style={styles.centered}>
         <View style={styles.modalContent}>
           <View style={styles.header}>
@@ -240,10 +241,6 @@ export default function CalendarModal({
 }
 
 const styles = StyleSheet.create({
-  backdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: colors.overlayBackground,
-  },
   centered: {
     flex: 1,
     justifyContent: "center",

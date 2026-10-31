@@ -1,10 +1,13 @@
 import BottomSheetModal from "@/ui/components/BottomSheetModal.native";
 import MiniMapView from "@/ui/components/MiniMapView";
+import ScalePressable from "@/ui/components/ScalePressable";
 import { colors } from "@/ui/tokens/colors";
 import { radii } from "@/ui/tokens/radii";
+import { shadows } from "@/ui/tokens/shadows";
 import { spacing } from "@/ui/tokens/spacing";
 import { textStyles } from "@/ui/tokens/typography";
 import { ItineraryCategory } from "@/types/itinerary";
+import { getTourismCategoryColor } from "@/types/tourism";
 import { formatWalkTime, haversineDistance } from "@/utils/distanceUtils";
 import { useEffect, useState } from "react";
 import {
@@ -27,17 +30,6 @@ import RouteIcon from "../../../assets/route.svg";
 import RoomIcon from "../../../assets/room.svg";
 import CutleryIcon from "../../../assets/cutlery.svg";
 import { tourismApi } from "@/services/tourism";
-
-const BADGE_COLORS: Record<string, { color: string; bg: string }> = {
-  여행코스: { color: "rgb(62, 91, 217)", bg: "rgb(236, 239, 254)" },
-  쇼핑: { color: "rgb(31, 157, 87)", bg: "rgb(231, 247, 236)" },
-  레포츠: { color: "rgb(55, 55, 55)", bg: "rgb(244, 244, 244)" },
-  "축제·공연": { color: "rgb(14, 138, 138)", bg: "rgb(227, 246, 246)" },
-  문화시설: { color: "rgb(217, 28, 181)", bg: "rgb(255, 235, 251)" },
-  음식점: { color: "rgb(183, 104, 0)", bg: "rgb(255, 244, 224)" },
-  관광지: { color: "rgb(217, 28, 181)", bg: "rgb(255, 235, 251)" },
-};
-const DEFAULT_BADGE = { color: "#6C6C6C", bg: "#F5F5F5" };
 
 type Row = { label: string; value: string };
 type IconType = "clock" | "calendar" | "hourglass" | "won" | "route" | "checkinout" | "room" | "cutlery";
@@ -204,7 +196,7 @@ export default function TourismDetailModal({
 
   if (!item) return null;
 
-  const badge = BADGE_COLORS[item.contentTypeId] ?? DEFAULT_BADGE;
+  const badge = getTourismCategoryColor(item.contentTypeId);
   const mapCoords = (detail?.mapx && detail?.mapy)
     ? { lat: detail.mapy, lng: detail.mapx }
     : geocodedCoords;
@@ -238,9 +230,9 @@ export default function TourismDetailModal({
           <View style={[styles.badge, { backgroundColor: badge.bg }]}>
             <Text style={[styles.badgeText, { color: badge.color }]}>{item.contentTypeId}</Text>
           </View>
-          <Pressable style={styles.actionButton} onPress={onClose} hitSlop={8}>
+          <ScalePressable style={styles.actionButton} onPress={onClose} hitSlop={8}>
             <CloseIcon width={20} height={20} color={colors.gray600} />
-          </Pressable>
+          </ScalePressable>
         </View>
         <View style={styles.titleGroup}>
           <Text style={styles.title}>{detail?.title ?? item.title}</Text>
@@ -347,9 +339,9 @@ export default function TourismDetailModal({
 
       {/* 푸터 */}
       <View style={styles.footer}>
-        <Pressable style={styles.addButton} onPress={handleAddToItinerary}>
+        <ScalePressable style={styles.addButton} onPress={handleAddToItinerary}>
           <Text style={styles.addButtonText}>일정에 추가</Text>
-        </Pressable>
+        </ScalePressable>
       </View>
     </BottomSheetModal>
   );
@@ -482,7 +474,9 @@ const styles = StyleSheet.create({
   addButton: {
     height: 48,
     borderRadius: radii.md,
-    backgroundColor: colors.gray900,
+    backgroundColor: colors.primary,
+    experimental_backgroundImage: `linear-gradient(180deg, ${colors.gradientPrimary[0]} 0%, ${colors.gradientPrimary[1]} 100%)`,
+    ...shadows.primaryRaised,
     justifyContent: "center",
     alignItems: "center",
   },

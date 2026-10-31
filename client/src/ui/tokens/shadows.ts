@@ -1,6 +1,26 @@
 import { Platform } from "react-native";
 
 export const shadows = {
+  xs: Platform.select({
+    ios: {
+      shadowColor: "#141828",
+      shadowOpacity: 0.06,
+      shadowRadius: 1,
+      shadowOffset: { width: 0, height: 1 },
+    },
+    android: { elevation: 1 },
+    default: { boxShadow: "0 1px 2px rgba(20,24,40,0.06)" } as any,
+  }),
+  xsHover: Platform.select({
+    ios: {
+      shadowColor: "#141828",
+      shadowOpacity: 0.14,
+      shadowRadius: 6,
+      shadowOffset: { width: 0, height: 4 },
+    },
+    android: { elevation: 3 },
+    default: { boxShadow: "0 4px 12px -4px rgba(20,24,40,0.14)" } as any,
+  }),
   sm: Platform.select({
     ios: {
       shadowColor: "#000",
@@ -20,6 +40,185 @@ export const shadows = {
     },
     android: { elevation: 4 },
     default: { boxShadow: "0 4px 10px rgba(0,0,0,0.12)" } as any,
+  }),
+  lg: Platform.select({
+    ios: {
+      shadowColor: "#000",
+      shadowOpacity: 0.1,
+      shadowRadius: 12,
+      shadowOffset: { width: 0, height: 8 },
+    },
+    android: { elevation: 8 },
+    default: { boxShadow: "0 8px 24px rgba(0,0,0,0.10)" } as any,
+  }),
+  xl: Platform.select({
+    ios: {
+      shadowColor: "#000",
+      shadowOpacity: 0.12,
+      shadowRadius: 24,
+      shadowOffset: { width: 0, height: 24 },
+    },
+    android: { elevation: 12 },
+    default: { boxShadow: "0 24px 48px rgba(0,0,0,0.12)" } as any,
+  }),
+  modal: Platform.select({
+    ios: {
+      shadowColor: "#000",
+      shadowOpacity: 0.3,
+      shadowRadius: 32,
+      shadowOffset: { width: 0, height: 24 },
+    },
+    android: { elevation: 24 },
+    default: { boxShadow: "0 24px 64px rgba(0,0,0,0.3)" } as any,
+  }),
+  toggleKnob: Platform.select({
+    ios: {
+      shadowColor: "#000",
+      shadowOpacity: 0.12,
+      shadowRadius: 3,
+      shadowOffset: { width: 0, height: 1 },
+    },
+    android: { elevation: 2 },
+    default: { boxShadow: "0 1px 3px rgba(0,0,0,0.12)" } as any,
+  }),
+  sheet: Platform.select({
+    ios: {
+      shadowColor: "#141828",
+      shadowOpacity: 0.28,
+      shadowRadius: 28,
+      shadowOffset: { width: 0, height: 24 },
+    },
+    android: { elevation: 16 },
+    default: {
+      boxShadow:
+        "0 2px 6px rgba(20,24,40,0.06), 0 24px 56px -20px rgba(20,24,40,0.28)",
+    } as any,
+  }),
+  errorCardRing: Platform.select({
+    ios: {},
+    android: {},
+    default: { boxShadow: "0 0 0 2px rgba(192,57,43,0.12)" } as any,
+  }),
+  eventHover: Platform.select({
+    ios: {
+      shadowColor: "#141828",
+      shadowOpacity: 0.28,
+      shadowRadius: 8,
+      shadowOffset: { width: 0, height: 6 },
+    },
+    android: { elevation: 4 },
+    default: { boxShadow: "0 6px 16px -8px rgba(20,24,40,0.28)" } as any,
+  }),
+  focusRing: {
+    boxShadow: "0 0 0 1px rgba(0,122,255,0.5), 0 0 0 4px rgba(0,122,255,0.14)",
+  },
+  filledFocusRing: {
+    boxShadow: "0 0 0 4px rgba(0,122,255,0.12)",
+  },
+  segmentActive: Platform.select({
+    ios: {
+      shadowColor: "#000",
+      shadowOpacity: 0.06,
+      shadowRadius: 2,
+      shadowOffset: { width: 0, height: 1 },
+    },
+    android: { elevation: 1 },
+    default: { boxShadow: "0 1px 3px rgba(0,0,0,0.06)" } as any,
+  }),
+  aiGlow: Platform.select({
+    ios: {
+      shadowColor: "#7B6CFF",
+      shadowOpacity: 0.34,
+      shadowRadius: 8,
+      shadowOffset: { width: 0, height: 6 },
+    },
+    android: { elevation: 6 },
+    default: { boxShadow: "0 6px 16px rgba(123,108,255,0.34)" } as any,
+  }),
+  aiGlowPress: Platform.select({
+    ios: {
+      shadowColor: "#7B6CFF",
+      shadowOpacity: 0.3,
+      shadowRadius: 4,
+      shadowOffset: { width: 0, height: 2 },
+    },
+    android: { elevation: 3 },
+    default: { boxShadow: "0 2px 8px rgba(123,108,255,0.30)" } as any,
+  }),
+  liftHover: Platform.select({
+    ios: {
+      shadowColor: "#141828",
+      shadowOpacity: 0.22,
+      shadowRadius: 20,
+      shadowOffset: { width: 0, height: 18 },
+    },
+    android: { elevation: 10 },
+    default: {
+      boxShadow:
+        "0 2px 4px rgba(20,24,40,0.05), 0 18px 40px -18px rgba(20,24,40,0.22)",
+    } as any,
+  }),
+  errorRing: {
+    boxShadow: "0 0 0 1px rgba(239,68,68,0.5), 0 0 0 4px rgba(239,68,68,0.14)",
+  },
+  insetBottom: Platform.select({
+    ios: {},
+    android: {},
+    default: { boxShadow: "inset 0 -1px 0 rgba(20,24,40,0.06)" } as any,
+  }),
+  dark: Platform.select({
+    ios: {
+      shadowColor: "#000",
+      shadowOpacity: 0.45,
+      shadowRadius: 9,
+      shadowOffset: { width: 0, height: 8 },
+    },
+    android: { elevation: 4 },
+    default: {
+      boxShadow:
+        "inset 0 1px 0 rgba(255,255,255,0.16), 0 1px 1px rgba(0,0,0,0.2), 0 8px 18px -8px rgba(0,0,0,0.45)",
+    } as any,
+  }),
+  primary: Platform.select({
+    ios: {
+      shadowColor: "#007AFF",
+      shadowOpacity: 0.55,
+      shadowRadius: 9,
+      shadowOffset: { width: 0, height: 8 },
+    },
+    android: { elevation: 4 },
+    default: {
+      boxShadow:
+        "inset 0 1px 0 rgba(255,255,255,0.22), 0 1px 1px rgba(0,60,140,0.25), 0 8px 18px -8px rgba(0,122,255,0.55)",
+    } as any,
+  }),
+  primaryRaised: {
+    boxShadow:
+      "inset 0 1px 0 rgba(255,255,255,0.22), 0 1px 1px rgba(0,60,140,0.25), 0 8px 18px -8px rgba(0,122,255,0.55)",
+  },
+  darkRaised: {
+    boxShadow:
+      "inset 0 1px 0 rgba(255,255,255,0.16), 0 1px 1px rgba(0,0,0,0.2), 0 8px 18px -8px rgba(0,0,0,0.45)",
+  },
+  card: {
+    boxShadow:
+      "0 0 0 1px rgba(20,24,40,0.08), 0 1px 2px rgba(20,24,40,0.05), 0 14px 36px -18px rgba(20,24,40,0.18)",
+  },
+  soft: {
+    boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
+  },
+  darkHover: Platform.select({
+    ios: {
+      shadowColor: "#000",
+      shadowOpacity: 0.5,
+      shadowRadius: 11,
+      shadowOffset: { width: 0, height: 12 },
+    },
+    android: { elevation: 6 },
+    default: {
+      boxShadow:
+        "inset 0 1px 0 rgba(255,255,255,0.18), 0 1px 1px rgba(0,0,0,0.2), 0 12px 22px -8px rgba(0,0,0,0.5)",
+    } as any,
   }),
 };
 

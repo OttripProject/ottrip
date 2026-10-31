@@ -1,10 +1,13 @@
 import type { CreatePlanRequest, Plan } from "@/types/api";
 import BottomSheetModal from "@/ui/components/BottomSheetModal.native";
 import { colors } from "@/ui/tokens/colors";
-import { textStyles } from "@/ui/tokens/typography";
+import { radii } from "@/ui/tokens/radii";
+import { spacing } from "@/ui/tokens/spacing";
+import { textStyles, typography } from "@/ui/tokens/typography";
 import dayjs from "dayjs";
 import {
   Alert,
+  Dimensions,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -12,16 +15,24 @@ import {
   View,
 } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import CheckIcon from "../../../../assets/check_black.svg";
 import DeleteIcon from "../../../../assets/delete_gray.svg";
-import AddPlanIcon from "../../../../assets/mobile_plan_add.svg";
-import CheckedIcon from "../../../../assets/mobile_plan_checked.svg";
-import UnCheckedIcon from "../../../../assets/mobile_plan_unchecked.svg";
 import UpdateIcon from "../../../../assets/update.svg";
 
+const DRAG_HANDLE_HEIGHT = 32;
+const HEADER_HEIGHT = 38;
+const LIST_PADDING = spacing.md + spacing.xs;
+const ROW_HEIGHT = 68;
+const ROW_GAP = spacing.xs;
+const EMPTY_HEIGHT = 104;
+const FOOTER_HEIGHT = 54;
+
 function formatPlanDateRange(startDate: string, endDate: string): string {
-  const start = dayjs(startDate).format("YYYY.MM.DD");
-  const end = dayjs(endDate).format("YYYY.MM.DD");
-  return `${start} ~ ${end}`;
+  const start = dayjs(startDate);
+  const end = dayjs(endDate);
+  const endFormat = start.isSame(end, "year") ? "M.DD" : "YYYY.M.DD";
+  return `${start.format("YYYY.M.DD")} – ${end.format(endFormat)}`;
 }
 
 interface PlanSelectModalProps {
@@ -87,25 +98,33 @@ export default function PlanSelectModal({
     ]);
   };
 
+  const insets = useSafeAreaInsets();
   const validPlans = Array.isArray(plans) ? plans : [];
   const todayStr = dayjs().format("YYYY-MM-DD");
 
+  const listHeight =
+    validPlans.length === 0
+      ? EMPTY_HEIGHT
+      : validPlans.length * ROW_HEIGHT + (validPlans.length - 1) * ROW_GAP;
+  const contentHeight =
+    DRAG_HANDLE_HEIGHT +
+    HEADER_HEIGHT +
+    LIST_PADDING +
+    listHeight +
+    FOOTER_HEIGHT +
+    spacing.lg +
+    Math.max(insets.bottom, spacing.sm);
+  const maxHeight =
+    Dimensions.get("window").height - insets.top - spacing.lg;
+  const sheetHeight = Math.min(contentHeight, maxHeight);
+
   return (
-    <BottomSheetModal visible={visible} onClose={onClose} height={0.5}>
-      {/* 헤더 */}
+    <BottomSheetModal visible={visible} onClose={onClose} height={sheetHeight}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>여행 선택</Text>
-        <Pressable
-          style={styles.addTripButton}
-          onPress={handleAddTripPress}
-          hitSlop={8}
-        >
-          <AddPlanIcon width={16} height={16} color={colors.primary} />
-          <Text style={styles.addTripButtonText}>새 여행</Text>
-        </Pressable>
+        <Text style={styles.headerCount}>{validPlans.length}개</Text>
       </View>
 
-      {/* 여행 목록 */}
       <GestureDetector gesture={Gesture.Native()}>
         <ScrollView
           style={styles.planList}
@@ -124,72 +143,62 @@ export default function PlanSelectModal({
               return (
                 <Pressable
                   key={plan.id}
-                  style={[styles.planCard, isPastTrip && styles.pastPlanCard]}
+                  style={({ pressed }) => [
+                    styles.planRow,
+                    (isSelected || pressed) && styles.planRowSelected,
+                    isPastTrip && !isSelected && styles.pastPlanRow,
+                  ]}
                   onPress={() => handleSelectPlan(plan)}
-                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                 >
-                  <View
-                    style={[
-                      styles.planCardCheckWrap,
-                      isSelected && styles.planCardCheckWrapSelected,
-                    ]}
-                  >
-                    {isSelected ? (
-                      <CheckedIcon
-                        width={20}
-                        height={20}
+                  <View style={styles.planRowText}>
+                    <Text style={styles.planRowTitle} numberOfLines={1}>
+                      {plan.title}
+                    </Text>
+                    <Text style={styles.planRowDate} numberOfLines={1}>
+                      {formatPlanDateRange(plan.startDate, plan.endDate)}
+                    </Text>
+                  </View>
+                  <View style={styles.checkSlot}>
+                    {isSelected && (
+                      <CheckIcon
+                        width={18}
+                        height={18}
                         color={colors.primary}
-                      />
-                    ) : (
-                      <UnCheckedIcon
-                        width={20}
-                        height={20}
-                        color={colors.gray500}
                       />
                     )}
                   </View>
-
-                  <View style={styles.planCardCenter}>
-                    <View style={styles.planCardTextWrap}>
-                      <Text style={styles.planCardTitle} numberOfLines={1}>
-                        {plan.title}
-                      </Text>
-                      <Text style={styles.planCardDate} numberOfLines={1}>
-                        {formatPlanDateRange(plan.startDate, plan.endDate)}
-                      </Text>
-                    </View>
-                  </View>
-
-                  <View style={styles.planCardActions}>
-                    <Pressable
-                      style={styles.planCardActionButton}
-                      onPress={e => handleEditPlan(plan, e)}
-                      hitSlop={8}
-                    >
-                      <UpdateIcon
-                        width={20}
-                        height={20}
-                        color={colors.gray600}
-                      />
-                    </Pressable>
-                    <Pressable
-                      style={styles.planCardActionButton}
-                      onPress={e => handleDeletePlan(plan, e)}
-                      hitSlop={8}
-                    >
-                      <DeleteIcon
-                        width={20}
-                        height={20}
-                        color={colors.gray600}
-                      />
-                    </Pressable>
-                  </View>
+                  <Pressable
+                    style={styles.actionButton}
+                    onPress={e => handleEditPlan(plan, e)}
+                    hitSlop={8}
+                  >
+                    <UpdateIcon width={18} height={18} color={colors.gray600} />
+                  </Pressable>
+                  <Pressable
+                    style={styles.actionButton}
+                    onPress={e => handleDeletePlan(plan, e)}
+                    hitSlop={8}
+                  >
+                    <DeleteIcon width={18} height={18} color={colors.gray600} />
+                  </Pressable>
                 </Pressable>
               );
             })
           )}
         </ScrollView>
       </GestureDetector>
+
+      <View style={styles.footer}>
+        <Pressable
+          style={({ pressed }) => [
+            styles.addTripButton,
+            pressed && styles.addTripButtonPressed,
+          ]}
+          onPress={handleAddTripPress}
+        >
+          <Text style={styles.addTripButtonText}>+ 새 여행 만들기</Text>
+        </Pressable>
+      </View>
     </BottomSheetModal>
   );
 }
@@ -197,84 +206,66 @@ export default function PlanSelectModal({
 const styles = StyleSheet.create({
   header: {
     flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 24,
-    paddingBottom: 16,
+    alignItems: "baseline",
+    marginHorizontal: spacing.sm,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.xs,
+    paddingHorizontal: spacing.md,
   },
   headerTitle: {
     ...textStyles.h4,
-    color: colors.black,
+    color: colors.paletteInk,
   },
-  addTripButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-  },
-  addTripButtonText: {
-    ...textStyles.h6,
-    color: colors.primary,
-  },
-  closeButton: {
-    padding: 4,
+  headerCount: {
+    ...textStyles.body5,
+    marginLeft: "auto",
+    fontFamily: typography.fontFamily.pretendardMedium,
+    color: colors.paletteFg3,
   },
   planList: {
     flex: 1,
-    minHeight: 200,
   },
   planListContent: {
-    paddingHorizontal: 24,
-    paddingBottom: 20,
-    flexGrow: 1,
+    gap: ROW_GAP,
+    marginHorizontal: spacing.sm,
+    paddingTop: spacing.md,
+    paddingHorizontal: spacing.xs,
+    paddingBottom: spacing.xs,
   },
-  planCard: {
+  planRow: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    backgroundColor: colors.gray200,
-    borderRadius: 16,
-    paddingVertical: 24,
-    paddingHorizontal: 20,
-    marginBottom: 8,
+    gap: spacing.md,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    borderRadius: radii.lgPlus,
   },
-  planCardCenter: {
-    flexDirection: "row",
-    alignItems: "center",
+  planRowSelected: {
+    backgroundColor: colors.paletteFill,
+  },
+  pastPlanRow: {
+    opacity: 0.4,
+  },
+  planRowText: {
     flex: 1,
     minWidth: 0,
-    marginHorizontal: 12,
   },
-  planCardTextWrap: {
-    flex: 1,
-    minWidth: 0,
+  planRowTitle: {
+    ...textStyles.h6,
+    color: colors.paletteInk,
   },
-  planCardTitle: {
-    ...textStyles.h5,
-    color: colors.black,
-    fontWeight: "600",
+  planRowDate: {
+    ...textStyles.body5,
+    marginTop: spacing.xs,
+    fontFamily: typography.fontFamily.pretendardMedium,
+    fontVariant: ["tabular-nums"],
+    color: colors.paletteFg3,
   },
-  planCardDate: {
-    ...textStyles.body4,
-    color: colors.gray600,
-    marginTop: 4,
-  },
-  planCardCheckWrap: {
-    width: 24,
-    height: 24,
+  checkSlot: {
+    width: 18,
     alignItems: "center",
-    justifyContent: "center",
   },
-  planCardCheckWrapSelected: {
-    // 선택 시 아이콘 색상만 primary로 표시
-  },
-  planCardActions: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-  },
-  planCardActionButton: {
+  actionButton: {
     alignItems: "center",
     justifyContent: "center",
   },
@@ -286,7 +277,26 @@ const styles = StyleSheet.create({
     ...textStyles.body2,
     color: colors.gray500,
   },
-  pastPlanCard: {
-    opacity: 0.4,
+  footer: {
+    marginHorizontal: spacing.sm,
+    paddingTop: spacing.sm,
+    paddingHorizontal: spacing.md,
+    paddingBottom: spacing.lg,
+  },
+  addTripButton: {
+    alignItems: "center",
+    paddingVertical: spacing.md,
+    borderRadius: radii.mdPlus,
+    borderWidth: 1,
+    borderStyle: "dashed",
+    borderColor: colors.gray400,
+  },
+  addTripButtonPressed: {
+    backgroundColor: colors.gray100,
+  },
+  addTripButtonText: {
+    ...textStyles.h7,
+    fontFamily: typography.fontFamily.pretendardBold,
+    color: colors.paletteInk,
   },
 });

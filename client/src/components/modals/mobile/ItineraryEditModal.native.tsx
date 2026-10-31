@@ -28,10 +28,14 @@ const itineraryCategoryToExpenseCategory: Partial<Record<ItineraryCategory, Expe
   [ItineraryCategory.MEAL]: ExpenseCategory.FOOD,
   [ItineraryCategory.TRANSPORT]: ExpenseCategory.TRANSPORT,
   [ItineraryCategory.ACTIVITY]: ExpenseCategory.ACTIVITY,
-  [ItineraryCategory.SIGHTSEEING]: ExpenseCategory.ACTIVITY,
+  [ItineraryCategory.SIGHTSEEING]: ExpenseCategory.SIGHTSEEING,
   [ItineraryCategory.SHOPPING]: ExpenseCategory.SHOPPING,
   [ItineraryCategory.ETC]: ExpenseCategory.ETC,
 };
+
+const toExpenseCategory = (category: ItineraryCategory | null) =>
+  (category && itineraryCategoryToExpenseCategory[category]) ||
+  ExpenseCategory.ETC;
 import CalendarModal from "@/ui/components/CalendarModal.native";
 import CurrencyToggle from "@/ui/components/CurrencyToggle";
 import FloatingFooter from "@/ui/components/FloatingFooter.native";
@@ -41,6 +45,7 @@ import AttachmentSection from "@/ui/components/attachmentSection.native";
 import Input from "@/ui/components/input/Input";
 import PlacesSearchInput, { type PlaceResult } from "@/ui/components/PlacesSearchInput";
 import { locationsApi, manualPlaceId } from "@/services/locations";
+import ModalBackdrop from "@/ui/components/ModalBackdrop";
 import { colors } from "@/ui/tokens/colors";
 import { textStyles, typography } from "@/ui/tokens/typography";
 import { formatAmountWithCommas, normalizeAmount } from "@/utils/amountUtils";
@@ -154,7 +159,7 @@ export default function ItineraryEditModal({
   });
   const [expenseData, setExpenseData] = useState({
     amount: "",
-    category: ExpenseCategory.FOOD,
+    category: ExpenseCategory.ETC,
     currency: ExpenseCurrency.KRW,
   });
   const [existingExpenseId, setExistingExpenseId] = useState<number | null>(
@@ -191,6 +196,7 @@ export default function ItineraryEditModal({
     ExpenseCategory.FOOD,
     ExpenseCategory.TRANSPORT,
     ExpenseCategory.ACTIVITY,
+    ExpenseCategory.SIGHTSEEING,
   ];
   const CATEGORY_ROW2: ExpenseCategory[] = [
     ExpenseCategory.ACCOMMODATION,
@@ -286,7 +292,7 @@ export default function ItineraryEditModal({
             });
             setExistingExpenseId(firstExpense.id);
           } else {
-            setExpenseData({ amount: "", category: ExpenseCategory.FOOD, currency: ExpenseCurrency.KRW });
+            setExpenseData({ amount: "", category: toExpenseCategory((latestItinerary.category as ItineraryCategory) ?? null), currency: ExpenseCurrency.KRW });
             setExistingExpenseId(null);
           }
         } catch {
@@ -307,7 +313,7 @@ export default function ItineraryEditModal({
               ? itinerary.endTime.substring(0, 5)
               : "10:00",
           });
-          setExpenseData({ amount: "", category: ExpenseCategory.FOOD, currency: ExpenseCurrency.KRW });
+          setExpenseData({ amount: "", category: toExpenseCategory((itinerary.category as ItineraryCategory) ?? null), currency: ExpenseCurrency.KRW });
           setExistingExpenseId(null);
         }
       };
@@ -326,7 +332,7 @@ export default function ItineraryEditModal({
         endTime: prefill?.endTime || defaultEndTime || "10:00",
       });
       setSelectedCategory(prefill?.category ?? null);
-      setExpenseData({ amount: "", category: ExpenseCategory.FOOD, currency: ExpenseCurrency.KRW });
+      setExpenseData({ amount: "", category: toExpenseCategory(prefill?.category ?? null), currency: ExpenseCurrency.KRW });
       setExistingExpenseId(null);
       if (prefill?.location) {
         const hasCoords = !!(prefill.locationLat && prefill.locationLng);
@@ -421,12 +427,10 @@ export default function ItineraryEditModal({
 
   useEffect(() => {
     if (existingExpenseId !== null) return;
-    const mapped = selectedCategory
-      ? itineraryCategoryToExpenseCategory[selectedCategory]
-      : undefined;
-    if (mapped) {
-      setExpenseData(prev => ({ ...prev, category: mapped }));
-    }
+    setExpenseData(prev => ({
+      ...prev,
+      category: toExpenseCategory(selectedCategory),
+    }));
   }, [selectedCategory]);
 
   useEffect(() => {
@@ -661,6 +665,7 @@ export default function ItineraryEditModal({
               일정 제목<Text style={styles.required}>*</Text>
             </Text>
             <Input
+              variant="filled"
               value={formData.title}
               onChangeText={text => setFormData({ ...formData, title: text })}
               style={[styles.input, !itinerary && styles.inputBorderless]}
@@ -689,6 +694,7 @@ export default function ItineraryEditModal({
               onRequestClose={() => setCategoryOpen(false)}
             >
               <Pressable style={styles.categoryModalOverlay} onPress={() => setCategoryOpen(false)}>
+                <ModalBackdrop />
                 <Pressable style={styles.categoryModalSheet} onPress={e => e.stopPropagation()}>
                   <View style={styles.categoryModalHeader}>
                     <Text style={styles.categoryModalTitle}>카테고리</Text>
@@ -731,6 +737,7 @@ export default function ItineraryEditModal({
           <View style={styles.inputGroup}>
             <Text style={styles.label}>내용 (메모)</Text>
             <Input
+              variant="filled"
               value={formData.description}
               onChangeText={text =>
                 setFormData({ ...formData, description: text })
@@ -911,7 +918,7 @@ export default function ItineraryEditModal({
                   placeholder="0"
                   placeholderTextColor={colors.gray500}
                   keyboardType="number-pad"
-                  variant="filled"
+                  variant="bare"
                   containerStyle={styles.amountInputContainer}
                   style={styles.amountInputStyle}
                 />
@@ -1141,7 +1148,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.gray200,
   },
   inputBorderless: {
-    borderWidth: 0,
     borderColor: "transparent",
   },
   textArea: {
@@ -1155,7 +1161,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.gray200,
   },
   textAreaBorderless: {
-    borderWidth: 0,
     borderColor: "transparent",
   },
   row: {
@@ -1225,6 +1230,8 @@ const styles = StyleSheet.create({
   },
   amountInputStyle: {
     flex: 1,
+    height: 44,
+    lineHeight: undefined,
     textAlign: "left",
     backgroundColor: "transparent",
     fontFamily: typography.fontFamily.pretendardSemiBold,
@@ -1290,7 +1297,6 @@ const styles = StyleSheet.create({
   },
   categoryModalOverlay: {
     flex: 1,
-    backgroundColor: colors.overlayBackground,
     justifyContent: "center",
     alignItems: "center",
     paddingHorizontal: 32,

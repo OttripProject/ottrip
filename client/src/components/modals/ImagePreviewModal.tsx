@@ -76,7 +76,7 @@ export default function ImagePreviewModal({
               </View>
             </View>
             <Pressable onPress={onClose} style={styles.closeButton}>
-              <XIcon width={16} height={16} />
+              <XIcon width={16} height={16} color={colors.gray700} />
             </Pressable>
           </View>
 

@@ -254,6 +254,7 @@ export enum ExpenseCategory {
   TRANSPORT = "transport",
   FLIGHT = "flight",
   ACTIVITY = "activity",
+  SIGHTSEEING = "sightseeing",
   ACCOMMODATION = "accommodation",
   SHOPPING = "shopping",
   ETC = "etc",

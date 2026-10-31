@@ -4,11 +4,14 @@ import {
   categoryColors,
   categoryLabels,
 } from "@/types/expense";
+import MotionPressable, { MotionIcon } from "@/ui/components/MotionPressable";
 import { colors } from "@/ui/tokens/colors";
+import { motion } from "@/ui/tokens/motion";
 import { radii } from "@/ui/tokens/radii";
 import { textStyles } from "@/ui/tokens/typography";
 import { useMemo, useRef } from "react";
 import {
+  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -17,7 +20,6 @@ import {
   type ViewStyle,
 } from "react-native";
 import DownArrowIcon from "../../../../assets/dropdown_time.svg";
-import UpperArrowIcon from "../../../../assets/upper_arrow.svg";
 
 interface CategoryPickerProps {
   value: ExpenseCategory;
@@ -39,6 +41,7 @@ const CATEGORY_ORDER: ExpenseCategory[] = [
   "food" as ExpenseCategory,
   "transport" as ExpenseCategory,
   "activity" as ExpenseCategory,
+  "sightseeing" as ExpenseCategory,
   "accommodation" as ExpenseCategory,
   "flight" as ExpenseCategory,
   "shopping" as ExpenseCategory,
@@ -91,8 +94,9 @@ export default function CategoryPicker({
       ref={wrapperRef}
       style={[styles.wrapper, containerStyle, { zIndex: open ? 100 : 1 }]}
     >
-      <Pressable
+      <MotionPressable
         style={[styles.trigger, disabled && styles.triggerDisabled, style]}
+        hoverStyle={!open && styles.triggerHover}
         onPress={handleToggle}
         disabled={disabled}
       >
@@ -105,20 +109,21 @@ export default function CategoryPicker({
             {label}
           </Text>
         </View>
-        {open ? (
-          <UpperArrowIcon
-            width={iconSize}
-            height={iconSize}
-            style={{ opacity: 0.6 }}
-          />
-        ) : (
-          <DownArrowIcon
-            width={iconSize}
-            height={iconSize}
-            style={{ opacity: 0.6 }}
-          />
-        )}
-      </Pressable>
+        <MotionIcon>
+          <View
+            style={[
+              Platform.OS === "web" && arrowTransition,
+              open && styles.arrowOpen,
+            ]}
+          >
+            <DownArrowIcon
+              width={iconSize}
+              height={iconSize}
+              style={{ opacity: 0.6 }}
+            />
+          </View>
+        </MotionIcon>
+      </MotionPressable>
 
       {open && (
         <View style={[styles.popup, dropDownContainerStyle]}>
@@ -151,6 +156,11 @@ export default function CategoryPicker({
   );
 }
 
+const arrowTransition = {
+  transitionProperty: "transform",
+  transitionDuration: `${motion.duration.fast}ms`,
+} as ViewStyle;
+
 const styles = StyleSheet.create({
   wrapper: {
     position: "relative",
@@ -163,6 +173,12 @@ const styles = StyleSheet.create({
     borderRadius: radii.md,
     minHeight: 40,
     paddingHorizontal: 12,
+  },
+  triggerHover: {
+    backgroundColor: colors.inputHover,
+  },
+  arrowOpen: {
+    transform: [{ rotate: "180deg" }],
   },
   triggerDisabled: {
     opacity: 0.5,

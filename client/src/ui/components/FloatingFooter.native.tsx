@@ -1,6 +1,10 @@
+import ScalePressable from "@/ui/components/ScalePressable";
 import { colors } from "@/ui/tokens/colors";
+import { shadows } from "@/ui/tokens/shadows";
 import { textStyles } from "@/ui/tokens/typography";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
+
+const PRIMARY_GRADIENT = `linear-gradient(180deg, ${colors.gradientPrimary[0]} 0%, ${colors.gradientPrimary[1]} 100%)`;
 
 interface FloatingFooterProps {
   primaryLabel: string;
@@ -23,14 +27,14 @@ export default function FloatingFooter({
     <View style={styles.footer}>
       <View style={styles.footerButtons}>
         {hasSecondary && (
-          <Pressable
+          <ScalePressable
             style={[styles.footerButton, styles.secondaryButton]}
             onPress={onSecondaryPress}
           >
             <Text style={styles.secondaryButtonText}>{secondaryLabel}</Text>
-          </Pressable>
+          </ScalePressable>
         )}
-        <Pressable
+        <ScalePressable
           style={[
             styles.footerButton,
             styles.primaryButton,
@@ -41,7 +45,7 @@ export default function FloatingFooter({
           disabled={primaryDisabled}
         >
           <Text style={styles.primaryButtonText}>{primaryLabel}</Text>
-        </Pressable>
+        </ScalePressable>
       </View>
     </View>
   );
@@ -66,18 +70,22 @@ const styles = StyleSheet.create({
   },
   secondaryButton: {
     flex: 1,
-    backgroundColor: colors.warning,
+    backgroundColor: colors.dangerTint,
   },
   secondaryButtonText: {
     ...textStyles.h4,
-    color: colors.white,
+    color: colors.danger,
   },
   primaryButton: {
     flex: 1,
-    backgroundColor: colors.black,
+    backgroundColor: colors.primary,
+    experimental_backgroundImage: PRIMARY_GRADIENT,
+    ...shadows.primaryRaised,
   },
   primaryButtonDisabled: {
     backgroundColor: colors.gray400,
+    experimental_backgroundImage: "none",
+    boxShadow: "none",
   },
   primaryButtonWithSecondary: {
     flex: 2,
