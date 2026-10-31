@@ -17,6 +17,7 @@ import { locationsApi } from "@/services/locations";
 import { useBackdropClose } from "@/hooks/useBackdropClose";
 import { ItineraryCategory } from "@/types/itinerary";
 import { getTourismCategoryColor } from "@/types/tourism";
+import ActionButton from "@/ui/components/ActionButton";
 import MotionPressable, { MotionIcon } from "@/ui/components/MotionPressable";
 import { modalMotion } from "@/ui/effects/modalMotion";
 import ModalBackdrop from "@/ui/components/ModalBackdrop";
@@ -667,17 +668,17 @@ export default function TourismDetailModal({
 
           {/* 푸터 */}
           <View style={styles.footer}>
-            <MotionPressable style={styles.closeButton} onPress={onClose}>
-              <Text style={styles.closeButtonText}>닫기</Text>
-            </MotionPressable>
-            <MotionPressable
-              style={styles.addButton}
+            <ActionButton
+              label="닫기"
+              tone="secondary"
+              fill
+              onPress={onClose}
+            />
+            <ActionButton
+              label={isAccommodation ? "숙박에 추가" : "일정에 추가"}
+              fill
               onPress={handleAddToItinerary}
-            >
-              <Text style={styles.addButtonText}>
-                {isAccommodation ? "숙박에 추가" : "일정에 추가"}
-              </Text>
-            </MotionPressable>
+            />
           </View>
         </View>
       </View>
@@ -992,29 +993,5 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing["2xl"],
     paddingTop: spacing.lg,
     paddingBottom: spacing.xl,
-  },
-  closeButton: {
-    flex: 1,
-    height: 48,
-    borderRadius: radii.md,
-    ...surfaces.muted,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  closeButtonText: {
-    ...textStyles.h6,
-    color: colors.gray900,
-  },
-  addButton: {
-    flex: 1,
-    height: 48,
-    borderRadius: radii.md,
-    ...surfaces.primary,
-    justifyContent: "center",
-    alignItems: "center",
-  } as any,
-  addButtonText: {
-    ...textStyles.h6,
-    color: colors.white,
   },
 });
