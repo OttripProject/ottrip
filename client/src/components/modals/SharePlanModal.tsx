@@ -1,6 +1,7 @@
 import { PLACEHOLDERS } from "@/constants/placeholders";
 import { type PlanShare, plansApi } from "@/services/plans";
 import { useBackdropClose } from "@/hooks/useBackdropClose";
+import ActionButton from "@/ui/components/ActionButton";
 import MotionPressable, { MotionIcon } from "@/ui/components/MotionPressable";
 import Input from "@/ui/components/input/Input";
 import { modalMotion } from "@/ui/effects/modalMotion";
@@ -292,12 +293,7 @@ export default function SharePlanModal({
               )}
             </View>
 
-            <MotionPressable
-              style={styles.primaryButton}
-              onPress={onClose}
-            >
-              <Text style={styles.primaryButtonText}>완료</Text>
-            </MotionPressable>
+            <ActionButton label="완료" onPress={onClose} />
         </View>
       </View>
     </Modal>
@@ -478,16 +474,5 @@ const styles = StyleSheet.create({
   empty: {
     ...textStyles.body5,
     color: colors.gray600,
-  },
-  primaryButton: {
-    height: 48,
-    borderRadius: radii.md,
-    ...surfaces.primary,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  primaryButtonText: {
-    ...textStyles.h6,
-    color: colors.white,
   },
 });

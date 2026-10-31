@@ -21,8 +21,8 @@ import { ExpenseCategory, ExpenseCurrency } from "@/types/expense";
 import AttachmentSection from "@/ui/components/attachmentSection";
 import type { AiAttachmentAnalyzeSelection } from "@/ui/components/attachmentSection.types";
 import { pendingAiFileKey } from "@/ui/components/attachmentSection.types";
+import ActionButton from "@/ui/components/ActionButton";
 import MotionPressable, { MotionIcon } from "@/ui/components/MotionPressable";
-import Spinner from "@/ui/components/Spinner";
 import { modalMotion } from "@/ui/effects/modalMotion";
 import { colors } from "@/ui/tokens/colors";
 import { radii } from "@/ui/tokens/radii";
@@ -130,7 +130,6 @@ export default function AddExpenseModal({
   const { showToast } = useToast();
   const [showErrors, setShowErrors] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showSubmitSpinner, setShowSubmitSpinner] = useState(false);
   const isSubmittingRef = useRef(false);
   const scrollRef = useRef<ScrollView>(null);
   const [pendingFiles, setPendingFiles] = useState<LocalFile[]>([]);
@@ -221,15 +220,6 @@ export default function AddExpenseModal({
   }, [visible, planStartDate, selectedDate]);
 
   const isSaving = isSubmitting || isUploading;
-
-  useEffect(() => {
-    if (!isSaving) {
-      setShowSubmitSpinner(false);
-      return;
-    }
-    const timer = setTimeout(() => setShowSubmitSpinner(true), 300);
-    return () => clearTimeout(timer);
-  }, [isSaving]);
 
   const handleExpenseSubmit = async () => {
     if (isSubmittingRef.current) {
@@ -389,24 +379,20 @@ export default function AddExpenseModal({
               />
 
               <View style={styles.modalButtons}>
-                <MotionPressable
-                  style={[styles.modalButton, styles.cancelButton]}
+                <ActionButton
+                  label="취소"
+                  tone="secondary"
+                  fill
                   onPress={handleClose}
-                  disabled={isSubmitting}
-                >
-                  <Text style={styles.cancelButtonText}>취소</Text>
-                </MotionPressable>
-                <MotionPressable
-                  style={[styles.modalButton, styles.submitButton]}
+                  blocked={isSaving}
+                />
+                <ActionButton
+                  label="저장"
+                  fill
                   onPress={handleExpenseSubmit}
-                  disabled={isSubmitting || isUploading || aiState.isAiAnalyzing}
-                >
-                  {showSubmitSpinner ? (
-                    <Spinner size={16} strokeWidth={2} color={colors.white} />
-                  ) : (
-                    <Text style={styles.submitButtonText}>저장</Text>
-                  )}
-                </MotionPressable>
+                  loading={isSaving}
+                  blocked={aiState.isAiAnalyzing}
+                />
               </View>
             </ScrollView>
           </View>
@@ -520,26 +506,5 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: spacing.md,
     paddingTop: spacing.xs,
-  },
-  modalButton: {
-    flex: 1,
-    borderRadius: radii.md,
-    alignItems: "center",
-    justifyContent: "center",
-    height: 48,
-  },
-  cancelButton: {
-    ...surfaces.muted,
-  },
-  cancelButtonText: {
-    ...textStyles.h6,
-    color: colors.gray900,
-  },
-  submitButton: {
-    ...surfaces.primary,
-  },
-  submitButtonText: {
-    ...textStyles.h6,
-    color: colors.white,
   },
 });

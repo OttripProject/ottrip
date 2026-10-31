@@ -22,8 +22,8 @@ import {
 } from "@/types/expense";
 import CurrencyToggle from "@/ui/components/CurrencyToggle";
 import HoverPressable from "@/ui/components/HoverPressable";
+import ActionButton from "@/ui/components/ActionButton";
 import MotionPressable, { MotionIcon } from "@/ui/components/MotionPressable";
-import Spinner from "@/ui/components/Spinner";
 import AttachmentSection from "@/ui/components/attachmentSection";
 import type { AiAttachmentAnalyzeSelection } from "@/ui/components/attachmentSection.types";
 import { pendingAiFileKey } from "@/ui/components/attachmentSection.types";
@@ -282,7 +282,6 @@ export default function FlightItem({
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isSubmittingRef = useRef(false);
-  const [showSaveSpinner, setShowSaveSpinner] = useState(false);
 
   const [pendingFiles, setPendingFiles] = useState<LocalFile[]>([]);
   const [existingAttachments, setExistingAttachments] = useState<Attachment[]>(
@@ -755,15 +754,6 @@ export default function FlightItem({
       : null;
 
   const isSaving = isSubmitting || isUploading;
-
-  useEffect(() => {
-    if (!isSaving) {
-      setShowSaveSpinner(false);
-      return;
-    }
-    const timer = setTimeout(() => setShowSaveSpinner(true), 300);
-    return () => clearTimeout(timer);
-  }, [isSaving]);
 
   return (
     <View style={styles.wrapper}>
@@ -1389,48 +1379,39 @@ export default function FlightItem({
         <View
           style={styles.buttonRow}
         >
-          <MotionPressable
-            style={styles.deleteButton}
-            onPress={flight ? handleDelete : onCancel}
-            disabled={isSubmitting}
-          >
-            <Text style={styles.deleteButtonText}>
-              {flight ? "삭제" : "취소"}
-            </Text>
-          </MotionPressable>
-          <MotionPressable
-            style={styles.saveButton}
+          <ActionButton
+            label="취소"
+            tone="secondary"
+            size="M"
+            fill
+            onPress={onCancel}
+            blocked={isSaving}
+          />
+          <ActionButton
+            label="저장"
+            size="M"
+            fill
             onPress={handleSave}
-            disabled={isSubmitting || isUploading}
-          >
-            {showSaveSpinner ? (
-              <Spinner size={16} strokeWidth={2} color={colors.white} />
-            ) : (
-              <Text style={styles.saveButtonText}>저장</Text>
-            )}
-          </MotionPressable>
+            loading={isSaving}
+          />
         </View>
       ) : (
         <View style={styles.buttonRow}>
-          <MotionPressable
-            style={[styles.deleteButton, styles.readOnlyDeleteButton]}
+          <ActionButton
+            label="삭제"
+            tone="danger"
+            size="M"
+            fill
             onPress={handleDelete}
-            disabled={isSubmitting}
-          >
-            <Text
-              style={[styles.deleteButtonText, styles.readOnlyDeleteButtonText]}
-            >
-              삭제
-            </Text>
-          </MotionPressable>
-          <MotionPressable
-            style={[styles.saveButton, styles.footerEditButton]}
+            blocked={isSubmitting}
+          />
+          <ActionButton
+            label="수정"
+            tone="secondary"
+            size="M"
+            fill
             onPress={onEdit}
-          >
-            <Text style={[styles.saveButtonText, styles.footerEditButtonText]}>
-              수정
-            </Text>
-          </MotionPressable>
+          />
         </View>
       )}
       <AiDocumentAnalyzeModal
@@ -1729,44 +1710,5 @@ const styles = StyleSheet.create({
     paddingTop: spacing.lg,
     paddingHorizontal: spacing.xl,
     paddingBottom: spacing.xl,
-  },
-  readOnlyDeleteButton: {
-    backgroundColor: colors.dangerTint,
-    backgroundImage: "none",
-    boxShadow: "none",
-  } as any,
-  readOnlyDeleteButtonText: {
-    color: colors.danger,
-  },
-  deleteButton: {
-    ...surfaces.muted,
-    flex: 1,
-    height: 40,
-    borderRadius: radii.md,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  deleteButtonText: {
-    ...textStyles.h7,
-    color: colors.gray900,
-  },
-  saveButton: {
-    ...surfaces.primary,
-    flex: 1,
-    height: 40,
-    borderRadius: radii.md,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  footerEditButton: {
-    ...surfaces.muted,
-    backgroundImage: "none",
-  } as any,
-  footerEditButtonText: {
-    color: colors.gray900,
-  },
-  saveButtonText: {
-    ...textStyles.h7,
-    color: colors.white,
   },
 });

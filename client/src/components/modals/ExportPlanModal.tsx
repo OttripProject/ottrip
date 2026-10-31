@@ -1,16 +1,15 @@
 import { plansApi } from "@/services/plans";
 import { useBackdropClose } from "@/hooks/useBackdropClose";
 import Card from "@/ui/components/Card";
+import ActionButton from "@/ui/components/ActionButton";
 import MotionPressable, { MotionIcon } from "@/ui/components/MotionPressable";
 import { modalMotion } from "@/ui/effects/modalMotion";
 import { colors } from "@/ui/tokens/colors";
 import { motion } from "@/ui/tokens/motion";
 import { shadows } from "@/ui/tokens/shadows";
-import { surfaces } from "@/ui/tokens/surfaces";
 import { textStyles } from "@/ui/tokens/typography";
 import { useState } from "react";
 import {
-  ActivityIndicator,
   Alert,
   Modal,
   Platform,
@@ -309,15 +308,10 @@ export default function ExportPlanModal({
                           editable={false}
                           selectTextOnFocus
                         />
-                        <MotionPressable
+                        <ActionButton
+                          label={copied ? "복사됨" : "복사"}
                           onPress={handleCopy}
-                          style={styles.copyButton}
-                          hoverStyle={shadows.darkHover}
-                        >
-                          <Text style={styles.copyText}>
-                            {copied ? "복사됨" : "복사"}
-                          </Text>
-                        </MotionPressable>
+                        />
                       </View>
                     </View>
 
@@ -331,22 +325,20 @@ export default function ExportPlanModal({
                       </Text>
                     </View>
 
-                    <MotionPressable
+                    <ActionButton
+                      label="링크로 접속해 보기"
+                      tone="secondary"
+                      icon={
+                        <MotionIcon>
+                          <ExternalLinkIcon
+                            width={14}
+                            height={14}
+                            color={colors.gray900}
+                          />
+                        </MotionIcon>
+                      }
                       onPress={handleOpenLink}
-                      style={styles.openButton}
-                      hoverStyle={shadows.xsHover}
-                    >
-                      <MotionIcon>
-                        <ExternalLinkIcon
-                          width={14}
-                          height={14}
-                          color={colors.gray900}
-                        />
-                      </MotionIcon>
-                      <Text style={styles.openButtonText}>
-                        링크로 접속해 보기
-                      </Text>
-                    </MotionPressable>
+                    />
 
                     <MotionPressable
                       onPress={handleGenerate}
@@ -369,22 +361,11 @@ export default function ExportPlanModal({
                     </MotionPressable>
                   </View>
                 ) : (
-                  <MotionPressable
+                  <ActionButton
+                    label="내보내기 URL 생성"
                     onPress={handleGenerate}
-                    disabled={isGenerating}
-                    hoverStyle={shadows.darkHover}
-                    style={[
-                      styles.generateButton,
-                      isGenerating && styles.generateButtonDisabled,
-                    ]}
-                  >
-                    {isGenerating && (
-                      <ActivityIndicator size="small" color={colors.white} />
-                    )}
-                    <Text style={styles.generateButtonText}>
-                      {isGenerating ? "링크 생성 중..." : "내보내기 URL 생성"}
-                    </Text>
-                  </MotionPressable>
+                    loading={isGenerating}
+                  />
                 )}
               </ScrollView>
             </View>
@@ -617,23 +598,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.gray300,
     borderRadius: 10,
+    height: 48,
     paddingHorizontal: 14,
-    paddingVertical: 12,
     ...textStyles.body5,
     color: colors.gray900,
-  },
-  copyButton: {
-    width: 64,
-    height: 46,
-    borderRadius: 10,
-    backgroundColor: colors.gray900,
-    alignItems: "center",
-    justifyContent: "center",
-    flexShrink: 0,
-  },
-  copyText: {
-    ...textStyles.h7,
-    color: colors.white,
   },
   resultDesc: {
     flexDirection: "row",
@@ -658,21 +626,6 @@ const styles = StyleSheet.create({
     ...textStyles.body6,
     color: colors.gray700,
   },
-  openButton: {
-    height: 46,
-    borderWidth: 1,
-    borderColor: colors.gray900,
-    borderRadius: 10,
-    backgroundColor: colors.white,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-  },
-  openButtonText: {
-    ...textStyles.h6,
-    color: colors.gray900,
-  },
   regenButton: {
     flexDirection: "row",
     alignItems: "center",
@@ -685,21 +638,5 @@ const styles = StyleSheet.create({
   regenButtonText: {
     ...textStyles.h8,
     color: colors.gray700,
-  },
-  generateButton: {
-    height: 52,
-    borderRadius: 12,
-    ...surfaces.dark,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-  },
-  generateButtonDisabled: {
-    opacity: 0.72,
-  },
-  generateButtonText: {
-    ...textStyles.h6,
-    color: colors.white,
   },
 });
