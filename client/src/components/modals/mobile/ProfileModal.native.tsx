@@ -6,12 +6,10 @@ import { type UserProfile, usersApi } from "@/services/users";
 import { Gender } from "@/types/api";
 import Card from "@/ui/components/Card";
 import ModalBackdrop from "@/ui/components/ModalBackdrop";
+import ActionButton from "@/ui/components/ActionButton";
 import Input from "@/ui/components/input/Input";
-import Spinner from "@/ui/components/Spinner";
 import { colors } from "@/ui/tokens/colors";
-import { radii } from "@/ui/tokens/radii";
 import { spacing } from "@/ui/tokens/spacing";
-import { shadows } from "@/ui/tokens/shadows";
 import { textStyles } from "@/ui/tokens/typography";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
@@ -43,7 +41,6 @@ import FilesIcon from "../../../../assets/memo.svg";
 import CloseIcon from "../../../../assets/mobile_close.svg";
 import QnaIcon from "../../../../assets/qna.svg";
 
-const PRIMARY_GRADIENT = `linear-gradient(180deg, ${colors.gradientPrimary[0]} 0%, ${colors.gradientPrimary[1]} 100%)`;
 
 interface ProfileModalProps {
   visible: boolean;
@@ -55,16 +52,6 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
   const navigation = useNavigation<any>();
   const { logout } = useAuth();
   const [deletingGuestData, setDeletingGuestData] = useState(false);
-  const [showDeletingSpinner, setShowDeletingSpinner] = useState(false);
-
-  useEffect(() => {
-    if (!deletingGuestData) {
-      setShowDeletingSpinner(false);
-      return;
-    }
-    const timer = setTimeout(() => setShowDeletingSpinner(true), 300);
-    return () => clearTimeout(timer);
-  }, [deletingGuestData]);
   const queryClient = useQueryClient();
   const [me, setMe] = useState<UserProfile | null>(null);
   const [nickname, setNickname] = useState("");
@@ -105,16 +92,6 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
   };
 
   const [saving, setSaving] = useState(false);
-  const [showSaveSpinner, setShowSaveSpinner] = useState(false);
-
-  useEffect(() => {
-    if (!saving) {
-      setShowSaveSpinner(false);
-      return;
-    }
-    const timer = setTimeout(() => setShowSaveSpinner(true), 300);
-    return () => clearTimeout(timer);
-  }, [saving]);
 
   const save = async () => {
     if (saving) return;
@@ -279,26 +256,19 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
                       <Text style={styles.guestDescription}>
                         로그인하면 임시 저장된 일정을 계정과 연동할 수 있어요.
                       </Text>
-                      <Pressable
-                        disabled={deletingGuestData}
+                      <ActionButton
+                        label="로그인"
                         style={styles.guestLoginButton}
                         onPress={handleSignUp}
-                      >
-                        <Text style={styles.guestLoginButtonText}>로그인</Text>
-                      </Pressable>
-                      <Pressable
-                        disabled={deletingGuestData}
+                        blocked={deletingGuestData}
+                      />
+                      <ActionButton
+                        label="임시 기록 삭제"
+                        tone="danger"
                         style={styles.guestDeleteRecordsButton}
                         onPress={handleDeleteTemporaryRecords}
-                      >
-                        {showDeletingSpinner ? (
-                          <Spinner size={16} strokeWidth={2} color={colors.danger} />
-                        ) : (
-                          <Text style={styles.guestDeleteRecordsButtonText}>
-                            임시 기록 삭제
-                          </Text>
-                        )}
-                      </Pressable>
+                        loading={deletingGuestData}
+                      />
                       <View style={styles.guestInquirySection}>
                         <Text style={styles.guestInquiryTitle}>문의하기</Text>
                         <View style={styles.guestInquiryEmailBox}>
@@ -477,27 +447,14 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
                             <Text style={styles.footerLinkGray}>계정 삭제</Text>
                           </Pressable>
                         </View>
-                        <Pressable
-                          disabled={!canSave || saving}
-                          style={[
-                            styles.saveButton,
-                            !canSave && styles.saveButtonDisabled,
-                          ]}
+                        <ActionButton
+                          label="저장"
+                          size="M"
+                          style={styles.saveButton}
                           onPress={save}
-                        >
-                          {showSaveSpinner ? (
-                            <Spinner size={16} strokeWidth={2} color={colors.white} />
-                          ) : (
-                            <Text
-                              style={[
-                                styles.saveButtonText,
-                                !canSave && styles.saveButtonTextDisabled,
-                              ]}
-                            >
-                              저장
-                            </Text>
-                          )}
-                        </Pressable>
+                          loading={saving}
+                          disabled={!canSave}
+                        />
                       </View>
                     </>
                   )}
@@ -557,12 +514,11 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
                   최대한 빠르게 답변드리겠습니다.
                 </Text>
 
-                <Pressable
+                <ActionButton
+                  label="확인"
                   style={styles.contactModalConfirmButton}
                   onPress={() => setContactOpen(false)}
-                >
-                  <Text style={styles.contactModalConfirmButtonText}>확인</Text>
-                </Pressable>
+                />
               </View>
             </View>
           </Modal>
@@ -677,31 +633,11 @@ const styles = StyleSheet.create({
   },
   guestLoginButton: {
     width: "100%",
-    height: 48,
-    backgroundColor: colors.primary,
-    experimental_backgroundImage: PRIMARY_GRADIENT,
-    ...shadows.primaryRaised,
-    borderRadius: radii.mdPlus,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 12,
-  },
-  guestLoginButtonText: {
-    ...textStyles.h5,
-    color: colors.white,
+    marginBottom: spacing.md,
   },
   guestDeleteRecordsButton: {
     width: "100%",
-    height: 48,
-    backgroundColor: colors.dangerTint,
-    borderRadius: radii.mdPlus,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 32,
-  },
-  guestDeleteRecordsButtonText: {
-    ...textStyles.h5,
-    color: colors.danger,
+    marginBottom: spacing["2xl"],
   },
   guestInquirySection: {
     width: "100%",
@@ -872,27 +808,8 @@ const styles = StyleSheet.create({
     color: colors.gray700,
   },
   saveButton: {
-    backgroundColor: colors.primary,
-    experimental_backgroundImage: PRIMARY_GRADIENT,
-    ...shadows.primaryRaised,
-    height: 44,
     paddingHorizontal: 42,
-    borderRadius: radii.md,
-    alignItems: "center",
-    justifyContent: "center",
     marginLeft: "auto",
-  },
-  saveButtonDisabled: {
-    backgroundColor: colors.gray300,
-    experimental_backgroundImage: "none",
-    boxShadow: "none",
-  },
-  saveButtonText: {
-    ...textStyles.h6,
-    color: colors.white,
-  },
-  saveButtonTextDisabled: {
-    color: colors.gray500,
   },
   contactModalOverlay: {
     flex: 1,
@@ -970,16 +887,5 @@ const styles = StyleSheet.create({
   },
   contactModalConfirmButton: {
     width: "100%",
-    height: 48,
-    backgroundColor: colors.primary,
-    experimental_backgroundImage: PRIMARY_GRADIENT,
-    ...shadows.primaryRaised,
-    borderRadius: radii.mdPlus,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  contactModalConfirmButtonText: {
-    ...textStyles.h5,
-    color: colors.white,
   },
 });

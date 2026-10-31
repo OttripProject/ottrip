@@ -23,14 +23,12 @@ import {
   currencyLabels,
 } from "@/types/expense";
 import BottomSheetModal from "@/ui/components/BottomSheetModal.native";
-import ScalePressable from "@/ui/components/ScalePressable";
-import Spinner from "@/ui/components/Spinner";
+import ActionButton from "@/ui/components/ActionButton";
 import CalendarModal from "@/ui/components/CalendarModal.native";
 import Input, { filledFocusStyle } from "@/ui/components/input/Input";
 import AttachmentSection from "@/ui/components/attachmentSection.native";
 import { colors } from "@/ui/tokens/colors";
 import { radii } from "@/ui/tokens/radii";
-import { shadows } from "@/ui/tokens/shadows";
 import { spacing } from "@/ui/tokens/spacing";
 import { textStyles } from "@/ui/tokens/typography";
 import { handleGuestPromptError } from "@/utils/guestPrompt";
@@ -110,7 +108,6 @@ export default function AddExpenseModal({
   );
   const [isLoadingAttachments, setIsLoadingAttachments] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showSaveSpinner, setShowSaveSpinner] = useState(false);
   const scrollRef = useRef<KeyboardAwareScrollViewRef>(null);
   const isSubmittingRef = useRef(false);
   const [isAiAnalyzing, setIsAiAnalyzing] = useState(false);
@@ -328,15 +325,6 @@ export default function AddExpenseModal({
 
   const isSaving = isSubmitting || isUploading;
 
-  useEffect(() => {
-    if (!isSaving) {
-      setShowSaveSpinner(false);
-      return;
-    }
-    const timer = setTimeout(() => setShowSaveSpinner(true), 300);
-    return () => clearTimeout(timer);
-  }, [isSaving]);
-
   const handleClose = () => {
     if (isSaving) return;
     setFormData({
@@ -530,24 +518,19 @@ export default function AddExpenseModal({
       </KeyboardAwareScrollView>
 
       <View style={styles.footer}>
-        <ScalePressable
-          style={styles.cancelButton}
+        <ActionButton
+          label="취소"
+          tone="secondary"
+          fill
           onPress={handleClose}
-          disabled={isSaving}
-        >
-          <Text style={styles.cancelButtonText}>취소</Text>
-        </ScalePressable>
-        <ScalePressable
-          style={styles.saveButton}
+          blocked={isSaving}
+        />
+        <ActionButton
+          label="저장"
+          fill
           onPress={handleSubmit}
-          disabled={isSaving}
-        >
-          {showSaveSpinner ? (
-            <Spinner size={16} strokeWidth={2} color={colors.white} />
-          ) : (
-            <Text style={styles.saveButtonText}>저장</Text>
-          )}
-        </ScalePressable>
+          loading={isSaving}
+        />
       </View>
     </BottomSheetModal>
     <AiDocumentAnalyzeModal
@@ -672,31 +655,5 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: colors.paletteFill,
     backgroundColor: colors.white,
-  },
-  cancelButton: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    height: 48,
-    borderRadius: radii.mdPlus,
-    backgroundColor: colors.gray300,
-  },
-  cancelButtonText: {
-    ...textStyles.h5,
-    color: colors.gray900,
-  },
-  saveButton: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    height: 48,
-    borderRadius: radii.mdPlus,
-    backgroundColor: colors.primary,
-    experimental_backgroundImage: `linear-gradient(180deg, ${colors.gradientPrimary[0]} 0%, ${colors.gradientPrimary[1]} 100%)`,
-    ...shadows.primaryRaised,
-  },
-  saveButtonText: {
-    ...textStyles.h5,
-    color: colors.white,
   },
 });

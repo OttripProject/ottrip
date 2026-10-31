@@ -3,12 +3,11 @@ import type { CreatePlanRequest, Plan, UpdatePlanRequest } from "@/types/api";
 import TripCalendarModal from "@/components/trip/TripCalendarModal";
 import TripDurationBanner from "@/components/trip/TripDurationBanner";
 import TripSegmentList from "@/components/trip/TripSegmentList";
+import ActionButton from "@/ui/components/ActionButton";
 import BottomSheetModal from "@/ui/components/BottomSheetModal.native";
-import Spinner from "@/ui/components/Spinner";
 import Input from "@/ui/components/input/Input";
 import { colors } from "@/ui/tokens/colors";
 import { radii } from "@/ui/tokens/radii";
-import { shadows } from "@/ui/tokens/shadows";
 import { spacing } from "@/ui/tokens/spacing";
 import { textStyles, typography } from "@/ui/tokens/typography";
 import { useEffect, useRef, useState } from "react";
@@ -57,16 +56,6 @@ export default function AddPlanModal({
   } = useTripForm();
 
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showSubmitSpinner, setShowSubmitSpinner] = useState(false);
-
-  useEffect(() => {
-    if (!isSubmitting) {
-      setShowSubmitSpinner(false);
-      return;
-    }
-    const timer = setTimeout(() => setShowSubmitSpinner(true), 300);
-    return () => clearTimeout(timer);
-  }, [isSubmitting]);
 
   const handleClose = () => {
     if (!isSubmitting) onClose();
@@ -214,36 +203,20 @@ export default function AddPlanModal({
           </ScrollView>
 
           <View style={styles.footer}>
-            <Pressable
-              style={styles.cancelBtn}
+            <ActionButton
+              label="취소"
+              tone="secondary"
+              fill
               onPress={handleClose}
-              disabled={isSubmitting}
-            >
-              <Text style={styles.cancelText}>취소</Text>
-            </Pressable>
-            <Pressable
-              style={[
-                styles.submitBtn,
-                isSubmitDisabled
-                  ? styles.submitBtnDisabled
-                  : styles.submitBtnEnabled,
-              ]}
+              blocked={isSubmitting}
+            />
+            <ActionButton
+              label="저장"
+              fill
               onPress={handleSubmit}
-              disabled={isSubmitDisabled || isSubmitting}
-            >
-              {showSubmitSpinner ? (
-                <Spinner size={16} strokeWidth={2} color={colors.white} />
-              ) : (
-                <Text
-                  style={[
-                    styles.submitText,
-                    isSubmitDisabled && styles.submitTextDisabled,
-                  ]}
-                >
-                  저장
-                </Text>
-              )}
-            </Pressable>
+              loading={isSubmitting}
+              disabled={isSubmitDisabled}
+            />
           </View>
           <TripCalendarModal
             visible={calendarOpen}
@@ -360,39 +333,5 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.md,
     borderTopWidth: 1,
     borderTopColor: colors.gray200,
-  },
-  cancelBtn: {
-    flex: 1,
-    height: 48,
-    borderRadius: radii.mdPlus,
-    backgroundColor: colors.gray300,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  cancelText: {
-    ...textStyles.h5,
-    color: colors.gray900,
-  },
-  submitBtn: {
-    flex: 1,
-    height: 48,
-    borderRadius: radii.mdPlus,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  submitBtnEnabled: {
-    backgroundColor: colors.primary,
-    experimental_backgroundImage: `linear-gradient(180deg, ${colors.gradientPrimary[0]} 0%, ${colors.gradientPrimary[1]} 100%)`,
-    ...shadows.primaryRaised,
-  },
-  submitBtnDisabled: {
-    backgroundColor: colors.gray300,
-  },
-  submitText: {
-    ...textStyles.h5,
-    color: colors.white,
-  },
-  submitTextDisabled: {
-    color: colors.gray500,
   },
 });
