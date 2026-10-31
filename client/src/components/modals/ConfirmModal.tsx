@@ -1,6 +1,6 @@
 import { useBackdropClose } from "@/hooks/useBackdropClose";
-import MotionPressable from "@/ui/components/MotionPressable";
-import Spinner from "@/ui/components/Spinner";
+import ActionButton from "@/ui/components/ActionButton";
+import type { ActionButtonTone } from "@/ui/components/ActionButton.types";
 import { modalMotion } from "@/ui/effects/modalMotion";
 import { colors } from "@/ui/tokens/colors";
 import { radii } from "@/ui/tokens/radii";
@@ -8,7 +8,7 @@ import { shadows } from "@/ui/tokens/shadows";
 import { spacing } from "@/ui/tokens/spacing";
 import { surfaces } from "@/ui/tokens/surfaces";
 import { textStyles } from "@/ui/tokens/typography";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { Modal, Platform, StyleSheet, Text, View } from "react-native";
 
 export type ConfirmAction = {
@@ -35,7 +35,6 @@ export default function ConfirmModal({
   loading = false,
 }: ConfirmModalProps) {
   const backdrop = useBackdropClose(onRequestClose);
-  const [showSpinner, setShowSpinner] = useState(false);
   const buttonRowRef = useRef<View>(null);
 
   useEffect(() => {
@@ -50,15 +49,6 @@ export default function ConfirmModal({
       previous?.focus?.();
     };
   }, [visible]);
-
-  useEffect(() => {
-    if (!loading) {
-      setShowSpinner(false);
-      return;
-    }
-    const timer = setTimeout(() => setShowSpinner(true), 300);
-    return () => clearTimeout(timer);
-  }, [loading]);
 
   return (
     <Modal
@@ -76,28 +66,21 @@ export default function ConfirmModal({
             <Text style={styles.description}>{description}</Text>
           ) : null}
           <View ref={buttonRowRef} style={styles.buttonRow}>
-            {actions.map((action, index) => (
-              <MotionPressable
-                key={action.label}
-                style={[styles.button, toneStyles[action.tone]]}
-                onPress={action.onPress}
-                disabled={loading}
-              >
-                {showSpinner && index === actions.length - 1 ? (
-                  <Spinner size={16} strokeWidth={2} color={colors.white} />
-                ) : (
-                  <Text
-                    style={
-                      action.tone === "muted"
-                        ? styles.buttonTextDark
-                        : styles.buttonTextLight
-                    }
-                  >
-                    {action.label}
-                  </Text>
-                )}
-              </MotionPressable>
-            ))}
+            {actions.map((action, index) => {
+              const isLast = index === actions.length - 1;
+              return (
+                <ActionButton
+                  key={action.label}
+                  label={action.label}
+                  tone={toneMap[action.tone]}
+                  size="M"
+                  fill
+                  onPress={action.onPress}
+                  loading={loading && isLast}
+                  blocked={loading && !isLast}
+                />
+              );
+            })}
           </View>
         </View>
       </View>
@@ -105,17 +88,11 @@ export default function ConfirmModal({
   );
 }
 
-const toneStyles = StyleSheet.create({
-  muted: {
-    ...surfaces.muted,
-  },
-  danger: {
-    backgroundColor: colors.danger,
-  },
-  primary: {
-    ...surfaces.primary,
-  },
-});
+const toneMap: Record<ConfirmAction["tone"], ActionButtonTone> = {
+  muted: "secondary",
+  danger: "destructive",
+  primary: "primary",
+};
 
 const styles = StyleSheet.create({
   overlay: {
@@ -154,20 +131,5 @@ const styles = StyleSheet.create({
   buttonRow: {
     flexDirection: "row",
     gap: spacing.md,
-  },
-  button: {
-    flex: 1,
-    height: 40,
-    borderRadius: radii.md,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  buttonTextDark: {
-    ...textStyles.h7,
-    color: colors.gray900,
-  },
-  buttonTextLight: {
-    ...textStyles.h7,
-    color: colors.white,
   },
 });

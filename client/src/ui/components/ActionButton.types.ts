@@ -18,6 +18,7 @@ export interface ActionButtonProps {
   size?: ActionButtonSize;
   loading?: boolean;
   disabled?: boolean;
+  blocked?: boolean;
   fill?: boolean;
   icon?: ReactNode;
   style?: StyleProp<ViewStyle>;

@@ -72,6 +72,7 @@ export default function ActionButton({
   size = "L",
   loading = false,
   disabled = false,
+  blocked = false,
   fill = false,
   icon,
   style,
@@ -93,7 +94,7 @@ export default function ActionButton({
   return (
     <ScalePressable
       onPress={onPress}
-      disabled={disabled || loading}
+      disabled={disabled || loading || blocked}
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel ?? label}
       style={[
