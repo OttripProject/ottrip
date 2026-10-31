@@ -18,7 +18,10 @@ import ImagePreviewModal, {
 } from "@/components/modals/ImagePreviewModal";
 import { useMe } from "@/hooks/useMe";
 import type { LocalFile } from "@/types/api";
-import MotionPressable, { MotionIcon } from "@/ui/components/MotionPressable";
+import MotionPressable, {
+  MotionIcon,
+  useMotionHovered,
+} from "@/ui/components/MotionPressable";
 import { Tooltip } from "@/ui/components/Tooltip";
 import type { AttachmentSectionProps } from "@/ui/components/attachmentSection.types";
 import { pendingAiFileKey } from "@/ui/components/attachmentSection.types";
@@ -27,6 +30,7 @@ import { motion } from "@/ui/tokens/motion";
 import { radii } from "@/ui/tokens/radii";
 import { shadows } from "@/ui/tokens/shadows";
 import { spacing } from "@/ui/tokens/spacing";
+import { surfaces } from "@/ui/tokens/surfaces";
 import { textStyles, typography } from "@/ui/tokens/typography";
 import { showMessage, showPickFileType } from "@/utils/crossPlatformAlert";
 import { guestPrompt } from "@/utils/guestPrompt";
@@ -36,7 +40,7 @@ import PdfDocIcon from "../../../assets/attachment_document.svg";
 import CheckMarkIcon from "../../../assets/check_mark.svg";
 import CheckWhiteIcon from "../../../assets/check_white.svg";
 import CloseErrorIcon from "../../../assets/close_error.svg";
-import CloseIcon from "../../../assets/close_sm.svg";
+import TrashIcon from "../../../assets/delete.svg";
 import ErrorTriangleIcon from "../../../assets/error_triangle.svg";
 import AttachmentDocIcon from "../../../assets/mobile_attachment_document.svg";
 import AttachmentImageIcon from "../../../assets/mobile_attachment_image.svg";
@@ -138,6 +142,31 @@ function FileThumbnail({
     return <AttachmentImageIcon width={20} height={20} />;
   }
   return <AttachmentDocIcon width={20} height={20} />;
+}
+
+function AiAnalyzeButtonContent({ isDisabled }: { isDisabled: boolean }) {
+  const hovered = useMotionHovered();
+  const gradColors = isDisabled
+    ? ([colors.gray300, colors.gray300] as const)
+    : hovered
+      ? colors.aiGradHover
+      : colors.aiGrad;
+  const contentColor = isDisabled ? colors.gray500 : colors.white;
+  return (
+    <LinearGradient
+      colors={gradColors}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={[styles.aiAnalyzeGradient, !isDisabled && hovered && shadows.aiGlow]}
+    >
+      <View style={styles.aiAnalyzeButtonInner}>
+        <CheckMarkIcon width={16} height={16} color={contentColor} />
+        <Text style={[styles.aiAnalyzeButtonText, { color: contentColor }]}>
+          AI로 분석
+        </Text>
+      </View>
+    </LinearGradient>
+  );
 }
 
 function stopEventBubble<E extends { stopPropagation?: () => void }>(
@@ -459,20 +488,18 @@ export default function AttachmentSection({
     );
 
     const openControl = onOpen ? (
-      <Pressable
+      <MotionPressable
         onPress={e => {
           stopEventBubble(e);
           onOpen();
         }}
         disabled={isUploading}
-        style={({ pressed }) => [styles.openLinkHit, pressed && styles.pressed]}
+        style={styles.openLinkHit}
         hitSlop={6}
       >
         <Text style={styles.openLinkText}>열기</Text>
-      </Pressable>
-    ) : (
-      <View style={styles.openLinkHit} />
-    );
+      </MotionPressable>
+    ) : null;
 
     const removeControl = onRemove ? (
       <Tooltip text="삭제">
@@ -487,7 +514,7 @@ export default function AttachmentSection({
           accessibilityLabel="삭제"
         >
           <MotionIcon>
-            <CloseIcon width={16} height={16} color={colors.gray700} />
+            <TrashIcon width={16} height={16} color={colors.gray700} />
           </MotionIcon>
         </MotionPressable>
       </Tooltip>
@@ -1205,69 +1232,28 @@ export default function AttachmentSection({
                   AI가 첨부 파일 내용을 정리하고 있어요
                 </Text>
               </View>
-              <Pressable
+              <MotionPressable
                 onPress={onCancelAiAnalyze}
-                style={({ pressed }) => [
-                  styles.aiCancelButton,
-                  pressed && styles.aiCancelButtonPressed,
-                ]}
+                style={styles.aiCancelButton}
                 hitSlop={8}
               >
                 <Text style={styles.aiCancelButtonText}>취소</Text>
-              </Pressable>
+              </MotionPressable>
             </View>
           ) : (
-            <Pressable
+            <MotionPressable
               onPress={() => {
                 if (!aiFileSelection || isAiAnalyzing) return;
                 onAiAnalyzePress?.(aiFileSelection);
               }}
               disabled={!aiFileSelection || disabled || isUploading}
               style={styles.aiAnalyzeButton}
+              pressedStyle={shadows.aiGlowPress}
             >
-              {({
-                pressed,
-                hovered,
-              }: { pressed: boolean; hovered?: boolean }) => {
-                const isDisabled = !aiFileSelection || disabled || isUploading;
-                const gradColors = isDisabled
-                  ? ([colors.gray200, colors.gray200] as const)
-                  : pressed
-                    ? colors.aiGradPress
-                    : hovered
-                      ? colors.aiGradHover
-                      : colors.aiGrad;
-                const contentColor = isDisabled ? colors.gray500 : colors.white;
-                return (
-                  <LinearGradient
-                    colors={gradColors}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                    style={[
-                      styles.aiAnalyzeGradient,
-                      !isDisabled && pressed && shadows.aiGlowPress,
-                      !isDisabled && !pressed && hovered && shadows.aiGlow,
-                    ]}
-                  >
-                    <View style={styles.aiAnalyzeButtonInner}>
-                      <CheckMarkIcon
-                        width={16}
-                        height={16}
-                        color={contentColor}
-                      />
-                      <Text
-                        style={[
-                          styles.aiAnalyzeButtonText,
-                          { color: contentColor },
-                        ]}
-                      >
-                        AI로 분석
-                      </Text>
-                    </View>
-                  </LinearGradient>
-                );
-              }}
-            </Pressable>
+              <AiAnalyzeButtonContent
+                isDisabled={!aiFileSelection || !!disabled || !!isUploading}
+              />
+            </MotionPressable>
           )}
         </View>
       ) : null}
@@ -1738,6 +1724,7 @@ const styles = StyleSheet.create({
   fileRow: {
     flexDirection: "row",
     alignItems: "center",
+    gap: spacing.md,
     backgroundColor: colors.white,
     borderWidth: 1,
     borderColor: colors.gray300,
@@ -1753,9 +1740,7 @@ const styles = StyleSheet.create({
   },
   openLinkHit: {
     flexShrink: 0,
-    marginLeft: 8,
-    marginRight: 4,
-    paddingVertical: 4,
+    paddingVertical: spacing.xs,
     paddingHorizontal: spacing.sm,
     justifyContent: "center",
   },
@@ -1771,7 +1756,6 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     alignItems: "center",
     justifyContent: "center",
-    marginRight: spacing.md,
     flexShrink: 0,
   },
   fileThumbnail: {
@@ -1802,10 +1786,10 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     marginVertical: -spacing.sm,
+    marginRight: -spacing.sm,
     borderRadius: radii.md,
     alignItems: "center",
     justifyContent: "center",
-    marginLeft: spacing.xs,
     flexShrink: 0,
   },
   formatErrorBanner: {
@@ -1848,12 +1832,12 @@ const styles = StyleSheet.create({
   },
   aiAnalyzeButton: {
     width: "100%",
-    borderRadius: radii.mdPlus,
+    borderRadius: radii.md,
   },
   aiAnalyzeGradient: {
     width: "100%",
     height: 48,
-    borderRadius: radii.mdPlus,
+    borderRadius: radii.md,
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: spacing.lg,
@@ -1893,18 +1877,15 @@ const styles = StyleSheet.create({
   aiCancelButton: {
     flexShrink: 0,
     marginLeft: "auto" as unknown as number,
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-    borderRadius: radii.sm,
-    backgroundColor: colors.gray300,
-  },
-  aiCancelButtonPressed: {
-    opacity: 0.7,
+    height: 32,
+    paddingHorizontal: spacing.md,
+    borderRadius: radii.md,
+    ...surfaces.muted,
+    alignItems: "center",
+    justifyContent: "center",
   },
   aiCancelButtonText: {
-    fontFamily: "Pretendard-SemiBold",
-    fontSize: 11,
-    lineHeight: 14,
+    ...textStyles.h8,
     color: colors.gray900,
   },
   previewBackdrop: {
