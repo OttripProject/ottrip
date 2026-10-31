@@ -7,6 +7,7 @@ import { useMe } from "@/hooks/useMe";
 import { useNicknameValidation } from "@/hooks/useNicknameValidation";
 import { type UserProfile, usersApi } from "@/services/users";
 import { Gender } from "@/types/api";
+import ActionButton from "@/ui/components/ActionButton";
 import MotionPressable, { MotionIcon } from "@/ui/components/MotionPressable";
 import Input from "@/ui/components/input/Input";
 import { modalMotion } from "@/ui/effects/modalMotion";
@@ -152,7 +153,6 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
       onClose();
     },
   );
-  const canSave = isValid && hasChanges && !saving;
   const isGuest = !!me?.isGuest;
 
   const handleSignUp = () => {
@@ -255,29 +255,17 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
                 </Text>
 
                 <View style={styles.guestActions}>
-                  <MotionPressable
-                    disabled={deletingGuestData}
-                    style={[
-                      styles.guestLoginButton,
-                      deletingGuestData && styles.guestButtonDisabled,
-                    ]}
+                  <ActionButton
+                    label="로그인"
                     onPress={handleSignUp}
-                  >
-                    <Text style={styles.guestLoginButtonText}>로그인</Text>
-                  </MotionPressable>
-                  <MotionPressable
-                    disabled={deletingGuestData}
-                    style={[
-                      styles.guestDeleteRecordsButton,
-                      deletingGuestData && styles.guestButtonDisabled,
-                    ]}
-                    hoverStyle={shadows.xsHover}
+                    blocked={deletingGuestData}
+                  />
+                  <ActionButton
+                    label="임시 기록 삭제"
+                    tone="danger"
                     onPress={handleDeleteTemporaryRecords}
-                  >
-                    <Text style={styles.guestDeleteRecordsButtonText}>
-                      임시 기록 삭제
-                    </Text>
-                  </MotionPressable>
+                    loading={deletingGuestData}
+                  />
                 </View>
 
                 <View style={styles.divider} />
@@ -487,16 +475,14 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
                       <Text style={styles.deleteText}>계정 삭제</Text>
                     </MotionPressable>
                   </View>
-                  <MotionPressable
-                    disabled={!canSave}
-                    style={[
-                      styles.saveButton,
-                      !canSave && styles.saveButtonDisabled,
-                    ]}
+                  <ActionButton
+                    label="저장"
+                    size="M"
+                    style={styles.saveButton}
                     onPress={save}
-                  >
-                    <Text style={styles.saveButtonText}>저장</Text>
-                  </MotionPressable>
+                    loading={saving}
+                    disabled={!isValid || !hasChanges}
+                  />
                 </View>
               </View>
             </ScrollView>
@@ -544,12 +530,7 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
                   최대한 빠르게 답변드리겠습니다.
                 </Text>
               </View>
-              <MotionPressable
-                style={styles.contactConfirmButton}
-                onPress={() => setContactOpen(false)}
-              >
-                <Text style={styles.contactConfirmButtonText}>확인</Text>
-              </MotionPressable>
+              <ActionButton label="확인" onPress={() => setContactOpen(false)} />
             </View>
           </View>
         </Modal>
@@ -608,33 +589,6 @@ const styles = StyleSheet.create({
   },
   guestActions: {
     gap: spacing.sm,
-  },
-  guestLoginButton: {
-    height: 48,
-    borderRadius: radii.md,
-    ...surfaces.primary,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  guestLoginButtonText: {
-    ...textStyles.h6,
-    color: colors.white,
-  },
-  guestDeleteRecordsButton: {
-    height: 48,
-    borderRadius: radii.md,
-    borderWidth: 1,
-    ...surfaces.outline,
-    borderColor: colors.danger,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  guestDeleteRecordsButtonText: {
-    ...textStyles.h6,
-    color: colors.danger,
-  },
-  guestButtonDisabled: {
-    opacity: 0.5,
   },
 
   // --- 멤버 ---
@@ -805,19 +759,7 @@ const styles = StyleSheet.create({
     color: colors.gray600,
   },
   saveButton: {
-    height: 40,
     paddingHorizontal: spacing["2xl"],
-    borderRadius: radii.md,
-    ...surfaces.primary,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  saveButtonDisabled: {
-    opacity: 0.4,
-  },
-  saveButtonText: {
-    ...textStyles.h7,
-    color: colors.white,
   },
 
   // --- 문의 모달 ---
@@ -867,16 +809,5 @@ const styles = StyleSheet.create({
     ...textStyles.body5,
     color: colors.success,
     marginTop: spacing.sm,
-  },
-  contactConfirmButton: {
-    height: 48,
-    borderRadius: radii.md,
-    ...surfaces.primary,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  contactConfirmButtonText: {
-    ...textStyles.h6,
-    color: colors.white,
   },
 });
