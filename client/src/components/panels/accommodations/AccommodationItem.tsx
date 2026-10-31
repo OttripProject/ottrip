@@ -1238,11 +1238,11 @@ export default function AccommodationItem({
           style={styles.buttonRow}
         >
           <ActionButton
-            label={accommodation?.id ? "삭제" : "취소"}
+            label="취소"
             tone="secondary"
             size="M"
             fill
-            onPress={accommodation?.id ? handleDelete : onCancel}
+            onPress={onCancel}
             blocked={isSaving}
           />
           <ActionButton

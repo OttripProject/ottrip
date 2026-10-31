@@ -7,14 +7,13 @@ import { useFilePicker } from "@/hooks/useFilePicker";
 import type { LocalFile } from "@/types/api";
 import { type Expense, type Attachment, PLAN_ENTITY_KIND } from "@/types/api";
 import { ExpenseCurrency, currencyLabels } from "@/types/expense";
+import ActionButton from "@/ui/components/ActionButton";
 import MotionPressable, { MotionIcon } from "@/ui/components/MotionPressable";
-import Spinner from "@/ui/components/Spinner";
 import { Tooltip } from "@/ui/components/Tooltip";
 import { colors } from "@/ui/tokens/colors";
 import { radii } from "@/ui/tokens/radii";
 import { shadows } from "@/ui/tokens/shadows";
 import { spacing } from "@/ui/tokens/spacing";
-import { surfaces } from "@/ui/tokens/surfaces";
 import { textStyles } from "@/ui/tokens/typography";
 import { attachmentsApi } from "@/services/attachments";
 import { expensesApi } from "@/services/expenses";
@@ -48,17 +47,7 @@ export default function ExpenseCard({
     
     const [editFormData, setEditFormData] = useState<ExpenseFormData | null>(null);
     const [isSaving, setIsSaving] = useState(false);
-    const [showSaveSpinner, setShowSaveSpinner] = useState(false);
     const [showErrors, setShowErrors] = useState(false);
-
-    useEffect(() => {
-      if (!isSaving) {
-        setShowSaveSpinner(false);
-        return;
-      }
-      const timer = setTimeout(() => setShowSaveSpinner(true), 300);
-      return () => clearTimeout(timer);
-    }, [isSaving]);
   
     const { isUploading, uploadFiles } = useAttachmentUpload({
       planId: expense.planId,
@@ -267,31 +256,22 @@ export default function ExpenseCard({
         />
 
         <View style={styles.editActions}>
-          <MotionPressable
-            style={styles.editCancelBtn}
+          <ActionButton
+            label="취소"
+            tone="secondary"
+            size="M"
+            fill
             onPress={requestEditCancel}
-            disabled={isSaving}
-          >
-            <Text style={styles.editCancelText}>취소</Text>
-          </MotionPressable>
-          <MotionPressable
-            style={[styles.editSaveBtn, !isDirty && styles.editSaveBtnDisabled]}
+            blocked={isSaving}
+          />
+          <ActionButton
+            label="저장"
+            size="M"
+            fill
             onPress={handleEditSave}
-            disabled={!isDirty || isSaving}
-          >
-            {showSaveSpinner ? (
-              <Spinner size={16} strokeWidth={2} color={colors.white} />
-            ) : (
-              <Text
-                style={[
-                  styles.editSaveText,
-                  !isDirty && styles.editSaveTextDisabled,
-                ]}
-              >
-                저장
-              </Text>
-            )}
-          </MotionPressable>
+            loading={isSaving}
+            disabled={!isDirty}
+          />
         </View>
         {discardConfirmModal}
       </View>
@@ -443,38 +423,7 @@ expenseDate: {
       },
       editActions: {
         flexDirection: "row", 
-        gap: 8,
+        gap: spacing.md,
         marginTop: 2,
-      },
-      editCancelBtn: {
-        flex: 1, 
-        height: 40,
-        borderRadius: radii.md,
-        ...surfaces.muted,
-        alignItems: "center",
-        justifyContent: "center",
-      },
-      editSaveBtn: {
-        flex: 1,
-        height: 40,
-        borderRadius: radii.md,
-        ...surfaces.primary,
-        alignItems: "center",
-        justifyContent: "center",
-      },
-      editSaveBtnDisabled: {
-        ...surfaces.muted,
-        backgroundImage: "none",
-      } as any,
-      editSaveTextDisabled: {
-        color: colors.gray500,
-      },
-      editCancelText: {
-        ...textStyles.h7,
-        color: colors.gray900,
-      },
-      editSaveText: {
-        ...textStyles.h7,
-        color: colors.white,
       },
 });

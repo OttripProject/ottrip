@@ -1380,11 +1380,11 @@ export default function FlightItem({
           style={styles.buttonRow}
         >
           <ActionButton
-            label={flight ? "삭제" : "취소"}
+            label="취소"
             tone="secondary"
             size="M"
             fill
-            onPress={flight ? handleDelete : onCancel}
+            onPress={onCancel}
             blocked={isSaving}
           />
           <ActionButton

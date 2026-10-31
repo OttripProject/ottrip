@@ -1799,11 +1799,11 @@ export default function ItineraryItem({
       {!readOnly ? (
         <View style={styles.buttonRow}>
           <ActionButton
-            label={itinerary ? "삭제" : "취소"}
+            label="취소"
             tone="secondary"
             size="M"
             fill
-            onPress={itinerary ? handleDelete : onCancel}
+            onPress={onCancel}
             blocked={isSaving}
           />
           <ActionButton
@@ -2071,7 +2071,7 @@ const styles = StyleSheet.create({
   },
   expenseButtonRow: {
     flexDirection: "row",
-    gap: spacing.sm,
+    gap: spacing.md,
   },
   deleteExpenseButton: {
     padding: 4,
