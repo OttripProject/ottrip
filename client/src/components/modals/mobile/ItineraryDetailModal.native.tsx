@@ -36,8 +36,7 @@ import CloseIcon from "../../../../assets/mobile_close.svg";
 import ExpenseIcon from "../../../../assets/mobile_expense.svg";
 import LocationIcon from "../../../../assets/mobile_location.svg";
 import TimeIcon from "../../../../assets/mobile_time.svg";
-import ActionButton from "@/ui/components/ActionButton";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import FloatingFooter from "@/ui/components/FloatingFooter.native";
 
 const MEMO_MAX_LINES = 3;
 
@@ -64,7 +63,6 @@ export default function ItineraryDetailModal({
   onAttractionSelect,
   planStartDate,
 }: ItineraryDetailModalProps) {
-  const insets = useSafeAreaInsets();
   const [previewVisible, setPreviewVisible] = useState(false);
   const [previewImages, setPreviewImages] = useState<ImagePreviewItem[]>([]);
   const [previewInitialIndex, setPreviewInitialIndex] = useState(0);
@@ -394,34 +392,14 @@ export default function ItineraryDetailModal({
       </ScrollView>
 
       {(onEdit || onDelete) && (
-        <View
-          style={[
-            styles.actionFooter,
-            {
-              paddingBottom: Math.max(
-                0,
-                spacing.xl - Math.max(insets.bottom, spacing.sm),
-              ),
-            },
-          ]}
-        >
-          {onDelete && (
-            <ActionButton
-              label="삭제"
-              tone="danger"
-              fill
-              onPress={handleDelete}
-            />
-          )}
-          {onEdit && (
-            <ActionButton
-              label="수정"
-              tone="secondary"
-              fill
-              onPress={handleEdit}
-            />
-          )}
-        </View>
+        <FloatingFooter
+          secondaryLabel={onEdit && onDelete ? "삭제" : undefined}
+          secondaryTone="danger"
+          onSecondaryPress={onEdit && onDelete ? handleDelete : undefined}
+          primaryLabel={onEdit ? "수정" : "삭제"}
+          primaryTone={onEdit ? "secondary" : "danger"}
+          onPrimaryPress={onEdit ? handleEdit : handleDelete}
+        />
       )}
 
       <ImagePreviewModal
@@ -435,12 +413,6 @@ export default function ItineraryDetailModal({
 }
 
 const styles = StyleSheet.create({
-  actionFooter: {
-    flexDirection: "row",
-    gap: spacing.md,
-    paddingTop: spacing.lg,
-    paddingHorizontal: spacing.xl,
-  },
   header: {
     flexDirection: "row",
     alignItems: "flex-start",

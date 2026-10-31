@@ -20,7 +20,6 @@ import {
   Text,
   View,
 } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import MemoIcon from "../../../../assets/memo.svg";
 import AccommodationIcon from "../../../../assets/mobile_accomodation.svg";
 import AttachmentDocumentIcon from "../../../../assets/mobile_attachment_document.svg";
@@ -28,8 +27,7 @@ import AttachmentImageIcon from "../../../../assets/mobile_attachment_image.svg"
 import CloseIcon from "../../../../assets/mobile_close.svg";
 import ExpenseIcon from "../../../../assets/mobile_expense.svg";
 import LocationIcon from "../../../../assets/mobile_location.svg";
-import ActionButton from "@/ui/components/ActionButton";
-import { spacing } from "@/ui/tokens/spacing";
+import FloatingFooter from "@/ui/components/FloatingFooter.native";
 
 interface AccommodationDetailModalProps {
   visible: boolean;
@@ -48,7 +46,6 @@ export default function AccommodationDetailModal({
   onEdit,
   onDelete,
 }: AccommodationDetailModalProps) {
-  const insets = useSafeAreaInsets();
   const [previewVisible, setPreviewVisible] = useState(false);
   const [previewImages, setPreviewImages] = useState<ImagePreviewItem[]>([]);
   const [previewInitialIndex, setPreviewInitialIndex] = useState(0);
@@ -270,34 +267,14 @@ export default function AccommodationDetailModal({
       </ScrollView>
 
       {(onEdit || onDelete) && (
-        <View
-          style={[
-            styles.actionFooter,
-            {
-              paddingBottom: Math.max(
-                0,
-                spacing.xl - Math.max(insets.bottom, spacing.sm),
-              ),
-            },
-          ]}
-        >
-          {onDelete && (
-            <ActionButton
-              label="삭제"
-              tone="danger"
-              fill
-              onPress={handleDelete}
-            />
-          )}
-          {onEdit && (
-            <ActionButton
-              label="수정"
-              tone="secondary"
-              fill
-              onPress={handleEdit}
-            />
-          )}
-        </View>
+        <FloatingFooter
+          secondaryLabel={onEdit && onDelete ? "삭제" : undefined}
+          secondaryTone="danger"
+          onSecondaryPress={onEdit && onDelete ? handleDelete : undefined}
+          primaryLabel={onEdit ? "수정" : "삭제"}
+          primaryTone={onEdit ? "secondary" : "danger"}
+          onPrimaryPress={onEdit ? handleEdit : handleDelete}
+        />
       )}
 
       <ImagePreviewModal
@@ -311,12 +288,6 @@ export default function AccommodationDetailModal({
 }
 
 const styles = StyleSheet.create({
-  actionFooter: {
-    flexDirection: "row",
-    gap: spacing.md,
-    paddingTop: spacing.lg,
-    paddingHorizontal: spacing.xl,
-  },
   scrollView: {
     flex: 1,
   },
