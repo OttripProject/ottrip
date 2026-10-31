@@ -24,6 +24,7 @@ import {
 } from "@/types/expense";
 import BottomSheetModal from "@/ui/components/BottomSheetModal.native";
 import ScalePressable from "@/ui/components/ScalePressable";
+import Spinner from "@/ui/components/Spinner";
 import CalendarModal from "@/ui/components/CalendarModal.native";
 import Input, { filledFocusStyle } from "@/ui/components/input/Input";
 import AttachmentSection from "@/ui/components/attachmentSection.native";
@@ -78,7 +79,6 @@ interface AddExpenseModalProps {
   onExpenseAdd?: (expense: Expense) => void;
   expense?: Expense | null;
   onExpenseUpdate?: (expense: Expense) => void;
-  onExpenseDelete?: () => void;
   pendingAiResult?: { result: DocumentUploadAnalyzeResponse; filename?: string; pendingFiles?: LocalFile[] } | null;
 }
 
@@ -98,7 +98,6 @@ export default function AddExpenseModal({
   onExpenseAdd,
   expense,
   onExpenseUpdate,
-  onExpenseDelete,
   pendingAiResult,
 }: AddExpenseModalProps) {
   const isEdit = !!expense;
@@ -111,6 +110,7 @@ export default function AddExpenseModal({
   );
   const [isLoadingAttachments, setIsLoadingAttachments] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showSaveSpinner, setShowSaveSpinner] = useState(false);
   const scrollRef = useRef<KeyboardAwareScrollViewRef>(null);
   const isSubmittingRef = useRef(false);
   const [isAiAnalyzing, setIsAiAnalyzing] = useState(false);
@@ -326,34 +326,19 @@ export default function AddExpenseModal({
     }
   };
 
-  const handleDelete = () => {
-    if (!expense) return;
-    Alert.alert("비용 삭제", "이 비용을 삭제할까요?", [
-      { text: "취소", style: "cancel" },
-      {
-        text: "삭제",
-        style: "destructive",
-        onPress: async () => {
-          if (isSubmittingRef.current) return;
-          isSubmittingRef.current = true;
-          setIsSubmitting(true);
-          try {
-            await expensesApi.deleteExpense(expense.id);
-            onClose?.({ fromSave: true });
-            onExpenseDelete?.();
-          } catch (error) {
-            if (handleGuestPromptError(error)) return;
-            Alert.alert("알림", "비용 삭제에 실패했습니다");
-          } finally {
-            isSubmittingRef.current = false;
-            setIsSubmitting(false);
-          }
-        },
-      },
-    ]);
-  };
+  const isSaving = isSubmitting || isUploading;
+
+  useEffect(() => {
+    if (!isSaving) {
+      setShowSaveSpinner(false);
+      return;
+    }
+    const timer = setTimeout(() => setShowSaveSpinner(true), 300);
+    return () => clearTimeout(timer);
+  }, [isSaving]);
 
   const handleClose = () => {
+    if (isSaving) return;
     setFormData({
       category: ExpenseCategory.FOOD,
       amount: "",
@@ -545,29 +530,23 @@ export default function AddExpenseModal({
       </KeyboardAwareScrollView>
 
       <View style={styles.footer}>
-        {isEdit && (
-          <ScalePressable
-            style={[
-              styles.deleteButton,
-              (isSubmitting || isUploading) && styles.saveButtonDisabled,
-            ]}
-            onPress={handleDelete}
-            disabled={isSubmitting || isUploading}
-          >
-            <Text style={styles.deleteButtonText}>삭제</Text>
-          </ScalePressable>
-        )}
         <ScalePressable
-          style={[
-            styles.saveButton,
-            (isSubmitting || isUploading) && styles.saveButtonDisabled,
-          ]}
-          onPress={handleSubmit}
-          disabled={isSubmitting || isUploading}
+          style={styles.cancelButton}
+          onPress={handleClose}
+          disabled={isSaving}
         >
-          <Text style={styles.saveButtonText}>
-            {isSubmitting ? "저장 중..." : isEdit ? "수정 완료" : "비용 저장"}
-          </Text>
+          <Text style={styles.cancelButtonText}>취소</Text>
+        </ScalePressable>
+        <ScalePressable
+          style={styles.saveButton}
+          onPress={handleSubmit}
+          disabled={isSaving}
+        >
+          {showSaveSpinner ? (
+            <Spinner size={16} strokeWidth={2} color={colors.white} />
+          ) : (
+            <Text style={styles.saveButtonText}>저장</Text>
+          )}
         </ScalePressable>
       </View>
     </BottomSheetModal>
@@ -686,7 +665,7 @@ const styles = StyleSheet.create({
   },
   footer: {
     flexDirection: "row",
-    gap: spacing.sm,
+    gap: spacing.md,
     paddingHorizontal: spacing.xl,
     paddingTop: spacing.md,
     paddingBottom: spacing.xl,
@@ -694,30 +673,27 @@ const styles = StyleSheet.create({
     borderTopColor: colors.paletteFill,
     backgroundColor: colors.white,
   },
-  deleteButton: {
+  cancelButton: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: spacing.lg,
-    borderRadius: radii.lgPlus,
-    backgroundColor: colors.dangerTint,
+    height: 48,
+    borderRadius: radii.mdPlus,
+    backgroundColor: colors.gray300,
   },
-  deleteButtonText: {
+  cancelButtonText: {
     ...textStyles.h5,
-    color: colors.danger,
+    color: colors.gray900,
   },
   saveButton: {
-    flex: 2,
+    flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: spacing.lg,
-    borderRadius: radii.lgPlus,
+    height: 48,
+    borderRadius: radii.mdPlus,
     backgroundColor: colors.primary,
     experimental_backgroundImage: `linear-gradient(180deg, ${colors.gradientPrimary[0]} 0%, ${colors.gradientPrimary[1]} 100%)`,
     ...shadows.primaryRaised,
-  },
-  saveButtonDisabled: {
-    opacity: 0.5,
   },
   saveButtonText: {
     ...textStyles.h5,

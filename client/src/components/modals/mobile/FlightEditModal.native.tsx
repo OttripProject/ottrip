@@ -57,7 +57,6 @@ interface FlightEditModalProps {
   defaultDate?: string;
   embedded?: boolean;
   onSave?: (flight: FlightRead) => void;
-  onDelete?: (flightId: number) => void;
   pendingAiResult?: { result: DocumentUploadAnalyzeResponse; filename?: string; pendingFiles?: LocalFile[] } | null;
   onRouteMismatchResult?: (result: DocumentUploadAnalyzeResponse, filename?: string, pendingFiles?: LocalFile[]) => void;
 }
@@ -103,7 +102,6 @@ export default function FlightEditModal({
   defaultDate,
   embedded,
   onSave,
-  onDelete,
   pendingAiResult,
   onRouteMismatchResult,
 }: FlightEditModalProps) {
@@ -472,27 +470,6 @@ export default function FlightEditModal({
     }
   };
 
-  const handleDelete = () => {
-    if (!flight) return;
-    Alert.alert("항공 편 삭제", "이 항공 편을 삭제하시겠습니까?", [
-      { text: "취소", style: "cancel" },
-      {
-        text: "삭제",
-        style: "destructive",
-        onPress: async () => {
-          try {
-            await flightsApi.deleteFlight(flight.id);
-            if (onDelete) onDelete(flight.id);
-            Alert.alert("삭제완료", "항공편이 삭제되었습니다");
-            onClose?.({ fromSave: true });
-          } catch (_error) {
-            Alert.alert("알림", "항공 편 삭제에 실패했습니다");
-          }
-        },
-      },
-    ]);
-  };
-
   const handleAmountChange = (text: string) => {
     const digits = text.replace(/[^0-9]/g, "");
     setExpenseAmount(digits.replace(/\B(?=(\d{3})+(?!\d))/g, ","));
@@ -547,7 +524,7 @@ export default function FlightEditModal({
           </Text>
           <Pressable
             style={styles.closeButton}
-            onPress={() => onClose?.()}
+            onPress={() => !(isSubmitting || isUploading) && onClose?.()}
             hitSlop={8}
           >
             <CloseIcon width={24} height={24} />
@@ -1033,12 +1010,12 @@ export default function FlightEditModal({
 
       <FloatingFooter
         primaryLabel={
-          isUploading ? "업로드 중..." : flight ? "수정 완료" : "일정 저장"
+          "저장"
         }
         onPrimaryPress={handleSave}
-        primaryDisabled={isSubmitting || isUploading}
-        secondaryLabel={flight && !embedded ? "삭제" : undefined}
-        onSecondaryPress={handleDelete}
+        primaryLoading={isSubmitting || isUploading}
+        secondaryLabel="취소"
+        onSecondaryPress={() => onClose?.()}
       />
     </>
   );
@@ -1084,7 +1061,10 @@ export default function FlightEditModal({
   }
 
   return (
-    <FullScreenModal visible={visible} onClose={() => onClose?.()}>
+    <FullScreenModal
+      visible={visible}
+      onClose={() => !(isSubmitting || isUploading) && onClose?.()}
+    >
       {content}
       {aiModal}
     </FullScreenModal>

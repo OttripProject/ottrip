@@ -9,6 +9,13 @@ const linearGradient = ([from, to]: readonly [string, string]) =>
       } as ViewStyle)
     : {};
 
+const crossPlatformGradient = ([from, to]: readonly [string, string]) =>
+  (Platform.OS === "web"
+    ? { backgroundImage: `linear-gradient(${from} 0%, ${to} 100%)` }
+    : {
+        experimental_backgroundImage: `linear-gradient(180deg, ${from} 0%, ${to} 100%)`,
+      }) as ViewStyle;
+
 export const surfaces = {
   overlay: {
     backgroundColor: colors.overlayBackground,
@@ -38,6 +45,11 @@ export const surfaces = {
     backgroundColor: colors.primary,
     ...linearGradient(colors.gradientPrimary),
     ...shadows.primary,
+  } as ViewStyle,
+  ink: {
+    backgroundColor: colors.paletteInk,
+    ...crossPlatformGradient(colors.gradientInk),
+    ...shadows.darkRaised,
   } as ViewStyle,
 };
 

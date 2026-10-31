@@ -15,7 +15,7 @@ import CheckMarkIcon from "../../../assets/check_mark.svg";
 import PlusIcon from "../../../assets/mobile_plus.svg";
 import RefreshIcon from "../../../assets/refresh_ai.svg";
 
-const INK_GRADIENT = `linear-gradient(180deg, ${colors.gradientInk[0]} 0%, ${colors.gradientInk[1]} 100%)`;
+const PRIMARY_GRADIENT = `linear-gradient(180deg, ${colors.gradientPrimary[0]} 0%, ${colors.gradientPrimary[1]} 100%)`;
 const AI_GRADIENT = `linear-gradient(135deg, ${colors.aiGrad[0]} 0%, ${colors.aiGrad[1]} 100%)`;
 
 const GROUPS = [
@@ -548,18 +548,17 @@ const styles = StyleSheet.create({
     ...shadows.focusRing,
   },
   saveButton: {
-    height: 40,
+    height: 44,
     paddingHorizontal: spacing.lg,
     borderRadius: radii.md,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: colors.paletteInk,
-    experimental_backgroundImage: INK_GRADIENT,
-    ...shadows.darkRaised,
+    backgroundColor: colors.primary,
+    experimental_backgroundImage: PRIMARY_GRADIENT,
+    ...shadows.primaryRaised,
   },
   saveButtonText: {
     ...textStyles.h6,
-    fontFamily: typography.fontFamily.pretendardBold,
     color: colors.white,
   },
   aiButton: {

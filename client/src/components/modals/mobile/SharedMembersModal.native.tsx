@@ -1,10 +1,11 @@
 import { plansApi } from "@/services/plans";
 import BottomSheetModal from "@/ui/components/BottomSheetModal.native";
 import ScalePressable from "@/ui/components/ScalePressable";
+import Spinner from "@/ui/components/Spinner";
 import { filledFocusStyle } from "@/ui/components/input/Input";
 import { colors } from "@/ui/tokens/colors";
 import { radii } from "@/ui/tokens/radii";
-import { shadows } from "@/ui/tokens/shadows";
+import { surfaces } from "@/ui/tokens/surfaces";
 import { spacing } from "@/ui/tokens/spacing";
 import { textStyles } from "@/ui/tokens/typography";
 import { toUserMessage } from "@/utils/crossPlatformAlert";
@@ -109,7 +110,18 @@ export default function SharedMembersModal({
       ? propSharedMembers
       : fetchedMembers;
 
-  const inviteDisabled = !inviteEmail.trim() || inviteLoading;
+  const isEmailEmpty = !inviteEmail.trim();
+  const inviteDisabled = isEmailEmpty || inviteLoading;
+  const [showInviteSpinner, setShowInviteSpinner] = useState(false);
+
+  useEffect(() => {
+    if (!inviteLoading) {
+      setShowInviteSpinner(false);
+      return;
+    }
+    const timer = setTimeout(() => setShowInviteSpinner(true), 300);
+    return () => clearTimeout(timer);
+  }, [inviteLoading]);
 
   const handleInvite = async () => {
     const result = validateEmail(inviteEmail);
@@ -252,28 +264,30 @@ export default function SharedMembersModal({
               <ScalePressable
                 style={[
                   styles.inviteButton,
-                  inviteDisabled && styles.inviteButtonDisabled,
+                  isEmailEmpty && styles.inviteButtonDisabled,
                 ]}
                 onPress={handleInvite}
                 disabled={inviteDisabled}
               >
-                {inviteLoading ? (
-                  <ActivityIndicator color={colors.paletteFg3} size="small" />
+                {showInviteSpinner ? (
+                  <Spinner size={16} strokeWidth={2} color={colors.white} />
                 ) : (
-                  <ShareAddIcon
-                    width={20}
-                    height={20}
-                    color={inviteDisabled ? colors.paletteFg3 : colors.white}
-                  />
+                  <>
+                    <ShareAddIcon
+                      width={20}
+                      height={20}
+                      color={isEmailEmpty ? colors.gray500 : colors.white}
+                    />
+                    <Text
+                      style={[
+                        styles.inviteButtonText,
+                        isEmailEmpty && styles.inviteButtonTextDisabled,
+                      ]}
+                    >
+                      초대하기
+                    </Text>
+                  </>
                 )}
-                <Text
-                  style={[
-                    styles.inviteButtonText,
-                    inviteDisabled && styles.inviteButtonTextDisabled,
-                  ]}
-                >
-                  초대하기
-                </Text>
               </ScalePressable>
             </View>
           )}
@@ -449,15 +463,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: spacing.sm,
-    height: 56,
+    height: 48,
     marginTop: spacing.md,
-    borderRadius: radii.lgPlus,
-    backgroundColor: colors.primary,
-    experimental_backgroundImage: `linear-gradient(180deg, ${colors.gradientPrimary[0]} 0%, ${colors.gradientPrimary[1]} 100%)`,
-    ...shadows.primaryRaised,
+    borderRadius: radii.mdPlus,
+    ...surfaces.ink,
   },
   inviteButtonDisabled: {
-    backgroundColor: colors.gray200,
+    backgroundColor: colors.gray300,
     experimental_backgroundImage: "none",
     boxShadow: "none",
   },
@@ -466,7 +478,7 @@ const styles = StyleSheet.create({
     color: colors.white,
   },
   inviteButtonTextDisabled: {
-    color: colors.gray600,
+    color: colors.gray500,
   },
   membersTitle: {
     ...textStyles.h5,

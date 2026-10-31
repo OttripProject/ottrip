@@ -108,7 +108,6 @@ interface ItineraryEditModalProps {
   prefill?: ItineraryEditPrefill;
   embedded?: boolean;
   onSave?: (itinerary: Itinerary) => void;
-  onDelete?: (itineraryId: number) => void;
   pendingAiResult?: { result: DocumentUploadAnalyzeResponse; filename?: string; pendingFiles?: LocalFile[] } | null;
   onRouteMismatchResult?: (result: DocumentUploadAnalyzeResponse, filename?: string, pendingFiles?: LocalFile[]) => void;
   showRecommendToast?: boolean;
@@ -134,7 +133,6 @@ export default function ItineraryEditModal({
   prefill,
   embedded,
   onSave,
-  onDelete,
   pendingAiResult,
   onRouteMismatchResult,
   showRecommendToast,
@@ -591,30 +589,6 @@ export default function ItineraryEditModal({
     }
   };
 
-  const handleDelete = () => {
-    if (!itinerary) return;
-
-    Alert.alert("일정 삭제", "이 일정을 삭제하시겠습니까?", [
-      { text: "취소", style: "cancel" },
-      {
-        text: "삭제",
-        style: "destructive",
-        onPress: async () => {
-          try {
-            await itinerariesApi.deleteItinerary(itinerary.id);
-            if (onDelete) {
-              onDelete(itinerary.id);
-            }
-            Alert.alert("삭제완료", "일정이 삭제되었습니다");
-            onClose?.({ fromSave: true });
-          } catch (_error) {
-            Alert.alert("알림", "일정 삭제에 실패했습니다");
-          }
-        },
-      },
-    ]);
-  };
-
   const formatDate = (dateStr: string) => {
     return dayjs(dateStr).format("YYYY.MM.DD");
   };
@@ -642,7 +616,7 @@ export default function ItineraryEditModal({
           </Text>
           <Pressable
             style={styles.closeButton}
-            onPress={() => onClose?.()}
+            onPress={() => !(isSubmitting || isUploading) && onClose?.()}
             hitSlop={8}
           >
             <CloseIcon width={24} height={24} />
@@ -1043,12 +1017,12 @@ export default function ItineraryEditModal({
 
       <FloatingFooter
         primaryLabel={
-          isUploading ? "업로드 중..." : itinerary ? "수정 완료" : "일정 저장"
+          "저장"
         }
         onPrimaryPress={handleSave}
-        primaryDisabled={isSubmitting || isUploading}
-        secondaryLabel={itinerary && !embedded ? "삭제" : undefined}
-        onSecondaryPress={itinerary ? handleDelete : undefined}
+        primaryLoading={isSubmitting || isUploading}
+        secondaryLabel="취소"
+        onSecondaryPress={() => onClose?.()}
       />
     </>
   );
@@ -1085,7 +1059,10 @@ export default function ItineraryEditModal({
   }
 
   return (
-    <FullScreenModal visible={visible} onClose={() => onClose?.()}>
+    <FullScreenModal
+      visible={visible}
+      onClose={() => !(isSubmitting || isUploading) && onClose?.()}
+    >
       {content}
       {aiModal}
       {showRecommendToast && (

@@ -344,10 +344,6 @@ export default function TravelInfoModal({
           await onRefreshExpenses?.();
           await onRefreshPlan?.();
         }}
-        onExpenseDelete={async () => {
-          await onRefreshExpenses?.();
-          await onRefreshPlan?.();
-        }}
       />
 
       <SharedMembersModal

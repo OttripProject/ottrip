@@ -4,6 +4,7 @@ import TripCalendarModal from "@/components/trip/TripCalendarModal";
 import TripDurationBanner from "@/components/trip/TripDurationBanner";
 import TripSegmentList from "@/components/trip/TripSegmentList";
 import BottomSheetModal from "@/ui/components/BottomSheetModal.native";
+import Spinner from "@/ui/components/Spinner";
 import Input from "@/ui/components/input/Input";
 import { colors } from "@/ui/tokens/colors";
 import { radii } from "@/ui/tokens/radii";
@@ -56,6 +57,20 @@ export default function AddPlanModal({
   } = useTripForm();
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showSubmitSpinner, setShowSubmitSpinner] = useState(false);
+
+  useEffect(() => {
+    if (!isSubmitting) {
+      setShowSubmitSpinner(false);
+      return;
+    }
+    const timer = setTimeout(() => setShowSubmitSpinner(true), 300);
+    return () => clearTimeout(timer);
+  }, [isSubmitting]);
+
+  const handleClose = () => {
+    if (!isSubmitting) onClose();
+  };
   const [calendarOpen, setCalendarOpen] = useState(false);
   const prevSelectionModeRef = useRef(selectionMode);
 
@@ -133,7 +148,7 @@ export default function AddPlanModal({
 
   return (
     <>
-      <BottomSheetModal visible={visible} onClose={onClose} height={0.94}>
+      <BottomSheetModal visible={visible} onClose={handleClose} height={0.94}>
         <View style={styles.container}>
           <View style={styles.header}>
             <View style={styles.headerText}>
@@ -147,11 +162,11 @@ export default function AddPlanModal({
               )}
             </View>
             <Pressable
-              onPress={onClose}
+              onPress={handleClose}
               style={styles.closeButton}
               accessibilityLabel="닫기"
             >
-              <CloseIcon width={24} height={24} color={colors.gray600} />
+              <CloseIcon width={24} height={24} color={colors.gray700} />
             </Pressable>
           </View>
 
@@ -199,27 +214,35 @@ export default function AddPlanModal({
           </ScrollView>
 
           <View style={styles.footer}>
-            <Pressable style={styles.cancelBtn} onPress={onClose}>
+            <Pressable
+              style={styles.cancelBtn}
+              onPress={handleClose}
+              disabled={isSubmitting}
+            >
               <Text style={styles.cancelText}>취소</Text>
             </Pressable>
             <Pressable
               style={[
                 styles.submitBtn,
-                isSubmitDisabled || isSubmitting
+                isSubmitDisabled
                   ? styles.submitBtnDisabled
                   : styles.submitBtnEnabled,
               ]}
               onPress={handleSubmit}
               disabled={isSubmitDisabled || isSubmitting}
             >
-              <Text
-                style={[
-                  styles.submitText,
-                  (isSubmitDisabled || isSubmitting) && styles.submitTextDisabled,
-                ]}
-              >
-                {planToEdit ? "수정" : "여행 저장"}
-              </Text>
+              {showSubmitSpinner ? (
+                <Spinner size={16} strokeWidth={2} color={colors.white} />
+              ) : (
+                <Text
+                  style={[
+                    styles.submitText,
+                    isSubmitDisabled && styles.submitTextDisabled,
+                  ]}
+                >
+                  저장
+                </Text>
+              )}
             </Pressable>
           </View>
           <TripCalendarModal
@@ -339,23 +362,21 @@ const styles = StyleSheet.create({
     borderTopColor: colors.gray200,
   },
   cancelBtn: {
-    width: "38%",
-    height: 56,
-    borderRadius: radii.lgPlus,
-    borderWidth: 1,
-    borderColor: colors.paletteLine,
+    flex: 1,
+    height: 48,
+    borderRadius: radii.mdPlus,
+    backgroundColor: colors.gray300,
     alignItems: "center",
     justifyContent: "center",
-    ...shadows.xs,
   },
   cancelText: {
     ...textStyles.h5,
-    color: colors.paletteInk,
+    color: colors.gray900,
   },
   submitBtn: {
     flex: 1,
-    height: 56,
-    borderRadius: radii.lgPlus,
+    height: 48,
+    borderRadius: radii.mdPlus,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -365,7 +386,7 @@ const styles = StyleSheet.create({
     ...shadows.primaryRaised,
   },
   submitBtnDisabled: {
-    backgroundColor: colors.paletteFill2,
+    backgroundColor: colors.gray300,
   },
   submitText: {
     ...textStyles.h5,

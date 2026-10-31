@@ -55,7 +55,6 @@ interface AccommodationEditModalProps {
   defaultCity?: string;
   embedded?: boolean;
   onSave?: (accommodation: Accommodation) => void;
-  onDelete?: (accommodationId: number) => void;
   pendingAiResult?: { result: DocumentUploadAnalyzeResponse; filename?: string; pendingFiles?: LocalFile[] } | null;
   onRouteMismatchResult?: (result: DocumentUploadAnalyzeResponse, filename?: string, pendingFiles?: LocalFile[]) => void;
 }
@@ -94,7 +93,6 @@ export default function AccommodationEditModal({
   defaultCity,
   embedded,
   onSave,
-  onDelete,
   pendingAiResult,
   onRouteMismatchResult,
 }: AccommodationEditModalProps) {
@@ -435,28 +433,6 @@ export default function AccommodationEditModal({
     }
   };
 
-  const handleDelete = () => {
-    if (!accommodation) return;
-
-    Alert.alert("숙소 삭제", "이 숙소를 삭제하시겠습니까?", [
-      { text: "취소", style: "cancel" },
-      {
-        text: "삭제",
-        style: "destructive",
-        onPress: async () => {
-          try {
-            await accommodationsApi.deleteAccommodation(accommodation.id);
-            if (onDelete) onDelete(accommodation.id);
-            Alert.alert("삭제완료", "숙소가 삭제되었습니다");
-            onClose?.({ fromSave: true });
-          } catch (_error) {
-            Alert.alert("알림", "숙소 삭제에 실패했습니다");
-          }
-        },
-      },
-    ]);
-  };
-
   const handleAmountChange = (text: string) => {
     const digits = text.replace(/[^0-9]/g, "");
     const formatted = digits.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
@@ -472,7 +448,7 @@ export default function AccommodationEditModal({
           </Text>
           <Pressable
             style={styles.closeButton}
-            onPress={() => onClose?.()}
+            onPress={() => !(isSubmitting || isUploading) && onClose?.()}
             hitSlop={8}
           >
             <CloseIcon width={24} height={24} />
@@ -774,16 +750,12 @@ export default function AccommodationEditModal({
 
       <FloatingFooter
         primaryLabel={
-          isUploading
-            ? "업로드 중..."
-            : accommodation
-              ? "수정 완료"
-              : "일정 저장"
+          "저장"
         }
         onPrimaryPress={handleSave}
-        primaryDisabled={isSubmitting || isUploading}
-        secondaryLabel={accommodation && !embedded ? "삭제" : undefined}
-        onSecondaryPress={handleDelete}
+        primaryLoading={isSubmitting || isUploading}
+        secondaryLabel="취소"
+        onSecondaryPress={() => onClose?.()}
       />
     </>
   );
@@ -842,7 +814,10 @@ export default function AccommodationEditModal({
   }
 
   return (
-    <FullScreenModal visible={visible} onClose={() => onClose?.()}>
+    <FullScreenModal
+      visible={visible}
+      onClose={() => !(isSubmitting || isUploading) && onClose?.()}
+    >
       {content}
       {aiModal}
     </FullScreenModal>

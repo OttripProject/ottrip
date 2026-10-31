@@ -7,7 +7,11 @@ import { Gender } from "@/types/api";
 import Card from "@/ui/components/Card";
 import ModalBackdrop from "@/ui/components/ModalBackdrop";
 import Input from "@/ui/components/input/Input";
+import Spinner from "@/ui/components/Spinner";
 import { colors } from "@/ui/tokens/colors";
+import { radii } from "@/ui/tokens/radii";
+import { spacing } from "@/ui/tokens/spacing";
+import { shadows } from "@/ui/tokens/shadows";
 import { textStyles } from "@/ui/tokens/typography";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
@@ -39,6 +43,8 @@ import FilesIcon from "../../../../assets/memo.svg";
 import CloseIcon from "../../../../assets/mobile_close.svg";
 import QnaIcon from "../../../../assets/qna.svg";
 
+const PRIMARY_GRADIENT = `linear-gradient(180deg, ${colors.gradientPrimary[0]} 0%, ${colors.gradientPrimary[1]} 100%)`;
+
 interface ProfileModalProps {
   visible: boolean;
   onClose: () => void;
@@ -49,6 +55,16 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
   const navigation = useNavigation<any>();
   const { logout } = useAuth();
   const [deletingGuestData, setDeletingGuestData] = useState(false);
+  const [showDeletingSpinner, setShowDeletingSpinner] = useState(false);
+
+  useEffect(() => {
+    if (!deletingGuestData) {
+      setShowDeletingSpinner(false);
+      return;
+    }
+    const timer = setTimeout(() => setShowDeletingSpinner(true), 300);
+    return () => clearTimeout(timer);
+  }, [deletingGuestData]);
   const queryClient = useQueryClient();
   const [me, setMe] = useState<UserProfile | null>(null);
   const [nickname, setNickname] = useState("");
@@ -88,16 +104,34 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
     onNicknameChange(text);
   };
 
+  const [saving, setSaving] = useState(false);
+  const [showSaveSpinner, setShowSaveSpinner] = useState(false);
+
+  useEffect(() => {
+    if (!saving) {
+      setShowSaveSpinner(false);
+      return;
+    }
+    const timer = setTimeout(() => setShowSaveSpinner(true), 300);
+    return () => clearTimeout(timer);
+  }, [saving]);
+
   const save = async () => {
+    if (saving) return;
     if (!isValid) {
       Alert.alert("알림", "닉네임을 확인해주세요");
       return;
     }
 
-    const updated = await usersApi.updateMe({ nickname, gender });
-    setMe(updated);
-    queryClient.setQueryData(["me"], updated);
-    onClose();
+    setSaving(true);
+    try {
+      const updated = await usersApi.updateMe({ nickname, gender });
+      setMe(updated);
+      queryClient.setQueryData(["me"], updated);
+      onClose();
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleDeleteAccount = () => {
@@ -232,7 +266,7 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
                       <CloseIcon
                         width={24}
                         height={24}
-                        color={colors.gray500}
+                        color={colors.gray700}
                       />
                     </Pressable>
                   </View>
@@ -247,25 +281,23 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
                       </Text>
                       <Pressable
                         disabled={deletingGuestData}
-                        style={[
-                          styles.guestLoginButton,
-                          deletingGuestData && styles.guestButtonDisabled,
-                        ]}
+                        style={styles.guestLoginButton}
                         onPress={handleSignUp}
                       >
                         <Text style={styles.guestLoginButtonText}>로그인</Text>
                       </Pressable>
                       <Pressable
                         disabled={deletingGuestData}
-                        style={[
-                          styles.guestDeleteRecordsButton,
-                          deletingGuestData && styles.guestButtonDisabled,
-                        ]}
+                        style={styles.guestDeleteRecordsButton}
                         onPress={handleDeleteTemporaryRecords}
                       >
-                        <Text style={styles.guestDeleteRecordsButtonText}>
-                          임시 기록 삭제
-                        </Text>
+                        {showDeletingSpinner ? (
+                          <Spinner size={16} strokeWidth={2} color={colors.danger} />
+                        ) : (
+                          <Text style={styles.guestDeleteRecordsButtonText}>
+                            임시 기록 삭제
+                          </Text>
+                        )}
                       </Pressable>
                       <View style={styles.guestInquirySection}>
                         <Text style={styles.guestInquiryTitle}>문의하기</Text>
@@ -284,8 +316,8 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
                               </Text>
                             ) : (
                               <Pressable
-                                hitSlop={8}
                                 style={styles.guestInquiryCopyIcon}
+                                accessibilityLabel="복사"
                                 onPress={async () => {
                                   try {
                                     await copyContactEmail();
@@ -446,14 +478,25 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
                           </Pressable>
                         </View>
                         <Pressable
-                          disabled={!canSave}
+                          disabled={!canSave || saving}
                           style={[
                             styles.saveButton,
                             !canSave && styles.saveButtonDisabled,
                           ]}
                           onPress={save}
                         >
-                          <Text style={styles.saveButtonText}>저장</Text>
+                          {showSaveSpinner ? (
+                            <Spinner size={16} strokeWidth={2} color={colors.white} />
+                          ) : (
+                            <Text
+                              style={[
+                                styles.saveButtonText,
+                                !canSave && styles.saveButtonTextDisabled,
+                              ]}
+                            >
+                              저장
+                            </Text>
+                          )}
                         </Pressable>
                       </View>
                     </>
@@ -471,8 +514,9 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
                 <Pressable
                   style={styles.contactModalCloseButton}
                   onPress={() => setContactOpen(false)}
+                  accessibilityLabel="닫기"
                 >
-                  <Ionicons name="close" size={24} color={colors.black} />
+                  <Ionicons name="close" size={24} color={colors.gray700} />
                 </Pressable>
 
                 <Text style={styles.contactModalTitle}>문의하기</Text>
@@ -490,6 +534,7 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
                     ) : (
                       <Pressable
                         style={styles.contactModalCopyIcon}
+                        accessibilityLabel="복사"
                         onPress={async () => {
                           try {
                             await copyContactEmail();
@@ -632,9 +677,11 @@ const styles = StyleSheet.create({
   },
   guestLoginButton: {
     width: "100%",
-    height: 56,
-    backgroundColor: colors.black,
-    borderRadius: 12,
+    height: 48,
+    backgroundColor: colors.primary,
+    experimental_backgroundImage: PRIMARY_GRADIENT,
+    ...shadows.primaryRaised,
+    borderRadius: radii.mdPlus,
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 12,
@@ -645,11 +692,9 @@ const styles = StyleSheet.create({
   },
   guestDeleteRecordsButton: {
     width: "100%",
-    height: 56,
-    backgroundColor: colors.white,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: colors.danger,
+    height: 48,
+    backgroundColor: colors.dangerTint,
+    borderRadius: radii.mdPlus,
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 32,
@@ -657,9 +702,6 @@ const styles = StyleSheet.create({
   guestDeleteRecordsButtonText: {
     ...textStyles.h5,
     color: colors.danger,
-  },
-  guestButtonDisabled: {
-    opacity: 0.5,
   },
   guestInquirySection: {
     width: "100%",
@@ -694,8 +736,11 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   guestInquiryCopyIcon: {
-    width: 16,
-    height: 16,
+    width: 32,
+    height: 32,
+    margin: -spacing.sm,
+    alignItems: "center",
+    justifyContent: "center",
   },
   guestInquiryCopiedText: {
     ...textStyles.body6,
@@ -824,23 +869,30 @@ const styles = StyleSheet.create({
   },
   footerLinkGray: {
     ...textStyles.h7,
-    color: colors.gray600,
+    color: colors.gray700,
   },
   saveButton: {
     backgroundColor: colors.primary,
+    experimental_backgroundImage: PRIMARY_GRADIENT,
+    ...shadows.primaryRaised,
+    height: 44,
     paddingHorizontal: 42,
-    paddingVertical: 14,
-    borderRadius: 12,
+    borderRadius: radii.md,
     alignItems: "center",
     justifyContent: "center",
     marginLeft: "auto",
   },
   saveButtonDisabled: {
     backgroundColor: colors.gray300,
+    experimental_backgroundImage: "none",
+    boxShadow: "none",
   },
   saveButtonText: {
     ...textStyles.h6,
     color: colors.white,
+  },
+  saveButtonTextDisabled: {
+    color: colors.gray500,
   },
   contactModalOverlay: {
     flex: 1,
@@ -858,10 +910,12 @@ const styles = StyleSheet.create({
   },
   contactModalCloseButton: {
     position: "absolute",
-    right: 20,
-    top: 20,
-    width: 24,
-    height: 24,
+    right: spacing.lg,
+    top: spacing.lg,
+    width: 32,
+    height: 32,
+    alignItems: "center",
+    justifyContent: "center",
     zIndex: 1,
   },
   contactModalTitle: {
@@ -899,8 +953,11 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   contactModalCopyIcon: {
-    width: 16,
-    height: 16,
+    width: 32,
+    height: 32,
+    margin: -spacing.sm,
+    alignItems: "center",
+    justifyContent: "center",
   },
   contactModalCopiedText: {
     ...textStyles.body6,
@@ -913,9 +970,11 @@ const styles = StyleSheet.create({
   },
   contactModalConfirmButton: {
     width: "100%",
-    height: 56,
-    backgroundColor: colors.black,
-    borderRadius: 10,
+    height: 48,
+    backgroundColor: colors.primary,
+    experimental_backgroundImage: PRIMARY_GRADIENT,
+    ...shadows.primaryRaised,
+    borderRadius: radii.mdPlus,
     alignItems: "center",
     justifyContent: "center",
   },
