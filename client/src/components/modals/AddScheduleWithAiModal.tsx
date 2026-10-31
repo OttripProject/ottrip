@@ -15,6 +15,7 @@ import {
   ExpenseCurrency,
   PLAN_ENTITY_KIND,
 } from "@/types/api";
+import ActionButton from "@/ui/components/ActionButton";
 import MotionPressable, { MotionIcon } from "@/ui/components/MotionPressable";
 import Input from "@/ui/components/input/Input";
 import { modalMotion } from "@/ui/effects/modalMotion";
@@ -752,12 +753,11 @@ export default function AddScheduleWithAiModal({
               </ScrollView>
 
               <View style={styles.resultFooter}>
-                <Pressable
-                  style={({ pressed }) => [
-                    styles.resultFooterBtn,
-                    styles.resultFooterBtnCancel,
-                    pressed && { opacity: 0.75 },
-                  ]}
+                <ActionButton
+                  label={isResultEditMode ? "취소" : "직접 수정"}
+                  tone="secondary"
+                  size="M"
+                  fill
                   onPress={() => {
                     if (isResultEditMode) {
                       setIsResultEditMode(false);
@@ -765,19 +765,12 @@ export default function AddScheduleWithAiModal({
                       setIsResultEditMode(true);
                     }
                   }}
-                >
-                  <Text style={styles.resultFooterBtnCancelText}>
-                    {isResultEditMode ? "취소" : "직접 수정"}
-                  </Text>
-                </Pressable>
-                <Pressable
-                  style={({ pressed }) => [
-                    styles.resultFooterBtn,
-                    styles.resultFooterBtnApply,
-                    pressed && { opacity: 0.85 },
-                    loading && styles.resultFooterBtnDisabled,
-                  ]}
-                  disabled={loading}
+                />
+                <ActionButton
+                  label={isResultEditMode ? "저장" : "이대로 추가"}
+                  size="M"
+                  fill
+                  blocked={loading}
                   onPress={() => {
                     const draft = isResultEditMode
                       ? (resultDraftEditorRef.current?.buildDraft() ??
@@ -787,11 +780,7 @@ export default function AddScheduleWithAiModal({
                     setResultView(null);
                     handleAnalyzeApply(draft);
                   }}
-                >
-                  <Text style={styles.resultFooterBtnApplyText}>
-                    {isResultEditMode ? "저장" : "이대로 추가"}
-                  </Text>
-                </Pressable>
+                />
               </View>
             </>
           ) : (
@@ -1187,38 +1176,12 @@ const styles = StyleSheet.create({
   resultFooter: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-    paddingTop: 12,
-    paddingHorizontal: 22,
-    paddingBottom: 18,
+    gap: spacing.md,
+    paddingTop: spacing.md,
+    paddingHorizontal: spacing.xl,
+    paddingBottom: spacing.lg,
     borderTopWidth: 1,
     borderTopColor: colors.gray200,
-  },
-  resultFooterBtn: {
-    height: 42,
-    borderRadius: 10,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 20,
-  },
-  resultFooterBtnCancel: {
-    flex: 1,
-    backgroundColor: colors.gray200,
-  },
-  resultFooterBtnDisabled: {
-    opacity: 0.6,
-  },
-  resultFooterBtnApply: {
-    flex: 1.4,
-    backgroundColor: colors.primary,
-  },
-  resultFooterBtnCancelText: {
-    ...textStyles.h7,
-    color: colors.gray900,
-  },
-  resultFooterBtnApplyText: {
-    ...textStyles.h7,
-    color: colors.white,
   },
   header: {
     flexDirection: "row",

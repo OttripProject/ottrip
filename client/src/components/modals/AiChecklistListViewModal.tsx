@@ -1,5 +1,6 @@
 import { useBackdropClose } from "@/hooks/useBackdropClose";
 import { useMe } from "@/hooks/useMe";
+import ActionButton from "@/ui/components/ActionButton";
 import MotionPressable, {
   MotionIcon,
   useMotionHovered,
@@ -470,22 +471,17 @@ export default function AiChecklistListViewModal({
                               </View>
                             </View>
                             <View style={styles.addingItemButtons}>
-                              <MotionPressable
-                                style={styles.addingItemCancelButton}
+                              <ActionButton
+                                label="취소"
+                                tone="secondary"
+                                size="S"
                                 onPress={handleCancelAdding}
-                              >
-                                <Text style={styles.addingItemCancelText}>
-                                  취소
-                                </Text>
-                              </MotionPressable>
-                              <MotionPressable
-                                style={styles.addingItemSaveButton}
+                              />
+                              <ActionButton
+                                label="추가"
+                                size="S"
                                 onPress={handleSaveAdding}
-                              >
-                                <Text style={styles.addingItemSaveText}>
-                                  추가
-                                </Text>
-                              </MotionPressable>
+                              />
                             </View>
                           </View>
                         )}
@@ -702,30 +698,6 @@ const styles = StyleSheet.create({
   addingItemButtons: {
     flexDirection: "row",
     gap: spacing.sm,
-  },
-  addingItemCancelButton: {
-    height: 32,
-    paddingHorizontal: spacing.md,
-    borderRadius: radii.md,
-    ...surfaces.muted,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  addingItemCancelText: {
-    ...textStyles.h8,
-    color: colors.gray900,
-  },
-  addingItemSaveButton: {
-    height: 32,
-    paddingHorizontal: spacing.md,
-    borderRadius: radii.md,
-    ...surfaces.primary,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  addingItemSaveText: {
-    ...textStyles.h8,
-    color: colors.white,
   },
   checkboxContainer: {
     width: 16,
