@@ -35,8 +35,8 @@ const itineraryCategoryToExpenseCategory: Partial<Record<ItineraryCategory, Expe
   [ItineraryCategory.SHOPPING]: ExpenseCategory.SHOPPING,
   [ItineraryCategory.ETC]: ExpenseCategory.ETC,
 };
+import ActionButton from "@/ui/components/ActionButton";
 import MotionPressable, { MotionIcon } from "@/ui/components/MotionPressable";
-import Spinner from "@/ui/components/Spinner";
 import { Tooltip } from "@/ui/components/Tooltip";
 import CurrencyToggle from "@/ui/components/CurrencyToggle";
 import PlacesSearchInput from "@/ui/components/PlacesSearchInput";
@@ -51,7 +51,6 @@ import {
   CountryPicker,
   TimePicker,
 } from "@/ui/components/pickers";
-import { surfaces } from "@/ui/tokens/surfaces";
 import { colors } from "@/ui/tokens/colors";
 import { radii } from "@/ui/tokens/radii";
 import { spacing } from "@/ui/tokens/spacing";
@@ -237,17 +236,7 @@ export default function ItineraryItem({
   const [showExpenseForm, setShowExpenseForm] = useState(false);
   const [showExpenseErrors, setShowExpenseErrors] = useState(false);
   const [isExpenseSubmitting, setIsExpenseSubmitting] = useState(false);
-  const [showExpenseSpinner, setShowExpenseSpinner] = useState(false);
   const isExpenseSubmittingRef = useRef(false);
-
-  useEffect(() => {
-    if (!isExpenseSubmitting) {
-      setShowExpenseSpinner(false);
-      return;
-    }
-    const timer = setTimeout(() => setShowExpenseSpinner(true), 300);
-    return () => clearTimeout(timer);
-  }, [isExpenseSubmitting]);
   const [expenseOpen, setExpenseOpen] = useState(false);
   const [editingExpense, setEditingExpense] = useState<any | null>(null);
   const [expenseForm, setExpenseForm] = useState({
@@ -323,7 +312,6 @@ export default function ItineraryItem({
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isSubmittingRef = useRef(false);
-  const [showSaveSpinner, setShowSaveSpinner] = useState(false);
 
   useEffect(() => {
     if (itinerary?.id) {
@@ -1158,15 +1146,6 @@ export default function ItineraryItem({
 
   const isSaving = isSubmitting || isUploading;
 
-  useEffect(() => {
-    if (!isSaving) {
-      setShowSaveSpinner(false);
-      return;
-    }
-    const timer = setTimeout(() => setShowSaveSpinner(true), 300);
-    return () => clearTimeout(timer);
-  }, [isSaving]);
-
   return (
     <View style={styles.wrapper}>
       <ScrollView
@@ -1733,9 +1712,12 @@ export default function ItineraryItem({
                   </View>
 
                   <View style={styles.expenseButtonRow}>
-                    <MotionPressable
-                      style={styles.expenseCancelButton}
-                      disabled={isExpenseSubmitting}
+                    <ActionButton
+                      label="취소"
+                      tone="secondary"
+                      size="M"
+                      fill
+                      blocked={isExpenseSubmitting}
                       onPress={() => {
                         setEditingExpense(null);
                         setExpenseForm({
@@ -1746,21 +1728,14 @@ export default function ItineraryItem({
                         });
                         setShowExpenseForm(false);
                       }}
-                    >
-                      <Text style={styles.expenseCancelButtonText}>취소</Text>
-                    </MotionPressable>
-                    <MotionPressable
-                      style={styles.expenseSubmitButton}
+                    />
+                    <ActionButton
+                      label={editingExpense ? "수정" : "추가"}
+                      size="M"
+                      fill
                       onPress={handleExpenseSubmit}
-                    >
-                      {showExpenseSpinner ? (
-                        <Spinner size={16} strokeWidth={2} color={colors.white} />
-                      ) : (
-                        <Text style={styles.expenseSubmitButtonText}>
-                          {editingExpense ? "수정" : "추가"}
-                        </Text>
-                      )}
-                    </MotionPressable>
+                      loading={isExpenseSubmitting}
+                    />
                   </View>
                 </View>
               )}
@@ -1823,48 +1798,39 @@ export default function ItineraryItem({
       </ScrollView>
       {!readOnly ? (
         <View style={styles.buttonRow}>
-          <MotionPressable
-            style={styles.deleteButton}
+          <ActionButton
+            label={itinerary ? "삭제" : "취소"}
+            tone="secondary"
+            size="M"
+            fill
             onPress={itinerary ? handleDelete : onCancel}
-            disabled={isSubmitting}
-          >
-            <Text style={styles.deleteButtonText}>
-              {itinerary ? "삭제" : "취소"}
-            </Text>
-          </MotionPressable>
-          <MotionPressable
-            style={styles.saveButton}
+            blocked={isSaving}
+          />
+          <ActionButton
+            label="저장"
+            size="M"
+            fill
             onPress={handleSave}
-            disabled={isSubmitting || isUploading}
-          >
-            {showSaveSpinner ? (
-              <Spinner size={16} strokeWidth={2} color={colors.white} />
-            ) : (
-              <Text style={styles.saveButtonText}>저장</Text>
-            )}
-          </MotionPressable>
+            loading={isSaving}
+          />
         </View>
       ) : (
         <View style={styles.buttonRow}>
-          <MotionPressable
-            style={[styles.deleteButton, styles.readOnlyDeleteButton]}
+          <ActionButton
+            label="삭제"
+            tone="danger"
+            size="M"
+            fill
             onPress={handleDelete}
-            disabled={isSubmitting}
-          >
-            <Text
-              style={[styles.deleteButtonText, styles.readOnlyDeleteButtonText]}
-            >
-              삭제
-            </Text>
-          </MotionPressable>
-          <MotionPressable
-            style={[styles.saveButton, styles.footerEditButton]}
+            blocked={isSubmitting}
+          />
+          <ActionButton
+            label="수정"
+            tone="secondary"
+            size="M"
+            fill
             onPress={onEdit}
-          >
-            <Text style={[styles.saveButtonText, styles.footerEditButtonText]}>
-              수정
-            </Text>
-          </MotionPressable>
+          />
         </View>
       )}
       <AiDocumentAnalyzeModal
@@ -1974,37 +1940,6 @@ const styles = StyleSheet.create({
     paddingTop: spacing.lg,
     paddingHorizontal: spacing.xl,
     paddingBottom: spacing.xl,
-  },
-  deleteButton: {
-    ...surfaces.muted,
-    flex: 1,
-    height: 40,
-    borderRadius: radii.md,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  deleteButtonText: {
-    ...textStyles.h7,
-    color: colors.gray900,
-  },
-  saveButton: {
-    ...surfaces.primary,
-    flex: 1,
-    height: 40,
-    borderRadius: radii.md,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  footerEditButton: {
-    ...surfaces.muted,
-    backgroundImage: "none",
-  } as any,
-  footerEditButtonText: {
-    color: colors.gray900,
-  },
-  saveButtonText: {
-    ...textStyles.h7,
-    color: colors.white,
   },
   row: {
     flexDirection: "row",
@@ -2138,30 +2073,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: spacing.sm,
   },
-  expenseCancelButton: {
-    ...surfaces.muted,
-    borderRadius: radii.md,
-    height: 40,
-    justifyContent: "center",
-    alignItems: "center",
-    flex: 1,
-  },
-  expenseCancelButtonText: {
-    ...textStyles.h7,
-    color: colors.gray900,
-  },
-  expenseSubmitButton: {
-    ...surfaces.primary,
-    borderRadius: radii.md,
-    height: 40,
-    justifyContent: "center",
-    alignItems: "center",
-    flex: 1,
-  },
-  expenseSubmitButtonText: {
-    ...textStyles.h7,
-    color: colors.white,
-  },
   deleteExpenseButton: {
     padding: 4,
     justifyContent: "center",
@@ -2198,14 +2109,6 @@ const styles = StyleSheet.create({
     borderWidth: 0,
     borderRadius: radii.mdPlus,
     paddingHorizontal: READ_ONLY_FIELD_PADDING_X,
-  },
-  readOnlyDeleteButton: {
-    backgroundColor: colors.dangerTint,
-    backgroundImage: "none",
-    boxShadow: "none",
-  } as any,
-  readOnlyDeleteButtonText: {
-    color: colors.danger,
   },
   categoryTriggerText: {
     ...textStyles.body5,
