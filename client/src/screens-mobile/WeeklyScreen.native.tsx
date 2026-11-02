@@ -1512,6 +1512,13 @@ export default function WeeklyScreen() {
           });
           planData.refreshAttachments();
         }}
+        onExpenseDelete={async () => {
+          await refetchDayExpenses();
+          queryClient.invalidateQueries({
+            queryKey: ["expenses", selectedPlan?.id],
+          });
+          planData.refreshAttachments();
+        }}
       />
 
       <CalendarModal

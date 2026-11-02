@@ -498,6 +498,7 @@ export default function ExpenseScreen() {
           planStartDate={selectedPlan.startDate}
           planEndDate={selectedPlan.endDate}
           onExpenseUpdate={refreshPlanData}
+          onExpenseDelete={refreshPlanData}
         />
       )}
     </View>

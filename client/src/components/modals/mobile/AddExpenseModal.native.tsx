@@ -77,6 +77,7 @@ interface AddExpenseModalProps {
   onExpenseAdd?: (expense: Expense) => void;
   expense?: Expense | null;
   onExpenseUpdate?: (expense: Expense) => void;
+  onExpenseDelete?: () => void;
   pendingAiResult?: { result: DocumentUploadAnalyzeResponse; filename?: string; pendingFiles?: LocalFile[] } | null;
 }
 
@@ -96,6 +97,7 @@ export default function AddExpenseModal({
   onExpenseAdd,
   expense,
   onExpenseUpdate,
+  onExpenseDelete,
   pendingAiResult,
 }: AddExpenseModalProps) {
   const isEdit = !!expense;
@@ -324,9 +326,37 @@ export default function AddExpenseModal({
   };
 
   const isSaving = isSubmitting || isUploading;
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const handleDelete = () => {
+    if (!expense) return;
+    Alert.alert("비용 삭제", "이 비용을 삭제할까요?", [
+      { text: "취소", style: "cancel" },
+      {
+        text: "삭제",
+        style: "destructive",
+        onPress: async () => {
+          if (isSubmittingRef.current) return;
+          isSubmittingRef.current = true;
+          setIsDeleting(true);
+          try {
+            await expensesApi.deleteExpense(expense.id);
+            onClose?.({ fromSave: true });
+            onExpenseDelete?.();
+          } catch (error) {
+            if (handleGuestPromptError(error)) return;
+            Alert.alert("알림", "비용 삭제에 실패했습니다");
+          } finally {
+            isSubmittingRef.current = false;
+            setIsDeleting(false);
+          }
+        },
+      },
+    ]);
+  };
 
   const handleClose = () => {
-    if (isSaving) return;
+    if (isSaving || isDeleting) return;
     setFormData({
       category: ExpenseCategory.FOOD,
       amount: "",
@@ -518,18 +548,30 @@ export default function AddExpenseModal({
       </KeyboardAwareScrollView>
 
       <View style={styles.footer}>
-        <ActionButton
-          label="취소"
-          tone="secondary"
-          fill
-          onPress={handleClose}
-          blocked={isSaving}
-        />
+        {isEdit ? (
+          <ActionButton
+            label="삭제"
+            tone="danger"
+            fill
+            onPress={handleDelete}
+            loading={isDeleting}
+            blocked={isSaving}
+          />
+        ) : (
+          <ActionButton
+            label="취소"
+            tone="secondary"
+            fill
+            onPress={handleClose}
+            blocked={isSaving}
+          />
+        )}
         <ActionButton
           label="저장"
           fill
           onPress={handleSubmit}
           loading={isSaving}
+          blocked={isDeleting}
         />
       </View>
     </BottomSheetModal>
