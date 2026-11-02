@@ -71,6 +71,7 @@ export default function TripChecklistPanel({
   const [aiLoading, setAiLoading] = useState(false);
   const togglingItems = useRef<Set<number>>(new Set());
   const deletingItems = useRef<Set<number>>(new Set());
+  const [deleteTargetId, setDeleteTargetId] = useState<number | null>(null);
 
   const { data: checklist, refetch } = useQuery<ChecklistData>({
     queryKey: ["checklist", planPublicId],
@@ -171,14 +172,15 @@ export default function TripChecklistPanel({
   };
 
   const handleLongPress = (item: ChecklistRow) => {
-    Alert.alert("항목 삭제", `'${item.name}' 항목을 삭제할까요?`, [
-      { text: "취소", style: "cancel" },
-      {
-        text: "삭제",
-        style: "destructive",
-        onPress: () => deleteItem(item.id),
-      },
-    ]);
+    setDeleteTargetId(item.id);
+  };
+
+  const handleItemPress = (item: ChecklistRow) => {
+    if (deleteTargetId !== null) {
+      setDeleteTargetId(null);
+      return;
+    }
+    handleToggle(item.id, !item.isChecked);
   };
 
   const handleAddPress = (key: GroupKey) => {
@@ -285,7 +287,7 @@ export default function TripChecklistPanel({
                 <ScalePressable
                   key={item.id}
                   style={[styles.itemRow, index > 0 && styles.itemRowDivider]}
-                  onPress={() => handleToggle(item.id, !item.isChecked)}
+                  onPress={() => handleItemPress(item)}
                   onLongPress={() => handleLongPress(item)}
                 >
                   <View
@@ -326,6 +328,18 @@ export default function TripChecklistPanel({
                       </Text>
                     )}
                   </Text>
+                  {deleteTargetId === item.id && (
+                    <ScalePressable
+                      style={styles.deletePill}
+                      onPress={() => {
+                        setDeleteTargetId(null);
+                        deleteItem(item.id);
+                      }}
+                      accessibilityLabel="삭제"
+                    >
+                      <Text style={styles.deletePillText}>삭제</Text>
+                    </ScalePressable>
+                  )}
                 </ScalePressable>
               ))}
               {addingGroup === group.key && (
@@ -476,6 +490,18 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 10,
     paddingVertical: 11,
+  },
+  deletePill: {
+    height: 28,
+    paddingHorizontal: spacing.md,
+    borderRadius: radii.pill,
+    backgroundColor: colors.dangerTint,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  deletePillText: {
+    ...textStyles.h8,
+    color: colors.danger,
   },
   itemRowDivider: {
     borderTopWidth: 1,

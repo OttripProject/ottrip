@@ -730,11 +730,13 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.sm,
   },
   swipeDeleteContainer: {
-    width: 64,
-    alignSelf: "stretch",
+    justifyContent: "center",
+    paddingHorizontal: spacing.md,
   },
   swipeDeleteButton: {
-    flex: 1,
+    height: 28,
+    paddingHorizontal: spacing.md,
+    borderRadius: radii.pill,
     backgroundColor: colors.dangerTint,
     justifyContent: "center",
     alignItems: "center",
