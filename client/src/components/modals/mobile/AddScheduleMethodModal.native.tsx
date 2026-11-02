@@ -57,7 +57,7 @@ export default function AddScheduleMethodModal({
             accessibilityRole="button"
             accessibilityLabel="닫기"
           >
-            <CloseIcon width={24} height={24} color={colors.gray600} />
+            <CloseIcon width={24} height={24} color={colors.gray700} />
           </Pressable>
         </View>
 

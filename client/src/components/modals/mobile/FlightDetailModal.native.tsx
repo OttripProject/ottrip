@@ -144,7 +144,7 @@ export default function FlightDetailModal({
               onPress={onClose}
               hitSlop={8}
             >
-              <CloseIcon width={20} height={20} color={colors.gray600} />
+              <CloseIcon width={20} height={20} color={colors.gray700} />
             </ScalePressable>
           </View>
         </View>

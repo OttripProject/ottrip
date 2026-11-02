@@ -7,6 +7,8 @@ import {
 } from "@/ui/components/attachmentSection.types";
 import { colors } from "@/ui/tokens/colors";
 import { radii } from "@/ui/tokens/radii";
+import { shadows } from "@/ui/tokens/shadows";
+import { spacing } from "@/ui/tokens/spacing";
 import { textStyles, typography } from "@/ui/tokens/typography";
 import { guestPrompt } from "@/utils/guestPrompt";
 import { LinearGradient } from "expo-linear-gradient";
@@ -34,6 +36,7 @@ import AttachmentImageIcon from "../../../assets/mobile_attachment_image.svg";
 import CameraIcon from "../../../assets/mobile_camera.svg";
 import AddIcon from "../../../assets/mobile_plan_add.svg";
 import DeleteIcon from "../../../assets/mobile_x.svg";
+import ScalePressable from "@/ui/components/ScalePressable";
 
 export type { AttachmentSectionProps } from "@/ui/components/attachmentSection.types";
 
@@ -355,16 +358,13 @@ export default function AttachmentSection({
                 <Text style={styles.aiAnalyzingText}>AI가 첨부 파일 내용을 정리하고 있어요</Text>
               </View>
               {onCancelAiAnalyze && (
-                <Pressable
+                <ScalePressable
                   onPress={onCancelAiAnalyze}
                   hitSlop={8}
-                  style={({ pressed }) => [
-                    styles.aiCancelButton,
-                    pressed && styles.pressed,
-                  ]}
+                  style={styles.aiCancelButton}
                 >
                   <Text style={styles.aiCancelText}>취소</Text>
-                </Pressable>
+                </ScalePressable>
               )}
             </View>
           ) : (
@@ -593,14 +593,15 @@ const styles = StyleSheet.create({
     color: colors.gray600,
   },
   aiCancelButton: {
-    paddingVertical: 4,
+    paddingVertical: spacing.xs,
     paddingHorizontal: 10,
-    borderRadius: 6,
+    borderRadius: radii.sm,
     backgroundColor: colors.gray300,
+    ...shadows.insetLine,
   },
   aiCancelText: {
-    ...textStyles.body4,
-    color: colors.gray700,
+    ...textStyles.h7,
+    color: colors.gray900,
   },
   aiAnalyzeButton: {
     borderRadius: radii.md,

@@ -231,7 +231,7 @@ export default function TourismDetailModal({
             <Text style={[styles.badgeText, { color: badge.color }]}>{item.contentTypeId}</Text>
           </View>
           <ScalePressable style={styles.actionButton} onPress={onClose} hitSlop={8}>
-            <CloseIcon width={20} height={20} color={colors.gray600} />
+            <CloseIcon width={20} height={20} color={colors.gray700} />
           </ScalePressable>
         </View>
         <View style={styles.titleGroup}>

@@ -162,7 +162,7 @@ export default function FestivalDetailModal({ visible, onClose, item, onAddToIti
             <Text style={[styles.badgeText, { color: badge.color }]}>{badge.label}</Text>
           </View>
           <ScalePressable style={styles.actionButton} onPress={onClose} hitSlop={8}>
-            <CloseIcon width={20} height={20} color={colors.gray600} />
+            <CloseIcon width={20} height={20} color={colors.gray700} />
           </ScalePressable>
         </View>
 
