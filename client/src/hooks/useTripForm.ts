@@ -190,13 +190,6 @@ export const useTripForm = (initialData?: Partial<TripFormData>) => {
     setSelectionMode("start");
   }, []);
 
-  const isSubmitDisabled =
-    !tripData.name.trim() ||
-    tripData.segments.length === 0 ||
-    tripData.segments.some(
-      s => !s.country.trim() || !s.city.trim() || !s.startDate || !s.endDate,
-    );
-
   return {
     tripData,
     activeSegmentIndex,
@@ -211,6 +204,5 @@ export const useTripForm = (initialData?: Partial<TripFormData>) => {
     updateTripData,
     resetForm,
     setFormData,
-    isSubmitDisabled,
   };
 };

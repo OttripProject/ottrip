@@ -1,4 +1,5 @@
-import { useTripForm } from "@/hooks/useTripForm";
+import { useToast } from "@/contexts/ToastContext";
+import { getTripFormErrors, useTripForm } from "@/hooks/useTripForm";
 import type { CreatePlanRequest, Plan, UpdatePlanRequest } from "@/types/api";
 import TripCalendarModal from "@/components/trip/TripCalendarModal";
 import TripDurationBanner from "@/components/trip/TripDurationBanner";
@@ -52,10 +53,15 @@ export default function AddPlanModal({
     setActiveSegmentIndex,
     resetForm,
     setFormData,
-    isSubmitDisabled,
   } = useTripForm();
 
+  const { showToast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showErrors, setShowErrors] = useState(false);
+  const scrollRef = useRef<ScrollView>(null);
+  const segSectionY = useRef(0);
+  const segmentYs = useRef<Record<number, number>>({});
+  const errors = showErrors ? getTripFormErrors(tripData) : null;
 
   const handleClose = () => {
     if (!isSubmitting) onClose();
@@ -76,6 +82,7 @@ export default function AddPlanModal({
 
   useEffect(() => {
     if (!visible) setCalendarOpen(false);
+    setShowErrors(false);
   }, [visible]);
 
   useEffect(() => {
@@ -106,11 +113,23 @@ export default function AddPlanModal({
   }, [visible, planToEdit]);
 
   const handleSubmit = async () => {
-    const trimmedName = tripData.name.trim();
-    if (!trimmedName) {
-      Alert.alert("알림", "여행 이름을 입력해주세요");
+    if (isSubmitting) return;
+    const formErrors = getTripFormErrors(tripData);
+    if (formErrors) {
+      setShowErrors(true);
+      const firstSegment = formErrors.segments.findIndex(
+        seg => seg.country || seg.city || seg.date,
+      );
+      scrollRef.current?.scrollTo({
+        y: formErrors.name
+          ? 0
+          : segSectionY.current + (segmentYs.current[firstSegment] ?? 0),
+        animated: true,
+      });
+      showToast("입력되지 않은 값이 있어요.", { icon: "warning" });
       return;
     }
+    const trimmedName = tripData.name.trim();
 
     setIsSubmitting(true);
     try {
@@ -160,6 +179,7 @@ export default function AddPlanModal({
           </View>
 
           <ScrollView
+            ref={scrollRef}
             style={styles.scroll}
             contentContainerStyle={styles.scrollContent}
             showsVerticalScrollIndicator={false}
@@ -171,16 +191,24 @@ export default function AddPlanModal({
                 <Text style={styles.counter}>{tripData.name.length}/30</Text>
               </View>
               <Input
-                style={styles.nameInput}
+                style={[styles.nameInput, errors?.name && styles.fieldError]}
                 placeholder="ex.도쿄 가을 여행"
                 placeholderTextColor={colors.gray600}
                 value={tripData.name}
                 onChangeText={name => updateTripData({ name })}
                 maxLength={30}
               />
+              {errors?.name && (
+                <Text style={styles.errorText}>{errors.name}</Text>
+              )}
             </View>
 
-            <View style={styles.segSection}>
+            <View
+              style={styles.segSection}
+              onLayout={e => {
+                segSectionY.current = e.nativeEvent.layout.y;
+              }}
+            >
               <View style={styles.segLabelRow}>
                 <Text style={styles.segSectionLabel}>여행 구간</Text>
                 <Text style={styles.hint}>순서대로 추가하세요</Text>
@@ -195,6 +223,10 @@ export default function AddPlanModal({
                 onDateButtonPress={idx => {
                   setActiveSegmentIndex(idx);
                   setCalendarOpen(true);
+                }}
+                errors={errors?.segments}
+                onSegmentLayout={(idx, y) => {
+                  segmentYs.current[idx] = y;
                 }}
               />
             </View>
@@ -215,7 +247,6 @@ export default function AddPlanModal({
               fill
               onPress={handleSubmit}
               loading={isSubmitting}
-              disabled={isSubmitDisabled}
             />
           </View>
           <TripCalendarModal
@@ -311,6 +342,14 @@ const styles = StyleSheet.create({
     marginLeft: "auto",
     fontFamily: typography.fontFamily.pretendardMedium,
     color: colors.paletteFg3,
+  },
+  fieldError: {
+    borderColor: colors.danger,
+  },
+  errorText: {
+    ...textStyles.body6,
+    color: colors.danger,
+    marginTop: spacing.xs,
   },
   nameInput: {
     width: "100%",
