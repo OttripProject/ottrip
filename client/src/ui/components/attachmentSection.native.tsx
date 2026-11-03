@@ -62,6 +62,7 @@ function formatFileSize(bytes: number): string {
 }
 
 export default function AttachmentSection({
+  variant,
   pendingFiles,
   onPickImage,
   onPickDocument,
@@ -268,8 +269,10 @@ export default function AttachmentSection({
       <View
         style={[styles.headerRow, hideAddControls && styles.headerRowTitleOnly]}
       >
-        <Text style={styles.title}>첨부 파일 (이미지, PDF)</Text>
-        {!hideAddControls && (
+        <Text style={styles.title}>
+          첨부 파일 <Text style={styles.titleSub}>(이미지, PDF)</Text>
+        </Text>
+        {!hideAddControls && (variant !== "expense" || hasFiles) && (
           <Pressable
             onPress={handleAddPress}
             hitSlop={8}
@@ -454,26 +457,33 @@ export default function AttachmentSection({
 }
 
 const styles = StyleSheet.create({
+  titleSub: {
+    fontFamily: typography.fontFamily.pretendardMedium,
+    color: colors.paletteFg3,
+  },
   root: {
     width: "100%",
   },
   topDivider: {
     height: 1,
-    backgroundColor: colors.gray300,
-    marginBottom: 32,
+    backgroundColor: colors.paletteFill2,
+    marginTop: spacing.sm,
+    marginBottom: spacing.lg,
   },
   headerRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 20,
+    minHeight: 18,
+    marginBottom: spacing.sm,
   },
   headerRowTitleOnly: {
     justifyContent: "flex-start",
   },
   title: {
-    ...textStyles.h5,
-    color: colors.black,
+    ...textStyles.h8,
+    fontFamily: typography.fontFamily.pretendardBold,
+    color: colors.paletteInk,
   },
   addLabel: {
     ...textStyles.h6,
@@ -491,9 +501,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderStyle: "dashed",
     borderColor: colors.gray400,
-    borderRadius: 12,
-    backgroundColor: colors.white,
-    paddingVertical: 13,
+    borderRadius: radii.mdPlus,
+    backgroundColor: "transparent",
+    padding: spacing.lg,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -501,7 +511,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 8,
+    gap: spacing.sm,
   },
   dropZonePressed: {
     backgroundColor: colors.gray100,
@@ -510,8 +520,8 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   hint: {
-    ...textStyles.h6,
-    color: colors.gray600,
+    ...textStyles.h8,
+    color: colors.paletteFg3,
     includeFontPadding: false,
   },
   loadingWrap: {
