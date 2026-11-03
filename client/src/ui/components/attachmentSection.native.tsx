@@ -11,7 +11,6 @@ import { shadows } from "@/ui/tokens/shadows";
 import { spacing } from "@/ui/tokens/spacing";
 import { textStyles, typography } from "@/ui/tokens/typography";
 import { guestPrompt } from "@/utils/guestPrompt";
-import { LinearGradient } from "expo-linear-gradient";
 import { useState } from "react";
 import CheckWhiteIcon from "../../../assets/check_white.svg";
 import {
@@ -37,6 +36,7 @@ import CameraIcon from "../../../assets/mobile_camera.svg";
 import AddIcon from "../../../assets/mobile_plan_add.svg";
 import DeleteIcon from "../../../assets/mobile_x.svg";
 import ScalePressable from "@/ui/components/ScalePressable";
+import ActionButton from "@/ui/components/ActionButton";
 
 export type { AttachmentSectionProps } from "@/ui/components/attachmentSection.types";
 
@@ -368,21 +368,13 @@ export default function AttachmentSection({
               )}
             </View>
           ) : (
-            <Pressable
+            <ActionButton
+              label="AI 분석"
+              tone="ai"
+              icon={<CheckWhiteIcon width={14} height={14} />}
               onPress={handleAiAnalyzePress}
-              disabled={disabled || isUploading}
-              style={({ pressed }) => [pressed && styles.pressed]}
-            >
-              <LinearGradient
-                colors={[...colors.aiGrad] as [string, string]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.aiAnalyzeButton}
-              >
-                <CheckWhiteIcon width={14} height={14} />
-                <Text style={styles.aiAnalyzeButtonText}>AI 분석</Text>
-              </LinearGradient>
-            </Pressable>
+              blocked={!!disabled || isUploading}
+            />
           )}
           {analyzeError && (
             <AiAnalyzeErrorBanner
@@ -602,21 +594,6 @@ const styles = StyleSheet.create({
   aiCancelText: {
     ...textStyles.h7,
     color: colors.gray900,
-  },
-  aiAnalyzeButton: {
-    borderRadius: radii.md,
-    height: 48,
-    alignItems: "center",
-    justifyContent: "center",
-    flexDirection: "row",
-    gap: 8,
-  },
-  aiAnalyzeButtonText: {
-    color: colors.white,
-    fontFamily: typography.fontFamily.pretendardSemiBold,
-    fontSize: 14,
-    lineHeight: 18,
-    letterSpacing: -0.14,
   },
   fileRowSelected: {
     backgroundColor: colors.gray400,
