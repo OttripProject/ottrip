@@ -298,7 +298,7 @@ export default function AddExpenseModal({
         setPendingFiles([]);
         onClose?.({ fromSave: true });
         onExpenseUpdate?.(updated);
-        showToast("비용을 저장했어요.");
+        showToast("비용을 수정했어요.");
         return;
       }
       const newExpense = await expensesApi.createExpense({

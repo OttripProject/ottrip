@@ -164,7 +164,7 @@ export default function AddPlanModal({
         const newPlan = await addPlan({ title: trimmedName, segments });
         onPlanCreated(newPlan);
       }
-      showToast(planToEdit ? "여행을 저장했어요." : "여행을 만들었어요.");
+      showToast(planToEdit ? "여행을 수정했어요." : "여행을 만들었어요.");
     } catch {
       Alert.alert("알림", planToEdit ? "여행 수정에 실패했습니다" : "여행 생성에 실패했습니다");
     } finally {

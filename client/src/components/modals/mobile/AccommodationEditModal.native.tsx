@@ -437,7 +437,7 @@ export default function AccommodationEditModal({
         }
       }
 
-      showToast("숙소를 저장했어요.");
+      showToast(accommodation ? "숙소를 수정했어요." : "숙소를 저장했어요.");
 
       try {
         await onSave?.(savedAccommodation);

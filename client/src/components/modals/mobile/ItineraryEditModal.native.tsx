@@ -599,7 +599,7 @@ export default function ItineraryEditModal({
         }
       }
 
-      showToast("일정을 저장했어요.");
+      showToast(itinerary ? "일정을 수정했어요." : "일정을 저장했어요.");
 
       try {
         await onSave?.(savedItinerary);

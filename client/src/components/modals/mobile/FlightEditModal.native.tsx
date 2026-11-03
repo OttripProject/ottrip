@@ -474,7 +474,7 @@ export default function FlightEditModal({
         }
       }
 
-      showToast("항공편을 저장했어요.");
+      showToast(flight ? "항공편을 수정했어요." : "항공편을 저장했어요.");
 
       try {
         await onSave?.(savedFlight);
