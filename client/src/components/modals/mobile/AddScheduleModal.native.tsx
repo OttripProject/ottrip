@@ -210,7 +210,7 @@ export default function AddScheduleModal({
                   <Icon
                     width={14}
                     height={14}
-                    color={isActive ? colors.primary : colors.paletteFg3}
+                    color={isActive ? colors.paletteInk : colors.paletteFg3}
                   />
                 </View>
                 <Text
