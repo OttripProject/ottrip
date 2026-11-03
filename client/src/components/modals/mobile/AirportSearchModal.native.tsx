@@ -3,6 +3,7 @@ import { useRecentSearches } from "@/hooks/useRecentSearches";
 import BottomSheetModal from "@/ui/components/BottomSheetModal.native";
 import Input from "@/ui/components/input/Input";
 import { colors } from "@/ui/tokens/colors";
+import { spacing } from "@/ui/tokens/spacing";
 import { textStyles, typography } from "@/ui/tokens/typography";
 import {
   getAirportLabelByIata,
@@ -215,6 +216,8 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     height: 48,
+    paddingVertical: spacing.none,
+    lineHeight: undefined,
     backgroundColor: colors.gray200,
     borderRadius: 12,
     paddingHorizontal: 16,

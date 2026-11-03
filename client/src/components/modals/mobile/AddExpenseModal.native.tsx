@@ -521,7 +521,7 @@ export default function AddExpenseModal({
             onBlur={() => setDescriptionFocused(false)}
             style={[
               styles.field,
-              styles.fieldText,
+              styles.singleLineInput,
               descriptionFocused && filledFocusStyle,
             ]}
           />
@@ -708,6 +708,7 @@ const styles = StyleSheet.create({
   },
   singleLineInput: {
     height: 48,
+    paddingVertical: spacing.none,
     lineHeight: undefined,
     fontFamily: textStyles.body2.fontFamily,
     fontSize: textStyles.body2.fontSize,

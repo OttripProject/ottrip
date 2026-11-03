@@ -739,7 +739,8 @@ const styles = StyleSheet.create({
   },
   input: {
     height: 48,
-    paddingBottom: 17,
+    paddingVertical: spacing.none,
+    lineHeight: undefined,
   },
   validationMessageContainer: {
     width: "100%",
