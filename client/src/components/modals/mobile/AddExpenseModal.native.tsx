@@ -19,8 +19,8 @@ import { buildAnalyzeUploadPayload } from "@/utils/attachmentAiAnalyze";
 import {
   ExpenseCategory,
   ExpenseCurrency,
+  categoryColors,
   categoryLabels,
-  currencyLabels,
 } from "@/types/expense";
 import BottomSheetModal from "@/ui/components/BottomSheetModal.native";
 import ActionButton from "@/ui/components/ActionButton";
@@ -49,6 +49,7 @@ import DownArrowIcon from "../../../../assets/down_arrow.svg";
 import CalendarIcon from "../../../../assets/mobile_calendar_black.svg";
 import { useDiscardConfirm } from "@/hooks/useDiscardConfirm";
 import { useToast } from "@/contexts/ToastContext";
+import CurrencyToggle from "@/ui/components/CurrencyToggle";
 
 const CATEGORY_OPTIONS: ExpenseCategory[] = [
   ExpenseCategory.FOOD,
@@ -61,10 +62,6 @@ const CATEGORY_OPTIONS: ExpenseCategory[] = [
   ExpenseCategory.ETC,
 ];
 
-const CURRENCY_OPTIONS: ExpenseCurrency[] = [
-  ExpenseCurrency.KRW,
-  ExpenseCurrency.USD,
-];
 
 const formatAmount = (digits: string) =>
   digits.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
@@ -439,16 +436,17 @@ export default function AddExpenseModal({
               }))
             }
           >
-            <View style={styles.field}>
-              <Text style={styles.fieldText}>
+            <View style={[styles.field, styles.categoryField]}>
+              <View
+                style={[
+                  styles.categoryDot,
+                  { backgroundColor: categoryColors[formData.category] },
+                ]}
+              />
+              <Text style={[styles.fieldText, styles.fieldTextFill]}>
                 {categoryLabels[formData.category]}
               </Text>
-              <DownArrowIcon
-                width={10}
-                height={10}
-                color={colors.paletteFg2}
-                style={styles.fieldChevron}
-              />
+              <DownArrowIcon width={16} height={16} color={colors.gray700} />
             </View>
           </MenuView>
         </View>
@@ -475,31 +473,14 @@ export default function AddExpenseModal({
           </View>
           <View style={[styles.inputGroup, styles.amountColumn]}>
             <Text style={styles.label}>통화</Text>
-            <MenuView
-              actions={CURRENCY_OPTIONS.map(currency => ({
-                id: currency,
-                title: currencyLabels[currency],
-                state: formData.currency === currency ? "on" : "off",
-              }))}
-              onPressAction={({ nativeEvent }) =>
-                setFormData(prev => ({
-                  ...prev,
-                  currency: nativeEvent.event as ExpenseCurrency,
-                }))
+            <CurrencyToggle
+              value={formData.currency}
+              onChange={currency =>
+                setFormData(prev => ({ ...prev, currency }))
               }
-            >
-              <View style={styles.field}>
-                <Text style={styles.fieldText}>
-                  {currencyLabels[formData.currency]}
-                </Text>
-                <DownArrowIcon
-                  width={10}
-                  height={10}
-                  color={colors.paletteFg2}
-                  style={styles.fieldChevron}
-                />
-              </View>
-            </MenuView>
+              large
+              style={styles.currencyToggle}
+            />
           </View>
         </View>
 
@@ -509,10 +490,10 @@ export default function AddExpenseModal({
             style={[styles.field, styles.dateField]}
             onPress={() => setShowDatePicker(true)}
           >
-            <CalendarIcon width={14} height={14} color={colors.paletteFg2} />
-            <Text style={[styles.fieldText, styles.dateText]}>
+            <Text style={[styles.fieldText, styles.fieldTextFill, styles.dateText]}>
               {dayjs(formData.ex_date).format("YYYY. MM. DD")}
             </Text>
+            <CalendarIcon width={16} height={16} color={colors.gray900} />
           </Pressable>
           <CalendarModal
             visible={showDatePicker}
@@ -536,14 +517,11 @@ export default function AddExpenseModal({
             }
             placeholder="비용 설명을 입력하세요."
             placeholderTextColor={colors.paletteFg3}
-            multiline
-            textAlignVertical="top"
             onFocus={() => setDescriptionFocused(true)}
             onBlur={() => setDescriptionFocused(false)}
             style={[
               styles.field,
               styles.fieldText,
-              styles.descriptionField,
               descriptionFocused && filledFocusStyle,
             ]}
           />
@@ -651,6 +629,22 @@ export default function AddExpenseModal({
 }
 
 const styles = StyleSheet.create({
+  categoryField: {
+    gap: spacing.sm,
+  },
+  categoryDot: {
+    width: 8,
+    height: 8,
+    borderRadius: radii.pill,
+  },
+  fieldTextFill: {
+    flex: 1,
+  },
+  currencyToggle: {
+    height: 48,
+    borderRadius: radii.mdPlus,
+    backgroundColor: colors.paletteFill,
+  },
   fieldError: {
     borderWidth: 1,
     borderColor: colors.danger,
@@ -694,14 +688,14 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
   },
   label: {
-    ...textStyles.h8,
+    ...textStyles.h6,
     color: colors.paletteInk,
     marginBottom: spacing.sm,
   },
   field: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: spacing.md,
+    height: 48,
     paddingHorizontal: spacing.lg,
     borderRadius: radii.mdPlus,
     borderWidth: 1,
@@ -709,18 +703,15 @@ const styles = StyleSheet.create({
     backgroundColor: colors.paletteFill,
   },
   fieldText: {
-    ...textStyles.body4,
+    ...textStyles.body2,
     color: colors.paletteInk,
   },
   singleLineInput: {
-    height: 44,
+    height: 48,
     lineHeight: undefined,
-    fontFamily: textStyles.body4.fontFamily,
-    fontSize: textStyles.body4.fontSize,
+    fontFamily: textStyles.body2.fontFamily,
+    fontSize: textStyles.body2.fontSize,
     color: colors.paletteInk,
-  },
-  fieldChevron: {
-    marginLeft: "auto",
   },
   amountRow: {
     flexDirection: "row",
@@ -734,9 +725,6 @@ const styles = StyleSheet.create({
   },
   dateText: {
     fontVariant: ["tabular-nums"],
-  },
-  descriptionField: {
-    minHeight: 80,
   },
   footer: {
     flexDirection: "row",
