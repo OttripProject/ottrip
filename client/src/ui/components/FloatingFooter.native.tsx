@@ -11,6 +11,7 @@ interface FloatingFooterProps {
   primaryTone?: ActionButtonTone;
   primaryDisabled?: boolean;
   primaryLoading?: boolean;
+  primaryBlocked?: boolean;
   secondaryLabel?: string;
   secondaryTone?: ActionButtonTone;
   onSecondaryPress?: () => void;
@@ -22,6 +23,7 @@ export default function FloatingFooter({
   primaryTone = "primary",
   primaryDisabled = false,
   primaryLoading = false,
+  primaryBlocked = false,
   secondaryLabel,
   secondaryTone = "secondary",
   onSecondaryPress,
@@ -51,6 +53,7 @@ export default function FloatingFooter({
         onPress={onPrimaryPress}
         loading={primaryLoading}
         disabled={primaryDisabled}
+        blocked={primaryBlocked}
       />
     </View>
   );

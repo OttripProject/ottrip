@@ -4,7 +4,6 @@ import { ItineraryCategory } from "@/types/itinerary";
 import ScalePressable from "@/ui/components/ScalePressable";
 import { colors } from "@/ui/tokens/colors";
 import { radii } from "@/ui/tokens/radii";
-import { shadows } from "@/ui/tokens/shadows";
 import { spacing } from "@/ui/tokens/spacing";
 import { textStyles } from "@/ui/tokens/typography";
 import { useEffect, useMemo, useState } from "react";
@@ -25,6 +24,7 @@ import LocationIcon from "../../../assets/mobile_location.svg";
 import TimeIcon from "../../../assets/week_bar_time.svg";
 import CalendarIcon from "../../../assets/calendar_outline.svg";
 import WonIcon from "../../../assets/won.svg";
+import FloatingFooter from "@/ui/components/FloatingFooter.native";
 
 const LCLSSYSTM2_MAP: Record<string, { label: string; bg: string; color: string }> = {
   EV01: { label: "축제", bg: colors.festivalBg, color: colors.festivalText },
@@ -325,16 +325,12 @@ export default function FestivalDetailModal({ visible, onClose, item, onAddToIti
         {!loading && detail && <Text style={styles.attribution}>출처: ⓒ한국관광공사</Text>}
       </ScrollView>
 
-      {/* 푸터 */}
-      <View style={styles.footer}>
-        <ScalePressable
-          style={[styles.addButton, (loading || !detail) && styles.addButtonDisabled]}
-          onPress={handleAddToItinerary}
-          disabled={loading || !detail}
-        >
-          <Text style={styles.addButtonText}>일정에 추가</Text>
-        </ScalePressable>
-      </View>
+      <FloatingFooter
+        primaryLabel="일정에 추가"
+        onPrimaryPress={handleAddToItinerary}
+        primaryLoading={loading}
+        primaryBlocked={!detail}
+      />
     </BottomSheetModal>
   );
 }
@@ -449,20 +445,4 @@ const styles = StyleSheet.create({
     color: colors.gray500,
     textAlign: "right",
   } as any,
-  footer: {
-    paddingHorizontal: 20,
-    paddingTop: 12,
-    paddingBottom: 20,
-  },
-  addButton: {
-    height: 48,
-    borderRadius: radii.md,
-    backgroundColor: colors.primary,
-    experimental_backgroundImage: `linear-gradient(180deg, ${colors.gradientPrimary[0]} 0%, ${colors.gradientPrimary[1]} 100%)`,
-    ...shadows.primaryRaised,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  addButtonDisabled: { opacity: 0.4 },
-  addButtonText: { ...textStyles.h5, color: colors.white },
 });

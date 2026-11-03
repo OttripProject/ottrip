@@ -3,7 +3,6 @@ import MiniMapView from "@/ui/components/MiniMapView";
 import ScalePressable from "@/ui/components/ScalePressable";
 import { colors } from "@/ui/tokens/colors";
 import { radii } from "@/ui/tokens/radii";
-import { shadows } from "@/ui/tokens/shadows";
 import { spacing } from "@/ui/tokens/spacing";
 import { textStyles } from "@/ui/tokens/typography";
 import { ItineraryCategory } from "@/types/itinerary";
@@ -30,6 +29,7 @@ import RouteIcon from "../../../assets/route.svg";
 import RoomIcon from "../../../assets/room.svg";
 import CutleryIcon from "../../../assets/cutlery.svg";
 import { tourismApi } from "@/services/tourism";
+import FloatingFooter from "@/ui/components/FloatingFooter.native";
 
 type Row = { label: string; value: string };
 type IconType = "clock" | "calendar" | "hourglass" | "won" | "route" | "checkinout" | "room" | "cutlery";
@@ -337,12 +337,10 @@ export default function TourismDetailModal({
         {!loading && detail && <Text style={styles.attribution}>출처: ⓒ한국관광공사</Text>}
       </ScrollView>
 
-      {/* 푸터 */}
-      <View style={styles.footer}>
-        <ScalePressable style={styles.addButton} onPress={handleAddToItinerary}>
-          <Text style={styles.addButtonText}>일정에 추가</Text>
-        </ScalePressable>
-      </View>
+      <FloatingFooter
+        primaryLabel="일정에 추가"
+        onPrimaryPress={handleAddToItinerary}
+      />
     </BottomSheetModal>
   );
 }
@@ -466,22 +464,4 @@ const styles = StyleSheet.create({
     color: colors.gray500,
     textAlign: "right",
   } as any,
-  footer: {
-    paddingHorizontal: 20,
-    paddingTop: 12,
-    paddingBottom: 20,
-  },
-  addButton: {
-    height: 48,
-    borderRadius: radii.md,
-    backgroundColor: colors.primary,
-    experimental_backgroundImage: `linear-gradient(180deg, ${colors.gradientPrimary[0]} 0%, ${colors.gradientPrimary[1]} 100%)`,
-    ...shadows.primaryRaised,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  addButtonText: {
-    ...textStyles.h5,
-    color: colors.white,
-  },
 });

@@ -24,6 +24,7 @@ import CloseIcon from "../../../../assets/mobile_close.svg";
 import ExpenseIcon from "../../../../assets/mobile_expense.svg";
 import { spacing } from "@/ui/tokens/spacing";
 import FloatingFooter from "@/ui/components/FloatingFooter.native";
+import ActionButton from "@/ui/components/ActionButton";
 
 interface FlightDetailModalProps {
   visible: boolean;
@@ -291,10 +292,12 @@ export default function FlightDetailModal({
             (onEdit || onDelete) && styles.footerAboveActions,
           ]}
         >
-          <ScalePressable style={styles.ticketButton} onPress={handleViewTicket}>
-            <FlightIcon width={20} height={20} color={colors.gray900} />
-            <Text style={styles.ticketButtonText}>항공권 보기</Text>
-          </ScalePressable>
+          <ActionButton
+            label="항공권 보기"
+            tone="secondary"
+            icon={<FlightIcon width={20} height={20} color={colors.gray900} />}
+            onPress={handleViewTicket}
+          />
         </View>
       )}
 
@@ -467,21 +470,8 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
   footer: {
-    paddingHorizontal: 16,
-    paddingTop: 8,
-    paddingBottom: 16,
-  },
-  ticketButton: {
-    backgroundColor: colors.gray300,
-    borderRadius: 12,
-    paddingVertical: 16,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-  },
-  ticketButtonText: {
-    ...textStyles.h4,
-    color: colors.gray900,
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.xl,
   },
 });
