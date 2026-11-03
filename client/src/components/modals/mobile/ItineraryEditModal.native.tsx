@@ -599,7 +599,7 @@ export default function ItineraryEditModal({
         }
       }
 
-      Alert.alert(itinerary ? "수정완료" : "추가완료", itinerary ? "일정이 수정되었습니다" : "일정이 추가되었습니다");
+      showToast("일정을 저장했어요.");
 
       try {
         await onSave?.(savedItinerary);

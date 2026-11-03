@@ -14,6 +14,7 @@ import { Alert, StyleSheet, Text, TextInput, View } from "react-native";
 import CheckMarkIcon from "../../../assets/check_mark.svg";
 import PlusIcon from "../../../assets/mobile_plus.svg";
 import RefreshIcon from "../../../assets/refresh_ai.svg";
+import { useToast } from "@/contexts/ToastContext";
 
 const PRIMARY_GRADIENT = `linear-gradient(180deg, ${colors.gradientPrimary[0]} 0%, ${colors.gradientPrimary[1]} 100%)`;
 const AI_GRADIENT = `linear-gradient(135deg, ${colors.aiGrad[0]} 0%, ${colors.aiGrad[1]} 100%)`;
@@ -71,6 +72,7 @@ export default function TripChecklistPanel({
   const [aiLoading, setAiLoading] = useState(false);
   const togglingItems = useRef<Set<number>>(new Set());
   const deletingItems = useRef<Set<number>>(new Set());
+  const { showToast } = useToast();
   const [deleteTargetId, setDeleteTargetId] = useState<number | null>(null);
 
   const { data: checklist, refetch } = useQuery<ChecklistData>({
@@ -201,6 +203,7 @@ export default function TripChecklistPanel({
       setNewItemName("");
       setAddingGroup(null);
       await refetch();
+      showToast("체크리스트에 추가했어요.");
     } catch (error) {
       if (handleGuestPromptError(error)) return;
       Alert.alert("알림", "체크리스트 항목 추가에 실패했습니다");

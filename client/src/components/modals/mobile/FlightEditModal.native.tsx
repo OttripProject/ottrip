@@ -474,7 +474,7 @@ export default function FlightEditModal({
         }
       }
 
-      Alert.alert(flight ? "수정완료" : "추가완료", flight ? "항공편이 수정되었습니다" : "항공편이 추가되었습니다");
+      showToast("항공편을 저장했어요.");
 
       try {
         await onSave?.(savedFlight);

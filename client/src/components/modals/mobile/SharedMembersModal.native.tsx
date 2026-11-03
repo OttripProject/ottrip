@@ -28,6 +28,7 @@ import DotsIcon from "../../../../assets/dots.svg";
 import DropdownIcon from "../../../../assets/mobile_dropdown.svg";
 import CloseIcon from "../../../../assets/mobile_x.svg";
 import ShareAddIcon from "../../../../assets/share_add.svg";
+import { ToastUI, useToast } from "@/contexts/ToastContext";
 
 export type SharedMemberRole = "OWNER" | "EDITOR" | "VIEWER";
 
@@ -87,6 +88,7 @@ export default function SharedMembersModal({
   const [fetchedMembers, setFetchedMembers] = useState<SharedMember[]>([]);
   const [loading, setLoading] = useState(false);
   const [inviteLoading, setInviteLoading] = useState(false);
+  const { showToast } = useToast();
 
   const loadShares = () => {
     if (!planId) return;
@@ -134,13 +136,15 @@ export default function SharedMembersModal({
       return;
     }
     setInviteLoading(true);
+    const invitedEmail = inviteEmail.trim().toLowerCase();
     try {
       await plansApi.invite(planId, {
-        email: inviteEmail.trim().toLowerCase(),
+        email: invitedEmail,
         role: selectedRole,
       });
       setInviteEmail("");
       loadShares();
+      showToast(`${invitedEmail}에게 초대를 보냈어요.`);
     } catch (e: any) {
       const msg =
         e?.response?.status === 403
@@ -384,6 +388,7 @@ export default function SharedMembersModal({
           )}
         </ScrollView>
       </KeyboardAvoidingView>
+      <ToastUI />
     </BottomSheetModal>
   );
 }

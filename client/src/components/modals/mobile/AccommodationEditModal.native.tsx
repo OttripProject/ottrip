@@ -437,7 +437,7 @@ export default function AccommodationEditModal({
         }
       }
 
-      Alert.alert(accommodation ? "수정완료" : "추가완료", accommodation ? "숙소가 수정되었습니다" : "숙소가 추가되었습니다");
+      showToast("숙소를 저장했어요.");
 
       try {
         await onSave?.(savedAccommodation);
