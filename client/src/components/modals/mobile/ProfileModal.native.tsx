@@ -1,6 +1,7 @@
 import { PLACEHOLDERS } from "@/constants/placeholders";
 import { useAuth } from "@/contexts/AuthContext";
 import { useMe } from "@/hooks/useMe";
+import { useDiscardConfirm } from "@/hooks/useDiscardConfirm";
 import { useNicknameValidation } from "@/hooks/useNicknameValidation";
 import { type UserProfile, usersApi } from "@/services/users";
 import { Gender } from "@/types/api";
@@ -138,6 +139,22 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
   const canSave = isValid && hasChanges;
   const isGuest = !!me?.isGuest;
 
+  const { requestClose: closeProfile, discardConfirmModal } = useDiscardConfirm(
+    hasChanges && !isGuest,
+    () => {
+      if (me) {
+        setNickname(me.nickname);
+        setGender(me.gender);
+        onNicknameChange(me.nickname);
+      }
+      onClose();
+    },
+  );
+
+  const handleCloseProfile = () => {
+    if (!saving) closeProfile();
+  };
+
   const handleSignUp = () => {
     guestPrompt.notifyBeforeSignUpNavigation();
     onClose();
@@ -237,8 +254,9 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
                     </Text>
                     <Pressable
                       style={styles.closeButton}
-                      onPress={onClose}
+                      onPress={handleCloseProfile}
                       hitSlop={8}
+                      accessibilityLabel="닫기"
                     >
                       <CloseIcon
                         width={24}
@@ -566,6 +584,7 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
         onClose={() => setTermsDetailModalOpen(false)}
         maxWidth={360}
       />
+      {discardConfirmModal}
     </>
   );
 }

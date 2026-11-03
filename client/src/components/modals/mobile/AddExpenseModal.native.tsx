@@ -47,6 +47,8 @@ import { KeyboardAwareScrollView, type KeyboardAwareScrollViewRef } from "react-
 import CloseIcon from "../../../../assets/close_sm.svg";
 import DownArrowIcon from "../../../../assets/down_arrow.svg";
 import CalendarIcon from "../../../../assets/mobile_calendar_black.svg";
+import { useDiscardConfirm } from "@/hooks/useDiscardConfirm";
+import { useToast } from "@/contexts/ToastContext";
 
 const CATEGORY_OPTIONS: ExpenseCategory[] = [
   ExpenseCategory.FOOD,
@@ -111,6 +113,8 @@ export default function AddExpenseModal({
   const [isLoadingAttachments, setIsLoadingAttachments] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const scrollRef = useRef<KeyboardAwareScrollViewRef>(null);
+  const [showErrors, setShowErrors] = useState(false);
+  const { showToast } = useToast();
   const isSubmittingRef = useRef(false);
   const [isAiAnalyzing, setIsAiAnalyzing] = useState(false);
   const [aiAnalyzeError, setAiAnalyzeError] = useState<string | null>(null);
@@ -141,6 +145,7 @@ export default function AddExpenseModal({
   useEffect(() => {
     if (!visible) {
       formInitializedRef.current = false;
+      setShowErrors(false);
       setAiModalResult(null);
       setAiAnalyzeError(null);
       return;
@@ -262,14 +267,16 @@ export default function AddExpenseModal({
     if (isSubmittingRef.current) return;
 
     if (!planId) {
-      Alert.alert("알림", "여행을 먼저 선택해주세요");
+      showToast("여행을 먼저 선택해주세요", { icon: "warning" });
       return;
     }
 
     const amountNum =
       Number.parseInt(normalizeAmount(formData.amount), 10) || 0;
     if (amountNum <= 0) {
-      Alert.alert("알림", "금액을 입력해주세요");
+      setShowErrors(true);
+      scrollRef.current?.scrollTo({ y: 0, animated: true });
+      showToast("입력되지 않은 값이 있어요.", { icon: "warning" });
       return;
     }
 
@@ -355,8 +362,22 @@ export default function AddExpenseModal({
     ]);
   };
 
-  const handleClose = () => {
-    if (isSaving || isDeleting) return;
+  const isDirty = expense
+    ? formData.category !== expense.category ||
+      formData.amount !== formatAmount(String(expense.amount)) ||
+      formData.description !== (expense.description ?? "") ||
+      formData.ex_date !== dayjs(expense.exDate).format("YYYY-MM-DD") ||
+      formData.currency !== expense.currency ||
+      pendingFiles.length > 0
+    : !!formData.amount ||
+      !!formData.description.trim() ||
+      pendingFiles.length > 0;
+
+  const amountError =
+    showErrors &&
+    (Number.parseInt(normalizeAmount(formData.amount), 10) || 0) <= 0;
+
+  const discardAndClose = () => {
     setFormData({
       category: ExpenseCategory.FOOD,
       amount: "",
@@ -366,6 +387,16 @@ export default function AddExpenseModal({
     });
     setPendingFiles([]);
     onClose?.();
+  };
+
+  const { requestClose, discardConfirmModal } = useDiscardConfirm(
+    isDirty,
+    discardAndClose,
+  );
+
+  const handleClose = () => {
+    if (isSaving || isDeleting) return;
+    requestClose();
   };
 
   return (
@@ -430,8 +461,15 @@ export default function AddExpenseModal({
               placeholder="0"
               placeholderTextColor={colors.paletteFg3}
               keyboardType="number-pad"
-              style={[styles.field, styles.singleLineInput]}
+              style={[
+                styles.field,
+                styles.singleLineInput,
+                amountError && styles.fieldError,
+              ]}
             />
+            {amountError && (
+              <Text style={styles.errorText}>금액을 입력해 주세요.</Text>
+            )}
           </View>
           <View style={[styles.inputGroup, styles.amountColumn]}>
             <Text style={styles.label}>통화</Text>
@@ -574,6 +612,7 @@ export default function AddExpenseModal({
           blocked={isDeleting}
         />
       </View>
+      {discardConfirmModal}
     </BottomSheetModal>
     <AiDocumentAnalyzeModal
       visible={!!aiModalResult}
@@ -610,6 +649,15 @@ export default function AddExpenseModal({
 }
 
 const styles = StyleSheet.create({
+  fieldError: {
+    borderWidth: 1,
+    borderColor: colors.danger,
+  },
+  errorText: {
+    ...textStyles.body6,
+    color: colors.danger,
+    marginTop: spacing.xs,
+  },
   header: {
     alignItems: "center",
     justifyContent: "center",

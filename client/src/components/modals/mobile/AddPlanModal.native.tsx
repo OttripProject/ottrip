@@ -1,4 +1,5 @@
 import { useToast } from "@/contexts/ToastContext";
+import { useDiscardConfirm } from "@/hooks/useDiscardConfirm";
 import { getTripFormErrors, useTripForm } from "@/hooks/useTripForm";
 import type { CreatePlanRequest, Plan, UpdatePlanRequest } from "@/types/api";
 import TripCalendarModal from "@/components/trip/TripCalendarModal";
@@ -32,6 +33,27 @@ interface AddPlanModalProps {
 }
 
 
+function buildEditFormData(plan: Plan) {
+  return {
+    name: plan.title || "",
+    segments: plan.segments?.length
+      ? plan.segments.map(s => ({
+          country: s.country,
+          city: s.city,
+          startDate: s.startDate,
+          endDate: s.endDate,
+        }))
+      : [
+          {
+            country: "",
+            city: "",
+            startDate: plan.startDate || "",
+            endDate: plan.endDate || "",
+          },
+        ],
+  };
+}
+
 export default function AddPlanModal({
   visible,
   onClose,
@@ -63,8 +85,20 @@ export default function AddPlanModal({
   const segmentYs = useRef<Record<number, number>>({});
   const errors = showErrors ? getTripFormErrors(tripData) : null;
 
+  const initialData = planToEdit ? buildEditFormData(planToEdit) : null;
+  const isDirty = initialData
+    ? JSON.stringify(initialData) !== JSON.stringify(tripData)
+    : !!tripData.name.trim() ||
+      tripData.segments.some(
+        seg => seg.country || seg.city || seg.startDate || seg.endDate,
+      );
+  const { requestClose, discardConfirmModal } = useDiscardConfirm(
+    isDirty,
+    onClose,
+  );
+
   const handleClose = () => {
-    if (!isSubmitting) onClose();
+    if (!isSubmitting) requestClose();
   };
   const [calendarOpen, setCalendarOpen] = useState(false);
   const prevSelectionModeRef = useRef(selectionMode);
@@ -88,24 +122,7 @@ export default function AddPlanModal({
   useEffect(() => {
     if (visible) {
       if (planToEdit) {
-        setFormData({
-          name: planToEdit.title || "",
-          segments: planToEdit.segments?.length
-            ? planToEdit.segments.map(s => ({
-                country: s.country,
-                city: s.city,
-                startDate: s.startDate,
-                endDate: s.endDate,
-              }))
-            : [
-                {
-                  country: "",
-                  city: "",
-                  startDate: planToEdit.startDate || "",
-                  endDate: planToEdit.endDate || "",
-                },
-              ],
-        });
+        setFormData(buildEditFormData(planToEdit));
       } else {
         resetForm();
       }
@@ -257,6 +274,7 @@ export default function AddPlanModal({
             onDateSelect={handleDateSelect}
           />
         </View>
+        {discardConfirmModal}
       </BottomSheetModal>
     </>
   );
