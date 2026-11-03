@@ -207,7 +207,7 @@ export default function ProfileScreen() {
                 }
               }}
             >
-              <XIcon width={24} height={24} fill={colors.black} />
+              <XIcon width={24} height={24} color={colors.black} />
             </Pressable>
 
             <Text style={styles.title}>프로필 설정</Text>
@@ -482,7 +482,7 @@ export default function ProfileScreen() {
               style={styles.contactModalCloseButton}
               onPress={() => setContactOpen(false)}
             >
-              <XIcon width={24} height={24} fill={colors.black} />
+              <XIcon width={24} height={24} color={colors.black} />
             </Pressable>
 
             <Text style={styles.contactModalTitle}>문의하기</Text>

@@ -180,7 +180,7 @@ export default function AddScheduleModal({
           <View style={styles.titleSpacer} />
           <Text style={styles.headerTitle}>새 일정 추가</Text>
           <Pressable style={styles.closeButton} onPress={onClose} hitSlop={8}>
-            <CloseIcon width={24} height={24} />
+            <CloseIcon width={24} height={24} color={colors.gray700} />
           </Pressable>
         </View>
 

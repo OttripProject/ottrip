@@ -9,6 +9,7 @@ import ChatIcon from "../../../../assets/chat.svg";
 import CloseIcon from "../../../../assets/close_line.svg";
 import RightArrowIcon from "../../../../assets/right_arrow.svg";
 import ManualIcon from "../../../../assets/update.svg";
+import ScalePressable from "@/ui/components/ScalePressable";
 
 const SHEET_CONTENT_HEIGHT = 264;
 
@@ -62,11 +63,8 @@ export default function AddScheduleMethodModal({
         </View>
 
         <View style={styles.cards}>
-          <Pressable
-            style={({ pressed }) => [
-              styles.card,
-              pressed && styles.cardPressed,
-            ]}
+          <ScalePressable
+            style={styles.card}
             onPress={handleDirect}
             accessibilityRole="button"
           >
@@ -78,7 +76,7 @@ export default function AddScheduleMethodModal({
             <View style={styles.cardTextBlock}>
               <Text style={styles.cardTitle}>직접 입력</Text>
               <Text style={styles.cardSubtitle}>
-                상세 정보를 직접 입력하세요
+                상세 정보를 직접 입력하세요.
               </Text>
             </View>
             <RightArrowIcon
@@ -87,13 +85,10 @@ export default function AddScheduleMethodModal({
               color={colors.paletteChevron}
               style={styles.chevron}
             />
-          </Pressable>
+          </ScalePressable>
 
-          <Pressable
-            style={({ pressed }) => [
-              styles.card,
-              pressed && styles.cardPressed,
-            ]}
+          <ScalePressable
+            style={styles.card}
             onPress={handleAi}
             accessibilityRole="button"
           >
@@ -105,7 +100,7 @@ export default function AddScheduleMethodModal({
             <View style={styles.cardTextBlock}>
               <Text style={styles.cardTitle}>대화로 일정 추가</Text>
               <Text style={styles.cardSubtitle}>
-                대화하거나 파일을 첨부하면 AI가 등록해요
+                대화하거나 파일을 첨부하면 AI가 등록해요.
               </Text>
             </View>
             <RightArrowIcon
@@ -114,7 +109,7 @@ export default function AddScheduleMethodModal({
               color={colors.paletteChevron}
               style={styles.chevron}
             />
-          </Pressable>
+          </ScalePressable>
         </View>
       </View>
     </BottomSheetModal>
@@ -154,9 +149,6 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
     borderRadius: radii.lgPlus,
     backgroundColor: colors.paletteFillSoft,
-  },
-  cardPressed: {
-    opacity: 0.85,
   },
   iconBox: {
     width: 48,
