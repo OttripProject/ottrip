@@ -25,6 +25,7 @@ import { motion } from "@/ui/tokens/motion";
 import { radii } from "@/ui/tokens/radii";
 import { shadows } from "@/ui/tokens/shadows";
 import { spacing } from "@/ui/tokens/spacing";
+import { surfaces } from "@/ui/tokens/surfaces";
 import { textStyles, typography } from "@/ui/tokens/typography";
 import { useQueryClient } from "@tanstack/react-query";
 import dayjs from "dayjs";
@@ -32,6 +33,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Animated, ScrollView, StyleSheet, Text, View } from "react-native";
 import DropdownIcon from "../../assets/mobile_dropdown.svg";
 import PaperclipIcon from "../../assets/paperclip.svg";
+import PlusIcon from "../../assets/mobile_plus2.svg";
 
 type CurrencyTotal = { currency: ExpenseCurrency; amount: number };
 
@@ -85,6 +87,7 @@ export default function ExpenseScreen() {
     useState<ExpenseCategory | null>(null);
   const [calendarVisible, setCalendarVisible] = useState(false);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
+  const [isAddingExpense, setIsAddingExpense] = useState(false);
   const [attachmentListVisible, setAttachmentListVisible] = useState(false);
   const [viewerAttachments, setViewerAttachments] = useState<
     Attachment[] | null
@@ -490,10 +493,26 @@ export default function ExpenseScreen() {
       />
 
       {selectedPlan && (
+        <ScalePressable
+          style={styles.fab}
+          onPress={() => setIsAddingExpense(true)}
+          hitSlop={8}
+          accessibilityLabel="비용 추가"
+        >
+          <PlusIcon width={24} height={24} color={colors.white} />
+        </ScalePressable>
+      )}
+
+      {selectedPlan && (
         <AddExpenseModal
-          visible={!!editingExpense}
+          visible={isAddingExpense || !!editingExpense}
           expense={editingExpense}
-          onClose={() => setEditingExpense(null)}
+          defaultExDate={selectedDate ?? undefined}
+          onClose={() => {
+            setIsAddingExpense(false);
+            setEditingExpense(null);
+          }}
+          onExpenseAdd={refreshPlanData}
           planId={selectedPlan.id}
           planStartDate={selectedPlan.startDate}
           planEndDate={selectedPlan.endDate}
@@ -506,6 +525,18 @@ export default function ExpenseScreen() {
 }
 
 const styles = StyleSheet.create({
+  fab: {
+    position: "absolute",
+    right: spacing.lgPlus,
+    bottom: 12,
+    width: 54,
+    height: 54,
+    borderRadius: radii.pill,
+    ...surfaces.ink,
+    ...shadows.fab,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   container: {
     flex: 1,
     backgroundColor: colors.white,
