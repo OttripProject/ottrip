@@ -2,7 +2,8 @@ import MapScheduleView from "@/components/map/MapScheduleView.native";
 import AddPlanModal from "@/components/modals/mobile/AddPlanModal.native";
 import PlanSelectModal from "@/components/modals/mobile/PlanSelectModal.native";
 import ProfileModal from "@/components/modals/mobile/ProfileModal.native";
-import TravelInfoModal from "@/components/modals/mobile/TravelInfoModal.native";
+import SharedMembersModal from "@/components/modals/mobile/SharedMembersModal.native";
+import SharedMemoModal from "@/components/modals/mobile/SharedMemoModal.native";
 import { useSelectedPlan } from "@/contexts/SelectedPlanContext";
 import { usePlanDataQuery } from "@/hooks/usePlanDataQuery";
 import { usePlansQuery } from "@/hooks/usePlansQuery";
@@ -29,11 +30,12 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import DotsIcon from "../../assets/dots.svg";
-import InfoCircleIcon from "../../assets/info_circle.svg";
 import CalendarIcon from "../../assets/mobile_calendar_black.svg";
 import DropdownIcon from "../../assets/mobile_dropdown.svg";
 import LocationIcon from "../../assets/mobile_location.svg";
-import PersonIcon from "../../assets/person_outline.svg";
+import MemoIcon from "../../assets/memo.svg";
+import ProfileIcon from "../../assets/person_outline.svg";
+import ShareIcon from "../../assets/share_nodes_outline.svg";
 
 interface TripHeaderProps {
   onCalendarPress: () => void;
@@ -49,7 +51,8 @@ export default function TripHeader({ onCalendarPress }: TripHeaderProps) {
   const [showAddPlanModal, setShowAddPlanModal] = useState(false);
   const [editingPlan, setEditingPlan] = useState<Plan | null>(null);
   const [profileModalVisible, setProfileModalVisible] = useState(false);
-  const [travelInfoModalVisible, setTravelInfoModalVisible] = useState(false);
+  const [shareModalVisible, setShareModalVisible] = useState(false);
+  const [memoModalVisible, setMemoModalVisible] = useState(false);
   const [moreMenuVisible, setMoreMenuVisible] = useState(false);
   const [mapVisible, setMapVisible] = useState(false);
   const [moreMenuTop, setMoreMenuTop] = useState(0);
@@ -59,7 +62,8 @@ export default function TripHeader({ onCalendarPress }: TripHeaderProps) {
   useEffect(() => {
     return guestPrompt.registerBeforeSignUpNavigation(() => {
       setProfileModalVisible(false);
-      setTravelInfoModalVisible(false);
+      setShareModalVisible(false);
+      setMemoModalVisible(false);
     });
   }, []);
 
@@ -210,39 +214,26 @@ export default function TripHeader({ onCalendarPress }: TripHeaderProps) {
       </Modal>
 
       {selectedPlan && (
-        <TravelInfoModal
-          visible={travelInfoModalVisible}
-          onClose={() => setTravelInfoModalVisible(false)}
-          plan={planData.plan ?? selectedPlan}
-          itineraries={planData.itineraries ?? []}
-          accommodations={planData.accommodations ?? []}
-          flights={planData.flights ?? []}
-          expenses={planData.expenses ?? []}
-          attachments={planData.attachments ?? []}
-          memberCount={planData.shares?.length ?? 0}
-          planPublicId={selectedPlan.publicId}
-          planId={selectedPlan.id}
-          planStartDate={selectedPlan.startDate}
-          planEndDate={selectedPlan.endDate}
-          onExpenseAdd={expense => planData.addExpense?.(expense)}
-          onRefreshExpenses={async () => {
-            if (selectedPlan?.publicId) {
-              queryClient.invalidateQueries({
-                queryKey: ["expenses", selectedPlan.id],
-              });
-            }
-          }}
-          onRefreshPlan={async () => {
-            if (selectedPlan?.publicId) {
+        <>
+          <SharedMembersModal
+            visible={shareModalVisible}
+            onClose={() => {
+              setShareModalVisible(false);
               queryClient.invalidateQueries({
                 queryKey: ["plan", selectedPlan.publicId],
               });
-              queryClient.invalidateQueries({
-                queryKey: ["expenses", selectedPlan.id],
-              });
-            }
-          }}
-        />
+            }}
+            planId={selectedPlan.id}
+            myRole={(planData.plan ?? selectedPlan).myRole}
+          />
+          <SharedMemoModal
+            visible={memoModalVisible}
+            onClose={() => setMemoModalVisible(false)}
+            planId={selectedPlan.id}
+            planPublicId={selectedPlan.publicId}
+            memo={(planData.plan ?? selectedPlan).memo}
+          />
+        </>
       )}
 
       <Modal
@@ -265,13 +256,18 @@ export default function TripHeader({ onCalendarPress }: TripHeaderProps) {
         >
           {[
             {
-              label: "여행 정보",
-              Icon: InfoCircleIcon,
-              onPress: () => setTravelInfoModalVisible(true),
+              label: "공유",
+              Icon: ShareIcon,
+              onPress: () => setShareModalVisible(true),
             },
             {
-              label: "설정",
-              Icon: PersonIcon,
+              label: "메모",
+              Icon: MemoIcon,
+              onPress: () => setMemoModalVisible(true),
+            },
+            {
+              label: "프로필",
+              Icon: ProfileIcon,
               onPress: () => setProfileModalVisible(true),
             },
           ].map(({ label, Icon, onPress }) => (

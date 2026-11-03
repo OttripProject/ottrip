@@ -28,7 +28,6 @@ import {
   Text,
   View,
 } from "react-native";
-import DeleteIcon from "../../../../assets/delete_gray.svg";
 import ExternalLinkIcon from "../../../../assets/external_link.svg";
 import MemoIcon from "../../../../assets/memo.svg";
 import AttachmentDocumentIcon from "../../../../assets/mobile_attachment_document.svg";
@@ -36,8 +35,8 @@ import AttachmentImageIcon from "../../../../assets/mobile_attachment_image.svg"
 import CloseIcon from "../../../../assets/mobile_close.svg";
 import ExpenseIcon from "../../../../assets/mobile_expense.svg";
 import LocationIcon from "../../../../assets/mobile_location.svg";
-import UpdateIcon from "../../../../assets/update.svg";
 import TimeIcon from "../../../../assets/mobile_time.svg";
+import FloatingFooter from "@/ui/components/FloatingFooter.native";
 
 const MEMO_MAX_LINES = 3;
 
@@ -393,26 +392,14 @@ export default function ItineraryDetailModal({
       </ScrollView>
 
       {(onEdit || onDelete) && (
-        <View style={styles.footer}>
-          {onDelete && (
-            <ScalePressable
-              style={[styles.footerButton, styles.deleteButton]}
-              onPress={handleDelete}
-            >
-              <DeleteIcon width={17} height={17} color={colors.danger} />
-              <Text style={styles.deleteButtonText}>삭제</Text>
-            </ScalePressable>
-          )}
-          {onEdit && (
-            <ScalePressable
-              style={[styles.footerButton, styles.editButton]}
-              onPress={handleEdit}
-            >
-              <UpdateIcon width={17} height={17} color={colors.gray900} />
-              <Text style={styles.editButtonText}>수정</Text>
-            </ScalePressable>
-          )}
-        </View>
+        <FloatingFooter
+          secondaryLabel={onEdit && onDelete ? "삭제" : undefined}
+          secondaryTone="danger"
+          onSecondaryPress={onEdit && onDelete ? handleDelete : undefined}
+          primaryLabel={onEdit ? "수정" : "삭제"}
+          primaryTone={onEdit ? "secondary" : "danger"}
+          onPrimaryPress={onEdit ? handleEdit : handleDelete}
+        />
       )}
 
       <ImagePreviewModal
@@ -621,35 +608,5 @@ const styles = StyleSheet.create({
     ...textStyles.h7,
     color: colors.gray800,
     flex: 1,
-  },
-  footer: {
-    flexDirection: "row",
-    gap: spacing.md,
-    paddingTop: spacing.lg,
-    paddingHorizontal: spacing.xl,
-    paddingBottom: spacing.sm,
-  },
-  footerButton: {
-    flex: 1,
-    height: 48,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: spacing.sm,
-    borderRadius: radii.mdPlus,
-  },
-  editButton: {
-    backgroundColor: colors.gray300,
-  },
-  deleteButton: {
-    backgroundColor: colors.dangerTint,
-  },
-  editButtonText: {
-    ...textStyles.h6,
-    color: colors.gray900,
-  },
-  deleteButtonText: {
-    ...textStyles.h6,
-    color: colors.danger,
   },
 });

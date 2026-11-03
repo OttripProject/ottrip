@@ -125,7 +125,6 @@ export default function MapStopModals({
           invalidatePlan();
           planData.refreshAttachments();
         }}
-        onDelete={afterItineraryRemoved}
       />
 
       <AccommodationDetailModal
@@ -156,7 +155,6 @@ export default function MapStopModals({
           invalidatePlan();
           planData.refreshAttachments();
         }}
-        onDelete={afterAccommodationRemoved}
       />
     </>
   );

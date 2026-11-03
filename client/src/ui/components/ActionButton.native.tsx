@@ -30,7 +30,7 @@ const toneStyles: Record<ActionButtonTone, ViewStyle> = {
     ...gradient(colors.gradientPrimary),
     ...shadows.primaryRaised,
   },
-  secondary: { backgroundColor: colors.gray300 },
+  secondary: { backgroundColor: colors.gray300, ...shadows.insetLine },
   danger: { backgroundColor: colors.dangerTint },
   destructive: { backgroundColor: colors.danger },
   ink: {

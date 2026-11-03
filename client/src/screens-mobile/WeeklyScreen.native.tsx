@@ -31,6 +31,7 @@ import { motion } from "@/ui/tokens/motion";
 import { radii } from "@/ui/tokens/radii";
 import { spacing } from "@/ui/tokens/spacing";
 import { shadows } from "@/ui/tokens/shadows";
+import { surfaces } from "@/ui/tokens/surfaces";
 import { textStyles, typography } from "@/ui/tokens/typography";
 import {
   convertUTCToLocalTime,
@@ -1697,28 +1698,6 @@ export default function WeeklyScreen() {
           }
           planData.refreshAttachments();
         }}
-        onDelete={async itineraryId => {
-          const remainingDates = collectPlanItemDates(
-            planData.itineraries.filter(it => it.id !== itineraryId),
-            planData.flights,
-            planData.accommodations,
-          );
-          await shrinkPlanIfNeeded(selectedPlan!.id, planData.plan, remainingDates);
-          planData.removeItinerary(itineraryId);
-          if (selectedPlan?.publicId) {
-            queryClient.invalidateQueries({
-              queryKey: ["expenses", selectedPlan.id],
-            });
-            queryClient.invalidateQueries({
-              queryKey: ["checklist", selectedPlan.publicId],
-            });
-            queryClient.invalidateQueries({
-              queryKey: ["plan", selectedPlan.publicId],
-            });
-          }
-          queryClient.invalidateQueries({ queryKey: ["plans"] });
-          planData.refreshAttachments();
-        }}
       />
 
       <TourismDetailModal
@@ -1822,27 +1801,6 @@ export default function WeeklyScreen() {
           }
           planData.refreshAttachments();
         }}
-        onDelete={async flightId => {
-          const remainingDates = collectPlanItemDates(
-            planData.itineraries,
-            planData.flights.filter(f => f.id !== flightId),
-            planData.accommodations,
-          );
-          await shrinkPlanIfNeeded(selectedPlan!.id, planData.plan, remainingDates);
-          planData.removeFlight(flightId);
-          if (selectedPlan?.publicId) {
-            queryClient.invalidateQueries({
-              queryKey: ["expenses", selectedPlan.id],
-            });
-            queryClient.invalidateQueries({
-              queryKey: ["checklist", selectedPlan.publicId],
-            });
-            queryClient.invalidateQueries({
-              queryKey: ["plan", selectedPlan.publicId],
-            });
-          }
-          queryClient.invalidateQueries({ queryKey: ["plans"] });
-        }}
       />
 
       <AccommodationDetailModal
@@ -1906,25 +1864,6 @@ export default function WeeklyScreen() {
               queryKey: ["expenses", selectedPlan.id],
             });
           }
-          planData.refreshAttachments();
-        }}
-        onDelete={async accommodationId => {
-          const remainingDates = collectPlanItemDates(
-            planData.itineraries,
-            planData.flights,
-            planData.accommodations.filter(acc => acc.id !== accommodationId),
-          );
-          await shrinkPlanIfNeeded(selectedPlan!.id, planData.plan, remainingDates);
-          planData.removeAccommodation(accommodationId);
-          if (selectedPlan?.publicId) {
-            queryClient.invalidateQueries({
-              queryKey: ["expenses", selectedPlan.id],
-            });
-            queryClient.invalidateQueries({
-              queryKey: ["plan", selectedPlan.publicId],
-            });
-          }
-          queryClient.invalidateQueries({ queryKey: ["plans"] });
           planData.refreshAttachments();
         }}
       />
@@ -2474,12 +2413,13 @@ const styles = StyleSheet.create({
   },
   fab: {
     position: "absolute",
-    right: 12,
+    right: spacing.lgPlus,
     bottom: 12,
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: colors.black,
+    width: 54,
+    height: 54,
+    borderRadius: radii.pill,
+    ...surfaces.ink,
+    ...shadows.fab,
     alignItems: "center",
     justifyContent: "center",
   },

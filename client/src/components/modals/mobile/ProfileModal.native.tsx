@@ -1,13 +1,16 @@
 import { PLACEHOLDERS } from "@/constants/placeholders";
 import { useAuth } from "@/contexts/AuthContext";
 import { useMe } from "@/hooks/useMe";
+import { useDiscardConfirm } from "@/hooks/useDiscardConfirm";
 import { useNicknameValidation } from "@/hooks/useNicknameValidation";
 import { type UserProfile, usersApi } from "@/services/users";
 import { Gender } from "@/types/api";
 import Card from "@/ui/components/Card";
 import ModalBackdrop from "@/ui/components/ModalBackdrop";
+import ActionButton from "@/ui/components/ActionButton";
 import Input from "@/ui/components/input/Input";
 import { colors } from "@/ui/tokens/colors";
+import { spacing } from "@/ui/tokens/spacing";
 import { textStyles } from "@/ui/tokens/typography";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
@@ -38,6 +41,7 @@ import GenderCheckIcon from "../../../../assets/gender_check.svg";
 import FilesIcon from "../../../../assets/memo.svg";
 import CloseIcon from "../../../../assets/mobile_close.svg";
 import QnaIcon from "../../../../assets/qna.svg";
+
 
 interface ProfileModalProps {
   visible: boolean;
@@ -88,16 +92,24 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
     onNicknameChange(text);
   };
 
+  const [saving, setSaving] = useState(false);
+
   const save = async () => {
+    if (saving) return;
     if (!isValid) {
       Alert.alert("알림", "닉네임을 확인해주세요");
       return;
     }
 
-    const updated = await usersApi.updateMe({ nickname, gender });
-    setMe(updated);
-    queryClient.setQueryData(["me"], updated);
-    onClose();
+    setSaving(true);
+    try {
+      const updated = await usersApi.updateMe({ nickname, gender });
+      setMe(updated);
+      queryClient.setQueryData(["me"], updated);
+      onClose();
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleDeleteAccount = () => {
@@ -126,6 +138,22 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
   const hasChanges = nickname !== me?.nickname || gender !== me?.gender;
   const canSave = isValid && hasChanges;
   const isGuest = !!me?.isGuest;
+
+  const { requestClose: closeProfile, discardConfirmModal } = useDiscardConfirm(
+    hasChanges && !isGuest,
+    () => {
+      if (me) {
+        setNickname(me.nickname);
+        setGender(me.gender);
+        onNicknameChange(me.nickname);
+      }
+      onClose();
+    },
+  );
+
+  const handleCloseProfile = () => {
+    if (!saving) closeProfile();
+  };
 
   const handleSignUp = () => {
     guestPrompt.notifyBeforeSignUpNavigation();
@@ -226,13 +254,14 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
                     </Text>
                     <Pressable
                       style={styles.closeButton}
-                      onPress={onClose}
+                      onPress={handleCloseProfile}
                       hitSlop={8}
+                      accessibilityLabel="닫기"
                     >
                       <CloseIcon
                         width={24}
                         height={24}
-                        color={colors.gray500}
+                        color={colors.gray700}
                       />
                     </Pressable>
                   </View>
@@ -245,28 +274,19 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
                       <Text style={styles.guestDescription}>
                         로그인하면 임시 저장된 일정을 계정과 연동할 수 있어요.
                       </Text>
-                      <Pressable
-                        disabled={deletingGuestData}
-                        style={[
-                          styles.guestLoginButton,
-                          deletingGuestData && styles.guestButtonDisabled,
-                        ]}
+                      <ActionButton
+                        label="로그인"
+                        style={styles.guestLoginButton}
                         onPress={handleSignUp}
-                      >
-                        <Text style={styles.guestLoginButtonText}>로그인</Text>
-                      </Pressable>
-                      <Pressable
-                        disabled={deletingGuestData}
-                        style={[
-                          styles.guestDeleteRecordsButton,
-                          deletingGuestData && styles.guestButtonDisabled,
-                        ]}
+                        blocked={deletingGuestData}
+                      />
+                      <ActionButton
+                        label="임시 기록 삭제"
+                        tone="danger"
+                        style={styles.guestDeleteRecordsButton}
                         onPress={handleDeleteTemporaryRecords}
-                      >
-                        <Text style={styles.guestDeleteRecordsButtonText}>
-                          임시 기록 삭제
-                        </Text>
-                      </Pressable>
+                        loading={deletingGuestData}
+                      />
                       <View style={styles.guestInquirySection}>
                         <Text style={styles.guestInquiryTitle}>문의하기</Text>
                         <View style={styles.guestInquiryEmailBox}>
@@ -284,8 +304,8 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
                               </Text>
                             ) : (
                               <Pressable
-                                hitSlop={8}
                                 style={styles.guestInquiryCopyIcon}
+                                accessibilityLabel="복사"
                                 onPress={async () => {
                                   try {
                                     await copyContactEmail();
@@ -445,16 +465,14 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
                             <Text style={styles.footerLinkGray}>계정 삭제</Text>
                           </Pressable>
                         </View>
-                        <Pressable
-                          disabled={!canSave}
-                          style={[
-                            styles.saveButton,
-                            !canSave && styles.saveButtonDisabled,
-                          ]}
+                        <ActionButton
+                          label="저장"
+                          size="M"
+                          style={styles.saveButton}
                           onPress={save}
-                        >
-                          <Text style={styles.saveButtonText}>저장</Text>
-                        </Pressable>
+                          loading={saving}
+                          disabled={!canSave}
+                        />
                       </View>
                     </>
                   )}
@@ -471,8 +489,9 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
                 <Pressable
                   style={styles.contactModalCloseButton}
                   onPress={() => setContactOpen(false)}
+                  accessibilityLabel="닫기"
                 >
-                  <Ionicons name="close" size={24} color={colors.black} />
+                  <Ionicons name="close" size={24} color={colors.gray700} />
                 </Pressable>
 
                 <Text style={styles.contactModalTitle}>문의하기</Text>
@@ -490,6 +509,7 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
                     ) : (
                       <Pressable
                         style={styles.contactModalCopyIcon}
+                        accessibilityLabel="복사"
                         onPress={async () => {
                           try {
                             await copyContactEmail();
@@ -512,12 +532,11 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
                   최대한 빠르게 답변드리겠습니다.
                 </Text>
 
-                <Pressable
+                <ActionButton
+                  label="확인"
                   style={styles.contactModalConfirmButton}
                   onPress={() => setContactOpen(false)}
-                >
-                  <Text style={styles.contactModalConfirmButtonText}>확인</Text>
-                </Pressable>
+                />
               </View>
             </View>
           </Modal>
@@ -565,6 +584,7 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
         onClose={() => setTermsDetailModalOpen(false)}
         maxWidth={360}
       />
+      {discardConfirmModal}
     </>
   );
 }
@@ -632,34 +652,11 @@ const styles = StyleSheet.create({
   },
   guestLoginButton: {
     width: "100%",
-    height: 56,
-    backgroundColor: colors.black,
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 12,
-  },
-  guestLoginButtonText: {
-    ...textStyles.h5,
-    color: colors.white,
+    marginBottom: spacing.md,
   },
   guestDeleteRecordsButton: {
     width: "100%",
-    height: 56,
-    backgroundColor: colors.white,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: colors.danger,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 32,
-  },
-  guestDeleteRecordsButtonText: {
-    ...textStyles.h5,
-    color: colors.danger,
-  },
-  guestButtonDisabled: {
-    opacity: 0.5,
+    marginBottom: spacing["2xl"],
   },
   guestInquirySection: {
     width: "100%",
@@ -694,8 +691,11 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   guestInquiryCopyIcon: {
-    width: 16,
-    height: 16,
+    width: 32,
+    height: 32,
+    margin: -spacing.sm,
+    alignItems: "center",
+    justifyContent: "center",
   },
   guestInquiryCopiedText: {
     ...textStyles.body6,
@@ -824,23 +824,11 @@ const styles = StyleSheet.create({
   },
   footerLinkGray: {
     ...textStyles.h7,
-    color: colors.gray600,
+    color: colors.gray700,
   },
   saveButton: {
-    backgroundColor: colors.primary,
     paddingHorizontal: 42,
-    paddingVertical: 14,
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
     marginLeft: "auto",
-  },
-  saveButtonDisabled: {
-    backgroundColor: colors.gray300,
-  },
-  saveButtonText: {
-    ...textStyles.h6,
-    color: colors.white,
   },
   contactModalOverlay: {
     flex: 1,
@@ -858,10 +846,12 @@ const styles = StyleSheet.create({
   },
   contactModalCloseButton: {
     position: "absolute",
-    right: 20,
-    top: 20,
-    width: 24,
-    height: 24,
+    right: spacing.lg,
+    top: spacing.lg,
+    width: 32,
+    height: 32,
+    alignItems: "center",
+    justifyContent: "center",
     zIndex: 1,
   },
   contactModalTitle: {
@@ -899,8 +889,11 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   contactModalCopyIcon: {
-    width: 16,
-    height: 16,
+    width: 32,
+    height: 32,
+    margin: -spacing.sm,
+    alignItems: "center",
+    justifyContent: "center",
   },
   contactModalCopiedText: {
     ...textStyles.body6,
@@ -913,14 +906,5 @@ const styles = StyleSheet.create({
   },
   contactModalConfirmButton: {
     width: "100%",
-    height: 56,
-    backgroundColor: colors.black,
-    borderRadius: 10,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  contactModalConfirmButtonText: {
-    ...textStyles.h5,
-    color: colors.white,
   },
 });

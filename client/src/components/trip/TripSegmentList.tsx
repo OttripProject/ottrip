@@ -208,7 +208,9 @@ export default function TripSegmentList({
                     placeholder="국가 선택"
                     style={
                       isNative
-                        ? styles.pickerBtnNative
+                        ? errors?.[idx]?.country
+                          ? pickerBtnNativeError
+                          : styles.pickerBtnNative
                         : errors?.[idx]?.country
                           ? pickerTriggerError
                           : styles.pickerTrigger
@@ -242,8 +244,12 @@ export default function TripSegmentList({
                     style={
                       isNative
                         ? segment.country.trim()
-                          ? styles.pickerBtnNative
-                          : pickerBtnNativeDisabled
+                          ? errors?.[idx]?.city
+                            ? pickerBtnNativeError
+                            : styles.pickerBtnNative
+                          : errors?.[idx]?.city
+                            ? pickerBtnNativeDisabledError
+                            : pickerBtnNativeDisabled
                         : segment.country.trim()
                           ? errors?.[idx]?.city
                             ? pickerTriggerError
@@ -274,7 +280,7 @@ export default function TripSegmentList({
                   style={({ hovered }: HoverState) => [
                     isNative ? styles.dateBtnNative : styles.dateBtnWeb,
                     !isNative && hovered && styles.dateBtnWebHover,
-                    !isNative && errors?.[idx]?.date && styles.fieldError,
+                    errors?.[idx]?.date && styles.fieldError,
                   ]}
                   onPress={() => {
                     onSegmentFocus(idx);
@@ -607,4 +613,14 @@ const pickerTriggerDisabledError = StyleSheet.flatten([
 const pickerBtnNativeDisabled = StyleSheet.flatten([
   styles.pickerBtnNative,
   { opacity: 0.55 },
+]);
+
+const pickerBtnNativeError = StyleSheet.flatten([
+  styles.pickerBtnNative,
+  styles.fieldError,
+]);
+
+const pickerBtnNativeDisabledError = StyleSheet.flatten([
+  pickerBtnNativeDisabled,
+  styles.fieldError,
 ]);

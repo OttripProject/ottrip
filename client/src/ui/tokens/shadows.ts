@@ -161,6 +161,9 @@ export const shadows = {
   errorRing: {
     boxShadow: "0 0 0 1px rgba(239,68,68,0.5), 0 0 0 4px rgba(239,68,68,0.14)",
   },
+  insetLine: {
+    boxShadow: "inset 0 -1px 0 rgba(20,24,40,0.06)",
+  },
   insetBottom: Platform.select({
     ios: {},
     android: {},
@@ -199,6 +202,9 @@ export const shadows = {
   darkRaised: {
     boxShadow:
       "inset 0 1px 0 rgba(255,255,255,0.16), 0 1px 1px rgba(0,0,0,0.2), 0 8px 18px -8px rgba(0,0,0,0.45)",
+  },
+  fab: {
+    boxShadow: "0 8px 22px rgba(0,0,0,0.25)",
   },
   card: {
     boxShadow:

@@ -14,8 +14,9 @@ import { Alert, StyleSheet, Text, TextInput, View } from "react-native";
 import CheckMarkIcon from "../../../assets/check_mark.svg";
 import PlusIcon from "../../../assets/mobile_plus.svg";
 import RefreshIcon from "../../../assets/refresh_ai.svg";
+import { useToast } from "@/contexts/ToastContext";
 
-const INK_GRADIENT = `linear-gradient(180deg, ${colors.gradientInk[0]} 0%, ${colors.gradientInk[1]} 100%)`;
+const PRIMARY_GRADIENT = `linear-gradient(180deg, ${colors.gradientPrimary[0]} 0%, ${colors.gradientPrimary[1]} 100%)`;
 const AI_GRADIENT = `linear-gradient(135deg, ${colors.aiGrad[0]} 0%, ${colors.aiGrad[1]} 100%)`;
 
 const GROUPS = [
@@ -71,6 +72,8 @@ export default function TripChecklistPanel({
   const [aiLoading, setAiLoading] = useState(false);
   const togglingItems = useRef<Set<number>>(new Set());
   const deletingItems = useRef<Set<number>>(new Set());
+  const { showToast } = useToast();
+  const [deleteTargetId, setDeleteTargetId] = useState<number | null>(null);
 
   const { data: checklist, refetch } = useQuery<ChecklistData>({
     queryKey: ["checklist", planPublicId],
@@ -171,14 +174,15 @@ export default function TripChecklistPanel({
   };
 
   const handleLongPress = (item: ChecklistRow) => {
-    Alert.alert("항목 삭제", `'${item.name}' 항목을 삭제할까요?`, [
-      { text: "취소", style: "cancel" },
-      {
-        text: "삭제",
-        style: "destructive",
-        onPress: () => deleteItem(item.id),
-      },
-    ]);
+    setDeleteTargetId(item.id);
+  };
+
+  const handleItemPress = (item: ChecklistRow) => {
+    if (deleteTargetId !== null) {
+      setDeleteTargetId(null);
+      return;
+    }
+    handleToggle(item.id, !item.isChecked);
   };
 
   const handleAddPress = (key: GroupKey) => {
@@ -199,6 +203,7 @@ export default function TripChecklistPanel({
       setNewItemName("");
       setAddingGroup(null);
       await refetch();
+      showToast("체크리스트에 추가했어요.");
     } catch (error) {
       if (handleGuestPromptError(error)) return;
       Alert.alert("알림", "체크리스트 항목 추가에 실패했습니다");
@@ -285,7 +290,7 @@ export default function TripChecklistPanel({
                 <ScalePressable
                   key={item.id}
                   style={[styles.itemRow, index > 0 && styles.itemRowDivider]}
-                  onPress={() => handleToggle(item.id, !item.isChecked)}
+                  onPress={() => handleItemPress(item)}
                   onLongPress={() => handleLongPress(item)}
                 >
                   <View
@@ -326,6 +331,18 @@ export default function TripChecklistPanel({
                       </Text>
                     )}
                   </Text>
+                  {deleteTargetId === item.id && (
+                    <ScalePressable
+                      style={styles.deletePill}
+                      onPress={() => {
+                        setDeleteTargetId(null);
+                        deleteItem(item.id);
+                      }}
+                      accessibilityLabel="삭제"
+                    >
+                      <Text style={styles.deletePillText}>삭제</Text>
+                    </ScalePressable>
+                  )}
                 </ScalePressable>
               ))}
               {addingGroup === group.key && (
@@ -477,6 +494,18 @@ const styles = StyleSheet.create({
     gap: 10,
     paddingVertical: 11,
   },
+  deletePill: {
+    height: 28,
+    paddingHorizontal: spacing.md,
+    borderRadius: radii.pill,
+    backgroundColor: colors.dangerTint,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  deletePillText: {
+    ...textStyles.h8,
+    color: colors.danger,
+  },
   itemRowDivider: {
     borderTopWidth: 1,
     borderTopColor: colors.gray200,
@@ -548,18 +577,17 @@ const styles = StyleSheet.create({
     ...shadows.focusRing,
   },
   saveButton: {
-    height: 40,
+    height: 44,
     paddingHorizontal: spacing.lg,
     borderRadius: radii.md,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: colors.paletteInk,
-    experimental_backgroundImage: INK_GRADIENT,
-    ...shadows.darkRaised,
+    backgroundColor: colors.primary,
+    experimental_backgroundImage: PRIMARY_GRADIENT,
+    ...shadows.primaryRaised,
   },
   saveButtonText: {
     ...textStyles.h6,
-    fontFamily: typography.fontFamily.pretendardBold,
     color: colors.white,
   },
   aiButton: {

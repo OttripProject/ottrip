@@ -47,6 +47,9 @@ import AddIcon from "../../../../assets/mobile_plan_add.svg";
 import TimeIcon from "../../../../assets/mobile_time.svg";
 import CloseIcon from "../../../../assets/x.svg";
 import AirportSearchModal from "./AirportSearchModal.native";
+import { useDiscardConfirm } from "@/hooks/useDiscardConfirm";
+import { useToast } from "@/contexts/ToastContext";
+import { spacing } from "@/ui/tokens/spacing";
 
 interface FlightEditModalProps {
   visible: boolean;
@@ -57,7 +60,6 @@ interface FlightEditModalProps {
   defaultDate?: string;
   embedded?: boolean;
   onSave?: (flight: FlightRead) => void;
-  onDelete?: (flightId: number) => void;
   pendingAiResult?: { result: DocumentUploadAnalyzeResponse; filename?: string; pendingFiles?: LocalFile[] } | null;
   onRouteMismatchResult?: (result: DocumentUploadAnalyzeResponse, filename?: string, pendingFiles?: LocalFile[]) => void;
 }
@@ -103,7 +105,6 @@ export default function FlightEditModal({
   defaultDate,
   embedded,
   onSave,
-  onDelete,
   pendingAiResult,
   onRouteMismatchResult,
 }: FlightEditModalProps) {
@@ -131,6 +132,9 @@ export default function FlightEditModal({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isSubmittingRef = useRef(false);
   const scrollRef = useRef<KeyboardAwareScrollViewRef>(null);
+  const { showToast } = useToast();
+  const [showErrors, setShowErrors] = useState(false);
+  const firstSegmentY = useRef(0);
   const [pendingFiles, setPendingFiles] = useState<LocalFile[]>([]);
   const [existingAttachments, setExistingAttachments] = useState<Attachment[]>(
     [],
@@ -155,6 +159,8 @@ export default function FlightEditModal({
   useEffect(() => {
     if (!visible) {
       formInitializedRef.current = false;
+      setShowErrors(false);
+      baselineRef.current = null;
       setAiModalResult(null);
       setAiApplyLabel(undefined);
       return;
@@ -249,7 +255,22 @@ export default function FlightEditModal({
       setFlightSegments(segList);
     }
     setPendingFiles([]);
+    setBaselinePending(true);
   }, [visible, flight, planStartDate, defaultDate]);
+  const [baselinePending, setBaselinePending] = useState(false);
+  const baselineRef = useRef<string | null>(null);
+  const formSnapshot = JSON.stringify({ formData, flightSegments, expenseAmount, expenseCurrency });
+
+  useEffect(() => {
+    if (!baselinePending) return;
+    baselineRef.current = formSnapshot;
+    setBaselinePending(false);
+  }, [baselinePending, formSnapshot]);
+
+  const isDirty =
+    baselineRef.current !== null &&
+    (formSnapshot !== baselineRef.current || pendingFiles.length > 0);
+
 
   useEffect(() => {
     if (!visible) return;
@@ -364,7 +385,9 @@ export default function FlightEditModal({
       !first?.arrival_date ||
       !first?.arrival_time
     ) {
-      Alert.alert("알림", "입력되지 않은 필수 값이 있습니다");
+      setShowErrors(true);
+      scrollRef.current?.scrollTo({ y: firstSegmentY.current, animated: true });
+      showToast("입력되지 않은 값이 있어요.", { icon: "warning" });
       return;
     }
 
@@ -451,7 +474,7 @@ export default function FlightEditModal({
         }
       }
 
-      Alert.alert(flight ? "수정완료" : "추가완료", flight ? "항공편이 수정되었습니다" : "항공편이 추가되었습니다");
+      showToast(flight ? "항공편을 수정했어요." : "항공편을 저장했어요.");
 
       try {
         await onSave?.(savedFlight);
@@ -470,27 +493,6 @@ export default function FlightEditModal({
       isSubmittingRef.current = false;
       setIsSubmitting(false);
     }
-  };
-
-  const handleDelete = () => {
-    if (!flight) return;
-    Alert.alert("항공 편 삭제", "이 항공 편을 삭제하시겠습니까?", [
-      { text: "취소", style: "cancel" },
-      {
-        text: "삭제",
-        style: "destructive",
-        onPress: async () => {
-          try {
-            await flightsApi.deleteFlight(flight.id);
-            if (onDelete) onDelete(flight.id);
-            Alert.alert("삭제완료", "항공편이 삭제되었습니다");
-            onClose?.({ fromSave: true });
-          } catch (_error) {
-            Alert.alert("알림", "항공 편 삭제에 실패했습니다");
-          }
-        },
-      },
-    ]);
   };
 
   const handleAmountChange = (text: string) => {
@@ -538,6 +540,16 @@ export default function FlightEditModal({
     });
   };
 
+  const { requestClose, discardConfirmModal } = useDiscardConfirm(
+    isDirty,
+    () => onClose?.(),
+  );
+
+  const handleRequestClose = () => {
+    if (isSubmitting || isUploading) return;
+    requestClose();
+  };
+
   const content = (
     <>
       {!embedded && (
@@ -547,10 +559,10 @@ export default function FlightEditModal({
           </Text>
           <Pressable
             style={styles.closeButton}
-            onPress={() => onClose?.()}
+            onPress={handleRequestClose}
             hitSlop={8}
           >
-            <CloseIcon width={24} height={24} />
+            <CloseIcon width={24} height={24} color={colors.gray700} />
           </Pressable>
         </View>
       )}
@@ -648,7 +660,17 @@ export default function FlightEditModal({
           </View>
 
           {flightSegments.map((seg, idx) => (
-            <View key={idx} style={styles.segmentCard}>
+            <View
+              key={idx}
+              style={styles.segmentCard}
+              onLayout={
+                idx === 0
+                  ? e => {
+                      firstSegmentY.current = e.nativeEvent.layout.y;
+                    }
+                  : undefined
+              }
+            >
               <View style={styles.segmentCardHeader}>
                 <Text style={styles.segmentCardHeaderText}>구간 {idx + 1}</Text>
                 {flightSegments.length > 1 && (
@@ -696,6 +718,7 @@ export default function FlightEditModal({
                         styles.airportPickerTouchable,
                         { backgroundColor: colors.white },
                         !flight && styles.pickerInputBorderless,
+                        showErrors && idx === 0 && !seg.departure_airport.trim() && styles.fieldError,
                       ]}
                       onPress={() =>
                         setAirportSearchTarget({ idx, type: "dep" })
@@ -722,6 +745,9 @@ export default function FlightEditModal({
                         color={colors.gray600}
                       />
                     </Pressable>
+                    {showErrors && idx === 0 && !seg.departure_airport.trim() && (
+                      <Text style={styles.errorText}>출발 공항을 선택해 주세요.</Text>
+                    )}
                   </View>
                   <View style={[styles.inputGroup, styles.halfWidth]}>
                     <Pressable
@@ -730,6 +756,7 @@ export default function FlightEditModal({
                         styles.airportPickerTouchable,
                         { backgroundColor: colors.white },
                         !flight && styles.pickerInputBorderless,
+                        showErrors && idx === 0 && !seg.arrival_airport.trim() && styles.fieldError,
                       ]}
                       onPress={() =>
                         setAirportSearchTarget({ idx, type: "arr" })
@@ -756,6 +783,9 @@ export default function FlightEditModal({
                         color={colors.gray600}
                       />
                     </Pressable>
+                    {showErrors && idx === 0 && !seg.arrival_airport.trim() && (
+                      <Text style={styles.errorText}>도착 공항을 선택해 주세요.</Text>
+                    )}
                   </View>
                 </View>
                 <View style={styles.row}>
@@ -1033,13 +1063,14 @@ export default function FlightEditModal({
 
       <FloatingFooter
         primaryLabel={
-          isUploading ? "업로드 중..." : flight ? "수정 완료" : "일정 저장"
+          "저장"
         }
         onPrimaryPress={handleSave}
-        primaryDisabled={isSubmitting || isUploading}
-        secondaryLabel={flight && !embedded ? "삭제" : undefined}
-        onSecondaryPress={handleDelete}
+        primaryLoading={isSubmitting || isUploading}
+        secondaryLabel="취소"
+        onSecondaryPress={handleRequestClose}
       />
+      {discardConfirmModal}
     </>
   );
 
@@ -1084,7 +1115,10 @@ export default function FlightEditModal({
   }
 
   return (
-    <FullScreenModal visible={visible} onClose={() => onClose?.()}>
+    <FullScreenModal
+      visible={visible}
+      onClose={handleRequestClose}
+    >
       {content}
       {aiModal}
     </FullScreenModal>
@@ -1092,6 +1126,15 @@ export default function FlightEditModal({
 }
 
 const styles = StyleSheet.create({
+  fieldError: {
+    borderWidth: 1,
+    borderColor: colors.danger,
+  },
+  errorText: {
+    ...textStyles.body6,
+    color: colors.danger,
+    marginTop: spacing.xs,
+  },
   header: {
     flexDirection: "row",
     justifyContent: "flex-end",

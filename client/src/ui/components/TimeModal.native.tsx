@@ -3,10 +3,14 @@ import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
 
 import ModalBackdrop from "@/ui/components/ModalBackdrop";
 import { colors } from "@/ui/tokens/colors";
+import { radii } from "@/ui/tokens/radii";
+import { shadows } from "@/ui/tokens/shadows";
 import { textStyles } from "@/ui/tokens/typography";
 import CloseIcon from "../../../assets/mobile_close.svg";
 import DownArrowIcon from "../../../assets/mobile_time_down.svg";
 import UpperArrowIcon from "../../../assets/mobile_time_up.svg";
+
+const PRIMARY_GRADIENT = `linear-gradient(180deg, ${colors.gradientPrimary[0]} 0%, ${colors.gradientPrimary[1]} 100%)`;
 
 const HOURS_12 = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12] as const;
 const MINUTES_STEP = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55] as const;
@@ -287,10 +291,12 @@ const styles = StyleSheet.create({
     alignItems: "flex-end",
   },
   saveBtn: {
-    paddingVertical: 13,
+    height: 44,
     paddingHorizontal: 40,
-    borderRadius: 12,
-    backgroundColor: colors.black,
+    borderRadius: radii.md,
+    backgroundColor: colors.primary,
+    experimental_backgroundImage: PRIMARY_GRADIENT,
+    ...shadows.primaryRaised,
     alignItems: "center",
     justifyContent: "center",
   },

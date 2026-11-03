@@ -78,6 +78,9 @@ import UpperArrowIcon from "../../../../assets/upper_arrow.svg";
 import InfoCircleIcon from "../../../../assets/info_circle.svg";
 import CityPicker from "@/ui/components/pickers/CityPicker";
 import CountryPicker from "@/ui/components/pickers/CountryPicker";
+import { useDiscardConfirm } from "@/hooks/useDiscardConfirm";
+import { useToast } from "@/contexts/ToastContext";
+import { spacing } from "@/ui/tokens/spacing";
 
 export interface ItineraryEditPrefill {
   title?: string;
@@ -108,7 +111,6 @@ interface ItineraryEditModalProps {
   prefill?: ItineraryEditPrefill;
   embedded?: boolean;
   onSave?: (itinerary: Itinerary) => void;
-  onDelete?: (itineraryId: number) => void;
   pendingAiResult?: { result: DocumentUploadAnalyzeResponse; filename?: string; pendingFiles?: LocalFile[] } | null;
   onRouteMismatchResult?: (result: DocumentUploadAnalyzeResponse, filename?: string, pendingFiles?: LocalFile[]) => void;
   showRecommendToast?: boolean;
@@ -134,12 +136,13 @@ export default function ItineraryEditModal({
   prefill,
   embedded,
   onSave,
-  onDelete,
   pendingAiResult,
   onRouteMismatchResult,
   showRecommendToast,
 }: ItineraryEditModalProps) {
   const scrollRef = useRef<KeyboardAwareScrollViewRef>(null);
+  const { showToast } = useToast();
+  const [showErrors, setShowErrors] = useState(false);
   const locationDraftRef = useRef<PlaceResult | null>(null);
   const rawLocationTextRef = useRef<string>("");
   const prefillCoordsRef = useRef<{ lat: number; lng: number; address?: string; name: string; hasCoords: boolean } | null>(null);
@@ -247,6 +250,8 @@ export default function ItineraryEditModal({
   useEffect(() => {
     if (!visible) {
       formInitializedRef.current = false;
+      setShowErrors(false);
+      baselineRef.current = null;
       locationDraftRef.current = null;
       rawLocationTextRef.current = "";
       prefillCoordsRef.current = null;
@@ -316,6 +321,7 @@ export default function ItineraryEditModal({
           setExpenseData({ amount: "", category: toExpenseCategory((itinerary.category as ItineraryCategory) ?? null), currency: ExpenseCurrency.KRW });
           setExistingExpenseId(null);
         }
+        setBaselinePending(true);
       };
       loadLatest();
     } else {
@@ -348,7 +354,22 @@ export default function ItineraryEditModal({
       }
     }
     setPendingFiles([]);
+    if (!itinerary) setBaselinePending(true);
   }, [visible, itinerary, defaultDate, defaultCountry, defaultCity, prefill]);
+  const [baselinePending, setBaselinePending] = useState(false);
+  const baselineRef = useRef<string | null>(null);
+  const formSnapshot = JSON.stringify({ formData, selectedCategory, amount: expenseData.amount, currency: expenseData.currency });
+
+  useEffect(() => {
+    if (!baselinePending) return;
+    baselineRef.current = formSnapshot;
+    setBaselinePending(false);
+  }, [baselinePending, formSnapshot]);
+
+  const isDirty =
+    baselineRef.current !== null &&
+    (formSnapshot !== baselineRef.current || pendingFiles.length > 0);
+
 
   useEffect(() => {
     if (!visible) return;
@@ -458,7 +479,9 @@ export default function ItineraryEditModal({
 
   const handleSave = async () => {
     if (!formData.title.trim()) {
-      Alert.alert("알림", "일정 제목을 입력해주세요");
+      setShowErrors(true);
+      scrollRef.current?.scrollTo({ y: 0, animated: true });
+      showToast("입력되지 않은 값이 있어요.", { icon: "warning" });
       return;
     }
 
@@ -576,7 +599,7 @@ export default function ItineraryEditModal({
         }
       }
 
-      Alert.alert(itinerary ? "수정완료" : "추가완료", itinerary ? "일정이 수정되었습니다" : "일정이 추가되었습니다");
+      showToast(itinerary ? "일정을 수정했어요." : "일정을 저장했어요.");
 
       try {
         await onSave?.(savedItinerary);
@@ -589,30 +612,6 @@ export default function ItineraryEditModal({
     } finally {
       setIsSubmitting(false);
     }
-  };
-
-  const handleDelete = () => {
-    if (!itinerary) return;
-
-    Alert.alert("일정 삭제", "이 일정을 삭제하시겠습니까?", [
-      { text: "취소", style: "cancel" },
-      {
-        text: "삭제",
-        style: "destructive",
-        onPress: async () => {
-          try {
-            await itinerariesApi.deleteItinerary(itinerary.id);
-            if (onDelete) {
-              onDelete(itinerary.id);
-            }
-            Alert.alert("삭제완료", "일정이 삭제되었습니다");
-            onClose?.({ fromSave: true });
-          } catch (_error) {
-            Alert.alert("알림", "일정 삭제에 실패했습니다");
-          }
-        },
-      },
-    ]);
   };
 
   const formatDate = (dateStr: string) => {
@@ -633,6 +632,18 @@ export default function ItineraryEditModal({
     return (Number.parseInt(h, 10) || 0) * 60 + (Number.parseInt(m, 10) || 0);
   };
 
+  const { requestClose, discardConfirmModal } = useDiscardConfirm(
+    isDirty,
+    () => onClose?.(),
+  );
+
+  const handleRequestClose = () => {
+    if (isSubmitting || isUploading) return;
+    requestClose();
+  };
+
+  const titleError = showErrors && !formData.title.trim();
+
   const content = (
     <>
       {!embedded && (
@@ -642,10 +653,10 @@ export default function ItineraryEditModal({
           </Text>
           <Pressable
             style={styles.closeButton}
-            onPress={() => onClose?.()}
+            onPress={handleRequestClose}
             hitSlop={8}
           >
-            <CloseIcon width={24} height={24} />
+            <CloseIcon width={24} height={24} color={colors.gray700} />
           </Pressable>
         </View>
       )}
@@ -668,8 +679,15 @@ export default function ItineraryEditModal({
               variant="filled"
               value={formData.title}
               onChangeText={text => setFormData({ ...formData, title: text })}
-              style={[styles.input, !itinerary && styles.inputBorderless]}
+              style={[
+                styles.input,
+                !itinerary && styles.inputBorderless,
+                titleError && styles.fieldError,
+              ]}
             />
+            {titleError && (
+              <Text style={styles.errorText}>제목을 입력해 주세요.</Text>
+            )}
           </View>
 
           {/* 카테고리 */}
@@ -1043,13 +1061,14 @@ export default function ItineraryEditModal({
 
       <FloatingFooter
         primaryLabel={
-          isUploading ? "업로드 중..." : itinerary ? "수정 완료" : "일정 저장"
+          "저장"
         }
         onPrimaryPress={handleSave}
-        primaryDisabled={isSubmitting || isUploading}
-        secondaryLabel={itinerary && !embedded ? "삭제" : undefined}
-        onSecondaryPress={itinerary ? handleDelete : undefined}
+        primaryLoading={isSubmitting || isUploading}
+        secondaryLabel="취소"
+        onSecondaryPress={handleRequestClose}
       />
+      {discardConfirmModal}
     </>
   );
 
@@ -1085,7 +1104,10 @@ export default function ItineraryEditModal({
   }
 
   return (
-    <FullScreenModal visible={visible} onClose={() => onClose?.()}>
+    <FullScreenModal
+      visible={visible}
+      onClose={handleRequestClose}
+    >
       {content}
       {aiModal}
       {showRecommendToast && (
@@ -1101,6 +1123,15 @@ export default function ItineraryEditModal({
 }
 
 const styles = StyleSheet.create({
+  fieldError: {
+    borderWidth: 1,
+    borderColor: colors.danger,
+  },
+  errorText: {
+    ...textStyles.body6,
+    color: colors.danger,
+    marginTop: spacing.xs,
+  },
   header: {
     flexDirection: "row",
     justifyContent: "flex-end",

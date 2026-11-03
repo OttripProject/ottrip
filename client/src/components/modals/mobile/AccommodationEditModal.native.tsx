@@ -44,6 +44,9 @@ import TimeIcon from "../../../../assets/mobile_time.svg";
 import CloseIcon from "../../../../assets/x.svg";
 import CityPicker from "@/ui/components/pickers/CityPicker";
 import CountryPicker from "@/ui/components/pickers/CountryPicker";
+import { useDiscardConfirm } from "@/hooks/useDiscardConfirm";
+import { useToast } from "@/contexts/ToastContext";
+import { spacing } from "@/ui/tokens/spacing";
 
 interface AccommodationEditModalProps {
   visible: boolean;
@@ -55,7 +58,6 @@ interface AccommodationEditModalProps {
   defaultCity?: string;
   embedded?: boolean;
   onSave?: (accommodation: Accommodation) => void;
-  onDelete?: (accommodationId: number) => void;
   pendingAiResult?: { result: DocumentUploadAnalyzeResponse; filename?: string; pendingFiles?: LocalFile[] } | null;
   onRouteMismatchResult?: (result: DocumentUploadAnalyzeResponse, filename?: string, pendingFiles?: LocalFile[]) => void;
 }
@@ -94,11 +96,12 @@ export default function AccommodationEditModal({
   defaultCity,
   embedded,
   onSave,
-  onDelete,
   pendingAiResult,
   onRouteMismatchResult,
 }: AccommodationEditModalProps) {
   const scrollRef = useRef<KeyboardAwareScrollViewRef>(null);
+  const { showToast } = useToast();
+  const [showErrors, setShowErrors] = useState(false);
   const locationDraftRef = useRef<PlaceResult | null>(null);
   const rawLocationTextRef = useRef<string>("");
 
@@ -146,6 +149,8 @@ export default function AccommodationEditModal({
   useEffect(() => {
     if (!visible) {
       formInitializedRef.current = false;
+      setShowErrors(false);
+      baselineRef.current = null;
       setAiModalResult(null);
       setAiApplyLabel(undefined);
       return;
@@ -190,7 +195,22 @@ export default function AccommodationEditModal({
       }));
     }
     setPendingFiles([]);
+    setBaselinePending(true);
   }, [visible, accommodation, defaultDate, defaultCountry, defaultCity]);
+  const [baselinePending, setBaselinePending] = useState(false);
+  const baselineRef = useRef<string | null>(null);
+  const formSnapshot = JSON.stringify({ formData, expenseAmount, expenseCurrency });
+
+  useEffect(() => {
+    if (!baselinePending) return;
+    baselineRef.current = formSnapshot;
+    setBaselinePending(false);
+  }, [baselinePending, formSnapshot]);
+
+  const isDirty =
+    baselineRef.current !== null &&
+    (formSnapshot !== baselineRef.current || pendingFiles.length > 0);
+
 
   useEffect(() => {
     if (!visible) return;
@@ -308,7 +328,9 @@ export default function AccommodationEditModal({
 
   const handleSave = async () => {
     if (!formData.name.trim()) {
-      Alert.alert("알림", "숙소명을 입력해주세요");
+      setShowErrors(true);
+      scrollRef.current?.scrollTo({ y: 0, animated: true });
+      showToast("입력되지 않은 값이 있어요.", { icon: "warning" });
       return;
     }
 
@@ -415,7 +437,7 @@ export default function AccommodationEditModal({
         }
       }
 
-      Alert.alert(accommodation ? "수정완료" : "추가완료", accommodation ? "숙소가 수정되었습니다" : "숙소가 추가되었습니다");
+      showToast(accommodation ? "숙소를 수정했어요." : "숙소를 저장했어요.");
 
       try {
         await onSave?.(savedAccommodation);
@@ -435,33 +457,23 @@ export default function AccommodationEditModal({
     }
   };
 
-  const handleDelete = () => {
-    if (!accommodation) return;
-
-    Alert.alert("숙소 삭제", "이 숙소를 삭제하시겠습니까?", [
-      { text: "취소", style: "cancel" },
-      {
-        text: "삭제",
-        style: "destructive",
-        onPress: async () => {
-          try {
-            await accommodationsApi.deleteAccommodation(accommodation.id);
-            if (onDelete) onDelete(accommodation.id);
-            Alert.alert("삭제완료", "숙소가 삭제되었습니다");
-            onClose?.({ fromSave: true });
-          } catch (_error) {
-            Alert.alert("알림", "숙소 삭제에 실패했습니다");
-          }
-        },
-      },
-    ]);
-  };
-
   const handleAmountChange = (text: string) => {
     const digits = text.replace(/[^0-9]/g, "");
     const formatted = digits.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
     setExpenseAmount(formatted);
   };
+
+  const { requestClose, discardConfirmModal } = useDiscardConfirm(
+    isDirty,
+    () => onClose?.(),
+  );
+
+  const handleRequestClose = () => {
+    if (isSubmitting || isUploading) return;
+    requestClose();
+  };
+
+  const nameError = showErrors && !formData.name.trim();
 
   const content = (
     <>
@@ -472,10 +484,10 @@ export default function AccommodationEditModal({
           </Text>
           <Pressable
             style={styles.closeButton}
-            onPress={() => onClose?.()}
+            onPress={handleRequestClose}
             hitSlop={8}
           >
-            <CloseIcon width={24} height={24} />
+            <CloseIcon width={24} height={24} color={colors.gray700} />
           </Pressable>
         </View>
       )}
@@ -497,8 +509,15 @@ export default function AccommodationEditModal({
               variant="filled"
               value={formData.name}
               onChangeText={text => setFormData({ ...formData, name: text })}
-              style={[styles.input, !accommodation && styles.inputBorderless]}
+              style={[
+                styles.input,
+                !accommodation && styles.inputBorderless,
+                nameError && styles.fieldError,
+              ]}
             />
+            {nameError && (
+              <Text style={styles.errorText}>숙소명을 입력해 주세요.</Text>
+            )}
           </View>
 
           <View style={styles.inputGroup}>
@@ -774,17 +793,14 @@ export default function AccommodationEditModal({
 
       <FloatingFooter
         primaryLabel={
-          isUploading
-            ? "업로드 중..."
-            : accommodation
-              ? "수정 완료"
-              : "일정 저장"
+          "저장"
         }
         onPrimaryPress={handleSave}
-        primaryDisabled={isSubmitting || isUploading}
-        secondaryLabel={accommodation && !embedded ? "삭제" : undefined}
-        onSecondaryPress={handleDelete}
+        primaryLoading={isSubmitting || isUploading}
+        secondaryLabel="취소"
+        onSecondaryPress={handleRequestClose}
       />
+      {discardConfirmModal}
     </>
   );
 
@@ -842,7 +858,10 @@ export default function AccommodationEditModal({
   }
 
   return (
-    <FullScreenModal visible={visible} onClose={() => onClose?.()}>
+    <FullScreenModal
+      visible={visible}
+      onClose={handleRequestClose}
+    >
       {content}
       {aiModal}
     </FullScreenModal>
@@ -850,6 +869,15 @@ export default function AccommodationEditModal({
 }
 
 const styles = StyleSheet.create({
+  fieldError: {
+    borderWidth: 1,
+    borderColor: colors.danger,
+  },
+  errorText: {
+    ...textStyles.body6,
+    color: colors.danger,
+    marginTop: spacing.xs,
+  },
   header: {
     flexDirection: "row",
     justifyContent: "flex-end",

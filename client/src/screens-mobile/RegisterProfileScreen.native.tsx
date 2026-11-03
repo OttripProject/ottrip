@@ -4,7 +4,10 @@ import api from "@/services/api";
 import { authApi } from "@/services/auth";
 import { Gender } from "@/types/api";
 import { Input } from "@/ui/components/input/Input";
+import Spinner from "@/ui/components/Spinner";
 import { colors } from "@/ui/tokens/colors";
+import { radii } from "@/ui/tokens/radii";
+import { shadows } from "@/ui/tokens/shadows";
 import { textStyles } from "@/ui/tokens/typography";
 import { toUserMessage } from "@/utils/crossPlatformAlert";
 import { tokenStores } from "@/utils/tokenStores";
@@ -25,6 +28,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import GenderCheckIcon from "../../assets/gender_check.svg";
 import LeftArrowIcon from "../../assets/left_arrow_L.svg";
 import CloseIcon from "../../assets/mobile_x.svg";
+
+const PRIMARY_GRADIENT = `linear-gradient(180deg, ${colors.gradientPrimary[0]} 0%, ${colors.gradientPrimary[1]} 100%)`;
 
 type RouteParams = {
   registerToken: string;
@@ -49,6 +54,16 @@ export default function RegisterProfileScreenNative() {
   const [gender, setGender] = useState<Gender | null>(null);
   const [handle] = useState(() => toHandleFromEmail(email));
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showSubmitSpinner, setShowSubmitSpinner] = useState(false);
+
+  useEffect(() => {
+    if (!isSubmitting) {
+      setShowSubmitSpinner(false);
+      return;
+    }
+    const timer = setTimeout(() => setShowSubmitSpinner(true), 300);
+    return () => clearTimeout(timer);
+  }, [isSubmitting]);
   const submittingRef = useRef(false);
 
   const { nicknameError, checkingNickname, onNicknameChange, isValid } =
@@ -220,14 +235,22 @@ export default function RegisterProfileScreenNative() {
       {/* 하단 버튼 */}
       <View style={styles.bottomArea}>
         <Pressable
-          style={[
-            styles.nextButton,
-            (!canSubmit || isSubmitting) && styles.nextButtonDisabled,
-          ]}
+          style={[styles.nextButton, !canSubmit && styles.nextButtonDisabled]}
           disabled={!canSubmit || isSubmitting}
           onPress={onSubmit}
         >
-          <Text style={styles.nextButtonText}>다음</Text>
+          {showSubmitSpinner ? (
+            <Spinner size={16} strokeWidth={2} color={colors.white} />
+          ) : (
+            <Text
+              style={[
+                styles.nextButtonText,
+                !canSubmit && styles.nextButtonTextDisabled,
+              ]}
+            >
+              다음
+            </Text>
+          )}
         </Pressable>
       </View>
     </SafeAreaView>
@@ -342,17 +365,24 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
   },
   nextButton: {
-    height: 56,
+    height: 48,
     backgroundColor: colors.primary,
-    borderRadius: 12,
+    experimental_backgroundImage: PRIMARY_GRADIENT,
+    ...shadows.primaryRaised,
+    borderRadius: radii.mdPlus,
     justifyContent: "center",
     alignItems: "center",
   },
   nextButtonDisabled: {
-    backgroundColor: colors.gray400,
+    backgroundColor: colors.gray300,
+    experimental_backgroundImage: "none",
+    boxShadow: "none",
   },
   nextButtonText: {
     ...textStyles.h5,
     color: colors.white,
+  },
+  nextButtonTextDisabled: {
+    color: colors.gray500,
   },
 });

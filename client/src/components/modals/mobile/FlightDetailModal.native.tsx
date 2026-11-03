@@ -19,11 +19,12 @@ import {
   View,
 } from "react-native";
 import FlightIcon from "../../../../assets/airplane.svg";
-import DeleteIcon from "../../../../assets/delete_gray.svg";
 import PNRIcon from "../../../../assets/memo.svg";
 import CloseIcon from "../../../../assets/mobile_close.svg";
 import ExpenseIcon from "../../../../assets/mobile_expense.svg";
-import UpdateIcon from "../../../../assets/update.svg";
+import { spacing } from "@/ui/tokens/spacing";
+import FloatingFooter from "@/ui/components/FloatingFooter.native";
+import ActionButton from "@/ui/components/ActionButton";
 
 interface FlightDetailModalProps {
   visible: boolean;
@@ -139,30 +140,12 @@ export default function FlightDetailModal({
             항공권 정보
           </Text>
           <View style={styles.headerActions}>
-            {onEdit && (
-              <ScalePressable
-                style={styles.actionButton}
-                onPress={handleEdit}
-                hitSlop={8}
-              >
-                <UpdateIcon width={20} height={20} color={colors.gray600} />
-              </ScalePressable>
-            )}
-            {onDelete && (
-              <ScalePressable
-                style={styles.actionButton}
-                onPress={handleDelete}
-                hitSlop={8}
-              >
-                <DeleteIcon width={20} height={20} color={colors.gray600} />
-              </ScalePressable>
-            )}
             <ScalePressable
               style={styles.actionButton}
               onPress={onClose}
               hitSlop={8}
             >
-              <CloseIcon width={20} height={20} color={colors.gray600} />
+              <CloseIcon width={20} height={20} color={colors.gray700} />
             </ScalePressable>
           </View>
         </View>
@@ -303,12 +286,30 @@ export default function FlightDetailModal({
       </ScrollView>
 
       {flightAttachments.length > 0 && (
-        <View style={styles.footer}>
-          <ScalePressable style={styles.ticketButton} onPress={handleViewTicket}>
-            <FlightIcon width={20} height={20} color={colors.gray900} />
-            <Text style={styles.ticketButtonText}>항공권 보기</Text>
-          </ScalePressable>
+        <View
+          style={[
+            styles.footer,
+            (onEdit || onDelete) && styles.footerAboveActions,
+          ]}
+        >
+          <ActionButton
+            label="항공권 보기"
+            tone="secondary"
+            icon={<FlightIcon width={20} height={20} color={colors.gray900} />}
+            onPress={handleViewTicket}
+          />
         </View>
+      )}
+
+      {(onEdit || onDelete) && (
+        <FloatingFooter
+          secondaryLabel={onEdit && onDelete ? "삭제" : undefined}
+          secondaryTone="danger"
+          onSecondaryPress={onEdit && onDelete ? handleDelete : undefined}
+          primaryLabel={onEdit ? "수정" : "삭제"}
+          primaryTone={onEdit ? "secondary" : "danger"}
+          onPrimaryPress={onEdit ? handleEdit : handleDelete}
+        />
       )}
 
       <ImagePreviewModal
@@ -322,6 +323,9 @@ export default function FlightDetailModal({
 }
 
 const styles = StyleSheet.create({
+  footerAboveActions: {
+    paddingBottom: spacing.none,
+  },
   scrollView: {
     flex: 1,
   },
@@ -466,21 +470,8 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
   footer: {
-    paddingHorizontal: 16,
-    paddingTop: 8,
-    paddingBottom: 16,
-  },
-  ticketButton: {
-    backgroundColor: colors.gray300,
-    borderRadius: 12,
-    paddingVertical: 16,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-  },
-  ticketButtonText: {
-    ...textStyles.h4,
-    color: colors.gray900,
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.xl,
   },
 });

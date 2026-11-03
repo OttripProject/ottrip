@@ -8,7 +8,7 @@ import BottomSheetModal from "@/ui/components/BottomSheetModal.native";
 import ScalePressable from "@/ui/components/ScalePressable";
 import { colors } from "@/ui/tokens/colors";
 import { radii } from "@/ui/tokens/radii";
-import { shadows } from "@/ui/tokens/shadows";
+import { surfaces } from "@/ui/tokens/surfaces";
 import { spacing } from "@/ui/tokens/spacing";
 import { textStyles, typography } from "@/ui/tokens/typography";
 import { formatFileSize } from "@/utils/fileUtils";
@@ -730,11 +730,13 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.sm,
   },
   swipeDeleteContainer: {
-    width: 64,
-    alignSelf: "stretch",
+    justifyContent: "center",
+    paddingHorizontal: spacing.md,
   },
   swipeDeleteButton: {
-    flex: 1,
+    height: 28,
+    paddingHorizontal: spacing.md,
+    borderRadius: radii.pill,
     backgroundColor: colors.dangerTint,
     justifyContent: "center",
     alignItems: "center",
@@ -868,11 +870,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
   },
   addExpenseButton: {
-    backgroundColor: colors.primary,
-    experimental_backgroundImage: `linear-gradient(180deg, ${colors.gradientPrimary[0]} 0%, ${colors.gradientPrimary[1]} 100%)`,
-    ...shadows.primaryRaised,
-    borderRadius: radii.lgPlus,
-    paddingVertical: spacing.lg,
+    ...surfaces.ink,
+    borderRadius: radii.mdPlus,
+    height: 48,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",

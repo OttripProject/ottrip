@@ -23,6 +23,7 @@ type ConfirmModalProps = {
   description?: string;
   actions: ConfirmAction[];
   onRequestClose: () => void;
+  onDismiss?: () => void;
   loading?: boolean;
 };
 
@@ -32,6 +33,7 @@ export default function ConfirmModal({
   description,
   actions,
   onRequestClose,
+  onDismiss,
   loading = false,
 }: ConfirmModalProps) {
   const backdrop = useBackdropClose(onRequestClose);
@@ -66,6 +68,7 @@ export default function ConfirmModal({
       transparent
       animationType="none"
       onRequestClose={onRequestClose}
+      onDismiss={onDismiss}
     >
       <View style={styles.overlay} {...backdrop.overlayProps}>
         <View style={styles.card} {...backdrop.cardProps}>

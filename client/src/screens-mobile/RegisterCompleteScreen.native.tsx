@@ -1,5 +1,7 @@
 import { useAuth } from "@/contexts/AuthContext";
 import { colors } from "@/ui/tokens/colors";
+import { radii } from "@/ui/tokens/radii";
+import { shadows } from "@/ui/tokens/shadows";
 import { textStyles } from "@/ui/tokens/typography";
 import {
   CommonActions,
@@ -10,6 +12,8 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import CheckIcon from "../../assets/mobile_plan_checked.svg";
+
+const PRIMARY_GRADIENT = `linear-gradient(180deg, ${colors.gradientPrimary[0]} 0%, ${colors.gradientPrimary[1]} 100%)`;
 
 type RouteParams = {
   accessToken: string;
@@ -89,14 +93,16 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
   },
   startButton: {
-    paddingVertical: 16,
-    backgroundColor: colors.black,
-    borderRadius: 12,
+    height: 48,
+    backgroundColor: colors.primary,
+    experimental_backgroundImage: PRIMARY_GRADIENT,
+    ...shadows.primaryRaised,
+    borderRadius: radii.mdPlus,
     justifyContent: "center",
     alignItems: "center",
   },
   startButtonText: {
-    ...textStyles.h4,
+    ...textStyles.h5,
     color: colors.white,
   },
 });
