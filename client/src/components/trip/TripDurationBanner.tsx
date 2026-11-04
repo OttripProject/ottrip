@@ -1,5 +1,7 @@
 import type { SegmentDraft } from "@/hooks/useTripForm";
 import { colors } from "@/ui/tokens/colors";
+import { radii } from "@/ui/tokens/radii";
+import { spacing } from "@/ui/tokens/spacing";
 import { textStyles, typography } from "@/ui/tokens/typography";
 import dayjs from "dayjs";
 import { Platform, StyleSheet, Text, View } from "react-native";
@@ -48,58 +50,89 @@ export default function TripDurationBanner({ segments }: TripDurationBannerProps
 
 const styles = StyleSheet.create({
   banner: {
-    backgroundColor: colors.gray900,
-    borderRadius: isNative ? 16 : 12,
-    paddingHorizontal: isNative ? 20 : 16,
-    paddingVertical: isNative ? 18 : 14,
-    marginBottom: isNative ? 8 : 20,
+    backgroundColor: isNative ? colors.paletteInk : colors.gray900,
+    borderRadius: isNative ? 16 : radii.mdPlus,
+    paddingHorizontal: isNative ? spacing.xl : spacing.lg,
+    paddingVertical: spacing.lg,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+    gap: spacing.md,
   },
   left: {
     flex: 1,
   },
-  label: {
-    ...textStyles.body6,
-    color: "rgba(255,255,255,0.5)",
-  },
+  label: isNative
+    ? {
+        ...textStyles.h7,
+        fontFamily: typography.fontFamily.pretendardBold,
+        color: colors.white,
+      }
+    : {
+        ...textStyles.h9,
+        color: colors.onDarkMuted,
+        letterSpacing: 1.54,
+        textTransform: "uppercase",
+      },
   dateRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-    marginTop: 2,
+    gap: spacing.sm,
+    marginTop: isNative ? spacing.sm : spacing.xs,
   },
-  dateNum: {
-    fontFamily: typography.fontFamily.poppinsSemiBold,
-    fontWeight: "700" as const,
-    fontSize: 15,
-    lineHeight: 22,
-    color: colors.white,
-  },
-  dateDash: {
-    fontFamily: typography.fontFamily.poppinsSemiBold,
-    fontWeight: "400" as const,
-    fontSize: 15,
-    lineHeight: 22,
-    color: "rgba(255,255,255,0.5)",
-  },
-  empty: {
-    ...textStyles.body5,
-    color: "rgba(255,255,255,0.5)",
-    marginTop: 2,
-  },
+  dateNum: isNative
+    ? {
+        fontFamily: typography.fontFamily.poppinsSemiBold,
+        fontWeight: "700" as const,
+        fontSize: 15,
+        lineHeight: 22,
+        color: colors.white,
+      }
+    : {
+        ...textStyles.h5,
+        fontVariant: ["tabular-nums"],
+        color: colors.white,
+      },
+  dateDash: isNative
+    ? {
+        fontFamily: typography.fontFamily.poppinsSemiBold,
+        fontWeight: "400" as const,
+        fontSize: 15,
+        lineHeight: 22,
+        color: colors.onDarkSubtle,
+      }
+    : {
+        ...textStyles.body2,
+        color: colors.onDarkSubtle,
+      },
+  empty: isNative
+    ? {
+        ...textStyles.body4,
+        fontFamily: typography.fontFamily.pretendardMedium,
+        color: colors.onDarkSubtle,
+        marginTop: spacing.sm,
+      }
+    : {
+        ...textStyles.body5,
+        color: colors.onDarkSubtle,
+        marginTop: spacing.xs,
+      },
   badge: {
-    backgroundColor: "rgba(255,255,255,0.12)",
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-    borderRadius: 999,
+    backgroundColor: colors.onDarkTint,
+    paddingVertical: isNative ? 6 : spacing.sm,
+    paddingHorizontal: isNative ? 10 : spacing.md,
+    borderRadius: radii.pill,
   },
-  badgeText: {
-    fontFamily: typography.fontFamily.poppinsSemiBold,
-    fontWeight: "700" as const,
-    fontSize: 12,
-    lineHeight: 16,
-    color: colors.white,
-  },
+  badgeText: isNative
+    ? {
+        fontFamily: typography.fontFamily.poppinsSemiBold,
+        fontWeight: "700" as const,
+        fontSize: 12,
+        lineHeight: 16,
+        color: colors.white,
+      }
+    : {
+        ...textStyles.h8,
+        color: colors.white,
+      },
 });

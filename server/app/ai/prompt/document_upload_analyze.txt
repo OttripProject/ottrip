@@ -18,7 +18,8 @@ You analyze ONE document's OCR/plain text for a travel app. Perform classificati
    - **Flight** `segments[].departure_time` / `arrival_time`: ISO 8601 strings preserving that clock time (e.g. `14:37`, `09:05:00`).
 9. **Flight segment datetimes (format)**: Use ISO 8601, e.g. `"2025-06-01T14:37"` or with offset if clearly stated. Unknown timezone: omit offset but keep the date-time from the document.
 10. **Expense enums** (when `values` includes expense or type is `expense`):
-    - `category` must be one of: `food`, `transport`, `flight`, `activity`, `accommodation`, `shopping`, `etc`.
+    - `category` must be one of: `food`, `transport`, `flight`, `activity`, `sightseeing`, `accommodation`, `shopping`, `etc`.
+    - Use `sightseeing` for visiting attractions (e.g. admission to palaces, museums, observatories) and `activity` for hands-on experiences (e.g. snorkeling, classes, tours).
     - `currency` must be one of: `KRW`, `USD`, `EUR`, `JPY`, `CNY`, `GBP`, `AUD`.
 11. **Flight `values` layout** (object, not a bare array at root):
     - `reservation_number`, `passenger_name`, `ticket_number`, `booking_reference` (strings, optional empty).

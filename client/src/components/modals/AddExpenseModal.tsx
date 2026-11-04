@@ -3,7 +3,10 @@ import BaseCalendar from "@/components/popup/calendar/BaseCalendar";
 import { PLACEHOLDERS } from "@/constants/placeholders";
 import ExpenseForm from "@/components/forms/ExpenseForm";
 import { useDate } from "@/contexts/DateContext";
+import { ToastUI, useToast } from "@/contexts/ToastContext";
 import { useAttachmentUpload } from "@/hooks/useAttachmentUpload";
+import { useBackdropClose } from "@/hooks/useBackdropClose";
+import { useDiscardConfirm } from "@/hooks/useDiscardConfirm";
 import { useExpenseAi } from "@/hooks/useExpenseAi";
 import { useFilePicker } from "@/hooks/useFilePicker";
 import { analyzeDocumentUpload } from "@/services/aiDocument";
@@ -18,29 +21,31 @@ import { ExpenseCategory, ExpenseCurrency } from "@/types/expense";
 import AttachmentSection from "@/ui/components/attachmentSection";
 import type { AiAttachmentAnalyzeSelection } from "@/ui/components/attachmentSection.types";
 import { pendingAiFileKey } from "@/ui/components/attachmentSection.types";
-import WarningBanner from "@/ui/components/toast/warning";
+import ActionButton from "@/ui/components/ActionButton";
+import MotionPressable, { MotionIcon } from "@/ui/components/MotionPressable";
+import { modalMotion } from "@/ui/effects/modalMotion";
 import { colors } from "@/ui/tokens/colors";
 import { radii } from "@/ui/tokens/radii";
+import { shadows } from "@/ui/tokens/shadows";
 import { spacing } from "@/ui/tokens/spacing";
-import { typography } from "@/ui/tokens/typography";
+import { surfaces } from "@/ui/tokens/surfaces";
+import { textStyles, typography } from "@/ui/tokens/typography";
 import { buildAnalyzeUploadPayload } from "@/utils/attachmentAiAnalyze";
 import { formatAttachmentUploadFailureMessage } from "@/utils/crossPlatformAlert";
 import dayjs from "dayjs";
 import { LinearGradient } from "expo-linear-gradient";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
-  ActivityIndicator,
   Alert,
   Modal,
   Platform,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
   View,
 } from "react-native";
 import CalendarIcon from "../../../assets/calender.svg";
-import XIcon from "../../../assets/x.svg";
+import CloseXIcon from "../../../assets/close_x.svg";
 
 function AiFilledBadge() {
   return (
@@ -72,7 +77,7 @@ const aiBadgeStyles = StyleSheet.create({
     borderRadius: 999,
   },
   text: {
-    fontFamily: "Pretendard-Bold",
+    fontFamily: typography.fontFamily.pretendardBold,
     fontSize: 9,
     lineHeight: 12,
     color: colors.aiInk,
@@ -96,7 +101,7 @@ const needsCheckStyles = StyleSheet.create({
     backgroundColor: "rgb(255, 243, 214)",
   },
   text: {
-    fontFamily: "Pretendard-Bold",
+    fontFamily: typography.fontFamily.pretendardBold,
     fontSize: 9,
     lineHeight: 12,
     color: "rgb(168, 115, 10)",
@@ -122,10 +127,11 @@ export default function AddExpenseModal({
   const { selectedDate } = useDate();
   const [categoryOpen, setCategoryOpen] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
-  const [showWarning, setShowWarning] = useState(false);
-  const [warningMessage, setWarningMessage] = useState("");
+  const { showToast } = useToast();
+  const [showErrors, setShowErrors] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isSubmittingRef = useRef(false);
+  const scrollRef = useRef<ScrollView>(null);
   const [pendingFiles, setPendingFiles] = useState<LocalFile[]>([]);
   const [aiAnalyzeFailureVisible, setAiAnalyzeFailureVisible] = useState(false);
   const [aiAnalyzeFailureMessage, setAiAnalyzeFailureMessage] = useState("");
@@ -213,20 +219,22 @@ export default function AddExpenseModal({
     }
   }, [visible, planStartDate, selectedDate]);
 
+  const isSaving = isSubmitting || isUploading;
+
   const handleExpenseSubmit = async () => {
     if (isSubmittingRef.current) {
       return;
     }
 
     if (!planId) {
-      setWarningMessage("여행을 먼저 선택해주세요");
-      setShowWarning(true);
+      showToast("여행을 먼저 선택해주세요", { icon: "warning" });
       return;
     }
 
     if (expenseForm.amount <= 0) {
-      setWarningMessage("금액을 입력해주세요");
-      setShowWarning(true);
+      setShowErrors(true);
+      scrollRef.current?.scrollTo({ y: 0, animated: true });
+      showToast("입력되지 않은 값이 있어요.", { icon: "warning" });
       return;
     }
 
@@ -261,8 +269,6 @@ export default function AddExpenseModal({
             "비용은 추가되었으나 첨부 파일 업로드에 실패했습니다",
           ),
         );
-      } else {
-        Alert.alert("성공", "비용이 추가되었습니다");
       }
 
       setExpenseForm({
@@ -272,8 +278,10 @@ export default function AddExpenseModal({
         ex_date: getDefaultDate(),
         currency: ExpenseCurrency.KRW,
       });
+      setShowErrors(false);
       onClose();
       onExpenseAdd?.(newExpense);
+      if (!uploadError) showToast("비용을 추가했어요.");
     } catch (_error) {
         Alert.alert("알림", "비용 추가에 실패했습니다");
     } finally {
@@ -282,7 +290,8 @@ export default function AddExpenseModal({
     }
   };
 
-  const handleClose = () => {
+  const discardAndClose = () => {
+    setShowErrors(false);
     aiState.resetAiState();
     clearPendingFilesWithRevoke();
     setExpenseForm({
@@ -301,29 +310,32 @@ export default function AddExpenseModal({
     onUpdateForm: setExpenseForm,
   });
 
+  const isDirty =
+    expenseForm.amount > 0 ||
+    !!expenseForm.description.trim() ||
+    pendingFiles.length > 0;
+  const { requestClose, discardConfirmModal } = useDiscardConfirm(
+    isDirty,
+    discardAndClose,
+  );
+  const handleClose = () => {
+    if (!isSubmittingRef.current) requestClose();
+  };
+
+  const backdrop = useBackdropClose(handleClose);
+
   return (
     <>
       <Modal
         visible={visible}
         transparent={true}
-        animationType="fade"
+        animationType="none"
         onRequestClose={handleClose}
       >
-        <Pressable style={styles.modalOverlay} onPress={handleClose}>
-          <Pressable
-            style={styles.modalContent}
-            onPress={e => e.stopPropagation()}
-          >
-            <WarningBanner
-              message={warningMessage}
-              visible={showWarning}
-              duration={3000}
-              onHide={() => {
-                setShowWarning(false);
-                setWarningMessage("");
-              }}
-            />
+        <View style={styles.modalOverlay} {...backdrop.overlayProps}>
+          <View style={styles.modalContent} {...backdrop.cardProps}>
             <ScrollView
+              ref={scrollRef}
               style={styles.scrollView}
               contentContainerStyle={styles.scrollContent}
               showsVerticalScrollIndicator={false}
@@ -331,9 +343,16 @@ export default function AddExpenseModal({
             >
               <View style={styles.modalHeader}>
                 <Text style={styles.modalTitle}>비용 추가</Text>
-                <Pressable style={styles.closeButton} onPress={handleClose}>
-                  <XIcon width={16} height={16} />
-                </Pressable>
+                <MotionPressable
+                  style={styles.closeButton}
+                  onPress={handleClose}
+                  disabled={isSubmitting}
+                  accessibilityLabel="닫기"
+                >
+                  <MotionIcon>
+                    <CloseXIcon width={16} height={16} color={colors.gray700} />
+                  </MotionIcon>
+                </MotionPressable>
               </View>
               <ExpenseForm 
                 data={expenseForm} 
@@ -356,32 +375,27 @@ export default function AddExpenseModal({
                 isAiAnalyzePartial={aiState.isAiAnalyzePartial}
                 analyzePartialMessage={aiState.analyzePartialMessage}
                 aiFilledFields={aiState.aiFilledFields}
+                amountError={showErrors && expenseForm.amount <= 0}
               />
 
               <View style={styles.modalButtons}>
-                <Pressable
-                  style={[styles.modalButton, styles.cancelButton]}
+                <ActionButton
+                  label="취소"
+                  tone="secondary"
+                  fill
                   onPress={handleClose}
-                >
-                  <Text style={styles.cancelButtonText}>취소</Text>
-                </Pressable>
-                <Pressable
-                  style={[styles.modalButton, styles.submitButton]}
+                  blocked={isSaving}
+                />
+                <ActionButton
+                  label="저장"
+                  fill
                   onPress={handleExpenseSubmit}
-                  disabled={isSubmitting || isUploading || aiState.isAiAnalyzing}
-                >
-                  <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                    {(isSubmitting || isUploading) && (
-                      <ActivityIndicator size="small" color="white" />
-                    )}
-                    <Text style={styles.submitButtonText}>
-                      {isSubmitting || isUploading ? "저장 중..." : "저장"}
-                    </Text>
-                  </View>
-                </Pressable>
+                  loading={isSaving}
+                  blocked={aiState.isAiAnalyzing}
+                />
               </View>
             </ScrollView>
-          </Pressable>
+          </View>
           {showDatePicker && (
             <View style={styles.calendarOverlay} pointerEvents="box-none">
               <BaseCalendar
@@ -398,7 +412,8 @@ export default function AddExpenseModal({
               />
             </View>
           )}
-        </Pressable>
+        </View>
+        <ToastUI />
       </Modal>
       <AiAnalyzeFailureModal
         visible={aiAnalyzeFailureVisible}
@@ -408,32 +423,37 @@ export default function AddExpenseModal({
           setAiAnalyzeFailureMessage("");
         }}
       />
+      {discardConfirmModal}
     </>
   );
 }
 
 const styles = StyleSheet.create({
   modalOverlay: {
+    ...modalMotion.overlay,
     flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.7)",
+    ...surfaces.overlay,
     justifyContent: "center",
     alignItems: "center",
+    padding: spacing.lgPlus,
   },
   modalContent: {
+    ...modalMotion.card,
     backgroundColor: colors.white,
-    borderRadius: 20,
-    width: "100%",
-    maxWidth: 460,
-    maxHeight: "90%",
+    borderRadius: radii["2xl"],
+    width: 420 + spacing.xl * 2,
+    maxWidth: "100%",
+    maxHeight: "calc(100vh - 40px)" as any,
     overflow: "hidden",
+    ...shadows.xl,
   },
   scrollView: {
-    flex: 1,
+    flexGrow: 0,
+    flexShrink: 1,
   },
   scrollContent: {
-    padding: 24,
-    paddingBottom: 20,
-    gap: 20,
+    padding: spacing.xl,
+    gap: spacing.xl,
   },
   modalHeader: {
     flexDirection: "row",
@@ -445,14 +465,12 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
   },
   modalTitle: {
-    fontFamily: typography.fontFamily.pretendardSemiBold,
-    fontSize: 20,
-    lineHeight: 28,
+    ...textStyles.h2,
     color: colors.gray900,
   },
   closeButton: {
-    width: 28,
-    height: 28,
+    width: 32,
+    height: 32,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -486,31 +504,7 @@ const styles = StyleSheet.create({
   },
   modalButtons: {
     flexDirection: "row",
-    gap: 12,
-  },
-  modalButton: {
-    flex: 1,
-    borderRadius: radii.md,
-    alignItems: "center",
-    justifyContent: "center",
-    height: 50,
-  },
-  cancelButton: {
-    backgroundColor: colors.gray300,
-  },
-  cancelButtonText: {
-    fontFamily: typography.fontFamily.pretendardSemiBold,
-    fontSize: 15,
-    lineHeight: 22,
-    color: colors.gray900,
-  },
-  submitButton: {
-    backgroundColor: colors.primary,
-  },
-  submitButtonText: {
-    fontFamily: typography.fontFamily.pretendardSemiBold,
-    fontSize: 15,
-    lineHeight: 22,
-    color: colors.white,
+    gap: spacing.md,
+    paddingTop: spacing.xs,
   },
 });

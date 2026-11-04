@@ -1,4 +1,5 @@
 import useDetectClose from "@/hooks/useDetectClose";
+import { useHover } from "@/hooks/useHover";
 import { useMe } from "@/hooks/useMe";
 import { useRecentSearches } from "@/hooks/useRecentSearches";
 import { colors } from "@/ui/tokens/colors";
@@ -38,6 +39,7 @@ interface AirportPickerProps {
   style?: ViewStyle;
   dropDownContainerStyle?: ViewStyle;
   disabled?: boolean;
+  hideArrow?: boolean;
   onOpen?: () => void;
   onClose?: () => void;
   dropdownAlign?: "left" | "right";
@@ -51,6 +53,7 @@ export default function AirportPicker({
   style,
   dropDownContainerStyle,
   disabled,
+  hideArrow,
   onOpen,
   onClose,
   dropdownAlign = "left",
@@ -149,13 +152,21 @@ export default function AirportPicker({
     );
   };
 
+  const triggerHover = useHover();
+
   return (
     <View
       ref={wrapperRef}
       style={[styles.wrapper, containerStyle, { zIndex: open ? zIndexTokens.dropdown : 1 }]}
     >
       <Pressable
-        style={[styles.trigger, disabled && styles.triggerDisabled, style]}
+        style={[
+          styles.trigger,
+          disabled && styles.triggerDisabled,
+          style,
+          triggerHover.hovered && !disabled && !open && styles.triggerHover,
+        ]}
+        {...triggerHover.pressableHoverProps}
         onPress={handleToggle}
         disabled={disabled}
       >
@@ -165,11 +176,12 @@ export default function AirportPicker({
         >
           {selectedLabel ?? placeholder}
         </Text>
-        {open ? (
-          <UpperArrowIcon width={10} height={10} style={{ opacity: 0.6 }} />
-        ) : (
-          <DownArrowIcon width={10} height={10} style={{ opacity: 0.6 }} />
-        )}
+        {!hideArrow &&
+          (open ? (
+            <UpperArrowIcon width={10} height={10} style={{ opacity: 0.6 }} />
+          ) : (
+            <DownArrowIcon width={10} height={10} style={{ opacity: 0.6 }} />
+          ))}
       </Pressable>
 
       {open && (
@@ -298,6 +310,9 @@ const styles = StyleSheet.create({
     height: 40,
     paddingHorizontal: 12,
     paddingVertical: 10,
+  },
+  triggerHover: {
+    backgroundColor: colors.inputHover,
   },
   triggerDisabled: {
     backgroundColor: colors.gray200,

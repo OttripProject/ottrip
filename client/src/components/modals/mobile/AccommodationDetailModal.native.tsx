@@ -5,6 +5,7 @@ import type { Accommodation, Attachment } from "@/types/api";
 import { ExpenseCurrency, currencyLabels } from "@/types/expense";
 import BottomSheetModal from "@/ui/components/BottomSheetModal.native";
 import MiniMapView from "@/ui/components/MiniMapView";
+import ScalePressable from "@/ui/components/ScalePressable";
 import { colors } from "@/ui/tokens/colors";
 import { radii } from "@/ui/tokens/radii";
 import { textStyles } from "@/ui/tokens/typography";
@@ -14,15 +15,11 @@ import { useEffect, useMemo, useState } from "react";
 import {
   Alert,
   Linking,
-  Platform,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
   View,
 } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import DeleteIcon from "../../../../assets/delete_gray.svg";
 import MemoIcon from "../../../../assets/memo.svg";
 import AccommodationIcon from "../../../../assets/mobile_accomodation.svg";
 import AttachmentDocumentIcon from "../../../../assets/mobile_attachment_document.svg";
@@ -30,8 +27,7 @@ import AttachmentImageIcon from "../../../../assets/mobile_attachment_image.svg"
 import CloseIcon from "../../../../assets/mobile_close.svg";
 import ExpenseIcon from "../../../../assets/mobile_expense.svg";
 import LocationIcon from "../../../../assets/mobile_location.svg";
-import MapIcon from "../../../../assets/mobile_map.svg";
-import UpdateIcon from "../../../../assets/update.svg";
+import FloatingFooter from "@/ui/components/FloatingFooter.native";
 
 interface AccommodationDetailModalProps {
   visible: boolean;
@@ -50,7 +46,6 @@ export default function AccommodationDetailModal({
   onEdit,
   onDelete,
 }: AccommodationDetailModalProps) {
-  const _insets = useSafeAreaInsets();
   const [previewVisible, setPreviewVisible] = useState(false);
   const [previewImages, setPreviewImages] = useState<ImagePreviewItem[]>([]);
   const [previewInitialIndex, setPreviewInitialIndex] = useState(0);
@@ -89,30 +84,6 @@ export default function AccommodationDetailModal({
     ? dayjs(accommodation.checkoutDate).format("YYYY-MM-DD")
     : "";
 
-  const handleOpenMap = () => {
-    const address = location || accommodation.name;
-    if (!address) {
-      Alert.alert("알림", "장소 정보가 없습니다");
-      return;
-    }
-
-    const encodedLocation = encodeURIComponent(address);
-    const url = Platform.select({
-      ios: `maps://maps.apple.com/?q=${encodedLocation}`,
-      android: `geo:0,0?q=${encodedLocation}`,
-    });
-
-    if (url) {
-      Linking.openURL(url).catch(() => {
-        Alert.alert("알림", "지도 앱을 열 수 없습니다");
-      });
-    } else {
-      const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodedLocation}`;
-      Linking.openURL(googleMapsUrl).catch(() => {
-        Alert.alert("알림", "지도 앱을 열 수 없습니다");
-      });
-    }
-  };
 
   const handleAttachmentPress = (index: number) => {
     const attachment = accommodationAttachments[index];
@@ -167,31 +138,13 @@ export default function AccommodationDetailModal({
             {accommodation.name || "숙소"}
           </Text>
           <View style={styles.headerActions}>
-            {onEdit && (
-              <Pressable
-                style={styles.actionButton}
-                onPress={handleEdit}
-                hitSlop={8}
-              >
-                <UpdateIcon width={20} height={20} color={colors.gray600} />
-              </Pressable>
-            )}
-            {onDelete && (
-              <Pressable
-                style={styles.actionButton}
-                onPress={handleDelete}
-                hitSlop={8}
-              >
-                <DeleteIcon width={20} height={20} color={colors.gray600} />
-              </Pressable>
-            )}
-            <Pressable
+            <ScalePressable
               style={styles.actionButton}
               onPress={onClose}
               hitSlop={8}
             >
-              <CloseIcon width={20} height={20} color={colors.gray600} />
-            </Pressable>
+              <CloseIcon width={20} height={20} color={colors.gray700} />
+            </ScalePressable>
           </View>
         </View>
 
@@ -283,7 +236,7 @@ export default function AccommodationDetailModal({
             {accommodationAttachments.map((attachment, index) => {
               const isImage = attachment.contentType.startsWith("image/");
               return (
-                <Pressable
+                <ScalePressable
                   key={attachment.id}
                   style={styles.attachmentItem}
                   onPress={() => handleAttachmentPress(index)}
@@ -306,21 +259,22 @@ export default function AccommodationDetailModal({
                   <Text style={styles.attachmentName} numberOfLines={1}>
                     {attachment.fileName}
                   </Text>
-                </Pressable>
+                </ScalePressable>
               );
             })}
           </View>
         )}
       </ScrollView>
 
-      {/* 지도 앱에서 길찾기 버튼 */}
-      {(location || accommodation.name) && (
-        <View style={styles.footer}>
-          <Pressable style={styles.mapButton} onPress={handleOpenMap}>
-            <MapIcon width={20} height={20} color={colors.white} />
-            <Text style={styles.mapButtonText}>지도 앱에서 길찾기</Text>
-          </Pressable>
-        </View>
+      {(onEdit || onDelete) && (
+        <FloatingFooter
+          secondaryLabel={onEdit && onDelete ? "삭제" : undefined}
+          secondaryTone="danger"
+          onSecondaryPress={onEdit && onDelete ? handleDelete : undefined}
+          primaryLabel={onEdit ? "수정" : "삭제"}
+          primaryTone={onEdit ? "secondary" : "danger"}
+          onPrimaryPress={onEdit ? handleEdit : handleDelete}
+        />
       )}
 
       <ImagePreviewModal
@@ -470,23 +424,5 @@ const styles = StyleSheet.create({
     ...textStyles.h7,
     color: colors.gray800,
     flex: 1,
-  },
-  footer: {
-    paddingHorizontal: 16,
-    paddingTop: 8,
-    paddingBottom: 16,
-  },
-  mapButton: {
-    backgroundColor: colors.black,
-    borderRadius: 12,
-    paddingVertical: 16,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-  },
-  mapButtonText: {
-    ...textStyles.h4,
-    color: colors.white,
   },
 });

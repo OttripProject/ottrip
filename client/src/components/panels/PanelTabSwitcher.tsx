@@ -1,13 +1,9 @@
+import MotionPressable from "@/ui/components/MotionPressable";
 import { colors } from "@/ui/tokens/colors";
+import { radii } from "@/ui/tokens/radii";
 import { spacing } from "@/ui/tokens/spacing";
 import { textStyles } from "@/ui/tokens/typography";
-import {
-  Platform,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { Platform, StyleSheet, Text, View } from "react-native";
 
 const TABS = [
   { key: "itinerary", label: "일정" },
@@ -31,16 +27,15 @@ export default function PanelTabSwitcher({
       {TABS.map(({ key, label }) => {
         const isActive = activeTab === key;
         return (
-          <TouchableOpacity
+          <MotionPressable
             key={key}
             style={[styles.tab, isActive && styles.tabActive]}
             onPress={() => onTabChange?.(key)}
-            activeOpacity={0.7}
           >
             <Text style={[styles.tabText, isActive && styles.tabTextActive]}>
               {label}
             </Text>
-          </TouchableOpacity>
+          </MotionPressable>
         );
       })}
     </View>
@@ -59,10 +54,10 @@ const styles = StyleSheet.create({
   },
   tab: {
     flex: 1,
-    height: 30,
+    height: 32,
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: 8,
+    borderRadius: radii.md,
     backgroundColor: "transparent",
   },
   tabActive: {

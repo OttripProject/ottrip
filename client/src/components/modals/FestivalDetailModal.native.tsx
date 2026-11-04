@@ -1,6 +1,7 @@
 import BottomSheetModal from "@/ui/components/BottomSheetModal.native";
 import MiniMapView from "@/ui/components/MiniMapView";
 import { ItineraryCategory } from "@/types/itinerary";
+import ScalePressable from "@/ui/components/ScalePressable";
 import { colors } from "@/ui/tokens/colors";
 import { radii } from "@/ui/tokens/radii";
 import { spacing } from "@/ui/tokens/spacing";
@@ -23,11 +24,12 @@ import LocationIcon from "../../../assets/mobile_location.svg";
 import TimeIcon from "../../../assets/week_bar_time.svg";
 import CalendarIcon from "../../../assets/calendar_outline.svg";
 import WonIcon from "../../../assets/won.svg";
+import FloatingFooter from "@/ui/components/FloatingFooter.native";
 
 const LCLSSYSTM2_MAP: Record<string, { label: string; bg: string; color: string }> = {
   EV01: { label: "축제", bg: colors.festivalBg, color: colors.festivalText },
   EV02: { label: "공연", bg: "#FDEAF9", color: colors.categoryActivity },
-  EV03: { label: "행사", bg: colors.accommodationBg, color: colors.categoryMeal },
+  EV03: { label: "행사", bg: colors.festivalEventBg, color: colors.categoryMeal },
 };
 const DEFAULT_BADGE = { label: "축제", bg: colors.festivalBg, color: colors.festivalText };
 
@@ -159,9 +161,9 @@ export default function FestivalDetailModal({ visible, onClose, item, onAddToIti
           <View style={[styles.badge, { backgroundColor: badge.bg }]}>
             <Text style={[styles.badgeText, { color: badge.color }]}>{badge.label}</Text>
           </View>
-          <Pressable style={styles.actionButton} onPress={onClose} hitSlop={8}>
-            <CloseIcon width={20} height={20} color={colors.gray600} />
-          </Pressable>
+          <ScalePressable style={styles.actionButton} onPress={onClose} hitSlop={8}>
+            <CloseIcon width={20} height={20} color={colors.gray700} />
+          </ScalePressable>
         </View>
 
         {/* 제목 + 주소 */}
@@ -323,16 +325,12 @@ export default function FestivalDetailModal({ visible, onClose, item, onAddToIti
         {!loading && detail && <Text style={styles.attribution}>출처: ⓒ한국관광공사</Text>}
       </ScrollView>
 
-      {/* 푸터 */}
-      <View style={styles.footer}>
-        <Pressable
-          style={[styles.addButton, (loading || !detail) && styles.addButtonDisabled]}
-          onPress={handleAddToItinerary}
-          disabled={loading || !detail}
-        >
-          <Text style={styles.addButtonText}>일정에 추가</Text>
-        </Pressable>
-      </View>
+      <FloatingFooter
+        primaryLabel="일정에 추가"
+        onPrimaryPress={handleAddToItinerary}
+        primaryLoading={loading}
+        primaryBlocked={!detail}
+      />
     </BottomSheetModal>
   );
 }
@@ -447,18 +445,4 @@ const styles = StyleSheet.create({
     color: colors.gray500,
     textAlign: "right",
   } as any,
-  footer: {
-    paddingHorizontal: 20,
-    paddingTop: 12,
-    paddingBottom: 20,
-  },
-  addButton: {
-    height: 48,
-    borderRadius: radii.md,
-    backgroundColor: colors.gray900,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  addButtonDisabled: { opacity: 0.4 },
-  addButtonText: { ...textStyles.h5, color: colors.white },
 });

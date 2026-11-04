@@ -1,10 +1,11 @@
 import { colors, radii, spacing, textStyles } from "@/ui/tokens";
 import { manualPlaceId } from "@/services/locations";
 import MiniMapView from "@/ui/components/MiniMapView";
+import Input from "@/ui/components/input/Input";
 import { useLoadScript } from "@react-google-maps/api";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { ActivityIndicator, StyleSheet, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 import LocationIcon from "../../../assets/week_bar_location.svg";
 import PlusIcon from "../../../assets/trip_add.svg";
 import SearchIcon from "../../../assets/search.svg";
@@ -329,8 +330,10 @@ export default function PlacesSearchInput({
   return (
     <View ref={containerRef} style={styles.container}>
       <View style={styles.inputWrapper}>
-        <TextInput
+        <Input
           ref={inputRef}
+          variant="filled"
+          size="md"
           style={[styles.input, disabled && styles.inputDisabled]}
           placeholder={placeholder}
           placeholderTextColor={colors.gray600}
@@ -462,14 +465,8 @@ const styles = StyleSheet.create({
   },
   input: {
     width: "100%",
-    height: 40,
-    backgroundColor: colors.gray200,
-    borderRadius: radii.md,
-    paddingLeft: spacing.md,
-    paddingRight: 36,
-    paddingVertical: spacing.md,
-    ...textStyles.body4,
-    color: colors.black,
+    paddingRight: spacing["2xl"],
+    color: colors.gray900,
   },
   inputDisabled: {
     color: colors.gray400,
@@ -485,15 +482,14 @@ const styles = StyleSheet.create({
   },
   readOnly: {
     backgroundColor: colors.gray200,
-    borderWidth: 1,
-    borderColor: colors.gray400,
-    height: 40,
-    borderRadius: radii.md,
-    paddingHorizontal: spacing.md,
+    minHeight: 46,
+    borderRadius: radii.mdPlus,
+    paddingHorizontal: 14,
+    paddingVertical: spacing.md,
     justifyContent: "center",
   },
   readOnlyText: {
-    ...textStyles.body4,
-    color: colors.black,
+    ...textStyles.body3,
+    color: colors.gray900,
   },
 });

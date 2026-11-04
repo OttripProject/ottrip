@@ -7,33 +7,49 @@ import { itinerariesApi } from "@/services/itineraries";
 import type { AiDocumentItemDraft, Plan } from "@/types/api";
 import { ExpenseCategory, ExpenseCurrency } from "@/types/api";
 import { plansApi } from "@/services/plans";
+import { useBackdropClose } from "@/hooks/useBackdropClose";
+import { useDiscardConfirm } from "@/hooks/useDiscardConfirm";
+import HoverPressable from "@/ui/components/HoverPressable";
+import ActionButton from "@/ui/components/ActionButton";
+import MotionPressable, { MotionIcon } from "@/ui/components/MotionPressable";
+import Input from "@/ui/components/input/Input";
+import { modalMotion } from "@/ui/effects/modalMotion";
 import { colors } from "@/ui/tokens/colors";
 import { radii } from "@/ui/tokens/radii";
+import { shadows } from "@/ui/tokens/shadows";
 import { spacing } from "@/ui/tokens/spacing";
+import { surfaces } from "@/ui/tokens/surfaces";
 import { textStyles, typography } from "@/ui/tokens/typography";
 import dayjs from "dayjs";
 import "dayjs/locale/ko";
-import { LinearGradient } from "expo-linear-gradient";
 import { createElement, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  ActivityIndicator,
   Modal,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   View,
   useWindowDimensions,
 } from "react-native";
 import { AirportPicker, CategoryPicker, TimePicker } from "@/ui/components/pickers";
-import type { ExpenseCategory as ExpenseCategoryType } from "@/types/expense";
+import {
+  type ExpenseCategory as ExpenseCategoryType,
+  categoryLabels,
+} from "@/types/expense";
+import {
+  ItineraryCategory,
+  itineraryCategoryColors,
+  itineraryCategoryLabels,
+} from "@/types/itinerary";
 import Spinner from "@/ui/components/Spinner";
+import { Tooltip } from "@/ui/components/Tooltip";
 import AiRefreshIcon from "../../../assets/ai_refresh.svg";
 import InfoCircleIcon from "../../../assets/info_circle.svg";
-import AttachmentDocIcon from "../../../assets/mobile_attachment_document.svg";
+import PdfDocIcon from "../../../assets/attachment_document.svg";
 import AttachmentImageIcon from "../../../assets/mobile_attachment_image.svg";
 import CalendarIcon from "../../../assets/calender.svg";
+import DownArrowIcon from "../../../assets/dropdown_time.svg";
 import CheckWhiteIcon from "../../../assets/check_white.svg";
 import ExpenseCardIcon from "../../../assets/expense_card.svg";
 import UpdateIcon from "../../../assets/update.svg";
@@ -54,7 +70,7 @@ const ALLOWED_MIME_TYPES = [
 ];
 const FILE_ACCEPT = ".csv,.xlsx,.xls,image/jpeg,image/png,application/pdf";
 
-type Step = "upload" | "preview" | "empty";
+type Step = "upload" | "preview" | "empty" | "error";
 
 interface AddScheduleWithFileModalProps {
   visible: boolean;
@@ -68,19 +84,9 @@ interface AddScheduleWithFileModalProps {
 
 const ITEM_BADGE: Record<string, { label: string; bg: string; text: string; dot: string }> = {
   itinerary: { label: "일정", bg: "#EAF1FF", text: "#1A66E0", dot: "#3D7FE6" },
-  flight: { label: "항공", bg: "#F3EEFF", text: "#7B2FBE", dot: "#9B5DE5" },
-  accommodation: { label: "숙박", bg: "rgb(255, 233, 199)", text: "rgb(162, 99, 9)", dot: "rgb(224, 138, 46)" },
+  flight: { label: "항공", bg: colors.flightBg, text: colors.flightText, dot: colors.flightText },
+  accommodation: { label: "숙박", bg: colors.accommodationBg, text: colors.accommodationText, dot: colors.accommodationText },
   expense: { label: "비용", bg: "#FFF4E5", text: "#C85B0B", dot: "#E8841A" },
-};
-
-const EXPENSE_CATEGORY_LABEL: Record<string, string> = {
-  food: "식비",
-  transport: "교통",
-  flight: "항공",
-  activity: "관광",
-  accommodation: "숙박",
-  shopping: "쇼핑",
-  etc: "기타",
 };
 
 function validateFile(file: File): string | null {
@@ -96,11 +102,6 @@ function formatFileSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)}MB`;
 }
 
-function isImageFile(filename: string): boolean {
-  const ext = filename.split(".").pop()?.toLowerCase() ?? "";
-  return ["jpg", "jpeg", "png"].includes(ext);
-}
-
 function getFileTypeLabel(filename: string): string {
   const ext = filename.split(".").pop()?.toUpperCase() ?? "";
   if (["XLSX", "XLS"].includes(ext)) return "XLS";
@@ -111,8 +112,54 @@ function getFileTypeLabel(filename: string): string {
 
 function getFileTypeBadgeColors(label: string): { bg: string; text: string } {
   if (label === "XLS" || label === "CSV") return { bg: "#E7F7EC", text: "#139D57" };
-  if (label === "IMG") return { bg: "#EAF1FF", text: colors.primary };
-  return { bg: "#FFE9D6", text: "#B8531A" };
+  if (label === "IMG") return { bg: colors.imageTint, text: colors.imageInk };
+  return { bg: colors.pdfBg, text: colors.pdfText };
+}
+
+function toItineraryCategory(raw: unknown): ItineraryCategory | undefined {
+  const key = String(raw ?? "").toUpperCase();
+  return (Object.values(ItineraryCategory) as string[]).includes(key)
+    ? (key as ItineraryCategory)
+    : undefined;
+}
+
+function filled(raw: unknown): boolean {
+  return String(raw ?? "").trim().length > 0;
+}
+
+function getMissingFields(itemType: string, v: Record<string, unknown>): string[] {
+  const missing: string[] = [];
+  if (itemType === "itinerary") {
+    if (!filled(v.title)) missing.push("제목");
+    if (!filled(v.itinerary_date ?? v.itineraryDate)) missing.push("날짜");
+    if (!filled(v.start_time ?? v.startTime)) missing.push("시작 시간");
+  } else if (itemType === "flight") {
+    const segs = Array.isArray(v.segments) ? (v.segments as Record<string, unknown>[]) : [];
+    const first = segs[0] ?? {};
+    const last = segs[segs.length - 1] ?? first;
+    if (!filled(first.departure_airport ?? first.departureAirport)) missing.push("출발 공항");
+    if (!filled(last.arrival_airport ?? last.arrivalAirport)) missing.push("도착 공항");
+    if (!filled(first.dep_date) && !filled(first.departure_time ?? first.departureTime)) missing.push("출발 일시");
+    if (!filled(last.arr_date) && !filled(last.arrival_time ?? last.arrivalTime)) missing.push("도착 일시");
+  } else if (itemType === "accommodation") {
+    if (!filled(v.name)) missing.push("숙소 이름");
+    if (!filled(v.checkin_date ?? v.checkinDate)) missing.push("체크인 날짜");
+    if (!filled(v.checkout_date ?? v.checkoutDate)) missing.push("체크아웃 날짜");
+  } else if (itemType === "expense") {
+    if (!(Number(v.amount ?? 0) > 0)) missing.push("금액");
+    if (!filled(v.ex_date ?? v.exDate)) missing.push("날짜");
+  }
+  return missing;
+}
+
+function WarnIcon({ size }: { size: number }) {
+  return createElement(
+    "svg" as any,
+    { width: size, height: size, viewBox: "0 0 16 16", fill: "none" },
+    createElement("path" as any, { d: "M8 1.6l6.8 11.8H1.2L8 1.6z", stroke: colors.errorInk, strokeWidth: 1.4, strokeLinejoin: "round", fill: colors.errorFill }),
+    createElement("path" as any, { d: "M8 6.4v3.2", stroke: colors.errorInk, strokeWidth: 1.6, strokeLinecap: "round" }),
+    createElement("circle" as any, { cx: 8, cy: 11.6, r: 0.9, fill: colors.errorInk }),
+  );
 }
 
 function normalizeHHmm(raw: unknown): string {
@@ -144,7 +191,7 @@ function getItemTitle(draft: AiDocumentItemDraft): string {
     const amount = Number(v.amount ?? 0);
     const cur = String(v.currency ?? "KRW");
     return [
-      EXPENSE_CATEGORY_LABEL[cat] ?? cat,
+      categoryLabels[cat as ExpenseCategoryType] ?? cat,
       amount ? `${amount.toLocaleString()}${cur === "KRW" ? "원" : ` ${cur}`}` : "",
     ].filter(Boolean).join(" · ");
   }
@@ -294,6 +341,7 @@ function buildItineraryRequest(v: Record<string, unknown>, planId: number, endTi
     country: v.country ? String(v.country) : undefined,
     city: v.city ? String(v.city) : undefined,
     location: v.location ? String(v.location) : undefined,
+    category: toItineraryCategory(v.category),
     itineraryDate: dateStr,
     startTime: startRaw.substring(0, 5) || "09:00",
     endTime,
@@ -419,6 +467,7 @@ export default function AddScheduleWithFileModal({
   const [showArrDatePicker, setShowArrDatePicker] = useState(false);
   const [showExpenseDatePicker, setShowExpenseDatePicker] = useState(false);
   const [isPickerOpen, setIsPickerOpen] = useState(false);
+  const [itinCategoryOpen, setItinCategoryOpen] = useState(false);
   const [autoAnalyzePending, setAutoAnalyzePending] = useState(false);
 
   function getMergedValues(idx: number, draft: AiDocumentItemDraft): Record<string, unknown> {
@@ -458,6 +507,14 @@ export default function AddScheduleWithFileModal({
 
   const dropZoneRef = useRef<View>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const { requestClose, discardConfirmModal } = useDiscardConfirm(
+    step === "preview" || !!selectedFile,
+    onClose,
+  );
+  const handleClose = () => {
+    if (!isSaving) requestClose();
+  };
+  const backdrop = useBackdropClose(handleClose);
   const handleFileRef = useRef<(file: File) => void>(() => {});
 
   const handleFile = useCallback((file: File) => {
@@ -545,6 +602,7 @@ export default function AddScheduleWithFileModal({
 
   async function handleAnalyze() {
     if (!selectedFile) return;
+    setStep("upload");
     setIsAnalyzing(true);
     setError(null);
     try {
@@ -554,19 +612,19 @@ export default function AddScheduleWithFileModal({
         setSelectedIndexes(new Set(res.items.map((_, i) => i)));
         setStep("preview");
       } else if (!res.success && res.error) {
-        setError(res.error);
+        setStep("error");
       } else {
         setStep("empty");
       }
     } catch {
-      setError("파일 분석 중 오류가 발생했어요. 잠시 후 다시 시도해 주세요.");
+      setStep("error");
     } finally {
       setIsAnalyzing(false);
     }
   }
 
   async function handleSave() {
-    if (selectedIndexes.size === 0 || !planId) return;
+    if (selectedIndexes.size === 0 || !planId || invalidSelectedCount > 0) return;
     setIsSaving(true);
     setError(null);
     try {
@@ -702,6 +760,7 @@ export default function AddScheduleWithFileModal({
       ),
     );
     setEditingIndex(null);
+    setItinCategoryOpen(false);
     setShowDepDatePicker(false);
     setShowArrDatePicker(false);
     setShowExpenseDatePicker(false);
@@ -710,23 +769,58 @@ export default function AddScheduleWithFileModal({
 
   function renderEditFormContent(draft: AiDocumentItemDraft, idx: number) {
     const v = (draftEdits[idx] ?? draft.payload.values) as Record<string, unknown>;
-    const timerPickerStyle = { height: 34, borderColor: colors.gray300, borderWidth: 1, borderRadius: 8, backgroundColor: colors.white };
+    const timerPickerStyle = { height: 40, borderColor: colors.gray300, borderWidth: 1, borderRadius: 8, backgroundColor: colors.white };
 
     if (draft.itemType === "itinerary") {
       const expNested = ((v.expense ?? {}) as Record<string, unknown>);
       return (
         <View style={styles.editForm}>
-          <TextInput
+          <Input
+            variant="filled"
             style={styles.editTitleInput}
             value={String(v.title ?? "")}
             onChangeText={val => setEditField(idx, "title", val)}
             placeholder="제목"
             placeholderTextColor={colors.gray400}
           />
-          <View style={styles.editTimeRow}>
-            <View style={styles.editCategoryFixed}>
-              <Text style={styles.editCategoryFixedText}>일정</Text>
-            </View>
+          <View style={[styles.editTimeRow, itinCategoryOpen && styles.editRowRaised]}>
+            {(() => {
+              const cat = toItineraryCategory(v.category);
+              return (
+                <View style={styles.editItinCategoryWrap}>
+                  <HoverPressable
+                    style={styles.editItinCategoryTrigger}
+                    hoverStyle={styles.editFieldHover}
+                    onPress={() => setItinCategoryOpen(o => !o)}
+                  >
+                    {cat ? (
+                      <View style={[styles.editItinCategoryDot, { backgroundColor: itineraryCategoryColors[cat] }]} />
+                    ) : null}
+                    <Text style={cat ? styles.editDateText : styles.editDatePlaceholder}>
+                      {cat ? itineraryCategoryLabels[cat] : "카테고리"}
+                    </Text>
+                    <View style={[styles.editItinCategoryArrow, itinCategoryOpen && styles.editItinCategoryArrowOpen]}>
+                      <DownArrowIcon width={10} height={10} />
+                    </View>
+                  </HoverPressable>
+                  {itinCategoryOpen && (
+                    <View style={styles.editItinCategoryPopup}>
+                      {Object.values(ItineraryCategory).map(c => (
+                        <HoverPressable
+                          key={c}
+                          style={[styles.editItinCategoryOption, cat === c && styles.editItinCategoryOptionSelected]}
+                          hoverStyle={styles.editItinCategoryOptionHover}
+                          onPress={() => { setEditField(idx, "category", c); setItinCategoryOpen(false); }}
+                        >
+                          <View style={[styles.editItinCategoryDot, { backgroundColor: itineraryCategoryColors[c] }]} />
+                          <Text style={styles.editDateText}>{itineraryCategoryLabels[c]}</Text>
+                        </HoverPressable>
+                      ))}
+                    </View>
+                  )}
+                </View>
+              );
+            })()}
             <TimePicker
               value={normalizeHHmm(v.start_time)}
               onChange={val => setEditField(idx, "start_time", val)}
@@ -742,14 +836,16 @@ export default function AddScheduleWithFileModal({
               popupAlign="right"
             />
           </View>
-          <TextInput
+          <Input
+            variant="filled"
             style={styles.editInput}
             value={String(v.location ?? v.city ?? "")}
             onChangeText={val => setEditField(idx, "location", val)}
             placeholder="장소"
             placeholderTextColor={colors.gray400}
           />
-          <TextInput
+          <Input
+            variant="filled"
             style={styles.editDescriptionInput}
             value={String(v.description ?? "")}
             onChangeText={val => setEditField(idx, "description", val)}
@@ -758,7 +854,7 @@ export default function AddScheduleWithFileModal({
             multiline
             numberOfLines={3}
           />
-          <View style={styles.editExpenseRow}>
+          <View style={[styles.editExpenseRow, isPickerOpen && styles.editRowRaised]}>
             <Text style={styles.editExpenseLabel}>비용</Text>
             <CategoryPicker
               value={String(expNested.category ?? "food") as ExpenseCategoryType}
@@ -768,16 +864,17 @@ export default function AddScheduleWithFileModal({
               onClose={() => setIsPickerOpen(false)}
             />
             <View style={styles.editCurrencyToggle}>
-              <Pressable style={styles.editCurrencyOption} onPress={() => setEditNestedField(idx, "expense", "currency", "KRW")}>
+              <HoverPressable style={styles.editCurrencyOption} hoverStyle={styles.editFieldHover} onPress={() => setEditNestedField(idx, "expense", "currency", "KRW")}>
                 <Text style={[styles.editCurrencyOptionText, String(expNested.currency ?? "KRW") === "KRW" && styles.editCurrencyOptionTextActive]}>₩</Text>
-              </Pressable>
+              </HoverPressable>
               <View style={styles.editCurrencyDivider} />
-              <Pressable style={styles.editCurrencyOption} onPress={() => setEditNestedField(idx, "expense", "currency", "USD")}>
+              <HoverPressable style={styles.editCurrencyOption} hoverStyle={styles.editFieldHover} onPress={() => setEditNestedField(idx, "expense", "currency", "USD")}>
                 <Text style={[styles.editCurrencyOptionText, String(expNested.currency ?? "KRW") === "USD" && styles.editCurrencyOptionTextActive]}>$</Text>
-              </Pressable>
+              </HoverPressable>
             </View>
             <View style={styles.editAmountWrapper}>
-              <TextInput
+              <Input
+                variant="filled"
                 style={styles.editAmountInput}
                 value={String(expNested.amount ?? "")}
                 onChangeText={val => setEditNestedField(idx, "expense", "amount", val.replace(/[^0-9.]/g, ""))}
@@ -787,9 +884,9 @@ export default function AddScheduleWithFileModal({
               />
             </View>
           </View>
-          <Pressable style={styles.editDoneButton} onPress={e => { e.stopPropagation(); finishEdit(idx); }}>
+          <MotionPressable style={styles.editDoneButton} onPress={e => { e.stopPropagation(); finishEdit(idx); }}>
             <Text style={styles.editDoneButtonText}>완료</Text>
-          </Pressable>
+          </MotionPressable>
         </View>
       );
     }
@@ -819,11 +916,13 @@ export default function AddScheduleWithFileModal({
               onChange={val => setEditSegmentField(idx, "arrival_airport", val)}
               placeholder="도착 공항"
               containerStyle={{ flex: 1 }}
+              dropdownAlign="right"
               onOpen={() => setIsPickerOpen(true)}
               onClose={() => setIsPickerOpen(false)}
             />
           </View>
-          <TextInput
+          <Input
+            variant="filled"
             style={styles.editTitleInput}
             value={String(v.reservation_number ?? v.reservationNumber ?? "")}
             onChangeText={val => setEditField(idx, "reservation_number", val)}
@@ -834,15 +933,16 @@ export default function AddScheduleWithFileModal({
           />
           <View style={[styles.editTimeRow, { zIndex: showDepDatePicker ? 2000 : 20 }]}>
             <View style={[styles.editFlightCell, { position: "relative" }]}>
-              <Pressable
+              <HoverPressable
                 style={styles.editDateTrigger}
+                hoverStyle={styles.editFieldHover}
                 onPress={() => { setShowDepDatePicker(true); setShowArrDatePicker(false); }}
               >
                 <Text style={depDate ? styles.editDateText : styles.editDatePlaceholder}>
                   {depDate ? dayjs(depDate).format("YYYY.MM.DD") : "출발 날짜"}
                 </Text>
                 <CalendarIcon width={14} height={14} />
-              </Pressable>
+              </HoverPressable>
               {showDepDatePicker && (
                 <BaseCalendar
                   visible
@@ -868,15 +968,16 @@ export default function AddScheduleWithFileModal({
           </View>
           <View style={[styles.editTimeRow, { zIndex: showArrDatePicker ? 2000 : 10 }]}>
             <View style={[styles.editFlightCell, { position: "relative" }]}>
-              <Pressable
+              <HoverPressable
                 style={styles.editDateTrigger}
+                hoverStyle={styles.editFieldHover}
                 onPress={() => { setShowArrDatePicker(true); setShowDepDatePicker(false); }}
               >
                 <Text style={arrDate ? styles.editDateText : styles.editDatePlaceholder}>
                   {arrDate ? dayjs(arrDate).format("YYYY.MM.DD") : "도착 날짜"}
                 </Text>
                 <CalendarIcon width={14} height={14} />
-              </Pressable>
+              </HoverPressable>
               {showArrDatePicker && (
                 <BaseCalendar
                   visible
@@ -900,19 +1001,20 @@ export default function AddScheduleWithFileModal({
               />
             </View>
           </View>
-          <View style={styles.editExpenseRow}>
+          <View style={[styles.editExpenseRow, isPickerOpen && styles.editRowRaised]}>
             <Text style={styles.editExpenseLabel}>비용</Text>
             <View style={styles.editCurrencyToggle}>
-              <Pressable style={styles.editCurrencyOption} onPress={() => setEditNestedField(idx, "expense", "currency", "KRW")}>
+              <HoverPressable style={styles.editCurrencyOption} hoverStyle={styles.editFieldHover} onPress={() => setEditNestedField(idx, "expense", "currency", "KRW")}>
                 <Text style={[styles.editCurrencyOptionText, String(expNested.currency ?? "KRW") === "KRW" && styles.editCurrencyOptionTextActive]}>₩</Text>
-              </Pressable>
+              </HoverPressable>
               <View style={styles.editCurrencyDivider} />
-              <Pressable style={styles.editCurrencyOption} onPress={() => setEditNestedField(idx, "expense", "currency", "USD")}>
+              <HoverPressable style={styles.editCurrencyOption} hoverStyle={styles.editFieldHover} onPress={() => setEditNestedField(idx, "expense", "currency", "USD")}>
                 <Text style={[styles.editCurrencyOptionText, String(expNested.currency ?? "KRW") === "USD" && styles.editCurrencyOptionTextActive]}>$</Text>
-              </Pressable>
+              </HoverPressable>
             </View>
             <View style={styles.editAmountWrapper}>
-              <TextInput
+              <Input
+                variant="filled"
                 style={styles.editAmountInput}
                 value={String(expNested.amount ?? "")}
                 onChangeText={val => setEditNestedField(idx, "expense", "amount", val.replace(/[^0-9.]/g, ""))}
@@ -922,9 +1024,9 @@ export default function AddScheduleWithFileModal({
               />
             </View>
           </View>
-          <Pressable style={styles.editDoneButton} onPress={e => { e.stopPropagation(); finishEdit(idx); }}>
+          <MotionPressable style={styles.editDoneButton} onPress={e => { e.stopPropagation(); finishEdit(idx); }}>
             <Text style={styles.editDoneButtonText}>완료</Text>
-          </Pressable>
+          </MotionPressable>
         </View>
       );
     }
@@ -935,14 +1037,16 @@ export default function AddScheduleWithFileModal({
       const coDate = String(v.checkout_date ?? v.checkoutDate ?? "").substring(0, 10);
       return (
         <View style={styles.editForm}>
-          <TextInput
+          <Input
+            variant="filled"
             style={styles.editTitleInput}
             value={String(v.name ?? "")}
             onChangeText={val => setEditField(idx, "name", val)}
             placeholder="숙소명"
             placeholderTextColor={colors.gray400}
           />
-          <TextInput
+          <Input
+            variant="filled"
             style={styles.editInput}
             value={String(v.place ?? v.city ?? "")}
             onChangeText={val => setEditField(idx, "place", val)}
@@ -951,15 +1055,16 @@ export default function AddScheduleWithFileModal({
           />
           <View style={[styles.editTimeRow, { zIndex: showDepDatePicker ? 2000 : 20 }]}>
             <View style={[styles.editFlightCell, { position: "relative" }]}>
-              <Pressable
+              <HoverPressable
                 style={styles.editDateTrigger}
+                hoverStyle={styles.editFieldHover}
                 onPress={() => { setShowDepDatePicker(true); setShowArrDatePicker(false); }}
               >
                 <Text style={ciDate ? styles.editDateText : styles.editDatePlaceholder}>
                   {ciDate ? dayjs(ciDate).format("YYYY.MM.DD") : "체크인 날짜"}
                 </Text>
                 <CalendarIcon width={14} height={14} />
-              </Pressable>
+              </HoverPressable>
               {showDepDatePicker && (
                 <BaseCalendar
                   visible
@@ -985,15 +1090,16 @@ export default function AddScheduleWithFileModal({
           </View>
           <View style={[styles.editTimeRow, { zIndex: showArrDatePicker ? 2000 : 10 }]}>
             <View style={[styles.editFlightCell, { position: "relative" }]}>
-              <Pressable
+              <HoverPressable
                 style={styles.editDateTrigger}
+                hoverStyle={styles.editFieldHover}
                 onPress={() => { setShowArrDatePicker(true); setShowDepDatePicker(false); }}
               >
                 <Text style={coDate ? styles.editDateText : styles.editDatePlaceholder}>
                   {coDate ? dayjs(coDate).format("YYYY.MM.DD") : "체크아웃 날짜"}
                 </Text>
                 <CalendarIcon width={14} height={14} />
-              </Pressable>
+              </HoverPressable>
               {showArrDatePicker && (
                 <BaseCalendar
                   visible
@@ -1017,7 +1123,8 @@ export default function AddScheduleWithFileModal({
               />
             </View>
           </View>
-          <TextInput
+          <Input
+            variant="filled"
             style={styles.editDescriptionInput}
             value={String(v.description ?? "")}
             onChangeText={val => setEditField(idx, "description", val)}
@@ -1026,19 +1133,20 @@ export default function AddScheduleWithFileModal({
             multiline
             numberOfLines={3}
           />
-          <View style={styles.editExpenseRow}>
+          <View style={[styles.editExpenseRow, isPickerOpen && styles.editRowRaised]}>
             <Text style={styles.editExpenseLabel}>비용</Text>
             <View style={styles.editCurrencyToggle}>
-              <Pressable style={styles.editCurrencyOption} onPress={() => setEditNestedField(idx, "expense", "currency", "KRW")}>
+              <HoverPressable style={styles.editCurrencyOption} hoverStyle={styles.editFieldHover} onPress={() => setEditNestedField(idx, "expense", "currency", "KRW")}>
                 <Text style={[styles.editCurrencyOptionText, String(expNested.currency ?? "KRW") === "KRW" && styles.editCurrencyOptionTextActive]}>₩</Text>
-              </Pressable>
+              </HoverPressable>
               <View style={styles.editCurrencyDivider} />
-              <Pressable style={styles.editCurrencyOption} onPress={() => setEditNestedField(idx, "expense", "currency", "USD")}>
+              <HoverPressable style={styles.editCurrencyOption} hoverStyle={styles.editFieldHover} onPress={() => setEditNestedField(idx, "expense", "currency", "USD")}>
                 <Text style={[styles.editCurrencyOptionText, String(expNested.currency ?? "KRW") === "USD" && styles.editCurrencyOptionTextActive]}>$</Text>
-              </Pressable>
+              </HoverPressable>
             </View>
             <View style={styles.editAmountWrapper}>
-              <TextInput
+              <Input
+                variant="filled"
                 style={styles.editAmountInput}
                 value={String(expNested.amount ?? "")}
                 onChangeText={val => setEditNestedField(idx, "expense", "amount", val.replace(/[^0-9.]/g, ""))}
@@ -1048,9 +1156,9 @@ export default function AddScheduleWithFileModal({
               />
             </View>
           </View>
-          <Pressable style={styles.editDoneButton} onPress={e => { e.stopPropagation(); finishEdit(idx); }}>
+          <MotionPressable style={styles.editDoneButton} onPress={e => { e.stopPropagation(); finishEdit(idx); }}>
             <Text style={styles.editDoneButtonText}>완료</Text>
-          </Pressable>
+          </MotionPressable>
         </View>
       );
     }
@@ -1058,7 +1166,7 @@ export default function AddScheduleWithFileModal({
     if (draft.itemType === "expense") {
       return (
         <View style={styles.editForm}>
-          <View style={styles.editExpenseRow}>
+          <View style={[styles.editExpenseRow, isPickerOpen && styles.editRowRaised]}>
             <CategoryPicker
               value={String(v.category ?? "food") as ExpenseCategoryType}
               onChange={cat => setEditField(idx, "category", cat)}
@@ -1067,16 +1175,17 @@ export default function AddScheduleWithFileModal({
               onClose={() => setIsPickerOpen(false)}
             />
             <View style={styles.editCurrencyToggle}>
-              <Pressable style={styles.editCurrencyOption} onPress={() => setEditField(idx, "currency", "KRW")}>
+              <HoverPressable style={styles.editCurrencyOption} hoverStyle={styles.editFieldHover} onPress={() => setEditField(idx, "currency", "KRW")}>
                 <Text style={[styles.editCurrencyOptionText, String(v.currency ?? "KRW") === "KRW" && styles.editCurrencyOptionTextActive]}>₩</Text>
-              </Pressable>
+              </HoverPressable>
               <View style={styles.editCurrencyDivider} />
-              <Pressable style={styles.editCurrencyOption} onPress={() => setEditField(idx, "currency", "USD")}>
+              <HoverPressable style={styles.editCurrencyOption} hoverStyle={styles.editFieldHover} onPress={() => setEditField(idx, "currency", "USD")}>
                 <Text style={[styles.editCurrencyOptionText, String(v.currency ?? "KRW") === "USD" && styles.editCurrencyOptionTextActive]}>$</Text>
-              </Pressable>
+              </HoverPressable>
             </View>
             <View style={styles.editAmountWrapper}>
-              <TextInput
+              <Input
+                variant="filled"
                 style={styles.editAmountInput}
                 value={String(v.amount ?? "")}
                 onChangeText={val => setEditField(idx, "amount", val.replace(/[^0-9.]/g, ""))}
@@ -1087,15 +1196,16 @@ export default function AddScheduleWithFileModal({
             </View>
           </View>
           <View style={{ position: "relative", zIndex: showExpenseDatePicker ? 2000 : 1 }}>
-            <Pressable
+            <HoverPressable
               style={styles.editDateTrigger}
+              hoverStyle={styles.editFieldHover}
               onPress={() => setShowExpenseDatePicker(true)}
             >
               <Text style={String(v.ex_date ?? "") ? styles.editDateText : styles.editDatePlaceholder}>
                 {String(v.ex_date ?? "") ? dayjs(String(v.ex_date).substring(0, 10)).format("YYYY.MM.DD") : "날짜"}
               </Text>
               <CalendarIcon width={14} height={14} />
-            </Pressable>
+            </HoverPressable>
             {showExpenseDatePicker && (
               <BaseCalendar
                 visible
@@ -1108,9 +1218,9 @@ export default function AddScheduleWithFileModal({
               />
             )}
           </View>
-          <Pressable style={styles.editDoneButton} onPress={e => { e.stopPropagation(); finishEdit(idx); }}>
+          <MotionPressable style={styles.editDoneButton} onPress={e => { e.stopPropagation(); finishEdit(idx); }}>
             <Text style={styles.editDoneButtonText}>완료</Text>
-          </Pressable>
+          </MotionPressable>
         </View>
       );
     }
@@ -1119,13 +1229,16 @@ export default function AddScheduleWithFileModal({
   }
 
   const allSelected = items.length > 0 && selectedIndexes.size === items.length;
+  const missingByIndex = items.map((d, i) => getMissingFields(d.itemType, getMergedValues(i, d)));
+  const invalidSelectedCount = [...selectedIndexes].filter(i => missingByIndex[i]?.length).length;
+  const saveDisabled = selectedIndexes.size === 0 || invalidSelectedCount > 0 || isSaving;
   const { krwTotal, usdTotal, count: expenseCount } = getExpenseSummary(items, selectedIndexes);
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+    <Modal visible={visible} transparent animationType="none" onRequestClose={handleClose}>
       {hiddenFileInput}
-      <Pressable style={styles.overlay} onPress={onClose}>
-        <Pressable style={[styles.container, step === "preview" && { minHeight: windowHeight * 0.80 }]} onPress={e => e.stopPropagation()}>
+      <View style={styles.overlay} {...backdrop.overlayProps}>
+        <View style={[styles.container, step === "preview" && { minHeight: windowHeight * 0.80 }]} {...backdrop.cardProps}>
 
           {/* 헤더 */}
           <View style={styles.header}>
@@ -1134,14 +1247,18 @@ export default function AddScheduleWithFileModal({
               <Text style={styles.description}>
                 {step === "upload"
                   ? "엑셀·이미지·PDF를 올리면 AI가 일정을 정리해 드려요."
+                  : step === "error"
+                  ? "파일 분석 중 문제가 생겼어요. 잠시 후 다시 시도해 주세요."
                   : step === "empty"
                   ? "파일에서 일정 정보를 찾지 못했어요."
                   : `'${planName}'에 추가할 일정을 선택하세요.`}
               </Text>
             </View>
-            <Pressable style={styles.closeButton} onPress={onClose}>
-              <XIcon width={16} height={16} />
-            </Pressable>
+            <MotionPressable style={styles.closeButton} onPress={handleClose} accessibilityLabel="닫기">
+              <MotionIcon>
+                <XIcon width={16} height={16} color={colors.gray700} />
+              </MotionIcon>
+            </MotionPressable>
           </View>
 
           {step === "upload" && (
@@ -1183,23 +1300,33 @@ export default function AddScheduleWithFileModal({
 
               {selectedFile && (
                 <View style={styles.fileInfoRow}>
-                  <View style={styles.fileTypeIcon}>
-                    {isImageFile(selectedFile.name)
-                      ? <AttachmentImageIcon width={20} height={20} />
-                      : <AttachmentDocIcon width={20} height={20} />
-                    }
-                  </View>
+                  {(() => {
+                    const label = getFileTypeLabel(selectedFile.name);
+                    const { bg, text } = getFileTypeBadgeColors(label);
+                    return (
+                      <View style={[styles.fileTypeIcon, { backgroundColor: bg }]}>
+                        {label === "IMG"
+                          ? <AttachmentImageIcon width={20} height={20} />
+                          : <PdfDocIcon width={20} height={20} color={text} />
+                        }
+                      </View>
+                    );
+                  })()}
                   <View style={styles.fileInfoText}>
                     <Text style={styles.fileName} numberOfLines={1}>{selectedFile.name}</Text>
                     <Text style={styles.fileSize}>{formatFileSize(selectedFile.size)}</Text>
                   </View>
-                  <Pressable
-                    style={styles.fileRemoveButton}
-                    aria-label="제거"
-                    onPress={() => { setSelectedFile(null); setError(null); }}
-                  >
-                    <XIcon width={14} height={14} color={colors.gray600} />
-                  </Pressable>
+                  <Tooltip text="제거">
+                    <MotionPressable
+                      style={styles.fileRemoveButton}
+                      accessibilityLabel="제거"
+                      onPress={() => { setSelectedFile(null); setError(null); }}
+                    >
+                      <MotionIcon>
+                        <XIcon width={16} height={16} color={colors.gray700} />
+                      </MotionIcon>
+                    </MotionPressable>
+                  </Tooltip>
                 </View>
               )}
 
@@ -1213,19 +1340,24 @@ export default function AddScheduleWithFileModal({
               )}
 
               <View style={styles.buttonRow}>
-                <Pressable style={styles.cancelButton} onPress={onClose}>
-                  <Text style={styles.cancelButtonText}>취소</Text>
-                </Pressable>
-                <Pressable
-                  style={[styles.aiButton, !selectedFile && styles.aiButtonDisabled]}
+                <ActionButton label="취소" tone="secondary" fill onPress={handleClose} />
+                <ActionButton
+                  label="AI로 분석"
+                  tone="ai"
+                  fill
+                  icon={
+                    <MotionIcon>
+                      <AiRefreshIcon
+                        width={16}
+                        height={16}
+                        color={selectedFile ? colors.white : colors.gray500}
+                      />
+                    </MotionIcon>
+                  }
                   onPress={handleAnalyze}
-                  disabled={!selectedFile || isAnalyzing}
-                >
-                  <LinearGradient colors={colors.aiGrad} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.aiButtonGradient}>
-                    <AiRefreshIcon width={14} height={14} color={colors.white} />
-                    <Text style={styles.aiButtonText}>AI로 분석</Text>
-                  </LinearGradient>
-                </Pressable>
+                  disabled={!selectedFile}
+                  blocked={isAnalyzing}
+                />
               </View>
             </>
             )
@@ -1241,12 +1373,14 @@ export default function AddScheduleWithFileModal({
                   {"개"}
                   <Text style={styles.summarySelected}>{"  ·  "}{selectedIndexes.size}개 선택</Text>
                 </Text>
-                <Pressable style={styles.toggleAllButton} onPress={toggleAll}>
-                  <View style={[styles.toggleCheckbox, allSelected && styles.toggleCheckboxSelected]}>
-                    {allSelected && <CheckWhiteIcon width={12} height={12} />}
-                  </View>
+                <MotionPressable style={styles.toggleAllButton} hoverStyle={shadows.xsHover} onPress={toggleAll}>
+                  <MotionIcon>
+                    <View style={[styles.toggleCheckbox, allSelected && styles.toggleCheckboxSelected]}>
+                      {allSelected && <CheckWhiteIcon width={12} height={12} />}
+                    </View>
+                  </MotionIcon>
                   <Text style={styles.toggleAllText}>전체 선택</Text>
-                </Pressable>
+                </MotionPressable>
               </View>
 
               {/* AI 분석 안내 + 비용 합계 배너 */}
@@ -1283,7 +1417,9 @@ export default function AddScheduleWithFileModal({
                 {items.map((draft, i) => {
                   const isSelected = selectedIndexes.has(i);
                   const isEditing = editingIndex === i;
-                  const badge = ITEM_BADGE[draft.itemType] ?? ITEM_BADGE.itinerary;
+                  const baseBadge = ITEM_BADGE[draft.itemType] ?? ITEM_BADGE.itinerary;
+                  const itinCat = draft.itemType === "itinerary" ? toItineraryCategory((draft.payload.values as Record<string, unknown>).category) : undefined;
+                  const badge = itinCat ? { ...baseBadge, label: itineraryCategoryLabels[itinCat] } : baseBadge;
                   const title = getItemTitle(draft);
                   const date = getItemDate(draft);
                   const timeRange = (() => {
@@ -1300,19 +1436,38 @@ export default function AddScheduleWithFileModal({
                   })();
                   const location = getItemLocation(draft);
                   const expense = getItemExpense(draft);
+                  const missing = missingByIndex[i] ?? [];
+                  const missingNotice = missing.length > 0 && !isEditing ? (
+                    <View style={styles.missingNotice}>
+                      <View style={styles.missingNoticeIcon}>
+                        <WarnIcon size={12} />
+                      </View>
+                      <Text style={styles.missingNoticeText}>
+                        <Text style={styles.missingNoticeTitle}>필수 항목 누락</Text>
+                        <Text style={styles.missingNoticeDot}>{"  ·  "}</Text>
+                        {missing.join(", ")}
+                      </Text>
+                    </View>
+                  ) : null;
 
                   return (
                     <Pressable
                       key={i}
-                      style={[styles.itemCard, isSelected ? styles.itemCardSelected : styles.itemCardUnselected, isEditing && { zIndex: 100 }]}
+                      style={[styles.itemCard, isSelected ? styles.itemCardSelected : styles.itemCardUnselected, missing.length > 0 && styles.itemCardInvalid, isEditing && { zIndex: 100 }]}
                       onPress={isEditing ? undefined : () => toggleIndex(i)}
                     >
-                      <Pressable
+                      <MotionPressable
                         style={[styles.itemCheckbox, isSelected && styles.itemCheckboxSelected]}
+                        hoverStyle={isSelected ? shadows.darkHover : undefined}
                         onPress={e => { e.stopPropagation(); toggleIndex(i); }}
+                        accessibilityLabel="포함"
                       >
-                        {isSelected && <CheckWhiteIcon width={12} height={12} />}
-                      </Pressable>
+                        {isSelected && (
+                          <MotionIcon>
+                            <CheckWhiteIcon width={11} height={11} />
+                          </MotionIcon>
+                        )}
+                      </MotionPressable>
 
                       {isEditing ? (
                         <View style={styles.itemContent}>
@@ -1344,6 +1499,7 @@ export default function AddScheduleWithFileModal({
                             ) : null;
                             return (
                               <View style={styles.itemContent}>
+                                {missingNotice}
                                 <View style={styles.itemTitleRow}>
                                   <View style={[styles.typeBadge, { backgroundColor: badge.bg }]}>
                                     <View style={[styles.typeDot, { backgroundColor: badge.dot }]} />
@@ -1400,6 +1556,7 @@ export default function AddScheduleWithFileModal({
                             ) : null;
                             return (
                               <View style={styles.itemContent}>
+                                {missingNotice}
                                 <View style={styles.itemTitleRow}>
                                   <View style={[styles.typeBadge, { backgroundColor: badge.bg }]}>
                                     <View style={[styles.typeDot, { backgroundColor: badge.dot }]} />
@@ -1444,6 +1601,7 @@ export default function AddScheduleWithFileModal({
                             );
                           })() : (
                           <View style={styles.itemContent}>
+                            {missingNotice}
                             <View style={styles.itemTitleRow}>
                               <View style={[styles.typeBadge, { backgroundColor: badge.bg }]}>
                                 <View style={[styles.typeDot, { backgroundColor: badge.dot }]} />
@@ -1474,7 +1632,7 @@ export default function AddScheduleWithFileModal({
                               <View style={styles.inlineExpenseBadge}>
                                 <ExpenseCardIcon width={12} height={12} color="#1F9D57" />
                                 <Text style={styles.inlineExpenseCategory}>
-                                  {EXPENSE_CATEGORY_LABEL[expense.category] ?? expense.category}
+                                  {categoryLabels[expense.category as ExpenseCategoryType] ?? expense.category}
                                 </Text>
                                 <Text style={styles.inlineExpenseAmount}>
                                   {expense.currency === "KRW"
@@ -1488,9 +1646,17 @@ export default function AddScheduleWithFileModal({
                           </View>
                           )}
 
-                          <Pressable style={styles.editButton} onPress={e => { e.stopPropagation(); startEdit(i); }}>
-                            <UpdateIcon width={14} height={14} color={colors.gray600} />
-                          </Pressable>
+                          <Tooltip text="수정">
+                            <MotionPressable
+                              style={styles.editButton}
+                              onPress={e => { e.stopPropagation(); startEdit(i); }}
+                              accessibilityLabel="수정"
+                            >
+                              <MotionIcon>
+                                <UpdateIcon width={16} height={16} color={colors.gray700} />
+                              </MotionIcon>
+                            </MotionPressable>
+                          </Tooltip>
                         </>
                       )}
                     </Pressable>
@@ -1500,22 +1666,55 @@ export default function AddScheduleWithFileModal({
 
               {error && <Text style={styles.errorText}>{error}</Text>}
 
-              <View style={styles.buttonRow}>
-                <Pressable style={styles.cancelButton} onPress={() => { setStep("upload"); setError(null); }}>
-                  <Text style={styles.cancelButtonText}>다시 올리기</Text>
-                </Pressable>
-                <Pressable
-                  style={[styles.saveButton, selectedIndexes.size === 0 && styles.saveButtonDisabled]}
-                  onPress={handleSave}
-                  disabled={selectedIndexes.size === 0 || isSaving}
-                >
-                  {isSaving ? (
-                    <ActivityIndicator size="small" color={colors.white} />
-                  ) : null}
-                  <Text style={styles.saveButtonText}>
-                    {isSaving ? "저장 중..." : `선택한 ${selectedIndexes.size}개 일정 추가`}
+              {invalidSelectedCount > 0 && (
+                <View style={styles.missingAlert} accessibilityRole="alert">
+                  <View style={styles.missingAlertIcon}>
+                    <WarnIcon size={16} />
+                  </View>
+                  <Text style={styles.missingAlertText}>
+                    {"필수 항목이 누락된 일정 "}
+                    <Text style={styles.missingAlertCount}>{invalidSelectedCount}</Text>
+                    {"개는 추가할 수 없어요. 항목을 수정하거나 선택을 해제해 주세요."}
                   </Text>
-                </Pressable>
+                </View>
+              )}
+
+              <View style={styles.buttonRow}>
+                <ActionButton
+                  label="다시 올리기"
+                  tone="secondary"
+                  fill
+                  onPress={() => { setStep("upload"); setError(null); }}
+                  blocked={isSaving}
+                />
+                <ActionButton
+                  label={`선택한 ${selectedIndexes.size}개 일정 추가`}
+                  fill
+                  onPress={handleSave}
+                  loading={isSaving}
+                  disabled={saveDisabled && !isSaving}
+                />
+              </View>
+            </>
+          )}
+
+          {step === "error" && (
+            <>
+              <View style={styles.emptyContainer}>
+                <View style={[styles.emptyIconCircle, styles.errorIconCircle]}>
+                  <WarnIcon size={26} />
+                </View>
+                <Text style={styles.emptyTitle}>파일 분석에 실패했어요</Text>
+                <Text style={styles.emptySubtitle}>{"일시적인 문제로 AI 분석을 마치지 못했어요.\n잠시 후 다시 시도하거나, 파일을 교체해 올려주세요."}</Text>
+              </View>
+              <View style={styles.buttonRow}>
+                <ActionButton
+                  label="다시 올리기"
+                  tone="secondary"
+                  fill
+                  onPress={() => { setStep("upload"); setError(null); }}
+                />
+                <ActionButton label="다시 시도" fill onPress={handleAnalyze} />
               </View>
             </>
           )}
@@ -1532,95 +1731,117 @@ export default function AddScheduleWithFileModal({
                   )}
                 </View>
                 <Text style={styles.emptyTitle}>분석된 일정이 없어요</Text>
-                <Text style={styles.emptySubtitle}>{"일정 정보를 찾지 못했어요.\n일정표나 예약 내역처럼 정보가 또렷한 파일로 다시 올려보세요."}</Text>
+                <Text style={styles.emptySubtitle}>{"파일에서 날짜·시간·장소를 읽어내지 못했어요.\n일정표나 예약 내역처럼 정보가 또렷한 파일로 다시 올려보세요."}</Text>
               </View>
               <View style={styles.buttonRow}>
-                <Pressable style={styles.saveButton} onPress={() => { setStep("upload"); setError(null); }}>
-                  <Text style={styles.saveButtonText}>다시 올리기</Text>
-                </Pressable>
+                <ActionButton
+                  label="다시 올리기"
+                  fill
+                  onPress={() => { setStep("upload"); setError(null); }}
+                />
               </View>
             </>
           )}
-        </Pressable>
-      </Pressable>
+        </View>
+      </View>
+      {discardConfirmModal}
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
   overlay: {
-    cursor: "auto",
+    ...modalMotion.overlay,
     flex: 1,
-    backgroundColor: colors.overlayBackground,
+    ...surfaces.overlay,
     justifyContent: "center",
     alignItems: "center",
+    padding: spacing.lgPlus,
   },
   container: {
-    cursor: "auto",
+    ...modalMotion.card,
     width: "100%",
-    maxWidth: 530,
+    maxWidth: 480 + spacing.xl * 2,
     maxHeight: "80%",
     backgroundColor: colors.white,
-    borderRadius: 20,
-    paddingTop: spacing.xl,
-    paddingHorizontal: spacing.xl,
-    paddingBottom: 20,
-    gap: 18,
-    boxShadow: "rgba(0, 0, 0, 0.12) 0px 24px 48px",
-  } as any,
+    borderRadius: radii["2xl"],
+    borderWidth: 1,
+    borderColor: colors.hairline,
+    padding: spacing.xl,
+    gap: spacing.lg,
+    ...shadows.sheet,
+  },
   header: {
     flexDirection: "row",
     alignItems: "flex-start",
     justifyContent: "space-between",
     gap: spacing.md,
   },
-  headerText: { flex: 1, gap: 6 },
-  title: { ...textStyles.h4, color: colors.gray900 },
-  description: { ...textStyles.body4, color: colors.gray700 },
-  closeButton: { width: 28, height: 28, alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 2 },
+  headerText: { flex: 1, gap: spacing.sm },
+  title: { ...textStyles.h5, color: colors.gray900 },
+  description: { ...textStyles.body5, color: colors.gray700 },
+  closeButton: { width: 28, height: 28, alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: spacing.xs },
 
   // Upload step
   dropZone: {
     borderWidth: 1.5,
     borderStyle: "dashed",
     borderColor: colors.gray400,
-    borderRadius: 14,
+    borderRadius: radii.lgPlus,
     backgroundColor: colors.gray100,
     alignItems: "center",
-    paddingVertical: 34,
-    paddingHorizontal: 20,
-    gap: 10,
+    paddingVertical: spacing["2xl"],
+    paddingHorizontal: spacing.xl,
+    gap: spacing.md,
   },
   dropZoneSelected: { borderColor: colors.gray900 },
   dropZoneDragging: { borderColor: colors.primary, backgroundColor: colors.gray200 },
   uploadIconCircle: { width: 52, height: 52, borderRadius: radii.pill, backgroundColor: colors.gray300, alignItems: "center", justifyContent: "center" },
-  dropZoneTitle: { fontFamily: typography.fontFamily.pretendardSemiBold, fontSize: 14, lineHeight: 20, color: "#1F1F1F" },
-  dropZoneHint: { fontFamily: typography.fontFamily.pretendardRegular, fontSize: 12, lineHeight: 18, color: colors.gray600 },
+  dropZoneTitle: { ...textStyles.h6, color: colors.gray900 },
+  dropZoneHint: { ...textStyles.body5, color: colors.gray600 },
   fileInfoRow: {
-    flexDirection: "row", alignItems: "center", gap: 12,
-    backgroundColor: colors.gray200, borderRadius: 10, paddingVertical: 10, paddingHorizontal: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.md,
+    backgroundColor: colors.gray200,
+    borderRadius: radii.md,
+    padding: spacing.md,
   },
   fileTypeIcon: {
-    width: 36, height: 36, borderRadius: 9, backgroundColor: colors.itineraryBg,
-    alignItems: "center", justifyContent: "center", flexShrink: 0,
+    width: 36,
+    height: 36,
+    borderRadius: radii.md,
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
   },
   fileInfoText: { flex: 1, minWidth: 0 },
-  fileName: { fontFamily: typography.fontFamily.pretendardSemiBold, fontSize: 13, lineHeight: 18, color: "#1F1F1F" },
-  fileSize: { fontFamily: typography.fontFamily.poppinsMedium, fontSize: 11, lineHeight: 15, color: colors.gray600, marginTop: 2 },
-  fileRemoveButton: { width: 24, height: 24, alignItems: "center", justifyContent: "center", flexShrink: 0 },
+  fileName: { ...textStyles.h7, color: colors.gray900 },
+  fileSize: { ...textStyles.body6, fontVariant: ["tabular-nums"], color: colors.gray600, marginTop: spacing.xs },
+  fileRemoveButton: { width: 32, height: 32, marginVertical: -spacing.sm, alignItems: "center", justifyContent: "center", flexShrink: 0 },
 
   errorText: { ...textStyles.body5, color: "#E53E3E" },
   // Empty state
   emptyContainer: {
-    flex: 1, alignItems: "center", justifyContent: "center",
-    gap: 8, paddingVertical: 40, paddingHorizontal: 20, textAlign: "center" as any,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: spacing.sm,
+    paddingTop: spacing["2xl"] + spacing.sm,
+    paddingHorizontal: spacing.xl,
+    paddingBottom: spacing["2xl"],
   },
   emptyIconCircle: {
-    width: 56, height: 56, borderRadius: radii.pill,
-    backgroundColor: colors.gray200, alignItems: "center", justifyContent: "center", marginBottom: 6,
+    width: 56,
+    height: 56,
+    borderRadius: radii.pill,
+    backgroundColor: colors.gray200,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: spacing.sm,
   },
-  emptyTitle: { fontFamily: typography.fontFamily.pretendardSemiBold, fontSize: 15, lineHeight: 22, color: "#1F1F1F" },
-  emptySubtitle: { fontFamily: typography.fontFamily.pretendardRegular, fontSize: 12.5, lineHeight: 19, color: colors.gray600, textAlign: "center" },
+  errorIconCircle: { backgroundColor: colors.warningTint },
+  emptyTitle: { ...textStyles.h5, color: colors.gray900 },
+  emptySubtitle: { ...textStyles.body4, color: colors.gray600, textAlign: "center" },
 
   // 분석 중 UI
   analyzingContainer: {
@@ -1653,19 +1874,19 @@ const styles = StyleSheet.create({
   toggleAllButton: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 7,
-    height: 30,
-    paddingHorizontal: 12,
-    paddingLeft: 8,
+    gap: spacing.sm,
+    height: 32,
+    paddingLeft: spacing.sm,
+    paddingRight: spacing.md,
     borderRadius: radii.pill,
     borderWidth: 1,
     borderColor: colors.gray300,
     backgroundColor: colors.white,
   },
   toggleCheckbox: {
-    width: 20,
-    height: 20,
-    borderRadius: 6,
+    width: 16,
+    height: 16,
+    borderRadius: radii.xs,
     borderWidth: 1.5,
     borderColor: colors.gray400,
     alignItems: "center",
@@ -1715,19 +1936,48 @@ const styles = StyleSheet.create({
   },
   itemCardSelected: { borderColor: colors.gray900 },
   itemCardUnselected: { borderColor: colors.gray300, opacity: 0.65 },
+  itemCardInvalid: { borderColor: colors.errorInk, backgroundColor: colors.errorTint, ...shadows.errorCardRing },
+  missingNotice: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: spacing.sm,
+    backgroundColor: colors.errorSoft,
+    borderRadius: radii.md,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    marginBottom: spacing.sm,
+  },
+  missingNoticeIcon: { marginTop: 3 },
+  missingNoticeText: { ...textStyles.body5, color: colors.errorText, flex: 1 },
+  missingNoticeTitle: { ...textStyles.h8, color: colors.errorInk },
+  missingNoticeDot: { color: colors.errorDivider },
+  missingAlert: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: spacing.sm,
+    backgroundColor: colors.errorSoft,
+    borderWidth: 1,
+    borderColor: colors.errorBorder,
+    borderRadius: radii.md,
+    padding: spacing.md,
+  },
+  missingAlertIcon: { marginTop: 2 },
+  missingAlertText: { ...textStyles.body4, color: colors.errorText, flex: 1 },
+  missingAlertCount: { ...textStyles.h7, color: colors.errorText },
 
   itemCheckbox: {
     width: 20,
     height: 20,
-    borderRadius: 6,
+    borderRadius: radii.xs,
     borderWidth: 1.5,
     borderColor: colors.gray400,
+    backgroundColor: colors.white,
     alignItems: "center",
     justifyContent: "center",
-    marginTop: 1,
+    marginTop: spacing.xs,
     flexShrink: 0,
   },
-  itemCheckboxSelected: { backgroundColor: colors.gray900, borderColor: colors.gray900 },
+  itemCheckboxSelected: { ...surfaces.dark, borderColor: colors.gray900 },
 
   itemContent: { flex: 1, minWidth: 0, gap: 0 },
 
@@ -1884,25 +2134,23 @@ const styles = StyleSheet.create({
   inlineExpenseCategory: { ...textStyles.h9, color: "#1F9D57" },
   inlineExpenseAmount: { fontFamily: typography.fontFamily.poppinsSemiBold, fontSize: 11, lineHeight: 16, color: "#137A41" },
 
-  editButton: { width: 28, height: 28, borderRadius: 8, alignItems: "center", justifyContent: "center", flexShrink: 0 },
+  editButton: { width: 32, height: 32, marginVertical: -spacing.sm, borderRadius: radii.md, alignItems: "center", justifyContent: "center", flexShrink: 0 },
   editForm: { flex: 1, gap: 8 },
   editTitleInput: {
-    height: 40, borderWidth: 1, borderColor: colors.gray300, borderRadius: 8,
-    paddingHorizontal: 10, fontFamily: typography.fontFamily.pretendardSemiBold,
-    fontSize: 13, color: colors.gray900, outlineStyle: "none",
-  } as any,
+    height: 40, borderWidth: 1, borderColor: colors.gray300, borderRadius: radii.base,
+    paddingHorizontal: 10, paddingVertical: 0, backgroundColor: colors.white,
+    ...textStyles.h7, color: colors.gray900,
+  },
   editInput: {
-    height: 40, borderWidth: 1, borderColor: colors.gray300, borderRadius: 8,
-    paddingHorizontal: 10, fontFamily: typography.fontFamily.pretendardRegular,
-    fontSize: 12, color: colors.gray900, outlineStyle: "none",
-  } as any,
+    height: 40, borderWidth: 1, borderColor: colors.gray300, borderRadius: radii.base,
+    paddingHorizontal: 10, paddingVertical: 0, backgroundColor: colors.white,
+    ...textStyles.body5, color: colors.gray900,
+  },
   editDescriptionInput: {
-    height: 60, borderWidth: 1, borderColor: colors.gray300, borderRadius: 8,
-    paddingHorizontal: 10, paddingVertical: 8,
-    fontFamily: typography.fontFamily.pretendardRegular,
-    fontSize: 12, lineHeight: 18, color: colors.gray900,
-    outlineStyle: "none", textAlignVertical: "top",
-  } as any,
+    height: 60, borderWidth: 1, borderColor: colors.gray300, borderRadius: radii.base,
+    paddingHorizontal: 10, paddingVertical: spacing.sm, backgroundColor: colors.white,
+    ...textStyles.body5, color: colors.gray900, textAlignVertical: "top",
+  },
   editTimeRow: { flexDirection: "row", alignItems: "center", gap: 6, zIndex: 10 },
   editFlightInput: { flex: 1, height: 40, minWidth: 0 },
   editFlightCell: { flex: 1, minWidth: 0 },
@@ -1915,23 +2163,35 @@ const styles = StyleSheet.create({
   editDateText: { ...textStyles.body4, color: colors.gray900 },
   editDatePlaceholder: { ...textStyles.body4, color: colors.gray400 },
   editCalendarPopup: { position: "absolute", top: 44, left: 0, zIndex: 30000 },
-  editCategoryFixed: {
-    height: 40, paddingHorizontal: 16, borderWidth: 1, borderColor: colors.gray300,
-    borderRadius: 8, alignItems: "center", justifyContent: "center", flexShrink: 0,
+  editItinCategoryWrap: { position: "relative", flexShrink: 0 },
+  editItinCategoryTrigger: {
+    flexDirection: "row", alignItems: "center", gap: spacing.xs + 2,
+    height: 40, paddingHorizontal: spacing.md, borderWidth: 1, borderColor: colors.gray300,
+    borderRadius: radii.base, backgroundColor: colors.white, minWidth: 96,
   },
-  editCategoryFixedText: {
-    fontFamily: typography.fontFamily.pretendardRegular, fontSize: 12, color: colors.gray600,
+  editItinCategoryDot: { width: 8, height: 8, borderRadius: radii.pill },
+  editItinCategoryArrow: { marginLeft: "auto", opacity: 0.6 },
+  editItinCategoryArrowOpen: { transform: [{ rotate: "180deg" }] },
+  editItinCategoryPopup: {
+    position: "absolute", top: 44, left: 0, minWidth: 140,
+    backgroundColor: colors.white, borderWidth: 1, borderColor: colors.gray300,
+    borderRadius: radii.md, padding: spacing.xs, gap: 2, ...shadows.lg,
   },
+  editItinCategoryOption: {
+    flexDirection: "row", alignItems: "center", gap: spacing.sm,
+    paddingHorizontal: 10, paddingVertical: spacing.sm, borderRadius: radii.base,
+  },
+  editItinCategoryOptionSelected: { backgroundColor: colors.gray200 },
+  editItinCategoryOptionHover: { backgroundColor: colors.gray100 },
   editExpenseRow: { flexDirection: "row", alignItems: "center", gap: 6 },
+  editRowRaised: { zIndex: 3000 },
   editCategoryPickerTrigger: { minWidth:100, minHeight: 40, borderWidth: 1, borderColor: colors.gray300, backgroundColor: colors.white },
   editExpenseLabel: {
     width: 30, fontFamily: typography.fontFamily.pretendardSemiBold,
     fontSize: 12, lineHeight: 18, color: colors.gray600, flexShrink: 0,
   },
   editAmountWrapper: {
-    flex: 1, flexDirection: "row", alignItems: "center",
-    borderWidth: 1, borderColor: colors.gray300, borderRadius: 8,
-    height: 40, paddingHorizontal: 8,
+    flex: 1,
   },
   editAmountWrapperDisabled: { opacity: 0.45 },
   editCurrencyToggle: {
@@ -1963,12 +2223,17 @@ const styles = StyleSheet.create({
     color: colors.gray900,
   },
   editAmountInput: {
-    flex: 1, borderWidth: 0, fontFamily: typography.fontFamily.poppinsSemiBold,
-    fontSize: 12, color: colors.gray900, textAlign: "right", outlineStyle: "none",
-  } as any,
+    height: 40, borderWidth: 1, borderColor: colors.gray300, borderRadius: radii.base,
+    paddingHorizontal: spacing.sm, paddingVertical: 0, backgroundColor: colors.white,
+    fontFamily: typography.fontFamily.poppinsSemiBold,
+    fontSize: 12, color: colors.gray900, textAlign: "right",
+  },
+  editFieldHover: {
+    backgroundColor: colors.inputHover,
+  },
   editDoneButton: {
     alignSelf: "flex-end", height: 30, paddingHorizontal: 14,
-    borderRadius: 8, backgroundColor: "#007AFF",
+    borderRadius: radii.base, ...surfaces.primary,
     alignItems: "center", justifyContent: "center",
   },
   editDoneButtonText: {
@@ -1976,31 +2241,5 @@ const styles = StyleSheet.create({
   },
 
   // Buttons
-  buttonRow: { flexDirection: "row", gap: 10 },
-  cancelButton: {
-    height: 46,
-    paddingHorizontal: 18,
-    borderRadius: 12,
-    backgroundColor: colors.gray200,
-    alignItems: "center",
-    justifyContent: "center",
-    flexShrink: 0,
-  },
-  cancelButtonText: { ...textStyles.h7, color: colors.gray900 },
-  aiButton: { flex: 1, height: 46, borderRadius: 12, overflow: "hidden" },
-  aiButtonDisabled: { opacity: 0.45 },
-  aiButtonGradient: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6 },
-  aiButtonText: { ...textStyles.h7, color: colors.white },
-  saveButton: {
-    flex: 1,
-    height: 46,
-    borderRadius: 12,
-    backgroundColor: colors.gray900,
-    alignItems: "center",
-    justifyContent: "center",
-    flexDirection: "row",
-    gap: 6,
-  },
-  saveButtonDisabled: { opacity: 0.45 },
-  saveButtonText: { ...textStyles.h7, color: colors.white },
+  buttonRow: { flexDirection: "row", gap: spacing.md, paddingTop: spacing.xs },
 });

@@ -2,6 +2,8 @@ import AiAnalyzeErrorBanner from "@/components/AiAnalyzeErrorBanner";
 import AiDocumentAnalyzeModal from "@/components/modals/AiDocumentAnalyzeModal";
 import BaseCalendar from "@/components/popup/calendar/BaseCalendar";
 import { PLACEHOLDERS } from "@/constants/placeholders";
+import { useToast } from "@/contexts/ToastContext";
+import { useHover } from "@/hooks/useHover";
 import { useAttachmentUpload } from "@/hooks/useAttachmentUpload";
 import { useFilePicker } from "@/hooks/useFilePicker";
 import { accommodationsApi } from "@/services/accommodations";
@@ -16,6 +18,8 @@ import type {
   StagedDocumentAnalyzePayload,
 } from "@/types/api";
 import { ExpenseCurrency, currencyLabels } from "@/types/expense";
+import CurrencyToggle from "@/ui/components/CurrencyToggle";
+import ActionButton from "@/ui/components/ActionButton";
 import AttachmentSection from "@/ui/components/attachmentSection";
 import type { AiAttachmentAnalyzeSelection } from "@/ui/components/attachmentSection.types";
 import { pendingAiFileKey } from "@/ui/components/attachmentSection.types";
@@ -23,7 +27,6 @@ import PlacesSearchInput from "@/ui/components/PlacesSearchInput";
 import type { PlaceResult } from "@/ui/components/PlacesSearchInput";
 import Input from "@/ui/components/input/Input";
 import { CityPicker, CountryPicker, TimePicker } from "@/ui/components/pickers";
-import WarningBanner from "@/ui/components/toast/warning";
 import { colors } from "@/ui/tokens/colors";
 import { radii } from "@/ui/tokens/radii";
 import { spacing } from "@/ui/tokens/spacing";
@@ -38,18 +41,15 @@ import { handleGuestPromptError } from "@/utils/guestPrompt";
 import dayjs from "dayjs";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  ActivityIndicator,
   Platform,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from "react-native";
+import { useDetailsHeader } from "../DetailsHeaderContext";
 import CalendarIcon from "../../../../assets/calender.svg";
-import CloseIcon from "../../../../assets/close_sm.svg";
-import PanelTabSwitcher from "../PanelTabSwitcher";
 import { extendPlanIfNeeded } from "@/utils/extendPlanIfNeeded";
 
 function getCountryCityFromSegments(
@@ -137,8 +137,9 @@ export default function AccommodationItem({
     const integerPart = raw.split(".")[0];
     return integerPart.replace(/[^0-9]/g, "");
   };
-  const [showWarning, setShowWarning] = useState(false);
-  const [warningMessage, setWarningMessage] = useState("");
+  const { showToast } = useToast();
+  const [showErrors, setShowErrors] = useState(false);
+  const scrollRef = useRef<ScrollView>(null);
   const [formData, setFormData] = useState({
     name: accommodation?.name || draft?.name || "",
     place: accommodation?.location?.name || draft?.place || "",
@@ -434,8 +435,9 @@ export default function AccommodationItem({
       !formData.checkin_time ||
       !formData.checkout_time
     ) {
-      setWarningMessage("입력되지 않은 값이 있어요.");
-      setShowWarning(true);
+      setShowErrors(true);
+      scrollRef.current?.scrollTo({ y: 0, animated: true });
+      showToast("입력되지 않은 값이 있어요.", { icon: "warning" });
       return;
     }
 
@@ -447,8 +449,7 @@ export default function AccommodationItem({
     );
 
     if (newCheckout.isSame(newCheckin) || newCheckout.isBefore(newCheckin)) {
-      setWarningMessage("체크아웃은 체크인보다 늦어야 해요.");
-      setShowWarning(true);
+      showToast("체크아웃은 체크인보다 늦어야 해요.", { icon: "warning" });
       return;
     }
 
@@ -475,8 +476,7 @@ export default function AccommodationItem({
           newCheckout.isAfter(existingCheckout));
 
       if (hasOverlap) {
-        setWarningMessage("겹치는 숙박 일정이 있어요");
-        setShowWarning(true);
+        showToast("겹치는 숙박 일정이 있어요", { icon: "warning" });
         return;
       }
     }
@@ -732,26 +732,27 @@ export default function AccommodationItem({
     setFormData(prev => ({ ...prev, place: place.name }));
   }, []);
 
+  const checkinDateHover = useHover();
+  const checkoutDateHover = useHover();
+
+  useDetailsHeader({
+    title: readOnly
+      ? "숙박 정보"
+      : accommodation && accommodation.id
+        ? "숙박 수정"
+        : "숙박 추가",
+    showTabs: !readOnly,
+    onClose: onCancel,
+  });
+
+  const nameError = showErrors && !readOnly && !formData.name.trim();
+
+  const isSaving = isSubmitting || isUploading;
+
   return (
     <View style={styles.wrapper}>
-      <View style={styles.titleRow}>
-        <Text style={styles.title}>
-          {readOnly
-            ? "숙박 정보"
-            : accommodation && accommodation.id
-              ? "숙박 수정"
-              : "숙박 추가"}
-        </Text>
-        {readOnly || accommodation ? (
-          <Pressable onPress={onCancel} style={styles.closeButton}>
-            <CloseIcon width={12} height={12} color={colors.gray600} />
-          </Pressable>
-        ) : null}
-      </View>
-      {!readOnly && (
-        <PanelTabSwitcher activeTab={activeTab} onTabChange={onTabChange} />
-      )}
       <ScrollView
+        ref={scrollRef}
         style={styles.container}
         contentContainerStyle={[
           styles.contentContainer,
@@ -772,16 +773,22 @@ export default function AccommodationItem({
               onChangeText={text =>
                 !readOnly && setFormData({ ...formData, name: text })
               }
-              style={readOnly ? styles.readOnlyInput : styles.input}
+              size="md"
+              style={readOnly ? styles.readOnlyInput : undefined}
               placeholderTextColor={colors.gray600}
               editable={!readOnly}
+              error={nameError}
             />
+            {nameError && (
+              <Text style={styles.errorText}>숙소명을 입력해 주세요.</Text>
+            )}
           </View>
 
           <View style={styles.inputGroup}>
             <Text style={styles.label}>내용</Text>
             {Platform.OS === "web" ? (
-              <TextInput
+              <Input
+                variant={readOnly ? "bare" : "filled"}
                 multiline
                 numberOfLines={3}
                 textAlignVertical="top"
@@ -791,10 +798,14 @@ export default function AccommodationItem({
                 }
                 placeholder={PLACEHOLDERS.itinerary.descriptionForm}
                 placeholderTextColor={colors.gray600}
-                editable={!readOnly}
+                readOnly={readOnly}
+                size="md"
                 style={[
                   readOnly ? styles.readOnlyTextArea : styles.textArea,
-                  { resize: "vertical", overflow: "auto" } as any,
+                  {
+                    resize: "vertical",
+                    overflow: readOnly ? "hidden" : "auto",
+                  } as any,
                 ]}
               />
             ) : (
@@ -808,6 +819,7 @@ export default function AccommodationItem({
                 onChangeText={text =>
                   !readOnly && setFormData({ ...formData, description: text })
                 }
+                size="md"
                 style={readOnly ? styles.readOnlyTextArea : styles.textArea}
                 placeholderTextColor={colors.gray600}
                 editable={!readOnly}
@@ -838,7 +850,9 @@ export default function AccommodationItem({
                 onOpen={() => !readOnly && setCountryOpen(true)}
                 onClose={() => setCountryOpen(false)}
                 disabled={readOnly}
+                hideArrow={readOnly}
                 useModal
+                style={readOnly ? styles.readOnlyPicker : styles.pickerTrigger}
               />
             </View>
             <View style={[styles.inputGroup, styles.halfWidth]}>
@@ -849,7 +863,9 @@ export default function AccommodationItem({
                 countryKo={formData.country}
                 placeholder={PLACEHOLDERS.accommodation.city}
                 disabled={readOnly}
+                hideArrow={readOnly}
                 useModal
+                style={readOnly ? styles.readOnlyPicker : styles.pickerTrigger}
               />
             </View>
           </View>
@@ -882,7 +898,8 @@ export default function AccommodationItem({
                 onChangeText={text =>
                   !readOnly && setFormData({ ...formData, place: text })
                 }
-                style={readOnly ? styles.readOnlyInput : styles.input}
+                size="md"
+              style={readOnly ? styles.readOnlyInput : undefined}
                 placeholderTextColor={colors.gray600}
                 editable={!readOnly}
               />
@@ -913,14 +930,19 @@ export default function AccommodationItem({
                 체크인 날짜 <Text style={{ color: colors.warning }}>*</Text>
               </Text>
               <Pressable
-                style={
+                style={[
                   readOnly
                     ? [
                         styles.dateInput,
-                        { borderColor: colors.gray400, borderWidth: 1 },
-                      ]
-                    : styles.dateInput
-                }
+                        styles.readOnlyPicker,
+                        ]
+                    : styles.dateInput,
+                  checkinDateHover.hovered &&
+                    !readOnly &&
+                    !showCheckinDatePicker &&
+                    styles.selectHover,
+                ]}
+                {...checkinDateHover.pressableHoverProps}
                 onPress={() => !readOnly && setShowCheckinDatePicker(true)}
                 disabled={readOnly}
               >
@@ -995,14 +1017,11 @@ export default function AccommodationItem({
                 popupAlign="right"
                 style={
                   readOnly
-                    ? {
-                        backgroundColor: colors.gray200,
-                        borderColor: colors.gray400,
-                        borderWidth: 1,
-                      }
+                    ? styles.readOnlyPicker
                     : styles.timePicker
                 }
                 disabled={readOnly}
+                hideArrow={readOnly}
               />
             </View>
           </View>
@@ -1031,14 +1050,19 @@ export default function AccommodationItem({
                 체크아웃 날짜 <Text style={{ color: colors.warning }}>*</Text>
               </Text>
               <Pressable
-                style={
+                style={[
                   readOnly
                     ? [
                         styles.dateInput,
-                        { borderColor: colors.gray400, borderWidth: 1 },
-                      ]
-                    : styles.dateInput
-                }
+                        styles.readOnlyPicker,
+                        ]
+                    : styles.dateInput,
+                  checkoutDateHover.hovered &&
+                    !readOnly &&
+                    !showCheckoutDatePicker &&
+                    styles.selectHover,
+                ]}
+                {...checkoutDateHover.pressableHoverProps}
                 onPress={() => !readOnly && setShowCheckoutDatePicker(true)}
                 disabled={readOnly}
               >
@@ -1104,14 +1128,11 @@ export default function AccommodationItem({
                 popupAlign="right"
                 style={
                   readOnly
-                    ? {
-                        backgroundColor: colors.gray200,
-                        borderColor: colors.gray400,
-                        borderWidth: 1,
-                      }
+                    ? styles.readOnlyPicker
                     : styles.timePicker
                 }
                 disabled={readOnly}
+                hideArrow={readOnly}
               />
             </View>
           </View>
@@ -1132,17 +1153,28 @@ export default function AccommodationItem({
                     });
                   }}
                   keyboardType="numeric"
-                  style={[
-                    readOnly ? styles.readOnlyInput : styles.input,
-                    styles.amountInputPadding,
-                  ]}
+                  size="md"
+                  style={readOnly ? styles.readOnlyInput : undefined}
                   placeholderTextColor={colors.gray600}
                   editable={!readOnly}
                 />
-                <Text style={styles.amountSuffix} pointerEvents="none">
-                  {currencyLabels[ExpenseCurrency.KRW]}
-                </Text>
               </View>
+            </View>
+            <View style={[styles.inputGroup, { flex: 1 }]}>
+              <Text style={styles.label}>통화</Text>
+              {readOnly ? (
+                <View style={styles.readOnlyCurrency}>
+                  <Text style={styles.readOnlyCurrencyText}>
+                    {currencyLabels[expenseData.currency as ExpenseCurrency]}
+                  </Text>
+                </View>
+              ) : (
+                <CurrencyToggle
+                  value={expenseData.currency as ExpenseCurrency}
+                  onChange={c => setExpenseData({ ...expenseData, currency: c })}
+                  style={styles.pickerTrigger}
+                />
+              )}
             </View>
           </View>
 
@@ -1198,64 +1230,48 @@ export default function AccommodationItem({
             />
           )}
 
-          {/* 하단 버튼 */}
-          {!readOnly ? (
-            <View
-              style={[styles.buttonRow, { position: "relative", zIndex: -1 }]}
-            >
-              <Pressable
-                style={styles.deleteButton}
-                onPress={accommodation?.id ? handleDelete : onCancel}
-                disabled={isSubmitting}
-              >
-                <Text style={styles.deleteButtonText}>
-                  {accommodation?.id ? "삭제" : "취소"}
-                </Text>
-              </Pressable>
-              <Pressable
-                style={styles.saveButton}
-                onPress={handleSave}
-                disabled={isSubmitting || isUploading}
-              >
-                <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                  {(isSubmitting || isUploading) && (
-                    <ActivityIndicator size="small" color="white" />
-                  )}
-                  <Text style={styles.saveButtonText}>
-                    {isSubmitting || isUploading ? "저장 중..." : "저장"}
-                  </Text>
-                </View>
-              </Pressable>
-            </View>
-          ) : (
-            <View style={[styles.buttonRow, { position: "relative" }]}>
-              <Pressable
-                style={styles.deleteButton}
-                onPress={handleDelete}
-                disabled={isSubmitting}
-              >
-                <Text style={styles.deleteButtonText}>삭제</Text>
-              </Pressable>
-              <Pressable
-                style={[styles.saveButton, { backgroundColor: colors.gray900 }]}
-                onPress={onEdit}
-              >
-                <Text style={styles.saveButtonText}>수정</Text>
-              </Pressable>
-            </View>
-          )}
-          <WarningBanner
-            message={warningMessage}
-            visible={showWarning}
-            duration={3000}
-            bottomOffset={70}
-            onHide={() => {
-              setShowWarning(false);
-              setWarningMessage("");
-            }}
-          />
         </View>
       </ScrollView>
+      {/* 하단 버튼 */}
+      {!readOnly ? (
+        <View
+          style={styles.buttonRow}
+        >
+          <ActionButton
+            label="취소"
+            tone="secondary"
+            size="M"
+            fill
+            onPress={onCancel}
+            blocked={isSaving}
+          />
+          <ActionButton
+            label="저장"
+            size="M"
+            fill
+            onPress={handleSave}
+            loading={isSaving}
+          />
+        </View>
+      ) : (
+        <View style={styles.buttonRow}>
+          <ActionButton
+            label="삭제"
+            tone="danger"
+            size="M"
+            fill
+            onPress={handleDelete}
+            blocked={isSubmitting}
+          />
+          <ActionButton
+            label="수정"
+            tone="secondary"
+            size="M"
+            fill
+            onPress={onEdit}
+          />
+        </View>
+      )}
       <AiDocumentAnalyzeModal
         visible={aiAnalyzeModalVisible}
         analyzeResult={aiAnalyzeResult}
@@ -1287,25 +1303,6 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.xl,
     gap: spacing.xl,
   },
-  titleRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: spacing.xl,
-    paddingTop: spacing.xl,
-    paddingBottom: spacing.md,
-  },
-  title: {
-    ...textStyles.h5,
-  },
-  closeButton: {
-    width: 26,
-    height: 26,
-    borderRadius: radii.pill,
-    backgroundColor: colors.gray200,
-    justifyContent: "center",
-    alignItems: "center",
-  },
   formSection: {
     gap: spacing.lg,
   },
@@ -1323,15 +1320,14 @@ const styles = StyleSheet.create({
   },
   label: {
     ...textStyles.h8,
-    color: colors.black,
+    color: colors.gray900,
   },
-  input: {
-    backgroundColor: colors.gray200,
-    height: 40,
-    borderRadius: radii.md,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
-    ...textStyles.body4,
+  errorText: {
+    ...textStyles.body6,
+    color: colors.danger,
+  },
+  pickerTrigger: {
+    height: 42,
   },
   dateInput: {
     flexDirection: "row",
@@ -1339,10 +1335,12 @@ const styles = StyleSheet.create({
     borderWidth: 0,
     borderRadius: radii.md,
     paddingHorizontal: spacing.md,
-    paddingVertical: 10,
+    paddingVertical: spacing.md,
     backgroundColor: colors.gray200,
-    maxHeight: 40,
     width: "100%",
+  },
+  selectHover: {
+    backgroundColor: colors.inputHover,
   },
   dateTextContainer: {
     flexDirection: "row",
@@ -1353,7 +1351,7 @@ const styles = StyleSheet.create({
     width: "100%",
   },
   dateText: {
-    ...textStyles.body4,
+    ...textStyles.body5,
     color: colors.black,
   },
   placeholderText: {
@@ -1373,7 +1371,7 @@ const styles = StyleSheet.create({
     borderWidth: 0,
     borderColor: colors.gray400,
     borderRadius: radii.md,
-    height: 40,
+    height: 42,
   },
   currencyDisplay: {
     backgroundColor: colors.gray200,
@@ -1390,81 +1388,57 @@ const styles = StyleSheet.create({
   amountInputWrapper: {
     position: "relative",
   },
-  amountInputPadding: {
-    // suffix(원) 공간만큼만 비우고, 숫자는 오른쪽으로 붙여서 "숫자 + 원"이 바로 붙어 보이게 함
-    paddingRight: 20,
-    textAlign: "right",
-  },
-  amountSuffix: {
-    position: "absolute",
-    right: spacing.sm,
-    top: "50%",
-    transform: [{ translateY: -10 }],
-    ...textStyles.body4,
-    color: colors.black,
-  },
   attachmentSection: {
     marginTop: spacing.lg,
     width: "100%",
   },
   buttonRow: {
     flexDirection: "row",
-    gap: spacing.sm,
-    marginTop: spacing.sm,
+    gap: spacing.md,
+    paddingTop: spacing.lg,
+    paddingHorizontal: spacing.xl,
     paddingBottom: spacing.xl,
   },
-  deleteButton: {
-    backgroundColor: colors.gray300,
-    height: 40,
-    borderRadius: radii.md,
-    paddingHorizontal: spacing.lg,
-    justifyContent: "center",
-    alignItems: "center",
-    minWidth: 90,
-  },
-  deleteButtonText: {
-    ...textStyles.h8,
-    color: colors.black,
-  },
-  saveButton: {
-    backgroundColor: colors.primary,
-    height: 40,
-    borderRadius: radii.md,
-    paddingHorizontal: spacing.lg,
-    justifyContent: "center",
-    alignItems: "center",
-    flex: 1,
-  },
-  saveButtonText: {
-    ...textStyles.h8,
-    color: colors.white,
-  },
   textArea: {
-    backgroundColor: colors.gray200,
     height: 80,
-    borderRadius: radii.md,
-    paddingHorizontal: spacing.md,
-    paddingVertical: 10,
-    ...textStyles.body4,
+  },
+  readOnlyPicker: {
+    backgroundColor: colors.gray200,
+    height: 46,
+    borderWidth: 0,
+    borderRadius: radii.mdPlus,
+    paddingHorizontal: 14,
   },
   readOnlyInput: {
     backgroundColor: colors.gray200,
-    borderWidth: 1,
-    borderColor: colors.gray400,
-    height: 40,
-    borderRadius: radii.md,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
-    ...textStyles.body4,
+    borderWidth: 0,
+    height: 46,
+    borderRadius: radii.mdPlus,
+    paddingHorizontal: 14,
+    paddingVertical: spacing.none,
+    ...textStyles.body3,
+    color: colors.gray900,
+  },
+  readOnlyCurrency: {
+    backgroundColor: colors.gray200,
+    borderWidth: 0,
+    height: 46,
+    borderRadius: radii.mdPlus,
+    paddingHorizontal: 14,
+    justifyContent: "center",
+  },
+  readOnlyCurrencyText: {
+    ...textStyles.body3,
+    color: colors.gray900,
   },
   readOnlyTextArea: {
     backgroundColor: colors.gray200,
-    borderWidth: 1,
-    borderColor: colors.gray400,
+    borderWidth: 0,
     minHeight: 80,
-    borderRadius: radii.md,
-    paddingHorizontal: spacing.md,
-    paddingVertical: 10,
-    ...textStyles.body4,
+    borderRadius: radii.mdPlus,
+    paddingHorizontal: 14,
+    paddingVertical: spacing.md,
+    ...textStyles.body3,
+    color: colors.gray900,
   },
 });

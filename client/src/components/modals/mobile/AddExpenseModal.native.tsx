@@ -10,43 +10,61 @@ import { useAttachmentUpload } from "@/hooks/useAttachmentUpload";
 import { useFilePicker } from "@/hooks/useFilePicker";
 import { useMe } from "@/hooks/useMe";
 import { analyzeDocumentUpload } from "@/services/aiDocument";
+import { attachmentsApi } from "@/services/attachments";
 import { expensesApi } from "@/services/expenses";
 import { type DocumentUploadAnalyzeResponse, type LocalFile, PLAN_ENTITY_KIND } from "@/types/api";
-import type { Expense } from "@/types/api";
+import type { Attachment, Expense } from "@/types/api";
 import type { AiAttachmentAnalyzeSelection } from "@/ui/components/attachmentSection.types";
 import { buildAnalyzeUploadPayload } from "@/utils/attachmentAiAnalyze";
 import {
   ExpenseCategory,
   ExpenseCurrency,
+  categoryColors,
   categoryLabels,
 } from "@/types/expense";
 import BottomSheetModal from "@/ui/components/BottomSheetModal.native";
+import ActionButton from "@/ui/components/ActionButton";
 import CalendarModal from "@/ui/components/CalendarModal.native";
-import FloatingFooter from "@/ui/components/FloatingFooter.native";
-import CurrencyToggle from "@/ui/components/CurrencyToggle";
+import Input, { filledFocusStyle } from "@/ui/components/input/Input";
 import AttachmentSection from "@/ui/components/attachmentSection.native";
-import Input from "@/ui/components/input/Input";
 import { colors } from "@/ui/tokens/colors";
-import { textStyles, typography } from "@/ui/tokens/typography";
+import { radii } from "@/ui/tokens/radii";
+import { spacing } from "@/ui/tokens/spacing";
+import { textStyles } from "@/ui/tokens/typography";
+import { handleGuestPromptError } from "@/utils/guestPrompt";
+import { MenuView } from "@react-native-menu/menu";
 import dayjs from "dayjs";
 import { useEffect, useRef, useState } from "react";
 import {
   Alert,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from "react-native";
 import { KeyboardAwareScrollView, type KeyboardAwareScrollViewRef } from "react-native-keyboard-controller";
-import BedIcon from "../../../../assets/mobile_bed.svg";
+import CloseIcon from "../../../../assets/close_sm.svg";
+import DownArrowIcon from "../../../../assets/down_arrow.svg";
 import CalendarIcon from "../../../../assets/mobile_calendar_black.svg";
-import CarIcon from "../../../../assets/mobile_car.svg";
-import CloseIcon from "../../../../assets/mobile_close.svg";
-import FlightIcon from "../../../../assets/mobile_flight.svg";
-import FoodIcon from "../../../../assets/mobile_food.svg";
-import ShoppingIcon from "../../../../assets/mobile_shopping.svg";
-import TicketIcon from "../../../../assets/mobile_ticket.svg";
+import { useDiscardConfirm } from "@/hooks/useDiscardConfirm";
+import { useToast } from "@/contexts/ToastContext";
+import CurrencyToggle from "@/ui/components/CurrencyToggle";
+
+const CATEGORY_OPTIONS: ExpenseCategory[] = [
+  ExpenseCategory.FOOD,
+  ExpenseCategory.TRANSPORT,
+  ExpenseCategory.ACTIVITY,
+  ExpenseCategory.SIGHTSEEING,
+  ExpenseCategory.ACCOMMODATION,
+  ExpenseCategory.FLIGHT,
+  ExpenseCategory.SHOPPING,
+  ExpenseCategory.ETC,
+];
+
+
+const formatAmount = (digits: string) =>
+  digits.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 
 interface AddExpenseModalProps {
   visible: boolean;
@@ -56,6 +74,9 @@ interface AddExpenseModalProps {
   planEndDate?: string;
   defaultExDate?: string;
   onExpenseAdd?: (expense: Expense) => void;
+  expense?: Expense | null;
+  onExpenseUpdate?: (expense: Expense) => void;
+  onExpenseDelete?: () => void;
   pendingAiResult?: { result: DocumentUploadAnalyzeResponse; filename?: string; pendingFiles?: LocalFile[] } | null;
 }
 
@@ -73,47 +94,24 @@ export default function AddExpenseModal({
   planEndDate,
   defaultExDate,
   onExpenseAdd,
+  expense,
+  onExpenseUpdate,
+  onExpenseDelete,
   pendingAiResult,
 }: AddExpenseModalProps) {
+  const isEdit = !!expense;
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [descriptionFocused, setDescriptionFocused] = useState(false);
 
-  const CATEGORY_ROW1: ExpenseCategory[] = [
-    ExpenseCategory.FOOD,
-    ExpenseCategory.TRANSPORT,
-    ExpenseCategory.ACTIVITY,
-  ];
-  const CATEGORY_ROW2: ExpenseCategory[] = [
-    ExpenseCategory.ACCOMMODATION,
-    ExpenseCategory.FLIGHT,
-    ExpenseCategory.SHOPPING,
-    ExpenseCategory.ETC,
-  ];
-
-  const getCategoryIcon = (category: ExpenseCategory, isSelected: boolean) => {
-    const size = 20;
-    const color = isSelected ? colors.white : colors.gray600;
-    switch (category) {
-      case ExpenseCategory.FOOD:
-        return <FoodIcon width={size} height={size} color={color} />;
-      case ExpenseCategory.TRANSPORT:
-        return <CarIcon width={size} height={size} color={color} />;
-      case ExpenseCategory.ACTIVITY:
-        return <TicketIcon width={size} height={size} color={color} />;
-      case ExpenseCategory.ETC:
-        return null;
-      case ExpenseCategory.ACCOMMODATION:
-        return <BedIcon width={size} height={size} color={color} />;
-      case ExpenseCategory.FLIGHT:
-        return <FlightIcon width={size} height={size} color={color} />;
-      case ExpenseCategory.SHOPPING:
-        return <ShoppingIcon width={size} height={size} color={color} />;
-      default:
-        return <TicketIcon width={size} height={size} color={color} />;
-    }
-  };
   const [pendingFiles, setPendingFiles] = useState<LocalFile[]>([]);
+  const [existingAttachments, setExistingAttachments] = useState<Attachment[]>(
+    [],
+  );
+  const [isLoadingAttachments, setIsLoadingAttachments] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const scrollRef = useRef<KeyboardAwareScrollViewRef>(null);
+  const [showErrors, setShowErrors] = useState(false);
+  const { showToast } = useToast();
   const isSubmittingRef = useRef(false);
   const [isAiAnalyzing, setIsAiAnalyzing] = useState(false);
   const [aiAnalyzeError, setAiAnalyzeError] = useState<string | null>(null);
@@ -144,6 +142,7 @@ export default function AddExpenseModal({
   useEffect(() => {
     if (!visible) {
       formInitializedRef.current = false;
+      setShowErrors(false);
       setAiModalResult(null);
       setAiAnalyzeError(null);
       return;
@@ -151,11 +150,56 @@ export default function AddExpenseModal({
     if (formInitializedRef.current) return;
     formInitializedRef.current = true;
 
-    const date =
-      defaultExDate || planStartDate || dayjs().format("YYYY-MM-DD");
-    setFormData(prev => ({ ...prev, ex_date: date }));
+    if (expense) {
+      setFormData({
+        category: expense.category,
+        amount: formatAmount(String(expense.amount)),
+        description: expense.description ?? "",
+        ex_date: dayjs(expense.exDate).format("YYYY-MM-DD"),
+        currency: expense.currency,
+      });
+    } else {
+      const date =
+        defaultExDate || planStartDate || dayjs().format("YYYY-MM-DD");
+      setFormData(prev => ({ ...prev, ex_date: date }));
+    }
     setPendingFiles([]);
-  }, [visible, defaultExDate, planStartDate]);
+  }, [visible, defaultExDate, planStartDate, expense]);
+
+  useEffect(() => {
+    if (!visible || !expense || !planId) {
+      setExistingAttachments([]);
+      setIsLoadingAttachments(false);
+      return;
+    }
+    let cancelled = false;
+    setExistingAttachments([]);
+    setIsLoadingAttachments(true);
+    attachmentsApi
+      .getAttachments(planId, "expense", expense.id)
+      .then(list => {
+        if (!cancelled) setExistingAttachments(list);
+      })
+      .catch(() => {
+        if (!cancelled) setExistingAttachments([]);
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoadingAttachments(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [visible, expense, planId]);
+
+  const handleRemoveExistingAttachment = async (attachmentId: number) => {
+    try {
+      await attachmentsApi.deleteAttachment(attachmentId);
+      setExistingAttachments(prev => prev.filter(a => a.id !== attachmentId));
+    } catch (error) {
+      if (handleGuestPromptError(error)) return;
+      Alert.alert("알림", "첨부파일 삭제에 실패했습니다");
+    }
+  };
 
   useEffect(() => {
     if (visible && pendingAiResult) {
@@ -189,7 +233,7 @@ export default function AddExpenseModal({
     try {
       const { file, filename } = await buildAnalyzeUploadPayload(selection, {
         pendingFiles,
-        existingAttachments: [],
+        existingAttachments,
       });
       setAiAnalyzeFileName(filename);
       const result = await analyzeDocumentUpload(file, { filename });
@@ -213,22 +257,23 @@ export default function AddExpenseModal({
 
   const handleAmountChange = (text: string) => {
     const digits = normalizeAmount(text);
-    const formatted = digits.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-    setFormData(prev => ({ ...prev, amount: formatted }));
+    setFormData(prev => ({ ...prev, amount: formatAmount(digits) }));
   };
 
   const handleSubmit = async () => {
     if (isSubmittingRef.current) return;
 
     if (!planId) {
-      Alert.alert("알림", "여행을 먼저 선택해주세요");
+      showToast("여행을 먼저 선택해주세요", { icon: "warning" });
       return;
     }
 
     const amountNum =
       Number.parseInt(normalizeAmount(formData.amount), 10) || 0;
     if (amountNum <= 0) {
-      Alert.alert("알림", "금액을 입력해주세요");
+      setShowErrors(true);
+      scrollRef.current?.scrollTo({ y: 0, animated: true });
+      showToast("입력되지 않은 값이 있어요.", { icon: "warning" });
       return;
     }
 
@@ -236,6 +281,23 @@ export default function AddExpenseModal({
     setIsSubmitting(true);
 
     try {
+      if (expense) {
+        const updated = await expensesApi.updateExpense(expense.id, {
+          category: formData.category,
+          amount: amountNum,
+          description: formData.description.trim(),
+          exDate: formData.ex_date,
+          currency: formData.currency,
+        });
+        if (pendingFiles.length > 0) {
+          await uploadFiles(pendingFiles, expense.id);
+        }
+        setPendingFiles([]);
+        onClose?.({ fromSave: true });
+        onExpenseUpdate?.(updated);
+        showToast("비용을 수정했어요.");
+        return;
+      }
       const newExpense = await expensesApi.createExpense({
         planId,
         category: formData.category,
@@ -257,15 +319,64 @@ export default function AddExpenseModal({
       setPendingFiles([]);
       onClose?.({ fromSave: true });
       onExpenseAdd?.(newExpense);
+      showToast("비용을 저장했어요.");
     } catch {
-      Alert.alert("알림", "비용 추가에 실패했습니다");
+      Alert.alert(
+        "알림",
+        expense ? "비용 수정에 실패했습니다" : "비용 추가에 실패했습니다",
+      );
     } finally {
       isSubmittingRef.current = false;
       setIsSubmitting(false);
     }
   };
 
-  const handleClose = () => {
+  const isSaving = isSubmitting || isUploading;
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const handleDelete = () => {
+    if (!expense) return;
+    Alert.alert("비용 삭제", "이 비용을 삭제할까요?", [
+      { text: "취소", style: "cancel" },
+      {
+        text: "삭제",
+        style: "destructive",
+        onPress: async () => {
+          if (isSubmittingRef.current) return;
+          isSubmittingRef.current = true;
+          setIsDeleting(true);
+          try {
+            await expensesApi.deleteExpense(expense.id);
+            onClose?.({ fromSave: true });
+            onExpenseDelete?.();
+          } catch (error) {
+            if (handleGuestPromptError(error)) return;
+            Alert.alert("알림", "비용 삭제에 실패했습니다");
+          } finally {
+            isSubmittingRef.current = false;
+            setIsDeleting(false);
+          }
+        },
+      },
+    ]);
+  };
+
+  const isDirty = expense
+    ? formData.category !== expense.category ||
+      formData.amount !== formatAmount(String(expense.amount)) ||
+      formData.description !== (expense.description ?? "") ||
+      formData.ex_date !== dayjs(expense.exDate).format("YYYY-MM-DD") ||
+      formData.currency !== expense.currency ||
+      pendingFiles.length > 0
+    : !!formData.amount ||
+      !!formData.description.trim() ||
+      pendingFiles.length > 0;
+
+  const amountError =
+    showErrors &&
+    (Number.parseInt(normalizeAmount(formData.amount), 10) || 0) <= 0;
+
+  const discardAndClose = () => {
     setFormData({
       category: ExpenseCategory.FOOD,
       amount: "",
@@ -277,13 +388,28 @@ export default function AddExpenseModal({
     onClose?.();
   };
 
+  const { requestClose, discardConfirmModal } = useDiscardConfirm(
+    isDirty,
+    discardAndClose,
+  );
+
+  const handleClose = () => {
+    if (isSaving || isDeleting) return;
+    requestClose();
+  };
+
   return (
   <>
-    <BottomSheetModal visible={visible} onClose={handleClose} height={0.93}>
+    <BottomSheetModal visible={visible} onClose={handleClose} height={0.92}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>비용 추가</Text>
-        <Pressable style={styles.closeButton} onPress={handleClose} hitSlop={8}>
-          <CloseIcon width={20} height={20} color={colors.gray700} />
+        <Text style={styles.headerTitle}>{isEdit ? "비용 수정" : "비용 추가"}</Text>
+        <Pressable
+          style={styles.closeButton}
+          onPress={handleClose}
+          hitSlop={8}
+          accessibilityLabel="닫기"
+        >
+          <CloseIcon width={12} height={12} color={colors.paletteInk} />
         </Pressable>
       </View>
 
@@ -296,110 +422,78 @@ export default function AddExpenseModal({
         bottomOffset={40}
       >
         <View style={styles.inputGroup}>
-          <Text style={styles.label}>카테고리 설정</Text>
-          <View style={styles.categoryRow}>
-            {CATEGORY_ROW1.map(cat => {
-              const isSelected = formData.category === cat;
-              return (
-                <Pressable
-                  key={cat}
-                  style={[
-                    styles.categoryPill,
-                    isSelected && styles.categoryPillSelected,
-                  ]}
-                  onPress={() =>
-                    setFormData(prev => ({ ...prev, category: cat }))
-                  }
-                >
-                  {getCategoryIcon(cat, isSelected)}
-                  <Text
-                    style={[
-                      styles.categoryPillText,
-                      isSelected && styles.categoryPillTextSelected,
-                    ]}
-                  >
-                    {categoryLabels[cat as keyof typeof categoryLabels]}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
-          <View style={[styles.categoryRow, styles.categoryRowSecond]}>
-            {CATEGORY_ROW2.map(cat => {
-              const isSelected = formData.category === cat;
-              return (
-                <Pressable
-                  key={cat}
-                  style={[
-                    styles.categoryPill,
-                    isSelected && styles.categoryPillSelected,
-                  ]}
-                  onPress={() =>
-                    setFormData(prev => ({ ...prev, category: cat }))
-                  }
-                >
-                  {getCategoryIcon(cat, isSelected)}
-                  <Text
-                    style={[
-                      styles.categoryPillText,
-                      isSelected && styles.categoryPillTextSelected,
-                    ]}
-                  >
-                    {categoryLabels[cat as keyof typeof categoryLabels]}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
+          <Text style={styles.label}>카테고리</Text>
+          <MenuView
+            actions={CATEGORY_OPTIONS.map(cat => ({
+              id: cat,
+              title: categoryLabels[cat],
+              state: formData.category === cat ? "on" : "off",
+            }))}
+            onPressAction={({ nativeEvent }) =>
+              setFormData(prev => ({
+                ...prev,
+                category: nativeEvent.event as ExpenseCategory,
+              }))
+            }
+          >
+            <View style={[styles.field, styles.categoryField]}>
+              <View
+                style={[
+                  styles.categoryDot,
+                  { backgroundColor: categoryColors[formData.category] },
+                ]}
+              />
+              <Text style={[styles.fieldText, styles.fieldTextFill]}>
+                {categoryLabels[formData.category]}
+              </Text>
+              <DownArrowIcon width={16} height={16} color={colors.gray700} />
+            </View>
+          </MenuView>
         </View>
 
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>지출 금액</Text>
-          <View style={styles.amountRow}>
-            <View style={styles.amountInputWrapper}>
-              <Input
-                value={formData.amount}
-                onChangeText={handleAmountChange}
-                placeholder="0"
-                placeholderTextColor={colors.gray500}
-                keyboardType="number-pad"
-                variant="filled"
-                containerStyle={styles.amountInputContainer}
-                style={styles.amountInputStyle}
-              />
-            </View>
+        <View style={styles.amountRow}>
+          <View style={[styles.inputGroup, styles.amountColumn]}>
+            <Text style={styles.label}>금액</Text>
+            <Input
+              variant="filled"
+              value={formData.amount}
+              onChangeText={handleAmountChange}
+              placeholder="0"
+              placeholderTextColor={colors.paletteFg3}
+              keyboardType="number-pad"
+              style={[
+                styles.field,
+                styles.singleLineInput,
+                amountError && styles.fieldError,
+              ]}
+            />
+            {amountError && (
+              <Text style={styles.errorText}>금액을 입력해 주세요.</Text>
+            )}
+          </View>
+          <View style={[styles.inputGroup, styles.amountColumn]}>
+            <Text style={styles.label}>통화</Text>
             <CurrencyToggle
               value={formData.currency}
-              onChange={c => setFormData(prev => ({ ...prev, currency: c }))}
+              onChange={currency =>
+                setFormData(prev => ({ ...prev, currency }))
+              }
+              large
               style={styles.currencyToggle}
             />
           </View>
         </View>
 
         <View style={styles.inputGroup}>
-          <Text style={styles.label}>내역 메모</Text>
-          <Input
-            value={formData.description}
-            onChangeText={text =>
-              setFormData(prev => ({ ...prev, description: text }))
-            }
-            placeholder="어디에 사용하셨나요?"
-            placeholderTextColor={colors.gray500}
-            variant="filled"
-            style={styles.modalInputStyle}
-          />
-        </View>
-
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>일자</Text>
+          <Text style={styles.label}>날짜</Text>
           <Pressable
-            style={styles.dateInput}
+            style={[styles.field, styles.dateField]}
             onPress={() => setShowDatePicker(true)}
           >
-            <Text style={styles.dateText}>
-              {dayjs(formData.ex_date).format("YYYY.MM.DD")}
+            <Text style={[styles.fieldText, styles.fieldTextFill, styles.dateText]}>
+              {dayjs(formData.ex_date).format("YYYY. MM. DD")}
             </Text>
-            <CalendarIcon width={20} height={20} color={colors.gray600} />
+            <CalendarIcon width={16} height={16} color={colors.gray900} />
           </Pressable>
           <CalendarModal
             visible={showDatePicker}
@@ -414,9 +508,31 @@ export default function AddExpenseModal({
           />
         </View>
 
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>내용</Text>
+          <TextInput
+            value={formData.description}
+            onChangeText={text =>
+              setFormData(prev => ({ ...prev, description: text }))
+            }
+            placeholder="비용 설명을 입력하세요."
+            placeholderTextColor={colors.paletteFg3}
+            onFocus={() => setDescriptionFocused(true)}
+            onBlur={() => setDescriptionFocused(false)}
+            style={[
+              styles.field,
+              styles.singleLineInput,
+              descriptionFocused && filledFocusStyle,
+            ]}
+          />
+        </View>
+
         <AttachmentSection
           variant="expense"
           pendingFiles={pendingFiles}
+          existingAttachments={existingAttachments}
+          onRemoveExisting={isEdit ? handleRemoveExistingAttachment : undefined}
+          isLoadingExisting={isEdit && isLoadingAttachments}
           onPickImage={async () => {
             const file = await pickImage();
             if (file) {
@@ -449,13 +565,34 @@ export default function AddExpenseModal({
         />
       </KeyboardAwareScrollView>
 
-      <FloatingFooter
-        primaryLabel={isSubmitting ? "저장 중..." : "저장"}
-        onPrimaryPress={handleSubmit}
-        primaryDisabled={isSubmitting || isUploading}
-        secondaryLabel="취소"
-        onSecondaryPress={handleClose}
-      />
+      <View style={styles.footer}>
+        {isEdit ? (
+          <ActionButton
+            label="삭제"
+            tone="danger"
+            fill
+            onPress={handleDelete}
+            loading={isDeleting}
+            blocked={isSaving}
+          />
+        ) : (
+          <ActionButton
+            label="취소"
+            tone="secondary"
+            fill
+            onPress={handleClose}
+            blocked={isSaving}
+          />
+        )}
+        <ActionButton
+          label="저장"
+          fill
+          onPress={handleSubmit}
+          loading={isSaving}
+          blocked={isDeleting}
+        />
+      </View>
+      {discardConfirmModal}
     </BottomSheetModal>
     <AiDocumentAnalyzeModal
       visible={!!aiModalResult}
@@ -492,23 +629,50 @@ export default function AddExpenseModal({
 }
 
 const styles = StyleSheet.create({
+  categoryField: {
+    gap: spacing.sm,
+  },
+  categoryDot: {
+    width: 8,
+    height: 8,
+    borderRadius: radii.pill,
+  },
+  fieldTextFill: {
+    flex: 1,
+  },
+  currencyToggle: {
+    height: 48,
+    borderRadius: radii.mdPlus,
+    backgroundColor: colors.paletteFill,
+  },
+  fieldError: {
+    borderWidth: 1,
+    borderColor: colors.danger,
+  },
+  errorText: {
+    ...textStyles.body6,
+    color: colors.danger,
+    marginTop: spacing.xs,
+  },
   header: {
-    flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingTop: 12,
+    justifyContent: "center",
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.lg,
   },
   headerTitle: {
     ...textStyles.h4,
-    color: colors.black,
+    color: colors.paletteInk,
   },
   closeButton: {
-    padding: 4,
-    backgroundColor: colors.gray200,
-    borderRadius: 16,
-    height: 32,
-    width: 32,
+    position: "absolute",
+    right: spacing.lgPlus,
+    top: spacing.md - 1,
+    width: 28,
+    height: 28,
+    borderRadius: radii.pill,
+    backgroundColor: colors.paletteFill,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -516,103 +680,61 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingHorizontal: 16,
-    paddingTop: 23,
-    paddingBottom: 24,
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.lg,
   },
   inputGroup: {
-    marginBottom: 20,
+    marginBottom: spacing.lg,
   },
   label: {
-    ...textStyles.h7,
-    color: colors.black,
-    marginBottom: 8,
+    ...textStyles.h6,
+    color: colors.paletteInk,
+    marginBottom: spacing.sm,
   },
-  categoryRow: {
-    flexDirection: "row",
-    gap: 8,
-  },
-  categoryRowSecond: {
-    marginTop: 8,
-  },
-  categoryPill: {
+  field: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 999,
-    backgroundColor: colors.gray200,
+    height: 48,
+    paddingHorizontal: spacing.lg,
+    borderRadius: radii.mdPlus,
+    borderWidth: 1,
+    borderColor: "transparent",
+    backgroundColor: colors.paletteFill,
   },
-  categoryPillSelected: {
-    backgroundColor: colors.primary,
+  fieldText: {
+    ...textStyles.body2,
+    color: colors.paletteInk,
   },
-  categoryPillText: {
-    ...textStyles.h7,
-    color: colors.gray600,
-  },
-  categoryPillTextSelected: {
-    color: colors.white,
+  singleLineInput: {
+    height: 48,
+    paddingVertical: spacing.none,
+    lineHeight: undefined,
+    fontFamily: textStyles.body2.fontFamily,
+    fontSize: textStyles.body2.fontSize,
+    color: colors.paletteInk,
   },
   amountRow: {
     flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
+    gap: spacing.md,
   },
-  amountInputWrapper: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    height: 48,
-    backgroundColor: colors.gray200,
-  },
-  currencyToggle: {
-    flex: 0.5,
-    height: 48,
-  },
-  amountInputContainer: {
+  amountColumn: {
     flex: 1,
   },
-  amountInputStyle: {
-    flex: 1,
-    height: 48,
-    textAlign: "right",
-    backgroundColor: "transparent",
-    paddingHorizontal: 0,
-    paddingVertical: 0,
-    fontFamily: typography.fontFamily.pretendardRegular,
-    fontSize: 14,
-    color: colors.black,
-  },
-  amountSuffix: {
-    fontFamily: typography.fontFamily.pretendardSemiBold,
-    fontSize: 14,
-    color: colors.black,
-    marginLeft: 4,
-  },
-  modalInputStyle: {
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    height: 48,
-    backgroundColor: colors.gray200,
-    fontFamily: typography.fontFamily.pretendardRegular,
-    fontSize: 14,
-    color: colors.black,
-  },
-  dateInput: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    height: 48,
-    backgroundColor: colors.gray200,
+  dateField: {
+    gap: spacing.sm,
   },
   dateText: {
-    ...textStyles.body3,
-    color: colors.black,
+    fontVariant: ["tabular-nums"],
+  },
+  footer: {
+    flexDirection: "row",
+    gap: spacing.md,
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.xl,
+    borderTopWidth: 1,
+    borderTopColor: colors.paletteFill,
+    backgroundColor: colors.white,
   },
 });

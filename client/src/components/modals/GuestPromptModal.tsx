@@ -9,7 +9,9 @@ import {
   type ViewStyle,
 } from "react-native";
 
+import ModalBackdrop from "@/ui/components/ModalBackdrop";
 import { colors } from "@/ui/tokens/colors";
+import { surfaces } from "@/ui/tokens/surfaces";
 import { textStyles } from "@/ui/tokens/typography";
 import { guestPrompt } from "@/utils/guestPrompt";
 
@@ -76,7 +78,11 @@ export default function GuestPromptModal({
   }
 
   const body = (
-    <View style={overlayStyle} pointerEvents="auto">
+    <View
+      style={[overlayStyle, surfaces.nativeBackdropClear]}
+      pointerEvents="auto"
+    >
+      <ModalBackdrop />
       <View style={cardStyle} pointerEvents="auto">
         <Text style={styles.title}>회원 전용 기능이에요</Text>
         <Text style={styles.body}>

@@ -7,9 +7,10 @@ import {
 } from "@/ui/components/attachmentSection.types";
 import { colors } from "@/ui/tokens/colors";
 import { radii } from "@/ui/tokens/radii";
+import { shadows } from "@/ui/tokens/shadows";
+import { spacing } from "@/ui/tokens/spacing";
 import { textStyles, typography } from "@/ui/tokens/typography";
 import { guestPrompt } from "@/utils/guestPrompt";
-import { LinearGradient } from "expo-linear-gradient";
 import { useState } from "react";
 import CheckWhiteIcon from "../../../assets/check_white.svg";
 import {
@@ -34,6 +35,8 @@ import AttachmentImageIcon from "../../../assets/mobile_attachment_image.svg";
 import CameraIcon from "../../../assets/mobile_camera.svg";
 import AddIcon from "../../../assets/mobile_plan_add.svg";
 import DeleteIcon from "../../../assets/mobile_x.svg";
+import ScalePressable from "@/ui/components/ScalePressable";
+import ActionButton from "@/ui/components/ActionButton";
 
 export type { AttachmentSectionProps } from "@/ui/components/attachmentSection.types";
 
@@ -59,6 +62,7 @@ function formatFileSize(bytes: number): string {
 }
 
 export default function AttachmentSection({
+  variant,
   pendingFiles,
   onPickImage,
   onPickDocument,
@@ -265,8 +269,10 @@ export default function AttachmentSection({
       <View
         style={[styles.headerRow, hideAddControls && styles.headerRowTitleOnly]}
       >
-        <Text style={styles.title}>첨부 파일 (이미지, PDF)</Text>
-        {!hideAddControls && (
+        <Text style={styles.title}>
+          첨부 파일 <Text style={styles.titleSub}>(이미지, PDF)</Text>
+        </Text>
+        {!hideAddControls && (variant !== "expense" || hasFiles) && (
           <Pressable
             onPress={handleAddPress}
             hitSlop={8}
@@ -355,34 +361,23 @@ export default function AttachmentSection({
                 <Text style={styles.aiAnalyzingText}>AI가 첨부 파일 내용을 정리하고 있어요</Text>
               </View>
               {onCancelAiAnalyze && (
-                <Pressable
+                <ScalePressable
                   onPress={onCancelAiAnalyze}
                   hitSlop={8}
-                  style={({ pressed }) => [
-                    styles.aiCancelButton,
-                    pressed && styles.pressed,
-                  ]}
+                  style={styles.aiCancelButton}
                 >
                   <Text style={styles.aiCancelText}>취소</Text>
-                </Pressable>
+                </ScalePressable>
               )}
             </View>
           ) : (
-            <Pressable
+            <ActionButton
+              label="AI 분석"
+              tone="ai"
+              icon={<CheckWhiteIcon width={14} height={14} />}
               onPress={handleAiAnalyzePress}
-              disabled={disabled || isUploading}
-              style={({ pressed }) => [pressed && styles.pressed]}
-            >
-              <LinearGradient
-                colors={[...colors.aiGrad] as [string, string]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.aiAnalyzeButton}
-              >
-                <CheckWhiteIcon width={14} height={14} />
-                <Text style={styles.aiAnalyzeButtonText}>AI 분석</Text>
-              </LinearGradient>
-            </Pressable>
+              blocked={!!disabled || isUploading}
+            />
           )}
           {analyzeError && (
             <AiAnalyzeErrorBanner
@@ -462,26 +457,33 @@ export default function AttachmentSection({
 }
 
 const styles = StyleSheet.create({
+  titleSub: {
+    fontFamily: typography.fontFamily.pretendardMedium,
+    color: colors.paletteFg3,
+  },
   root: {
     width: "100%",
   },
   topDivider: {
     height: 1,
-    backgroundColor: colors.gray300,
-    marginBottom: 32,
+    backgroundColor: colors.paletteFill2,
+    marginTop: spacing.sm,
+    marginBottom: spacing.lg,
   },
   headerRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 20,
+    minHeight: 18,
+    marginBottom: spacing.sm,
   },
   headerRowTitleOnly: {
     justifyContent: "flex-start",
   },
   title: {
-    ...textStyles.h5,
-    color: colors.black,
+    ...textStyles.h8,
+    fontFamily: typography.fontFamily.pretendardBold,
+    color: colors.paletteInk,
   },
   addLabel: {
     ...textStyles.h6,
@@ -499,9 +501,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderStyle: "dashed",
     borderColor: colors.gray400,
-    borderRadius: 12,
-    backgroundColor: colors.white,
-    paddingVertical: 13,
+    borderRadius: radii.mdPlus,
+    backgroundColor: "transparent",
+    padding: spacing.lg,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -509,7 +511,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 8,
+    gap: spacing.sm,
   },
   dropZonePressed: {
     backgroundColor: colors.gray100,
@@ -518,8 +520,8 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   hint: {
-    ...textStyles.h6,
-    color: colors.gray600,
+    ...textStyles.h8,
+    color: colors.paletteFg3,
     includeFontPadding: false,
   },
   loadingWrap: {
@@ -593,29 +595,15 @@ const styles = StyleSheet.create({
     color: colors.gray600,
   },
   aiCancelButton: {
-    paddingVertical: 4,
+    paddingVertical: spacing.xs,
     paddingHorizontal: 10,
-    borderRadius: 6,
+    borderRadius: radii.sm,
     backgroundColor: colors.gray300,
+    ...shadows.insetLine,
   },
   aiCancelText: {
-    ...textStyles.body4,
-    color: colors.gray700,
-  },
-  aiAnalyzeButton: {
-    borderRadius: radii.md,
-    height: 48,
-    alignItems: "center",
-    justifyContent: "center",
-    flexDirection: "row",
-    gap: 8,
-  },
-  aiAnalyzeButtonText: {
-    color: colors.white,
-    fontFamily: typography.fontFamily.pretendardSemiBold,
-    fontSize: 14,
-    lineHeight: 18,
-    letterSpacing: -0.14,
+    ...textStyles.h7,
+    color: colors.gray900,
   },
   fileRowSelected: {
     backgroundColor: colors.gray400,
@@ -668,7 +656,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   previewLoading: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     alignItems: "center",
     justifyContent: "center",
   },

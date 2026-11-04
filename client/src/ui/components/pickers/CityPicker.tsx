@@ -1,3 +1,4 @@
+import { useHover } from "@/hooks/useHover";
 import useDetectClose from "@/hooks/useDetectClose";
 import { useMe } from "@/hooks/useMe";
 import { useRecentSearches } from "@/hooks/useRecentSearches";
@@ -16,6 +17,7 @@ import {
   StyleSheet,
   Text,
   TextInput,
+  type TextStyle,
   View,
   type ViewStyle,
 } from "react-native";
@@ -46,6 +48,9 @@ interface CityPickerProps {
   containerStyle?: ViewStyle;
   style?: ViewStyle;
   disabled?: boolean;
+  hideArrow?: boolean;
+  textStyle?: TextStyle;
+  arrowSize?: number;
   onOpen?: () => void;
   onClose?: () => void;
   useModal?: boolean;
@@ -62,6 +67,9 @@ export default function CityPicker({
   containerStyle,
   style,
   disabled,
+  hideArrow,
+  textStyle,
+  arrowSize = 10,
   onOpen,
   onClose,
   useModal = false,
@@ -504,6 +512,8 @@ export default function CityPicker({
     </View>
   );
 
+  const triggerHover = useHover();
+
   return (
     <View
       ref={wrapperRef}
@@ -514,21 +524,39 @@ export default function CityPicker({
       ]}
     >
       <Pressable
-        style={[styles.trigger, disabled && styles.triggerDisabled, style]}
+        style={[
+          styles.trigger,
+          disabled && styles.triggerDisabled,
+          style,
+          triggerHover.hovered && !disabled && !open && styles.triggerHover,
+        ]}
+        {...triggerHover.pressableHoverProps}
         onPress={handleToggle}
         disabled={disabled}
       >
         <Text
-          style={value ? styles.triggerText : styles.triggerPlaceholder}
+          style={[
+            value ? styles.triggerText : styles.triggerPlaceholder,
+            textStyle,
+          ]}
           numberOfLines={1}
         >
           {value || placeholder}
         </Text>
-        {open || fsOpen ? (
-          <UpperArrowIcon width={10} height={10} color={colors.gray600} />
-        ) : (
-          <DownArrowIcon width={10} height={10} color={colors.gray600} />
-        )}
+        {!hideArrow &&
+          ((open || fsOpen) ? (
+            <UpperArrowIcon
+              width={arrowSize}
+              height={arrowSize}
+              color={colors.gray600}
+            />
+          ) : (
+            <DownArrowIcon
+              width={arrowSize}
+              height={arrowSize}
+              color={colors.gray600}
+            />
+          ))}
       </Pressable>
 
       {open && !useModal && <View style={styles.popup}>{popupContent}</View>}
@@ -542,7 +570,7 @@ export default function CityPicker({
           statusBarTranslucent
         >
           <Pressable
-            style={StyleSheet.absoluteFillObject}
+            style={StyleSheet.absoluteFill}
             onPress={closeModal}
           />
           <View
@@ -615,6 +643,9 @@ const styles = StyleSheet.create({
     height: 40,
     paddingHorizontal: 12,
     paddingVertical: 10,
+  },
+  triggerHover: {
+    backgroundColor: colors.inputHover,
   },
   triggerDisabled: {
     borderWidth: 1,

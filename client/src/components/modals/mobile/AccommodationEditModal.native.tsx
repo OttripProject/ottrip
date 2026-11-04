@@ -26,6 +26,7 @@ import Input from "@/ui/components/input/Input";
 import PlacesSearchInput, { type PlaceResult } from "@/ui/components/PlacesSearchInput";
 import { locationsApi, manualPlaceId } from "@/services/locations";
 import { colors } from "@/ui/tokens/colors";
+import { radii } from "@/ui/tokens/radii";
 import { textStyles, typography } from "@/ui/tokens/typography";
 import { handleGuestPromptError } from "@/utils/guestPrompt";
 import dayjs from "dayjs";
@@ -36,7 +37,6 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from "react-native";
 import { KeyboardAwareScrollView, type KeyboardAwareScrollViewRef } from "react-native-keyboard-controller";
@@ -45,6 +45,9 @@ import TimeIcon from "../../../../assets/mobile_time.svg";
 import CloseIcon from "../../../../assets/x.svg";
 import CityPicker from "@/ui/components/pickers/CityPicker";
 import CountryPicker from "@/ui/components/pickers/CountryPicker";
+import { useDiscardConfirm } from "@/hooks/useDiscardConfirm";
+import { useToast } from "@/contexts/ToastContext";
+import { spacing } from "@/ui/tokens/spacing";
 
 interface AccommodationEditModalProps {
   visible: boolean;
@@ -56,7 +59,6 @@ interface AccommodationEditModalProps {
   defaultCity?: string;
   embedded?: boolean;
   onSave?: (accommodation: Accommodation) => void;
-  onDelete?: (accommodationId: number) => void;
   pendingAiResult?: { result: DocumentUploadAnalyzeResponse; filename?: string; pendingFiles?: LocalFile[] } | null;
   onRouteMismatchResult?: (result: DocumentUploadAnalyzeResponse, filename?: string, pendingFiles?: LocalFile[]) => void;
 }
@@ -95,11 +97,12 @@ export default function AccommodationEditModal({
   defaultCity,
   embedded,
   onSave,
-  onDelete,
   pendingAiResult,
   onRouteMismatchResult,
 }: AccommodationEditModalProps) {
   const scrollRef = useRef<KeyboardAwareScrollViewRef>(null);
+  const { showToast } = useToast();
+  const [showErrors, setShowErrors] = useState(false);
   const locationDraftRef = useRef<PlaceResult | null>(null);
   const rawLocationTextRef = useRef<string>("");
 
@@ -147,6 +150,8 @@ export default function AccommodationEditModal({
   useEffect(() => {
     if (!visible) {
       formInitializedRef.current = false;
+      setShowErrors(false);
+      baselineRef.current = null;
       setAiModalResult(null);
       setAiApplyLabel(undefined);
       return;
@@ -191,7 +196,22 @@ export default function AccommodationEditModal({
       }));
     }
     setPendingFiles([]);
+    setBaselinePending(true);
   }, [visible, accommodation, defaultDate, defaultCountry, defaultCity]);
+  const [baselinePending, setBaselinePending] = useState(false);
+  const baselineRef = useRef<string | null>(null);
+  const formSnapshot = JSON.stringify({ formData, expenseAmount, expenseCurrency });
+
+  useEffect(() => {
+    if (!baselinePending) return;
+    baselineRef.current = formSnapshot;
+    setBaselinePending(false);
+  }, [baselinePending, formSnapshot]);
+
+  const isDirty =
+    baselineRef.current !== null &&
+    (formSnapshot !== baselineRef.current || pendingFiles.length > 0);
+
 
   useEffect(() => {
     if (!visible) return;
@@ -309,7 +329,9 @@ export default function AccommodationEditModal({
 
   const handleSave = async () => {
     if (!formData.name.trim()) {
-      Alert.alert("알림", "숙소명을 입력해주세요");
+      setShowErrors(true);
+      scrollRef.current?.scrollTo({ y: 0, animated: true });
+      showToast("입력되지 않은 값이 있어요.", { icon: "warning" });
       return;
     }
 
@@ -416,7 +438,7 @@ export default function AccommodationEditModal({
         }
       }
 
-      Alert.alert(accommodation ? "수정완료" : "추가완료", accommodation ? "숙소가 수정되었습니다" : "숙소가 추가되었습니다");
+      showToast(accommodation ? "숙소를 수정했어요." : "숙소를 저장했어요.");
 
       try {
         await onSave?.(savedAccommodation);
@@ -436,33 +458,23 @@ export default function AccommodationEditModal({
     }
   };
 
-  const handleDelete = () => {
-    if (!accommodation) return;
-
-    Alert.alert("숙소 삭제", "이 숙소를 삭제하시겠습니까?", [
-      { text: "취소", style: "cancel" },
-      {
-        text: "삭제",
-        style: "destructive",
-        onPress: async () => {
-          try {
-            await accommodationsApi.deleteAccommodation(accommodation.id);
-            if (onDelete) onDelete(accommodation.id);
-            Alert.alert("삭제완료", "숙소가 삭제되었습니다");
-            onClose?.({ fromSave: true });
-          } catch (_error) {
-            Alert.alert("알림", "숙소 삭제에 실패했습니다");
-          }
-        },
-      },
-    ]);
-  };
-
   const handleAmountChange = (text: string) => {
     const digits = text.replace(/[^0-9]/g, "");
     const formatted = digits.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
     setExpenseAmount(formatted);
   };
+
+  const { requestClose, discardConfirmModal } = useDiscardConfirm(
+    isDirty,
+    () => onClose?.(),
+  );
+
+  const handleRequestClose = () => {
+    if (isSubmitting || isUploading) return;
+    requestClose();
+  };
+
+  const nameError = showErrors && !formData.name.trim();
 
   const content = (
     <>
@@ -473,10 +485,10 @@ export default function AccommodationEditModal({
           </Text>
           <Pressable
             style={styles.closeButton}
-            onPress={() => onClose?.()}
+            onPress={handleRequestClose}
             hitSlop={8}
           >
-            <CloseIcon width={24} height={24} />
+            <CloseIcon width={24} height={24} color={colors.gray700} />
           </Pressable>
         </View>
       )}
@@ -495,15 +507,24 @@ export default function AccommodationEditModal({
               숙소명<Text style={styles.required}>*</Text>
             </Text>
             <Input
+              variant="filled"
               value={formData.name}
               onChangeText={text => setFormData({ ...formData, name: text })}
-              style={[styles.input, !accommodation && styles.inputBorderless]}
+              style={[
+                styles.input,
+                !accommodation && styles.inputBorderless,
+                nameError && styles.fieldError,
+              ]}
             />
+            {nameError && (
+              <Text style={styles.errorText}>숙소명을 입력해 주세요.</Text>
+            )}
           </View>
 
           <View style={styles.inputGroup}>
             <Text style={styles.label}>내용 (메모)</Text>
-            <TextInput
+            <Input
+              variant="filled"
               value={formData.description}
               onChangeText={text =>
                 setFormData({ ...formData, description: text })
@@ -553,6 +574,98 @@ export default function AccommodationEditModal({
             </View>
           </View>
 
+          <View style={styles.row}>
+            <View style={[styles.inputGroup, styles.halfWidth]}>
+              <Text style={styles.label}>체크인 날짜</Text>
+              <Pressable
+                style={[
+                  styles.dateInput,
+                  !accommodation && styles.dateInputBorderless,
+                ]}
+                onPress={() => setShowCheckinDatePicker(true)}
+              >
+                <View style={styles.fieldIcon}>
+                  <CalendarIcon width={14} height={14} color={colors.paletteInk} />
+                </View>
+                <Text style={styles.dateText}>
+                  {formatDate(formData.checkinDate)}
+                </Text>
+              </Pressable>
+              <CalendarModal
+                visible={showCheckinDatePicker}
+                selectedDate={formData.checkinDate}
+                onDayPress={day => {
+                  setFormData({ ...formData, checkinDate: day.dateString });
+                  setShowCheckinDatePicker(false);
+                }}
+                onClose={() => setShowCheckinDatePicker(false)}
+              />
+            </View>
+            <View style={[styles.inputGroup, styles.halfWidth]}>
+              <Text style={styles.label}>체크인 시간</Text>
+              <Pressable
+                style={[
+                  styles.dateInput,
+                  !accommodation && styles.dateInputBorderless,
+                ]}
+                onPress={() => setTimeModalField("checkin")}
+              >
+                <View style={styles.fieldIcon}>
+                  <TimeIcon width={14} height={14} color={colors.paletteInk} />
+                </View>
+                <Text style={styles.dateText}>
+                  {formatTimeDisplay(formData.checkinTime)}
+                </Text>
+              </Pressable>
+            </View>
+          </View>
+          <View style={styles.row}>
+            <View style={[styles.inputGroup, styles.halfWidth]}>
+              <Text style={styles.label}>체크아웃 날짜</Text>
+              <Pressable
+                style={[
+                  styles.dateInput,
+                  !accommodation && styles.dateInputBorderless,
+                ]}
+                onPress={() => setShowCheckoutDatePicker(true)}
+              >
+                <View style={styles.fieldIcon}>
+                  <CalendarIcon width={14} height={14} color={colors.paletteInk} />
+                </View>
+                <Text style={styles.dateText}>
+                  {formatDate(formData.checkoutDate)}
+                </Text>
+              </Pressable>
+              <CalendarModal
+                visible={showCheckoutDatePicker}
+                selectedDate={formData.checkoutDate}
+                onDayPress={day => {
+                  setFormData({ ...formData, checkoutDate: day.dateString });
+                  setShowCheckoutDatePicker(false);
+                }}
+                onClose={() => setShowCheckoutDatePicker(false)}
+                minDate={formData.checkinDate}
+              />
+            </View>
+            <View style={[styles.inputGroup, styles.halfWidth]}>
+              <Text style={styles.label}>체크아웃 시간</Text>
+              <Pressable
+                style={[
+                  styles.dateInput,
+                  !accommodation && styles.dateInputBorderless,
+                ]}
+                onPress={() => setTimeModalField("checkout")}
+              >
+                <View style={styles.fieldIcon}>
+                  <TimeIcon width={14} height={14} color={colors.paletteInk} />
+                </View>
+                <Text style={styles.dateText}>
+                  {formatTimeDisplay(formData.checkoutTime)}
+                </Text>
+              </Pressable>
+            </View>
+          </View>
+
           <View style={styles.inputGroup}>
             <Text style={styles.label}>장소 (주소)</Text>
             <PlacesSearchInput
@@ -571,115 +684,30 @@ export default function AccommodationEditModal({
             />
           </View>
 
-          {/* 체크인/체크아웃 */}
-          <View style={styles.checkinoutSection}>
-            <Text style={styles.checkinoutSectionTitle}>체크인 / 체크아웃</Text>
-            <View style={styles.checkinoutRow}>
-              <View style={[styles.inputGroup, styles.halfWidth]}>
-                <Text style={styles.checkinoutLabel}>체크인 날짜</Text>
-                <Pressable
-                  style={[
-                    styles.dateInput,
-                    !accommodation && styles.dateInputBorderless,
-                  ]}
-                  onPress={() => setShowCheckinDatePicker(true)}
-                >
-                  <Text style={styles.dateText}>
-                    {formatDate(formData.checkinDate)}
-                  </Text>
-                  <CalendarIcon width={20} height={20} color={colors.black} />
-                </Pressable>
-                <CalendarModal
-                  visible={showCheckinDatePicker}
-                  selectedDate={formData.checkinDate}
-                  onDayPress={day => {
-                    setFormData({ ...formData, checkinDate: day.dateString });
-                    setShowCheckinDatePicker(false);
-                  }}
-                  onClose={() => setShowCheckinDatePicker(false)}
-                />
-              </View>
-              <View style={[styles.inputGroup, styles.halfWidth]}>
-                <Text style={styles.checkinoutLabel}>시간</Text>
-                <Pressable
-                  style={[
-                    styles.dateInput,
-                    !accommodation && styles.dateInputBorderless,
-                  ]}
-                  onPress={() => setTimeModalField("checkin")}
-                >
-                  <Text style={styles.dateText}>
-                    {formatTimeDisplay(formData.checkinTime)}
-                  </Text>
-                  <TimeIcon width={20} height={20} color={colors.black} />
-                </Pressable>
-              </View>
-            </View>
-            <View style={styles.checkinoutRow}>
-              <View style={[styles.inputGroup, styles.halfWidth]}>
-                <Text style={styles.checkinoutLabel}>체크아웃 날짜</Text>
-                <Pressable
-                  style={[
-                    styles.dateInput,
-                    !accommodation && styles.dateInputBorderless,
-                  ]}
-                  onPress={() => setShowCheckoutDatePicker(true)}
-                >
-                  <Text style={styles.dateText}>
-                    {formatDate(formData.checkoutDate)}
-                  </Text>
-                  <CalendarIcon width={16} height={16} color={colors.black} />
-                </Pressable>
-                <CalendarModal
-                  visible={showCheckoutDatePicker}
-                  selectedDate={formData.checkoutDate}
-                  onDayPress={day => {
-                    setFormData({ ...formData, checkoutDate: day.dateString });
-                    setShowCheckoutDatePicker(false);
-                  }}
-                  onClose={() => setShowCheckoutDatePicker(false)}
-                  minDate={formData.checkinDate}
-                />
-              </View>
-              <View style={[styles.inputGroup, styles.halfWidth]}>
-                <Text style={styles.checkinoutLabel}>시간</Text>
-                <Pressable
-                  style={[
-                    styles.dateInput,
-                    !accommodation && styles.dateInputBorderless,
-                  ]}
-                  onPress={() => setTimeModalField("checkout")}
-                >
-                  <Text style={styles.dateText}>
-                    {formatTimeDisplay(formData.checkoutTime)}
-                  </Text>
-                  <TimeIcon width={20} height={20} color={colors.black} />
-                </Pressable>
-              </View>
-            </View>
-          </View>
-
           {/* 비용 정보 */}
           <View style={styles.expenseSection}>
             <View style={styles.expenseDivider} />
             <Text style={styles.expenseSectionTitle}>비용 정보</Text>
-            <View style={[styles.inputGroup, { marginBottom: 20 }]}>
-              <Text style={styles.label}>금액</Text>
-              <View style={styles.amountInputWrapper}>
+            <View style={styles.amountRow}>
+              <View style={[styles.inputGroup, styles.halfWidth]}>
+                <Text style={styles.label}>금액</Text>
                 <Input
+                  variant="filled"
                   value={expenseAmount}
                   onChangeText={handleAmountChange}
                   placeholder="0"
-                  placeholderTextColor={colors.gray500}
+                  placeholderTextColor={colors.paletteFg3}
                   keyboardType="number-pad"
-                  variant="filled"
-                  containerStyle={styles.amountInputContainer}
-                  style={styles.amountInputStyle}
+                  style={styles.input}
                 />
+              </View>
+              <View style={[styles.inputGroup, styles.halfWidth]}>
+                <Text style={styles.label}>통화</Text>
                 <CurrencyToggle
                   value={expenseCurrency}
                   onChange={setExpenseCurrency}
-                  variant="primary"
+                  large
+                  style={styles.currencyToggle}
                 />
               </View>
             </View>
@@ -773,17 +801,14 @@ export default function AccommodationEditModal({
 
       <FloatingFooter
         primaryLabel={
-          isUploading
-            ? "업로드 중..."
-            : accommodation
-              ? "수정 완료"
-              : "일정 저장"
+          "저장"
         }
         onPrimaryPress={handleSave}
-        primaryDisabled={isSubmitting || isUploading}
-        secondaryLabel={accommodation && !embedded ? "삭제" : undefined}
-        onSecondaryPress={handleDelete}
+        primaryLoading={isSubmitting || isUploading}
+        secondaryLabel="취소"
+        onSecondaryPress={handleRequestClose}
       />
+      {discardConfirmModal}
     </>
   );
 
@@ -841,7 +866,10 @@ export default function AccommodationEditModal({
   }
 
   return (
-    <FullScreenModal visible={visible} onClose={() => onClose?.()}>
+    <FullScreenModal
+      visible={visible}
+      onClose={handleRequestClose}
+    >
       {content}
       {aiModal}
     </FullScreenModal>
@@ -849,6 +877,15 @@ export default function AccommodationEditModal({
 }
 
 const styles = StyleSheet.create({
+  fieldError: {
+    borderWidth: 1,
+    borderColor: colors.danger,
+  },
+  errorText: {
+    ...textStyles.body6,
+    color: colors.danger,
+    marginTop: spacing.xs,
+  },
   header: {
     flexDirection: "row",
     justifyContent: "flex-end",
@@ -870,140 +907,114 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingHorizontal: 16,
-    paddingTop: 12,
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.lg,
   },
   form: {
-    gap: 20,
+    gap: spacing.lg,
   },
   inputGroup: {},
   label: {
-    ...textStyles.h7,
-    marginBottom: 8,
+    ...textStyles.h8,
+    fontFamily: typography.fontFamily.pretendardBold,
+    color: colors.paletteInk,
+    marginBottom: spacing.sm,
   },
   required: {
     color: colors.warning,
   },
   input: {
     minHeight: 44,
-    paddingVertical: 14,
-    paddingHorizontal: 12,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
     borderWidth: 1,
-    borderColor: colors.gray400,
-    borderRadius: 12,
-    backgroundColor: colors.gray200,
+    borderColor: "transparent",
+    borderRadius: radii.mdPlus,
+    backgroundColor: colors.paletteFill,
+    fontFamily: typography.fontFamily.pretendardMedium,
   },
   inputBorderless: {
-    borderWidth: 0,
     borderColor: "transparent",
   },
   textArea: {
     ...textStyles.body4,
-    minHeight: 100,
+    fontFamily: typography.fontFamily.pretendardMedium,
+    minHeight: 80,
     borderWidth: 1,
-    borderColor: colors.gray400,
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    backgroundColor: colors.gray200,
+    borderColor: "transparent",
+    borderRadius: radii.mdPlus,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    backgroundColor: colors.paletteFill,
   },
   textAreaBorderless: {
-    borderWidth: 0,
     borderColor: "transparent",
   },
   row: {
     flexDirection: "row",
-    gap: 8,
+    gap: spacing.md,
   },
   halfWidth: {
     flex: 1,
   },
+  fieldIcon: {
+    opacity: 0.6,
+  },
+  amountRow: {
+    flexDirection: "row",
+    gap: spacing.md,
+  },
+  currencyToggle: {
+    height: 44,
+    borderRadius: radii.mdPlus,
+    backgroundColor: colors.paletteFill,
+  },
   pickerTrigger: {
     height: 44,
-    borderWidth: 1,
-    borderColor: colors.gray400,
-    borderRadius: 12,
+    borderWidth: 0,
+    borderRadius: radii.mdPlus,
+    backgroundColor: colors.paletteFill,
   },
   pickerTriggerBorderless: {
     height: 44,
     borderWidth: 0,
-    borderRadius: 12,
-  },
-  checkinoutSection: {
-    backgroundColor: `${colors.primary}1A`,
-    borderColor: colors.primary,
-    borderWidth: 1,
-    borderRadius: 12,
-    padding: 16,
-  },
-  checkinoutSectionTitle: {
-    ...textStyles.h6,
-    color: colors.primary,
-    marginBottom: 16,
-  },
-  checkinoutRow: {
-    flexDirection: "row",
-    gap: 8,
-    marginBottom: 12,
-  },
-  checkinoutLabel: {
-    ...textStyles.h8,
-    color: colors.gray700,
-    marginBottom: 8,
+    borderRadius: radii.mdPlus,
+    backgroundColor: colors.paletteFill,
   },
   dateInput: {
     minHeight: 44,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    borderWidth: 1,
-    borderColor: colors.gray400,
-    borderRadius: 12,
-    backgroundColor: colors.white,
+    gap: spacing.sm,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    borderRadius: radii.mdPlus,
+    backgroundColor: colors.paletteFill,
   },
   dateInputBorderless: {
     borderWidth: 0,
     borderColor: "transparent",
   },
   dateText: {
-    ...textStyles.body3,
+    ...textStyles.body4,
+    fontFamily: typography.fontFamily.pretendardMedium,
+    fontVariant: ["tabular-nums"],
+    color: colors.paletteInk,
   },
   expenseSection: {
-    marginTop: 20,
+    marginTop: spacing.sm,
   },
   expenseDivider: {
     height: 1,
-    backgroundColor: colors.gray300,
-    marginBottom: 20,
+    backgroundColor: colors.paletteFill2,
+    marginTop: spacing.sm,
+    marginBottom: spacing.lg,
   },
   expenseSectionTitle: {
     ...textStyles.h5,
-    marginTop: 12,
-    marginBottom: 20,
-  },
-  amountInputWrapper: {
-    flexDirection: "row",
-    alignItems: "center",
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 2,
-    gap: 8,
-    backgroundColor: `${colors.primary}1A`,
-  },
-  amountInputContainer: {
-    flex: 1,
-  },
-  amountInputStyle: {
-    flex: 1,
-    textAlign: "left",
-    backgroundColor: "transparent",
-    fontFamily: typography.fontFamily.pretendardSemiBold,
-    fontSize: 14,
-    paddingHorizontal: 0,
-    paddingVertical: 0,
-    color: colors.primary,
+    color: colors.paletteInk,
+    marginBottom: spacing.md,
   },
   attachmentSection: {
     marginTop: 0,

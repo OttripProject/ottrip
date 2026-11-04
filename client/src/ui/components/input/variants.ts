@@ -1,7 +1,7 @@
 import { colors, radii, spacing, textStyles } from "@/ui/tokens";
 import { Platform, StyleSheet } from "react-native";
 
-export type InputVariant = "outlined" | "filled" | "underline";
+export type InputVariant = "outlined" | "filled" | "underline" | "bare";
 
 export type InputState = {
   disabled?: boolean;
@@ -30,6 +30,13 @@ const baseStyle = Platform.select({
   },
 });
 
+const isWeb = Platform.OS === "web";
+
+function filledBackground(disabled?: boolean) {
+  if (disabled) return colors.inputDisabled;
+  return isWeb ? colors.gray200 : colors.gray100;
+}
+
 export function useInputStyleVariant(
   variant: InputVariant,
   state?: InputState,
@@ -57,7 +64,7 @@ export function useInputStyleVariant(
   }
 
   if (variant === "filled") {
-    const bg = disabled ? "#F8FAFC" : colors.gray100;
+    const bg = filledBackground(disabled);
     const borderColor = error ? colors.danger : "transparent";
     return {
       containerStyle: styles.container,
@@ -67,6 +74,25 @@ export function useInputStyleVariant(
           backgroundColor: bg,
           borderWidth: 1,
           borderColor,
+          color: baseTextColor,
+        },
+      ],
+      placeholderTextColor: basePlaceholder,
+    } as const;
+  }
+
+  if (variant === "bare") {
+    return {
+      containerStyle: styles.container,
+      style: [
+        baseStyle,
+        {
+          paddingTop: 0,
+          paddingBottom: 0,
+          paddingHorizontal: 0,
+          borderWidth: 0,
+          borderRadius: 0,
+          backgroundColor: "transparent",
           color: baseTextColor,
         },
       ],

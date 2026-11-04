@@ -7,6 +7,7 @@ export enum ExpenseCategory {
   TRANSPORT = "transport",
   FLIGHT = "flight",
   ACTIVITY = "activity",
+  SIGHTSEEING = "sightseeing",
   ACCOMMODATION = "accommodation",
   SHOPPING = "shopping",
   ETC = "etc",
@@ -26,6 +27,7 @@ export const categoryLabels = {
   [ExpenseCategory.FOOD]: "식비",
   [ExpenseCategory.TRANSPORT]: "교통비",
   [ExpenseCategory.ACTIVITY]: "액티비티",
+  [ExpenseCategory.SIGHTSEEING]: "관광",
   [ExpenseCategory.ACCOMMODATION]: "숙박비",
   [ExpenseCategory.FLIGHT]: "항공료",
   [ExpenseCategory.SHOPPING]: "쇼핑",
@@ -36,10 +38,22 @@ export const categoryColors: Record<ExpenseCategory, string> = {
   [ExpenseCategory.FOOD]: colors.categoryMeal,
   [ExpenseCategory.TRANSPORT]: colors.categoryTransport,
   [ExpenseCategory.ACTIVITY]: colors.categoryActivity,
-  [ExpenseCategory.ACCOMMODATION]: colors.expenseAccommodation,
-  [ExpenseCategory.FLIGHT]: colors.expenseFlight,
+  [ExpenseCategory.SIGHTSEEING]: colors.categorySightseeing,
+  [ExpenseCategory.ACCOMMODATION]: colors.accommodationText,
+  [ExpenseCategory.FLIGHT]: colors.flightText,
   [ExpenseCategory.SHOPPING]: colors.categoryShopping,
   [ExpenseCategory.ETC]: colors.categoryEtc,
+};
+
+export const categoryTints: Record<ExpenseCategory, string> = {
+  [ExpenseCategory.FOOD]: colors.categoryMealBg,
+  [ExpenseCategory.TRANSPORT]: colors.categoryTransportBg,
+  [ExpenseCategory.ACTIVITY]: colors.categoryActivityBg,
+  [ExpenseCategory.SIGHTSEEING]: colors.categorySightseeingBg,
+  [ExpenseCategory.ACCOMMODATION]: colors.accommodationBg,
+  [ExpenseCategory.FLIGHT]: colors.flightBg,
+  [ExpenseCategory.SHOPPING]: colors.categoryShoppingBg,
+  [ExpenseCategory.ETC]: colors.categoryEtcBg,
 };
 
 export const currencyLabels = {
@@ -48,6 +62,16 @@ export const currencyLabels = {
   [ExpenseCurrency.EUR]: "€",
   [ExpenseCurrency.JPY]: "¥",
   [ExpenseCurrency.CNY]: "¥",
+  [ExpenseCurrency.GBP]: "£",
+  [ExpenseCurrency.AUD]: "A$",
+};
+
+export const currencySymbols = {
+  [ExpenseCurrency.KRW]: "₩",
+  [ExpenseCurrency.USD]: "$",
+  [ExpenseCurrency.EUR]: "€",
+  [ExpenseCurrency.JPY]: "¥",
+  [ExpenseCurrency.CNY]: "CN¥",
   [ExpenseCurrency.GBP]: "£",
   [ExpenseCurrency.AUD]: "A$",
 };

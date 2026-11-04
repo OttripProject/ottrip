@@ -15,7 +15,9 @@ export default function App() {
 
   const [fontsLoaded, fontError] = useFonts({
     "Pretendard-Regular": require("./assets/fonts/Pretendard-Regular.otf"),
+    "Pretendard-Medium": require("./assets/fonts/Pretendard-Medium.otf"),
     "Pretendard-SemiBold": require("./assets/fonts/Pretendard-SemiBold.otf"),
+    "Pretendard-Bold": require("./assets/fonts/Pretendard-Bold.otf"),
     "Poppins-Medium": require("./assets/fonts/Poppins-Medium.ttf"),
     "Poppins-SemiBold": require("./assets/fonts/Poppins-SemiBold.ttf"),
   });

@@ -18,8 +18,10 @@ import type {
   AiDocumentItemType,
   DocumentUploadAnalyzeResponse,
 } from "@/types/api";
+import ActionButton from "@/ui/components/ActionButton";
 import { textStyles } from "@/ui/tokens/typography"
 import { colors } from "@/ui/tokens/colors";
+import { spacing } from "@/ui/tokens/spacing";
 import CheckWhiteIcon from "../../../../assets/check_white.svg";
 import CloseErrorIcon from "../../../../assets/close_error.svg";
 import { AiAnalyzeResultContent, getHeaderSubtitle } from "../AiDocumentAnalyzeModal";
@@ -148,35 +150,21 @@ export default function AiDocumentAnalyzeModal({
         </ScrollView>
 
         <View style={[styles.footer, { paddingBottom: insets.bottom + 18 }]}>
-          <Pressable
+          <ActionButton
+            label={isEditMode ? "취소" : "직접 수정"}
+            tone="secondary"
+            fill
             onPress={
               isEditMode
                 ? () => setIsEditMode(false)
                 : () => setIsEditMode(true)
             }
-            style={({ pressed }) => [
-              styles.footerBtn,
-              styles.footerBtnLeft,
-              pressed && styles.pressed,
-            ]}
-          >
-            <Text style={styles.footerBtnLeftText}>
-              {isEditMode ? "취소" : "직접 수정"}
-            </Text>
-          </Pressable>
-          <Pressable
+          />
+          <ActionButton
+            label={isEditMode ? "저장" : (applyLabel ?? "이대로 추가")}
+            fill
             onPress={handleApply}
-            style={({ pressed }) => [
-              styles.footerBtn,
-              styles.footerBtnRight,
-              isEditMode && styles.footerBtnRightEdit,
-              pressed && styles.pressed,
-            ]}
-          >
-            <Text style={styles.footerBtnRightText}>
-              {isEditMode ? "저장" : (applyLabel ?? "이대로 추가")}
-            </Text>
-          </Pressable>
+          />
         </View>
       </View>
     </Modal>
@@ -243,33 +231,8 @@ const styles = StyleSheet.create({
   },
   footer: {
     flexDirection: "row",
-    gap: 8,
+    gap: spacing.md,
     paddingHorizontal: 22,
     paddingTop: 12,
-  },
-  footerBtn: {
-    paddingVertical: 16,
-    borderRadius: 9,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  footerBtnLeft: {
-    flex: 1,
-    backgroundColor: colors.gray300,
-  },
-  footerBtnLeftText: {
-    ...textStyles.h6,
-    color: colors.gray900,
-  },
-  footerBtnRight: {
-    flex: 1,
-    backgroundColor: colors.gray900,
-  },
-  footerBtnRightEdit: {
-    backgroundColor: colors.primary,
-  },
-  footerBtnRightText: {
-    ...textStyles.h6,
-    color: colors.white,
   },
 });

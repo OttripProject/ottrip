@@ -1,19 +1,24 @@
 import { plansApi } from "@/services/plans";
+import { useBackdropClose } from "@/hooks/useBackdropClose";
 import Card from "@/ui/components/Card";
+import ActionButton from "@/ui/components/ActionButton";
+import MotionPressable, { MotionIcon } from "@/ui/components/MotionPressable";
+import { modalMotion } from "@/ui/effects/modalMotion";
 import { colors } from "@/ui/tokens/colors";
+import { motion } from "@/ui/tokens/motion";
+import { shadows } from "@/ui/tokens/shadows";
 import { textStyles } from "@/ui/tokens/typography";
 import { useState } from "react";
 import {
-  ActivityIndicator,
   Alert,
   Modal,
   Platform,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
   View,
+  type ViewStyle,
   useWindowDimensions,
 } from "react-native";
 import ExportGuestIcon from "../../../assets/export_guest.svg";
@@ -31,15 +36,21 @@ type Props = {
   planName: string;
 };
 
-function Toggle({ value, onToggle }: { value: boolean; onToggle: () => void }) {
+function Toggle({ value }: { value: boolean }) {
   return (
-    <Pressable
-      onPress={onToggle}
-      style={[styles.toggle, value && styles.toggleOn]}
+    <View
+      pointerEvents="none"
+      style={[styles.toggle, toggleTransition, value && styles.toggleOn]}
     >
-      <View style={[styles.toggleThumb, value && styles.toggleThumbOn]} />
-    </Pressable>
+      <View
+        style={[styles.toggleThumb, toggleTransition, value && styles.toggleThumbOn]}
+      />
+    </View>
   );
+}
+
+function scopeRowHover(on: boolean) {
+  return on ? shadows.xsHover : [shadows.xsHover, styles.scopeToggleRowHover];
 }
 
 export default function ExportPlanModal({
@@ -100,16 +111,17 @@ export default function ExportPlanModal({
     setCopied(false);
     onClose();
   };
+  const backdrop = useBackdropClose(handleClose);
 
   return (
     <>
       <Modal
         visible={visible}
         transparent
-        animationType="fade"
+        animationType="none"
         onRequestClose={handleClose}
       >
-        <Pressable style={styles.overlay} onPress={handleClose}>
+        <View style={styles.overlay} {...backdrop.overlayProps}>
           <Card
             width="100%"
             maxWidth={468}
@@ -121,12 +133,13 @@ export default function ExportPlanModal({
               shadowRadius: 48,
               elevation: 12,
             }}
-            style={{ ...styles.cardStyle, maxHeight: windowHeight * 0.9 }}
+            style={{
+              ...modalMotion.card,
+              ...styles.cardStyle,
+              maxHeight: windowHeight * 0.9,
+            }}
           >
-            <Pressable
-              onPress={() => {}}
-              style={styles.cardInner}
-            >
+            <View style={styles.cardInner} {...backdrop.cardProps}>
               {/* 고정 헤더 */}
               <View style={styles.header}>
                 <View style={styles.headerText}>
@@ -135,13 +148,16 @@ export default function ExportPlanModal({
                     여행 일정을 누구나 열람할 수 있는 링크로 내보냅니다
                   </Text>
                 </View>
-                <Pressable
+                <MotionPressable
                   onPress={handleClose}
                   hitSlop={8}
                   style={styles.closeButton}
+                  accessibilityLabel="닫기"
                 >
-                  <XIcon width={16} height={16} color={colors.gray900} />
-                </Pressable>
+                  <MotionIcon>
+                    <XIcon width={16} height={16} color={colors.gray700} />
+                  </MotionIcon>
+                </MotionPressable>
               </View>
 
               <ScrollView
@@ -238,7 +254,8 @@ export default function ExportPlanModal({
                   </View>
 
                   {/* 비용 토글 */}
-                  <Pressable
+                  <MotionPressable
+                    hoverStyle={scopeRowHover(includeExpenses)}
                     style={[
                       styles.scopeToggleRow,
                       includeExpenses && styles.scopeToggleRowOn,
@@ -254,17 +271,12 @@ export default function ExportPlanModal({
                         총 비용과 카테고리별·항목별 내역을 게스트가 볼 수 있어요
                       </Text>
                     </View>
-                    <Toggle
-                      value={includeExpenses}
-                      onToggle={() => {
-                        setIncludeExpenses(v => !v);
-                        setExportPublicId(null);
-                      }}
-                    />
-                  </Pressable>
+                    <Toggle value={includeExpenses} />
+                  </MotionPressable>
 
                   {/* 체크리스트 토글 */}
-                  <Pressable
+                  <MotionPressable
+                    hoverStyle={scopeRowHover(includeChecklist)}
                     style={[
                       styles.scopeToggleRow,
                       includeChecklist && styles.scopeToggleRowOn,
@@ -280,14 +292,8 @@ export default function ExportPlanModal({
                         준비물 체크리스트와 준비 현황을 게스트가 볼 수 있어요
                       </Text>
                     </View>
-                    <Toggle
-                      value={includeChecklist}
-                      onToggle={() => {
-                        setIncludeChecklist(v => !v);
-                        setExportPublicId(null);
-                      }}
-                    />
-                  </Pressable>
+                    <Toggle value={includeChecklist} />
+                  </MotionPressable>
                 </View>
 
                 {/* 생성 완료 후 결과 영역 */}
@@ -302,14 +308,10 @@ export default function ExportPlanModal({
                           editable={false}
                           selectTextOnFocus
                         />
-                        <Pressable
+                        <ActionButton
+                          label={copied ? "복사됨" : "복사"}
                           onPress={handleCopy}
-                          style={styles.copyButton}
-                        >
-                          <Text style={styles.copyText}>
-                            {copied ? "복사됨" : "복사"}
-                          </Text>
-                        </Pressable>
+                        />
                       </View>
                     </View>
 
@@ -323,21 +325,22 @@ export default function ExportPlanModal({
                       </Text>
                     </View>
 
-                    <Pressable
+                    <ActionButton
+                      label="링크로 접속해 보기"
+                      tone="secondary"
+                      icon={
+                        <MotionIcon>
+                          <ExternalLinkIcon
+                            width={14}
+                            height={14}
+                            color={colors.gray900}
+                          />
+                        </MotionIcon>
+                      }
                       onPress={handleOpenLink}
-                      style={styles.openButton}
-                    >
-                      <ExternalLinkIcon
-                        width={14}
-                        height={14}
-                        color={colors.gray900}
-                      />
-                      <Text style={styles.openButtonText}>
-                        링크로 접속해 보기
-                      </Text>
-                    </Pressable>
+                    />
 
-                    <Pressable
+                    <MotionPressable
                       onPress={handleGenerate}
                       disabled={isGenerating}
                       style={[
@@ -345,45 +348,43 @@ export default function ExportPlanModal({
                         isGenerating && styles.regenButtonDisabled,
                       ]}
                     >
-                      <RefreshIcon
-                        width={13}
-                        height={13}
-                        color={colors.gray700}
-                      />
+                      <MotionIcon>
+                        <RefreshIcon
+                          width={13}
+                          height={13}
+                          color={colors.gray700}
+                        />
+                      </MotionIcon>
                       <Text style={styles.regenButtonText}>
                         {isGenerating ? "생성 중..." : "새 링크 생성"}
                       </Text>
-                    </Pressable>
+                    </MotionPressable>
                   </View>
                 ) : (
-                  <Pressable
+                  <ActionButton
+                    label="내보내기 URL 생성"
                     onPress={handleGenerate}
-                    disabled={isGenerating}
-                    style={[
-                      styles.generateButton,
-                      isGenerating && styles.generateButtonDisabled,
-                    ]}
-                  >
-                    {isGenerating && (
-                      <ActivityIndicator size="small" color={colors.white} />
-                    )}
-                    <Text style={styles.generateButtonText}>
-                      {isGenerating ? "링크 생성 중..." : "내보내기 URL 생성"}
-                    </Text>
-                  </Pressable>
+                    loading={isGenerating}
+                  />
                 )}
               </ScrollView>
-            </Pressable>
+            </View>
           </Card>
 
-        </Pressable>
+        </View>
       </Modal>
     </>
   );
 }
 
+const toggleTransition = {
+  transitionProperty: "background-color, transform",
+  transitionDuration: `${motion.duration.fast + 30}ms`,
+} as ViewStyle;
+
 const styles = StyleSheet.create({
   overlay: {
+    ...modalMotion.overlay,
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.7)",
     alignItems: "center",
@@ -538,6 +539,9 @@ const styles = StyleSheet.create({
     padding: 12,
     backgroundColor: colors.white,
   },
+  scopeToggleRowHover: {
+    borderColor: colors.gray400,
+  },
   scopeToggleRowOn: {
     borderColor: colors.primary,
   },
@@ -570,7 +574,7 @@ const styles = StyleSheet.create({
     alignSelf: "flex-start",
   },
   toggleThumbOn: {
-    alignSelf: "flex-end",
+    transform: [{ translateX: 16 }],
   },
   resultSection: {
     gap: 10,
@@ -594,23 +598,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.gray300,
     borderRadius: 10,
+    height: 48,
     paddingHorizontal: 14,
-    paddingVertical: 12,
     ...textStyles.body5,
     color: colors.gray900,
-  },
-  copyButton: {
-    width: 64,
-    height: 46,
-    borderRadius: 10,
-    backgroundColor: colors.gray900,
-    alignItems: "center",
-    justifyContent: "center",
-    flexShrink: 0,
-  },
-  copyText: {
-    ...textStyles.h7,
-    color: colors.white,
   },
   resultDesc: {
     flexDirection: "row",
@@ -635,21 +626,6 @@ const styles = StyleSheet.create({
     ...textStyles.body6,
     color: colors.gray700,
   },
-  openButton: {
-    height: 46,
-    borderWidth: 1,
-    borderColor: colors.gray900,
-    borderRadius: 10,
-    backgroundColor: colors.white,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-  },
-  openButtonText: {
-    ...textStyles.h6,
-    color: colors.gray900,
-  },
   regenButton: {
     flexDirection: "row",
     alignItems: "center",
@@ -662,21 +638,5 @@ const styles = StyleSheet.create({
   regenButtonText: {
     ...textStyles.h8,
     color: colors.gray700,
-  },
-  generateButton: {
-    height: 52,
-    borderRadius: 12,
-    backgroundColor: colors.gray900,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-  },
-  generateButtonDisabled: {
-    opacity: 0.72,
-  },
-  generateButtonText: {
-    ...textStyles.h6,
-    color: colors.white,
   },
 });

@@ -3,6 +3,7 @@ import { manualPlaceId } from "@/services/locations";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ActivityIndicator, Keyboard, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import MiniMapView from "@/ui/components/MiniMapView";
+import { filledFocusStyle } from "@/ui/components/input/Input";
 import LocationIcon from "../../../assets/week_bar_location.svg";
 import PlusIcon from "../../../assets/trip_add.svg";
 import XIcon from "../../../assets/mobile_x.svg";
@@ -92,6 +93,7 @@ export default function PlacesSearchInput({
   const [showList, setShowList] = useState(false);
   const [loading, setLoading] = useState(false);
   const [searchError, setSearchError] = useState(false);
+  const [focused, setFocused] = useState(false);
   const [mapCoords, setMapCoords] = useState<{ lat: number; lng: number; name: string } | null>(
     initialCoords && value ? { ...initialCoords, name: value } : null,
   );
@@ -208,12 +210,20 @@ export default function PlacesSearchInput({
           value={text}
           onChangeText={handleChangeText}
           onSubmitEditing={handleManualSelect}
-          onFocus={onFocus}
+          onFocus={() => {
+            setFocused(true);
+            onFocus?.();
+          }}
+          onBlur={() => setFocused(false)}
           placeholder={placeholder}
           placeholderTextColor={colors.gray600}
           editable={!disabled}
           returnKeyType="search"
-          style={[styles.textInput, bordered && styles.textInputBordered]}
+          style={[
+            styles.textInput,
+            bordered && styles.textInputBordered,
+            focused && filledFocusStyle,
+          ]}
         />
         <View style={styles.iconButton}>
           {loading ? (
@@ -303,6 +313,8 @@ const styles = StyleSheet.create({
     height: 44,
     backgroundColor: colors.gray200,
     borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "transparent",
     paddingLeft: 16,
     paddingRight: 40,
     fontFamily: textStyles.body4.fontFamily,
@@ -311,7 +323,6 @@ const styles = StyleSheet.create({
     color: colors.black,
   },
   textInputBordered: {
-    borderWidth: 1,
     borderColor: colors.gray400,
   },
   iconButton: {

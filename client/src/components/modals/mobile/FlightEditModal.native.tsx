@@ -26,6 +26,7 @@ import { TimeModal } from "@/ui/components/TimeModal.native";
 import AttachmentSection from "@/ui/components/attachmentSection.native";
 import Input from "@/ui/components/input/Input";
 import { colors } from "@/ui/tokens/colors";
+import { radii } from "@/ui/tokens/radii";
 import { textStyles, typography } from "@/ui/tokens/typography";
 import { getAirportLabelByIata } from "@/utils/airportList";
 import { handleGuestPromptError } from "@/utils/guestPrompt";
@@ -43,10 +44,13 @@ import { KeyboardAwareScrollView, type KeyboardAwareScrollViewRef } from "react-
 import DeleteIcon from "../../../../assets/delete.svg";
 import DownArrowIcon from "../../../../assets/down_arrow.svg";
 import CalendarIcon from "../../../../assets/mobile_calendar_black.svg";
-import AddIcon from "../../../../assets/mobile_plan_add.svg";
+import PlusIcon from "../../../../assets/mobile_plus.svg";
 import TimeIcon from "../../../../assets/mobile_time.svg";
 import CloseIcon from "../../../../assets/x.svg";
 import AirportSearchModal from "./AirportSearchModal.native";
+import { useDiscardConfirm } from "@/hooks/useDiscardConfirm";
+import { useToast } from "@/contexts/ToastContext";
+import { spacing } from "@/ui/tokens/spacing";
 
 interface FlightEditModalProps {
   visible: boolean;
@@ -57,7 +61,6 @@ interface FlightEditModalProps {
   defaultDate?: string;
   embedded?: boolean;
   onSave?: (flight: FlightRead) => void;
-  onDelete?: (flightId: number) => void;
   pendingAiResult?: { result: DocumentUploadAnalyzeResponse; filename?: string; pendingFiles?: LocalFile[] } | null;
   onRouteMismatchResult?: (result: DocumentUploadAnalyzeResponse, filename?: string, pendingFiles?: LocalFile[]) => void;
 }
@@ -103,7 +106,6 @@ export default function FlightEditModal({
   defaultDate,
   embedded,
   onSave,
-  onDelete,
   pendingAiResult,
   onRouteMismatchResult,
 }: FlightEditModalProps) {
@@ -131,6 +133,9 @@ export default function FlightEditModal({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isSubmittingRef = useRef(false);
   const scrollRef = useRef<KeyboardAwareScrollViewRef>(null);
+  const { showToast } = useToast();
+  const [showErrors, setShowErrors] = useState(false);
+  const firstSegmentY = useRef(0);
   const [pendingFiles, setPendingFiles] = useState<LocalFile[]>([]);
   const [existingAttachments, setExistingAttachments] = useState<Attachment[]>(
     [],
@@ -155,6 +160,8 @@ export default function FlightEditModal({
   useEffect(() => {
     if (!visible) {
       formInitializedRef.current = false;
+      setShowErrors(false);
+      baselineRef.current = null;
       setAiModalResult(null);
       setAiApplyLabel(undefined);
       return;
@@ -249,7 +256,22 @@ export default function FlightEditModal({
       setFlightSegments(segList);
     }
     setPendingFiles([]);
+    setBaselinePending(true);
   }, [visible, flight, planStartDate, defaultDate]);
+  const [baselinePending, setBaselinePending] = useState(false);
+  const baselineRef = useRef<string | null>(null);
+  const formSnapshot = JSON.stringify({ formData, flightSegments, expenseAmount, expenseCurrency });
+
+  useEffect(() => {
+    if (!baselinePending) return;
+    baselineRef.current = formSnapshot;
+    setBaselinePending(false);
+  }, [baselinePending, formSnapshot]);
+
+  const isDirty =
+    baselineRef.current !== null &&
+    (formSnapshot !== baselineRef.current || pendingFiles.length > 0);
+
 
   useEffect(() => {
     if (!visible) return;
@@ -364,7 +386,9 @@ export default function FlightEditModal({
       !first?.arrival_date ||
       !first?.arrival_time
     ) {
-      Alert.alert("알림", "입력되지 않은 필수 값이 있습니다");
+      setShowErrors(true);
+      scrollRef.current?.scrollTo({ y: firstSegmentY.current, animated: true });
+      showToast("입력되지 않은 값이 있어요.", { icon: "warning" });
       return;
     }
 
@@ -451,7 +475,7 @@ export default function FlightEditModal({
         }
       }
 
-      Alert.alert(flight ? "수정완료" : "추가완료", flight ? "항공편이 수정되었습니다" : "항공편이 추가되었습니다");
+      showToast(flight ? "항공편을 수정했어요." : "항공편을 저장했어요.");
 
       try {
         await onSave?.(savedFlight);
@@ -470,27 +494,6 @@ export default function FlightEditModal({
       isSubmittingRef.current = false;
       setIsSubmitting(false);
     }
-  };
-
-  const handleDelete = () => {
-    if (!flight) return;
-    Alert.alert("항공 편 삭제", "이 항공 편을 삭제하시겠습니까?", [
-      { text: "취소", style: "cancel" },
-      {
-        text: "삭제",
-        style: "destructive",
-        onPress: async () => {
-          try {
-            await flightsApi.deleteFlight(flight.id);
-            if (onDelete) onDelete(flight.id);
-            Alert.alert("삭제완료", "항공편이 삭제되었습니다");
-            onClose?.({ fromSave: true });
-          } catch (_error) {
-            Alert.alert("알림", "항공 편 삭제에 실패했습니다");
-          }
-        },
-      },
-    ]);
   };
 
   const handleAmountChange = (text: string) => {
@@ -538,6 +541,16 @@ export default function FlightEditModal({
     });
   };
 
+  const { requestClose, discardConfirmModal } = useDiscardConfirm(
+    isDirty,
+    () => onClose?.(),
+  );
+
+  const handleRequestClose = () => {
+    if (isSubmitting || isUploading) return;
+    requestClose();
+  };
+
   const content = (
     <>
       {!embedded && (
@@ -547,10 +560,10 @@ export default function FlightEditModal({
           </Text>
           <Pressable
             style={styles.closeButton}
-            onPress={() => onClose?.()}
+            onPress={handleRequestClose}
             hitSlop={8}
           >
-            <CloseIcon width={24} height={24} />
+            <CloseIcon width={24} height={24} color={colors.gray700} />
           </Pressable>
         </View>
       )}
@@ -565,138 +578,122 @@ export default function FlightEditModal({
           <View style={styles.inputGroup}>
             <Text style={styles.label}>예약번호 (PNR)</Text>
             <Input
+              variant="filled"
               value={formData.reservation_number}
               onChangeText={t =>
                 setFormData({ ...formData, reservation_number: t })
               }
-              style={[styles.input, !flight && styles.inputBorderless]}
+              style={styles.input}
               placeholder={PLACEHOLDERS.flight.reservationNumber}
-              placeholderTextColor={colors.gray600}
+              placeholderTextColor={colors.paletteFg3}
             />
           </View>
-          <View style={styles.row}>
-            <View style={[styles.inputGroup, styles.halfWidth]}>
-              <Text style={styles.label}>승객명</Text>
-              <Input
-                value={formData.passenger_name}
-                onChangeText={t =>
-                  setFormData({ ...formData, passenger_name: t })
-                }
-                style={[styles.input, !flight && styles.inputBorderless]}
-                placeholder={PLACEHOLDERS.flight.passengerName}
-                placeholderTextColor={colors.gray600}
-              />
-            </View>
-            <View style={[styles.inputGroup, styles.halfWidth]}>
-              <Text style={styles.label}>항공료(원)</Text>
-              <Input
-                value={expenseAmount}
-                onChangeText={handleAmountChange}
-                style={[styles.input, !flight && styles.inputBorderless]}
-                placeholder="0"
-                placeholderTextColor={colors.gray600}
-                keyboardType="number-pad"
-              />
-            </View>
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>승객명</Text>
+            <Input
+              variant="filled"
+              value={formData.passenger_name}
+              onChangeText={t =>
+                setFormData({ ...formData, passenger_name: t })
+              }
+              style={styles.input}
+              placeholder={PLACEHOLDERS.flight.passengerName}
+              placeholderTextColor={colors.paletteFg3}
+            />
           </View>
           <View style={styles.row}>
             <View style={[styles.inputGroup, styles.halfWidth]}>
               <Text style={styles.label}>여행사 예약번호</Text>
               <Input
+                variant="filled"
                 value={formData.booking_reference}
                 onChangeText={t =>
                   setFormData({ ...formData, booking_reference: t })
                 }
-                style={[styles.input, !flight && styles.inputBorderless]}
+                style={styles.input}
                 placeholder={PLACEHOLDERS.flight.bookingReference}
-                placeholderTextColor={colors.gray600}
+                placeholderTextColor={colors.paletteFg3}
               />
             </View>
             <View style={[styles.inputGroup, styles.halfWidth]}>
               <Text style={styles.label}>항공권 번호</Text>
               <Input
+                variant="filled"
                 value={formData.ticket_number}
                 onChangeText={t =>
                   setFormData({ ...formData, ticket_number: t })
                 }
-                style={[styles.input, !flight && styles.inputBorderless]}
+                style={styles.input}
                 placeholder={PLACEHOLDERS.flight.ticketNumber}
-                placeholderTextColor={colors.gray600}
+                placeholderTextColor={colors.paletteFg3}
               />
             </View>
           </View>
         </View>
 
-        <View style={styles.sectionDivider} />
-
-        <View style={styles.segmentSection}>
-          <View style={styles.segmentSectionHeader}>
-            <Text style={styles.segmentSectionTitle}>상세 구간 정보</Text>
-            <Pressable onPress={addSegment} style={styles.addSegmentBtn}>
-              <AddIcon width={16} height={16} />
-              <Text style={styles.addSegmentBtnText}>구간 추가</Text>
-            </Pressable>
-          </View>
-
-          {flightSegments.map((seg, idx) => (
-            <View key={idx} style={styles.segmentCard}>
-              <View style={styles.segmentCardHeader}>
-                <Text style={styles.segmentCardHeaderText}>구간 {idx + 1}</Text>
-                {flightSegments.length > 1 && (
-                  <Pressable onPress={() => removeSegment(idx)} hitSlop={8}>
-                    <DeleteIcon width={16} height={16} color={colors.gray600} />
-                  </Pressable>
-                )}
-              </View>
-              <View style={styles.segmentForm}>
-                <View style={styles.row}>
+        {flightSegments.map((seg, idx) => (
+          <View
+            key={idx}
+            style={styles.segmentCard}
+            onLayout={
+              idx === 0
+                ? e => {
+                    firstSegmentY.current = e.nativeEvent.layout.y;
+                  }
+                : undefined
+            }
+          >
+            <View style={styles.segmentCardHeader}>
+              <Text style={styles.segmentCardHeaderText}>구간 {idx + 1}</Text>
+              {flightSegments.length > 1 && (
+                <Pressable onPress={() => removeSegment(idx)} hitSlop={8}>
+                  <DeleteIcon width={16} height={16} color={colors.gray700} />
+                </Pressable>
+              )}
+            </View>
+            <View style={styles.segmentForm}>
+              <View style={styles.segmentRow}>
                   <View style={[styles.inputGroup, styles.halfWidth]}>
+                    <Text style={styles.label}>항공사</Text>
                     <Input
+                      variant="filled"
                       value={seg.airline}
                       onChangeText={t => updateSegment(idx, "airline", t)}
-                      style={[
-                        styles.input,
-                        { backgroundColor: colors.white },
-                        !flight && styles.inputBorderless,
-                      ]}
+                      style={styles.input}
                       placeholder={PLACEHOLDERS.flight.airline}
-                      placeholderTextColor={colors.gray600}
+                      placeholderTextColor={colors.paletteFg3}
                     />
                   </View>
                   <View style={[styles.inputGroup, styles.halfWidth]}>
+                    <Text style={styles.label}>항공편명</Text>
                     <Input
+                      variant="filled"
                       value={seg.flight_number}
                       onChangeText={t => updateSegment(idx, "flight_number", t)}
-                      style={[
-                        styles.input,
-                        { backgroundColor: colors.white },
-                        !flight && styles.inputBorderless,
-                      ]}
+                      style={styles.input}
                       placeholder={PLACEHOLDERS.flight.flightNumber}
-                      placeholderTextColor={colors.gray600}
+                      placeholderTextColor={colors.paletteFg3}
                     />
                   </View>
-                </View>
-                <View style={styles.row}>
+              </View>
+              <View style={styles.segmentRow}>
                   <View style={[styles.inputGroup, styles.halfWidth]}>
+                    <Text style={styles.label}>출발 공항</Text>
                     <Pressable
                       style={[
                         styles.pickerInput,
-                        styles.airportPickerTouchable,
-                        { backgroundColor: colors.white },
-                        !flight && styles.pickerInputBorderless,
+                        showErrors && idx === 0 && !seg.departure_airport.trim() && styles.fieldError,
                       ]}
                       onPress={() =>
                         setAirportSearchTarget({ idx, type: "dep" })
                       }
                     >
                       <Text
-                        style={[
+                        style={
                           seg.departure_airport
                             ? styles.pickerValueText
-                            : styles.pickerPlaceholderText,
-                          styles.airportTextTruncate,
-                        ]}
+                            : styles.pickerPlaceholderText
+                        }
                         numberOfLines={1}
                         ellipsizeMode="tail"
                       >
@@ -705,32 +702,29 @@ export default function FlightEditModal({
                             seg.departure_airport
                           : "출발 공항"}
                       </Text>
-                      <DownArrowIcon
-                        width={20}
-                        height={20}
-                        color={colors.gray600}
-                      />
+                      <DownArrowIcon width={10} height={10} color={colors.gray700} />
                     </Pressable>
+                    {showErrors && idx === 0 && !seg.departure_airport.trim() && (
+                      <Text style={styles.errorText}>출발 공항을 선택해 주세요.</Text>
+                    )}
                   </View>
                   <View style={[styles.inputGroup, styles.halfWidth]}>
+                    <Text style={styles.label}>도착 공항</Text>
                     <Pressable
                       style={[
                         styles.pickerInput,
-                        styles.airportPickerTouchable,
-                        { backgroundColor: colors.white },
-                        !flight && styles.pickerInputBorderless,
+                        showErrors && idx === 0 && !seg.arrival_airport.trim() && styles.fieldError,
                       ]}
                       onPress={() =>
                         setAirportSearchTarget({ idx, type: "arr" })
                       }
                     >
                       <Text
-                        style={[
+                        style={
                           seg.arrival_airport
                             ? styles.pickerValueText
-                            : styles.pickerPlaceholderText,
-                          styles.airportTextTruncate,
-                        ]}
+                            : styles.pickerPlaceholderText
+                        }
                         numberOfLines={1}
                         ellipsizeMode="tail"
                       >
@@ -739,32 +733,26 @@ export default function FlightEditModal({
                             seg.arrival_airport
                           : "도착 공항"}
                       </Text>
-                      <DownArrowIcon
-                        width={20}
-                        height={20}
-                        color={colors.gray600}
-                      />
+                      <DownArrowIcon width={10} height={10} color={colors.gray700} />
                     </Pressable>
+                    {showErrors && idx === 0 && !seg.arrival_airport.trim() && (
+                      <Text style={styles.errorText}>도착 공항을 선택해 주세요.</Text>
+                    )}
                   </View>
-                </View>
-                <View style={styles.row}>
+              </View>
+              <View style={styles.segmentRow}>
                   <View style={[styles.inputGroup, styles.halfWidth]}>
+                    <Text style={styles.label}>출발 일자</Text>
                     <Pressable
-                      style={[
-                        styles.dateInput,
-                        { backgroundColor: colors.white },
-                        !flight && styles.dateInputBorderless,
-                      ]}
+                      style={styles.dateInput}
                       onPress={() => setSegmentDatePicker({ idx, type: "dep" })}
                     >
+                      <View style={styles.fieldIcon}>
+                        <CalendarIcon width={14} height={14} color={colors.paletteInk} />
+                      </View>
                       <Text style={styles.dateText}>
                         {formatDate(seg.departure_date)}
                       </Text>
-                      <CalendarIcon
-                        width={20}
-                        height={20}
-                        color={colors.black}
-                      />
                     </Pressable>
                     <CalendarModal
                       visible={
@@ -788,23 +776,33 @@ export default function FlightEditModal({
                     />
                   </View>
                   <View style={[styles.inputGroup, styles.halfWidth]}>
+                    <Text style={styles.label}>출발 시간</Text>
                     <Pressable
-                      style={[
-                        styles.dateInput,
-                        { backgroundColor: colors.white },
-                        { backgroundColor: colors.white },
-                        !flight && styles.dateInputBorderless,
-                      ]}
+                      style={styles.dateInput}
+                      onPress={() => setSegmentTimeModal({ idx, field: "departure_time" })}
+                    >
+                      <View style={styles.fieldIcon}>
+                        <TimeIcon width={14} height={14} color={colors.paletteInk} />
+                      </View>
+                      <Text style={styles.dateText}>
+                        {formatTimeDisplay(seg.departure_time)}
+                      </Text>
+                    </Pressable>
+                  </View>
+              </View>
+              <View style={styles.segmentRow}>
+                  <View style={[styles.inputGroup, styles.halfWidth]}>
+                    <Text style={styles.label}>도착 일자</Text>
+                    <Pressable
+                      style={styles.dateInput}
                       onPress={() => setSegmentDatePicker({ idx, type: "arr" })}
                     >
+                      <View style={styles.fieldIcon}>
+                        <CalendarIcon width={14} height={14} color={colors.paletteInk} />
+                      </View>
                       <Text style={styles.dateText}>
                         {formatDate(seg.arrival_date)}
                       </Text>
-                      <CalendarIcon
-                        width={20}
-                        height={20}
-                        color={colors.black}
-                      />
                     </Pressable>
                     <CalendarModal
                       visible={
@@ -820,36 +818,15 @@ export default function FlightEditModal({
                       minDate={seg.departure_date}
                     />
                   </View>
-                </View>
-                <View style={styles.row}>
                   <View style={[styles.inputGroup, styles.halfWidth]}>
+                    <Text style={styles.label}>도착 시간</Text>
                     <Pressable
-                      style={[
-                        styles.dateInput,
-                        { backgroundColor: colors.white },
-                        !flight && styles.dateInputBorderless,
-                      ]}
-                      onPress={() =>
-                        setSegmentTimeModal({ idx, field: "departure_time" })
-                      }
+                      style={styles.dateInput}
+                      onPress={() => setSegmentTimeModal({ idx, field: "arrival_time" })}
                     >
-                      <Text style={styles.dateText}>
-                        {formatTimeDisplay(seg.departure_time)}
-                      </Text>
-                      <TimeIcon width={20} height={20} color={colors.black} />
-                    </Pressable>
-                  </View>
-                  <View style={[styles.inputGroup, styles.halfWidth]}>
-                    <Pressable
-                      style={[
-                        styles.dateInput,
-                        { backgroundColor: colors.white },
-                        !flight && styles.dateInputBorderless,
-                      ]}
-                      onPress={() =>
-                        setSegmentTimeModal({ idx, field: "arrival_time" })
-                      }
-                    >
+                      <View style={styles.fieldIcon}>
+                        <TimeIcon width={14} height={14} color={colors.paletteInk} />
+                      </View>
                       <Text
                         style={
                           seg.arrival_time
@@ -861,65 +838,42 @@ export default function FlightEditModal({
                           ? formatTimeDisplay(seg.arrival_time)
                           : "시간 선택"}
                       </Text>
-                      <TimeIcon width={20} height={20} color={colors.black} />
                     </Pressable>
                   </View>
-                </View>
-                {/* <View style={[styles.row, styles.threeCol]}>
-                  <View style={[styles.inputGroup, styles.thirdWidth]}>
-                    <Input
-                      value={seg.terminal || ''}
-                      onChangeText={(t) => updateSegment(idx, 'terminal', t)}
-                      style={styles.input}
-                      placeholder={PLACEHOLDERS.flight.terminal}
-                      placeholderTextColor={colors.gray600}
-                    />
-                  </View>
-                  <View style={[styles.inputGroup, styles.thirdWidth]}>
-                    <Input
-                      value={seg.gate || ''}
-                      onChangeText={(t) => updateSegment(idx, 'gate', t)}
-                      style={styles.input}
-                      placeholder={PLACEHOLDERS.flight.gate}
-                      placeholderTextColor={colors.gray600}
-                    />
-                  </View>
-                  <View style={[styles.inputGroup, styles.thirdWidth]}>
-                    <Input
-                      value={seg.seat_number || ''}
-                      onChangeText={(t) => updateSegment(idx, 'seat_number', t)}
-                      style={styles.input}
-                      placeholder={PLACEHOLDERS.flight.seatNumber}
-                      placeholderTextColor={colors.gray600}
-                    />
-                  </View>
-                </View> */}
               </View>
             </View>
-          ))}
-        </View>
+          </View>
+        ))}
+
+        <Pressable onPress={addSegment} style={styles.addSegmentButton}>
+          <PlusIcon width={14} height={14} color={colors.paletteFg2} />
+          <Text style={styles.addSegmentButtonText}>항공권 구간 추가</Text>
+        </Pressable>
 
         {/* 비용 정보 */}
         <View style={styles.expenseSection}>
           <View style={styles.expenseDivider} />
           <Text style={styles.expenseSectionTitle}>비용 정보</Text>
-          <View style={[styles.inputGroup, { marginBottom: 20 }]}>
-            <Text style={styles.label}>금액</Text>
-            <View style={styles.amountInputWrapper}>
+          <View style={styles.amountRow}>
+            <View style={[styles.inputGroup, styles.halfWidth]}>
+              <Text style={styles.label}>금액</Text>
               <Input
+                variant="filled"
                 value={expenseAmount}
                 onChangeText={handleAmountChange}
                 placeholder="0"
-                placeholderTextColor={colors.gray500}
+                placeholderTextColor={colors.paletteFg3}
                 keyboardType="number-pad"
-                variant="filled"
-                containerStyle={styles.amountInputContainer}
-                style={styles.amountInputStyle}
+                style={styles.input}
               />
+            </View>
+            <View style={[styles.inputGroup, styles.halfWidth]}>
+              <Text style={styles.label}>통화</Text>
               <CurrencyToggle
                 value={expenseCurrency}
                 onChange={setExpenseCurrency}
-                variant="primary"
+                large
+                style={styles.currencyToggle}
               />
             </View>
           </View>
@@ -1022,13 +976,14 @@ export default function FlightEditModal({
 
       <FloatingFooter
         primaryLabel={
-          isUploading ? "업로드 중..." : flight ? "수정 완료" : "일정 저장"
+          "저장"
         }
         onPrimaryPress={handleSave}
-        primaryDisabled={isSubmitting || isUploading}
-        secondaryLabel={flight && !embedded ? "삭제" : undefined}
-        onSecondaryPress={handleDelete}
+        primaryLoading={isSubmitting || isUploading}
+        secondaryLabel="취소"
+        onSecondaryPress={handleRequestClose}
       />
+      {discardConfirmModal}
     </>
   );
 
@@ -1073,7 +1028,10 @@ export default function FlightEditModal({
   }
 
   return (
-    <FullScreenModal visible={visible} onClose={() => onClose?.()}>
+    <FullScreenModal
+      visible={visible}
+      onClose={handleRequestClose}
+    >
       {content}
       {aiModal}
     </FullScreenModal>
@@ -1081,6 +1039,15 @@ export default function FlightEditModal({
 }
 
 const styles = StyleSheet.create({
+  fieldError: {
+    borderWidth: 1,
+    borderColor: colors.danger,
+  },
+  errorText: {
+    ...textStyles.body6,
+    color: colors.danger,
+    marginTop: spacing.xs,
+  },
   header: {
     flexDirection: "row",
     justifyContent: "flex-end",
@@ -1098,151 +1065,145 @@ const styles = StyleSheet.create({
   closeButton: { padding: 4 },
   scrollView: { flex: 1 },
   scrollContent: {
-    paddingHorizontal: 16,
-    paddingTop: 12,
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.lg,
   },
-  form: { gap: 20, marginBottom: 24 },
-  sectionDivider: {
-    height: 1,
-    backgroundColor: colors.gray300,
-    marginBottom: 24,
+  form: {
+    gap: spacing.lg,
+    marginBottom: spacing.lg,
   },
   inputGroup: {},
-  label: { ...textStyles.h7, marginBottom: 8 },
+  label: {
+    ...textStyles.h8,
+    fontFamily: typography.fontFamily.pretendardBold,
+    color: colors.paletteInk,
+    marginBottom: spacing.sm,
+  },
   input: {
-    minHeight: 48,
-    paddingVertical: 14,
-    paddingHorizontal: 12,
+    minHeight: 44,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
     borderWidth: 1,
-    borderColor: colors.gray400,
-    borderRadius: 12,
-    backgroundColor: colors.gray200,
-  },
-  inputBorderless: {
-    borderWidth: 0,
     borderColor: "transparent",
+    borderRadius: radii.mdPlus,
+    backgroundColor: colors.paletteFill,
+    fontFamily: typography.fontFamily.pretendardMedium,
   },
-  row: { flexDirection: "row", gap: 9 },
+  row: {
+    flexDirection: "row",
+    gap: spacing.md,
+  },
   halfWidth: { flex: 1 },
-  segmentSection: { marginBottom: 24 },
-  segmentSectionHeader: {
+  segmentRow: {
     flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 12,
+    gap: spacing.sm,
   },
-  segmentSectionTitle: { ...textStyles.h5 },
-  addSegmentBtn: {
+  fieldIcon: {
+    opacity: 0.6,
+  },
+  addSegmentButton: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
-  },
-  addSegmentBtnText: { ...textStyles.h6, color: colors.primary },
-  segmentCard: {
-    backgroundColor: `${colors.primary}1A`,
+    justifyContent: "center",
+    gap: spacing.sm,
+    paddingVertical: spacing.lg,
+    marginBottom: spacing.md,
     borderWidth: 1,
-    borderColor: colors.primary,
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
+    borderStyle: "dashed",
+    borderColor: colors.gray400,
+    borderRadius: radii.lgPlus,
+  },
+  addSegmentButtonText: {
+    ...textStyles.h7,
+    color: colors.paletteFg2,
+  },
+  amountRow: {
+    flexDirection: "row",
+    gap: spacing.md,
+  },
+  currencyToggle: {
+    height: 44,
+    borderRadius: radii.mdPlus,
+    backgroundColor: colors.paletteFill,
+  },
+  segmentCard: {
+    borderWidth: 1,
+    borderColor: colors.paletteFill2,
+    borderRadius: radii.lgPlus,
+    paddingTop: spacing.lg,
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.md,
+    marginBottom: spacing.md,
+    backgroundColor: colors.white,
   },
   segmentCardHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 16,
+    marginBottom: spacing.lg,
   },
-  segmentCardHeaderText: { ...textStyles.h6, color: colors.primary },
-  segmentForm: { gap: 16, marginBottom: 8 },
-  threeCol: { gap: 8 },
-  thirdWidth: { flex: 1 },
+  segmentCardHeaderText: {
+    ...textStyles.h6,
+    color: colors.paletteInk,
+  },
+  segmentForm: {
+    gap: spacing.md,
+  },
   dateInput: {
-    minHeight: 48,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    paddingRight: 14,
+    minHeight: 44,
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    borderWidth: 1,
-    borderColor: colors.gray400,
-    borderRadius: 12,
-    backgroundColor: colors.gray200,
+    gap: spacing.sm,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    borderRadius: radii.mdPlus,
+    backgroundColor: colors.paletteFill,
   },
-  dateInputBorderless: {
-    borderWidth: 0,
-    borderColor: "transparent",
+  dateText: {
+    ...textStyles.body4,
+    fontFamily: typography.fontFamily.pretendardMedium,
+    fontVariant: ["tabular-nums"],
+    color: colors.paletteInk,
   },
-  dateText: { ...textStyles.body3 },
   pickerInput: {
-    height: 48,
-    minHeight: 48,
-    overflow: "hidden",
-    paddingRight: 14,
-    borderWidth: 1,
-    borderColor: colors.gray400,
-    borderRadius: 12,
-    backgroundColor: colors.gray200,
-  },
-  pickerInputBorderless: {
-    borderWidth: 0,
-    borderColor: "transparent",
-  },
-  airportPickerTouchable: {
+    height: 44,
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    paddingVertical: 10,
-    paddingHorizontal: 12,
+    gap: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    borderRadius: radii.mdPlus,
+    backgroundColor: colors.paletteFill,
   },
   pickerValueText: {
-    ...textStyles.h6,
-    color: colors.black,
+    ...textStyles.body4,
+    fontFamily: typography.fontFamily.pretendardMedium,
+    color: colors.paletteInk,
+    flex: 1,
+    minWidth: 0,
   },
   pickerPlaceholderText: {
-    ...textStyles.body3,
-    color: colors.gray600,
-  },
-  airportTextTruncate: {
+    ...textStyles.body4,
+    fontFamily: typography.fontFamily.pretendardMedium,
+    color: colors.paletteFg3,
     flex: 1,
     minWidth: 0,
   },
   expenseSection: {
-    marginTop: 20,
+    marginTop: spacing.md,
   },
   expenseDivider: {
     height: 1,
-    backgroundColor: colors.gray300,
-    marginBottom: 20,
+    backgroundColor: colors.paletteFill2,
+    marginTop: spacing.sm,
+    marginBottom: spacing.lg,
   },
   expenseSectionTitle: {
     ...textStyles.h5,
-    marginTop: 12,
-    marginBottom: 20,
-  },
-  amountInputWrapper: {
-    flexDirection: "row",
-    alignItems: "center",
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 2,
-    gap: 8,
-    backgroundColor: `${colors.primary}1A`,
-  },
-  amountInputContainer: {
-    flex: 1,
-  },
-  amountInputStyle: {
-    flex: 1,
-    textAlign: "left",
-    backgroundColor: "transparent",
-    fontFamily: typography.fontFamily.pretendardSemiBold,
-    fontSize: 14,
-    paddingHorizontal: 0,
-    paddingVertical: 0,
-    color: colors.primary,
+    color: colors.paletteInk,
+    marginBottom: spacing.md,
   },
   attachmentSection: {
-    marginTop: 20,
+    marginTop: spacing.lg,
   },
 });

@@ -1,4 +1,7 @@
+import ModalBackdrop from "@/ui/components/ModalBackdrop";
 import { colors } from "@/ui/tokens/colors";
+import { radii } from "@/ui/tokens/radii";
+import { shadows } from "@/ui/tokens/shadows";
 import { textStyles, typography } from "@/ui/tokens/typography";
 import dayjs from "dayjs";
 import { useEffect, useMemo, useState } from "react";
@@ -7,6 +10,8 @@ import { Calendar, type DateData } from "react-native-calendars";
 import LeftArrowIcon from "../../../assets/cal_left_arrow.svg";
 import RightArrowIcon from "../../../assets/cal_right_arrow.svg";
 import CloseIcon from "../../../assets/mobile_close.svg";
+
+const PRIMARY_GRADIENT = `linear-gradient(180deg, ${colors.gradientPrimary[0]} 0%, ${colors.gradientPrimary[1]} 100%)`;
 
 export interface CalendarModalProps {
   visible: boolean;
@@ -180,7 +185,7 @@ export default function CalendarModal({
 
   return (
     <Modal visible={visible} transparent animationType="fade">
-      <Pressable style={styles.backdrop} onPress={onClose} />
+      <ModalBackdrop onPress={onClose} />
       <View style={styles.centered}>
         <View style={styles.modalContent}>
           <View style={styles.header}>
@@ -240,10 +245,6 @@ export default function CalendarModal({
 }
 
 const styles = StyleSheet.create({
-  backdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: colors.overlayBackground,
-  },
   centered: {
     flex: 1,
     justifyContent: "center",
@@ -363,10 +364,12 @@ const styles = StyleSheet.create({
   todayButton: {
     marginTop: 20,
     alignSelf: "flex-end",
-    paddingVertical: 13,
+    height: 44,
     paddingHorizontal: 20,
-    borderRadius: 12,
-    backgroundColor: colors.black,
+    borderRadius: radii.md,
+    backgroundColor: colors.primary,
+    experimental_backgroundImage: PRIMARY_GRADIENT,
+    ...shadows.primaryRaised,
     alignItems: "center",
     justifyContent: "center",
   },

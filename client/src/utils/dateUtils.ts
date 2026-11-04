@@ -110,6 +110,24 @@ export function formatTime(time: string): string {
   return time.split(":").slice(0, 2).join(":");
 }
 
+const toMinutes = (time: string) => {
+  const [hours, minutes] = time.split(":").map(Number);
+  return hours * 60 + minutes;
+};
+
+export function formatDuration(
+  startTime: string,
+  endTime: string,
+): string | null {
+  const total = toMinutes(endTime) - toMinutes(startTime);
+  if (total <= 0) return null;
+  const hours = Math.floor(total / 60);
+  const minutes = total % 60;
+  return [hours && `${hours}시간`, minutes && `${minutes}분`]
+    .filter(Boolean)
+    .join(" ");
+}
+
 export function convertUTCToLocalTime(utcDateTime: string): string {
   if (!utcDateTime) return "00:00";
   const localTime = dayjs(utcDateTime); // UTC → 로컬 시간 자동 변환
@@ -126,4 +144,10 @@ export function isNextDayLocal(
   const startDate = start.format("YYYY-MM-DD");
   const endDate = end.format("YYYY-MM-DD");
   return startDate !== endDate;
+}
+
+export function getDefaultEndTime(start: dayjs.ConfigType): string {
+  const begin = dayjs(start);
+  const end = begin.add(1, "hour");
+  return end.isSame(begin, "day") ? end.format("HH:mm") : "24:00";
 }

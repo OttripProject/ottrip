@@ -1,4 +1,5 @@
 import { colors } from "@/ui/tokens/colors";
+import { spacing } from "@/ui/tokens/spacing";
 import { useEffect, useRef, useState } from "react";
 import { Animated, StyleSheet, View } from "react-native";
 import FlightIcon from "../../assets/airplane.svg";
@@ -66,7 +67,7 @@ export default function PlanLoadingOverlay({ visible }: PlanLoadingOverlayProps)
   return (
     <Animated.View style={[styles.overlay, { opacity: opacityAnim }]}>
       <View style={styles.iconWrapper}>
-        <FlightIcon width={42} height={42} color={`${colors.primary}`} />
+        <FlightIcon width={42} height={42} color={colors.primary} />
       </View>
       <View style={styles.dotsRow}>
         <Animated.View style={[styles.dot, { opacity: dot1Anim }]} />
@@ -80,11 +81,11 @@ export default function PlanLoadingOverlay({ visible }: PlanLoadingOverlayProps)
 
 const styles = StyleSheet.create({
   overlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(255, 255, 255, 0.85)",
+    ...StyleSheet.absoluteFill,
+    backgroundColor: colors.onDarkStrong,
     alignItems: "center",
     justifyContent: "center",
-    gap: 10,
+    gap: spacing.md,
     zIndex: 100,
   },
   iconWrapper: {
@@ -92,12 +93,12 @@ const styles = StyleSheet.create({
   },
   dotsRow: {
     flexDirection: "row",
-    gap: 8,
+    gap: spacing.sm,
   },
   dot: {
     width: 8,
     height: 8,
     borderRadius: 2,
-    backgroundColor: `${colors.primary}`,
+    backgroundColor: colors.primary,
   },
 });

@@ -17,6 +17,30 @@ interface TripFormData {
   segments: SegmentDraft[];
 }
 
+export interface SegmentFieldErrors {
+  country?: string;
+  city?: string;
+  date?: string;
+}
+
+export interface TripFormErrors {
+  name?: string;
+  segments: SegmentFieldErrors[];
+}
+
+export const getTripFormErrors = (
+  data: TripFormData,
+): TripFormErrors | null => {
+  const name = data.name.trim() ? undefined : "여행명을 입력해 주세요.";
+  const segments = data.segments.map(s => ({
+    country: s.country.trim() ? undefined : "나라를 선택해 주세요.",
+    city: s.city.trim() ? undefined : "도시를 입력해 주세요.",
+    date: s.startDate && s.endDate ? undefined : "기간을 선택해 주세요.",
+  }));
+  const hasError = !!name || segments.some(s => s.country || s.city || s.date);
+  return hasError ? { name, segments } : null;
+};
+
 const emptySegment = (): SegmentDraft => ({
   country: "",
   city: "",
@@ -166,13 +190,6 @@ export const useTripForm = (initialData?: Partial<TripFormData>) => {
     setSelectionMode("start");
   }, []);
 
-  const isSubmitDisabled =
-    !tripData.name.trim() ||
-    tripData.segments.length === 0 ||
-    tripData.segments.some(
-      s => !s.country.trim() || !s.city.trim() || !s.startDate || !s.endDate,
-    );
-
   return {
     tripData,
     activeSegmentIndex,
@@ -187,6 +204,5 @@ export const useTripForm = (initialData?: Partial<TripFormData>) => {
     updateTripData,
     resetForm,
     setFormData,
-    isSubmitDisabled,
   };
 };

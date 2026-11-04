@@ -1,15 +1,20 @@
-import { useCallback, useState } from "react";
-import { View, Text, Platform, Pressable, StyleSheet } from "react-native";
+import { useCallback, useEffect, useState } from "react";
+import { View, Text, Platform, StyleSheet } from "react-native";
 import { useAttachmentUpload } from "@/hooks/useAttachmentUpload";
+import { useDiscardConfirm } from "@/hooks/useDiscardConfirm";
 import { useExpenseAi } from "@/hooks/useExpenseAi";
 import { useFilePicker } from "@/hooks/useFilePicker";
 import type { LocalFile } from "@/types/api";
 import { type Expense, type Attachment, PLAN_ENTITY_KIND } from "@/types/api";
 import { ExpenseCurrency, currencyLabels } from "@/types/expense";
+import ActionButton from "@/ui/components/ActionButton";
+import MotionPressable, { MotionIcon } from "@/ui/components/MotionPressable";
+import { Tooltip } from "@/ui/components/Tooltip";
 import { colors } from "@/ui/tokens/colors";
 import { radii } from "@/ui/tokens/radii";
+import { shadows } from "@/ui/tokens/shadows";
 import { spacing } from "@/ui/tokens/spacing";
-import { textStyles, typography } from "@/ui/tokens/typography";
+import { textStyles } from "@/ui/tokens/typography";
 import { attachmentsApi } from "@/services/attachments";
 import { expensesApi } from "@/services/expenses";
 import ExpenseForm, { type ExpenseFormData } from "@/components/forms/ExpenseForm";
@@ -26,6 +31,7 @@ interface ExpenseCardProps {
   onDelete: (id: number) => void;
   onUpdate?: () => void;
   onAttachmentPress: (expense: Expense, attachments: Attachment[]) => void;
+  onDirtyChange?: (id: number, dirty: boolean) => void;
 }
 
 export default function ExpenseCard({ 
@@ -35,10 +41,13 @@ export default function ExpenseCard({
     onDelete,
     onAttachmentPress,
     onUpdate,
+    onDirtyChange,
  }: ExpenseCardProps) {
     const [isEditing, setIsEditing] = useState(false);
     
     const [editFormData, setEditFormData] = useState<ExpenseFormData | null>(null);
+    const [isSaving, setIsSaving] = useState(false);
+    const [showErrors, setShowErrors] = useState(false);
   
     const { isUploading, uploadFiles } = useAttachmentUpload({
       planId: expense.planId,
@@ -115,16 +124,46 @@ export default function ExpenseCard({
       });
       setPendingFiles([]);
       setDeletedAttachmentIds([]);
+      setShowErrors(false);
     };
   
     const handleEditCancel = () => {
       setIsEditing(false);
       setEditFormData(null);
     };
+
+    const isDirty =
+      isEditing &&
+      !!editFormData &&
+      (editFormData.category !== expense.category ||
+        editFormData.amount !== expense.amount ||
+        editFormData.currency !== expense.currency ||
+        editFormData.ex_date !== expense.exDate ||
+        editFormData.description !== (expense.description || "") ||
+        pendingFiles.length > 0 ||
+        deletedAttachmentIds.length > 0);
+
+    const { requestClose: requestEditCancel, discardConfirmModal } =
+      useDiscardConfirm(isDirty, handleEditCancel);
+
+    useEffect(() => {
+      onDirtyChange?.(expense.id, isDirty);
+    }, [onDirtyChange, expense.id, isDirty]);
+
+    useEffect(
+      () => () => onDirtyChange?.(expense.id, false),
+      [onDirtyChange, expense.id],
+    );
   
     const handleEditSave = async () => {
-      if (!editFormData) return;
-      
+      if (!editFormData || isSaving) return;
+      if (editFormData.amount <= 0) {
+        setShowErrors(true);
+        showToast("입력되지 않은 값이 있어요.", { icon: "warning" });
+        return;
+      }
+
+      setIsSaving(true);
       try {
         await expensesApi.updateExpense(expense.id, {
           category: editFormData.category,
@@ -167,6 +206,8 @@ export default function ExpenseCard({
       } catch (error) {
         showToast("지출 수정에 실패했습니다.");
         console.error("지출 수정 중 전체 에러:", error);
+      } finally {
+        setIsSaving(false);
       }
     };
 
@@ -211,16 +252,28 @@ export default function ExpenseCard({
           isAiAnalyzePartial={aiState.isAiAnalyzePartial}
           analyzePartialMessage={aiState.analyzePartialMessage}
           aiFilledFields={aiState.aiFilledFields}
+          amountError={showErrors && !!editFormData && editFormData.amount <= 0}
         />
 
         <View style={styles.editActions}>
-          <Pressable style={styles.editCancelBtn} onPress={handleEditCancel}>
-            <Text style={styles.editCancelText}>취소</Text>
-          </Pressable>
-          <Pressable style={styles.editSaveBtn} onPress={handleEditSave}>
-            <Text style={styles.editSaveText}>저장</Text>
-          </Pressable>
+          <ActionButton
+            label="취소"
+            tone="secondary"
+            size="M"
+            fill
+            onPress={requestEditCancel}
+            blocked={isSaving}
+          />
+          <ActionButton
+            label="저장"
+            size="M"
+            fill
+            onPress={handleEditSave}
+            loading={isSaving}
+            disabled={!isDirty}
+          />
         </View>
+        {discardConfirmModal}
       </View>
     );
   }
@@ -241,32 +294,45 @@ export default function ExpenseCard({
         {!readOnly && (
           <View style={styles.expenseCardActions}>
             {attachments.length > 0 && (
-              <Pressable
+              <MotionPressable
                 style={styles.attachmentButton}
+                hoverStyle={shadows.xsHover}
                 onPress={() => onAttachmentPress(expense, attachments)}
+                accessibilityLabel={`첨부파일 ${attachments.length}개 보기`}
               >
-                <AttachmentIcon
-                  width={11}
-                  height={11}
-                  color={colors.gray500}
-                  style={{ transform: [{ rotate: "45deg" }] }}
-                />
-              </Pressable>
+                <MotionIcon>
+                  <AttachmentIcon
+                    width={11}
+                    height={11}
+                    color={colors.gray700}
+                    style={{ transform: [{ rotate: "45deg" }] }}
+                  />
+                </MotionIcon>
+                <Text style={styles.attachmentCount}>{attachments.length}</Text>
+              </MotionPressable>
             )}
-            <Pressable style={styles.updateButton} onPress={handleEditStart}>
-                <UpdateIcon
-                width={14}
-                height={14}
-                color={colors.gray700}
-                />
-            </Pressable>
-            <Pressable style={styles.deleteButton} onPress={() => onDelete(expense.id)}>
-                <DeleteIcon
-                width={14}
-                height={14}
-                color={colors.warning}
-                />
-            </Pressable>
+            <Tooltip text="수정">
+              <MotionPressable
+                style={styles.updateButton}
+                onPress={handleEditStart}
+                accessibilityLabel="수정"
+              >
+                <MotionIcon>
+                  <UpdateIcon width={16} height={16} color={colors.gray700} />
+                </MotionIcon>
+              </MotionPressable>
+            </Tooltip>
+            <Tooltip text="삭제">
+              <MotionPressable
+                style={styles.deleteButton}
+                onPress={() => onDelete(expense.id)}
+                accessibilityLabel="삭제"
+              >
+                <MotionIcon>
+                  <DeleteIcon width={16} height={16} color={colors.gray700} />
+                </MotionIcon>
+              </MotionPressable>
+            </Tooltip>
           </View>
         )}
       </View>
@@ -278,7 +344,7 @@ const styles = StyleSheet.create({
     expenseCard: {
         backgroundColor: colors.gray100,
         borderRadius: radii.md,
-        padding: spacing.md + 2,
+        padding: spacing.lg,
         flexDirection: "row",
         alignItems: "flex-start",
         justifyContent: "space-between",
@@ -286,57 +352,56 @@ const styles = StyleSheet.create({
       },
       expenseCardLeft: {
         flex: 1,
-        gap: spacing.xs + 2,
+        gap: spacing.sm,
         minWidth: 0,
       },
       expenseCardRight: {
         flexShrink: 0,
         alignItems: "flex-end",
-        gap: spacing.xs,
+        gap: spacing.sm,
       },
       expenseDescription: {
         ...textStyles.h7,
         color: colors.gray900,
       },
-      expenseDate: {
-        fontFamily: typography.fontFamily.poppinsMedium,
-        fontSize: 11,
-        lineHeight: 16,
+expenseDate: {
+        ...textStyles.body6,
         color: colors.gray600,
       },
       expenseAmount: {
-        ...textStyles.h7,
+        ...textStyles.h6,
         color: colors.gray900,
       },
       expenseCardActions: {
         flexDirection: "row",
         alignItems: "center",
-        gap: spacing.xs,
       },
       attachmentButton: {
         flexDirection: "row",
         alignItems: "center",
-        gap: 3,
+        gap: spacing.xs,
         height: 24,
         paddingHorizontal: spacing.sm,
         borderRadius: radii.pill,
         backgroundColor: colors.white,
         borderWidth: 1,
-        borderColor: colors.gray300,
+        borderColor: colors.gray350,
       },
       attachmentCount: {
         ...textStyles.h9,
         color: colors.gray700,
       },
       updateButton: {
-        width: 24,
-        height: 24,
+        width: 32,
+        height: 32,
+        marginVertical: -spacing.sm,
         alignItems: "center",
         justifyContent: "center",
       },
       deleteButton: {
-        width: 24,
-        height: 24,
+        width: 32,
+        height: 32,
+        marginVertical: -spacing.sm,
         alignItems: "center",
         justifyContent: "center",
       },
@@ -358,31 +423,7 @@ const styles = StyleSheet.create({
       },
       editActions: {
         flexDirection: "row", 
-        gap: 8,
+        gap: spacing.md,
         marginTop: 2,
-      },
-      editCancelBtn: {
-        flex: 1, 
-        height: 40,
-        borderRadius: 10,
-        backgroundColor: colors.gray400,
-        alignItems: "center",
-        justifyContent: "center",
-      },
-      editSaveBtn: {
-        flex: 1,
-        height: 40,
-        borderRadius: 10,
-        backgroundColor: colors.primary,
-        alignItems: "center",
-        justifyContent: "center",
-      },
-      editCancelText: {
-        ...textStyles.h7,
-        color: colors.gray900,
-      },
-      editSaveText: {
-        ...textStyles.h7,
-        color: colors.white,
       },
 });

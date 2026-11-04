@@ -1,6 +1,7 @@
+import ModalBackdrop from "@/ui/components/ModalBackdrop";
 import { colors } from "@/ui/tokens/colors";
 import { type ReactNode, useEffect } from "react";
-import { Dimensions, Modal, Pressable, StyleSheet, View } from "react-native";
+import { Dimensions, Modal, StyleSheet, View } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, {
   useSharedValue,
@@ -15,14 +16,14 @@ interface BottomSheetModalProps {
   visible: boolean;
   onClose: () => void;
   children: ReactNode;
-  height?: number; // 0~1 사이의 비율 또는 픽셀 값
+  height?: number | "auto"; // 0~1 사이의 비율 또는 픽셀 값
   dragThreshold?: number;
   maxUpwardDrag?: number;
   showDragHandle?: boolean;
-  backdropOpacity?: number;
 }
 
 const DEFAULT_DRAG_THRESHOLD = 80;
+const AUTO_MAX_HEIGHT_RATIO = 0.88;
 const DEFAULT_MAX_UPWARD_DRAG = 50;
 const DEFAULT_MODAL_HEIGHT = Dimensions.get("window").height * 0.5;
 
@@ -34,12 +35,14 @@ export default function BottomSheetModal({
   dragThreshold = DEFAULT_DRAG_THRESHOLD,
   maxUpwardDrag = DEFAULT_MAX_UPWARD_DRAG,
   showDragHandle = true,
-  backdropOpacity = 0.5,
 }: BottomSheetModalProps) {
   const insets = useSafeAreaInsets();
-  const modalHeight =
-    typeof height === "number" && height <= 1
-      ? Dimensions.get("window").height * height
+  const windowHeight = Dimensions.get("window").height;
+  const isAutoHeight = height === "auto";
+  const modalHeight = isAutoHeight
+    ? windowHeight
+    : height <= 1
+      ? windowHeight * height
       : height;
 
   const slidePosition = useSharedValue(modalHeight);
@@ -102,24 +105,25 @@ export default function BottomSheetModal({
     >
       <View style={styles.container}>
         {/* 배경 오버레이 */}
-        <Pressable
-          style={[
-            styles.backdrop,
-            { backgroundColor: `rgba(0, 0, 0, ${backdropOpacity})` },
-          ]}
-          onPress={handleBackdropPress}
-        />
+        <ModalBackdrop onPress={handleBackdropPress} />
 
         {/* 모달 컨텐츠 */}
         <GestureDetector gesture={panGesture}>
           <Animated.View
             style={[
               styles.modalContent,
-              { height: modalHeight },
+              isAutoHeight
+                ? { maxHeight: windowHeight * AUTO_MAX_HEIGHT_RATIO }
+                : { height: modalHeight },
               animatedStyle,
             ]}
           >
-            <View style={[styles.safeArea, { paddingBottom: Math.max(insets.bottom, 8) }]}>
+            <View
+              style={[
+                isAutoHeight ? styles.shrink : styles.safeArea,
+                { paddingBottom: Math.max(insets.bottom, 8) },
+              ]}
+            >
               {/* 드래그 핸들 */}
               {showDragHandle && (
                 <View style={styles.dragHandleContainer}>
@@ -127,7 +131,9 @@ export default function BottomSheetModal({
                 </View>
               )}
               {/* 컨텐츠 */}
-              <View style={styles.content}>{children}</View>
+              <View style={isAutoHeight ? styles.shrink : styles.content}>
+                {children}
+              </View>
             </View>
           </Animated.View>
         </GestureDetector>
@@ -140,9 +146,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     justifyContent: "flex-end",
-  },
-  backdrop: {
-    ...StyleSheet.absoluteFillObject,
   },
   modalContent: {
     backgroundColor: colors.white,
@@ -172,5 +175,8 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
+  },
+  shrink: {
+    flexShrink: 1,
   },
 });

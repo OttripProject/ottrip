@@ -6,7 +6,9 @@ export const typography = {
     default: "System",
     mono: "Courier",
     pretendardRegular: "Pretendard-Regular",
+    pretendardMedium: "Pretendard-Medium",
     pretendardSemiBold: "Pretendard-SemiBold",
+    pretendardBold: "Pretendard-Bold",
     poppinsMedium: "Poppins-Medium",
     poppinsSemiBold: "Poppins-SemiBold",
   },
@@ -96,6 +98,12 @@ export const textStyles: Record<string, TextStyle> = {
     fontFamily: typography.fontFamily.pretendardRegular,
     fontSize: 16,
     lineHeight: 24,
+    color: colors.black,
+  },
+  menuItem: {
+    fontFamily: typography.fontFamily.pretendardMedium,
+    fontSize: 15,
+    lineHeight: 22,
     color: colors.black,
   },
   body3: {

@@ -3,8 +3,11 @@ import AddExpenseModal from "@/components/modals/mobile/AddExpenseModal.native";
 import FlightEditModal from "@/components/modals/mobile/FlightEditModal.native";
 import ItineraryEditModal from "@/components/modals/mobile/ItineraryEditModal.native";
 import type { Accommodation, DocumentUploadAnalyzeResponse, FlightRead, Itinerary, LocalFile } from "@/types/api";
-import FullScreenModal from "@/ui/components/FullScreenModal.native";
+import BottomSheetModal from "@/ui/components/BottomSheetModal.native";
 import { colors } from "@/ui/tokens/colors";
+import { radii } from "@/ui/tokens/radii";
+import { shadows } from "@/ui/tokens/shadows";
+import { spacing } from "@/ui/tokens/spacing";
 import { textStyles } from "@/ui/tokens/typography";
 import type dayjs from "dayjs";
 import { useCallback, useEffect, useState } from "react";
@@ -13,6 +16,12 @@ import FlightIcon from "../../../../assets/airplane.svg";
 import AccommodationIcon from "../../../../assets/mobile_accomodation.svg";
 import CalendarIcon from "../../../../assets/mobile_calendar_black.svg";
 import CloseIcon from "../../../../assets/x.svg";
+
+const TABS = [
+  { key: "accommodation", label: "숙소", Icon: AccommodationIcon },
+  { key: "flight", label: "항공", Icon: FlightIcon },
+  { key: "itinerary", label: "일정", Icon: CalendarIcon },
+] as const;
 
 type AddScheduleTab = "accommodation" | "flight" | "itinerary";
 
@@ -174,84 +183,47 @@ export default function AddScheduleModal({
   };
 
   return (
-    <FullScreenModal visible={visible} onClose={onClose}>
+    <BottomSheetModal visible={visible} onClose={onClose} height={0.92}>
       <View style={styles.headerSection}>
         <View style={styles.titleRow}>
-          <View style={styles.titleSpacer} />
           <Text style={styles.headerTitle}>새 일정 추가</Text>
-          <Pressable style={styles.closeButton} onPress={onClose} hitSlop={8}>
-            <CloseIcon width={24} height={24} />
+          <Pressable
+            style={styles.closeButton}
+            onPress={onClose}
+            hitSlop={8}
+            accessibilityLabel="닫기"
+          >
+            <CloseIcon width={12} height={12} color={colors.gray700} />
           </Pressable>
         </View>
 
         <View style={styles.categoryTabs}>
-          <Pressable
-            style={[
-              styles.categoryTab,
-              activeTab === "accommodation" && styles.categoryTabActive,
-            ]}
-            onPress={() => setActiveTab("accommodation")}
-          >
-            <AccommodationIcon
-              width={16}
-              height={16}
-              color={
-                activeTab === "accommodation" ? colors.primary : colors.gray600
-              }
-            />
-            <Text
-              style={[
-                styles.categoryTabText,
-                activeTab === "accommodation" && styles.categoryTabTextActive,
-              ]}
-            >
-              숙소
-            </Text>
-          </Pressable>
-          <Pressable
-            style={[
-              styles.categoryTab,
-              activeTab === "flight" && styles.categoryTabActive,
-            ]}
-            onPress={() => setActiveTab("flight")}
-          >
-            <FlightIcon
-              width={16}
-              height={16}
-              color={activeTab === "flight" ? colors.primary : colors.gray600}
-            />
-            <Text
-              style={[
-                styles.categoryTabText,
-                activeTab === "flight" && styles.categoryTabTextActive,
-              ]}
-            >
-              항공
-            </Text>
-          </Pressable>
-          <Pressable
-            style={[
-              styles.categoryTab,
-              activeTab === "itinerary" && styles.categoryTabActive,
-            ]}
-            onPress={() => setActiveTab("itinerary")}
-          >
-            <CalendarIcon
-              width={16}
-              height={16}
-              color={
-                activeTab === "itinerary" ? colors.primary : colors.gray600
-              }
-            />
-            <Text
-              style={[
-                styles.categoryTabText,
-                activeTab === "itinerary" && styles.categoryTabTextActive,
-              ]}
-            >
-              일정
-            </Text>
-          </Pressable>
+          {TABS.map(({ key, label, Icon }) => {
+            const isActive = activeTab === key;
+            return (
+              <Pressable
+                key={key}
+                style={[styles.categoryTab, isActive && styles.categoryTabActive]}
+                onPress={() => setActiveTab(key)}
+              >
+                <View style={!isActive && styles.categoryTabIconInactive}>
+                  <Icon
+                    width={14}
+                    height={14}
+                    color={isActive ? colors.paletteInk : colors.paletteFg3}
+                  />
+                </View>
+                <Text
+                  style={[
+                    styles.categoryTabText,
+                    isActive && styles.categoryTabTextActive,
+                  ]}
+                >
+                  {label}
+                </Text>
+              </Pressable>
+            );
+          })}
         </View>
       </View>
 
@@ -275,61 +247,67 @@ export default function AddScheduleModal({
           onRefresh?.();
         }}
       />
-    </FullScreenModal>
+    </BottomSheetModal>
   );
 }
 
 const styles = StyleSheet.create({
   headerSection: {
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 12,
+    paddingHorizontal: spacing.xl,
+    paddingBottom: spacing.md,
     backgroundColor: colors.white,
   },
   titleRow: {
-    flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 28,
-  },
-  titleSpacer: {
-    width: 32,
+    justifyContent: "center",
+    minHeight: 28,
+    marginBottom: spacing.lg + spacing.xs,
   },
   headerTitle: {
     ...textStyles.h4,
-    flex: 1,
+    color: colors.paletteInk,
     textAlign: "center",
   },
   closeButton: {
-    width: 32,
-    alignItems: "flex-end",
+    position: "absolute",
+    right: -spacing.xs,
+    top: 0,
+    width: 28,
+    height: 28,
+    borderRadius: radii.pill,
+    backgroundColor: colors.paletteFill,
+    alignItems: "center",
+    justifyContent: "center",
   },
   categoryTabs: {
     flexDirection: "row",
-    width: "100%",
-    backgroundColor: colors.gray200,
-    borderRadius: 12,
-    padding: 6,
+    gap: spacing.xs,
+    padding: spacing.xs,
+    borderRadius: radii.lgPlus,
+    backgroundColor: colors.paletteFill,
   },
   categoryTab: {
     flex: 1,
     flexDirection: "row",
-    paddingVertical: 9,
     alignItems: "center",
     justifyContent: "center",
-    gap: 4,
-    borderRadius: 8,
+    gap: spacing.sm,
+    paddingVertical: spacing.md,
+    borderRadius: radii.md,
   },
   categoryTabActive: {
     backgroundColor: colors.white,
+    ...shadows.segmentActive,
+  },
+  categoryTabIconInactive: {
+    opacity: 0.55,
   },
   categoryTabText: {
-    ...textStyles.h6,
-    color: colors.gray600,
+    ...textStyles.h7,
+    color: colors.paletteFg3,
   },
   categoryTabTextActive: {
-    ...textStyles.h6,
-    color: colors.primary,
+    color: colors.paletteInk,
   },
   content: {
     flex: 1,

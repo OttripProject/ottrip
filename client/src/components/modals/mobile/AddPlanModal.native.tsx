@@ -1,11 +1,16 @@
-import { useTripForm } from "@/hooks/useTripForm";
+import { useToast } from "@/contexts/ToastContext";
+import { useDiscardConfirm } from "@/hooks/useDiscardConfirm";
+import { getTripFormErrors, useTripForm } from "@/hooks/useTripForm";
 import type { CreatePlanRequest, Plan, UpdatePlanRequest } from "@/types/api";
 import TripCalendarModal from "@/components/trip/TripCalendarModal";
 import TripDurationBanner from "@/components/trip/TripDurationBanner";
 import TripSegmentList from "@/components/trip/TripSegmentList";
+import ActionButton from "@/ui/components/ActionButton";
 import BottomSheetModal from "@/ui/components/BottomSheetModal.native";
 import Input from "@/ui/components/input/Input";
 import { colors } from "@/ui/tokens/colors";
+import { radii } from "@/ui/tokens/radii";
+import { spacing } from "@/ui/tokens/spacing";
 import { textStyles, typography } from "@/ui/tokens/typography";
 import { useEffect, useRef, useState } from "react";
 import {
@@ -28,6 +33,27 @@ interface AddPlanModalProps {
 }
 
 
+function buildEditFormData(plan: Plan) {
+  return {
+    name: plan.title || "",
+    segments: plan.segments?.length
+      ? plan.segments.map(s => ({
+          country: s.country,
+          city: s.city,
+          startDate: s.startDate,
+          endDate: s.endDate,
+        }))
+      : [
+          {
+            country: "",
+            city: "",
+            startDate: plan.startDate || "",
+            endDate: plan.endDate || "",
+          },
+        ],
+  };
+}
+
 export default function AddPlanModal({
   visible,
   onClose,
@@ -49,10 +75,31 @@ export default function AddPlanModal({
     setActiveSegmentIndex,
     resetForm,
     setFormData,
-    isSubmitDisabled,
   } = useTripForm();
 
+  const { showToast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showErrors, setShowErrors] = useState(false);
+  const scrollRef = useRef<ScrollView>(null);
+  const segSectionY = useRef(0);
+  const segmentYs = useRef<Record<number, number>>({});
+  const errors = showErrors ? getTripFormErrors(tripData) : null;
+
+  const initialData = planToEdit ? buildEditFormData(planToEdit) : null;
+  const isDirty = initialData
+    ? JSON.stringify(initialData) !== JSON.stringify(tripData)
+    : !!tripData.name.trim() ||
+      tripData.segments.some(
+        seg => seg.country || seg.city || seg.startDate || seg.endDate,
+      );
+  const { requestClose, discardConfirmModal } = useDiscardConfirm(
+    isDirty,
+    onClose,
+  );
+
+  const handleClose = () => {
+    if (!isSubmitting) requestClose();
+  };
   const [calendarOpen, setCalendarOpen] = useState(false);
   const prevSelectionModeRef = useRef(selectionMode);
 
@@ -69,29 +116,13 @@ export default function AddPlanModal({
 
   useEffect(() => {
     if (!visible) setCalendarOpen(false);
+    setShowErrors(false);
   }, [visible]);
 
   useEffect(() => {
     if (visible) {
       if (planToEdit) {
-        setFormData({
-          name: planToEdit.title || "",
-          segments: planToEdit.segments?.length
-            ? planToEdit.segments.map(s => ({
-                country: s.country,
-                city: s.city,
-                startDate: s.startDate,
-                endDate: s.endDate,
-              }))
-            : [
-                {
-                  country: "",
-                  city: "",
-                  startDate: planToEdit.startDate || "",
-                  endDate: planToEdit.endDate || "",
-                },
-              ],
-        });
+        setFormData(buildEditFormData(planToEdit));
       } else {
         resetForm();
       }
@@ -99,11 +130,23 @@ export default function AddPlanModal({
   }, [visible, planToEdit]);
 
   const handleSubmit = async () => {
-    const trimmedName = tripData.name.trim();
-    if (!trimmedName) {
-      Alert.alert("알림", "여행 이름을 입력해주세요");
+    if (isSubmitting) return;
+    const formErrors = getTripFormErrors(tripData);
+    if (formErrors) {
+      setShowErrors(true);
+      const firstSegment = formErrors.segments.findIndex(
+        seg => seg.country || seg.city || seg.date,
+      );
+      scrollRef.current?.scrollTo({
+        y: formErrors.name
+          ? 0
+          : segSectionY.current + (segmentYs.current[firstSegment] ?? 0),
+        animated: true,
+      });
+      showToast("입력되지 않은 값이 있어요.", { icon: "warning" });
       return;
     }
+    const trimmedName = tripData.name.trim();
 
     setIsSubmitting(true);
     try {
@@ -121,6 +164,7 @@ export default function AddPlanModal({
         const newPlan = await addPlan({ title: trimmedName, segments });
         onPlanCreated(newPlan);
       }
+      showToast(planToEdit ? "여행을 수정했어요." : "여행을 만들었어요.");
     } catch {
       Alert.alert("알림", planToEdit ? "여행 수정에 실패했습니다" : "여행 생성에 실패했습니다");
     } finally {
@@ -130,18 +174,30 @@ export default function AddPlanModal({
 
   return (
     <>
-      <BottomSheetModal visible={visible} onClose={onClose} height={0.93}>
+      <BottomSheetModal visible={visible} onClose={handleClose} height={0.94}>
         <View style={styles.container}>
           <View style={styles.header}>
-            <Text style={styles.headerTitle}>
-              {planToEdit ? "여행 수정" : "새로운 여행 만들기"}
-            </Text>
-            <Pressable onPress={onClose} style={styles.closeButton} hitSlop={8}>
-              <CloseIcon width={20} height={20} color={colors.gray700} />
+            <View style={styles.headerText}>
+              <Text style={styles.headerTitle}>
+                {planToEdit ? "여행 수정" : "새 여행 추가"}
+              </Text>
+              {!planToEdit && (
+                <Text style={styles.headerSubtitle}>
+                  구간별로 나라·도시·기간을 추가해보세요.
+                </Text>
+              )}
+            </View>
+            <Pressable
+              onPress={handleClose}
+              style={styles.closeButton}
+              accessibilityLabel="닫기"
+            >
+              <CloseIcon width={24} height={24} color={colors.gray700} />
             </Pressable>
           </View>
 
           <ScrollView
+            ref={scrollRef}
             style={styles.scroll}
             contentContainerStyle={styles.scrollContent}
             showsVerticalScrollIndicator={false}
@@ -153,17 +209,25 @@ export default function AddPlanModal({
                 <Text style={styles.counter}>{tripData.name.length}/30</Text>
               </View>
               <Input
-                style={styles.nameInput}
+                style={[styles.nameInput, errors?.name && styles.fieldError]}
                 placeholder="ex.도쿄 가을 여행"
-                placeholderTextColor={colors.gray500}
+                placeholderTextColor={colors.gray600}
                 value={tripData.name}
                 onChangeText={name => updateTripData({ name })}
                 maxLength={30}
               />
+              {errors?.name && (
+                <Text style={styles.errorText}>{errors.name}</Text>
+              )}
             </View>
 
-            <View style={styles.section}>
-              <View style={styles.labelRow}>
+            <View
+              style={styles.segSection}
+              onLayout={e => {
+                segSectionY.current = e.nativeEvent.layout.y;
+              }}
+            >
+              <View style={styles.segLabelRow}>
                 <Text style={styles.segSectionLabel}>여행 구간</Text>
                 <Text style={styles.hint}>순서대로 추가하세요</Text>
               </View>
@@ -178,6 +242,10 @@ export default function AddPlanModal({
                   setActiveSegmentIndex(idx);
                   setCalendarOpen(true);
                 }}
+                errors={errors?.segments}
+                onSegmentLayout={(idx, y) => {
+                  segmentYs.current[idx] = y;
+                }}
               />
             </View>
 
@@ -185,26 +253,19 @@ export default function AddPlanModal({
           </ScrollView>
 
           <View style={styles.footer}>
-            <Pressable style={styles.cancelBtn} onPress={onClose}>
-              <Text style={styles.cancelText}>취소</Text>
-            </Pressable>
-            <Pressable
-              style={[
-                styles.submitBtn,
-                (isSubmitDisabled || isSubmitting) && styles.submitBtnDisabled,
-              ]}
+            <ActionButton
+              label="취소"
+              tone="secondary"
+              fill
+              onPress={handleClose}
+              blocked={isSubmitting}
+            />
+            <ActionButton
+              label="저장"
+              fill
               onPress={handleSubmit}
-              disabled={isSubmitDisabled || isSubmitting}
-            >
-              <Text
-                style={[
-                  styles.submitText,
-                  (isSubmitDisabled || isSubmitting) && styles.submitTextDisabled,
-                ]}
-              >
-                {planToEdit ? "수정" : "여행 저장"}
-              </Text>
-            </Pressable>
+              loading={isSubmitting}
+            />
           </View>
           <TripCalendarModal
             visible={calendarOpen}
@@ -214,6 +275,7 @@ export default function AddPlanModal({
             onDateSelect={handleDateSelect}
           />
         </View>
+        {discardConfirmModal}
       </BottomSheetModal>
     </>
   );
@@ -226,21 +288,31 @@ const styles = StyleSheet.create({
   },
   header: {
     flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 16,
+    alignItems: "flex-start",
+    paddingHorizontal: spacing.xl,
+    paddingBottom: spacing.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.gray200,
+  },
+  headerText: {
+    flex: 1,
   },
   headerTitle: {
-    ...textStyles.h4,
-    color: colors.black,
+    ...textStyles.h3,
+    color: colors.paletteInk,
+  },
+  headerSubtitle: {
+    ...textStyles.body4,
+    marginTop: spacing.xs,
+    fontFamily: typography.fontFamily.pretendardMedium,
+    color: colors.paletteFg3,
   },
   closeButton: {
-    width: 32,
-    height: 32,
-    backgroundColor: colors.gray200,
-    borderRadius: 16,
+    width: 44,
+    height: 44,
+    marginTop: -spacing.sm,
+    marginRight: -spacing.sm,
+    borderRadius: radii.pill,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -248,88 +320,76 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingHorizontal: 20,
-    paddingBottom: 32,
+    paddingTop: spacing.xl,
+    paddingHorizontal: spacing.xl,
+    paddingBottom: spacing.lg,
   },
   section: {
-    marginBottom: 24,
+    marginBottom: spacing.xl,
+  },
+  segSection: {
+    marginBottom: spacing.lg,
   },
   labelRow: {
     flexDirection: "row",
     alignItems: "baseline",
-    marginBottom: 8,
+    marginBottom: spacing.sm,
+  },
+  segLabelRow: {
+    flexDirection: "row",
+    alignItems: "baseline",
+    marginBottom: spacing.md,
   },
   sectionLabel: {
-    ...textStyles.h8,
-    color: colors.black,
+    ...textStyles.h7,
+    fontFamily: typography.fontFamily.pretendardBold,
+    color: colors.paletteInk,
   },
   segSectionLabel: {
-    ...textStyles.h6,
-    color: colors.black,
+    ...textStyles.h5,
+    color: colors.paletteInk,
   },
   counter: {
+    ...textStyles.body5,
     marginLeft: "auto",
-    fontFamily: typography.fontFamily.poppinsMedium,
-    fontSize: 12,
-    lineHeight: 16,
-    color: colors.gray500,
+    fontFamily: typography.fontFamily.pretendardMedium,
+    fontVariant: ["tabular-nums"],
+    color: colors.paletteFg3,
   },
   hint: {
+    ...textStyles.body5,
     marginLeft: "auto",
+    fontFamily: typography.fontFamily.pretendardMedium,
+    color: colors.paletteFg3,
+  },
+  fieldError: {
+    borderColor: colors.danger,
+  },
+  errorText: {
     ...textStyles.body6,
-    color: colors.gray500,
+    color: colors.danger,
+    marginTop: spacing.xs,
   },
   nameInput: {
     width: "100%",
     borderWidth: 1,
-    borderColor: colors.gray300,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: 12,
-    fontFamily: typography.fontFamily.pretendardRegular,
-    fontSize: 14,
-    color: colors.gray900,
+    borderColor: colors.paletteLine,
+    borderRadius: radii.mdPlus,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.lg,
+    fontFamily: typography.fontFamily.pretendardMedium,
+    fontSize: textStyles.body2.fontSize,
+    color: colors.paletteInk,
     backgroundColor: colors.white,
   },
   footer: {
     flexDirection: "row",
-    gap: 10,
-    paddingHorizontal: 20,
-    paddingVertical: 16,
+    gap: spacing.md,
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.md,
     borderTopWidth: 1,
     borderTopColor: colors.gray200,
-  },
-  cancelBtn: {
-    flex: 1,
-    height: 52,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: colors.gray300,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: colors.white,
-  },
-  cancelText: {
-    ...textStyles.h7,
-    color: colors.black,
-  },
-  submitBtn: {
-    flex: 1,
-    height: 52,
-    borderRadius: 14,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: colors.gray900,
-  },
-  submitBtnDisabled: {
-    backgroundColor: colors.gray300,
-  },
-  submitText: {
-    ...textStyles.h7,
-    color: colors.white,
-  },
-  submitTextDisabled: {
-    color: colors.gray600,
   },
 });

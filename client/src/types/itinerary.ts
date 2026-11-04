@@ -26,3 +26,12 @@ export const itineraryCategoryColors: Record<ItineraryCategory, string> = {
   [ItineraryCategory.SHOPPING]: colors.categoryShopping,
   [ItineraryCategory.ETC]: colors.categoryEtc,
 };
+
+export const itineraryCategoryTints: Record<ItineraryCategory, string> = {
+  [ItineraryCategory.MEAL]: colors.categoryMealBg,
+  [ItineraryCategory.TRANSPORT]: colors.categoryTransportBg,
+  [ItineraryCategory.ACTIVITY]: colors.categoryActivityBg,
+  [ItineraryCategory.SIGHTSEEING]: colors.categorySightseeingBg,
+  [ItineraryCategory.SHOPPING]: colors.categoryShoppingBg,
+  [ItineraryCategory.ETC]: colors.categoryEtcBg,
+};

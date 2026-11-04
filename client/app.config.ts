@@ -49,7 +49,9 @@ export default ({ config }: ConfigContext): ExpoConfig => {
         {
           fonts: [
             "./assets/fonts/Pretendard-Regular.otf",
+            "./assets/fonts/Pretendard-Medium.otf",
             "./assets/fonts/Pretendard-SemiBold.otf",
+            "./assets/fonts/Pretendard-Bold.otf",
             "./assets/fonts/Poppins-Medium.ttf",
             "./assets/fonts/Poppins-SemiBold.ttf",
           ],
@@ -69,6 +71,17 @@ export default ({ config }: ConfigContext): ExpoConfig => {
           iosGoogleMapsApiKey: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY_IOS ?? "",
         },
       ],
+      [
+        "expo-splash-screen",
+        {
+          image: "./assets/icon.png",
+          resizeMode: "contain",
+          backgroundColor: "#ffffff",
+          enableFullScreenImage_legacy: true,
+        },
+      ],
+      "./plugins/withPodsMinDeploymentTarget",
+      "./plugins/withSceneLifecycle",
     ];
 
     if (iosUrlScheme) {
@@ -137,7 +150,6 @@ export default ({ config }: ConfigContext): ExpoConfig => {
 
   return {
     ...config,
-    newArchEnabled: true,
     name: switchProfile({
       dev: "오티트립 Dev",
       alpha: "오티트립 Alpha",
@@ -150,14 +162,14 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     updates: {
       url: `https://u.expo.dev/${projectId}`,
     },
-    runtimeVersion: "1.1.0",
+    runtimeVersion: "1.2.0",
     scheme: switchProfile({
       dev: "ottrip-dev",
       alpha: "ottrip-alpha",
       prod: "ottrip",
       local: "ottrip-local",
     }),
-    version: "1.1.1",
+    version: "1.2.0",
     orientation: "portrait",
     icon: `./assets/${switchProfile({
       dev: "icon-dev.png",
@@ -166,11 +178,6 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       local: "icon-dev.png",
     })}`,
     userInterfaceStyle: "light",
-    splash: {
-      image: "./assets/icon.png",
-      resizeMode: "contain",
-      backgroundColor: "#ffffff",
-    },
     assetBundlePatterns: ["**/*"],
     ios: {
       usesAppleSignIn: true,

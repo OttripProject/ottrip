@@ -1,89 +1,70 @@
+import ActionButton from "@/ui/components/ActionButton";
+import type { ActionButtonTone } from "@/ui/components/ActionButton.types";
 import { colors } from "@/ui/tokens/colors";
-import { textStyles } from "@/ui/tokens/typography";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { spacing } from "@/ui/tokens/spacing";
+import { StyleSheet, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 interface FloatingFooterProps {
   primaryLabel: string;
   onPrimaryPress: () => void;
+  primaryTone?: ActionButtonTone;
   primaryDisabled?: boolean;
+  primaryLoading?: boolean;
+  primaryBlocked?: boolean;
   secondaryLabel?: string;
+  secondaryTone?: ActionButtonTone;
   onSecondaryPress?: () => void;
 }
 
 export default function FloatingFooter({
   primaryLabel,
   onPrimaryPress,
+  primaryTone = "primary",
   primaryDisabled = false,
+  primaryLoading = false,
+  primaryBlocked = false,
   secondaryLabel,
+  secondaryTone = "secondary",
   onSecondaryPress,
 }: FloatingFooterProps) {
-  const hasSecondary = Boolean(secondaryLabel && onSecondaryPress);
+  const insets = useSafeAreaInsets();
 
   return (
-    <View style={styles.footer}>
-      <View style={styles.footerButtons}>
-        {hasSecondary && (
-          <Pressable
-            style={[styles.footerButton, styles.secondaryButton]}
-            onPress={onSecondaryPress}
-          >
-            <Text style={styles.secondaryButtonText}>{secondaryLabel}</Text>
-          </Pressable>
-        )}
-        <Pressable
-          style={[
-            styles.footerButton,
-            styles.primaryButton,
-            hasSecondary && styles.primaryButtonWithSecondary,
-            primaryDisabled && styles.primaryButtonDisabled,
-          ]}
-          onPress={onPrimaryPress}
-          disabled={primaryDisabled}
-        >
-          <Text style={styles.primaryButtonText}>{primaryLabel}</Text>
-        </Pressable>
-      </View>
+    <View
+      style={[
+        styles.footer,
+        { paddingBottom: Math.max(0, spacing.xl - insets.bottom) },
+      ]}
+    >
+      {secondaryLabel && onSecondaryPress && (
+        <ActionButton
+          label={secondaryLabel}
+          tone={secondaryTone}
+          fill
+          onPress={onSecondaryPress}
+          blocked={primaryLoading}
+        />
+      )}
+      <ActionButton
+        label={primaryLabel}
+        tone={primaryTone}
+        fill
+        onPress={onPrimaryPress}
+        loading={primaryLoading}
+        disabled={primaryDisabled}
+        blocked={primaryBlocked}
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   footer: {
-    backgroundColor: colors.white,
-    paddingHorizontal: 16,
-    paddingTop: 8,
-    paddingBottom: 12,
-  },
-  footerButtons: {
     flexDirection: "row",
-    gap: 8,
-  },
-  footerButton: {
-    paddingVertical: 16,
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  secondaryButton: {
-    flex: 1,
-    backgroundColor: colors.warning,
-  },
-  secondaryButtonText: {
-    ...textStyles.h4,
-    color: colors.white,
-  },
-  primaryButton: {
-    flex: 1,
-    backgroundColor: colors.black,
-  },
-  primaryButtonDisabled: {
-    backgroundColor: colors.gray400,
-  },
-  primaryButtonWithSecondary: {
-    flex: 2,
-  },
-  primaryButtonText: {
-    ...textStyles.h4,
-    color: colors.white,
+    gap: spacing.md,
+    backgroundColor: colors.white,
+    paddingTop: spacing.lg,
+    paddingHorizontal: spacing.xl,
   },
 });

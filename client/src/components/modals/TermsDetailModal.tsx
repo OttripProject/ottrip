@@ -1,5 +1,7 @@
 import { TERMS, type TermsKey } from "@/constants/terms";
+import ModalBackdrop from "@/ui/components/ModalBackdrop";
 import { colors } from "@/ui/tokens/colors";
+import { surfaces } from "@/ui/tokens/surfaces";
 import { textStyles } from "@/ui/tokens/typography";
 import { useMemo } from "react";
 import {
@@ -59,7 +61,8 @@ export default function TermsDetailModal({
       animationType="fade"
       onRequestClose={onClose}
     >
-      <View style={styles.overlay}>
+      <View style={[styles.overlay, surfaces.nativeBackdropClear]}>
+        <ModalBackdrop />
         <View
           style={[
             styles.card,
@@ -80,7 +83,7 @@ export default function TermsDetailModal({
               hitSlop={12}
               accessibilityLabel="닫기"
             >
-              <XIcon width={24} height={24} fill={colors.black} />
+              <XIcon width={24} height={24} color={colors.gray700} />
             </Pressable>
           </View>
 

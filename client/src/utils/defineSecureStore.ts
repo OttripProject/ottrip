@@ -46,10 +46,10 @@ export function defineSecureStore<T extends string>(key: string) {
           return value as T | null;
         } else {
           if (
-            (global as any).__tempStorage &&
-            (global as any).__tempStorage[key]
+            (globalThis as any).__tempStorage &&
+            (globalThis as any).__tempStorage[key]
           ) {
-            return (global as any).__tempStorage[key] as T;
+            return (globalThis as any).__tempStorage[key] as T;
           }
           return null;
         }
@@ -65,10 +65,10 @@ export function defineSecureStore<T extends string>(key: string) {
         } else if (SecureStore) {
           await SecureStore.setItemAsync(key, value);
         } else {
-          if (!(global as any).__tempStorage) {
-            (global as any).__tempStorage = {};
+          if (!(globalThis as any).__tempStorage) {
+            (globalThis as any).__tempStorage = {};
           }
-          (global as any).__tempStorage[key] = value;
+          (globalThis as any).__tempStorage[key] = value;
         }
       } catch (error) {
         throw error;
@@ -84,8 +84,8 @@ export function defineSecureStore<T extends string>(key: string) {
         } else if (SecureStore) {
           await SecureStore.deleteItemAsync(key);
         } else {
-          if ((global as any).__tempStorage) {
-            delete (global as any).__tempStorage[key];
+          if ((globalThis as any).__tempStorage) {
+            delete (globalThis as any).__tempStorage[key];
           }
         }
       } catch (error) {
