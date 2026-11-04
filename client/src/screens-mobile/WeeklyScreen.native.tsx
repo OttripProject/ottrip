@@ -534,6 +534,14 @@ export default function WeeklyScreen() {
     selectedDate,
   ]);
 
+  const selectedDateAccommodations = useMemo(
+    () =>
+      selectedDateSchedules
+        .filter(s => s.type === "accommodation")
+        .map(s => s.data as Accommodation),
+    [selectedDateSchedules],
+  );
+
   const selectedDateStr = selectedDate.format("YYYY-MM-DD");
   const { data: dayExpenses = [], refetch: refetchDayExpenses } =
     useExpensesQuery(selectedPlan?.id, selectedDateStr);
@@ -1203,6 +1211,65 @@ export default function WeeklyScreen() {
               )}
               <Text style={styles.costHint}>터치하여 상세 내역 확인</Text>
             </ScalePressable>
+          )}
+          {selectedDateAccommodations.length > 0 && (
+            <View style={styles.dayStaySection}>
+              <Text style={styles.dayStayTitle}>숙소</Text>
+              {selectedDateAccommodations.map(accommodation => {
+                const checkinDay = dayjs(accommodation.checkinDate).startOf("day");
+                const isCheckin =
+                  checkinDay.format("YYYY-MM-DD") === selectedDateStr;
+                const isCheckout =
+                  dayjs(accommodation.checkoutDate).format("YYYY-MM-DD") ===
+                  selectedDateStr;
+                const daysToCheckout = dayjs(accommodation.checkoutDate)
+                  .startOf("day")
+                  .diff(selectedDate.startOf("day"), "day");
+                const dayLabel = selectedDate.isSame(dayjs(), "day")
+                  ? "오늘"
+                  : selectedDate.format("M월 D일");
+                return (
+                  <ScalePressable
+                    key={accommodation.id}
+                    style={styles.dayStayCard}
+                    onPress={() => {
+                      setSelectedAccommodation(accommodation);
+                      setShowAccommodationDetail(true);
+                    }}
+                  >
+                    <View style={styles.dayStayIconBox}>
+                      <AccommodationIcon
+                        width={20}
+                        height={20}
+                        color={colors.accommodationText}
+                      />
+                    </View>
+                    <View style={styles.dayStayBody}>
+                      <Text style={styles.dayStayLabel}>
+                        {isCheckout ? `${dayLabel} 체크아웃` : `${dayLabel}의 숙소`}
+                      </Text>
+                      <Text style={styles.dayStayName} numberOfLines={1}>
+                        {accommodation.name}
+                      </Text>
+                      <Text style={styles.dayStayLabel}>
+                        {isCheckout
+                          ? `체크아웃 ${formatTime(accommodation.checkoutTime)}`
+                          : isCheckin
+                            ? `체크인 ${formatTime(accommodation.checkinTime)}`
+                            : `체크아웃 D-${daysToCheckout}`}
+                      </Text>
+                    </View>
+                    <View style={styles.dayStayChevron}>
+                      <RightArrowIcon
+                        width={13}
+                        height={13}
+                        color={colors.gray600}
+                      />
+                    </View>
+                  </ScalePressable>
+                );
+              })}
+            </View>
           )}
         </ScrollView>
         <ScrollView
@@ -2207,6 +2274,48 @@ const styles = StyleSheet.create({
     ...textStyles.h7,
     color: colors.paletteFg2,
     flexShrink: 1,
+  },
+  dayStaySection: {
+    gap: spacing.md,
+    marginHorizontal: spacing.sm,
+    marginTop: spacing.xl,
+  },
+  dayStayTitle: {
+    ...textStyles.h4,
+    color: colors.paletteInk,
+  },
+  dayStayCard: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: spacing.lg,
+    padding: spacing.lg,
+    borderRadius: radii.lgPlus,
+    backgroundColor: colors.white,
+    ...shadows.card,
+  },
+  dayStayIconBox: {
+    width: 48,
+    height: 48,
+    borderRadius: radii.mdPlus,
+    backgroundColor: colors.accommodationBg,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  dayStayBody: {
+    flex: 1,
+    minWidth: 0,
+    gap: spacing.xs,
+  },
+  dayStayLabel: {
+    ...textStyles.body5,
+    color: colors.gray750,
+  },
+  dayStayName: {
+    ...textStyles.h5,
+    color: colors.paletteInk,
+  },
+  dayStayChevron: {
+    marginTop: spacing.lg,
   },
   festivalsWrap: {
     marginHorizontal: spacing.sm,
